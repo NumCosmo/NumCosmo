@@ -3,7 +3,6 @@ from typing import Any, Callable, Literal, Optional, Tuple, Type, TypeVar, Seque
 from gi.repository import GLib
 from gi.repository import GObject
 
-
 ABC_MIN_SYNC_INTERVAL: float = 10.0
 BOOTSTRAP_RNG_NAME: str = "bootstrap"
 CFG_DATA_DIR_ENV: str = "NUMCOSMO_DATA_DIR"
@@ -85,7 +84,7 @@ SF_SPHERICAL_HARMONICS_EPS: float = 0.0
 SF_SPHERICAL_HARMONICS_LATERAL_MOVE: int = 1
 SF_SPHERICAL_HARMONICS_MAX_LEN: int = 6
 SPHERE_MAP_DEFAULT_SIGNAL: str = "SIGNAL"
-SPHERE_MAP_HEALPIX_NULLVAL: float = 1.6375e+30
+SPHERE_MAP_HEALPIX_NULLVAL: float = 1.6375e30
 SPLINE2D_BICUBIC_00: int = 0
 SPLINE2D_BICUBIC_01: int = 2
 SPLINE2D_BICUBIC_10: int = 1
@@ -99,22 +98,32 @@ SPLINE_KNOT_DIFF_TOL: int = 0
 THREAD_POOL_MAX: int = 5
 TIMER_SEC_FORMAT: str = "%07.4f"
 ZERO_LIMIT: float = 0.0
-_lock = ... # FIXME Constant
+_lock = ...  # FIXME Constant
 _namespace: str = "NumCosmoMath"
 _version: str = "1.0"
 
 def binsplit_join(bs: BinSplit, bs_l: BinSplit, bs_r: BinSplit) -> None: ...
 def cfg_command_line(argv: str, argc: int) -> str: ...
 def cfg_enable_gsl_err_handler() -> None: ...
-def cfg_entries_to_keyfile(kfile: GLib.KeyFile, group_name: str, entries: GLib.OptionEntry) -> None: ...
+def cfg_entries_to_keyfile(
+    kfile: GLib.KeyFile, group_name: str, entries: GLib.OptionEntry
+) -> None: ...
 def cfg_enum_get_value(enum_type: Type, n: int) -> GObject.EnumValue: ...
 def cfg_enum_print_all(enum_type: Type, header: str) -> None: ...
 def cfg_get_data_filename(filename: str, must_exist: bool) -> str: ...
-def cfg_get_enum_by_id_name_nick(enum_type: Type, id_name_nick: str) -> GObject.EnumValue: ...
+def cfg_get_enum_by_id_name_nick(
+    enum_type: Type, id_name_nick: str
+) -> GObject.EnumValue: ...
 def cfg_init() -> None: ...
 def cfg_init_full(argv: Sequence[str]) -> list[str]: ...
 def cfg_init_full_ptr(argv: Sequence[str]) -> None: ...
-def cfg_keyfile_to_arg(kfile: GLib.KeyFile, group_name: str, entries: GLib.OptionEntry, argv: str, argc: int) -> None: ...
+def cfg_keyfile_to_arg(
+    kfile: GLib.KeyFile,
+    group_name: str,
+    entries: GLib.OptionEntry,
+    argv: str,
+    argc: int,
+) -> None: ...
 def cfg_lock_plan_fftw() -> None: ...
 def cfg_logfile(on: bool) -> None: ...
 def cfg_logfile_flush(on: bool) -> None: ...
@@ -144,39 +153,293 @@ def dtuple3_clear(dt3: DTuple3) -> None: ...
 def exprel(x: float) -> float: ...
 def func_eval_log_pool_stats() -> None: ...
 def func_eval_set_max_threads(mt: int) -> None: ...
-def func_eval_threaded_loop(lfunc: Callable[..., None], i: int, f: int, *data: Any) -> None: ...
-def func_eval_threaded_loop_full(lfunc: Callable[..., None], i: int, f: int, *data: Any) -> None: ...
-def func_eval_threaded_loop_nw(lfunc: Callable[..., None], i: int, f: int, nworkers: int, *data: Any) -> None: ...
-def integrate_2dim(integ: Integrand2dim, xi: float, yi: float, xf: float, yf: float, epsrel: float, epsabs: float, result: float, error: float) -> bool: ...
-def integrate_2dim_divonne(integ: Integrand2dim, xi: float, yi: float, xf: float, yf: float, epsrel: float, epsabs: float, ngiven: int, ldxgiven: int, xgiven: float, result: float, error: float) -> bool: ...
-def integrate_2dim_divonne_peakfinder(integ: Integrand2dim, xi: float, yi: float, xf: float, yf: float, epsrel: float, epsabs: float, ngiven: int, ldxgiven: int, xgiven: float, nextra: int, peakfinder: Callable[[int, float, int, float, None], None], result: float, error: float) -> bool: ...
-def integrate_2dim_vegas(integ: Integrand2dim, xi: float, yi: float, xf: float, yf: float, epsrel: float, epsabs: float, nstart: int, result: float, error: float) -> bool: ...
-def integrate_3dim(integ: Integrand3dim, xi: float, yi: float, zi: float, xf: float, yf: float, zf: float, epsrel: float, epsabs: float, result: float, error: float) -> bool: ...
-def integrate_3dim_divonne(integ: Integrand3dim, xi: float, yi: float, zi: float, xf: float, yf: float, zf: float, epsrel: float, epsabs: float, ngiven: int, ldxgiven: int, xgiven: float, result: float, error: float) -> bool: ...
-def integrate_3dim_vegas(integ: Integrand3dim, xi: float, yi: float, zi: float, xf: float, yf: float, zf: float, epsrel: float, epsabs: float, nstart: int, result: float, error: float) -> bool: ...
-def lapack_dgeev(jobvl: int, jobvr: int, n: int, a: float, lda: int, wr: float, wi: float, vl: float, ldvl: int, vr: float, ldvr: int, work: float, lwork: int) -> int: ...
-def lapack_dgeevx(balanc: int, jobvl: int, jobvr: int, sense: int, n: int, a: float, lda: int, wr: float, wi: float, vl: float, ldvl: int, vr: float, ldvr: int, ilo: int, ihi: int, scale: float, abnrm: float, rconde: float, rcondv: float, work: float, lwork: int, iwork: int) -> int: ...
-def lapack_dgelqf(m: int, n: int, a: float, lda: int, tau: float, ws: LapackWS) -> int: ...
-def lapack_dgels(trans: int, m: int, n: int, nrhs: int, a: float, lda: int, b: float, ldb: int, work: float, lwork: int) -> int: ...
-def lapack_dgelsd(m: int, n: int, nrhs: int, a: float, lda: int, b: float, ldb: int, s: float, rcond: float, rank: int, ws: LapackWS) -> int: ...
-def lapack_dgeqlf(m: int, n: int, a: float, lda: int, tau: float, ws: LapackWS) -> int: ...
-def lapack_dgeqrf(m: int, n: int, a: float, lda: int, tau: float, ws: LapackWS) -> int: ...
-def lapack_dgerqf(m: int, n: int, a: float, lda: int, tau: float, ws: LapackWS) -> int: ...
-def lapack_dggglm_alloc(L: Matrix, X: Matrix, p: Vector, d: Vector, y: Vector) -> list[float]: ...
-def lapack_dggglm_run(ws: Sequence[float], L: Matrix, X: Matrix, p: Vector, d: Vector, y: Vector) -> int: ...
-def lapack_dposv(uplo: int, n: int, nrhs: int, a: float, lda: int, b: float, ldb: int) -> int: ...
+def func_eval_threaded_loop(
+    lfunc: Callable[..., None], i: int, f: int, *data: Any
+) -> None: ...
+def func_eval_threaded_loop_full(
+    lfunc: Callable[..., None], i: int, f: int, *data: Any
+) -> None: ...
+def func_eval_threaded_loop_nw(
+    lfunc: Callable[..., None], i: int, f: int, nworkers: int, *data: Any
+) -> None: ...
+def integrate_2dim(
+    integ: Integrand2dim,
+    xi: float,
+    yi: float,
+    xf: float,
+    yf: float,
+    epsrel: float,
+    epsabs: float,
+    result: float,
+    error: float,
+) -> bool: ...
+def integrate_2dim_divonne(
+    integ: Integrand2dim,
+    xi: float,
+    yi: float,
+    xf: float,
+    yf: float,
+    epsrel: float,
+    epsabs: float,
+    ngiven: int,
+    ldxgiven: int,
+    xgiven: float,
+    result: float,
+    error: float,
+) -> bool: ...
+def integrate_2dim_divonne_peakfinder(
+    integ: Integrand2dim,
+    xi: float,
+    yi: float,
+    xf: float,
+    yf: float,
+    epsrel: float,
+    epsabs: float,
+    ngiven: int,
+    ldxgiven: int,
+    xgiven: float,
+    nextra: int,
+    peakfinder: Callable[[int, float, int, float, None], None],
+    result: float,
+    error: float,
+) -> bool: ...
+def integrate_2dim_vegas(
+    integ: Integrand2dim,
+    xi: float,
+    yi: float,
+    xf: float,
+    yf: float,
+    epsrel: float,
+    epsabs: float,
+    nstart: int,
+    result: float,
+    error: float,
+) -> bool: ...
+def integrate_3dim(
+    integ: Integrand3dim,
+    xi: float,
+    yi: float,
+    zi: float,
+    xf: float,
+    yf: float,
+    zf: float,
+    epsrel: float,
+    epsabs: float,
+    result: float,
+    error: float,
+) -> bool: ...
+def integrate_3dim_divonne(
+    integ: Integrand3dim,
+    xi: float,
+    yi: float,
+    zi: float,
+    xf: float,
+    yf: float,
+    zf: float,
+    epsrel: float,
+    epsabs: float,
+    ngiven: int,
+    ldxgiven: int,
+    xgiven: float,
+    result: float,
+    error: float,
+) -> bool: ...
+def integrate_3dim_vegas(
+    integ: Integrand3dim,
+    xi: float,
+    yi: float,
+    zi: float,
+    xf: float,
+    yf: float,
+    zf: float,
+    epsrel: float,
+    epsabs: float,
+    nstart: int,
+    result: float,
+    error: float,
+) -> bool: ...
+def lapack_dgeev(
+    jobvl: int,
+    jobvr: int,
+    n: int,
+    a: float,
+    lda: int,
+    wr: float,
+    wi: float,
+    vl: float,
+    ldvl: int,
+    vr: float,
+    ldvr: int,
+    work: float,
+    lwork: int,
+) -> int: ...
+def lapack_dgeevx(
+    balanc: int,
+    jobvl: int,
+    jobvr: int,
+    sense: int,
+    n: int,
+    a: float,
+    lda: int,
+    wr: float,
+    wi: float,
+    vl: float,
+    ldvl: int,
+    vr: float,
+    ldvr: int,
+    ilo: int,
+    ihi: int,
+    scale: float,
+    abnrm: float,
+    rconde: float,
+    rcondv: float,
+    work: float,
+    lwork: int,
+    iwork: int,
+) -> int: ...
+def lapack_dgelqf(
+    m: int, n: int, a: float, lda: int, tau: float, ws: LapackWS
+) -> int: ...
+def lapack_dgels(
+    trans: int,
+    m: int,
+    n: int,
+    nrhs: int,
+    a: float,
+    lda: int,
+    b: float,
+    ldb: int,
+    work: float,
+    lwork: int,
+) -> int: ...
+def lapack_dgelsd(
+    m: int,
+    n: int,
+    nrhs: int,
+    a: float,
+    lda: int,
+    b: float,
+    ldb: int,
+    s: float,
+    rcond: float,
+    rank: int,
+    ws: LapackWS,
+) -> int: ...
+def lapack_dgeqlf(
+    m: int, n: int, a: float, lda: int, tau: float, ws: LapackWS
+) -> int: ...
+def lapack_dgeqrf(
+    m: int, n: int, a: float, lda: int, tau: float, ws: LapackWS
+) -> int: ...
+def lapack_dgerqf(
+    m: int, n: int, a: float, lda: int, tau: float, ws: LapackWS
+) -> int: ...
+def lapack_dggglm_alloc(
+    L: Matrix, X: Matrix, p: Vector, d: Vector, y: Vector
+) -> list[float]: ...
+def lapack_dggglm_run(
+    ws: Sequence[float], L: Matrix, X: Matrix, p: Vector, d: Vector, y: Vector
+) -> int: ...
+def lapack_dposv(
+    uplo: int, n: int, nrhs: int, a: float, lda: int, b: float, ldb: int
+) -> int: ...
 def lapack_dpotrf(uplo: int, n: int, a: float, lda: int) -> int: ...
 def lapack_dpotri(uplo: int, n: int, a: float, lda: int) -> int: ...
-def lapack_dpotrs(uplo: int, n: int, nrhs: int, a: float, lda: int, b: float, ldb: int) -> int: ...
+def lapack_dpotrs(
+    uplo: int, n: int, nrhs: int, a: float, lda: int, b: float, ldb: int
+) -> int: ...
 def lapack_dptsv(d: float, e: float, b: float, x: float, n: int) -> int: ...
-def lapack_dsyevd(jobz: int, uplo: int, n: int, a: float, lda: int, w: float, ws: LapackWS) -> int: ...
-def lapack_dsyevr(jobz: int, range: int, uplo: int, n: int, a: float, lda: int, vl: float, vu: float, il: int, iu: int, abstol: float, m: int, w: float, z: float, ldz: int, isuppz: int, ws: LapackWS) -> int: ...
-def lapack_dsysv(uplo: int, n: int, nrhs: int, a: float, lda: int, ipiv: int, b: float, ldb: int, work: float, lwork: int) -> int: ...
-def lapack_dsysvx(fact: int, uplo: int, n: int, nrhs: int, a: float, lda: int, af: float, ldaf: int, ipiv: int, b: float, ldb: int, x: float, ldx: int, rcond: float, ferr: float, berr: float, work: float, lwork: int, iwork: int) -> int: ...
-def lapack_dsysvxx(fact: int, uplo: int, n: int, nrhs: int, a: float, lda: int, af: float, ldaf: int, ipiv: int, equed: str, s: float, b: float, ldb: int, x: float, ldx: int, rcond: float, rpvgrw: float, berr: float, n_err_bnds: int, err_bnds_norm: float, err_bnds_comp: float, nparams: int, params: float, work: float, iwork: int) -> int: ...
-def lapack_dsytrf(uplo: int, n: int, a: float, lda: int, ipiv: int, ws: LapackWS) -> int: ...
-def lapack_dsytri(uplo: int, n: int, a: float, lda: int, ipiv: int, ws: LapackWS) -> int: ...
-def lapack_dsytrs(uplo: int, n: int, nrhs: int, a: float, lda: int, ipiv: int, b: float, ldb: int) -> int: ...
+def lapack_dsyevd(
+    jobz: int, uplo: int, n: int, a: float, lda: int, w: float, ws: LapackWS
+) -> int: ...
+def lapack_dsyevr(
+    jobz: int,
+    range: int,
+    uplo: int,
+    n: int,
+    a: float,
+    lda: int,
+    vl: float,
+    vu: float,
+    il: int,
+    iu: int,
+    abstol: float,
+    m: int,
+    w: float,
+    z: float,
+    ldz: int,
+    isuppz: int,
+    ws: LapackWS,
+) -> int: ...
+def lapack_dsysv(
+    uplo: int,
+    n: int,
+    nrhs: int,
+    a: float,
+    lda: int,
+    ipiv: int,
+    b: float,
+    ldb: int,
+    work: float,
+    lwork: int,
+) -> int: ...
+def lapack_dsysvx(
+    fact: int,
+    uplo: int,
+    n: int,
+    nrhs: int,
+    a: float,
+    lda: int,
+    af: float,
+    ldaf: int,
+    ipiv: int,
+    b: float,
+    ldb: int,
+    x: float,
+    ldx: int,
+    rcond: float,
+    ferr: float,
+    berr: float,
+    work: float,
+    lwork: int,
+    iwork: int,
+) -> int: ...
+def lapack_dsysvxx(
+    fact: int,
+    uplo: int,
+    n: int,
+    nrhs: int,
+    a: float,
+    lda: int,
+    af: float,
+    ldaf: int,
+    ipiv: int,
+    equed: str,
+    s: float,
+    b: float,
+    ldb: int,
+    x: float,
+    ldx: int,
+    rcond: float,
+    rpvgrw: float,
+    berr: float,
+    n_err_bnds: int,
+    err_bnds_norm: float,
+    err_bnds_comp: float,
+    nparams: int,
+    params: float,
+    work: float,
+    iwork: int,
+) -> int: ...
+def lapack_dsytrf(
+    uplo: int, n: int, a: float, lda: int, ipiv: int, ws: LapackWS
+) -> int: ...
+def lapack_dsytri(
+    uplo: int, n: int, a: float, lda: int, ipiv: int, ws: LapackWS
+) -> int: ...
+def lapack_dsytrs(
+    uplo: int, n: int, nrhs: int, a: float, lda: int, ipiv: int, b: float, ldb: int
+) -> int: ...
 def lapack_ws_clear(ws: LapackWS) -> None: ...
 def lh_ratio2d_region_clear(rg: LHRatio2dRegion) -> None: ...
 def likelihoood_peek_m2lnL_v(lh: Likelihood) -> Vector: ...
@@ -203,16 +466,24 @@ def util_cvode_check_flag(flagvalue: None, funcname: str, opt: int) -> bool: ...
 def util_cvode_print_stats(cvode: None) -> bool: ...
 def util_fact_size(n: int) -> int: ...
 def util_function_params(func: str) -> Tuple[str, list[float], int]: ...
-def util_great_circle_distance(ra1: float, dec1: float, ra2: float, dec2: float) -> float: ...
+def util_great_circle_distance(
+    ra1: float, dec1: float, ra2: float, dec2: float
+) -> float: ...
 def util_ln1pexpx(x: float) -> float: ...
-def util_mln_1mIexpzA_1pIexpmzA(rho: float, theta: float, A: float) -> Tuple[float, float]: ...
+def util_mln_1mIexpzA_1pIexpmzA(
+    rho: float, theta: float, A: float
+) -> Tuple[float, float]: ...
 def util_position_angle(ra1: float, dec1: float, ra2: float, dec2: float) -> float: ...
 def util_sinh1(x: float) -> float: ...
 def util_sinh3(x: float) -> float: ...
 def util_sinhx_m_xcoshx_x3(x: float) -> float: ...
 def util_sleep_ms(milliseconds: int) -> None: ...
-def util_smooth_trans(f0: float, f1: float, z0: float, dz: float, z: float) -> float: ...
-def util_smooth_trans_get_theta(z0: float, dz: float, z: float, theta0: float, theta1: float) -> None: ...
+def util_smooth_trans(
+    f0: float, f1: float, z0: float, dz: float, z: float
+) -> float: ...
+def util_smooth_trans_get_theta(
+    z0: float, dz: float, z: float, theta0: float, theta1: float
+) -> None: ...
 def util_sqrt1px_m1(x: float) -> float: ...
 
 class ABC(GObject.Object):
@@ -242,6 +513,7 @@ class ABC(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         data_set: Dataset
         epsilon: float
@@ -251,11 +523,14 @@ class ABC(GObject.Object):
         trans_kernel: MSetTransKern
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, data_set: Dataset = ...,
-                 epsilon: float = ...,
-                 mset: MSet = ...,
-                 prior: MSetTransKern = ...,
-                 trans_kernel: MSetTransKern = ...): ...
+    def __init__(
+        self,
+        data_set: Dataset = ...,
+        epsilon: float = ...,
+        mset: MSet = ...,
+        prior: MSetTransKern = ...,
+        trans_kernel: MSetTransKern = ...,
+    ): ...
     @staticmethod
     def clear(abc: ABC) -> None: ...
     def data_summary(self) -> bool: ...
@@ -264,7 +539,9 @@ class ABC(GObject.Object):
     def do_distance_prob(self, distance: float) -> float: ...
     def do_get_desc(self) -> str: ...
     def do_log_info(self) -> str: ...
-    def do_mock_distance(self, dset: Dataset, theta: Vector, thetastar: Vector, rng: RNG) -> float: ...
+    def do_mock_distance(
+        self, dset: Dataset, theta: Vector, thetastar: Vector, rng: RNG
+    ) -> float: ...
     def do_update_tkern(self) -> None: ...
     def end_run(self) -> None: ...
     def end_update(self) -> None: ...
@@ -277,7 +554,9 @@ class ABC(GObject.Object):
     def get_mtype(self) -> FitRunMsgs: ...
     def log_info(self) -> str: ...
     def mean_covar(self, fit: Fit) -> None: ...
-    def mock_distance(self, dset: Dataset, theta: Vector, thetastar: Vector, rng: RNG) -> float: ...
+    def mock_distance(
+        self, dset: Dataset, theta: Vector, thetastar: Vector, rng: RNG
+    ) -> float: ...
     def peek_catalog(self) -> MSetCatalog: ...
     def peek_covar(self) -> Matrix: ...
     def peek_dataset(self) -> Dataset: ...
@@ -294,7 +573,6 @@ class ABC(GObject.Object):
     def update(self) -> None: ...
     def update_epsilon(self, epsilon: float) -> None: ...
     def update_tkern(self) -> None: ...
-    
 
 class ABCClass(GObject.GPointer):
     r"""
@@ -360,15 +638,19 @@ class Bootstrap(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         bootstrap_size: int
         full_size: int
         init: bool
         realization: GLib.Variant
     props: Props = ...
-    def __init__(self, bootstrap_size: int = ...,
-                 full_size: int = ...,
-                 realization: GLib.Variant = ...): ...
+    def __init__(
+        self,
+        bootstrap_size: int = ...,
+        full_size: int = ...,
+        realization: GLib.Variant = ...,
+    ): ...
     @staticmethod
     def clear(bstrap: Bootstrap) -> None: ...
     def free(self) -> None: ...
@@ -388,7 +670,6 @@ class Bootstrap(GObject.Object):
     def set_fsize(self, fsize: int) -> None: ...
     @classmethod
     def sized_new(cls, fsize: int) -> Bootstrap: ...
-    
 
 class BootstrapClass(GObject.GPointer):
     r"""
@@ -737,7 +1018,6 @@ class C(GObject.Object):
     def wmap5_coadded_I_W() -> float: ...
     @staticmethod
     def year() -> float: ...
-    
 
 class CClass(GObject.GPointer):
     r"""
@@ -782,6 +1062,7 @@ class CSQ1D(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         adiab_threshold: float
@@ -794,29 +1075,49 @@ class CSQ1D(GObject.Object):
         ti: float
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, abstol: float = ...,
-                 adiab_threshold: float = ...,
-                 k: float = ...,
-                 max_order_2: bool = ...,
-                 prop_threshold: float = ...,
-                 reltol: float = ...,
-                 save_evol: bool = ...,
-                 tf: float = ...,
-                 ti: float = ...): ...
-    def alpha_dgamma_to_minkowski_frame(self, model: Optional[Model], adiab_frame: int, t: float, alpha: float, dgamma: float) -> Tuple[float, float]: ...
-    def alpha_dgamma_to_phi_Pphi(self, model: Optional[Model], t: float, alpha: float, dgamma: float) -> Tuple[list[float], list[float]]: ...
-    def alpha_gamma_circle(self, model: Optional[Model], alpha: float, gamma: float, r: float, theta: float) -> Tuple[float, float]: ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        adiab_threshold: float = ...,
+        k: float = ...,
+        max_order_2: bool = ...,
+        prop_threshold: float = ...,
+        reltol: float = ...,
+        save_evol: bool = ...,
+        tf: float = ...,
+        ti: float = ...,
+    ): ...
+    def alpha_dgamma_to_minkowski_frame(
+        self,
+        model: Optional[Model],
+        adiab_frame: int,
+        t: float,
+        alpha: float,
+        dgamma: float,
+    ) -> Tuple[float, float]: ...
+    def alpha_dgamma_to_phi_Pphi(
+        self, model: Optional[Model], t: float, alpha: float, dgamma: float
+    ) -> Tuple[list[float], list[float]]: ...
+    def alpha_gamma_circle(
+        self, model: Optional[Model], alpha: float, gamma: float, r: float, theta: float
+    ) -> Tuple[float, float]: ...
     @staticmethod
     def clear(csq1d: CSQ1D) -> None: ...
     def do_eval_F1(self, model: Optional[Model], t: float, k: float) -> float: ...
     def do_eval_F2(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def do_eval_FN(self, model: Optional[Model], n: int, t: float, k: float) -> float: ...
+    def do_eval_FN(
+        self, model: Optional[Model], n: int, t: float, k: float
+    ) -> float: ...
     def do_eval_dm(self, model: Optional[Model], t: float, k: float) -> float: ...
     def do_eval_dxi(self, model: Optional[Model], t: float, k: float) -> float: ...
     def do_eval_int_1_m(self, model: Optional[Model], t: float, k: float) -> float: ...
     def do_eval_int_mnu2(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def do_eval_int_q2mnu2(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def do_eval_int_qmnu2(self, model: Optional[Model], t: float, k: float) -> float: ...
+    def do_eval_int_q2mnu2(
+        self, model: Optional[Model], t: float, k: float
+    ) -> float: ...
+    def do_eval_int_qmnu2(
+        self, model: Optional[Model], t: float, k: float
+    ) -> float: ...
     def do_eval_m(self, model: Optional[Model], t: float, k: float) -> float: ...
     def do_eval_nu(self, model: Optional[Model], t: float, k: float) -> float: ...
     def do_eval_nu2(self, model: Optional[Model], t: float, k: float) -> float: ...
@@ -826,7 +1127,9 @@ class CSQ1D(GObject.Object):
     def eval_F1(self, model: Optional[Model], t: float, k: float) -> float: ...
     def eval_F2(self, model: Optional[Model], t: float, k: float) -> float: ...
     def eval_FN(self, model: Optional[Model], n: int, t: float, k: float) -> float: ...
-    def eval_adiab_at(self, model: Optional[Model], t: float) -> Tuple[float, float, float, float]: ...
+    def eval_adiab_at(
+        self, model: Optional[Model], t: float
+    ) -> Tuple[float, float, float, float]: ...
     def eval_at(self, t: float) -> Tuple[float, float]: ...
     def eval_dm(self, model: Optional[Model], t: float, k: float) -> float: ...
     def eval_dxi(self, model: Optional[Model], t: float, k: float) -> float: ...
@@ -835,30 +1138,63 @@ class CSQ1D(GObject.Object):
     def eval_int_q2mnu2(self, model: Optional[Model], t: float, k: float) -> float: ...
     def eval_int_qmnu2(self, model: Optional[Model], t: float, k: float) -> float: ...
     def eval_m(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def eval_nonadiab_at(self, model: Optional[Model], nonadiab_frame: int, t: float) -> Tuple[float, float]: ...
+    def eval_nonadiab_at(
+        self, model: Optional[Model], nonadiab_frame: int, t: float
+    ) -> Tuple[float, float]: ...
     def eval_nu(self, model: Optional[Model], t: float, k: float) -> float: ...
     def eval_nu2(self, model: Optional[Model], t: float, k: float) -> float: ...
     def eval_powspec_factor(self, model: Optional[Model], k: float) -> float: ...
     def eval_xi(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def evolve_prop_vector_chi_Up(self, model: Optional[Model], t: float, nonadiab_frame: int, chi_i: float, Up_i: float) -> Tuple[float, float]: ...
-    def find_adiab_max(self, model: Optional[Model], t0: float, t1: float, border_eps: float) -> Tuple[float, float, float, float]: ...
-    def find_adiab_time_limit(self, model: Optional[Model], t0: float, t1: float, reltol: float) -> Tuple[bool, float]: ...
+    def evolve_prop_vector_chi_Up(
+        self,
+        model: Optional[Model],
+        t: float,
+        nonadiab_frame: int,
+        chi_i: float,
+        Up_i: float,
+    ) -> Tuple[float, float]: ...
+    def find_adiab_max(
+        self, model: Optional[Model], t0: float, t1: float, border_eps: float
+    ) -> Tuple[float, float, float, float]: ...
+    def find_adiab_time_limit(
+        self, model: Optional[Model], t0: float, t1: float, reltol: float
+    ) -> Tuple[bool, float]: ...
     def free(self) -> None: ...
-    def get_H_poincare_disc(self, model: Optional[Model], t: float) -> Tuple[float, float]: ...
-    def get_H_poincare_hp(self, model: Optional[Model], t: float) -> Tuple[float, float]: ...
-    def get_Hadiab_poincare_disc(self, model: Optional[Model], t: float) -> Tuple[float, float]: ...
-    def get_Hadiab_poincare_hp(self, model: Optional[Model], t: float) -> Tuple[float, float]: ...
-    def get_J_at(self, model: Optional[Model], t: float) -> Tuple[float, float, float]: ...
+    def get_H_poincare_disc(
+        self, model: Optional[Model], t: float
+    ) -> Tuple[float, float]: ...
+    def get_H_poincare_hp(
+        self, model: Optional[Model], t: float
+    ) -> Tuple[float, float]: ...
+    def get_Hadiab_poincare_disc(
+        self, model: Optional[Model], t: float
+    ) -> Tuple[float, float]: ...
+    def get_Hadiab_poincare_hp(
+        self, model: Optional[Model], t: float
+    ) -> Tuple[float, float]: ...
+    def get_J_at(
+        self, model: Optional[Model], t: float
+    ) -> Tuple[float, float, float]: ...
     def get_abstol(self) -> float: ...
     def get_adiab_threshold(self) -> float: ...
     def get_k(self) -> float: ...
     def get_max_order_2(self) -> bool: ...
-    def get_minkowski_frame(self, model: Optional[Model], adiab_frame: int, t: float) -> Tuple[float, float]: ...
-    def get_poincare_disc(self, model: Optional[Model], t: float) -> Tuple[float, float]: ...
-    def get_poincare_hp(self, model: Optional[Model], t: float) -> Tuple[float, float]: ...
-    def get_poincare_hp_frame(self, model: Optional[Model], adiab_frame: int, t: float) -> Tuple[float, float]: ...
+    def get_minkowski_frame(
+        self, model: Optional[Model], adiab_frame: int, t: float
+    ) -> Tuple[float, float]: ...
+    def get_poincare_disc(
+        self, model: Optional[Model], t: float
+    ) -> Tuple[float, float]: ...
+    def get_poincare_hp(
+        self, model: Optional[Model], t: float
+    ) -> Tuple[float, float]: ...
+    def get_poincare_hp_frame(
+        self, model: Optional[Model], adiab_frame: int, t: float
+    ) -> Tuple[float, float]: ...
     def get_prop_threshold(self) -> float: ...
-    def get_prop_vector_chi_Up(self, model: Optional[Model], t: float) -> Tuple[float, float]: ...
+    def get_prop_vector_chi_Up(
+        self, model: Optional[Model], t: float
+    ) -> Tuple[float, float]: ...
     def get_reltol(self) -> float: ...
     def get_save_evol(self) -> bool: ...
     def get_tf(self) -> float: ...
@@ -866,11 +1202,15 @@ class CSQ1D(GObject.Object):
     def get_ti(self) -> float: ...
     def get_time_array(self) -> Tuple[list[float], float]: ...
     def prepare(self, model: Optional[Model] = None) -> None: ...
-    def prepare_prop(self, model: Optional[Model], ti: float, tii: float, tf: float) -> None: ...
+    def prepare_prop(
+        self, model: Optional[Model], ti: float, tii: float, tf: float
+    ) -> None: ...
     def ref(self) -> CSQ1D: ...
     def set_abstol(self, abstol: float) -> None: ...
     def set_adiab_threshold(self, adiab_threshold: float) -> None: ...
-    def set_init_cond(self, state: CSQ1DEvolState, ti: float, x: float, y: float) -> None: ...
+    def set_init_cond(
+        self, state: CSQ1DEvolState, ti: float, x: float, y: float
+    ) -> None: ...
     def set_init_cond_adiab(self, model: Optional[Model], ti: float) -> None: ...
     def set_k(self, k: float) -> None: ...
     def set_max_order_2(self, truncate: bool) -> None: ...
@@ -879,7 +1219,6 @@ class CSQ1D(GObject.Object):
     def set_save_evol(self, save: bool) -> None: ...
     def set_tf(self, tf: float) -> None: ...
     def set_ti(self, ti: float) -> None: ...
-    
 
 class CSQ1DClass(GObject.GPointer):
     r"""
@@ -908,7 +1247,6 @@ class CSQ1DClass(GObject.GPointer):
     padding: list[None] = ...
 
 class CSQ1DSingFitUm(GObject.GPointer): ...
-
 class CSQ1DSingFitUp(GObject.GPointer): ...
 
 class Complex(GObject.GBoxed):
@@ -936,7 +1274,6 @@ class Complex(GObject.GBoxed):
     def res_mul(self, c2: Complex) -> None: ...
     def set(self, a: float, b: float) -> None: ...
     def set_zero(self) -> None: ...
-    
 
 class DTuple2(GObject.GBoxed):
     r"""
@@ -958,7 +1295,6 @@ class DTuple2(GObject.GBoxed):
     @classmethod
     def new_from_variant(cls, var: GLib.Variant) -> DTuple2: ...
     def serialize(self) -> GLib.Variant: ...
-    
 
 class DTuple3(GObject.GBoxed):
     r"""
@@ -980,7 +1316,6 @@ class DTuple3(GObject.GBoxed):
     @classmethod
     def new_from_variant(cls, var: GLib.Variant) -> DTuple3: ...
     def serialize(self) -> GLib.Variant: ...
-    
 
 class Data(GObject.Object):
     r"""
@@ -1007,6 +1342,7 @@ class Data(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         bootstrap: Bootstrap
         desc: str
@@ -1015,10 +1351,13 @@ class Data(GObject.Object):
         name: str
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, bootstrap: Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        bootstrap: Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     def bootstrap_create(self) -> None: ...
     def bootstrap_enabled(self) -> bool: ...
     def bootstrap_remove(self) -> None: ...
@@ -1056,7 +1395,6 @@ class Data(GObject.Object):
     def set_init(self, state: bool) -> None: ...
     def sigma_vector(self, mset: MSet, sigma: Vector) -> None: ...
     def take_desc(self, desc: str) -> None: ...
-    
 
 class DataClass(GObject.GPointer):
     r"""
@@ -1112,6 +1450,7 @@ class DataDist1d(Data):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         n_points: int
         vector: Vector
@@ -1122,19 +1461,21 @@ class DataDist1d(Data):
         name: str
     props: Props = ...
     parent_instance: Data = ...
-    def __init__(self, n_points: int = ...,
-                 vector: Vector = ...,
-                 bootstrap: Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        n_points: int = ...,
+        vector: Vector = ...,
+        bootstrap: Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     def do_get_size(self) -> int: ...
     def do_inv_pdf(self, mset: MSet, u: float) -> float: ...
     def do_set_size(self, np: int) -> None: ...
     def get_data(self) -> Vector: ...
     def get_size(self) -> int: ...
     def set_size(self, np: int) -> None: ...
-    
 
 class DataDist1dClass(GObject.GPointer):
     r"""
@@ -1182,6 +1523,7 @@ class DataDist2d(Data):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         matrix: Matrix
         n_points: int
@@ -1192,19 +1534,23 @@ class DataDist2d(Data):
         name: str
     props: Props = ...
     parent_instance: Data = ...
-    def __init__(self, matrix: Matrix = ...,
-                 n_points: int = ...,
-                 bootstrap: Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        matrix: Matrix = ...,
+        n_points: int = ...,
+        bootstrap: Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     def do_get_size(self) -> int: ...
-    def do_inv_pdf(self, mset: MSet, u: float, v: float, x: float, y: float) -> None: ...
+    def do_inv_pdf(
+        self, mset: MSet, u: float, v: float, x: float, y: float
+    ) -> None: ...
     def do_set_size(self, np: int) -> None: ...
     def get_data(self) -> Matrix: ...
     def get_size(self) -> int: ...
     def set_size(self, np: int) -> None: ...
-    
 
 class DataDist2dClass(GObject.GPointer):
     r"""
@@ -1247,6 +1593,7 @@ class DataFunnel(Data):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         bootstrap: Bootstrap
         desc: str
@@ -1254,17 +1601,19 @@ class DataFunnel(Data):
         long_desc: str
         name: str
     props: Props = ...
-    def __init__(self, bootstrap: Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        bootstrap: Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @staticmethod
     def clear(dfu: DataFunnel) -> None: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls) -> DataFunnel: ...
     def ref(self) -> DataFunnel: ...
-    
 
 class DataFunnelClass(GObject.GPointer):
     r"""
@@ -1309,6 +1658,7 @@ class DataGauss(Data):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         inv_cov: Matrix
         mean: Vector
@@ -1320,13 +1670,16 @@ class DataGauss(Data):
         name: str
     props: Props = ...
     parent_instance: Data = ...
-    def __init__(self, inv_cov: Matrix = ...,
-                 mean: Vector = ...,
-                 n_points: int = ...,
-                 bootstrap: Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        inv_cov: Matrix = ...,
+        mean: Vector = ...,
+        n_points: int = ...,
+        bootstrap: Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     def do_get_size(self) -> int: ...
     def do_inv_cov_func(self, mset: MSet, inv_cov: Matrix) -> bool: ...
     def do_mean_func(self, mset: MSet, vp: Vector) -> None: ...
@@ -1335,7 +1688,6 @@ class DataGauss(Data):
     def peek_inv_cov(self) -> Matrix: ...
     def peek_mean(self) -> Vector: ...
     def set_size(self, np: int) -> None: ...
-    
 
 class DataGaussClass(GObject.GPointer):
     r"""
@@ -1387,6 +1739,7 @@ class DataGaussCov(Data):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         cov: Matrix
         mean: Vector
@@ -1399,14 +1752,17 @@ class DataGaussCov(Data):
         name: str
     props: Props = ...
     parent_instance: Data = ...
-    def __init__(self, cov: Matrix = ...,
-                 mean: Vector = ...,
-                 n_points: int = ...,
-                 use_norma: bool = ...,
-                 bootstrap: Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        cov: Matrix = ...,
+        mean: Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     def bulk_resample(self, mset: MSet, resample: Matrix, rng: RNG) -> None: ...
     def do_cov_func(self, mset: MSet, cov: Matrix) -> bool: ...
     def do_get_size(self) -> int: ...
@@ -1421,7 +1777,6 @@ class DataGaussCov(Data):
     def replace_mean(self, mean: Vector) -> None: ...
     def set_size(self, np: int) -> None: ...
     def use_norma(self, use_norma: bool) -> None: ...
-    
 
 class DataGaussCovClass(GObject.GPointer):
     r"""
@@ -1477,6 +1832,7 @@ class DataGaussCovMVND(DataGaussCov):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         cov: Matrix
         mean: Vector
@@ -1488,30 +1844,71 @@ class DataGaussCovMVND(DataGaussCov):
         long_desc: str
         name: str
     props: Props = ...
-    def __init__(self, cov: Matrix = ...,
-                 mean: Vector = ...,
-                 n_points: int = ...,
-                 use_norma: bool = ...,
-                 bootstrap: Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        cov: Matrix = ...,
+        mean: Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @staticmethod
     def clear(data_mvnd: DataGaussCovMVND) -> None: ...
-    def est_ratio(self, mset: MSet, obj: None, bound: Callable[[None, Vector], bool], reltol: float, rng: RNG) -> Tuple[float, int, int]: ...
+    def est_ratio(
+        self,
+        mset: MSet,
+        obj: None,
+        bound: Callable[[None, Vector], bool],
+        reltol: float,
+        rng: RNG,
+    ) -> Tuple[float, int, int]: ...
     def free(self) -> None: ...
-    def gen(self, mset: MSet, obj: None, bound: Optional[Callable[[None, Vector], bool]], rng: RNG) -> Tuple[Vector, int]: ...
-    def gen_cov_mean(self, sigma_min: float, sigma_max: float, cor_level: float, mean_min: float, mean_max: float, rng: RNG) -> None: ...
+    def gen(
+        self,
+        mset: MSet,
+        obj: None,
+        bound: Optional[Callable[[None, Vector], bool]],
+        rng: RNG,
+    ) -> Tuple[Vector, int]: ...
+    def gen_cov_mean(
+        self,
+        sigma_min: float,
+        sigma_max: float,
+        cor_level: float,
+        mean_min: float,
+        mean_max: float,
+        rng: RNG,
+    ) -> None: ...
     def log_info(self) -> None: ...
     @classmethod
     def new(cls, dim: int) -> DataGaussCovMVND: ...
     @classmethod
-    def new_full(cls, dim: int, sigma_min: float, sigma_max: float, cor_level: float, mean_min: float, mean_max: float, rng: RNG) -> DataGaussCovMVND: ...
+    def new_full(
+        cls,
+        dim: int,
+        sigma_min: float,
+        sigma_max: float,
+        cor_level: float,
+        mean_min: float,
+        mean_max: float,
+        rng: RNG,
+    ) -> DataGaussCovMVND: ...
     def peek_mean(self) -> Vector: ...
     def ref(self) -> DataGaussCovMVND: ...
     def set_cov_mean(self, mean: Vector, cov: Matrix) -> None: ...
-    def stats_vec(self, mset: MSet, n: int, maxiter: int, lower: Vector, upper: Vector, save_realizations: bool, rng: RNG) -> StatsVec: ...
-    
+    def stats_vec(
+        self,
+        mset: MSet,
+        n: int,
+        maxiter: int,
+        lower: Vector,
+        upper: Vector,
+        save_realizations: bool,
+        rng: RNG,
+    ) -> StatsVec: ...
 
 class DataGaussCovMVNDClass(GObject.GPointer):
     r"""
@@ -1558,6 +1955,7 @@ class DataGaussDiag(Data):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         mean: Vector
         n_points: int
@@ -1570,14 +1968,17 @@ class DataGaussDiag(Data):
         name: str
     props: Props = ...
     parent_instance: Data = ...
-    def __init__(self, mean: Vector = ...,
-                 n_points: int = ...,
-                 sigma: Vector = ...,
-                 w_mean: bool = ...,
-                 bootstrap: Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        mean: Vector = ...,
+        n_points: int = ...,
+        sigma: Vector = ...,
+        w_mean: bool = ...,
+        bootstrap: Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     def do_get_size(self) -> int: ...
     def do_mean_func(self, mset: MSet, vp: Vector) -> None: ...
     def do_set_size(self, np: int) -> None: ...
@@ -1586,7 +1987,6 @@ class DataGaussDiag(Data):
     def peek_mean(self) -> Vector: ...
     def peek_std(self) -> Vector: ...
     def set_size(self, np: int) -> None: ...
-    
 
 class DataGaussDiagClass(GObject.GPointer):
     r"""
@@ -1629,6 +2029,7 @@ class DataGaussMix2D(Data):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         bootstrap: Bootstrap
         desc: str
@@ -1636,17 +2037,19 @@ class DataGaussMix2D(Data):
         long_desc: str
         name: str
     props: Props = ...
-    def __init__(self, bootstrap: Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        bootstrap: Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @staticmethod
     def clear(gm2d: DataGaussMix2D) -> None: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls) -> DataGaussMix2D: ...
     def ref(self) -> DataGaussMix2D: ...
-    
 
 class DataGaussMix2DClass(GObject.GPointer):
     r"""
@@ -1689,6 +2092,7 @@ class DataPoisson(Data):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         mean: Vector
         n_bins: int
@@ -1699,12 +2103,15 @@ class DataPoisson(Data):
         name: str
     props: Props = ...
     parent_instance: Data = ...
-    def __init__(self, mean: Vector = ...,
-                 n_bins: int = ...,
-                 bootstrap: Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        mean: Vector = ...,
+        n_bins: int = ...,
+        bootstrap: Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     def do_get_size(self) -> int: ...
     def do_mean_func(self, mset: MSet, n: int) -> float: ...
     def do_set_size(self, nbins: int) -> None: ...
@@ -1715,7 +2122,6 @@ class DataPoisson(Data):
     def init_from_binning(self, nodes: Vector, x: Vector) -> None: ...
     def init_from_vector(self, nodes: Vector, N: Vector) -> None: ...
     def set_size(self, nbins: int) -> None: ...
-    
 
 class DataPoissonClass(GObject.GPointer):
     r"""
@@ -1757,6 +2163,7 @@ class DataRosenbrock(Data):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         bootstrap: Bootstrap
         desc: str
@@ -1764,17 +2171,19 @@ class DataRosenbrock(Data):
         long_desc: str
         name: str
     props: Props = ...
-    def __init__(self, bootstrap: Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        bootstrap: Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @staticmethod
     def clear(drb: DataRosenbrock) -> None: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls) -> DataRosenbrock: ...
     def ref(self) -> DataRosenbrock: ...
-    
 
 class DataRosenbrockClass(GObject.GPointer):
     r"""
@@ -1794,6 +2203,7 @@ class Dataset(GObject.Object):
 
         Dataset(**properties)
         new() -> NumCosmoMath.Dataset
+        new_array(data_array:list) -> NumCosmoMath.Dataset
 
     Object NcmDataset
 
@@ -1806,12 +2216,14 @@ class Dataset(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         bootstrap_type: DatasetBStrapType
         data_array: ObjArray
     props: Props = ...
-    def __init__(self, bootstrap_type: DatasetBStrapType = ...,
-                 data_array: ObjArray = ...): ...
+    def __init__(
+        self, bootstrap_type: DatasetBStrapType = ..., data_array: ObjArray = ...
+    ): ...
     def all_init(self) -> bool: ...
     def append_data(self, data: Data) -> None: ...
     def bootstrap_resample(self, rng: RNG) -> None: ...
@@ -1838,12 +2250,13 @@ class Dataset(GObject.Object):
     def m2lnL_vec(self, mset: MSet, m2lnL_v: Vector) -> None: ...
     @classmethod
     def new(cls) -> Dataset: ...
+    @classmethod
+    def new_array(cls, data_array: Sequence[Data]) -> Dataset: ...
     def peek_data(self, n: int) -> Data: ...
     def peek_data_array(self) -> ObjArray: ...
     def ref(self) -> Dataset: ...
     def resample(self, mset: MSet, rng: RNG) -> None: ...
     def set_data_array(self, oa: ObjArray) -> None: ...
-    
 
 class DatasetClass(GObject.GPointer):
     r"""
@@ -1881,6 +2294,7 @@ class Diff(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         ini_h: float
         max_order: int
@@ -1888,11 +2302,14 @@ class Diff(GObject.Object):
         round_off_pad: float
         terr_pad: float
     props: Props = ...
-    def __init__(self, ini_h: float = ...,
-                 max_order: int = ...,
-                 richardson_step: float = ...,
-                 round_off_pad: float = ...,
-                 terr_pad: float = ...): ...
+    def __init__(
+        self,
+        ini_h: float = ...,
+        max_order: int = ...,
+        richardson_step: float = ...,
+        round_off_pad: float = ...,
+        terr_pad: float = ...,
+    ): ...
     @staticmethod
     def clear(diff: Diff) -> None: ...
     def free(self) -> None: ...
@@ -1906,26 +2323,51 @@ class Diff(GObject.Object):
     def log_forward_tables(self) -> None: ...
     @classmethod
     def new(cls) -> Diff: ...
-    def rc_d1_1_to_1(self, x: float, f: Callable[..., float], *user_data: Any) -> Tuple[float, float]: ...
-    def rc_d1_1_to_M(self, x: float, dim: int, f: Callable[..., None], *user_data: Any) -> Tuple[list[float], list[float]]: ...
-    def rc_d1_N_to_1(self, x_a: Sequence[float], f: Callable[..., float], *user_data: Any) -> Tuple[list[float], list[float]]: ...
-    def rc_d1_N_to_M(self, x_a: Sequence[float], dim: int, f: Callable[..., None], *user_data: Any) -> Tuple[list[float], list[float]]: ...
-    def rc_d2_1_to_1(self, x: float, f: Callable[..., float], *user_data: Any) -> Tuple[float, float]: ...
-    def rc_d2_1_to_M(self, x: float, dim: int, f: Callable[..., None], *user_data: Any) -> Tuple[list[float], list[float]]: ...
-    def rc_d2_N_to_1(self, x_a: Sequence[float], f: Callable[..., float], *user_data: Any) -> Tuple[list[float], list[float]]: ...
-    def rc_d2_N_to_M(self, x_a: Sequence[float], dim: int, f: Callable[..., None], *user_data: Any) -> Tuple[list[float], list[float]]: ...
+    def rc_d1_1_to_1(
+        self, x: float, f: Callable[..., float], *user_data: Any
+    ) -> Tuple[float, float]: ...
+    def rc_d1_1_to_M(
+        self, x: float, dim: int, f: Callable[..., None], *user_data: Any
+    ) -> Tuple[list[float], list[float]]: ...
+    def rc_d1_N_to_1(
+        self, x_a: Sequence[float], f: Callable[..., float], *user_data: Any
+    ) -> Tuple[list[float], list[float]]: ...
+    def rc_d1_N_to_M(
+        self, x_a: Sequence[float], dim: int, f: Callable[..., None], *user_data: Any
+    ) -> Tuple[list[float], list[float]]: ...
+    def rc_d2_1_to_1(
+        self, x: float, f: Callable[..., float], *user_data: Any
+    ) -> Tuple[float, float]: ...
+    def rc_d2_1_to_M(
+        self, x: float, dim: int, f: Callable[..., None], *user_data: Any
+    ) -> Tuple[list[float], list[float]]: ...
+    def rc_d2_N_to_1(
+        self, x_a: Sequence[float], f: Callable[..., float], *user_data: Any
+    ) -> Tuple[list[float], list[float]]: ...
+    def rc_d2_N_to_M(
+        self, x_a: Sequence[float], dim: int, f: Callable[..., None], *user_data: Any
+    ) -> Tuple[list[float], list[float]]: ...
     def ref(self) -> Diff: ...
-    def rf_Hessian_N_to_1(self, x_a: Sequence[float], f: Callable[..., float], *user_data: Any) -> Tuple[list[float], list[float]]: ...
-    def rf_d1_1_to_1(self, x: float, f: Callable[..., float], *user_data: Any) -> Tuple[float, float]: ...
-    def rf_d1_1_to_M(self, x: float, dim: int, f: Callable[..., None], *user_data: Any) -> Tuple[list[float], list[float]]: ...
-    def rf_d1_N_to_1(self, x_a: Sequence[float], f: Callable[..., float], *user_data: Any) -> Tuple[list[float], list[float]]: ...
-    def rf_d1_N_to_M(self, x_a: Sequence[float], dim: int, f: Callable[..., None], *user_data: Any) -> Tuple[list[float], list[float]]: ...
+    def rf_Hessian_N_to_1(
+        self, x_a: Sequence[float], f: Callable[..., float], *user_data: Any
+    ) -> Tuple[list[float], list[float]]: ...
+    def rf_d1_1_to_1(
+        self, x: float, f: Callable[..., float], *user_data: Any
+    ) -> Tuple[float, float]: ...
+    def rf_d1_1_to_M(
+        self, x: float, dim: int, f: Callable[..., None], *user_data: Any
+    ) -> Tuple[list[float], list[float]]: ...
+    def rf_d1_N_to_1(
+        self, x_a: Sequence[float], f: Callable[..., float], *user_data: Any
+    ) -> Tuple[list[float], list[float]]: ...
+    def rf_d1_N_to_M(
+        self, x_a: Sequence[float], dim: int, f: Callable[..., None], *user_data: Any
+    ) -> Tuple[list[float], list[float]]: ...
     def set_ini_h(self, ini_h: float) -> None: ...
     def set_max_order(self, maxorder: int) -> None: ...
     def set_richardson_step(self, rs: float) -> None: ...
     def set_round_off_pad(self, roff_pad: float) -> None: ...
     def set_trunc_error_pad(self, terr_pad: float) -> None: ...
-    
 
 class DiffClass(GObject.GPointer):
     r"""
@@ -1978,6 +2420,7 @@ class Fftlog(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Lk: float
         N: int
@@ -1994,19 +2437,24 @@ class Fftlog(GObject.Object):
         use_smooth_padding: bool
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, Lk: float = ...,
-                 N: int = ...,
-                 eval_r_max: float = ...,
-                 eval_r_min: float = ...,
-                 lnk0: float = ...,
-                 lnr0: float = ...,
-                 nderivs: int = ...,
-                 no_ringing: bool = ...,
-                 padding: float = ...,
-                 smooth_padding_scale: float = ...,
-                 use_eval_int: bool = ...,
-                 use_smooth_padding: bool = ...): ...
-    def calibrate_size(self, Fk: Callable[..., float], reltol: float, *user_data: Any) -> None: ...
+    def __init__(
+        self,
+        Lk: float = ...,
+        N: int = ...,
+        eval_r_max: float = ...,
+        eval_r_min: float = ...,
+        lnk0: float = ...,
+        lnr0: float = ...,
+        nderivs: int = ...,
+        no_ringing: bool = ...,
+        padding: float = ...,
+        smooth_padding_scale: float = ...,
+        use_eval_int: bool = ...,
+        use_smooth_padding: bool = ...,
+    ): ...
+    def calibrate_size(
+        self, Fk: Callable[..., float], reltol: float, *user_data: Any
+    ) -> None: ...
     @staticmethod
     def clear(fftlog: Fftlog) -> None: ...
     def do_compute_Ym(self, Ym_0: None) -> None: ...
@@ -2051,7 +2499,6 @@ class Fftlog(GObject.Object):
     def set_smooth_padding_scale(self, log10sc: float) -> None: ...
     def use_eval_interval(self, use_eval_interal: bool) -> None: ...
     def use_smooth_padding(self, use_smooth_padding: bool) -> None: ...
-    
 
 class FftlogClass(GObject.GPointer):
     r"""
@@ -2108,6 +2555,7 @@ class FftlogGausswin2(Fftlog):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Lk: float
         N: int
@@ -2123,21 +2571,23 @@ class FftlogGausswin2(Fftlog):
         use_eval_int: bool
         use_smooth_padding: bool
     props: Props = ...
-    def __init__(self, Lk: float = ...,
-                 N: int = ...,
-                 eval_r_max: float = ...,
-                 eval_r_min: float = ...,
-                 lnk0: float = ...,
-                 lnr0: float = ...,
-                 nderivs: int = ...,
-                 no_ringing: bool = ...,
-                 padding: float = ...,
-                 smooth_padding_scale: float = ...,
-                 use_eval_int: bool = ...,
-                 use_smooth_padding: bool = ...): ...
+    def __init__(
+        self,
+        Lk: float = ...,
+        N: int = ...,
+        eval_r_max: float = ...,
+        eval_r_min: float = ...,
+        lnk0: float = ...,
+        lnr0: float = ...,
+        nderivs: int = ...,
+        no_ringing: bool = ...,
+        padding: float = ...,
+        smooth_padding_scale: float = ...,
+        use_eval_int: bool = ...,
+        use_smooth_padding: bool = ...,
+    ): ...
     @classmethod
     def new(cls, lnr0: float, lnk0: float, Lk: float, N: int) -> FftlogGausswin2: ...
-    
 
 class FftlogGausswin2Class(GObject.GPointer):
     r"""
@@ -2197,6 +2647,7 @@ class FftlogSBesselJ(Fftlog):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         ell: int
         q: float
@@ -2214,29 +2665,33 @@ class FftlogSBesselJ(Fftlog):
         use_eval_int: bool
         use_smooth_padding: bool
     props: Props = ...
-    def __init__(self, ell: int = ...,
-                 q: float = ...,
-                 Lk: float = ...,
-                 N: int = ...,
-                 eval_r_max: float = ...,
-                 eval_r_min: float = ...,
-                 lnk0: float = ...,
-                 lnr0: float = ...,
-                 nderivs: int = ...,
-                 no_ringing: bool = ...,
-                 padding: float = ...,
-                 smooth_padding_scale: float = ...,
-                 use_eval_int: bool = ...,
-                 use_smooth_padding: bool = ...): ...
+    def __init__(
+        self,
+        ell: int = ...,
+        q: float = ...,
+        Lk: float = ...,
+        N: int = ...,
+        eval_r_max: float = ...,
+        eval_r_min: float = ...,
+        lnk0: float = ...,
+        lnr0: float = ...,
+        nderivs: int = ...,
+        no_ringing: bool = ...,
+        padding: float = ...,
+        smooth_padding_scale: float = ...,
+        use_eval_int: bool = ...,
+        use_smooth_padding: bool = ...,
+    ): ...
     def get_ell(self) -> int: ...
     def get_q(self) -> float: ...
     @classmethod
-    def new(cls, ell: int, lnr0: float, lnk0: float, Lk: float, N: int) -> FftlogSBesselJ: ...
+    def new(
+        cls, ell: int, lnr0: float, lnk0: float, Lk: float, N: int
+    ) -> FftlogSBesselJ: ...
     def set_best_lnk0(self) -> None: ...
     def set_best_lnr0(self) -> None: ...
     def set_ell(self, ell: int) -> None: ...
     def set_q(self, q: float) -> None: ...
-    
 
 class FftlogSBesselJClass(GObject.GPointer):
     r"""
@@ -2298,6 +2753,7 @@ class FftlogSBesselJLJM(Fftlog):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dell: int
         ell: int
@@ -2316,32 +2772,43 @@ class FftlogSBesselJLJM(Fftlog):
         use_eval_int: bool
         use_smooth_padding: bool
     props: Props = ...
-    def __init__(self, dell: int = ...,
-                 ell: int = ...,
-                 lnw: float = ...,
-                 Lk: float = ...,
-                 N: int = ...,
-                 eval_r_max: float = ...,
-                 eval_r_min: float = ...,
-                 lnk0: float = ...,
-                 lnr0: float = ...,
-                 nderivs: int = ...,
-                 no_ringing: bool = ...,
-                 padding: float = ...,
-                 smooth_padding_scale: float = ...,
-                 use_eval_int: bool = ...,
-                 use_smooth_padding: bool = ...): ...
+    def __init__(
+        self,
+        dell: int = ...,
+        ell: int = ...,
+        lnw: float = ...,
+        Lk: float = ...,
+        N: int = ...,
+        eval_r_max: float = ...,
+        eval_r_min: float = ...,
+        lnk0: float = ...,
+        lnr0: float = ...,
+        nderivs: int = ...,
+        no_ringing: bool = ...,
+        padding: float = ...,
+        smooth_padding_scale: float = ...,
+        use_eval_int: bool = ...,
+        use_smooth_padding: bool = ...,
+    ): ...
     def get_dell(self) -> int: ...
     def get_ell(self) -> int: ...
     def get_lnw(self) -> float: ...
     @classmethod
-    def new(cls, ell: int, dell: int, lnw: float, lnr0: float, lnk0: float, Lk: float, N: int) -> FftlogSBesselJLJM: ...
+    def new(
+        cls,
+        ell: int,
+        dell: int,
+        lnw: float,
+        lnr0: float,
+        lnk0: float,
+        Lk: float,
+        N: int,
+    ) -> FftlogSBesselJLJM: ...
     def set_best_lnk0(self) -> None: ...
     def set_best_lnr0(self) -> None: ...
     def set_dell(self, dell: int) -> None: ...
     def set_ell(self, ell: int) -> None: ...
     def set_lnw(self, lnw: float) -> None: ...
-    
 
 class FftlogSBesselJLJMClass(GObject.GPointer):
     r"""
@@ -2395,6 +2862,7 @@ class FftlogTophatwin2(Fftlog):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Lk: float
         N: int
@@ -2410,21 +2878,23 @@ class FftlogTophatwin2(Fftlog):
         use_eval_int: bool
         use_smooth_padding: bool
     props: Props = ...
-    def __init__(self, Lk: float = ...,
-                 N: int = ...,
-                 eval_r_max: float = ...,
-                 eval_r_min: float = ...,
-                 lnk0: float = ...,
-                 lnr0: float = ...,
-                 nderivs: int = ...,
-                 no_ringing: bool = ...,
-                 padding: float = ...,
-                 smooth_padding_scale: float = ...,
-                 use_eval_int: bool = ...,
-                 use_smooth_padding: bool = ...): ...
+    def __init__(
+        self,
+        Lk: float = ...,
+        N: int = ...,
+        eval_r_max: float = ...,
+        eval_r_min: float = ...,
+        lnk0: float = ...,
+        lnr0: float = ...,
+        nderivs: int = ...,
+        no_ringing: bool = ...,
+        padding: float = ...,
+        smooth_padding_scale: float = ...,
+        use_eval_int: bool = ...,
+        use_smooth_padding: bool = ...,
+    ): ...
     @classmethod
     def new(cls, lnr0: float, lnk0: float, Lk: float, N: int) -> FftlogTophatwin2: ...
-    
 
 class FftlogTophatwin2Class(GObject.GPointer):
     r"""
@@ -2477,6 +2947,7 @@ class Fit(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         equality_constraints: ObjArray
         equality_constraints_tot: Vector
@@ -2493,19 +2964,22 @@ class Fit(GObject.Object):
         sub_fit: Fit
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, equality_constraints: ObjArray = ...,
-                 equality_constraints_tot: Vector = ...,
-                 grad_type: FitGradType = ...,
-                 inequality_constraints: ObjArray = ...,
-                 inequality_constraints_tot: Vector = ...,
-                 likelihood: Likelihood = ...,
-                 m2lnL_abstol: float = ...,
-                 m2lnL_reltol: float = ...,
-                 maxiter: int = ...,
-                 mset: MSet = ...,
-                 params_reltol: float = ...,
-                 state: FitState = ...,
-                 sub_fit: Fit = ...): ...
+    def __init__(
+        self,
+        equality_constraints: ObjArray = ...,
+        equality_constraints_tot: Vector = ...,
+        grad_type: FitGradType = ...,
+        inequality_constraints: ObjArray = ...,
+        inequality_constraints_tot: Vector = ...,
+        likelihood: Likelihood = ...,
+        m2lnL_abstol: float = ...,
+        m2lnL_reltol: float = ...,
+        maxiter: int = ...,
+        mset: MSet = ...,
+        params_reltol: float = ...,
+        state: FitState = ...,
+        sub_fit: Fit = ...,
+    ): ...
     def add_equality_constraint(self, func: MSetFunc, tot: float) -> None: ...
     def add_inequality_constraint(self, func: MSetFunc, tot: float) -> None: ...
     def chisq_test(self, bins: int) -> float: ...
@@ -2525,14 +2999,20 @@ class Fit(GObject.Object):
     def do_get_desc(self) -> str: ...
     def do_reset(self) -> None: ...
     def do_run(self, mtype: FitRunMsgs) -> bool: ...
-    def dprob(self, mid: int, pid: int, a: float, b: float, step: float, norm: float) -> None: ...
+    def dprob(
+        self, mid: int, pid: int, a: float, b: float, step: float, norm: float
+    ) -> None: ...
     def dup(self, ser: Serialize) -> Fit: ...
     def equality_constraints_len(self) -> int: ...
     @staticmethod
-    def factory(ftype: FitType, algo_name: str, lh: Likelihood, mset: MSet, gtype: FitGradType) -> Fit: ...
+    def factory(
+        ftype: FitType, algo_name: str, lh: Likelihood, mset: MSet, gtype: FitGradType
+    ) -> Fit: ...
     def fisher(self) -> None: ...
     def free(self) -> None: ...
-    def function_error(self, func: MSetFunc, x: float, pretty_print: bool) -> Tuple[float, float]: ...
+    def function_error(
+        self, func: MSetFunc, x: float, pretty_print: bool
+    ) -> Tuple[float, float]: ...
     def get_covar(self) -> Matrix: ...
     def get_desc(self) -> str: ...
     def get_equality_constraint(self, i: int) -> Tuple[MSetFunc, float]: ...
@@ -2554,7 +3034,9 @@ class Fit(GObject.Object):
     def log_state(self) -> None: ...
     def log_step(self) -> None: ...
     def lr_test(self, mid: int, pid: int, val: float, dof: int) -> float: ...
-    def lr_test_range(self, mid: int, pid: int, start: float, stop: float, step: float) -> None: ...
+    def lr_test_range(
+        self, mid: int, pid: int, start: float, stop: float, step: float
+    ) -> None: ...
     def ls_J(self, J: Matrix) -> None: ...
     def ls_f(self, f: Vector) -> None: ...
     def ls_f_J(self, f: Vector, J: Matrix) -> None: ...
@@ -2581,7 +3063,14 @@ class Fit(GObject.Object):
     def remove_inequality_constraints(self) -> None: ...
     def reset(self) -> None: ...
     def run(self, mtype: FitRunMsgs) -> bool: ...
-    def run_restart(self, mtype: FitRunMsgs, abstol: float, reltol: float, save_mset: Optional[MSet] = None, mset_file: Optional[str] = None) -> None: ...
+    def run_restart(
+        self,
+        mtype: FitRunMsgs,
+        abstol: float,
+        reltol: float,
+        save_mset: Optional[MSet] = None,
+        mset_file: Optional[str] = None,
+    ) -> None: ...
     def set_grad_type(self, gtype: FitGradType) -> None: ...
     def set_m2lnL_abstol(self, tol: float) -> None: ...
     def set_m2lnL_reltol(self, tol: float) -> None: ...
@@ -2589,8 +3078,9 @@ class Fit(GObject.Object):
     def set_messages(self, mtype: FitRunMsgs) -> None: ...
     def set_params_reltol(self, tol: float) -> None: ...
     def set_sub_fit(self, sub_fit: Fit) -> None: ...
-    def type_constrain_error(self, p: float, nu: int, dir: float, func: MSetFunc, z: float, walk: bool) -> float: ...
-    
+    def type_constrain_error(
+        self, p: float, nu: int, dir: float, func: MSetFunc, z: float, walk: bool
+    ) -> float: ...
 
 class FitClass(GObject.GPointer):
     r"""
@@ -2659,6 +3149,7 @@ class FitESMCMC(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         auto_trim: bool
         auto_trim_div: int
@@ -2678,23 +3169,26 @@ class FitESMCMC(GObject.Object):
         use_mpi: bool
         walker: FitESMCMCWalker
     props: Props = ...
-    def __init__(self, auto_trim: bool = ...,
-                 auto_trim_div: int = ...,
-                 data_file: str = ...,
-                 fit: Fit = ...,
-                 function_array: ObjArray = ...,
-                 intermediary_log: int = ...,
-                 log_time_interval: float = ...,
-                 lre_step: float = ...,
-                 max_runs_time: float = ...,
-                 min_runs: int = ...,
-                 mtype: FitRunMsgs = ...,
-                 nthreads: int = ...,
-                 nwalkers: int = ...,
-                 sampler: MSetTransKern = ...,
-                 trim_type: MSetCatalogTrimType = ...,
-                 use_mpi: bool = ...,
-                 walker: FitESMCMCWalker = ...): ...
+    def __init__(
+        self,
+        auto_trim: bool = ...,
+        auto_trim_div: int = ...,
+        data_file: str = ...,
+        fit: Fit = ...,
+        function_array: ObjArray = ...,
+        intermediary_log: int = ...,
+        log_time_interval: float = ...,
+        lre_step: float = ...,
+        max_runs_time: float = ...,
+        min_runs: int = ...,
+        mtype: FitRunMsgs = ...,
+        nthreads: int = ...,
+        nwalkers: int = ...,
+        sampler: MSetTransKern = ...,
+        trim_type: MSetCatalogTrimType = ...,
+        use_mpi: bool = ...,
+        walker: FitESMCMCWalker = ...,
+    ): ...
     @staticmethod
     def clear(esmcmc: FitESMCMC) -> None: ...
     def end_run(self) -> None: ...
@@ -2707,9 +3201,24 @@ class FitESMCMC(GObject.Object):
     def has_rng(self) -> bool: ...
     def mean_covar(self) -> None: ...
     @classmethod
-    def new(cls, fit: Fit, nwalkers: int, sampler: MSetTransKern, walker: Optional[FitESMCMCWalker], mtype: FitRunMsgs) -> FitESMCMC: ...
+    def new(
+        cls,
+        fit: Fit,
+        nwalkers: int,
+        sampler: MSetTransKern,
+        walker: Optional[FitESMCMCWalker],
+        mtype: FitRunMsgs,
+    ) -> FitESMCMC: ...
     @classmethod
-    def new_funcs_array(cls, fit: Fit, nwalkers: int, sampler: MSetTransKern, walker: Optional[FitESMCMCWalker], mtype: FitRunMsgs, funcs_array: ObjArray) -> FitESMCMC: ...
+    def new_funcs_array(
+        cls,
+        fit: Fit,
+        nwalkers: int,
+        sampler: MSetTransKern,
+        walker: Optional[FitESMCMCWalker],
+        mtype: FitRunMsgs,
+        funcs_array: ObjArray,
+    ) -> FitESMCMC: ...
     def peek_catalog(self) -> MSetCatalog: ...
     def peek_fit(self) -> Fit: ...
     def peek_ser(self) -> Serialize: ...
@@ -2732,7 +3241,6 @@ class FitESMCMC(GObject.Object):
     def start_run(self) -> None: ...
     def use_mpi(self, use_mpi: bool) -> None: ...
     def validate(self, pi: int, pf: int) -> bool: ...
-    
 
 class FitESMCMCClass(GObject.GPointer):
     r"""
@@ -2763,13 +3271,13 @@ class FitESMCMCWalker(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         nparams: int
         size: int
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, nparams: int = ...,
-                 size: int = ...): ...
+    def __init__(self, nparams: int = ..., size: int = ...): ...
     def clean(self, ki: int, kf: int) -> None: ...
     @staticmethod
     def clear(walker: FitESMCMCWalker) -> None: ...
@@ -2778,23 +3286,78 @@ class FitESMCMCWalker(GObject.Object):
     def do_desc(self) -> str: ...
     def do_get_nparams(self) -> int: ...
     def do_get_size(self) -> int: ...
-    def do_prob(self, theta: Sequence[Vector], m2lnL: Sequence[Vector], thetastar: Vector, k: int, m2lnL_cur: float, m2lnL_star: float) -> float: ...
-    def do_prob_norm(self, theta: Sequence[Vector], m2lnL: Sequence[Vector], thetastar: Vector, k: int) -> float: ...
+    def do_prob(
+        self,
+        theta: Sequence[Vector],
+        m2lnL: Sequence[Vector],
+        thetastar: Vector,
+        k: int,
+        m2lnL_cur: float,
+        m2lnL_star: float,
+    ) -> float: ...
+    def do_prob_norm(
+        self,
+        theta: Sequence[Vector],
+        m2lnL: Sequence[Vector],
+        thetastar: Vector,
+        k: int,
+    ) -> float: ...
     def do_set_nparams(self, nparams: int) -> None: ...
     def do_set_size(self, size: int) -> None: ...
-    def do_setup(self, mset: MSet, theta: Sequence[Vector], m2lnL: Sequence[Vector], ki: int, kf: int, rng: RNG) -> None: ...
-    def do_step(self, theta: Sequence[Vector], m2lnL: Sequence[Vector], thetastar: Vector, k: int) -> None: ...
+    def do_setup(
+        self,
+        mset: MSet,
+        theta: Sequence[Vector],
+        m2lnL: Sequence[Vector],
+        ki: int,
+        kf: int,
+        rng: RNG,
+    ) -> None: ...
+    def do_step(
+        self,
+        theta: Sequence[Vector],
+        m2lnL: Sequence[Vector],
+        thetastar: Vector,
+        k: int,
+    ) -> None: ...
     def free(self) -> None: ...
     def get_nparams(self) -> int: ...
     def get_size(self) -> int: ...
-    def prob(self, theta: Sequence[Vector], m2lnL: Sequence[Vector], thetastar: Vector, k: int, m2lnL_cur: float, m2lnL_star: float) -> float: ...
-    def prob_norm(self, theta: Sequence[Vector], m2lnL: Sequence[Vector], thetastar: Vector, k: int) -> float: ...
+    def prob(
+        self,
+        theta: Sequence[Vector],
+        m2lnL: Sequence[Vector],
+        thetastar: Vector,
+        k: int,
+        m2lnL_cur: float,
+        m2lnL_star: float,
+    ) -> float: ...
+    def prob_norm(
+        self,
+        theta: Sequence[Vector],
+        m2lnL: Sequence[Vector],
+        thetastar: Vector,
+        k: int,
+    ) -> float: ...
     def ref(self) -> FitESMCMCWalker: ...
     def set_nparams(self, nparams: int) -> None: ...
     def set_size(self, size: int) -> None: ...
-    def setup(self, mset: MSet, theta: Sequence[Vector], m2lnL: Sequence[Vector], ki: int, kf: int, rng: RNG) -> None: ...
-    def step(self, theta: Sequence[Vector], m2lnL: Sequence[Vector], thetastar: Vector, k: int) -> None: ...
-    
+    def setup(
+        self,
+        mset: MSet,
+        theta: Sequence[Vector],
+        m2lnL: Sequence[Vector],
+        ki: int,
+        kf: int,
+        rng: RNG,
+    ) -> None: ...
+    def step(
+        self,
+        theta: Sequence[Vector],
+        m2lnL: Sequence[Vector],
+        thetastar: Vector,
+        k: int,
+    ) -> None: ...
 
 class FitESMCMCWalkerAPES(FitESMCMCWalker):
     r"""
@@ -2829,6 +3392,7 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         kernel_type: FitESMCMCWalkerAPESKType
         method: FitESMCMCWalkerAPESMethod
@@ -2838,13 +3402,16 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         nparams: int
         size: int
     props: Props = ...
-    def __init__(self, kernel_type: FitESMCMCWalkerAPESKType = ...,
-                 method: FitESMCMCWalkerAPESMethod = ...,
-                 over_smooth: float = ...,
-                 use_interp: bool = ...,
-                 use_threads: bool = ...,
-                 nparams: int = ...,
-                 size: int = ...): ...
+    def __init__(
+        self,
+        kernel_type: FitESMCMCWalkerAPESKType = ...,
+        method: FitESMCMCWalkerAPESMethod = ...,
+        over_smooth: float = ...,
+        use_interp: bool = ...,
+        use_threads: bool = ...,
+        nparams: int = ...,
+        size: int = ...,
+    ): ...
     @staticmethod
     def clear(apes: FitESMCMCWalkerAPES) -> None: ...
     def free(self) -> None: ...
@@ -2856,7 +3423,15 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
     @classmethod
     def new(cls, nwalkers: int, nparams: int) -> FitESMCMCWalkerAPES: ...
     @classmethod
-    def new_full(cls, nwalkers: int, nparams: int, method: FitESMCMCWalkerAPESMethod, k_type: FitESMCMCWalkerAPESKType, over_smooth: float, use_interp: bool) -> FitESMCMCWalkerAPES: ...
+    def new_full(
+        cls,
+        nwalkers: int,
+        nparams: int,
+        method: FitESMCMCWalkerAPESMethod,
+        k_type: FitESMCMCWalkerAPESKType,
+        over_smooth: float,
+        use_interp: bool,
+    ) -> FitESMCMCWalkerAPES: ...
     def peek_sds(self) -> Tuple[StatsDist, StatsDist]: ...
     def ref(self) -> FitESMCMCWalkerAPES: ...
     def set_cov_fixed_from_mset(self, mset: MSet) -> None: ...
@@ -2868,7 +3443,6 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
     def set_over_smooth(self, os: float) -> None: ...
     def set_use_threads(self, use_threads: bool) -> None: ...
     def use_interp(self, use_interp: bool) -> None: ...
-    
 
 class FitESMCMCWalkerAPESClass(GObject.GPointer):
     r"""
@@ -2893,10 +3467,27 @@ class FitESMCMCWalkerClass(GObject.GPointer):
     get_size: Callable[[FitESMCMCWalker], int] = ...
     set_nparams: Callable[[FitESMCMCWalker, int], None] = ...
     get_nparams: Callable[[FitESMCMCWalker], int] = ...
-    setup: Callable[[FitESMCMCWalker, MSet, Sequence[Vector], Sequence[Vector], int, int, RNG], None] = ...
-    step: Callable[[FitESMCMCWalker, Sequence[Vector], Sequence[Vector], Vector, int], None] = ...
-    prob: Callable[[FitESMCMCWalker, Sequence[Vector], Sequence[Vector], Vector, int, float, float], float] = ...
-    prob_norm: Callable[[FitESMCMCWalker, Sequence[Vector], Sequence[Vector], Vector, int], float] = ...
+    setup: Callable[
+        [FitESMCMCWalker, MSet, Sequence[Vector], Sequence[Vector], int, int, RNG], None
+    ] = ...
+    step: Callable[
+        [FitESMCMCWalker, Sequence[Vector], Sequence[Vector], Vector, int], None
+    ] = ...
+    prob: Callable[
+        [
+            FitESMCMCWalker,
+            Sequence[Vector],
+            Sequence[Vector],
+            Vector,
+            int,
+            float,
+            float,
+        ],
+        float,
+    ] = ...
+    prob_norm: Callable[
+        [FitESMCMCWalker, Sequence[Vector], Sequence[Vector], Vector, int], float
+    ] = ...
     clean: Callable[[FitESMCMCWalker, int, int], None] = ...
     desc: Callable[[FitESMCMCWalker], str] = ...
     padding: list[None] = ...
@@ -2927,16 +3518,20 @@ class FitESMCMCWalkerStretch(FitESMCMCWalker):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         multi_stretch: bool
         scale: float
         nparams: int
         size: int
     props: Props = ...
-    def __init__(self, multi_stretch: bool = ...,
-                 scale: float = ...,
-                 nparams: int = ...,
-                 size: int = ...): ...
+    def __init__(
+        self,
+        multi_stretch: bool = ...,
+        scale: float = ...,
+        nparams: int = ...,
+        size: int = ...,
+    ): ...
     def get_scale(self) -> float: ...
     def multi(self, multi: bool) -> None: ...
     @classmethod
@@ -2944,7 +3539,6 @@ class FitESMCMCWalkerStretch(FitESMCMCWalker):
     def set_box(self, n: int, lb: float, ub: float) -> None: ...
     def set_box_mset(self, mset: MSet) -> None: ...
     def set_scale(self, a: float) -> None: ...
-    
 
 class FitESMCMCWalkerStretchClass(GObject.GPointer):
     r"""
@@ -2980,19 +3574,17 @@ class FitESMCMCWalkerWalk(FitESMCMCWalker):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         scale: float
         nparams: int
         size: int
     props: Props = ...
-    def __init__(self, scale: float = ...,
-                 nparams: int = ...,
-                 size: int = ...): ...
+    def __init__(self, scale: float = ..., nparams: int = ..., size: int = ...): ...
     def get_scale(self) -> float: ...
     @classmethod
     def new(cls, nwalkers: int) -> FitESMCMCWalkerWalk: ...
     def set_scale(self, a: float) -> None: ...
-    
 
 class FitESMCMCWalkerWalkClass(GObject.GPointer):
     r"""
@@ -3046,6 +3638,7 @@ class FitGSLLS(Fit):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         equality_constraints: ObjArray
         equality_constraints_tot: Vector
@@ -3061,22 +3654,24 @@ class FitGSLLS(Fit):
         state: FitState
         sub_fit: Fit
     props: Props = ...
-    def __init__(self, equality_constraints: ObjArray = ...,
-                 equality_constraints_tot: Vector = ...,
-                 grad_type: FitGradType = ...,
-                 inequality_constraints: ObjArray = ...,
-                 inequality_constraints_tot: Vector = ...,
-                 likelihood: Likelihood = ...,
-                 m2lnL_abstol: float = ...,
-                 m2lnL_reltol: float = ...,
-                 maxiter: int = ...,
-                 mset: MSet = ...,
-                 params_reltol: float = ...,
-                 state: FitState = ...,
-                 sub_fit: Fit = ...): ...
+    def __init__(
+        self,
+        equality_constraints: ObjArray = ...,
+        equality_constraints_tot: Vector = ...,
+        grad_type: FitGradType = ...,
+        inequality_constraints: ObjArray = ...,
+        inequality_constraints_tot: Vector = ...,
+        likelihood: Likelihood = ...,
+        m2lnL_abstol: float = ...,
+        m2lnL_reltol: float = ...,
+        maxiter: int = ...,
+        mset: MSet = ...,
+        params_reltol: float = ...,
+        state: FitState = ...,
+        sub_fit: Fit = ...,
+    ): ...
     @classmethod
     def new(cls, lh: Likelihood, mset: MSet, gtype: FitGradType) -> FitGSLLS: ...
-    
 
 class FitGSLLSClass(GObject.GPointer):
     r"""
@@ -3136,6 +3731,7 @@ class FitGSLMM(Fit):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         algorithm: FitGSLMMAlgos
         equality_constraints: ObjArray
@@ -3152,28 +3748,36 @@ class FitGSLMM(Fit):
         state: FitState
         sub_fit: Fit
     props: Props = ...
-    def __init__(self, algorithm: FitGSLMMAlgos = ...,
-                 equality_constraints: ObjArray = ...,
-                 equality_constraints_tot: Vector = ...,
-                 grad_type: FitGradType = ...,
-                 inequality_constraints: ObjArray = ...,
-                 inequality_constraints_tot: Vector = ...,
-                 likelihood: Likelihood = ...,
-                 m2lnL_abstol: float = ...,
-                 m2lnL_reltol: float = ...,
-                 maxiter: int = ...,
-                 mset: MSet = ...,
-                 params_reltol: float = ...,
-                 state: FitState = ...,
-                 sub_fit: Fit = ...): ...
+    def __init__(
+        self,
+        algorithm: FitGSLMMAlgos = ...,
+        equality_constraints: ObjArray = ...,
+        equality_constraints_tot: Vector = ...,
+        grad_type: FitGradType = ...,
+        inequality_constraints: ObjArray = ...,
+        inequality_constraints_tot: Vector = ...,
+        likelihood: Likelihood = ...,
+        m2lnL_abstol: float = ...,
+        m2lnL_reltol: float = ...,
+        maxiter: int = ...,
+        mset: MSet = ...,
+        params_reltol: float = ...,
+        state: FitState = ...,
+        sub_fit: Fit = ...,
+    ): ...
     @classmethod
-    def new(cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo: FitGSLMMAlgos) -> FitGSLMM: ...
+    def new(
+        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo: FitGSLMMAlgos
+    ) -> FitGSLMM: ...
     @classmethod
-    def new_by_name(cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str) -> FitGSLMM: ...
+    def new_by_name(
+        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str
+    ) -> FitGSLMM: ...
     @classmethod
-    def new_default(cls, lh: Likelihood, mset: MSet, gtype: FitGradType) -> FitGSLMM: ...
+    def new_default(
+        cls, lh: Likelihood, mset: MSet, gtype: FitGradType
+    ) -> FitGSLMM: ...
     def set_algo(self, algo: FitGSLMMAlgos) -> None: ...
-    
 
 class FitGSLMMClass(GObject.GPointer):
     r"""
@@ -3233,6 +3837,7 @@ class FitGSLMMS(Fit):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         algorithm: FitGSLMMSAlgos
         equality_constraints: ObjArray
@@ -3249,28 +3854,36 @@ class FitGSLMMS(Fit):
         state: FitState
         sub_fit: Fit
     props: Props = ...
-    def __init__(self, algorithm: FitGSLMMSAlgos = ...,
-                 equality_constraints: ObjArray = ...,
-                 equality_constraints_tot: Vector = ...,
-                 grad_type: FitGradType = ...,
-                 inequality_constraints: ObjArray = ...,
-                 inequality_constraints_tot: Vector = ...,
-                 likelihood: Likelihood = ...,
-                 m2lnL_abstol: float = ...,
-                 m2lnL_reltol: float = ...,
-                 maxiter: int = ...,
-                 mset: MSet = ...,
-                 params_reltol: float = ...,
-                 state: FitState = ...,
-                 sub_fit: Fit = ...): ...
+    def __init__(
+        self,
+        algorithm: FitGSLMMSAlgos = ...,
+        equality_constraints: ObjArray = ...,
+        equality_constraints_tot: Vector = ...,
+        grad_type: FitGradType = ...,
+        inequality_constraints: ObjArray = ...,
+        inequality_constraints_tot: Vector = ...,
+        likelihood: Likelihood = ...,
+        m2lnL_abstol: float = ...,
+        m2lnL_reltol: float = ...,
+        maxiter: int = ...,
+        mset: MSet = ...,
+        params_reltol: float = ...,
+        state: FitState = ...,
+        sub_fit: Fit = ...,
+    ): ...
     @classmethod
-    def new(cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo: FitGSLMMSAlgos) -> FitGSLMMS: ...
+    def new(
+        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo: FitGSLMMSAlgos
+    ) -> FitGSLMMS: ...
     @classmethod
-    def new_by_name(cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str) -> FitGSLMMS: ...
+    def new_by_name(
+        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str
+    ) -> FitGSLMMS: ...
     @classmethod
-    def new_default(cls, lh: Likelihood, mset: MSet, gtype: FitGradType) -> FitGSLMMS: ...
+    def new_default(
+        cls, lh: Likelihood, mset: MSet, gtype: FitGradType
+    ) -> FitGSLMMS: ...
     def set_algo(self, algo: FitGSLMMSAlgos) -> None: ...
-    
 
 class FitGSLMMSClass(GObject.GPointer):
     r"""
@@ -3345,6 +3958,7 @@ class FitLevmar(Fit):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         algorithm: FitLevmarAlgos
         equality_constraints: ObjArray
@@ -3361,28 +3975,36 @@ class FitLevmar(Fit):
         state: FitState
         sub_fit: Fit
     props: Props = ...
-    def __init__(self, algorithm: FitLevmarAlgos = ...,
-                 equality_constraints: ObjArray = ...,
-                 equality_constraints_tot: Vector = ...,
-                 grad_type: FitGradType = ...,
-                 inequality_constraints: ObjArray = ...,
-                 inequality_constraints_tot: Vector = ...,
-                 likelihood: Likelihood = ...,
-                 m2lnL_abstol: float = ...,
-                 m2lnL_reltol: float = ...,
-                 maxiter: int = ...,
-                 mset: MSet = ...,
-                 params_reltol: float = ...,
-                 state: FitState = ...,
-                 sub_fit: Fit = ...): ...
+    def __init__(
+        self,
+        algorithm: FitLevmarAlgos = ...,
+        equality_constraints: ObjArray = ...,
+        equality_constraints_tot: Vector = ...,
+        grad_type: FitGradType = ...,
+        inequality_constraints: ObjArray = ...,
+        inequality_constraints_tot: Vector = ...,
+        likelihood: Likelihood = ...,
+        m2lnL_abstol: float = ...,
+        m2lnL_reltol: float = ...,
+        maxiter: int = ...,
+        mset: MSet = ...,
+        params_reltol: float = ...,
+        state: FitState = ...,
+        sub_fit: Fit = ...,
+    ): ...
     @classmethod
-    def new(cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo: FitLevmarAlgos) -> FitLevmar: ...
+    def new(
+        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo: FitLevmarAlgos
+    ) -> FitLevmar: ...
     @classmethod
-    def new_by_name(cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str) -> FitLevmar: ...
+    def new_by_name(
+        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str
+    ) -> FitLevmar: ...
     @classmethod
-    def new_default(cls, lh: Likelihood, mset: MSet, gtype: FitGradType) -> FitLevmar: ...
+    def new_default(
+        cls, lh: Likelihood, mset: MSet, gtype: FitGradType
+    ) -> FitLevmar: ...
     def set_algo(self, algo: FitLevmarAlgos) -> None: ...
-    
 
 class FitLevmarClass(GObject.GPointer):
     r"""
@@ -3422,6 +4044,7 @@ class FitMC(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         fiducial: MSet
         fit: Fit
@@ -3430,12 +4053,15 @@ class FitMC(GObject.Object):
         nthreads: int
         rtype: FitMCResampleType
     props: Props = ...
-    def __init__(self, fiducial: MSet = ...,
-                 fit: Fit = ...,
-                 keep_order: bool = ...,
-                 mtype: FitRunMsgs = ...,
-                 nthreads: int = ...,
-                 rtype: FitMCResampleType = ...): ...
+    def __init__(
+        self,
+        fiducial: MSet = ...,
+        fit: Fit = ...,
+        keep_order: bool = ...,
+        mtype: FitRunMsgs = ...,
+        nthreads: int = ...,
+        rtype: FitMCResampleType = ...,
+    ): ...
     @staticmethod
     def clear(mc: FitMC) -> None: ...
     def end_run(self) -> None: ...
@@ -3458,7 +4084,6 @@ class FitMC(GObject.Object):
     def set_rng(self, rng: RNG) -> None: ...
     def set_rtype(self, rtype: FitMCResampleType) -> None: ...
     def start_run(self) -> None: ...
-    
 
 class FitMCBS(GObject.Object):
     r"""
@@ -3480,22 +4105,30 @@ class FitMCBS(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         filename: str
         fit: Fit
     props: Props = ...
-    def __init__(self, filename: str = ...,
-                 fit: Fit = ...): ...
+    def __init__(self, filename: str = ..., fit: Fit = ...): ...
     @staticmethod
     def clear(mcbs: FitMCBS) -> None: ...
     def free(self) -> None: ...
     def get_catalog(self) -> MSetCatalog: ...
     @classmethod
     def new(cls, fit: Fit) -> FitMCBS: ...
-    def run(self, fiduc: MSet, ni: int, nf: int, nbstraps: int, rtype: FitMCResampleType, mtype: FitRunMsgs, bsmt: int) -> None: ...
+    def run(
+        self,
+        fiduc: MSet,
+        ni: int,
+        nf: int,
+        nbstraps: int,
+        rtype: FitMCResampleType,
+        mtype: FitRunMsgs,
+        bsmt: int,
+    ) -> None: ...
     def set_filename(self, filename: str) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
-    
 
 class FitMCBSClass(GObject.GPointer):
     r"""
@@ -3541,16 +4174,20 @@ class FitMCMC(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         fit: Fit
         mtype: FitRunMsgs
         nthreads: int
         sampler: MSetTransKern
     props: Props = ...
-    def __init__(self, fit: Fit = ...,
-                 mtype: FitRunMsgs = ...,
-                 nthreads: int = ...,
-                 sampler: MSetTransKern = ...): ...
+    def __init__(
+        self,
+        fit: Fit = ...,
+        mtype: FitRunMsgs = ...,
+        nthreads: int = ...,
+        sampler: MSetTransKern = ...,
+    ): ...
     @staticmethod
     def clear(mcmc: FitMCMC) -> None: ...
     def end_run(self) -> None: ...
@@ -3571,7 +4208,6 @@ class FitMCMC(GObject.Object):
     def set_rng(self, rng: RNG) -> None: ...
     def set_trans_kern(self, tkern: MSetTransKern) -> None: ...
     def start_run(self) -> None: ...
-    
 
 class FitMCMCClass(GObject.GPointer):
     r"""
@@ -3634,6 +4270,7 @@ class FitNLOpt(Fit):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         algorithm: FitNloptAlgorithm
         local_algorithm: FitNloptAlgorithm
@@ -3651,32 +4288,47 @@ class FitNLOpt(Fit):
         state: FitState
         sub_fit: Fit
     props: Props = ...
-    def __init__(self, algorithm: FitNloptAlgorithm = ...,
-                 local_algorithm: FitNloptAlgorithm = ...,
-                 equality_constraints: ObjArray = ...,
-                 equality_constraints_tot: Vector = ...,
-                 grad_type: FitGradType = ...,
-                 inequality_constraints: ObjArray = ...,
-                 inequality_constraints_tot: Vector = ...,
-                 likelihood: Likelihood = ...,
-                 m2lnL_abstol: float = ...,
-                 m2lnL_reltol: float = ...,
-                 maxiter: int = ...,
-                 mset: MSet = ...,
-                 params_reltol: float = ...,
-                 state: FitState = ...,
-                 sub_fit: Fit = ...): ...
+    def __init__(
+        self,
+        algorithm: FitNloptAlgorithm = ...,
+        local_algorithm: FitNloptAlgorithm = ...,
+        equality_constraints: ObjArray = ...,
+        equality_constraints_tot: Vector = ...,
+        grad_type: FitGradType = ...,
+        inequality_constraints: ObjArray = ...,
+        inequality_constraints_tot: Vector = ...,
+        likelihood: Likelihood = ...,
+        m2lnL_abstol: float = ...,
+        m2lnL_reltol: float = ...,
+        maxiter: int = ...,
+        mset: MSet = ...,
+        params_reltol: float = ...,
+        state: FitState = ...,
+        sub_fit: Fit = ...,
+    ): ...
     @classmethod
-    def local_new(cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo: FitNloptAlgorithm, local_algo: FitNloptAlgorithm) -> FitNLOpt: ...
+    def local_new(
+        cls,
+        lh: Likelihood,
+        mset: MSet,
+        gtype: FitGradType,
+        algo: FitNloptAlgorithm,
+        local_algo: FitNloptAlgorithm,
+    ) -> FitNLOpt: ...
     @classmethod
-    def new(cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo: FitNloptAlgorithm) -> FitNLOpt: ...
+    def new(
+        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo: FitNloptAlgorithm
+    ) -> FitNLOpt: ...
     @classmethod
-    def new_by_name(cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str) -> FitNLOpt: ...
+    def new_by_name(
+        cls, lh: Likelihood, mset: MSet, gtype: FitGradType, algo_name: str
+    ) -> FitNLOpt: ...
     @classmethod
-    def new_default(cls, lh: Likelihood, mset: MSet, gtype: FitGradType) -> FitNLOpt: ...
+    def new_default(
+        cls, lh: Likelihood, mset: MSet, gtype: FitGradType
+    ) -> FitNLOpt: ...
     def set_algo(self, algo: FitNloptAlgorithm) -> None: ...
     def set_local_algo(self, algo: FitNloptAlgorithm) -> None: ...
-    
 
 class FitNLOptClass(GObject.GPointer):
     r"""
@@ -3720,6 +4372,7 @@ class FitState(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         data_len: int
         dof: int
@@ -3730,14 +4383,17 @@ class FitState(GObject.Object):
         is_least_squares: bool
         niters: int
     props: Props = ...
-    def __init__(self, data_len: int = ...,
-                 dof: int = ...,
-                 fparam_len: int = ...,
-                 func_eval: int = ...,
-                 grad_eval: int = ...,
-                 is_best_fit: bool = ...,
-                 is_least_squares: bool = ...,
-                 niters: int = ...): ...
+    def __init__(
+        self,
+        data_len: int = ...,
+        dof: int = ...,
+        fparam_len: int = ...,
+        func_eval: int = ...,
+        grad_eval: int = ...,
+        is_best_fit: bool = ...,
+        is_least_squares: bool = ...,
+        niters: int = ...,
+    ): ...
     def add_func_eval(self, func_eval: int) -> None: ...
     def add_grad_eval(self, grad_eval: int) -> None: ...
     def add_iter(self, niter: int) -> None: ...
@@ -3758,7 +4414,9 @@ class FitState(GObject.Object):
     def is_best_fit(self) -> bool: ...
     def is_least_squares(self) -> bool: ...
     @classmethod
-    def new(cls, data_len: int, fparam_len: int, dof: int, is_least_squares: bool) -> FitState: ...
+    def new(
+        cls, data_len: int, fparam_len: int, dof: int, is_least_squares: bool
+    ) -> FitState: ...
     def peek_J(self) -> Matrix: ...
     def peek_covar(self) -> Matrix: ...
     def peek_f(self) -> Vector: ...
@@ -3766,7 +4424,9 @@ class FitState(GObject.Object):
     def peek_hessian(self) -> Matrix: ...
     def ref(self) -> FitState: ...
     def reset(self) -> None: ...
-    def set_all(self, data_len: int, fparam_len: int, dof: int, is_least_squares: bool) -> None: ...
+    def set_all(
+        self, data_len: int, fparam_len: int, dof: int, is_least_squares: bool
+    ) -> None: ...
     def set_data_len(self, data_len: int) -> None: ...
     def set_dof(self, dof: int) -> None: ...
     def set_elapsed_time(self, elapsed_time: float) -> None: ...
@@ -3781,7 +4441,6 @@ class FitState(GObject.Object):
     def set_m2lnL_prec(self, prec: float) -> None: ...
     def set_niter(self, niter: int) -> None: ...
     def set_params_prec(self, prec: float) -> None: ...
-    
 
 class FitStateClass(GObject.GPointer):
     r"""
@@ -3815,26 +4474,28 @@ class FunctionCache(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         dimension: int
         reltol: float
     props: Props = ...
-    def __init__(self, abstol: float = ...,
-                 dimension: int = ...,
-                 reltol: float = ...): ...
+    def __init__(
+        self, abstol: float = ..., dimension: int = ..., reltol: float = ...
+    ): ...
     @staticmethod
     def clear(cache: FunctionCache) -> None: ...
     def empty_cache(self) -> None: ...
     def free(self) -> None: ...
     def get_abstol(self) -> float: ...
-    def get_near(self, x: float, x_found_ptr: float, type: FunctionCacheSearchType) -> Tuple[bool, Vector]: ...
+    def get_near(
+        self, x: float, x_found_ptr: float, type: FunctionCacheSearchType
+    ) -> Tuple[bool, Vector]: ...
     def get_reltol(self) -> float: ...
     def insert_vector(self, x: float, p: Vector) -> None: ...
     @classmethod
     def new(cls, n: int, abstol: float, reltol: float) -> FunctionCache: ...
     def ref(self) -> FunctionCache: ...
-    
 
 class FunctionCacheClass(GObject.GPointer):
     r"""
@@ -3875,6 +4536,7 @@ class HOAA(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         k: float
@@ -3885,13 +4547,16 @@ class HOAA(GObject.Object):
         ti: float
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, abstol: float = ...,
-                 k: float = ...,
-                 opt: HOAAOpt = ...,
-                 reltol: float = ...,
-                 save_evol: bool = ...,
-                 tf: float = ...,
-                 ti: float = ...): ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        k: float = ...,
+        opt: HOAAOpt = ...,
+        reltol: float = ...,
+        save_evol: bool = ...,
+        tf: float = ...,
+        ti: float = ...,
+    ): ...
     @staticmethod
     def clear(hoaa: HOAA) -> None: ...
     def do_eval_V(self, model: Optional[Model], t: float, k: float) -> float: ...
@@ -3899,34 +4564,78 @@ class HOAA(GObject.Object):
     def do_eval_mnu(self, model: Optional[Model], t: float, k: float) -> float: ...
     def do_eval_nu(self, model: Optional[Model], t: float, k: float) -> float: ...
     def do_eval_powspec_factor(self, model: Optional[Model] = None) -> float: ...
-    def do_eval_sing_V(self, model: Optional[Model], t_m_ts: float, k: float, sing: int) -> float: ...
-    def do_eval_sing_dlnmnu(self, model: Optional[Model], t_m_ts: float, k: float, sing: int) -> float: ...
-    def do_eval_sing_mnu(self, model: Optional[Model], t_m_ts: float, k: float, sing: int) -> float: ...
-    def do_eval_sing_system(self, model: Optional[Model], t_m_ts: float, k: float, sing: int) -> Tuple[float, float, float]: ...
-    def do_eval_system(self, model: Optional[Model], t: float, k: float) -> Tuple[float, float, float]: ...
-    def do_get_sing_info(self, model: Optional[Model], k: float, sing: int) -> Tuple[float, float, float, HOAASingType]: ...
+    def do_eval_sing_V(
+        self, model: Optional[Model], t_m_ts: float, k: float, sing: int
+    ) -> float: ...
+    def do_eval_sing_dlnmnu(
+        self, model: Optional[Model], t_m_ts: float, k: float, sing: int
+    ) -> float: ...
+    def do_eval_sing_mnu(
+        self, model: Optional[Model], t_m_ts: float, k: float, sing: int
+    ) -> float: ...
+    def do_eval_sing_system(
+        self, model: Optional[Model], t_m_ts: float, k: float, sing: int
+    ) -> Tuple[float, float, float]: ...
+    def do_eval_system(
+        self, model: Optional[Model], t: float, k: float
+    ) -> Tuple[float, float, float]: ...
+    def do_get_sing_info(
+        self, model: Optional[Model], k: float, sing: int
+    ) -> Tuple[float, float, float, HOAASingType]: ...
     def do_nsing(self, model: Optional[Model], k: float) -> int: ...
     def do_prepare(self, model: Optional[Model] = None) -> None: ...
-    def eval_AA(self, model: Optional[Model], t: float) -> Tuple[float, float, float, float]: ...
-    def eval_AA2QV(self, model: Optional[Model], t: float, upsilon: float, gamma: float, qbar: float, pbar: float) -> Tuple[float, float, float, float]: ...
+    def eval_AA(
+        self, model: Optional[Model], t: float
+    ) -> Tuple[float, float, float, float]: ...
+    def eval_AA2QV(
+        self,
+        model: Optional[Model],
+        t: float,
+        upsilon: float,
+        gamma: float,
+        qbar: float,
+        pbar: float,
+    ) -> Tuple[float, float, float, float]: ...
     def eval_Delta(self, model: Optional[Model], t: float) -> Tuple[float, float]: ...
-    def eval_QV(self, model: Optional[Model], t: float) -> Tuple[float, float, float, float]: ...
-    def eval_QV2AA(self, model: Optional[Model], t: float, q: float, v: float, Pq: float, Pv: float) -> Tuple[float, float, float, float]: ...
+    def eval_QV(
+        self, model: Optional[Model], t: float
+    ) -> Tuple[float, float, float, float]: ...
+    def eval_QV2AA(
+        self, model: Optional[Model], t: float, q: float, v: float, Pq: float, Pv: float
+    ) -> Tuple[float, float, float, float]: ...
     def eval_V(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def eval_adiabatic_LnI_approx(self, model: Optional[Model], t: float, theta: float, psi: float) -> Tuple[float, float]: ...
-    def eval_adiabatic_approx(self, model: Optional[Model], t: float) -> Tuple[float, float, float]: ...
+    def eval_adiabatic_LnI_approx(
+        self, model: Optional[Model], t: float, theta: float, psi: float
+    ) -> Tuple[float, float]: ...
+    def eval_adiabatic_approx(
+        self, model: Optional[Model], t: float
+    ) -> Tuple[float, float, float]: ...
     def eval_dlnmnu(self, model: Optional[Model], t: float, k: float) -> float: ...
     def eval_mnu(self, model: Optional[Model], t: float, k: float) -> float: ...
     def eval_nu(self, model: Optional[Model], t: float, k: float) -> float: ...
     def eval_powspec_factor(self, model: Optional[Model] = None) -> float: ...
-    def eval_sing_V(self, model: Optional[Model], t_m_ts: float, k: float, sing: int) -> float: ...
-    def eval_sing_dlnmnu(self, model: Optional[Model], t_m_ts: float, k: float, sing: int) -> float: ...
-    def eval_sing_mnu(self, model: Optional[Model], t_m_ts: float, k: float, sing: int) -> float: ...
-    def eval_sing_system(self, model: Optional[Model], t_m_ts: float, k: float, sing: int) -> Tuple[float, float, float]: ...
-    def eval_solution(self, model: Optional[Model], t: float, S: float, PS: float) -> Tuple[float, float]: ...
-    def eval_system(self, model: Optional[Model], t: float, k: float) -> Tuple[float, float, float]: ...
+    def eval_sing_V(
+        self, model: Optional[Model], t_m_ts: float, k: float, sing: int
+    ) -> float: ...
+    def eval_sing_dlnmnu(
+        self, model: Optional[Model], t_m_ts: float, k: float, sing: int
+    ) -> float: ...
+    def eval_sing_mnu(
+        self, model: Optional[Model], t_m_ts: float, k: float, sing: int
+    ) -> float: ...
+    def eval_sing_system(
+        self, model: Optional[Model], t_m_ts: float, k: float, sing: int
+    ) -> Tuple[float, float, float]: ...
+    def eval_solution(
+        self, model: Optional[Model], t: float, S: float, PS: float
+    ) -> Tuple[float, float]: ...
+    def eval_system(
+        self, model: Optional[Model], t: float, k: float
+    ) -> Tuple[float, float, float]: ...
     def free(self) -> None: ...
-    def get_sing_info(self, model: Optional[Model], k: float, sing: int) -> Tuple[float, float, float, HOAASingType]: ...
+    def get_sing_info(
+        self, model: Optional[Model], k: float, sing: int
+    ) -> Tuple[float, float, float, HOAASingType]: ...
     def get_t0_t1(self, model: Optional[Model] = None) -> Tuple[float, float]: ...
     def nsing(self, model: Optional[Model], k: float) -> int: ...
     def prepare(self, model: Optional[Model] = None) -> None: ...
@@ -3937,7 +4646,6 @@ class HOAA(GObject.Object):
     def set_reltol(self, reltol: float) -> None: ...
     def set_tf(self, tf: float) -> None: ...
     def set_ti(self, ti: float) -> None: ...
-    
 
 class HOAAClass(GObject.GPointer):
     r"""
@@ -3952,13 +4660,19 @@ class HOAAClass(GObject.GPointer):
     eval_nu: Callable[[HOAA, Optional[Model], float, float], float] = ...
     eval_dlnmnu: Callable[[HOAA, Optional[Model], float, float], float] = ...
     eval_V: Callable[[HOAA, Optional[Model], float, float], float] = ...
-    eval_system: Callable[[HOAA, Optional[Model], float, float], Tuple[float, float, float]] = ...
+    eval_system: Callable[
+        [HOAA, Optional[Model], float, float], Tuple[float, float, float]
+    ] = ...
     nsing: Callable[[HOAA, Optional[Model], float], int] = ...
-    get_sing_info: Callable[[HOAA, Optional[Model], float, int], Tuple[float, float, float, HOAASingType]] = ...
+    get_sing_info: Callable[
+        [HOAA, Optional[Model], float, int], Tuple[float, float, float, HOAASingType]
+    ] = ...
     eval_sing_mnu: Callable[[HOAA, Optional[Model], float, float, int], float] = ...
     eval_sing_dlnmnu: Callable[[HOAA, Optional[Model], float, float, int], float] = ...
     eval_sing_V: Callable[[HOAA, Optional[Model], float, float, int], float] = ...
-    eval_sing_system: Callable[[HOAA, Optional[Model], float, float, int], Tuple[float, float, float]] = ...
+    eval_sing_system: Callable[
+        [HOAA, Optional[Model], float, float, int], Tuple[float, float, float]
+    ] = ...
     eval_powspec_factor: Callable[[HOAA, Optional[Model]], float] = ...
     prepare: Callable[[HOAA, Optional[Model]], None] = ...
     padding: list[None] = ...
@@ -3981,6 +4695,7 @@ class ISet(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         max_index: int
     props: Props = ...
@@ -4007,12 +4722,13 @@ class ISet(GObject.Object):
     @classmethod
     def new(cls, n: int) -> ISet: ...
     def ref(self) -> ISet: ...
-    def remove_smallest_subset(self, target: ISet, v: Vector, max_remove: int) -> int: ...
+    def remove_smallest_subset(
+        self, target: ISet, v: Vector, max_remove: int
+    ) -> int: ...
     def remove_subset(self, target: ISet) -> None: ...
     def reset(self) -> None: ...
     def set_complement(self, cmplm: ISet) -> None: ...
     def set_subvector(self, v: Vector, sub: Vector) -> None: ...
-    
 
 class ISetClass(GObject.GPointer):
     r"""
@@ -4047,6 +4763,7 @@ class Integral1d(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         partition: int
@@ -4054,10 +4771,13 @@ class Integral1d(GObject.Object):
         rule: int
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, abstol: float = ...,
-                 partition: int = ...,
-                 reltol: float = ...,
-                 rule: int = ...): ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        partition: int = ...,
+        reltol: float = ...,
+        rule: int = ...,
+    ): ...
     @staticmethod
     def clear(int1d: Integral1d) -> None: ...
     def do_integrand(self, x: float, w: float) -> float: ...
@@ -4081,7 +4801,6 @@ class Integral1d(GObject.Object):
     def set_partition(self, partition: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_rule(self, rule: int) -> None: ...
-    
 
 class Integral1dClass(GObject.GPointer):
     r"""
@@ -4128,6 +4847,7 @@ class Integral1dPtr(Integral1d):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         integrand: None
         userdata: Optional[None]
@@ -4137,23 +4857,35 @@ class Integral1dPtr(Integral1d):
         reltol: float
         rule: int
     props: Props = ...
-    def __init__(self, integrand: None = ...,
-                 userdata: Optional[None] = ...,
-                 userfree: None = ...,
-                 abstol: float = ...,
-                 partition: int = ...,
-                 reltol: float = ...,
-                 rule: int = ...): ...
+    def __init__(
+        self,
+        integrand: None = ...,
+        userdata: Optional[None] = ...,
+        userfree: None = ...,
+        abstol: float = ...,
+        partition: int = ...,
+        reltol: float = ...,
+        rule: int = ...,
+    ): ...
     @staticmethod
     def clear(int1d_ptr: Integral1dPtr) -> None: ...
     def free(self) -> None: ...
     @classmethod
-    def new(cls, F: Callable[[None, float, float], float], userfree: Callable[[None], None]) -> Integral1dPtr: ...
+    def new(
+        cls, F: Callable[[None, float, float], float], userfree: Callable[[None], None]
+    ) -> Integral1dPtr: ...
     @classmethod
-    def new_full(cls, F: Callable[[None, float, float], float], userfree: Callable[[None], None], reltol: float, abstol: float, partition: int, rule: int) -> Integral1dPtr: ...
+    def new_full(
+        cls,
+        F: Callable[[None, float, float], float],
+        userfree: Callable[[None], None],
+        reltol: float,
+        abstol: float,
+        partition: int,
+        rule: int,
+    ) -> Integral1dPtr: ...
     def ref(self) -> Integral1dPtr: ...
     def set_userdata(self, userdata: None) -> None: ...
-    
 
 class Integral1dPtrClass(GObject.GPointer):
     r"""
@@ -4180,7 +4912,6 @@ class IntegralFixed(GObject.GPointer):
     rule_n: int = ...
     def free(self) -> None: ...
     def nodes_eval(self) -> float: ...
-    
 
 class IntegralND(GObject.Object):
     r"""
@@ -4207,6 +4938,7 @@ class IntegralND(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         error: IntegralNDError
@@ -4215,15 +4947,20 @@ class IntegralND(GObject.Object):
         reltol: float
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, abstol: float = ...,
-                 error: IntegralNDError = ...,
-                 maxeval: int = ...,
-                 method: IntegralNDMethod = ...,
-                 reltol: float = ...): ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        error: IntegralNDError = ...,
+        maxeval: int = ...,
+        method: IntegralNDMethod = ...,
+        reltol: float = ...,
+    ): ...
     @staticmethod
     def clear(intnd: IntegralND) -> None: ...
     def do_get_dimensions(self) -> Tuple[int, int]: ...
-    def do_integrand(self, x: Vector, dim: int, npoints: int, fdim: int, fval: Vector) -> None: ...
+    def do_integrand(
+        self, x: Vector, dim: int, npoints: int, fdim: int, fval: Vector
+    ) -> None: ...
     def eval(self, xi: Vector, xf: Vector, res: Vector, err: Vector) -> None: ...
     def free(self) -> None: ...
     def get_abstol(self) -> float: ...
@@ -4237,7 +4974,6 @@ class IntegralND(GObject.Object):
     def set_maxeval(self, maxeval: int) -> None: ...
     def set_method(self, method: IntegralNDMethod) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
-    
 
 class IntegralNDClass(GObject.GPointer):
     r"""
@@ -4296,14 +5032,15 @@ class LHRatio1d(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         constraint: MSetFunc
         fit: Fit
         pi: MSetPIndex
     props: Props = ...
-    def __init__(self, constraint: MSetFunc = ...,
-                 fit: Fit = ...,
-                 pi: MSetPIndex = ...): ...
+    def __init__(
+        self, constraint: MSetFunc = ..., fit: Fit = ..., pi: MSetPIndex = ...
+    ): ...
     @staticmethod
     def clear(lhr1d: LHRatio1d) -> None: ...
     def find_bounds(self, clevel: float, mtype: FitRunMsgs) -> Tuple[float, float]: ...
@@ -4311,7 +5048,6 @@ class LHRatio1d(GObject.Object):
     @classmethod
     def new(cls, fit: Fit, pi: MSetPIndex) -> LHRatio1d: ...
     def set_pindex(self, pi: MSetPIndex) -> None: ...
-    
 
 class LHRatio1dClass(GObject.GPointer):
     r"""
@@ -4347,25 +5083,34 @@ class LHRatio2d(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         border_prec: float
         pi1: MSetPIndex
         pi2: MSetPIndex
         fit: Fit
     props: Props = ...
-    def __init__(self, border_prec: float = ...,
-                 fit: Fit = ...,
-                 pi1: MSetPIndex = ...,
-                 pi2: MSetPIndex = ...): ...
+    def __init__(
+        self,
+        border_prec: float = ...,
+        fit: Fit = ...,
+        pi1: MSetPIndex = ...,
+        pi2: MSetPIndex = ...,
+    ): ...
     @staticmethod
     def clear(lhr2d: LHRatio2d) -> None: ...
-    def conf_region(self, clevel: float, expected_np: float, mtype: FitRunMsgs) -> LHRatio2dRegion: ...
-    def fisher_border(self, clevel: float, expected_np: float, mtype: FitRunMsgs) -> LHRatio2dRegion: ...
+    def conf_region(
+        self, clevel: float, expected_np: float, mtype: FitRunMsgs
+    ) -> LHRatio2dRegion: ...
+    def fisher_border(
+        self, clevel: float, expected_np: float, mtype: FitRunMsgs
+    ) -> LHRatio2dRegion: ...
     def free(self) -> None: ...
     @classmethod
-    def new(cls, fit: Fit, pi1: MSetPIndex, pi2: MSetPIndex, border_prec: float) -> LHRatio2d: ...
+    def new(
+        cls, fit: Fit, pi1: MSetPIndex, pi2: MSetPIndex, border_prec: float
+    ) -> LHRatio2d: ...
     def set_pindex(self, pi1: MSetPIndex, pi2: MSetPIndex) -> None: ...
-    
 
 class LHRatio2dClass(GObject.GPointer):
     r"""
@@ -4408,7 +5153,6 @@ class LHRatio2dRegion(GObject.GBoxed):
     def dup(self) -> LHRatio2dRegion: ...
     def free(self) -> None: ...
     def print_(self, out: int) -> None: ...
-    
 
 class LapackWS(GObject.GBoxed):
     r"""
@@ -4427,7 +5171,6 @@ class LapackWS(GObject.GBoxed):
     def free(self) -> None: ...
     @classmethod
     def new(cls) -> LapackWS: ...
-    
 
 class Likelihood(GObject.Object):
     r"""
@@ -4453,16 +5196,20 @@ class Likelihood(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dataset: Dataset
         m2lnL_v: Vector
         priors_f: ObjArray
         priors_m2lnL: ObjArray
     props: Props = ...
-    def __init__(self, dataset: Dataset = ...,
-                 m2lnL_v: Vector = ...,
-                 priors_f: ObjArray = ...,
-                 priors_m2lnL: ObjArray = ...): ...
+    def __init__(
+        self,
+        dataset: Dataset = ...,
+        m2lnL_v: Vector = ...,
+        priors_f: ObjArray = ...,
+        priors_m2lnL: ObjArray = ...,
+    ): ...
     @staticmethod
     def clear(lh: Likelihood) -> None: ...
     def dup(self, ser: Serialize) -> Likelihood: ...
@@ -4473,14 +5220,35 @@ class Likelihood(GObject.Object):
     def new(cls, dset: Dataset) -> Likelihood: ...
     def peek_dataset(self) -> Dataset: ...
     def priors_add(self, prior: Prior) -> None: ...
-    def priors_add_flat_func(self, mean_func: MSetFunc, x_low: float, x_upp: float, scale: float, variable: float) -> None: ...
-    def priors_add_flat_param(self, mid: int, pid: int, x_low: float, x_upp: float, scale: float) -> None: ...
-    def priors_add_flat_param_name(self, mset: MSet, name: str, x_low: float, x_upp: float, scale: float) -> None: ...
-    def priors_add_flat_param_pindex(self, pi: MSetPIndex, x_low: float, x_upp: float, scale: float) -> None: ...
-    def priors_add_gauss_func(self, mean_func: MSetFunc, mu: float, sigma: float, var: float) -> None: ...
-    def priors_add_gauss_param(self, mid: int, pid: int, mu: float, sigma: float) -> None: ...
-    def priors_add_gauss_param_name(self, mset: MSet, name: str, mu: float, sigma: float) -> None: ...
-    def priors_add_gauss_param_pindex(self, pi: MSetPIndex, mu: float, sigma: float) -> None: ...
+    def priors_add_flat_func(
+        self,
+        mean_func: MSetFunc,
+        x_low: float,
+        x_upp: float,
+        scale: float,
+        variable: float,
+    ) -> None: ...
+    def priors_add_flat_param(
+        self, mid: int, pid: int, x_low: float, x_upp: float, scale: float
+    ) -> None: ...
+    def priors_add_flat_param_name(
+        self, mset: MSet, name: str, x_low: float, x_upp: float, scale: float
+    ) -> None: ...
+    def priors_add_flat_param_pindex(
+        self, pi: MSetPIndex, x_low: float, x_upp: float, scale: float
+    ) -> None: ...
+    def priors_add_gauss_func(
+        self, mean_func: MSetFunc, mu: float, sigma: float, var: float
+    ) -> None: ...
+    def priors_add_gauss_param(
+        self, mid: int, pid: int, mu: float, sigma: float
+    ) -> None: ...
+    def priors_add_gauss_param_name(
+        self, mset: MSet, name: str, mu: float, sigma: float
+    ) -> None: ...
+    def priors_add_gauss_param_pindex(
+        self, pi: MSetPIndex, mu: float, sigma: float
+    ) -> None: ...
     def priors_leastsquares_f(self, mset: MSet, priors_f: Vector) -> None: ...
     def priors_length_f(self) -> int: ...
     def priors_length_m2lnL(self) -> int: ...
@@ -4489,7 +5257,6 @@ class Likelihood(GObject.Object):
     def priors_peek_f(self, i: int) -> Prior: ...
     def priors_peek_m2lnL(self, i: int) -> Prior: ...
     def ref(self) -> Likelihood: ...
-    
 
 class LikelihoodClass(GObject.GPointer):
     r"""
@@ -4518,6 +5285,7 @@ class MPIJob(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         placeholder: int
     props: Props = ...
@@ -4559,13 +5327,16 @@ class MPIJob(GObject.Object):
     def ref(self) -> MPIJob: ...
     def return_datatype(self) -> Tuple[int, int]: ...
     def run(self, input: None, ret: None) -> None: ...
-    def run_array(self, input_array: Sequence[GObject.Object], ret_array: Sequence[GObject.Object]) -> None: ...
-    def run_array_async(self, input_array: Sequence[GObject.Object], ret_array: Sequence[GObject.Object]) -> None: ...
+    def run_array(
+        self, input_array: Sequence[GObject.Object], ret_array: Sequence[GObject.Object]
+    ) -> None: ...
+    def run_array_async(
+        self, input_array: Sequence[GObject.Object], ret_array: Sequence[GObject.Object]
+    ) -> None: ...
     def unpack_input(self, buf: None, input: None) -> None: ...
     def unpack_return(self, buf: None, ret: None) -> None: ...
     def work_clear(self) -> None: ...
     def work_init(self) -> None: ...
-    
 
 class MPIJobClass(GObject.GPointer):
     r"""
@@ -4633,21 +5404,23 @@ class MPIJobFEval(MPIJob):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         fit: Fit
         function_array: ObjArray
         placeholder: int
     props: Props = ...
-    def __init__(self, fit: Fit = ...,
-                 function_array: ObjArray = ...,
-                 placeholder: int = ...): ...
+    def __init__(
+        self, fit: Fit = ..., function_array: ObjArray = ..., placeholder: int = ...
+    ): ...
     @staticmethod
     def clear(mjfeval: MPIJobFEval) -> None: ...
     def free(self) -> None: ...
     @classmethod
-    def new(cls, fit: Fit, func_oa: Optional[Sequence[MSetFunc]] = None) -> MPIJobFEval: ...
+    def new(
+        cls, fit: Fit, func_oa: Optional[Sequence[MSetFunc]] = None
+    ) -> MPIJobFEval: ...
     def ref(self) -> MPIJobFEval: ...
-    
 
 class MPIJobFEvalClass(GObject.GPointer):
     r"""
@@ -4683,21 +5456,23 @@ class MPIJobFit(MPIJob):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         fit: Fit
         function_array: ObjArray
         placeholder: int
     props: Props = ...
-    def __init__(self, fit: Fit = ...,
-                 function_array: ObjArray = ...,
-                 placeholder: int = ...): ...
+    def __init__(
+        self, fit: Fit = ..., function_array: ObjArray = ..., placeholder: int = ...
+    ): ...
     @staticmethod
     def clear(mjfit: MPIJobFit) -> None: ...
     def free(self) -> None: ...
     @classmethod
-    def new(cls, fit: Fit, func_oa: Optional[Sequence[MSetFunc]] = None) -> MPIJobFit: ...
+    def new(
+        cls, fit: Fit, func_oa: Optional[Sequence[MSetFunc]] = None
+    ) -> MPIJobFit: ...
     def ref(self) -> MPIJobFit: ...
-    
 
 class MPIJobFitClass(GObject.GPointer):
     r"""
@@ -4733,21 +5508,23 @@ class MPIJobMCMC(MPIJob):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         fit: Fit
         function_array: ObjArray
         placeholder: int
     props: Props = ...
-    def __init__(self, fit: Fit = ...,
-                 function_array: ObjArray = ...,
-                 placeholder: int = ...): ...
+    def __init__(
+        self, fit: Fit = ..., function_array: ObjArray = ..., placeholder: int = ...
+    ): ...
     @staticmethod
     def clear(mjmcmc: MPIJobMCMC) -> None: ...
     def free(self) -> None: ...
     @classmethod
-    def new(cls, fit: Fit, func_oa: Optional[Sequence[MSetFunc]] = None) -> MPIJobMCMC: ...
+    def new(
+        cls, fit: Fit, func_oa: Optional[Sequence[MSetFunc]] = None
+    ) -> MPIJobMCMC: ...
     def ref(self) -> MPIJobMCMC: ...
-    
 
 class MPIJobMCMCClass(GObject.GPointer):
     r"""
@@ -4781,12 +5558,12 @@ class MPIJobTest(MPIJob):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         vector: Vector
         placeholder: int
     props: Props = ...
-    def __init__(self, vector: Vector = ...,
-                 placeholder: int = ...): ...
+    def __init__(self, vector: Vector = ..., placeholder: int = ...): ...
     @staticmethod
     def clear(mjt: MPIJobTest) -> None: ...
     def free(self) -> None: ...
@@ -4794,7 +5571,6 @@ class MPIJobTest(MPIJob):
     def new(cls) -> MPIJobTest: ...
     def ref(self) -> MPIJobTest: ...
     def set_rand_vector(self, len: int, rng: RNG) -> None: ...
-    
 
 class MPIJobTestClass(GObject.GPointer):
     r"""
@@ -4830,15 +5606,19 @@ class MSet(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         fmap: list[str]
         model_array: ObjArray
         valid_map: bool
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, fmap: Sequence[str] = ...,
-                 model_array: ObjArray = ...,
-                 valid_map: bool = ...): ...
+    def __init__(
+        self,
+        fmap: Sequence[str] = ...,
+        model_array: ObjArray = ...,
+        valid_map: bool = ...,
+    ): ...
     @staticmethod
     def clear(mset: MSet) -> None: ...
     def cmp(self, mset1: MSet, cmp_model: bool) -> bool: ...
@@ -4937,7 +5717,6 @@ class MSet(GObject.Object):
     def set_pos(self, model: Model, stackpos_id: int) -> None: ...
     def shallow_copy(self) -> MSet: ...
     def total_len(self) -> int: ...
-    
 
 class MSetCatalog(GObject.Object):
     r"""
@@ -4987,6 +5766,7 @@ class MSetCatalog(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         burnin: int
         filename: str
@@ -5004,35 +5784,64 @@ class MSetCatalog(GObject.Object):
         tau_method: MSetCatalogTauMethod
         weighted: bool
     props: Props = ...
-    def __init__(self, burnin: int = ...,
-                 filename: str = ...,
-                 m2lnp_var: int = ...,
-                 mset: MSet = ...,
-                 nadd_val_names: Sequence[str] = ...,
-                 nadd_val_symbols: Sequence[str] = ...,
-                 nadd_vals: int = ...,
-                 nchains: int = ...,
-                 read_only: bool = ...,
-                 rng: RNG = ...,
-                 run_type_string: str = ...,
-                 smode: MSetCatalogSync = ...,
-                 sync_interval: float = ...,
-                 tau_method: MSetCatalogTauMethod = ...,
-                 weighted: bool = ...): ...
+    def __init__(
+        self,
+        burnin: int = ...,
+        filename: str = ...,
+        m2lnp_var: int = ...,
+        mset: MSet = ...,
+        nadd_val_names: Sequence[str] = ...,
+        nadd_val_symbols: Sequence[str] = ...,
+        nadd_vals: int = ...,
+        nchains: int = ...,
+        read_only: bool = ...,
+        rng: RNG = ...,
+        run_type_string: str = ...,
+        smode: MSetCatalogSync = ...,
+        sync_interval: float = ...,
+        tau_method: MSetCatalogTauMethod = ...,
+        weighted: bool = ...,
+    ): ...
     def add_from_mset_array(self, mset: MSet, ax: Sequence[float]) -> None: ...
     def add_from_vector(self, vals: Vector) -> None: ...
     def add_from_vector_array(self, vals: Vector, ax: Sequence[float]) -> None: ...
-    def calc_add_param_distrib(self, add_param: int, mtype: FitRunMsgs) -> StatsDist1d: ...
-    def calc_add_param_ensemble_evol(self, add_param: int, nsteps: int, mtype: FitRunMsgs) -> Tuple[Vector, Matrix]: ...
-    def calc_ci_direct(self, func: MSetFunc, x_v: Vector, p_val: Sequence[float]) -> Matrix: ...
-    def calc_ci_interp(self, func: MSetFunc, x_v: Vector, p_val: Sequence[float], nodes: int, mtype: FitRunMsgs) -> Matrix: ...
+    def calc_add_param_distrib(
+        self, add_param: int, mtype: FitRunMsgs
+    ) -> StatsDist1d: ...
+    def calc_add_param_ensemble_evol(
+        self, add_param: int, nsteps: int, mtype: FitRunMsgs
+    ) -> Tuple[Vector, Matrix]: ...
+    def calc_ci_direct(
+        self, func: MSetFunc, x_v: Vector, p_val: Sequence[float]
+    ) -> Matrix: ...
+    def calc_ci_interp(
+        self,
+        func: MSetFunc,
+        x_v: Vector,
+        p_val: Sequence[float],
+        nodes: int,
+        mtype: FitRunMsgs,
+    ) -> Matrix: ...
     def calc_const_break(self, p: int, mtype: FitRunMsgs) -> int: ...
     def calc_distrib(self, func: MSetFunc, mtype: FitRunMsgs) -> StatsDist1d: ...
-    def calc_heidel_diag(self, ntests: int, pvalue: float, mtype: FitRunMsgs) -> int: ...
-    def calc_max_ess_time(self, ntests: int, mtype: FitRunMsgs) -> Tuple[int, float]: ...
+    def calc_heidel_diag(
+        self, ntests: int, pvalue: float, mtype: FitRunMsgs
+    ) -> int: ...
+    def calc_max_ess_time(
+        self, ntests: int, mtype: FitRunMsgs
+    ) -> Tuple[int, float]: ...
     def calc_param_distrib(self, pi: MSetPIndex, mtype: FitRunMsgs) -> StatsDist1d: ...
-    def calc_param_ensemble_evol(self, pi: MSetPIndex, nsteps: int, mtype: FitRunMsgs) -> Tuple[Vector, Matrix]: ...
-    def calc_pvalue(self, func: MSetFunc, x_v: Vector, lim: Sequence[float], nodes: int, mtype: FitRunMsgs) -> Matrix: ...
+    def calc_param_ensemble_evol(
+        self, pi: MSetPIndex, nsteps: int, mtype: FitRunMsgs
+    ) -> Tuple[Vector, Matrix]: ...
+    def calc_pvalue(
+        self,
+        func: MSetFunc,
+        x_v: Vector,
+        lim: Sequence[float],
+        nodes: int,
+        mtype: FitRunMsgs,
+    ) -> Matrix: ...
     @staticmethod
     def clear(mcat: MSetCatalog) -> None: ...
     def col_by_name(self, name: str) -> Tuple[bool, int]: ...
@@ -5060,20 +5869,32 @@ class MSetCatalog(GObject.Object):
     def get_run_type(self) -> str: ...
     def get_shrink_factor(self) -> float: ...
     def get_tau_method(self) -> MSetCatalogTauMethod: ...
-    def heidel_diag_by_chain(self, ntests: int, pvalue: float, mtype: FitRunMsgs) -> Tuple[int, float]: ...
+    def heidel_diag_by_chain(
+        self, ntests: int, pvalue: float, mtype: FitRunMsgs
+    ) -> Tuple[int, float]: ...
     def is_empty(self) -> bool: ...
     def largest_error(self) -> float: ...
     def len(self) -> int: ...
     def log_current_chain_stats(self) -> None: ...
     def log_current_stats(self) -> None: ...
     def log_full_covar(self) -> None: ...
-    def max_ess_time_by_chain(self, ntests: int, mtype: FitRunMsgs) -> Tuple[int, float]: ...
+    def max_ess_time_by_chain(
+        self, ntests: int, mtype: FitRunMsgs
+    ) -> Tuple[int, float]: ...
     def max_time(self) -> int: ...
     def nadd_vals(self) -> int: ...
     def nchains(self) -> int: ...
     def ncols(self) -> int: ...
     @classmethod
-    def new_array(cls, mset: MSet, nadd_vals: int, nchains: int, weighted: bool, names: Sequence[str], symbols: Sequence[str]) -> MSetCatalog: ...
+    def new_array(
+        cls,
+        mset: MSet,
+        nadd_vals: int,
+        nchains: int,
+        weighted: bool,
+        names: Sequence[str],
+        symbols: Sequence[str],
+    ) -> MSetCatalog: ...
     @classmethod
     def new_from_file(cls, filename: str, burnin: int) -> MSetCatalog: ...
     @classmethod
@@ -5110,11 +5931,12 @@ class MSetCatalog(GObject.Object):
     def sync(self, check: bool) -> None: ...
     def timed_sync(self, check: bool) -> None: ...
     def trim(self, tc: int, thin: int) -> None: ...
-    def trim_by_type(self, ntests: int, trim_type: MSetCatalogTrimType, mtype: FitRunMsgs) -> None: ...
+    def trim_by_type(
+        self, ntests: int, trim_type: MSetCatalogTrimType, mtype: FitRunMsgs
+    ) -> None: ...
     def trim_oob(self, out_file: str) -> int: ...
     def trim_p(self, p: float) -> None: ...
     def weighted(self) -> bool: ...
-    
 
 class MSetCatalogClass(GObject.GPointer):
     r"""
@@ -5160,15 +5982,16 @@ class MSetFunc(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dimension: int
         eval_x: Vector
         nvariables: int
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, dimension: int = ...,
-                 eval_x: Vector = ...,
-                 nvariables: int = ...): ...
+    def __init__(
+        self, dimension: int = ..., eval_x: Vector = ..., nvariables: int = ...
+    ): ...
     @staticmethod
     def array_new() -> list[MSetFunc]: ...
     @staticmethod
@@ -5195,8 +6018,9 @@ class MSetFunc(GObject.Object):
     def peek_usymbol(self) -> str: ...
     def ref(self) -> MSetFunc: ...
     def set_eval_x(self, x: Sequence[float]) -> None: ...
-    def set_meta(self, name: str, symbol: str, ns: str, desc: str, nvar: int, dim: int) -> None: ...
-    
+    def set_meta(
+        self, name: str, symbol: str, ns: str, desc: str, nvar: int, dim: int
+    ) -> None: ...
 
 class MSetFunc1(MSetFunc):
     r"""
@@ -5219,22 +6043,22 @@ class MSetFunc1(MSetFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dimension: int
         eval_x: Vector
         nvariables: int
     props: Props = ...
     parent_instance: MSetFunc = ...
-    def __init__(self, dimension: int = ...,
-                 eval_x: Vector = ...,
-                 nvariables: int = ...): ...
+    def __init__(
+        self, dimension: int = ..., eval_x: Vector = ..., nvariables: int = ...
+    ): ...
     @staticmethod
     def clear(f1: MSetFunc1) -> None: ...
     def do_eval1(self, mset: MSet, x: Sequence[float]) -> list[float]: ...
     def eval1(self, mset: MSet, x: Sequence[float]) -> list[float]: ...
     def free(self) -> None: ...
     def ref(self) -> MSetFunc1: ...
-    
 
 class MSetFunc1Class(GObject.GPointer):
     r"""
@@ -5289,6 +6113,7 @@ class MSetFuncList(MSetFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         full_name: str
         object: GObject.Object
@@ -5297,25 +6122,40 @@ class MSetFuncList(MSetFunc):
         nvariables: int
     props: Props = ...
     parent_instance: MSetFunc = ...
-    def __init__(self, full_name: str = ...,
-                 object: GObject.Object = ...,
-                 dimension: int = ...,
-                 eval_x: Vector = ...,
-                 nvariables: int = ...): ...
+    def __init__(
+        self,
+        full_name: str = ...,
+        object: GObject.Object = ...,
+        dimension: int = ...,
+        eval_x: Vector = ...,
+        nvariables: int = ...,
+    ): ...
     @staticmethod
     def has_full_name(full_name: str) -> bool: ...
     @staticmethod
     def has_ns_name(ns: str, name: str) -> bool: ...
     @classmethod
-    def new(cls, full_name: str, obj: Optional[GObject.Object] = None) -> MSetFuncList: ...
+    def new(
+        cls, full_name: str, obj: Optional[GObject.Object] = None
+    ) -> MSetFuncList: ...
     @classmethod
-    def new_ns_name(cls, ns: str, name: str, obj: Optional[GObject.Object] = None) -> MSetFuncList: ...
+    def new_ns_name(
+        cls, ns: str, name: str, obj: Optional[GObject.Object] = None
+    ) -> MSetFuncList: ...
     def peek_obj(self) -> GObject.Object: ...
     @staticmethod
-    def register(name: str, symbol: str, ns: str, desc: str, obj_type: Type, func: Callable[[MSetFuncList, MSet, float, float], None], nvar: int, dim: int) -> None: ...
+    def register(
+        name: str,
+        symbol: str,
+        ns: str,
+        desc: str,
+        obj_type: Type,
+        func: Callable[[MSetFuncList, MSet, float, float], None],
+        nvar: int,
+        dim: int,
+    ) -> None: ...
     @staticmethod
     def select(ns: Optional[str], nvar: int, dim: int) -> list[MSetFuncListStruct]: ...
-    
 
 class MSetFuncListClass(GObject.GPointer):
     r"""
@@ -5376,7 +6216,6 @@ class MSetPIndex(GObject.GBoxed):
     def free(self) -> None: ...
     @classmethod
     def new(cls, mid: int, pid: int) -> MSetPIndex: ...
-    
 
 class MSetTransKern(GObject.Object):
     r"""
@@ -5395,6 +6234,7 @@ class MSetTransKern(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         mset: MSet
     props: Props = ...
@@ -5419,7 +6259,6 @@ class MSetTransKern(GObject.Object):
     def set_mset(self, mset: MSet) -> None: ...
     def set_prior(self, theta: Vector) -> None: ...
     def set_prior_from_mset(self) -> None: ...
-    
 
 class MSetTransKernCat(MSetTransKern):
     r"""
@@ -5453,6 +6292,7 @@ class MSetTransKernCat(MSetTransKern):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         catalog: MSetCatalog
         choose_cut: bool
@@ -5462,19 +6302,23 @@ class MSetTransKernCat(MSetTransKern):
         stats_dist: StatsDist
         mset: MSet
     props: Props = ...
-    def __init__(self, catalog: MSetCatalog = ...,
-                 choose_cut: bool = ...,
-                 choose_percentile: float = ...,
-                 m2lnL_reltol: float = ...,
-                 sampling_type: MSetTransKernCatSampling = ...,
-                 stats_dist: StatsDist = ...,
-                 mset: MSet = ...): ...
+    def __init__(
+        self,
+        catalog: MSetCatalog = ...,
+        choose_cut: bool = ...,
+        choose_percentile: float = ...,
+        m2lnL_reltol: float = ...,
+        sampling_type: MSetTransKernCatSampling = ...,
+        stats_dist: StatsDist = ...,
+        mset: MSet = ...,
+    ): ...
     def get_sampling(self) -> MSetTransKernCatSampling: ...
     @classmethod
-    def new(cls, mcat: MSetCatalog, sd: Optional[StatsDist] = None) -> MSetTransKernCat: ...
+    def new(
+        cls, mcat: MSetCatalog, sd: Optional[StatsDist] = None
+    ) -> MSetTransKernCat: ...
     def reset(self) -> None: ...
     def set_sampling(self, sampling: MSetTransKernCatSampling) -> None: ...
-    
 
 class MSetTransKernCatClass(GObject.GPointer):
     r"""
@@ -5521,13 +6365,13 @@ class MSetTransKernFlat(MSetTransKern):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         mset: MSet
     props: Props = ...
     def __init__(self, mset: MSet = ...): ...
     @classmethod
     def new(cls) -> MSetTransKernFlat: ...
-    
 
 class MSetTransKernFlatClass(GObject.GPointer):
     r"""
@@ -5563,14 +6407,13 @@ class MSetTransKernGauss(MSetTransKern):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         cov: Matrix
         length: int
         mset: MSet
     props: Props = ...
-    def __init__(self, cov: Matrix = ...,
-                 length: int = ...,
-                 mset: MSet = ...): ...
+    def __init__(self, cov: Matrix = ..., length: int = ..., mset: MSet = ...): ...
     def get_cov(self) -> Matrix: ...
     def get_size(self) -> int: ...
     @classmethod
@@ -5580,7 +6423,6 @@ class MSetTransKernGauss(MSetTransKern):
     def set_cov_from_scale(self) -> None: ...
     def set_cov_variant(self, cov: GLib.Variant) -> None: ...
     def set_size(self, len: int) -> None: ...
-    
 
 class MSetTransKernGaussClass(GObject.GPointer):
     r"""
@@ -5615,6 +6457,7 @@ class Matrix(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         values: GLib.Variant
     props: Props = ...
@@ -5650,16 +6493,29 @@ class Matrix(GObject.Object):
     def cov2cor(self, cor: Matrix) -> None: ...
     def cov_dup_cor(self) -> Matrix: ...
     def data(self) -> float: ...
-    def dgemm(self, TransA: int, TransB: int, alpha: float, A: Matrix, B: Matrix, beta: float) -> None: ...
+    def dgemm(
+        self, TransA: int, TransB: int, alpha: float, A: Matrix, B: Matrix, beta: float
+    ) -> None: ...
     def div_elements(self, cm2: Matrix) -> None: ...
-    def dsymm(self, UL: int, alpha: float, A: Matrix, B: Matrix, beta: float) -> None: ...
+    def dsymm(
+        self, UL: int, alpha: float, A: Matrix, B: Matrix, beta: float
+    ) -> None: ...
     def dup(self) -> Matrix: ...
     def dup_array(self) -> list[float]: ...
     def fast_get(self, ij: int) -> float: ...
     def fast_set(self, ij: int, val: float) -> None: ...
     def fill_rand_cor(self, cor_level: float, rng: RNG) -> None: ...
-    def fill_rand_cov(self, sigma_min: float, sigma_max: float, cor_level: float, rng: RNG) -> None: ...
-    def fill_rand_cov2(self, mu: Vector, reltol_min: float, reltol_max: float, cor_level: float, rng: RNG) -> None: ...
+    def fill_rand_cov(
+        self, sigma_min: float, sigma_max: float, cor_level: float, rng: RNG
+    ) -> None: ...
+    def fill_rand_cov2(
+        self,
+        mu: Vector,
+        reltol_min: float,
+        reltol_max: float,
+        cor_level: float,
+        rng: RNG,
+    ) -> None: ...
     def free(self) -> None: ...
     def get(self, i: int, j: int) -> float: ...
     def get_array(self) -> list[float]: ...
@@ -5684,7 +6540,15 @@ class Matrix(GObject.Object):
     @classmethod
     def new_array(cls, a: Sequence[float], ncols: int) -> Matrix: ...
     @classmethod
-    def new_full(cls, d: float, nrows: int, ncols: int, tda: int, pdata: None, pfree: Optional[Callable[[None], None]] = None) -> Matrix: ...
+    def new_full(
+        cls,
+        d: float,
+        nrows: int,
+        ncols: int,
+        tda: int,
+        pdata: None,
+        pfree: Optional[Callable[[None], None]] = None,
+    ) -> Matrix: ...
     @classmethod
     def new_variant(cls, var: GLib.Variant) -> Matrix: ...
     def nrows(self) -> int: ...
@@ -5711,13 +6575,16 @@ class Matrix(GObject.Object):
     def substitute(cm: Matrix, nm: Optional[Matrix], check_size: bool) -> None: ...
     def sym_exp_cholesky(self, UL: int, exp_cm_dec: Matrix) -> None: ...
     def sym_posdef_log(self, UL: int, ln_cm: Matrix) -> None: ...
-    def sym_update_vector(self, UL: int, alpha: float, v: Vector, beta: float, u: Vector) -> None: ...
+    def sym_update_vector(
+        self, UL: int, alpha: float, v: Vector, beta: float, u: Vector
+    ) -> None: ...
     def tda(self) -> int: ...
     def transpose(self) -> None: ...
     def transpose_memcpy(self, src: Matrix) -> None: ...
     def triang_to_sym(self, UL: int, zero: bool, sym: Matrix) -> None: ...
-    def update_vector(self, NT: int, alpha: float, v: Vector, beta: float, u: Vector) -> None: ...
-    
+    def update_vector(
+        self, NT: int, alpha: float, v: Vector, beta: float, u: Vector
+    ) -> None: ...
 
 class MatrixClass(GObject.GPointer):
     r"""
@@ -5751,7 +6618,6 @@ class MemoryPool(GObject.GPointer):
     @staticmethod
     def return_(p: None) -> None: ...
     def set_min_size(self, n: int) -> None: ...
-    
 
 class MemoryPoolSlice(GObject.GPointer):
     r"""
@@ -5798,6 +6664,7 @@ class Model(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         implementation: int
         name: str
@@ -5810,10 +6677,15 @@ class Model(GObject.Object):
         vector_params_len: int
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, reparam: Reparam = ...,
-                 sparam_array: ObjArray = ...,
-                 submodel_array: ObjArray = ...): ...
-    def add_params(self, sparam_len: int, vparam_len: int, nonparam_prop_len: int) -> None: ...
+    def __init__(
+        self,
+        reparam: Reparam = ...,
+        sparam_array: ObjArray = ...,
+        submodel_array: ObjArray = ...,
+    ): ...
+    def add_params(
+        self, sparam_len: int, vparam_len: int, nonparam_prop_len: int
+    ) -> None: ...
     def add_submodel(self, submodel: Model) -> None: ...
     def check_impl_flag(self, impl: int) -> bool: ...
     def check_impl_opt(self, opt: int) -> bool: ...
@@ -5897,9 +6769,32 @@ class Model(GObject.Object):
     def ref(self) -> Model: ...
     def set_name_nick(self, name: str, nick: str) -> None: ...
     def set_reparam(self, reparam: Reparam) -> None: ...
-    def set_sparam(self, sparam_id: int, symbol: str, name: str, lower_bound: float, upper_bound: float, scale: float, abstol: float, default_value: float, ppt: ParamType) -> None: ...
+    def set_sparam(
+        self,
+        sparam_id: int,
+        symbol: str,
+        name: str,
+        lower_bound: float,
+        upper_bound: float,
+        scale: float,
+        abstol: float,
+        default_value: float,
+        ppt: ParamType,
+    ) -> None: ...
     def set_sparam_obj(self, sparam_id: int, sparam: SParam) -> None: ...
-    def set_vparam(self, vparam_id: int, default_length: int, symbol: str, name: str, lower_bound: float, upper_bound: float, scale: float, abstol: float, default_value: float, ppt: ParamType) -> None: ...
+    def set_vparam(
+        self,
+        vparam_id: int,
+        default_length: int,
+        symbol: str,
+        name: str,
+        lower_bound: float,
+        upper_bound: float,
+        scale: float,
+        abstol: float,
+        default_value: float,
+        ppt: ParamType,
+    ) -> None: ...
     def set_vparam_len(self, n: int, len: int) -> None: ...
     def set_vparam_obj(self, vparam_id: int, vparam: VParam) -> None: ...
     def sparam_len(self) -> int: ...
@@ -5914,7 +6809,6 @@ class Model(GObject.Object):
     def vparam_array_len(self) -> int: ...
     def vparam_index(self, n: int, i: int) -> int: ...
     def vparam_len(self, n: int) -> int: ...
-    
 
 class ModelBuilder(GObject.Object):
     r"""
@@ -5938,25 +6832,46 @@ class ModelBuilder(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         description: str
         name: str
         parent_type: Type
     props: Props = ...
-    def __init__(self, description: str = ...,
-                 name: str = ...,
-                 parent_type: Type = ...): ...
-    def add_sparam(self, symbol: str, name: str, lower_bound: float, upper_bound: float, scale: float, abstol: float, default_value: float, ppt: ParamType) -> None: ...
+    def __init__(
+        self, description: str = ..., name: str = ..., parent_type: Type = ...
+    ): ...
+    def add_sparam(
+        self,
+        symbol: str,
+        name: str,
+        lower_bound: float,
+        upper_bound: float,
+        scale: float,
+        abstol: float,
+        default_value: float,
+        ppt: ParamType,
+    ) -> None: ...
     def add_sparam_obj(self, sparam: SParam) -> None: ...
     def add_sparams(self, sparams: ObjArray) -> None: ...
-    def add_vparam(self, default_length: int, symbol: str, name: str, lower_bound: float, upper_bound: float, scale: float, abstol: float, default_value: float, ppt: ParamType) -> None: ...
+    def add_vparam(
+        self,
+        default_length: int,
+        symbol: str,
+        name: str,
+        lower_bound: float,
+        upper_bound: float,
+        scale: float,
+        abstol: float,
+        default_value: float,
+        ppt: ParamType,
+    ) -> None: ...
     def add_vparam_obj(self, vparam: VParam) -> None: ...
     def create(self) -> Type: ...
     def get_sparams(self) -> ObjArray: ...
     @classmethod
     def new(cls, ptype: Type, name: str, desc: str) -> ModelBuilder: ...
     def ref(self) -> ModelBuilder: ...
-    
 
 class ModelBuilderClass(GObject.GPointer):
     r"""
@@ -5995,14 +6910,38 @@ class ModelClass(GObject.GPointer):
     parent_vparam_len: int = ...
     sparam: list[None] = ...
     vparam: list[None] = ...
-    def add_params(self, sparam_len: int, vparam_len: int, nonparam_prop_len: int) -> None: ...
+    def add_params(
+        self, sparam_len: int, vparam_len: int, nonparam_prop_len: int
+    ) -> None: ...
     def check_params_info(self) -> None: ...
     def set_name_nick(self, name: str, nick: str) -> None: ...
-    def set_sparam(self, sparam_id: int, symbol: str, name: str, lower_bound: float, upper_bound: float, scale: float, abstol: float, default_value: float, ppt: ParamType) -> None: ...
+    def set_sparam(
+        self,
+        sparam_id: int,
+        symbol: str,
+        name: str,
+        lower_bound: float,
+        upper_bound: float,
+        scale: float,
+        abstol: float,
+        default_value: float,
+        ppt: ParamType,
+    ) -> None: ...
     def set_sparam_obj(self, sparam_id: int, sparam: SParam) -> None: ...
-    def set_vparam(self, vparam_id: int, default_length: int, symbol: str, name: str, lower_bound: float, upper_bound: float, scale: float, abstol: float, default_value: float, ppt: ParamType) -> None: ...
+    def set_vparam(
+        self,
+        vparam_id: int,
+        default_length: int,
+        symbol: str,
+        name: str,
+        lower_bound: float,
+        upper_bound: float,
+        scale: float,
+        abstol: float,
+        default_value: float,
+        ppt: ParamType,
+    ) -> None: ...
     def set_vparam_obj(self, vparam_id: int, vparam: VParam) -> None: ...
-    
 
 class ModelCtrl(GObject.Object):
     r"""
@@ -6022,6 +6961,7 @@ class ModelCtrl(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         model: Model
     props: Props = ...
@@ -6039,7 +6979,6 @@ class ModelCtrl(GObject.Object):
     def set_model(self, model: Model) -> bool: ...
     def submodel_last_update(self, mid: int) -> bool: ...
     def update(self, model: Model) -> bool: ...
-    
 
 class ModelCtrlClass(GObject.GPointer):
     r"""
@@ -6097,6 +7036,7 @@ class ModelFunnel(Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         nu: float
         nu_fit: bool
@@ -6113,14 +7053,17 @@ class ModelFunnel(Model):
         submodel_array: ObjArray
         vector_params_len: int
     props: Props = ...
-    def __init__(self, nu: float = ...,
-                 nu_fit: bool = ...,
-                 x: Vector = ...,
-                 x_fit: GLib.Variant = ...,
-                 x_length: int = ...,
-                 reparam: Reparam = ...,
-                 sparam_array: ObjArray = ...,
-                 submodel_array: ObjArray = ...): ...
+    def __init__(
+        self,
+        nu: float = ...,
+        nu_fit: bool = ...,
+        x: Vector = ...,
+        x_fit: GLib.Variant = ...,
+        x_length: int = ...,
+        reparam: Reparam = ...,
+        sparam_array: ObjArray = ...,
+        submodel_array: ObjArray = ...,
+    ): ...
     @staticmethod
     def clear(mfu: ModelFunnel) -> None: ...
     def free(self) -> None: ...
@@ -6129,7 +7072,6 @@ class ModelFunnel(Model):
     @classmethod
     def new(cls, n: int) -> ModelFunnel: ...
     def ref(self) -> ModelFunnel: ...
-    
 
 class ModelFunnelClass(GObject.GPointer):
     r"""
@@ -6185,6 +7127,7 @@ class ModelMVND(Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dim: int
         mu: Vector
@@ -6200,13 +7143,16 @@ class ModelMVND(Model):
         submodel_array: ObjArray
         vector_params_len: int
     props: Props = ...
-    def __init__(self, dim: int = ...,
-                 mu: Vector = ...,
-                 mu_fit: GLib.Variant = ...,
-                 mu_length: int = ...,
-                 reparam: Reparam = ...,
-                 sparam_array: ObjArray = ...,
-                 submodel_array: ObjArray = ...): ...
+    def __init__(
+        self,
+        dim: int = ...,
+        mu: Vector = ...,
+        mu_fit: GLib.Variant = ...,
+        mu_length: int = ...,
+        reparam: Reparam = ...,
+        sparam_array: ObjArray = ...,
+        submodel_array: ObjArray = ...,
+    ): ...
     @staticmethod
     def clear(model_mvnd: ModelMVND) -> None: ...
     def free(self) -> None: ...
@@ -6216,7 +7162,6 @@ class ModelMVND(Model):
     @classmethod
     def new(cls, dim: int) -> ModelMVND: ...
     def ref(self) -> ModelMVND: ...
-    
 
 class ModelMVNDClass(GObject.GPointer):
     r"""
@@ -6272,6 +7217,7 @@ class ModelRosenbrock(Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         x1: float
         x1_fit: bool
@@ -6287,13 +7233,16 @@ class ModelRosenbrock(Model):
         submodel_array: ObjArray
         vector_params_len: int
     props: Props = ...
-    def __init__(self, x1: float = ...,
-                 x1_fit: bool = ...,
-                 x2: float = ...,
-                 x2_fit: bool = ...,
-                 reparam: Reparam = ...,
-                 sparam_array: ObjArray = ...,
-                 submodel_array: ObjArray = ...): ...
+    def __init__(
+        self,
+        x1: float = ...,
+        x1_fit: bool = ...,
+        x2: float = ...,
+        x2_fit: bool = ...,
+        reparam: Reparam = ...,
+        sparam_array: ObjArray = ...,
+        submodel_array: ObjArray = ...,
+    ): ...
     @staticmethod
     def clear(mrb: ModelRosenbrock) -> None: ...
     def free(self) -> None: ...
@@ -6302,7 +7251,6 @@ class ModelRosenbrock(Model):
     @classmethod
     def new(cls) -> ModelRosenbrock: ...
     def ref(self) -> ModelRosenbrock: ...
-    
 
 class ModelRosenbrockClass(GObject.GPointer):
     r"""
@@ -6353,16 +7301,20 @@ class NNLS(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         ncols: int
         nrows: int
         reltol: float
         umethod: NNLSUMethod
     props: Props = ...
-    def __init__(self, ncols: int = ...,
-                 nrows: int = ...,
-                 reltol: float = ...,
-                 umethod: NNLSUMethod = ...): ...
+    def __init__(
+        self,
+        ncols: int = ...,
+        nrows: int = ...,
+        reltol: float = ...,
+        umethod: NNLSUMethod = ...,
+    ): ...
     @staticmethod
     def clear(nnls: NNLS) -> None: ...
     def free(self) -> None: ...
@@ -6381,7 +7333,6 @@ class NNLS(GObject.Object):
     def solve_gsmo(self, A: Matrix, x: Vector, f: Vector) -> float: ...
     def solve_lowrankqp(self, A: Matrix, x: Vector, f: Vector) -> float: ...
     def solve_splx(self, A: Matrix, x: Vector, f: Vector) -> float: ...
-    
 
 class NNLSClass(GObject.GPointer):
     r"""
@@ -6423,7 +7374,6 @@ class ObjArray(GObject.GBoxed):
     @classmethod
     def sized_new(cls, n: int) -> ObjArray: ...
     def unref(self) -> None: ...
-    
 
 class OdeSpline(GObject.Object):
     r"""
@@ -6464,6 +7414,7 @@ class OdeSpline(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         auto_abstol: bool
@@ -6477,26 +7428,38 @@ class OdeSpline(GObject.Object):
         yf: float
         yi: float
     props: Props = ...
-    def __init__(self, abstol: float = ...,
-                 auto_abstol: bool = ...,
-                 dydx: None = ...,
-                 ini_step: float = ...,
-                 reltol: float = ...,
-                 spline: Spline = ...,
-                 stop_hnil: bool = ...,
-                 xf: float = ...,
-                 xi: float = ...,
-                 yf: float = ...,
-                 yi: float = ...): ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        auto_abstol: bool = ...,
+        dydx: None = ...,
+        ini_step: float = ...,
+        reltol: float = ...,
+        spline: Spline = ...,
+        stop_hnil: bool = ...,
+        xf: float = ...,
+        xi: float = ...,
+        yf: float = ...,
+        yi: float = ...,
+    ): ...
     def auto_abstol(self, on: bool) -> None: ...
     @staticmethod
     def clear(os: OdeSpline) -> None: ...
     def free(self) -> None: ...
     def get_ini_step(self) -> float: ...
     @classmethod
-    def new(cls, s: Spline, dydx: Callable[[float, float, None], float]) -> OdeSpline: ...
+    def new(
+        cls, s: Spline, dydx: Callable[[float, float, None], float]
+    ) -> OdeSpline: ...
     @classmethod
-    def new_full(cls, s: Spline, dydx: Callable[[float, float, None], float], yi: float, xi: float, xf: float) -> OdeSpline: ...
+    def new_full(
+        cls,
+        s: Spline,
+        dydx: Callable[[float, float, None], float],
+        yi: float,
+        xi: float,
+        xf: float,
+    ) -> OdeSpline: ...
     def peek_spline(self) -> Spline: ...
     def prepare(self, userdata: None) -> None: ...
     def set_abstol(self, abstol: float) -> None: ...
@@ -6507,7 +7470,6 @@ class OdeSpline(GObject.Object):
     def set_xi(self, xi: float) -> None: ...
     def set_yf(self, yf: float) -> None: ...
     def set_yi(self, yi: float) -> None: ...
-    
 
 class OdeSplineClass(GObject.GPointer):
     r"""
@@ -6544,6 +7506,7 @@ class Powspec(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         kmax: float
         kmin: float
@@ -6552,11 +7515,14 @@ class Powspec(GObject.Object):
         zi: float
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, kmax: float = ...,
-                 kmin: float = ...,
-                 reltol: float = ...,
-                 zf: float = ...,
-                 zi: float = ...): ...
+    def __init__(
+        self,
+        kmax: float = ...,
+        kmin: float = ...,
+        reltol: float = ...,
+        zf: float = ...,
+        zi: float = ...,
+    ): ...
     @staticmethod
     def clear(powspec: Powspec) -> None: ...
     def corr3d(self, model: Model, reltol: float, z: float, r: float) -> float: ...
@@ -6588,10 +7554,22 @@ class Powspec(GObject.Object):
     def set_reltol_spline(self, reltol: float) -> None: ...
     def set_zf(self, zf: float) -> None: ...
     def set_zi(self, zi: float) -> None: ...
-    def sigma_tophat_R(self, model: Model, reltol: float, z: float, R: float) -> float: ...
-    def sproj(self, model: Model, reltol: float, ell: int, z1: float, z2: float, xi1: float, xi2: float) -> float: ...
-    def var_tophat_R(self, model: Model, reltol: float, z: float, R: float) -> float: ...
-    
+    def sigma_tophat_R(
+        self, model: Model, reltol: float, z: float, R: float
+    ) -> float: ...
+    def sproj(
+        self,
+        model: Model,
+        reltol: float,
+        ell: int,
+        z1: float,
+        z2: float,
+        xi1: float,
+        xi2: float,
+    ) -> float: ...
+    def var_tophat_R(
+        self, model: Model, reltol: float, z: float, R: float
+    ) -> float: ...
 
 class PowspecClass(GObject.GPointer):
     r"""
@@ -6637,6 +7615,7 @@ class PowspecCorr3d(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         lnr0: float
         powerspectrum: Powspec
@@ -6645,12 +7624,15 @@ class PowspecCorr3d(GObject.Object):
         zf: float
         zi: float
     props: Props = ...
-    def __init__(self, lnr0: float = ...,
-                 powerspectrum: Powspec = ...,
-                 reltol: float = ...,
-                 reltol_z: float = ...,
-                 zf: float = ...,
-                 zi: float = ...): ...
+    def __init__(
+        self,
+        lnr0: float = ...,
+        powerspectrum: Powspec = ...,
+        reltol: float = ...,
+        reltol_z: float = ...,
+        zf: float = ...,
+        zi: float = ...,
+    ): ...
     @staticmethod
     def clear(psc: PowspecCorr3d) -> None: ...
     def eval_xi(self, z: float, r: float) -> float: ...
@@ -6671,7 +7653,6 @@ class PowspecCorr3d(GObject.Object):
     def set_reltol_z(self, reltol_z: float) -> None: ...
     def set_zf(self, zf: float) -> None: ...
     def set_zi(self, zi: float) -> None: ...
-    
 
 class PowspecCorr3dClass(GObject.GPointer):
     r"""
@@ -6713,6 +7694,7 @@ class PowspecFilter(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         lnr0: float
         powerspectrum: Powspec
@@ -6722,13 +7704,16 @@ class PowspecFilter(GObject.Object):
         zf: float
         zi: float
     props: Props = ...
-    def __init__(self, lnr0: float = ...,
-                 powerspectrum: Powspec = ...,
-                 reltol: float = ...,
-                 reltol_z: float = ...,
-                 type: PowspecFilterType = ...,
-                 zf: float = ...,
-                 zi: float = ...): ...
+    def __init__(
+        self,
+        lnr0: float = ...,
+        powerspectrum: Powspec = ...,
+        reltol: float = ...,
+        reltol_z: float = ...,
+        type: PowspecFilterType = ...,
+        zf: float = ...,
+        zi: float = ...,
+    ): ...
     @staticmethod
     def clear(psf: PowspecFilter) -> None: ...
     def eval_dlnvar_dlnr(self, z: float, lnr: float) -> float: ...
@@ -6763,7 +7748,6 @@ class PowspecFilter(GObject.Object):
     def set_zf(self, zf: float) -> None: ...
     def set_zi(self, zi: float) -> None: ...
     def volume_rm3(self) -> float: ...
-    
 
 class PowspecFilterClass(GObject.GPointer):
     r"""
@@ -6807,6 +7791,7 @@ class PowspecSphereProj(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         ell_max: int
         ell_min: int
@@ -6817,17 +7802,22 @@ class PowspecSphereProj(GObject.Object):
         xi_f: float
         xi_i: float
     props: Props = ...
-    def __init__(self, ell_max: int = ...,
-                 ell_min: int = ...,
-                 k_pivot: float = ...,
-                 powerspectrum: Powspec = ...,
-                 reltol: float = ...,
-                 reltol_z: float = ...,
-                 xi_f: float = ...,
-                 xi_i: float = ...): ...
+    def __init__(
+        self,
+        ell_max: int = ...,
+        ell_min: int = ...,
+        k_pivot: float = ...,
+        powerspectrum: Powspec = ...,
+        reltol: float = ...,
+        reltol_z: float = ...,
+        xi_f: float = ...,
+        xi_i: float = ...,
+    ): ...
     @staticmethod
     def clear(psp: PowspecSphereProj) -> None: ...
-    def eval_Cell_xi1_xi2(self, model: Model, ell: int, z1: float, z2: float, xi1: float, xi2: float) -> float: ...
+    def eval_Cell_xi1_xi2(
+        self, model: Model, ell: int, z1: float, z2: float, xi1: float, xi2: float
+    ) -> float: ...
     def eval_lnvar_lnr(self, z: float, lnr: float) -> float: ...
     def free(self) -> None: ...
     def get_ell(self, w_i: int, ell: int) -> Tuple[list[float], list[float]]: ...
@@ -6847,7 +7837,6 @@ class PowspecSphereProj(GObject.Object):
     def set_k_pivot(self, k_pivot: float) -> None: ...
     def set_xi_f(self, xi_f: float) -> None: ...
     def set_xi_i(self, xi_i: float) -> None: ...
-    
 
 class PowspecSphereProjClass(GObject.GPointer):
     r"""
@@ -6880,21 +7869,21 @@ class Prior(MSetFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dimension: int
         eval_x: Vector
         nvariables: int
     props: Props = ...
     parent_instance: MSetFunc = ...
-    def __init__(self, dimension: int = ...,
-                 eval_x: Vector = ...,
-                 nvariables: int = ...): ...
+    def __init__(
+        self, dimension: int = ..., eval_x: Vector = ..., nvariables: int = ...
+    ): ...
     @staticmethod
     def clear(prior: Prior) -> None: ...
     def free(self) -> None: ...
     def is_m2lnL(self) -> bool: ...
     def ref(self) -> Prior: ...
-    
 
 class PriorClass(GObject.GPointer):
     r"""
@@ -6941,6 +7930,7 @@ class PriorFlat(Prior):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         h0: float
         scale: float
@@ -6952,14 +7942,17 @@ class PriorFlat(Prior):
         nvariables: int
     props: Props = ...
     parent_instance: Prior = ...
-    def __init__(self, h0: float = ...,
-                 scale: float = ...,
-                 variable: float = ...,
-                 x_low: float = ...,
-                 x_upp: float = ...,
-                 dimension: int = ...,
-                 eval_x: Vector = ...,
-                 nvariables: int = ...): ...
+    def __init__(
+        self,
+        h0: float = ...,
+        scale: float = ...,
+        variable: float = ...,
+        x_low: float = ...,
+        x_upp: float = ...,
+        dimension: int = ...,
+        eval_x: Vector = ...,
+        nvariables: int = ...,
+    ): ...
     @staticmethod
     def clear(pf: PriorFlat) -> None: ...
     def do_mean(self, mset: MSet) -> float: ...
@@ -6975,7 +7968,6 @@ class PriorFlat(Prior):
     def set_var(self, var: float) -> None: ...
     def set_x_low(self, x_low: float) -> None: ...
     def set_x_upp(self, x_upp: float) -> None: ...
-    
 
 class PriorFlatClass(GObject.GPointer):
     r"""
@@ -7027,6 +8019,7 @@ class PriorFlatFunc(PriorFlat):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         mean_func: MSetFunc
         h0: float
@@ -7038,22 +8031,31 @@ class PriorFlatFunc(PriorFlat):
         eval_x: Vector
         nvariables: int
     props: Props = ...
-    def __init__(self, mean_func: MSetFunc = ...,
-                 h0: float = ...,
-                 scale: float = ...,
-                 variable: float = ...,
-                 x_low: float = ...,
-                 x_upp: float = ...,
-                 dimension: int = ...,
-                 eval_x: Vector = ...,
-                 nvariables: int = ...): ...
+    def __init__(
+        self,
+        mean_func: MSetFunc = ...,
+        h0: float = ...,
+        scale: float = ...,
+        variable: float = ...,
+        x_low: float = ...,
+        x_upp: float = ...,
+        dimension: int = ...,
+        eval_x: Vector = ...,
+        nvariables: int = ...,
+    ): ...
     @staticmethod
     def clear(pff: PriorFlatFunc) -> None: ...
     def free(self) -> None: ...
     @classmethod
-    def new(cls, mean_func: MSetFunc, x_low: float, x_upp: float, scale: float, variable: float) -> PriorFlatFunc: ...
+    def new(
+        cls,
+        mean_func: MSetFunc,
+        x_low: float,
+        x_upp: float,
+        scale: float,
+        variable: float,
+    ) -> PriorFlatFunc: ...
     def ref(self) -> PriorFlatFunc: ...
-    
 
 class PriorFlatFuncClass(GObject.GPointer):
     r"""
@@ -7107,6 +8109,7 @@ class PriorFlatParam(PriorFlat):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         mid: int
         pid: int
@@ -7119,27 +8122,35 @@ class PriorFlatParam(PriorFlat):
         eval_x: Vector
         nvariables: int
     props: Props = ...
-    def __init__(self, mid: int = ...,
-                 pid: int = ...,
-                 h0: float = ...,
-                 scale: float = ...,
-                 variable: float = ...,
-                 x_low: float = ...,
-                 x_upp: float = ...,
-                 dimension: int = ...,
-                 eval_x: Vector = ...,
-                 nvariables: int = ...): ...
+    def __init__(
+        self,
+        mid: int = ...,
+        pid: int = ...,
+        h0: float = ...,
+        scale: float = ...,
+        variable: float = ...,
+        x_low: float = ...,
+        x_upp: float = ...,
+        dimension: int = ...,
+        eval_x: Vector = ...,
+        nvariables: int = ...,
+    ): ...
     @staticmethod
     def clear(pfp: PriorFlatParam) -> None: ...
     def free(self) -> None: ...
     @classmethod
-    def new(cls, mid: int, pid: int, x_low: float, x_upp: float, scale: float) -> PriorFlatParam: ...
+    def new(
+        cls, mid: int, pid: int, x_low: float, x_upp: float, scale: float
+    ) -> PriorFlatParam: ...
     @classmethod
-    def new_name(cls, mset: MSet, name: str, x_low: float, x_upp: float, scale: float) -> PriorFlatParam: ...
+    def new_name(
+        cls, mset: MSet, name: str, x_low: float, x_upp: float, scale: float
+    ) -> PriorFlatParam: ...
     @classmethod
-    def new_pindex(cls, pi: MSetPIndex, x_low: float, x_upp: float, scale: float) -> PriorFlatParam: ...
+    def new_pindex(
+        cls, pi: MSetPIndex, x_low: float, x_upp: float, scale: float
+    ) -> PriorFlatParam: ...
     def ref(self) -> PriorFlatParam: ...
-    
 
 class PriorFlatParamClass(GObject.GPointer):
     r"""
@@ -7180,6 +8191,7 @@ class PriorGauss(Prior):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         mu: float
         sigma: float
@@ -7189,12 +8201,15 @@ class PriorGauss(Prior):
         nvariables: int
     props: Props = ...
     parent_instance: Prior = ...
-    def __init__(self, mu: float = ...,
-                 sigma: float = ...,
-                 variable: float = ...,
-                 dimension: int = ...,
-                 eval_x: Vector = ...,
-                 nvariables: int = ...): ...
+    def __init__(
+        self,
+        mu: float = ...,
+        sigma: float = ...,
+        variable: float = ...,
+        dimension: int = ...,
+        eval_x: Vector = ...,
+        nvariables: int = ...,
+    ): ...
     @staticmethod
     def clear(pg: PriorGauss) -> None: ...
     def do_mean(self, mset: MSet) -> float: ...
@@ -7206,7 +8221,6 @@ class PriorGauss(Prior):
     def set_mean(self, mean: float) -> None: ...
     def set_sigma(self, sigma: float) -> None: ...
     def set_var(self, var: float) -> None: ...
-    
 
 class PriorGaussClass(GObject.GPointer):
     r"""
@@ -7254,6 +8268,7 @@ class PriorGaussFunc(PriorGauss):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         mean_func: MSetFunc
         mu: float
@@ -7263,20 +8278,24 @@ class PriorGaussFunc(PriorGauss):
         eval_x: Vector
         nvariables: int
     props: Props = ...
-    def __init__(self, mean_func: MSetFunc = ...,
-                 mu: float = ...,
-                 sigma: float = ...,
-                 variable: float = ...,
-                 dimension: int = ...,
-                 eval_x: Vector = ...,
-                 nvariables: int = ...): ...
+    def __init__(
+        self,
+        mean_func: MSetFunc = ...,
+        mu: float = ...,
+        sigma: float = ...,
+        variable: float = ...,
+        dimension: int = ...,
+        eval_x: Vector = ...,
+        nvariables: int = ...,
+    ): ...
     @staticmethod
     def clear(pgf: PriorGaussFunc) -> None: ...
     def free(self) -> None: ...
     @classmethod
-    def new(cls, mean_func: MSetFunc, mu: float, sigma: float, var: float) -> PriorGaussFunc: ...
+    def new(
+        cls, mean_func: MSetFunc, mu: float, sigma: float, var: float
+    ) -> PriorGaussFunc: ...
     def ref(self) -> PriorGaussFunc: ...
-    
 
 class PriorGaussFuncClass(GObject.GPointer):
     r"""
@@ -7326,6 +8345,7 @@ class PriorGaussParam(PriorGauss):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         mid: int
         pid: int
@@ -7336,25 +8356,29 @@ class PriorGaussParam(PriorGauss):
         eval_x: Vector
         nvariables: int
     props: Props = ...
-    def __init__(self, mid: int = ...,
-                 pid: int = ...,
-                 mu: float = ...,
-                 sigma: float = ...,
-                 variable: float = ...,
-                 dimension: int = ...,
-                 eval_x: Vector = ...,
-                 nvariables: int = ...): ...
+    def __init__(
+        self,
+        mid: int = ...,
+        pid: int = ...,
+        mu: float = ...,
+        sigma: float = ...,
+        variable: float = ...,
+        dimension: int = ...,
+        eval_x: Vector = ...,
+        nvariables: int = ...,
+    ): ...
     @staticmethod
     def clear(pgp: PriorGaussParam) -> None: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls, mid: int, pid: int, mu: float, sigma: float) -> PriorGaussParam: ...
     @classmethod
-    def new_name(cls, mset: MSet, name: str, mu: float, sigma: float) -> PriorGaussParam: ...
+    def new_name(
+        cls, mset: MSet, name: str, mu: float, sigma: float
+    ) -> PriorGaussParam: ...
     @classmethod
     def new_pindex(cls, pi: MSetPIndex, mu: float, sigma: float) -> PriorGaussParam: ...
     def ref(self) -> PriorGaussParam: ...
-    
 
 class PriorGaussParamClass(GObject.GPointer):
     r"""
@@ -7391,7 +8415,9 @@ class Quaternion(GObject.GBoxed):
     @classmethod
     def new(cls) -> Quaternion: ...
     @classmethod
-    def new_from_data(cls, x: float, y: float, z: float, theta: float) -> Quaternion: ...
+    def new_from_data(
+        cls, x: float, y: float, z: float, theta: float
+    ) -> Quaternion: ...
     @classmethod
     def new_from_vector(cls, v: TriVec) -> Quaternion: ...
     def norm(self) -> float: ...
@@ -7402,7 +8428,6 @@ class Quaternion(GObject.GBoxed):
     def set_I(self) -> None: ...
     def set_from_data(self, x: float, y: float, z: float, theta: float) -> None: ...
     def set_random(self, rng: RNG) -> None: ...
-    
 
 class RNG(GObject.Object):
     r"""
@@ -7427,17 +8452,18 @@ class RNG(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         algorithm: str
         seed: int
         state: str
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, algorithm: str = ...,
-                 seed: int = ...,
-                 state: str = ...): ...
+    def __init__(self, algorithm: str = ..., seed: int = ..., state: str = ...): ...
     def beta_gen(self, a: float, b: float) -> float: ...
-    def bivariate_gaussian_gen(self, sigma_x: float, sigma_y: float, rho: float) -> Tuple[float, float]: ...
+    def bivariate_gaussian_gen(
+        self, sigma_x: float, sigma_y: float, rho: float
+    ) -> Tuple[float, float]: ...
     def check_seed(self, seed: int) -> bool: ...
     def chisq_gen(self, nu: float) -> float: ...
     def choose(self, dest: None, k: int, src: None, n: int, size: int) -> None: ...
@@ -7477,7 +8503,6 @@ class RNG(GObject.Object):
     def uniform_gen(self, xl: float, xu: float) -> float: ...
     def uniform_int_gen(self, n: int) -> int: ...
     def unlock(self) -> None: ...
-    
 
 class RNGClass(GObject.GPointer):
     r"""
@@ -7504,7 +8529,6 @@ class RNGDiscrete(GObject.GBoxed):
     def free(self) -> None: ...
     @classmethod
     def new(cls, weights: Sequence[float]) -> RNGDiscrete: ...
-    
 
 class Reparam(GObject.Object):
     r"""
@@ -7527,15 +8551,16 @@ class Reparam(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         compat_type: str
         length: int
         params_desc: GLib.Variant
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, compat_type: str = ...,
-                 length: int = ...,
-                 params_desc: GLib.Variant = ...): ...
+    def __init__(
+        self, compat_type: str = ..., length: int = ..., params_desc: GLib.Variant = ...
+    ): ...
     @staticmethod
     def clear(reparam: Reparam) -> None: ...
     def do_new2old(self, model: None) -> bool: ...
@@ -7553,9 +8578,19 @@ class Reparam(GObject.Object):
     def ref(self) -> Reparam: ...
     def set_compat_type(self, compat_type: Type) -> None: ...
     def set_param_desc(self, i: int, sp: SParam) -> None: ...
-    def set_param_desc_full(self, i: int, name: str, symbol: str, lower_bound: float, upper_bound: float, scale: float, abstol: float, default_val: float, ftype: ParamType) -> None: ...
+    def set_param_desc_full(
+        self,
+        i: int,
+        name: str,
+        symbol: str,
+        lower_bound: float,
+        upper_bound: float,
+        scale: float,
+        abstol: float,
+        default_val: float,
+        ftype: ParamType,
+    ) -> None: ...
     def set_params_desc_dict(self, pdesc_dict: GLib.Variant) -> None: ...
-    
 
 class ReparamClass(GObject.GPointer):
     r"""
@@ -7598,6 +8633,7 @@ class ReparamLinear(Reparam):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         matrix: Matrix
         vector: Vector
@@ -7605,15 +8641,17 @@ class ReparamLinear(Reparam):
         length: int
         params_desc: GLib.Variant
     props: Props = ...
-    def __init__(self, matrix: Matrix = ...,
-                 vector: Vector = ...,
-                 compat_type: str = ...,
-                 length: int = ...,
-                 params_desc: GLib.Variant = ...): ...
+    def __init__(
+        self,
+        matrix: Matrix = ...,
+        vector: Vector = ...,
+        compat_type: str = ...,
+        length: int = ...,
+        params_desc: GLib.Variant = ...,
+    ): ...
     @classmethod
     def new(cls, size: int, T: Matrix, v: Vector) -> ReparamLinear: ...
     def set_compat_type(self, compat_type: Type) -> None: ...
-    
 
 class ReparamLinearClass(GObject.GPointer):
     r"""
@@ -7643,6 +8681,7 @@ class SFSphericalHarmonics(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         lmax: int
     props: Props = ...
@@ -7662,8 +8701,9 @@ class SFSphericalHarmonics(GObject.Object):
     def ref(self) -> SFSphericalHarmonics: ...
     def set_lmax(self, lmax: int) -> None: ...
     def start_rec(self, sphaY: SFSphericalHarmonicsY, theta: float) -> None: ...
-    def start_rec_array(self, sphaYa: SFSphericalHarmonicsYArray, theta: Sequence[float]) -> None: ...
-    
+    def start_rec_array(
+        self, sphaYa: SFSphericalHarmonicsYArray, theta: Sequence[float]
+    ) -> None: ...
 
 class SFSphericalHarmonicsClass(GObject.GPointer):
     r"""
@@ -7730,14 +8770,15 @@ class SFSphericalHarmonicsY(GObject.GBoxed):
     def get_m(self) -> int: ...
     def get_x(self) -> float: ...
     @classmethod
-    def new(cls, spha: SFSphericalHarmonics, abstol: float) -> SFSphericalHarmonicsY: ...
+    def new(
+        cls, spha: SFSphericalHarmonics, abstol: float
+    ) -> SFSphericalHarmonicsY: ...
     def next_l(self) -> None: ...
     def next_l2(self) -> list[float]: ...
     def next_l2pn(self, Yblm: float, n: int) -> None: ...
     def next_l4(self) -> list[float]: ...
     def next_m(self) -> None: ...
     def reset(self) -> None: ...
-    
 
 class SFSphericalHarmonicsYArray(GObject.GBoxed):
     r"""
@@ -7767,14 +8808,15 @@ class SFSphericalHarmonicsYArray(GObject.GBoxed):
     def get_m(self) -> int: ...
     def get_x(self, i: int) -> float: ...
     @classmethod
-    def new(cls, spha: SFSphericalHarmonics, len: int, abstol: float) -> SFSphericalHarmonicsYArray: ...
+    def new(
+        cls, spha: SFSphericalHarmonics, len: int, abstol: float
+    ) -> SFSphericalHarmonicsYArray: ...
     def next_l(self, len: int) -> None: ...
     def next_l2(self, len: int, Yblm: float) -> None: ...
     def next_l2pn(self, len: int, Yblm: float, n: int) -> None: ...
     def next_l4(self, len: int, Yblm: float) -> None: ...
     def next_m(self, len: int) -> None: ...
     def reset(self, len: int) -> None: ...
-    
 
 class SParam(GObject.Object):
     r"""
@@ -7808,6 +8850,7 @@ class SParam(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         absolute_tolerance: float
         default_value: float
@@ -7818,14 +8861,17 @@ class SParam(GObject.Object):
         symbol: str
         upper_bound: float
     props: Props = ...
-    def __init__(self, absolute_tolerance: float = ...,
-                 default_value: float = ...,
-                 fit_type: ParamType = ...,
-                 lower_bound: float = ...,
-                 name: str = ...,
-                 scale: float = ...,
-                 symbol: str = ...,
-                 upper_bound: float = ...): ...
+    def __init__(
+        self,
+        absolute_tolerance: float = ...,
+        default_value: float = ...,
+        fit_type: ParamType = ...,
+        lower_bound: float = ...,
+        name: str = ...,
+        scale: float = ...,
+        symbol: str = ...,
+        upper_bound: float = ...,
+    ): ...
     @staticmethod
     def clear(sparam: SParam) -> None: ...
     def copy(self) -> SParam: ...
@@ -7838,7 +8884,17 @@ class SParam(GObject.Object):
     def get_upper_bound(self) -> float: ...
     def name(self) -> str: ...
     @classmethod
-    def new(cls, name: str, symbol: str, lower_bound: float, upper_bound: float, scale: float, abstol: float, default_val: float, ftype: ParamType) -> SParam: ...
+    def new(
+        cls,
+        name: str,
+        symbol: str,
+        lower_bound: float,
+        upper_bound: float,
+        scale: float,
+        abstol: float,
+        default_val: float,
+        ftype: ParamType,
+    ) -> SParam: ...
     def ref(self) -> SParam: ...
     def set_absolute_tolerance(self, abstol: float) -> None: ...
     def set_default_value(self, default_val: float) -> None: ...
@@ -7849,7 +8905,6 @@ class SParam(GObject.Object):
     def symbol(self) -> str: ...
     def take_name(self, name: str) -> None: ...
     def take_symbol(self, symbol: str) -> None: ...
-    
 
 class SParamClass(GObject.GPointer):
     r"""
@@ -7879,6 +8934,7 @@ class Serialize(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         options: SerializeOpt
     props: Props = ...
@@ -7894,7 +8950,9 @@ class Serialize(GObject.Object):
     def free(self) -> None: ...
     def from_binfile(self, filename: str) -> GObject.Object: ...
     def from_file(self, filename: str) -> GObject.Object: ...
-    def from_name_params(self, obj_name: str, params: GLib.Variant) -> GObject.Object: ...
+    def from_name_params(
+        self, obj_name: str, params: GLib.Variant
+    ) -> GObject.Object: ...
     def from_string(self, obj_ser: str) -> GObject.Object: ...
     def from_variant(self, var_obj: GLib.Variant) -> GObject.Object: ...
     def from_yaml(self, yaml_obj: str) -> GObject.Object: ...
@@ -7919,7 +8977,9 @@ class Serialize(GObject.Object):
     @staticmethod
     def global_from_file(filename: str) -> GObject.Object: ...
     @staticmethod
-    def global_from_name_params(obj_name: str, params: GLib.Variant) -> GObject.Object: ...
+    def global_from_name_params(
+        obj_name: str, params: GLib.Variant
+    ) -> GObject.Object: ...
     @staticmethod
     def global_from_string(obj_ser: str) -> GObject.Object: ...
     @staticmethod
@@ -7947,7 +9007,9 @@ class Serialize(GObject.Object):
     @staticmethod
     def global_set_property(obj: GObject.Object, prop_str: str) -> None: ...
     @staticmethod
-    def global_set_property_from_key_file(obj: GObject.Object, prop_file: str) -> None: ...
+    def global_set_property_from_key_file(
+        obj: GObject.Object, prop_file: str
+    ) -> None: ...
     @staticmethod
     def global_to_binfile(obj: GObject.Object, filename: str) -> None: ...
     @staticmethod
@@ -7976,7 +9038,9 @@ class Serialize(GObject.Object):
     def reset(self, autosave_only: bool) -> None: ...
     def set(self, obj: GObject.Object, name: str, overwrite: bool) -> None: ...
     def set_property(self, obj: GObject.Object, prop_str: str) -> None: ...
-    def set_property_from_key_file(self, obj: GObject.Object, prop_file: str) -> None: ...
+    def set_property_from_key_file(
+        self, obj: GObject.Object, prop_file: str
+    ) -> None: ...
     def to_binfile(self, obj: GObject.Object, filename: str) -> None: ...
     def to_file(self, obj: GObject.Object, filename: str) -> None: ...
     def to_string(self, obj: GObject.Object, valid_variant: bool) -> str: ...
@@ -7986,7 +9050,6 @@ class Serialize(GObject.Object):
     def unref(self) -> None: ...
     def unset(self, obj: GObject.Object) -> None: ...
     def variant_to_yaml(self, var_obj: GLib.Variant) -> str: ...
-    
 
 class SerializeClass(GObject.GPointer):
     r"""
@@ -8022,16 +9085,20 @@ class SphereMap(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         coordsys: SphereMapCoordSys
         lmax: int
         nside: int
         order: SphereMapOrder
     props: Props = ...
-    def __init__(self, coordsys: SphereMapCoordSys = ...,
-                 lmax: int = ...,
-                 nside: int = ...,
-                 order: SphereMapOrder = ...): ...
+    def __init__(
+        self,
+        coordsys: SphereMapCoordSys = ...,
+        lmax: int = ...,
+        nside: int = ...,
+        order: SphereMapOrder = ...,
+    ): ...
     def add_noise(self, sd: float, rng: RNG) -> None: ...
     def add_to_ang(self, theta: float, phi: float, s: float) -> None: ...
     def add_to_vec(self, vec: TriVec, s: float) -> None: ...
@@ -8060,7 +9127,9 @@ class SphereMap(GObject.Object):
     def get_ring_first_index(self, r_i: int) -> int: ...
     def get_ring_size(self, r_i: int) -> int: ...
     def load_fits(self, fits_file: str, signal_name: Optional[str] = None) -> None: ...
-    def load_from_fits_catalog(self, fits_file: str, RA: str, DEC: str, S: Optional[str] = None) -> None: ...
+    def load_from_fits_catalog(
+        self, fits_file: str, RA: str, DEC: str, S: Optional[str] = None
+    ) -> None: ...
     def nest2ring(self, nest_index: int) -> int: ...
     @classmethod
     def new(cls, nside: int) -> SphereMap: ...
@@ -8071,7 +9140,9 @@ class SphereMap(GObject.Object):
     def prepare_alm(self) -> None: ...
     def ref(self) -> SphereMap: ...
     def ring2nest(self, ring_index: int) -> int: ...
-    def save_fits(self, fits_file: str, signal_name: Optional[str], overwrite: bool) -> None: ...
+    def save_fits(
+        self, fits_file: str, signal_name: Optional[str], overwrite: bool
+    ) -> None: ...
     def set_Cls(self, Cls: Vector) -> None: ...
     def set_alm(self, l: int, m: int, Re_alm: float, Im_alm: float) -> None: ...
     def set_coordsys(self, coordsys: SphereMapCoordSys) -> None: ...
@@ -8082,7 +9153,6 @@ class SphereMap(GObject.Object):
     def update_Cl(self) -> None: ...
     def vec2pix_nest(self, vec: TriVec) -> int: ...
     def vec2pix_ring(self, vec: TriVec) -> int: ...
-    
 
 class SphereMapClass(GObject.GPointer):
     r"""
@@ -8115,15 +9185,14 @@ class Spline(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         length: int
         x: Vector
         y: Vector
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, length: int = ...,
-                 x: Vector = ...,
-                 y: Vector = ...): ...
+    def __init__(self, length: int = ..., x: Vector = ..., y: Vector = ...): ...
     def acc(self, enable: bool) -> None: ...
     @staticmethod
     def clear(s: Spline) -> None: ...
@@ -8155,7 +9224,9 @@ class Spline(GObject.Object):
     def is_init(self) -> bool: ...
     def min_size(self) -> int: ...
     def new(self, xv: Vector, yv: Vector, init: bool) -> Spline: ...
-    def new_array(self, x: Sequence[float], y: Sequence[float], init: bool) -> Spline: ...
+    def new_array(
+        self, x: Sequence[float], y: Sequence[float], init: bool
+    ) -> Spline: ...
     def new_data(self, x: float, y: float, len: int, init: bool) -> Spline: ...
     def peek_xv(self) -> Vector: ...
     def peek_yv(self) -> Vector: ...
@@ -8165,12 +9236,28 @@ class Spline(GObject.Object):
     def set(self, xv: Vector, yv: Vector, init: bool) -> Spline: ...
     def set_array(self, x: Sequence[float], y: Sequence[float], init: bool) -> None: ...
     def set_data_static(self, x: float, y: float, len: int, init: bool) -> None: ...
-    def set_func1(self, ftype: SplineFuncType, F: Callable[[float, GObject.Object], float], obj: Optional[GObject.Object], xi: float, xf: float, max_nodes: int, rel_error: float) -> None: ...
-    def set_func_grid1(self, ftype: SplineFuncType, F: Callable[[float, GObject.Object], float], obj: Optional[GObject.Object], xi: float, xf: float, nnodes: int) -> None: ...
+    def set_func1(
+        self,
+        ftype: SplineFuncType,
+        F: Callable[[float, GObject.Object], float],
+        obj: Optional[GObject.Object],
+        xi: float,
+        xf: float,
+        max_nodes: int,
+        rel_error: float,
+    ) -> None: ...
+    def set_func_grid1(
+        self,
+        ftype: SplineFuncType,
+        F: Callable[[float, GObject.Object], float],
+        obj: Optional[GObject.Object],
+        xi: float,
+        xf: float,
+        nnodes: int,
+    ) -> None: ...
     def set_len(self, len: int) -> None: ...
     def set_xv(self, xv: Vector, init: bool) -> None: ...
     def set_yv(self, yv: Vector, init: bool) -> None: ...
-    
 
 class Spline2d(GObject.Object):
     r"""
@@ -8199,6 +9286,7 @@ class Spline2d(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         init: bool
         spline: Spline
@@ -8208,12 +9296,15 @@ class Spline2d(GObject.Object):
         z_matrix: Matrix
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, init: bool = ...,
-                 spline: Spline = ...,
-                 use_acc: bool = ...,
-                 x_vector: Vector = ...,
-                 y_vector: Vector = ...,
-                 z_matrix: Matrix = ...): ...
+    def __init__(
+        self,
+        init: bool = ...,
+        spline: Spline = ...,
+        use_acc: bool = ...,
+        x_vector: Vector = ...,
+        y_vector: Vector = ...,
+        z_matrix: Matrix = ...,
+    ): ...
     @staticmethod
     def clear(s2d: Spline2d) -> None: ...
     def copy(self) -> Spline2d: ...
@@ -8230,22 +9321,30 @@ class Spline2d(GObject.Object):
     def do_dzdx(self, x: float, y: float) -> float: ...
     def do_dzdy(self, x: float, y: float) -> float: ...
     def do_eval(self, x: float, y: float) -> float: ...
-    def do_eval_vec_y(self, x: float, y: Vector, order: Optional[Sequence[int]], res: Sequence[float]) -> None: ...
+    def do_eval_vec_y(
+        self, x: float, y: Vector, order: Optional[Sequence[int]], res: Sequence[float]
+    ) -> None: ...
     def do_int_dx(self, xl: float, xu: float, y: float) -> float: ...
     def do_int_dxdy(self, xl: float, xu: float, yl: float, yu: float) -> float: ...
     def do_int_dy(self, x: float, yl: float, yu: float) -> float: ...
     def do_prepare(self) -> None: ...
     def do_reset(self) -> None: ...
     def eval(self, x: float, y: float) -> float: ...
-    def eval_vec_y(self, x: float, y: Vector, order: Optional[Sequence[int]], res: Sequence[float]) -> None: ...
+    def eval_vec_y(
+        self, x: float, y: Vector, order: Optional[Sequence[int]], res: Sequence[float]
+    ) -> None: ...
     def free(self) -> None: ...
     def has_no_stride(self) -> bool: ...
     def integ_dx(self, xl: float, xu: float, y: float) -> float: ...
     def integ_dx_spline(self, xl: float, xu: float) -> Spline: ...
     def integ_dx_spline_val(self, xl: float, xu: float, y: float) -> float: ...
     def integ_dxdy(self, xl: float, xu: float, yl: float, yu: float) -> float: ...
-    def integ_dxdy_spline_x(self, xl: float, xu: float, yl: float, yu: float) -> float: ...
-    def integ_dxdy_spline_y(self, xl: float, xu: float, yl: float, yu: float) -> float: ...
+    def integ_dxdy_spline_x(
+        self, xl: float, xu: float, yl: float, yu: float
+    ) -> float: ...
+    def integ_dxdy_spline_y(
+        self, xl: float, xu: float, yl: float, yu: float
+    ) -> float: ...
     def integ_dy(self, x: float, yl: float, yu: float) -> float: ...
     def integ_dy_spline(self, yl: float, yu: float) -> Spline: ...
     def integ_dy_spline_val(self, x: float, yl: float, yu: float) -> float: ...
@@ -8263,7 +9362,6 @@ class Spline2d(GObject.Object):
     def set_init(self, init: bool) -> None: ...
     def use_acc(self, use_acc: bool) -> None: ...
     def using_acc(self) -> bool: ...
-    
 
 class Spline2dBicubic(Spline2d):
     r"""
@@ -8294,6 +9392,7 @@ class Spline2dBicubic(Spline2d):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         init: bool
         spline: Spline
@@ -8302,31 +9401,49 @@ class Spline2dBicubic(Spline2d):
         y_vector: Vector
         z_matrix: Matrix
     props: Props = ...
-    def __init__(self, init: bool = ...,
-                 spline: Spline = ...,
-                 use_acc: bool = ...,
-                 x_vector: Vector = ...,
-                 y_vector: Vector = ...,
-                 z_matrix: Matrix = ...): ...
+    def __init__(
+        self,
+        init: bool = ...,
+        spline: Spline = ...,
+        use_acc: bool = ...,
+        x_vector: Vector = ...,
+        y_vector: Vector = ...,
+        z_matrix: Matrix = ...,
+    ): ...
     @staticmethod
     def bi(sc: SplineCubic, xv: Vector, yv: Vector, i: int) -> float: ...
     @staticmethod
-    def bi_bip1(sc: SplineCubic, xv: Vector, yv: Vector, i: int, b_i: float, b_ip1: float) -> None: ...
+    def bi_bip1(
+        sc: SplineCubic, xv: Vector, yv: Vector, i: int, b_i: float, b_ip1: float
+    ) -> None: ...
     @staticmethod
     def eval_poly(sa: Spline2dBicubicCoeffs, x: float, y: float) -> float: ...
     @staticmethod
-    def fij_to_aij(sf: Spline2dBicubicCoeffs, dx: float, dy: float, sa: Spline2dBicubicCoeffs) -> None: ...
+    def fij_to_aij(
+        sf: Spline2dBicubicCoeffs, dx: float, dy: float, sa: Spline2dBicubicCoeffs
+    ) -> None: ...
     @staticmethod
-    def integ_dx_coeffs(aij: Spline2dBicubicCoeffs, dy: float, coeffs: float) -> None: ...
+    def integ_dx_coeffs(
+        aij: Spline2dBicubicCoeffs, dy: float, coeffs: float
+    ) -> None: ...
     @staticmethod
-    def integ_dy_coeffs(aij: Spline2dBicubicCoeffs, dx: float, coeffs: float) -> None: ...
+    def integ_dy_coeffs(
+        aij: Spline2dBicubicCoeffs, dx: float, coeffs: float
+    ) -> None: ...
     @staticmethod
-    def integ_eval2d(aij: Spline2dBicubicCoeffs, x0: float, xl: float, xu: float, y0: float, yl: float, yu: float) -> float: ...
+    def integ_eval2d(
+        aij: Spline2dBicubicCoeffs,
+        x0: float,
+        xl: float,
+        xu: float,
+        y0: float,
+        yl: float,
+        yu: float,
+    ) -> float: ...
     @classmethod
     def new(cls, s: Spline) -> Spline2dBicubic: ...
     @classmethod
     def notaknot_new(cls) -> Spline2dBicubic: ...
-    
 
 class Spline2dBicubicClass(GObject.GPointer):
     r"""
@@ -8371,7 +9488,9 @@ class Spline2dClass(GObject.GPointer):
     int_dxdy: Callable[[Spline2d, float, float, float, float], float] = ...
     int_dx_spline: None = ...
     int_dy_spline: None = ...
-    eval_vec_y: Callable[[Spline2d, float, Vector, Optional[Sequence[int]], Sequence[float]], None] = ...
+    eval_vec_y: Callable[
+        [Spline2d, float, Vector, Optional[Sequence[int]], Sequence[float]], None
+    ] = ...
     padding: list[None] = ...
 
 class Spline2dGsl(Spline2d):
@@ -8403,6 +9522,7 @@ class Spline2dGsl(Spline2d):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         init: bool
         spline: Spline
@@ -8411,17 +9531,19 @@ class Spline2dGsl(Spline2d):
         y_vector: Vector
         z_matrix: Matrix
     props: Props = ...
-    def __init__(self, init: bool = ...,
-                 spline: Spline = ...,
-                 use_acc: bool = ...,
-                 x_vector: Vector = ...,
-                 y_vector: Vector = ...,
-                 z_matrix: Matrix = ...): ...
+    def __init__(
+        self,
+        init: bool = ...,
+        spline: Spline = ...,
+        use_acc: bool = ...,
+        x_vector: Vector = ...,
+        y_vector: Vector = ...,
+        z_matrix: Matrix = ...,
+    ): ...
     @classmethod
     def natural_new(cls) -> Spline2dGsl: ...
     @classmethod
     def new(cls, s: Spline) -> Spline2dGsl: ...
-    
 
 class Spline2dGslClass(GObject.GPointer):
     r"""
@@ -8461,6 +9583,7 @@ class Spline2dSpline(Spline2d):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         init: bool
         spline: Spline
@@ -8469,15 +9592,17 @@ class Spline2dSpline(Spline2d):
         y_vector: Vector
         z_matrix: Matrix
     props: Props = ...
-    def __init__(self, init: bool = ...,
-                 spline: Spline = ...,
-                 use_acc: bool = ...,
-                 x_vector: Vector = ...,
-                 y_vector: Vector = ...,
-                 z_matrix: Matrix = ...): ...
+    def __init__(
+        self,
+        init: bool = ...,
+        spline: Spline = ...,
+        use_acc: bool = ...,
+        x_vector: Vector = ...,
+        y_vector: Vector = ...,
+        z_matrix: Matrix = ...,
+    ): ...
     @classmethod
     def new(cls, s: Spline) -> Spline2dSpline: ...
-    
 
 class Spline2dSplineClass(GObject.GPointer):
     r"""
@@ -8532,21 +9657,19 @@ class SplineCubic(Spline):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         length: int
         x: Vector
         y: Vector
     props: Props = ...
     parent_instance: Spline = ...
-    def __init__(self, length: int = ...,
-                 x: Vector = ...,
-                 y: Vector = ...): ...
+    def __init__(self, length: int = ..., x: Vector = ..., y: Vector = ...): ...
     def peek_b_vec(self) -> Vector: ...
     def peek_c_vec(self) -> Vector: ...
     def peek_d_vec(self) -> Vector: ...
     def peek_diag_vec(self) -> Vector: ...
     def peek_offdiag_vec(self) -> Vector: ...
-    
 
 class SplineCubicClass(GObject.GPointer):
     r"""
@@ -8581,17 +9704,15 @@ class SplineCubicD2(SplineCubic):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         length: int
         x: Vector
         y: Vector
     props: Props = ...
-    def __init__(self, length: int = ...,
-                 x: Vector = ...,
-                 y: Vector = ...): ...
+    def __init__(self, length: int = ..., x: Vector = ..., y: Vector = ...): ...
     @classmethod
     def new(cls, xv: Vector, yv: Vector, d2yv: Vector, init: bool) -> SplineCubicD2: ...
-    
 
 class SplineCubicD2Class(GObject.GPointer):
     r"""
@@ -8626,19 +9747,17 @@ class SplineCubicNotaknot(SplineCubic):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         length: int
         x: Vector
         y: Vector
     props: Props = ...
-    def __init__(self, length: int = ...,
-                 x: Vector = ...,
-                 y: Vector = ...): ...
+    def __init__(self, length: int = ..., x: Vector = ..., y: Vector = ...): ...
     @classmethod
     def new(cls) -> SplineCubicNotaknot: ...
     @classmethod
     def new_full(cls, xv: Vector, yv: Vector, init: bool) -> SplineCubicNotaknot: ...
-    
 
 class SplineCubicNotaknotClass(GObject.GPointer):
     r"""
@@ -8682,6 +9801,7 @@ class SplineFuncTest(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         ngrid: int
         par_info: Matrix
@@ -8692,14 +9812,17 @@ class SplineFuncTest(GObject.Object):
         xf: float
         xi: float
     props: Props = ...
-    def __init__(self, ngrid: int = ...,
-                 par_info: Matrix = ...,
-                 rel_error: float = ...,
-                 scale: float = ...,
-                 seed: int = ...,
-                 type: SplineFuncTestType = ...,
-                 xf: float = ...,
-                 xi: float = ...): ...
+    def __init__(
+        self,
+        ngrid: int = ...,
+        par_info: Matrix = ...,
+        rel_error: float = ...,
+        scale: float = ...,
+        seed: int = ...,
+        type: SplineFuncTestType = ...,
+        xf: float = ...,
+        xi: float = ...,
+    ): ...
     @staticmethod
     def clear(sft: SplineFuncTest) -> None: ...
     def get_ngrid(self) -> int: ...
@@ -8717,7 +9840,9 @@ class SplineFuncTest(GObject.Object):
     @classmethod
     def new(cls) -> SplineFuncTest: ...
     def peek_current_params(self) -> Vector: ...
-    def prepare(self, ftype: SplineFuncType, pdftype: SplineFuncTestTypePDF) -> None: ...
+    def prepare(
+        self, ftype: SplineFuncType, pdftype: SplineFuncTestTypePDF
+    ) -> None: ...
     def ref(self) -> SplineFuncTest: ...
     def save_grid_functions_to_txt(self, fname: str) -> None: ...
     def save_knots_to_txt(self, fname: str) -> None: ...
@@ -8735,7 +9860,6 @@ class SplineFuncTest(GObject.Object):
     def set_xf(self, xf: float) -> None: ...
     def set_xi(self, xi: float) -> None: ...
     def unref(self) -> None: ...
-    
 
 class SplineFuncTestClass(GObject.GPointer):
     r"""
@@ -8776,16 +9900,16 @@ class SplineGsl(Spline):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         type_name: str
         length: int
         x: Vector
         y: Vector
     props: Props = ...
-    def __init__(self, type_name: str = ...,
-                 length: int = ...,
-                 x: Vector = ...,
-                 y: Vector = ...): ...
+    def __init__(
+        self, type_name: str = ..., length: int = ..., x: Vector = ..., y: Vector = ...
+    ): ...
     @classmethod
     def new(cls, type: int) -> SplineGsl: ...
     @classmethod
@@ -8793,11 +9917,12 @@ class SplineGsl(Spline):
     @classmethod
     def new_full(cls, type: int, xv: Vector, yv: Vector, init: bool) -> SplineGsl: ...
     @classmethod
-    def new_full_by_id(cls, type_id: SplineGslType, xv: Vector, yv: Vector, init: bool) -> SplineGsl: ...
+    def new_full_by_id(
+        cls, type_id: SplineGslType, xv: Vector, yv: Vector, init: bool
+    ) -> SplineGsl: ...
     def set_type(self, type: int) -> None: ...
     def set_type_by_id(self, type_id: SplineGslType) -> None: ...
     def set_type_by_name(self, type_name: str) -> None: ...
-    
 
 class SplineGslClass(GObject.GPointer):
     r"""
@@ -8835,16 +9960,20 @@ class SplineRBF(Spline):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         type_id: SplineRBFType
         length: int
         x: Vector
         y: Vector
     props: Props = ...
-    def __init__(self, type_id: SplineRBFType = ...,
-                 length: int = ...,
-                 x: Vector = ...,
-                 y: Vector = ...): ...
+    def __init__(
+        self,
+        type_id: SplineRBFType = ...,
+        length: int = ...,
+        x: Vector = ...,
+        y: Vector = ...,
+    ): ...
     @staticmethod
     def clear(rbf: SplineRBF) -> None: ...
     def free(self) -> None: ...
@@ -8853,7 +9982,6 @@ class SplineRBF(Spline):
     def ref(self) -> SplineRBF: ...
     def set_shape_params(self, shape_params: Vector) -> None: ...
     def set_type(self, type_id: SplineRBFType) -> None: ...
-    
 
 class SplineRBFClass(GObject.GPointer):
     r"""
@@ -8894,6 +10022,7 @@ class StatsDist(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         CV_type: StatsDistCV
         N: int
@@ -8904,12 +10033,15 @@ class StatsDist(GObject.Object):
         use_threads: bool
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, CV_type: StatsDistCV = ...,
-                 kernel: StatsDistKernel = ...,
-                 over_smooth: float = ...,
-                 print_fit: bool = ...,
-                 split_frac: float = ...,
-                 use_threads: bool = ...): ...
+    def __init__(
+        self,
+        CV_type: StatsDistCV = ...,
+        kernel: StatsDistKernel = ...,
+        over_smooth: float = ...,
+        print_fit: bool = ...,
+        split_frac: float = ...,
+        use_threads: bool = ...,
+    ): ...
     def add_obs(self, y: Vector) -> None: ...
     @staticmethod
     def clear(sd: StatsDist) -> None: ...
@@ -8957,7 +10089,6 @@ class StatsDist(GObject.Object):
     def set_print_fit(self, print_fit: bool) -> None: ...
     def set_split_frac(self, split_frac: float) -> None: ...
     def set_use_threads(self, use_threads: bool) -> None: ...
-    
 
 class StatsDist1d(GObject.Object):
     r"""
@@ -8988,6 +10119,7 @@ class StatsDist1d(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         compute_cdf: bool
@@ -8998,12 +10130,15 @@ class StatsDist1d(GObject.Object):
         xi: float
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, abstol: float = ...,
-                 compute_cdf: bool = ...,
-                 max_prob: float = ...,
-                 reltol: float = ...,
-                 xf: float = ...,
-                 xi: float = ...): ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        compute_cdf: bool = ...,
+        max_prob: float = ...,
+        reltol: float = ...,
+        xf: float = ...,
+        xi: float = ...,
+    ): ...
     @staticmethod
     def clear(sd1: StatsDist1d) -> None: ...
     def do_get_current_h(self) -> float: ...
@@ -9028,7 +10163,6 @@ class StatsDist1d(GObject.Object):
     def set_compute_cdf(self, compute_cdf: bool) -> None: ...
     def set_xf(self, xf: float) -> None: ...
     def set_xi(self, xi: float) -> None: ...
-    
 
 class StatsDist1dClass(GObject.GPointer):
     r"""
@@ -9090,6 +10224,7 @@ class StatsDist1dEPDF(StatsDist1d):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         bandwidth: StatsDist1dEPDFBw
         h_fixed: float
@@ -9105,17 +10240,20 @@ class StatsDist1dEPDF(StatsDist1d):
         xf: float
         xi: float
     props: Props = ...
-    def __init__(self, bandwidth: StatsDist1dEPDFBw = ...,
-                 h_fixed: float = ...,
-                 max_obs: int = ...,
-                 outliers_threshold: float = ...,
-                 sd_min_scale: float = ...,
-                 abstol: float = ...,
-                 compute_cdf: bool = ...,
-                 max_prob: float = ...,
-                 reltol: float = ...,
-                 xf: float = ...,
-                 xi: float = ...): ...
+    def __init__(
+        self,
+        bandwidth: StatsDist1dEPDFBw = ...,
+        h_fixed: float = ...,
+        max_obs: int = ...,
+        outliers_threshold: float = ...,
+        sd_min_scale: float = ...,
+        abstol: float = ...,
+        compute_cdf: bool = ...,
+        max_prob: float = ...,
+        reltol: float = ...,
+        xf: float = ...,
+        xi: float = ...,
+    ): ...
     def add_obs(self, x: float) -> None: ...
     def add_obs_weight(self, x: float, w: float) -> None: ...
     @staticmethod
@@ -9127,14 +10265,15 @@ class StatsDist1dEPDF(StatsDist1d):
     @classmethod
     def new(cls, sd_min_scale: float) -> StatsDist1dEPDF: ...
     @classmethod
-    def new_full(cls, max_obs: int, bw: StatsDist1dEPDFBw, h_fixed: float, sd_min_scale: float) -> StatsDist1dEPDF: ...
+    def new_full(
+        cls, max_obs: int, bw: StatsDist1dEPDFBw, h_fixed: float, sd_min_scale: float
+    ) -> StatsDist1dEPDF: ...
     def ref(self) -> StatsDist1dEPDF: ...
     def reset(self) -> None: ...
     def set_bw_type(self, bw: StatsDist1dEPDFBw) -> None: ...
     def set_h_fixed(self, h_fixed: float) -> None: ...
     def set_max(self, max: float) -> None: ...
     def set_min(self, min: float) -> None: ...
-    
 
 class StatsDist1dEPDFClass(GObject.GPointer):
     r"""
@@ -9182,6 +10321,7 @@ class StatsDist1dSpline(StatsDist1d):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         m2lnp: Spline
         tail_sigma: float
@@ -9193,17 +10333,19 @@ class StatsDist1dSpline(StatsDist1d):
         xf: float
         xi: float
     props: Props = ...
-    def __init__(self, m2lnp: Spline = ...,
-                 tail_sigma: float = ...,
-                 abstol: float = ...,
-                 compute_cdf: bool = ...,
-                 max_prob: float = ...,
-                 reltol: float = ...,
-                 xf: float = ...,
-                 xi: float = ...): ...
+    def __init__(
+        self,
+        m2lnp: Spline = ...,
+        tail_sigma: float = ...,
+        abstol: float = ...,
+        compute_cdf: bool = ...,
+        max_prob: float = ...,
+        reltol: float = ...,
+        xf: float = ...,
+        xi: float = ...,
+    ): ...
     @classmethod
     def new(cls, m2lnp: Spline) -> StatsDist1dSpline: ...
-    
 
 class StatsDist1dSplineClass(GObject.GPointer):
     r"""
@@ -9253,7 +10395,6 @@ class StatsDist2d(GObject.Object):
     def ref(self) -> StatsDist2d: ...
     def xbounds(self) -> Tuple[float, float]: ...
     def ybounds(self) -> Tuple[float, float]: ...
-    
 
 class StatsDist2dClass(GObject.GPointer):
     r"""
@@ -9296,15 +10437,14 @@ class StatsDist2dSpline(StatsDist2d):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         m2lnp: Spline2d
         marginal_x: bool
     props: Props = ...
-    def __init__(self, m2lnp: Spline2d = ...,
-                 marginal_x: bool = ...): ...
+    def __init__(self, m2lnp: Spline2d = ..., marginal_x: bool = ...): ...
     @classmethod
     def new(cls, m2lnp: Spline2d) -> StatsDist2dSpline: ...
-    
 
 class StatsDist2dSplineClass(GObject.GPointer):
     r"""
@@ -9376,6 +10516,7 @@ class StatsDistKDE(StatsDist):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         cov_fixed: Matrix
         cov_type: StatsDistKDECovType
@@ -9389,15 +10530,18 @@ class StatsDistKDE(StatsDist):
         use_threads: bool
     props: Props = ...
     parent_instance: StatsDist = ...
-    def __init__(self, cov_fixed: Matrix = ...,
-                 cov_type: StatsDistKDECovType = ...,
-                 nearPD_maxiter: int = ...,
-                 CV_type: StatsDistCV = ...,
-                 kernel: StatsDistKernel = ...,
-                 over_smooth: float = ...,
-                 print_fit: bool = ...,
-                 split_frac: float = ...,
-                 use_threads: bool = ...): ...
+    def __init__(
+        self,
+        cov_fixed: Matrix = ...,
+        cov_type: StatsDistKDECovType = ...,
+        nearPD_maxiter: int = ...,
+        CV_type: StatsDistCV = ...,
+        kernel: StatsDistKernel = ...,
+        over_smooth: float = ...,
+        print_fit: bool = ...,
+        split_frac: float = ...,
+        use_threads: bool = ...,
+    ): ...
     @staticmethod
     def clear(sdkde: StatsDistKDE) -> None: ...
     def free(self) -> None: ...
@@ -9410,7 +10554,6 @@ class StatsDistKDE(StatsDist):
     def set_cov_fixed(self, cov_fixed: Matrix) -> None: ...
     def set_cov_type(self, cov_type: StatsDistKDECovType) -> None: ...
     def set_nearPD_maxiter(self, maxiter: int) -> None: ...
-    
 
 class StatsDistKDEClass(GObject.GPointer):
     r"""
@@ -9440,6 +10583,7 @@ class StatsDistKernel(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dimension: int
     props: Props = ...
@@ -9447,17 +10591,27 @@ class StatsDistKernel(GObject.Object):
     def __init__(self, dimension: int = ...): ...
     @staticmethod
     def clear(sdk: StatsDistKernel) -> None: ...
-    def do_eval_sum0_gamma_lambda(self, chi2: Vector, weights: Vector, lnnorms: Vector, lnK: Vector) -> Tuple[float, float]: ...
-    def do_eval_sum1_gamma_lambda(self, chi2: Vector, weights: Vector, lnnorm: float, lnK: Vector) -> Tuple[float, float]: ...
+    def do_eval_sum0_gamma_lambda(
+        self, chi2: Vector, weights: Vector, lnnorms: Vector, lnK: Vector
+    ) -> Tuple[float, float]: ...
+    def do_eval_sum1_gamma_lambda(
+        self, chi2: Vector, weights: Vector, lnnorm: float, lnK: Vector
+    ) -> Tuple[float, float]: ...
     def do_eval_unnorm(self, chi2: float) -> float: ...
     def do_eval_unnorm_vec(self, chi2: Vector, Ku: Vector) -> None: ...
     def do_get_dim(self) -> int: ...
     def do_get_lnnorm(self, cov_decomp: Matrix) -> float: ...
     def do_get_rot_bandwidth(self, n: float) -> float: ...
-    def do_sample(self, cov_decomp: Matrix, href: float, mu: Vector, y: Vector, rng: RNG) -> None: ...
+    def do_sample(
+        self, cov_decomp: Matrix, href: float, mu: Vector, y: Vector, rng: RNG
+    ) -> None: ...
     def do_set_dim(self, dim: int) -> None: ...
-    def eval_sum0_gamma_lambda(self, chi2: Vector, weights: Vector, lnnorms: Vector, lnK: Vector) -> Tuple[float, float]: ...
-    def eval_sum1_gamma_lambda(self, chi2: Vector, weights: Vector, lnnorm: float, lnK: Vector) -> Tuple[float, float]: ...
+    def eval_sum0_gamma_lambda(
+        self, chi2: Vector, weights: Vector, lnnorms: Vector, lnK: Vector
+    ) -> Tuple[float, float]: ...
+    def eval_sum1_gamma_lambda(
+        self, chi2: Vector, weights: Vector, lnnorm: float, lnK: Vector
+    ) -> Tuple[float, float]: ...
     def eval_unnorm(self, chi2: float) -> float: ...
     def eval_unnorm_vec(self, chi2: Vector, Ku: Vector) -> None: ...
     def free(self) -> None: ...
@@ -9465,8 +10619,9 @@ class StatsDistKernel(GObject.Object):
     def get_lnnorm(self, cov_decomp: Matrix) -> float: ...
     def get_rot_bandwidth(self, n: float) -> float: ...
     def ref(self) -> StatsDistKernel: ...
-    def sample(self, cov_decomp: Matrix, href: float, mu: Vector, y: Vector, rng: RNG) -> None: ...
-    
+    def sample(
+        self, cov_decomp: Matrix, href: float, mu: Vector, y: Vector, rng: RNG
+    ) -> None: ...
 
 class StatsDistKernelClass(GObject.GPointer):
     r"""
@@ -9483,8 +10638,12 @@ class StatsDistKernelClass(GObject.GPointer):
     get_lnnorm: Callable[[StatsDistKernel, Matrix], float] = ...
     eval_unnorm: Callable[[StatsDistKernel, float], float] = ...
     eval_unnorm_vec: Callable[[StatsDistKernel, Vector, Vector], None] = ...
-    eval_sum0_gamma_lambda: Callable[[StatsDistKernel, Vector, Vector, Vector, Vector], Tuple[float, float]] = ...
-    eval_sum1_gamma_lambda: Callable[[StatsDistKernel, Vector, Vector, float, Vector], Tuple[float, float]] = ...
+    eval_sum0_gamma_lambda: Callable[
+        [StatsDistKernel, Vector, Vector, Vector, Vector], Tuple[float, float]
+    ] = ...
+    eval_sum1_gamma_lambda: Callable[
+        [StatsDistKernel, Vector, Vector, float, Vector], Tuple[float, float]
+    ] = ...
     sample: Callable[[StatsDistKernel, Matrix, float, Vector, Vector, RNG], None] = ...
     padding: list[None] = ...
 
@@ -9506,6 +10665,7 @@ class StatsDistKernelGauss(StatsDistKernel):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dimension: int
     props: Props = ...
@@ -9516,7 +10676,6 @@ class StatsDistKernelGauss(StatsDistKernel):
     @classmethod
     def new(cls, dim: int) -> StatsDistKernelGauss: ...
     def ref(self) -> StatsDistKernelGauss: ...
-    
 
 class StatsDistKernelGaussClass(GObject.GPointer):
     r"""
@@ -9550,12 +10709,12 @@ class StatsDistKernelST(StatsDistKernel):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         nu: float
         dimension: int
     props: Props = ...
-    def __init__(self, nu: float = ...,
-                 dimension: int = ...): ...
+    def __init__(self, nu: float = ..., dimension: int = ...): ...
     @staticmethod
     def clear(sdkst: StatsDistKernelST) -> None: ...
     def free(self) -> None: ...
@@ -9564,7 +10723,6 @@ class StatsDistKernelST(StatsDistKernel):
     def new(cls, dim: int, nu: float) -> StatsDistKernelST: ...
     def ref(self) -> StatsDistKernelST: ...
     def set_nu(self, nu: float) -> None: ...
-    
 
 class StatsDistKernelSTClass(GObject.GPointer):
     r"""
@@ -9620,6 +10778,7 @@ class StatsDistVKDE(StatsDistKDE):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         local_frac: float
         use_rot_href: bool
@@ -9635,17 +10794,20 @@ class StatsDistVKDE(StatsDistKDE):
         use_threads: bool
     props: Props = ...
     parent_instance: StatsDistKDE = ...
-    def __init__(self, local_frac: float = ...,
-                 use_rot_href: bool = ...,
-                 cov_fixed: Matrix = ...,
-                 cov_type: StatsDistKDECovType = ...,
-                 nearPD_maxiter: int = ...,
-                 CV_type: StatsDistCV = ...,
-                 kernel: StatsDistKernel = ...,
-                 over_smooth: float = ...,
-                 print_fit: bool = ...,
-                 split_frac: float = ...,
-                 use_threads: bool = ...): ...
+    def __init__(
+        self,
+        local_frac: float = ...,
+        use_rot_href: bool = ...,
+        cov_fixed: Matrix = ...,
+        cov_type: StatsDistKDECovType = ...,
+        nearPD_maxiter: int = ...,
+        CV_type: StatsDistCV = ...,
+        kernel: StatsDistKernel = ...,
+        over_smooth: float = ...,
+        print_fit: bool = ...,
+        split_frac: float = ...,
+        use_threads: bool = ...,
+    ): ...
     @staticmethod
     def clear(sdvkde: StatsDistVKDE) -> None: ...
     def free(self) -> None: ...
@@ -9656,7 +10818,6 @@ class StatsDistVKDE(StatsDistKDE):
     def ref(self) -> StatsDistVKDE: ...
     def set_local_frac(self, local_frac: float) -> None: ...
     def set_use_rot_href(self, use_rot_href: bool) -> None: ...
-    
 
 class StatsDistVKDEClass(GObject.GPointer):
     r"""
@@ -9691,14 +10852,15 @@ class StatsVec(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         length: int
         save_x: bool
         type: StatsVecType
     props: Props = ...
-    def __init__(self, length: int = ...,
-                 save_x: bool = ...,
-                 type: StatsVecType = ...): ...
+    def __init__(
+        self, length: int = ..., save_x: bool = ..., type: StatsVecType = ...
+    ): ...
     def append(self, x: Vector, dup: bool) -> None: ...
     def append_data(self, data: Sequence[Vector], dup: bool) -> None: ...
     def append_weight(self, x: Vector, w: float, dup: bool) -> None: ...
@@ -9711,7 +10873,9 @@ class StatsVec(GObject.Object):
     def dup_saved_x(self) -> list[Vector]: ...
     def enable_quantile(self, p: float) -> None: ...
     def estimate_const_break(self, p: int) -> float: ...
-    def fit_ar_model(self, p: int, order: int, ar_crit: StatsVecARType) -> Tuple[bool, Vector, Vector, float, int]: ...
+    def fit_ar_model(
+        self, p: int, order: int, ar_crit: StatsVecARType
+    ) -> Tuple[bool, Vector, Vector, float, int]: ...
     def free(self) -> None: ...
     def get(self, i: int) -> float: ...
     def get_autocorr(self, p: int) -> Vector: ...
@@ -9726,10 +10890,14 @@ class StatsVec(GObject.Object):
     def get_quantile_spread(self, i: int) -> float: ...
     def get_sd(self, i: int) -> float: ...
     def get_subsample_autocorr(self, p: int, subsample: int) -> Vector: ...
-    def get_subsample_autocorr_tau(self, p: int, subsample: int, max_lag: int) -> float: ...
+    def get_subsample_autocorr_tau(
+        self, p: int, subsample: int, max_lag: int
+    ) -> float: ...
     def get_var(self, i: int) -> float: ...
     def get_weight(self) -> float: ...
-    def heidel_diag(self, ntests: int, pvalue: float) -> Tuple[Vector, int, int, int, float]: ...
+    def heidel_diag(
+        self, ntests: int, pvalue: float
+    ) -> Tuple[Vector, int, int, int, float]: ...
     def len(self) -> int: ...
     def max_ess_time(self, ntests: int) -> Tuple[Vector, int, int, int, float]: ...
     @classmethod
@@ -9749,7 +10917,6 @@ class StatsVec(GObject.Object):
     def update(self) -> None: ...
     def update_weight(self, w: float) -> None: ...
     def visual_heidel_diag(self, p: int, fi: int) -> Tuple[Vector, float, float]: ...
-    
 
 class StatsVecClass(GObject.GPointer):
     r"""
@@ -9783,6 +10950,7 @@ class Timer(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         name: str
         task_len: int
@@ -9828,7 +10996,6 @@ class Timer(GObject.Object):
     def task_start_datetime_str(self) -> str: ...
     def task_time_left(self) -> float: ...
     def task_time_left_str(self) -> str: ...
-    
 
 class TimerClass(GObject.GPointer):
     r"""
@@ -9869,7 +11036,6 @@ class TriVec(GObject.GBoxed):
     def scale(self, scale: float) -> None: ...
     def set_0(self) -> None: ...
     def set_spherical_coord(self, r: float, theta: float, phi: float) -> None: ...
-    
 
 class VParam(GObject.Object):
     r"""
@@ -9890,6 +11056,7 @@ class VParam(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         default_sparam: SParam
     props: Props = ...
@@ -9899,7 +11066,18 @@ class VParam(GObject.Object):
     def copy(self) -> VParam: ...
     def free(self) -> None: ...
     @classmethod
-    def full_new(cls, len: int, name: str, symbol: str, lower_bound: float, upper_bound: float, scale: float, abstol: float, default_val: float, ftype: ParamType) -> VParam: ...
+    def full_new(
+        cls,
+        len: int,
+        name: str,
+        symbol: str,
+        lower_bound: float,
+        upper_bound: float,
+        scale: float,
+        abstol: float,
+        default_val: float,
+        ftype: ParamType,
+    ) -> VParam: ...
     def get_absolute_tolerance(self, n: int) -> float: ...
     def get_default_value(self, n: int) -> float: ...
     def get_fit_type(self, n: int) -> ParamType: ...
@@ -9921,10 +11099,20 @@ class VParam(GObject.Object):
     def set_lower_bound(self, n: int, lb: float) -> None: ...
     def set_scale(self, n: int, scale: float) -> None: ...
     def set_sparam(self, n: int, spn: SParam) -> None: ...
-    def set_sparam_full(self, n: int, name: str, symbol: str, lower_bound: float, upper_bound: float, scale: float, abstol: float, default_val: float, ftype: ParamType) -> None: ...
+    def set_sparam_full(
+        self,
+        n: int,
+        name: str,
+        symbol: str,
+        lower_bound: float,
+        upper_bound: float,
+        scale: float,
+        abstol: float,
+        default_val: float,
+        ftype: ParamType,
+    ) -> None: ...
     def set_upper_bound(self, n: int, ub: float) -> None: ...
     def symbol(self) -> str: ...
-    
 
 class VParamClass(GObject.GPointer):
     r"""
@@ -9964,6 +11152,7 @@ class Vector(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         values: GLib.Variant
     props: Props = ...
@@ -10021,12 +11210,16 @@ class Vector(GObject.Object):
     def len(self) -> int: ...
     def log_vals(self, prestr: str, format: str, cr: bool) -> None: ...
     def log_vals_avpb(self, prestr: str, format: str, a: float, b: float) -> None: ...
-    def log_vals_func(self, prestr: str, format: str, f: Callable[..., float], *user_data: Any) -> None: ...
+    def log_vals_func(
+        self, prestr: str, format: str, f: Callable[..., float], *user_data: Any
+    ) -> None: ...
     def lt(self, cv2: Vector) -> bool: ...
     def lteq(self, cv2: Vector) -> bool: ...
     def mean(self) -> float: ...
     def memcpy(self, cv2: Vector) -> None: ...
-    def memcpy2(self, cv2: Vector, cv1_start: int, cv2_start: int, size: int) -> None: ...
+    def memcpy2(
+        self, cv2: Vector, cv1_start: int, cv2_start: int, size: int
+    ) -> None: ...
     def mul(self, cv2: Vector) -> None: ...
     def mulby(self, i: int, val: float) -> None: ...
     @classmethod
@@ -10044,7 +11237,14 @@ class Vector(GObject.Object):
     @classmethod
     def new_fftw(cls, size: int) -> Vector: ...
     @classmethod
-    def new_full(cls, d: Sequence[float], size: int, stride: int, pdata: None, pfree: Optional[Callable[[None], None]] = None) -> Vector: ...
+    def new_full(
+        cls,
+        d: Sequence[float],
+        size: int,
+        stride: int,
+        pdata: None,
+        pfree: Optional[Callable[[None], None]] = None,
+    ) -> Vector: ...
     @classmethod
     def new_variant(cls, var: GLib.Variant) -> Vector: ...
     def peek_variant(self) -> GLib.Variant: ...
@@ -10067,7 +11267,6 @@ class Vector(GObject.Object):
     @staticmethod
     def substitute(cv1: Vector, cv2: Vector, check_size: bool) -> None: ...
     def sum_cpts(self) -> float: ...
-    
 
 class VectorClass(GObject.GPointer):
     r"""
@@ -10399,5 +11598,3 @@ class VectorInternal(GObject.GEnum):
     GSL_VECTOR: VectorInternal = ...
     MALLOC: VectorInternal = ...
     SLICE: VectorInternal = ...
-
-

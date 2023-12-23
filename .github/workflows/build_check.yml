@@ -158,7 +158,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ env.CONDA }}/envs
-          key: miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('environment.yml') }}-${{ env.CACHE_NUMBER }}
+          key: miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
         env:
           CACHE_NUMBER: 0
         id: cache
@@ -178,5 +178,17 @@ jobs:
       - name: Building NumCosmo
         run: |
           meson compile -C build
+      - name: Running black check
+        run: |
+          black --check numcosmo_py
+      - name: Running flake8
+        run: |
+          flake8 numcosmo_py
+      - name: Running mypy
+        run: |
+          mypy -p numcosmo_py
+      - name: Running pylint
+        run: |
+          pylint numcosmo_py
       - name: Check NumCosmo
         run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)

@@ -268,6 +268,7 @@ ncm_rng_discrete_copy (NcmRNGDiscrete *rng)
 
 /**
  * ncm_rng_discrete_free:
+ * @rng: a #NcmRNGDiscrete
  *
  * Frees the memory allocated by @rng.
  *
@@ -943,10 +944,10 @@ ncm_rng_rayleigh_gen (NcmRNG *rng, const gdouble sigma)
 /**
  * ncm_rng_discrete_gen:
  * @rng: a #NcmRNG
+ * @rng_discrete: a #NcmRNGDiscrete
  *
- * This function returns a random number drawn from the
- * discrete distribution. The weights must be set before calling
- * ncm_rng_discrete_set_weights().
+ * This function returns a random number drawn from the discrete distribution. The
+ * weights must created using ncm_rng_discrete_new().
  *
  */
 gsize

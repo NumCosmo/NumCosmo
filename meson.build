@@ -685,7 +685,7 @@ if get_option('numcosmo_py')
       '-m',
       'pip',
       'install',
-      meson.source_root(),
+      numcosmo_source_dir,
       '-t',
       python.get_install_dir(),
       '--no-dependencies',

@@ -30,6 +30,7 @@ import pyccl
 from numcosmo_py import Ncm, Nc
 
 
+# pylint:disable-next=too-many-arguments,too-many-locals
 def create_nc_obj(
     ccl_cosmo,
     prec=1.0e-7,
@@ -40,7 +41,7 @@ def create_nc_obj(
 ):
     """Create a NumCosmo object from a CCL cosmology."""
 
-    cosmo = Nc.HICosmo.new_from_name(Nc.HICosmo, "NcHICosmoDECpl{'massnu-length':<0>}")
+    cosmo = Nc.HICosmoDECpl(massnu_length=0)
     cosmo.omega_x2omega_k()
     cosmo.param_set_by_name("H0", ccl_cosmo["h"] * 100)
     cosmo.param_set_by_name("Omegak", ccl_cosmo["Omega_k"])

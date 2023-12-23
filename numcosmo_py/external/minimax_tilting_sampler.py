@@ -8,8 +8,7 @@ Original code in https://github.com/brunzema/truncated-mvn-sampler
 import math
 import numpy as np
 
-from scipy import special
-from scipy import optimize
+from scipy import special, optimize, stats
 
 
 EPS = 10e-15
@@ -435,7 +434,7 @@ class TruncatedMVN:
             s = self.cov[j, j] - np.sum(L[j, 0:j] ** 2, axis=0)
             if s < -0.01:
                 raise RuntimeError("Sigma is not positive semi-definite")
-            elif s < 0:
+            if s < 0:
                 s = self.eps
             L[j, j] = np.sqrt(s)
             new_L = (
@@ -496,7 +495,6 @@ def lnPhi(x):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    import scipy.stats as stats
 
     d_test = 50
     # random mu and cov
