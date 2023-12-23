@@ -58,6 +58,7 @@ typedef enum _NcmDatasetBStrapType
 
 NcmDataset *ncm_dataset_new (void);
 NcmDataset *ncm_dataset_new_list (gpointer data0, ...) G_GNUC_NULL_TERMINATED;
+NcmDataset *ncm_dataset_new_array (NcmData **data_array, guint len);
 NcmDataset *ncm_dataset_dup (NcmDataset *dset, NcmSerialize *ser);
 NcmDataset *ncm_dataset_ref (NcmDataset *dset);
 NcmDataset *ncm_dataset_copy (NcmDataset *dset);
