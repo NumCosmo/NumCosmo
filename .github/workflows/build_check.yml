@@ -168,8 +168,6 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Setting up NumCosmo
         run: |
-          export NUMCOSMO_DIR=${PWD}
-          conda env config vars set NUMCOSMO_DIR=${NUMCOSMO_DIR}
           conda activate numcosmo_developer
           [[ -e $GCC_AR ]] && AR=$GCC_AR
           [[ -e $GCC_NM ]] && NM=$GCC_NM
@@ -178,9 +176,9 @@ jobs:
       - name: Building NumCosmo
         run: |
           meson compile -C build
-      - name: Setting up NumCosmo
+      - name: Installing NumCosmo
         run: |
-          source build/numcosmo_export.sh
+          meson install -C build
           cd examples
           python example_simple.py
           python example_cbe.py
