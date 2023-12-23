@@ -1,0 +1,51 @@
+[project]
+name = 'NumCosmoPy'
+version = '0.19.1'
+description = 'NumCosmo is a free software C library for cosmology calculations'
+readme = 'README.md'
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: C",
+    "Programming Language :: Fortran",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Scientific/Engineering",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: POSIX",
+    "Operating System :: Unix",
+    "Operating System :: MacOS",
+]
+requires-python = '>=3.8'
+license = {file = 'COPYING'}
+authors = [
+  {name = 'Sandro Dias Pinto Vitenti', email = 'vitenti@uel.br'},
+  {name = 'Mariana Penna-Lima', email = 'pennalima@unb.br'}
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+dev = [
+    "mypy",
+]
+
+[project.urls]
+Repository = "https://github.com/NumCosmo/NumCosmo"
+Documentation = "https://numcosmo.github.io/"
+Changelog = "https://github.com/NumCosmo/NumCosmo/blob/master/ChangeLog.md"
+
+[tool.setuptools]
+package-dir = {numcosmo_py = "numcosmo_py"}
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
