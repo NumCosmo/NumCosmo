@@ -4,8 +4,6 @@ from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import NumCosmoMath
 
-
-CLUSTER_MASS_ASCASO_DEFAULT_CUT: int = 6
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P0: float = 3.19
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P1: int = 0
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P2: int = 0
@@ -28,22 +26,6 @@ CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL: float = 0.0
 CLUSTER_MASS_LNNORMAL_DEFAULT_BIAS: float = 0.0
 CLUSTER_MASS_LNNORMAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
 CLUSTER_MASS_LNNORMAL_DEFAULT_SIGMA: float = 0.04
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT: int = 6
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT_M1: float = 0.0
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT_Z1: float = 0.0
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU: float = 3.19
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_M1: int = 0
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_M2: float = 0.0
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_MZ: float = 0.0
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_Z1: int = 0
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_Z2: float = 0.0
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_PARAMS_ABSTOL: float = 0.0
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_0: float = 0.33
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_M1: int = 0
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_M2: float = 0.0
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_MZ: float = 0.0
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_Z1: float = 0.0
-CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_Z2: float = 0.0
 CLUSTER_MASS_PLCL_DEFAULT_A_L: float = 0.9
 CLUSTER_MASS_PLCL_DEFAULT_A_SZ: float = 1.0
 CLUSTER_MASS_PLCL_DEFAULT_B_L: float = 0.0
@@ -138,7 +120,7 @@ HICOSMO_QCONST_DEFAULT_Z1: float = 0.0
 HICOSMO_QGRW_DEFAULT_OMEGA_R: float = 1e-05
 HICOSMO_QGRW_DEFAULT_OMEGA_W: int = 0
 HICOSMO_QGRW_DEFAULT_W: float = 1e-12
-HICOSMO_QGRW_DEFAULT_X_B: float = 1e+30
+HICOSMO_QGRW_DEFAULT_X_B: float = 1e30
 HICOSMO_QLINEAR_DEFAULT_CD: float = 0.0
 HICOSMO_QLINEAR_DEFAULT_E: float = 1.0
 HICOSMO_QLINEAR_DEFAULT_OMEGA_T: float = 1.0
@@ -167,7 +149,7 @@ HICOSMO_VEXP_DEFAULT_H0: float = 70.0
 HICOSMO_VEXP_DEFAULT_OMEGA_C: float = 0.25
 HICOSMO_VEXP_DEFAULT_OMEGA_L: float = 0.75
 HICOSMO_VEXP_DEFAULT_SIGMA_PHI: float = 0.4
-HICOSMO_VEXP_DEFAULT_X_B: float = 1e+30
+HICOSMO_VEXP_DEFAULT_X_B: float = 1e30
 HIPERT_BG_VAR_DEFAULT_ZF: float = 1000000000.0
 HIPERT_BOLTZMANN_BASE_SIZE: int = 8
 HIPRIM_ATAN_DEFAULT_C2: float = 0.5
@@ -368,17 +350,29 @@ XCOR_LIMBER_KERNEL_GAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN: int = 200
 XCOR_LIMBER_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_PRECISION: float = 1e-05
-_lock = ... # FIXME Constant
+_lock = ...  # FIXME Constant
 _namespace: str = "NumCosmo"
 _version: str = "1.0"
 
 def bias_mean_prepare(cad: ClusterAbundance, cosmo: HICosmo) -> None: ...
-def bias_mean_val(cad: ClusterAbundance, cosmo: HICosmo, lnMl: float, lnMu: float, z: float) -> float: ...
-def ca_mean_bias(cad: ClusterAbundance, cosmo: HICosmo, lnM: float, z: float) -> float: ...
-def ca_mean_bias_Mobs_denominator(cad: ClusterAbundance, cosmo: HICosmo, lnMobs: float, z: float) -> float: ...
-def ca_mean_bias_Mobs_numerator(cad: ClusterAbundance, cosmo: HICosmo, lnMobs: float, z: float) -> float: ...
-def ca_mean_bias_denominator(cad: ClusterAbundance, cosmo: HICosmo, lnM: float, z: float) -> float: ...
-def ca_mean_bias_numerator(cad: ClusterAbundance, cosmo: HICosmo, lnM: float, z: float) -> float: ...
+def bias_mean_val(
+    cad: ClusterAbundance, cosmo: HICosmo, lnMl: float, lnMu: float, z: float
+) -> float: ...
+def ca_mean_bias(
+    cad: ClusterAbundance, cosmo: HICosmo, lnM: float, z: float
+) -> float: ...
+def ca_mean_bias_Mobs_denominator(
+    cad: ClusterAbundance, cosmo: HICosmo, lnMobs: float, z: float
+) -> float: ...
+def ca_mean_bias_Mobs_numerator(
+    cad: ClusterAbundance, cosmo: HICosmo, lnMobs: float, z: float
+) -> float: ...
+def ca_mean_bias_denominator(
+    cad: ClusterAbundance, cosmo: HICosmo, lnM: float, z: float
+) -> float: ...
+def ca_mean_bias_numerator(
+    cad: ClusterAbundance, cosmo: HICosmo, lnM: float, z: float
+) -> float: ...
 def data_bao_create(dist: Distance, id: DataBaoId) -> NumCosmoMath.Data: ...
 def data_cmb_create(dist: Distance, id: DataCMBId) -> NumCosmoMath.Data: ...
 def data_snia_cov_error_quark() -> int: ...
@@ -434,6 +428,7 @@ class ABCClusterNCount(NumCosmoMath.ABC):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         epsilon_update: float
         epsilon_update_type: ABCClusterNCountEpsilonUpdate
@@ -452,29 +447,40 @@ class ABCClusterNCount(NumCosmoMath.ABC):
         prior: NumCosmoMath.MSetTransKern
         trans_kernel: NumCosmoMath.MSetTransKern
     props: Props = ...
-    def __init__(self, epsilon_update: float = ...,
-                 epsilon_update_type: ABCClusterNCountEpsilonUpdate = ...,
-                 lnM_bins: int = ...,
-                 lnM_nodes: NumCosmoMath.Vector = ...,
-                 quantiles: NumCosmoMath.Vector = ...,
-                 rbf_scale: float = ...,
-                 scale_cov: bool = ...,
-                 summary_type: ABCClusterNCountSummary = ...,
-                 z_bins: int = ...,
-                 z_nodes: NumCosmoMath.Vector = ...,
-                 data_set: NumCosmoMath.Dataset = ...,
-                 epsilon: float = ...,
-                 mset: NumCosmoMath.MSet = ...,
-                 prior: NumCosmoMath.MSetTransKern = ...,
-                 trans_kernel: NumCosmoMath.MSetTransKern = ...): ...
+    def __init__(
+        self,
+        epsilon_update: float = ...,
+        epsilon_update_type: ABCClusterNCountEpsilonUpdate = ...,
+        lnM_bins: int = ...,
+        lnM_nodes: NumCosmoMath.Vector = ...,
+        quantiles: NumCosmoMath.Vector = ...,
+        rbf_scale: float = ...,
+        scale_cov: bool = ...,
+        summary_type: ABCClusterNCountSummary = ...,
+        z_bins: int = ...,
+        z_nodes: NumCosmoMath.Vector = ...,
+        data_set: NumCosmoMath.Dataset = ...,
+        epsilon: float = ...,
+        mset: NumCosmoMath.MSet = ...,
+        prior: NumCosmoMath.MSetTransKern = ...,
+        trans_kernel: NumCosmoMath.MSetTransKern = ...,
+    ): ...
     @classmethod
-    def new(cls, mset: NumCosmoMath.MSet, prior: NumCosmoMath.MSetTransKern, dset: NumCosmoMath.Dataset) -> ABCClusterNCount: ...
-    def set_bin_nodes(self, z_nodes: NumCosmoMath.Vector, lnM_nodes: NumCosmoMath.Vector) -> None: ...
-    def set_bin_quantile(self, quantiles: Optional[NumCosmoMath.Vector] = None) -> None: ...
+    def new(
+        cls,
+        mset: NumCosmoMath.MSet,
+        prior: NumCosmoMath.MSetTransKern,
+        dset: NumCosmoMath.Dataset,
+    ) -> ABCClusterNCount: ...
+    def set_bin_nodes(
+        self, z_nodes: NumCosmoMath.Vector, lnM_nodes: NumCosmoMath.Vector
+    ) -> None: ...
+    def set_bin_quantile(
+        self, quantiles: Optional[NumCosmoMath.Vector] = None
+    ) -> None: ...
     def set_bin_uniform(self, z_bins: int, lnM_bins: int) -> None: ...
     def set_epsilon_update(self, q: float) -> None: ...
     def set_scale_cov(self, on: bool) -> None: ...
-    
 
 class ABCClusterNCountClass(GObject.GPointer):
     r"""
@@ -530,6 +536,7 @@ class CBE(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         calc_transfer: bool
         matter_pk_maxk: float
@@ -571,23 +578,33 @@ class CBE(GObject.Object):
     free: Callable[[CBE], None] = ...
     allocated: bool = ...
     thermodyn_prepared: bool = ...
-    def __init__(self, calc_transfer: bool = ...,
-                 matter_pk_maxk: float = ...,
-                 matter_pk_maxz: float = ...,
-                 precision: CBEPrecision = ...,
-                 scalar_lmax: int = ...,
-                 target_Cls: DataCMBDataType = ...,
-                 tensor_lmax: int = ...,
-                 use_lensed_Cls: bool = ...,
-                 use_ppf: bool = ...,
-                 use_tensor: bool = ...,
-                 use_thermodyn: bool = ...,
-                 vector_lmax: int = ...,
-                 verbosity: int = ...): ...
+    def __init__(
+        self,
+        calc_transfer: bool = ...,
+        matter_pk_maxk: float = ...,
+        matter_pk_maxz: float = ...,
+        precision: CBEPrecision = ...,
+        scalar_lmax: int = ...,
+        target_Cls: DataCMBDataType = ...,
+        tensor_lmax: int = ...,
+        use_lensed_Cls: bool = ...,
+        use_ppf: bool = ...,
+        use_tensor: bool = ...,
+        use_thermodyn: bool = ...,
+        vector_lmax: int = ...,
+        verbosity: int = ...,
+    ): ...
     @staticmethod
     def clear(cbe: CBE) -> None: ...
     def compare_bg(self, cosmo: HICosmo, log_cmp: bool) -> float: ...
-    def get_all_Cls(self, PHIPHI_Cls: NumCosmoMath.Vector, TT_Cls: NumCosmoMath.Vector, EE_Cls: NumCosmoMath.Vector, BB_Cls: NumCosmoMath.Vector, TE_Cls: NumCosmoMath.Vector) -> None: ...
+    def get_all_Cls(
+        self,
+        PHIPHI_Cls: NumCosmoMath.Vector,
+        TT_Cls: NumCosmoMath.Vector,
+        EE_Cls: NumCosmoMath.Vector,
+        BB_Cls: NumCosmoMath.Vector,
+        TE_Cls: NumCosmoMath.Vector,
+    ) -> None: ...
     def get_matter_ps(self) -> NumCosmoMath.Spline2d: ...
     def get_max_matter_pk_k(self) -> float: ...
     def get_max_matter_pk_z(self) -> float: ...
@@ -626,7 +643,6 @@ class CBE(GObject.Object):
     def thermodyn_v_tau_max_z(self) -> float: ...
     def thermodyn_z_d(self) -> float: ...
     def use_ppf(self, use_ppf: bool) -> None: ...
-    
 
 class CBEClass(GObject.GPointer):
     r"""
@@ -956,6 +972,7 @@ class CBEPrecision(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         a_ini_over_a_today_default: float
         accurate_lensing: int
@@ -1111,157 +1128,160 @@ class CBEPrecision(GObject.Object):
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: CBEPrecisionPrivate = ...
-    def __init__(self, a_ini_over_a_today_default: float = ...,
-                 accurate_lensing: int = ...,
-                 back_integration_stepsize: float = ...,
-                 curvature_ini: float = ...,
-                 delta_l_max: int = ...,
-                 entropy_ini: float = ...,
-                 evolver: int = ...,
-                 gw_ini: float = ...,
-                 halofit_k_per_decade: float = ...,
-                 halofit_min_k_max: float = ...,
-                 halofit_min_k_nonlinear: float = ...,
-                 halofit_sigma_precision: float = ...,
-                 halofit_tol_sigma: float = ...,
-                 hyper_flat_approximation_nu: float = ...,
-                 hyper_nu_sampling_step: float = ...,
-                 hyper_phi_min_abs: float = ...,
-                 hyper_sampling_curved_high_nu: float = ...,
-                 hyper_sampling_curved_low_nu: float = ...,
-                 hyper_sampling_flat: float = ...,
-                 hyper_x_min: float = ...,
-                 hyper_x_tol: float = ...,
-                 hyrec_Alpha_inf_file: str = ...,
-                 hyrec_R_inf_file: str = ...,
-                 hyrec_two_photon_tables_file: str = ...,
-                 k_bao_center: float = ...,
-                 k_bao_width: float = ...,
-                 k_max_tau0_over_l_max: float = ...,
-                 k_min_tau0: float = ...,
-                 k_per_decade_for_bao: float = ...,
-                 k_per_decade_for_pk: float = ...,
-                 k_per_decade_primordial: float = ...,
-                 k_step_sub: float = ...,
-                 k_step_super: float = ...,
-                 k_step_super_reduction: float = ...,
-                 k_step_transition: float = ...,
-                 l_linstep: int = ...,
-                 l_logstep: float = ...,
-                 l_max_dr: int = ...,
-                 l_max_g: int = ...,
-                 l_max_g_ten: int = ...,
-                 l_max_ncdm: int = ...,
-                 l_max_pol_g: int = ...,
-                 l_max_pol_g_ten: int = ...,
-                 l_max_ur: int = ...,
-                 l_switch_limber: float = ...,
-                 l_switch_limber_for_nc_local_over_z: float = ...,
-                 l_switch_limber_for_nc_los_over_z: float = ...,
-                 ncdm_fluid_approximation: int = ...,
-                 ncdm_fluid_trigger_tau_over_tau_k: float = ...,
-                 neglect_CMB_sources_below_visibility: float = ...,
-                 num_mu_minus_lmax: int = ...,
-                 perturb_integration_stepsize: float = ...,
-                 perturb_sampling_stepsize: float = ...,
-                 pk_eq_tol: float = ...,
-                 pk_eq_z_max: float = ...,
-                 primordial_inflation_aH_ini_target: float = ...,
-                 primordial_inflation_attractor_maxit: int = ...,
-                 primordial_inflation_attractor_precision_initial: float = ...,
-                 primordial_inflation_attractor_precision_pivot: float = ...,
-                 primordial_inflation_bg_stepsize: float = ...,
-                 primordial_inflation_end_dphi: float = ...,
-                 primordial_inflation_end_logstep: float = ...,
-                 primordial_inflation_extra_efolds: float = ...,
-                 primordial_inflation_phi_ini_maxit: int = ...,
-                 primordial_inflation_pt_stepsize: float = ...,
-                 primordial_inflation_ratio_max: float = ...,
-                 primordial_inflation_ratio_min: float = ...,
-                 primordial_inflation_small_epsilon: float = ...,
-                 primordial_inflation_small_epsilon_tol: float = ...,
-                 primordial_inflation_tol_curvature: float = ...,
-                 primordial_inflation_tol_integration: float = ...,
-                 q_linstep: float = ...,
-                 q_logstep_open: float = ...,
-                 q_logstep_spline: float = ...,
-                 q_logstep_trapzd: float = ...,
-                 q_numstep_transition: float = ...,
-                 radiation_streaming_approximation: int = ...,
-                 radiation_streaming_trigger_tau_c_over_tau: float = ...,
-                 radiation_streaming_trigger_tau_over_tau_k: float = ...,
-                 recfast_AGauss1: float = ...,
-                 recfast_AGauss2: float = ...,
-                 recfast_H_frac: float = ...,
-                 recfast_Heswitch: int = ...,
-                 recfast_Hswitch: int = ...,
-                 recfast_Nz0: int = ...,
-                 recfast_delta_fudge_H: float = ...,
-                 recfast_delta_z_He_1: float = ...,
-                 recfast_delta_z_He_2: float = ...,
-                 recfast_delta_z_He_3: float = ...,
-                 recfast_fudge_H: float = ...,
-                 recfast_fudge_He: float = ...,
-                 recfast_wGauss1: float = ...,
-                 recfast_wGauss2: float = ...,
-                 recfast_x_H0_trigger: float = ...,
-                 recfast_x_H0_trigger_delta: float = ...,
-                 recfast_x_H0_trigger2: float = ...,
-                 recfast_x_He0_trigger: float = ...,
-                 recfast_x_He0_trigger_delta: float = ...,
-                 recfast_x_He0_trigger2: float = ...,
-                 recfast_z_He_1: float = ...,
-                 recfast_z_He_2: float = ...,
-                 recfast_z_He_3: float = ...,
-                 recfast_z_initial: float = ...,
-                 recfast_zGauss1: float = ...,
-                 recfast_zGauss2: float = ...,
-                 reionization_optical_depth_tol: float = ...,
-                 reionization_sampling: float = ...,
-                 reionization_start_factor: float = ...,
-                 reionization_z_start_max: float = ...,
-                 sBBN_file: str = ...,
-                 safe_phi_scf: float = ...,
-                 selection_cut_at_sigma: float = ...,
-                 selection_sampling: float = ...,
-                 selection_sampling_bessel: float = ...,
-                 selection_sampling_bessel_los: float = ...,
-                 selection_tophat_edge: float = ...,
-                 smallest_allowed_variation: float = ...,
-                 start_large_k_at_tau_h_over_tau_k: float = ...,
-                 start_small_k_at_tau_c_over_tau_h: float = ...,
-                 start_sources_at_tau_c_over_tau_h: float = ...,
-                 thermo_rate_smoothing_radius: int = ...,
-                 tight_coupling_approximation: int = ...,
-                 tight_coupling_trigger_tau_c_over_tau_h: float = ...,
-                 tight_coupling_trigger_tau_c_over_tau_k: float = ...,
-                 tol_M_ncdm: float = ...,
-                 tol_background_integration: float = ...,
-                 tol_gauss_legendre: float = ...,
-                 tol_initial_Omega_r: float = ...,
-                 tol_ncdm: float = ...,
-                 tol_ncdm_bg: float = ...,
-                 tol_ncdm_initial_w: float = ...,
-                 tol_ncdm_newtonian: float = ...,
-                 tol_ncdm_synchronous: float = ...,
-                 tol_perturb_integration: float = ...,
-                 tol_tau_approx: float = ...,
-                 tol_tau_eq: float = ...,
-                 tol_thermo_integration: float = ...,
-                 transfer_neglect_delta_k_S_e: float = ...,
-                 transfer_neglect_delta_k_S_t0: float = ...,
-                 transfer_neglect_delta_k_S_t1: float = ...,
-                 transfer_neglect_delta_k_S_t2: float = ...,
-                 transfer_neglect_delta_k_T_b: float = ...,
-                 transfer_neglect_delta_k_T_e: float = ...,
-                 transfer_neglect_delta_k_T_t2: float = ...,
-                 transfer_neglect_delta_k_V_b: float = ...,
-                 transfer_neglect_delta_k_V_e: float = ...,
-                 transfer_neglect_delta_k_V_t1: float = ...,
-                 transfer_neglect_delta_k_V_t2: float = ...,
-                 transfer_neglect_late_source: float = ...,
-                 ur_fluid_approximation: int = ...,
-                 ur_fluid_trigger_tau_over_tau_k: float = ...): ...
+    def __init__(
+        self,
+        a_ini_over_a_today_default: float = ...,
+        accurate_lensing: int = ...,
+        back_integration_stepsize: float = ...,
+        curvature_ini: float = ...,
+        delta_l_max: int = ...,
+        entropy_ini: float = ...,
+        evolver: int = ...,
+        gw_ini: float = ...,
+        halofit_k_per_decade: float = ...,
+        halofit_min_k_max: float = ...,
+        halofit_min_k_nonlinear: float = ...,
+        halofit_sigma_precision: float = ...,
+        halofit_tol_sigma: float = ...,
+        hyper_flat_approximation_nu: float = ...,
+        hyper_nu_sampling_step: float = ...,
+        hyper_phi_min_abs: float = ...,
+        hyper_sampling_curved_high_nu: float = ...,
+        hyper_sampling_curved_low_nu: float = ...,
+        hyper_sampling_flat: float = ...,
+        hyper_x_min: float = ...,
+        hyper_x_tol: float = ...,
+        hyrec_Alpha_inf_file: str = ...,
+        hyrec_R_inf_file: str = ...,
+        hyrec_two_photon_tables_file: str = ...,
+        k_bao_center: float = ...,
+        k_bao_width: float = ...,
+        k_max_tau0_over_l_max: float = ...,
+        k_min_tau0: float = ...,
+        k_per_decade_for_bao: float = ...,
+        k_per_decade_for_pk: float = ...,
+        k_per_decade_primordial: float = ...,
+        k_step_sub: float = ...,
+        k_step_super: float = ...,
+        k_step_super_reduction: float = ...,
+        k_step_transition: float = ...,
+        l_linstep: int = ...,
+        l_logstep: float = ...,
+        l_max_dr: int = ...,
+        l_max_g: int = ...,
+        l_max_g_ten: int = ...,
+        l_max_ncdm: int = ...,
+        l_max_pol_g: int = ...,
+        l_max_pol_g_ten: int = ...,
+        l_max_ur: int = ...,
+        l_switch_limber: float = ...,
+        l_switch_limber_for_nc_local_over_z: float = ...,
+        l_switch_limber_for_nc_los_over_z: float = ...,
+        ncdm_fluid_approximation: int = ...,
+        ncdm_fluid_trigger_tau_over_tau_k: float = ...,
+        neglect_CMB_sources_below_visibility: float = ...,
+        num_mu_minus_lmax: int = ...,
+        perturb_integration_stepsize: float = ...,
+        perturb_sampling_stepsize: float = ...,
+        pk_eq_tol: float = ...,
+        pk_eq_z_max: float = ...,
+        primordial_inflation_aH_ini_target: float = ...,
+        primordial_inflation_attractor_maxit: int = ...,
+        primordial_inflation_attractor_precision_initial: float = ...,
+        primordial_inflation_attractor_precision_pivot: float = ...,
+        primordial_inflation_bg_stepsize: float = ...,
+        primordial_inflation_end_dphi: float = ...,
+        primordial_inflation_end_logstep: float = ...,
+        primordial_inflation_extra_efolds: float = ...,
+        primordial_inflation_phi_ini_maxit: int = ...,
+        primordial_inflation_pt_stepsize: float = ...,
+        primordial_inflation_ratio_max: float = ...,
+        primordial_inflation_ratio_min: float = ...,
+        primordial_inflation_small_epsilon: float = ...,
+        primordial_inflation_small_epsilon_tol: float = ...,
+        primordial_inflation_tol_curvature: float = ...,
+        primordial_inflation_tol_integration: float = ...,
+        q_linstep: float = ...,
+        q_logstep_open: float = ...,
+        q_logstep_spline: float = ...,
+        q_logstep_trapzd: float = ...,
+        q_numstep_transition: float = ...,
+        radiation_streaming_approximation: int = ...,
+        radiation_streaming_trigger_tau_c_over_tau: float = ...,
+        radiation_streaming_trigger_tau_over_tau_k: float = ...,
+        recfast_AGauss1: float = ...,
+        recfast_AGauss2: float = ...,
+        recfast_H_frac: float = ...,
+        recfast_Heswitch: int = ...,
+        recfast_Hswitch: int = ...,
+        recfast_Nz0: int = ...,
+        recfast_delta_fudge_H: float = ...,
+        recfast_delta_z_He_1: float = ...,
+        recfast_delta_z_He_2: float = ...,
+        recfast_delta_z_He_3: float = ...,
+        recfast_fudge_H: float = ...,
+        recfast_fudge_He: float = ...,
+        recfast_wGauss1: float = ...,
+        recfast_wGauss2: float = ...,
+        recfast_x_H0_trigger: float = ...,
+        recfast_x_H0_trigger_delta: float = ...,
+        recfast_x_H0_trigger2: float = ...,
+        recfast_x_He0_trigger: float = ...,
+        recfast_x_He0_trigger_delta: float = ...,
+        recfast_x_He0_trigger2: float = ...,
+        recfast_z_He_1: float = ...,
+        recfast_z_He_2: float = ...,
+        recfast_z_He_3: float = ...,
+        recfast_z_initial: float = ...,
+        recfast_zGauss1: float = ...,
+        recfast_zGauss2: float = ...,
+        reionization_optical_depth_tol: float = ...,
+        reionization_sampling: float = ...,
+        reionization_start_factor: float = ...,
+        reionization_z_start_max: float = ...,
+        sBBN_file: str = ...,
+        safe_phi_scf: float = ...,
+        selection_cut_at_sigma: float = ...,
+        selection_sampling: float = ...,
+        selection_sampling_bessel: float = ...,
+        selection_sampling_bessel_los: float = ...,
+        selection_tophat_edge: float = ...,
+        smallest_allowed_variation: float = ...,
+        start_large_k_at_tau_h_over_tau_k: float = ...,
+        start_small_k_at_tau_c_over_tau_h: float = ...,
+        start_sources_at_tau_c_over_tau_h: float = ...,
+        thermo_rate_smoothing_radius: int = ...,
+        tight_coupling_approximation: int = ...,
+        tight_coupling_trigger_tau_c_over_tau_h: float = ...,
+        tight_coupling_trigger_tau_c_over_tau_k: float = ...,
+        tol_M_ncdm: float = ...,
+        tol_background_integration: float = ...,
+        tol_gauss_legendre: float = ...,
+        tol_initial_Omega_r: float = ...,
+        tol_ncdm: float = ...,
+        tol_ncdm_bg: float = ...,
+        tol_ncdm_initial_w: float = ...,
+        tol_ncdm_newtonian: float = ...,
+        tol_ncdm_synchronous: float = ...,
+        tol_perturb_integration: float = ...,
+        tol_tau_approx: float = ...,
+        tol_tau_eq: float = ...,
+        tol_thermo_integration: float = ...,
+        transfer_neglect_delta_k_S_e: float = ...,
+        transfer_neglect_delta_k_S_t0: float = ...,
+        transfer_neglect_delta_k_S_t1: float = ...,
+        transfer_neglect_delta_k_S_t2: float = ...,
+        transfer_neglect_delta_k_T_b: float = ...,
+        transfer_neglect_delta_k_T_e: float = ...,
+        transfer_neglect_delta_k_T_t2: float = ...,
+        transfer_neglect_delta_k_V_b: float = ...,
+        transfer_neglect_delta_k_V_e: float = ...,
+        transfer_neglect_delta_k_V_t1: float = ...,
+        transfer_neglect_delta_k_V_t2: float = ...,
+        transfer_neglect_late_source: float = ...,
+        ur_fluid_approximation: int = ...,
+        ur_fluid_trigger_tau_over_tau_k: float = ...,
+    ): ...
     def assert_default(self) -> None: ...
     @staticmethod
     def clear(cbe_prec: CBEPrecision) -> None: ...
@@ -1269,7 +1289,6 @@ class CBEPrecision(GObject.Object):
     @classmethod
     def new(cls) -> CBEPrecision: ...
     def ref(self) -> CBEPrecision: ...
-    
 
 class CBEPrecisionClass(GObject.GPointer):
     r"""
@@ -1282,7 +1301,6 @@ class CBEPrecisionClass(GObject.GPointer):
     parent_class: GObject.ObjectClass = ...
 
 class CBEPrecisionPrivate(GObject.GPointer): ...
-
 class CBEPrivate(GObject.GPointer): ...
 
 class ClusterAbundance(GObject.Object):
@@ -1306,6 +1324,7 @@ class ClusterAbundance(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         halo_mass_function: HaloMassFunction
         mean_bias: HaloBias
@@ -1314,8 +1333,22 @@ class ClusterAbundance(GObject.Object):
     mfp: HaloMassFunction = ...
     mbiasf: HaloBias = ...
     N: Callable[[ClusterAbundance, HICosmo, ClusterRedshift, ClusterMass], float] = ...
-    intp_d2N: Callable[[ClusterAbundance, HICosmo, ClusterRedshift, ClusterMass, float, float], float] = ...
-    intp_d2N_bias: Callable[[ClusterAbundance, HICosmo, ClusterRedshift, ClusterMass, float, float, float, float], float] = ...
+    intp_d2N: Callable[
+        [ClusterAbundance, HICosmo, ClusterRedshift, ClusterMass, float, float], float
+    ] = ...
+    intp_d2N_bias: Callable[
+        [
+            ClusterAbundance,
+            HICosmo,
+            ClusterRedshift,
+            ClusterMass,
+            float,
+            float,
+            float,
+            float,
+        ],
+        float,
+    ] = ...
     norma: float = ...
     log_norma: float = ...
     lnMi: float = ...
@@ -1336,33 +1369,117 @@ class ClusterAbundance(GObject.Object):
     ctrl_reion: NumCosmoMath.ModelCtrl = ...
     ctrl_z: NumCosmoMath.ModelCtrl = ...
     ctrl_m: NumCosmoMath.ModelCtrl = ...
-    def __init__(self, halo_mass_function: HaloMassFunction = ...,
-                 mean_bias: HaloBias = ...): ...
+    def __init__(
+        self, halo_mass_function: HaloMassFunction = ..., mean_bias: HaloBias = ...
+    ): ...
     @staticmethod
     def clear(cad: ClusterAbundance) -> None: ...
-    def d2n(self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass, lnM: float, z: float) -> float: ...
+    def d2n(
+        self,
+        cosmo: HICosmo,
+        clusterz: ClusterRedshift,
+        clusterm: ClusterMass,
+        lnM: float,
+        z: float,
+    ) -> float: ...
     def free(self) -> None: ...
-    def intp_bin_d2n(self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass, lnM_obs_lower: Sequence[float], lnM_obs_upper: Sequence[float], lnM_obs_params: Optional[Sequence[float]], z_obs_lower: Sequence[float], z_obs_upper: Sequence[float], z_obs_params: Optional[Sequence[float]] = None) -> float: ...
-    def intp_bin_d2n_bias(self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass, lnM_obs_lower: Sequence[float], lnM_obs_upper: Sequence[float], lnM_obs_params: Optional[Sequence[float]], z_obs_lower: Sequence[float], z_obs_upper: Sequence[float], z_obs_params: Optional[Sequence[float]] = None) -> float: ...
-    def intp_d2n(self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass, lnM: float, z: float) -> float: ...
-    def intp_d2n_bias(self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass, lnM_obs: Sequence[float], lnM_obs_params: Optional[Sequence[float]], z_obs: Sequence[float], z_obs_params: Optional[Sequence[float]] = None) -> float: ...
-    def lnM_p_d2n(self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass, lnM_obs: Sequence[float], lnM_obs_params: Optional[Sequence[float]], z: float) -> float: ...
-    def mean_bias(self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass) -> float: ...
-    def n(self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass) -> float: ...
+    def intp_bin_d2n(
+        self,
+        cosmo: HICosmo,
+        clusterz: ClusterRedshift,
+        clusterm: ClusterMass,
+        lnM_obs_lower: Sequence[float],
+        lnM_obs_upper: Sequence[float],
+        lnM_obs_params: Optional[Sequence[float]],
+        z_obs_lower: Sequence[float],
+        z_obs_upper: Sequence[float],
+        z_obs_params: Optional[Sequence[float]] = None,
+    ) -> float: ...
+    def intp_bin_d2n_bias(
+        self,
+        cosmo: HICosmo,
+        clusterz: ClusterRedshift,
+        clusterm: ClusterMass,
+        lnM_obs_lower: Sequence[float],
+        lnM_obs_upper: Sequence[float],
+        lnM_obs_params: Optional[Sequence[float]],
+        z_obs_lower: Sequence[float],
+        z_obs_upper: Sequence[float],
+        z_obs_params: Optional[Sequence[float]] = None,
+    ) -> float: ...
+    def intp_d2n(
+        self,
+        cosmo: HICosmo,
+        clusterz: ClusterRedshift,
+        clusterm: ClusterMass,
+        lnM: float,
+        z: float,
+    ) -> float: ...
+    def intp_d2n_bias(
+        self,
+        cosmo: HICosmo,
+        clusterz: ClusterRedshift,
+        clusterm: ClusterMass,
+        lnM_obs: Sequence[float],
+        lnM_obs_params: Optional[Sequence[float]],
+        z_obs: Sequence[float],
+        z_obs_params: Optional[Sequence[float]] = None,
+    ) -> float: ...
+    def lnM_p_d2n(
+        self,
+        cosmo: HICosmo,
+        clusterz: ClusterRedshift,
+        clusterm: ClusterMass,
+        lnM_obs: Sequence[float],
+        lnM_obs_params: Optional[Sequence[float]],
+        z: float,
+    ) -> float: ...
+    def mean_bias(
+        self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass
+    ) -> float: ...
+    def n(
+        self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass
+    ) -> float: ...
     @classmethod
-    def new(cls, mfp: HaloMassFunction, mbiasf: Optional[HaloBias] = None) -> ClusterAbundance: ...
+    def new(
+        cls, mfp: HaloMassFunction, mbiasf: Optional[HaloBias] = None
+    ) -> ClusterAbundance: ...
     @classmethod
-    def nodist_new(cls, mfp: HaloMassFunction, mbiasf: Optional[HaloBias] = None) -> ClusterAbundance: ...
-    def prepare(self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass) -> None: ...
-    def prepare_if_needed(self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass) -> None: ...
+    def nodist_new(
+        cls, mfp: HaloMassFunction, mbiasf: Optional[HaloBias] = None
+    ) -> ClusterAbundance: ...
+    def prepare(
+        self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass
+    ) -> None: ...
+    def prepare_if_needed(
+        self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass
+    ) -> None: ...
     def prepare_inv_dNdlnM_z(self, cosmo: HICosmo, lnMi: float, z: float) -> None: ...
     def prepare_inv_dNdz(self, cosmo: HICosmo, lnMi: float) -> None: ...
     def ref(self) -> ClusterAbundance: ...
     def set_area(self, area: float) -> None: ...
-    def true_n(self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass) -> float: ...
-    def z_p_d2n(self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass, lnM: float, z_obs: Sequence[float], z_obs_params: Sequence[float]) -> float: ...
-    def z_p_lnM_p_d2n(self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass, lnM_obs: Sequence[float], lnM_obs_params: Sequence[float], z_obs: Sequence[float], z_obs_params: Sequence[float]) -> float: ...
-    
+    def true_n(
+        self, cosmo: HICosmo, clusterz: ClusterRedshift, clusterm: ClusterMass
+    ) -> float: ...
+    def z_p_d2n(
+        self,
+        cosmo: HICosmo,
+        clusterz: ClusterRedshift,
+        clusterm: ClusterMass,
+        lnM: float,
+        z_obs: Sequence[float],
+        z_obs_params: Sequence[float],
+    ) -> float: ...
+    def z_p_lnM_p_d2n(
+        self,
+        cosmo: HICosmo,
+        clusterz: ClusterRedshift,
+        clusterm: ClusterMass,
+        lnM_obs: Sequence[float],
+        lnM_obs_params: Sequence[float],
+        z_obs: Sequence[float],
+        z_obs_params: Sequence[float],
+    ) -> float: ...
 
 class ClusterAbundanceClass(GObject.GPointer):
     r"""
@@ -1375,11 +1492,8 @@ class ClusterAbundanceClass(GObject.GPointer):
     parent_class: GObject.ObjectClass = ...
 
 class ClusterAbundanceDataBin(GObject.GPointer): ...
-
 class ClusterAbundanceDataBinM(GObject.GPointer): ...
-
 class ClusterAbundanceDataBinZ(GObject.GPointer): ...
-
 class ClusterAbundanceDataP(GObject.GPointer): ...
 
 class ClusterMass(NumCosmoMath.Model):
@@ -1415,6 +1529,7 @@ class ClusterMass(NumCosmoMath.Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         implementation: int
         name: str
@@ -1428,41 +1543,138 @@ class ClusterMass(NumCosmoMath.Model):
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     priv: ClusterMassPrivate = ...
-    def __init__(self, reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @staticmethod
     def clear(clusterm: ClusterMass) -> None: ...
     def do_N_limits(self, cosmo: HICosmo) -> Tuple[float, float]: ...
-    def do_P(self, cosmo: HICosmo, lnM: float, z: float, lnM_obs: Sequence[float], lnM_obs_params: Optional[Sequence[float]] = None) -> float: ...
-    def do_P_bin_limits(self, cosmo: HICosmo, lnM_obs_lower: Sequence[float], lnM_obs_upper: Sequence[float], lnM_obs_params: Sequence[float]) -> Tuple[float, float]: ...
-    def do_P_limits(self, cosmo: HICosmo, lnM_obs: Sequence[float], lnM_obs_params: Sequence[float]) -> Tuple[float, float]: ...
-    def do_P_vec_z_lnMobs(self, cosmo: HICosmo, lnM: float, z: NumCosmoMath.Vector, lnM_obs: NumCosmoMath.Matrix, lnM_obs_params: NumCosmoMath.Matrix, res: Sequence[float]) -> None: ...
+    def do_P(
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: float,
+        lnM_obs: Sequence[float],
+        lnM_obs_params: Optional[Sequence[float]] = None,
+    ) -> float: ...
+    def do_P_bin_limits(
+        self,
+        cosmo: HICosmo,
+        lnM_obs_lower: Sequence[float],
+        lnM_obs_upper: Sequence[float],
+        lnM_obs_params: Sequence[float],
+    ) -> Tuple[float, float]: ...
+    def do_P_limits(
+        self, cosmo: HICosmo, lnM_obs: Sequence[float], lnM_obs_params: Sequence[float]
+    ) -> Tuple[float, float]: ...
+    def do_P_vec_z_lnMobs(
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: NumCosmoMath.Vector,
+        lnM_obs: NumCosmoMath.Matrix,
+        lnM_obs_params: NumCosmoMath.Matrix,
+        res: Sequence[float],
+    ) -> None: ...
     def do_intP(self, cosmo: HICosmo, lnM: float, z: float) -> float: ...
-    def do_intP_bin(self, cosmo: HICosmo, lnM: float, z: float, lnM_obs_lower: Sequence[float], lnM_obs_upper: Sequence[float], lnM_obs_params: Optional[Sequence[float]] = None) -> float: ...
-    def do_resample(self, cosmo: HICosmo, lnM: float, z: float, lnM_obs: Sequence[float], lnM_obs_params: Sequence[float], rng: NumCosmoMath.RNG) -> bool: ...
+    def do_intP_bin(
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: float,
+        lnM_obs_lower: Sequence[float],
+        lnM_obs_upper: Sequence[float],
+        lnM_obs_params: Optional[Sequence[float]] = None,
+    ) -> float: ...
+    def do_resample(
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: float,
+        lnM_obs: Sequence[float],
+        lnM_obs_params: Sequence[float],
+        rng: NumCosmoMath.RNG,
+    ) -> bool: ...
     def do_volume(self) -> float: ...
     def free(self) -> None: ...
     @staticmethod
     def id() -> int: ...
     def intp(self, cosmo: HICosmo, lnM: float, z: float) -> float: ...
-    def intp_bin(self, cosmo: HICosmo, lnM: float, z: float, lnM_obs_lower: Sequence[float], lnM_obs_upper: Sequence[float], lnM_obs_params: Optional[Sequence[float]] = None) -> float: ...
+    def intp_bin(
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: float,
+        lnM_obs_lower: Sequence[float],
+        lnM_obs_upper: Sequence[float],
+        lnM_obs_params: Optional[Sequence[float]] = None,
+    ) -> float: ...
     @staticmethod
     def log_all_models() -> None: ...
     def n_limits(self, cosmo: HICosmo) -> Tuple[float, float]: ...
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
-    def p(self, cosmo: HICosmo, lnM: float, z: float, lnM_obs: Sequence[float], lnM_obs_params: Optional[Sequence[float]] = None) -> float: ...
-    def p_bin_limits(self, cosmo: HICosmo, lnM_obs_lower: Sequence[float], lnM_obs_upper: Sequence[float], lnM_obs_params: Sequence[float]) -> Tuple[float, float]: ...
-    def p_limits(self, cosmo: HICosmo, lnM_obs: Sequence[float], lnM_obs_params: Sequence[float]) -> Tuple[float, float]: ...
-    def p_vec_z_lnMobs(self, cosmo: HICosmo, lnM: float, z: NumCosmoMath.Vector, lnM_obs: NumCosmoMath.Matrix, lnM_obs_params: NumCosmoMath.Matrix, res: Sequence[float]) -> None: ...
-    def plcl_Msz_Ml_p_ndetone(self, lnMcut: float, z: float, Mpl: float, Mcl: float, sigma_pl: float, sigma_cl: float) -> float: ...
-    def plcl_pdf(self, lnM_M0: float, w1: float, w2: float, Mobs: Sequence[float], Mobs_params: Sequence[float]) -> float: ...
-    def plcl_pdf_only_lognormal(self, lnM: float, lnMsz_M0: float, lnMl_M0: float) -> float: ...
+    def p(
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: float,
+        lnM_obs: Sequence[float],
+        lnM_obs_params: Optional[Sequence[float]] = None,
+    ) -> float: ...
+    def p_bin_limits(
+        self,
+        cosmo: HICosmo,
+        lnM_obs_lower: Sequence[float],
+        lnM_obs_upper: Sequence[float],
+        lnM_obs_params: Sequence[float],
+    ) -> Tuple[float, float]: ...
+    def p_limits(
+        self, cosmo: HICosmo, lnM_obs: Sequence[float], lnM_obs_params: Sequence[float]
+    ) -> Tuple[float, float]: ...
+    def p_vec_z_lnMobs(
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: NumCosmoMath.Vector,
+        lnM_obs: NumCosmoMath.Matrix,
+        lnM_obs_params: NumCosmoMath.Matrix,
+        res: Sequence[float],
+    ) -> None: ...
+    def plcl_Msz_Ml_p_ndetone(
+        self,
+        lnMcut: float,
+        z: float,
+        Mpl: float,
+        Mcl: float,
+        sigma_pl: float,
+        sigma_cl: float,
+    ) -> float: ...
+    def plcl_pdf(
+        self,
+        lnM_M0: float,
+        w1: float,
+        w2: float,
+        Mobs: Sequence[float],
+        Mobs_params: Sequence[float],
+    ) -> float: ...
+    def plcl_pdf_only_lognormal(
+        self, lnM: float, lnMsz_M0: float, lnMl_M0: float
+    ) -> float: ...
     def ref(self) -> ClusterMass: ...
-    def resample(self, cosmo: HICosmo, lnM: float, z: float, lnM_obs: Sequence[float], lnM_obs_params: Sequence[float], rng: NumCosmoMath.RNG) -> bool: ...
+    def resample(
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: float,
+        lnM_obs: Sequence[float],
+        lnM_obs_params: Sequence[float],
+        rng: NumCosmoMath.RNG,
+    ) -> bool: ...
     def volume(self) -> float: ...
-    
 
 class ClusterMassAscaso(ClusterMass):
     r"""
@@ -1495,8 +1707,6 @@ class ClusterMassAscaso(ClusterMass):
         \sigma_p1
       sigmap2 -> gdouble: sigmap2
         \sigma_p2
-      cut -> gdouble: cut
-        cut
       mup0-fit -> gboolean: mup0-fit
         mu_p0:fit
       mup1-fit -> gboolean: mup1-fit
@@ -1509,8 +1719,6 @@ class ClusterMassAscaso(ClusterMass):
         \sigma_p1:fit
       sigmap2-fit -> gboolean: sigmap2-fit
         \sigma_p2:fit
-      cut-fit -> gboolean: cut-fit
-        cut:fit
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -1535,10 +1743,9 @@ class ClusterMassAscaso(ClusterMass):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         M0: float
-        cut: float
-        cut_fit: bool
         lnRichness_max: float
         lnRichness_min: float
         mup0: float
@@ -1566,31 +1773,28 @@ class ClusterMassAscaso(ClusterMass):
     props: Props = ...
     parent_instance: ClusterMass = ...
     priv: ClusterMassAscasoPrivate = ...
-    def __init__(self, M0: float = ...,
-                 cut: float = ...,
-                 cut_fit: bool = ...,
-                 lnRichness_max: float = ...,
-                 lnRichness_min: float = ...,
-                 mup0: float = ...,
-                 mup0_fit: bool = ...,
-                 mup1: float = ...,
-                 mup1_fit: bool = ...,
-                 mup2: float = ...,
-                 mup2_fit: bool = ...,
-                 sigmap0: float = ...,
-                 sigmap0_fit: bool = ...,
-                 sigmap1: float = ...,
-                 sigmap1_fit: bool = ...,
-                 sigmap2: float = ...,
-                 sigmap2_fit: bool = ...,
-                 z0: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
-    def get_cut(self, lnM: float, z: float) -> float: ...
-    def get_mean_richness(self, lnM: float, z: float) -> float: ...
-    def get_std_richness(self, lnM: float, z: float) -> float: ...
-    
+    def __init__(
+        self,
+        M0: float = ...,
+        lnRichness_max: float = ...,
+        lnRichness_min: float = ...,
+        mup0: float = ...,
+        mup0_fit: bool = ...,
+        mup1: float = ...,
+        mup1_fit: bool = ...,
+        mup2: float = ...,
+        mup2_fit: bool = ...,
+        sigmap0: float = ...,
+        sigmap0_fit: bool = ...,
+        sigmap1: float = ...,
+        sigmap1_fit: bool = ...,
+        sigmap2: float = ...,
+        sigmap2_fit: bool = ...,
+        z0: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
 
 class ClusterMassAscasoClass(GObject.GPointer):
     r"""
@@ -1663,6 +1867,7 @@ class ClusterMassBenson(ClusterMass):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Asz: float
         Asz_fit: bool
@@ -1691,21 +1896,24 @@ class ClusterMassBenson(ClusterMass):
     signif_obs_max: float = ...
     z0: float = ...
     M0: float = ...
-    def __init__(self, Asz: float = ...,
-                 Asz_fit: bool = ...,
-                 Bsz: float = ...,
-                 Bsz_fit: bool = ...,
-                 Csz: float = ...,
-                 Csz_fit: bool = ...,
-                 Dsz: float = ...,
-                 Dsz_fit: bool = ...,
-                 M0: float = ...,
-                 signif_obs_max: float = ...,
-                 signif_obs_min: float = ...,
-                 z0: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        Asz: float = ...,
+        Asz_fit: bool = ...,
+        Bsz: float = ...,
+        Bsz_fit: bool = ...,
+        Csz: float = ...,
+        Csz_fit: bool = ...,
+        Dsz: float = ...,
+        Dsz_fit: bool = ...,
+        M0: float = ...,
+        signif_obs_max: float = ...,
+        signif_obs_min: float = ...,
+        z0: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
 
 class ClusterMassBensonClass(GObject.GPointer):
     r"""
@@ -1802,6 +2010,7 @@ class ClusterMassBensonXRay(ClusterMassBenson):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Ax: float
         Ax_fit: bool
@@ -1842,33 +2051,36 @@ class ClusterMassBensonXRay(ClusterMassBenson):
     Yx_obs_max: float = ...
     M0x: float = ...
     Y0: float = ...
-    def __init__(self, Ax: float = ...,
-                 Ax_fit: bool = ...,
-                 Bx: float = ...,
-                 Bx_fit: bool = ...,
-                 Cx: float = ...,
-                 Cx_fit: bool = ...,
-                 Dx: float = ...,
-                 Dx_fit: bool = ...,
-                 M0x: float = ...,
-                 Y0: float = ...,
-                 Yx_obs_max: float = ...,
-                 Yx_obs_min: float = ...,
-                 Asz: float = ...,
-                 Asz_fit: bool = ...,
-                 Bsz: float = ...,
-                 Bsz_fit: bool = ...,
-                 Csz: float = ...,
-                 Csz_fit: bool = ...,
-                 Dsz: float = ...,
-                 Dsz_fit: bool = ...,
-                 M0: float = ...,
-                 signif_obs_max: float = ...,
-                 signif_obs_min: float = ...,
-                 z0: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        Ax: float = ...,
+        Ax_fit: bool = ...,
+        Bx: float = ...,
+        Bx_fit: bool = ...,
+        Cx: float = ...,
+        Cx_fit: bool = ...,
+        Dx: float = ...,
+        Dx_fit: bool = ...,
+        M0x: float = ...,
+        Y0: float = ...,
+        Yx_obs_max: float = ...,
+        Yx_obs_min: float = ...,
+        Asz: float = ...,
+        Asz_fit: bool = ...,
+        Bsz: float = ...,
+        Bsz_fit: bool = ...,
+        Csz: float = ...,
+        Csz_fit: bool = ...,
+        Dsz: float = ...,
+        Dsz_fit: bool = ...,
+        M0: float = ...,
+        signif_obs_max: float = ...,
+        signif_obs_min: float = ...,
+        z0: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
 
 class ClusterMassBensonXRayClass(GObject.GPointer):
     r"""
@@ -1889,20 +2101,67 @@ class ClusterMassClass(GObject.GPointer):
         ClusterMassClass()
     """
     parent_class: NumCosmoMath.ModelClass = ...
-    P: Callable[[ClusterMass, HICosmo, float, float, Sequence[float], Optional[Sequence[float]]], float] = ...
+    P: Callable[
+        [
+            ClusterMass,
+            HICosmo,
+            float,
+            float,
+            Sequence[float],
+            Optional[Sequence[float]],
+        ],
+        float,
+    ] = ...
     intP: Callable[[ClusterMass, HICosmo, float, float], float] = ...
-    intP_bin: Callable[[ClusterMass, HICosmo, float, float, Sequence[float], Sequence[float], Optional[Sequence[float]]], float] = ...
-    resample: Callable[[ClusterMass, HICosmo, float, float, Sequence[float], Sequence[float], NumCosmoMath.RNG], bool] = ...
-    P_limits: Callable[[ClusterMass, HICosmo, Sequence[float], Sequence[float]], Tuple[float, float]] = ...
-    P_bin_limits: Callable[[ClusterMass, HICosmo, Sequence[float], Sequence[float], Sequence[float]], Tuple[float, float]] = ...
+    intP_bin: Callable[
+        [
+            ClusterMass,
+            HICosmo,
+            float,
+            float,
+            Sequence[float],
+            Sequence[float],
+            Optional[Sequence[float]],
+        ],
+        float,
+    ] = ...
+    resample: Callable[
+        [
+            ClusterMass,
+            HICosmo,
+            float,
+            float,
+            Sequence[float],
+            Sequence[float],
+            NumCosmoMath.RNG,
+        ],
+        bool,
+    ] = ...
+    P_limits: Callable[
+        [ClusterMass, HICosmo, Sequence[float], Sequence[float]], Tuple[float, float]
+    ] = ...
+    P_bin_limits: Callable[
+        [ClusterMass, HICosmo, Sequence[float], Sequence[float], Sequence[float]],
+        Tuple[float, float],
+    ] = ...
     N_limits: Callable[[ClusterMass, HICosmo], Tuple[float, float]] = ...
     volume: Callable[[ClusterMass], float] = ...
-    P_vec_z_lnMobs: Callable[[ClusterMass, HICosmo, float, NumCosmoMath.Vector, NumCosmoMath.Matrix, NumCosmoMath.Matrix, Sequence[float]], None] = ...
+    P_vec_z_lnMobs: Callable[
+        [
+            ClusterMass,
+            HICosmo,
+            float,
+            NumCosmoMath.Vector,
+            NumCosmoMath.Matrix,
+            NumCosmoMath.Matrix,
+            Sequence[float],
+        ],
+        None,
+    ] = ...
     _obs_len: int = ...
     _obs_params_len: int = ...
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
-    
 
 class ClusterMassLnnormal(ClusterMass):
     r"""
@@ -1951,6 +2210,7 @@ class ClusterMassLnnormal(ClusterMass):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         bias: float
         bias_fit: bool
@@ -1971,15 +2231,18 @@ class ClusterMassLnnormal(ClusterMass):
     parent_instance: ClusterMass = ...
     lnMobs_max: float = ...
     lnMobs_min: float = ...
-    def __init__(self, bias: float = ...,
-                 bias_fit: bool = ...,
-                 lnMobs_max: float = ...,
-                 lnMobs_min: float = ...,
-                 sigma: float = ...,
-                 sigma_fit: bool = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        bias: float = ...,
+        bias_fit: bool = ...,
+        lnMobs_max: float = ...,
+        lnMobs_min: float = ...,
+        sigma: float = ...,
+        sigma_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
 
 class ClusterMassLnnormalClass(GObject.GPointer):
     r"""
@@ -1990,210 +2253,6 @@ class ClusterMassLnnormalClass(GObject.GPointer):
         ClusterMassLnnormalClass()
     """
     parent_class: ClusterMassClass = ...
-
-class ClusterMassLnrichExt(ClusterMass):
-    r"""
-    :Constructors:
-
-    ::
-
-        ClusterMassLnrichExt(**properties)
-
-    Object NcClusterMassLnrichExt
-
-    Properties from NcClusterMassLnrichExt:
-      M0 -> gdouble: M0
-        Pivot mass
-      z0 -> gdouble: z0
-        Pivot redshift
-      lnRichness-min -> gdouble: lnRichness-min
-        Minimum LnRichness
-      lnRichness-max -> gdouble: lnRichness-max
-        Maximum LnRichness
-      mu -> gdouble: mu
-        \mu
-      muM1 -> gdouble: muM1
-        \mu_\mathrm{M_1}
-      muZ1 -> gdouble: muZ1
-        \mu_\mathrm{z_1}
-      muM2 -> gdouble: muM2
-        \mu_\mathrm{M_2}
-      muZ2 -> gdouble: muZ2
-        \mu_\mathrm{z_2}
-      muMZ -> gdouble: muMZ
-        \mu_\mathrm{MZ}
-      sigma0 -> gdouble: sigma0
-        \sigma_0
-      sigmaM1 -> gdouble: sigmaM1
-        \sigma_\mathrm{M_1}
-      sigmaZ1 -> gdouble: sigmaZ1
-        \sigma_\mathrm{z_1}
-      sigmaM2 -> gdouble: sigmaM2
-        \sigma_\mathrm{M_2}
-      sigmaZ2 -> gdouble: sigmaZ2
-        \sigma_\mathrm{z_2}
-      sigmaMZ -> gdouble: sigmaMZ
-        \sigma_\mathrm{MZ}
-      cut -> gdouble: cut
-        cut
-      cutM1 -> gdouble: cutM1
-        \cut_\mathrm{M_1}
-      cutZ1 -> gdouble: cutZ1
-        \cut_\mathrm{Z_1}
-      mu-fit -> gboolean: mu-fit
-        \mu:fit
-      muM1-fit -> gboolean: muM1-fit
-        \mu_\mathrm{M_1}:fit
-      muZ1-fit -> gboolean: muZ1-fit
-        \mu_\mathrm{z_1}:fit
-      muM2-fit -> gboolean: muM2-fit
-        \mu_\mathrm{M_2}:fit
-      muZ2-fit -> gboolean: muZ2-fit
-        \mu_\mathrm{z_2}:fit
-      muMZ-fit -> gboolean: muMZ-fit
-        \mu_\mathrm{MZ}:fit
-      sigma0-fit -> gboolean: sigma0-fit
-        \sigma_0:fit
-      sigmaM1-fit -> gboolean: sigmaM1-fit
-        \sigma_\mathrm{M_1}:fit
-      sigmaZ1-fit -> gboolean: sigmaZ1-fit
-        \sigma_\mathrm{z_1}:fit
-      sigmaM2-fit -> gboolean: sigmaM2-fit
-        \sigma_\mathrm{M_2}:fit
-      sigmaZ2-fit -> gboolean: sigmaZ2-fit
-        \sigma_\mathrm{z_2}:fit
-      sigmaMZ-fit -> gboolean: sigmaMZ-fit
-        \sigma_\mathrm{MZ}:fit
-      cut-fit -> gboolean: cut-fit
-        cut:fit
-      cutM1-fit -> gboolean: cutM1-fit
-        \cut_\mathrm{M_1}:fit
-      cutZ1-fit -> gboolean: cutZ1-fit
-        \cut_\mathrm{Z_1}:fit
-
-    Properties from NcmModel:
-      name -> gchararray: name
-        Model's name
-      nick -> gchararray: nick
-        Model's nick
-      scalar-params-len -> guint: scalar-params-len
-        Number of scalar parameters
-      vector-params-len -> guint: vector-params-len
-        Number of vector parameters
-      implementation -> guint64: implementation
-        Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
-        NcmModel array of NcmSParam
-      params-types -> GArray: params-types
-        Parameters' types
-      reparam -> NcmReparam: reparam
-        Model reparametrization
-      submodel-array -> NcmObjArray: submodel-array
-        NcmModel array of submodels
-
-    Signals from GObject:
-      notify (GParam)
-    """
-    class Props:
-        M0: float
-        cut: float
-        cut_fit: bool
-        cutM1: float
-        cutM1_fit: bool
-        cutZ1: float
-        cutZ1_fit: bool
-        lnRichness_max: float
-        lnRichness_min: float
-        mu: float
-        mu_fit: bool
-        muM1: float
-        muM1_fit: bool
-        muM2: float
-        muM2_fit: bool
-        muMZ: float
-        muMZ_fit: bool
-        muZ1: float
-        muZ1_fit: bool
-        muZ2: float
-        muZ2_fit: bool
-        sigma0: float
-        sigma0_fit: bool
-        sigmaM1: float
-        sigmaM1_fit: bool
-        sigmaM2: float
-        sigmaM2_fit: bool
-        sigmaMZ: float
-        sigmaMZ_fit: bool
-        sigmaZ1: float
-        sigmaZ1_fit: bool
-        sigmaZ2: float
-        sigmaZ2_fit: bool
-        z0: float
-        implementation: int
-        name: str
-        nick: str
-        params_types: list[None]
-        reparam: NumCosmoMath.Reparam
-        scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
-        submodel_array: NumCosmoMath.ObjArray
-        vector_params_len: int
-    props: Props = ...
-    parent_instance: ClusterMass = ...
-    priv: ClusterMassLnrichExtPrivate = ...
-    def __init__(self, M0: float = ...,
-                 cut: float = ...,
-                 cut_fit: bool = ...,
-                 cutM1: float = ...,
-                 cutM1_fit: bool = ...,
-                 cutZ1: float = ...,
-                 cutZ1_fit: bool = ...,
-                 lnRichness_max: float = ...,
-                 lnRichness_min: float = ...,
-                 mu: float = ...,
-                 mu_fit: bool = ...,
-                 muM1: float = ...,
-                 muM1_fit: bool = ...,
-                 muM2: float = ...,
-                 muM2_fit: bool = ...,
-                 muMZ: float = ...,
-                 muMZ_fit: bool = ...,
-                 muZ1: float = ...,
-                 muZ1_fit: bool = ...,
-                 muZ2: float = ...,
-                 muZ2_fit: bool = ...,
-                 sigma0: float = ...,
-                 sigma0_fit: bool = ...,
-                 sigmaM1: float = ...,
-                 sigmaM1_fit: bool = ...,
-                 sigmaM2: float = ...,
-                 sigmaM2_fit: bool = ...,
-                 sigmaMZ: float = ...,
-                 sigmaMZ_fit: bool = ...,
-                 sigmaZ1: float = ...,
-                 sigmaZ1_fit: bool = ...,
-                 sigmaZ2: float = ...,
-                 sigmaZ2_fit: bool = ...,
-                 z0: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
-    def get_cut(self, lnM: float, z: float) -> float: ...
-    def get_mean_richness(self, lnM: float, z: float) -> float: ...
-    def get_std_richness(self, lnM: float, z: float) -> float: ...
-    
-
-class ClusterMassLnrichExtClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        ClusterMassLnrichExtClass()
-    """
-    parent_class: ClusterMassClass = ...
-
-class ClusterMassLnrichExtPrivate(GObject.GPointer): ...
 
 class ClusterMassNodist(ClusterMass):
     r"""
@@ -2234,6 +2293,7 @@ class ClusterMassNodist(ClusterMass):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         lnM_max: float
         lnM_min: float
@@ -2249,11 +2309,14 @@ class ClusterMassNodist(ClusterMass):
     props: Props = ...
     parent_instance: ClusterMass = ...
     priv: ClusterMassNodistPrivate = ...
-    def __init__(self, lnM_max: float = ...,
-                 lnM_min: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        lnM_max: float = ...,
+        lnM_min: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
 
 class ClusterMassNodistClass(GObject.GPointer):
     r"""
@@ -2332,6 +2395,7 @@ class ClusterMassPlCL(ClusterMass):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Al: float
         Al_fit: bool
@@ -2362,29 +2426,47 @@ class ClusterMassPlCL(ClusterMass):
     M0: float = ...
     T: int = ...
     s: int = ...
-    def __init__(self, Al: float = ...,
-                 Al_fit: bool = ...,
-                 Asz: float = ...,
-                 Asz_fit: bool = ...,
-                 Bl: float = ...,
-                 Bl_fit: bool = ...,
-                 Bsz: float = ...,
-                 Bsz_fit: bool = ...,
-                 M0: float = ...,
-                 cor: float = ...,
-                 cor_fit: bool = ...,
-                 sigma_l: float = ...,
-                 sigma_l_fit: bool = ...,
-                 sigma_sz: float = ...,
-                 sigma_sz_fit: bool = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        Al: float = ...,
+        Al_fit: bool = ...,
+        Asz: float = ...,
+        Asz_fit: bool = ...,
+        Bl: float = ...,
+        Bl_fit: bool = ...,
+        Bsz: float = ...,
+        Bsz_fit: bool = ...,
+        M0: float = ...,
+        cor: float = ...,
+        cor_fit: bool = ...,
+        sigma_l: float = ...,
+        sigma_l_fit: bool = ...,
+        sigma_sz: float = ...,
+        sigma_sz_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @staticmethod
-    def gsl_f(p: float, hx: float, n: int, mszl: ClusterMassPlCL, lnM: float, Mobs: Sequence[float], Mobs_params: Sequence[float]) -> None: ...
+    def gsl_f(
+        p: float,
+        hx: float,
+        n: int,
+        mszl: ClusterMassPlCL,
+        lnM: float,
+        Mobs: Sequence[float],
+        Mobs_params: Sequence[float],
+    ) -> None: ...
     @staticmethod
-    def peak_new_variables(N: float, lb: float, ub: float, mszl: ClusterMassPlCL, lnM: float, Mobs: Sequence[float], Mobs_params: Sequence[float]) -> None: ...
-    
+    def peak_new_variables(
+        N: float,
+        lb: float,
+        ub: float,
+        mszl: ClusterMassPlCL,
+        lnM: float,
+        Mobs: Sequence[float],
+        Mobs_params: Sequence[float],
+    ) -> None: ...
 
 class ClusterMassPlCLClass(GObject.GPointer):
     r"""
@@ -2457,6 +2539,7 @@ class ClusterMassVanderlinde(ClusterMass):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Asz: float
         Asz_fit: bool
@@ -2485,21 +2568,24 @@ class ClusterMassVanderlinde(ClusterMass):
     signif_obs_max: float = ...
     z0: float = ...
     M0: float = ...
-    def __init__(self, Asz: float = ...,
-                 Asz_fit: bool = ...,
-                 Bsz: float = ...,
-                 Bsz_fit: bool = ...,
-                 Csz: float = ...,
-                 Csz_fit: bool = ...,
-                 Dsz: float = ...,
-                 Dsz_fit: bool = ...,
-                 M0: float = ...,
-                 signif_obs_max: float = ...,
-                 signif_obs_min: float = ...,
-                 z0: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        Asz: float = ...,
+        Asz_fit: bool = ...,
+        Bsz: float = ...,
+        Bsz_fit: bool = ...,
+        Csz: float = ...,
+        Csz_fit: bool = ...,
+        Dsz: float = ...,
+        Dsz_fit: bool = ...,
+        M0: float = ...,
+        signif_obs_max: float = ...,
+        signif_obs_min: float = ...,
+        z0: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
 
 class ClusterMassVanderlindeClass(GObject.GPointer):
     r"""
@@ -2551,6 +2637,7 @@ class ClusterPhotozGauss(ClusterRedshift):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         pz_max: float
         pz_min: float
@@ -2567,14 +2654,16 @@ class ClusterPhotozGauss(ClusterRedshift):
     parent_instance: ClusterRedshift = ...
     pz_max: float = ...
     pz_min: float = ...
-    def __init__(self, pz_max: float = ...,
-                 pz_min: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        pz_max: float = ...,
+        pz_min: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
     def new(cls) -> ClusterPhotozGauss: ...
-    
 
 class ClusterPhotozGaussClass(GObject.GPointer):
     r"""
@@ -2634,6 +2723,7 @@ class ClusterPhotozGaussGlobal(ClusterRedshift):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         pz_max: float
         pz_min: float
@@ -2654,22 +2744,26 @@ class ClusterPhotozGaussGlobal(ClusterRedshift):
     parent_instance: ClusterRedshift = ...
     pz_min: float = ...
     pz_max: float = ...
-    def __init__(self, pz_max: float = ...,
-                 pz_min: float = ...,
-                 sigma0: float = ...,
-                 sigma0_fit: bool = ...,
-                 z_bias: float = ...,
-                 z_bias_fit: bool = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        pz_max: float = ...,
+        pz_min: float = ...,
+        sigma0: float = ...,
+        sigma0_fit: bool = ...,
+        z_bias: float = ...,
+        z_bias_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     def get_sigma0(self) -> float: ...
     def get_z_bias(self) -> float: ...
     @classmethod
-    def new(cls, pz_min: float, pz_max: float, z_bias: float, sigma0: float) -> ClusterPhotozGaussGlobal: ...
+    def new(
+        cls, pz_min: float, pz_max: float, z_bias: float, sigma0: float
+    ) -> ClusterPhotozGaussGlobal: ...
     def set_sigma0(self, sigma0: float) -> None: ...
     def set_z_bias(self, z_bias: float) -> None: ...
-    
 
 class ClusterPhotozGaussGlobalClass(GObject.GPointer):
     r"""
@@ -2735,6 +2829,7 @@ class ClusterPseudoCounts(NumCosmoMath.Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Deltaz: float
         Deltaz_fit: bool
@@ -2760,35 +2855,73 @@ class ClusterPseudoCounts(NumCosmoMath.Model):
     T: int = ...
     s: int = ...
     workz: float = ...
-    def __init__(self, Deltaz: float = ...,
-                 Deltaz_fit: bool = ...,
-                 lnMCut: float = ...,
-                 lnMCut_fit: bool = ...,
-                 number_clusters: int = ...,
-                 sigma_Mcut: float = ...,
-                 sigma_Mcut_fit: bool = ...,
-                 zmin: float = ...,
-                 zmin_fit: bool = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        Deltaz: float = ...,
+        Deltaz_fit: bool = ...,
+        lnMCut: float = ...,
+        lnMCut_fit: bool = ...,
+        number_clusters: int = ...,
+        sigma_Mcut: float = ...,
+        sigma_Mcut_fit: bool = ...,
+        zmin: float = ...,
+        zmin_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @staticmethod
     def clear(cpc: ClusterPseudoCounts) -> None: ...
     def free(self) -> None: ...
     @staticmethod
     def id() -> int: ...
-    def mf_lognormal_integral(self, mfp: HaloMassFunction, clusterm: ClusterMass, cosmo: HICosmo, lnMsz: float, lnMl: float, z: float) -> float: ...
+    def mf_lognormal_integral(
+        self,
+        mfp: HaloMassFunction,
+        clusterm: ClusterMass,
+        cosmo: HICosmo,
+        lnMsz: float,
+        lnMl: float,
+        z: float,
+    ) -> float: ...
     def ndet(self, mfp: HaloMassFunction, cosmo: HICosmo) -> float: ...
     def ndet_no_z_integral(self, cosmo: HICosmo, z: float) -> float: ...
     @classmethod
     def new(cls, nclusters: int) -> ClusterPseudoCounts: ...
-    def posterior_ndetone(self, mfp: HaloMassFunction, cosmo: HICosmo, clusterm: ClusterMass, z: float, Mpl: float, Mcl: float, sigma_pl: float, sigma_cl: float) -> float: ...
-    def posterior_numerator(self, mfp: HaloMassFunction, clusterm: ClusterMass, cosmo: HICosmo, z: float, Mobs: Sequence[float], Mobs_params: Sequence[float]) -> float: ...
-    def posterior_numerator_plcl(self, mfp: HaloMassFunction, clusterm: ClusterMass, cosmo: HICosmo, z: float, Mpl: float, Mcl: float, sigma_pl: float, sigma_cl: float) -> float: ...
+    def posterior_ndetone(
+        self,
+        mfp: HaloMassFunction,
+        cosmo: HICosmo,
+        clusterm: ClusterMass,
+        z: float,
+        Mpl: float,
+        Mcl: float,
+        sigma_pl: float,
+        sigma_cl: float,
+    ) -> float: ...
+    def posterior_numerator(
+        self,
+        mfp: HaloMassFunction,
+        clusterm: ClusterMass,
+        cosmo: HICosmo,
+        z: float,
+        Mobs: Sequence[float],
+        Mobs_params: Sequence[float],
+    ) -> float: ...
+    def posterior_numerator_plcl(
+        self,
+        mfp: HaloMassFunction,
+        clusterm: ClusterMass,
+        cosmo: HICosmo,
+        z: float,
+        Mpl: float,
+        Mcl: float,
+        sigma_pl: float,
+        sigma_cl: float,
+    ) -> float: ...
     def ref(self) -> ClusterPseudoCounts: ...
     def selection_function(self, lnM: float, z: float) -> float: ...
     def selection_function_lnMi(self, cosmo: HICosmo) -> float: ...
-    
 
 class ClusterPseudoCountsClass(GObject.GPointer):
     r"""
@@ -2833,6 +2966,7 @@ class ClusterRedshift(NumCosmoMath.Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         implementation: int
         name: str
@@ -2846,36 +2980,90 @@ class ClusterRedshift(NumCosmoMath.Model):
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     priv: ClusterRedshiftPrivate = ...
-    def __init__(self, reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @staticmethod
     def clear(clusterz: ClusterRedshift) -> None: ...
     def do_N_limits(self, cosmo: HICosmo, z_lower: float, z_upper: float) -> None: ...
-    def do_P(self, cosmo: HICosmo, lnM: float, z: float, z_obs: float, z_obs_params: float) -> float: ...
-    def do_P_bin_limits(self, cosmo: HICosmo, z_obs_lower: float, z_obs_upper: float, z_obs_params: float, z_lower: float, z_upper: float) -> None: ...
-    def do_P_limits(self, cosmo: HICosmo, z_obs: float, z_obs_params: float, z_lower: float, z_upper: float) -> None: ...
+    def do_P(
+        self, cosmo: HICosmo, lnM: float, z: float, z_obs: float, z_obs_params: float
+    ) -> float: ...
+    def do_P_bin_limits(
+        self,
+        cosmo: HICosmo,
+        z_obs_lower: float,
+        z_obs_upper: float,
+        z_obs_params: float,
+        z_lower: float,
+        z_upper: float,
+    ) -> None: ...
+    def do_P_limits(
+        self,
+        cosmo: HICosmo,
+        z_obs: float,
+        z_obs_params: float,
+        z_lower: float,
+        z_upper: float,
+    ) -> None: ...
     def do_intP(self, cosmo: HICosmo, lnM: float, z: float) -> float: ...
-    def do_intP_bin(self, cosmo: HICosmo, lnM: float, z: float, z_obs_lower: float, z_obs_upper: float, z_obs_params: float) -> float: ...
-    def do_resample(self, cosmo: HICosmo, lnM: float, z: float, rng: NumCosmoMath.RNG) -> Tuple[bool, float, float]: ...
+    def do_intP_bin(
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: float,
+        z_obs_lower: float,
+        z_obs_upper: float,
+        z_obs_params: float,
+    ) -> float: ...
+    def do_resample(
+        self, cosmo: HICosmo, lnM: float, z: float, rng: NumCosmoMath.RNG
+    ) -> Tuple[bool, float, float]: ...
     def do_volume(self) -> float: ...
     def free(self) -> None: ...
     @staticmethod
     def id() -> int: ...
     def intp(self, cosmo: HICosmo, lnM: float, z: float) -> float: ...
-    def intp_bin(self, cosmo: HICosmo, lnM: float, z: float, z_obs_lower: Sequence[float], z_obs_upper: Sequence[float], z_obs_params: Optional[Sequence[float]] = None) -> float: ...
+    def intp_bin(
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: float,
+        z_obs_lower: Sequence[float],
+        z_obs_upper: Sequence[float],
+        z_obs_params: Optional[Sequence[float]] = None,
+    ) -> float: ...
     @staticmethod
     def log_all_models() -> None: ...
     def n_limits(self, cosmo: HICosmo) -> Tuple[float, float]: ...
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
-    def p(self, cosmo: HICosmo, lnM: float, z: float, z_obs: Sequence[float], z_obs_params: Sequence[float]) -> float: ...
-    def p_bin_limits(self, cosmo: HICosmo, z_obs_lower: Sequence[float], z_obs_upper: Sequence[float], z_obs_params: Sequence[float]) -> Tuple[float, float]: ...
-    def p_limits(self, cosmo: HICosmo, z_obs: Sequence[float], z_obs_params: Sequence[float]) -> Tuple[float, float]: ...
+    def p(
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: float,
+        z_obs: Sequence[float],
+        z_obs_params: Sequence[float],
+    ) -> float: ...
+    def p_bin_limits(
+        self,
+        cosmo: HICosmo,
+        z_obs_lower: Sequence[float],
+        z_obs_upper: Sequence[float],
+        z_obs_params: Sequence[float],
+    ) -> Tuple[float, float]: ...
+    def p_limits(
+        self, cosmo: HICosmo, z_obs: Sequence[float], z_obs_params: Sequence[float]
+    ) -> Tuple[float, float]: ...
     def ref(self) -> ClusterRedshift: ...
-    def resample(self, cosmo: HICosmo, lnM: float, z: float, rng: NumCosmoMath.RNG) -> Tuple[bool, float, float]: ...
+    def resample(
+        self, cosmo: HICosmo, lnM: float, z: float, rng: NumCosmoMath.RNG
+    ) -> Tuple[bool, float, float]: ...
     def volume(self) -> float: ...
-    
 
 class ClusterRedshiftClass(GObject.GPointer):
     r"""
@@ -2888,17 +3076,25 @@ class ClusterRedshiftClass(GObject.GPointer):
     parent_class: NumCosmoMath.ModelClass = ...
     P: Callable[[ClusterRedshift, HICosmo, float, float, float, float], float] = ...
     intP: Callable[[ClusterRedshift, HICosmo, float, float], float] = ...
-    intP_bin: Callable[[ClusterRedshift, HICosmo, float, float, float, float, float], float] = ...
-    resample: Callable[[ClusterRedshift, HICosmo, float, float, NumCosmoMath.RNG], Tuple[bool, float, float]] = ...
-    P_limits: Callable[[ClusterRedshift, HICosmo, float, float, float, float], None] = ...
-    P_bin_limits: Callable[[ClusterRedshift, HICosmo, float, float, float, float, float], None] = ...
+    intP_bin: Callable[
+        [ClusterRedshift, HICosmo, float, float, float, float, float], float
+    ] = ...
+    resample: Callable[
+        [ClusterRedshift, HICosmo, float, float, NumCosmoMath.RNG],
+        Tuple[bool, float, float],
+    ] = ...
+    P_limits: Callable[
+        [ClusterRedshift, HICosmo, float, float, float, float], None
+    ] = ...
+    P_bin_limits: Callable[
+        [ClusterRedshift, HICosmo, float, float, float, float, float], None
+    ] = ...
     N_limits: Callable[[ClusterRedshift, HICosmo, float, float], None] = ...
     volume: Callable[[ClusterRedshift], float] = ...
     _obs_len: int = ...
     _obs_params_len: int = ...
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
-    
 
 class ClusterRedshiftNodist(ClusterRedshift):
     r"""
@@ -2939,6 +3135,7 @@ class ClusterRedshiftNodist(ClusterRedshift):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         z_max: float
         z_min: float
@@ -2954,11 +3151,14 @@ class ClusterRedshiftNodist(ClusterRedshift):
     props: Props = ...
     parent_instance: ClusterRedshift = ...
     priv: ClusterRedshiftNodistPrivate = ...
-    def __init__(self, z_max: float = ...,
-                 z_min: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        z_max: float = ...,
+        z_min: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
 
 class ClusterRedshiftNodistClass(GObject.GPointer):
     r"""
@@ -2971,7 +3171,6 @@ class ClusterRedshiftNodistClass(GObject.GPointer):
     parent_class: ClusterRedshiftClass = ...
 
 class ClusterRedshiftNodistPrivate(GObject.GPointer): ...
-
 class ClusterRedshiftPrivate(GObject.GPointer): ...
 
 class CorClusterCmbLensLimber(GObject.Object):
@@ -2992,13 +3191,59 @@ class CorClusterCmbLensLimber(GObject.Object):
     oneh_int_mass_spline: NumCosmoMath.Spline = ...
     @classmethod
     def new(cls) -> CorClusterCmbLensLimber: ...
-    def oneh_int_mass(self, cad: ClusterAbundance, clusterm: ClusterMass, cosmo: HICosmo, dp: HaloDensityProfile, k: float, z: float, lnM_obs: Sequence[float], lnM_obs_params: Sequence[float]) -> float: ...
-    def oneh_term(self, cad: ClusterAbundance, cosmo: HICosmo, dist: Distance, dp: HaloDensityProfile, l: int, lnM_obs: Sequence[float], lnM_obs_params: Sequence[float], z_obs: Sequence[float], z_obs_params: Sequence[float]) -> float: ...
-    def twoh_int_mass1(self, cad: ClusterAbundance, clusterm: ClusterMass, cosmo: HICosmo, z: float) -> float: ...
-    def twoh_int_mass2(self, cad: ClusterAbundance, clusterm: ClusterMass, cosmo: HICosmo, dp: HaloDensityProfile, k: float, z: float) -> float: ...
-    def twoh_int_mm(self, cad: ClusterAbundance, cosmo: HICosmo, dp: HaloDensityProfile, k: float, z: float) -> float: ...
-    def twoh_term(self, cad: ClusterAbundance, cosmo: HICosmo, dist: Distance, dp: HaloDensityProfile, l: int, z_obs: Sequence[float], z_obs_params: Sequence[float]) -> float: ...
-    
+    def oneh_int_mass(
+        self,
+        cad: ClusterAbundance,
+        clusterm: ClusterMass,
+        cosmo: HICosmo,
+        dp: HaloDensityProfile,
+        k: float,
+        z: float,
+        lnM_obs: Sequence[float],
+        lnM_obs_params: Sequence[float],
+    ) -> float: ...
+    def oneh_term(
+        self,
+        cad: ClusterAbundance,
+        cosmo: HICosmo,
+        dist: Distance,
+        dp: HaloDensityProfile,
+        l: int,
+        lnM_obs: Sequence[float],
+        lnM_obs_params: Sequence[float],
+        z_obs: Sequence[float],
+        z_obs_params: Sequence[float],
+    ) -> float: ...
+    def twoh_int_mass1(
+        self, cad: ClusterAbundance, clusterm: ClusterMass, cosmo: HICosmo, z: float
+    ) -> float: ...
+    def twoh_int_mass2(
+        self,
+        cad: ClusterAbundance,
+        clusterm: ClusterMass,
+        cosmo: HICosmo,
+        dp: HaloDensityProfile,
+        k: float,
+        z: float,
+    ) -> float: ...
+    def twoh_int_mm(
+        self,
+        cad: ClusterAbundance,
+        cosmo: HICosmo,
+        dp: HaloDensityProfile,
+        k: float,
+        z: float,
+    ) -> float: ...
+    def twoh_term(
+        self,
+        cad: ClusterAbundance,
+        cosmo: HICosmo,
+        dist: Distance,
+        dp: HaloDensityProfile,
+        l: int,
+        z_obs: Sequence[float],
+        z_obs_params: Sequence[float],
+    ) -> float: ...
 
 class CorClusterCmbLensLimberClass(GObject.GPointer):
     r"""
@@ -3048,12 +3293,13 @@ class DECont(NumCosmoMath.CSQ1D):
         The propagator threshold
       save-evol -> gboolean: save-evol
         Save the system evolution
-      sing-detect -> gboolean: sing-detect
-        Singularity detection
+      max-order-2 -> gboolean: max-order-2
+        Whether to always truncate at order 2
 
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         OmegaL: float
         Omegaw: float
@@ -3062,35 +3308,37 @@ class DECont(NumCosmoMath.CSQ1D):
         abstol: float
         adiab_threshold: float
         k: float
+        max_order_2: bool
         prop_threshold: float
         reltol: float
         save_evol: bool
-        sing_detect: bool
         tf: float
         ti: float
     props: Props = ...
     parent_instance: NumCosmoMath.CSQ1D = ...
     priv: DEContPrivate = ...
-    def __init__(self, OmegaL: float = ...,
-                 Omegaw: float = ...,
-                 cs2: float = ...,
-                 w: float = ...,
-                 abstol: float = ...,
-                 adiab_threshold: float = ...,
-                 k: float = ...,
-                 prop_threshold: float = ...,
-                 reltol: float = ...,
-                 save_evol: bool = ...,
-                 sing_detect: bool = ...,
-                 tf: float = ...,
-                 ti: float = ...): ...
+    def __init__(
+        self,
+        OmegaL: float = ...,
+        Omegaw: float = ...,
+        cs2: float = ...,
+        w: float = ...,
+        abstol: float = ...,
+        adiab_threshold: float = ...,
+        k: float = ...,
+        max_order_2: bool = ...,
+        prop_threshold: float = ...,
+        reltol: float = ...,
+        save_evol: bool = ...,
+        tf: float = ...,
+        ti: float = ...,
+    ): ...
     @staticmethod
     def clear(dec: DECont) -> None: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls, Omegaw: float, OmegaL: float, cs2: float, w: float) -> DECont: ...
     def ref(self) -> DECont: ...
-    
 
 class DEContClass(GObject.GPointer):
     r"""
@@ -3147,6 +3395,7 @@ class DataBaoA(NumCosmoMath.DataGaussDiag):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dist: Distance
         z: NumCosmoMath.Vector
@@ -3163,22 +3412,24 @@ class DataBaoA(NumCosmoMath.DataGaussDiag):
     parent_instance: NumCosmoMath.DataGaussDiag = ...
     dist: Distance = ...
     x: NumCosmoMath.Vector = ...
-    def __init__(self, dist: Distance = ...,
-                 z: NumCosmoMath.Vector = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 sigma: NumCosmoMath.Vector = ...,
-                 w_mean: bool = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        dist: Distance = ...,
+        z: NumCosmoMath.Vector = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        sigma: NumCosmoMath.Vector = ...,
+        w_mean: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @classmethod
     def new_from_file(cls, filename: str) -> DataBaoA: ...
     @classmethod
     def new_from_id(cls, dist: Distance, id: DataBaoId) -> DataBaoA: ...
     def set_dist(self, dist: Distance) -> None: ...
-    
 
 class DataBaoAClass(GObject.GPointer):
     r"""
@@ -3233,6 +3484,7 @@ class DataBaoDHrDAr(NumCosmoMath.DataGaussCov):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dist: Distance
         z: NumCosmoMath.Vector
@@ -3249,22 +3501,24 @@ class DataBaoDHrDAr(NumCosmoMath.DataGaussCov):
     parent_instance: NumCosmoMath.DataGaussCov = ...
     dist: Distance = ...
     x: NumCosmoMath.Vector = ...
-    def __init__(self, dist: Distance = ...,
-                 z: NumCosmoMath.Vector = ...,
-                 cov: NumCosmoMath.Matrix = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 use_norma: bool = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        dist: Distance = ...,
+        z: NumCosmoMath.Vector = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @classmethod
     def new_from_file(cls, filename: str) -> DataBaoDHrDAr: ...
     @classmethod
     def new_from_id(cls, dist: Distance, id: DataBaoId) -> DataBaoDHrDAr: ...
     def set_dist(self, dist: Distance) -> None: ...
-    
 
 class DataBaoDHrDArClass(GObject.GPointer):
     r"""
@@ -3321,6 +3575,7 @@ class DataBaoDMrHr(NumCosmoMath.DataGaussCov):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dist: Distance
         rs_fiduc: float
@@ -3339,23 +3594,25 @@ class DataBaoDMrHr(NumCosmoMath.DataGaussCov):
     dist: Distance = ...
     x: NumCosmoMath.Vector = ...
     rs_fiduc: float = ...
-    def __init__(self, dist: Distance = ...,
-                 rs_fiduc: float = ...,
-                 z: NumCosmoMath.Vector = ...,
-                 cov: NumCosmoMath.Matrix = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 use_norma: bool = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        dist: Distance = ...,
+        rs_fiduc: float = ...,
+        z: NumCosmoMath.Vector = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @classmethod
     def new_from_file(cls, filename: str) -> DataBaoDMrHr: ...
     @classmethod
     def new_from_id(cls, dist: Distance, id: DataBaoId) -> DataBaoDMrHr: ...
     def set_dist(self, dist: Distance) -> None: ...
-    
 
 class DataBaoDMrHrClass(GObject.GPointer):
     r"""
@@ -3410,6 +3667,7 @@ class DataBaoDV(NumCosmoMath.DataGaussDiag):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dist: Distance
         z: NumCosmoMath.Vector
@@ -3426,22 +3684,24 @@ class DataBaoDV(NumCosmoMath.DataGaussDiag):
     parent_instance: NumCosmoMath.DataGaussDiag = ...
     dist: Distance = ...
     x: NumCosmoMath.Vector = ...
-    def __init__(self, dist: Distance = ...,
-                 z: NumCosmoMath.Vector = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 sigma: NumCosmoMath.Vector = ...,
-                 w_mean: bool = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        dist: Distance = ...,
+        z: NumCosmoMath.Vector = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        sigma: NumCosmoMath.Vector = ...,
+        w_mean: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @classmethod
     def new_from_file(cls, filename: str) -> DataBaoDV: ...
     @classmethod
     def new_from_id(cls, dist: Distance, id: DataBaoId) -> DataBaoDV: ...
     def set_dist(self, dist: Distance) -> None: ...
-    
 
 class DataBaoDVClass(GObject.GPointer):
     r"""
@@ -3494,6 +3754,7 @@ class DataBaoDVDV(NumCosmoMath.DataGaussDiag):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dist: Distance
         mean: NumCosmoMath.Vector
@@ -3508,21 +3769,23 @@ class DataBaoDVDV(NumCosmoMath.DataGaussDiag):
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussDiag = ...
     dist: Distance = ...
-    def __init__(self, dist: Distance = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 sigma: NumCosmoMath.Vector = ...,
-                 w_mean: bool = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        dist: Distance = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        sigma: NumCosmoMath.Vector = ...,
+        w_mean: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @classmethod
     def new_from_file(cls, filename: str) -> DataBaoDVDV: ...
     @classmethod
     def new_from_id(cls, dist: Distance, id: DataBaoId) -> DataBaoDVDV: ...
     def set_dist(self, dist: Distance) -> None: ...
-    
 
 class DataBaoDVDVClass(GObject.GPointer):
     r"""
@@ -3577,6 +3840,7 @@ class DataBaoDtrDHr(NumCosmoMath.DataGaussCov):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dist: Distance
         z: NumCosmoMath.Vector
@@ -3593,22 +3857,24 @@ class DataBaoDtrDHr(NumCosmoMath.DataGaussCov):
     parent_instance: NumCosmoMath.DataGaussCov = ...
     dist: Distance = ...
     x: NumCosmoMath.Vector = ...
-    def __init__(self, dist: Distance = ...,
-                 z: NumCosmoMath.Vector = ...,
-                 cov: NumCosmoMath.Matrix = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 use_norma: bool = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        dist: Distance = ...,
+        z: NumCosmoMath.Vector = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @classmethod
     def new_from_file(cls, filename: str) -> DataBaoDtrDHr: ...
     @classmethod
     def new_from_id(cls, dist: Distance, id: DataBaoId) -> DataBaoDtrDHr: ...
     def set_dist(self, dist: Distance) -> None: ...
-    
 
 class DataBaoDtrDHrClass(GObject.GPointer):
     r"""
@@ -3666,6 +3932,7 @@ class DataBaoEmpiricalFit(NumCosmoMath.DataDist1d):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Dv_fiduc: float
         dist: Distance
@@ -3688,27 +3955,31 @@ class DataBaoEmpiricalFit(NumCosmoMath.DataDist1d):
     p: NumCosmoMath.StatsDist1d = ...
     p_mode: float = ...
     dist: Distance = ...
-    def __init__(self, Dv_fiduc: float = ...,
-                 dist: Distance = ...,
-                 m2lnp: NumCosmoMath.Spline = ...,
-                 rs_fiduc: float = ...,
-                 z: float = ...,
-                 n_points: int = ...,
-                 vector: NumCosmoMath.Vector = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        Dv_fiduc: float = ...,
+        dist: Distance = ...,
+        m2lnp: NumCosmoMath.Spline = ...,
+        rs_fiduc: float = ...,
+        z: float = ...,
+        n_points: int = ...,
+        vector: NumCosmoMath.Vector = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     def get_alpha(self, mset: NumCosmoMath.MSet) -> float: ...
     def get_mode(self) -> float: ...
     @classmethod
-    def new(cls, m2lnp: NumCosmoMath.Spline, Dv_fiduc: float, rs_fiduc: float, z: float) -> DataBaoEmpiricalFit: ...
+    def new(
+        cls, m2lnp: NumCosmoMath.Spline, Dv_fiduc: float, rs_fiduc: float, z: float
+    ) -> DataBaoEmpiricalFit: ...
     @classmethod
     def new_from_file(cls, filename: str) -> DataBaoEmpiricalFit: ...
     @classmethod
     def new_from_id(cls, dist: Distance, id: DataBaoId) -> DataBaoEmpiricalFit: ...
     def set_dist(self, dist: Distance) -> None: ...
-    
 
 class DataBaoEmpiricalFit2d(NumCosmoMath.DataDist2d):
     r"""
@@ -3756,6 +4027,7 @@ class DataBaoEmpiricalFit2d(NumCosmoMath.DataDist2d):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Dh_rd_fiduc: float
         Dt_rd_fiduc: float
@@ -3777,28 +4049,36 @@ class DataBaoEmpiricalFit2d(NumCosmoMath.DataDist2d):
     m2lnp: NumCosmoMath.Spline2d = ...
     p: NumCosmoMath.StatsDist2d = ...
     dist: Distance = ...
-    def __init__(self, Dh_rd_fiduc: float = ...,
-                 Dt_rd_fiduc: float = ...,
-                 dist: Distance = ...,
-                 m2lnp: NumCosmoMath.Spline2d = ...,
-                 z: float = ...,
-                 matrix: NumCosmoMath.Matrix = ...,
-                 n_points: int = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        Dh_rd_fiduc: float = ...,
+        Dt_rd_fiduc: float = ...,
+        dist: Distance = ...,
+        m2lnp: NumCosmoMath.Spline2d = ...,
+        z: float = ...,
+        matrix: NumCosmoMath.Matrix = ...,
+        n_points: int = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     def get_alpha_parallel(self, mset: NumCosmoMath.MSet) -> float: ...
     def get_alpha_perpendicular(self, mset: NumCosmoMath.MSet) -> float: ...
     def get_mode(self) -> float: ...
     @classmethod
-    def new(cls, m2lnp: NumCosmoMath.Spline2d, Dh_rd_fiduc: float, Dt_rd_fiduc: float, z: float) -> DataBaoEmpiricalFit2d: ...
+    def new(
+        cls,
+        m2lnp: NumCosmoMath.Spline2d,
+        Dh_rd_fiduc: float,
+        Dt_rd_fiduc: float,
+        z: float,
+    ) -> DataBaoEmpiricalFit2d: ...
     @classmethod
     def new_from_file(cls, filename: str) -> DataBaoEmpiricalFit2d: ...
     @classmethod
     def new_from_id(cls, dist: Distance, id: DataBaoId) -> DataBaoEmpiricalFit2d: ...
     def set_dist(self, dist: Distance) -> None: ...
-    
 
 class DataBaoEmpiricalFit2dClass(GObject.GPointer):
     r"""
@@ -3863,6 +4143,7 @@ class DataBaoRDV(NumCosmoMath.DataGauss):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dist: Distance
         is_rDV: bool
@@ -3880,22 +4161,24 @@ class DataBaoRDV(NumCosmoMath.DataGauss):
     dist: Distance = ...
     x: NumCosmoMath.Vector = ...
     r_DV: bool = ...
-    def __init__(self, dist: Distance = ...,
-                 is_rDV: bool = ...,
-                 z: NumCosmoMath.Vector = ...,
-                 inv_cov: NumCosmoMath.Matrix = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        dist: Distance = ...,
+        is_rDV: bool = ...,
+        z: NumCosmoMath.Vector = ...,
+        inv_cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @classmethod
     def new_from_file(cls, filename: str) -> DataBaoRDV: ...
     @classmethod
     def new_from_id(cls, dist: Distance, id: DataBaoId) -> DataBaoRDV: ...
     def set_dist(self, dist: Distance) -> None: ...
-    
 
 class DataBaoRDVClass(GObject.GPointer):
     r"""
@@ -3947,6 +4230,7 @@ class DataCMBDistPriors(NumCosmoMath.DataGauss):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dist: Distance
         inv_cov: NumCosmoMath.Matrix
@@ -3960,14 +4244,17 @@ class DataCMBDistPriors(NumCosmoMath.DataGauss):
     props: Props = ...
     parent_instance: NumCosmoMath.DataGauss = ...
     dist: Distance = ...
-    def __init__(self, dist: Distance = ...,
-                 inv_cov: NumCosmoMath.Matrix = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        dist: Distance = ...,
+        inv_cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @classmethod
     def new_empty(cls, dist: Distance) -> DataCMBDistPriors: ...
     @classmethod
@@ -3975,7 +4262,6 @@ class DataCMBDistPriors(NumCosmoMath.DataGauss):
     @classmethod
     def new_from_id(cls, dist: Distance, id: DataCMBId) -> DataCMBDistPriors: ...
     def set_dist(self, dist: Distance) -> None: ...
-    
 
 class DataCMBDistPriorsClass(GObject.GPointer):
     r"""
@@ -4031,6 +4317,7 @@ class DataCMBShiftParam(NumCosmoMath.DataGaussDiag):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dist: Distance
         z: NumCosmoMath.Vector
@@ -4047,16 +4334,19 @@ class DataCMBShiftParam(NumCosmoMath.DataGaussDiag):
     parent_instance: NumCosmoMath.DataGaussDiag = ...
     dist: Distance = ...
     x: NumCosmoMath.Vector = ...
-    def __init__(self, dist: Distance = ...,
-                 z: NumCosmoMath.Vector = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 sigma: NumCosmoMath.Vector = ...,
-                 w_mean: bool = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        dist: Distance = ...,
+        z: NumCosmoMath.Vector = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        sigma: NumCosmoMath.Vector = ...,
+        w_mean: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @classmethod
     def new_empty(cls, dist: Distance) -> DataCMBShiftParam: ...
     @classmethod
@@ -4064,7 +4354,6 @@ class DataCMBShiftParam(NumCosmoMath.DataGaussDiag):
     @classmethod
     def new_from_id(cls, dist: Distance, id: DataCMBId) -> DataCMBShiftParam: ...
     def set_dist(self, dist: Distance) -> None: ...
-    
 
 class DataCMBShiftParamClass(GObject.GPointer):
     r"""
@@ -4075,76 +4364,6 @@ class DataCMBShiftParamClass(GObject.GPointer):
         DataCMBShiftParamClass()
     """
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
-
-class DataClusterMassRich(NumCosmoMath.Data):
-    r"""
-    :Constructors:
-
-    ::
-
-        DataClusterMassRich(**properties)
-        new() -> NumCosmo.DataClusterMassRich
-
-    Object NcDataClusterMassRich
-
-    Properties from NcDataClusterMassRich:
-      z-cluster -> NcmVector: z-cluster
-        Clusters (halo) redshift array
-      lnM-cluster -> NcmVector: lnM-cluster
-        Clusters (halo) ln-mass array
-      lnR-cluster -> NcmVector: lnR-cluster
-        Clusters (halo) ln-richness array
-
-    Properties from NcmData:
-      name -> gchararray: name
-        Data type name
-      desc -> gchararray: desc
-        Data description
-      long-desc -> gchararray: long-desc
-        Data detailed description
-      init -> gboolean: init
-        Data initialized state
-      bootstrap -> NcmBootstrap: bootstrap
-        Data bootstrap object
-
-    Signals from GObject:
-      notify (GParam)
-    """
-    class Props:
-        lnM_cluster: NumCosmoMath.Vector
-        lnR_cluster: NumCosmoMath.Vector
-        z_cluster: NumCosmoMath.Vector
-        bootstrap: NumCosmoMath.Bootstrap
-        desc: str
-        init: bool
-        long_desc: str
-        name: str
-    props: Props = ...
-    def __init__(self, lnM_cluster: NumCosmoMath.Vector = ...,
-                 lnR_cluster: NumCosmoMath.Vector = ...,
-                 z_cluster: NumCosmoMath.Vector = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
-    @staticmethod
-    def clear(dmr: DataClusterMassRich) -> None: ...
-    def free(self) -> None: ...
-    @classmethod
-    def new(cls) -> DataClusterMassRich: ...
-    def ref(self) -> DataClusterMassRich: ...
-    def set_data(self, lnM: NumCosmoMath.Vector, z: NumCosmoMath.Vector, lnR: NumCosmoMath.Vector) -> None: ...
-    
-
-class DataClusterMassRichClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        DataClusterMassRichClass()
-    """
-    parent_class: NumCosmoMath.DataClass = ...
 
 class DataClusterNCount(NumCosmoMath.Data):
     r"""
@@ -4210,6 +4429,7 @@ class DataClusterNCount(NumCosmoMath.Data):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         area: float
         bin_count: NumCosmoMath.Vector
@@ -4237,29 +4457,38 @@ class DataClusterNCount(NumCosmoMath.Data):
     props: Props = ...
     parent_instance: NumCosmoMath.Data = ...
     priv: DataClusterNCountPrivate = ...
-    def __init__(self, area: float = ...,
-                 bin_count: NumCosmoMath.Vector = ...,
-                 binned: bool = ...,
-                 cluster_abundance: ClusterAbundance = ...,
-                 fiducial: bool = ...,
-                 lnM_obs: NumCosmoMath.Matrix = ...,
-                 lnM_obs_bins: NumCosmoMath.ObjArray = ...,
-                 lnM_obs_params: NumCosmoMath.Matrix = ...,
-                 lnM_true: NumCosmoMath.Vector = ...,
-                 mass_type: str = ...,
-                 redshift_type: str = ...,
-                 rng_name: str = ...,
-                 rng_seed: int = ...,
-                 use_true: bool = ...,
-                 z_obs: NumCosmoMath.Matrix = ...,
-                 z_obs_bins: NumCosmoMath.ObjArray = ...,
-                 z_obs_params: NumCosmoMath.Matrix = ...,
-                 z_true: NumCosmoMath.Vector = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
-    def add_bin(self, lnM_obs_lb: NumCosmoMath.Vector, lnM_obs_ub: NumCosmoMath.Vector, z_obs_lb: NumCosmoMath.Vector, z_obs_ub: NumCosmoMath.Vector) -> None: ...
+    def __init__(
+        self,
+        area: float = ...,
+        bin_count: NumCosmoMath.Vector = ...,
+        binned: bool = ...,
+        cluster_abundance: ClusterAbundance = ...,
+        fiducial: bool = ...,
+        lnM_obs: NumCosmoMath.Matrix = ...,
+        lnM_obs_bins: NumCosmoMath.ObjArray = ...,
+        lnM_obs_params: NumCosmoMath.Matrix = ...,
+        lnM_true: NumCosmoMath.Vector = ...,
+        mass_type: str = ...,
+        redshift_type: str = ...,
+        rng_name: str = ...,
+        rng_seed: int = ...,
+        use_true: bool = ...,
+        z_obs: NumCosmoMath.Matrix = ...,
+        z_obs_bins: NumCosmoMath.ObjArray = ...,
+        z_obs_params: NumCosmoMath.Matrix = ...,
+        z_true: NumCosmoMath.Vector = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
+    def add_bin(
+        self,
+        lnM_obs_lb: NumCosmoMath.Vector,
+        lnM_obs_ub: NumCosmoMath.Vector,
+        z_obs_lb: NumCosmoMath.Vector,
+        z_obs_ub: NumCosmoMath.Vector,
+    ) -> None: ...
     def bin_data(self) -> None: ...
     def catalog_load(self, filename: str) -> None: ...
     def catalog_save(self, filename: str, overwrite: bool) -> None: ...
@@ -4276,11 +4505,15 @@ class DataClusterNCount(NumCosmoMath.Data):
     def get_z_true(self) -> NumCosmoMath.Vector: ...
     def has_lnM_true(self) -> bool: ...
     def has_z_true(self) -> bool: ...
-    def init_from_sampling(self, mset: NumCosmoMath.MSet, area_survey: float, rng: NumCosmoMath.RNG) -> None: ...
+    def init_from_sampling(
+        self, mset: NumCosmoMath.MSet, area_survey: float, rng: NumCosmoMath.RNG
+    ) -> None: ...
     def lnM_obs_len(self) -> int: ...
     def lnM_obs_params_len(self) -> int: ...
     @classmethod
-    def new(cls, cad: ClusterAbundance, redshift_type: str, mass_type: str) -> DataClusterNCount: ...
+    def new(
+        cls, cad: ClusterAbundance, redshift_type: str, mass_type: str
+    ) -> DataClusterNCount: ...
     def ref(self) -> DataClusterNCount: ...
     def set_bin_count(self, bin_count: NumCosmoMath.Vector) -> None: ...
     def set_binned(self, on: bool) -> None: ...
@@ -4296,7 +4529,6 @@ class DataClusterNCount(NumCosmoMath.Data):
     def using_true_data(self) -> bool: ...
     def z_obs_len(self) -> int: ...
     def z_obs_params_len(self) -> int: ...
-    
 
 class DataClusterNCountClass(GObject.GPointer):
     r"""
@@ -4349,6 +4581,7 @@ class DataClusterPseudoCounts(NumCosmoMath.Data):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         M_z_flat_prior: bool
         cluster_abundance: ClusterAbundance
@@ -4368,20 +4601,25 @@ class DataClusterPseudoCounts(NumCosmoMath.Data):
     np: int = ...
     M_Z_FlatPrior: bool = ...
     rnd_name: str = ...
-    def __init__(self, M_z_flat_prior: bool = ...,
-                 cluster_abundance: ClusterAbundance = ...,
-                 np: int = ...,
-                 obs: NumCosmoMath.Matrix = ...,
-                 true_data: NumCosmoMath.Matrix = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        M_z_flat_prior: bool = ...,
+        cluster_abundance: ClusterAbundance = ...,
+        np: int = ...,
+        obs: NumCosmoMath.Matrix = ...,
+        true_data: NumCosmoMath.Matrix = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @staticmethod
     def clear(dcpc: DataClusterPseudoCounts) -> None: ...
     def free(self) -> None: ...
     def get_nclusters(self) -> int: ...
-    def init_from_sampling(self, mset: NumCosmoMath.MSet, rng: NumCosmoMath.RNG, np: int) -> None: ...
+    def init_from_sampling(
+        self, mset: NumCosmoMath.MSet, rng: NumCosmoMath.RNG, np: int
+    ) -> None: ...
     @classmethod
     def new(cls, cad: ClusterAbundance) -> DataClusterPseudoCounts: ...
     @classmethod
@@ -4391,7 +4629,6 @@ class DataClusterPseudoCounts(NumCosmoMath.Data):
     def set_nclusters(self, np: int) -> None: ...
     def set_obs(self, m: NumCosmoMath.Matrix) -> None: ...
     def set_true_data(self, m: NumCosmoMath.Matrix) -> None: ...
-    
 
 class DataClusterPseudoCountsClass(GObject.GPointer):
     r"""
@@ -4442,6 +4679,7 @@ class DataClusterWL(NumCosmoMath.Data):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dec_cluster: float
         galaxy_array: NumCosmoMath.ObjArray
@@ -4456,15 +4694,18 @@ class DataClusterWL(NumCosmoMath.Data):
     props: Props = ...
     parent_instance: NumCosmoMath.Data = ...
     priv: DataClusterWLPrivate = ...
-    def __init__(self, dec_cluster: float = ...,
-                 galaxy_array: NumCosmoMath.ObjArray = ...,
-                 psf_size: float = ...,
-                 ra_cluster: float = ...,
-                 z_cluster: float = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        dec_cluster: float = ...,
+        galaxy_array: NumCosmoMath.ObjArray = ...,
+        psf_size: float = ...,
+        ra_cluster: float = ...,
+        z_cluster: float = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @staticmethod
     def clear(dcwl: DataClusterWL) -> None: ...
     def free(self) -> None: ...
@@ -4473,7 +4714,6 @@ class DataClusterWL(NumCosmoMath.Data):
     @classmethod
     def new_from_file(cls, filename: str) -> DataClusterWL: ...
     def ref(self) -> DataClusterWL: ...
-    
 
 class DataClusterWLClass(GObject.GPointer):
     r"""
@@ -4531,6 +4771,7 @@ class DataDistMu(NumCosmoMath.DataGaussDiag):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dist: Distance
         z: NumCosmoMath.Vector
@@ -4547,16 +4788,19 @@ class DataDistMu(NumCosmoMath.DataGaussDiag):
     parent_instance: NumCosmoMath.DataGaussDiag = ...
     dist: Distance = ...
     x: NumCosmoMath.Vector = ...
-    def __init__(self, dist: Distance = ...,
-                 z: NumCosmoMath.Vector = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 sigma: NumCosmoMath.Vector = ...,
-                 w_mean: bool = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        dist: Distance = ...,
+        z: NumCosmoMath.Vector = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        sigma: NumCosmoMath.Vector = ...,
+        w_mean: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @classmethod
     def new_empty(cls, dist: Distance) -> DataDistMu: ...
     @classmethod
@@ -4564,7 +4808,6 @@ class DataDistMu(NumCosmoMath.DataGaussDiag):
     @classmethod
     def new_from_id(cls, dist: Distance, id: DataSNIAId) -> DataDistMu: ...
     def set_dist(self, dist: Distance) -> None: ...
-    
 
 class DataDistMuClass(GObject.GPointer):
     r"""
@@ -4618,6 +4861,7 @@ class DataHubble(NumCosmoMath.DataGaussDiag):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         z: NumCosmoMath.Vector
         mean: NumCosmoMath.Vector
@@ -4632,15 +4876,18 @@ class DataHubble(NumCosmoMath.DataGaussDiag):
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussDiag = ...
     x: NumCosmoMath.Vector = ...
-    def __init__(self, z: NumCosmoMath.Vector = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 sigma: NumCosmoMath.Vector = ...,
-                 w_mean: bool = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        z: NumCosmoMath.Vector = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        sigma: NumCosmoMath.Vector = ...,
+        w_mean: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @classmethod
     def new_empty(cls) -> DataHubble: ...
     @classmethod
@@ -4648,7 +4895,6 @@ class DataHubble(NumCosmoMath.DataGaussDiag):
     @classmethod
     def new_from_id(cls, id: DataHubbleId) -> DataHubble: ...
     def set_sample(self, id: DataHubbleId) -> None: ...
-    
 
 class DataHubbleBao(NumCosmoMath.DataGaussDiag):
     r"""
@@ -4692,6 +4938,7 @@ class DataHubbleBao(NumCosmoMath.DataGaussDiag):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dist: Distance
         z: NumCosmoMath.Vector
@@ -4708,20 +4955,22 @@ class DataHubbleBao(NumCosmoMath.DataGaussDiag):
     parent_instance: NumCosmoMath.DataGaussDiag = ...
     dist: Distance = ...
     x: NumCosmoMath.Vector = ...
-    def __init__(self, dist: Distance = ...,
-                 z: NumCosmoMath.Vector = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 sigma: NumCosmoMath.Vector = ...,
-                 w_mean: bool = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        dist: Distance = ...,
+        z: NumCosmoMath.Vector = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        sigma: NumCosmoMath.Vector = ...,
+        w_mean: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @classmethod
     def new(cls, dist: Distance, id: DataHubbleBaoId) -> DataHubbleBao: ...
     def set_sample(self, id: DataHubbleBaoId) -> None: ...
-    
 
 class DataHubbleBaoClass(GObject.GPointer):
     r"""
@@ -4782,6 +5031,7 @@ class DataPlanckLKL(NumCosmoMath.Data):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         checksum: str
         data_file: str
@@ -4820,12 +5070,15 @@ class DataPlanckLKL(NumCosmoMath.Data):
     cm2lnL: float = ...
     A_planck: float = ...
     param_map: list[None] = ...
-    def __init__(self, data_file: str = ...,
-                 hipert_boltzmann: HIPertBoltzmann = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        data_file: str = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @classmethod
     def full_new(cls, filename: str, pb: HIPertBoltzmann) -> DataPlanckLKL: ...
     def get_param_name(self, i: int) -> str: ...
@@ -4833,7 +5086,6 @@ class DataPlanckLKL(NumCosmoMath.Data):
     @classmethod
     def new(cls, filename: str) -> DataPlanckLKL: ...
     def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
-    
 
 class DataPlanckLKLClass(GObject.GPointer):
     r"""
@@ -4890,6 +5142,7 @@ class DataReducedShearClusterMass(NumCosmoMath.Data):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dec_cluster: float
         dist: Distance
@@ -4907,29 +5160,38 @@ class DataReducedShearClusterMass(NumCosmoMath.Data):
     props: Props = ...
     parent_instance: NumCosmoMath.Data = ...
     priv: DataReducedShearClusterMassPrivate = ...
-    def __init__(self, dec_cluster: float = ...,
-                 dist: Distance = ...,
-                 gal_obs: NumCosmoMath.Matrix = ...,
-                 has_rh: bool = ...,
-                 photoz_array: NumCosmoMath.ObjArray = ...,
-                 psf_size: float = ...,
-                 ra_cluster: float = ...,
-                 z_cluster: float = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        dec_cluster: float = ...,
+        dist: Distance = ...,
+        gal_obs: NumCosmoMath.Matrix = ...,
+        has_rh: bool = ...,
+        photoz_array: NumCosmoMath.ObjArray = ...,
+        psf_size: float = ...,
+        ra_cluster: float = ...,
+        z_cluster: float = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     @staticmethod
     def clear(drs: DataReducedShearClusterMass) -> None: ...
     def free(self) -> None: ...
-    def load_hdf5(self, hdf5_file: str, ftype: int, z_cluster: float, ra_cluster: float, dec_cluster: float) -> None: ...
+    def load_hdf5(
+        self,
+        hdf5_file: str,
+        ftype: int,
+        z_cluster: float,
+        ra_cluster: float,
+        dec_cluster: float,
+    ) -> None: ...
     @classmethod
     def new(cls, dist: Distance) -> DataReducedShearClusterMass: ...
     @classmethod
     def new_from_file(cls, filename: str) -> DataReducedShearClusterMass: ...
     def ref(self) -> DataReducedShearClusterMass: ...
     def set_dist(self, dist: Distance) -> None: ...
-    
 
 class DataReducedShearClusterMassClass(GObject.GPointer):
     r"""
@@ -5021,6 +5283,7 @@ class DataSNIACov(NumCosmoMath.DataGaussCov):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         absmag_set: GLib.Variant
         cat_version: int
@@ -5053,33 +5316,36 @@ class DataSNIACov(NumCosmoMath.DataGaussCov):
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussCov = ...
     priv: DataSNIACovPrivate = ...
-    def __init__(self, absmag_set: GLib.Variant = ...,
-                 cat_version: int = ...,
-                 ceph_dist: NumCosmoMath.Vector = ...,
-                 colour: NumCosmoMath.Vector = ...,
-                 cov_full: NumCosmoMath.Matrix = ...,
-                 cov_mbc_mbc: NumCosmoMath.Matrix = ...,
-                 has_complete_cov: bool = ...,
-                 is_calib: GLib.Variant = ...,
-                 magnitude_b_corrected: NumCosmoMath.Vector = ...,
-                 magnitude_cut: float = ...,
-                 magnitudes: NumCosmoMath.Vector = ...,
-                 sigma_thirdpar: NumCosmoMath.Vector = ...,
-                 sigma_z: NumCosmoMath.Vector = ...,
-                 thirdpar: NumCosmoMath.Vector = ...,
-                 used_in_sh0es: GLib.Variant = ...,
-                 width: NumCosmoMath.Vector = ...,
-                 z_He: NumCosmoMath.Vector = ...,
-                 z_cmb: NumCosmoMath.Vector = ...,
-                 z_hd: NumCosmoMath.Vector = ...,
-                 cov: NumCosmoMath.Matrix = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 use_norma: bool = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
+    def __init__(
+        self,
+        absmag_set: GLib.Variant = ...,
+        cat_version: int = ...,
+        ceph_dist: NumCosmoMath.Vector = ...,
+        colour: NumCosmoMath.Vector = ...,
+        cov_full: NumCosmoMath.Matrix = ...,
+        cov_mbc_mbc: NumCosmoMath.Matrix = ...,
+        has_complete_cov: bool = ...,
+        is_calib: GLib.Variant = ...,
+        magnitude_b_corrected: NumCosmoMath.Vector = ...,
+        magnitude_cut: float = ...,
+        magnitudes: NumCosmoMath.Vector = ...,
+        sigma_thirdpar: NumCosmoMath.Vector = ...,
+        sigma_z: NumCosmoMath.Vector = ...,
+        thirdpar: NumCosmoMath.Vector = ...,
+        used_in_sh0es: GLib.Variant = ...,
+        width: NumCosmoMath.Vector = ...,
+        z_He: NumCosmoMath.Vector = ...,
+        z_cmb: NumCosmoMath.Vector = ...,
+        z_hd: NumCosmoMath.Vector = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
     def apply_filter_sh0es_z(self, z_min: float, use_calib: bool) -> DataSNIACov: ...
     def estimate_width_colour(self, mset: NumCosmoMath.MSet) -> float: ...
     @staticmethod
@@ -5136,7 +5402,6 @@ class DataSNIACov(NumCosmoMath.DataGaussCov):
     def set_z_he(self, z_he: NumCosmoMath.Vector) -> None: ...
     def sigma_int_len(self) -> int: ...
     def snia_len(self) -> int: ...
-    
 
 class DataSNIACovClass(GObject.GPointer):
     r"""
@@ -5198,6 +5463,7 @@ class DataXcor(NumCosmoMath.DataGaussCov):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         X1: NumCosmoMath.Matrix
         X2: NumCosmoMath.Matrix
@@ -5227,30 +5493,53 @@ class DataXcor(NumCosmoMath.DataGaussCov):
     xc: Xcor = ...
     cosmo_ctrl: NumCosmoMath.ModelCtrl = ...
     xclk_ctrl: list[None] = ...
-    def __init__(self, X1: NumCosmoMath.Matrix = ...,
-                 X2: NumCosmoMath.Matrix = ...,
-                 nobs: int = ...,
-                 xc: Xcor = ...,
-                 xcab_oa: NumCosmoMath.ObjArray = ...,
-                 cov: NumCosmoMath.Matrix = ...,
-                 mean: NumCosmoMath.Vector = ...,
-                 n_points: int = ...,
-                 use_norma: bool = ...,
-                 bootstrap: NumCosmoMath.Bootstrap = ...,
-                 desc: str = ...,
-                 init: bool = ...,
-                 long_desc: str = ...): ...
-    def cov_func_abcd(self, cov: NumCosmoMath.Matrix, a: int, b: int, c: int, d: int) -> None: ...
+    def __init__(
+        self,
+        X1: NumCosmoMath.Matrix = ...,
+        X2: NumCosmoMath.Matrix = ...,
+        nobs: int = ...,
+        xc: Xcor = ...,
+        xcab_oa: NumCosmoMath.ObjArray = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
+    def cov_func_abcd(
+        self, cov: NumCosmoMath.Matrix, a: int, b: int, c: int, d: int
+    ) -> None: ...
     def get_cl_obs(self, vp: NumCosmoMath.Vector, a: int, b: int) -> None: ...
     def mean_func_ab(self, vp: NumCosmoMath.Vector, a: int, b: int) -> None: ...
     @classmethod
     def new_full(cls, nobs: int, xc: Xcor, use_norma: bool) -> DataXcor: ...
-    def set_2(self, a: int, b: int, ell_th_cut_off: int, ell_lik_min: int, ell_lik_max: int, clobs_filename: str, mixing_filename: str, mixing_filelength: int) -> None: ...
+    def set_2(
+        self,
+        a: int,
+        b: int,
+        ell_th_cut_off: int,
+        ell_lik_min: int,
+        ell_lik_max: int,
+        clobs_filename: str,
+        mixing_filename: str,
+        mixing_filelength: int,
+    ) -> None: ...
     def set_3(self) -> None: ...
-    def set_4(self, a: int, b: int, c: int, d: int, X1_filename: str, X2_filename: str, X_filelength: int) -> None: ...
+    def set_4(
+        self,
+        a: int,
+        b: int,
+        c: int,
+        d: int,
+        X1_filename: str,
+        X2_filename: str,
+        X_filelength: int,
+    ) -> None: ...
     def set_5(self) -> None: ...
     def set_AB(self, xcab: XcorAB) -> None: ...
-    
 
 class DataXcorClass(GObject.GPointer):
     r"""
@@ -5284,6 +5573,7 @@ class Distance(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         compute_inv_comoving: bool
         recomb: Recomb
@@ -5304,9 +5594,9 @@ class Distance(GObject.Object):
     cpu_inv_comoving: bool = ...
     recomb: Recomb = ...
     cmethod: DistanceComovingMethod = ...
-    def __init__(self, compute_inv_comoving: bool = ...,
-                 recomb: Recomb = ...,
-                 zf: float = ...): ...
+    def __init__(
+        self, compute_inv_comoving: bool = ..., recomb: Recomb = ..., zf: float = ...
+    ): ...
     def DA_r(self, cosmo: HICosmo, z: float) -> float: ...
     def DH_r(self, cosmo: HICosmo, z: float) -> float: ...
     def Dt_r(self, cosmo: HICosmo, z: float) -> float: ...
@@ -5354,7 +5644,6 @@ class Distance(GObject.Object):
     def transverse(self, cosmo: HICosmo, z: float) -> float: ...
     def transverse_z1_z2(self, cosmo: HICosmo, z1: float, z2: float) -> float: ...
     def transverse_z_to_infinity(self, cosmo: HICosmo, z: float) -> float: ...
-    
 
 class DistanceClass(GObject.GPointer):
     r"""
@@ -5416,7 +5705,6 @@ class GalaxyAcf(GObject.Object):
     def new(cls, gf: GrowthFunc, dist: Distance, tf: TransferFunc) -> GalaxyAcf: ...
     def prepare_psi(self, cosmo: HICosmo, l: int) -> None: ...
     def psi(self, cosmo: HICosmo, k: float, l: int) -> float: ...
-    
 
 class GalaxyAcfClass(GObject.GPointer):
     r"""
@@ -5445,8 +5733,12 @@ class GalaxyRedshift(GObject.Object):
     priv: GalaxyRedshiftPrivate = ...
     @staticmethod
     def clear(gz: GalaxyRedshift) -> None: ...
-    def compute_mean_m2lnf(self, gal_i: int, m2lnf: Callable[..., float], *userdata: Any) -> float: ...
-    def do_compute_mean_m2lnf(self, gal_i: int, m2lnf: Callable[..., float], *userdata: Any) -> float: ...
+    def compute_mean_m2lnf(
+        self, gal_i: int, m2lnf: Callable[..., float], *userdata: Any
+    ) -> float: ...
+    def do_compute_mean_m2lnf(
+        self, gal_i: int, m2lnf: Callable[..., float], *userdata: Any
+    ) -> float: ...
     def do_gen(self, rng: NumCosmoMath.RNG) -> float: ...
     def do_has_dist(self) -> bool: ...
     def do_interval_weight(self, di: int) -> float: ...
@@ -5467,7 +5759,6 @@ class GalaxyRedshift(GObject.Object):
     def pdf_limits(self, di: int) -> Tuple[float, float]: ...
     def quantile(self, q: float) -> float: ...
     def ref(self) -> GalaxyRedshift: ...
-    
 
 class GalaxyRedshiftClass(GObject.GPointer):
     r"""
@@ -5507,6 +5798,7 @@ class GalaxyRedshiftGauss(GalaxyRedshift):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         obs: NumCosmoMath.Matrix
     props: Props = ...
@@ -5522,7 +5814,6 @@ class GalaxyRedshiftGauss(GalaxyRedshift):
     def peek_obs(self) -> NumCosmoMath.Matrix: ...
     def ref(self) -> GalaxyRedshiftGauss: ...
     def set_obs(self, obs: NumCosmoMath.Matrix) -> None: ...
-    
 
 class GalaxyRedshiftGaussClass(GObject.GPointer):
     r"""
@@ -5535,7 +5826,6 @@ class GalaxyRedshiftGaussClass(GObject.GPointer):
     parent_class: GalaxyRedshiftClass = ...
 
 class GalaxyRedshiftGaussPrivate(GObject.GPointer): ...
-
 class GalaxyRedshiftPrivate(GObject.GPointer): ...
 
 class GalaxyRedshiftSpec(GalaxyRedshift):
@@ -5556,6 +5846,7 @@ class GalaxyRedshiftSpec(GalaxyRedshift):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         z_spec: NumCosmoMath.Vector
     props: Props = ...
@@ -5570,7 +5861,6 @@ class GalaxyRedshiftSpec(GalaxyRedshift):
     def peek_z(self) -> NumCosmoMath.Vector: ...
     def ref(self) -> GalaxyRedshiftSpec: ...
     def set_z(self, z_spec: NumCosmoMath.Vector) -> None: ...
-    
 
 class GalaxyRedshiftSpecClass(GObject.GPointer):
     r"""
@@ -5604,24 +5894,25 @@ class GalaxyRedshiftSpline(GalaxyRedshift):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dists: NumCosmoMath.ObjArray
         z_best: float
     props: Props = ...
     parent_instance: GalaxyRedshift = ...
     priv: GalaxyRedshiftSplinePrivate = ...
-    def __init__(self, dists: NumCosmoMath.ObjArray = ...,
-                 z_best: float = ...): ...
+    def __init__(self, dists: NumCosmoMath.ObjArray = ..., z_best: float = ...): ...
     @staticmethod
     def clear(gzs: GalaxyRedshiftSpline) -> None: ...
     def free(self) -> None: ...
     def get_z_best(self) -> float: ...
-    def init_from_vectors(self, zv: NumCosmoMath.Vector, Pzv: NumCosmoMath.Vector) -> None: ...
+    def init_from_vectors(
+        self, zv: NumCosmoMath.Vector, Pzv: NumCosmoMath.Vector
+    ) -> None: ...
     @classmethod
     def new(cls) -> GalaxyRedshiftSpline: ...
     def ref(self) -> GalaxyRedshiftSpline: ...
     def set_z_best(self, z_best: float) -> None: ...
-    
 
 class GalaxyRedshiftSplineClass(GObject.GPointer):
     r"""
@@ -5655,14 +5946,16 @@ class GalaxySelfunc(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         nshells: int
         shell_splines: NumCosmoMath.ObjArray
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: GalaxySelfuncPrivate = ...
-    def __init__(self, nshells: int = ...,
-                 shell_splines: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self, nshells: int = ..., shell_splines: NumCosmoMath.ObjArray = ...
+    ): ...
     @staticmethod
     def clear(gsf: GalaxySelfunc) -> None: ...
     def eval(self, shell: int, z: float) -> float: ...
@@ -5678,7 +5971,6 @@ class GalaxySelfunc(GObject.Object):
     def ref(self) -> GalaxySelfunc: ...
     def set_nshells(self, nshells: int) -> None: ...
     def set_shell_splines(self, dNdz_a: NumCosmoMath.ObjArray) -> None: ...
-    
 
 class GalaxySelfuncClass(GObject.GPointer):
     r"""
@@ -5712,23 +6004,28 @@ class GalaxyWL(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         gz_dist: GalaxyRedshift
         wl_dist: GalaxyWLDist
     props: Props = ...
     parent_instance: GalaxyWLDist = ...
     priv: GalaxyWLPrivate = ...
-    def __init__(self, gz_dist: GalaxyRedshift = ...,
-                 wl_dist: GalaxyWLDist = ...): ...
+    def __init__(self, gz_dist: GalaxyRedshift = ..., wl_dist: GalaxyWLDist = ...): ...
     @staticmethod
     def clear(gwl: GalaxyWL) -> None: ...
-    def eval_m2lnP(self, cosmo: HICosmo, dp: HaloDensityProfile, smd: WLSurfaceMassDensity, z_cluster: float) -> float: ...
+    def eval_m2lnP(
+        self,
+        cosmo: HICosmo,
+        dp: HaloDensityProfile,
+        smd: WLSurfaceMassDensity,
+        z_cluster: float,
+    ) -> float: ...
     def free(self) -> None: ...
     def len(self) -> int: ...
     @classmethod
     def new(cls, wl_dist: GalaxyWLDist, gz_dist: GalaxyRedshift) -> GalaxyWL: ...
     def ref(self) -> GalaxyWL: ...
-    
 
 class GalaxyWLClass(GObject.GPointer):
     r"""
@@ -5759,17 +6056,60 @@ class GalaxyWLDist(GObject.Object):
     def clear(gwld: GalaxyWLDist) -> None: ...
     def do_gen(self, g_true: float, rng: NumCosmoMath.RNG) -> float: ...
     def do_len(self) -> int: ...
-    def do_m2lnP(self, cosmo: HICosmo, dp: HaloDensityProfile, smd: WLSurfaceMassDensity, z_cluster: float, gal_i: int, z: float) -> float: ...
-    def do_m2lnP_initial_prep(self, gz: GalaxyRedshift, cosmo: HICosmo, dp: HaloDensityProfile, smd: WLSurfaceMassDensity, z_cluster: float) -> None: ...
-    def do_m2lnP_prep(self, cosmo: HICosmo, dp: HaloDensityProfile, smd: WLSurfaceMassDensity, z_cluster: float, gal_i: int) -> None: ...
+    def do_m2lnP(
+        self,
+        cosmo: HICosmo,
+        dp: HaloDensityProfile,
+        smd: WLSurfaceMassDensity,
+        z_cluster: float,
+        gal_i: int,
+        z: float,
+    ) -> float: ...
+    def do_m2lnP_initial_prep(
+        self,
+        gz: GalaxyRedshift,
+        cosmo: HICosmo,
+        dp: HaloDensityProfile,
+        smd: WLSurfaceMassDensity,
+        z_cluster: float,
+    ) -> None: ...
+    def do_m2lnP_prep(
+        self,
+        cosmo: HICosmo,
+        dp: HaloDensityProfile,
+        smd: WLSurfaceMassDensity,
+        z_cluster: float,
+        gal_i: int,
+    ) -> None: ...
     def free(self) -> None: ...
     def gen(self, g_true: float, rng: NumCosmoMath.RNG) -> float: ...
     def len(self) -> int: ...
-    def m2lnP(self, cosmo: HICosmo, dp: HaloDensityProfile, smd: WLSurfaceMassDensity, z_cluster: float, gal_i: int, z: float) -> float: ...
-    def m2lnP_initial_prep(self, gz: GalaxyRedshift, cosmo: HICosmo, dp: HaloDensityProfile, smd: WLSurfaceMassDensity, z_cluster: float) -> None: ...
-    def m2lnP_prep(self, cosmo: HICosmo, dp: HaloDensityProfile, smd: WLSurfaceMassDensity, z_cluster: float, gal_i: int) -> None: ...
+    def m2lnP(
+        self,
+        cosmo: HICosmo,
+        dp: HaloDensityProfile,
+        smd: WLSurfaceMassDensity,
+        z_cluster: float,
+        gal_i: int,
+        z: float,
+    ) -> float: ...
+    def m2lnP_initial_prep(
+        self,
+        gz: GalaxyRedshift,
+        cosmo: HICosmo,
+        dp: HaloDensityProfile,
+        smd: WLSurfaceMassDensity,
+        z_cluster: float,
+    ) -> None: ...
+    def m2lnP_prep(
+        self,
+        cosmo: HICosmo,
+        dp: HaloDensityProfile,
+        smd: WLSurfaceMassDensity,
+        z_cluster: float,
+        gal_i: int,
+    ) -> None: ...
     def ref(self) -> GalaxyWLDist: ...
-    
 
 class GalaxyWLDistClass(GObject.GPointer):
     r"""
@@ -5780,9 +6120,33 @@ class GalaxyWLDistClass(GObject.GPointer):
         GalaxyWLDistClass()
     """
     parent_class: GObject.ObjectClass = ...
-    m2lnP_initial_prep: Callable[[GalaxyWLDist, GalaxyRedshift, HICosmo, HaloDensityProfile, WLSurfaceMassDensity, float], None] = ...
-    m2lnP_prep: Callable[[GalaxyWLDist, HICosmo, HaloDensityProfile, WLSurfaceMassDensity, float, int], None] = ...
-    m2lnP: Callable[[GalaxyWLDist, HICosmo, HaloDensityProfile, WLSurfaceMassDensity, float, int, float], float] = ...
+    m2lnP_initial_prep: Callable[
+        [
+            GalaxyWLDist,
+            GalaxyRedshift,
+            HICosmo,
+            HaloDensityProfile,
+            WLSurfaceMassDensity,
+            float,
+        ],
+        None,
+    ] = ...
+    m2lnP_prep: Callable[
+        [GalaxyWLDist, HICosmo, HaloDensityProfile, WLSurfaceMassDensity, float, int],
+        None,
+    ] = ...
+    m2lnP: Callable[
+        [
+            GalaxyWLDist,
+            HICosmo,
+            HaloDensityProfile,
+            WLSurfaceMassDensity,
+            float,
+            int,
+            float,
+        ],
+        float,
+    ] = ...
     gen: Callable[[GalaxyWLDist, float, NumCosmoMath.RNG], float] = ...
     len: Callable[[GalaxyWLDist], int] = ...
 
@@ -5806,6 +6170,7 @@ class GalaxyWLEllipticityBinned(GalaxyWLDist):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         binobs: NumCosmoMath.ObjArray
     props: Props = ...
@@ -5820,8 +6185,9 @@ class GalaxyWLEllipticityBinned(GalaxyWLDist):
     def peek_binobs(self) -> NumCosmoMath.ObjArray: ...
     def peek_bins(self) -> NumCosmoMath.Vector: ...
     def ref(self) -> GalaxyWLEllipticityBinned: ...
-    def set_binobs(self, obs: NumCosmoMath.Matrix, bins: NumCosmoMath.Vector) -> None: ...
-    
+    def set_binobs(
+        self, obs: NumCosmoMath.Matrix, bins: NumCosmoMath.Vector
+    ) -> None: ...
 
 class GalaxyWLEllipticityBinnedClass(GObject.GPointer):
     r"""
@@ -5855,14 +6221,16 @@ class GalaxyWLEllipticityGauss(GalaxyWLDist):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         obs: NumCosmoMath.Matrix
         pos: GalaxyWLEllipticityGaussPos
     props: Props = ...
     parent_instance: GalaxyWLDist = ...
     priv: GalaxyWLEllipticityGaussPrivate = ...
-    def __init__(self, obs: NumCosmoMath.Matrix = ...,
-                 pos: GalaxyWLEllipticityGaussPos = ...): ...
+    def __init__(
+        self, obs: NumCosmoMath.Matrix = ..., pos: GalaxyWLEllipticityGaussPos = ...
+    ): ...
     @staticmethod
     def clear(gegauss: GalaxyWLEllipticityGauss) -> None: ...
     def free(self) -> None: ...
@@ -5873,7 +6241,6 @@ class GalaxyWLEllipticityGauss(GalaxyWLDist):
     def ref(self) -> GalaxyWLEllipticityGauss: ...
     def set_obs(self, obs: NumCosmoMath.Matrix) -> None: ...
     def set_pos(self, pos: GalaxyWLEllipticityGaussPos) -> None: ...
-    
 
 class GalaxyWLEllipticityGaussClass(GObject.GPointer):
     r"""
@@ -5905,6 +6272,7 @@ class GalaxyWLEllipticityKDE(GalaxyWLDist):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         obs: NumCosmoMath.Matrix
     props: Props = ...
@@ -5921,7 +6289,6 @@ class GalaxyWLEllipticityKDE(GalaxyWLDist):
     def peek_obs(self) -> NumCosmoMath.Matrix: ...
     def ref(self) -> GalaxyWLEllipticityKDE: ...
     def set_obs(self, obs: NumCosmoMath.Matrix) -> None: ...
-    
 
 class GalaxyWLEllipticityKDEClass(GObject.GPointer):
     r"""
@@ -5934,7 +6301,6 @@ class GalaxyWLEllipticityKDEClass(GObject.GPointer):
     parent_class: GalaxyWLDistClass = ...
 
 class GalaxyWLEllipticityKDEPrivate(GObject.GPointer): ...
-
 class GalaxyWLPrivate(GObject.GPointer): ...
 
 class GalaxyWLProj(GalaxyWLDist):
@@ -5957,14 +6323,14 @@ class GalaxyWLProj(GalaxyWLDist):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         obs: NumCosmoMath.Matrix
         pos: GalaxyWLProjPos
     props: Props = ...
     parent_instance: GalaxyWLDist = ...
     priv: GalaxyWLProjPrivate = ...
-    def __init__(self, obs: NumCosmoMath.Matrix = ...,
-                 pos: GalaxyWLProjPos = ...): ...
+    def __init__(self, obs: NumCosmoMath.Matrix = ..., pos: GalaxyWLProjPos = ...): ...
     @staticmethod
     def clear(gwlp: GalaxyWLProj) -> None: ...
     def free(self) -> None: ...
@@ -5975,7 +6341,6 @@ class GalaxyWLProj(GalaxyWLDist):
     def ref(self) -> GalaxyWLProj: ...
     def set_obs(self, obs: NumCosmoMath.Matrix) -> None: ...
     def set_pos(self, pos: GalaxyWLProjPos) -> None: ...
-    
 
 class GalaxyWLProjClass(GObject.GPointer):
     r"""
@@ -6011,6 +6376,7 @@ class GrowthFunc(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         reltol: float
@@ -6020,9 +6386,7 @@ class GrowthFunc(GObject.Object):
     priv: GrowthFuncPrivate = ...
     s: NumCosmoMath.Spline = ...
     Da0: float = ...
-    def __init__(self, abstol: float = ...,
-                 reltol: float = ...,
-                 x_i: float = ...): ...
+    def __init__(self, abstol: float = ..., reltol: float = ..., x_i: float = ...): ...
     @staticmethod
     def clear(gf: GrowthFunc) -> None: ...
     def eval(self, cosmo: HICosmo, z: float) -> float: ...
@@ -6041,7 +6405,6 @@ class GrowthFunc(GObject.Object):
     def set_abstol(self, abstol: float) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_x_i(self, x_i: float) -> None: ...
-    
 
 class GrowthFuncClass(GObject.GPointer):
     r"""
@@ -6088,6 +6451,7 @@ class HICosmo(NumCosmoMath.Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         implementation: int
         name: str
@@ -6107,9 +6471,12 @@ class HICosmo(NumCosmoMath.Model):
     s: int = ...
     Tmin: int = ...
     smin: int = ...
-    def __init__(self, reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     def Dc(self, z: float) -> float: ...
     def E(self, z: float) -> float: ...
     def E2(self, z: float) -> float: ...
@@ -6233,7 +6600,6 @@ class HICosmo(NumCosmoMath.Model):
     def xb(self) -> float: ...
     def z_lss(self) -> float: ...
     def zt(self, z_max: float) -> float: ...
-    
 
 class HICosmoClass(GObject.GPointer):
     r"""
@@ -6368,6 +6734,7 @@ class HICosmoDE(HICosmo):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         ENnu: float
         ENnu_fit: bool
@@ -6407,35 +6774,38 @@ class HICosmoDE(HICosmo):
     props: Props = ...
     parent_instance: HICosmo = ...
     priv: HICosmoDEPrivate = ...
-    def __init__(self, ENnu: float = ...,
-                 ENnu_fit: bool = ...,
-                 H0: float = ...,
-                 H0_fit: bool = ...,
-                 Omegab: float = ...,
-                 Omegab_fit: bool = ...,
-                 Omegac: float = ...,
-                 Omegac_fit: bool = ...,
-                 Omegax: float = ...,
-                 Omegax_fit: bool = ...,
-                 Tgamma0: float = ...,
-                 Tgamma0_fit: bool = ...,
-                 Tnu: NumCosmoMath.Vector = ...,
-                 Tnu_fit: GLib.Variant = ...,
-                 Tnu_length: int = ...,
-                 Yp: float = ...,
-                 Yp_fit: bool = ...,
-                 gnu: NumCosmoMath.Vector = ...,
-                 gnu_fit: GLib.Variant = ...,
-                 gnu_length: int = ...,
-                 massnu: NumCosmoMath.Vector = ...,
-                 massnu_fit: GLib.Variant = ...,
-                 massnu_length: int = ...,
-                 munu: NumCosmoMath.Vector = ...,
-                 munu_fit: GLib.Variant = ...,
-                 munu_length: int = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        ENnu: float = ...,
+        ENnu_fit: bool = ...,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegab: float = ...,
+        Omegab_fit: bool = ...,
+        Omegac: float = ...,
+        Omegac_fit: bool = ...,
+        Omegax: float = ...,
+        Omegax_fit: bool = ...,
+        Tgamma0: float = ...,
+        Tgamma0_fit: bool = ...,
+        Tnu: NumCosmoMath.Vector = ...,
+        Tnu_fit: GLib.Variant = ...,
+        Tnu_length: int = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
+        gnu: NumCosmoMath.Vector = ...,
+        gnu_fit: GLib.Variant = ...,
+        gnu_length: int = ...,
+        massnu: NumCosmoMath.Vector = ...,
+        massnu_fit: GLib.Variant = ...,
+        massnu_length: int = ...,
+        munu: NumCosmoMath.Vector = ...,
+        munu_fit: GLib.Variant = ...,
+        munu_length: int = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     def E2Omega_de(self, z: float) -> float: ...
     def E2Omega_de_onepw(self, z: float) -> float: ...
     def cmb_params(self) -> None: ...
@@ -6450,7 +6820,6 @@ class HICosmoDE(HICosmo):
     def omega_x2omega_k(self) -> None: ...
     def set_wmap5_params(self) -> None: ...
     def w_de(self, z: float) -> float: ...
-    
 
 class HICosmoDEClass(GObject.GPointer):
     r"""
@@ -6564,6 +6933,7 @@ class HICosmoDECpl(HICosmoDE):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         w0: float
         w0_fit: bool
@@ -6606,42 +6976,44 @@ class HICosmoDECpl(HICosmoDE):
         vector_params_len: int
     props: Props = ...
     parent_instance: HICosmoDE = ...
-    def __init__(self, w0: float = ...,
-                 w0_fit: bool = ...,
-                 w1: float = ...,
-                 w1_fit: bool = ...,
-                 ENnu: float = ...,
-                 ENnu_fit: bool = ...,
-                 H0: float = ...,
-                 H0_fit: bool = ...,
-                 Omegab: float = ...,
-                 Omegab_fit: bool = ...,
-                 Omegac: float = ...,
-                 Omegac_fit: bool = ...,
-                 Omegax: float = ...,
-                 Omegax_fit: bool = ...,
-                 Tgamma0: float = ...,
-                 Tgamma0_fit: bool = ...,
-                 Tnu: NumCosmoMath.Vector = ...,
-                 Tnu_fit: GLib.Variant = ...,
-                 Tnu_length: int = ...,
-                 Yp: float = ...,
-                 Yp_fit: bool = ...,
-                 gnu: NumCosmoMath.Vector = ...,
-                 gnu_fit: GLib.Variant = ...,
-                 gnu_length: int = ...,
-                 massnu: NumCosmoMath.Vector = ...,
-                 massnu_fit: GLib.Variant = ...,
-                 massnu_length: int = ...,
-                 munu: NumCosmoMath.Vector = ...,
-                 munu_fit: GLib.Variant = ...,
-                 munu_length: int = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        w0: float = ...,
+        w0_fit: bool = ...,
+        w1: float = ...,
+        w1_fit: bool = ...,
+        ENnu: float = ...,
+        ENnu_fit: bool = ...,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegab: float = ...,
+        Omegab_fit: bool = ...,
+        Omegac: float = ...,
+        Omegac_fit: bool = ...,
+        Omegax: float = ...,
+        Omegax_fit: bool = ...,
+        Tgamma0: float = ...,
+        Tgamma0_fit: bool = ...,
+        Tnu: NumCosmoMath.Vector = ...,
+        Tnu_fit: GLib.Variant = ...,
+        Tnu_length: int = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
+        gnu: NumCosmoMath.Vector = ...,
+        gnu_fit: GLib.Variant = ...,
+        gnu_length: int = ...,
+        massnu: NumCosmoMath.Vector = ...,
+        massnu_fit: GLib.Variant = ...,
+        massnu_length: int = ...,
+        munu: NumCosmoMath.Vector = ...,
+        munu_fit: GLib.Variant = ...,
+        munu_length: int = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
     def new(cls) -> HICosmoDECpl: ...
-    
 
 class HICosmoDECplClass(GObject.GPointer):
     r"""
@@ -6751,6 +7123,7 @@ class HICosmoDEJbp(HICosmoDE):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         w0: float
         w0_fit: bool
@@ -6793,42 +7166,44 @@ class HICosmoDEJbp(HICosmoDE):
         vector_params_len: int
     props: Props = ...
     parent_instance: HICosmoDE = ...
-    def __init__(self, w0: float = ...,
-                 w0_fit: bool = ...,
-                 w1: float = ...,
-                 w1_fit: bool = ...,
-                 ENnu: float = ...,
-                 ENnu_fit: bool = ...,
-                 H0: float = ...,
-                 H0_fit: bool = ...,
-                 Omegab: float = ...,
-                 Omegab_fit: bool = ...,
-                 Omegac: float = ...,
-                 Omegac_fit: bool = ...,
-                 Omegax: float = ...,
-                 Omegax_fit: bool = ...,
-                 Tgamma0: float = ...,
-                 Tgamma0_fit: bool = ...,
-                 Tnu: NumCosmoMath.Vector = ...,
-                 Tnu_fit: GLib.Variant = ...,
-                 Tnu_length: int = ...,
-                 Yp: float = ...,
-                 Yp_fit: bool = ...,
-                 gnu: NumCosmoMath.Vector = ...,
-                 gnu_fit: GLib.Variant = ...,
-                 gnu_length: int = ...,
-                 massnu: NumCosmoMath.Vector = ...,
-                 massnu_fit: GLib.Variant = ...,
-                 massnu_length: int = ...,
-                 munu: NumCosmoMath.Vector = ...,
-                 munu_fit: GLib.Variant = ...,
-                 munu_length: int = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        w0: float = ...,
+        w0_fit: bool = ...,
+        w1: float = ...,
+        w1_fit: bool = ...,
+        ENnu: float = ...,
+        ENnu_fit: bool = ...,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegab: float = ...,
+        Omegab_fit: bool = ...,
+        Omegac: float = ...,
+        Omegac_fit: bool = ...,
+        Omegax: float = ...,
+        Omegax_fit: bool = ...,
+        Tgamma0: float = ...,
+        Tgamma0_fit: bool = ...,
+        Tnu: NumCosmoMath.Vector = ...,
+        Tnu_fit: GLib.Variant = ...,
+        Tnu_length: int = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
+        gnu: NumCosmoMath.Vector = ...,
+        gnu_fit: GLib.Variant = ...,
+        gnu_length: int = ...,
+        massnu: NumCosmoMath.Vector = ...,
+        massnu_fit: GLib.Variant = ...,
+        massnu_length: int = ...,
+        munu: NumCosmoMath.Vector = ...,
+        munu_fit: GLib.Variant = ...,
+        munu_length: int = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
     def new(cls) -> HICosmoDEJbp: ...
-    
 
 class HICosmoDEJbpClass(GObject.GPointer):
     r"""
@@ -6864,18 +7239,18 @@ class HICosmoDEReparamCMB(NumCosmoMath.Reparam):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         compat_type: str
         length: int
         params_desc: GLib.Variant
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
-    def __init__(self, compat_type: str = ...,
-                 length: int = ...,
-                 params_desc: GLib.Variant = ...): ...
+    def __init__(
+        self, compat_type: str = ..., length: int = ..., params_desc: GLib.Variant = ...
+    ): ...
     @classmethod
     def new(cls, length: int) -> HICosmoDEReparamCMB: ...
-    
 
 class HICosmoDEReparamCMBClass(GObject.GPointer):
     r"""
@@ -6909,18 +7284,18 @@ class HICosmoDEReparamOk(NumCosmoMath.Reparam):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         compat_type: str
         length: int
         params_desc: GLib.Variant
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
-    def __init__(self, compat_type: str = ...,
-                 length: int = ...,
-                 params_desc: GLib.Variant = ...): ...
+    def __init__(
+        self, compat_type: str = ..., length: int = ..., params_desc: GLib.Variant = ...
+    ): ...
     @classmethod
     def new(cls, length: int) -> HICosmoDEReparamOk: ...
-    
 
 class HICosmoDEReparamOkClass(GObject.GPointer):
     r"""
@@ -7032,6 +7407,7 @@ class HICosmoDEWSpline(HICosmoDE):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         w: NumCosmoMath.Vector
         w_fit: GLib.Variant
@@ -7076,44 +7452,46 @@ class HICosmoDEWSpline(HICosmoDE):
     props: Props = ...
     parent_instance: HICosmoDE = ...
     priv: HICosmoDEWSplinePrivate = ...
-    def __init__(self, w: NumCosmoMath.Vector = ...,
-                 w_fit: GLib.Variant = ...,
-                 w_length: int = ...,
-                 z1: float = ...,
-                 zf: float = ...,
-                 ENnu: float = ...,
-                 ENnu_fit: bool = ...,
-                 H0: float = ...,
-                 H0_fit: bool = ...,
-                 Omegab: float = ...,
-                 Omegab_fit: bool = ...,
-                 Omegac: float = ...,
-                 Omegac_fit: bool = ...,
-                 Omegax: float = ...,
-                 Omegax_fit: bool = ...,
-                 Tgamma0: float = ...,
-                 Tgamma0_fit: bool = ...,
-                 Tnu: NumCosmoMath.Vector = ...,
-                 Tnu_fit: GLib.Variant = ...,
-                 Tnu_length: int = ...,
-                 Yp: float = ...,
-                 Yp_fit: bool = ...,
-                 gnu: NumCosmoMath.Vector = ...,
-                 gnu_fit: GLib.Variant = ...,
-                 gnu_length: int = ...,
-                 massnu: NumCosmoMath.Vector = ...,
-                 massnu_fit: GLib.Variant = ...,
-                 massnu_length: int = ...,
-                 munu: NumCosmoMath.Vector = ...,
-                 munu_fit: GLib.Variant = ...,
-                 munu_length: int = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        w: NumCosmoMath.Vector = ...,
+        w_fit: GLib.Variant = ...,
+        w_length: int = ...,
+        z1: float = ...,
+        zf: float = ...,
+        ENnu: float = ...,
+        ENnu_fit: bool = ...,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegab: float = ...,
+        Omegab_fit: bool = ...,
+        Omegac: float = ...,
+        Omegac_fit: bool = ...,
+        Omegax: float = ...,
+        Omegax_fit: bool = ...,
+        Tgamma0: float = ...,
+        Tgamma0_fit: bool = ...,
+        Tnu: NumCosmoMath.Vector = ...,
+        Tnu_fit: GLib.Variant = ...,
+        Tnu_length: int = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
+        gnu: NumCosmoMath.Vector = ...,
+        gnu_fit: GLib.Variant = ...,
+        gnu_length: int = ...,
+        massnu: NumCosmoMath.Vector = ...,
+        massnu_fit: GLib.Variant = ...,
+        massnu_length: int = ...,
+        munu: NumCosmoMath.Vector = ...,
+        munu_fit: GLib.Variant = ...,
+        munu_length: int = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     def get_alpha(self) -> NumCosmoMath.Vector: ...
     @classmethod
     def new(cls, nknots: int, z_f: float) -> HICosmoDEWSpline: ...
-    
 
 class HICosmoDEWSplineClass(GObject.GPointer):
     r"""
@@ -7221,6 +7599,7 @@ class HICosmoDEXcdm(HICosmoDE):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         w: float
         w_fit: bool
@@ -7261,40 +7640,42 @@ class HICosmoDEXcdm(HICosmoDE):
         vector_params_len: int
     props: Props = ...
     parent_instance: HICosmoDE = ...
-    def __init__(self, w: float = ...,
-                 w_fit: bool = ...,
-                 ENnu: float = ...,
-                 ENnu_fit: bool = ...,
-                 H0: float = ...,
-                 H0_fit: bool = ...,
-                 Omegab: float = ...,
-                 Omegab_fit: bool = ...,
-                 Omegac: float = ...,
-                 Omegac_fit: bool = ...,
-                 Omegax: float = ...,
-                 Omegax_fit: bool = ...,
-                 Tgamma0: float = ...,
-                 Tgamma0_fit: bool = ...,
-                 Tnu: NumCosmoMath.Vector = ...,
-                 Tnu_fit: GLib.Variant = ...,
-                 Tnu_length: int = ...,
-                 Yp: float = ...,
-                 Yp_fit: bool = ...,
-                 gnu: NumCosmoMath.Vector = ...,
-                 gnu_fit: GLib.Variant = ...,
-                 gnu_length: int = ...,
-                 massnu: NumCosmoMath.Vector = ...,
-                 massnu_fit: GLib.Variant = ...,
-                 massnu_length: int = ...,
-                 munu: NumCosmoMath.Vector = ...,
-                 munu_fit: GLib.Variant = ...,
-                 munu_length: int = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        w: float = ...,
+        w_fit: bool = ...,
+        ENnu: float = ...,
+        ENnu_fit: bool = ...,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegab: float = ...,
+        Omegab_fit: bool = ...,
+        Omegac: float = ...,
+        Omegac_fit: bool = ...,
+        Omegax: float = ...,
+        Omegax_fit: bool = ...,
+        Tgamma0: float = ...,
+        Tgamma0_fit: bool = ...,
+        Tnu: NumCosmoMath.Vector = ...,
+        Tnu_fit: GLib.Variant = ...,
+        Tnu_length: int = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
+        gnu: NumCosmoMath.Vector = ...,
+        gnu_fit: GLib.Variant = ...,
+        gnu_length: int = ...,
+        massnu: NumCosmoMath.Vector = ...,
+        massnu_fit: GLib.Variant = ...,
+        massnu_length: int = ...,
+        munu: NumCosmoMath.Vector = ...,
+        munu_fit: GLib.Variant = ...,
+        munu_length: int = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
     def new(cls) -> HICosmoDEXcdm: ...
-    
 
 class HICosmoDEXcdmClass(GObject.GPointer):
     r"""
@@ -7423,6 +7804,7 @@ class HICosmoGCG(HICosmo):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         ENnu: float
         ENnu_fit: bool
@@ -7464,40 +7846,42 @@ class HICosmoGCG(HICosmo):
     props: Props = ...
     parent_instance: HICosmo = ...
     priv: HICosmoGCGPrivate = ...
-    def __init__(self, ENnu: float = ...,
-                 ENnu_fit: bool = ...,
-                 H0: float = ...,
-                 H0_fit: bool = ...,
-                 Omegab: float = ...,
-                 Omegab_fit: bool = ...,
-                 Omegac: float = ...,
-                 Omegac_fit: bool = ...,
-                 Omegax: float = ...,
-                 Omegax_fit: bool = ...,
-                 Tgamma0: float = ...,
-                 Tgamma0_fit: bool = ...,
-                 Tnu: NumCosmoMath.Vector = ...,
-                 Tnu_fit: GLib.Variant = ...,
-                 Tnu_length: int = ...,
-                 Yp: float = ...,
-                 Yp_fit: bool = ...,
-                 gamma: float = ...,
-                 gamma_fit: bool = ...,
-                 gnu: NumCosmoMath.Vector = ...,
-                 gnu_fit: GLib.Variant = ...,
-                 gnu_length: int = ...,
-                 massnu: NumCosmoMath.Vector = ...,
-                 massnu_fit: GLib.Variant = ...,
-                 massnu_length: int = ...,
-                 munu: NumCosmoMath.Vector = ...,
-                 munu_fit: GLib.Variant = ...,
-                 munu_length: int = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        ENnu: float = ...,
+        ENnu_fit: bool = ...,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegab: float = ...,
+        Omegab_fit: bool = ...,
+        Omegac: float = ...,
+        Omegac_fit: bool = ...,
+        Omegax: float = ...,
+        Omegax_fit: bool = ...,
+        Tgamma0: float = ...,
+        Tgamma0_fit: bool = ...,
+        Tnu: NumCosmoMath.Vector = ...,
+        Tnu_fit: GLib.Variant = ...,
+        Tnu_length: int = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
+        gamma: float = ...,
+        gamma_fit: bool = ...,
+        gnu: NumCosmoMath.Vector = ...,
+        gnu_fit: GLib.Variant = ...,
+        gnu_length: int = ...,
+        massnu: NumCosmoMath.Vector = ...,
+        massnu_fit: GLib.Variant = ...,
+        massnu_length: int = ...,
+        munu: NumCosmoMath.Vector = ...,
+        munu_fit: GLib.Variant = ...,
+        munu_length: int = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     def cmb_params(self) -> None: ...
     def omega_x2omega_k(self) -> None: ...
-    
 
 class HICosmoGCGClass(GObject.GPointer):
     r"""
@@ -7533,18 +7917,18 @@ class HICosmoGCGReparamCMB(NumCosmoMath.Reparam):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         compat_type: str
         length: int
         params_desc: GLib.Variant
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
-    def __init__(self, compat_type: str = ...,
-                 length: int = ...,
-                 params_desc: GLib.Variant = ...): ...
+    def __init__(
+        self, compat_type: str = ..., length: int = ..., params_desc: GLib.Variant = ...
+    ): ...
     @classmethod
     def new(cls, length: int) -> HICosmoGCGReparamCMB: ...
-    
 
 class HICosmoGCGReparamCMBClass(GObject.GPointer):
     r"""
@@ -7578,18 +7962,18 @@ class HICosmoGCGReparamOk(NumCosmoMath.Reparam):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         compat_type: str
         length: int
         params_desc: GLib.Variant
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
-    def __init__(self, compat_type: str = ...,
-                 length: int = ...,
-                 params_desc: GLib.Variant = ...): ...
+    def __init__(
+        self, compat_type: str = ..., length: int = ..., params_desc: GLib.Variant = ...
+    ): ...
     @classmethod
     def new(cls, length: int) -> HICosmoGCGReparamOk: ...
-    
 
 class HICosmoGCGReparamOkClass(GObject.GPointer):
     r"""
@@ -7692,6 +8076,7 @@ class HICosmoIDEM2(HICosmo):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         ENnu: float
         ENnu_fit: bool
@@ -7733,40 +8118,42 @@ class HICosmoIDEM2(HICosmo):
     props: Props = ...
     parent_instance: HICosmo = ...
     priv: HICosmoIDEM2Private = ...
-    def __init__(self, ENnu: float = ...,
-                 ENnu_fit: bool = ...,
-                 H0: float = ...,
-                 H0_fit: bool = ...,
-                 Omegab: float = ...,
-                 Omegab_fit: bool = ...,
-                 Omegac: float = ...,
-                 Omegac_fit: bool = ...,
-                 Omegax: float = ...,
-                 Omegax_fit: bool = ...,
-                 Tgamma0: float = ...,
-                 Tgamma0_fit: bool = ...,
-                 Tnu: NumCosmoMath.Vector = ...,
-                 Tnu_fit: GLib.Variant = ...,
-                 Tnu_length: int = ...,
-                 Yp: float = ...,
-                 Yp_fit: bool = ...,
-                 gamma: float = ...,
-                 gamma_fit: bool = ...,
-                 gnu: NumCosmoMath.Vector = ...,
-                 gnu_fit: GLib.Variant = ...,
-                 gnu_length: int = ...,
-                 massnu: NumCosmoMath.Vector = ...,
-                 massnu_fit: GLib.Variant = ...,
-                 massnu_length: int = ...,
-                 munu: NumCosmoMath.Vector = ...,
-                 munu_fit: GLib.Variant = ...,
-                 munu_length: int = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        ENnu: float = ...,
+        ENnu_fit: bool = ...,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegab: float = ...,
+        Omegab_fit: bool = ...,
+        Omegac: float = ...,
+        Omegac_fit: bool = ...,
+        Omegax: float = ...,
+        Omegax_fit: bool = ...,
+        Tgamma0: float = ...,
+        Tgamma0_fit: bool = ...,
+        Tnu: NumCosmoMath.Vector = ...,
+        Tnu_fit: GLib.Variant = ...,
+        Tnu_length: int = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
+        gamma: float = ...,
+        gamma_fit: bool = ...,
+        gnu: NumCosmoMath.Vector = ...,
+        gnu_fit: GLib.Variant = ...,
+        gnu_length: int = ...,
+        massnu: NumCosmoMath.Vector = ...,
+        massnu_fit: GLib.Variant = ...,
+        massnu_length: int = ...,
+        munu: NumCosmoMath.Vector = ...,
+        munu_fit: GLib.Variant = ...,
+        munu_length: int = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     def cmb_params(self) -> None: ...
     def omega_x2omega_k(self) -> None: ...
-    
 
 class HICosmoIDEM2Class(GObject.GPointer):
     r"""
@@ -7802,18 +8189,18 @@ class HICosmoIDEM2ReparamCMB(NumCosmoMath.Reparam):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         compat_type: str
         length: int
         params_desc: GLib.Variant
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
-    def __init__(self, compat_type: str = ...,
-                 length: int = ...,
-                 params_desc: GLib.Variant = ...): ...
+    def __init__(
+        self, compat_type: str = ..., length: int = ..., params_desc: GLib.Variant = ...
+    ): ...
     @classmethod
     def new(cls, length: int) -> HICosmoIDEM2ReparamCMB: ...
-    
 
 class HICosmoIDEM2ReparamCMBClass(GObject.GPointer):
     r"""
@@ -7847,18 +8234,18 @@ class HICosmoIDEM2ReparamOk(NumCosmoMath.Reparam):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         compat_type: str
         length: int
         params_desc: GLib.Variant
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
-    def __init__(self, compat_type: str = ...,
-                 length: int = ...,
-                 params_desc: GLib.Variant = ...): ...
+    def __init__(
+        self, compat_type: str = ..., length: int = ..., params_desc: GLib.Variant = ...
+    ): ...
     @classmethod
     def new(cls, length: int) -> HICosmoIDEM2ReparamOk: ...
-    
 
 class HICosmoIDEM2ReparamOkClass(GObject.GPointer):
     r"""
@@ -7934,6 +8321,7 @@ class HICosmoLCDM(HICosmo):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         ENnu: float
         ENnu_fit: bool
@@ -7960,26 +8348,28 @@ class HICosmoLCDM(HICosmo):
         vector_params_len: int
     props: Props = ...
     parent_instance: HICosmo = ...
-    def __init__(self, ENnu: float = ...,
-                 ENnu_fit: bool = ...,
-                 H0: float = ...,
-                 H0_fit: bool = ...,
-                 Omegab: float = ...,
-                 Omegab_fit: bool = ...,
-                 Omegac: float = ...,
-                 Omegac_fit: bool = ...,
-                 Omegax: float = ...,
-                 Omegax_fit: bool = ...,
-                 Tgamma0: float = ...,
-                 Tgamma0_fit: bool = ...,
-                 Yp: float = ...,
-                 Yp_fit: bool = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        ENnu: float = ...,
+        ENnu_fit: bool = ...,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegab: float = ...,
+        Omegab_fit: bool = ...,
+        Omegac: float = ...,
+        Omegac_fit: bool = ...,
+        Omegax: float = ...,
+        Omegax_fit: bool = ...,
+        Tgamma0: float = ...,
+        Tgamma0_fit: bool = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
     def new(cls) -> HICosmoLCDM: ...
-    
 
 class HICosmoLCDMClass(GObject.GPointer):
     r"""
@@ -8051,6 +8441,7 @@ class HICosmoQConst(HICosmo):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Dc: float
         Dc_fit: bool
@@ -8075,24 +8466,26 @@ class HICosmoQConst(HICosmo):
         vector_params_len: int
     props: Props = ...
     parent_instance: HICosmo = ...
-    def __init__(self, Dc: float = ...,
-                 Dc_fit: bool = ...,
-                 E: float = ...,
-                 E_fit: bool = ...,
-                 H0: float = ...,
-                 H0_fit: bool = ...,
-                 Omegat: float = ...,
-                 Omegat_fit: bool = ...,
-                 q: float = ...,
-                 q_fit: bool = ...,
-                 zs: float = ...,
-                 zs_fit: bool = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        Dc: float = ...,
+        Dc_fit: bool = ...,
+        E: float = ...,
+        E_fit: bool = ...,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegat: float = ...,
+        Omegat_fit: bool = ...,
+        q: float = ...,
+        q_fit: bool = ...,
+        zs: float = ...,
+        zs_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
     def new(cls) -> HICosmoQConst: ...
-    
 
 class HICosmoQConstClass(GObject.GPointer):
     r"""
@@ -8160,6 +8553,7 @@ class HICosmoQGRW(HICosmo, HIPertITwoFluids):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         H0: float
         H0_fit: bool
@@ -8184,22 +8578,24 @@ class HICosmoQGRW(HICosmo, HIPertITwoFluids):
     parent_instance: HICosmo = ...
     eom_two_fluids: HIPertITwoFluidsEOM = ...
     tv_two_fluids: HIPertITwoFluidsTV = ...
-    def __init__(self, H0: float = ...,
-                 H0_fit: bool = ...,
-                 Omegar: float = ...,
-                 Omegar_fit: bool = ...,
-                 Omegaw: float = ...,
-                 Omegaw_fit: bool = ...,
-                 w: float = ...,
-                 w_fit: bool = ...,
-                 xb: float = ...,
-                 xb_fit: bool = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegar: float = ...,
+        Omegar_fit: bool = ...,
+        Omegaw: float = ...,
+        Omegaw_fit: bool = ...,
+        w: float = ...,
+        w_fit: bool = ...,
+        xb: float = ...,
+        xb_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
     def new(cls) -> HICosmoQGRW: ...
-    
 
 class HICosmoQGRWClass(GObject.GPointer):
     r"""
@@ -8275,6 +8671,7 @@ class HICosmoQLinear(HICosmo):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Dc: float
         Dc_fit: bool
@@ -8301,28 +8698,30 @@ class HICosmoQLinear(HICosmo):
         vector_params_len: int
     props: Props = ...
     parent_instance: HICosmo = ...
-    def __init__(self, Dc: float = ...,
-                 Dc_fit: bool = ...,
-                 E: float = ...,
-                 E_fit: bool = ...,
-                 H0: float = ...,
-                 H0_fit: bool = ...,
-                 Omegat: float = ...,
-                 Omegat_fit: bool = ...,
-                 q: float = ...,
-                 q_fit: bool = ...,
-                 qp: float = ...,
-                 qp_fit: bool = ...,
-                 zs: float = ...,
-                 zs_fit: bool = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        Dc: float = ...,
+        Dc_fit: bool = ...,
+        E: float = ...,
+        E_fit: bool = ...,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegat: float = ...,
+        Omegat_fit: bool = ...,
+        q: float = ...,
+        q_fit: bool = ...,
+        qp: float = ...,
+        qp_fit: bool = ...,
+        zs: float = ...,
+        zs_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @staticmethod
     def dE(z2: float, z1: float, q: float, qp: float) -> float: ...
     @classmethod
     def new(cls) -> HICosmoQLinear: ...
-    
 
 class HICosmoQLinearClass(GObject.GPointer):
     r"""
@@ -8400,6 +8799,7 @@ class HICosmoQRBF(HICosmo):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         H0: float
         H0_fit: bool
@@ -8428,29 +8828,31 @@ class HICosmoQRBF(HICosmo):
     props: Props = ...
     parent_instance: HICosmo = ...
     priv: HICosmoQRBFPrivate = ...
-    def __init__(self, H0: float = ...,
-                 H0_fit: bool = ...,
-                 Omegat: float = ...,
-                 Omegat_fit: bool = ...,
-                 asdrag: float = ...,
-                 asdrag_fit: bool = ...,
-                 ci: NumCosmoMath.Vector = ...,
-                 ci_fit: GLib.Variant = ...,
-                 ci_length: int = ...,
-                 hr: float = ...,
-                 hr_fit: bool = ...,
-                 xi: NumCosmoMath.Vector = ...,
-                 xi_fit: GLib.Variant = ...,
-                 xi_length: int = ...,
-                 zf: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegat: float = ...,
+        Omegat_fit: bool = ...,
+        asdrag: float = ...,
+        asdrag_fit: bool = ...,
+        ci: NumCosmoMath.Vector = ...,
+        ci_fit: GLib.Variant = ...,
+        ci_length: int = ...,
+        hr: float = ...,
+        hr_fit: bool = ...,
+        xi: NumCosmoMath.Vector = ...,
+        xi_fit: GLib.Variant = ...,
+        xi_length: int = ...,
+        zf: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
     def new(cls, np: int, z_f: float) -> HICosmoQRBF: ...
     def q_roughness(self) -> float: ...
     def set_z_f(self, z_f: float) -> None: ...
-    
 
 class HICosmoQRBFClass(GObject.GPointer):
     r"""
@@ -8490,6 +8892,7 @@ class HICosmoQRBFRprior(NumCosmoMath.Prior):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dimension: int
         eval_x: NumCosmoMath.Vector
@@ -8497,12 +8900,14 @@ class HICosmoQRBFRprior(NumCosmoMath.Prior):
     props: Props = ...
     parent_instance: NumCosmoMath.Prior = ...
     priv: HICosmoQRBFRpriorPrivate = ...
-    def __init__(self, dimension: int = ...,
-                 eval_x: NumCosmoMath.Vector = ...,
-                 nvariables: int = ...): ...
+    def __init__(
+        self,
+        dimension: int = ...,
+        eval_x: NumCosmoMath.Vector = ...,
+        nvariables: int = ...,
+    ): ...
     @classmethod
     def new(cls, lambda_: float) -> HICosmoQRBFRprior: ...
-    
 
 class HICosmoQRBFRpriorClass(GObject.GPointer):
     r"""
@@ -8574,6 +8979,7 @@ class HICosmoQSpline(HICosmo):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         H0: float
         H0_fit: bool
@@ -8602,24 +9008,28 @@ class HICosmoQSpline(HICosmo):
     z_f: float = ...
     q_z: NumCosmoMath.Spline = ...
     E2_z: NumCosmoMath.OdeSpline = ...
-    def __init__(self, H0: float = ...,
-                 H0_fit: bool = ...,
-                 Omegat: float = ...,
-                 Omegat_fit: bool = ...,
-                 asdrag: float = ...,
-                 asdrag_fit: bool = ...,
-                 qparam: NumCosmoMath.Vector = ...,
-                 qparam_fit: GLib.Variant = ...,
-                 qparam_length: int = ...,
-                 spline: NumCosmoMath.Spline = ...,
-                 zf: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
-    def add_continuity_priors(self, lh: NumCosmoMath.Likelihood, sigma: float, abstol: float) -> HICosmoQSplineContPrior: ...
+    def __init__(
+        self,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegat: float = ...,
+        Omegat_fit: bool = ...,
+        asdrag: float = ...,
+        asdrag_fit: bool = ...,
+        qparam: NumCosmoMath.Vector = ...,
+        qparam_fit: GLib.Variant = ...,
+        qparam_length: int = ...,
+        spline: NumCosmoMath.Spline = ...,
+        zf: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
+    def add_continuity_priors(
+        self, lh: NumCosmoMath.Likelihood, sigma: float, abstol: float
+    ) -> HICosmoQSplineContPrior: ...
     @classmethod
     def new(cls, s: NumCosmoMath.Spline, np: int, z_f: float) -> HICosmoQSpline: ...
-    
 
 class HICosmoQSplineClass(GObject.GPointer):
     r"""
@@ -8677,6 +9087,7 @@ class HICosmoQSplineContPrior(NumCosmoMath.Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         abstol_fit: bool
@@ -8694,14 +9105,17 @@ class HICosmoQSplineContPrior(NumCosmoMath.Model):
         vector_params_len: int
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
-    def __init__(self, abstol: float = ...,
-                 abstol_fit: bool = ...,
-                 lnsigma: NumCosmoMath.Vector = ...,
-                 lnsigma_fit: GLib.Variant = ...,
-                 lnsigma_length: int = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        abstol_fit: bool = ...,
+        lnsigma: NumCosmoMath.Vector = ...,
+        lnsigma_fit: GLib.Variant = ...,
+        lnsigma_length: int = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     def free(self) -> None: ...
     def get_abstol(self) -> float: ...
     def get_lnsigma(self, i: int) -> float: ...
@@ -8713,7 +9127,6 @@ class HICosmoQSplineContPrior(NumCosmoMath.Model):
     def set_abstol(self, abstol: float) -> None: ...
     def set_all_lnsigma(self, ln_sigma: float) -> None: ...
     def set_lnsigma(self, i: int, ln_sigma: float) -> None: ...
-    
 
 class HICosmoQSplineContPriorClass(GObject.GPointer):
     r"""
@@ -8793,6 +9206,7 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         H0: float
         H0_fit: bool
@@ -8822,32 +9236,41 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
     props: Props = ...
     parent_instance: HICosmo = ...
     priv: HICosmoVexpPrivate = ...
-    def __init__(self, H0: float = ...,
-                 H0_fit: bool = ...,
-                 OmegaL: float = ...,
-                 OmegaL_fit: bool = ...,
-                 Omegac: float = ...,
-                 Omegac_fit: bool = ...,
-                 alphab: float = ...,
-                 alphab_fit: bool = ...,
-                 dphi: float = ...,
-                 dphi_fit: bool = ...,
-                 glue_de: bool = ...,
-                 set_xb_max: bool = ...,
-                 sigmaphi: float = ...,
-                 sigmaphi_fit: bool = ...,
-                 xb: float = ...,
-                 xb_fit: bool = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        OmegaL: float = ...,
+        OmegaL_fit: bool = ...,
+        Omegac: float = ...,
+        Omegac_fit: bool = ...,
+        alphab: float = ...,
+        alphab_fit: bool = ...,
+        dphi: float = ...,
+        dphi_fit: bool = ...,
+        glue_de: bool = ...,
+        set_xb_max: bool = ...,
+        sigmaphi: float = ...,
+        sigmaphi_fit: bool = ...,
+        xb: float = ...,
+        xb_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     def Ricci_scale(self, tau: float) -> float: ...
     def alpha(self, tau: float) -> float: ...
+    def alpha_0c(self) -> float: ...
+    def alpha_0e(self) -> float: ...
+    def cauchy_eval_F(self, tau: float, k: float, B: float, beta: float) -> float: ...
+    def cauchy_eval_F1(self, tau: float, k: float, B: float, beta: float) -> float: ...
+    def cauchy_eval_m(self, tau: float, B: float, beta: float) -> float: ...
+    def cauchy_eval_xi(self, tau: float, k: float, B: float, beta: float) -> float: ...
     def eval_F(self, tau: float, k: float, B: float, beta: float) -> float: ...
-    def eval_F1(self, tau: float, k: float, B: float, beta: float) -> float: ...
-    def eval_m(self, tau: float, B: float, beta: float) -> float: ...
     def eval_nu(self, tau: float, k: float) -> float: ...
-    def eval_xi(self, tau: float, k: float, B: float, beta: float) -> float: ...
+    def gauss_eval_F1(self, tau: float, k: float, B: float, beta: float) -> float: ...
+    def gauss_eval_m(self, tau: float, B: float, beta: float) -> float: ...
+    def gauss_eval_xi(self, tau: float, k: float, B: float, beta: float) -> float: ...
     @classmethod
     def new(cls) -> HICosmoVexp: ...
     def phi(self, tau: float) -> float: ...
@@ -8861,7 +9284,6 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
     def x_y(self, tau: float) -> Tuple[float, float]: ...
     def xbc(self) -> float: ...
     def xbe(self) -> float: ...
-    
 
 class HICosmoVexpClass(GObject.GPointer):
     r"""
@@ -8900,6 +9322,7 @@ class HIPert(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         alphai: float
@@ -8909,11 +9332,14 @@ class HIPert(GObject.Object):
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: HIPertPrivate = ...
-    def __init__(self, abstol: float = ...,
-                 alphai: float = ...,
-                 k: float = ...,
-                 reltol: float = ...,
-                 sys_size: int = ...): ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        alphai: float = ...,
+        k: float = ...,
+        reltol: float = ...,
+        sys_size: int = ...,
+    ): ...
     def do_set_abstol(self, abstol: float) -> None: ...
     def do_set_mode_k(self, k: float) -> None: ...
     def do_set_reltol(self, reltol: float) -> None: ...
@@ -8928,7 +9354,6 @@ class HIPert(GObject.Object):
     def set_reltol(self, reltol: float) -> None: ...
     def set_stiff_solver(self, stiff: bool) -> None: ...
     def set_sys_size(self, sys_size: int) -> None: ...
-    
 
 class HIPertAdiab(NumCosmoMath.HOAA):
     r"""
@@ -8960,6 +9385,7 @@ class HIPertAdiab(NumCosmoMath.HOAA):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         k: float
@@ -8970,20 +9396,22 @@ class HIPertAdiab(NumCosmoMath.HOAA):
         ti: float
     props: Props = ...
     parent_instance: NumCosmoMath.HOAA = ...
-    def __init__(self, abstol: float = ...,
-                 k: float = ...,
-                 opt: NumCosmoMath.HOAAOpt = ...,
-                 reltol: float = ...,
-                 save_evol: bool = ...,
-                 tf: float = ...,
-                 ti: float = ...): ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        k: float = ...,
+        opt: NumCosmoMath.HOAAOpt = ...,
+        reltol: float = ...,
+        save_evol: bool = ...,
+        tf: float = ...,
+        ti: float = ...,
+    ): ...
     @staticmethod
     def clear(pa: HIPertAdiab) -> None: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls) -> HIPertAdiab: ...
     def ref(self) -> HIPertAdiab: ...
-    
 
 class HIPertAdiabClass(GObject.GPointer):
     r"""
@@ -9020,6 +9448,7 @@ class HIPertBGVar(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         distance: Distance
         recomb: Optional[Recomb]
@@ -9037,10 +9466,13 @@ class HIPertBGVar(GObject.Object):
     k: float = ...
     x: float = ...
     E: float = ...
-    def __init__(self, distance: Distance = ...,
-                 recomb: Recomb = ...,
-                 scalefactor: Scalefactor = ...,
-                 zf: float = ...): ...
+    def __init__(
+        self,
+        distance: Distance = ...,
+        recomb: Recomb = ...,
+        scalefactor: Scalefactor = ...,
+        zf: float = ...,
+    ): ...
     def activate_id_array(self, ids: Sequence[int]) -> None: ...
     @staticmethod
     def clear(bg_var: HIPertBGVar) -> None: ...
@@ -9053,7 +9485,9 @@ class HIPertBGVar(GObject.Object):
     @classmethod
     def new(cls) -> HIPertBGVar: ...
     @classmethod
-    def new_full(cls, dist: Distance, recomb: Recomb, a: Scalefactor) -> HIPertBGVar: ...
+    def new_full(
+        cls, dist: Distance, recomb: Recomb, a: Scalefactor
+    ) -> HIPertBGVar: ...
     def peek_dist(self) -> Optional[Distance]: ...
     def peek_recomb(self) -> Optional[Recomb]: ...
     def peek_scalefactor(self) -> Optional[Scalefactor]: ...
@@ -9064,7 +9498,6 @@ class HIPertBGVar(GObject.Object):
     def set_recomb(self, recomb: Recomb) -> None: ...
     def set_scalefactor(self, a: Scalefactor) -> None: ...
     def set_zf(self, zf: float) -> None: ...
-    
 
 class HIPertBGVarClass(GObject.GPointer):
     r"""
@@ -9116,7 +9549,6 @@ class HIPertBGVarYDY(GObject.GBoxed):
     @classmethod
     def new(cls) -> HIPertBGVarYDY: ...
     def set_dy_i(self, i: int, dy_i: float) -> None: ...
-    
 
 class HIPertBoltzmann(HIPert):
     r"""
@@ -9169,6 +9601,7 @@ class HIPertBoltzmann(HIPert):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         BB_l_max: int
         EB_l_max: int
@@ -9213,23 +9646,26 @@ class HIPertBoltzmann(HIPert):
     tight_coupling: bool = ...
     ctrl_cosmo: NumCosmoMath.ModelCtrl = ...
     ctrl_prim: NumCosmoMath.ModelCtrl = ...
-    def __init__(self, BB_l_max: int = ...,
-                 EB_l_max: int = ...,
-                 EE_l_max: int = ...,
-                 PHIPHI_l_max: int = ...,
-                 TB_l_max: int = ...,
-                 TE_l_max: int = ...,
-                 TT_l_max: int = ...,
-                 calc_transfer: bool = ...,
-                 recomb: Recomb = ...,
-                 target_Cls: DataCMBDataType = ...,
-                 use_lensed_Cls: bool = ...,
-                 use_tensor: bool = ...,
-                 abstol: float = ...,
-                 alphai: float = ...,
-                 k: float = ...,
-                 reltol: float = ...,
-                 sys_size: int = ...): ...
+    def __init__(
+        self,
+        BB_l_max: int = ...,
+        EB_l_max: int = ...,
+        EE_l_max: int = ...,
+        PHIPHI_l_max: int = ...,
+        TB_l_max: int = ...,
+        TE_l_max: int = ...,
+        TT_l_max: int = ...,
+        calc_transfer: bool = ...,
+        recomb: Recomb = ...,
+        target_Cls: DataCMBDataType = ...,
+        use_lensed_Cls: bool = ...,
+        use_tensor: bool = ...,
+        abstol: float = ...,
+        alphai: float = ...,
+        k: float = ...,
+        reltol: float = ...,
+        sys_size: int = ...,
+    ): ...
     def append_target_Cls(self, tCls: DataCMBDataType) -> None: ...
     @staticmethod
     def clear(pb: HIPertBoltzmann) -> None: ...
@@ -9294,7 +9730,6 @@ class HIPertBoltzmann(HIPert):
     def set_target_Cls(self, tCls: DataCMBDataType) -> None: ...
     def set_tensor(self, use_tensor: bool) -> None: ...
     def tensor(self) -> bool: ...
-    
 
 class HIPertBoltzmannCBE(HIPertBoltzmann):
     r"""
@@ -9353,6 +9788,7 @@ class HIPertBoltzmannCBE(HIPertBoltzmann):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         cbe: CBE
         BB_l_max: int
@@ -9382,24 +9818,27 @@ class HIPertBoltzmannCBE(HIPertBoltzmann):
     TE_Cls: NumCosmoMath.Vector = ...
     TB_Cls: NumCosmoMath.Vector = ...
     EB_Cls: NumCosmoMath.Vector = ...
-    def __init__(self, cbe: CBE = ...,
-                 BB_l_max: int = ...,
-                 EB_l_max: int = ...,
-                 EE_l_max: int = ...,
-                 PHIPHI_l_max: int = ...,
-                 TB_l_max: int = ...,
-                 TE_l_max: int = ...,
-                 TT_l_max: int = ...,
-                 calc_transfer: bool = ...,
-                 recomb: Recomb = ...,
-                 target_Cls: DataCMBDataType = ...,
-                 use_lensed_Cls: bool = ...,
-                 use_tensor: bool = ...,
-                 abstol: float = ...,
-                 alphai: float = ...,
-                 k: float = ...,
-                 reltol: float = ...,
-                 sys_size: int = ...): ...
+    def __init__(
+        self,
+        cbe: CBE = ...,
+        BB_l_max: int = ...,
+        EB_l_max: int = ...,
+        EE_l_max: int = ...,
+        PHIPHI_l_max: int = ...,
+        TB_l_max: int = ...,
+        TE_l_max: int = ...,
+        TT_l_max: int = ...,
+        calc_transfer: bool = ...,
+        recomb: Recomb = ...,
+        target_Cls: DataCMBDataType = ...,
+        use_lensed_Cls: bool = ...,
+        use_tensor: bool = ...,
+        abstol: float = ...,
+        alphai: float = ...,
+        k: float = ...,
+        reltol: float = ...,
+        sys_size: int = ...,
+    ): ...
     @staticmethod
     def clear(boltzmann_cbe: HIPertBoltzmannCBE) -> None: ...
     def free(self) -> None: ...
@@ -9408,7 +9847,6 @@ class HIPertBoltzmannCBE(HIPertBoltzmann):
     @classmethod
     def new(cls) -> HIPertBoltzmannCBE: ...
     def ref(self) -> HIPertBoltzmannCBE: ...
-    
 
 class HIPertBoltzmannCBEClass(GObject.GPointer):
     r"""
@@ -9514,6 +9952,7 @@ class HIPertBoltzmannStd(HIPertBoltzmann):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         l_maxa: int
         BB_l_max: int
@@ -9535,27 +9974,29 @@ class HIPertBoltzmannStd(HIPertBoltzmann):
         sys_size: int
     props: Props = ...
     parent_instance: HIPertBoltzmann = ...
-    def __init__(self, l_maxa: int = ...,
-                 BB_l_max: int = ...,
-                 EB_l_max: int = ...,
-                 EE_l_max: int = ...,
-                 PHIPHI_l_max: int = ...,
-                 TB_l_max: int = ...,
-                 TE_l_max: int = ...,
-                 TT_l_max: int = ...,
-                 calc_transfer: bool = ...,
-                 recomb: Recomb = ...,
-                 target_Cls: DataCMBDataType = ...,
-                 use_lensed_Cls: bool = ...,
-                 use_tensor: bool = ...,
-                 abstol: float = ...,
-                 alphai: float = ...,
-                 k: float = ...,
-                 reltol: float = ...,
-                 sys_size: int = ...): ...
+    def __init__(
+        self,
+        l_maxa: int = ...,
+        BB_l_max: int = ...,
+        EB_l_max: int = ...,
+        EE_l_max: int = ...,
+        PHIPHI_l_max: int = ...,
+        TB_l_max: int = ...,
+        TE_l_max: int = ...,
+        TT_l_max: int = ...,
+        calc_transfer: bool = ...,
+        recomb: Recomb = ...,
+        target_Cls: DataCMBDataType = ...,
+        use_lensed_Cls: bool = ...,
+        use_tensor: bool = ...,
+        abstol: float = ...,
+        alphai: float = ...,
+        k: float = ...,
+        reltol: float = ...,
+        sys_size: int = ...,
+    ): ...
     @classmethod
     def new(cls, recomb: Recomb, lmax: int) -> HIPertBoltzmannStd: ...
-    
 
 class HIPertBoltzmannStdClass(GObject.GPointer):
     r"""
@@ -9597,6 +10038,7 @@ class HIPertComp(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         gauge: HIPertGravGauge
     props: Props = ...
@@ -9605,26 +10047,45 @@ class HIPertComp(GObject.Object):
     def __init__(self, gauge: HIPertGravGauge = ...): ...
     @staticmethod
     def clear(comp: HIPertComp) -> None: ...
-    def do_get_T_scalar(self, bg_var: HIPertBGVar, ydy: HIPertBGVarYDY, T_scalar: HIPertGravTScalar) -> None: ...
+    def do_get_T_scalar(
+        self, bg_var: HIPertBGVar, ydy: HIPertBGVarYDY, T_scalar: HIPertGravTScalar
+    ) -> None: ...
     def do_get_T_scalar_info(self) -> HIPertGravTScalarInfo: ...
-    def do_get_T_tensor(self, bg_var: HIPertBGVar, ydy: HIPertBGVarYDY, T_tensor: HIPertGravTTensor) -> None: ...
-    def do_get_T_vector(self, bg_var: HIPertBGVar, ydy: HIPertBGVarYDY, T_vector: HIPertGravTVector) -> None: ...
+    def do_get_T_tensor(
+        self, bg_var: HIPertBGVar, ydy: HIPertBGVarYDY, T_tensor: HIPertGravTTensor
+    ) -> None: ...
+    def do_get_T_vector(
+        self, bg_var: HIPertBGVar, ydy: HIPertBGVarYDY, T_vector: HIPertGravTVector
+    ) -> None: ...
     def do_get_deps(self, vindex: int) -> list[int]: ...
-    def do_get_dy_scalar(self, bg_var: HIPertBGVar, ydy: HIPertBGVarYDY, T_scalar: HIPertGravTScalar, G_scalar: HIPertGravScalar) -> None: ...
+    def do_get_dy_scalar(
+        self,
+        bg_var: HIPertBGVar,
+        ydy: HIPertBGVarYDY,
+        T_scalar: HIPertGravTScalar,
+        G_scalar: HIPertGravScalar,
+    ) -> None: ...
     def do_get_gauge(self) -> HIPertGravGauge: ...
     def do_ndyn_var(self) -> int: ...
     def do_set_gauge(self, gauge: HIPertGravGauge) -> None: ...
     def free(self) -> None: ...
-    def get_T_scalar(self, bg_var: HIPertBGVar, ydy: HIPertBGVarYDY, T_scalar: HIPertGravTScalar) -> None: ...
+    def get_T_scalar(
+        self, bg_var: HIPertBGVar, ydy: HIPertBGVarYDY, T_scalar: HIPertGravTScalar
+    ) -> None: ...
     def get_T_scalar_info(self) -> HIPertGravTScalarInfo: ...
     def get_deps(self, vindex: int) -> list[int]: ...
-    def get_dy_scalar(self, bg_var: HIPertBGVar, ydy: HIPertBGVarYDY, T_scalar: HIPertGravTScalar, G_scalar: HIPertGravScalar) -> None: ...
+    def get_dy_scalar(
+        self,
+        bg_var: HIPertBGVar,
+        ydy: HIPertBGVarYDY,
+        T_scalar: HIPertGravTScalar,
+        G_scalar: HIPertGravScalar,
+    ) -> None: ...
     def get_gauge(self) -> HIPertGravGauge: ...
     def get_id(self) -> int: ...
     def ndyn_var(self) -> int: ...
     def ref(self) -> HIPertComp: ...
     def set_gauge(self, gauge: HIPertGravGauge) -> None: ...
-    
 
 class HIPertCompClass(GObject.GPointer):
     r"""
@@ -9640,10 +10101,19 @@ class HIPertCompClass(GObject.GPointer):
     set_gauge: Callable[[HIPertComp, HIPertGravGauge], None] = ...
     get_gauge: Callable[[HIPertComp], HIPertGravGauge] = ...
     get_T_scalar_info: Callable[[HIPertComp], HIPertGravTScalarInfo] = ...
-    get_T_scalar: Callable[[HIPertComp, HIPertBGVar, HIPertBGVarYDY, HIPertGravTScalar], None] = ...
-    get_T_vector: Callable[[HIPertComp, HIPertBGVar, HIPertBGVarYDY, HIPertGravTVector], None] = ...
-    get_T_tensor: Callable[[HIPertComp, HIPertBGVar, HIPertBGVarYDY, HIPertGravTTensor], None] = ...
-    get_dy_scalar: Callable[[HIPertComp, HIPertBGVar, HIPertBGVarYDY, HIPertGravTScalar, HIPertGravScalar], None] = ...
+    get_T_scalar: Callable[
+        [HIPertComp, HIPertBGVar, HIPertBGVarYDY, HIPertGravTScalar], None
+    ] = ...
+    get_T_vector: Callable[
+        [HIPertComp, HIPertBGVar, HIPertBGVarYDY, HIPertGravTVector], None
+    ] = ...
+    get_T_tensor: Callable[
+        [HIPertComp, HIPertBGVar, HIPertBGVarYDY, HIPertGravTTensor], None
+    ] = ...
+    get_dy_scalar: Callable[
+        [HIPertComp, HIPertBGVar, HIPertBGVarYDY, HIPertGravTScalar, HIPertGravScalar],
+        None,
+    ] = ...
 
 class HIPertCompPB(HIPertComp):
     r"""
@@ -9667,14 +10137,14 @@ class HIPertCompPB(HIPertComp):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         l_max: int
         gauge: HIPertGravGauge
     props: Props = ...
     parent_instance: HIPertComp = ...
     priv: HIPertCompPBPrivate = ...
-    def __init__(self, l_max: int = ...,
-                 gauge: HIPertGravGauge = ...): ...
+    def __init__(self, l_max: int = ..., gauge: HIPertGravGauge = ...): ...
     @staticmethod
     def clear(pb: HIPertCompPB) -> None: ...
     def free(self) -> None: ...
@@ -9685,7 +10155,6 @@ class HIPertCompPB(HIPertComp):
     def new(cls) -> HIPertCompPB: ...
     def ref(self) -> HIPertCompPB: ...
     def set_lmax(self, lmax: int) -> None: ...
-    
 
 class HIPertCompPBClass(GObject.GPointer):
     r"""
@@ -9698,7 +10167,6 @@ class HIPertCompPBClass(GObject.GPointer):
     parent_class: HIPertCompClass = ...
 
 class HIPertCompPBPrivate(GObject.GPointer): ...
-
 class HIPertCompPrivate(GObject.GPointer): ...
 
 class HIPertFirstOrder(HIPertBoltzmann):
@@ -9774,6 +10242,7 @@ class HIPertFirstOrder(HIPertBoltzmann):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         comp_array: NumCosmoMath.ObjArray
@@ -9801,29 +10270,32 @@ class HIPertFirstOrder(HIPertBoltzmann):
     props: Props = ...
     parent_instance: HIPertBoltzmann = ...
     priv: HIPertFirstOrderPrivate = ...
-    def __init__(self, abstol: float = ...,
-                 comp_array: NumCosmoMath.ObjArray = ...,
-                 distance: Distance = ...,
-                 gauge: HIPertGravGauge = ...,
-                 grav: HIPertGrav = ...,
-                 integ: HIPertFirstOrderInteg = ...,
-                 recomb: Recomb = ...,
-                 reltol: float = ...,
-                 scalefactor: Scalefactor = ...,
-                 BB_l_max: int = ...,
-                 EB_l_max: int = ...,
-                 EE_l_max: int = ...,
-                 PHIPHI_l_max: int = ...,
-                 TB_l_max: int = ...,
-                 TE_l_max: int = ...,
-                 TT_l_max: int = ...,
-                 calc_transfer: bool = ...,
-                 target_Cls: DataCMBDataType = ...,
-                 use_lensed_Cls: bool = ...,
-                 use_tensor: bool = ...,
-                 alphai: float = ...,
-                 k: float = ...,
-                 sys_size: int = ...): ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        comp_array: NumCosmoMath.ObjArray = ...,
+        distance: Distance = ...,
+        gauge: HIPertGravGauge = ...,
+        grav: HIPertGrav = ...,
+        integ: HIPertFirstOrderInteg = ...,
+        recomb: Recomb = ...,
+        reltol: float = ...,
+        scalefactor: Scalefactor = ...,
+        BB_l_max: int = ...,
+        EB_l_max: int = ...,
+        EE_l_max: int = ...,
+        PHIPHI_l_max: int = ...,
+        TB_l_max: int = ...,
+        TE_l_max: int = ...,
+        TT_l_max: int = ...,
+        calc_transfer: bool = ...,
+        target_Cls: DataCMBDataType = ...,
+        use_lensed_Cls: bool = ...,
+        use_tensor: bool = ...,
+        alphai: float = ...,
+        k: float = ...,
+        sys_size: int = ...,
+    ): ...
     def add_comp(self, comp: HIPertComp) -> None: ...
     @staticmethod
     def clear(fo: HIPertFirstOrder) -> None: ...
@@ -9836,7 +10308,9 @@ class HIPertFirstOrder(HIPertBoltzmann):
     @classmethod
     def new(cls) -> HIPertFirstOrder: ...
     @classmethod
-    def new_full(cls, dist: Distance, recomb: Recomb, a: Scalefactor) -> HIPertFirstOrder: ...
+    def new_full(
+        cls, dist: Distance, recomb: Recomb, a: Scalefactor
+    ) -> HIPertFirstOrder: ...
     def peek_grav(self) -> Optional[HIPertGrav]: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> HIPertFirstOrder: ...
@@ -9845,7 +10319,6 @@ class HIPertFirstOrder(HIPertBoltzmann):
     def set_grav(self, grav: HIPertGrav) -> None: ...
     def set_integ(self, integ: HIPertFirstOrderInteg) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
-    
 
 class HIPertFirstOrderClass(GObject.GPointer):
     r"""
@@ -9889,6 +10362,7 @@ class HIPertGW(NumCosmoMath.HOAA):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         k: float
@@ -9899,20 +10373,22 @@ class HIPertGW(NumCosmoMath.HOAA):
         ti: float
     props: Props = ...
     parent_instance: NumCosmoMath.HOAA = ...
-    def __init__(self, abstol: float = ...,
-                 k: float = ...,
-                 opt: NumCosmoMath.HOAAOpt = ...,
-                 reltol: float = ...,
-                 save_evol: bool = ...,
-                 tf: float = ...,
-                 ti: float = ...): ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        k: float = ...,
+        opt: NumCosmoMath.HOAAOpt = ...,
+        reltol: float = ...,
+        save_evol: bool = ...,
+        tf: float = ...,
+        ti: float = ...,
+    ): ...
     @staticmethod
     def clear(pa: HIPertGW) -> None: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls) -> HIPertGW: ...
     def ref(self) -> HIPertGW: ...
-    
 
 class HIPertGWClass(GObject.GPointer):
     r"""
@@ -9941,6 +10417,7 @@ class HIPertGrav(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         gauge: HIPertGravGauge
     props: Props = ...
@@ -9949,24 +10426,47 @@ class HIPertGrav(GObject.Object):
     def __init__(self, gauge: HIPertGravGauge = ...): ...
     @staticmethod
     def clear(grav: HIPertGrav) -> None: ...
-    def do_get_G_scalar(self, bg_var: HIPertBGVar, ydy: HIPertBGVarYDY, T_scalar: HIPertGravTScalar, G_scalar: HIPertGravScalar) -> None: ...
+    def do_get_G_scalar(
+        self,
+        bg_var: HIPertBGVar,
+        ydy: HIPertBGVarYDY,
+        T_scalar: HIPertGravTScalar,
+        G_scalar: HIPertGravScalar,
+    ) -> None: ...
     def do_get_G_scalar_info(self) -> HIPertGravInfo: ...
     def do_get_deps(self, vindex: int) -> list[int]: ...
-    def do_get_dy_scalar(self, bg_var: HIPertBGVar, ydy: HIPertBGVarYDY, T_scalar: HIPertGravTScalar, G_scalar: HIPertGravScalar) -> None: ...
+    def do_get_dy_scalar(
+        self,
+        bg_var: HIPertBGVar,
+        ydy: HIPertBGVarYDY,
+        T_scalar: HIPertGravTScalar,
+        G_scalar: HIPertGravScalar,
+    ) -> None: ...
     def do_get_gauge(self) -> HIPertGravGauge: ...
     def do_ndyn_var(self) -> int: ...
     def do_set_gauge(self, gauge: HIPertGravGauge) -> None: ...
     def free(self) -> None: ...
-    def get_G_scalar(self, bg_var: HIPertBGVar, ydy: HIPertBGVarYDY, T_scalar: HIPertGravTScalar, G_scalar: HIPertGravScalar) -> None: ...
+    def get_G_scalar(
+        self,
+        bg_var: HIPertBGVar,
+        ydy: HIPertBGVarYDY,
+        T_scalar: HIPertGravTScalar,
+        G_scalar: HIPertGravScalar,
+    ) -> None: ...
     def get_G_scalar_info(self) -> HIPertGravInfo: ...
     def get_deps(self, vindex: int) -> list[int]: ...
-    def get_dy_scalar(self, bg_var: HIPertBGVar, ydy: HIPertBGVarYDY, T_scalar: HIPertGravTScalar, G_scalar: HIPertGravScalar) -> None: ...
+    def get_dy_scalar(
+        self,
+        bg_var: HIPertBGVar,
+        ydy: HIPertBGVarYDY,
+        T_scalar: HIPertGravTScalar,
+        G_scalar: HIPertGravScalar,
+    ) -> None: ...
     def get_gauge(self) -> HIPertGravGauge: ...
     def get_id(self) -> int: ...
     def ndyn_var(self) -> int: ...
     def ref(self) -> HIPertGrav: ...
     def set_gauge(self, gauge: HIPertGravGauge) -> None: ...
-    
 
 class HIPertGravClass(GObject.GPointer):
     r"""
@@ -9982,8 +10482,14 @@ class HIPertGravClass(GObject.GPointer):
     set_gauge: Callable[[HIPertGrav, HIPertGravGauge], None] = ...
     get_gauge: Callable[[HIPertGrav], HIPertGravGauge] = ...
     get_G_scalar_info: Callable[[HIPertGrav], HIPertGravInfo] = ...
-    get_G_scalar: Callable[[HIPertGrav, HIPertBGVar, HIPertBGVarYDY, HIPertGravTScalar, HIPertGravScalar], None] = ...
-    get_dy_scalar: Callable[[HIPertGrav, HIPertBGVar, HIPertBGVarYDY, HIPertGravTScalar, HIPertGravScalar], None] = ...
+    get_G_scalar: Callable[
+        [HIPertGrav, HIPertBGVar, HIPertBGVarYDY, HIPertGravTScalar, HIPertGravScalar],
+        None,
+    ] = ...
+    get_dy_scalar: Callable[
+        [HIPertGrav, HIPertBGVar, HIPertBGVarYDY, HIPertGravTScalar, HIPertGravScalar],
+        None,
+    ] = ...
 
 class HIPertGravEinstein(HIPertGrav):
     r"""
@@ -10007,14 +10513,14 @@ class HIPertGravEinstein(HIPertGrav):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         nhoc: int
         gauge: HIPertGravGauge
     props: Props = ...
     parent_instance: HIPertGrav = ...
     priv: HIPertGravEinsteinPrivate = ...
-    def __init__(self, nhoc: int = ...,
-                 gauge: HIPertGravGauge = ...): ...
+    def __init__(self, nhoc: int = ..., gauge: HIPertGravGauge = ...): ...
     @staticmethod
     def clear(gr: HIPertGravEinstein) -> None: ...
     def free(self) -> None: ...
@@ -10023,7 +10529,6 @@ class HIPertGravEinstein(HIPertGrav):
     @classmethod
     def new(cls) -> HIPertGravEinstein: ...
     def ref(self) -> HIPertGravEinstein: ...
-    
 
 class HIPertGravEinsteinClass(GObject.GPointer):
     r"""
@@ -10063,7 +10568,6 @@ class HIPertGravInfo(GObject.GBoxed):
     def set_phi_deps(self, phi_deps: Sequence[int]) -> None: ...
     def set_psi_deps(self, psi_deps: Sequence[int]) -> None: ...
     def set_zero(self) -> None: ...
-    
 
 class HIPertGravPrivate(GObject.GPointer): ...
 
@@ -10084,7 +10588,6 @@ class HIPertGravScalar(GObject.GBoxed):
     @classmethod
     def new(cls) -> HIPertGravScalar: ...
     def set_zero(self) -> None: ...
-    
 
 class HIPertGravTScalar(GObject.GBoxed):
     r"""
@@ -10106,7 +10609,6 @@ class HIPertGravTScalar(GObject.GBoxed):
     @classmethod
     def new(cls) -> HIPertGravTScalar: ...
     def set_zero(self) -> None: ...
-    
 
 class HIPertGravTScalarInfo(GObject.GBoxed):
     r"""
@@ -10127,7 +10629,6 @@ class HIPertGravTScalarInfo(GObject.GBoxed):
     @classmethod
     def new(cls) -> HIPertGravTScalarInfo: ...
     def set_zero(self) -> None: ...
-    
 
 class HIPertGravTTensor(GObject.GBoxed):
     r"""
@@ -10145,7 +10646,6 @@ class HIPertGravTTensor(GObject.GBoxed):
     @classmethod
     def new(cls) -> HIPertGravTTensor: ...
     def set_zero(self) -> None: ...
-    
 
 class HIPertGravTVector(GObject.GBoxed):
     r"""
@@ -10163,7 +10663,6 @@ class HIPertGravTVector(GObject.GBoxed):
     @classmethod
     def new(cls) -> HIPertGravTVector: ...
     def set_zero(self) -> None: ...
-    
 
 class HIPertGravTensor(GObject.GBoxed):
     r"""
@@ -10180,7 +10679,6 @@ class HIPertGravTensor(GObject.GBoxed):
     @classmethod
     def new(cls) -> HIPertGravTensor: ...
     def set_zero(self) -> None: ...
-    
 
 class HIPertGravVector(GObject.GBoxed):
     r"""
@@ -10197,7 +10695,6 @@ class HIPertGravVector(GObject.GBoxed):
     @classmethod
     def new(cls) -> HIPertGravVector: ...
     def set_zero(self) -> None: ...
-    
 
 class HIPertIAdiab(GObject.GInterface):
     r"""
@@ -10212,11 +10709,20 @@ class HIPertIAdiab(GObject.GInterface):
     def eval_powspec_factor(self) -> float: ...
     def eval_sing_dlnmnu(self, tau_m_taus: float, k: float, sing: int) -> float: ...
     def eval_sing_mnu(self, tau_m_taus: float, k: float, sing: int) -> float: ...
-    def eval_sing_system(self, tau_m_taus: float, k: float, sing: int) -> Tuple[float, float]: ...
+    def eval_sing_system(
+        self, tau_m_taus: float, k: float, sing: int
+    ) -> Tuple[float, float]: ...
     def eval_system(self, tau: float, k: float) -> Tuple[float, float]: ...
-    def get_sing_info(self, k: float, sing: int, ts: float, dts_i: float, dts_f: float, st: NumCosmoMath.HOAASingType) -> None: ...
+    def get_sing_info(
+        self,
+        k: float,
+        sing: int,
+        ts: float,
+        dts_i: float,
+        dts_f: float,
+        st: NumCosmoMath.HOAASingType,
+    ) -> None: ...
     def nsing(self, k: float) -> int: ...
-    
 
 class HIPertIAdiabInterface(GObject.GPointer):
     r"""
@@ -10232,10 +10738,14 @@ class HIPertIAdiabInterface(GObject.GPointer):
     eval_dlnmnu: Callable[[HIPertIAdiab, float, float], float] = ...
     eval_system: Callable[[HIPertIAdiab, float, float], Tuple[float, float]] = ...
     nsing: Callable[[HIPertIAdiab, float], int] = ...
-    get_sing_info: Callable[[HIPertIAdiab, float, int, float, float, float, NumCosmoMath.HOAASingType], None] = ...
+    get_sing_info: Callable[
+        [HIPertIAdiab, float, int, float, float, float, NumCosmoMath.HOAASingType], None
+    ] = ...
     eval_sing_mnu: Callable[[HIPertIAdiab, float, float, int], float] = ...
     eval_sing_dlnmnu: Callable[[HIPertIAdiab, float, float, int], float] = ...
-    eval_sing_system: Callable[[HIPertIAdiab, float, float, int], Tuple[float, float]] = ...
+    eval_sing_system: Callable[
+        [HIPertIAdiab, float, float, int], Tuple[float, float]
+    ] = ...
     eval_powspec_factor: Callable[[HIPertIAdiab], float] = ...
 
 class HIPertIGW(GObject.GInterface):
@@ -10251,11 +10761,20 @@ class HIPertIGW(GObject.GInterface):
     def eval_powspec_factor(self) -> float: ...
     def eval_sing_dlnmnu(self, tau_m_taus: float, k: float, sing: int) -> float: ...
     def eval_sing_mnu(self, tau_m_taus: float, k: float, sing: int) -> float: ...
-    def eval_sing_system(self, tau_m_taus: float, k: float, sing: int) -> Tuple[float, float]: ...
+    def eval_sing_system(
+        self, tau_m_taus: float, k: float, sing: int
+    ) -> Tuple[float, float]: ...
     def eval_system(self, tau: float, k: float) -> Tuple[float, float]: ...
-    def get_sing_info(self, k: float, sing: int, ts: float, dts_i: float, dts_f: float, st: NumCosmoMath.HOAASingType) -> None: ...
+    def get_sing_info(
+        self,
+        k: float,
+        sing: int,
+        ts: float,
+        dts_i: float,
+        dts_f: float,
+        st: NumCosmoMath.HOAASingType,
+    ) -> None: ...
     def nsing(self, k: float) -> int: ...
-    
 
 class HIPertIGWInterface(GObject.GPointer):
     r"""
@@ -10271,10 +10790,14 @@ class HIPertIGWInterface(GObject.GPointer):
     eval_dlnmnu: Callable[[HIPertIGW, float, float], float] = ...
     eval_system: Callable[[HIPertIGW, float, float], Tuple[float, float]] = ...
     nsing: Callable[[HIPertIGW, float], int] = ...
-    get_sing_info: Callable[[HIPertIGW, float, int, float, float, float, NumCosmoMath.HOAASingType], None] = ...
+    get_sing_info: Callable[
+        [HIPertIGW, float, int, float, float, float, NumCosmoMath.HOAASingType], None
+    ] = ...
     eval_sing_mnu: Callable[[HIPertIGW, float, float, int], float] = ...
     eval_sing_dlnmnu: Callable[[HIPertIGW, float, float, int], float] = ...
-    eval_sing_system: Callable[[HIPertIGW, float, float, int], Tuple[float, float]] = ...
+    eval_sing_system: Callable[
+        [HIPertIGW, float, float, int], Tuple[float, float]
+    ] = ...
     eval_powspec_factor: Callable[[HIPertIGW], float] = ...
 
 class HIPertITwoFluids(GObject.GInterface):
@@ -10286,7 +10809,6 @@ class HIPertITwoFluids(GObject.GInterface):
     """
     def eom_eval(self, alpha: float, k: float) -> HIPertITwoFluidsEOM: ...
     def tv_eval(self, alpha: float, k: float) -> HIPertITwoFluidsTV: ...
-    
 
 class HIPertITwoFluidsEOM(GObject.GBoxed):
     r"""
@@ -10312,7 +10834,6 @@ class HIPertITwoFluidsEOM(GObject.GBoxed):
     y: float = ...
     def dup(self) -> HIPertITwoFluidsEOM: ...
     def free(self) -> None: ...
-    
 
 class HIPertITwoFluidsInterface(GObject.GPointer):
     r"""
@@ -10343,7 +10864,6 @@ class HIPertITwoFluidsTV(GObject.GBoxed):
     Ps: list[float] = ...
     def dup(self) -> HIPertITwoFluidsTV: ...
     def free(self) -> None: ...
-    
 
 class HIPertPrivate(GObject.GPointer): ...
 
@@ -10373,6 +10893,7 @@ class HIPertTwoFluids(HIPert):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         alphai: float
@@ -10382,29 +10903,58 @@ class HIPertTwoFluids(HIPert):
     props: Props = ...
     parent_instance: HIPert = ...
     priv: HIPertTwoFluidsPrivate = ...
-    def __init__(self, abstol: float = ...,
-                 alphai: float = ...,
-                 k: float = ...,
-                 reltol: float = ...,
-                 sys_size: int = ...): ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        alphai: float = ...,
+        k: float = ...,
+        reltol: float = ...,
+        sys_size: int = ...,
+    ): ...
     @staticmethod
     def clear(ptf: HIPertTwoFluids) -> None: ...
     def eom(self, cosmo: HICosmo, alpha: float) -> HIPertITwoFluidsEOM: ...
     def evolve(self, cosmo: HICosmo, alphaf: float) -> None: ...
     def evolve_mode1sub(self, cosmo: HICosmo, alphaf: float) -> None: ...
     def free(self) -> None: ...
-    def get_cross_time(self, cosmo: HICosmo, cross: HIPertTwoFluidsCross, alpha_i: float, prec: float) -> float: ...
-    def get_init_cond_QP(self, cosmo: HICosmo, alpha: float, main_mode: int, beta_R: float, init_cond: NumCosmoMath.Vector) -> None: ...
-    def get_init_cond_zetaS(self, cosmo: HICosmo, alpha: float, main_mode: int, beta_R: float, init_cond: NumCosmoMath.Vector) -> None: ...
+    def get_cross_time(
+        self, cosmo: HICosmo, cross: HIPertTwoFluidsCross, alpha_i: float, prec: float
+    ) -> float: ...
+    def get_init_cond_QP(
+        self,
+        cosmo: HICosmo,
+        alpha: float,
+        main_mode: int,
+        beta_R: float,
+        init_cond: NumCosmoMath.Vector,
+    ) -> None: ...
+    def get_init_cond_zetaS(
+        self,
+        cosmo: HICosmo,
+        alpha: float,
+        main_mode: int,
+        beta_R: float,
+        init_cond: NumCosmoMath.Vector,
+    ) -> None: ...
     def get_state_mod(self) -> float: ...
     @classmethod
     def new(cls) -> HIPertTwoFluids: ...
     def peek_state(self, cosmo: HICosmo) -> Tuple[NumCosmoMath.Vector, float]: ...
     def ref(self) -> HIPertTwoFluids: ...
-    def set_init_cond(self, cosmo: HICosmo, alpha: float, main_mode: int, useQP: bool, init_cond: NumCosmoMath.Vector) -> None: ...
-    def set_init_cond_mode1sub(self, cosmo: HICosmo, alpha: float, init_cond: NumCosmoMath.Vector) -> None: ...
-    def to_zeta_s(self, cosmo: HICosmo, alpha: float, state: NumCosmoMath.Vector) -> None: ...
-    
+    def set_init_cond(
+        self,
+        cosmo: HICosmo,
+        alpha: float,
+        main_mode: int,
+        useQP: bool,
+        init_cond: NumCosmoMath.Vector,
+    ) -> None: ...
+    def set_init_cond_mode1sub(
+        self, cosmo: HICosmo, alpha: float, init_cond: NumCosmoMath.Vector
+    ) -> None: ...
+    def to_zeta_s(
+        self, cosmo: HICosmo, alpha: float, state: NumCosmoMath.Vector
+    ) -> None: ...
 
 class HIPertTwoFluidsClass(GObject.GPointer):
     r"""
@@ -10443,6 +10993,7 @@ class HIPertWKB(HIPert):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         alphai: float
@@ -10459,33 +11010,53 @@ class HIPertWKB(HIPert):
     alpha_i: float = ...
     alpha_f: float = ...
     alpha_p: float = ...
-    def __init__(self, abstol: float = ...,
-                 alphai: float = ...,
-                 k: float = ...,
-                 reltol: float = ...,
-                 sys_size: int = ...): ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        alphai: float = ...,
+        k: float = ...,
+        reltol: float = ...,
+        sys_size: int = ...,
+    ): ...
     @staticmethod
     def clear(wkb: HIPertWKB) -> None: ...
-    def do_get_dVnu2(self, model: NumCosmoMath.Model, alpha: float, k: float) -> float: ...
+    def do_get_dVnu2(
+        self, model: NumCosmoMath.Model, alpha: float, k: float
+    ) -> float: ...
     def do_get_m(self, model: NumCosmoMath.Model, alpha: float, k: float) -> float: ...
-    def do_get_mnu_dmnu(self, model: NumCosmoMath.Model, alpha: float, k: float) -> Tuple[float, float]: ...
-    def do_get_nu2(self, model: NumCosmoMath.Model, alpha: float, k: float) -> float: ...
-    def do_get_nu_V(self, model: NumCosmoMath.Model, alpha: float, k: float) -> Tuple[float, float]: ...
+    def do_get_mnu_dmnu(
+        self, model: NumCosmoMath.Model, alpha: float, k: float
+    ) -> Tuple[float, float]: ...
+    def do_get_nu2(
+        self, model: NumCosmoMath.Model, alpha: float, k: float
+    ) -> float: ...
+    def do_get_nu_V(
+        self, model: NumCosmoMath.Model, alpha: float, k: float
+    ) -> Tuple[float, float]: ...
     def free(self) -> None: ...
     def get_dVnu2(self, model: NumCosmoMath.Model, alpha: float, k: float) -> float: ...
     def get_m(self, model: NumCosmoMath.Model, alpha: float, k: float) -> float: ...
-    def get_mnu_dmnu(self, model: NumCosmoMath.Model, alpha: float, k: float) -> Tuple[float, float]: ...
+    def get_mnu_dmnu(
+        self, model: NumCosmoMath.Model, alpha: float, k: float
+    ) -> Tuple[float, float]: ...
     def get_nu2(self, model: NumCosmoMath.Model, alpha: float, k: float) -> float: ...
-    def get_nu_V(self, model: NumCosmoMath.Model, alpha: float, k: float) -> Tuple[float, float]: ...
-    def maxtime(self, model: NumCosmoMath.Model, alpha0: float, alpha1: float) -> float: ...
-    def maxtime_prec(self, model: NumCosmoMath.Model, cmp: HIPertWKBCmp, alpha0: float, alpha1: float) -> float: ...
+    def get_nu_V(
+        self, model: NumCosmoMath.Model, alpha: float, k: float
+    ) -> Tuple[float, float]: ...
+    def maxtime(
+        self, model: NumCosmoMath.Model, alpha0: float, alpha1: float
+    ) -> float: ...
+    def maxtime_prec(
+        self, model: NumCosmoMath.Model, cmp: HIPertWKBCmp, alpha0: float, alpha1: float
+    ) -> float: ...
     def phase(self, model: NumCosmoMath.Model, alpha: float) -> float: ...
     def prepare(self, model: NumCosmoMath.Model) -> None: ...
     def q(self, model: NumCosmoMath.Model, alpha: float) -> Tuple[float, float]: ...
-    def q_p(self, model: NumCosmoMath.Model, alpha: float) -> Tuple[float, float, float, float]: ...
+    def q_p(
+        self, model: NumCosmoMath.Model, alpha: float
+    ) -> Tuple[float, float, float, float]: ...
     def ref(self) -> HIPertWKB: ...
     def set_interval(self, alpha_i: float, alpha_f: float) -> None: ...
-    
 
 class HIPertWKBClass(GObject.GPointer):
     r"""
@@ -10496,8 +11067,12 @@ class HIPertWKBClass(GObject.GPointer):
         HIPertWKBClass()
     """
     parent_class: HIPertClass = ...
-    get_nu_V: Callable[[HIPertWKB, NumCosmoMath.Model, float, float], Tuple[float, float]] = ...
-    get_mnu_dmnu: Callable[[HIPertWKB, NumCosmoMath.Model, float, float], Tuple[float, float]] = ...
+    get_nu_V: Callable[
+        [HIPertWKB, NumCosmoMath.Model, float, float], Tuple[float, float]
+    ] = ...
+    get_mnu_dmnu: Callable[
+        [HIPertWKB, NumCosmoMath.Model, float, float], Tuple[float, float]
+    ] = ...
     get_m: Callable[[HIPertWKB, NumCosmoMath.Model, float, float], float] = ...
     get_nu2: Callable[[HIPertWKB, NumCosmoMath.Model, float, float], float] = ...
     get_dVnu2: Callable[[HIPertWKB, NumCosmoMath.Model, float, float], float] = ...
@@ -10527,6 +11102,7 @@ class HIPertWKBQgrwZeta(HIPertWKB):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         alphai: float
@@ -10534,11 +11110,14 @@ class HIPertWKBQgrwZeta(HIPertWKB):
         reltol: float
         sys_size: int
     props: Props = ...
-    def __init__(self, abstol: float = ...,
-                 alphai: float = ...,
-                 k: float = ...,
-                 reltol: float = ...,
-                 sys_size: int = ...): ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        alphai: float = ...,
+        k: float = ...,
+        reltol: float = ...,
+        sys_size: int = ...,
+    ): ...
 
 class HIPrim(NumCosmoMath.Model):
     r"""
@@ -10577,6 +11156,7 @@ class HIPrim(NumCosmoMath.Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         k_pivot: float
         implementation: int
@@ -10592,10 +11172,13 @@ class HIPrim(NumCosmoMath.Model):
     parent_instance: NumCosmoMath.Model = ...
     k_pivot: float = ...
     lnk_pivot: float = ...
-    def __init__(self, k_pivot: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        k_pivot: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     def SA_Ampl(self) -> float: ...
     def SA_powspec_k(self, k: float) -> float: ...
     def T_Ampl(self) -> float: ...
@@ -10617,7 +11200,6 @@ class HIPrim(NumCosmoMath.Model):
     def log_all_models(parent: Type) -> None: ...
     def ref(self) -> HIPrim: ...
     def set_k_pivot(self, k_pivot: float) -> None: ...
-    
 
 class HIPrimAtan(HIPrim):
     r"""
@@ -10691,6 +11273,7 @@ class HIPrimAtan(HIPrim):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         T_SA_ratio: float
         T_SA_ratio_fit: bool
@@ -10719,28 +11302,30 @@ class HIPrimAtan(HIPrim):
         vector_params_len: int
     props: Props = ...
     parent_instance: HIPrim = ...
-    def __init__(self, T_SA_ratio: float = ...,
-                 T_SA_ratio_fit: bool = ...,
-                 c2: float = ...,
-                 c2_fit: bool = ...,
-                 c3: float = ...,
-                 c3_fit: bool = ...,
-                 lambda_fit: bool = ...,
-                 ln10e10ASA: float = ...,
-                 ln10e10ASA_fit: bool = ...,
-                 lnkc: float = ...,
-                 lnkc_fit: bool = ...,
-                 n_SA: float = ...,
-                 n_SA_fit: bool = ...,
-                 n_T: float = ...,
-                 n_T_fit: bool = ...,
-                 k_pivot: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        T_SA_ratio: float = ...,
+        T_SA_ratio_fit: bool = ...,
+        c2: float = ...,
+        c2_fit: bool = ...,
+        c3: float = ...,
+        c3_fit: bool = ...,
+        lambda_fit: bool = ...,
+        ln10e10ASA: float = ...,
+        ln10e10ASA_fit: bool = ...,
+        lnkc: float = ...,
+        lnkc_fit: bool = ...,
+        n_SA: float = ...,
+        n_SA_fit: bool = ...,
+        n_T: float = ...,
+        n_T_fit: bool = ...,
+        k_pivot: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
     def new(cls) -> HIPrimAtan: ...
-    
 
 class HIPrimAtanClass(GObject.GPointer):
     r"""
@@ -10816,6 +11401,7 @@ class HIPrimBPL(HIPrim):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         T_SA_ratio: float
         T_SA_ratio_fit: bool
@@ -10841,25 +11427,27 @@ class HIPrimBPL(HIPrim):
         vector_params_len: int
     props: Props = ...
     parent_instance: HIPrim = ...
-    def __init__(self, T_SA_ratio: float = ...,
-                 T_SA_ratio_fit: bool = ...,
-                 delta: float = ...,
-                 delta_fit: bool = ...,
-                 ln10e10ASA: float = ...,
-                 ln10e10ASA_fit: bool = ...,
-                 lnkb: float = ...,
-                 lnkb_fit: bool = ...,
-                 n_SA: float = ...,
-                 n_SA_fit: bool = ...,
-                 n_T: float = ...,
-                 n_T_fit: bool = ...,
-                 k_pivot: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        T_SA_ratio: float = ...,
+        T_SA_ratio_fit: bool = ...,
+        delta: float = ...,
+        delta_fit: bool = ...,
+        ln10e10ASA: float = ...,
+        ln10e10ASA_fit: bool = ...,
+        lnkb: float = ...,
+        lnkb_fit: bool = ...,
+        n_SA: float = ...,
+        n_SA_fit: bool = ...,
+        n_T: float = ...,
+        n_T_fit: bool = ...,
+        k_pivot: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
     def new(cls) -> HIPrimBPL: ...
-    
 
 class HIPrimBPLClass(GObject.GPointer):
     r"""
@@ -10952,6 +11540,7 @@ class HIPrimExpc(HIPrim):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         T_SA_ratio: float
         T_SA_ratio_fit: bool
@@ -10979,27 +11568,29 @@ class HIPrimExpc(HIPrim):
         vector_params_len: int
     props: Props = ...
     parent_instance: HIPrim = ...
-    def __init__(self, T_SA_ratio: float = ...,
-                 T_SA_ratio_fit: bool = ...,
-                 c: float = ...,
-                 c_fit: bool = ...,
-                 lambdac: float = ...,
-                 lambdac_fit: bool = ...,
-                 ln10e10ASA: float = ...,
-                 ln10e10ASA_fit: bool = ...,
-                 lnkc: float = ...,
-                 lnkc_fit: bool = ...,
-                 n_SA: float = ...,
-                 n_SA_fit: bool = ...,
-                 n_T: float = ...,
-                 n_T_fit: bool = ...,
-                 k_pivot: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        T_SA_ratio: float = ...,
+        T_SA_ratio_fit: bool = ...,
+        c: float = ...,
+        c_fit: bool = ...,
+        lambdac: float = ...,
+        lambdac_fit: bool = ...,
+        ln10e10ASA: float = ...,
+        ln10e10ASA_fit: bool = ...,
+        lnkc: float = ...,
+        lnkc_fit: bool = ...,
+        n_SA: float = ...,
+        n_SA_fit: bool = ...,
+        n_T: float = ...,
+        n_T_fit: bool = ...,
+        k_pivot: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
     def new(cls) -> HIPrimExpc: ...
-    
 
 class HIPrimExpcClass(GObject.GPointer):
     r"""
@@ -11067,6 +11658,7 @@ class HIPrimPowerLaw(HIPrim):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         T_SA_ratio: float
         T_SA_ratio_fit: bool
@@ -11088,21 +11680,23 @@ class HIPrimPowerLaw(HIPrim):
         vector_params_len: int
     props: Props = ...
     parent_instance: HIPrim = ...
-    def __init__(self, T_SA_ratio: float = ...,
-                 T_SA_ratio_fit: bool = ...,
-                 ln10e10ASA: float = ...,
-                 ln10e10ASA_fit: bool = ...,
-                 n_SA: float = ...,
-                 n_SA_fit: bool = ...,
-                 n_T: float = ...,
-                 n_T_fit: bool = ...,
-                 k_pivot: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        T_SA_ratio: float = ...,
+        T_SA_ratio_fit: bool = ...,
+        ln10e10ASA: float = ...,
+        ln10e10ASA_fit: bool = ...,
+        n_SA: float = ...,
+        n_SA_fit: bool = ...,
+        n_T: float = ...,
+        n_T_fit: bool = ...,
+        k_pivot: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
     def new(cls) -> HIPrimPowerLaw: ...
-    
 
 class HIPrimPowerLawClass(GObject.GPointer):
     r"""
@@ -11186,6 +11780,7 @@ class HIPrimSBPL(HIPrim):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         RA: float
         RA_fit: bool
@@ -11214,28 +11809,30 @@ class HIPrimSBPL(HIPrim):
         vector_params_len: int
     props: Props = ...
     parent_instance: HIPrim = ...
-    def __init__(self, RA: float = ...,
-                 RA_fit: bool = ...,
-                 T_SA_ratio: float = ...,
-                 T_SA_ratio_fit: bool = ...,
-                 delta: float = ...,
-                 delta_fit: bool = ...,
-                 lambda_fit: bool = ...,
-                 ln10e10ASA: float = ...,
-                 ln10e10ASA_fit: bool = ...,
-                 lnkb: float = ...,
-                 lnkb_fit: bool = ...,
-                 n_SA: float = ...,
-                 n_SA_fit: bool = ...,
-                 n_T: float = ...,
-                 n_T_fit: bool = ...,
-                 k_pivot: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        RA: float = ...,
+        RA_fit: bool = ...,
+        T_SA_ratio: float = ...,
+        T_SA_ratio_fit: bool = ...,
+        delta: float = ...,
+        delta_fit: bool = ...,
+        lambda_fit: bool = ...,
+        ln10e10ASA: float = ...,
+        ln10e10ASA_fit: bool = ...,
+        lnkb: float = ...,
+        lnkb_fit: bool = ...,
+        n_SA: float = ...,
+        n_SA_fit: bool = ...,
+        n_T: float = ...,
+        n_T_fit: bool = ...,
+        k_pivot: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
     def new(cls) -> HIPrimSBPL: ...
-    
 
 class HIPrimSBPLClass(GObject.GPointer):
     r"""
@@ -11274,6 +11871,7 @@ class HIQG1D(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         abstol: float
         nknots: int
@@ -11282,14 +11880,19 @@ class HIQG1D(GObject.Object):
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: HIQG1DPrivate = ...
-    def __init__(self, abstol: float = ...,
-                 nknots: int = ...,
-                 noboundary: bool = ...,
-                 reltol: float = ...): ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        nknots: int = ...,
+        noboundary: bool = ...,
+        reltol: float = ...,
+    ): ...
     def Bohm(self, i: int) -> float: ...
     def Bohm_p(self, i: int) -> float: ...
     def Hbasis(self, x: float, y: float, h: float, a: float) -> float: ...
-    def Sbasis_x3(self, x: float, y1: float, y2: float, h: float, a: float) -> float: ...
+    def Sbasis_x3(
+        self, x: float, y1: float, y2: float, h: float, a: float
+    ) -> float: ...
     def basis(self, x: float, y: float, h: float, a: float) -> float: ...
     @staticmethod
     def clear(qg1d: HIQG1D) -> None: ...
@@ -11318,12 +11921,19 @@ class HIQG1D(GObject.Object):
     def peek_knots(self) -> NumCosmoMath.Vector: ...
     def prepare(self) -> None: ...
     def ref(self) -> HIQG1D: ...
-    def set_init_cond(self, psi0_lnRS: Callable[..., list[float]], xi: float, xf: float, *psi_data: Any) -> None: ...
+    def set_init_cond(
+        self,
+        psi0_lnRS: Callable[..., list[float]],
+        xi: float,
+        xf: float,
+        *psi_data: Any,
+    ) -> None: ...
     def set_init_cond_exp(self, qm_exp: HIQG1DExp, xi: float, xf: float) -> None: ...
-    def set_init_cond_gauss(self, qm_gauss: HIQG1DGauss, xi: float, xf: float) -> None: ...
+    def set_init_cond_gauss(
+        self, qm_gauss: HIQG1DGauss, xi: float, xf: float
+    ) -> None: ...
     def set_init_cond_sq(self, qm_sq: HIQG1DSQ, xi: float, xf: float) -> None: ...
     def set_nknots(self, nknots: int) -> None: ...
-    
 
 class HIQG1DClass(GObject.GPointer):
     r"""
@@ -11354,7 +11964,6 @@ class HIQG1DExp(GObject.GBoxed):
     def free(self) -> None: ...
     @classmethod
     def new(cls, n: float, V: float, pV: float) -> HIQG1DExp: ...
-    
 
 class HIQG1DGauss(GObject.GBoxed):
     r"""
@@ -11377,7 +11986,6 @@ class HIQG1DGauss(GObject.GBoxed):
     def free(self) -> None: ...
     @classmethod
     def new(cls, mean: float, alpha: float, sigma: float, Hi: float) -> HIQG1DGauss: ...
-    
 
 class HIQG1DPrivate(GObject.GPointer): ...
 
@@ -11400,7 +12008,6 @@ class HIQG1DSQ(GObject.GBoxed):
     def free(self) -> None: ...
     @classmethod
     def new(cls, mu: float, V: float, pV: float) -> HIQG1DSQ: ...
-    
 
 class HIReion(NumCosmoMath.Model):
     r"""
@@ -11439,6 +12046,7 @@ class HIReion(NumCosmoMath.Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         prec: float
         implementation: int
@@ -11453,10 +12061,13 @@ class HIReion(NumCosmoMath.Model):
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     prec: float = ...
-    def __init__(self, prec: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        prec: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @staticmethod
     def clear(reion: HIReion) -> None: ...
     def do_get_Xe(self, cosmo: HICosmo, lambda_: float, Xe_recomb: float) -> float: ...
@@ -11469,7 +12080,6 @@ class HIReion(NumCosmoMath.Model):
     @staticmethod
     def id() -> int: ...
     def ref(self) -> HIReion: ...
-    
 
 class HIReionCamb(HIReion):
     r"""
@@ -11527,6 +12137,7 @@ class HIReionCamb(HIReion):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         HII_HeII_reion_delta: float
         HII_HeII_reion_exponent: float
@@ -11556,24 +12167,26 @@ class HIReionCamb(HIReion):
     HEII_reionized: bool = ...
     fsol: int = ...
     tau_ctrl: NumCosmoMath.ModelCtrl = ...
-    def __init__(self, HII_HeII_reion_delta: float = ...,
-                 HII_HeII_reion_exponent: float = ...,
-                 HeII_reionized: bool = ...,
-                 HeIII_reion_delta: float = ...,
-                 z_He_re: float = ...,
-                 z_He_re_fit: bool = ...,
-                 z_re: float = ...,
-                 z_re_fit: bool = ...,
-                 prec: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        HII_HeII_reion_delta: float = ...,
+        HII_HeII_reion_exponent: float = ...,
+        HeII_reionized: bool = ...,
+        HeIII_reion_delta: float = ...,
+        z_He_re: float = ...,
+        z_He_re_fit: bool = ...,
+        z_re: float = ...,
+        z_re_fit: bool = ...,
+        prec: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     def calc_z_from_tau(self, cosmo: HICosmo, tau: float) -> float: ...
     @classmethod
     def new(cls) -> HIReionCamb: ...
     def set_z_from_tau(self, cosmo: HICosmo, tau: float) -> None: ...
     def z_to_tau(self, cosmo: HICosmo) -> None: ...
-    
 
 class HIReionCambClass(GObject.GPointer):
     r"""
@@ -11611,6 +12224,7 @@ class HIReionCambReparamTau(NumCosmoMath.Reparam):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         cosmo: HICosmo
         compat_type: str
@@ -11619,13 +12233,15 @@ class HIReionCambReparamTau(NumCosmoMath.Reparam):
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     ctrl: NumCosmoMath.ModelCtrl = ...
-    def __init__(self, cosmo: HICosmo = ...,
-                 compat_type: str = ...,
-                 length: int = ...,
-                 params_desc: GLib.Variant = ...): ...
+    def __init__(
+        self,
+        cosmo: HICosmo = ...,
+        compat_type: str = ...,
+        length: int = ...,
+        params_desc: GLib.Variant = ...,
+    ): ...
     @classmethod
     def new(cls, length: int, cosmo: HICosmo) -> HIReionCambReparamTau: ...
-    
 
 class HIReionCambReparamTauClass(GObject.GPointer):
     r"""
@@ -11667,6 +12283,7 @@ class HaloBias(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         mass_function: HaloMassFunction
     props: Props = ...
@@ -11679,7 +12296,6 @@ class HaloBias(GObject.Object):
     def eval(self, cosmo: HICosmo, sigma: float, z: float) -> float: ...
     def free(self) -> None: ...
     def integrand(self, cosmo: HICosmo, lnM: float, z: float) -> float: ...
-    
 
 class HaloBiasClass(GObject.GPointer):
     r"""
@@ -11715,21 +12331,22 @@ class HaloBiasPS(HaloBias):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         critical_delta: float
         mass_function: HaloMassFunction
     props: Props = ...
     parent_instance: HaloBias = ...
     delta_c: float = ...
-    def __init__(self, critical_delta: float = ...,
-                 mass_function: HaloMassFunction = ...): ...
+    def __init__(
+        self, critical_delta: float = ..., mass_function: HaloMassFunction = ...
+    ): ...
     def get_delta_c(self) -> float: ...
     @classmethod
     def new(cls, mfp: HaloMassFunction) -> HaloBiasPS: ...
     @classmethod
     def new_full(cls, mfp: HaloMassFunction, delta_c: float) -> HaloBiasPS: ...
     def set_delta_c(self, delta_c: float) -> None: ...
-    
 
 class HaloBiasPSClass(GObject.GPointer):
     r"""
@@ -11770,6 +12387,7 @@ class HaloBiasSTEllip(HaloBias):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         a: float
         b: float
@@ -11782,11 +12400,14 @@ class HaloBiasSTEllip(HaloBias):
     a: float = ...
     b: float = ...
     c: float = ...
-    def __init__(self, a: float = ...,
-                 b: float = ...,
-                 c: float = ...,
-                 critical_delta: float = ...,
-                 mass_function: HaloMassFunction = ...): ...
+    def __init__(
+        self,
+        a: float = ...,
+        b: float = ...,
+        c: float = ...,
+        critical_delta: float = ...,
+        mass_function: HaloMassFunction = ...,
+    ): ...
     def get_a(self) -> float: ...
     def get_b(self) -> float: ...
     def get_c(self) -> float: ...
@@ -11794,12 +12415,13 @@ class HaloBiasSTEllip(HaloBias):
     @classmethod
     def new(cls, mfp: HaloMassFunction) -> HaloBiasSTEllip: ...
     @classmethod
-    def new_full(cls, mfp: HaloMassFunction, delta_c: float, a: float, b: float, c: float) -> HaloBiasSTEllip: ...
+    def new_full(
+        cls, mfp: HaloMassFunction, delta_c: float, a: float, b: float, c: float
+    ) -> HaloBiasSTEllip: ...
     def set_a(self, a: float) -> None: ...
     def set_b(self, b: float) -> None: ...
     def set_c(self, c: float) -> None: ...
     def set_delta_c(self, delta_c: float) -> None: ...
-    
 
 class HaloBiasSTEllipClass(GObject.GPointer):
     r"""
@@ -11838,6 +12460,7 @@ class HaloBiasSTSpher(HaloBias):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         a: float
         critical_delta: float
@@ -11848,21 +12471,25 @@ class HaloBiasSTSpher(HaloBias):
     delta_c: float = ...
     a: float = ...
     p: float = ...
-    def __init__(self, a: float = ...,
-                 critical_delta: float = ...,
-                 p: float = ...,
-                 mass_function: HaloMassFunction = ...): ...
+    def __init__(
+        self,
+        a: float = ...,
+        critical_delta: float = ...,
+        p: float = ...,
+        mass_function: HaloMassFunction = ...,
+    ): ...
     def get_a(self) -> float: ...
     def get_delta_c(self) -> float: ...
     def get_p(self) -> float: ...
     @classmethod
     def new(cls, mfp: HaloMassFunction) -> HaloBiasSTSpher: ...
     @classmethod
-    def new_full(cls, mfp: HaloMassFunction, delta_c: float, a: float, p: float) -> HaloBiasSTSpher: ...
+    def new_full(
+        cls, mfp: HaloMassFunction, delta_c: float, a: float, p: float
+    ) -> HaloBiasSTSpher: ...
     def set_a(self, a: float) -> None: ...
     def set_delta_c(self, delta_c: float) -> None: ...
     def set_p(self, p: float) -> None: ...
-    
 
 class HaloBiasSTSpherClass(GObject.GPointer):
     r"""
@@ -11903,6 +12530,7 @@ class HaloBiasTinker(HaloBias):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         B: float
         b: float
@@ -11915,11 +12543,14 @@ class HaloBiasTinker(HaloBias):
     B: float = ...
     b: float = ...
     c: float = ...
-    def __init__(self, B: float = ...,
-                 b: float = ...,
-                 c: float = ...,
-                 critical_delta: float = ...,
-                 mass_function: HaloMassFunction = ...): ...
+    def __init__(
+        self,
+        B: float = ...,
+        b: float = ...,
+        c: float = ...,
+        critical_delta: float = ...,
+        mass_function: HaloMassFunction = ...,
+    ): ...
     def get_B(self) -> float: ...
     def get_b(self) -> float: ...
     def get_c(self) -> float: ...
@@ -11927,12 +12558,13 @@ class HaloBiasTinker(HaloBias):
     @classmethod
     def new(cls, mfp: HaloMassFunction) -> HaloBiasTinker: ...
     @classmethod
-    def new_full(cls, mfp: HaloMassFunction, delta_c: float, B: float, b: float, c: float) -> HaloBiasTinker: ...
+    def new_full(
+        cls, mfp: HaloMassFunction, delta_c: float, B: float, b: float, c: float
+    ) -> HaloBiasTinker: ...
     def set_B(self, B: float) -> None: ...
     def set_b(self, b: float) -> None: ...
     def set_c(self, c: float) -> None: ...
     def set_delta_c(self, delta_c: float) -> None: ...
-    
 
 class HaloBiasTinkerClass(GObject.GPointer):
     r"""
@@ -11997,6 +12629,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Delta: float
         cDelta: float
@@ -12019,18 +12652,21 @@ class HaloDensityProfile(NumCosmoMath.Model):
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     priv: HaloDensityProfilePrivate = ...
-    def __init__(self, Delta: float = ...,
-                 cDelta: float = ...,
-                 cDelta_fit: bool = ...,
-                 lnXf: float = ...,
-                 lnXi: float = ...,
-                 log10MDelta: float = ...,
-                 log10MDelta_fit: bool = ...,
-                 mass_def: HaloDensityProfileMassDef = ...,
-                 reltol: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        Delta: float = ...,
+        cDelta: float = ...,
+        cDelta_fit: bool = ...,
+        lnXf: float = ...,
+        lnXi: float = ...,
+        log10MDelta: float = ...,
+        log10MDelta_fit: bool = ...,
+        mass_def: HaloDensityProfileMassDef = ...,
+        reltol: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     def Delta(self, cosmo: HICosmo, z: float) -> float: ...
     def Delta_rho_bg(self, cosmo: HICosmo, z: float) -> float: ...
     @staticmethod
@@ -12040,11 +12676,17 @@ class HaloDensityProfile(NumCosmoMath.Model):
     def do_eval_dl_density(self, x: float) -> float: ...
     def do_eval_dl_spher_mass(self, x: float) -> float: ...
     def eval_2d_density(self, cosmo: HICosmo, R: float, z: float) -> float: ...
-    def eval_2d_density_array(self, cosmo: HICosmo, R: Sequence[float], fin: float, fout: float, z: float) -> list[float]: ...
+    def eval_2d_density_array(
+        self, cosmo: HICosmo, R: Sequence[float], fin: float, fout: float, z: float
+    ) -> list[float]: ...
     def eval_cyl_mass(self, cosmo: HICosmo, R: float, z: float) -> float: ...
-    def eval_cyl_mass_array(self, cosmo: HICosmo, R: Sequence[float], fin: float, fout: float, z: float) -> list[float]: ...
+    def eval_cyl_mass_array(
+        self, cosmo: HICosmo, R: Sequence[float], fin: float, fout: float, z: float
+    ) -> list[float]: ...
     def eval_density(self, cosmo: HICosmo, r: float, z: float) -> float: ...
-    def eval_density_array(self, cosmo: HICosmo, r: Sequence[float], fin: float, fout: float, z: float) -> list[float]: ...
+    def eval_density_array(
+        self, cosmo: HICosmo, r: Sequence[float], fin: float, fout: float, z: float
+    ) -> list[float]: ...
     def eval_dl_2d_density(self, X: float) -> float: ...
     def eval_dl_cyl_mass(self, X: float) -> float: ...
     def eval_dl_density(self, x: float) -> float: ...
@@ -12068,7 +12710,6 @@ class HaloDensityProfile(NumCosmoMath.Model):
     def set_lnXf(self, lnXf: float) -> None: ...
     def set_lnXi(self, lnXi: float) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
-    
 
 class HaloDensityProfileClass(GObject.GPointer):
     r"""
@@ -12150,6 +12791,7 @@ class HaloDensityProfileDK14(HaloDensityProfile):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Delta: float
         beta: float
@@ -12177,25 +12819,27 @@ class HaloDensityProfileDK14(HaloDensityProfile):
     parent_instance: HaloDensityProfile = ...
     Delta: float = ...
     r_Delta: float = ...
-    def __init__(self, Delta: float = ...,
-                 beta: float = ...,
-                 beta_fit: bool = ...,
-                 rt: float = ...,
-                 rt_fit: bool = ...,
-                 cDelta: float = ...,
-                 cDelta_fit: bool = ...,
-                 lnXf: float = ...,
-                 lnXi: float = ...,
-                 log10MDelta: float = ...,
-                 log10MDelta_fit: bool = ...,
-                 mass_def: HaloDensityProfileMassDef = ...,
-                 reltol: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        Delta: float = ...,
+        beta: float = ...,
+        beta_fit: bool = ...,
+        rt: float = ...,
+        rt_fit: bool = ...,
+        cDelta: float = ...,
+        cDelta_fit: bool = ...,
+        lnXf: float = ...,
+        lnXi: float = ...,
+        log10MDelta: float = ...,
+        log10MDelta_fit: bool = ...,
+        mass_def: HaloDensityProfileMassDef = ...,
+        reltol: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
     def new(cls) -> HaloDensityProfileDK14: ...
-    
 
 class HaloDensityProfileDK14Class(GObject.GPointer):
     r"""
@@ -12267,6 +12911,7 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         alpha: float
         alpha_fit: bool
@@ -12290,23 +12935,27 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         vector_params_len: int
     props: Props = ...
     parent_instance: HaloDensityProfile = ...
-    def __init__(self, alpha: float = ...,
-                 alpha_fit: bool = ...,
-                 Delta: float = ...,
-                 cDelta: float = ...,
-                 cDelta_fit: bool = ...,
-                 lnXf: float = ...,
-                 lnXi: float = ...,
-                 log10MDelta: float = ...,
-                 log10MDelta_fit: bool = ...,
-                 mass_def: HaloDensityProfileMassDef = ...,
-                 reltol: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        alpha: float = ...,
+        alpha_fit: bool = ...,
+        Delta: float = ...,
+        cDelta: float = ...,
+        cDelta_fit: bool = ...,
+        lnXf: float = ...,
+        lnXi: float = ...,
+        log10MDelta: float = ...,
+        log10MDelta_fit: bool = ...,
+        mass_def: HaloDensityProfileMassDef = ...,
+        reltol: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
-    def new(cls, mdef: HaloDensityProfileMassDef, Delta: float) -> HaloDensityProfileEinasto: ...
-    
+    def new(
+        cls, mdef: HaloDensityProfileMassDef, Delta: float
+    ) -> HaloDensityProfileEinasto: ...
 
 class HaloDensityProfileEinastoClass(GObject.GPointer):
     r"""
@@ -12372,6 +13021,7 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Delta: float
         cDelta: float
@@ -12393,21 +13043,25 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
         vector_params_len: int
     props: Props = ...
     parent_instance: HaloDensityProfile = ...
-    def __init__(self, Delta: float = ...,
-                 cDelta: float = ...,
-                 cDelta_fit: bool = ...,
-                 lnXf: float = ...,
-                 lnXi: float = ...,
-                 log10MDelta: float = ...,
-                 log10MDelta_fit: bool = ...,
-                 mass_def: HaloDensityProfileMassDef = ...,
-                 reltol: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        Delta: float = ...,
+        cDelta: float = ...,
+        cDelta_fit: bool = ...,
+        lnXf: float = ...,
+        lnXi: float = ...,
+        log10MDelta: float = ...,
+        log10MDelta_fit: bool = ...,
+        mass_def: HaloDensityProfileMassDef = ...,
+        reltol: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
-    def new(cls, mdef: HaloDensityProfileMassDef, Delta: float) -> HaloDensityProfileHernquist: ...
-    
+    def new(
+        cls, mdef: HaloDensityProfileMassDef, Delta: float
+    ) -> HaloDensityProfileHernquist: ...
 
 class HaloDensityProfileHernquistClass(GObject.GPointer):
     r"""
@@ -12473,6 +13127,7 @@ class HaloDensityProfileNFW(HaloDensityProfile):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Delta: float
         cDelta: float
@@ -12494,23 +13149,27 @@ class HaloDensityProfileNFW(HaloDensityProfile):
         vector_params_len: int
     props: Props = ...
     parent_instance: HaloDensityProfile = ...
-    def __init__(self, Delta: float = ...,
-                 cDelta: float = ...,
-                 cDelta_fit: bool = ...,
-                 lnXf: float = ...,
-                 lnXi: float = ...,
-                 log10MDelta: float = ...,
-                 log10MDelta_fit: bool = ...,
-                 mass_def: HaloDensityProfileMassDef = ...,
-                 reltol: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        Delta: float = ...,
+        cDelta: float = ...,
+        cDelta_fit: bool = ...,
+        lnXf: float = ...,
+        lnXi: float = ...,
+        log10MDelta: float = ...,
+        log10MDelta_fit: bool = ...,
+        mass_def: HaloDensityProfileMassDef = ...,
+        reltol: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
-    def new(cls, mdef: HaloDensityProfileMassDef, Delta: float) -> HaloDensityProfileNFW: ...
+    def new(
+        cls, mdef: HaloDensityProfileMassDef, Delta: float
+    ) -> HaloDensityProfileNFW: ...
     @staticmethod
     def set_ni(num: bool) -> None: ...
-    
 
 class HaloDensityProfileNFWClass(GObject.GPointer):
     r"""
@@ -12523,7 +13182,6 @@ class HaloDensityProfileNFWClass(GObject.GPointer):
     parent_class: HaloDensityProfileClass = ...
     @staticmethod
     def set_ni(num: bool) -> None: ...
-    
 
 class HaloDensityProfilePrivate(GObject.GPointer): ...
 
@@ -12563,6 +13221,7 @@ class HaloMassFunction(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         area: float
         distance: Distance
@@ -12578,40 +13237,56 @@ class HaloMassFunction(GObject.Object):
     parent_instance: GObject.Object = ...
     priv: HaloMassFunctionPrivate = ...
     d2NdzdlnM: NumCosmoMath.Spline2d = ...
-    def __init__(self, area: float = ...,
-                 distance: Distance = ...,
-                 lnMf: float = ...,
-                 lnMi: float = ...,
-                 mf_lb: float = ...,
-                 multiplicity: MultiplicityFunc = ...,
-                 powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
-                 prec: float = ...,
-                 zf: float = ...,
-                 zi: float = ...): ...
+    def __init__(
+        self,
+        area: float = ...,
+        distance: Distance = ...,
+        lnMf: float = ...,
+        lnMi: float = ...,
+        mf_lb: float = ...,
+        multiplicity: MultiplicityFunc = ...,
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
+        prec: float = ...,
+        zf: float = ...,
+        zi: float = ...,
+    ): ...
     @staticmethod
     def clear(mfp: HaloMassFunction) -> None: ...
     def d2n_dzdlnM(self, cosmo: HICosmo, lnM: float, z: float) -> float: ...
     def dn_dlnM(self, cosmo: HICosmo, lnM: float, z: float) -> float: ...
     def dn_dlnR(self, cosmo: HICosmo, lnR: float, z: float) -> float: ...
-    def dn_dz(self, cosmo: HICosmo, lnMl: float, lnMu: float, z: float, spline: bool) -> float: ...
+    def dn_dz(
+        self, cosmo: HICosmo, lnMl: float, lnMu: float, z: float, spline: bool
+    ) -> float: ...
     def dv_dzdomega(self, cosmo: HICosmo, z: float) -> float: ...
     def free(self) -> None: ...
     def lnM_to_lnR(self, cosmo: HICosmo, lnM: float) -> float: ...
     def lnR_to_lnM(self, cosmo: HICosmo, lnR: float) -> float: ...
-    def n(self, cosmo: HICosmo, lnMl: float, lnMu: float, zl: float, zu: float, spline: HaloMassFunctionSplineOptimize) -> float: ...
+    def n(
+        self,
+        cosmo: HICosmo,
+        lnMl: float,
+        lnMu: float,
+        zl: float,
+        zu: float,
+        spline: HaloMassFunctionSplineOptimize,
+    ) -> float: ...
     @classmethod
-    def new(cls, dist: Distance, psf: NumCosmoMath.PowspecFilter, mulf: MultiplicityFunc) -> HaloMassFunction: ...
+    def new(
+        cls, dist: Distance, psf: NumCosmoMath.PowspecFilter, mulf: MultiplicityFunc
+    ) -> HaloMassFunction: ...
     def peek_multiplicity_function(self) -> MultiplicityFunc: ...
     def peek_psf(self) -> NumCosmoMath.PowspecFilter: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def prepare_if_needed(self, cosmo: HICosmo) -> None: ...
     def set_area(self, area: float) -> None: ...
     def set_area_sd(self, area_sd: float) -> None: ...
-    def set_eval_limits(self, cosmo: HICosmo, lnMi: float, lnMf: float, zi: float, zf: float) -> None: ...
+    def set_eval_limits(
+        self, cosmo: HICosmo, lnMi: float, lnMf: float, zi: float, zf: float
+    ) -> None: ...
     def set_prec(self, prec: float) -> None: ...
     def sigma_lnM(self, cosmo: HICosmo, lnM: float, z: float) -> float: ...
     def sigma_lnR(self, cosmo: HICosmo, lnR: float, z: float) -> float: ...
-    
 
 class HaloMassFunctionClass(GObject.GPointer):
     r"""
@@ -12644,18 +13319,22 @@ class MultiplicityFunc(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: MultiplicityFuncPrivate = ...
-    def __init__(self, Delta: float = ...,
-                 mass_def: MultiplicityFuncMassDef = ...): ...
+    def __init__(self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...): ...
     @staticmethod
     def clear(mulf: MultiplicityFunc) -> None: ...
-    def correction_factor(self, cosmo: HICosmo, sigma: float, z: float, lnM: float) -> float: ...
-    def do_correction_factor(self, cosmo: HICosmo, sigma: float, z: float, lnM: float) -> float: ...
+    def correction_factor(
+        self, cosmo: HICosmo, sigma: float, z: float, lnM: float
+    ) -> float: ...
+    def do_correction_factor(
+        self, cosmo: HICosmo, sigma: float, z: float, lnM: float
+    ) -> float: ...
     def do_eval(self, cosmo: HICosmo, sigma: float, z: float) -> float: ...
     def do_get_Delta(self) -> float: ...
     def do_get_matter_Delta(self, cosmo: HICosmo, z: float) -> float: ...
@@ -12671,7 +13350,6 @@ class MultiplicityFunc(GObject.Object):
     def has_correction_factor(self) -> bool: ...
     def set_Delta(self, Delta: float) -> None: ...
     def set_mdef(self, mdef: MultiplicityFuncMassDef) -> None: ...
-    
 
 class MultiplicityFuncBocquet(MultiplicityFunc):
     r"""
@@ -12698,6 +13376,7 @@ class MultiplicityFuncBocquet(MultiplicityFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         sim: MultiplicityFuncBocquetSim
         Delta: float
@@ -12705,9 +13384,12 @@ class MultiplicityFuncBocquet(MultiplicityFunc):
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncBocquetPrivate = ...
-    def __init__(self, sim: MultiplicityFuncBocquetSim = ...,
-                 Delta: float = ...,
-                 mass_def: MultiplicityFuncMassDef = ...): ...
+    def __init__(
+        self,
+        sim: MultiplicityFuncBocquetSim = ...,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
+    ): ...
     @staticmethod
     def clear(mb: MultiplicityFuncBocquet) -> None: ...
     def free(self) -> None: ...
@@ -12715,10 +13397,14 @@ class MultiplicityFuncBocquet(MultiplicityFunc):
     @classmethod
     def new(cls) -> MultiplicityFuncBocquet: ...
     @classmethod
-    def new_full(cls, mdef: MultiplicityFuncMassDef, sim: MultiplicityFuncBocquetSim, Delta: float) -> MultiplicityFuncBocquet: ...
+    def new_full(
+        cls,
+        mdef: MultiplicityFuncMassDef,
+        sim: MultiplicityFuncBocquetSim,
+        Delta: float,
+    ) -> MultiplicityFuncBocquet: ...
     def ref(self) -> MultiplicityFuncBocquet: ...
     def set_sim(self, sim: MultiplicityFuncBocquetSim) -> None: ...
-    
 
 class MultiplicityFuncBocquetClass(GObject.GPointer):
     r"""
@@ -12748,7 +13434,9 @@ class MultiplicityFuncClass(GObject.GPointer):
     get_mdef: Callable[[MultiplicityFunc], MultiplicityFuncMassDef] = ...
     eval: Callable[[MultiplicityFunc, HICosmo, float, float], float] = ...
     has_correction_factor: Callable[[MultiplicityFunc], bool] = ...
-    correction_factor: Callable[[MultiplicityFunc, HICosmo, float, float, float], float] = ...
+    correction_factor: Callable[
+        [MultiplicityFunc, HICosmo, float, float, float], float
+    ] = ...
 
 class MultiplicityFuncCrocce(MultiplicityFunc):
     r"""
@@ -12770,21 +13458,20 @@ class MultiplicityFuncCrocce(MultiplicityFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncCroccePrivate = ...
-    def __init__(self, Delta: float = ...,
-                 mass_def: MultiplicityFuncMassDef = ...): ...
+    def __init__(self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...): ...
     @staticmethod
     def clear(mc: MultiplicityFuncCrocce) -> None: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls) -> MultiplicityFuncCrocce: ...
     def ref(self) -> MultiplicityFuncCrocce: ...
-    
 
 class MultiplicityFuncCrocceClass(GObject.GPointer):
     r"""
@@ -12818,21 +13505,20 @@ class MultiplicityFuncJenkins(MultiplicityFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncJenkinsPrivate = ...
-    def __init__(self, Delta: float = ...,
-                 mass_def: MultiplicityFuncMassDef = ...): ...
+    def __init__(self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...): ...
     @staticmethod
     def clear(mj: MultiplicityFuncJenkins) -> None: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls) -> MultiplicityFuncJenkins: ...
     def ref(self) -> MultiplicityFuncJenkins: ...
-    
 
 class MultiplicityFuncJenkinsClass(GObject.GPointer):
     r"""
@@ -12870,6 +13556,7 @@ class MultiplicityFuncPS(MultiplicityFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         critical_delta: float
         Delta: float
@@ -12877,9 +13564,12 @@ class MultiplicityFuncPS(MultiplicityFunc):
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncPSPrivate = ...
-    def __init__(self, critical_delta: float = ...,
-                 Delta: float = ...,
-                 mass_def: MultiplicityFuncMassDef = ...): ...
+    def __init__(
+        self,
+        critical_delta: float = ...,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
+    ): ...
     @staticmethod
     def clear(mps: MultiplicityFuncPS) -> None: ...
     def free(self) -> None: ...
@@ -12888,7 +13578,6 @@ class MultiplicityFuncPS(MultiplicityFunc):
     def new(cls) -> MultiplicityFuncPS: ...
     def ref(self) -> MultiplicityFuncPS: ...
     def set_delta_c(self, delta_c: float) -> None: ...
-    
 
 class MultiplicityFuncPSClass(GObject.GPointer):
     r"""
@@ -12901,7 +13590,6 @@ class MultiplicityFuncPSClass(GObject.GPointer):
     parent_class: MultiplicityFuncClass = ...
 
 class MultiplicityFuncPSPrivate(GObject.GPointer): ...
-
 class MultiplicityFuncPrivate(GObject.GPointer): ...
 
 class MultiplicityFuncST(MultiplicityFunc):
@@ -12934,6 +13622,7 @@ class MultiplicityFuncST(MultiplicityFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         A: float
         b: float
@@ -12944,12 +13633,15 @@ class MultiplicityFuncST(MultiplicityFunc):
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncSTPrivate = ...
-    def __init__(self, A: float = ...,
-                 b: float = ...,
-                 critical_delta: float = ...,
-                 p: float = ...,
-                 Delta: float = ...,
-                 mass_def: MultiplicityFuncMassDef = ...): ...
+    def __init__(
+        self,
+        A: float = ...,
+        b: float = ...,
+        critical_delta: float = ...,
+        p: float = ...,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
+    ): ...
     @staticmethod
     def clear(mst: MultiplicityFuncST) -> None: ...
     def free(self) -> None: ...
@@ -12964,7 +13656,6 @@ class MultiplicityFuncST(MultiplicityFunc):
     def set_b(self, b: float) -> None: ...
     def set_delta_c(self, delta_c: float) -> None: ...
     def set_p(self, p: float) -> None: ...
-    
 
 class MultiplicityFuncSTClass(GObject.GPointer):
     r"""
@@ -12999,24 +13690,25 @@ class MultiplicityFuncTinker(MultiplicityFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncTinkerPrivate = ...
-    def __init__(self, Delta: float = ...,
-                 mass_def: MultiplicityFuncMassDef = ...): ...
+    def __init__(self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...): ...
     @staticmethod
     def clear(mt: MultiplicityFuncTinker) -> None: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls) -> MultiplicityFuncTinker: ...
     @classmethod
-    def new_full(cls, mdef: MultiplicityFuncMassDef, Delta: float) -> MultiplicityFuncTinker: ...
+    def new_full(
+        cls, mdef: MultiplicityFuncMassDef, Delta: float
+    ) -> MultiplicityFuncTinker: ...
     def ref(self) -> MultiplicityFuncTinker: ...
     def set_linear_interp(self, lin_interp: bool) -> None: ...
-    
 
 class MultiplicityFuncTinkerClass(GObject.GPointer):
     r"""
@@ -13048,21 +13740,20 @@ class MultiplicityFuncTinkerMeanNormalized(MultiplicityFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncTinkerMeanNormalizedPrivate = ...
-    def __init__(self, Delta: float = ...,
-                 mass_def: MultiplicityFuncMassDef = ...): ...
+    def __init__(self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...): ...
     @staticmethod
     def clear(mt10: MultiplicityFuncTinkerMeanNormalized) -> None: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls) -> MultiplicityFuncTinkerMeanNormalized: ...
     def ref(self) -> MultiplicityFuncTinkerMeanNormalized: ...
-    
 
 class MultiplicityFuncTinkerMeanNormalizedClass(GObject.GPointer):
     r"""
@@ -13075,7 +13766,6 @@ class MultiplicityFuncTinkerMeanNormalizedClass(GObject.GPointer):
     parent_class: MultiplicityFuncClass = ...
 
 class MultiplicityFuncTinkerMeanNormalizedPrivate(GObject.GPointer): ...
-
 class MultiplicityFuncTinkerPrivate(GObject.GPointer): ...
 
 class MultiplicityFuncWarren(MultiplicityFunc):
@@ -13098,21 +13788,20 @@ class MultiplicityFuncWarren(MultiplicityFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncWarrenPrivate = ...
-    def __init__(self, Delta: float = ...,
-                 mass_def: MultiplicityFuncMassDef = ...): ...
+    def __init__(self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...): ...
     @staticmethod
     def clear(mw: MultiplicityFuncWarren) -> None: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls) -> MultiplicityFuncWarren: ...
     def ref(self) -> MultiplicityFuncWarren: ...
-    
 
 class MultiplicityFuncWarrenClass(GObject.GPointer):
     r"""
@@ -13146,21 +13835,20 @@ class MultiplicityFuncWatson(MultiplicityFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncWatsonPrivate = ...
-    def __init__(self, Delta: float = ...,
-                 mass_def: MultiplicityFuncMassDef = ...): ...
+    def __init__(self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...): ...
     @staticmethod
     def clear(mwat: MultiplicityFuncWatson) -> None: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls) -> MultiplicityFuncWatson: ...
     def ref(self) -> MultiplicityFuncWatson: ...
-    
 
 class MultiplicityFuncWatsonClass(GObject.GPointer):
     r"""
@@ -13211,6 +13899,7 @@ class PlanckFI(NumCosmoMath.Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         version: int
         implementation: int
@@ -13225,9 +13914,12 @@ class PlanckFI(NumCosmoMath.Model):
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     version: int = ...
-    def __init__(self, reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @staticmethod
     def clear(pfi: PlanckFI) -> None: ...
     def free(self) -> None: ...
@@ -13236,7 +13928,6 @@ class PlanckFI(NumCosmoMath.Model):
     @staticmethod
     def log_all_models() -> None: ...
     def ref(self) -> PlanckFI: ...
-    
 
 class PlanckFIClass(GObject.GPointer):
     r"""
@@ -13367,6 +14058,7 @@ class PlanckFICorTT(PlanckFI):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         A_cib_217: float
         A_cib_217_fit: bool
@@ -13420,55 +14112,62 @@ class PlanckFICorTT(PlanckFI):
         vector_params_len: int
     props: Props = ...
     parent_instance: PlanckFI = ...
-    def __init__(self, A_cib_217: float = ...,
-                 A_cib_217_fit: bool = ...,
-                 A_planck: float = ...,
-                 A_planck_fit: bool = ...,
-                 A_sbpx_100_100_TT: float = ...,
-                 A_sbpx_100_100_TT_fit: bool = ...,
-                 A_sbpx_143_143_TT: float = ...,
-                 A_sbpx_143_143_TT_fit: bool = ...,
-                 A_sbpx_143_217_TT: float = ...,
-                 A_sbpx_143_217_TT_fit: bool = ...,
-                 A_sbpx_217_217_TT: float = ...,
-                 A_sbpx_217_217_TT_fit: bool = ...,
-                 A_sz: float = ...,
-                 A_sz_fit: bool = ...,
-                 calib_100T: float = ...,
-                 calib_100T_fit: bool = ...,
-                 calib_217T: float = ...,
-                 calib_217T_fit: bool = ...,
-                 cib_index: float = ...,
-                 cib_index_fit: bool = ...,
-                 gal545_A_100: float = ...,
-                 gal545_A_100_fit: bool = ...,
-                 gal545_A_143: float = ...,
-                 gal545_A_143_217: float = ...,
-                 gal545_A_143_217_fit: bool = ...,
-                 gal545_A_143_fit: bool = ...,
-                 gal545_A_217: float = ...,
-                 gal545_A_217_fit: bool = ...,
-                 ksz_norm: float = ...,
-                 ksz_norm_fit: bool = ...,
-                 ps_A_100_100: float = ...,
-                 ps_A_100_100_fit: bool = ...,
-                 ps_A_143_143: float = ...,
-                 ps_A_143_143_fit: bool = ...,
-                 ps_A_143_217: float = ...,
-                 ps_A_143_217_fit: bool = ...,
-                 ps_A_217_217: float = ...,
-                 ps_A_217_217_fit: bool = ...,
-                 xi_sz_cib: float = ...,
-                 xi_sz_cib_fit: bool = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        A_cib_217: float = ...,
+        A_cib_217_fit: bool = ...,
+        A_planck: float = ...,
+        A_planck_fit: bool = ...,
+        A_sbpx_100_100_TT: float = ...,
+        A_sbpx_100_100_TT_fit: bool = ...,
+        A_sbpx_143_143_TT: float = ...,
+        A_sbpx_143_143_TT_fit: bool = ...,
+        A_sbpx_143_217_TT: float = ...,
+        A_sbpx_143_217_TT_fit: bool = ...,
+        A_sbpx_217_217_TT: float = ...,
+        A_sbpx_217_217_TT_fit: bool = ...,
+        A_sz: float = ...,
+        A_sz_fit: bool = ...,
+        calib_100T: float = ...,
+        calib_100T_fit: bool = ...,
+        calib_217T: float = ...,
+        calib_217T_fit: bool = ...,
+        cib_index: float = ...,
+        cib_index_fit: bool = ...,
+        gal545_A_100: float = ...,
+        gal545_A_100_fit: bool = ...,
+        gal545_A_143: float = ...,
+        gal545_A_143_217: float = ...,
+        gal545_A_143_217_fit: bool = ...,
+        gal545_A_143_fit: bool = ...,
+        gal545_A_217: float = ...,
+        gal545_A_217_fit: bool = ...,
+        ksz_norm: float = ...,
+        ksz_norm_fit: bool = ...,
+        ps_A_100_100: float = ...,
+        ps_A_100_100_fit: bool = ...,
+        ps_A_143_143: float = ...,
+        ps_A_143_143_fit: bool = ...,
+        ps_A_143_217: float = ...,
+        ps_A_143_217_fit: bool = ...,
+        ps_A_217_217: float = ...,
+        ps_A_217_217_fit: bool = ...,
+        xi_sz_cib: float = ...,
+        xi_sz_cib_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @staticmethod
     def add_all_default18_priors(lh: NumCosmoMath.Likelihood) -> None: ...
     @staticmethod
     def add_all_default_priors(lh: NumCosmoMath.Likelihood) -> None: ...
     @staticmethod
-    def add_calib_priors(lh: NumCosmoMath.Likelihood, mean: NumCosmoMath.Vector, sigma: NumCosmoMath.Vector) -> None: ...
+    def add_calib_priors(
+        lh: NumCosmoMath.Likelihood,
+        mean: NumCosmoMath.Vector,
+        sigma: NumCosmoMath.Vector,
+    ) -> None: ...
     @staticmethod
     def add_default18_calib_priors(lh: NumCosmoMath.Likelihood) -> None: ...
     @staticmethod
@@ -13482,10 +14181,15 @@ class PlanckFICorTT(PlanckFI):
     @staticmethod
     def add_default_sz_prior(lh: NumCosmoMath.Likelihood) -> None: ...
     @staticmethod
-    def add_gal_priors(lh: NumCosmoMath.Likelihood, mean: NumCosmoMath.Vector, sigma: NumCosmoMath.Vector) -> None: ...
+    def add_gal_priors(
+        lh: NumCosmoMath.Likelihood,
+        mean: NumCosmoMath.Vector,
+        sigma: NumCosmoMath.Vector,
+    ) -> None: ...
     @staticmethod
-    def add_sz_prior(lh: NumCosmoMath.Likelihood, f_tSZ: float, mean: float, sigma: float) -> None: ...
-    
+    def add_sz_prior(
+        lh: NumCosmoMath.Likelihood, f_tSZ: float, mean: float, sigma: float
+    ) -> None: ...
 
 class PlanckFICorTTClass(GObject.GPointer):
     r"""
@@ -13966,6 +14670,7 @@ class PlanckFICorTTTEEE(PlanckFICorTT):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         A_cnoise_e2e_100_100_EE: float
         A_cnoise_e2e_100_100_EE_fit: bool
@@ -14193,238 +14898,250 @@ class PlanckFICorTTTEEE(PlanckFICorTT):
         vector_params_len: int
     props: Props = ...
     parent_instance: PlanckFICorTT = ...
-    def __init__(self, A_cnoise_e2e_100_100_EE: float = ...,
-                 A_cnoise_e2e_100_100_EE_fit: bool = ...,
-                 A_cnoise_e2e_143_143_EE: float = ...,
-                 A_cnoise_e2e_143_143_EE_fit: bool = ...,
-                 A_cnoise_e2e_217_217_EE: float = ...,
-                 A_cnoise_e2e_217_217_EE_fit: bool = ...,
-                 A_pol: float = ...,
-                 A_pol_fit: bool = ...,
-                 A_sbpx_100_100_EE: float = ...,
-                 A_sbpx_100_100_EE_fit: bool = ...,
-                 A_sbpx_100_143_EE: float = ...,
-                 A_sbpx_100_143_EE_fit: bool = ...,
-                 A_sbpx_100_217_EE: float = ...,
-                 A_sbpx_100_217_EE_fit: bool = ...,
-                 A_sbpx_143_143_EE: float = ...,
-                 A_sbpx_143_143_EE_fit: bool = ...,
-                 A_sbpx_143_217_EE: float = ...,
-                 A_sbpx_143_217_EE_fit: bool = ...,
-                 A_sbpx_217_217_EE: float = ...,
-                 A_sbpx_217_217_EE_fit: bool = ...,
-                 bleak_epsilon_0_0E_0E: float = ...,
-                 bleak_epsilon_0_0E_0E_fit: bool = ...,
-                 bleak_epsilon_0_0E_1E: float = ...,
-                 bleak_epsilon_0_0E_1E_fit: bool = ...,
-                 bleak_epsilon_0_0E_2E: float = ...,
-                 bleak_epsilon_0_0E_2E_fit: bool = ...,
-                 bleak_epsilon_0_0T_0E: float = ...,
-                 bleak_epsilon_0_0T_0E_fit: bool = ...,
-                 bleak_epsilon_0_0T_1E: float = ...,
-                 bleak_epsilon_0_0T_1E_fit: bool = ...,
-                 bleak_epsilon_0_0T_2E: float = ...,
-                 bleak_epsilon_0_0T_2E_fit: bool = ...,
-                 bleak_epsilon_0_1E_1E: float = ...,
-                 bleak_epsilon_0_1E_1E_fit: bool = ...,
-                 bleak_epsilon_0_1E_2E: float = ...,
-                 bleak_epsilon_0_1E_2E_fit: bool = ...,
-                 bleak_epsilon_0_1T_1E: float = ...,
-                 bleak_epsilon_0_1T_1E_fit: bool = ...,
-                 bleak_epsilon_0_1T_2E: float = ...,
-                 bleak_epsilon_0_1T_2E_fit: bool = ...,
-                 bleak_epsilon_0_2E_2E: float = ...,
-                 bleak_epsilon_0_2E_2E_fit: bool = ...,
-                 bleak_epsilon_0_2T_2E: float = ...,
-                 bleak_epsilon_0_2T_2E_fit: bool = ...,
-                 bleak_epsilon_1_0E_0E: float = ...,
-                 bleak_epsilon_1_0E_0E_fit: bool = ...,
-                 bleak_epsilon_1_0E_1E: float = ...,
-                 bleak_epsilon_1_0E_1E_fit: bool = ...,
-                 bleak_epsilon_1_0E_2E: float = ...,
-                 bleak_epsilon_1_0E_2E_fit: bool = ...,
-                 bleak_epsilon_1_0T_0E: float = ...,
-                 bleak_epsilon_1_0T_0E_fit: bool = ...,
-                 bleak_epsilon_1_0T_1E: float = ...,
-                 bleak_epsilon_1_0T_1E_fit: bool = ...,
-                 bleak_epsilon_1_0T_2E: float = ...,
-                 bleak_epsilon_1_0T_2E_fit: bool = ...,
-                 bleak_epsilon_1_1E_1E: float = ...,
-                 bleak_epsilon_1_1E_1E_fit: bool = ...,
-                 bleak_epsilon_1_1E_2E: float = ...,
-                 bleak_epsilon_1_1E_2E_fit: bool = ...,
-                 bleak_epsilon_1_1T_1E: float = ...,
-                 bleak_epsilon_1_1T_1E_fit: bool = ...,
-                 bleak_epsilon_1_1T_2E: float = ...,
-                 bleak_epsilon_1_1T_2E_fit: bool = ...,
-                 bleak_epsilon_1_2E_2E: float = ...,
-                 bleak_epsilon_1_2E_2E_fit: bool = ...,
-                 bleak_epsilon_1_2T_2E: float = ...,
-                 bleak_epsilon_1_2T_2E_fit: bool = ...,
-                 bleak_epsilon_2_0E_0E: float = ...,
-                 bleak_epsilon_2_0E_0E_fit: bool = ...,
-                 bleak_epsilon_2_0E_1E: float = ...,
-                 bleak_epsilon_2_0E_1E_fit: bool = ...,
-                 bleak_epsilon_2_0E_2E: float = ...,
-                 bleak_epsilon_2_0E_2E_fit: bool = ...,
-                 bleak_epsilon_2_0T_0E: float = ...,
-                 bleak_epsilon_2_0T_0E_fit: bool = ...,
-                 bleak_epsilon_2_0T_1E: float = ...,
-                 bleak_epsilon_2_0T_1E_fit: bool = ...,
-                 bleak_epsilon_2_0T_2E: float = ...,
-                 bleak_epsilon_2_0T_2E_fit: bool = ...,
-                 bleak_epsilon_2_1E_1E: float = ...,
-                 bleak_epsilon_2_1E_1E_fit: bool = ...,
-                 bleak_epsilon_2_1E_2E: float = ...,
-                 bleak_epsilon_2_1E_2E_fit: bool = ...,
-                 bleak_epsilon_2_1T_1E: float = ...,
-                 bleak_epsilon_2_1T_1E_fit: bool = ...,
-                 bleak_epsilon_2_1T_2E: float = ...,
-                 bleak_epsilon_2_1T_2E_fit: bool = ...,
-                 bleak_epsilon_2_2E_2E: float = ...,
-                 bleak_epsilon_2_2E_2E_fit: bool = ...,
-                 bleak_epsilon_2_2T_2E: float = ...,
-                 bleak_epsilon_2_2T_2E_fit: bool = ...,
-                 bleak_epsilon_3_0E_0E: float = ...,
-                 bleak_epsilon_3_0E_0E_fit: bool = ...,
-                 bleak_epsilon_3_0E_1E: float = ...,
-                 bleak_epsilon_3_0E_1E_fit: bool = ...,
-                 bleak_epsilon_3_0E_2E: float = ...,
-                 bleak_epsilon_3_0E_2E_fit: bool = ...,
-                 bleak_epsilon_3_0T_0E: float = ...,
-                 bleak_epsilon_3_0T_0E_fit: bool = ...,
-                 bleak_epsilon_3_0T_1E: float = ...,
-                 bleak_epsilon_3_0T_1E_fit: bool = ...,
-                 bleak_epsilon_3_0T_2E: float = ...,
-                 bleak_epsilon_3_0T_2E_fit: bool = ...,
-                 bleak_epsilon_3_1E_1E: float = ...,
-                 bleak_epsilon_3_1E_1E_fit: bool = ...,
-                 bleak_epsilon_3_1E_2E: float = ...,
-                 bleak_epsilon_3_1E_2E_fit: bool = ...,
-                 bleak_epsilon_3_1T_1E: float = ...,
-                 bleak_epsilon_3_1T_1E_fit: bool = ...,
-                 bleak_epsilon_3_1T_2E: float = ...,
-                 bleak_epsilon_3_1T_2E_fit: bool = ...,
-                 bleak_epsilon_3_2E_2E: float = ...,
-                 bleak_epsilon_3_2E_2E_fit: bool = ...,
-                 bleak_epsilon_3_2T_2E: float = ...,
-                 bleak_epsilon_3_2T_2E_fit: bool = ...,
-                 bleak_epsilon_4_0E_0E: float = ...,
-                 bleak_epsilon_4_0E_0E_fit: bool = ...,
-                 bleak_epsilon_4_0E_1E: float = ...,
-                 bleak_epsilon_4_0E_1E_fit: bool = ...,
-                 bleak_epsilon_4_0E_2E: float = ...,
-                 bleak_epsilon_4_0E_2E_fit: bool = ...,
-                 bleak_epsilon_4_0T_0E: float = ...,
-                 bleak_epsilon_4_0T_0E_fit: bool = ...,
-                 bleak_epsilon_4_0T_1E: float = ...,
-                 bleak_epsilon_4_0T_1E_fit: bool = ...,
-                 bleak_epsilon_4_0T_2E: float = ...,
-                 bleak_epsilon_4_0T_2E_fit: bool = ...,
-                 bleak_epsilon_4_1E_1E: float = ...,
-                 bleak_epsilon_4_1E_1E_fit: bool = ...,
-                 bleak_epsilon_4_1E_2E: float = ...,
-                 bleak_epsilon_4_1E_2E_fit: bool = ...,
-                 bleak_epsilon_4_1T_1E: float = ...,
-                 bleak_epsilon_4_1T_1E_fit: bool = ...,
-                 bleak_epsilon_4_1T_2E: float = ...,
-                 bleak_epsilon_4_1T_2E_fit: bool = ...,
-                 bleak_epsilon_4_2E_2E: float = ...,
-                 bleak_epsilon_4_2E_2E_fit: bool = ...,
-                 bleak_epsilon_4_2T_2E: float = ...,
-                 bleak_epsilon_4_2T_2E_fit: bool = ...,
-                 calib_100P: float = ...,
-                 calib_100P_fit: bool = ...,
-                 calib_143P: float = ...,
-                 calib_143P_fit: bool = ...,
-                 calib_217P: float = ...,
-                 calib_217P_fit: bool = ...,
-                 galf_EE_A_100: float = ...,
-                 galf_EE_A_100_143: float = ...,
-                 galf_EE_A_100_143_fit: bool = ...,
-                 galf_EE_A_100_217: float = ...,
-                 galf_EE_A_100_217_fit: bool = ...,
-                 galf_EE_A_100_fit: bool = ...,
-                 galf_EE_A_143: float = ...,
-                 galf_EE_A_143_217: float = ...,
-                 galf_EE_A_143_217_fit: bool = ...,
-                 galf_EE_A_143_fit: bool = ...,
-                 galf_EE_A_217: float = ...,
-                 galf_EE_A_217_fit: bool = ...,
-                 galf_EE_index: float = ...,
-                 galf_EE_index_fit: bool = ...,
-                 galf_TE_A_100: float = ...,
-                 galf_TE_A_100_143: float = ...,
-                 galf_TE_A_100_143_fit: bool = ...,
-                 galf_TE_A_100_217: float = ...,
-                 galf_TE_A_100_217_fit: bool = ...,
-                 galf_TE_A_100_fit: bool = ...,
-                 galf_TE_A_143: float = ...,
-                 galf_TE_A_143_217: float = ...,
-                 galf_TE_A_143_217_fit: bool = ...,
-                 galf_TE_A_143_fit: bool = ...,
-                 galf_TE_A_217: float = ...,
-                 galf_TE_A_217_fit: bool = ...,
-                 galf_TE_index: float = ...,
-                 galf_TE_index_fit: bool = ...,
-                 A_cib_217: float = ...,
-                 A_cib_217_fit: bool = ...,
-                 A_planck: float = ...,
-                 A_planck_fit: bool = ...,
-                 A_sbpx_100_100_TT: float = ...,
-                 A_sbpx_100_100_TT_fit: bool = ...,
-                 A_sbpx_143_143_TT: float = ...,
-                 A_sbpx_143_143_TT_fit: bool = ...,
-                 A_sbpx_143_217_TT: float = ...,
-                 A_sbpx_143_217_TT_fit: bool = ...,
-                 A_sbpx_217_217_TT: float = ...,
-                 A_sbpx_217_217_TT_fit: bool = ...,
-                 A_sz: float = ...,
-                 A_sz_fit: bool = ...,
-                 calib_100T: float = ...,
-                 calib_100T_fit: bool = ...,
-                 calib_217T: float = ...,
-                 calib_217T_fit: bool = ...,
-                 cib_index: float = ...,
-                 cib_index_fit: bool = ...,
-                 gal545_A_100: float = ...,
-                 gal545_A_100_fit: bool = ...,
-                 gal545_A_143: float = ...,
-                 gal545_A_143_217: float = ...,
-                 gal545_A_143_217_fit: bool = ...,
-                 gal545_A_143_fit: bool = ...,
-                 gal545_A_217: float = ...,
-                 gal545_A_217_fit: bool = ...,
-                 ksz_norm: float = ...,
-                 ksz_norm_fit: bool = ...,
-                 ps_A_100_100: float = ...,
-                 ps_A_100_100_fit: bool = ...,
-                 ps_A_143_143: float = ...,
-                 ps_A_143_143_fit: bool = ...,
-                 ps_A_143_217: float = ...,
-                 ps_A_143_217_fit: bool = ...,
-                 ps_A_217_217: float = ...,
-                 ps_A_217_217_fit: bool = ...,
-                 xi_sz_cib: float = ...,
-                 xi_sz_cib_fit: bool = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        A_cnoise_e2e_100_100_EE: float = ...,
+        A_cnoise_e2e_100_100_EE_fit: bool = ...,
+        A_cnoise_e2e_143_143_EE: float = ...,
+        A_cnoise_e2e_143_143_EE_fit: bool = ...,
+        A_cnoise_e2e_217_217_EE: float = ...,
+        A_cnoise_e2e_217_217_EE_fit: bool = ...,
+        A_pol: float = ...,
+        A_pol_fit: bool = ...,
+        A_sbpx_100_100_EE: float = ...,
+        A_sbpx_100_100_EE_fit: bool = ...,
+        A_sbpx_100_143_EE: float = ...,
+        A_sbpx_100_143_EE_fit: bool = ...,
+        A_sbpx_100_217_EE: float = ...,
+        A_sbpx_100_217_EE_fit: bool = ...,
+        A_sbpx_143_143_EE: float = ...,
+        A_sbpx_143_143_EE_fit: bool = ...,
+        A_sbpx_143_217_EE: float = ...,
+        A_sbpx_143_217_EE_fit: bool = ...,
+        A_sbpx_217_217_EE: float = ...,
+        A_sbpx_217_217_EE_fit: bool = ...,
+        bleak_epsilon_0_0E_0E: float = ...,
+        bleak_epsilon_0_0E_0E_fit: bool = ...,
+        bleak_epsilon_0_0E_1E: float = ...,
+        bleak_epsilon_0_0E_1E_fit: bool = ...,
+        bleak_epsilon_0_0E_2E: float = ...,
+        bleak_epsilon_0_0E_2E_fit: bool = ...,
+        bleak_epsilon_0_0T_0E: float = ...,
+        bleak_epsilon_0_0T_0E_fit: bool = ...,
+        bleak_epsilon_0_0T_1E: float = ...,
+        bleak_epsilon_0_0T_1E_fit: bool = ...,
+        bleak_epsilon_0_0T_2E: float = ...,
+        bleak_epsilon_0_0T_2E_fit: bool = ...,
+        bleak_epsilon_0_1E_1E: float = ...,
+        bleak_epsilon_0_1E_1E_fit: bool = ...,
+        bleak_epsilon_0_1E_2E: float = ...,
+        bleak_epsilon_0_1E_2E_fit: bool = ...,
+        bleak_epsilon_0_1T_1E: float = ...,
+        bleak_epsilon_0_1T_1E_fit: bool = ...,
+        bleak_epsilon_0_1T_2E: float = ...,
+        bleak_epsilon_0_1T_2E_fit: bool = ...,
+        bleak_epsilon_0_2E_2E: float = ...,
+        bleak_epsilon_0_2E_2E_fit: bool = ...,
+        bleak_epsilon_0_2T_2E: float = ...,
+        bleak_epsilon_0_2T_2E_fit: bool = ...,
+        bleak_epsilon_1_0E_0E: float = ...,
+        bleak_epsilon_1_0E_0E_fit: bool = ...,
+        bleak_epsilon_1_0E_1E: float = ...,
+        bleak_epsilon_1_0E_1E_fit: bool = ...,
+        bleak_epsilon_1_0E_2E: float = ...,
+        bleak_epsilon_1_0E_2E_fit: bool = ...,
+        bleak_epsilon_1_0T_0E: float = ...,
+        bleak_epsilon_1_0T_0E_fit: bool = ...,
+        bleak_epsilon_1_0T_1E: float = ...,
+        bleak_epsilon_1_0T_1E_fit: bool = ...,
+        bleak_epsilon_1_0T_2E: float = ...,
+        bleak_epsilon_1_0T_2E_fit: bool = ...,
+        bleak_epsilon_1_1E_1E: float = ...,
+        bleak_epsilon_1_1E_1E_fit: bool = ...,
+        bleak_epsilon_1_1E_2E: float = ...,
+        bleak_epsilon_1_1E_2E_fit: bool = ...,
+        bleak_epsilon_1_1T_1E: float = ...,
+        bleak_epsilon_1_1T_1E_fit: bool = ...,
+        bleak_epsilon_1_1T_2E: float = ...,
+        bleak_epsilon_1_1T_2E_fit: bool = ...,
+        bleak_epsilon_1_2E_2E: float = ...,
+        bleak_epsilon_1_2E_2E_fit: bool = ...,
+        bleak_epsilon_1_2T_2E: float = ...,
+        bleak_epsilon_1_2T_2E_fit: bool = ...,
+        bleak_epsilon_2_0E_0E: float = ...,
+        bleak_epsilon_2_0E_0E_fit: bool = ...,
+        bleak_epsilon_2_0E_1E: float = ...,
+        bleak_epsilon_2_0E_1E_fit: bool = ...,
+        bleak_epsilon_2_0E_2E: float = ...,
+        bleak_epsilon_2_0E_2E_fit: bool = ...,
+        bleak_epsilon_2_0T_0E: float = ...,
+        bleak_epsilon_2_0T_0E_fit: bool = ...,
+        bleak_epsilon_2_0T_1E: float = ...,
+        bleak_epsilon_2_0T_1E_fit: bool = ...,
+        bleak_epsilon_2_0T_2E: float = ...,
+        bleak_epsilon_2_0T_2E_fit: bool = ...,
+        bleak_epsilon_2_1E_1E: float = ...,
+        bleak_epsilon_2_1E_1E_fit: bool = ...,
+        bleak_epsilon_2_1E_2E: float = ...,
+        bleak_epsilon_2_1E_2E_fit: bool = ...,
+        bleak_epsilon_2_1T_1E: float = ...,
+        bleak_epsilon_2_1T_1E_fit: bool = ...,
+        bleak_epsilon_2_1T_2E: float = ...,
+        bleak_epsilon_2_1T_2E_fit: bool = ...,
+        bleak_epsilon_2_2E_2E: float = ...,
+        bleak_epsilon_2_2E_2E_fit: bool = ...,
+        bleak_epsilon_2_2T_2E: float = ...,
+        bleak_epsilon_2_2T_2E_fit: bool = ...,
+        bleak_epsilon_3_0E_0E: float = ...,
+        bleak_epsilon_3_0E_0E_fit: bool = ...,
+        bleak_epsilon_3_0E_1E: float = ...,
+        bleak_epsilon_3_0E_1E_fit: bool = ...,
+        bleak_epsilon_3_0E_2E: float = ...,
+        bleak_epsilon_3_0E_2E_fit: bool = ...,
+        bleak_epsilon_3_0T_0E: float = ...,
+        bleak_epsilon_3_0T_0E_fit: bool = ...,
+        bleak_epsilon_3_0T_1E: float = ...,
+        bleak_epsilon_3_0T_1E_fit: bool = ...,
+        bleak_epsilon_3_0T_2E: float = ...,
+        bleak_epsilon_3_0T_2E_fit: bool = ...,
+        bleak_epsilon_3_1E_1E: float = ...,
+        bleak_epsilon_3_1E_1E_fit: bool = ...,
+        bleak_epsilon_3_1E_2E: float = ...,
+        bleak_epsilon_3_1E_2E_fit: bool = ...,
+        bleak_epsilon_3_1T_1E: float = ...,
+        bleak_epsilon_3_1T_1E_fit: bool = ...,
+        bleak_epsilon_3_1T_2E: float = ...,
+        bleak_epsilon_3_1T_2E_fit: bool = ...,
+        bleak_epsilon_3_2E_2E: float = ...,
+        bleak_epsilon_3_2E_2E_fit: bool = ...,
+        bleak_epsilon_3_2T_2E: float = ...,
+        bleak_epsilon_3_2T_2E_fit: bool = ...,
+        bleak_epsilon_4_0E_0E: float = ...,
+        bleak_epsilon_4_0E_0E_fit: bool = ...,
+        bleak_epsilon_4_0E_1E: float = ...,
+        bleak_epsilon_4_0E_1E_fit: bool = ...,
+        bleak_epsilon_4_0E_2E: float = ...,
+        bleak_epsilon_4_0E_2E_fit: bool = ...,
+        bleak_epsilon_4_0T_0E: float = ...,
+        bleak_epsilon_4_0T_0E_fit: bool = ...,
+        bleak_epsilon_4_0T_1E: float = ...,
+        bleak_epsilon_4_0T_1E_fit: bool = ...,
+        bleak_epsilon_4_0T_2E: float = ...,
+        bleak_epsilon_4_0T_2E_fit: bool = ...,
+        bleak_epsilon_4_1E_1E: float = ...,
+        bleak_epsilon_4_1E_1E_fit: bool = ...,
+        bleak_epsilon_4_1E_2E: float = ...,
+        bleak_epsilon_4_1E_2E_fit: bool = ...,
+        bleak_epsilon_4_1T_1E: float = ...,
+        bleak_epsilon_4_1T_1E_fit: bool = ...,
+        bleak_epsilon_4_1T_2E: float = ...,
+        bleak_epsilon_4_1T_2E_fit: bool = ...,
+        bleak_epsilon_4_2E_2E: float = ...,
+        bleak_epsilon_4_2E_2E_fit: bool = ...,
+        bleak_epsilon_4_2T_2E: float = ...,
+        bleak_epsilon_4_2T_2E_fit: bool = ...,
+        calib_100P: float = ...,
+        calib_100P_fit: bool = ...,
+        calib_143P: float = ...,
+        calib_143P_fit: bool = ...,
+        calib_217P: float = ...,
+        calib_217P_fit: bool = ...,
+        galf_EE_A_100: float = ...,
+        galf_EE_A_100_143: float = ...,
+        galf_EE_A_100_143_fit: bool = ...,
+        galf_EE_A_100_217: float = ...,
+        galf_EE_A_100_217_fit: bool = ...,
+        galf_EE_A_100_fit: bool = ...,
+        galf_EE_A_143: float = ...,
+        galf_EE_A_143_217: float = ...,
+        galf_EE_A_143_217_fit: bool = ...,
+        galf_EE_A_143_fit: bool = ...,
+        galf_EE_A_217: float = ...,
+        galf_EE_A_217_fit: bool = ...,
+        galf_EE_index: float = ...,
+        galf_EE_index_fit: bool = ...,
+        galf_TE_A_100: float = ...,
+        galf_TE_A_100_143: float = ...,
+        galf_TE_A_100_143_fit: bool = ...,
+        galf_TE_A_100_217: float = ...,
+        galf_TE_A_100_217_fit: bool = ...,
+        galf_TE_A_100_fit: bool = ...,
+        galf_TE_A_143: float = ...,
+        galf_TE_A_143_217: float = ...,
+        galf_TE_A_143_217_fit: bool = ...,
+        galf_TE_A_143_fit: bool = ...,
+        galf_TE_A_217: float = ...,
+        galf_TE_A_217_fit: bool = ...,
+        galf_TE_index: float = ...,
+        galf_TE_index_fit: bool = ...,
+        A_cib_217: float = ...,
+        A_cib_217_fit: bool = ...,
+        A_planck: float = ...,
+        A_planck_fit: bool = ...,
+        A_sbpx_100_100_TT: float = ...,
+        A_sbpx_100_100_TT_fit: bool = ...,
+        A_sbpx_143_143_TT: float = ...,
+        A_sbpx_143_143_TT_fit: bool = ...,
+        A_sbpx_143_217_TT: float = ...,
+        A_sbpx_143_217_TT_fit: bool = ...,
+        A_sbpx_217_217_TT: float = ...,
+        A_sbpx_217_217_TT_fit: bool = ...,
+        A_sz: float = ...,
+        A_sz_fit: bool = ...,
+        calib_100T: float = ...,
+        calib_100T_fit: bool = ...,
+        calib_217T: float = ...,
+        calib_217T_fit: bool = ...,
+        cib_index: float = ...,
+        cib_index_fit: bool = ...,
+        gal545_A_100: float = ...,
+        gal545_A_100_fit: bool = ...,
+        gal545_A_143: float = ...,
+        gal545_A_143_217: float = ...,
+        gal545_A_143_217_fit: bool = ...,
+        gal545_A_143_fit: bool = ...,
+        gal545_A_217: float = ...,
+        gal545_A_217_fit: bool = ...,
+        ksz_norm: float = ...,
+        ksz_norm_fit: bool = ...,
+        ps_A_100_100: float = ...,
+        ps_A_100_100_fit: bool = ...,
+        ps_A_143_143: float = ...,
+        ps_A_143_143_fit: bool = ...,
+        ps_A_143_217: float = ...,
+        ps_A_143_217_fit: bool = ...,
+        ps_A_217_217: float = ...,
+        ps_A_217_217_fit: bool = ...,
+        xi_sz_cib: float = ...,
+        xi_sz_cib_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @staticmethod
     def add_all_default18_priors(lh: NumCosmoMath.Likelihood) -> None: ...
     @staticmethod
     def add_all_default_priors(lh: NumCosmoMath.Likelihood) -> None: ...
     @staticmethod
-    def add_calib_priors(lh: NumCosmoMath.Likelihood, mean: NumCosmoMath.Vector, sigma: NumCosmoMath.Vector) -> None: ...
+    def add_calib_priors(
+        lh: NumCosmoMath.Likelihood,
+        mean: NumCosmoMath.Vector,
+        sigma: NumCosmoMath.Vector,
+    ) -> None: ...
     @staticmethod
     def add_default18_galf_priors(lh: NumCosmoMath.Likelihood) -> None: ...
     @staticmethod
     def add_default_galf_priors(lh: NumCosmoMath.Likelihood) -> None: ...
     @staticmethod
-    def add_galf_priors(lh: NumCosmoMath.Likelihood, mean: NumCosmoMath.Vector, sigma: NumCosmoMath.Vector) -> None: ...
+    def add_galf_priors(
+        lh: NumCosmoMath.Likelihood,
+        mean: NumCosmoMath.Vector,
+        sigma: NumCosmoMath.Vector,
+    ) -> None: ...
     @staticmethod
-    def add_sz_prior(lh: NumCosmoMath.Likelihood, f_tSZ: float, mean: float, sigma: float) -> None: ...
-    
+    def add_sz_prior(
+        lh: NumCosmoMath.Likelihood, f_tSZ: float, mean: float, sigma: float
+    ) -> None: ...
 
 class PlanckFICorTTTEEEClass(GObject.GPointer):
     r"""
@@ -14471,6 +15188,7 @@ class PowspecML(NumCosmoMath.Powspec):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         kmax: float
         kmin: float
@@ -14479,16 +15197,18 @@ class PowspecML(NumCosmoMath.Powspec):
         reltol: float
     props: Props = ...
     parent_instance: NumCosmoMath.Powspec = ...
-    def __init__(self, kmax: float = ...,
-                 kmin: float = ...,
-                 zf: float = ...,
-                 zi: float = ...,
-                 reltol: float = ...): ...
+    def __init__(
+        self,
+        kmax: float = ...,
+        kmin: float = ...,
+        zf: float = ...,
+        zi: float = ...,
+        reltol: float = ...,
+    ): ...
     @staticmethod
     def clear(ps_ml: PowspecML) -> None: ...
     def free(self) -> None: ...
     def ref(self) -> PowspecML: ...
-    
 
 class PowspecMLCBE(PowspecML):
     r"""
@@ -14535,6 +15255,7 @@ class PowspecMLCBE(PowspecML):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         cbe: CBE
         intern_k_max: float
@@ -14547,14 +15268,17 @@ class PowspecMLCBE(PowspecML):
     props: Props = ...
     parent_instance: PowspecML = ...
     priv: PowspecMLCBEPrivate = ...
-    def __init__(self, cbe: CBE = ...,
-                 intern_k_max: float = ...,
-                 intern_k_min: float = ...,
-                 kmax: float = ...,
-                 kmin: float = ...,
-                 zf: float = ...,
-                 zi: float = ...,
-                 reltol: float = ...): ...
+    def __init__(
+        self,
+        cbe: CBE = ...,
+        intern_k_max: float = ...,
+        intern_k_min: float = ...,
+        kmax: float = ...,
+        kmin: float = ...,
+        zf: float = ...,
+        zi: float = ...,
+        reltol: float = ...,
+    ): ...
     def get_intern_k_max(self) -> float: ...
     def get_intern_k_min(self) -> float: ...
     @classmethod
@@ -14565,7 +15289,6 @@ class PowspecMLCBE(PowspecML):
     def set_cbe(self, cbe: CBE) -> None: ...
     def set_intern_k_max(self, k_max: float) -> None: ...
     def set_intern_k_min(self, k_min: float) -> None: ...
-    
 
 class PowspecMLCBEClass(GObject.GPointer):
     r"""
@@ -14629,6 +15352,7 @@ class PowspecMLFixSpline(PowspecML):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         filename: str
         kmax: float
@@ -14642,16 +15366,18 @@ class PowspecMLFixSpline(PowspecML):
     Pk: NumCosmoMath.Spline = ...
     gf: GrowthFunc = ...
     filename: str = ...
-    def __init__(self, filename: str = ...,
-                 kmax: float = ...,
-                 kmin: float = ...,
-                 zf: float = ...,
-                 zi: float = ...,
-                 reltol: float = ...): ...
+    def __init__(
+        self,
+        filename: str = ...,
+        kmax: float = ...,
+        kmin: float = ...,
+        zf: float = ...,
+        zi: float = ...,
+        reltol: float = ...,
+    ): ...
     @classmethod
     def new(cls, filename: str) -> PowspecMLFixSpline: ...
     def set_file(self, filename: str) -> None: ...
-    
 
 class PowspecMLFixSplineClass(GObject.GPointer):
     r"""
@@ -14705,6 +15431,7 @@ class PowspecMLTransfer(PowspecML):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         growth: GrowthFunc
         transfer: TransferFunc
@@ -14718,20 +15445,22 @@ class PowspecMLTransfer(PowspecML):
     tf: TransferFunc = ...
     gf: GrowthFunc = ...
     Pm_k2Pzeta: float = ...
-    def __init__(self, growth: GrowthFunc = ...,
-                 transfer: TransferFunc = ...,
-                 kmax: float = ...,
-                 kmin: float = ...,
-                 zf: float = ...,
-                 zi: float = ...,
-                 reltol: float = ...): ...
+    def __init__(
+        self,
+        growth: GrowthFunc = ...,
+        transfer: TransferFunc = ...,
+        kmax: float = ...,
+        kmin: float = ...,
+        zf: float = ...,
+        zi: float = ...,
+        reltol: float = ...,
+    ): ...
     @classmethod
     def new(cls, tf: TransferFunc) -> PowspecMLTransfer: ...
     def peek_gf(self) -> GrowthFunc: ...
     def peek_tf(self) -> TransferFunc: ...
     def set_gf(self, gf: GrowthFunc) -> None: ...
     def set_tf(self, tf: TransferFunc) -> None: ...
-    
 
 class PowspecMLTransferClass(GObject.GPointer):
     r"""
@@ -14768,6 +15497,7 @@ class PowspecMNL(NumCosmoMath.Powspec):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         kmax: float
         kmin: float
@@ -14776,16 +15506,18 @@ class PowspecMNL(NumCosmoMath.Powspec):
         zi: float
     props: Props = ...
     parent_instance: NumCosmoMath.Powspec = ...
-    def __init__(self, kmax: float = ...,
-                 kmin: float = ...,
-                 reltol: float = ...,
-                 zf: float = ...,
-                 zi: float = ...): ...
+    def __init__(
+        self,
+        kmax: float = ...,
+        kmin: float = ...,
+        reltol: float = ...,
+        zf: float = ...,
+        zi: float = ...,
+    ): ...
     @staticmethod
     def clear(ps_mnl: PowspecMNL) -> None: ...
     def free(self) -> None: ...
     def ref(self) -> PowspecMNL: ...
-    
 
 class PowspecMNLClass(GObject.GPointer):
     r"""
@@ -14833,6 +15565,7 @@ class PowspecMNLHaloFit(PowspecMNL):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         power_spec: PowspecML
         reltol: float
@@ -14845,19 +15578,23 @@ class PowspecMNLHaloFit(PowspecMNL):
     props: Props = ...
     parent_instance: PowspecMNL = ...
     priv: PowspecMNLHaloFitPrivate = ...
-    def __init__(self, power_spec: PowspecML = ...,
-                 reltol: float = ...,
-                 use_pkequal: bool = ...,
-                 zmaxnl: float = ...,
-                 kmax: float = ...,
-                 kmin: float = ...,
-                 zf: float = ...,
-                 zi: float = ...): ...
+    def __init__(
+        self,
+        power_spec: PowspecML = ...,
+        reltol: float = ...,
+        use_pkequal: bool = ...,
+        zmaxnl: float = ...,
+        kmax: float = ...,
+        kmin: float = ...,
+        zf: float = ...,
+        zi: float = ...,
+    ): ...
     @classmethod
-    def new(cls, psml: PowspecML, zmaxnl: float, reltol: float) -> PowspecMNLHaloFit: ...
+    def new(
+        cls, psml: PowspecML, zmaxnl: float, reltol: float
+    ) -> PowspecMNLHaloFit: ...
     def pkequal(self, on: bool) -> None: ...
     def set_kbounds_from_ml(self) -> None: ...
-    
 
 class PowspecMNLHaloFitClass(GObject.GPointer):
     r"""
@@ -14893,18 +15630,21 @@ class PriorQSplineCont(NumCosmoMath.Prior):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dimension: int
         eval_x: NumCosmoMath.Vector
         nvariables: int
     props: Props = ...
     parent_instance: NumCosmoMath.Prior = ...
-    def __init__(self, dimension: int = ...,
-                 eval_x: NumCosmoMath.Vector = ...,
-                 nvariables: int = ...): ...
+    def __init__(
+        self,
+        dimension: int = ...,
+        eval_x: NumCosmoMath.Vector = ...,
+        nvariables: int = ...,
+    ): ...
     @classmethod
     def new(cls) -> PriorQSplineCont: ...
-    
 
 class PriorQSplineContClass(GObject.GPointer):
     r"""
@@ -14937,6 +15677,7 @@ class Recomb(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         init_frac: float
         prec: float
@@ -14964,9 +15705,7 @@ class Recomb(GObject.Object):
     tau_drag_lambda: float = ...
     tau_cutoff_z: float = ...
     tau_cutoff_lambda: float = ...
-    def __init__(self, init_frac: float = ...,
-                 prec: float = ...,
-                 zi: float = ...): ...
+    def __init__(self, init_frac: float = ..., prec: float = ..., zi: float = ...): ...
     @staticmethod
     def HI_ion_saha(cosmo: HICosmo, x: float) -> float: ...
     @staticmethod
@@ -15022,10 +15761,13 @@ class Recomb(GObject.Object):
     def set_zi(self, zi: float) -> None: ...
     def tau(self, cosmo: HICosmo, lambda_: float) -> float: ...
     def tau_drag(self, cosmo: HICosmo, lambda_: float) -> float: ...
-    def tau_lambda0_lambda1(self, cosmo: HICosmo, lambda0: float, lambda1: float) -> float: ...
+    def tau_lambda0_lambda1(
+        self, cosmo: HICosmo, lambda0: float, lambda1: float
+    ) -> float: ...
     def v_tau(self, cosmo: HICosmo, lambda_: float) -> float: ...
-    def v_tau_lambda_features(self, cosmo: HICosmo, logref: float) -> Tuple[float, float, float]: ...
-    
+    def v_tau_lambda_features(
+        self, cosmo: HICosmo, logref: float
+    ) -> Tuple[float, float, float]: ...
 
 class RecombCBE(Recomb):
     r"""
@@ -15054,6 +15796,7 @@ class RecombCBE(Recomb):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         cbe: CBE
         init_frac: float
@@ -15063,10 +15806,9 @@ class RecombCBE(Recomb):
     parent_instance: Recomb = ...
     cbe: CBE = ...
     Xe_s: NumCosmoMath.Spline = ...
-    def __init__(self, cbe: CBE = ...,
-                 init_frac: float = ...,
-                 prec: float = ...,
-                 zi: float = ...): ...
+    def __init__(
+        self, cbe: CBE = ..., init_frac: float = ..., prec: float = ..., zi: float = ...
+    ): ...
     @staticmethod
     def clear(recomb_cbe: RecombCBE) -> None: ...
     def free(self) -> None: ...
@@ -15077,7 +15819,6 @@ class RecombCBE(Recomb):
     def peek_cbe(self) -> CBE: ...
     def ref(self) -> RecombCBE: ...
     def set_cbe(self, cbe: CBE) -> None: ...
-    
 
 class RecombCBEClass(GObject.GPointer):
     r"""
@@ -15130,6 +15871,7 @@ class RecombSeager(Recomb):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         options: RecombSeagerOpt
         init_frac: float
@@ -15138,10 +15880,13 @@ class RecombSeager(Recomb):
     props: Props = ...
     parent_instance: Recomb = ...
     priv: RecombSeagerPrivate = ...
-    def __init__(self, options: RecombSeagerOpt = ...,
-                 init_frac: float = ...,
-                 prec: float = ...,
-                 zi: float = ...): ...
+    def __init__(
+        self,
+        options: RecombSeagerOpt = ...,
+        init_frac: float = ...,
+        prec: float = ...,
+        zi: float = ...,
+    ): ...
     @staticmethod
     def clear(recomb_seager: RecombSeager) -> None: ...
     def free(self) -> None: ...
@@ -15159,7 +15904,6 @@ class RecombSeager(Recomb):
     def ref(self) -> RecombSeager: ...
     def set_options(self, opts: RecombSeagerOpt) -> None: ...
     def set_switch(self, H_switch: int, He_switch: int) -> None: ...
-    
 
 class RecombSeagerClass(GObject.GPointer):
     r"""
@@ -15206,6 +15950,7 @@ class ReducedShearCalib(NumCosmoMath.Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         implementation: int
         name: str
@@ -15219,9 +15964,12 @@ class ReducedShearCalib(NumCosmoMath.Model):
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     priv: ReducedShearCalibPrivate = ...
-    def __init__(self, reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @staticmethod
     def clear(rs_calib: ReducedShearCalib) -> None: ...
     def do_eval(self, g_th: float, psf_size: float, gal_size: float) -> float: ...
@@ -15230,7 +15978,6 @@ class ReducedShearCalib(NumCosmoMath.Model):
     @staticmethod
     def id() -> int: ...
     def ref(self) -> ReducedShearCalib: ...
-    
 
 class ReducedShearCalibClass(GObject.GPointer):
     r"""
@@ -15297,6 +16044,7 @@ class ReducedShearCalibWtg(ReducedShearCalib):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         c: float
         c_fit: bool
@@ -15318,24 +16066,26 @@ class ReducedShearCalibWtg(ReducedShearCalib):
     props: Props = ...
     parent_instance: ReducedShearCalib = ...
     priv: ReducedShearCalibWtgPrivate = ...
-    def __init__(self, c: float = ...,
-                 c_fit: bool = ...,
-                 mb: float = ...,
-                 mb_fit: bool = ...,
-                 mslope: float = ...,
-                 mslope_fit: bool = ...,
-                 xp: float = ...,
-                 xp_fit: bool = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        c: float = ...,
+        c_fit: bool = ...,
+        mb: float = ...,
+        mb_fit: bool = ...,
+        mslope: float = ...,
+        mslope_fit: bool = ...,
+        xp: float = ...,
+        xp_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @staticmethod
     def clear(rs_wtg: ReducedShearCalibWtg) -> None: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls) -> ReducedShearCalibWtg: ...
     def ref(self) -> ReducedShearCalibWtg: ...
-    
 
 class ReducedShearCalibWtgClass(GObject.GPointer):
     r"""
@@ -15413,6 +16163,7 @@ class ReducedShearClusterMass(NumCosmoMath.Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Gamma: float
         Gamma_fit: bool
@@ -15444,24 +16195,29 @@ class ReducedShearClusterMass(NumCosmoMath.Model):
     T: int = ...
     s: int = ...
     workz: float = ...
-    def __init__(self, Gamma: float = ...,
-                 Gamma_fit: bool = ...,
-                 R: float = ...,
-                 a: float = ...,
-                 a_fit: bool = ...,
-                 b: float = ...,
-                 b_fit: bool = ...,
-                 c: float = ...,
-                 c_fit: bool = ...,
-                 number_z_bins: int = ...,
-                 sigma: float = ...,
-                 sigma_fit: bool = ...,
-                 xp: float = ...,
-                 xp_fit: bool = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
-    def P_z_gth_gobs(self, cosmo: HICosmo, z: float, g_th: float, g_obs: float) -> float: ...
+    def __init__(
+        self,
+        Gamma: float = ...,
+        Gamma_fit: bool = ...,
+        R: float = ...,
+        a: float = ...,
+        a_fit: bool = ...,
+        b: float = ...,
+        b_fit: bool = ...,
+        c: float = ...,
+        c_fit: bool = ...,
+        number_z_bins: int = ...,
+        sigma: float = ...,
+        sigma_fit: bool = ...,
+        xp: float = ...,
+        xp_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
+    def P_z_gth_gobs(
+        self, cosmo: HICosmo, z: float, g_th: float, g_obs: float
+    ) -> float: ...
     @staticmethod
     def clear(rscm: ReducedShearClusterMass) -> None: ...
     def free(self) -> None: ...
@@ -15469,9 +16225,10 @@ class ReducedShearClusterMass(NumCosmoMath.Model):
     def id() -> int: ...
     @classmethod
     def new(cls) -> ReducedShearClusterMass: ...
-    def posterior_no_shear_calibration(self, cosmo: HICosmo, z: float, g_obs: float) -> float: ...
+    def posterior_no_shear_calibration(
+        self, cosmo: HICosmo, z: float, g_obs: float
+    ) -> float: ...
     def ref(self) -> ReducedShearClusterMass: ...
-    
 
 class ReducedShearClusterMassClass(GObject.GPointer):
     r"""
@@ -15560,6 +16317,7 @@ class SNIADistCov(NumCosmoMath.Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         M1: float
         M1_fit: bool
@@ -15600,29 +16358,32 @@ class SNIADistCov(NumCosmoMath.Model):
     beta_cpu: float = ...
     lnsigma_pecz_cpu: float = ...
     lnsigma_lens_cpu: float = ...
-    def __init__(self, M1: float = ...,
-                 M1_fit: bool = ...,
-                 M2: float = ...,
-                 M2_fit: bool = ...,
-                 alpha: float = ...,
-                 alpha_fit: bool = ...,
-                 beta: float = ...,
-                 beta_fit: bool = ...,
-                 dist: Distance = ...,
-                 empty_fac: bool = ...,
-                 lnsigma_int: NumCosmoMath.Vector = ...,
-                 lnsigma_int_fit: GLib.Variant = ...,
-                 lnsigma_int_length: int = ...,
-                 lnsigma_lens: float = ...,
-                 lnsigma_lens_fit: bool = ...,
-                 lnsigma_pecz: float = ...,
-                 lnsigma_pecz_fit: bool = ...,
-                 mu: NumCosmoMath.Vector = ...,
-                 mu_fit: GLib.Variant = ...,
-                 mu_length: int = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        M1: float = ...,
+        M1_fit: bool = ...,
+        M2: float = ...,
+        M2_fit: bool = ...,
+        alpha: float = ...,
+        alpha_fit: bool = ...,
+        beta: float = ...,
+        beta_fit: bool = ...,
+        dist: Distance = ...,
+        empty_fac: bool = ...,
+        lnsigma_int: NumCosmoMath.Vector = ...,
+        lnsigma_int_fit: GLib.Variant = ...,
+        lnsigma_int_length: int = ...,
+        lnsigma_lens: float = ...,
+        lnsigma_lens_fit: bool = ...,
+        lnsigma_pecz: float = ...,
+        lnsigma_pecz_fit: bool = ...,
+        mu: NumCosmoMath.Vector = ...,
+        mu_fit: GLib.Variant = ...,
+        mu_length: int = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     def alpha_beta(self) -> Tuple[float, float]: ...
     def calc(self, snia_cov: DataSNIACov, cov: NumCosmoMath.Matrix) -> bool: ...
     @staticmethod
@@ -15631,10 +16392,28 @@ class SNIADistCov(NumCosmoMath.Model):
     def free(self) -> None: ...
     @staticmethod
     def id() -> int: ...
-    def mag(self, cosmo: HICosmo, snia_cov: DataSNIACov, i: int, width_th: float, colour_th: float) -> float: ...
-    def mag_to_width_colour(self, cosmo: HICosmo, snia_cov: DataSNIACov, obs: NumCosmoMath.Vector, X: NumCosmoMath.Matrix, colmajor: bool) -> None: ...
-    def mean(self, cosmo: HICosmo, snia_cov: DataSNIACov, y: NumCosmoMath.Vector) -> None: ...
-    def mean_V2(self, cosmo: HICosmo, snia_cov: DataSNIACov, y: NumCosmoMath.Vector) -> None: ...
+    def mag(
+        self,
+        cosmo: HICosmo,
+        snia_cov: DataSNIACov,
+        i: int,
+        width_th: float,
+        colour_th: float,
+    ) -> float: ...
+    def mag_to_width_colour(
+        self,
+        cosmo: HICosmo,
+        snia_cov: DataSNIACov,
+        obs: NumCosmoMath.Vector,
+        X: NumCosmoMath.Matrix,
+        colmajor: bool,
+    ) -> None: ...
+    def mean(
+        self, cosmo: HICosmo, snia_cov: DataSNIACov, y: NumCosmoMath.Vector
+    ) -> None: ...
+    def mean_V2(
+        self, cosmo: HICosmo, snia_cov: DataSNIACov, y: NumCosmoMath.Vector
+    ) -> None: ...
     @classmethod
     def new(cls, dist: Distance, sigma_int_len: int) -> SNIADistCov: ...
     @classmethod
@@ -15644,7 +16423,6 @@ class SNIADistCov(NumCosmoMath.Model):
     def ref(self) -> SNIADistCov: ...
     def set_dist(self, dist: Distance) -> None: ...
     def set_empty_fac(self, enable: bool) -> None: ...
-    
 
 class SNIADistCovClass(GObject.GPointer):
     r"""
@@ -15684,6 +16462,7 @@ class Scalefactor(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         a0: float
         a0_conformal_normal: bool
@@ -15694,12 +16473,15 @@ class Scalefactor(GObject.Object):
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: ScalefactorPrivate = ...
-    def __init__(self, a0: float = ...,
-                 a0_conformal_normal: bool = ...,
-                 abstol: float = ...,
-                 dist: Distance = ...,
-                 reltol: float = ...,
-                 zf: float = ...): ...
+    def __init__(
+        self,
+        a0: float = ...,
+        a0_conformal_normal: bool = ...,
+        abstol: float = ...,
+        dist: Distance = ...,
+        reltol: float = ...,
+        zf: float = ...,
+    ): ...
     @staticmethod
     def clear(a: Scalefactor) -> None: ...
     def eval_a_eta(self, eta: float) -> float: ...
@@ -15724,7 +16506,6 @@ class Scalefactor(GObject.Object):
     def set_abstol(self, abstol: float) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_zf(self, zf: float) -> None: ...
-    
 
 class ScalefactorClass(GObject.GPointer):
     r"""
@@ -15763,7 +16544,6 @@ class TransferFunc(GObject.Object):
     def prepare(self, cosmo: HICosmo) -> None: ...
     def prepare_if_needed(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> TransferFunc: ...
-    
 
 class TransferFuncBBKS(TransferFunc):
     r"""
@@ -15783,6 +16563,7 @@ class TransferFuncBBKS(TransferFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         type: TransferFuncBBKSType
     props: Props = ...
@@ -15792,7 +16573,6 @@ class TransferFuncBBKS(TransferFunc):
     @classmethod
     def new(cls) -> TransferFuncBBKS: ...
     def set_type(self, bbks_type: TransferFuncBBKSType) -> None: ...
-    
 
 class TransferFuncBBKSClass(GObject.GPointer):
     r"""
@@ -15825,7 +16605,6 @@ class TransferFuncCAMB(TransferFunc):
     init: bool = ...
     @classmethod
     def new(cls) -> TransferFuncCAMB: ...
-    
 
 class TransferFuncCAMBClass(GObject.GPointer):
     r"""
@@ -15868,6 +16647,7 @@ class TransferFuncEH(TransferFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         CCL_comp: bool
     props: Props = ...
@@ -15877,7 +16657,6 @@ class TransferFuncEH(TransferFunc):
     @classmethod
     def new(cls) -> TransferFuncEH: ...
     def set_CCL_comp(self, CCL_comp: bool) -> None: ...
-    
 
 class TransferFuncEHClass(GObject.GPointer):
     r"""
@@ -15937,6 +16716,7 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Roff: float
         Roff_fit: bool
@@ -15957,42 +16737,141 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
     dist: Distance = ...
     ctrl_cosmo: NumCosmoMath.ModelCtrl = ...
     ctrl_dp: NumCosmoMath.ModelCtrl = ...
-    def __init__(self, Roff: float = ...,
-                 Roff_fit: bool = ...,
-                 distance: Distance = ...,
-                 pcc: float = ...,
-                 pcc_fit: bool = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        Roff: float = ...,
+        Roff_fit: bool = ...,
+        distance: Distance = ...,
+        pcc: float = ...,
+        pcc_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @staticmethod
     def clear(smd: WLSurfaceMassDensity) -> None: ...
-    def convergence(self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zs: float, zl: float, zc: float) -> float: ...
-    def convergence_infinity(self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zl: float, zc: float) -> float: ...
+    def convergence(
+        self,
+        dp: HaloDensityProfile,
+        cosmo: HICosmo,
+        R: float,
+        zs: float,
+        zl: float,
+        zc: float,
+    ) -> float: ...
+    def convergence_infinity(
+        self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zl: float, zc: float
+    ) -> float: ...
     def free(self) -> None: ...
     @staticmethod
     def id() -> int: ...
-    def magnification(self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zs: float, zl: float, zc: float) -> float: ...
+    def magnification(
+        self,
+        dp: HaloDensityProfile,
+        cosmo: HICosmo,
+        R: float,
+        zs: float,
+        zl: float,
+        zc: float,
+    ) -> float: ...
     @classmethod
     def new(cls, dist: Distance) -> WLSurfaceMassDensity: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def prepare_if_needed(self, cosmo: HICosmo) -> None: ...
-    def reduced_shear(self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zs: float, zl: float, zc: float) -> float: ...
-    def reduced_shear_array(self, dp: HaloDensityProfile, cosmo: HICosmo, R: Sequence[float], fin: float, fout: float, zs: Sequence[float], zl: float, zc: float) -> list[float]: ...
-    def reduced_shear_array_equal(self, dp: HaloDensityProfile, cosmo: HICosmo, R: Sequence[float], fin: float, fout: float, zs: Sequence[float], zl: float, zc: float) -> list[float]: ...
-    def reduced_shear_infinity(self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zs: float, zl: float, zc: float) -> float: ...
-    def reduced_shear_optzs(self, dp: HaloDensityProfile, cosmo: HICosmo, zs: float, zl: float, optzs: WLSurfaceMassDensityOptzs) -> float: ...
+    def reduced_shear(
+        self,
+        dp: HaloDensityProfile,
+        cosmo: HICosmo,
+        R: float,
+        zs: float,
+        zl: float,
+        zc: float,
+    ) -> float: ...
+    def reduced_shear_array(
+        self,
+        dp: HaloDensityProfile,
+        cosmo: HICosmo,
+        R: Sequence[float],
+        fin: float,
+        fout: float,
+        zs: Sequence[float],
+        zl: float,
+        zc: float,
+    ) -> list[float]: ...
+    def reduced_shear_array_equal(
+        self,
+        dp: HaloDensityProfile,
+        cosmo: HICosmo,
+        R: Sequence[float],
+        fin: float,
+        fout: float,
+        zs: Sequence[float],
+        zl: float,
+        zc: float,
+    ) -> list[float]: ...
+    def reduced_shear_infinity(
+        self,
+        dp: HaloDensityProfile,
+        cosmo: HICosmo,
+        R: float,
+        zs: float,
+        zl: float,
+        zc: float,
+    ) -> float: ...
+    def reduced_shear_optzs(
+        self,
+        dp: HaloDensityProfile,
+        cosmo: HICosmo,
+        zs: float,
+        zl: float,
+        optzs: WLSurfaceMassDensityOptzs,
+    ) -> float: ...
     def ref(self) -> WLSurfaceMassDensity: ...
-    def shear(self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zs: float, zl: float, zc: float) -> float: ...
-    def shear_infinity(self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zl: float, zc: float) -> float: ...
-    def sigma(self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zc: float) -> float: ...
-    def sigma_array(self, dp: HaloDensityProfile, cosmo: HICosmo, R: Sequence[float], fin: float, fout: float, zc: float) -> list[float]: ...
-    def sigma_critical(self, cosmo: HICosmo, zs: float, zl: float, zc: float) -> float: ...
-    def sigma_critical_infinity(self, cosmo: HICosmo, zl: float, zc: float) -> float: ...
-    def sigma_excess(self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zc: float) -> float: ...
-    def sigma_excess_array(self, dp: HaloDensityProfile, cosmo: HICosmo, R: Sequence[float], fin: float, fout: float, zc: float) -> list[float]: ...
-    def sigma_mean(self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zc: float) -> float: ...
-    
+    def shear(
+        self,
+        dp: HaloDensityProfile,
+        cosmo: HICosmo,
+        R: float,
+        zs: float,
+        zl: float,
+        zc: float,
+    ) -> float: ...
+    def shear_infinity(
+        self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zl: float, zc: float
+    ) -> float: ...
+    def sigma(
+        self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zc: float
+    ) -> float: ...
+    def sigma_array(
+        self,
+        dp: HaloDensityProfile,
+        cosmo: HICosmo,
+        R: Sequence[float],
+        fin: float,
+        fout: float,
+        zc: float,
+    ) -> list[float]: ...
+    def sigma_critical(
+        self, cosmo: HICosmo, zs: float, zl: float, zc: float
+    ) -> float: ...
+    def sigma_critical_infinity(
+        self, cosmo: HICosmo, zl: float, zc: float
+    ) -> float: ...
+    def sigma_excess(
+        self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zc: float
+    ) -> float: ...
+    def sigma_excess_array(
+        self,
+        dp: HaloDensityProfile,
+        cosmo: HICosmo,
+        R: Sequence[float],
+        fin: float,
+        fout: float,
+        zc: float,
+    ) -> list[float]: ...
+    def sigma_mean(
+        self, dp: HaloDensityProfile, cosmo: HICosmo, R: float, zc: float
+    ) -> float: ...
 
 class WLSurfaceMassDensityClass(GObject.GPointer):
     r"""
@@ -16043,7 +16922,6 @@ class Window(GObject.Object):
     def eval_realspace(self, r: float, R: float) -> float: ...
     def free(self) -> None: ...
     def volume(self) -> float: ...
-    
 
 class WindowClass(GObject.GPointer):
     r"""
@@ -16076,7 +16954,6 @@ class WindowGaussian(Window):
     parent_instance: Window = ...
     @classmethod
     def new(cls) -> WindowGaussian: ...
-    
 
 class WindowGaussianClass(GObject.GPointer):
     r"""
@@ -16105,7 +16982,6 @@ class WindowTophat(Window):
     parent_instance: Window = ...
     @classmethod
     def new(cls) -> WindowTophat: ...
-    
 
 class WindowTophatClass(GObject.GPointer):
     r"""
@@ -16139,6 +17015,7 @@ class Xcor(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         distance: Distance
         meth: XcorLimberMethod
@@ -16149,18 +17026,30 @@ class Xcor(GObject.Object):
     ps: NumCosmoMath.Powspec = ...
     RH: float = ...
     meth: XcorLimberMethod = ...
-    def __init__(self, distance: Distance = ...,
-                 meth: XcorLimberMethod = ...,
-                 power_spec: NumCosmoMath.Powspec = ...): ...
+    def __init__(
+        self,
+        distance: Distance = ...,
+        meth: XcorLimberMethod = ...,
+        power_spec: NumCosmoMath.Powspec = ...,
+    ): ...
     @staticmethod
     def clear(xc: Xcor) -> None: ...
     def free(self) -> None: ...
-    def limber(self, xclk1: XcorLimberKernel, xclk2: XcorLimberKernel, cosmo: HICosmo, lmin: int, lmax: int, vp: NumCosmoMath.Vector) -> None: ...
+    def limber(
+        self,
+        xclk1: XcorLimberKernel,
+        xclk2: XcorLimberKernel,
+        cosmo: HICosmo,
+        lmin: int,
+        lmax: int,
+        vp: NumCosmoMath.Vector,
+    ) -> None: ...
     @classmethod
-    def new(cls, dist: Distance, ps: NumCosmoMath.Powspec, meth: XcorLimberMethod) -> Xcor: ...
+    def new(
+        cls, dist: Distance, ps: NumCosmoMath.Powspec, meth: XcorLimberMethod
+    ) -> Xcor: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> Xcor: ...
-    
 
 class XcorAB(GObject.Object):
     r"""
@@ -16194,6 +17083,7 @@ class XcorAB(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         a: int
         b: int
@@ -16214,21 +17104,33 @@ class XcorAB(GObject.Object):
     mixing: NumCosmoMath.Matrix = ...
     cl_th: NumCosmoMath.Matrix = ...
     cl_obs: NumCosmoMath.Vector = ...
-    def __init__(self, a: int = ...,
-                 b: int = ...,
-                 cl_obs: NumCosmoMath.Vector = ...,
-                 cl_th: NumCosmoMath.Matrix = ...,
-                 ell_lik_max: int = ...,
-                 ell_lik_min: int = ...,
-                 ell_th_cut_off: int = ...,
-                 mixing: NumCosmoMath.Matrix = ...): ...
+    def __init__(
+        self,
+        a: int = ...,
+        b: int = ...,
+        cl_obs: NumCosmoMath.Vector = ...,
+        cl_th: NumCosmoMath.Matrix = ...,
+        ell_lik_max: int = ...,
+        ell_lik_min: int = ...,
+        ell_th_cut_off: int = ...,
+        mixing: NumCosmoMath.Matrix = ...,
+    ): ...
     @staticmethod
     def clear(xcab: XcorAB) -> None: ...
     def free(self) -> None: ...
     @classmethod
-    def new(cls, a: int, b: int, ell_th_cut_off: int, ell_lik_min: int, ell_lik_max: int, clobs_filename: str, mixing_filename: str, mixing_filelength: int) -> XcorAB: ...
+    def new(
+        cls,
+        a: int,
+        b: int,
+        ell_th_cut_off: int,
+        ell_lik_min: int,
+        ell_lik_max: int,
+        clobs_filename: str,
+        mixing_filename: str,
+        mixing_filelength: int,
+    ) -> XcorAB: ...
     def ref(self) -> XcorAB: ...
-    
 
 class XcorABClass(GObject.GPointer):
     r"""
@@ -16264,7 +17166,6 @@ class XcorKinetic(GObject.GBoxed):
     E_z: float = ...
     def copy(self) -> XcorKinetic: ...
     def free(self) -> None: ...
-    
 
 class XcorLimberKernel(NumCosmoMath.Model):
     r"""
@@ -16305,6 +17206,7 @@ class XcorLimberKernel(NumCosmoMath.Model):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         zmax: float
         zmin: float
@@ -16323,15 +17225,22 @@ class XcorLimberKernel(NumCosmoMath.Model):
     zmin: float = ...
     zmax: float = ...
     zmid: float = ...
-    def __init__(self, zmax: float = ...,
-                 zmin: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
-    def add_noise(self, vp1: NumCosmoMath.Vector, vp2: NumCosmoMath.Vector, lmin: int) -> None: ...
+    def __init__(
+        self,
+        zmax: float = ...,
+        zmin: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
+    def add_noise(
+        self, vp1: NumCosmoMath.Vector, vp2: NumCosmoMath.Vector, lmin: int
+    ) -> None: ...
     @staticmethod
     def clear(xclk: XcorLimberKernel) -> None: ...
-    def do_add_noise(self, vp1: NumCosmoMath.Vector, vp2: NumCosmoMath.Vector, lmin: int) -> None: ...
+    def do_add_noise(
+        self, vp1: NumCosmoMath.Vector, vp2: NumCosmoMath.Vector, lmin: int
+    ) -> None: ...
     def do_eval(self, cosmo: HICosmo, z: float, xck: XcorKinetic, l: int) -> float: ...
     def do_obs_len(self) -> int: ...
     def do_obs_params_len(self) -> int: ...
@@ -16347,7 +17256,6 @@ class XcorLimberKernel(NumCosmoMath.Model):
     def obs_params_len(self) -> int: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> XcorLimberKernel: ...
-    
 
 class XcorLimberKernelCMBLensing(XcorLimberKernel):
     r"""
@@ -16397,6 +17305,7 @@ class XcorLimberKernelCMBLensing(XcorLimberKernel):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         Nl: NumCosmoMath.Vector
         dist: Distance
@@ -16419,17 +17328,21 @@ class XcorLimberKernelCMBLensing(XcorLimberKernel):
     Nl: NumCosmoMath.Vector = ...
     Nlmax: int = ...
     xi_lss: float = ...
-    def __init__(self, Nl: NumCosmoMath.Vector = ...,
-                 dist: Distance = ...,
-                 recomb: Recomb = ...,
-                 zmax: float = ...,
-                 zmin: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        Nl: NumCosmoMath.Vector = ...,
+        dist: Distance = ...,
+        recomb: Recomb = ...,
+        zmax: float = ...,
+        zmin: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
-    def new(cls, dist: Distance, recomb: Recomb, Nl: NumCosmoMath.Vector) -> XcorLimberKernelCMBLensing: ...
-    
+    def new(
+        cls, dist: Distance, recomb: Recomb, Nl: NumCosmoMath.Vector
+    ) -> XcorLimberKernelCMBLensing: ...
 
 class XcorLimberKernelCMBLensingClass(GObject.GPointer):
     r"""
@@ -16452,7 +17365,9 @@ class XcorLimberKernelClass(GObject.GPointer):
     parent_class: NumCosmoMath.ModelClass = ...
     eval: Callable[[XcorLimberKernel, HICosmo, float, XcorKinetic, int], float] = ...
     prepare: Callable[[XcorLimberKernel, HICosmo], None] = ...
-    add_noise: Callable[[XcorLimberKernel, NumCosmoMath.Vector, NumCosmoMath.Vector, int], None] = ...
+    add_noise: Callable[
+        [XcorLimberKernel, NumCosmoMath.Vector, NumCosmoMath.Vector, int], None
+    ] = ...
     obs_len: Callable[[XcorLimberKernel], int] = ...
     obs_params_len: Callable[[XcorLimberKernel], int] = ...
 
@@ -16522,6 +17437,7 @@ class XcorLimberKernelGal(XcorLimberKernel):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         bias: NumCosmoMath.Spline
         bparam: NumCosmoMath.Vector
@@ -16559,26 +17475,37 @@ class XcorLimberKernelGal(XcorLimberKernel):
     bias_old: float = ...
     noise_bias_old: float = ...
     nbarm1: float = ...
-    def __init__(self, bias: NumCosmoMath.Spline = ...,
-                 bparam: NumCosmoMath.Vector = ...,
-                 bparam_fit: GLib.Variant = ...,
-                 bparam_length: int = ...,
-                 dist: Distance = ...,
-                 dndz: NumCosmoMath.Spline = ...,
-                 domagbias: bool = ...,
-                 mag_bias: float = ...,
-                 mag_bias_fit: bool = ...,
-                 nbarm1: float = ...,
-                 noise_bias: float = ...,
-                 noise_bias_fit: bool = ...,
-                 zmax: float = ...,
-                 zmin: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        bias: NumCosmoMath.Spline = ...,
+        bparam: NumCosmoMath.Vector = ...,
+        bparam_fit: GLib.Variant = ...,
+        bparam_length: int = ...,
+        dist: Distance = ...,
+        dndz: NumCosmoMath.Spline = ...,
+        domagbias: bool = ...,
+        mag_bias: float = ...,
+        mag_bias_fit: bool = ...,
+        nbarm1: float = ...,
+        noise_bias: float = ...,
+        noise_bias_fit: bool = ...,
+        zmax: float = ...,
+        zmin: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
-    def new(cls, zmin: float, zmax: float, np: int, nbarm1: float, dn_dz: NumCosmoMath.Spline, dist: Distance, domagbias: bool) -> XcorLimberKernelGal: ...
-    
+    def new(
+        cls,
+        zmin: float,
+        zmax: float,
+        np: int,
+        nbarm1: float,
+        dn_dz: NumCosmoMath.Spline,
+        dist: Distance,
+        domagbias: bool,
+    ) -> XcorLimberKernelGal: ...
 
 class XcorLimberKernelGalClass(GObject.GPointer):
     r"""
@@ -16640,6 +17567,7 @@ class XcorLimberKernelWeakLensing(XcorLimberKernel):
     Signals from GObject:
       notify (GParam)
     """
+
     class Props:
         dist: Distance
         dndz: NumCosmoMath.Spline
@@ -16664,18 +17592,28 @@ class XcorLimberKernelWeakLensing(XcorLimberKernel):
     nbar: float = ...
     intr_shear: float = ...
     noise: float = ...
-    def __init__(self, dist: Distance = ...,
-                 dndz: NumCosmoMath.Spline = ...,
-                 intr_shear: float = ...,
-                 nbar: float = ...,
-                 zmax: float = ...,
-                 zmin: float = ...,
-                 reparam: NumCosmoMath.Reparam = ...,
-                 sparam_array: NumCosmoMath.ObjArray = ...,
-                 submodel_array: NumCosmoMath.ObjArray = ...): ...
+    def __init__(
+        self,
+        dist: Distance = ...,
+        dndz: NumCosmoMath.Spline = ...,
+        intr_shear: float = ...,
+        nbar: float = ...,
+        zmax: float = ...,
+        zmin: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
     @classmethod
-    def new(cls, zmin: float, zmax: float, dn_dz: NumCosmoMath.Spline, nbar: float, intr_shear: float, dist: Distance) -> XcorLimberKernelWeakLensing: ...
-    
+    def new(
+        cls,
+        zmin: float,
+        zmax: float,
+        dn_dz: NumCosmoMath.Spline,
+        nbar: float,
+        intr_shear: float,
+        dist: Distance,
+    ) -> XcorLimberKernelWeakLensing: ...
 
 class XcorLimberKernelWeakLensingClass(GObject.GPointer):
     r"""
@@ -16765,7 +17703,6 @@ class ABCClusterNCountSummary(GObject.GEnum):
     GAUSS_RBF: ABCClusterNCountSummary = ...
 
 class ClusterMassAscasoSParams(GObject.GEnum):
-    CUT: ClusterMassAscasoSParams = ...
     MU_P0: ClusterMassAscasoSParams = ...
     MU_P1: ClusterMassAscasoSParams = ...
     MU_P2: ClusterMassAscasoSParams = ...
@@ -16795,23 +17732,6 @@ class ClusterMassImpl(GObject.GEnum):
 class ClusterMassLnnormalSParams(GObject.GEnum):
     BIAS: ClusterMassLnnormalSParams = ...
     SIGMA: ClusterMassLnnormalSParams = ...
-
-class ClusterMassLnrichExtSParams(GObject.GEnum):
-    CUT: ClusterMassLnrichExtSParams = ...
-    CUT_M1: ClusterMassLnrichExtSParams = ...
-    CUT_Z1: ClusterMassLnrichExtSParams = ...
-    MU: ClusterMassLnrichExtSParams = ...
-    MU_M1: ClusterMassLnrichExtSParams = ...
-    MU_M2: ClusterMassLnrichExtSParams = ...
-    MU_MZ: ClusterMassLnrichExtSParams = ...
-    MU_Z1: ClusterMassLnrichExtSParams = ...
-    MU_Z2: ClusterMassLnrichExtSParams = ...
-    SIGMA_0: ClusterMassLnrichExtSParams = ...
-    SIGMA_M1: ClusterMassLnrichExtSParams = ...
-    SIGMA_M2: ClusterMassLnrichExtSParams = ...
-    SIGMA_MZ: ClusterMassLnrichExtSParams = ...
-    SIGMA_Z1: ClusterMassLnrichExtSParams = ...
-    SIGMA_Z2: ClusterMassLnrichExtSParams = ...
 
 class ClusterMassPlCLSParams(GObject.GEnum):
     A_L: ClusterMassPlCLSParams = ...
@@ -17412,5 +18332,3 @@ class XcorLimberMethod(GObject.GEnum):
     CVODE: XcorLimberMethod = ...
     GSL: XcorLimberMethod = ...
     SUAVE: XcorLimberMethod = ...
-
-
