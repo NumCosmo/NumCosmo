@@ -10,11 +10,13 @@ dependencies:
   - getdist
   - glib
   - glib-tools
+  - gmp
   - gobject-introspection
   - gsl
   - libfyaml
   - matplotlib-base
   - meson
+  - mpfr
   - mypy
   - ninja
   - nlopt

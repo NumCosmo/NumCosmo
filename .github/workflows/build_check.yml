@@ -12,6 +12,7 @@ jobs:
 
   build-gcc-ubuntu:
 
+    name: NumCosmo (ubuntu, apt)
     runs-on: ubuntu-latest
 
     steps:
@@ -60,7 +61,7 @@ jobs:
         ./example_ca
 
   coveralls-gcc-ubuntu:
-
+    name: NumCosmo (ubuntu, apt, coveralls)
     runs-on: ubuntu-latest
 
     steps:
@@ -89,6 +90,7 @@ jobs:
 
   build-gcc-macos:
 
+    name: NumCosmo (macos, brew)
     runs-on: macos-latest
     env:
       CC: gcc-11
