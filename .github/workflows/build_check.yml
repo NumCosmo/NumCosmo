@@ -178,6 +178,12 @@ jobs:
       - name: Building NumCosmo
         run: |
           meson compile -C build
+      - name: Setting up NumCosmo
+        run: |
+          source build/numcosmo_export.sh
+          cd examples
+          python example_simple.py
+          python example_cbe.py
       - name: Running black check
         run: |
           black --check numcosmo_py
