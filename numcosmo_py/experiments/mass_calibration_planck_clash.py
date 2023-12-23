@@ -24,43 +24,19 @@
 
 """Old Planck-CLASH mass calibration experiment."""
 
+from typing import Tuple
+
 from numcosmo_py import Ncm, Nc
 
 Ncm.cfg_init()
 
 
-def run_example():
-    """Run the example."""
+def create_cosmology() -> Nc.HICosmo:
+    """Create a cosmology."""
 
-    Tinker_lin_interp = True
-
-    NT = 3  # Number of threads
-    NClusters = 21  # Number of clusters
-    NWalkers = 100  # Number of walkers / chains
-
-    # Cosmological model: XCDM, DE eqos - w = constant
-    cosmo = Nc.HICosmo.new_from_name(Nc.HICosmo, "NcHICosmoDEXcdm")
-    dist = Nc.Distance.new(4.0)
-    # Primordial power spectrum - power law
+    cosmo = Nc.HICosmoDEXcdm()
     prim = Nc.HIPrimPowerLaw.new()
     reion = Nc.HIReionCamb.new()
-    # Transfer function
-    tf = Nc.TransferFunc.new_from_name("NcTransferFuncEH")
-    # Linear matter power spectrum
-    ps_ml = Nc.PowspecMLTransfer.new(tf)
-    psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)
-    mulf = Nc.MultiplicityFuncTinker.new()
-    mulf.set_linear_interp(Tinker_lin_interp)
-    mulf.set_mdef(Nc.MultiplicityFuncMassDef.MEAN)
-    mulf.set_Delta(500.0)
-    mf = Nc.HaloMassFunction.new(dist, psf, mulf)
-    cad = Nc.ClusterAbundance.new(mf, None)
-    clusterz = Nc.ClusterRedshift.new_from_name(
-        "NcClusterRedshiftNodist{'z-min':<0.0>, 'z-max':<2.0>}"
-    )
-    # Planck - CLASH cluster mass distribution, pivot mass M0
-    clusterm = Nc.ClusterMass.new_from_name("NcClusterMassPlCL{'M0':<5.7e14>}")
-    cpc = Nc.ClusterPseudoCounts.new(NClusters)
 
     cosmo.add_submodel(reion)
     cosmo.add_submodel(prim)
@@ -77,21 +53,32 @@ def run_example():
     cosmo.omega_x2omega_k()
     cosmo.param_set_by_name("Omegak", 0.0)
 
-    cad.prepare(cosmo, clusterz, clusterm)
+    return cosmo
 
-    mset = Ncm.MSet.empty_new()
-    mset.set(cosmo)
-    mset.set(clusterm)
-    mset.set(clusterz)
-    mset.set(cpc)
 
-    clusterm.param_set_ftype(0, Ncm.ParamType.FREE)
-    clusterm.param_set_ftype(1, Ncm.ParamType.FREE)
-    clusterm.param_set_ftype(2, Ncm.ParamType.FREE)
-    clusterm.param_set_ftype(3, Ncm.ParamType.FREE)
-    clusterm.param_set_ftype(4, Ncm.ParamType.FREE)
-    clusterm.param_set_ftype(5, Ncm.ParamType.FREE)
-    clusterm.param_set_ftype(6, Ncm.ParamType.FREE)
+def create_cluster_abundance(
+    Tinker_lin_interp=True,
+) -> Tuple[Nc.ClusterAbundance, Nc.ClusterRedshiftNodist, Nc.ClusterMassPlCL]:
+    """Create a cluster abundance."""
+    # Cosmological distances
+    dist = Nc.Distance.new(4.0)
+    # Transfer function
+    tf = Nc.TransferFuncEH()
+    # Linear matter power spectrum
+    ps_ml = Nc.PowspecMLTransfer.new(tf)
+    psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)
+    mulf = Nc.MultiplicityFuncTinker.new()
+    mulf.set_linear_interp(Tinker_lin_interp)
+    mulf.set_mdef(Nc.MultiplicityFuncMassDef.MEAN)
+    mulf.set_Delta(500.0)
+    mf = Nc.HaloMassFunction.new(dist, psf, mulf)
+    cad = Nc.ClusterAbundance.new(mf, None)
+    clusterz = Nc.ClusterRedshiftNodist(z_min=0.0, z_max=2.0)
+    # Planck - CLASH cluster mass distribution, pivot mass M0
+    clusterm = Nc.ClusterMassPlCL(M0=5.7e14)
+
+    for i in range(7):
+        clusterm.param_set_ftype(i, Ncm.ParamType.FREE)
 
     clusterm.param_set_by_name("Asz", 1.00)
     clusterm.param_set_by_name("Bsz", 0.25)
@@ -101,10 +88,32 @@ def run_example():
     clusterm.param_set_by_name("sigma_l", 0.27)
     clusterm.param_set_by_name("cor", 0.0)
 
-    cpc.param_set_ftype(0, Ncm.ParamType.FREE)
-    cpc.param_set_ftype(1, Ncm.ParamType.FREE)
-    cpc.param_set_ftype(2, Ncm.ParamType.FREE)
-    cpc.param_set_ftype(3, Ncm.ParamType.FREE)
+    return cad, clusterz, clusterm
+
+
+def run_example():
+    """Run the example."""
+
+    Tinker_lin_interp = True
+
+    NT = 3  # Number of threads
+    NClusters = 21  # Number of clusters
+    NWalkers = 100  # Number of walkers / chains
+
+    cosmo = create_cosmology()
+    cad, clusterz, clusterm = create_cluster_abundance(Tinker_lin_interp)
+    cad.prepare(cosmo, clusterz, clusterm)
+
+    cpc = Nc.ClusterPseudoCounts.new(NClusters)
+
+    mset = Ncm.MSet.empty_new()
+    mset.set(cosmo)
+    mset.set(clusterm)
+    mset.set(clusterz)
+    mset.set(cpc)
+
+    for i in range(4):
+        cpc.param_set_ftype(i, Ncm.ParamType.FREE)
 
     cpc.param_set_by_name("lnMCut", 33.0)
     cpc.param_set_by_name("sigma_Mcut", 0.10)
@@ -125,7 +134,7 @@ def run_example():
     lh.priors_add_gauss_param(clusterm.id(), 4, 0.0, 0.08)
 
     algorithm = "ln-neldermead"
-    fit = Ncm.Fit.new(
+    fit = Ncm.Fit.factory(
         Ncm.FitType.NLOPT, algorithm, lh, mset, Ncm.FitGradType.NUMDIFF_CENTRAL
     )
 

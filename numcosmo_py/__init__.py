@@ -36,10 +36,10 @@ from gi.repository import GLib  # noqa: E402
 from gi.repository import GObject  # noqa: E402
 
 # pylint:disable-next=wrong-import-position,unused-import
-from . import ncm as Ncm
+from . import ncm as Ncm  # noqa: E402
 
 # pylint:disable-next=wrong-import-position,unused-import
-from . import nc as Nc
+from . import nc as Nc  # noqa: E402
 
 
 class GEnum(str, Enum):
