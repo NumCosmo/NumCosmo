@@ -46,6 +46,28 @@
 #include "math/ncm_rng.h"
 #include "math/ncm_cfg.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_randist.h>
+#endif /* NUMCOSMO_GIR_SCAN */
+
+typedef struct _NcmRNGPrivate
+{
+  /*< private >*/
+  GObject parent_instance;
+  gsl_rng *r;
+  gulong seed_val;
+  gboolean seed_set;
+  GMutex lock;
+} NcmRNGPrivate;
+
+struct _NcmRNGDiscrete
+{
+  /*< private >*/
+  gsize n;
+  gdouble *weights;
+  gsl_ran_discrete_t *wran;
+};
+
 enum
 {
   PROP_0,
@@ -54,15 +76,19 @@ enum
   PROP_SEED,
 };
 
-G_DEFINE_TYPE (NcmRNG, ncm_rng, G_TYPE_OBJECT)
+G_DEFINE_TYPE_WITH_PRIVATE (NcmRNG, ncm_rng, G_TYPE_OBJECT)
+G_DEFINE_BOXED_TYPE (NcmRNGDiscrete, ncm_rng_discrete, ncm_rng_discrete_copy, ncm_rng_discrete_free)
 
 static void
 ncm_rng_init (NcmRNG *rng)
 {
-  rng->r        = NULL;
-  rng->seed_val = 0;
-  rng->seed_set = FALSE;
-  g_mutex_init (&rng->lock);
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  self->r        = NULL;
+  self->seed_val = 0;
+  self->seed_set = FALSE;
+
+  g_mutex_init (&self->lock);
 }
 
 static void
@@ -71,9 +97,10 @@ _ncm_rng_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (ncm_rng_parent_class)->constructed (object);
   {
-    NcmRNG *rng = NCM_RNG (object);
-    
-    if (!rng->seed_set)
+    NcmRNG *rng                = NCM_RNG (object);
+    NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+    if (!self->seed_set)
       ncm_rng_set_seed (rng, gsl_rng_default_seed);
   }
 }
@@ -82,9 +109,9 @@ static void
 _ncm_rng_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmRNG *rng = NCM_RNG (object);
-  
+
   g_return_if_fail (NCM_IS_RNG (object));
-  
+
   switch (prop_id)
   {
     case PROP_ALGO:
@@ -105,10 +132,11 @@ _ncm_rng_set_property (GObject *object, guint prop_id, const GValue *value, GPar
 static void
 _ncm_rng_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmRNG *rng = NCM_RNG (object);
-  
+  NcmRNG *rng                = NCM_RNG (object);
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
   g_return_if_fail (NCM_IS_RNG (object));
-  
+
   switch (prop_id)
   {
     case PROP_ALGO:
@@ -118,7 +146,7 @@ _ncm_rng_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
       g_value_take_string (value, ncm_rng_get_state (rng));
       break;
     case PROP_SEED:
-      g_value_set_ulong (value, rng->seed_val);
+      g_value_set_ulong (value, self->seed_val);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -129,11 +157,12 @@ _ncm_rng_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
 static void
 _ncm_rng_finalize (GObject *object)
 {
-  NcmRNG *rng = NCM_RNG (object);
-  
-  g_clear_pointer (&rng->r, gsl_rng_free);
-  g_mutex_clear (&rng->lock);
-  
+  NcmRNG *rng                = NCM_RNG (object);
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  g_clear_pointer (&self->r, gsl_rng_free);
+  g_mutex_clear (&self->lock);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_rng_parent_class)->finalize (object);
 }
@@ -142,12 +171,12 @@ static void
 ncm_rng_class_init (NcmRNGClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->constructed  = &_ncm_rng_constructed;
   object_class->finalize     = &_ncm_rng_finalize;
   object_class->set_property = &_ncm_rng_set_property;
   object_class->get_property = &_ncm_rng_get_property;
-  
+
   /**
    * NcmRNG:algorithm:
    *
@@ -162,7 +191,7 @@ ncm_rng_class_init (NcmRNGClass *klass)
                                                         "Algorithm name",
                                                         gsl_rng_default->name,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmRNG:seed:
    *
@@ -176,7 +205,7 @@ ncm_rng_class_init (NcmRNGClass *klass)
                                                        "Algorithm seed",
                                                        0, G_MAXULONG, 0,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmRNG:state:
    *
@@ -192,9 +221,64 @@ ncm_rng_class_init (NcmRNGClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /* Init the global gsl_rng variables */
   gsl_rng_env_setup ();
-  
+
   klass->seed_gen  = g_rand_new ();
   klass->seed_hash = g_hash_table_new (g_direct_hash, g_direct_equal);
+}
+
+/**
+ * ncm_rng_discrete_new:
+ * @weights: (array length=n): array of weights
+ * @n: number of elements in @weights
+ *
+ * Creates a new #NcmRNGDiscrete. This object is used to generate random numbers
+ * from a discrete distribution for the given set of weights.
+ *
+ * Returns: (transfer full): a new #NcmRNGDiscrete.
+ */
+NcmRNGDiscrete *
+ncm_rng_discrete_new (const gdouble *weights, const guint n)
+{
+  NcmRNGDiscrete *rng_discrete = g_slice_new (NcmRNGDiscrete);
+
+  rng_discrete->n = n;
+#if GLIB_CHECK_VERSION (2, 68, 0)
+  rng_discrete->weights = g_memdup2 (weights, n * sizeof (gdouble));
+#else
+  rng_discrete->weights = g_memdup (weights, n * sizeof (gdouble));
+#endif /* GLIB_CHECK_VERSION */
+  rng_discrete->wran = gsl_ran_discrete_preproc (n, weights);
+
+  return rng_discrete;
+}
+
+/**
+ * ncm_rng_discrete_copy:
+ * @rng: a #NcmRNGDiscrete
+ *
+ * Creates a copy of @rng_discrete.
+ *
+ * Returns: (transfer full): a copy of @rng_discrete.
+ */
+NcmRNGDiscrete *
+ncm_rng_discrete_copy (NcmRNGDiscrete *rng)
+{
+  return ncm_rng_discrete_new (rng->weights, rng->n);
+}
+
+/**
+ * ncm_rng_discrete_free:
+ * @rng: a #NcmRNGDiscrete
+ *
+ * Frees the memory allocated by @rng.
+ *
+ */
+void
+ncm_rng_discrete_free (NcmRNGDiscrete *rng)
+{
+  g_clear_pointer (&rng->weights, g_free);
+  g_clear_pointer (&rng->wran, gsl_ran_discrete_free);
+  g_slice_free (NcmRNGDiscrete, rng);
 }
 
 /**
@@ -214,7 +298,7 @@ ncm_rng_new (const gchar *algo)
   NcmRNG *rng = g_object_new (NCM_TYPE_RNG,
                               "algorithm", algo,
                               NULL);
-  
+
   return rng;
 }
 
@@ -237,7 +321,7 @@ ncm_rng_seeded_new (const gchar *algo, gulong seed)
                               "algorithm", algo,
                               "seed", seed,
                               NULL);
-  
+
   return rng;
 }
 
@@ -291,7 +375,9 @@ ncm_rng_clear (NcmRNG **rng)
 void
 ncm_rng_lock (NcmRNG *rng)
 {
-  g_mutex_lock (&rng->lock);
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  g_mutex_lock (&self->lock);
 }
 
 /**
@@ -304,7 +390,9 @@ ncm_rng_lock (NcmRNG *rng)
 void
 ncm_rng_unlock (NcmRNG *rng)
 {
-  g_mutex_unlock (&rng->lock);
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  g_mutex_unlock (&self->lock);
 }
 
 /**
@@ -318,7 +406,9 @@ ncm_rng_unlock (NcmRNG *rng)
 const gchar *
 ncm_rng_get_algo (NcmRNG *rng)
 {
-  return gsl_rng_name (rng->r);
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_rng_name (self->r);
 }
 
 /**
@@ -333,9 +423,10 @@ ncm_rng_get_algo (NcmRNG *rng)
 gchar *
 ncm_rng_get_state (NcmRNG *rng)
 {
-  gpointer state  = gsl_rng_state (rng->r);
-  gsize state_len = gsl_rng_size (rng->r);
-  
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+  gpointer state             = gsl_rng_state (self->r);
+  gsize state_len            = gsl_rng_size (self->r);
+
   return g_base64_encode (state, state_len);
 }
 
@@ -350,16 +441,17 @@ ncm_rng_get_state (NcmRNG *rng)
 void
 ncm_rng_set_algo (NcmRNG *rng, const gchar *algo)
 {
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
   const gsl_rng_type *type;
   gboolean found = FALSE;
-  
+
   if (algo != NULL)
   {
     const gsl_rng_type **t;
     const gsl_rng_type **t0;
-    
+
     t0 = gsl_rng_types_setup ();
-    
+
     for (t = t0; *t != 0; t++)
     {
       if (strcmp ((*t)->name, algo) == 0)
@@ -368,25 +460,25 @@ ncm_rng_set_algo (NcmRNG *rng, const gchar *algo)
         break;
       }
     }
-    
+
     if (!found)
       g_error ("ncm_rng_set_algo: cannot find algorithm %s.", algo);
-    
+
     type = *t;
   }
   else
   {
     type = gsl_rng_default;
   }
-  
-  if (rng->r == NULL)
+
+  if (self->r == NULL)
   {
-    rng->r = gsl_rng_alloc (type);
+    self->r = gsl_rng_alloc (type);
   }
-  else if (strcmp (gsl_rng_name (rng->r), algo) != 0)
+  else if (strcmp (gsl_rng_name (self->r), algo) != 0)
   {
-    gsl_rng_free (rng->r);
-    rng->r = gsl_rng_alloc (type);
+    gsl_rng_free (self->r);
+    self->r = gsl_rng_alloc (type);
   }
 }
 
@@ -401,15 +493,16 @@ ncm_rng_set_algo (NcmRNG *rng, const gchar *algo)
 void
 ncm_rng_set_state (NcmRNG *rng, const gchar *state)
 {
-  gpointer state_ptr    = gsl_rng_state (rng->r);
-  gsize state_len       = gsl_rng_size (rng->r);
-  gsize state_dec_len   = 0;
-  guchar *decoded_state = g_base64_decode (state, &state_dec_len);
-  
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+  gpointer state_ptr         = gsl_rng_state (self->r);
+  gsize state_len            = gsl_rng_size (self->r);
+  gsize state_dec_len        = 0;
+  guchar *decoded_state      = g_base64_decode (state, &state_dec_len);
+
   g_assert_cmpuint (state_len, ==, state_dec_len);
-  
+
   memcpy (state_ptr, decoded_state, state_len);
-  
+
   g_free (decoded_state);
 }
 
@@ -425,10 +518,11 @@ ncm_rng_set_state (NcmRNG *rng, const gchar *state)
 gboolean
 ncm_rng_check_seed (NcmRNG *rng, gulong seed)
 {
-  NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);
-  gint seed_int          = seed;
-  gpointer b             = g_hash_table_lookup (rng_class->seed_hash, GINT_TO_POINTER (seed_int));
-  
+  NcmRNGClass *rng_class     = NCM_RNG_GET_CLASS (rng);
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+  gint seed_int              = seed;
+  gpointer b                 = g_hash_table_lookup (rng_class->seed_hash, GINT_TO_POINTER (seed_int));
+
   return GPOINTER_TO_INT (b) == 0;
 }
 
@@ -443,16 +537,18 @@ ncm_rng_check_seed (NcmRNG *rng, gulong seed)
 void
 ncm_rng_set_seed (NcmRNG *rng, gulong seed)
 {
-  rng->seed_val = seed;
-  
-  if (rng->r != NULL)
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  self->seed_val = seed;
+
+  if (self->r != NULL)
   {
     NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);
     gint seed_int          = seed;
-    
-    gsl_rng_set (rng->r, seed);
+
+    gsl_rng_set (self->r, seed);
     g_hash_table_insert (rng_class->seed_hash, GINT_TO_POINTER (seed_int), GINT_TO_POINTER (1));
-    rng->seed_set = TRUE;
+    self->seed_set = TRUE;
   }
 }
 
@@ -468,7 +564,9 @@ ncm_rng_set_seed (NcmRNG *rng, gulong seed)
 gulong
 ncm_rng_get_seed (NcmRNG *rng)
 {
-  return rng->seed_val;
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return self->seed_val;
 }
 
 /**
@@ -486,10 +584,10 @@ ncm_rng_set_random_seed (NcmRNG *rng, gboolean allow_colisions)
 {
   NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);
   gulong seed            = g_rand_int (rng_class->seed_gen) + 1;
-  
+
   while (!ncm_rng_check_seed (rng, seed))
     seed = g_rand_int (rng_class->seed_gen) + 1;
-  
+
   ncm_rng_set_seed (rng, seed);
 }
 
@@ -508,25 +606,25 @@ NcmRNG *
 ncm_rng_pool_get (const gchar *name)
 {
   NcmRNG *rng;
-  
+
   G_LOCK_DEFINE_STATIC (create_lock);
   G_LOCK_DEFINE_STATIC (update_acess_lock);
-  
+
   if (rng_table == NULL)
   {
     G_LOCK (create_lock);
-    
+
     if (rng_table == NULL)
       rng_table = g_hash_table_new_full (g_str_hash, g_str_equal,
                                          &g_free, (GDestroyNotify) & ncm_rng_free);
 
     G_UNLOCK (create_lock);
   }
-  
+
   G_LOCK (update_acess_lock);
   {
     rng = g_hash_table_lookup (rng_table, name);
-    
+
     if (rng == NULL)
     {
       rng = ncm_rng_new (NULL);
@@ -540,8 +638,76 @@ ncm_rng_pool_get (const gchar *name)
     }
   }
   G_UNLOCK (update_acess_lock);
-  
+
   return rng;
+}
+
+/**
+ * ncm_rng_gen_ulong:
+ * @rng: a #NcmRNG
+ *
+ * This function returns a random unsigned integer from the uniform distribution.
+ *
+ * Returns: a random unsigned long from the uniform distribution.
+ */
+gulong
+ncm_rng_gen_ulong (NcmRNG *rng)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_rng_get (self->r);
+}
+
+/**
+ * ncm_rng_uniform_int_gen:
+ * @rng: a #NcmRNG
+ * @n: upper limit
+ *
+ * This function returns a random number drawn from the
+ * uniform distribution between zero and @n.
+ *
+ * Returns: a random number from the uniform distribution.
+ */
+gulong
+ncm_rng_uniform_int_gen (NcmRNG *rng, gulong n)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_rng_uniform_int (self->r, n);
+}
+
+/**
+ * ncm_rng_uniform01_gen:
+ * @rng: a #NcmRNG
+ *
+ * This function returns a random number drawn from the
+ * uniform distribution between zero and one $[0,1)$.
+ *
+ * Returns: a random number from the uniform distribution.
+ */
+gdouble
+ncm_rng_uniform01_gen (NcmRNG *rng)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_rng_uniform (self->r);
+}
+
+/**
+ * ncm_rng_uniform01_pos_gen:
+ * @rng: a #NcmRNG
+ *
+ * This function returns a random number drawn from the
+ * uniform distribution between zero and one $(0,1)$.
+ *
+ * Returns: a random number from the uniform distribution.
+ */
+gdouble
+ncm_rng_uniform01_pos_gen (NcmRNG *rng)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_rng_uniform_pos (self->r);
 }
 
 /**
@@ -555,6 +721,13 @@ ncm_rng_pool_get (const gchar *name)
  *
  * Returns: a random number from the uniform distribution.
  */
+gdouble
+ncm_rng_uniform_gen (NcmRNG *rng, const gdouble xl, const gdouble xu)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_ran_flat (self->r, xl, xu);
+}
 
 /**
  * ncm_rng_gaussian_gen:
@@ -568,6 +741,13 @@ ncm_rng_pool_get (const gchar *name)
  *
  * Returns: a random number from the Gaussian distribution.
  */
+gdouble
+ncm_rng_gaussian_gen (NcmRNG *rng, const gdouble mu, const gdouble sigma)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_ran_gaussian (self->r, sigma) + mu;
+}
 
 /**
  * ncm_rng_ugaussian_gen:
@@ -580,6 +760,13 @@ ncm_rng_pool_get (const gchar *name)
  *
  * Returns: a random number from the Gaussian distribution.
  */
+gdouble
+ncm_rng_ugaussian_gen (NcmRNG *rng)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_ran_ugaussian (self->r);
+}
 
 /**
  * ncm_rng_gaussian_tail_gen:
@@ -593,6 +780,13 @@ ncm_rng_pool_get (const gchar *name)
  *
  * Returns: a random number from the Gaussian distribution tail.
  */
+gdouble
+ncm_rng_gaussian_tail_gen (NcmRNG *rng, const gdouble a, const gdouble sigma)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_ran_gaussian_tail (self->r, a, sigma);
+}
 
 /**
  * ncm_rng_exponential_gen:
@@ -605,6 +799,13 @@ ncm_rng_pool_get (const gchar *name)
  *
  * Returns: a random number from the exponential distribution.
  */
+gdouble
+ncm_rng_exponential_gen (NcmRNG *rng, const gdouble mu)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_ran_exponential (self->r, mu);
+}
 
 /**
  * ncm_rng_laplace_gen:
@@ -617,6 +818,13 @@ ncm_rng_pool_get (const gchar *name)
  *
  * Returns: a random number from the Laplace distribution.
  */
+gdouble
+ncm_rng_laplace_gen (NcmRNG *rng, const gdouble a)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_ran_laplace (self->r, a);
+}
 
 /**
  * ncm_rng_exppow_gen:
@@ -630,6 +838,13 @@ ncm_rng_pool_get (const gchar *name)
  *
  * Returns: a random number from the exponential power distribution.
  */
+gdouble
+ncm_rng_exppow_gen (NcmRNG *rng, const gdouble a, const gdouble b)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_ran_exppow (self->r, a, b);
+}
 
 /**
  * ncm_rng_beta_gen:
@@ -643,6 +858,13 @@ ncm_rng_pool_get (const gchar *name)
  *
  * Returns: a random number from the beta distribution.
  */
+gdouble
+ncm_rng_beta_gen (NcmRNG *rng, const gdouble a, const gdouble b)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_ran_beta (self->r, a, b);
+}
 
 /**
  * ncm_rng_gamma_gen:
@@ -656,14 +878,170 @@ ncm_rng_pool_get (const gchar *name)
  *
  * Returns: a random number from the gamma distribution.
  */
+gdouble
+ncm_rng_gamma_gen (NcmRNG *rng, const gdouble a, const gdouble b)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_ran_gamma (self->r, a, b);
+}
 
 /**
-* ncm_rng_chisq_gen:
-* @rng: a #NcmRNG
-* @nu: degrees of freedom $\nu$
-*
-* This function returns a random number drawn from the
-* [Chi-square Distribution](https://en.wikipedia.org/wiki/Chi-square_distribution),
-* with $\nu$ degrees of freedom.
-* Returns: a random number from Chi-square distribution.
-*/
+ * ncm_rng_chisq_gen:
+ * @rng: a #NcmRNG
+ * @nu: degrees of freedom $\nu$
+ *
+ * This function returns a random number drawn from the
+ * [Chi-square Distribution](https://en.wikipedia.org/wiki/Chi-square_distribution),
+ * with $\nu$ degrees of freedom.
+ * Returns: a random number from Chi-square distribution.
+ */
+gdouble
+ncm_rng_chisq_gen (NcmRNG *rng, const gdouble nu)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_ran_chisq (self->r, nu);
+}
+
+/**
+ * ncm_rng_poisson_gen:
+ * @rng: a #NcmRNG
+ * @mu: degrees of freedom $\nu$
+ *
+ * This function returns a random number drawn from the Poisson distribution,
+ * with frequency @mu.
+ *
+ * Returns: a random number from the Poisson distribution.
+ */
+gdouble
+ncm_rng_poisson_gen (NcmRNG *rng, const gdouble mu)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_ran_poisson (self->r, mu);
+}
+
+/**
+ * ncm_rng_rayleigh_gen:
+ * @rng: a #NcmRNG
+ * @sigma: scale parameter
+ *
+ * This function returns a random number drawn from the
+ * [Rayleigh distribution](https://en.wikipedia.org/wiki/Rayleigh_distribution)
+ * with scale parameter @sigma.
+ *
+ * Returns: a random number from the Rayleigh distribution.
+ */
+gdouble
+ncm_rng_rayleigh_gen (NcmRNG *rng, const gdouble sigma)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_ran_rayleigh (self->r, sigma);
+}
+
+/**
+ * ncm_rng_discrete_gen:
+ * @rng: a #NcmRNG
+ * @rng_discrete: a #NcmRNGDiscrete
+ *
+ * This function returns a random number drawn from the discrete distribution. The
+ * weights must created using ncm_rng_discrete_new().
+ *
+ */
+gsize
+ncm_rng_discrete_gen (NcmRNG *rng, NcmRNGDiscrete *rng_discrete)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  return gsl_ran_discrete (self->r, rng_discrete->wran);
+}
+
+/**
+ * ncm_rng_sample:
+ * @rng: a #NcmRNG
+ * @dest: an array of @k elements of size @size
+ * @k: number of elements in @dest
+ * @src: an array of @n elements of size @size
+ * @n: number of elements in @src
+ * @size: size of each element in @dest and @src
+ *
+ * This function fills the array @dest with @k elements from the array @src.
+ * The elements are chosen randomly using the algorithm (sample with replecement) in
+ * [gsl_ran_sample()](https://www.gnu.org/software/gsl/doc/html/randist.html#c.gsl_ran_sample).
+ *
+ */
+void
+ncm_rng_sample (NcmRNG *rng, void *dest, size_t k, void *src, size_t n, size_t size)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  gsl_ran_sample (self->r, dest, k, src, n, size);
+}
+
+/**
+ * ncm_rng_choose:
+ * @rng: a #NcmRNG
+ * @dest: an array of @k elements of size @size
+ * @k: number of elements in @dest
+ * @src: an array of @n elements of size @size
+ * @n: number of elements in @src
+ * @size: size of each element in @dest and @src
+ *
+ * This function fills the array @dest with @k elements from the array @src.
+ * The elements are chosen randomly using the algorithm (choose with replecement) in
+ * [gsl_ran_choose()](https://www.gnu.org/software/gsl/doc/html/randist.html#c.gsl_ran_choose).
+ *
+ */
+void
+ncm_rng_choose (NcmRNG *rng, void *dest, size_t k, void *src, size_t n, size_t size)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  gsl_ran_choose (self->r, dest, k, src, n, size);
+}
+
+/**
+ * ncm_rng_multinomial:
+ * @rng: a #NcmRNG
+ * @K: number of possible outcomes
+ * @N: number of trials
+ * @p: (array length=K) (element-type gdouble): array of probabilities
+ * @n: (array length=K) (element-type guint): array of counts
+ *
+ * This function fills the array @n with @K elements using a multinomial distribution
+ * defined by the array @p.
+ *
+ */
+void
+ncm_rng_multinomial (NcmRNG *rng, gsize K, guint N, const gdouble *p, guint *n)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  gsl_ran_multinomial (self->r, K, N, p, n);
+}
+
+/**
+ * ncm_rng_bivariate_gaussian_gen:
+ * @rng: a #NcmRNG
+ * @sigma_x: standard deviation
+ * @sigma_y: standard deviation
+ * @rho: correlation coefficient
+ * @x: (out): random number from the Bivariate Gaussian distribution
+ * @y: (out): random number from the Bivariate Gaussian distribution
+ *
+ * This function returns a random number drawn from the
+ * [Bivariate Gaussian distribution](https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Bivariate_case),
+ * with standard deviations @sigma_x and @sigma_y and correlation coefficient @rho.
+ * The correlation coefficient must be in the range $-1 \leq \rho \leq 1$.
+ *
+ */
+void
+ncm_rng_bivariate_gaussian_gen (NcmRNG *rng, const gdouble sigma_x, const gdouble sigma_y, const gdouble rho, gdouble *x, gdouble *y)
+{
+  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
+
+  gsl_ran_bivariate_gaussian (self->r, sigma_x, sigma_y, rho, x, y);
+}
+

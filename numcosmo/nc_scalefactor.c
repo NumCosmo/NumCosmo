@@ -732,6 +732,45 @@ nc_scalefactor_eval_z_eta (NcScalefactor *a, const gdouble eta)
 }
 
 /**
+ *  <<<<<<< HEAD
+ *  =======
+ * nc_scalefactor_eval_eta_z:
+ * @a: a #NcScalefactor
+ * @z: redshift $z$
+ *
+ * Calculates the value of the conformal time at $z$,
+ * i.e., $\eta(z)$.
+ *
+ * Returns: $\eta(z)$.
+ */
+gdouble
+nc_scalefactor_eval_eta_z (NcScalefactor *a, const gdouble z)
+{
+  NcScalefactorPrivate * const self = a->priv;
+
+  return ncm_spline_eval (self->eta_a, -z);
+}
+
+/**
+ * nc_scalefactor_eval_eta_x:
+ * @a: a #NcScalefactor
+ * @x: redshift x variable $x = 1 + z$
+ *
+ * Calculates the value of the conformal time at $x$,
+ * i.e., $\eta(z(x))$.
+ *
+ * Returns: $\eta(z(x))$.
+ */
+gdouble
+nc_scalefactor_eval_eta_x (NcScalefactor *a, const gdouble x)
+{
+  NcScalefactorPrivate * const self = a->priv;
+
+  return ncm_spline_eval (self->eta_a, -(x - 1.0));
+}
+
+/**
+ *  >>>>>>> master
  * nc_scalefactor_eval_a_eta:
  * @a: a #NcScalefactor
  * @eta: conformal time $\eta$
@@ -909,8 +948,11 @@ _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo)
 
   if (!ncm_spline_is_empty (self->a_eta))
   {
-    eta_a = ncm_vector_get_array (self->a_eta->xv);
-    mz_a  = ncm_vector_get_array (self->a_eta->yv);
+    NcmVector *a_eta_xv = ncm_spline_peek_xv (self->a_eta);
+    NcmVector *a_eta_yv = ncm_spline_peek_yv (self->a_eta);
+
+    eta_a = ncm_vector_get_array (a_eta_xv);
+    mz_a  = ncm_vector_get_array (a_eta_yv);
     g_array_set_size (eta_a, 0);
     g_array_set_size (mz_a, 0);
   }
@@ -922,7 +964,9 @@ _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo)
 
   if (!ncm_spline_is_empty (self->t_eta))
   {
-    t_a = ncm_vector_get_array (self->t_eta->yv);
+    NcmVector *t_eta_yv = ncm_spline_peek_yv (self->t_eta);
+
+    t_a = ncm_vector_get_array (t_eta_yv);
     g_array_set_size (t_a, 0);
   }
   else

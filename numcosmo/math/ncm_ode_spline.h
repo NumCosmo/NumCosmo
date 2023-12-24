@@ -34,34 +34,11 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_ODE_SPLINE             (ncm_ode_spline_get_type ())
-#define NCM_ODE_SPLINE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_ODE_SPLINE, NcmOdeSpline))
-#define NCM_ODE_SPLINE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_ODE_SPLINE, NcmOdeSplineClass))
-#define NCM_IS_ODE_SPLINE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_ODE_SPLINE))
-#define NCM_IS_ODE_SPLINE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_ODE_SPLINE))
-#define NCM_ODE_SPLINE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_ODE_SPLINE, NcmOdeSplineClass))
+#define NCM_TYPE_ODE_SPLINE (ncm_ode_spline_get_type ())
 
-typedef struct _NcmOdeSplineClass NcmOdeSplineClass;
-typedef struct _NcmOdeSpline NcmOdeSpline;
-typedef struct _NcmOdeSplinePrivate NcmOdeSplinePrivate;
+G_DECLARE_FINAL_TYPE (NcmOdeSpline, ncm_ode_spline, NCM, ODE_SPLINE, GObject)
 
 typedef gdouble (*NcmOdeSplineDydx) (gdouble y, gdouble x, gpointer userdata);
-
-struct _NcmOdeSplineClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcmOdeSpline
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmOdeSplinePrivate *priv;
-  NcmSpline *spline;
-};
-
-GType ncm_ode_spline_get_type (void) G_GNUC_CONST;
 
 NcmOdeSpline *ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx);
 NcmOdeSpline *ncm_ode_spline_new_full (NcmSpline *s, NcmOdeSplineDydx dydx, gdouble yi, gdouble xi, gdouble xf);
@@ -82,7 +59,7 @@ void ncm_ode_spline_auto_abstol (NcmOdeSpline *os, gboolean on);
 void ncm_ode_spline_set_ini_step (NcmOdeSpline *os, gdouble ini_step);
 gdouble ncm_ode_spline_get_ini_step (NcmOdeSpline *os);
 
-NCM_INLINE NcmSpline *ncm_ode_spline_peek_spline (NcmOdeSpline *os);
+NcmSpline *ncm_ode_spline_peek_spline (NcmOdeSpline *os);
 
 #define NCM_ODE_SPLINE_DEFAULT_RELTOL (GSL_DBL_EPSILON)
 #define NCM_ODE_SPLINE_DEFAULT_ABSTOL (0.0)
@@ -91,23 +68,4 @@ NCM_INLINE NcmSpline *ncm_ode_spline_peek_spline (NcmOdeSpline *os);
 G_END_DECLS
 
 #endif /* _NCM_ODE_SPLINE_H_ */
-
-#ifndef _NCM_ODE_SPLINE_INLINE_H_
-#define _NCM_ODE_SPLINE_INLINE_H_
-#ifdef NUMCOSMO_HAVE_INLINE
-#ifndef __GTK_DOC_IGNORE__
-
-G_BEGIN_DECLS
-
-NCM_INLINE NcmSpline *
-ncm_ode_spline_peek_spline (NcmOdeSpline *os)
-{
-  return os->spline;
-}
-
-G_END_DECLS
-
-#endif /* __GTK_DOC_IGNORE__ */
-#endif /* NUMCOSMO_HAVE_INLINE */
-#endif /* _NCM_ODE_SPLINE_INLINE_H_ */
 

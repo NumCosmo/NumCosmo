@@ -262,8 +262,8 @@ ncm_model_builder_add_vparam_obj (NcmModelBuilder *mb, NcmVParam *vparam)
  * @name: name of the sacalar parameter
  * @lower_bound: lower-bound value
  * @upper_bound: upper-bound value
- * @scale: FIXME
- * @abstol: FIXME
+ * @scale: parameter scale
+ * @abstol: absolute tolerance
  * @default_value: default value
  * @ppt: a #NcmParamType
  *
@@ -286,10 +286,10 @@ ncm_model_builder_add_sparam (NcmModelBuilder *mb, const gchar *symbol, const gc
  * @default_length: default length of the vector parameter
  * @symbol: symbol of the vector parameter
  * @name: name of the vector parameter
- * @lower_bound: FIXME
- * @upper_bound: FIXME
- * @scale: FIXME
- * @abstol: FIXME
+ * @lower_bound: parameter lower bound
+ * @upper_bound: parameter upper bound
+ * @scale: parameter scale
+ * @abstol: absolute tolerance
  * @default_value: default value
  * @ppt: a #NcmParamType
  *

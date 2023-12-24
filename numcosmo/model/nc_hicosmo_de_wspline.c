@@ -454,6 +454,6 @@ nc_hicosmo_de_wspline_get_alpha (NcHICosmoDEWSpline *wspline)
 {
   NcHICosmoDEWSplinePrivate * const self = wspline->priv;
 
-  return self->w_alpha->xv;
+  return ncm_spline_peek_xv (self->w_alpha);
 }
 

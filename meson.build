@@ -1,7 +1,7 @@
 project(
   'numcosmo',
   ['c', 'fortran'],
-  version: '0.19.0',
+  version: '0.19.2',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.2.0',
   default_options: [
@@ -407,15 +407,19 @@ omp_fortran = dependency(
 message('Checking for GObject introspection')
 
 gir_scanner = find_program('g-ir-scanner', required: get_option('introspection'))
-enable_gir = (
-  get_option('introspection').allowed()
-  and gir_scanner.found()
-  and meson.can_run_host_binaries()
-)
+
+enable_gir = false
+if gir_scanner.found()
+  if get_option('introspection').auto() and meson.can_run_host_binaries()
+    enable_gir = true
+  elif get_option('introspection').enabled()
+    enable_gir = true
+  endif
+endif
 
 if get_option('introspection').enabled() and not meson.can_run_host_binaries()
-  error(
-    'Running binaries on the build host needs to be supported to build with -Dintrospection=enabled',
+  message(
+    'To build GObject introspection files in a cross build, you need to set the appropriate GI_CROSS_LAUNCHER variable.',
   )
 endif
 
@@ -667,13 +671,30 @@ endif
 python_module = import('python')
 python = python_module.find_installation('python3', modules: ['pytest', 'gi'])
 
-# Installing the python module:
-python_dir = python.get_install_dir()
-install_subdir(
-  'numcosmo_py',
-  install_dir: python_dir,
-  exclude_directories: ['__pycache__', '.mypy_cache'],
+python_pip = python_module.find_installation(
+  'python3',
+  modules: ['pip'],
+  required: false,
 )
+
+# Installing the python module:
+if get_option('numcosmo_py')
+  if python_pip.found()
+    pip_cmd = [
+      'python',
+      '-m',
+      'pip',
+      'install',
+      numcosmo_source_dir,
+      '-t',
+      python.get_install_dir(),
+      '--no-dependencies',
+    ]
+    meson.add_install_script(pip_cmd, skip_if_destdir: true)
+  else
+    error('Python pip not found, cannot install the NumCosmoPy python module')
+  endif
+endif
 
 #######################################################################################
 # Creating the configuration files:

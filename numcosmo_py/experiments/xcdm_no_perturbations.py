@@ -45,6 +45,53 @@ from numcosmo_py.datasets.no_perturbations import (
 )
 
 
+def create_mset(
+    use_neutrino: bool = False,
+    flat: bool = False,
+) -> Ncm.MSet:
+    """Create a model set."""
+    model_str = "xcdm"
+    data_str = "data_local"
+
+    if flat:
+        model_str = f"{model_str}_flat"
+
+    filename_base = f"{model_str}_{data_str}"
+    progress_file = f"{filename_base}_progress.mset"
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    if os.path.exists(progress_file):
+        mset = Ncm.MSet.load(progress_file, ser)
+    else:
+        mset = Ncm.MSet.empty_new()
+
+        if use_neutrino:
+            cosmo = Nc.HICosmoDEXcdm(massnu_length=1)
+        else:
+            cosmo = Nc.HICosmoDEXcdm()
+
+        cosmo.omega_x2omega_k()
+
+        cosmo.param_set_by_name("H0", 70.0)
+        cosmo.param_set_by_name("Omegab", 0.05)
+        cosmo.param_set_by_name("Omegac", 0.25)
+        cosmo.param_set_by_name("Omegak", 0.00)
+
+        if use_neutrino:
+            cosmo.orig_param_set(Nc.HICosmoDESParams.ENNU, 2.0328)
+            param_id = cosmo.vparam_index(Nc.HICosmoDEVParams.M, 0)
+            cosmo.param_set_ftype(param_id, Ncm.ParamType.FREE)
+
+        cosmo.set_property("H0_fit", True)
+        cosmo.set_property("Omegac_fit", True)
+        cosmo.set_property("Omegax_fit", not flat)
+        cosmo.set_property("w_fit", True)
+
+        mset.set(cosmo)
+
+    return mset
+
+
 def run_xcdm_nopert_mcmc(
     *,
     ssize: int = 5000000,
@@ -69,48 +116,8 @@ def run_xcdm_nopert_mcmc(
 ) -> str:
     """Runs the XCDM model with no perturbations MCMC."""
 
-    model_str = "xcdm"
-    data_str = "data_local"
-
-    if flat:
-        model_str = f"{model_str}_flat"
-
-    filename_base = f"{model_str}_{data_str}"
-    progress_file = f"{filename_base}_progress.mset"
-
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    mset = create_mset(use_neutrino, flat)
     dset = Ncm.Dataset.new()
-
-    if os.path.exists(progress_file):
-        mset = Ncm.MSet.load(progress_file, ser)
-    else:
-        mset = Ncm.MSet.empty_new()
-
-        if use_neutrino:
-            cosmo = Nc.HICosmo.new_from_name(
-                Nc.HICosmo, "NcHICosmoDEXcdm{'massnu-length':<1>}"
-            )
-        else:
-            cosmo = Nc.HICosmo.new_from_name(Nc.HICosmo, "NcHICosmoDEXcdm")
-
-        cosmo.omega_x2omega_k()
-
-        cosmo.param_set_by_name("H0", 70.0)
-        cosmo.param_set_by_name("Omegab", 0.05)
-        cosmo.param_set_by_name("Omegac", 0.25)
-        cosmo.param_set_by_name("Omegak", 0.00)
-
-        if use_neutrino:
-            cosmo.orig_param_set(Nc.HICosmoDESParams.ENNU, 2.0328)
-            param_id = cosmo.vparam_index(Nc.HICosmoDEVParams.M, 0)
-            cosmo.param_set_ftype(param_id, Ncm.ParamType.FREE)
-
-        cosmo.set_property("H0_fit", True)
-        cosmo.set_property("Omegac_fit", True)
-        cosmo.set_property("Omegax_fit", not flat)
-        cosmo.set_property("w_fit", True)
-
-        mset.set(cosmo)
 
     dist = Nc.Distance(zf=z_f)
 

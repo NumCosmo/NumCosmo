@@ -3,7 +3,81 @@ CHANGELOG
 
 [Current]
 
+[v0.19.2]
+ * Fixed project name in pyproject.toml.
+
+ * New minor version.
+
+ * Using pip to install python modules. (#127)
+
+     * Using pip to install python modules.
+     * Adding conda in the CI.
+     * Added devel_environment.yml.
+     * Update numcosmo_py.
+     * Fixed flake8 issues.
+ * More objects encapsulation (#126)
+
+     * Removed NcmCalc (unfinished). Updated csq1d.
+     * Encapsulated all NumCosmoMath objects.
+     * Including CI testing log.
+     * Adding documentation to every NumCosmoMath objects.
+
+[v0.19.1]
+ * New minor release 0.19.1
+
+ * Updated meson to deal with cross compiling and GI building. Updated ncm.pyi.
+
+ * Removed git ignored files related to autotools and in-source building.
+
+ * Removed unnecessary packages.
+
+ * Yaml implementation (#125)
+
+     * Updated minimum glib version.
+     * Complete version of the yaml serialization, including special types.
+     * Updated Python stubs.
+     * Adding fyaml to CI.
+ * Adding fyaml to CI.
+
+ * Updated Python stubs.
+
+ * Complete version of the yaml serialization, including special types.
+
+ * First version of from_yaml and to_yaml serialization. Updated minimum glib
+     version.
+
+ * New tuple boxed type (#124)
+
+     * Added new NcmDTuple boxed objects.
+     * Added serialization support and tests.
+ * Objects encapsulation (#122)
+
+     * Deleting old unnecessary files.
+     * Encapsulating and documenting NcmMPI objects.
+     * Basic documention for NcmMPIJob and NcmMSetTransKern.
+     * Documenting NcmPrior and subclasses. Finished documentation of
+     NcmPowspec.
+     * More documentation for NcmModelCtrl.
+     * Uncrustified NcmModel.
+     * Reordered NcmModelCtrl.
+     * Encapsulated and documented NcmModel. All subclasses were adapated.
+     * Disabling gsl range check by default and enabled inlining in GSL.
+     * Refactored models to use ncm_model_orig_param_get.
+ * Removed unnecessary header inclusions to avoid propagating depedencies.
+
+ * Fixing warnings in conda build. (#121)
+
+
+ * Mypy to ignore python scripts inside meson builds.
+
+ * New test for simple vector set/get.
+
+ * Removed old files.
+
+
 [v0.19.0]
+ * Release v0.19.0.
+
  * Testing before adding warn supp. Testing for isfinite declaration.
 
  * Adding cfitstio to plc.

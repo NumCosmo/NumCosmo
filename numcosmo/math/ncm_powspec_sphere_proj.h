@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -35,33 +35,11 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_POWSPEC_SPHERE_PROJ             (ncm_powspec_sphere_proj_get_type ())
-#define NCM_POWSPEC_SPHERE_PROJ(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_POWSPEC_SPHERE_PROJ, NcmPowspecSphereProj))
-#define NCM_POWSPEC_SPHERE_PROJ_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_POWSPEC_SPHERE_PROJ, NcmPowspecSphereProjClass))
-#define NCM_IS_POWSPEC_SPHERE_PROJ(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_POWSPEC_SPHERE_PROJ))
-#define NCM_IS_POWSPEC_SPHERE_PROJ_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_POWSPEC_SPHERE_PROJ))
-#define NCM_POWSPEC_SPHERE_PROJ_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_POWSPEC_SPHERE_PROJ, NcmPowspecSphereProjClass))
+#define NCM_TYPE_POWSPEC_SPHERE_PROJ (ncm_powspec_sphere_proj_get_type ())
 
-typedef struct _NcmPowspecSphereProjClass NcmPowspecSphereProjClass;
-typedef struct _NcmPowspecSphereProj NcmPowspecSphereProj;
-typedef struct _NcmPowspecSphereProjPrivate NcmPowspecSphereProjPrivate;
+G_DECLARE_FINAL_TYPE (NcmPowspecSphereProj, ncm_powspec_sphere_proj, NCM, POWSPEC_SPHERE_PROJ, NcmPowspec)
 
-struct _NcmPowspecSphereProjClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcmPowspecSphereProj
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmPowspecSphereProjPrivate *priv;
-};
-
-GType ncm_powspec_sphere_proj_get_type (void) G_GNUC_CONST;
-
-NcmPowspecSphereProj *ncm_powspec_sphere_proj_new (NcmPowspec *ps, guint ell_min, guint ell_max);
+NcmPowspecSphereProj *ncm_powspec_sphere_proj_new (NcmPowspec * ps, guint ell_min, guint ell_max);
 NcmPowspecSphereProj *ncm_powspec_sphere_proj_ref (NcmPowspecSphereProj *psp);
 void ncm_powspec_sphere_proj_free (NcmPowspecSphereProj *psp);
 void ncm_powspec_sphere_proj_clear (NcmPowspecSphereProj **psp);
@@ -93,3 +71,4 @@ gdouble ncm_powspec_sphere_proj_eval_Cell_xi1_xi2 (NcmPowspecSphereProj *psp, Nc
 G_END_DECLS
 
 #endif /* _NCM_POWSPEC_SPHERE_PROJ_H_ */
+

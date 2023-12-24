@@ -986,10 +986,11 @@ nc_hipert_wkb_phase (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha)
   }
   else
   {
-    gdouble alpha_i = wkb->alpha_phase;
-    gdouble alpha_f = alpha;
-    gdouble sign    = 1.0;
-    gdouble Dphase  = 0.0;
+    NcmVector *nuA_xv = ncm_spline_peek_xv (wkb->nuA);
+    gdouble alpha_i   = wkb->alpha_phase;
+    gdouble alpha_f   = alpha;
+    gdouble sign      = 1.0;
+    gdouble Dphase    = 0.0;
     gdouble dphase, alpha_k;
     guint cur, tar, k;
 
@@ -1011,7 +1012,7 @@ nc_hipert_wkb_phase (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha)
 
     for (k = cur; k < tar; k++)
     {
-      gdouble alpha_kp1 = ncm_vector_get (wkb->nuA->xv, k + 1);
+      gdouble alpha_kp1 = ncm_vector_get (nuA_xv, k + 1);
 
       dphase  = ncm_spline_eval_integ (wkb->nuA, alpha_k, alpha_kp1);
       Dphase  = fmod (Dphase + dphase, 2.0 * M_PI);

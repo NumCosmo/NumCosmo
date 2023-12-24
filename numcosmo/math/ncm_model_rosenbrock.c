@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_model_rosenbrock.c
  *
@@ -14,12 +15,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -49,9 +50,14 @@ enum
   PROP_SIZE,
 };
 
-struct _NcmModelRosenbrockPrivate
+typedef struct _NcmModelRosenbrockPrivate
 {
   gint place_holder;
+} NcmModelRosenbrockPrivate;
+
+struct _NcmModelRosenbrock
+{
+  NcmModel parent_instance;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmModelRosenbrock, ncm_model_rosenbrock, NCM_TYPE_MODEL)
@@ -59,7 +65,9 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmModelRosenbrock, ncm_model_rosenbrock, NCM_TYPE_M
 static void
 ncm_model_rosenbrock_init (NcmModelRosenbrock *model_rosenbrock)
 {
-  model_rosenbrock->priv = ncm_model_rosenbrock_get_instance_private (model_rosenbrock);
+  NcmModelRosenbrockPrivate * const self = ncm_model_rosenbrock_get_instance_private (model_rosenbrock);
+
+  self->place_holder = 0;
 }
 
 static void
@@ -94,7 +102,7 @@ static void
 _ncm_model_rosenbrock_dispose (GObject *object)
 {
   /*NcmModelRosenbrock *model_rosenbrock = NCM_MODEL_ROSENBROCK (object);*/
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_rosenbrock_parent_class)->dispose (object);
 }
@@ -102,7 +110,6 @@ _ncm_model_rosenbrock_dispose (GObject *object)
 static void
 _ncm_model_rosenbrock_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_rosenbrock_parent_class)->finalize (object);
 }
@@ -112,14 +119,14 @@ NCM_MSET_MODEL_REGISTER_ID (ncm_model_rosenbrock, NCM_TYPE_MODEL_ROSENBROCK);
 static void
 ncm_model_rosenbrock_class_init (NcmModelRosenbrockClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
   model_class->set_property = &_ncm_model_rosenbrock_set_property;
   model_class->get_property = &_ncm_model_rosenbrock_get_property;
-  
-  object_class->dispose      = &_ncm_model_rosenbrock_dispose;
-  object_class->finalize     = &_ncm_model_rosenbrock_finalize;
+
+  object_class->dispose  = &_ncm_model_rosenbrock_dispose;
+  object_class->finalize = &_ncm_model_rosenbrock_finalize;
 
   ncm_model_class_set_name_nick (model_class, "MRB", "NcmModelRosenbrock");
   ncm_model_class_add_params (model_class, NNCM_MODEL_ROSENBROCK_SPARAM_LEN, 0, PROP_SIZE);
@@ -141,9 +148,9 @@ ncm_model_rosenbrock_class_init (NcmModelRosenbrockClass *klass)
 
 /**
  * ncm_model_rosenbrock_new:
- * 
+ *
  * Creates a new Rosenbrock model.
- * 
+ *
  * Returns: (transfer full): the newly created #NcmModelRosenbrock
  */
 NcmModelRosenbrock *
@@ -151,15 +158,16 @@ ncm_model_rosenbrock_new (void)
 {
   NcmModelRosenbrock *mrb = g_object_new (NCM_TYPE_MODEL_ROSENBROCK,
                                           NULL);
+
   return mrb;
 }
 
 /**
  * ncm_model_rosenbrock_ref:
  * @mrb: a #NcmModelRosenbrock
- * 
+ *
  * Increases the reference count of @mrb by one.
- * 
+ *
  * Returns: (transfer full): @mrb
  */
 NcmModelRosenbrock *
@@ -171,11 +179,11 @@ ncm_model_rosenbrock_ref (NcmModelRosenbrock *mrb)
 /**
  * ncm_model_rosenbrock_free:
  * @mrb: a #NcmModelRosenbrock
- * 
+ *
  * Decreases the reference count of @mrb by one.
- * 
+ *
  */
-void 
+void
 ncm_model_rosenbrock_free (NcmModelRosenbrock *mrb)
 {
   g_object_unref (mrb);
@@ -184,13 +192,14 @@ ncm_model_rosenbrock_free (NcmModelRosenbrock *mrb)
 /**
  * ncm_model_rosenbrock_clear:
  * @mrb: a #NcmModelRosenbrock
- * 
+ *
  * If @mrb is different from NULL, decreases the reference count of
  * @mrb by one and sets @mrb to NULL.
- * 
+ *
  */
-void 
+void
 ncm_model_rosenbrock_clear (NcmModelRosenbrock **mrb)
 {
   g_clear_object (mrb);
 }
+

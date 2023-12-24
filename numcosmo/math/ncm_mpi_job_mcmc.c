@@ -63,14 +63,14 @@
 #define MPI_DOUBLE (0)
 #endif /* HAVE_MPI */
 
-struct _NcmMPIJobMCMCPrivate
+typedef struct _NcmMPIJobMCMCPrivate
 {
   NcmFit *fit;
   NcmObjArray *func_oa;
   gint fparam_len;
   gint nadd_vals;
   NcmTimer *nt;
-};
+} NcmMPIJobMCMCPrivate;
 
 enum
 {
@@ -80,12 +80,17 @@ enum
   PROP_JOB_TYPE,
 };
 
+struct _NcmMPIJobMCMC
+{
+  NcmMPIJob parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobMCMC, ncm_mpi_job_mcmc, NCM_TYPE_MPI_JOB)
 
 static void
 ncm_mpi_job_mcmc_init (NcmMPIJobMCMC *mjmcmc)
 {
-  NcmMPIJobMCMCPrivate * const self = mjmcmc->priv = ncm_mpi_job_mcmc_get_instance_private (mjmcmc);
+  NcmMPIJobMCMCPrivate * const self = ncm_mpi_job_mcmc_get_instance_private (mjmcmc);
 
   self->fit     = NULL;
   self->func_oa = NULL;
@@ -100,7 +105,7 @@ static void
 _ncm_mpi_job_mcmc_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (object);
-  NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
+  NcmMPIJobMCMCPrivate * const self = ncm_mpi_job_mcmc_get_instance_private (mjmcmc);
 
   g_return_if_fail (NCM_IS_MPI_JOB_MCMC (object));
 
@@ -142,7 +147,7 @@ static void
 _ncm_mpi_job_mcmc_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (object);
-  NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
+  NcmMPIJobMCMCPrivate * const self = ncm_mpi_job_mcmc_get_instance_private (mjmcmc);
 
   g_return_if_fail (NCM_IS_MPI_JOB_MCMC (object));
 
@@ -164,7 +169,7 @@ static void
 _ncm_mpi_job_mcmc_constructed (GObject *object)
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (object);
-  NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
+  NcmMPIJobMCMCPrivate * const self = ncm_mpi_job_mcmc_get_instance_private (mjmcmc);
   NcmMSet *mset                     = ncm_fit_peek_mset (self->fit);
 
   self->fparam_len = ncm_mset_fparam_len (mset);
@@ -178,7 +183,7 @@ static void
 _ncm_mpi_job_mcmc_dispose (GObject *object)
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (object);
-  NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
+  NcmMPIJobMCMCPrivate * const self = ncm_mpi_job_mcmc_get_instance_private (mjmcmc);
 
   ncm_fit_clear (&self->fit);
   ncm_obj_array_clear (&self->func_oa);
@@ -274,7 +279,7 @@ static NcmMPIDatatype
 _ncm_mpi_job_mcmc_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (mpi_job);
-  NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
+  NcmMPIJobMCMCPrivate * const self = ncm_mpi_job_mcmc_get_instance_private (mjmcmc);
 
   len[0]  = self->fparam_len + NCM_FIT_ESMCMC_MPI_IN_LEN;
   size[0] = sizeof (gdouble) * len[0];
@@ -286,7 +291,7 @@ static NcmMPIDatatype
 _ncm_mpi_job_mcmc_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (mpi_job);
-  NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
+  NcmMPIJobMCMCPrivate * const self = ncm_mpi_job_mcmc_get_instance_private (mjmcmc);
 
   len[0]  = NCM_FIT_ESMCMC_MPI_OUT_LEN + self->nadd_vals;
   size[0] = sizeof (gdouble) * len[0];
@@ -298,7 +303,7 @@ static gpointer
 _ncm_mpi_job_mcmc_create_input (NcmMPIJob *mpi_job)
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (mpi_job);
-  NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
+  NcmMPIJobMCMCPrivate * const self = ncm_mpi_job_mcmc_get_instance_private (mjmcmc);
 
   return ncm_vector_new (self->fparam_len + NCM_FIT_ESMCMC_MPI_IN_LEN);
 }
@@ -307,7 +312,7 @@ static gpointer
 _ncm_mpi_job_mcmc_create_return (NcmMPIJob *mpi_job)
 {
   NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (mpi_job);
-  NcmMPIJobMCMCPrivate * const self = mjmcmc->priv;
+  NcmMPIJobMCMCPrivate * const self = ncm_mpi_job_mcmc_get_instance_private (mjmcmc);
 
   return ncm_vector_new (NCM_FIT_ESMCMC_MPI_OUT_LEN + self->nadd_vals);
 }
@@ -375,8 +380,8 @@ _ncm_mpi_job_mcmc_unpack_return (NcmMPIJob *mpi_job, gpointer buf, gpointer ret)
 static void
 _ncm_mpi_job_mcmc_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 {
-  NcmMPIJobMCMC *mjt                = NCM_MPI_JOB_MCMC (mpi_job);
-  NcmMPIJobMCMCPrivate * const self = mjt->priv;
+  NcmMPIJobMCMC *mjmcmc             = NCM_MPI_JOB_MCMC (mpi_job);
+  NcmMPIJobMCMCPrivate * const self = ncm_mpi_job_mcmc_get_instance_private (mjmcmc);
   NcmMSet *mset                     = ncm_fit_peek_mset (self->fit);
   const gdouble m2lnL_cur           = ncm_vector_get (input, self->fparam_len + 0);
   const gdouble norm                = ncm_vector_get (input, self->fparam_len + 1);

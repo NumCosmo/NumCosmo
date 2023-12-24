@@ -228,7 +228,7 @@ _nc_galaxy_wl_ellipticity_kde_m2lnP_initial_prep (NcGalaxyWLDist *gwld, NcGalaxy
   const gdouble hp = gsl_hypot (h, ncm_matrix_get (self->obs, 0, 2));
 
   ncm_stats_dist1d_epdf_set_bw_type (self->kde, NCM_STATS_DIST1D_EPDF_BW_FIXED);
-  self->kde->h_fixed = hp;
+  ncm_stats_dist1d_epdf_set_h_fixed (self->kde, hp);
   ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (self->kde));
 
   self->e_vec = g_vec;

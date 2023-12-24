@@ -466,8 +466,11 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
   if (dist->recomb != NULL)
     nc_recomb_prepare_if_needed (dist->recomb, cosmo);
 
+<<<<<<< HEAD
   dist->RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
 
+=======
+>>>>>>> master
   ncm_model_ctrl_update (dist->ctrl, NCM_MODEL (cosmo));
 
   return;
@@ -1572,13 +1575,13 @@ nc_distance_conformal_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 }
 
 #define _NC_DISTANCE_FUNC0_TO_FLIST(fname) \
-  static void _nc_distance_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
-  { \
-    NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
-    NcDistance *dist = NC_DISTANCE (flist->obj); \
-    nc_distance_prepare_if_needed (dist, cosmo); \
-    res[0] = nc_distance_ ## fname (dist, cosmo); \
-  }
+        static void _nc_distance_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
+        { \
+          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
+          NcDistance *dist = NC_DISTANCE (ncm_mset_func_list_peek_obj (flist)); \
+          nc_distance_prepare_if_needed (dist, cosmo); \
+          res[0] = nc_distance_ ## fname (dist, cosmo); \
+        }
 
 _NC_DISTANCE_FUNC0_TO_FLIST (decoupling_redshift)
 _NC_DISTANCE_FUNC0_TO_FLIST (drag_redshift)
@@ -1591,13 +1594,13 @@ _NC_DISTANCE_FUNC0_TO_FLIST (r_zd)
 _NC_DISTANCE_FUNC0_TO_FLIST (r_zd_Mpc)
 
 #define _NC_DISTANCE_FUNC1_TO_FLIST(fname) \
-  static void _nc_distance_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
-  { \
-    NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
-    NcDistance *dist = NC_DISTANCE (flist->obj); \
-    nc_distance_prepare_if_needed (dist, cosmo); \
-    res[0] = nc_distance_ ## fname (dist, cosmo, x[0]); \
-  }
+        static void _nc_distance_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
+        { \
+          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
+          NcDistance *dist = NC_DISTANCE (ncm_mset_func_list_peek_obj (flist)); \
+          nc_distance_prepare_if_needed (dist, cosmo); \
+          res[0] = nc_distance_ ## fname (dist, cosmo, x[0]); \
+        }
 
 _NC_DISTANCE_FUNC1_TO_FLIST (comoving)
 _NC_DISTANCE_FUNC1_TO_FLIST (transverse)
@@ -1615,6 +1618,7 @@ void
 _nc_distance_register_functions (void)
 {
   ncm_mset_func_list_register ("decoupling_redshift",              "z_\\mathrm{dec}",          "NcDistance", "Decoupling redshift",              NC_TYPE_DISTANCE, _nc_distance_flist_decoupling_redshift,              0, 1);
+
   ncm_mset_func_list_register ("drag_redshift",                    "z_\\mathrm{drag}",         "NcDistance", "Drag redshift",                    NC_TYPE_DISTANCE, _nc_distance_flist_drag_redshift,                    0, 1);
   ncm_mset_func_list_register ("shift_parameter_lss",              "R_\\mathrm{lss}",          "NcDistance", "Shift parameter at lss",           NC_TYPE_DISTANCE, _nc_distance_flist_shift_parameter_lss,              0, 1);
   ncm_mset_func_list_register ("comoving_lss",                     "d_\\mathrm{lss}",          "NcDistance", "Comoving scale of lss",            NC_TYPE_DISTANCE, _nc_distance_flist_comoving_lss,                     0, 1);

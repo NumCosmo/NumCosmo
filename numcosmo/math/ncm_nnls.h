@@ -35,29 +35,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_NNLS             (ncm_nnls_get_type ())
-#define NCM_NNLS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_NNLS, NcmNNLS))
-#define NCM_NNLS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_NNLS, NcmNNLSClass))
-#define NCM_IS_NNLS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_NNLS))
-#define NCM_IS_NNLS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_NNLS))
-#define NCM_NNLS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_NNLS, NcmNNLSClass))
+#define NCM_TYPE_NNLS (ncm_nnls_get_type ())
 
-typedef struct _NcmNNLSClass NcmNNLSClass;
-typedef struct _NcmNNLS NcmNNLS;
-typedef struct _NcmNNLSPrivate NcmNNLSPrivate;
-
-struct _NcmNNLSClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcmNNLS
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmNNLSPrivate *priv;
-};
+G_DECLARE_FINAL_TYPE (NcmNNLS, ncm_nnls, NCM, NNLS, GObject)
 
 /**
  * NcmNNLSUMethod:
@@ -79,8 +59,6 @@ typedef enum _NcmNNLSUMethod /*< enum,underscore_name=NCM_NNLS_UMETHOD >*/
   /* < private > */
   NCM_NNLS_UMETHOD_LEN, /*< skip >*/
 } NcmNNLSUMethod;
-
-GType ncm_nnls_get_type (void) G_GNUC_CONST;
 
 NcmNNLS *ncm_nnls_new (guint nrows, guint ncols);
 NcmNNLS *ncm_nnls_ref (NcmNNLS *nnls);

@@ -1707,7 +1707,7 @@ ncm_matrix_fill_rand_cor (NcmMatrix *cm, const gdouble cor_level, NcmRNG *rng)
 
       for (i = k + 1; i < n; i++)
       {
-        gdouble p = (gsl_ran_beta (rng->r, cor_level, cor_level) - 0.5) * 2.0;
+        gdouble p = (ncm_rng_beta_gen (rng, cor_level, cor_level) - 0.5) * 2.0;
         gint l;
 
         ncm_matrix_set (P, k, i, p);

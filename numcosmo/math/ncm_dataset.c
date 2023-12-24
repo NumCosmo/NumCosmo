@@ -240,6 +240,29 @@ ncm_dataset_new_list (gpointer data0, ...)
 }
 
 /**
+ * ncm_dataset_new_array:
+ * @data_array: (array length=len) (element-type NcmData): array of #NcmData to be added
+ * @len: length of @data_array
+ *
+ * Creates a new #NcmDataset object and adds @len #NcmData from @data_array.
+ *
+ * Returns: a new #NcmDataset.
+ */
+NcmDataset *
+ncm_dataset_new_array (NcmData **data_array, guint len)
+{
+  NcmDataset *dset = ncm_dataset_new ();
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    ncm_dataset_append_data (dset, data_array[i]);
+  }
+
+  return dset;
+}
+
+/**
  * ncm_dataset_ref:
  * @dset: pointer to type defined by #NcmDataset
  *
@@ -641,7 +664,7 @@ ncm_dataset_bootstrap_resample (NcmDataset *dset, NcmRNG *rng)
       guint n = ncm_dataset_get_n (dset);
 
       ncm_rng_lock (rng);
-      gsl_ran_multinomial (rng->r, dset->oa->len, n,
+      ncm_rng_multinomial (rng, dset->oa->len, n,
                            (gdouble *) dset->data_prob->data,
                            (guint *) dset->bstrap->data);
       ncm_rng_unlock (rng);

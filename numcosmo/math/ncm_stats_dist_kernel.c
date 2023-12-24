@@ -125,7 +125,7 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmStatsDistKernel, ncm_stats_dist_kernel, 
 static void
 ncm_stats_dist_kernel_init (NcmStatsDistKernel *sdk)
 {
-  NcmStatsDistKernelPrivate * const self = sdk->priv = ncm_stats_dist_kernel_get_instance_private (sdk);
+  NcmStatsDistKernelPrivate * const self = ncm_stats_dist_kernel_get_instance_private (sdk);
 
   self->d = 0;
 }
@@ -271,7 +271,7 @@ ncm_stats_dist_kernel_class_init (NcmStatsDistKernelClass *klass)
 static void
 _ncm_stats_dist_kernel_set_dim (NcmStatsDistKernel *sdk, const guint dim)
 {
-  NcmStatsDistKernelPrivate * const self = sdk->priv;
+  NcmStatsDistKernelPrivate * const self = ncm_stats_dist_kernel_get_instance_private (sdk);
 
   self->d = dim;
 }
@@ -279,7 +279,7 @@ _ncm_stats_dist_kernel_set_dim (NcmStatsDistKernel *sdk, const guint dim)
 static guint
 _ncm_stats_dist_kernel_get_dim (NcmStatsDistKernel *sdk)
 {
-  NcmStatsDistKernelPrivate * const self = sdk->priv;
+  NcmStatsDistKernelPrivate * const self = ncm_stats_dist_kernel_get_instance_private (sdk);
 
   return self->d;
 }
