@@ -28,8 +28,7 @@
  * @title: NcmLHRatio1d
  * @short_description: Likelihood ratio for one dimensional parameter analysis.
  *
- * This object subclasses #NcmLHRatio and defines a likelihood ratio for one
- * dimensional parameter analysis.
+ * This object defines a likelihood ratio for one dimensional parameter analysis.
  *
  */
 

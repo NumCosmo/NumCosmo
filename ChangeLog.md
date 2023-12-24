@@ -4,6 +4,10 @@ CHANGELOG
 [Current]
 
 [v0.19.2]
+ * Fixed project name in pyproject.toml.
+
+ * New minor version.
+
  * Using pip to install python modules. (#127)
 
      * Using pip to install python modules.
@@ -428,8 +432,7 @@ CHANGELOG
      * Fixed copyright notices
      
      ---------
-      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
- 
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br> 
      Co-authored-by: Caio Lima de Oliveira <caiolimadeoliveira@proton.me>
  * Added check to see if the python interface is available.
 
@@ -538,8 +541,7 @@ CHANGELOG
      * Updated plcl script.
      
      ---------
-      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com>
- Co-authored-by:
+      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com> Co-authored-by:
      Mariana Penna Lima <pennalima@gmail.com>
  * Halo bias tests (#73)
 
@@ -577,10 +579,8 @@ CHANGELOG
      * Bias as function of mass
      * Added minimal documentation to bias objects.
      * Finished Documentations
-      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
- 
-     Co-authored-by: Eduardo Barroso <eduardojsbarroso@gmail.com>
- 
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br> 
+     Co-authored-by: Eduardo Barroso <eduardojsbarroso@gmail.com> 
      Co-authored-by: root <root@eduardo>
  * Added interface to generate models using an array of NcmSParams
 
@@ -698,8 +698,7 @@ CHANGELOG
      * missing files
      
      * multiplicity_watson_install
-      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com>
- Co-authored-by:
+      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com> Co-authored-by:
      Henrique Lettieri <henrique.cnl@hotmail.com>
  * Removed ckern algo.
 
