@@ -304,9 +304,8 @@ _ncm_spline_cubic_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
  * ncm_spline_cubic_peek_b_vec:
  * @s: a #NcmSplineCubic
  *
- * Gets the vector of coefficients b. This method is used by subclasses
- * to implement the #NcmSplineCubicClass::prepare virtual method.
- * It should not be used by the user.
+ * Gets the vector of coefficients b. This method is used by subclasses to implement
+ * the ncm_spline_prepare() virtual method. It should not be used by the user.
  *
  * Returns: (transfer none): the vector of coefficients b.
  */
@@ -323,7 +322,7 @@ ncm_spline_cubic_peek_b_vec (const NcmSplineCubic *s)
  * @s: a #NcmSplineCubic
  *
  * Gets the vector of coefficients c. This method is used by subclasses
- * to implement the #NcmSplineCubicClass::prepare virtual method.
+ * to implement the ncm_spline_prepare() virtual method.
  * It should not be used by the user.
  *
  * Returns: (transfer none): the vector of coefficients c.
@@ -341,7 +340,7 @@ ncm_spline_cubic_peek_c_vec (const NcmSplineCubic *s)
  * @s: a #NcmSplineCubic
  *
  * Gets the vector of coefficients d. This method is used by subclasses
- * to implement the #NcmSplineCubicClass::prepare virtual method.
+ * to implement the ncm_spline_prepare() virtual method.
  * It should not be used by the user.
  *
  * Returns: (transfer none): the vector of coefficients d.
@@ -359,7 +358,7 @@ ncm_spline_cubic_peek_d_vec (const NcmSplineCubic *s)
  * @s: a #NcmSplineCubic
  *
  * Gets the vector diag of the tridiagonal matrix. This method is used by subclasses
- * to implement the #NcmSplineCubicClass::prepare virtual method.
+ * to implement the ncm_spline_prepare() virtual method.
  * It should not be used by the user.
  *
  * Returns: (transfer none): the vector of coefficients g.
@@ -377,7 +376,7 @@ ncm_spline_cubic_peek_diag_vec (const NcmSplineCubic *s)
  * @s: a #NcmSplineCubic
  *
  * Gets the vector offdiag of the tridiagonal matrix. This method is used by subclasses
- * to implement the #NcmSplineCubicClass::prepare virtual method.
+ * to implement the ncm_spline_prepare() virtual method.
  * It should not be used by the user.
  *
  * Returns: (transfer none): the vector of coefficients g.
