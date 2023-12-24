@@ -40,6 +40,22 @@ G_BEGIN_DECLS
 
 G_DECLARE_DERIVABLE_TYPE (NcmStatsDistKernel, ncm_stats_dist_kernel, NCM, STATS_DIST_KERNEL, GObject)
 
+/**
+ * NcmStatsDistKernelClass:
+ * @parent_class: The parent class.
+ * @set_dim: Sets the dimension of the kernel.
+ * @get_dim: Gets the dimension of the kernel.
+ * @get_rot_bandwidth: Gets the rule-of-thumb bandwidth of the kernel.
+ * @get_lnnorm: Gets the log of the normalization constant of the kernel.
+ * @eval_unnorm: Evaluates the unnormalized kernel at a given chi2.
+ * @eval_unnorm_vec: Evaluates the unnormalized kernel at a given chi2 vector.
+ * @eval_sum0_gamma_lambda: Evaluates the kernels sum0, gamma and lambda at a given chi2 vector.
+ * @eval_sum1_gamma_lambda: Evaluates the kernels sum1, gamma and lambda at a given chi2 vector.
+ * @sample: Samples the kernel.
+ *
+ * The virtual function table for #NcmStatsDistKernel.
+ *
+ */
 struct _NcmStatsDistKernelClass
 {
   GObjectClass parent_class;
@@ -55,6 +71,7 @@ struct _NcmStatsDistKernelClass
   void (*sample) (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *y, NcmRNG *rng);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
+  /* <private> */
   gpointer padding[9];
 };
 
