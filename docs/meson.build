@@ -109,6 +109,8 @@ if build_gtk_doc
             output: 'numcosmo-mathjax-update',
             command: [addmathjax, '@OUTDIR@' / 'html'],
             build_by_default: true,
+            build_always_stale: true,
+            depends: docfiles,
         )
     endif
 
