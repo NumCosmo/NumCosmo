@@ -26,9 +26,12 @@
 /**
  * SECTION:ncm_ode_spline
  * @title: NcmOdeSpline
- * @short_description: Automatic generation of splines from ODE solvers (#NcmODE).
+ * @short_description: Automatic generation of splines from ODE solvers.
  * @stability: Stable
  * @include: numcosmo/math/ncm_ode_spline.h
+ *
+ * This class defines an object that integrates an ODE and generates a spline
+ * from the solution.
  *
  */
 
@@ -284,7 +287,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:reltol:
    *
-   * #NcmODE integrator's relative tolerance.
+   * Integrator's relative tolerance.
    *
    */
   g_object_class_install_property (object_class,
@@ -298,7 +301,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:abstol:
    *
-   * #NcmODE integrator's absolute tolerance.
+   * Integrator's absolute tolerance.
    *
    */
   g_object_class_install_property (object_class,
