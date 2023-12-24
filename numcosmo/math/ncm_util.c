@@ -812,9 +812,9 @@ ncm_util_cvode_check_flag (gpointer flagvalue, const gchar *funcname, gint opt)
 
 /**
  * ncm_util_cvode_print_stats:
- * @cvode: a #CVodeMem
+ * @cvode: a CVodeMem
  *
- * Prints the statistics of the #CVodeMem object @cvode.
+ * Prints the statistics of the CVodeMem object @cvode.
  *
  * Returns: TRUE.
  */
