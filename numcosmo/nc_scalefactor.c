@@ -732,45 +732,6 @@ nc_scalefactor_eval_z_eta (NcScalefactor *a, const gdouble eta)
 }
 
 /**
- *  <<<<<<< HEAD
- *  =======
- * nc_scalefactor_eval_eta_z:
- * @a: a #NcScalefactor
- * @z: redshift $z$
- *
- * Calculates the value of the conformal time at $z$,
- * i.e., $\eta(z)$.
- *
- * Returns: $\eta(z)$.
- */
-gdouble
-nc_scalefactor_eval_eta_z (NcScalefactor *a, const gdouble z)
-{
-  NcScalefactorPrivate * const self = a->priv;
-
-  return ncm_spline_eval (self->eta_a, -z);
-}
-
-/**
- * nc_scalefactor_eval_eta_x:
- * @a: a #NcScalefactor
- * @x: redshift x variable $x = 1 + z$
- *
- * Calculates the value of the conformal time at $x$,
- * i.e., $\eta(z(x))$.
- *
- * Returns: $\eta(z(x))$.
- */
-gdouble
-nc_scalefactor_eval_eta_x (NcScalefactor *a, const gdouble x)
-{
-  NcScalefactorPrivate * const self = a->priv;
-
-  return ncm_spline_eval (self->eta_a, -(x - 1.0));
-}
-
-/**
- *  >>>>>>> master
  * nc_scalefactor_eval_a_eta:
  * @a: a #NcScalefactor
  * @eta: conformal time $\eta$

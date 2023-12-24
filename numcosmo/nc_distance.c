@@ -466,11 +466,8 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
   if (dist->recomb != NULL)
     nc_recomb_prepare_if_needed (dist->recomb, cosmo);
 
-<<<<<<< HEAD
   dist->RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
 
-=======
->>>>>>> master
   ncm_model_ctrl_update (dist->ctrl, NCM_MODEL (cosmo));
 
   return;
