@@ -18,6 +18,8 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries",
     "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Physics",
     "Operating System :: POSIX :: Linux",
     "Operating System :: POSIX",
     "Operating System :: Unix",
@@ -43,8 +45,11 @@ Repository = "https://github.com/NumCosmo/NumCosmo"
 Documentation = "https://numcosmo.github.io/"
 Changelog = "https://github.com/NumCosmo/NumCosmo/blob/master/ChangeLog.md"
 
-[tool.setuptools]
-package-dir = {numcosmo_py = "numcosmo_py"}
+[tool.setuptools.package-dir]
+numcosmo_py = "numcosmo_py"
+
+[tool.setuptools.package-data]
+mypkg = ["*.pyi", "py.typed"]
 
 [build-system]
 requires = ["setuptools"]
