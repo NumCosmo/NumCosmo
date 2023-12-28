@@ -254,6 +254,22 @@ python_tests = [
     },
 ]
 
+
+python_astropy_scipy = python_module.find_installation(
+    'python3',
+    modules: ['astropy', 'scipy'],
+    required: false,
+)
+
+if python_astropy_scipy.found()
+    python_tests += [
+        {
+            'name': 'py_constants',
+            'source': 'test_py_constants.py',
+        },
+    ]
+endif
+
 if enable_gir
     env = environment()
     env.prepend(

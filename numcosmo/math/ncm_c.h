@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_c.h
  *
@@ -46,20 +47,20 @@ G_DECLARE_FINAL_TYPE (NcmC, ncm_c, NCM, C, GObject)
  * Mathematical constants
  *******************************************************************************/
 
-NCM_INLINE long double ncm_c_sqrt_1_4pi (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_sqrt_pi (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_sqrt_2pi (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_sqrt_pi_2 (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_sqrt_3_4pi (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_ln2 (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_ln3 (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_lnpi_4 (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_ln2pi (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_lnpi (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_pi (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_2_pi_2 (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_tan_1arcsec (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_deg2_steradian (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_sqrt_1_4pi (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_sqrt_pi (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_sqrt_2pi (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_sqrt_pi_2 (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_sqrt_3_4pi (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_ln2 (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_ln3 (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_lnpi_4 (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_ln2pi (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_lnpi (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_pi (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_2_pi_2 (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_tan_1arcsec (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_deg2_steradian (void) G_GNUC_CONST;
 
 NCM_INLINE gdouble ncm_c_degree_to_radian (const gdouble d) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_radian_to_degree (const gdouble r) G_GNUC_CONST;
@@ -337,9 +338,9 @@ NCM_INLINE gdouble ncm_c_decay_He_rate_2s_1s (void) G_GNUC_CONST;
  * START: Statistics
  *******************************************************************************/
 
-NCM_INLINE long double ncm_c_stats_1sigma (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_stats_2sigma (void) G_GNUC_CONST;
-NCM_INLINE long double ncm_c_stats_3sigma (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_stats_1sigma (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_stats_2sigma (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_stats_3sigma (void) G_GNUC_CONST;
 
 /*******************************************************************************
  * END: Statistics
@@ -349,11 +350,6 @@ NCM_INLINE long double ncm_c_stats_3sigma (void) G_GNUC_CONST;
  * START: Observational data
  *******************************************************************************/
 
-NCM_INLINE gdouble ncm_c_wmap5_coadded_I_K (void) G_GNUC_CONST;
-NCM_INLINE gdouble ncm_c_wmap5_coadded_I_Ka (void) G_GNUC_CONST;
-NCM_INLINE gdouble ncm_c_wmap5_coadded_I_Q (void) G_GNUC_CONST;
-NCM_INLINE gdouble ncm_c_wmap5_coadded_I_V (void) G_GNUC_CONST;
-NCM_INLINE gdouble ncm_c_wmap5_coadded_I_W (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_hubble_cte_planck6_base (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_hubble_cte_hst (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_hubble_radius_hm1_Mpc (void);
@@ -365,6 +361,7 @@ NCM_INLINE gdouble ncm_c_crit_number_density_p (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_crit_number_density_n (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_blackbody_energy_density (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_blackbody_per_crit_density_h2 (void) G_GNUC_CONST;
+NCM_INLINE gdouble ncm_c_radiation_temp_to_h2Omega_r0 (const gdouble T);
 
 /*******************************************************************************
  * END: Observational data
@@ -385,85 +382,85 @@ G_BEGIN_DECLS
  * Mathematical constants
  *******************************************************************************/
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_sqrt_1_4pi (void)
 {
   return 0.28209479177387814347403972578038630L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_sqrt_pi (void)
 {
   return 1.77245385090551602729816748334114518L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_sqrt_2pi (void)
 {
   return 2.5066282746310005024157652848110452L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_sqrt_pi_2 (void)
 {
   return 1.2533141373155002512078826424055226L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_sqrt_3_4pi (void)
 {
   return 0.48860251190291992158638462283834700L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_ln2 (void)
 {
   return 0.69314718055994530941723212145817657L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_ln3 (void)
 {
   return 1.0986122886681096913952452369225257L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_lnpi_4 (void)
 {
   return 0.28618247146235004353585683783826468L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_ln2pi (void)
 {
   return 1.8378770664093454835606594728112353L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_lnpi (void)
 {
   return 1.1447298858494001741434273513530587L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_pi (void)
 {
   return 3.1415926535897932384626433832795029L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_2_pi_2 (void)
 {
   return 19.739208802178717237668981999752302L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_tan_1arcsec (void)
 {
   return 4.8481368111333441675396429478852853e-6L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_deg2_steradian (void)
 {
   return 3.0461741978670859934674354937889355e-4L;
@@ -1478,19 +1475,19 @@ ncm_c_decay_He_rate_2s_1s (void)
  * START: Statistics
  *******************************************************************************/
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_stats_1sigma (void)
 {
   return 0.6826894921370858971704650912640758449558L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_stats_2sigma (void)
 {
   return 0.9544997361036415855994347256669331250564L;
 }
 
-NCM_INLINE long double
+NCM_INLINE double
 ncm_c_stats_3sigma (void)
 {
   return 0.9973002039367398109466963704648100452443L;
@@ -1503,36 +1500,6 @@ ncm_c_stats_3sigma (void)
 /*******************************************************************************
  * START: Observational data
  *******************************************************************************/
-
-NCM_INLINE gdouble
-ncm_c_wmap5_coadded_I_K (void)
-{
-  return 1.436;
-}
-
-NCM_INLINE gdouble
-ncm_c_wmap5_coadded_I_Ka (void)
-{
-  return 1.470;
-}
-
-NCM_INLINE gdouble
-ncm_c_wmap5_coadded_I_Q (void)
-{
-  return 2.197;
-}
-
-NCM_INLINE gdouble
-ncm_c_wmap5_coadded_I_V (void)
-{
-  return 3.133;
-}
-
-NCM_INLINE gdouble
-ncm_c_wmap5_coadded_I_W (void)
-{
-  return 6.538;
-}
 
 NCM_INLINE gdouble
 ncm_c_hubble_cte_planck6_base (void)
@@ -1601,7 +1568,7 @@ ncm_c_blackbody_per_crit_density_h2 (void)
 }
 
 NCM_INLINE gdouble
-ncm_c_radiation_temp_to_h2omega_r (const gdouble T)
+ncm_c_radiation_temp_to_h2Omega_r0 (const gdouble T)
 {
   return ncm_c_blackbody_per_crit_density_h2 () * gsl_pow_4 (T);
 }
