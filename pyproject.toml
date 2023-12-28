@@ -49,7 +49,7 @@ Changelog = "https://github.com/NumCosmo/NumCosmo/blob/master/ChangeLog.md"
 numcosmo_py = "numcosmo_py"
 
 [tool.setuptools.package-data]
-mypkg = ["*.pyi", "py.typed"]
+numcosmo_py = ["*.pyi", "py.typed"]
 
 [build-system]
 requires = ["setuptools"]
