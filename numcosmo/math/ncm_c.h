@@ -58,7 +58,7 @@ NCM_INLINE double ncm_c_lnpi_4 (void) G_GNUC_CONST;
 NCM_INLINE double ncm_c_ln2pi (void) G_GNUC_CONST;
 NCM_INLINE double ncm_c_lnpi (void) G_GNUC_CONST;
 NCM_INLINE double ncm_c_pi (void) G_GNUC_CONST;
-NCM_INLINE double ncm_c_2_pi_2 (void) G_GNUC_CONST;
+NCM_INLINE double ncm_c_two_pi_2 (void) G_GNUC_CONST;
 NCM_INLINE double ncm_c_tan_1arcsec (void) G_GNUC_CONST;
 NCM_INLINE double ncm_c_deg2_steradian (void) G_GNUC_CONST;
 
@@ -449,7 +449,7 @@ ncm_c_pi (void)
 }
 
 NCM_INLINE double
-ncm_c_2_pi_2 (void)
+ncm_c_two_pi_2 (void)
 {
   return 19.739208802178717237668981999752302L;
 }

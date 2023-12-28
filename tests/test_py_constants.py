@@ -34,6 +34,12 @@ from astropy import units as u
 from numcosmo_py import Ncm
 
 
+def test_constants_object():
+    """Test constants from ncm_c.h"""
+    c = Ncm.C()
+    assert c is not None
+
+
 def test_constants_math():
     """Test constants from ncm_c.h"""
 
@@ -48,17 +54,28 @@ def test_constants_math():
     assert_allclose(Ncm.C.ln2pi(), math.log(2.0 * math.pi))
     assert_allclose(Ncm.C.lnpi(), math.log(math.pi))
     assert_allclose(Ncm.C.pi(), math.pi)
+    assert_allclose(Ncm.C.two_pi_2(), 2.0 * math.pi**2)
 
     assert_allclose(Ncm.C.tan_1arcsec(), math.tan(math.pi / (3600.0 * 180.0)))
     assert_allclose(Ncm.C.deg2_steradian(), (math.pi / 180.0) ** 2)
 
     angles = np.linspace(-10 * math.pi, 10.0 * math.pi, 311, endpoint=False)
+    angles_deg = angles * 180.0 / math.pi
 
     assert_allclose(
         [Ncm.C.radian_0_2pi(angle) for angle in angles], angles % (2.0 * math.pi)
     )
     assert_allclose(
         [Ncm.C.sign_sin(angle) for angle in angles], np.sign(np.sin(angles))
+    )
+
+    assert_allclose(
+        [Ncm.C.degree_to_radian(angle) for angle in angles_deg],
+        angles_deg * math.pi / 180.0,
+    )
+    assert_allclose(
+        [Ncm.C.radian_to_degree(angle) for angle in angles],
+        angles * 180.0 / math.pi,
     )
 
 

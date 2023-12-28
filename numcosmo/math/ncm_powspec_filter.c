@@ -467,7 +467,7 @@ _ncm_powspec_filter_k2Pk (gdouble k, gpointer userdata)
   NcmPowspecFilterArg *arg = (NcmPowspecFilterArg *) userdata;
   const gdouble k2         = k * k;
   const gdouble Pk         = ncm_powspec_eval (arg->psf->ps, arg->model, arg->z, k);
-  const gdouble f          = Pk * k2 / ncm_c_2_pi_2 ();
+  const gdouble f          = Pk * k2 / ncm_c_two_pi_2 ();
 
   return f;
 }

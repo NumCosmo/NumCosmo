@@ -165,7 +165,7 @@ ncm_c_class_init (NcmCClass *klass)
  */
 
 /**
- * ncm_c_2_pi_2:
+ * ncm_c_twp_pi_2:
  *
  * Returns: $2\pi^2$.
  */
