@@ -28,6 +28,7 @@ import math
 from numpy.testing import assert_allclose
 import numpy as np
 from numcosmo_py import Ncm
+from numcosmo_py.ncm import MSet, Matrix
 
 Ncm.cfg_init()
 
@@ -57,6 +58,19 @@ class DataGaussTest(Ncm.DataGauss):
 
         vp.set(0, 0.0)
         vp.set(1, 0.0)
+
+
+class DataGaussTestUpdateCov(DataGaussTest):
+    """Test class for NcmDataGauss with update covariance."""
+
+    def do_inv_cov_func(  # pylint: disable=arguments-differ
+        self, _: MSet, inv_cov: Matrix
+    ) -> bool:
+        """Do inverse covariance function."""
+
+        inv_cov.memcpy(self.peek_inv_cov())
+
+        return True
 
 
 def test_data_gauss_set_get_size():
@@ -90,14 +104,22 @@ def test_data_gauss_resample():
 
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.empty_new()
-    sv = Ncm.StatsVec.new(2, Ncm.StatsVecType.COV, False)
+    sv = Ncm.StatsVec.new(5, Ncm.StatsVecType.COV, False)
+    residual = Ncm.Vector.new(2)
 
     n_runs = 100
     data_dist = DataGaussTest(corr=0.5, sigma1=1.0, sigma2=2.0)
 
     for _ in range(n_runs):
         data_dist.resample(mset, rng)
-        sv.append(data_dist.peek_mean(), True)
+
+        sv.set(0, data_dist.peek_mean().get(0))
+        sv.set(1, data_dist.peek_mean().get(1))
+        sv.set(2, data_dist.m2lnL_val(mset))
+        data_dist.leastsquares_f(mset, residual)
+        sv.set(3, residual.get(0))
+        sv.set(4, residual.get(1))
+        sv.update()
 
     assert_allclose(sv.get_mean(0), 0.0, atol=3.0 / math.sqrt(n_runs))
     assert_allclose(sv.get_mean(1), 0.0, atol=3.0 / math.sqrt(n_runs))
@@ -105,12 +127,23 @@ def test_data_gauss_resample():
     assert_allclose(sv.get_sd(1), 2.0, atol=0.1)
     assert_allclose(sv.get_cor(0, 1), 0.5, atol=0.1)
 
+    assert_allclose(sv.get_mean(2), 2.0, atol=0.4)
+
+    # Residuals should have mean zero and standard deviation one and
+    # be uncorrelated
+    assert_allclose(sv.get_mean(3), 0.0, atol=3.0 / math.sqrt(n_runs))
+    assert_allclose(sv.get_mean(4), 0.0, atol=3.0 / math.sqrt(n_runs))
+    assert_allclose(sv.get_sd(3), 1.0, atol=0.1)
+    assert_allclose(sv.get_sd(4), 1.0, atol=0.1)
+    assert_allclose(sv.get_cor(3, 4), 0.0, atol=0.1)
+
 
 def test_data_gauss_bootstrap():
     """Test NcmDataDist2D."""
 
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.empty_new()
+    sv = Ncm.StatsVec.new(3, Ncm.StatsVecType.COV, False)
 
     n_runs = 100
     data_dist = DataGaussTest()
@@ -126,8 +159,18 @@ def test_data_gauss_bootstrap():
         data_dist.bootstrap_resample(rng)
         index_freq = np.array(bootstrap.get_sortncomp())
         freq = index_freq[1::2]
+        sv.set(0, data_dist.peek_mean().get(0))
+        sv.set(1, data_dist.peek_mean().get(1))
+        sv.set(2, data_dist.m2lnL_val(mset))
+        sv.update()
 
         assert np.sum(freq) == 2
+
+    assert_allclose(sv.get_mean(2), 0.0, atol=0.4)
+
+    data_dist.set_size(10)
+    assert bootstrap.get_bsize() == 10
+    assert bootstrap.get_fsize() == 10
 
 
 def test_data_gauss_serialize():
@@ -154,9 +197,49 @@ def test_data_gauss_serialize():
     )
 
 
+def test_data_gauss_update_cov_resample():
+    """Test NcmDataGauss."""
+
+    rng = Ncm.RNG.new()
+    mset = Ncm.MSet.empty_new()
+    sv = Ncm.StatsVec.new(5, Ncm.StatsVecType.COV, False)
+    residual = Ncm.Vector.new(2)
+
+    n_runs = 100
+    data_dist = DataGaussTestUpdateCov(corr=0.5, sigma1=1.0, sigma2=2.0)
+
+    for _ in range(n_runs):
+        data_dist.resample(mset, rng)
+
+        sv.set(0, data_dist.peek_mean().get(0))
+        sv.set(1, data_dist.peek_mean().get(1))
+        sv.set(2, data_dist.m2lnL_val(mset))
+        data_dist.leastsquares_f(mset, residual)
+        sv.set(3, residual.get(0))
+        sv.set(4, residual.get(1))
+        sv.update()
+
+    assert_allclose(sv.get_mean(0), 0.0, atol=3.0 / math.sqrt(n_runs))
+    assert_allclose(sv.get_mean(1), 0.0, atol=3.0 / math.sqrt(n_runs))
+    assert_allclose(sv.get_sd(0), 1.0, atol=0.1)
+    assert_allclose(sv.get_sd(1), 2.0, atol=0.1)
+    assert_allclose(sv.get_cor(0, 1), 0.5, atol=0.1)
+
+    assert_allclose(sv.get_mean(2), 2.0, atol=0.4)
+
+    # Residuals should have mean zero and standard deviation one and
+    # be uncorrelated
+    assert_allclose(sv.get_mean(3), 0.0, atol=3.0 / math.sqrt(n_runs))
+    assert_allclose(sv.get_mean(4), 0.0, atol=3.0 / math.sqrt(n_runs))
+    assert_allclose(sv.get_sd(3), 1.0, atol=0.1)
+    assert_allclose(sv.get_sd(4), 1.0, atol=0.1)
+    assert_allclose(sv.get_cor(3, 4), 0.0, atol=0.1)
+
+
 if __name__ == "__main__":
     test_data_gauss_set_get_size()
     test_data_gauss_get_inv_cov()
     test_data_gauss_resample()
     test_data_gauss_bootstrap()
     test_data_gauss_serialize()
+    test_data_gauss_update_cov_resample()
