@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_data_dist2d.h
  *
@@ -44,7 +45,7 @@ struct _NcmDataDist2dClass
   /*< private >*/
   NcmDataClass parent_class;
 
-  gdouble (*m2lnL_val) (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble x, gdouble y);
+  gdouble (*dist2d_m2lnL_val) (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble x, gdouble y);
   void (*inv_pdf) (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble u, gdouble v, gdouble *x, gdouble *y);
   void (*set_size) (NcmDataDist2d *dist2d, guint np);
   guint (*get_size) (NcmDataDist2d *dist2d);
@@ -56,6 +57,8 @@ struct _NcmDataDist2dClass
 void ncm_data_dist2d_set_size (NcmDataDist2d *dist2d, guint np);
 guint ncm_data_dist2d_get_size (NcmDataDist2d *dist2d);
 NcmMatrix *ncm_data_dist2d_get_data (NcmDataDist2d *dist2d);
+
+void ncm_data_dist2d_inv_pdf (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble u, gdouble v, gdouble *x, gdouble *y);
 
 G_END_DECLS
 
