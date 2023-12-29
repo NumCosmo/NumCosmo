@@ -126,8 +126,33 @@ def test_data_dist1d_bootstrap():
     )
 
 
+def test_data_dist1d_serialize():
+    """Test NcmDataDist1D."""
+
+    rng = Ncm.RNG.new()
+    mset = Ncm.MSet.empty_new()
+
+    n_points = 100
+    data_dist = DataDist1dTest(n_points=n_points)
+
+    data_dist.resample(mset, rng)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+
+    data_dist_dup = ser.dup_obj(data_dist)
+
+    assert data_dist_dup.get_size() == data_dist.get_size()
+    assert data_dist_dup.get_data().len() == data_dist.get_data().len()
+
+    vector = data_dist.get_data()
+    vector_dup = data_dist_dup.get_data()
+
+    assert_allclose(vector.dup_array(), vector_dup.dup_array())
+
+
 if __name__ == "__main__":
     test_data_dist1d_set_get_size()
     test_data_dist1d_get_vector()
     test_data_dist1d_resample()
     test_data_dist1d_bootstrap()
+    test_data_dist1d_serialize()

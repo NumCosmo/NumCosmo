@@ -103,6 +103,8 @@ def test_data_dist2d_resample():
         sv.get_mean(0), 2.0 * n_points, atol=3.0 * math.sqrt(4.0 * n_points / n_runs)
     )
 
+    assert_allclose(data_dist.inv_pdf(mset, 0.5, 0.5), [0.0, 0.0])
+
 
 def test_data_dist2d_bootstrap():
     """Test NcmDataDist2D."""
@@ -131,6 +133,30 @@ def test_data_dist2d_bootstrap():
     assert_allclose(
         sv.get_mean(0), 2.0 * n_points, atol=20.0 * math.sqrt(4.0 * n_points / n_runs)
     )
+
+
+def test_data_dist2d_serialize():
+    """Test NcmDataDist1D."""
+
+    rng = Ncm.RNG.new()
+    mset = Ncm.MSet.empty_new()
+
+    n_points = 100
+    data_dist = DataDist2dTest(n_points=n_points)
+
+    data_dist.resample(mset, rng)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+
+    data_dist_dup = ser.dup_obj(data_dist)
+
+    assert data_dist_dup.get_size() == data_dist.get_size()
+    assert data_dist_dup.get_data().nrows() == data_dist.get_data().nrows()
+
+    matrix = data_dist.get_data()
+    matrix_dup = data_dist_dup.get_data()
+
+    assert_allclose(matrix.dup_array(), matrix_dup.dup_array())
 
 
 if __name__ == "__main__":
