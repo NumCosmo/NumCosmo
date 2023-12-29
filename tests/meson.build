@@ -5,6 +5,10 @@ c_tests = [
         'sources': ['test_ncm_cfg.c'],
     },
     {
+        'name': 'ncm_generic',
+        'sources': ['test_ncm_generic.c'],
+    },
+    {
         'name': 'ncm_sparam',
         'sources': ['test_ncm_sparam.c'],
     },
