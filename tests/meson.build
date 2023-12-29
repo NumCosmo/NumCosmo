@@ -252,6 +252,11 @@ python_tests = [
         'name': 'py_sanity',
         'source': 'test_py_sanity.py',
     },
+    {
+        'name': 'py_data_funnel',
+        'source': 'test_py_data_funnel.py',
+    },
+
 ]
 
 
