@@ -252,10 +252,6 @@ python_tests = [
         'name': 'py_sanity',
         'source': 'test_py_sanity.py',
     },
-    {
-        'name': 'py_csq1d',
-        'source': 'test_py_csq1d.py',
-    },
 ]
 
 
@@ -270,6 +266,10 @@ if python_astropy_scipy.found()
         {
             'name': 'py_constants',
             'source': 'test_py_constants.py',
+        },
+        {
+            'name': 'py_csq1d',
+            'source': 'test_py_csq1d.py',
         },
     ]
 endif
