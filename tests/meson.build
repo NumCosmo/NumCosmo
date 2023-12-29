@@ -252,6 +252,10 @@ python_tests = [
         'name': 'py_sanity',
         'source': 'test_py_sanity.py',
     },
+    {
+        'name': 'py_csq1d',
+        'source': 'test_py_csq1d.py',
+    },
 ]
 
 

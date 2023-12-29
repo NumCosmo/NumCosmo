@@ -33,6 +33,8 @@ from astropy import units as u
 
 from numcosmo_py import Ncm
 
+Ncm.cfg_init()
+
 
 def test_constants_object():
     """Test constants from ncm_c.h"""
