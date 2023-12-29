@@ -25,6 +25,8 @@
 """Tests on NcmDataDist2D class."""
 
 import math
+from typing import Tuple
+
 from numpy.testing import assert_allclose
 from scipy.stats import norm
 
@@ -54,7 +56,7 @@ class DataDist2dTest(Ncm.DataDist2d):
         _: Ncm.MSet,
         u: float,
         v: float,
-    ) -> float:
+    ) -> Tuple[float, float]:
         """Test function for NcmDataDist2D.do_inv_pdf."""
         return (norm.ppf(u), norm.ppf(v))
 

@@ -40,24 +40,28 @@ class DataGaussTest(Ncm.DataGauss):
         """Constructor for DataGaussTest."""
 
         oneminuscorr = 1.0 - corr * corr
-        inv_cov = [
+        inv_cov_array = [
             1.0 / (sigma1 * sigma1 * oneminuscorr),
             -corr / (sigma1 * sigma2 * oneminuscorr),
             -corr / (sigma1 * sigma2 * oneminuscorr),
             1.0 / (sigma2 * sigma2 * oneminuscorr),
         ]
 
-        inv_cov = Ncm.Matrix.new_array(inv_cov, 2)
+        inv_cov = Ncm.Matrix.new_array(inv_cov_array, 2)
         mean = Ncm.Vector.new_array([0.0, 0.0])
         super().__init__(n_points=2, inv_cov=inv_cov, mean=mean, init=True)
 
     def do_mean_func(  # pylint: disable=arguments-differ
-        self, _: Ncm.MSet, vp: Ncm.Vector
+        self, mset: Ncm.MSet, vp: Ncm.Vector
     ) -> None:
         """Do mean function."""
 
-        vp.set(0, 0.0)
-        vp.set(1, 0.0)
+        mvnd = mset.peek(Ncm.ModelMVND.id())
+        assert mvnd is not None
+        assert mvnd.vparam_len(0) == 2
+
+        vp.set(0, mvnd.orig_vparam_get(0, 0))
+        vp.set(1, mvnd.orig_vparam_get(0, 1))
 
 
 class DataGaussTestUpdateCov(DataGaussTest):
@@ -103,7 +107,7 @@ def test_data_gauss_resample():
     """Test NcmDataGauss."""
 
     rng = Ncm.RNG.new()
-    mset = Ncm.MSet.empty_new()
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
     sv = Ncm.StatsVec.new(5, Ncm.StatsVecType.COV, False)
     residual = Ncm.Vector.new(2)
 
@@ -142,7 +146,7 @@ def test_data_gauss_bootstrap():
     """Test NcmDataDist2D."""
 
     rng = Ncm.RNG.new()
-    mset = Ncm.MSet.empty_new()
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
     sv = Ncm.StatsVec.new(3, Ncm.StatsVecType.COV, False)
 
     n_runs = 100
@@ -177,7 +181,7 @@ def test_data_gauss_serialize():
     """Test NcmDataGauss."""
 
     rng = Ncm.RNG.new()
-    mset = Ncm.MSet.empty_new()
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
 
     data_dist = DataGaussTest(corr=0.55, sigma1=1.234, sigma2=2.345)
 
@@ -201,7 +205,7 @@ def test_data_gauss_update_cov_resample():
     """Test NcmDataGauss."""
 
     rng = Ncm.RNG.new()
-    mset = Ncm.MSet.empty_new()
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
     sv = Ncm.StatsVec.new(5, Ncm.StatsVecType.COV, False)
     residual = Ncm.Vector.new(2)
 
@@ -236,6 +240,26 @@ def test_data_gauss_update_cov_resample():
     assert_allclose(sv.get_cor(3, 4), 0.0, atol=0.1)
 
 
+def test_data_gauss_fisher():
+    """Test NcmDataGauss fisher matrix."""
+
+    rng = Ncm.RNG.new()
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    mset.prepare_fparam_map()
+
+    data_dist = DataGaussTest(corr=0.5, sigma1=1.0, sigma2=2.0)
+
+    data_dist.resample(mset, rng)
+    fisher = data_dist.fisher_matrix(mset)
+
+    fisher.cholesky_decomp(ord("U"))
+    fisher.cholesky_inverse(ord("U"))
+    fisher.copy_triangle(ord("U"))
+
+    assert_allclose(fisher.dup_array(), [1.0, 1.0, 1.0, 4.0])
+
+
 if __name__ == "__main__":
     test_data_gauss_set_get_size()
     test_data_gauss_get_inv_cov()
@@ -243,3 +267,4 @@ if __name__ == "__main__":
     test_data_gauss_bootstrap()
     test_data_gauss_serialize()
     test_data_gauss_update_cov_resample()
+    test_data_gauss_fisher()

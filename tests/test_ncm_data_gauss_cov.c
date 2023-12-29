@@ -322,6 +322,16 @@ test_ncm_data_gauss_cov_test_bootstrap_resample (TestNcmDataGaussCovTest *test, 
   g_assert (gsl_finite (ncm_stats_vec_get_mean (stat, 0)));
   g_assert (gsl_finite (ncm_stats_vec_get_sd (stat, 0)));
 
+  ncm_data_gauss_cov_set_size (gauss, 10);
+  g_assert_cmpuint (ncm_data_gauss_cov_get_size (gauss), ==, 10);
+
+  {
+    NcmBootstrap *boot = ncm_data_peek_bootstrap (test->data);
+
+    g_assert_cmpuint (ncm_bootstrap_get_bsize (boot), ==, 10);
+    g_assert_cmpuint (ncm_bootstrap_get_fsize (boot), ==, 10);
+  }
+
   ncm_stats_vec_clear (&stat);
   ncm_vector_clear (&mean);
 }

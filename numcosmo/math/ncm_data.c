@@ -291,36 +291,44 @@ _ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
 {
   NcmDataPrivate * const self = ncm_data_get_instance_private (data);
   const guint fparams_len     = ncm_mset_fparams_len (mset);
-  NcmVector *x_v              = ncm_vector_new (fparams_len);
-  NcmDataDiffArg arg          = {mset, data};
-  const guint dim             = ncm_data_get_length (data);
 
-  if (*IM == NULL)
+  if (fparams_len == 0)
   {
-    *IM = ncm_matrix_new (fparams_len, fparams_len);
+    *IM = NULL;
   }
   else
   {
-    g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, ncm_matrix_nrows (*IM));
-    g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, fparams_len);
+    NcmVector *x_v     = ncm_vector_new (fparams_len);
+    NcmDataDiffArg arg = {mset, data};
+    const guint dim    = ncm_data_get_length (data);
+
+    if (*IM == NULL)
+    {
+      *IM = ncm_matrix_new (fparams_len, fparams_len);
+    }
+    else
+    {
+      g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, ncm_matrix_nrows (*IM));
+      g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, fparams_len);
+    }
+
+    ncm_mset_fparams_get_vector (mset, x_v);
+    {
+      GArray *x_a    = ncm_vector_dup_array (x_v);
+      GArray *dmu_a  = ncm_diff_rf_d1_N_to_M (self->diff, x_a, dim, _ncm_data_diff_f, &arg, NULL);
+      NcmMatrix *dmu = ncm_matrix_new_array (dmu_a, dim);
+
+      ncm_data_inv_cov_UH (data, mset, dmu);
+
+      ncm_matrix_dgemm (*IM, 'N', 'T', 1.0, dmu, dmu, 0.0);
+
+      g_array_unref (dmu_a);
+      g_array_unref (x_a);
+      ncm_matrix_free (dmu);
+    }
+    ncm_mset_fparams_set_vector (mset, x_v);
+    ncm_vector_free (x_v);
   }
-
-  ncm_mset_fparams_get_vector (mset, x_v);
-  {
-    GArray *x_a    = ncm_vector_dup_array (x_v);
-    GArray *dmu_a  = ncm_diff_rf_d1_N_to_M (self->diff, x_a, dim, _ncm_data_diff_f, &arg, NULL);
-    NcmMatrix *dmu = ncm_matrix_new_array (dmu_a, dim);
-
-    ncm_data_inv_cov_UH (data, mset, dmu);
-
-    ncm_matrix_dgemm (*IM, 'N', 'T', 1.0, dmu, dmu, 0.0);
-
-    g_array_unref (dmu_a);
-    g_array_unref (x_a);
-    ncm_matrix_free (dmu);
-  }
-  ncm_mset_fparams_set_vector (mset, x_v);
-  ncm_vector_free (x_v);
 }
 
 /**
