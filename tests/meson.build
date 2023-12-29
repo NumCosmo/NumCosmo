@@ -271,6 +271,10 @@ if python_astropy_scipy.found()
             'name': 'py_csq1d',
             'source': 'test_py_csq1d.py',
         },
+        {
+            'name': 'py_data_dist1d',
+            'source': 'test_py_data_dist1d.py',
+        },
     ]
 endif
 
