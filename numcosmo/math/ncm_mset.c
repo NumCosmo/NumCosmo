@@ -514,6 +514,9 @@ ncm_mset_newv (gpointer model0, va_list ap)
   NcmMSet *mset   = ncm_mset_empty_new ();
   NcmModel *model = NULL;
 
+  g_assert (model0 != NULL);
+  g_assert (NCM_IS_MODEL (model0));
+
   ncm_mset_set (mset, model0);
 
   while ((model = va_arg (ap, NcmModel *)) != NULL)

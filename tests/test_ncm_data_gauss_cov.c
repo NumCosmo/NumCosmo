@@ -44,6 +44,7 @@ void test_ncm_data_gauss_cov_test_new (TestNcmDataGaussCovTest *test, gconstpoin
 void test_ncm_data_gauss_cov_test_free (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 void test_ncm_data_gauss_cov_test_sanity (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 void test_ncm_data_gauss_cov_test_resample (TestNcmDataGaussCovTest *test, gconstpointer pdata);
+void test_ncm_data_gauss_cov_test_bootstrap_resample (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 void test_ncm_data_gauss_cov_test_bulk_resample (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 
 void test_ncm_data_gauss_cov_mvnd_new (TestNcmDataGaussCovTest *test, gconstpointer pdata);
@@ -66,6 +67,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/data_gauss_cov/test/resample", TestNcmDataGaussCovTest, NULL,
               &test_ncm_data_gauss_cov_test_new,
               &test_ncm_data_gauss_cov_test_resample,
+              &test_ncm_data_gauss_cov_test_free);
+
+  g_test_add ("/ncm/data_gauss_cov/test/bootstrap/resample", TestNcmDataGaussCovTest, NULL,
+              &test_ncm_data_gauss_cov_test_new,
+              &test_ncm_data_gauss_cov_test_bootstrap_resample,
               &test_ncm_data_gauss_cov_test_free);
 
   g_test_add ("/ncm/data_gauss_cov/test/bulk/resample", TestNcmDataGaussCovTest, NULL,
@@ -280,6 +286,41 @@ test_ncm_data_gauss_cov_test_resample (TestNcmDataGaussCovTest *test, gconstpoin
   }
 
   g_assert_cmpuint (nerr, <, (np * (np - 1)) / 20);
+
+  ncm_stats_vec_clear (&stat);
+  ncm_vector_clear (&mean);
+}
+
+void
+test_ncm_data_gauss_cov_test_bootstrap_resample (TestNcmDataGaussCovTest *test, gconstpointer pdata)
+{
+  NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (test->data);
+  guint np               = ncm_data_gauss_cov_get_size (gauss);
+  NcmStatsVec *stat      = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
+  NcmRNG *rng            = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmMatrix *cov         = ncm_data_gauss_cov_peek_cov (gauss);
+  NcmVector *y           = ncm_data_gauss_cov_peek_mean (gauss);
+  NcmVector *mean        = ncm_vector_new (np);
+  guint resample_size    = 10000 * np;
+  guint nerr             = 0;
+  guint i;
+
+  ncm_data_gauss_cov_test_mean_func (gauss, NULL, mean);
+  ncm_data_resample (test->data, NULL, rng);
+  ncm_data_bootstrap_create (test->data);
+
+  for (i = 0; i < resample_size; i++)
+  {
+    gdouble m2lnL;
+
+    ncm_data_bootstrap_resample (test->data, rng);
+    ncm_data_m2lnL_val (test->data, NULL, &m2lnL);
+    ncm_stats_vec_set (stat, 0, m2lnL);
+    ncm_stats_vec_update (stat);
+  }
+
+  g_assert (gsl_finite (ncm_stats_vec_get_mean (stat, 0)));
+  g_assert (gsl_finite (ncm_stats_vec_get_sd (stat, 0)));
 
   ncm_stats_vec_clear (&stat);
   ncm_vector_clear (&mean);
