@@ -277,9 +277,9 @@ _ncm_fftlog_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_EVAL_R_MAX:
       ncm_fftlog_set_eval_r_max (fftlog, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -332,9 +332,9 @@ _ncm_fftlog_get_property (GObject *object, guint prop_id, GValue *value, GParamS
     case PROP_EVAL_R_MAX:
       g_value_set_double (value, ncm_fftlog_get_eval_r_max (fftlog));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

@@ -34,6 +34,7 @@
 #include <glib.h>
 #include <glib-object.h>
 
+void test_ncm_data_basic (void);
 void test_ncm_data_funnel_basic (void);
 void test_ncm_data_gaussmix2d_basic (void);
 void test_ncm_data_rosenbrock_basic (void);
@@ -47,11 +48,30 @@ main (gint argc, gchar *argv[])
 
   g_test_set_nonfatal_assertions ();
 
+  g_test_add_func ("/ncm/data/basic", test_ncm_data_basic);
   g_test_add_func ("/ncm/data_funnel/basic", test_ncm_data_funnel_basic);
   g_test_add_func ("/ncm/data_gaussmix2d/basic", test_ncm_data_gaussmix2d_basic);
   g_test_add_func ("/ncm/data_rosenbrock/basic", test_ncm_data_rosenbrock_basic);
 
   g_test_run ();
+}
+
+void
+test_ncm_data_basic (void)
+{
+  NcmData *data = NCM_DATA (ncm_data_funnel_new ());
+  NcmData *data2;
+
+  g_assert (data != NULL);
+  g_assert (NCM_IS_DATA (data));
+
+  data2 = ncm_data_ref (data);
+  ncm_data_clear (&data2);
+  g_assert (data2 == NULL);
+
+  g_assert (NCM_IS_DATA (data));
+
+  NCM_TEST_FREE (ncm_data_free, data);
 }
 
 void
