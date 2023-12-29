@@ -250,9 +250,9 @@ _ncm_sphere_map_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_LMAX:
       ncm_sphere_map_set_lmax (smap, g_value_get_uint (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -278,9 +278,9 @@ _ncm_sphere_map_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_LMAX:
       g_value_set_uint (value, ncm_sphere_map_get_lmax (smap));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

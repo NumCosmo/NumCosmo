@@ -131,9 +131,9 @@ _ncm_powspec_corr3d_set_property (GObject *object, guint prop_id, const GValue *
       psc->zi = ncm_powspec_get_zi (psc->ps);
       psc->zf = ncm_powspec_get_zf (psc->ps);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -164,9 +164,9 @@ _ncm_powspec_corr3d_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_POWERSPECTRUM:
       g_value_set_object (value, psc->ps);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

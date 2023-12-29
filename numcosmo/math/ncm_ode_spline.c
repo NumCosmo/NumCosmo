@@ -176,9 +176,9 @@ _ncm_ode_spline_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_INI_STEP:
       ncm_ode_spline_set_ini_step (os, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -225,9 +225,9 @@ _ncm_ode_spline_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_INI_STEP:
       g_value_set_boolean (value, ncm_ode_spline_get_ini_step (os));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

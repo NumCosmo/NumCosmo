@@ -150,9 +150,9 @@ _ncm_mset_trans_kern_cat_set_property (GObject *object, guint prop_id, const GVa
       g_assert_cmpfloat (self->choose_percentile, >, 0.01);
       g_assert_cmpfloat (self->choose_percentile, <, 1.0);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -184,9 +184,9 @@ _ncm_mset_trans_kern_cat_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_CHOOSE_PERCENTILE:
       g_value_set_double (value, self->choose_percentile);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
