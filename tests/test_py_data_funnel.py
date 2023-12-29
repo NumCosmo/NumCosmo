@@ -33,12 +33,15 @@ Ncm.cfg_init()
 def test_constructor():
     """Test constructor."""
 
-    funnel = Ncm.DataFunnel()
+    funnel = Ncm.DataFunnel.new()
     assert funnel is not None
     assert isinstance(funnel, Ncm.DataFunnel)
 
     funnel2 = funnel.ref()
     assert funnel2 == funnel
+
+    assert funnel.get_dof() > 0
+    assert funnel.get_length() > 0
 
 
 def test_eval():
