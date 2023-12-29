@@ -84,6 +84,12 @@ ncm_data_gauss_init (NcmDataGauss *gauss)
 static void
 _ncm_data_gauss_constructed (GObject *object)
 {
+  NcmDataGauss *gauss            = NCM_DATA_GAUSS (object);
+  NcmDataGaussClass *gauss_class = NCM_DATA_GAUSS_GET_CLASS (gauss);
+
+  if (gauss_class->mean_func == NULL)
+    g_error ("NcmDataGauss: mean_func not set, class %s cannot be used.", G_OBJECT_CLASS_NAME (gauss_class));
+
   /* Chain up : start */
   G_OBJECT_CLASS (ncm_data_gauss_parent_class)->constructed (object);
 }

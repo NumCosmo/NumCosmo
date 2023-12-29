@@ -284,6 +284,10 @@ if python_astropy_scipy.found()
             'name': 'py_data_dist2d',
             'source': 'test_py_data_dist2d.py',
         },
+        {
+            'name': 'py_data_gauss',
+            'source': 'test_py_data_gauss.py',
+        },
     ]
 endif
 
