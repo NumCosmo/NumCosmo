@@ -260,7 +260,10 @@ python_tests = [
         'name': 'py_data_funnel',
         'source': 'test_py_data_funnel.py',
     },
-
+    {
+        'name': 'py_data_gaussmix2d',
+        'source': 'test_py_data_gaussmix2d.py',
+    },
 ]
 
 
