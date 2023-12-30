@@ -172,6 +172,41 @@ def test_data_gauss_bootstrap():
     assert bootstrap.get_fsize() == 10
 
 
+def test_data_gauss_bootstrap_wmean():
+    """Test NcmDataDist2D."""
+
+    rng = Ncm.RNG.new()
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
+    sv = Ncm.StatsVec.new(1, Ncm.StatsVecType.VAR, False)
+
+    n_runs = 100
+    n_points = 200
+    data_dist = DataGaussDiagTest(n_points=n_points)
+    data_dist.set_property("w-mean", True)
+
+    data_dist.resample(mset, rng)
+    data_dist.bootstrap_create()
+
+    assert data_dist.bootstrap_enabled()
+    assert isinstance(data_dist.peek_bootstrap(), Ncm.Bootstrap)
+
+    bootstrap = data_dist.peek_bootstrap()
+    for _ in range(n_runs):
+        data_dist.bootstrap_resample(rng)
+        index_freq = np.array(bootstrap.get_sortncomp())
+        freq = index_freq[1::2]
+        sv.set(0, data_dist.m2lnL_val(mset))
+        sv.update()
+
+        assert np.sum(freq) == n_points
+
+    assert_allclose(sv.get_mean(0), n_points, atol=10.0)
+
+    data_dist.set_size(10)
+    assert bootstrap.get_bsize() == 10
+    assert bootstrap.get_fsize() == 10
+
+
 def test_data_gauss_serialize():
     """Test NcmDataGauss."""
 
@@ -301,6 +336,7 @@ if __name__ == "__main__":
     test_data_gauss_get_inv_cov()
     test_data_gauss_resample()
     test_data_gauss_bootstrap()
+    test_data_gauss_bootstrap_wmean()
     test_data_gauss_serialize()
     test_data_gauss_update_cov_resample()
     test_data_gauss_fisher()
