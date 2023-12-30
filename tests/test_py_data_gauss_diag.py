@@ -24,7 +24,6 @@
 
 """Tests on NcmDataGaussDiag class."""
 
-import math
 from numpy.testing import assert_allclose
 import numpy as np
 from numcosmo_py import Ncm
@@ -81,9 +80,14 @@ def test_data_gauss_set_get_size():
 
     data_dist = DataGaussDiagTest(n_points=n_points)
     assert data_dist.get_size() == n_points
+    assert data_dist.get_dof() == n_points
 
     data_dist.set_size(n_points * 2)
     assert data_dist.get_size() == n_points * 2
+    assert data_dist.get_dof() == n_points * 2
+
+    data_dist.set_property("w-mean", True)
+    assert data_dist.get_dof() == n_points * 2 - 1
 
 
 def test_data_gauss_get_inv_cov():
@@ -106,7 +110,7 @@ def test_data_gauss_resample():
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
     mset.prepare_fparam_map()
 
-    sv = Ncm.StatsVec.new(2 * n_points, Ncm.StatsVecType.COV, False)
+    sv = Ncm.StatsVec.new(2 * n_points + 1, Ncm.StatsVecType.COV, False)
     residual = Ncm.Vector.new(n_points)
 
     mset.fparam_set(0, 5.0)
@@ -119,17 +123,19 @@ def test_data_gauss_resample():
         data_dist.resample(mset, rng)
         data_dist.leastsquares_f(mset, residual)
 
+        mean = data_dist.peek_mean().dup_array()
+        ls_f = residual.dup_array()
+        m2lnL = [data_dist.m2lnL_val(mset)]
         sv.append(
-            Ncm.Vector.new_array(
-                data_dist.peek_mean().dup_array() + residual.dup_array()
-            ),
+            Ncm.Vector.new_array(mean + ls_f + m2lnL),
             True,
         )
 
     mean = sv.peek_mean().dup_array()
 
     assert_allclose(mean[:n_points], np.linspace(5.0, 15.0, n_points), atol=0.6)
-    assert_allclose(mean[n_points:], 0.0, atol=0.6)
+    assert_allclose(mean[n_points : 2 * n_points], 0.0, atol=0.6)
+    assert_allclose(mean[2 * n_points], n_points, atol=n_points * 0.2)
 
 
 def test_data_gauss_bootstrap():
@@ -200,7 +206,7 @@ def test_data_gauss_update_cov_resample():
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
     mset.prepare_fparam_map()
 
-    sv = Ncm.StatsVec.new(2 * n_points, Ncm.StatsVecType.COV, False)
+    sv = Ncm.StatsVec.new(2 * n_points + 1, Ncm.StatsVecType.COV, False)
     residual = Ncm.Vector.new(n_points)
 
     mset.fparam_set(0, -2.0)
@@ -213,17 +219,19 @@ def test_data_gauss_update_cov_resample():
         data_dist.resample(mset, rng)
         data_dist.leastsquares_f(mset, residual)
 
+        mean_vec = data_dist.peek_mean().dup_array()
+        ls_f = residual.dup_array()
+        m2lnL = [data_dist.m2lnL_val(mset)]
         sv.append(
-            Ncm.Vector.new_array(
-                data_dist.peek_mean().dup_array() + residual.dup_array()
-            ),
+            Ncm.Vector.new_array(mean_vec + ls_f + m2lnL),
             True,
         )
 
     mean = sv.peek_mean().dup_array()
 
     assert_allclose(mean[:n_points], np.linspace(-2.0, 2.0, n_points), atol=0.6)
-    assert_allclose(mean[n_points:], 0.0, atol=0.6)
+    assert_allclose(mean[n_points : 2 * n_points], 0.0, atol=0.6)
+    assert_allclose(mean[2 * n_points], n_points, atol=n_points * 0.2)
 
 
 def test_data_gauss_fisher():
@@ -250,6 +258,44 @@ def test_data_gauss_fisher():
     assert np.all(np.isfinite(fisher.dup_array()))
 
 
+def test_data_gauss_resample_wmean():
+    """Test NcmDataGauss."""
+
+    n_points = 20
+    rng = Ncm.RNG.new()
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    mset.prepare_fparam_map()
+
+    sv = Ncm.StatsVec.new(2 * n_points + 1, Ncm.StatsVecType.COV, False)
+    residual = Ncm.Vector.new(n_points)
+
+    mset.fparam_set(0, 5.0)
+    mset.fparam_set(1, 15.0)
+
+    n_runs = 100
+    data_dist = DataGaussDiagTest(n_points=n_points)
+    data_dist.set_property("w-mean", True)
+
+    for _ in range(n_runs):
+        data_dist.resample(mset, rng)
+        data_dist.leastsquares_f(mset, residual)
+
+        mean = data_dist.peek_mean().dup_array()
+        ls_f = residual.dup_array()
+        m2lnL = [data_dist.m2lnL_val(mset)]
+        sv.append(
+            Ncm.Vector.new_array(mean + ls_f + m2lnL),
+            True,
+        )
+
+    mean = sv.peek_mean().dup_array()
+
+    assert_allclose(mean[:n_points], np.linspace(5.0, 15.0, n_points), atol=0.6)
+    assert_allclose(mean[n_points : 2 * n_points], 0.0, atol=0.6)
+    assert_allclose(mean[2 * n_points], n_points, atol=n_points * 0.2)
+
+
 if __name__ == "__main__":
     test_data_gauss_set_get_size()
     test_data_gauss_get_inv_cov()
@@ -258,3 +304,4 @@ if __name__ == "__main__":
     test_data_gauss_serialize()
     test_data_gauss_update_cov_resample()
     test_data_gauss_fisher()
+    test_data_gauss_resample_wmean()
