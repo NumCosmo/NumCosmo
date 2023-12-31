@@ -268,6 +268,10 @@ python_tests = [
         'name': 'py_data_poisson',
         'source': 'test_py_data_poisson.py',
     },
+    {
+        'name': 'py_data_rosenbrock',
+        'source': 'test_py_data_rosenbrock.py',
+    },
 ]
 
 
