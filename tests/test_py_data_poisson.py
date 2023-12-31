@@ -55,7 +55,7 @@ class DataPoissonTest(Ncm.DataPoisson):
 
 
 def test_data_poisson_set_get_size():
-    """Test NcmDataGauss."""
+    """Test NcmDataPoisson."""
 
     n_bins = 200
 
@@ -68,8 +68,64 @@ def test_data_poisson_set_get_size():
     assert data_dist.get_dof() == n_bins * 2
 
 
+def test_data_poisson_init_from_vector():
+    """Test NcmDataPoission."""
+
+    nodes = Ncm.Vector.new_array(np.linspace(0.0, 1.0, 100 + 1))
+    values = Ncm.Vector.new_array(np.linspace(100.0, 200.0, 100))
+
+    data_dist = DataPoissonTest()
+
+    data_dist.init_from_vector(nodes, values)
+
+    assert data_dist.get_size() == 100
+    assert data_dist.get_dof() == 100
+    assert_allclose(data_dist.get_sum(), 100.0 * 150.0)
+
+    values = data_dist.get_hist_vals()
+
+    assert_allclose(values.dup_array(), values.dup_array())
+
+
+def test_data_poisson_init_zero():
+    """Test NcmDataPoisson."""
+
+    data_dist = DataPoissonTest()
+
+    nodes = Ncm.Vector.new_array(np.linspace(0.0, 1.0, 100 + 1))
+
+    data_dist.init_zero(nodes)
+
+    assert data_dist.get_size() == 100
+    assert data_dist.get_dof() == 100
+    assert_allclose(data_dist.get_sum(), 0.0)
+
+    values = data_dist.get_hist_vals()
+
+    assert_allclose(values.dup_array(), np.zeros(100))
+
+
+def test_data_poisson_init_from_binning():
+    """Test NcmDataPoisson."""
+
+    data_dist = DataPoissonTest()
+
+    nodes = Ncm.Vector.new_array(np.linspace(0.0, 1.0, 100 + 1))
+    values = Ncm.Vector.new_array(np.linspace(0.0001, 0.9999, 1000))
+
+    data_dist.init_from_binning(nodes, values)
+
+    assert data_dist.get_size() == 100
+    assert data_dist.get_dof() == 100
+    assert_allclose(data_dist.get_sum(), 1000.0)
+
+    values = data_dist.get_hist_vals()
+
+    assert_allclose(values.dup_array(), np.ones(100) * 10.0)
+
+
 def test_data_poisson_resample():
-    """Test NcmDataGauss."""
+    """Test NcmDataPoisson."""
 
     n_bins = 20
     rng = Ncm.RNG.new()
@@ -148,7 +204,7 @@ def test_data_poisson_bootstrap():
 
 
 def test_data_poisson_serialize():
-    """Test NcmDataGauss."""
+    """Test NcmDataPoisson."""
 
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
@@ -179,7 +235,7 @@ def test_data_poisson_serialize():
 
 
 def test_data_poisson_fisher():
-    """Test NcmDataGauss fisher matrix."""
+    """Test NcmDataPoisson fisher matrix."""
 
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
@@ -204,6 +260,8 @@ def test_data_poisson_fisher():
 
 if __name__ == "__main__":
     test_data_poisson_set_get_size()
+    test_data_poisson_init_from_vector()
+    test_data_poisson_init_zero()
     test_data_poisson_resample()
     test_data_poisson_bootstrap()
     test_data_poisson_serialize()

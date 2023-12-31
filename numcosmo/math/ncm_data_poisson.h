@@ -32,10 +32,6 @@
 #include <numcosmo/math/ncm_mset_func.h>
 #include <numcosmo/math/ncm_data.h>
 
-#ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_histogram.h>
-#endif /* NUMCOSMO_GIR_SCAN */
-
 G_BEGIN_DECLS
 
 #define NCM_TYPE_DATA_POISSON (ncm_data_poisson_get_type ())
@@ -67,7 +63,6 @@ struct _NcmDataPoissonClass
 };
 
 void ncm_data_poisson_init_from_vector (NcmDataPoisson *poisson, NcmVector *nodes, NcmVector *N);
-void ncm_data_poisson_init_from_histogram (NcmDataPoisson *poisson, gsl_histogram *h);
 void ncm_data_poisson_init_zero (NcmDataPoisson *poisson, NcmVector *nodes);
 void ncm_data_poisson_init_from_binning (NcmDataPoisson *poisson, NcmVector *nodes, NcmVector *x);
 

@@ -43,6 +43,7 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_sf_gamma.h>
+#include <gsl/gsl_histogram.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
@@ -461,26 +462,7 @@ ncm_data_poisson_init_from_binning (NcmDataPoisson *poisson, NcmVector *nodes, N
 }
 
 /**
- * ncm_data_poisson_init_from_histogram: (skip)
- * @poisson: a #NcmDataPoisson
- * @h: a #gsl_histogram
- *
- * Initializes a #NcmDataPoisson from a #gsl_histogram.
- *
- */
-void
-ncm_data_poisson_init_from_histogram (NcmDataPoisson *poisson, gsl_histogram *h)
-{
-  NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
-
-  ncm_data_poisson_set_size (poisson, h->n);
-  gsl_histogram_memcpy (self->h, h);
-
-  ncm_data_set_init (NCM_DATA (poisson), TRUE);
-}
-
-/**
- * ncm_data_poisson_init_zero: (skip)
+ * ncm_data_poisson_init_zero:
  * @poisson: a #NcmDataPoisson
  * @nodes: a #NcmVector
  *
