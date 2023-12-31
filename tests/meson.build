@@ -264,6 +264,10 @@ python_tests = [
         'name': 'py_data_gaussmix2d',
         'source': 'test_py_data_gaussmix2d.py',
     },
+    {
+        'name': 'py_data_poisson',
+        'source': 'test_py_data_poisson.py',
+    },
 ]
 
 
