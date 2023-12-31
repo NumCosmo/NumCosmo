@@ -38,6 +38,7 @@ void test_ncm_data_basic (void);
 void test_ncm_data_funnel_basic (void);
 void test_ncm_data_gaussmix2d_basic (void);
 void test_ncm_data_rosenbrock_basic (void);
+void test_ncm_dataset_basic (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -52,6 +53,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/data_funnel/basic", test_ncm_data_funnel_basic);
   g_test_add_func ("/ncm/data_gaussmix2d/basic", test_ncm_data_gaussmix2d_basic);
   g_test_add_func ("/ncm/data_rosenbrock/basic", test_ncm_data_rosenbrock_basic);
+  g_test_add_func ("/ncm/dataset/basic", test_ncm_dataset_basic);
 
   g_test_run ();
 }
@@ -126,5 +128,23 @@ test_ncm_data_rosenbrock_basic (void)
   g_assert (NCM_IS_DATA_ROSENBROCK (rosenbrock));
 
   NCM_TEST_FREE (ncm_data_rosenbrock_free, rosenbrock);
+}
+
+void
+test_ncm_dataset_basic (void)
+{
+  NcmDataset *dset = ncm_dataset_new ();
+  NcmDataset *dset2;
+
+  g_assert (dset != NULL);
+  g_assert (NCM_IS_DATASET (dset));
+
+  dset2 = ncm_dataset_ref (dset);
+  ncm_dataset_clear (&dset2);
+  g_assert (dset2 == NULL);
+
+  g_assert (NCM_IS_DATASET (dset));
+
+  NCM_TEST_FREE (ncm_dataset_free, dset);
 }
 

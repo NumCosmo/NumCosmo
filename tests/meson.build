@@ -272,6 +272,10 @@ python_tests = [
         'name': 'py_data_rosenbrock',
         'source': 'test_py_data_rosenbrock.py',
     },
+    {
+        'name': 'py_dataset',
+        'source': 'test_py_dataset.py',
+    },
 ]
 
 
