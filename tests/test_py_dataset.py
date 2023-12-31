@@ -160,6 +160,12 @@ def test_resample():
     for _ in range(n_runs):
         dset.resample(mset, rng)
         sv.set(0, dset.m2lnL_val(mset))
+
+        assert_allclose(
+            np.sum([dset.m2lnL_i_val(mset, i) for i in range(dset.get_length())]),
+            dset.m2lnL_val(mset),
+        )
+
         sv.update()
         dset.leastsquares_f(mset, ls_f)
         for i in range(dset.get_n()):
@@ -230,6 +236,17 @@ def test_bootstrap_total_resample():
     assert_allclose(sv.get_mean(0), dset.get_n(), atol=10.0)
 
 
+def test_log_info():
+    """Test log_info."""
+
+    dset = Ncm.Dataset.new_array(
+        [Ncm.DataRosenbrock.new(), Ncm.DataRosenbrock.new(), Ncm.DataFunnel.new()]
+    )
+
+    dset.log_info()
+    assert dset.get_info() is not None
+
+
 if __name__ == "__main__":
     test_constructor()
     test_new_array_eval()
@@ -238,3 +255,4 @@ if __name__ == "__main__":
     test_resample()
     test_bootstrap_partial_resample()
     test_bootstrap_total_resample()
+    test_log_info()
