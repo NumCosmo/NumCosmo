@@ -116,9 +116,9 @@ _ncm_prior_flat_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_H0:
       ncm_prior_flat_set_h0 (pf, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -147,9 +147,9 @@ _ncm_prior_flat_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_H0:
       g_value_set_double (value, ncm_prior_flat_get_h0 (pf));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

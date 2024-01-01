@@ -4,6 +4,12 @@ CHANGELOG
 [Current]
 
 [v0.19.2]
+ * Including typing data into pyproject.toml.
+
+ * Fixing minor doc glitches. (#128)
+
+ * Updated changelog.
+
  * Fixed project name in pyproject.toml.
 
  * New minor version.

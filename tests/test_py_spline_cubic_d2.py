@@ -92,7 +92,7 @@ def test_func_x2(f, df, d2f, interp_nknots, tol) -> None:
     interp_knots = np.linspace(0.0, 4.0, interp_nknots)
 
     s = Ncm.SplineCubicD2.new(
-        Ncm.Vector.new_array(interp_knots),
+        Ncm.Vector.new_array(interp_knots.tolist()),
         Ncm.Vector.new_array([f(x) for x in interp_knots]),
         Ncm.Vector.new_array([d2f(x) for x in interp_knots]),
         True,

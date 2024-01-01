@@ -50,6 +50,7 @@ ncm_data_gauss_cov_test_finalize (GObject *object)
 
 static void _ncm_data_gauss_cov_test_prepare (NcmData *data, NcmMSet *mset);
 static gboolean _ncm_data_gauss_cov_test_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov);
+static gboolean _ncm_data_gauss_cov_test_cov_func0 (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov_pass);
 
 static void
 ncm_data_gauss_cov_test_class_init (NcmDataGaussCovTestClass *klass)
@@ -62,7 +63,7 @@ ncm_data_gauss_cov_test_class_init (NcmDataGaussCovTestClass *klass)
 
   data_class->prepare    = &_ncm_data_gauss_cov_test_prepare;
   gauss_class->mean_func = &ncm_data_gauss_cov_test_mean_func;
-  gauss_class->cov_func  = NULL;
+  gauss_class->cov_func  = &_ncm_data_gauss_cov_test_cov_func0;
 }
 
 static void
@@ -83,6 +84,17 @@ ncm_data_gauss_cov_test_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVec
 
     ncm_vector_set (vp, i, gcov_test->a + gcov_test->b * cos (gcov_test->c * x + gcov_test->d));
   }
+}
+
+static gboolean
+_ncm_data_gauss_cov_test_cov_func0 (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov_pass)
+{
+  NcmMatrix *cov = ncm_data_gauss_cov_peek_cov (gauss);
+
+  if (cov != cov_pass)
+    ncm_matrix_memcpy (cov_pass, cov);
+
+  return TRUE;
 }
 
 static gboolean

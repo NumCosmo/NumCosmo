@@ -116,9 +116,9 @@ ncm_data_gauss_diag_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_SIGMA:
       ncm_vector_substitute (&self->sigma, g_value_get_object (value), TRUE);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -144,9 +144,9 @@ ncm_data_gauss_diag_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_SIGMA:
       g_value_set_object (value, self->sigma);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

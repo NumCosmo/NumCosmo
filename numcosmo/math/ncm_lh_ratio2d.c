@@ -143,9 +143,9 @@ ncm_lh_ratio2d_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_BORDER_PREC:
       lhr2d->border_prec = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -175,9 +175,9 @@ ncm_lh_ratio2d_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_BORDER_PREC:
       g_value_set_double (value, lhr2d->border_prec);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

@@ -123,9 +123,9 @@ _ncm_rng_set_property (GObject *object, guint prop_id, const GValue *value, GPar
     case PROP_SEED:
       ncm_rng_set_seed (rng, g_value_get_ulong (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -148,9 +148,9 @@ _ncm_rng_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
     case PROP_SEED:
       g_value_set_ulong (value, self->seed_val);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
