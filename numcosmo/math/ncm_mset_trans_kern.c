@@ -107,9 +107,9 @@ ncm_mset_trans_kern_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_MSET:
       ncm_mset_trans_kern_set_mset (tkern, g_value_get_object (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -126,9 +126,9 @@ ncm_mset_trans_kern_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_MSET:
       g_value_set_object (value, self->mset);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

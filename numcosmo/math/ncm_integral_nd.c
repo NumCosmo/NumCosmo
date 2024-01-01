@@ -159,9 +159,9 @@ ncm_integral_nd_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_ABSTOL:
       ncm_integral_nd_set_abstol (intnd, g_value_get_double (value));
       break;
-    default: /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break; /* LCOV_EXCL_LINE */
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -189,9 +189,9 @@ ncm_integral_nd_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_ABSTOL:
       g_value_set_double (value, ncm_integral_nd_get_abstol (intnd));
       break;
-    default: /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break; /* LCOV_EXCL_LINE */
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

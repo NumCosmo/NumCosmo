@@ -180,10 +180,10 @@ ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
   data_class->resample  = &_ncm_data_dist1d_resample;
   data_class->m2lnL_val = &_ncm_data_dist1d_m2lnL_val;
 
-  dist1d_class->m2lnL_val = NULL;
-  dist1d_class->inv_pdf   = NULL;
-  dist1d_class->set_size  = &_ncm_data_dist1d_set_size;
-  dist1d_class->get_size  = &_ncm_data_dist1d_get_size;
+  dist1d_class->dist1d_m2lnL_val = NULL;
+  dist1d_class->inv_pdf          = NULL;
+  dist1d_class->set_size         = &_ncm_data_dist1d_set_size;
+  dist1d_class->get_size         = &_ncm_data_dist1d_get_size;
 }
 
 static guint
@@ -211,7 +211,7 @@ _ncm_data_dist1d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     {
       const gdouble x_i = ncm_vector_get (self->x, i);
 
-      *m2lnL += dist1d_class->m2lnL_val (dist1d, mset, x_i);
+      *m2lnL += dist1d_class->dist1d_m2lnL_val (dist1d, mset, x_i);
     }
   }
   else
@@ -224,7 +224,7 @@ _ncm_data_dist1d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       guint k           = ncm_bootstrap_get (bstrap, i);
       const gdouble x_i = ncm_vector_get (self->x, k);
 
-      *m2lnL += dist1d_class->m2lnL_val (dist1d, mset, x_i);
+      *m2lnL += dist1d_class->dist1d_m2lnL_val (dist1d, mset, x_i);
     }
   }
 

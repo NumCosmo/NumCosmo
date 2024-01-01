@@ -84,6 +84,12 @@ ncm_data_gauss_init (NcmDataGauss *gauss)
 static void
 _ncm_data_gauss_constructed (GObject *object)
 {
+  NcmDataGauss *gauss            = NCM_DATA_GAUSS (object);
+  NcmDataGaussClass *gauss_class = NCM_DATA_GAUSS_GET_CLASS (gauss);
+
+  if (gauss_class->mean_func == NULL)
+    g_error ("NcmDataGauss: mean_func not set, class %s cannot be used.", G_OBJECT_CLASS_NAME (gauss_class));
+
   /* Chain up : start */
   G_OBJECT_CLASS (ncm_data_gauss_parent_class)->constructed (object);
 }
@@ -129,9 +135,9 @@ ncm_data_gauss_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_INV_COV:
       ncm_matrix_substitute (&self->inv_cov, g_value_get_object (value), TRUE);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -154,9 +160,9 @@ ncm_data_gauss_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_INV_COV:
       g_value_set_object (value, self->inv_cov);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

@@ -104,9 +104,9 @@ ncm_fit_esmcmc_walker_set_property (GObject *object, guint prop_id, const GValue
     case PROP_NPARAMS:
       ncm_fit_esmcmc_walker_set_nparams (walker, g_value_get_uint (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -125,9 +125,9 @@ ncm_fit_esmcmc_walker_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_NPARAMS:
       g_value_set_uint (value, ncm_fit_esmcmc_walker_get_nparams (walker));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

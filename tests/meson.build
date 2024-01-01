@@ -5,6 +5,10 @@ c_tests = [
         'sources': ['test_ncm_cfg.c'],
     },
     {
+        'name': 'ncm_generic',
+        'sources': ['test_ncm_generic.c'],
+    },
+    {
         'name': 'ncm_sparam',
         'sources': ['test_ncm_sparam.c'],
     },
@@ -260,7 +264,63 @@ python_tests = [
         'name': 'py_sanity',
         'source': 'test_py_sanity.py',
     },
+    {
+        'name': 'py_data_funnel',
+        'source': 'test_py_data_funnel.py',
+    },
+    {
+        'name': 'py_data_gaussmix2d',
+        'source': 'test_py_data_gaussmix2d.py',
+    },
+    {
+        'name': 'py_data_poisson',
+        'source': 'test_py_data_poisson.py',
+    },
+    {
+        'name': 'py_data_rosenbrock',
+        'source': 'test_py_data_rosenbrock.py',
+    },
+    {
+        'name': 'py_dataset',
+        'source': 'test_py_dataset.py',
+    },
 ]
+
+
+python_astropy_scipy = python_module.find_installation(
+    'python3',
+    modules: ['astropy', 'scipy'],
+    required: false,
+)
+
+if python_astropy_scipy.found()
+    python_tests += [
+        {
+            'name': 'py_constants',
+            'source': 'test_py_constants.py',
+        },
+        {
+            'name': 'py_csq1d',
+            'source': 'test_py_csq1d.py',
+        },
+        {
+            'name': 'py_data_dist1d',
+            'source': 'test_py_data_dist1d.py',
+        },
+        {
+            'name': 'py_data_dist2d',
+            'source': 'test_py_data_dist2d.py',
+        },
+        {
+            'name': 'py_data_gauss',
+            'source': 'test_py_data_gauss.py',
+        },
+        {
+            'name': 'py_data_gauss_diag',
+            'source': 'test_py_data_gauss_diag.py',
+        },
+    ]
+endif
 
 if enable_gir
     env = environment()

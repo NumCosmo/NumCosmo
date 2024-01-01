@@ -358,7 +358,7 @@ _nc_powspec_mnl_halofit_var_moment (NcPowspecML *ps, NcHICosmo *cosmo, const gdo
 
   gsl_integration_workspace_free (w);
 
-  return result / (gsl_pow_3 (R) * ncm_c_2_pi_2 ());
+  return result / (gsl_pow_3 (R) * ncm_c_two_pi_2 ());
 }
 
 typedef struct _var_params
@@ -790,7 +790,7 @@ _nc_powspec_mnl_halofit_Pklin2Pknln (NcPowspecMNLHaloFit *pshf, NcHICosmo *cosmo
 
   const gdouble kh2       = gsl_pow_2 (k / nc_hicosmo_h (cosmo));
   const gdouble k3        = gsl_pow_3 (k);
-  const gdouble k3o2pi2   = k3 / ncm_c_2_pi_2 ();
+  const gdouble k3o2pi2   = k3 / ncm_c_two_pi_2 ();
   const gdouble Delta_lin = k3o2pi2 * Pklin;
 
   const gdouble y = k / self->ksigma;
