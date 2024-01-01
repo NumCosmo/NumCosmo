@@ -190,9 +190,9 @@ _ncm_mset_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
     case PROP_FMAP:
       g_value_take_boxed (value, ncm_mset_get_fmap (mset));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -253,9 +253,9 @@ _ncm_mset_set_property (GObject *object, guint prop_id, const GValue *value, GPa
 
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -513,6 +513,9 @@ ncm_mset_newv (gpointer model0, va_list ap)
 {
   NcmMSet *mset   = ncm_mset_empty_new ();
   NcmModel *model = NULL;
+
+  g_assert (model0 != NULL);
+  g_assert (NCM_IS_MODEL (model0));
 
   ncm_mset_set (mset, model0);
 

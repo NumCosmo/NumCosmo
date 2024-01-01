@@ -123,9 +123,9 @@ _ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_COV:
       ncm_matrix_substitute (&self->cov, g_value_get_object (value), TRUE);
       break;
-    default: /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break; /* LCOV_EXCL_LINE */
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -151,9 +151,9 @@ _ncm_data_gauss_cov_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_COV:
       g_value_set_object (value, self->cov);
       break;
-    default: /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break; /* LCOV_EXCL_LINE */
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

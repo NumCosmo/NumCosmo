@@ -144,9 +144,9 @@ _ncm_stats_dist_kernel_set_property (GObject *object, guint prop_id, const GValu
     case PROP_DIM:
       NCM_STATS_DIST_KERNEL_GET_CLASS (sdk)->set_dim (sdk, g_value_get_uint (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -164,9 +164,9 @@ _ncm_stats_dist_kernel_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_DIM:
       g_value_set_uint (value, ncm_stats_dist_kernel_get_dim (sdk));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

@@ -118,9 +118,9 @@ ncm_mset_trans_kern_gauss_set_property (GObject *object, guint prop_id, const GV
     case PROP_COV:
       ncm_mset_trans_kern_gauss_set_cov (tkerng, g_value_get_object (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -139,9 +139,9 @@ ncm_mset_trans_kern_gauss_get_property (GObject *object, guint prop_id, GValue *
     case PROP_COV:
       g_value_set_object (value, tkerng->cov);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
