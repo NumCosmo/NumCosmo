@@ -154,9 +154,9 @@ _ncm_nnls_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_NCOLS:
       _ncm_nnls_set_ncols (nnls, g_value_get_uint (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -181,9 +181,9 @@ _ncm_nnls_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
     case PROP_NCOLS:
       g_value_set_uint (value, ncm_nnls_get_ncols (nnls));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

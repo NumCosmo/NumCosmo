@@ -138,9 +138,9 @@ ncm_fit_mcmc_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_DATA_FILE:
       ncm_fit_mcmc_set_data_file (mcmc, g_value_get_string (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -168,9 +168,9 @@ ncm_fit_mcmc_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_DATA_FILE:
       g_value_set_string (value, ncm_mset_catalog_peek_filename (mcmc->mcat));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

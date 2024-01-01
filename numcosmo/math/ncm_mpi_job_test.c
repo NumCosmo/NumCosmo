@@ -119,9 +119,9 @@ _ncm_mpi_job_test_set_property (GObject *object, guint prop_id, const GValue *va
       ncm_vector_clear (&self->vec);
       self->vec = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -138,9 +138,9 @@ _ncm_mpi_job_test_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_VECTOR:
       g_value_set_object (value, self->vec);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

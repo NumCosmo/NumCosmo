@@ -80,9 +80,9 @@ _ncm_sf_spherical_harmonics_set_property (GObject *object, guint prop_id, const 
     case PROP_LMAX:
       ncm_sf_spherical_harmonics_set_lmax (spha, g_value_get_int (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -98,9 +98,9 @@ _ncm_sf_spherical_harmonics_get_property (GObject *object, guint prop_id, GValue
     case PROP_LMAX:
       g_value_set_int (value, ncm_sf_spherical_harmonics_get_lmax (spha));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

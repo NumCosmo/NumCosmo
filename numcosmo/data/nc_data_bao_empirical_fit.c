@@ -226,8 +226,8 @@ nc_data_bao_empirical_fit_class_init (NcDataBaoEmpiricalFitClass *klass)
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  bao_ef_class->m2lnL_val = _nc_data_bao_empirical_fit_m2lnL_val;
-  bao_ef_class->inv_pdf   = _nc_data_bao_empirical_fit_inv_pdf;
+  bao_ef_class->dist1d_m2lnL_val = _nc_data_bao_empirical_fit_m2lnL_val;
+  bao_ef_class->inv_pdf          = _nc_data_bao_empirical_fit_inv_pdf;
 }
 
 static gdouble
