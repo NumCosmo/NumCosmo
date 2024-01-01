@@ -132,9 +132,9 @@ _ncm_sparam_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_FIT_TYPE:
       ncm_sparam_set_fit_type (sparam, g_value_get_enum (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -171,9 +171,9 @@ _ncm_sparam_get_property (GObject *object, guint prop_id, GValue *value, GParamS
     case PROP_FIT_TYPE:
       g_value_set_enum (value, ncm_sparam_get_fit_type (sparam));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

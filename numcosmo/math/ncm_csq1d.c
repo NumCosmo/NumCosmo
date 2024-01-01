@@ -615,6 +615,7 @@ typedef struct _NcmCSQ1DWS
   NcmCSQ1D *csq1d;
   NcmModel *model;
   gdouble reltol;
+  gdouble F1_min;
 } NcmCSQ1DWS;
 
 static gdouble _ncm_csq1d_F1_func (const gdouble t, gpointer user_data);
@@ -623,7 +624,7 @@ static gdouble
 _ncm_csq1d_eval_F2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  NcmCSQ1DWS ws                = {csq1d, model, 0.0};
+  NcmCSQ1DWS ws                = {csq1d, model, 0.0, 0.0};
   const gdouble nu             = ncm_csq1d_eval_nu (csq1d, model, t, self->k);
   const gdouble twonu          = 2.0 * nu;
 
@@ -1843,7 +1844,7 @@ void
 ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  NcmCSQ1DWS ws                = {csq1d, model, 0.0};
+  NcmCSQ1DWS ws                = {csq1d, model, 0.0, 0.0};
 
   if (NCM_CSQ1D_GET_CLASS (csq1d)->prepare != NULL)
     NCM_CSQ1D_GET_CLASS (csq1d)->prepare (csq1d, model);
@@ -1975,7 +1976,7 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
   }
   else
   {
-    NcmCSQ1DWS ws = {csq1d, model, reltol};
+    NcmCSQ1DWS ws = {csq1d, model, reltol, 0.0};
     guint iter = 0, max_iter = 1000;
     const gdouble root_reltol = 1.0e-2;
     const gsl_root_fsolver_type *T;
@@ -2043,8 +2044,8 @@ _ncm_csq1d_lnnu_func (const gdouble t, gpointer user_data)
   return log (nu);
 }
 
-static gdouble _ncm_csq1d_abs_F1_logt (gdouble at, gpointer user_data);
-static gdouble _ncm_csq1d_ln_abs_F1_eps_logt (gdouble at, gpointer user_data);
+static gdouble _ncm_csq1d_abs_F1_asinht (gdouble at, gpointer user_data);
+static gdouble _ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data);
 
 /**
  * ncm_csq1d_find_adiab_max:
@@ -2065,42 +2066,78 @@ gdouble
 ncm_csq1d_find_adiab_max (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, gdouble t1, const gdouble border_eps, gdouble *F1_min, gdouble *t_Bl, gdouble *t_Bu)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  NcmCSQ1DWS ws                = {csq1d, model, border_eps};
+  NcmCSQ1DWS ws                = {csq1d, model, border_eps, 0.0};
 
   gsl_min_fminimizer *fmin = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
-  const gdouble atl        = log (t0);
-  const gdouble atu        = log (t1);
+  const gdouble atl        = asinh (t0);
+  const gdouble atu        = asinh (t1);
   gdouble at0              = atl;
   gdouble at1              = atu;
   gdouble atm              = (at0 + at1) * 0.5;
+  const guint linsearch    = 100;
   guint iter               = 0;
   gint status;
   gsl_function F;
   gint ret;
+  guint i;
 
   F.params   = &ws;
-  F.function = &_ncm_csq1d_abs_F1_logt;
+  F.function = &_ncm_csq1d_abs_F1_asinht;
 
-  ret = gsl_min_fminimizer_set (fmin, &F, atm, at0, at1);
-  NCM_TEST_GSL_RESULT ("ncm_csq1d_find_adiab_max", ret);
+  {
+    gdouble test = GSL_POSINF;
 
-  do {
-    iter++;
-    status = gsl_min_fminimizer_iterate (fmin);
+    for (i = 0; i < linsearch; i++)
+    {
+      const gdouble at    = at0 + (at1 - at0) * i / (linsearch - 1);
+      const gdouble test0 = GSL_FN_EVAL (&F, at);
 
-    if (status)
-      g_error ("ncm_csq1d_find_adiab_max: Cannot find minimum (%s)", gsl_strerror (status));
+      if (test0 < test)
+      {
+        test = test0;
+        atm  = at;
+      }
+    }
+  }
 
-    atm = gsl_min_fminimizer_x_minimum (fmin);
-    at0 = gsl_min_fminimizer_x_lower (fmin);
-    at1 = gsl_min_fminimizer_x_upper (fmin);
+  /* Testing for minimum on the edge */
+  if (ncm_cmp (atm, atl, 1.0e-15, 0.0) == 0)
+  {
+    atm = atl;
+    at0 = atl;
+    at1 = atl;
+  }
+  else if (ncm_cmp (atm, atu, 1.0e-15, 0.0) == 0)
+  {
+    atm = atu;
+    at0 = atu;
+    at1 = atu;
+  }
+  else
+  {
+    ret = gsl_min_fminimizer_set (fmin, &F, atm, at0, at1);
 
-    status = gsl_min_test_interval (at0, at1, 0.0, self->reltol);
+    NCM_TEST_GSL_RESULT ("ncm_csq1d_find_adiab_max", ret);
 
-    /*ncm_message ("[%d] % 22.15e % 22.15e % 22.15e\n", status, exp (atm), exp (at0), exp (at1));*/
-  } while (status == GSL_CONTINUE && iter < 1000);
+    do {
+      iter++;
+      status = gsl_min_fminimizer_iterate (fmin);
+
+      if (status)
+        g_error ("ncm_csq1d_find_adiab_max: Cannot find minimum (%s)", gsl_strerror (status));
+
+      atm = gsl_min_fminimizer_x_minimum (fmin);
+      at0 = gsl_min_fminimizer_x_lower (fmin);
+      at1 = gsl_min_fminimizer_x_upper (fmin);
+
+      status = gsl_min_test_interval (at0, at1, 0.0, self->reltol);
+
+      /*ncm_message ("[%d] % 22.15e % 22.15e % 22.15e\n", status, exp (atm), exp (at0), exp (at1));*/
+    } while (status == GSL_CONTINUE && iter < 1000);
+  }
 
   gsl_min_fminimizer_free (fmin);
+  ws.F1_min = ncm_csq1d_eval_F1 (csq1d, model, sinh (atm), self->k);
 
   {
     const gsl_root_fsolver_type *T;
@@ -2109,7 +2146,7 @@ ncm_csq1d_find_adiab_max (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, gdouble 
 
     iter = 0;
 
-    F.function = &_ncm_csq1d_ln_abs_F1_eps_logt;
+    F.function = &_ncm_csq1d_ln_abs_F1_eps_asinht;
     F.params   = &ws;
 
     T = gsl_root_fsolver_brent;
@@ -2125,7 +2162,7 @@ ncm_csq1d_find_adiab_max (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, gdouble 
       at1     = gsl_root_fsolver_x_upper (s);
       status  = gsl_root_test_interval (at0, at1, 0.0, 1.0e-7);
 
-      /*ncm_message ("Bl: [%d] % 22.15e % 22.15e % 22.15e\n", status, exp (t_Bl[0]), exp (at0), exp (at1));*/
+      /* ncm_message ("Bl: [%d] % 22.15e % 22.15e % 22.15e\n", status, sinh (t_Bl[0]), sinh (at0), sinh (at1)); */
     } while (status == GSL_CONTINUE && iter < max_iter);
 
     gsl_root_fsolver_set (s, &F, atm, atu);
@@ -2138,41 +2175,41 @@ ncm_csq1d_find_adiab_max (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, gdouble 
       at1     = gsl_root_fsolver_x_upper (s);
       status  = gsl_root_test_interval (at0, at1, 0.0, 1.0e-7);
 
-      /*ncm_message ("Bu: [%d] % 22.15e % 22.15e % 22.15e\n", status, exp (t_Bu[0]), exp (at0), exp (at1));*/
+      /* ncm_message ("Bu: [%d] % 22.15e % 22.15e % 22.15e\n", status, sinh (t_Bu[0]), sinh (at0), sinh (at1)); */
     } while (status == GSL_CONTINUE && iter < max_iter);
 
     gsl_root_fsolver_free (s);
   }
 
   {
-    const gdouble tm = exp (atm);
+    const gdouble tm = sinh (atm);
 
     F1_min[0] = ncm_csq1d_eval_F1 (csq1d, model, tm, self->k);
-    t_Bl[0]   = exp (t_Bl[0]);
-    t_Bu[0]   = exp (t_Bu[0]);
+    t_Bl[0]   = sinh (t_Bl[0]);
+    t_Bu[0]   = sinh (t_Bu[0]);
 
     return tm;
   }
 }
 
 static gdouble
-_ncm_csq1d_abs_F1_logt (gdouble at, gpointer user_data)
+_ncm_csq1d_abs_F1_asinht (gdouble at, gpointer user_data)
 {
   NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) user_data;
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-  const gdouble F1             = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, exp (at), self->k);
+  const gdouble F1             = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, sinh (at), self->k);
 
   return fabs (F1);
 }
 
 static gdouble
-_ncm_csq1d_ln_abs_F1_eps_logt (gdouble at, gpointer user_data)
+_ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data)
 {
   NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) user_data;
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-  const gdouble F1             = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, exp (at), self->k);
+  const gdouble F1             = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, sinh (at), self->k);
 
-  return fabs (F1 / ws->reltol) - 1.0;
+  return fabs ((F1 - ws->F1_min) / ws->reltol) - 1.0;
 }
 
 /**
@@ -2192,7 +2229,7 @@ void
 ncm_csq1d_eval_adiab_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *alpha, gdouble *dgamma, gdouble *alpha_reltol, gdouble *dgamma_reltol)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  NcmCSQ1DWS ws                = {csq1d, model, 0.0};
+  NcmCSQ1DWS ws                = {csq1d, model, 0.0, 0.0};
   const gdouble F1             = ncm_csq1d_eval_F1 (csq1d, model, t, self->k);
   const gdouble F2             = ncm_csq1d_eval_F2 (csq1d, model, t, self->k);
   const gdouble F1_2           = F1 * F1;
@@ -2254,13 +2291,13 @@ static void
 _ncm_csq1d_eval_adiab_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *alpha, gdouble *dgamma, gdouble *alpha_reltol, gdouble *dgamma_reltol)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  NcmCSQ1DWS ws = {csq1d, model, 0.0};
-  const gdouble F1 = ncm_csq1d_eval_F1 (csq1d, model, t, self->k);
-  const gdouble F2 = ncm_csq1d_eval_F2 (csq1d, model, t, self->k);
-  const gdouble F1_2 = F1 * F1;
-  const gdouble F1_3 = F1_2 * F1;
-  const gdouble nu = ncm_csq1d_eval_nu (csq1d, model, t, self->k);
-  const gdouble twonu = 2.0 * nu;
+  NcmCSQ1DWS ws                = {csq1d, model, 0.0, 0.0};
+  const gdouble F1             = ncm_csq1d_eval_F1 (csq1d, model, t, self->k);
+  const gdouble F2             = ncm_csq1d_eval_F2 (csq1d, model, t, self->k);
+  const gdouble F1_2           = F1 * F1;
+  const gdouble F1_3           = F1_2 * F1;
+  const gdouble nu             = ncm_csq1d_eval_nu (csq1d, model, t, self->k);
+  const gdouble twonu          = 2.0 * nu;
   gdouble err, F3, d2F2, dlnnu, F4, alpha_reltol0, dgamma_reltol0;
 
   if (self->max_order_2)
@@ -2874,7 +2911,7 @@ static void
 _ncm_csq1d_prepare_prop_eval_u1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti, const gdouble t, gdouble u1[3])
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  NcmCSQ1DWS ws                = {csq1d, model, 0.0};
+  NcmCSQ1DWS ws                = {csq1d, model, 0.0, 0.0};
 
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
   gsl_function F;
@@ -2918,7 +2955,7 @@ void
 ncm_csq1d_prepare_prop (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti, const gdouble tii, const gdouble tf)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  NcmCSQ1DWS ws                = {csq1d, model, self->prop_threshold};
+  NcmCSQ1DWS ws                = {csq1d, model, self->prop_threshold, 0.0};
   GArray *t_a                  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   gdouble t                    = 0.0;
   gboolean tf_Prop_found       = FALSE;

@@ -193,9 +193,9 @@ _ncm_stats_dist_kde_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_COV_FIXED:
       ncm_stats_dist_kde_set_cov_fixed (sdkde, g_value_get_object (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -219,9 +219,9 @@ _ncm_stats_dist_kde_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_COV_FIXED:
       g_value_set_object (value, ncm_stats_dist_kde_peek_cov_fixed (sdkde));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

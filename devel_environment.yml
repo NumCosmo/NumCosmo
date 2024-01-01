@@ -2,10 +2,11 @@ name: numcosmo_developer
 channels:
   - conda-forge
 dependencies:
+  - astropy
   - black
   - c-compiler
-  - fftw
   - cfitsio
+  - fftw
   - flake8
   - fortran-compiler
   - getdist
@@ -33,4 +34,5 @@ dependencies:
   - pylint
   - pytest
   - python >= 3.9
+  - scipy
 

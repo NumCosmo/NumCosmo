@@ -165,7 +165,7 @@ ncm_c_class_init (NcmCClass *klass)
  */
 
 /**
- * ncm_c_2_pi_2:
+ * ncm_c_twp_pi_2:
  *
  * Returns: $2\pi^2$.
  */
@@ -1818,51 +1818,6 @@ ncm_c_class_init (NcmCClass *klass)
 /*******************************************************************************
  * START: Observational data
  *******************************************************************************/
-
-/**
- * ncm_c_wmap5_coadded_I_K:
- *
- * WMAP-5 noise per observation for resolution 9 and 10 $I$ maps, to $\sim$0.1\% uncertainty for differencing assembly (DA) $\text{K1}$. See [Hinshaw (2009)][X2009ApJS..180..225H] [[arXiv](https://arxiv.org/abs/0803.0732)].
- *
- * Returns: $\sigma_0(I) = 1.436 \left[ \text{mK} \right]$.
- *
- */
-
-/**
- * ncm_c_wmap5_coadded_I_Ka:
- *
- * WMAP-5 noise per observation for resolution 9 and 10 $I$ maps, to $\sim$0.1\% uncertainty for differencing assembly (DA) $\text{Ka1}$. See [Hinshaw (2009)][X2009ApJS..180..225H] [[arXiv](https://arxiv.org/abs/0803.0732)].
- *
- * Returns: $\sigma_0(I) = 1.470 \left[ \text{mK} \right]$.
- *
- */
-
-/**
- * ncm_c_wmap5_coadded_I_Q:
- *
- * WMAP-5 noise per observation for resolution 9 and 10 $I$ maps, to $\sim$0.1\% uncertainty for differencing assembly (DA) $\text{Q}$. See [Smidt (2009)][X2009PhRvD..80l3005S] [[arXiv](https://arxiv.org/abs/0907.4051)].
- *
- * Returns: $\sigma_0(I) = 2.197 \left[ \text{mK} \right]$.
- *
- */
-
-/**
- * ncm_c_wmap5_coadded_I_V:
- *
- * WMAP-5 noise per observation for resolution 9 and 10 $I$ maps, to $\sim$0.1\% uncertainty for differencing assembly (DA) $\text{V}$. See [Smidt (2009)][X2009PhRvD..80l3005S] [[arXiv](https://arxiv.org/abs/0907.4051)].
- *
- * Returns: $\sigma_0(I) = 3.133 \left[ \text{mK} \right]$.
- *
- */
-
-/**
- * ncm_c_wmap5_coadded_I_W:
- *
- * WMAP-5 noise per observation for resolution 9 and 10 $I$ maps, to $\sim$0.1\% uncertainty for differencing assembly (DA) $\text{W}$. See [Smidt (2009)][X2009PhRvD..80l3005S] [[arXiv](https://arxiv.org/abs/0907.4051)].
- *
- * Returns: $\sigma_0(I) = 6.538 \left[ \text{mK} \right]$.
- *
- */
 
 /**
  * ncm_c_hubble_cte_planck6_base:

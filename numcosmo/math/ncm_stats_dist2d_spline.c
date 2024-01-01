@@ -84,9 +84,9 @@ _ncm_stats_dist2d_spline_set_property (GObject *object, guint prop_id, const GVa
     case PROP_MARGINAL_X:
       sd2s->marginal_x = g_value_get_boolean (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -105,9 +105,9 @@ _ncm_stats_dist2d_spline_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_MARGINAL_X:
       g_value_set_boolean (value, sd2s->marginal_x);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
