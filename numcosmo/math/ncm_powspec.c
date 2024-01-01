@@ -156,9 +156,9 @@ _ncm_powspec_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_RELTOL_SPLINE:
       ncm_powspec_set_reltol_spline (powspec, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -186,9 +186,9 @@ _ncm_powspec_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_RELTOL_SPLINE:
       g_value_set_double (value, ncm_powspec_get_reltol_spline (powspec));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -835,7 +835,7 @@ ncm_powspec_var_tophat_R (NcmPowspec *powspec, NcmModel *model, const gdouble re
   const gdouble kmax             = ncm_powspec_get_kmax (powspec);
   const gdouble lnkmin           = log (kmin);
   const gdouble lnkmax           = log (kmax);
-  const gdouble one_2pi2         = 1.0 / ncm_c_2_pi_2 ();
+  const gdouble one_2pi2         = 1.0 / ncm_c_two_pi_2 ();
   gdouble error, sigma2_2pi2;
 
   ncm_powspec_prepare_if_needed (powspec, model);
@@ -903,7 +903,7 @@ ncm_powspec_corr3d (NcmPowspec *powspec, NcmModel *model, const gdouble reltol, 
   const gdouble kmax             = ncm_powspec_get_kmax (powspec);
   const gdouble lnkmin           = log (kmin);
   const gdouble lnkmax           = log (kmax);
-  const gdouble one_2pi2         = 1.0 / ncm_c_2_pi_2 ();
+  const gdouble one_2pi2         = 1.0 / ncm_c_two_pi_2 ();
   gdouble error, xi_2pi2;
 
   ncm_powspec_prepare_if_needed (powspec, model);

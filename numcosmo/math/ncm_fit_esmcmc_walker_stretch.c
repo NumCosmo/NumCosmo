@@ -106,9 +106,9 @@ _ncm_fit_esmcmc_walker_stretch_set_property (GObject *object, guint prop_id, con
     case PROP_MULTI:
       ncm_fit_esmcmc_walker_stretch_multi (stretch, g_value_get_boolean (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -127,9 +127,9 @@ _ncm_fit_esmcmc_walker_stretch_get_property (GObject *object, guint prop_id, GVa
     case PROP_MULTI:
       g_value_set_boolean (value, stretch->multi);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

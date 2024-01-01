@@ -108,9 +108,9 @@ ncm_model_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_MODEL:
       ncm_model_ctrl_set_model (ctrl, g_value_get_object (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -126,9 +126,9 @@ ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
     case PROP_MODEL:
       g_value_take_object (value, g_weak_ref_get (&ctrl->model_wr));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

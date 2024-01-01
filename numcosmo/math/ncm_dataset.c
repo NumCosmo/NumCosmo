@@ -93,9 +93,9 @@ ncm_dataset_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_OA:
       ncm_dataset_set_data_array (dset, (NcmObjArray *) g_value_get_boxed (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -114,9 +114,9 @@ ncm_dataset_get_property (GObject *object, guint prop_id, GValue *value, GParamS
     case PROP_OA:
       g_value_set_boxed (value, ncm_dataset_peek_data_array (dset));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

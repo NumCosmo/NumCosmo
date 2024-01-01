@@ -81,9 +81,9 @@ _ncm_vparam_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_DEFAULT_SPARAM:
       vparam->default_sparam = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -99,9 +99,9 @@ _ncm_vparam_get_property (GObject *object, guint prop_id, GValue *value, GParamS
     case PROP_DEFAULT_SPARAM:
       g_value_set_object (value, vparam->default_sparam);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

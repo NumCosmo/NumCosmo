@@ -95,9 +95,9 @@ _ncm_integral1d_ptr_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_USERFREE:
       self->userfree = g_value_get_pointer (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -120,9 +120,9 @@ _ncm_integral1d_ptr_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_USERFREE:
       g_value_set_pointer (value, self->userfree);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

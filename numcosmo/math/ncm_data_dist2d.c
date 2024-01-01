@@ -180,10 +180,10 @@ ncm_data_dist2d_class_init (NcmDataDist2dClass *klass)
   data_class->resample  = &_ncm_data_dist2d_resample;
   data_class->m2lnL_val = &_ncm_data_dist2d_m2lnL_val;
 
-  dist2d_class->m2lnL_val = NULL;
-  dist2d_class->inv_pdf   = NULL;
-  dist2d_class->set_size  = &_ncm_data_dist2d_set_size;
-  dist2d_class->get_size  = &_ncm_data_dist2d_get_size;
+  dist2d_class->dist2d_m2lnL_val = NULL;
+  dist2d_class->inv_pdf          = NULL;
+  dist2d_class->set_size         = &_ncm_data_dist2d_set_size;
+  dist2d_class->get_size         = &_ncm_data_dist2d_get_size;
 }
 
 static guint
@@ -212,7 +212,7 @@ _ncm_data_dist2d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       const gdouble x_i = ncm_matrix_get (self->m, i, 0);
       const gdouble y_i = ncm_matrix_get (self->m, i, 1);
 
-      *m2lnL += dist2d_class->m2lnL_val (dist2d, mset, x_i, y_i);
+      *m2lnL += dist2d_class->dist2d_m2lnL_val (dist2d, mset, x_i, y_i);
     }
   }
   else
@@ -226,7 +226,7 @@ _ncm_data_dist2d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       const gdouble x_i = ncm_matrix_get (self->m, k, 0);
       const gdouble y_i = ncm_matrix_get (self->m, k, 1);
 
-      *m2lnL += dist2d_class->m2lnL_val (dist2d, mset, x_i, y_i);
+      *m2lnL += dist2d_class->dist2d_m2lnL_val (dist2d, mset, x_i, y_i);
     }
   }
 
@@ -342,5 +342,23 @@ ncm_data_dist2d_get_data (NcmDataDist2d *dist2d)
   NcmDataDist2dPrivate * const self = ncm_data_dist2d_get_instance_private (dist2d);
 
   return ncm_matrix_ref (self->m);
+}
+
+/**
+ * ncm_data_dist2d_inv_pdf: (virtual inv_pdf)
+ * @dist2d: a #NcmDataDist2d
+ * @mset: a #NcmMSet
+ * @u: a random number in the range [0,1]
+ * @v: a random number in the range [0,1]
+ * @x: (out): generated random number
+ * @y: (out): generated random number
+ *
+ * Generates a random number from the inverse of the pdf.
+ *
+ */
+void
+ncm_data_dist2d_inv_pdf (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble u, gdouble v, gdouble *x, gdouble *y)
+{
+  NCM_DATA_DIST2D_GET_CLASS (dist2d)->inv_pdf (dist2d, mset, u, v, x, y);
 }
 

@@ -105,9 +105,9 @@ _ncm_function_cache_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_ABSTOL:
       self->abstol = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -130,9 +130,9 @@ _ncm_function_cache_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_ABSTOL:
       g_value_set_double (value, ncm_function_cache_get_abstol (cache));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

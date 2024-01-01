@@ -98,9 +98,9 @@ _ncm_reparam_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_COMPAT_TYPE:
       g_value_set_string (value, g_type_name (self->compat_type));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -127,9 +127,9 @@ _ncm_reparam_set_property (GObject *object, guint prop_id, const GValue *value, 
         g_error ("_ncm_reparam_set_property: GType `%s' unregistered or invalid.", g_value_get_string (value));
 
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
