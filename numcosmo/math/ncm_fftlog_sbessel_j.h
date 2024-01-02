@@ -41,12 +41,6 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_fftlog.h>
 
-#ifndef NUMCOSMO_GIR_SCAN
-#ifdef HAVE_ACB_H
-#include <acb.h>
-#endif /* HAVE_ACB_H */
-#endif /* NUMCOSMO_GIR_SCAN */
-
 G_BEGIN_DECLS
 
 #define NCM_TYPE_FFTLOG_SBESSEL_J (ncm_fftlog_sbessel_j_get_type ())

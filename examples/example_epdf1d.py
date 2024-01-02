@@ -124,7 +124,7 @@ def test_epdf1d() -> None:
     u_a = []
 
     for i in range(1000):
-        lx = epdf.xi + (epdf.xf - epdf.xi) / 999.0 * i
+        lx = epdf.get_xi() + (epdf.get_xf() - epdf.get_xi()) / 999.0 * i
         u = 1.0 / 1000.0 * i
 
         x_a.append(lx)
