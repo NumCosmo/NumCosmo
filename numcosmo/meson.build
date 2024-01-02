@@ -705,6 +705,8 @@ libnumcosmo_dep = [
     blas_dep,
     lapack_dep,
     gsl_dep,
+    arb_dep,
+    flint_dep,
 ]
 
 numcosmo_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
