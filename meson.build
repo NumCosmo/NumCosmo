@@ -352,6 +352,7 @@ glib_req = '>= 2.54.0'
 gsl_req = '>= 2.4'
 fftw_req = '>= 3.1.2'
 cfitsio_req = '>= 3.25'
+flint_req = '>= 3.0'
 
 #######################################################################################
 # Checking for MPI:
@@ -535,6 +536,54 @@ nlopt_dep = dependency(
 if nlopt_dep.found()
   numcosmo_conf.set('HAVE_NLOPT', true)
   numcosmo_build_cfg.set('have_nlopt_support', '#define NUMCOSMO_HAVE_NLOPT 1')
+endif
+
+#######################################################################################
+# Checking for Flint (optional):
+#######################################################################################
+message('Checking for Flint')
+
+flint_dep = dependency(
+  'flint',
+  version: flint_req,
+  required: false,
+)
+
+if not flint_dep.found()
+  flint_lib_dep = cc.find_library(
+    'flint',
+    required: false,
+  )
+  if flint_lib_dep.found() and cc.has_function('acb_set', dependencies: [flint_lib_dep])
+    flint_dep = flint_lib_dep
+  endif
+endif
+
+if flint_dep.found()
+  numcosmo_conf.set('HAVE_FLINT', true)
+  flint_headers = [
+    'arb.h',
+    'acb.h',
+  ]
+  foreach h : flint_headers
+    if cc.has_header(
+      h,
+      dependencies: [flint_dep],
+      required: false,
+    )
+      define = 'HAVE_' + h.underscorify().to_upper()
+      numcosmo_conf.set(define, 1)
+    elif cc.has_header(
+      'flint' / h,
+      dependencies: [flint_dep],
+      required: false,
+    )
+      define = 'HAVE_' + h.underscorify().to_upper()
+      define_flint = 'HAVE_FLINT_' + h.underscorify().to_upper()
+      numcosmo_conf.set(define, 1)
+      numcosmo_conf.set(define_flint, 1)
+    endif
+  endforeach
 endif
 
 #######################################################################################
