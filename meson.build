@@ -783,3 +783,53 @@ subdir('numcosmo')
 subdir('tools')
 subdir('tests')
 subdir('docs')
+
+building_options = {
+  'Build type': get_option('buildtype'),
+  'C-Compiler': cc.get_id(),
+  'C-Compiler version': cc.version(),
+  'Fortran-Compiler': fc.get_id(),
+  'Fortran-Compiler version': fc.version(),
+  'Build tests': build_tests,
+  'Build documentation': build_gtk_doc,
+  'Build Python module': get_option('numcosmo_py'),
+  'Build Vala library': have_vala,
+  'Build GObject introspection': enable_gir,
+  'Build MPI support': mpi_c_dep,
+  'Build OpenMP support': omp_c,
+  'Build prefix': numcosmo_prefix,
+  'Build bindir': numcosmo_bindir,
+  'Build libdir': numcosmo_libdir,
+  'Build libexecdir': numcosmo_libexecdir,
+  'Build datadir': numcosmo_datadir,
+  'Build includedir': numcosmo_includedir,
+  'Build pkgdatadir': numcosmo_pkgdatadir,
+  'Build pkgconfigdir': numcosmo_pkgconfigreldir,
+}
+
+summary(
+  building_options,
+  section: 'Building options',
+)
+
+dependencies_summary = {
+  'blas': blas_dep,
+  'cfitsio': cfitsio_dep,
+  'fftw3': fftw3_dep,
+  'fftw3f': fftw3f_dep,
+  'flint': flint_dep,
+  'gio': gio_dep,
+  'glib': glib_dep,
+  'gmp': gmp_dep,
+  'gobject': gobject_dep,
+  'gsl': gsl_dep,
+  'lapack': lapack_dep,
+  'libfyaml': libfyaml_dep,
+  'mpfr': mpfr_dep,
+  'mpi': mpi_c_dep,
+  'nlopt': nlopt_dep,
+  'omp': omp_c,
+  'python': python,
+}
+
+summary(dependencies_summary, section: 'Dependencies')
