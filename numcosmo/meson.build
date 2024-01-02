@@ -703,6 +703,7 @@ libnumcosmo_dep = [
     blas_dep,
     lapack_dep,
     gsl_dep,
+    arb_lib_dep,
     flint_dep,
 ]
 

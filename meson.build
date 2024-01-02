@@ -552,7 +552,9 @@ flint_dep = dependency(
   required: false,
 )
 
-if not flint_dep.found()
+if flint_dep.found()
+  arb_lib_dep = flint_dep
+else
   flint_lib_dep = cc.find_library(
     'flint',
     required: false,
@@ -560,6 +562,7 @@ if not flint_dep.found()
   if flint_lib_dep.found()
     if cc.has_function('acb_set', dependencies: [flint_lib_dep])
       flint_dep = flint_lib_dep
+      arb_lib_dep = flint_dep
     else
       arb_lib_names = [
         'arb',
@@ -572,7 +575,6 @@ if not flint_dep.found()
         )
         if arb_lib_dep.found()
           if cc.has_function('acb_set', dependencies: [arb_lib_dep])
-            flint_dep = arb_lib_dep
             break
           endif
         endif
@@ -581,7 +583,7 @@ if not flint_dep.found()
   endif
 endif
 
-if flint_dep.found()
+if arb_lib_dep.found()
   numcosmo_conf.set('HAVE_FLINT', true)
   flint_headers = [
     'arb.h',
@@ -590,14 +592,14 @@ if flint_dep.found()
   foreach h : flint_headers
     if cc.has_header(
       h,
-      dependencies: [flint_dep],
+      dependencies: [arb_lib_dep, flint_dep],
       required: false,
     )
       define = 'HAVE_' + h.underscorify().to_upper()
       numcosmo_conf.set(define, 1)
     elif cc.has_header(
       'flint' / h,
-      dependencies: [flint_dep],
+      dependencies: [arb_lib_dep, flint_dep],
       required: false,
     )
       define = 'HAVE_' + h.underscorify().to_upper()
