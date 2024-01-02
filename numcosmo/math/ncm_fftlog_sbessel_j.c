@@ -119,6 +119,13 @@
 #include <fftw3.h>
 #endif /* HAVE_FFTW3 */
 #include <math.h>
+#ifdef HAVE_ACB_H
+#ifdef HAVE_FLINT_ACB_H
+#include <flint/acb.h>
+#else /* HAVE_FLINT_ACB_H */
+#include <acb.h>
+#endif /* HAVE_FLINT_ACB_H */
+#endif /* HAVE_ACB_H */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct _NcmFftlogSBesselJPrivate

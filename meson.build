@@ -352,6 +352,7 @@ glib_req = '>= 2.54.0'
 gsl_req = '>= 2.4'
 fftw_req = '>= 3.1.2'
 cfitsio_req = '>= 3.25'
+flint_req = '>= 3.0'
 
 #######################################################################################
 # Checking for MPI:
@@ -535,6 +536,80 @@ nlopt_dep = dependency(
 if nlopt_dep.found()
   numcosmo_conf.set('HAVE_NLOPT', true)
   numcosmo_build_cfg.set('have_nlopt_support', '#define NUMCOSMO_HAVE_NLOPT 1')
+endif
+
+#######################################################################################
+# Checking for Flint (optional):
+#######################################################################################
+message('Checking for Flint')
+
+# Currently the flint pkg-config file is broken, so we need to check for the
+# library manually. When this is fixed, we can replace 'flint_does_not_work' with
+# 'flint' in the dependency() call below.
+flint_dep = dependency(
+  'flint_does_not_work',
+  version: flint_req,
+  required: false,
+)
+
+if flint_dep.found()
+  arb_dep = flint_dep
+else
+  flint_dep = cc.find_library(
+    'flint',
+    required: false,
+  )
+
+  if flint_dep.found()
+    if cc.has_function('acb_set', dependencies: [flint_dep])
+      arb_dep = flint_dep
+    else
+      arb_lib_names = [
+        'arb',
+        'flint-arb',
+      ]
+      foreach arb_lib_name : arb_lib_names
+        arb_dep = cc.find_library(
+          arb_lib_name,
+          required: false,
+        )
+        if arb_dep.found()
+          if cc.has_function('acb_set', dependencies: [arb_dep, flint_dep])
+            break
+          endif
+        endif
+      endforeach
+    endif
+  else
+    arb_dep = flint_dep
+  endif
+endif
+
+if arb_dep.found()
+  numcosmo_conf.set('HAVE_FLINT', true)
+  flint_headers = [
+    'arb.h',
+    'acb.h',
+  ]
+  foreach h : flint_headers
+    if cc.has_header(
+      h,
+      dependencies: [arb_dep, flint_dep],
+      required: false,
+    )
+      define = 'HAVE_' + h.underscorify().to_upper()
+      numcosmo_conf.set(define, 1)
+    elif cc.has_header(
+      'flint' / h,
+      dependencies: [arb_dep, flint_dep],
+      required: false,
+    )
+      define = 'HAVE_' + h.underscorify().to_upper()
+      define_flint = 'HAVE_FLINT_' + h.underscorify().to_upper()
+      numcosmo_conf.set(define, 1)
+      numcosmo_conf.set(define_flint, 1)
+    endif
+  endforeach
 endif
 
 #######################################################################################
@@ -734,3 +809,54 @@ subdir('numcosmo')
 subdir('tools')
 subdir('tests')
 subdir('docs')
+
+building_options = {
+  'Build type': get_option('buildtype'),
+  'C-Compiler': cc.get_id(),
+  'C-Compiler version': cc.version(),
+  'Fortran-Compiler': fc.get_id(),
+  'Fortran-Compiler version': fc.version(),
+  'Build tests': build_tests,
+  'Build documentation': build_gtk_doc,
+  'Build Python module': get_option('numcosmo_py'),
+  'Build Vala library': have_vala,
+  'Build GObject introspection': enable_gir,
+  'Build MPI support': mpi_c_dep,
+  'Build OpenMP support': omp_c,
+  'Build prefix': numcosmo_prefix,
+  'Build bindir': numcosmo_bindir,
+  'Build libdir': numcosmo_libdir,
+  'Build libexecdir': numcosmo_libexecdir,
+  'Build datadir': numcosmo_datadir,
+  'Build includedir': numcosmo_includedir,
+  'Build pkgdatadir': numcosmo_pkgdatadir,
+  'Build pkgconfigdir': numcosmo_pkgconfigreldir,
+}
+
+summary(
+  building_options,
+  section: 'Building options',
+)
+
+dependencies_summary = {
+  'blas': blas_dep,
+  'cfitsio': cfitsio_dep,
+  'fftw3': fftw3_dep,
+  'fftw3f': fftw3f_dep,
+  'flint': flint_dep,
+  'gio': gio_dep,
+  'glib': glib_dep,
+  'gmp': gmp_dep,
+  'gobject': gobject_dep,
+  'gsl': gsl_dep,
+  'lapack': lapack_dep,
+  'libfyaml': libfyaml_dep,
+  'mpfr': mpfr_dep,
+  'mpi': mpi_c_dep,
+  'nlopt': nlopt_dep,
+  'omp': omp_c,
+  'python': python,
+}
+
+summary(dependencies_summary, section: 'Dependencies')
+

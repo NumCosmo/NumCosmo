@@ -67,8 +67,13 @@
 #include <gsl/gsl_poly.h>
 
 #ifdef HAVE_ACB_H
+#ifdef HAVE_FLINT_ACB_H
+#include <flint/acb.h>
+#include <flint/acb_hypgeom.h>
+#else /* HAVE_FLINT_ACB_H */
 #include <acb.h>
 #include <acb_hypgeom.h>
+#endif /* HAVE_FLINT_ACB_H */
 #endif /* HAVE_ACB_H  */
 
 #include <nvector/nvector_serial.h>
