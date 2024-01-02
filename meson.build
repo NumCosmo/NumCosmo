@@ -543,8 +543,11 @@ endif
 #######################################################################################
 message('Checking for Flint')
 
+# Currently the flint pkg-config file is broken, so we need to check for the
+# library manually. When this is fixed, we can replace 'flint_does_not_work' with
+# 'flint' in the dependency() call below.
 flint_dep = dependency(
-  'flint',
+  'flint_does_not_work',
   version: flint_req,
   required: false,
 )
