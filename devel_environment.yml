@@ -16,6 +16,7 @@ dependencies:
   - gobject-introspection
   - gsl
   - hdf5
+  - libflint
   - libfyaml
   - matplotlib-base
   - meson
