@@ -557,8 +557,27 @@ if not flint_dep.found()
     'flint',
     required: false,
   )
-  if flint_lib_dep.found() and cc.has_function('acb_set', dependencies: [flint_lib_dep])
-    flint_dep = flint_lib_dep
+  if flint_lib_dep.found()
+    if cc.has_function('acb_set', dependencies: [flint_lib_dep])
+      flint_dep = flint_lib_dep
+    else
+      arb_lib_names = [
+        'arb',
+        'flint-arb',
+      ]
+      foreach arb_lib_name : arb_lib_names
+        arb_lib_dep = cc.find_library(
+          arb_lib_name,
+          required: false,
+        )
+        if arb_lib_dep.found()
+          if cc.has_function('acb_set', dependencies: [arb_lib_dep])
+            flint_dep = arb_lib_dep
+            break
+          endif
+        endif
+      endforeach
+    endif
   endif
 endif
 
