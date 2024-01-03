@@ -39,6 +39,7 @@ void test_ncm_data_funnel_basic (void);
 void test_ncm_data_gaussmix2d_basic (void);
 void test_ncm_data_rosenbrock_basic (void);
 void test_ncm_dataset_basic (void);
+void test_ncm_fftlog_basic (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -54,6 +55,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/data_gaussmix2d/basic", test_ncm_data_gaussmix2d_basic);
   g_test_add_func ("/ncm/data_rosenbrock/basic", test_ncm_data_rosenbrock_basic);
   g_test_add_func ("/ncm/dataset/basic", test_ncm_dataset_basic);
+  g_test_add_func ("/ncm/fftlog/basic", test_ncm_fftlog_basic);
 
   g_test_run ();
 }
@@ -146,5 +148,23 @@ test_ncm_dataset_basic (void)
   g_assert (NCM_IS_DATASET (dset));
 
   NCM_TEST_FREE (ncm_dataset_free, dset);
+}
+
+void
+test_ncm_fftlog_basic (void)
+{
+  NcmFftlog *fftlog = NCM_FFTLOG (ncm_fftlog_gausswin2_new (0.0, 0.0, 20.0, 1000));
+  NcmFftlog *fftlog2;
+
+  g_assert (fftlog != NULL);
+  g_assert (NCM_IS_FFTLOG (fftlog));
+
+  fftlog2 = ncm_fftlog_ref (fftlog);
+  ncm_fftlog_clear (&fftlog2);
+  g_assert (fftlog2 == NULL);
+
+  g_assert (NCM_IS_FFTLOG (fftlog));
+
+  NCM_TEST_FREE (ncm_fftlog_free, fftlog);
 }
 
