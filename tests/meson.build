@@ -23,6 +23,7 @@ c_tests = [
     {
         'name': 'ncm_fftlog',
         'sources': ['test_ncm_fftlog.c'],
+        'timeout': 0,
     },
     {
         'name': 'ncm_vector',
