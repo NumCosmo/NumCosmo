@@ -66,6 +66,7 @@ void test_ncm_fftlog_eval_calibrate (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_eval_serialized (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_eval_deriv (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_eval_use_eval_int (TestNcmFftlog *test, gconstpointer pdata);
+void test_ncm_fftlog_eval_smooth_padding (TestNcmFftlog *test, gconstpointer pdata);
 
 void test_ncm_fftlog_tophatwin2_traps (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_gausswin2_traps (TestNcmFftlog *test, gconstpointer pdata);
@@ -87,6 +88,7 @@ TestCases tests[] = {
   {"eval/serialized", &test_ncm_fftlog_eval_serialized},
   {"eval/deriv", &test_ncm_fftlog_eval_deriv},
   {"eval/use_eval_int", &test_ncm_fftlog_eval_use_eval_int},
+  {"eval/smooth_padding", &test_ncm_fftlog_eval_smooth_padding},
 };
 
 TestCases fixtures[] = {
@@ -433,6 +435,43 @@ test_ncm_fftlog_setget (TestNcmFftlog *test, gconstpointer pdata)
   g_assert_true (ncm_fftlog_get_noring (fftlog));
   ncm_fftlog_set_noring (fftlog, FALSE);
   g_assert_false (ncm_fftlog_get_noring (fftlog));
+
+  ncm_fftlog_set_eval_r_min (fftlog, 1.0e-3);
+  ncm_fftlog_set_eval_r_max (fftlog, 1.0e+3);
+  ncm_assert_cmpdouble_e (ncm_fftlog_get_eval_r_min (fftlog), ==, 1.0e-3, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (ncm_fftlog_get_eval_r_max (fftlog), ==, 1.0e+3, 1.0e-15, 0.0);
+  ncm_fftlog_use_eval_interval (fftlog, FALSE);
+  {
+    gboolean use_eval_interval;
+
+    g_object_get (G_OBJECT (fftlog), "use-eval-int", &use_eval_interval, NULL);
+    g_assert_false (use_eval_interval);
+  }
+  ncm_fftlog_use_eval_interval (fftlog, TRUE);
+  {
+    gboolean use_eval_interval;
+
+    g_object_get (G_OBJECT (fftlog), "use-eval-int", &use_eval_interval, NULL);
+    g_assert_true (use_eval_interval);
+  }
+
+  ncm_fftlog_set_smooth_padding_scale (fftlog, 0.1);
+  ncm_assert_cmpdouble_e (ncm_fftlog_get_smooth_padding_scale (fftlog), ==, 0.1, 1.0e-15, 0.0);
+
+  ncm_fftlog_use_smooth_padding (fftlog, TRUE);
+  {
+    gboolean use_smooth_padding;
+
+    g_object_get (G_OBJECT (fftlog), "use-smooth-padding", &use_smooth_padding, NULL);
+    g_assert_true (use_smooth_padding);
+  }
+  ncm_fftlog_use_smooth_padding (fftlog, FALSE);
+  {
+    gboolean use_smooth_padding;
+
+    g_object_get (G_OBJECT (fftlog), "use-smooth-padding", &use_smooth_padding, NULL);
+    g_assert_false (use_smooth_padding);
+  }
 }
 
 void
@@ -620,6 +659,25 @@ test_ncm_fftlog_eval_use_eval_int (TestNcmFftlog *test, gconstpointer pdata)
 
     /* printf ("%u % 22.15g % 22.15g % 22.15g % 22.15e\n", l, test->argK->lnr, res, fftlog_res, fabs (res / fftlog_res - 1.0)); */
   }
+}
+
+void
+test_ncm_fftlog_eval_smooth_padding (TestNcmFftlog *test, gconstpointer pdata)
+{
+  NcmFftlog *fftlog = test->fftlog;
+  guint nerr        = 0;
+  gdouble reltol    = 1.0e-1;
+  NcmVector *lnr;
+  guint i, len;
+
+  ncm_fftlog_set_smooth_padding_scale (fftlog, 1.0e-4);
+  ncm_fftlog_use_smooth_padding (fftlog, TRUE);
+  ncm_fftlog_eval_by_function (fftlog, test->Fk.function, test->Fk.params);
+  ncm_fftlog_prepare_splines (fftlog);
+  lnr = ncm_fftlog_get_vector_lnr (NCM_FFTLOG (fftlog));
+  len = ncm_vector_len (lnr);
+
+  g_assert_cmpint (len, >, 0);
 }
 
 void
