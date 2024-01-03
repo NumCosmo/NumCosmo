@@ -339,6 +339,7 @@ test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata)
   ncm_fftlog_set_length (fftlog, Lk);
 
   ncm_fftlog_sbessel_j_set_best_lnr0 (NCM_FFTLOG_SBESSEL_J (fftlog));
+  ncm_fftlog_sbessel_j_set_best_lnk0 (NCM_FFTLOG_SBESSEL_J (fftlog));
 
   g_assert_true (fftlog != NULL);
   g_assert_true (NCM_IS_FFTLOG (fftlog));
