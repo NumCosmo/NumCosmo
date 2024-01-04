@@ -57,6 +57,7 @@ typedef struct _TestNcmFftlog
 void test_ncm_fftlog_tophatwin2_new (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_gausswin2_new (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata);
+void test_ncm_fftlog_sbessel_j_q0_5_new (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_sbessel_jljm_new (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_free (TestNcmFftlog *test, gconstpointer pdata);
 
@@ -95,6 +96,7 @@ TestCases fixtures[] = {
   {"tophatwin2", &test_ncm_fftlog_tophatwin2_new},
   {"gausswin2", &test_ncm_fftlog_gausswin2_new},
   {"sbessel_j", &test_ncm_fftlog_sbessel_j_new},
+  {"sbessel_j_q0_5", &test_ncm_fftlog_sbessel_j_q0_5_new},
 #if defined (HAVE_FFTW3) && defined (HAVE_ACB_H)
   {"sbessel_jljm", &test_ncm_fftlog_sbessel_jljm_new},
 #endif /* defined (HAVE_FFTW3) && defined (HAVE_ACB_H) */
@@ -221,6 +223,16 @@ _test_ncm_fftlog_sbessel_j (gdouble lnk, gpointer user_data)
 }
 
 static gdouble
+_test_ncm_fftlog_sbessel_j_q0_5 (gdouble lnk, gpointer user_data)
+{
+  TestNcmFftlogK *args = (TestNcmFftlogK *) user_data;
+  const gdouble kr     = exp (lnk + args->lnr);
+  const gdouble k      = exp (lnk);
+
+  return GSL_FN_EVAL (&args->Fk, k) * k * sqrt (kr) * ncm_sf_sbessel (args->ell, kr);
+}
+
+static gdouble
 _test_ncm_fftlog_sbessel_jljm (gdouble lnk, gpointer user_data)
 {
   TestNcmFftlogK *args = (TestNcmFftlogK *) user_data;
@@ -337,6 +349,47 @@ test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata)
 
   ncm_fftlog_set_lnk0 (fftlog, +0.5 * (test->lnk_i + test->lnk_f));
   ncm_fftlog_set_length (fftlog, Lk);
+
+  ncm_fftlog_sbessel_j_set_best_lnr0 (NCM_FFTLOG_SBESSEL_J (fftlog));
+  ncm_fftlog_sbessel_j_set_best_lnk0 (NCM_FFTLOG_SBESSEL_J (fftlog));
+
+  g_assert_true (fftlog != NULL);
+  g_assert_true (NCM_IS_FFTLOG (fftlog));
+  g_assert_true (NCM_IS_FFTLOG_SBESSEL_J (fftlog));
+}
+
+void
+test_ncm_fftlog_sbessel_j_q0_5_new (TestNcmFftlog *test, gconstpointer pdata)
+{
+  const guint N          = g_test_rand_int_range  (1000, 2000);
+  const guint ell        = g_test_rand_int_range  (0, 10);
+  NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_sbessel_j_new (ell, 0.0, 0.0, 20.0, N));
+  TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
+  TestNcmFftlogPlaw *arg = g_new (TestNcmFftlogPlaw, 1);
+  gdouble Lk             = g_test_rand_double_range (log (1.0e+3), log (1.0e+4));
+
+  test->fftlog       = fftlog;
+  test->Fk.function  = &_test_ncm_fftlog_plaw;
+  test->Fk.params    = arg;
+  test->KFk.function = &_test_ncm_fftlog_sbessel_j_q0_5;
+  test->KFk.params   = argK;
+  test->argK         = argK;
+
+  test->lnk_i = g_test_rand_double_range (log (1.0e-6), log (1.0e-4));
+  test->lnk_f = test->lnk_i + Lk;
+
+  test->ntests = NTESTS;
+
+  arg->lnA = g_test_rand_double_range (log (1.0e-10), log (1.0e+10));
+  arg->ns  = g_test_rand_double_range (0.5, 1.5);
+
+  argK->lnr = 0.0;
+  argK->Fk  = test->Fk;
+  argK->ell = ell;
+
+  ncm_fftlog_set_lnk0 (fftlog, +0.5 * (test->lnk_i + test->lnk_f));
+  ncm_fftlog_set_length (fftlog, Lk);
+  ncm_fftlog_sbessel_j_set_q (NCM_FFTLOG_SBESSEL_J (fftlog), 0.5);
 
   ncm_fftlog_sbessel_j_set_best_lnr0 (NCM_FFTLOG_SBESSEL_J (fftlog));
   ncm_fftlog_sbessel_j_set_best_lnk0 (NCM_FFTLOG_SBESSEL_J (fftlog));
