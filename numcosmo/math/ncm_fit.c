@@ -2650,7 +2650,6 @@ ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof)
  * @fit: a #NcmFit
  * @func: a #NcmMSetFunc
  * @x: the argument for the function
- * @pretty_print: whether to print the result to the log
  * @f: (out): the function value
  * @sigma_f: (out): the error in the function value
  *
@@ -2663,7 +2662,7 @@ ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof)
  *
  */
 void
-ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pretty_print, gdouble *f, gdouble *sigma_f)
+ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gdouble *f, gdouble *sigma_f)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
 
@@ -2694,9 +2693,6 @@ ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pre
 
     *f       = ncm_mset_func_eval_nvar (func, self->mset, x);
     *sigma_f = sqrt (result);
-
-    if (pretty_print)
-      g_message ("# % -12.4g +/- % -12.4g\n", *f, *sigma_f);
 
     ncm_vector_free (v);
     ncm_vector_free (tmp1);

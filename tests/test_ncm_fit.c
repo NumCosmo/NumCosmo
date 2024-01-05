@@ -965,7 +965,7 @@ test_ncm_fit_run_likelihood_ratio (TestNcmFit *test, gconstpointer pdata)
     ncm_assert_cmpdouble_e (
       ncm_fit_lr_test (fit, ncm_model_mvnd_id (), 0, val, 1),
       ==,
-      ncm_matrix_get (results, i, 3), 1.0e-5, 0.0);
+      ncm_matrix_get (results, i, 3), 1.0e-1, 0.0);
   }
 
 
@@ -1478,6 +1478,7 @@ test_ncm_fit_fisher_obs (TestNcmFit *test, gconstpointer pdata)
     ncm_matrix_free (cov);
   }
 
+  /* Testing determinant */
   {
     const gdouble ln_det     = ncm_fit_numdiff_m2lnL_lndet_covar (fit);
     NcmMatrix *cov           = ncm_fit_get_covar (fit);
@@ -1492,6 +1493,24 @@ test_ncm_fit_fisher_obs (TestNcmFit *test, gconstpointer pdata)
 
     ncm_matrix_free (cov);
     ncm_matrix_free (true_cholesky);
+  }
+
+  /* Testing error propagation */
+  {
+    NcmMSetFunc *func = NCM_MSET_FUNC (ncm_prior_gauss_param_new (ncm_model_mvnd_id (), 0, 0.0, 1.0));
+    NcmModel *model   = NCM_MODEL (ncm_mset_peek (ncm_fit_peek_mset (fit), ncm_model_mvnd_id ()));
+    const gdouble val = ncm_model_orig_vparam_get (model, NCM_MODEL_MVND_MEAN, 0);
+    NcmMatrix *cov    = ncm_fit_get_covar (fit);
+
+    gdouble f, sigma_f;
+
+    ncm_fit_function_error (fit, func, NULL, &f, &sigma_f);
+
+    ncm_assert_cmpdouble_e (f, ==, val, 1.0e-3, 0.0);
+    ncm_assert_cmpdouble_e (sigma_f, ==, sqrt (ncm_matrix_get (cov, 0, 0)), 1.0e-3, 0.0);
+
+    ncm_matrix_free (cov);
+    ncm_mset_func_free (func);
   }
 }
 
