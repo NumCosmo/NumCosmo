@@ -233,7 +233,16 @@ foreach c_test : c_tests
     else
         timeout = 60
     endif
-    test(c_test['name'], executable_test, timeout: timeout)
+    test(
+        c_test['name'],
+        executable_test,
+        timeout: timeout,
+        env: [
+            'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
+            'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
+        ],
+        protocol: 'tap',
+    )
 endforeach
 
 python_tests = [
@@ -337,13 +346,40 @@ if enable_gir
         numcosmo_source_dir,
     )
 
+    pytest_args = ['-m', 'pytest']
+    pytest_protocol = 'exitcode'
+
+    py_tap = python_module.find_installation(
+        'python3',
+        modules: ['pytest_tap'],
+        required: false,
+    )
+    if py_tap.found()
+        r = run_command(
+            python,
+            '-c',
+            'import importlib.metadata; import sys; sys.stdout.write(importlib.metadata.version("pytest-tap"))',
+            check: true,
+        )
+        message('pytest-tap version: @0@'.format(r.stdout().strip()))
+
+        if r.stdout().version_compare('>= 3.4')
+            pytest_args += ['--tap']
+        else
+            pytest_args += ['--tap-stream']
+        endif
+        pytest_protocol = 'tap'
+    endif
+
+
     foreach python_test : python_tests
         test(
             python_test['name'],
             python,
-            args: ['-m', 'pytest', join_paths(meson.current_source_dir(), python_test['source'])],
+            args: pytest_args + join_paths(meson.current_source_dir(), python_test['source']),
             depends: [numcosmo_gir, numcosmo_math_gir],
             env: env,
+            protocol: pytest_protocol,
         )
     endforeach
 endif

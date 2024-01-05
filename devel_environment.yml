@@ -30,6 +30,7 @@ dependencies:
   - pip
   - pip:
     - pygobject-stubs
+    - pytest-tap
   - pyccl >= 3.0.0
   - pygobject
   - pylint
