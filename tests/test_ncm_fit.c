@@ -997,7 +997,7 @@ test_ncm_fit_sub_fit_run (TestNcmFit *test, gconstpointer pdata)
   ncm_mset_param_set_ftype (mset_dup, ncm_model_mvnd_id (), 0, NCM_PARAM_TYPE_FREE);
 
   ncm_fit_set_sub_fit (test->fit, fit_dup);
-  g_assert (ncm_fit_has_sub_fit (test->fit));
+  g_assert_true (ncm_fit_has_sub_fit (test->fit));
 
   ncm_fit_run (test->fit, NCM_FIT_RUN_MSGS_NONE);
 

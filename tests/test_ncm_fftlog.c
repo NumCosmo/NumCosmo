@@ -449,9 +449,9 @@ test_ncm_fftlog_sbessel_jljm_new (TestNcmFftlog *test, gconstpointer pdata)
     ncm_assert_cmpdouble_e (ncm_fftlog_sbessel_jljm_get_q (NCM_FFTLOG_SBESSEL_JLJM (fftlog)), ==, q, 1.0e-15, 0.0);
   }
 
-  g_assert (fftlog != NULL);
-  g_assert (NCM_IS_FFTLOG (fftlog));
-  g_assert (NCM_IS_FFTLOG_SBESSEL_JLJM (fftlog));
+  g_assert_true (fftlog != NULL);
+  g_assert_true (NCM_IS_FFTLOG (fftlog));
+  g_assert_true (NCM_IS_FFTLOG_SBESSEL_JLJM (fftlog));
 }
 
 void

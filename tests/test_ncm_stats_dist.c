@@ -383,10 +383,10 @@ test_ncm_stats_dist_sanity (TestNcmStatsDist *test, gconstpointer pdata)
   test->sd = sd;
 
   ncm_stats_dist_set_use_threads (test->sd, TRUE);
-  g_assert (ncm_stats_dist_get_use_threads (test->sd));
+  g_assert_true (ncm_stats_dist_get_use_threads (test->sd));
 
   ncm_stats_dist_set_use_threads (test->sd, FALSE);
-  g_assert (!ncm_stats_dist_get_use_threads (test->sd));
+  g_assert_true (!ncm_stats_dist_get_use_threads (test->sd));
 
   ncm_stats_dist_set_over_smooth (test->sd, 1.2);
   g_assert_cmpfloat (ncm_stats_dist_get_over_smooth (test->sd), ==, 1.2);
@@ -395,10 +395,10 @@ test_ncm_stats_dist_sanity (TestNcmStatsDist *test, gconstpointer pdata)
   g_assert_cmpfloat (ncm_stats_dist_get_split_frac (test->sd), ==, 0.2);
 
   ncm_stats_dist_set_print_fit (test->sd, TRUE);
-  g_assert (ncm_stats_dist_get_print_fit (test->sd));
+  g_assert_true (ncm_stats_dist_get_print_fit (test->sd));
 
   ncm_stats_dist_set_print_fit (test->sd, FALSE);
-  g_assert (!ncm_stats_dist_get_print_fit (test->sd));
+  g_assert_true (!ncm_stats_dist_get_print_fit (test->sd));
 
   ncm_stats_dist_set_cv_type (test->sd, NCM_STATS_DIST_CV_NONE);
   g_assert_cmpint (ncm_stats_dist_get_cv_type (test->sd), ==, NCM_STATS_DIST_CV_NONE);
@@ -411,12 +411,12 @@ test_ncm_stats_dist_sanity (TestNcmStatsDist *test, gconstpointer pdata)
     NcmStatsDistKernelGauss *sdk_gauss = ncm_stats_dist_kernel_gauss_new (dim);
     NcmStatsDistKernel *kernel         = ncm_stats_dist_get_kernel (test->sd);
 
-    g_assert (kernel == ncm_stats_dist_peek_kernel (test->sd));
+    g_assert_true (kernel == ncm_stats_dist_peek_kernel (test->sd));
 
     ncm_stats_dist_kernel_free (kernel);
 
     ncm_stats_dist_set_kernel (test->sd, NCM_STATS_DIST_KERNEL (sdk_gauss));
-    g_assert (NCM_STATS_DIST_KERNEL (sdk_gauss) == ncm_stats_dist_get_kernel (test->sd));
+    g_assert_true (NCM_STATS_DIST_KERNEL (sdk_gauss) == ncm_stats_dist_get_kernel (test->sd));
   }
 }
 
