@@ -2279,18 +2279,29 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
 }
 
 static void
-_ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher)
+_ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher, gboolean decomp)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
   NcmMatrix *covar    = ncm_fit_state_peek_covar (self->fstate);
-  gint ret;
+  gint ret            = 0;
 
   if (ncm_mset_fparam_len (self->mset) == 0)
     g_error ("_ncm_fit_fisher_to_covar: mset object has 0 free parameters");
 
-  ncm_matrix_memcpy (covar, fisher);
-
-  ret = ncm_matrix_cholesky_decomp (covar, 'U');
+  if (!decomp)
+  {
+    ncm_matrix_memcpy (covar, fisher);
+    ret = ncm_matrix_cholesky_decomp (covar, 'U');
+  }
+  else
+  {
+    /*
+     * Here we assume that the hessian matrix was already copied to the covariance
+     * matrix, and that it was decomposed using the cholesky decomposition in the upper
+     * triangular matrix.
+     */
+    g_assert_null (fisher);
+  }
 
   if (ret == 0)
   {
@@ -2354,7 +2365,7 @@ ncm_fit_obs_fisher (NcmFit *fit)
   _ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
   ncm_matrix_scale (hessian, 0.5);
 
-  _ncm_fit_fisher_to_covar (fit, hessian);
+  _ncm_fit_fisher_to_covar (fit, hessian, FALSE);
 }
 
 /**
@@ -2409,7 +2420,7 @@ ncm_fit_fisher (NcmFit *fit)
     g_warning ("ncm_fit_fisher: the analysis contains priors which are ignored in the Fisher matrix calculation.");
 
   ncm_dataset_fisher_matrix (dset, self->mset, &IM);
-  _ncm_fit_fisher_to_covar (fit, IM);
+  _ncm_fit_fisher_to_covar (fit, IM, FALSE);
 
   ncm_matrix_clear (&IM);
 }
@@ -2458,9 +2469,9 @@ ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
     g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
 
   _ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
-  ncm_matrix_memcpy (covar, hessian);
-  ncm_matrix_scale (covar, 0.5);
+  ncm_matrix_scale (hessian, 0.5);
 
+  ncm_matrix_memcpy (covar, hessian);
   ret = ncm_matrix_cholesky_decomp (covar, 'U');
 
   if (ret == 0)
@@ -2496,6 +2507,8 @@ ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
   {
     g_error ("ncm_fit_numdiff_m2lnL_lndet_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
   }
+
+  _ncm_fit_fisher_to_covar (fit, NULL, TRUE);
 
   return lndetC;
 }
