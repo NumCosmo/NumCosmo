@@ -132,6 +132,11 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_run_restart_save_file, \
                     &test_ncm_fit_free); \
 \
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/run/likelihood_ratio", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_run_likelihood_ratio, \
+                    &test_ncm_fit_free); \
+\
         g_test_add ("/ncm/fit/" #lib "/" #algo "/serialize", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_serialize, \
@@ -319,6 +324,7 @@ void test_ncm_fit_run_restart (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_restart_simple (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_restart_save (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_restart_save_file (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_likelihood_ratio (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_serialize (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_copy_new (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_sub_fit_wrong_fit (TestNcmFit *test, gconstpointer pdata);
@@ -940,6 +946,32 @@ test_ncm_fit_run_restart_save_file (TestNcmFit *test, gconstpointer pdata)
 
   ncm_mset_free (mset_dup);
   ncm_serialize_free (ser);
+}
+
+void
+test_ncm_fit_run_likelihood_ratio (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit = test->fit;
+  NcmMatrix *results;
+  guint i;
+
+  ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-3, 0.0, NULL, NULL);
+  results = ncm_fit_lr_test_range (fit, ncm_model_mvnd_id (), 0, -1.0, 1.0, 100);
+
+  for (i = 0; i < 100; i++)
+  {
+    const gdouble val = ncm_matrix_get (results, i, 0);
+
+    ncm_assert_cmpdouble_e (
+      ncm_fit_lr_test (fit, ncm_model_mvnd_id (), 0, val, 1),
+      ==,
+      ncm_matrix_get (results, i, 3), 1.0e-5, 0.0);
+  }
+
+
+  ncm_matrix_free (results);
+
+  return;
 }
 
 void

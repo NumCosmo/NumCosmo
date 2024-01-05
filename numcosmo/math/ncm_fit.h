@@ -220,10 +220,8 @@ gdouble ncm_fit_covar_fparam_sd (NcmFit *fit, guint fpi);
 gdouble ncm_fit_covar_fparam_cov (NcmFit *fit, guint fpi1, guint fpi2);
 gdouble ncm_fit_covar_fparam_cor (NcmFit *fit, guint fpi1, guint fpi2);
 
-void ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gdouble stop, gdouble step);
-void ncm_fit_dprob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b, gdouble step, gdouble norm);
+NcmMatrix *ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gdouble stop, guint nsteps);
 gdouble ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof);
-gdouble ncm_fit_prob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b);
 gdouble ncm_fit_chisq_test (NcmFit *fit, size_t bins);
 
 void ncm_fit_reset (NcmFit *fit);
