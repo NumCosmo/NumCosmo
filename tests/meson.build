@@ -286,13 +286,17 @@ python_tests = [
         'name': 'py_dataset',
         'source': 'test_py_dataset.py',
     },
-    {
-        'name': 'py_mpi',
-        'source': 'test_py_mpi.py',
-        'mpi': true,
-    },
 ]
 
+if mpi_c_dep.found()
+    python_tests += [
+        {
+            'name': 'py_mpi',
+            'source': 'test_py_mpi.py',
+            'mpi': true,
+        },
+    ]
+endif
 
 python_astropy_scipy = python_module.find_installation(
     'python3',
@@ -395,7 +399,7 @@ if enable_gir
                 [
                     '-n',
                     '2',
-                    python.path(),
+                    python.full_path(),
                 ] + pytest_args
             )
             foreach python_test : python_tests
