@@ -143,7 +143,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup miniforge
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
           activate-environment: numcosmo_developer
