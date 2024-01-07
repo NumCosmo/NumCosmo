@@ -286,6 +286,11 @@ python_tests = [
         'name': 'py_dataset',
         'source': 'test_py_dataset.py',
     },
+    {
+        'name': 'py_mpi',
+        'source': 'test_py_mpi.py',
+        'mpi': true,
+    },
 ]
 
 
@@ -382,4 +387,32 @@ if enable_gir
             protocol: pytest_protocol,
         )
     endforeach
+
+    if mpi_c_dep.found()
+        mpiexec = find_program('mpiexec', required: false)
+        if mpiexec.found()
+            mpiexec_args = (
+                [
+                    '-n',
+                    '2',
+                    python.path(),
+                ] + pytest_args
+            )
+            foreach python_test : python_tests
+                if python_test.has_key('mpi') and python_test['mpi']
+                    test(
+                        'mpiexec_' + python_test['name'],
+                        mpiexec,
+                        args: mpiexec_args + join_paths(
+                            meson.current_source_dir(),
+                            python_test['source'],
+                        ),
+                        depends: [numcosmo_gir, numcosmo_math_gir],
+                        env: env,
+                        protocol: pytest_protocol,
+                    )
+                endif
+            endforeach
+        endif
+    endif
 endif

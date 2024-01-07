@@ -380,6 +380,13 @@ else
   numcosmo_build_cfg.set('have_mpi_support', '')
 endif
 
+if get_option('debug-mpi') and mpi_c_dep.found()
+  add_global_arguments(
+    '-DNCM_MPI_DEBUG',
+    language: 'c',
+  )
+endif
+
 #######################################################################################
 # Checking for OpenMP:
 #

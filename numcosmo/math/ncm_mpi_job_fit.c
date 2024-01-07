@@ -98,44 +98,41 @@ _ncm_mpi_job_fit_set_property (GObject *object, guint prop_id, const GValue *val
   NcmMPIJobFitPrivate * const self = ncm_mpi_job_fit_get_instance_private (mjfit);
 
   g_return_if_fail (NCM_IS_MPI_JOB_FIT (object));
+
+  switch (prop_id)
   {
-    NcmMSet *mset = ncm_fit_peek_mset (self->fit);
-
-    switch (prop_id)
+    case PROP_FIT:
+      g_assert (self->fit == NULL);
+      self->fit        = g_value_dup_object (value);
+      self->fparam_len = ncm_mset_fparam_len (ncm_fit_peek_mset (self->fit));
+      break;
+    case PROP_FUNC_ARRAY:
     {
-      case PROP_FIT:
-        g_assert (self->fit == NULL);
-        self->fit        = g_value_dup_object (value);
-        self->fparam_len = ncm_mset_fparam_len (mset);
-        break;
-      case PROP_FUNC_ARRAY:
+      ncm_obj_array_clear (&self->func_oa);
+      self->func_oa = g_value_dup_boxed (value);
+      self->nfuncs  = 0;
+
+      if (self->func_oa != NULL)
       {
-        ncm_obj_array_clear (&self->func_oa);
-        self->func_oa = g_value_dup_boxed (value);
-        self->nfuncs  = 0;
+        guint i;
 
-        if (self->func_oa != NULL)
+        for (i = 0; i < self->func_oa->len; i++)
         {
-          guint i;
+          NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (self->func_oa, i));
 
-          for (i = 0; i < self->func_oa->len; i++)
-          {
-            NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (self->func_oa, i));
-
-            g_assert (NCM_IS_MSET_FUNC (func));
-            g_assert (ncm_mset_func_is_scalar (func));
-            g_assert (ncm_mset_func_is_const (func));
-          }
-
-          self->nfuncs = self->func_oa->len;
+          g_assert (NCM_IS_MSET_FUNC (func));
+          g_assert (ncm_mset_func_is_scalar (func));
+          g_assert (ncm_mset_func_is_const (func));
         }
 
-        break;
+        self->nfuncs = self->func_oa->len;
       }
-      default:                                                      /* LCOV_EXCL_LINE */
-        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-        break;                                                      /* LCOV_EXCL_LINE */
+
+      break;
     }
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
