@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Example testing MPI fit."""
+"""Unit tests for NumCosmo MPI objects. """
 
 import sys
 from numpy.testing import assert_allclose
@@ -30,15 +30,11 @@ import numpy as np
 
 from numcosmo_py import Ncm
 
-#
-#  Initializing the library objects, this must be called before
-#  any other library function.
-#
 sys.argv = Ncm.cfg_init_full(sys.argv)
 
 
 def test_mpi_fit_run_array() -> None:
-    """Example testing MPI fit."""
+    """Testing MPI fit using run_array."""
 
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
@@ -83,7 +79,7 @@ def test_mpi_fit_run_array() -> None:
 
 
 def test_mpi_fit_run_array_async() -> None:
-    """Example testing MPI fit."""
+    """Testing MPI fit using run_array_async."""
 
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
@@ -128,7 +124,7 @@ def test_mpi_fit_run_array_async() -> None:
 
 
 def test_mpi_job_test_run_array() -> None:
-    """Example testing MPI objects."""
+    """Testing MPI job test using run_array."""
 
     rng = Ncm.RNG.new(None)
     rng.set_random_seed(True)
@@ -153,7 +149,7 @@ def test_mpi_job_test_run_array() -> None:
 
 
 def test_mpi_job_test_run_array_async() -> None:
-    """Example testing MPI objects."""
+    """Testing MPI job test using run_array_async."""
 
     rng = Ncm.RNG.new(None)
     rng.set_random_seed(True)

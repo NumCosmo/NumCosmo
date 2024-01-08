@@ -575,8 +575,7 @@ test_ncm_fit_log_covar (TestNcmFit *test, gconstpointer pdata)
   {
     NcmFit *fit = test->fit;
 
-    ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
-    ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+    ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-3, 0.0, NULL, NULL);
     ncm_fit_obs_fisher (fit);
     ncm_fit_log_covar (fit);
 
