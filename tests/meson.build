@@ -413,7 +413,7 @@ if enable_gir
                         ),
                         depends: [numcosmo_gir, numcosmo_math_gir],
                         env: env,
-                        protocol: pytest_protocol,
+                        # protocol: pytest_protocol, # FIXME: mpiexec does not support TAP
                     )
                 endif
             endforeach
