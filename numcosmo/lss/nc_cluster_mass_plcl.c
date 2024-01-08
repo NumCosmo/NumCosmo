@@ -1109,12 +1109,12 @@ _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdoub
   const gdouble lnM_SZ = _SZ_lnmass_mean (mszl, lnM);
   const gdouble lnM_L  = _Lens_lnmass_mean (mszl, lnM);
 
-  printf ("lnMobs_params[0] = % 22.15g lnMobs_params[1] = % 22.15g\n", lnMobs_params[0], lnMobs_params[1]);
-  fflush (stdout);
-  printf ("%p\n", lnMobs);
-  fflush (stdout);
-  printf ("lnMobs[0] = % 22.15g lnMobs[1] = % 22.15g\n", lnMobs[0], lnMobs[1]);
-  fflush (stdout);
+  /* printf ("lnMobs_params[0] = % 22.15g lnMobs_params[1] = % 22.15g\n", lnMobs_params[0], lnMobs_params[1]); */
+  /* fflush (stdout); */
+  /* printf ("%p\n", lnMobs); */
+  /* fflush (stdout); */
+  /* printf ("lnMobs[0] = % 22.15g lnMobs[1] = % 22.15g\n", lnMobs[0], lnMobs[1]); */
+  /* fflush (stdout); */
 
   ncm_rng_lock (rng);
   ncm_rng_bivariate_gaussian_gen (rng, SD_SZ, SD_L, COR, &r_SZ, &r_L);
@@ -1142,8 +1142,8 @@ _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdoub
   lnMobs[NC_CLUSTER_MASS_PLCL_MPL] = M_pl;
   lnMobs[NC_CLUSTER_MASS_PLCL_MCL] = M_cl;
 
-  printf ("Finished\n");
-  fflush (stdout);
+  /* printf ("Finished\n"); */
+  /* fflush (stdout); */
 
   return TRUE;
 

@@ -171,12 +171,12 @@ test_nc_cluster_abundance_sanity (TestNcClusterAbundance *test, gconstpointer pd
   {
     gchar *desc = ncm_data_get_desc (NCM_DATA (test->ncdata));
 
-    g_assert (strlen (desc) > 0);
+    g_assert_true (strlen (desc) > 0);
     g_free (desc);
   }
 
-  g_assert (nc_data_cluster_ncount_has_lnM_true (test->ncdata));
-  g_assert (nc_data_cluster_ncount_has_z_true (test->ncdata));
+  g_assert_true (nc_data_cluster_ncount_has_lnM_true (test->ncdata));
+  g_assert_true (nc_data_cluster_ncount_has_z_true (test->ncdata));
 
   g_assert_cmpuint (nc_data_cluster_ncount_get_len (test->ncdata), >, 0);
   g_assert_cmpuint (nc_data_cluster_ncount_lnM_obs_len (test->ncdata), ==, 1);
@@ -211,10 +211,10 @@ test_nc_cluster_abundance_sanity (TestNcClusterAbundance *test, gconstpointer pd
   }
 
   nc_data_cluster_ncount_true_data (test->ncdata, TRUE);
-  g_assert (nc_data_cluster_ncount_using_true_data (test->ncdata));
+  g_assert_true (nc_data_cluster_ncount_using_true_data (test->ncdata));
 
   nc_data_cluster_ncount_true_data (test->ncdata, FALSE);
-  g_assert (!nc_data_cluster_ncount_using_true_data (test->ncdata));
+  g_assert_true (!nc_data_cluster_ncount_using_true_data (test->ncdata));
 
   ncm_rng_free (rng);
 }
@@ -240,8 +240,8 @@ test_nc_cluster_abundance_true_n (TestNcClusterAbundance *test, gconstpointer pd
     gdouble n1 = nc_cluster_abundance_true_n (test->cad, test->cosmo, test->clusterz, test->clusterm);
     gdouble n2 = nc_cluster_abundance_true_n (test->cad, test->cosmo, test->clusterz, test->clusterm);
 
-    g_assert (gsl_finite (n1));
-    g_assert (gsl_finite (n2));
+    g_assert_true (gsl_finite (n1));
+    g_assert_true (gsl_finite (n2));
 
     ncm_assert_cmpdouble_e (n1, ==, n2, 1.0e-15, 0.0);
   }
@@ -255,8 +255,8 @@ test_nc_cluster_abundance_n (TestNcClusterAbundance *test, gconstpointer pdata)
     gdouble N1 = nc_cluster_abundance_n (test->cad, test->cosmo, test->clusterz, test->clusterm);
     gdouble N2 = nc_cluster_abundance_n (test->cad, test->cosmo, test->clusterz, test->clusterm);
 
-    g_assert (gsl_finite (N1));
-    g_assert (gsl_finite (N2));
+    g_assert_true (gsl_finite (N1));
+    g_assert_true (gsl_finite (N2));
 
     ncm_assert_cmpdouble_e (N1, ==, N2, 1.0e-15, 0.0);
   }
@@ -270,8 +270,8 @@ test_nc_cluster_abundance_intp_d2n (TestNcClusterAbundance *test, gconstpointer 
     gdouble d2n_1 = nc_cluster_abundance_intp_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, 14, 1);
     gdouble d2n_2 = nc_cluster_abundance_intp_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, 14, 1);
 
-    g_assert (gsl_finite (d2n_1));
-    g_assert (gsl_finite (d2n_2));
+    g_assert_true (gsl_finite (d2n_1));
+    g_assert_true (gsl_finite (d2n_2));
 
     ncm_assert_cmpdouble_e (d2n_1, ==, d2n_2, 1.0e-15, 0.0);
   }
@@ -289,8 +289,8 @@ test_nc_cluster_abundance_intp_bin_d2n (TestNcClusterAbundance *test, gconstpoin
     gdouble d2n_bin1                   = nc_cluster_abundance_intp_bin_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_lower, z_obs_bin_upper, NULL);
     gdouble d2n_bin2                   = nc_cluster_abundance_intp_bin_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_lower, z_obs_bin_upper, NULL);
 
-    g_assert (gsl_finite (d2n_bin1));
-    g_assert (gsl_finite (d2n_bin2));
+    g_assert_true (gsl_finite (d2n_bin1));
+    g_assert_true (gsl_finite (d2n_bin2));
 
     ncm_assert_cmpdouble_e (d2n_bin1, ==, d2n_bin2, 1.0e-15, 0.0);
   }
@@ -306,8 +306,8 @@ test_nc_cluster_abundance_intp_d2n_bias (TestNcClusterAbundance *test, gconstpoi
   gdouble d2n_bias1  = nc_cluster_abundance_intp_d2n_bias (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs, NULL, z_obs, NULL);
   gdouble d2n_bias2  = nc_cluster_abundance_intp_d2n_bias (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs, NULL, z_obs, NULL);
 
-  g_assert (gsl_finite (d2n_bias1));
-  g_assert (gsl_finite (d2n_bias2));
+  g_assert_true (gsl_finite (d2n_bias1));
+  g_assert_true (gsl_finite (d2n_bias2));
 
   ncm_assert_cmpdouble_e (d2n_bias1, ==, d2n_bias2, 1.0e-15, 0.0);
 }
@@ -324,8 +324,8 @@ test_nc_cluster_abundance_intp_bin_d2n_bias (TestNcClusterAbundance *test, gcons
     gdouble d2n_bias_bin1              = nc_cluster_abundance_intp_bin_d2n_bias (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_lower, z_obs_bin_upper, NULL);
     gdouble d2n_bias_bin2              = nc_cluster_abundance_intp_bin_d2n_bias (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_lower, z_obs_bin_upper, NULL);
 
-    g_assert (gsl_finite (d2n_bias_bin1));
-    g_assert (gsl_finite (d2n_bias_bin2));
+    g_assert_true (gsl_finite (d2n_bias_bin1));
+    g_assert_true (gsl_finite (d2n_bias_bin2));
 
     ncm_assert_cmpdouble_e (d2n_bias_bin1, ==, d2n_bias_bin2, 1.0e-15, 0.0);
   }
@@ -339,8 +339,8 @@ test_nc_cluster_abundance_mean_bias (TestNcClusterAbundance *test, gconstpointer
     gdouble mean_bias1 = nc_cluster_abundance_mean_bias (test->cad, test->cosmo, test->clusterz, test->clusterm);
     gdouble mean_bias2 = nc_cluster_abundance_mean_bias (test->cad, test->cosmo, test->clusterz, test->clusterm);
 
-    g_assert (gsl_finite (mean_bias1));
-    g_assert (gsl_finite (mean_bias2));
+    g_assert_true (gsl_finite (mean_bias1));
+    g_assert_true (gsl_finite (mean_bias2));
 
     ncm_assert_cmpdouble_e (mean_bias1, ==, mean_bias2, 1.0e-15, 0.0);
   }
