@@ -392,7 +392,7 @@ _ncm_mpi_job_feval_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 /**
  * ncm_mpi_job_feval_new:
  * @fit: a #NcmFit
- * @func_oa: (array) (element-type NcmMSetFunc) (allow-none): a #NcmObjArray
+ * @func_oa: (nullable): a #NcmObjArray
  *
  * Creates a new #NcmMPIJobFEval object.
  *

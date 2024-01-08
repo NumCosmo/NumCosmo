@@ -162,7 +162,7 @@ test_ncm_data_gauss_cov_mvnd_sanity (TestNcmDataGaussCovTest *test, gconstpointe
     g_assert_cmpfloat_with_epsilon (ncm_stats_vec_get_mean (sv, i), 0.0, 1.0e-1);
   }
 
-  g_assert (ncm_stats_vec_peek_row (sv, 0) != NULL);
+  g_assert_true (ncm_stats_vec_peek_row (sv, 0) != NULL);
 
   ncm_vector_free (lower);
   ncm_vector_free (upper);
@@ -204,13 +204,13 @@ test_ncm_data_gauss_cov_test_sanity (TestNcmDataGaussCovTest *test, gconstpointe
 
     ncm_data_gauss_cov_replace_mean (gauss, y_dup);
 
-    g_assert (y_dup == ncm_data_gauss_cov_peek_mean (gauss));
+    g_assert_true (y_dup == ncm_data_gauss_cov_peek_mean (gauss));
 
     NCM_TEST_FREE (ncm_vector_free, y);
   }
 
   {
-    g_assert (gsl_finite (ncm_data_gauss_cov_get_log_norma (gauss, NULL)));
+    g_assert_true (gsl_finite (ncm_data_gauss_cov_get_log_norma (gauss, NULL)));
   }
 
   for (i = 0; i < np; i++)
@@ -325,8 +325,8 @@ test_ncm_data_gauss_cov_test_bootstrap_resample (TestNcmDataGaussCovTest *test, 
     ncm_stats_vec_update (stat);
   }
 
-  g_assert (gsl_finite (ncm_stats_vec_get_mean (stat, 0)));
-  g_assert (gsl_finite (ncm_stats_vec_get_sd (stat, 0)));
+  g_assert_true (gsl_finite (ncm_stats_vec_get_mean (stat, 0)));
+  g_assert_true (gsl_finite (ncm_stats_vec_get_sd (stat, 0)));
 
   ncm_data_gauss_cov_set_size (gauss, 10);
   g_assert_cmpuint (ncm_data_gauss_cov_get_size (gauss), ==, 10);
@@ -371,8 +371,8 @@ test_ncm_data_gauss_cov_test_bootstrap_resample_norm (TestNcmDataGaussCovTest *t
     ncm_stats_vec_update (stat);
   }
 
-  g_assert (gsl_finite (ncm_stats_vec_get_mean (stat, 0)));
-  g_assert (gsl_finite (ncm_stats_vec_get_sd (stat, 0)));
+  g_assert_true (gsl_finite (ncm_stats_vec_get_mean (stat, 0)));
+  g_assert_true (gsl_finite (ncm_stats_vec_get_sd (stat, 0)));
 
   ncm_data_gauss_cov_set_size (gauss, 10);
   g_assert_cmpuint (ncm_data_gauss_cov_get_size (gauss), ==, 10);

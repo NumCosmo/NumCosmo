@@ -679,8 +679,8 @@ test_ncm_serialize_from_yaml_special_types (TestNcmSerialize *test, gconstpointe
     "  matrix: [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]\n";
   GObject *obj_new = ncm_serialize_from_yaml (test->ser, yaml_str);
 
-  g_assert (G_IS_OBJECT (obj_new));
-  g_assert (NCM_IS_OBJECT_TEST (obj_new));
+  g_assert_true (G_IS_OBJECT (obj_new));
+  g_assert_true (NCM_IS_OBJECT_TEST (obj_new));
 
   {
     NcmObjectTest *obj_test = NCM_OBJECT_TEST (obj_new);
@@ -738,8 +738,8 @@ test_ncm_serialize_from_yaml_special_types_block_flow (TestNcmSerialize *test, g
     "   - [4.0, 5.0, 6.0]\n";
   GObject *obj_new = ncm_serialize_from_yaml (test->ser, yaml_str);
 
-  g_assert (G_IS_OBJECT (obj_new));
-  g_assert (NCM_IS_OBJECT_TEST (obj_new));
+  g_assert_true (G_IS_OBJECT (obj_new));
+  g_assert_true (NCM_IS_OBJECT_TEST (obj_new));
 
   {
     NcmObjectTest *obj_test = NCM_OBJECT_TEST (obj_new);

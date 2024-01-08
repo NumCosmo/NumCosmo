@@ -615,16 +615,16 @@ test_ncm_mset_catalog_autocorrelation (TestNcmMSetCatalog *test, gconstpointer p
   {
     NcmVector *tau = ncm_mset_catalog_peek_autocorrelation_tau (test->mcat);
 
-    g_assert (ncm_vector_is_finite (tau));
+    g_assert_true (ncm_vector_is_finite (tau));
   }
 
   {
     GArray *accept_ratio_array = ncm_mset_catalog_peek_accept_ratio_array (test->mcat);
 
     if (ncm_mset_catalog_nchains (test->mcat) > 1)
-      g_assert (accept_ratio_array != NULL);
+      g_assert_true (accept_ratio_array != NULL);
     else
-      g_assert (accept_ratio_array == NULL);
+      g_assert_true (accept_ratio_array == NULL);
   }
 }
 
@@ -655,13 +655,13 @@ test_ncm_mset_catalog_accept_ratio_array (TestNcmMSetCatalog *test, gconstpointe
     {
       const gint max_time = ncm_mset_catalog_max_time (test->mcat);
 
-      g_assert (accept_ratio_array != NULL);
+      g_assert_true (accept_ratio_array != NULL);
 
       g_assert_cmpuint (accept_ratio_array->len + 1, ==, max_time);
     }
     else
     {
-      g_assert (accept_ratio_array == NULL);
+      g_assert_true (accept_ratio_array == NULL);
     }
   }
 }

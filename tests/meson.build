@@ -23,6 +23,7 @@ c_tests = [
     {
         'name': 'ncm_fftlog',
         'sources': ['test_ncm_fftlog.c'],
+        'timeout': 0,
     },
     {
         'name': 'ncm_vector',
@@ -240,7 +241,16 @@ foreach c_test : c_tests
     else
         timeout = 60
     endif
-    test(c_test['name'], executable_test, timeout: timeout)
+    test(
+        c_test['name'],
+        executable_test,
+        timeout: timeout,
+        env: [
+            'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
+            'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
+        ],
+        protocol: 'tap',
+    )
 endforeach
 
 python_tests = [
@@ -284,8 +294,21 @@ python_tests = [
         'name': 'py_dataset',
         'source': 'test_py_dataset.py',
     },
+    {
+        'name': 'py_ode_spline',
+        'source': 'test_py_ode_spline.py',
+    },
 ]
 
+if mpi_c_dep.found()
+    python_tests += [
+        {
+            'name': 'py_mpi',
+            'source': 'test_py_mpi.py',
+            'mpi': true,
+        },
+    ]
+endif
 
 python_astropy_scipy = python_module.find_installation(
     'python3',
@@ -344,13 +367,68 @@ if enable_gir
         numcosmo_source_dir,
     )
 
+    pytest_args = ['-m', 'pytest']
+    pytest_protocol = 'exitcode'
+
+    py_tap = python_module.find_installation(
+        'python3',
+        modules: ['pytest_tap'],
+        required: false,
+    )
+    if py_tap.found()
+        r = run_command(
+            python,
+            '-c',
+            'import importlib.metadata; import sys; sys.stdout.write(importlib.metadata.version("pytest-tap"))',
+            check: true,
+        )
+        message('pytest-tap version: @0@'.format(r.stdout().strip()))
+
+        if r.stdout().version_compare('>= 3.4')
+            pytest_args += ['--tap']
+        else
+            pytest_args += ['--tap-stream']
+        endif
+        pytest_protocol = 'tap'
+    endif
+
+
     foreach python_test : python_tests
         test(
             python_test['name'],
             python,
-            args: ['-m', 'pytest', join_paths(meson.current_source_dir(), python_test['source'])],
+            args: pytest_args + join_paths(meson.current_source_dir(), python_test['source']),
             depends: [numcosmo_gir, numcosmo_math_gir],
             env: env,
+            protocol: pytest_protocol,
         )
     endforeach
+
+    if mpi_c_dep.found()
+        mpiexec = find_program('mpiexec', required: false)
+        if mpiexec.found()
+            mpiexec_args = (
+                [
+                    '-n',
+                    '2',
+                    python.full_path(),
+                ] + pytest_args
+            )
+            foreach python_test : python_tests
+                if python_test.has_key('mpi') and python_test['mpi']
+                    test(
+                        'mpiexec_' + python_test['name'],
+                        mpiexec,
+                        args: mpiexec_args + join_paths(
+                            meson.current_source_dir(),
+                            python_test['source'],
+                        ),
+                        depends: [numcosmo_gir, numcosmo_math_gir],
+                        env: env,
+                        # protocol: pytest_protocol, # FIXME: mpiexec does not support TAP
+                    )
+                endif
+            endforeach
+        endif
+    endif
 endif

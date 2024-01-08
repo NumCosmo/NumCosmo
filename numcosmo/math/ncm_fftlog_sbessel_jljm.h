@@ -46,6 +46,9 @@ gint ncm_fftlog_sbessel_jljm_get_ell (NcmFftlogSBesselJLJM *fftlog_jljm);
 void ncm_fftlog_sbessel_jljm_set_dell (NcmFftlogSBesselJLJM *fftlog_jljm, const gint dell);
 gint ncm_fftlog_sbessel_jljm_get_dell (NcmFftlogSBesselJLJM *fftlog_jljm);
 
+void ncm_fftlog_sbessel_jljm_set_q (NcmFftlogSBesselJLJM *fftlog_jljm, const gdouble q);
+gdouble ncm_fftlog_sbessel_jljm_get_q (NcmFftlogSBesselJLJM *fftlog_jljm);
+
 void ncm_fftlog_sbessel_jljm_set_lnw (NcmFftlogSBesselJLJM *fftlog_jljm, const gdouble lnw);
 gdouble ncm_fftlog_sbessel_jljm_get_lnw (NcmFftlogSBesselJLJM *fftlog_jljm);
 

@@ -214,7 +214,7 @@ test_nc_halo_bias_eval (TestNcHaloBias *test, gconstpointer pdata)
 
   g_assert_cmpfloat (eval_ps, ==, GSL_POSINF);
   g_assert_cmpfloat (eval_bt, ==, 1.0);
-  g_assert (gsl_finite (eval_bste));
+  g_assert_true (gsl_finite (eval_bste));
 
   {
     gdouble delta_c  = nc_halo_bias_st_spher_get_delta_c (test->bsts);
