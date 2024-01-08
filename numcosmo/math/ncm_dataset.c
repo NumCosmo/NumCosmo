@@ -992,3 +992,48 @@ ncm_dataset_fisher_matrix (NcmDataset *dset, NcmMSet *mset, NcmMatrix **IM)
   ncm_matrix_free (IM0);
 }
 
+/**
+ * ncm_dataset_fisher_matrix_bias:
+ * @dset: a #NcmDataset
+ * @mset: a #NcmMSet
+ * @f_true: a #NcmVector
+ * @IM: (out) (transfer full): The fisher matrix
+ * @delta_theta: (out) (transfer full): The bias vector
+ *
+ * Calculates the Fisher-information matrix @IM and and the bias vector @delta_theta
+ * adding the individual ones from each #NcmData in @dset.
+ *
+ */
+void
+ncm_dataset_fisher_matrix_bias (NcmDataset *dset, NcmMSet *mset, NcmVector *f_true, NcmMatrix **IM, NcmVector **delta_theta)
+{
+  const guint fparams_len = ncm_mset_fparams_len (mset);
+  NcmMatrix *IM0          = ncm_matrix_new (fparams_len, fparams_len);
+  NcmVector *delta_theta0 = ncm_vector_new (fparams_len);
+  guint pos               = 0;
+  guint i;
+
+  *IM          = ncm_matrix_new (fparams_len, fparams_len);
+  *delta_theta = ncm_vector_new (fparams_len);
+
+  ncm_matrix_set_zero (*IM);
+
+  for (i = 0; i < dset->oa->len; i++)
+  {
+    NcmData *data = ncm_dataset_peek_data (dset, i);
+    guint n       = ncm_data_get_length (data);
+
+    ncm_vector_get_subvector2 (dset->ls_f, f_true, pos, n);
+
+    ncm_data_fisher_matrix_bias (data, mset, dset->ls_f, &IM0, &delta_theta0);
+
+    ncm_matrix_add (*IM, IM0);
+    ncm_vector_add (*delta_theta, delta_theta0);
+
+    pos += n;
+  }
+
+  ncm_matrix_free (IM0);
+  ncm_vector_free (delta_theta0);
+}
+

@@ -36,7 +36,7 @@ from numcosmo_py import Ncm
 Ncm.cfg_init()
 
 
-def test_constructor():
+def test_dataset_constructor():
     """Test constructor."""
 
     dset = Ncm.Dataset.new()
@@ -57,7 +57,7 @@ def test_constructor():
     assert dset.all_init()
 
 
-def test_new_array_eval():
+def test_dataset_new_array_eval():
     """Test eval."""
 
     dset = Ncm.Dataset.new_array(
@@ -73,7 +73,7 @@ def test_new_array_eval():
     assert math.isfinite(dset.m2lnL_val(mset))
 
 
-def test_new_array_dup():
+def test_dataset_new_array_dup():
     """Test eval."""
 
     dset = Ncm.Dataset.new_array(
@@ -95,7 +95,7 @@ def test_new_array_dup():
     assert_allclose(dset.m2lnL_val(mset), dset2.m2lnL_val(mset))
 
 
-def test_new_array_copy():
+def test_dataset_new_array_copy():
     """Test eval."""
 
     dset = Ncm.Dataset.new_array(
@@ -121,7 +121,7 @@ def test_new_array_copy():
         assert dset.get_data(i) == dset2.get_data(i)
 
 
-def test_new_array_get_data_array():
+def test_dataset_new_array_get_data_array():
     """Test eval."""
 
     dset = Ncm.Dataset.new_array(
@@ -137,7 +137,7 @@ def test_new_array_get_data_array():
         assert data_array.get(i) == dset.get_data(i)
 
 
-def test_resample():
+def test_dataset_resample():
     """Test resample."""
 
     rng = Ncm.RNG.new()
@@ -178,7 +178,7 @@ def test_resample():
     assert_allclose(sd[1:], 1.0, atol=0.1)
 
 
-def test_bootstrap_partial_resample():
+def test_dataset_bootstrap_partial_resample():
     """Test resample."""
 
     rng = Ncm.RNG.new()
@@ -207,7 +207,7 @@ def test_bootstrap_partial_resample():
     assert_allclose(sv.get_mean(0), dset.get_n(), atol=20.0)
 
 
-def test_bootstrap_total_resample():
+def test_dataset_bootstrap_total_resample():
     """Test resample."""
 
     rng = Ncm.RNG.new()
@@ -236,7 +236,7 @@ def test_bootstrap_total_resample():
     assert_allclose(sv.get_mean(0), dset.get_n(), atol=10.0)
 
 
-def test_log_info():
+def test_dataset_log_info():
     """Test log_info."""
 
     dset = Ncm.Dataset.new_array(
@@ -247,12 +247,70 @@ def test_log_info():
     assert dset.get_info() is not None
 
 
+def test_dataset_fisher():
+    """Test resample."""
+
+    theta_true = np.array([1.0, 2.0])
+    delta_theta = np.array([0.1, 0.2])
+
+    dset = Ncm.Dataset.new_array(
+        [
+            DataGaussDiagTest(n_points=200),
+            DataGaussTest(corr=0.3, sigma1=1.0, sigma2=2.0),
+        ]
+    )
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    mset.fparams_set_array(theta_true - delta_theta)
+    mset.prepare_fparam_map()
+
+    fisher = dset.fisher_matrix(mset)
+    fisher.cholesky_decomp(ord("U"))
+    fisher.cholesky_inverse(ord("U"))
+    fisher.copy_triangle(ord("U"))
+
+    assert np.all(np.isfinite(fisher.dup_array()))
+
+
+def test_dataset_fisher_bias():
+    """Test resample."""
+
+    true_theta = np.array([1.0, 2.0])
+    theta_shift = np.array([0.1, 0.2])
+
+    dset = Ncm.Dataset.new_array(
+        [
+            DataGaussDiagTest(n_points=200),
+            DataGaussTest(corr=0.3, sigma1=1.0, sigma2=2.0),
+        ]
+    )
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    mset.prepare_fparam_map()
+    mset.fparams_set_array(true_theta - theta_shift)
+
+    fisher0 = dset.fisher_matrix(mset)
+    fisher1, delta_theta = dset.fisher_matrix_bias(
+        mset,
+        Ncm.Vector.new_array(
+            np.concatenate((np.linspace(true_theta[0], true_theta[1], 200), true_theta))
+        ),
+    )
+
+    assert_allclose(fisher0.dup_array(), fisher1.dup_array(), atol=1.0e-6)
+
+    fisher0.cholesky_solve(delta_theta, ord("U"))
+    assert_allclose(delta_theta.dup_array(), theta_shift, atol=1.0e-1)
+
+
 if __name__ == "__main__":
-    test_constructor()
-    test_new_array_eval()
-    test_new_array_dup()
-    test_new_array_copy()
-    test_resample()
-    test_bootstrap_partial_resample()
-    test_bootstrap_total_resample()
-    test_log_info()
+    test_dataset_constructor()
+    test_dataset_new_array_eval()
+    test_dataset_new_array_dup()
+    test_dataset_new_array_copy()
+    test_dataset_resample()
+    test_dataset_bootstrap_partial_resample()
+    test_dataset_bootstrap_total_resample()
+    test_dataset_log_info()
+    test_dataset_fisher()
+    test_dataset_fisher_bias()
