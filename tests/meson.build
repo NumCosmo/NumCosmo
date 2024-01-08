@@ -286,6 +286,10 @@ python_tests = [
         'name': 'py_dataset',
         'source': 'test_py_dataset.py',
     },
+    {
+        'name': 'py_ode_spline',
+        'source': 'test_py_ode_spline.py',
+    },
 ]
 
 if mpi_c_dep.found()
