@@ -78,6 +78,53 @@ def test_mpi_fit_run_array() -> None:
     mj.free_all_slaves()
 
 
+def test_mpi_fit_funcs_run_array() -> None:
+    """Testing MPI fit using run_array."""
+
+    rng = Ncm.RNG.new()
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    data_mvnd = Ncm.DataGaussCovMVND.new_full(
+        dim=4,
+        sigma_min=1.0,
+        sigma_max=2.0,
+        cor_level=50.0,
+        mean_min=0.0,
+        mean_max=1.0,
+        rng=rng,
+    )
+
+    dset = Ncm.Dataset.new_array([data_mvnd])
+    lh = Ncm.Likelihood(dataset=dset)
+    fit = Ncm.Fit.factory(
+        Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD
+    )
+
+    funcs = Ncm.ObjArray.new()
+    funcs.add(Ncm.PriorGaussParam.new(Ncm.ModelMVND.id(), 0, 0.0, 1.0))
+    mj = Ncm.MPIJobFit.new(fit, funcs)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    mj.init_all_slaves(ser)
+
+    param_a = []
+    m2lnL_a = []
+    for _ in range(24):
+        param_a.append(
+            Ncm.Vector.new_array([rng.gaussian_gen(-1.0, 1.0) for _ in range(4)])
+        )
+        m2lnL_a.append(Ncm.Vector.new(1 + 4 + 1))
+
+    mj.run_array(param_a, m2lnL_a)
+
+    true_mean = data_mvnd.peek_mean().dup_array()
+
+    for m2lnL in m2lnL_a:
+        assert_allclose(np.array(m2lnL.dup_array())[1:5], true_mean, rtol=1.0e-2)
+
+    mj.free_all_slaves()
+
+
 def test_mpi_fit_run_array_async() -> None:
     """Testing MPI fit using run_array_async."""
 
@@ -119,6 +166,53 @@ def test_mpi_fit_run_array_async() -> None:
 
     for m2lnL in m2lnL_a:
         assert_allclose(np.array(m2lnL.dup_array())[1:], true_mean, rtol=1.0e-2)
+
+    mj.free_all_slaves()
+
+
+def test_mpi_fit_funcs_run_array_async() -> None:
+    """Testing MPI fit using run_array_async."""
+
+    rng = Ncm.RNG.new()
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    data_mvnd = Ncm.DataGaussCovMVND.new_full(
+        dim=4,
+        sigma_min=1.0,
+        sigma_max=2.0,
+        cor_level=50.0,
+        mean_min=0.0,
+        mean_max=1.0,
+        rng=rng,
+    )
+
+    dset = Ncm.Dataset.new_array([data_mvnd])
+    lh = Ncm.Likelihood(dataset=dset)
+    fit = Ncm.Fit.factory(
+        Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD
+    )
+
+    funcs = Ncm.ObjArray.new()
+    funcs.add(Ncm.PriorGaussParam.new(Ncm.ModelMVND.id(), 0, 0.0, 1.0))
+    mj = Ncm.MPIJobFit.new(fit, funcs)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    mj.init_all_slaves(ser)
+
+    param_a = []
+    m2lnL_a = []
+    for _ in range(24):
+        param_a.append(
+            Ncm.Vector.new_array([rng.gaussian_gen(-1.0, 1.0) for _ in range(4)])
+        )
+        m2lnL_a.append(Ncm.Vector.new(1 + 4 + 1))
+
+    mj.run_array_async(param_a, m2lnL_a)
+
+    true_mean = data_mvnd.peek_mean().dup_array()
+
+    for m2lnL in m2lnL_a:
+        assert_allclose(np.array(m2lnL.dup_array())[1:5], true_mean, rtol=1.0e-2)
 
     mj.free_all_slaves()
 
@@ -175,6 +269,8 @@ def test_mpi_job_test_run_array_async() -> None:
 
 if __name__ == "__main__":
     test_mpi_fit_run_array()
+    test_mpi_fit_funcs_run_array()
     test_mpi_fit_run_array_async()
+    test_mpi_fit_funcs_run_array_async()
     test_mpi_job_test_run_array()
     test_mpi_job_test_run_array_async()

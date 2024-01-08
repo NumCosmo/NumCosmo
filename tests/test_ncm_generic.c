@@ -40,6 +40,11 @@ void test_ncm_data_gaussmix2d_basic (void);
 void test_ncm_data_rosenbrock_basic (void);
 void test_ncm_dataset_basic (void);
 void test_ncm_fftlog_basic (void);
+void test_ncm_mpi_job_basic (void);
+void test_ncm_mpi_job_test_basic (void);
+void test_ncm_mpi_job_fit_basic (void);
+void test_ncm_mpi_job_mcmc_basic (void);
+void test_ncm_mpi_job_feval_basic (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -56,6 +61,11 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/data_rosenbrock/basic", test_ncm_data_rosenbrock_basic);
   g_test_add_func ("/ncm/dataset/basic", test_ncm_dataset_basic);
   g_test_add_func ("/ncm/fftlog/basic", test_ncm_fftlog_basic);
+  g_test_add_func ("/ncm/mpi_job/basic", test_ncm_mpi_job_basic);
+  g_test_add_func ("/ncm/mpi_job_test/basic", test_ncm_mpi_job_test_basic);
+  g_test_add_func ("/ncm/mpi_job_fit/basic", test_ncm_mpi_job_fit_basic);
+  g_test_add_func ("/ncm/mpi_job_mcmc/basic", test_ncm_mpi_job_mcmc_basic);
+  g_test_add_func ("/ncm/mpi_job_feval/basic", test_ncm_mpi_job_feval_basic);
 
   g_test_run ();
 }
@@ -166,5 +176,128 @@ test_ncm_fftlog_basic (void)
   g_assert_true (NCM_IS_FFTLOG (fftlog));
 
   NCM_TEST_FREE (ncm_fftlog_free, fftlog);
+}
+
+void
+test_ncm_mpi_job_basic (void)
+{
+  NcmMPIJob *mpi_job = NCM_MPI_JOB (ncm_mpi_job_test_new ());
+  NcmMPIJob *mpi_job2;
+
+  g_assert_true (mpi_job != NULL);
+  g_assert_true (NCM_IS_MPI_JOB (mpi_job));
+
+  mpi_job2 = ncm_mpi_job_ref (mpi_job);
+  ncm_mpi_job_clear (&mpi_job2);
+  g_assert_true (mpi_job2 == NULL);
+
+  g_assert_true (NCM_IS_MPI_JOB (mpi_job));
+
+  NCM_TEST_FREE (ncm_mpi_job_free, mpi_job);
+}
+
+void
+test_ncm_mpi_job_test_basic (void)
+{
+  NcmMPIJobTest *mpi_job = ncm_mpi_job_test_new ();
+  NcmMPIJobTest *mpi_job2;
+
+  g_assert_true (mpi_job != NULL);
+  g_assert_true (NCM_IS_MPI_JOB_TEST (mpi_job));
+
+  mpi_job2 = ncm_mpi_job_test_ref (mpi_job);
+  ncm_mpi_job_test_clear (&mpi_job2);
+  g_assert_true (mpi_job2 == NULL);
+
+  g_assert_true (NCM_IS_MPI_JOB_TEST (mpi_job));
+
+  NCM_TEST_FREE (ncm_mpi_job_test_free, mpi_job);
+}
+
+void
+test_ncm_mpi_job_fit_basic (void)
+{
+  NcmMSet *mset             = ncm_mset_empty_new ();
+  NcmData *data             = NCM_DATA (ncm_data_funnel_new ());
+  NcmDataset *dset          = ncm_dataset_new_list (data, NULL);
+  NcmLikelihood *likelihood = ncm_likelihood_new (dset);
+  NcmFit *fit               = ncm_fit_factory (NCM_FIT_TYPE_GSL_MMS, NULL, likelihood, mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
+  NcmMPIJobFit *mpi_job     = ncm_mpi_job_fit_new (fit, NULL);
+  NcmMPIJobFit *mpi_job2;
+
+  g_assert_true (mpi_job != NULL);
+  g_assert_true (NCM_IS_MPI_JOB_FIT (mpi_job));
+
+  mpi_job2 = ncm_mpi_job_fit_ref (mpi_job);
+  ncm_mpi_job_fit_clear (&mpi_job2);
+  g_assert_true (mpi_job2 == NULL);
+
+  g_assert_true (NCM_IS_MPI_JOB_FIT (mpi_job));
+
+  NCM_TEST_FREE (ncm_mpi_job_fit_free, mpi_job);
+
+  NCM_TEST_FREE (ncm_fit_free, fit);
+  NCM_TEST_FREE (ncm_likelihood_free, likelihood);
+  NCM_TEST_FREE (ncm_dataset_free, dset);
+  NCM_TEST_FREE (ncm_data_free, data);
+  NCM_TEST_FREE (ncm_mset_free, mset);
+}
+
+void
+test_ncm_mpi_job_mcmc_basic (void)
+{
+  NcmMSet *mset             = ncm_mset_empty_new ();
+  NcmData *data             = NCM_DATA (ncm_data_funnel_new ());
+  NcmDataset *dset          = ncm_dataset_new_list (data, NULL);
+  NcmLikelihood *likelihood = ncm_likelihood_new (dset);
+  NcmFit *fit               = ncm_fit_factory (NCM_FIT_TYPE_GSL_MMS, NULL, likelihood, mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
+  NcmMPIJobMCMC *mpi_job    = ncm_mpi_job_mcmc_new (fit, NULL);
+  NcmMPIJobMCMC *mpi_job2;
+
+  g_assert_true (mpi_job != NULL);
+  g_assert_true (NCM_IS_MPI_JOB_MCMC (mpi_job));
+
+  mpi_job2 = ncm_mpi_job_mcmc_ref (mpi_job);
+  ncm_mpi_job_mcmc_clear (&mpi_job2);
+  g_assert_true (mpi_job2 == NULL);
+
+  g_assert_true (NCM_IS_MPI_JOB_MCMC (mpi_job));
+
+  NCM_TEST_FREE (ncm_mpi_job_mcmc_free, mpi_job);
+
+  NCM_TEST_FREE (ncm_fit_free, fit);
+  NCM_TEST_FREE (ncm_likelihood_free, likelihood);
+  NCM_TEST_FREE (ncm_dataset_free, dset);
+  NCM_TEST_FREE (ncm_data_free, data);
+  NCM_TEST_FREE (ncm_mset_free, mset);
+}
+
+void
+test_ncm_mpi_job_feval_basic (void)
+{
+  NcmMSet *mset             = ncm_mset_empty_new ();
+  NcmData *data             = NCM_DATA (ncm_data_funnel_new ());
+  NcmDataset *dset          = ncm_dataset_new_list (data, NULL);
+  NcmLikelihood *likelihood = ncm_likelihood_new (dset);
+  NcmFit *fit               = ncm_fit_factory (NCM_FIT_TYPE_GSL_MMS, NULL, likelihood, mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
+  NcmMPIJobFEval *mpi_job   = ncm_mpi_job_feval_new (fit, NULL);
+  NcmMPIJobFEval *mpi_job2;
+
+  g_assert_true (mpi_job != NULL);
+  g_assert_true (NCM_IS_MPI_JOB_FEVAL (mpi_job));
+
+  mpi_job2 = ncm_mpi_job_feval_ref (mpi_job);
+  ncm_mpi_job_feval_clear (&mpi_job2);
+  g_assert_true (mpi_job2 == NULL);
+
+  g_assert_true (NCM_IS_MPI_JOB_FEVAL (mpi_job));
+
+  NCM_TEST_FREE (ncm_mpi_job_feval_free, mpi_job);
+
+  NCM_TEST_FREE (ncm_fit_free, fit);
+  NCM_TEST_FREE (ncm_likelihood_free, likelihood);
+  NCM_TEST_FREE (ncm_dataset_free, dset);
+  NCM_TEST_FREE (ncm_data_free, data);
+  NCM_TEST_FREE (ncm_mset_free, mset);
 }
 
