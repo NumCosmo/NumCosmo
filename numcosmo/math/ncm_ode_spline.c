@@ -223,7 +223,7 @@ _ncm_ode_spline_get_property (GObject *object, guint prop_id, GValue *value, GPa
       g_value_set_boolean (value, self->auto_abstol);
       break;
     case PROP_INI_STEP:
-      g_value_set_boolean (value, ncm_ode_spline_get_ini_step (os));
+      g_value_set_double (value, ncm_ode_spline_get_ini_step (os));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */

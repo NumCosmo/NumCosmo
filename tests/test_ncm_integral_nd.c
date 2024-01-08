@@ -126,7 +126,7 @@ test_sin (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fd
     const gdouble x_i = ncm_vector_get (x, i);
 
     ncm_vector_set (fval, i, sin (test_int_sin->data.a * x_i));
-    printf ("%d % 22.15g % 22.15g\n", i, x_i, sin (test_int_sin->data.a * x_i));
+    /* printf ("%d % 22.15g % 22.15g\n", i, x_i, sin (test_int_sin->data.a * x_i)); */
   }
 }
 
@@ -158,7 +158,7 @@ test_x_p_y (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint 
     const gdouble y_i = ncm_vector_get (x, 2 * i + 1);
 
     ncm_vector_set (fval, i, x_i + y_i);
-    printf ("%d % 22.15g % 22.15g % 22.15g\n", i, x_i, y_i, x_i + y_i);
+    /* printf ("%d % 22.15g % 22.15g % 22.15g\n", i, x_i, y_i, x_i + y_i); */
   }
 }
 
@@ -183,7 +183,7 @@ test_acosx_by_p_cz (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints
 
     ncm_vector_set (fval, i, test_int_acosx->data.a * sin (x_i));
     ncm_vector_set (fval, i + 1, (test_int_acosx->data.b * y_i + test_int_acosx->data.c * z_i));
-    printf ("%d % 22.15g % 22.15g % 22.15g \n", i, y_i, z_i, test_int_acosx->data.b * y_i + test_int_acosx->data.c * z_i);
+    /* printf ("%d % 22.15g % 22.15g % 22.15g \n", i, y_i, z_i, test_int_acosx->data.b * y_i + test_int_acosx->data.c * z_i); */
   }
 }
 

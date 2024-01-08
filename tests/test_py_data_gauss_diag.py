@@ -172,6 +172,75 @@ def test_data_gauss_bootstrap():
     assert bootstrap.get_fsize() == 10
 
 
+def test_data_gauss_bootstrap_set():
+    """Test NcmDataDist2D."""
+
+    rng = Ncm.RNG.new()
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
+    sv = Ncm.StatsVec.new(1, Ncm.StatsVecType.VAR, False)
+
+    n_runs = 100
+    n_points = 200
+    data_dist = DataGaussDiagTest(n_points=n_points)
+
+    data_dist.resample(mset, rng)
+    data_dist.bootstrap_set(Ncm.Bootstrap.sized_new(n_points))
+
+    assert data_dist.bootstrap_enabled()
+    assert isinstance(data_dist.peek_bootstrap(), Ncm.Bootstrap)
+
+    bootstrap = data_dist.peek_bootstrap()
+    for _ in range(n_runs):
+        data_dist.bootstrap_resample(rng)
+        index_freq = np.array(bootstrap.get_sortncomp())
+        freq = index_freq[1::2]
+        sv.set(0, data_dist.m2lnL_val(mset))
+        sv.update()
+
+        assert np.sum(freq) == n_points
+
+    assert_allclose(sv.get_mean(0), n_points, atol=10.0)
+
+    data_dist.set_size(10)
+    assert bootstrap.get_bsize() == 10
+    assert bootstrap.get_fsize() == 10
+
+
+def test_data_gauss_bootstrap_twice():
+    """Test NcmDataDist2D."""
+
+    rng = Ncm.RNG.new()
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
+    sv = Ncm.StatsVec.new(1, Ncm.StatsVecType.VAR, False)
+
+    n_runs = 100
+    n_points = 200
+    data_dist = DataGaussDiagTest(n_points=n_points)
+
+    data_dist.resample(mset, rng)
+    data_dist.bootstrap_create()
+    data_dist.bootstrap_create()
+
+    assert data_dist.bootstrap_enabled()
+    assert isinstance(data_dist.peek_bootstrap(), Ncm.Bootstrap)
+
+    bootstrap = data_dist.peek_bootstrap()
+    for _ in range(n_runs):
+        data_dist.bootstrap_resample(rng)
+        index_freq = np.array(bootstrap.get_sortncomp())
+        freq = index_freq[1::2]
+        sv.set(0, data_dist.m2lnL_val(mset))
+        sv.update()
+
+        assert np.sum(freq) == n_points
+
+    assert_allclose(sv.get_mean(0), n_points, atol=10.0)
+
+    data_dist.set_size(10)
+    assert bootstrap.get_bsize() == 10
+    assert bootstrap.get_fsize() == 10
+
+
 def test_data_gauss_bootstrap_wmean():
     """Test NcmDataDist2D."""
 
@@ -215,6 +284,32 @@ def test_data_gauss_serialize():
 
     n_points = 200
     data_dist = DataGaussDiagTest(n_points=n_points)
+
+    data_dist.resample(mset, rng)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+
+    data_dist_dup = ser.dup_obj(data_dist)
+
+    assert data_dist_dup.get_size() == data_dist.get_size()
+
+    assert_allclose(
+        data_dist.peek_std().dup_array(), data_dist_dup.peek_std().dup_array()
+    )
+    assert_allclose(
+        data_dist.peek_mean().dup_array(), data_dist_dup.peek_mean().dup_array()
+    )
+
+
+def test_data_gauss_serialize_bootstrap():
+    """Test NcmDataGauss."""
+
+    rng = Ncm.RNG.new()
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
+
+    n_points = 200
+    data_dist = DataGaussDiagTest(n_points=n_points)
+    data_dist.bootstrap_create()
 
     data_dist.resample(mset, rng)
 

@@ -576,7 +576,7 @@ test_ncm_stats_dist1d_epdf_free (TestNcmStatsDist1dEPDF *test, gconstpointer pda
 
   ncm_stats_dist1d_ref (sd1_base);
   ncm_stats_dist1d_clear (&sd1_base);
-  g_assert (sd1_base == NULL);
+  g_assert_true (sd1_base == NULL);
 
   sd1_base = NCM_STATS_DIST1D (sd1);
 
