@@ -426,7 +426,7 @@ test_ncm_spline2d_new_sanity (NcmSpline2d *s2d)
 
   ncm_spline2d_clear (&s2d_ref);
 
-  g_assert (s2d_ref == NULL);
+  g_assert_true (s2d_ref == NULL);
   g_assert_true (NCM_IS_SPLINE2D (s2d));
 }
 
@@ -1322,7 +1322,7 @@ test_ncm_spline2d_eval_integ_dxdy (TestNcmSpline2d *test, gconstpointer pdata)
       }
     }
 
-    g_assert (gsl_finite (ncm_spline2dim_integ_total (s2d)));
+    g_assert_true (gsl_finite (ncm_spline2dim_integ_total (s2d)));
 
     NCM_TEST_FREE (ncm_spline2d_free, s2d);
     NCM_TEST_FREE (ncm_vector_free, xv);
@@ -1368,7 +1368,7 @@ test_ncm_spline2d_eval_integ_dxdy (TestNcmSpline2d *test, gconstpointer pdata)
       }
     }
 
-    g_assert (gsl_finite (ncm_spline2dim_integ_total (s2d)));
+    g_assert_true (gsl_finite (ncm_spline2dim_integ_total (s2d)));
 
     NCM_TEST_FREE (ncm_spline2d_free, s2d);
     NCM_TEST_FREE (ncm_vector_free, xv);

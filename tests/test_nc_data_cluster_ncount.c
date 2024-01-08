@@ -201,12 +201,12 @@ test_nc_data_cluster_ncount_sanity (TestNcDataClusterNCount *test, gconstpointer
   {
     gchar *desc = ncm_data_get_desc (NCM_DATA (test->ncdata));
 
-    g_assert (strlen (desc) > 0);
+    g_assert_true (strlen (desc) > 0);
     g_free (desc);
   }
 
-  g_assert (nc_data_cluster_ncount_has_lnM_true (test->ncdata));
-  g_assert (nc_data_cluster_ncount_has_z_true (test->ncdata));
+  g_assert_true (nc_data_cluster_ncount_has_lnM_true (test->ncdata));
+  g_assert_true (nc_data_cluster_ncount_has_z_true (test->ncdata));
 
   g_assert_cmpuint (nc_data_cluster_ncount_get_len (test->ncdata), >, 0);
   g_assert_cmpuint (nc_data_cluster_ncount_lnM_obs_len (test->ncdata), ==, 1);
@@ -241,10 +241,10 @@ test_nc_data_cluster_ncount_sanity (TestNcDataClusterNCount *test, gconstpointer
   }
 
   nc_data_cluster_ncount_true_data (test->ncdata, TRUE);
-  g_assert (nc_data_cluster_ncount_using_true_data (test->ncdata));
+  g_assert_true (nc_data_cluster_ncount_using_true_data (test->ncdata));
 
   nc_data_cluster_ncount_true_data (test->ncdata, FALSE);
-  g_assert (!nc_data_cluster_ncount_using_true_data (test->ncdata));
+  g_assert_true (!nc_data_cluster_ncount_using_true_data (test->ncdata));
 
   ncm_rng_free (rng);
 }
@@ -329,7 +329,7 @@ test_nc_data_cluster_ncount_m2lnL_true_data_unbinned (TestNcDataClusterNCount *t
   nc_data_cluster_ncount_true_data (test->ncdata, TRUE);
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL);
 
-  g_assert (gsl_finite (m2lnL));
+  g_assert_true (gsl_finite (m2lnL));
 }
 
 void
@@ -341,7 +341,7 @@ test_nc_data_cluster_ncount_m2lnL_unbinned (TestNcDataClusterNCount *test, gcons
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL);
 
-  g_assert (gsl_finite (m2lnL));
+  g_assert_true (gsl_finite (m2lnL));
 }
 
 void
@@ -355,7 +355,7 @@ test_nc_data_cluster_ncount_m2lnL_binned (TestNcDataClusterNCount *test, gconstp
   nc_data_cluster_ncount_set_binned (test->ncdata, TRUE);
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL);
 
-  g_assert (gsl_finite (m2lnL));
+  g_assert_true (gsl_finite (m2lnL));
 }
 
 void
@@ -369,12 +369,12 @@ test_nc_data_cluster_ncount_m2lnL_serialize_true_data_unbinned (TestNcDataCluste
   nc_data_cluster_ncount_true_data (test->ncdata, TRUE);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL0);
-  g_assert (gsl_finite (m2lnL0));
+  g_assert_true (gsl_finite (m2lnL0));
 
   test_nc_data_cluster_ncount_serialize (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL1);
-  g_assert (gsl_finite (m2lnL1));
+  g_assert_true (gsl_finite (m2lnL1));
 
   ncm_assert_cmpdouble_e (m2lnL0, ==, m2lnL1, 1.0e-15, 0.0);
 }
@@ -388,12 +388,12 @@ test_nc_data_cluster_ncount_m2lnL_serialize_unbinned (TestNcDataClusterNCount *t
   test_nc_data_cluster_ncount_sanity (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL0);
-  g_assert (gsl_finite (m2lnL0));
+  g_assert_true (gsl_finite (m2lnL0));
 
   test_nc_data_cluster_ncount_serialize (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL1);
-  g_assert (gsl_finite (m2lnL1));
+  g_assert_true (gsl_finite (m2lnL1));
 
   ncm_assert_cmpdouble_e (m2lnL0, ==, m2lnL1, 1.0e-15, 0.0);
 }
@@ -410,12 +410,12 @@ test_nc_data_cluster_ncount_m2lnL_serialize_binned (TestNcDataClusterNCount *tes
   nc_data_cluster_ncount_set_binned (test->ncdata, TRUE);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL0);
-  g_assert (gsl_finite (m2lnL0));
+  g_assert_true (gsl_finite (m2lnL0));
 
   test_nc_data_cluster_ncount_serialize (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL1);
-  g_assert (gsl_finite (m2lnL1));
+  g_assert_true (gsl_finite (m2lnL1));
 
   ncm_assert_cmpdouble_e (m2lnL0, ==, m2lnL1, 1.0e-15, 0.0);
 }
@@ -431,12 +431,12 @@ test_nc_data_cluster_ncount_m2lnL_saveload_true_data_unbinned (TestNcDataCluster
   nc_data_cluster_ncount_true_data (test->ncdata, TRUE);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL0);
-  g_assert (gsl_finite (m2lnL0));
+  g_assert_true (gsl_finite (m2lnL0));
 
   _test_nc_data_cluster_ncount_saveload (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL1);
-  g_assert (gsl_finite (m2lnL1));
+  g_assert_true (gsl_finite (m2lnL1));
 
   ncm_assert_cmpdouble_e (m2lnL0, ==, m2lnL1, 1.0e-12, 0.0);
 }
@@ -450,12 +450,12 @@ test_nc_data_cluster_ncount_m2lnL_saveload_unbinned (TestNcDataClusterNCount *te
   test_nc_data_cluster_ncount_sanity (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL0);
-  g_assert (gsl_finite (m2lnL0));
+  g_assert_true (gsl_finite (m2lnL0));
 
   _test_nc_data_cluster_ncount_saveload (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL1);
-  g_assert (gsl_finite (m2lnL1));
+  g_assert_true (gsl_finite (m2lnL1));
 
   ncm_assert_cmpdouble_e (m2lnL0, ==, m2lnL1, 1.0e-12, 0.0);
 }
@@ -472,12 +472,12 @@ test_nc_data_cluster_ncount_m2lnL_saveload_binned (TestNcDataClusterNCount *test
   nc_data_cluster_ncount_set_binned (test->ncdata, TRUE);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL0);
-  g_assert (gsl_finite (m2lnL0));
+  g_assert_true (gsl_finite (m2lnL0));
 
   _test_nc_data_cluster_ncount_saveload (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL1);
-  g_assert (gsl_finite (m2lnL1));
+  g_assert_true (gsl_finite (m2lnL1));
 
   ncm_assert_cmpdouble_e (m2lnL0, ==, m2lnL1, 1.0e-12, 0.0);
 }
