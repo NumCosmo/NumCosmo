@@ -376,8 +376,19 @@ mpi_fortran_dep = dependency(
 if mpi_c_dep.found()
   numcosmo_conf.set('HAVE_MPI', true)
   numcosmo_build_cfg.set('have_mpi_support', '#define NUMCOSMO_HAVE_MPI 1')
+  add_global_arguments(
+    '-DUSE_NCM_MPI',
+    language: 'c',
+  )
 else
   numcosmo_build_cfg.set('have_mpi_support', '')
+endif
+
+if get_option('debug-mpi') and mpi_c_dep.found()
+  add_global_arguments(
+    '-DNCM_MPI_DEBUG',
+    language: 'c',
+  )
 endif
 
 #######################################################################################

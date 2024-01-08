@@ -812,7 +812,7 @@ _ncm_cfg_mpi_main_loop (void)
 
   g_main_loop_unref (mpi_ml);
 
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%d %d] Dying slave!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Dying slave!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
   exit (0);
 }
 

@@ -33,7 +33,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_serialize.h>
-#ifdef NUMCOSMO_HAVE_MPI
+#if defined (NUMCOSMO_HAVE_MPI) && defined (USE_NCM_MPI)
 #  ifndef NUMCOSMO_GIR_SCAN
 #    include <mpi.h>
 

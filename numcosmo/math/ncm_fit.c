@@ -2279,18 +2279,29 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
 }
 
 static void
-_ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher)
+_ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher, gboolean decomp)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
   NcmMatrix *covar    = ncm_fit_state_peek_covar (self->fstate);
-  gint ret;
+  gint ret            = 0;
 
   if (ncm_mset_fparam_len (self->mset) == 0)
     g_error ("_ncm_fit_fisher_to_covar: mset object has 0 free parameters");
 
-  ncm_matrix_memcpy (covar, fisher);
-
-  ret = ncm_matrix_cholesky_decomp (covar, 'U');
+  if (!decomp)
+  {
+    ncm_matrix_memcpy (covar, fisher);
+    ret = ncm_matrix_cholesky_decomp (covar, 'U');
+  }
+  else
+  {
+    /*
+     * Here we assume that the hessian matrix was already copied to the covariance
+     * matrix, and that it was decomposed using the cholesky decomposition in the upper
+     * triangular matrix.
+     */
+    g_assert_null (fisher);
+  }
 
   if (ret == 0)
   {
@@ -2354,7 +2365,7 @@ ncm_fit_obs_fisher (NcmFit *fit)
   _ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
   ncm_matrix_scale (hessian, 0.5);
 
-  _ncm_fit_fisher_to_covar (fit, hessian);
+  _ncm_fit_fisher_to_covar (fit, hessian, FALSE);
 }
 
 /**
@@ -2409,7 +2420,7 @@ ncm_fit_fisher (NcmFit *fit)
     g_warning ("ncm_fit_fisher: the analysis contains priors which are ignored in the Fisher matrix calculation.");
 
   ncm_dataset_fisher_matrix (dset, self->mset, &IM);
-  _ncm_fit_fisher_to_covar (fit, IM);
+  _ncm_fit_fisher_to_covar (fit, IM, FALSE);
 
   ncm_matrix_clear (&IM);
 }
@@ -2458,9 +2469,9 @@ ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
     g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
 
   _ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
-  ncm_matrix_memcpy (covar, hessian);
-  ncm_matrix_scale (covar, 0.5);
+  ncm_matrix_scale (hessian, 0.5);
 
+  ncm_matrix_memcpy (covar, hessian);
   ret = ncm_matrix_cholesky_decomp (covar, 'U');
 
   if (ret == 0)
@@ -2497,6 +2508,8 @@ ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
     g_error ("ncm_fit_numdiff_m2lnL_lndet_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
   }
 
+  _ncm_fit_fisher_to_covar (fit, NULL, TRUE);
+
   return lndetC;
 }
 
@@ -2518,135 +2531,6 @@ ncm_fit_get_covar (NcmFit *fit)
   return ncm_matrix_dup (ncm_fit_state_peek_covar (self->fstate));
 }
 
-typedef struct _FitDProb
-{
-  NcmMSetPIndex pi;
-  NcmFit *fit_val;
-  NcmFit *fit;
-} FitDProb;
-
-static gdouble
-fit_dprob (gdouble val, gpointer p)
-{
-  FitDProb *dprob_arg     = (FitDProb *) p;
-  NcmFitPrivate *self     = ncm_fit_get_instance_private (dprob_arg->fit);
-  NcmFitPrivate *self_val = ncm_fit_get_instance_private (dprob_arg->fit_val);
-
-  ncm_mset_param_set (self_val->mset, dprob_arg->pi.mid, dprob_arg->pi.pid, val);
-  ncm_fit_run (dprob_arg->fit_val, NCM_FIT_RUN_MSGS_NONE);
-
-  if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
-    g_message (".");
-
-  {
-    const gdouble m2lnL_fv = ncm_fit_state_get_m2lnL_curval (self_val->fstate);
-    const gdouble m2lnL    = ncm_fit_state_get_m2lnL_curval (self->fstate);
-
-    return exp (-(m2lnL_fv - m2lnL) / 2.0);
-  }
-}
-
-/**
- * ncm_fit_prob:
- * @fit: a #NcmFit
- * @mid: a #NcmModelID
- * @pid: a parameter id
- * @a: probability lower limit
- * @b: probability upper limit
- *
- * Computes the probability of the parameter @pid of the model @mid
- * to be in the interval [@a, @b].
- *
- * Returns: the probability
- */
-gdouble
-ncm_fit_prob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b)
-{
-  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
-  NcmSerialize *ser   = ncm_serialize_global ();
-  NcmMSet *mset_val   = ncm_mset_dup (self->mset, ser);
-  gsl_integration_workspace **w;
-  NcmFit *fit_val;
-  FitDProb dprob_arg;
-  gdouble result, error;
-  gint error_code;
-  gsl_function F;
-
-  ncm_serialize_free (ser);
-  ncm_mset_param_set_ftype (mset_val, mid, pid, NCM_PARAM_TYPE_FIXED);
-  fit_val = ncm_fit_copy_new (fit, self->lh, mset_val, self->grad.gtype);
-
-  dprob_arg.pi.mid  = mid;
-  dprob_arg.pi.pid  = pid;
-  dprob_arg.fit     = fit;
-  dprob_arg.fit_val = fit_val;
-
-  F.function = &fit_dprob;
-  F.params   = &dprob_arg;
-
-  w = ncm_integral_get_workspace ();
-
-  if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
-    g_message ("#");
-
-  error_code = gsl_integration_qags (&F, a, b, 1e-10, NCM_INTEGRAL_ERROR, NCM_INTEGRAL_PARTITION, *w, &result, &error);
-
-  if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
-    g_message ("\n");
-
-  NCM_TEST_GSL_RESULT ("ncm_fit_prob", error_code);
-  ncm_memory_pool_return (w);
-
-  ncm_fit_free (fit_val);
-  ncm_mset_free (mset_val);
-
-  return result;
-}
-
-/**
- * ncm_fit_dprob:
- * @fit: a #NcmFit
- * @mid: a #NcmModelID
- * @pid: a parameter id
- * @a: probability lower limit
- * @b: probability upper limit
- * @step: probability density step
- * @norm: normalization factor
- *
- * Computes the probability density of the parameter @pid of the model @mid
- * in the interval [@a, @b] with a step @step.
- *
- */
-void
-ncm_fit_dprob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b, gdouble step, gdouble norm)
-{
-  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
-  NcmSerialize *ser   = ncm_serialize_global ();
-  NcmMSet *mset_val   = ncm_mset_dup (self->mset, ser);
-  NcmFit *fit_val;
-  FitDProb dprob_arg;
-  gdouble point;
-
-  ncm_serialize_free (ser);
-  ncm_mset_param_set_ftype (mset_val, mid, pid, NCM_PARAM_TYPE_FIXED);
-  fit_val = ncm_fit_copy_new (fit, self->lh, mset_val, self->grad.gtype);
-
-  dprob_arg.pi.mid  = mid;
-  dprob_arg.pi.pid  = pid;
-  dprob_arg.fit     = fit;
-  dprob_arg.fit_val = fit_val;
-
-  for (point = a; point <= b; point += step)
-  {
-    g_message ("%g %g\n", point, fit_dprob (point, &dprob_arg) / norm);
-  }
-
-  ncm_fit_free (fit_val);
-  ncm_mset_free (mset_val);
-
-  return;
-}
-
 /**
  * ncm_fit_lr_test_range:
  * @fit: a #NcmFit
@@ -2654,21 +2538,33 @@ ncm_fit_dprob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b, gdo
  * @pid: the parameter id
  * @start: starting value
  * @stop: ending value
- * @step: step size
+ * @nsteps: step size
  *
  * Computes the likelihood ratio test for the parameter @pid of the model @mid
- * in the interval [@start, @stop] with a step @step. The result is printed
- * to the log.
+ * in the interval [@start, @stop] subdivided by @nsteps. The function returns a
+ * #NcmMatrix with the following columns:
+ *   1. Parameter value.
+ *   2. The difference in -2 times the natural logarithm of the likelihood
+ *      between the full model and the model with the parameter @pid fixed to the
+ *      value in the first column.
+ *   3. The probability density of the difference in -2 times the natural logarithm
+ *      of the likelihood between the full model and the model with the parameter
+ *      @pid fixed to the value in the first column, assuming a chi-squared distribution
+ *      with one degree of freedom.
+ *   4. Cumulative probability (two-sides) of the difference (Column 3).
  *
+ * Returns: (transfer full): a #NcmMatrix with the results.
  */
-void
-ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gdouble stop, gdouble step)
+NcmMatrix *
+ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gdouble stop, guint nsteps)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
   NcmSerialize *ser   = ncm_serialize_global ();
   NcmMSet *mset_val   = ncm_mset_dup (self->mset, ser);
+  NcmMatrix *results  = ncm_matrix_new (nsteps, 4);
+  const gdouble step  = (stop - start) / (nsteps - 1);
   NcmFit *fit_val;
-  gdouble walk;
+  guint i;
 
   ncm_serialize_free (ser);
   ncm_mset_param_set_ftype (mset_val, mid, pid, NCM_PARAM_TYPE_FIXED);
@@ -2677,8 +2573,10 @@ ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gd
   {
     NcmFitPrivate *self_val = ncm_fit_get_instance_private (fit_val);
 
-    for (walk = start; walk <= stop; walk += step)
+    for (i = 0; i < nsteps; i++)
     {
+      const gdouble walk = start + i * step;
+
       ncm_mset_param_set (self_val->mset, mid, pid, walk);
       ncm_fit_run (fit_val, NCM_FIT_RUN_MSGS_NONE);
 
@@ -2686,12 +2584,10 @@ ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gd
         const gdouble m2lnL_fv = ncm_fit_state_get_m2lnL_curval (self_val->fstate);
         const gdouble m2lnL    = ncm_fit_state_get_m2lnL_curval (self->fstate);
 
-        g_message ("%g %g %g %g %g\n", walk,
-                   (m2lnL_fv - m2lnL),
-                   gsl_ran_chisq_pdf (m2lnL_fv - m2lnL, 1),
-                   gsl_cdf_chisq_Q (m2lnL_fv - m2lnL, 1),
-                   gsl_cdf_ugaussian_Q (sqrt (m2lnL_fv - m2lnL))
-                  );
+        ncm_matrix_set (results, i, 0, walk);
+        ncm_matrix_set (results, i, 1, m2lnL_fv - m2lnL);
+        ncm_matrix_set (results, i, 2, gsl_ran_chisq_pdf (m2lnL_fv - m2lnL, 1));
+        ncm_matrix_set (results, i, 3, gsl_cdf_chisq_Q (m2lnL_fv - m2lnL, 1));
       }
     }
 
@@ -2699,7 +2595,7 @@ ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gd
     ncm_mset_free (mset_val);
   }
 
-  return;
+  return results;
 }
 
 /**
@@ -2711,7 +2607,10 @@ ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gd
  * @dof: degrees of freedom
  *
  * Computes the likelihood ratio test for the parameter @pid of the model @mid
- * with the value @val.
+ * with the value @val. The function returns the probability of the null hypothesis
+ * assuming a chi-squared distribution with @dof degrees of freedom. That is,
+ * it computes the left tail of the chi-squared distribution with @dof degrees of
+ * freedom.
  *
  * Returns: the probability of the null hypothesis.
  */
@@ -2751,7 +2650,6 @@ ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof)
  * @fit: a #NcmFit
  * @func: a #NcmMSetFunc
  * @x: the argument for the function
- * @pretty_print: whether to print the result to the log
  * @f: (out): the function value
  * @sigma_f: (out): the error in the function value
  *
@@ -2764,7 +2662,7 @@ ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof)
  *
  */
 void
-ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pretty_print, gdouble *f, gdouble *sigma_f)
+ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gdouble *f, gdouble *sigma_f)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
 
@@ -2795,9 +2693,6 @@ ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pre
 
     *f       = ncm_mset_func_eval_nvar (func, self->mset, x);
     *sigma_f = sqrt (result);
-
-    if (pretty_print)
-      g_message ("# % -12.4g +/- % -12.4g\n", *f, *sigma_f);
 
     ncm_vector_free (v);
     ncm_vector_free (tmp1);
