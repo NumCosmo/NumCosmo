@@ -1744,7 +1744,7 @@ ncm_mset_params_valid (NcmMSet *mset)
 }
 
 /**
- * ncm_mset_params_bounds:
+ * ncm_mset_params_valid_bounds:
  * @mset: a #NcmMSet
  *
  * Check whenever the parameters respect the bounds.

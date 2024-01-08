@@ -22,16 +22,12 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Example of using the OdeSpline object to create a spline from an ODE."""
+"""Tests for OdeSpline object to create a spline from an ODE."""
 
-import math
+from numpy.testing import assert_allclose
 import numpy as np
 from numcosmo_py import Ncm
 
-#
-#  Initializing the library objects, this must be called before
-#  any other library function.
-#
 Ncm.cfg_init()
 
 
@@ -42,8 +38,6 @@ class RhsF:
     def __init__(self, alpha):
         self.alpha = alpha
 
-    # C closure _data is not supported in Python, so we use a class
-    # to store the data.
     def rhs(self, y, _x, _data):
         r"""Test function for the ODE, it describes the right-hand
         side of the equation $y_x = f(y,x)$, here we use $f(y,x) = \alpha y$."""
@@ -58,7 +52,7 @@ def test_ode_spline() -> None:
     s = Ncm.SplineCubicNotaknot.new()
 
     os = Ncm.OdeSpline.new(s, f.rhs)
-    os.set_reltol(1.0e-3)
+    os.set_reltol(1.0e-10)
 
     x_0 = 0.0
     y_0 = 1.0
@@ -68,33 +62,53 @@ def test_ode_spline() -> None:
     os.props.xf = x_1
     os.props.yi = y_0
 
-    # Prepare the ODE solver to calculate the spline.
-    # Since C closures are not supported in Python, we need to pass
-    # None as the data argument.
     os.prepare(None)
 
-    # Gets the results from the ODE solver.
     ss = os.peek_spline()
     assert isinstance(ss, Ncm.SplineCubic)
 
-    # Print the spline coefficients.
-    for i in range(ss.len):
-        print(
-            f"{i} {ss.xv.get(i): 22.15g} {ss.yv.get(i): 22.15g} "
-            f"{ss.b.get(i): 22.15g} {ss.c.get(i): 22.15g} {ss.d.get(i): 22.15g}"
-        )
-
-    # Evaluate the spline at some points.
-    # Compare with the exponential function.
     x_a = np.linspace(x_0, x_1, 100)
-    for x in x_a:
-        expx = math.exp(x * f.alpha)
-        odex = ss.eval(x)
-        print(
-            f"x = {x: 8.5}, exp(x) = {expx: 22.15g}, ode(x) = {odex: 22.15g}, "
-            f"relative difference {math.fabs((expx - odex) / expx): 22.15e}"
-        )
+
+    assert_allclose([ss.eval(x) for x in x_a], np.exp(x_a * f.alpha), rtol=1e-7)
+
+
+def test_ode_spline_copy_props() -> None:
+    """Test function for the ODE spline."""
+
+    f = RhsF(2.5)
+
+    s = Ncm.SplineCubicNotaknot.new()
+
+    os0 = Ncm.OdeSpline.new(s, f.rhs)
+    os0.set_reltol(1.0e-10)
+
+    x_0 = 0.0
+    y_0 = 1.0
+    x_1 = 5.0
+
+    os0.props.xi = x_0
+    os0.props.xf = x_1
+    os0.props.yi = y_0
+
+    os = Ncm.OdeSpline.new(s, f.rhs)
+    for prop in os0.list_properties():
+        if prop.name == "dydx" or prop.name == "yf":
+            continue
+        print(prop.name)
+        os.set_property(prop.name, os0.get_property(prop.name))
+
+    assert isinstance(os, Ncm.OdeSpline)
+
+    os.prepare(None)
+
+    ss = os.peek_spline()
+    assert isinstance(ss, Ncm.SplineCubic)
+
+    x_a = np.linspace(x_0, x_1, 100)
+
+    assert_allclose([ss.eval(x) for x in x_a], np.exp(x_a * f.alpha), rtol=1e-7)
 
 
 if __name__ == "__main__":
     test_ode_spline()
+    test_ode_spline_copy_props()
