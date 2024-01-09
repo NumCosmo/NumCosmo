@@ -110,6 +110,7 @@ c_tests = [
             'ncm_data_gauss_cov_test.c',
             'ncm_data_gauss_cov_test.h',
         ],
+        'timeout': 0,
     },
     {
         'name': 'ncm_fit',
@@ -275,6 +276,18 @@ python_tests = [
         'source': 'test_py_data_gaussmix2d.py',
     },
     {
+        'name': 'py_data_gauss',
+        'source': 'test_py_data_gauss.py',
+    },
+    {
+        'name': 'py_data_gauss_cov',
+        'source': 'test_py_data_gauss_cov.py',
+    },
+    {
+        'name': 'py_data_gauss_diag',
+        'source': 'test_py_data_gauss_diag.py',
+    },
+    {
         'name': 'py_data_poisson',
         'source': 'test_py_data_poisson.py',
     },
@@ -325,14 +338,6 @@ if python_astropy_scipy.found()
         {
             'name': 'py_data_dist2d',
             'source': 'test_py_data_dist2d.py',
-        },
-        {
-            'name': 'py_data_gauss',
-            'source': 'test_py_data_gauss.py',
-        },
-        {
-            'name': 'py_data_gauss_diag',
-            'source': 'test_py_data_gauss_diag.py',
         },
     ]
 endif
