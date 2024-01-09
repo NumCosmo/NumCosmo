@@ -94,7 +94,9 @@ void ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v)
 
 void ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2lnL_i);
 
+void ncm_dataset_mean_vector (NcmDataset *dset, NcmMSet *mset, NcmVector *mu);
 void ncm_dataset_fisher_matrix (NcmDataset *dset, NcmMSet *mset, NcmMatrix **IM);
+void ncm_dataset_fisher_matrix_bias (NcmDataset *dset, NcmMSet *mset, NcmVector *f_true, NcmMatrix **IM, NcmVector **delta_theta);
 
 G_END_DECLS
 
