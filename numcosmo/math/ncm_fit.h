@@ -203,6 +203,7 @@ void ncm_fit_ls_f_J (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_obs_fisher (NcmFit *fit);
 void ncm_fit_ls_fisher (NcmFit *fit);
 void ncm_fit_fisher (NcmFit *fit);
+NcmVector *ncm_fit_fisher_bias (NcmFit *fit, NcmVector *f_true);
 
 G_DEPRECATED_FOR (ncm_fit_obs_fisher)
 void ncm_fit_numdiff_m2lnL_covar (NcmFit *fit);
