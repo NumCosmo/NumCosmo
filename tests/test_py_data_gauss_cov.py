@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Tests on NcmDataGauss class."""
+"""Tests on NcmDataGaussCov class."""
 
 import math
 from numpy.testing import assert_allclose
@@ -33,23 +33,22 @@ from numcosmo_py.ncm import MSet, Matrix
 Ncm.cfg_init()
 
 
-class DataGaussTest(Ncm.DataGauss):
-    """Test class for NcmDataGauss."""
+class DataGaussCovTest(Ncm.DataGaussCov):
+    """Test class for DataGaussCov."""
 
     def __init__(self, corr: float = 0.0, sigma1: float = 1.0, sigma2: float = 1.0):
-        """Constructor for DataGaussTest."""
+        """Constructor for DataGaussCovTest."""
 
-        oneminuscorr = 1.0 - corr * corr
-        inv_cov_array = [
-            1.0 / (sigma1 * sigma1 * oneminuscorr),
-            -corr / (sigma1 * sigma2 * oneminuscorr),
-            -corr / (sigma1 * sigma2 * oneminuscorr),
-            1.0 / (sigma2 * sigma2 * oneminuscorr),
+        cov_array = [
+            sigma1 * sigma1,
+            corr * sigma1 * sigma2,
+            corr * sigma1 * sigma2,
+            sigma2 * sigma2,
         ]
 
-        inv_cov = Ncm.Matrix.new_array(inv_cov_array, 2)
+        cov = Ncm.Matrix.new_array(cov_array, 2)
         mean = Ncm.Vector.new_array([0.0, 0.0])
-        super().__init__(n_points=2, inv_cov=inv_cov, mean=mean, init=True)
+        super().__init__(n_points=2, cov=cov, mean=mean, init=True)
 
     def do_mean_func(  # pylint: disable=arguments-differ
         self, mset: Ncm.MSet, vp: Ncm.Vector
@@ -64,23 +63,23 @@ class DataGaussTest(Ncm.DataGauss):
         vp.set(1, mvnd.orig_vparam_get(0, 1))
 
 
-class DataGaussTestUpdateCov(DataGaussTest):
-    """Test class for NcmDataGauss with update covariance."""
+class DataGaussCovTestUpdateCov(DataGaussCovTest):
+    """Test class for NcmDataGaussCov with update covariance."""
 
-    def do_inv_cov_func(  # pylint: disable=arguments-differ
-        self, _: MSet, inv_cov: Matrix
+    def do_cov_func(  # pylint: disable=arguments-differ
+        self, _: MSet, cov: Matrix
     ) -> bool:
         """Do inverse covariance function."""
 
-        inv_cov.memcpy(self.peek_inv_cov())
+        cov.memcpy(self.peek_cov())
 
         return True
 
 
 def test_data_gauss_set_get_size():
-    """Test NcmDataGauss."""
+    """Test NcmDataGaussCov."""
 
-    data_dist = DataGaussTest()
+    data_dist = DataGaussCovTest()
     assert data_dist.get_size() == 2
 
     data_dist.set_size(10)
@@ -88,23 +87,23 @@ def test_data_gauss_set_get_size():
 
 
 def test_data_gauss_get_inv_cov():
-    """Test NcmDataGauss."""
+    """Test NcmDataGaussCov."""
 
-    data_dist = DataGaussTest()
+    data_dist = DataGaussCovTest()
 
-    inv_cov = data_dist.peek_inv_cov()
+    cov = data_dist.peek_cov()
 
-    assert inv_cov.nrows() == 2
-    assert inv_cov.ncols() == 2
+    assert cov.nrows() == 2
+    assert cov.ncols() == 2
 
-    assert_allclose(inv_cov.get(0, 0), 1.0)
-    assert_allclose(inv_cov.get(0, 1), 0.0)
-    assert_allclose(inv_cov.get(1, 0), 0.0)
-    assert_allclose(inv_cov.get(1, 1), 1.0)
+    assert_allclose(cov.get(0, 0), 1.0)
+    assert_allclose(cov.get(0, 1), 0.0)
+    assert_allclose(cov.get(1, 0), 0.0)
+    assert_allclose(cov.get(1, 1), 1.0)
 
 
 def test_data_gauss_resample():
-    """Test NcmDataGauss."""
+    """Test NcmDataGaussCov."""
 
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
@@ -112,7 +111,7 @@ def test_data_gauss_resample():
     residual = Ncm.Vector.new(2)
 
     n_runs = 100
-    data_dist = DataGaussTest(corr=0.5, sigma1=1.0, sigma2=2.0)
+    data_dist = DataGaussCovTest(corr=0.5, sigma1=1.0, sigma2=2.0)
 
     for _ in range(n_runs):
         data_dist.resample(mset, rng)
@@ -150,7 +149,7 @@ def test_data_gauss_bootstrap():
     sv = Ncm.StatsVec.new(3, Ncm.StatsVecType.COV, False)
 
     n_runs = 100
-    data_dist = DataGaussTest()
+    data_dist = DataGaussCovTest()
 
     data_dist.resample(mset, rng)
     data_dist.bootstrap_create()
@@ -178,12 +177,12 @@ def test_data_gauss_bootstrap():
 
 
 def test_data_gauss_serialize():
-    """Test NcmDataGauss."""
+    """Test NcmDataGaussCov."""
 
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
 
-    data_dist = DataGaussTest(corr=0.55, sigma1=1.234, sigma2=2.345)
+    data_dist = DataGaussCovTest(corr=0.55, sigma1=1.234, sigma2=2.345)
 
     data_dist.resample(mset, rng)
 
@@ -194,7 +193,7 @@ def test_data_gauss_serialize():
     assert data_dist_dup.get_size() == data_dist.get_size()
 
     assert_allclose(
-        data_dist.peek_inv_cov().dup_array(), data_dist_dup.peek_inv_cov().dup_array()
+        data_dist.peek_cov().dup_array(), data_dist_dup.peek_cov().dup_array()
     )
     assert_allclose(
         data_dist.peek_mean().dup_array(), data_dist_dup.peek_mean().dup_array()
@@ -202,7 +201,7 @@ def test_data_gauss_serialize():
 
 
 def test_data_gauss_update_cov_resample():
-    """Test NcmDataGauss."""
+    """Test NcmDataGaussCov."""
 
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
@@ -210,7 +209,7 @@ def test_data_gauss_update_cov_resample():
     residual = Ncm.Vector.new(2)
 
     n_runs = 100
-    data_dist = DataGaussTestUpdateCov(corr=0.5, sigma1=1.0, sigma2=2.0)
+    data_dist = DataGaussCovTestUpdateCov(corr=0.5, sigma1=1.0, sigma2=2.0)
 
     for _ in range(n_runs):
         data_dist.resample(mset, rng)
@@ -241,14 +240,14 @@ def test_data_gauss_update_cov_resample():
 
 
 def test_data_gauss_fisher():
-    """Test NcmDataGauss fisher matrix."""
+    """Test NcmDataGaussCov fisher matrix."""
 
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
     mset.prepare_fparam_map()
 
-    data_dist = DataGaussTest(corr=0.5, sigma1=1.0, sigma2=2.0)
+    data_dist = DataGaussCovTest(corr=0.5, sigma1=1.0, sigma2=2.0)
 
     data_dist.resample(mset, rng)
     fisher = data_dist.fisher_matrix(mset)
@@ -261,7 +260,7 @@ def test_data_gauss_fisher():
 
 
 def test_data_gauss_fisher_bias():
-    """Test NcmDataGauss fisher matrix and bias."""
+    """Test NcmDataGaussCov fisher matrix and bias."""
 
     true_theta = [1.0, 2.0]
     theta_shift = [0.1, -0.02]
@@ -274,7 +273,7 @@ def test_data_gauss_fisher_bias():
     mset.fparam_set(0, true_theta[0] - theta_shift[0])
     mset.fparam_set(1, true_theta[1] - theta_shift[1])
 
-    data_dist = DataGaussTest(corr=0.5, sigma1=1.0, sigma2=2.0)
+    data_dist = DataGaussCovTest(corr=0.5, sigma1=1.0, sigma2=2.0)
 
     data_dist.resample(mset, rng)
     fisher0 = data_dist.fisher_matrix(mset)

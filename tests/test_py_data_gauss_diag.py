@@ -61,7 +61,7 @@ class DataGaussDiagTest(Ncm.DataGaussDiag):
 
 
 class DataGaussDiagTestUpdateSigma(DataGaussDiagTest):
-    """Test class for NcmDataGauss with update covariance."""
+    """Test class for NcmDataGaussDiag with update covariance."""
 
     def do_sigma_func(  # pylint: disable=arguments-differ
         self, _: MSet, sigma: Ncm.Vector
@@ -73,8 +73,8 @@ class DataGaussDiagTestUpdateSigma(DataGaussDiagTest):
         return True
 
 
-def test_data_gauss_set_get_size():
-    """Test NcmDataGauss."""
+def test_data_gauss_diag_set_get_size():
+    """Test NcmDataGaussDiag."""
 
     n_points = 200
 
@@ -90,8 +90,8 @@ def test_data_gauss_set_get_size():
     assert data_dist.get_dof() == n_points * 2 - 1
 
 
-def test_data_gauss_get_inv_cov():
-    """Test NcmDataGauss."""
+def test_data_gauss_diag_get_inv_cov():
+    """Test NcmDataGaussDiag."""
 
     n_points = 200
     data_dist = DataGaussDiagTest(n_points=n_points)
@@ -101,8 +101,8 @@ def test_data_gauss_get_inv_cov():
     assert sigma.len() == n_points
 
 
-def test_data_gauss_resample():
-    """Test NcmDataGauss."""
+def test_data_gauss_diag_resample():
+    """Test NcmDataGaussDiag."""
 
     n_points = 20
     rng = Ncm.RNG.new()
@@ -138,7 +138,7 @@ def test_data_gauss_resample():
     assert_allclose(mean[2 * n_points], n_points, atol=n_points * 0.2)
 
 
-def test_data_gauss_bootstrap():
+def test_data_gauss_diag_bootstrap():
     """Test NcmDataDist2D."""
 
     rng = Ncm.RNG.new()
@@ -172,7 +172,7 @@ def test_data_gauss_bootstrap():
     assert bootstrap.get_fsize() == 10
 
 
-def test_data_gauss_bootstrap_set():
+def test_data_gauss_diag_bootstrap_set():
     """Test NcmDataDist2D."""
 
     rng = Ncm.RNG.new()
@@ -206,7 +206,7 @@ def test_data_gauss_bootstrap_set():
     assert bootstrap.get_fsize() == 10
 
 
-def test_data_gauss_bootstrap_twice():
+def test_data_gauss_diag_bootstrap_twice():
     """Test NcmDataDist2D."""
 
     rng = Ncm.RNG.new()
@@ -241,7 +241,7 @@ def test_data_gauss_bootstrap_twice():
     assert bootstrap.get_fsize() == 10
 
 
-def test_data_gauss_bootstrap_wmean():
+def test_data_gauss_diag_bootstrap_wmean():
     """Test NcmDataDist2D."""
 
     rng = Ncm.RNG.new()
@@ -276,8 +276,8 @@ def test_data_gauss_bootstrap_wmean():
     assert bootstrap.get_fsize() == 10
 
 
-def test_data_gauss_serialize():
-    """Test NcmDataGauss."""
+def test_data_gauss_diag_serialize():
+    """Test NcmDataGaussDiag."""
 
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
@@ -301,8 +301,8 @@ def test_data_gauss_serialize():
     )
 
 
-def test_data_gauss_serialize_bootstrap():
-    """Test NcmDataGauss."""
+def test_data_gauss_diag_serialize_bootstrap():
+    """Test NcmDataGaussDiag."""
 
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
@@ -327,8 +327,8 @@ def test_data_gauss_serialize_bootstrap():
     )
 
 
-def test_data_gauss_update_cov_resample():
-    """Test NcmDataGauss."""
+def test_data_gauss_diag_update_cov_resample():
+    """Test NcmDataGaussDiag."""
 
     n_points = 20
     rng = Ncm.RNG.new()
@@ -364,8 +364,8 @@ def test_data_gauss_update_cov_resample():
     assert_allclose(mean[2 * n_points], n_points, atol=n_points * 0.2)
 
 
-def test_data_gauss_fisher():
-    """Test NcmDataGauss fisher matrix."""
+def test_data_gauss_diag_fisher():
+    """Test NcmDataGaussDiag fisher matrix."""
 
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
@@ -388,8 +388,40 @@ def test_data_gauss_fisher():
     assert np.all(np.isfinite(fisher.dup_array()))
 
 
-def test_data_gauss_resample_wmean():
-    """Test NcmDataGauss."""
+def test_data_gauss_diag_fisher_bias():
+    """Test NcmDataGaussDiag fisher matrix."""
+
+    true_theta = [1.0, 2.0]
+    theta_shift = [0.1, -0.02]
+
+    rng = Ncm.RNG.new()
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    mset.prepare_fparam_map()
+
+    mset.fparam_set(0, true_theta[0] - theta_shift[0])
+    mset.fparam_set(1, true_theta[1] - theta_shift[1])
+
+    n_points = 100
+    data_dist = DataGaussDiagTest(n_points=n_points)
+
+    data_dist.resample(mset, rng)
+    fisher0 = data_dist.fisher_matrix(mset)
+    fisher1, delta_theta = data_dist.fisher_matrix_bias(
+        mset,
+        Ncm.Vector.new_array(
+            np.linspace(true_theta[0], true_theta[1], n_points).tolist()
+        ),
+    )
+
+    assert_allclose(fisher0.dup_array(), fisher1.dup_array(), atol=1.0e-6)
+
+    fisher0.cholesky_solve(delta_theta, ord("U"))
+    assert_allclose(delta_theta.dup_array(), theta_shift, atol=1.0e-1)
+
+
+def test_data_gauss_diag_resample_wmean():
+    """Test NcmDataGaussDiag."""
 
     n_points = 20
     rng = Ncm.RNG.new()
@@ -427,12 +459,13 @@ def test_data_gauss_resample_wmean():
 
 
 if __name__ == "__main__":
-    test_data_gauss_set_get_size()
-    test_data_gauss_get_inv_cov()
-    test_data_gauss_resample()
-    test_data_gauss_bootstrap()
-    test_data_gauss_bootstrap_wmean()
-    test_data_gauss_serialize()
-    test_data_gauss_update_cov_resample()
-    test_data_gauss_fisher()
-    test_data_gauss_resample_wmean()
+    test_data_gauss_diag_set_get_size()
+    test_data_gauss_diag_get_inv_cov()
+    test_data_gauss_diag_resample()
+    test_data_gauss_diag_bootstrap()
+    test_data_gauss_diag_bootstrap_wmean()
+    test_data_gauss_diag_serialize()
+    test_data_gauss_diag_update_cov_resample()
+    test_data_gauss_diag_fisher()
+    test_data_gauss_diag_fisher_bias()
+    test_data_gauss_diag_resample_wmean()
