@@ -959,6 +959,37 @@ ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2ln
 }
 
 /**
+ * ncm_dataset_mean_vector:
+ * @dset: a #NcmDataset
+ * @mset: a #NcmMSet
+ * @mu: a #NcmVector
+ *
+ * Calculates the mean vector @f concatenating the individual ones from each
+ * #NcmData in @dset.
+ *
+ */
+void
+ncm_dataset_mean_vector (NcmDataset *dset, NcmMSet *mset, NcmVector *mu)
+{
+  const guint total_n = ncm_dataset_get_n (dset);
+  guint pos           = 0;
+  guint i;
+
+  g_assert_cmpuint (ncm_vector_len (mu), ==, total_n);
+
+  for (i = 0; i < dset->oa->len; i++)
+  {
+    NcmData *data = ncm_dataset_peek_data (dset, i);
+    guint n       = ncm_data_get_length (data);
+
+    ncm_vector_get_subvector2 (dset->ls_f, mu, pos, n);
+
+    ncm_data_mean_vector (data, mset, dset->ls_f);
+    pos += n;
+  }
+}
+
+/**
  * ncm_dataset_fisher_matrix:
  * @dset: a #NcmDataset
  * @mset: a #NcmMSet
@@ -1017,6 +1048,7 @@ ncm_dataset_fisher_matrix_bias (NcmDataset *dset, NcmMSet *mset, NcmVector *f_tr
   *delta_theta = ncm_vector_new (fparams_len);
 
   ncm_matrix_set_zero (*IM);
+  ncm_vector_set_zero (*delta_theta);
 
   for (i = 0; i < dset->oa->len; i++)
   {

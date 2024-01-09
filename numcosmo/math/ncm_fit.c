@@ -2426,6 +2426,54 @@ ncm_fit_fisher (NcmFit *fit)
 }
 
 /**
+ * ncm_fit_fisher_bias:
+ * @fit: a #NcmFit
+ * @f_true: a #NcmVector
+ *
+ * Calculates the covariance from the Fisher matrix and the bias vector, see
+ * ncm_dataset_fisher_matrix_bias(). The bias vector is calculated using the
+ * the theory vector @f_true as the true model expectation values.
+ *
+ * Note that this function does not use the gradient defined in the @fit object, it
+ * always uses the accurate numerical differentiation methods implemented in the
+ * #NcmDiff object.
+ *
+ * It sets the covariance matrix in the #NcmFitState object associated to the
+ * @fit object. Moreover, it computes the final bias vector, that is, the inverse
+ * of the Fisher matrix times the bias vector returns it.
+ *
+ * Returns: (transfer full): the bias vector
+ */
+NcmVector *
+ncm_fit_fisher_bias (NcmFit *fit, NcmVector *f_true)
+{
+  NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
+  NcmDataset *dset    = ncm_likelihood_peek_dataset (self->lh);
+  NcmMatrix *cov      = ncm_fit_state_peek_covar (self->fstate);
+  NcmMatrix *IM       = NULL;
+  NcmVector *bias     = NULL;
+  gint ret;
+
+  if ((ncm_likelihood_priors_length_f (self->lh) > 0) || (ncm_likelihood_priors_length_m2lnL (self->lh) > 0))
+    g_warning ("ncm_fit_fisher: the analysis contains priors which are ignored in the Fisher matrix calculation.");
+
+  ncm_dataset_fisher_matrix_bias (dset, self->mset, f_true, &IM, &bias);
+
+  ret = ncm_matrix_cholesky_solve (IM, bias, 'U');
+
+  if (ret != 0)
+    g_error ("ncm_fit_fisher_bias[ncm_matrix_cholesky_solve]: %d.", ret);
+
+  ncm_matrix_memcpy (cov, IM);
+
+  _ncm_fit_fisher_to_covar (fit, NULL, TRUE);
+
+  ncm_matrix_clear (&IM);
+
+  return bias;
+}
+
+/**
  * ncm_fit_numdiff_m2lnL_covar:
  * @fit: a #NcmFit
  *

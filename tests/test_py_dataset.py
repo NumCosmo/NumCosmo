@@ -247,6 +247,33 @@ def test_dataset_log_info():
     assert dset.get_info() is not None
 
 
+def test_dataset_mean_vector():
+    """Test mean vector."""
+
+    dset = Ncm.Dataset.new_array(
+        [
+            DataGaussDiagTest(n_points=200),
+            DataGaussTest(corr=0.3, sigma1=1.0, sigma2=2.0),
+        ]
+    )
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+
+    mset.fparams_set_array(np.array([1.0, 2.0]))
+
+    mean_vector = Ncm.Vector.new(dset.get_n())
+    dset.mean_vector(mset, mean_vector)
+
+    local_mean_vector = []
+    for i in range(dset.get_ndata()):
+        data = dset.get_data(i)
+        mean_vector_i = Ncm.Vector.new(data.get_length())
+        data.mean_vector(mset, mean_vector_i)
+        local_mean_vector += mean_vector_i.dup_array()
+
+    assert_allclose(mean_vector.dup_array(), local_mean_vector)
+
+
 def test_dataset_fisher():
     """Test resample."""
 
@@ -312,5 +339,6 @@ if __name__ == "__main__":
     test_dataset_bootstrap_partial_resample()
     test_dataset_bootstrap_total_resample()
     test_dataset_log_info()
+    test_dataset_mean_vector()
     test_dataset_fisher()
     test_dataset_fisher_bias()

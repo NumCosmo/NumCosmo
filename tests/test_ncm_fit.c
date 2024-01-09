@@ -202,6 +202,11 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_fisher_gauss, \
                     &test_ncm_fit_free); \
 \
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/fisher_bias/gauss", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_fisher_bias_gauss, \
+                    &test_ncm_fit_free); \
+\
         g_test_add ("/ncm/fit/" #lib "/" #algo "/traps", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _traps, \
@@ -338,6 +343,7 @@ void test_ncm_fit_serialize_constraints (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_fisher_ls (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_fisher_obs (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_fisher_gauss (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_fisher_bias_gauss (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
 
 gint
@@ -922,11 +928,13 @@ test_ncm_fit_run_restart_save_file (TestNcmFit *test, gconstpointer pdata)
   NcmFit *fit       = test->fit;
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
   NcmMSet *mset     = ncm_fit_peek_mset (fit);
+  gchar *tmp_dir    = g_dir_make_tmp ("tmp_test_ncm_fit_run_restart_save_file_XXXXXX", NULL);
+  gchar *filename   = g_strdup_printf ("%s/tmp_test_ncm_fit_run_restart_save_file.mset", tmp_dir);
   NcmMSet *mset_dup;
 
-  ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-3, 0.0, NULL, "tmp_test_ncm_fit_run_restart_save_file.mset");
+  ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-3, 0.0, NULL, filename);
 
-  mset_dup = ncm_mset_load ("tmp_test_ncm_fit_run_restart_save_file.mset", ser);
+  mset_dup = ncm_mset_load (filename, ser);
 
   g_assert_true (ncm_mset_cmp (mset, mset_dup, TRUE));
 
@@ -945,6 +953,12 @@ test_ncm_fit_run_restart_save_file (TestNcmFit *test, gconstpointer pdata)
 
   ncm_mset_free (mset_dup);
   ncm_serialize_free (ser);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
 }
 
 void
@@ -1532,6 +1546,67 @@ test_ncm_fit_fisher_gauss (TestNcmFit *test, gconstpointer pdata)
 
     ncm_matrix_free (cov);
   }
+}
+
+void
+test_ncm_fit_fisher_bias_gauss (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit             = test->fit;
+  NcmMSet *mset           = ncm_fit_peek_mset (fit);
+  NcmDataset *dataset     = ncm_likelihood_peek_dataset (ncm_fit_peek_likelihood (fit));
+  const guint fparams_len = ncm_mset_fparams_len (mset);
+  const guint data_n      = ncm_dataset_get_n (dataset);
+  NcmVector *x            = ncm_vector_new (fparams_len);
+  NcmVector *x_bf         = ncm_vector_new (fparams_len);
+  NcmVector *dx           = ncm_vector_new (fparams_len);
+  NcmVector *f_true       = ncm_vector_new (data_n);
+  NcmRNG *rng             = ncm_rng_new (NULL);
+  NcmVector *bias         = NULL;
+  guint i;
+
+  for (i = 0; i < fparams_len; i++)
+  {
+    ncm_vector_set (dx, i, ncm_rng_gaussian_gen (rng, 0.0, 5.0e-2));
+  }
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+  ncm_dataset_mean_vector (dataset, mset, f_true);
+
+  ncm_mset_fparams_get_vector (mset, x_bf);
+  ncm_vector_memcpy (x, x_bf);
+  ncm_vector_sub (x, dx);
+
+  ncm_mset_fparams_set_vector (mset, x);
+
+  bias = ncm_fit_fisher_bias (fit, f_true);
+
+  {
+    NcmMatrix *cov      = ncm_fit_get_covar (fit);
+    NcmMatrix *true_cov = ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (test->data_mvnd));
+
+    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, 1.0e-3);
+
+    ncm_matrix_free (cov);
+  }
+
+  {
+    for (i = 0; i < fparams_len; i++)
+    {
+      const gdouble bias_i = ncm_vector_get (bias, i);
+      const gdouble dx_i   = ncm_vector_get (dx, i);
+
+      ncm_assert_cmpdouble_e (bias_i, ==, dx_i, 3.0e-1, 0.0);
+    }
+  }
+
+  ncm_vector_free (x);
+  ncm_vector_free (x_bf);
+  ncm_vector_free (dx);
+  ncm_vector_free (f_true);
+  ncm_rng_free (rng);
+  ncm_vector_free (bias);
 }
 
 #ifdef HAVE_NLOPT
