@@ -174,6 +174,7 @@ static void _ncm_data_gauss_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2
 static void _ncm_data_gauss_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v);
 static void _ncm_data_gauss_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu);
 static void _ncm_data_gauss_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H);
+static void _ncm_data_gauss_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f);
 
 static void _ncm_data_gauss_set_size (NcmDataGauss *gauss, guint np);
 static guint _ncm_data_gauss_get_size (NcmDataGauss *gauss);
@@ -225,6 +226,7 @@ ncm_data_gauss_class_init (NcmDataGaussClass *klass)
 
   data_class->mean_vector = &_ncm_data_gauss_mean_vector;
   data_class->inv_cov_UH  = &_ncm_data_gauss_inv_cov_UH;
+  data_class->inv_cov_Uf  = &_ncm_data_gauss_inv_cov_Uf;
 
   gauss_class->mean_func    = NULL;
   gauss_class->inv_cov_func = NULL;
@@ -407,6 +409,27 @@ _ncm_data_gauss_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
                         1.0, ncm_matrix_gsl (self->LLT), ncm_matrix_gsl (H));
 
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_inv_cov_UH", ret);
+}
+
+static void
+_ncm_data_gauss_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f)
+{
+  NcmDataGauss *gauss              = NCM_DATA_GAUSS (data);
+  NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
+  NcmDataGaussClass *gauss_class   = NCM_DATA_GAUSS_GET_CLASS (gauss);
+  gboolean inv_cov_update          = FALSE;
+  gint ret;
+
+  if (gauss_class->inv_cov_func != NULL)
+    inv_cov_update = gauss_class->inv_cov_func (gauss, mset, self->inv_cov);
+
+  if (inv_cov_update || !self->prepared_LLT)
+    _ncm_data_gauss_prepare_LLT (data);
+
+  ret = gsl_blas_dtrmv (CblasUpper, CblasNoTrans, CblasNonUnit,
+                        ncm_matrix_gsl (self->LLT), ncm_vector_gsl (f));
+
+  NCM_TEST_GSL_RESULT ("_ncm_data_gauss_inv_cov_Uf", ret);
 }
 
 void
