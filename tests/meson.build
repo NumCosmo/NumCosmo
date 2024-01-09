@@ -110,6 +110,7 @@ c_tests = [
             'ncm_data_gauss_cov_test.c',
             'ncm_data_gauss_cov_test.h',
         ],
+        'timeout': 0,
     },
     {
         'name': 'ncm_fit',

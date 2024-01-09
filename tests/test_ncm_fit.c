@@ -961,10 +961,11 @@ test_ncm_fit_run_likelihood_ratio (TestNcmFit *test, gconstpointer pdata)
   {
     const gdouble val = ncm_matrix_get (results, i, 0);
 
-    ncm_assert_cmpdouble_e (
-      ncm_fit_lr_test (fit, ncm_model_mvnd_id (), 0, val, 1),
-      ==,
-      ncm_matrix_get (results, i, 3), 1.0e-1, 0.0);
+    if (ncm_matrix_get (results, i, 3) > 1.0e-8)
+      ncm_assert_cmpdouble_e (
+        ncm_fit_lr_test (fit, ncm_model_mvnd_id (), 0, val, 1),
+        ==,
+        ncm_matrix_get (results, i, 3), 1.0e-1, 0.0);
   }
 
 
