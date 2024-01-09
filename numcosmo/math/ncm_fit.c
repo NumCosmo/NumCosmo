@@ -2261,21 +2261,38 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
   NcmFitPrivate *self         = ncm_fit_get_instance_private (fit);
   const guint free_params_len = ncm_mset_fparams_len (self->mset);
   GArray *x_a                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *errors_a            = NULL;
   NcmVector *x                = NULL;
+  NcmVector *errors           = NULL;
   GArray *H_a                 = NULL;
 
   g_array_set_size (x_a, free_params_len);
   x = ncm_vector_new_array (x_a);
 
   ncm_mset_fparams_get_vector (self->mset, x);
-  H_a = ncm_diff_rf_Hessian_N_to_1 (self->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, NULL);
+  H_a    = ncm_diff_rf_Hessian_N_to_1 (self->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, &errors_a);
+  errors = ncm_vector_new_array (errors_a);
+
+  if (ncm_vector_get_max (errors) > reltol)
+  {
+    const gdouble old_h_ini = ncm_diff_get_ini_h (self->diff);
+
+    g_array_unref (H_a);
+
+    /* Trying again with larger initial step. */
+    ncm_diff_set_ini_h (self->diff, 4.0e-1);
+    H_a = ncm_diff_rf_Hessian_N_to_1 (self->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, NULL);
+    ncm_diff_set_ini_h (self->diff, old_h_ini);
+  }
 
   ncm_matrix_set_from_array (H, H_a);
   ncm_mset_fparams_set_vector (self->mset, x);
 
   g_array_unref (x_a);
+  g_array_unref (errors_a);
   g_array_unref (H_a);
   ncm_vector_free (x);
+  ncm_vector_free (errors);
 }
 
 static void

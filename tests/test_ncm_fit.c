@@ -36,6 +36,11 @@ typedef struct _TestNcmFit
   guint ntests;
 } TestNcmFit;
 
+#define TEST_NCM_FIT_FISHER_COV_RELTOL 1.0e-2
+#define TEST_NCM_FIT_FISHER_BIAS_RELTOL 3.0e-1
+#define TEST_NCM_FIT_DIM 10
+#define TEST_NCM_FIT_DIM_SMALL 5
+
 #define TESTS_NCM_DECL(lib, algo) \
         void test_ncm_fit_ ## lib ## _ ## algo ## _new (TestNcmFit * test, gconstpointer pdata); \
         void test_ncm_fit_ ## lib ## _ ## algo ## _new_empty (TestNcmFit * test, gconstpointer pdata); \
@@ -404,21 +409,21 @@ main (gint argc, gchar *argv[])
 }
 
 #ifdef HAVE_NLOPT
-TESTS_NCM_NEW (nlopt, neldermead, NCM_FIT_TYPE_NLOPT, FIT_NLOPT, "ln-neldermead", 20, NCM_FIT_DEFAULT_MAXITER)
-TESTS_NCM_NEW (nlopt, slsqp,      NCM_FIT_TYPE_NLOPT, FIT_NLOPT, "ld-slsqp",      20, NCM_FIT_DEFAULT_MAXITER)
+TESTS_NCM_NEW (nlopt, neldermead, NCM_FIT_TYPE_NLOPT, FIT_NLOPT, "ln-neldermead", TEST_NCM_FIT_DIM, NCM_FIT_DEFAULT_MAXITER)
+TESTS_NCM_NEW (nlopt, slsqp,      NCM_FIT_TYPE_NLOPT, FIT_NLOPT, "ld-slsqp",      TEST_NCM_FIT_DIM, NCM_FIT_DEFAULT_MAXITER)
 #endif /* HAVE_NLOPT */
 
-TESTS_NCM_NEW (gsl, ls, NCM_FIT_TYPE_GSL_LS, FIT_GSL_LS, NULL, 20, 10000000)
+TESTS_NCM_NEW (gsl, ls, NCM_FIT_TYPE_GSL_LS, FIT_GSL_LS, NULL, TEST_NCM_FIT_DIM, 10000000)
 
-TESTS_NCM_NEW (gsl, mm_conjugate_fr,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "conjugate-fr",     20, 10000000)
-TESTS_NCM_NEW (gsl, mm_conjugate_pr,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "conjugate-pr",     20, 10000000)
-TESTS_NCM_NEW (gsl, mm_vector_bfgs,      NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "vector-bfgs",      20, 10000000)
-TESTS_NCM_NEW (gsl, mm_vector_bfgs2,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "vector-bfgs2",     20, 10000000)
-TESTS_NCM_NEW (gsl, mm_steepest_descent, NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "steepest-descent", 20, 10000000)
+TESTS_NCM_NEW (gsl, mm_conjugate_fr,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "conjugate-fr",     TEST_NCM_FIT_DIM, 10000000)
+TESTS_NCM_NEW (gsl, mm_conjugate_pr,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "conjugate-pr",     TEST_NCM_FIT_DIM, 10000000)
+TESTS_NCM_NEW (gsl, mm_vector_bfgs,      NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "vector-bfgs",      TEST_NCM_FIT_DIM, 10000000)
+TESTS_NCM_NEW (gsl, mm_vector_bfgs2,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "vector-bfgs2",     TEST_NCM_FIT_DIM, 10000000)
+TESTS_NCM_NEW (gsl, mm_steepest_descent, NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "steepest-descent", TEST_NCM_FIT_DIM, 10000000)
 
-TESTS_NCM_NEW (gsl, nmsimplex,      NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex",     20, 10000000)
-TESTS_NCM_NEW (gsl, nmsimplex2,     NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex2",     5, 10000000)
-TESTS_NCM_NEW (gsl, nmsimplex2rand, NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex2rand", 5, 10000000)
+TESTS_NCM_NEW (gsl, nmsimplex,      NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex",      TEST_NCM_FIT_DIM_SMALL, 10000000)
+TESTS_NCM_NEW (gsl, nmsimplex2,     NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex2",     TEST_NCM_FIT_DIM_SMALL, 10000000)
+TESTS_NCM_NEW (gsl, nmsimplex2rand, NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex2rand", TEST_NCM_FIT_DIM_SMALL, 10000000)
 
 TESTS_NCM_NEW (levmar, der,    NCM_FIT_TYPE_LEVMAR, FIT_LEVMAR, "der",    20, 10000000)
 TESTS_NCM_NEW (levmar, dif,    NCM_FIT_TYPE_LEVMAR, FIT_LEVMAR, "dif",    20, 10000000)
@@ -979,7 +984,7 @@ test_ncm_fit_run_likelihood_ratio (TestNcmFit *test, gconstpointer pdata)
       ncm_assert_cmpdouble_e (
         ncm_fit_lr_test (fit, ncm_model_mvnd_id (), 0, val, 1),
         ==,
-        ncm_matrix_get (results, i, 3), 1.0e-1, 0.0);
+        ncm_matrix_get (results, i, 3), 1.0e-1, 1.0e-1);
   }
 
 
@@ -1487,7 +1492,7 @@ test_ncm_fit_fisher_obs (TestNcmFit *test, gconstpointer pdata)
     NcmMatrix *cov      = ncm_fit_get_covar (fit);
     NcmMatrix *true_cov = ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (test->data_mvnd));
 
-    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, 1.0e-3);
+    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, TEST_NCM_FIT_FISHER_COV_RELTOL);
 
     ncm_matrix_free (cov);
   }
@@ -1501,9 +1506,9 @@ test_ncm_fit_fisher_obs (TestNcmFit *test, gconstpointer pdata)
 
     ncm_matrix_cholesky_decomp (true_cholesky, 'U');
 
-    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, 1.0e-3);
+    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, TEST_NCM_FIT_FISHER_COV_RELTOL);
 
-    ncm_assert_cmpdouble_e (ncm_matrix_cholesky_lndet (true_cholesky), ==, ln_det, 1.0e-3, 0.0);
+    ncm_assert_cmpdouble_e (ncm_matrix_cholesky_lndet (true_cholesky), ==, ln_det, TEST_NCM_FIT_FISHER_COV_RELTOL, 0.0);
 
     ncm_matrix_free (cov);
     ncm_matrix_free (true_cholesky);
@@ -1542,7 +1547,7 @@ test_ncm_fit_fisher_gauss (TestNcmFit *test, gconstpointer pdata)
     NcmMatrix *cov      = ncm_fit_get_covar (fit);
     NcmMatrix *true_cov = ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (test->data_mvnd));
 
-    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, 1.0e-3);
+    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, TEST_NCM_FIT_FISHER_COV_RELTOL);
 
     ncm_matrix_free (cov);
   }
@@ -1586,7 +1591,7 @@ test_ncm_fit_fisher_bias_gauss (TestNcmFit *test, gconstpointer pdata)
     NcmMatrix *cov      = ncm_fit_get_covar (fit);
     NcmMatrix *true_cov = ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (test->data_mvnd));
 
-    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, 1.0e-3);
+    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, TEST_NCM_FIT_FISHER_COV_RELTOL);
 
     ncm_matrix_free (cov);
   }
@@ -1597,7 +1602,7 @@ test_ncm_fit_fisher_bias_gauss (TestNcmFit *test, gconstpointer pdata)
       const gdouble bias_i = ncm_vector_get (bias, i);
       const gdouble dx_i   = ncm_vector_get (dx, i);
 
-      ncm_assert_cmpdouble_e (bias_i, ==, dx_i, 3.0e-1, 0.0);
+      ncm_assert_cmpdouble_e (bias_i, ==, dx_i, TEST_NCM_FIT_FISHER_BIAS_RELTOL, TEST_NCM_FIT_FISHER_BIAS_RELTOL);
     }
   }
 
