@@ -51,7 +51,7 @@ class DataPoissonTest(Ncm.DataPoisson):
 
         a = mvnd.orig_vparam_get(0, 0)
         b = mvnd.orig_vparam_get(0, 1)
-        return a + b / (self.n_bins - 1.0) * n
+        return a + (b - a) / (self.n_bins - 1.0) * n
 
 
 def test_data_poisson_set_get_size():
@@ -258,6 +258,38 @@ def test_data_poisson_fisher():
     assert np.all(np.isfinite(fisher.dup_array()))
 
 
+def test_data_poisson_fisher_bias():
+    """Test NcmDataPoisson fisher matrix and bias."""
+
+    true_theta = [1.0, 2.0]
+    theta_shift = [0.1, -0.02]
+
+    rng = Ncm.RNG.new()
+    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    mset.prepare_fparam_map()
+
+    mset.fparam_set(0, true_theta[0] - theta_shift[0])
+    mset.fparam_set(1, true_theta[1] - theta_shift[1])
+
+    n_bins = 100
+    data_dist = DataPoissonTest(n_bins=n_bins)
+
+    data_dist.resample(mset, rng)
+    fisher0 = data_dist.fisher_matrix(mset)
+    fisher1, delta_theta = data_dist.fisher_matrix_bias(
+        mset,
+        Ncm.Vector.new_array(
+            np.linspace(true_theta[0], true_theta[1], n_bins).tolist()
+        ),
+    )
+
+    assert_allclose(fisher0.dup_array(), fisher1.dup_array(), atol=1.0e-6)
+
+    fisher0.cholesky_solve(delta_theta, ord("U"))
+    assert_allclose(delta_theta.dup_array(), theta_shift, atol=1.0e-1)
+
+
 if __name__ == "__main__":
     test_data_poisson_set_get_size()
     test_data_poisson_init_from_vector()
@@ -266,3 +298,4 @@ if __name__ == "__main__":
     test_data_poisson_bootstrap()
     test_data_poisson_serialize()
     test_data_poisson_fisher()
+    test_data_poisson_fisher_bias()

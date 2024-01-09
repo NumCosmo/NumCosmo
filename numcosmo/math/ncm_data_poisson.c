@@ -158,6 +158,7 @@ static void _ncm_data_poisson_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *
 static void _ncm_data_poisson_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v);
 static void _ncm_data_poisson_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu);
 static void _ncm_data_poisson_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H);
+static void _ncm_data_poisson_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f);
 static void _ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint nbins);
 static guint _ncm_data_poisson_get_size (NcmDataPoisson *poisson);
 
@@ -200,6 +201,7 @@ ncm_data_poisson_class_init (NcmDataPoissonClass *klass)
   data_class->leastsquares_f = &_ncm_data_poisson_leastsquares_f;
   data_class->mean_vector    = &_ncm_data_poisson_mean_vector;
   data_class->inv_cov_UH     = &_ncm_data_poisson_inv_cov_UH;
+  data_class->inv_cov_Uf     = &_ncm_data_poisson_inv_cov_Uf;
 
   poisson_class->mean_func = NULL;
   poisson_class->set_size  = &_ncm_data_poisson_set_size;
@@ -350,6 +352,27 @@ _ncm_data_poisson_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
     const gdouble mean_i = poisson_class->mean_func (poisson, mset, i);
 
     ncm_matrix_mul_col (H, i, 1.0 / sqrt (mean_i));
+  }
+}
+
+static void
+_ncm_data_poisson_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f)
+{
+  NcmDataPoisson *poisson            = NCM_DATA_POISSON (data);
+  NcmDataPoissonPrivate * const self = ncm_data_poisson_get_instance_private (poisson);
+  NcmDataPoissonClass *poisson_class = NCM_DATA_POISSON_GET_CLASS (poisson);
+  guint i;
+
+  if (ncm_data_bootstrap_enabled (data))
+    g_error ("NcmDataPoisson: does not support bootstrap fisher matrix");
+
+  g_assert_cmpuint (ncm_vector_len (f), ==, self->h->n);
+
+  for (i = 0; i < self->h->n; i++)
+  {
+    const gdouble mean_i = poisson_class->mean_func (poisson, mset, i);
+
+    ncm_vector_mulby (f, i, 1.0 / sqrt (mean_i));
   }
 }
 
