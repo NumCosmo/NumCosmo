@@ -3,10 +3,60 @@ CHANGELOG
 
 [Current]
 
+[v0.20.0]
+ * Support for computing fisher bias vector (#132)
+
+     * Added support for computing fisher bias vector and corresponding unit
+     tests.
+     * Increased timeout for GaussCov and conditional testing in likelihood
+     ratio.
+     * Interface for fisher bias computation and tests.
+     * Better calibration for ncm_fit tests.
+     * Added retry in the hessian computation.
+ * Improving tests for NumCosmoMath (#131)
+
+     * Improving tests for NcmFftlog.
+     * Testing q=0.5 case for j_l.
+     * Added support to make meson use tap protocol for testing.
+     * Using g_assert_true instead of g_assert in tests.
+     * More tests for NcmFit.
+     * Tests for likelihood ratio tests, removed old and unused ncm_fit methods.
+     
+     * Testing MPI.
+     * Adding libopenmpi-dev to ubuntu installations.
+     * Adding MPI tests only on supported envs.
+     * Created the USE_NCM_MPI flag to use when compiling code that use
+     numcosmo's MPI facilities.
+     * Disabled TAP when running pytest-tap and mpi.
+     * Moved ode_spline from example to unit testing.
+ * Adding support for libflint arb usage. (#130)
+
+     * Adding support for libflint arb usage
+ * Adding more python based tests using external libs (astropy and scipy). (#129)
+
+     * Adding more python based tests using external libs (astropy and scipy).
+     * Adding astropy and scipy to coveralls job.
+     * Testing adiabatic solutions on CSQ1D.
+     * Tests for NcmDataDist1d.
+     * Tests for DataDist2d.
+     * Testing DataFunnel.
+     * Tests for NcmDataGauss.
+     * Added C test for generic garbage collection tests.
+     * More tests for DataGauss.
+     * Adding LCOV_EXCL_LINE non-testable lines.
+     * Tests for NcmDataGaussDiag.
+     * Testing bootstrap+wmean.
+     * Testing GaussMix2D.
+     * Testing DataPoisson and finished Poisson fisher support.
+     * Testing NcmDataset.
+ * Fixed package name in pyproject.toml.
+
+
 [v0.19.2]
- * Including typing data into pyproject.toml.
+ * Including typing data into pyproject.toml. Updating changelog.
 
  * Fixing minor doc glitches. (#128)
+
 
  * Updated changelog.
 
