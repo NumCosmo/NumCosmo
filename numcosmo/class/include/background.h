@@ -9,7 +9,7 @@
 #include "arrays.h"
 #include "dei_rkck.h"
 #include "parser.h"
-#include "../math/ncm_c.h"
+#include "../../math/ncm_c.h"
 
 /** list of possible types of spatial curvature */
 
