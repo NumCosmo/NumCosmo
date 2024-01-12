@@ -32,7 +32,7 @@ misc_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H', '-Wno-sign-compar
 libmisc = static_library(
     'misc',
     sources: misc_sources,
-    dependencies: [omp_c, glib_dep],
+    dependencies: [omp_c, gsl_dep, glib_dep],
     include_directories: [configinc, numcosmoinc],
     install: false,
     gnu_symbol_visibility: 'hidden',
