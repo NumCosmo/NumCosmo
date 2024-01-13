@@ -70,7 +70,6 @@
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
-#include <omp.h>
 #include "misc/kdtree.h"
 #include "misc/rb_knn_list.h"
 #include "levmar/levmar.h"

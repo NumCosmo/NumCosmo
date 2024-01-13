@@ -30,10 +30,10 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/math/ncm_spline.h>
 #include <numcosmo/math/ncm_spline2d.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/nc_hireion.h>
-#include <numcosmo/nc_hiprim.h>
 #include <numcosmo/nc_scalefactor.h>
 #include <numcosmo/nc_cbe_precision.h>
 #include <numcosmo/data/nc_data_cmb.h>
