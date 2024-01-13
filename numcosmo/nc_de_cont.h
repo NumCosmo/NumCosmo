@@ -31,7 +31,6 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_csq1d.h>
-#include <numcosmo/math/ncm_spline.h>
 
 G_BEGIN_DECLS
 
