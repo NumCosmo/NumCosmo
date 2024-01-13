@@ -117,7 +117,6 @@
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_sort.h>
-#include <omp.h>
 #include "levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
