@@ -7231,7 +7231,7 @@ class HICosmoDEReparamCMB(NumCosmoMath.Reparam):
     Properties from NcmReparam:
       length -> guint: length
         System's length
-      params-desc -> GVariant: params-desc
+      params-desc -> NcmObjDictInt: params-desc
         News parameter descriptions
       compat-type -> gchararray: compat-type
         Compatible type
@@ -7243,11 +7243,14 @@ class HICosmoDEReparamCMB(NumCosmoMath.Reparam):
     class Props:
         compat_type: str
         length: int
-        params_desc: GLib.Variant
+        params_desc: NumCosmoMath.ObjDictInt
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     def __init__(
-        self, compat_type: str = ..., length: int = ..., params_desc: GLib.Variant = ...
+        self,
+        compat_type: str = ...,
+        length: int = ...,
+        params_desc: NumCosmoMath.ObjDictInt = ...,
     ): ...
     @classmethod
     def new(cls, length: int) -> HICosmoDEReparamCMB: ...
@@ -7276,7 +7279,7 @@ class HICosmoDEReparamOk(NumCosmoMath.Reparam):
     Properties from NcmReparam:
       length -> guint: length
         System's length
-      params-desc -> GVariant: params-desc
+      params-desc -> NcmObjDictInt: params-desc
         News parameter descriptions
       compat-type -> gchararray: compat-type
         Compatible type
@@ -7288,11 +7291,14 @@ class HICosmoDEReparamOk(NumCosmoMath.Reparam):
     class Props:
         compat_type: str
         length: int
-        params_desc: GLib.Variant
+        params_desc: NumCosmoMath.ObjDictInt
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     def __init__(
-        self, compat_type: str = ..., length: int = ..., params_desc: GLib.Variant = ...
+        self,
+        compat_type: str = ...,
+        length: int = ...,
+        params_desc: NumCosmoMath.ObjDictInt = ...,
     ): ...
     @classmethod
     def new(cls, length: int) -> HICosmoDEReparamOk: ...
@@ -7909,7 +7915,7 @@ class HICosmoGCGReparamCMB(NumCosmoMath.Reparam):
     Properties from NcmReparam:
       length -> guint: length
         System's length
-      params-desc -> GVariant: params-desc
+      params-desc -> NcmObjDictInt: params-desc
         News parameter descriptions
       compat-type -> gchararray: compat-type
         Compatible type
@@ -7921,11 +7927,14 @@ class HICosmoGCGReparamCMB(NumCosmoMath.Reparam):
     class Props:
         compat_type: str
         length: int
-        params_desc: GLib.Variant
+        params_desc: NumCosmoMath.ObjDictInt
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     def __init__(
-        self, compat_type: str = ..., length: int = ..., params_desc: GLib.Variant = ...
+        self,
+        compat_type: str = ...,
+        length: int = ...,
+        params_desc: NumCosmoMath.ObjDictInt = ...,
     ): ...
     @classmethod
     def new(cls, length: int) -> HICosmoGCGReparamCMB: ...
@@ -7954,7 +7963,7 @@ class HICosmoGCGReparamOk(NumCosmoMath.Reparam):
     Properties from NcmReparam:
       length -> guint: length
         System's length
-      params-desc -> GVariant: params-desc
+      params-desc -> NcmObjDictInt: params-desc
         News parameter descriptions
       compat-type -> gchararray: compat-type
         Compatible type
@@ -7966,11 +7975,14 @@ class HICosmoGCGReparamOk(NumCosmoMath.Reparam):
     class Props:
         compat_type: str
         length: int
-        params_desc: GLib.Variant
+        params_desc: NumCosmoMath.ObjDictInt
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     def __init__(
-        self, compat_type: str = ..., length: int = ..., params_desc: GLib.Variant = ...
+        self,
+        compat_type: str = ...,
+        length: int = ...,
+        params_desc: NumCosmoMath.ObjDictInt = ...,
     ): ...
     @classmethod
     def new(cls, length: int) -> HICosmoGCGReparamOk: ...
@@ -8181,7 +8193,7 @@ class HICosmoIDEM2ReparamCMB(NumCosmoMath.Reparam):
     Properties from NcmReparam:
       length -> guint: length
         System's length
-      params-desc -> GVariant: params-desc
+      params-desc -> NcmObjDictInt: params-desc
         News parameter descriptions
       compat-type -> gchararray: compat-type
         Compatible type
@@ -8193,11 +8205,14 @@ class HICosmoIDEM2ReparamCMB(NumCosmoMath.Reparam):
     class Props:
         compat_type: str
         length: int
-        params_desc: GLib.Variant
+        params_desc: NumCosmoMath.ObjDictInt
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     def __init__(
-        self, compat_type: str = ..., length: int = ..., params_desc: GLib.Variant = ...
+        self,
+        compat_type: str = ...,
+        length: int = ...,
+        params_desc: NumCosmoMath.ObjDictInt = ...,
     ): ...
     @classmethod
     def new(cls, length: int) -> HICosmoIDEM2ReparamCMB: ...
@@ -8226,7 +8241,7 @@ class HICosmoIDEM2ReparamOk(NumCosmoMath.Reparam):
     Properties from NcmReparam:
       length -> guint: length
         System's length
-      params-desc -> GVariant: params-desc
+      params-desc -> NcmObjDictInt: params-desc
         News parameter descriptions
       compat-type -> gchararray: compat-type
         Compatible type
@@ -8238,11 +8253,14 @@ class HICosmoIDEM2ReparamOk(NumCosmoMath.Reparam):
     class Props:
         compat_type: str
         length: int
-        params_desc: GLib.Variant
+        params_desc: NumCosmoMath.ObjDictInt
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     def __init__(
-        self, compat_type: str = ..., length: int = ..., params_desc: GLib.Variant = ...
+        self,
+        compat_type: str = ...,
+        length: int = ...,
+        params_desc: NumCosmoMath.ObjDictInt = ...,
     ): ...
     @classmethod
     def new(cls, length: int) -> HICosmoIDEM2ReparamOk: ...
@@ -12216,7 +12234,7 @@ class HIReionCambReparamTau(NumCosmoMath.Reparam):
     Properties from NcmReparam:
       length -> guint: length
         System's length
-      params-desc -> GVariant: params-desc
+      params-desc -> NcmObjDictInt: params-desc
         News parameter descriptions
       compat-type -> gchararray: compat-type
         Compatible type
@@ -12229,7 +12247,7 @@ class HIReionCambReparamTau(NumCosmoMath.Reparam):
         cosmo: HICosmo
         compat_type: str
         length: int
-        params_desc: GLib.Variant
+        params_desc: NumCosmoMath.ObjDictInt
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     ctrl: NumCosmoMath.ModelCtrl = ...
@@ -12238,7 +12256,7 @@ class HIReionCambReparamTau(NumCosmoMath.Reparam):
         cosmo: HICosmo = ...,
         compat_type: str = ...,
         length: int = ...,
-        params_desc: GLib.Variant = ...,
+        params_desc: NumCosmoMath.ObjDictInt = ...,
     ): ...
     @classmethod
     def new(cls, length: int, cosmo: HICosmo) -> HIReionCambReparamTau: ...
