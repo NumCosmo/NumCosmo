@@ -767,7 +767,7 @@ python_pip = python_module.find_installation(
 if get_option('numcosmo_py')
   if python_pip.found()
     pip_cmd = [
-      'python',
+      python.full_path(),
       '-m',
       'pip',
       'install',
