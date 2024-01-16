@@ -858,7 +858,7 @@ ncm_model_class_set_vparam_obj (NcmModelClass *model_class, guint vparam_id, Ncm
 
     g_object_class_install_property (object_class, prop_fit_id,
                                      g_param_spec_variant (param_fit_name, NULL, param_fit_symbol,
-                                                           G_VARIANT_TYPE_ARRAY, NULL,
+                                                           G_VARIANT_TYPE ("ab"), NULL,
                                                            G_PARAM_READWRITE));
     g_free (param_length_name);
     g_free (param_length_symbol);
