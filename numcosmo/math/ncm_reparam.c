@@ -39,6 +39,9 @@
 #include "math/ncm_reparam.h"
 #include "math/ncm_model.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_sparam.h"
+#include "math/ncm_vector.h"
+#include "math/ncm_obj_array.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
@@ -50,7 +53,7 @@ typedef struct _NcmReparamPrivate
   GObject parent_instance;
   guint length;
   NcmVector *new_params;
-  GPtrArray *sparams;
+  NcmObjDictInt *sparams;
   GHashTable *sparams_name_id;
   GType compat_type;
 } NcmReparamPrivate;
@@ -71,7 +74,7 @@ ncm_reparam_init (NcmReparam *reparam)
   NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
 
   self->length          = 0;
-  self->sparams         = NULL;
+  self->sparams         = ncm_obj_dict_int_new ();
   self->new_params      = NULL;
   self->sparams_name_id = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free, NULL);
   self->compat_type     = G_TYPE_INVALID;
@@ -91,10 +94,8 @@ _ncm_reparam_get_property (GObject *object, guint prop_id, GValue *value, GParam
       g_value_set_uint (value, self->length);
       break;
     case PROP_PARAMS_DESC:
-    {
-      g_value_take_variant (value, ncm_reparam_get_params_desc_dict (reparam));
+      g_value_set_boxed (value, self->sparams);
       break;
-    }
     case PROP_COMPAT_TYPE:
       g_value_set_string (value, g_type_name (self->compat_type));
       break;
@@ -118,7 +119,8 @@ _ncm_reparam_set_property (GObject *object, guint prop_id, const GValue *value, 
       self->length = g_value_get_uint (value);
       break;
     case PROP_PARAMS_DESC:
-      ncm_reparam_set_params_desc_dict (reparam, g_value_get_variant (value));
+      ncm_obj_dict_int_clear (&self->sparams);
+      self->sparams = g_value_dup_boxed (value);
       break;
     case PROP_COMPAT_TYPE:
       self->compat_type = g_type_from_name (g_value_get_string (value));
@@ -145,10 +147,6 @@ _ncm_reparam_constructed (GObject *object)
     g_assert_cmpuint (self->length, >, 0);
 
     self->new_params = ncm_vector_new (self->length);
-
-    self->sparams = g_ptr_array_sized_new (self->length);
-
-    g_ptr_array_set_size (self->sparams, self->length);
   }
 }
 
@@ -157,18 +155,9 @@ _ncm_reparam_finalize (GObject *object)
 {
   NcmReparam *reparam            = NCM_REPARAM (object);
   NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
-  guint i;
-
-  for (i = 0; i < self->sparams->len; i++)
-  {
-    NcmSParam *sp_i = g_ptr_array_index (self->sparams, i);
-
-    if (sp_i != NULL)
-      ncm_sparam_free (sp_i);
-  }
 
   g_clear_pointer (&self->sparams_name_id, g_hash_table_unref);
-  g_clear_pointer (&self->sparams, g_ptr_array_unref);
+  g_clear_pointer (&self->sparams, ncm_obj_dict_int_unref);
   ncm_vector_clear (&self->new_params);
 
   /* Chain up : end */
@@ -195,11 +184,11 @@ ncm_reparam_class_init (NcmReparamClass *klass)
 
   g_object_class_install_property (object_class,
                                    PROP_PARAMS_DESC,
-                                   g_param_spec_variant ("params-desc",
-                                                         NULL,
-                                                         "News parameter descriptions",
-                                                         G_VARIANT_TYPE (NCM_REPARAM_PARAMS_DESC_DICT_TYPE), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_boxed ("params-desc",
+                                                       NULL,
+                                                       "News parameter descriptions",
+                                                       NCM_TYPE_OBJ_DICT_INT,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_COMPAT_TYPE,
                                    g_param_spec_string ("compat-type",
@@ -317,75 +306,6 @@ ncm_reparam_new2old (NcmReparam *reparam, NcmModel *model)
 }
 
 /**
- * ncm_reparam_get_params_desc_dict:
- * @reparam: a #NcmReparam.
- *
- * Returns a #GVariant containing a dictionary describing the new parameters.
- *
- * Returns: a #GVariant dictionary.
- */
-GVariant *
-ncm_reparam_get_params_desc_dict (NcmReparam *reparam)
-{
-  NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
-  GVariantBuilder builder;
-  guint i;
-
-  g_variant_builder_init (&builder, G_VARIANT_TYPE (NCM_REPARAM_PARAMS_DESC_DICT_TYPE));
-
-  for (i = 0; i < self->length; i++)
-  {
-    NcmSParam *sp_i = g_ptr_array_index (self->sparams, i);
-
-    if (sp_i != NULL)
-    {
-      GVariant *i_var    = g_variant_new_uint32 (i);
-      GVariant *sp_var_i = ncm_serialize_global_to_variant (G_OBJECT (sp_i));
-      GVariant *entry_i  = g_variant_new_dict_entry (i_var, sp_var_i);
-
-      g_variant_builder_add_value (&builder, entry_i);
-      g_variant_unref (sp_var_i);
-    }
-  }
-
-  return g_variant_ref_sink (g_variant_builder_end (&builder));
-}
-
-/**
- * ncm_reparam_set_params_desc_dict:
- * @reparam: a #NcmReparam.
- * @pdesc_dict: a #GVariant containing the new parameters descriptions.
- *
- * Sets the new parameters descriptions using the information from @pdesc_dict.
- *
- */
-void
-ncm_reparam_set_params_desc_dict (NcmReparam *reparam, GVariant *pdesc_dict)
-{
-  if (pdesc_dict != NULL)
-  {
-    g_assert (g_variant_is_of_type (pdesc_dict, G_VARIANT_TYPE (NCM_REPARAM_PARAMS_DESC_DICT_TYPE)));
-    {
-      gsize n = g_variant_n_children (pdesc_dict);
-      guint i;
-
-      for (i = 0; i < n; i++)
-      {
-        GVariant *sp_var = NULL;
-        guint j;
-        NcmSParam *sp = NULL;
-
-        g_variant_get_child (pdesc_dict, i, "{u@"NCM_SERIALIZE_OBJECT_TYPE "}", &j, &sp_var);
-        sp = NCM_SPARAM (ncm_serialize_global_from_variant (sp_var));
-        ncm_reparam_set_param_desc (reparam, j, sp);
-        ncm_sparam_free (sp);
-        g_variant_unref (sp_var);
-      }
-    }
-  }
-}
-
-/**
  * ncm_reparam_set_param_desc:
  * @reparam: a #NcmReparam
  * @i: index of the changed parameter.
@@ -398,21 +318,18 @@ void
 ncm_reparam_set_param_desc (NcmReparam *reparam, guint i, NcmSParam *sp)
 {
   NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
-  NcmSParam **old_sp             = (NcmSParam **) &g_ptr_array_index (self->sparams, i);
+  NcmSParam *old_sp              = NCM_SPARAM (ncm_obj_dict_int_peek (self->sparams, i));
 
-  g_assert (i < self->sparams->len);
+  g_assert (i < self->length);
 
-  if (*old_sp != NULL)
-  {
-    g_assert (g_hash_table_remove (self->sparams_name_id, ncm_sparam_name (*old_sp)));
-    ncm_sparam_clear (old_sp);
-  }
+  if (old_sp != NULL)
+    g_assert (g_hash_table_remove (self->sparams_name_id, ncm_sparam_name (old_sp)));
 
   g_hash_table_insert (self->sparams_name_id,
                        g_strdup (ncm_sparam_name (sp)),
                        GUINT_TO_POINTER (i));
 
-  g_ptr_array_index (self->sparams, i) = ncm_sparam_ref (sp);
+  ncm_obj_dict_int_add (self->sparams, i, G_OBJECT (sp));
 }
 
 /**
@@ -429,9 +346,16 @@ ncm_reparam_peek_param_desc (NcmReparam *reparam, guint i)
 {
   NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
 
-  g_assert_cmpuint (i, <, self->sparams->len);
+  g_assert_cmpuint (i, <, self->length);
 
-  return g_ptr_array_index (self->sparams, i);
+  {
+    GObject *sp = ncm_obj_dict_int_peek (self->sparams, i);
+
+    if (sp != NULL)
+      return NCM_SPARAM (sp);
+    else
+      return NULL;
+  }
 }
 
 /**
@@ -448,12 +372,16 @@ ncm_reparam_get_param_desc (NcmReparam *reparam, guint i)
 {
   NcmReparamPrivate * const self = ncm_reparam_get_instance_private (reparam);
 
-  g_assert (i < self->sparams->len);
+  g_assert_cmpuint (i, <, self->length);
 
-  if (g_ptr_array_index (self->sparams, i) != NULL)
-    return ncm_sparam_ref (g_ptr_array_index (self->sparams, i));
-  else
-    return NULL;
+  {
+    GObject *sp = ncm_obj_dict_int_peek (self->sparams, i);
+
+    if (sp != NULL)
+      return ncm_sparam_ref (NCM_SPARAM (sp));
+    else
+      return NULL;
+  }
 }
 
 /**

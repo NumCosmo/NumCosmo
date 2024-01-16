@@ -60,6 +60,7 @@
 
 #include <gio/gio.h>
 #include <float.h>
+#include <errno.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #ifdef HAVE_LIBFYAML
@@ -825,6 +826,111 @@ ncm_serialize_from_variant (NcmSerialize *ser, GVariant *var_obj)
 }
 
 /**
+ * ncm_serialize_array_from_variant:
+ * @ser: a #NcmSerialize.
+ * @var: a #GVariant containing an array of objects.
+ *
+ * Creates a new #NcmObjArray from a #GVariant.
+ *
+ * Returns: (transfer full): a new #NcmObjArray.
+ */
+NcmObjArray *
+ncm_serialize_array_from_variant (NcmSerialize *ser, GVariant *var)
+{
+  g_assert (g_variant_is_of_type (var, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_ARRAY_TYPE)));
+  {
+    guint i, n = g_variant_n_children (var);
+    NcmObjArray *oa = ncm_obj_array_sized_new (n);
+
+    for (i = 0; i < n; i++)
+    {
+      GVariant *cvar = g_variant_get_child_value (var, i);
+      GObject *cobj  = ncm_serialize_from_variant (ser, cvar);
+
+      ncm_obj_array_add (oa, cobj);
+      g_object_unref (cobj);
+      g_variant_unref (cvar);
+    }
+
+    return oa;
+  }
+}
+
+/**
+ * ncm_serialize_dict_str_from_variant:
+ * @ser: a #NcmSerialize
+ * @var: a #GVariant containing a dictionary of string keys
+ *
+ * Creates a new #NcmObjDictStr from a #GVariant.
+ *
+ * Returns: (transfer full): a new #NcmObjDictStr.
+ */
+NcmObjDictStr *
+ncm_serialize_dict_str_from_variant (NcmSerialize *ser, GVariant *var)
+{
+  g_assert (g_variant_is_of_type (var, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_STR_TYPE)));
+  {
+    guint i, n = g_variant_n_children (var);
+    NcmObjDictStr *ods = ncm_obj_dict_str_new ();
+
+    for (i = 0; i < n; i++)
+    {
+      GVariant *cvar = g_variant_get_child_value (var, i);
+      GVariant *key  = g_variant_get_child_value (cvar, 0);
+      GVariant *val  = g_variant_get_child_value (cvar, 1);
+      GObject *cobj  = ncm_serialize_from_variant (ser, val);
+
+      ncm_obj_dict_str_set (ods, g_variant_get_string (key, NULL), cobj);
+
+      g_object_unref (cobj);
+
+      g_variant_unref (key);
+      g_variant_unref (val);
+      g_variant_unref (cvar);
+    }
+
+    return ods;
+  }
+}
+
+/**
+ * ncm_serialize_dict_int_from_variant:
+ * @ser: a #NcmSerialize
+ * @var: a #GVariant containing a dictionary of integers keys
+ *
+ * Creates a new #NcmObjDictInt from a #GVariant.
+ *
+ * Returns: (transfer full): a new #NcmObjDictInt.
+ */
+NcmObjDictInt *
+ncm_serialize_dict_int_from_variant (NcmSerialize *ser, GVariant *var)
+{
+  g_assert (g_variant_is_of_type (var, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE)));
+  {
+    guint i, n = g_variant_n_children (var);
+    NcmObjDictInt *odi = ncm_obj_dict_int_new ();
+
+    for (i = 0; i < n; i++)
+    {
+      GVariant *cvar = g_variant_get_child_value (var, i);
+      GVariant *key  = g_variant_get_child_value (cvar, 0);
+      GVariant *val  = g_variant_get_child_value (cvar, 1);
+      GObject *cobj  = ncm_serialize_from_variant (ser, val);
+
+      ncm_obj_dict_int_set (odi, g_variant_get_int32 (key), cobj);
+
+      g_object_unref (cobj);
+
+      g_variant_unref (key);
+      g_variant_unref (val);
+      g_variant_unref (cvar);
+    }
+
+    return odi;
+  }
+}
+
+/**
  * ncm_serialize_from_string:
  * @ser: a #NcmSerialize.
  * @obj_ser: String containing the serialized version of the object.
@@ -912,9 +1018,6 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
     gchar *anchor_label                  = NULL;
 
     g_assert (fy_node_is_scalar (obj_type_str));
-
-    if (fy_node_mapping_item_count (root) > 1)
-      g_error ("_ncm_serialize_from_node: object yaml has more than one item.");
 
     if (obj_type_anchor != NULL)
     {
@@ -1008,9 +1111,74 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
                       GObject *item_obj    = _ncm_serialize_from_node (ser, item);
 
                       ncm_obj_array_add (obj_array, item_obj);
+
+                      g_object_unref (item_obj);
                     }
 
                     g_value_take_boxed (&lval, obj_array);
+                  }
+                }
+                else if (g_type_is_a (pspec->value_type, NCM_TYPE_OBJ_DICT_STR))
+                {
+                  if (!fy_node_is_mapping (prop_val))
+                  {
+                    g_error ("_ncm_serialize_from_node: object property of type NcmObjDictStr `%s' must be a mapping.", names[i]);
+                  }
+                  else
+                  {
+                    NcmObjDictStr *obj_dict_str = ncm_obj_dict_str_new ();
+                    guint n_items               = fy_node_mapping_item_count (prop_val);
+                    guint k;
+
+                    for (k = 0; k < n_items; k++)
+                    {
+                      struct fy_node_pair *item = fy_node_mapping_get_by_index (prop_val, k);
+                      struct fy_node *item_key  = fy_node_pair_key (item);
+                      struct fy_node *item_val  = fy_node_pair_value (item);
+                      const gchar *key          = fy_node_get_scalar0 (item_key);
+                      GObject *val_obj          = _ncm_serialize_from_node (ser, item_val);
+
+                      ncm_obj_dict_str_set (obj_dict_str, key, val_obj);
+
+                      g_object_unref (val_obj);
+                    }
+
+                    g_value_take_boxed (&lval, obj_dict_str);
+                  }
+                }
+                else if (g_type_is_a (pspec->value_type, NCM_TYPE_OBJ_DICT_INT))
+                {
+                  if (!fy_node_is_mapping (prop_val))
+                  {
+                    g_error ("_ncm_serialize_from_node: object property of type NcmObjDictInt `%s' must be a mapping.", names[i]);
+                  }
+                  else
+                  {
+                    NcmObjDictInt *obj_dict_int = ncm_obj_dict_int_new ();
+                    guint n_items               = fy_node_mapping_item_count (prop_val);
+                    guint k;
+
+                    for (k = 0; k < n_items; k++)
+                    {
+                      struct fy_node_pair *item = fy_node_mapping_get_by_index (prop_val, k);
+                      struct fy_node *item_key  = fy_node_pair_key (item);
+                      struct fy_node *item_val  = fy_node_pair_value (item);
+                      GObject *val_obj          = _ncm_serialize_from_node (ser, item_val);
+                      glong lkey;
+
+                      errno = 0;
+                      lkey  = strtol (fy_node_get_scalar0 (item_key), NULL, 10);
+
+                      if (errno != 0)
+                        g_error ("_ncm_serialize_from_node: object dict int yaml key must be an integer, received '%s'.",
+                                 fy_node_get_scalar0 (item_key));
+
+                      ncm_obj_dict_int_set (obj_dict_int, lkey, val_obj);
+
+                      g_object_unref (val_obj);
+                    }
+
+                    g_value_take_boxed (&lval, obj_dict_int);
                   }
                 }
                 else if (g_type_is_a (pspec->value_type, G_TYPE_OBJECT))
@@ -1156,6 +1324,7 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
           g_free (values);
         }
 
+        g_free (prop);
         g_type_class_unref (klass);
       }
     }
@@ -1198,6 +1367,8 @@ ncm_serialize_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 
   if (doc == NULL)
   {
+    fy_document_destroy (doc);
+
     g_error ("ncm_serialize_from_yaml: cannot parse YAML object ###\n%s\n###.", yaml_obj);
 
     return NULL;
@@ -1206,11 +1377,247 @@ ncm_serialize_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
   {
     struct fy_node *root = fy_document_root (doc);
 
-    return _ncm_serialize_from_node (ser, root);
+    if (!fy_node_is_mapping (root))
+    {
+      fy_document_destroy (doc);
+
+      g_error ("ncm_serialize_from_yaml: object yaml root must be a mapping.");
+
+      return NULL;
+    }
+
+    if (fy_node_mapping_item_count (root) > 1)
+    {
+      fy_document_destroy (doc);
+
+      g_error ("ncm_serialize_from_yaml: object yaml root has more than one item.");
+
+      return NULL;
+    }
+
+    {
+      GObject *obj = _ncm_serialize_from_node (ser, root);
+
+      fy_document_destroy (doc);
+
+      return obj;
+    }
   }
 
 #else
   g_error ("ncm_serialize_from_yaml: libfyaml not available.");
+
+  return NULL;
+
+#endif /* HAVE_LIBFYAML */
+}
+
+static NcmObjArray *
+_ncm_serialize_array_from_yaml_node (NcmSerialize *ser, struct fy_node *root)
+{
+  NcmObjArray *array = ncm_obj_array_new ();
+
+  if (fy_node_is_sequence (root))
+  {
+    guint n_items = fy_node_sequence_item_count (root);
+    guint i;
+
+    for (i = 0; i < n_items; i++)
+    {
+      struct fy_node *item = fy_node_sequence_get_by_index (root, i);
+      GObject *item_obj    = _ncm_serialize_from_node (ser, item);
+
+      ncm_obj_array_add (array, item_obj);
+
+      g_object_unref (item_obj);
+    }
+  }
+  else
+  {
+    g_error ("_ncm_serialize_array_from_yaml_node: object array yaml root must be a sequence.");
+  }
+
+  return array;
+}
+
+/**
+ * ncm_serialize_array_from_yaml:
+ * @ser: a #NcmSerialize
+ * @yaml_obj: string containing the serialized version of the object in YAML format
+ *
+ * Parses the serialized string in @yaml_obj and returns an array of newly created objects.
+ *
+ * Returns: (transfer full): A new #NcmObjArray.
+ */
+NcmObjArray *
+ncm_serialize_array_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
+{
+#ifdef HAVE_LIBFYAML
+
+  struct fy_document *doc = fy_document_build_from_string (NULL, yaml_obj, strlen (yaml_obj));
+
+  if (doc == NULL)
+  {
+    fy_document_destroy (doc);
+
+    g_error ("ncm_serialize_from_yaml: cannot parse YAML object ###\n%s\n###.", yaml_obj);
+
+    return NULL;
+  }
+  else
+  {
+    struct fy_node *root = fy_document_root (doc);
+    NcmObjArray *array   = _ncm_serialize_array_from_yaml_node (ser, root);
+
+    fy_document_destroy (doc);
+
+    return array;
+  }
+
+#else
+
+  g_error ("ncm_serialize_array_from_yaml: libfyaml not available.");
+
+  return NULL;
+
+#endif /* HAVE_LIBFYAML */
+}
+
+/**
+ * ncm_serialize_dict_str_from_yaml:
+ * @ser: a #NcmSerialize
+ * @yaml_obj: string containing the serialized version of the object in YAML format
+ *
+ * Parses the serialized string in @yaml_obj and returns a #NcmObjDictStr containing
+ * the object names as keys and the serialized objects as values.
+ *
+ * Returns: (transfer full): A new #NcmObjDictStr.
+ */
+NcmObjDictStr *
+ncm_serialize_dict_str_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
+{
+#ifdef HAVE_LIBFYAML
+
+  struct fy_document *doc = fy_document_build_from_string (NULL, yaml_obj, strlen (yaml_obj));
+
+  if (doc == NULL)
+  {
+    fy_document_destroy (doc);
+
+    g_error ("ncm_serialize_from_yaml: cannot parse YAML object ###\n%s\n###.", yaml_obj);
+
+    return NULL;
+  }
+  else
+  {
+    struct fy_node *root = fy_document_root (doc);
+    NcmObjDictStr *dict  = ncm_obj_dict_str_new ();
+
+    if (fy_node_is_mapping (root))
+    {
+      guint n_items = fy_node_mapping_item_count (root);
+      guint i;
+
+      for (i = 0; i < n_items; i++)
+      {
+        struct fy_node_pair *item = fy_node_mapping_get_by_index (root, i);
+        struct fy_node *item_key  = fy_node_pair_key (item);
+        struct fy_node *item_val  = fy_node_pair_value (item);
+        const gchar *key          = fy_node_get_scalar0 (item_key);
+        GObject *val              = _ncm_serialize_from_node (ser, item_val);
+
+        ncm_obj_dict_str_set (dict, key, val);
+
+        g_object_unref (val);
+      }
+    }
+    else
+    {
+      g_error ("_ncm_serialize_dict_str_from_yaml: object dict str yaml root must be a mapping.");
+    }
+
+    fy_document_destroy (doc);
+
+    return dict;
+  }
+
+#else /* HAVE_LIBFYAML */
+
+  g_error ("ncm_serialize_dict_str_from_yaml: libfyaml not available.");
+
+  return NULL;
+
+#endif /* HAVE_LIBFYAML */
+}
+
+/**
+ * ncm_serialize_dict_int_from_yaml:
+ * @ser: a #NcmSerialize
+ * @yaml_obj: string containing the serialized version of the object in YAML format
+ *
+ * Parses the serialized string in @yaml_obj and returns a #NcmObjDictInt containing
+ * the object names as keys and the serialized objects as values.
+ *
+ * Returns: (transfer full): A new #NcmObjDictInt.
+ */
+NcmObjDictInt *
+ncm_serialize_dict_int_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
+{
+#ifdef HAVE_LIBFYAML
+
+  struct fy_document *doc = fy_document_build_from_string (NULL, yaml_obj, strlen (yaml_obj));
+
+  if (doc == NULL)
+  {
+    fy_document_destroy (doc);
+
+    g_error ("ncm_serialize_from_yaml: cannot parse YAML object ###\n%s\n###.", yaml_obj);
+
+    return NULL;
+  }
+  else
+  {
+    struct fy_node *root = fy_document_root (doc);
+    NcmObjDictInt *dict  = ncm_obj_dict_int_new ();
+
+    if (fy_node_is_mapping (root))
+    {
+      guint n_items = fy_node_mapping_item_count (root);
+      guint i;
+
+      for (i = 0; i < n_items; i++)
+      {
+        struct fy_node_pair *item = fy_node_mapping_get_by_index (root, i);
+        struct fy_node *item_key  = fy_node_pair_key (item);
+        struct fy_node *item_val  = fy_node_pair_value (item);
+        GObject *val              = _ncm_serialize_from_node (ser, item_val);
+        glong lkey;
+
+        errno = 0;
+        lkey  = strtol (fy_node_get_scalar0 (item_key), NULL, 10);
+
+        if (errno != 0)
+          g_error ("_ncm_serialize_dict_int_from_yaml: object dict int yaml key must be an integer, received '%s'.",
+                   fy_node_get_scalar0 (item_key));
+
+        ncm_obj_dict_int_set (dict, lkey, val);
+
+        g_object_unref (val);
+      }
+    }
+    else
+    {
+      g_error ("_ncm_serialize_dict_int_from_yaml: object dict int yaml root must be a mapping.");
+    }
+
+    fy_document_destroy (doc);
+
+    return dict;
+  }
+
+#else /* HAVE_LIBFYAML */
+
+  g_error ("ncm_serialize_dict_int_from_yaml: libfyaml not available.");
 
   return NULL;
 
@@ -1321,6 +1728,213 @@ ncm_serialize_from_yaml_file (NcmSerialize *ser, const gchar *filename)
   g_free (file);
 
   return obj;
+}
+
+/**
+ * ncm_serialize_array_from_key_file:
+ * @ser: a #NcmSerialize
+ * @filename: oa filename
+ *
+ * Loads a #NcmObjArray from a file using a #NcmSerialize and a #GKeyFile.
+ *
+ * Returns: (transfer full): a new #NcmObjArray.
+ */
+NcmObjArray *
+ncm_serialize_array_from_key_file (NcmSerialize *ser, const gchar *filename)
+{
+  NcmObjArray *oa  = ncm_obj_array_new ();
+  GKeyFile *oafile = g_key_file_new ();
+  GError *error    = NULL;
+  gchar **groups   = NULL;
+  gsize ngroups    = 0;
+  guint i;
+
+  if (!g_key_file_load_from_file (oafile, filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
+  {
+    g_error ("ncm_obj_array_load: Invalid GObject array file: %s %s", filename, error->message);
+
+    return NULL;
+  }
+
+  if (g_key_file_has_group (oafile, "NcmObjArray"))
+  {
+    g_key_file_remove_group (oafile, "NcmObjArray", &error);
+
+    if (error != NULL)
+      g_error ("ncm_obj_array_load: %s", error->message);
+  }
+
+  groups = g_key_file_get_groups (oafile, &ngroups);
+
+  for (i = 0; i < ngroups; i++)
+  {
+    GString *obj_ser = g_string_sized_new (200);
+    gchar **a_pos    = g_strsplit (groups[i], ":", 2);
+    gchar *obj_name  = NULL;
+
+    g_assert_cmpuint (g_strv_length (a_pos), ==, 2);
+
+    if (!g_key_file_has_key (oafile, groups[i], NCM_SERIALIZE_OBJECT_ARRAY_OBJ_NAME_STR, &error))
+    {
+      if (error != NULL)
+        g_error ("ncm_obj_array_load: %s", error->message);
+
+      g_error ("ncm_obj_array_load: Every group must contain the key `%s' containing the object name.", NCM_SERIALIZE_OBJECT_ARRAY_OBJ_NAME_STR);
+    }
+    else
+    {
+      obj_name = g_key_file_get_value (oafile, groups[i], NCM_SERIALIZE_OBJECT_ARRAY_OBJ_NAME_STR, &error);
+
+      if (error != NULL)
+        g_error ("ncm_obj_array_load: %s", error->message);
+
+      g_key_file_remove_key (oafile, groups[i], NCM_SERIALIZE_OBJECT_ARRAY_OBJ_NAME_STR, &error);
+
+      if (error != NULL)
+        g_error ("ncm_obj_array_load: %s", error->message);
+    }
+
+    g_string_append_printf (obj_ser, "{\'%s\', @a{sv} {", obj_name);
+    g_clear_pointer (&obj_name, g_free);
+
+    {
+      gsize nkeys  = 0;
+      gchar **keys = g_key_file_get_keys (oafile, groups[i], &nkeys, &error);
+      guint j;
+
+      if (error != NULL)
+        g_error ("ncm_obj_array_load: %s", error->message);
+
+      for (j = 0; j < nkeys; j++)
+      {
+        gchar *propval = g_key_file_get_value (oafile, groups[i], keys[j], &error);
+
+        if (error != NULL)
+          g_error ("ncm_obj_array_load: %s", error->message);
+
+        g_string_append_printf (obj_ser, "\'%s\':<%s>", keys[j], propval);
+        g_free (propval);
+
+        if (j + 1 != nkeys)
+          g_string_append (obj_ser, ", ");
+      }
+
+      g_string_append (obj_ser, "}}");
+      g_strfreev (keys);
+    }
+
+    {
+      GObject *obj = ncm_serialize_from_string (ser, obj_ser->str);
+
+      g_assert (G_IS_OBJECT (obj));
+
+      ncm_obj_array_add (oa, obj);
+      g_object_unref (obj);
+    }
+    g_string_free (obj_ser, TRUE);
+    g_strfreev (a_pos);
+  }
+
+  g_key_file_unref (oafile);
+  g_strfreev (groups);
+
+  return oa;
+}
+
+/**
+ * ncm_serialize_array_from_yaml_file:
+ * @ser: a #NcmSerialize
+ * @filename: File containing the serialized version of the object in YAML format
+ *
+ * Parses the YAML in @filename and returns an array of newly created objects.
+ *
+ * Returns: (transfer full): A new #NcmObjArray.
+ */
+NcmObjArray *
+ncm_serialize_array_from_yaml_file (NcmSerialize *ser, const gchar *filename)
+{
+  GError *error      = NULL;
+  gchar *file        = NULL;
+  gsize length       = 0;
+  NcmObjArray *array = NULL;
+
+  g_assert (filename != NULL);
+
+  if (!g_file_get_contents (filename, &file, &length, &error))
+    g_error ("ncm_serialize_from_file: cannot open file %s: %s",
+             filename, error->message);
+
+  g_assert_cmpint (length, >, 0);
+
+  array = ncm_serialize_array_from_yaml (ser, file);
+
+  g_free (file);
+
+  return array;
+}
+
+/**
+ * ncm_serialize_dict_str_from_yaml_file:
+ * @ser: a #NcmSerialize
+ * @filename: File containing the serialized version of the object in YAML format
+ *
+ * Parses the YAML in @filename and returns a #NcmObjDictStr containing
+ *
+ * Returns: (transfer full): A new #NcmObjDictStr.
+ */
+NcmObjDictStr *
+ncm_serialize_dict_str_from_yaml_file (NcmSerialize *ser, const gchar *filename)
+{
+  GError *error       = NULL;
+  gchar *file         = NULL;
+  gsize length        = 0;
+  NcmObjDictStr *dict = NULL;
+
+  g_assert (filename != NULL);
+
+  if (!g_file_get_contents (filename, &file, &length, &error))
+    g_error ("ncm_serialize_from_file: cannot open file %s: %s",
+             filename, error->message);
+
+  g_assert_cmpint (length, >, 0);
+
+  dict = ncm_serialize_dict_str_from_yaml (ser, file);
+
+  g_free (file);
+
+  return dict;
+}
+
+/**
+ * ncm_serialize_dict_int_from_yaml_file:
+ * @ser: a #NcmSerialize
+ * @filename: File containing the serialized version of the object in YAML format
+ *
+ * Parses the YAML in @filename and returns a #NcmObjDictInt containing
+ *
+ * Returns: (transfer full): A new #NcmObjDictInt.
+ */
+NcmObjDictInt *
+ncm_serialize_dict_int_from_yaml_file (NcmSerialize *ser, const gchar *filename)
+{
+  GError *error       = NULL;
+  gchar *file         = NULL;
+  gsize length        = 0;
+  NcmObjDictInt *dict = NULL;
+
+  g_assert (filename != NULL);
+
+  if (!g_file_get_contents (filename, &file, &length, &error))
+    g_error ("ncm_serialize_from_file: cannot open file %s: %s",
+             filename, error->message);
+
+  g_assert_cmpint (length, >, 0);
+
+  dict = ncm_serialize_dict_int_from_yaml (ser, file);
+
+  g_free (file);
+
+  return dict;
 }
 
 /**
@@ -1452,14 +2066,32 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
         values[i] = lval;
         g_value_take_boxed (&values[i], strv);
       }
-      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_OBJ_ARRAY_TYPE)))
+      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_ARRAY_TYPE)))
       {
-        NcmObjArray *oa = ncm_obj_array_new_from_variant (ser, val);
+        NcmObjArray *oa = ncm_serialize_array_from_variant (ser, val);
         GValue lval     = G_VALUE_INIT;
 
         g_value_init (&lval, NCM_TYPE_OBJ_ARRAY);
         values[i] = lval;
         g_value_take_boxed (&values[i], oa);
+      }
+      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_STR_TYPE)))
+      {
+        NcmObjDictStr *dict = ncm_serialize_dict_str_from_variant (ser, val);
+        GValue lval         = G_VALUE_INIT;
+
+        g_value_init (&lval, NCM_TYPE_OBJ_DICT_STR);
+        values[i] = lval;
+        g_value_take_boxed (&values[i], dict);
+      }
+      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE)))
+      {
+        NcmObjDictInt *dict = ncm_serialize_dict_int_from_variant (ser, val);
+        GValue lval         = G_VALUE_INIT;
+
+        g_value_init (&lval, NCM_TYPE_OBJ_DICT_INT);
+        values[i] = lval;
+        g_value_take_boxed (&values[i], dict);
       }
       else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE)))
       {
@@ -1704,7 +2336,21 @@ ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
           NcmObjArray *oa = g_value_get_boxed (val);
 
           if (oa != NULL)
-            var = ncm_obj_array_ser (oa, ser);
+            var = ncm_serialize_array_to_variant (ser, oa);
+        }
+        else if (g_type_is_a (t, NCM_TYPE_OBJ_DICT_STR))
+        {
+          NcmObjDictStr *dict = g_value_get_boxed (val);
+
+          if (dict != NULL)
+            var = ncm_serialize_dict_str_to_variant (ser, dict);
+        }
+        else if (g_type_is_a (t, NCM_TYPE_OBJ_DICT_INT))
+        {
+          NcmObjDictStr *dict = g_value_get_boxed (val);
+
+          if (dict != NULL)
+            var = ncm_serialize_dict_int_to_variant (ser, dict);
         }
         else if (g_type_is_a (t, G_TYPE_STRV))
         {
@@ -1845,6 +2491,117 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
   return ser_var;
 }
 
+/**
+ * ncm_serialize_array_to_variant:
+ * @ser: a #NcmSerialize
+ * @oa: a #NcmObjArray
+ *
+ * Serializes a #NcmObjArray to a #GVariant.
+ *
+ * Returns: (transfer full): the serialized #GVariant.
+ */
+GVariant *
+ncm_serialize_array_to_variant (NcmSerialize *ser, NcmObjArray *oa)
+{
+  GVariantBuilder *builder;
+  GVariant *var;
+  guint i;
+
+  builder = g_variant_builder_new (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_ARRAY_TYPE));
+
+  for (i = 0; i < oa->len; i++)
+  {
+    GVariant *cvar = ncm_serialize_to_variant (ser, ncm_obj_array_peek (oa, i));
+
+    g_variant_builder_add_value (builder, cvar);
+    g_variant_unref (cvar);
+  }
+
+  var = g_variant_ref_sink (g_variant_builder_end (builder));
+
+  g_variant_builder_unref (builder);
+
+  return var;
+}
+
+/**
+ * ncm_serialize_dict_str_to_variant:
+ * @ser: a #NcmSerialize
+ * @ods: a #NcmObjDictStr
+ *
+ * Serializes a #NcmObjDictStr to a #GVariant.
+ *
+ * Returns: (transfer full): the serialized #GVariant.
+ */
+GVariant *
+ncm_serialize_dict_str_to_variant (NcmSerialize *ser, NcmObjDictStr *ods)
+{
+  GVariantBuilder *builder;
+  GVariant *var;
+  GHashTableIter iter;
+  gchar *key;
+  GObject *val;
+
+  builder = g_variant_builder_new (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_STR_TYPE));
+
+  g_hash_table_iter_init (&iter, ods);
+
+  while (g_hash_table_iter_next (&iter, (gpointer *) &key, (gpointer *) &val))
+  {
+    GVariant *key_var = g_variant_new_string (key);
+    GVariant *cvar    = ncm_serialize_to_variant (ser, val);
+    GVariant *entry   = g_variant_new_dict_entry (key_var, cvar);
+
+    g_variant_builder_add_value (builder, entry);
+    g_variant_unref (cvar);
+  }
+
+  var = g_variant_ref_sink (g_variant_builder_end (builder));
+
+  g_variant_builder_unref (builder);
+
+  return var;
+}
+
+/**
+ * ncm_serialize_dict_int_to_variant:
+ * @ser: a #NcmSerialize
+ * @odi: a #NcmObjDictInt
+ *
+ * Serializes a #NcmObjDictInt to a #GVariant.
+ *
+ * Returns: (transfer full): the serialized #GVariant.
+ */
+GVariant *
+ncm_serialize_dict_int_to_variant (NcmSerialize *ser, NcmObjDictInt *odi)
+{
+  GVariantBuilder *builder;
+  GVariant *var;
+  GHashTableIter iter;
+  gint *key;
+  GObject *val;
+
+  builder = g_variant_builder_new (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE));
+
+  g_hash_table_iter_init (&iter, odi);
+
+  while (g_hash_table_iter_next (&iter, (gpointer *) &key, (gpointer *) &val))
+  {
+    GVariant *key_var = g_variant_new_int32 (*key);
+    GVariant *cvar    = ncm_serialize_to_variant (ser, val);
+    GVariant *entry   = g_variant_new_dict_entry (key_var, cvar);
+
+    g_variant_builder_add_value (builder, entry);
+    g_variant_unref (cvar);
+  }
+
+  var = g_variant_ref_sink (g_variant_builder_end (builder));
+
+  g_variant_builder_unref (builder);
+
+  return var;
+}
+
 #ifdef HAVE_LIBFYAML
 static struct fy_node *_ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVariant *var_obj);
 
@@ -1959,7 +2716,7 @@ _ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVarian
         const gchar *prop_name = g_variant_get_string (var_key, NULL);
         struct fy_node *value  = NULL;
 
-        if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_OBJ_ARRAY_TYPE)))
+        if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_ARRAY_TYPE)))
         {
           const guint n = g_variant_n_children (val);
 
@@ -1970,6 +2727,48 @@ _ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVarian
             GVariant *cvar = g_variant_get_child_value (val, i);
 
             fy_node_sequence_append (value, _ncm_serialize_to_yaml_node (ser, doc, cvar));
+            g_variant_unref (cvar);
+          }
+        }
+        else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_STR_TYPE)))
+        {
+          const guint n = g_variant_n_children (val);
+
+          value = fy_node_create_mapping (doc);
+
+          for (i = 0; i < n; i++)
+          {
+            GVariant *cvar     = g_variant_get_child_value (val, i);
+            GVariant *cvar_key = g_variant_get_child_value (cvar, 0);
+            GVariant *cvar_val = g_variant_get_child_value (cvar, 1);
+
+            fy_node_mapping_append (value,
+                                    fy_node_create_scalar_copy (doc, g_variant_get_string (cvar_key, NULL), FY_NT),
+                                    _ncm_serialize_to_yaml_node (ser, doc, cvar_val));
+
+            g_variant_unref (cvar_key);
+            g_variant_unref (cvar_val);
+            g_variant_unref (cvar);
+          }
+        }
+        else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE)))
+        {
+          const guint n = g_variant_n_children (val);
+
+          value = fy_node_create_mapping (doc);
+
+          for (i = 0; i < n; i++)
+          {
+            GVariant *cvar     = g_variant_get_child_value (val, i);
+            GVariant *cvar_key = g_variant_get_child_value (cvar, 0);
+            GVariant *cvar_val = g_variant_get_child_value (cvar, 1);
+
+            fy_node_mapping_append (value,
+                                    fy_node_create_scalarf (doc, "%d", g_variant_get_int32 (cvar_key)),
+                                    _ncm_serialize_to_yaml_node (ser, doc, cvar_val));
+
+            g_variant_unref (cvar_key);
+            g_variant_unref (cvar_val);
             g_variant_unref (cvar);
           }
         }
@@ -2077,6 +2876,115 @@ ncm_serialize_to_yaml (NcmSerialize *ser, GObject *obj)
 }
 
 /**
+ * ncm_serialize_array_to_yaml:
+ * @ser: a #NcmSerialize
+ * @oa: a #NcmObjArray
+ *
+ * Serialize the #NcmObjArray @oa to a YAML string.
+ *
+ * Returns: (transfer full): A YAML string containing the serialized version of @oa.
+ */
+gchar *
+ncm_serialize_array_to_yaml (NcmSerialize *ser, NcmObjArray *oa)
+{
+  struct fy_document *doc = fy_document_create (NULL);
+  struct fy_node *root    = fy_node_create_sequence (doc);
+  gchar *yaml_str         = NULL;
+  guint i;
+
+  for (i = 0; i < ncm_obj_array_len (oa); i++)
+  {
+    GObject *obj      = ncm_obj_array_peek (oa, i);
+    GVariant *obj_var = ncm_serialize_to_variant (ser, obj);
+
+    fy_node_sequence_append (root, _ncm_serialize_to_yaml_node (ser, doc, obj_var));
+    g_variant_unref (obj_var);
+  }
+
+  fy_document_set_root (doc, root);
+  yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT);
+  fy_document_destroy (doc);
+
+  return yaml_str;
+}
+
+/**
+ * ncm_serialize_dict_str_to_yaml:
+ * @ser: a #NcmSerialize
+ * @ods: a #NcmObjDictStr
+ *
+ * Serialize the #NcmObjDictStr @ods to a YAML string.
+ *
+ * Returns: (transfer full): A YAML string containing the serialized version of @ods.
+ */
+gchar *
+ncm_serialize_dict_str_to_yaml (NcmSerialize *ser, NcmObjDictStr *ods)
+{
+  struct fy_document *doc = fy_document_create (NULL);
+  struct fy_node *root    = fy_node_create_mapping (doc);
+  gchar *yaml_str         = NULL;
+  GHashTableIter iter;
+  gchar *key;
+  GObject *value;
+
+  g_hash_table_iter_init (&iter, ods);
+
+  while (g_hash_table_iter_next (&iter, (gpointer *) &key, (gpointer *) &value))
+  {
+    GVariant *obj_var = ncm_serialize_to_variant (ser, value);
+
+    fy_node_mapping_append (root,
+                            fy_node_create_scalar_copy (doc, key, FY_NT),
+                            _ncm_serialize_to_yaml_node (ser, doc, obj_var));
+    g_variant_unref (obj_var);
+  }
+
+  fy_document_set_root (doc, root);
+  yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT);
+  fy_document_destroy (doc);
+
+  return yaml_str;
+}
+
+/**
+ * ncm_serialize_dict_int_to_yaml:
+ * @ser: a #NcmSerialize
+ * @odi: a #NcmObjDictInt
+ *
+ * Serialize the #NcmObjDictInt @odi to a YAML string.
+ *
+ * Returns: (transfer full): A YAML string containing the serialized version of @odi.
+ */
+gchar *
+ncm_serialize_dict_int_to_yaml (NcmSerialize *ser, NcmObjDictInt *odi)
+{
+  struct fy_document *doc = fy_document_create (NULL);
+  struct fy_node *root    = fy_node_create_mapping (doc);
+  gchar *yaml_str         = NULL;
+  GHashTableIter iter;
+  gint *key;
+  GObject *value;
+
+  g_hash_table_iter_init (&iter, odi);
+
+  while (g_hash_table_iter_next (&iter, (gpointer *) &key, (gpointer *) &value))
+  {
+    GVariant *obj_var = ncm_serialize_to_variant (ser, value);
+
+    fy_node_mapping_append (root,
+                            fy_node_create_scalarf (doc, "%d", *key),
+                            _ncm_serialize_to_yaml_node (ser, doc, obj_var));
+    g_variant_unref (obj_var);
+  }
+
+  fy_document_set_root (doc, root);
+  yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT);
+  fy_document_destroy (doc);
+
+  return yaml_str;
+}
+
+/**
  * ncm_serialize_to_file:
  * @ser: a #NcmSerialize
  * @obj: a #GObject
@@ -2152,6 +3060,189 @@ ncm_serialize_to_yaml_file (NcmSerialize *ser, GObject *obj, const gchar *filena
 }
 
 /**
+ * ncm_serialize_array_to_key_file:
+ * @ser: a #NcmSerialize
+ * @oa: a #NcmObjArray
+ * @filename: oa filename
+ * @save_comment: whether to save comments
+ *
+ * Saves a #NcmObjArray to a file using a #NcmSerialize and a #GKeyFile.
+ *
+ */
+void
+ncm_serialize_array_to_key_file (NcmSerialize *ser, NcmObjArray *oa, const gchar *filename, gboolean save_comment)
+{
+  GKeyFile *oafile = g_key_file_new ();
+  guint i;
+
+  {
+    GError *error  = NULL;
+    gchar *oa_desc = ncm_cfg_string_to_comment ("Whether NcmObjArray is empty");
+
+    g_key_file_set_boolean (oafile, "NcmObjArray", "empty", oa->len == 0 ? TRUE : FALSE);
+
+    if (save_comment)
+      if (!g_key_file_set_comment (oafile, "NcmObjArray", NULL, oa_desc, &error))
+        g_error ("ncm_obj_array_save: %s", error->message);
+
+
+    g_free (oa_desc);
+  }
+
+  for (i = 0; i < oa->len; i++)
+  {
+    GObject *go          = ncm_obj_array_peek (oa, i);
+    GObjectClass *oclass = G_OBJECT_GET_CLASS (go);
+    GError *error        = NULL;
+    gchar *group         = g_strdup_printf (NCM_SERIALIZE_OBJECT_ARRAY_POS_STR ":%d", i);
+    GVariant *go_var     = ncm_serialize_to_variant (ser, go);
+    GVariant *params     = NULL;
+    gchar *obj_name      = NULL;
+    guint nparams;
+
+    g_variant_get (go_var, "{s@a{sv}}", &obj_name, &params);
+    nparams = g_variant_n_children (params);
+
+    g_key_file_set_value (oafile, group, NCM_SERIALIZE_OBJECT_ARRAY_OBJ_NAME_STR, obj_name);
+
+    if (nparams != 0)
+    {
+      GVariantIter iter;
+      GVariant *value;
+      gchar *key;
+
+      g_variant_iter_init (&iter, params);
+
+      while (g_variant_iter_next (&iter, "{sv}", &key, &value))
+      {
+        GParamSpec *param_spec = g_object_class_find_property (oclass, key);
+        gchar *param_str       = g_variant_print (value, TRUE);
+
+        if (param_spec == NULL)
+          g_error ("ncm_obj_array_save: property `%s' not found in object `%s'.", key, obj_name);
+
+        g_key_file_set_value (oafile, group, key, param_str);
+
+        if (save_comment)
+        {
+          const gchar *blurb = g_param_spec_get_blurb (param_spec);
+
+          if ((blurb != NULL) && (blurb[0] != 0))
+          {
+            gchar *desc = ncm_cfg_string_to_comment (blurb);
+
+            if (!g_key_file_set_comment (oafile, group, key, desc, &error))
+              g_error ("ncm_obj_array_save: %s", error->message);
+
+            g_free (desc);
+          }
+        }
+
+        g_variant_unref (value);
+        g_free (key);
+        g_free (param_str);
+      }
+    }
+
+    g_free (obj_name);
+    g_variant_unref (params);
+    g_variant_unref (go_var);
+
+    g_free (group);
+  }
+
+  {
+    GError *error  = NULL;
+    gsize len      = 0;
+    gchar *oa_data = g_key_file_to_data (oafile, &len, &error);
+
+    if (error != NULL)
+      g_error ("Error converting NcmObjArray to configuration file: %s", error->message);
+
+    if (!g_file_set_contents (filename, oa_data, len, &error))
+      g_error ("Error saving configuration file to disk: %s", error->message);
+
+    g_free (oa_data);
+    g_key_file_free (oafile);
+  }
+}
+
+/**
+ * ncm_serialize_array_to_yaml_file:
+ * @ser: a #NcmSerialize
+ * @oa: a #NcmObjArray
+ * @filename: oa filename
+ *
+ * Saves a #NcmObjArray to a file using a #NcmSerialize and a YAML string.
+ *
+ */
+void
+ncm_serialize_array_to_yaml_file (NcmSerialize *ser, NcmObjArray *oa, const gchar *filename)
+{
+  GError *error = NULL;
+  gchar *yaml   = ncm_serialize_array_to_yaml (ser, oa);
+  gsize length  = strlen (yaml);
+
+  g_assert (filename != NULL);
+
+  if (!g_file_set_contents (filename, yaml, length, &error))
+    g_error ("ncm_serialize_array_to_yaml_file: cannot save to file %s: %s",
+             filename, error->message);
+
+  g_free (yaml);
+}
+
+/**
+ * ncm_serialize_dict_str_to_yaml_file:
+ * @ser: a #NcmSerialize
+ * @ods: a #NcmObjDictStr
+ * @filename: ods filename
+ *
+ * Saves a #NcmObjDictStr to a file using a #NcmSerialize and a YAML string.
+ *
+ */
+void
+ncm_serialize_dict_str_to_yaml_file (NcmSerialize *ser, NcmObjDictStr *ods, const gchar *filename)
+{
+  GError *error = NULL;
+  gchar *yaml   = ncm_serialize_dict_str_to_yaml (ser, ods);
+  gsize length  = strlen (yaml);
+
+  g_assert (filename != NULL);
+
+  if (!g_file_set_contents (filename, yaml, length, &error))
+    g_error ("ncm_serialize_dict_str_to_yaml_file: cannot save to file %s: %s",
+             filename, error->message);
+
+  g_free (yaml);
+}
+
+/**
+ * ncm_serialize_dict_int_to_yaml_file:
+ * @ser: a #NcmSerialize
+ * @odi: a #NcmObjDictInt
+ * @filename: odi filename
+ *
+ * Saves a #NcmObjDictInt to a file using a #NcmSerialize and a YAML string.
+ *
+ */
+void
+ncm_serialize_dict_int_to_yaml_file (NcmSerialize *ser, NcmObjDictInt *odi, const gchar *filename)
+{
+  GError *error = NULL;
+  gchar *yaml   = ncm_serialize_dict_int_to_yaml (ser, odi);
+  gsize length  = strlen (yaml);
+
+  g_assert (filename != NULL);
+
+  if (!g_file_set_contents (filename, yaml, length, &error))
+    g_error ("ncm_serialize_dict_int_to_yaml_file: cannot save to file %s: %s",
+             filename, error->message);
+
+  g_free (yaml);
+}
+
+/**
  * ncm_serialize_dup_obj:
  * @ser: a #NcmSerialize.
  * @obj: a #GObject.
@@ -2165,6 +3256,26 @@ ncm_serialize_dup_obj (NcmSerialize *ser, GObject *obj)
 {
   GVariant *var = ncm_serialize_to_variant (ser, obj);
   GObject *dup  = ncm_serialize_from_variant (ser, var);
+
+  g_variant_unref (var);
+
+  return dup;
+}
+
+/**
+ * ncm_serialize_dup_array:
+ * @ser: a #NcmSerialize
+ * @oa: a #NcmObjArray
+ *
+ * Duplicates a #NcmObjArray, all objects are duplicated.
+ *
+ * Returns: (transfer full): a new #NcmObjArray.
+ */
+NcmObjArray *
+ncm_serialize_dup_array (NcmSerialize *ser, NcmObjArray *oa)
+{
+  GVariant *var    = ncm_serialize_array_to_variant (ser, oa);
+  NcmObjArray *dup = ncm_serialize_array_from_variant (ser, var);
 
   g_variant_unref (var);
 
