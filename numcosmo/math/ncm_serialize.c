@@ -60,6 +60,7 @@
 
 #include <gio/gio.h>
 #include <float.h>
+#include <errno.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #ifdef HAVE_LIBFYAML
@@ -1163,12 +1164,16 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
                       struct fy_node *item_key  = fy_node_pair_key (item);
                       struct fy_node *item_val  = fy_node_pair_value (item);
                       GObject *val_obj          = _ncm_serialize_from_node (ser, item_val);
-                      gint key;
+                      glong lkey;
 
-                      if (fy_node_scanf (item_key, "/ %d", &key) != 1)
-                        g_error ("_ncm_serialize_from_node: object dict int yaml key must be an integer.");
+                      errno = 0;
+                      lkey  = strtol (fy_node_get_scalar0 (item_key), NULL, 10);
 
-                      ncm_obj_dict_int_set (obj_dict_int, key, val_obj);
+                      if (errno != 0)
+                        g_error ("_ncm_serialize_from_node: object dict int yaml key must be an integer, received '%s'.",
+                                 fy_node_get_scalar0 (item_key));
+
+                      ncm_obj_dict_int_set (obj_dict_int, lkey, val_obj);
 
                       g_object_unref (val_obj);
                     }
@@ -1586,12 +1591,16 @@ ncm_serialize_dict_int_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
         struct fy_node *item_key  = fy_node_pair_key (item);
         struct fy_node *item_val  = fy_node_pair_value (item);
         GObject *val              = _ncm_serialize_from_node (ser, item_val);
-        gint key;
+        glong lkey;
 
-        if (fy_node_scanf (item_key, "/ %d", &key) != 1)
-          g_error ("_ncm_serialize_dict_int_from_yaml: object dict int yaml key must be an integer.");
+        errno = 0;
+        lkey  = strtol (fy_node_get_scalar0 (item_key), NULL, 10);
 
-        ncm_obj_dict_int_set (dict, atoi (fy_node_get_scalar0 (item_key)), val);
+        if (errno != 0)
+          g_error ("_ncm_serialize_dict_int_from_yaml: object dict int yaml key must be an integer, received '%s'.",
+                   fy_node_get_scalar0 (item_key));
+
+        ncm_obj_dict_int_set (dict, lkey, val);
 
         g_object_unref (val);
       }
