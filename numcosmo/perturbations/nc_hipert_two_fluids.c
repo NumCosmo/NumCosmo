@@ -1378,7 +1378,6 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
 
   flag = ARKodeSetLinear (self->arkode, 1);
   NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
-#endif /* HAVE_SUNDIALS_ARKODE */
 
   if (useQP)
   {
@@ -1390,8 +1389,6 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
     flag = ARKStepSetJacFn (self->arkode, &_nc_hipert_two_fluids_J_zetaS);
     NCM_CVODE_CHECK (&flag, "ARKodeSetJacFn", 1, );
   }
-
-#ifdef HAVE_SUNDIALS_ARKODE
 
   switch (main_mode)
   {
