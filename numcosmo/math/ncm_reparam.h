@@ -72,8 +72,6 @@ GType ncm_reparam_get_compat_type (NcmReparam *reparam);
 void ncm_reparam_old2new (NcmReparam *reparam, struct _NcmModel *model);
 void ncm_reparam_new2old (NcmReparam *reparam, struct _NcmModel *model);
 
-GVariant *ncm_reparam_get_params_desc_dict (NcmReparam *reparam);
-void ncm_reparam_set_params_desc_dict (NcmReparam *reparam, GVariant *pdesc_dict);
 void ncm_reparam_set_param_desc (NcmReparam *reparam, guint i, NcmSParam *sp);
 NcmSParam *ncm_reparam_peek_param_desc (NcmReparam *reparam, guint i);
 NcmSParam *ncm_reparam_get_param_desc (NcmReparam *reparam, guint i);
@@ -82,8 +80,6 @@ gboolean ncm_reparam_index_from_name (NcmReparam *reparam, const gchar *param_na
 
 guint ncm_reparam_get_length (NcmReparam *reparam);
 NcmVector *ncm_reparam_peek_params (NcmReparam *reparam);
-
-#define NCM_REPARAM_PARAMS_DESC_DICT_TYPE "a{u"NCM_SERIALIZE_OBJECT_TYPE "}"
 
 G_END_DECLS
 
