@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# example_ode_spline.py
+# test_py_ode_spline.py
 #
 # Fri May 19 10:00:00 2023
 # Copyright  2023  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# example_ode_spline.py
+# test_py_ode_spline.py
 # Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
