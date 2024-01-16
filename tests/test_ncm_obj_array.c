@@ -514,6 +514,8 @@ test_ncm_obj_dict_str_to_from_yaml (TestNcmObjDictStr *test, gconstpointer pdata
       g_assert_true (G_IS_OBJECT (obj));
 
       g_assert_true (ncm_obj_dict_str_peek (ods, key) != ncm_obj_dict_str_peek (ods_load, key));
+
+      g_object_unref (obj);
     }
 
     ncm_obj_dict_str_unref (ods_load);
@@ -554,6 +556,8 @@ test_ncm_obj_dict_str_to_from_yaml_file (TestNcmObjDictStr *test, gconstpointer 
       g_assert_true (G_IS_OBJECT (obj));
 
       g_assert_true (ncm_obj_dict_str_peek (ods, key) != ncm_obj_dict_str_peek (ods_load, key));
+
+      g_object_unref (obj);
     }
 
     ncm_obj_dict_str_unref (ods_load);
@@ -696,6 +700,8 @@ test_ncm_obj_dict_int_to_from_yaml (TestNcmObjDictInt *test, gconstpointer pdata
       g_assert_true (G_IS_OBJECT (obj));
 
       g_assert_true (ncm_obj_dict_int_peek (odi, *key) != ncm_obj_dict_int_peek (odi_load, *key));
+
+      g_object_unref (obj);
     }
 
     ncm_obj_dict_int_unref (odi_load);
@@ -736,6 +742,8 @@ test_ncm_obj_dict_int_to_from_yaml_file (TestNcmObjDictInt *test, gconstpointer 
       g_assert_true (G_IS_OBJECT (obj));
 
       g_assert_true (ncm_obj_dict_int_peek (odi, *key) != ncm_obj_dict_int_peek (odi_load, *key));
+
+      g_object_unref (obj);
     }
 
     ncm_obj_dict_int_unref (odi_load);

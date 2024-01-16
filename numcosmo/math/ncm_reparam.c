@@ -323,10 +323,7 @@ ncm_reparam_set_param_desc (NcmReparam *reparam, guint i, NcmSParam *sp)
   g_assert (i < self->length);
 
   if (old_sp != NULL)
-  {
     g_assert (g_hash_table_remove (self->sparams_name_id, ncm_sparam_name (old_sp)));
-    ncm_sparam_clear (&old_sp);
-  }
 
   g_hash_table_insert (self->sparams_name_id,
                        g_strdup (ncm_sparam_name (sp)),

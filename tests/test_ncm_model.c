@@ -255,6 +255,7 @@ _test_ncm_model_create_reparam (TestNcmModel *test)
   ncm_vector_free (v);
   ncm_matrix_free (T);
   ncm_rng_free (rng);
+  ncm_bootstrap_free (bstrap);
 
   return NCM_REPARAM (relin);
 }
@@ -705,5 +706,7 @@ test_ncm_model_test_dup (TestNcmModel *test, gconstpointer pdata)
     ncm_assert_cmpdouble (ncm_model_param_get_upper_bound (model, i), ==, ncm_model_param_get_upper_bound (model_dup, i));
     ncm_assert_cmpdouble (ncm_model_param_get_abstol (model, i),      ==, ncm_model_param_get_abstol (model_dup, i));
   }
+
+  ncm_model_free (model_dup);
 }
 
