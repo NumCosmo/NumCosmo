@@ -303,6 +303,10 @@ python_tests = [
         'name': 'py_ode_spline',
         'source': 'test_py_ode_spline.py',
     },
+    {
+        'name': 'py_serialize',
+        'source': 'test_py_serialize.py',
+    },
 ]
 
 if mpi_c_dep.found()

@@ -43,6 +43,12 @@
 #include "math/ncm_cfg.h"
 
 G_DEFINE_BOXED_TYPE (NcmObjArray, ncm_obj_array, ncm_obj_array_ref, ncm_obj_array_unref)
+G_DEFINE_BOXED_TYPE (NcmObjDictStr, ncm_obj_dict_str, ncm_obj_dict_str_ref, ncm_obj_dict_str_unref)
+G_DEFINE_BOXED_TYPE (NcmObjDictInt, ncm_obj_dict_int, ncm_obj_dict_int_ref, ncm_obj_dict_int_unref)
+
+/*
+ * NcmObjArray
+ */
 
 /**
  * ncm_obj_array_new:
@@ -59,37 +65,6 @@ ncm_obj_array_new ()
   g_ptr_array_set_free_func (oa, g_object_unref);
 
   return (NcmObjArray *) oa;
-}
-
-/**
- * ncm_obj_array_new_from_variant:
- * @ser: a #NcmSerialize.
- * @var: a #GVariant containing an array of objects.
- *
- * Creates a new #NcmObjArray from a #GVariant.
- *
- * Returns: (transfer full): a new #NcmObjArray.
- */
-NcmObjArray *
-ncm_obj_array_new_from_variant (NcmSerialize *ser, GVariant *var)
-{
-  g_assert (g_variant_is_of_type (var, G_VARIANT_TYPE (NCM_OBJ_ARRAY_TYPE)));
-  {
-    guint i, n = g_variant_n_children (var);
-    NcmObjArray *oa = ncm_obj_array_sized_new (n);
-
-    for (i = 0; i < n; i++)
-    {
-      GVariant *cvar = g_variant_get_child_value (var, i);
-      GObject *cobj  = ncm_serialize_from_variant (ser, cvar);
-
-      ncm_obj_array_add (oa, cobj);
-      g_object_unref (cobj);
-      g_variant_unref (cvar);
-    }
-
-    return oa;
-  }
 }
 
 /**
@@ -149,59 +124,6 @@ void
 ncm_obj_array_clear (NcmObjArray **oa)
 {
   g_clear_pointer (oa, ncm_obj_array_unref);
-}
-
-/**
- * ncm_obj_array_ser:
- * @oa: a #NcmObjArray.
- * @ser: a #NcmSerialize.
- *
- * Serializes a #NcmObjArray to a #GVariant.
- *
- * Returns: (transfer full): the serialized #GVariant.
- */
-GVariant *
-ncm_obj_array_ser (NcmObjArray *oa, NcmSerialize *ser)
-{
-  GVariantBuilder *builder;
-  GVariant *var;
-  guint i;
-
-  builder = g_variant_builder_new (G_VARIANT_TYPE (NCM_OBJ_ARRAY_TYPE));
-
-  for (i = 0; i < oa->len; i++)
-  {
-    GVariant *cvar = ncm_serialize_to_variant (ser, ncm_obj_array_peek (oa, i));
-
-    g_variant_builder_add_value (builder, cvar);
-    g_variant_unref (cvar);
-  }
-
-  var = g_variant_ref_sink (g_variant_builder_end (builder));
-
-  g_variant_builder_unref (builder);
-
-  return var;
-}
-
-/**
- * ncm_obj_array_dup:
- * @oa: a #NcmObjArray.
- * @ser: a #NcmSerialize.
- *
- * Duplicates a #NcmObjArray, all objects are duplicated.
- *
- * Returns: (transfer full): a new #NcmObjArray.
- */
-NcmObjArray *
-ncm_obj_array_dup (NcmObjArray *oa, NcmSerialize *ser)
-{
-  GVariant *var    = ncm_obj_array_ser (oa, ser);
-  NcmObjArray *dup = ncm_obj_array_new_from_variant (ser, var);
-
-  g_variant_unref (var);
-
-  return dup;
 }
 
 /**
@@ -290,221 +212,336 @@ ncm_obj_array_len (NcmObjArray *oa)
   return oa->len;
 }
 
-/**
- * ncm_obj_array_save:
- * @oa: a #NcmObjArray
- * @ser: a #NcmSerialize
- * @filename: oa filename
- * @save_comment: whether to save comments
- *
- * Saves a #NcmObjArray to a file using a #NcmSerialize and a #GKeyFile.
- *
+/*
+ * NcmObjDictStr
  */
-void
-ncm_obj_array_save (NcmObjArray *oa, NcmSerialize *ser, const gchar *filename, gboolean save_comment)
+
+/**
+ * ncm_obj_dict_str_new:
+ *
+ * Creates a new #NcmObjDictStr.
+ *
+ * Returns: (transfer full): a new #NcmObjDictStr.
+ */
+NcmObjDictStr *
+ncm_obj_dict_str_new ()
 {
-  GKeyFile *oafile = g_key_file_new ();
-  guint i;
+  GHashTable *od = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 
-  {
-    GError *error  = NULL;
-    gchar *oa_desc = ncm_cfg_string_to_comment ("Whether NcmObjArray is empty");
-
-    g_key_file_set_boolean (oafile, "NcmObjArray", "empty", oa->len == 0 ? TRUE : FALSE);
-
-    if (save_comment)
-      if (!g_key_file_set_comment (oafile, "NcmObjArray", NULL, oa_desc, &error))
-        g_error ("ncm_obj_array_save: %s", error->message);
-
-
-    g_free (oa_desc);
-  }
-
-  for (i = 0; i < oa->len; i++)
-  {
-    GObject *go          = ncm_obj_array_peek (oa, i);
-    GObjectClass *oclass = G_OBJECT_GET_CLASS (go);
-    GError *error        = NULL;
-    gchar *group         = g_strdup_printf (NCM_OBJ_ARRAY_POS_STR ":%d", i);
-    GVariant *go_var     = ncm_serialize_to_variant (ser, go);
-    GVariant *params     = NULL;
-    gchar *obj_name      = NULL;
-    guint nparams;
-
-    g_variant_get (go_var, "{s@a{sv}}", &obj_name, &params);
-    nparams = g_variant_n_children (params);
-
-    g_key_file_set_value (oafile, group, NCM_OBJ_ARRAY_OBJ_NAME_STR, obj_name);
-
-    if (nparams != 0)
-    {
-      GVariantIter iter;
-      GVariant *value;
-      gchar *key;
-
-      g_variant_iter_init (&iter, params);
-
-      while (g_variant_iter_next (&iter, "{sv}", &key, &value))
-      {
-        GParamSpec *param_spec = g_object_class_find_property (oclass, key);
-        gchar *param_str       = g_variant_print (value, TRUE);
-
-        if (param_spec == NULL)
-          g_error ("ncm_obj_array_save: property `%s' not found in object `%s'.", key, obj_name);
-
-        g_key_file_set_value (oafile, group, key, param_str);
-
-        if (save_comment)
-        {
-          const gchar *blurb = g_param_spec_get_blurb (param_spec);
-
-          if ((blurb != NULL) && (blurb[0] != 0))
-          {
-            gchar *desc = ncm_cfg_string_to_comment (blurb);
-
-            if (!g_key_file_set_comment (oafile, group, key, desc, &error))
-              g_error ("ncm_obj_array_save: %s", error->message);
-
-            g_free (desc);
-          }
-        }
-
-        g_variant_unref (value);
-        g_free (key);
-        g_free (param_str);
-      }
-    }
-
-    g_free (obj_name);
-    g_variant_unref (params);
-    g_variant_unref (go_var);
-
-    g_free (group);
-  }
-
-  {
-    GError *error  = NULL;
-    gsize len      = 0;
-    gchar *oa_data = g_key_file_to_data (oafile, &len, &error);
-
-    if (error != NULL)
-      g_error ("Error converting NcmObjArray to configuration file: %s", error->message);
-
-    if (!g_file_set_contents (filename, oa_data, len, &error))
-      g_error ("Error saving configuration file to disk: %s", error->message);
-
-    g_free (oa_data);
-    g_key_file_free (oafile);
-  }
+  return (NcmObjDictStr *) od;
 }
 
 /**
- * ncm_obj_array_load:
- * @filename: oa filename
- * @ser: a #NcmSerialize
+ * ncm_obj_dict_str_ref:
+ * @od: a #NcmObjDictStr.
  *
- * Loads a #NcmObjArray from a file using a #NcmSerialize and a #GKeyFile.
+ * Increases the reference count of @od by one.
  *
- * Returns: (transfer full): a new #NcmObjArray.
+ * Returns: (transfer full): @od.
  */
-NcmObjArray *
-ncm_obj_array_load (const gchar *filename, NcmSerialize *ser)
+NcmObjDictStr *
+ncm_obj_dict_str_ref (NcmObjDictStr *od)
 {
-  NcmObjArray *oa  = ncm_obj_array_new ();
-  GKeyFile *oafile = g_key_file_new ();
-  GError *error    = NULL;
-  gchar **groups   = NULL;
-  gsize ngroups    = 0;
-  guint i;
+  return (NcmObjDictStr *) g_hash_table_ref ((GHashTable *) od);
+}
 
-  if (!g_key_file_load_from_file (oafile, filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
-  {
-    g_error ("ncm_obj_array_load: Invalid GObject array file: %s %s", filename, error->message);
+/**
+ * ncm_obj_dict_str_unref:
+ * @od: a #NcmObjDictStr.
+ *
+ * Decreases the reference count of @od by one. If the reference count
+ * reaches zero, all objects in the dictionary are unreferenced.
+ *
+ */
+void
+ncm_obj_dict_str_unref (NcmObjDictStr *od)
+{
+  g_hash_table_unref ((GHashTable *) od);
+}
 
-    return NULL;
-  }
+/**
+ * ncm_obj_dict_str_clear:
+ * @od: a pointer to a #NcmObjDictStr.
+ *
+ * If *@od is not %NULL, unreferences it and sets *@od to %NULL.
+ *
+ */
+void
+ncm_obj_dict_str_clear (NcmObjDictStr **od)
+{
+  g_clear_pointer (od, ncm_obj_dict_str_unref);
+}
 
-  if (g_key_file_has_group (oafile, "NcmObjArray"))
-  {
-    g_key_file_remove_group (oafile, "NcmObjArray", &error);
+/**
+ * ncm_obj_dict_str_add:
+ * @od: a #NcmObjDictStr.
+ * @key: a string.
+ * @obj: a #GObject.
+ *
+ * Adds a #GObject to a #NcmObjDictStr.
+ *
+ */
+void
+ncm_obj_dict_str_add (NcmObjDictStr *od, const gchar *key, GObject *obj)
+{
+  g_assert (key != NULL);
+  g_assert (obj != NULL);
 
-    if (error != NULL)
-      g_error ("ncm_obj_array_load: %s", error->message);
-  }
+  g_hash_table_insert ((GHashTable *) od, g_strdup (key), g_object_ref (obj));
+}
 
-  groups = g_key_file_get_groups (oafile, &ngroups);
+/**
+ * ncm_obj_dict_str_set:
+ * @od: a #NcmObjDictStr.
+ * @key: a string.
+ * @obj: a #GObject.
+ *
+ * Sets a #GObject to a #NcmObjDictStr. If there is already a #GObject
+ * with key @key, it is unreferenced.
+ *
+ */
+void
+ncm_obj_dict_str_set (NcmObjDictStr *od, const gchar *key, GObject *obj)
+{
+  g_assert (key != NULL);
+  g_assert (obj != NULL);
 
-  for (i = 0; i < ngroups; i++)
-  {
-    GString *obj_ser = g_string_sized_new (200);
-    gchar **a_pos    = g_strsplit (groups[i], ":", 2);
-    gchar *obj_name  = NULL;
+  if (obj != g_hash_table_lookup ((GHashTable *) od, key))
+    g_hash_table_replace ((GHashTable *) od, g_strdup (key), g_object_ref (obj));
+}
 
-    g_assert_cmpuint (g_strv_length (a_pos), ==, 2);
+/**
+ * ncm_obj_dict_str_get:
+ * @od: a #NcmObjDictStr
+ * @key: a string.
+ *
+ * Gets a #GObject from a #NcmObjDictStr with key @key.
+ *
+ * Returns: (transfer full): the #GObject with key @key.
+ */
+GObject *
+ncm_obj_dict_str_get (NcmObjDictStr *od, const gchar *key)
+{
+  GObject *obj = ncm_obj_dict_str_peek (od, key);
 
-    if (!g_key_file_has_key (oafile, groups[i], NCM_OBJ_ARRAY_OBJ_NAME_STR, &error))
-    {
-      if (error != NULL)
-        g_error ("ncm_obj_array_load: %s", error->message);
+  if (obj != NULL)
+    return g_object_ref (obj);
 
-      g_error ("ncm_obj_array_load: Every group must contain the key `%s' containing the object name.", NCM_OBJ_ARRAY_OBJ_NAME_STR);
-    }
-    else
-    {
-      obj_name = g_key_file_get_value (oafile, groups[i], NCM_OBJ_ARRAY_OBJ_NAME_STR, &error);
+  return NULL;
+}
 
-      if (error != NULL)
-        g_error ("ncm_obj_array_load: %s", error->message);
+/**
+ * ncm_obj_dict_str_peek:
+ * @od: a #NcmObjDictStr.
+ * @key: a string.
+ *
+ * Peeks a #GObject from a #NcmObjDictStr with key @key without increasing its reference
+ * count.
+ *
+ * Returns: (transfer none): the #GObject with key @key.
+ */
+GObject *
+ncm_obj_dict_str_peek (NcmObjDictStr *od, const gchar *key)
+{
+  g_assert (key != NULL);
 
-      g_key_file_remove_key (oafile, groups[i], NCM_OBJ_ARRAY_OBJ_NAME_STR, &error);
+  return g_hash_table_lookup ((GHashTable *) od, key);
+}
 
-      if (error != NULL)
-        g_error ("ncm_obj_array_load: %s", error->message);
-    }
+/**
+ * ncm_obj_dict_str_len:
+ * @od: a #NcmObjDictStr
+ *
+ * Gets the length of a #NcmObjDictStr.
+ *
+ * Returns: dictionary length
+ */
+guint
+ncm_obj_dict_str_len (NcmObjDictStr *od)
+{
+  return g_hash_table_size ((GHashTable *) od);
+}
 
-    g_string_append_printf (obj_ser, "{\'%s\', @a{sv} {", obj_name);
+/**
+ * ncm_obj_dict_str_keys:
+ * @od: a #NcmObjDictStr
+ *
+ * Gets the keys of a #NcmObjDictStr.
+ *
+ * Returns: (transfer container): the keys of a #NcmObjDictStr.
+ */
+GStrv
+ncm_obj_dict_str_keys (NcmObjDictStr *od)
+{
+  return (GStrv) g_hash_table_get_keys_as_array ((GHashTable *) od, NULL);
+}
 
-    {
-      gsize nkeys  = 0;
-      gchar **keys = g_key_file_get_keys (oafile, groups[i], &nkeys, &error);
-      guint j;
+/*
+ * NcmObjDictInt
+ */
 
-      if (error != NULL)
-        g_error ("ncm_obj_array_load: %s", error->message);
+/**
+ * ncm_obj_dict_int_new:
+ *
+ * Creates a new #NcmObjDictInt.
+ *
+ * Returns: (transfer full): a new #NcmObjDictInt.
+ */
+NcmObjDictInt *
+ncm_obj_dict_int_new ()
+{
+  GHashTable *od = g_hash_table_new_full (g_int_hash, g_int_equal, g_free, g_object_unref);
 
-      for (j = 0; j < nkeys; j++)
-      {
-        gchar *propval = g_key_file_get_value (oafile, groups[i], keys[j], &error);
+  return (NcmObjDictInt *) od;
+}
 
-        if (error != NULL)
-          g_error ("ncm_obj_array_load: %s", error->message);
+/**
+ * ncm_obj_dict_int_ref:
+ * @od: a #NcmObjDictInt.
+ *
+ * Increases the reference count of @od by one.
+ *
+ * Returns: (transfer full): @od.
+ */
+NcmObjDictInt *
+ncm_obj_dict_int_ref (NcmObjDictInt *od)
+{
+  return (NcmObjDictInt *) g_hash_table_ref ((GHashTable *) od);
+}
 
-        g_string_append_printf (obj_ser, "\'%s\':<%s>", keys[j], propval);
-        g_free (propval);
+/**
+ * ncm_obj_dict_int_unref:
+ * @od: a #NcmObjDictInt.
+ *
+ * Decreases the reference count of @od by one. If the reference count
+ * reaches zero, all objects in the dictionary are unreferenced.
+ *
+ */
+void
+ncm_obj_dict_int_unref (NcmObjDictInt *od)
+{
+  g_hash_table_unref ((GHashTable *) od);
+}
 
-        if (j + 1 != nkeys)
-          g_string_append (obj_ser, ", ");
-      }
+/**
+ * ncm_obj_dict_int_clear:
+ * @od: a pointer to a #NcmObjDictInt.
+ *
+ * If *@od is not %NULL, unreferences it and sets *@od to %NULL.
+ *
+ */
+void
+ncm_obj_dict_int_clear (NcmObjDictInt **od)
+{
+  g_clear_pointer (od, ncm_obj_dict_int_unref);
+}
 
-      g_string_append (obj_ser, "}}");
-      g_strfreev (keys);
-    }
+/**
+ * ncm_obj_dict_int_add:
+ * @od: a #NcmObjDictInt.
+ * @key: an integer.
+ * @obj: a #GObject.
+ *
+ * Adds a #GObject to a #NcmObjDictInt.
+ *
+ */
+void
+ncm_obj_dict_int_add (NcmObjDictInt *od, gint key, GObject *obj)
+{
+  g_assert (obj != NULL);
 
-    {
-      GObject *obj = ncm_serialize_from_string (ser, obj_ser->str);
+  g_hash_table_insert ((GHashTable *) od, g_memdup2 (&key, sizeof (gint)), g_object_ref (obj));
+}
 
-      g_assert (G_IS_OBJECT (obj));
+/**
+ * ncm_obj_dict_int_set:
+ * @od: a #NcmObjDictInt.
+ * @key: an integer.
+ * @obj: a #GObject.
+ *
+ * Sets a #GObject to a #NcmObjDictInt. If there is already a #GObject
+ * with key @key, it is unreferenced.
+ *
+ */
+void
+ncm_obj_dict_int_set (NcmObjDictInt *od, gint key, GObject *obj)
+{
+  g_assert (obj != NULL);
 
-      ncm_obj_array_add (oa, obj);
-      g_object_unref (obj);
-    }
-    g_string_free (obj_ser, TRUE);
-    g_strfreev (a_pos);
-  }
+  if (obj != g_hash_table_lookup ((GHashTable *) od, &key))
+    g_hash_table_replace ((GHashTable *) od, g_memdup2 (&key, sizeof (gint)), g_object_ref (obj));
+}
 
-  g_key_file_unref (oafile);
-  g_strfreev (groups);
+/**
+ * ncm_obj_dict_int_get:
+ * @od: a #NcmObjDictInt
+ * @key: an integer.
+ *
+ * Gets a #GObject from a #NcmObjDictInt with key @key.
+ *
+ * Returns: (transfer full): the #GObject with key @key.
+ */
+GObject *
+ncm_obj_dict_int_get (NcmObjDictInt *od, gint key)
+{
+  GObject *obj = ncm_obj_dict_int_peek (od, key);
 
-  return oa;
+  if (obj != NULL)
+    return g_object_ref (obj);
+
+  return NULL;
+}
+
+/**
+ * ncm_obj_dict_int_peek:
+ * @od: a #NcmObjDictInt.
+ * @key: an integer.
+ *
+ * Peeks a #GObject from a #NcmObjDictInt with key @key without increasing its reference
+ * count.
+ *
+ * Returns: (transfer none): the #GObject with key @key.
+ */
+GObject *
+ncm_obj_dict_int_peek (NcmObjDictInt *od, gint key)
+{
+  return g_hash_table_lookup ((GHashTable *) od, &key);
+}
+
+/**
+ * ncm_obj_dict_int_len:
+ * @od: a #NcmObjDictInt
+ *
+ * Gets the length of a #NcmObjDictInt.
+ *
+ * Returns: dictionary length
+ */
+guint
+ncm_obj_dict_int_len (NcmObjDictInt *od)
+{
+  return g_hash_table_size ((GHashTable *) od);
+}
+
+/**
+ * ncm_obj_dict_int_keys:
+ * @od: a #NcmObjDictInt
+ *
+ * Gets the keys of a #NcmObjDictInt.
+ *
+ * Returns: (transfer full) (array) (element-type int): the keys of a #NcmObjDictInt.
+ */
+GArray *
+ncm_obj_dict_int_keys (NcmObjDictInt *od)
+{
+  GArray *keys = g_array_new (FALSE, FALSE, sizeof (gint));
+  GHashTableIter iter;
+  gint *key;
+
+  g_hash_table_iter_init (&iter, (GHashTable *) od);
+
+  while (g_hash_table_iter_next (&iter, (gpointer *) &key, NULL))
+    g_array_append_val (keys, *key);
+
+  return keys;
 }
 
