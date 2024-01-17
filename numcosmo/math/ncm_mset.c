@@ -3174,7 +3174,7 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
       gchar *obj_name            = NULL;
       guint nparams, j;
 
-      g_variant_get (model_var, "{s@a{sv}}", &obj_name, &params);
+      g_variant_get (model_var, NCM_SERIALIZE_OBJECT_FORMAT, &obj_name, &params);
       nparams = g_variant_n_children (params);
       g_key_file_set_value (msetfile, group, ns, obj_name);
 
@@ -3367,7 +3367,7 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
         }
       }
 
-      g_string_append_printf (obj_ser, "{\'%s\', @a{sv} {", obj_type);
+      g_string_append_printf (obj_ser, "(\'%s\', @a{sv} {", obj_type);
       g_free (obj_type);
       g_key_file_remove_key (msetfile, groups[i], ns, &error);
 
@@ -3404,7 +3404,7 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
         }
       }
 
-      g_string_append (obj_ser, "}}");
+      g_string_append (obj_ser, "})");
       g_strfreev (keys);
     }
 
