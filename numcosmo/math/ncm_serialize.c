@@ -1217,6 +1217,41 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
                     g_value_take_boxed (&lval, obj_dict_int);
                   }
                 }
+                else if (g_type_is_a (pspec->value_type, NCM_TYPE_VAR_DICT))
+                {
+                  if (!fy_node_is_mapping (prop_val))
+                  {
+                    g_error ("_ncm_serialize_from_node: object property of type NcmVarDict `%s' must be a mapping.", names[i]);
+                  }
+                  else
+                  {
+                    NcmVarDict *var_dict = ncm_var_dict_new ();
+                    guint n_items        = fy_node_mapping_item_count (prop_val);
+                    guint k;
+
+                    for (k = 0; k < n_items; k++)
+                    {
+                      struct fy_node_pair *item = fy_node_mapping_get_by_index (prop_val, k);
+                      struct fy_node *item_key  = fy_node_pair_key (item);
+                      struct fy_node *item_val  = fy_node_pair_value (item);
+                      const gchar *key          = fy_node_get_scalar0 (item_key);
+                      gchar *value_string       = fy_emit_node_to_string (item_val, FYECF_WIDTH_INF | FYECF_MODE_FLOW_ONELINE);
+                      GError *error             = NULL;
+                      GVariant *item_val_var    = g_variant_parse (NULL, value_string, NULL, NULL, &error);
+
+                      if (error != NULL)
+                        g_error ("_ncm_serialize_var_dict_from_yaml: cannot parse dictionary element `%s' value `%s': %s.",
+                                 key, value_string, error->message);
+
+                      ncm_var_dict_set_variant (var_dict, key, item_val_var);
+
+                      g_variant_unref (item_val_var);
+                      g_free (value_string);
+                    }
+
+                    g_value_take_boxed (&lval, var_dict);
+                  }
+                }
                 else if (g_type_is_a (pspec->value_type, G_TYPE_OBJECT))
                 {
                   if (fy_node_is_mapping (prop_val))
@@ -1696,7 +1731,7 @@ ncm_serialize_var_dict_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
         GVariant *item_val_var    = g_variant_parse (NULL, value_string, NULL, NULL, &error);
 
         if (error != NULL)
-          g_error ("_ncm_serialize_var_dict_from_yaml: cannot parse dictionary element `%s' value `%s': %s.", key, value_string, error->message);
+          g_error ("ncm_serialize_var_dict_from_yaml: cannot parse dictionary element `%s' value `%s': %s.", key, value_string, error->message);
 
         ncm_var_dict_set_variant (dict, key, item_val_var);
 
@@ -2287,6 +2322,15 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
         values[i] = lval;
         g_value_take_boxed (&values[i], dict);
       }
+      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_VAR_DICT_TYPE)))
+      {
+        NcmVarDict *dict = ncm_serialize_var_dict_from_variant (ser, val);
+        GValue lval      = G_VALUE_INIT;
+
+        g_value_init (&lval, NCM_TYPE_VAR_DICT);
+        values[i] = lval;
+        g_value_take_boxed (&values[i], dict);
+      }
       else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE)))
       {
         GVariant *nest_obj_key    = g_variant_get_child_value (val, 0);
@@ -2545,6 +2589,13 @@ ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
 
           if (dict != NULL)
             var = ncm_serialize_dict_int_to_variant (ser, dict);
+        }
+        else if (g_type_is_a (t, NCM_TYPE_VAR_DICT))
+        {
+          NcmVarDict *dict = g_value_get_boxed (val);
+
+          if (dict != NULL)
+            var = ncm_serialize_var_dict_to_variant (ser, dict);
         }
         else if (g_type_is_a (t, G_TYPE_STRV))
         {
@@ -3000,6 +3051,29 @@ _ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVarian
             g_variant_unref (cvar_key);
             g_variant_unref (cvar_val);
             g_variant_unref (cvar);
+          }
+        }
+        else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_VAR_DICT_TYPE)))
+        {
+          const guint n = g_variant_n_children (val);
+
+          value = fy_node_create_mapping (doc);
+
+          for (i = 0; i < n; i++)
+          {
+            GVariant *cvar     = g_variant_get_child_value (val, i);
+            GVariant *cvar_key = g_variant_get_child_value (cvar, 0);
+            GVariant *cvar_val = g_variant_get_child_value (cvar, 1);
+            GVariant *val      = g_variant_get_variant (cvar_val);
+
+            fy_node_mapping_append (value,
+                                    fy_node_create_scalar_copy (doc, g_variant_get_string (cvar_key, NULL), FY_NT),
+                                    fy_node_build_from_malloc_string (doc, g_variant_print (val, FALSE), FY_NT));
+
+            g_variant_unref (cvar_key);
+            g_variant_unref (cvar_val);
+            g_variant_unref (cvar);
+            g_variant_unref (val);
           }
         }
         else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE)))

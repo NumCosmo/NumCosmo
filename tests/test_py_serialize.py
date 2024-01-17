@@ -26,7 +26,7 @@
 
 import pytest
 import numpy as np
-from numcosmo_py import Ncm, GObject
+from numcosmo_py import Ncm, GObject, dict_to_var_dict
 
 Ncm.cfg_init()
 
@@ -38,28 +38,33 @@ class GTestA(GObject.Object):
 
     __gtype_name__ = "GTestA"
 
-    A_string = GObject.Property(
+    A_string: str = GObject.Property(
         type=GObject.TYPE_STRING,  # type: ignore
         flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
     )
 
-    A_int = GObject.Property(
+    A_int: int = GObject.Property(
         type=GObject.TYPE_INT,  # type: ignore
         flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
     )
 
-    A_double = GObject.Property(
+    A_double: float = GObject.Property(
         type=GObject.TYPE_DOUBLE,  # type: ignore
         flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
     )
 
-    A_vector = GObject.Property(
+    A_vector: Ncm.Vector = GObject.Property(
         type=Ncm.Vector,  # type: ignore
         flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
     )
 
-    A_matrix = GObject.Property(
+    A_matrix: Ncm.Matrix = GObject.Property(
         type=Ncm.Matrix,  # type: ignore
+        flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
+    )
+
+    A_var_dict: Ncm.VarDict = GObject.Property(
+        type=Ncm.VarDict,  # type: ignore
         flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
     )
 
@@ -77,7 +82,14 @@ class GTestA(GObject.Object):
         t4 = np.allclose(self.A_vector.dup_array(), other.A_vector.dup_array())
         t5 = np.allclose(self.A_matrix.dup_array(), other.A_matrix.dup_array())
         t6 = self.extra == other.extra
-        return t1 and t2 and t3 and t4 and t5 and t6
+
+        t7 = self.A_var_dict.len() == other.A_var_dict.len()
+        t8 = all(
+            self.A_var_dict.get_variant(key) == other.A_var_dict.get_variant(key)
+            for key in self.A_var_dict.keys()
+        )
+
+        return t1 and t2 and t3 and t4 and t5 and t6 and t7 and t8
 
 
 GObject.type_register(GTestA)
@@ -215,6 +227,21 @@ def fixture_a1():
         A_double=3.1415,
         A_vector=Ncm.Vector.new_array([1.0, 2.0, 3.0]),
         A_matrix=Ncm.Matrix.new_array([1.0, 2.0, 3.0, 4.0], 2),
+        A_var_dict=dict_to_var_dict(
+            {
+                "a": 1,
+                "b": 2,
+                "c": 3,
+                "d": "string",
+                "e": True,
+                "f": 3.14,
+                "g": 3.14e-10,
+                "h": 3.14e10,
+                "i": [1, 2, 3],
+                "j": [1.2, 2.3, 3.4],
+                "k": [True, False, True],
+            }
+        ),
     )
 
 
@@ -229,6 +256,21 @@ def fixture_a2():
         A_double=3.1416,
         A_vector=Ncm.Vector.new_array([1.1, 2.1, 3.1]),
         A_matrix=Ncm.Matrix.new_array([1.1, 2.1, 3.1, 4.1], 2),
+        A_var_dict=dict_to_var_dict(
+            {
+                "jaba_a": 10,
+                "jaba_b": 22,
+                "jaba_c": 3566,
+                "jaba_d": "another string",
+                "jaba_e": False,
+                "jaba_f": 3.1433,
+                "jaba_g": 3.14e-30,
+                "jaba_h": 3.14e100,
+                "jaba_i": [-1, 20, 30000],
+                "jaba_j": [1.223, 234.3563, 64643.4],
+                "jaba_k": [True, True, True],
+            }
+        ),
     )
 
 
@@ -243,6 +285,21 @@ def fixture_a3():
         A_double=3.1417,
         A_vector=Ncm.Vector.new_array([1.2, 2.2, 3.2]),
         A_matrix=Ncm.Matrix.new_array([1.2, 2.2, 3.2, 4.2], 2),
+        A_var_dict=dict_to_var_dict(
+            {
+                "jaba_1": 100,
+                "jaba_2": 220,
+                "jaba_3": 35660,
+                "jaba_4": "another string again",
+                "jaba_5": False,
+                "jaba_6": 34.1433,
+                "jaba_7": 36.14e-30,
+                "jaba_8": 37.14e100,
+                "jaba_9": [-10, 2220, 3000],
+                "jaba_0": [1.23, 234.363, 643.4],
+                "jaba_11": [True, True, False],
+            }
+        ),
     )
 
 
