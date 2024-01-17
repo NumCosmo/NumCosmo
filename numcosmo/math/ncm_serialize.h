@@ -89,23 +89,27 @@ GObject *ncm_serialize_from_variant (NcmSerialize *ser, GVariant *var_obj);
 NcmObjArray *ncm_serialize_array_from_variant (NcmSerialize *ser, GVariant *var);
 NcmObjDictStr *ncm_serialize_dict_str_from_variant (NcmSerialize *ser, GVariant *var);
 NcmObjDictInt *ncm_serialize_dict_int_from_variant (NcmSerialize *ser, GVariant *var);
+NcmVarDict *ncm_serialize_var_dict_from_variant (NcmSerialize *ser, GVariant *var);
 GObject *ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVariant *params);
 GObject *ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser);
 GObject *ncm_serialize_from_yaml (NcmSerialize *ser, const gchar *yaml_obj);
 NcmObjArray *ncm_serialize_array_from_yaml (NcmSerialize *ser, const gchar *yaml_obj);
 NcmObjDictStr *ncm_serialize_dict_str_from_yaml (NcmSerialize *ser, const gchar *yaml_obj);
 NcmObjDictInt *ncm_serialize_dict_int_from_yaml (NcmSerialize *ser, const gchar *yaml_obj);
+NcmVarDict *ncm_serialize_var_dict_from_yaml (NcmSerialize *ser, const gchar *yaml_obj);
 
 /*
  * Serialization functions that return a new deserialized object from a file.
  */
 GObject *ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename);
 GObject *ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename);
+NcmVarDict *ncm_serialize_var_dict_from_variant_file (NcmSerialize *ser, const gchar *filename, gboolean binary);
 GObject *ncm_serialize_from_yaml_file (NcmSerialize *ser, const gchar *filename);
 NcmObjArray *ncm_serialize_array_from_key_file (NcmSerialize *ser, const gchar *filename);
 NcmObjArray *ncm_serialize_array_from_yaml_file (NcmSerialize *ser, const gchar *filename);
 NcmObjDictStr *ncm_serialize_dict_str_from_yaml_file (NcmSerialize *ser, const gchar *filename);
 NcmObjDictInt *ncm_serialize_dict_int_from_yaml_file (NcmSerialize *ser, const gchar *filename);
+NcmVarDict *ncm_serialize_var_dict_from_yaml_file (NcmSerialize *ser, const gchar *filename);
 
 /*
  * Serialization functions that return a new serialized object.
@@ -115,22 +119,26 @@ GVariant *ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj);
 GVariant *ncm_serialize_array_to_variant (NcmSerialize *ser, NcmObjArray *oa);
 GVariant *ncm_serialize_dict_str_to_variant (NcmSerialize *ser, NcmObjDictStr *ods);
 GVariant *ncm_serialize_dict_int_to_variant (NcmSerialize *ser, NcmObjDictInt *odi);
+GVariant *ncm_serialize_var_dict_to_variant (NcmSerialize *ser, NcmVarDict *vd);
 gchar *ncm_serialize_to_string (NcmSerialize *ser, GObject *obj, gboolean valid_variant);
 gchar *ncm_serialize_to_yaml (NcmSerialize *ser, GObject *obj);
 gchar *ncm_serialize_array_to_yaml (NcmSerialize *ser, NcmObjArray *oa);
 gchar *ncm_serialize_dict_str_to_yaml (NcmSerialize *ser, NcmObjDictStr *ods);
 gchar *ncm_serialize_dict_int_to_yaml (NcmSerialize *ser, NcmObjDictInt *odi);
+gchar *ncm_serialize_var_dict_to_yaml (NcmSerialize *ser, NcmVarDict *dict);
 
 /*
  * Serialization functions that save the serialized object to a file.
  */
 void ncm_serialize_to_file (NcmSerialize *ser, GObject *obj, const gchar *filename);
 void ncm_serialize_to_binfile (NcmSerialize *ser, GObject *obj, const gchar *filename);
+void ncm_serialize_var_dict_to_variant_file (NcmSerialize *ser, NcmVarDict *vd, const gchar *filename, gboolean binary);
 void ncm_serialize_to_yaml_file (NcmSerialize *ser, GObject *obj, const gchar *filename);
 void ncm_serialize_array_to_key_file (NcmSerialize *ser, NcmObjArray *oa, const gchar *filename, gboolean save_comment);
 void ncm_serialize_array_to_yaml_file (NcmSerialize *ser, NcmObjArray *oa, const gchar *filename);
 void ncm_serialize_dict_str_to_yaml_file (NcmSerialize *ser, NcmObjDictStr *ods, const gchar *filename);
 void ncm_serialize_dict_int_to_yaml_file (NcmSerialize *ser, NcmObjDictInt *odi, const gchar *filename);
+void ncm_serialize_var_dict_to_yaml_file (NcmSerialize *ser, NcmVarDict *vd, const gchar *filename);
 
 GObject *ncm_serialize_dup_obj (NcmSerialize *ser, GObject *obj);
 NcmObjArray *ncm_serialize_dup_array (NcmSerialize *ser, NcmObjArray *oa);
@@ -193,6 +201,7 @@ gchar *ncm_serialize_global_variant_to_yaml (GVariant *var_obj);
 
 #define NCM_SERIALIZE_OBJECT_DICT_STR_TYPE "a{s"NCM_SERIALIZE_OBJECT_TYPE "}"
 #define NCM_SERIALIZE_OBJECT_DICT_INT_TYPE "a{i"NCM_SERIALIZE_OBJECT_TYPE "}"
+#define NCM_SERIALIZE_VAR_DICT_TYPE "a{sv}"
 
 #define NCM_SERIALIZE_VECTOR_TYPE "ad"
 #define NCM_SERIALIZE_MATRIX_TYPE "aad"

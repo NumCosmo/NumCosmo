@@ -307,6 +307,10 @@ python_tests = [
         'name': 'py_serialize',
         'source': 'test_py_serialize.py',
     },
+    {
+        'name': 'py_obj_array',
+        'source': 'test_py_obj_array.py',
+    },
 ]
 
 if mpi_c_dep.found()

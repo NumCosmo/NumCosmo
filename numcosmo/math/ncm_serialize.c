@@ -931,6 +931,42 @@ ncm_serialize_dict_int_from_variant (NcmSerialize *ser, GVariant *var)
 }
 
 /**
+ * ncm_serialize_var_dict_from_variant:
+ * @ser: a #NcmSerialize
+ * @var: a #GVariant containing a dictionary of string and variants
+ *
+ * Creates a new #NcmVarDict from a #GVariant.
+ *
+ * Returns: (transfer full): a new #NcmObjDictStr.
+ */
+NcmVarDict *
+ncm_serialize_var_dict_from_variant (NcmSerialize *ser, GVariant *var)
+{
+  g_assert (g_variant_is_of_type (var, G_VARIANT_TYPE (NCM_SERIALIZE_VAR_DICT_TYPE)));
+  {
+    guint i, n = g_variant_n_children (var);
+    NcmVarDict *vd = ncm_var_dict_new ();
+
+    for (i = 0; i < n; i++)
+    {
+      GVariant *cvar    = g_variant_get_child_value (var, i);
+      GVariant *key     = g_variant_get_child_value (cvar, 0);
+      GVariant *val_var = g_variant_get_child_value (cvar, 1);
+      GVariant *val     = g_variant_get_variant (val_var);
+
+      ncm_var_dict_set_variant (vd, g_variant_get_string (key, NULL), val);
+
+      g_variant_unref (key);
+      g_variant_unref (val_var);
+      g_variant_unref (val);
+      g_variant_unref (cvar);
+    }
+
+    return vd;
+  }
+}
+
+/**
  * ncm_serialize_from_string:
  * @ser: a #NcmSerialize.
  * @obj_ser: String containing the serialized version of the object.
@@ -1367,8 +1403,6 @@ ncm_serialize_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 
   if (doc == NULL)
   {
-    fy_document_destroy (doc);
-
     g_error ("ncm_serialize_from_yaml: cannot parse YAML object ###\n%s\n###.", yaml_obj);
 
     return NULL;
@@ -1458,8 +1492,6 @@ ncm_serialize_array_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 
   if (doc == NULL)
   {
-    fy_document_destroy (doc);
-
     g_error ("ncm_serialize_from_yaml: cannot parse YAML object ###\n%s\n###.", yaml_obj);
 
     return NULL;
@@ -1502,8 +1534,6 @@ ncm_serialize_dict_str_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 
   if (doc == NULL)
   {
-    fy_document_destroy (doc);
-
     g_error ("ncm_serialize_from_yaml: cannot parse YAML object ###\n%s\n###.", yaml_obj);
 
     return NULL;
@@ -1569,8 +1599,6 @@ ncm_serialize_dict_int_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 
   if (doc == NULL)
   {
-    fy_document_destroy (doc);
-
     g_error ("ncm_serialize_from_yaml: cannot parse YAML object ###\n%s\n###.", yaml_obj);
 
     return NULL;
@@ -1618,6 +1646,77 @@ ncm_serialize_dict_int_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 #else /* HAVE_LIBFYAML */
 
   g_error ("ncm_serialize_dict_int_from_yaml: libfyaml not available.");
+
+  return NULL;
+
+#endif /* HAVE_LIBFYAML */
+}
+
+/**
+ * ncm_serialize_var_dict_from_yaml:
+ * @ser: a #NcmSerialize
+ * @yaml_obj: string containing the serialized version of the #NcmVarDict in YAML format
+ *
+ * Parses the serialized string in @yaml_obj and returns a #NcmVarDict containing
+ * the object names as keys and the serialized objects as values.
+ *
+ * Returns: (transfer full): A new #NcmVarDict.
+ */
+NcmVarDict *
+ncm_serialize_var_dict_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
+{
+#ifdef HAVE_LIBFYAML
+
+  struct fy_document *doc = fy_document_build_from_string (NULL, yaml_obj, strlen (yaml_obj));
+
+  if (doc == NULL)
+  {
+    g_error ("ncm_serialize_from_yaml: cannot parse YAML object ###\n%s\n###.", yaml_obj);
+
+    return NULL;
+  }
+  else
+  {
+    struct fy_node *root = fy_document_root (doc);
+    NcmVarDict *dict     = ncm_var_dict_new ();
+
+    if (fy_node_is_mapping (root))
+    {
+      guint n_items = fy_node_mapping_item_count (root);
+      guint i;
+
+      for (i = 0; i < n_items; i++)
+      {
+        struct fy_node_pair *item = fy_node_mapping_get_by_index (root, i);
+        struct fy_node *item_key  = fy_node_pair_key (item);
+        struct fy_node *item_val  = fy_node_pair_value (item);
+        const gchar *key          = fy_node_get_scalar0 (item_key);
+        gchar *value_string       = fy_emit_node_to_string (item_val, FYECF_WIDTH_INF | FYECF_MODE_FLOW_ONELINE);
+        GError *error             = NULL;
+        GVariant *item_val_var    = g_variant_parse (NULL, value_string, NULL, NULL, &error);
+
+        if (error != NULL)
+          g_error ("_ncm_serialize_var_dict_from_yaml: cannot parse dictionary element `%s' value `%s': %s.", key, value_string, error->message);
+
+        ncm_var_dict_set_variant (dict, key, item_val_var);
+
+        g_variant_unref (item_val_var);
+        g_free (value_string);
+      }
+    }
+    else
+    {
+      g_error ("_ncm_serialize_var_dict_from_yaml: object var dict yaml root must be a mapping.");
+    }
+
+    fy_document_destroy (doc);
+
+    return dict;
+  }
+
+  #else /* HAVE_LIBFYAML */
+
+  g_error ("ncm_serialize_var_dict_from_yaml: libfyaml not available.");
 
   return NULL;
 
@@ -1696,6 +1795,68 @@ ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename)
   }
 
   return obj;
+}
+
+/**
+ * ncm_serialize_var_dict_from_variant_file:
+ * @ser: a #NcmSerialize
+ * @filename: File containing the serialized version of the #NcmVarDict
+ * @binary: Whether the file contains binary data or not
+ *
+ * Parses the serialized string in @filename and returns a #NcmVarDict containing
+ * the object names as keys and the serialized objects as values.
+ *
+ * Returns: (transfer full): A new #NcmVarDict.
+ */
+NcmVarDict *
+ncm_serialize_var_dict_from_variant_file (NcmSerialize *ser, const gchar *filename, gboolean binary)
+{
+  GError *error  = NULL;
+  gchar *file    = NULL;
+  gsize length   = 0;
+  NcmVarDict *vd = NULL;
+
+  g_assert (filename != NULL);
+
+  if (!g_file_get_contents (filename, &file, &length, &error))
+    g_error ("ncm_serialize_from_file: cannot open file %s: %s",
+             filename, error->message);
+
+  g_assert_cmpint (length, >, 0);
+
+  if (binary)
+  {
+    GVariant *vd_ser = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_VAR_DICT_TYPE),
+                                                file,
+                                                length,
+                                                TRUE,
+                                                g_free,
+                                                file
+                                               );
+
+    vd = ncm_serialize_var_dict_from_variant (ser, vd_ser);
+
+    g_variant_unref (vd_ser);
+  }
+  else
+  {
+    GVariant *vd_ser = g_variant_parse (G_VARIANT_TYPE (NCM_SERIALIZE_VAR_DICT_TYPE),
+                                        file,
+                                        NULL,
+                                        NULL,
+                                        &error);
+
+    if (error != NULL)
+      g_error ("ncm_serialize_var_dict_from_variant_file: cannot parse file %s: %s",
+               filename, error->message);
+
+    vd = ncm_serialize_var_dict_from_variant (ser, vd_ser);
+
+    g_variant_unref (vd_ser);
+    g_free (file);
+  }
+
+  return vd;
 }
 
 /**
@@ -1931,6 +2092,39 @@ ncm_serialize_dict_int_from_yaml_file (NcmSerialize *ser, const gchar *filename)
   g_assert_cmpint (length, >, 0);
 
   dict = ncm_serialize_dict_int_from_yaml (ser, file);
+
+  g_free (file);
+
+  return dict;
+}
+
+/**
+ * ncm_serialize_var_dict_from_yaml_file:
+ * @ser: a #NcmSerialize
+ * @filename: File containing the serialized version of the #NcmVarDict in YAML format
+ *
+ * Parses the YAML in @filename and returns a #NcmVarDict containing
+ * the element names as keys and their values.
+ *
+ * Returns: (transfer full): A new #NcmVarDict.
+ */
+NcmVarDict *
+ncm_serialize_var_dict_from_yaml_file (NcmSerialize *ser, const gchar *filename)
+{
+  GError *error    = NULL;
+  gchar *file      = NULL;
+  gsize length     = 0;
+  NcmVarDict *dict = NULL;
+
+  g_assert (filename != NULL);
+
+  if (!g_file_get_contents (filename, &file, &length, &error))
+    g_error ("ncm_serialize_from_file: cannot open file %s: %s",
+             filename, error->message);
+
+  g_assert_cmpint (length, >, 0);
+
+  dict = ncm_serialize_var_dict_from_yaml (ser, file);
 
   g_free (file);
 
@@ -2602,6 +2796,42 @@ ncm_serialize_dict_int_to_variant (NcmSerialize *ser, NcmObjDictInt *odi)
   return var;
 }
 
+/**
+ * ncm_serialize_var_dict_to_variant:
+ * @ser: a #NcmSerialize
+ * @vd: a #NcmVarDict
+ *
+ * Serializes a #NcmVarDict to a #GVariant.
+ *
+ * Returns: (transfer full): the serialized #GVariant.
+ */
+GVariant *
+ncm_serialize_var_dict_to_variant (NcmSerialize *ser, NcmVarDict *vd)
+{
+  GVariantBuilder builder;
+  GVariant *var;
+  GHashTableIter iter;
+  gchar *key;
+  GVariant *val;
+
+  g_variant_builder_init (&builder, G_VARIANT_TYPE (NCM_SERIALIZE_VAR_DICT_TYPE));
+
+  g_hash_table_iter_init (&iter, vd);
+
+  while (g_hash_table_iter_next (&iter, (gpointer *) &key, (gpointer *) &val))
+  {
+    GVariant *key_var = g_variant_new_string (key);
+    GVariant *val_var = g_variant_new_variant (val);
+    GVariant *entry   = g_variant_new_dict_entry (key_var, val_var);
+
+    g_variant_builder_add_value (&builder, entry);
+  }
+
+  var = g_variant_ref_sink (g_variant_builder_end (&builder));
+
+  return var;
+}
+
 #ifdef HAVE_LIBFYAML
 static struct fy_node *_ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVariant *var_obj);
 
@@ -2985,6 +3215,41 @@ ncm_serialize_dict_int_to_yaml (NcmSerialize *ser, NcmObjDictInt *odi)
 }
 
 /**
+ * ncm_serialize_var_dict_to_yaml:
+ * @ser: a #NcmSerialize
+ * @dict: a #NcmVarDict
+ *
+ * Serialize the #NcmVarDict @dict to a YAML string.
+ *
+ * Returns: (transfer full): A YAML string containing the serialized version of @dict.
+ */
+gchar *
+ncm_serialize_var_dict_to_yaml (NcmSerialize *ser, NcmVarDict *dict)
+{
+  struct fy_document *doc = fy_document_create (NULL);
+  struct fy_node *root    = fy_node_create_mapping (doc);
+  gchar *yaml_str         = NULL;
+  GHashTableIter iter;
+  gchar *key;
+  GVariant *value;
+
+  g_hash_table_iter_init (&iter, dict);
+
+  while (g_hash_table_iter_next (&iter, (gpointer *) &key, (gpointer *) &value))
+  {
+    fy_node_mapping_append (root,
+                            fy_node_create_scalar_copy (doc, key, FY_NT),
+                            fy_node_build_from_malloc_string (doc, g_variant_print (value, FALSE), FY_NT));
+  }
+
+  fy_document_set_root (doc, root);
+  yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT);
+  fy_document_destroy (doc);
+
+  return yaml_str;
+}
+
+/**
  * ncm_serialize_to_file:
  * @ser: a #NcmSerialize
  * @obj: a #GObject
@@ -3032,6 +3297,45 @@ ncm_serialize_to_binfile (NcmSerialize *ser, GObject *obj, const gchar *filename
              filename, error->message);
 
   g_variant_unref (obj_ser);
+}
+
+/**
+ * ncm_serialize_var_dict_to_variant_file:
+ * @ser: a #NcmSerialize
+ * @vd: a #NcmVarDict
+ * @filename: File where to save the serialized version of the object
+ * @binary: whether to save the variant in binary format
+ *
+ * Serializes @vd and saves the variant string in @filename.
+ *
+ */
+void
+ncm_serialize_var_dict_to_variant_file (NcmSerialize *ser, NcmVarDict *vd, const gchar *filename, gboolean binary)
+{
+  GError *error = NULL;
+  GVariant *var = ncm_serialize_var_dict_to_variant (ser, vd);
+  gsize length  = g_variant_get_size (var);
+
+  g_assert (filename != NULL);
+
+  if (binary)
+  {
+    if (!g_file_set_contents (filename, g_variant_get_data (var), length, &error))
+      g_error ("ncm_serialize_var_dict_to_variant_file: cannot save to file %s: %s",
+               filename, error->message);
+  }
+  else
+  {
+    gchar *variant_string = g_variant_print (var, TRUE);
+
+    if (!g_file_set_contents (filename, variant_string, strlen (variant_string), &error))
+      g_error ("ncm_serialize_var_dict_to_variant_file: cannot save to file %s: %s",
+               filename, error->message);
+
+    g_free (variant_string);
+  }
+
+  g_variant_unref (var);
 }
 
 /**
@@ -3237,6 +3541,32 @@ ncm_serialize_dict_int_to_yaml_file (NcmSerialize *ser, NcmObjDictInt *odi, cons
 
   if (!g_file_set_contents (filename, yaml, length, &error))
     g_error ("ncm_serialize_dict_int_to_yaml_file: cannot save to file %s: %s",
+             filename, error->message);
+
+  g_free (yaml);
+}
+
+/**
+ * ncm_serialize_var_dict_to_yaml_file:
+ * @ser: a #NcmSerialize
+ * @vd: a #NcmVarDict
+ * @filename: vd filename
+ *
+ * Saves a #NcmVarDict to a file using a #NcmSerialize and a YAML string.
+ *
+ *
+ */
+void
+ncm_serialize_var_dict_to_yaml_file (NcmSerialize *ser, NcmVarDict *vd, const gchar *filename)
+{
+  GError *error = NULL;
+  gchar *yaml   = ncm_serialize_var_dict_to_yaml (ser, vd);
+  gsize length  = strlen (yaml);
+
+  g_assert (filename != NULL);
+
+  if (!g_file_set_contents (filename, yaml, length, &error))
+    g_error ("ncm_serialize_var_dict_to_yaml_file: cannot save to file %s: %s",
              filename, error->message);
 
   g_free (yaml);
