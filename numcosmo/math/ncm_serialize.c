@@ -1955,7 +1955,7 @@ ncm_serialize_array_from_key_file (NcmSerialize *ser, const gchar *filename)
         g_error ("ncm_obj_array_load: %s", error->message);
     }
 
-    g_string_append_printf (obj_ser, "{\'%s\', @a{sv} {", obj_name);
+    g_string_append_printf (obj_ser, "(\'%s\', @a{sv} {", obj_name);
     g_clear_pointer (&obj_name, g_free);
 
     {
@@ -1980,7 +1980,7 @@ ncm_serialize_array_from_key_file (NcmSerialize *ser, const gchar *filename)
           g_string_append (obj_ser, ", ");
       }
 
-      g_string_append (obj_ser, "}}");
+      g_string_append (obj_ser, "})");
       g_strfreev (keys);
     }
 
@@ -3404,7 +3404,7 @@ ncm_serialize_array_to_key_file (NcmSerialize *ser, NcmObjArray *oa, const gchar
     gchar *obj_name      = NULL;
     guint nparams;
 
-    g_variant_get (go_var, "{s@a{sv}}", &obj_name, &params);
+    g_variant_get (go_var, NCM_SERIALIZE_OBJECT_FORMAT, &obj_name, &params);
     nparams = g_variant_n_children (params);
 
     g_key_file_set_value (oafile, group, NCM_SERIALIZE_OBJECT_ARRAY_OBJ_NAME_STR, obj_name);

@@ -73,8 +73,8 @@ SERIALIZE_OBJECT_ARRAY_POS_STR: str = "ARRAY:ELEMENT"
 SERIALIZE_OBJECT_ARRAY_TYPE: str = "a"
 SERIALIZE_OBJECT_DICT_INT_TYPE: str = "a{i"
 SERIALIZE_OBJECT_DICT_STR_TYPE: str = "a{s"
-SERIALIZE_OBJECT_FORMAT: str = "{s@"
-SERIALIZE_OBJECT_TYPE: str = "{s"
+SERIALIZE_OBJECT_FORMAT: str = "(s@"
+SERIALIZE_OBJECT_TYPE: str = "(s"
 SERIALIZE_PROPERTIES_TYPE: str = "a"
 SERIALIZE_PROPERTY_TYPE: str = "{sv}"
 SERIALIZE_STRV_TYPE: str = "as"
@@ -112,6 +112,7 @@ def cfg_entries_to_keyfile(
 ) -> None: ...
 def cfg_enum_get_value(enum_type: Type, n: int) -> GObject.EnumValue: ...
 def cfg_enum_print_all(enum_type: Type, header: str) -> None: ...
+def cfg_get_data_directory() -> str: ...
 def cfg_get_data_filename(filename: str, must_exist: bool) -> str: ...
 def cfg_get_enum_by_id_name_nick(
     enum_type: Type, id_name_nick: str

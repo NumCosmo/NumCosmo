@@ -311,6 +311,10 @@ python_tests = [
         'name': 'py_obj_array',
         'source': 'test_py_obj_array.py',
     },
+    {
+        'name': 'py_test_data_objects',
+        'source': 'test_py_test_data_objects.py',
+    },
 ]
 
 if mpi_c_dep.found()

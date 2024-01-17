@@ -1,4 +1,4 @@
-{
+(
   'NcDataBaoRDV', 
   {
     'desc'     : <'Percival 2010, BAO Sample R-Dv'>, 
@@ -12,4 +12,4 @@
     'z'        : <[0.20, 0.35]>, 
     'is-rDV'   : <true>
   }
-}
+)

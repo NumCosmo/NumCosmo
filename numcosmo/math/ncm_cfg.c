@@ -1969,6 +1969,51 @@ ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist)
 }
 
 /**
+ * ncm_cfg_get_data_directory:
+ *
+ * Gets the data directory path. It first checks the environment variable
+ * NCM_CFG_DATA_DIR_ENV, then the package data directory and finally the
+ * package source directory. If none of these directories exists, it raises
+ * an error.
+ *
+ * Returns: (transfer full): Full path for the data directory.
+ */
+gchar *
+ncm_cfg_get_data_directory (void)
+{
+  const gchar *data_dir = g_getenv (NCM_CFG_DATA_DIR_ENV);
+  gchar *full_directory = NULL;
+
+  if (data_dir != NULL)
+  {
+    full_directory = g_build_filename (data_dir, "data", NULL);
+
+    if (!g_file_test (full_directory, G_FILE_TEST_IS_DIR))
+      g_clear_pointer (&full_directory, g_free);
+  }
+
+  if (full_directory == NULL)
+  {
+    full_directory = g_build_filename (PACKAGE_DATA_DIR, "data", NULL);
+
+    if (!g_file_test (full_directory, G_FILE_TEST_IS_DIR))
+      g_clear_pointer (&full_directory, g_free);
+  }
+
+  if (full_directory == NULL)
+    full_directory = g_build_filename (PACKAGE_SOURCE_DIR, "data", NULL);
+
+  if (!g_file_test (full_directory, G_FILE_TEST_IS_DIR))
+  {
+    g_clear_pointer (&full_directory, g_free);
+    g_error ("ncm_cfg_get_data_directory: cannot determine data directory.");
+  }
+
+
+  return full_directory;
+}
+
+/**
  * ncm_cfg_command_line:
  * @argv: array of strings
  * @argc: number of strings in @argv
