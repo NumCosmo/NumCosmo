@@ -25,7 +25,7 @@ dependencies:
   - ninja
   - nlopt
   - numpy >= 1.21.0
-  - openblas
+  - openblas=*=*openmp*
   - openmpi
   - pip
   - pip:
