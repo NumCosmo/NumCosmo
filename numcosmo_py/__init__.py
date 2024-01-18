@@ -144,7 +144,8 @@ def var_dict_to_dict(
             assert found
         else:
             raise TypeError(
-                f"Invalid type for value: {value} variant type  {value.get_type_string()}"
+                f"Invalid type for value: {value} variant type "
+                f"{value.get_type_string()}"
             )
 
     return dictionary
