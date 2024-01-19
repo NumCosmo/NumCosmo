@@ -5261,35 +5261,6 @@ class Likelihood(GObject.Object):
     def new(cls, dset: Dataset) -> Likelihood: ...
     def peek_dataset(self) -> Dataset: ...
     def priors_add(self, prior: Prior) -> None: ...
-    def priors_add_flat_func(
-        self,
-        mean_func: MSetFunc,
-        x_low: float,
-        x_upp: float,
-        scale: float,
-        variable: float,
-    ) -> None: ...
-    def priors_add_flat_param(
-        self, mid: int, pid: int, x_low: float, x_upp: float, scale: float
-    ) -> None: ...
-    def priors_add_flat_param_name(
-        self, mset: MSet, name: str, x_low: float, x_upp: float, scale: float
-    ) -> None: ...
-    def priors_add_flat_param_pindex(
-        self, pi: MSetPIndex, x_low: float, x_upp: float, scale: float
-    ) -> None: ...
-    def priors_add_gauss_func(
-        self, mean_func: MSetFunc, mu: float, sigma: float, var: float
-    ) -> None: ...
-    def priors_add_gauss_param(
-        self, mid: int, pid: int, mu: float, sigma: float
-    ) -> None: ...
-    def priors_add_gauss_param_name(
-        self, mset: MSet, name: str, mu: float, sigma: float
-    ) -> None: ...
-    def priors_add_gauss_param_pindex(
-        self, pi: MSetPIndex, mu: float, sigma: float
-    ) -> None: ...
     def priors_leastsquares_f(self, mset: MSet, priors_f: Vector) -> None: ...
     def priors_length_f(self) -> int: ...
     def priors_length_m2lnL(self) -> int: ...
@@ -5297,6 +5268,7 @@ class Likelihood(GObject.Object):
     def priors_m2lnL_vec(self, mset: MSet, priors_m2lnL_v: Vector) -> None: ...
     def priors_peek_f(self, i: int) -> Prior: ...
     def priors_peek_m2lnL(self, i: int) -> Prior: ...
+    def priors_take(self, prior: Prior) -> None: ...
     def ref(self) -> Likelihood: ...
 
 class LikelihoodClass(GObject.GPointer):
@@ -5751,6 +5723,8 @@ class MSet(GObject.Object):
     def set_fmap(self, fmap: Sequence[str], update_models: bool) -> None: ...
     def set_pos(self, model: Model, stackpos_id: int) -> None: ...
     def shallow_copy(self) -> MSet: ...
+    @staticmethod
+    def split_full_name(fullname: str) -> Tuple[bool, str, int, str]: ...
     def total_len(self) -> int: ...
 
 class MSetCatalog(GObject.Object):
@@ -5994,6 +5968,7 @@ class MSetClass(GObject.GPointer):
     parent_class: GObject.ObjectClass = ...
     ns_table: dict[None, None] = ...
     model_desc_array: list[None] = ...
+    fullname_regex: GLib.Regex = ...
     padding: list[None] = ...
 
 class MSetFunc(GObject.Object):
@@ -8143,17 +8118,18 @@ class PriorFlatParam(PriorFlat):
     ::
 
         PriorFlatParam(**properties)
-        new(mid:int, pid:int, x_low:float, x_upp:float, scale:float) -> NumCosmoMath.PriorFlatParam
-        new_name(mset:NumCosmoMath.MSet, name:str, x_low:float, x_upp:float, scale:float) -> NumCosmoMath.PriorFlatParam
-        new_pindex(pi:NumCosmoMath.MSetPIndex, x_low:float, x_upp:float, scale:float) -> NumCosmoMath.PriorFlatParam
+        new(model:NumCosmoMath.Model, pid:int, x_low:float, x_upp:float, scale:float) -> NumCosmoMath.PriorFlatParam
+        new_name(name:str, x_low:float, x_upp:float, scale:float) -> NumCosmoMath.PriorFlatParam
 
     Object NcmPriorFlatParam
 
     Properties from NcmPriorFlatParam:
-      mid -> gint: mid
-        model id
-      pid -> guint: pid
-        parameter id
+      model-ns -> gchararray: model-ns
+        model namespace
+      stack-pos -> guint: stack-pos
+        stack position
+      parameter-name -> gchararray: parameter-name
+        parameter name
 
     Properties from NcmPriorFlat:
       x-low -> gdouble: x-low
@@ -8180,8 +8156,9 @@ class PriorFlatParam(PriorFlat):
     """
 
     class Props:
-        mid: int
-        pid: int
+        model_ns: str
+        parameter_name: str
+        stack_pos: int
         h0: float
         scale: float
         variable: float
@@ -8193,8 +8170,9 @@ class PriorFlatParam(PriorFlat):
     props: Props = ...
     def __init__(
         self,
-        mid: int = ...,
-        pid: int = ...,
+        model_ns: str = ...,
+        parameter_name: str = ...,
+        stack_pos: int = ...,
         h0: float = ...,
         scale: float = ...,
         variable: float = ...,
@@ -8207,19 +8185,21 @@ class PriorFlatParam(PriorFlat):
     @staticmethod
     def clear(pfp: PriorFlatParam) -> None: ...
     def free(self) -> None: ...
+    def get_stack_pos(self) -> int: ...
     @classmethod
     def new(
-        cls, mid: int, pid: int, x_low: float, x_upp: float, scale: float
+        cls, model: Model, pid: int, x_low: float, x_upp: float, scale: float
     ) -> PriorFlatParam: ...
     @classmethod
     def new_name(
-        cls, mset: MSet, name: str, x_low: float, x_upp: float, scale: float
+        cls, name: str, x_low: float, x_upp: float, scale: float
     ) -> PriorFlatParam: ...
-    @classmethod
-    def new_pindex(
-        cls, pi: MSetPIndex, x_low: float, x_upp: float, scale: float
-    ) -> PriorFlatParam: ...
+    def peek_model_ns(self) -> str: ...
+    def peek_param_name(self) -> str: ...
     def ref(self) -> PriorFlatParam: ...
+    def set_model_ns(self, model_ns: str) -> None: ...
+    def set_param_name(self, param_name: str) -> None: ...
+    def set_stack_pos(self, stack_pos: int) -> None: ...
 
 class PriorFlatParamClass(GObject.GPointer):
     r"""
@@ -8383,17 +8363,18 @@ class PriorGaussParam(PriorGauss):
     ::
 
         PriorGaussParam(**properties)
-        new(mid:int, pid:int, mu:float, sigma:float) -> NumCosmoMath.PriorGaussParam
-        new_name(mset:NumCosmoMath.MSet, name:str, mu:float, sigma:float) -> NumCosmoMath.PriorGaussParam
-        new_pindex(pi:NumCosmoMath.MSetPIndex, mu:float, sigma:float) -> NumCosmoMath.PriorGaussParam
+        new(model:NumCosmoMath.Model, pid:int, mu:float, sigma:float) -> NumCosmoMath.PriorGaussParam
+        new_name(name:str, mu:float, sigma:float) -> NumCosmoMath.PriorGaussParam
 
     Object NcmPriorGaussParam
 
     Properties from NcmPriorGaussParam:
-      mid -> gint: mid
-        model id
-      pid -> guint: pid
-        parameter id
+      model-ns -> gchararray: model-ns
+        model namespace
+      stack-pos -> guint: stack-pos
+        stack position
+      parameter-name -> gchararray: parameter-name
+        parameter name
 
     Properties from NcmPriorGauss:
       mu -> gdouble: mu
@@ -8416,8 +8397,9 @@ class PriorGaussParam(PriorGauss):
     """
 
     class Props:
-        mid: int
-        pid: int
+        model_ns: str
+        parameter_name: str
+        stack_pos: int
         mu: float
         sigma: float
         variable: float
@@ -8427,8 +8409,9 @@ class PriorGaussParam(PriorGauss):
     props: Props = ...
     def __init__(
         self,
-        mid: int = ...,
-        pid: int = ...,
+        model_ns: str = ...,
+        parameter_name: str = ...,
+        stack_pos: int = ...,
         mu: float = ...,
         sigma: float = ...,
         variable: float = ...,
@@ -8439,15 +8422,19 @@ class PriorGaussParam(PriorGauss):
     @staticmethod
     def clear(pgp: PriorGaussParam) -> None: ...
     def free(self) -> None: ...
+    def get_stack_pos(self) -> int: ...
     @classmethod
-    def new(cls, mid: int, pid: int, mu: float, sigma: float) -> PriorGaussParam: ...
-    @classmethod
-    def new_name(
-        cls, mset: MSet, name: str, mu: float, sigma: float
+    def new(
+        cls, model: Model, pid: int, mu: float, sigma: float
     ) -> PriorGaussParam: ...
     @classmethod
-    def new_pindex(cls, pi: MSetPIndex, mu: float, sigma: float) -> PriorGaussParam: ...
+    def new_name(cls, name: str, mu: float, sigma: float) -> PriorGaussParam: ...
+    def peek_model_ns(self) -> str: ...
+    def peek_param_name(self) -> str: ...
     def ref(self) -> PriorGaussParam: ...
+    def set_model_ns(self, model_ns: str) -> None: ...
+    def set_param_name(self, param_name: str) -> None: ...
+    def set_stack_pos(self, stack_pos: int) -> None: ...
 
 class PriorGaussParamClass(GObject.GPointer):
     r"""

@@ -300,6 +300,10 @@ python_tests = [
         'source': 'test_py_dataset.py',
     },
     {
+        'name': 'py_prior',
+        'source': 'test_py_prior.py',
+    },
+    {
         'name': 'py_ode_spline',
         'source': 'test_py_ode_spline.py',
     },

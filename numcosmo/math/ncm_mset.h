@@ -67,6 +67,7 @@ struct _NcmMSetClass
   GObjectClass parent_class;
   GHashTable *ns_table;
   GArray *model_desc_array;
+  GRegex *fullname_regex;
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[16];
@@ -136,6 +137,8 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
 NcmMSetPIndex *ncm_mset_pindex_new (NcmModelID mid, guint pid);
 NcmMSetPIndex *ncm_mset_pindex_dup (NcmMSetPIndex *pi);
 void ncm_mset_pindex_free (NcmMSetPIndex *pi);
+
+gboolean ncm_mset_split_full_name (const gchar *fullname, gchar **model_ns, guint *stackpos_id, gchar **pname);
 
 NcmMSet *ncm_mset_empty_new (void);
 NcmMSet *ncm_mset_new (gpointer model0, ...) G_GNUC_NULL_TERMINATED;
