@@ -69,14 +69,26 @@ jobs:
     - name: Install pre-requisites
       run: |
         sudo apt-get update
-        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran gcovr pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools libopenmpi-dev
+        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran gcovr pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools libopenmpi-dev lcov
         pip install meson ninja pytest pytest-tap numpy astropy scipy
     - name: Configure NumCosmo
       run: meson setup build -Ddebug=true -Db_coverage=true -Db_lto=false -Dnumcosmo_py=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: meson compile -C build
     - name: Check NumCosmo
-      run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
+      # First run to generate the coverage base
+      # Second run to generate the coverage for the tests
+      # Third run to merge the coverage base and the coverage for the tests
+      run: |
+        lcov --config-file .lcovrc --no-external --capture --initial --directory Coverage --directory numcosmo --base-directory $(pwd)/Coverage --output-file numcosmo-coverage-base.info --build-directory Coverage
+        meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
+        lcov --config-file .lcovrc --no-external --capture --directory Coverage --directory numcosmo --base-directory $(pwd)/Coverage --output-file numcosmo-coverage-tests.info --build-directory Coverage
+        lcov --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage.info
+    - name: CodeCov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./numcosmo-coverage.info
     - name: Generate coverage
       # For some reason, gcovr is ignoring the configured gcovr.cfg file
       # ninja coverage -C build -v -d stats -d explain
@@ -87,11 +99,6 @@ jobs:
       with:
         files: build/meson-logs/coverage.xml
         github-token: ${{ secrets.GITHUB_TOKEN }}
-    - name: CodeCov
-      uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        gcov: true
   build-gcc-macos:
 
     name: NumCosmo (macos, brew)

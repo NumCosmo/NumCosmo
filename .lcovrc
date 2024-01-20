@@ -14,14 +14,5 @@ lcov_excl_line = LCOV_EXCL_LINE|g_return_if_reached|g_return_val_if_reached|g_as
 
 # Excluding external projects
 ignore_errors = unused
+ignore_errors = empty
 
-exclude = ncm_fit_nlopt_enum.*
-exclude = ncm_enum_types.*
-exclude = nc_enum_types.*
-exclude = class/
-exclude = levmar/
-exclude = libcuba/
-exclude = plc/
-exclude = sundials/
-exclude = toeplitz/
-exclude = tools/
