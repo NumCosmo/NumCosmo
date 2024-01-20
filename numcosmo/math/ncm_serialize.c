@@ -2910,7 +2910,7 @@ ncm_serialize_variant_to_yaml (NcmSerialize *ser, GVariant *var_obj)
     gchar *yaml             = NULL;
 
     fy_document_set_root (doc, root);
-    yaml = fy_emit_document_to_string (doc, FYECF_DEFAULT);
+    yaml = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
     fy_document_destroy (doc);
 
     return yaml;
@@ -3206,7 +3206,7 @@ ncm_serialize_array_to_yaml (NcmSerialize *ser, NcmObjArray *oa)
   }
 
   fy_document_set_root (doc, root);
-  yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT);
+  yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
   fy_document_destroy (doc);
 
   return yaml_str;
@@ -3244,7 +3244,7 @@ ncm_serialize_dict_str_to_yaml (NcmSerialize *ser, NcmObjDictStr *ods)
   }
 
   fy_document_set_root (doc, root);
-  yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT);
+  yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
   fy_document_destroy (doc);
 
   return yaml_str;
@@ -3282,7 +3282,7 @@ ncm_serialize_dict_int_to_yaml (NcmSerialize *ser, NcmObjDictInt *odi)
   }
 
   fy_document_set_root (doc, root);
-  yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT);
+  yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
   fy_document_destroy (doc);
 
   return yaml_str;
@@ -3317,7 +3317,7 @@ ncm_serialize_var_dict_to_yaml (NcmSerialize *ser, NcmVarDict *dict)
   }
 
   fy_document_set_root (doc, root);
-  yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT);
+  yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
   fy_document_destroy (doc);
 
   return yaml_str;
