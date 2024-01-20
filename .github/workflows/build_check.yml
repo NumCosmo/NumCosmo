@@ -217,9 +217,9 @@ jobs:
         # Second run to generate the coverage for the tests
         # Third run to merge the coverage base and the coverage for the tests
         run: |
-          lcov --config-file .lcovrc --no-external --capture --initial --directory Coverage --directory numcosmo --base-directory $(pwd)/Coverage --output-file numcosmo-coverage-base.info --build-directory Coverage
+          lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info --build-directory build
           meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
-          lcov --config-file .lcovrc --no-external --capture --directory Coverage --directory numcosmo --base-directory $(pwd)/Coverage --output-file numcosmo-coverage-tests.info --build-directory Coverage
+          lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info --build-directory build
           lcov --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage.info
       - name: CodeCov
         uses: codecov/codecov-action@v3
