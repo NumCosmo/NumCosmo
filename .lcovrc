@@ -16,3 +16,11 @@ lcov_excl_line = LCOV_EXCL_LINE|g_return_if_reached|g_return_val_if_reached|g_as
 ignore_errors = unused
 ignore_errors = empty
 
+# This will not work with lcov 1.16 or earlier
+#exclude = */class/*
+#exclude = */levmar/*
+#exclude = */libcuba/*
+#exclude = */plc/*
+#exclude = */sundials/*
+#exclude = */toeplitz/*
+#exclude = */tools/*
