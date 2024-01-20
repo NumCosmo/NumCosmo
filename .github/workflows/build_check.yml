@@ -227,15 +227,16 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./numcosmo-coverage.info
-      - name: Generate coverage
-          # For some reason, gcovr is ignoring the configured gcovr.cfg file
-          # ninja coverage -C build -v -d stats -d explain
-        run: |
-            gcovr --root . --object-directory build --config gcovr.cfg --xml-pretty -o build/meson-logs/coverage.xml
+      #- name: Generate coverage
+      #    # For some reason, gcovr is ignoring the configured gcovr.cfg file
+      #    # ninja coverage -C build -v -d stats -d explain
+      #  run: |
+      #      gcovr --root . --object-directory build --config gcovr.cfg --xml-pretty -o build/meson-logs/coverage.xml
       - name: Coveralls
         uses: coverallsapp/github-action@v2
         with:
-          files: build/meson-logs/coverage.xml
+          files: ./numcosmo-coverage.info
+          format: lcov
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
 
