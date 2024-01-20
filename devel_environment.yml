@@ -9,6 +9,7 @@ dependencies:
   - fftw
   - flake8
   - fortran-compiler
+  - gcovr
   - getdist
   - glib
   - glib-tools
@@ -16,6 +17,7 @@ dependencies:
   - gobject-introspection
   - gsl
   - hdf5
+  - lcov
   - libflint
   - libfyaml
   - matplotlib-base
