@@ -10,7 +10,6 @@ project(
     'c_std=gnu99',
     'b_lto=true',
     'b_lto_threads=2',
-    'optimization=3',
   ],
 )
 
@@ -823,6 +822,8 @@ subdir('docs')
 
 building_options = {
   'Build type': get_option('buildtype'),
+  'Optimization level': get_option('optimization'),
+  'Debug': get_option('debug'),
   'C-Compiler': cc.get_id(),
   'C-Compiler version': cc.version(),
   'Fortran-Compiler': fc.get_id(),
@@ -855,17 +856,17 @@ dependencies_summary = {
   'fftw3': fftw3_dep,
   'fftw3f': fftw3f_dep,
   'flint': flint_dep,
-  'gio': gio_dep,
+  'glib-gio': gio_dep,
+  'glib-gobject': gobject_dep,
   'glib': glib_dep,
   'gmp': gmp_dep,
-  'gobject': gobject_dep,
   'gsl': gsl_dep,
   'lapack': lapack_dep,
   'libfyaml': libfyaml_dep,
   'mpfr': mpfr_dep,
   'mpi': mpi_c_dep,
   'nlopt': nlopt_dep,
-  'omp': omp_c,
+  'openmp': omp_c,
   'python': python,
 }
 

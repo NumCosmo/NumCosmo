@@ -1,4 +1,4 @@
-{
+(
   'NcDataHubble', 
   {
     'desc':      <'Busca 2013 H(z) BAO+WMAP sample'>, 
@@ -10,4 +10,4 @@
     'sigma':     <[  7.92]>, 
     'z':         <[  2.3 ]>
   }
-}
+)

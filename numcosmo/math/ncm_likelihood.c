@@ -358,188 +358,20 @@ ncm_likelihood_priors_add (NcmLikelihood *lh, NcmPrior *prior)
 }
 
 /**
- * ncm_likelihood_priors_add_gauss_param:
- * @lh: a #NcmLikelihood
- * @mid: a #NcmModelID
- * @pid: a parameter ID
- * @mu: the mean $\mu$
- * @sigma: the standard deviation $\sigma$
+ * ncm_likelihood_priors_take:
+ * @lh: (in) (transfer full): a #NcmLikelihood
+ * @prior: a #NcmPrior
  *
- * Adds a Gaussian prior to the #NcmLikelihood for the parameter @pid of the model
- * @mid.
+ * Adds a #NcmPrior to the #NcmLikelihood and takes ownership of the object.
  *
  */
 void
-ncm_likelihood_priors_add_gauss_param (NcmLikelihood *lh, NcmModelID mid, guint pid, gdouble mu, gdouble sigma)
+ncm_likelihood_priors_take (NcmLikelihood *lh, NcmPrior *prior)
 {
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_gauss_param_new (mid, pid, mu, sigma));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
-}
-
-/**
- * ncm_likelihood_priors_add_gauss_param_pindex:
- * @lh: a #NcmLikelihood
- * @pi: a #NcmMSetPIndex
- * @mu: the mean $\mu$
- * @sigma: the standard deviation $\sigma$
- *
- * Adds a Gaussian prior to the #NcmLikelihood for the parameter @pi.
- *
- */
-void
-ncm_likelihood_priors_add_gauss_param_pindex (NcmLikelihood *lh, const NcmMSetPIndex *pi, gdouble mu, gdouble sigma)
-{
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_gauss_param_new_pindex (pi, mu, sigma));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
-}
-
-/**
- * ncm_likelihood_priors_add_gauss_param_name:
- * @lh: a #NcmLikelihood
- * @mset: a #NcmMSet
- * @name: a parameter name
- * @mu: the mean $\mu$
- * @sigma: the standard deviation $\sigma$
- *
- * Adds a Gaussian prior to the #NcmLikelihood for the parameter @name in a model
- * @mset. Note that the parameter @name must be unique in the model @mset or
- * the name should contain the model name as a prefix, namely 'mode:name'.
- *
- */
-void
-ncm_likelihood_priors_add_gauss_param_name (NcmLikelihood *lh, NcmMSet *mset, const gchar *name, gdouble mu, gdouble sigma)
-{
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_gauss_param_new_name (mset, name, mu, sigma));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
-}
-
-/**
- * ncm_likelihood_priors_add_gauss_func:
- * @lh: a #NcmLikelihood
- * @mean_func: a #NcmMSetFunc $f(x)$
- * @mu: the mean $\mu$
- * @sigma: the standard deviation $\sigma$
- * @var: the dependent variable
- *
- * Adds a Gaussian prior to the #NcmLikelihood for the function @mean_func.
- * The prior is defined as:
- * \begin{equation}
- *  \frac{1}{\sqrt{2\pi\sigma^2}}\exp\left(-\frac{(f(x)-\mu)^2}{2\sigma^2}\right)
- * \end{equation}
- * where $x$ is the dependent variable @var and $\mu$ and $\sigma$ are the mean and
- * standard deviation, respectively.
- *
- * The function @mean_func must be a #NcmMSetFunc with up to one dependent variable.
- * If the function has no dependent variable, the prior is defined as:
- * \begin{equation}
- * \frac{1}{\sqrt{2\pi\sigma^2}}\exp\left(-\frac{(f-\mu)^2}{2\sigma^2}\right)
- * \end{equation}
- * where $f$ is the value of the function @mean_func. In this case, the parameter
- * @var is ignored.
- *
- */
-void
-ncm_likelihood_priors_add_gauss_func (NcmLikelihood *lh, NcmMSetFunc *mean_func, gdouble mu, gdouble sigma, gdouble var)
-{
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_gauss_func_new (mean_func, mu, sigma, var));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
-}
-
-/**
- * ncm_likelihood_priors_add_flat_param:
- * @lh: a #NcmLikelihood
- * @mid: a #NcmModelID
- * @pid: a parameter ID
- * @x_low: the parameter lower limit
- * @x_upp: the parameter upper limit
- * @scale: the scale factor
- *
- * Adds a flat prior to the #NcmLikelihood for the parameter @pid of the model @mid.
- * The prior is defined in #NcmPriorFlat, note that to avoid numerical problems
- * the prior is not discontinuous at the limits, but varies exponentially to zero
- * at the limits with a scale factor @scale.
- *
- */
-void
-ncm_likelihood_priors_add_flat_param (NcmLikelihood *lh, NcmModelID mid, guint pid, gdouble x_low, gdouble x_upp, gdouble scale)
-{
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_flat_param_new (mid, pid, x_low, x_upp, scale));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
-}
-
-/**
- * ncm_likelihood_priors_add_flat_param_pindex:
- * @lh: a #NcmLikelihood
- * @pi: a #NcmMSetPIndex
- * @x_low: the parameter lower limit
- * @x_upp: the parameter upper limit
- * @scale: the scale factor
- *
- * Same as ncm_likelihood_priors_add_flat_param() but for a #NcmMSetPIndex.
- *
- */
-void
-ncm_likelihood_priors_add_flat_param_pindex (NcmLikelihood *lh, const NcmMSetPIndex *pi, gdouble x_low, gdouble x_upp, gdouble scale)
-{
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_flat_param_new_pindex (pi, x_low, x_upp, scale));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
-}
-
-/**
- * ncm_likelihood_priors_add_flat_param_name:
- * @lh: a #NcmLikelihood
- * @mset: a #NcmMSet
- * @name: a parameter name
- * @x_low: the parameter lower limit
- * @x_upp: the parameter upper limit
- * @scale: the scale factor
- *
- * Same as ncm_likelihood_priors_add_flat_param() but for a parameter name defined in
- * a #NcmMSet.
- *
- */
-void
-ncm_likelihood_priors_add_flat_param_name (NcmLikelihood *lh, NcmMSet *mset, const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale)
-{
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_flat_param_new_name (mset, name, x_low, x_upp, scale));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
-}
-
-/**
- * ncm_likelihood_priors_add_flat_func:
- * @lh: a #NcmLikelihood
- * @mean_func: a #NcmMSetFunc $f(x)$
- * @x_low: the parameter lower limit
- * @x_upp: the parameter upper limit
- * @scale: the scale factor
- * @variable: the dependent variable
- *
- * Adds a flat prior to the #NcmLikelihood for the function @mean_func. The prior
- * is similar to the one defined in ncm_likelihood_priors_add_flat_param() but
- * for a function.
- *
- */
-void
-ncm_likelihood_priors_add_flat_func (NcmLikelihood *lh, NcmMSetFunc *mean_func, gdouble x_low, gdouble x_upp, gdouble scale, gdouble variable)
-{
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_flat_func_new (mean_func, x_low, x_upp, scale, variable));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
+  if (ncm_prior_is_m2lnL (prior))
+    g_ptr_array_add (lh->priors_m2lnL, prior);
+  else
+    g_ptr_array_add (lh->priors_f, prior);
 }
 
 /**

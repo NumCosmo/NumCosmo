@@ -1,4 +1,4 @@
-{
+(
   'NcDataBaoEmpiricalFit',
   {
     'desc'     : <"SDSS-DR7-lowz -- Ross (2015), Empirical m2lnp">,
@@ -7,7 +7,7 @@
     'z'        : <0.15>,
     'n-points' : <1>,
     'vector'   : <[0.0]>,
-    'm2lnp' : <{'NcmSplineCubicNotaknot',
+    'm2lnp' : <('NcmSplineCubicNotaknot',
                 {
                  'length' : <398>,
                  'x'      : <[
@@ -811,6 +811,6 @@
                               6.70356436671
                              ]>
                 }
-              }>
+              )>
   }
-}
+)

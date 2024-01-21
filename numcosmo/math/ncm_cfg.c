@@ -1839,19 +1839,22 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 
   {
     char *wisdown_str = fftw_export_wisdom_to_string ();
-    gssize len        = strlen (wisdown_str);
-    gboolean OK       = FALSE;
+
+    if (wisdown_str != NULL)
+    {
+      gssize len  = strlen (wisdown_str);
+      gboolean OK = FALSE;
 
 #if GLIB_CHECK_VERSION (2, 66, 0)
-    OK = g_file_set_contents_full (full_filename, wisdown_str, len,
-                                   G_FILE_SET_CONTENTS_CONSISTENT,
-                                   0666, NULL);
+      OK = g_file_set_contents_full (full_filename, wisdown_str, len,
+                                     G_FILE_SET_CONTENTS_CONSISTENT,
+                                     0666, NULL);
 #else /* GLIB_CHECK_VERSION (2, 66, 0) */
-    OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+      OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
 #endif /* GLIB_CHECK_VERSION (2, 66, 0) */
-    g_assert (OK);
-
-    g_free (wisdown_str);
+      g_assert (OK);
+      g_free (wisdown_str);
+    }
   }
 
 #ifdef HAVE_FFTW3F
@@ -1863,20 +1866,24 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 
   {
     char *wisdown_str = fftwf_export_wisdom_to_string ();
-    gssize len        = strlen (wisdown_str);
-    gboolean OK       = FALSE;
+
+    if (wisdown_str != NULL)
+    {
+      gssize len  = strlen (wisdown_str);
+      gboolean OK = FALSE;
 
 #if GLIB_CHECK_VERSION (2, 66, 0)
-    OK = g_file_set_contents_full (full_filename, wisdown_str, len,
-                                   G_FILE_SET_CONTENTS_CONSISTENT,
-                                   0666, NULL);
+      OK = g_file_set_contents_full (full_filename, wisdown_str, len,
+                                     G_FILE_SET_CONTENTS_CONSISTENT,
+                                     0666, NULL);
 #else /* GLIB_CHECK_VERSION (2, 66, 0) */
-    OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+      OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
 #endif /* GLIB_CHECK_VERSION (2, 66, 0) */
 
-    g_assert (OK);
+      g_assert (OK);
 
-    g_free (wisdown_str);
+      g_free (wisdown_str);
+    }
   }
 #endif
 
@@ -1966,6 +1973,51 @@ ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist)
   }
 
   return full_filename;
+}
+
+/**
+ * ncm_cfg_get_data_directory:
+ *
+ * Gets the data directory path. It first checks the environment variable
+ * NCM_CFG_DATA_DIR_ENV, then the package data directory and finally the
+ * package source directory. If none of these directories exists, it raises
+ * an error.
+ *
+ * Returns: (transfer full): Full path for the data directory.
+ */
+gchar *
+ncm_cfg_get_data_directory (void)
+{
+  const gchar *data_dir = g_getenv (NCM_CFG_DATA_DIR_ENV);
+  gchar *full_directory = NULL;
+
+  if (data_dir != NULL)
+  {
+    full_directory = g_build_filename (data_dir, "data", NULL);
+
+    if (!g_file_test (full_directory, G_FILE_TEST_IS_DIR))
+      g_clear_pointer (&full_directory, g_free);
+  }
+
+  if (full_directory == NULL)
+  {
+    full_directory = g_build_filename (PACKAGE_DATA_DIR, "data", NULL);
+
+    if (!g_file_test (full_directory, G_FILE_TEST_IS_DIR))
+      g_clear_pointer (&full_directory, g_free);
+  }
+
+  if (full_directory == NULL)
+    full_directory = g_build_filename (PACKAGE_SOURCE_DIR, "data", NULL);
+
+  if (!g_file_test (full_directory, G_FILE_TEST_IS_DIR))
+  {
+    g_clear_pointer (&full_directory, g_free);
+    g_error ("ncm_cfg_get_data_directory: cannot determine data directory.");
+  }
+
+
+  return full_directory;
 }
 
 /**

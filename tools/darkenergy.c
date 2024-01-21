@@ -382,12 +382,8 @@ main (gint argc, gchar *argv[])
 
   if (de_model.pos_Omega_x)
   {
-    if (is_de)
-      ncm_likelihood_priors_add_flat_param (lh, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, 0.0, HUGE_VAL, 1.0);
-    else if (is_gcg)
-      ncm_likelihood_priors_add_flat_param (lh, nc_hicosmo_id (), NC_HICOSMO_GCG_OMEGA_X, 0.0, HUGE_VAL, 1.0);
-    else if (is_idem2)
-      ncm_likelihood_priors_add_flat_param (lh, nc_hicosmo_id (), NC_HICOSMO_IDEM2_OMEGA_X, 0.0, HUGE_VAL, 1.0);
+    if (is_de || is_gcg || is_idem2)
+      ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_flat_param_new_name ("NcHICosmo:Omegax", 0.0, HUGE_VAL, 1.0)));
     else
       g_error ("omegak > 0 option is valid only for darkenergy models");
   }
@@ -601,7 +597,7 @@ main (gint argc, gchar *argv[])
   {
     NcmMSetFunc *Omega_b0h2 = NCM_MSET_FUNC (ncm_mset_func_list_new ("NcHICosmo:Omega_b0h2", NULL));
 
-    ncm_likelihood_priors_add_gauss_func (lh, Omega_b0h2, 0.022, 0.002, 0.0);
+    ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_func_new (Omega_b0h2, 0.022, 0.002, 0.0)));
     ncm_mset_func_free (Omega_b0h2);
   }
 
@@ -680,6 +676,7 @@ main (gint argc, gchar *argv[])
         NcmMSetPIndex p_i;
         gchar *model_ns = NULL;
         gchar *p_name   = NULL;
+        gchar *fullname = NULL;
         gdouble mu, sigma;
 
         if (!g_variant_lookup (prior_hash, "model", "s", &model_ns))
@@ -707,10 +704,13 @@ main (gint argc, gchar *argv[])
 
         g_assert_cmpfloat (sigma, >, 0.0);
 
-        ncm_likelihood_priors_add_gauss_param (lh, p_i.mid, p_i.pid, mu, sigma);
+        fullname = g_strdup_printf ("%s:%s", model_ns, p_name);
+
+        ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name (fullname, mu, sigma)));
         g_variant_unref (prior_hash);
         g_free (model_ns);
         g_free (p_name);
+        g_free (fullname);
       }
     }
   }
