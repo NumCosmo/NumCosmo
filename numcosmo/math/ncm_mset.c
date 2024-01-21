@@ -786,6 +786,49 @@ ncm_mset_peek_array_pos (NcmMSet *mset, guint i)
 }
 
 /**
+ * ncm_mset_peek_by_name:
+ * @mset: a #NcmMSet
+ * @name: model namespace
+ *
+ * Peeks a #NcmModel from the #NcmMSet using the model namespace @name.
+ * The name may be specified with the parameter full name "model:stackposition".
+ * If the stack position is not specified, the first model with the model namespace
+ * @name will be returned.
+ *
+ * Returns: (transfer none): a #NcmModel with the model namespace @name.
+ */
+NcmModel *
+ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name)
+{
+  NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
+  gchar **ns_stackpos         = g_strsplit (name, ":", 2);
+  NcmModel *model             = NULL;
+
+  if (ns_stackpos[1] != NULL)
+  {
+    gchar *endptr = NULL;
+    guint stackpos_id;
+
+    stackpos_id = g_ascii_strtoll (ns_stackpos[1], &endptr, 10);
+
+    if (*endptr != '\0')
+      g_error ("ncm_mset_peek_by_name: invalid stackpos number `%s'.", ns_stackpos[1]);
+
+    g_strfreev (ns_stackpos);
+
+    model = ncm_mset_peek_pos (mset, ncm_mset_get_id_by_ns (ns_stackpos[0]), stackpos_id);
+  }
+  else
+  {
+    g_strfreev (ns_stackpos);
+
+    model = ncm_mset_peek (mset, ncm_mset_get_id_by_ns (name));
+  }
+
+  return model;
+}
+
+/**
  * ncm_mset_get_mid_array_pos:
  * @mset: a #NcmMSet
  * @i: array position

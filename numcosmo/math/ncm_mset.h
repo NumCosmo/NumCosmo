@@ -155,6 +155,7 @@ NcmModel *ncm_mset_peek (NcmMSet *mset, NcmModelID mid);
 NcmModel *ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint stackpos_id);
 NcmModel *ncm_mset_get (NcmMSet *mset, NcmModelID mid);
 NcmModel *ncm_mset_peek_array_pos (NcmMSet *mset, guint i);
+NcmModel *ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name);
 NcmModelID ncm_mset_get_mid_array_pos (NcmMSet *mset, guint i);
 void ncm_mset_remove (NcmMSet *mset, NcmModelID mid);
 void ncm_mset_set (NcmMSet *mset, NcmModel *model);
