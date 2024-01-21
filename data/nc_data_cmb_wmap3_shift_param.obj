@@ -1,4 +1,4 @@
-{
+(
   'NcDataCMBShiftParam', 
   {
     'desc':      <'WMAP3 shift parameter'>, 
@@ -10,4 +10,4 @@
     'sigma':     <[0.03]>, 
     'z':         <[1089.0]>
   }
-}
+)

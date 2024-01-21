@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -37,15 +37,23 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmPriorFlatParam, ncm_prior_flat_param, NCM, PRIOR_FLAT_PARAM, NcmPriorFlat)
 
-NcmPriorFlatParam *ncm_prior_flat_param_new (NcmModelID mid, guint pid, gdouble x_low, gdouble x_upp, gdouble scale);
-NcmPriorFlatParam *ncm_prior_flat_param_new_pindex (const NcmMSetPIndex *pi, gdouble x_low, gdouble x_upp, gdouble scale);
-NcmPriorFlatParam *ncm_prior_flat_param_new_name (NcmMSet *mset, const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale);
+NcmPriorFlatParam *ncm_prior_flat_param_new (NcmModel * model, guint pid, gdouble x_low, gdouble x_upp, gdouble scale);
+NcmPriorFlatParam *ncm_prior_flat_param_new_name (const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale);
 
 NcmPriorFlatParam *ncm_prior_flat_param_ref (NcmPriorFlatParam *pfp);
 
 void ncm_prior_flat_param_free (NcmPriorFlatParam *pfp);
 void ncm_prior_flat_param_clear (NcmPriorFlatParam **pfp);
 
+void ncm_prior_flat_param_set_model_ns (NcmPriorFlatParam *pfp, const gchar *model_ns);
+void ncm_prior_flat_param_set_stack_pos (NcmPriorFlatParam *pfp, guint stack_pos);
+void ncm_prior_flat_param_set_param_name (NcmPriorFlatParam *pfp, const gchar *param_name);
+
+const gchar *ncm_prior_flat_param_peek_model_ns (NcmPriorFlatParam *pfp);
+const gchar *ncm_prior_flat_param_peek_param_name (NcmPriorFlatParam *pfp);
+guint ncm_prior_flat_param_get_stack_pos (NcmPriorFlatParam *pfp);
+
 G_END_DECLS
 
 #endif /* _NCM_PRIOR_FLAT_PARAM_H_ */
+

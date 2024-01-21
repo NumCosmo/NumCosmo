@@ -1494,7 +1494,7 @@ static gdouble
 _ncm_stats_vec_heidel_diag_pcramer (const gdouble q)
 {
   const gdouble pi_32 = sqrt (gsl_pow_3 (M_PI));
-  const gint maxiter  = 100;
+  const guint maxiter = 100;
   const gdouble ffac  = 1.0 / (pi_32 * sqrt (q));
   gdouble p           = 0.0;
   guint i             = 0;
