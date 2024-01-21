@@ -1,4 +1,4 @@
-{
+(
   'NcDataHubble', 
   {
     'desc':      <'Riess 2008 HST Project sample'>, 
@@ -10,4 +10,4 @@
     'sigma':     <[ 2.4]>, 
     'z':         <[ 0.0]>
   }
-}
+)

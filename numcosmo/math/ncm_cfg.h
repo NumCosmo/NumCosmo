@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_cfg.h
  *
@@ -88,6 +89,7 @@ void ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, gu
 void ncm_cfg_msg_sepa (void);
 
 gchar *ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist);
+gchar *ncm_cfg_get_data_directory (void);
 
 gchar *ncm_cfg_command_line (gchar *argv[], gint argc);
 
@@ -104,10 +106,10 @@ extern guint fftw_default_flags;
 
 #ifdef NUMCOSMO_CHECK_PREPARE
 #define NCM_CHECK_PREPARED(obj, name) \
-  G_STMT_START { \
-    if (!obj->prepared) \
-    g_error ("calling method %s on an unprepared instance.", #name); \
-  } G_STMT_END
+        G_STMT_START { \
+          if (!obj->prepared) \
+          g_error ("calling method %s on an unprepared instance.", #name); \
+        } G_STMT_END
 #else /* NUMCOSMO_CHECK_PREPARE */
 #define NCM_CHECK_PREPARED(obj, name)
 #endif /* NUMCOSMO_CHECK_PREPARE */
@@ -129,14 +131,14 @@ extern guint fftw_default_flags;
 
 #ifndef NUMCOSMO_GIR_SCAN
 #define NCM_FITS_ERROR(status) \
-  G_STMT_START { \
-    if (status) \
-    { \
-      gchar errormsg[30]; \
-      fits_get_errstatus (status, errormsg); \
-      g_error ("FITS: %s", errormsg); \
-    } \
-  } G_STMT_END
+        G_STMT_START { \
+          if (status) \
+          { \
+            gchar errormsg[30]; \
+            fits_get_errstatus (status, errormsg); \
+            g_error ("FITS: %s", errormsg); \
+          } \
+        } G_STMT_END
 #endif /* NUMCOSMO_GIR_SCAN */
 
 G_END_DECLS

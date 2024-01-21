@@ -1,4 +1,4 @@
-{
+(
   'NcDataBaoDMrHr', 
   {
     'desc'      : <'SDSS DR12 (final consensus) -- Ross et al. (2016), arXiv:1607.03145; Alam et al. (2016), arXiv:1607.03155; BAO+FS Sample(D_M * r_sd^fid / r_sd, H * r_sd / r_sd^fid)'>, 
@@ -16,4 +16,4 @@
                    ]>, 
     'z'         : <[0.38, 0.38, 0.51, 0.51, 0.61, 0.61]>
   }
-}
+)
