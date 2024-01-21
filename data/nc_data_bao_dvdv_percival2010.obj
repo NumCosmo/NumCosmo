@@ -1,4 +1,4 @@
-{
+(
   'NcDataBaoDVDV', 
   {
     'desc'      : <'Percival 2010, BAO Sample Dv-Dv'>, 
@@ -9,4 +9,4 @@
     'sigma'     : <[0.065]>,
     'long-desc' : <'BAO Percival data (arXiv:0907.1660).'>
   }
-}
+)

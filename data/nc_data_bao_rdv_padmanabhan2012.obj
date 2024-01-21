@@ -1,4 +1,4 @@
-{
+(
   'NcDataBaoRDV', 
   {
     'desc'      : <'SDSS-DR7-rec -- Padmanabhan (2012), BAO Sample R-Dv'>, 
@@ -12,4 +12,4 @@
     'is-rDV'    : <false>,
     'long-desc' : <'BAO SDSS-DR7-rec Padmanabhan et al. (2012) (arXiv:1202.0090) - r_s computed using EH1998.\nCorrection for r_{s,EH}/r_{sCAMB} = 1.025 included, see Kazin (2014).'>
   }
-}
+)

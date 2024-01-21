@@ -1232,7 +1232,7 @@ void
 test_ncm_fit_equality_constraints (TestNcmFit *test, gconstpointer pdata)
 {
   NcmFit *fit       = test->fit;
-  NcmMSetFunc *func = NCM_MSET_FUNC (ncm_prior_gauss_param_new (ncm_model_mvnd_id (), 0, 1.0, 1.0));
+  NcmMSetFunc *func = NCM_MSET_FUNC (ncm_prior_gauss_param_new_name ("NcmModelMVND:mu_0", 1.0, 1.0));
 
   ncm_fit_add_equality_constraint (fit, func, 1.0e-5);
 
@@ -1289,7 +1289,7 @@ void
 test_ncm_fit_inequality_constraints (TestNcmFit *test, gconstpointer pdata)
 {
   NcmFit *fit       = test->fit;
-  NcmMSetFunc *func = NCM_MSET_FUNC (ncm_prior_gauss_param_new (ncm_model_mvnd_id (), 0, 1.0, 1.0));
+  NcmMSetFunc *func = NCM_MSET_FUNC (ncm_prior_gauss_param_new_name ("NcmModelMVND:mu_0", 1.0, 1.0));
 
   ncm_fit_add_inequality_constraint (fit, func, 1.0e-5);
 
@@ -1347,8 +1347,8 @@ test_ncm_fit_serialize_constraints (TestNcmFit *test, gconstpointer pdata)
 {
   NcmFit *fit        = test->fit;
   NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  NcmMSetFunc *func0 = NCM_MSET_FUNC (ncm_prior_gauss_param_new (ncm_model_mvnd_id (), 0, 1.0, 1.0));
-  NcmMSetFunc *func1 = NCM_MSET_FUNC (ncm_prior_gauss_param_new (ncm_model_mvnd_id (), 1, 1.1, 1.1));
+  NcmMSetFunc *func0 = NCM_MSET_FUNC (ncm_prior_gauss_param_new_name ("NcmModelMVND:mu_0", 1.0, 1.0));
+  NcmMSetFunc *func1 = NCM_MSET_FUNC (ncm_prior_gauss_param_new_name ("NcmModelMVND:mu_1", 1.1, 1.1));
   NcmFit *fit_dup;
 
   ncm_fit_add_inequality_constraint (fit, func0, 1.0e-5);
@@ -1365,8 +1365,8 @@ test_ncm_fit_serialize_constraints (TestNcmFit *test, gconstpointer pdata)
     gdouble mu, sigma;
     gdouble tol0_dup;
     gdouble tol1_dup;
-    NcmModelID mid;
-    guint pid;
+    gchar *parameter_name;
+    gchar *model_ns;
 
     ncm_fit_get_inequality_constraint (fit_dup, 0, &func0_dup, &tol0_dup);
     ncm_fit_get_equality_constraint (fit_dup, 0, &func1_dup, &tol1_dup);
@@ -1383,26 +1383,32 @@ test_ncm_fit_serialize_constraints (TestNcmFit *test, gconstpointer pdata)
     g_object_get (func0_dup,
                   "mu", &mu,
                   "sigma", &sigma,
-                  "mid", &mid,
-                  "pid", &pid,
+                  "model-ns", &model_ns,
+                  "parameter-name", &parameter_name,
                   NULL);
 
     g_assert_true (mu == 1.0);
     g_assert_true (sigma == 1.0);
-    g_assert_true (mid == ncm_model_mvnd_id ());
-    g_assert_true (pid == 0);
+    g_assert_cmpstr (model_ns, ==, "NcmModelMVND");
+    g_assert_cmpstr (parameter_name, ==, "mu_0");
+
+    g_clear_pointer (&model_ns, g_free);
+    g_clear_pointer (&parameter_name, g_free);
 
     g_object_get (func1_dup,
                   "mu", &mu,
                   "sigma", &sigma,
-                  "mid", &mid,
-                  "pid", &pid,
+                  "model-ns", &model_ns,
+                  "parameter-name", &parameter_name,
                   NULL);
 
     g_assert_true (mu == 1.1);
     g_assert_true (sigma == 1.1);
-    g_assert_true (mid == ncm_model_mvnd_id ());
-    g_assert_true (pid == 1);
+    g_assert_cmpstr (model_ns, ==, "NcmModelMVND");
+    g_assert_cmpstr (parameter_name, ==, "mu_1");
+
+    g_clear_pointer (&model_ns, g_free);
+    g_clear_pointer (&parameter_name, g_free);
 
     g_assert_true (tol0_dup == 1.0e-5);
     g_assert_true (tol1_dup == 1.0e-5);
@@ -1516,7 +1522,7 @@ test_ncm_fit_fisher_obs (TestNcmFit *test, gconstpointer pdata)
 
   /* Testing error propagation */
   {
-    NcmMSetFunc *func = NCM_MSET_FUNC (ncm_prior_gauss_param_new (ncm_model_mvnd_id (), 0, 0.0, 1.0));
+    NcmMSetFunc *func = NCM_MSET_FUNC (ncm_prior_gauss_param_new_name ("NcmModelMVND:mu_0", 0.0, 1.0));
     NcmModel *model   = NCM_MODEL (ncm_mset_peek (ncm_fit_peek_mset (fit), ncm_model_mvnd_id ()));
     const gdouble val = ncm_model_orig_vparam_get (model, NCM_MODEL_MVND_MEAN, 0);
     NcmMatrix *cov    = ncm_fit_get_covar (fit);
