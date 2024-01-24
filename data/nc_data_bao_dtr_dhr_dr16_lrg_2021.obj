@@ -1,4 +1,4 @@
-{
+(
   'NcDataBaoDtrDHr', 
   {
     'desc'      : <'SDSS DR16 -- Alam et al., PRD 103, 083533 (2021); BAO LRG Sample(D_t / r_sd, DH / r_sd)'>, 
@@ -11,4 +11,4 @@
                    ]>, 
     'z'         : <[0.698, 0.698]>
   }
-}
+)

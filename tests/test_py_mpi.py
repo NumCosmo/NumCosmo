@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# example_mpi_fit.py
+# test_py_mpi.py
 #
 # Mon May 22 16:00:00 2023
 # Copyright  2023  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# example_mpi_fit.py
+# test_py_mpi.py
 # Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
@@ -101,7 +101,7 @@ def test_mpi_job_fit_funcs_run_array() -> None:
     )
 
     funcs = Ncm.ObjArray.new()
-    funcs.add(Ncm.PriorGaussParam.new(Ncm.ModelMVND.id(), 0, 0.0, 1.0))
+    funcs.add(Ncm.PriorGaussParam.new_name("NcmModelMVND:mu_0", 0.0, 1.0))
     mj = Ncm.MPIJobFit.new(fit, funcs)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
@@ -193,7 +193,7 @@ def test_mpi_job_fit_funcs_run_array_async() -> None:
     )
 
     funcs = Ncm.ObjArray.new()
-    funcs.add(Ncm.PriorGaussParam.new(Ncm.ModelMVND.id(), 0, 0.0, 1.0))
+    funcs.add(Ncm.PriorGaussParam.new_name("NcmModelMVND:mu_0", 0.0, 1.0))
     mj = Ncm.MPIJobFit.new(fit, funcs)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
@@ -334,7 +334,7 @@ def test_mpi_job_feval_funcs_run_array() -> None:
     )
 
     funcs = Ncm.ObjArray.new()
-    funcs.add(Ncm.PriorGaussParam.new(Ncm.ModelMVND.id(), 0, 0.0, 1.0))
+    funcs.add(Ncm.PriorGaussParam.new_name("NcmModelMVND:mu_0", 0.0, 1.0))
     mj = Ncm.MPIJobFEval.new(fit, funcs)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
@@ -425,7 +425,7 @@ def test_mpi_job_feval_funcs_run_array_async() -> None:
     )
 
     funcs = Ncm.ObjArray.new()
-    funcs.add(Ncm.PriorGaussParam.new(Ncm.ModelMVND.id(), 0, 0.0, 1.0))
+    funcs.add(Ncm.PriorGaussParam.new_name("NcmModelMVND:mu_0", 0.0, 1.0))
     mj = Ncm.MPIJobFEval.new(fit, funcs)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
@@ -525,7 +525,7 @@ def test_mpi_job_mcmc_funcs_run_array():
     )
 
     funcs = Ncm.ObjArray.new()
-    funcs.add(Ncm.PriorGaussParam.new(Ncm.ModelMVND.id(), 0, 0.0, 1.0))
+    funcs.add(Ncm.PriorGaussParam.new_name("NcmModelMVND:mu_0", 0.0, 1.0))
     mj = Ncm.MPIJobMCMC.new(fit, funcs)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
@@ -632,7 +632,7 @@ def test_mpi_job_mcmc_funcs_run_array_async():
     )
 
     funcs = Ncm.ObjArray.new()
-    funcs.add(Ncm.PriorGaussParam.new(Ncm.ModelMVND.id(), 0, 0.0, 1.0))
+    funcs.add(Ncm.PriorGaussParam.new_name("NcmModelMVND:mu_0", 0.0, 1.0))
     mj = Ncm.MPIJobMCMC.new(fit, funcs)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)

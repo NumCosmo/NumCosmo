@@ -394,7 +394,7 @@ void
 test_ncm_object_with_tuples_from_string (TestNcmObjectWithTuples *test, gconstpointer pdata)
 {
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  gchar *string     = g_strdup_printf ("{'NcmObjectWithTuples', {'dt2': <(%24.16g,%24.16g)>, 'dt3': <(%24.16g,%24.16g,%24.16g)>}}",
+  gchar *string     = g_strdup_printf ("('NcmObjectWithTuples', {'dt2': <(%24.16g,%24.16g)>, 'dt3': <(%24.16g,%24.16g,%24.16g)>})",
                                        test->obj->dt2->elements[0],
                                        test->obj->dt2->elements[1],
                                        test->obj->dt3->elements[0],

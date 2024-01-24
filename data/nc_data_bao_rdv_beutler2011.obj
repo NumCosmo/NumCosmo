@@ -1,4 +1,4 @@
-{
+(
   'NcDataBaoRDV', 
   {
     'desc'      : <'6dFGRS -- Beutler (2011), BAO Sample R-Dv'>, 
@@ -10,4 +10,4 @@
     'is-rDV'    : <true>,
     'long-desc' : <'BAO 6dFGRS Beutler et al. (2011) (arXiv:1106.3366) - r_s computed using EH1998.\nCorrection for r_{s,EH}/r_{sCAMB} = 1.027 included, see Kazin (2014).'>
   }
-}
+)

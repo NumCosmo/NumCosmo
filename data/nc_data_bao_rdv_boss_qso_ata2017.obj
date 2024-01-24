@@ -1,4 +1,4 @@
-{
+(
   'NcDataBaoRDV',
   {
     'desc'      : <'BOSS DR14 QSO -- Ata et al. (2017), BAO Sample Dv_r'>,
@@ -13,4 +13,4 @@
     Mpc. We then implemented it as Dv/r_d dividing the mean and error bar by the fiducial
     value.'>
   }
-}
+)

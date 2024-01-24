@@ -300,8 +300,28 @@ python_tests = [
         'source': 'test_py_dataset.py',
     },
     {
+        'name': 'py_prior',
+        'source': 'test_py_prior.py',
+    },
+    {
         'name': 'py_ode_spline',
         'source': 'test_py_ode_spline.py',
+    },
+    {
+        'name': 'py_serialize',
+        'source': 'test_py_serialize.py',
+    },
+    {
+        'name': 'py_obj_array',
+        'source': 'test_py_obj_array.py',
+    },
+    {
+        'name': 'py_mset',
+        'source': 'test_py_mset.py',
+    },
+    {
+        'name': 'py_test_data_objects',
+        'source': 'test_py_test_data_objects.py',
     },
 ]
 

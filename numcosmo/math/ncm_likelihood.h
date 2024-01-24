@@ -50,16 +50,7 @@ NcmDataset *ncm_likelihood_peek_dataset (NcmLikelihood *lh);
 NcmVector *ncm_likelihoood_peek_m2lnL_v (NcmLikelihood *lh);
 
 void ncm_likelihood_priors_add (NcmLikelihood *lh, NcmPrior *prior);
-
-void ncm_likelihood_priors_add_gauss_param (NcmLikelihood *lh, NcmModelID mid, guint pid, gdouble mu, gdouble sigma);
-void ncm_likelihood_priors_add_gauss_param_pindex (NcmLikelihood *lh, const NcmMSetPIndex *pi, gdouble mu, gdouble sigma);
-void ncm_likelihood_priors_add_gauss_param_name (NcmLikelihood *lh, NcmMSet *mset, const gchar *name, gdouble mu, gdouble sigma);
-void ncm_likelihood_priors_add_gauss_func (NcmLikelihood *lh, NcmMSetFunc *mean_func, gdouble mu, gdouble sigma, gdouble var);
-
-void ncm_likelihood_priors_add_flat_param (NcmLikelihood *lh, NcmModelID mid, guint pid, gdouble x_low, gdouble x_upp, gdouble scale);
-void ncm_likelihood_priors_add_flat_param_pindex (NcmLikelihood *lh, const NcmMSetPIndex *pi, gdouble x_low, gdouble x_upp, gdouble scale);
-void ncm_likelihood_priors_add_flat_param_name (NcmLikelihood *lh, NcmMSet *mset, const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale);
-void ncm_likelihood_priors_add_flat_func (NcmLikelihood *lh, NcmMSetFunc *mean_func, gdouble x_low, gdouble x_upp, gdouble scale, gdouble variable);
+void ncm_likelihood_priors_take (NcmLikelihood *lh, NcmPrior *prior);
 
 NcmPrior *ncm_likelihood_priors_peek_f (NcmLikelihood *lh, guint i);
 guint ncm_likelihood_priors_length_f (NcmLikelihood *lh);

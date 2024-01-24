@@ -87,7 +87,7 @@ test_nc_galaxy_wl_ellipticity_kde_new (TestNcGalaxyWLEllipticityKDE *test, gcons
   NcDistance *dist                = nc_distance_new (3.0);
   NcWLSurfaceMassDensity *smd     = nc_wl_surface_mass_density_new (dist);
   NcmRNG *rng                     = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  const gint ndata                = 10000;
+  const guint ndata               = 10000;
   const gdouble n                 = 10000;
   NcmMatrix *data                 = ncm_matrix_new (n, 3);
   NcmVector *z_vec                = ncm_vector_new (n);
