@@ -519,7 +519,7 @@ _ncm_fit_reset (NcmFit *fit)
 /**
  * ncm_fit_factory:
  * @ftype: a #NcmFitType
- * @algo_name: name of the algorithm to be used
+ * @algo_name: (nullable): name of the algorithm to be used
  * @lh: a #NcmLikelihood
  * @mset: a #NcmMSet
  * @gtype: a #NcmFitGradType
