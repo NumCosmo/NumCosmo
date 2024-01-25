@@ -150,7 +150,6 @@ def numcosmo_run_fit(
     model_builders = ser.dict_str_from_yaml_file(builders_file.absolute().as_posix())
 
     for model_builder_name in model_builders.keys():
-        print(f"BUILDER: {model_builder_name}")
         model_builder = model_builders.get(model_builder_name)
         model_builder.create()
 
@@ -159,7 +158,7 @@ def numcosmo_run_fit(
     if experiment_objects.peek("likelihood") is None:
         raise RuntimeError("No likelihood found in experiment file")
 
-    likelihood = experiment_objects.get("likelihood")
+    likelihood: Ncm.Likelihood = experiment_objects.get("likelihood")
 
     if experiment_objects.peek("model-set") is None:
         raise RuntimeError("No model-set found in experiment file")
@@ -171,11 +170,7 @@ def numcosmo_run_fit(
     fit = Ncm.Fit.factory(runner.genum, algorithm, likelihood, mset, grad_type.genum)
 
     fit.log_info()
-    fit.log_start()
-    success = fit.run(run_messages.genum)
-
-    if not success:
-        raise RuntimeError("Fit failed.")
+    fit.run(run_messages.genum)
 
 
 @app_run.command()

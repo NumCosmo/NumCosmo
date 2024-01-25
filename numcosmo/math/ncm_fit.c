@@ -1521,7 +1521,6 @@ ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
 {
   NcmFitPrivate *self = ncm_fit_get_instance_private (fit);
   gboolean run;
-  gdouble m2lnL_i;
 
   self->mtype = mtype;
 
@@ -1529,19 +1528,24 @@ ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_log_start (fit);
   g_timer_start (self->timer);
 
-  ncm_fit_m2lnL_val (fit, &m2lnL_i);
 
-  if (gsl_finite (m2lnL_i))
+  if (ncm_mset_fparam_len (self->mset) == 0)
   {
-    if (ncm_mset_fparam_len (self->mset) == 0)
-      run = _ncm_fit_run_empty (fit, mtype);
-    else
-      run = NCM_FIT_GET_CLASS (fit)->run (fit, mtype);
+    run = _ncm_fit_run_empty (fit, mtype);
   }
   else
   {
-    g_warning ("ncm_fit_run: initial point provides m2lnL = % 22.15g, giving up.", m2lnL_i);
-    run = FALSE;
+    gdouble m2lnL_i;
+
+    ncm_fit_m2lnL_val (fit, &m2lnL_i);
+
+    if (!gsl_finite (m2lnL_i))
+    {
+      g_warning ("ncm_fit_run: initial point provides m2lnL = % 22.15g, giving up.", m2lnL_i);
+      run = FALSE;
+    }
+
+    run = NCM_FIT_GET_CLASS (fit)->run (fit, mtype);
   }
 
   ncm_fit_state_set_elapsed_time (self->fstate, g_timer_elapsed (self->timer, NULL));

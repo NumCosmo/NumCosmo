@@ -219,6 +219,8 @@ def convert_single_likelihood(
         for _, name in config.keys(section=likelihood_module)
     }
     build_parameters = NamedParameters(build_parameters_dict)
+    if build_parameters.get_bool("require_nonlinear_pk", False):
+        mapping.require_nonlinear_pk = True
 
     # Using Firecrown's NumCosmoFactory to create the NumCosmo likelihood.
     numcosmo_factory = NumCosmoFactory(
@@ -251,6 +253,7 @@ def create_numcosmo_mapping(
     matter_ps: LinearMatterPowerSpectrum = LinearMatterPowerSpectrum.NONE,
     nonlin_matter_ps: NonLinearMatterPowerSpectrum = NonLinearMatterPowerSpectrum.NONE,
     distance_max_z: float = 10.0,
+    require_nonlinear_pk: bool = False,
 ) -> MappingNumCosmo:
     """Creates a NumCosmo mapping to be used in the likelihoods.
     converted from Cosmosis."""
@@ -258,6 +261,7 @@ def create_numcosmo_mapping(
     ps_ml = None
     ps_mnl = None
     dist = Nc.Distance.new(distance_max_z)
+    # dist.comoving_distance_spline.set_reltol(1.0e-5)
 
     if matter_ps == LinearMatterPowerSpectrum.BBKS:
         transfer_bbks = Nc.TransferFuncBBKS.new()
@@ -274,11 +278,14 @@ def create_numcosmo_mapping(
                 "Non-linear matter power spectrum is HALOFIT but linear matter"
                 " power spectrum is not set."
             )
-        ps_mnl = Nc.PowspecMNLHaloFit.new(
-            psml=ps_ml, zmaxnl=distance_max_z, reltol=1.0e-5
-        )
+        ps_mnl = Nc.PowspecMNLHaloFit.new(ps_ml, 3.0, 1.0e-5)
 
-    return MappingNumCosmo(p_ml=ps_ml, p_mnl=ps_mnl, dist=dist)
+    return MappingNumCosmo(
+        p_ml=ps_ml,
+        p_mnl=ps_mnl,
+        dist=dist,
+        require_nonlinear_pk=require_nonlinear_pk,
+    )
 
 
 def convert_cosmology(
@@ -398,6 +405,7 @@ def convert_likelihoods(
     mset = Ncm.MSet.empty_new()
     dataset = Ncm.Dataset.new()
     likelihood = Ncm.Likelihood.new(dataset)
+
     if mapping is None:
         mapping = create_numcosmo_mapping()
 
