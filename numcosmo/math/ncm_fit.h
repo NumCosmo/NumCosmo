@@ -84,6 +84,9 @@ typedef void (*_NcmFitLSJ) (NcmFit *fit, NcmMatrix *J);
 typedef void (*_NcmFitLSFJ) (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 typedef void (*_NcmFitM2lnLGrad) (NcmFit *fit, NcmVector *grad);
 typedef void (*_NcmFitM2lnLValGrad) (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
+typedef void (*NcmFitWriter) (NcmFit *fit, const gchar *msg);
+typedef void (*NcmFitUpdater) (NcmFit *fit, guint n);
+typedef void (*NcmFitUpdateChange) (NcmFit *fit);
 
 /**
  * NcmFitGrad:
@@ -180,6 +183,7 @@ void ncm_fit_get_equality_constraint (NcmFit *fit, guint i, NcmMSetFunc **func, 
 void ncm_fit_get_inequality_constraint (NcmFit *fit, guint i, NcmMSetFunc **func, gdouble *tot);
 
 const gchar *ncm_fit_get_desc (NcmFit *fit);
+void ncm_fit_set_logger (NcmFit *fit, NcmFitWriter writer, NcmFitUpdater updater, NcmFitUpdateChange start_update, NcmFitUpdateChange end_update);
 void ncm_fit_log_info (NcmFit *fit);
 void ncm_fit_log_covar (NcmFit *fit);
 void ncm_fit_log_start (NcmFit *fit);
@@ -223,7 +227,7 @@ gdouble ncm_fit_covar_fparam_cor (NcmFit *fit, guint fpi1, guint fpi2);
 
 void ncm_fit_reset (NcmFit *fit);
 gboolean ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype);
-void ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, const gdouble reltol, NcmMSet *save_mset, const gchar *mset_file);
+gboolean ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, const gdouble reltol, NcmMSet *save_mset, const gchar *mset_file);
 
 NcmMatrix *ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gdouble stop, guint nsteps);
 gdouble ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof);

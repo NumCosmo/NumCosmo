@@ -28,6 +28,7 @@
 from typing import Optional, Annotated
 from pathlib import Path
 import typer
+from tqdm import tqdm
 
 from numcosmo_py import Ncm
 from numcosmo_py.external.cosmosis import (
@@ -108,6 +109,33 @@ def numcosmo_from_cosmosis(
     ser.dict_str_to_yaml_file(experiment, outfile.absolute().as_posix())
 
 
+class NcmFitLogger:
+    """Class implementing logging functions for Ncm.Fit"""
+
+    def __init__(self) -> None:
+        self.t = tqdm(desc="# Computing best fit", total=10)
+
+    def write_progress(self, _fit: Ncm.Fit, message: str):
+        """Write progress to tqdm."""
+        self.t.write(message, end="")
+
+    def update_progress(self, fit: Ncm.Fit, _n):
+        """Update progress bar."""
+        t = self.t
+        feval = fit.peek_state().get_func_eval() - t.n
+        if t.n + feval > t.total:
+            t.total *= 2
+
+        t.update(feval)
+
+    def start_update(self, _fit: Ncm.Fit):
+        """Starting updates."""
+
+    def end_update(self, _fit: Ncm.Fit):
+        """Ending updates"""
+        self.t.close()
+
+
 @app_run.command(name="fit")
 def numcosmo_run_fit(
     experiment: Annotated[
@@ -169,8 +197,17 @@ def numcosmo_run_fit(
 
     fit = Ncm.Fit.factory(runner.genum, algorithm, likelihood, mset, grad_type.genum)
 
+    fit_logger = NcmFitLogger()
+    fit.set_logger(
+        fit_logger.write_progress,
+        fit_logger.update_progress,
+        fit_logger.start_update,
+        fit_logger.end_update,
+    )
+
     fit.log_info()
     fit.run(run_messages.genum)
+    # fit.log_end()
 
 
 @app_run.command()
