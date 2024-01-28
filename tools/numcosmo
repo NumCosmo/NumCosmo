@@ -25,10 +25,9 @@
 """ NumCosmo script to perform different tasks.
 """
 
-from typing import Optional, Annotated
+from typing import Optional, Annotated, Tuple
 from pathlib import Path
 import typer
-from tqdm import tqdm
 
 from numcosmo_py import Ncm
 from numcosmo_py.external.cosmosis import (
@@ -41,14 +40,14 @@ from numcosmo_py.sampling import (
     FitRunner,
     FitRunMessages,
     FitGradType,
+    NcmFitLogger,
+    set_ncm_console,
     check_runner_algorithm,
 )
 
-app = typer.Typer(no_args_is_help=True)
-app_run = typer.Typer(no_args_is_help=True)
+app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
+app_run = typer.Typer(no_args_is_help=True, help="Run different statistical analyses.")
 app.add_typer(app_run, name="run")
-
-Ncm.cfg_init()
 
 
 @app.command(name="from-cosmosis")
@@ -87,6 +86,8 @@ def numcosmo_from_cosmosis(
     :param distance_max_z: Max distance to optimize distance computations.
     """
 
+    Ncm.cfg_init()
+
     if outfile is None:
         outfile = Path(inifile.stem + ".yaml")
 
@@ -109,31 +110,52 @@ def numcosmo_from_cosmosis(
     ser.dict_str_to_yaml_file(experiment, outfile.absolute().as_posix())
 
 
-class NcmFitLogger:
-    """Class implementing logging functions for Ncm.Fit"""
+@app_run.command(
+    name="test", help="Loads the experiment file and computes the likelihood once."
+)
+def numcosmo_run_test(
+    experiment: Annotated[
+        Path, typer.Argument(help="Path to the experiment file to fit.")
+    ],
+) -> None:
+    """Test command."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
-    def __init__(self) -> None:
-        self.t = tqdm(desc="# Computing best fit", total=10)
+    builders_file = experiment.with_suffix(".builders.yaml")
+    model_builders = ser.dict_str_from_yaml_file(builders_file.absolute().as_posix())
 
-    def write_progress(self, _fit: Ncm.Fit, message: str):
-        """Write progress to tqdm."""
-        self.t.write(message, end="")
+    for model_builder_name in model_builders.keys():
+        model_builder = model_builders.get(model_builder_name)
+        model_builder.create()
 
-    def update_progress(self, fit: Ncm.Fit, _n):
-        """Update progress bar."""
-        t = self.t
-        feval = fit.peek_state().get_func_eval() - t.n
-        if t.n + feval > t.total:
-            t.total *= 2
+    # We need to initialize NumCosmo after creating the model builders
+    # this is necessary because when using MPI, the model builders
+    # should be created in all processes before initializing NumCosmo.
+    Ncm.cfg_init()
+    set_ncm_console()
 
-        t.update(feval)
+    experiment_objects = ser.dict_str_from_yaml_file(experiment.absolute().as_posix())
 
-    def start_update(self, _fit: Ncm.Fit):
-        """Starting updates."""
+    if experiment_objects.peek("likelihood") is None:
+        raise RuntimeError("No likelihood found in experiment file")
 
-    def end_update(self, _fit: Ncm.Fit):
-        """Ending updates"""
-        self.t.close()
+    likelihood: Ncm.Likelihood = experiment_objects.get("likelihood")
+
+    if experiment_objects.peek("model-set") is None:
+        raise RuntimeError("No model-set found in experiment file")
+
+    mset: Ncm.MSet = experiment_objects.get("model-set")
+    mset.param_set_all_ftype(Ncm.ParamType.FIXED)
+
+    fit = Ncm.Fit.factory(
+        FitRunner.GSL_MMS.genum,
+        None,
+        likelihood,
+        mset,
+        FitGradType.NUMDIFF_FORWARD.genum,
+    )
+    fit.log_info()
+    fit.run(FitRunMessages.SIMPLE.genum)
 
 
 @app_run.command(name="fit")
@@ -146,31 +168,52 @@ def numcosmo_run_fit(
         FitRunner,
         typer.Option(
             help="Algorithm to use for the fit.",
-            case_sensitive=False,
         ),
     ] = FitRunner.NLOPT.value,
     algorithm: Annotated[
         Optional[str],
         typer.Option(
             help="Algorithm to use for the fit.",
-            case_sensitive=False,
         ),
     ] = None,
     grad_type: Annotated[
         FitGradType,
         typer.Option(
             help="Gradient type to use for the fit.",
-            case_sensitive=False,
         ),
     ] = FitGradType.NUMDIFF_FORWARD.value,
     run_messages: Annotated[
         FitRunMessages,
         typer.Option(
             help="Verbosity level for the fit.",
-            case_sensitive=False,
         ),
     ] = FitRunMessages.SIMPLE.value,
-):
+    output: Annotated[
+        Optional[Path],
+        typer.Option(
+            help="Path to the output file, if given, the best fit is written to"
+            " this file, otherwise the best fit is not saved."
+        ),
+    ] = None,
+    restart: Annotated[
+        Optional[Tuple[float, float]],
+        typer.Option(
+            help=(
+                "Restart the fit until the given the value of m2lnL varies less"
+                " than the given tolerance (abstol, reltol)."
+            ),
+        ),
+    ] = None,
+    starting_point: Annotated[
+        Optional[Path],
+        typer.Option(
+            help=(
+                "Path to the file containing the starting point for the fit. "
+                "The output of a previous fit can be used."
+            ),
+        ),
+    ] = None,
+) -> None:
     """Computes the best fit of the model to the data."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
@@ -180,6 +223,12 @@ def numcosmo_run_fit(
     for model_builder_name in model_builders.keys():
         model_builder = model_builders.get(model_builder_name)
         model_builder.create()
+
+    # We need to initialize NumCosmo after creating the model builders
+    # this is necessary because when using MPI, the model builders
+    # should be created in all processes before initializing NumCosmo.
+    Ncm.cfg_init()
+    console = set_ncm_console()
 
     experiment_objects = ser.dict_str_from_yaml_file(experiment.absolute().as_posix())
 
@@ -191,13 +240,26 @@ def numcosmo_run_fit(
     if experiment_objects.peek("model-set") is None:
         raise RuntimeError("No model-set found in experiment file")
 
-    mset = experiment_objects.get("model-set")
+    mset: Ncm.MSet = experiment_objects.get("model-set")
 
     check_runner_algorithm(runner, algorithm)
 
-    fit = Ncm.Fit.factory(runner.genum, algorithm, likelihood, mset, grad_type.genum)
+    if starting_point is not None:
+        if not starting_point.exists():
+            raise RuntimeError(f"Starting point file {starting_point} not found.")
+        ser.reset(False)
+        saved_mset: Ncm.MSet = ser.from_yaml_file(starting_point.absolute().as_posix())
+        assert isinstance(saved_mset, Ncm.MSet)
+        if not mset.cmp(saved_mset, True):
+            raise RuntimeError(
+                f"Starting point file {starting_point} does not match experiment."
+            )
+        mset.param_set_mset(saved_mset)
 
-    fit_logger = NcmFitLogger()
+    fit = Ncm.Fit.factory(runner.genum, algorithm, likelihood, mset, grad_type.genum)
+    fit.log_info()
+
+    fit_logger = NcmFitLogger(console)
     fit.set_logger(
         fit_logger.write_progress,
         fit_logger.update_progress,
@@ -205,9 +267,86 @@ def numcosmo_run_fit(
         fit_logger.end_update,
     )
 
+    if restart is None:
+        fit.run(run_messages.genum)
+    else:
+        if restart[0] <= 0.0 and restart[1] <= 0.0:
+            raise RuntimeError(f"Invalid tolerance for restart {restart}.")
+        output_filename = None if output is None else output.absolute().as_posix()
+        fit.run_restart(
+            run_messages.genum, restart[0], restart[1], None, output_filename
+        )
+
+    if output is not None:
+        ser.reset(False)
+        ser.to_yaml_file(fit.peek_mset(), output.as_posix())
+
+
+@app_run.command(name="fisher")
+def numcosmo_run_fisher(
+    experiment: Annotated[
+        Path, typer.Argument(help="Path to the experiment file to fit.")
+    ],
+    *,
+    starting_point: Annotated[
+        Optional[Path],
+        typer.Option(
+            help=(
+                "Path to the file containing the starting point for the fit. "
+                "The output of a previous fit can be used."
+            ),
+        ),
+    ] = None,
+    output: Annotated[
+        Optional[Path],
+        typer.Option(
+            help="Path to the output file, if given, the best fit is written to"
+            " this file, otherwise the best fit is not saved."
+        ),
+    ] = None,
+) -> None:
+    """Computes the Fisher matrix."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+
+    builders_file = experiment.with_suffix(".builders.yaml")
+    model_builders = ser.dict_str_from_yaml_file(builders_file.absolute().as_posix())
+
+    for model_builder_name in model_builders.keys():
+        model_builder = model_builders.get(model_builder_name)
+        model_builder.create()
+
+    # We need to initialize NumCosmo after creating the model builders
+    # this is necessary because when using MPI, the model builders
+    # should be created in all processes before initializing NumCosmo.
+    Ncm.cfg_init()
+    console = set_ncm_console()
+
+    experiment_objects = ser.dict_str_from_yaml_file(experiment.absolute().as_posix())
+
+    if experiment_objects.peek("likelihood") is None:
+        raise RuntimeError("No likelihood found in experiment file")
+
+    likelihood: Ncm.Likelihood = experiment_objects.get("likelihood")
+
+    if experiment_objects.peek("model-set") is None:
+        raise RuntimeError("No model-set found in experiment file")
+
+    mset: Ncm.MSet = experiment_objects.get("model-set")
+
+    fit = Ncm.Fit.factory(FitRunner.GSL_MMS.genum, None, likelihood, mset)
     fit.log_info()
-    fit.run(run_messages.genum)
-    # fit.log_end()
+
+    fit_logger = NcmFitLogger(console)
+    fit.set_logger(
+        fit_logger.write_progress,
+        fit_logger.update_progress,
+        fit_logger.start_update,
+        fit_logger.end_update,
+    )
+
+    if output is not None:
+        ser.reset(False)
+        ser.to_yaml_file(fit.peek_mset(), output.as_posix())
 
 
 @app_run.command()

@@ -580,6 +580,12 @@ _ncm_fit_message (NcmFit *fit, const gchar *format, ...)
   g_free (message);
 }
 
+static void
+_ncm_fit_message_sepa (NcmFit *fit)
+{
+  _ncm_fit_message (fit, "#----------------------------------------------------------------------------------\n");
+}
+
 /**
  * ncm_fit_factory:
  * @ftype: a #NcmFitType
@@ -1683,7 +1689,7 @@ ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, con
 
       if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
       {
-        ncm_cfg_msg_sepa ();
+        _ncm_fit_message_sepa (fit);
         _ncm_fit_message (fit, "# Restarting:              %s\n", restart ? "yes" : "no");
         _ncm_fit_message (fit, "#  - absolute improvement: %-22.15g\n", (last_m2lnL - m2lnL));
         _ncm_fit_message (fit, "#  - relative improvement: %-22.15g\n", (last_m2lnL - m2lnL) / last_m2lnL);
@@ -1741,6 +1747,9 @@ ncm_fit_set_logger (NcmFit *fit, NcmFitWriter writer, NcmFitUpdater updater, Ncm
 
   self->writer  = writer;
   self->updater = updater;
+
+  self->start_update = start_update;
+  self->end_update   = end_update;
 }
 
 /**
@@ -1757,7 +1766,7 @@ ncm_fit_log_start (NcmFit *fit)
 
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
   {
-    ncm_cfg_msg_sepa ();
+    _ncm_fit_message_sepa (fit);
     _ncm_fit_message (fit, "# Model fitting. Interating using:\n");
     _ncm_fit_message (fit, "#  - solver:            %s\n", ncm_fit_get_desc (fit));
     _ncm_fit_message (fit, "#  - differentiation:   %s\n", self->grad.diff_name);
@@ -1882,7 +1891,7 @@ ncm_fit_log_state (NcmFit *fit)
     _ncm_fit_message (fit, "#  Fit parameters:\n#    ");
 
     for (i = 0; i < ncm_mset_fparam_len (self->mset); i++)
-      _ncm_fit_message (fit, "% -20.15g ", ncm_mset_fparam_get (self->mset, i));
+      _ncm_fit_message (fit, "% -22.15g ", ncm_mset_fparam_get (self->mset, i));
 
     _ncm_fit_message (fit, "\n");
   }

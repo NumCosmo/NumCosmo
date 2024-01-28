@@ -22,6 +22,24 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from typing import Optional, Union, Type
+
+from rich.console import Console
+from rich.highlighter import RegexHighlighter
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    ProgressColumn,
+    SpinnerColumn,
+    Task,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
+from rich.text import Text
+from rich.theme import Theme
+
+
 from .. import Ncm, GEnum
 
 
@@ -86,3 +104,91 @@ def check_runner_algorithm(runner: FitRunner, algorithm: str):
         if Ncm.cfg_get_enum_by_id_name_nick(algorithms, algorithm) is None:
             Ncm.cfg_enum_print_all(algorithms, "Allowed algorithms")
             raise RuntimeError(f"Algorithm {algorithm} not found for runner {runner}.")
+
+
+class EmailHighlighter(RegexHighlighter):
+    """Apply style to anything that looks like an email."""
+
+    base_style = "Ncm."
+    highlights = [
+        r"(?P<FitTypeFIXED>FIXED)",
+        r"(?P<FitTypeFREE>FREE)",
+        r"\b(?P<float>\d+(\.?\d+)?([eE][-+]?\d+)?)\b",
+        r"(?P<float_signed>[-+]\d+(\.?\d+)?([eE][-+]?\d+)?)\b",
+        r"(?P<datetime>\d{2}:\d{2}:\d{2}(\.\d{3,})?)",
+    ]
+
+
+def set_ncm_console() -> Console:
+    """Set console for Ncm.Fit."""
+    theme = Theme(
+        {
+            "Ncm.FitTypeFIXED": "bold red",
+            "Ncm.FitTypeFREE": "bold green",
+            "Ncm.datetime": "bold yellow",
+            "Ncm.float": "bold cyan",
+            "Ncm.float_signed": "bold cyan",
+        }
+    )
+    console = Console(highlighter=EmailHighlighter(), theme=theme)
+
+    Ncm.cfg_set_log_handler(lambda msg: console.print(msg, end=""))
+
+    return console
+
+
+class FitSpeedColumn(ProgressColumn):
+    """Renders human readable transfer speed."""
+
+    def render(self, task: Task) -> Text:
+        """Show data transfer speed."""
+        speed = task.finished_speed or task.speed
+        if speed is None:
+            return Text("?", style="progress.data.speed")
+
+        return Text(f"{speed:.2f}it/s", style="progress.data.speed")
+
+
+class NcmFitLogger:
+    """Class implementing logging functions for Ncm.Fit"""
+
+    def __init__(self, console: Optional[Console]) -> None:
+        self.console = console if console is not None else Console()
+        self.progress = Progress(
+            TextColumn("# [progress.description]{task.description}: "),
+            SpinnerColumn(),
+            MofNCompleteColumn(),
+            BarColumn(bar_width=None),
+            TimeElapsedColumn(),
+            FitSpeedColumn(),
+            TimeRemainingColumn(),
+            transient=False,
+            console=self.console,
+            expand=True,
+        )
+        self.task = self.progress.add_task("Computing best fit")
+
+    def write_progress(self, _fit, message):
+        """Write progress to Rich."""
+        self.console.print(message, end="")
+
+    def update_progress(self, fit, _n):
+        """Update progress bar."""
+        feval = fit.peek_state().get_func_eval()
+        total = self.progress.tasks[0].total
+        if feval > total:
+            new_total = 2 * total
+            self.progress.update(self.task, completed=feval, total=new_total)
+        else:
+            self.progress.update(self.task, completed=feval)
+
+    def start_update(self, _fit):
+        """Starting updates."""
+        self.progress.start()
+        self.progress.start_task(self.task)
+        self.progress.update(self.task, completed=0, total=10)
+
+    def end_update(self, _fit):
+        """Ending updates"""
+        self.progress.stop_task(self.task)
+        self.progress.stop()
