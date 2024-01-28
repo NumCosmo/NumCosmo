@@ -492,6 +492,108 @@ class ABCClusterNCountClass(GObject.GPointer):
     """
     parent_class: NumCosmoMath.ABCClass = ...
 
+class ACosmoLowz(NumCosmoMath.Model):
+    r"""
+    :Constructors:
+
+    ::
+
+        ACosmoLowz(**properties)
+        new() -> NumCosmo.ACosmoLowz
+
+    Object NcACosmoLowz
+
+    Properties from NcACosmoLowz:
+      H0 -> gdouble: H0
+        H_0
+      a -> NcmVector: a
+        a
+      sigma -> NcmVector: sigma
+        \sigma
+      a-length -> guint: a-length
+        a:length
+      sigma-length -> guint: sigma-length
+        \sigma:length
+      H0-fit -> gboolean: H0-fit
+        H_0:fit
+      a-fit -> GVariant: a-fit
+        a:fit
+      sigma-fit -> GVariant: sigma-fit
+        \sigma:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjArray: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        H0: float
+        H0_fit: bool
+        a: NumCosmoMath.Vector
+        a_fit: GLib.Variant
+        a_length: int
+        sigma: NumCosmoMath.Vector
+        sigma_fit: GLib.Variant
+        sigma_length: int
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjArray
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+    props: Props = ...
+    def __init__(
+        self,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        a: NumCosmoMath.Vector = ...,
+        a_fit: GLib.Variant = ...,
+        a_length: int = ...,
+        sigma: NumCosmoMath.Vector = ...,
+        sigma_fit: GLib.Variant = ...,
+        sigma_length: int = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjArray = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
+    def distance_modulus(self, z: float, theta: float, phi: float) -> float: ...
+    @staticmethod
+    def id() -> int: ...
+    @classmethod
+    def new(cls) -> ACosmoLowz: ...
+
+class ACosmoLowzClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        ACosmoLowzClass()
+    """
+    parent_class: NumCosmoMath.ModelClass = ...
+
 class CBE(GObject.Object):
     r"""
     :Constructors:
@@ -4816,6 +4918,85 @@ class DataDistMuClass(GObject.GPointer):
     ::
 
         DataDistMuClass()
+    """
+    parent_class: NumCosmoMath.DataGaussDiagClass = ...
+
+class DataGalaxyLowz(NumCosmoMath.DataGaussDiag):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataGalaxyLowz(**properties)
+        new_empty() -> NumCosmo.DataGalaxyLowz
+
+    Object NcDataGalaxyLowz
+
+    Properties from NcDataGalaxyLowz:
+      pos-z-theta-phi -> NcmMatrix: pos-z-theta-phi
+        Position matrix (z, theta, phi)
+
+    Properties from NcmDataGaussDiag:
+      n-points -> guint: n-points
+        Data sample size
+      w-mean -> gboolean: w-mean
+        Whether to minimize analytically over the weighted mean
+      mean -> NcmVector: mean
+        Data mean
+      sigma -> NcmVector: sigma
+        Data standard deviation
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        pos_z_theta_phi: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        sigma: NumCosmoMath.Vector
+        w_mean: bool
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+    props: Props = ...
+    def __init__(
+        self,
+        pos_z_theta_phi: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        sigma: NumCosmoMath.Vector = ...,
+        w_mean: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
+    @classmethod
+    def new_empty(cls) -> DataGalaxyLowz: ...
+    def peek_position_z_theta_phi(self) -> NumCosmoMath.Matrix: ...
+
+class DataGalaxyLowzClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataGalaxyLowzClass()
     """
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
@@ -17719,6 +17900,13 @@ class ABCClusterNCountSummary(GObject.GEnum):
     BIN_QUANTILE: ABCClusterNCountSummary = ...
     BIN_UNIFORM: ABCClusterNCountSummary = ...
     GAUSS_RBF: ABCClusterNCountSummary = ...
+
+class ACosmoLowzSParams(GObject.GEnum):
+    H0: ACosmoLowzSParams = ...
+
+class ACosmoLowzVParams(GObject.GEnum):
+    ACCEL: ACosmoLowzVParams = ...
+    SHEAR: ACosmoLowzVParams = ...
 
 class ClusterMassAscasoSParams(GObject.GEnum):
     MU_P0: ClusterMassAscasoSParams = ...
