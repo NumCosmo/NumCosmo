@@ -959,6 +959,30 @@ ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2ln
 }
 
 /**
+ * ncm_dataset_has_mean_vector:
+ * @dset: a #NcmDataset
+ *
+ * Whether all the #NcmData in @dset have a ncm_data_mean_vector() method.
+ *
+ * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_mean_vector() method.
+ */
+gboolean
+ncm_dataset_has_mean_vector (NcmDataset *dset)
+{
+  guint i;
+
+  for (i = 0; i < dset->oa->len; i++)
+  {
+    NcmData *data = ncm_dataset_peek_data (dset, i);
+
+    if (!ncm_data_has_mean_vector (data))
+      return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
  * ncm_dataset_mean_vector:
  * @dset: a #NcmDataset
  * @mset: a #NcmMSet

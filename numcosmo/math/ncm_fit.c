@@ -103,16 +103,16 @@ typedef struct _NcmFitPrivate
 
   void (*writer) (NcmFit *fit, const gchar *msg);
   void (*updater) (NcmFit *fit, guint n);
-  void (*start_update) (NcmFit *fit);
-  void (*end_update) (NcmFit *fit);
+  void (*start_update) (NcmFit *fit, const gchar *start_msg);
+  void (*end_update) (NcmFit *fit, const gchar *end_msg);
 } NcmFitPrivate;
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmFit, ncm_fit, G_TYPE_OBJECT)
 
 static void _ncm_fit_writer (NcmFit *fit, const gchar *msg);
 static void _ncm_fit_updater (NcmFit *fit, guint n);
-static void _ncm_fit_start_update (NcmFit *fit);
-static void _ncm_fit_end_update (NcmFit *fit);
+static void _ncm_fit_start_update (NcmFit *fit, const gchar *start_msg);
+static void _ncm_fit_end_update (NcmFit *fit, const gchar *end_msg);
 
 static void
 ncm_fit_init (NcmFit *fit)
@@ -548,7 +548,7 @@ _ncm_fit_updater (NcmFit *fit, guint n)
 }
 
 static void
-_ncm_fit_start_update (NcmFit *fit)
+_ncm_fit_start_update (NcmFit *fit, const gchar *start_msg)
 {
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
 
@@ -556,7 +556,7 @@ _ncm_fit_start_update (NcmFit *fit)
 }
 
 static void
-_ncm_fit_end_update (NcmFit *fit)
+_ncm_fit_end_update (NcmFit *fit, const gchar *start_msg)
 {
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
   const guint niter          = ncm_fit_state_get_niter (self->fstate);
@@ -1772,7 +1772,7 @@ ncm_fit_log_start (NcmFit *fit)
     _ncm_fit_message (fit, "#  - differentiation:   %s\n", self->grad.diff_name);
 
     if ((self->mtype == NCM_FIT_RUN_MSGS_SIMPLE) && (self->start_update != NULL))
-      self->start_update (fit);
+      self->start_update (fit, "Computing best-fit: ");
   }
 }
 
@@ -1830,7 +1830,7 @@ ncm_fit_log_end (NcmFit *fit)
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
   {
     if ((self->mtype == NCM_FIT_RUN_MSGS_SIMPLE) && (self->end_update != NULL))
-      self->end_update (fit);
+      self->end_update (fit, "");
 
     _ncm_fit_message (fit, "#  Minimum found with precision: |df|/f = % 8.5e and |dx| = % 8.5e\n",
                       ncm_fit_state_get_m2lnL_prec (self->fstate),
@@ -1914,7 +1914,7 @@ ncm_fit_log_step (NcmFit *fit)
   if (self->mtype == NCM_FIT_RUN_MSGS_FULL)
     ncm_fit_log_state (fit);
   else if (self->mtype == NCM_FIT_RUN_MSGS_SIMPLE)
-    self->updater (fit, 1);
+    self->updater (fit, ncm_fit_state_get_func_eval (self->fstate));
 
   return;
 }
@@ -2341,6 +2341,10 @@ _ncm_fit_numdiff_m2lnL_val (NcmVector *x, gpointer user_data)
   ncm_mset_fparams_set_vector (self->mset, x);
 
   ncm_likelihood_m2lnL_val (self->lh, self->mset, &res);
+  ncm_fit_state_add_func_eval (self->fstate, 1);
+
+  if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
+    self->updater (fit, ncm_fit_state_get_func_eval (self->fstate));
 
   return res;
 }
@@ -2364,27 +2368,71 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
   GArray *x_a                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *errors_a            = NULL;
   NcmVector *x                = NULL;
-  NcmVector *errors           = NULL;
   GArray *H_a                 = NULL;
+  gdouble worst_relerror      = 0.0;
+  guint i;
 
   g_array_set_size (x_a, free_params_len);
   x = ncm_vector_new_array (x_a);
 
-  ncm_mset_fparams_get_vector (self->mset, x);
-  H_a    = ncm_diff_rf_Hessian_N_to_1 (self->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, &errors_a);
-  errors = ncm_vector_new_array (errors_a);
+  if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
+  {
+    _ncm_fit_message (fit, "# Computing Hessian matrix using numerical differentiation.\n");
+    _ncm_fit_message (fit, "#  - relative tolerance: %.2e\n", reltol);
 
-  if (ncm_vector_get_max (errors) > reltol)
+    self->start_update (fit, "Computing Hessian matrix: ");
+  }
+
+  ncm_mset_fparams_get_vector (self->mset, x);
+  H_a = ncm_diff_rf_Hessian_N_to_1 (self->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, &errors_a);
+
+  for (i = 0; i < H_a->len; i++)
+  {
+    const gdouble abs_error = g_array_index (errors_a, gdouble, i);
+    const gdouble rel_error =  g_array_index (H_a, gdouble, i) != 0.0 ? fabs (abs_error / g_array_index (H_a, gdouble, i)) : abs_error;
+
+    worst_relerror = GSL_MAX (worst_relerror, rel_error);
+  }
+
+
+  if (worst_relerror > reltol)
   {
     const gdouble old_h_ini = ncm_diff_get_ini_h (self->diff);
 
+    ncm_fit_reset (fit);
+
+    if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
+    {
+      self->end_update (fit, "");
+      _ncm_fit_message (fit, "#  - worst relative error: %.2e\n", worst_relerror);
+      _ncm_fit_message (fit, "#  - relative tolerance not reached, trying again with larger initial step.\n");
+      self->start_update (fit, "Computing Hessian matrix: ");
+    }
+
     g_array_unref (H_a);
+    g_clear_pointer (&errors_a, g_array_unref);
 
     /* Trying again with larger initial step. */
     ncm_diff_set_ini_h (self->diff, 4.0e-1);
-    H_a = ncm_diff_rf_Hessian_N_to_1 (self->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, NULL);
+    H_a = ncm_diff_rf_Hessian_N_to_1 (self->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, &errors_a);
     ncm_diff_set_ini_h (self->diff, old_h_ini);
+
+    worst_relerror = 0.0;
+
+    for (i = 0; i < H_a->len; i++)
+    {
+      const gdouble abs_error = g_array_index (errors_a, gdouble, i);
+      const gdouble rel_error =  g_array_index (H_a, gdouble, i) != 0.0 ? fabs (abs_error / g_array_index (H_a, gdouble, i)) : abs_error;
+
+      worst_relerror = GSL_MAX (worst_relerror, rel_error);
+    }
+
+    if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
+      _ncm_fit_message (fit, "#  - worst relative error: %.2e\n", worst_relerror);
   }
+
+  if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
+    self->end_update (fit, "");
 
   ncm_matrix_set_from_array (H, H_a);
   ncm_mset_fparams_set_vector (self->mset, x);
@@ -2393,7 +2441,6 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
   g_array_unref (errors_a);
   g_array_unref (H_a);
   ncm_vector_free (x);
-  ncm_vector_free (errors);
 }
 
 static void
@@ -2479,6 +2526,8 @@ ncm_fit_obs_fisher (NcmFit *fit)
 
   if (ncm_mset_fparam_len (self->mset) == 0)
     g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
+
+  ncm_fit_reset (fit);
 
   _ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
   ncm_matrix_scale (hessian, 0.5);

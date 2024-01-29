@@ -86,7 +86,7 @@ typedef void (*_NcmFitM2lnLGrad) (NcmFit *fit, NcmVector *grad);
 typedef void (*_NcmFitM2lnLValGrad) (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
 typedef void (*NcmFitWriter) (NcmFit *fit, const gchar *msg);
 typedef void (*NcmFitUpdater) (NcmFit *fit, guint n);
-typedef void (*NcmFitUpdateChange) (NcmFit *fit);
+typedef void (*NcmFitUpdateChange) (NcmFit *fit, const gchar *msg);
 
 /**
  * NcmFitGrad:

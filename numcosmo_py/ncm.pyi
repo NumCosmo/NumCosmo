@@ -3124,8 +3124,8 @@ class Fit(GObject.Object):
         self,
         writer: Callable[[Fit, str], None],
         updater: Callable[[Fit, int], None],
-        start_update: Optional[Callable[[Fit], None]] = None,
-        end_update: Optional[Callable[[Fit], None]] = None,
+        start_update: Optional[Callable[[Fit, str], None]] = None,
+        end_update: Optional[Callable[[Fit, str], None]] = None,
     ) -> None: ...
     def set_m2lnL_abstol(self, tol: float) -> None: ...
     def set_m2lnL_reltol(self, tol: float) -> None: ...

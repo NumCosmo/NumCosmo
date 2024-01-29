@@ -21,7 +21,10 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Sampling module for numcosmo."""
+
 from typing import Optional, Union, Type
+from enum import Enum
 
 from rich.console import Console
 from rich.highlighter import RegexHighlighter
@@ -32,13 +35,13 @@ from rich.progress import (
     ProgressColumn,
     SpinnerColumn,
     Task,
+    TaskID,
     TextColumn,
     TimeElapsedColumn,
     TimeRemainingColumn,
 )
 from rich.text import Text
 from rich.theme import Theme
-
 
 from .. import Ncm, GEnum
 
@@ -106,7 +109,7 @@ def check_runner_algorithm(runner: FitRunner, algorithm: str):
             raise RuntimeError(f"Algorithm {algorithm} not found for runner {runner}.")
 
 
-class EmailHighlighter(RegexHighlighter):
+class NcmHighlighter(RegexHighlighter):
     """Apply style to anything that looks like an email."""
 
     base_style = "Ncm."
@@ -130,7 +133,7 @@ def set_ncm_console() -> Console:
             "Ncm.float_signed": "bold cyan",
         }
     )
-    console = Console(highlighter=EmailHighlighter(), theme=theme)
+    console = Console(highlighter=NcmHighlighter(), theme=theme)
 
     Ncm.cfg_set_log_handler(lambda msg: console.print(msg, end=""))
 
@@ -166,29 +169,43 @@ class NcmFitLogger:
             console=self.console,
             expand=True,
         )
-        self.task = self.progress.add_task("Computing best fit")
+        self.task: Optional[TaskID] = None
 
-    def write_progress(self, _fit, message):
+    def write_progress(self, _fit: Ncm.Fit, message: str):
         """Write progress to Rich."""
         self.console.print(message, end="")
 
-    def update_progress(self, fit, _n):
+    def update_progress(self, _fit: Ncm.Fit, n: Union[int, float]):
         """Update progress bar."""
-        feval = fit.peek_state().get_func_eval()
         total = self.progress.tasks[0].total
-        if feval > total:
+        assert self.task is not None
+        assert total is not None
+        if n > total:
             new_total = 2 * total
-            self.progress.update(self.task, completed=feval, total=new_total)
+            self.progress.update(self.task, completed=n, total=new_total)
         else:
-            self.progress.update(self.task, completed=feval)
+            self.progress.update(self.task, completed=n)
 
-    def start_update(self, _fit):
+    def start_update(self, _fit: Ncm.Fit, start_message: str):
         """Starting updates."""
+        self.task = self.progress.add_task(start_message)
         self.progress.start()
         self.progress.start_task(self.task)
         self.progress.update(self.task, completed=0, total=10)
 
-    def end_update(self, _fit):
+    def end_update(self, _fit: Ncm.Fit, _end_message: str):
         """Ending updates"""
+        assert self.task is not None
+
         self.progress.stop_task(self.task)
         self.progress.stop()
+
+        self.progress.remove_task(self.task)
+        self.task = None
+
+
+class FisherType(str, Enum):
+    """Possible linear matter power spectrum models."""
+
+    OBSERVED = "observed"
+    EXPECTED = "expected"
