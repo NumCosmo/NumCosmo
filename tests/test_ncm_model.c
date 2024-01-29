@@ -57,6 +57,7 @@ void test_ncm_model_test_name_index (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_test_dup (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_test_impl (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_param_names (TestNcmModel *test, gconstpointer pdata);
+void test_ncm_model_svparams_len (TestNcmModel *test, gconstpointer pdata);
 
 #define TEST_NCM_MODEL_NTYPES 5
 
@@ -127,6 +128,10 @@ main (gint argc, gchar *argv[])
 
     d = g_strdup_printf ("/ncm/%s/param_names", (gchar *) ccc[i][0]);
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_param_names, ccc[i][2]);
+    g_free (d);
+
+    d = g_strdup_printf ("/ncm/%s/svparams_len", (gchar *) ccc[i][0]);
+    g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_svparams_len, ccc[i][2]);
     g_free (d);
   }
 
@@ -218,7 +223,7 @@ _test_ncm_model_create_reparam (TestNcmModel *test)
   NcmVector *v         = ncm_vector_new (size);
   NcmBootstrap *bstrap = ncm_bootstrap_sized_new (size);
   NcmRNG *rng          = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  guint cdesc_n        = size / 10;
+  guint cdesc_n        = g_test_rand_int_range (size / 2, size);
   NcmReparamLinear *relin;
   guint i;
 
@@ -241,12 +246,11 @@ _test_ncm_model_create_reparam (TestNcmModel *test)
 
   for (i = 0; i < cdesc_n; i++)
   {
-    guint j                 = g_test_rand_int_range (0, size - 1);
-    gchar *new_param        = g_strdup_printf ("new_param_%u", j);
-    gchar *new_param_symbol = g_strdup_printf ("NP_%u", j);
+    gchar *new_param        = g_strdup_printf ("new_param_%u", i);
+    gchar *new_param_symbol = g_strdup_printf ("NP_%u", i);
 
     ncm_reparam_set_param_desc_full (NCM_REPARAM (relin),
-                                     j,
+                                     i,
                                      new_param,
                                      new_param_symbol,
                                      -10.0,
@@ -838,5 +842,19 @@ test_ncm_model_param_names (TestNcmModel *test, gconstpointer pdata)
       name_index += v_len_tot[i];
     }
   }
+}
+
+void
+test_ncm_model_svparams_len (TestNcmModel *test, gconstpointer pdata)
+{
+  NcmModelTest *tm = test->tm;
+  NcmModel *model  = NCM_MODEL (tm);
+  guint sparam_len, vparam_len;
+
+  g_object_get (model, "scalar-params-len", &sparam_len, NULL);
+  g_object_get (model, "vector-params-len", &vparam_len, NULL);
+
+  g_assert_cmpuint (sparam_len, ==, test->sparam_len);
+  g_assert_cmpuint (vparam_len, ==, test->vparam_len);
 }
 
