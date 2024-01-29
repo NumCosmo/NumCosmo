@@ -55,6 +55,7 @@ void test_ncm_model_test_setget_vector (TestNcmModel *test, gconstpointer pdata)
 void test_ncm_model_test_setget_model (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_test_name_index (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_test_dup (TestNcmModel *test, gconstpointer pdata);
+void test_ncm_model_test_impl (TestNcmModel *test, gconstpointer pdata);
 
 #define TEST_NCM_MODEL_NTYPES 5
 
@@ -117,6 +118,10 @@ main (gint argc, gchar *argv[])
 
     d = g_strdup_printf ("/ncm/%s/dup", (gchar *) ccc[i][0]);
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_dup, ccc[i][2]);
+    g_free (d);
+
+    d = g_strdup_printf ("/ncm/%s/impl", (gchar *) ccc[i][0]);
+    g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_impl, ccc[i][2]);
     g_free (d);
   }
 
@@ -705,8 +710,51 @@ test_ncm_model_test_dup (TestNcmModel *test, gconstpointer pdata)
     ncm_assert_cmpdouble (ncm_model_param_get_lower_bound (model, i), ==, ncm_model_param_get_lower_bound (model_dup, i));
     ncm_assert_cmpdouble (ncm_model_param_get_upper_bound (model, i), ==, ncm_model_param_get_upper_bound (model_dup, i));
     ncm_assert_cmpdouble (ncm_model_param_get_abstol (model, i),      ==, ncm_model_param_get_abstol (model_dup, i));
+
+    ncm_assert_cmpdouble (ncm_model_orig_param_get (model, i),             ==, ncm_model_orig_param_get (model_dup, i));
+    ncm_assert_cmpdouble (ncm_model_orig_param_get_scale (model, i),       ==, ncm_model_orig_param_get_scale (model_dup, i));
+    ncm_assert_cmpdouble (ncm_model_orig_param_get_lower_bound (model, i), ==, ncm_model_orig_param_get_lower_bound (model_dup, i));
+    ncm_assert_cmpdouble (ncm_model_orig_param_get_upper_bound (model, i), ==, ncm_model_orig_param_get_upper_bound (model_dup, i));
+    ncm_assert_cmpdouble (ncm_model_orig_param_get_abstol (model, i),      ==, ncm_model_orig_param_get_abstol (model_dup, i));
   }
 
   ncm_model_free (model_dup);
+}
+
+void
+test_ncm_model_test_impl (TestNcmModel *test, gconstpointer pdata)
+{
+  NcmModelTest *tm = test->tm;
+  NcmModel *model  = NCM_MODEL (tm);
+
+  g_assert_true (ncm_model_check_impl_flag (model, 1 << 0));
+  g_assert_true (ncm_model_check_impl_flag (model, 1 << 1));
+  g_assert_true (ncm_model_check_impl_flag (model, 1 << 2));
+  g_assert_false (ncm_model_check_impl_flag (model, 1 << 3));
+  g_assert_false (ncm_model_check_impl_flag (model, 1 << 4));
+  g_assert_false (ncm_model_check_impl_flag (model, 1 << 5));
+
+  g_assert_true (ncm_model_check_impl_opt (model, 0));
+  g_assert_true (ncm_model_check_impl_opt (model, 1));
+  g_assert_true (ncm_model_check_impl_opt (model, 2));
+  g_assert_false (ncm_model_check_impl_opt (model, 3));
+  g_assert_false (ncm_model_check_impl_opt (model, 4));
+  g_assert_false (ncm_model_check_impl_opt (model, 5));
+
+  g_assert_true (ncm_model_check_impl_opts (model, 0, 1, 2, -1));
+  g_assert_true (ncm_model_check_impl_opts (model, 2, 1, 2, -1));
+  g_assert_false (ncm_model_check_impl_opts (model, 2, 1, 4, -1));
+
+  {
+    gint64 flags = 0;
+
+    g_object_get (model, "implementation", &flags, NULL);
+    g_assert_true (flags & (1 << 0));
+    g_assert_true (flags & (1 << 1));
+    g_assert_true (flags & (1 << 2));
+    g_assert_false (flags & (1 << 3));
+    g_assert_false (flags & (1 << 4));
+    g_assert_false (flags & (1 << 5));
+  }
 }
 

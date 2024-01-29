@@ -1534,7 +1534,7 @@ ncm_model_check_impl_flag (NcmModel *model, guint64 impl)
   if (impl == 0)
     return TRUE;
   else
-    return ((NCM_MODEL_GET_CLASS (model)->impl_flag & impl) != 0);
+    return ((NCM_MODEL_GET_CLASS (model)->impl_flag & impl) == impl);
 }
 
 /**
@@ -1561,6 +1561,7 @@ ncm_model_check_impl_opt (NcmModel *model, gint opt)
  * @...: implementation options, must end with -1
  *
  * Checks if the model implements all the @opt1, @opt2, ... options.
+ * The last argument must be -1.
  *
  * Returns: TRUE if the model implements all the @opt1, @opt2, ... options.
  */
