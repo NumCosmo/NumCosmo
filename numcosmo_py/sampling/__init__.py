@@ -119,6 +119,7 @@ class NcmHighlighter(RegexHighlighter):
         r"\b(?P<float>\d+(\.?\d+)?([eE][-+]?\d+)?)\b",
         r"(?P<float_signed>[-+]\d+(\.?\d+)?([eE][-+]?\d+)?)\b",
         r"(?P<datetime>\d{2}:\d{2}:\d{2}(\.\d{3,})?)",
+        r"\b(?P<percentage>\d+(\.?\d+)?%)",
     ]
 
 
@@ -131,6 +132,7 @@ def set_ncm_console() -> Console:
             "Ncm.datetime": "bold yellow",
             "Ncm.float": "bold cyan",
             "Ncm.float_signed": "bold cyan",
+            "Ncm.percentage": "bold magenta",
         }
     )
     console = Console(highlighter=NcmHighlighter(), theme=theme)
