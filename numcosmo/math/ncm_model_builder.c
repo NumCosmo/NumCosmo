@@ -432,7 +432,7 @@ _ncm_model_builder_class_init (gpointer g_class, gpointer class_data)
   if (model_class->main_model_id == -1)
     ncm_mset_model_register_id (model_class, mb->name, mb->desc, NULL, mb->stackable, -1);
 
-  ncm_model_class_set_name_nick (model_class, mb->desc, mb->name);
+  ncm_model_class_set_name_nick (model_class, mb->name, mb->name);
   ncm_model_class_add_params (model_class, mb->sparams->len, mb->vparams->len, 1);
 
   for (i = 0; i < mb->sparams->len; i++)
