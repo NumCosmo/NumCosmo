@@ -25,11 +25,13 @@
 """Tests on NcmModelBuilder class."""
 
 
+from typing import cast
+
 from numpy.testing import assert_allclose
 from numcosmo_py import Ncm, GObject
 
 
-def test_create_with_scalar():
+def test_create_with_scalar() -> None:
     """Test create simple model."""
     mb = Ncm.ModelBuilder.new(Ncm.Model, "MyNewModel", "This is my new model")
     assert mb is not None
@@ -48,7 +50,7 @@ def test_create_with_scalar():
     assert isinstance(model, MyNewModel.pytype)
 
 
-def test_create_with_vector():
+def test_create_with_vector() -> None:
     """Test create model with vector."""
     mb = Ncm.ModelBuilder.new(Ncm.Model, "MyNewModel2", "This is my new model")
     assert mb is not None
@@ -73,7 +75,7 @@ def test_create_with_vector():
     assert_allclose(model.orig_vparam_get_vector(0).dup_array(), 0.5)
 
 
-def test_serialization():
+def test_serialization() -> None:
     """Test model builder serialization."""
 
     mb = Ncm.ModelBuilder.new(Ncm.Model, "MyNewModel3", "This is my new model")
@@ -104,3 +106,77 @@ def test_serialization():
 
     assert_allclose(model.vparam_len(0), 10)
     assert_allclose(model.orig_vparam_get_vector(0).dup_array(), 0.5)
+
+
+def test_get_many_sparams() -> None:
+    """Test many sparams."""
+    mb = Ncm.ModelBuilder.new(Ncm.Model, "MyNewModel4", "This is my new model")
+    assert mb is not None
+    assert isinstance(mb, Ncm.ModelBuilder)
+
+    for i in range(100):
+        mb.add_sparam(
+            f"p_{i}", f"param{i}", 0.0, 1.0, 0.01, 0.0, 0.45, Ncm.ParamType.FREE
+        )
+
+    obj_array = mb.get_sparams()
+
+    assert obj_array is not None
+    assert isinstance(obj_array, Ncm.ObjArray)
+
+    assert obj_array.len() == 100
+
+    for i in range(100):
+        sparam: Ncm.SParam = cast(Ncm.SParam, obj_array.peek(i))
+        assert sparam is not None
+        assert isinstance(sparam, Ncm.SParam)
+
+        assert sparam.symbol() == f"p_{i}"
+        assert sparam.name() == f"param{i}"
+        assert sparam.get_fit_type() == Ncm.ParamType.FREE
+        assert sparam.get_default_value() == 0.45
+        assert sparam.get_lower_bound() == 0.0
+        assert sparam.get_upper_bound() == 1.0
+        assert sparam.get_scale() == 0.01
+        assert sparam.get_absolute_tolerance() == 0.0
+
+
+def test_set_many_sparams() -> None:
+    """Test many sparams."""
+
+    obj_array = Ncm.ObjArray.new()
+    assert obj_array is not None
+
+    for i in range(100):
+        sparam = Ncm.SParam.new(
+            f"param{i}", f"p_{i}", 0.0, 1.0, 0.01, 0.0, 0.45, Ncm.ParamType.FREE
+        )
+        assert sparam is not None
+        assert isinstance(sparam, Ncm.SParam)
+        obj_array.add(sparam)
+
+    mb = Ncm.ModelBuilder.new(Ncm.Model, "MyNewModel5", "This is my new model")
+    assert mb is not None
+
+    mb.add_sparams(obj_array)
+
+    MyNewModel5 = mb.create()
+    assert MyNewModel5 is not None
+    GObject.new(MyNewModel5)
+    model = MyNewModel5.pytype()
+
+    assert model is not None
+    assert isinstance(model, Ncm.Model)
+    assert model.name() == "MyNewModel5"
+    assert isinstance(model, MyNewModel5.pytype)
+
+    model.params_set_default_ftype()
+
+    for i in range(100):
+        assert model.orig_param_get(i) == 0.45
+        assert model.orig_param_get_abstol(i) == 0.0
+        assert model.orig_param_get_lower_bound(i) == 0.0
+        assert model.orig_param_get_upper_bound(i) == 1.0
+        assert model.orig_param_get_scale(i) == 0.01
+        assert model.param_index_from_name(f"param{i}") == (True, i)
+        assert model.param_get_ftype(i) == Ncm.ParamType.FREE
