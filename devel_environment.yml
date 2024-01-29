@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies: 
   - astropy
-  - black
+  - black<24
   - c-compiler
   - cfitsio
   - fftw
