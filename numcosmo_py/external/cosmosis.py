@@ -26,7 +26,7 @@
 
 import os
 import math
-from typing import List, Dict, Tuple, Optional, Iterator
+from typing import List, Dict, Tuple, Optional
 from pathlib import Path
 from enum import Enum
 
@@ -62,7 +62,7 @@ class NonLinearMatterPowerSpectrum(str, Enum):
     HALOFIT = "halofit"
 
 
-def convert_parameter(p: Parameter, required_parameters: Iterator[str]) -> Ncm.SParam:
+def convert_parameter(p: Parameter, required_parameters: List[str]) -> Ncm.SParam:
     """Converts a Cosmosis parameter to a NumCosmo parameter."""
 
     matched_name = next(
@@ -109,7 +109,7 @@ def convert_parameter(p: Parameter, required_parameters: Iterator[str]) -> Ncm.S
 
 def convert_single_model(
     sampling_parameters_section: str,
-    required_parameters: Iterator[str],
+    required_parameters: List[str],
     model_name: str,
     parameters: List[Parameter],
 ) -> Tuple[Ncm.ModelBuilder, Ncm.Model]:
@@ -149,7 +149,7 @@ def convert_single_model(
 def convert_models(
     sampling_parameters_sections: List[str],
     model_names_list: List[str],
-    required_parameters: Iterator[str],
+    required_parameters: List[str],
     parameters: List[Parameter],
     model_builders: Ncm.ObjDictStr,
     mset: Ncm.MSet,
