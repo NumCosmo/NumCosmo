@@ -227,8 +227,8 @@
       <xi:include href="xml/nc_hicosmo_qrbf.xml"/>
     </section>
     <section>
-        <xi:include href="xml/acosmo_lowz.xml"/>
-    </secrion>
+        <xi:include href="xml/nc_acosmo_lowz.xml"/>
+    </section>
   </chapter>
 
   <chapter>
