@@ -249,6 +249,8 @@ def test_data_gauss_fisher():
 
     data_dist = DataGaussCovTest(corr=0.5, sigma1=1.0, sigma2=2.0)
 
+    assert data_dist.has_mean_vector()
+
     data_dist.resample(mset, rng)
     fisher = data_dist.fisher_matrix(mset)
 

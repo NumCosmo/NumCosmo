@@ -149,3 +149,8 @@ def var_dict_to_dict(
             )
 
     return dictionary
+
+
+def to_camel_case(snake_str):
+    """Convert a snake case string to camel case."""
+    return "".join(x.capitalize() for x in snake_str.strip().lower().split("_"))

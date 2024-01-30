@@ -171,6 +171,7 @@ _ncm_fit_gsl_mms_finalize (GObject *object)
   NcmFitGSLMMS *fit_gsl_mms = NCM_FIT_GSL_MMS (object);
 
   g_clear_pointer (&fit_gsl_mms->mms, gsl_multimin_fminimizer_free);
+  g_clear_pointer (&fit_gsl_mms->desc, g_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_gsl_mms_parent_class)->finalize (object);
@@ -275,7 +276,8 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
   g_assert (fparam_len != 0);
 
   ncm_mset_fparams_get_vector (mset, fparams);
-  gsl_multimin_fminimizer_set (fit_gsl_mms->mms, &fit_gsl_mms->f, ncm_vector_gsl (fparams), ncm_vector_gsl (fit_gsl_mms->ss));
+  status = gsl_multimin_fminimizer_set (fit_gsl_mms->mms, &fit_gsl_mms->f, ncm_vector_gsl (fparams), ncm_vector_gsl (fit_gsl_mms->ss));
+  NCM_TEST_GSL_RESULT ("_ncm_fit_gsl_mms_run[gsl_multimin_fminimizer_set]: ", status);
 
   do {
     gdouble size;
@@ -339,7 +341,7 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_mset_fparams_get_vector (mset, fparams);
   ncm_fit_state_set_m2lnL_curval (fstate, fit_gsl_mms->mms->fval);
-  ncm_fit_state_set_m2lnL_prec (fstate, last_size);
+  ncm_fit_state_set_m2lnL_prec (fstate, fabs (last_size));
 
   return TRUE;
 }
