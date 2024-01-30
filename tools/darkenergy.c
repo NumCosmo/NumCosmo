@@ -654,6 +654,8 @@ main (gint argc, gchar *argv[])
     if (fit_diff_id == NULL)
       g_error ("Fit type '%s' not found run --fit-list to list the available options", de_fit.fit_diff);
 
+
+
     fit = ncm_fit_factory (fit_type_id->value, de_fit.fit_algo, lh, mset, fit_diff_id->value);
     ncm_fit_set_m2lnL_reltol (fit, de_fit.fit_reltol);
     ncm_fit_set_params_reltol (fit, de_fit.fit_params_reltol);
