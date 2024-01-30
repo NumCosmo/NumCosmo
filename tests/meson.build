@@ -323,6 +323,14 @@ python_tests = [
         'name': 'py_test_data_objects',
         'source': 'test_py_test_data_objects.py',
     },
+    {
+        'name': 'py_model_builder',
+        'source': 'test_py_model_builder.py',
+    },
+    {
+        'name': 'py_fit',
+        'source': 'test_py_fit.py',
+    },
 ]
 
 if mpi_c_dep.found()

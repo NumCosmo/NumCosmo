@@ -106,6 +106,8 @@ NcmBootstrap *ncm_data_peek_bootstrap (NcmData *data);
 void ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f);
 void ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 
+gboolean ncm_data_has_mean_vector (NcmData *data);
+
 void ncm_data_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu);
 void ncm_data_sigma_vector (NcmData *data, NcmMSet *mset, NcmVector *sigma);
 void ncm_data_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H);
