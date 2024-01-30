@@ -312,16 +312,18 @@ class RunFit(RunCommonOptions):
                 " than the given tolerance (abstol, reltol)."
             ),
         ),
-    ] = None
+    ] = (None, None)
 
     def __post_init__(self):
         super().__post_init__()
         self.fit.log_info()
 
-        if self.restart is None:
+        abstol, reltol = self.restart
+
+        if abstol is None or reltol is None:
             self.fit.run(self.run_messages.genum)
         else:
-            if self.restart[0] <= 0.0 and self.restart[1] <= 0.0:
+            if abstol <= 0.0 and reltol <= 0.0:
                 raise RuntimeError(f"Invalid tolerance for restart {self.restart}.")
             output_filename = (
                 None
@@ -330,8 +332,8 @@ class RunFit(RunCommonOptions):
             )
             self.fit.run_restart(
                 self.run_messages.genum,
-                self.restart[0],
-                self.restart[1],
+                abstol,
+                reltol,
                 None,
                 output_filename,
             )

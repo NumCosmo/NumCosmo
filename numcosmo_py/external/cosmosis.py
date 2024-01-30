@@ -253,7 +253,7 @@ def convert_single_likelihood(
     likelihood.peek_dataset().append_data(firecrown_data)
 
     firecrown_likelihood = numcosmo_factory.get_firecrown_likelihood()
-    required_parameters = firecrown_likelihood.required_parameters().get_params_names()
+    required_parameters = list(firecrown_likelihood.required_parameters().get_params_names())
 
     # Converts the sampling parameters sections to NumCosmo models.
     convert_models(
