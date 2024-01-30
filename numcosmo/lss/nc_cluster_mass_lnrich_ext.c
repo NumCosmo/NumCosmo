@@ -54,6 +54,7 @@ struct _NcClusterMassLnrichExtPrivate
   gdouble ln1pz0;
   gdouble lnR_max;
   gdouble lnR_min;
+  gboolean use_ln1pz;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassLnrichExt, nc_cluster_mass_lnrich_ext, NC_TYPE_CLUSTER_MASS);
@@ -82,6 +83,7 @@ enum
   PROP_Z0,
   PROP_LNRICHNESS_MIN,
   PROP_LNRICHNESS_MAX,
+  PROP_USE_LN1PZ,
   PROP_SIZE,
 };
 
@@ -90,12 +92,13 @@ nc_cluster_mass_lnrich_ext_init (NcClusterMassLnrichExt *lnrich_ext)
 {
   NcClusterMassLnrichExtPrivate * const self = lnrich_ext->priv = nc_cluster_mass_lnrich_ext_get_instance_private (lnrich_ext);
 
-  self->M0      = 0.0;
-  self->z0      = 0.0;
-  self->lnM0    = 0.0;
-  self->ln1pz0  = 0.0;
-  self->lnR_min = GSL_NEGINF;
-  self->lnR_max = GSL_POSINF;
+  self->M0        = 0.0;
+  self->z0        = 0.0;
+  self->lnM0      = 0.0;
+  self->ln1pz0    = 0.0;
+  self->lnR_min   = GSL_NEGINF;
+  self->lnR_max   = GSL_POSINF;
+  self->use_ln1pz = FALSE;
 }
 
 static void
@@ -124,6 +127,9 @@ _nc_cluster_mass_lnrich_ext_set_property (GObject *object, guint prop_id, const 
       self->lnR_max = g_value_get_double (value);
       g_assert (self->lnR_min < self->lnR_max);
       break;
+    case PROP_USE_LN1PZ:
+      self->use_ln1pz = g_value_get_boolean (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -151,6 +157,9 @@ _nc_cluster_mass_lnrich_ext_get_property (GObject *object, guint prop_id, GValue
       break;
     case PROP_LNRICHNESS_MAX:
       g_value_set_double (value, self->lnR_max);
+      break;
+    case PROP_USE_LN1PZ:
+      g_value_set_boolean (value, self->use_ln1pz);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -242,6 +251,19 @@ nc_cluster_mass_lnrich_ext_class_init (NcClusterMassLnrichExtClass *klass)
                                                         "Maximum LnRichness",
                                                         0.0, G_MAXDOUBLE,  M_LN10 * 2.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcClusterMassLnrichExt:use_ln1pz:
+   *
+   * Whether we are going to use ln(1+z) or z in the fits.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_USE_LN1PZ,
+                                   g_param_spec_boolean ("use-ln1pz",
+                                                         NULL,
+                                                         "Whether we are going to use ln(1+z) or z in the fits.",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcClusterMassLnrichExt:MU:
@@ -433,14 +455,10 @@ _nc_cluster_mass_lnrich_ext_lnR_sigma (NcClusterMass *clusterm, const gdouble ln
   NcClusterMassLnrichExt *lnrich_ext         = NC_CLUSTER_MASS_LNRICH_EXT (clusterm);
   NcClusterMassLnrichExtPrivate * const self = lnrich_ext->priv;
   const gdouble DlnM                         = lnM - self->lnM0;
-  // const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
-  const gdouble Dz                       = z / self-> z0;
+  const gdouble Vz                           = self->use_ln1pz ? log1p (z) - self->ln1pz0 : z / self-> z0;
 
-  // lnR[0]   = MU      + MU_M1    * DlnM + MU_Z1    * Dln1pz + MU_M2    * DlnM * DlnM + MU_Z2    * Dln1pz * Dln1pz + MU_MZ    * DlnM * Dln1pz;
-  lnR[0] = MU      + MU_M1    * DlnM + MU_Z1    * Dz + MU_M2    * DlnM * DlnM + MU_Z2    * Dz * Dz + MU_MZ    * DlnM * Dz;
-    
-  // sigma[0] = SIGMA_0 + SIGMA_M1 * DlnM + SIGMA_Z1 * Dln1pz + SIGMA_M2 * DlnM * DlnM + SIGMA_Z2 * Dln1pz * Dln1pz + SIGMA_MZ * DlnM * Dln1pz;
-  sigma[0] = SIGMA_0 + ( SIGMA_M1 * DlnM ) + ( SIGMA_Z1 * Dz ) + ( SIGMA_M2 * DlnM * DlnM ) + ( SIGMA_Z2 * Dz * Dz ) + ( SIGMA_MZ * DlnM * Dz );
+  lnR[0] = MU + MU_M1 * DlnM + MU_Z1 * Vz + MU_M2 * DlnM * DlnM + MU_Z2 * Vz * Vz + MU_MZ * DlnM * Vz;
+  sigma[0] = SIGMA_0 + SIGMA_M1 * DlnM + SIGMA_Z1 * Vz + SIGMA_M2 * DlnM * DlnM + SIGMA_Z2 * Vz * Vz + SIGMA_MZ * DlnM * Vz;   
 }
 
 static gdouble
@@ -574,13 +592,9 @@ nc_cluster_mass_lnrich_ext_get_mean_richness (NcClusterMassLnrichExt *lnrich_ext
 {
   NcClusterMassLnrichExtPrivate * const self = lnrich_ext->priv;
   const gdouble DlnM                         = lnM - self->lnM0;
-  // const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
-  const gdouble Dz                       = z / self-> z0;
-
-
-  // return MU      + MU_M1    * DlnM + MU_Z1    * Dln1pz + MU_M2    * DlnM * DlnM + MU_Z2    * Dln1pz * Dln1pz + MU_MZ    * DlnM * Dln1pz;
-  
-  return MU      + MU_M1    * DlnM + MU_Z1    * Dz + MU_M2    * DlnM * DlnM + MU_Z2    * Dz * Dz + MU_MZ    * DlnM * Dz;
+  const gdouble Vz                           = self->use_ln1pz ? log1p (z) - self->ln1pz0 : z / self-> z0;
+    
+  return MU + MU_M1 * DlnM + MU_Z1 * Vz + MU_M2 * DlnM * DlnM + MU_Z2 * Vz * Vz + MU_MZ * DlnM * Vz;
 }
 
 /**
@@ -597,13 +611,9 @@ nc_cluster_mass_lnrich_ext_get_std_richness (NcClusterMassLnrichExt *lnrich_ext,
 {
   NcClusterMassLnrichExtPrivate * const self = lnrich_ext->priv;
   const gdouble DlnM                         = lnM - self->lnM0;
-  
-  // const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
-  const gdouble Dz                       = z / self-> z0;
+  const gdouble Vz                           = self->use_ln1pz ? log1p (z) - self->ln1pz0 : z / self-> z0;
 
-  // return SIGMA_0 + SIGMA_M1 * DlnM + SIGMA_Z1 * Dln1pz + SIGMA_M2 * DlnM * DlnM + SIGMA_Z2 * Dln1pz * Dln1pz + SIGMA_MZ * DlnM * Dln1pz;
-    
-    return SIGMA_0 + ( SIGMA_M1 * DlnM ) + ( SIGMA_Z1 * Dz ) + ( SIGMA_M2 * DlnM * DlnM ) + ( SIGMA_Z2 * Dz * Dz ) + ( SIGMA_MZ * DlnM * Dz );
+  return SIGMA_0 + ( SIGMA_M1 * DlnM ) + ( SIGMA_Z1 * Vz ) + ( SIGMA_M2 * DlnM * DlnM ) + ( SIGMA_Z2 * Vz * Vz ) + ( SIGMA_MZ * DlnM * Vz );
 }
 
 /**
