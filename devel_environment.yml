@@ -1,9 +1,9 @@
 name: numcosmo_developer
 channels:
   - conda-forge
-dependencies:
+dependencies: 
   - astropy
-  - black
+  - black<24
   - c-compiler
   - cfitsio
   - fftw
@@ -39,4 +39,5 @@ dependencies:
   - pytest
   - python >= 3.9
   - scipy
-
+  - tqdm
+  - typer

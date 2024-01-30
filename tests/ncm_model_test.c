@@ -238,6 +238,8 @@ ncm_model_test_base_class_init (NcmModelClass *model_class)
 {
   guint i;
 
+  model_class->impl_flag = 1 << 0 | 1 << 1 | 1 << 2;
+
   for (i = 0; i < ci_sparam_len; i++)
   {
     const gdouble base_number = pow (10.0, g_test_rand_double_range (-10.0, 10.0));

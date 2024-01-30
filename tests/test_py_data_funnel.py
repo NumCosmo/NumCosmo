@@ -54,6 +54,13 @@ def test_eval():
     assert math.isfinite(funnel.m2lnL_val(mset))
 
 
+def test_no_mean_vector():
+    """Test no mean vector."""
+    funnel = Ncm.DataFunnel.new()
+
+    assert not funnel.has_mean_vector()
+
+
 if __name__ == "__main__":
     test_constructor()
     test_eval()

@@ -855,6 +855,21 @@ ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 }
 
 /**
+ * ncm_data_has_mean_vector:
+ * @data: a #NcmData
+ *
+ * This method returns TRUE if the likelihood implements
+ * the ncm_data_mean_vector() virtual method.
+ *
+ * Returns: whether the data can calculate the mean vector.
+ */
+gboolean
+ncm_data_has_mean_vector (NcmData *data)
+{
+  return NCM_DATA_GET_CLASS (data)->mean_vector != NULL;
+}
+
+/**
  * ncm_data_mean_vector: (virtual mean_vector)
  * @data: a #NcmData
  * @mset: a #NcmMSet
