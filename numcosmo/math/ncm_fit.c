@@ -1614,8 +1614,10 @@ ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
       g_warning ("ncm_fit_run: initial point provides m2lnL = % 22.15g, giving up.", m2lnL_i);
       run = FALSE;
     }
-
-    run = NCM_FIT_GET_CLASS (fit)->run (fit, mtype);
+    else
+    {
+      run = NCM_FIT_GET_CLASS (fit)->run (fit, mtype);
+    }
   }
 
   ncm_fit_state_set_elapsed_time (self->fstate, g_timer_elapsed (self->timer, NULL));
