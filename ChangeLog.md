@@ -3,7 +3,73 @@ CHANGELOG
 
 [Current]
 
+[v0.21.0]
+ * numcosmo command line tool (#137)
+
+     Introduced a new command line tool for NumCosmo (experimental):
+     
+     * `numcosmo from-cosmosis` converts a cosmosis ini file to NumCosmo yaml
+     format
+     * `numcosmo run fit ` computes the best-fit for an experiment (NumCosmo's
+     analysis)
+     * `numcosmo run test` test an experiment
+     * `numcosmo run fisher` computes a fisher matrix
+     * `numcosmo run fisher-bias` computes a fisher matrix
+     * `numcosmo run theory-vector` computes the theory vector
+     * `numcosmo run mcmc apes` computes the MCMC sampling of the experiment
+     using APES
+     * Fixed serialization for require_nonlinear_pk.
+     * Now NcmFit calls m2lnL just once if no parameters are free.
+     * New methods to NcmData and NcmDataset to check if mean_vector is
+     available.
+     * Updated stubs and requiring black < 24 due to difference in formatting.
+     * Unit tests for the newly added code.
+ * Variant dictionary support  (#135)
+
+     * New NcmVarDict boxed object describing a dict of str keys and basic types
+     values.
+     * Added unit testing
+     * Support for serialization of NcmVarDict
+     * Improved valgrind suppresion file
+     * Changing Variant type of object to tuples.
+     * Finished update of Object variant type. Added tests for data files.
+     * Finished support for VarDict as object properties.
+     * Updated conda environment file to use openblas compatible with openmp.
+     * Fixing problem with fft wisdow when MKL is being used.
+     * Updated priors to use named parameters. Improved Model and MSet objects
+     use of full parameter names.
+     * Improving reports to codecov.
+     * Using conda build for coverage.
+     * Fixed wrong signness comparison and coverage .
+     * Testing lcov 1.16 options.
+     * Removing timeout for coverage tests.
+     * Removing external codes from coverage.
+     * Disabling documentation build in CI.
+     * Removing G_DECLARE_ from coverage.
+     * Ignoring G_DEFINE_ in coverage.
+     * Using lcov for coveralls.
+     * Disabling branch detection.
+     * Extra tests for NcmMSet and adding tests back to coverage.
+ * Support for object dictionaries, NcmObjDictStr and NcmObjDictInt. (#134)
+
+     * Support for object dictionaries, NcmObjDictStr and NcmObjDictInt.
+     * Unit testing
+     * Updated stubs
+     * Fixed leaks
+ * Better python executable finding.
+
+ * Added GSL as a dependency for libmisc (internal library). (#133)
+
+     * Added GSL as a dependency for libmisc (internal library).
+     * More missing deps for libmisc.
+     * Removed unnecessary includes omp and added missing deps to class.
+     * Improving a few includes.
+
 [v0.20.0]
+ * Updated stubs.
+
+ * New minor version v0.20.0
+
  * Support for computing fisher bias vector (#132)
 
      * Added support for computing fisher bias vector and corresponding unit
