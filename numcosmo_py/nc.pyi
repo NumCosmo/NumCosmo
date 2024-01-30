@@ -1619,7 +1619,7 @@ class ClusterMass(NumCosmoMath.Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -1639,7 +1639,7 @@ class ClusterMass(NumCosmoMath.Model):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -1648,7 +1648,7 @@ class ClusterMass(NumCosmoMath.Model):
     def __init__(
         self,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @staticmethod
@@ -1833,7 +1833,7 @@ class ClusterMassAscaso(ClusterMass):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -1869,7 +1869,7 @@ class ClusterMassAscaso(ClusterMass):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -1894,7 +1894,7 @@ class ClusterMassAscaso(ClusterMass):
         sigmap2_fit: bool = ...,
         z0: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
 
@@ -1957,7 +1957,7 @@ class ClusterMassBenson(ClusterMass):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -1989,7 +1989,7 @@ class ClusterMassBenson(ClusterMass):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -2013,7 +2013,7 @@ class ClusterMassBenson(ClusterMass):
         signif_obs_min: float = ...,
         z0: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
 
@@ -2100,7 +2100,7 @@ class ClusterMassBensonXRay(ClusterMassBenson):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -2144,7 +2144,7 @@ class ClusterMassBensonXRay(ClusterMassBenson):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -2180,7 +2180,7 @@ class ClusterMassBensonXRay(ClusterMassBenson):
         signif_obs_min: float = ...,
         z0: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
 
@@ -2300,7 +2300,7 @@ class ClusterMassLnnormal(ClusterMass):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -2326,7 +2326,7 @@ class ClusterMassLnnormal(ClusterMass):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -2342,7 +2342,7 @@ class ClusterMassLnnormal(ClusterMass):
         sigma: float = ...,
         sigma_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
 
@@ -2383,7 +2383,7 @@ class ClusterMassNodist(ClusterMass):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -2405,7 +2405,7 @@ class ClusterMassNodist(ClusterMass):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -2416,7 +2416,7 @@ class ClusterMassNodist(ClusterMass):
         lnM_max: float = ...,
         lnM_min: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
 
@@ -2485,7 +2485,7 @@ class ClusterMassPlCL(ClusterMass):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -2520,7 +2520,7 @@ class ClusterMassPlCL(ClusterMass):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -2546,7 +2546,7 @@ class ClusterMassPlCL(ClusterMass):
         sigma_sz: float = ...,
         sigma_sz_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @staticmethod
@@ -2629,7 +2629,7 @@ class ClusterMassVanderlinde(ClusterMass):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -2661,7 +2661,7 @@ class ClusterMassVanderlinde(ClusterMass):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -2685,7 +2685,7 @@ class ClusterMassVanderlinde(ClusterMass):
         signif_obs_min: float = ...,
         z0: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
 
@@ -2727,7 +2727,7 @@ class ClusterPhotozGauss(ClusterRedshift):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -2749,7 +2749,7 @@ class ClusterPhotozGauss(ClusterRedshift):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -2761,7 +2761,7 @@ class ClusterPhotozGauss(ClusterRedshift):
         pz_max: float = ...,
         pz_min: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -2813,7 +2813,7 @@ class ClusterPhotozGaussGlobal(ClusterRedshift):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -2839,7 +2839,7 @@ class ClusterPhotozGaussGlobal(ClusterRedshift):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -2855,7 +2855,7 @@ class ClusterPhotozGaussGlobal(ClusterRedshift):
         z_bias: float = ...,
         z_bias_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def get_sigma0(self) -> float: ...
@@ -2919,7 +2919,7 @@ class ClusterPseudoCounts(NumCosmoMath.Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -2948,7 +2948,7 @@ class ClusterPseudoCounts(NumCosmoMath.Model):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -2969,7 +2969,7 @@ class ClusterPseudoCounts(NumCosmoMath.Model):
         zmin: float = ...,
         zmin_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @staticmethod
@@ -3056,7 +3056,7 @@ class ClusterRedshift(NumCosmoMath.Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -3076,7 +3076,7 @@ class ClusterRedshift(NumCosmoMath.Model):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -3085,7 +3085,7 @@ class ClusterRedshift(NumCosmoMath.Model):
     def __init__(
         self,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @staticmethod
@@ -3225,7 +3225,7 @@ class ClusterRedshiftNodist(ClusterRedshift):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -3247,7 +3247,7 @@ class ClusterRedshiftNodist(ClusterRedshift):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -3258,7 +3258,7 @@ class ClusterRedshiftNodist(ClusterRedshift):
         z_max: float = ...,
         z_min: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
 
@@ -6620,7 +6620,7 @@ class HICosmo(NumCosmoMath.Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -6640,7 +6640,7 @@ class HICosmo(NumCosmoMath.Model):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -6655,7 +6655,7 @@ class HICosmo(NumCosmoMath.Model):
     def __init__(
         self,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def Dc(self, z: float) -> float: ...
@@ -6903,7 +6903,7 @@ class HICosmoDE(HICosmo):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -6949,7 +6949,7 @@ class HICosmoDE(HICosmo):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -6984,7 +6984,7 @@ class HICosmoDE(HICosmo):
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def E2Omega_de(self, z: float) -> float: ...
@@ -7102,7 +7102,7 @@ class HICosmoDECpl(HICosmoDE):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -7152,7 +7152,7 @@ class HICosmoDECpl(HICosmoDE):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -7190,7 +7190,7 @@ class HICosmoDECpl(HICosmoDE):
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -7292,7 +7292,7 @@ class HICosmoDEJbp(HICosmoDE):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -7342,7 +7342,7 @@ class HICosmoDEJbp(HICosmoDE):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -7380,7 +7380,7 @@ class HICosmoDEJbp(HICosmoDE):
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -7582,7 +7582,7 @@ class HICosmoDEWSpline(HICosmoDE):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -7633,7 +7633,7 @@ class HICosmoDEWSpline(HICosmoDE):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -7673,7 +7673,7 @@ class HICosmoDEWSpline(HICosmoDE):
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def get_alpha(self) -> NumCosmoMath.Vector: ...
@@ -7774,7 +7774,7 @@ class HICosmoDEXcdm(HICosmoDE):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -7822,7 +7822,7 @@ class HICosmoDEXcdm(HICosmoDE):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -7858,7 +7858,7 @@ class HICosmoDEXcdm(HICosmoDE):
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -7979,7 +7979,7 @@ class HICosmoGCG(HICosmo):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -8027,7 +8027,7 @@ class HICosmoGCG(HICosmo):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -8064,7 +8064,7 @@ class HICosmoGCG(HICosmo):
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def cmb_params(self) -> None: ...
@@ -8257,7 +8257,7 @@ class HICosmoIDEM2(HICosmo):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -8305,7 +8305,7 @@ class HICosmoIDEM2(HICosmo):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -8342,7 +8342,7 @@ class HICosmoIDEM2(HICosmo):
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def cmb_params(self) -> None: ...
@@ -8508,7 +8508,7 @@ class HICosmoLCDM(HICosmo):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -8542,7 +8542,7 @@ class HICosmoLCDM(HICosmo):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -8564,7 +8564,7 @@ class HICosmoLCDM(HICosmo):
         Yp: float = ...,
         Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -8628,7 +8628,7 @@ class HICosmoQConst(HICosmo):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -8660,7 +8660,7 @@ class HICosmoQConst(HICosmo):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -8680,7 +8680,7 @@ class HICosmoQConst(HICosmo):
         zs: float = ...,
         zs_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -8740,7 +8740,7 @@ class HICosmoQGRW(HICosmo, HIPertITwoFluids):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -8770,7 +8770,7 @@ class HICosmoQGRW(HICosmo, HIPertITwoFluids):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -8790,7 +8790,7 @@ class HICosmoQGRW(HICosmo, HIPertITwoFluids):
         xb: float = ...,
         xb_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -8858,7 +8858,7 @@ class HICosmoQLinear(HICosmo):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -8892,7 +8892,7 @@ class HICosmoQLinear(HICosmo):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -8914,7 +8914,7 @@ class HICosmoQLinear(HICosmo):
         zs: float = ...,
         zs_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @staticmethod
@@ -8986,7 +8986,7 @@ class HICosmoQRBF(HICosmo):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -9021,7 +9021,7 @@ class HICosmoQRBF(HICosmo):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -9045,7 +9045,7 @@ class HICosmoQRBF(HICosmo):
         xi_length: int = ...,
         zf: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -9166,7 +9166,7 @@ class HICosmoQSpline(HICosmo):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -9197,7 +9197,7 @@ class HICosmoQSpline(HICosmo):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -9221,7 +9221,7 @@ class HICosmoQSpline(HICosmo):
         spline: NumCosmoMath.Spline = ...,
         zf: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def add_continuity_priors(
@@ -9274,7 +9274,7 @@ class HICosmoQSplineContPrior(NumCosmoMath.Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -9299,7 +9299,7 @@ class HICosmoQSplineContPrior(NumCosmoMath.Model):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -9312,7 +9312,7 @@ class HICosmoQSplineContPrior(NumCosmoMath.Model):
         lnsigma_fit: GLib.Variant = ...,
         lnsigma_length: int = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def free(self) -> None: ...
@@ -9393,7 +9393,7 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -9429,7 +9429,7 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -9454,7 +9454,7 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
         xb: float = ...,
         xb_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def Ricci_scale(self, tau: float) -> float: ...
@@ -11343,7 +11343,7 @@ class HIPrim(NumCosmoMath.Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -11364,7 +11364,7 @@ class HIPrim(NumCosmoMath.Model):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -11375,7 +11375,7 @@ class HIPrim(NumCosmoMath.Model):
         self,
         k_pivot: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def SA_Ampl(self) -> float: ...
@@ -11460,7 +11460,7 @@ class HIPrimAtan(HIPrim):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -11496,7 +11496,7 @@ class HIPrimAtan(HIPrim):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -11520,7 +11520,7 @@ class HIPrimAtan(HIPrim):
         n_T_fit: bool = ...,
         k_pivot: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -11588,7 +11588,7 @@ class HIPrimBPL(HIPrim):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -11621,7 +11621,7 @@ class HIPrimBPL(HIPrim):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -11642,7 +11642,7 @@ class HIPrimBPL(HIPrim):
         n_T_fit: bool = ...,
         k_pivot: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -11727,7 +11727,7 @@ class HIPrimExpc(HIPrim):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -11762,7 +11762,7 @@ class HIPrimExpc(HIPrim):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -11785,7 +11785,7 @@ class HIPrimExpc(HIPrim):
         n_T_fit: bool = ...,
         k_pivot: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -11845,7 +11845,7 @@ class HIPrimPowerLaw(HIPrim):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -11874,7 +11874,7 @@ class HIPrimPowerLaw(HIPrim):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -11891,7 +11891,7 @@ class HIPrimPowerLaw(HIPrim):
         n_T_fit: bool = ...,
         k_pivot: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -11967,7 +11967,7 @@ class HIPrimSBPL(HIPrim):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -12003,7 +12003,7 @@ class HIPrimSBPL(HIPrim):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -12027,7 +12027,7 @@ class HIPrimSBPL(HIPrim):
         n_T_fit: bool = ...,
         k_pivot: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -12233,7 +12233,7 @@ class HIReion(NumCosmoMath.Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -12254,7 +12254,7 @@ class HIReion(NumCosmoMath.Model):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -12264,7 +12264,7 @@ class HIReion(NumCosmoMath.Model):
         self,
         prec: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @staticmethod
@@ -12324,7 +12324,7 @@ class HIReionCamb(HIReion):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -12353,7 +12353,7 @@ class HIReionCamb(HIReion):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -12378,7 +12378,7 @@ class HIReionCamb(HIReion):
         z_re_fit: bool = ...,
         prec: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def calc_z_from_tau(self, cosmo: HICosmo, tau: float) -> float: ...
@@ -12816,7 +12816,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -12845,7 +12845,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -12863,7 +12863,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
         mass_def: HaloDensityProfileMassDef = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def Delta(self, cosmo: HICosmo, z: float) -> float: ...
@@ -12978,7 +12978,7 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -13011,7 +13011,7 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -13034,7 +13034,7 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         mass_def: HaloDensityProfileMassDef = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -13098,7 +13098,7 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -13129,7 +13129,7 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -13148,7 +13148,7 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         mass_def: HaloDensityProfileMassDef = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -13208,7 +13208,7 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -13237,7 +13237,7 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -13254,7 +13254,7 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
         mass_def: HaloDensityProfileMassDef = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -13314,7 +13314,7 @@ class HaloDensityProfileNFW(HaloDensityProfile):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -13343,7 +13343,7 @@ class HaloDensityProfileNFW(HaloDensityProfile):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -13360,7 +13360,7 @@ class HaloDensityProfileNFW(HaloDensityProfile):
         mass_def: HaloDensityProfileMassDef = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -14086,7 +14086,7 @@ class PlanckFI(NumCosmoMath.Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -14107,7 +14107,7 @@ class PlanckFI(NumCosmoMath.Model):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -14116,7 +14116,7 @@ class PlanckFI(NumCosmoMath.Model):
     def __init__(
         self,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @staticmethod
@@ -14245,7 +14245,7 @@ class PlanckFICorTT(PlanckFI):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -14306,7 +14306,7 @@ class PlanckFICorTT(PlanckFI):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -14354,7 +14354,7 @@ class PlanckFICorTT(PlanckFI):
         xi_sz_cib: float = ...,
         xi_sz_cib_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @staticmethod
@@ -14857,7 +14857,7 @@ class PlanckFICorTTTEEE(PlanckFICorTT):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -15092,7 +15092,7 @@ class PlanckFICorTTTEEE(PlanckFICorTT):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -15314,7 +15314,7 @@ class PlanckFICorTTTEEE(PlanckFICorTT):
         xi_sz_cib: float = ...,
         xi_sz_cib_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @staticmethod
@@ -16137,7 +16137,7 @@ class ReducedShearCalib(NumCosmoMath.Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -16157,7 +16157,7 @@ class ReducedShearCalib(NumCosmoMath.Model):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -16166,7 +16166,7 @@ class ReducedShearCalib(NumCosmoMath.Model):
     def __init__(
         self,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @staticmethod
@@ -16231,7 +16231,7 @@ class ReducedShearCalibWtg(ReducedShearCalib):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -16259,7 +16259,7 @@ class ReducedShearCalibWtg(ReducedShearCalib):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -16276,7 +16276,7 @@ class ReducedShearCalibWtg(ReducedShearCalib):
         xp: float = ...,
         xp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @staticmethod
@@ -16350,7 +16350,7 @@ class ReducedShearClusterMass(NumCosmoMath.Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -16384,7 +16384,7 @@ class ReducedShearClusterMass(NumCosmoMath.Model):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -16411,7 +16411,7 @@ class ReducedShearClusterMass(NumCosmoMath.Model):
         xp: float = ...,
         xp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def P_z_gth_gobs(
@@ -16504,7 +16504,7 @@ class SNIADistCov(NumCosmoMath.Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -16544,7 +16544,7 @@ class SNIADistCov(NumCosmoMath.Model):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -16580,7 +16580,7 @@ class SNIADistCov(NumCosmoMath.Model):
         mu_fit: GLib.Variant = ...,
         mu_length: int = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def alpha_beta(self) -> Tuple[float, float]: ...
@@ -16903,7 +16903,7 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -16928,7 +16928,7 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -16944,7 +16944,7 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         pcc: float = ...,
         pcc_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @staticmethod
@@ -17393,7 +17393,7 @@ class XcorLimberKernel(NumCosmoMath.Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -17415,7 +17415,7 @@ class XcorLimberKernel(NumCosmoMath.Model):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -17429,7 +17429,7 @@ class XcorLimberKernel(NumCosmoMath.Model):
         zmax: float = ...,
         zmin: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     def add_noise(
@@ -17492,7 +17492,7 @@ class XcorLimberKernelCMBLensing(XcorLimberKernel):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -17517,7 +17517,7 @@ class XcorLimberKernelCMBLensing(XcorLimberKernel):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -17535,7 +17535,7 @@ class XcorLimberKernelCMBLensing(XcorLimberKernel):
         zmax: float = ...,
         zmin: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -17624,7 +17624,7 @@ class XcorLimberKernelGal(XcorLimberKernel):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -17658,7 +17658,7 @@ class XcorLimberKernelGal(XcorLimberKernel):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -17691,7 +17691,7 @@ class XcorLimberKernelGal(XcorLimberKernel):
         zmax: float = ...,
         zmin: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
@@ -17754,7 +17754,7 @@ class XcorLimberKernelWeakLensing(XcorLimberKernel):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -17780,7 +17780,7 @@ class XcorLimberKernelWeakLensing(XcorLimberKernel):
         params_types: list[None]
         reparam: NumCosmoMath.Reparam
         scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjArray
+        sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
     props: Props = ...
@@ -17800,7 +17800,7 @@ class XcorLimberKernelWeakLensing(XcorLimberKernel):
         zmax: float = ...,
         zmin: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjArray = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod

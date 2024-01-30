@@ -247,6 +247,43 @@ def test_dataset_log_info():
     assert dset.get_info() is not None
 
 
+def test_dataset_no_mean_vector():
+    """Test mean vector."""
+
+    dset = Ncm.Dataset.new_array(
+        [Ncm.DataRosenbrock.new(), Ncm.DataRosenbrock.new(), Ncm.DataFunnel.new()]
+    )
+
+    assert not dset.has_mean_vector()
+
+
+def test_dataset_mixed_mean_vector():
+    """Test mean vector."""
+
+    dset = Ncm.Dataset.new_array(
+        [
+            DataGaussDiagTest(n_points=200),
+            DataGaussTest(corr=0.3, sigma1=1.0, sigma2=2.0),
+            Ncm.DataFunnel.new(),
+        ]
+    )
+
+    assert not dset.has_mean_vector()
+
+
+def test_dataset_has_mean_vector():
+    """Test mean vector."""
+
+    dset = Ncm.Dataset.new_array(
+        [
+            DataGaussDiagTest(n_points=200),
+            DataGaussTest(corr=0.3, sigma1=1.0, sigma2=2.0),
+        ]
+    )
+
+    assert dset.has_mean_vector()
+
+
 def test_dataset_mean_vector():
     """Test mean vector."""
 
@@ -260,6 +297,8 @@ def test_dataset_mean_vector():
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
 
     mset.fparams_set_array(np.array([1.0, 2.0]))
+
+    assert dset.has_mean_vector()
 
     mean_vector = Ncm.Vector.new(dset.get_n())
     dset.mean_vector(mset, mean_vector)
