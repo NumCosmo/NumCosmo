@@ -30,8 +30,8 @@
 G_BEGIN_DECLS
 
 #define NCM_TYPE_MODEL_TEST (ncm_model_test_get_type ())
-#define NCM_TYPE_MODEL_TEST_CHILD             (ncm_model_test_child_get_type ())
-#define NCM_TYPE_MODEL_TEST_CHILD_CHILD             (ncm_model_test_child_child_get_type ())
+#define NCM_TYPE_MODEL_TEST_CHILD (ncm_model_test_child_get_type ())
+#define NCM_TYPE_MODEL_TEST_CHILD_CHILD (ncm_model_test_child_child_get_type ())
 
 G_DECLARE_DERIVABLE_TYPE (NcmModelTest, ncm_model_test, NCM, MODEL_TEST, NcmModel)
 G_DECLARE_DERIVABLE_TYPE (NcmModelTestChild, ncm_model_test_child, NCM, MODEL_TEST_CHILD, NcmModelTest)

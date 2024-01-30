@@ -1419,6 +1419,7 @@ class Data(GObject.Object):
     def get_desc(self) -> str: ...
     def get_dof(self) -> int: ...
     def get_length(self) -> int: ...
+    def has_mean_vector(self) -> bool: ...
     def inv_cov_UH(self, mset: MSet, H: Matrix) -> None: ...
     def inv_cov_Uf(self, mset: MSet, f: Vector) -> None: ...
     def is_init(self) -> bool: ...
@@ -2289,6 +2290,7 @@ class Dataset(GObject.Object):
     def get_ndata(self) -> int: ...
     def has_leastsquares_f(self) -> bool: ...
     def has_m2lnL_val(self) -> bool: ...
+    def has_mean_vector(self) -> bool: ...
     def leastsquares_f(self, mset: MSet, f: Vector) -> None: ...
     def log_info(self) -> None: ...
     def m2lnL_i_val(self, mset: MSet, i: int) -> float: ...
@@ -3052,7 +3054,11 @@ class Fit(GObject.Object):
     def equality_constraints_len(self) -> int: ...
     @staticmethod
     def factory(
-        ftype: FitType, algo_name: str, lh: Likelihood, mset: MSet, gtype: FitGradType
+        ftype: FitType,
+        algo_name: Optional[str],
+        lh: Likelihood,
+        mset: MSet,
+        gtype: FitGradType,
     ) -> Fit: ...
     def fisher(self) -> None: ...
     def fisher_bias(self, f_true: Vector) -> Vector: ...
@@ -3114,8 +3120,15 @@ class Fit(GObject.Object):
         reltol: float,
         save_mset: Optional[MSet] = None,
         mset_file: Optional[str] = None,
-    ) -> None: ...
+    ) -> bool: ...
     def set_grad_type(self, gtype: FitGradType) -> None: ...
+    def set_logger(
+        self,
+        writer: Callable[[Fit, str], None],
+        updater: Callable[[Fit, int], None],
+        start_update: Optional[Callable[[Fit, str], None]] = None,
+        end_update: Optional[Callable[[Fit, str], None]] = None,
+    ) -> None: ...
     def set_m2lnL_abstol(self, tol: float) -> None: ...
     def set_m2lnL_reltol(self, tol: float) -> None: ...
     def set_maxiter(self, maxiter: int) -> None: ...
@@ -5712,6 +5725,7 @@ class MSet(GObject.Object):
     def params_valid_bounds(self) -> bool: ...
     def peek(self, mid: int) -> Model: ...
     def peek_array_pos(self, i: int) -> Model: ...
+    def peek_by_name(self, name: str) -> Model: ...
     def peek_pos(self, base_mid: int, stackpos_id: int) -> Model: ...
     def prepare_fparam_map(self) -> None: ...
     def pretty_log(self) -> None: ...
@@ -6662,7 +6676,7 @@ class Model(GObject.Object):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -6682,7 +6696,7 @@ class Model(GObject.Object):
         params_types: list[None]
         reparam: Reparam
         scalar_params_len: int
-        sparam_array: ObjArray
+        sparam_array: ObjDictInt
         submodel_array: ObjArray
         vector_params_len: int
     props: Props = ...
@@ -6690,7 +6704,7 @@ class Model(GObject.Object):
     def __init__(
         self,
         reparam: Reparam = ...,
-        sparam_array: ObjArray = ...,
+        sparam_array: ObjDictInt = ...,
         submodel_array: ObjArray = ...,
     ): ...
     def add_params(
@@ -6726,7 +6740,6 @@ class Model(GObject.Object):
     def orig_param_get_upper_bound(self, n: int) -> float: ...
     def orig_param_index_from_name(self, param_name: str) -> Tuple[bool, int]: ...
     def orig_param_name(self, n: int) -> str: ...
-    def orig_param_peek_desc(self, n: int) -> SParam: ...
     def orig_param_set(self, n: int, val: float) -> None: ...
     def orig_param_set_by_name(self, param_name: str, val: float) -> None: ...
     def orig_param_symbol(self, n: int) -> str: ...
@@ -6748,7 +6761,6 @@ class Model(GObject.Object):
     def param_index_from_name(self, param_name: str) -> Tuple[bool, int]: ...
     def param_name(self, n: int) -> str: ...
     def param_names(self) -> list[str]: ...
-    def param_peek_desc(self, n: int) -> SParam: ...
     def param_set(self, n: int, val: float) -> None: ...
     def param_set0(self, n: int, val: float) -> None: ...
     def param_set_abstol(self, n: int, abstol: float) -> None: ...
@@ -6832,12 +6844,18 @@ class ModelBuilder(GObject.Object):
     Object NcmModelBuilder
 
     Properties from NcmModelBuilder:
-      parent-type -> GType: parent-type
-        Parent type
+      parent-type-string -> gchararray: parent-type-string
+        Parent type name
       name -> gchararray: name
         Model's name
       description -> gchararray: description
         Model's description
+      sparams -> NcmObjArray: sparams
+        Scalar parameters
+      vparams -> NcmObjArray: vparams
+        Vector parameters
+      stackable -> gboolean: stackable
+        Stackable
 
     Signals from GObject:
       notify (GParam)
@@ -6846,10 +6864,19 @@ class ModelBuilder(GObject.Object):
     class Props:
         description: str
         name: str
-        parent_type: Type
+        parent_type_string: str
+        sparams: ObjArray
+        stackable: bool
+        vparams: ObjArray
     props: Props = ...
     def __init__(
-        self, description: str = ..., name: str = ..., parent_type: Type = ...
+        self,
+        description: str = ...,
+        name: str = ...,
+        parent_type_string: str = ...,
+        sparams: ObjArray = ...,
+        stackable: bool = ...,
+        vparams: ObjArray = ...,
     ): ...
     def add_sparam(
         self,
@@ -7034,7 +7061,7 @@ class ModelFunnel(Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -7059,7 +7086,7 @@ class ModelFunnel(Model):
         params_types: list[None]
         reparam: Reparam
         scalar_params_len: int
-        sparam_array: ObjArray
+        sparam_array: ObjDictInt
         submodel_array: ObjArray
         vector_params_len: int
     props: Props = ...
@@ -7071,7 +7098,7 @@ class ModelFunnel(Model):
         x_fit: GLib.Variant = ...,
         x_length: int = ...,
         reparam: Reparam = ...,
-        sparam_array: ObjArray = ...,
+        sparam_array: ObjDictInt = ...,
         submodel_array: ObjArray = ...,
     ): ...
     @staticmethod
@@ -7125,7 +7152,7 @@ class ModelMVND(Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -7149,7 +7176,7 @@ class ModelMVND(Model):
         params_types: list[None]
         reparam: Reparam
         scalar_params_len: int
-        sparam_array: ObjArray
+        sparam_array: ObjDictInt
         submodel_array: ObjArray
         vector_params_len: int
     props: Props = ...
@@ -7160,7 +7187,7 @@ class ModelMVND(Model):
         mu_fit: GLib.Variant = ...,
         mu_length: int = ...,
         reparam: Reparam = ...,
-        sparam_array: ObjArray = ...,
+        sparam_array: ObjDictInt = ...,
         submodel_array: ObjArray = ...,
     ): ...
     @staticmethod
@@ -7215,7 +7242,7 @@ class ModelRosenbrock(Model):
         Number of vector parameters
       implementation -> guint64: implementation
         Bitwise specification of functions implementation
-      sparam-array -> NcmObjArray: sparam-array
+      sparam-array -> NcmObjDictInt: sparam-array
         NcmModel array of NcmSParam
       params-types -> GArray: params-types
         Parameters' types
@@ -7239,7 +7266,7 @@ class ModelRosenbrock(Model):
         params_types: list[None]
         reparam: Reparam
         scalar_params_len: int
-        sparam_array: ObjArray
+        sparam_array: ObjDictInt
         submodel_array: ObjArray
         vector_params_len: int
     props: Props = ...
@@ -7250,7 +7277,7 @@ class ModelRosenbrock(Model):
         x2: float = ...,
         x2_fit: bool = ...,
         reparam: Reparam = ...,
-        sparam_array: ObjArray = ...,
+        sparam_array: ObjDictInt = ...,
         submodel_array: ObjArray = ...,
     ): ...
     @staticmethod
