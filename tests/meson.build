@@ -331,10 +331,6 @@ python_tests = [
         'name': 'py_fit',
         'source': 'test_py_fit.py',
     },
-    {
-        'name': 'py_numcosmo_app',
-        'source': 'test_py_numcosmo_app.py',
-    },
 ]
 
 if mpi_c_dep.found()
@@ -370,6 +366,21 @@ if python_astropy_scipy.found()
         {
             'name': 'py_data_dist2d',
             'source': 'test_py_data_dist2d.py',
+        },
+    ]
+endif
+
+python_typer = python_module.find_installation(
+    'python3',
+    modules: ['typer', 'rich'],
+    required: false,
+)
+
+if python_typer.found()
+    python_tests += [
+        {
+            'name': 'py_numcosmo_app',
+            'source': 'test_py_numcosmo_app.py',
         },
     ]
 endif

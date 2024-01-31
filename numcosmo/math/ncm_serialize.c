@@ -1498,12 +1498,15 @@ ncm_serialize_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
   }
 
 #else
+
   g_error ("ncm_serialize_from_yaml: libfyaml not available.");
 
   return NULL;
 
 #endif /* HAVE_LIBFYAML */
 }
+
+#ifdef HAVE_LIBFYAML
 
 static NcmObjArray *
 _ncm_serialize_array_from_yaml_node (NcmSerialize *ser, struct fy_node *root)
@@ -1532,6 +1535,8 @@ _ncm_serialize_array_from_yaml_node (NcmSerialize *ser, struct fy_node *root)
 
   return array;
 }
+
+#endif /* HAVE_LIBFYAML */
 
 /**
  * ncm_serialize_array_from_yaml:
@@ -3215,6 +3220,8 @@ ncm_serialize_to_yaml (NcmSerialize *ser, GObject *obj)
 gchar *
 ncm_serialize_array_to_yaml (NcmSerialize *ser, NcmObjArray *oa)
 {
+#ifdef HAVE_LIBFYAML
+
   struct fy_document *doc = fy_document_create (NULL);
   struct fy_node *root    = fy_node_create_sequence (doc);
   gchar *yaml_str         = NULL;
@@ -3234,6 +3241,14 @@ ncm_serialize_array_to_yaml (NcmSerialize *ser, NcmObjArray *oa)
   fy_document_destroy (doc);
 
   return yaml_str;
+
+#else /* HAVE_LIBFYAML */
+
+  g_error ("ncm_serialize_array_to_yaml: libfyaml not available.");
+
+  return NULL;
+
+#endif
 }
 
 /**
@@ -3248,6 +3263,7 @@ ncm_serialize_array_to_yaml (NcmSerialize *ser, NcmObjArray *oa)
 gchar *
 ncm_serialize_dict_str_to_yaml (NcmSerialize *ser, NcmObjDictStr *ods)
 {
+#ifdef HAVE_LIBFYAML
   struct fy_document *doc = fy_document_create (NULL);
   struct fy_node *root    = fy_node_create_mapping (doc);
   gchar *yaml_str         = NULL;
@@ -3272,6 +3288,14 @@ ncm_serialize_dict_str_to_yaml (NcmSerialize *ser, NcmObjDictStr *ods)
   fy_document_destroy (doc);
 
   return yaml_str;
+
+#else /* HAVE_LIBFYAML */
+
+  g_error ("ncm_serialize_dict_str_to_yaml: libfyaml not available.");
+
+  return NULL;
+
+#endif
 }
 
 /**
@@ -3286,6 +3310,8 @@ ncm_serialize_dict_str_to_yaml (NcmSerialize *ser, NcmObjDictStr *ods)
 gchar *
 ncm_serialize_dict_int_to_yaml (NcmSerialize *ser, NcmObjDictInt *odi)
 {
+#ifdef HAVE_LIBFYAML
+
   struct fy_document *doc = fy_document_create (NULL);
   struct fy_node *root    = fy_node_create_mapping (doc);
   gchar *yaml_str         = NULL;
@@ -3310,6 +3336,14 @@ ncm_serialize_dict_int_to_yaml (NcmSerialize *ser, NcmObjDictInt *odi)
   fy_document_destroy (doc);
 
   return yaml_str;
+
+#else /* HAVE_LIBFYAML */
+
+  g_error ("ncm_serialize_dict_int_to_yaml: libfyaml not available.");
+
+  return NULL;
+
+#endif
 }
 
 /**
@@ -3324,6 +3358,7 @@ ncm_serialize_dict_int_to_yaml (NcmSerialize *ser, NcmObjDictInt *odi)
 gchar *
 ncm_serialize_var_dict_to_yaml (NcmSerialize *ser, NcmVarDict *dict)
 {
+#ifdef HAVE_LIBFYAML
   struct fy_document *doc = fy_document_create (NULL);
   struct fy_node *root    = fy_node_create_mapping (doc);
   gchar *yaml_str         = NULL;
@@ -3345,6 +3380,14 @@ ncm_serialize_var_dict_to_yaml (NcmSerialize *ser, NcmVarDict *dict)
   fy_document_destroy (doc);
 
   return yaml_str;
+
+#else /* HAVE_LIBFYAML */
+
+  g_error ("ncm_serialize_var_dict_to_yaml: libfyaml not available.");
+
+  return NULL;
+
+#endif
 }
 
 /**
