@@ -30,8 +30,12 @@ import pytest
 from typer.testing import CliRunner
 
 from numcosmo_py import Ncm
-from numcosmo_py.app import app
+from numcosmo_py.app import app, IniSampler, Parallezation
 from numcosmo_py.sampling import FitRunner, FitGradType, FitRunMessages, FisherType
+from numcosmo_py.interpolation.stats_dist import (
+    InterpolationMethod,
+    InterpolationKernel,
+)
 
 runner = CliRunner()
 
@@ -91,19 +95,39 @@ def fixture_fisher_type(request) -> str:
     return request.param
 
 
+@pytest.fixture(
+    name="interpolation_method", params=[e.value for e in InterpolationMethod]
+)
+def fixture_interpolation_method(request) -> str:
+    """Returns interpolation method"""
+
+    return request.param
+
+
+@pytest.fixture(
+    name="interpolation_kernel", params=[e.value for e in InterpolationKernel]
+)
+def fixture_interpolation_kernel(request) -> str:
+    """Returns interpolation kernel"""
+
+    return request.param
+
+
 def test_run_test(simple_experiment):
     """Test run test."""
 
     filename, _ = simple_experiment
     result = runner.invoke(app, ["run", "test", filename.as_posix()])
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
 
 def test_run_fit(simple_experiment):
     """Test run fit."""
     filename, _ = simple_experiment
     result = runner.invoke(app, ["run", "fit", filename.as_posix()])
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
 
 def test_run_fit_runner(simple_experiment, fit_runner):
@@ -112,7 +136,8 @@ def test_run_fit_runner(simple_experiment, fit_runner):
     result = runner.invoke(
         app, ["run", "fit", filename.as_posix(), "--runner", fit_runner]
     )
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
 
 def test_run_fit_grad_type(simple_experiment, fit_grad_type):
@@ -121,7 +146,8 @@ def test_run_fit_grad_type(simple_experiment, fit_grad_type):
     result = runner.invoke(
         app, ["run", "fit", filename.as_posix(), "--grad-type", fit_grad_type]
     )
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
 
 def test_run_fit_run_messages(simple_experiment, fit_run_messages):
@@ -130,7 +156,8 @@ def test_run_fit_run_messages(simple_experiment, fit_run_messages):
     result = runner.invoke(
         app, ["run", "fit", filename.as_posix(), "--run-messages", fit_run_messages]
     )
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
 
 def test_run_fit_runner_grad_type(simple_experiment, fit_runner, fit_grad_type):
@@ -148,7 +175,8 @@ def test_run_fit_runner_grad_type(simple_experiment, fit_runner, fit_grad_type):
             fit_grad_type,
         ],
     )
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
 
 def test_run_fit_runner_grad_type_run_messages(
@@ -170,7 +198,8 @@ def test_run_fit_runner_grad_type_run_messages(
             fit_run_messages,
         ],
     )
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
 
 def test_run_fit_starting_point(
@@ -184,7 +213,8 @@ def test_run_fit_starting_point(
         app,
         ["run", "fit", filename.as_posix(), "--output", output.as_posix()],
     )
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
     result = runner.invoke(
         app,
@@ -203,7 +233,8 @@ def test_run_fit_starting_point(
         ],
     )
 
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
 
 def test_run_fit_restart(
@@ -229,7 +260,8 @@ def test_run_fit_restart(
             "0.0",
         ],
     )
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
 
 def test_run_theory_vector(simple_experiment):
@@ -241,7 +273,8 @@ def test_run_theory_vector(simple_experiment):
         ["run", "theory-vector", filename.as_posix(), "--output", output.as_posix()],
     )
 
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     output_dict = ser.dict_str_from_yaml_file(output.as_posix())
@@ -260,7 +293,8 @@ def test_run_theory_vector_starting_point(simple_experiment):
         ["run", "fit", filename.as_posix(), "--output", output.as_posix()],
     )
 
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
     result = runner.invoke(
         app,
@@ -275,7 +309,8 @@ def test_run_theory_vector_starting_point(simple_experiment):
         ],
     )
 
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     output_dict = ser.dict_str_from_yaml_file(output.as_posix())
@@ -293,7 +328,8 @@ def test_run_fisher(simple_experiment, fisher_type):
         ["run", "fisher", filename.as_posix(), "--fisher-type", fisher_type],
     )
 
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
 
 def test_run_fisher_output(simple_experiment, fisher_type):
@@ -314,7 +350,8 @@ def test_run_fisher_output(simple_experiment, fisher_type):
         ],
     )
 
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     output_dict = ser.dict_str_from_yaml_file(output.as_posix())
@@ -332,13 +369,16 @@ def test_run_fisher_bias(simple_experiment):
         app,
         ["run", "theory-vector", filename.as_posix(), "--output", output.as_posix()],
     )
-    assert result.exit_code == 0
+
+    if result.exit_code != 0:
+        raise result.exception
 
     result = runner.invoke(
         app,
         ["run", "fit", filename.as_posix(), "--output", output.as_posix()],
     )
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
 
     result = runner.invoke(
         app,
@@ -352,10 +392,190 @@ def test_run_fisher_bias(simple_experiment):
             output.as_posix(),
         ],
     )
-    assert result.exit_code == 0
+
+    if result.exit_code != 0:
+        raise result.exception
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     output_dict = ser.dict_str_from_yaml_file(output.as_posix())
     assert isinstance(output_dict, Ncm.ObjDictStr)
     v1 = output_dict.get("delta-theta")
     assert isinstance(v1, Ncm.Vector)
+
+
+def test_run_mcmc_apes(simple_experiment):
+    """Runs a MCMC analysis using APES."""
+
+    filename, _ = simple_experiment
+    result = runner.invoke(app, ["run", "mcmc", "apes", filename.as_posix()])
+
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mcmc_apes_threads(simple_experiment):
+    """Runs a MCMC analysis using APES."""
+
+    filename, _ = simple_experiment
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--parallel",
+            Parallezation.THREADS.value,
+        ],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mcmc_apes_output(simple_experiment):
+    """Runs a MCMC analysis using APES."""
+
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+
+    assert output.absolute().with_suffix(".mcmc.fits").exists()
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mcmc_apes_init_gauss_cov(simple_experiment):
+    """Runs a MCMC analysis using APES starting at a best-fit and fisher matrix."""
+
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+
+    # Computes best-fit
+    result = runner.invoke(
+        app, ["run", "fit", filename.as_posix(), "--output", output.as_posix()]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    # Computes covariance
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "fisher",
+            filename.as_posix(),
+            "--output",
+            output.as_posix(),
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    # Runs MCMC
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--starting-point",
+            output.as_posix(),
+            "--output",
+            output.as_posix(),
+            "--initial-points-sampler",
+            IniSampler.GAUSS_COV.value,
+            "--initial-sampler-covar",
+            output.as_posix(),
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mcmc_apes_init_catalog(simple_experiment):
+    """Runs a MCMC analysis using APES starting at previously computed catalog."""
+
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+
+    # Computes best-fit
+    result = runner.invoke(
+        app, ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    # Runs MCMC
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--initial-points-sampler",
+            IniSampler.FROM_CATALOG.value,
+            "--initial-catalog",
+            output.absolute().with_suffix(".mcmc.fits").as_posix(),
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mcmc_apes_method_kernel(
+    simple_experiment, interpolation_method, interpolation_kernel
+):
+    """Runs a MCMC analysis using APES."""
+
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--output",
+            output.as_posix(),
+            "--interpolation-method",
+            interpolation_method,
+            "--interpolation-kernel",
+            interpolation_kernel,
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mcmc_apes_method_kernel_no_interp(
+    simple_experiment, interpolation_method, interpolation_kernel
+):
+    """Runs a MCMC analysis using APES."""
+
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--output",
+            output.as_posix(),
+            "--interpolation-method",
+            interpolation_method,
+            "--interpolation-kernel",
+            interpolation_kernel,
+            "--no-use-interpolation",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
