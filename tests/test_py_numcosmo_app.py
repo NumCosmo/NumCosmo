@@ -31,11 +31,7 @@ from typer.testing import CliRunner
 
 from numcosmo_py import Ncm
 from numcosmo_py.app import app
-from numcosmo_py.sampling import (
-    FitRunner,
-    FitGradType,
-    FitRunMessages,
-)
+from numcosmo_py.sampling import FitRunner, FitGradType, FitRunMessages, FisherType
 
 runner = CliRunner()
 
@@ -84,6 +80,13 @@ def fixture_fit_grad_type(request) -> str:
 @pytest.fixture(name="fit_run_messages", params=[e.value for e in FitRunMessages])
 def fixture_fit_run_messages(request) -> str:
     """Returns a fit run messages"""
+
+    return request.param
+
+
+@pytest.fixture(name="fisher_type", params=[e.value for e in FisherType])
+def fixture_fisher_type(request) -> str:
+    """Returns fisher type"""
 
     return request.param
 
@@ -240,6 +243,12 @@ def test_run_theory_vector(simple_experiment):
 
     assert result.exit_code == 0
 
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    output_dict = ser.dict_str_from_yaml_file(output.as_posix())
+    assert isinstance(output_dict, Ncm.ObjDictStr)
+    v1 = output_dict.get("theory-vector")
+    assert isinstance(v1, Ncm.Vector)
+
 
 def test_run_theory_vector_starting_point(simple_experiment):
     """Test run theory vector with starting point."""
@@ -261,7 +270,92 @@ def test_run_theory_vector_starting_point(simple_experiment):
             filename.as_posix(),
             "--starting-point",
             output.as_posix(),
+            "--output",
+            output.as_posix(),
         ],
     )
 
     assert result.exit_code == 0
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    output_dict = ser.dict_str_from_yaml_file(output.as_posix())
+    assert isinstance(output_dict, Ncm.ObjDictStr)
+    v1 = output_dict.get("theory-vector")
+    assert isinstance(v1, Ncm.Vector)
+
+
+def test_run_fisher(simple_experiment, fisher_type):
+    """Test run fisher"""
+
+    filename, _ = simple_experiment
+    result = runner.invoke(
+        app,
+        ["run", "fisher", filename.as_posix(), "--fisher-type", fisher_type],
+    )
+
+    assert result.exit_code == 0
+
+
+def test_run_fisher_output(simple_experiment, fisher_type):
+    """Test run fisher"""
+
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "fisher",
+            filename.as_posix(),
+            "--fisher-type",
+            fisher_type,
+            "--output",
+            output.as_posix(),
+        ],
+    )
+
+    assert result.exit_code == 0
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    output_dict = ser.dict_str_from_yaml_file(output.as_posix())
+    assert isinstance(output_dict, Ncm.ObjDictStr)
+    v1 = output_dict.get("covariance")
+    assert isinstance(v1, Ncm.Matrix)
+
+
+def test_run_fisher_bias(simple_experiment):
+    """Computes fisher bias based on a theory vector."""
+
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "theory-vector", filename.as_posix(), "--output", output.as_posix()],
+    )
+    assert result.exit_code == 0
+
+    result = runner.invoke(
+        app,
+        ["run", "fit", filename.as_posix(), "--output", output.as_posix()],
+    )
+    assert result.exit_code == 0
+
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "fisher-bias",
+            filename.as_posix(),
+            "--theory-vector",
+            output.as_posix(),
+            "--output",
+            output.as_posix(),
+        ],
+    )
+    assert result.exit_code == 0
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    output_dict = ser.dict_str_from_yaml_file(output.as_posix())
+    assert isinstance(output_dict, Ncm.ObjDictStr)
+    v1 = output_dict.get("delta-theta")
+    assert isinstance(v1, Ncm.Vector)

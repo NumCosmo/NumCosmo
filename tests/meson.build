@@ -331,6 +331,10 @@ python_tests = [
         'name': 'py_fit',
         'source': 'test_py_fit.py',
     },
+    {
+        'name': 'py_numcosmo_app',
+        'source': 'test_py_numcosmo_app.py',
+    },
 ]
 
 if mpi_c_dep.found()
