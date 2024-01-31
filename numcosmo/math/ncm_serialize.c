@@ -1356,6 +1356,30 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
                   dtuple3 = ncm_dtuple3_new_from_variant (var);
                   g_value_take_boxed (&lval, dtuple3);
                 }
+                else if (g_type_is_a (pspec->value_type, G_TYPE_STRV))
+                {
+                  if (!fy_node_is_sequence (prop_val))
+                  {
+                    g_error ("_ncm_serialize_from_node: object property of type G_TYPE_STRV `%s' must be a sequence.", names[i]);
+                  }
+                  else
+                  {
+                    guint n_items = fy_node_sequence_item_count (prop_val);
+                    gchar **strv  = g_new (gchar *, n_items + 1);
+                    guint k;
+
+                    for (k = 0; k < n_items; k++)
+                    {
+                      struct fy_node *item = fy_node_sequence_get_by_index (prop_val, k);
+
+                      strv[k] = g_strdup (fy_node_get_scalar0 (item));
+                    }
+
+                    strv[n_items] = NULL;
+
+                    g_value_take_boxed (&lval, strv);
+                  }
+                }
                 else
                 {
                   GError *error       = NULL;
