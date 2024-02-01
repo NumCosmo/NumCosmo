@@ -95,9 +95,10 @@ ncm_binsplit_alloc (gpointer userdata)
  * @bs_eval: a #NcmBinSplitEval
  * @nt: number of terms to be added to the sum
  *
- * FIXME
+ * Computes the number of bits of precision that would be gained by adding
+ * @nt terms to the sum.
  *
- * Returns: FIXME
+ * Returns: number of bits of precision that would be gained by adding @nt terms to the sum.
  */
 glong
 ncm_binsplit_test_next (NcmBinSplit *bs, NcmBinSplitEval bs_eval, gulong nt)
@@ -131,7 +132,8 @@ ncm_binsplit_test_next (NcmBinSplit *bs, NcmBinSplitEval bs_eval, gulong nt)
  * @bs_l: a #NcmBinSplit
  * @bs_r: a #NcmBinSplit
  *
- * FIXME
+ * Joins two #NcmBinSplit objects, it is assumed that @bs_l and @bs_r are
+ * consecutive in the sum.
  *
  */
 void
@@ -171,9 +173,10 @@ ncm_binsplit_join (NcmBinSplit *bs, NcmBinSplit *bs_l, NcmBinSplit *bs_r)
  * ncm_binsplit_eval_join: (skip)
  * @bs: a #NcmBinSplit
  * @bs_eval: a #NcmBinSplitEval
- * @nt: FIXME
+ * @nt: number of terms to be added to the sum
  *
- * FIXME
+ * Evaluates the sum of @nt terms and joins the result to the sum stored in
+ * @bs.
  *
  */
 void
@@ -209,12 +212,13 @@ ncm_binsplit_eval_join (NcmBinSplit *bs, NcmBinSplitEval bs_eval, gulong nt)
  * ncm_binsplit_eval_prec: (skip)
  * @bs: a #NcmBinSplit
  * @bs_eval: a #NcmBinSplitEval
- * @step: FIXME
- * @prec: FIXME
+ * @step: number of terms to be added to the sum in each iteration
+ * @prec: number of bits of precision to be achieved
  *
- * FIXME
+ * Evaluates the sum until the number of bits of precision is greater or
+ * equal to @prec.
  *
- * Returns: FIXME
+ * Returns: number of terms added to the sum.
  */
 gulong
 ncm_binsplit_eval_prec (NcmBinSplit *bs, NcmBinSplitEval bs_eval, gulong step, glong prec)
@@ -236,9 +240,10 @@ ncm_binsplit_eval_prec (NcmBinSplit *bs, NcmBinSplitEval bs_eval, gulong step, g
 /**
  * ncm_binsplit_get: (skip)
  * @bs: a #NcmBinSplit
- * @res: FIXME
+ * @res: a #mpfr_t arbitrary precision float
  *
- * FIXME
+ * Computes the value of the sum stored in @bs and stores the result in @res
+ * in the form of a #mpfr_t.
  *
  */
 void
@@ -254,9 +259,10 @@ ncm_binsplit_get (NcmBinSplit *bs, mpfr_t res)
 /**
  * ncm_binsplit_get_q: (skip)
  * @bs: a #NcmBinSplit
- * @q: FIXME
+ * @q: a #mpq_t arbitrary precision rational
  *
- * FIXME
+ * Computes the value of the sum stored in @bs and stores the result in @q.
+ * The result is stored in the form of a #mpq_t.
  *
  */
 void
@@ -273,11 +279,12 @@ ncm_binsplit_get_q (NcmBinSplit *bs, mpq_t q)
 /**
  * ncm_binsplit_get_d: (skip)
  * @bs: a #NcmBinSplit
- * @rnd: FIXME
+ * @rnd: a #mp_rnd_t rounding mode
  *
- * FIXME
+ * Computes the value of the sum stored in @bs and stores the result in @res
+ * in the form of a double.
  *
- * Returns: FIXME
+ * Returns: the value of the sum stored in @bs in the form of a double.
  */
 gdouble
 ncm_binsplit_get_d (NcmBinSplit *bs, mp_rnd_t rnd)

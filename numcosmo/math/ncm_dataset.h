@@ -36,7 +36,7 @@ G_BEGIN_DECLS
 
 #define NCM_TYPE_DATASET (ncm_dataset_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcmDataset, ncm_dataset, NCM, DATASET, GObject);
+G_DECLARE_FINAL_TYPE (NcmDataset, ncm_dataset, NCM, DATASET, GObject)
 
 /**
  * NcmDatasetBStrapType:
@@ -58,6 +58,7 @@ typedef enum _NcmDatasetBStrapType
 
 NcmDataset *ncm_dataset_new (void);
 NcmDataset *ncm_dataset_new_list (gpointer data0, ...) G_GNUC_NULL_TERMINATED;
+NcmDataset *ncm_dataset_new_array (NcmData **data_array, guint len);
 NcmDataset *ncm_dataset_dup (NcmDataset *dset, NcmSerialize *ser);
 NcmDataset *ncm_dataset_ref (NcmDataset *dset);
 NcmDataset *ncm_dataset_copy (NcmDataset *dset);
@@ -93,7 +94,11 @@ void ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v)
 
 void ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2lnL_i);
 
+gboolean ncm_dataset_has_mean_vector (NcmDataset *dset);
+
+void ncm_dataset_mean_vector (NcmDataset *dset, NcmMSet *mset, NcmVector *mu);
 void ncm_dataset_fisher_matrix (NcmDataset *dset, NcmMSet *mset, NcmMatrix **IM);
+void ncm_dataset_fisher_matrix_bias (NcmDataset *dset, NcmMSet *mset, NcmVector *f_true, NcmMatrix **IM, NcmVector **delta_theta);
 
 G_END_DECLS
 

@@ -1,4 +1,4 @@
-{
+(
   'NcDataHubble', 
   {
     'desc':      <'Riess 2016 HST WFC3'>, 
@@ -10,4 +10,4 @@
     'sigma':     <[ 1.74]>, 
     'z':         <[ 0.0]>
   }
-}
+)

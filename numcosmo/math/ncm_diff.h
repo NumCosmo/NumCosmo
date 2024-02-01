@@ -1,4 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
 /***************************************************************************
  *            ncm_diff.h
  *
@@ -37,7 +36,7 @@ G_BEGIN_DECLS
 
 #define NCM_TYPE_DIFF (ncm_diff_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcmDiff, ncm_diff, NCM, DIFF, GObject);
+G_DECLARE_FINAL_TYPE (NcmDiff, ncm_diff, NCM, DIFF, GObject)
 
 /**
  * NcmDiffFuncNtoM:

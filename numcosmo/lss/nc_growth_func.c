@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            nc_growth_func.c
  *
@@ -112,13 +113,13 @@ enum
   PROP_X_I,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGrowthFunc, nc_growth_func, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGrowthFunc, nc_growth_func, G_TYPE_OBJECT)
 
 static void
 nc_growth_func_init (NcGrowthFunc *gf)
 {
   NcGrowthFuncPrivate * const self = gf->priv = nc_growth_func_get_instance_private (gf);
-  
+
   self->cvode      = NULL;
   self->yv         = N_VNew_Serial (3);
   self->A          = SUNDenseMatrix (3, 3);
@@ -127,10 +128,10 @@ nc_growth_func_init (NcGrowthFunc *gf)
   self->reltol     = 0.0;
   self->abstol     = 0.0;
   self->ctrl_cosmo = ncm_model_ctrl_new (NULL);
-  
+
   gf->s   = NULL;
   gf->Da0 = 0.0;
-  
+
   NCM_CVODE_CHECK ((gpointer) self->A, "SUNDenseMatrix", 0, );
   NCM_CVODE_CHECK ((gpointer) self->LS, "SUNDenseLinearSolver", 0, );
 }
@@ -139,6 +140,7 @@ static void
 _nc_growth_func_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcGrowthFunc *gf = NC_GROWTH_FUNC (object);
+
   g_return_if_fail (NC_IS_GROWTH_FUNC (object));
 
   switch (prop_id)
@@ -162,6 +164,7 @@ static void
 _nc_growth_func_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcGrowthFunc *gf = NC_GROWTH_FUNC (object);
+
   g_return_if_fail (NC_IS_GROWTH_FUNC (object));
 
   switch (prop_id)
@@ -186,10 +189,10 @@ _nc_growth_func_dispose (GObject *object)
 {
   NcGrowthFunc *gf                 = NC_GROWTH_FUNC (object);
   NcGrowthFuncPrivate * const self = gf->priv;
-  
+
   ncm_spline_clear (&gf->s);
   ncm_model_ctrl_clear (&self->ctrl_cosmo);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_growth_func_parent_class)->dispose (object);
 }
@@ -199,22 +202,22 @@ _nc_growth_func_finalize (GObject *object)
 {
   NcGrowthFunc *gf                 = NC_GROWTH_FUNC (object);
   NcGrowthFuncPrivate * const self = gf->priv;
-  
+
   CVodeFree (&self->cvode);
   N_VDestroy (self->yv);
-  
+
   if (self->A != NULL)
   {
     SUNMatDestroy (self->A);
     self->A = NULL;
   }
-  
+
   if (self->LS != NULL)
   {
     SUNLinSolFree (self->LS);
     self->LS = NULL;
   }
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_growth_func_parent_class)->finalize (object);
 }
@@ -223,7 +226,7 @@ static void
 nc_growth_func_class_init (NcGrowthFuncClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->set_property = &_nc_growth_func_set_property;
   object_class->get_property = &_nc_growth_func_get_property;
   object_class->dispose      = &_nc_growth_func_dispose;
@@ -243,6 +246,7 @@ nc_growth_func_class_init (NcGrowthFuncClass *klass)
                                                         "Relative tolerance",
                                                         GSL_DBL_EPSILON, 1.0, 1.0e-13,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcGrowthFunc:abstol:
    *
@@ -268,14 +272,13 @@ nc_growth_func_class_init (NcGrowthFuncClass *klass)
    * Default value: $10^{12}$.
    *
    */
-g_object_class_install_property (object_class,
+  g_object_class_install_property (object_class,
                                    PROP_X_I,
                                    g_param_spec_double ("x-i",
                                                         NULL,
                                                         "Initial value for $x_i$",
                                                         0.0, G_MAXDOUBLE, 1.0e12,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
 }
 
 /**
@@ -290,7 +293,7 @@ nc_growth_func_new (void)
 {
   NcGrowthFunc *gf = g_object_new (NC_TYPE_GROWTH_FUNC,
                                    NULL);
-  
+
   return gf;
 }
 
@@ -446,15 +449,15 @@ growth_f (realtype a, N_Vector y, N_Vector ydot, gpointer f_data)
   const gdouble E2    = nc_hicosmo_E2 (cosmo, z);
   const gdouble E     = sqrt (E2);
   const gdouble dE2dz = nc_hicosmo_dE2_dz (cosmo, z);
-  
+
   const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
   const gdouble D        = NV_Ith_S (y, 0);
   const gdouble B        = NV_Ith_S (y, 1);
-  
+
   NV_Ith_S (ydot, 0) = B;
   NV_Ith_S (ydot, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a) * B + 3.0 * Omega_m0 * D / (2.0 * a5 * E2);
   NV_Ith_S (ydot, 2) = 1.0 / gsl_pow_3 (a * E);
-  
+
   return 0;
 }
 
@@ -468,25 +471,25 @@ growth_J (realtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Ve
   const gdouble E2       = nc_hicosmo_E2 (cosmo, z);
   const gdouble dE2dz    = nc_hicosmo_dE2_dz (cosmo, z);
   const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
-  
+
   NCM_UNUSED (y);
   NCM_UNUSED (fy);
   NCM_UNUSED (tmp1);
   NCM_UNUSED (tmp2);
   NCM_UNUSED (tmp3);
-  
+
   SUN_DENSE_ACCESS (J, 0, 0) = 0.0;
   SUN_DENSE_ACCESS (J, 0, 1) = 1.0;
   SUN_DENSE_ACCESS (J, 0, 2) = 0.0;
-  
+
   SUN_DENSE_ACCESS (J, 1, 0) = 3.0 * Omega_m0 / (2.0 * a5 * E2);
   SUN_DENSE_ACCESS (J, 1, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a);
   SUN_DENSE_ACCESS (J, 1, 2) = 0.0;
-  
+
   SUN_DENSE_ACCESS (J, 2, 0) = 0.0;
   SUN_DENSE_ACCESS (J, 2, 1) = 0.0;
   SUN_DENSE_ACCESS (J, 2, 2) = 0.0;
-  
+
   return 0;
 }
 
@@ -510,39 +513,42 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
   const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (cosmo);
   gdouble dDa0;
   gint flag;
-  
+
   ai = 1.0 / self->x_i;
-  
+
   if (gf->s != NULL)
   {
-    x_array = ncm_vector_get_array (gf->s->xv);
-    y_array = ncm_vector_get_array (gf->s->yv);
+    NcmVector *xv = ncm_spline_peek_xv (gf->s);
+    NcmVector *yv = ncm_spline_peek_yv (gf->s);
+
+    x_array = ncm_vector_get_array (xv);
+    y_array = ncm_vector_get_array (yv);
   }
   else
   {
     x_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
     y_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   }
-  
+
   g_array_set_size (x_array, 0);
   g_array_set_size (y_array, 0);
-  
+
   dDa0 = 1.0e-20 / gsl_pow_3 (ai * nc_hicosmo_E (cosmo, 1.0 / ai - 1.0));
-  
+
   NV_Ith_S (self->yv, 0) = 1.0;
   NV_Ith_S (self->yv, 1) = (Omega_r0 > 0.0) ? ((3.0 / 2.0) * Omega_m0 / Omega_r0) : 1.0;
   NV_Ith_S (self->yv, 2) = dDa0;
-  
+
   if (self->cvode == NULL)
   {
     self->cvode = CVodeCreate (CV_BDF);
-    
+
     flag = CVodeInit (self->cvode, &growth_f, ai, self->yv);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
-    
+
     flag = CVodeSetLinearSolver (self->cvode, self->LS, self->A);
     NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
-    
+
     flag = CVodeSetJacFn (self->cvode, &growth_J);
     NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
   }
@@ -550,63 +556,63 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
   {
     flag = CVodeReInit (self->cvode, ai, self->yv);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
-    
+
     flag = CVodeSetLinearSolver (self->cvode, self->LS, self->A);
     NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
-    
+
     flag = CVodeSetJacFn (self->cvode, &growth_J);
     NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
   }
-  
+
   flag = CVodeSStolerances (self->cvode, self->reltol, self->abstol);
   NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
-  
+
   flag = CVodeSetMaxNumSteps (self->cvode, 500000);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
-  
+
   flag = CVodeSetUserData (self->cvode, cosmo);
   NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
-  
+
   flag = CVodeSetStopTime (self->cvode, 1.0);
   NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
-  
+
   g_array_append_val (x_array, ai);
   g_array_append_val (y_array, NV_Ith_S (self->yv, 0));
-  
+
   while (TRUE)
   {
     gint flag = CVode (self->cvode, 1.0, self->yv, &a, CV_ONE_STEP);
-    
+
     NCM_CVODE_CHECK (&flag, "CVode", 1, );
-    
+
     g_array_append_val (x_array, a);
     g_array_append_val (y_array, NV_Ith_S (self->yv, 0));
-    
+
     if (a == 1.0)
       break;
   }
-  
+
   gf->Da0 = 2.5 * Omega_m0 * (NV_Ith_S (self->yv, 2) - dDa0);
-  
+
   if (gf->s == NULL)
     gf->s = ncm_spline_cubic_notaknot_new ();
 
   {
     NcmVector *xv = ncm_vector_new_array (x_array);
     NcmVector *yv = ncm_vector_new_array (y_array);
-    
+
     ncm_vector_scale (yv, 1.0 / ncm_vector_get (yv, y_array->len - 1));
     ncm_spline_set (gf->s, xv, yv, TRUE);
-    
+
     ncm_vector_free (xv);
     ncm_vector_free (yv);
   }
-  
+
   g_array_unref (x_array);
   g_array_unref (y_array);
-  
+
   ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo));
-  
+
   return;
 }
 
@@ -624,7 +630,7 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
 {
   NcGrowthFuncPrivate * const self = gf->priv;
   gboolean cosmo_up                = ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo));
-  
+
   if (cosmo_up)
     nc_growth_func_prepare (gf, cosmo);
 }

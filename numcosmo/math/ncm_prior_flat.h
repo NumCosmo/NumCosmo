@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -33,15 +33,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_PRIOR_FLAT             (ncm_prior_flat_get_type ())
-#define NCM_PRIOR_FLAT(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_PRIOR_FLAT, NcmPriorFlat))
-#define NCM_PRIOR_FLAT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_PRIOR_FLAT, NcmPriorFlatClass))
-#define NCM_IS_PRIOR_FLAT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_PRIOR_FLAT))
-#define NCM_IS_PRIOR_FLAT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_PRIOR_FLAT))
-#define NCM_PRIOR_FLAT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_PRIOR_FLAT, NcmPriorFlatClass))
+#define NCM_TYPE_PRIOR_FLAT (ncm_prior_flat_get_type ())
 
-typedef struct _NcmPriorFlatClass NcmPriorFlatClass;
-typedef struct _NcmPriorFlat NcmPriorFlat;
+G_DECLARE_DERIVABLE_TYPE (NcmPriorFlat, ncm_prior_flat, NCM, PRIOR_FLAT, NcmPrior)
 
 typedef gdouble (*NcmPriorFlatMean) (NcmPriorFlat *pf, NcmMSet *mset);
 
@@ -49,25 +43,29 @@ struct _NcmPriorFlatClass
 {
   /*< private >*/
   NcmPriorClass parent_class;
-  NcmPriorFlatMean mean;  
-};
+  NcmPriorFlatMean mean;
 
-struct _NcmPriorFlat
-{
-  /*< private >*/
-  NcmPrior parent_instance;
-  gdouble x_low;
-  gdouble x_upp;
-  gdouble s;
-  gdouble var;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[17];
 };
-
-GType ncm_prior_flat_get_type (void) G_GNUC_CONST;
 
 NcmPriorFlat *ncm_prior_flat_ref (NcmPriorFlat *pf);
 void ncm_prior_flat_free (NcmPriorFlat *pf);
 void ncm_prior_flat_clear (NcmPriorFlat **pf);
 
+void ncm_prior_flat_set_x_low (NcmPriorFlat *pf, const gdouble x_low);
+void ncm_prior_flat_set_x_upp (NcmPriorFlat *pf, const gdouble x_upp);
+void ncm_prior_flat_set_scale (NcmPriorFlat *pf, const gdouble scale);
+void ncm_prior_flat_set_var (NcmPriorFlat *pf, const gdouble var);
+void ncm_prior_flat_set_h0 (NcmPriorFlat *pf, const gdouble h0);
+
+gdouble ncm_prior_flat_get_x_low (NcmPriorFlat *pf);
+gdouble ncm_prior_flat_get_x_upp (NcmPriorFlat *pf);
+gdouble ncm_prior_flat_get_scale (NcmPriorFlat *pf);
+gdouble ncm_prior_flat_get_var (NcmPriorFlat *pf);
+gdouble ncm_prior_flat_get_h0 (NcmPriorFlat *pf);
+
 G_END_DECLS
 
 #endif /* _NCM_PRIOR_FLAT_H_ */
+

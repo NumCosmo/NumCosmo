@@ -51,7 +51,7 @@ enum
   PROP_NHOC
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertGravEinstein, nc_hipert_grav_einstein, NC_TYPE_HIPERT_GRAV);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertGravEinstein, nc_hipert_grav_einstein, NC_TYPE_HIPERT_GRAV)
 
 static void
 nc_hipert_grav_einstein_init (NcHIPertGravEinstein *gr)

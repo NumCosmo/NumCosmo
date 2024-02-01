@@ -60,11 +60,11 @@
 #include <gsl/gsl_randist.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcXcorLimberKernelGal, nc_xcor_limber_kernel_gal, NC_TYPE_XCOR_LIMBER_KERNEL);
+G_DEFINE_TYPE (NcXcorLimberKernelGal, nc_xcor_limber_kernel_gal, NC_TYPE_XCOR_LIMBER_KERNEL)
 
-#define VECTOR (NCM_MODEL (xclkg)->params)
-#define MAG_BIAS (ncm_vector_get (VECTOR, NC_XCOR_LIMBER_KERNEL_GAL_MAG_BIAS))
-#define NOISE_BIAS (ncm_vector_get (VECTOR, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS))
+#define VECTOR     (NCM_MODEL (xclkg))
+#define MAG_BIAS   (ncm_model_orig_param_get (VECTOR, NC_XCOR_LIMBER_KERNEL_GAL_MAG_BIAS))
+#define NOISE_BIAS (ncm_model_orig_param_get (VECTOR, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS))
 
 enum
 {
@@ -205,9 +205,13 @@ _nc_xcor_limber_kernel_gal_constructed (GObject *object)
 
     xclkg->nknots = bz_size;
 
-    bvi = ncm_model_vparam_index (model, NC_XCOR_LIMBER_KERNEL_GAL_BIAS, 0);
-    zv  = ncm_vector_new (bz_size);
-    bv  = ncm_vector_get_subvector (model->params, bvi, bz_size);
+    {
+      NcmVector *orig_vec = ncm_model_orig_params_peek_vector (model);
+
+      bvi = ncm_model_vparam_index (model, NC_XCOR_LIMBER_KERNEL_GAL_BIAS, 0);
+      zv  = ncm_vector_new (bz_size);
+      bv  = ncm_vector_get_subvector (orig_vec, bvi, bz_size);
+    }
 
     switch (bz_size)
     {

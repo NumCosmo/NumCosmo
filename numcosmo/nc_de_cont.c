@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            nc_de_cont.c
  *
@@ -14,12 +15,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -48,8 +49,13 @@
 
 
 #ifdef HAVE_ACB_H
+#ifdef HAVE_FLINT_ACB_H
+#include <flint/acb.h>
+#include <flint/acb_hypgeom.h>
+#else /* HAVE_FLINT_ACB_H */
 #include <acb.h>
 #include <acb_hypgeom.h>
+#endif /* HAVE_FLINT_ACB_H */
 #endif /* HAVE_ACB_H  */
 
 #include <nvector/nvector_serial.h>
@@ -63,7 +69,7 @@ struct _NcDEContPrivate
   gdouble cs2;
   gdouble cs;
   gdouble w;
- };
+};
 
 enum
 {
@@ -74,7 +80,7 @@ enum
   PROP_W,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcDECont, nc_de_cont, NCM_TYPE_CSQ1D);
+G_DEFINE_TYPE_WITH_PRIVATE (NcDECont, nc_de_cont, NCM_TYPE_CSQ1D)
 
 static void
 nc_de_cont_init (NcDECont *dec)
@@ -91,8 +97,9 @@ nc_de_cont_init (NcDECont *dec)
 static void
 _nc_de_cont_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcDECont *dec = NC_DE_CONT (object);
+  NcDECont *dec                = NC_DE_CONT (object);
   NcDEContPrivate * const self = dec->priv;
+
   g_return_if_fail (NC_IS_DE_CONT (object));
 
   switch (prop_id)
@@ -119,8 +126,9 @@ _nc_de_cont_set_property (GObject *object, guint prop_id, const GValue *value, G
 static void
 _nc_de_cont_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcDECont *dec = NC_DE_CONT (object);
+  NcDECont *dec                = NC_DE_CONT (object);
   NcDEContPrivate * const self = dec->priv;
+
   g_return_if_fail (NC_IS_DE_CONT (object));
 
   switch (prop_id)
@@ -158,7 +166,7 @@ _nc_de_cont_finalize (GObject *object)
 {
   /*NcDECont *dec = NC_DE_CONT (object);*/
   /*NcDEContPrivate * const self = dec->priv;*/
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_de_cont_parent_class)->finalize (object);
 }
@@ -183,7 +191,7 @@ nc_de_cont_class_init (NcDEContClass *klass)
   object_class->get_property = &_nc_de_cont_get_property;
   object_class->dispose      = &_nc_de_cont_dispose;
   object_class->finalize     = &_nc_de_cont_finalize;
-  
+
   g_object_class_install_property (object_class,
                                    PROP_OMEGA_W,
                                    g_param_spec_double ("Omegaw",
@@ -226,7 +234,7 @@ nc_de_cont_class_init (NcDEContClass *klass)
 static gdouble
 _nc_de_cont_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
-  NcDECont *dec = NC_DE_CONT (csq1d);
+  NcDECont *dec                = NC_DE_CONT (csq1d);
   NcDEContPrivate * const self = dec->priv;
 
   const gdouble t_1p3w = pow (t, 1.0 + 3.0 * self->w);
@@ -240,7 +248,7 @@ _nc_de_cont_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdo
 static gdouble
 _nc_de_cont_eval_int_1_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
-  NcDECont *dec = NC_DE_CONT (csq1d);
+  NcDECont *dec                = NC_DE_CONT (csq1d);
   NcDEContPrivate * const self = dec->priv;
 
   const gdouble t_3w   = pow (t, 3.0 * self->w);
@@ -257,12 +265,12 @@ _nc_de_cont_eval_int_1_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, con
 static gdouble
 _nc_de_cont_eval_int_mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
-  NcDECont *dec = NC_DE_CONT (csq1d);
+  NcDECont *dec                = NC_DE_CONT (csq1d);
   NcDEContPrivate * const self = dec->priv;
 
   const gdouble three1pw = 3.0 * (1.0 + self->w);
   const gdouble t_3p3w   = pow (t, three1pw);
-  const gdouble z        = - t_3p3w * self->Omega_w / self->Omega_L;
+  const gdouble z        = -t_3p3w * self->Omega_w / self->Omega_L;
   const gdouble z2       = z * z;
   const gdouble z3       = z2 * z;
   const gdouble z4       = z2 * z2;
@@ -281,16 +289,16 @@ _nc_de_cont_eval_int_mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, co
 static gdouble
 _nc_de_cont_eval_int_qmnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
-  NcDECont *dec = NC_DE_CONT (csq1d);
+  NcDECont *dec                = NC_DE_CONT (csq1d);
   NcDEContPrivate * const self = dec->priv;
 
   const gdouble three1pw = 3.0 * (1.0 + self->w);
   const gdouble t_3p3w   = pow (t, three1pw);
-  const gdouble z        = - t_3p3w * self->Omega_w / self->Omega_L;
+  const gdouble z        = -t_3p3w * self->Omega_w / self->Omega_L;
   const gdouble z2       = z * z;
   const gdouble z3       = z2 * z;
   const gdouble z4       = z2 * z2;
-  const gdouble prefac   = - self->cs2 * gsl_pow_2 (k * t) / (6.0 * self->w * self->Omega_L);
+  const gdouble prefac   = -self->cs2 * gsl_pow_2 (k * t) / (6.0 * self->w * self->Omega_L);
   const gdouble n1       = (3.0 + self->w);
   const gdouble n2       = n1 * (5.0 + 3.0 * self->w);
   const gdouble n3       = n2 * (7.0 + 5.0 * self->w);
@@ -308,12 +316,12 @@ _nc_de_cont_eval_int_qmnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, c
 static gdouble
 _nc_de_cont_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
-  NcDECont *dec = NC_DE_CONT (csq1d);
+  NcDECont *dec                = NC_DE_CONT (csq1d);
   NcDEContPrivate * const self = dec->priv;
 
   const gdouble three1pw = 3.0 * (1.0 + self->w);
   const gdouble t_3p3w   = pow (t, three1pw);
-  const gdouble z        = - t_3p3w * self->Omega_w / self->Omega_L;
+  const gdouble z        = -t_3p3w * self->Omega_w / self->Omega_L;
   const gdouble z2       = z * z;
   const gdouble z3       = z2 * z;
   const gdouble z4       = z2 * z2;
@@ -338,11 +346,10 @@ _nc_de_cont_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, 
   return prefac * (1.0 + T0 * (n1 * z / d1 + n2 * z2 / d2 + n3 * z3 / d3 + n4 * z4 / d4));
 }
 
-
 static gdouble
 _nc_de_cont_eval_nu  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
-  NcDECont *dec = NC_DE_CONT (csq1d);
+  NcDECont *dec                = NC_DE_CONT (csq1d);
   NcDEContPrivate * const self = dec->priv;
 
   const gdouble t_1p3w = pow (t, 1.0 + 3.0 * self->w);
@@ -355,7 +362,7 @@ _nc_de_cont_eval_nu  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const g
 static gdouble
 _nc_de_cont_eval_xi  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
-  NcDECont *dec = NC_DE_CONT (csq1d);
+  NcDECont *dec                = NC_DE_CONT (csq1d);
   NcDEContPrivate * const self = dec->priv;
 
   const gdouble t_1p3w = pow (t, 1.0 + 3.0 * self->w);
@@ -363,13 +370,12 @@ _nc_de_cont_eval_xi  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const g
   const gdouble E2     = self->Omega_w * t_3p3w + self->Omega_L;
 
   return log (3.0 * k * (1.0 + self->w) * t_1p3w * self->Omega_w / (2.0 * self->cs * E2));
-
 }
 
 static gdouble
 _nc_de_cont_eval_F1  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
-  NcDECont *dec = NC_DE_CONT (csq1d);
+  NcDECont *dec                = NC_DE_CONT (csq1d);
   NcDEContPrivate * const self = dec->priv;
 
   const gdouble t_1p3w = pow (t, 1.0 + 3.0 * self->w);
@@ -383,7 +389,7 @@ _nc_de_cont_eval_F1  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const g
 static gdouble
 _nc_de_cont_eval_F2  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
 {
-  NcDECont *dec = NC_DE_CONT (csq1d);
+  NcDECont *dec                = NC_DE_CONT (csq1d);
   NcDEContPrivate * const self = dec->priv;
 
   const gdouble t_1p3w = pow (t, 1.0 + 3.0 * self->w);
@@ -399,9 +405,9 @@ _nc_de_cont_eval_F2  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const g
  * @OmegaL: the value of $\Omega_\Lambda$
  * @cs2: the value of $c_s^2$
  * @w: the value of $w$
- * 
+ *
  * Creates a new #NcDECont object.
- * 
+ *
  * Returns: (transfer full): a new #NcDECont.
  */
 NcDECont *
@@ -413,6 +419,7 @@ nc_de_cont_new (const gdouble Omegaw, const gdouble OmegaL, const gdouble cs2, c
                                 "cs2",    cs2,
                                 "w",      w,
                                 NULL);
+
   return dec;
 }
 

@@ -78,11 +78,11 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
-G_DEFINE_TYPE (NcWLSurfaceMassDensity, nc_wl_surface_mass_density, NCM_TYPE_MODEL);
+G_DEFINE_TYPE (NcWLSurfaceMassDensity, nc_wl_surface_mass_density, NCM_TYPE_MODEL)
 
-#define VECTOR (NCM_MODEL (smd)->params)
-#define PCC   (ncm_vector_get (VECTOR, NC_WL_SURFACE_MASS_DENSITY_PCC))
-#define ROFF   (ncm_vector_get (VECTOR, NC_WL_SURFACE_MASS_DENSITY_ROFF))
+#define VECTOR (NCM_MODEL (smd))
+#define PCC    (ncm_model_orig_param_get (VECTOR, NC_WL_SURFACE_MASS_DENSITY_PCC))
+#define ROFF   (ncm_model_orig_param_get (VECTOR, NC_WL_SURFACE_MASS_DENSITY_ROFF))
 
 enum
 {
@@ -106,9 +106,9 @@ static void
 _nc_wl_surface_mass_density_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (object);
-  
+
   g_return_if_fail (NC_IS_WL_SURFACE_MASS_DENSITY (object));
-  
+
   switch (prop_id)
   {
     case PROP_DISTANCE:
@@ -124,9 +124,9 @@ static void
 _nc_wl_surface_mass_density_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (object);
-  
+
   g_return_if_fail (NC_IS_WL_SURFACE_MASS_DENSITY (object));
-  
+
   switch (prop_id)
   {
     case PROP_DISTANCE:
@@ -152,12 +152,12 @@ static void
 _nc_wl_surface_mass_density_dispose (GObject *object)
 {
   NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (object);
-  
+
   nc_distance_clear (&smd->dist);
-  
+
   ncm_model_ctrl_clear (&smd->ctrl_dp);
   ncm_model_ctrl_clear (&smd->ctrl_cosmo);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_wl_surface_mass_density_parent_class)->dispose (object);
 }
@@ -176,23 +176,23 @@ nc_wl_surface_mass_density_class_init (NcWLSurfaceMassDensityClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-  
+
   object_class->constructed = &_nc_wl_surface_mass_density_constructed;
   model_class->set_property = &_nc_wl_surface_mass_density_set_property;
   model_class->get_property = &_nc_wl_surface_mass_density_get_property;
   object_class->dispose     = &_nc_wl_surface_mass_density_dispose;
   object_class->finalize    = &_nc_wl_surface_mass_density_finalize;
-  
+
   ncm_mset_model_register_id (model_class,
                               "NcWLSurfaceMassDensity",
                               "NcWLSurfaceMassDensity.",
                               NULL,
                               FALSE,
                               NCM_MSET_MODEL_MAIN);
-  
+
   ncm_model_class_set_name_nick (model_class, "WL Surface Mass Density", "WLSMD");
   ncm_model_class_add_params (model_class, NC_WL_SURFACE_MASS_DENSITY_SPARAM_LEN, 0, PROP_SIZE);
-  
+
   /**
    * NcWLSurfaceMassDensity:pcc:
    *
@@ -202,7 +202,7 @@ nc_wl_surface_mass_density_class_init (NcWLSurfaceMassDensityClass *klass)
   ncm_model_class_set_sparam (model_class, NC_WL_SURFACE_MASS_DENSITY_PCC, "p_{cc}", "pcc",
                               0.0,  1.0, 5e-2,
                               NC_WL_SURFACE_MASS_DENSITY_DEFAULT_PARAMS_ABSTOL, NC_WL_SURFACE_MASS_DENSITY_DEFAULT_PCC, NCM_PARAM_TYPE_FIXED);
-  
+
   /**
    * NcWLSurfaceMassDensity:Roff:
    *
@@ -212,7 +212,7 @@ nc_wl_surface_mass_density_class_init (NcWLSurfaceMassDensityClass *klass)
   ncm_model_class_set_sparam (model_class, NC_WL_SURFACE_MASS_DENSITY_ROFF, "R_{off}", "Roff",
                               0.0,  2.0, 1e-1,
                               NC_WL_SURFACE_MASS_DENSITY_DEFAULT_PARAMS_ABSTOL, NC_WL_SURFACE_MASS_DENSITY_DEFAULT_ROFF, NCM_PARAM_TYPE_FIXED);
-  
+
   /**
    * NcWLSurfaceMassDensity:distance:
    *
@@ -242,7 +242,7 @@ nc_wl_surface_mass_density_new (NcDistance *dist)
   NcWLSurfaceMassDensity *smd = g_object_new (NC_TYPE_WL_SURFACE_MASS_DENSITY,
                                               "distance", dist,
                                               NULL);
-  
+
   return smd;
 }
 
@@ -339,7 +339,9 @@ gdouble
 nc_wl_surface_mass_density_sigma_critical (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zs, const gdouble zl, const gdouble zc)
 {
   if (zs < zc)
+  {
     return GSL_POSINF;
+  }
   else
   {
     const gdouble a   = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc (); /* [ M_solar / Mpc ] */
@@ -378,9 +380,9 @@ nc_wl_surface_mass_density_sigma_critical_infinity (NcWLSurfaceMassDensity *smd,
   const gdouble Dinf  = nc_distance_transverse_z_to_infinity (smd->dist, cosmo, 0.0);
   const gdouble Dl    = nc_distance_angular_diameter (smd->dist, cosmo, zl);
   const gdouble Dlinf = nc_distance_transverse_z_to_infinity (smd->dist, cosmo, zl);
-  
+
   const gdouble RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
-  
+
   return a * Dinf / (Dl * Dlinf * RH_Mpc);
 }
 
@@ -400,7 +402,7 @@ gdouble
 nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
 {
   const gdouble Sigma = nc_halo_density_profile_eval_2d_density (dp, cosmo, R, zc);
-  
+
   return Sigma;
 }
 
@@ -441,7 +443,7 @@ nc_wl_surface_mass_density_sigma_excess (NcWLSurfaceMassDensity *smd, NcHaloDens
 {
   const gdouble mean_sigma_2x2 = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
   const gdouble sigma          = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
-  
+
   return (mean_sigma_2x2 - sigma);
 }
 
@@ -475,12 +477,14 @@ gdouble
 nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
   if (zs < zc)
+  {
     return 0.0;
+  }
   else
   {
     gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
     gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, zs, zl, zc);
-  
+
     return sigma / sigma_crit;
   }
 }
@@ -503,7 +507,7 @@ nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, Nc
 {
   gdouble sigma          = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
   gdouble sigma_crit_inf = nc_wl_surface_mass_density_sigma_critical_infinity (smd, cosmo, zl, zc);
-  
+
   return sigma / sigma_crit_inf;
 }
 
@@ -525,13 +529,15 @@ gdouble
 nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
   if (zs < zc)
+  {
     return 0.0;
+  }
   else
   {
     const gdouble sigma      = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
     const gdouble mean_sigma = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
     const gdouble sigma_crit = nc_wl_surface_mass_density_sigma_critical (smd, cosmo, zs, zl, zc);
-  
+
     return (mean_sigma - sigma) / sigma_crit;
   }
 }
@@ -555,7 +561,7 @@ nc_wl_surface_mass_density_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDe
   gdouble sigma          = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
   gdouble mean_sigma     = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
   gdouble sigma_crit_inf = nc_wl_surface_mass_density_sigma_critical_infinity (smd, cosmo, zl, zc);
-  
+
   return (mean_sigma - sigma) / sigma_crit_inf;
 }
 
@@ -592,77 +598,86 @@ nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcHaloDen
     switch (k)
     {
       case -1:
-        {
-          const gdouble X          = R / r_s;
-          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
-          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
-          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
-          const gdouble Dl         = sinh (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
-          if (zs > zl)
-          {
-            const gdouble x_i           = 1.0 + zs;
-            const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs);
-            const gdouble Ds            = sinh (sqrt_Omega_k0 * ds)        / (x_i * sqrt_Omega_k0);
-            const gdouble Dls           = sinh (sqrt_Omega_k0 * (ds - dl)) / (x_i * sqrt_Omega_k0);
-            const gdouble sigma_crit    = a * Ds / (Dl * Dls);
-            const gdouble mu            = sigma / sigma_crit;
-            const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
-            const gdouble reduced_shear = shear / (1.0 - mu);
+      {
+        const gdouble X          = R / r_s;
+        const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+        const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+        const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+        const gdouble Dl         = sinh (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
 
-            return reduced_shear;
-          }
-          else
-            return 0.0;
+        if (zs > zl)
+        {
+          const gdouble x_i           = 1.0 + zs;
+          const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs);
+          const gdouble Ds            = sinh (sqrt_Omega_k0 * ds)        / (x_i * sqrt_Omega_k0);
+          const gdouble Dls           = sinh (sqrt_Omega_k0 * (ds - dl)) / (x_i * sqrt_Omega_k0);
+          const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+          const gdouble mu            = sigma / sigma_crit;
+          const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+          const gdouble reduced_shear = shear / (1.0 - mu);
+
+          return reduced_shear;
         }
-        break;
+        else
+        {
+          return 0.0;
+        }
+      }
+      break;
       case 0:
-        {
-          const gdouble X          = R / r_s;
-          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
-          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
-          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
-          const gdouble Dl         = dl / (1.0 + zl);
-          if (zs > zl)
-          {
-            const gdouble x_i           = 1.0 + zs;
-            const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs);
-            const gdouble Ds            = ds        / x_i;
-            const gdouble Dls           = (ds - dl) / x_i;
-            const gdouble sigma_crit    = a * Ds / (Dl * Dls);
-            const gdouble mu            = sigma / sigma_crit;
-            const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
-            const gdouble reduced_shear = shear / (1.0 - mu);
+      {
+        const gdouble X          = R / r_s;
+        const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+        const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+        const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+        const gdouble Dl         = dl / (1.0 + zl);
 
-            return reduced_shear;
-          }
-          else
-            return 0.0;
+        if (zs > zl)
+        {
+          const gdouble x_i           = 1.0 + zs;
+          const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs);
+          const gdouble Ds            = ds        / x_i;
+          const gdouble Dls           = (ds - dl) / x_i;
+          const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+          const gdouble mu            = sigma / sigma_crit;
+          const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+          const gdouble reduced_shear = shear / (1.0 - mu);
+
+          return reduced_shear;
         }
-        break;
+        else
+        {
+          return 0.0;
+        }
+      }
+      break;
       case 1:
-        {
-          const gdouble X          = R / r_s;
-          const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
-          const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
-          const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
-          const gdouble Dl         = sin (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
-          if (zs > zl)
-          {
-            const gdouble x_i           = 1.0 + zs;
-            const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs);
-            const gdouble Ds            = sin (sqrt_Omega_k0 * ds)        / (x_i * sqrt_Omega_k0);
-            const gdouble Dls           = sin (sqrt_Omega_k0 * (ds - dl)) / (x_i * sqrt_Omega_k0);
-            const gdouble sigma_crit    = a * Ds / (Dl * Dls);
-            const gdouble mu            = sigma / sigma_crit;
-            const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
-            const gdouble reduced_shear = shear / (1.0 - mu);
+      {
+        const gdouble X          = R / r_s;
+        const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+        const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+        const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
+        const gdouble Dl         = sin (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
 
-            return reduced_shear;
-          }
-          else
-            return 0.0;
+        if (zs > zl)
+        {
+          const gdouble x_i           = 1.0 + zs;
+          const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs);
+          const gdouble Ds            = sin (sqrt_Omega_k0 * ds)        / (x_i * sqrt_Omega_k0);
+          const gdouble Dls           = sin (sqrt_Omega_k0 * (ds - dl)) / (x_i * sqrt_Omega_k0);
+          const gdouble sigma_crit    = a * Ds / (Dl * Dls);
+          const gdouble mu            = sigma / sigma_crit;
+          const gdouble shear         = (mean_sigma - sigma) / sigma_crit;
+          const gdouble reduced_shear = shear / (1.0 - mu);
+
+          return reduced_shear;
         }
-        break;
+        else
+        {
+          return 0.0;
+        }
+      }
+      break;
       default:
         g_assert_not_reached ();
         break;
@@ -671,13 +686,15 @@ nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcHaloDen
 
   /* Old un-optimized code */
   if (zs < zc)
-	return 0.0;
+  {
+    return 0.0;
+  }
   else
   {
     gdouble convergence   = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R, zs, zl, zc);
     gdouble shear         = nc_wl_surface_mass_density_shear (smd, dp, cosmo, R, zs, zl, zc);
     gdouble reduced_shear = shear / (1.0 - convergence);
-  
+
     return reduced_shear;
   }
 }
@@ -708,8 +725,8 @@ nc_wl_surface_mass_density_reduced_shear_optzs_prep (NcWLSurfaceMassDensity *smd
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
 
   {
-    const gdouble a             = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc () / nc_hicosmo_RH_Mpc (cosmo); /* [ M_solar / Mpc^2 ] */
-    const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
+    const gdouble a        = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc () / nc_hicosmo_RH_Mpc (cosmo); /* [ M_solar / Mpc^2 ] */
+    const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
 
     optzs->sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
 
@@ -719,35 +736,35 @@ nc_wl_surface_mass_density_reduced_shear_optzs_prep (NcWLSurfaceMassDensity *smd
     switch (optzs->k)
     {
       case -1:
-        {
-          const gdouble X          = R / r_s;
-          const gdouble Dl         = sinh (optzs->sqrt_Omega_k0 * optzs->dl) / ((1.0 + zl) * optzs->sqrt_Omega_k0);
+      {
+        const gdouble X  = R / r_s;
+        const gdouble Dl = sinh (optzs->sqrt_Omega_k0 * optzs->dl) / ((1.0 + zl) * optzs->sqrt_Omega_k0);
 
-          optzs->mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
-          optzs->sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
-          optzs->sc_Dls_Ds  = a / Dl;
-        }
-        break;
+        optzs->mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+        optzs->sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+        optzs->sc_Dls_Ds  = a / Dl;
+      }
+      break;
       case 0:
-        {
-          const gdouble X          = R / r_s;
-          const gdouble Dl         = optzs->dl / (1.0 + zl);
+      {
+        const gdouble X  = R / r_s;
+        const gdouble Dl = optzs->dl / (1.0 + zl);
 
-          optzs->mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
-          optzs->sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
-          optzs->sc_Dls_Ds  = a / Dl;
-        }
-        break;
+        optzs->mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+        optzs->sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+        optzs->sc_Dls_Ds  = a / Dl;
+      }
+      break;
       case 1:
-        {
-          const gdouble X          = R / r_s;
-          const gdouble Dl         = sin (optzs->sqrt_Omega_k0 * optzs->dl) / ((1.0 + zl) * optzs->sqrt_Omega_k0);
+      {
+        const gdouble X  = R / r_s;
+        const gdouble Dl = sin (optzs->sqrt_Omega_k0 * optzs->dl) / ((1.0 + zl) * optzs->sqrt_Omega_k0);
 
-          optzs->mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
-          optzs->sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
-          optzs->sc_Dls_Ds  = a / Dl;
-        }
-        break;
+        optzs->mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+        optzs->sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+        optzs->sc_Dls_Ds  = a / Dl;
+      }
+      break;
       default:
         g_assert_not_reached ();
         break;
@@ -852,7 +869,9 @@ gdouble
 nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
   if (zs < zc)
+  {
     return 0.0;
+  }
   else
   {
     gdouble Dinf, betainf, beta_s;
@@ -896,7 +915,9 @@ gdouble
 nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
 {
   if (zs < zc)
-	return 1.0;
+  {
+    return 1.0;
+  }
   else
   {
     gdouble convergence   = nc_wl_surface_mass_density_convergence (smd, dp, cosmo, R, zs, zl, zc);
@@ -904,7 +925,7 @@ nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, NcHaloDen
     gdouble one_m_conv    = 1.0 - convergence;
     gdouble shear2        = shear * shear;
     gdouble magnification = 1.0 / (one_m_conv * one_m_conv - shear2);
-  
+
     return magnification;
   }
 }
@@ -947,29 +968,29 @@ GArray *
 nc_wl_surface_mass_density_sigma_excess_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble zc)
 {
   gdouble r_s, rho_s;
-  
+
   g_assert_cmpint (R->len, >, 0);
-  
+
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
-  
+
   fin  = fin / r_s;
   fout = fout * rho_s * r_s;
-  
+
   {
     GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), R->len);
     guint i;
-    
+
     g_array_set_size (res, R->len);
-    
+
     for (i = 0; i < R->len; i++)
     {
       const gdouble X        = g_array_index (R, gdouble, i) * fin;
       const gdouble barSigma = 2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X);
       const gdouble sigma    = nc_halo_density_profile_eval_dl_2d_density (dp, X);
-      
+
       g_array_index (res, gdouble, i) = fout * (barSigma - sigma);
     }
-    
+
     return res;
   }
 }
@@ -1003,7 +1024,7 @@ nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcH
 
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
 
-  fin  = fin / r_s;
+  fin = fin / r_s;
 
   {
     GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), R->len * zs->len);
@@ -1011,13 +1032,14 @@ nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcH
     const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
     const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
     const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
-    gint i,j;
+    guint i, j;
 
     g_array_set_size (res, R->len * zs->len);
 
     switch (k)
     {
       case -1:
+
         for (i = 0; i < R->len; i++)
         {
           const gdouble X          = g_array_index (R, gdouble, i) * fin;
@@ -1029,7 +1051,8 @@ nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcH
 
           for (j = 0; j < zs->len; j++)
           {
-            const gdouble zs_j          = g_array_index (zs, gdouble, j);
+            const gdouble zs_j = g_array_index (zs, gdouble, j);
+
             if (zs_j > zl)
             {
               const gdouble x_j           = 1.0 + zs_j;
@@ -1044,11 +1067,15 @@ nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcH
               g_array_index (res, gdouble, pad + j) = reduced_shear * fout;
             }
             else
+            {
               g_array_index (res, gdouble, pad + j) = 0.0;
+            }
           }
         }
+
         break;
       case 0:
+
         for (i = 0; i < R->len; i++)
         {
           const gdouble X          = g_array_index (R, gdouble, i) * fin;
@@ -1060,7 +1087,8 @@ nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcH
 
           for (j = 0; j < zs->len; j++)
           {
-            const gdouble zs_j          = g_array_index (zs, gdouble, j);
+            const gdouble zs_j = g_array_index (zs, gdouble, j);
+
             if (zs_j > zl)
             {
               const gdouble x_j           = 1.0 + zs_j;
@@ -1075,11 +1103,15 @@ nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcH
               g_array_index (res, gdouble, pad + j) = reduced_shear * fout;
             }
             else
+            {
               g_array_index (res, gdouble, pad + j) = 0.0;
+            }
           }
         }
+
         break;
       case 1:
+
         for (i = 0; i < R->len; i++)
         {
           const gdouble X          = g_array_index (R, gdouble, i) * fin;
@@ -1091,7 +1123,8 @@ nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcH
 
           for (j = 0; j < zs->len; j++)
           {
-            const gdouble zs_j          = g_array_index (zs, gdouble, j);
+            const gdouble zs_j = g_array_index (zs, gdouble, j);
+
             if (zs_j > zl)
             {
               const gdouble x_j           = 1.0 + zs_j;
@@ -1106,9 +1139,12 @@ nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcH
               g_array_index (res, gdouble, pad + j) = reduced_shear * fout;
             }
             else
+            {
               g_array_index (res, gdouble, pad + j) = 0.0;
+            }
           }
         }
+
         break;
       default:
         g_assert_not_reached ();
@@ -1148,7 +1184,7 @@ nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *sm
 
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
 
-  fin  = fin / r_s;
+  fin = fin / r_s;
 
   {
     GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), R->len);
@@ -1156,13 +1192,14 @@ nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *sm
     const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
     const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
     const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
-    gint i;
+    guint i;
 
     g_array_set_size (res, R->len);
 
     switch (k)
     {
       case -1:
+
         for (i = 0; i < R->len; i++)
         {
           const gdouble X          = g_array_index (R, gdouble, i) * fin;
@@ -1171,6 +1208,7 @@ nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *sm
           const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
           const gdouble Dl         = sinh (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
           const gdouble zs_i       = g_array_index (zs, gdouble, i);
+
           if (zs_i > zl)
           {
             const gdouble x_i           = 1.0 + zs_i;
@@ -1185,10 +1223,14 @@ nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *sm
             g_array_index (res, gdouble, i) = reduced_shear * fout;
           }
           else
+          {
             g_array_index (res, gdouble, i) = 0.0;
+          }
         }
+
         break;
       case 0:
+
         for (i = 0; i < R->len; i++)
         {
           const gdouble X          = g_array_index (R, gdouble, i) * fin;
@@ -1197,6 +1239,7 @@ nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *sm
           const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
           const gdouble Dl         = dl / (1.0 + zl);
           const gdouble zs_i       = g_array_index (zs, gdouble, i);
+
           if (zs_i > zl)
           {
             const gdouble x_i           = 1.0 + zs_i;
@@ -1211,10 +1254,14 @@ nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *sm
             g_array_index (res, gdouble, i) = reduced_shear * fout;
           }
           else
+          {
             g_array_index (res, gdouble, i) = 0.0;
+          }
         }
+
         break;
       case 1:
+
         for (i = 0; i < R->len; i++)
         {
           const gdouble X          = g_array_index (R, gdouble, i) * fin;
@@ -1223,6 +1270,7 @@ nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *sm
           const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
           const gdouble Dl         = sin (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
           const gdouble zs_i       = g_array_index (zs, gdouble, i);
+
           if (zs_i > zl)
           {
             const gdouble x_i           = 1.0 + zs_i;
@@ -1237,8 +1285,11 @@ nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *sm
             g_array_index (res, gdouble, i) = reduced_shear * fout;
           }
           else
+          {
             g_array_index (res, gdouble, i) = 0.0;
+          }
         }
+
         break;
       default:
         g_assert_not_reached ();

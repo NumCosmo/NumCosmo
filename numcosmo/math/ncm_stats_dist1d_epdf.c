@@ -28,7 +28,8 @@
  * @title: NcmStatsDist1dEPDF
  * @short_description: One dimensional probability distribution based on an EPDF
  *
- * Reconstruction of an arbitrary one dimensional probability distribution based on a Empirical Probability Distribution Function (EPDF).
+ * Reconstruction of an arbitrary one dimensional probability distribution based on a
+ * Empirical Probability Distribution Function (EPDF).
  *
  */
 
@@ -41,13 +42,14 @@
 #include "math/ncm_spline_func.h"
 #include "math/ncm_stats_dist1d_epdf.h"
 #include "math/ncm_c.h"
+#include "math/ncm_cfg.h"
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #include <gsl/gsl_sort.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -62,7 +64,41 @@ enum
   PROP_OUTLIERS_THRESHOLD,
 };
 
-G_DEFINE_TYPE (NcmStatsDist1dEPDF, ncm_stats_dist1d_epdf, NCM_TYPE_STATS_DIST1D);
+
+struct _NcmStatsDist1dEPDF
+{
+  /*< private >*/
+  NcmStatsDist1d parent_instance;
+  NcmStatsVec *obs_stats;
+  guint max_obs;
+  NcmStatsDist1dEPDFBw bw;
+  gdouble h_fixed;
+  gdouble sd_min_scale;
+  gdouble outliers_threshold;
+  gdouble h;
+  guint n_obs;
+  guint np_obs;
+  gdouble WT;
+  GArray *obs;
+  gdouble min;
+  gdouble max;
+  gboolean list_sorted;
+  guint fftsize;
+  NcmVector *Iv;
+  NcmVector *p_data;
+  NcmVector *p_tilde;
+  NcmVector *p_tilde2;
+  NcmVector *p_est;
+  NcmVector *xv;
+  NcmVector *pv;
+  gpointer fft_data_to_tilde;
+  gpointer fft_tilde_to_est;
+  NcmSpline *ph_spline;
+  NcmSpline *p_spline;
+  gboolean bw_set;
+};
+
+G_DEFINE_TYPE (NcmStatsDist1dEPDF, ncm_stats_dist1d_epdf, NCM_TYPE_STATS_DIST1D)
 
 typedef struct _NcmStatsDist1dEPDFObs
 {
@@ -208,8 +244,10 @@ ncm_stats_dist1d_epdf_finalize (GObject *object)
 {
   NcmStatsDist1dEPDF *epdf1d = NCM_STATS_DIST1D_EPDF (object);
 
+#ifdef HAVE_FFTW3
   g_clear_pointer (&epdf1d->fft_data_to_tilde, fftw_destroy_plan);
   g_clear_pointer (&epdf1d->fft_tilde_to_est, fftw_destroy_plan);
+#endif /* HAVE_FFTW3 */
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist1d_epdf_parent_class)->finalize (object);
@@ -297,7 +335,7 @@ _ncm_stats_dist1d_epdf_cmp_double (gconstpointer a,
 #undef B
 
 #define _NCM_STATS_DIST1D_EPDF_OBS_N(obs, epdf1d, sd) \
-  0.5 * (erf (((obs)->x - (epdf1d)->min) / (sd)) + erf (((epdf1d)->max - (obs)->x) / (sd)))
+        0.5 * (erf (((obs)->x - (epdf1d)->min) / (sd)) + erf (((epdf1d)->max - (obs)->x) / (sd)))
 
 static gdouble _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x);
 
@@ -414,12 +452,13 @@ _ncm_stats_dist1d_epdf_estimate_h (NcmVector *p_tilde2, NcmVector *Iv, const gui
 static void
 _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
 {
-  const guint nbins = exp2 (14.0 /*ceil (log2 (epdf1d->obs->len * 10))*/);
+#ifdef HAVE_FFTW3
+  const guint nbins     = exp2 (14.0 /*ceil (log2 (epdf1d->obs->len * 10))*/);
   const gdouble delta_l = (epdf1d->max - epdf1d->min) * 2.0;
-  const gdouble deltax = delta_l / nbins;
-  const gdouble xm = (epdf1d->max + epdf1d->min) * 0.5;
-  const gdouble lb = xm - delta_l * 0.5;
-  gdouble xc = lb + deltax;
+  const gdouble deltax  = delta_l / nbins;
+  const gdouble xm      = (epdf1d->max + epdf1d->min) * 0.5;
+  const gdouble lb      = xm - delta_l * 0.5;
+  gdouble xc            = lb + deltax;
   guint i, j;
 
   if (epdf1d->fftsize != nbins)
@@ -560,6 +599,10 @@ _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
 
     ncm_spline_prepare (epdf1d->ph_spline);
   }
+
+#else
+  g_error ("ncm_stats_dist1d_epdf_autobw: FFTW3 not available."); /* LCOV_EXCL_LINE */
+#endif /* HAVE_FFTW3 */
 }
 
 static void
@@ -605,6 +648,8 @@ _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
   if ((x < epdf1d->min) || (x > epdf1d->max))
     return 0.0;
 
+  g_assert_cmpuint (epdf1d->obs->len, >, 0);
+
   _ncm_stats_dist1d_epdf_compact_obs (epdf1d);
   _ncm_stats_dist1d_epdf_set_bw (epdf1d);
 
@@ -617,8 +662,9 @@ _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
   }
 
   {
-    gint s = _ncm_stats_dist1d_epdf_bsearch (epdf1d->obs, x, 0, epdf1d->obs->len - 1);
-    gint i;
+    guint s = _ncm_stats_dist1d_epdf_bsearch (epdf1d->obs, x, 0, epdf1d->obs->len - 1);
+    guint i;
+    gint j;
 
     for (i = s; i < epdf1d->obs->len; i++)
     {
@@ -634,23 +680,25 @@ _ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
         break;
     }
 
-    for (i = s - 1; i >= 0; i--)
+    for (j = s - 1; j >= 0; j--)
     {
-      NcmStatsDist1dEPDFObs *obs = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, i);
-      const gdouble x_i          = obs->x;
-      const gdouble de_i         = (x - x_i) / epdf1d->h;
-      const gdouble de2_i        = de_i * de_i;
-      const gdouble wexp_i       = obs->w * exp (-de2_i * 0.5);
+      NcmStatsDist1dEPDFObs *obs = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, j);
+      const gdouble x_j          = obs->x;
+      const gdouble de_j         = (x - x_j) / epdf1d->h;
+      const gdouble de2_j        = de_j * de_j;
+      const gdouble wexp_j       = obs->w * exp (-de2_j * 0.5);
 
-      res += wexp_i;
+      res += wexp_j;
 
-      if (wexp_i / res < GSL_DBL_EPSILON)
+      if (wexp_j / res < GSL_DBL_EPSILON)
         break;
     }
   }
 
   {
-    const gdouble phat      = (res / (sqrt (2.0 * M_PI) * epdf1d->h) + 1.0 / (sd1->xf - sd1->xi)) / (epdf1d->WT + 1.0);
+    const gdouble xi        = ncm_stats_dist1d_get_xi (sd1);
+    const gdouble xf        = ncm_stats_dist1d_get_xf (sd1);
+    const gdouble phat      = (res / (sqrt (2.0 * M_PI) * epdf1d->h) + 1.0 / (xf - xi)) / (epdf1d->WT + 1.0);
     const gdouble bias_corr = 0.5 * (erf ((x - epdf1d->min) / (M_SQRT2 * epdf1d->h)) + erf ((epdf1d->max - x) / (M_SQRT2 * epdf1d->h)));
 
     return phat / bias_corr;
@@ -679,8 +727,8 @@ _ncm_stats_dist1d_epdf_update_limits (NcmStatsDist1dEPDF *epdf1d)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (epdf1d);
 
-  sd1->xi = epdf1d->min;
-  sd1->xf = epdf1d->max;
+  ncm_stats_dist1d_set_xi (sd1, epdf1d->min);
+  ncm_stats_dist1d_set_xf (sd1, epdf1d->max);
 
   return;
 }
@@ -694,9 +742,14 @@ _ncm_stats_dist1d_epdf_prepare (NcmStatsDist1d *sd1)
   _ncm_stats_dist1d_epdf_set_bw (epdf1d);
 
   if (G_UNLIKELY (epdf1d->min == epdf1d->max))
-    sd1->xi = sd1->xf = epdf1d->min;
+  {
+    ncm_stats_dist1d_set_xi (sd1, epdf1d->min);
+    ncm_stats_dist1d_set_xf (sd1, epdf1d->min);
+  }
   else
+  {
     _ncm_stats_dist1d_epdf_update_limits (epdf1d);
+  }
 
   return;
 }
@@ -821,6 +874,36 @@ NcmStatsDist1dEPDFBw
 ncm_stats_dist1d_epdf_get_bw_type (NcmStatsDist1dEPDF *epdf1d)
 {
   return epdf1d->bw;
+}
+
+/**
+ * ncm_stats_dist1d_epdf_set_h_fixed:
+ * @epdf1d: a #NcmStatsDist1dEPDF
+ * @h_fixed: fixed bandwidth
+ *
+ * Sets the fixed bandwidth to @h_fixed. The object
+ * must be (re)prepared after the call to this method to be used.
+ * This value is used only if the bandwidth computation type is
+ * #NCM_STATS_DIST1D_EPDF_BW_FIXED.
+ *
+ */
+void
+ncm_stats_dist1d_epdf_set_h_fixed (NcmStatsDist1dEPDF *epdf1d, gdouble h_fixed)
+{
+  epdf1d->h_fixed = h_fixed;
+  epdf1d->bw_set  = FALSE;
+}
+
+/**
+ * ncm_stats_dist1d_epdf_get_h_fixed:
+ * @epdf1d: a #NcmStatsDist1dEPDF
+ *
+ * Returns: the current fixed bandwidth.
+ */
+gdouble
+ncm_stats_dist1d_epdf_get_h_fixed (NcmStatsDist1dEPDF *epdf1d)
+{
+  return epdf1d->h_fixed;
 }
 
 /**

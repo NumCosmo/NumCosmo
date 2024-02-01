@@ -53,24 +53,24 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
-  
+
   g_test_set_nonfatal_assertions ();
-  
+
   g_test_add ("/ncm/sf/trig_int/sin/cmp/gsl", TestNcmMPSFSTrigInt, NULL,
               &test_ncm_mpsf_trig_int_new,
               &test_ncm_mpsf_trig_int_sin_cmp_gsl,
               &test_ncm_mpsf_trig_int_free);
-  
+
   g_test_add ("/ncm/sf/trig_int/traps", TestNcmMPSFSTrigInt, NULL,
               &test_ncm_mpsf_trig_int_new,
               &test_ncm_mpsf_trig_int_traps,
               &test_ncm_mpsf_trig_int_free);
-#if GLIB_CHECK_VERSION (2, 38, 0)
+
   g_test_add ("/ncm/sf/trig_int/invalid/st/subprocess", TestNcmMPSFSTrigInt, NULL,
               &test_ncm_mpsf_trig_int_new,
               &test_ncm_mpsf_trig_int_invalid_st,
               &test_ncm_mpsf_trig_int_free);
-#endif
+
   g_test_run ();
 }
 
@@ -88,7 +88,7 @@ void
 test_ncm_mpsf_trig_int_sin_cmp_gsl (TestNcmMPSFSTrigInt *test, gconstpointer pdata)
 {
   guint i;
-  
+
   for (i = 0; i < NTOT; i++)
   {
     const gdouble x      = 1.0 * pow (10.0, 0.0 + XMAX / (NTOT - 1.0) * i);
@@ -102,10 +102,8 @@ test_ncm_mpsf_trig_int_sin_cmp_gsl (TestNcmMPSFSTrigInt *test, gconstpointer pda
 void
 test_ncm_mpsf_trig_int_traps (TestNcmMPSFSTrigInt *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/sf/trig_int/invalid/st/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void

@@ -28,9 +28,10 @@
  * SECTION:ncm_obj_array
  * @title: NcmObjArray
  * @short_description: GObjects array with serialization support.
- * 
- * FIXME
- * 
+ *
+ * A #NcmObjArray is a #GPtrArray that holds #GObject's. It is used to
+ * store #GObject's that can be serialized to a #GVariant.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -41,171 +42,104 @@
 #include "math/ncm_obj_array.h"
 #include "math/ncm_cfg.h"
 
-G_DEFINE_BOXED_TYPE (NcmObjArray, ncm_obj_array, ncm_obj_array_ref, ncm_obj_array_unref);
+G_DEFINE_BOXED_TYPE (NcmObjArray, ncm_obj_array, ncm_obj_array_ref, ncm_obj_array_unref)
+G_DEFINE_BOXED_TYPE (NcmObjDictStr, ncm_obj_dict_str, ncm_obj_dict_str_ref, ncm_obj_dict_str_unref)
+G_DEFINE_BOXED_TYPE (NcmObjDictInt, ncm_obj_dict_int, ncm_obj_dict_int_ref, ncm_obj_dict_int_unref)
+G_DEFINE_BOXED_TYPE (NcmVarDict, ncm_var_dict, ncm_var_dict_ref, ncm_var_dict_unref)
+
+/*
+ * NcmObjArray
+ */
 
 /**
  * ncm_obj_array_new:
  *
- * FIXME
+ * Creates a new #NcmObjArray.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcmObjArray.
  */
 NcmObjArray *
 ncm_obj_array_new ()
 {
   GPtrArray *oa = g_ptr_array_new ();
-  g_ptr_array_set_free_func (oa, g_object_unref);
-  return (NcmObjArray *) oa;
-}
 
-/**
- * ncm_obj_array_new_from_variant:
- * @ser: a #NcmSerialize.
- * @var: a #GVariant containing an array of objects.
- * 
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
-NcmObjArray *
-ncm_obj_array_new_from_variant (NcmSerialize *ser, GVariant *var)
-{
-  g_assert (g_variant_is_of_type (var, G_VARIANT_TYPE (NCM_OBJ_ARRAY_TYPE)));
-  {
-    guint i, n = g_variant_n_children (var);
-    NcmObjArray *oa = ncm_obj_array_sized_new (n);
-    for (i = 0; i < n; i++)
-    {
-      GVariant *cvar = g_variant_get_child_value (var, i);
-      GObject *cobj  = ncm_serialize_from_variant (ser, cvar);
-      
-      ncm_obj_array_add (oa, cobj);
-      g_object_unref (cobj);
-      g_variant_unref (cvar);
-    }
-    return oa;
-  }
+  g_ptr_array_set_free_func (oa, g_object_unref);
+
+  return (NcmObjArray *) oa;
 }
 
 /**
  * ncm_obj_array_sized_new:
  * @n: initial allocation size.
- * 
- * FIXME
  *
- * Returns: (transfer full): FIXME
+ * Creates a new #NcmObjArray with @n elements preallocated.
+ *
+ * Returns: (transfer full): a new #NcmObjArray.
  */
 NcmObjArray *
 ncm_obj_array_sized_new (guint n)
 {
   GPtrArray *oa = g_ptr_array_sized_new (n);
+
   g_ptr_array_set_free_func (oa, g_object_unref);
+
   return (NcmObjArray *) oa;
 }
 
 /**
  * ncm_obj_array_ref:
  * @oa: a #NcmObjArray.
- * 
- * FIXME
  *
- * Returns: (transfer full): FIXME
+ * Increases the reference count of @oa by one.
+ *
+ * Returns: (transfer full): @oa.
  */
 NcmObjArray *
 ncm_obj_array_ref (NcmObjArray *oa)
 {
-  return (NcmObjArray *)g_ptr_array_ref ((GPtrArray *)oa);
+  return (NcmObjArray *) g_ptr_array_ref ((GPtrArray *) oa);
 }
 
 /**
  * ncm_obj_array_unref:
  * @oa: a #NcmObjArray.
- * 
- * FIXME
+ *
+ * Decreases the reference count of @oa by one. If the reference count
+ * reaches zero, all objects in the array are unreferenced.
  *
  */
-void 
+void
 ncm_obj_array_unref (NcmObjArray *oa)
 {
-  g_ptr_array_unref ((GPtrArray *)oa);
+  g_ptr_array_unref ((GPtrArray *) oa);
 }
 
 /**
  * ncm_obj_array_clear:
  * @oa: a pointer to a #NcmObjArray.
- * 
- * FIXME
+ *
+ * If *@oa is not %NULL, unreferences it and sets *@oa to %NULL.
  *
  */
-void 
+void
 ncm_obj_array_clear (NcmObjArray **oa)
 {
   g_clear_pointer (oa, ncm_obj_array_unref);
 }
 
 /**
- * ncm_obj_array_ser:
- * @oa: a #NcmObjArray.
- * @ser: a #NcmSerialize.
- * 
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
-GVariant *
-ncm_obj_array_ser (NcmObjArray *oa, NcmSerialize *ser)
-{
-  GVariantBuilder *builder;
-  GVariant *var;
-  guint i;
-
-  builder = g_variant_builder_new (G_VARIANT_TYPE (NCM_OBJ_ARRAY_TYPE));
-
-  for (i = 0; i < oa->len; i++)
-  {
-    GVariant *cvar = ncm_serialize_to_variant (ser, ncm_obj_array_peek (oa, i));
-    g_variant_builder_add_value (builder, cvar);
-    g_variant_unref (cvar);
-  }
-
-  var = g_variant_ref_sink (g_variant_builder_end (builder));
-
-  g_variant_builder_unref (builder);
-
-  return var;
-}
-
-/**
- * ncm_obj_array_dup:
- * @oa: a #NcmObjArray.
- * @ser: a #NcmSerialize.
- * 
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
-NcmObjArray *
-ncm_obj_array_dup (NcmObjArray *oa, NcmSerialize *ser)
-{
-  GVariant *var    = ncm_obj_array_ser (oa, ser);
-  NcmObjArray *dup = ncm_obj_array_new_from_variant (ser, var);
-  g_variant_unref (var);
-  return dup;
-}
-
-/**
  * ncm_obj_array_add:
  * @oa: a #NcmObjArray.
  * @obj: a #GObject.
- * 
- * FIXME
+ *
+ * Adds a #GObject to a #NcmObjArray.
  *
  */
-void 
+void
 ncm_obj_array_add (NcmObjArray *oa, GObject *obj)
 {
   g_assert (obj != NULL);
-  g_ptr_array_add ((GPtrArray *)oa, g_object_ref (obj));
+  g_ptr_array_add ((GPtrArray *) oa, g_object_ref (obj));
 }
 
 /**
@@ -213,31 +147,33 @@ ncm_obj_array_add (NcmObjArray *oa, GObject *obj)
  * @oa: a #NcmObjArray.
  * @i: object index.
  * @obj: a #GObject.
- * 
- * FIXME
+ *
+ * Sets a #GObject to a #NcmObjArray. If there is already a #GObject
+ * at position @i, it is unreferenced.
  *
  */
-void 
+void
 ncm_obj_array_set (NcmObjArray *oa, guint i, GObject *obj)
 {
   g_assert_cmpuint (i, <, oa->len);
 
   g_assert (obj != NULL);
-  if (obj != g_ptr_array_index ((GPtrArray *)oa, i))
-	{
-		g_object_unref (g_ptr_array_index ((GPtrArray *)oa, i));
-		g_ptr_array_index ((GPtrArray *)oa, i) = g_object_ref (obj);
-	}
+
+  if (obj != g_ptr_array_index ((GPtrArray *) oa, i))
+  {
+    g_object_unref (g_ptr_array_index ((GPtrArray *) oa, i));
+    g_ptr_array_index ((GPtrArray *) oa, i) = g_object_ref (obj);
+  }
 }
 
 /**
  * ncm_obj_array_get:
- * @oa: a #NcmObjArray.
- * @i: object index.
- * 
- * FIXME
+ * @oa: a #NcmObjArray
+ * @i: object index
  *
- * Returns: (transfer full): FIXME
+ * Gets a #GObject from a #NcmObjArray at position @i.
+ *
+ * Returns: (transfer full): the #GObject at position @i.
  */
 GObject *
 ncm_obj_array_get (NcmObjArray *oa, guint i)
@@ -249,230 +185,919 @@ ncm_obj_array_get (NcmObjArray *oa, guint i)
  * ncm_obj_array_peek:
  * @oa: a #NcmObjArray.
  * @i: object index.
- * 
- * FIXME
  *
- * Returns: (transfer none): FIXME
+ * Peeks a #GObject from a #NcmObjArray at position @i without increasing its reference
+ * count.
+ *
+ * Returns: (transfer none): the #GObject at position @i.
  */
 GObject *
 ncm_obj_array_peek (NcmObjArray *oa, guint i)
 {
   g_assert_cmpuint (i, <, oa->len);
-  return g_ptr_array_index ((GPtrArray *)oa, i);
+
+  return g_ptr_array_index ((GPtrArray *) oa, i);
 }
 
 /**
  * ncm_obj_array_len:
  * @oa: a #NcmObjArray
  *
- * FIXME
+ * Gets the length of a #NcmObjArray.
  *
  * Returns: array length
  */
-gint
+guint
 ncm_obj_array_len (NcmObjArray *oa)
 {
   return oa->len;
 }
 
+/*
+ * NcmObjDictStr
+ */
+
 /**
- * ncm_obj_array_save:
- * @oa: a #NcmObjArray
- * @ser: a #NcmSerialize
- * @filename: FIXME
- * @save_comment: FIXME
+ * ncm_obj_dict_str_new:
  *
- * FIXME
+ * Creates a new #NcmObjDictStr.
+ *
+ * Returns: (transfer full): a new #NcmObjDictStr.
+ */
+NcmObjDictStr *
+ncm_obj_dict_str_new ()
+{
+  GHashTable *ods = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+
+  return (NcmObjDictStr *) ods;
+}
+
+/**
+ * ncm_obj_dict_str_ref:
+ * @ods: a #NcmObjDictStr.
+ *
+ * Increases the reference count of @ods by one.
+ *
+ * Returns: (transfer full): @ods.
+ */
+NcmObjDictStr *
+ncm_obj_dict_str_ref (NcmObjDictStr *ods)
+{
+  return (NcmObjDictStr *) g_hash_table_ref ((GHashTable *) ods);
+}
+
+/**
+ * ncm_obj_dict_str_unref:
+ * @ods: a #NcmObjDictStr.
+ *
+ * Decreases the reference count of @ods by one. If the reference count
+ * reaches zero, all objects in the dictionary are unreferenced.
  *
  */
 void
-ncm_obj_array_save (NcmObjArray *oa, NcmSerialize *ser, const gchar *filename, gboolean save_comment)
+ncm_obj_dict_str_unref (NcmObjDictStr *ods)
 {
-  GKeyFile *oafile = g_key_file_new ();
-  guint i;
+  g_hash_table_unref ((GHashTable *) ods);
+}
+
+/**
+ * ncm_obj_dict_str_clear:
+ * @ods: a pointer to a #NcmObjDictStr.
+ *
+ * If *@ods is not %NULL, unreferences it and sets *@ods to %NULL.
+ *
+ */
+void
+ncm_obj_dict_str_clear (NcmObjDictStr **ods)
+{
+  g_clear_pointer (ods, ncm_obj_dict_str_unref);
+}
+
+/**
+ * ncm_obj_dict_str_add:
+ * @ods: a #NcmObjDictStr.
+ * @key: a string.
+ * @obj: a #GObject.
+ *
+ * Adds a #GObject to a #NcmObjDictStr.
+ *
+ */
+void
+ncm_obj_dict_str_add (NcmObjDictStr *ods, const gchar *key, GObject *obj)
+{
+  g_assert (key != NULL);
+  g_assert (obj != NULL);
+
+  g_hash_table_insert ((GHashTable *) ods, g_strdup (key), g_object_ref (obj));
+}
+
+/**
+ * ncm_obj_dict_str_set:
+ * @ods: a #NcmObjDictStr.
+ * @key: a string.
+ * @obj: a #GObject.
+ *
+ * Sets a #GObject to a #NcmObjDictStr. If there is already a #GObject
+ * with key @key, it is unreferenced.
+ *
+ */
+void
+ncm_obj_dict_str_set (NcmObjDictStr *ods, const gchar *key, GObject *obj)
+{
+  g_assert (key != NULL);
+  g_assert (obj != NULL);
+
+  if (obj != g_hash_table_lookup ((GHashTable *) ods, key))
+    g_hash_table_replace ((GHashTable *) ods, g_strdup (key), g_object_ref (obj));
+}
+
+/**
+ * ncm_obj_dict_str_get:
+ * @ods: a #NcmObjDictStr
+ * @key: a string.
+ *
+ * Gets a #GObject from a #NcmObjDictStr with key @key.
+ *
+ * Returns: (transfer full): the #GObject with key @key.
+ */
+GObject *
+ncm_obj_dict_str_get (NcmObjDictStr *ods, const gchar *key)
+{
+  GObject *obj = ncm_obj_dict_str_peek (ods, key);
+
+  if (obj != NULL)
+    return g_object_ref (obj);
+
+  return NULL;
+}
+
+/**
+ * ncm_obj_dict_str_peek:
+ * @ods: a #NcmObjDictStr.
+ * @key: a string.
+ *
+ * Peeks a #GObject from a #NcmObjDictStr with key @key without increasing its reference
+ * count.
+ *
+ * Returns: (transfer none): the #GObject with key @key.
+ */
+GObject *
+ncm_obj_dict_str_peek (NcmObjDictStr *ods, const gchar *key)
+{
+  g_assert (key != NULL);
+
+  return g_hash_table_lookup ((GHashTable *) ods, key);
+}
+
+/**
+ * ncm_obj_dict_str_len:
+ * @ods: a #NcmObjDictStr
+ *
+ * Gets the length of a #NcmObjDictStr.
+ *
+ * Returns: dictionary length
+ */
+guint
+ncm_obj_dict_str_len (NcmObjDictStr *ods)
+{
+  return g_hash_table_size ((GHashTable *) ods);
+}
+
+/**
+ * ncm_obj_dict_str_keys:
+ * @ods: a #NcmObjDictStr
+ *
+ * Gets the keys of a #NcmObjDictStr.
+ *
+ * Returns: (transfer container): the keys of a #NcmObjDictStr.
+ */
+GStrv
+ncm_obj_dict_str_keys (NcmObjDictStr *ods)
+{
+  return (GStrv) g_hash_table_get_keys_as_array ((GHashTable *) ods, NULL);
+}
+
+/*
+ * NcmObjDictInt
+ */
+
+/**
+ * ncm_obj_dict_int_new:
+ *
+ * Creates a new #NcmObjDictInt.
+ *
+ * Returns: (transfer full): a new #NcmObjDictInt.
+ */
+NcmObjDictInt *
+ncm_obj_dict_int_new ()
+{
+  GHashTable *odi = g_hash_table_new_full (g_int_hash, g_int_equal, g_free, g_object_unref);
+
+  return (NcmObjDictInt *) odi;
+}
+
+/**
+ * ncm_obj_dict_int_ref:
+ * @odi: a #NcmObjDictInt.
+ *
+ * Increases the reference count of @odi by one.
+ *
+ * Returns: (transfer full): @odi.
+ */
+NcmObjDictInt *
+ncm_obj_dict_int_ref (NcmObjDictInt *odi)
+{
+  return (NcmObjDictInt *) g_hash_table_ref ((GHashTable *) odi);
+}
+
+/**
+ * ncm_obj_dict_int_unref:
+ * @odi: a #NcmObjDictInt.
+ *
+ * Decreases the reference count of @odi by one. If the reference count
+ * reaches zero, all objects in the dictionary are unreferenced.
+ *
+ */
+void
+ncm_obj_dict_int_unref (NcmObjDictInt *odi)
+{
+  g_hash_table_unref ((GHashTable *) odi);
+}
+
+/**
+ * ncm_obj_dict_int_clear:
+ * @odi: a pointer to a #NcmObjDictInt.
+ *
+ * If *@odi is not %NULL, unreferences it and sets *@odi to %NULL.
+ *
+ */
+void
+ncm_obj_dict_int_clear (NcmObjDictInt **odi)
+{
+  g_clear_pointer (odi, ncm_obj_dict_int_unref);
+}
+
+/**
+ * ncm_obj_dict_int_add:
+ * @odi: a #NcmObjDictInt.
+ * @key: an integer.
+ * @obj: a #GObject.
+ *
+ * Adds a #GObject to a #NcmObjDictInt.
+ *
+ */
+void
+ncm_obj_dict_int_add (NcmObjDictInt *odi, gint key, GObject *obj)
+{
+  g_assert (obj != NULL);
+
+  g_hash_table_insert ((GHashTable *) odi, g_memdup2 (&key, sizeof (gint)), g_object_ref (obj));
+}
+
+/**
+ * ncm_obj_dict_int_set:
+ * @odi: a #NcmObjDictInt.
+ * @key: an integer.
+ * @obj: a #GObject.
+ *
+ * Sets a #GObject to a #NcmObjDictInt. If there is already a #GObject
+ * with key @key, it is unreferenced.
+ *
+ */
+void
+ncm_obj_dict_int_set (NcmObjDictInt *odi, gint key, GObject *obj)
+{
+  g_assert (obj != NULL);
+
+  if (obj != g_hash_table_lookup ((GHashTable *) odi, &key))
+    g_hash_table_replace ((GHashTable *) odi, g_memdup2 (&key, sizeof (gint)), g_object_ref (obj));
+}
+
+/**
+ * ncm_obj_dict_int_get:
+ * @odi: a #NcmObjDictInt
+ * @key: an integer.
+ *
+ * Gets a #GObject from a #NcmObjDictInt with key @key.
+ *
+ * Returns: (transfer full): the #GObject with key @key.
+ */
+GObject *
+ncm_obj_dict_int_get (NcmObjDictInt *odi, gint key)
+{
+  GObject *obj = ncm_obj_dict_int_peek (odi, key);
+
+  if (obj != NULL)
+    return g_object_ref (obj);
+
+  return NULL;
+}
+
+/**
+ * ncm_obj_dict_int_peek:
+ * @odi: a #NcmObjDictInt.
+ * @key: an integer.
+ *
+ * Peeks a #GObject from a #NcmObjDictInt with key @key without increasing its reference
+ * count.
+ *
+ * Returns: (transfer none): the #GObject with key @key.
+ */
+GObject *
+ncm_obj_dict_int_peek (NcmObjDictInt *odi, gint key)
+{
+  return g_hash_table_lookup ((GHashTable *) odi, &key);
+}
+
+/**
+ * ncm_obj_dict_int_len:
+ * @odi: a #NcmObjDictInt
+ *
+ * Gets the length of a #NcmObjDictInt.
+ *
+ * Returns: dictionary length
+ */
+guint
+ncm_obj_dict_int_len (NcmObjDictInt *odi)
+{
+  return g_hash_table_size ((GHashTable *) odi);
+}
+
+/**
+ * ncm_obj_dict_int_keys:
+ * @odi: a #NcmObjDictInt
+ *
+ * Gets the keys of a #NcmObjDictInt.
+ *
+ * Returns: (transfer full) (array) (element-type int): the keys of a #NcmObjDictInt.
+ */
+GArray *
+ncm_obj_dict_int_keys (NcmObjDictInt *odi)
+{
+  GArray *keys = g_array_new (FALSE, FALSE, sizeof (gint));
+  GHashTableIter iter;
+  gint *key;
+
+  g_hash_table_iter_init (&iter, (GHashTable *) odi);
+
+  while (g_hash_table_iter_next (&iter, (gpointer *) &key, NULL))
+    g_array_append_val (keys, *key);
+
+  return keys;
+}
+
+/*
+ * NcmVarDict
+ */
+
+/**
+ * ncm_var_dict_new:
+ *
+ * Creates a new #NcmVarDict.
+ *
+ * Returns: (transfer full): a new #NcmVarDict.
+ */
+NcmVarDict *
+ncm_var_dict_new ()
+{
+  GHashTable *vd = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, (GDestroyNotify) g_variant_unref);
+
+  return (NcmVarDict *) vd;
+}
+
+/**
+ * ncm_var_dict_ref:
+ * @vd: a #NcmVarDict.
+ *
+ * Increases the reference count of @vd by one.
+ *
+ * Returns: (transfer full): @vd.
+ */
+NcmVarDict *
+ncm_var_dict_ref (NcmVarDict *vd)
+{
+  return (NcmVarDict *) g_hash_table_ref ((GHashTable *) vd);
+}
+
+/**
+ * ncm_var_dict_unref:
+ * @vd: a #NcmVarDict.
+ *
+ * Decreases the reference count of @vd by one. If the reference count
+ * reaches zero, all objects in the dictionary are unreferenced.
+ *
+ */
+void
+ncm_var_dict_unref (NcmVarDict *vd)
+{
+  g_hash_table_unref ((GHashTable *) vd);
+}
+
+/**
+ * ncm_var_dict_clear:
+ * @vd: a pointer to a #NcmVarDict.
+ *
+ * If *@vd is not %NULL, unreferences it and sets *@vd to %NULL.
+ *
+ */
+void
+ncm_var_dict_clear (NcmVarDict **vd)
+{
+  g_clear_pointer (vd, ncm_var_dict_unref);
+}
+
+/**
+ * ncm_var_dict_peek:
+ * @vd: a #NcmVarDict.
+ * @key: a string.
+ *
+ * Peeks a #GVariant from a #NcmVarDict with key @key without increasing its reference
+ * count.
+ *
+ * Returns: (transfer none): the #GVariant with key @key.
+ */
+GVariant *
+ncm_var_dict_peek (NcmVarDict *vd, const gchar *key)
+{
+  g_assert (key != NULL);
+
+  return g_hash_table_lookup ((GHashTable *) vd, key);
+}
+
+/**
+ * ncm_var_dict_set_string:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: a string
+ *
+ * Sets a string to a #NcmVarDict. If there is already a string
+ * with key @key, it is unreferenced.
+ *
+ */
+void
+ncm_var_dict_set_string (NcmVarDict *vd, const gchar *key, const gchar *value)
+{
+  g_assert (key != NULL);
+  g_assert (value != NULL);
+
+  g_hash_table_insert ((GHashTable *) vd, g_strdup (key),
+                       g_variant_ref_sink (g_variant_new_string (value)));
+}
+
+/**
+ * ncm_var_dict_set_int:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: an integer
+ *
+ * Sets an integer to a #NcmVarDict. If there is already an integer
+ * with key @key, it is unreferenced.
+ *
+ */
+void
+ncm_var_dict_set_int (NcmVarDict *vd, const gchar *key, gint value)
+{
+  g_assert (key != NULL);
+
+  g_hash_table_insert ((GHashTable *) vd, g_strdup (key),
+                       g_variant_ref_sink (g_variant_new_int32 (value)));
+}
+
+/**
+ * ncm_var_dict_set_double:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: a double
+ *
+ * Sets a double to a #NcmVarDict. If there is already a double
+ * with key @key, it is unreferenced.
+ *
+ */
+void
+ncm_var_dict_set_double (NcmVarDict *vd, const gchar *key, gdouble value)
+{
+  g_assert (key != NULL);
+
+  g_hash_table_insert ((GHashTable *) vd, g_strdup (key),
+                       g_variant_ref_sink (g_variant_new_double (value)));
+}
+
+/**
+ * ncm_var_dict_set_boolean:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: a boolean
+ *
+ * Sets a boolean to a #NcmVarDict. If there is already a boolean
+ * with key @key, it is unreferenced.
+ */
+void
+ncm_var_dict_set_boolean (NcmVarDict *vd, const gchar *key, gboolean value)
+{
+  g_assert (key != NULL);
+
+  g_hash_table_insert ((GHashTable *) vd, g_strdup (key),
+                       g_variant_ref_sink (g_variant_new_boolean (value)));
+}
+
+/**
+ * ncm_var_dict_set_int_array:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: (array) (element-type int): a #GArray of integers
+ *
+ * Sets an array of integers to a #NcmVarDict. If there is already an array
+ * of integers with key @key, it is unreferenced.
+ *
+ */
+void
+ncm_var_dict_set_int_array (NcmVarDict *vd, const gchar *key, GArray *value)
+{
+  g_assert (key != NULL);
+  g_assert (value != NULL);
+
+  g_assert (g_array_get_element_size (value) == sizeof (gint));
+
+  g_hash_table_insert ((GHashTable *) vd, g_strdup (key),
+                       g_variant_ref_sink (g_variant_new_fixed_array (G_VARIANT_TYPE_INT32,
+                                                                      value->data,
+                                                                      value->len,
+                                                                      sizeof (gint))));
+}
+
+/**
+ * ncm_var_dict_set_double_array:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: (array) (element-type double): a #GArray of doubles
+ *
+ * Sets an array of doubles to a #NcmVarDict. If there is already an array
+ * of doubles with key @key, it is unreferenced.
+ */
+void
+ncm_var_dict_set_double_array (NcmVarDict *vd, const gchar *key, GArray *value)
+{
+  g_assert (key != NULL);
+  g_assert (value != NULL);
+
+  g_assert (g_array_get_element_size (value) == sizeof (gdouble));
+
+  g_hash_table_insert ((GHashTable *) vd, g_strdup (key),
+                       g_variant_ref_sink (g_variant_new_fixed_array (G_VARIANT_TYPE_DOUBLE,
+                                                                      value->data,
+                                                                      value->len,
+                                                                      sizeof (gdouble))));
+}
+
+/**
+ * ncm_var_dict_set_boolean_array:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: (array) (element-type boolean): a #GArray of booleans
+ *
+ * Sets an array of booleans to a #NcmVarDict. If there is already an array
+ * of booleans with key @key, it is unreferenced.
+ */
+void
+ncm_var_dict_set_boolean_array (NcmVarDict *vd, const gchar *key, GArray *value)
+{
+  g_assert (key != NULL);
+  g_assert (value != NULL);
+
+  g_assert (g_array_get_element_size (value) == sizeof (gboolean));
 
   {
-    GError *error = NULL;
-    gchar *oa_desc = ncm_cfg_string_to_comment ("Whether NcmObjArray is empty");
+    GVariantBuilder builder;
+    guint i;
 
-    g_key_file_set_boolean (oafile, "NcmObjArray", "empty", oa->len == 0 ? TRUE : FALSE);
-    if (save_comment)
+    g_variant_builder_init (&builder, G_VARIANT_TYPE ("ab"));
+
+    for (i = 0; i < value->len; i++)
     {
-      if (!g_key_file_set_comment (oafile, "NcmObjArray", NULL, oa_desc, &error))
-        g_error ("ncm_obj_array_save: %s", error->message);
+      gchar b = g_array_index (value, gboolean, i);
+
+      g_variant_builder_add (&builder, "b", b);
     }
 
-    g_free (oa_desc);
-  }
-
-  for (i = 0; i < oa->len; i++)
-  {
-    GObject *go          = ncm_obj_array_peek (oa, i);
-    GObjectClass *oclass = G_OBJECT_GET_CLASS (go);
-    GError *error        = NULL;
-    gchar *group         = g_strdup_printf (NCM_OBJ_ARRAY_POS_STR":%d", i);
-    GVariant *go_var     = ncm_serialize_to_variant (ser, go);
-    GVariant *params     = NULL;
-    gchar *obj_name      = NULL;
-    guint nparams;
-
-    g_variant_get (go_var, "{s@a{sv}}", &obj_name, &params);
-    nparams = g_variant_n_children (params);
-    
-    g_key_file_set_value (oafile, group, NCM_OBJ_ARRAY_OBJ_NAME_STR, obj_name);
-    
-    if (nparams != 0)
-    {
-      GVariantIter iter;
-      GVariant *value;
-      gchar *key;
-      g_variant_iter_init (&iter, params);
-      while (g_variant_iter_next (&iter, "{sv}", &key, &value))
-      {
-        GParamSpec *param_spec = g_object_class_find_property (oclass, key);
-        gchar *param_str = g_variant_print (value, TRUE);
-        
-        if (param_spec == NULL)
-          g_error ("ncm_obj_array_save: property `%s' not found in object `%s'.", key, obj_name);
-
-        g_key_file_set_value (oafile, group, key, param_str);
-        
-        if (save_comment)
-        {
-          const gchar *blurb = g_param_spec_get_blurb (param_spec);
-          if (blurb != NULL && blurb[0] != 0)
-          {
-            gchar *desc = ncm_cfg_string_to_comment (blurb);
-            if (!g_key_file_set_comment (oafile, group, key, desc, &error))
-              g_error ("ncm_obj_array_save: %s", error->message);
-            g_free (desc);
-          }
-        }
-
-        g_variant_unref (value);
-        g_free (key);
-        g_free (param_str);
-      }
-    }
-    
-    g_free (obj_name);
-    g_variant_unref (params);
-    g_variant_unref (go_var);
-    
-    g_free (group);
-  }
-
-  {
-    GError *error = NULL;
-    gsize len = 0;
-    gchar *oa_data = g_key_file_to_data (oafile, &len, &error);
-    if (error != NULL)
-      g_error ("Error converting NcmObjArray to configuration file: %s", error->message);
-    if (!g_file_set_contents (filename, oa_data, len, &error))
-      g_error ("Error saving configuration file to disk: %s", error->message);
-    g_free (oa_data);
-    g_key_file_free (oafile);
+    g_hash_table_insert ((GHashTable *) vd, g_strdup (key),
+                         g_variant_ref_sink (g_variant_builder_end (&builder)));
   }
 }
 
 /**
- * ncm_obj_array_load:
- * @filename: oa filename
- * @ser: a #NcmSerialize
+ * ncm_var_dict_set_variant:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: a #GVariant
  *
- * FIXME
+ * Sets a #GVariant to a #NcmVarDict. If there is already a #GVariant
+ * with key @key, it is unreferenced.
  *
- * Returns: (transfer full): FIXME
+ * Valid #GVariant types are:
+ * - %G_VARIANT_TYPE_STRING
+ * - %G_VARIANT_TYPE_INT32
+ * - %G_VARIANT_TYPE_DOUBLE
+ * - %G_VARIANT_TYPE_BOOLEAN
+ * - %G_VARIANT_TYPE_ARRAY (element-type int)
+ * - %G_VARIANT_TYPE_ARRAY (element-type double)
+ * - %G_VARIANT_TYPE_ARRAY (element-type boolean)
+ *
  */
-NcmObjArray *
-ncm_obj_array_load (const gchar *filename, NcmSerialize *ser)
+void
+ncm_var_dict_set_variant (NcmVarDict *vd, const gchar *key, GVariant *value)
 {
-  NcmObjArray *oa = ncm_obj_array_new ();
-  GKeyFile *oafile = g_key_file_new ();
-  GError *error = NULL;
-  gchar **groups = NULL;
-  gsize ngroups = 0;
+  const GVariantType *allowed_types[] = {
+    G_VARIANT_TYPE_STRING,
+    G_VARIANT_TYPE_INT32,
+    G_VARIANT_TYPE_DOUBLE,
+    G_VARIANT_TYPE_BOOLEAN,
+    G_VARIANT_TYPE ("ai"),
+    G_VARIANT_TYPE ("ad"),
+    G_VARIANT_TYPE ("ab"),
+    NULL
+  };
+  gboolean is_allowed = FALSE;
   guint i;
 
-  if (!g_key_file_load_from_file (oafile, filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
+  g_assert (key != NULL);
+  g_assert (value != NULL);
+
+  for (i = 0; allowed_types[i] != NULL; i++)
   {
-    g_error ("ncm_obj_array_load: Invalid GObject array file: %s %s", filename, error->message);
-    return NULL;
+    if (g_variant_is_of_type (value, allowed_types[i]))
+    {
+      is_allowed = TRUE;
+      break;
+    }
   }
 
-  if (g_key_file_has_group (oafile, "NcmObjArray"))
-  {
-    g_key_file_remove_group (oafile, "NcmObjArray", &error);
-    if (error != NULL)
-      g_error ("ncm_obj_array_load: %s", error->message);
-  }
+  if (!is_allowed)
+    g_error ("ncm_var_dict_set_variant: Invalid GVariant type");
 
-  groups = g_key_file_get_groups (oafile, &ngroups);
-  for (i = 0; i < ngroups; i++)
-  {
-    GString *obj_ser = g_string_sized_new (200);
-    gchar **a_pos    = g_strsplit (groups[i], ":", 2);
-    gchar *obj_name  = NULL;
-
-    g_assert_cmpuint (g_strv_length (a_pos), ==, 2);    
-
-    if (!g_key_file_has_key (oafile, groups[i], NCM_OBJ_ARRAY_OBJ_NAME_STR, &error))
-    {
-      if (error != NULL)
-        g_error ("ncm_obj_array_load: %s", error->message);
-      g_error ("ncm_obj_array_load: Every group must contain the key `%s' containing the object name.", NCM_OBJ_ARRAY_OBJ_NAME_STR);
-    }
-    else
-    {
-      obj_name = g_key_file_get_value (oafile, groups[i], NCM_OBJ_ARRAY_OBJ_NAME_STR, &error);
-      if (error != NULL)
-        g_error ("ncm_obj_array_load: %s", error->message);      
-      g_key_file_remove_key (oafile, groups[i], NCM_OBJ_ARRAY_OBJ_NAME_STR, &error);
-      if (error != NULL)
-        g_error ("ncm_obj_array_load: %s", error->message);
-    }
-
-    g_string_append_printf (obj_ser, "{\'%s\', @a{sv} {", obj_name);    
-
-    {
-      gsize nkeys  = 0;
-      gchar **keys = g_key_file_get_keys (oafile, groups[i], &nkeys, &error);
-      guint j;
-      
-      if (error != NULL)
-        g_error ("ncm_obj_array_load: %s", error->message);
-      
-      for (j = 0; j < nkeys; j++)
-      {
-        gchar *propval = g_key_file_get_value (oafile, groups[i], keys[j], &error);
-
-        if (error != NULL)
-          g_error ("ncm_obj_array_load: %s", error->message);
-        
-        g_string_append_printf (obj_ser, "\'%s\':<%s>", keys[j], propval);
-        g_free (propval);
-        
-        if (j + 1 != nkeys)
-          g_string_append (obj_ser, ", ");
-      }
-
-      g_string_append (obj_ser, "}}");
-      g_strfreev (keys);
-    }
-
-    {
-      GObject *obj = ncm_serialize_from_string (ser, obj_ser->str);
-      g_assert (G_IS_OBJECT (obj));
-
-      ncm_obj_array_add (oa, obj);
-      g_object_unref (obj);
-    }
-    g_string_free (obj_ser, TRUE);
-    g_strfreev (a_pos);
-  }
-  
-  g_key_file_unref (oafile);
-  g_strfreev (groups);
-    
-  return oa;
+  g_hash_table_insert ((GHashTable *) vd, g_strdup (key), g_variant_ref_sink (value));
 }
+
+/**
+ * ncm_var_dict_has_key:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ *
+ * Checks if a #NcmVarDict has a key @key.
+ *
+ * Returns: whether the key @key was found.
+ */
+gboolean
+ncm_var_dict_has_key (NcmVarDict *vd, const gchar *key)
+{
+  return g_hash_table_contains ((GHashTable *) vd, key);
+}
+
+/**
+ * ncm_var_dict_get_string:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: (out) (transfer full): a string
+ *
+ * Gets a string from a #NcmVarDict with key @key.
+ *
+ * Returns: whether the string with key @key was found.
+ */
+gboolean
+ncm_var_dict_get_string (NcmVarDict *vd, const gchar *key, gchar **value)
+{
+  GVariant *v = ncm_var_dict_peek (vd, key);
+
+  if (v != NULL)
+  {
+    *value = g_variant_dup_string (v, NULL);
+
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * ncm_var_dict_get_int:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: (out): an integer
+ *
+ * Gets an integer from a #NcmVarDict with key @key.
+ *
+ * Returns: whether the integer with key @key was found.
+ */
+gboolean
+ncm_var_dict_get_int (NcmVarDict *vd, const gchar *key, gint *value)
+{
+  GVariant *v = ncm_var_dict_peek (vd, key);
+
+  if (v != NULL)
+  {
+    *value = g_variant_get_int32 (v);
+
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * ncm_var_dict_get_double:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: (out): a double
+ *
+ * Gets a double from a #NcmVarDict with key @key.
+ *
+ * Returns: whether the double with key @key was found.
+ */
+gboolean
+ncm_var_dict_get_double (NcmVarDict *vd, const gchar *key, gdouble *value)
+{
+  GVariant *v = ncm_var_dict_peek (vd, key);
+
+  if (v != NULL)
+  {
+    *value = g_variant_get_double (v);
+
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * ncm_var_dict_get_boolean:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: (out): a boolean
+ *
+ * Gets a boolean from a #NcmVarDict with key @key.
+ *
+ * Returns: whether the boolean with key @key was found.
+ */
+gboolean
+ncm_var_dict_get_boolean (NcmVarDict *vd, const gchar *key, gboolean *value)
+{
+  GVariant *v = ncm_var_dict_peek (vd, key);
+
+  if (v != NULL)
+  {
+    *value = g_variant_get_boolean (v);
+
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * ncm_var_dict_get_int_array:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: (out) (transfer full) (element-type int): an array of integers
+ *
+ * Gets an array of integers from a #NcmVarDict with key @key.
+ *
+ * Returns: whether the array of integers with key @key was found.
+ */
+gboolean
+ncm_var_dict_get_int_array (NcmVarDict *vd, const gchar *key, GArray **value)
+{
+  GVariant *v = ncm_var_dict_peek (vd, key);
+
+  if (v != NULL)
+  {
+    gsize len;
+    const gint *data = (const gint *) g_variant_get_fixed_array (v, &len, sizeof (gint));
+
+    *value = g_array_sized_new (FALSE, FALSE, sizeof (gint), len);
+
+    g_array_append_vals (*value, data, len);
+
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * ncm_var_dict_get_double_array:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: (out) (transfer full) (element-type double): an array of doubles
+ *
+ * Gets an array of doubles from a #NcmVarDict with key @key.
+ *
+ * Returns: whether the array of doubles with key @key was found.
+ */
+gboolean
+ncm_var_dict_get_double_array (NcmVarDict *vd, const gchar *key, GArray **value)
+{
+  GVariant *v = ncm_var_dict_peek (vd, key);
+
+  if (v != NULL)
+  {
+    gsize len;
+    const gdouble *data = (const gdouble *) g_variant_get_fixed_array (v, &len, sizeof (gdouble));
+
+    *value = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
+
+    g_array_append_vals (*value, data, len);
+
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * ncm_var_dict_get_boolean_array:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: (out) (transfer full) (element-type boolean): an array of booleans
+ *
+ * Gets an array of booleans from a #NcmVarDict with key @key.
+ *
+ * Returns: whether the array of booleans with key @key was found.
+ */
+gboolean
+ncm_var_dict_get_boolean_array (NcmVarDict *vd, const gchar *key, GArray **value)
+{
+  GVariant *v = ncm_var_dict_peek (vd, key);
+
+  if (v != NULL)
+  {
+    gsize len;
+    const gchar *data = (const gchar *) g_variant_get_fixed_array (v, &len, sizeof (gchar));
+    guint i;
+
+    *value = g_array_sized_new (FALSE, FALSE, sizeof (gboolean), len);
+
+    for (i = 0; i < len; i++)
+    {
+      gboolean b = data[i];
+
+      g_array_append_val (*value, b);
+    }
+
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * ncm_var_dict_get_variant:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @value: (out) (transfer full): a #GVariant
+ *
+ * Gets a #GVariant from a #NcmVarDict with key @key.
+ *
+ * Returns: whether the #GVariant with key @key was found.
+ */
+gboolean
+ncm_var_dict_get_variant (NcmVarDict *vd, const gchar *key, GVariant **value)
+{
+  GVariant *v = ncm_var_dict_peek (vd, key);
+
+  if (v != NULL)
+  {
+    *value = g_variant_ref_sink (v);
+
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * ncm_var_dict_len:
+ * @vd: a #NcmVarDict
+ *
+ * Gets the length of a #NcmVarDict.
+ *
+ * Returns: dictionary length
+ */
+guint
+ncm_var_dict_len (NcmVarDict *vd)
+{
+  return g_hash_table_size ((GHashTable *) vd);
+}
+
+/**
+ * ncm_var_dict_keys:
+ * @vd: a #NcmVarDict
+ *
+ * Gets the keys of a #NcmVarDict.
+ *
+ * Returns: (transfer container): the keys of a #NcmVarDict.
+ */
+GStrv
+ncm_var_dict_keys (NcmVarDict *vd)
+{
+  return (GStrv) g_hash_table_get_keys_as_array ((GHashTable *) vd, NULL);
+}
+

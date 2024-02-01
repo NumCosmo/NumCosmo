@@ -69,10 +69,12 @@ struct _NcmDataClass
   void (*m2lnL_val) (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
   void (*mean_vector) (NcmData *data, NcmMSet *mset, NcmVector *mu);
   void (*inv_cov_UH) (NcmData *data, NcmMSet *mset, NcmMatrix *H);
+  void (*inv_cov_Uf) (NcmData *data, NcmMSet *mset, NcmVector *f);
 
   NcmDataFisherMatrix fisher_matrix;
+  void (*fisher_matrix_bias) (NcmData *data, NcmMSet *mset, NcmVector *f_true, NcmMatrix **IM, NcmVector **delta_theta);
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[2];
+  gpointer padding[6];
 };
 
 NcmData *ncm_data_ref (NcmData *data);
@@ -80,7 +82,6 @@ void ncm_data_free (NcmData *data);
 void ncm_data_clear (NcmData **data);
 
 NcmData *ncm_data_dup (NcmData *data, NcmSerialize *ser_obj);
-NcmData *ncm_data_new_from_file (const gchar *filename);
 
 guint ncm_data_get_length (NcmData *data);
 guint ncm_data_get_dof (NcmData *data);
@@ -106,11 +107,15 @@ NcmBootstrap *ncm_data_peek_bootstrap (NcmData *data);
 void ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f);
 void ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 
+gboolean ncm_data_has_mean_vector (NcmData *data);
+
 void ncm_data_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu);
 void ncm_data_sigma_vector (NcmData *data, NcmMSet *mset, NcmVector *sigma);
 void ncm_data_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H);
+void ncm_data_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f);
 
 void ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM);
+void ncm_data_fisher_matrix_bias (NcmData *data, NcmMSet *mset, NcmVector *f_true, NcmMatrix **IM, NcmVector **delta_theta);
 
 #define NCM_DATA_RESAMPLE_RNG_NAME "data_resample"
 

@@ -28,7 +28,25 @@
  * @title: NcmLikelihood
  * @short_description: Likelihood combining a NcmDataset and priors.
  *
- * FIXME
+ * Class combining a #NcmDataset and priors. It represents the posterior distribution
+ * of the parameters of a model given the data and the priors. For historical reasons
+ * it is called likelihood, but it is actually the posterior distribution. This will
+ * be fixed in version 1.0 but for backward compatibility for version 0 it will remain
+ * as likelihood.
+ *
+ * The posterior distribution is the combination of the #NcmDataset containing the
+ * individual likelihoods of the data and the priors. The priors are defined as
+ * #NcmPrior objects. The priors can be leastsquares priors or m2lnL priors. The
+ * leastsquares priors compute the leastsquares vectors $\vec{f}_i$ and the m2lnL
+ * priors the probabilities $-2\ln P_{\mathrm{prior},i}$.
+ *
+ * The final posterior distribution is defined as:
+ * \begin{equation}
+ * -2\ln P_{\mathrm{posterior}} = -2\ln L_{\mathrm{data}} + \sum_i \vec{f}_i\cdot\vec{f}_i + \sum_i -2\ln P_{\mathrm{prior},i}
+ * \end{equation}
+ *
+ * Note that to be able to use least squares the posterior must contain least-squares
+ * priors only and all individual likelihoods in the #NcmDataset must also be least-squares.
  *
  */
 
@@ -44,6 +62,18 @@
 #include "math/ncm_prior_flat_param.h"
 #include "math/ncm_prior_flat_func.h"
 
+struct _NcmLikelihood
+{
+  /*< private >*/
+  GObject parent_instance;
+  NcmDataset *dset;
+  NcmObjArray *priors_f;
+  NcmObjArray *priors_m2lnL;
+  NcmVector *m2lnL_v;
+  NcmVector *ls_f_data;
+  NcmVector *ls_f_priors;
+};
+
 enum
 {
   PROP_0,
@@ -54,7 +84,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcmLikelihood, ncm_likelihood, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmLikelihood, ncm_likelihood, G_TYPE_OBJECT)
 
 static void
 ncm_likelihood_init (NcmLikelihood *lh)
@@ -108,9 +138,9 @@ _ncm_likelihood_set_property (GObject *object, guint prop_id, const GValue *valu
 
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -135,9 +165,9 @@ _ncm_likelihood_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_M2LNL_V:
       g_value_set_object (value, lh->m2lnL_v);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -210,9 +240,9 @@ ncm_likelihood_class_init (NcmLikelihoodClass *klass)
  * ncm_likelihood_new:
  * @dset: a #NcmDataset.
  *
- * FIXME
+ * Creates a new #NcmLikelihood for the given #NcmDataset.
  *
- * Returns: FIXME
+ * Returns: (transfer full): A new #NcmLikelihood.
  */
 NcmLikelihood *
 ncm_likelihood_new (NcmDataset *dset)
@@ -228,9 +258,9 @@ ncm_likelihood_new (NcmDataset *dset)
  * ncm_likelihood_ref:
  * @lh: a #NcmLikelihood
  *
- * FIXME
+ * Increases the reference count of the object.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): The same object @lh.
  */
 NcmLikelihood *
 ncm_likelihood_ref (NcmLikelihood *lh)
@@ -257,7 +287,9 @@ ncm_likelihood_dup (NcmLikelihood *lh, NcmSerialize *ser)
  * ncm_likelihood_free:
  * @lh: a #NcmLikelihood
  *
- * FIXME
+ * Decreases the reference count of the object. If the reference count
+ * reaches zero, the object is finalized (i.e. its memory is freed).
+ *
  */
 void
 ncm_likelihood_free (NcmLikelihood *lh)
@@ -269,7 +301,8 @@ ncm_likelihood_free (NcmLikelihood *lh)
  * ncm_likelihood_clear:
  * @lh: a #NcmLikelihood
  *
- * FIXME
+ * If *@lh is not %NULL, decreases the reference count of the object
+ * and sets *@lh to %NULL.
  *
  */
 void
@@ -279,11 +312,40 @@ ncm_likelihood_clear (NcmLikelihood **lh)
 }
 
 /**
+ * ncm_likelihood_peek_dataset:
+ * @lh: a #NcmLikelihood
+ *
+ * Gets the #NcmDataset associated with the #NcmLikelihood.
+ *
+ * Returns: (transfer none): the #NcmDataset associated with the #NcmLikelihood.
+ */
+NcmDataset *
+ncm_likelihood_peek_dataset (NcmLikelihood *lh)
+{
+  return lh->dset;
+}
+
+/**
+ * ncm_likelihoood_peek_m2lnL_v:
+ * @lh: a #NcmLikelihood
+ *
+ * Gets the m2lnL vector associated with the #NcmLikelihood containing the
+ * last calculated m2lnL values.
+ *
+ * Returns: (transfer none): the m2lnL vector associated with the #NcmLikelihood.
+ */
+NcmVector *
+ncm_likelihoood_peek_m2lnL_v (NcmLikelihood *lh)
+{
+  return lh->m2lnL_v;
+}
+
+/**
  * ncm_likelihood_priors_add:
  * @lh: a #NcmLikelihood
  * @prior: a #NcmPrior
  *
- * FIXME
+ * Adds a #NcmPrior to the #NcmLikelihood.
  *
  */
 void
@@ -296,175 +358,31 @@ ncm_likelihood_priors_add (NcmLikelihood *lh, NcmPrior *prior)
 }
 
 /**
- * ncm_likelihood_priors_add_gauss_param:
- * @lh: a #NcmLikelihood
- * @mid: FIXME
- * @pid: FIXME
- * @mu: FIXME
- * @sigma: FIXME
+ * ncm_likelihood_priors_take:
+ * @lh: (in) (transfer full): a #NcmLikelihood
+ * @prior: a #NcmPrior
  *
- * FIXME
+ * Adds a #NcmPrior to the #NcmLikelihood and takes ownership of the object.
  *
  */
 void
-ncm_likelihood_priors_add_gauss_param (NcmLikelihood *lh, NcmModelID mid, guint pid, gdouble mu, gdouble sigma)
+ncm_likelihood_priors_take (NcmLikelihood *lh, NcmPrior *prior)
 {
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_gauss_param_new (mid, pid, mu, sigma));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
-}
-
-/**
- * ncm_likelihood_priors_add_gauss_param_pindex:
- * @lh: a #NcmLikelihood
- * @pi: FIXME
- * @mu: FIXME
- * @sigma: FIXME
- *
- * FIXME
- *
- */
-void
-ncm_likelihood_priors_add_gauss_param_pindex (NcmLikelihood *lh, const NcmMSetPIndex *pi, gdouble mu, gdouble sigma)
-{
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_gauss_param_new_pindex (pi, mu, sigma));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
-}
-
-/**
- * ncm_likelihood_priors_add_gauss_param_name:
- * @lh: a #NcmLikelihood
- * @mset: FIXME
- * @name: FIXME
- * @mu: FIXME
- * @sigma: FIXME
- *
- * FIXME
- *
- */
-void
-ncm_likelihood_priors_add_gauss_param_name (NcmLikelihood *lh, NcmMSet *mset, const gchar *name, gdouble mu, gdouble sigma)
-{
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_gauss_param_new_name (mset, name, mu, sigma));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
-}
-
-/**
- * ncm_likelihood_priors_add_gauss_func:
- * @lh: a #NcmLikelihood
- * @mean_func: FIXME
- * @mu: FIXME
- * @sigma: FIXME
- * @var: FIXME
- *
- * FIXME
- *
- */
-void
-ncm_likelihood_priors_add_gauss_func (NcmLikelihood *lh, NcmMSetFunc *mean_func, gdouble mu, gdouble sigma, gdouble var)
-{
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_gauss_func_new (mean_func, mu, sigma, var));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
-}
-
-/**
- * ncm_likelihood_priors_add_flat_param:
- * @lh: a #NcmLikelihood
- * @mid: FIXME
- * @pid: FIXME
- * @x_low: FIXME
- * @x_upp: FIXME
- * @scale: FIXME
- *
- * FIXME
- *
- */
-void
-ncm_likelihood_priors_add_flat_param (NcmLikelihood *lh, NcmModelID mid, guint pid, gdouble x_low, gdouble x_upp, gdouble scale)
-{
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_flat_param_new (mid, pid, x_low, x_upp, scale));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
-}
-
-/**
- * ncm_likelihood_priors_add_flat_param_pindex:
- * @lh: a #NcmLikelihood
- * @pi: FIXME
- * @x_low: FIXME
- * @x_upp: FIXME
- * @scale: FIXME
- *
- * FIXME
- *
- */
-void
-ncm_likelihood_priors_add_flat_param_pindex (NcmLikelihood *lh, const NcmMSetPIndex *pi, gdouble x_low, gdouble x_upp, gdouble scale)
-{
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_flat_param_new_pindex (pi, x_low, x_upp, scale));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
-}
-
-/**
- * ncm_likelihood_priors_add_flat_param_name:
- * @lh: a #NcmLikelihood
- * @mset: FIXME
- * @name: FIXME
- * @x_low: FIXME
- * @x_upp: FIXME
- * @scale: FIXME
- *
- * FIXME
- *
- */
-void
-ncm_likelihood_priors_add_flat_param_name (NcmLikelihood *lh, NcmMSet *mset, const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale)
-{
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_flat_param_new_name (mset, name, x_low, x_upp, scale));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
-}
-
-/**
- * ncm_likelihood_priors_add_flat_func:
- * @lh: a #NcmLikelihood
- * @mean_func: FIXME
- * @x_low: FIXME
- * @x_upp: FIXME
- * @scale: FIXME
- * @variable: FIXME
- *
- * FIXME
- *
- */
-void
-ncm_likelihood_priors_add_flat_func (NcmLikelihood *lh, NcmMSetFunc *mean_func, gdouble x_low, gdouble x_upp, gdouble scale, gdouble variable)
-{
-  NcmPrior *prior = NCM_PRIOR (ncm_prior_flat_func_new (mean_func, x_low, x_upp, scale, variable));
-
-  ncm_likelihood_priors_add (lh, prior);
-  ncm_prior_clear (&prior);
+  if (ncm_prior_is_m2lnL (prior))
+    g_ptr_array_add (lh->priors_m2lnL, prior);
+  else
+    g_ptr_array_add (lh->priors_f, prior);
 }
 
 /**
  * ncm_likelihood_priors_peek_f:
  * @lh: a #NcmLikelihood
- * @i: FIXME
+ * @i: prior index
  *
- * FIXME
+ * Peeks the prior at index @i in the #NcmLikelihood from the array of priors
+ * that contribute to the leastsquares f.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): a #NcmPrior representing the prior at index @i.
  */
 NcmPrior *
 ncm_likelihood_priors_peek_f (NcmLikelihood *lh, guint i)
@@ -475,11 +393,12 @@ ncm_likelihood_priors_peek_f (NcmLikelihood *lh, guint i)
 /**
  * ncm_likelihood_priors_peek_m2lnL:
  * @lh: a #NcmLikelihood
- * @i: FIXME
+ * @i: prior index
  *
- * FIXME
+ * Peek the prior at index @i in the #NcmLikelihood from the array of priors
+ * that contribute to the m2lnL.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): a #NcmPrior representing the prior at index @i.
  */
 NcmPrior *
 ncm_likelihood_priors_peek_m2lnL (NcmLikelihood *lh, guint i)
@@ -491,9 +410,9 @@ ncm_likelihood_priors_peek_m2lnL (NcmLikelihood *lh, guint i)
  * ncm_likelihood_priors_length_f:
  * @lh: a #NcmLikelihood
  *
- * FIXME
+ * Gets the number of priors that contribute to the leastsquares f.
  *
- * Returns: FIXME
+ * Returns: the number of priors that contribute to the leastsquares f.
  */
 guint
 ncm_likelihood_priors_length_f (NcmLikelihood *lh)
@@ -505,9 +424,9 @@ ncm_likelihood_priors_length_f (NcmLikelihood *lh)
  * ncm_likelihood_priors_length_m2lnL:
  * @lh: a #NcmLikelihood
  *
- * FIXME
+ * Gets the number of priors that contribute to the m2lnL.
  *
- * Returns: FIXME
+ * Returns: the number of priors that contribute to the m2lnL.
  */
 guint
 ncm_likelihood_priors_length_m2lnL (NcmLikelihood *lh)
@@ -521,7 +440,9 @@ ncm_likelihood_priors_length_m2lnL (NcmLikelihood *lh)
  * @mset: a #NcmMSet.
  * @priors_f: a #NcmVector.
  *
- * FIXME
+ * Calculates the leastsquares f for the priors, note that the all priors
+ * in @lh must be priors that contribute to the leastsquares f.
+ *
  */
 void
 ncm_likelihood_priors_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVector *priors_f)
@@ -549,7 +470,9 @@ ncm_likelihood_priors_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVecto
  * @mset: a #NcmMSet.
  * @f: a #NcmVector.
  *
- * FIXME
+ * Combines the leastsquares f for the dataset and the priors, note that the
+ * first elements of @f are the leastsquares f for the dataset and the last
+ * elements are the leastsquares f for the priors.
  *
  */
 void
@@ -583,9 +506,11 @@ ncm_likelihood_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVector *f)
  * ncm_likelihood_priors_m2lnL_val:
  * @lh: a #NcmLikelihood.
  * @mset: a #NcmMSet.
- * @priors_m2lnL: (out): FIXME
+ * @priors_m2lnL: (out): the sum of the priors m2lnL.
  *
- * FIXME
+ * Combines the m2lnL for the priors, note that the priors can be priors that
+ * contribute to the leastsquares f or to the m2lnL.
+ *
  */
 void
 ncm_likelihood_priors_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *priors_m2lnL)
@@ -619,7 +544,12 @@ ncm_likelihood_priors_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *prio
  * @mset: a #NcmMSet.
  * @priors_m2lnL_v: a #NcmVector
  *
- * FIXME
+ * Computes the m2lnL for the priors, inserting the result in @priors_m2lnL_v.
+ * The order of the elements in @priors_m2lnL_v is the same as the order of the
+ * priors in the #NcmLikelihood. The first elements are the m2lnL for the priors
+ * that contribute to the leastsquares f and the last elements are the m2lnL for
+ * the priors that contribute to the m2lnL.
+ *
  */
 void
 ncm_likelihood_priors_m2lnL_vec (NcmLikelihood *lh, NcmMSet *mset, NcmVector *priors_m2lnL_v)
@@ -653,9 +583,10 @@ ncm_likelihood_priors_m2lnL_vec (NcmLikelihood *lh, NcmMSet *mset, NcmVector *pr
  * ncm_likelihood_m2lnL_val:
  * @lh: a #NcmLikelihood.
  * @mset: a #NcmMSet.
- * @m2lnL: (out): FIXME
+ * @m2lnL: (out): the sum of the m2lnL
  *
- * FIXME
+ * Combines the m2lnL for the dataset and the priors, note that the priors can
+ * be priors that contribute to the leastsquares f or to the m2lnL.
  *
  */
 void

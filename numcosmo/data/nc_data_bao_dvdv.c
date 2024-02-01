@@ -31,7 +31,7 @@
  * See [Percival et al. (2007)][XPercival2007].
  *
  * The data is stored in a #NcDataBaoDVDV object. The data is stored in a
- * #NcDataGaussDiag base class object, which is a subclass of #NcmData.
+ * #NcmDataGaussDiag base class object, which is a subclass of #NcmData.
  * The data represents the mean values of the volume mean $D_V$ at the redshift
  * $z$.
  *
@@ -43,6 +43,7 @@
 #include "build_cfg.h"
 
 #include "data/nc_data_bao_dvdv.h"
+#include "math/ncm_cfg.h"
 #include "nc_enum_types.h"
 
 enum
@@ -52,7 +53,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataBaoDVDV, nc_data_bao_dvdv, NCM_TYPE_DATA_GAUSS_DIAG);
+G_DEFINE_TYPE (NcDataBaoDVDV, nc_data_bao_dvdv, NCM_TYPE_DATA_GAUSS_DIAG)
 
 static void
 nc_data_bao_dvdv_init (NcDataBaoDVDV *bao_dvdv)

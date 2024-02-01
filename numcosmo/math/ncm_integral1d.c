@@ -49,7 +49,7 @@
 #include <gsl/gsl_errno.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmIntegral1dPrivate
+typedef struct _NcmIntegral1dPrivate
 {
   guint partition;
   gdouble reltol;
@@ -57,9 +57,9 @@ struct _NcmIntegral1dPrivate
   guint rule;
   gsl_integration_workspace *ws;
   gsl_integration_cquad_workspace *cquad_ws;
-};
+} NcmIntegral1dPrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmIntegral1d, ncm_integral1d, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmIntegral1d, ncm_integral1d, G_TYPE_OBJECT)
 
 enum
 {
@@ -75,7 +75,7 @@ enum
 static void
 ncm_integral1d_init (NcmIntegral1d *int1d)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv = ncm_integral1d_get_instance_private (int1d);
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
 
   self->partition = 0;
   self->rule      = 0;
@@ -106,9 +106,9 @@ ncm_integral1d_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_ABSTOL:
       ncm_integral1d_set_abstol (int1d, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -133,9 +133,9 @@ ncm_integral1d_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_ABSTOL:
       g_value_set_double (value, ncm_integral1d_get_abstol (int1d));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -143,7 +143,7 @@ static void
 ncm_integral1d_finalize (GObject *object)
 {
   NcmIntegral1d *int1d              = NCM_INTEGRAL1D (object);
-  NcmIntegral1dPrivate * const self = int1d->priv;
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
 
   g_clear_pointer (&self->ws,       gsl_integration_workspace_free);
   g_clear_pointer (&self->cquad_ws, gsl_integration_cquad_workspace_free);
@@ -243,7 +243,7 @@ ncm_integral1d_clear (NcmIntegral1d **int1d)
 void
 ncm_integral1d_set_partition (NcmIntegral1d *int1d, guint partition)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
 
   g_assert_cmpuint (partition, >=, 10);
 
@@ -267,7 +267,7 @@ ncm_integral1d_set_partition (NcmIntegral1d *int1d, guint partition)
 void
 ncm_integral1d_set_rule (NcmIntegral1d *int1d, guint rule)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
 
   self->rule = rule;
 }
@@ -283,7 +283,7 @@ ncm_integral1d_set_rule (NcmIntegral1d *int1d, guint rule)
 void
 ncm_integral1d_set_reltol (NcmIntegral1d *int1d, gdouble reltol)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
 
   self->reltol = reltol;
 }
@@ -299,7 +299,7 @@ ncm_integral1d_set_reltol (NcmIntegral1d *int1d, gdouble reltol)
 void
 ncm_integral1d_set_abstol (NcmIntegral1d *int1d, gdouble abstol)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
 
   self->abstol = abstol;
 }
@@ -313,7 +313,7 @@ ncm_integral1d_set_abstol (NcmIntegral1d *int1d, gdouble abstol)
 guint
 ncm_integral1d_get_partition (NcmIntegral1d *int1d)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
 
   return self->partition;
 }
@@ -327,7 +327,7 @@ ncm_integral1d_get_partition (NcmIntegral1d *int1d)
 guint
 ncm_integral1d_get_rule (NcmIntegral1d *int1d)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
 
   return self->rule;
 }
@@ -341,7 +341,7 @@ ncm_integral1d_get_rule (NcmIntegral1d *int1d)
 gdouble
 ncm_integral1d_get_reltol (NcmIntegral1d *int1d)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
 
   return self->reltol;
 }
@@ -355,9 +355,23 @@ ncm_integral1d_get_reltol (NcmIntegral1d *int1d)
 gdouble
 ncm_integral1d_get_abstol (NcmIntegral1d *int1d)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
 
   return self->abstol;
+}
+
+/**
+ * ncm_integral1d_integrand:
+ * @int1d: a #NcmIntegral1d
+ * @x: integration variable
+ * @w: integration weight
+ *
+ * Returns: the value of the integrand at @x.
+ */
+gdouble
+ncm_integral1d_integrand (NcmIntegral1d *int1d, const gdouble x, const gdouble w)
+{
+  return NCM_INTEGRAL1D_GET_CLASS (int1d)->integrand (int1d, x, w);
 }
 
 typedef struct _NcIntegral1dHermite
@@ -465,8 +479,8 @@ _ncm_integral1d_eval_gauss_laguerre_r (gdouble alpha, gpointer userdata)
 gdouble
 ncm_integral1d_eval (NcmIntegral1d *int1d, const gdouble xi, const gdouble xf, gdouble *err)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0};
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
@@ -494,8 +508,8 @@ ncm_integral1d_eval (NcmIntegral1d *int1d, const gdouble xi, const gdouble xf, g
 gdouble
 ncm_integral1d_eval_gauss_hermite_p (NcmIntegral1d *int1d, gdouble *err)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0};
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
@@ -525,8 +539,8 @@ ncm_integral1d_eval_gauss_hermite_p (NcmIntegral1d *int1d, gdouble *err)
 gdouble
 ncm_integral1d_eval_gauss_hermite (NcmIntegral1d *int1d, gdouble *err)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0};
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
@@ -557,8 +571,8 @@ ncm_integral1d_eval_gauss_hermite (NcmIntegral1d *int1d, gdouble *err)
 gdouble
 ncm_integral1d_eval_gauss_hermite_r_p (NcmIntegral1d *int1d, const gdouble r, gdouble *err)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, 0.0, r};
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, r, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
@@ -593,8 +607,8 @@ ncm_integral1d_eval_gauss_hermite_r_p (NcmIntegral1d *int1d, const gdouble r, gd
 gdouble
 ncm_integral1d_eval_gauss_hermite_mur (NcmIntegral1d *int1d, const gdouble r, const gdouble mu, gdouble *err)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, mu, r};
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
+  NcIntegral1dHermite int1d_H       = {int1d, mu, r, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
@@ -627,8 +641,8 @@ ncm_integral1d_eval_gauss_hermite_mur (NcmIntegral1d *int1d, const gdouble r, co
 gdouble
 ncm_integral1d_eval_gauss_hermite1_p (NcmIntegral1d *int1d, gdouble *err)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0};
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
@@ -657,8 +671,8 @@ ncm_integral1d_eval_gauss_hermite1_p (NcmIntegral1d *int1d, gdouble *err)
 gdouble
 ncm_integral1d_eval_gauss_hermite1_r_p (NcmIntegral1d *int1d, const gdouble r, gdouble *err)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, 0.0, r};
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, r, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;
@@ -691,7 +705,7 @@ ncm_integral1d_eval_gauss_hermite1_r_p (NcmIntegral1d *int1d, const gdouble r, g
 gdouble
 ncm_integral1d_eval_gauss_laguerre (NcmIntegral1d *int1d, gdouble *err)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
   NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0, 0};
   gdouble result                    = 0.0;
   gsl_function F;
@@ -721,8 +735,8 @@ ncm_integral1d_eval_gauss_laguerre (NcmIntegral1d *int1d, gdouble *err)
 gdouble
 ncm_integral1d_eval_gauss_laguerre_r (NcmIntegral1d *int1d, const gdouble r, gdouble *err)
 {
-  NcmIntegral1dPrivate * const self = int1d->priv;
-  NcIntegral1dHermite int1d_H       = {int1d, 0.0, r};
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, r, 0};
   gdouble result                    = 0.0;
   gsl_function F;
   gint ret;

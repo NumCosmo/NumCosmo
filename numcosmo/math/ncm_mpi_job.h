@@ -33,7 +33,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_serialize.h>
-#ifdef NUMCOSMO_HAVE_MPI
+#if defined (NUMCOSMO_HAVE_MPI) && defined (USE_NCM_MPI)
 #  ifndef NUMCOSMO_GIR_SCAN
 #    include <mpi.h>
 
@@ -52,22 +52,15 @@ typedef gpointer NcmMPIDatatype;
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MPI_JOB             (ncm_mpi_job_get_type ())
-#define NCM_MPI_JOB(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MPI_JOB, NcmMPIJob))
-#define NCM_MPI_JOB_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MPI_JOB, NcmMPIJobClass))
-#define NCM_IS_MPI_JOB(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MPI_JOB))
-#define NCM_IS_MPI_JOB_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MPI_JOB))
-#define NCM_MPI_JOB_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MPI_JOB, NcmMPIJobClass))
+#define NCM_TYPE_MPI_JOB (ncm_mpi_job_get_type ())
 
-typedef struct _NcmMPIJobClass NcmMPIJobClass;
-typedef struct _NcmMPIJob NcmMPIJob;
-typedef struct _NcmMPIJobPrivate NcmMPIJobPrivate;
+G_DECLARE_DERIVABLE_TYPE (NcmMPIJob, ncm_mpi_job, NCM, MPI_JOB, GObject)
 
 struct _NcmMPIJobClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  
+
   void (*work_init) (NcmMPIJob *mpi_job);
   void (*work_clear) (NcmMPIJob *mpi_job);
   NcmMPIDatatype (*input_datatype) (NcmMPIJob *mpi_job, gint *len, gint *size);
@@ -85,13 +78,9 @@ struct _NcmMPIJobClass
   void (*unpack_input) (NcmMPIJob *mpi_job, gpointer buf, gpointer input);
   void (*unpack_return) (NcmMPIJob *mpi_job, gpointer buf, gpointer ret);
   void (*run) (NcmMPIJob *mpi_job, gpointer input, gpointer ret);
-};
 
-struct _NcmMPIJob
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmMPIJobPrivate *priv;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[1];
 };
 
 /**************************************************************************************/
@@ -109,12 +98,12 @@ typedef struct _NcmMPIJobCtrl
 
 /**
  * NcmMPIJobCtrlMsg:
- * @NCM_MPI_CTRL_SLAVE_INIT: FIXME
- * @NCM_MPI_CTRL_SLAVE_FREE: FIXME
- * @NCM_MPI_CTRL_SLAVE_KILL: FIXME
- * @NCM_MPI_CTRL_SLAVE_WORK: FIXME
+ * @NCM_MPI_CTRL_SLAVE_INIT: Slave should receive a serialized job and initializes itself
+ * @NCM_MPI_CTRL_SLAVE_FREE: Slave should free its resources and waits for a new job
+ * @NCM_MPI_CTRL_SLAVE_KILL: Slave should free its resources and exits, the rank will not be used anymore
+ * @NCM_MPI_CTRL_SLAVE_WORK: Slave should receive a serialized input, runs the job, and returns a serialized result
  *
- * FIXME
+ * Control messages from master to slave. All messages have the same size, specifying tag #NCM_MPI_CTRL_TAG_CMD.
  *
  */
 typedef enum _NcmMPIJobCtrlMsg
@@ -129,12 +118,24 @@ typedef enum _NcmMPIJobCtrlMsg
 
 /**
  * NcmMPIJobCtrlTag:
- * @NCM_MPI_CTRL_TAG_CMD: FIXME
- * @NCM_MPI_CTRL_TAG_JOB: FIXME
- * @NCM_MPI_CTRL_TAG_WORK_INPUT: FIXME
- * @NCM_MPI_CTRL_TAG_WORK_RETURN: FIXME
+ * @NCM_MPI_CTRL_TAG_CMD: Control message
+ * @NCM_MPI_CTRL_TAG_JOB: Serialized job
+ * @NCM_MPI_CTRL_TAG_WORK_INPUT: Serialized input
+ * @NCM_MPI_CTRL_TAG_WORK_RETURN: Serialized return
  *
- * FIXME
+ * MPI tags for master-slave communication.
+ * If @NCM_MPI_CTRL_TAG_CMD is used, the message is a control message.
+ * #NCM_MPI_CTRL_SLAVE_INIT must be followed by #NCM_MPI_CTRL_TAG_JOB containing the serialized job.
+ * #NCM_MPI_CTRL_SLAVE_WORK must be followed by #NCM_MPI_CTRL_TAG_WORK_INPUT containing the serialized input.
+ * #NCM_MPI_CTRL_SLAVE_WORK is followed by #NCM_MPI_CTRL_TAG_WORK_RETURN containing the serialized return.
+ * #NCM_MPI_CTRL_SLAVE_FREE does not need to be followed by any message. The slave can be reinitialized with #NCM_MPI_CTRL_SLAVE_INIT.
+ * #NCM_MPI_CTRL_SLAVE_KILL should not be followed by any message. The slave will exit.
+ *
+ * Slaves receive messages with tags below:
+ * - Waits for a message with tag @NCM_MPI_CTRL_TAG_CMD:
+ *   - If the control message is #NCM_MPI_CTRL_SLAVE_INIT, the slave receives #NCM_MPI_CTRL_TAG_JOB with the serialized job.
+ *   - If the control message is #NCM_MPI_CTRL_SLAVE_WORK, the slave receives #NCM_MPI_CTRL_TAG_WORK_INPUT with the serialized input.
+ *   - After #NCM_MPI_CTRL_SLAVE_WORK, the slave sends @NCM_MPI_CTRL_TAG_WORK_RETURN with the serialized return.
  *
  */
 typedef enum _NcmMPIJobCtrlTag
@@ -148,8 +149,6 @@ typedef enum _NcmMPIJobCtrlTag
 } NcmMPIJobCtrlTag;
 
 /**************************************************************************************/
-
-GType ncm_mpi_job_get_type (void) G_GNUC_CONST;
 
 NcmMPIJob *ncm_mpi_job_ref (NcmMPIJob *mpi_job);
 

@@ -8,7 +8,7 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -35,11 +35,6 @@
 #include <numcosmo/math/ncm_data.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
-
-#ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_histogram.h>
-#include <gsl/gsl_histogram2d.h>
-#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -128,11 +123,8 @@ void nc_data_cluster_ncount_del_bins (NcDataClusterNCount *ncount);
 void nc_data_cluster_ncount_set_binned (NcDataClusterNCount *ncount, gboolean on);
 void nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount);
 
-#ifdef NUMCOSMO_HAVE_CFITSIO
 void nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filename, gboolean overwrite);
 void nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filename);
-
-#endif /* NUMCOSMO_HAVE_CFITSIO */
 
 G_END_DECLS
 

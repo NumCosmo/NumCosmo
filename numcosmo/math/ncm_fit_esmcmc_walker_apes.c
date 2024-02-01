@@ -96,7 +96,7 @@ typedef struct _NcmFitESMCMCWalkerAPESPrivate
   guint nparams;
   guint a_size;
   guint a_nparams;
-  gint mk;
+  guint mk;
   NcmVector *m2lnp_star;
   NcmVector *m2lnp_cur;
   gchar *desc;
@@ -118,7 +118,7 @@ struct _NcmFitESMCMCWalkerAPES
   NcmFitESMCMCWalker parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmFitESMCMCWalkerAPES, ncm_fit_esmcmc_walker_apes, NCM_TYPE_FIT_ESMCMC_WALKER);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmFitESMCMCWalkerAPES, ncm_fit_esmcmc_walker_apes, NCM_TYPE_FIT_ESMCMC_WALKER)
 
 #define __MK(method, k_type) (method + (k_type << 8))
 
@@ -175,9 +175,9 @@ _ncm_fit_esmcmc_walker_apes_set_property (GObject *object, guint prop_id, const 
     case PROP_USE_THREADS:
       ncm_fit_esmcmc_walker_apes_set_use_threads (apes, g_value_get_boolean (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -205,9 +205,9 @@ _ncm_fit_esmcmc_walker_apes_get_property (GObject *object, guint prop_id, GValue
     case PROP_USE_THREADS:
       g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_get_use_threads (apes));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -362,7 +362,7 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
       (self->nparams != self->a_nparams) ||
       (self->mk != __MK (self->method, self->k_type)))
   {
-    gint i;
+    guint i;
 
     self->a_size    = self->size;
     self->a_nparams = self->nparams;
@@ -492,7 +492,7 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
   NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
   const gdouble T                            = 1.0;
-  gint i;
+  guint i;
 
   if (ki < self->size_2)
   {

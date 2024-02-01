@@ -56,9 +56,9 @@ typedef struct _NcHIPrimClass NcHIPrimClass;
 typedef enum /*< flags,underscore_name=NC_HIPRIM_IMPL >*/
 {
   NC_HIPRIM_IMPL_lnSA_powspec_lnk = 1 << 0,
-  NC_HIPRIM_IMPL_lnT_powspec_lnk  = 1 << 1, 
+  NC_HIPRIM_IMPL_lnT_powspec_lnk = 1 << 1,
   /* < private > */
-  NC_HIPRIM_IMPL_LAST             = 1 << 2, /*< skip >*/
+  NC_HIPRIM_IMPL_LAST = 1 << 2, /*< skip >*/
 } NcHIPrimImpl;
 
 typedef gdouble (*NcHIPrimFunc1) (NcHIPrim *prim, gdouble lnk);
@@ -84,7 +84,6 @@ GType nc_hiprim_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_hiprim);
 
-NcHIPrim *nc_hiprim_new_from_name (GType parent_type, gchar *prim_name);
 NcHIPrim *nc_hiprim_ref (NcHIPrim *prim);
 void nc_hiprim_free (NcHIPrim *prim);
 void nc_hiprim_clear (NcHIPrim **prim);
@@ -122,9 +121,8 @@ G_END_DECLS
 #ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
-
-NCM_MODEL_FUNC1_IMPL (NC_HIPRIM,NcHIPrim,nc_hiprim,lnSA_powspec_lnk,lnk)
-NCM_MODEL_FUNC1_IMPL (NC_HIPRIM,NcHIPrim,nc_hiprim,lnT_powspec_lnk,lnk)
+NCM_MODEL_FUNC1_IMPL (NC_HIPRIM, NcHIPrim, nc_hiprim, lnSA_powspec_lnk, lnk)
+NCM_MODEL_FUNC1_IMPL (NC_HIPRIM, NcHIPrim, nc_hiprim, lnT_powspec_lnk, lnk)
 
 NCM_INLINE gdouble
 nc_hiprim_SA_powspec_k (NcHIPrim *prim, const gdouble k)
@@ -144,7 +142,8 @@ nc_hiprim_SA_Ampl (NcHIPrim *prim)
   return nc_hiprim_SA_powspec_k (prim, prim->k_pivot);
 }
 
-NCM_INLINE gdouble nc_hiprim_T_Ampl (NcHIPrim *prim)
+NCM_INLINE gdouble
+nc_hiprim_T_Ampl (NcHIPrim *prim)
 {
   return nc_hiprim_T_powspec_k (prim, prim->k_pivot);
 }
@@ -160,3 +159,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HIPRIM_INLINE_H_ */
+

@@ -75,9 +75,9 @@ GType nc_cluster_photoz_gauss_global_get_type (void) G_GNUC_CONST;
 
 NcClusterRedshift *nc_cluster_photoz_gauss_global_new (gdouble pz_min, gdouble pz_max, gdouble z_bias, gdouble sigma0);
 void nc_cluster_photoz_gauss_global_set_z_bias (NcClusterPhotozGaussGlobal *pzg_global, gdouble z_bias);
-gdouble nc_cluster_photoz_gauss_global_get_z_bias (const NcClusterPhotozGaussGlobal *pzg_global);
+gdouble nc_cluster_photoz_gauss_global_get_z_bias (NcClusterPhotozGaussGlobal *pzg_global);
 void nc_cluster_photoz_gauss_global_set_sigma0 (NcClusterPhotozGaussGlobal *pzg_global, gdouble sigma0);
-gdouble nc_cluster_photoz_gauss_global_get_sigma0 (const NcClusterPhotozGaussGlobal *pzg_global);
+gdouble nc_cluster_photoz_gauss_global_get_sigma0 (NcClusterPhotozGaussGlobal *pzg_global);
 
 #define NC_CLUSTER_REDSHIFT_PHOTOZ_GAUSS_GLOBAL_DEFAULT_BIAS (0.0)
 #define NC_CLUSTER_REDSHIFT_PHOTOZ_GAUSS_GLOBAL_DEFAULT_SIGMA0 (0.03)

@@ -64,9 +64,9 @@
 #include <gsl/gsl_sf_trig.h>
 #include <gsl/gsl_math.h>
 #include <complex.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -75,7 +75,7 @@ struct _NcmFftlogGausswin2
   NcmFftlog parent_instance;
 };
 
-G_DEFINE_TYPE (NcmFftlogGausswin2, ncm_fftlog_gausswin2, NCM_TYPE_FFTLOG);
+G_DEFINE_TYPE (NcmFftlogGausswin2, ncm_fftlog_gausswin2, NCM_TYPE_FFTLOG)
 
 static void
 ncm_fftlog_gausswin2_init (NcmFftlogGausswin2 *gwin2)
@@ -89,30 +89,30 @@ _ncm_fftlog_gausswin2_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_fftlog_gausswin2_parent_class)->finalize (object);
 }
 
-static void _ncm_fftlog_gausswin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0);
+static void _ncm_fftlog_gausswin2_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0);
 
 static void
 ncm_fftlog_gausswin2_class_init (NcmFftlogGausswin2Class *klass)
 {
   GObjectClass *object_class   = G_OBJECT_CLASS (klass);
   NcmFftlogClass *fftlog_class = NCM_FFTLOG_CLASS (klass);
-  
+
   object_class->finalize = &_ncm_fftlog_gausswin2_finalize;
-  
-  fftlog_class->name   = "gaussian_window_2";
-  fftlog_class->get_Ym = &_ncm_fftlog_gausswin2_get_Ym;
+
+  fftlog_class->name       = "gaussian_window_2";
+  fftlog_class->compute_Ym = &_ncm_fftlog_gausswin2_compute_Ym;
 }
 
 static void
-_ncm_fftlog_gausswin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
+_ncm_fftlog_gausswin2_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
   const gdouble twopi_Lt = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
   const gint Nf          = ncm_fftlog_get_full_size (fftlog);
-  
-#ifdef NUMCOSMO_HAVE_FFTW3
+
+#ifdef HAVE_FFTW3
   fftw_complex *Ym_base = (fftw_complex *) Ym_0;
   gint i;
-  
+
   for (i = 0; i < Nf; i++)
   {
     const gint phys_i            = ncm_fftlog_get_mode_index (fftlog, i);
@@ -121,14 +121,14 @@ _ncm_fftlog_gausswin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
     const complex double onepA_2 = 0.5 * (1.0 + A);
     complex double U;
     gsl_sf_result lngamma_rho, lngamma_theta;
-    
+
     gsl_sf_lngamma_complex_e (creal (onepA_2), cimag (onepA_2), &lngamma_rho, &lngamma_theta);
     U = 0.5 * cexp (lngamma_rho.val + I * lngamma_theta.val);
-    
+
     Ym_base[i] = U;
   }
-  
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+
+#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -151,7 +151,7 @@ ncm_fftlog_gausswin2_new (gdouble lnr0, gdouble lnk0, gdouble Lk, guint N)
                                              "Lk", Lk,
                                              "N", N,
                                              NULL);
-  
+
   return fftlog;
 }
 

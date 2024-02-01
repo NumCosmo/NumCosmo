@@ -55,7 +55,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataClusterPseudoCounts, nc_data_cluster_pseudo_counts, NCM_TYPE_DATA);
+G_DEFINE_TYPE (NcDataClusterPseudoCounts, nc_data_cluster_pseudo_counts, NCM_TYPE_DATA)
 
 static void
 nc_data_cluster_pseudo_counts_init (NcDataClusterPseudoCounts *dcpc)
@@ -226,7 +226,7 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
   if (dcpc->M_Z_FlatPrior)
   {
     /* ndet = 1, i.e., no-physical case: selection function and mass function equal to one (flat prior). */
-    gint i;
+    guint i;
 
     for (i = 0; i < dcpc->np; i++)
     {
@@ -250,7 +250,7 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
   {
     gdouble Ndet   = nc_cluster_pseudo_counts_ndet (cpc, dcpc->cad->mfp, cosmo);
     gdouble lnNdet = log (Ndet);
-    gint i;
+    guint i;
 
     *m2lnL = 0.0;
 
@@ -324,7 +324,7 @@ _nc_data_cluster_pseudo_counts_resample (NcmData *data, NcmMSet *mset, NcmRNG *r
 
   g_assert (clusterz != NULL && clusterm != NULL && cosmo != NULL && cpc != NULL);
   g_assert (NC_IS_CLUSTER_MASS_PLCL (clusterm));
-  g_assert_cmpuint (nc_cluster_redshift_obs_params_len (clusterz), ==, 0);
+  g_assert_cmpuint (nc_cluster_redshift_class_obs_params_len (NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)), ==, 0);
 
   nc_cluster_abundance_prepare_inv_dNdz (dcpc->cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())),
                                          lnMi);
@@ -333,15 +333,15 @@ _nc_data_cluster_pseudo_counts_resample (NcmData *data, NcmMSet *mset, NcmRNG *r
   {
     ncm_rng_lock (rng);
     {
-      const gdouble u1         = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), dcpc->cad->z_epsilon);
-      const gdouble u2         = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), dcpc->cad->lnM_epsilon);
+      const gdouble u1         = _nc_cad_inv_dNdz_convergence_f (ncm_rng_uniform01_pos_gen (rng), dcpc->cad->z_epsilon);
+      const gdouble u2         = _nc_cad_inv_dNdz_convergence_f (ncm_rng_uniform01_pos_gen (rng), dcpc->cad->lnM_epsilon);
       const gdouble z_true     = ncm_spline_eval (dcpc->cad->inv_z, u1);
       const gdouble lnM_true   = ncm_spline2d_eval (dcpc->cad->inv_lnM_z, u2, z_true);
       gdouble *zi_obs          = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z);
       gdouble *lnMi_obs        = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
       gdouble *lnMi_obs_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
       gdouble val_sel          = nc_cluster_pseudo_counts_selection_function (cpc, lnM_true, z_true);
-      gdouble sel_u            = gsl_rng_uniform_pos (rng->r);
+      gdouble sel_u            = ncm_rng_uniform01_pos_gen (rng);
 
       ncm_rng_unlock (rng);
 
@@ -576,8 +576,8 @@ nc_data_cluster_pseudo_counts_init_from_sampling (NcDataClusterPseudoCounts *dcp
 
   for (i = 0; i < np; i++)
   {
-    const gdouble sd_PL = gsl_ran_gamma (rng->r, 10.0, 0.5) * M0 / 10.0;      /* This choice is suitable for the Planck catalog, logarithm (e) scale*/
-    const gdouble sd_CL = (1.8 + gsl_ran_rayleigh (rng->r, 3.5)) * M0 / 10.0; /* This choice is suitable for the CLASH catalog, logarithm (e) scale*/
+    const gdouble sd_PL = ncm_rng_gamma_gen (rng, 10.0, 0.5) * M0 / 10.0;      /* This choice is suitable for the Planck catalog, logarithm (e) scale*/
+    const gdouble sd_CL = (1.8 + ncm_rng_rayleigh_gen (rng, 3.5)) * M0 / 10.0; /* This choice is suitable for the CLASH catalog, logarithm (e) scale*/
 
     ncm_matrix_set (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL, sd_PL);
     ncm_matrix_set (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MCL, sd_CL);

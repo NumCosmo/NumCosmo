@@ -55,9 +55,10 @@ struct _NcHICosmoDEWSplinePrivate
   NcmSpline *w_alpha;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoDEWSpline, nc_hicosmo_de_wspline, NC_TYPE_HICOSMO_DE);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoDEWSpline, nc_hicosmo_de_wspline, NC_TYPE_HICOSMO_DE)
 
-enum {
+enum
+{
   PROP_0,
   PROP_Z_1,
   PROP_Z_F,
@@ -82,7 +83,7 @@ nc_hicosmo_de_wspline_init (NcHICosmoDEWSpline *wspline)
 static void
 _nc_hicosmo_de_wspline_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHICosmoDEWSpline *wspline = NC_HICOSMO_DE_WSPLINE (object);
+  NcHICosmoDEWSpline *wspline            = NC_HICOSMO_DE_WSPLINE (object);
   NcHICosmoDEWSplinePrivate * const self = wspline->priv;
 
   g_return_if_fail (NC_IS_HICOSMO_DE_WSPLINE (object));
@@ -104,8 +105,9 @@ _nc_hicosmo_de_wspline_get_property (GObject *object, guint prop_id, GValue *val
 static void
 _nc_hicosmo_de_wspline_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHICosmoDEWSpline *wspline = NC_HICOSMO_DE_WSPLINE (object);
+  NcHICosmoDEWSpline *wspline            = NC_HICOSMO_DE_WSPLINE (object);
   NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
   g_return_if_fail (NC_IS_HICOSMO_DE_WSPLINE (object));
 
   switch (prop_id)
@@ -128,18 +130,19 @@ _nc_hicosmo_de_wspline_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (nc_hicosmo_de_wspline_parent_class)->constructed (object);
   {
-    NcHICosmoDEWSpline *wspline = NC_HICOSMO_DE_WSPLINE (object);
+    NcHICosmoDEWSpline *wspline            = NC_HICOSMO_DE_WSPLINE (object);
     NcHICosmoDEWSplinePrivate * const self = wspline->priv;
-    NcmModel *model            = NCM_MODEL (wspline);
-    NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
-    guint wz_size              = ncm_model_vparam_len (model, NC_HICOSMO_DE_WSPLINE_W);
-    const gdouble alpha1       = log1p (self->z_1);
-    const gdouble alphaf       = log1p (self->z_f);
+    NcmModel *model                        = NCM_MODEL (wspline);
+    NcmVector *orig_vec                    = ncm_model_orig_params_peek_vector (model);
+    NcmModelClass *model_class             = NCM_MODEL_GET_CLASS (model);
+    guint wz_size                          = ncm_model_vparam_len (model, NC_HICOSMO_DE_WSPLINE_W);
+    const gdouble alpha1                   = log1p (self->z_1);
+    const gdouble alphaf                   = log1p (self->z_f);
     NcmVector *alphav, *wv;
     guint i, wvi;
 
-    self->nknots = wz_size;
-    self->size = model_class->sparam_len + self->nknots;
+    self->nknots  = wz_size;
+    self->size    = model_class->sparam_len + self->nknots;
     self->alpha_f = alphaf * (1.0 - GSL_DBL_EPSILON);
 
     g_assert_cmpuint (wz_size, >, 2);
@@ -147,29 +150,29 @@ _nc_hicosmo_de_wspline_constructed (GObject *object)
     wvi = ncm_model_vparam_index (model, NC_HICOSMO_DE_WSPLINE_W, 0);
 
     alphav = ncm_vector_new (wz_size);
-    wv = ncm_vector_get_subvector (model->params, wvi, wz_size);
+    wv     = ncm_vector_get_subvector (orig_vec, wvi, wz_size);
 
     ncm_vector_set (alphav, 0, 0.0);
     ncm_vector_set (alphav, 1, alpha1);
 
     {
       const gdouble dalpha = (log (alphaf) - log (alpha1)) / (wz_size - 2);
+
       for (i = 0; i < wz_size - 2; i++)
       {
         const gdouble alpha = alpha1 * exp (dalpha * (i + 1.0));
+
         ncm_vector_set (alphav, 2 + i, alpha);
       }
     }
 
     {
       NcmSpline *s;
-      
+
       if (self->nknots >= 6)
         s = ncm_spline_cubic_notaknot_new ();
       else
-      {
         s = ncm_spline_gsl_new (gsl_interp_polynomial);
-      }
 
       self->w_alpha = ncm_spline_new (s, alphav, wv, TRUE);
 
@@ -183,7 +186,7 @@ _nc_hicosmo_de_wspline_constructed (GObject *object)
 static void
 _nc_hicosmo_de_wspline_dispose (GObject *object)
 {
-  NcHICosmoDEWSpline *wspline = NC_HICOSMO_DE_WSPLINE (object);
+  NcHICosmoDEWSpline *wspline            = NC_HICOSMO_DE_WSPLINE (object);
   NcHICosmoDEWSplinePrivate * const self = wspline->priv;
 
   ncm_spline_clear (&self->w_alpha);
@@ -195,7 +198,6 @@ _nc_hicosmo_de_wspline_dispose (GObject *object)
 static void
 _nc_hicosmo_de_wspline_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_de_wspline_parent_class)->finalize (object);
 }
@@ -208,9 +210,9 @@ static gdouble _nc_hicosmo_de_wspline_w_de (NcHICosmoDE *cosmo_de, gdouble z);
 static void
 nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcHICosmoDEClass* parent_class = NC_HICOSMO_DE_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  GObjectClass *object_class     = G_OBJECT_CLASS (klass);
+  NcHICosmoDEClass *parent_class = NC_HICOSMO_DE_CLASS (klass);
+  NcmModelClass *model_class     = NCM_MODEL_CLASS (klass);
 
   model_class->set_property = &_nc_hicosmo_de_wspline_set_property;
   model_class->get_property = &_nc_hicosmo_de_wspline_get_property;
@@ -241,10 +243,10 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
 
   /* Set w_0 param info */
   ncm_model_class_set_vparam (model_class, NC_HICOSMO_DE_WSPLINE_W, 6, "w", "w",
-                               -5.0, 1.0, 1.0e-2,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_WSPLINE_DEFAULT_W0,
-                               NCM_PARAM_TYPE_FREE);
-                               
+                              -5.0, 1.0, 1.0e-2,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_WSPLINE_DEFAULT_W0,
+                              NCM_PARAM_TYPE_FREE);
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
@@ -252,11 +254,10 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
   nc_hicosmo_de_set_dE2Omega_de_dz_impl (parent_class, &_nc_hicosmo_de_wspline_dE2Omega_de_dz);
   nc_hicosmo_de_set_d2E2Omega_de_dz2_impl (parent_class, &_nc_hicosmo_de_wspline_d2E2Omega_de_dz2);
   nc_hicosmo_de_set_w_de_impl (parent_class, &_nc_hicosmo_de_wspline_w_de);
-
 }
 
-#define VECTOR  (NCM_MODEL (cosmo_de)->params)
-#define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
+#define VECTOR (NCM_MODEL (cosmo_de))
+#define OMEGA_X (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
 
 static void
 _nc_hicosmo_de_wspline_prepare (NcHICosmoDEWSpline *wspline)
@@ -273,24 +274,29 @@ _nc_hicosmo_de_wspline_prepare (NcHICosmoDEWSpline *wspline)
     ncm_model_lstate_set_update (NCM_MODEL (wspline), 0);
   }
   else
+  {
     return;
+  }
 }
 
 static gdouble
 _nc_hicosmo_de_wspline_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)
 {
-  NcHICosmoDEWSpline *wspline = NC_HICOSMO_DE_WSPLINE (cosmo_de);
+  NcHICosmoDEWSpline *wspline            = NC_HICOSMO_DE_WSPLINE (cosmo_de);
   NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
   _nc_hicosmo_de_wspline_prepare (wspline);
 
   if (z < self->z_f)
   {
     const gdouble alpha = log1p (z);
+
     return OMEGA_X * exp (3.0 * (alpha + ncm_spline_eval_integ (self->w_alpha, 0.0, alpha)));
   }
   else
   {
     const gdouble alpha = log1p (z);
+
     return OMEGA_X * exp (3.0 * (alpha + self->int_f + self->w_f * (alpha - self->alpha_f)));
   }
 }
@@ -298,7 +304,7 @@ _nc_hicosmo_de_wspline_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)
 static gdouble
 _nc_hicosmo_de_wspline_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z)
 {
-  NcHICosmoDEWSpline *wspline = NC_HICOSMO_DE_WSPLINE (cosmo_de);
+  NcHICosmoDEWSpline *wspline            = NC_HICOSMO_DE_WSPLINE (cosmo_de);
   NcHICosmoDEWSplinePrivate * const self = wspline->priv;
 
   _nc_hicosmo_de_wspline_prepare (wspline);
@@ -315,6 +321,7 @@ _nc_hicosmo_de_wspline_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z)
   else
   {
     const gdouble alpha = log1p (z);
+
     return OMEGA_X * 3.0 * (1.0 + self->w_f) * exp (2.0 * alpha + 3.0 * (self->int_f + self->w_f * (alpha - self->alpha_f)));
   }
 }
@@ -322,7 +329,7 @@ _nc_hicosmo_de_wspline_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z)
 static gdouble
 _nc_hicosmo_de_wspline_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z)
 {
-  NcHICosmoDEWSpline *wspline = NC_HICOSMO_DE_WSPLINE (cosmo_de);
+  NcHICosmoDEWSpline *wspline            = NC_HICOSMO_DE_WSPLINE (cosmo_de);
   NcHICosmoDEWSplinePrivate * const self = wspline->priv;
 
   _nc_hicosmo_de_wspline_prepare (wspline);
@@ -349,20 +356,22 @@ _nc_hicosmo_de_wspline_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z)
 static gdouble
 _nc_hicosmo_de_wspline_w_de (NcHICosmoDE *cosmo_de, gdouble z)
 {
-  NcHICosmoDEWSpline *wspline = NC_HICOSMO_DE_WSPLINE (cosmo_de);
+  NcHICosmoDEWSpline *wspline            = NC_HICOSMO_DE_WSPLINE (cosmo_de);
   NcHICosmoDEWSplinePrivate * const self = wspline->priv;
 
   _nc_hicosmo_de_wspline_prepare (wspline);
 
   if (z < self->z_f)
   {
-    const gdouble alpha  = z < self->z_f ? log1p (z) : log1p (self->z_f);
-    const gdouble w      = ncm_spline_eval (self->w_alpha, alpha);
+    const gdouble alpha = z < self->z_f ? log1p (z) : log1p (self->z_f);
+    const gdouble w     = ncm_spline_eval (self->w_alpha, alpha);
 
     return w;
   }
   else
+  {
     return self->w_f;
+  }
 }
 
 /**
@@ -381,6 +390,7 @@ nc_hicosmo_de_wspline_new (gsize nknots, const gdouble z_f)
                                               "zf", z_f,
                                               "w-length", nknots,
                                               NULL);
+
   return wspline;
 }
 
@@ -397,6 +407,6 @@ nc_hicosmo_de_wspline_get_alpha (NcHICosmoDEWSpline *wspline)
 {
   NcHICosmoDEWSplinePrivate * const self = wspline->priv;
 
-  return self->w_alpha->xv;
+  return ncm_spline_peek_xv (self->w_alpha);
 }
 

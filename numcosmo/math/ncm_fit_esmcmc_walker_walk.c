@@ -68,7 +68,7 @@ struct _NcmFitESMCMCWalkerWalk
   GArray *numbers;
 };
 
-G_DEFINE_TYPE (NcmFitESMCMCWalkerWalk, ncm_fit_esmcmc_walker_walk, NCM_TYPE_FIT_ESMCMC_WALKER);
+G_DEFINE_TYPE (NcmFitESMCMCWalkerWalk, ncm_fit_esmcmc_walker_walk, NCM_TYPE_FIT_ESMCMC_WALKER)
 
 static void
 ncm_fit_esmcmc_walker_walk_init (NcmFitESMCMCWalkerWalk *walk)
@@ -120,9 +120,9 @@ ncm_fit_esmcmc_walker_walk_set_property (GObject *object, guint prop_id, const G
     case PROP_SCALE:
       ncm_fit_esmcmc_walker_walk_set_scale (walk, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -138,9 +138,9 @@ ncm_fit_esmcmc_walker_walk_get_property (GObject *object, guint prop_id, GValue 
     case PROP_SCALE:
       g_value_set_double (value, ncm_fit_esmcmc_walker_walk_get_scale (walk));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -284,12 +284,12 @@ _ncm_fit_esmcmc_walker_walk_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
 
     for (pi = 0; pi < walk->nparams; pi++)
     {
-      const gdouble zi = gsl_ran_ugaussian (rng->r);
+      const gdouble zi = ncm_rng_ugaussian_gen (rng);
 
       ncm_matrix_set (walk->z, k, pi, zi);
     }
 
-    gsl_ran_choose (rng->r,
+    ncm_rng_choose (rng,
                     &g_array_index (walk->indices, guint, k * walk->nparams),
                     walk->nparams,
                     &g_array_index (walk->numbers, guint, subensemble),

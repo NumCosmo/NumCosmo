@@ -35,29 +35,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MODEL_MVND             (ncm_model_mvnd_get_type ())
-#define NCM_MODEL_MVND(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MODEL_MVND, NcmModelMVND))
-#define NCM_MODEL_MVND_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MODEL_MVND, NcmModelMVNDClass))
-#define NCM_IS_MODEL_MVND(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MODEL_MVND))
-#define NCM_IS_MODEL_MVND_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MODEL_MVND))
-#define NCM_MODEL_MVND_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MODEL_MVND, NcmModelMVNDClass))
+#define NCM_TYPE_MODEL_MVND (ncm_model_mvnd_get_type ())
 
-typedef struct _NcmModelMVNDClass NcmModelMVNDClass;
-typedef struct _NcmModelMVND NcmModelMVND;
-typedef struct _NcmModelMVNDPrivate NcmModelMVNDPrivate;
-
-struct _NcmModelMVNDClass
-{
-  /*< private >*/
-  NcmModelClass parent_class;
-};
-
-struct _NcmModelMVND
-{
-  /*< private >*/
-  NcmModel parent_instance;
-  NcmModelMVNDPrivate *priv;
-};
+G_DECLARE_FINAL_TYPE (NcmModelMVND, ncm_model_mvnd, NCM, MODEL_MVND, NcmModel)
 
 /**
  * NcmModelMVNDVParams:
@@ -72,8 +52,6 @@ typedef enum _NcmModelMVNDVParams
   /* < private > */
   NNCM_MODEL_MVND_VPARAM_LEN, /*< skip >*/
 } NcmModelMVNDVParams;
-
-GType ncm_model_mvnd_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (ncm_model_mvnd);
 

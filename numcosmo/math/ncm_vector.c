@@ -40,15 +40,16 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
+#include "math/ncm_cblas.h" /* This must be included before any gsl header */
 #include "math/ncm_vector.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
@@ -57,7 +58,7 @@ enum
   PROP_VALS,
 };
 
-G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_OBJECT)
 
 static void
 ncm_vector_init (NcmVector *cv)
@@ -84,9 +85,9 @@ _ncm_vector_get_property (GObject *object, guint prop_id, GValue *value, GParamS
       g_value_take_variant (value, var);
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -106,9 +107,9 @@ _ncm_vector_set_property (GObject *object, guint prop_id, const GValue *value, G
       ncm_vector_set_from_variant (cv, var);
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -173,7 +174,7 @@ ncm_vector_class_init (NcmVectorClass *klass)
    */
   g_object_class_install_property (object_class, PROP_VALS,
                                    g_param_spec_variant ("values", NULL, "values",
-                                                         G_VARIANT_TYPE_ARRAY, NULL,
+                                                         G_VARIANT_TYPE ("ad"), NULL,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -243,12 +244,20 @@ ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDest
 NcmVector *
 ncm_vector_new_fftw (guint size)
 {
+#ifdef HAVE_FFTW3
   gdouble *d    = fftw_alloc_real (size);
   NcmVector *cv = ncm_vector_new_full (d, size, 1, d, (GDestroyNotify) fftw_free);
 
   cv->type = NCM_VECTOR_MALLOC;
 
   return cv;
+
+#else
+  g_error ("ncm_vector_new_fftw: fftw3 not available");
+
+  return NULL;
+
+#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -478,7 +487,7 @@ ncm_vector_ref (NcmVector *cv)
 const NcmVector *
 ncm_vector_const_ref (const NcmVector *cv)
 {
-  return g_object_ref (NCM_VECTOR (cv));
+  return g_object_ref (NCM_VECTOR ((NcmVector *) cv));
 }
 
 /**
@@ -493,9 +502,9 @@ ncm_vector_const_ref (const NcmVector *cv)
 const NcmVector *
 ncm_vector_const_new_variant (GVariant *var)
 {
-  gsize n             = g_variant_n_children (var);
-  gconstpointer data  = g_variant_get_data (var);
-  const NcmVector *cv = ncm_vector_const_new_data (data, n, 1);
+  gsize n            = g_variant_n_children (var);
+  gconstpointer data = g_variant_get_data (var);
+  NcmVector *cv      = (NcmVector *) ncm_vector_const_new_data (data, n, 1);
 
   NCM_VECTOR (cv)->pdata = g_variant_ref_sink (var);
   NCM_VECTOR (cv)->pfree = (GDestroyNotify) & g_variant_unref;
@@ -528,7 +537,7 @@ ncm_vector_free (NcmVector *cv)
 void
 ncm_vector_const_free (const NcmVector *cv)
 {
-  ncm_vector_free (NCM_VECTOR (cv));
+  ncm_vector_free (NCM_VECTOR ((NcmVector *) cv));
 }
 
 /**
@@ -731,7 +740,7 @@ ncm_vector_peek_variant (const NcmVector *cv)
                                                   sizeof (gdouble) * n,
                                                   TRUE,
                                                   (GDestroyNotify) & ncm_vector_const_free,
-                                                  NCM_VECTOR (ncm_vector_const_ref (cv)));
+                                                  NCM_VECTOR ((NcmVector *) ncm_vector_const_ref (cv)));
 
     return g_variant_ref_sink (vvar);
   }
@@ -1150,6 +1159,11 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  *
  * Returns: $\vec{v}_1 \cdot \vec{v}_2$.
  */
+gdouble
+ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2)
+{
+  return cblas_ddot (ncm_vector_len (cv1), ncm_vector_const_data (cv1), ncm_vector_stride (cv1), ncm_vector_const_data (cv2), ncm_vector_stride (cv2));
+}
 
 /**
  * ncm_vector_len:
@@ -1584,7 +1598,7 @@ void
 ncm_vector_hypot (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
 {
   const guint len = ncm_vector_len (cv1);
-  gint i;
+  guint i;
 
   g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
 

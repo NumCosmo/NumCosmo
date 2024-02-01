@@ -61,6 +61,21 @@
 #include <gsl/gsl_sf_bessel.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+typedef struct _NcmPowspecPrivate
+{
+  /*< private > */
+  GObject parent_instance;
+  gdouble zi;
+  gdouble zf;
+  gdouble kmin;
+  gdouble kmax;
+  NcmIntegral1dPtr *var_tophat_R;
+  NcmIntegral1dPtr *corr3D;
+  NcmIntegral1dPtr *sproj;
+  gdouble reltol_spline;
+  NcmModelCtrl *ctrl;
+} NcmPowspecPrivate;
+
 enum
 {
   PROP_0,
@@ -71,7 +86,7 @@ enum
   PROP_RELTOL_SPLINE,
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmPowspec, ncm_powspec, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmPowspec, ncm_powspec, G_TYPE_OBJECT)
 
 static gdouble _ncm_powspec_var_tophat_R_integ (gpointer user_data, gdouble lnk, gdouble weight);
 static gdouble _ncm_powspec_corr3D_integ (gpointer user_data, gdouble lnk, gdouble weight);
@@ -80,29 +95,32 @@ static gdouble _ncm_powspec_sproj_integ (gpointer user_data, gdouble lnk, gdoubl
 static void
 ncm_powspec_init (NcmPowspec *powspec)
 {
-  powspec->zi            = 0.0;
-  powspec->zf            = 0.0;
-  powspec->kmin          = 0.0;
-  powspec->kmax          = 0.0;
-  powspec->reltol_spline = 0.0;
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
 
-  powspec->var_tophat_R = ncm_integral1d_ptr_new (&_ncm_powspec_var_tophat_R_integ, NULL);
-  powspec->corr3D       = ncm_integral1d_ptr_new (&_ncm_powspec_corr3D_integ, NULL);
-  powspec->sproj        = ncm_integral1d_ptr_new (&_ncm_powspec_sproj_integ, NULL);
+  self->zi            = 0.0;
+  self->zf            = 0.0;
+  self->kmin          = 0.0;
+  self->kmax          = 0.0;
+  self->reltol_spline = 0.0;
 
-  powspec->ctrl = ncm_model_ctrl_new (NULL);
+  self->var_tophat_R = ncm_integral1d_ptr_new (&_ncm_powspec_var_tophat_R_integ, NULL);
+  self->corr3D       = ncm_integral1d_ptr_new (&_ncm_powspec_corr3D_integ, NULL);
+  self->sproj        = ncm_integral1d_ptr_new (&_ncm_powspec_sproj_integ, NULL);
+
+  self->ctrl = ncm_model_ctrl_new (NULL);
 }
 
 static void
 _ncm_powspec_dispose (GObject *object)
 {
-  NcmPowspec *powspec = NCM_POWSPEC (object);
-  
-  ncm_model_ctrl_clear (&powspec->ctrl);
-  ncm_integral1d_ptr_clear (&powspec->var_tophat_R);
-  ncm_integral1d_ptr_clear (&powspec->corr3D);
-  ncm_integral1d_ptr_clear (&powspec->sproj);
-  
+  NcmPowspec *powspec            = NCM_POWSPEC (object);
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  ncm_model_ctrl_clear (&self->ctrl);
+  ncm_integral1d_ptr_clear (&self->var_tophat_R);
+  ncm_integral1d_ptr_clear (&self->corr3D);
+  ncm_integral1d_ptr_clear (&self->sproj);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_powspec_parent_class)->dispose (object);
 }
@@ -118,9 +136,9 @@ static void
 _ncm_powspec_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmPowspec *powspec = NCM_POWSPEC (object);
-  
+
   g_return_if_fail (NCM_IS_POWSPEC (object));
-  
+
   switch (prop_id)
   {
     case PROP_ZI:
@@ -138,9 +156,9 @@ _ncm_powspec_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_RELTOL_SPLINE:
       ncm_powspec_set_reltol_spline (powspec, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -148,29 +166,29 @@ static void
 _ncm_powspec_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmPowspec *powspec = NCM_POWSPEC (object);
-  
+
   g_return_if_fail (NCM_IS_POWSPEC (object));
-  
+
   switch (prop_id)
   {
     case PROP_ZI:
-      g_value_set_double (value, powspec->zi);
+      g_value_set_double (value, ncm_powspec_get_zi (powspec));
       break;
     case PROP_ZF:
-      g_value_set_double (value, powspec->zf);
+      g_value_set_double (value, ncm_powspec_get_zf (powspec));
       break;
     case PROP_KMIN:
-      g_value_set_double (value, powspec->kmin);
+      g_value_set_double (value, ncm_powspec_get_kmin (powspec));
       break;
     case PROP_KMAX:
-      g_value_set_double (value, powspec->kmax);
+      g_value_set_double (value, ncm_powspec_get_kmax (powspec));
       break;
     case PROP_RELTOL_SPLINE:
-      g_value_set_double (value, powspec->reltol_spline);
+      g_value_set_double (value, ncm_powspec_get_reltol_spline (powspec));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -184,7 +202,7 @@ static gdouble
 _ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
   g_error ("_ncm_powspec_eval: no default implementation, all children must implement it.");
-  
+
   return 0.0;
 }
 
@@ -202,6 +220,7 @@ static gdouble
 __P_z (gdouble z, gpointer p)
 {
   _NcmPowspecSplineData *data = (_NcmPowspecSplineData *) p;
+
   return ncm_powspec_eval (data->powspec, data->model, z, data->k_m);
 }
 
@@ -209,18 +228,22 @@ static gdouble
 __P_k (gdouble k, gpointer p)
 {
   _NcmPowspecSplineData *data = (_NcmPowspecSplineData *) p;
+
   return ncm_powspec_eval (data->powspec, data->model, data->z_m, k);
 }
 
 static NcmSpline2d *
 _ncm_powspec_get_spline_2d (NcmPowspec *powspec, NcmModel *model)
 {
-  NcmSpline2d *pk_s2d = ncm_spline2d_bicubic_notaknot_new ();
-  _NcmPowspecSplineData data = {powspec, model,
-      0.5 * (powspec->zi + powspec->zf),
-      exp (0.5 * (log (powspec->kmin) + log(powspec->kmax)))};
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+  NcmSpline2d *pk_s2d            = ncm_spline2d_bicubic_notaknot_new ();
+  _NcmPowspecSplineData data     = {
+    powspec, model,
+    0.5 * (self->zi + self->zf),
+    exp (0.5 * (log (self->kmin) + log (self->kmax)))
+  };
   gsl_function Fx, Fy;
-  gint i, j;
+  guint i, j;
 
   Fx.function = __P_z;
   Fx.params   = &data;
@@ -231,22 +254,27 @@ _ncm_powspec_get_spline_2d (NcmPowspec *powspec, NcmModel *model)
   ncm_spline2d_set_function (pk_s2d,
                              NCM_SPLINE_FUNCTION_SPLINE,
                              &Fx, &Fy,
-                             powspec->zi, powspec->zf,
-                             powspec->kmin, powspec->kmax,
-                             powspec->reltol_spline);
+                             self->zi, self->zf,
+                             self->kmin, self->kmax,
+                             self->reltol_spline);
   {
-    const guint nz = ncm_vector_len (pk_s2d->xv);
-    const guint nk = ncm_vector_len (pk_s2d->yv);
+    NcmVector *xv = ncm_spline2d_peek_xv (pk_s2d);
+    NcmVector *yv = ncm_spline2d_peek_yv (pk_s2d);
+    NcmMatrix *zm = ncm_spline2d_peek_zm (pk_s2d);
+
+    const guint nz = ncm_vector_len (xv);
+    const guint nk = ncm_vector_len (yv);
 
     for (i = 0; i < nk; i++)
     {
-      const gdouble k = ncm_vector_get (pk_s2d->yv, i);
+      const gdouble k = ncm_vector_get (yv, i);
+
       for (j = 0; j < nz; j++)
       {
-        const gdouble z   = ncm_vector_get (pk_s2d->xv, j);
+        const gdouble z   = ncm_vector_get (xv, j);
         const gdouble Pkz = ncm_powspec_eval (powspec, model, z, k);
 
-        ncm_matrix_set (pk_s2d->zm, i, j, Pkz);
+        ncm_matrix_set (zm, i, j, Pkz);
       }
     }
   }
@@ -259,13 +287,13 @@ static void
 ncm_powspec_class_init (NcmPowspecClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->set_property = &_ncm_powspec_set_property;
   object_class->get_property = &_ncm_powspec_get_property;
-  
+
   object_class->dispose  = &_ncm_powspec_dispose;
   object_class->finalize = &_ncm_powspec_finalize;
-  
+
   /**
    * NcmPowspec:zi:
    *
@@ -278,7 +306,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
                                                         "Initial time",
                                                         0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmPowspec:zf:
    *
@@ -291,7 +319,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
                                                         "Final time",
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmPowspec:kmin:
    *
@@ -304,7 +332,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
                                                         "Minimum mode value",
                                                         0.0, G_MAXDOUBLE, 1.0e-5,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmPowspec:kmax:
    *
@@ -317,6 +345,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
                                                         "Maximum mode value",
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcmPowspec:reltol:
    *
@@ -341,15 +370,15 @@ _ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, Nc
 {
   const guint len = ncm_vector_len (k);
   guint i;
-  
+
   for (i = 0; i < len; i++)
   {
     const gdouble ki  = ncm_vector_get (k, i);
     const gdouble Pki = ncm_powspec_eval (powspec, model, z, ki);
-    
+
     ncm_vector_set (Pk, i, Pki);
   }
-  
+
   return;
 }
 
@@ -409,10 +438,12 @@ ncm_powspec_clear (NcmPowspec **powspec)
 void
 ncm_powspec_set_zi (NcmPowspec *powspec, const gdouble zi)
 {
-  if (powspec->zi != zi)
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  if (self->zi != zi)
   {
-    powspec->zi = zi;
-    ncm_model_ctrl_force_update (powspec->ctrl);
+    self->zi = zi;
+    ncm_model_ctrl_force_update (self->ctrl);
   }
 }
 
@@ -427,10 +458,12 @@ ncm_powspec_set_zi (NcmPowspec *powspec, const gdouble zi)
 void
 ncm_powspec_set_zf (NcmPowspec *powspec, const gdouble zf)
 {
-  if (powspec->zf != zf)
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  if (self->zf != zf)
   {
-    powspec->zf = zf;
-    ncm_model_ctrl_force_update (powspec->ctrl);
+    self->zf = zf;
+    ncm_model_ctrl_force_update (self->ctrl);
   }
 }
 
@@ -445,10 +478,12 @@ ncm_powspec_set_zf (NcmPowspec *powspec, const gdouble zf)
 void
 ncm_powspec_set_kmin (NcmPowspec *powspec, const gdouble kmin)
 {
-  if (powspec->kmin != kmin)
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  if (self->kmin != kmin)
   {
-    powspec->kmin = kmin;
-    ncm_model_ctrl_force_update (powspec->ctrl);
+    self->kmin = kmin;
+    ncm_model_ctrl_force_update (self->ctrl);
   }
 }
 
@@ -463,10 +498,12 @@ ncm_powspec_set_kmin (NcmPowspec *powspec, const gdouble kmin)
 void
 ncm_powspec_set_kmax (NcmPowspec *powspec, const gdouble kmax)
 {
-  if (powspec->kmax != kmax)
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  if (self->kmax != kmax)
   {
-    powspec->kmax = kmax;
-    ncm_model_ctrl_force_update (powspec->ctrl);
+    self->kmax = kmax;
+    ncm_model_ctrl_force_update (self->ctrl);
   }
 }
 
@@ -481,7 +518,9 @@ ncm_powspec_set_kmax (NcmPowspec *powspec, const gdouble kmax)
 void
 ncm_powspec_set_reltol_spline (NcmPowspec *powspec, const gdouble reltol)
 {
-  powspec->reltol_spline = reltol;
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  self->reltol_spline = reltol;
 }
 
 /**
@@ -495,7 +534,9 @@ ncm_powspec_set_reltol_spline (NcmPowspec *powspec, const gdouble reltol)
 void
 ncm_powspec_require_zi (NcmPowspec *powspec, const gdouble zi)
 {
-  if (zi < powspec->zi)
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  if (zi < self->zi)
     ncm_powspec_set_zi (powspec, zi);
 }
 
@@ -510,7 +551,9 @@ ncm_powspec_require_zi (NcmPowspec *powspec, const gdouble zi)
 void
 ncm_powspec_require_zf (NcmPowspec *powspec, const gdouble zf)
 {
-  if (zf > powspec->zf)
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  if (zf > self->zf)
     ncm_powspec_set_zf (powspec, zf);
 }
 
@@ -525,7 +568,9 @@ ncm_powspec_require_zf (NcmPowspec *powspec, const gdouble zf)
 void
 ncm_powspec_require_kmin (NcmPowspec *powspec, const gdouble kmin)
 {
-  if (kmin < powspec->kmin)
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  if (kmin < self->kmin)
     ncm_powspec_set_kmin (powspec, kmin);
 }
 
@@ -540,7 +585,9 @@ ncm_powspec_require_kmin (NcmPowspec *powspec, const gdouble kmin)
 void
 ncm_powspec_require_kmax (NcmPowspec *powspec, const gdouble kmax)
 {
-  if (kmax > powspec->kmax)
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  if (kmax > self->kmax)
     ncm_powspec_set_kmax (powspec, kmax);
 }
 
@@ -554,7 +601,9 @@ ncm_powspec_require_kmax (NcmPowspec *powspec, const gdouble kmax)
 gdouble
 ncm_powspec_get_zi (NcmPowspec *powspec)
 {
-  return powspec->zi;
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  return self->zi;
 }
 
 /**
@@ -567,7 +616,9 @@ ncm_powspec_get_zi (NcmPowspec *powspec)
 gdouble
 ncm_powspec_get_zf (NcmPowspec *powspec)
 {
-  return powspec->zf;
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  return self->zf;
 }
 
 /**
@@ -580,7 +631,9 @@ ncm_powspec_get_zf (NcmPowspec *powspec)
 gdouble
 ncm_powspec_get_kmin (NcmPowspec *powspec)
 {
-  return powspec->kmin;
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  return self->kmin;
 }
 
 /**
@@ -593,7 +646,25 @@ ncm_powspec_get_kmin (NcmPowspec *powspec)
 gdouble
 ncm_powspec_get_kmax (NcmPowspec *powspec)
 {
-  return powspec->kmax;
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  return self->kmax;
+}
+
+/**
+ * ncm_powspec_get_reltol_spline:
+ * @powspec: a #NcmPowspec
+ *
+ * Gets the relative tolerance for interpolation errors.
+ *
+ * Returns: the relative tolerance for interpolation errors.
+ */
+gdouble
+ncm_powspec_get_reltol_spline (NcmPowspec *powspec)
+{
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  return self->reltol_spline;
 }
 
 /**
@@ -619,6 +690,13 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
  * Prepares the power spectrum @powspec using the model @model.
  *
  */
+
+void
+ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model)
+{
+  NCM_POWSPEC_GET_CLASS (powspec)->prepare (powspec, model);
+}
+
 /**
  * ncm_powspec_prepare_if_needed:
  * @powspec: a #NcmPowspec
@@ -628,6 +706,16 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
  * since last preparation.
  *
  */
+void
+ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model)
+{
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+  gboolean model_up              = ncm_model_ctrl_update (self->ctrl, NCM_MODEL (model));
+
+  if (model_up)
+    ncm_powspec_prepare (powspec, model);
+}
+
 /**
  * ncm_powspec_eval:
  * @powspec: a #NcmPowspec
@@ -639,6 +727,12 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
  *
  * Returns: $P(z, k)$.
  */
+gdouble
+ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
+{
+  return NCM_POWSPEC_GET_CLASS (powspec)->eval (powspec, model, z, k);
+}
+
 /**
  * ncm_powspec_eval_vec:
  * @powspec: a #NcmPowspec
@@ -651,6 +745,12 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
  * contained in @k and puts the result in @Pk.
  *
  */
+void
+ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk)
+{
+  NCM_POWSPEC_GET_CLASS (powspec)->eval_vec (powspec, model, z, k, Pk);
+}
+
 /**
  * ncm_powspec_get_spline_2d:
  * @powspec: a #NcmPowspec
@@ -660,6 +760,27 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
  *
  * Returns: (transfer full): a #NcmSpline2d interpolating spline as a function of $(z, k)$.
  */
+NcmSpline2d *
+ncm_powspec_get_spline_2d (NcmPowspec *powspec, NcmModel *model)
+{
+  return NCM_POWSPEC_GET_CLASS (powspec)->get_spline_2d (powspec, model);
+}
+
+/**
+ * ncm_powspec_peek_model_ctrl:
+ * @powspec: a #NcmPowspec
+ *
+ * Gets the #NcmModelCtrl used by @powspec.
+ *
+ * Returns: (transfer none): the #NcmModelCtrl used by @powspec.
+ */
+NcmModelCtrl *
+ncm_powspec_peek_model_ctrl (NcmPowspec *powspec)
+{
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+
+  return self->ctrl;
+}
 
 typedef struct _NcmPowspecInt
 {
@@ -682,13 +803,13 @@ _ncm_powspec_var_tophat_R_integ (gpointer user_data, gdouble lnk, gdouble weight
   const gdouble Pk    = ncm_powspec_eval (data->ps, data->model, data->z, k);
   const gdouble W     = 3.0 * gsl_sf_bessel_j1 (x) / x;
   const gdouble W2    = W * W;
-  
+
   return gsl_pow_3 (k) * Pk * W2;
 }
 
 /**
  * ncm_powspec_var_tophat_R:
- * @ps: a #NcmPowspec
+ * @powspec: a #NcmPowspec
  * @model: a #NcmModel
  * @reltol: relative tolerance for integration
  * @z: the value of $z$
@@ -706,29 +827,30 @@ _ncm_powspec_var_tophat_R_integ (gpointer user_data, gdouble lnk, gdouble weight
  * Returns: $\sigma_{R}^{2}(z)$.
  */
 gdouble
-ncm_powspec_var_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R)
+ncm_powspec_var_tophat_R (NcmPowspec *powspec, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R)
 {
-  NcmPowspecInt data = {z, R, ps, model};
-  const gdouble kmin = ncm_powspec_get_kmin (ps);
-  const gdouble kmax = ncm_powspec_get_kmax (ps);
-  const gdouble lnkmin = log (kmin);
-  const gdouble lnkmax = log (kmax);
-  const gdouble one_2pi2 = 1.0 / ncm_c_2_pi_2 ();
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+  NcmPowspecInt data             = {z, R, powspec, model, 0.0, 0.0, 0.0, 0};
+  const gdouble kmin             = ncm_powspec_get_kmin (powspec);
+  const gdouble kmax             = ncm_powspec_get_kmax (powspec);
+  const gdouble lnkmin           = log (kmin);
+  const gdouble lnkmax           = log (kmax);
+  const gdouble one_2pi2         = 1.0 / ncm_c_two_pi_2 ();
   gdouble error, sigma2_2pi2;
-  
-  ncm_powspec_prepare_if_needed (ps, model);
-  
-  ncm_integral1d_ptr_set_userdata (ps->var_tophat_R, &data);
-  ncm_integral1d_set_reltol (NCM_INTEGRAL1D (ps->var_tophat_R), reltol);
 
-  sigma2_2pi2 = ncm_integral1d_eval (NCM_INTEGRAL1D (ps->var_tophat_R), lnkmin, lnkmax, &error);
+  ncm_powspec_prepare_if_needed (powspec, model);
+
+  ncm_integral1d_ptr_set_userdata (self->var_tophat_R, &data);
+  ncm_integral1d_set_reltol (NCM_INTEGRAL1D (self->var_tophat_R), reltol);
+
+  sigma2_2pi2 = ncm_integral1d_eval (NCM_INTEGRAL1D (self->var_tophat_R), lnkmin, lnkmax, &error);
 
   return sigma2_2pi2 * one_2pi2;
 }
 
 /**
  * ncm_powspec_sigma_tophat_R:
- * @ps: a #NcmPowspec
+ * @powspec: a #NcmPowspec
  * @model: a #NcmModel
  * @reltol: relative tolerance for integration
  * @z: the value of $z$
@@ -739,9 +861,9 @@ ncm_powspec_var_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol,
  * Returns: $\sigma_R(z)$.
  */
 gdouble
-ncm_powspec_sigma_tophat_R (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R)
+ncm_powspec_sigma_tophat_R (NcmPowspec *powspec, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble R)
 {
-  return sqrt (ncm_powspec_var_tophat_R (ps, model, reltol, z, R));
+  return sqrt (ncm_powspec_var_tophat_R (powspec, model, reltol, z, R));
 }
 
 static gdouble
@@ -752,13 +874,13 @@ _ncm_powspec_corr3D_integ (gpointer user_data, gdouble lnk, gdouble weight)
   const gdouble x     = k * data->R;
   const gdouble Pk    = ncm_powspec_eval (data->ps, data->model, data->z, k);
   const gdouble W     = gsl_sf_bessel_j0 (x);
-  
+
   return gsl_pow_3 (k) * Pk * W;
 }
 
 /**
  * ncm_powspec_corr3d:
- * @ps: a #NcmPowspec
+ * @powspec: a #NcmPowspec
  * @model: a #NcmModel
  * @reltol: relative tolerance for integration
  * @z: the value of $z$
@@ -773,23 +895,24 @@ _ncm_powspec_corr3D_integ (gpointer user_data, gdouble lnk, gdouble weight)
  * Returns: $\xi(r,z)$.
  */
 gdouble
-ncm_powspec_corr3d (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble r)
+ncm_powspec_corr3d (NcmPowspec *powspec, NcmModel *model, const gdouble reltol, const gdouble z, const gdouble r)
 {
-  NcmPowspecInt data = {z, r, ps, model};
-  const gdouble kmin = ncm_powspec_get_kmin (ps);
-  const gdouble kmax = ncm_powspec_get_kmax (ps);
-  const gdouble lnkmin = log (kmin);
-  const gdouble lnkmax = log (kmax);
-  const gdouble one_2pi2 = 1.0 / ncm_c_2_pi_2 ();
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+  NcmPowspecInt data             = {z, r, powspec, model, 0.0, 0.0, 0.0, 0};
+  const gdouble kmin             = ncm_powspec_get_kmin (powspec);
+  const gdouble kmax             = ncm_powspec_get_kmax (powspec);
+  const gdouble lnkmin           = log (kmin);
+  const gdouble lnkmax           = log (kmax);
+  const gdouble one_2pi2         = 1.0 / ncm_c_two_pi_2 ();
   gdouble error, xi_2pi2;
-  
-  ncm_powspec_prepare_if_needed (ps, model);
 
-  ncm_integral1d_ptr_set_userdata (ps->corr3D, &data);
-  ncm_integral1d_set_reltol (NCM_INTEGRAL1D (ps->corr3D), reltol);
+  ncm_powspec_prepare_if_needed (powspec, model);
 
-  xi_2pi2 = ncm_integral1d_eval (NCM_INTEGRAL1D (ps->corr3D), lnkmin, lnkmax, &error);
-  
+  ncm_integral1d_ptr_set_userdata (self->corr3D, &data);
+  ncm_integral1d_set_reltol (NCM_INTEGRAL1D (self->corr3D), reltol);
+
+  xi_2pi2 = ncm_integral1d_eval (NCM_INTEGRAL1D (self->corr3D), lnkmin, lnkmax, &error);
+
   return xi_2pi2 * one_2pi2;
 }
 
@@ -802,13 +925,13 @@ _ncm_powspec_sproj_integ (gpointer user_data, gdouble lnk, gdouble weight)
   const gdouble x2    = k * data->xi2;
   const gdouble Pk    = sqrt (ncm_powspec_eval (data->ps, data->model, data->z, k) * ncm_powspec_eval (data->ps, data->model, data->z2, k));
   const gdouble W     = ncm_sf_sbessel (data->ell, x1) * ncm_sf_sbessel (data->ell, x2);
-  
+
   return gsl_pow_3 (k) * Pk * W;
 }
 
 /**
  * ncm_powspec_sproj:
- * @ps: a #NcmPowspec
+ * @powspec: a #NcmPowspec
  * @model: a #NcmModel
  * @reltol: relative tolerance for integration
  * @ell: the value of $\ell$
@@ -817,27 +940,30 @@ _ncm_powspec_sproj_integ (gpointer user_data, gdouble lnk, gdouble weight)
  * @xi1: the value of $\xi_1$
  * @xi2: the value of $\xi_2$
  *
- * Computes $C_\ell (z_1, z_2) = \int\dots$. FIXME
+ * Computes \(C_\ell (z_1, z_2) = \int\dots\). This method calculates the angular power
+ * spectrum directly from the power spectrum by integrating over the wave-numbers. It
+ * is slow and intended for testing purposes only.
  *
  */
 gdouble
-ncm_powspec_sproj (NcmPowspec *ps, NcmModel *model, const gdouble reltol, const gint ell, const gdouble z1, const gdouble z2, const gdouble xi1, const gdouble xi2)
+ncm_powspec_sproj (NcmPowspec *powspec, NcmModel *model, const gdouble reltol, const gint ell, const gdouble z1, const gdouble z2, const gdouble xi1, const gdouble xi2)
 {
-  NcmPowspecInt data = {z1, 0.0, ps, model, z2, xi1, xi2, ell};
-  const gdouble kmin = ncm_powspec_get_kmin (ps);
-  const gdouble kmax = ncm_powspec_get_kmax (ps);
-  const gdouble lnkmin = log (kmin);
-  const gdouble lnkmax = log (kmax);
-  const gdouble two_pi = 2.0 / ncm_c_pi ();
+  NcmPowspecPrivate * const self = ncm_powspec_get_instance_private (powspec);
+  NcmPowspecInt data             = {z1, 0.0, powspec, model, z2, xi1, xi2, ell};
+  const gdouble kmin             = ncm_powspec_get_kmin (powspec);
+  const gdouble kmax             = ncm_powspec_get_kmax (powspec);
+  const gdouble lnkmin           = log (kmin);
+  const gdouble lnkmax           = log (kmax);
+  const gdouble two_pi           = 2.0 / ncm_c_pi ();
   gdouble error, xi_two_pi;
-  
-  ncm_powspec_prepare_if_needed (ps, model);
-  
-  ncm_integral1d_ptr_set_userdata (ps->sproj, &data);
-  ncm_integral1d_set_reltol (NCM_INTEGRAL1D (ps->sproj), reltol);
 
-  xi_two_pi = ncm_integral1d_eval (NCM_INTEGRAL1D (ps->sproj), lnkmin, lnkmax, &error);
-  
+  ncm_powspec_prepare_if_needed (powspec, model);
+
+  ncm_integral1d_ptr_set_userdata (self->sproj, &data);
+  ncm_integral1d_set_reltol (NCM_INTEGRAL1D (self->sproj), reltol);
+
+  xi_two_pi = ncm_integral1d_eval (NCM_INTEGRAL1D (self->sproj), lnkmin, lnkmax, &error);
+
   return xi_two_pi * two_pi;
 }
 

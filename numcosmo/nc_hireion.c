@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -27,7 +27,7 @@
  * SECTION:nc_hireion
  * @title: NcHIReion
  * @short_description: Abstract class for implementing homogeneous and isotropic reionization models.
- * 
+ *
  * $
  *  \newcommand{\He}{\text{He}}
  *  \newcommand{\HeI}{\text{HeI}}
@@ -38,9 +38,9 @@
  *  \newcommand{\HyII}{\text{HII}}
  *  \newcommand{\e}{{\text{e}^-}}
  * $
- * 
+ *
  * See [NcRecomb][NcRecomb.description] for symbol definitions.
- * 
+ *
  * FIXME
  *
  */
@@ -62,7 +62,7 @@
 #include <gsl/gsl_integration.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_ABSTRACT_TYPE (NcHIReion, nc_hireion, NCM_TYPE_MODEL);
+G_DEFINE_ABSTRACT_TYPE (NcHIReion, nc_hireion, NCM_TYPE_MODEL)
 
 enum
 {
@@ -80,7 +80,6 @@ nc_hireion_init (NcHIReion *reion)
 static void
 nc_hireion_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hireion_parent_class)->finalize (object);
 }
@@ -89,6 +88,7 @@ static void
 nc_hireion_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHIReion *reion = NC_HIREION (object);
+
   g_return_if_fail (NC_IS_HIREION (object));
 
   switch (prop_id)
@@ -106,6 +106,7 @@ static void
 nc_hireion_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHIReion *reion = NC_HIREION (object);
+
   g_return_if_fail (NC_IS_HIREION (object));
 
   switch (prop_id)
@@ -135,7 +136,7 @@ nc_hireion_class_init (NcHIReionClass *klass)
   model_class->set_property = nc_hireion_set_property;
   model_class->get_property = nc_hireion_get_property;
   object_class->finalize    = nc_hireion_finalize;
-  
+
   ncm_model_class_set_name_nick (model_class, "Abstract class for H and He reionization models.", "NcHIReion");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
 
@@ -153,7 +154,7 @@ nc_hireion_class_init (NcHIReionClass *klass)
                                                         "Precision for reionization calculations",
                                                         0.0, 1.0, 1.0e-7,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   ncm_model_class_check_params_info (model_class);
 
   reion_class->get_init_x = &_nc_hireion_get_init_x;
@@ -164,50 +165,27 @@ nc_hireion_class_init (NcHIReionClass *klass)
 static gdouble
 _nc_hireion_get_init_x (NcHIReion *reion, NcHICosmo *cosmo)
 {
-  NCM_UNUSED (reion);
-  NCM_UNUSED (cosmo);
-  g_error ("_nc_hireion_get_init_x: error object `%s' do not implement this virtual function.", 
+  g_error ("_nc_hireion_get_init_x: error object `%s' do not implement this virtual function.",
            g_type_name (G_OBJECT_TYPE (reion)));
+
   return 0.0;
 }
 
 static gdouble
 _nc_hireion_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambda, const gdouble Xe_recomb)
 {
-  NCM_UNUSED (reion);
-  NCM_UNUSED (cosmo);
-  NCM_UNUSED (lambda);
-  g_error ("_nc_hireion_get_Xe: error object `%s' do not implement this virtual function.", 
+  g_error ("_nc_hireion_get_Xe: error object `%s' do not implement this virtual function.",
            g_type_name (G_OBJECT_TYPE (reion)));
+
   return 0.0;
-}
-
-/**
- * nc_hireion_new_from_name:
- * @parent_type: FIXME
- * @reion_name: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcHIReion *
-nc_hireion_new_from_name (GType parent_type, gchar *reion_name)
-{
-  GObject *obj = ncm_serialize_global_from_string (reion_name);
-  GType model_type = G_OBJECT_TYPE (obj);
-
-  if (!g_type_is_a (model_type, parent_type))
-    g_error ("nc_hireion_new_from_name: NcHIReion %s do not descend from %s.", reion_name, g_type_name (parent_type));
-  return NC_HIREION (obj);
 }
 
 /**
  * nc_hireion_ref:
  * @reion: a #NcHIReion
- * 
+ *
  * Increses the reference count of @reion by one.
- * 
+ *
  * Returns: (transfer full): @reion.
  */
 NcHIReion *
@@ -219,11 +197,11 @@ nc_hireion_ref (NcHIReion *reion)
 /**
  * nc_hireion_free:
  * @reion: a #NcHIReion
- * 
+ *
  * Decreases the reference count of @reion by one.
- * 
+ *
  */
-void 
+void
 nc_hireion_free (NcHIReion *reion)
 {
   g_object_unref (reion);
@@ -232,12 +210,12 @@ nc_hireion_free (NcHIReion *reion)
 /**
  * nc_hireion_clear:
  * @reion: a #NcHIReion
- * 
- * If @reion is different from NULL, decreses the reference 
+ *
+ * If @reion is different from NULL, decreses the reference
  * count of *@reion by one and sets *reion to NULL.
- * 
+ *
  */
-void 
+void
 nc_hireion_clear (NcHIReion **reion)
 {
   g_clear_object (reion);
@@ -249,10 +227,10 @@ nc_hireion_clear (NcHIReion **reion)
  * @cosmo: a #NcHICosmo
  *
  * Gets the redshift ($x = 1 + z$) where the reionization begins.
- * 
+ *
  * Returns: $x_\mathrm{init}$.
  */
-gdouble 
+gdouble
 nc_hireion_get_init_x (NcHIReion *reion, NcHICosmo *cosmo)
 {
   return NC_HIREION_GET_CLASS (reion)->get_init_x (reion, cosmo);
@@ -266,10 +244,10 @@ nc_hireion_get_init_x (NcHIReion *reion, NcHICosmo *cosmo)
  * @Xe_recomb: recombination value for $X_\e$
  *
  * Gets the electron fraction from reionization $X_\e$.
- * 
+ *
  * Returns: $X_\e$.
  */
-gdouble 
+gdouble
 nc_hireion_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambda, const gdouble Xe_recomb)
 {
   return NC_HIREION_GET_CLASS (reion)->get_Xe (reion, cosmo, lambda, Xe_recomb);
@@ -281,21 +259,22 @@ typedef struct _NcHIReionTauInt
   NcHICosmo *cosmo;
 } NcHIReionTauInt;
 
-static gdouble 
+static gdouble
 _nc_hireion_dtau_dlambda (gdouble lambda, gpointer data)
 {
   NcHIReionTauInt *tau_int = (NcHIReionTauInt *) data;
+
   return nc_hireion_get_Xe (tau_int->reion, tau_int->cosmo, lambda, 0.0) * nc_recomb_dtau_dlambda_Xe (tau_int->cosmo, lambda);
 }
 
-static gdouble 
+static gdouble
 _nc_hireion_get_tau (NcHIReion *reion, NcHICosmo *cosmo)
 {
-  gdouble result = 0.0;
-  gdouble error  = 0.0;
-  const gdouble lambda_i = -log (nc_hireion_get_init_x (reion, cosmo));
-  gsl_integration_workspace **w = ncm_integral_get_workspace();
-  NcHIReionTauInt tau_int = {reion, cosmo};
+  gdouble result                = 0.0;
+  gdouble error                 = 0.0;
+  const gdouble lambda_i        = -log (nc_hireion_get_init_x (reion, cosmo));
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  NcHIReionTauInt tau_int       = {reion, cosmo};
   gsl_function F;
 
   F.function = &_nc_hireion_dtau_dlambda;
@@ -305,7 +284,7 @@ _nc_hireion_get_tau (NcHIReion *reion, NcHICosmo *cosmo)
 
   ncm_memory_pool_return (w);
 
-  return -result;  
+  return -result;
 }
 
 /**
@@ -314,16 +293,17 @@ _nc_hireion_get_tau (NcHIReion *reion, NcHICosmo *cosmo)
  * @cosmo: a #NcHICosmo
  *
  * Calculates the reionization optical depth $\tau_\mathrm{reion}$.
- * 
+ *
  * Returns: $\tau_\mathrm{reion}$.
  */
-gdouble 
+gdouble
 nc_hireion_get_tau (NcHIReion *reion, NcHICosmo *cosmo)
 {
   return NC_HIREION_GET_CLASS (reion)->get_tau (reion, cosmo);
 }
 
-static void _nc_hireion_flist_tau (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+static void
+_nc_hireion_flist_tau (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHIReion *reion = NC_HIREION (ncm_mset_peek (mset, nc_hireion_id ()));
@@ -336,3 +316,4 @@ _nc_hireion_register_functions (void)
 {
   ncm_mset_func_list_register ("tau", "\\tau", "NcHIReion", "Reionization tau", G_TYPE_NONE, _nc_hireion_flist_tau, 0, 1);
 }
+

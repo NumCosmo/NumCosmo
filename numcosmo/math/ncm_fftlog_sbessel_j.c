@@ -115,10 +115,17 @@
 #include <gsl/gsl_sf_trig.h>
 #include <gsl/gsl_math.h>
 #include <complex.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #include <math.h>
+#ifdef HAVE_ACB_H
+#ifdef HAVE_FLINT_ACB_H
+#include <flint/acb.h>
+#else /* HAVE_FLINT_ACB_H */
+#include <acb.h>
+#endif /* HAVE_FLINT_ACB_H */
+#endif /* HAVE_ACB_H */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct _NcmFftlogSBesselJPrivate
@@ -135,17 +142,18 @@ enum
   PROP_SIZE,
 };
 
-struct _NcmFftlogSBesselJ {
+struct _NcmFftlogSBesselJ
+{
   NcmFftlog parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJ, ncm_fftlog_sbessel_j, NCM_TYPE_FFTLOG);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJ, ncm_fftlog_sbessel_j, NCM_TYPE_FFTLOG)
 
 static void
 ncm_fftlog_sbessel_j_init (NcmFftlogSBesselJ *fftlog_jl)
 {
   NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
-  
+
   self->ell = 0;
   self->q   = 0.0;
 }
@@ -154,9 +162,9 @@ static void
 _ncm_fftlog_sbessel_j_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmFftlogSBesselJ *fftlog_jl = NCM_FFTLOG_SBESSEL_J (object);
-  
+
   g_return_if_fail (NCM_IS_FFTLOG_SBESSEL_J (object));
-  
+
   switch (prop_id)
   {
     case PROP_ELL:
@@ -165,9 +173,9 @@ _ncm_fftlog_sbessel_j_set_property (GObject *object, guint prop_id, const GValue
     case PROP_Q:
       ncm_fftlog_sbessel_j_set_q (fftlog_jl, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -175,9 +183,9 @@ static void
 _ncm_fftlog_sbessel_j_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmFftlogSBesselJ *fftlog_jl = NCM_FFTLOG_SBESSEL_J (object);
-  
+
   g_return_if_fail (NCM_IS_FFTLOG_SBESSEL_J (object));
-  
+
   switch (prop_id)
   {
     case PROP_ELL:
@@ -186,9 +194,9 @@ _ncm_fftlog_sbessel_j_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_Q:
       g_value_set_double (value, ncm_fftlog_sbessel_j_get_q (fftlog_jl));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -199,18 +207,18 @@ _ncm_fftlog_sbessel_j_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_fftlog_sbessel_j_parent_class)->finalize (object);
 }
 
-static void _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0);
+static void _ncm_fftlog_sbessel_j_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0);
 
 static void
 ncm_fftlog_sbessel_j_class_init (NcmFftlogSBesselJClass *klass)
 {
   GObjectClass *object_class   = G_OBJECT_CLASS (klass);
   NcmFftlogClass *fftlog_class = NCM_FFTLOG_CLASS (klass);
-  
+
   object_class->set_property = &_ncm_fftlog_sbessel_j_set_property;
   object_class->get_property = &_ncm_fftlog_sbessel_j_get_property;
   object_class->finalize     = &_ncm_fftlog_sbessel_j_finalize;
-  
+
   /**
    * NcmFftlogSBesselJ:ell:
    *
@@ -224,7 +232,7 @@ ncm_fftlog_sbessel_j_class_init (NcmFftlogSBesselJClass *klass)
                                                       "Spherical Bessel integer order",
                                                       0, G_MAXUINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmFftlogSBesselJ:q:
    *
@@ -239,25 +247,25 @@ ncm_fftlog_sbessel_j_class_init (NcmFftlogSBesselJClass *klass)
                                                         "Spherical Bessel power",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
-  fftlog_class->name   = "sbessel_j";
-  fftlog_class->get_Ym = &_ncm_fftlog_sbessel_j_get_Ym;
+
+  fftlog_class->name       = "sbessel_j";
+  fftlog_class->compute_Ym = &_ncm_fftlog_sbessel_j_compute_Ym;
 }
 
 static void
-_ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
+_ncm_fftlog_sbessel_j_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
   NcmFftlogSBesselJ *fftlog_jl          = NCM_FFTLOG_SBESSEL_J (fftlog);
   NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
-  
+
   const gdouble pi_sqrt  = sqrt (M_PI);
   const gdouble twopi_Lt = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
   const gint Nf          = ncm_fftlog_get_full_size (fftlog);
-  
-#ifdef NUMCOSMO_HAVE_FFTW3
+
+#ifdef HAVE_FFTW3
   fftw_complex *Ym_base = (fftw_complex *) Ym_0;
   gint i;
-  
+
   if (self->q == 0.5)
   {
     for (i = 0; i < Nf; i++)
@@ -268,20 +276,20 @@ _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
       const complex double xup      = 0.5 * (1.0 + 1.0 * self->ell + A);
       const complex double two_x_m1 = cpow (2.0, A - 1.0);
       complex double U;
-      
+
       gsl_sf_result lngamma_rho_up, lngamma_theta_up;
-      
+
       gsl_sf_lngamma_complex_e (creal (xup), cimag (xup), &lngamma_rho_up, &lngamma_theta_up);
-      
+
       U = cexp (2.0 * I * lngamma_theta_up.val);
-      
+
       Ym_base[i] = pi_sqrt * two_x_m1 * U;
     }
   }
   else
   {
     const gdouble q = self->q;
-    
+
     for (i = 0; i < Nf; i++)
     {
       const gint phys_i             = ncm_fftlog_get_mode_index (fftlog, i);
@@ -291,22 +299,22 @@ _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
       const complex double xdw      = 0.5 * (2.0 + 1.0 * self->ell - A);
       const complex double two_x_m1 = cpow (2.0, A - 1.0);
       complex double U;
-      
+
       gsl_sf_result lngamma_rho_up, lngamma_theta_up;
       gsl_sf_result lngamma_rho_dw, lngamma_theta_dw;
-      
+
       gsl_sf_lngamma_complex_e (creal (xup), cimag (xup), &lngamma_rho_up, &lngamma_theta_up);
       gsl_sf_lngamma_complex_e (creal (xdw), cimag (xdw), &lngamma_rho_dw, &lngamma_theta_dw);
-      
+
       U = cexp ((lngamma_rho_up.val - lngamma_rho_dw.val) + I * (lngamma_theta_up.val - lngamma_theta_dw.val));
-      
+
       /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g\n", lngamma_rho_up.val, lngamma_rho_dw.val, lngamma_theta_up.val, lngamma_theta_dw.val);*/
-      
+
       Ym_base[i] = pi_sqrt * two_x_m1 * U;
     }
   }
-  
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+
+#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -331,7 +339,7 @@ ncm_fftlog_sbessel_j_new (guint ell, gdouble lnr0, gdouble lnk0, gdouble Lk, gui
                                                "Lk",   Lk,
                                                "N",    N,
                                                NULL);
-  
+
   return fftlog_jl;
 }
 
@@ -347,11 +355,11 @@ void
 ncm_fftlog_sbessel_j_set_ell (NcmFftlogSBesselJ *fftlog_jl, const guint ell)
 {
   NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
-  
+
   if (self->ell != ell)
   {
     NcmFftlog *fftlog = NCM_FFTLOG (fftlog_jl);
-    
+
     self->ell = ell;
     ncm_fftlog_reset (fftlog);
   }
@@ -367,7 +375,7 @@ guint
 ncm_fftlog_sbessel_j_get_ell (NcmFftlogSBesselJ *fftlog_jl)
 {
   NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
-  
+
   return self->ell;
 }
 
@@ -383,11 +391,11 @@ void
 ncm_fftlog_sbessel_j_set_q (NcmFftlogSBesselJ *fftlog_jl, const gdouble q)
 {
   NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
-  
+
   if (self->q != q)
   {
     NcmFftlog *fftlog = NCM_FFTLOG (fftlog_jl);
-    
+
     self->q = q;
     ncm_fftlog_reset (fftlog);
   }
@@ -403,7 +411,7 @@ gdouble
 ncm_fftlog_sbessel_j_get_q (NcmFftlogSBesselJ *fftlog_jl)
 {
   NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
-  
+
   return self->q;
 }
 
@@ -422,15 +430,15 @@ ncm_fftlog_sbessel_j_set_best_lnr0 (NcmFftlogSBesselJ *fftlog_jl)
 {
   NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
   NcmFftlog *fftlog                     = NCM_FFTLOG (fftlog_jl);
-  
+
   gint signp = 0;
-  
+
   const gdouble lnk0      = ncm_fftlog_get_lnk0 (fftlog);
   const gdouble Lk        = ncm_fftlog_get_length (fftlog);
   const gdouble ell       = self->ell;
   const gdouble lnc0      = (ell == 0) ? 0.0 : ((ell - 1.0) * Lk + 2.0 * (ell + 1.0) * M_LN2 - ncm_c_lnpi () + 2.0 * lgamma_r (1.5 + ell, &signp)) / (2.0 * (1.0 + ell));
   const gdouble best_lnr0 = -lnk0 + lnc0;
-  
+
   ncm_fftlog_set_lnr0 (fftlog, best_lnr0);
 }
 
@@ -449,15 +457,15 @@ ncm_fftlog_sbessel_j_set_best_lnk0 (NcmFftlogSBesselJ *fftlog_jl)
 {
   NcmFftlogSBesselJPrivate * const self = ncm_fftlog_sbessel_j_get_instance_private (fftlog_jl);
   NcmFftlog *fftlog                     = NCM_FFTLOG (fftlog_jl);
-  
+
   gint signp = 0;
-  
+
   const gdouble lnr0      = ncm_fftlog_get_lnr0 (fftlog);
   const gdouble Lk        = ncm_fftlog_get_length (fftlog);
   const gdouble ell       = self->ell;
   const gdouble lnc0      = (ell == 0) ? 0.0 : ((ell - 1.0) * Lk + 2.0 * (ell + 1.0) * M_LN2 - ncm_c_lnpi () + 2.0 * lgamma_r (1.5 + ell, &signp)) / (2.0 * (1.0 + ell));
   const gdouble best_lnk0 = -lnr0 + lnc0;
-  
+
   ncm_fftlog_set_lnk0 (fftlog, best_lnk0);
 }
 

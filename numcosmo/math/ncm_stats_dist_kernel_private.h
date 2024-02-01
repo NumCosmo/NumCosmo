@@ -31,11 +31,11 @@
 
 G_BEGIN_DECLS
 
-struct _NcmStatsDistKernelPrivate
+typedef struct _NcmStatsDistKernelPrivate
 {
   /*< private >*/
-  gint d;
-};
+  guint d;
+} NcmStatsDistKernelPrivate;
 
 G_END_DECLS
 

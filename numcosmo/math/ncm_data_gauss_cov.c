@@ -72,7 +72,7 @@ typedef struct _NcmDataGaussCovPrivate
 } NcmDataGaussCovPrivate;
 
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataGaussCov, ncm_data_gauss_cov, NCM_TYPE_DATA); /* LCOV_EXCL_BR_LINE */
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmDataGaussCov, ncm_data_gauss_cov, NCM_TYPE_DATA) /* LCOV_EXCL_BR_LINE */
 
 static void
 ncm_data_gauss_cov_init (NcmDataGaussCov *gauss)
@@ -123,9 +123,9 @@ _ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_COV:
       ncm_matrix_substitute (&self->cov, g_value_get_object (value), TRUE);
       break;
-    default: /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break; /* LCOV_EXCL_LINE */
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -151,9 +151,9 @@ _ncm_data_gauss_cov_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_COV:
       g_value_set_object (value, self->cov);
       break;
-    default: /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break; /* LCOV_EXCL_LINE */
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -187,6 +187,7 @@ static void _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble
 static void _ncm_data_gauss_cov_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v);
 static void _ncm_data_gauss_cov_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu);
 static void _ncm_data_gauss_cov_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H);
+static void _ncm_data_gauss_cov_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f);
 
 static void _ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np);
 static guint _ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss);
@@ -250,6 +251,7 @@ ncm_data_gauss_cov_class_init (NcmDataGaussCovClass *klass)
 
   data_class->mean_vector = &_ncm_data_gauss_cov_mean_vector;
   data_class->inv_cov_UH  = &_ncm_data_gauss_cov_inv_cov_UH;
+  data_class->inv_cov_Uf  = &_ncm_data_gauss_cov_inv_cov_Uf;
 
   gauss_cov_class->mean_func   = NULL;
   gauss_cov_class->cov_func    = NULL;
@@ -315,7 +317,7 @@ _ncm_data_gauss_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
   for (i = 0; i < self->np; i++)
   {
-    const gdouble u_i = gsl_ran_ugaussian (rng->r);
+    const gdouble u_i = ncm_rng_ugaussian_gen (rng);
 
     ncm_vector_set (self->v, i, u_i);
   }
@@ -491,6 +493,27 @@ _ncm_data_gauss_cov_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
                         1.0, ncm_matrix_gsl (self->LLT), ncm_matrix_gsl (H));
 
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_inv_cov_UH", ret);
+}
+
+static void
+_ncm_data_gauss_cov_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f)
+{
+  NcmDataGaussCov *gauss                = NCM_DATA_GAUSS_COV (data);
+  NcmDataGaussCovPrivate * const self   = ncm_data_gauss_cov_get_instance_private (gauss);
+  NcmDataGaussCovClass *gauss_cov_class = NCM_DATA_GAUSS_COV_GET_CLASS (gauss);
+  gboolean cov_update                   = FALSE;
+  gint ret;
+
+  if (gauss_cov_class->cov_func != NULL)
+    cov_update = gauss_cov_class->cov_func (gauss, mset, self->cov);
+
+  if (cov_update || !self->prepared_LLT)
+    _ncm_data_gauss_cov_prepare_LLT (data);
+
+  ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit,
+                        ncm_matrix_gsl (self->LLT), ncm_vector_gsl (f));
+
+  NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_inv_cov_Uf", ret);
 }
 
 static void
@@ -691,7 +714,7 @@ ncm_data_gauss_cov_bulk_resample (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatr
   {
     for (i = 0; i < self->np; i++)
     {
-      const gdouble u_i = gsl_ran_ugaussian (rng->r);
+      const gdouble u_i = ncm_rng_ugaussian_gen (rng);
 
       ncm_matrix_set (resample, j, i, u_i);
     }

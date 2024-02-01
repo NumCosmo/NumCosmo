@@ -72,7 +72,7 @@ struct _NcmFitESMCMCWalkerStretch
   gchar *desc;
 };
 
-G_DEFINE_TYPE (NcmFitESMCMCWalkerStretch, ncm_fit_esmcmc_walker_stretch, NCM_TYPE_FIT_ESMCMC_WALKER);
+G_DEFINE_TYPE (NcmFitESMCMCWalkerStretch, ncm_fit_esmcmc_walker_stretch, NCM_TYPE_FIT_ESMCMC_WALKER)
 
 static void
 ncm_fit_esmcmc_walker_stretch_init (NcmFitESMCMCWalkerStretch *stretch)
@@ -106,9 +106,9 @@ _ncm_fit_esmcmc_walker_stretch_set_property (GObject *object, guint prop_id, con
     case PROP_MULTI:
       ncm_fit_esmcmc_walker_stretch_multi (stretch, g_value_get_boolean (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -127,9 +127,9 @@ _ncm_fit_esmcmc_walker_stretch_get_property (GObject *object, guint prop_id, GVa
     case PROP_MULTI:
       g_value_set_boolean (value, stretch->multi);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -300,9 +300,9 @@ _ncm_fit_esmcmc_walker_stretch_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset,
     for (k = ki; k < kf; k++)
     {
       const guint subensemble = (k < stretch->size_2) ? stretch->size_2 : 0;
-      const gdouble u         = gsl_rng_uniform (rng->r);
+      const gdouble u         = ncm_rng_uniform01_gen (rng);
       const gdouble z         = gsl_pow_2 (1.0 + (stretch->a - 1.0) * u) / stretch->a;
-      const guint j           = gsl_rng_uniform_int (rng->r, stretch->size_2) + subensemble;
+      const guint j           = ncm_rng_uniform_int_gen (rng, stretch->size_2) + subensemble;
 
       /*printf ("# Walker %u using z = % 20.15g and other walker %u to move.\n", k, z, j);*/
 
@@ -319,7 +319,7 @@ _ncm_fit_esmcmc_walker_stretch_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset,
 
       for (pi = 0; pi < stretch->nparams; pi++)
       {
-        const gdouble u = gsl_rng_uniform (rng->r);
+        const gdouble u = ncm_rng_uniform01_gen (rng);
         const gdouble z = gsl_pow_2 (1.0 + (stretch->a - 1.0) * u) / stretch->a;
 
         /*const guint j   = gsl_rng_uniform_int (rng->r, stretch->size_2) + subensemble;*/
@@ -328,7 +328,7 @@ _ncm_fit_esmcmc_walker_stretch_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset,
         /*g_array_index (stretch->indices, guint, k * stretch->nparams + pi) = j;*/
       }
 
-      gsl_ran_choose (rng->r,
+      ncm_rng_choose (rng,
                       &g_array_index (stretch->indices, guint, k * stretch->nparams),
                       stretch->nparams,
                       &g_array_index (stretch->numbers, guint, subensemble),

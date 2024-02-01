@@ -40,6 +40,7 @@
 #include <numcosmo/math/ncm_mpi_job_feval.h>
 
 /* Base types and components */
+#include <numcosmo/math/ncm_dtuple.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/math/ncm_nnls.h>
@@ -105,7 +106,6 @@
 #include <numcosmo/math/ncm_mset_func.h>
 #include <numcosmo/math/ncm_mset_func1.h>
 #include <numcosmo/math/ncm_mset_func_list.h>
-#include <numcosmo/math/ncm_calc.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/math/ncm_reparam_linear.h>
 #include <numcosmo/math/ncm_data.h>
@@ -132,8 +132,6 @@
 #include <numcosmo/math/ncm_util.h>
 #include <numcosmo/math/ncm_iset.h>
 #include <numcosmo/math/ncm_diff.h>
-#include <numcosmo/math/ncm_ode.h>
-#include <numcosmo/math/ncm_ode_eval.h>
 #include <numcosmo/math/ncm_timer.h>
 
 /* Likelihood object */

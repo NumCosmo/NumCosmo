@@ -28,7 +28,8 @@
  * @title: NcmMSetFunc
  * @short_description: Abstract class for arbitrary MSet functions - bindable version
  *
- * FIXME
+ * This class is an abstract class for arbitrary MSet functions it behaves
+ * exactly like #NcmMSetFunc but its virtual function is bindable.
  *
  */
 
@@ -39,18 +40,19 @@
 
 #include "math/ncm_mset_func1.h"
 
-struct _NcmMSetFunc1Private
+typedef struct _NcmMSetFunc1Private
 {
   gint placeholder;
-};
+} NcmMSetFunc1Private;
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetFunc1, ncm_mset_func1, NCM_TYPE_MSET_FUNC);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetFunc1, ncm_mset_func1, NCM_TYPE_MSET_FUNC)
 
 static void
 ncm_mset_func1_init (NcmMSetFunc1 *f1)
 {
-  f1->priv              = ncm_mset_func1_get_instance_private (f1);
-  f1->priv->placeholder = 0;
+  NcmMSetFunc1Private *self = ncm_mset_func1_get_instance_private (f1);
+
+  self->placeholder = 0;
 }
 
 static void
@@ -76,14 +78,16 @@ ncm_mset_func1_class_init (NcmMSetFunc1Class *klass)
 void
 _ncm_mset_func1_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
-  GArray *x_a = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *x_a      = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  const guint nvar = ncm_mset_func_get_nvar (func);
+  const guint dim  = ncm_mset_func_get_dim (func);
   GArray *res_a;
 
-  g_array_append_vals (x_a, x, func->nvar);
+  g_array_append_vals (x_a, x, nvar);
 
   res_a = ncm_mset_func1_eval1 (NCM_MSET_FUNC1 (func), mset, x_a);
 
-  g_assert_cmpint (res_a->len, ==, func->dim);
+  g_assert_cmpint (res_a->len, ==, dim);
   memcpy (res, res_a->data, res_a->len * sizeof (gdouble));
 
   g_array_unref (x_a);
@@ -94,9 +98,9 @@ _ncm_mset_func1_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdoubl
  * ncm_mset_func1_ref:
  * @f1: a #NcmMSetFunc1
  *
- * FIXME
+ * Increments the reference count of @f1 by one.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): @f1.
  */
 NcmMSetFunc1 *
 ncm_mset_func1_ref (NcmMSetFunc1 *f1)
@@ -108,7 +112,8 @@ ncm_mset_func1_ref (NcmMSetFunc1 *f1)
  * ncm_mset_func1_free:
  * @f1: a #NcmMSetFunc1
  *
- * FIXME
+ * Decrements the reference count of @f1 by one. If the reference count
+ * reaches zero, @f1 is freed.
  *
  */
 void
@@ -121,7 +126,7 @@ ncm_mset_func1_free (NcmMSetFunc1 *f1)
  * ncm_mset_func1_clear:
  * @f1: a #NcmMSetFunc1
  *
- * FIXME
+ * If *@f1 is non-%NULL, unrefs it and sets *@f1 to %NULL.
  *
  */
 void
@@ -136,7 +141,7 @@ ncm_mset_func1_clear (NcmMSetFunc1 **f1)
  * @f1: a #NcmMSetFunc1
  * @x: (array) (element-type double): function argument
  *
- * FIXME
+ * Evaluates the function at @x.
  *
  * Returns: (array) (element-type double) (transfer full): function result
  */

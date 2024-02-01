@@ -26,7 +26,7 @@ test the MCMC sampler.
 """
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 
@@ -40,6 +40,93 @@ from numcosmo_py.sampling.esmcmc import (
 
 
 from numcosmo_py.external.minimax_tilting_sampler import TruncatedMVN
+
+
+def create_mset(dim: int) -> Tuple[Ncm.MSet, Ncm.ModelMVND]:
+    """Creates a MSet with a Gaussian distribution with positivity constraint."""
+    mgc = Ncm.ModelMVND.new(dim)
+    for i in range(dim):
+        if i % 2 == 0:
+            mgc.param_set_lower_bound(i, 0.0)
+        else:
+            mgc.param_set_lower_bound(i, -10.0)
+        mgc.param_set_upper_bound(i, 10.0)
+        mgc.param_set_scale(i, 0.1)
+        mgc.orig_vparam_set(0, i, 0.5)
+
+    mset = Ncm.MSet.empty_new()
+    mset.set(mgc)
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    mset.prepare_fparam_map()
+
+    return mset, mgc
+
+
+def create_data_object(mset: Ncm.MSet, dim: int, rng: Ncm.RNG) -> Ncm.DataGaussCovMVND:
+    """Creates a dataset with a Gaussian distribution with positivity constraint."""
+
+    dgc = Ncm.DataGaussCovMVND.new(dim)
+    mean = Ncm.Vector.new(dim)
+    mean.set_all(0.0)
+
+    if dim > 50:
+        raise ValueError("dim > 50 not supported")
+
+    # Always use the same seed and size to get the same results
+    # for all dimensions.
+    cov50 = Ncm.Matrix.new(50, 50)
+    cov50.fill_rand_cor(10.0, rng)
+    cov = cov50.get_submatrix(0, 0, dim, dim).dup()
+    # cov50.log_vals("", "% 22.15g")
+
+    dgc.set_cov_mean(mean, cov)
+    m2lnN = dgc.get_log_norma(mset)
+    print(f"# Constant normalization {m2lnN}")
+
+    return dgc
+
+
+def sample_with_tmvn(
+    mset: Ncm.MSet, mgc: Ncm.ModelMVND, dgc: Ncm.DataGaussCovMVND, dim: int, ssize: int
+) -> str:
+    """Samples the likelihood posterior using TruncatedMVN."""
+
+    Ncm.message_str("# Sampling the likelihood posterior using TruncatedMVN: \n")
+    bounds = np.array(
+        [
+            [mgc.param_get_lower_bound(i), mgc.param_get_upper_bound(i)]
+            for i in range(dim)
+        ]
+    )
+    mset.fparams_set_vector(dgc.peek_mean())
+
+    cov_np = np.array(dgc.peek_cov().dup_array())
+    cov_np.shape = (dim, dim)
+
+    tmvn_sampler = TruncatedMVN(
+        mu=np.zeros(dim), cov=cov_np, lb=bounds[:, 0], ub=bounds[:, 1], seed=0
+    )
+
+    sv = Ncm.StatsVec.new(dim + 1, Ncm.StatsVecType.COV, True)
+    for s in np.transpose(tmvn_sampler.sample(ssize)):
+        dgc.peek_mean().set_array(s)
+        st = np.concatenate(([dgc.m2lnL_val(mset)], s))
+        sv.append(Ncm.Vector.new_array(st), True)
+
+    filename = f"gauss_constraint_{dim}d_tmvn_samples.dat"
+    with open(filename, "w", encoding="utf-8") as f:
+        mean_array = [f"{v: 22.15g}" for v in sv.peek_mean().dup_array()]
+        stdev_array = [f"{sv.get_sd(i): 22.15g}" for i in range(dim)]
+        f.write(f"#   Number of samples : {sv.nitens}\n")
+        f.write(f"#   Mean : {' '.join(mean_array)}\n")
+        f.write(f"#   Stdev: {' '.join(stdev_array)}\n")
+
+        for i in range(sv.nitens()):
+            f.write(
+                " ".join([f"{v: 22.15g}" for v in sv.peek_row(i).dup_array()]) + "\n"
+            )
+
+    return filename
 
 
 def run_gauss_constraint_mcmc(
@@ -64,85 +151,15 @@ def run_gauss_constraint_mcmc(
 ) -> str:
     """Runs the Funnel MCMC example."""
 
-    mgc = Ncm.ModelMVND.new(dim)
-    for i in range(dim):
-        if i % 2 == 0:
-            mgc.param_set_lower_bound(i, 0.0)
-        else:
-            mgc.param_set_lower_bound(i, -10.0)
-        mgc.param_set_upper_bound(i, 10.0)
-        mgc.param_set_scale(i, 0.1)
-        mgc.orig_vparam_set(0, i, 0.5)
-
-    mset = Ncm.MSet.empty_new()
-    mset.set(mgc)
-    mset.param_set_all_ftype(Ncm.ParamType.FREE)
-    mset.prepare_fparam_map()
-
-    dgc = Ncm.DataGaussCovMVND.new(dim)
-    mean = Ncm.Vector.new(dim)
-    mean.set_all(0.0)
-
-    if dim > 50:
-        raise ValueError("dim > 50 not supported")
-
-    # Always use the same seed and size to get the same results
-    # for all dimensions.
-    cov50 = Ncm.Matrix.new(50, 50)
     rng = Ncm.RNG.seeded_new(None, 0)
-    cov50.fill_rand_cor(10.0, rng)
-    cov = cov50.get_submatrix(0, 0, dim, dim).dup()
-    # cov50.log_vals("", "% 22.15g")
 
-    dgc.set_cov_mean(mean, cov)
-    m2lnN = dgc.get_log_norma(mset)
-    print(f"# Constant normalization {m2lnN}")
+    mset, mgc = create_mset(dim)
+    dgc = create_data_object(mset, dim, rng)
 
     if tmvn:
-        Ncm.message_str("# Sampling the likelihood posterior using TruncatedMVN: \n")
-        rng = Ncm.RNG.seeded_new(None, 0)
-        bounds = np.array(
-            [
-                [mgc.param_get_lower_bound(i), mgc.param_get_upper_bound(i)]
-                for i in range(dim)
-            ]
-        )
-        mset.fparams_set_vector(mean)
+        return sample_with_tmvn(mset, mgc, dgc, dim, ssize)
 
-        cov_np = np.array(cov.dup_array())
-        cov_np.shape = (dim, dim)
-
-        tmvn_sampler = TruncatedMVN(
-            mu=np.zeros(dim), cov=cov_np, lb=bounds[:, 0], ub=bounds[:, 1], seed=0
-        )
-
-        sv = Ncm.StatsVec.new(dim + 1, Ncm.StatsVecType.COV, True)
-        for s in np.transpose(tmvn_sampler.sample(ssize)):
-            dgc.peek_mean().set_array(s)
-            st = np.concatenate(([dgc.m2lnL_val(mset)], s))
-            sv.append(Ncm.Vector.new_array(st), True)
-
-        filename = f"gauss_constraint_{dim}d_tmvn_samples.dat"
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(f"#   Number of samples : {sv.nitens}\n")
-            f.write(
-                f"#   Mean : {' '.join([f'{v: 22.15g}' for v in sv.peek_mean().dup_array()])}\n"
-            )
-            f.write(
-                f"#   Stdev: {' '.join([f'{sv.get_sd(i): 22.15g}' for i in range(dim)])}\n"
-            )
-
-            for i in range(sv.nitens):
-                f.write(
-                    " ".join([f"{v: 22.15g}" for v in sv.peek_row(i).dup_array()])
-                    + "\n"
-                )
-
-        return filename
-
-    dset = Ncm.Dataset.new()
-    dset.append_data(dgc)
-    likelihood = Ncm.Likelihood.new(dset)
+    likelihood = Ncm.Likelihood.new(Ncm.Dataset.new_array([dgc]))
 
     start_mcat = None
     if start_catalog is not None:

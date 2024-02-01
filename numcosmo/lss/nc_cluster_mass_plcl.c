@@ -48,16 +48,16 @@
 #include <gsl/gsl_roots.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcClusterMassPlCL, nc_cluster_mass_plcl, NC_TYPE_CLUSTER_MASS);
+G_DEFINE_TYPE (NcClusterMassPlCL, nc_cluster_mass_plcl, NC_TYPE_CLUSTER_MASS)
 
-#define VECTOR (NCM_MODEL (mszl)->params)
-#define A_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_A_SZ))
-#define B_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_B_SZ))
-#define SD_SZ  (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_SD_SZ))
-#define A_L    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_A_L))
-#define B_L    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_B_L))
-#define SD_L   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_SD_L))
-#define COR    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_PLCL_COR))
+#define VECTOR (NCM_MODEL (mszl))
+#define A_SZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PLCL_A_SZ))
+#define B_SZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PLCL_B_SZ))
+#define SD_SZ  (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PLCL_SD_SZ))
+#define A_L    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PLCL_A_L))
+#define B_L    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PLCL_B_L))
+#define SD_L   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PLCL_SD_L))
+#define COR    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_PLCL_COR))
 
 enum
 {
@@ -236,10 +236,10 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
   parent_class->P    = &_nc_cluster_mass_plcl_Msz_Ml_M500_p;
   parent_class->intP = &_nc_cluster_mass_plcl_intp;
   /*parent_class->P_limits       = &_nc_cluster_mass_plcl_p_limits; */
-  parent_class->N_limits       = &_nc_cluster_mass_plcl_n_limits;
-  parent_class->resample       = &_nc_cluster_mass_plcl_resample;
-  parent_class->obs_len        = 2;
-  parent_class->obs_params_len = 2;
+  parent_class->N_limits        = &_nc_cluster_mass_plcl_n_limits;
+  parent_class->resample        = &_nc_cluster_mass_plcl_resample;
+  parent_class->_obs_len        = 2;
+  parent_class->_obs_params_len = 2;
 
   ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 }
@@ -530,8 +530,8 @@ void
 nc_cluster_mass_plcl_gsl_f_new_variables (const gsl_vector *p, gsl_vector *hx, NcClusterMassPlCL *mszl, gdouble lnM_M0, const gdouble *Mobs, const gdouble *Mobs_params)
 {
   const gdouble onemcor2 = sqrt (1.0 - COR * COR);
-  const gdouble w1 = gsl_vector_get (p, 0); /*p[0]; */
-  const gdouble w2 = gsl_vector_get (p, 1); /*p[1]; */
+  const gdouble w1       = gsl_vector_get (p, 0); /*p[0]; */
+  const gdouble w2       = gsl_vector_get (p, 1); /*p[1]; */
   gdouble M_PL, M_CL, sd_PL, sd_CL, dw1, dw2;
 
   /* Both masses and errors are given in units of the pivot mass, i.e., M_PL -> M_PL / M0 */
@@ -573,8 +573,8 @@ void
 nc_cluster_mass_plcl_gsl_J_new_variables (const gsl_vector *p, gsl_matrix *j, NcClusterMassPlCL *mszl, gdouble lnM_M0, const gdouble *Mobs, const gdouble *Mobs_params)
 {
   const gdouble onemcor2 = sqrt (1.0 - COR * COR);
-  const gdouble w1 = gsl_vector_get (p, 0); /*p[0]; */
-  const gdouble w2 = gsl_vector_get (p, 1); /*p[1]; */
+  const gdouble w1       = gsl_vector_get (p, 0); /*p[0]; */
+  const gdouble w2       = gsl_vector_get (p, 1); /*p[1]; */
   gdouble sd_PL, sd_CL, kernel_w1, kernel_w2;
 
   sd_PL = Mobs_params[NC_CLUSTER_MASS_PLCL_SD_PL];
@@ -615,7 +615,7 @@ nc_cluster_mass_plcl_gsl_f (const gdouble *p, gdouble *hx, gint n, NcClusterMass
   integrand_data data;
   const gdouble onemcor2 = sqrt (1.0 - COR * COR);
   const gdouble lnMsz_M0 = p[0];
-  const gdouble lnMl_M0 = p[1];
+  const gdouble lnMl_M0  = p[1];
   gdouble Msz, Ml, dMsz, dMl, dlnMsz, dlnMl;
 
   data.mszl        =            mszl;
@@ -683,19 +683,15 @@ _peakfinder (const gint *ndim, const gdouble bounds[], gint *n, gdouble x[], voi
 {
   integrand_data *data    = (integrand_data *) userdata;
   NcClusterMassPlCL *mszl = data->mszl;
+  gdouble p0[]            = {log (data->mobs[NC_CLUSTER_MASS_PLCL_MPL] / mszl->M0), log (data->mobs[NC_CLUSTER_MASS_PLCL_MCL] / mszl->M0)};
+  gdouble lb[]            = {bounds[0], bounds[2]};
+  gdouble ub[]            = {bounds[1], bounds[3]};
+  const gdouble xtol      = 1e-11;
+  const gdouble gtol      = 1e-11;
+  const gdouble ftol      = 0.0;
   gsl_multifit_function_fdf f;
-
-  gdouble p0[] = {log (data->mobs[NC_CLUSTER_MASS_PLCL_MPL] / mszl->M0), log (data->mobs[NC_CLUSTER_MASS_PLCL_MCL] / mszl->M0)};
-  gdouble lb[] = {bounds[0], bounds[2]};
-  gdouble ub[] = {bounds[1], bounds[3]};
-
-#ifdef HAVE_GSL_2_2
   gint status;
   gint info;
-  const gdouble xtol = 1e-11;
-  const gdouble gtol = 1e-11;
-  const gdouble ftol = 0.0;
-#endif /* HAVE_GSL_2_2 */
 
   p0[0] = GSL_MAX (p0[0], lb[0]);
   p0[1] = GSL_MAX (p0[1], lb[1]);
@@ -714,15 +710,10 @@ _peakfinder (const gint *ndim, const gdouble bounds[], gint *n, gdouble x[], voi
   gsl_multifit_fdfsolver_set (mszl->s, &f, &p0_vec.vector);
 
   /* solve the system with a maximum of 20 iterations */
-#ifdef HAVE_GSL_2_2
   status = gsl_multifit_fdfsolver_driver (mszl->s, 20000, xtol, gtol, ftol, &info);
 
   if (status != GSL_SUCCESS)
     g_error ("_peakfinder: NcClusterMassPlCL peakfinder function.\n");
-
-#else /* HAVE_GSL_2_2 */
-  g_error ("_peakfinder: this model requires gsl >= 2.2.");
-#endif /* HAVE_GSL_2_2 */
 
   /*printf ("Inicial: p0 = %.5g p1 = %.5g\n", p0[0], p0[1]); */
   /*printf ("2d Minimo : p  = %.5g p  = %.5g\n", gsl_vector_get (mszl->s->x, 0), gsl_vector_get (mszl->s->x, 1)); */
@@ -866,7 +857,7 @@ _nc_cluster_mass_plcl_Msz_Ml_M500_p (NcClusterMass *clusterm, NcHICosmo *cosmo, 
   integ.userdata = &data;
 
   {
-    gint n = 1;
+    gint n    = 1;
     gint ndim = 2;
     gdouble a_sz, a_l, b_sz, b_l, bounds[ndim * 2], x[ndim];
     gdouble lb[2], ub[2];
@@ -1079,7 +1070,7 @@ _nc_cluster_mass_plcl_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble l
   integrand_data data;
   NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
   /*gdouble sd_Pl, sd_CL; */
-  const gdouble sdsz_sdl = SD_SZ * SD_L;
+  const gdouble sdsz_sdl     = SD_SZ * SD_L;
   const gdouble norma_factor =  sdsz_sdl * sqrt (1.0 - COR * COR);
   gdouble P, err;
   NcmIntegrand2dim integ;
@@ -1118,15 +1109,15 @@ _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdoub
   const gdouble lnM_SZ = _SZ_lnmass_mean (mszl, lnM);
   const gdouble lnM_L  = _Lens_lnmass_mean (mszl, lnM);
 
-  printf ("lnMobs_params[0] = % 22.15g lnMobs_params[1] = % 22.15g\n", lnMobs_params[0], lnMobs_params[1]);
-  fflush (stdout);
-  printf ("%p\n", lnMobs);
-  fflush (stdout);
-  printf ("lnMobs[0] = % 22.15g lnMobs[1] = % 22.15g\n", lnMobs[0], lnMobs[1]);
-  fflush (stdout);
+  /* printf ("lnMobs_params[0] = % 22.15g lnMobs_params[1] = % 22.15g\n", lnMobs_params[0], lnMobs_params[1]); */
+  /* fflush (stdout); */
+  /* printf ("%p\n", lnMobs); */
+  /* fflush (stdout); */
+  /* printf ("lnMobs[0] = % 22.15g lnMobs[1] = % 22.15g\n", lnMobs[0], lnMobs[1]); */
+  /* fflush (stdout); */
 
   ncm_rng_lock (rng);
-  gsl_ran_bivariate_gaussian (rng->r, SD_SZ, SD_L, COR, &r_SZ, &r_L);
+  ncm_rng_bivariate_gaussian_gen (rng, SD_SZ, SD_L, COR, &r_SZ, &r_L);
   lnM_SZ_ran = lnM_SZ + r_SZ;
   lnM_L_ran  = lnM_L + r_L;
   ncm_rng_unlock (rng);
@@ -1137,14 +1128,12 @@ _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdoub
   ncm_rng_lock (rng);
 
   do {
-    sz_ran = gsl_ran_gaussian (rng->r, lnMobs_params[0]);
-    M_pl   = M_SZ_ran + sz_ran;
+    M_pl = ncm_rng_gaussian_gen (rng, M_SZ_ran, lnMobs_params[0]);
   } while (M_pl < 0.0);
 
   /*printf ("%8.5f % 20.15e % 20.15e % 20.15f\n", z, M_SZ_ran, sz_ran, 100.0 * fabs (sz_ran / M_SZ_ran));*/
   do {
-    l_ran = gsl_ran_gaussian (rng->r, lnMobs_params[1]);
-    M_cl  = M_L_ran + l_ran;
+    M_cl = ncm_rng_gaussian_gen (rng, M_L_ran, lnMobs_params[1]);
   } while (M_cl < 0.0);
 
   /*printf ("%8.5f % 20.15e % 20.15e % 20.15f\n", z, M_L_ran, l_ran, 100.0 * fabs (l_ran / M_L_ran));*/
@@ -1153,8 +1142,8 @@ _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdoub
   lnMobs[NC_CLUSTER_MASS_PLCL_MPL] = M_pl;
   lnMobs[NC_CLUSTER_MASS_PLCL_MCL] = M_cl;
 
-  printf ("Finished\n");
-  fflush (stdout);
+  /* printf ("Finished\n"); */
+  /* fflush (stdout); */
 
   return TRUE;
 

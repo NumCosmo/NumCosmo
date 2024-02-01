@@ -419,7 +419,7 @@ _nc_data_cluster_ncounts_gauss_mean_func (NcmDataGaussCov *gauss_cov, NcmMSet *m
   NcClusterRedshift *clusterz                   = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
   NcClusterMass *clusterm                       = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
   NcClusterAbundance *cad                       = self->cad;
-  gint i;
+  guint i;
 
   for (i = 0; i < self->index_map->len; i++)
   {
@@ -435,7 +435,7 @@ _nc_data_cluster_ncounts_gauss_mean_func (NcmDataGaussCov *gauss_cov, NcmMSet *m
 
     ncm_vector_set (vp, i, mean);
   }
-  
+
   return;
 }
 
@@ -464,13 +464,12 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
     NcClusterAbundance *cad     = self->cad;
     NcmMatrix *s_matrix;
     guint i, j;
+
     if (ncm_data_is_resampling (NCM_DATA (gauss_cov)) && (self->resample_s_matrix != NULL))
-      {
-      s_matrix = self->resample_s_matrix;}
+      s_matrix = self->resample_s_matrix;
     else
-      {
       s_matrix = self->s_matrix;
-      }
+
     if (s_matrix == NULL)
       g_error ("Super sample covariance matrix not set");
 
@@ -538,6 +537,7 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
         ncm_matrix_set (cov, i, i, poisson_i);
       }
     }
+
     return TRUE;
   }
 }
@@ -664,7 +664,6 @@ nc_data_cluster_ncounts_gauss_set_s_matrix (NcDataClusterNCountsGauss *ncounts_g
   ncm_matrix_clear (&self->s_matrix);
   self->s_matrix = ncm_matrix_ref (s_matrix);
 }
-
 
 /**
  * nc_data_cluster_ncounts_gauss_set_resample_s_matrix:

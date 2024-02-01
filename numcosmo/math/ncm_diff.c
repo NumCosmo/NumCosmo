@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            ncm_diff.c
  *
@@ -40,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_diff.h"
+#include "math/ncm_cfg.h"
 
 typedef struct _NcmDiffPrivate
 {
@@ -78,7 +77,7 @@ struct _NcmDiff
   GObject parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmDiff, ncm_diff, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmDiff, ncm_diff, G_TYPE_OBJECT)
 
 static void
 ncm_diff_init (NcmDiff *diff)

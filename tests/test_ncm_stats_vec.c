@@ -101,7 +101,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_stats_vec_subsample_autocorr_test,
               &test_ncm_stats_vec_free);
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_add ("/ncm/stats_vec/mean/get_var/subprocess", TestNcmStatsVec, NULL,
               &test_ncm_stats_vec_mean_new,
               &test_ncm_stats_vec_invalid_get_var,
@@ -114,7 +113,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_stats_vec_var_new,
               &test_ncm_stats_vec_invalid_get_cov,
               &test_ncm_stats_vec_free);
-#endif
 
   g_test_add ("/ncm/stats_vec/traps", TestNcmStatsVec, NULL,
               &test_ncm_stats_vec_var_new,
@@ -207,7 +205,7 @@ test_ncm_stats_vec_mean_test (TestNcmStatsVec *test, gconstpointer pdata)
 
     for (j = 0; j < test->v_size; j++)
     {
-      gdouble x_j = ncm_vector_get (test->mu, j) + sigma * gsl_ran_ugaussian (rng->r);
+      gdouble x_j = ncm_vector_get (test->mu, j) + sigma * ncm_rng_ugaussian_gen (rng);
 
       ncm_stats_vec_set (test->svec, j, x_j);
       ncm_matrix_set (test->xs, i, j, x_j);
@@ -255,7 +253,7 @@ test_ncm_stats_vec_var_test (TestNcmStatsVec *test, gconstpointer pdata)
 
     for (j = 0; j < test->v_size; j++)
     {
-      gdouble x_j = ncm_vector_get (test->mu, j) + sigma * gsl_ran_ugaussian (rng->r);
+      gdouble x_j = ncm_vector_get (test->mu, j) + sigma * ncm_rng_ugaussian_gen (rng);
 
       ncm_stats_vec_set (test->svec, j, x_j);
       ncm_matrix_set (test->xs, i, j, x_j);
@@ -308,7 +306,7 @@ test_ncm_stats_vec_cov_test (TestNcmStatsVec *test, gconstpointer pdata)
 
     for (j = 0; j < test->v_size; j++)
     {
-      gdouble x_j = ncm_vector_get (test->mu, j) + sigma * gsl_ran_ugaussian (rng->r);
+      gdouble x_j = ncm_vector_get (test->mu, j) + sigma * ncm_rng_ugaussian_gen (rng);
 
       if (j == 0)
       {
@@ -375,7 +373,7 @@ test_ncm_stats_vec_cov_robust_test (TestNcmStatsVec *test, gconstpointer pdata)
 
     for (j = 0; j < test->v_size; j++)
     {
-      gdouble x_j = sigma * gsl_ran_ugaussian (rng->r);
+      gdouble x_j = sigma * ncm_rng_ugaussian_gen (rng);
 
       if (j == 0)
         x_0 = x_j;
@@ -395,7 +393,7 @@ test_ncm_stats_vec_cov_robust_test (TestNcmStatsVec *test, gconstpointer pdata)
 
     for (j = 0; j < test->v_size; j++)
     {
-      gdouble x_j = 1.0 + sigma * gsl_ran_ugaussian (rng->r) / 10.0;
+      gdouble x_j = 1.0 + sigma * ncm_rng_ugaussian_gen (rng) / 10.0;
 
       if (j == 0)
       {
@@ -465,7 +463,7 @@ test_ncm_stats_vec_autocorr_test (TestNcmStatsVec *test, gconstpointer pdata)
 
     for (j = 0; j < test->v_size; j++)
     {
-      const gdouble epsilon_j = ncm_vector_get (test->mu, j) + sigma * gsl_ran_ugaussian (rng->r);
+      const gdouble epsilon_j = ncm_vector_get (test->mu, j) + sigma * ncm_rng_ugaussian_gen (rng);
       const gdouble x_j       = (a * ncm_vector_get (last, j) + epsilon_j);
 
       ncm_vector_set (last, j, x_j);
@@ -534,7 +532,7 @@ test_ncm_stats_vec_subsample_autocorr_test (TestNcmStatsVec *test, gconstpointer
 
     for (j = 0; j < test->v_size; j++)
     {
-      const gdouble epsilon_j = ncm_vector_get (test->mu, j) + sigma * gsl_ran_ugaussian (rng->r);
+      const gdouble epsilon_j = ncm_vector_get (test->mu, j) + sigma * ncm_rng_ugaussian_gen (rng);
       const gdouble x_j       = (a * ncm_matrix_get (last, chain_id, j) + epsilon_j);
 
       ncm_matrix_set (last, chain_id, j, x_j);
@@ -594,7 +592,6 @@ test_ncm_stats_vec_invalid_get_cov (TestNcmStatsVec *test, gconstpointer pdata)
 void
 test_ncm_stats_vec_traps (TestNcmStatsVec *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/stats_vec/mean/get_var/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 
@@ -603,6 +600,5 @@ test_ncm_stats_vec_traps (TestNcmStatsVec *test, gconstpointer pdata)
 
   g_test_trap_subprocess ("/ncm/stats_vec/var/get_cov/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 

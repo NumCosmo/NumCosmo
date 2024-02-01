@@ -99,7 +99,7 @@ struct _NcmFitMC
   GCond write_cond;
 };
 
-G_DEFINE_TYPE (NcmFitMC, ncm_fit_mc, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmFitMC, ncm_fit_mc, G_TYPE_OBJECT)
 
 static void
 ncm_fit_mc_init (NcmFitMC *mc)
@@ -157,9 +157,9 @@ ncm_fit_mc_set_property (GObject *object, guint prop_id, const GValue *value, GP
     case PROP_DATA_FILE:
       ncm_fit_mc_set_data_file (mc, g_value_get_string (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -193,9 +193,9 @@ ncm_fit_mc_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
     case PROP_DATA_FILE:
       g_value_set_string (value, ncm_mset_catalog_peek_filename (mc->mcat));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -416,8 +416,9 @@ static gint
 _ncm_fit_mc_resample (NcmFitMC *mc, NcmFit *fit)
 {
   NcmLikelihood *lh = ncm_fit_peek_likelihood (fit);
+  NcmDataset *dset  = ncm_likelihood_peek_dataset (lh);
 
-  mc->resample (lh->dset, mc->fiduc, ncm_mset_catalog_peek_rng (mc->mcat));
+  mc->resample (dset, mc->fiduc, ncm_mset_catalog_peek_rng (mc->mcat));
   mc->cur_sample_id++;
 
   return mc->cur_sample_id;
@@ -436,6 +437,7 @@ ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype)
 {
   const GEnumValue *eval = ncm_cfg_enum_get_value (NCM_TYPE_FIT_MC_RESAMPLE_TYPE, rtype);
   NcmLikelihood *lh      = ncm_fit_peek_likelihood (mc->fit);
+  NcmDataset *dset       = ncm_likelihood_peek_dataset (lh);
 
   if (mc->started)
     g_error ("ncm_fit_mc_set_rtype: Cannot change resample type during a run, call ncm_fit_mc_end_run() first.");
@@ -448,15 +450,15 @@ ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype)
   {
     case NCM_FIT_MC_RESAMPLE_FROM_MODEL:
       mc->resample = &ncm_dataset_resample;
-      ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_DISABLE);
+      ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_DISABLE);
       break;
     case NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX:
       mc->resample = &_ncm_fit_mc_resample_bstrap;
-      ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_PARTIAL);
+      ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_PARTIAL);
       break;
     case NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX:
       mc->resample = &_ncm_fit_mc_resample_bstrap;
-      ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_TOTAL);
+      ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_TOTAL);
       break;
     case NCM_FIT_MC_RESAMPLE_BOOTSTRAP_LEN:
       g_assert_not_reached ();
@@ -579,13 +581,13 @@ _ncm_fit_mc_update (NcmFitMC *mc, NcmFit *fit)
       break;
     case NCM_FIT_RUN_MSGS_SIMPLE:
     {
-      guint stepi          = mc->nt->task_pos % step;
+      guint stepi          = ncm_timer_task_completed (mc->nt) % step;
       gboolean log_timeout = FALSE;
 
-      if ((mc->nt->pos_time - mc->nt->last_log_time) > 60.0)
+      if (ncm_timer_elapsed_since_last_log (mc->nt) > 60.0)
         log_timeout = TRUE;
 
-      if (log_timeout || (stepi == 0) || (mc->nt->task_pos == mc->nt->task_len))
+      if (log_timeout || (stepi == 0) || ncm_timer_task_has_ended (mc->nt))
       {
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (mc->mcat);
@@ -642,6 +644,7 @@ ncm_fit_mc_start_run (NcmFitMC *mc)
   const guint param_len  = ncm_mset_total_len (mc->fiduc);
   const gint mcat_cur_id = ncm_mset_catalog_get_cur_id (mc->mcat);
   NcmRNG *mcat_rng       = ncm_mset_catalog_peek_rng (mc->mcat);
+  NcmDataset *dset       = ncm_likelihood_peek_dataset (lh);
 
   if (mc->started)
     g_error ("ncm_fit_mc_start_run: run already started, run ncm_fit_mc_end_run() first.");
@@ -656,7 +659,7 @@ ncm_fit_mc_start_run (NcmFitMC *mc)
     case NCM_FIT_RUN_MSGS_FULL:
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitMC: Starting Monte Carlo...\n");
-      ncm_dataset_log_info (lh->dset);
+      ncm_dataset_log_info (dset);
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitMC: Fiducial model set:\n");
       ncm_mset_pretty_log (mc->fiduc);
@@ -815,7 +818,7 @@ ncm_fit_mc_run (NcmFitMC *mc, guint n)
   if (!mc->started)
     g_error ("ncm_fit_mc_run: run not started, run ncm_fit_mc_start_run() first.");
 
-  if (n <= (mc->cur_sample_id + 1))
+  if (n <= (guint) (mc->cur_sample_id + 1))
   {
     if (mc->mtype > NCM_FIT_RUN_MSGS_NONE)
     {
@@ -1057,7 +1060,7 @@ ncm_fit_mc_run_lre (NcmFitMC *mc, guint prerun, gdouble lre)
  *
  * Computes the mean and covariance of the Monte Carlo run.
  * The mean and covariance are stored in the #NcmFit object of @mc.
- * The mean is stored in the #NcmFitFState object of the #NcmFit object
+ * The mean is stored in the #NcmFitState object of the #NcmFit object
  * and in the #NcmMSetCatalog object of @mc.
  *
  */

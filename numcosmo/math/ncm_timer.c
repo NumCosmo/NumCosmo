@@ -48,6 +48,7 @@
 #include "math/ncm_timer.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
+#include "math/ncm_stats_vec.h"
 
 enum
 {
@@ -58,7 +59,23 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcmTimer, ncm_timer, G_TYPE_OBJECT);
+struct _NcmTimer
+{
+  /*< private >*/
+  GObject parent_instance;
+  GTimer *gt;
+  gchar *name;
+  guint task_len;
+  guint task_pos;
+  gdouble pos_time;
+  gdouble last_log_time;
+  NcmStatsVec *time_stats;
+  GString *msg;
+  GString *msg_tmp1;
+  GString *msg_tmp2;
+};
+
+G_DEFINE_TYPE (NcmTimer, ncm_timer, G_TYPE_OBJECT)
 
 #define _NCM_TIMER_MSG_PREALLOC_SIZE 100
 
@@ -80,12 +97,12 @@ static void
 _ncm_timer_dispose (GObject *object)
 {
   NcmTimer *nt = NCM_TIMER (object);
-  
+
   ncm_g_string_clear (&nt->msg);
   ncm_g_string_clear (&nt->msg_tmp1);
   ncm_g_string_clear (&nt->msg_tmp2);
   ncm_stats_vec_clear (&nt->time_stats);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_timer_parent_class)->dispose (object);
 }
@@ -94,16 +111,16 @@ static void
 _ncm_timer_finalize (GObject *object)
 {
   NcmTimer *nt = NCM_TIMER (object);
-  
+
   if (nt->gt != NULL)
   {
     g_timer_destroy (nt->gt);
     nt->gt = NULL;
   }
-  
+
   g_free (nt->name);
   nt->name = NULL;
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_timer_parent_class)->finalize (object);
 }
@@ -112,17 +129,17 @@ static void
 _ncm_timer_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmTimer *nt = NCM_TIMER (object);
-  
+
   g_return_if_fail (NCM_IS_TIMER (object));
-  
+
   switch (prop_id)
   {
     case PROP_NAME:
       ncm_timer_set_name (nt, g_value_get_string (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -130,9 +147,9 @@ static void
 _ncm_timer_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmTimer *nt = NCM_TIMER (object);
-  
+
   g_return_if_fail (NCM_IS_TIMER (object));
-  
+
   switch (prop_id)
   {
     case PROP_NAME:
@@ -144,9 +161,9 @@ _ncm_timer_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
     case PROP_TASK_POS:
       g_value_set_uint (value, nt->task_pos);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -154,12 +171,12 @@ static void
 ncm_timer_class_init (NcmTimerClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->dispose      = &_ncm_timer_dispose;
   object_class->finalize     = &_ncm_timer_finalize;
   object_class->set_property = &_ncm_timer_set_property;
   object_class->get_property = &_ncm_timer_get_property;
-  
+
   /**
    * NcmTimer:name:
    *
@@ -173,7 +190,7 @@ ncm_timer_class_init (NcmTimerClass *klass)
                                                         "Timer's name",
                                                         "timer",
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmTimer:task-len:
    *
@@ -187,7 +204,7 @@ ncm_timer_class_init (NcmTimerClass *klass)
                                                       "Task length",
                                                       0, G_MAXUINT32, 0,
                                                       G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcmTimer:task-pos:
    *
@@ -214,7 +231,7 @@ NcmTimer *
 ncm_timer_new (void)
 {
   NcmTimer *nt = g_object_new (NCM_TYPE_TIMER, NULL);
-  
+
   return nt;
 }
 
@@ -272,7 +289,7 @@ ncm_timer_set_name (NcmTimer *nt, const gchar *name)
 {
   if (nt->name != NULL)
     g_free (nt->name);
-  
+
   nt->name = g_strdup (name);
 }
 
@@ -301,7 +318,7 @@ _ncm_timer_sec_to_dhms (gdouble t, guint *elap_day, guint *elap_hour, guint *ela
   *elap_min  = *elap_sec / 60;
   *elap_hour = *elap_min / 60;
   *elap_day  = *elap_hour / 24;
-  
+
   *elap_sec  = fmod (*elap_sec, 60);
   *elap_min  = *elap_min % 60;
   *elap_hour = *elap_hour % 24;
@@ -340,7 +357,7 @@ void
 ncm_timer_elapsed_dhms (NcmTimer *nt, guint *elap_day, guint *elap_hour, guint *elap_min, gdouble *elap_sec)
 {
   gdouble elapsed = ncm_timer_elapsed (nt);
-  
+
   _ncm_timer_sec_to_dhms (elapsed, elap_day, elap_hour, elap_min, elap_sec);
 }
 
@@ -357,10 +374,10 @@ ncm_timer_elapsed_dhms_str (NcmTimer *nt)
 {
   guint elap_day, elap_hour, elap_min;
   gdouble elap_sec;
-  
+
   ncm_timer_elapsed_dhms (nt, &elap_day, &elap_hour, &elap_min, &elap_sec);
   _ncm_timer_dhms_to_string (nt->msg, elap_day, elap_hour, elap_min, elap_sec);
-  
+
   return nt->msg->str;
 }
 
@@ -376,7 +393,7 @@ ncm_timer_start (NcmTimer *nt)
 {
   if (nt->task_len != 0)
     g_error ("ncm_timer_start: cannot start timer during a task, call task_end first.");
-  
+
   g_timer_start (nt->gt);
 }
 
@@ -392,7 +409,7 @@ ncm_timer_stop (NcmTimer *nt)
 {
   if (nt->task_len != 0)
     g_error ("ncm_timer_stop: cannot end timer during a task, call task_end first.");
-  
+
   g_timer_stop (nt->gt);
 }
 
@@ -408,7 +425,7 @@ ncm_timer_continue (NcmTimer *nt)
 {
   if (nt->task_len != 0)
     g_error ("ncm_timer_continue: cannot continue timer during a task, call task_end first.");
-  
+
   g_timer_continue (nt->gt);
 }
 
@@ -427,10 +444,10 @@ ncm_timer_task_start (NcmTimer *nt, guint task_len)
 {
   if (nt->task_len != 0)
     g_error ("ncm_timer_task_start: cannot start a new task during a task, call task_end first.");
-  
+
   if (task_len == 0)
     g_error ("ncm_timer_task_start: cannot start task with 0 itens.");
-  
+
   ncm_timer_start (nt);
   nt->task_len      = task_len;
   nt->task_pos      = 0;
@@ -454,12 +471,12 @@ ncm_timer_task_increment (NcmTimer *nt)
   {
     const gdouble tot_elapsed = ncm_timer_elapsed (nt);
     const gdouble elap_sec    = tot_elapsed - nt->pos_time;
-    
+
     nt->pos_time = tot_elapsed;
     nt->task_pos++;
     ncm_stats_vec_set (nt->time_stats, 0, elap_sec);
     ncm_stats_vec_update (nt->time_stats);
-    
+
     if (nt->task_pos > nt->task_len)
       g_error ("ncm_timer_task_increment: incrementing past the end of the task.");
   }
@@ -480,16 +497,33 @@ ncm_timer_task_accumulate (NcmTimer *nt, guint nitens)
   {
     const gdouble tot_elapsed = ncm_timer_elapsed (nt);
     const gdouble elap_sec    = tot_elapsed - nt->pos_time;
-    
+
     nt->pos_time  = tot_elapsed;
     nt->task_pos += nitens;
-    
+
     ncm_stats_vec_set (nt->time_stats, 0, elap_sec / nitens);
     ncm_stats_vec_update_weight (nt->time_stats, nitens);
-    
+
     if (nt->task_pos > nt->task_len)
       g_error ("ncm_timer_task_accumulate: incrementing past the end of the task.");
   }
+}
+
+/**
+ * ncm_timer_task_completed:
+ * @nt: a #NcmTimer
+ *
+ * This function returns the number of tasks already completed.
+ * The @nt task length must be greater than 0.
+ *
+ * Returns: the number of tasks already completed.
+ */
+guint
+ncm_timer_task_completed (NcmTimer *nt)
+{
+  g_assert (nt->task_len != 0);
+
+  return nt->task_pos;
 }
 
 /**
@@ -567,12 +601,33 @@ ncm_timer_task_is_running (NcmTimer *nt)
 }
 
 /**
+ * ncm_timer_task_has_ended:
+ * @nt: a #NcmTimer
+ *
+ * This function verifies if @nt task has ended.
+ * The @nt task length must be greater than 0.
+ *
+ * Returns: TRUE if the task has ended, FALSE otherwise.
+ */
+gboolean
+ncm_timer_task_has_ended (NcmTimer *nt)
+{
+  g_assert (nt->task_len != 0);
+  {
+    gboolean ok = nt->task_len == nt->task_pos;
+
+    return ok;
+  }
+}
+
+/**
  * ncm_timer_task_end:
  * @nt: a #NcmTimer
  *
  * This function ends @nt task.
  * The @nt task length must be greater than 0.
  *
+ * Returns: TRUE if the task is finished, FALSE otherwise.
  */
 gboolean
 ncm_timer_task_end (NcmTimer *nt)
@@ -580,11 +635,25 @@ ncm_timer_task_end (NcmTimer *nt)
   g_assert (nt->task_len != 0);
   {
     gboolean ok = nt->task_len == nt->task_pos;
-    
+
     nt->task_len = 0;
-    
+
     return ok;
   }
+}
+
+/**
+ * ncm_timer_elapsed_since_last_log:
+ * @nt: a #NcmTimer
+ *
+ * This function returns the elapsed time since the last log.
+ *
+ * Returns: elapsed time since the last log.
+ */
+gdouble
+ncm_timer_elapsed_since_last_log (NcmTimer *nt)
+{
+  return ncm_timer_elapsed (nt) - nt->last_log_time;
 }
 
 /**
@@ -614,7 +683,7 @@ ncm_timer_task_time_left (NcmTimer *nt)
 {
   const gdouble mean_time = ncm_timer_task_mean_time (nt);
   const guint task_left   = nt->task_len - nt->task_pos;
-  
+
   return mean_time * task_left;
 }
 
@@ -635,13 +704,13 @@ ncm_timer_task_elapsed_str (NcmTimer *nt)
   {
     guint elap_day, elap_hour, elap_min;
     gdouble elap_sec;
-    
+
     ncm_timer_elapsed_dhms (nt, &elap_day, &elap_hour, &elap_min, &elap_sec);
     _ncm_timer_dhms_to_string (nt->msg_tmp1, elap_day, elap_hour, elap_min, elap_sec);
     g_string_printf (nt->msg,
                      "# Task:%s, completed: %u of %u, elapsed time: %s",
                      nt->name, nt->task_pos, nt->task_len, nt->msg_tmp1->str);
-    
+
     return nt->msg->str;
   }
 }
@@ -663,17 +732,17 @@ ncm_timer_task_mean_time_str (NcmTimer *nt)
     gdouble sec;
     gdouble mean_time  = ncm_timer_task_mean_time (nt);
     gdouble sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
-    
+
     _ncm_timer_sec_to_dhms (mean_time, &day, &hour, &min, &sec);
     _ncm_timer_dhms_to_string (nt->msg_tmp1, day, hour, min, sec);
-    
+
     _ncm_timer_sec_to_dhms (sigma_time, &day, &hour, &min, &sec);
     _ncm_timer_dhms_to_string (nt->msg_tmp2, day, hour, min, sec);
-    
+
     g_string_printf (nt->msg,
                      "# Task:%s, mean time: %s +/- %s",
                      nt->name, nt->msg_tmp1->str, nt->msg_tmp2->str);
-    
+
     return nt->msg->str;
   }
 }
@@ -698,17 +767,17 @@ ncm_timer_task_time_left_str (NcmTimer *nt)
     const guint task_left         = nt->task_len - nt->task_pos;
     const gdouble mean_time_left  = mean_time * task_left;
     const gdouble sigma_time_left = sigma_time * task_left;
-    
+
     _ncm_timer_sec_to_dhms (mean_time_left, &day, &hour, &min, &sec);
     _ncm_timer_dhms_to_string (nt->msg_tmp1, day, hour, min, sec);
-    
+
     _ncm_timer_sec_to_dhms (sigma_time_left, &day, &hour, &min, &sec);
     _ncm_timer_dhms_to_string (nt->msg_tmp2, day, hour, min, sec);
-    
+
     g_string_printf (nt->msg,
                      "# Task:%s, time left: %s +/- %s",
                      nt->name, nt->msg_tmp1->str, nt->msg_tmp2->str);
-    
+
     return nt->msg->str;
   }
 }
@@ -728,15 +797,15 @@ ncm_timer_task_start_datetime_str (NcmTimer *nt)
   const gdouble elap  = ncm_timer_elapsed (nt);
   GDateTime *dt_start = g_date_time_add_seconds (dt_now, -elap);
   gchar *start_str    = g_date_time_format (dt_start, "%a %b %d %Y, %T");
-  
+
   g_string_printf (nt->msg,
                    "# Task:%s, started at: %s",
                    nt->name, start_str);
-  
+
   g_date_time_unref (dt_now);
   g_date_time_unref (dt_start);
   g_free (start_str);
-  
+
   return nt->msg->str;
 }
 
@@ -751,28 +820,28 @@ ncm_timer_task_start_datetime_str (NcmTimer *nt)
 const gchar *
 ncm_timer_task_end_datetime_str (NcmTimer *nt)
 {
-  GDateTime *dt_now = g_date_time_new_now_local ();
-  const gdouble mean_time = ncm_stats_vec_get_mean (nt->time_stats, 0);
-  const gdouble sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
-  const guint task_left = nt->task_len - nt->task_pos;
-  const gdouble mean_time_left = mean_time * task_left;
+  GDateTime *dt_now             = g_date_time_new_now_local ();
+  const gdouble mean_time       = ncm_stats_vec_get_mean (nt->time_stats, 0);
+  const gdouble sigma_time      = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
+  const guint task_left         = nt->task_len - nt->task_pos;
+  const gdouble mean_time_left  = mean_time * task_left;
   const gdouble sigma_time_left = sigma_time * task_left;
-  GDateTime *dt_end = g_date_time_add_seconds (dt_now, mean_time_left);
-  gchar *end_str = g_date_time_format (dt_end, "%a %b %d %Y, %T");
+  GDateTime *dt_end             = g_date_time_add_seconds (dt_now, mean_time_left);
+  gchar *end_str                = g_date_time_format (dt_end, "%a %b %d %Y, %T");
   guint day, hour, min;
   gdouble sec;
-  
+
   _ncm_timer_sec_to_dhms (sigma_time_left, &day, &hour, &min, &sec);
   _ncm_timer_dhms_to_string (nt->msg_tmp1, day, hour, min, sec);
-  
+
   g_string_printf (nt->msg,
                    "# Task:%s, estimated to end at: %s +/- %s",
                    nt->name, end_str, nt->msg_tmp1->str);
-  
+
   g_date_time_unref (dt_now);
   g_date_time_unref (dt_end);
   g_free (end_str);
-  
+
   return nt->msg->str;
 }
 
@@ -789,14 +858,14 @@ ncm_timer_task_cur_datetime_str (NcmTimer *nt)
 {
   GDateTime *dt_now = g_date_time_new_now_local ();
   gchar *now_str    = g_date_time_format (dt_now, "%a %b %d %Y, %T");
-  
+
   g_string_printf (nt->msg,
                    "# Task:%s, current time:        %s",
                    nt->name, now_str);
-  
+
   g_date_time_unref (dt_now);
   g_free (now_str);
-  
+
   return nt->msg->str;
 }
 

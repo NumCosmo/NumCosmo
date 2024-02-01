@@ -1,0 +1,133 @@
+option(
+       'tests',
+       type: 'boolean',
+       value: true,
+       description: 'build tests',
+)
+
+option(
+       'installed_tests',
+       type: 'boolean',
+       value: false,
+       description: 'enable installed tests',
+)
+
+option(
+       'numcosmo_debug',
+       type: 'feature',
+       value: 'auto',
+       description: 'Enable NumCosmo debug infrastructure',
+)
+
+option(
+       'numcosmo_assert',
+       type: 'boolean',
+       value: true,
+       description: 'Enable NumCosmo assertion',
+)
+
+option(
+       'numcosmo_checks',
+       type: 'boolean',
+       value: true,
+       description: 'Enable NumCosmo checks such as API guards',
+)
+
+option(
+       'introspection',
+       type: 'feature',
+       value: 'auto',
+       description: 'Enable generating introspection data (requires gobject-introspection)',
+)
+
+option(
+       'vala',
+       type: 'feature',
+       value: 'auto',
+       description: 'Build VAPI and Vala plugins',
+)
+
+option(
+       'gtkdoc',
+       type: 'feature',
+       value: 'auto',
+       description: 'Build documentation with gtk-doc',
+)
+
+#######################################################################################
+# BLAS/LAPACK options, shamelessly copied from numpy
+#######################################################################################
+
+option(
+       'blas',
+       type: 'string',
+       value: 'auto',
+       description: 'Option for BLAS library selection. By default, try to find any in the order given by `blas-order`',
+)
+option(
+       'lapack',
+       type: 'string',
+       value: 'auto',
+       description: 'Option for LAPACK library selection. By default, try to find any in the order given by `lapack-order`',
+)
+option(
+       'blas-order',
+       type: 'array',
+       value: ['mkl', 'accelerate', 'openblas', 'flexiblas', 'blis', 'blas'],
+)
+option(
+       'lapack-order',
+       type: 'array',
+       value: ['mkl', 'accelerate', 'openblas', 'flexiblas', 'lapack'],
+)
+
+#######################################################################################
+# CUBA options
+#######################################################################################
+
+option(
+       'libcuba-max-dim',
+       type: 'integer',
+       value: 16,
+       description: 'Maximum number of dimensions for libcuba',
+)
+
+option(
+       'libcuba-max-comp',
+       type: 'integer',
+       value: 4,
+       description: 'Maximum number components for libcuba',
+)
+
+#######################################################################################
+# GSL options
+#######################################################################################
+
+option(
+       'gsl_range_check',
+       type: 'boolean',
+       value: false,
+       description: 'Enable gsl range checking',
+)
+
+#######################################################################################
+# NumCosmoPy
+#######################################################################################
+
+option(
+       'numcosmo_py',
+       type: 'boolean',
+       value: true,
+       description: 'Install NumCosmoPy using pip',
+)
+
+#######################################################################################
+# MPI options
+#######################################################################################
+
+option(
+       'debug-mpi',
+       type: 'boolean',
+       value: false,
+       description: 'Enable MPI debug messages',
+)

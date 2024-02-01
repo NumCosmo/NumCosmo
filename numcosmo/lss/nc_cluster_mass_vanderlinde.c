@@ -45,13 +45,13 @@
 #include <gsl/gsl_randist.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcClusterMassVanderlinde, nc_cluster_mass_vanderlinde, NC_TYPE_CLUSTER_MASS);
+G_DEFINE_TYPE (NcClusterMassVanderlinde, nc_cluster_mass_vanderlinde, NC_TYPE_CLUSTER_MASS)
 
-#define VECTOR (NCM_MODEL (msz)->params)
-#define A_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_VANDERLINDE_A_SZ))
-#define B_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_VANDERLINDE_B_SZ))
-#define C_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_VANDERLINDE_C_SZ))
-#define D_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_VANDERLINDE_D_SZ))
+#define VECTOR (NCM_MODEL (msz))
+#define A_SZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_VANDERLINDE_A_SZ))
+#define B_SZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_VANDERLINDE_B_SZ))
+#define C_SZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_VANDERLINDE_C_SZ))
+#define D_SZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_VANDERLINDE_D_SZ))
 
 enum
 {
@@ -260,13 +260,13 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
                               NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_D_SZ,
                               NCM_PARAM_TYPE_FIXED);
 
-  parent_class->P              = &_nc_cluster_mass_vanderlinde_significance_m_p;
-  parent_class->intP           = &_nc_cluster_mass_vanderlinde_intp;
-  parent_class->P_limits       = &_nc_cluster_mass_vanderlinde_p_limits;
-  parent_class->N_limits       = &_nc_cluster_mass_vanderlinde_n_limits;
-  parent_class->resample       = &_nc_cluster_mass_vanderlinde_resample;
-  parent_class->obs_len        = 1;
-  parent_class->obs_params_len = 0;
+  parent_class->P               = &_nc_cluster_mass_vanderlinde_significance_m_p;
+  parent_class->intP            = &_nc_cluster_mass_vanderlinde_intp;
+  parent_class->P_limits        = &_nc_cluster_mass_vanderlinde_p_limits;
+  parent_class->N_limits        = &_nc_cluster_mass_vanderlinde_n_limits;
+  parent_class->resample        = &_nc_cluster_mass_vanderlinde_resample;
+  parent_class->_obs_len        = 1;
+  parent_class->_obs_params_len = 0;
 
   ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 }
@@ -411,13 +411,13 @@ _nc_cluster_mass_vanderlinde_resample (NcClusterMass *clusterm, NcHICosmo *cosmo
   lnzeta = B_SZ * (lnM - log (msz->M0)) + C_SZ * log ((1.0 + z) / (1.0 + msz->z0)) + log (A_SZ);
 
   ncm_rng_lock (rng);
-  lnzeta_obs = lnzeta + gsl_ran_gaussian (rng->r, D_SZ);
+  lnzeta_obs = ncm_rng_gaussian_gen (rng, lnzeta, D_SZ);
 
   zeta_obs = exp (lnzeta_obs);
 
   xi_mean = sqrt (zeta_obs * zeta_obs + 3.0);
 
-  xi[0] = xi_mean + gsl_ran_gaussian (rng->r, 1.0);
+  xi[0] = ncm_rng_gaussian_gen (rng, xi_mean, 1.0);
   ncm_rng_unlock (rng);
 
   /*printf ("M = %e z = %.5g zeta = %.5g xi = %.5g xiobs = %.5g\n", exp(lnM), z, zeta_obs, xi_mean, xi[0]); */

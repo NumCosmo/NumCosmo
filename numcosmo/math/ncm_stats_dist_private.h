@@ -38,7 +38,7 @@
 
 G_BEGIN_DECLS
 
-struct _NcmStatsDistPrivate
+typedef struct _NcmStatsDistPrivate
 {
   /*< private >*/
   NcmStatsDistKernel *kernel;
@@ -74,7 +74,7 @@ struct _NcmStatsDistPrivate
   GArray *m2lnp_sort;
   GArray *m2lnp;
   NcmRNG *rng;
-};
+} NcmStatsDistPrivate;
 
 G_END_DECLS
 

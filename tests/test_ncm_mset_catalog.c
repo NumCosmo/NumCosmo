@@ -30,7 +30,7 @@
 
 typedef struct _TestNcmMSetCatalog
 {
-  gint dim;
+  guint dim;
   NcmRNG *rng;
   NcmDataGaussCovMVND *data_mvnd;
   NcmMSetCatalog *mcat;
@@ -112,12 +112,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_catalog_traps,
               &test_ncm_mset_catalog_free);
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_add ("/ncm/mset/catalog/invalid/run/subprocess", TestNcmMSetCatalog, NULL,
               &test_ncm_mset_catalog_new,
               &test_ncm_mset_catalog_invalid_run,
               &test_ncm_mset_catalog_free);
-#endif
+
   g_test_run ();
 }
 
@@ -127,7 +126,7 @@ main (gint argc, gchar *argv[])
 void
 test_ncm_mset_catalog_new (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
-  const gint dim                 = test->dim = g_test_rand_int_range (2, 5);
+  const guint dim                = test->dim = g_test_rand_int_range (2, 5);
   NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (dim, 5.0e-3, 1.0e-2, 1.0, 1.0, 2.0, rng);
   NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (dim);
@@ -210,7 +209,7 @@ test_ncm_mset_catalog_mean (TestNcmMSetCatalog *test, gconstpointer pdata)
   NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
   NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
   const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
-  gint i;
+  guint i;
 
   for (i = 0; i < nt; i++)
   {
@@ -255,7 +254,7 @@ test_ncm_mset_catalog_cov (TestNcmMSetCatalog *test, gconstpointer pdata)
   NcmMatrix *data_cov  = ncm_data_gauss_cov_peek_cov (cov);
   NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
   const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
-  gint i;
+  guint i;
 
   for (i = 0; i < nt; i++)
   {
@@ -308,7 +307,7 @@ test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata)
   gdouble lnnorm_sd;
   gulong N;
   gulong Nin;
-  gint i;
+  guint i;
 
   N     = Nin = 0;
   ratio = 0.0;
@@ -440,7 +439,7 @@ test_ncm_mset_catalog_vol (TestNcmMSetCatalog *test, gconstpointer pdata)
   NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
   gdouble glnvol;
   gdouble lnnorm_sd;
-  gint i;
+  guint i;
 
   for (i = 0; i < nt; i++)
   {
@@ -476,7 +475,7 @@ test_ncm_mset_catalog_bestfit (TestNcmMSetCatalog *test, gconstpointer pdata)
   gdouble m2lnL_min    = GSL_POSINF;
   NcmVector *min_row   = ncm_vector_new (test->dim);
   NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
-  gint i;
+  guint i;
 
   for (i = 0; i < nt; i++)
   {
@@ -539,7 +538,7 @@ test_ncm_mset_catalog_percentile (TestNcmMSetCatalog *test, gconstpointer pdata)
   NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
   GArray *m2lnL_array  = g_array_new (FALSE, FALSE, sizeof (gdouble));
   guint nth            = 0;
-  gint i;
+  guint i;
 
   for (i = 0; i < nt; i++)
   {
@@ -600,7 +599,7 @@ test_ncm_mset_catalog_autocorrelation (TestNcmMSetCatalog *test, gconstpointer p
   NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
   const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
   NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
-  gint i;
+  guint i;
 
   for (i = 0; i < nt; i++)
   {
@@ -616,16 +615,16 @@ test_ncm_mset_catalog_autocorrelation (TestNcmMSetCatalog *test, gconstpointer p
   {
     NcmVector *tau = ncm_mset_catalog_peek_autocorrelation_tau (test->mcat);
 
-    g_assert (ncm_vector_is_finite (tau));
+    g_assert_true (ncm_vector_is_finite (tau));
   }
 
   {
     GArray *accept_ratio_array = ncm_mset_catalog_peek_accept_ratio_array (test->mcat);
 
     if (ncm_mset_catalog_nchains (test->mcat) > 1)
-      g_assert (accept_ratio_array != NULL);
+      g_assert_true (accept_ratio_array != NULL);
     else
-      g_assert (accept_ratio_array == NULL);
+      g_assert_true (accept_ratio_array == NULL);
   }
 }
 
@@ -637,7 +636,7 @@ test_ncm_mset_catalog_accept_ratio_array (TestNcmMSetCatalog *test, gconstpointe
   NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
   const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
   NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
-  gint i;
+  guint i;
 
   for (i = 0; i < nt; i++)
   {
@@ -656,18 +655,16 @@ test_ncm_mset_catalog_accept_ratio_array (TestNcmMSetCatalog *test, gconstpointe
     {
       const gint max_time = ncm_mset_catalog_max_time (test->mcat);
 
-      g_assert (accept_ratio_array != NULL);
+      g_assert_true (accept_ratio_array != NULL);
 
       g_assert_cmpuint (accept_ratio_array->len + 1, ==, max_time);
     }
     else
     {
-      g_assert (accept_ratio_array == NULL);
+      g_assert_true (accept_ratio_array == NULL);
     }
   }
 }
-
-#if GLIB_CHECK_VERSION (2, 38, 0)
 
 void
 test_ncm_mset_catalog_traps (TestNcmMSetCatalog *test, gconstpointer pdata)
@@ -675,15 +672,6 @@ test_ncm_mset_catalog_traps (TestNcmMSetCatalog *test, gconstpointer pdata)
   g_test_trap_subprocess ("/ncm/mset/catalog/invalid/run/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 }
-
-#else
-
-void
-test_ncm_mset_catalog_traps (TestNcmMSetCatalog *test, gconstpointer pdata)
-{
-}
-
-#endif
 
 void
 test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer pdata)

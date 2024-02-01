@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_sphere_map_block.c
  *
@@ -28,7 +29,7 @@
 static void
 NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_run_over_l) (NcmSphereMap * pix, NcmSFSphericalHarmonicsY *sphaY, NcmComplex *restrict alm, const NcmComplex *Fim_i)
 {
-  NcmSphereMapPrivate * const self = pix->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (pix);
   const gint lmax                  = self->lmax;
   const gint lmaxm1                = self->lmax - 1;
   const gint lmaxmstepm2           = self->lmax - NCM_SPHERE_MAP_BLOCK_STEPM2;
@@ -85,7 +86,7 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_run_over_l) (NcmSphereMap * pix, NcmSF
 static void
 NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_run_over_l_array) (NcmSphereMap * pix, NcmSFSphericalHarmonicsYArray *sphaYa, NcmComplex *restrict alm, const NcmComplex *restrict Fim_i)
 {
-  NcmSphereMapPrivate * const self = pix->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (pix);
   const gint lmax                  = self->lmax;
   const gint lmaxm1                = self->lmax - 1;
   const gint lmaxmstepm2           = self->lmax - NCM_SPHERE_MAP_BLOCK_STEPM2;
@@ -166,7 +167,7 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_run_over_l_array) (NcmSphereMap * pix,
 static void
 NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_prepare_circle) (NcmSphereMap * pix, const gint64 r_i, const gint64 i, _fft_complex *restrict *restrict Fima, gdouble *theta, gdouble *phi, gint64 *ring_size, gint64 *ring_size_2)
 {
-  NcmSphereMapPrivate * const self = pix->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (pix);
   const gint64 ring_fi             = ncm_sphere_map_get_ring_first_index (pix, r_i);
 
   ring_size[i]   = ncm_sphere_map_get_ring_size (pix, r_i);
@@ -180,7 +181,8 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_prepare_circle) (NcmSphereMap * pix, c
 static gboolean
 NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_get_alm_from_apcircles) (NcmSphereMap * pix, NcmSFSphericalHarmonicsYArray *sphaYa, NcmComplex *restrict alm, const gint64 r_ini, const gint64 nrings, const gint64 mmax)
 {
-  NcmSphereMapPrivate * const self         = pix->priv;
+  NcmSphereMapPrivate * const self         = ncm_sphere_map_get_instance_private (pix);
+  const gint lmax                          = self->lmax;
   const gdouble pix_area                   = 4.0 * M_PI / self->npix;
   const NcmSphereMapBlock * restrict block = &g_array_index (self->block_data, NcmSphereMapBlock, r_ini / NCM_SPHERE_MAP_BLOCK_NC);
 
@@ -225,7 +227,7 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_get_alm_from_apcircles) (NcmSphereMap 
       ncm_sf_spherical_harmonics_Y_array_next_m (sphaYa, NCM_SPHERE_MAP_BLOCK_NCT);
       l0 = ncm_sf_spherical_harmonics_Y_array_get_l (sphaYa);
 
-      if (l0 > self->lmax)
+      if (l0 > lmax)
       {
         return FALSE;
 
@@ -233,13 +235,13 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_get_alm_from_apcircles) (NcmSphereMap 
       }
       else
       {
-        alm += self->lmax - m + 1;
+        alm += lmax - m + 1;
         m    = ncm_sf_spherical_harmonics_Y_array_get_m (sphaYa);
       }
     }
     else
     {
-      if (m < self->lmax)
+      if (m < lmax)
       {
         ncm_sf_spherical_harmonics_Y_array_next_m (sphaYa, NCM_SPHERE_MAP_BLOCK_NCT);
 
@@ -258,7 +260,8 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_get_alm_from_apcircles) (NcmSphereMap 
 static void
 NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_get_alm_from_circle) (NcmSphereMap * pix, NcmSFSphericalHarmonicsY *sphaY, NcmComplex *restrict alm, gint64 r_i)
 {
-  NcmSphereMapPrivate * const self = pix->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (pix);
+  const gint lmax                  = self->lmax;
   const gint64 ring_size           = ncm_sphere_map_get_ring_size (pix, r_i);
   const gint64 ring_size_2         = ring_size / 2;
   const gint64 ring_fi             = ncm_sphere_map_get_ring_first_index (pix, r_i);
@@ -289,18 +292,18 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_get_alm_from_circle) (NcmSphereMap * p
       phase *= expIphi;
       NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_run_over_l) (pix, sphaY, alm, NCM_COMPLEX (&ring_m));
 
-      if (m < self->lmax)
+      if (m < lmax)
       {
         ncm_sf_spherical_harmonics_Y_next_m (sphaY);
         l0 = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
 
-        if (l0 > self->lmax)
+        if (l0 > lmax)
         {
           break;
         }
         else
         {
-          alm += self->lmax - m + 1;
+          alm += lmax - m + 1;
           m    = ncm_sf_spherical_harmonics_Y_get_m (sphaY);
         }
       }
@@ -326,18 +329,18 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_get_alm_from_circle) (NcmSphereMap * p
 
       NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_run_over_l) (pix, sphaY, alm, NCM_COMPLEX (&ring_m));
 
-      if (m < self->lmax)
+      if (m < lmax)
       {
         ncm_sf_spherical_harmonics_Y_next_m (sphaY);
         l0 = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
 
-        if (l0 > self->lmax)
+        if (l0 > lmax)
         {
           break;
         }
         else
         {
-          alm += self->lmax - m + 1;
+          alm += lmax - m + 1;
           m    = ncm_sf_spherical_harmonics_Y_get_m (sphaY);
         }
       }
@@ -352,12 +355,13 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_get_alm_from_circle) (NcmSphereMap * p
 static void
 NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_map2alm_run) (NcmSphereMap * pix)
 {
-  NcmSphereMapPrivate * const self = pix->priv;
-  NcmSFSphericalHarmonicsY *sphaY = ncm_sf_spherical_harmonics_Y_new (self->spha, NCM_SF_SPHERICAL_HARMONICS_DEFAULT_ABSTOL);
-  NcmComplex * restrict alm = NCM_COMPLEX (self->alm);
-  const gint64 nrings = ncm_sphere_map_get_nrings (pix);
-  const gint64 lr_i = self->block_ring_size;
-  const gint64 nrleft = self->last_sing_ring;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (pix);
+  NcmSFSphericalHarmonicsY *sphaY  = ncm_sf_spherical_harmonics_Y_new (self->spha, NCM_SF_SPHERICAL_HARMONICS_DEFAULT_ABSTOL);
+  NcmComplex * restrict alm        = NCM_COMPLEX (self->alm);
+  const gint lmax                  = self->lmax;
+  const gint64 nrings              = ncm_sphere_map_get_nrings (pix);
+  const gint64 lr_i                = self->block_ring_size;
+  const gint64 nrleft              = self->last_sing_ring;
   gint64 r_i, m, offset;
 
   memset (alm, 0, sizeof (NcmComplex) * self->alm_len);
@@ -373,17 +377,17 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_map2alm_run) (NcmSphereMap * pix)
   m      = 0;
   offset = 0;
 
-  while (m < self->lmax)
+  while (m < lmax)
   {
     gboolean c_all = FALSE;
     gint64 chunk   = 0;
 
     do {
-      chunk += (self->lmax + 1 - m);
+      chunk += (lmax + 1 - m);
       m++;
-    } while ((chunk < (1024 * NCM_SPHERE_MAP_BLOCK_CM)) && (m < self->lmax + 1));
+    } while ((chunk < (1024 * NCM_SPHERE_MAP_BLOCK_CM)) && (m < lmax + 1));
 
-    /*printf ("# mmax %ld lmax %u chunk %ld offset %ld\n", m - 1, self->lmax, chunk, offset);*/
+    /*printf ("# mmax %ld lmax %u chunk %ld offset %ld\n", m - 1, lmax, chunk, offset);*/
 
     for (r_i = 0; r_i < lr_i; r_i += NCM_SPHERE_MAP_BLOCK_NC)
     {
@@ -404,14 +408,16 @@ NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_map2alm_run) (NcmSphereMap * pix)
   {
     NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_get_alm_from_circle) (pix, sphaY, alm, r_i);
   }
+
   ncm_sf_spherical_harmonics_Y_free (sphaY);
 }
 
 static void
 NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_D_m) (NcmSphereMap * pix, NcmSFSphericalHarmonicsY *sphaY, NcmComplex *restrict *restrict alm_ptr, const gint ring_size, const gint m, NcmComplex *D_m)
 {
-  NcmSphereMapPrivate * const self = pix->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (pix);
   const gint lmaxmstepm2           = self->lmax - NCM_SPHERE_MAP_BLOCK_INV_STEPM2;
+  const gint lmax                  = self->lmax;
   gdouble Ylm[NCM_SPHERE_MAP_BLOCK_INV_STEP];
   gint l;
 
@@ -433,7 +439,7 @@ NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_D_m) (NcmSphereMap * pix, NcmS
     l           = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
   }
 
-  if (l <= self->lmax)
+  if (l <= lmax)
   {
     while (TRUE)
     {
@@ -443,7 +449,7 @@ NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_D_m) (NcmSphereMap * pix, NcmS
 
       alm_ptr[0]++;
 
-      if (l < self->lmax)
+      if (l < lmax)
       {
         ncm_sf_spherical_harmonics_Y_next_l (sphaY);
         l = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
@@ -461,10 +467,11 @@ NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_D_m) (NcmSphereMap * pix, NcmS
 static void
 NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_D_m_array) (NcmSphereMap * pix, NcmSFSphericalHarmonicsYArray *sphaYa, NcmComplex *restrict *restrict alm_ptr, const gint m, NcmComplex *D_m)
 {
-  NcmSphereMapPrivate * const self = pix->priv;
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (pix);
   const gint lmaxmstepm2           = self->lmax - NCM_SPHERE_MAP_BLOCK_INV_STEPM2;
+  const gint lmax                  = self->lmax;
+  gint l                           = 0;
   gdouble Ylm[NCM_SPHERE_MAP_BLOCK_INV_STEP * NCM_SPHERE_MAP_BLOCK_INV_NCT];
-  gint l = 0;
 
   l           = ncm_sf_spherical_harmonics_Y_array_get_l (sphaYa);
   alm_ptr[0] += (l - m);
@@ -489,7 +496,7 @@ NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_D_m_array) (NcmSphereMap * pix
     l           = ncm_sf_spherical_harmonics_Y_array_get_l (sphaYa);
   }
 
-  if (l <= self->lmax)
+  if (l <= lmax)
   {
     while (TRUE)
     {
@@ -504,7 +511,7 @@ NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_D_m_array) (NcmSphereMap * pix
 
       alm_ptr[0]++;
 
-      if (l < self->lmax)
+      if (l < lmax)
       {
         ncm_sf_spherical_harmonics_Y_array_next_l (sphaYa, NCM_SPHERE_MAP_BLOCK_INV_NCT);
         l = ncm_sf_spherical_harmonics_Y_array_get_l (sphaYa);
@@ -522,14 +529,16 @@ NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_D_m_array) (NcmSphereMap * pix
 static void
 NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_circle_from_alm) (NcmSphereMap * pix, gint64 r_i)
 {
-  NcmSphereMapPrivate * const self = pix->priv;
-  NcmSFSphericalHarmonicsY *sphaY = ncm_sf_spherical_harmonics_Y_new (self->spha, NCM_SF_SPHERICAL_HARMONICS_DEFAULT_ABSTOL);
-  const gint ring_size = ncm_sphere_map_get_ring_size (pix, r_i);
-  const gint ring_fi = ncm_sphere_map_get_ring_first_index (pix, r_i);
-  _fft_complex *Fim = &((_fft_complex *) self->fft_pvec)[ring_fi];
-  gdouble theta_i = 0.0, phi = 0.0;
-  gint ring_size_2 = ring_size / 2;
+  NcmSphereMapPrivate * const self  = ncm_sphere_map_get_instance_private (pix);
+  NcmSFSphericalHarmonicsY *sphaY   = ncm_sf_spherical_harmonics_Y_new (self->spha, NCM_SF_SPHERICAL_HARMONICS_DEFAULT_ABSTOL);
+  const gint lmax                   = self->lmax;
+  const gint ring_size              = ncm_sphere_map_get_ring_size (pix, r_i);
+  const gint ring_fi                = ncm_sphere_map_get_ring_first_index (pix, r_i);
+  _fft_complex *Fim                 = &((_fft_complex *) self->fft_pvec)[ring_fi];
+  gint ring_size_2                  = ring_size / 2;
   complex double * volatile alm_ptr = self->alm;
+  gdouble theta_i                   = 0.0;
+  gdouble phi                       = 0.0;
   complex double expIphi, phase;
   gint m, l0;
 
@@ -572,13 +581,13 @@ NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_circle_from_alm) (NcmSphereMap
     else if (fft_ring_index > ring_size_2)
       Fim[ring_size - fft_ring_index] += conj (D_m);
 
-    if (m < self->lmax)
+    if (m < lmax)
     {
       ncm_sf_spherical_harmonics_Y_next_m (sphaY);
       m  = ncm_sf_spherical_harmonics_Y_get_m (sphaY);
       l0 = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
 
-      if (l0 > self->lmax)
+      if (l0 > lmax)
         break;
     }
     else
@@ -593,9 +602,10 @@ NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_circle_from_alm) (NcmSphereMap
 static void
 NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_apcircles_from_alm) (NcmSphereMap * pix, const gint64 r_ini, const gint64 nrings)
 {
-  NcmSphereMapPrivate * const self      = pix->priv;
+  NcmSphereMapPrivate * const self      = ncm_sphere_map_get_instance_private (pix);
   NcmSFSphericalHarmonicsYArray *sphaYa = ncm_sf_spherical_harmonics_Y_array_new (self->spha, NCM_SPHERE_MAP_BLOCK_INV_NCT, NCM_SF_SPHERICAL_HARMONICS_ARRAY_DEFAULT_ABSTOL);
   complex double * volatile alm_ptr     = self->alm;
+  const gint lmax                       = self->lmax;
 
   _fft_complex * restrict Fima[NCM_SPHERE_MAP_BLOCK_INV_NCT];
   gint64 ring_size[NCM_SPHERE_MAP_BLOCK_INV_NCT];
@@ -666,13 +676,13 @@ NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_apcircles_from_alm) (NcmSphere
         Fima[i][ring_size[i] - fft_ring_index] += conj (D_m[i]);
     }
 
-    if (m < self->lmax)
+    if (m < lmax)
     {
       ncm_sf_spherical_harmonics_Y_array_next_m (sphaYa, NCM_SPHERE_MAP_BLOCK_INV_NCT);
       m  = ncm_sf_spherical_harmonics_Y_array_get_m (sphaYa);
       l0 = ncm_sf_spherical_harmonics_Y_array_get_l (sphaYa);
 
-      if (l0 > self->lmax)
+      if (l0 > lmax)
         break;
     }
     else
@@ -687,7 +697,7 @@ NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_get_apcircles_from_alm) (NcmSphere
 static void
 NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_alm2map_run) (NcmSphereMap * pix)
 {
-  const gint64 nrings = ncm_sphere_map_get_nrings (pix);
+  const gint64 nrings   = ncm_sphere_map_get_nrings (pix);
   const gint64 nrings_2 = nrings / 2;
   gint64 r_i, nrleft;
 

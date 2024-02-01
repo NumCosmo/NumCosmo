@@ -30,7 +30,15 @@
  * @title: NcmMPIJobFEval
  * @short_description: MPI job object for evaluating fit steps
  *
- * FIXME
+ * This object is a subclass of #NcmMPIJob and is designed to implement an MPI job
+ * for evaluating fit steps. It is employed by #NcmFit to parallelize the evaluation
+ * of the posterior function. The job entails computing the posterior function and,
+ * if applicable, additional functions (e.g., derived quantities) at a specified
+ * point within the parameter space.
+ *
+ * The MPI job is implemented as a function that takes a vector of parameters as input
+ * and produces a vector of values as output. The first value represents the posterior
+ * function's value, while the subsequent values correspond to those of additional functions.
  *
  */
 
@@ -47,13 +55,13 @@
 #define MPI_DOUBLE (0)
 #endif /* HAVE_MPI */
 
-struct _NcmMPIJobFEvalPrivate
+typedef struct _NcmMPIJobFEvalPrivate
 {
   NcmFit *fit;
   NcmObjArray *func_oa;
   gint fparam_len;
   gint nadd_vals;
-};
+} NcmMPIJobFEvalPrivate;
 
 enum
 {
@@ -63,12 +71,17 @@ enum
   PROP_JOB_TYPE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobFEval, ncm_mpi_job_feval, NCM_TYPE_MPI_JOB);
+struct _NcmMPIJobFEval
+{
+  NcmMPIJob parent_instance;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobFEval, ncm_mpi_job_feval, NCM_TYPE_MPI_JOB)
 
 static void
 ncm_mpi_job_feval_init (NcmMPIJobFEval *mjfeval)
 {
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv = ncm_mpi_job_feval_get_instance_private (mjfeval);
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
 
   self->fit     = NULL;
   self->func_oa = NULL;
@@ -81,7 +94,7 @@ static void
 _ncm_mpi_job_feval_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (object);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
 
   g_return_if_fail (NCM_IS_MPI_JOB_FEVAL (object));
 
@@ -113,9 +126,9 @@ _ncm_mpi_job_feval_set_property (GObject *object, guint prop_id, const GValue *v
 
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -123,7 +136,7 @@ static void
 _ncm_mpi_job_feval_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (object);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
 
   g_return_if_fail (NCM_IS_MPI_JOB_FEVAL (object));
 
@@ -135,9 +148,9 @@ _ncm_mpi_job_feval_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_FUNC_ARRAY:
       g_value_set_boxed (value, self->func_oa);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -145,7 +158,7 @@ static void
 _ncm_mpi_job_feval_constructed (GObject *object)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (object);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
   NcmMSet *mset                      = ncm_fit_peek_mset (self->fit);
 
   self->fparam_len = ncm_mset_fparam_len (mset);
@@ -159,7 +172,7 @@ static void
 _ncm_mpi_job_feval_dispose (GObject *object)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (object);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
 
   ncm_fit_clear (&self->fit);
   ncm_obj_array_clear (&self->func_oa);
@@ -253,7 +266,7 @@ static NcmMPIDatatype
 _ncm_mpi_job_feval_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (mpi_job);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
 
   len[0]  = self->fparam_len;
   size[0] = sizeof (gdouble) * len[0];
@@ -265,7 +278,7 @@ static NcmMPIDatatype
 _ncm_mpi_job_feval_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (mpi_job);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
 
   len[0]  = self->nadd_vals;
   size[0] = sizeof (gdouble) * len[0];
@@ -277,7 +290,7 @@ static gpointer
 _ncm_mpi_job_feval_create_input (NcmMPIJob *mpi_job)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (mpi_job);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
 
   return ncm_vector_new (self->fparam_len);
 }
@@ -286,7 +299,7 @@ static gpointer
 _ncm_mpi_job_feval_create_return (NcmMPIJob *mpi_job)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (mpi_job);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
 
   return ncm_vector_new (self->nadd_vals);
 }
@@ -354,8 +367,8 @@ _ncm_mpi_job_feval_unpack_return (NcmMPIJob *mpi_job, gpointer buf, gpointer ret
 static void
 _ncm_mpi_job_feval_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 {
-  NcmMPIJobFEval *mjt                = NCM_MPI_JOB_FEVAL (mpi_job);
-  NcmMPIJobFEvalPrivate * const self = mjt->priv;
+  NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (mpi_job);
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
   gdouble *m2lnL_star                = ncm_vector_ptr (ret, 0);
   NcmMSet *mset                      = ncm_fit_peek_mset (self->fit);
 
@@ -364,7 +377,7 @@ _ncm_mpi_job_feval_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 
   if (self->func_oa != NULL)
   {
-    gint i;
+    guint i;
 
     for (i = 0; i < self->func_oa->len; i++)
     {
@@ -379,7 +392,7 @@ _ncm_mpi_job_feval_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 /**
  * ncm_mpi_job_feval_new:
  * @fit: a #NcmFit
- * @func_oa: (array) (element-type NcmMSetFunc) (allow-none): a #NcmObjArray
+ * @func_oa: (nullable): a #NcmObjArray
  *
  * Creates a new #NcmMPIJobFEval object.
  *

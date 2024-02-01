@@ -61,13 +61,18 @@
 #include <gsl/gsl_sf_hyperg.h>
 #include <gsl/gsl_math.h>
 #include <complex.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 
 #ifdef HAVE_ACB_H
+#ifdef HAVE_FLINT_ACB_H
+#include <flint/acb.h>
+#include <flint/acb_hypgeom.h>
+#else /* HAVE_FLINT_ACB_H */
 #include <acb.h>
 #include <acb_hypgeom.h>
+#endif /* HAVE_FLINT_ACB_H */
 #endif /* HAVE_ACB_H */
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -110,7 +115,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJLJM, ncm_fftlog_sbessel_jljm, NCM_TYPE_FFTLOG);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmFftlogSBesselJLJM, ncm_fftlog_sbessel_jljm, NCM_TYPE_FFTLOG)
 
 static void
 ncm_fftlog_sbessel_jljm_init (NcmFftlogSBesselJLJM *fftlog_jljm)
@@ -147,9 +152,9 @@ _ncm_fftlog_sbessel_jljm_set_property (GObject *object, guint prop_id, const GVa
     case PROP_LNW:
       ncm_fftlog_sbessel_jljm_set_lnw (fftlog_jljm, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -171,9 +176,9 @@ _ncm_fftlog_sbessel_jljm_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_LNW:
       g_value_set_double (value, ncm_fftlog_sbessel_jljm_get_lnw (fftlog_jljm));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -218,7 +223,7 @@ _ncm_fftlog_sbessel_jljm_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_fftlog_sbessel_jljm_parent_class)->finalize (object);
 }
 
-static void _ncm_fftlog_sbessel_jljm_get_Ym (NcmFftlog *fftlog, gpointer Ym_0);
+static void _ncm_fftlog_sbessel_jljm_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0);
 
 static void
 ncm_fftlog_sbessel_jljm_class_init (NcmFftlogSBesselJLJMClass *klass)
@@ -253,11 +258,11 @@ ncm_fftlog_sbessel_jljm_class_init (NcmFftlogSBesselJLJMClass *klass)
                                                         GSL_LOG_DBL_MIN, 0.0, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  fftlog_class->name   = "sbessel_jljm";
-  fftlog_class->get_Ym = &_ncm_fftlog_sbessel_jljm_get_Ym;
+  fftlog_class->name       = "sbessel_jljm";
+  fftlog_class->compute_Ym = &_ncm_fftlog_sbessel_jljm_compute_Ym;
 }
 
-#if defined (NUMCOSMO_HAVE_FFTW3) && defined (HAVE_ACB_H)
+#if defined (HAVE_FFTW3) && defined (HAVE_ACB_H)
 
 static gint _ncm_fftlog_sbessel_jljm_cpu_integrate_2f1_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data);
 static gint _ncm_fftlog_sbessel_jljm_cpu_integrate_2f1_jac (gdouble x, N_Vector y, N_Vector fy, SUNMatrix Jac, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
@@ -517,14 +522,14 @@ _ncm_fftlog_sbessel_jljm_compute_2f1 (NcmFftlog *fftlog)
   printf ("# RES % 22.15g % 22.15g\n", creal (res), cimag (res));
 }
 
-#endif /* defined (NUMCOSMO_HAVE_FFTW3) && defined (HAVE_ACB_H) */
+#endif /* defined (HAVE_FFTW3) && defined (HAVE_ACB_H) */
 
 #define _NCM_FFTLOG_SBESSEL_JLJM_CACHE_FILE "ncm_fftlog_sbessel_j%dj%d_lnw%.14g_L%.14g.fftlog", self->ell, self->ell + self->dell, self->lnw, ncm_fftlog_get_full_length (fftlog)
 
 static void
-_ncm_fftlog_sbessel_jljm_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
+_ncm_fftlog_sbessel_jljm_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
-#if defined (NUMCOSMO_HAVE_FFTW3) && defined (HAVE_ACB_H)
+#if defined (HAVE_FFTW3) && defined (HAVE_ACB_H)
   NcmFftlogSBesselJLJM *fftlog_jljm        = NCM_FFTLOG_SBESSEL_JLJM (fftlog);
   NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   const guint maxprec                      = 64 * 64;
@@ -734,7 +739,7 @@ _ncm_fftlog_sbessel_jljm_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
     {
       /*printf ("INCREASING PREC: %6d %4ld %4u => %4u\n", i, prec_sf, prec, prec + 16);*/
       if (prec + 16 > maxprec)
-        g_error ("_ncm_fftlog_sbessel_jljm_get_Ym: max precision was not enough, giving up.");
+        g_error ("_ncm_fftlog_sbessel_jljm_compute_Ym: max precision was not enough, giving up.");
 
       i    -= 1;
       prec += 16;
@@ -815,8 +820,8 @@ _ncm_fftlog_sbessel_jljm_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   }
 
 #else
-  g_error ("_ncm_fftlog_sbessel_jljm_get_Ym: this object requires both FFTW3 and ARB dependencies.");
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+  g_error ("_ncm_fftlog_sbessel_jljm_compute_Ym: this object requires both FFTW3 and ARB dependencies.");
+#endif /* HAVE_FFTW3 */
 }
 
 /**

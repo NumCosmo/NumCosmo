@@ -38,8 +38,8 @@
 
 typedef enum _NcmStatsDistKernelType
 {
-  NCM_STATS_DIST_KERNEL_GAUSS,
-  NCM_STATS_DIST_KERNEL_ST3,
+  NCM_STATS_DIST_KERNEL_TYPE_GAUSS,
+  NCM_STATS_DIST_KERNEL_TYPE_ST3,
 } NcmStatsDistKernelType;
 
 typedef struct _TestNcmStatsDistKernel
@@ -118,13 +118,10 @@ main (gint argc, gchar *argv[])
               &test_ncm_stats_dist_kernel_traps,
               &test_ncm_stats_dist_kernel_free);
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_add ("/ncm/stats/dist/kernel/gauss/invalid/stub/subprocess", TestNcmStatsDistKernel, NULL,
               &test_ncm_stats_dist_kernel_new_gauss,
               &test_ncm_stats_dist_kernel_invalid_stub,
               &test_ncm_stats_dist_kernel_free);
-#endif
-
 
   g_test_run ();
 }
@@ -137,7 +134,7 @@ test_ncm_stats_dist_kernel_new_gauss (TestNcmStatsDistKernel *test, gconstpointe
 
   test->dim         = dim;
   test->kernel      = NCM_STATS_DIST_KERNEL (sdk_gauss);
-  test->kernel_type = NCM_STATS_DIST_KERNEL_GAUSS;
+  test->kernel_type = NCM_STATS_DIST_KERNEL_TYPE_GAUSS;
   test->nfail       = 0;
 
   ncm_stats_dist_kernel_gauss_ref (sdk_gauss);
@@ -159,7 +156,7 @@ test_ncm_stats_dist_kernel_new_st (TestNcmStatsDistKernel *test, gconstpointer p
 
   test->dim         = dim;
   test->nu          = nu;
-  test->kernel_type = NCM_STATS_DIST_KERNEL_ST3;
+  test->kernel_type = NCM_STATS_DIST_KERNEL_TYPE_ST3;
   test->kernel      = NCM_STATS_DIST_KERNEL (sdk_st);
   test->nfail       = 0;
 
@@ -188,10 +185,10 @@ test_ncm_stats_dist_kernel_bandwidth (TestNcmStatsDistKernel *test, gconstpointe
 
   switch (test->kernel_type)
   {
-    case NCM_STATS_DIST_KERNEL_GAUSS:
+    case NCM_STATS_DIST_KERNEL_TYPE_GAUSS:
       h_test = pow (4.0 / (n * (test->dim + 2.0)), 1.0 / (test->dim + 4.0));
       break;
-    case NCM_STATS_DIST_KERNEL_ST3:
+    case NCM_STATS_DIST_KERNEL_TYPE_ST3:
       h_test = pow (16.0 * gsl_pow_2 (test->nu - 2) * (1.0 + test->dim + test->nu) * (3.0 + test->dim + test->nu) / ((2.0 + test->dim) * (test->dim + test->nu) * (2.0 + test->dim + test->nu) * (test->dim + 2.0 * test->nu) * (2.0 + test->dim + 2.0 * test->nu) * n), 1.0 / (test->dim + 4.0));
       break;
     default:
@@ -235,7 +232,7 @@ test_ncm_stats_dist_kernel_norm (TestNcmStatsDistKernel *test, gconstpointer pda
 
   switch (test->kernel_type)
   {
-    case NCM_STATS_DIST_KERNEL_GAUSS:
+    case NCM_STATS_DIST_KERNEL_TYPE_GAUSS:
     {
       gdouble norm_test    = 0.5 * (test->dim * ncm_c_ln2pi () + lndet_cov);
       const gdouble lnnorm = ncm_stats_dist_kernel_get_lnnorm (test->kernel, cov);
@@ -243,7 +240,7 @@ test_ncm_stats_dist_kernel_norm (TestNcmStatsDistKernel *test, gconstpointer pda
       ncm_assert_cmpdouble_e (norm_test, ==, lnnorm, 1.0e-14, 0.0);
       break;
     }
-    case NCM_STATS_DIST_KERNEL_ST3:
+    case NCM_STATS_DIST_KERNEL_TYPE_ST3:
     {
       const guint d             = test->dim;
       const gdouble lg_lnnorm   = lgamma (test->nu / 2.0) - lgamma ((test->nu + d) / 2.0);
@@ -276,7 +273,7 @@ test_ncm_stats_dist_kernel_norm (TestNcmStatsDistKernel *test, gconstpointer pda
 
     switch (test->kernel_type)
     {
-      case NCM_STATS_DIST_KERNEL_GAUSS:
+      case NCM_STATS_DIST_KERNEL_TYPE_GAUSS:
 
         for (i = 0; i < ntests; i++)
         {
@@ -287,7 +284,7 @@ test_ncm_stats_dist_kernel_norm (TestNcmStatsDistKernel *test, gconstpointer pda
         }
 
         break;
-      case NCM_STATS_DIST_KERNEL_ST3:
+      case NCM_STATS_DIST_KERNEL_TYPE_ST3:
 
         for (i = 0; i < ntests; i++)
         {
@@ -316,8 +313,8 @@ test_ncm_stats_dist_kernel_norm (TestNcmStatsDistKernel *test, gconstpointer pda
 static void
 test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdata)
 {
-  guint i = 0;
-  const guint n = g_test_rand_int_range (5, 100);
+  guint i        = 0;
+  const guint n  = g_test_rand_int_range (5, 100);
   gdouble lnnorm = g_test_rand_double_range (1.0, 200.0);
   gdouble lambda0, gamma0, gamma1, lambda1;
   gdouble lambda_test0   = 0.0;
@@ -356,11 +353,11 @@ test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdat
 
     switch (test->kernel_type)
     {
-      case NCM_STATS_DIST_KERNEL_GAUSS:
+      case NCM_STATS_DIST_KERNEL_TYPE_GAUSS:
         lnt_i0 = -0.5 * chi2_i - lnu_i + log (w_i);
         lnt_i1 = -0.5 * chi2_i + log (w_i);
         break;
-      case NCM_STATS_DIST_KERNEL_ST3:
+      case NCM_STATS_DIST_KERNEL_TYPE_ST3:
         lnt_i0 = kappa * log1p (chi2_i / test->nu) - lnu_i + log (w_i);
         lnt_i1 = kappa * log1p (chi2_i / test->nu) + log (w_i);
         break;
@@ -431,7 +428,6 @@ test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdat
 static void
 test_ncm_stats_dist_kernel_sample (TestNcmStatsDistKernel *test, gconstpointer pdata)
 {
-  gint i, j;
   NcmRNG *rng             = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcmMatrix *cov_decomp   = ncm_matrix_new (test->dim, test->dim);
   gdouble href            = g_test_rand_double_range (1.0, 200.0);
@@ -439,6 +435,7 @@ test_ncm_stats_dist_kernel_sample (TestNcmStatsDistKernel *test, gconstpointer p
   NcmVector *mu           = ncm_vector_new (test->dim);
   NcmStatsVec *test_stats = ncm_stats_vec_new (test->dim, NCM_STATS_VEC_VAR, FALSE);
   const guint ntests      = 300 * g_test_rand_int_range (1, 5);
+  guint i, j;
 
   for (i = 0; i < test->dim; i++)
   {
@@ -471,7 +468,7 @@ test_ncm_stats_dist_kernel_sample (TestNcmStatsDistKernel *test, gconstpointer p
     {
       gdouble dif_i;
 
-      dif_i = abs ((ncm_stats_vec_get_mean (test_stats, i) - ncm_vector_get (mu, i)) / ncm_vector_get (mu, i));
+      dif_i = fabs ((ncm_stats_vec_get_mean (test_stats, i) - ncm_vector_get (mu, i)) / ncm_vector_get (mu, i));
       dif   = dif + dif_i;
     }
 
@@ -505,10 +502,8 @@ test_ncm_stats_dist_kernel_free (TestNcmStatsDistKernel *test, gconstpointer pda
 static void
 test_ncm_stats_dist_kernel_traps (TestNcmStatsDistKernel *test, gconstpointer pdata)
 {
-  #if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/stats/dist/kernel/gauss/invalid/stub/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  #endif
 }
 
 static void

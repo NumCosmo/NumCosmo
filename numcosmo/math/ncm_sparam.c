@@ -26,10 +26,10 @@
  * SECTION:ncm_sparam
  * @title: NcmSParam
  * @short_description: Properties of a scalar parameter.
- * 
+ *
  * This object comprises the necessary properties to define a scalar parameter.
  * It is used by #NcmModel to store the description of the scalar model parameters.
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -56,8 +56,21 @@ enum
   PROP_FIT_TYPE
 };
 
-G_DEFINE_TYPE (NcmSParam, ncm_sparam, G_TYPE_OBJECT);
+struct _NcmSParam
+{
+  /*< private >*/
+  GObject parent_instance;
+  gchar *name;
+  gchar *symbol;
+  gdouble lower_bound;
+  gdouble upper_bound;
+  gdouble scale;
+  gdouble abstol;
+  gdouble default_val;
+  NcmParamType ftype;
+};
 
+G_DEFINE_TYPE (NcmSParam, ncm_sparam, G_TYPE_OBJECT)
 
 static void
 ncm_sparam_init (NcmSParam *sparam)
@@ -76,8 +89,10 @@ static void
 _ncm_sparam_finalize (GObject *object)
 {
   NcmSParam *sparam = NCM_SPARAM (object);
+
   if (sparam->name)
     g_free (sparam->name);
+
   if (sparam->symbol)
     g_free (sparam->symbol);
 
@@ -88,6 +103,7 @@ static void
 _ncm_sparam_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmSParam *sparam = NCM_SPARAM (object);
+
   g_return_if_fail (NCM_IS_SPARAM (object));
 
   switch (prop_id)
@@ -116,9 +132,9 @@ _ncm_sparam_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_FIT_TYPE:
       ncm_sparam_set_fit_type (sparam, g_value_get_enum (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -126,6 +142,7 @@ static void
 _ncm_sparam_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmSParam *sparam = NCM_SPARAM (object);
+
   g_return_if_fail (NCM_IS_SPARAM (object));
 
   switch (prop_id)
@@ -154,20 +171,20 @@ _ncm_sparam_get_property (GObject *object, guint prop_id, GValue *value, GParamS
     case PROP_FIT_TYPE:
       g_value_set_enum (value, ncm_sparam_get_fit_type (sparam));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
 static void
 ncm_sparam_class_init (NcmSParamClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = _ncm_sparam_set_property;
   object_class->get_property = _ncm_sparam_get_property;
-  object_class->finalize = _ncm_sparam_finalize;
+  object_class->finalize     = _ncm_sparam_finalize;
 
   /**
    * NcmSParam:name:
@@ -186,7 +203,7 @@ ncm_sparam_class_init (NcmSParamClass *klass)
    * NcmSParam:symbol:
    *
    * Parameter's name written in a usual form (including latex).
-     */
+   */
   g_object_class_install_property (object_class,
                                    PROP_SYMBOL,
                                    g_param_spec_string ("symbol",
@@ -199,7 +216,7 @@ ncm_sparam_class_init (NcmSParamClass *klass)
    * NcmSParam:lower-bound:
    *
    * Lower parameter threshold whose value is restricted to [-G_MAXDOUBLE, G_MAXDOUBLE].
-     */
+   */
   g_object_class_install_property (object_class,
                                    PROP_LOWER_BOUND,
                                    g_param_spec_double ("lower-bound",
@@ -212,7 +229,7 @@ ncm_sparam_class_init (NcmSParamClass *klass)
    * NcmSParam:upper-bound:
    *
    * Upper parameter threshold whose value is restricted to [-G_MAXDOUBLE, G_MAXDOUBLE].
-     */
+   */
   g_object_class_install_property (object_class,
                                    PROP_UPPER_BOUND,
                                    g_param_spec_double ("upper-bound",
@@ -225,7 +242,7 @@ ncm_sparam_class_init (NcmSParamClass *klass)
    * NcmSParam:scale:
    *
    * Scale, whose value is restricted to [0, G_MAXDOUBLE], is the step used by #NcmFit to increment the value of the parameter.
-     */
+   */
   g_object_class_install_property (object_class,
                                    PROP_SCALE,
                                    g_param_spec_double ("scale",
@@ -238,7 +255,7 @@ ncm_sparam_class_init (NcmSParamClass *klass)
    * NcmSParam:absolute-tolerance:
    *
    * Absolute tolerance, whose value is restricted to [0, G_MAXDOUBLE], is the size of the error used by #NcmFit.
-     */
+   */
   g_object_class_install_property (object_class,
                                    PROP_ABSOLUTE_TOLERANCE,
                                    g_param_spec_double ("absolute-tolerance",
@@ -246,6 +263,7 @@ ncm_sparam_class_init (NcmSParamClass *klass)
                                                         "Absolute tolerance",
                                                         0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcmSParam:default-value:
    *
@@ -307,6 +325,7 @@ ncm_sparam_new (const gchar *name, const gchar *symbol, gdouble lower_bound, gdo
                                     "default-value",      default_val,
                                     "fit-type",           ftype,
                                     NULL);
+
   return sparam;
 }
 
@@ -317,7 +336,7 @@ ncm_sparam_new (const gchar *name, const gchar *symbol, gdouble lower_bound, gdo
  * Duplicates the #NcmSParam object setting the same values of the original propertities.
  *
  * Returns: (transfer full): A new #NcmSParam
-   */
+ */
 NcmSParam *
 ncm_sparam_copy (NcmSParam *sparam)
 {
@@ -361,7 +380,7 @@ ncm_sparam_clear (NcmSParam **sparam)
  * Atomically increases the reference count of @sparam by one.
  *
  * Returns: (transfer full): @sparam
-   */
+ */
 NcmSParam *
 ncm_sparam_ref (NcmSParam *sparam)
 {
@@ -436,7 +455,6 @@ ncm_sparam_set_scale (NcmSParam *sparam, const gdouble scale)
   g_assert (scale > 0);
   sparam->scale = scale;
 }
-
 
 /**
  * ncm_sparam_get_scale:
@@ -584,3 +602,4 @@ ncm_sparam_symbol (const NcmSParam *sparam)
 {
   return sparam->symbol;
 }
+

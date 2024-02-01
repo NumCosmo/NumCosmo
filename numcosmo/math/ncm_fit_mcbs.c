@@ -69,7 +69,7 @@ struct _NcmFitMCBS
 };
 
 
-G_DEFINE_TYPE (NcmFitMCBS, ncm_fit_mcbs, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcmFitMCBS, ncm_fit_mcbs, G_TYPE_OBJECT)
 
 static void
 ncm_fit_mcbs_init (NcmFitMCBS *mcbs)
@@ -105,9 +105,9 @@ ncm_fit_mcbs_set_property (GObject *object, guint prop_id, const GValue *value, 
       case PROP_FILE:
         ncm_fit_mcbs_set_filename (mcbs, g_value_get_string (value));
         break;
-      default:
-        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-        break;
+      default:                                                      /* LCOV_EXCL_LINE */
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+        break;                                                      /* LCOV_EXCL_LINE */
     }
   }
 }
@@ -127,9 +127,9 @@ ncm_fit_mcbs_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_FILE:
       g_value_set_string (value, ncm_mset_catalog_peek_filename (mcbs->mcat));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -321,6 +321,7 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
   NcmFitState *fstate  = ncm_fit_peek_state (mcbs->fit);
   NcmLikelihood *lh    = ncm_fit_peek_likelihood (mcbs->fit);
   gboolean cat_has_rng = FALSE;
+  NcmDataset *dset     = ncm_likelihood_peek_dataset (lh);
   guint i;
 
   ncm_fit_mc_set_rtype (mcbs->mc_resample, NCM_FIT_MC_RESAMPLE_FROM_MODEL);
@@ -354,10 +355,10 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
 
   for (i = ni; i < nf; i++)
   {
-    ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_DISABLE);
+    ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_DISABLE);
     /*ncm_fit_mc_set_first_sample_id (mcbs->mc_resample, i + 1); */
     ncm_fit_mc_run (mcbs->mc_resample, i + 1);
-    ncm_dataset_bootstrap_set (lh->dset, NCM_DATASET_BSTRAP_TOTAL); /* FIXME */
+    ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_TOTAL); /* FIXME */
 
     if (mcbs->base_name != NULL)
     {
@@ -371,7 +372,7 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
     ncm_fit_mc_run (mcbs->mc_bstrap, nbstraps);
 
     ncm_mset_catalog_add_from_vector (mcbs->mcat,
-                                      ncm_mset_catalog_peek_pstats (ncm_fit_mc_peek_catalog (mcbs->mc_bstrap))->mean);
+                                      ncm_stats_vec_peek_mean (ncm_mset_catalog_peek_pstats (ncm_fit_mc_peek_catalog (mcbs->mc_bstrap))));
     ncm_mset_catalog_log_current_stats (mcbs->mcat);
 
     ncm_fit_mc_end_run (mcbs->mc_bstrap);

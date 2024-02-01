@@ -39,21 +39,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_VECTOR             (ncm_vector_get_type ())
-#define NCM_VECTOR(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_VECTOR, NcmVector))
-#define NCM_VECTOR_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_VECTOR, NcmVectorClass))
-#define NCM_IS_VECTOR(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_VECTOR))
-#define NCM_IS_VECTOR_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_VECTOR))
-#define NCM_VECTOR_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_VECTOR, NcmVectorClass))
+#define NCM_TYPE_VECTOR (ncm_vector_get_type ())
 
-typedef struct _NcmVectorClass NcmVectorClass;
-typedef struct _NcmVector NcmVector;
-
-struct _NcmVectorClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
+G_DECLARE_FINAL_TYPE (NcmVector, ncm_vector, NCM, VECTOR, GObject)
 
 /**
  * NcmVectorInternal:
@@ -86,8 +74,6 @@ struct _NcmVector
 };
 
 typedef gdouble (*NcmVectorCompFunc) (gdouble v_i, guint i, gpointer user_data);
-
-GType ncm_vector_get_type (void) G_GNUC_CONST;
 
 #define NCM_N2VECTOR(v) ((NcmVector *) ((v)->content))
 
@@ -165,7 +151,9 @@ NCM_INLINE const gdouble *ncm_vector_const_data (const NcmVector *cv);
 NCM_INLINE void ncm_vector_replace_data (NcmVector *cv, gdouble *data);
 NCM_INLINE gsl_vector *ncm_vector_gsl (NcmVector *cv);
 NCM_INLINE const gsl_vector *ncm_vector_const_gsl (const NcmVector *cv);
-NCM_INLINE gdouble ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2);
+
+gdouble ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2);
+
 NCM_INLINE guint ncm_vector_len (const NcmVector *cv);
 NCM_INLINE guint ncm_vector_stride (const NcmVector *cv);
 
@@ -200,6 +188,7 @@ G_END_DECLS
 #define _NCM_VECTOR_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
 #ifndef __GTK_DOC_IGNORE__
+#ifndef NUMCOSMO_GIR_SCAN
 
 G_BEGIN_DECLS
 
@@ -398,7 +387,7 @@ ncm_vector_get_array (NcmVector *cv)
 {
   g_assert (cv->type == NCM_VECTOR_ARRAY);
 
-  return g_array_ref (cv->pdata);
+  return g_array_ref ((GArray *) cv->pdata);
 }
 
 NCM_INLINE GArray *
@@ -417,7 +406,7 @@ ncm_vector_dup_array (NcmVector *cv)
   else
   {
     GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
-    gint i;
+    guint i;
 
     g_array_set_size (a, len);
 
@@ -456,12 +445,6 @@ NCM_INLINE const gsl_vector *
 ncm_vector_const_gsl (const NcmVector *cv)
 {
   return &(cv->vv.vector);
-}
-
-NCM_INLINE gdouble
-ncm_vector_dot (const NcmVector *cv1, const NcmVector *cv2)
-{
-  return cblas_ddot (ncm_vector_len (cv1), ncm_vector_const_data (cv1), ncm_vector_stride (cv1), ncm_vector_const_data (cv2), ncm_vector_stride (cv2));
 }
 
 NCM_INLINE guint
@@ -525,7 +508,7 @@ NCM_INLINE gboolean
 ncm_vector_lt (const NcmVector *cv1, const NcmVector *cv2)
 {
   const guint len = ncm_vector_len (cv1);
-  gint i;
+  guint i;
 
   g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
 
@@ -542,7 +525,7 @@ NCM_INLINE gboolean
 ncm_vector_lteq (const NcmVector *cv1, const NcmVector *cv2)
 {
   const guint len = ncm_vector_len (cv1);
-  gint i;
+  guint i;
 
   g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
 
@@ -559,7 +542,7 @@ NCM_INLINE gboolean
 ncm_vector_between (const NcmVector *cv, const NcmVector *cv_lb, const NcmVector *cv_ub, gint type)
 {
   const guint len = ncm_vector_len (cv);
-  gint i;
+  guint i;
 
   g_assert_cmpuint (len, ==, ncm_vector_len (cv_lb));
   g_assert_cmpuint (len, ==, ncm_vector_len (cv_ub));
@@ -602,6 +585,7 @@ ncm_vector_between (const NcmVector *cv, const NcmVector *cv_lb, const NcmVector
 
 G_END_DECLS
 
+#endif /* NUMCOSMO_GIR_SCAN */
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_VECTOR_INLINE_H_ */

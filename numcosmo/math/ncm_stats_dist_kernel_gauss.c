@@ -84,22 +84,33 @@
 
 #include "math/ncm_stats_dist_kernel_private.h"
 
-struct _NcmStatsDistKernelGaussPrivate
+typedef struct _NcmStatsDistKernelGaussPrivate
 {
   gint place_holder;
-};
+} NcmStatsDistKernelGaussPrivate;
 
 enum
 {
   PROP_0,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistKernelGauss, ncm_stats_dist_kernel_gauss, NCM_TYPE_STATS_DIST_KERNEL);
+struct _NcmStatsDistKernelGauss
+{
+  NcmStatsDistKernel parent_instance;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistKernelGauss, ncm_stats_dist_kernel_gauss, NCM_TYPE_STATS_DIST_KERNEL)
+
+static NcmStatsDistKernelPrivate *
+ncm_stats_dist_kernel_get_instance_private (NcmStatsDistKernel * sdk)
+{
+  return g_type_instance_get_private ((GTypeInstance *) sdk, NCM_TYPE_STATS_DIST_KERNEL);
+}
 
 static void
 ncm_stats_dist_kernel_gauss_init (NcmStatsDistKernelGauss *sdkg)
 {
-  NcmStatsDistKernelGaussPrivate * const self = sdkg->priv = ncm_stats_dist_kernel_gauss_get_instance_private (sdkg);
+  NcmStatsDistKernelGaussPrivate * const self = ncm_stats_dist_kernel_gauss_get_instance_private (sdkg);
 
   self->place_holder = 0;
 }
@@ -114,9 +125,9 @@ _ncm_stats_dist_kernel_gauss_set_property (GObject *object, guint prop_id, const
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -130,9 +141,9 @@ _ncm_stats_dist_kernel_gauss_get_property (GObject *object, guint prop_id, GValu
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -184,7 +195,7 @@ ncm_stats_dist_kernel_gauss_class_init (NcmStatsDistKernelGaussClass *klass)
 static gdouble
 _ncm_stats_dist_kernel_gauss_get_rot_bandwidth (NcmStatsDistKernel *sdk, const gdouble n)
 {
-  NcmStatsDistKernelPrivate * const pself = sdk->priv;
+  NcmStatsDistKernelPrivate * const pself = ncm_stats_dist_kernel_get_instance_private (sdk);
 
   return pow (4.0 / (n * (pself->d + 2.0)), 1.0 / (pself->d + 4.0));
 }
@@ -192,7 +203,7 @@ _ncm_stats_dist_kernel_gauss_get_rot_bandwidth (NcmStatsDistKernel *sdk, const g
 static gdouble
 _ncm_stats_dist_kernel_gauss_get_lnnorm (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp)
 {
-  NcmStatsDistKernelPrivate * const pself = sdk->priv;
+  NcmStatsDistKernelPrivate * const pself = ncm_stats_dist_kernel_get_instance_private (sdk);
 
   return 0.5 * (pself->d * ncm_c_ln2pi () + ncm_matrix_cholesky_lndet (cov_decomp));
 }
@@ -208,7 +219,7 @@ _ncm_stats_dist_kernel_gauss_eval_unnorm_vec (NcmStatsDistKernel *sdk, NcmVector
 {
   /*NcmStatsDistKernelPrivate * const pself = sdk->priv;*/
   const guint n = ncm_vector_len (chi2);
-  gint i;
+  guint i;
 
   g_assert (ncm_vector_len (Ku) == n);
 
@@ -240,9 +251,9 @@ _ncm_stats_dist_kernel_gauss_eval_sum0_gamma_lambda (NcmStatsDistKernel *sdk, Nc
   /* NcmStatsDistKernelGaussPrivate * const self = NCM_STATS_DIST_KERNEL_GAUSS (sdk)->priv; */
   /*NcmStatsDistKernelPrivate * const pself  = sdk->priv;*/
 
-  const guint n = ncm_vector_len (chi2);
+  const guint n   = ncm_vector_len (chi2);
   gdouble lnt_max = GSL_NEGINF;
-  gint i, i_max = -1;
+  guint i, i_max = 0;
 
   g_assert (n == ncm_vector_len (weights));
   g_assert (n == ncm_vector_len (lnnorms));
@@ -286,9 +297,9 @@ _ncm_stats_dist_kernel_gauss_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, Nc
   /* NcmStatsDistKernelGaussPrivate * const self = NCM_STATS_DIST_KERNEL_GAUSS (sdk)->priv; */
   /* NcmStatsDistKernelPrivate * const pself  = sdk->priv; */
 
-  const guint n = ncm_vector_len (chi2);
+  const guint n   = ncm_vector_len (chi2);
   gdouble lnt_max = GSL_NEGINF;
-  gint i, i_max = -1;
+  guint i, i_max = 0;
 
   g_assert (n == ncm_vector_len (weights));
   g_assert (n == ncm_vector_len (lnK));
@@ -326,12 +337,13 @@ _ncm_stats_dist_kernel_gauss_eval_sum1_gamma_lambda (NcmStatsDistKernel *sdk, Nc
 static void
 _ncm_stats_dist_kernel_gauss_sample (NcmStatsDistKernel *sdk, NcmMatrix *cov_decomp, const gdouble href, NcmVector *mu, NcmVector *x, NcmRNG *rng)
 {
-  NcmStatsDistKernelPrivate * const pself = sdk->priv;
-  gint i, ret;
+  NcmStatsDistKernelPrivate * const pself = ncm_stats_dist_kernel_get_instance_private (sdk);
+  gint ret;
+  guint i;
 
   for (i = 0; i < pself->d; i++)
   {
-    const gdouble u_i = gsl_ran_ugaussian (rng->r);
+    const gdouble u_i = ncm_rng_ugaussian_gen (rng);
 
     ncm_vector_set (x, i, u_i * href);
   }

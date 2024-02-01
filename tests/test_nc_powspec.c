@@ -56,6 +56,7 @@ void test_nc_powspec_free (TestNcPowspec *test, gconstpointer pdata);
 typedef struct _TestNcPowspecFunc
 {
   void (*func) (TestNcPowspec *, gconstpointer);
+
   const gchar *name;
   gpointer pdata;
 } TestNcPowspecFuncData;
@@ -74,9 +75,9 @@ TestNcPowspecFuncData powspecs[TEST_NC_POWSPECS_LEN] =
 #define TEST_NC_POWSPEC_TESTS 3
 TestNcPowspecFuncData tests[TEST_NC_POWSPEC_TESTS] =
 {
-    {test_nc_powspec_eval,          "eval",          NULL},
-    {test_nc_powspec_filter_tophat, "filter/tophat", NULL},
-    {test_nc_powspec_corr3d,        "corr3d",        NULL},
+  {test_nc_powspec_eval,          "eval",          NULL},
+  {test_nc_powspec_filter_tophat, "filter/tophat", NULL},
+  {test_nc_powspec_corr3d,        "corr3d",        NULL},
 };
 
 gint
@@ -93,34 +94,35 @@ main (gint argc, gchar *argv[])
     for (j = 0; j < TEST_NC_POWSPEC_TESTS; j++)
     {
       gchar *test_path = g_strdup_printf ("/nc/powspec/%s/%s", powspecs[i].name, tests[j].name);
+
       g_test_add (test_path, TestNcPowspec, powspecs[i].pdata, powspecs[i].func, tests[j].func,
-          &test_nc_powspec_free);
+                  &test_nc_powspec_free);
       g_free (test_path);
     }
   }
-  
+
   g_test_run ();
 }
 
 void
 test_nc_powspec_ml_transfer_new_EH (TestNcPowspec *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo            = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
-  NcHIReion *reion            = NC_HIREION (nc_hireion_camb_new ());
-  NcHIPrim *prim              = NC_HIPRIM (nc_hiprim_power_law_new ());
-  NcTransferFunc *tf          = nc_transfer_func_new_from_name ("NcTransferFuncEH");
-  NcPowspecML *ps_ml          = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
-  
+  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcHIReion *reion   = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim     = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcTransferFunc *tf = NC_TRANSFER_FUNC (ncm_serialize_global_from_string ("NcTransferFuncEH"));
+  NcPowspecML *ps_ml = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
-  
+
   test->model = NCM_MODEL (nc_hicosmo_ref (cosmo));
   test->ps    = NCM_POWSPEC (nc_powspec_ml_ref (ps_ml));
-  
+
   ncm_model_free (NCM_MODEL (cosmo));
   ncm_model_free (NCM_MODEL (reion));
   ncm_model_free (NCM_MODEL (prim));
-  
+
   nc_powspec_ml_free (ps_ml);
   nc_transfer_func_free (tf);
 }
@@ -128,22 +130,22 @@ test_nc_powspec_ml_transfer_new_EH (TestNcPowspec *test, gconstpointer pdata)
 void
 test_nc_powspec_ml_transfer_new_BBKS (TestNcPowspec *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo            = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
-  NcHIReion *reion            = NC_HIREION (nc_hireion_camb_new ());
-  NcHIPrim *prim              = NC_HIPRIM (nc_hiprim_power_law_new ());
-  NcTransferFunc *tf          = nc_transfer_func_new_from_name ("NcTransferFuncBBKS");
-  NcPowspecML *ps_ml          = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
-  
+  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcHIReion *reion   = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim     = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcTransferFunc *tf = NC_TRANSFER_FUNC (ncm_serialize_global_from_string ("NcTransferFuncBBKS"));
+  NcPowspecML *ps_ml = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
-  
+
   test->model = NCM_MODEL (nc_hicosmo_ref (cosmo));
   test->ps    = NCM_POWSPEC (nc_powspec_ml_ref (ps_ml));
-  
+
   ncm_model_free (NCM_MODEL (cosmo));
   ncm_model_free (NCM_MODEL (reion));
   ncm_model_free (NCM_MODEL (prim));
-  
+
   nc_powspec_ml_free (ps_ml);
   nc_transfer_func_free (tf);
 }
@@ -151,10 +153,10 @@ test_nc_powspec_ml_transfer_new_BBKS (TestNcPowspec *test, gconstpointer pdata)
 void
 test_nc_powspec_ml_cbe_new (TestNcPowspec *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo            = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
-  NcHIReion *reion            = NC_HIREION (nc_hireion_camb_new ());
-  NcHIPrim *prim              = NC_HIPRIM (nc_hiprim_power_law_new ());
-  NcPowspecML *ps_ml          = NC_POWSPEC_ML (nc_powspec_ml_cbe_new ());
+  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcHIReion *reion   = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim     = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcPowspecML *ps_ml = NC_POWSPEC_ML (nc_powspec_ml_cbe_new ());
 
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
@@ -172,7 +174,7 @@ test_nc_powspec_ml_cbe_new (TestNcPowspec *test, gconstpointer pdata)
 void
 test_nc_powspec_mnl_halofit_new (TestNcPowspec *test, gconstpointer pdata)
 {
-  ((TestNcPowspecFunc)pdata)(test, NULL);
+  ((TestNcPowspecFunc) pdata)(test, NULL);
   {
     NcPowspecMNLHaloFit *ps_mln = nc_powspec_mnl_halofit_new (NC_POWSPEC_ML (test->ps), 3.0, 1.0e-4);
 
@@ -192,7 +194,7 @@ test_nc_powspec_eval (TestNcPowspec *test, gconstpointer pdata)
   NcmVector *Pkv     = NULL;
   guint Nz           = 0;
   guint Nk           = 0;
-  gint i, j;
+  guint i, j;
 
   g_assert_cmpfloat (zi, >=, 0.0);
   g_assert_cmpfloat (zi, <, zf);
@@ -211,13 +213,16 @@ test_nc_powspec_eval (TestNcPowspec *test, gconstpointer pdata)
   for (i = 0; i < Nk * 10; i++)
   {
     const gdouble lnk = log (kmin) + log (kmax / kmin) / (Nk * 10.0 - 1.0) * i;
+
     ncm_vector_set (kv, i, exp (lnk));
   }
 
   for (i = 0; i < Nz * 10; i++)
   {
     const gdouble z = zi + (zf - zi) / (Nz * 10.0 - 1.0) * i;
+
     ncm_powspec_eval_vec (test->ps, test->model, z, kv, Pkv);
+
     for (j = 0; j < Nk * 10; j++)
     {
       const gdouble k = ncm_vector_get (kv, j);
@@ -232,13 +237,15 @@ test_nc_powspec_eval (TestNcPowspec *test, gconstpointer pdata)
     for (i = 0; i < Nz * 10; i++)
     {
       const gdouble z = zi + (zf - zi) / (Nz * 10.0 - 1.0) * i;
+
       ncm_powspec_eval_vec (test->ps, test->model, z, kv, Pkv);
+
       for (j = 0; j < Nk * 10; j++)
       {
         const gdouble k = ncm_vector_get (kv, j);
 
         ncm_assert_cmpdouble_e (ncm_vector_get (Pkv, j), ==, ncm_spline2d_eval (Pks, z, k),
-            test->ps->reltol_spline * 10.0, 0.0);
+                                ncm_powspec_get_reltol_spline (test->ps) * 10.0, 0.0);
       }
     }
 
@@ -253,10 +260,11 @@ void
 test_nc_powspec_filter_tophat (TestNcPowspec *test, gconstpointer pdata)
 {
   NcmPowspecFilter *psf = ncm_powspec_filter_new (NCM_POWSPEC (test->ps), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
-  const gdouble zi   = ncm_powspec_get_zi (test->ps);
-  const gdouble zf   = ncm_powspec_get_zf (test->ps);
-  const gdouble kmin = ncm_powspec_get_kmin (test->ps);
-  const gdouble kmax = ncm_powspec_get_kmax (test->ps);
+  const gdouble zi      = ncm_powspec_get_zi (test->ps);
+  const gdouble zf      = ncm_powspec_get_zf (test->ps);
+  const gdouble kmin    = ncm_powspec_get_kmin (test->ps);
+  const gdouble kmax    = ncm_powspec_get_kmax (test->ps);
+  const gdouble reltol  = ncm_powspec_filter_get_reltol (psf);
 
   ncm_powspec_filter_prepare (psf, test->model);
 
@@ -273,26 +281,26 @@ test_nc_powspec_filter_tophat (TestNcPowspec *test, gconstpointer pdata)
     for (i = 0; i < 10; i++)
     {
       const gdouble z = zi + (zf - zi) / (100.0 - 1.0) * i;
+
       for (j = 0; j < 10; j++)
       {
         const gdouble lnR    = log (r_min) + log (r_max / r_min) / (100.0 - 1.0) * j;
         const gdouble R      = exp (lnR);
-        const gdouble var0   = ncm_powspec_var_tophat_R (test->ps, test->model, psf->reltol, z, R);
-        const gdouble sigma0 = ncm_powspec_sigma_tophat_R (test->ps, test->model, psf->reltol, z, R);
+        const gdouble var0   = ncm_powspec_var_tophat_R (test->ps, test->model, reltol, z, R);
+        const gdouble sigma0 = ncm_powspec_sigma_tophat_R (test->ps, test->model, reltol, z, R);
         const gdouble var1   = ncm_powspec_filter_eval_var_lnr (psf, z, lnR);
         const gdouble sigma1 = ncm_powspec_filter_eval_sigma_lnr (psf, z, lnR);
 
         if (var0 > 1.0e-4)
         {
-          ncm_assert_cmpdouble_e (var0, ==, var1, psf->reltol * 10.0, 0.0);
-          ncm_assert_cmpdouble_e (sigma0, ==, sigma1, psf->reltol * 10.0, 0.0);
+          ncm_assert_cmpdouble_e (var0, ==, var1, reltol * 10.0, 0.0);
+          ncm_assert_cmpdouble_e (sigma0, ==, sigma1, reltol * 10.0, 0.0);
         }
       }
     }
   }
   ncm_powspec_filter_free (psf);
 }
-
 
 void
 test_nc_powspec_corr3d (TestNcPowspec *test, gconstpointer pdata)
@@ -302,6 +310,7 @@ test_nc_powspec_corr3d (TestNcPowspec *test, gconstpointer pdata)
   const gdouble zf      = ncm_powspec_get_zf (test->ps);
   const gdouble kmin    = ncm_powspec_get_kmin (test->ps);
   const gdouble kmax    = ncm_powspec_get_kmax (test->ps);
+  const gdouble reltol  = ncm_powspec_corr3d_get_reltol (psc);
 
   ncm_powspec_corr3d_prepare (psc, test->model);
 
@@ -318,14 +327,15 @@ test_nc_powspec_corr3d (TestNcPowspec *test, gconstpointer pdata)
     for (i = 0; i < 10; i++)
     {
       const gdouble z = zi + (zf - zi) / (100.0 - 1.0) * i;
+
       for (j = 0; j < 10; j++)
       {
         const gdouble lnR = log (r_min) + log (r_max / r_min) / (100.0 - 1.0) * j;
         const gdouble R   = exp (lnR);
-        const gdouble xi0 = ncm_powspec_corr3d (test->ps, test->model, psc->reltol, z, R);
+        const gdouble xi0 = ncm_powspec_corr3d (test->ps, test->model, reltol, z, R);
         const gdouble xi1 = ncm_powspec_corr3d_eval_xi_lnr (psc, z, lnR);
 
-        ncm_assert_cmpdouble_e (xi0, ==, xi1, psc->reltol * 10.0, 0.0);
+        ncm_assert_cmpdouble_e (xi0, ==, xi1, reltol * 10.0, 0.0);
       }
     }
   }

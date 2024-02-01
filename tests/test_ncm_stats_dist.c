@@ -143,12 +143,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_stats_dist_new_kde_gauss,
               &test_ncm_stats_dist_traps,
               &test_ncm_stats_dist_free);
-#if GLIB_CHECK_VERSION (2, 38, 0)
+
   g_test_add ("/ncm/stats/dist/nd/kde/gauss/invalid/stub/subprocess", TestNcmStatsDist, NULL,
               &test_ncm_stats_dist_new_kde_gauss,
               &test_ncm_stats_dist_invalid_stub,
               &test_ncm_stats_dist_free);
-#endif
 
   g_test_run ();
 }
@@ -384,10 +383,10 @@ test_ncm_stats_dist_sanity (TestNcmStatsDist *test, gconstpointer pdata)
   test->sd = sd;
 
   ncm_stats_dist_set_use_threads (test->sd, TRUE);
-  g_assert (ncm_stats_dist_get_use_threads (test->sd));
+  g_assert_true (ncm_stats_dist_get_use_threads (test->sd));
 
   ncm_stats_dist_set_use_threads (test->sd, FALSE);
-  g_assert (!ncm_stats_dist_get_use_threads (test->sd));
+  g_assert_true (!ncm_stats_dist_get_use_threads (test->sd));
 
   ncm_stats_dist_set_over_smooth (test->sd, 1.2);
   g_assert_cmpfloat (ncm_stats_dist_get_over_smooth (test->sd), ==, 1.2);
@@ -396,10 +395,10 @@ test_ncm_stats_dist_sanity (TestNcmStatsDist *test, gconstpointer pdata)
   g_assert_cmpfloat (ncm_stats_dist_get_split_frac (test->sd), ==, 0.2);
 
   ncm_stats_dist_set_print_fit (test->sd, TRUE);
-  g_assert (ncm_stats_dist_get_print_fit (test->sd));
+  g_assert_true (ncm_stats_dist_get_print_fit (test->sd));
 
   ncm_stats_dist_set_print_fit (test->sd, FALSE);
-  g_assert (!ncm_stats_dist_get_print_fit (test->sd));
+  g_assert_true (!ncm_stats_dist_get_print_fit (test->sd));
 
   ncm_stats_dist_set_cv_type (test->sd, NCM_STATS_DIST_CV_NONE);
   g_assert_cmpint (ncm_stats_dist_get_cv_type (test->sd), ==, NCM_STATS_DIST_CV_NONE);
@@ -412,12 +411,12 @@ test_ncm_stats_dist_sanity (TestNcmStatsDist *test, gconstpointer pdata)
     NcmStatsDistKernelGauss *sdk_gauss = ncm_stats_dist_kernel_gauss_new (dim);
     NcmStatsDistKernel *kernel         = ncm_stats_dist_get_kernel (test->sd);
 
-    g_assert (kernel == ncm_stats_dist_peek_kernel (test->sd));
+    g_assert_true (kernel == ncm_stats_dist_peek_kernel (test->sd));
 
     ncm_stats_dist_kernel_free (kernel);
 
     ncm_stats_dist_set_kernel (test->sd, NCM_STATS_DIST_KERNEL (sdk_gauss));
-    g_assert (NCM_STATS_DIST_KERNEL (sdk_gauss) == ncm_stats_dist_get_kernel (test->sd));
+    g_assert_true (NCM_STATS_DIST_KERNEL (sdk_gauss) == ncm_stats_dist_get_kernel (test->sd));
   }
 }
 
@@ -454,7 +453,7 @@ test_ncm_stats_dist_cmp_dist (TestNcmStatsDist *test, NcmDataGaussCovMVND *data_
 {
   NcmStatsVec *err_stats = ncm_stats_vec_new (2, NCM_STATS_VEC_VAR, FALSE);
   gulong N               = 0;
-  gint i;
+  guint i;
 
   for (i = 0; i < test->ntests; i++)
   {
@@ -644,7 +643,7 @@ test_ncm_stats_dist_dens_interp_sampling (TestNcmStatsDist *test, gconstpointer 
 
   for (i = 0; i < ntests; i++)
   {
-    const gint k_i = ncm_stats_dist_kernel_choose (test->sd, rng);
+    const guint k_i = ncm_stats_dist_kernel_choose (test->sd, rng);
 
     g_assert_true (k_i < n);
     ncm_vector_addto (cum, k_i, 1.0);
@@ -1120,10 +1119,8 @@ test_ncm_stats_dist_get_kernel_info (TestNcmStatsDist *test, gconstpointer pdata
 static void
 test_ncm_stats_dist_traps (TestNcmStatsDist *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/stats/dist/nd/kde/gauss/invalid/stub/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 static void

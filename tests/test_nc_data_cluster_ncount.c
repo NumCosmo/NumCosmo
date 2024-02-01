@@ -67,12 +67,12 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
-  
+
   g_test_add ("/nc/data_cluster_ncount/sanity", TestNcDataClusterNCount, NULL,
               &test_nc_data_cluster_ncount_new,
               &test_nc_data_cluster_ncount_sanity,
               &test_nc_data_cluster_ncount_free);
-  
+
   g_test_add ("/nc/data_cluster_ncount/bin", TestNcDataClusterNCount, NULL,
               &test_nc_data_cluster_ncount_new,
               &test_nc_data_cluster_ncount_bin,
@@ -137,29 +137,29 @@ main (gint argc, gchar *argv[])
               &test_nc_data_cluster_ncount_new,
               &test_nc_data_cluster_ncount_traps,
               &test_nc_data_cluster_ncount_free);
-#if GLIB_CHECK_VERSION (2, 38, 0)
+
   g_test_add ("/nc/data_cluster_ncount/invalid/test/subprocess", TestNcDataClusterNCount, NULL,
               &test_nc_data_cluster_ncount_new,
               &test_nc_data_cluster_ncount_invalid_test,
               &test_nc_data_cluster_ncount_free);
-#endif
+
   g_test_run ();
 }
 
 void
 test_nc_data_cluster_ncount_new (TestNcDataClusterNCount *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo            = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
+  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHIReion *reion            = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim              = NC_HIPRIM (nc_hiprim_power_law_new ());
   NcDistance *dist            = nc_distance_new (3.0);
-  NcTransferFunc *tf          = nc_transfer_func_new_from_name ("NcTransferFuncEH");
+  NcTransferFunc *tf          = NC_TRANSFER_FUNC (ncm_serialize_global_from_string ("NcTransferFuncEH"));
   NcPowspecML *ps_ml          = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
   NcmPowspecFilter *psf       = ncm_powspec_filter_new (NCM_POWSPEC (ps_ml), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
   NcMultiplicityFunc *mulf    = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_tinker_new_full (NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL, 500.0));
   NcHaloMassFunction *mfp     = nc_halo_mass_function_new (dist, psf, mulf);
-  NcClusterMass *clusterm     = NC_CLUSTER_MASS (nc_cluster_mass_new_from_name ("NcClusterMassAscaso"));
-  NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (nc_cluster_redshift_new_from_name ("NcClusterRedshiftNodist{'z-min':<0.1>, 'z-max':<1.0>}"));
+  NcClusterMass *clusterm     = NC_CLUSTER_MASS (ncm_serialize_global_from_string ("NcClusterMassAscaso"));
+  NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_serialize_global_from_string ("NcClusterRedshiftNodist{'z-min':<0.1>, 'z-max':<1.0>}"));
 
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
@@ -167,8 +167,8 @@ test_nc_data_cluster_ncount_new (TestNcDataClusterNCount *test, gconstpointer pd
   test->cad    = nc_cluster_abundance_new (mfp, NULL);
   test->mset   = ncm_mset_new (cosmo, clusterm, clusterz, NULL);
   test->ncdata = nc_data_cluster_ncount_new (test->cad, "NcClusterRedshiftNodist", "NcClusterMassAscaso");
-  test->area   = g_test_rand_double_range (0.21, 0.27) * 4.0 *ncm_c_pi () / 100.0;
-  
+  test->area   = g_test_rand_double_range (0.21, 0.27) * 4.0 * ncm_c_pi () / 100.0;
+
   ncm_model_free (NCM_MODEL (cosmo));
   ncm_model_free (NCM_MODEL (reion));
   ncm_model_free (NCM_MODEL (prim));
@@ -200,12 +200,13 @@ test_nc_data_cluster_ncount_sanity (TestNcDataClusterNCount *test, gconstpointer
 
   {
     gchar *desc = ncm_data_get_desc (NCM_DATA (test->ncdata));
-    g_assert (strlen (desc) > 0);
+
+    g_assert_true (strlen (desc) > 0);
     g_free (desc);
   }
 
-  g_assert (nc_data_cluster_ncount_has_lnM_true (test->ncdata));
-  g_assert (nc_data_cluster_ncount_has_z_true (test->ncdata));
+  g_assert_true (nc_data_cluster_ncount_has_lnM_true (test->ncdata));
+  g_assert_true (nc_data_cluster_ncount_has_z_true (test->ncdata));
 
   g_assert_cmpuint (nc_data_cluster_ncount_get_len (test->ncdata), >, 0);
   g_assert_cmpuint (nc_data_cluster_ncount_lnM_obs_len (test->ncdata), ==, 1);
@@ -240,10 +241,10 @@ test_nc_data_cluster_ncount_sanity (TestNcDataClusterNCount *test, gconstpointer
   }
 
   nc_data_cluster_ncount_true_data (test->ncdata, TRUE);
-  g_assert (nc_data_cluster_ncount_using_true_data (test->ncdata));
+  g_assert_true (nc_data_cluster_ncount_using_true_data (test->ncdata));
 
   nc_data_cluster_ncount_true_data (test->ncdata, FALSE);
-  g_assert (!nc_data_cluster_ncount_using_true_data (test->ncdata));
+  g_assert_true (!nc_data_cluster_ncount_using_true_data (test->ncdata));
 
   ncm_rng_free (rng);
 }
@@ -251,8 +252,8 @@ test_nc_data_cluster_ncount_sanity (TestNcDataClusterNCount *test, gconstpointer
 void
 test_nc_data_cluster_ncount_bin (TestNcDataClusterNCount *test, gconstpointer pdata)
 {
-  const gdouble zl = 0.1;
-  const gdouble zu = 1.0;
+  const gdouble zl   = 0.1;
+  const gdouble zu   = 1.0;
   const gdouble lnRl = 1.0;
   const gdouble lnRu = 2.0;
   gint i, j;
@@ -280,6 +281,7 @@ test_nc_data_cluster_ncount_bin (TestNcDataClusterNCount *test, gconstpointer pd
       ncm_vector_free (bin_lnRl_vec);
       ncm_vector_free (bin_lnRu_vec);
     }
+
     ncm_vector_free (bin_zl_vec);
     ncm_vector_free (bin_zu_vec);
   }
@@ -291,7 +293,7 @@ void
 test_nc_data_cluster_ncount_serialize (TestNcDataClusterNCount *test, gconstpointer pdata)
 {
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-  GVariant *var = ncm_serialize_to_variant (ser, G_OBJECT (test->ncdata));
+  GVariant *var     = ncm_serialize_to_variant (ser, G_OBJECT (test->ncdata));
 
   nc_data_cluster_ncount_free (test->ncdata);
   test->ncdata = NC_DATA_CLUSTER_NCOUNT (ncm_serialize_from_variant (ser, var));
@@ -321,36 +323,39 @@ void
 test_nc_data_cluster_ncount_m2lnL_true_data_unbinned (TestNcDataClusterNCount *test, gconstpointer pdata)
 {
   gdouble m2lnL = 0.0;
+
   test_nc_data_cluster_ncount_sanity (test, pdata);
 
   nc_data_cluster_ncount_true_data (test->ncdata, TRUE);
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL);
 
-  g_assert (gsl_finite (m2lnL));
+  g_assert_true (gsl_finite (m2lnL));
 }
 
 void
 test_nc_data_cluster_ncount_m2lnL_unbinned (TestNcDataClusterNCount *test, gconstpointer pdata)
 {
   gdouble m2lnL = 0.0;
+
   test_nc_data_cluster_ncount_sanity (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL);
 
-  g_assert (gsl_finite (m2lnL));
+  g_assert_true (gsl_finite (m2lnL));
 }
 
 void
 test_nc_data_cluster_ncount_m2lnL_binned (TestNcDataClusterNCount *test, gconstpointer pdata)
 {
   gdouble m2lnL = 0.0;
+
   test_nc_data_cluster_ncount_sanity (test, pdata);
   test_nc_data_cluster_ncount_bin (test, pdata);
 
   nc_data_cluster_ncount_set_binned (test->ncdata, TRUE);
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL);
 
-  g_assert (gsl_finite (m2lnL));
+  g_assert_true (gsl_finite (m2lnL));
 }
 
 void
@@ -358,17 +363,18 @@ test_nc_data_cluster_ncount_m2lnL_serialize_true_data_unbinned (TestNcDataCluste
 {
   gdouble m2lnL0 = 0.0;
   gdouble m2lnL1 = 0.0;
+
   test_nc_data_cluster_ncount_sanity (test, pdata);
 
   nc_data_cluster_ncount_true_data (test->ncdata, TRUE);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL0);
-  g_assert (gsl_finite (m2lnL0));
+  g_assert_true (gsl_finite (m2lnL0));
 
   test_nc_data_cluster_ncount_serialize (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL1);
-  g_assert (gsl_finite (m2lnL1));
+  g_assert_true (gsl_finite (m2lnL1));
 
   ncm_assert_cmpdouble_e (m2lnL0, ==, m2lnL1, 1.0e-15, 0.0);
 }
@@ -378,15 +384,16 @@ test_nc_data_cluster_ncount_m2lnL_serialize_unbinned (TestNcDataClusterNCount *t
 {
   gdouble m2lnL0 = 0.0;
   gdouble m2lnL1 = 0.0;
+
   test_nc_data_cluster_ncount_sanity (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL0);
-  g_assert (gsl_finite (m2lnL0));
+  g_assert_true (gsl_finite (m2lnL0));
 
   test_nc_data_cluster_ncount_serialize (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL1);
-  g_assert (gsl_finite (m2lnL1));
+  g_assert_true (gsl_finite (m2lnL1));
 
   ncm_assert_cmpdouble_e (m2lnL0, ==, m2lnL1, 1.0e-15, 0.0);
 }
@@ -396,18 +403,19 @@ test_nc_data_cluster_ncount_m2lnL_serialize_binned (TestNcDataClusterNCount *tes
 {
   gdouble m2lnL0 = 0.0;
   gdouble m2lnL1 = 0.0;
+
   test_nc_data_cluster_ncount_sanity (test, pdata);
   test_nc_data_cluster_ncount_bin (test, pdata);
 
   nc_data_cluster_ncount_set_binned (test->ncdata, TRUE);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL0);
-  g_assert (gsl_finite (m2lnL0));
+  g_assert_true (gsl_finite (m2lnL0));
 
   test_nc_data_cluster_ncount_serialize (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL1);
-  g_assert (gsl_finite (m2lnL1));
+  g_assert_true (gsl_finite (m2lnL1));
 
   ncm_assert_cmpdouble_e (m2lnL0, ==, m2lnL1, 1.0e-15, 0.0);
 }
@@ -417,17 +425,18 @@ test_nc_data_cluster_ncount_m2lnL_saveload_true_data_unbinned (TestNcDataCluster
 {
   gdouble m2lnL0 = 0.0;
   gdouble m2lnL1 = 0.0;
+
   test_nc_data_cluster_ncount_sanity (test, pdata);
 
   nc_data_cluster_ncount_true_data (test->ncdata, TRUE);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL0);
-  g_assert (gsl_finite (m2lnL0));
+  g_assert_true (gsl_finite (m2lnL0));
 
   _test_nc_data_cluster_ncount_saveload (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL1);
-  g_assert (gsl_finite (m2lnL1));
+  g_assert_true (gsl_finite (m2lnL1));
 
   ncm_assert_cmpdouble_e (m2lnL0, ==, m2lnL1, 1.0e-12, 0.0);
 }
@@ -437,15 +446,16 @@ test_nc_data_cluster_ncount_m2lnL_saveload_unbinned (TestNcDataClusterNCount *te
 {
   gdouble m2lnL0 = 0.0;
   gdouble m2lnL1 = 0.0;
+
   test_nc_data_cluster_ncount_sanity (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL0);
-  g_assert (gsl_finite (m2lnL0));
+  g_assert_true (gsl_finite (m2lnL0));
 
   _test_nc_data_cluster_ncount_saveload (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL1);
-  g_assert (gsl_finite (m2lnL1));
+  g_assert_true (gsl_finite (m2lnL1));
 
   ncm_assert_cmpdouble_e (m2lnL0, ==, m2lnL1, 1.0e-12, 0.0);
 }
@@ -455,18 +465,19 @@ test_nc_data_cluster_ncount_m2lnL_saveload_binned (TestNcDataClusterNCount *test
 {
   gdouble m2lnL0 = 0.0;
   gdouble m2lnL1 = 0.0;
+
   test_nc_data_cluster_ncount_sanity (test, pdata);
   test_nc_data_cluster_ncount_bin (test, pdata);
 
   nc_data_cluster_ncount_set_binned (test->ncdata, TRUE);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL0);
-  g_assert (gsl_finite (m2lnL0));
+  g_assert_true (gsl_finite (m2lnL0));
 
   _test_nc_data_cluster_ncount_saveload (test, pdata);
 
   ncm_data_m2lnL_val (NCM_DATA (test->ncdata), test->mset, &m2lnL1);
-  g_assert (gsl_finite (m2lnL1));
+  g_assert_true (gsl_finite (m2lnL1));
 
   ncm_assert_cmpdouble_e (m2lnL0, ==, m2lnL1, 1.0e-12, 0.0);
 }
@@ -474,10 +485,8 @@ test_nc_data_cluster_ncount_m2lnL_saveload_binned (TestNcDataClusterNCount *test
 void
 test_nc_data_cluster_ncount_traps (TestNcDataClusterNCount *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/nc/data_cluster_ncount/invalid/test/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void
@@ -485,3 +494,4 @@ test_nc_data_cluster_ncount_invalid_test (TestNcDataClusterNCount *test, gconstp
 {
   g_assert_not_reached ();
 }
+

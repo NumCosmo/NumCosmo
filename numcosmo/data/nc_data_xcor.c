@@ -62,9 +62,9 @@
 #include <glib/gstdio.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
-#ifdef NUMCOSMO_HAVE_CFITSIO
+#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* HAVE_CFITSIO */
 
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_multifit.h>
@@ -81,7 +81,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataXcor, nc_data_xcor, NCM_TYPE_DATA_GAUSS_COV);
+G_DEFINE_TYPE (NcDataXcor, nc_data_xcor, NCM_TYPE_DATA_GAUSS_COV)
 
 static void
 _nc_data_xcor_sort (const gint a, const gint b, gint *aa, gint *bb)
@@ -401,8 +401,12 @@ _nc_data_xcor_fast_update (NcDataXcor *dxc, NcXcorLimberKernel *xcl, guint a, Nc
         }
       }
 
-      xclkg->bias_old       = *(xclkg->bias);
-      xclkg->noise_bias_old = ncm_vector_get (NCM_MODEL (xclkg)->params, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS);
+      {
+        NcmVector *orig_vec = ncm_model_orig_params_peek_vector (NCM_MODEL (xclkg));
+
+        xclkg->bias_old       = *(xclkg->bias);
+        xclkg->noise_bias_old = ncm_vector_get (orig_vec, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS);
+      }
 
       return TRUE;
     }
@@ -694,6 +698,7 @@ nc_data_xcor_cov_func_abcd (NcDataXcor *dxc, NcmMatrix *cov, guint a, guint b, g
 }
 
 /* static gboolean */
+
 /* _nc_data_xcor_cov (NcDataXcor* dxc) */
 static gboolean
 _nc_data_xcor_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov)
@@ -911,10 +916,10 @@ nc_data_xcor_set_3 (NcDataXcor *dxc)
           NcXcorAB *xcab = dxc->xcab[a][b];
 
           ncm_vector_memcpy2 (dxc->pcl,
-              xcab->cl_obs,
-              ell_idx,
-              xcab->ell_lik_min,
-              xcab->nell_lik);
+                              xcab->cl_obs,
+                              ell_idx,
+                              xcab->ell_lik_min,
+                              xcab->nell_lik);
 
           max_ell_lik_max = GSL_MAX (max_ell_lik_max, xcab->ell_lik_max);
         }
@@ -931,7 +936,6 @@ nc_data_xcor_set_3 (NcDataXcor *dxc)
         if (ell_idx > -1)
           g_assert_cmpuint (dxc->xcab[a][b]->ell_th_cut_off, >=, max_ell_lik_max);
         else /* C_l^{a,b} not used */
-
           dxc->xcab[a][b] = nc_xcor_AB_new (a, b, max_ell_lik_max, 0, 0, NULL, NULL, 0);
       }
     }

@@ -110,12 +110,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_fit_esmcmc_traps,
               &test_ncm_fit_esmcmc_free);
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_add ("/ncm/fit/esmcmc/stretch/invalid/run/subprocess", TestNcmFitESMCMC, NULL,
               &test_ncm_fit_esmcmc_new_stretch,
               &test_ncm_fit_invalid_run,
               &test_ncm_fit_esmcmc_free);
-#endif
+
   g_test_run ();
 }
 
@@ -143,7 +142,7 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
 
   ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
 
-  fit = ncm_fit_new (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  fit = ncm_fit_factory (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
 
   ncm_fit_set_maxiter (fit, 10000000);
 
@@ -290,7 +289,7 @@ test_ncm_fit_esmcmc_new_stretch (TestNcmFitESMCMC *test, gconstpointer pdata)
 
   ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
 
-  fit = ncm_fit_new (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  fit = ncm_fit_factory (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
   ncm_fit_set_maxiter (fit, 10000000);
 
   stretch = ncm_fit_esmcmc_walker_stretch_new (nwalkers, ncm_mset_fparams_len (mset));
@@ -679,7 +678,7 @@ void
 test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   const gint run = MAX (test->dim * g_test_rand_int_range (6000, 12000) / test->nrun_div, 100);
-  gdouble prec = 1.0e-2;
+  gdouble prec   = 1.0e-2;
   gdouble lnnorm_sd, lnnorm;
 
   ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
@@ -716,23 +715,12 @@ test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer
   }
 }
 
-#if GLIB_CHECK_VERSION (2, 38, 0)
-
 void
 test_ncm_fit_esmcmc_traps (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   g_test_trap_subprocess ("/ncm/fit/esmcmc/stretch/invalid/run/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 }
-
-#else
-
-void
-test_ncm_fit_esmcmc_traps (TestNcmFitESMCMC *test, gconstpointer pdata)
-{
-}
-
-#endif
 
 void
 test_ncm_fit_invalid_run (TestNcmFitESMCMC *test, gconstpointer pdata)

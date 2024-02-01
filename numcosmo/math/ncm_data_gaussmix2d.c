@@ -56,7 +56,7 @@ struct _NcmDataGaussMix2D
   NcmData parent_instance;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmDataGaussMix2D, ncm_data_gaussmix2d, NCM_TYPE_DATA);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmDataGaussMix2D, ncm_data_gaussmix2d, NCM_TYPE_DATA)
 
 static void
 ncm_data_gaussmix2d_init (NcmDataGaussMix2D *gm2d)
@@ -81,6 +81,7 @@ ncm_data_gaussmix2d_finalize (GObject *object)
 
 static guint _ncm_data_gaussmix2d_get_length (NcmData *data);
 static guint _ncm_data_gaussmix2d_get_dof (NcmData *data);
+static void _ncm_data_gaussmix2d_prepare (NcmData *data, NcmMSet *mset);
 static void _ncm_data_gaussmix2d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 
 static void
@@ -94,6 +95,7 @@ ncm_data_gaussmix2d_class_init (NcmDataGaussMix2DClass *klass)
 
   data_class->get_length = &_ncm_data_gaussmix2d_get_length;
   data_class->get_dof    = &_ncm_data_gaussmix2d_get_dof;
+  data_class->prepare    = &_ncm_data_gaussmix2d_prepare;
   data_class->m2lnL_val  = &_ncm_data_gaussmix2d_m2lnL_val;
 }
 
@@ -107,6 +109,15 @@ static guint
 _ncm_data_gaussmix2d_get_dof (NcmData *data)
 {
   return 10;
+}
+
+static void
+_ncm_data_gaussmix2d_prepare (NcmData *data, NcmMSet *mset)
+{
+  NcmModelRosenbrock *mrb = NCM_MODEL_ROSENBROCK (ncm_mset_peek (mset, ncm_model_rosenbrock_id ()));
+
+  g_assert (mrb != NULL);
+  g_assert (NCM_IS_MODEL_ROSENBROCK (mrb));
 }
 
 static void

@@ -46,23 +46,35 @@ enum
 {
   PROP_0,
   PROP_DEFAULT_SPARAM,
+  PROP_DEFAULT_LEN,
   PROP_LEN,
 };
 
-G_DEFINE_TYPE (NcmVParam, ncm_vparam, G_TYPE_OBJECT);
+struct _NcmVParam
+{
+  /*< private >*/
+  GObject parent_instance;
+  guint len;
+  NcmSParam *default_sparam;
+  GPtrArray *sparam;
+};
+
+
+G_DEFINE_TYPE (NcmVParam, ncm_vparam, G_TYPE_OBJECT)
 
 static void
 ncm_vparam_init (NcmVParam *vp)
 {
-  vp->len = 0;
+  vp->len            = 0;
   vp->default_sparam = NULL;
-  vp->sparam = g_ptr_array_new_with_free_func ((GDestroyNotify) &ncm_sparam_free);
+  vp->sparam         = g_ptr_array_new_with_free_func ((GDestroyNotify) & ncm_sparam_free);
 }
 
 static void
 _ncm_vparam_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmVParam *vparam = NCM_VPARAM (object);
+
   g_return_if_fail (NCM_IS_VPARAM (object));
 
   switch (prop_id)
@@ -70,9 +82,12 @@ _ncm_vparam_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_DEFAULT_SPARAM:
       vparam->default_sparam = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    case PROP_DEFAULT_LEN:
+      ncm_vparam_set_len (vparam, g_value_get_uint (value));
       break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -80,15 +95,20 @@ static void
 _ncm_vparam_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmVParam *vparam = NCM_VPARAM (object);
-  g_return_if_fail (NCM_IS_VPARAM (vparam));
 
-  NCM_UNUSED (value);
+  g_return_if_fail (NCM_IS_VPARAM (vparam));
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    case PROP_DEFAULT_SPARAM:
+      g_value_set_object (value, vparam->default_sparam);
       break;
+    case PROP_DEFAULT_LEN:
+      g_value_set_uint (value, ncm_vparam_get_len (vparam));
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -99,6 +119,7 @@ _ncm_vparam_dispose (GObject *object)
 
   vp->len = 0;
   ncm_sparam_clear (&vp->default_sparam);
+
   if (vp->sparam != NULL)
   {
     g_ptr_array_unref (vp->sparam);
@@ -116,11 +137,10 @@ _ncm_vparam_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_vparam_parent_class)->finalize (object);
 }
 
-
 static void
 ncm_vparam_class_init (NcmVParamClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = _ncm_vparam_set_property;
   object_class->get_property = _ncm_vparam_get_property;
@@ -130,12 +150,19 @@ ncm_vparam_class_init (NcmVParamClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_DEFAULT_SPARAM,
                                    g_param_spec_object  ("default-sparam",
-                                                        NULL,
-                                                        "Default sparam for the vector components",
-                                                        NCM_TYPE_SPARAM,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-}
+                                                         NULL,
+                                                         "Default sparam for the vector components",
+                                                         NCM_TYPE_SPARAM,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  g_object_class_install_property (object_class,
+                                   PROP_DEFAULT_LEN,
+                                   g_param_spec_uint  ("default-len",
+                                                       NULL,
+                                                       "Default length of the vector",
+                                                       1, G_MAXUINT, 1,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
 
 /**
  * ncm_vparam_new:
@@ -153,7 +180,9 @@ ncm_vparam_new (guint len, NcmSParam *default_param)
   NcmVParam *vp = g_object_new (NCM_TYPE_VPARAM,
                                 "default-sparam", default_param,
                                 NULL);
+
   ncm_vparam_set_len (vp, len);
+
   return vp;
 }
 
@@ -183,8 +212,10 @@ NcmVParam *
 ncm_vparam_full_new (guint len, const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
 {
   NcmSParam *default_param = ncm_sparam_new (name, symbol, lower_bound, upper_bound, scale, abstol, default_val, ftype);
-  NcmVParam *vparam = ncm_vparam_new (len, default_param);
+  NcmVParam *vparam        = ncm_vparam_new (len, default_param);
+
   ncm_sparam_free (default_param);
+
   return vparam;
 }
 
@@ -214,8 +245,9 @@ NcmVParam *
 ncm_vparam_copy (NcmVParam *vparam)
 {
   NcmSParam *default_param = ncm_sparam_copy (vparam->default_sparam);
-  NcmVParam *vparam_new = ncm_vparam_new (0, default_param);
+  NcmVParam *vparam_new    = ncm_vparam_new (0, default_param);
   guint i;
+
   ncm_sparam_free (default_param);
 
   g_ptr_array_set_size (vparam_new->sparam, vparam->len);
@@ -224,8 +256,10 @@ ncm_vparam_copy (NcmVParam *vparam)
   for (i = 0; i < vparam->len; i++)
   {
     NcmSParam *sp = ncm_sparam_copy (ncm_vparam_peek_sparam (vparam, i));
+
     g_ptr_array_index (vparam_new->sparam, i) = sp;
   }
+
   return vparam_new;
 }
 
@@ -269,20 +303,22 @@ void
 ncm_vparam_set_len (NcmVParam *vparam, guint len)
 {
   guint i;
+
   g_ptr_array_set_size (vparam->sparam, len);
+
   for (i = vparam->len; i < len; i++)
   {
-	g_ptr_array_index (vparam->sparam, i) = ncm_sparam_copy (vparam->default_sparam);
-	ncm_sparam_take_name (g_ptr_array_index (vparam->sparam, i),
-	                      g_strdup_printf ("%s_%u",
-	                                       ncm_sparam_name (vparam->default_sparam), i)
-	                      );
-	ncm_sparam_take_symbol (g_ptr_array_index (vparam->sparam, i),
-	                        g_strdup_printf ("{%s}_%u",
-	                                         ncm_sparam_symbol (vparam->default_sparam), i)
-	                        );
-
+    g_ptr_array_index (vparam->sparam, i) = ncm_sparam_copy (vparam->default_sparam);
+    ncm_sparam_take_name (g_ptr_array_index (vparam->sparam, i),
+                          g_strdup_printf ("%s_%u",
+                                           ncm_sparam_name (vparam->default_sparam), i)
+                         );
+    ncm_sparam_take_symbol (g_ptr_array_index (vparam->sparam, i),
+                            g_strdup_printf ("{%s}_%u",
+                                             ncm_sparam_symbol (vparam->default_sparam), i)
+                           );
   }
+
   vparam->len = len;
 }
 
@@ -336,6 +372,7 @@ void
 ncm_vparam_set_sparam_full (NcmVParam *vparam, guint n, gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
 {
   NcmSParam *spn = ncm_sparam_new (name, symbol, lower_bound, upper_bound, scale, abstol, default_val, ftype);
+
   g_assert (n < vparam->len);
   ncm_sparam_free (g_ptr_array_index (vparam->sparam, n));
   g_ptr_array_index (vparam->sparam, n) = spn;
@@ -369,7 +406,9 @@ NcmSParam *
 ncm_vparam_get_sparam (NcmVParam *vparam, guint n)
 {
   NcmSParam *sp = ncm_vparam_peek_sparam (vparam, n);
+
   ncm_sparam_ref (sp);
+
   return sp;
 }
 
@@ -385,6 +424,7 @@ void
 ncm_vparam_set_lower_bound (NcmVParam *vparam, guint n, const gdouble lb)
 {
   NcmSParam *sp = ncm_vparam_peek_sparam (vparam, n);
+
   ncm_sparam_set_lower_bound (sp, lb);
 }
 
@@ -400,6 +440,7 @@ void
 ncm_vparam_set_upper_bound (NcmVParam *vparam, guint n, const gdouble ub)
 {
   NcmSParam *sp = ncm_vparam_peek_sparam (vparam, n);
+
   ncm_sparam_set_upper_bound (sp, ub);
 }
 
@@ -415,6 +456,7 @@ void
 ncm_vparam_set_scale (NcmVParam *vparam, guint n, const gdouble scale)
 {
   NcmSParam *sp = ncm_vparam_peek_sparam (vparam, n);
+
   ncm_sparam_set_scale (sp, scale);
 }
 
@@ -430,6 +472,7 @@ void
 ncm_vparam_set_absolute_tolerance (NcmVParam *vparam, guint n, const gdouble abstol)
 {
   NcmSParam *sp = ncm_vparam_peek_sparam (vparam, n);
+
   ncm_sparam_set_absolute_tolerance (sp, abstol);
 }
 
@@ -445,6 +488,7 @@ void
 ncm_vparam_set_default_value (NcmVParam *vparam, guint n, const gdouble default_val)
 {
   NcmSParam *sp = ncm_vparam_peek_sparam (vparam, n);
+
   ncm_sparam_set_default_value (sp, default_val);
 }
 
@@ -460,6 +504,7 @@ void
 ncm_vparam_set_fit_type (NcmVParam *vparam, guint n, const NcmParamType ftype)
 {
   NcmSParam *sp = ncm_vparam_peek_sparam (vparam, n);
+
   ncm_sparam_set_default_value (sp, ftype);
 }
 
@@ -502,6 +547,7 @@ gdouble
 ncm_vparam_get_lower_bound (const NcmVParam *vparam, guint n)
 {
   NcmSParam *sp = ncm_vparam_peek_sparam (vparam, n);
+
   return ncm_sparam_get_lower_bound (sp);
 }
 
@@ -516,6 +562,7 @@ gdouble
 ncm_vparam_get_upper_bound (const NcmVParam *vparam, guint n)
 {
   NcmSParam *sp = ncm_vparam_peek_sparam (vparam, n);
+
   return ncm_sparam_get_upper_bound (sp);
 }
 
@@ -530,6 +577,7 @@ gdouble
 ncm_vparam_get_scale (const NcmVParam *vparam, guint n)
 {
   NcmSParam *sp = ncm_vparam_peek_sparam (vparam, n);
+
   return ncm_sparam_get_scale (sp);
 }
 
@@ -544,6 +592,7 @@ gdouble
 ncm_vparam_get_absolute_tolerance (const NcmVParam *vparam, guint n)
 {
   NcmSParam *sp = ncm_vparam_peek_sparam (vparam, n);
+
   return ncm_sparam_get_absolute_tolerance (sp);
 }
 
@@ -558,6 +607,7 @@ gdouble
 ncm_vparam_get_default_value (const NcmVParam *vparam, guint n)
 {
   NcmSParam *sp = ncm_vparam_peek_sparam (vparam, n);
+
   return ncm_sparam_get_default_value (sp);
 }
 
@@ -572,6 +622,7 @@ NcmParamType
 ncm_vparam_get_fit_type (const NcmVParam *vparam, guint n)
 {
   NcmSParam *sp = ncm_vparam_peek_sparam (vparam, n);
+
   return ncm_sparam_get_fit_type (sp);
 }
 
@@ -586,3 +637,4 @@ ncm_vparam_len (const NcmVParam *vparam)
 {
   return vparam->len;
 }
+

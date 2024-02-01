@@ -36,33 +36,11 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MPI_JOB_FIT             (ncm_mpi_job_fit_get_type ())
-#define NCM_MPI_JOB_FIT(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MPI_JOB_FIT, NcmMPIJobFit))
-#define NCM_MPI_JOB_FIT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MPI_JOB_FIT, NcmMPIJobFitClass))
-#define NCM_IS_MPI_JOB_FIT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MPI_JOB_FIT))
-#define NCM_IS_MPI_JOB_FIT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MPI_JOB_FIT))
-#define NCM_MPI_JOB_FIT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MPI_JOB_FIT, NcmMPIJobFitClass))
+#define NCM_TYPE_MPI_JOB_FIT (ncm_mpi_job_fit_get_type ())
 
-typedef struct _NcmMPIJobFitClass NcmMPIJobFitClass;
-typedef struct _NcmMPIJobFit NcmMPIJobFit;
-typedef struct _NcmMPIJobFitPrivate NcmMPIJobFitPrivate;
+G_DECLARE_FINAL_TYPE (NcmMPIJobFit, ncm_mpi_job_fit, NCM, MPI_JOB_FIT, NcmMPIJob)
 
-struct _NcmMPIJobFitClass
-{
-  /*< private >*/
-  NcmMPIJobClass parent_class;
-};
-
-struct _NcmMPIJobFit
-{
-  /*< private >*/
-  NcmMPIJob parent_instance;
-  NcmMPIJobFitPrivate *priv;
-};
-
-GType ncm_mpi_job_fit_get_type (void) G_GNUC_CONST;
-
-NcmMPIJobFit *ncm_mpi_job_fit_new (NcmFit *fit, NcmObjArray *func_oa);
+NcmMPIJobFit *ncm_mpi_job_fit_new (NcmFit * fit, NcmObjArray * func_oa);
 NcmMPIJobFit *ncm_mpi_job_fit_ref (NcmMPIJobFit *mjfit);
 
 void ncm_mpi_job_fit_free (NcmMPIJobFit *mjfit);
