@@ -4,6 +4,23 @@ CHANGELOG
 [Current]
 
 [v0.21.1]
+ * Updates and tests for NumCosmo app (#140)
+
+     * Fixed minor bugs in levmar.
+     * Added serialization for strv.
+     * Tests for NumCosmo app.
+     * Adding strv to serialization tests.
+     * Making all test files in a tmp dir.
+     * Conditional tests for numcosmo app (depends on typer and rich).
+     * Added optional reqs to pyproject.
+     * Fixed conditional compilation of yaml serialization methods.
+     * Minimal tests for the complete functionality of NumCosmo app.
+     * Finished numcosmo analyze.
+     * Fixing flake8 issues.
+     * NumCosmo analyze behaves well for number of iterations < 10.
+     * Improved message for test failing on all parameters.
+ * New bug fix release.
+
  * Fixed mypy issues.
 
  * Ran black.
