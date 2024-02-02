@@ -770,7 +770,6 @@ class AnalyzeMCMC(LoadExperiment):
         mcat = Ncm.MSetCatalog.new_from_file_ro(
             self.mcmc_file.absolute().as_posix(), self.burnin
         )
-        mcat.estimate_autocorrelation_tau(False)
         mset = mcat.peek_mset()
         mset.prepare_fparam_map()
         fparams_len = mset.fparams_len()
@@ -782,6 +781,9 @@ class AnalyzeMCMC(LoadExperiment):
             stats = mcat.peek_e_mean_stats()
         else:
             stats = mcat.peek_pstats()
+        nitems = stats.nitens()
+        if nitems >= 10:
+            mcat.estimate_autocorrelation_tau(False)
 
         desc_color = "bold bright_cyan"
         values_color = "bold bright_green"
@@ -853,37 +855,38 @@ class AnalyzeMCMC(LoadExperiment):
             [f"{full_stats.get_sd(i): .6g}" for i in range(total_columns)]
         )
 
-        # Mean Standard Deviation
+        if nitems >= 10:
+            # Mean Standard Deviation
+            param_diag.add_column(
+                "Mean Standard Deviation",
+                justify="left",
+                style=val_color,
+                vertical="middle",
+            )
+            tau_vec = mcat.peek_autocorrelation_tau()
+            mean_sd_array = [
+                np.sqrt(full_stats.get_var(i) * tau_vec.get(i) / full_stats.nitens())
+                for i in range(total_columns)
+            ]
+            param_diag_matrix.append([f"{mean_sd: .6g}" for mean_sd in mean_sd_array])
 
-        param_diag.add_column(
-            "Mean Standard Deviation",
-            justify="left",
-            style=val_color,
-            vertical="middle",
-        )
-        tau_vec = mcat.peek_autocorrelation_tau()
-        mean_sd_array = [
-            np.sqrt(full_stats.get_var(i) * tau_vec.get(i) / full_stats.nitens())
-            for i in range(total_columns)
-        ]
-        param_diag_matrix.append([f"{mean_sd: .6g}" for mean_sd in mean_sd_array])
+            # Autocorrelation Time
+            tau_row = []
+            tau_row.append("Autocorrelation time (tau)")
+            tau_row.append("NA")
+            tau_row.append(
+                f"{tau_vec.get_max():.0f} ({mcat.col_full_name(tau_vec.get_max_index())})"
+            )
+            tau_row.append("NA")
+            tau_row.append(f"{tau_vec.get_max():.3f}")
+            global_diag.add_row(*tau_row)
 
-        # Autocorrelation Time
-
-        tau_row = []
-        tau_row.append("Autocorrelation time (tau)")
-        tau_row.append("NA")
-        tau_row.append(
-            f"{tau_vec.get_max():.0f} ({mcat.col_full_name(tau_vec.get_max_index())})"
-        )
-        tau_row.append("NA")
-        tau_row.append(f"{tau_vec.get_max():.3f}")
-        global_diag.add_row(*tau_row)
-
-        param_diag.add_column("tau", justify="left", style=val_color, vertical="middle")
-        param_diag_matrix.append(
-            [f"{tau_vec.get(i): .6g}" for i in range(total_columns)]
-        )
+            param_diag.add_column(
+                "tau", justify="left", style=val_color, vertical="middle"
+            )
+            param_diag_matrix.append(
+                [f"{tau_vec.get(i): .6g}" for i in range(total_columns)]
+            )
 
         if nchains > 1:
             # Gelman Rubin
@@ -919,66 +922,66 @@ class AnalyzeMCMC(LoadExperiment):
         param_diag.add_column("CB", justify="left", style=val_color)
         param_diag_matrix.append([f"{cb_i:.0f} {cb_i * nchains:.0f}" for cb_i in cb])
 
-        # Effective sample size
+        if nitems >= 10:
+            # Effective sample size
+            (
+                ess_vec,
+                ess_best_cutoff,
+                ess_worst_index,
+                ess_worst_order,
+                ess_worst_ess,
+            ) = stats.max_ess_time(100)
+            ess_row = []
+            ess_row.append("Effective Sample Size (ESS) (ensembles, points)")
+            ess_row.append(f"{ess_best_cutoff}")
+            ess_row.append(
+                f"{ess_vec.get(ess_worst_index):.0f} ({mcat.col_full_name(ess_worst_index)})"
+            )
+            ess_row.append(f"{ess_worst_order}")
+            ess_row.append(f"{ess_worst_ess:.0f}")
+            global_diag.add_row(*ess_row)
 
-        (
-            ess_vec,
-            ess_best_cutoff,
-            ess_worst_index,
-            ess_worst_order,
-            ess_worst_ess,
-        ) = stats.max_ess_time(100)
-        ess_row = []
-        ess_row.append("Effective Sample Size (ESS) (ensembles, points)")
-        ess_row.append(f"{ess_best_cutoff}")
-        ess_row.append(
-            f"{ess_vec.get(ess_worst_index):.0f} ({mcat.col_full_name(ess_worst_index)})"
-        )
-        ess_row.append(f"{ess_worst_order}")
-        ess_row.append(f"{ess_worst_ess:.0f}")
-        global_diag.add_row(*ess_row)
+            param_diag.add_column("ESS", justify="left", style=val_color)
+            param_diag_matrix.append(
+                [
+                    f"{ess_vec.get(i):.0f} {ess_vec.get(i) * nchains:.0f}"
+                    for i in range(total_columns)
+                ]
+            )
 
-        param_diag.add_column("ESS", justify="left", style=val_color)
-        param_diag_matrix.append(
-            [
-                f"{ess_vec.get(i):.0f} {ess_vec.get(i) * nchains:.0f}"
-                for i in range(total_columns)
-            ]
-        )
+            # Heidelberger and Welch
 
-        # Heidelberger and Welch
+            hw_pvalue = 1.0 - 0.95 ** (1.0 / fparams_len)
+            (
+                hw_vec,
+                hw_best_cutoff,
+                hw_worst_index,
+                hw_worst_order,
+                hw_worst_pvalue,
+            ) = stats.heidel_diag(100, hw_pvalue)
 
-        hw_pvalue = 1.0 - 0.95 ** (1.0 / fparams_len)
-        (
-            hw_vec,
-            hw_best_cutoff,
-            hw_worst_index,
-            hw_worst_order,
-            hw_worst_pvalue,
-        ) = stats.heidel_diag(100, hw_pvalue)
+            hw_row = []
+            hw_row.append(f"Heidelberger and Welch p-value (>{hw_pvalue * 100.0:.1f}%)")
 
-        hw_row = []
-        hw_row.append(f"Heidelberger and Welch p-value (>{hw_pvalue * 100.0:.1f}%)")
+            if hw_best_cutoff >= 0:
+                hw_row.append(f"{hw_best_cutoff}")
+            else:
+                hw_row.append("All tests fail")
+            hw_row.append(
+                f"{(1.0 - hw_worst_pvalue) * 100.0:.1f}% ({mcat.col_full_name(hw_worst_index)})"
+            )
+            hw_row.append(f"{hw_worst_order}")
+            hw_row.append(f"{(1.0 - hw_worst_pvalue) * 100.0:.1f}%")
+            global_diag.add_row(*hw_row)
 
-        if hw_best_cutoff >= 0:
-            hw_row.append(f"{hw_best_cutoff}")
-        else:
-            hw_row.append("All tests fail")
-        hw_row.append(
-            f"{(1.0 - hw_worst_pvalue) * 100.0:.1f}% ({mcat.col_full_name(hw_worst_index)})"
-        )
-        hw_row.append(f"{hw_worst_order}")
-        hw_row.append(f"{(1.0 - hw_worst_pvalue) * 100.0:.1f}%")
-        global_diag.add_row(*hw_row)
-
-        param_diag.add_column(
-            "H&W",
-            justify="left",
-            style=val_color,
-        )
-        param_diag_matrix.append(
-            [f"{(1.0 - hw_vec.get(i)) * 100.0:.1f}" for i in range(total_columns)]
-        )
+            param_diag.add_column(
+                "H&W",
+                justify="left",
+                style=val_color,
+            )
+            param_diag_matrix.append(
+                [f"{(1.0 - hw_vec.get(i)) * 100.0:.1f}" for i in range(total_columns)]
+            )
 
         for row in np.array(param_diag_matrix).T:
             param_diag.add_row(*row)
