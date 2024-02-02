@@ -38,6 +38,7 @@ dependencies:
   - pylint
   - pytest
   - python >= 3.9
+  - rich
   - scipy
   - tqdm
   - typer

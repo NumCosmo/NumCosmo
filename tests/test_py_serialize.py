@@ -24,6 +24,8 @@
 
 """Tests for serialization."""
 
+from typing import List
+
 import pytest
 import numpy as np
 from numcosmo_py import Ncm, GObject, dict_to_var_dict
@@ -67,6 +69,10 @@ class GTestA(GObject.Object):
         type=Ncm.VarDict,  # type: ignore
         flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
     )
+    A_strv: List[str] = GObject.Property(
+        type=GObject.TYPE_STRV,  # type: ignore
+        flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -88,8 +94,9 @@ class GTestA(GObject.Object):
             self.A_var_dict.get_variant(key) == other.A_var_dict.get_variant(key)
             for key in self.A_var_dict.keys()
         )
+        t9 = self.A_strv == other.A_strv
 
-        return t1 and t2 and t3 and t4 and t5 and t6 and t7 and t8
+        return t1 and t2 and t3 and t4 and t5 and t6 and t7 and t8 and t9
 
 
 GObject.type_register(GTestA)
@@ -240,8 +247,9 @@ def fixture_a1():
                 "i": [1, 2, 3],
                 "j": [1.2, 2.3, 3.4],
                 "k": [True, False, True],
-            }
+            },
         ),
+        A_strv=["saa", "sab", "sac"],
     )
 
 
@@ -271,6 +279,7 @@ def fixture_a2():
                 "jaba_k": [True, True, True],
             }
         ),
+        A_strv=["baa", "bab", "bac", "sdg"],
     )
 
 
@@ -300,6 +309,7 @@ def fixture_a3():
                 "jaba_11": [True, True, False],
             }
         ),
+        A_strv=[],
     )
 
 

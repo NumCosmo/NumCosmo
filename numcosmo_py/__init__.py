@@ -30,6 +30,7 @@ import gi
 gi.require_version("NumCosmo", "1.0")
 gi.require_version("NumCosmoMath", "1.0")
 
+# pyright: reportMissingModuleSource=false
 # pylint:disable-next=wrong-import-position,unused-import
 from gi.repository import GLib  # noqa: E402
 

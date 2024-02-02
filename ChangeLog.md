@@ -3,7 +3,18 @@ CHANGELOG
 
 [Current]
 
+[v0.21.1]
+ * Fixed mypy issues.
+
+ * Ran black.
+
+ * Fixed cosmosis required parameters issue due to returning iterator. Fixed
+     restart issue on numcosmo run fit.
+
+
 [v0.21.0]
+ * New release v0.21.0
+
  * numcosmo command line tool (#137)
 
      Introduced a new command line tool for NumCosmo (experimental):
