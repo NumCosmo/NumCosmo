@@ -97,7 +97,7 @@ def get_algorithms(
     raise RuntimeError(f"Runner {runner} not found.")
 
 
-def check_runner_algorithm(runner: FitRunner, algorithm: str):
+def check_runner_algorithm(runner: FitRunner, algorithm: Optional[str]):
     """Check if algorithm is valid."""
 
     if algorithm is not None:

@@ -337,7 +337,12 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_fit_ls_f (fit, f);
   ncm_fit_state_set_m2lnL_curval (fstate, info[1]);
-  ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1] > 1.0 ? info[2] : info[2] / info[1]);
+
+  if (info[2] != 0.0)
+    ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1] > 1.0 ? info[2] : info[2] / info[1]);
+  else
+    ncm_fit_state_set_m2lnL_prec (fstate, info[2]);
+
   ncm_fit_state_set_niter (fstate, info[5]);
 
   ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
@@ -380,7 +385,12 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_fit_ls_f (fit, f);
   ncm_fit_state_set_m2lnL_curval (fstate, info[1]);
-  ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1] > 1.0 ? info[2] : info[2] / info[1]);
+
+  if (info[2] != 0.0)
+    ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1] > 1.0 ? info[2] : info[2] / info[1]);
+  else
+    ncm_fit_state_set_m2lnL_prec (fstate, info[2]);
+
   ncm_fit_state_set_niter (fstate, info[5]);
 
   ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
@@ -424,7 +434,12 @@ ncm_fit_levmar_bc_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_fit_ls_f (fit, f);
   ncm_fit_state_set_m2lnL_curval (fstate, info[1]);
-  ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1] > 1.0 ? info[2] : info[2] / info[1]);
+
+  if (info[2] != 0.0)
+    ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1] > 1.0 ? info[2] : info[2] / info[1]);
+  else
+    ncm_fit_state_set_m2lnL_prec (fstate, info[2]);
+
   ncm_fit_state_set_niter (fstate, info[5]);
 
   ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
@@ -468,7 +483,12 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   ncm_fit_ls_f (fit, f);
   ncm_fit_state_set_m2lnL_curval (fstate, info[1]);
-  ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1] > 1.0 ? info[2] : info[2] / info[1]);
+
+  if (info[2] != 0.0)
+    ncm_fit_state_set_m2lnL_prec (fstate, info[2] / info[1] > 1.0 ? info[2] : info[2] / info[1]);
+  else
+    ncm_fit_state_set_m2lnL_prec (fstate, info[2]);
+
   ncm_fit_state_set_niter (fstate, info[5]);
 
   ncm_fit_params_set_vector (fit, ncm_fit_state_peek_fparams (fstate));
