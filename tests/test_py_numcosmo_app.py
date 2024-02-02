@@ -579,3 +579,30 @@ def test_run_mcmc_apes_method_kernel_no_interp(
     )
     if result.exit_code != 0:
         raise result.exception
+
+
+def test_run_mcmc_apes_analyze(simple_experiment):
+    """Runs a MCMC analysis using APES."""
+
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+
+    assert output.absolute().with_suffix(".mcmc.fits").exists()
+    if result.exit_code != 0:
+        raise result.exception
+
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            filename.as_posix(),
+            output.absolute().with_suffix(".mcmc.fits").as_posix(),
+        ],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception

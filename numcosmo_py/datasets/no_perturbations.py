@@ -38,6 +38,7 @@ class SNIaID(GEnum):
 
     # pylint: disable=no-member
     COV_PANTHEON_PLUS_SH0ES_SYS_STAT = Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT
+    SIMPLE_UNION2_1 = Nc.DataSNIAId.SIMPLE_UNION2_1
 
 
 class BAOID(str, Enum):

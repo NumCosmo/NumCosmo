@@ -28,6 +28,9 @@ from enum import Enum
 from typing import Optional, Annotated, Tuple, cast, Union
 from pathlib import Path
 import typer
+from rich.table import Table
+from rich.text import Text
+import numpy as np
 
 from numcosmo_py import Ncm
 from numcosmo_py.sampling import (
@@ -720,5 +723,296 @@ class RunMCMC(RunCommonOptions):
         esmcmc.start_run()
         esmcmc.run(self.nsamples)
         esmcmc.end_run()
+
+        self.end_experiment()
+
+
+@app.command(
+    name="analyze",
+    help="Analyzes the results of a MCMC run.",
+    no_args_is_help=True,
+)
+@dataclasses.dataclass
+class AnalyzeMCMC(LoadExperiment):
+    """Analyzes the results of a MCMC run."""
+
+    mcmc_file: Annotated[
+        Optional[Path],
+        typer.Argument(
+            help="Path to the MCMC file.",
+        ),
+    ] = None
+
+    burnin: Annotated[
+        int,
+        typer.Option(
+            help="Number of samples to discard as burnin.",
+            min=0,
+        ),
+    ] = 0
+
+    info: Annotated[
+        bool,
+        typer.Option(
+            help="Prints information about the MCMC file.",
+        ),
+    ] = True
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+        if self.mcmc_file is None:
+            raise RuntimeError("No MCMC file given.")
+
+        if not self.mcmc_file.exists():
+            raise RuntimeError(f"MCMC file {self.mcmc_file} not found.")
+
+        mcat = Ncm.MSetCatalog.new_from_file_ro(
+            self.mcmc_file.absolute().as_posix(), self.burnin
+        )
+        mcat.estimate_autocorrelation_tau(False)
+        mset = mcat.peek_mset()
+        mset.prepare_fparam_map()
+        fparams_len = mset.fparams_len()
+        nadd_vals = mcat.nadd_vals()
+        total_columns = fparams_len + nadd_vals
+        nchains = mcat.nchains()
+        full_stats = mcat.peek_pstats()
+        if nchains > 1:
+            stats = mcat.peek_e_mean_stats()
+        else:
+            stats = mcat.peek_pstats()
+
+        desc_color = "bold bright_cyan"
+        values_color = "bold bright_green"
+        main_table = Table(title="Catalog information")
+        main_table.show_header = False
+
+        main_table.add_column(justify="left")
+
+        details = Table(title="Run details", expand=False)
+        details.show_header = False
+        details.add_column(justify="left", style=desc_color)
+        details.add_column(justify="right", style=values_color)
+
+        details.add_row("Run type", mcat.get_run_type())
+        details.add_row("Size", f"{mcat.len()}")
+        details.add_row("Number of Iterations", f"{mcat.max_time()}")
+        details.add_row("Number of chains", f"{nchains}")
+        details.add_row("Number of parameters", f"{fparams_len}")
+        details.add_row("Number of extra columns", f"{nadd_vals}")
+        details.add_row("Weighted", f"{mcat.weighted()}")
+        main_table.add_row(details)
+
+        # Global diagnostics
+
+        global_diag = Table(
+            title="Global Convergence Diagnostics",
+            expand=True,
+        )
+        global_diag.add_column("Diagnostic Statistic", justify="left", style=desc_color)
+        global_diag.add_column("Suggested cut-off", justify="left", style=values_color)
+        global_diag.add_column("Worst parameter", justify="left", style=values_color)
+        global_diag.add_column("AR model order", justify="left", style=values_color)
+        global_diag.add_column("Value", justify="left", style=values_color)
+
+        param_diag = Table(title="Parameters", expand=False, show_lines=True)
+        param_diag_matrix = []
+
+        # Parameter names
+        param_diag.add_column(
+            "Parameter", justify="left", style=desc_color, vertical="middle"
+        )
+        param_diag_matrix.append([mcat.col_full_name(i) for i in range(total_columns)])
+
+        # Values color
+        val_color = values_color
+        # Parameter best fit
+        best_fit_vec = mcat.get_bestfit_row()
+        param_diag.add_column(
+            "Best-fit", justify="left", style=val_color, vertical="middle"
+        )
+        param_diag_matrix.append(
+            [f"{best_fit_vec.get(i): .6g}" for i in range(total_columns)]
+        )
+
+        # Parameter mean
+        param_diag.add_column(
+            "Mean", justify="left", style=val_color, vertical="middle"
+        )
+        param_diag_matrix.append(
+            [f"{full_stats.get_mean(i): .6g}" for i in range(total_columns)]
+        )
+
+        # Standard Deviation
+
+        param_diag.add_column(
+            "Standard Deviation", justify="left", style=val_color, vertical="middle"
+        )
+        param_diag_matrix.append(
+            [f"{full_stats.get_sd(i): .6g}" for i in range(total_columns)]
+        )
+
+        # Mean Standard Deviation
+
+        param_diag.add_column(
+            "Mean Standard Deviation",
+            justify="left",
+            style=val_color,
+            vertical="middle",
+        )
+        tau_vec = mcat.peek_autocorrelation_tau()
+        mean_sd_array = [
+            np.sqrt(full_stats.get_var(i) * tau_vec.get(i) / full_stats.nitens())
+            for i in range(total_columns)
+        ]
+        param_diag_matrix.append([f"{mean_sd: .6g}" for mean_sd in mean_sd_array])
+
+        # Autocorrelation Time
+
+        tau_row = []
+        tau_row.append("Autocorrelation time (tau)")
+        tau_row.append("NA")
+        tau_row.append(
+            f"{tau_vec.get_max():.0f} ({mcat.col_full_name(tau_vec.get_max_index())})"
+        )
+        tau_row.append("NA")
+        tau_row.append(f"{tau_vec.get_max():.3f}")
+        global_diag.add_row(*tau_row)
+
+        param_diag.add_column("tau", justify="left", style=val_color, vertical="middle")
+        param_diag_matrix.append(
+            [f"{tau_vec.get(i): .6g}" for i in range(total_columns)]
+        )
+
+        if nchains > 1:
+            # Gelman Rubin
+            gelman_rubin_row = []
+            gelman_rubin_row.append("Gelman-Rubin (G&B) Shrink Factor (R-1)")
+            skf = [mcat.get_param_shrink_factor(i) - 1 for i in range(total_columns)]
+            gelman_rubin_row.append("NA")
+            gr_worst = int(np.argmin(skf))
+            gelman_rubin_row.append(
+                f"{skf[gr_worst]:.3f} ({mcat.col_full_name(gr_worst)})"
+            )
+            gelman_rubin_row.append("NA")
+            gelman_rubin_row.append(f"{mcat.get_shrink_factor() - 1:.3f}")
+            global_diag.add_row(*gelman_rubin_row)
+
+            param_diag.add_column(
+                "G&R", justify="left", style=val_color, vertical="middle"
+            )
+            param_diag_matrix.append([f"{skf_i:.3f}" for skf_i in skf])
+
+        # Constant Break
+
+        cb = [stats.estimate_const_break(i) for i in range(total_columns)]
+        cb_worst = int(np.argmax(cb))
+        const_break_row = []
+        const_break_row.append("Constant Break (CB) (iterations, points)")
+        const_break_row.append(f"{cb[cb_worst]:.0f}")
+        const_break_row.append(f"{cb[cb_worst]:.0f} ({mcat.col_full_name(cb_worst)})")
+        const_break_row.append("NA")
+        const_break_row.append(f"{cb[cb_worst]:.0f}")
+        global_diag.add_row(*const_break_row)
+
+        param_diag.add_column("CB", justify="left", style=val_color)
+        param_diag_matrix.append([f"{cb_i:.0f} {cb_i*nchains:.0f}" for cb_i in cb])
+
+        # Effective sample size
+
+        (
+            ess_vec,
+            ess_best_cutoff,
+            ess_worst_index,
+            ess_worst_order,
+            ess_worst_ess,
+        ) = stats.max_ess_time(100)
+        ess_row = []
+        ess_row.append("Effective Sample Size (ESS) (ensembles, points)")
+        ess_row.append(f"{ess_best_cutoff}")
+        ess_row.append(
+            f"{ess_vec.get(ess_worst_index):.0f} ({mcat.col_full_name(ess_worst_index)})"
+        )
+        ess_row.append(f"{ess_worst_order}")
+        ess_row.append(f"{ess_worst_ess:.0f}")
+        global_diag.add_row(*ess_row)
+
+        param_diag.add_column("ESS", justify="left", style=val_color)
+        param_diag_matrix.append(
+            [
+                f"{ess_vec.get(i):.0f} {ess_vec.get(i)*nchains:.0f}"
+                for i in range(total_columns)
+            ]
+        )
+
+        # Heidelberger and Welch
+
+        hw_pvalue = 1.0 - 0.95 ** (1.0 / fparams_len)
+        (
+            hw_vec,
+            hw_best_cutoff,
+            hw_worst_index,
+            hw_worst_order,
+            hw_worst_pvalue,
+        ) = stats.heidel_diag(100, hw_pvalue)
+
+        hw_row = []
+        hw_row.append(f"Heidelberger and Welch p-value (>{hw_pvalue*100.0:.1f}%)")
+
+        if hw_best_cutoff >= 0:
+            hw_row.append(f"{hw_best_cutoff}")
+        else:
+            hw_row.append("All tests fail")
+        hw_row.append(
+            f"{(1.0 - hw_worst_pvalue)*100.0:.1f}% ({mcat.col_full_name(hw_worst_index)})"
+        )
+        hw_row.append(f"{hw_worst_order}")
+        hw_row.append(f"{(1.0-hw_worst_pvalue)*100.0:.1f}%")
+        global_diag.add_row(*hw_row)
+
+        param_diag.add_column(
+            "H&W",
+            justify="left",
+            style=val_color,
+        )
+        param_diag_matrix.append(
+            [f"{(1.0 - hw_vec.get(i))*100.0:.1f}" for i in range(total_columns)]
+        )
+
+        for row in np.array(param_diag_matrix).T:
+            param_diag.add_row(*row)
+
+        # Add the global diagnostics to the main table
+        main_table.add_row(global_diag)
+        main_table.add_row(param_diag)
+
+        covariance_matrix = Table(title="Covariance Matrix", expand=False)
+        covariance_matrix.add_column("Parameter", justify="right", style="bold")
+        for i in range(total_columns):
+            covariance_matrix.add_column(
+                mcat.col_name(i).split(":")[-1], justify="right"
+            )
+
+        for i in range(total_columns):
+            row = [mcat.col_name(i).split(":")[-1]]
+            for j in range(total_columns):
+                cov_ij = full_stats.get_cor(i, j)
+                cor_ij_string = f"{cov_ij*100.0: 3.0f}%"
+                styles_array = [
+                    "bold bright_red",
+                    "bright_red",
+                    "dim bright_red",
+                    "dim bright_green",
+                    "bright_green",
+                    "bold bright_green",
+                ]
+                cov_color_index = int(np.round((cov_ij + 1.0) * 2.5))
+
+                row.append(Text(cor_ij_string, style=styles_array[cov_color_index]))
+            covariance_matrix.add_row(*row)
+
+        main_table.add_row(covariance_matrix)
+        self.console.print(main_table)
 
         self.end_experiment()
