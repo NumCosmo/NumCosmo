@@ -917,7 +917,7 @@ class AnalyzeMCMC(LoadExperiment):
         global_diag.add_row(*const_break_row)
 
         param_diag.add_column("CB", justify="left", style=val_color)
-        param_diag_matrix.append([f"{cb_i:.0f} {cb_i*nchains:.0f}" for cb_i in cb])
+        param_diag_matrix.append([f"{cb_i:.0f} {cb_i * nchains:.0f}" for cb_i in cb])
 
         # Effective sample size
 
@@ -941,7 +941,7 @@ class AnalyzeMCMC(LoadExperiment):
         param_diag.add_column("ESS", justify="left", style=val_color)
         param_diag_matrix.append(
             [
-                f"{ess_vec.get(i):.0f} {ess_vec.get(i)*nchains:.0f}"
+                f"{ess_vec.get(i):.0f} {ess_vec.get(i) * nchains:.0f}"
                 for i in range(total_columns)
             ]
         )
@@ -958,17 +958,17 @@ class AnalyzeMCMC(LoadExperiment):
         ) = stats.heidel_diag(100, hw_pvalue)
 
         hw_row = []
-        hw_row.append(f"Heidelberger and Welch p-value (>{hw_pvalue*100.0:.1f}%)")
+        hw_row.append(f"Heidelberger and Welch p-value (>{hw_pvalue * 100.0:.1f}%)")
 
         if hw_best_cutoff >= 0:
             hw_row.append(f"{hw_best_cutoff}")
         else:
             hw_row.append("All tests fail")
         hw_row.append(
-            f"{(1.0 - hw_worst_pvalue)*100.0:.1f}% ({mcat.col_full_name(hw_worst_index)})"
+            f"{(1.0 - hw_worst_pvalue) * 100.0:.1f}% ({mcat.col_full_name(hw_worst_index)})"
         )
         hw_row.append(f"{hw_worst_order}")
-        hw_row.append(f"{(1.0-hw_worst_pvalue)*100.0:.1f}%")
+        hw_row.append(f"{(1.0 - hw_worst_pvalue) * 100.0:.1f}%")
         global_diag.add_row(*hw_row)
 
         param_diag.add_column(
@@ -977,7 +977,7 @@ class AnalyzeMCMC(LoadExperiment):
             style=val_color,
         )
         param_diag_matrix.append(
-            [f"{(1.0 - hw_vec.get(i))*100.0:.1f}" for i in range(total_columns)]
+            [f"{(1.0 - hw_vec.get(i)) * 100.0:.1f}" for i in range(total_columns)]
         )
 
         for row in np.array(param_diag_matrix).T:
@@ -998,7 +998,7 @@ class AnalyzeMCMC(LoadExperiment):
             row = [mcat.col_name(i).split(":")[-1]]
             for j in range(total_columns):
                 cov_ij = full_stats.get_cor(i, j)
-                cor_ij_string = f"{cov_ij*100.0: 3.0f}%"
+                cor_ij_string = f"{cov_ij * 100.0: 3.0f}%"
                 styles_array = [
                     "bold bright_red",
                     "bright_red",
