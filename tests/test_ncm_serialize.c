@@ -575,14 +575,16 @@ test_ncm_serialize_from_string_nest_samename (TestNcmSerialize *test, gconstpoin
 static void
 test_ncm_serialize_to_file_from_file (TestNcmSerialize *test, gconstpointer pdata)
 {
-  GObject *obj   = ncm_serialize_from_string (test->ser, "NcHICosmoDEXcdm{'w':<-2.0>}");
-  NcHICosmo *hic = NC_HICOSMO (obj);
-  gchar *obj_ser = ncm_serialize_to_string (test->ser, obj, TRUE);
+  GObject *obj    = ncm_serialize_from_string (test->ser, "NcHICosmoDEXcdm{'w':<-2.0>}");
+  NcHICosmo *hic  = NC_HICOSMO (obj);
+  gchar *obj_ser  = ncm_serialize_to_string (test->ser, obj, TRUE);
+  gchar *tmp_dir  = g_dir_make_tmp ("test_serialize_file_XXXXXX", NULL);
+  gchar *filename = g_strdup_printf ("%s/test_serialize_file.obj", tmp_dir);
 
-  ncm_serialize_to_file (test->ser, obj, "test-serialize-file.obj");
+  ncm_serialize_to_file (test->ser, obj, filename);
 
   {
-    GObject *obj_new   = ncm_serialize_from_file (test->ser, "test-serialize-file.obj");
+    GObject *obj_new   = ncm_serialize_from_file (test->ser, filename);
     gchar *obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, TRUE);
 
     g_assert_true (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
@@ -603,19 +605,27 @@ test_ncm_serialize_to_file_from_file (TestNcmSerialize *test, gconstpointer pdat
 
     NCM_TEST_FREE (nc_hicosmo_free, hic);
   }
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
 }
 
 static void
 test_ncm_serialize_to_binfile_from_binfile (TestNcmSerialize *test, gconstpointer pdata)
 {
-  GObject *obj   = ncm_serialize_from_string (test->ser, "NcHICosmoDEXcdm{'w':<-2.0>}");
-  NcHICosmo *hic = NC_HICOSMO (obj);
-  gchar *obj_ser = ncm_serialize_to_string (test->ser, obj, TRUE);
+  GObject *obj    = ncm_serialize_from_string (test->ser, "NcHICosmoDEXcdm{'w':<-2.0>}");
+  NcHICosmo *hic  = NC_HICOSMO (obj);
+  gchar *obj_ser  = ncm_serialize_to_string (test->ser, obj, TRUE);
+  gchar *tmp_dir  = g_dir_make_tmp ("test_serialize_binfile_XXXXXX", NULL);
+  gchar *filename = g_strdup_printf ("%s/test_serialize_binfile.obj", tmp_dir);
 
-  ncm_serialize_to_binfile (test->ser, obj, "test-serialize-binfile.obj");
+  ncm_serialize_to_binfile (test->ser, obj, filename);
 
   {
-    GObject *obj_new   = ncm_serialize_from_binfile (test->ser, "test-serialize-binfile.obj");
+    GObject *obj_new   = ncm_serialize_from_binfile (test->ser, filename);
     gchar *obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, TRUE);
 
     g_assert_true (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
@@ -636,6 +646,12 @@ test_ncm_serialize_to_binfile_from_binfile (TestNcmSerialize *test, gconstpointe
 
     NCM_TEST_FREE (nc_hicosmo_free, hic);
   }
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
 }
 
 #ifdef HAVE_LIBFYAML

@@ -2549,6 +2549,24 @@ ncm_mset_catalog_col_name (NcmMSetCatalog *mcat, guint i)
 }
 
 /**
+ * ncm_mset_catalog_col_full_name:
+ * @mcat: a #NcmMSetCatalog
+ * @i: column index
+ *
+ * Returns: (transfer none): the full name of the @i-th column.
+ */
+const gchar *
+ncm_mset_catalog_col_full_name (NcmMSetCatalog *mcat, guint i)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  if (i < self->nadd_vals)
+    return g_ptr_array_index (self->add_vals_names, i);
+  else
+    return ncm_mset_fparam_full_name (self->mset, i - self->nadd_vals);
+}
+
+/**
  * ncm_mset_catalog_col_symb:
  * @mcat: a #NcmMSetCatalog
  * @i: column index
