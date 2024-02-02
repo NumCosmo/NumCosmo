@@ -113,11 +113,11 @@ def create_nc_obj(
         psf = Ncm.PowspecFilter.new(ps_lin, Ncm.PowspecFilterType.TOPHAT)
         psf.set_best_lnr0()
 
-        if ccl_cosmo._config_init_kwargs["mass_function"] == "tinker10":
-            # pylint: disable-next=invalid-name
-            hmf_T10 = Nc.MultiplicityFuncTinkerMeanNormalized.new()
-            hmfunc = Nc.HaloMassFunction.new(dist, psf, hmf_T10)
-            hmfunc.prepare(cosmo)
+        #if ccl_cosmo._config_init_kwargs["mass_function"] == "tinker10":
+        #    # pylint: disable-next=invalid-name
+        #    hmf_T10 = Nc.MultiplicityFuncTinkerMeanNormalized.new()
+        #    hmfunc = Nc.HaloMassFunction.new(dist, psf, hmf_T10)
+        #    hmfunc.prepare(cosmo)
 
     # pylint: enable=protected-access
     return cosmo, dist, ps_lin, ps_nln, hmfunc
