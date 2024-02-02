@@ -966,7 +966,7 @@ class AnalyzeMCMC(LoadExperiment):
             if hw_best_cutoff >= 0:
                 hw_row.append(f"{hw_best_cutoff}")
             else:
-                hw_row.append("All tests fail")
+                hw_row.append("All parameters fail")
             hw_row.append(
                 f"{(1.0 - hw_worst_pvalue) * 100.0:.1f}% ({mcat.col_full_name(hw_worst_index)})"
             )
