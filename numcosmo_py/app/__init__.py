@@ -92,6 +92,18 @@ if COSMOSIS:
                 help="Max distance to optimize distance computations", min=0.0
             ),
         ] = 10.0,
+        reltol: Annotated[
+            float,
+            typer.Option(
+                help="Relative tolerance for the distance computation", min=1.0e-14
+            ),
+        ] = 1.0e-4,
+        mute_cosmosis: Annotated[
+            bool,
+            typer.Option(
+                help="Mute Cosmosis output.",
+            ),
+        ] = False,
     ):
         """Converts a Cosmosis ini file to a NumCosmo yaml file, containing
         the same information. The NumCosmo yaml file can be used to run the
@@ -114,9 +126,12 @@ if COSMOSIS:
             matter_ps=matter_ps,
             nonlin_matter_ps=nonlin_matter_ps,
             distance_max_z=distance_max_z,
+            reltol=reltol,
         )
 
-        model_builders, mset, likelihood = convert_likelihoods(inifile, mapping=mapping)
+        model_builders, mset, likelihood = convert_likelihoods(
+            inifile, mapping=mapping, mute_cosmosis=mute_cosmosis
+        )
 
         builders_file = outfile.with_suffix(".builders.yaml")
 
