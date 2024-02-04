@@ -4,6 +4,12 @@ CHANGELOG
 [Current]
 
 [v0.21.1]
+ * More options to the conversion tool from-cosmosis. (#141)
+
+     * mute-cosmosis makes cosmosis do not print info messages.
+     * reltol sets the tolerance for NumCosmo underlying cosmology.
+ * New minor release v0.21.1.
+
  * Updates and tests for NumCosmo app (#140)
 
      * Fixed minor bugs in levmar.
