@@ -237,7 +237,7 @@ _nc_galaxy_sd_z_proxy_gauss_get_true_z_lim (NcGalaxySDZProxy *gsdzp, const gdoub
   g_assert_nonnull (z_min);
   g_assert_nonnull (z_max);
 
-  *z_min = MAX (zp - 8.0 * sigma_max, 0.0);
+  *z_min = MAX (zp - 8.0 * sigma_max, 1e-11);
   *z_max = zp + 8.0 * sigma_max;
 }
 

@@ -631,8 +631,6 @@ nc_galaxy_wl_likelihood_prepare (NcGalaxyWLLikelihood *gwl, NcHICosmo *cosmo, Nc
     ncm_stats_dist_add_obs (self->kde, sample);
   }
 
-  printf ("# in_cut: %g\n", in_cut);
-
   self->cut_fraction = (gdouble) in_cut / (gdouble) (in_cut + out_cut);
 
   ncm_stats_dist_prepare (self->kde);
