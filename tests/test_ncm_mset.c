@@ -532,10 +532,12 @@ test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata)
 
   {
     NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_mset_saved_XXXXXX", NULL);
+    gchar *filename   = g_strdup_printf ("%s/test_ncm_mset_saved.mset", tmp_dir);
 
-    ncm_mset_save (test->mset, ser, "test_ncm_mset_saved.mset", TRUE);
+    ncm_mset_save (test->mset, ser, filename, TRUE);
 
-    NcmMSet *mset_dup = ncm_mset_load ("test_ncm_mset_saved.mset", ser);
+    NcmMSet *mset_dup = ncm_mset_load (filename, ser);
 
     g_assert_true (ncm_mset_cmp (test->mset, mset_dup, FALSE));
     g_assert_true (ncm_mset_cmp (test->mset, mset_dup, TRUE));
@@ -584,6 +586,12 @@ test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata)
       ncm_serialize_clear (&ser);
       g_assert_true (destroyed);
     }
+
+    g_unlink (filename);
+    g_rmdir (tmp_dir);
+
+    g_free (filename);
+    g_free (tmp_dir);
   }
 
   nc_cluster_mass_free (benson);

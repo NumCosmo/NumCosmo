@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# example_simple.py
+# test_py_integralnd.py
 #
 # Mon May 22 16:00:00 2023
 # Copyright  2023  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# example_simple.py
+# test_py_integralnd.py
 # Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Simple example computing cosmological distances."""
+"""Testing IntegralND class."""
 
 from typing import Tuple, List
 

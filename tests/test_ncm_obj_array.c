@@ -391,6 +391,8 @@ test_ncm_obj_array_to_from_keyfile (TestNcmObjArray *test, gconstpointer pdata)
 {
   NcmObjArray *oa   = test->oa;
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_obj_array_saved_XXXXXX", NULL);
+  gchar *filename   = g_strdup_printf ("%s/test_ncm_obj_array_saved.oa", tmp_dir);
 
   test_ncm_obj_array_add (test, pdata);
 
@@ -415,6 +417,12 @@ test_ncm_obj_array_to_from_keyfile (TestNcmObjArray *test, gconstpointer pdata)
 
     ncm_obj_array_unref (oa_load);
   }
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
 
   ncm_serialize_clear (&ser);
 }
@@ -460,13 +468,15 @@ test_ncm_obj_array_to_from_yaml_file (TestNcmObjArray *test, gconstpointer pdata
 {
   NcmObjArray *oa   = test->oa;
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_obj_array_saved_XXXXXX", NULL);
+  gchar *filename   = g_strdup_printf ("%s/test_ncm_obj_array_saved.yaml", tmp_dir);
 
   test_ncm_obj_array_add (test, pdata);
 
-  ncm_serialize_array_to_yaml_file (ser, oa, "test_ncm_obj_array_saved.yaml");
+  ncm_serialize_array_to_yaml_file (ser, oa, filename);
 
   {
-    NcmObjArray *oa_load = ncm_serialize_array_from_yaml_file (ser, "test_ncm_obj_array_saved.yaml");
+    NcmObjArray *oa_load = ncm_serialize_array_from_yaml_file (ser, filename);
     guint i;
 
     g_assert_cmpuint (ncm_obj_array_len (oa), ==, ncm_obj_array_len (oa_load));
@@ -484,6 +494,12 @@ test_ncm_obj_array_to_from_yaml_file (TestNcmObjArray *test, gconstpointer pdata
 
     ncm_obj_array_unref (oa_load);
   }
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
 
   ncm_serialize_clear (&ser);
 }
@@ -649,13 +665,15 @@ test_ncm_obj_dict_str_to_from_yaml_file (TestNcmObjDictStr *test, gconstpointer 
 {
   NcmObjDictStr *ods = test->ods;
   NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  gchar *tmp_dir     = g_dir_make_tmp ("test_ncm_obj_dict_str_saved_XXXXXX", NULL);
+  gchar *filename    = g_strdup_printf ("%s/test_ncm_obj_dict_str_saved.yaml", tmp_dir);
 
   test_ncm_obj_dict_str_add (test, pdata);
 
-  ncm_serialize_dict_str_to_yaml_file (ser, ods, "test_ncm_obj_dict_str_saved.yaml");
+  ncm_serialize_dict_str_to_yaml_file (ser, ods, filename);
 
   {
-    NcmObjDictStr *ods_load = ncm_serialize_dict_str_from_yaml_file (ser, "test_ncm_obj_dict_str_saved.yaml");
+    NcmObjDictStr *ods_load = ncm_serialize_dict_str_from_yaml_file (ser, filename);
     GHashTableIter iter;
     gchar *key;
     GObject *value;
@@ -680,6 +698,12 @@ test_ncm_obj_dict_str_to_from_yaml_file (TestNcmObjDictStr *test, gconstpointer 
 
     ncm_obj_dict_str_unref (ods_load);
   }
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
 
   ncm_serialize_clear (&ser);
 }
@@ -835,13 +859,15 @@ test_ncm_obj_dict_int_to_from_yaml_file (TestNcmObjDictInt *test, gconstpointer 
 {
   NcmObjDictInt *odi = test->odi;
   NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  gchar *tmp_dir     = g_dir_make_tmp ("test_ncm_obj_dict_int_saved_XXXXXX", NULL);
+  gchar *filename    = g_strdup_printf ("%s/test_ncm_obj_dict_int_saved.yaml", tmp_dir);
 
   test_ncm_obj_dict_int_add (test, pdata);
 
-  ncm_serialize_dict_int_to_yaml_file (ser, odi, "test_ncm_obj_dict_int_saved.yaml");
+  ncm_serialize_dict_int_to_yaml_file (ser, odi, filename);
 
   {
-    NcmObjDictInt *odi_load = ncm_serialize_dict_int_from_yaml_file (ser, "test_ncm_obj_dict_int_saved.yaml");
+    NcmObjDictInt *odi_load = ncm_serialize_dict_int_from_yaml_file (ser, filename);
     GHashTableIter iter;
     gint *key;
     GObject *value;
@@ -866,6 +892,12 @@ test_ncm_obj_dict_int_to_from_yaml_file (TestNcmObjDictInt *test, gconstpointer 
 
     ncm_obj_dict_int_unref (odi_load);
   }
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
 
   ncm_serialize_clear (&ser);
 }
@@ -1334,14 +1366,22 @@ _test_ncm_var_dict_to_from_variant_binfile (NcmVarDict *vd)
 {
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
   NcmVarDict *vd0   = NULL;
+  gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_var_dict_saved_XXXXXX", NULL);
+  gchar *filename   = g_strdup_printf ("%s/test_ncm_var_dict_saved.yaml", tmp_dir);
 
-  ncm_serialize_var_dict_to_variant_file (ser, vd, "test_ncm_var_dict_saved.yaml", TRUE);
-  vd0 = ncm_serialize_var_dict_from_variant_file (ser, "test_ncm_var_dict_saved.yaml", TRUE);
+  ncm_serialize_var_dict_to_variant_file (ser, vd, filename, TRUE);
+  vd0 = ncm_serialize_var_dict_from_variant_file (ser, filename, TRUE);
 
   g_assert_nonnull (vd0);
   g_assert_true (vd != vd0);
 
   ncm_serialize_clear (&ser);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
 
   return vd0;
 }
@@ -1351,14 +1391,22 @@ _test_ncm_var_dict_to_from_variant_file (NcmVarDict *vd)
 {
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
   NcmVarDict *vd0   = NULL;
+  gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_var_dict_saved_XXXXXX", NULL);
+  gchar *filename   = g_strdup_printf ("%s/test_ncm_var_dict_saved.yaml", tmp_dir);
 
-  ncm_serialize_var_dict_to_variant_file (ser, vd, "test_ncm_var_dict_saved.yaml", FALSE);
-  vd0 = ncm_serialize_var_dict_from_variant_file (ser, "test_ncm_var_dict_saved.yaml", FALSE);
+  ncm_serialize_var_dict_to_variant_file (ser, vd, filename, FALSE);
+  vd0 = ncm_serialize_var_dict_from_variant_file (ser, filename, FALSE);
 
   g_assert_nonnull (vd0);
   g_assert_true (vd != vd0);
 
   ncm_serialize_clear (&ser);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
 
   return vd0;
 }
@@ -1368,14 +1416,22 @@ _test_ncm_var_dict_to_from_yaml_file (NcmVarDict *vd)
 {
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
   NcmVarDict *vd0   = NULL;
+  gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_var_dict_saved_XXXXXX", NULL);
+  gchar *filename   = g_strdup_printf ("%s/test_ncm_var_dict_saved.yaml", tmp_dir);
 
-  ncm_serialize_var_dict_to_yaml_file (ser, vd, "test_ncm_var_dict_saved.yaml");
-  vd0 = ncm_serialize_var_dict_from_yaml_file (ser, "test_ncm_var_dict_saved.yaml");
+  ncm_serialize_var_dict_to_yaml_file (ser, vd, filename);
+  vd0 = ncm_serialize_var_dict_from_yaml_file (ser, filename);
 
   g_assert_nonnull (vd0);
   g_assert_true (vd != vd0);
 
   ncm_serialize_clear (&ser);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
 
   return vd0;
 }

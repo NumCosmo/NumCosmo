@@ -323,6 +323,14 @@ python_tests = [
         'name': 'py_test_data_objects',
         'source': 'test_py_test_data_objects.py',
     },
+    {
+        'name': 'py_model_builder',
+        'source': 'test_py_model_builder.py',
+    },
+    {
+        'name': 'py_fit',
+        'source': 'test_py_fit.py',
+    },
 ]
 
 if mpi_c_dep.found()
@@ -358,6 +366,22 @@ if python_astropy_scipy.found()
         {
             'name': 'py_data_dist2d',
             'source': 'test_py_data_dist2d.py',
+        },
+    ]
+endif
+
+python_typer = python_module.find_installation(
+    'python3',
+    modules: ['typer', 'rich'],
+    required: false,
+)
+
+if python_typer.found()
+    python_tests += [
+        {
+            'name': 'py_numcosmo_app',
+            'source': 'test_py_numcosmo_app.py',
+            'timeout': 0,
         },
     ]
 endif
@@ -411,6 +435,12 @@ if enable_gir
 
 
     foreach python_test : python_tests
+        if python_test.has_key('timeout')
+            timeout = python_test['timeout']
+        else
+            timeout = 60
+        endif
+
         test(
             python_test['name'],
             python,
@@ -418,6 +448,7 @@ if enable_gir
             depends: [numcosmo_gir, numcosmo_math_gir],
             env: env,
             protocol: pytest_protocol,
+            timeout: timeout,
         )
     endforeach
 
@@ -433,6 +464,11 @@ if enable_gir
             )
             foreach python_test : python_tests
                 if python_test.has_key('mpi') and python_test['mpi']
+                    if python_test.has_key('timeout')
+                        timeout = python_test['timeout']
+                    else
+                        timeout = 60
+                    endif
                     test(
                         'mpiexec_' + python_test['name'],
                         mpiexec,
@@ -442,6 +478,7 @@ if enable_gir
                         ),
                         depends: [numcosmo_gir, numcosmo_math_gir],
                         env: env,
+                        timeout: timeout,
                         # protocol: pytest_protocol, # FIXME: mpiexec does not support TAP
                     )
                 endif

@@ -30,6 +30,7 @@ import gi
 gi.require_version("NumCosmo", "1.0")
 gi.require_version("NumCosmoMath", "1.0")
 
+# pyright: reportMissingModuleSource=false
 # pylint:disable-next=wrong-import-position,unused-import
 from gi.repository import GLib  # noqa: E402
 
@@ -149,3 +150,8 @@ def var_dict_to_dict(
             )
 
     return dictionary
+
+
+def to_camel_case(snake_str):
+    """Convert a snake case string to camel case."""
+    return "".join(x.capitalize() for x in snake_str.strip().lower().split("_"))

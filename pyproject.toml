@@ -1,6 +1,6 @@
 [project]
 name = 'numcosmo_py'
-version = '0.20.0'
+version = '0.21.1'
 description = 'NumCosmo is a free software C library for cosmology calculations'
 readme = 'README.md'
 classifiers = [
@@ -25,7 +25,7 @@ classifiers = [
     "Operating System :: Unix",
     "Operating System :: MacOS",
 ]
-requires-python = '>=3.8'
+requires-python = '>=3.9'
 license = {file = 'COPYING'}
 authors = [
   {name = 'Sandro Dias Pinto Vitenti', email = 'vitenti@uel.br'},
@@ -35,9 +35,14 @@ authors = [
 [project.optional-dependencies]
 test = [
     "pytest",
+    "pytest-tap",
+    "rich",
+    "typer",
 ]
 dev = [
     "mypy",
+    "pylint",
+    "flake8",
 ]
 
 [project.urls]

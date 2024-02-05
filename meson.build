@@ -1,7 +1,7 @@
 project(
   'numcosmo',
   ['c', 'fortran'],
-  version: '0.20.0',
+  version: '0.21.1',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.2.0',
   default_options: [
