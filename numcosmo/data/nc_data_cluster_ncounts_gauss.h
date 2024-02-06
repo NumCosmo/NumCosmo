@@ -72,6 +72,7 @@ void nc_data_cluster_ncounts_gauss_set_s_matrix (NcDataClusterNCountsGauss *ncou
 void nc_data_cluster_ncounts_gauss_set_resample_s_matrix (NcDataClusterNCountsGauss *ncounts_gauss, NcmMatrix *s_matrix);
 void nc_data_cluster_ncounts_gauss_set_fix_cov (NcDataClusterNCountsGauss *ncounts_gauss, gboolean on);
 
+
 NcmVector *nc_data_cluster_ncounts_gauss_get_z_obs (NcDataClusterNCountsGauss *ncounts_gauss);
 NcmMatrix *nc_data_cluster_ncounts_gauss_get_z_obs_params (NcDataClusterNCountsGauss *ncounts_gauss);
 NcmVector *nc_data_cluster_ncounts_gauss_get_lnM_obs (NcDataClusterNCountsGauss *ncounts_gauss);

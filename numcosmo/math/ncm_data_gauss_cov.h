@@ -60,8 +60,10 @@ guint ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss);
 void ncm_data_gauss_cov_use_norma (NcmDataGaussCov *gauss, gboolean use_norma);
 
 void ncm_data_gauss_cov_replace_mean (NcmDataGaussCov *gauss, NcmVector *mean);
+void ncm_data_gauss_cov_set_cov (NcmDataGaussCov *gauss, NcmMatrix *cov);
 NcmVector *ncm_data_gauss_cov_peek_mean (NcmDataGaussCov *gauss);
 NcmMatrix *ncm_data_gauss_cov_peek_cov (NcmDataGaussCov *gauss);
+
 
 gdouble ncm_data_gauss_cov_get_log_norma (NcmDataGaussCov *gauss, NcmMSet *mset);
 

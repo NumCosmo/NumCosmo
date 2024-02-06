@@ -635,6 +635,23 @@ ncm_data_gauss_cov_peek_mean (NcmDataGaussCov *gauss)
 }
 
 /**
+ * ncm_data_gauss_cov_set_cov:
+ * @gauss: a #NcmDataGaussCov
+ * @cov: a #NcmMatrix
+ *
+ * Sets a #NcmMatrix representing the covariance matrix in each bin.
+ *
+ */
+void
+ncm_data_gauss_cov_set_cov (NcmDataGaussCov *gauss, NcmMatrix *cov)
+{
+  NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
+
+  ncm_matrix_clear (&self->cov);
+  self->cov = ncm_matrix_ref (cov);
+}
+
+/**
  * ncm_data_gauss_cov_peek_cov:
  * @gauss: a #NcmDataGaussCov
  *

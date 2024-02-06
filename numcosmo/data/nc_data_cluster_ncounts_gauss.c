@@ -639,6 +639,7 @@ nc_data_cluster_ncounts_gauss_set_s_matrix (NcDataClusterNCountsGauss *ncounts_g
 
   ncm_matrix_clear (&self->s_matrix);
   self->s_matrix = ncm_matrix_ref (s_matrix);
+  
 }
 
 /**
@@ -667,6 +668,8 @@ nc_data_cluster_ncounts_gauss_set_resample_s_matrix (NcDataClusterNCountsGauss *
  * Sets array of #Set if the data covariance matrix is fixed.
  *
  */
+
+
 void
 nc_data_cluster_ncounts_gauss_set_fix_cov (NcDataClusterNCountsGauss *ncounts_gauss, gboolean on)
 {
