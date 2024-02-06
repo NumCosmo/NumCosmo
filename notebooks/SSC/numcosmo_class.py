@@ -2,7 +2,6 @@
 
 import math
 import healpy as hp
-from classy import Class
 from scipy.stats import norm
 import numpy as np
 import sys
@@ -53,7 +52,7 @@ def get_numcosmo(z_arr,cosmo_numcosmo):
     growth_func = Nc.GrowthFunc.new()
     growth_func.prepare(cosmo)
 
-    tf = Nc.TransferFunc.new_from_name ("NcTransferFuncEH")
+    tf = Nc.TransferFuncEH.new()
 
     psml = Nc.PowspecMLTransfer.new (tf)
     psml.require_kmin (1.0e-6)
