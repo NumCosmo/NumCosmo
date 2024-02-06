@@ -69,7 +69,6 @@ enum
   PROP_HAS_SSC,
   PROP_S_MATRIX,
   PROP_RESAMPLE_S_MATRIX,
-  PROP_BIN_COUNT,
   PROP_FIX_COV,
   PROP_SIZE,
 };
@@ -84,7 +83,6 @@ struct _NcDataClusterNCountsGaussPrivate
   gboolean has_ssc;
   NcmMatrix *s_matrix;
   NcmMatrix *resample_s_matrix;
-  NcmVector *bin_count;
   gboolean fix_cov;
   GArray *index_map;
 };
@@ -114,7 +112,6 @@ nc_data_cluster_ncounts_gauss_init (NcDataClusterNCountsGauss *ncounts_gauss)
   self->has_ssc           = FALSE;
   self->s_matrix          = NULL;
   self->resample_s_matrix = NULL;
-  self->bin_count         = NULL;
   self->index_map         = g_array_new (FALSE, FALSE, sizeof (NcDataClusterNCountsGaussIndex));
   self->fix_cov           = FALSE;
 }
@@ -153,9 +150,6 @@ nc_data_cluster_ncounts_gauss_set_property (GObject *object, guint prop_id, cons
       break;
     case PROP_RESAMPLE_S_MATRIX:
       nc_data_cluster_ncounts_gauss_set_resample_s_matrix (ncounts_gauss,  g_value_get_object (value));
-      break;
-    case PROP_BIN_COUNT:
-      nc_data_cluster_ncounts_gauss_set_bin_count (ncounts_gauss, g_value_get_object (value));
       break;
     case PROP_FIX_COV:
       nc_data_cluster_ncounts_gauss_set_fix_cov (ncounts_gauss, g_value_get_boolean (value));
@@ -200,9 +194,6 @@ nc_data_cluster_ncounts_gauss_get_property (GObject *object, guint prop_id, GVal
     case PROP_RESAMPLE_S_MATRIX:
       g_value_set_object (value, self->resample_s_matrix);
       break;
-    case PROP_BIN_COUNT:
-      g_value_set_object (value, self->bin_count);
-      break;
     case PROP_FIX_COV:
       g_value_set_boolean (value, self->fix_cov);
       break;
@@ -225,7 +216,6 @@ nc_data_cluster_ncounts_gauss_dispose (GObject *object)
   nc_cluster_abundance_clear (&self->cad);
   ncm_matrix_clear (&self->s_matrix);
   ncm_matrix_clear (&self->resample_s_matrix);
-  ncm_vector_clear (&self->bin_count);
 
   g_clear_pointer (&self->index_map, g_array_unref);
 
@@ -315,13 +305,6 @@ nc_data_cluster_ncounts_gauss_class_init (NcDataClusterNCountsGaussClass *klass)
                                                         NCM_TYPE_MATRIX,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_BIN_COUNT,
-                                   g_param_spec_object ("bin-count",
-                                                        NULL,
-                                                        "Bin count",
-                                                        NCM_TYPE_VECTOR,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
                                    PROP_FIX_COV,
                                    g_param_spec_boolean ("fix-cov",
                                                          NULL,
@@ -392,13 +375,6 @@ _nc_data_cluster_ncounts_gauss_set_size (NcmDataGaussCov *gauss_cov, guint np)
   NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (gauss_cov);
   NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
   const guint cnp                               = ncm_data_gauss_cov_get_size (gauss_cov);
-
-  if ((np == 0) || (np != cnp))
-    ncm_vector_clear (&self->bin_count);
-
-  if ((np != 0) && (np != cnp))
-    self->bin_count = ncm_vector_new (np);
-
   /* Chain up : end */
   NCM_DATA_GAUSS_COV_CLASS (nc_data_cluster_ncounts_gauss_parent_class)->set_size (gauss_cov, np);
 }
@@ -684,23 +660,6 @@ nc_data_cluster_ncounts_gauss_set_resample_s_matrix (NcDataClusterNCountsGauss *
 }
 
 /**
- * nc_data_cluster_ncounts_gauss_set_bin_count:
- * @ncounts_gauss: a #NcDataClusterNCountsGauss
- * @bin_count: a #NcmVector
- *
- * Sets a #NcmMatrix representing the observed number of clusters in each bin.
- *
- */
-void
-nc_data_cluster_ncounts_gauss_set_bin_count (NcDataClusterNCountsGauss *ncounts_gauss, NcmVector *bin_count)
-{
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
-
-  ncm_vector_clear (&self->bin_count);
-  self->bin_count = ncm_vector_ref (bin_count);
-}
-
-/**
  * nc_data_cluster_ncounts_gauss_set_fix_cov:
  * @ncounts_gauss: a #NcDataClusterNCountsGauss
  * @on: Whether the covariance matrix is fixed or not.
@@ -844,25 +803,6 @@ nc_data_cluster_ncounts_gauss_get_resample_s_matrix (NcDataClusterNCountsGauss *
 
   if (self->resample_s_matrix != NULL)
     return ncm_matrix_ref (self->resample_s_matrix);
-  else
-    return NULL;
-}
-
-/**
- * nc_data_cluster_ncounts_gauss_get_bin_count:
- * @ncounts_gauss: a #NcDataClusterNCountsGauss
- *
- * Gets the vector containing the number of clusters in each bin
- *
- * Returns: (transfer full): The observed clusters in each bin #NcmVector.
- */
-NcmVector *
-nc_data_cluster_ncounts_gauss_get_bin_count (NcDataClusterNCountsGauss *ncounts_gauss)
-{
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
-
-  if (self->bin_count != NULL)
-    return ncm_vector_ref (self->bin_count);
   else
     return NULL;
 }
