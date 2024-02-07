@@ -213,19 +213,6 @@ c_tests = [
         'name': 'nc_galaxy_sd_position',
         'sources': ['test_nc_galaxy_sd_position.c'],
     },
-    {
-        'name': 'nc_galaxy_wl_likelihood',
-        'sources': ['test_nc_galaxy_wl_likelihood.c'],
-    },
-    {
-        'name': 'nc_galaxy_wl_ellipticity_kde',
-        'sources': ['test_nc_galaxy_wl_ellipticity_kde.c'],
-        'timeout': 0,
-    },
-    {
-        'name': 'nc_galaxy_wl_ellipticity_binned',
-        'sources': ['test_nc_galaxy_wl_ellipticity_binned.c'],
-    },
 ]
 tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
 

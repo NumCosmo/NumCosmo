@@ -1,5 +1,5 @@
 /***************************************************************************
- *            test_nc_galaxy_wl_likelihood.c
+ *            test_nc_data_cluster_wl.c
  *
  *  thu December 07 13:54:21 2023
  *  Copyright  2023  Sandro Dias Pinto Vitenti
@@ -32,18 +32,18 @@
 #include <glib.h>
 #include <glib-object.h>
 
-typedef struct _TestNcGalaxyWLLikelihood
+typedef struct _TestNcDataClusterWL
 {
-  NcGalaxyWLLikelihood *gwl;
-} TestNcGalaxyWLLikelihood;
+  NcDataClusterWL *dcwl;
+} TestNcDataClusterWL;
 
 
-static void test_nc_galaxy_wl_likelihood_new_flat (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
-static void test_nc_galaxy_wl_likelihood_new_lsst_srd (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
-static void test_nc_galaxy_wl_likelihood_free (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_new_flat (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_new_lsst_srd (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_free (TestNcDataClusterWL *test, gconstpointer pdata);
 
-static void test_nc_galaxy_wl_likelihood_fit (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
-static void test_nc_galaxy_wl_likelihood_kde_cmp (TestNcGalaxyWLLikelihood *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_fit (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_kde_cmp (TestNcDataClusterWL *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -54,25 +54,25 @@ main (gint argc, gchar *argv[])
 
   /* g_test_set_nonfatal_assertions (); */
 
-  g_test_add ("/nc/galaxy_wl_likelihood/flat/fit", TestNcGalaxyWLLikelihood, NULL,
-              &test_nc_galaxy_wl_likelihood_new_flat,
-              &test_nc_galaxy_wl_likelihood_fit,
-              &test_nc_galaxy_wl_likelihood_free);
+  g_test_add ("/nc/data_cluster_wl/flat/fit", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_flat,
+              &test_nc_data_cluster_wl_fit,
+              &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/galaxy_wl_likelihood/flat/kde_cmp", TestNcGalaxyWLLikelihood, NULL,
-              &test_nc_galaxy_wl_likelihood_new_flat,
-              &test_nc_galaxy_wl_likelihood_kde_cmp,
-              &test_nc_galaxy_wl_likelihood_free);
+  g_test_add ("/nc/data_cluster_wl/flat/kde_cmp", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_flat,
+              &test_nc_data_cluster_wl_kde_cmp,
+              &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/galaxy_wl_likelihood/lsst_srd/fit", TestNcGalaxyWLLikelihood, NULL,
-              &test_nc_galaxy_wl_likelihood_new_lsst_srd,
-              &test_nc_galaxy_wl_likelihood_fit,
-              &test_nc_galaxy_wl_likelihood_free);
+  g_test_add ("/nc/data_cluster_wl/lsst_srd/fit", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_lsst_srd,
+              &test_nc_data_cluster_wl_fit,
+              &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/galaxy_wl_likelihood/lsst_srd/kde_cmp", TestNcGalaxyWLLikelihood, NULL,
-              &test_nc_galaxy_wl_likelihood_new_lsst_srd,
-              &test_nc_galaxy_wl_likelihood_kde_cmp,
-              &test_nc_galaxy_wl_likelihood_free);
+  g_test_add ("/nc/data_cluster_wl/lsst_srd/kde_cmp", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_lsst_srd,
+              &test_nc_data_cluster_wl_kde_cmp,
+              &test_nc_data_cluster_wl_free);
 
   g_test_run ();
 
@@ -80,57 +80,57 @@ main (gint argc, gchar *argv[])
 }
 
 static void
-test_nc_galaxy_wl_likelihood_new_flat (TestNcGalaxyWLLikelihood *test, gconstpointer pdata)
+test_nc_data_cluster_wl_new_flat (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   NcGalaxySDPositionFlat *gsdpf = nc_galaxy_sd_position_flat_new (0.0, 2.0, 0.4, 1.2);
   NcGalaxySDZProxyGauss *gsdzpg = nc_galaxy_sd_z_proxy_gauss_new (0.4, 1.0, 0.03);
   NcGalaxySDShapeGauss *gss     = nc_galaxy_sd_shape_gauss_new ();
-  NcGalaxyWLLikelihood *gwl     = nc_galaxy_wl_likelihood_new (NC_GALAXY_SD_SHAPE (gss),
-                                                               NC_GALAXY_SD_Z_PROXY (gsdzpg),
-                                                               NC_GALAXY_SD_POSITION (gsdpf));
+  NcDataClusterWL *dcwl         = nc_data_cluster_wl_new (NC_GALAXY_SD_SHAPE (gss),
+                                                          NC_GALAXY_SD_Z_PROXY (gsdzpg),
+                                                          NC_GALAXY_SD_POSITION (gsdpf));
 
   nc_galaxy_sd_shape_gauss_set_sigma (gss, 0.001);
-  nc_galaxy_wl_likelihood_set_cut (gwl, 0.0, 2.0);
+  nc_data_cluster_wl_set_cut (dcwl, 0.0, 2.0);
 
-  test->gwl = gwl;
+  test->dcwl = dcwl;
 
   nc_galaxy_sd_position_flat_free (gsdpf);
   nc_galaxy_sd_z_proxy_gauss_free (gsdzpg);
   nc_galaxy_sd_shape_gauss_free (gss);
 
-  g_assert_true (NC_IS_GALAXY_WL_LIKELIHOOD (gwl));
+  g_assert_true (NC_IS_GALAXY_WL_LIKELIHOOD (test->dcwl));
 }
 
 static void
-test_nc_galaxy_wl_likelihood_new_lsst_srd (TestNcGalaxyWLLikelihood *test, gconstpointer pdata)
+test_nc_data_cluster_wl_new_lsst_srd (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   NcGalaxySDPositionLSSTSRD *gsdplsst = nc_galaxy_sd_position_lsst_srd_new (0.0, 2.0, 0.4, 1.2);
   NcGalaxySDZProxyGauss *gsdzpg       = nc_galaxy_sd_z_proxy_gauss_new (0.4, 1.0, 0.03);
   NcGalaxySDShapeGauss *gss           = nc_galaxy_sd_shape_gauss_new ();
-  NcGalaxyWLLikelihood *gwl           = nc_galaxy_wl_likelihood_new (NC_GALAXY_SD_SHAPE (gss),
-                                                                     NC_GALAXY_SD_Z_PROXY (gsdzpg),
-                                                                     NC_GALAXY_SD_POSITION (gsdplsst));
+  NcDataClusterWL *dcwl               = nc_data_cluster_wl_new (NC_GALAXY_SD_SHAPE (gss),
+                                                                NC_GALAXY_SD_Z_PROXY (gsdzpg),
+                                                                NC_GALAXY_SD_POSITION (gsdplsst));
 
   nc_galaxy_sd_shape_gauss_set_sigma (gss, 0.001);
-  nc_galaxy_wl_likelihood_set_cut (gwl, 0.0, 2.0);
+  nc_data_cluster_wl_set_cut (test->dcwl, 0.0, 2.0);
 
-  test->gwl = gwl;
+  test->dcwl = dcwl;
 
   nc_galaxy_sd_position_lsst_srd_free (gsdplsst);
   nc_galaxy_sd_z_proxy_gauss_free (gsdzpg);
   nc_galaxy_sd_shape_gauss_free (gss);
 
-  g_assert_true (NC_IS_GALAXY_WL_LIKELIHOOD (gwl));
+  g_assert_true (NC_IS_GALAXY_WL_LIKELIHOOD (test->dcwl));
 }
 
 static void
-test_nc_galaxy_wl_likelihood_free (TestNcGalaxyWLLikelihood *test, gconstpointer pdata)
+test_nc_data_cluster_wl_free (TestNcDataClusterWL *test, gconstpointer pdata)
 {
-  NCM_TEST_FREE (nc_galaxy_wl_likelihood_free, test->gwl);
+  NCM_TEST_FREE (nc_data_cluster_wl_free, test->dcwl);
 }
 
 static void
-test_nc_galaxy_wl_likelihood_fit (TestNcGalaxyWLLikelihood *test, gconstpointer pdata)
+test_nc_data_cluster_wl_fit (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   NcmRNG *rng                 = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
@@ -148,23 +148,18 @@ test_nc_galaxy_wl_likelihood_fit (TestNcGalaxyWLLikelihood *test, gconstpointer 
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
 
-  nc_galaxy_wl_likelihood_gen_obs (test->gwl, cosmo, dp, smd, z_cluster, ngals, rng);
+  nc_data_cluster_wl_gen_obs (test->dcwl, cosmo, dp, smd, ngals, rng);
 
   {
-    NcDataClusterWLL *data_wll = nc_data_cluster_wll_new ();
-    NcmObjArray *obs           = ncm_obj_array_new ();
+    nc_data_cluster_wl_set_kde_method (test->dcwl, FALSE);
 
-    ncm_obj_array_add (obs, G_OBJECT (test->gwl));
-    nc_data_cluster_wll_set_kde (data_wll, FALSE);
-
-    g_object_set (data_wll,
-                  "galaxy-array", obs,
+    g_object_set (test->dcwl,
                   "z-cluster", z_cluster,
                   NULL);
-    ncm_data_set_init (NCM_DATA (data_wll), TRUE);
+    ncm_data_set_init (NCM_DATA (test->dcwl), TRUE);
 
     {
-      NcmDataset *dataset       = ncm_dataset_new_list (data_wll, NULL);
+      NcmDataset *dataset       = ncm_dataset_new_list (test->dcwl, NULL);
       NcmLikelihood *likelihood = ncm_likelihood_new (dataset);
       NcmMSet *mset             = ncm_mset_new (cosmo, dp, smd, NULL);
       NcmFit *fit               = ncm_fit_factory (NCM_FIT_TYPE_NLOPT, "ln-neldermead", likelihood, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
@@ -191,8 +186,7 @@ test_nc_galaxy_wl_likelihood_fit (TestNcGalaxyWLLikelihood *test, gconstpointer 
       ncm_fit_free (fit);
     }
 
-    nc_data_cluster_wll_free (data_wll);
-    ncm_obj_array_unref (obs);
+    nc_data_cluster_wl_free (test->dcwl);
   }
 
   ncm_rng_free (rng);
@@ -203,7 +197,7 @@ test_nc_galaxy_wl_likelihood_fit (TestNcGalaxyWLLikelihood *test, gconstpointer 
 }
 
 static void
-test_nc_galaxy_wl_likelihood_kde_cmp (TestNcGalaxyWLLikelihood *test, gconstpointer pdata)
+test_nc_data_cluster_wl_kde_cmp (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   NcmRNG *rng                 = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
@@ -228,13 +222,13 @@ test_nc_galaxy_wl_likelihood_kde_cmp (TestNcGalaxyWLLikelihood *test, gconstpoin
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
 
-  nc_galaxy_wl_likelihood_gen_obs (test->gwl, cosmo, dp, smd, z_cluster, ngals, rng);
-  nc_galaxy_wl_likelihood_set_ndata (test->gwl, 1000);
+  nc_data_cluster_wl_gen_obs (test->dcwl, cosmo, dp, smd, ngals, rng);
+  nc_data_cluster_wl_set_ndata (test->dcwl, 1000);
 
-  obs = nc_galaxy_wl_likelihood_peek_obs (test->gwl);
+  obs = nc_data_cluster_wl_peek_obs (test->dcwl);
 
-  nc_galaxy_wl_likelihood_eval_m2lnP (test->gwl, cosmo, dp, smd, z_cluster, obs, m2lnP_int_gal);
-  nc_galaxy_wl_likelihood_kde_eval_m2lnP (test->gwl, cosmo, dp, smd, z_cluster, obs, m2lnP_kde_gal);
+  nc_data_cluster_wl_eval_m2lnP (test->dcwl, cosmo, dp, smd, z_cluster, obs, m2lnP_int_gal);
+  nc_data_cluster_wl_kde_eval_m2lnP (test->dcwl, cosmo, dp, smd, z_cluster, obs, m2lnP_kde_gal);
 
   for (i = 0; i < ngals; i++)
   {

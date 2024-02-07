@@ -136,10 +136,6 @@
 #include "lss/nc_galaxy_redshift_spec.h"
 #include "lss/nc_galaxy_redshift_spline.h"
 #include "lss/nc_galaxy_redshift_gauss.h"
-#include "lss/nc_galaxy_wl.h"
-#include "lss/nc_galaxy_wl_ellipticity_gauss.h"
-#include "lss/nc_galaxy_wl_ellipticity_kde.h"
-#include "lss/nc_galaxy_wl_ellipticity_binned.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_mass_nodist.h"
@@ -164,7 +160,6 @@
 #include "lss/nc_reduced_shear_cluster_mass.h"
 #include "lss/nc_reduced_shear_calib.h"
 #include "lss/nc_reduced_shear_calib_wtg.h"
-#include "galaxy/nc_galaxy_wl_likelihood.h"
 #include "galaxy/nc_galaxy_sd_position.h"
 #include "galaxy/nc_galaxy_sd_position_flat.h"
 #include "galaxy/nc_galaxy_sd_position_lsst_srd.h"
@@ -202,7 +197,6 @@
 #include "data/nc_data_cluster_pseudo_counts.h"
 #include "data/nc_data_cluster_ncount.h"
 #include "data/nc_data_cluster_wl.h"
-#include "data/nc_data_cluster_wll.h"
 #include "data/nc_data_reduced_shear_cluster_mass.h"
 #include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
@@ -651,11 +645,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPLINE);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_GAUSS);
 
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_GAUSS);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_KDE);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_BINNED);
-
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_LNNORMAL);
@@ -689,7 +678,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB);
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB_WTG);
 
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_LIKELIHOOD);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_FLAT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_LSST_SRD);
@@ -743,7 +731,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);
-  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WLL);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_SHIFT_PARAM);
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_DIST_PRIORS);
