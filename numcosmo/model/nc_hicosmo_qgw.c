@@ -205,24 +205,23 @@ nc_hicosmo_qgw_class_init (NcHICosmoQGWClass *klass)
 #define W        (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGW_W))
 #define X_B      (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGW_X_B))
 
-/****************************************************************************
- * Normalized Hubble function
- ****************************************************************************/
-
 static gdouble
 _nc_hicosmo_qgw_E2 (NcHICosmo *cosmo, gdouble z)
 {
+  NcHICosmoQGW * qgw = NC_HICOSMO_QGW(cosmo);
+  NcHICosmoQGWPrivate * const self = qgw->priv = nc_hicosmo_qgw_get_instance_private (qgw);
+  const gdouble tb = self->tb;
+  const gdouble tbm2 = pow(tb, -2.0);
   const gdouble x    = 1.0 + z;
-  const gdouble x2   = x * x;
-  const gdouble x3   = x2 * x;
-  const gdouble x4   = x2 * x2;
+  const gdouble x3   = x * x * x;
   const gdouble x3w  = pow (x3, W);
   const gdouble x6   = x3 * x3;
   const gdouble xb   = X_B;
   const gdouble xb2  = xb * xb;
   const gdouble xb3  = xb2 * xb;
-  const gdouble xb3w = pow (xb3, W);
-
+  const gdouble xb3w = pow (xb3,W);
+  const gdouble cs   = sqrt(W);
+  const gdouble mw2 = pow (1.0 - cs, -2.0);
 #ifdef NC_HICOSMO_QGW_CHECK_INTERVAL
 
   if (G_UNLIKELY (ncm_cmp (x, xb, 1e-4) == 0))
@@ -230,7 +229,7 @@ _nc_hicosmo_qgw_E2 (NcHICosmo *cosmo, gdouble z)
 
 #endif /* NC_HICOSMO_QGW_CHECK_INTERVAL */
 
-  return (OMEGA_R * (x4 - x6 / xb2) + OMEGA_W * (x3 * x3w - x6 * xb3w / xb3));
+  return  (4.0 / 9.0) * tbm2 * mw2 * (x3 * x3w - x6 / (xb3/xb3w));
 }
 
 /****************************************************************************
@@ -249,7 +248,6 @@ _nc_hicosmo_qgw_dE2_dz (NcHICosmo *cosmo, gdouble z)
   const gdouble xb2  = xb * xb;
   const gdouble xb3  = xb2 * xb;
   const gdouble xb3w = pow (xb3, W);
-  const gdouble poly = OMEGA_R * (4.0 * x3 - 6.0 * x5 / xb2) + OMEGA_W * (3.0 * (1.0 + W) * x2 * x3w - 6.0 * x5 * xb3w / xb3);
 
 #ifdef NC_HICOSMO_QGW_CHECK_INTERVAL
 
@@ -258,7 +256,7 @@ _nc_hicosmo_qgw_dE2_dz (NcHICosmo *cosmo, gdouble z)
 
 #endif /* NC_HICOSMO_QGW_CHECK_INTERVAL */
 
-  return poly;
+  return 0.0;
 }
 
 static gdouble
@@ -276,7 +274,6 @@ _nc_hicosmo_qgw_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
   const gdouble xb3         = xb2 * xb;
   const gdouble xb3w        = pow (xb3, W);
 
-  const gdouble poly = OMEGA_R * (12.0 * x2 - 30.0 * x4 / xb2) + OMEGA_W * (three1p3w * three1p3wm1 * x * x3w - 30.0 * x4  * xb3w / xb3);
 
 #ifdef NC_HICOSMO_QGW_CHECK_INTERVAL
 
@@ -285,7 +282,7 @@ _nc_hicosmo_qgw_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
 
 #endif /* NC_HICOSMO_QGW_CHECK_INTERVAL */
 
-  return poly;
+  return 0.0;
 }
 
 /****************************************************************************
@@ -294,14 +291,9 @@ _nc_hicosmo_qgw_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
 static gdouble
 _nc_hicosmo_qgw_bgp_cs2 (NcHICosmo *cosmo, gdouble z)
 {
-  const gdouble x   = 1.0 + z;
-  const gdouble x2  = x * x;
-  const gdouble x3  = x2 * x;
   const gdouble w   = W;
-  const gdouble x3w = pow (x3, w);
-  const gdouble R   = (4.0 * OMEGA_R * x / (3.0 * (1.0 + w) * OMEGA_W * x3w));
 
-  return (w + R * 1.0 / 3.0) / (1.0 + R);
+  return w;
 }
 
 /****************************************************************************
