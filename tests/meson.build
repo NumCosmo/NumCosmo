@@ -210,6 +210,10 @@ c_tests = [
         'sources': ['test_nc_distance.c'],
     },
     {
+        'name': 'nc_data_cluster_wl',
+        'sources': ['test_nc_data_cluster_wl.c'],
+    },
+    {
         'name': 'nc_galaxy_sd_position',
         'sources': ['test_nc_galaxy_sd_position.c'],
     },

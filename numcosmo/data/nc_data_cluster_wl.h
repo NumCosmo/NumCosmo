@@ -89,12 +89,15 @@ NcDataClusterWL *nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZPro
 NcDataClusterWL *nc_data_cluster_wl_new_from_file (const gchar *filename);
 NcDataClusterWL *nc_data_cluster_wl_ref (NcDataClusterWL *dcwl);
 void nc_data_cluster_wl_prepare_kde (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster);
+gdouble nc_data_cluster_wl_kde_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcmVector *m2lnP_gal);
+gdouble nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcmVector *m2lnP_gal);
 void nc_data_cluster_wl_free (NcDataClusterWL *dcwl);
 void nc_data_cluster_wl_clear (NcDataClusterWL **dcwl);
 void nc_data_cluster_wl_set_kde_method (NcDataClusterWL *dcwl, gboolean kde);
 void nc_data_cluster_wl_set_prec (NcDataClusterWL *dcwl, gdouble prec);
 void nc_data_cluster_wl_set_ndata (NcDataClusterWL *dcwl, gdouble ndata);
 void nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcmMatrix *obs);
+void nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gdouble r_max);
 void nc_data_cluster_wl_gen_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, guint nobs, NcmRNG *rng);
 NcmMatrix *nc_data_cluster_wl_peek_obs (NcDataClusterWL *dcwl);
 NcmStatsDist *nc_data_cluster_wl_peek_kde (NcDataClusterWL *dcwl);
