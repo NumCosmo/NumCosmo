@@ -363,7 +363,7 @@ test_ncm_serialize_global_from_string_params (TestNcmSerialize *test, gconstpoin
 
   NCM_TEST_FREE (ncm_model_free, m);
 
-  m = NCM_MODEL (ncm_serialize_global_from_string ("{'NcHICosmoLCDM', {'H0':<12.3>,'Omegac':<0.2>}}"));
+  m = NCM_MODEL (ncm_serialize_global_from_string ("('NcHICosmoLCDM', {'H0':<12.3>,'Omegac':<0.2>})"));
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_H0), ==, 12.3);
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_OMEGA_C), ==, 0.2);
 
@@ -373,7 +373,7 @@ test_ncm_serialize_global_from_string_params (TestNcmSerialize *test, gconstpoin
 void
 test_ncm_serialize_global_from_string_nest (TestNcmSerialize *test, gconstpointer pdata)
 {
-  GObject *obj = ncm_serialize_global_from_string ("NcPowspecMLTransfer{'transfer':<{'NcTransferFuncEH',@a{sv} {}}>}");
+  GObject *obj = ncm_serialize_global_from_string ("NcPowspecMLTransfer{'transfer':<('NcTransferFuncEH',@a{sv} {})>}");
 
   NcPowspecML *ps_ml = NC_POWSPEC_ML (obj);
 
@@ -433,7 +433,7 @@ test_ncm_serialize_reset_autosave_only (TestNcmSerialize *test, gconstpointer pd
   /* Deserialized from string, since it is named it will be automatically added to the saved instances. */
   GObject *obj1 = ncm_serialize_from_string (test->ser, "NcHICosmoLCDM[myname:is]");
   /* Deserialized from string, since it is *not* named it will *not* be automatically added to the saved instances.*/
-  GObject *obj2 = ncm_serialize_from_string (test->ser, "NcPowspecMLTransfer{'transfer':<{'NcTransferFuncEH',@a{sv} {}}>}");
+  GObject *obj2 = ncm_serialize_from_string (test->ser, "NcPowspecMLTransfer{'transfer':<('NcTransferFuncEH',@a{sv} {})>}");
 
   /* Serializing from object */
   gchar *obj_ser1 = ncm_serialize_to_string (test->ser, obj1, FALSE);
@@ -485,7 +485,7 @@ test_ncm_serialize_from_string_params_named (TestNcmSerialize *test, gconstpoint
   ncm_serialize_clear_instances (test->ser, FALSE);
   NCM_TEST_FREE (ncm_model_free, m);
 
-  m = NCM_MODEL (ncm_serialize_from_string (test->ser, "{'NcHICosmoLCDM[T1]', {'H0':<12.3>,'Omegac':<0.2>}}"));
+  m = NCM_MODEL (ncm_serialize_from_string (test->ser, "('NcHICosmoLCDM[T1]', {'H0':<12.3>,'Omegac':<0.2>})"));
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_H0), ==, 12.3);
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_OMEGA_C), ==, 0.2);
 
@@ -496,7 +496,7 @@ test_ncm_serialize_from_string_params_named (TestNcmSerialize *test, gconstpoint
 void
 test_ncm_serialize_from_string_nest_named (TestNcmSerialize *test, gconstpointer pdata)
 {
-  GObject *obj = ncm_serialize_from_string (test->ser, "NcPowspecMLTransfer[T0]{'transfer':<{'NcTransferFuncEH[T1]',@a{sv} {}}>}");
+  GObject *obj = ncm_serialize_from_string (test->ser, "NcPowspecMLTransfer[T0]{'transfer':<('NcTransferFuncEH[T1]',@a{sv} {})>}");
 
   NcPowspecML *ps_ml = NC_POWSPEC_ML (obj);
 
@@ -535,8 +535,8 @@ test_ncm_serialize_from_string_nest_samename (TestNcmSerialize *test, gconstpoin
 {
   GObject *obj = ncm_serialize_from_string (test->ser,
                                             "NcmSplineCubicNotaknot{'length':<6>, "
-                                            "'x' : <{'NcmVector[T0]', {'values':<[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]>}}>, "
-                                            "'y' : <{'NcmVector[T0]', @a{sv} {}}>}");
+                                            "'x' : <('NcmVector[T0]', {'values':<[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]>})>, "
+                                            "'y' : <('NcmVector[T0]', @a{sv} {})>}");
 
   NcmSpline *s = NCM_SPLINE (obj);
   gchar *obj_ser, *obj_new_ser;
@@ -575,14 +575,16 @@ test_ncm_serialize_from_string_nest_samename (TestNcmSerialize *test, gconstpoin
 static void
 test_ncm_serialize_to_file_from_file (TestNcmSerialize *test, gconstpointer pdata)
 {
-  GObject *obj   = ncm_serialize_from_string (test->ser, "NcHICosmoDEXcdm{'w':<-2.0>}");
-  NcHICosmo *hic = NC_HICOSMO (obj);
-  gchar *obj_ser = ncm_serialize_to_string (test->ser, obj, TRUE);
+  GObject *obj    = ncm_serialize_from_string (test->ser, "NcHICosmoDEXcdm{'w':<-2.0>}");
+  NcHICosmo *hic  = NC_HICOSMO (obj);
+  gchar *obj_ser  = ncm_serialize_to_string (test->ser, obj, TRUE);
+  gchar *tmp_dir  = g_dir_make_tmp ("test_serialize_file_XXXXXX", NULL);
+  gchar *filename = g_strdup_printf ("%s/test_serialize_file.obj", tmp_dir);
 
-  ncm_serialize_to_file (test->ser, obj, "test-serialize-file.obj");
+  ncm_serialize_to_file (test->ser, obj, filename);
 
   {
-    GObject *obj_new   = ncm_serialize_from_file (test->ser, "test-serialize-file.obj");
+    GObject *obj_new   = ncm_serialize_from_file (test->ser, filename);
     gchar *obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, TRUE);
 
     g_assert_true (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
@@ -603,19 +605,27 @@ test_ncm_serialize_to_file_from_file (TestNcmSerialize *test, gconstpointer pdat
 
     NCM_TEST_FREE (nc_hicosmo_free, hic);
   }
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
 }
 
 static void
 test_ncm_serialize_to_binfile_from_binfile (TestNcmSerialize *test, gconstpointer pdata)
 {
-  GObject *obj   = ncm_serialize_from_string (test->ser, "NcHICosmoDEXcdm{'w':<-2.0>}");
-  NcHICosmo *hic = NC_HICOSMO (obj);
-  gchar *obj_ser = ncm_serialize_to_string (test->ser, obj, TRUE);
+  GObject *obj    = ncm_serialize_from_string (test->ser, "NcHICosmoDEXcdm{'w':<-2.0>}");
+  NcHICosmo *hic  = NC_HICOSMO (obj);
+  gchar *obj_ser  = ncm_serialize_to_string (test->ser, obj, TRUE);
+  gchar *tmp_dir  = g_dir_make_tmp ("test_serialize_binfile_XXXXXX", NULL);
+  gchar *filename = g_strdup_printf ("%s/test_serialize_binfile.obj", tmp_dir);
 
-  ncm_serialize_to_binfile (test->ser, obj, "test-serialize-binfile.obj");
+  ncm_serialize_to_binfile (test->ser, obj, filename);
 
   {
-    GObject *obj_new   = ncm_serialize_from_binfile (test->ser, "test-serialize-binfile.obj");
+    GObject *obj_new   = ncm_serialize_from_binfile (test->ser, filename);
     gchar *obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, TRUE);
 
     g_assert_true (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
@@ -636,6 +646,12 @@ test_ncm_serialize_to_binfile_from_binfile (TestNcmSerialize *test, gconstpointe
 
     NCM_TEST_FREE (nc_hicosmo_free, hic);
   }
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
 }
 
 #ifdef HAVE_LIBFYAML
@@ -679,8 +695,8 @@ test_ncm_serialize_from_yaml_special_types (TestNcmSerialize *test, gconstpointe
     "  matrix: [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]\n";
   GObject *obj_new = ncm_serialize_from_yaml (test->ser, yaml_str);
 
-  g_assert (G_IS_OBJECT (obj_new));
-  g_assert (NCM_IS_OBJECT_TEST (obj_new));
+  g_assert_true (G_IS_OBJECT (obj_new));
+  g_assert_true (NCM_IS_OBJECT_TEST (obj_new));
 
   {
     NcmObjectTest *obj_test = NCM_OBJECT_TEST (obj_new);
@@ -738,8 +754,8 @@ test_ncm_serialize_from_yaml_special_types_block_flow (TestNcmSerialize *test, g
     "   - [4.0, 5.0, 6.0]\n";
   GObject *obj_new = ncm_serialize_from_yaml (test->ser, yaml_str);
 
-  g_assert (G_IS_OBJECT (obj_new));
-  g_assert (NCM_IS_OBJECT_TEST (obj_new));
+  g_assert_true (G_IS_OBJECT (obj_new));
+  g_assert_true (NCM_IS_OBJECT_TEST (obj_new));
 
   {
     NcmObjectTest *obj_test = NCM_OBJECT_TEST (obj_new);
@@ -805,7 +821,7 @@ test_ncm_serialize_traps (TestNcmSerialize *test, gconstpointer pdata)
 void
 test_ncm_serialize_global_invalid_from_string_syntax (TestNcmSerialize *test, gconstpointer pdata)
 {
-  GObject *obj = ncm_serialize_global_from_string ("NcPowspecMLTransfer Error{'transfer':<{'NcTransferFuncEH',@a{sv} {}}>}");
+  GObject *obj = ncm_serialize_global_from_string ("NcPowspecMLTransfer Error{'transfer':<('NcTransferFuncEH',@a{sv} {})>}");
 
   NCM_TEST_FREE (g_object_unref, obj);
 }
@@ -813,7 +829,7 @@ test_ncm_serialize_global_invalid_from_string_syntax (TestNcmSerialize *test, gc
 void
 test_ncm_serialize_global_invalid_from_string_nonexist (TestNcmSerialize *test, gconstpointer pdata)
 {
-  GObject *obj = ncm_serialize_global_from_string ("NcPowspecMLErrorName   {'transfer':<{'NcTransferFuncEH',@a{sv} {}}>}");
+  GObject *obj = ncm_serialize_global_from_string ("NcPowspecMLErrorName   {'transfer':<('NcTransferFuncEH',@a{sv} {})>}");
 
   NCM_TEST_FREE (g_object_unref, obj);
 }
@@ -821,7 +837,7 @@ test_ncm_serialize_global_invalid_from_string_nonexist (TestNcmSerialize *test, 
 void
 test_ncm_serialize_invalid_from_string_mnames (TestNcmSerialize *test, gconstpointer pdata)
 {
-  GObject *obj = ncm_serialize_from_string (test->ser, "NcPowspecMLTransfer[T0]{'transfer':<{'NcTransferFuncEH[T0]', @a{sv} {}}>}");
+  GObject *obj = ncm_serialize_from_string (test->ser, "NcPowspecMLTransfer[T0]{'transfer':<('NcTransferFuncEH[T0]', @a{sv} {})>}");
 
   NCM_TEST_FREE (g_object_unref, obj);
 }
@@ -831,8 +847,8 @@ test_ncm_serialize_invalid_from_string_samename (TestNcmSerialize *test, gconstp
 {
   GObject *obj = ncm_serialize_from_string (test->ser,
                                             "NcmSplineCubicNotaknot{'length':<6>, "
-                                            "'x' : <{'NcmVector[T0]', {'values':<[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]>}}>, "
-                                            "'y' : <{'NcmVector[T0]', {'values':<[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]>}}>}");
+                                            "'x' : <('NcmVector[T0]', {'values':<[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]>})>, "
+                                            "'y' : <('NcmVector[T0]', {'values':<[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]>})>}");
 
   NCM_TEST_FREE (g_object_unref, obj);
 }
@@ -842,8 +858,8 @@ test_ncm_serialize_invalid_from_string_wrongorder (TestNcmSerialize *test, gcons
 {
   GObject *obj = ncm_serialize_from_string (test->ser,
                                             "NcmSplineCubicNotaknot{'length':<6>, "
-                                            "'x' : <{'NcmVector[T0]', @a{sv} {}}>, "
-                                            "'y' : <{'NcmVector[T0]', {'values':<[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]>}}>}");
+                                            "'x' : <('NcmVector[T0]', @a{sv} {})>, "
+                                            "'y' : <('NcmVector[T0]', {'values':<[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]>})>}");
 
   NCM_TEST_FREE (g_object_unref, obj);
 }

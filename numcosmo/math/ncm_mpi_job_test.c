@@ -73,12 +73,12 @@
 #define MPI_DOUBLE (0)
 #endif /* HAVE_MPI */
 
-struct _NcmMPIJobTestPrivate
+typedef struct _NcmMPIJobTestPrivate
 {
   NcmVector *vec;
   NcmVector *ret;
   NcmRNG *rng;
-};
+} NcmMPIJobTestPrivate;
 
 enum
 {
@@ -86,12 +86,17 @@ enum
   PROP_VECTOR
 };
 
+struct _NcmMPIJobTest
+{
+  NcmMPIJob parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobTest, ncm_mpi_job_test, NCM_TYPE_MPI_JOB)
 
 static void
 ncm_mpi_job_test_init (NcmMPIJobTest *mjt)
 {
-  NcmMPIJobTestPrivate * const self = mjt->priv = ncm_mpi_job_test_get_instance_private (mjt);
+  NcmMPIJobTestPrivate * const self = ncm_mpi_job_test_get_instance_private (mjt);
 
   self->vec = NULL;
   self->ret = NULL;
@@ -104,7 +109,7 @@ static void
 _ncm_mpi_job_test_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmMPIJobTest *mjt                = NCM_MPI_JOB_TEST (object);
-  NcmMPIJobTestPrivate * const self = mjt->priv;
+  NcmMPIJobTestPrivate * const self = ncm_mpi_job_test_get_instance_private (mjt);
 
   g_return_if_fail (NCM_IS_MPI_JOB_TEST (object));
 
@@ -114,9 +119,9 @@ _ncm_mpi_job_test_set_property (GObject *object, guint prop_id, const GValue *va
       ncm_vector_clear (&self->vec);
       self->vec = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -124,7 +129,7 @@ static void
 _ncm_mpi_job_test_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmMPIJobTest *mjt                = NCM_MPI_JOB_TEST (object);
-  NcmMPIJobTestPrivate * const self = mjt->priv;
+  NcmMPIJobTestPrivate * const self = ncm_mpi_job_test_get_instance_private (mjt);
 
   g_return_if_fail (NCM_IS_MPI_JOB_TEST (object));
 
@@ -133,9 +138,9 @@ _ncm_mpi_job_test_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_VECTOR:
       g_value_set_object (value, self->vec);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -143,7 +148,7 @@ static void
 _ncm_mpi_job_test_dispose (GObject *object)
 {
   NcmMPIJobTest *mjt                = NCM_MPI_JOB_TEST (object);
-  NcmMPIJobTestPrivate * const self = mjt->priv;
+  NcmMPIJobTestPrivate * const self = ncm_mpi_job_test_get_instance_private (mjt);
 
   ncm_vector_clear (&self->vec);
   ncm_vector_clear (&self->ret);
@@ -322,17 +327,12 @@ _ncm_mpi_job_test_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
   g_assert_cmpuint  (ncm_vector_len (input), ==, 1);
   {
     NcmMPIJobTest *mjt                = NCM_MPI_JOB_TEST (mpi_job);
-    NcmMPIJobTestPrivate * const self = mjt->priv;
+    NcmMPIJobTestPrivate * const self = ncm_mpi_job_test_get_instance_private (mjt);
     guint index                       = floor (ncm_vector_get (input, 0));
 
     g_assert_cmpuint (index, <, ncm_vector_len (self->vec));
 
     ncm_vector_set (ret, 0, ncm_vector_get (self->vec, index));
-
-    /*printf ("# Received %.5u.\n", index);*/
-    /*sleep (0 + gsl_rng_uniform_int (self->rng->r, 2));*/
-    sleep (1);
-    /*printf ("# Received %.5u done!\n", index);*/
   }
 }
 
@@ -405,7 +405,7 @@ ncm_mpi_job_test_clear (NcmMPIJobTest **mjt)
 void
 ncm_mpi_job_test_set_rand_vector (NcmMPIJobTest *mjt, const guint len, NcmRNG *rng)
 {
-  NcmMPIJobTestPrivate * const self = mjt->priv;
+  NcmMPIJobTestPrivate * const self = ncm_mpi_job_test_get_instance_private (mjt);
   guint i;
 
   g_assert_cmpuint (len, >, 0);

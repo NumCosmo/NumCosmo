@@ -9,14 +9,6 @@ executable(
 )
 
 executable(
-    'gobj_itest',
-    'gobj_itest.c',
-    install: true,
-    include_directories: configinc,
-    dependencies: [libnumcosmo_dep],
-)
-
-executable(
     'mcat_analyze',
     'mcat_analyze.c',
     install: true,
@@ -51,6 +43,7 @@ executable(
 python_scripts = [
     'mcat_calibrate_apes',
     'mcat_plot_corner',
+    'numcosmo',
 ]
 
 foreach script : python_scripts

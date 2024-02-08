@@ -116,9 +116,9 @@ ncm_data_gauss_diag_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_SIGMA:
       ncm_vector_substitute (&self->sigma, g_value_get_object (value), TRUE);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -144,9 +144,9 @@ ncm_data_gauss_diag_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_SIGMA:
       g_value_set_object (value, self->sigma);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -181,6 +181,7 @@ static void _ncm_data_gauss_diag_m2lnL_val (NcmData *data, NcmMSet *mset, gdoubl
 static void _ncm_data_gauss_diag_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v);
 static void _ncm_data_gauss_diag_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu);
 static void _ncm_data_gauss_diag_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H);
+static void _ncm_data_gauss_diag_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f);
 
 static void _ncm_data_gauss_diag_set_size (NcmDataGaussDiag *diag, guint np);
 static guint _ncm_data_gauss_diag_get_size (NcmDataGaussDiag *diag);
@@ -238,6 +239,7 @@ ncm_data_gauss_diag_class_init (NcmDataGaussDiagClass *klass)
   data_class->leastsquares_f = &_ncm_data_gauss_diag_leastsquares_f;
   data_class->mean_vector    = &_ncm_data_gauss_diag_mean_vector;
   data_class->inv_cov_UH     = &_ncm_data_gauss_diag_inv_cov_UH;
+  data_class->inv_cov_Uf     = &_ncm_data_gauss_diag_inv_cov_Uf;
 
   gauss_diag_class->mean_func  = NULL;
   gauss_diag_class->sigma_func = NULL;
@@ -310,7 +312,7 @@ _ncm_data_gauss_diag_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   for (i = 0; i < self->np; i++)
   {
     const gdouble sigma_i = ncm_vector_get (self->sigma, i);
-    const gdouble u_i     = gsl_ran_gaussian_ziggurat (rng->r, sigma_i);
+    const gdouble u_i     = ncm_rng_gaussian_gen (rng, 0.0, sigma_i);
 
     ncm_vector_subfrom (self->y, i, u_i);
   }
@@ -505,6 +507,23 @@ _ncm_data_gauss_diag_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
 
     ncm_matrix_mul_col (H, i, 1.0 / sigma_i);
   }
+}
+
+static void
+_ncm_data_gauss_diag_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f)
+{
+  NcmDataGaussDiag *diag                  = NCM_DATA_GAUSS_DIAG (data);
+  NcmDataGaussDiagPrivate * const self    = ncm_data_gauss_diag_get_instance_private (diag);
+  NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (diag);
+  guint i;
+
+  if (ncm_data_bootstrap_enabled (data))
+    g_error ("NcmDataGaussDiag: does not support bootstrap with least squares");
+
+  if (gauss_diag_class->sigma_func != NULL)
+    gauss_diag_class->sigma_func (diag, mset, self->sigma);
+
+  ncm_vector_div (f, self->sigma);
 }
 
 static void

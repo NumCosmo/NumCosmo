@@ -29,7 +29,8 @@
  * @stability: Stable
  * @include: numcosmo/math/ncm_integrate.h
  *
- * FIXME
+ * This module provides functions to perform numerical integration.
+ * It uses GSL library to perform the integration.
  *
  */
 
@@ -302,9 +303,11 @@ _peakfinder_2dim (const gint *ndim, const gdouble b[], gint *n, gdouble x[], voi
  * @result: a pointer to a gdouble in which the function stores the result.
  * @error: a pointer to a gdouble in which the function stores the estimated error.
  *
- * This function FIXME
+ * This function computes the integral of the function @integ->f over the
+ * interval [xi, xf] and [yi, yf] using the Cuhre algorithm from the Cuba
+ * library.
  *
- * Returns: a gboolean
+ * Returns: whether the integration was successful.
  */
 gboolean
 ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error)
@@ -377,9 +380,11 @@ _integrand_3dim (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble
  * @result: a pointer to a gdouble in which the function stores the result.
  * @error: a pointer to a gdouble in which the function stores the estimated error.
  *
- * This function FIXME
+ * This function computes the integral of the function @integ->f over the
+ * interval [xi, xf] and [yi, yf] and [zi, zf] using the Cuhre algorithm from the Cuba
+ * library.
  *
- * Returns: a gboolean
+ * Returns: whether the integration was successful.
  */
 gboolean
 ncm_integrate_3dim (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error)
@@ -429,9 +434,11 @@ ncm_integrate_3dim (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi,
  * @result: a pointer to a gdouble in which the function stores the result.
  * @error: a pointer to a gdouble in which the function stores the estimated error.
  *
- * This function FIXME
+ * This function computes the integral of the function @integ->f over the
+ * interval [xi, xf] and [yi, yf] using the Divonne algorithm from the Cuba
+ * library.
  *
- * Returns: a gboolean
+ * Returns: whether the integration was successful.
  */
 gboolean
 ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error)
@@ -505,9 +512,12 @@ ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdo
  * @result: a pointer to a gdouble in which the function stores the result.
  * @error: a pointer to a gdouble in which the function stores the estimated error.
  *
- * This function FIXME
+ * This function computes the integral of the function @integ->f over the
+ * interval [xi, xf] and [yi, yf] using the Divonne algorithm from the Cuba
+ * library. It uses a peakfinder to find the peaks of the integrand and improve
+ * the integration of concentrated functions.
  *
- * Returns: a gboolean
+ * Returns: whether the integration was successful.
  */
 gboolean
 ncm_integrate_2dim_divonne_peakfinder (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], const gint nextra, NcmIntegralPeakfinder peakfinder, gdouble *result, gdouble *error)
@@ -571,9 +581,11 @@ ncm_integrate_2dim_divonne_peakfinder (NcmIntegrand2dim *integ, gdouble xi, gdou
  * @result: a pointer to a gdouble in which the function stores the result.
  * @error: a pointer to a gdouble in which the function stores the estimated error.
  *
- * This function FIXME
+ * This function computes the integral of the function @integ->f over the
+ * interval [xi, xf] and [yi, yf] using the Vegas algorithm from the Cuba
+ * library.
  *
- * Returns: a gboolean
+ * Returns: whether the integration was successful.
  */
 gboolean
 ncm_integrate_2dim_vegas (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint nstart, gdouble *result, gdouble *error)
@@ -627,9 +639,11 @@ ncm_integrate_2dim_vegas (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdoub
  * @result: a pointer to a gdouble in which the function stores the result.
  * @error: a pointer to a gdouble in which the function stores the estimated error.
  *
- * This function FIXME
+ * This function computes the integral of the function @integ->f over the
+ * interval [xi, xf] and [yi, yf] and [zi, zf] using the Divonne algorithm from the Cuba
+ * library.
  *
- * Returns: a gboolean
+ * Returns: whether the integration was successful.
  */
 gboolean
 ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error)
@@ -694,9 +708,11 @@ ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdo
  * @result: a pointer to a gdouble in which the function stores the result.
  * @error: a pointer to a gdouble in which the function stores the estimated error.
  *
- * This function FIXME
+ * This function computes the integral of the function @integ->f over the
+ * interval [xi, xf] and [yi, yf] and [zi, zf] using the Vegas algorithm from the Cuba
+ * library.
  *
- * Returns: a gboolean
+ * Returns: whether the integration was successful.
  */
 gboolean
 ncm_integrate_3dim_vegas (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, const gint nstart, gdouble *result, gdouble *error)
@@ -782,7 +798,9 @@ ncm_integral_fixed_free (NcmIntegralFixed *intf)
  * @intf: a pointer to #NcmIntegralFixed.
  * @F: a pointer to a gsl_function.
  *
- * This function FIXME
+ * This function calculates the nodes of the #NcmIntegralFixed.
+ * It uses the Gauss-Legendre integration rule to determine the
+ * interval inner points.
  *
  */
 void
@@ -833,9 +851,10 @@ ncm_integral_fixed_calc_nodes (NcmIntegralFixed *intf, gsl_function *F)
  * ncm_integral_fixed_nodes_eval:
  * @intf: a pointer to #NcmIntegralFixed.
  *
- * This function
+ * This function evaluates the integral of the function @integ->f over the
+ * interval [xi, xf] using the nodes calculated by #ncm_integral_fixed_calc_nodes.
  *
- * Returns: FIXME
+ * Returns: the integral of the function @integ->f over the interval [xi, xf].
  */
 gdouble
 ncm_integral_fixed_nodes_eval (NcmIntegralFixed *intf)
@@ -856,9 +875,13 @@ ncm_integral_fixed_nodes_eval (NcmIntegralFixed *intf)
  * @intf: a pointer to #NcmIntegralFixed.
  * @F: a pointer to gsl_function.
  *
- * This function
+ * This function evaluates the integral of the function @integ->f over the
+ * interval [xi, xf] using the nodes calculated by #ncm_integral_fixed_calc_nodes.
+ * It uses the Gauss-Legendre integration rule to determine the
+ * interval inner points. This function multiplies the integrand by the
+ * function @F.
  *
- * Returns: FIXME
+ * Returns: the integral of the function @integ->f times @F over the interval [xi, xf].
  */
 gdouble
 ncm_integral_fixed_integ_mult (NcmIntegralFixed *intf, gsl_function *F)
@@ -909,14 +932,19 @@ ncm_integral_fixed_integ_mult (NcmIntegralFixed *intf, gsl_function *F)
 
 /**
  * ncm_integral_fixed_integ_posdef_mult: (skip)
- * @intf: a pointer to #NcmIntegralFixed.
- * @F: a pointer to gsl_function.
- * @max: FIXME
- * @reltol: FIXME
+ * @intf: a pointer to #NcmIntegralFixed
+ * @F: a pointer to gsl_function
+ * @max: maximum value of the integration interval
+ * @reltol: relative tolerance
  *
- * This function
+ * This function computes the integral of the function @integ->f over the
+ * interval starting at @max and going to the left using the nodes calculated
+ * by #ncm_integral_fixed_calc_nodes. It uses the Gauss-Legendre integration
+ * rule to determine the interval inner points. This function multiplies the
+ * integrand by the function @F. It stops when the relative error is less than
+ * @reltol.
  *
- * Returns: FIXME
+ * Returns: the integral of the function @integ->f times @F over the interval [max, xf].
  */
 gdouble
 ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, gdouble max, gdouble reltol)

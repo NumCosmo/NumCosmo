@@ -138,9 +138,9 @@ ncm_fit_mcmc_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_DATA_FILE:
       ncm_fit_mcmc_set_data_file (mcmc, g_value_get_string (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -168,9 +168,9 @@ ncm_fit_mcmc_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_DATA_FILE:
       g_value_set_string (value, ncm_mset_catalog_peek_filename (mcmc->mcat));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -439,13 +439,13 @@ _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
       break;
     case NCM_FIT_RUN_MSGS_SIMPLE:
     {
-      guint stepi          = mcmc->nt->task_pos % step;
+      guint stepi          = ncm_timer_task_completed (mcmc->nt) % step;
       gboolean log_timeout = FALSE;
 
-      if ((mcmc->nt->pos_time - mcmc->nt->last_log_time) > 60.0)
+      if (ncm_timer_elapsed_since_last_log (mcmc->nt) > 60.0)
         log_timeout = TRUE;
 
-      if (log_timeout || (stepi == 0) || (mcmc->nt->task_pos == mcmc->nt->task_len))
+      if (log_timeout || (stepi == 0) || ncm_timer_task_has_ended (mcmc->nt))
       {
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (mcmc->mcat);
@@ -774,7 +774,7 @@ _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
 
     if (prob != 1.0)
     {
-      jump = gsl_rng_uniform (rng->r);
+      jump = ncm_rng_uniform01_gen (rng);
 
       if (jump > prob)
       {

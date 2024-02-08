@@ -196,7 +196,7 @@ test_nc_galaxy_wl_ellipticity_binned_binning (TestNcGalaxyWLEllipticityBinned *t
     NcmMatrix *bin_data = NCM_MATRIX (ncm_obj_array_get (bin_obs, bin_i));
     guint j;
 
-    printf ("%d\n", ncm_matrix_nrows (bin_data));
+    /* printf ("%d\n", ncm_matrix_nrows (bin_data)); */
 
     for (j = 0; j < ncm_matrix_nrows (bin_data); j++)
     {

@@ -3,7 +3,237 @@ CHANGELOG
 
 [Current]
 
+[v0.21.1]
+ * More options to the conversion tool from-cosmosis. (#141)
+
+     * mute-cosmosis makes cosmosis do not print info messages.
+     * reltol sets the tolerance for NumCosmo underlying cosmology.
+ * New minor release v0.21.1.
+
+ * Updates and tests for NumCosmo app (#140)
+
+     * Fixed minor bugs in levmar.
+     * Added serialization for strv.
+     * Tests for NumCosmo app.
+     * Adding strv to serialization tests.
+     * Making all test files in a tmp dir.
+     * Conditional tests for numcosmo app (depends on typer and rich).
+     * Added optional reqs to pyproject.
+     * Fixed conditional compilation of yaml serialization methods.
+     * Minimal tests for the complete functionality of NumCosmo app.
+     * Finished numcosmo analyze.
+     * Fixing flake8 issues.
+     * NumCosmo analyze behaves well for number of iterations < 10.
+     * Improved message for test failing on all parameters.
+ * New bug fix release.
+
+ * Fixed mypy issues.
+
+ * Ran black.
+
+ * Fixed cosmosis required parameters issue due to returning iterator. Fixed
+     restart issue on numcosmo run fit.
+
+
+[v0.21.0]
+ * New release v0.21.0
+
+ * numcosmo command line tool (#137)
+
+     Introduced a new command line tool for NumCosmo (experimental):
+     
+     * `numcosmo from-cosmosis` converts a cosmosis ini file to NumCosmo yaml
+     format
+     * `numcosmo run fit ` computes the best-fit for an experiment (NumCosmo's
+     analysis)
+     * `numcosmo run test` test an experiment
+     * `numcosmo run fisher` computes a fisher matrix
+     * `numcosmo run fisher-bias` computes a fisher matrix
+     * `numcosmo run theory-vector` computes the theory vector
+     * `numcosmo run mcmc apes` computes the MCMC sampling of the experiment
+     using APES
+     * Fixed serialization for require_nonlinear_pk.
+     * Now NcmFit calls m2lnL just once if no parameters are free.
+     * New methods to NcmData and NcmDataset to check if mean_vector is
+     available.
+     * Updated stubs and requiring black < 24 due to difference in formatting.
+     * Unit tests for the newly added code.
+ * Variant dictionary support  (#135)
+
+     * New NcmVarDict boxed object describing a dict of str keys and basic types
+     values.
+     * Added unit testing
+     * Support for serialization of NcmVarDict
+     * Improved valgrind suppresion file
+     * Changing Variant type of object to tuples.
+     * Finished update of Object variant type. Added tests for data files.
+     * Finished support for VarDict as object properties.
+     * Updated conda environment file to use openblas compatible with openmp.
+     * Fixing problem with fft wisdow when MKL is being used.
+     * Updated priors to use named parameters. Improved Model and MSet objects
+     use of full parameter names.
+     * Improving reports to codecov.
+     * Using conda build for coverage.
+     * Fixed wrong signness comparison and coverage .
+     * Testing lcov 1.16 options.
+     * Removing timeout for coverage tests.
+     * Removing external codes from coverage.
+     * Disabling documentation build in CI.
+     * Removing G_DECLARE_ from coverage.
+     * Ignoring G_DEFINE_ in coverage.
+     * Using lcov for coveralls.
+     * Disabling branch detection.
+     * Extra tests for NcmMSet and adding tests back to coverage.
+ * Support for object dictionaries, NcmObjDictStr and NcmObjDictInt. (#134)
+
+     * Support for object dictionaries, NcmObjDictStr and NcmObjDictInt.
+     * Unit testing
+     * Updated stubs
+     * Fixed leaks
+ * Better python executable finding.
+
+ * Added GSL as a dependency for libmisc (internal library). (#133)
+
+     * Added GSL as a dependency for libmisc (internal library).
+     * More missing deps for libmisc.
+     * Removed unnecessary includes omp and added missing deps to class.
+     * Improving a few includes.
+
+[v0.20.0]
+ * Updated stubs.
+
+ * New minor version v0.20.0
+
+ * Support for computing fisher bias vector (#132)
+
+     * Added support for computing fisher bias vector and corresponding unit
+     tests.
+     * Increased timeout for GaussCov and conditional testing in likelihood
+     ratio.
+     * Interface for fisher bias computation and tests.
+     * Better calibration for ncm_fit tests.
+     * Added retry in the hessian computation.
+ * Improving tests for NumCosmoMath (#131)
+
+     * Improving tests for NcmFftlog.
+     * Testing q=0.5 case for j_l.
+     * Added support to make meson use tap protocol for testing.
+     * Using g_assert_true instead of g_assert in tests.
+     * More tests for NcmFit.
+     * Tests for likelihood ratio tests, removed old and unused ncm_fit methods.
+     
+     * Testing MPI.
+     * Adding libopenmpi-dev to ubuntu installations.
+     * Adding MPI tests only on supported envs.
+     * Created the USE_NCM_MPI flag to use when compiling code that use
+     numcosmo's MPI facilities.
+     * Disabled TAP when running pytest-tap and mpi.
+     * Moved ode_spline from example to unit testing.
+ * Adding support for libflint arb usage. (#130)
+
+     * Adding support for libflint arb usage
+ * Adding more python based tests using external libs (astropy and scipy). (#129)
+
+     * Adding more python based tests using external libs (astropy and scipy).
+     * Adding astropy and scipy to coveralls job.
+     * Testing adiabatic solutions on CSQ1D.
+     * Tests for NcmDataDist1d.
+     * Tests for DataDist2d.
+     * Testing DataFunnel.
+     * Tests for NcmDataGauss.
+     * Added C test for generic garbage collection tests.
+     * More tests for DataGauss.
+     * Adding LCOV_EXCL_LINE non-testable lines.
+     * Tests for NcmDataGaussDiag.
+     * Testing bootstrap+wmean.
+     * Testing GaussMix2D.
+     * Testing DataPoisson and finished Poisson fisher support.
+     * Testing NcmDataset.
+ * Fixed package name in pyproject.toml.
+
+
+[v0.19.2]
+ * Including typing data into pyproject.toml. Updating changelog.
+
+ * Fixing minor doc glitches. (#128)
+
+
+ * Updated changelog.
+
+ * Fixed project name in pyproject.toml.
+
+ * New minor version.
+
+ * Using pip to install python modules. (#127)
+
+     * Using pip to install python modules.
+     * Adding conda in the CI.
+     * Added devel_environment.yml.
+     * Update numcosmo_py.
+     * Fixed flake8 issues.
+ * More objects encapsulation (#126)
+
+     * Removed NcmCalc (unfinished). Updated csq1d.
+     * Encapsulated all NumCosmoMath objects.
+     * Including CI testing log.
+     * Adding documentation to every NumCosmoMath objects.
+
+[v0.19.1]
+ * New minor release 0.19.1
+
+ * Updated meson to deal with cross compiling and GI building. Updated ncm.pyi.
+
+ * Removed git ignored files related to autotools and in-source building.
+
+ * Removed unnecessary packages.
+
+ * Yaml implementation (#125)
+
+     * Updated minimum glib version.
+     * Complete version of the yaml serialization, including special types.
+     * Updated Python stubs.
+     * Adding fyaml to CI.
+ * Adding fyaml to CI.
+
+ * Updated Python stubs.
+
+ * Complete version of the yaml serialization, including special types.
+
+ * First version of from_yaml and to_yaml serialization. Updated minimum glib
+     version.
+
+ * New tuple boxed type (#124)
+
+     * Added new NcmDTuple boxed objects.
+     * Added serialization support and tests.
+ * Objects encapsulation (#122)
+
+     * Deleting old unnecessary files.
+     * Encapsulating and documenting NcmMPI objects.
+     * Basic documention for NcmMPIJob and NcmMSetTransKern.
+     * Documenting NcmPrior and subclasses. Finished documentation of
+     NcmPowspec.
+     * More documentation for NcmModelCtrl.
+     * Uncrustified NcmModel.
+     * Reordered NcmModelCtrl.
+     * Encapsulated and documented NcmModel. All subclasses were adapated.
+     * Disabling gsl range check by default and enabled inlining in GSL.
+     * Refactored models to use ncm_model_orig_param_get.
+ * Removed unnecessary header inclusions to avoid propagating depedencies.
+
+ * Fixing warnings in conda build. (#121)
+
+
+ * Mypy to ignore python scripts inside meson builds.
+
+ * New test for simple vector set/get.
+
+ * Removed old files.
+
+
 [v0.19.0]
+ * Release v0.19.0.
+
  * Testing before adding warn supp. Testing for isfinite declaration.
 
  * Adding cfitstio to plc.

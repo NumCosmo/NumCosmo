@@ -84,6 +84,9 @@ typedef void (*_NcmFitLSJ) (NcmFit *fit, NcmMatrix *J);
 typedef void (*_NcmFitLSFJ) (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 typedef void (*_NcmFitM2lnLGrad) (NcmFit *fit, NcmVector *grad);
 typedef void (*_NcmFitM2lnLValGrad) (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
+typedef void (*NcmFitWriter) (NcmFit *fit, const gchar *msg);
+typedef void (*NcmFitUpdater) (NcmFit *fit, guint n);
+typedef void (*NcmFitUpdateChange) (NcmFit *fit, const gchar *msg);
 
 /**
  * NcmFitGrad:
@@ -180,6 +183,7 @@ void ncm_fit_get_equality_constraint (NcmFit *fit, guint i, NcmMSetFunc **func, 
 void ncm_fit_get_inequality_constraint (NcmFit *fit, guint i, NcmMSetFunc **func, gdouble *tot);
 
 const gchar *ncm_fit_get_desc (NcmFit *fit);
+void ncm_fit_set_logger (NcmFit *fit, NcmFitWriter writer, NcmFitUpdater updater, NcmFitUpdateChange start_update, NcmFitUpdateChange end_update);
 void ncm_fit_log_info (NcmFit *fit);
 void ncm_fit_log_covar (NcmFit *fit);
 void ncm_fit_log_start (NcmFit *fit);
@@ -203,6 +207,7 @@ void ncm_fit_ls_f_J (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_obs_fisher (NcmFit *fit);
 void ncm_fit_ls_fisher (NcmFit *fit);
 void ncm_fit_fisher (NcmFit *fit);
+NcmVector *ncm_fit_fisher_bias (NcmFit *fit, NcmVector *f_true);
 
 G_DEPRECATED_FOR (ncm_fit_obs_fisher)
 void ncm_fit_numdiff_m2lnL_covar (NcmFit *fit);
@@ -220,18 +225,14 @@ gdouble ncm_fit_covar_fparam_sd (NcmFit *fit, guint fpi);
 gdouble ncm_fit_covar_fparam_cov (NcmFit *fit, guint fpi1, guint fpi2);
 gdouble ncm_fit_covar_fparam_cor (NcmFit *fit, guint fpi1, guint fpi2);
 
-void ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gdouble stop, gdouble step);
-void ncm_fit_dprob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b, gdouble step, gdouble norm);
-gdouble ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof);
-gdouble ncm_fit_prob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b);
-gdouble ncm_fit_chisq_test (NcmFit *fit, size_t bins);
-
 void ncm_fit_reset (NcmFit *fit);
 gboolean ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype);
-void ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, const gdouble reltol, NcmMSet *save_mset, const gchar *mset_file);
+gboolean ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, const gdouble reltol, NcmMSet *save_mset, const gchar *mset_file);
 
-gdouble ncm_fit_type_constrain_error (NcmFit *fit, gdouble p, gint nu, gdouble dir, NcmMSetFunc *func, gdouble z, gboolean walk);
-void ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pretty_print, gdouble *f, gdouble *sigma_f);
+NcmMatrix *ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gdouble stop, guint nsteps);
+gdouble ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof);
+gdouble ncm_fit_chisq_test (NcmFit *fit, size_t bins);
+void ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gdouble *f, gdouble *sigma_f);
 
 #define NCM_FIT_DEFAULT_M2LNL_RELTOL (1e-8)
 #define NCM_FIT_DEFAULT_M2LNL_ABSTOL (0.0)

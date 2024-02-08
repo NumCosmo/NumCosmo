@@ -66,8 +66,13 @@
 #endif /* HAVE_FFTW3 */
 
 #ifdef HAVE_ACB_H
+#ifdef HAVE_FLINT_ACB_H
+#include <flint/acb.h>
+#include <flint/acb_hypgeom.h>
+#else /* HAVE_FLINT_ACB_H */
 #include <acb.h>
 #include <acb_hypgeom.h>
+#endif /* HAVE_FLINT_ACB_H */
 #endif /* HAVE_ACB_H */
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -147,9 +152,9 @@ _ncm_fftlog_sbessel_jljm_set_property (GObject *object, guint prop_id, const GVa
     case PROP_LNW:
       ncm_fftlog_sbessel_jljm_set_lnw (fftlog_jljm, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -171,9 +176,9 @@ _ncm_fftlog_sbessel_jljm_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_LNW:
       g_value_set_double (value, ncm_fftlog_sbessel_jljm_get_lnw (fftlog_jljm));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

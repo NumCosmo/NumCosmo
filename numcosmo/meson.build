@@ -23,7 +23,6 @@ ncm_sources = files(
     'math/ncm_binsplit.c',
     'math/ncm_bootstrap.c',
     'math/ncm_c.c',
-    'math/ncm_calc.c',
     'math/ncm_cfg.c',
     'math/ncm_csq1d.c',
     'math/ncm_data.c',
@@ -98,8 +97,6 @@ ncm_sources = files(
     'math/ncm_mset_trans_kern_gauss.c',
     'math/ncm_nnls.c',
     'math/ncm_obj_array.c',
-    'math/ncm_ode.c',
-    'math/ncm_ode_eval.c',
     'math/ncm_ode_spline.c',
     'math/ncm_powspec.c',
     'math/ncm_powspec_corr3d.c',
@@ -159,7 +156,6 @@ ncm_headers = files(
     'math/ncm_binsplit.h',
     'math/ncm_bootstrap.h',
     'math/ncm_c.h',
-    'math/ncm_calc.h',
     'math/ncm_cfg.h',
     'math/ncm_csq1d.h',
     'math/ncm_data.h',
@@ -234,8 +230,6 @@ ncm_headers = files(
     'math/ncm_mset_trans_kern_gauss.h',
     'math/ncm_nnls.h',
     'math/ncm_obj_array.h',
-    'math/ncm_ode.h',
-    'math/ncm_ode_eval.h',
     'math/ncm_ode_spline.h',
     'math/ncm_powspec.h',
     'math/ncm_powspec_corr3d.h',
@@ -713,6 +707,8 @@ libnumcosmo_dep = [
     blas_dep,
     lapack_dep,
     gsl_dep,
+    arb_dep,
+    flint_dep,
 ]
 
 numcosmo_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']

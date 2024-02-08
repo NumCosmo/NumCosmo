@@ -1,4 +1,4 @@
-{'NcDataClusterPseudoCounts',
+('NcDataClusterPseudoCounts',
   {
     'desc'  : <"Planck - CLASH galaxy clusters">,
     'np'    : <21>,
@@ -27,4 +27,4 @@
                 [0.42,  3.86504118e+14, 4.33282005e+14, 6.2319478646e+13, 4.6445101e+13]
                ]>
   }
-}
+)

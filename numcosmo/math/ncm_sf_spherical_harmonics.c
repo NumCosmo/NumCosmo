@@ -30,7 +30,8 @@
  * @title: NcmSFSphericalHarmonics
  * @short_description: Spherical Harmonics object
  *
- * FIXME
+ * Object to compute the spherical harmonics $\bar{Y}_l^m (x)$ and its derivatives
+ * $\bar{Y}_{l+1}^m (x)$ and $\bar{Y}_{l+2}^m (x)$, where $x = \cos \theta$.
  *
  */
 
@@ -79,9 +80,9 @@ _ncm_sf_spherical_harmonics_set_property (GObject *object, guint prop_id, const 
     case PROP_LMAX:
       ncm_sf_spherical_harmonics_set_lmax (spha, g_value_get_int (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -97,9 +98,9 @@ _ncm_sf_spherical_harmonics_get_property (GObject *object, guint prop_id, GValue
     case PROP_LMAX:
       g_value_set_int (value, ncm_sf_spherical_harmonics_get_lmax (spha));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -147,9 +148,9 @@ ncm_sf_spherical_harmonics_class_init (NcmSFSphericalHarmonicsClass *klass)
  * @spha: a #NcmSFSphericalHarmonics
  * @abstol: absolute tolerance
  *
- * FIXME
+ * Creates a new #NcmSFSphericalHarmonicsY object.
  *
- * Returns: FIXME
+ * Returns: a new #NcmSFSphericalHarmonicsY.
  */
 NcmSFSphericalHarmonicsY *
 ncm_sf_spherical_harmonics_Y_new (NcmSFSphericalHarmonics *spha, const gdouble abstol)
@@ -178,9 +179,9 @@ ncm_sf_spherical_harmonics_Y_new (NcmSFSphericalHarmonics *spha, const gdouble a
  * ncm_sf_spherical_harmonics_Y_dup:
  * @sphaY: a #NcmSFSphericalHarmonicsY
  *
- * FIXME
+ * Duplicates a #NcmSFSphericalHarmonicsY object.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a copy of @sphaY.
  */
 NcmSFSphericalHarmonicsY *
 ncm_sf_spherical_harmonics_Y_dup (NcmSFSphericalHarmonicsY *sphaY)
@@ -196,7 +197,7 @@ ncm_sf_spherical_harmonics_Y_dup (NcmSFSphericalHarmonicsY *sphaY)
  * ncm_sf_spherical_harmonics_Y_free:
  * @sphaY: a #NcmSFSphericalHarmonicsY
  *
- * FIXME
+ * Frees a #NcmSFSphericalHarmonicsY object.
  *
  */
 void
@@ -212,9 +213,11 @@ ncm_sf_spherical_harmonics_Y_free (NcmSFSphericalHarmonicsY *sphaY)
  * @len: array length
  * @abstol: absolute tolerance
  *
- * FIXME
+ * Creates a new #NcmSFSphericalHarmonicsYArray object. This object is used to
+ * contain the results of the computation of the spherical harmonics for an
+ * array of angles $\theta_i$ with length @len.
  *
- * Returns: FIXME
+ * Returns: a new #NcmSFSphericalHarmonicsYArray.
  */
 NcmSFSphericalHarmonicsYArray *
 ncm_sf_spherical_harmonics_Y_array_new (NcmSFSphericalHarmonics *spha, const gint len, const gdouble abstol)
@@ -239,9 +242,9 @@ ncm_sf_spherical_harmonics_Y_array_new (NcmSFSphericalHarmonics *spha, const gin
  * ncm_sf_spherical_harmonics_Y_array_dup:
  * @sphaYa: a #NcmSFSphericalHarmonicsYArray
  *
- * FIXME
+ * Duplicates a #NcmSFSphericalHarmonicsYArray object.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a copy of @sphaYa.
  */
 NcmSFSphericalHarmonicsYArray *
 ncm_sf_spherical_harmonics_Y_array_dup (NcmSFSphericalHarmonicsYArray *sphaYa)
@@ -257,7 +260,7 @@ ncm_sf_spherical_harmonics_Y_array_dup (NcmSFSphericalHarmonicsYArray *sphaYa)
  * ncm_sf_spherical_harmonics_Y_array_free:
  * @sphaYa: a #NcmSFSphericalHarmonicsYArray
  *
- * FIXME
+ * Frees a #NcmSFSphericalHarmonicsYArray object.
  *
  */
 void

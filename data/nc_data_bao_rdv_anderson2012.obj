@@ -1,4 +1,4 @@
-{
+(
   'NcDataBaoRDV', 
   {
     'desc'      : <'SDSS-DR9-rec -- Anderson (2012), BAO Sample R-Dv'>, 
@@ -10,4 +10,4 @@
     'is-rDV'    : <false>,
     'long-desc' : <'BAO SDSS-DR9-rec Anderson et al. (2012) (arXiv:1203.6594) - r_s computed using EH1998.'>
   }
-}
+)

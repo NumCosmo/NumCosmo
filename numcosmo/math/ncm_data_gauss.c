@@ -84,6 +84,12 @@ ncm_data_gauss_init (NcmDataGauss *gauss)
 static void
 _ncm_data_gauss_constructed (GObject *object)
 {
+  NcmDataGauss *gauss            = NCM_DATA_GAUSS (object);
+  NcmDataGaussClass *gauss_class = NCM_DATA_GAUSS_GET_CLASS (gauss);
+
+  if (gauss_class->mean_func == NULL)
+    g_error ("NcmDataGauss: mean_func not set, class %s cannot be used.", G_OBJECT_CLASS_NAME (gauss_class));
+
   /* Chain up : start */
   G_OBJECT_CLASS (ncm_data_gauss_parent_class)->constructed (object);
 }
@@ -129,9 +135,9 @@ ncm_data_gauss_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_INV_COV:
       ncm_matrix_substitute (&self->inv_cov, g_value_get_object (value), TRUE);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -154,9 +160,9 @@ ncm_data_gauss_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_INV_COV:
       g_value_set_object (value, self->inv_cov);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -168,6 +174,7 @@ static void _ncm_data_gauss_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2
 static void _ncm_data_gauss_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v);
 static void _ncm_data_gauss_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu);
 static void _ncm_data_gauss_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H);
+static void _ncm_data_gauss_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f);
 
 static void _ncm_data_gauss_set_size (NcmDataGauss *gauss, guint np);
 static guint _ncm_data_gauss_get_size (NcmDataGauss *gauss);
@@ -219,6 +226,7 @@ ncm_data_gauss_class_init (NcmDataGaussClass *klass)
 
   data_class->mean_vector = &_ncm_data_gauss_mean_vector;
   data_class->inv_cov_UH  = &_ncm_data_gauss_inv_cov_UH;
+  data_class->inv_cov_Uf  = &_ncm_data_gauss_inv_cov_Uf;
 
   gauss_class->mean_func    = NULL;
   gauss_class->inv_cov_func = NULL;
@@ -275,7 +283,7 @@ _ncm_data_gauss_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
   for (i = 0; i < self->np; i++)
   {
-    const gdouble u_i = gsl_ran_ugaussian (rng->r);
+    const gdouble u_i = ncm_rng_ugaussian_gen (rng);
 
     ncm_vector_set (self->v, i, u_i);
   }
@@ -401,6 +409,27 @@ _ncm_data_gauss_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
                         1.0, ncm_matrix_gsl (self->LLT), ncm_matrix_gsl (H));
 
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_inv_cov_UH", ret);
+}
+
+static void
+_ncm_data_gauss_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f)
+{
+  NcmDataGauss *gauss              = NCM_DATA_GAUSS (data);
+  NcmDataGaussPrivate * const self = ncm_data_gauss_get_instance_private (gauss);
+  NcmDataGaussClass *gauss_class   = NCM_DATA_GAUSS_GET_CLASS (gauss);
+  gboolean inv_cov_update          = FALSE;
+  gint ret;
+
+  if (gauss_class->inv_cov_func != NULL)
+    inv_cov_update = gauss_class->inv_cov_func (gauss, mset, self->inv_cov);
+
+  if (inv_cov_update || !self->prepared_LLT)
+    _ncm_data_gauss_prepare_LLT (data);
+
+  ret = gsl_blas_dtrmv (CblasUpper, CblasNoTrans, CblasNonUnit,
+                        ncm_matrix_gsl (self->LLT), ncm_vector_gsl (f));
+
+  NCM_TEST_GSL_RESULT ("_ncm_data_gauss_inv_cov_Uf", ret);
 }
 
 void

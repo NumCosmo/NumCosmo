@@ -143,9 +143,9 @@ ncm_lh_ratio2d_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_BORDER_PREC:
       lhr2d->border_prec = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -175,9 +175,9 @@ ncm_lh_ratio2d_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_BORDER_PREC:
       g_value_set_double (value, lhr2d->border_prec);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -296,14 +296,15 @@ ncm_lh_ratio2d_class_init (NcmLHRatio2dClass *klass)
 
 /**
  * ncm_lh_ratio2d_new:
- * @fit: FIXME
- * @pi1: FIXME
- * @pi2: FIXME
+ * @fit: a #NcmFit
+ * @pi1: a #NcmMSetPIndex for the first parameter
+ * @pi2: a #NcmMSetPIndex for the second parameter
  * @border_prec: precision on the border finder.
  *
- * FIXME
+ * Creates a new #NcmLHRatio2d object. The parameters @pi1 and @pi2 must be
+ * parameters of the model set of @fit.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcmLHRatio2d.
  */
 NcmLHRatio2d *
 ncm_lh_ratio2d_new (NcmFit *fit, const NcmMSetPIndex *pi1, const NcmMSetPIndex *pi2, gdouble border_prec)
@@ -994,7 +995,7 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expecte
   lhr2d->chisquare = gsl_cdf_chisq_Qinv (1.0 - clevel, 2);
   lhr2d->shift[0]  = 0.0;
   lhr2d->shift[1]  = 0.0;
-  lhr2d->theta     = gsl_rng_uniform (lhr2d->rng->r) * 2.0 * M_PI;
+  lhr2d->theta     = ncm_rng_uniform01_gen (lhr2d->rng) * 2.0 * M_PI;
 
   switch (lhr2d->rtype)
   {

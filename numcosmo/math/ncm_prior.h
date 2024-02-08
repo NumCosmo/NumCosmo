@@ -33,30 +33,18 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_PRIOR             (ncm_prior_get_type ())
-#define NCM_PRIOR(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_PRIOR, NcmPrior))
-#define NCM_PRIOR_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_PRIOR, NcmPriorClass))
-#define NCM_IS_PRIOR(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_PRIOR))
-#define NCM_IS_PRIOR_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_PRIOR))
-#define NCM_PRIOR_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_PRIOR, NcmPriorClass))
+#define NCM_TYPE_PRIOR (ncm_prior_get_type ())
 
-typedef struct _NcmPriorClass NcmPriorClass;
-typedef struct _NcmPrior NcmPrior;
-
+G_DECLARE_DERIVABLE_TYPE (NcmPrior, ncm_prior, NCM, PRIOR, NcmMSetFunc)
 struct _NcmPriorClass
 {
   /*< private >*/
   NcmMSetFuncClass parent_class;
   gboolean is_m2lnL;
-};
 
-struct _NcmPrior
-{
-  /*< private >*/  
-  NcmMSetFunc parent_instance;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[18];
 };
-
-GType ncm_prior_get_type (void) G_GNUC_CONST;
 
 NcmPrior *ncm_prior_ref (NcmPrior *prior);
 void ncm_prior_free (NcmPrior *prior);

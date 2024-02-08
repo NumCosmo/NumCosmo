@@ -47,6 +47,14 @@ enum
   PROP_MEAN_FUNC,
 };
 
+struct _NcmPriorGaussFunc
+{
+  /*< private >*/
+  NcmPriorGauss parent_instance;
+  NcmMSetFunc *mean_func;
+};
+
+
 G_DEFINE_TYPE (NcmPriorGaussFunc, ncm_prior_gauss_func, NCM_TYPE_PRIOR_GAUSS)
 
 static void
@@ -72,9 +80,9 @@ _ncm_prior_gauss_func_set_property (GObject *object, guint prop_id, const GValue
       g_assert_cmpint (ncm_mset_func_get_nvar (pgf->mean_func), <=, 1);
 
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -90,9 +98,9 @@ _ncm_prior_gauss_func_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_MEAN_FUNC:
       g_value_set_object (value, pgf->mean_func);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -141,8 +149,9 @@ static gdouble
 _ncm_prior_gauss_func_mean (NcmPriorGauss *pg, NcmMSet *mset)
 {
   NcmPriorGaussFunc *pgf = NCM_PRIOR_GAUSS_FUNC (pg);
+  const gdouble var      = ncm_prior_gauss_get_var (pg);
 
-  return ncm_mset_func_eval1 (pgf->mean_func, mset, pg->var);
+  return ncm_mset_func_eval1 (pgf->mean_func, mset, var);
 }
 
 /**

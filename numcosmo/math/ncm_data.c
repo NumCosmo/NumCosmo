@@ -108,9 +108,9 @@ _ncm_data_set_property (GObject *object, guint prop_id, const GValue *value, GPa
       ncm_data_bootstrap_set (data, bstrap);
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -142,9 +142,9 @@ _ncm_data_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
       g_value_set_object (value, self->bstrap);
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -175,6 +175,7 @@ _ncm_data_finalize (GObject *object)
 }
 
 static void _ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM);
+static void _ncm_data_fisher_matrix_bias (NcmData *data, NcmMSet *mset, NcmVector *f_true, NcmMatrix **IM, NcmVector **delta_theta);
 
 static void
 ncm_data_class_init (NcmDataClass *klass)
@@ -267,8 +268,10 @@ ncm_data_class_init (NcmDataClass *klass)
 
   data_class->mean_vector = NULL;
   data_class->inv_cov_UH  = NULL;
+  data_class->inv_cov_Uf  = NULL;
 
-  data_class->fisher_matrix = &_ncm_data_fisher_matrix;
+  data_class->fisher_matrix      = &_ncm_data_fisher_matrix;
+  data_class->fisher_matrix_bias = &_ncm_data_fisher_matrix_bias;
 }
 
 typedef struct _NcmDataDiffArg
@@ -291,36 +294,105 @@ _ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
 {
   NcmDataPrivate * const self = ncm_data_get_instance_private (data);
   const guint fparams_len     = ncm_mset_fparams_len (mset);
-  NcmVector *x_v              = ncm_vector_new (fparams_len);
-  NcmDataDiffArg arg          = {mset, data};
-  const guint dim             = ncm_data_get_length (data);
 
-  if (*IM == NULL)
+  if (fparams_len == 0)
   {
-    *IM = ncm_matrix_new (fparams_len, fparams_len);
+    *IM = NULL;
   }
   else
   {
-    g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, ncm_matrix_nrows (*IM));
-    g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, fparams_len);
-  }
+    NcmVector *x_v     = ncm_vector_new (fparams_len);
+    NcmDataDiffArg arg = {mset, data};
+    const guint dim    = ncm_data_get_length (data);
 
-  ncm_mset_fparams_get_vector (mset, x_v);
+    if (*IM == NULL)
+    {
+      *IM = ncm_matrix_new (fparams_len, fparams_len);
+    }
+    else
+    {
+      g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, ncm_matrix_nrows (*IM));
+      g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, fparams_len);
+    }
+
+    ncm_mset_fparams_get_vector (mset, x_v);
+    {
+      GArray *x_a    = ncm_vector_dup_array (x_v);
+      GArray *dmu_a  = ncm_diff_rf_d1_N_to_M (self->diff, x_a, dim, _ncm_data_diff_f, &arg, NULL);
+      NcmMatrix *dmu = ncm_matrix_new_array (dmu_a, dim);
+
+      ncm_data_inv_cov_UH (data, mset, dmu);
+
+      ncm_matrix_dgemm (*IM, 'N', 'T', 1.0, dmu, dmu, 0.0);
+
+      g_array_unref (dmu_a);
+      g_array_unref (x_a);
+      ncm_matrix_free (dmu);
+    }
+    ncm_mset_fparams_set_vector (mset, x_v);
+    ncm_vector_free (x_v);
+  }
+}
+
+static void
+_ncm_data_fisher_matrix_bias (NcmData *data, NcmMSet *mset, NcmVector *f_true, NcmMatrix **IM, NcmVector **delta_theta)
+{
+  NcmDataPrivate * const self = ncm_data_get_instance_private (data);
+  const guint fparams_len     = ncm_mset_fparams_len (mset);
+
+  if (fparams_len == 0)
   {
-    GArray *x_a    = ncm_vector_dup_array (x_v);
-    GArray *dmu_a  = ncm_diff_rf_d1_N_to_M (self->diff, x_a, dim, _ncm_data_diff_f, &arg, NULL);
-    NcmMatrix *dmu = ncm_matrix_new_array (dmu_a, dim);
-
-    ncm_data_inv_cov_UH (data, mset, dmu);
-
-    ncm_matrix_dgemm (*IM, 'N', 'T', 1.0, dmu, dmu, 0.0);
-
-    g_array_unref (dmu_a);
-    g_array_unref (x_a);
-    ncm_matrix_free (dmu);
+    *IM          = NULL;
+    *delta_theta = NULL;
   }
-  ncm_mset_fparams_set_vector (mset, x_v);
-  ncm_vector_free (x_v);
+  else
+  {
+    NcmVector *x_v     = ncm_vector_new (fparams_len);
+    NcmDataDiffArg arg = {mset, data};
+    const guint dim    = ncm_data_get_length (data);
+
+    if (*IM == NULL)
+    {
+      *IM = ncm_matrix_new (fparams_len, fparams_len);
+    }
+    else
+    {
+      g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, ncm_matrix_nrows (*IM));
+      g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, fparams_len);
+    }
+
+    if (*delta_theta == NULL)
+      *delta_theta = ncm_vector_new (fparams_len);
+    else
+      g_assert_cmpuint (ncm_vector_len (*delta_theta), ==, fparams_len);
+
+    g_assert_cmpuint (ncm_vector_len (f_true), ==, dim);
+
+    ncm_mset_fparams_get_vector (mset, x_v);
+    {
+      GArray *x_a    = ncm_vector_dup_array (x_v);
+      GArray *dmu_a  = ncm_diff_rf_d1_N_to_M (self->diff, x_a, dim, _ncm_data_diff_f, &arg, NULL);
+      NcmMatrix *dmu = ncm_matrix_new_array (dmu_a, dim);
+      NcmVector *mu  = ncm_vector_new (dim);
+
+      ncm_data_inv_cov_UH (data, mset, dmu);
+
+      ncm_matrix_dgemm (*IM, 'N', 'T', 1.0, dmu, dmu, 0.0);
+
+      ncm_data_mean_vector (data, mset, mu);
+      ncm_vector_sub (mu, f_true);
+      ncm_data_inv_cov_Uf (data, mset, mu);
+
+      ncm_matrix_update_vector (dmu, 'N', -1.0, mu, 0.0, *delta_theta);
+
+      g_array_unref (dmu_a);
+      g_array_unref (x_a);
+      ncm_matrix_free (dmu);
+      ncm_vector_free (mu);
+    }
+    ncm_mset_fparams_set_vector (mset, x_v);
+    ncm_vector_free (x_v);
+  }
 }
 
 /**
@@ -771,6 +843,21 @@ ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 }
 
 /**
+ * ncm_data_has_mean_vector:
+ * @data: a #NcmData
+ *
+ * This method returns TRUE if the likelihood implements
+ * the ncm_data_mean_vector() virtual method.
+ *
+ * Returns: whether the data can calculate the mean vector.
+ */
+gboolean
+ncm_data_has_mean_vector (NcmData *data)
+{
+  return NCM_DATA_GET_CLASS (data)->mean_vector != NULL;
+}
+
+/**
  * ncm_data_mean_vector: (virtual mean_vector)
  * @data: a #NcmData
  * @mset: a #NcmMSet
@@ -800,8 +887,8 @@ ncm_data_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu)
  * @H: a #NcmMatrix
  *
  *
- * Given the Cholesky decomposition of the inverse covariance $C^{-1} = L\cdotU$
- * this function returns in-place the product $U\cdotH$.
+ * Given the Cholesky decomposition of the inverse covariance $C^{-1} = L\cdot U$
+ * this function returns in-place the product $U\cdot H$.
  *
  */
 void
@@ -817,12 +904,37 @@ ncm_data_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
 }
 
 /**
+ * ncm_data_inv_cov_Uf: (virtual inv_cov_Uf)
+ * @data: a #NcmData
+ * @mset: a #NcmMSet
+ * @f: a #NcmVector
+ *
+ *
+ * Given the Cholesky decomposition of the inverse covariance $C^{-1} = L\cdot U$
+ * this function returns in-place the product $U\cdot\vec{f}$.
+ *
+ */
+void
+ncm_data_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f)
+{
+  ncm_data_prepare (data, mset);
+
+  if (NCM_DATA_GET_CLASS (data)->inv_cov_Uf == NULL)
+    g_error ("ncm_data_inv_cov_Uf: The data (%s) does not implement inv_cov_Uf.",
+             ncm_data_get_desc (data));
+
+  NCM_DATA_GET_CLASS (data)->inv_cov_Uf (data, mset, f);
+}
+
+/**
  * ncm_data_fisher_matrix: (virtual fisher_matrix)
  * @data: a #NcmData
  * @mset: a #NcmMSet
  * @IM: (out): The fisher matrix
  *
- * Calculates the Fisher-information matrix @I.
+ * Calculates the Fisher-information matrix @I. Note that this is an
+ * additive quantity, i.e., the Fisher-information matrix of different
+ * and uncorrrelated data sets can be added.
  *
  */
 void
@@ -835,5 +947,31 @@ ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
              ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->fisher_matrix (data, mset, IM);
+}
+
+/**
+ * ncm_data_fisher_matrix_bias: (virtual fisher_matrix_bias)
+ * @data: a #NcmData
+ * @mset: a #NcmMSet
+ * @f_true: a #NcmVector
+ * @IM: (out): The fisher matrix
+ * @delta_theta: (out): The shift parameter vector
+ *
+ * Calculates the Fisher-information matrix @I and the bias vector @f
+ * assuming that the true theoretical model is @f_true. Note that these
+ * are additive quantities, i.e., the Fisher-information matrix and
+ * the bias vector of different and uncorrrelated data sets can be added.
+ *
+ */
+void
+ncm_data_fisher_matrix_bias (NcmData *data, NcmMSet *mset, NcmVector *f_true, NcmMatrix **IM, NcmVector **delta_theta)
+{
+  ncm_data_prepare (data, mset);
+
+  if (NCM_DATA_GET_CLASS (data)->fisher_matrix_bias == NULL)
+    g_error ("ncm_data_fisher_matrix_bias: The data (%s) does not implement fisher_matrix_bias.",
+             ncm_data_get_desc (data));
+
+  NCM_DATA_GET_CLASS (data)->fisher_matrix_bias (data, mset, f_true, IM, delta_theta);
 }
 

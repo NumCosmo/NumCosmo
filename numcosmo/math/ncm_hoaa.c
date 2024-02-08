@@ -111,7 +111,7 @@
 #include <gsl/gsl_fit.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmHOAAPrivate
+typedef struct _NcmHOAAPrivate
 {
 #ifndef HAVE_SUNDIALS_ARKODE
   gpointer cvode;
@@ -119,12 +119,15 @@ struct _NcmHOAAPrivate
   gpointer cvode_phase;
   gboolean cvode_init;
   gboolean cvode_sing_init;
+  gdouble k;
+
 #else
   gpointer arkode;
   gpointer arkode_sing;
   gpointer arkode_phase;
   gboolean arkode_init;
   gboolean arkode_sing_init;
+
 #endif /* HAVE_SUNDIALS_ARKODE */
   NcmHOAAOpt opt;
   N_Vector sigma;
@@ -150,7 +153,7 @@ struct _NcmHOAAPrivate
   NcmSpline *upsilon_s, *gamma_s, *qbar_s, *pbar_s;
   gdouble sigma0;
   NcmDiff *diff;
-};
+} NcmHOAAPrivate;
 
 enum
 {
@@ -169,9 +172,9 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmHOAA, ncm_hoaa, G_TYPE_OBJECT)
 static void
 ncm_hoaa_init (NcmHOAA *hoaa)
 {
-  NcmHOAAPrivate * const self = hoaa->priv = ncm_hoaa_get_instance_private (hoaa);
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
 
-  hoaa->k = 0.0;
+  self->k = 0.0;
   /* private properties */
 #ifndef HAVE_SUNDIALS_ARKODE
   self->cvode           = CVodeCreate (CV_BDF);   /*CVodeCreate (CV_BDF, CV_NEWTON);*/
@@ -230,7 +233,9 @@ static void
 _ncm_hoaa_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmHOAA *hoaa               = NCM_HOAA (object);
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+
+
 
   g_return_if_fail (NCM_IS_HOAA (object));
 
@@ -261,9 +266,9 @@ _ncm_hoaa_set_property (GObject *object, guint prop_id, const GValue *value, GPa
         g_error ("_ncm_hoaa_set_property: `opt' property must be set.");
 
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -271,7 +276,9 @@ static void
 _ncm_hoaa_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmHOAA *hoaa               = NCM_HOAA (object);
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+
+
 
   g_return_if_fail (NCM_IS_HOAA (object));
 
@@ -284,7 +291,7 @@ _ncm_hoaa_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
       g_value_set_double (value, self->abstol);
       break;
     case PROP_K:
-      g_value_set_double (value, hoaa->k);
+      g_value_set_double (value, self->k);
       break;
     case PROP_TI:
       g_value_set_double (value, self->ti);
@@ -298,9 +305,9 @@ _ncm_hoaa_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
     case PROP_OPT:
       g_value_set_enum (value, self->opt);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -308,7 +315,9 @@ static void
 _ncm_hoaa_dispose (GObject *object)
 {
   NcmHOAA *hoaa               = NCM_HOAA (object);
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+
+
 
   ncm_model_ctrl_clear (&self->ctrl);
   ncm_rng_clear (&self->rng);
@@ -335,7 +344,9 @@ static void
 _ncm_hoaa_finalize (GObject *object)
 {
   NcmHOAA *hoaa               = NCM_HOAA (object);
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+
+
 
 #ifndef HAVE_SUNDIALS_ARKODE
 
@@ -644,7 +655,7 @@ ncm_hoaa_clear (NcmHOAA **hoaa)
 void
 ncm_hoaa_set_reltol (NcmHOAA *hoaa, const gdouble reltol)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
 
   self->reltol = reltol;
 }
@@ -660,7 +671,7 @@ ncm_hoaa_set_reltol (NcmHOAA *hoaa, const gdouble reltol)
 void
 ncm_hoaa_set_abstol (NcmHOAA *hoaa, const gdouble abstol)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
 
   self->abstol = abstol;
 }
@@ -676,7 +687,9 @@ ncm_hoaa_set_abstol (NcmHOAA *hoaa, const gdouble abstol)
 void
 ncm_hoaa_set_k (NcmHOAA *hoaa, const gdouble k)
 {
-  hoaa->k = k;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+
+  self->k = k;
 }
 
 /**
@@ -690,7 +703,7 @@ ncm_hoaa_set_k (NcmHOAA *hoaa, const gdouble k)
 void
 ncm_hoaa_set_ti (NcmHOAA *hoaa, const gdouble ti)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
 
   self->ti = ti;
 }
@@ -706,7 +719,7 @@ ncm_hoaa_set_ti (NcmHOAA *hoaa, const gdouble ti)
 void
 ncm_hoaa_set_tf (NcmHOAA *hoaa, const gdouble tf)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
 
   self->tf = tf;
 }
@@ -722,7 +735,7 @@ ncm_hoaa_set_tf (NcmHOAA *hoaa, const gdouble tf)
 void
 ncm_hoaa_save_evol (NcmHOAA *hoaa, gboolean save_evol)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
 
   if (self->save_evol != save_evol)
   {
@@ -743,10 +756,11 @@ typedef struct _NcmHOAAArg
 static gdouble
 _ncm_hoaa_F (gdouble t, gpointer userdata)
 {
-  NcmHOAAArg *arg = (NcmHOAAArg *) userdata;
+  NcmHOAAArg *arg             = (NcmHOAAArg *) userdata;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (arg->hoaa);
   gdouble nu, dlnmnu, Vnu;
 
-  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
+  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, self->k, &nu, &dlnmnu, &Vnu);
 
   return 0.5 * Vnu / nu;
 }
@@ -754,10 +768,11 @@ _ncm_hoaa_F (gdouble t, gpointer userdata)
 static gdouble
 _ncm_hoaa_G (gdouble t, gpointer userdata)
 {
-  NcmHOAAArg *arg = (NcmHOAAArg *) userdata;
+  NcmHOAAArg *arg             = (NcmHOAAArg *) userdata;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (arg->hoaa);
   gdouble nu, dlnmnu, Vnu;
 
-  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
+  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, self->k, &nu, &dlnmnu, &Vnu);
 
   return 0.5 * dlnmnu / nu;
 }
@@ -765,8 +780,9 @@ _ncm_hoaa_G (gdouble t, gpointer userdata)
 static gint
 _ncm_hoaa_phase_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {
-  NcmHOAAArg *arg  = (NcmHOAAArg *) f_data;
-  const gdouble nu = ncm_hoaa_eval_nu (arg->hoaa, arg->model, t, arg->hoaa->k);
+  NcmHOAAArg *arg             = (NcmHOAAArg *) f_data;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (arg->hoaa);
+  const gdouble nu            = ncm_hoaa_eval_nu (arg->hoaa, arg->model, t, self->k);
 
   NV_Ith_S (ydot, 0) = nu;
 
@@ -794,7 +810,7 @@ _ncm_hoaa_full_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 
   gdouble nu, dlnmnu, Vnu, sin_2theta, cos_2theta, sin_2psi, cos_2psi;
 
-  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
+  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->self->k, &nu, &dlnmnu, &Vnu);
 
   sincos (2.0 * theta, &sin_2theta, &cos_2theta);
   sincos (2.0 * psi,   &sin_2psi,   &cos_2psi);
@@ -818,7 +834,7 @@ _ncm_hoaa_full_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_da
 
   gdouble nu, dlnmnu, Vnu, sin_2theta, cos_2theta, sin_2psi, cos_2psi;
 
-  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
+  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->self->k, &nu, &dlnmnu, &Vnu);
 
   sincos (2.0 * theta, &sin_2theta, &cos_2theta);
   sincos (2.0 * psi, &sin_2psi, &cos_2psi);
@@ -870,7 +886,7 @@ _ncm_hoaa_V_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 
   gdouble nu, dlnmnu, Vnu;
 
-  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
+  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->self->k, &nu, &dlnmnu, &Vnu);
 
   NV_Ith_S (ydot, NCM_HOAA_VAR_THETAB)  = nu - sin2_theta * Vnu;
   NV_Ith_S (ydot, NCM_HOAA_VAR_UPSILON) = nu - sin2_psi * Vnu;
@@ -891,7 +907,7 @@ _ncm_hoaa_V_only_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_
 
   gdouble nu, dlnmnu, Vnu, sin_2theta, cos_2theta, sin_2psi, cos_2psi;
 
-  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
+  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->self->k, &nu, &dlnmnu, &Vnu);
 
   sincos (2.0 * theta, &sin_2theta, &cos_2theta);
   sincos (2.0 * psi,   &sin_2psi,   &cos_2psi);
@@ -962,17 +978,18 @@ _ncm_hoaa_dlnmnu_calc_u_v (const gdouble upsilon, const gdouble lnmnu, gdouble *
 static gint
 _ncm_hoaa_dlnmnu_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {
-  NcmHOAAArg *arg = (NcmHOAAArg *) f_data;
+  NcmHOAAArg *arg             = (NcmHOAAArg *) f_data;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (arg->hoaa);
 
   const gdouble qbar    = NV_Ith_S (y, NCM_HOAA_VAR_QBAR);
   const gdouble pbar    = NV_Ith_S (y, NCM_HOAA_VAR_PBAR);
   const gdouble upsilon = NV_Ith_S (y, NCM_HOAA_VAR_UPSILON);
-  const gdouble mnu     = ncm_hoaa_eval_mnu (arg->hoaa, arg->model, t, arg->hoaa->k);
+  const gdouble mnu     = ncm_hoaa_eval_mnu (arg->hoaa, arg->model, t, self->k);
   const gdouble lnmnu   = log (mnu);
 
   gdouble nu, dlnmnu, Vnu, u, v, epsilon;
 
-  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
+  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, self->k, &nu, &dlnmnu, &Vnu);
   _ncm_hoaa_dlnmnu_calc_u_v (upsilon, lnmnu, &u, &v, &epsilon);
 
   {
@@ -1001,17 +1018,18 @@ _ncm_hoaa_dlnmnu_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 static gint
 _ncm_hoaa_dlnmnu_only_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
-  NcmHOAAArg *arg = (NcmHOAAArg *) jac_data;
+  NcmHOAAArg *arg             = (NcmHOAAArg *) jac_data;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (arg->hoaa);
 
   const gdouble qbar    = NV_Ith_S (y, NCM_HOAA_VAR_QBAR);
   const gdouble pbar    = NV_Ith_S (y, NCM_HOAA_VAR_PBAR);
   const gdouble upsilon = NV_Ith_S (y, NCM_HOAA_VAR_UPSILON);
-  const gdouble mnu     = ncm_hoaa_eval_mnu (arg->hoaa, arg->model, t, arg->hoaa->k);
+  const gdouble mnu     = ncm_hoaa_eval_mnu (arg->hoaa, arg->model, t, self->k);
   const gdouble lnmnu   = log (mnu);
 
   gdouble nu, dlnmnu, Vnu, u, v, epsilon;
 
-  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
+  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, self->k, &nu, &dlnmnu, &Vnu);
   _ncm_hoaa_dlnmnu_calc_u_v (upsilon, lnmnu, &u, &v, &epsilon);
 
   {
@@ -1056,17 +1074,18 @@ _ncm_hoaa_dlnmnu_only_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void 
 static gint
 _ncm_hoaa_dlnmnu_only_sing_f (realtype t_m_ts, N_Vector y, N_Vector ydot, gpointer f_data)
 {
-  NcmHOAAArg *arg = (NcmHOAAArg *) f_data;
+  NcmHOAAArg *arg             = (NcmHOAAArg *) f_data;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (arg->hoaa);
 
   const gdouble qbar    = NV_Ith_S (y, NCM_HOAA_VAR_QBAR);
   const gdouble pbar    = NV_Ith_S (y, NCM_HOAA_VAR_PBAR);
   const gdouble upsilon = NV_Ith_S (y, NCM_HOAA_VAR_UPSILON);
-  const gdouble mnu     = ncm_hoaa_eval_sing_mnu (arg->hoaa, arg->model, t_m_ts, arg->hoaa->k, arg->sing);
+  const gdouble mnu     = ncm_hoaa_eval_sing_mnu (arg->hoaa, arg->model, t_m_ts, self->k, arg->sing);
   const gdouble lnmnu   = log (mnu);
 
   gdouble nu, dlnmnu, Vnu, u, v, epsilon;
 
-  ncm_hoaa_eval_sing_system (arg->hoaa, arg->model, t_m_ts, arg->hoaa->k, arg->sing, &nu, &dlnmnu, &Vnu);
+  ncm_hoaa_eval_sing_system (arg->hoaa, arg->model, t_m_ts, self->k, arg->sing, &nu, &dlnmnu, &Vnu);
   _ncm_hoaa_dlnmnu_calc_u_v (upsilon, lnmnu, &u, &v, &epsilon);
 
   {
@@ -1117,17 +1136,18 @@ _ncm_hoaa_dlnmnu_only_sing_f (realtype t_m_ts, N_Vector y, N_Vector ydot, gpoint
 static gint
 _ncm_hoaa_dlnmnu_only_sing_J (realtype t_m_ts, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
-  NcmHOAAArg *arg = (NcmHOAAArg *) jac_data;
+  NcmHOAAArg *arg             = (NcmHOAAArg *) jac_data;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (arg->hoaa);
 
   const gdouble qbar    = NV_Ith_S (y, NCM_HOAA_VAR_QBAR);
   const gdouble pbar    = NV_Ith_S (y, NCM_HOAA_VAR_PBAR);
   const gdouble upsilon = NV_Ith_S (y, NCM_HOAA_VAR_UPSILON);
-  const gdouble mnu     = ncm_hoaa_eval_sing_mnu (arg->hoaa, arg->model, t_m_ts, arg->hoaa->k, arg->sing);
+  const gdouble mnu     = ncm_hoaa_eval_sing_mnu (arg->hoaa, arg->model, t_m_ts, self->k, arg->sing);
   const gdouble lnmnu   = log (mnu);
 
   gdouble nu, dlnmnu, Vnu, u, v, epsilon;
 
-  ncm_hoaa_eval_sing_system (arg->hoaa, arg->model, t_m_ts, arg->hoaa->k, arg->sing, &nu, &dlnmnu, &Vnu);
+  ncm_hoaa_eval_sing_system (arg->hoaa, arg->model, t_m_ts, self->k, arg->sing, &nu, &dlnmnu, &Vnu);
   _ncm_hoaa_dlnmnu_calc_u_v (upsilon, lnmnu, &u, &v, &epsilon);
 
   {
@@ -1181,7 +1201,7 @@ _ncm_hoaa_dlnmnu_only_J (glong N, realtype t, N_Vector y, N_Vector fy, DlsMat J,
 
   gdouble nu, dlnmnu, Vnu, sin_2theta, cos_2theta, sin_2psi, cos_2psi;
 
-  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
+  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->self->k, &nu, &dlnmnu, &Vnu);
 
   sincos (2.0 * theta, &sin_2theta, &cos_2theta);
   sincos (2.0 * psi,   &sin_2psi,   &cos_2psi);
@@ -1210,8 +1230,11 @@ _ncm_hoaa_dlnmnu_only_J (glong N, realtype t, N_Vector y, N_Vector fy, DlsMat J,
 void
 _ncm_hoaa_set_init_cond (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
-  const gdouble Rsigma_t0     = 0.125 * M_PI; /* pi / 8 */
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+
+
+
+  const gdouble Rsigma_t0 = 0.125 * M_PI; /* pi / 8 */
   gdouble Athetab, Aupsilon, Agamma;
 
   self->tc      = t0;
@@ -1223,7 +1246,7 @@ _ncm_hoaa_set_init_cond (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
   ncm_hoaa_eval_adiabatic_approx (hoaa, model, t0, &Athetab, &Aupsilon, &Agamma);
 
   {
-    const gdouble mnu             = ncm_hoaa_eval_mnu (hoaa, model, t0, hoaa->k);
+    const gdouble mnu             = ncm_hoaa_eval_mnu (hoaa, model, t0, self->k);
     const gdouble lnmnu           = log (mnu);
     const gdouble ch_lnmnu        = cosh (lnmnu);
     const gdouble pbar2_qbar2     = hypot (Aupsilon, 1.0 / ch_lnmnu);
@@ -1239,7 +1262,10 @@ _ncm_hoaa_set_init_cond (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
 void
 _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+
+
+
   gint flag;
 
 #ifndef HAVE_SUNDIALS_ARKODE
@@ -1400,7 +1426,10 @@ _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
 void
 _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const guint sing, const gdouble ts, const NcmHOAASingType st)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+
+
+
   gint flag;
 
 #ifndef HAVE_SUNDIALS_ARKODE
@@ -1413,7 +1442,7 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
 #endif /* HAVE_SUNDIALS_ARKODE */
 
   /*g_assert_cmpfloat (t_m_ts + ts, ==, self->t_cur);*/
-  g_assert_cmpuint (sing, <, ncm_hoaa_nsing (hoaa, model, hoaa->k));
+  g_assert_cmpuint (sing, <, ncm_hoaa_nsing (hoaa, model, self->k));
 
   switch (self->opt)
   {
@@ -1525,11 +1554,12 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
 static gdouble
 _ncm_hoaa_test_tol_dlnmnu (gdouble at, gpointer userdata)
 {
-  NcmHOAAArg *arg = (NcmHOAAArg *) userdata;
+  NcmHOAAArg *arg             = (NcmHOAAArg *) userdata;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (arg->hoaa);
   gdouble nu, dlnmnu, Vnu, test;
   const gdouble t = sinh (at);
 
-  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
+  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, self->k, &nu, &dlnmnu, &Vnu);
 
   test = dlnmnu / nu;
 
@@ -1539,13 +1569,14 @@ _ncm_hoaa_test_tol_dlnmnu (gdouble at, gpointer userdata)
 static gdouble
 _ncm_hoaa_test_tol_Vnu (gdouble at, gpointer userdata)
 {
-  NcmHOAAArg *arg = (NcmHOAAArg *) userdata;
+  NcmHOAAArg *arg             = (NcmHOAAArg *) userdata;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (arg->hoaa);
   gdouble nu, dlnmnu, Vnu, test;
   const gdouble t = sinh (at);
 
-  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
+  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, self->k, &nu, &dlnmnu, &Vnu);
 
-  /*printf ("t=% 22.15g k=% 22.15g nu=% 22.15g dlnmnu=% 22.15g Vnu=% 22.15g\n", t, arg->hoaa->k, nu, dlnmnu, Vnu);*/
+  /*printf ("t=% 22.15g k=% 22.15g nu=% 22.15g dlnmnu=% 22.15g Vnu=% 22.15g\n", t, arg->self->k, nu, dlnmnu, Vnu);*/
 
   test = Vnu / nu;
 
@@ -1555,13 +1586,14 @@ _ncm_hoaa_test_tol_Vnu (gdouble at, gpointer userdata)
 static gdouble
 _ncm_hoaa_search_initial_time_by_func (NcmHOAA *hoaa, NcmModel *model, gdouble tol, gdouble (*test_tol) (gdouble, gpointer))
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
-  gdouble at_hi               = asinh (self->tf);
-  gdouble at_lo               = asinh (self->ti);
-  gint iter                   = 0;
-  gint max_iter               = 100000;
-  const gdouble pass_step     = (at_hi - at_lo) * 1.0e-4;
-  NcmHOAAArg arg              = {hoaa, model, tol, -1, NCM_HOAA_SING_TYPE_INVALID};
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+
+  gdouble at_hi           = asinh (self->tf);
+  gdouble at_lo           = asinh (self->ti);
+  gint iter               = 0;
+  gint max_iter           = 100000;
+  const gdouble pass_step = (at_hi - at_lo) * 1.0e-4;
+  NcmHOAAArg arg          = {hoaa, model, tol, -1, NCM_HOAA_SING_TYPE_INVALID};
 
   gsl_function F;
   gint status;
@@ -1617,7 +1649,9 @@ _ncm_hoaa_search_initial_time_by_func (NcmHOAA *hoaa, NcmModel *model, gdouble t
 static gdouble
 _ncm_hoaa_search_initial_time (NcmHOAA *hoaa, NcmModel *model, gdouble tol)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+
+
 
   switch (self->opt)
   {
@@ -1651,13 +1685,16 @@ _ncm_hoaa_search_initial_time (NcmHOAA *hoaa, NcmModel *model, gdouble tol)
 static gdouble
 _ncm_hoaa_search_final_time_by_func (NcmHOAA *hoaa, NcmModel *model, gdouble tol, gdouble (*test_tol) (gdouble, gpointer))
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
-  gdouble at_hi               = asinh (self->tf);
-  gdouble at_lo               = asinh (self->ti);
-  gint iter                   = 0;
-  gint max_iter               = 100000;
-  const gdouble pass_step     = (at_hi - at_lo) * 1.0e-4;
-  NcmHOAAArg arg              = {hoaa, model, tol, -1, NCM_HOAA_SING_TYPE_INVALID};
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+
+
+
+  gdouble at_hi           = asinh (self->tf);
+  gdouble at_lo           = asinh (self->ti);
+  gint iter               = 0;
+  gint max_iter           = 100000;
+  const gdouble pass_step = (at_hi - at_lo) * 1.0e-4;
+  NcmHOAAArg arg          = {hoaa, model, tol, -1, NCM_HOAA_SING_TYPE_INVALID};
 
 
   gsl_function F;
@@ -1709,7 +1746,9 @@ _ncm_hoaa_search_final_time_by_func (NcmHOAA *hoaa, NcmModel *model, gdouble tol
 static gdouble
 _ncm_hoaa_search_final_time (NcmHOAA *hoaa, NcmModel *model, gdouble tol)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+
+
 
   switch (self->opt)
   {
@@ -1753,13 +1792,16 @@ _ncm_hoaa_arkode_resize (N_Vector y, N_Vector ytemplate, void *user_data)
 void
 _ncm_hoaa_evol_save (NcmHOAA *hoaa, NcmModel *model, const gdouble tf)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
-  NcmHOAAArg arg              = {hoaa, model, 0.0, -1, NCM_HOAA_SING_TYPE_INVALID};
-  gdouble last_t              = -1.0e100;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+
+
+
+  NcmHOAAArg arg = {hoaa, model, 0.0, -1, NCM_HOAA_SING_TYPE_INVALID};
+  gdouble last_t = -1.0e100;
   gint flag;
 
   if (self->sigma0 == 0.0)
-    self->sigma0 = 0.125 * M_PI - hoaa->k * self->t_cur;
+    self->sigma0 = 0.125 * M_PI - self->k * self->t_cur;
 
   g_assert_cmpfloat (tf, >, self->t_cur);
 
@@ -1794,7 +1836,7 @@ _ncm_hoaa_evol_save (NcmHOAA *hoaa, NcmModel *model, const gdouble tf)
 
       if (NCM_HOAA_DEBUG_EVOL)
       {
-        const gdouble mnu         = ncm_hoaa_eval_mnu (hoaa, model, self->t_cur, hoaa->k);
+        const gdouble mnu         = ncm_hoaa_eval_mnu (hoaa, model, self->t_cur, self->k);
         const gdouble lnmnu       = log (mnu);
         const gdouble ch_lnmnu    = cosh (lnmnu);
         const gdouble pbar2_qbar2 = hypot (upsilon, 1.0 / ch_lnmnu);
@@ -1913,10 +1955,13 @@ _ncm_hoaa_find_parabolic_cut_sigma (NcmVector *x_v, NcmVector *y_v, const gint n
 void
 _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const guint sing, const gdouble ts, const NcmHOAASingType st)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
-  NcmHOAAArg arg              = {hoaa, model, 0.0, sing, st};
-  gdouble last_t              = self->t_cur;
-  gboolean check_turning      = TRUE;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+
+
+
+  NcmHOAAArg arg         = {hoaa, model, 0.0, sing, st};
+  gdouble last_t         = self->t_cur;
+  gboolean check_turning = TRUE;
   gdouble tstep_m_ts;
   gint flag;
 
@@ -1953,7 +1998,7 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
     self->t_cur = ts + tstep_m_ts;
 
     {
-      const gdouble mnu     = ncm_hoaa_eval_sing_mnu (hoaa, model, tstep_m_ts, hoaa->k, sing);
+      const gdouble mnu     = ncm_hoaa_eval_sing_mnu (hoaa, model, tstep_m_ts, self->k, sing);
       const gdouble lnmnu   = log (mnu);
       const gdouble qbar    = NV_Ith_S (self->y, NCM_HOAA_VAR_QBAR);
       const gdouble pbar    = NV_Ith_S (self->y, NCM_HOAA_VAR_PBAR);
@@ -2039,7 +2084,7 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
 
         gdouble nu, dlnmnu, Vnu;
 
-        ncm_hoaa_eval_sing_system (hoaa, model, t_m_ts, hoaa->k, sing, &nu, &dlnmnu, &Vnu);
+        ncm_hoaa_eval_sing_system (hoaa, model, t_m_ts, self->k, sing, &nu, &dlnmnu, &Vnu);
 
         ncm_hoaa_eval_AA2QV (hoaa, model, self->t_cur, upsilon, gamma, qbar, pbar, &q, &v, &Pq, &Pv);
 
@@ -2071,8 +2116,9 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
 gdouble
 _ncm_hoaa_phase_nu (gdouble y, gdouble x, gpointer userdata)
 {
-  NcmHOAAArg *arg  = (NcmHOAAArg *) userdata;
-  const gdouble nu = ncm_hoaa_eval_nu (arg->hoaa, arg->model, x, arg->hoaa->k);
+  NcmHOAAArg *arg             = (NcmHOAAArg *) userdata;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (arg->hoaa);
+  const gdouble nu            = ncm_hoaa_eval_nu (arg->hoaa, arg->model, x, self->k);
 
   return nu;
 }
@@ -2080,9 +2126,10 @@ _ncm_hoaa_phase_nu (gdouble y, gdouble x, gpointer userdata)
 gdouble
 _ncm_hoaa_phase_mnu2 (gdouble y, gdouble x, gpointer userdata)
 {
-  NcmHOAAArg *arg   = (NcmHOAAArg *) userdata;
-  const gdouble nu  = ncm_hoaa_eval_nu (arg->hoaa, arg->model, x, arg->hoaa->k);
-  const gdouble mnu = ncm_hoaa_eval_mnu (arg->hoaa, arg->model, x, arg->hoaa->k);
+  NcmHOAAArg *arg             = (NcmHOAAArg *) userdata;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (arg->hoaa);
+  const gdouble nu            = ncm_hoaa_eval_nu (arg->hoaa, arg->model, x, self->k);
+  const gdouble mnu           = ncm_hoaa_eval_mnu (arg->hoaa, arg->model, x, self->k);
 
   return GSL_MAX (mnu * nu, 1.0e100);
 }
@@ -2098,7 +2145,7 @@ _ncm_hoaa_phase_mnu2 (gdouble y, gdouble x, gpointer userdata)
 void
 ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
 
   if (NCM_HOAA_GET_CLASS (hoaa)->prepare != NULL)
     NCM_HOAA_GET_CLASS (hoaa)->prepare (hoaa, model);
@@ -2181,7 +2228,7 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
 
     if (self->save_evol)
     {
-      const guint nsing = ncm_hoaa_nsing (hoaa, model, hoaa->k);
+      const guint nsing = ncm_hoaa_nsing (hoaa, model, self->k);
 
       if (nsing == 0)
       {
@@ -2198,7 +2245,7 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
           gdouble dts_i, dts_f;
           NcmHOAASingType st;
 
-          ncm_hoaa_get_sing_info (hoaa, model, hoaa->k, i, &ts_a[i], &dts_i, &dts_f, &st);
+          ncm_hoaa_get_sing_info (hoaa, model, self->k, i, &ts_a[i], &dts_i, &dts_f, &st);
         }
 
         gsl_sort_index (sing_a, ts_a, 1, nsing);
@@ -2208,7 +2255,7 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
           gdouble ts, dts_i, dts_f;
           NcmHOAASingType st;
 
-          ncm_hoaa_get_sing_info (hoaa, model, hoaa->k, sing_a[i], &ts, &dts_i, &dts_f, &st);
+          ncm_hoaa_get_sing_info (hoaa, model, self->k, sing_a[i], &ts, &dts_i, &dts_f, &st);
 
           if (ts < self->t_cur)
             continue;
@@ -2251,7 +2298,7 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
 void
 ncm_hoaa_get_t0_t1 (NcmHOAA *hoaa, NcmModel *model, gdouble *t0, gdouble *t1)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
 
   t0[0] = self->t_ad_0;
   t1[0] = self->t_ad_1;
@@ -2280,7 +2327,7 @@ _ncm_hoaa_dangle_f (gdouble dt, gpointer userdata)
 gdouble
 _ncm_hoaa_dangle (NcmHOAA *hoaa, const gdouble R, const gdouble F, const gdouble G, const gdouble dF, const gdouble dG, const gdouble nu)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
   const gdouble sin_2R        = sin (2.0 * R);
   const gdouble cos_2R        = cos (2.0 * R);
   const gdouble sin_4R        = sin (4.0 * R);
@@ -2345,7 +2392,7 @@ _ncm_hoaa_dangle (NcmHOAA *hoaa, const gdouble R, const gdouble F, const gdouble
 void
 ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *thetab, gdouble *upsilon, gdouble *gamma)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
 
   if (ncm_cmp (t, self->tc, self->reltol, 0.0) != 0)
   {
@@ -2411,12 +2458,12 @@ ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t,
   {
     const gdouble Rsigma_t0 = self->sigma_c;
     const gdouble Isigma_t0 = self->sigma_c + 0.5 * M_PI;
-    const gdouble mnu       = ncm_hoaa_eval_mnu (hoaa, model, t, hoaa->k);
+    const gdouble mnu       = ncm_hoaa_eval_mnu (hoaa, model, t, self->k);
     const gdouble lnmnu     = log (mnu);
     gdouble nu, dlnmnu, Vnu;
     NcmHOAAArg arg;
 
-    ncm_hoaa_eval_system (hoaa, model, t, hoaa->k, &nu, &dlnmnu, &Vnu);
+    ncm_hoaa_eval_system (hoaa, model, t, self->k, &nu, &dlnmnu, &Vnu);
 
     arg.model = model;
     arg.hoaa  = hoaa;
@@ -2502,11 +2549,11 @@ ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t,
 void
 ncm_hoaa_eval_adiabatic_LnI_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble theta, const gdouble psi, gdouble *LnI, gdouble *LnJ)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
   gdouble nu, dlnmnu, Vnu;
   NcmHOAAArg arg;
 
-  ncm_hoaa_eval_system (hoaa, model, t, hoaa->k, &nu, &dlnmnu, &Vnu);
+  ncm_hoaa_eval_system (hoaa, model, t, self->k, &nu, &dlnmnu, &Vnu);
 
   arg.model = model;
   arg.hoaa  = hoaa;
@@ -2551,7 +2598,7 @@ ncm_hoaa_eval_adiabatic_LnI_approx (NcmHOAA *hoaa, NcmModel *model, const gdoubl
 void
 ncm_hoaa_eval_AA (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *upsilon, gdouble *gamma, gdouble *qbar, gdouble *pbar)
 {
-  NcmHOAAPrivate * const self = hoaa->priv;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
 
   if (!self->save_evol)
   {
@@ -2565,7 +2612,7 @@ ncm_hoaa_eval_AA (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *upsi
     sincos (Athetab, qbar, pbar);
 
     {
-      const gdouble mnu             = ncm_hoaa_eval_mnu (hoaa, model, t, hoaa->k);
+      const gdouble mnu             = ncm_hoaa_eval_mnu (hoaa, model, t, self->k);
       const gdouble lnmnu           = log (mnu);
       const gdouble ch_lnmnu        = cosh (lnmnu);
       const gdouble pbar2_qbar2     = hypot (Aupsilon, 1.0 / ch_lnmnu);
@@ -2610,7 +2657,8 @@ ncm_hoaa_eval_AA (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *upsi
 void
 ncm_hoaa_eval_AA2QV (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble upsilon, const gdouble gamma, const gdouble qbar, const gdouble pbar, gdouble *q, gdouble *v, gdouble *Pq, gdouble *Pv)
 {
-  const gdouble mnu              = ncm_hoaa_eval_mnu (hoaa, model, t, hoaa->k);
+  NcmHOAAPrivate * const self    = ncm_hoaa_get_instance_private (hoaa);
+  const gdouble mnu              = ncm_hoaa_eval_mnu (hoaa, model, t, self->k);
   const gdouble lnmnu            = log (mnu);
   const gdouble ch_lnmnu         = cosh (lnmnu);
   const gdouble pbar2_qbar2      = hypot (upsilon, 1.0 / ch_lnmnu);
@@ -2646,8 +2694,9 @@ ncm_hoaa_eval_AA2QV (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdou
 void
 ncm_hoaa_eval_QV2AA (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble q, const gdouble v, const gdouble Pq, const gdouble Pv, gdouble *upsilon, gdouble *gamma, gdouble *qbar, gdouble *pbar)
 {
-  const gdouble mnu   = ncm_hoaa_eval_mnu (hoaa, model, t, hoaa->k);
-  const gdouble lnmnu = log (mnu);
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+  const gdouble mnu           = ncm_hoaa_eval_mnu (hoaa, model, t, self->k);
+  const gdouble lnmnu         = log (mnu);
 
   const gdouble theta    = atan2 (q, Pq);
   const gdouble psi      = atan2 (v, Pv);
@@ -2706,8 +2755,9 @@ ncm_hoaa_eval_QV (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *q, g
 void
 ncm_hoaa_eval_Delta (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *Delta_phi, gdouble *Delta_Pphi)
 {
-  const gdouble factor  = ncm_hoaa_eval_powspec_factor (hoaa, model);
-  const gdouble k3_2pi2 = gsl_pow_3 (hoaa->k) * factor;
+  NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
+  const gdouble factor        = ncm_hoaa_eval_powspec_factor (hoaa, model);
+  const gdouble k3_2pi2       = gsl_pow_3 (self->k) * factor;
   gdouble q = 0.0, v = 0.0, Pq = 0.0, Pv = 0.0;
 
   ncm_hoaa_eval_QV (hoaa, model, t, &q, &v, &Pq, &Pv);
@@ -2752,6 +2802,12 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  *
  * Returns: the frequency $\nu$.
  */
+gdouble
+ncm_hoaa_eval_nu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->eval_nu (hoaa, model, t, k);
+}
+
 /**
  * ncm_hoaa_eval_mnu: (virtual eval_mnu)
  * @hoaa: a #NcmHOAA
@@ -2763,6 +2819,12 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  *
  * Returns: the mass $m$.
  */
+gdouble
+ncm_hoaa_eval_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->eval_mnu (hoaa, model, t, k);
+}
+
 /**
  * ncm_hoaa_eval_dlnmnu: (virtual eval_dlnmnu)
  * @hoaa: a #NcmHOAA
@@ -2774,6 +2836,12 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  *
  * Returns: the potential $\mathrm{d}(m\nu)/\mathrm{d}t$.
  */
+gdouble
+ncm_hoaa_eval_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->eval_dlnmnu (hoaa, model, t, k);
+}
+
 /**
  * ncm_hoaa_eval_V: (virtual eval_V)
  * @hoaa: a #NcmHOAA
@@ -2785,6 +2853,12 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  *
  * Returns: the potential $V$.
  */
+gdouble
+ncm_hoaa_eval_V (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->eval_V (hoaa, model, t, k);
+}
+
 /**
  * ncm_hoaa_eval_system: (virtual eval_system)
  * @hoaa: a #NcmHOAA
@@ -2798,6 +2872,11 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  * Evaluates the system functions at $t$ and $k$.
  *
  */
+void
+ncm_hoaa_eval_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu)
+{
+  NCM_HOAA_GET_CLASS (hoaa)->eval_system (hoaa, model, t, k, nu, dlnmnu, Vnu);
+}
 
 /**
  * ncm_hoaa_nsing: (virtual nsing)
@@ -2809,6 +2888,12 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  *
  * Returns: the number of singular points.
  */
+guint
+ncm_hoaa_nsing (NcmHOAA *hoaa, NcmModel *model, const gdouble k)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->nsing (hoaa, model, k);
+}
+
 /**
  * ncm_hoaa_get_sing_info: (virtual get_sing_info)
  * @hoaa: a #NcmHOAA
@@ -2816,13 +2901,19 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  * @k: mode $k$
  * @sing: singularity index
  * @ts: (out): singularity time $t_s$
- * @dts_i: (out): FIXME
- * @dts_f: (out): FIXME
- * @st: (out): FIXME
+ * @dts_i: (out): singularity time interval $t_s - t_i$
+ * @dts_f: (out): singularity time interval $t_f - t_s$
+ * @st: (out): singularity type
  *
  * Gets the time $t_s$ where the @sing-th singularity occour.
  *
  */
+void
+ncm_hoaa_get_sing_info (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st)
+{
+  NCM_HOAA_GET_CLASS (hoaa)->get_sing_info (hoaa, model, k, sing, ts, dts_i, dts_f, st);
+}
+
 /**
  * ncm_hoaa_eval_sing_mnu: (virtual eval_sing_mnu)
  * @hoaa: a #NcmHOAA
@@ -2835,6 +2926,12 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  *
  * Returns: the mass $m$.
  */
+gdouble
+ncm_hoaa_eval_sing_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->eval_sing_mnu (hoaa, model, t_m_ts, k, sing);
+}
+
 /**
  * ncm_hoaa_eval_sing_V: (virtual eval_sing_V)
  * @hoaa: a #NcmHOAA
@@ -2847,6 +2944,12 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  *
  * Returns: the potential $V$.
  */
+gdouble
+ncm_hoaa_eval_sing_V (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->eval_sing_V (hoaa, model, t_m_ts, k, sing);
+}
+
 /**
  * ncm_hoaa_eval_sing_dlnmnu: (virtual eval_sing_dlnmnu)
  * @hoaa: a #NcmHOAA
@@ -2859,6 +2962,12 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  *
  * Returns: the potential $\mathrm{d}(m\nu)/\mathrm{d}t$.
  */
+gdouble
+ncm_hoaa_eval_sing_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->eval_sing_dlnmnu (hoaa, model, t_m_ts, k, sing);
+}
+
 /**
  * ncm_hoaa_eval_sing_system: (virtual eval_sing_system)
  * @hoaa: a #NcmHOAA
@@ -2873,6 +2982,12 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  * Evaluates the system functions at $t$ and $k$.
  *
  */
+void
+ncm_hoaa_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu)
+{
+  NCM_HOAA_GET_CLASS (hoaa)->eval_sing_system (hoaa, model, t_m_ts, k, sing, nu, dlnmnu, Vnu);
+}
+
 /**
  * ncm_hoaa_eval_powspec_factor: (virtual eval_powspec_factor)
  * @hoaa: a #NcmHOAA
@@ -2882,6 +2997,11 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  * Default is: $1/(2\pi^2)$.
  *
  */
+gdouble
+ncm_hoaa_eval_powspec_factor (NcmHOAA *hoaa, NcmModel *model)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->eval_powspec_factor (hoaa, model);
+}
 
 #if 0
 

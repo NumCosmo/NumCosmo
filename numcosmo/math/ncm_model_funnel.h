@@ -35,29 +35,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MODEL_FUNNEL             (ncm_model_funnel_get_type ())
-#define NCM_MODEL_FUNNEL(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MODEL_FUNNEL, NcmModelFunnel))
-#define NCM_MODEL_FUNNEL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MODEL_FUNNEL, NcmModelFunnelClass))
-#define NCM_IS_MODEL_FUNNEL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MODEL_FUNNEL))
-#define NCM_IS_MODEL_FUNNEL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MODEL_FUNNEL))
-#define NCM_MODEL_FUNNEL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MODEL_FUNNEL, NcmModelFunnelClass))
+#define NCM_TYPE_MODEL_FUNNEL (ncm_model_funnel_get_type ())
 
-typedef struct _NcmModelFunnelClass NcmModelFunnelClass;
-typedef struct _NcmModelFunnel NcmModelFunnel;
-typedef struct _NcmModelFunnelPrivate NcmModelFunnelPrivate;
-
-struct _NcmModelFunnelClass
-{
-  /*< private >*/
-  NcmModelClass parent_class;
-};
-
-struct _NcmModelFunnel
-{
-  /*< private >*/
-  NcmModel parent_instance;
-  NcmModelFunnelPrivate *priv;
-};
+G_DECLARE_FINAL_TYPE (NcmModelFunnel, ncm_model_funnel, NCM, MODEL_FUNNEL, NcmModel)
 
 /**
  * NcmModelFunnelSParams:
@@ -86,8 +66,6 @@ typedef enum _NcmModelFunnelVParams
   /* < private > */
   NNCM_MODEL_FUNNEL_VPARAM_LEN, /*< skip >*/
 } NcmModelFunnelVParams;
-
-GType ncm_model_funnel_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (ncm_model_funnel);
 

@@ -109,3 +109,25 @@ option(
        value: false,
        description: 'Enable gsl range checking',
 )
+
+#######################################################################################
+# NumCosmoPy
+#######################################################################################
+
+option(
+       'numcosmo_py',
+       type: 'boolean',
+       value: true,
+       description: 'Install NumCosmoPy using pip',
+)
+
+#######################################################################################
+# MPI options
+#######################################################################################
+
+option(
+       'debug-mpi',
+       type: 'boolean',
+       value: false,
+       description: 'Enable MPI debug messages',
+)

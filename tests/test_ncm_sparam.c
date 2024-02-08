@@ -137,16 +137,18 @@ test_ncm_sparam_new (TestNcmSparam *test, gconstpointer pdata)
   g_assert_true (p != NULL);
   g_assert_true (NCM_IS_SPARAM (p));
 
-  g_assert_true (p->name != name);
-  g_assert_true (p->symbol != symbol);
+  ;
 
-  g_assert_cmpstr (p->name, ==, name);
-  g_assert_cmpstr (p->symbol, ==, symbol);
+  g_assert_true (ncm_sparam_name (p) != name);
+  g_assert_true (ncm_sparam_symbol (p) != symbol);
 
-  ncm_assert_cmpdouble (p->lower_bound, ==, lower_bound);
-  ncm_assert_cmpdouble (p->upper_bound, ==, upper_bound);
-  ncm_assert_cmpdouble (p->scale, ==, scale);
-  ncm_assert_cmpdouble (p->abstol, ==, abstol);
+  g_assert_cmpstr (ncm_sparam_name (p), ==, name);
+  g_assert_cmpstr (ncm_sparam_symbol (p), ==, symbol);
+
+  ncm_assert_cmpdouble (ncm_sparam_get_lower_bound (p), ==, lower_bound);
+  ncm_assert_cmpdouble (ncm_sparam_get_upper_bound (p), ==, upper_bound);
+  ncm_assert_cmpdouble (ncm_sparam_get_scale (p), ==, scale);
+  ncm_assert_cmpdouble (ncm_sparam_get_absolute_tolerance (p), ==, abstol);
 }
 
 void

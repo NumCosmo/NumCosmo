@@ -1,4 +1,4 @@
-{
+(
   'NcDataBaoDV', 
   {
     'desc'     : <'Eisenstein 2005, BAO Sample Dv'>, 
@@ -9,4 +9,4 @@
     'sigma'    : <[88.0]>, 
     'z'        : <[0.35]>
   }
-}
+)

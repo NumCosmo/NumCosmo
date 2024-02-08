@@ -5,6 +5,10 @@ c_tests = [
         'sources': ['test_ncm_cfg.c'],
     },
     {
+        'name': 'ncm_generic',
+        'sources': ['test_ncm_generic.c'],
+    },
+    {
         'name': 'ncm_sparam',
         'sources': ['test_ncm_sparam.c'],
     },
@@ -17,12 +21,9 @@ c_tests = [
         'sources': ['test_ncm_dtuple.c'],
     },
     {
-        'name': 'ncm_ode',
-        'sources': ['test_ncm_ode.c'],
-    },
-    {
         'name': 'ncm_fftlog',
         'sources': ['test_ncm_fftlog.c'],
+        'timeout': 0,
     },
     {
         'name': 'ncm_vector',
@@ -92,6 +93,7 @@ c_tests = [
     {
         'name': 'ncm_mset_catalog',
         'sources': ['test_ncm_mset_catalog.c'],
+        'timeout': 0,
     },
     {
         'name': 'ncm_obj_array',
@@ -108,6 +110,7 @@ c_tests = [
             'ncm_data_gauss_cov_test.c',
             'ncm_data_gauss_cov_test.h',
         ],
+        'timeout': 0,
     },
     {
         'name': 'ncm_fit',
@@ -231,7 +234,16 @@ foreach c_test : c_tests
     else
         timeout = 60
     endif
-    test(c_test['name'], executable_test, timeout: timeout)
+    test(
+        c_test['name'],
+        executable_test,
+        timeout: timeout,
+        env: [
+            'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
+            'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
+        ],
+        protocol: 'tap',
+    )
 endforeach
 
 python_tests = [
@@ -248,10 +260,131 @@ python_tests = [
         'source': 'test_py_integralnd.py',
     },
     {
+        'name': 'py_spline_cubic_d2',
+        'source': 'test_py_spline_cubic_d2.py',
+    },
+    {
         'name': 'py_sanity',
         'source': 'test_py_sanity.py',
     },
+    {
+        'name': 'py_data_funnel',
+        'source': 'test_py_data_funnel.py',
+    },
+    {
+        'name': 'py_data_gaussmix2d',
+        'source': 'test_py_data_gaussmix2d.py',
+    },
+    {
+        'name': 'py_data_gauss',
+        'source': 'test_py_data_gauss.py',
+    },
+    {
+        'name': 'py_data_gauss_cov',
+        'source': 'test_py_data_gauss_cov.py',
+    },
+    {
+        'name': 'py_data_gauss_diag',
+        'source': 'test_py_data_gauss_diag.py',
+    },
+    {
+        'name': 'py_data_poisson',
+        'source': 'test_py_data_poisson.py',
+    },
+    {
+        'name': 'py_data_rosenbrock',
+        'source': 'test_py_data_rosenbrock.py',
+    },
+    {
+        'name': 'py_dataset',
+        'source': 'test_py_dataset.py',
+    },
+    {
+        'name': 'py_prior',
+        'source': 'test_py_prior.py',
+    },
+    {
+        'name': 'py_ode_spline',
+        'source': 'test_py_ode_spline.py',
+    },
+    {
+        'name': 'py_serialize',
+        'source': 'test_py_serialize.py',
+    },
+    {
+        'name': 'py_obj_array',
+        'source': 'test_py_obj_array.py',
+    },
+    {
+        'name': 'py_mset',
+        'source': 'test_py_mset.py',
+    },
+    {
+        'name': 'py_test_data_objects',
+        'source': 'test_py_test_data_objects.py',
+    },
+    {
+        'name': 'py_model_builder',
+        'source': 'test_py_model_builder.py',
+    },
+    {
+        'name': 'py_fit',
+        'source': 'test_py_fit.py',
+    },
 ]
+
+if mpi_c_dep.found()
+    python_tests += [
+        {
+            'name': 'py_mpi',
+            'source': 'test_py_mpi.py',
+            'mpi': true,
+        },
+    ]
+endif
+
+python_astropy_scipy = python_module.find_installation(
+    'python3',
+    modules: ['astropy', 'scipy'],
+    required: false,
+)
+
+if python_astropy_scipy.found()
+    python_tests += [
+        {
+            'name': 'py_constants',
+            'source': 'test_py_constants.py',
+        },
+        {
+            'name': 'py_csq1d',
+            'source': 'test_py_csq1d.py',
+        },
+        {
+            'name': 'py_data_dist1d',
+            'source': 'test_py_data_dist1d.py',
+        },
+        {
+            'name': 'py_data_dist2d',
+            'source': 'test_py_data_dist2d.py',
+        },
+    ]
+endif
+
+python_typer = python_module.find_installation(
+    'python3',
+    modules: ['typer', 'rich'],
+    required: false,
+)
+
+if python_typer.found()
+    python_tests += [
+        {
+            'name': 'py_numcosmo_app',
+            'source': 'test_py_numcosmo_app.py',
+            'timeout': 0,
+        },
+    ]
+endif
 
 if enable_gir
     env = environment()
@@ -275,13 +408,81 @@ if enable_gir
         numcosmo_source_dir,
     )
 
+    pytest_args = ['-m', 'pytest']
+    pytest_protocol = 'exitcode'
+
+    py_tap = python_module.find_installation(
+        'python3',
+        modules: ['pytest_tap'],
+        required: false,
+    )
+    if py_tap.found()
+        r = run_command(
+            python,
+            '-c',
+            'import importlib.metadata; import sys; sys.stdout.write(importlib.metadata.version("pytest-tap"))',
+            check: true,
+        )
+        message('pytest-tap version: @0@'.format(r.stdout().strip()))
+
+        if r.stdout().version_compare('>= 3.4')
+            pytest_args += ['--tap']
+        else
+            pytest_args += ['--tap-stream']
+        endif
+        pytest_protocol = 'tap'
+    endif
+
+
     foreach python_test : python_tests
+        if python_test.has_key('timeout')
+            timeout = python_test['timeout']
+        else
+            timeout = 60
+        endif
+
         test(
             python_test['name'],
             python,
-            args: ['-m', 'pytest', join_paths(meson.current_source_dir(), python_test['source'])],
+            args: pytest_args + join_paths(meson.current_source_dir(), python_test['source']),
             depends: [numcosmo_gir, numcosmo_math_gir],
             env: env,
+            protocol: pytest_protocol,
+            timeout: timeout,
         )
     endforeach
+
+    if mpi_c_dep.found()
+        mpiexec = find_program('mpiexec', required: false)
+        if mpiexec.found()
+            mpiexec_args = (
+                [
+                    '-n',
+                    '2',
+                    python.full_path(),
+                ] + pytest_args
+            )
+            foreach python_test : python_tests
+                if python_test.has_key('mpi') and python_test['mpi']
+                    if python_test.has_key('timeout')
+                        timeout = python_test['timeout']
+                    else
+                        timeout = 60
+                    endif
+                    test(
+                        'mpiexec_' + python_test['name'],
+                        mpiexec,
+                        args: mpiexec_args + join_paths(
+                            meson.current_source_dir(),
+                            python_test['source'],
+                        ),
+                        depends: [numcosmo_gir, numcosmo_math_gir],
+                        env: env,
+                        timeout: timeout,
+                        # protocol: pytest_protocol, # FIXME: mpiexec does not support TAP
+                    )
+                endif
+            endforeach
+        endif
+    endif
 endif

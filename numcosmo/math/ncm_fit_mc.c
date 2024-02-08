@@ -157,9 +157,9 @@ ncm_fit_mc_set_property (GObject *object, guint prop_id, const GValue *value, GP
     case PROP_DATA_FILE:
       ncm_fit_mc_set_data_file (mc, g_value_get_string (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -193,9 +193,9 @@ ncm_fit_mc_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
     case PROP_DATA_FILE:
       g_value_set_string (value, ncm_mset_catalog_peek_filename (mc->mcat));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -581,13 +581,13 @@ _ncm_fit_mc_update (NcmFitMC *mc, NcmFit *fit)
       break;
     case NCM_FIT_RUN_MSGS_SIMPLE:
     {
-      guint stepi          = mc->nt->task_pos % step;
+      guint stepi          = ncm_timer_task_completed (mc->nt) % step;
       gboolean log_timeout = FALSE;
 
-      if ((mc->nt->pos_time - mc->nt->last_log_time) > 60.0)
+      if (ncm_timer_elapsed_since_last_log (mc->nt) > 60.0)
         log_timeout = TRUE;
 
-      if (log_timeout || (stepi == 0) || (mc->nt->task_pos == mc->nt->task_len))
+      if (log_timeout || (stepi == 0) || ncm_timer_task_has_ended (mc->nt))
       {
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (mc->mcat);

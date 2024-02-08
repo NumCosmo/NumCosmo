@@ -407,7 +407,7 @@ _nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gd
   _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
 
   ncm_rng_lock (rng);
-  lnM_obs[0] = lnR_true + gsl_ran_gaussian (rng->r, sigma);
+  lnM_obs[0] = ncm_rng_gaussian_gen (rng, lnR_true, sigma);
   ncm_rng_unlock (rng);
 
   return (lnM_obs[0] <= self->lnR_max) && (lnM_obs[0] >= self->lnR_min);

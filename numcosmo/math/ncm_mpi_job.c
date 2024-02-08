@@ -76,7 +76,7 @@
 #define MPI_DOUBLE (0)
 #endif /* HAVE_MPI */
 
-struct _NcmMPIJobPrivate
+typedef struct _NcmMPIJobPrivate
 {
   guint placeholder;
   NcmMPIDatatype input_dtype;
@@ -91,7 +91,7 @@ struct _NcmMPIJobPrivate
   GHashTable *input_buf_table;
   GHashTable *return_buf_table;
   NcmTimer *nt;
-};
+} NcmMPIJobPrivate;
 
 enum
 {
@@ -110,7 +110,7 @@ static void _ncm_mpi_job_destroy_buffer (gpointer p);
 static void
 ncm_mpi_job_init (NcmMPIJob *mpi_job)
 {
-  NcmMPIJobPrivate * const self = mpi_job->priv = ncm_mpi_job_get_instance_private (mpi_job);
+  NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
 
   self->placeholder      = 0;
   self->input_dtype      = MPI_DATATYPE_NULL;
@@ -131,7 +131,7 @@ static gpointer
 _ncm_mpi_job_create_input_buffer (gpointer userdata)
 {
   NcmMPIJob *mpi_job            = NCM_MPI_JOB (userdata);
-  NcmMPIJobPrivate * const self = mpi_job->priv;
+  NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
 
   return g_malloc (self->input_size);
 }
@@ -140,7 +140,7 @@ static gpointer
 _ncm_mpi_job_create_return_buffer (gpointer userdata)
 {
   NcmMPIJob *mpi_job            = NCM_MPI_JOB (userdata);
-  NcmMPIJobPrivate * const self = mpi_job->priv;
+  NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
 
   return g_malloc (self->return_size);
 }
@@ -155,7 +155,7 @@ static void
 _ncm_mpi_job_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmMPIJob *mpi_job            = NCM_MPI_JOB (object);
-  NcmMPIJobPrivate * const self = mpi_job->priv;
+  NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
 
   g_return_if_fail (NCM_IS_MPI_JOB (object));
 
@@ -164,9 +164,9 @@ _ncm_mpi_job_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_PLACEHOLDER:
       self->placeholder = g_value_get_uint (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -174,7 +174,7 @@ static void
 _ncm_mpi_job_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmMPIJob *mpi_job            = NCM_MPI_JOB (object);
-  NcmMPIJobPrivate * const self = mpi_job->priv;
+  NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
 
   g_return_if_fail (NCM_IS_MPI_JOB (object));
 
@@ -183,9 +183,9 @@ _ncm_mpi_job_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_PLACEHOLDER:
       g_value_set_uint (value, self->placeholder);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -196,7 +196,7 @@ _ncm_mpi_job_constructed (GObject *object)
   G_OBJECT_CLASS (ncm_mpi_job_parent_class)->constructed (object);
   {
     NcmMPIJob *mpi_job            = NCM_MPI_JOB (object);
-    NcmMPIJobPrivate * const self = mpi_job->priv;
+    NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
 
     self->input_dtype  = ncm_mpi_job_input_datatype  (mpi_job, &self->input_len,  &self->input_size);
     self->return_dtype = ncm_mpi_job_return_datatype (mpi_job, &self->return_len, &self->return_size);
@@ -207,7 +207,7 @@ static void
 _ncm_mpi_job_dispose (GObject *object)
 {
   NcmMPIJob *mpi_job            = NCM_MPI_JOB (object);
-  NcmMPIJobPrivate * const self = mpi_job->priv;
+  NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
 
   g_clear_pointer (&self->input_buf_table, g_hash_table_unref);
   g_clear_pointer (&self->return_buf_table, g_hash_table_unref);
@@ -222,7 +222,7 @@ static void
 _ncm_mpi_job_finalize (GObject *object)
 {
   NcmMPIJob *mpi_job            = NCM_MPI_JOB (object);
-  NcmMPIJobPrivate * const self = mpi_job->priv;
+  NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
 
   ncm_mpi_job_free_all_slaves (mpi_job);
 
@@ -366,13 +366,13 @@ ncm_mpi_job_class_init (NcmMPIJobClass *klass)
 static void
 _ncm_mpi_job_work_clear (NcmMPIJob *mpi_job)
 {
-  /*NcmMPIJobPrivate * const self = mpi_job->priv;*/
+  /*NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);*/
 }
 
 static gpointer
 _ncm_mpi_job_get_input_buffer (NcmMPIJob *mpi_job, gpointer input)
 {
-  NcmMPIJobPrivate * const self = mpi_job->priv;
+  NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
   gpointer *buf_ptr             = ncm_memory_pool_get (self->input_buf_pool);
 
   g_hash_table_insert (self->input_buf_table, *buf_ptr, buf_ptr);
@@ -383,7 +383,7 @@ _ncm_mpi_job_get_input_buffer (NcmMPIJob *mpi_job, gpointer input)
 static gpointer
 _ncm_mpi_job_get_return_buffer (NcmMPIJob *mpi_job, gpointer ret)
 {
-  NcmMPIJobPrivate * const self = mpi_job->priv;
+  NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
   gpointer *buf_ptr             = ncm_memory_pool_get (self->return_buf_pool);
 
   g_hash_table_insert (self->return_buf_table, *buf_ptr, buf_ptr);
@@ -394,7 +394,7 @@ _ncm_mpi_job_get_return_buffer (NcmMPIJob *mpi_job, gpointer ret)
 static void
 _ncm_mpi_job_destroy_input_buffer (NcmMPIJob *mpi_job, gpointer input, gpointer buf)
 {
-  NcmMPIJobPrivate * const self = mpi_job->priv;
+  NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
   gpointer *buf_ptr             = g_hash_table_lookup (self->input_buf_table, buf);
 
   g_assert (buf_ptr != NULL);
@@ -404,7 +404,7 @@ _ncm_mpi_job_destroy_input_buffer (NcmMPIJob *mpi_job, gpointer input, gpointer 
 static void
 _ncm_mpi_job_destroy_return_buffer (NcmMPIJob *mpi_job, gpointer ret, gpointer buf)
 {
-  NcmMPIJobPrivate * const self = mpi_job->priv;
+  NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
   gpointer *buf_ptr             = g_hash_table_lookup (self->return_buf_table, buf);
 
   g_assert (buf_ptr != NULL);
@@ -726,7 +726,7 @@ ncm_mpi_job_init_all_slaves (NcmMPIJob *mpi_job, NcmSerialize *ser)
 
   if (_mpi_ctrl.size > 1)
   {
-    NcmMPIJobPrivate * const self = mpi_job->priv;
+    NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
     GVariant *job_ser             = ncm_serialize_to_variant (ser, G_OBJECT (mpi_job));
     gconstpointer job_data        = g_variant_get_data (job_ser);
     gint length                   = g_variant_get_size (job_ser);
@@ -803,7 +803,7 @@ ncm_mpi_job_run_array (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArray *re
 
   if (_mpi_ctrl.size > 1)
   {
-    NcmMPIJobPrivate * const self = mpi_job->priv;
+    NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
     const guint njobs             = input_array->len;
     const guint njobs_pa          = njobs - njobs / _mpi_ctrl.size;
     const guint prealloc          = (njobs < 100) ? njobs : 100;
@@ -994,7 +994,7 @@ static gpointer
 _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
 {
   NcmMPIJobCtrlData *ctrl_data  = data;
-  NcmMPIJobPrivate * const self = ctrl_data->mpi_job->priv;
+  NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (ctrl_data->mpi_job);
   GAsyncQueue *jobs             = ctrl_data->jobs;
   const guint prealloc          = _mpi_ctrl.nslaves;
   GArray *send_req_array        = g_array_sized_new (FALSE, TRUE, sizeof (MPI_Request), prealloc);
@@ -1175,7 +1175,7 @@ ncm_mpi_job_run_array_async (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArr
 {
 #ifdef HAVE_MPI
 #ifdef NCM_MPI_DEBUG
-  NcmMPIJobPrivate * const self = mpi_job->priv;
+  NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
 #endif /* NCM_MPI_DEBUG */
   g_assert_cmpint (_mpi_ctrl.rank, ==, NCM_MPI_CTRL_MASTER_ID);
 
@@ -1258,7 +1258,7 @@ ncm_mpi_job_run_array_async (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArr
 void
 ncm_mpi_job_free_all_slaves (NcmMPIJob *mpi_job)
 {
-  NcmMPIJobPrivate * const self = mpi_job->priv;
+  NcmMPIJobPrivate * const self = ncm_mpi_job_get_instance_private (mpi_job);
 
 #ifdef HAVE_MPI
 

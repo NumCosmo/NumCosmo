@@ -11,20 +11,19 @@ on:
 jobs:
 
   build-gcc-ubuntu:
-
+    name: NumCosmo (ubuntu, apt)
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
     - name: Install pre-requisites
       run: |
         sudo apt-get update
-        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev gtk-doc-tools
-        sudo pip install meson ninja pytest numpy
+        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev gtk-doc-tools libopenmpi-dev
+        sudo pip install meson ninja pytest pytest-tap numpy
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
-      run: meson setup build -Ddebug=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+      run: meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dgtkdoc=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: meson compile -C build
     - name: Test python examples
@@ -42,7 +41,7 @@ jobs:
         ./example_simple
         ./example_ca
     - name: Check NumCosmo
-      run: meson test -C build
+      run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
     - name: Create a NumCosmo tarball
       run: meson dist -C build --no-tests 
     - name: Upload a Build Artifact
@@ -59,36 +58,8 @@ jobs:
         ./example_simple
         ./example_ca
 
-  coveralls-gcc-ubuntu:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Install pre-requisites
-      run: |
-        sudo apt-get update
-        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran gcovr pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev python3-setuptools gtk-doc-tools
-        pip install meson ninja pytest numpy
-    - name: Configure NumCosmo
-      run: meson setup build -Ddebug=true -Db_coverage=true -Db_lto=false --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
-    - name: Building NumCosmo
-      run: meson compile -C build
-    - name: Check NumCosmo
-      run: meson test -C build
-    - name: Generate coverage
-      # For some reason, gcovr is ignoring the configured gcovr.cfg file
-      # ninja coverage -C build -v -d stats -d explain
-      run: |
-        gcovr --root . --object-directory build --config gcovr.cfg --xml-pretty -o build/meson-logs/coverage.xml
-    - name: Coveralls
-      uses: coverallsapp/github-action@v2
-      with:
-        files: build/meson-logs/coverage.xml
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-
   build-gcc-macos:
-
+    name: NumCosmo (macos, brew)
     runs-on: macos-latest
     env:
       CC: gcc-11
@@ -110,12 +81,12 @@ jobs:
         brew install gobject-introspection gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran gtk-doc glib openblas
     - name: Pip install pre-requisites
       run: |
-        pip3 install meson ninja pytest numpy pygobject
+        pip3 install meson ninja pytest pytest-tap numpy pygobject
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
       run: | 
-        meson setup build -Ddebug=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+        meson setup build -Dbuildtype=release -Dnumcosmo_py=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: |
         meson compile -C build
@@ -126,4 +97,146 @@ jobs:
         python example_simple.py
         python example_cbe.py
     - name: Check NumCosmo
-      run: meson test -C build
+      run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
+  
+  build-miniforge:
+    name: NumCosmo (${{ matrix.os }}, python-${{ matrix.python-version }}, Miniforge)
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      matrix:
+        os: ["ubuntu", "macos"]
+        python-version: ["3.9"]
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup miniforge
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          activate-environment: numcosmo_developer
+          python-version: ${{ matrix.python-version }}
+          miniforge-variant: Mambaforge
+          show-channel-urls: true
+          use-mamba: true
+      - name: Cache date
+        id: get-date
+        run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
+      - name: Cache Conda env
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.CONDA }}/envs
+          key: miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
+        env:
+          CACHE_NUMBER: 0
+        id: cache
+      - name: Update environment
+        run: |
+          conda env update -q -v -n numcosmo_developer -f devel_environment.yml
+        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Setting up NumCosmo
+        run: |
+          conda activate numcosmo_developer
+          [[ -e $GCC_AR ]] && AR=$GCC_AR
+          [[ -e $GCC_NM ]] && NM=$GCC_NM
+          [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
+          meson setup build -Dbuildtype=release -Dnumcosmo_py=true --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
+      - name: Building NumCosmo
+        run: |
+          meson compile -C build
+      - name: Installing NumCosmo
+        run: |
+          meson install -C build
+          cd examples
+          python example_simple.py
+          python example_cbe.py
+      - name: Running black check
+        run: |
+          black --check numcosmo_py
+      - name: Running flake8
+        run: |
+          flake8 numcosmo_py
+      - name: Running mypy
+        run: |
+          mypy -p numcosmo_py
+      #- name: Running pylint
+      #  run: |
+      #    pylint --rcfile .pylintrc numcosmo_py
+      - name: Check NumCosmo
+        run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
+
+  build-miniforge-coverage:
+    name: NumCosmo-Coverage (${{ matrix.os }}, python-${{ matrix.python-version }}, Miniforge)
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      matrix:
+        os: ["ubuntu"]
+        python-version: ["3.9"]
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup miniforge
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          activate-environment: numcosmo_developer
+          python-version: ${{ matrix.python-version }}
+          miniforge-variant: Mambaforge
+          show-channel-urls: true
+          use-mamba: true
+      - name: Cache date
+        id: get-date
+        run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
+      - name: Cache Conda env
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.CONDA }}/envs
+          key: coverage-miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
+        env:
+          CACHE_NUMBER: 0
+        id: cache
+      - name: Update environment
+        run: |
+          conda env update -q -v -n numcosmo_developer -f devel_environment.yml
+        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Setting up NumCosmo
+        run: |
+          conda activate numcosmo_developer
+          [[ -e $GCC_AR ]] && AR=$GCC_AR
+          [[ -e $GCC_NM ]] && NM=$GCC_NM
+          [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
+          meson setup build -Dbuildtype=debug -Db_coverage=true -Db_lto=false -Dnumcosmo_py=true --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
+      - name: Building NumCosmo
+        run: |
+          meson compile -C build
+      - name: Check and coverage
+        # First run to generate the coverage base
+        # Second run to generate the coverage for the tests
+        # Third run to merge the coverage base and the coverage for the tests
+        run: |
+          lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
+          meson test -C build --timeout-multiplier 0 || (cat build/meson-logs/testlog.txt && exit 1)
+          lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
+          lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
+          lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/class/*' '*/levmar/*' '*/libcuba/*' '*/plc/*' '*/sundials/*' '*/toeplitz/*' '*/tools/*' --output-file numcosmo-coverage.info 
+      - name: CodeCov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./numcosmo-coverage.info
+      #- name: Generate coverage
+      #    # For some reason, gcovr is ignoring the configured gcovr.cfg file
+      #    # ninja coverage -C build -v -d stats -d explain
+      #  run: |
+      #      gcovr --root . --object-directory build --config gcovr.cfg --xml-pretty -o build/meson-logs/coverage.xml
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          files: ./numcosmo-coverage.info
+          format: lcov
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+

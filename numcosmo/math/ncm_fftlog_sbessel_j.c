@@ -119,6 +119,13 @@
 #include <fftw3.h>
 #endif /* HAVE_FFTW3 */
 #include <math.h>
+#ifdef HAVE_ACB_H
+#ifdef HAVE_FLINT_ACB_H
+#include <flint/acb.h>
+#else /* HAVE_FLINT_ACB_H */
+#include <acb.h>
+#endif /* HAVE_FLINT_ACB_H */
+#endif /* HAVE_ACB_H */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct _NcmFftlogSBesselJPrivate
@@ -166,9 +173,9 @@ _ncm_fftlog_sbessel_j_set_property (GObject *object, guint prop_id, const GValue
     case PROP_Q:
       ncm_fftlog_sbessel_j_set_q (fftlog_jl, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -187,9 +194,9 @@ _ncm_fftlog_sbessel_j_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_Q:
       g_value_set_double (value, ncm_fftlog_sbessel_j_get_q (fftlog_jl));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

@@ -114,6 +114,12 @@ enum
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmStatsDistKDE, ncm_stats_dist_kde, NCM_TYPE_STATS_DIST)
 
+static NcmStatsDistPrivate *
+ncm_stats_dist_get_instance_private (NcmStatsDist * sd)
+{
+  return g_type_instance_get_private ((GTypeInstance *) sd, NCM_TYPE_STATS_DIST);
+}
+
 typedef struct _NcmStatsDistKDEEvalVars
 {
   NcmVector *v;
@@ -125,7 +131,7 @@ static gpointer
 _ncm_stats_dist_kde_eval_vars_new (gpointer userdata)
 {
   NcmStatsDist *sd                   = NCM_STATS_DIST (userdata);
-  NcmStatsDistPrivate * const ppself = sd->priv;
+  NcmStatsDistPrivate * const ppself = ncm_stats_dist_get_instance_private (sd);
   NcmStatsDistKDEEvalVars *ev        = g_new0 (NcmStatsDistKDEEvalVars, 1);
 
   ev->v    = ncm_vector_new (ppself->d);
@@ -149,7 +155,7 @@ _ncm_stats_dist_kde_eval_vars_free (gpointer userdata)
 static void
 ncm_stats_dist_kde_init (NcmStatsDistKDE *sdkde)
 {
-  NcmStatsDistKDEPrivate * const self = sdkde->priv = ncm_stats_dist_kde_get_instance_private (sdkde);
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
   self->sample            = NULL;
   self->cov_type          = NCM_STATS_DIST_KDE_COV_TYPE_LEN;
@@ -187,9 +193,9 @@ _ncm_stats_dist_kde_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_COV_FIXED:
       ncm_stats_dist_kde_set_cov_fixed (sdkde, g_value_get_object (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -198,7 +204,7 @@ _ncm_stats_dist_kde_get_property (GObject *object, guint prop_id, GValue *value,
 {
   NcmStatsDistKDE *sdkde = NCM_STATS_DIST_KDE (object);
 
-  /*NcmStatsDistKDEPrivate * const self = sdkde->priv;*/
+  /*NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);*/
 
   g_return_if_fail (NCM_IS_STATS_DIST_KDE (object));
 
@@ -213,9 +219,9 @@ _ncm_stats_dist_kde_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_COV_FIXED:
       g_value_set_object (value, ncm_stats_dist_kde_peek_cov_fixed (sdkde));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -223,7 +229,7 @@ static void
 _ncm_stats_dist_kde_dispose (GObject *object)
 {
   NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (object);
-  NcmStatsDistKDEPrivate * const self = sdkde->priv;
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
   ncm_stats_vec_clear (&self->sample);
   ncm_matrix_clear (&self->cov_fixed);
@@ -247,7 +253,7 @@ static void
 _ncm_stats_dist_kde_finalize (GObject *object)
 {
   /*NcmStatsDistKDE *sdkde = NCM_STATS_DIST_KDE (object);*/
-  /*NcmStatsDistKDEPrivate * const self = sdkde->priv;*/
+  /*NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);*/
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_dist_kde_parent_class)->finalize (object);
@@ -311,7 +317,7 @@ _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim)
   NCM_STATS_DIST_CLASS (ncm_stats_dist_kde_parent_class)->set_dim (sd, dim);
   {
     NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
-    NcmStatsDistKDEPrivate * const self = sdkde->priv;
+    NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
     ncm_stats_vec_clear (&self->sample);
 
@@ -353,8 +359,8 @@ static void
 _ncm_stats_dist_kde_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array)
 {
   NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
-  NcmStatsDistKDEPrivate * const self = sdkde->priv;
-  NcmStatsDistPrivate * const pself   = sd->priv;
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
+  NcmStatsDistPrivate * const pself   = ncm_stats_dist_get_instance_private (sd);
   gint ret;
   guint i;
 
@@ -462,8 +468,8 @@ static void
 _ncm_stats_dist_kde_compute_IM (NcmStatsDist *sd, NcmMatrix *IM)
 {
   NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
-  NcmStatsDistKDEPrivate * const self = sdkde->priv;
-  NcmStatsDistPrivate * const pself   = sd->priv;
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
+  NcmStatsDistPrivate * const pself   = ncm_stats_dist_get_instance_private (sd);
   const gdouble href2                 = pself->href * pself->href;
   guint i;
 
@@ -529,7 +535,7 @@ static NcmMatrix *
 _ncm_stats_dist_kde_peek_cov_decomp (NcmStatsDist *sd, guint i)
 {
   NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
-  NcmStatsDistKDEPrivate * const self = sdkde->priv;
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
   return self->cov_decomp;
 }
@@ -538,8 +544,8 @@ static gdouble
 _ncm_stats_dist_kde_get_lnnorm (NcmStatsDist *sd, guint i)
 {
   NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
-  NcmStatsDistKDEPrivate * const self = sdkde->priv;
-  NcmStatsDistPrivate * const pself   = sd->priv;
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
+  NcmStatsDistPrivate * const pself   = ncm_stats_dist_get_instance_private (sd);
 
   return self->kernel_lnnorm + pself->d * log (pself->href);
 }
@@ -548,8 +554,8 @@ static gdouble
 _ncm_stats_dist_kde_eval_weights (NcmStatsDist *sd, NcmVector *weights, NcmVector *x)
 {
   NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
-  NcmStatsDistKDEPrivate * const self = sdkde->priv;
-  NcmStatsDistPrivate * const pself   = sd->priv;
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
+  NcmStatsDistPrivate * const pself   = ncm_stats_dist_get_instance_private (sd);
   const gdouble href2                 = pself->href * pself->href;
   NcmStatsDistKDEEvalVars **ev_ptr    = ncm_memory_pool_get (self->mp_eval_vars);
   NcmStatsDistKDEEvalVars *ev         = *ev_ptr;
@@ -591,8 +597,8 @@ static gdouble
 _ncm_stats_dist_kde_eval_weights_m2lnp (NcmStatsDist *sd, NcmVector *weights, NcmVector *x)
 {
   NcmStatsDistKDE *sdkde              = NCM_STATS_DIST_KDE (sd);
-  NcmStatsDistKDEPrivate * const self = sdkde->priv;
-  NcmStatsDistPrivate * const pself   = sd->priv;
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
+  NcmStatsDistPrivate * const pself   = ncm_stats_dist_get_instance_private (sd);
   const gdouble href2                 = pself->href * pself->href;
   NcmStatsDistKDEEvalVars **ev_ptr    = ncm_memory_pool_get (self->mp_eval_vars);
   NcmStatsDistKDEEvalVars *ev         = *ev_ptr;
@@ -705,7 +711,7 @@ ncm_stats_dist_kde_clear (NcmStatsDistKDE **sdkde)
 void
 ncm_stats_dist_kde_set_nearPD_maxiter (NcmStatsDistKDE *sdkde, const guint maxiter)
 {
-  NcmStatsDistKDEPrivate * const self = sdkde->priv;
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
   self->nearPD_maxiter = maxiter;
 }
@@ -719,7 +725,7 @@ ncm_stats_dist_kde_set_nearPD_maxiter (NcmStatsDistKDE *sdkde, const guint maxit
 guint
 ncm_stats_dist_kde_get_nearPD_maxiter (NcmStatsDistKDE *sdkde)
 {
-  NcmStatsDistKDEPrivate * const self = sdkde->priv;
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
   return self->nearPD_maxiter;
 }
@@ -735,7 +741,7 @@ ncm_stats_dist_kde_get_nearPD_maxiter (NcmStatsDistKDE *sdkde)
 void
 ncm_stats_dist_kde_set_cov_type (NcmStatsDistKDE *sdkde, NcmStatsDistKDECovType cov_type)
 {
-  NcmStatsDistKDEPrivate * const self = sdkde->priv;
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
   self->cov_type = cov_type;
 
@@ -757,7 +763,7 @@ ncm_stats_dist_kde_set_cov_type (NcmStatsDistKDE *sdkde, NcmStatsDistKDECovType 
 NcmStatsDistKDECovType
 ncm_stats_dist_kde_get_cov_type (NcmStatsDistKDE *sdkde)
 {
-  NcmStatsDistKDEPrivate * const self = sdkde->priv;
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
   return self->cov_type;
 }
@@ -775,8 +781,9 @@ ncm_stats_dist_kde_get_cov_type (NcmStatsDistKDE *sdkde)
 void
 ncm_stats_dist_kde_set_cov_fixed (NcmStatsDistKDE *sdkde, NcmMatrix *cov_fixed)
 {
-  NcmStatsDistKDEPrivate * const self = sdkde->priv;
-  NcmStatsDistPrivate * const pself   = NCM_STATS_DIST (sdkde)->priv;
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
+  NcmStatsDist *sd                    = NCM_STATS_DIST (sdkde);
+  NcmStatsDistPrivate * const pself   = ncm_stats_dist_get_instance_private (sd);
 
   g_assert_cmpuint (ncm_matrix_ncols (cov_fixed), ==, pself->d);
   g_assert_cmpuint (ncm_matrix_nrows (cov_fixed), ==, pself->d);
@@ -805,7 +812,7 @@ ncm_stats_dist_kde_set_cov_fixed (NcmStatsDistKDE *sdkde, NcmMatrix *cov_fixed)
 NcmMatrix *
 ncm_stats_dist_kde_peek_cov_fixed (NcmStatsDistKDE *sdkde)
 {
-  NcmStatsDistKDEPrivate * const self = sdkde->priv;
+  NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
   return self->cov_fixed;
 }
