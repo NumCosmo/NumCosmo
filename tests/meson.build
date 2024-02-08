@@ -148,6 +148,10 @@ c_tests = [
         'sources': ['test_nc_hicosmo_de.c'],
     },
     {
+        'name': 'nc_hicosmo_qgw',
+        'sources': ['test_nc_hicosmo_qgw.c'],
+    },
+    {
         'name': 'nc_window',
         'sources': ['test_nc_window.c'],
     },

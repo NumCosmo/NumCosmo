@@ -393,6 +393,7 @@ nc_headers = files(
     'model/nc_hicosmo_lcdm.h',
     'model/nc_hicosmo_qconst.h',
     'model/nc_hicosmo_qgrw.h',
+    'model/nc_hicosmo_qgw.h',
     'model/nc_hicosmo_qlinear.h',
     'model/nc_hicosmo_qrbf.h',
     'model/nc_hicosmo_qspline.h',
@@ -548,6 +549,7 @@ nc_sources = files(
     'model/nc_hicosmo_lcdm.c',
     'model/nc_hicosmo_qconst.c',
     'model/nc_hicosmo_qgrw.c',
+    'model/nc_hicosmo_qgw.c',
     'model/nc_hicosmo_qlinear.c',
     'model/nc_hicosmo_qrbf.c',
     'model/nc_hicosmo_qspline.c',
@@ -750,7 +752,7 @@ libnumcosmo_dep = declare_dependency(
 
 # Generate pkg-config files
 # Code using NumCosmo frequently depends directly on gsl, glib, gobject, and gio, so we
-# include them in the Requires field. 
+# include them in the Requires field.
 # This happends mostly because of inlining, but also because of the many macros defined
 # in the glib headers.
 pkg.generate(
