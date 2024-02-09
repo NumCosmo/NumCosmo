@@ -44,14 +44,8 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_DATA_CLUSTER_WL             (nc_data_cluster_wl_get_type ())
-#define NC_DATA_CLUSTER_WL(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_CLUSTER_WL, NcDataClusterWL))
-#define NC_DATA_CLUSTER_WL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_CLUSTER_WL, NcDataClusterWLClass))
-#define NC_IS_DATA_CLUSTER_WL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_DATA_CLUSTER_WL))
-#define NC_IS_DATA_CLUSTER_WL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_CLUSTER_WL))
-#define NC_DATA_CLUSTER_WL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_CLUSTER_WL, NcDataClusterWLClass))
+G_DECLARE_FINAL_TYPE (NcDataClusterWL, nc_data_cluster_wl, NC, DATA_CLUSTER_WL, NcmData);
 
-typedef struct _NcDataClusterWLClass NcDataClusterWLClass;
-typedef struct _NcDataClusterWL NcDataClusterWL;
 typedef struct _NcDataClusterWLPrivate NcDataClusterWLPrivate;
 
 struct _NcDataClusterWLClass
@@ -83,7 +77,6 @@ struct _NcDataClusterWL
   NcDataClusterWLPrivate *priv;
 };
 
-GType nc_data_cluster_wl_get_type (void) G_GNUC_CONST;
 
 NcDataClusterWL *nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *rz_dist, const gdouble z_cluster);
 NcDataClusterWL *nc_data_cluster_wl_new_from_file (const gchar *filename);
