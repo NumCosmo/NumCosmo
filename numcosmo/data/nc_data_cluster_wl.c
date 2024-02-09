@@ -253,7 +253,7 @@ nc_data_cluster_wl_finalize (GObject *object)
 }
 
 static void
-nc_data_cluster_wl_constructed (GObject *object)
+_nc_data_cluster_wl_constructed (GObject *object)
 {
   /* Chain up : start */
   G_OBJECT_CLASS (nc_data_cluster_wl_parent_class)->constructed (object);
@@ -281,7 +281,7 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
   object_class->get_property = nc_data_cluster_wl_get_property;
   object_class->dispose      = nc_data_cluster_wl_dispose;
   object_class->finalize     = nc_data_cluster_wl_finalize;
-  object_class->constructed  = nc_data_cluster_wl_constructed;
+  object_class->constructed  = _nc_data_cluster_wl_constructed;
 
   /**
    * NcDataClusterWL:obs:
