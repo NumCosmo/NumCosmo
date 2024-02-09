@@ -557,15 +557,14 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
 {
   NcDataClusterWLPrivate * const self = dcwl->priv;
   gdouble verr, vzpi, vzpf, vres, vtmp;
-  NcmVector *err  = ncm_vector_new_data_static (&verr, 1, 1);
-  NcmVector *zpi  = ncm_vector_new_data_static (&vzpi, 1, 1);
-  NcmVector *zpf  = ncm_vector_new_data_static (&vzpf, 1, 1);
-  NcmVector *res  = ncm_vector_new_data_static (&vres, 1, 1);
-  NcmVector *tmp  = ncm_vector_new_data_static (&vtmp, 1, 1);
-  const guint len = ncm_matrix_nrows (self->obs);
-  gdouble zp_i    = 1.0e-11;
-  gdouble zp_f    = 100.0;
-  gdouble result  = 0;
+  NcmVector *err = ncm_vector_new_data_static (&verr, 1, 1);
+  NcmVector *zpi = ncm_vector_new_data_static (&vzpi, 1, 1);
+  NcmVector *zpf = ncm_vector_new_data_static (&vzpf, 1, 1);
+  NcmVector *res = ncm_vector_new_data_static (&vres, 1, 1);
+  NcmVector *tmp = ncm_vector_new_data_static (&vtmp, 1, 1);
+  gdouble zp_i   = 1.0e-11;
+  gdouble zp_f   = 100.0;
+  gdouble result = 0;
   guint gal_i;
 
   ncm_vector_set (zpi, 0, zp_i);
@@ -574,9 +573,9 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
   g_assert_cmpuint (ncm_matrix_ncols (self->obs), ==, 4);
 
   if (m2lnP_gal != NULL)
-    g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, len);
+    g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
 
-  for (gal_i = 0; gal_i < len; gal_i++)
+  for (gal_i = 0; gal_i < self->len; gal_i++)
   {
     NcDataClusterWLInt *likelihood_integral = g_object_new (nc_data_cluster_wl_integ_get_type (), NULL);
     NcmIntegralND *lh_int                   = NCM_INTEGRAL_ND (likelihood_integral);
