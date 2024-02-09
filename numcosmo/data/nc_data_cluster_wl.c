@@ -133,6 +133,7 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
   switch (prop_id)
   {
     case PROP_OBS:
+      ncm_matrix_clear (&self->obs);
       nc_data_cluster_wl_set_obs (dcwl, g_value_get_object (value));
       break;
     case PROP_S_DIST:
