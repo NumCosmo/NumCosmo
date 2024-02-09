@@ -2417,7 +2417,7 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
       GArray *errors_try_a       = NULL;
       gdouble worst_relerror_try = 0.0;
 
-      ncm_diff_set_ini_h (self->diff, 4.0e-1);
+      ncm_diff_set_ini_h (self->diff, 2.0 * old_h_ini);
       H_try_a = ncm_diff_rf_Hessian_N_to_1 (self->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, &errors_try_a);
       ncm_diff_set_ini_h (self->diff, old_h_ini);
 
