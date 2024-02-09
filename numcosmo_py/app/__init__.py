@@ -153,6 +153,16 @@ class LoadExperiment:
     experiment: Annotated[
         Path, typer.Argument(help="Path to the experiment file to fit.")
     ]
+    product_file: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "If given, the product file is written, the file name is the same as "
+                "the experiment file with the extension .product.yaml. "
+                "This option is incompatible with the output and starting-point options."
+            ),
+        ),
+    ] = False
     starting_point: Annotated[
         Optional[Path],
         typer.Option(
@@ -196,6 +206,18 @@ class LoadExperiment:
         experiment_objects = ser.dict_str_from_yaml_file(
             self.experiment.absolute().as_posix()
         )
+
+        if self.product_file:
+            if self.output is not None:
+                raise RuntimeError(
+                    "The product file option is incompatible with the output option."
+                )
+            if self.starting_point is not None:
+                raise RuntimeError(
+                    "The product file option is incompatible with the starting-point option."
+                )
+            self.output = self.experiment.with_suffix(".product.yaml")
+            self.starting_point = self.output
 
         if experiment_objects.peek("likelihood") is None:
             raise RuntimeError("No likelihood found in experiment file")
