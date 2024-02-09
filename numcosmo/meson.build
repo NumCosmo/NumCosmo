@@ -349,7 +349,6 @@ nc_headers = files(
     'lss/nc_galaxy_redshift_spec.h',
     'lss/nc_galaxy_redshift_spline.h',
     'lss/nc_galaxy_selfunc.h',
-
     'lss/nc_growth_func.h',
     'lss/nc_halo_bias.h',
     'lss/nc_halo_bias_ps.h',
