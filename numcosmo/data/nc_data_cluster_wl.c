@@ -438,7 +438,7 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
   data_class->prepare    = &_nc_data_cluster_wl_prepare;
 }
 
-struct int_data
+struct _NcDataClusterWLIntArg
 {
   NcGalaxySDPosition *rz_dist;
   NcGalaxySDZProxy *zp_dist;
@@ -456,7 +456,7 @@ struct int_data
 static void nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
 static void nc_data_cluster_wl_int_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
 
-NCM_INTEGRAL_ND_DEFINE_TYPE (NC, DATA_CLUSTER_WL_INT, NcDataClusterWLInt, nc_data_cluster_wl_integ, nc_data_cluster_wl_int_dim, nc_data_cluster_wl_integ, struct int_data);
+NCM_INTEGRAL_ND_DEFINE_TYPE (NC, DATA_CLUSTER_WL_INT, NcDataClusterWLInt, nc_data_cluster_wl_integ, nc_data_cluster_wl_int_dim, nc_data_cluster_wl_integ, struct _NcDataClusterWLIntArg);
 
 static void
 nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
