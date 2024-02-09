@@ -47,6 +47,8 @@ NcGalaxySDZProxyGauss *nc_galaxy_sd_z_proxy_gauss_ref (NcGalaxySDZProxyGauss *gs
 void nc_galaxy_sd_z_proxy_gauss_free (NcGalaxySDZProxyGauss *gsdzpgauss);
 void nc_galaxy_sd_z_proxy_gauss_clear (NcGalaxySDZProxyGauss **gsdzpgauss);
 
+void nc_galaxy_sd_z_proxy_gauss_set_true_z_min (NcGalaxySDZProxyGauss *gsdzpgauss, const gdouble true_z_min);
+gdouble nc_galaxy_sd_z_proxy_gauss_get_true_z_min (NcGalaxySDZProxyGauss *gsdzpgauss);
 void nc_galaxy_sd_z_proxy_gauss_set_z_lim (NcGalaxySDZProxyGauss *gsdzpgauss, const gdouble z_min, const gdouble z_max);
 void nc_galaxy_sd_z_proxy_gauss_get_z_lim (NcGalaxySDZProxyGauss *gsdzpgauss, gdouble *z_min, gdouble *z_max);
 void nc_galaxy_sd_z_proxy_gauss_set_sigma (NcGalaxySDZProxyGauss *gsdzpgauss, gdouble sigma);

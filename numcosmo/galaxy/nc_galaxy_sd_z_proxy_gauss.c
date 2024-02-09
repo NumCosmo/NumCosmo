@@ -51,6 +51,7 @@
 
 typedef struct _NcGalaxySDZProxyGaussPrivate
 {
+  gdouble true_z_min;
   gdouble z_min;
   gdouble z_max;
   gdouble sigma;
@@ -64,6 +65,7 @@ struct _NcGalaxySDZProxyGauss
 enum
 {
   PROP_0,
+  PROP_TRUE_Z_MIN,
   PROP_Z_LIM,
   PROP_SIGMA,
   PROP_LEN,
@@ -76,9 +78,10 @@ nc_galaxy_sd_z_proxy_gauss_init (NcGalaxySDZProxyGauss *gsdzpgauss)
 {
   NcGalaxySDZProxyGaussPrivate * const self = nc_galaxy_sd_z_proxy_gauss_get_instance_private (gsdzpgauss);
 
-  self->z_min = 0.0;
-  self->z_max = 0.0;
-  self->sigma = 0.0;
+  self->true_z_min = 1e-11;
+  self->z_min      = 0.0;
+  self->z_max      = 0.0;
+  self->sigma      = 0.0;
 }
 
 static void
@@ -90,6 +93,14 @@ _nc_galaxy_sd_z_proxy_gauss_set_property (GObject *object, guint prop_id, const 
 
   switch (prop_id)
   {
+    case PROP_TRUE_Z_MIN:
+    {
+      if (value == 0)
+        g_error ("_nc_galaxy_sd_position_set_property: value is zero.");
+
+      nc_galaxy_sd_z_proxy_gauss_set_true_z_min (gsdzpgauss, g_value_get_double (value));
+      break;
+    }
     case PROP_Z_LIM:
     {
       NcmDTuple2 *z_lim = g_value_get_boxed (value);
@@ -119,6 +130,9 @@ _nc_galaxy_sd_z_proxy_gauss_get_property (GObject *object, guint prop_id, GValue
 
   switch (prop_id)
   {
+    case PROP_TRUE_Z_MIN:
+      g_value_set_double (value, self->true_z_min);
+      break;
     case PROP_Z_LIM:
     {
       gdouble z_min, z_max;
@@ -168,6 +182,20 @@ nc_galaxy_sd_z_proxy_gauss_class_init (NcGalaxySDZProxyGaussClass *klass)
 
   ncm_model_class_set_name_nick (model_class, "Gaussian photometric redshift distribution", "GAUSS_PHOTO_Z");
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
+
+  /**
+   * NcGalaxySDZProxyGauss:true-z-min:
+   *
+   * Minimum true redshift.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_TRUE_Z_MIN,
+                                   g_param_spec_double ("true-z-min",
+                                                        NULL,
+                                                        "Minimum true redshift",
+                                                        1e-11, G_MAXDOUBLE, 1e-11,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcGalaxySDZProxyGauss:z-lim:
@@ -237,7 +265,7 @@ _nc_galaxy_sd_z_proxy_gauss_get_true_z_lim (NcGalaxySDZProxy *gsdzp, const gdoub
   g_assert_nonnull (z_min);
   g_assert_nonnull (z_max);
 
-  *z_min = MAX (zp - 8.0 * sigma_max, 1e-11);
+  *z_min = MAX (zp - 8.0 * sigma_max, self->true_z_min);
   *z_max = zp + 8.0 * sigma_max;
 }
 
@@ -302,6 +330,38 @@ void
 nc_galaxy_sd_z_proxy_gauss_clear (NcGalaxySDZProxyGauss **gsdzpgauss)
 {
   g_clear_object (gsdzpgauss);
+}
+
+/**
+ * nc_galaxy_sd_z_proxy_gauss_set_true_z_min:
+ * @gsdzpgauss: a #NcGalaxySDZProxyGauss
+ * @true_z_min: the minimum true redshift
+ *
+ * Sets the minimum true redshift.
+ *
+ */
+void
+nc_galaxy_sd_z_proxy_gauss_set_true_z_min (NcGalaxySDZProxyGauss *gsdzpgauss, const gdouble true_z_min)
+{
+  NcGalaxySDZProxyGaussPrivate * const self = nc_galaxy_sd_z_proxy_gauss_get_instance_private (gsdzpgauss);
+
+  self->true_z_min = true_z_min;
+}
+
+/**
+ * nc_galaxy_sd_z_proxy_gauss_get_true_z_min:
+ * @gsdzpgauss: a #NcGalaxySDZProxyGauss
+ *
+ * Gets the minimum true redshift.
+ *
+ * Returns: the minimum true redshift.
+ */
+gdouble
+nc_galaxy_sd_z_proxy_gauss_get_true_z_min (NcGalaxySDZProxyGauss *gsdzpgauss)
+{
+  NcGalaxySDZProxyGaussPrivate * const self = nc_galaxy_sd_z_proxy_gauss_get_instance_private (gsdzpgauss);
+
+  return self->true_z_min;
 }
 
 /**
