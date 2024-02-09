@@ -750,7 +750,10 @@ _nc_data_cluster_wl_get_len (NcmData *data)
   NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (data);
   NcDataClusterWLPrivate * const self = dcwl->priv;
 
-  return self->len;
+  if (self->obs == NULL)
+    return 0;
+  else
+    return self->len;
 }
 
 static void
