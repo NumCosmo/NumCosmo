@@ -77,7 +77,7 @@ struct _NcDataClusterWLPrivate
   gboolean constructed;
   guint len;
   gdouble z_cluster;
-  gboolean kde_method;
+  gboolean use_kde;
 };
 
 enum
@@ -95,7 +95,7 @@ enum
   PROP_NDATA,
   PROP_PREC,
   PROP_Z_CLUSTER,
-  PROP_KDE_METHOD,
+  PROP_USE_KDE,
   PROP_SIZE,
 };
 
@@ -119,7 +119,7 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
   self->prec        = 1.0e-11;
   self->constructed = FALSE;
   self->z_cluster   = 0.0;
-  self->kde_method  = FALSE;
+  self->use_kde     = FALSE;
 }
 
 static void
@@ -167,8 +167,8 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_Z_CLUSTER:
       self->z_cluster = g_value_get_double (value);
       break;
-    case PROP_KDE_METHOD:
-      nc_data_cluster_wl_set_kde_method (dcwl, g_value_get_boolean (value));
+    case PROP_USE_KDE:
+      nc_data_cluster_wl_set_use_kde (dcwl, g_value_get_boolean (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -216,8 +216,8 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_Z_CLUSTER:
       g_value_set_double (value, self->z_cluster);
       break;
-    case PROP_KDE_METHOD:
-      g_value_set_boolean (value, self->kde_method);
+    case PROP_USE_KDE:
+      g_value_set_boolean (value, self->use_kde);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -417,15 +417,15 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcDataClusterWL:kde-method:
+   * NcDataClusterWL:use-kde:
    *
    * Whether to use KDE method.
    *
    */
 
   g_object_class_install_property (object_class,
-                                   PROP_KDE,
-                                   g_param_spec_boolean ("kde",
+                                   PROP_USE_KDE,
+                                   g_param_spec_boolean ("use-kde",
                                                          NULL,
                                                          "Whether to use KDE method",
                                                          TRUE,
@@ -736,7 +736,7 @@ _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
   m2lnL[0] = 0.0;
 
-  if (self->kde_method)
+  if (self->use_kde)
     m2lnL[0] += nc_data_cluster_wl_kde_eval_m2lnP (dcwl, cosmo, dp, smd, NULL);
   else
     m2lnL[0] += nc_data_cluster_wl_eval_m2lnP (dcwl, cosmo, dp, smd, NULL);
@@ -850,7 +850,7 @@ nc_data_cluster_wl_clear (NcDataClusterWL **dcwl)
 }
 
 /**
- * nc_data_cluster_wl_set_kde_method:
+ * nc_data_cluster_wl_set_use_kde:
  * @dcwl: a #NcDataClusterWL
  * @kde: whether to use KDE method
  *
@@ -858,12 +858,12 @@ nc_data_cluster_wl_clear (NcDataClusterWL **dcwl)
  *
  */
 void
-nc_data_cluster_wl_set_kde_method (NcDataClusterWL *data, gboolean kde_method)
+nc_data_cluster_wl_set_use_kde (NcDataClusterWL *data, gboolean use_kde)
 {
   NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (data);
   NcDataClusterWLPrivate * const self = dcwl->priv;
 
-  self->kde_method = kde_method;
+  self->use_kde = use_kde;
 }
 
 /**

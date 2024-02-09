@@ -151,11 +151,7 @@ test_nc_data_cluster_wl_fit (TestNcDataClusterWL *test, gconstpointer pdata)
   nc_data_cluster_wl_gen_obs (test->dcwl, cosmo, dp, smd, ngals, rng);
 
   {
-    nc_data_cluster_wl_set_kde_method (test->dcwl, FALSE);
-
-    g_object_set (test->dcwl,
-                  "z-cluster", z_cluster,
-                  NULL);
+    nc_data_cluster_wl_set_use_kde (test->dcwl, FALSE);
     ncm_data_set_init (NCM_DATA (test->dcwl), TRUE);
 
     {

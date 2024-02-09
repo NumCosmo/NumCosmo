@@ -93,7 +93,7 @@ gdouble nc_data_cluster_wl_kde_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cos
 gdouble nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcmVector *m2lnP_gal);
 void nc_data_cluster_wl_free (NcDataClusterWL *dcwl);
 void nc_data_cluster_wl_clear (NcDataClusterWL **dcwl);
-void nc_data_cluster_wl_set_kde_method (NcDataClusterWL *dcwl, gboolean kde);
+void nc_data_cluster_wl_set_use_kde (NcDataClusterWL *dcwl, gboolean kde);
 void nc_data_cluster_wl_set_prec (NcDataClusterWL *dcwl, gdouble prec);
 void nc_data_cluster_wl_set_ndata (NcDataClusterWL *dcwl, gdouble ndata);
 void nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcmMatrix *obs);
