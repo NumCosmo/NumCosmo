@@ -491,7 +491,7 @@ nc_data_cluster_wl_int_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
 }
 
 void
-nc_data_cluster_wl_prepare_kde (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster)
+nc_data_cluster_wl_prepare_kde (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd)
 {
   NcDataClusterWLPrivate * const self = dcwl->priv;
   NcmVector *sample                   = ncm_vector_new (4);
@@ -525,7 +525,7 @@ nc_data_cluster_wl_prepare_kde (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloD
 
     ncm_vector_set (sample, 0, r);
     ncm_vector_set (sample, 1, zp);
-    nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, z_cluster, rng, r, z, ncm_vector_ptr (sample, 2), ncm_vector_ptr (sample, 3));
+    nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, self->z_cluster, rng, r, z, ncm_vector_ptr (sample, 2), ncm_vector_ptr (sample, 3));
 
     ncm_stats_dist_add_obs (self->kde, sample);
   }
@@ -667,7 +667,7 @@ nc_data_cluster_wl_kde_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHa
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
 
-  nc_data_cluster_wl_prepare_kde (dcwl, cosmo, dp, smd, self->z_cluster);
+  nc_data_cluster_wl_prepare_kde (dcwl, cosmo, dp, smd);
 
   if (m2lnP_gal != NULL)
   {
