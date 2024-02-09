@@ -87,7 +87,8 @@ test_nc_data_cluster_wl_new_flat (TestNcDataClusterWL *test, gconstpointer pdata
   NcGalaxySDShapeGauss *gss     = nc_galaxy_sd_shape_gauss_new ();
   NcDataClusterWL *dcwl         = nc_data_cluster_wl_new (NC_GALAXY_SD_SHAPE (gss),
                                                           NC_GALAXY_SD_Z_PROXY (gsdzpg),
-                                                          NC_GALAXY_SD_POSITION (gsdpf));
+                                                          NC_GALAXY_SD_POSITION (gsdpf),
+                                                          0.4);
 
   nc_galaxy_sd_shape_gauss_set_sigma (gss, 0.001);
   nc_data_cluster_wl_set_cut (dcwl, 0.0, 2.0);
@@ -109,7 +110,8 @@ test_nc_data_cluster_wl_new_lsst_srd (TestNcDataClusterWL *test, gconstpointer p
   NcGalaxySDShapeGauss *gss           = nc_galaxy_sd_shape_gauss_new ();
   NcDataClusterWL *dcwl               = nc_data_cluster_wl_new (NC_GALAXY_SD_SHAPE (gss),
                                                                 NC_GALAXY_SD_Z_PROXY (gsdzpg),
-                                                                NC_GALAXY_SD_POSITION (gsdplsst));
+                                                                NC_GALAXY_SD_POSITION (gsdplsst),
+                                                                0.4);
 
   nc_galaxy_sd_shape_gauss_set_sigma (gss, 0.001);
   nc_data_cluster_wl_set_cut (dcwl, 0.0, 2.0);
@@ -139,7 +141,6 @@ test_nc_data_cluster_wl_fit (TestNcDataClusterWL *test, gconstpointer pdata)
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
   const guint ngals           = 200;
   NcmMatrix *gal_obs          = NULL;
-  const gdouble z_cluster     = 0.4;
 
   ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, NCM_PARAM_TYPE_FREE);
   ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
@@ -203,7 +204,6 @@ test_nc_data_cluster_wl_kde_cmp (TestNcDataClusterWL *test, gconstpointer pdata)
   NcmVector *m2lnP_int_gal    = ncm_vector_new (ngals);
   NcmVector *m2lnP_kde_gal    = ncm_vector_new (ngals);
   NcmMatrix *gal_obs          = NULL;
-  const gdouble z_cluster     = 0.4;
   NcmMatrix *obs;
   guint i;
 

@@ -775,6 +775,7 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
  * @s_dist: a #NcGalaxySDShape
  * @zp_dist: a #NcGalaxySDZProxy
  * @rz_dist: a #NcGalaxySDPosition
+ * @z_cluster: cluster (halo) redshift
  *
  * Creates a new galaxy weak lensing object.
  * Requires an instance of #NcGalaxySDShape, #NcGalaxySDZProxy, and #NcGalaxySDPosition.
@@ -782,12 +783,13 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
  * Returns: (transfer full): a new NcDataClusterWL.
  */
 NcDataClusterWL *
-nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *rz_dist)
+nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *rz_dist, gdouble z_cluster)
 {
   NcDataClusterWL *dcwl = g_object_new (NC_TYPE_DATA_CLUSTER_WL,
                                         "s-dist", s_dist,
                                         "zp-dist", zp_dist,
                                         "rz-dist", rz_dist,
+                                        "z-cluster", z_cluster,
                                         NULL);
 
   return dcwl;

@@ -85,7 +85,7 @@ struct _NcDataClusterWL
 
 GType nc_data_cluster_wl_get_type (void) G_GNUC_CONST;
 
-NcDataClusterWL *nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *rz_dist);
+NcDataClusterWL *nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *rz_dist, const gdouble z_cluster);
 NcDataClusterWL *nc_data_cluster_wl_new_from_file (const gchar *filename);
 NcDataClusterWL *nc_data_cluster_wl_ref (NcDataClusterWL *dcwl);
 void nc_data_cluster_wl_prepare_kde (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd);
