@@ -156,16 +156,21 @@ class LoadExperiment:
     product_file: Annotated[
         bool,
         typer.Option(
+            "--product-file",
+            "-p",
             help=(
                 "If given, the product file is written, the file name is the same as "
                 "the experiment file with the extension .product.yaml. "
-                "This option is incompatible with the output and starting-point options."
+                "This option is incompatible with the output and starting-point options "
+                "since the product file contains the output and starting point."
             ),
         ),
     ] = False
     starting_point: Annotated[
         Optional[Path],
         typer.Option(
+            "--starting-point",
+            "-s",
             help=(
                 "Path to the file containing the starting point for the fit. "
                 "The output of a previous fit can be used."
@@ -175,8 +180,10 @@ class LoadExperiment:
     output: Annotated[
         Optional[Path],
         typer.Option(
+            "--output",
+            "-o",
             help="Path to the output file, if given, the computed results are written "
-            "to this file, otherwise they are not saved."
+            "to this file, otherwise they are not saved.",
         ),
     ] = None
 
@@ -207,6 +214,19 @@ class LoadExperiment:
             self.experiment.absolute().as_posix()
         )
 
+        functions_file = self.experiment.with_suffix(".functions.yaml")
+        self.functions: Optional[Ncm.ObjArray] = None
+        if functions_file.exists():
+            functions: Ncm.ObjArray = ser.array_from_yaml_file(
+                functions_file.absolute().as_posix()
+            )
+            assert isinstance(functions, Ncm.ObjArray)
+            self.functions = functions
+            for i in range(functions.len()):
+                function: Ncm.MSetFunc = cast(Ncm.MSetFunc, functions.get(i))
+                if not isinstance(function, Ncm.MSetFunc):
+                    raise RuntimeError(f"Invalid function file {functions_file}.")
+
         if self.product_file:
             if self.output is not None:
                 raise RuntimeError(
@@ -217,7 +237,6 @@ class LoadExperiment:
                     "The product file option is incompatible with the starting-point option."
                 )
             self.output = self.experiment.with_suffix(".product.yaml")
-            self.starting_point = self.output
 
         if experiment_objects.peek("likelihood") is None:
             raise RuntimeError("No likelihood found in experiment file")
@@ -234,24 +253,17 @@ class LoadExperiment:
         assert isinstance(mset, Ncm.MSet)
         mset.prepare_fparam_map()
 
-        if self.starting_point is not None:
-            if not self.starting_point.exists():
-                raise RuntimeError(
-                    f"Starting point file {self.starting_point} not found."
+        if self.output is not None:
+            if self.output.exists():
+                ser.reset(False)
+                self.output_dict = ser.dict_str_from_yaml_file(
+                    self.output.absolute().as_posix()
                 )
+            else:
+                self.output_dict = Ncm.ObjDictStr.new()
 
-            ser.reset(False)
-            starting_dict = ser.dict_str_from_yaml_file(
-                self.starting_point.absolute().as_posix()
-            )
-            if starting_dict.peek("model-set") is None:
-                raise RuntimeError(
-                    f"Starting point file {self.starting_point} does not contain "
-                    f"a model-set."
-                )
-            saved_mset: Ncm.MSet = cast(Ncm.MSet, starting_dict.get("model-set"))
-            assert isinstance(saved_mset, Ncm.MSet)
-            assert isinstance(saved_mset, Ncm.MSet)
+        saved_mset = self._load_saved_mset()
+        if saved_mset is not None:
             if not mset.cmp(saved_mset, True):
                 raise RuntimeError(
                     f"Starting point file {self.starting_point} "
@@ -263,14 +275,37 @@ class LoadExperiment:
         self.likelihood = likelihood
         self.mset = mset
 
-        if self.output is not None:
-            if self.output.exists():
-                ser.reset(False)
-                self.output_dict = ser.dict_str_from_yaml_file(
-                    self.output.absolute().as_posix()
+    def _load_saved_mset(self) -> Optional[Ncm.MSet]:
+        """Loads the saved model set from the starting point file "
+        "or the product file."""
+
+        if self.starting_point is not None:
+            if not self.starting_point.exists():
+                raise RuntimeError(
+                    f"Starting point file {self.starting_point} not found."
                 )
-            else:
-                self.output_dict = Ncm.ObjDictStr.new()
+
+            ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+            starting_dict = ser.dict_str_from_yaml_file(
+                self.starting_point.absolute().as_posix()
+            )
+            if starting_dict.peek("model-set") is None:
+                raise RuntimeError(
+                    f"Starting point file {self.starting_point} does not contain "
+                    f"a model-set."
+                )
+            saved_mset: Ncm.MSet = cast(Ncm.MSet, starting_dict.get("model-set"))
+            assert isinstance(saved_mset, Ncm.MSet)
+
+            return saved_mset
+
+        if self.product_file:
+            product_mset: Ncm.MSet = cast(Ncm.MSet, self.output_dict.get("model-set"))
+            if product_mset is not None:
+                assert isinstance(product_mset, Ncm.MSet)
+                return product_mset
+
+        return None
 
     def end_experiment(self):
         """Ends the experiment and writes the output file."""
@@ -482,13 +517,32 @@ class RunFisherBias(RunCommonOptions):
     def __post_init__(self) -> None:
         super().__post_init__()
 
-        if self.theory_vector is None:
-            raise RuntimeError("No theory vector file given.")
+        if self.product_file and self.theory_vector is not None:
+            raise RuntimeError(
+                "The theory vector option is incompatible with the product file option."
+            )
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-        theory_vector_dict = ser.dict_str_from_yaml_file(
-            self.theory_vector.absolute().as_posix()
-        )
+        if self.theory_vector is None:
+            if self.product_file:
+                theory_vector: Ncm.Vector = cast(
+                    Ncm.Vector, self.output_dict.get("theory-vector")
+                )
+                if theory_vector is None:
+                    raise RuntimeError(
+                        "No theory vector found in the product file, "
+                        "cannot compute bias. Use the --theory-vector option or "
+                        "a product file with a theory vector."
+                    )
+            else:
+                raise RuntimeError("No theory vector file given.")
+        else:
+            ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+            theory_vector_dict = ser.dict_str_from_yaml_file(
+                self.theory_vector.absolute().as_posix()
+            )
+            theory_vector = cast(Ncm.Vector, theory_vector_dict.get("theory-vector"))
+            if not isinstance(theory_vector, Ncm.Vector):
+                raise RuntimeError("Invalid theory vector file.")
 
         dset = self.likelihood.peek_dataset()
         if not dset.has_mean_vector():
@@ -496,10 +550,6 @@ class RunFisherBias(RunCommonOptions):
                 "mean vector computation not supported by this dataset, "
                 "cannot compute bias."
             )
-
-        theory_vector = theory_vector_dict.get("theory-vector")
-        if not isinstance(theory_vector, Ncm.Vector):
-            raise RuntimeError("Invalid theory vector file.")
 
         if theory_vector.len() != dset.get_n():
             raise RuntimeError(
@@ -512,8 +562,8 @@ class RunFisherBias(RunCommonOptions):
         if self.output is not None:
             self.output_dict.add("covariance", self.fit.get_covar())
             self.output_dict.add("delta-theta", delta_theta)
-        else:
-            self.console.print(delta_theta.dup_array())
+
+        self.console.print(delta_theta.dup_array())
 
         self.end_experiment()
 
@@ -630,7 +680,9 @@ class RunMCMC(RunCommonOptions):
                 "posterior. The covariance matrix can be computed using the "
                 "scales in the model-set or using the covariance matrix of the last "
                 "fit. The catalog sampler uses a catalog of points to sample the "
-                "initial points."
+                "initial points. The covariance can be specified using the "
+                "--initial-sampler-covar option or using the covariance matrix in the "
+                "product file."
             ),
         ),
     ] = IniSampler.GAUSS_MSET
@@ -691,16 +743,30 @@ class RunMCMC(RunCommonOptions):
             init_sampler = Ncm.MSetTransKernGauss.new(0)
             init_sampler.set_mset(self.mset)
             init_sampler.set_prior_from_mset()
-            if self.initial_sampler_covar is None:
-                raise RuntimeError("No covariance file given.")
 
-            ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-            cov_dict = ser.dict_str_from_yaml_file(
-                self.initial_sampler_covar.absolute().as_posix()
-            )
-            cov = cov_dict.get("covariance")
-            if not isinstance(cov, Ncm.Matrix):
-                raise RuntimeError("Invalid covariance file.")
+            if self.initial_sampler_covar is None:
+                if self.output_dict.get("covariance") is None:
+                    raise RuntimeError(
+                        "No covariance file given and the product file "
+                        "does not contain a covariance matrix."
+                    )
+                cov = self.output_dict.get("covariance")
+                if cov is None or not isinstance(cov, Ncm.Matrix):
+                    raise RuntimeError(
+                        "Covariance matrix cannot be found in the product file."
+                    )
+            else:
+                ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+                cov_dict = ser.dict_str_from_yaml_file(
+                    self.initial_sampler_covar.absolute().as_posix()
+                )
+                cov = cov_dict.get("covariance")
+                if cov is None or not isinstance(cov, Ncm.Matrix):
+                    raise RuntimeError(
+                        f"Covariance matrix not found in file"
+                        f"{self.initial_sampler_covar}"
+                    )
+
             cov.scale(self.initial_sampler_rescale)
             init_sampler.set_cov(cov)
         elif self.initial_points_sampler == IniSampler.FROM_CATALOG:
@@ -843,11 +909,18 @@ class AnalyzeMCMC(LoadExperiment):
         details.add_row("Weighted", f"{mcat.weighted()}")
         main_table.add_row(details)
 
+        if nitems == 0:
+            self.console.print(main_table)
+            self.console.print("#  Empty catalog!")
+
+            self.end_experiment()
+            return
+
         # Global diagnostics
 
         global_diag = Table(
             title="Global Convergence Diagnostics",
-            expand=True,
+            expand=False,
         )
         global_diag.add_column("Diagnostic Statistic", justify="left", style=desc_color)
         global_diag.add_column("Suggested cut-off", justify="left", style=values_color)
@@ -868,12 +941,13 @@ class AnalyzeMCMC(LoadExperiment):
         val_color = values_color
         # Parameter best fit
         best_fit_vec = mcat.get_bestfit_row()
-        param_diag.add_column(
-            "Best-fit", justify="left", style=val_color, vertical="middle"
-        )
-        param_diag_matrix.append(
-            [f"{best_fit_vec.get(i): .6g}" for i in range(total_columns)]
-        )
+        if best_fit_vec is not None:
+            param_diag.add_column(
+                "Best-fit", justify="left", style=val_color, vertical="middle"
+            )
+            param_diag_matrix.append(
+                [f"{best_fit_vec.get(i): .6g}" for i in range(total_columns)]
+            )
 
         # Parameter mean
         param_diag.add_column(
