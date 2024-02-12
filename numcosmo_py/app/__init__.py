@@ -724,6 +724,16 @@ class RunMCMC(RunCommonOptions):
         ),
     ] = 0
 
+    exploration: Annotated[
+        int,
+        typer.Option(
+            help=(
+                "Number of samples to use for the exploration phase. The exploration "
+                " phase should be discarded from the final samples."
+            ),
+        ),
+    ] = 0
+
     def __post_init__(self) -> None:
         super().__post_init__()
         self.fit.log_info()
@@ -807,6 +817,9 @@ class RunMCMC(RunCommonOptions):
                 )
         else:
             apes_walker.set_use_threads(False)
+
+        if self.exploration > 0:
+            apes_walker.set_exploration(self.exploration)
 
         esmcmc = Ncm.FitESMCMC.new(
             self.fit,
