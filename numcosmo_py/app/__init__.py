@@ -23,6 +23,7 @@
 
 """NumCosmo command line interface app."""
 
+import math
 import dataclasses
 from enum import Enum
 from typing import Optional, Annotated, Tuple, cast, Union
@@ -31,6 +32,7 @@ import typer
 from rich.table import Table
 from rich.text import Text
 import numpy as np
+import matplotlib.pyplot as plt
 
 from numcosmo_py import Ncm
 from numcosmo_py.sampling import (
@@ -43,9 +45,13 @@ from numcosmo_py.sampling import (
     set_ncm_console,
 )
 from numcosmo_py.interpolation.stats_dist import (
-    InterpolationMethod,
+    create_stats_dist,
+    CrossValidationMethod,
     InterpolationKernel,
+    InterpolationMethod,
 )
+from numcosmo_py.plotting.tools import confidence_ellipse
+
 
 try:
     from numcosmo_py.external.cosmosis import (
@@ -351,7 +357,7 @@ class RunCommonOptions(LoadExperiment):
         typer.Option(
             help="Algorithm to use for the fit.",
         ),
-    ] = FitRunner.NLOPT.value
+    ] = FitRunner.NLOPT
     algorithm: Annotated[
         Optional[str],
         typer.Option(
@@ -363,13 +369,13 @@ class RunCommonOptions(LoadExperiment):
         typer.Option(
             help="Gradient type to use for the fit.",
         ),
-    ] = FitGradType.NUMDIFF_FORWARD.value
+    ] = FitGradType.NUMDIFF_FORWARD
     run_messages: Annotated[
         FitRunMessages,
         typer.Option(
             help="Verbosity level for the fit.",
         ),
-    ] = FitRunMessages.SIMPLE.value
+    ] = FitRunMessages.SIMPLE
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -621,14 +627,14 @@ class RunMCMC(RunCommonOptions):
         typer.Option(
             help="Interpolation method to use.",
         ),
-    ] = InterpolationMethod.VKDE.value
+    ] = InterpolationMethod.VKDE
 
     interpolation_kernel: Annotated[
         InterpolationKernel,
         typer.Option(
             help="Interpolation kernel to use.",
         ),
-    ] = InterpolationKernel.CAUCHY.value
+    ] = InterpolationKernel.CAUCHY
 
     over_smooth: Annotated[
         float,
@@ -843,13 +849,8 @@ class RunMCMC(RunCommonOptions):
         self.end_experiment()
 
 
-@app.command(
-    name="analyze",
-    help="Analyzes the results of a MCMC run.",
-    no_args_is_help=True,
-)
 @dataclasses.dataclass
-class AnalyzeMCMC(LoadExperiment):
+class LoadCatalog(LoadExperiment):
     """Analyzes the results of a MCMC run."""
 
     mcmc_file: Annotated[
@@ -867,6 +868,50 @@ class AnalyzeMCMC(LoadExperiment):
         ),
     ] = 0
 
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.mcmc_file is None:
+            raise RuntimeError("No MCMC file given.")
+
+        if not self.mcmc_file.exists():
+            raise RuntimeError(f"MCMC file {self.mcmc_file} not found.")
+
+        self.mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_file_ro(
+            self.mcmc_file.absolute().as_posix(), self.burnin
+        )
+        assert isinstance(self.mcat, Ncm.MSetCatalog)
+
+        self.catalog_mset: Ncm.MSet = self.mcat.peek_mset()
+        assert isinstance(self.catalog_mset, Ncm.MSet)
+
+        self.catalog_mset.prepare_fparam_map()
+        self.fparams_len = self.catalog_mset.fparams_len()
+        self.nadd_vals: int = self.mcat.nadd_vals()
+        self.total_columns: int = self.fparams_len + self.nadd_vals
+        self.nchains: int = self.mcat.nchains()
+
+        self.full_stats: Ncm.StatsVec = self.mcat.peek_pstats()
+        assert isinstance(self.full_stats, Ncm.StatsVec)
+
+        if self.nchains > 1:
+            self.stats: Ncm.StatsVec = self.mcat.peek_e_mean_stats()
+            assert isinstance(self.stats, Ncm.StatsVec)
+        else:
+            self.stats = self.mcat.peek_pstats()
+            assert isinstance(self.stats, Ncm.StatsVec)
+
+        self.nitems: int = self.stats.nitens()
+
+
+@app.command(
+    name="analyze",
+    help="Analyzes the results of a MCMC run.",
+    no_args_is_help=True,
+)
+@dataclasses.dataclass
+class AnalyzeMCMC(LoadCatalog):
+    """Analyzes the results of a MCMC run."""
+
     info: Annotated[
         bool,
         typer.Option(
@@ -877,28 +922,9 @@ class AnalyzeMCMC(LoadExperiment):
     def __post_init__(self) -> None:
         super().__post_init__()
 
-        if self.mcmc_file is None:
-            raise RuntimeError("No MCMC file given.")
-
-        if not self.mcmc_file.exists():
-            raise RuntimeError(f"MCMC file {self.mcmc_file} not found.")
-
-        mcat = Ncm.MSetCatalog.new_from_file_ro(
-            self.mcmc_file.absolute().as_posix(), self.burnin
-        )
-        mset = mcat.peek_mset()
-        mset.prepare_fparam_map()
-        fparams_len = mset.fparams_len()
-        nadd_vals = mcat.nadd_vals()
-        total_columns = fparams_len + nadd_vals
-        nchains = mcat.nchains()
-        full_stats = mcat.peek_pstats()
-        if nchains > 1:
-            stats = mcat.peek_e_mean_stats()
-        else:
-            stats = mcat.peek_pstats()
-        nitems = stats.nitens()
-        if nitems >= 10:
+        mcat = self.mcat
+        fs = self.full_stats
+        if self.nitems >= 10:
             mcat.estimate_autocorrelation_tau(False)
 
         desc_color = "bold bright_cyan"
@@ -916,13 +942,13 @@ class AnalyzeMCMC(LoadExperiment):
         details.add_row("Run type", mcat.get_run_type())
         details.add_row("Size", f"{mcat.len()}")
         details.add_row("Number of Iterations", f"{mcat.max_time()}")
-        details.add_row("Number of chains", f"{nchains}")
-        details.add_row("Number of parameters", f"{fparams_len}")
-        details.add_row("Number of extra columns", f"{nadd_vals}")
+        details.add_row("Number of chains", f"{self.nchains}")
+        details.add_row("Number of parameters", f"{self.fparams_len}")
+        details.add_row("Number of extra columns", f"{self.nadd_vals}")
         details.add_row("Weighted", f"{mcat.weighted()}")
         main_table.add_row(details)
 
-        if nitems == 0:
+        if self.nitems == 0:
             self.console.print(main_table)
             self.console.print("#  Empty catalog!")
 
@@ -948,7 +974,9 @@ class AnalyzeMCMC(LoadExperiment):
         param_diag.add_column(
             "Parameter", justify="left", style=desc_color, vertical="middle"
         )
-        param_diag_matrix.append([mcat.col_full_name(i) for i in range(total_columns)])
+        param_diag_matrix.append(
+            [mcat.col_full_name(i) for i in range(self.total_columns)]
+        )
 
         # Values color
         val_color = values_color
@@ -959,7 +987,7 @@ class AnalyzeMCMC(LoadExperiment):
                 "Best-fit", justify="left", style=val_color, vertical="middle"
             )
             param_diag_matrix.append(
-                [f"{best_fit_vec.get(i): .6g}" for i in range(total_columns)]
+                [f"{best_fit_vec.get(i): .6g}" for i in range(self.total_columns)]
             )
 
         # Parameter mean
@@ -967,7 +995,7 @@ class AnalyzeMCMC(LoadExperiment):
             "Mean", justify="left", style=val_color, vertical="middle"
         )
         param_diag_matrix.append(
-            [f"{full_stats.get_mean(i): .6g}" for i in range(total_columns)]
+            [f"{fs.get_mean(i): .6g}" for i in range(self.total_columns)]
         )
 
         # Standard Deviation
@@ -976,10 +1004,10 @@ class AnalyzeMCMC(LoadExperiment):
             "Standard Deviation", justify="left", style=val_color, vertical="middle"
         )
         param_diag_matrix.append(
-            [f"{full_stats.get_sd(i): .6g}" for i in range(total_columns)]
+            [f"{fs.get_sd(i): .6g}" for i in range(self.total_columns)]
         )
 
-        if nitems >= 10:
+        if self.nitems >= 10:
             # Mean Standard Deviation
             param_diag.add_column(
                 "Mean Standard Deviation",
@@ -988,9 +1016,10 @@ class AnalyzeMCMC(LoadExperiment):
                 vertical="middle",
             )
             tau_vec = mcat.peek_autocorrelation_tau()
+
             mean_sd_array = [
-                np.sqrt(full_stats.get_var(i) * tau_vec.get(i) / full_stats.nitens())
-                for i in range(total_columns)
+                np.sqrt(fs.get_var(i) * tau_vec.get(i) / fs.nitens())
+                for i in range(self.total_columns)
             ]
             param_diag_matrix.append([f"{mean_sd: .6g}" for mean_sd in mean_sd_array])
 
@@ -1009,14 +1038,16 @@ class AnalyzeMCMC(LoadExperiment):
                 "tau", justify="left", style=val_color, vertical="middle"
             )
             param_diag_matrix.append(
-                [f"{tau_vec.get(i): .6g}" for i in range(total_columns)]
+                [f"{tau_vec.get(i): .6g}" for i in range(self.total_columns)]
             )
 
-        if nchains > 1:
+        if self.nchains > 1:
             # Gelman Rubin
             gelman_rubin_row = []
             gelman_rubin_row.append("Gelman-Rubin (G&B) Shrink Factor (R-1)")
-            skf = [mcat.get_param_shrink_factor(i) - 1 for i in range(total_columns)]
+            skf = [
+                mcat.get_param_shrink_factor(i) - 1 for i in range(self.total_columns)
+            ]
             gelman_rubin_row.append("NA")
             gr_worst = int(np.argmin(skf))
             gelman_rubin_row.append(
@@ -1033,7 +1064,7 @@ class AnalyzeMCMC(LoadExperiment):
 
         # Constant Break
 
-        cb = [stats.estimate_const_break(i) for i in range(total_columns)]
+        cb = [self.stats.estimate_const_break(i) for i in range(self.total_columns)]
         cb_worst = int(np.argmax(cb))
         const_break_row = []
         const_break_row.append("Constant Break (CB) (iterations, points)")
@@ -1044,9 +1075,11 @@ class AnalyzeMCMC(LoadExperiment):
         global_diag.add_row(*const_break_row)
 
         param_diag.add_column("CB", justify="left", style=val_color)
-        param_diag_matrix.append([f"{cb_i:.0f} {cb_i * nchains:.0f}" for cb_i in cb])
+        param_diag_matrix.append(
+            [f"{cb_i:.0f} {cb_i * self.nchains:.0f}" for cb_i in cb]
+        )
 
-        if nitems >= 10:
+        if self.nitems >= 10:
             # Effective sample size
             (
                 ess_vec,
@@ -1054,7 +1087,7 @@ class AnalyzeMCMC(LoadExperiment):
                 ess_worst_index,
                 ess_worst_order,
                 ess_worst_ess,
-            ) = stats.max_ess_time(100)
+            ) = self.stats.max_ess_time(100)
             ess_row = []
             ess_row.append("Effective Sample Size (ESS) (ensembles, points)")
             ess_row.append(f"{ess_best_cutoff}")
@@ -1068,21 +1101,21 @@ class AnalyzeMCMC(LoadExperiment):
             param_diag.add_column("ESS", justify="left", style=val_color)
             param_diag_matrix.append(
                 [
-                    f"{ess_vec.get(i):.0f} {ess_vec.get(i) * nchains:.0f}"
-                    for i in range(total_columns)
+                    f"{ess_vec.get(i):.0f} {ess_vec.get(i) * self.nchains:.0f}"
+                    for i in range(self.total_columns)
                 ]
             )
 
             # Heidelberger and Welch
 
-            hw_pvalue = 1.0 - 0.95 ** (1.0 / fparams_len)
+            hw_pvalue = 1.0 - 0.95 ** (1.0 / self.fparams_len)
             (
                 hw_vec,
                 hw_best_cutoff,
                 hw_worst_index,
                 hw_worst_order,
                 hw_worst_pvalue,
-            ) = stats.heidel_diag(100, hw_pvalue)
+            ) = self.stats.heidel_diag(100, hw_pvalue)
 
             hw_row = []
             hw_row.append(f"Heidelberger and Welch p-value (>{hw_pvalue * 100.0:.1f}%)")
@@ -1104,7 +1137,10 @@ class AnalyzeMCMC(LoadExperiment):
                 style=val_color,
             )
             param_diag_matrix.append(
-                [f"{(1.0 - hw_vec.get(i)) * 100.0:.1f}" for i in range(total_columns)]
+                [
+                    f"{(1.0 - hw_vec.get(i)) * 100.0:.1f}"
+                    for i in range(self.total_columns)
+                ]
             )
 
         for row in np.array(param_diag_matrix).T:
@@ -1116,15 +1152,15 @@ class AnalyzeMCMC(LoadExperiment):
 
         covariance_matrix = Table(title="Covariance Matrix", expand=False)
         covariance_matrix.add_column("Parameter", justify="right", style="bold")
-        for i in range(total_columns):
+        for i in range(self.total_columns):
             covariance_matrix.add_column(
                 mcat.col_name(i).split(":")[-1], justify="right"
             )
 
-        for i in range(total_columns):
+        for i in range(self.total_columns):
             row = [mcat.col_name(i).split(":")[-1]]
-            for j in range(total_columns):
-                cov_ij = full_stats.get_cor(i, j)
+            for j in range(self.total_columns):
+                cov_ij = fs.get_cor(i, j)
                 cor_ij_string = f"{cov_ij * 100.0: 3.0f}%"
                 styles_array = [
                     "bold bright_red",
@@ -1143,3 +1179,208 @@ class AnalyzeMCMC(LoadExperiment):
         self.console.print(main_table)
 
         self.end_experiment()
+
+
+@app.command(
+    name="calibrate",
+    help="Calibrate the APES sampler using a given catalog.",
+    no_args_is_help=True,
+)
+@dataclasses.dataclass
+class CalibrateCatalog(LoadCatalog):
+    """Calibrate the APES sampler using a given catalog."""
+
+    robust: Annotated[
+        bool,
+        typer.Option(
+            help="Use robust covariance estimation.",
+        ),
+    ] = False
+
+    interpolation_method: Annotated[
+        InterpolationMethod,
+        typer.Option(
+            help="Interpolation method to use.",
+        ),
+    ] = InterpolationMethod.VKDE
+
+    interpolation_kernel: Annotated[
+        InterpolationKernel,
+        typer.Option(
+            help="Interpolation kernel to use.",
+        ),
+    ] = InterpolationKernel.CAUCHY
+
+    cv_method: Annotated[
+        CrossValidationMethod,
+        typer.Option(
+            help="Cross-validation method to use.",
+        ),
+    ] = CrossValidationMethod.NONE
+
+    over_smooth: Annotated[
+        float,
+        typer.Option(
+            help="Over-smoothing parameter to use.",
+            min=1.0e-2,
+        ),
+    ] = 1.0
+
+    split_fraction: Annotated[
+        Optional[float],
+        typer.Option(
+            help="Split fraction to use.",
+            min=0.02,
+        ),
+    ] = None
+
+    local_fraction: Annotated[
+        Optional[float],
+        typer.Option(
+            help="Local fraction to use.",
+            min=0.02,
+        ),
+    ] = None
+
+    interpolate: Annotated[
+        bool,
+        typer.Option(
+            help="Use interpolation to compute the weights of the APES approximation.",
+        ),
+    ] = True
+
+    ntries: Annotated[
+        int,
+        typer.Option(
+            help="Number of tries to sample from the calibrated distribution.",
+            min=1,
+        ),
+    ] = 100
+
+    use_half: Annotated[
+        bool,
+        typer.Option(
+            help="Use half of the walkers to calibrate the sampler.",
+        ),
+    ] = True
+
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            help="Prints verbose information.",
+        ),
+    ] = False
+
+    plot_2d: Annotated[
+        bool,
+        typer.Option(
+            help="Plots 2D confidence ellipses.",
+        ),
+    ] = False
+
+    plot_2d_scatter: Annotated[
+        bool,
+        typer.Option(
+            help="Plots 2D scatter plots.",
+        ),
+    ] = False
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+        mcat = self.mcat
+        m2lnL_id = mcat.get_m2lnp_var()  # pylint: disable-msg=invalid-name
+        mcat_len = mcat.len()
+
+        nwalkers = self.nchains
+        if self.use_half:
+            nwalkers = nwalkers // 2
+
+        last_e = [mcat.peek_row(mcat_len - nwalkers + i) for i in range(nwalkers)]
+        ncols = mcat.ncols()
+        nvar = ncols - self.nadd_vals
+        params = [
+            "$" + mcat.col_symb(i) + "$" for i in range(self.nadd_vals, mcat.ncols())
+        ]
+
+        sdist = create_stats_dist(
+            robust=self.robust,
+            interpolation_method=self.interpolation_method,
+            interpolation_kernel=self.interpolation_kernel,
+            cv_method=self.cv_method,
+            dim=nvar,
+            over_smooth=math.fabs(self.over_smooth),
+            split_fraction=self.split_fraction,
+            local_fraction=self.local_fraction,
+            verbose=self.verbose,
+        )
+
+        m2lnL = []  # pylint: disable-msg=invalid-name
+        for row in last_e:
+            m2lnL.append(row.get(m2lnL_id))
+            sdist.add_obs(row.get_subvector(self.nadd_vals, nvar))
+
+        m2lnL_v = Ncm.Vector.new_array(m2lnL)  # pylint: disable-msg=invalid-name
+        if self.interpolate:
+            sdist.prepare_interp(m2lnL_v)
+        else:
+            sdist.prepare()
+
+        ovs = sdist.get_over_smooth()
+        print(f"# === Setting over smooth to {ovs}")
+
+        rng = Ncm.RNG.new()
+        var_vector = Ncm.Vector.new(nvar)
+
+        try_sample_array = []
+        for _ in range(self.ntries):
+            sdist.sample(var_vector, rng)
+            try_sample_array.append(var_vector.dup_array())
+
+        try_sample = np.array(try_sample_array)
+
+        weights = np.array(sdist.peek_weights().dup_array())
+        weights = weights / np.sum(weights)
+        max_w = np.max(weights[np.nonzero(weights)])
+        min_w = np.min(weights[np.nonzero(weights)])
+
+        print(f"# === Min weight: {min_w}")
+        print(f"# === Max weight: {max_w}")
+        print(f"# === Mean weight: {np.mean(weights[np.nonzero(weights)])}")
+        print(f"# === Median weight: {np.median(weights[np.nonzero(weights)])}")
+        print(f"# === Non-zero weights: {np.count_nonzero(weights)}")
+        print(f"# === Final bandwidth: {sdist.get_href()}")
+
+        if self.plot_2d:
+            for a in range(nvar):  # pylint: disable-msg=invalid-name
+                for b in range(a + 1, nvar):  # pylint: disable-msg=invalid-name
+                    indices = np.array([a, b])
+                    print(indices)
+
+                    _, axis = plt.subplots(1, 1, figsize=(16, 8))
+
+                    # pylint: disable-next=invalid-name
+                    for ii in range(0, int(sdist.get_n_kernels())):
+                        y_i, cov_i, _, w_i = sdist.get_Ki(ii)
+                        mean = np.array(y_i.dup_array())
+                        cov = np.array(
+                            [[cov_i.get(i, j) for j in indices] for i in indices]
+                        )
+                        cov = cov * 1.0
+                        w_i = weights[ii]
+
+                        if w_i > 0.0:
+                            confidence_ellipse(
+                                mean[indices],
+                                cov,
+                                axis,
+                                edgecolor="red",
+                                facecolor="red",
+                            )
+                    if self.plot_2d_scatter:
+                        axis.scatter(try_sample[:, a], try_sample[:, b])
+                    plt.axis("auto")
+                    plt.xlabel(params[a])
+                    plt.ylabel(params[b])
+                    plt.grid()
+                    plt.show()
