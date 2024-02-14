@@ -228,7 +228,7 @@ def test_powspec_halofit(
     print(f"# CCL time: {ccl_elapse:.3f} s, NumCosmo time: {nc_elapse:.3f} s")
 
 
-@pytest.mark.parametrize("sigma8", [0.01, 0.05, 0.1])
+@pytest.mark.parametrize("sigma8", [0.01, 0.05, 0.1, 0.2, 0.5])
 def test_powspec_halofit_linear_universe(
     sigma8, k_a: np.ndarray, z_a: np.ndarray
 ) -> None:
@@ -249,7 +249,8 @@ def test_powspec_halofit_linear_universe(
         matter_power_spectrum="halofit",
     )
 
-    cosmo, _, _, ps_mnl, _ = create_nc_obj(ccl_cosmo)
+    cosmo, _, _, ps_mnl, _ = create_nc_obj(ccl_cosmo, ps_nln_z_max=1.0)
+    ps_mnl
 
     k_vec = Ncm.Vector.new_array(k_a.tolist())
     Pk_vec = Ncm.Vector.new(k_vec.len())
