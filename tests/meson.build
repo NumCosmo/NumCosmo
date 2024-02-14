@@ -386,6 +386,21 @@ if python_typer.found()
     ]
 endif
 
+python_pyccl = python_module.find_installation(
+    'python3',
+    modules: ['pyccl'],
+    required: false,
+)
+
+if python_pyccl.found()
+    python_tests += [
+        {
+            'name': 'py_powspec',
+            'source': 'test_py_powspec.py',
+        },
+    ]
+endif
+
 if enable_gir
     env = environment()
     env.prepend(

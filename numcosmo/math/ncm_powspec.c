@@ -739,7 +739,7 @@ ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const g
  * @model: a #NcmModel
  * @z: time $z$
  * @k: a #NcmVector
- * @Pk: (out caller-allocates): a #NcmVector
+ * @Pk: a #NcmVector
  *
  * Evaluates the power spectrum @powspec at $z$ and in the knots
  * contained in @k and puts the result in @Pk.
