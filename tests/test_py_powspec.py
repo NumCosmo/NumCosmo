@@ -228,7 +228,10 @@ def test_powspec_halofit(
     print(f"# CCL time: {ccl_elapse:.3f} s, NumCosmo time: {nc_elapse:.3f} s")
 
 
-def test_powspec_halofit_linear_universe(k_a: np.ndarray, z_a: np.ndarray) -> None:
+@pytest.mark.parametrize("sigma8", [0.01, 0.05, 0.1])
+def test_powspec_halofit_linear_universe(
+    sigma8, k_a: np.ndarray, z_a: np.ndarray
+) -> None:
     """Test NumCosmo for an linear universe (very small sigma8)."""
 
     # Linear universe, halofit power spectrum
@@ -237,7 +240,7 @@ def test_powspec_halofit_linear_universe(k_a: np.ndarray, z_a: np.ndarray) -> No
         Omega_b=0.05,
         Neff=3.046,
         h=0.7,
-        sigma8=0.1,
+        sigma8=sigma8,
         n_s=0.96,
         Omega_k=0.0,
         w0=-1.0,
