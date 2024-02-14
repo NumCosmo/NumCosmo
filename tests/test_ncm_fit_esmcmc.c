@@ -47,6 +47,7 @@ void test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_burnin (TestNcmFitESMCMC *test, gconstpointer pdata);
+void test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer pdata);
@@ -73,12 +74,13 @@ TestNcmFitEsmcmcFunc walkers[TEST_NCM_FIT_ESMCMC_NWALKERS] =
   {test_ncm_fit_esmcmc_new_apes,    "apes/kde/gauss",   GINT_TO_POINTER (5)},
 };
 
-#define TEST_NCM_FIT_ESMCMC_TESTS 6
+#define TEST_NCM_FIT_ESMCMC_TESTS 7
 TestNcmFitEsmcmcFunc tests[TEST_NCM_FIT_ESMCMC_TESTS] =
 {
   {test_ncm_fit_esmcmc_run,                   "run",                   NULL},
   {test_ncm_fit_esmcmc_run_lre,               "run/lre",               NULL},
   {test_ncm_fit_esmcmc_run_burnin,            "run/burnin",            NULL},
+  {test_ncm_fit_esmcmc_run_exploration,       "run/exploration",       NULL},
   {test_ncm_fit_esmcmc_run_restart_from_cat,  "run/restart_from_cat",  NULL},
   {test_ncm_fit_esmcmc_run_lre_auto_trim,     "run/lre/auto_trim",     NULL},
   {test_ncm_fit_esmcmc_run_lre_auto_trim_vol, "run/lre/auto_trim/vol", NULL},
@@ -497,6 +499,50 @@ test_ncm_fit_esmcmc_run_burnin (TestNcmFitESMCMC *test, gconstpointer pdata)
 
           return;
         }
+      }
+    }
+
+    ncm_assert_cmpdouble_e (var_m2lnL, ==, (2.0 * test->dim), 0.4, 0.0);
+  }
+}
+
+void
+test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata)
+{
+  NcmFitESMCMCWalker *walker = ncm_fit_esmcmc_peek_walker (test->esmcmc);
+
+  if (!NCM_IS_FIT_ESMCMC_WALKER_APES (walker))
+  {
+    g_test_skip ("Exploration tests only for APES-Move walkers");
+
+    return;
+  }
+
+  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
+  ncm_fit_esmcmc_set_auto_trim_type (test->esmcmc, NCM_MSET_CATALOG_TRIM_TYPE_CK);
+  ncm_fit_esmcmc_walker_apes_set_exploration (NCM_FIT_ESMCMC_WALKER_APES (walker), 10);
+
+  ncm_fit_esmcmc_start_run (test->esmcmc);
+  ncm_fit_esmcmc_run (test->esmcmc, 100);
+  ncm_fit_esmcmc_end_run (test->esmcmc);
+
+  {
+    NcmMSetCatalog *mcat   = ncm_fit_esmcmc_peek_catalog (test->esmcmc);
+    const gint m2lnL_index = ncm_mset_catalog_get_m2lnp_var (mcat);
+    NcmMatrix *cov         = NULL;
+    gdouble var_m2lnL;
+
+    ncm_mset_catalog_get_full_covar (mcat, &cov);
+
+    var_m2lnL = ncm_matrix_get (cov, m2lnL_index, m2lnL_index);
+
+    if (ncm_cmp (var_m2lnL, 2.0 * test->dim, 0.4, 0.0) != 0)
+    {
+      if (ncm_fit_esmcmc_walker_apes_get_k_type (NCM_FIT_ESMCMC_WALKER_APES (walker)) == NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS)
+      {
+        g_test_skip ("APES-Move:*:Gauss walker not supported");
+
+        return;
       }
     }
 
