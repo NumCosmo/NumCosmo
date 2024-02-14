@@ -250,12 +250,16 @@ def test_powspec_halofit_linear_universe(
     )
 
     cosmo, _, _, ps_mnl, _ = create_nc_obj(ccl_cosmo, ps_nln_z_max=1.0)
-    ps_mnl
 
     k_vec = Ncm.Vector.new_array(k_a.tolist())
     Pk_vec = Ncm.Vector.new(k_vec.len())
 
-    for z in z_a:
+    step = 10
+    for z in z_a[::step]:
         ps_mnl.eval_vec(cosmo, z, k_vec, Pk_vec)
         pk_nc = Pk_vec.dup_array()
         assert all(np.isfinite(pk_nc))
+
+        for i, k in enumerate(k_a[::step]):
+            Pk = ps_mnl.eval(cosmo, z, k)
+            assert_allclose(Pk_vec.get(i * step), Pk)
