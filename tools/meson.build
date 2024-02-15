@@ -41,7 +41,6 @@ executable(
 )
 
 python_scripts = [
-    'mcat_calibrate_apes',
     'mcat_plot_corner',
     'numcosmo',
 ]

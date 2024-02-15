@@ -307,6 +307,7 @@ def create_numcosmo_mapping(
         ps_ml.peek_gf().set_reltol(reltol)
     elif matter_ps == LinearMatterPowerSpectrum.CLASS:
         ps_ml = Nc.PowspecMLCBE.new()
+        ps_ml.peek_cbe().use_ppf(True)
         ps_ml.set_reltol_spline(reltol)
 
     if nonlin_matter_ps == NonLinearMatterPowerSpectrum.HALOFIT:
