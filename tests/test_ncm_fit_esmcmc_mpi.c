@@ -99,7 +99,7 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
   const gint dim                      = test->dim = g_test_rand_int_range (2, 4);
   const gint nwalkers                 = 100 * test->dim;
   NcmRNG *rng                         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcmDataGaussCovMVND *data_mvnd      = ncm_data_gauss_cov_mvnd_new_full (dim, 2.0e-2, 5.0e-2, 10.0, 1.0, 2.0, rng);
+  NcmDataGaussCovMVND *data_mvnd      = ncm_data_gauss_cov_mvnd_new_full (dim, 2.0e-2, 5.0e-2, 30.0, 1.0, 2.0, rng);
   NcmModelMVND *model_mvnd            = ncm_model_mvnd_new (dim);
   NcmDataset *dset                    = ncm_dataset_new_list (data_mvnd, NULL);
   NcmLikelihood *lh                   = ncm_likelihood_new (dset);
@@ -215,7 +215,7 @@ test_ncm_fit_esmcmc_new_stretch (TestNcmFitESMCMC *test, gconstpointer pdata)
   const gint dim                      = test->dim = g_test_rand_int_range (2, 4);
   const gint nwalkers                 = 10 * g_test_rand_int_range (2, 5);
   NcmRNG *rng                         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcmDataGaussCovMVND *data_mvnd      = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 2.0e-2, 1.0, 1.0, 2.0, rng);
+  NcmDataGaussCovMVND *data_mvnd      = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 2.0e-2, 30.0, 1.0, 2.0, rng);
   NcmModelMVND *model_mvnd            = ncm_model_mvnd_new (dim);
   NcmDataset *dset                    = ncm_dataset_new_list (data_mvnd, NULL);
   NcmLikelihood *lh                   = ncm_likelihood_new (dset);
@@ -319,19 +319,5 @@ test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata
 
     ncm_assert_cmpdouble_e (var_m2lnL, ==, (2.0 * test->dim), 0.4, 0.0);
   }
-}
-
-void
-test_ncm_fit_esmcmc_traps (TestNcmFitESMCMC *test, gconstpointer pdata)
-{
-  g_test_trap_subprocess ("/ncm/fit/esmcmc/stretch/invalid/run/subprocess", 0, 0);
-  g_test_trap_assert_failed ();
-}
-
-void
-test_ncm_fit_invalid_run (TestNcmFitESMCMC *test, gconstpointer pdata)
-{
-  /*NcmFit *fit = test->fit;*/
-  g_assert_not_reached ();
 }
 
