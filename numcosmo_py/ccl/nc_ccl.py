@@ -94,7 +94,6 @@ def create_nc_obj(
     if not math.isnan(ccl_cosmo["A_s"]):
         hiprim.param_set_by_name("ln10e10ASA", math.log(1.0e10 * ccl_cosmo["A_s"]))
     else:
-        # pylint: disable-next=invalid-name
         A_s = math.exp(hiprim.param_get_by_name("ln10e10ASA")) * 1.0e-10
         fact = (
             ccl_cosmo["sigma8"]
@@ -105,6 +104,8 @@ def create_nc_obj(
     ps_nln = None
     if ccl_cosmo._config_init_kwargs["matter_power_spectrum"] == "halofit":
         ps_nln = Nc.PowspecMNLHaloFit.new(ps_lin, ps_nln_z_max, prec)
+        ps_nln.set_kmin(k_min)
+        ps_nln.set_kmax(k_max)
         ps_nln.prepare(cosmo)
 
     hmfunc = None
@@ -113,33 +114,69 @@ def create_nc_obj(
         psf = Ncm.PowspecFilter.new(ps_lin, Ncm.PowspecFilterType.TOPHAT)
         psf.set_best_lnr0()
 
-        if ccl_cosmo._config_init_kwargs["mass_function"] == "tinker10":
-            # pylint: disable-next=invalid-name
-            hmf_T10 = Nc.MultiplicityFuncTinkerMeanNormalized.new()
-            hmfunc = Nc.HaloMassFunction.new(dist, psf, hmf_T10)
-            hmfunc.prepare(cosmo)
-
     # pylint: enable=protected-access
     return cosmo, dist, ps_lin, ps_nln, hmfunc
 
 
-def ccl_cosmo_set_high_prec():
-    """Set CCL cosmology to high precision."""
-    pyccl.gsl_params.INTEGRATION_EPSREL = 1.0e-13
-    pyccl.gsl_params.ODE_GROWTH_EPSREL = 1.0e-13
-    pyccl.gsl_params.N_ITERATION = 10000
-    pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL = 1.0e-9
-    pyccl.spline_params.A_SPLINE_NLOG = 1000
-    pyccl.spline_params.A_SPLINE_NA = 1000
-    pyccl.spline_params.A_SPLINE_NA_PK = 1000
-    pyccl.spline_params.A_SPLINE_NLOG_PK = 1000
-    pyccl.spline_params.N_K = 1000
-    pyccl.spline_params.K_MIN = 1.0e-6
-    pyccl.spline_params.K_MAX = 1.0e3
+class CCLParams:
+    """CCL cosmology parameters."""
 
-    pyccl.spline_params.A_SPLINE_NLOG_SM = 100
-    pyccl.spline_params.A_SPLINE_NA_SM = 100
-    pyccl.spline_params.LOGM_SPLINE_NM = 300
+    DEFAULT_INTEGRATION_EPSREL: float = pyccl.gsl_params.INTEGRATION_EPSREL
+    DEFAULT_ODE_GROWTH_EPSREL: float = pyccl.gsl_params.ODE_GROWTH_EPSREL
+    DEFAULT_N_ITERATION: int = pyccl.gsl_params.N_ITERATION
+    DEFAULT_INTEGRATION_SIGMAR_EPSREL: float = (
+        pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL
+    )
+    DEFAULT_A_SPLINE_NLOG: int = pyccl.spline_params.A_SPLINE_NLOG
+    DEFAULT_A_SPLINE_NA: int = pyccl.spline_params.A_SPLINE_NA
+    DEFAULT_A_SPLINE_NA_PK: int = pyccl.spline_params.A_SPLINE_NA_PK
+    DEFAULT_A_SPLINE_NLOG_PK: int = pyccl.spline_params.A_SPLINE_NLOG_PK
+    DEFAULT_N_K: int = pyccl.spline_params.N_K
+    DEFAULT_K_MIN: float = pyccl.spline_params.K_MIN
+    DEFAULT_K_MAX: float = pyccl.spline_params.K_MAX
+    DEFAULT_A_SPLINE_NLOG_SM: int = pyccl.spline_params.A_SPLINE_NLOG_SM
+    DEFAULT_A_SPLINE_NA_SM: int = pyccl.spline_params.A_SPLINE_NA_SM
+    DEFAULT_LOGM_SPLINE_NM: int = pyccl.spline_params.LOGM_SPLINE_NM
+
+    @staticmethod
+    def set_default_params():
+        """Set CCL parameters to default values."""
+
+        pyccl.gsl_params.INTEGRATION_EPSREL = CCLParams.DEFAULT_INTEGRATION_EPSREL
+        pyccl.gsl_params.ODE_GROWTH_EPSREL = CCLParams.DEFAULT_ODE_GROWTH_EPSREL
+        pyccl.gsl_params.N_ITERATION = CCLParams.DEFAULT_N_ITERATION
+        pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL = (
+            CCLParams.DEFAULT_INTEGRATION_SIGMAR_EPSREL
+        )
+        pyccl.spline_params.A_SPLINE_NLOG = CCLParams.DEFAULT_A_SPLINE_NLOG
+        pyccl.spline_params.A_SPLINE_NA = CCLParams.DEFAULT_A_SPLINE_NA
+        pyccl.spline_params.A_SPLINE_NA_PK = CCLParams.DEFAULT_A_SPLINE_NA_PK
+        pyccl.spline_params.A_SPLINE_NLOG_PK = CCLParams.DEFAULT_A_SPLINE_NLOG_PK
+        pyccl.spline_params.N_K = CCLParams.DEFAULT_N_K
+        pyccl.spline_params.K_MIN = CCLParams.DEFAULT_K_MIN
+        pyccl.spline_params.K_MAX = CCLParams.DEFAULT_K_MAX
+        pyccl.spline_params.A_SPLINE_NLOG_SM = CCLParams.DEFAULT_A_SPLINE_NLOG_SM
+        pyccl.spline_params.A_SPLINE_NA_SM = CCLParams.DEFAULT_A_SPLINE_NA_SM
+        pyccl.spline_params.LOGM_SPLINE_NM = CCLParams.DEFAULT_LOGM_SPLINE_NM
+
+    @staticmethod
+    def set_high_prec_params():
+        """Set CCL parameters to high precision values."""
+
+        pyccl.gsl_params.INTEGRATION_EPSREL = 1.0e-13
+        pyccl.gsl_params.ODE_GROWTH_EPSREL = 1.0e-13
+        pyccl.gsl_params.N_ITERATION = 10000
+        pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL = 1.0e-9
+        pyccl.spline_params.A_SPLINE_NLOG = 1000
+        pyccl.spline_params.A_SPLINE_NA = 1000
+        pyccl.spline_params.A_SPLINE_NA_PK = 1000
+        pyccl.spline_params.A_SPLINE_NLOG_PK = 1000
+        pyccl.spline_params.N_K = 1000
+        pyccl.spline_params.K_MIN = 1.0e-6
+        pyccl.spline_params.K_MAX = 1.0e3
+        pyccl.spline_params.A_SPLINE_NLOG_SM = 100
+        pyccl.spline_params.A_SPLINE_NA_SM = 100
+        pyccl.spline_params.LOGM_SPLINE_NM = 300
 
 
 # Missing function in CCL
