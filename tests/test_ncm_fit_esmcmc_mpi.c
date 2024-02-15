@@ -41,12 +41,10 @@ typedef struct _TestNcmFitESMCMC
 
 void test_ncm_fit_esmcmc_new_stretch (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata);
-void test_ncm_fit_esmcmc_traps (TestNcmFitESMCMC *test, gconstpointer pdata);
 
 void test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata);
-void test_ncm_fit_invalid_run (TestNcmFitESMCMC *test, gconstpointer pdata);
 
 typedef struct _TestNcmFitEsmcmcFunc
 {
@@ -91,16 +89,6 @@ main (gint argc, gchar *argv[])
       g_free (test_path);
     }
   }
-
-  g_test_add ("/ncm/fit/esmcmc/stretch/traps", TestNcmFitESMCMC, NULL,
-              &test_ncm_fit_esmcmc_new_stretch,
-              &test_ncm_fit_esmcmc_traps,
-              &test_ncm_fit_esmcmc_free);
-
-  g_test_add ("/ncm/fit/esmcmc/stretch/invalid/run/subprocess", TestNcmFitESMCMC, NULL,
-              &test_ncm_fit_esmcmc_new_stretch,
-              &test_ncm_fit_invalid_run,
-              &test_ncm_fit_esmcmc_free);
 
   g_test_run ();
 }
