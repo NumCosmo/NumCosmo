@@ -536,16 +536,6 @@ test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata
 
     var_m2lnL = ncm_matrix_get (cov, m2lnL_index, m2lnL_index);
 
-    if (ncm_cmp (var_m2lnL, 2.0 * test->dim, 0.4, 0.0) != 0)
-    {
-      if (ncm_fit_esmcmc_walker_apes_get_k_type (NCM_FIT_ESMCMC_WALKER_APES (walker)) == NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS)
-      {
-        g_test_skip ("APES-Move:*:Gauss walker not supported");
-
-        return;
-      }
-    }
-
     ncm_assert_cmpdouble_e (var_m2lnL, ==, (2.0 * test->dim), 0.4, 0.0);
   }
 }

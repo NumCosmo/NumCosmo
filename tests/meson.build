@@ -246,6 +246,54 @@ foreach c_test : c_tests
     )
 endforeach
 
+if mpi_c_dep.found()
+    mpiexec = find_program('mpiexec', required: false)
+    if mpiexec.found()
+
+        c_tests_mpi = [
+            {
+                'name': 'ncm_fit_esmcmc_mpi',
+                'sources': ['test_ncm_fit_esmcmc_mpi.c'],
+                'timeout': 0,
+            },
+        ]
+        foreach c_test_mpi : c_tests_mpi
+            executable_test = executable(
+                c_test_mpi['name'],
+                c_test_mpi['sources'],
+                c_args: tests_c_args,
+                dependencies: [libnumcosmo_dep],
+                include_directories: [configinc, numcosmoinc],
+            )
+            if c_test_mpi.has_key('timeout')
+                timeout = c_test_mpi['timeout']
+            else
+                timeout = 60
+            endif
+
+            mpiexec_args = (
+                [
+                    '-n',
+                    '2',
+                    executable_test.full_path(),
+                ]
+            )
+            test(
+                c_test_mpi['name'],
+                mpiexec,
+                args: mpiexec_args,
+                timeout: timeout,
+                env: [
+                    'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
+                    'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
+                ],
+                protocol: 'tap',
+            )
+        endforeach
+    endif
+
+endif
+
 python_tests = [
     {
         'name': 'py_cluster_abundance_sampling',
