@@ -3,7 +3,31 @@ CHANGELOG
 
 [Current]
 
+[v0.21.2]
+ * Adding MPICH support. (#144)
+
+     * Adding MPICH support.
+     * Descreasing allowed m2lnL variance for exploration phase (leading to
+     overflow during matrix inversion for large dimensions).
+     * Testing MPI support.
+     * Better names for CI.
+ * NumCosmo product file (#143)
+
+     * Introducing the product-file options.
+     * Updated Halofit to return linear Pk when all required scales are linear.
+     * Support for exploration phase in APES.
+     * Adding calibrate option to numcosmo app.
+     * Reorganized numcosmo app.
+     * Removed calibrate_apes tool.
+     * Testing power-spectra with/without halofit.
+     * More tests for linear universe.
+     * Added tests for APES exploration.
+     * Testing APES MPI.
+     * Removed unused code and optimizing tests.
+
 [v0.21.1]
+ * Moving release v0.21.1.
+
  * More options to the conversion tool from-cosmosis. (#141)
 
      * mute-cosmosis makes cosmosis do not print info messages.
