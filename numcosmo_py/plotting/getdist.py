@@ -39,7 +39,7 @@ def mcat_to_mcsamples(
     burnin: int = 0,
     thin: int = 1,
     collapse: bool = False,
-) -> MCSamples:
+) -> Tuple[MCSamples, np.ndarray, np.ndarray]:
     """Converts a Ncm.MSetCatalog to a getdist.MCSamples object."""
 
     nchains: int = mcat.nchains()
