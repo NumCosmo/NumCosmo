@@ -427,14 +427,35 @@ _nc_powspec_mnl_halofit_linear_scale (NcPowspecMNLHaloFit *pshf, NcHICosmo *cosm
   FDF.params = &vps;
 
   /*  Check if f(lnR_min) f(lnR_max) are both positive/negative. */
-  if (_nc_powspec_mnl_halofit_varm1 (lnR_min, &vps) * _nc_powspec_mnl_halofit_varm1 (lnR_max, &vps) > 0.0)
-    g_error ("_nc_powspec_mnl_halofit_linear_scale: cannot find linear scale. "
-             "The lnR-interval (% 22.15g, % 22.15g) with lnVar (% 22.15g, % 22.15g) "
-             "does not seem to include lnVar == 0.0. This interval can be increased by increasing "
-             "the lnk-interval for the linear power spectrum.",
-             lnR_min, lnR_max,
-             _nc_powspec_mnl_halofit_varm1 (lnR_min, &vps),
-             _nc_powspec_mnl_halofit_varm1 (lnR_max, &vps));
+  {
+    const gdouble varm1_min = _nc_powspec_mnl_halofit_varm1 (lnR_min, &vps);
+    const gdouble varm1_max = _nc_powspec_mnl_halofit_varm1 (lnR_max, &vps);
+
+    if (varm1_min * varm1_max > 0.0)
+    {
+      if ((varm1_min < 0.0) && (varm1_max < 0.0))
+      {
+        const gdouble Rnlin = 0.0;
+
+        /*
+         * All considered scales are linear, variance==1 R is below the lower
+         * limit, returning 0,0
+         */
+
+        return Rnlin;
+      }
+      else
+      {
+        g_error ("_nc_powspec_mnl_halofit_linear_scale: cannot find linear scale. "
+                 "The lnR-interval (% 22.15g, % 22.15g) with lnVar (% 22.15g, % 22.15g) "
+                 "does not seem to include lnVar == 0.0. This interval can be increased by increasing "
+                 "the lnk-interval for the linear power spectrum.",
+                 lnR_min, lnR_max,
+                 _nc_powspec_mnl_halofit_varm1 (lnR_min, &vps),
+                 _nc_powspec_mnl_halofit_varm1 (lnR_max, &vps));
+      }
+    }
+  }
 
   gsl_root_fdfsolver_set (self->linear_scale_solver, &FDF, lnR);
 
@@ -555,8 +576,15 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit *pshf, NcmModel *model)
       gdouble R1         = _nc_powspec_mnl_halofit_linear_scale_z (z1, Fznl.params);
       gboolean found     = FALSE;
 
+      /* If the model is linear for all chosen scales, the linear Pk is enough. */
       if (R0 < R_min)
-        g_error ("_nc_powspec_mnl_halofit_prepare_nl: linear universe or too large R_min, in the latter case increase k_max (R0 == % 21.15g, R_min == % 21.15g).", R0, R_min);
+      {
+        self->znl = -1.0;
+        ncm_spline_clear (&self->Rsigma);
+        self->Rsigma = ncm_spline_cubic_notaknot_new ();
+
+        return;
+      }
 
       while (R1 > R_min)
       {
@@ -580,13 +608,19 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit *pshf, NcmModel *model)
         gsl_root_fsolver_set (self->znl_solver, &Fznl, z0, z1);
 
         do {
+          gdouble znl_try;
+
           iter++;
           status = gsl_root_fsolver_iterate (self->znl_solver);
 
-          self->znl = gsl_root_fsolver_root (self->znl_solver);
-          z0        = gsl_root_fsolver_x_lower (self->znl_solver);
-          z1        = gsl_root_fsolver_x_upper (self->znl_solver);
-          status    = gsl_root_test_interval (z0, z1, 0.0, 1.0e-3);
+          znl_try = gsl_root_fsolver_root (self->znl_solver);
+          z0      = gsl_root_fsolver_x_lower (self->znl_solver);
+          z1      = gsl_root_fsolver_x_upper (self->znl_solver);
+          status  = gsl_root_test_interval (z0, z1, 0.0, 1.0e-3);
+
+          /* Due to the non-continuous nature of Fznl we need to check if we are not in a bump. */
+          if (fabs (Fznl.function (znl_try, Fznl.params)) < fabs (Fznl.function (self->znl, Fznl.params)))
+            self->znl = znl_try;
         } while (status == GSL_CONTINUE && iter < max_iter);
 
         if (iter >= max_iter)
@@ -812,21 +846,29 @@ _nc_powspec_mnl_halofit_eval (NcmPowspec *powspec, NcmModel *model, const gdoubl
   NcHICosmo *cosmo                        = NC_HICOSMO (model);
   NcPowspecMNLHaloFit *pshf               = NC_POWSPEC_MNL_HALOFIT (powspec);
   NcPowspecMNLHaloFitPrivate * const self = pshf->priv;
-  const gboolean linscale                 = (z > self->znl);
-  const gboolean applysmooth              = (z + 1.0 > self->znl);
-  const gdouble zhf                       = linscale ? self->znl : z;
-  const gdouble Pklin                     = ncm_powspec_eval (NCM_POWSPEC (self->psml), model, z, k);
-  gdouble Pknln;
 
-  if (zhf != self->z)
-    _nc_powspec_mnl_halofit_preeval (pshf, cosmo, zhf);
+  if (self->znl < 0.0)
+  {
+    return ncm_powspec_eval (NCM_POWSPEC (self->psml), model, z, k);
+  }
+  else
+  {
+    const gboolean linscale    = (z > self->znl);
+    const gboolean applysmooth = (z + 1.0 > self->znl);
+    const gdouble zhf          = linscale ? self->znl : z;
+    const gdouble Pklin        = ncm_powspec_eval (NCM_POWSPEC (self->psml), model, z, k);
+    gdouble Pknln;
 
-  Pknln = _nc_powspec_mnl_halofit_Pklin2Pknln (pshf, cosmo, k, Pklin);
+    if (zhf != self->z)
+      _nc_powspec_mnl_halofit_preeval (pshf, cosmo, zhf);
 
-  if (applysmooth)
-    Pknln = ncm_util_smooth_trans (Pknln, Pklin, self->znl, 1.0, z);
+    Pknln = _nc_powspec_mnl_halofit_Pklin2Pknln (pshf, cosmo, k, Pklin);
 
-  return Pknln;
+    if (applysmooth)
+      Pknln = ncm_util_smooth_trans (Pknln, Pklin, self->znl, 1.0, z);
+
+    return Pknln;
+  }
 }
 
 static void
@@ -835,34 +877,42 @@ _nc_powspec_mnl_halofit_eval_vec (NcmPowspec *powspec, NcmModel *model, const gd
   NcHICosmo *cosmo                        = NC_HICOSMO (model);
   NcPowspecMNLHaloFit *pshf               = NC_POWSPEC_MNL_HALOFIT (powspec);
   NcPowspecMNLHaloFitPrivate * const self = pshf->priv;
-  const gboolean linscale                 = (z > self->znl);
-  const gboolean applysmooth              = (z + 1.0 > self->znl);
-  const gdouble zhf                       = linscale ? self->znl : z;
-  gdouble theta0, theta1;
 
-  ncm_powspec_eval_vec (NCM_POWSPEC (self->psml), model, z, k, Pk);
-
-  if (applysmooth)
-    ncm_util_smooth_trans_get_theta (self->znl, 1.0, z, &theta0, &theta1);
-
-  if (zhf != self->z)
-    _nc_powspec_mnl_halofit_preeval (pshf, cosmo, zhf);
-
+  if (self->znl < 0.0)
   {
-    const guint len = ncm_vector_len (k);
-    guint i;
+    ncm_powspec_eval_vec (NCM_POWSPEC (self->psml), model, z, k, Pk);
+  }
+  else
+  {
+    const gboolean linscale    = (z > self->znl);
+    const gboolean applysmooth = (z + 1.0 > self->znl);
+    const gdouble zhf          = linscale ? self->znl : z;
+    gdouble theta0, theta1;
 
-    for (i = 0; i < len; i++)
+    ncm_powspec_eval_vec (NCM_POWSPEC (self->psml), model, z, k, Pk);
+
+    if (applysmooth)
+      ncm_util_smooth_trans_get_theta (self->znl, 1.0, z, &theta0, &theta1);
+
+    if (zhf != self->z)
+      _nc_powspec_mnl_halofit_preeval (pshf, cosmo, zhf);
+
     {
-      const gdouble ki    = ncm_vector_get (k, i);
-      const gdouble Pklin = ncm_vector_get (Pk, i);
+      const guint len = ncm_vector_len (k);
+      guint i;
 
-      const gdouble Pknln = _nc_powspec_mnl_halofit_Pklin2Pknln (pshf, cosmo, ki, Pklin);
+      for (i = 0; i < len; i++)
+      {
+        const gdouble ki    = ncm_vector_get (k, i);
+        const gdouble Pklin = ncm_vector_get (Pk, i);
 
-      if (applysmooth)
-        ncm_vector_set (Pk, i, theta0 * Pknln + theta1 * Pklin);
-      else
-        ncm_vector_set (Pk, i, Pknln);
+        const gdouble Pknln = _nc_powspec_mnl_halofit_Pklin2Pknln (pshf, cosmo, ki, Pklin);
+
+        if (applysmooth)
+          ncm_vector_set (Pk, i, theta0 * Pknln + theta1 * Pklin);
+        else
+          ncm_vector_set (Pk, i, Pknln);
+      }
     }
   }
 }
@@ -874,7 +924,9 @@ _nc_powspec_mnl_halofit_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
   NcPowspecMNLHaloFitPrivate * const self = pshf->priv;
 
   ncm_powspec_get_nknots (NCM_POWSPEC (self->psml), Nz, Nk);
-  *Nz = ncm_vector_len (ncm_spline_peek_xv (self->Rsigma));
+
+  if (self->znl > 0.0)
+    *Nz = ncm_vector_len (ncm_spline_peek_xv (self->Rsigma));
 }
 
 /**
