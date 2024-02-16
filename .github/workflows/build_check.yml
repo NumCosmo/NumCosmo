@@ -135,7 +135,7 @@ jobs:
       - name: Update environment
         run: |
           mamba env update -q -v -n numcosmo_developer -f devel_environment.yml
-          mamab install -q -v -n numcosmo_developer ${{ matrix.mpi }}
+          mamba install -q -v -n numcosmo_developer ${{ matrix.mpi }}
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Setting up NumCosmo
         run: |
