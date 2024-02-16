@@ -372,6 +372,16 @@ mpi_fortran_dep = dependency(
   required: false,
 )
 
+# MPICH is not found by the mpi dependency, so we need to check for it manually
+if not mpi_c_dep.found()
+  mpi_c_dep = dependency('mpich', required: false)
+endif
+
+# MPICH is not found by the mpi dependency, so we need to check for it manually
+if not mpi_fortran_dep.found()
+  mpi_fortran_dep = dependency('mpichf90', required: false)
+endif
+
 if mpi_c_dep.found()
   numcosmo_conf.set('HAVE_MPI', true)
   numcosmo_build_cfg.set('have_mpi_support', '#define NUMCOSMO_HAVE_MPI 1')
