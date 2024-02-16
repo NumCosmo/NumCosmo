@@ -11,7 +11,7 @@ on:
 jobs:
 
   build-gcc-ubuntu:
-    name: NumCosmo (ubuntu, apt)
+    name: (ubuntu, apt)
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -59,7 +59,7 @@ jobs:
         ./example_ca
 
   build-gcc-macos:
-    name: NumCosmo (macos, brew)
+    name: (macos, brew)
     runs-on: macos-latest
     env:
       CC: gcc-11
@@ -100,12 +100,13 @@ jobs:
       run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
   
   build-miniforge:
-    name: NumCosmo (${{ matrix.os }}, python-${{ matrix.python-version }}, Miniforge)
+    name: (${{ matrix.os }}, py${{ matrix.python-version }}, ${{ matrix.mpi }}, Miniforge)
     runs-on: ${{ matrix.os }}-latest
     strategy:
       matrix:
         os: ["ubuntu", "macos"]
         python-version: ["3.9"]
+        mpi: ["openmpi", "mpich"]
     defaults:
       run:
         shell: bash -el {0}
@@ -127,13 +128,15 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ env.CONDA }}/envs
-          key: miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
+          key: miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ matrix.mpi }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
         env:
           CACHE_NUMBER: 0
         id: cache
       - name: Update environment
         run: |
-          conda env update -q -v -n numcosmo_developer -f devel_environment.yml
+          mamba env update -q -v -n numcosmo_developer -f devel_environment.yml
+          mamba remove -q -v -n numcosmo_developer openmpi
+          mamba install -q -v -n numcosmo_developer ${{ matrix.mpi }}
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Setting up NumCosmo
         run: |
@@ -167,7 +170,7 @@ jobs:
         run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge-coverage:
-    name: NumCosmo-Coverage (${{ matrix.os }}, python-${{ matrix.python-version }}, Miniforge)
+    name: Coverage (${{ matrix.os }}, py${{ matrix.python-version }}, openmpi, Miniforge)
     runs-on: ${{ matrix.os }}-latest
     strategy:
       matrix:

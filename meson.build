@@ -1,7 +1,7 @@
 project(
   'numcosmo',
   ['c', 'fortran'],
-  version: '0.21.1',
+  version: '0.21.2',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.2.0',
   default_options: [
@@ -371,6 +371,16 @@ mpi_fortran_dep = dependency(
   language: 'fortran',
   required: false,
 )
+
+# MPICH is not found by the mpi dependency, so we need to check for it manually
+if not mpi_c_dep.found()
+  mpi_c_dep = dependency('mpich', required: false)
+endif
+
+# MPICH is not found by the mpi dependency, so we need to check for it manually
+if not mpi_fortran_dep.found()
+  mpi_fortran_dep = dependency('mpichf90', required: false)
+endif
 
 if mpi_c_dep.found()
   numcosmo_conf.set('HAVE_MPI', true)
