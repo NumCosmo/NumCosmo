@@ -263,7 +263,7 @@ nc_cluster_mass_lnrich_ext_class_init (NcClusterMassLnrichExtClass *klass)
                                                          NULL,
                                                          "Whether we are going to use ln(1+z) or z in the fits.",
                                                          TRUE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcClusterMassLnrichExt:MU:
