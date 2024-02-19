@@ -542,6 +542,11 @@ _nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
       const gdouble cs2   = c1 * c1 * cos2_phi + c2 * c2 * sin2_phi;
       const gdouble cm2   = c2 * c2 * cos2_phi + c1 * c1 * sin2_phi;
 
+
+      qgrw->eom_two_fluids.cos2phi    = cos2_phi;
+      qgrw->eom_two_fluids.sin2phi    = sin2_phi;
+      qgrw->eom_two_fluids.cs2    = c1 * c1 * cos2_phi + c2 * c2 * sin2_phi;
+      qgrw->eom_two_fluids.cm2    = c2 * c2 * cos2_phi + c1 * c1 * sin2_phi;
       qgrw->eom_two_fluids.m_zeta    = rhopp / (cs2 * absE * x3);
       qgrw->eom_two_fluids.m_s       = absE * x3 / (cm2 * rhopp * cos2_phi * sin2_phi);
       qgrw->eom_two_fluids.mnu2_zeta = rhopp * k * k / (x * gsl_pow_3 (absE));
