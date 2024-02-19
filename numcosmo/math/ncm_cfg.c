@@ -1418,6 +1418,21 @@ ncm_cfg_get_fullpath (const gchar *filename, ...)
 }
 
 /**
+ * ncm_cfg_get_fullpath_base:
+ *
+ * Gets the full path base directory.
+ *
+ * Returns: (transfer none): the full path base directory.
+ */
+const gchar *
+ncm_cfg_get_fullpath_base (void)
+{
+  g_assert (numcosmo_init);
+
+  return numcosmo_path;
+}
+
+/**
  * ncm_cfg_keyfile_to_arg:
  * @kfile: keyfile filename
  * @group_name: group name
