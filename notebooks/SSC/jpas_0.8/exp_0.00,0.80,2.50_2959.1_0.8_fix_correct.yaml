@@ -1,0 +1,316 @@
+model-set:
+  &S0 NcmMSet:
+    valid-map: true
+    model-array:
+    - &S1 NcHICosmoDEXcdm:
+        sparam-array: {}
+        reparam:
+          &S2 NcHICosmoDEReparamOk:
+            length: 8
+            params-desc:
+              2:
+                &S3 NcmSParam:
+                  name: 'Omegak'
+                  symbol: '\\Omega_{k0}'
+                  lower-bound: -0.29999999999999999
+                  upper-bound: 0.29999999999999999
+                  scale: 0.01
+                  absolute-tolerance: 0.0
+                  default-value: 0.0
+                  fit-type: 1
+            compat-type: 'NcHICosmoDE'
+        submodel-array:
+        - &S4 NcHIReionCamb:
+            sparam-array: {}
+            submodel-array: []
+            prec: 9.9999999999999995e-08
+            HII-HeII-reion-delta: 0.5
+            HeIII-reion-delta: 0.5
+            HII-HeII-reion-exponent: 1.5
+            HeII-reionized: true
+            z-re: 13.0
+            z-He-re: 3.5
+            z-re-fit: false
+            z-He-re-fit: false
+        - &S5 NcHIPrimPowerLaw:
+            sparam-array: {}
+            submodel-array: []
+            k-pivot: 0.050000000000000003
+            ln10e10ASA: 3.0274496981616061
+            T-SA-ratio: 0.20000000000000001
+            n-SA: 0.97419999999999995
+            n-T: 0.0
+            ln10e10ASA-fit: true
+            T-SA-ratio-fit: false
+            n-SA-fit: false
+            n-T-fit: false
+        H0: 67.810000000000002
+        Omegac: 0.26119999999999999
+        Omegax: 0.69010914771956156
+        Tgamma0: 2.7244999999999999
+        Yp: 0.23999999999999999
+        ENnu: 3.0459999999999998
+        Omegab: 0.048599999999999997
+        massnu-length: 0
+        Tnu-length: 0
+        munu-length: 0
+        gnu-length: 0
+        H0-fit: false
+        Omegac-fit: true
+        Omegax-fit: false
+        Tgamma0-fit: false
+        Yp-fit: false
+        ENnu-fit: false
+        Omegab-fit: false
+        massnu-fit: []
+        Tnu-fit: []
+        munu-fit: []
+        gnu-fit: []
+        w: -1.0
+        w-fit: true
+    - &S6 NcClusterMassNodist:
+        sparam-array: {}
+        submodel-array: []
+        lnM-min: 32.236191301916641
+        lnM-max: 36.841361487904734
+    - &S7 NcClusterRedshiftNodist:
+        sparam-array: {}
+        submodel-array: []
+        z-min: 0.0
+        z-max: 2.0
+    fmap: [
+      'NcHICosmo:Omegac',
+      'NcHICosmo:w',
+      'NcHIPrim:ln10e10ASA'
+      ]
+likelihood:
+  &S8 NcmLikelihood:
+    dataset:
+      &S9 NcmDataset:
+        bootstrap-type: 0
+        data-array:
+        - &S10 NcDataClusterNCountsGauss:
+            desc: 'NcDataClusterNCountsGauss'
+            long-desc: ''
+            init: true
+            n-points: 7
+            use-norma: true
+            mean:
+              &S11 NcmVector:
+                values: [
+                  9404.9925965170369,
+                  18637.038663431475,
+                  26873.523134664665,
+                  32674.06229143461,
+                  35760.238371026957,
+                  36537.025991966329,
+                  36376.475955083828
+                  ]
+            cov:
+              &S12 NcmMatrix:
+                values: [
+                  [
+                    10618.488412352242,
+                    -260.97588742234416,
+                    -77.529000698294709,
+                    -36.687488232798934,
+                    -11.250979849629781,
+                    -19.206688185990089,
+                    -15.060635626408255
+                  ],
+                  [
+                    -260.97588742234416,
+                    21108.208186278775,
+                    -554.62669540048989,
+                    -104.44375503793943,
+                    -33.74334716428082,
+                    -7.8121913445045834,
+                    -54.687985488884912
+                  ],
+                  [
+                    -77.529000698294709,
+                    -554.62669540048989,
+                    29505.320695781749,
+                    -818.30408283370775,
+                    -114.69826711217347,
+                    -74.216892989366983,
+                    -38.724147018990159
+                  ],
+                  [
+                    -36.687488232798934,
+                    -104.44375503793943,
+                    -818.30408283370775,
+                    35199.341551701473,
+                    -859.77778822054381,
+                    -179.76653671080754,
+                    -76.77135644919413
+                  ],
+                  [
+                    -11.250979849629781,
+                    -33.74334716428082,
+                    -114.69826711217347,
+                    -859.77778822054381,
+                    38493.384011947695,
+                    -876.9484117936654,
+                    -188.45328013593297
+                  ],
+                  [
+                    -19.206688185990089,
+                    -7.8121913445045834,
+                    -74.216892989366983,
+                    -179.76653671080754,
+                    -876.9484117936654,
+                    39737.797663785088,
+                    -806.64243563230877
+                  ],
+                  [
+                    -15.060635626408255,
+                    -54.687985488884912,
+                    -38.724147018990159,
+                    -76.77135644919413,
+                    -188.45328013593297,
+                    -806.64243563230877,
+                    38949.464882709683
+                  ]
+                  ]
+            z-obs:
+              &S13 NcmVector:
+                values: [
+                  0.10000000000000001,
+                  0.20000000000000001,
+                  0.30000000000000004,
+                  0.40000000000000002,
+                  0.5,
+                  0.59999999999999998,
+                  0.70000000000000007,
+                  0.80000000000000004
+                  ]
+            lnM-obs:
+              &S14 NcmVector:
+                values: [
+                  32.236191301916641,
+                  34.538776394910691
+                  ]
+            cluster-abundance:
+              &S15 NcClusterAbundance:
+                halo-mass-function:
+                  &S16 NcHaloMassFunction:
+                    distance:
+                      &S17 NcDistance:
+                        zf: 2.0
+                        compute-inv-comoving: false
+                    powerspectrum-filtered:
+                      &S18 NcmPowspecFilter:
+                        type: 0
+                        lnr0: 2.3025850929940468
+                        zi: 0.0
+                        zf: 5.0
+                        reltol: 0.001
+                        reltol-z: 9.9999999999999995e-07
+                        powerspectrum:
+                          &S19 NcPowspecMLTransfer:
+                            reltol: 1.4901161193847656e-08
+                            zi: 0.0
+                            zf: 5.0
+                            kmin: 1e-08
+                            kmax: 1000000.0
+                            transfer:
+                              &S20 NcTransferFuncEH:
+                                CCL-comp: false
+                            growth:
+                              &S21 NcGrowthFunc:
+                                reltol: 1e-13
+                                abstol: 0.0
+                                x-i: 1000000000000.0
+                    multiplicity:
+                      &S22 NcMultiplicityFuncTinker:
+                        mass-def: 1
+                        Delta: 200.0
+                    area: 0.90139340689084935
+                    prec: 9.9999999999999995e-07
+                    lnMi: 32.236191301916641
+                    lnMf: 36.841361487904734
+                    zi: 0.0
+                    zf: 2.0
+                    mf-lb: 1.0000000000000001e-30
+                mean-bias:
+                  &S23 NcHaloBiasTinker:
+                    mass-function:
+                      NcHaloMassFunction: *S16
+                    critical-delta: 1.6859999999999999
+                    B: 0.183
+                    b: 1.5
+                    c: 2.3999999999999999
+            has-ssc: true
+            s-matrix:
+              &S24 NcmMatrix:
+                values: [
+                  [
+                    6.0904988048623277e-06,
+                    -6.3270830304266075e-07,
+                    -1.209455361238518e-07,
+                    -4.3475522239109326e-08,
+                    -1.1187569522066762e-08,
+                    -1.7129820829936958e-08,
+                    -1.2640157999493345e-08
+                  ],
+                  [
+                    -6.3270830304266075e-07,
+                    2.5779920888537675e-06,
+                    -3.9881362740744194e-07,
+                    -5.7049634764506323e-08,
+                    -1.546596856106324e-08,
+                    -3.2115653914683956e-09,
+                    -2.1156542247335177e-08
+                  ],
+                  [
+                    -1.209455361238518e-07,
+                    -3.9881362740744194e-07,
+                    1.2513366101674027e-06,
+                    -2.8761240654008405e-07,
+                    -3.3827377224947526e-08,
+                    -1.9632209209686057e-08,
+                    -9.6395582292372501e-09
+                  ],
+                  [
+                    -4.3475522239109326e-08,
+                    -5.7049634764506323e-08,
+                    -2.8761240654008405e-07,
+                    7.3369357137783327e-07,
+                    -1.926188837086642e-07,
+                    -3.6122385774637972e-08,
+                    -1.4516959171810501e-08
+                  ],
+                  [
+                    -1.1187569522066762e-08,
+                    -1.546596856106324e-08,
+                    -3.3827377224947526e-08,
+                    -1.926188837086642e-07,
+                    5.2907407891081679e-07,
+                    -1.4786323129238635e-07,
+                    -2.9901895149111741e-08
+                  ],
+                  [
+                    -1.7129820829936958e-08,
+                    -3.2115653914683956e-09,
+                    -1.9632209209686057e-08,
+                    -3.6122385774637972e-08,
+                    -1.4786323129238635e-07,
+                    4.4305158788052624e-07,
+                    -1.1479712541595644e-07
+                  ],
+                  [
+                    -1.2640157999493345e-08,
+                    -2.1156542247335177e-08,
+                    -9.6395582292372501e-09,
+                    -1.4516959171810501e-08,
+                    -2.9901895149111741e-08,
+                    -1.1479712541595644e-07,
+                    3.5562558060197173e-07
+                  ]
+                  ]
+            resample-s-matrix:
+              NcmMatrix: *S24
+            fix-cov: true
+    priors-m2lnL: []
+    priors-f: []
