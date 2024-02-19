@@ -264,7 +264,7 @@ libplc = static_library(
     dependencies: [omp_c, cfitsio_dep, dl_dep],
     include_directories: [configinc, numcosmoinc, plc_inc],
     install: false,
-    gnu_symbol_visibility: 'protected',
+    gnu_symbol_visibility: 'default',
     c_args: plc_c_args,
     fortran_args: plc_fc_args,
 )
