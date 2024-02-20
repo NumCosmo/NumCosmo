@@ -39,18 +39,23 @@ class Planck18Types(str, Enum):
     TTTEEE = "TTTEEE"
 
 
-def create_cosmo_for_cmb() -> Nc.HICosmo:
+def create_cosmo_for_cmb(massive_nu: bool = False) -> Nc.HICosmo:
     """Create a cosmology for CMB experiments."""
-    cosmo = Nc.HICosmoDEXcdm(massnu_length=1)
+    if massive_nu:
+        cosmo = Nc.HICosmoDEXcdm(massnu_length=1)
+    else:
+        cosmo = Nc.HICosmoDEXcdm()
+
     cosmo.params_set_default_ftype()
     cosmo.omega_x2omega_k()
     cosmo.param_set_by_name("H0", 70.0)
     cosmo.param_set_by_name("Omegab", 0.05)
     cosmo.param_set_by_name("Omegac", 0.25)
 
-    cosmo.orig_param_set(Nc.HICosmoDESParams.ENNU, 2.0328)
-    param_id = cosmo.vparam_index(Nc.HICosmoDEVParams.M, 0)
-    cosmo.param_set_ftype(param_id, Ncm.ParamType.FIXED)
+    if massive_nu:
+        cosmo.orig_param_set(Nc.HICosmoDESParams.ENNU, 2.0328)
+        param_id = cosmo.vparam_index(Nc.HICosmoDEVParams.M, 0)
+        cosmo.param_set_ftype(param_id, Ncm.ParamType.FREE)
 
     cosmo.set_property("H0_fit", True)
     cosmo.set_property("Omegac_fit", True)
@@ -108,6 +113,10 @@ def generate_planck18_tt() -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     # Likelihood
 
     cbe_boltzmann = Nc.HIPertBoltzmannCBE.new()
+
+    b18_lowl_EE = Nc.DataPlanckLKL.full_new_id(
+        Nc.DataPlanckLKLType.BASELINE_18_LOWL_EE, cbe_boltzmann
+    )
     b18_lowl_TT = Nc.DataPlanckLKL.full_new_id(
         Nc.DataPlanckLKLType.BASELINE_18_LOWL_TT, cbe_boltzmann
     )
@@ -115,7 +124,7 @@ def generate_planck18_tt() -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
         Nc.DataPlanckLKLType.BASELINE_18_HIGHL_TT, cbe_boltzmann
     )
 
-    dset = Ncm.Dataset.new_array([b18_lowl_TT, b18_highl_TT])
+    dset = Ncm.Dataset.new_array([b18_lowl_EE, b18_lowl_TT, b18_highl_TT])
     likelihood = Ncm.Likelihood.new(dset)
     Nc.PlanckFICorTT.add_all_default18_priors(likelihood)
 
@@ -149,19 +158,20 @@ def generate_planck18_ttteee() -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     # Likelihood
 
     cbe_boltzmann = Nc.HIPertBoltzmannCBE.new()
-    b18_lowl_TT = Nc.DataPlanckLKL.full_new_id(
-        Nc.DataPlanckLKLType.BASELINE_18_LOWL_TT, cbe_boltzmann
-    )
 
     b18_lowl_EE = Nc.DataPlanckLKL.full_new_id(
         Nc.DataPlanckLKLType.BASELINE_18_LOWL_EE, cbe_boltzmann
+    )
+
+    b18_lowl_TT = Nc.DataPlanckLKL.full_new_id(
+        Nc.DataPlanckLKLType.BASELINE_18_LOWL_TT, cbe_boltzmann
     )
 
     b18_highl_TTTEEE = Nc.DataPlanckLKL.full_new_id(
         Nc.DataPlanckLKLType.BASELINE_18_HIGHL_TTTEEE, cbe_boltzmann
     )
 
-    dset = Ncm.Dataset.new_array([b18_lowl_TT, b18_lowl_EE, b18_highl_TTTEEE])
+    dset = Ncm.Dataset.new_array([b18_lowl_EE, b18_lowl_TT, b18_highl_TTTEEE])
     likelihood = Ncm.Likelihood.new(dset)
     Nc.PlanckFICorTTTEEE.add_all_default18_priors(likelihood)
 
@@ -187,6 +197,71 @@ def generate_planck18_ttteee() -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     experiment.set("model-set", mset)
 
     return experiment, mfunc_oa
+
+
+EXP_PARAMETERS: dict[str, dict[str, float]] = {
+    Planck18Types.TT: {
+        "NcHICosmo:H0": 66.86,
+        "NcHICosmo:Omegac": 0.12068 / 0.6686**2,
+        "NcHICosmo:Omegab": 0.022126 / 0.6686**2,
+        "NcHICosmo:w": -1.0,
+        "NcHIPrim:ln10e10ASA": 3.0413,
+        "NcHIPrim:n_SA": 0.9635,
+        "NcHIReion:z_re": 7.54,
+        "NcPlanckFI:A_cib_217": 48.5,
+        "NcPlanckFI:xi_sz_cib": 0.32,
+        "NcPlanckFI:A_sz": 7.03,
+        "NcPlanckFI:ps_A_100_100": 254.9,
+        "NcPlanckFI:ps_A_143_143": 49.8,
+        "NcPlanckFI:ps_A_143_217": 47.3,
+        "NcPlanckFI:ps_A_217_217": 119.9,
+        "NcPlanckFI:ksz_norm": 0.00,
+        "NcPlanckFI:gal545_A_100": 8.86,
+        "NcPlanckFI:gal545_A_143": 10.80,
+        "NcPlanckFI:gal545_A_143_217": 19.43,
+        "NcPlanckFI:gal545_A_217": 94.8,
+        "NcPlanckFI:calib_100T": 0.99965,
+        "NcPlanckFI:calib_217T": 0.99825,
+        "NcPlanckFI:A_planck": 1.00046,
+    },
+    Planck18Types.TTTEEE: {
+        "NcHICosmo:H0": 67.32,
+        "NcHICosmo:Omegac": 0.12010 / 0.6732**2,
+        "NcHICosmo:Omegab": 0.022377 / 0.6732**2,
+        "NcHICosmo:w": -1.0,
+        "NcHIPrim:ln10e10ASA": 3.0447,
+        "NcHIPrim:n_SA": 0.96589,
+        "NcHIReion:z_re": 7.68,
+        "NcPlanckFI:A_cib_217": 47.2,
+        "NcPlanckFI:xi_sz_cib": 0.42,
+        "NcPlanckFI:A_sz": 7.23,
+        "NcPlanckFI:ps_A_100_100": 250.5,
+        "NcPlanckFI:ps_A_143_143": 47.4,
+        "NcPlanckFI:ps_A_143_217": 47.3,
+        "NcPlanckFI:ps_A_217_217": 119.8,
+        "NcPlanckFI:ksz_norm": 0.01,
+        "NcPlanckFI:gal545_A_100": 8.86,
+        "NcPlanckFI:gal545_A_143": 11.10,
+        "NcPlanckFI:gal545_A_143_217": 19.83,
+        "NcPlanckFI:gal545_A_217": 95.1,
+        "NcPlanckFI:calib_100T": 0.99969,
+        "NcPlanckFI:calib_217T": 0.99816,
+        "NcPlanckFI:A_planck": 1.00061,
+        "NcPlanckFI:galf_TE_A_100": 0.1142,
+        "NcPlanckFI:galf_TE_A_100_143": 0.1345,
+        "NcPlanckFI:galf_TE_A_100_217": 0.482,
+        "NcPlanckFI:galf_TE_A_143": 0.224,
+        "NcPlanckFI:galf_TE_A_143_217": 0.664,
+        "NcPlanckFI:galf_TE_A_217": 2.081,
+    },
+}
+
+
+def _set_exp_params(mset: Ncm.MSet, exp_type: Planck18Types):
+    """Set the experiment parameters."""
+    for param, value in EXP_PARAMETERS[exp_type].items():
+        pi = mset.fparam_get_pi_by_name(param)
+        mset.param_set(pi.mid, pi.pid, value)
 
 
 @dataclasses.dataclass
@@ -218,6 +293,8 @@ class GeneratePlanck:
             exp, mfunc_array = generate_planck18_ttteee()
         else:
             raise ValueError(f"Invalid data type: {self.data_type}")
+
+        _set_exp_params(exp.peek("model-set"), self.data_type)
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
