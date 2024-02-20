@@ -33,6 +33,7 @@ from .run_fit import RunFit, RunTest
 from .fisher import ComputeTheoryVector, RunFisher, RunFisherBias
 from .esmcmc import RunMCMC
 from .catalog import AnalyzeMCMC, CalibrateCatalog, PlotCorner
+from .generate import GeneratePlanck
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
 app_run = typer.Typer(no_args_is_help=True, help="Run different statistical analyses.")
@@ -40,10 +41,12 @@ app_run_mcmc = typer.Typer(no_args_is_help=True, help="Run MCMC analyses.")
 app_cat = typer.Typer(
     no_args_is_help=True, help="MCMC catalog analysis and calibration."
 )
+app_generate = typer.Typer(no_args_is_help=True, help="Generate experiment files.")
 
 app.add_typer(app_run, name="run")
 app_run.add_typer(app_run_mcmc, name="mcmc")
 app.add_typer(app_cat, name="catalog")
+app.add_typer(app_generate, name="generate")
 
 CMDArg = TypedDict("CMDArg", {"no_args_is_help": bool, "help": str, "name": str})
 
@@ -110,6 +113,12 @@ CAT_PLOT_CORNER_CMD: CMDArg = {
     "help": "Plots the corner plot for a given catalog.",
 }
 
+GEN_PLANCK_CMD: CMDArg = {
+    "name": "planck18",
+    "no_args_is_help": True,
+    "help": "Generate Planck 2018 baseline experiments.",
+}
+
 # ------------------------------------------------------------------------------
 # Installing from-cosmosis command if COSMOSIS is installed and
 # all prerequisites are met.
@@ -132,3 +141,6 @@ app_run_mcmc.command(**RUN_MCMC_APES_CMD)(RunMCMC)
 app_cat.command(**CAT_ANALYZE_CMD)(AnalyzeMCMC)
 app_cat.command(**CAT_CALIBRATE_CMD)(CalibrateCatalog)
 app_cat.command(**CAT_PLOT_CORNER_CMD)(PlotCorner)
+# ------------------------------------------------------------------------------
+# Installing experiment generation subcommands
+app_generate.command(**GEN_PLANCK_CMD)(GeneratePlanck)
