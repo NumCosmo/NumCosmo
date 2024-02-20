@@ -74,6 +74,9 @@ nc_planck_fi_cor_ttteee_class_init (NcPlanckFICorTTTEEEClass *klass)
   ncm_model_class_set_name_nick (model_class, "Planck Foreground and Instument Model -- TT, TE, EE", "PlanckFICorTTTEEE");
   ncm_model_class_add_params (model_class, NC_PLANCK_FI_COR_TTTEEE_SPARAM_LEN - NC_PLANCK_FI_COR_TT_SPARAM_LEN, 0, PROP_SIZE);
 
+  /*******************************************************************************************************************************************************/
+  /* EE modes are not usually included in high-l likelihood, thus the parameters below are kept fixed. */
+  /*******************************************************************************************************************************************************/
   ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100, "A^{\\mathrm{dust}EE}_{100}", "galf_EE_A_100",
                               0.0, 10.0, 1.0,
                               NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_100,
@@ -103,30 +106,33 @@ nc_planck_fi_cor_ttteee_class_init (NcPlanckFICorTTTEEEClass *klass)
                               NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_index,
                               NCM_PARAM_TYPE_FIXED);
 
+  /*******************************************************************************************************************************************************/
+  /* TE modes */
+  /*******************************************************************************************************************************************************/
   ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_100, "A^{\\mathrm{dust}TE}_{100}", "galf_TE_A_100",
                               0.0, 10.0, 1.0,
                               NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_100,
-                              NCM_PARAM_TYPE_FIXED);
+                              NCM_PARAM_TYPE_FREE);
   ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_100_143, "A^{\\mathrm{dust}TE}_{100 \\times 143}", "galf_TE_A_100_143",
                               0.0, 10.0, 1.0,
                               NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_100_143,
-                              NCM_PARAM_TYPE_FIXED);
+                              NCM_PARAM_TYPE_FREE);
   ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_100_217, "A^{\\mathrm{dust}TE}_{100 \\times 217}", "galf_TE_A_100_217",
                               0.0, 10.0, 1.0,
                               NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_100_217,
-                              NCM_PARAM_TYPE_FIXED);
+                              NCM_PARAM_TYPE_FREE);
   ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_143, "A^{\\mathrm{dust}TE}_{143}", "galf_TE_A_143",
                               0.0, 10.0, 1.0,
                               NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_143,
-                              NCM_PARAM_TYPE_FIXED);
+                              NCM_PARAM_TYPE_FREE);
   ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_143_217, "A^{\\mathrm{dust}TE}_{143 \\times 217}", "galf_TE_A_143_217",
                               0.0, 10.0, 1.0,
                               NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_143_217,
-                              NCM_PARAM_TYPE_FIXED);
+                              NCM_PARAM_TYPE_FREE);
   ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_217, "A^{\\mathrm{dust}TE}_{217}", "galf_TE_A_217",
                               0.0, 10.0, 1.0,
                               NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_A_217,
-                              NCM_PARAM_TYPE_FIXED);
+                              NCM_PARAM_TYPE_FREE);
   ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TTTEEE_galf_TE_index, "n^{\\mathrm{dust}TE}", "galf_TE_index",
                               -10.0, 10.0, 0.1,
                               NC_PLANCK_FI_DEFAULT_PARAMS_ABSTOL, NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_TE_index,
