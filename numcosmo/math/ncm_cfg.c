@@ -89,25 +89,26 @@
 #include "math/ncm_fftlog_sbessel_jljm.h"
 #include "nc_hicosmo.h"
 #include "nc_cbe_precision.h"
-#include "model/nc_hicosmo_qconst.h"
-#include "model/nc_hicosmo_qlinear.h"
-#include "model/nc_hicosmo_qspline.h"
-#include "model/nc_hicosmo_qrbf.h"
-#include "model/nc_hicosmo_lcdm.h"
-#include "model/nc_hicosmo_gcg.h"
-#include "model/nc_hicosmo_idem2.h"
-#include "model/nc_hicosmo_de_xcdm.h"
-#include "model/nc_hicosmo_de_wspline.h"
+#include "model/nc_acosmo_lowz.h"
 #include "model/nc_hicosmo_de_cpl.h"
 #include "model/nc_hicosmo_de_jbp.h"
-#include "model/nc_hicosmo_qgrw.h"
-#include "model/nc_hicosmo_Vexp.h"
-#include "model/nc_hicosmo_de_reparam_ok.h"
 #include "model/nc_hicosmo_de_reparam_cmb.h"
-#include "model/nc_hiprim_power_law.h"
+#include "model/nc_hicosmo_de_reparam_ok.h"
+#include "model/nc_hicosmo_de_wspline.h"
+#include "model/nc_hicosmo_de_xcdm.h"
+#include "model/nc_hicosmo_gcg.h"
+#include "model/nc_hicosmo_idem2.h"
+#include "model/nc_hicosmo_lcdm.h"
+#include "model/nc_hicosmo_qconst.h"
+#include "model/nc_hicosmo_qgrw.h"
+#include "model/nc_hicosmo_qlinear.h"
+#include "model/nc_hicosmo_qrbf.h"
+#include "model/nc_hicosmo_qspline.h"
+#include "model/nc_hicosmo_Vexp.h"
 #include "model/nc_hiprim_atan.h"
-#include "model/nc_hiprim_expc.h"
 #include "model/nc_hiprim_bpl.h"
+#include "model/nc_hiprim_expc.h"
+#include "model/nc_hiprim_power_law.h"
 #include "model/nc_hiprim_sbpl.h"
 #include "lss/nc_window_tophat.h"
 #include "lss/nc_window_gaussian.h"
@@ -181,25 +182,26 @@
 #include "nc_planck_fi_cor_ttteee.h"
 #include "perturbations/nc_hipert_boltzmann_cbe.h"
 #include "data/nc_data_bao_a.h"
+#include "data/nc_data_bao_dhr_dar.h"
+#include "data/nc_data_bao_dmr_hr.h"
+#include "data/nc_data_bao_dtr_dhr.h"
 #include "data/nc_data_bao_dv.h"
 #include "data/nc_data_bao_dvdv.h"
-#include "data/nc_data_bao_rdv.h"
-#include "data/nc_data_bao_empirical_fit.h"
 #include "data/nc_data_bao_empirical_fit_2d.h"
-#include "data/nc_data_bao_dhr_dar.h"
-#include "data/nc_data_bao_dtr_dhr.h"
-#include "data/nc_data_bao_dmr_hr.h"
-#include "data/nc_data_dist_mu.h"
-#include "data/nc_data_cluster_pseudo_counts.h"
+#include "data/nc_data_bao_empirical_fit.h"
+#include "data/nc_data_bao_rdv.h"
 #include "data/nc_data_cluster_ncount.h"
+#include "data/nc_data_cluster_pseudo_counts.h"
 #include "data/nc_data_cluster_wl.h"
-#include "data/nc_data_reduced_shear_cluster_mass.h"
-#include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
+#include "data/nc_data_cmb_shift_param.h"
+#include "data/nc_data_dist_mu.h"
+#include "data/nc_data_galaxy_lowz.h"
 #include "data/nc_data_hubble.h"
+#include "data/nc_data_planck_lkl.h"
+#include "data/nc_data_reduced_shear_cluster_mass.h"
 #include "data/nc_data_snia_cov.h"
 #include "data/nc_data_xcor.h"
-#include "data/nc_data_planck_lkl.h"
 #include "xcor/nc_xcor.h"
 #include "xcor/nc_xcor_AB.h"
 #include "xcor/nc_xcor_limber_kernel.h"
@@ -574,6 +576,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_STATS_DIST1D_EPDF);
   ncm_cfg_register_obj (NCM_TYPE_STATS_DIST1D_SPLINE);
 
+  ncm_cfg_register_obj (NC_TYPE_ACOSMO_LOWZ);
+
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QCONST);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QLINEAR);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE);
@@ -712,6 +716,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DHR_DAR);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DTR_DHR);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DMR_HR);
+
+  ncm_cfg_register_obj (NC_TYPE_DATA_GALAXY_LOWZ);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_DIST_MU);
 
