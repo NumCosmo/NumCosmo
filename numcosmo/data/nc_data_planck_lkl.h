@@ -37,61 +37,47 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_DATA_PLANCK_LKL             (nc_data_planck_lkl_get_type ())
-#define NC_DATA_PLANCK_LKL(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_PLANCK_LKL, NcDataPlanckLKL))
-#define NC_DATA_PLANCK_LKL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_PLANCK_LKL, NcDataPlanckLKLClass))
-#define NC_IS_DATA_PLANCK_LKL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_DATA_PLANCK_LKL))
-#define NC_IS_DATA_PLANCK_LKL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_PLANCK_LKL))
-#define NC_DATA_PLANCK_LKL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_PLANCK_LKL, NcDataPlanckLKLClass))
+#define NC_TYPE_DATA_PLANCK_LKL (nc_data_planck_lkl_get_type ())
 
-typedef struct _NcDataPlanckLKLClass NcDataPlanckLKLClass;
-typedef struct _NcDataPlanckLKL NcDataPlanckLKL;
+G_DECLARE_FINAL_TYPE (NcDataPlanckLKL, nc_data_planck_lkl, NC, DATA_PLANCK_LKL, NcmData)
 
-struct _NcDataPlanckLKLClass
+/**
+ * NcDataPlanckLKLType:
+ * @NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LOWL_TT: Planck 2018 baseline low-ell likelihood for TT.
+ * @NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LOWL_EE: Planck 2018 baseline low-ell likelihood for EE.
+ * @NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LOWL_BB: Planck 2018 baseline low-ell likelihood for BB.
+ * @NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LOWL_EEBB: Planck 2018 baseline low-ell likelihood for TE.
+ * @NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TT: Planck 2018 baseline high-ell likelihood for TT.
+ * @NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TTTEEE: Planck 2018 baseline high-ell likelihood for TT, TE and EE.
+ * @NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TT_LITE: Planck 2018 baseline high-ell likelihood for TT (lite).
+ * @NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TTTEEE_LITE: Planck 2018 baseline high-ell likelihood for TT, TE and EE (lite).
+ *
+ * The Planck likelihood types.
+ *
+ */
+typedef enum _NcDataPlanckLKLType
 {
-  /*< private >*/
-  NcmDataClass parent_class;
-};
-
-struct _NcDataPlanckLKL
-{
-  /*< private >*/
-  NcmData parent_instance;
-  NcHIPertBoltzmann *pb;
-  gchar *filename;
-  gpointer obj;
-  gboolean is_lensing;
-  guint nparams;
-  guint ndata_entry;
-  gchar **pnames;
-  gchar *chksum;
-	gdouble check_m2lnL;
-  NcDataCMBDataType cmb_data;
-  NcmVector *data_params;
-  NcmVector *check_data_params;
-  NcmVector *data_TT;
-  NcmVector *data_EE;
-  NcmVector *data_BB;
-  NcmVector *data_TE;
-  NcmVector *data_TB;
-  NcmVector *data_EB;
-  NcmVector *data_PHIPHI;
-  NcmVector *params;
-  NcmModelCtrl *pfi_ctrl;
-  NcmModelCtrl *cosmo_ctrl;
-  gdouble cm2lnL;
-  gdouble A_planck;
-  GArray *param_map;
-};
-
-GType nc_data_planck_lkl_get_type (void) G_GNUC_CONST;
+  NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LOWL_TT,
+  NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LOWL_EE,
+  NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LOWL_BB,
+  NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LOWL_EEBB,
+  NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TT,
+  NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TTTEEE,
+  NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TT_LITE,
+  NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TTTEEE_LITE,
+  /* < private > */
+  NC_DATA_PLANCK_LKL_TYPE_LENGTH,
+} NcDataPlanckLKLType;
 
 NcDataPlanckLKL *nc_data_planck_lkl_new (const gchar *filename);
 NcDataPlanckLKL *nc_data_planck_lkl_full_new (const gchar *filename, NcHIPertBoltzmann *pb);
+NcDataPlanckLKL *nc_data_planck_lkl_full_new_id (NcDataPlanckLKLType id, NcHIPertBoltzmann *pb);
+
 const gchar *nc_data_planck_lkl_get_param_name (NcDataPlanckLKL *plik, guint i);
 gchar **nc_data_planck_lkl_get_param_names (NcDataPlanckLKL *plik);
 
 void nc_data_planck_lkl_set_hipert_boltzmann (NcDataPlanckLKL *plik, NcHIPertBoltzmann *pb);
+void nc_data_planck_lkl_download_baseline (const gchar *dir);
 
 G_END_DECLS
 

@@ -56,7 +56,7 @@ struct _NcHIPertBoltzmannCBE
   /*< private >*/
   NcHIPertBoltzmann parent_instance;
   NcCBE *cbe;
-	NcmVector *PHIPHI_Cls;
+  NcmVector *PHIPHI_Cls;
   NcmVector *TT_Cls;
   NcmVector *EE_Cls;
   NcmVector *BB_Cls;
@@ -73,6 +73,9 @@ NcHIPertBoltzmannCBE *nc_hipert_boltzmann_cbe_ref (NcHIPertBoltzmannCBE *boltzma
 void nc_hipert_boltzmann_cbe_free (NcHIPertBoltzmannCBE *boltzmann_cbe);
 void nc_hipert_boltzmann_cbe_clear (NcHIPertBoltzmannCBE **boltzmann_cbe);
 
+NcCBE *nc_hipert_boltzmann_cbe_peek_cbe (NcHIPertBoltzmannCBE *boltzmann_cbe);
+
 G_END_DECLS
 
 #endif /* _NC_HIPERT_BOLTZMANN_CBE_H_ */
+
