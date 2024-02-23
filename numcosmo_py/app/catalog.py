@@ -166,7 +166,8 @@ class AnalyzeMCMC(LoadCatalog):
             tau_row.append("Autocorrelation time (tau)")
             tau_row.append("NA")
             tau_row.append(
-                f"{tau_vec.get_max():.0f} ({mcat.col_full_name(tau_vec.get_max_index())})"
+                f"{tau_vec.get_max():.0f} "
+                f"({mcat.col_full_name(tau_vec.get_max_index())})"
             )
             tau_row.append("NA")
             tau_row.append(f"{tau_vec.get_max():.3f}")
@@ -230,7 +231,8 @@ class AnalyzeMCMC(LoadCatalog):
             ess_row.append("Effective Sample Size (ESS) (ensembles, points)")
             ess_row.append(f"{ess_best_cutoff}")
             ess_row.append(
-                f"{ess_vec.get(ess_worst_index):.0f} ({mcat.col_full_name(ess_worst_index)})"
+                f"{ess_vec.get(ess_worst_index):.0f} "
+                f"({mcat.col_full_name(ess_worst_index)})"
             )
             ess_row.append(f"{ess_worst_order}")
             ess_row.append(f"{ess_worst_ess:.0f}")
@@ -263,7 +265,8 @@ class AnalyzeMCMC(LoadCatalog):
             else:
                 hw_row.append("All parameters fail")
             hw_row.append(
-                f"{(1.0 - hw_worst_pvalue) * 100.0:.1f}% ({mcat.col_full_name(hw_worst_index)})"
+                f"{(1.0 - hw_worst_pvalue) * 100.0:.1f}% "
+                f"({mcat.col_full_name(hw_worst_index)})"
             )
             hw_row.append(f"{hw_worst_order}")
             hw_row.append(f"{(1.0 - hw_worst_pvalue) * 100.0:.1f}%")

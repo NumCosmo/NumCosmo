@@ -25,20 +25,6 @@ from . import numcosmo_class
 
 # Default values for redshift bin, cosmo parameters etc
 pi = math.pi
-default_zstakes = [0.9, 1]
-default_cosmo_params = {
-    "omega_b": 0.022,
-    "omega_cdm": 0.12,
-    "H0": 67.0,
-    "n_s": 0.96,
-    "A_s": 2.035e-9,
-    "output": "mPk",
-}
-AngPow_cosmo_params = copy.deepcopy(default_cosmo_params)
-AngPow_cosmo_params["z_max_pk"] = 0
-AngPow_cosmo_params["P_k_max_h/Mpc"] = 20
-
-# MAIN WRAPPER
 
 
 def Sij(
@@ -181,7 +167,8 @@ def Sij_fullsky(
         for jbin in range(ibin, nbins):
             U2 = Uarr[jbin, :] / Inorm[jbin]
             integrand = kk**2 * Pk * U1 * U2
-            # Cl_zero[ibin,jbin] = 2/pi * integrate.simps(integrand,kk)     #linear integration
+            # Cl_zero[ibin,jbin] = 2/pi * integrate.simps(integrand,kk)
+            # linear integration
             Cl_zero[ibin, jbin] = (2 / pi) * integrate.simps(
                 integrand * kk, logk
             )  # log integration
@@ -215,7 +202,8 @@ def Sij_alt_fullsky(
 
     keq = 0.02 / h  # Equality matter radiation in 1/Mpc (more or less)
     klogwidth = 10  # Factor of width of the integration range.
-    # 10 seems ok ; going higher needs to increase nk_fft to reach convergence (fine cancellation issue noted in Lacasa & Grain)
+    # 10 seems ok ; going higher needs to increase nk_fft to reach convergence
+    # (fine cancellation issue noted in Lacasa & Grain)
     kmin = min(keq, 1.0 / comov_dist.max()) / klogwidth
     kmax = max(keq, 1.0 / comov_dist.min()) * klogwidth
     nk_fft = (
@@ -320,7 +308,6 @@ def Sij_psky(
     ell = np.arange(nell)  # 0..lmax
 
     # Get cosmology, comoving distances etc from dedicated auxiliary routine
-    # cosmo, h, comov_dist, dcomov_dist, growth = get_cosmo(z_arr, cosmo_params=cosmo_params, cosmo_Class=cosmo_Class)
     h, comov_dist, dcomov_dist, growth, psml = numcosmo_class.get_numcosmo(z_arr, cosmo)
     psml.prepare(cosmo)
     # Get element of z integration, depending on kernel convention
@@ -341,7 +328,8 @@ def Sij_psky(
         nk = (
             2**precision
         )  # 10 seems to be enough. Increase to test precision, reduce to speed up.
-        # kk          = np.linspace(kmin,kmax,num=nk)                   #linear grid on k
+        # kk          = np.linspace(kmin,kmax,num=nk)
+        # linear grid on k
         logkmin = np.log(kmin)
         logkmax = np.log(kmax)
         logk = np.linspace(logkmin, logkmax, num=nk)
@@ -363,7 +351,8 @@ def Sij_psky(
             for jbin in range(ibin, nbins):
                 U2 = Uarr[jbin, :] / Inorm[jbin]
                 integrand = kk**2 * Pk * U1 * U2
-                # Cl_zero[ibin,jbin] = 2/pi * integrate.simps(integrand,kk)     #linear integration
+                # Cl_zero[ibin,jbin] = 2/pi * integrate.simps(integrand,kk)
+                # linear integration
                 Cl_zero[ibin, jbin] = (
                     2 / pi * integrate.simps(integrand * kk, logk)
                 )  # log integration
@@ -400,7 +389,8 @@ def Sij_psky(
                 integrand = dX_dz * kernels[ibin, :] ** order * growth * bessel_jl
                 Uarr[ibin, ik, ll] = integrate.simps(integrand, z_arr)
 
-    # Compute Cl(X,Y) = 2/pi \int kk^2 dkk P(kk) U(i;kk,ell)/I_\mathrm{norm}(i) U(j;kk,ell)/I_\mathrm{norm}(j)
+    # Compute Cl(X,Y) = 2/pi \int kk^2 dkk P(kk) U(i;kk,ell)/
+    # I_\mathrm{norm}(i) U(j;kk,ell)/I_\mathrm{norm}(j)
     Cl_XY = np.zeros((nbins, nbins, nell))
     for ll in ell:
         # For i<=j
@@ -409,7 +399,8 @@ def Sij_psky(
             for jbin in range(ibin, nbins):
                 U2 = Uarr[jbin, :, ll] / Inorm[jbin]
                 integrand = kk**2 * Pk * U1 * U2
-                # Cl_XY[ibin,jbin,ll] = 2/pi * integrate.simps(integrand,kk)     #linear integration
+                # Cl_XY[ibin,jbin,ll] = 2/pi * integrate.simps(integrand,kk)
+                # linear integration
                 Cl_XY[ibin, jbin, ll] = (
                     2 / pi * integrate.simps(integrand * kk, logk)
                 )  # log integration
@@ -609,7 +600,7 @@ def get_mask_quantities(clmask=None, mask=None, mask2=None, verbose=False):
     # Compute fsky from the mask
     fsky = np.sqrt(cl_mask[0] / (4 * np.pi))
     if verbose:
-        print("f_sky = %.4f" % (fsky))
+        print(f"f_sky = {fsky:.4f}")
 
     return ell, cl_mask, fsky
 
@@ -670,8 +661,8 @@ def test_zw(z_arr, kernels):
 
 # test_mask
 def test_mask(mask, clmask, mask2=None):
-    """
-    Assert that either the mask or its Cl has been provided. If two masks are provided, check that they have the same resolution.
+    """Assert that either the mask or its Cl has been provided. If two masks are
+    provided, check that they have the same resolution.
     """
     assert (mask is not None) or (
         clmask is not None
