@@ -462,25 +462,34 @@ static void
 nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
 {
   NcDataClusterWLInt *lh_int = NC_DATA_CLUSTER_WL_INT (intnd);
+  GArray *zarr               = ncm_vector_dup_array (x);
+  GArray *rarr               = g_array_new_take (&lh_int->data.r, 1, FALSE, sizeof (gdouble));
+  GArray *Psinteg            = nc_galaxy_sd_shape_integ (lh_int->data.s_dist,
+                                                         lh_int->data.cosmo,
+                                                         lh_int->data.dp,
+                                                         lh_int->data.smd,
+                                                         lh_int->data.z_cluster,
+                                                         rarr,
+                                                         zarr,
+                                                         lh_int->data.et,
+                                                         lh_int->data.ex);
   guint i;
+
+
 
   for (i = 0; i < npoints; i++)
   {
     const gdouble z = ncm_vector_get (x, i);
     gdouble res     = nc_galaxy_sd_position_integ (lh_int->data.rz_dist, lh_int->data.r, z) *
                       nc_galaxy_sd_z_proxy_integ (lh_int->data.zp_dist, z, lh_int->data.zp) *
-                      nc_galaxy_sd_shape_integ (lh_int->data.s_dist,
-                                                lh_int->data.cosmo,
-                                                lh_int->data.dp,
-                                                lh_int->data.smd,
-                                                lh_int->data.z_cluster,
-                                                lh_int->data.r,
-                                                z,
-                                                lh_int->data.et,
-                                                lh_int->data.ex);
+                      g_array_index (Psinteg, gdouble, i);
 
     ncm_vector_set (fval, i, res);
   }
+
+  g_array_free (zarr, TRUE);
+  g_array_free (rarr, FALSE);
+  g_array_free (Psinteg, TRUE);
 }
 
 static void
