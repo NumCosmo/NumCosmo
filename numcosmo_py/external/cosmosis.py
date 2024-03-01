@@ -31,6 +31,7 @@ from pathlib import Path
 from enum import Enum
 
 from cosmosis.runtime.config import Inifile
+import cosmosis.runtime.logs
 from cosmosis.runtime.parameter import Parameter
 from cosmosis.runtime.prior import Prior, GaussianPrior, DeltaFunctionPrior
 from cosmosis.runtime.pipeline import (
@@ -284,6 +285,7 @@ def create_numcosmo_mapping(
     nonlin_matter_ps: NonLinearMatterPowerSpectrum = NonLinearMatterPowerSpectrum.NONE,
     distance_max_z: float = 10.0,
     require_nonlinear_pk: bool = False,
+    reltol: float = 1.0e-4,
 ) -> MappingNumCosmo:
     """Creates a NumCosmo mapping to be used in the likelihoods.
     converted from Cosmosis."""
@@ -291,16 +293,22 @@ def create_numcosmo_mapping(
     ps_ml = None
     ps_mnl = None
     dist = Nc.Distance.new(distance_max_z)
-    # dist.comoving_distance_spline.set_reltol(1.0e-5)
+    dist.comoving_distance_spline.set_reltol(reltol)
 
     if matter_ps == LinearMatterPowerSpectrum.BBKS:
         transfer_bbks = Nc.TransferFuncBBKS.new()
         ps_ml = Nc.PowspecMLTransfer.new(transfer_bbks)
+        ps_ml.set_reltol_spline(reltol)
+        ps_ml.peek_gf().set_reltol(reltol)
     elif matter_ps == LinearMatterPowerSpectrum.EISENSTEIN_HU:
         transfer_eh = Nc.TransferFuncEH.new()
         ps_ml = Nc.PowspecMLTransfer.new(transfer_eh)
+        ps_ml.set_reltol_spline(reltol)
+        ps_ml.peek_gf().set_reltol(reltol)
     elif matter_ps == LinearMatterPowerSpectrum.CLASS:
         ps_ml = Nc.PowspecMLCBE.new()
+        ps_ml.peek_cbe().use_ppf(True)
+        ps_ml.set_reltol_spline(reltol)
 
     if nonlin_matter_ps == NonLinearMatterPowerSpectrum.HALOFIT:
         if ps_ml is None:
@@ -308,7 +316,8 @@ def create_numcosmo_mapping(
                 "Non-linear matter power spectrum is HALOFIT but linear matter"
                 " power spectrum is not set."
             )
-        ps_mnl = Nc.PowspecMNLHaloFit.new(ps_ml, 3.0, 1.0e-5)
+        ps_mnl = Nc.PowspecMNLHaloFit.new(ps_ml, 3.0, reltol)
+        ps_ml.set_reltol_spline(reltol)
 
     return MappingNumCosmo(
         p_ml=ps_ml,
@@ -397,6 +406,7 @@ def convert_cosmology(
 def convert_likelihoods(
     inifile: Path,
     mapping: Optional[MappingNumCosmo] = None,
+    mute_cosmosis: bool = False,
 ) -> Tuple[Ncm.ObjDictStr, Ncm.MSet, Ncm.Likelihood]:
     """Converts the likelihoods from a Cosmosis ini file to NumCosmo
     likelihoods.
@@ -407,6 +417,8 @@ def convert_likelihoods(
 
     # Loads the ini file.
     ini = Inifile(inifile)
+    if mute_cosmosis:
+        cosmosis.runtime.logs.set_verbosity("muted")
 
     # Converts the ini file to a datablock.
     relevant_sections = ini.sections()

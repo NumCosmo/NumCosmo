@@ -30,7 +30,10 @@ import pytest
 from typer.testing import CliRunner
 
 from numcosmo_py import Ncm
-from numcosmo_py.app import app, IniSampler, Parallezation
+from numcosmo_py.app import app
+from numcosmo_py.app.esmcmc import IniSampler, Parallezation
+from numcosmo_py.app.generate import Planck18Types
+from numcosmo_py.interpolation.stats_dist import CrossValidationMethod
 from numcosmo_py.sampling import FitRunner, FitGradType, FitRunMessages, FisherType
 from numcosmo_py.interpolation.stats_dist import (
     InterpolationMethod,
@@ -109,6 +112,22 @@ def fixture_interpolation_method(request) -> str:
 )
 def fixture_interpolation_kernel(request) -> str:
     """Returns interpolation kernel"""
+
+    return request.param
+
+
+@pytest.fixture(
+    name="calibration_method", params=[e.value for e in CrossValidationMethod]
+)
+def fixture_calibration_method(request) -> str:
+    """Returns calibration method"""
+
+    return request.param
+
+
+@pytest.fixture(name="planck18_type", params=[e.value for e in Planck18Types])
+def fixture_planck18_type(request) -> str:
+    """Returns planck18 type"""
 
     return request.param
 
@@ -598,11 +617,75 @@ def test_run_mcmc_apes_analyze(simple_experiment):
     result = runner.invoke(
         app,
         [
+            "catalog",
             "analyze",
             filename.as_posix(),
             output.absolute().with_suffix(".mcmc.fits").as_posix(),
         ],
     )
+
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mcmc_apes_calibrate(simple_experiment, calibration_method):
+    """Runs a MCMC analysis using APES."""
+
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+
+    assert output.absolute().with_suffix(".mcmc.fits").exists()
+    if result.exit_code != 0:
+        raise result.exception
+
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "calibrate",
+            filename.as_posix(),
+            output.absolute().with_suffix(".mcmc.fits").as_posix(),
+            "--cv-method",
+            calibration_method,
+        ],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_generate_planck(tmp_path, planck18_type):
+    """Test run theory vector."""
+
+    tmp_file = tmp_path / "planck_generated.yaml"
+
+    result = runner.invoke(
+        app,
+        ["generate", "planck18", tmp_file.as_posix(), "--data-type", planck18_type],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_generate_planck_test(tmp_path, planck18_type):
+    """Test run theory vector."""
+
+    tmp_file = tmp_path / "planck_generated.yaml"
+
+    result = runner.invoke(
+        app,
+        ["generate", "planck18", tmp_file.as_posix(), "--data-type", planck18_type],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception
+
+    result = runner.invoke(app, ["run", "test", tmp_file.as_posix()])
 
     if result.exit_code != 0:
         raise result.exception
