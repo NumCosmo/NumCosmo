@@ -63,6 +63,7 @@ typedef struct _NcGalaxySDPositionLSSTSRDPrivate
   gdouble r_ub;
   gdouble r_lb2;
   gdouble r_ub2;
+  gdouble y0;
 } NcGalaxySDPositionLSSTSRDPrivate;
 
 struct _NcGalaxySDPositionLSSTSRD
@@ -90,6 +91,7 @@ nc_galaxy_sd_position_lsst_srd_init (NcGalaxySDPositionLSSTSRD *gsdplsst)
   self->r_ub   = 0.0;
   self->r_lb2  = 0.0;
   self->r_ub2  = 0.0;
+  self->y0     = 0.0;
 }
 
 static void
@@ -216,11 +218,10 @@ _nc_galaxy_sd_position_lsst_srd_integ (NcGalaxySDPosition *gsdp, const gdouble r
   const gdouble alpha                           = ALPHA;
   const gdouble beta                            = BETA;
   const gdouble z0                              = Z0;
-  const gdouble y0                              = pow (z0, alpha);
-  const gdouble gamma_a                         = (1.0 + beta) / alpha;
   const gdouble y                               = pow (z, alpha);
 
-  return gsl_ran_gamma_pdf (y, gamma_a, y0) * alpha * y / z * r * self->r_norm;
+  return pow (z, beta) * exp (-(y / self->y0)) * r * self->r_norm;
+  // return gsl_ran_gamma_pdf (y, gamma_a, y0) * alpha * y / z * r * self->r_norm;
 }
 
 static void
@@ -228,11 +229,13 @@ _nc_galaxy_sd_position_lsst_srd_set_z_lim (NcGalaxySDPosition *gsdp, gdouble z_m
 {
   NcGalaxySDPositionLSSTSRD *gsdplsst           = NC_GALAXY_SD_POSITION_LSST_SRD (gsdp);
   NcGalaxySDPositionLSSTSRDPrivate * const self = nc_galaxy_sd_position_lsst_srd_get_instance_private (gsdplsst);
+  const gdouble alpha = ALPHA;
 
   g_assert_cmpfloat (z_min, <, z_max);
 
   self->z_lb = z_min;
   self->z_ub = z_max;
+  self->y0   = pow (Z0, alpha);
 }
 
 static void
