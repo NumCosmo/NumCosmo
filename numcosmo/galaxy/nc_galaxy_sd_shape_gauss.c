@@ -125,7 +125,7 @@ _nc_galaxy_sd_shape_gauss_finalize (GObject *object)
 }
 
 static void _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, gdouble r, gdouble z, gdouble *et, gdouble *ex);
-static GArray *_nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, GArray *rarr, GArray *zarr, const gdouble et, const gdouble ex);
+static gdouble _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const gdouble r, const gdouble z, const gdouble et, const gdouble ex);
 
 static void
 nc_galaxy_sd_shape_gauss_class_init (NcGalaxySDShapeGaussClass *klass)
@@ -178,28 +178,22 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
   *ex = cimag (e_obs);
 }
 
-static GArray *
-_nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, GArray *rarr, GArray *zarr, const gdouble et, const gdouble ex)
+static gdouble
+_nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const gdouble r, const gdouble z, const gdouble et, const gdouble ex)
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = gsdsgauss->priv;
-  GArray *gtarr                            = nc_wl_surface_mass_density_reduced_shear_array (smd, dp, cosmo, rarr, 1, 1, zarr, z_cluster, z_cluster);
-  GArray *res                              = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), gtarr->len);
   complex double e_obs                     = et + I * ex;
   complex double e_source                  = e_obs;
-  guint i;
+  complex double gt                        = 0.0;
 
-  for (i = 0; i < gtarr->len; i++)
+  if (z > z_cluster)
   {
-    complex double gt = g_array_index (gtarr, gdouble, i);
+    gt       = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r, z, z_cluster, z_cluster);
     e_source = (e_obs - gt) / (1.0 - conj (gt) * e_obs);
-
-    g_array_index (res, gdouble, i) = exp (-0.5 * gsl_pow_2 (cabs (e_source) / self->sigma)) / (2.0 * M_PI * self->sigma * self->sigma);
   }
 
-  g_array_free (gtarr, TRUE);
-
-  return res;
+  return exp (-0.5 * gsl_pow_2 (cabs (e_source) / self->sigma)) / (2.0 * M_PI * self->sigma * self->sigma);
 }
 
 /**

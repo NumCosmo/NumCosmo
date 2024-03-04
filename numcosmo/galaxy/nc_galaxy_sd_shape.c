@@ -72,12 +72,12 @@ _nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityP
   g_error ("_nc_galaxy_sd_shape_gen: method not implemented.");
 }
 
-static GArray *
-_nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, GArray *rarr, GArray *zarr, const gdouble et, const gdouble ex)
+static gdouble
+_nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const gdouble r, const gdouble z, const gdouble et, const gdouble ex)
 {
   g_error ("_nc_galaxy_sd_shape_integ: method not implemented.");
 
-  return NULL;
+  return 0.0;
 }
 
 static void
@@ -172,9 +172,9 @@ nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityPr
  *
  * Returns: the probability density of observable shape, $P(s)$.
  */
-GArray *
-nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, GArray *rarr, GArray *zarr, const gdouble et, const gdouble ex)
+gdouble
+nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, const gdouble r, const gdouble z, const gdouble et, const gdouble ex)
 {
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ (gsds, cosmo, dp, smd, z_cluster, rarr, zarr, et, ex);
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ (gsds, cosmo, dp, smd, z_cluster, r, z, et, ex);
 }
 
