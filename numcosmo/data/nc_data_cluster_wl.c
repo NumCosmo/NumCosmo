@@ -464,8 +464,6 @@ nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint n
   NcDataClusterWLInt *lh_int = NC_DATA_CLUSTER_WL_INT (intnd);
   guint i;
 
-  nc_galaxy_sd_shape_integ_prep (lh_int->data.s_dist, lh_int->data.cosmo, lh_int->data.dp, lh_int->data.smd, lh_int->data.z_cluster, lh_int->data.r);
-
   for (i = 0; i < npoints; i++)
   {
     const gdouble z = ncm_vector_get (x, i);
@@ -556,7 +554,9 @@ nc_data_cluster_wl_prepare_kde (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloD
 gdouble
 nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcmVector *m2lnP_gal)
 {
-  NcDataClusterWLPrivate * const self = dcwl->priv;
+  NcDataClusterWLPrivate * const self     = dcwl->priv;
+  NcDataClusterWLInt *likelihood_integral = g_object_new (nc_data_cluster_wl_integ_get_type (), NULL);
+  NcmIntegralND *lh_int                   = NCM_INTEGRAL_ND (likelihood_integral);
   gdouble verr, vzpi, vzpf, vres, vtmp;
   NcmVector *err = ncm_vector_new_data_static (&verr, 1, 1);
   NcmVector *zpi = ncm_vector_new_data_static (&vzpi, 1, 1);
@@ -571,6 +571,10 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
   ncm_vector_set (zpi, 0, zp_i);
   ncm_vector_set (zpf, 0, zp_f);
 
+  ncm_integral_nd_set_reltol (lh_int, self->prec);
+  ncm_integral_nd_set_abstol (lh_int, 0.0);
+  ncm_integral_nd_set_method (lh_int, NCM_INTEGRAL_ND_METHOD_CUBATURE_P);
+
   g_assert_cmpuint (ncm_matrix_ncols (self->obs), ==, 4);
 
   if (m2lnP_gal != NULL)
@@ -578,8 +582,6 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
 
   for (gal_i = 0; gal_i < self->len; gal_i++)
   {
-    NcDataClusterWLInt *likelihood_integral = g_object_new (nc_data_cluster_wl_integ_get_type (), NULL);
-    NcmIntegralND *lh_int                   = NCM_INTEGRAL_ND (likelihood_integral);
     gdouble m2lnP_gal_i;
     gdouble z_min, z_max;
 
@@ -595,11 +597,9 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
     likelihood_integral->data.et        = ncm_matrix_get (self->obs, gal_i, 2);
     likelihood_integral->data.ex        = ncm_matrix_get (self->obs, gal_i, 3);
 
-    ncm_integral_nd_set_method (lh_int, NCM_INTEGRAL_ND_METHOD_CUBATURE_P);
+    nc_galaxy_sd_shape_integ_prep (self->s_dist, cosmo, dp, smd, self->z_cluster, likelihood_integral->data.r);
 
     nc_galaxy_sd_z_proxy_get_true_z_lim (self->zp_dist, likelihood_integral->data.zp, &z_min, &z_max);
-    ncm_integral_nd_set_reltol (lh_int, self->prec);
-    ncm_integral_nd_set_abstol (lh_int, 0.0);
 
     if (z_min < self->z_cluster)
     {
@@ -625,8 +625,6 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
       ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
 
     result += m2lnP_gal_i;
-
-    ncm_integral_nd_clear (&lh_int);
   }
 
   ncm_vector_free (err);
@@ -634,6 +632,7 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
   ncm_vector_free (zpf);
   ncm_vector_free (res);
   ncm_vector_free (tmp);
+  ncm_integral_nd_clear (&lh_int);
 
   return result;
 }
