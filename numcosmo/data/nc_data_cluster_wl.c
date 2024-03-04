@@ -464,6 +464,8 @@ nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint n
   NcDataClusterWLInt *lh_int = NC_DATA_CLUSTER_WL_INT (intnd);
   guint i;
 
+  nc_galaxy_sd_shape_integ_prep (lh_int->data.s_dist, lh_int->data.cosmo, lh_int->data.dp, lh_int->data.smd, lh_int->data.z_cluster, lh_int->data.r);
+
   for (i = 0; i < npoints; i++)
   {
     const gdouble z = ncm_vector_get (x, i);
@@ -474,7 +476,6 @@ nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint n
                                                 lh_int->data.dp,
                                                 lh_int->data.smd,
                                                 lh_int->data.z_cluster,
-                                                lh_int->data.r,
                                                 z,
                                                 lh_int->data.et,
                                                 lh_int->data.ex);
