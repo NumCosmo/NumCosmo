@@ -666,6 +666,37 @@ ncm_data_gauss_cov_peek_cov (NcmDataGaussCov *gauss)
 }
 
 /**
+ * ncm_data_gauss_cov_compute_cov:
+ * @gauss: a #NcmDataGaussCov
+ * @mset: a #NcmMSet
+ * @updated: (out) (allow-none): a #gboolean
+ *
+ * Computes the covariance matrix based on the models in @mset. If
+ * the #NcmDataGaussCovClass::cov_func is not set, returns %NULL.
+ *
+ * Returns: (transfer full): the current data covariance #NcmMatrix.
+ */
+NcmMatrix *
+ncm_data_gauss_cov_compute_cov (NcmDataGaussCov *gauss, NcmMSet *mset, gboolean *updated)
+{
+  NcmDataGaussCovClass * const gauss_cov_class = NCM_DATA_GAUSS_COV_GET_CLASS (gauss);
+  NcmDataGaussCovPrivate * const self          = ncm_data_gauss_cov_get_instance_private (gauss);
+
+  if (gauss_cov_class->cov_func != NULL)
+  {
+    NcmMatrix *cov     = ncm_matrix_dup (self->cov);
+    gboolean l_updated = gauss_cov_class->cov_func (gauss, mset, cov);
+
+    if (updated != NULL)
+      *updated = l_updated;
+
+    return cov;
+  }
+
+  return NULL;
+}
+
+/**
  * ncm_data_gauss_cov_get_log_norma:
  * @gauss: a #NcmDataGaussCov
  * @mset: a #NcmMSet
