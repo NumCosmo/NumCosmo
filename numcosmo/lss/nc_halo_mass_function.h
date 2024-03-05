@@ -57,6 +57,7 @@ struct _NcHaloMassFunction
   GObject parent_instance;
   NcHaloMassFunctionPrivate *priv;
   NcmSpline2d *d2NdzdlnM;
+  gdouble mf_lb;
 };
 
 /**
@@ -119,7 +120,10 @@ G_BEGIN_DECLS
 NCM_INLINE gdouble
 nc_halo_mass_function_d2n_dzdlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
-  return ncm_spline2d_eval (mfp->d2NdzdlnM, lnM, z);
+  const gdouble res = ncm_spline2d_eval (mfp->d2NdzdlnM, lnM, z);
+  if (res < mfp->mf_lb)
+    return mfp->mf_lb;
+  return res
 }
 
 G_END_DECLS

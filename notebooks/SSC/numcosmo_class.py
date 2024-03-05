@@ -1,14 +1,5 @@
 #!/usr/bin/env python
-
-import math
-import healpy as hp
-from scipy.stats import norm
 import numpy as np
-import sys
-import time
-sys.path.insert(1, '../../../PySSC/')
-sys.path.insert(1, '../../../CLASS/')
-import PySSC
 
 try:
     import gi
