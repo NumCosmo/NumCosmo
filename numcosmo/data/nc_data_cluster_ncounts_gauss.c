@@ -518,6 +518,7 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
   }
 }
 
+
 /**
  * nc_data_cluster_ncounts_gauss_new:
  * @cad: a #NcClusterAbundance
@@ -526,6 +527,7 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
  *
  * Returns: NcDataClusterNCountsGauss
  */
+
 NcDataClusterNCountsGauss *
 nc_data_cluster_ncounts_gauss_new (NcClusterAbundance *cad)
 {

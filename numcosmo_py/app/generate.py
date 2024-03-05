@@ -23,11 +23,12 @@
 
 """NumCosmo APP subcommands generate experiment files."""
 
-from typing import Annotated, Optional
+import numpy as np
+from typing import Annotated, Optional, Tuple
 import dataclasses
 from pathlib import Path
 import typer
-
+from dataclasses import dataclass, field
 from numcosmo_py import Ncm
 from numcosmo_py.experiments.planck18 import (
     Planck18Types,
@@ -37,7 +38,6 @@ from numcosmo_py.experiments.planck18 import (
 )
 from numcosmo_py.experiments.jpas_forecast24 import (
     JpasSSCType,
-    JpasModelTypes,
     generate_jpas_forecast_2024,
 )
 
@@ -116,27 +116,79 @@ class GenerateJpasForecast:
         ),
     ] = JpasSSCType.NO_SSC
 
-    model: Annotated[
-        JpasModelTypes,
+    resample_model: Annotated[
+        tuple[float,float,float],
         typer.Option(
-            help="J-Pas model parameters to use during resample.", show_default=True
+            help="Model for resample.(NcHICosmo:Omegac,NcHICosmo:w,NcHIPrim:ln10e10ASA)", show_default=True,
         ),
-    ] = JpasModelTypes.FIDUCIAL
-
-    model_for_cov: Annotated[
-        Optional[JpasModelTypes],
+    ] = (0.2612,-1.0,3.027)
+    
+    fitting_model: Annotated[
+        tuple[float,float,float],
         typer.Option(
-            help=(
-                "J-Pas model parameters to use during covariance matrix generation. "
-                "This option is only used if use_fixed_cov is True."
-            ),
-            show_default=True,
+            help="Model for fitting. (NcHICosmo:Omegac,NcHICosmo:w,NcHIPrim:ln10e10ASA)", show_default=True,
         ),
-    ] = None
+    ] = (0.2612,-1.0,3.027)
 
     use_fixed_cov: Annotated[
         bool, typer.Option(help="Use fixed covariance matrix.", show_default=True)
     ] = False
+    
+    z_min: Annotated[
+        float,
+        typer.Option(
+            help="Jpas minimum redshift.", show_default=True,
+            min=0
+        ),
+    ] = 0.1
+    
+    z_max: Annotated[
+        float,
+        typer.Option(
+            help="Jpas maximum redshift.", show_default=True,
+            max=2.0
+        ),
+    ] = 0.8
+    
+    znknots: Annotated[
+        int,
+        typer.Option(
+            help="Jpas number of redshift bins.", show_default=True,
+            min=2
+        ),
+    ] = 8
+    
+    lnM_min: Annotated[
+        float,
+        typer.Option(
+            help="Jpas minimum mass.", show_default=True,
+            min= np.log(10) * 14.0
+        ),
+    ] = np.log(10.0) * 14.0
+    
+    lnM_max: Annotated[
+        float,
+        typer.Option(
+            help="Jpas maximum mass.", show_default=True,
+            max=np.log(10) * 16.0
+        ),
+    ] = np.log(10.0) * 15.0
+    
+    lnMnknots: Annotated[
+        int,
+        typer.Option(
+            help="Jpas number of mass bins.", show_default=True,
+            min=2
+        ),
+    ] = 2
+    
+    survey_area: Annotated[
+        float,
+        typer.Option(
+            help="Jpas survey area. This option is unvailable for the partial sky cases.", show_default=True,
+            min=0
+        ),
+    ] = 2959.1
 
     def __post_init__(self):
         """Generate JPAS 2024 forecast experiment."""
@@ -149,11 +201,18 @@ class GenerateJpasForecast:
             )
 
         exp, mfunc_array = generate_jpas_forecast_2024(
+            area=self.survey_area,
+            z_min=self.z_min,
+            z_max=self.z_max,
+            znknots=self.znknots,
+            lnM_min=self.lnM_min,
+            lnM_max=self.lnM_max,
+            lnMnknots=self.lnMnknots,
             use_fixed_cov=self.use_fixed_cov,
             fitting_Sij_type=self.fitting_sky_cut,
             resample_Sij_type=self.resample_sky_cut,
-            model_for_resample=self.model,
-            model_for_cov=self.model_for_cov,
+            resample_model=self.resample_model,
+            fitting_model=self.fitting_model,
         )
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
