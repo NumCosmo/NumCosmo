@@ -573,7 +573,7 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
 
   ncm_integral_nd_set_reltol (lh_int, self->prec);
   ncm_integral_nd_set_abstol (lh_int, 0.0);
-  ncm_integral_nd_set_method (lh_int, NCM_INTEGRAL_ND_METHOD_CUBATURE_P);
+  ncm_integral_nd_set_method (lh_int, NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V);
 
   g_assert_cmpuint (ncm_matrix_ncols (self->obs), ==, 4);
 
