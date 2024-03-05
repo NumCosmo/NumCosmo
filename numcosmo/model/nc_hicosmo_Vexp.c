@@ -535,56 +535,36 @@ _nc_hicosmo_Vexp_init_dx_alpha_series (const gdouble dalpha)
 #define LAMBDAp (1.0 + 1.0 / M_SQRT2)
 #define LAMBDAm (1.0 - 1.0 / M_SQRT2)
 
-static gdouble _nc_hicosmo_Vexp_zeta_eval_mnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_Vexp_zeta_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_Vexp_zeta_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 static gdouble _nc_hicosmo_Vexp_zeta_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-static gdouble _nc_hicosmo_Vexp_zeta_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_Vexp_zeta_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 static void _nc_hicosmo_Vexp_zeta_eval_system (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
-
-static guint _nc_hicosmo_Vexp_zeta_nsing (NcHIPertIAdiab *iad, const gdouble k);
-static void _nc_hicosmo_Vexp_zeta_get_sing_info (NcHIPertIAdiab *iad, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st);
-static gdouble _nc_hicosmo_Vexp_zeta_eval_sing_mnu (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, guint sing);
-static gdouble _nc_hicosmo_Vexp_zeta_eval_sing_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, guint sing);
-static void _nc_hicosmo_Vexp_zeta_eval_sing_system (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, guint sing, gdouble *nu, gdouble *dlnmnu);
 
 static void
 nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface)
 {
-  iface->eval_mnu    = &_nc_hicosmo_Vexp_zeta_eval_mnu;
+  iface->eval_xi     = &_nc_hicosmo_Vexp_zeta_eval_xi;
+  iface->eval_F1     = &_nc_hicosmo_Vexp_zeta_eval_F1;
   iface->eval_nu     = &_nc_hicosmo_Vexp_zeta_eval_nu;
-  iface->eval_dlnmnu = &_nc_hicosmo_Vexp_zeta_eval_dlnmnu;
+  iface->eval_m      = &_nc_hicosmo_Vexp_zeta_eval_m;
   iface->eval_system = &_nc_hicosmo_Vexp_zeta_eval_system;
-
-  iface->nsing            = &_nc_hicosmo_Vexp_zeta_nsing;
-  iface->get_sing_info    = &_nc_hicosmo_Vexp_zeta_get_sing_info;
-  iface->eval_sing_mnu    = &_nc_hicosmo_Vexp_zeta_eval_sing_mnu;
-  iface->eval_sing_dlnmnu = &_nc_hicosmo_Vexp_zeta_eval_sing_dlnmnu;
-  iface->eval_sing_system = &_nc_hicosmo_Vexp_zeta_eval_sing_system;
 }
 
-static gdouble _nc_hicosmo_Vexp_gw_eval_mnu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_Vexp_gw_eval_xi (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_Vexp_gw_eval_F1 (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
 static gdouble _nc_hicosmo_Vexp_gw_eval_nu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
-static gdouble _nc_hicosmo_Vexp_gw_eval_dlnmnu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_Vexp_gw_eval_m (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
 static void _nc_hicosmo_Vexp_gw_eval_system (NcHIPertIGW *igw, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
-
-static guint _nc_hicosmo_Vexp_gw_nsing (NcHIPertIGW *igw, const gdouble k);
-static void _nc_hicosmo_Vexp_gw_get_sing_info (NcHIPertIGW *igw, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st);
-static gdouble _nc_hicosmo_Vexp_gw_eval_sing_mnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, guint sing);
-static gdouble _nc_hicosmo_Vexp_gw_eval_sing_dlnmnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, guint sing);
-static void _nc_hicosmo_Vexp_gw_eval_sing_system (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, guint sing, gdouble *nu, gdouble *dlnmnu);
 
 static void
 nc_hipert_igw_interface_init (NcHIPertIGWInterface *iface)
 {
-  iface->eval_mnu    = &_nc_hicosmo_Vexp_gw_eval_mnu;
+  iface->eval_xi     = &_nc_hicosmo_Vexp_gw_eval_xi;
+  iface->eval_F1     = &_nc_hicosmo_Vexp_gw_eval_F1;
   iface->eval_nu     = &_nc_hicosmo_Vexp_gw_eval_nu;
-  iface->eval_dlnmnu = &_nc_hicosmo_Vexp_gw_eval_dlnmnu;
+  iface->eval_m      = &_nc_hicosmo_Vexp_gw_eval_m;
   iface->eval_system = &_nc_hicosmo_Vexp_gw_eval_system;
-
-  iface->nsing            = &_nc_hicosmo_Vexp_gw_nsing;
-  iface->get_sing_info    = &_nc_hicosmo_Vexp_gw_get_sing_info;
-  iface->eval_sing_mnu    = &_nc_hicosmo_Vexp_gw_eval_sing_mnu;
-  iface->eval_sing_dlnmnu = &_nc_hicosmo_Vexp_gw_eval_sing_dlnmnu;
-  iface->eval_sing_system = &_nc_hicosmo_Vexp_gw_eval_sing_system;
 }
 
 static gdouble
@@ -1702,7 +1682,7 @@ _nc_hicosmo_Vexp_xb (NcHICosmo *cosmo)
 #define _NC_HICOSMO_VEXP_PHIA NC_HICOSMO_VEXP_START_T
 
 static gdouble
-_nc_hicosmo_Vexp_zeta_eval_mnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+_nc_hicosmo_Vexp_zeta_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
 {
   NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (iad);
 
@@ -1782,7 +1762,80 @@ _nc_hicosmo_Vexp_zeta_eval_mnu (NcHIPertIAdiab *iad, const gdouble tau, const gd
         break;
     }
 
-    return mnu;
+    return log (mnu);
+  }
+}
+
+static gdouble
+_nc_hicosmo_Vexp_zeta_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+{
+  NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (iad);
+
+  _nc_hicosmo_Vexp_prepare (Vexp);
+
+  {
+    const gdouble tau2    = tau * tau;
+    const gdouble lna_a0e = 0.5 * tau2 + Vexp->priv->alpha_b - Vexp->priv->alpha_0e;
+    guint branch          = 0;
+    gdouble dlnmnu, nu;
+
+    if (tau > Vexp->priv->tau_qt_c)
+    {
+      branch++;
+
+      if (tau > Vexp->priv->tau_qt_e)
+        branch++;
+    }
+
+    switch (branch)
+    {
+      case 0: /* Classical contraction */
+      {
+        const gdouble lnq         = ncm_spline_eval (Vexp->priv->lnqc_mtau, -tau);
+        const gdouble q           = exp (lnq);
+        const gdouble dlnx_dalpha = _nc_hicosmo_Vexp_cl_dlnx_dalpha (Vexp, q, Vexp->priv->cl_bc);
+        const gdouble E           = _nc_hicosmo_Vexp_Hc_H0_q (Vexp, q, Vexp->priv->cl_bc);
+
+        nu     = exp (-lna_a0e) * k * tau / E;
+        dlnmnu = 2.0 * (dlnx_dalpha + 1.0) * tau;
+
+        break;
+      }
+      case 1: /* Quantum phase */
+      {
+        const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
+        const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau;
+        gdouble H_lp, xq;
+
+        _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
+
+        {
+          const gdouble dlnx_dalpha = _nc_hicosmo_Vexp_qt_dlnx_dalpha (Vexp, 0.0, alpha, phi);
+
+          nu     = exp (-lna_a0e) * k * tau / (H_lp * Vexp->priv->RH_lp);
+          dlnmnu = 2.0 * (dlnx_dalpha + 1.0) * tau;
+        }
+
+        break;
+      }
+      case 2: /* Classical expansion */
+      {
+        const gdouble lnq         = ncm_spline_eval (Vexp->priv->lnqe_tau, tau);
+        const gdouble q           = exp (lnq);
+        const gdouble dlnx_dalpha = _nc_hicosmo_Vexp_cl_dlnx_dalpha (Vexp, q, Vexp->priv->cl_be);
+        const gdouble E           = _nc_hicosmo_Vexp_He_H0_q (Vexp, q, Vexp->priv->cl_be);
+
+        nu     = exp (-lna_a0e) * k * tau / E;
+        dlnmnu = 2.0 * (dlnx_dalpha + 1.0) * tau;
+
+        break;
+      }
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+
+    return dlnmnu / (2.0 * nu);
   }
 }
 
@@ -1850,15 +1903,19 @@ _nc_hicosmo_Vexp_zeta_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdo
   }
 }
 
+/*////////////////////// */
 static gdouble
-_nc_hicosmo_Vexp_zeta_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+_nc_hicosmo_Vexp_zeta_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
 {
   NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (iad);
 
   _nc_hicosmo_Vexp_prepare (Vexp);
 
   {
-    gdouble dlnmnu;
+    const gdouble tau2    = tau * tau;
+    const gdouble lna_a0e = 0.5 * tau2 + Vexp->priv->alpha_b - Vexp->priv->alpha_0e;
+
+    gdouble m;
     guint branch = 0;
 
     if (tau > Vexp->priv->tau_qt_c)
@@ -1873,11 +1930,22 @@ _nc_hicosmo_Vexp_zeta_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau, const
     {
       case 0: /* Classical contraction */
       {
-        const gdouble lnq         = ncm_spline_eval (Vexp->priv->lnqc_mtau, -tau);
-        const gdouble q           = exp (lnq);
-        const gdouble dlnx_dalpha = _nc_hicosmo_Vexp_cl_dlnx_dalpha (Vexp, q, Vexp->priv->cl_bc);
+        const gdouble lnq = ncm_spline_eval (Vexp->priv->lnqc_mtau, -tau);
+        const gdouble q   = exp (lnq);
+        const gdouble x   = _nc_hicosmo_Vexp_x_q (q, Vexp->priv->cl_bc);
+        const gdouble E   = _nc_hicosmo_Vexp_Hc_H0_q (Vexp, q, Vexp->priv->cl_bc);
 
-        dlnmnu = 2.0 * (dlnx_dalpha + 1.0) * tau;
+        if (fabs (x) < 1.0e-1)
+        {
+          const gdouble dalpha = 0.5 * (tau - Vexp->priv->tau_x0) * (tau + Vexp->priv->tau_x0);
+          const gdouble x_s    = _nc_hicosmo_Vexp_init_x_alpha_series (dalpha);
+
+          m = x_s * x_s * exp (3.0 * lna_a0e) * E / tau;
+        }
+        else
+        {
+          m = x * x * exp (3.0 * lna_a0e) * E / tau;
+        }
 
         break;
       }
@@ -1889,21 +1957,28 @@ _nc_hicosmo_Vexp_zeta_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau, const
 
         _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
 
-        {
-          const gdouble dlnx_dalpha = _nc_hicosmo_Vexp_qt_dlnx_dalpha (Vexp, 0.0, alpha, phi);
-
-          dlnmnu = 2.0 * (dlnx_dalpha + 1.0) * tau;
-        }
+        m = xq * xq * exp (3.0 * lna_a0e) * (H_lp * Vexp->priv->RH_lp) / tau;
 
         break;
       }
       case 2: /* Classical expansion */
       {
-        const gdouble lnq         = ncm_spline_eval (Vexp->priv->lnqe_tau, tau);
-        const gdouble q           = exp (lnq);
-        const gdouble dlnx_dalpha = _nc_hicosmo_Vexp_cl_dlnx_dalpha (Vexp, q, Vexp->priv->cl_be);
+        const gdouble lnq = ncm_spline_eval (Vexp->priv->lnqe_tau, tau);
+        const gdouble q   = exp (lnq);
+        const gdouble x   = _nc_hicosmo_Vexp_x_q (q, Vexp->priv->cl_be);
+        const gdouble E   = _nc_hicosmo_Vexp_He_H0_q (Vexp, q, Vexp->priv->cl_be);
 
-        dlnmnu = 2.0 * (dlnx_dalpha + 1.0) * tau;
+        if (fabs (x) < 1.0e-1)
+        {
+          const gdouble dalpha = 0.5 * (tau - Vexp->priv->tau_x0) * (tau + Vexp->priv->tau_x0);
+          const gdouble x_s    = _nc_hicosmo_Vexp_init_x_alpha_series (dalpha);
+
+          m = x_s * x_s * exp (3.0 * lna_a0e) * E / tau;
+        }
+        else
+        {
+          m = x * x * exp (3.0 * lna_a0e) * E / tau;
+        }
 
         break;
       }
@@ -1912,7 +1987,7 @@ _nc_hicosmo_Vexp_zeta_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau, const
         break;
     }
 
-    return dlnmnu;
+    return m;
   }
 }
 
@@ -1989,258 +2064,8 @@ _nc_hicosmo_Vexp_zeta_eval_system (NcHIPertIAdiab *iad, const gdouble tau, const
   return;
 }
 
-static guint
-_nc_hicosmo_Vexp_zeta_nsing (NcHIPertIAdiab *iad, const gdouble k)
-{
-  NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (iad);
-
-  _nc_hicosmo_Vexp_prepare (Vexp);
-
-  if (Vexp->priv->tau_x0 != 0.0)
-    return 2;
-  else
-    return 1;
-}
-
-static void
-_nc_hicosmo_Vexp_zeta_get_sing_info (NcHIPertIAdiab *iad, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st)
-{
-  NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (iad);
-
-  _nc_hicosmo_Vexp_prepare (Vexp);
-
-  switch (sing)
-  {
-    case 0:
-      ts[0]    =  0.0;
-      dts_i[0] = -0.1;
-      dts_f[0] = +0.1;
-      st[0]    = NCM_HOAA_SING_TYPE_INF;
-      break;
-    case 1:
-      ts[0]    = Vexp->priv->tau_x0;
-      dts_i[0] = Vexp->priv->tau_x0_i - Vexp->priv->tau_x0;
-      dts_f[0] = Vexp->priv->tau_x0_f - Vexp->priv->tau_x0;
-      st[0]    = NCM_HOAA_SING_TYPE_ZERO;
-      break;
-    default:
-      g_assert_not_reached ();
-      break;
-  }
-}
-
 static gdouble
-_nc_hicosmo_Vexp_zeta_eval_sing_mnu (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, guint sing)
-{
-  if (sing == 0)
-  {
-    return _nc_hicosmo_Vexp_zeta_eval_mnu (iad, tau_m_taus, k);
-  }
-  else
-  {
-    NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (iad);
-
-    _nc_hicosmo_Vexp_prepare (Vexp);
-
-    {
-      const gdouble tau     = tau_m_taus + Vexp->priv->tau_x0;
-      const gdouble tau2    = tau * tau;
-      const gdouble lna_a0e = 0.5 * tau2 + Vexp->priv->alpha_b - Vexp->priv->alpha_0e;
-      gdouble mnu;
-      guint branch = 0;
-
-      if (tau > Vexp->priv->tau_qt_c)
-      {
-        branch++;
-
-        if (tau > Vexp->priv->tau_qt_e)
-          branch++;
-      }
-
-      switch (branch)
-      {
-        case 0: /* Classical contraction */
-        {
-          const gdouble lnq = ncm_spline_eval (Vexp->priv->lnqc_mtau, -tau);
-          const gdouble q   = exp (lnq);
-          const gdouble x   = _nc_hicosmo_Vexp_x_q (q, Vexp->priv->cl_bc);
-
-          if (fabs (x) < 1.0e-1)
-          {
-            const gdouble dalpha = 0.5 * tau_m_taus * (tau + Vexp->priv->tau_x0);
-            const gdouble x_s    = _nc_hicosmo_Vexp_init_x_alpha_series (dalpha);
-
-            mnu = k * x_s * x_s * exp (2.0 * lna_a0e);
-          }
-          else
-          {
-            mnu = k * x * x * exp (2.0 * lna_a0e);
-          }
-
-          break;
-        }
-        case 1: /* Quantum phase */
-        {
-          const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
-          const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
-          gdouble H_lp, xq;
-
-          _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
-
-          mnu = k * xq * xq * exp (2.0 * lna_a0e);
-
-          break;
-        }
-        case 2: /* Classical expansion */
-        {
-          const gdouble lnq = ncm_spline_eval (Vexp->priv->lnqe_tau, tau);
-          const gdouble q   = exp (lnq);
-          const gdouble x   = _nc_hicosmo_Vexp_x_q (q, Vexp->priv->cl_be);
-
-          if (fabs (x) < 1.0e-1)
-          {
-            const gdouble dalpha = 0.5 * tau_m_taus * (tau + Vexp->priv->tau_x0);
-            const gdouble x_s    = _nc_hicosmo_Vexp_init_x_alpha_series (dalpha);
-
-            mnu = k * x_s * x_s * exp (2.0 * lna_a0e);
-          }
-          else
-          {
-            mnu = k * x * x * exp (2.0 * lna_a0e);
-          }
-
-          break;
-        }
-        default:
-          g_assert_not_reached ();
-          break;
-      }
-
-      return mnu;
-    }
-  }
-}
-
-static gdouble
-_nc_hicosmo_Vexp_zeta_eval_sing_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, guint sing)
-{
-  if (sing == 0)
-  {
-    return _nc_hicosmo_Vexp_zeta_eval_dlnmnu (iad, tau_m_taus, k);
-  }
-  else
-  {
-    NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (iad);
-
-    _nc_hicosmo_Vexp_prepare (Vexp);
-
-    {
-      const gdouble tau = tau_m_taus + Vexp->priv->tau_x0;
-      gdouble dlnmnu;
-      guint branch = 0;
-
-      if (tau > Vexp->priv->tau_qt_c)
-      {
-        branch++;
-
-        if (tau > Vexp->priv->tau_qt_e)
-          branch++;
-      }
-
-      switch (branch)
-      {
-        case 0: /* Classical contraction */
-        {
-          const gdouble lnq = ncm_spline_eval (Vexp->priv->lnqc_mtau, -tau);
-          const gdouble q   = exp (lnq);
-          const gdouble x   = _nc_hicosmo_Vexp_x_q (q, Vexp->priv->cl_bc);
-
-          if (fabs (x) < 1.0e-1)
-          {
-            const gdouble dalpha      = 0.5 * tau_m_taus * (tau + Vexp->priv->tau_x0);
-            const gdouble x_s         = _nc_hicosmo_Vexp_init_x_alpha_series (dalpha);
-            const gdouble dx          = _nc_hicosmo_Vexp_init_dx_alpha_series (dalpha);
-            const gdouble dlnx_dalpha = dx / x_s;
-
-            dlnmnu = 2.0 * (dlnx_dalpha + 1.0) * tau;
-          }
-          else
-          {
-            const gdouble dlnx_dalpha = _nc_hicosmo_Vexp_cl_dlnx_dalpha (Vexp, q, Vexp->priv->cl_bc);
-
-            dlnmnu = 2.0 * (dlnx_dalpha + 1.0) * tau;
-          }
-
-          break;
-        }
-        case 1: /* Quantum phase */
-        {
-          const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
-          const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
-          gdouble H_lp, xq;
-
-          _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
-
-          {
-            const gdouble dlnx_dalpha = _nc_hicosmo_Vexp_qt_dlnx_dalpha (Vexp, 0.0, alpha, phi);
-
-            dlnmnu = 2.0 * (dlnx_dalpha + 1.0) * tau;
-          }
-
-          break;
-        }
-        case 2: /* Classical expansion */
-        {
-          const gdouble lnq = ncm_spline_eval (Vexp->priv->lnqe_tau, tau);
-          const gdouble q   = exp (lnq);
-          const gdouble x   = _nc_hicosmo_Vexp_x_q (q, Vexp->priv->cl_be);
-
-          if (fabs (x) < 1.0e-1)
-          {
-            const gdouble dalpha      = 0.5 * tau_m_taus * (tau + Vexp->priv->tau_x0);
-            const gdouble x_s         = _nc_hicosmo_Vexp_init_x_alpha_series (dalpha);
-            const gdouble dx          = _nc_hicosmo_Vexp_init_dx_alpha_series (dalpha);
-            const gdouble dlnx_dalpha = dx / x_s;
-
-            dlnmnu = 2.0 * (dlnx_dalpha + 1.0) * tau;
-          }
-          else
-          {
-            const gdouble dlnx_dalpha = _nc_hicosmo_Vexp_cl_dlnx_dalpha (Vexp, q, Vexp->priv->cl_be);
-
-            dlnmnu = 2.0 * (dlnx_dalpha + 1.0) * tau;
-          }
-
-          break;
-        }
-        default:
-          g_assert_not_reached ();
-          break;
-      }
-
-      return dlnmnu;
-    }
-  }
-}
-
-static void
-_nc_hicosmo_Vexp_zeta_eval_sing_system (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, guint sing, gdouble *nu, gdouble *dlnmnu)
-{
-  NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (iad);
-
-  if (sing == 0)
-  {
-    return _nc_hicosmo_Vexp_zeta_eval_system (iad, tau_m_taus, k, nu, dlnmnu);
-  }
-  else
-  {
-    nu[0]     = _nc_hicosmo_Vexp_zeta_eval_nu (iad, tau_m_taus + Vexp->priv->tau_x0, k);
-    dlnmnu[0] = _nc_hicosmo_Vexp_zeta_eval_sing_dlnmnu (iad, tau_m_taus, k, sing);
-  }
-}
-
-static gdouble
-_nc_hicosmo_Vexp_gw_eval_mnu (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
+_nc_hicosmo_Vexp_gw_eval_xi (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
 {
   NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (igw);
 
@@ -2250,7 +2075,71 @@ _nc_hicosmo_Vexp_gw_eval_mnu (NcHIPertIGW *igw, const gdouble tau, const gdouble
     const gdouble tau2    = tau * tau;
     const gdouble lna_a0e = 0.5 * tau2 + Vexp->priv->alpha_b - Vexp->priv->alpha_0e;
 
-    return exp (2.0 * lna_a0e) * k;
+    return 2.0 * lna_a0e + log (k);
+  }
+}
+
+static gdouble
+_nc_hicosmo_Vexp_gw_eval_F1 (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
+{
+  NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (igw);
+
+  _nc_hicosmo_Vexp_prepare (Vexp);
+
+  {
+    const gdouble tau2    = tau * tau;
+    const gdouble lna_a0e = 0.5 * tau2 + Vexp->priv->alpha_b - Vexp->priv->alpha_0e;
+    gdouble nu;
+    guint branch = 0;
+
+    if (tau > Vexp->priv->tau_qt_c)
+    {
+      branch++;
+
+      if (tau > Vexp->priv->tau_qt_e)
+        branch++;
+    }
+
+    switch (branch)
+    {
+      case 0: /* Classical contraction */
+      {
+        const gdouble lnq = ncm_spline_eval (Vexp->priv->lnqc_mtau, -tau);
+        const gdouble q   = exp (lnq);
+        const gdouble E   = _nc_hicosmo_Vexp_Hc_H0_q (Vexp, q, Vexp->priv->cl_bc);
+
+        nu = exp (-lna_a0e) * k * tau / E;
+
+        break;
+      }
+      case 1: /* Quantum phase */
+      {
+        const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
+        const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
+        gdouble H_lp, xq;
+
+        _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
+
+        nu = exp (-lna_a0e) * k * tau / (H_lp * Vexp->priv->RH_lp);
+
+        break;
+      }
+      case 2: /* Classical expansion */
+      {
+        const gdouble lnq = ncm_spline_eval (Vexp->priv->lnqe_tau, tau);
+        const gdouble q   = exp (lnq);
+        const gdouble E   = _nc_hicosmo_Vexp_He_H0_q (Vexp, q, Vexp->priv->cl_be);
+
+        nu = exp (-lna_a0e) * k * tau / E;
+
+        break;
+      }
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+
+    return tau / nu; /* dxi = 2 * tau, F1 = dxi / (2nu). */
   }
 }
 
@@ -2319,9 +2208,67 @@ _nc_hicosmo_Vexp_gw_eval_nu (NcHIPertIGW *igw, const gdouble tau, const gdouble 
 }
 
 static gdouble
-_nc_hicosmo_Vexp_gw_eval_dlnmnu (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
+_nc_hicosmo_Vexp_gw_eval_m (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
 {
-  return 2.0 * tau;
+  NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (igw);
+
+  _nc_hicosmo_Vexp_prepare (Vexp);
+
+  {
+    const gdouble tau2    = tau * tau;
+    const gdouble lna_a0e = 0.5 * tau2 + Vexp->priv->alpha_b - Vexp->priv->alpha_0e;
+    guint branch          = 0;
+    gdouble m;
+
+    if (tau > Vexp->priv->tau_qt_c)
+    {
+      branch++;
+
+      if (tau > Vexp->priv->tau_qt_e)
+        branch++;
+    }
+
+    switch (branch)
+    {
+      case 0: /* Classical contraction */
+      {
+        const gdouble lnq = ncm_spline_eval (Vexp->priv->lnqc_mtau, -tau);
+        const gdouble q   = exp (lnq);
+        const gdouble E   = _nc_hicosmo_Vexp_Hc_H0_q (Vexp, q, Vexp->priv->cl_bc);
+
+        m = exp (3.0 * lna_a0e) * E / tau;
+
+        break;
+      }
+      case 1: /* Quantum phase */
+      {
+        const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
+        const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
+        gdouble H_lp, xq;
+
+        _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
+
+        m = exp (3.0 * lna_a0e) * (H_lp * Vexp->priv->RH_lp) / tau;
+
+        break;
+      }
+      case 2: /* Classical expansion */
+      {
+        const gdouble lnq = ncm_spline_eval (Vexp->priv->lnqe_tau, tau);
+        const gdouble q   = exp (lnq);
+        const gdouble E   = _nc_hicosmo_Vexp_He_H0_q (Vexp, q, Vexp->priv->cl_be);
+
+        m = exp (3.0 * lna_a0e) * E / tau;
+
+        break;
+      }
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+
+    return m;
+  }
 }
 
 static void
@@ -2391,41 +2338,6 @@ _nc_hicosmo_Vexp_gw_eval_system (NcHIPertIGW *igw, const gdouble tau, const gdou
   }
 
   return;
-}
-
-static guint
-_nc_hicosmo_Vexp_gw_nsing (NcHIPertIGW *igw, const gdouble k)
-{
-  return 1;
-}
-
-static void
-_nc_hicosmo_Vexp_gw_get_sing_info (NcHIPertIGW *igw, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st)
-{
-  g_assert_cmpuint (sing, ==, 0);
-
-  ts[0]    = +0.0;
-  dts_i[0] = -0.1;
-  dts_f[0] = +0.1;
-  st[0]    = NCM_HOAA_SING_TYPE_INF;
-}
-
-static gdouble
-_nc_hicosmo_Vexp_gw_eval_sing_mnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, guint sing)
-{
-  return _nc_hicosmo_Vexp_gw_eval_mnu (igw, tau_m_taus, k);
-}
-
-static gdouble
-_nc_hicosmo_Vexp_gw_eval_sing_dlnmnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, guint sing)
-{
-  return _nc_hicosmo_Vexp_gw_eval_dlnmnu (igw, tau_m_taus, k);
-}
-
-static void
-_nc_hicosmo_Vexp_gw_eval_sing_system (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, guint sing, gdouble *nu, gdouble *dlnmnu)
-{
-  _nc_hicosmo_Vexp_gw_eval_system (igw, tau_m_taus, k, nu, dlnmnu);
 }
 
 /**
