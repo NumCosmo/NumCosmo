@@ -539,32 +539,28 @@ static gdouble _nc_hicosmo_Vexp_zeta_eval_xi (NcHIPertIAdiab *iad, const gdouble
 static gdouble _nc_hicosmo_Vexp_zeta_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 static gdouble _nc_hicosmo_Vexp_zeta_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 static gdouble _nc_hicosmo_Vexp_zeta_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-static void _nc_hicosmo_Vexp_zeta_eval_system (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
 
 static void
 nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface)
 {
-  iface->eval_xi     = &_nc_hicosmo_Vexp_zeta_eval_xi;
-  iface->eval_F1     = &_nc_hicosmo_Vexp_zeta_eval_F1;
-  iface->eval_nu     = &_nc_hicosmo_Vexp_zeta_eval_nu;
-  iface->eval_m      = &_nc_hicosmo_Vexp_zeta_eval_m;
-  iface->eval_system = &_nc_hicosmo_Vexp_zeta_eval_system;
+  iface->eval_xi = &_nc_hicosmo_Vexp_zeta_eval_xi;
+  iface->eval_F1 = &_nc_hicosmo_Vexp_zeta_eval_F1;
+  iface->eval_nu = &_nc_hicosmo_Vexp_zeta_eval_nu;
+  iface->eval_m  = &_nc_hicosmo_Vexp_zeta_eval_m;
 }
 
 static gdouble _nc_hicosmo_Vexp_gw_eval_xi (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
 static gdouble _nc_hicosmo_Vexp_gw_eval_F1 (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
 static gdouble _nc_hicosmo_Vexp_gw_eval_nu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
 static gdouble _nc_hicosmo_Vexp_gw_eval_m (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
-static void _nc_hicosmo_Vexp_gw_eval_system (NcHIPertIGW *igw, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
 
 static void
 nc_hipert_igw_interface_init (NcHIPertIGWInterface *iface)
 {
-  iface->eval_xi     = &_nc_hicosmo_Vexp_gw_eval_xi;
-  iface->eval_F1     = &_nc_hicosmo_Vexp_gw_eval_F1;
-  iface->eval_nu     = &_nc_hicosmo_Vexp_gw_eval_nu;
-  iface->eval_m      = &_nc_hicosmo_Vexp_gw_eval_m;
-  iface->eval_system = &_nc_hicosmo_Vexp_gw_eval_system;
+  iface->eval_xi = &_nc_hicosmo_Vexp_gw_eval_xi;
+  iface->eval_F1 = &_nc_hicosmo_Vexp_gw_eval_F1;
+  iface->eval_nu = &_nc_hicosmo_Vexp_gw_eval_nu;
+  iface->eval_m  = &_nc_hicosmo_Vexp_gw_eval_m;
 }
 
 static gdouble

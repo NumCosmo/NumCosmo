@@ -71,21 +71,21 @@
 struct _NcHIPertAdiab
 {
   NcmCSQ1D parent_instance;
+  gdouble k;
 };
 
 G_DEFINE_INTERFACE (NcHIPertIAdiab, nc_hipert_iadiab, G_TYPE_OBJECT)
 G_DEFINE_TYPE (NcHIPertAdiab, nc_hipert_adiab, NCM_TYPE_CSQ1D)
 
-static gdouble _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad, const gdouble k);
+static gdouble _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad);
 
 static void
 nc_hipert_iadiab_default_init (NcHIPertIAdiabInterface *iface)
 {
-  iface->eval_xi     = NULL;
-  iface->eval_F1     = NULL;
-  iface->eval_nu     = NULL;
-  iface->eval_m      = NULL;
-  iface->eval_system = NULL;
+  iface->eval_xi = NULL;
+  iface->eval_F1 = NULL;
+  iface->eval_nu = NULL;
+  iface->eval_m  = NULL;
 
   iface->eval_powspec_factor = &_nc_hipert_iadiab_eval_powspec_factor;
 }
@@ -93,6 +93,7 @@ nc_hipert_iadiab_default_init (NcHIPertIAdiabInterface *iface)
 enum
 {
   PROP_0,
+  PROP_K,
   PROP_SIZE,
 };
 
@@ -105,16 +106,21 @@ typedef struct _NcHIPertAdiabArg
 static void
 nc_hipert_adiab_init (NcHIPertAdiab *pa)
 {
+  pa->k = 0.0;
 }
 
 static void
 _nc_hipert_adiab_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  /* NcHIPertAdiab *pa = NC_HIPERT_ADIAB (object); */
+  NcHIPertAdiab *pa = NC_HIPERT_ADIAB (object);
+
   g_return_if_fail (NC_IS_HIPERT_ADIAB (object));
 
   switch (prop_id)
   {
+    case PROP_K:
+      nc_hipert_adiab_set_k (pa, g_value_get_double (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -124,11 +130,15 @@ _nc_hipert_adiab_set_property (GObject *object, guint prop_id, const GValue *val
 static void
 _nc_hipert_adiab_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  /* NcHIPertAdiab *pa = NC_HIPERT_ADIAB (object); */
+  NcHIPertAdiab *pa = NC_HIPERT_ADIAB (object);
+
   g_return_if_fail (NC_IS_HIPERT_ADIAB (object));
 
   switch (prop_id)
   {
+    case PROP_K:
+      g_value_set_double (value, nc_hipert_adiab_get_k (pa));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -151,12 +161,12 @@ _nc_hipert_adiab_finalize (GObject *object)
   G_OBJECT_CLASS (nc_hipert_adiab_parent_class)->finalize (object);
 }
 
-static gdouble _nc_hipert_adiab_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _nc_hipert_adiab_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _nc_hipert_adiab_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _nc_hipert_adiab_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k);
+static gdouble _nc_hipert_adiab_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
+static gdouble _nc_hipert_adiab_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
+static gdouble _nc_hipert_adiab_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
+static gdouble _nc_hipert_adiab_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 
-static gdouble _nc_hipert_adiab_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model, const gdouble k);
+static gdouble _nc_hipert_adiab_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model);
 
 static void _nc_hipert_adiab_prepare (NcmCSQ1D *csq1d, NcmModel *model);
 
@@ -181,26 +191,38 @@ nc_hipert_adiab_class_init (NcHIPertAdiabClass *klass)
 }
 
 static gdouble
-_nc_hipert_adiab_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+_nc_hipert_adiab_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
+  NcHIPertAdiab *pa = NC_HIPERT_ADIAB (model);
+  const gdouble k   = pa->k;
+
   return nc_hipert_iadiab_eval_xi (NC_HIPERT_IADIAB (model), t, k);
 }
 
 static gdouble
-_nc_hipert_adiab_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+_nc_hipert_adiab_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
+  NcHIPertAdiab *pa = NC_HIPERT_ADIAB (model);
+  const gdouble k   = pa->k;
+
   return nc_hipert_iadiab_eval_F1 (NC_HIPERT_IADIAB (model), t, k);
 }
 
 static gdouble
-_nc_hipert_adiab_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+_nc_hipert_adiab_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
+  NcHIPertAdiab *pa = NC_HIPERT_ADIAB (model);
+  const gdouble k   = pa->k;
+
   return nc_hipert_iadiab_eval_nu (NC_HIPERT_IADIAB (model), t, k);
 }
 
 static gdouble
-_nc_hipert_adiab_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble k)
+_nc_hipert_adiab_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
+  NcHIPertAdiab *pa = NC_HIPERT_ADIAB (model);
+  const gdouble k   = pa->k;
+
   return nc_hipert_iadiab_eval_m (NC_HIPERT_IADIAB (model), t, k);
 }
 
@@ -211,13 +233,16 @@ _nc_hipert_adiab_prepare (NcmCSQ1D *csq1d, NcmModel *model)
 }
 
 static gdouble
-_nc_hipert_adiab_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model, const gdouble k)
+_nc_hipert_adiab_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model)
 {
-  return nc_hipert_iadiab_eval_powspec_factor (NC_HIPERT_IADIAB (model), k);
+  NcHIPertAdiab *pa = NC_HIPERT_ADIAB (model);
+  const gdouble k   = pa->k;
+
+  return nc_hipert_iadiab_eval_powspec_factor (NC_HIPERT_IADIAB (model));
 }
 
 static gdouble
-_nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad, const gdouble k)
+_nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad)
 {
   g_assert (NC_IS_HICOSMO (iad));
   {
@@ -234,9 +259,9 @@ _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad, const gdouble k)
  * @tau: $\tau$
  * @k: $k$
  *
- * FIXME
+ * Computes the value of $\xi = \ln(m\nu)$.
  *
- * Returns: FIXME.
+ * Returns: $\xi$.
  */
 gdouble
 nc_hipert_iadiab_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
@@ -250,9 +275,9 @@ nc_hipert_iadiab_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble 
  * @tau: $\tau$
  * @k: $k$
  *
- * FIXME
+ * Computes the value of $F_1 = \dot{\xi}/(2\nu)$.
  *
- * Returns: FIXME.
+ * Returns: $F_1$.
  */
 gdouble
 nc_hipert_iadiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
@@ -266,9 +291,9 @@ nc_hipert_iadiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gdouble 
  * @tau: $\tau$
  * @k: $k$
  *
- * FIXME
+ * Computes the value of $\nu$.
  *
- * Returns: FIXME.
+ * Returns: $\nu$.
  */
 gdouble
 nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
@@ -282,9 +307,9 @@ nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble 
  * @tau: $\tau$
  * @k: $k$
  *
- * FIXME
+ * Computes the value of $m$.
  *
- * Returns: FIXME.
+ * Returns: $m$.
  */
 gdouble
 nc_hipert_iadiab_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
@@ -293,35 +318,17 @@ nc_hipert_iadiab_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k
 }
 
 /**
- * nc_hipert_iadiab_eval_system:
- * @iad: a #NcHIPertIAdiab
- * @tau: $\tau$
- * @k: $k$
- * @nu: (out): $\nu$
- * @dlnmnu: (out): FIXME
- *
- * FIXME
- *
- */
-void
-nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu)
-{
-  NC_HIPERT_IADIAB_GET_IFACE (iad)->eval_system (iad, tau, k, nu, dlnmnu);
-}
-
-/**
  * nc_hipert_iadiab_eval_powspec_factor:
  * @iad: a #NcHIPertIAdiab
- * @k: $k$
  *
  * Numerical factor for the power spectrum of the adiabatic mode.
  *
  * Returns: the numerical factor for the power spectrum of the adiabatic mode.
  */
 gdouble
-nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad, const gdouble k)
+nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad)
 {
-  return NC_HIPERT_IADIAB_GET_IFACE (iad)->eval_powspec_factor (iad, k);
+  return NC_HIPERT_IADIAB_GET_IFACE (iad)->eval_powspec_factor (iad);
 }
 
 /**
@@ -378,5 +385,32 @@ void
 nc_hipert_adiab_clear (NcHIPertAdiab **pa)
 {
   g_clear_object (pa);
+}
+
+/**
+ * nc_hipert_adiab_set_k:
+ * @adiab: a #NcHIPertAdiab
+ * @k: $k$
+ *
+ * Sets the wave number $k$.
+ */
+void
+nc_hipert_adiab_set_k (NcHIPertAdiab *adiab, const gdouble k)
+{
+  adiab->k = k;
+}
+
+/**
+ * nc_hipert_adiab_get_k:
+ * @adiab: a #NcHIPertAdiab
+ *
+ * Gets the wave number $k$.
+ *
+ * Returns: $k$
+ */
+gdouble
+nc_hipert_adiab_get_k (NcHIPertAdiab *adiab)
+{
+  return adiab->k;
 }
 

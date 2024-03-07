@@ -49,8 +49,7 @@ struct _NcHIPertIGWInterface
   gdouble (*eval_F1) (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
   gdouble (*eval_nu) (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
   gdouble (*eval_m) (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
-  void (*eval_system) (NcHIPertIGW *igw, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
-  gdouble (*eval_powspec_factor) (NcHIPertIGW *igw, const gdouble k);
+  gdouble (*eval_powspec_factor) (NcHIPertIGW *igw);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[12];
@@ -58,20 +57,20 @@ struct _NcHIPertIGWInterface
 
 /**
  * NcHIPertGWVars:
- * @NC_HIPERT_GW_RE_ZETA: $\text{Re}(\zeta)$
- * @NC_HIPERT_GW_IM_ZETA: $\text{Im}(\zeta)$
- * @NC_HIPERT_GW_RE_PZETA: $\text{Re}(P_\zeta)$
- * @NC_HIPERT_GW_IM_PZETA: $\text{Im}(P_\zeta)$
+ * @NC_HIPERT_GW_RE_H: $\text{Re}(\zeta)$
+ * @NC_HIPERT_GW_IM_H: $\text{Im}(\zeta)$
+ * @NC_HIPERT_GW_RE_PH: $\text{Re}(P_\zeta)$
+ * @NC_HIPERT_GW_IM_PH: $\text{Im}(P_\zeta)$
  *
  * Perturbation variables enumerator.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HIPERT_GW_VARS  >*/
 {
-  NC_HIPERT_GW_RE_ZETA = 0,
-  NC_HIPERT_GW_IM_ZETA,
-  NC_HIPERT_GW_RE_PZETA,
-  NC_HIPERT_GW_IM_PZETA,
+  NC_HIPERT_GW_RE_H = 0,
+  NC_HIPERT_GW_IM_H,
+  NC_HIPERT_GW_RE_PH,
+  NC_HIPERT_GW_IM_PH,
 } NcHIPertGWVars;
 
 
@@ -79,13 +78,15 @@ gdouble nc_hipert_igw_eval_xi (NcHIPertIGW *igw, const gdouble tau, const gdoubl
 gdouble nc_hipert_igw_eval_F1 (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
 gdouble nc_hipert_igw_eval_nu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
 gdouble nc_hipert_igw_eval_m (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
-void nc_hipert_igw_eval_system (NcHIPertIGW *igw, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
-gdouble nc_hipert_igw_eval_powspec_factor (NcHIPertIGW *igw, const gdouble k);
+gdouble nc_hipert_igw_eval_powspec_factor (NcHIPertIGW *igw);
 
 NcHIPertGW *nc_hipert_gw_new (void);
-NcHIPertGW *nc_hipert_gw_ref (NcHIPertGW *pa);
-void nc_hipert_gw_free (NcHIPertGW *pa);
-void nc_hipert_gw_clear (NcHIPertGW **pa);
+NcHIPertGW *nc_hipert_gw_ref (NcHIPertGW *pgw);
+void nc_hipert_gw_free (NcHIPertGW *pgw);
+void nc_hipert_gw_clear (NcHIPertGW **pgw);
+
+void nc_hipert_gw_set_k (NcHIPertGW *pgw, const gdouble k);
+gdouble nc_hipert_gw_get_k (NcHIPertGW *pgw);
 
 G_END_DECLS
 

@@ -49,8 +49,7 @@ struct _NcHIPertIAdiabInterface
   gdouble (*eval_F1) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
   gdouble (*eval_nu) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
   gdouble (*eval_m) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-  void (*eval_system) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
-  gdouble (*eval_powspec_factor) (NcHIPertIAdiab *iad, const gdouble k);
+  gdouble (*eval_powspec_factor) (NcHIPertIAdiab *iad);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[12];
@@ -79,14 +78,16 @@ gdouble nc_hipert_iadiab_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const 
 gdouble nc_hipert_iadiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 gdouble nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 gdouble nc_hipert_iadiab_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-void nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
 
-gdouble nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad, const gdouble k);
+gdouble nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad);
 
 NcHIPertAdiab *nc_hipert_adiab_new (void);
 NcHIPertAdiab *nc_hipert_adiab_ref (NcHIPertAdiab *pa);
 void nc_hipert_adiab_free (NcHIPertAdiab *pa);
 void nc_hipert_adiab_clear (NcHIPertAdiab **pa);
+
+void nc_hipert_adiab_set_k (NcHIPertAdiab *adiab, const gdouble k);
+gdouble nc_hipert_adiab_get_k (NcHIPertAdiab *adiab);
 
 G_END_DECLS
 
