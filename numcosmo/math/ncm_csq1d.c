@@ -1454,9 +1454,6 @@ _ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, GArray *as
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
   NcmCSQ1DEvolStop reason      = NCM_CSQ1D_EVOL_STOP_ERROR;
   gdouble last_asinh_t         = asinh (self->t);
-  GArray *t_a                  = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *exp_Up_a             = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *chim_t_a             = g_array_new (FALSE, FALSE, sizeof (gdouble));
   gint flag;
 
   g_assert (self->state == NCM_CSQ1D_EVOL_STATE_UP);
@@ -1503,10 +1500,6 @@ _ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, GArray *as
       last_asinh_t = asinh_t;
     }
 
-    g_array_append_val (t_a,      self->t);
-    g_array_append_val (exp_Up_a, exp_Up);
-    g_array_append_val (chim_t_a, chim_t);
-
     if (is_finished)
     {
       reason = NCM_CSQ1D_EVOL_STOP_FINISHED;
@@ -1525,10 +1518,6 @@ _ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, GArray *as
       break;
     }
   }
-
-  g_array_unref (t_a);
-  g_array_unref (exp_Up_a);
-  g_array_unref (chim_t_a);
 
   return reason;
 }

@@ -100,7 +100,6 @@ void ncm_csq1d_set_init_cond_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdou
 
 gdouble ncm_csq1d_get_reltol (NcmCSQ1D *csq1d);
 gdouble ncm_csq1d_get_abstol (NcmCSQ1D *csq1d);
-gdouble ncm_csq1d_get_k (NcmCSQ1D *csq1d);
 gdouble ncm_csq1d_get_ti (NcmCSQ1D *csq1d);
 gdouble ncm_csq1d_get_tf (NcmCSQ1D *csq1d);
 gdouble ncm_csq1d_get_adiab_threshold (NcmCSQ1D *csq1d);
