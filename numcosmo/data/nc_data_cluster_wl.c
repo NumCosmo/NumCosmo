@@ -469,14 +469,14 @@ nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint n
     const gdouble z = ncm_vector_get (x, i);
     gdouble res     = nc_galaxy_sd_position_integ (lh_int->data.rz_dist, lh_int->data.r, z) *
                       nc_galaxy_sd_z_proxy_integ (lh_int->data.zp_dist, z, lh_int->data.zp) *
-                      nc_galaxy_sd_shape_integ (lh_int->data.s_dist,
-                                                lh_int->data.cosmo,
-                                                lh_int->data.dp,
-                                                lh_int->data.smd,
-                                                lh_int->data.z_cluster,
-                                                z,
-                                                lh_int->data.et,
-                                                lh_int->data.ex);
+                      nc_galaxy_sd_shape_integ_optzs (lh_int->data.s_dist,
+                                                      lh_int->data.cosmo,
+                                                      lh_int->data.dp,
+                                                      lh_int->data.smd,
+                                                      lh_int->data.z_cluster,
+                                                      z,
+                                                      lh_int->data.et,
+                                                      lh_int->data.ex);
 
     ncm_vector_set (fval, i, res);
   }
@@ -597,7 +597,7 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
     likelihood_integral->data.et        = ncm_matrix_get (self->obs, gal_i, 2);
     likelihood_integral->data.ex        = ncm_matrix_get (self->obs, gal_i, 3);
 
-    nc_galaxy_sd_shape_integ_prep (self->s_dist, cosmo, dp, smd, self->z_cluster, likelihood_integral->data.r);
+    nc_galaxy_sd_shape_integ_optzs_prep (self->s_dist, cosmo, dp, smd, self->z_cluster, likelihood_integral->data.r);
 
     nc_galaxy_sd_z_proxy_get_true_z_lim (self->zp_dist, likelihood_integral->data.zp, &z_min, &z_max);
 
