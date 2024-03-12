@@ -149,6 +149,7 @@ def test_initial_conditions_adiabatic():
     bs.set_k(1.0)
     bs.set_ti(-100.0)
     bs.set_tf(-1.0e-3)
+    state = Ncm.CSQ1DState.new()
 
     for prec in np.geomspace(1.0e-14, 1.0e-6, 100):
         limit_found, t_adiab = bs.find_adiab_time_limit(None, -1.0e4, -1.0e1, prec)
@@ -156,7 +157,7 @@ def test_initial_conditions_adiabatic():
         assert limit_found
 
         # Getting the adiabatic solution
-        state, _alpha_reltol, _dgamma_reltol = bs.compute_adiab(None, t_adiab)
+        state, _alpha_reltol, _dgamma_reltol = bs.compute_adiab(None, t_adiab, state)
         bs.change_frame(None, state, Ncm.CSQ1DFrame.ORIG)
         phi_vec, Pphi_vec = state.get_phi_Pphi()
 
@@ -183,6 +184,7 @@ def test_evolution():
     bs.set_k(1.0)
     bs.set_ti(-100.0)
     bs.set_tf(-1.0e-3)
+    state = Ncm.CSQ1DState.new()
 
     limit_found, t_adiab = bs.find_adiab_time_limit(None, -1.0e4, -1.0e1, 1.0e-8)
 
@@ -197,7 +199,7 @@ def test_evolution():
     t_a, _smaller_abst = bs.get_time_array()
 
     for t in t_a:
-        state = bs.eval_at(t)
+        state = bs.eval_at(t, state)
         phi_vec, Pphi_vec = state.get_phi_Pphi()
 
         phi = phi_vec[0] + 1.0j * phi_vec[1]
