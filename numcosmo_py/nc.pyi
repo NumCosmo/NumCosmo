@@ -3275,14 +3275,14 @@ class DECont(NumCosmoMath.CSQ1D):
         c_s^2
       w -> gdouble: w
         w
+      k -> gdouble: k
+        k
 
     Properties from NcmCSQ1D:
       reltol -> gdouble: reltol
         Relative tolerance
       abstol -> gdouble: abstol
         Absolute tolerance tolerance
-      k -> gdouble: k
-        Mode k
       ti -> gdouble: ti
         The initial time t_i
       tf -> gdouble: tf
@@ -3304,10 +3304,10 @@ class DECont(NumCosmoMath.CSQ1D):
         OmegaL: float
         Omegaw: float
         cs2: float
+        k: float
         w: float
         abstol: float
         adiab_threshold: float
-        k: float
         max_order_2: bool
         prop_threshold: float
         reltol: float
@@ -3315,17 +3315,15 @@ class DECont(NumCosmoMath.CSQ1D):
         tf: float
         ti: float
     props: Props = ...
-    parent_instance: NumCosmoMath.CSQ1D = ...
-    priv: DEContPrivate = ...
     def __init__(
         self,
         OmegaL: float = ...,
         Omegaw: float = ...,
         cs2: float = ...,
+        k: float = ...,
         w: float = ...,
         abstol: float = ...,
         adiab_threshold: float = ...,
-        k: float = ...,
         max_order_2: bool = ...,
         prop_threshold: float = ...,
         reltol: float = ...,
@@ -3336,9 +3334,11 @@ class DECont(NumCosmoMath.CSQ1D):
     @staticmethod
     def clear(dec: DECont) -> None: ...
     def free(self) -> None: ...
+    def get_k(self) -> float: ...
     @classmethod
     def new(cls, Omegaw: float, OmegaL: float, cs2: float, w: float) -> DECont: ...
     def ref(self) -> DECont: ...
+    def set_k(self, k: float) -> None: ...
 
 class DEContClass(GObject.GPointer):
     r"""
@@ -3349,8 +3349,6 @@ class DEContClass(GObject.GPointer):
         DEContClass()
     """
     parent_class: NumCosmoMath.CSQ1DClass = ...
-
-class DEContPrivate(GObject.GPointer): ...
 
 class DataBaoA(NumCosmoMath.DataGaussDiag):
     r"""
@@ -9354,7 +9352,7 @@ class HIPert(GObject.Object):
     def set_stiff_solver(self, stiff: bool) -> None: ...
     def set_sys_size(self, sys_size: int) -> None: ...
 
-class HIPertAdiab(NumCosmoMath.HOAA):
+class HIPertAdiab(NumCosmoMath.CSQ1D):
     r"""
     :Constructors:
 
@@ -9365,21 +9363,23 @@ class HIPertAdiab(NumCosmoMath.HOAA):
 
     Object NcHIPertAdiab
 
-    Properties from NcmHOAA:
+    Properties from NcmCSQ1D:
       reltol -> gdouble: reltol
         Relative tolerance
       abstol -> gdouble: abstol
         Absolute tolerance tolerance
-      k -> gdouble: k
-        The mode k
       ti -> gdouble: ti
         The initial time t_i
       tf -> gdouble: tf
         The final time t_f
+      adiab-threshold -> gdouble: adiab-threshold
+        The adiabatic threshold
+      prop-threshold -> gdouble: prop-threshold
+        The propagator threshold
       save-evol -> gboolean: save-evol
         Save the system evolution
-      opt -> NcmHOAAOpt: opt
-        Evolution options
+      max-order-2 -> gboolean: max-order-2
+        Whether to always truncate at order 2
 
     Signals from GObject:
       notify (GParam)
@@ -9387,19 +9387,20 @@ class HIPertAdiab(NumCosmoMath.HOAA):
 
     class Props:
         abstol: float
-        k: float
-        opt: NumCosmoMath.HOAAOpt
+        adiab_threshold: float
+        max_order_2: bool
+        prop_threshold: float
         reltol: float
         save_evol: bool
         tf: float
         ti: float
     props: Props = ...
-    parent_instance: NumCosmoMath.HOAA = ...
     def __init__(
         self,
         abstol: float = ...,
-        k: float = ...,
-        opt: NumCosmoMath.HOAAOpt = ...,
+        adiab_threshold: float = ...,
+        max_order_2: bool = ...,
+        prop_threshold: float = ...,
         reltol: float = ...,
         save_evol: bool = ...,
         tf: float = ...,
@@ -9408,9 +9409,11 @@ class HIPertAdiab(NumCosmoMath.HOAA):
     @staticmethod
     def clear(pa: HIPertAdiab) -> None: ...
     def free(self) -> None: ...
+    def get_k(self) -> float: ...
     @classmethod
     def new(cls) -> HIPertAdiab: ...
     def ref(self) -> HIPertAdiab: ...
+    def set_k(self, k: float) -> None: ...
 
 class HIPertAdiabClass(GObject.GPointer):
     r"""
@@ -9420,7 +9423,7 @@ class HIPertAdiabClass(GObject.GPointer):
 
         HIPertAdiabClass()
     """
-    parent_class: NumCosmoMath.HOAAClass = ...
+    parent_class: NumCosmoMath.CSQ1DClass = ...
 
 class HIPertBGVar(GObject.Object):
     r"""
@@ -10332,7 +10335,7 @@ class HIPertFirstOrderClass(GObject.GPointer):
 
 class HIPertFirstOrderPrivate(GObject.GPointer): ...
 
-class HIPertGW(NumCosmoMath.HOAA):
+class HIPertGW(NumCosmoMath.CSQ1D):
     r"""
     :Constructors:
 
@@ -10343,21 +10346,23 @@ class HIPertGW(NumCosmoMath.HOAA):
 
     Object NcHIPertGW
 
-    Properties from NcmHOAA:
+    Properties from NcmCSQ1D:
       reltol -> gdouble: reltol
         Relative tolerance
       abstol -> gdouble: abstol
         Absolute tolerance tolerance
-      k -> gdouble: k
-        The mode k
       ti -> gdouble: ti
         The initial time t_i
       tf -> gdouble: tf
         The final time t_f
+      adiab-threshold -> gdouble: adiab-threshold
+        The adiabatic threshold
+      prop-threshold -> gdouble: prop-threshold
+        The propagator threshold
       save-evol -> gboolean: save-evol
         Save the system evolution
-      opt -> NcmHOAAOpt: opt
-        Evolution options
+      max-order-2 -> gboolean: max-order-2
+        Whether to always truncate at order 2
 
     Signals from GObject:
       notify (GParam)
@@ -10365,30 +10370,33 @@ class HIPertGW(NumCosmoMath.HOAA):
 
     class Props:
         abstol: float
-        k: float
-        opt: NumCosmoMath.HOAAOpt
+        adiab_threshold: float
+        max_order_2: bool
+        prop_threshold: float
         reltol: float
         save_evol: bool
         tf: float
         ti: float
     props: Props = ...
-    parent_instance: NumCosmoMath.HOAA = ...
     def __init__(
         self,
         abstol: float = ...,
-        k: float = ...,
-        opt: NumCosmoMath.HOAAOpt = ...,
+        adiab_threshold: float = ...,
+        max_order_2: bool = ...,
+        prop_threshold: float = ...,
         reltol: float = ...,
         save_evol: bool = ...,
         tf: float = ...,
         ti: float = ...,
     ): ...
     @staticmethod
-    def clear(pa: HIPertGW) -> None: ...
+    def clear(pgw: HIPertGW) -> None: ...
     def free(self) -> None: ...
+    def get_k(self) -> float: ...
     @classmethod
     def new(cls) -> HIPertGW: ...
     def ref(self) -> HIPertGW: ...
+    def set_k(self, k: float) -> None: ...
 
 class HIPertGWClass(GObject.GPointer):
     r"""
@@ -10398,7 +10406,7 @@ class HIPertGWClass(GObject.GPointer):
 
         HIPertGWClass()
     """
-    parent_class: NumCosmoMath.HOAAClass = ...
+    parent_class: NumCosmoMath.CSQ1DClass = ...
 
 class HIPertGrav(GObject.Object):
     r"""
@@ -10703,26 +10711,11 @@ class HIPertIAdiab(GObject.GInterface):
     Signals from GObject:
       notify (GParam)
     """
-    def eval_dlnmnu(self, tau: float, k: float) -> float: ...
-    def eval_mnu(self, tau: float, k: float) -> float: ...
+    def eval_F1(self, tau: float, k: float) -> float: ...
+    def eval_m(self, tau: float, k: float) -> float: ...
     def eval_nu(self, tau: float, k: float) -> float: ...
     def eval_powspec_factor(self) -> float: ...
-    def eval_sing_dlnmnu(self, tau_m_taus: float, k: float, sing: int) -> float: ...
-    def eval_sing_mnu(self, tau_m_taus: float, k: float, sing: int) -> float: ...
-    def eval_sing_system(
-        self, tau_m_taus: float, k: float, sing: int
-    ) -> Tuple[float, float]: ...
-    def eval_system(self, tau: float, k: float) -> Tuple[float, float]: ...
-    def get_sing_info(
-        self,
-        k: float,
-        sing: int,
-        ts: float,
-        dts_i: float,
-        dts_f: float,
-        st: NumCosmoMath.HOAASingType,
-    ) -> None: ...
-    def nsing(self, k: float) -> int: ...
+    def eval_xi(self, tau: float, k: float) -> float: ...
 
 class HIPertIAdiabInterface(GObject.GPointer):
     r"""
@@ -10733,20 +10726,12 @@ class HIPertIAdiabInterface(GObject.GPointer):
         HIPertIAdiabInterface()
     """
     parent: GObject.TypeInterface = ...
-    eval_mnu: Callable[[HIPertIAdiab, float, float], float] = ...
+    eval_xi: Callable[[HIPertIAdiab, float, float], float] = ...
+    eval_F1: Callable[[HIPertIAdiab, float, float], float] = ...
     eval_nu: Callable[[HIPertIAdiab, float, float], float] = ...
-    eval_dlnmnu: Callable[[HIPertIAdiab, float, float], float] = ...
-    eval_system: Callable[[HIPertIAdiab, float, float], Tuple[float, float]] = ...
-    nsing: Callable[[HIPertIAdiab, float], int] = ...
-    get_sing_info: Callable[
-        [HIPertIAdiab, float, int, float, float, float, NumCosmoMath.HOAASingType], None
-    ] = ...
-    eval_sing_mnu: Callable[[HIPertIAdiab, float, float, int], float] = ...
-    eval_sing_dlnmnu: Callable[[HIPertIAdiab, float, float, int], float] = ...
-    eval_sing_system: Callable[
-        [HIPertIAdiab, float, float, int], Tuple[float, float]
-    ] = ...
+    eval_m: Callable[[HIPertIAdiab, float, float], float] = ...
     eval_powspec_factor: Callable[[HIPertIAdiab], float] = ...
+    padding: list[None] = ...
 
 class HIPertIGW(GObject.GInterface):
     r"""
@@ -10755,26 +10740,11 @@ class HIPertIGW(GObject.GInterface):
     Signals from GObject:
       notify (GParam)
     """
-    def eval_dlnmnu(self, tau: float, k: float) -> float: ...
-    def eval_mnu(self, tau: float, k: float) -> float: ...
+    def eval_F1(self, tau: float, k: float) -> float: ...
+    def eval_m(self, tau: float, k: float) -> float: ...
     def eval_nu(self, tau: float, k: float) -> float: ...
     def eval_powspec_factor(self) -> float: ...
-    def eval_sing_dlnmnu(self, tau_m_taus: float, k: float, sing: int) -> float: ...
-    def eval_sing_mnu(self, tau_m_taus: float, k: float, sing: int) -> float: ...
-    def eval_sing_system(
-        self, tau_m_taus: float, k: float, sing: int
-    ) -> Tuple[float, float]: ...
-    def eval_system(self, tau: float, k: float) -> Tuple[float, float]: ...
-    def get_sing_info(
-        self,
-        k: float,
-        sing: int,
-        ts: float,
-        dts_i: float,
-        dts_f: float,
-        st: NumCosmoMath.HOAASingType,
-    ) -> None: ...
-    def nsing(self, k: float) -> int: ...
+    def eval_xi(self, tau: float, k: float) -> float: ...
 
 class HIPertIGWInterface(GObject.GPointer):
     r"""
@@ -10785,20 +10755,12 @@ class HIPertIGWInterface(GObject.GPointer):
         HIPertIGWInterface()
     """
     parent: GObject.TypeInterface = ...
-    eval_mnu: Callable[[HIPertIGW, float, float], float] = ...
+    eval_xi: Callable[[HIPertIGW, float, float], float] = ...
+    eval_F1: Callable[[HIPertIGW, float, float], float] = ...
     eval_nu: Callable[[HIPertIGW, float, float], float] = ...
-    eval_dlnmnu: Callable[[HIPertIGW, float, float], float] = ...
-    eval_system: Callable[[HIPertIGW, float, float], Tuple[float, float]] = ...
-    nsing: Callable[[HIPertIGW, float], int] = ...
-    get_sing_info: Callable[
-        [HIPertIGW, float, int, float, float, float, NumCosmoMath.HOAASingType], None
-    ] = ...
-    eval_sing_mnu: Callable[[HIPertIGW, float, float, int], float] = ...
-    eval_sing_dlnmnu: Callable[[HIPertIGW, float, float, int], float] = ...
-    eval_sing_system: Callable[
-        [HIPertIGW, float, float, int], Tuple[float, float]
-    ] = ...
+    eval_m: Callable[[HIPertIGW, float, float], float] = ...
     eval_powspec_factor: Callable[[HIPertIGW], float] = ...
+    padding: list[None] = ...
 
 class HIPertITwoFluids(GObject.GInterface):
     r"""
@@ -18040,10 +18002,10 @@ class HIPertFirstOrderInteg(GObject.GEnum):
     CVODE: HIPertFirstOrderInteg = ...
 
 class HIPertGWVars(GObject.GEnum):
-    IM_PZETA: HIPertGWVars = ...
-    IM_ZETA: HIPertGWVars = ...
-    RE_PZETA: HIPertGWVars = ...
-    RE_ZETA: HIPertGWVars = ...
+    IM_H: HIPertGWVars = ...
+    IM_PH: HIPertGWVars = ...
+    RE_H: HIPertGWVars = ...
+    RE_PH: HIPertGWVars = ...
 
 class HIPertGravGauge(GObject.GEnum):
     CONST_CURV: HIPertGravGauge = ...

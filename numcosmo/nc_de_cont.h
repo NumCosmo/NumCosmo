@@ -46,6 +46,9 @@ NcDECont *nc_de_cont_ref (NcDECont *dec);
 void nc_de_cont_free (NcDECont *dec);
 void nc_de_cont_clear (NcDECont **dec);
 
+void nc_de_cont_set_k (NcDECont *dec, const gdouble k);
+gdouble nc_de_cont_get_k (NcDECont *dec);
+
 G_END_DECLS
 
 #endif /* _NC_DE_CONT_H_ */

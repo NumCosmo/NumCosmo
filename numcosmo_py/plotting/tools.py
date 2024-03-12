@@ -84,7 +84,7 @@ def latex_float(value: float):
         if exponent == 0.0:
             return f"{base}"
 
-        return f"{base} \times 10^{{{int(exponent)}}}"
+        return rf"{base} \times 10^{{{int(exponent)}}}"
 
     return float_str
 

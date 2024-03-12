@@ -553,7 +553,7 @@ ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const g
  * @abstol: the absolute precision
  *
  * Compare x and y and return -1 if x < y, 0 if x == y and 1 if x > y,
- * all comparisons are done with precision @prec.
+ * all comparisons are done with precision @reltol and @abstol.
  *
  * Returns: -1, 0, 1.
  */

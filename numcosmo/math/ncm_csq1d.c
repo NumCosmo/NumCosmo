@@ -132,9 +132,12 @@ typedef struct _NcmCSQ1DPrivate
   SUNLinearSolver LS_Prop;
   NcmSpline *alpha_s;
   NcmSpline *dgamma_s;
+  NcmSpline *gamma_s;
   NcmDiff *diff;
   NcmSpline *R[4];
   gdouble tf_Prop;
+  gdouble ti_Prop;
+  NcmCSQ1DState *cur_state;
 } NcmCSQ1DPrivate;
 
 enum
@@ -150,6 +153,7 @@ enum
   PROP_MAX_ORDER_2,
 };
 
+G_DEFINE_BOXED_TYPE (NcmCSQ1DState, ncm_csq1d_state, ncm_csq1d_state_copy, ncm_csq1d_state_free)
 G_DEFINE_TYPE_WITH_PRIVATE (NcmCSQ1D, ncm_csq1d, G_TYPE_OBJECT)
 
 static void
@@ -211,6 +215,7 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
 
   self->alpha_s  = ncm_spline_cubic_notaknot_new ();
   self->dgamma_s = ncm_spline_cubic_notaknot_new ();
+  self->gamma_s  = ncm_spline_cubic_notaknot_new ();
 
   {
     gint i;
@@ -219,8 +224,10 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
       self->R[i] = ncm_spline_cubic_notaknot_new ();
   }
   self->tf_Prop = 0.0;
+  self->ti_Prop = 0.0;
 
-  self->diff = ncm_diff_new ();
+  self->diff      = ncm_diff_new ();
+  self->cur_state = ncm_csq1d_state_new ();
 }
 
 static void
@@ -232,6 +239,7 @@ _ncm_csq1d_dispose (GObject *object)
   ncm_model_ctrl_clear (&self->ctrl);
   ncm_spline_clear (&self->alpha_s);
   ncm_spline_clear (&self->dgamma_s);
+  ncm_spline_clear (&self->gamma_s);
 
   {
     gint i;
@@ -331,6 +339,8 @@ _ncm_csq1d_finalize (GObject *object)
 
     NCM_CVODE_CHECK (&flag, "SUNLinSolFree", 1, );
   }
+
+  ncm_csq1d_state_free (self->cur_state);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_csq1d_parent_class)->finalize (object);
@@ -625,6 +635,312 @@ _ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model)
   return 0.0;
 }
 
+/* State related functions */
+
+/**
+ * ncm_csq1d_state_new:
+ *
+ * Creates a new and uninitialized #NcmCSQ1DState.
+ *
+ * Returns: (transfer full): a new #NcmCSQ1DState.
+ */
+NcmCSQ1DState *
+ncm_csq1d_state_new (void)
+{
+  return g_slice_new0 (NcmCSQ1DState);
+}
+
+/**
+ * ncm_csq1d_state_copy:
+ * @state: a #NcmCSQ1DState
+ *
+ * Creates a copy of @state.
+ *
+ * Returns: (transfer full): a new #NcmCSQ1DState with the same contents as @state.
+ */
+NcmCSQ1DState *
+ncm_csq1d_state_copy (NcmCSQ1DState *state)
+{
+  return g_slice_dup (NcmCSQ1DState, state);
+}
+
+/**
+ * ncm_csq1d_state_free:
+ * @state: a #NcmCSQ1DState
+ *
+ * Frees @state.
+ *
+ */
+void
+ncm_csq1d_state_free (NcmCSQ1DState *state)
+{
+  g_slice_free (NcmCSQ1DState, state);
+}
+
+/**
+ * ncm_csq1d_state_set_ag:
+ * @state: a #NcmCSQ1DState
+ * @frame: the frame of @state
+ * @t: the time of @state
+ * @alpha: the alpha of @state
+ * @gamma: the gamma of @state
+ *
+ * Sets the state using the $(\alpha, \gamma)$ parametrization.
+ *
+ */
+void
+ncm_csq1d_state_set_ag (NcmCSQ1DState *state, const NcmCSQ1DFrame frame, const gdouble t, const gdouble alpha, const gdouble gamma)
+{
+  state->frame = frame;
+  state->t     = t;
+  state->alpha = alpha;
+  state->gamma = gamma;
+}
+
+/**
+ * ncm_csq1d_state_set_up:
+ * @state: a #NcmCSQ1DState
+ * @frame: the frame of @state
+ * @t: the time of @state
+ * @chi: the chi of @state
+ * @Up: the Up of @state
+ *
+ * Sets the state using the $(\chi, U_+)$ parametrization.
+ *
+ */
+void
+ncm_csq1d_state_set_up (NcmCSQ1DState *state, const NcmCSQ1DFrame frame, const gdouble t, const gdouble chi, const gdouble Up)
+{
+  state->frame = frame;
+  state->t     = t;
+  state->alpha = asinh (chi);
+  state->gamma = Up - gsl_sf_lncosh (state->alpha);
+}
+
+/**
+ * ncm_csq1d_state_set_um:
+ * @state: a #NcmCSQ1DState
+ * @frame: the frame of @state
+ * @t: the time of @state
+ * @chi: the chi of @state
+ * @Um: the Um of @state
+ *
+ * Sets the state using the $(\chi, U_-)$ parametrization.
+ *
+ */
+void
+ncm_csq1d_state_set_um (NcmCSQ1DState *state, const NcmCSQ1DFrame frame, const gdouble t, const gdouble chi, const gdouble Um)
+{
+  state->frame = frame;
+  state->t     = t;
+  state->alpha = asinh (chi);
+  state->gamma = -Um + gsl_sf_lncosh (state->alpha);
+}
+
+/**
+ * ncm_csq1d_state_get_time:
+ * @state: a #NcmCSQ1DState
+ *
+ * Returns: the time of @state.
+ */
+gdouble
+ncm_csq1d_state_get_time (NcmCSQ1DState *state)
+{
+  return state->t;
+}
+
+/**
+ * ncm_csq1d_state_get_frame:
+ * @state: a #NcmCSQ1DState
+ *
+ * Returns: the frame of @state.
+ */
+NcmCSQ1DFrame
+ncm_csq1d_state_get_frame (NcmCSQ1DState *state)
+{
+  return state->frame;
+}
+
+/**
+ * ncm_csq1d_state_get_ag:
+ * @state: a #NcmCSQ1DState
+ * @alpha: (out): the alpha of @state
+ * @gamma: (out): the gamma of @state
+ *
+ * Computes the $(\alpha, \gamma)$ parametrization of @state.
+ *
+ */
+void
+ncm_csq1d_state_get_ag (NcmCSQ1DState *state, gdouble *alpha, gdouble *gamma)
+{
+  *alpha = state->alpha;
+  *gamma = state->gamma;
+}
+
+/**
+ * ncm_csq1d_state_get_up:
+ * @state: a #NcmCSQ1DState
+ * @chi: (out): the chi of @state
+ * @Up: (out): the Up of @state
+ *
+ * Computes the $(\chi, U_+)$ parametrization of @state.
+ *
+ */
+void
+ncm_csq1d_state_get_up (NcmCSQ1DState *state, gdouble *chi, gdouble *Up)
+{
+  *chi = sinh (state->alpha);
+  *Up  = state->gamma + gsl_sf_lncosh (state->alpha);
+}
+
+/**
+ * ncm_csq1d_state_get_um:
+ * @state: a #NcmCSQ1DState
+ * @chi: (out): the chi of @state
+ * @Um: (out): the Um of @state
+ *
+ * Computes the $(\chi, U_-)$ parametrization of @state.
+ *
+ */
+void
+ncm_csq1d_state_get_um (NcmCSQ1DState *state, gdouble *chi, gdouble *Um)
+{
+  *chi = sinh (state->alpha);
+  *Um  = -state->gamma + gsl_sf_lncosh (state->alpha);
+}
+
+/**
+ * ncm_csq1d_state_get_J:
+ * @state: a #NcmCSQ1DState
+ * @J11: (out): the J11 of @state
+ * @J12: (out): the J12 of @state
+ * @J22: (out): the J22 of @state
+ *
+ * Computes the covariant metric of @state.
+ *
+ */
+void
+ncm_csq1d_state_get_J (NcmCSQ1DState *state, gdouble *J11, gdouble *J12, gdouble *J22)
+{
+  const gdouble alpha = state->alpha;
+  const gdouble gamma = state->gamma;
+
+  *J11 = cosh (alpha) * exp (-gamma);
+  *J22 = cosh (alpha) * exp (+gamma);
+  *J12 = -sinh (alpha);
+}
+
+/**
+ * ncm_csq1d_state_get_phi_Pphi:
+ * @state: a #NcmCSQ1DState
+ * @phi: (out caller-allocates) (array fixed-size=2): the $\phi$ of @state
+ * @Pphi: (out caller-allocates) (array fixed-size=2): the $P_\phi$ of @state
+ *
+ * Computes the $(\phi, P_\phi)$ parametrization of @state.
+ *
+ */
+void
+ncm_csq1d_state_get_phi_Pphi (NcmCSQ1DState *state, gdouble *phi, gdouble *Pphi)
+{
+  const gdouble alpha               = state->alpha;
+  const gdouble gamma               = state->gamma;
+  const gdouble exp_gamma_p_alpha_2 = exp (0.5 * (gamma + alpha));
+  const gdouble exp_gamma_m_alpha_2 = exp (0.5 * (gamma - alpha));
+
+  phi[0] = +0.5 / exp_gamma_m_alpha_2;
+  phi[1] = -0.5 / exp_gamma_p_alpha_2;
+
+  Pphi[0] = -0.5 * exp_gamma_p_alpha_2;
+  Pphi[1] = -0.5 * exp_gamma_m_alpha_2;
+}
+
+/**
+ * ncm_csq1d_state_get_poincare_half_plane:
+ * @state: a #NcmCSQ1DState
+ * @x: (out): the $x$ of @state
+ * @lny: (out): the $\ln y$ of @state
+ *
+ * Computes the Poincaré half-plane parametrization of @state.
+ *
+ */
+void
+ncm_csq1d_state_get_poincare_half_plane (NcmCSQ1DState *state, gdouble *x, gdouble *lny)
+{
+  const gdouble alpha = state->alpha;
+  const gdouble gamma = state->gamma;
+
+  *x   = exp (-gamma) * tanh (alpha);
+  *lny = -gamma - gsl_sf_lncosh (alpha);
+}
+
+/**
+ * ncm_csq1d_state_get_poincare_disc:
+ * @state: a #NcmCSQ1DState
+ * @x: (out): the $x$ of @state
+ * @y: (out): the $y$ of @state
+ *
+ * Computes the Poincaré disc parametrization of @state.
+ *
+ */
+void
+ncm_csq1d_state_get_poincare_disc (NcmCSQ1DState *state, gdouble *x, gdouble *y)
+{
+  const gdouble alpha = state->alpha;
+  const gdouble gamma = state->gamma;
+
+  *x = +sinh (alpha) / (1.0 + cosh (alpha) * cosh (gamma));
+  *y = -sinh (gamma) * cosh (alpha) / (1.0 + cosh (alpha) * cosh (gamma));
+}
+
+/**
+ * ncm_csq1d_state_get_minkowski:
+ * @state: a #NcmCSQ1DState
+ * @x1: (out): the $x_1$ of @state
+ * @x2: (out): the $x_2$ of @state
+ *
+ * Computes the Minkowski parametrization of @state.
+ *
+ */
+void
+ncm_csq1d_state_get_minkowski (NcmCSQ1DState *state, gdouble *x1, gdouble *x2)
+{
+  const gdouble alpha = state->alpha;
+  const gdouble gamma = state->gamma;
+
+  *x1 = +sinh (alpha);
+  *x2 = -cosh (alpha) * sinh (gamma);
+}
+
+/**
+ * ncm_csq1d_state_get_circle:
+ * @state: a #NcmCSQ1DState
+ * @r: radius
+ * @theta: angle
+ * @cstate: (out caller-allocates): the new state
+ *
+ * Computes the complex structure matrix parameters for a circle
+ * around the point @state with radius $r$ and angle
+ * $\theta$ and stores the result in @cstate.
+ *
+ */
+void
+ncm_csq1d_state_get_circle (NcmCSQ1DState *state, const gdouble r, const gdouble theta, NcmCSQ1DState *cstate)
+{
+  const gdouble alpha = state->alpha;
+  const gdouble gamma = state->gamma;
+  const gdouble ct    = cos (theta);
+  const gdouble st    = sin (theta);
+  const gdouble tr    = tanh (r);
+  const gdouble ca    = cosh (alpha);
+  const gdouble sa    = sinh (alpha);
+  const gdouble t1    = cosh (r) * sa + ct * ca * sinh (r);
+  const gdouble t2    = -(2.0 * st * tr / (ca + tr * (st + ct * sa)));
+
+  ncm_csq1d_state_set_ag (cstate, state->frame, state->t, asinh (t1), gamma + 0.5 * log1p (t2));
+}
+
+/* CSQ1D methods */
+
 /**
  * ncm_csq1d_ref:
  * @csq1d: a #NcmCSQ1D
@@ -809,43 +1125,44 @@ ncm_csq1d_set_max_order_2 (NcmCSQ1D *csq1d, gboolean truncate)
 /**
  * ncm_csq1d_set_init_cond:
  * @csq1d: a #NcmCSQ1D
- * @state: a #NcmCSQ1DEvolState
- * @ti: initial time $t_i$
- * @x: $\alpha$ or $\chi$ depending on the @state
- * @y: $\delta\gamma$, $U_+$ or $U_-$ depending on the @state
+ * @model: (allow-none): a #NcmModel
+ * @evol_state: a #NcmCSQ1DEvolState
+ * @initial_state: a #NcmCSQ1DState
  *
- * Sets the values of the initial conditions at $t_i$.
- * This method also updates the value of $t_i$.
+ * Sets the values of the initial conditions to @initial_state.
+ * Depending on the value of @evol_state, the initial conditions
+ * are set in the adiabatic frame 1 if @evol_state is #NCM_CSQ1D_EVOL_STATE_ADIABATIC,
+ * or in the original frame when using the $U_+$ or $U_-$ parametrization.
  *
  */
 void
-ncm_csq1d_set_init_cond (NcmCSQ1D *csq1d, NcmCSQ1DEvolState state, const gdouble ti, const gdouble x, const gdouble y)
+ncm_csq1d_set_init_cond (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DEvolState evol_state, NcmCSQ1DState *initial_state)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  switch (state)
+  switch (evol_state)
   {
     case NCM_CSQ1D_EVOL_STATE_ADIABATIC:
-      NV_Ith_S (self->y, 0) = x;
-      NV_Ith_S (self->y, 1) = y;
+      ncm_csq1d_change_frame (csq1d, model, initial_state, NCM_CSQ1D_FRAME_ADIAB1);
+      ncm_csq1d_state_get_ag (initial_state, &NV_Ith_S (self->y, 0), &NV_Ith_S (self->y, 1));
       break;
     case NCM_CSQ1D_EVOL_STATE_UP:
-      NV_Ith_S (self->y_Up, 0) = x;
-      NV_Ith_S (self->y_Up, 1) = y;
+      ncm_csq1d_change_frame (csq1d, model, initial_state, NCM_CSQ1D_FRAME_ORIG);
+      ncm_csq1d_state_get_up (initial_state, &NV_Ith_S (self->y_Up, 0), &NV_Ith_S (self->y_Up, 1));
       break;
     case NCM_CSQ1D_EVOL_STATE_UM:
-      NV_Ith_S (self->y_Um, 0) = x;
-      NV_Ith_S (self->y_Um, 1) = y;
+      ncm_csq1d_change_frame (csq1d, model, initial_state, NCM_CSQ1D_FRAME_ORIG);
+      ncm_csq1d_state_get_um (initial_state, &NV_Ith_S (self->y_Um, 0), &NV_Ith_S (self->y_Um, 1));
       break;
     default:
-      g_error ("ncm_csq1d_set_init_cond: state %d not supported", state);
+      g_error ("ncm_csq1d_set_init_cond: state %d not supported", evol_state);
       break;
   }
 
-  self->t     = ti;
-  self->state = state;
+  self->t     = ncm_csq1d_state_get_time (initial_state);
+  self->state = evol_state;
 
-  ncm_csq1d_set_ti (csq1d, ti);
+  ncm_csq1d_set_ti (csq1d, self->t);
   self->init_cond_set = TRUE;
 }
 
@@ -863,15 +1180,15 @@ void
 ncm_csq1d_set_init_cond_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  gdouble alpha, dgamma;
+  NcmCSQ1DState *state         = ncm_csq1d_compute_adiab (csq1d, model, ti, self->cur_state, NULL, NULL);
 
-  ncm_csq1d_eval_adiab_at (csq1d, model, ti, &alpha, &dgamma, NULL, NULL);
+  g_assert (state->frame == NCM_CSQ1D_FRAME_ADIAB1);
 
-  if ((fabs (dgamma) > self->adiab_threshold) || (fabs (alpha) > self->adiab_threshold))
+  if ((fabs (state->gamma) > self->adiab_threshold) || (fabs (state->alpha) > self->adiab_threshold))
     g_error ("ncm_csq1d_set_init_cond_adiab: time ti == % 22.15g is not a valid adiabatic time alpha, dgamma == (% 22.15g, % 22.15g)",
-             ti, alpha, dgamma);
+             ti, state->alpha, state->gamma);
   else
-    ncm_csq1d_set_init_cond (csq1d, NCM_CSQ1D_EVOL_STATE_ADIABATIC, ti, alpha, dgamma);
+    ncm_csq1d_set_init_cond (csq1d, model, NCM_CSQ1D_EVOL_STATE_ADIABATIC, state);
 }
 
 /**
@@ -1381,7 +1698,7 @@ _ncm_csq1d_J_Um (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_
  */
 
 static NcmCSQ1DEvolStop
-_ncm_csq1d_evol_adiabatic (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, GArray *alpha_a, GArray *dgamma_a)
+_ncm_csq1d_evol_adiabatic (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, GArray *alpha_a, GArray *dgamma_a, GArray *gamma_a)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
   NcmCSQ1DEvolStop reason      = NCM_CSQ1D_EVOL_STOP_ERROR;
@@ -1422,9 +1739,13 @@ _ncm_csq1d_evol_adiabatic (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, 
 
     if ((fabs ((asinh_t - last_asinh_t) / last_asinh_t) > 1.0e-5) || is_finished)
     {
+      const gdouble xi    = ncm_csq1d_eval_xi (csq1d, model, self->t);
+      const gdouble gamma = dgamma + xi;
+
       g_array_append_val (asinh_t_a, asinh_t);
       g_array_append_val (alpha_a,   alpha);
       g_array_append_val (dgamma_a,  dgamma);
+      g_array_append_val (gamma_a,   gamma);
       last_asinh_t = asinh_t;
     }
 
@@ -1449,7 +1770,7 @@ _ncm_csq1d_evol_adiabatic (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, 
 }
 
 static NcmCSQ1DEvolStop
-_ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, GArray *asinh_t_a, GArray *alpha_a, GArray *dgamma_a)
+_ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, GArray *asinh_t_a, GArray *alpha_a, GArray *dgamma_a, GArray *gamma_a)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
   NcmCSQ1DEvolStop reason      = NCM_CSQ1D_EVOL_STOP_ERROR;
@@ -1497,6 +1818,7 @@ _ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, GArray *as
       g_array_append_val (asinh_t_a, asinh_t);
       g_array_append_val (alpha_a,   alpha);
       g_array_append_val (dgamma_a,  dgamma);
+      g_array_append_val (gamma_a,   gamma);
       last_asinh_t = asinh_t;
     }
 
@@ -1523,7 +1845,7 @@ _ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, GArray *as
 }
 
 static NcmCSQ1DEvolStop
-_ncm_csq1d_evol_Um (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, GArray *alpha_a, GArray *dgamma_a)
+_ncm_csq1d_evol_Um (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, GArray *alpha_a, GArray *dgamma_a, GArray *gamma_a)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
   NcmCSQ1DEvolStop reason      = NCM_CSQ1D_EVOL_STOP_ERROR;
@@ -1567,6 +1889,7 @@ _ncm_csq1d_evol_Um (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, GArray 
       g_array_append_val (asinh_t_a, asinh_t);
       g_array_append_val (alpha_a,   alpha);
       g_array_append_val (dgamma_a,  dgamma);
+      g_array_append_val (gamma_a,   gamma);
       last_asinh_t = asinh_t;
     }
 
@@ -1593,7 +1916,7 @@ _ncm_csq1d_evol_Um (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, GArray 
 }
 
 static void
-_ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *asinh_t_a, GArray *alpha_a, GArray *dgamma_a)
+_ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *asinh_t_a, GArray *alpha_a, GArray *dgamma_a, GArray *gamma_a)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
   NcmCSQ1DEvolStop stop;
@@ -1606,19 +1929,19 @@ _ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *
     case NCM_CSQ1D_EVOL_STATE_ADIABATIC:
     {
       _ncm_csq1d_prepare_integrator (csq1d, ws);
-      stop = _ncm_csq1d_evol_adiabatic (csq1d, model, asinh_t_a, alpha_a, dgamma_a);
+      stop = _ncm_csq1d_evol_adiabatic (csq1d, model, asinh_t_a, alpha_a, dgamma_a, gamma_a);
       break;
     }
     case NCM_CSQ1D_EVOL_STATE_UP:
     {
       _ncm_csq1d_prepare_integrator_Up (csq1d, ws);
-      stop = _ncm_csq1d_evol_Up (csq1d, ws, model, asinh_t_a, alpha_a, dgamma_a);
+      stop = _ncm_csq1d_evol_Up (csq1d, ws, model, asinh_t_a, alpha_a, dgamma_a, gamma_a);
       break;
     }
     case NCM_CSQ1D_EVOL_STATE_UM:
     {
       _ncm_csq1d_prepare_integrator_Um (csq1d, ws);
-      stop = _ncm_csq1d_evol_Um (csq1d, model, asinh_t_a, alpha_a, dgamma_a);
+      stop = _ncm_csq1d_evol_Um (csq1d, model, asinh_t_a, alpha_a, dgamma_a, gamma_a);
       break;
     }
     default:
@@ -1660,7 +1983,7 @@ _ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *
       }
 
       self->state = NCM_CSQ1D_EVOL_STATE_UP;
-      _ncm_csq1d_evol_save (csq1d, model, ws, asinh_t_a, alpha_a, dgamma_a);
+      _ncm_csq1d_evol_save (csq1d, model, ws, asinh_t_a, alpha_a, dgamma_a, gamma_a);
       break;
     }
     case NCM_CSQ1D_EVOL_STOP_UM_START:
@@ -1695,7 +2018,7 @@ _ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *
       }
 
       self->state = NCM_CSQ1D_EVOL_STATE_UM;
-      _ncm_csq1d_evol_save (csq1d, model, ws, asinh_t_a, alpha_a, dgamma_a);
+      _ncm_csq1d_evol_save (csq1d, model, ws, asinh_t_a, alpha_a, dgamma_a, gamma_a);
       break;
     }
     case NCM_CSQ1D_EVOL_STOP_ADIABATIC_START:
@@ -1732,7 +2055,7 @@ _ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *
       }
 
       self->state = NCM_CSQ1D_EVOL_STATE_ADIABATIC;
-      _ncm_csq1d_evol_save (csq1d, model, ws, asinh_t_a, alpha_a, dgamma_a);
+      _ncm_csq1d_evol_save (csq1d, model, ws, asinh_t_a, alpha_a, dgamma_a, gamma_a);
       break;
     }
     case NCM_CSQ1D_EVOL_STOP_FINISHED:
@@ -1770,15 +2093,18 @@ ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
     GArray *asinh_t_a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
     GArray *alpha_a   = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
     GArray *dgamma_a  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+    GArray *gamma_a   = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
 
-    _ncm_csq1d_evol_save (csq1d, model, &ws, asinh_t_a, alpha_a, dgamma_a);
+    _ncm_csq1d_evol_save (csq1d, model, &ws, asinh_t_a, alpha_a, dgamma_a, gamma_a);
 
     ncm_spline_set_array (self->alpha_s,  asinh_t_a, alpha_a,  TRUE);
     ncm_spline_set_array (self->dgamma_s, asinh_t_a, dgamma_a, TRUE);
+    ncm_spline_set_array (self->gamma_s,  asinh_t_a, gamma_a,  TRUE);
 
     g_array_unref (asinh_t_a);
     g_array_unref (alpha_a);
     g_array_unref (dgamma_a);
+    g_array_unref (gamma_a);
   }
   else
   {
@@ -2125,21 +2451,8 @@ _ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data)
   return fabs ((F1 - ws->F1_min) / ws->reltol) - 1.0;
 }
 
-/**
- * ncm_csq1d_eval_adiab_at:
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time $t$
- * @alpha: (out): value of $\alpha(t)$
- * @dgamma: (out): value of $\Delta\gamma(t)$
- * @alpha_reltol: (out) (allow-none): estimated error on $\alpha(t)$
- * @dgamma_reltol: (out) (allow-none): estimated error on $\Delta\gamma(t)$
- *
- * Computes the value of the adiabatic approximation of the variables $\alpha$ and $\Delta\gamma$ at $t$.
- *
- */
-void
-ncm_csq1d_eval_adiab_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *alpha, gdouble *dgamma, gdouble *alpha_reltol, gdouble *dgamma_reltol)
+static void
+_ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state, gdouble *alpha_reltol, gdouble *dgamma_reltol)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
   NcmCSQ1DWS ws                = {csq1d, model, 0.0, 0.0};
@@ -2156,12 +2469,15 @@ ncm_csq1d_eval_adiab_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdou
   dlnnu = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_lnnu_func, &ws, &err);
   F4    = d2F2 / gsl_pow_2 (twonu) - dlnnu * F3 / twonu;
 
+  state->frame = NCM_CSQ1D_FRAME_ADIAB1;
+  state->t     = t;
+
   if (self->max_order_2)
   {
     alpha_reltol0  = fabs (F1);
     dgamma_reltol0 = fabs (F2);
-    alpha[0]       = +F1;
-    dgamma[0]      = -F2;
+    state->alpha   = +F1;
+    state->gamma   = -F2;
   }
   else if ((fabs (F3) > fabs (F2)) || (fabs (F4) > fabs (F3)))
   {
@@ -2172,8 +2488,8 @@ ncm_csq1d_eval_adiab_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdou
 
     alpha_reltol0  = fabs (F1);
     dgamma_reltol0 = fabs (F2);
-    alpha[0]       = +F1;
-    dgamma[0]      = -F2;
+    state->alpha   = +F1;
+    state->gamma   = -F2;
   }
   else if ((F1 == 0.0) || (F2 == 0.0))
   {
@@ -2182,15 +2498,15 @@ ncm_csq1d_eval_adiab_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdou
 
     alpha_reltol0  = 0.0;
     dgamma_reltol0 = 0.0;
-    alpha[0]       = F1;
-    dgamma[0]      = -F2;
+    state->alpha   = +F1;
+    state->gamma   = -F2;
   }
   else
   {
     alpha_reltol0  = gsl_pow_2 ((F1_3 / 3.0 - F3) / F1);
     dgamma_reltol0 = gsl_pow_2 ((F4 - F1_2 * F2) / F2);
-    alpha[0]       = +F1 + F1_3 / 3.0 - F3;
-    dgamma[0]      = -(1.0 + F1_2) * F2 + F4;
+    state->alpha   = +F1 + F1_3 / 3.0 - F3;
+    state->gamma   = -(1.0 + F1_2) * F2 + F4;
   }
 
   if (alpha_reltol != NULL)
@@ -2198,6 +2514,30 @@ ncm_csq1d_eval_adiab_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdou
 
   if (dgamma_reltol != NULL)
     dgamma_reltol[0] = dgamma_reltol0;
+}
+
+/**
+ * ncm_csq1d_compute_adiab:
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ * @t: time $t$
+ * @state: a #NcmCSQ1DState to store the result
+ * @alpha_reltol: (out) (allow-none): estimated error on $\alpha(t)$
+ * @dgamma_reltol: (out) (allow-none): estimated error on $\Delta\gamma(t)$
+ *
+ * Computes the value of the adiabatic approximation of the variables $\alpha$ and $\Delta\gamma$ at $t$.
+ * This method computes the adiabatic approximation using the adiabatic series up to the order 2 or 4,
+ * depending on the value of the property max-order-2. The result is stored in the state object in the
+ * frame NCM_CSQ1D_FRAME_ADIAB1. Use ncm_csq1d_change_frame() to change the frame.
+ *
+ * Returns: (transfer none): the @state object with the result.
+ */
+NcmCSQ1DState *
+ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state, gdouble *alpha_reltol, gdouble *dgamma_reltol)
+{
+  _ncm_csq1d_compute_adiab (csq1d, model, t, state, alpha_reltol, dgamma_reltol);
+
+  return state;
 }
 
 static void
@@ -2240,164 +2580,112 @@ _ncm_csq1d_eval_adiab_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdoubl
     dgamma_reltol[0] = dgamma_reltol0;
 }
 
-/**
- * ncm_csq1d_eval_nonadiab_at:
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @nonadiab_frame: frame
- * @t: time $t$
- * @chi: (out): value of $\chi(t)$
- * @Up: (out): value of $U_+$
- *
- * Computes the value of the non-adiabatic VDC order order two
- * in the variables $\chi$ and $U$ at $t$. The VDC can be computed
- * at different frames by choosing @nonadiab_frame.
- *
- */
-void
-ncm_csq1d_eval_nonadiab_at (NcmCSQ1D *csq1d, NcmModel *model, guint nonadiab_frame, const gdouble t, gdouble *chi, gdouble *Up)
+static void
+_ncm_csq1d_compute_nonadiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble q0             = ncm_csq1d_eval_int_1_m (csq1d, model, t);
-  const gdouble q1             = ncm_csq1d_eval_int_q2mnu2 (csq1d, model, t);
   const gdouble p1             = ncm_csq1d_eval_int_qmnu2 (csq1d, model, t);
   const gdouble r1             = 0.5 * ncm_csq1d_eval_int_mnu2 (csq1d, model, t);
 
-  switch (nonadiab_frame)
-  {
-    case 0:
-      chi[0] = (2.0 * p1 - 1.0) * (q0 + q1) + 2.0 * r1;
-      Up[0]  = -2.0 * p1;
-      break;
-    case 1:
-      chi[0] = +2.0 * r1;
-      Up[0]  = -2.0 * p1;
-      break;
-    case 2:
-      chi[0] = 0.0;
-      Up[0]  = 0.0;
-      break;
-  }
+  ncm_csq1d_state_set_up (state, NCM_CSQ1D_FRAME_NONADIAB1, t, +2.0 * r1, -2.0 * p1);
+}
+
+/*  OLD IMPLEMENTATION
+ *  const gdouble q0             = ncm_csq1d_eval_int_1_m (csq1d, model, t);
+ *  const gdouble q1             = ncm_csq1d_eval_int_q2mnu2 (csq1d, model, t);
+ *  const gdouble p1             = ncm_csq1d_eval_int_qmnu2 (csq1d, model, t);
+ *  const gdouble r1             = 0.5 * ncm_csq1d_eval_int_mnu2 (csq1d, model, t);
+ *
+ *  switch (frame)
+ *  {
+ *   case NCM_CSQ1D_FRAME_ORIG:
+ *     chi[0] = (2.0 * p1 - 1.0) * (q0 + q1) + 2.0 * r1;
+ *     Up[0]  = -2.0 * p1;
+ *     break;
+ *   case NCM_CSQ1D_FRAME_NONADIAB1:
+ *     chi[0] = +2.0 * r1;
+ *     Up[0]  = -2.0 * p1;
+ *     break;
+ *   case NCM_CSQ1D_FRAME_NONADIAB2:
+ *     chi[0] = 0.0;
+ *     Up[0]  = 0.0;
+ *     break;
+ *   default:
+ *     g_assert_not_reached ();
+ *     break;
+ *  }
+ */
+
+/**
+ * ncm_csq1d_compute_nonadiab:
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ * @t: time $t$
+ * @state: a #NcmCSQ1DState to store the result
+ *
+ * Computes the value of the non-adiabatic VDC order two in the variables $\chi$ and
+ * $U$ at $t$. The result is stored in the state object in the frame NCM_CSQ1D_FRAME_NONADIAB1.
+ * Use ncm_csq1d_change_frame() to change the frame.
+ *
+ * Returns: (transfer none): the @state object with the result.
+ */
+NcmCSQ1DState *
+ncm_csq1d_compute_nonadiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state)
+{
+  _ncm_csq1d_compute_nonadiab (csq1d, model, t, state);
+
+  return state;
+}
+
+/**
+ * ncm_csq1d_compute_H:
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ * @t: time $t$
+ * @state: a #NcmCSQ1DState to store the result
+ *
+ * Computes the Hamiltonian vector state of the original frame at $t$. The result is
+ * stored in the state object in the frame NCM_CSQ1D_FRAME_ORIG.
+ * Use ncm_csq1d_change_frame() to change the frame.
+ *
+ * Returns: (transfer none): the @state object with the result.
+ */
+NcmCSQ1DState *
+ncm_csq1d_compute_H (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state)
+{
+  ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_ORIG, t, 0.0, ncm_csq1d_eval_xi (csq1d, model, t));
+
+  return state;
+}
+
+static void
+_ncm_csq1d_eval_state (NcmCSQ1D *csq1d, const gdouble t, NcmCSQ1DState *state)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  const gdouble a_t            = asinh (t);
+  const gdouble alpha          = ncm_spline_eval (self->alpha_s, a_t);
+  const gdouble gamma          = ncm_spline_eval (self->gamma_s, a_t);
+
+  ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_ORIG, t, alpha, gamma);
 }
 
 /**
  * ncm_csq1d_eval_at:
  * @csq1d: a #NcmCSQ1D
  * @t: time $t$
- * @alpha: (out): value of $\alpha(t)$
- * @dgamma: (out): value of $\Delta\gamma(t)$
+ * @state: a #NcmCSQ1DState to store the result
  *
- * Computes the value of the variables $\alpha$ and $\Delta\gamma$ at $t$.
+ * Computes the system state at $t$, the result is stored in the state object
+ * in the frame NCM_CSQ1D_FRAME_ORIG. Use ncm_csq1d_change_frame() to change the frame.
  *
+ * Returns: (transfer none): the @state object with the result.
  */
-void
-ncm_csq1d_eval_at (NcmCSQ1D *csq1d, const gdouble t, gdouble *alpha, gdouble *dgamma)
+NcmCSQ1DState *
+ncm_csq1d_eval_at (NcmCSQ1D *csq1d, const gdouble t, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble a_t            = asinh (t);
+  _ncm_csq1d_eval_state (csq1d, t, state);
 
-  alpha[0]  = ncm_spline_eval (self->alpha_s, a_t);
-  dgamma[0] = ncm_spline_eval (self->dgamma_s, a_t);
-}
-
-/**
- * ncm_csq1d_alpha_dgamma_to_phi_Pphi:
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time $t$
- * @alpha: value of $\alpha(t)$
- * @dgamma: value of $\Delta\gamma(t)$
- * @phi: (out caller-allocates) (array fixed-size=2): real and imaginary parts of $\phi$, i.e., $[\mathrm{Re}(\phi), \mathrm{Im}(\phi)]$
- * @Pphi: (out caller-allocates) (array fixed-size=2): real and imaginary parts of $\Pi_\phi$, i.e., $[\mathrm{Re}(\Pi_\phi), \mathrm{Im}(\Pi_\phi)]$
- *
- * Computes the value of the variables $\alpha$ and $\Delta\gamma$ at $t$.
- *
- */
-void
-ncm_csq1d_alpha_dgamma_to_phi_Pphi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const gdouble alpha, const gdouble dgamma, gdouble *phi, gdouble *Pphi)
-{
-  NcmCSQ1DPrivate * const self      = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble gamma               = ncm_csq1d_eval_xi (csq1d, model, t) + dgamma;
-  const gdouble exp_gamma_p_alpha_2 = exp (0.5 * (gamma + alpha));
-  const gdouble exp_gamma_m_alpha_2 = exp (0.5 * (gamma - alpha));
-
-  phi[0] = +0.5 / exp_gamma_m_alpha_2;
-  phi[1] = -0.5 / exp_gamma_p_alpha_2;
-
-  Pphi[0] = -0.5 * exp_gamma_p_alpha_2;
-  Pphi[1] = -0.5 * exp_gamma_m_alpha_2;
-}
-
-/**
- * ncm_csq1d_get_J_at:
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time $t$
- * @J11: (out): $J_{11}$
- * @J12: (out): $J_{12}$
- * @J22: (out): $J_{22}$
- *
- * Computes the complex structure matrix.
- *
- */
-void
-ncm_csq1d_get_J_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *J11, gdouble *J12, gdouble *J22)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble a_t            = asinh (t);
-
-  const gdouble alpha  = ncm_spline_eval (self->alpha_s, a_t);
-  const gdouble dgamma = ncm_spline_eval (self->dgamma_s, a_t);
-  const gdouble gamma  = ncm_csq1d_eval_xi (csq1d, model, t) + dgamma;
-
-  J11[0] = cosh (alpha) * exp (-gamma);
-  J22[0] = cosh (alpha) * exp (+gamma);
-  J12[0] = -sinh (alpha);
-}
-
-/**
- * ncm_csq1d_get_H_poincare_hp:
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time $t$
- * @x: (out): $x$
- * @lny: (out): $\ln(y)$
- *
- * Computes the complex structure matrix.
- *
- */
-void
-ncm_csq1d_get_H_poincare_hp (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-
-  x[0]   = 0.0;
-  lny[0] = -ncm_csq1d_eval_xi (csq1d, model, t);
-}
-
-/**
- * ncm_csq1d_get_poincare_hp:
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time $t$
- * @x: (out): $x$
- * @lny: (out): $\ln(y)$
- *
- * Computes the complex structure matrix.
- *
- */
-void
-ncm_csq1d_get_poincare_hp (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble a_t            = asinh (t);
-
-  const gdouble alpha  = ncm_spline_eval (self->alpha_s, a_t);
-  const gdouble dgamma = ncm_spline_eval (self->dgamma_s, a_t);
-  const gdouble gamma  = ncm_csq1d_eval_xi (csq1d, model, t) + dgamma;
-
-  x[0]   = exp (-gamma) * tanh (alpha);
-  lny[0] = -gamma - gsl_sf_lncosh (alpha);
+  return state;
 }
 
 #define _ALPHA_TO_THETA(alpha) (atan (sinh (alpha)))
@@ -2415,256 +2703,354 @@ ncm_csq1d_get_poincare_hp (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gd
 static void
 _ncm_csq1d_ct_g0g1 (const gdouble alpha, const gdouble gamma, const gdouble p, gdouble *alphap, gdouble *gammap)
 {
-  const gdouble theta = _ALPHA_TO_THETA (alpha);
-  gdouble thetap      = 0.0;
+  const gdouble l_theta = _ALPHA_TO_THETA (alpha);
+  const gdouble l_gamma = gamma;
+  gdouble thetap        = 0.0;
 
-  ncm_util_mln_1mIexpzA_1pIexpmzA (gamma, theta, tanh (0.5 * p), gammap, &thetap);
+  ncm_util_mln_1mIexpzA_1pIexpmzA (l_gamma, l_theta, tanh (0.5 * p), gammap, &thetap);
   alphap[0] = _THETA_TO_ALPHA (thetap);
 }
 
-/**
- * ncm_csq1d_get_poincare_hp_frame:
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @adiab_frame: which adiabatic frame to use
- * @t: time $t$
- * @x: (out): $x$
- * @lny: (out): $\ln(y)$
- *
- * Computes the complex structure matrix.
- *
- */
-void
-ncm_csq1d_get_poincare_hp_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_frame, const gdouble t, gdouble *x, gdouble *lny)
+static void
+_ncm_csq1d_change_adiab1_to_orig (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble a_t            = asinh (t);
-
-  switch (adiab_frame)
-  {
-    case 0:
-    {
-      const gdouble alpha  = ncm_spline_eval (self->alpha_s, a_t);
-      const gdouble dgamma = ncm_spline_eval (self->dgamma_s, a_t);
-      const gdouble gamma  = ncm_csq1d_eval_xi (csq1d, model, t) + dgamma;
-
-      x[0]   = exp (-gamma) * tanh (alpha);
-      lny[0] = -gamma - gsl_sf_lncosh (alpha);
-      break;
-    }
-    case 1:
-    {
-      const gdouble alpha  = ncm_spline_eval (self->alpha_s, a_t);
-      const gdouble dgamma = ncm_spline_eval (self->dgamma_s, a_t);
-
-      x[0]   = exp (-dgamma) * tanh (alpha);
-      lny[0] = -dgamma - gsl_sf_lncosh (alpha);
-      break;
-    }
-    case 2:
-    {
-      const gdouble alpha  = ncm_spline_eval (self->alpha_s, a_t);
-      const gdouble dgamma = ncm_spline_eval (self->dgamma_s, a_t);
-      const gdouble theta  = _ALPHA_TO_THETA (alpha);
-      const gdouble F1     = ncm_csq1d_eval_F1 (csq1d, model, t);
-      const gdouble xi1    = atanh (-F1);
-
-      gdouble thetap = 0.0;
-      gdouble alphap = 0.0;
-      gdouble gammap = 0.0;
-
-      ncm_util_mln_1mIexpzA_1pIexpmzA (dgamma, theta, tanh (0.5 * xi1), &gammap, &thetap);
-
-      alphap = _THETA_TO_ALPHA (thetap);
-
-      x[0]   = exp (-gammap) * tanh (alphap);
-      lny[0] = -gammap - gsl_sf_lncosh (alphap);
-      break;
-    }
-    default:
-      g_assert_not_reached ();
-      break;
-  }
-}
-
-/**
- * ncm_csq1d_alpha_dgamma_to_minkowski_frame:
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @adiab_frame: which adiabatic frame to use
- * @t: time $t$
- * @alpha: $\alpha$
- * @dgamma: $\delta\gamma$
- * @x1: (out): $x_1$
- * @x2: (out): $x_2$
- *
- * Computes the complex structure matrix.
- *
- */
-void
-ncm_csq1d_alpha_dgamma_to_minkowski_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_frame, const gdouble t, const gdouble alpha, const gdouble dgamma, gdouble *x1, gdouble *x2)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-
-  switch (adiab_frame)
-  {
-    case 0:
-    {
-      const gdouble gamma = ncm_csq1d_eval_xi (csq1d, model, t) + dgamma;
-
-      x1[0] = +sinh (alpha);
-      x2[0] = -cosh (alpha) * sinh (gamma);
-      break;
-    }
-    case 1:
-    {
-      x1[0] = +sinh (alpha);
-      x2[0] = -cosh (alpha) * sinh (dgamma);
-      break;
-    }
-    case 2:
-    {
-      const gdouble theta = _ALPHA_TO_THETA (alpha);
-      const gdouble F1    = ncm_csq1d_eval_F1 (csq1d, model, t);
-      const gdouble xi1   = atanh (-F1);
-
-      gdouble thetap = 0.0;
-      gdouble alphap = 0.0;
-      gdouble gammap = 0.0;
-
-      ncm_util_mln_1mIexpzA_1pIexpmzA (dgamma, theta, tanh (0.5 * xi1), &gammap, &thetap);
-
-      alphap = _THETA_TO_ALPHA (thetap);
-
-      x1[0] = +sinh (alphap);
-      x2[0] = -cosh (alphap) * sinh (gammap);
-      break;
-    }
-    default:
-      g_assert_not_reached ();
-      break;
-  }
-}
-
-/**
- * ncm_csq1d_get_minkowski_frame:
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @adiab_frame: which adiabatic frame to use
- * @t: time $t$
- * @x1: (out): $x_1$
- * @x2: (out): $x_2$
- *
- * Computes the complex structure matrix.
- *
- */
-void
-ncm_csq1d_get_minkowski_frame (NcmCSQ1D *csq1d, NcmModel *model, guint adiab_frame, const gdouble t, gdouble *x1, gdouble *x2)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble a_t            = asinh (t);
-  const gdouble alpha          = ncm_spline_eval (self->alpha_s, a_t);
-  const gdouble dgamma         = ncm_spline_eval (self->dgamma_s, a_t);
-
-  ncm_csq1d_alpha_dgamma_to_minkowski_frame (csq1d, model, adiab_frame, t, alpha, dgamma, x1, x2);
-}
-
-/**
- * ncm_csq1d_get_Hadiab_poincare_hp:
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time $t$
- * @x: (out): $x$
- * @lny: (out): $\ln(y)$
- *
- * Computes the complex structure matrix.
- *
- */
-void
-ncm_csq1d_get_Hadiab_poincare_hp (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-
-  gdouble alpha, dgamma, gamma;
-
-  ncm_csq1d_eval_adiab_at (csq1d, model, t, &alpha, &dgamma, NULL, NULL);
-
-  gamma = ncm_csq1d_eval_xi (csq1d, model, t) + dgamma;
-
-  x[0]   = exp (-gamma) * tanh (alpha);
-  lny[0] = -gamma - gsl_sf_lncosh (alpha);
-}
-
-/**
- * ncm_csq1d_get_H_poincare_disc:
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time $t$
- * @x: (out): $x$
- * @lny: (out): $\ln(y)$
- *
- * Computes the complex structure matrix.
- *
- */
-void
-ncm_csq1d_get_H_poincare_disc (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  const gdouble t              = state->t;
   const gdouble xi             = ncm_csq1d_eval_xi (csq1d, model, t);
 
-  x[0]   = 0.0;
-  lny[0] = -tanh (xi / 2);
+  ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_ORIG, t, state->alpha, state->gamma + xi);
 }
 
-/**
- * ncm_csq1d_get_Hadiab_poincare_disc:
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time $t$
- * @x: (out): $x$
- * @lny: (out): $\ln(y)$
- *
- * Computes the complex structure matrix.
- *
- */
-void
-ncm_csq1d_get_Hadiab_poincare_disc (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny)
+static void
+_ncm_csq1d_change_orig_to_adiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  const gdouble t              = state->t;
+  const gdouble xi             = ncm_csq1d_eval_xi (csq1d, model, t);
+
+  ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_ADIAB1, t, state->alpha, state->gamma - xi);
+}
+
+static void
+_ncm_csq1d_change_adiab2_to_adiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  const gdouble t              = state->t;
+  const gdouble F1             = ncm_csq1d_eval_F1 (csq1d, model, t);
+  const gdouble xi1            = atanh (-F1);
+  gdouble alphap               = 0.0;
+  gdouble gammap               = 0.0;
+
+  if (fabs (F1) >= 1.0)
+    g_error ("ncm_csq1d_change_adiab2_to_adiab1: |F1| >= 1 at t = % 22.15e", t);
+
+  _ncm_csq1d_ct_g0g1 (state->alpha, state->gamma, -xi1, &alphap, &gammap);
+  ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_ADIAB1, t, alphap, gammap);
+}
+
+static void
+_ncm_csq1d_change_adiab1_to_adiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  const gdouble t              = state->t;
+  const gdouble F1             = ncm_csq1d_eval_F1 (csq1d, model, t);
+  const gdouble xi1            = atanh (-F1);
+  gdouble alphap               = 0.0;
+  gdouble gammap               = 0.0;
+
+  if (fabs (F1) >= 1.0)
+    g_error ("ncm_csq1d_change_adiab1_to_adiab2: |F1| >= 1 at t = % 22.15e", t);
+
+  _ncm_csq1d_ct_g0g1 (state->alpha, state->gamma, xi1, &alphap, &gammap);
+  ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_ADIAB2, t, alphap, gammap);
+}
+
+static void
+_ncm_csq1d_change_nonadiab1_to_orig (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  const gdouble t              = state->t;
+  const gdouble int_1_m        = ncm_csq1d_eval_int_1_m (csq1d, model, t);
+  const gdouble q0             = int_1_m;
+  const gdouble q1             = ncm_csq1d_eval_int_q2mnu2 (csq1d, model, t);
+  gdouble chi, Up;
+
+  ncm_csq1d_state_get_up (state, &chi, &Up);
+  ncm_csq1d_state_set_up (state, NCM_CSQ1D_FRAME_ORIG, t, chi - exp (Up) * (q0 + q1), Up);
+}
+
+static void
+_ncm_csq1d_change_orig_to_nonadiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  const gdouble t              = state->t;
+  const gdouble int_1_m        = ncm_csq1d_eval_int_1_m (csq1d, model, t);
+  const gdouble q0             = int_1_m;
+  const gdouble q1             = ncm_csq1d_eval_int_q2mnu2 (csq1d, model, t);
+  gdouble chi, Up;
+
+  ncm_csq1d_state_get_up (state, &chi, &Up);
+  ncm_csq1d_state_set_up (state, NCM_CSQ1D_FRAME_NONADIAB1, t, chi + exp (Up) * (q0 + q1), Up);
+}
+
+static void
+_ncm_csq1d_change_nonadiab1_to_nonadiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  const gdouble t              = state->t;
+
+  /* p1 g1 */
+  {
+    const gdouble p1 = ncm_csq1d_eval_int_qmnu2 (csq1d, model, t);
+    gdouble chi, Up;
+
+    ncm_csq1d_state_get_up (state, &chi, &Up);
+
+    Up = Up + 2.0 * p1;
+
+    ncm_csq1d_state_set_up (state, NCM_CSQ1D_FRAME_NONADIAB2, t, chi, Up);
+  }
+
+  /* r1 g2 */
+  {
+    const gdouble r1 = 0.5 * ncm_csq1d_eval_int_mnu2 (csq1d, model, t);
+    gdouble alpha, gamma, alphap, gammap;
+
+    ncm_csq1d_state_get_ag (state, &alpha, &gamma);
+
+    _ncm_csq1d_ct_g0g1 (alpha, gamma, -2.0 * r1, &alphap, &gammap);
+
+    ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_NONADIAB2, t, alphap, gammap);
+  }
+}
+
+static void
+_ncm_csq1d_change_nonadiab2_to_nonadiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  const gdouble t              = state->t;
+
+  /* r1 g2 */
+  {
+    const gdouble r1 = 0.5 * ncm_csq1d_eval_int_mnu2 (csq1d, model, t);
+    gdouble alpha, gamma, alphap, gammap;
+
+    ncm_csq1d_state_get_ag (state, &alpha, &gamma);
+
+    _ncm_csq1d_ct_g0g1 (alpha, gamma, +2.0 * r1, &alphap, &gammap);
+
+    ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_NONADIAB1, t, alphap, gammap);
+  }
+
+  {
+    const gdouble p1 = ncm_csq1d_eval_int_qmnu2 (csq1d, model, t);
+    gdouble chi, Up;
+
+    ncm_csq1d_state_get_up (state, &chi, &Up);
+
+    /* p1 g1 */
+    Up = Up - 2.0 * p1;
+
+    ncm_csq1d_state_set_up (state, NCM_CSQ1D_FRAME_NONADIAB1, t, chi, Up);
+  }
+}
+
+static void
+_ncm_csq1d_change_frame_to_orig (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  gdouble alpha, dgamma, gamma;
+  switch (state->frame)
+  {
+    case NCM_CSQ1D_FRAME_ORIG:
+      break;
+    case NCM_CSQ1D_FRAME_ADIAB1:
+      _ncm_csq1d_change_adiab1_to_orig (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_ADIAB2:
+      _ncm_csq1d_change_adiab2_to_adiab1 (csq1d, model, state);
+      _ncm_csq1d_change_adiab1_to_orig (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_NONADIAB1:
+      _ncm_csq1d_change_nonadiab1_to_orig (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_NONADIAB2:
+      _ncm_csq1d_change_nonadiab2_to_nonadiab1 (csq1d, model, state);
+      _ncm_csq1d_change_nonadiab1_to_orig (csq1d, model, state);
+      break;
+    default:
+      g_error ("_ncm_csq1d_change_frame_to_orig: Invalid frame %d", state->frame);
+      break;
+  }
+}
 
-  ncm_csq1d_eval_adiab_at (csq1d, model, t, &alpha, &dgamma, NULL, NULL);
+static void
+_ncm_csq1d_change_frame_to_adiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  gamma = ncm_csq1d_eval_xi (csq1d, model, t) + dgamma;
+  switch (state->frame)
+  {
+    case NCM_CSQ1D_FRAME_ORIG:
+      _ncm_csq1d_change_orig_to_adiab1 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_ADIAB1:
+      break;
+    case NCM_CSQ1D_FRAME_ADIAB2:
+      _ncm_csq1d_change_adiab2_to_adiab1 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_NONADIAB1:
+      _ncm_csq1d_change_nonadiab1_to_orig (csq1d, model, state);
+      _ncm_csq1d_change_orig_to_adiab1 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_NONADIAB2:
+      _ncm_csq1d_change_nonadiab2_to_nonadiab1 (csq1d, model, state);
+      _ncm_csq1d_change_nonadiab1_to_orig (csq1d, model, state);
+      _ncm_csq1d_change_orig_to_adiab1 (csq1d, model, state);
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+}
 
-  x[0]   = +sinh (alpha) / (1.0 + cosh (alpha) * cosh (gamma));
-  lny[0] = -sinh (gamma) * cosh (alpha) / (1.0 + cosh (alpha) * cosh (gamma));
+static void
+_ncm_csq1d_change_frame_to_adiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+
+  switch (state->frame)
+  {
+    case NCM_CSQ1D_FRAME_ORIG:
+      _ncm_csq1d_change_orig_to_adiab1 (csq1d, model, state);
+      _ncm_csq1d_change_adiab1_to_adiab2 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_ADIAB1:
+      _ncm_csq1d_change_adiab1_to_adiab2 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_ADIAB2:
+      break;
+    case NCM_CSQ1D_FRAME_NONADIAB1:
+      _ncm_csq1d_change_nonadiab1_to_orig (csq1d, model, state);
+      _ncm_csq1d_change_orig_to_adiab1 (csq1d, model, state);
+      _ncm_csq1d_change_adiab1_to_adiab2 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_NONADIAB2:
+      _ncm_csq1d_change_nonadiab2_to_nonadiab1 (csq1d, model, state);
+      _ncm_csq1d_change_nonadiab1_to_orig (csq1d, model, state);
+      _ncm_csq1d_change_orig_to_adiab1 (csq1d, model, state);
+      _ncm_csq1d_change_adiab1_to_adiab2 (csq1d, model, state);
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+}
+
+static void
+_ncm_csq1d_change_frame_to_nonadiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+
+  switch (state->frame)
+  {
+    case NCM_CSQ1D_FRAME_ORIG:
+      _ncm_csq1d_change_orig_to_nonadiab1 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_ADIAB1:
+      _ncm_csq1d_change_adiab1_to_orig (csq1d, model, state);
+      _ncm_csq1d_change_orig_to_nonadiab1 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_ADIAB2:
+      _ncm_csq1d_change_adiab2_to_adiab1 (csq1d, model, state);
+      _ncm_csq1d_change_adiab1_to_orig (csq1d, model, state);
+      _ncm_csq1d_change_orig_to_nonadiab1 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_NONADIAB1:
+      break;
+    case NCM_CSQ1D_FRAME_NONADIAB2:
+      _ncm_csq1d_change_nonadiab2_to_nonadiab1 (csq1d, model, state);
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+}
+
+static void
+_ncm_csq1d_change_frame_to_nonadiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+
+  switch (state->frame)
+  {
+    case NCM_CSQ1D_FRAME_ORIG:
+      _ncm_csq1d_change_orig_to_nonadiab1 (csq1d, model, state);
+      _ncm_csq1d_change_nonadiab1_to_nonadiab2 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_ADIAB1:
+      _ncm_csq1d_change_adiab1_to_orig (csq1d, model, state);
+      _ncm_csq1d_change_orig_to_nonadiab1 (csq1d, model, state);
+      _ncm_csq1d_change_nonadiab1_to_nonadiab2 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_ADIAB2:
+      _ncm_csq1d_change_adiab2_to_adiab1 (csq1d, model, state);
+      _ncm_csq1d_change_adiab1_to_orig (csq1d, model, state);
+      _ncm_csq1d_change_orig_to_nonadiab1 (csq1d, model, state);
+      _ncm_csq1d_change_nonadiab1_to_nonadiab2 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_NONADIAB1:
+      _ncm_csq1d_change_nonadiab1_to_nonadiab2 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_NONADIAB2:
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
 }
 
 /**
- * ncm_csq1d_get_poincare_disc:
+ * ncm_csq1d_change_frame:
  * @csq1d: a #NcmCSQ1D
  * @model: (allow-none): a #NcmModel
- * @t: time $t$
- * @x: (out): $x$
- * @lny: (out): $\ln(y)$
+ * @state: a #NcmCSQ1DState
+ * @frame: which frame to use
  *
- * Computes the complex structure matrix.
+ * Changes the frame of the @state object to the given @frame. The state object
+ * must be a valid state object, it cannot be NULL. The state object is updated
+ * in place.
  *
+ * Returns: (transfer none): the state object in the new frame.
  */
-void
-ncm_csq1d_get_poincare_disc (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *x, gdouble *lny)
+NcmCSQ1DState *
+ncm_csq1d_change_frame (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state, NcmCSQ1DFrame frame)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble a_t            = asinh (t);
 
-  const gdouble alpha  = ncm_spline_eval (self->alpha_s, a_t);
-  const gdouble dgamma = ncm_spline_eval (self->dgamma_s, a_t);
-  const gdouble gamma  = ncm_csq1d_eval_xi (csq1d, model, t) + dgamma;
+  switch (frame)
+  {
+    case NCM_CSQ1D_FRAME_ORIG:
+      _ncm_csq1d_change_frame_to_orig (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_ADIAB1:
+      _ncm_csq1d_change_frame_to_adiab1 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_ADIAB2:
+      _ncm_csq1d_change_frame_to_adiab2 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_NONADIAB1:
+      _ncm_csq1d_change_frame_to_nonadiab1 (csq1d, model, state);
+      break;
+    case NCM_CSQ1D_FRAME_NONADIAB2:
+      _ncm_csq1d_change_frame_to_nonadiab2 (csq1d, model, state);
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
 
-  x[0]   = +sinh (alpha) / (1.0 + cosh (alpha) * cosh (gamma));
-  lny[0] = -sinh (gamma) * cosh (alpha) / (1.0 + cosh (alpha) * cosh (gamma));
+  return state;
 }
 
 static gint _ncm_csq1d_f_Prop (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
@@ -2860,8 +3246,10 @@ _ncm_csq1d_prepare_prop_eval_u1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble
  * @tii: integral approximation time $t_{\mathrm{i}i}$
  * @tf: max time $t_f$
  *
- *
- * Computes the complex structure matrix.
+ * Computes the propagator for the given @csq1d and @model from @ti to @tf. The
+ * propagator is computed using the integral approximation time @tii. The
+ * propagator is stored in the @csq1d object and can be used to compute the
+ * propagator a state from @ti to any time between @tii and @tf.
  *
  */
 void
@@ -2877,6 +3265,7 @@ ncm_csq1d_prepare_prop (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti, cons
   gint i;
 
   _ncm_csq1d_prepare_prop_eval_u1 (csq1d, model, ti, tii, u1);
+  self->ti_Prop = ti;
 
 /*
  *  ncm_message ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", ti, tii,
@@ -3019,16 +3408,18 @@ ncm_csq1d_get_tf_prop (NcmCSQ1D *csq1d)
 }
 
 /**
- * ncm_csq1d_get_prop_vector_chi_Up:
+ * ncm_csq1d_get_prop_vector:
  * @csq1d: a #NcmCSQ1D
  * @model: (allow-none): a #NcmModel
  * @t: time $t$
- * @chi: (out): $\chi$
- * @Up: (out): $U_+$
+ * @state: a #NcmCSQ1DState to store the result
  *
+ * Computes the state vector associated with the propagator at time $t$.
+ *
+ * Returns: (transfer none): the @state object with the result.
  */
-void
-ncm_csq1d_get_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *chi, gdouble *Up)
+NcmCSQ1DState *
+ncm_csq1d_compute_prop_vector (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
   const gdouble b              = ncm_spline_eval (self->R[1], t);
@@ -3036,25 +3427,13 @@ ncm_csq1d_get_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdoubl
   const gdouble h              = ncm_spline_eval (self->R[3], t);
   const gdouble n0             = sqrt (-(b * c + h * h));
 
-  chi[0] = h / n0;
-  Up[0]  = log (-c / n0);
+  ncm_csq1d_state_set_up (state, NCM_CSQ1D_FRAME_ORIG, t, h / n0, log (-c / n0));
+
+  return state;
 }
 
-/**
- * ncm_csq1d_evolve_prop_vector_chi_Up:
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time $t$
- * @nonadiab_frame: frame
- * @chi_i: $\chi_i$
- * @Up_i: $U_{+i}$
- * @chi: (out): $\chi$
- * @Up: (out): $U_+$
- *
- *
- */
-void
-ncm_csq1d_evolve_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, const guint nonadiab_frame, gdouble chi_i, gdouble Up_i, gdouble *chi, gdouble *Up)
+static void
+_ncm_csq1d_evolve_prop_vector (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *initial_state, const NcmCSQ1DFrame frame, const gdouble t, NcmCSQ1DState *state)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
   const gdouble int_1_m        = ncm_csq1d_eval_int_1_m (csq1d, model, t);
@@ -3068,83 +3447,105 @@ ncm_csq1d_evolve_prop_vector_chi_Up (NcmCSQ1D *csq1d, NcmModel *model, const gdo
   const gdouble a22            = a - h;
   const gdouble a12            = b;
   const gdouble a21            = c;
-  const gdouble onepchi2       = 1.0 + chi_i * chi_i;
-  const gdouble exp_Up_i       = exp (Up_i);
+  const gdouble init_ti        = ncm_csq1d_state_get_time (initial_state);
+  const gdouble q1_ti          = ncm_csq1d_eval_int_qmnu2 (csq1d, model, init_ti);
+  gdouble chi_i, Up_i;
 
-  chi[0] = a12 * a21 * chi_i + a22 * (a11 * chi_i - a12 * exp_Up_i) - a11 * a21 * onepchi2 / exp_Up_i;
-  Up[0]  = -(2.0 * a21 * a22 * chi_i - a22 * a22 * exp_Up_i - a21 * a21 * onepchi2 / exp_Up_i);
+  if (init_ti != self->ti_Prop)
+    g_error ("Initial time does not match the propagator initial time");
 
-  switch (nonadiab_frame)
+  if (initial_state->frame != NCM_CSQ1D_FRAME_NONADIAB1)
+    g_error ("Initial state must be in the non-adiabatic 1 frame");
+
+  ncm_csq1d_state_get_up (initial_state, &chi_i, &Up_i);
+
+  /*
+   * The propagator is computed in a intermediate frame, we need to change from the
+   * non-adibatic 1 to the intermediate frame first. This transformation does not
+   * change Up_i, so we can use it to compute the new chi_i.
+   */
+  chi_i =  (chi_i - exp (Up_i) * q1_ti);
+
   {
-    case 0:
-      chi[0] = (chi[0] - Up[0] * q0);
-      Up[0]  = log (Up[0]);
-      break;
-    case 1:
-      /* q1 L2p */
-      chi[0] = (chi[0] + Up[0] * q1);
-      Up[0]  = log (Up[0]);
-      break;
-    case 2:
+    const gdouble onepchi2 = 1.0 + chi_i * chi_i;
+    const gdouble exp_Up_i = exp (Up_i);
+    gdouble chi, Up;
+
+    chi = a12 * a21 * chi_i + a22 * (a11 * chi_i - a12 * exp_Up_i) - a11 * a21 * onepchi2 / exp_Up_i;
+    Up  = -(2.0 * a21 * a22 * chi_i - a22 * a22 * exp_Up_i - a21 * a21 * onepchi2 / exp_Up_i);
+
+    /*
+     * The transformation above result in a new chi and Up in the intermediate frame.
+     * We can now use these values and transform to the final frame.
+     */
+
+    switch (frame)
     {
-      const gdouble p1 = ncm_csq1d_eval_int_qmnu2 (csq1d, model, t);
+      case NCM_CSQ1D_FRAME_ORIG:
+        chi = (chi - Up * q0);
+        Up  = log (Up);
 
-      /* q1 L2p */
-      chi[0] = (chi[0] + Up[0] * q1);
-      Up[0]  = log (Up[0]);
+        ncm_csq1d_state_set_up (state, NCM_CSQ1D_FRAME_ORIG, t, chi, Up);
+        break;
+      case NCM_CSQ1D_FRAME_NONADIAB1:
+        /* q1 L2p */
+        chi = (chi + Up * q1);
+        Up  = log (Up);
 
-      /* p1 g1 */
-      Up[0] = Up[0] + 2.0 * p1;
-
-      /* r1 g2 */
+        ncm_csq1d_state_set_up (state, NCM_CSQ1D_FRAME_NONADIAB1, t, chi, Up);
+        break;
+      case NCM_CSQ1D_FRAME_NONADIAB2:
       {
-        const gdouble alpha = asinh (chi[0]);
-        const gdouble gamma = Up[0] - 0.5 * log1p (chi[0] * chi[0]);
-        const gdouble r1    = 0.5 * ncm_csq1d_eval_int_mnu2 (csq1d, model, t);
+        const gdouble p1 = ncm_csq1d_eval_int_qmnu2 (csq1d, model, t);
 
-        gdouble alphap, gammap;
+        /* q1 L2p */
+        chi = (chi + Up * q1);
+        Up  = log (Up);
 
-        _ncm_csq1d_ct_g0g1 (alpha, gamma, -2.0 * r1, &alphap, &gammap);
+        /* p1 g1 */
+        Up = Up + 2.0 * p1;
 
-        chi[0] = sinh (alphap);
-        Up[0]  = gammap + 0.5 * log1p (chi[0] * chi[0]);
+        /* r1 g2 */
+        {
+          const gdouble alpha = asinh (chi);
+          const gdouble gamma = Up - 0.5 * log1p (chi * chi);
+          const gdouble r1    = 0.5 * ncm_csq1d_eval_int_mnu2 (csq1d, model, t);
+
+          gdouble alphap, gammap;
+
+          _ncm_csq1d_ct_g0g1 (alpha, gamma, -2.0 * r1, &alphap, &gammap);
+
+          chi = sinh (alphap);
+          Up  = gammap + 0.5 * log1p (chi * chi);
+        }
+        ncm_csq1d_state_set_up (state, NCM_CSQ1D_FRAME_NONADIAB2, t, chi, Up);
+        break;
       }
-      break;
+      default:
+        g_assert_not_reached ();
+        break;
     }
-    default:
-      g_assert_not_reached ();
-      break;
   }
 }
 
 /**
- * ncm_csq1d_alpha_gamma_circle:
+ * ncm_csq1d_evolve_prop_vector:
  * @csq1d: a #NcmCSQ1D
  * @model: (allow-none): a #NcmModel
- * @alpha: $\alpha$ variable
- * @gamma: $\gamma$ variable
- * @r: radius
- * @theta: angle
- * @alphap: (out): output $\alpha$ variable
- * @gammap: (out): output $\gamma$ variable
+ * @initial_state: initial state
+ * @frame: frame
+ * @t: time $t$
  *
- * Computes the complex structure matrix parameters for a circle
- * around the point $(\alpha, \gamma)$ with radius $r$ and angle
- * $\theta$.
+ * Uses the propagator to evolve the state vector @initial_state to time $t$ and
+ * at frame @frame.
  *
+ * Returns: (transfer none): the state vector.
  */
-void
-ncm_csq1d_alpha_gamma_circle (NcmCSQ1D *csq1d, NcmModel *model, const gdouble alpha, const gdouble gamma, const gdouble r, const gdouble theta, gdouble *alphap, gdouble *gammap)
+NcmCSQ1DState *
+ncm_csq1d_evolve_prop_vector (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *initial_state, const NcmCSQ1DFrame frame, const gdouble t, NcmCSQ1DState *state)
 {
-  const gdouble ct = cos (theta);
-  const gdouble st = sin (theta);
-  const gdouble tr = tanh (r);
-  const gdouble ca = cosh (alpha);
-  const gdouble sa = sinh (alpha);
-  const gdouble t1 = cosh (r) * sa + ct * ca * sinh (r);
-  const gdouble t2 = -(2.0 * st * tr / (ca + tr * (st + ct * sa)));
+  _ncm_csq1d_evolve_prop_vector (csq1d, model, initial_state, frame, t, state);
 
-  alphap[0] = asinh (t1);
-  gammap[0] = gamma + 0.5 * log1p (t2);
+  return state;
 }
 
