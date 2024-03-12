@@ -2540,6 +2540,29 @@ ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmC
   return state;
 }
 
+/**
+ * ncm_csq1d_compute_adiab_frame:
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ * @frame: the frame to change
+ * @t: time $t$
+ * @state: a #NcmCSQ1DState to store the result
+ * @alpha_reltol: (out) (allow-none): estimated error on $\alpha(t)$
+ * @dgamma_reltol: (out) (allow-none): estimated error on $\Delta\gamma(t)$
+ *
+ * As ncm_csq1d_compute_adiab(), but changes the frame of the result to @frame.
+ *
+ * Returns: (transfer none): the @state object with the result.
+ */
+NcmCSQ1DState *
+ncm_csq1d_compute_adiab_frame (NcmCSQ1D *csq1d, NcmModel *model, const NcmCSQ1DFrame frame, const gdouble t, NcmCSQ1DState *state, gdouble *alpha_reltol, gdouble *dgamma_reltol)
+{
+  _ncm_csq1d_compute_adiab (csq1d, model, t, state, alpha_reltol, dgamma_reltol);
+  ncm_csq1d_change_frame (csq1d, model, state, frame);
+
+  return state;
+}
+
 static void
 _ncm_csq1d_eval_adiab_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *alpha, gdouble *dgamma, gdouble *alpha_reltol, gdouble *dgamma_reltol)
 {
@@ -2684,6 +2707,29 @@ NcmCSQ1DState *
 ncm_csq1d_eval_at (NcmCSQ1D *csq1d, const gdouble t, NcmCSQ1DState *state)
 {
   _ncm_csq1d_eval_state (csq1d, t, state);
+
+  return state;
+}
+
+/**
+ * ncm_csq1d_eval_at_frame:
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ * @frame: a #NcmCSQ1DFrame
+ * @t: time $t$
+ * @state: a #NcmCSQ1DState to store the result
+ *
+ * Computes the system state at $t$, the result is stored in the state object
+ * in the frame @frame.
+ *
+ * Returns: (transfer none): the @state object with the result.
+ */
+NcmCSQ1DState *
+ncm_csq1d_eval_at_frame (NcmCSQ1D *csq1d, NcmModel *model, const NcmCSQ1DFrame frame, const gdouble t, NcmCSQ1DState *state)
+{
+  _ncm_csq1d_eval_state (csq1d, t, state);
+
+  ncm_csq1d_change_frame (csq1d, model, state, frame);
 
   return state;
 }

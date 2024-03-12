@@ -198,9 +198,11 @@ gboolean ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdou
 gdouble ncm_csq1d_find_adiab_max (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, gdouble t1, const gdouble border_eps, gdouble *F1_min, gdouble *t_Bl, gdouble *t_Bu);
 
 NcmCSQ1DState *ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state, gdouble *alpha_reltol, gdouble *dgamma_reltol);
+NcmCSQ1DState *ncm_csq1d_compute_adiab_frame (NcmCSQ1D *csq1d, NcmModel *model, const NcmCSQ1DFrame frame, const gdouble t, NcmCSQ1DState *state, gdouble *alpha_reltol, gdouble *dgamma_reltol);
 NcmCSQ1DState *ncm_csq1d_compute_nonadiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state);
 NcmCSQ1DState *ncm_csq1d_compute_H (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state);
 NcmCSQ1DState *ncm_csq1d_eval_at (NcmCSQ1D *csq1d, const gdouble t, NcmCSQ1DState *state);
+NcmCSQ1DState *ncm_csq1d_eval_at_frame (NcmCSQ1D *csq1d, NcmModel *model, const NcmCSQ1DFrame frame, const gdouble t, NcmCSQ1DState *state);
 
 NcmCSQ1DState *ncm_csq1d_change_frame (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state, NcmCSQ1DFrame frame);
 
