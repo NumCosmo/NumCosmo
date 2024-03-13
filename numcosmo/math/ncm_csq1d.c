@@ -432,7 +432,6 @@ static gdouble _ncm_csq1d_eval_int_1_m    (NcmCSQ1D *csq1d, NcmModel *model, con
 static gdouble _ncm_csq1d_eval_int_mnu2   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _ncm_csq1d_eval_int_qmnu2  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
-static gdouble _ncm_csq1d_eval_dm         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _ncm_csq1d_eval_F1         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _ncm_csq1d_eval_F2         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _ncm_csq1d_eval_FN         (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t);
@@ -513,7 +512,6 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
   klass->eval_int_mnu2       = &_ncm_csq1d_eval_int_mnu2;
   klass->eval_int_qmnu2      = &_ncm_csq1d_eval_int_qmnu2;
   klass->eval_int_q2mnu2     = &_ncm_csq1d_eval_int_q2mnu2;
-  klass->eval_dm             = &_ncm_csq1d_eval_dm;
   klass->eval_F1             = &_ncm_csq1d_eval_F1;
   klass->eval_F2             = &_ncm_csq1d_eval_F2;
   klass->eval_FN             = &_ncm_csq1d_eval_FN;
@@ -576,14 +574,6 @@ static gdouble
 _ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
   g_error ("_ncm_csq1d_eval_int_q2mnu2: not implemented.");
-
-  return 0.0;
-}
-
-static gdouble
-_ncm_csq1d_eval_dm (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
-{
-  g_error ("_ncm_csq1d_eval_dm: not implemented.");
 
   return 0.0;
 }
@@ -1655,14 +1645,6 @@ _ncm_csq1d_J_Um (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_
  * @t: time $t$
  *
  * Returns: $\int \left(\int 1/m \mathrm{d}t\right)^2 m\nu^2 \mathrm{d}t$.
- */
-/**
- * ncm_csq1d_eval_dm: (virtual eval_dm)
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @t: time $t$
- *
- * Returns: $\mathrm{d}m/\mathrm{d}t$
  */
 /**
  * ncm_csq1d_eval_F1: (virtual eval_F1)

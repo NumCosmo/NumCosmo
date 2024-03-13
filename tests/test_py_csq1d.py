@@ -23,10 +23,11 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Tests on NcmCSQ1D class."""
-
 import math
+import pytest
+
 from numpy.testing import assert_allclose
-from scipy.special import hankel1e  # pylint: disable=no-name-in-module
+from scipy.special import hankel1e, jv, yv  # pylint: disable=no-name-in-module
 import numpy as np
 
 from numcosmo_py import Ncm
@@ -78,6 +79,28 @@ class BesselTest(Ncm.CSQ1D):
     def do_eval_F2(self, _model, x):  # pylint: disable=arguments-differ
         """Evaluate F2 function, F2 = F1'/(2nu)."""
         return -0.25 * (1.0 + 2.0 * self.alpha) / (x * self.k) ** 2
+
+    def do_eval_int_1_m(self, _model, t):  # pylint: disable=arguments-differ
+        """Evaluate int_1_m function, int_1_m."""
+        return (
+            -self.t_sign * (t * self.t_sign) ** (-2.0 * self.alpha) / (2.0 * self.alpha)
+        )
+
+    def do_eval_int_mnu2(self, _model, t):  # pylint: disable=arguments-differ
+        """Evaluate int_mnu2 function, int_mnu2."""
+        return (self.k**2 * t * (t * self.t_sign) ** (2.0 * self.alpha + 1.0)) / (
+            2.0 * (self.alpha + 1.0)
+        )
+
+    def do_eval_int_qmnu2(self, _model, t):  # pylint: disable=arguments-differ
+        """Evaluate int_qmnu2 function, int_qmnu2."""
+        return -((self.k * t) ** 2 / (4.0 * self.alpha))
+
+    def do_eval_int_q2mnu2(self, _model, t):  # pylint: disable=arguments-differ
+        """Evaluate int_q2mnu2 function, int_q2mnu2."""
+        return ((self.k * t) ** 2 * (t * self.t_sign) ** (-2.0 * self.alpha)) / (
+            8.0 * self.t_sign * self.alpha**2 * (1.0 - self.alpha)
+        )
 
     def do_prepare(self, _model):  # pylint: disable=arguments-differ
         pass
@@ -224,6 +247,38 @@ def test_evolution():
         assert_allclose(J12, (2.0 * phi * Pphi.conjugate()).real, atol=1.0e-7)
 
 
+@pytest.mark.parametrize(
+    "frame",
+    [Ncm.CSQ1DFrame.ORIG, Ncm.CSQ1DFrame.ADIAB1, Ncm.CSQ1DFrame.ADIAB2],
+    ids=["orig", "adiab1", "adiab2"],
+)
+def test_evolution_frame(frame):
+    """Test initial conditions of NcmCSQ1D."""
+
+    bs = BesselTest(alpha=2.0)
+    bs.set_k(1.0)
+    bs.set_ti(-100.0)
+    state = Ncm.CSQ1DState.new()
+
+    limit_found, t_adiab = bs.find_adiab_time_limit(None, -1.0e4, -1.0e1, 1.0e-8)
+    assert limit_found
+    limit_found, t_adiab_end = bs.find_adiab_time_limit(None, -1.0e4, -1.0e0, 1.0e-1)
+    assert limit_found
+    bs.set_tf(t_adiab_end)
+
+    bs.set_save_evol(True)
+    bs.set_reltol(1.0e-10)
+    bs.set_abstol(0.0)
+    bs.set_init_cond_adiab(None, t_adiab)
+    bs.prepare(None)
+
+    t_a, _smaller_abst = bs.get_time_array()
+
+    for t in t_a:
+        state = bs.eval_at_frame(None, frame, t, state)
+        assert state.get_frame() == frame
+
+
 def test_change_frame_orig_adiab1():
     """Test change_frame method of NcmCSQ1D."""
 
@@ -301,11 +356,87 @@ def test_change_frame_adiab1_adiab2():
     assert_allclose(state.get_ag(), (0.1, 0.3))
 
 
+def test_csq1d_nonadiab_prop():
+    """Test basic functionality of NcmCSQ1D."""
+
+    k = 8.0
+    alpha = 0.5
+    bs = BesselTest(alpha=alpha, adiab=False)
+    bs.set_k(k)
+
+    ti = 0.0
+    tii = 1.0e-7
+    tf = 2.0
+
+    bs.prepare_prop(None, ti, tii, tf)
+    state0 = Ncm.CSQ1DState.new()
+    state1 = Ncm.CSQ1DState.new()
+    state0.set_up(Ncm.CSQ1DFrame.NONADIAB1, ti, 0.0, 0.0)
+
+    def theo_phi(t):
+        """Theoretical phi."""
+        prefactor = 0.5 * (1.0 - 1.0j) * math.sqrt(math.pi / 2.0) * (k * t) ** (-alpha)
+        return prefactor * (
+            jv(alpha, k * t) - 1.0j * k ** (2.0 * alpha) * yv(alpha, k * t)
+        )
+
+    test_t = np.geomspace(tii, 1.0e-2, 10)
+
+    prop_J11 = [
+        bs.evolve_prop_vector(None, state0, Ncm.CSQ1DFrame.ORIG, t, state1).get_J()[0]
+        for t in test_t
+    ]
+
+    analytic_J11 = [2.0 * np.abs(theo_phi(t)) ** 2 for t in test_t]
+
+    assert_allclose(prop_J11, analytic_J11, rtol=1.0e-9)
+
+
+def test_csq1d_nonadiab_evol():
+    """Test basic functionality of NcmCSQ1D."""
+
+    k = 8.0
+    alpha = 0.5
+    bs = BesselTest(alpha=alpha, adiab=False)
+    bs.set_k(k)
+
+    ti = 0.0
+    tii = 1.0e-7
+    tf = 2.0
+
+    bs.prepare_prop(None, ti, tii, tf)
+    state0 = Ncm.CSQ1DState.new()
+    state1 = Ncm.CSQ1DState.new()
+    state = Ncm.CSQ1DState.new()
+    state0.set_up(Ncm.CSQ1DFrame.NONADIAB1, ti, 0.0, 0.0)
+
+    def theo_phi(t):
+        """Theoretical phi."""
+        prefactor = 0.5 * (1.0 - 1.0j) * math.sqrt(math.pi / 2.0) * (k * t) ** (-alpha)
+        return prefactor * (
+            jv(alpha, k * t) - 1.0j * k ** (2.0 * alpha) * yv(alpha, k * t)
+        )
+
+    bs.evolve_prop_vector(None, state0, Ncm.CSQ1DFrame.ORIG, 1.0e-4, state1)
+    bs.set_init_cond(None, Ncm.CSQ1DEvolState.UP, state1)
+    bs.set_tf(10.0)
+    bs.set_reltol(1.0e-14)
+    bs.prepare(None)
+    t_a, _smaller_abst = bs.get_time_array()
+
+    evol_J11 = [bs.eval_at(t, state).get_J()[0] for t in t_a]
+    analytic_J11 = [2.0 * np.abs(theo_phi(t)) ** 2 for t in t_a]
+
+    assert_allclose(evol_J11, analytic_J11, rtol=1.0e-7)
+
+
 if __name__ == "__main__":
     test_csq1d()
     test_initial_conditions_time()
     test_initial_conditions_adiabatic()
     test_evolution()
+    for frame0 in [Ncm.CSQ1DFrame.ORIG, Ncm.CSQ1DFrame.ADIAB1, Ncm.CSQ1DFrame.ADIAB2]:
+        test_evolution_frame(frame0)
     test_change_frame_orig_adiab1()
     test_change_frame_orig_adiab2()
     test_change_frame_adiab1_adiab2()

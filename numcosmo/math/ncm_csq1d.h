@@ -55,7 +55,6 @@ struct _NcmCSQ1DClass
   gdouble (*eval_int_mnu2)   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_int_qmnu2)  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_int_q2mnu2) (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
-  gdouble (*eval_dm)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_F1)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_F2)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_FN)         (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t);
@@ -269,12 +268,6 @@ NCM_INLINE gdouble
 ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_int_q2mnu2 (csq1d, model, t);
-}
-
-NCM_INLINE gdouble
-ncm_csq1d_eval_dm (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
-{
-  return NCM_CSQ1D_GET_CLASS (csq1d)->eval_dm (csq1d, model, t);
 }
 
 NCM_INLINE gdouble
