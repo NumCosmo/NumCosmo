@@ -878,8 +878,8 @@ ncm_csq1d_state_get_poincare_disc (NcmCSQ1DState *state, gdouble *x, gdouble *y)
   const gdouble alpha = state->alpha;
   const gdouble gamma = state->gamma;
 
-  *x = +sinh (alpha) / (1.0 + cosh (alpha) * cosh (gamma));
-  *y = -sinh (gamma) * cosh (alpha) / (1.0 + cosh (alpha) * cosh (gamma));
+  *x = +tanh (alpha) / (1.0 / cosh (alpha) + cosh (gamma));
+  *y = -tanh (gamma) / (1.0 / (cosh (alpha) * cosh (gamma)) + 1.0);
 }
 
 /**
@@ -901,6 +901,18 @@ ncm_csq1d_state_get_minkowski (NcmCSQ1DState *state, gdouble *x1, gdouble *x2)
   *x2 = -cosh (alpha) * sinh (gamma);
 }
 
+static gdouble
+_arcsinh_exp_x (const gdouble x)
+{
+  return x + log1p (sqrt (1.0 + exp (-2.0 * x)));
+}
+
+static gdouble
+_arccosh_exp_x (const gdouble x)
+{
+  return x + log1p (sqrt (1.0 - exp (-2.0 * x)));
+}
+
 /**
  * ncm_csq1d_state_get_circle:
  * @state: a #NcmCSQ1DState
@@ -916,17 +928,67 @@ ncm_csq1d_state_get_minkowski (NcmCSQ1DState *state, gdouble *x1, gdouble *x2)
 void
 ncm_csq1d_state_get_circle (NcmCSQ1DState *state, const gdouble r, const gdouble theta, NcmCSQ1DState *cstate)
 {
-  const gdouble alpha = state->alpha;
-  const gdouble gamma = state->gamma;
-  const gdouble ct    = cos (theta);
-  const gdouble st    = sin (theta);
-  const gdouble tr    = tanh (r);
-  const gdouble ca    = cosh (alpha);
-  const gdouble sa    = sinh (alpha);
-  const gdouble t1    = cosh (r) * sa + ct * ca * sinh (r);
-  const gdouble t2    = -(2.0 * st * tr / (ca + tr * (st + ct * sa)));
+  const gdouble alpha   = state->alpha;
+  const gdouble gamma   = state->gamma;
+  const gdouble ct      = cos (theta);
+  const gdouble st      = sin (theta);
+  const gdouble tr      = tanh (r);
+  const gdouble ca      = cosh (alpha);
+  const gdouble ta      = tanh (alpha);
+  const gdouble lncr    = gsl_sf_lncosh (r);
+  const gdouble lnca    = gsl_sf_lncosh (alpha);
+  const gdouble f       = (ta + ct * tr);
+  const gdouble absf    = fabs (f);
+  const gdouble ln_absf = log (absf);
+  const gdouble signf   = GSL_SIGN (f);
+  const gdouble t1      = signf * _arcsinh_exp_x (lncr + lnca + ln_absf);
+  const gdouble t2      = -(2.0 * st * tr / (ca * (1.0 + tr * ct * ta) + tr * st));
 
-  ncm_csq1d_state_set_ag (cstate, state->frame, state->t, asinh (t1), gamma + 0.5 * log1p (t2));
+  ncm_csq1d_state_set_ag (cstate, state->frame, state->t, t1, gamma + 0.5 * log1p (t2));
+}
+
+/**
+ * ncm_csq1d_state_compute_distance:
+ * @state: a #NcmCSQ1DState
+ * @state1: a #NcmCSQ1DState
+ *
+ * Computes the distance between @state and @state1.
+ *
+ * Returns: the distance between @state and @state1.
+ */
+gdouble
+ncm_csq1d_state_compute_distance (NcmCSQ1DState *state, NcmCSQ1DState *state1)
+{
+  const gdouble dgamma01 = state->gamma - state1->gamma;
+
+  g_assert (state->frame == state1->frame);
+  g_assert (state->t == state1->t);
+
+  if ((fabs (state->alpha) > 1.0) || (fabs (state1->alpha) > 1.0) || (fabs (dgamma01) > 1.0))
+  {
+    const gdouble lncoshalpha0 = gsl_sf_lncosh (state->alpha);
+    const gdouble lncoshalpha1 = gsl_sf_lncosh (state1->alpha);
+    const gdouble lncoshdgamma = gsl_sf_lncosh (dgamma01);
+    const gdouble tanhalpha0   = tanh (state->alpha);
+    const gdouble tanhalpha1   = tanh (state1->alpha);
+    const gdouble f            = log1p (-tanhalpha0 * tanhalpha1 * exp (-lncoshdgamma));
+
+    return _arccosh_exp_x (lncoshalpha0 + lncoshalpha1 + lncoshdgamma + f);
+  }
+  else
+  {
+    const gdouble a        = gsl_sf_lncosh (state->alpha + state1->alpha);
+    const gdouble b        = gsl_sf_lncosh (state->alpha - state1->alpha);
+    const gdouble c        = gsl_sf_lncosh (dgamma01);
+    const gdouble expm1a   = expm1 (a);
+    const gdouble expm1b   = expm1 (b);
+    const gdouble expm1apc = expm1 (a + c);
+    const gdouble expm1bpc = expm1 (b + c);
+    const gdouble M12_m1   = 0.5 * (expm1apc + expm1bpc + expm1b - expm1a);
+    const gdouble dist     =  asinh (sqrt (M12_m1 * (2.0 + M12_m1)));
+
+    return dist;
+  }
 }
 
 /* CSQ1D methods */
@@ -2189,7 +2251,9 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
   if ((adiab0 && adiab1) || (!adiab0 && !adiab1))
   {
     if (PRINT_EVOL)
-      g_warning ("# Impossible to find the adiabatic limit: \n\tt0 % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n\tt1 % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n",
+      g_warning ("# Impossible to find the adiabatic limit: \n"
+                 "\tt0 % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n"
+                 "\tt1 % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n",
                  t0, alpha0, alpha_reltol0, dgamma0, dgamma_reltol0,
                  t1, alpha1, alpha_reltol1, dgamma1, dgamma_reltol1);
 

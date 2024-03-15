@@ -148,6 +148,7 @@ void ncm_csq1d_state_get_poincare_half_plane (NcmCSQ1DState *state, gdouble *x, 
 void ncm_csq1d_state_get_poincare_disc (NcmCSQ1DState *state, gdouble *x, gdouble *y);
 void ncm_csq1d_state_get_minkowski (NcmCSQ1DState *state, gdouble *x1, gdouble *x2);
 void ncm_csq1d_state_get_circle (NcmCSQ1DState *state, const gdouble r, const gdouble theta, NcmCSQ1DState *cstate);
+gdouble ncm_csq1d_state_compute_distance (NcmCSQ1DState *state, NcmCSQ1DState *state1);
 
 /* CSQ1D methods */
 

@@ -247,6 +247,54 @@ def test_evolution():
         assert_allclose(J12, (2.0 * phi * Pphi.conjugate()).real, atol=1.0e-7)
 
 
+def test_evolution_max_order2():
+    """Test initial conditions of NcmCSQ1D."""
+
+    bs = BesselTest(alpha=2.0)
+    bs.set_max_order_2(True)
+    bs.set_k(1.0)
+    bs.set_ti(-100.0)
+    bs.set_tf(-1.0e-3)
+    state = Ncm.CSQ1DState.new()
+
+    limit_found, t_adiab = bs.find_adiab_time_limit(None, -1.0e5, -1.0e0, 1.0e-3)
+
+    assert limit_found
+
+    bs.set_save_evol(True)
+    bs.set_reltol(1.0e-10)
+    bs.set_abstol(0.0)
+    bs.set_init_cond_adiab(None, t_adiab)
+    bs.prepare(None)
+
+    t_a, _smaller_abst = bs.get_time_array()
+
+    for t in t_a:
+        state = bs.eval_at(t, state)
+        phi_vec, Pphi_vec = state.get_phi_Pphi()
+
+        phi = phi_vec[0] + 1.0j * phi_vec[1]
+        Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
+
+        kt = bs.get_k() * t
+        hfnormm = 0.5 * math.sqrt(math.pi) * (-t) ** (-bs.alpha)
+        hfnormp = 0.5 * math.sqrt(math.pi) * (-t) ** (+bs.alpha)
+
+        # Analytical solution for phi and Pphi
+        theo_phi = hfnormm * hankel1e(bs.alpha, kt)
+        theo_Pphi = kt * hfnormp * hankel1e(1.0 + bs.alpha, kt)
+
+        # Compare with analytical solution
+        assert_allclose(abs(phi), abs(theo_phi), rtol=1.0e-7)
+        assert_allclose(abs(Pphi), abs(theo_Pphi), rtol=1.0e-7)
+
+        J11, J12, J22 = state.get_J()
+
+        assert_allclose(J11, 2.0 * abs(phi) ** 2, atol=1.0e-7)
+        assert_allclose(J22, 2.0 * abs(Pphi) ** 2, atol=1.0e-7)
+        assert_allclose(J12, (2.0 * phi * Pphi.conjugate()).real, atol=1.0e-7)
+
+
 @pytest.mark.parametrize(
     "frame",
     [Ncm.CSQ1DFrame.ORIG, Ncm.CSQ1DFrame.ADIAB1, Ncm.CSQ1DFrame.ADIAB2],
@@ -356,7 +404,7 @@ def test_change_frame_adiab1_adiab2():
     assert_allclose(state.get_ag(), (0.1, 0.3))
 
 
-def test_csq1d_nonadiab_prop():
+def test_nonadiab_prop():
     """Test basic functionality of NcmCSQ1D."""
 
     k = 8.0
@@ -392,7 +440,7 @@ def test_csq1d_nonadiab_prop():
     assert_allclose(prop_J11, analytic_J11, rtol=1.0e-9)
 
 
-def test_csq1d_nonadiab_evol():
+def test_nonadiab_evol():
     """Test basic functionality of NcmCSQ1D."""
 
     k = 8.0
@@ -430,6 +478,128 @@ def test_csq1d_nonadiab_evol():
     assert_allclose(evol_J11, analytic_J11, rtol=1.0e-7)
 
 
+def test_state_circle():
+    """Test circle functionality of NcmCSQ1DState."""
+
+    state = Ncm.CSQ1DState.new()
+    state.set_up(Ncm.CSQ1DFrame.ORIG, 1.0, 0.1, 0.2)
+
+    for r in np.geomspace(1.0e-4, 1.0e4, 100):
+        for theta in np.linspace(-4.0 * math.pi, 4.0 * math.pi, 120):
+            state1 = state.get_circle(r, theta)
+            assert_allclose(state.compute_distance(state1), r)
+
+
+def test_state_phi_Pphi():
+    """Test phi and Pphi functionality of NcmCSQ1DState."""
+
+    state = Ncm.CSQ1DState.new()
+    alpha_a = np.linspace(-2.0, 2.0, 100)
+    gamma_a = np.linspace(-2.0, 2.0, 100)
+
+    for alpha, gamma in zip(alpha_a, gamma_a):
+        state.set_ag(Ncm.CSQ1DFrame.ORIG, 0.0, alpha, gamma)
+
+        phi_v, Pphi_v = state.get_phi_Pphi()
+        J11, J12, J22 = state.get_J()
+
+        phi = phi_v[0] + 1.0j * phi_v[1]
+        Pphi = Pphi_v[0] + 1.0j * Pphi_v[1]
+        phic = phi_v[0] - 1.0j * phi_v[1]
+        Pphic = Pphi_v[0] - 1.0j * Pphi_v[1]
+
+        assert_allclose(2.0 * phi * phic, J11)
+        assert_allclose(2.0 * Pphi * Pphic, J22)
+        assert_allclose(phi * Pphic + phic * Pphi, J12)
+        assert_allclose(phi * Pphic - phic * Pphi, 1.0j)
+
+
+def test_state_um():
+    """Test um functionality of NcmCSQ1DState."""
+
+    state = Ncm.CSQ1DState.new()
+    alpha_a = np.linspace(-2.0, 2.0, 100)
+    gamma_a = np.linspace(-2.0, 2.0, 100)
+
+    for alpha, gamma in zip(alpha_a, gamma_a):
+        state.set_ag(Ncm.CSQ1DFrame.ORIG, 0.0, alpha, gamma)
+
+        chi, Um = state.get_um()
+        alpha1, gamma1 = state.get_ag()
+
+        state.set_um(Ncm.CSQ1DFrame.ORIG, 0.0, chi, Um)
+        alpha2, gamma2 = state.get_ag()
+
+        assert_allclose(alpha, alpha1)
+        assert_allclose(alpha, alpha2)
+        assert_allclose(gamma, gamma1)
+        assert_allclose(gamma, gamma2)
+        assert_allclose(chi, np.sinh(alpha))
+        assert_allclose(Um, -gamma + np.log(np.cosh(alpha)))
+
+
+def test_state_up():
+    """Test up functionality of NcmCSQ1DState."""
+
+    state = Ncm.CSQ1DState.new()
+    alpha_a = np.linspace(-2.0, 2.0, 100)
+    gamma_a = np.linspace(-2.0, 2.0, 100)
+
+    for alpha, gamma in zip(alpha_a, gamma_a):
+        state.set_ag(Ncm.CSQ1DFrame.ORIG, 0.0, alpha, gamma)
+
+        chi, Up = state.get_up()
+        alpha1, gamma1 = state.get_ag()
+
+        state.set_up(Ncm.CSQ1DFrame.ORIG, 0.0, chi, Up)
+        alpha2, gamma2 = state.get_ag()
+
+        assert_allclose(alpha, alpha1)
+        assert_allclose(alpha, alpha2)
+        assert_allclose(gamma, gamma1)
+        assert_allclose(gamma, gamma2)
+        assert_allclose(chi, np.sinh(alpha))
+        assert_allclose(Up, gamma + np.log(np.cosh(alpha)))
+
+
+def test_state_poincare_half_plane():
+    """Test poincare_half_plane functionality of NcmCSQ1DState."""
+
+    state = Ncm.CSQ1DState.new()
+    alpha_a = np.linspace(-2.0, 2.0, 100)
+    gamma_a = np.linspace(-2.0, 2.0, 100)
+
+    for alpha, gamma in zip(alpha_a, gamma_a):
+        state.set_ag(Ncm.CSQ1DFrame.ORIG, 0.0, alpha, gamma)
+
+        x, lny = state.get_poincare_half_plane()
+        chi, Up = state.get_up()
+
+        assert_allclose(x, chi * np.exp(-Up))
+        assert_allclose(lny, -Up)
+
+
+def test_state_poincare_disc():
+    """Test poincare_disc functionality of NcmCSQ1DState."""
+
+    state = Ncm.CSQ1DState.new()
+    alpha_a = np.linspace(-2.0, 2.0, 100)
+    gamma_a = np.linspace(-2.0, 2.0, 100)
+
+    for alpha, gamma in zip(alpha_a, gamma_a):
+        state.set_ag(Ncm.CSQ1DFrame.ORIG, 0.0, alpha, gamma)
+
+        x, y = state.get_poincare_disc()
+        chi, Up = state.get_up()
+        chi, Um = state.get_um()
+
+        assert_allclose(x, chi / (1.0 + 0.5 * (np.exp(Up) + np.exp(Um))))
+        assert_allclose(
+            y,
+            -0.5 * (np.exp(Up) - np.exp(Um)) / (1.0 + 0.5 * (np.exp(Up) + np.exp(Um))),
+        )
+
+
 if __name__ == "__main__":
     test_csq1d()
     test_initial_conditions_time()
@@ -440,3 +610,9 @@ if __name__ == "__main__":
     test_change_frame_orig_adiab1()
     test_change_frame_orig_adiab2()
     test_change_frame_adiab1_adiab2()
+    test_nonadiab_prop()
+    test_nonadiab_evol()
+    test_state_circle()
+    test_state_phi_Pphi()
+    test_state_um()
+    test_state_up()
