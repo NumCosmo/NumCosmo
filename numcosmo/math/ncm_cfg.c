@@ -136,10 +136,6 @@
 #include "lss/nc_galaxy_redshift_spec.h"
 #include "lss/nc_galaxy_redshift_spline.h"
 #include "lss/nc_galaxy_redshift_gauss.h"
-#include "lss/nc_galaxy_wl.h"
-#include "lss/nc_galaxy_wl_ellipticity_gauss.h"
-#include "lss/nc_galaxy_wl_ellipticity_kde.h"
-#include "lss/nc_galaxy_wl_ellipticity_binned.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_mass_nodist.h"
@@ -164,6 +160,14 @@
 #include "lss/nc_reduced_shear_cluster_mass.h"
 #include "lss/nc_reduced_shear_calib.h"
 #include "lss/nc_reduced_shear_calib_wtg.h"
+#include "galaxy/nc_galaxy_sd_position.h"
+#include "galaxy/nc_galaxy_sd_position_flat.h"
+#include "galaxy/nc_galaxy_sd_position_lsst_srd.h"
+#include "galaxy/nc_galaxy_sd_z_proxy.h"
+#include "galaxy/nc_galaxy_sd_z_proxy_gauss.h"
+#include "galaxy/nc_galaxy_sd_z_proxy_dirac.h"
+#include "galaxy/nc_galaxy_sd_shape.h"
+#include "galaxy/nc_galaxy_sd_shape_gauss.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_cbe.h"
@@ -641,11 +645,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPLINE);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_GAUSS);
 
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_GAUSS);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_KDE);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_BINNED);
-
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_LNNORMAL);
@@ -678,6 +677,15 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB);
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB_WTG);
+
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_FLAT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_LSST_SRD);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY_DIRAC);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS);
 
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
