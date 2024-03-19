@@ -101,6 +101,7 @@
 #include "model/nc_hicosmo_de_cpl.h"
 #include "model/nc_hicosmo_de_jbp.h"
 #include "model/nc_hicosmo_qgrw.h"
+#include "model/nc_hicosmo_qgw.h"
 #include "model/nc_hicosmo_Vexp.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
 #include "model/nc_hicosmo_de_reparam_cmb.h"
@@ -587,6 +588,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_CPL);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_JBP);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGRW);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGW);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_VEXP);
 
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_OK);
@@ -2165,4 +2167,3 @@ ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout)
 guint fftw_default_flags = 0;
 
 #endif /* HAVE_FFTW3 */
-
