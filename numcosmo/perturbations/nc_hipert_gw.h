@@ -49,7 +49,8 @@ struct _NcHIPertIGWInterface
   gdouble (*eval_F1) (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
   gdouble (*eval_nu) (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
   gdouble (*eval_m) (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
-  gdouble (*eval_powspec_factor) (NcHIPertIGW *igw);
+  gdouble (*eval_unit) (NcHIPertIGW *igw);
+  gdouble (*eval_x) (NcHIPertIGW *igw, const gdouble tau);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[12];
@@ -78,7 +79,8 @@ gdouble nc_hipert_igw_eval_xi (NcHIPertIGW *igw, const gdouble tau, const gdoubl
 gdouble nc_hipert_igw_eval_F1 (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
 gdouble nc_hipert_igw_eval_nu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
 gdouble nc_hipert_igw_eval_m (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
-gdouble nc_hipert_igw_eval_powspec_factor (NcHIPertIGW *igw);
+gdouble nc_hipert_igw_eval_unit (NcHIPertIGW *igw);
+gdouble nc_hipert_igw_eval_x (NcHIPertIGW *igw, const gdouble tau);
 
 NcHIPertGW *nc_hipert_gw_new (void);
 NcHIPertGW *nc_hipert_gw_ref (NcHIPertGW *pgw);

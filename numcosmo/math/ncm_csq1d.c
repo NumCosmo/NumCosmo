@@ -435,7 +435,7 @@ static gdouble _ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, con
 static gdouble _ncm_csq1d_eval_F1         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _ncm_csq1d_eval_F2         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _ncm_csq1d_eval_FN         (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t);
-static gdouble _ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model);
+static gdouble _ncm_csq1d_eval_unit (NcmCSQ1D *csq1d, NcmModel *model);
 
 static void
 ncm_csq1d_class_init (NcmCSQ1DClass *klass)
@@ -504,18 +504,18 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->eval_xi             = &_ncm_csq1d_eval_xi;
-  klass->eval_nu             = &_ncm_csq1d_eval_nu;
-  klass->eval_nu2            = &_ncm_csq1d_eval_nu2;
-  klass->eval_m              = &_ncm_csq1d_eval_m;
-  klass->eval_int_1_m        = &_ncm_csq1d_eval_int_1_m;
-  klass->eval_int_mnu2       = &_ncm_csq1d_eval_int_mnu2;
-  klass->eval_int_qmnu2      = &_ncm_csq1d_eval_int_qmnu2;
-  klass->eval_int_q2mnu2     = &_ncm_csq1d_eval_int_q2mnu2;
-  klass->eval_F1             = &_ncm_csq1d_eval_F1;
-  klass->eval_F2             = &_ncm_csq1d_eval_F2;
-  klass->eval_FN             = &_ncm_csq1d_eval_FN;
-  klass->eval_powspec_factor = &_ncm_csq1d_eval_powspec_factor;
+  klass->eval_xi         = &_ncm_csq1d_eval_xi;
+  klass->eval_nu         = &_ncm_csq1d_eval_nu;
+  klass->eval_nu2        = &_ncm_csq1d_eval_nu2;
+  klass->eval_m          = &_ncm_csq1d_eval_m;
+  klass->eval_int_1_m    = &_ncm_csq1d_eval_int_1_m;
+  klass->eval_int_mnu2   = &_ncm_csq1d_eval_int_mnu2;
+  klass->eval_int_qmnu2  = &_ncm_csq1d_eval_int_qmnu2;
+  klass->eval_int_q2mnu2 = &_ncm_csq1d_eval_int_q2mnu2;
+  klass->eval_F1         = &_ncm_csq1d_eval_F1;
+  klass->eval_F2         = &_ncm_csq1d_eval_F2;
+  klass->eval_FN         = &_ncm_csq1d_eval_FN;
+  klass->eval_unit       = &_ncm_csq1d_eval_unit;
 }
 
 static gdouble
@@ -618,9 +618,9 @@ _ncm_csq1d_eval_FN (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdoubl
 }
 
 static gdouble
-_ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model)
+_ncm_csq1d_eval_unit (NcmCSQ1D *csq1d, NcmModel *model)
 {
-  g_error ("_ncm_csq1d_eval_powspec_factor: not implemented.");
+  g_error ("_ncm_csq1d_eval_unit: not implemented.");
 
   return 0.0;
 }
@@ -1734,7 +1734,7 @@ _ncm_csq1d_J_Um (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_
  * Returns: $F_n$
  */
 /**
- * ncm_csq1d_eval_powspec_factor: (virtual eval_powspec_factor)
+ * ncm_csq1d_eval_unit: (virtual eval_unit)
  * @csq1d: a #NcmCSQ1D
  * @model: (allow-none): a #NcmModel
  *
@@ -2636,10 +2636,18 @@ _ncm_csq1d_eval_adiab_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdoubl
     dlnnu = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_lnnu_func, &ws, &err);
     F4    = d2F2 / gsl_pow_2 (twonu) - dlnnu * F3 / twonu;
 
-    alpha_reltol0  = gsl_pow_2 ((F1_3 / 3.0 - F3) / F1);
-    dgamma_reltol0 = gsl_pow_2 ((F4 - F1_2 * F2) / F2);
-    alpha[0]       = +F1 + F1_3 / 3.0 - F3;
-    dgamma[0]      = -(1.0 + F1_2) * F2 + F4;
+    if (F1 != 0.0)
+      alpha_reltol0 = gsl_pow_2 ((F1_3 / 3.0 - F3) / F1);
+    else
+      alpha_reltol0 = gsl_pow_2 (F1_3 / 3.0 - F3);
+
+    if (F2 != 0.0)
+      dgamma_reltol0 = gsl_pow_2 ((F4 - F1_2 * F2) / F2);
+    else
+      dgamma_reltol0 = gsl_pow_2 (F4 - F1_2 * F2);
+
+    alpha[0]  = +F1 + F1_3 / 3.0 - F3;
+    dgamma[0] = -(1.0 + F1_2) * F2 + F4;
   }
 
   if (alpha_reltol != NULL)

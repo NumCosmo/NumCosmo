@@ -58,7 +58,7 @@ struct _NcmCSQ1DClass
   gdouble (*eval_F1)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_F2)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_FN)         (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t);
-  gdouble (*eval_powspec_factor) (NcmCSQ1D *csq1d, NcmModel *model);
+  gdouble (*eval_unit) (NcmCSQ1D *csq1d, NcmModel *model);
   void (*prepare) (NcmCSQ1D *csq1d, NcmModel *model);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
@@ -188,7 +188,7 @@ NCM_INLINE gdouble ncm_csq1d_eval_dm         (NcmCSQ1D *csq1d, NcmModel *model, 
 NCM_INLINE gdouble ncm_csq1d_eval_F1         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_F2         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_FN         (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t);
-NCM_INLINE gdouble ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model);
+NCM_INLINE gdouble ncm_csq1d_eval_unit       (NcmCSQ1D *csq1d, NcmModel *model);
 
 void ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model);
 
@@ -290,9 +290,9 @@ ncm_csq1d_eval_FN (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble
 }
 
 NCM_INLINE gdouble
-ncm_csq1d_eval_powspec_factor (NcmCSQ1D *csq1d, NcmModel *model)
+ncm_csq1d_eval_unit (NcmCSQ1D *csq1d, NcmModel *model)
 {
-  return NCM_CSQ1D_GET_CLASS (csq1d)->eval_powspec_factor (csq1d, model);
+  return NCM_CSQ1D_GET_CLASS (csq1d)->eval_unit (csq1d, model);
 }
 
 G_END_DECLS
