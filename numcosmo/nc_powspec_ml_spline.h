@@ -44,8 +44,6 @@ NcPowspecMLSpline *nc_powspec_ml_spline_new (NcmSpline * Pk);
 void nc_powspec_ml_spline_set_spline (NcPowspecMLSpline *ps_fs, NcmSpline *Pk);
 NcmSpline *nc_powspec_ml_spline_peek_spline (NcPowspecMLSpline *ps_fs);
 
-void nc_powspec_ml_spline_load_from_file (NcPowspecMLSpline *ps_fs, const gchar *filename);
-
 G_END_DECLS
 
 #endif /* _NC_POWSPEC_ML_SPLINE_H_ */

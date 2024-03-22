@@ -57,10 +57,11 @@
 #include "math/ncm_spline2d_spline.h"
 #include "math/ncm_integral1d.h"
 #include "math/ncm_integral_nd.h"
-#include "math/ncm_powspec.h"
+#include "math/ncm_powspec_corr3d.h"
 #include "math/ncm_powspec_filter.h"
 #include "math/ncm_powspec_sphere_proj.h"
-#include "math/ncm_powspec_corr3d.h"
+#include "math/ncm_powspec_spline2d.h"
+#include "math/ncm_powspec.h"
 #include "math/ncm_model.h"
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_model_builder.h"
@@ -171,11 +172,12 @@
 #include "nc_recomb_seager.h"
 #include "nc_hireion.h"
 #include "nc_hireion_camb.h"
-#include "nc_powspec_ml.h"
-#include "nc_powspec_ml_transfer.h"
 #include "nc_powspec_ml_cbe.h"
-#include "nc_powspec_mnl.h"
+#include "nc_powspec_ml_spline.h"
+#include "nc_powspec_ml_transfer.h"
+#include "nc_powspec_ml.h"
 #include "nc_powspec_mnl_halofit.h"
+#include "nc_powspec_mnl.h"
 #include "nc_snia_dist_cov.h"
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
@@ -527,6 +529,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL_ND);
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
+  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPLINE2D);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPHERE_PROJ);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
@@ -691,6 +694,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HIREION_CAMB);
 
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML);
+  ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_SPLINE);
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_TRANSFER);
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_CBE);
 
@@ -2167,3 +2171,4 @@ ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout)
 guint fftw_default_flags = 0;
 
 #endif /* HAVE_FFTW3 */
+

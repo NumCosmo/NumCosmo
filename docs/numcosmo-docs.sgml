@@ -77,9 +77,10 @@
     <section>
       <title>Power spectrum functions</title>
       <xi:include href="xml/ncm_powspec.xml"/>
+      <xi:include href="xml/ncm_powspec_corr3d.xml"/>
       <xi:include href="xml/ncm_powspec_filter.xml"/>
       <xi:include href="xml/ncm_powspec_sphere_proj.xml"/>
-      <xi:include href="xml/ncm_powspec_corr3d.xml"/>
+      <xi:include href="xml/ncm_powspec_spline2d.xml"/>
     </section>
     <section>
       <title>Harmonic Oscillator</title>
@@ -321,9 +322,9 @@
     <section>
       <title>Matter Power Spectrum</title>
       <xi:include href="xml/nc_powspec_ml.xml"/>
-      <xi:include href="xml/nc_powspec_ml_fix_spline.xml"/>
-      <xi:include href="xml/nc_powspec_ml_transfer.xml"/>
       <xi:include href="xml/nc_powspec_ml_cbe.xml"/>
+      <xi:include href="xml/nc_powspec_ml_spline.xml"/>
+      <xi:include href="xml/nc_powspec_ml_transfer.xml"/>
       <xi:include href="xml/nc_powspec_mnl.xml"/>
       <xi:include href="xml/nc_powspec_mnl_halofit.xml"/>
     </section>

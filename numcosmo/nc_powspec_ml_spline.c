@@ -83,9 +83,9 @@ _nc_powspec_ml_spline_set_property (GObject *object, guint prop_id, const GValue
     case PROP_SPLINE:
       nc_powspec_ml_spline_set_spline (ps_fs, g_value_get_object (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -101,9 +101,9 @@ _nc_powspec_ml_spline_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_SPLINE:
       g_value_set_object (value, nc_powspec_ml_spline_peek_spline (ps_fs));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -270,26 +270,5 @@ NcmSpline *
 nc_powspec_ml_spline_peek_spline (NcPowspecMLSpline *ps_fs)
 {
   return ps_fs->Pk;
-}
-
-/**
- * nc_powspec_ml_spline_load_from_file:
- * @ps_fs: a #NcPowspecMLSpline
- * @filename: a file containing a serialized #NcmSpline
- *
- * Loads a spline of the power spectrum at a redshift $z_0$, P(k, z_0), from @filename.
- *
- */
-void
-nc_powspec_ml_spline_load_from_file (NcPowspecMLSpline *ps_fs, const gchar *filename)
-{
-  g_assert (filename != NULL);
-  {
-    GObject *obj = ncm_serialize_from_file (ps_fs->ser, filename);
-
-    g_assert (NCM_IS_SPLINE (obj));
-
-    nc_powspec_ml_spline_set_spline (ps_fs, NCM_SPLINE (obj));
-  }
 }
 
