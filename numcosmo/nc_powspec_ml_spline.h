@@ -39,7 +39,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcPowspecMLSpline, nc_powspec_ml_spline, NC, POWSPEC_ML_SPLINE, NcPowspecML)
 
-NcPowspecMLSpline *nc_powspec_ml_spline_new (const gchar *filename);
+NcPowspecMLSpline *nc_powspec_ml_spline_new (NcmSpline * Pk);
 
 void nc_powspec_ml_spline_set_spline (NcPowspecMLSpline *ps_fs, NcmSpline *Pk);
 NcmSpline *nc_powspec_ml_spline_peek_spline (NcPowspecMLSpline *ps_fs);

@@ -161,10 +161,10 @@ nc_powspec_ml_spline_class_init (NcPowspecMLSplineClass *klass)
    */
   g_object_class_install_property (object_class,
                                    PROP_SPLINE,
-                                   g_param_spec_string ("spline",
+                                   g_param_spec_object ("spline",
                                                         NULL,
                                                         "Spline representing Pk at z=0",
-                                                        NULL,
+                                                        NCM_TYPE_SPLINE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 
@@ -216,24 +216,29 @@ _nc_powspec_ml_spline_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdou
 static void
 _nc_powspec_ml_spline_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
 {
-  Nz[0] = 20;
-  Nk[0] = 1000;
+  NcPowspecMLSpline *ps_fs = NC_POWSPEC_ML_SPLINE (powspec);
+  NcmPowspec *powspec_base = NCM_POWSPEC (ps_fs);
+  const gdouble zi         = ncm_powspec_get_zi (powspec_base);
+  const gdouble zf         = ncm_powspec_get_zf (powspec_base);
+
+  Nz[0] = GSL_MAX ((zf - zi) * 50, 10);
+  Nk[0] = ncm_spline_get_len (ps_fs->Pk);
 }
 
 /**
  * nc_powspec_ml_spline_new:
- * @filename: a file containing a serialized #NcmSpline
+ * @Pk: a #NcmSpline
  *
- * Creates a new #NcPowspecMLSpline from a spline of the power spectrum, $P(k, z=z_0)$
- * at a given redshift $z_0$, which is present in the serialized object @filename.
+ * Creates a new #NcPowspecMLSpline from a spline @Pk of the power spectrum, $P(k,
+ * z=z_0)$ at a given redshift $z_0$.
  *
  * Returns: (transfer full): the newly created #NcPowspecMLSpline.
  */
 NcPowspecMLSpline *
-nc_powspec_ml_spline_new (const gchar *filename)
+nc_powspec_ml_spline_new (NcmSpline *Pk)
 {
   NcPowspecMLSpline *ps_fs = g_object_new (NC_TYPE_POWSPEC_ML_SPLINE,
-                                           "filename", filename,
+                                           "spline", Pk,
                                            NULL);
 
   return ps_fs;

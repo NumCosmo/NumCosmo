@@ -383,6 +383,10 @@ python_tests = [
         'name': 'py_fit',
         'source': 'test_py_fit.py',
     },
+    {
+        'name': 'py_powspec_ml_spline',
+        'source': 'test_py_powspec_ml_spline.py',
+    },
 ]
 
 if mpi_c_dep.found()
