@@ -15572,7 +15572,7 @@ class PowspecMLSpline(PowspecML):
     Object NcPowspecMLSpline
 
     Properties from NcPowspecMLSpline:
-      spline -> gchararray: spline
+      spline -> NcmSpline: spline
         Spline representing Pk at z=0
 
     Properties from NcPowspecML:
@@ -15602,7 +15602,7 @@ class PowspecMLSpline(PowspecML):
     """
 
     class Props:
-        spline: str
+        spline: NumCosmoMath.Spline
         kmax: float
         kmin: float
         zf: float
@@ -15611,14 +15611,13 @@ class PowspecMLSpline(PowspecML):
     props: Props = ...
     def __init__(
         self,
-        spline: str = ...,
+        spline: NumCosmoMath.Spline = ...,
         kmax: float = ...,
         kmin: float = ...,
         zf: float = ...,
         zi: float = ...,
         reltol: float = ...,
     ): ...
-    def load_from_file(self, filename: str) -> None: ...
     @classmethod
     def new(cls, Pk: NumCosmoMath.Spline) -> PowspecMLSpline: ...
     def peek_spline(self) -> NumCosmoMath.Spline: ...

@@ -45,6 +45,7 @@ void test_ncm_mpi_job_test_basic (void);
 void test_ncm_mpi_job_fit_basic (void);
 void test_ncm_mpi_job_mcmc_basic (void);
 void test_ncm_mpi_job_feval_basic (void);
+void test_ncm_powspec_spline2d_basic (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -66,6 +67,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mpi_job_fit/basic", test_ncm_mpi_job_fit_basic);
   g_test_add_func ("/ncm/mpi_job_mcmc/basic", test_ncm_mpi_job_mcmc_basic);
   g_test_add_func ("/ncm/mpi_job_feval/basic", test_ncm_mpi_job_feval_basic);
+  g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
 
   g_test_run ();
 }
@@ -299,5 +301,39 @@ test_ncm_mpi_job_feval_basic (void)
   NCM_TEST_FREE (ncm_dataset_free, dset);
   NCM_TEST_FREE (ncm_data_free, data);
   NCM_TEST_FREE (ncm_mset_free, mset);
+}
+
+void
+test_ncm_powspec_spline2d_basic (void)
+{
+  gdouble x[6]               = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
+  gdouble y[7]               = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+  gdouble z[42]              = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0, };
+  NcmVector *xv              = ncm_vector_new_data_static (x, 6, 1);
+  NcmVector *yv              = ncm_vector_new_data_static (y, 7, 1);
+  NcmMatrix *zm              = ncm_matrix_new_data_static (z, 7, 6);
+  NcmSpline *sc              = ncm_spline_cubic_notaknot_new ();
+  NcmSpline2d *sb2d          = ncm_spline2d_bicubic_new (sc);
+  NcmPowspecSpline2d *ps_s2d = ncm_powspec_spline2d_new (NCM_SPLINE2D (sb2d));
+  NcmPowspecSpline2d *ps_s2d2;
+
+  ncm_spline2d_set (NCM_SPLINE2D (sb2d), xv, yv, zm, FALSE);
+
+  g_assert_true (ps_s2d != NULL);
+  g_assert_true (NCM_IS_POWSPEC_SPLINE2D (ps_s2d));
+
+  ps_s2d2 = ncm_powspec_spline2d_ref (ps_s2d);
+  ncm_powspec_spline2d_clear (&ps_s2d2);
+  g_assert_true (ps_s2d2 == NULL);
+
+  g_assert_true (NCM_IS_POWSPEC_SPLINE2D (ps_s2d));
+
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+  ncm_matrix_free (zm);
+  ncm_spline_free (NCM_SPLINE (sc));
+
+  NCM_TEST_FREE (ncm_powspec_spline2d_free, ps_s2d);
+  NCM_TEST_FREE (ncm_spline2d_free, NCM_SPLINE2D (sb2d));
 }
 

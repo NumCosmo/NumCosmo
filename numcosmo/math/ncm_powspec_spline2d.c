@@ -69,7 +69,7 @@ enum
   PROP_SPLINE2D,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmPowspecSpline2d, ncm_powspec_spline2d, G_TYPE_OBJECT)
+G_DEFINE_TYPE_WITH_PRIVATE (NcmPowspecSpline2d, ncm_powspec_spline2d, NCM_TYPE_POWSPEC)
 
 static void
 ncm_powspec_spline2d_init (NcmPowspecSpline2d *ps_s2d)
