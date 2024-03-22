@@ -51,6 +51,8 @@ struct _NcHIPertIAdiabInterface
   gdouble (*eval_m) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
   gdouble (*eval_unit) (NcHIPertIAdiab *iad);
   gdouble (*eval_x) (NcHIPertIAdiab *iad, const gdouble tau);
+  gdouble (*eval_p2Psi) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+  gdouble (*eval_p2drho) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[12];
@@ -81,6 +83,8 @@ gdouble nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const 
 gdouble nc_hipert_iadiab_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 gdouble nc_hipert_iadiab_eval_unit (NcHIPertIAdiab *iad);
 gdouble nc_hipert_iadiab_eval_x (NcHIPertIAdiab *iad, const gdouble tau);
+gdouble nc_hipert_iadiab_eval_p2Psi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+gdouble nc_hipert_iadiab_eval_p2drho (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 
 NcHIPertAdiab *nc_hipert_adiab_new (void);
 NcHIPertAdiab *nc_hipert_adiab_ref (NcHIPertAdiab *pa);
@@ -89,6 +93,13 @@ void nc_hipert_adiab_clear (NcHIPertAdiab **pa);
 
 void nc_hipert_adiab_set_k (NcHIPertAdiab *adiab, const gdouble k);
 gdouble nc_hipert_adiab_get_k (NcHIPertAdiab *adiab);
+
+gdouble nc_hipert_adiab_eval_powspec_zeta_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
+gdouble nc_hipert_adiab_eval_powspec_Psi_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
+gdouble nc_hipert_adiab_eval_powspec_drho_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
+GArray *nc_hipert_adiab_eval_powspec_zeta (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tAi, const gdouble tAf, const gdouble adiab_reltol, GArray *k_array, const gdouble tau);
+GArray *nc_hipert_adiab_eval_powspec_Psi (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tAi, const gdouble tAf, const gdouble adiab_reltol, GArray *k_array, const gdouble tau);
+GArray *nc_hipert_adiab_eval_powspec_drho (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tAi, const gdouble tAf, const gdouble adiab_reltol, GArray *k_array, const gdouble tau);
 
 G_END_DECLS
 

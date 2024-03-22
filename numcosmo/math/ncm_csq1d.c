@@ -480,7 +480,7 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
                                    g_param_spec_double ("adiab-threshold",
                                                         NULL,
                                                         "The adiabatic threshold",
-                                                        0.0, G_MAXDOUBLE, 1.0e-1,
+                                                        0.0, G_MAXDOUBLE, 1.0e0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_PROP_THRESHOLD,
@@ -1799,7 +1799,7 @@ _ncm_csq1d_evol_adiabatic (NcmCSQ1D *csq1d, NcmModel *model, GArray *asinh_t_a, 
       break;
     }
 
-    if ((fabs (dgamma) > self->adiab_threshold) || (fabs (alpha) > self->adiab_threshold))
+    if ((fabs (dgamma) > self->adiab_threshold) && (fabs (alpha) > self->adiab_threshold))
     {
       if (dgamma > 0.0)
         reason = NCM_CSQ1D_EVOL_STOP_UP_START;

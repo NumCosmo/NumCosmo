@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * nc_hipert_gw.c
- * Copyright (C) 2014 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2016 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -28,8 +28,9 @@
  * @title: NcHIPertGW
  * @short_description: Perturbation object for gravitational wave mode.
  *
- * This object provides the computation of the gravitational wave mode for the cosmological
- * perturbations. It solves the equation of motion for the gauge invariant variable $h$.
+ * This object provides the computation of the gravitational wave mode for the
+ * cosmological perturbations. It solves the equation of motion for the gauge invariant
+ * variable $h$.
  *
  */
 
@@ -143,7 +144,6 @@ static gdouble _nc_hipert_gw_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gd
 static gdouble _nc_hipert_gw_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _nc_hipert_gw_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _nc_hipert_gw_eval_unit (NcmCSQ1D *csq1d, NcmModel *model);
-
 static void _nc_hipert_gw_prepare (NcmCSQ1D *csq1d, NcmModel *model);
 
 static void

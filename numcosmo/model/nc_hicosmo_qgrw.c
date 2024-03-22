@@ -26,15 +26,18 @@
 /**
  * SECTION:nc_hicosmo_qgrw
  * @title: NcHICosmoQGRW
- * @short_description: Radiation plus $w$-fluid model with a quantum generated bounce phase model.
+ * @short_description: Radiation plus $w$-fluid model with a quantum generated bounce
+ * phase model.
  *
- * In this model the adiabatic mode $\zeta$ has its mass, speed of sound square $c_s^2$ and frequency square $\nu_\zeta^2$ given by
- * \begin{align}
- * m_\zeta &= 3 \Delta_\bar{K}\sqrt{\Omega_{w0}} x^{-3(1-w)/2}\frac{(1 + w) +  4R/3}{c_s^2}\frac{1}{\sqrt{(1-exp(-2\vert\alpha\vert)) + (1-exp(-3(1-w)\vert\alpha\vert))}}, \\\\
+ * In this model the adiabatic mode $\zeta$ has its mass, speed of sound square $c_s^2$
+ * and frequency square $\nu_\zeta^2$ given by \begin{align} m_\zeta &= 3
+ * \Delta_\bar{K}\sqrt{\Omega_{w0}} x^{-3(1-w)/2}\frac{(1 + w) +
+ * 4R/3}{c_s^2}\frac{1}{\sqrt{(1-exp(-2\vert\alpha\vert)) +
+ * (1-exp(-3(1-w)\vert\alpha\vert))}}, \\\\
  * c_s^2 &= \frac{w (1 + w) + 4R/9}{(1+w) + 4R/3}, \\\\
- * \nu_\zeta^2 &= \frac {c_s^2 k^2}{\Omega_{w0} x^{1+3w} ((1-exp(-2\vert\alpha\vert)) + (1-exp(-3(1-w)\vert\alpha\vert)))},
- * \end{align}
- * where $$R \equiv \frac{\Omega_{r0} x}{\Omega_{w0} x^{3w}}.$$
+ * \nu_\zeta^2 &= \frac {c_s^2 k^2}{\Omega_{w0} x^{1+3w} ((1-exp(-2\vert\alpha\vert)) +
+ * (1-exp(-3(1-w)\vert\alpha\vert)))}, \end{align} where $$R \equiv \frac{\Omega_{r0}
+ * x}{\Omega_{w0} x^{3w}}.$$
  *
  */
 

@@ -1,13 +1,13 @@
 /***************************************************************************
  *            nc_hicosmo_qgw.c
  *
- *  Wed June 04 10:04:24 2014
- *  Copyright  2014  Sandro Dias Pinto Vitenti
- *  <vitenti@uel.br>
+ *  Tue March 19 10:45:17 2024
+ *  Copyright  2024  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>>
  ****************************************************************************/
 /*
  * nc_hicosmo_qgw.c
- * Copyright (C) 2014 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -26,15 +26,10 @@
 /**
  * SECTION:nc_hicosmo_qgw
  * @title: NcHICosmoQGW
- * @short_description: Radiation plus $w$-fluid model with a quantum generated bounce phase model.
+ * @short_description: $w$-fluid model with a quantum generated bounce phase model.
  *
- * In this model the adiabatic mode $\zeta$ has its mass, speed of sound square $c_s^2$ and frequency square $\nu_\zeta^2$ given by
- * \begin{align}
- * m_\zeta &= 3 \Delta_\bar{K}\sqrt{\Omega_{w0}} x^{-3(1-w)/2}\frac{(1 + w) +  4R/3}{c_s^2}\frac{1}{\sqrt{(1-exp(-2\vert\alpha\vert)) + (1-exp(-3(1-w)\vert\alpha\vert))}}, \\\\
- * c_s^2 &= \frac{w (1 + w) + 4R/9}{(1+w) + 4R/3}, \\\\
- * \nu_\zeta^2 &= \frac {c_s^2 k^2}{\Omega_{w0} x^{1+3w} ((1-exp(-2\vert\alpha\vert)) + (1-exp(-3(1-w)\vert\alpha\vert)))},
- * \end{align}
- * where $$R \equiv \frac{\Omega_{r0} x}{\Omega_{w0} x^{3w}}.$$
+ * The NcHICosmoQGW class implements the $w$-fluid model with a quantum generated
+ * bounce phase model.
  *
  */
 
@@ -44,24 +39,28 @@
 #include "build_cfg.h"
 
 #include "model/nc_hicosmo_qgw.h"
+#include "perturbations/nc_hipert_adiab.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_sf_trig.h>
+#endif /* NUMCOSMO_GIR_SCAN */
+
+static void nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface);
 
 struct _NcHICosmoQGWPrivate
 {
-  gdouble units;
-  gdouble tb;
-  gdouble RH_mpc;
-  gdouble RH_m;
-  gdouble lp_RH;
-  gdouble gamma;
+  guint place_holder;
 };
 
-
-G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoQGW, nc_hicosmo_qgw, NC_TYPE_HICOSMO);
+G_DEFINE_TYPE_WITH_CODE (NcHICosmoQGW, nc_hicosmo_qgw, NC_TYPE_HICOSMO,
+                         G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IADIAB,
+                                                nc_hipert_iadiab_interface_init)
+                         G_ADD_PRIVATE (NcHICosmoQGW)
+                        );
 
 enum
 {
   PROP_0,
-  PROP_UNITS,
   PROP_SIZE,
 };
 
@@ -69,50 +68,39 @@ static void
 nc_hicosmo_qgw_init (NcHICosmoQGW *cosmo_qgw)
 {
   NcHICosmoQGWPrivate * const self = cosmo_qgw->priv = nc_hicosmo_qgw_get_instance_private (cosmo_qgw);
-  self->units = 0.0;
-  self->tb = 0.0;
-  self->RH_mpc = 0.0;
-  self->RH_m = 0.0;
-  self->lp_RH = 0.0;
-  self->gamma =  0.0;
+
+  self->place_holder = 0;
 }
 
 static void
 _nc_hicosmo_qgw_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHICosmoQGW *qgw               = NC_HICOSMO_QGW (object);
+  NcHICosmoQGW *qgw = NC_HICOSMO_QGW (object);
+
   g_return_if_fail (NC_IS_HICOSMO_QGW (object));
 
   switch (prop_id)
   {
-    case PROP_UNITS:
-      nc_hicosmo_qgw_set_units(qgw, g_value_get_double (value));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
-
 }
 
 static void
 _nc_hicosmo_qgw_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHICosmoQGW *qgw               = NC_HICOSMO_QGW (object);
+  NcHICosmoQGW *qgw = NC_HICOSMO_QGW (object);
+
   g_return_if_fail (NC_IS_HICOSMO_QGW (object));
 
   switch (prop_id)
   {
-    case PROP_UNITS:
-      g_value_set_double (value, qgw->priv->units);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
-
 }
-
 
 static void
 nc_hicosmo_qgw_finalize (GObject *object)
@@ -127,11 +115,10 @@ static gdouble _nc_hicosmo_qgw_E2 (NcHICosmo *cosmo, gdouble z);
 static gdouble _nc_hicosmo_qgw_d2E2_dz2 (NcHICosmo *cosmo, gdouble z);
 static gdouble _nc_hicosmo_qgw_bgp_cs2 (NcHICosmo *cosmo, gdouble z);
 
-static gdouble _nc_hicosmo_qgw_H0 (NcHICosmo*cosmo);
+static gdouble _nc_hicosmo_qgw_H0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_qgw_Omega_t0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_qgw_Omega_c0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_qgw_xb (NcHICosmo *cosmo);
-
 
 static void
 nc_hicosmo_qgw_class_init (NcHICosmoQGWClass *klass)
@@ -142,22 +129,16 @@ nc_hicosmo_qgw_class_init (NcHICosmoQGWClass *klass)
 
   model_class->set_property = &_nc_hicosmo_qgw_set_property;
   model_class->get_property = &_nc_hicosmo_qgw_get_property;
-  object_class->finalize = nc_hicosmo_qgw_finalize;
+  object_class->finalize    = nc_hicosmo_qgw_finalize;
 
   ncm_model_class_set_name_nick (model_class, "QGW", "QGW");
   ncm_model_class_add_params (model_class, NC_HICOSMO_QGW_SPARAM_LEN, 0, PROP_SIZE);
-
 
   /* Set H_0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGW_H0, "H_0", "H0",
                               10.0, 500.0, 1.0,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QGW_DEFAULT_H0,
                               NCM_PARAM_TYPE_FIXED);
-  /* Set Omega_r0 param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGW_OMEGA_R, "\\Omega_{r0}", "Omegar",
-                              1e-8,  10.0, 1.0e-2,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QGW_DEFAULT_OMEGA_R,
-                              NCM_PARAM_TYPE_FREE);
   /* Set Omega_x0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGW_OMEGA_W, "\\Omega_{w0}", "Omegaw",
                               1e-8,  10.0, 1.0e-2,
@@ -178,15 +159,6 @@ nc_hicosmo_qgw_class_init (NcHICosmoQGWClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  g_object_class_install_property (object_class,
-                                   PROP_UNITS,
-                                   g_param_spec_double ("units",
-                                                         NULL,
-                                                        "Which units to use",
-                                                        1.0,2.0,1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-
   nc_hicosmo_set_H0_impl        (parent_class, &_nc_hicosmo_qgw_H0);
   nc_hicosmo_set_E2_impl        (parent_class, &_nc_hicosmo_qgw_E2);
   nc_hicosmo_set_Omega_c0_impl  (parent_class, &_nc_hicosmo_qgw_Omega_c0);
@@ -195,41 +167,174 @@ nc_hicosmo_qgw_class_init (NcHICosmoQGWClass *klass)
   nc_hicosmo_set_dE2_dz_impl    (parent_class, &_nc_hicosmo_qgw_dE2_dz);
   nc_hicosmo_set_d2E2_dz2_impl  (parent_class, &_nc_hicosmo_qgw_d2E2_dz2);
   nc_hicosmo_set_bgp_cs2_impl   (parent_class, &_nc_hicosmo_qgw_bgp_cs2);
-
 }
 
 #define VECTOR   (NCM_MODEL (cosmo))
 #define MACRO_H0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGW_H0))
-#define OMEGA_R  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGW_OMEGA_R))
 #define OMEGA_W  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGW_OMEGA_W))
 #define W        (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGW_W))
 #define X_B      (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGW_X_B))
 
+static gdouble _nc_hicosmo_qgw_adiab_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_qgw_adiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_qgw_adiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_qgw_adiab_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_qgw_adiab_eval_unit (NcHIPertIAdiab *iad);
+static gdouble _nc_hicosmo_qgw_adiab_eval_x (NcHIPertIAdiab *iad, const gdouble tau);
+static gdouble _nc_hicosmo_qgw_adiab_eval_p2Psi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_qgw_adiab_eval_p2drho (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+
+static void
+nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface)
+{
+  iface->eval_xi     = &_nc_hicosmo_qgw_adiab_eval_xi;
+  iface->eval_F1     = &_nc_hicosmo_qgw_adiab_eval_F1;
+  iface->eval_nu     = &_nc_hicosmo_qgw_adiab_eval_nu;
+  iface->eval_m      = &_nc_hicosmo_qgw_adiab_eval_m;
+  iface->eval_unit   = &_nc_hicosmo_qgw_adiab_eval_unit;
+  iface->eval_x      = &_nc_hicosmo_qgw_adiab_eval_x;
+  iface->eval_p2Psi  = &_nc_hicosmo_qgw_adiab_eval_p2Psi;
+  iface->eval_p2drho = &_nc_hicosmo_qgw_adiab_eval_p2drho;
+}
+
+/*
+ * Interface implementation -- NcHIPertIAdiab
+ */
+
+static gdouble
+_nc_hicosmo_qgw_adiab_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+{
+  NcHICosmoQGW *qgw       = NC_HICOSMO_QGW (iad);
+  NcHICosmo *cosmo        = NC_HICOSMO (iad);
+  const gdouble w         = W;
+  const gdouble xb        = X_B;
+  const gdouble Omega_w   = OMEGA_W;
+  const gdouble xb2       = xb * xb;
+  const gdouble cs        = sqrt (w);
+  const gdouble tanh_tau  = tanh (tau);
+  const gdouble tanh_tau2 = tanh_tau * tanh_tau;
+  const gdouble lnfact    = log (3.0 * (1.0 + w) * k / (cs * tanh_tau2));
+  const gdouble x         = _nc_hicosmo_qgw_adiab_eval_x (iad, tau);
+
+  return lnfact - 2.0 * log (x);
+}
+
+static gdouble
+_nc_hicosmo_qgw_adiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+{
+  NcHICosmoQGW *qgw          = NC_HICOSMO_QGW (iad);
+  NcHICosmo *cosmo           = NC_HICOSMO (iad);
+  const gdouble w            = W;
+  const gdouble xb           = X_B;
+  const gdouble Omega_w      = OMEGA_W;
+  const gdouble xb_1p3w_2    = pow (xb, (1.0 + 3.0 * w) / 2.0);
+  const gdouble sqrt_Omega_w = sqrt (Omega_w);
+  const gdouble cs           = sqrt (w);
+  const gdouble tanh_tau     = tanh (tau);
+  const gdouble cosh_tau     = cosh (tau);
+  const gdouble cosh_2tau    = cosh (2.0 * tau);
+  const gdouble fact         = xb_1p3w_2 * sqrt_Omega_w / (2.0 * cs * k);
+
+  return fact / pow (cosh_tau, (7.0 - 3.0 * w) / (3.0 * (1.0 - w))) / tanh_tau * (cosh_2tau + 3.0 * w - 4.0);
+}
+
+static gdouble
+_nc_hicosmo_qgw_adiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+{
+  NcHICosmoQGW *qgw          = NC_HICOSMO_QGW (iad);
+  NcHICosmo *cosmo           = NC_HICOSMO (iad);
+  const gdouble w            = W;
+  const gdouble Omega_w      = OMEGA_W;
+  const gdouble w2           = w * w;
+  const gdouble sqrt_Omega_w = sqrt (Omega_w);
+  const gdouble cs           = sqrt (w);
+  const gdouble x            = _nc_hicosmo_qgw_adiab_eval_x (iad, tau);
+
+  return cs * 2.0 / (3.0 * (1.0 - w)) * k / sqrt_Omega_w / pow (x, 0.5 + 1.5 * w);
+}
+
+static gdouble
+_nc_hicosmo_qgw_adiab_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+{
+  NcHICosmoQGW *qgw          = NC_HICOSMO_QGW (iad);
+  NcHICosmo *cosmo           = NC_HICOSMO (iad);
+  const gdouble w            = W;
+  const gdouble Omega_w      = OMEGA_W;
+  const gdouble w2           = w * w;
+  const gdouble sqrt_Omega_w = sqrt (Omega_w);
+  const gdouble cs2          = w;
+  const gdouble tanh_tau     = tanh (tau);
+  const gdouble tanh_tau2    = tanh_tau * tanh_tau;
+  const gdouble x            = _nc_hicosmo_qgw_adiab_eval_x (iad, tau);
+
+  return 9.0 * (1.0 - w2) * sqrt_Omega_w / (2.0 * pow (x, 1.5 * (1.0 - w)) * cs2 * tanh_tau2);
+}
+
+static gdouble
+_nc_hicosmo_qgw_adiab_eval_unit (NcHIPertIAdiab *iad)
+{
+  NcHICosmoQGW *qgw    = NC_HICOSMO_QGW (iad);
+  NcHICosmo *cosmo     = NC_HICOSMO (iad);
+  const gdouble RH_lp  = nc_hicosmo_RH_planck (cosmo);
+  const gdouble factor = sqrt (8.0 * ncm_c_pi () / 3.0);
+
+  return factor / RH_lp;
+}
+
+static gdouble
+_nc_hicosmo_qgw_adiab_eval_x (NcHIPertIAdiab *iad, const gdouble tau)
+{
+  NcHICosmoQGW *qgw = NC_HICOSMO_QGW (iad);
+  NcHICosmo *cosmo  = NC_HICOSMO (iad);
+  const gdouble xb  = X_B;
+  const gdouble w   = W;
+
+  return xb / pow (cosh (tau), 2.0 / (3.0 * (1 - w)));
+}
+
+static gdouble
+_nc_hicosmo_qgw_adiab_eval_p2Psi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+{
+  NcHICosmoQGW *qgw          = NC_HICOSMO_QGW (iad);
+  NcHICosmo *cosmo           = NC_HICOSMO (iad);
+  const gdouble w            = W;
+  const gdouble Omega_w      = OMEGA_W;
+  const gdouble tanh_tau     = tanh (tau);
+  const gdouble x            = _nc_hicosmo_qgw_adiab_eval_x (iad, tau);
+  const gdouble sqrt_Omega_w = sqrt (Omega_w);
+
+  return -sqrt_Omega_w *pow (x, 2.5 + 1.5 *w) * tanh_tau / (2.0 * k * k);
+}
+
+static gdouble
+_nc_hicosmo_qgw_adiab_eval_p2drho (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+{
+  NcHICosmoQGW *qgw          = NC_HICOSMO_QGW (iad);
+  NcHICosmo *cosmo           = NC_HICOSMO (iad);
+  const gdouble w            = W;
+  const gdouble Omega_w      = OMEGA_W;
+  const gdouble tanh_tau     = tanh (tau);
+  const gdouble x            = _nc_hicosmo_qgw_adiab_eval_x (iad, tau);
+  const gdouble sqrt_Omega_w = sqrt (Omega_w);
+
+  return -tanh_tau *pow (x, 1.5 *(1.0 - w)) / (sqrt_Omega_w * (1.0 + w));
+}
+
+/*
+ * NcHICosmo virtual methods
+ */
+
 static gdouble
 _nc_hicosmo_qgw_E2 (NcHICosmo *cosmo, gdouble z)
 {
-  NcHICosmoQGW * qgw = NC_HICOSMO_QGW(cosmo);
+  NcHICosmoQGW *qgw = NC_HICOSMO_QGW (cosmo);
+
   NcHICosmoQGWPrivate * const self = qgw->priv = nc_hicosmo_qgw_get_instance_private (qgw);
-  const gdouble tb = self->tb;
-  const gdouble tbm2 = pow(tb, -2.0);
-  const gdouble x    = 1.0 + z;
-  const gdouble x3   = x * x * x;
-  const gdouble x3w  = pow (x3, W);
-  const gdouble x6   = x3 * x3;
-  const gdouble xb   = X_B;
-  const gdouble xb2  = xb * xb;
-  const gdouble xb3  = xb2 * xb;
-  const gdouble xb3w = pow (xb3,W);
-  const gdouble cs   = sqrt(W);
-  const gdouble mw2 = pow (1.0 - cs, -2.0);
-#ifdef NC_HICOSMO_QGW_CHECK_INTERVAL
+  const gdouble x                  = 1.0 + z;
+  const gdouble x3_1pw             = pow (x, 3.0 * (1.0 + W));
+  const gdouble Omega_w            = OMEGA_W;
 
-  if (G_UNLIKELY (ncm_cmp (x, xb, 1e-4) == 0))
-    g_warning ("_nc_hicosmo_qgw_E2: used outside if its valid interval.");
-
-#endif /* NC_HICOSMO_QGW_CHECK_INTERVAL */
-
-  return  (4.0 / 9.0) * tbm2 * mw2 * (x3 * x3w - x6 / (xb3/xb3w));
+  return Omega_w * x3_1pw;
 }
 
 /****************************************************************************
@@ -239,50 +344,21 @@ _nc_hicosmo_qgw_E2 (NcHICosmo *cosmo, gdouble z)
 static gdouble
 _nc_hicosmo_qgw_dE2_dz (NcHICosmo *cosmo, gdouble z)
 {
-  const gdouble x    = 1.0 + z;
-  const gdouble x2   = x * x;
-  const gdouble x3   = x2 * x;
-  const gdouble x5   = x3 * x2;
-  const gdouble x3w  = pow (x3, W);
-  const gdouble xb   = X_B;
-  const gdouble xb2  = xb * xb;
-  const gdouble xb3  = xb2 * xb;
-  const gdouble xb3w = pow (xb3, W);
+  const gdouble x         = 1.0 + z;
+  const gdouble three_1pw = 3.0 * (1.0 + W);
+  const gdouble x2p3w     = pow (x, three_1pw - 1.0);
 
-#ifdef NC_HICOSMO_QGW_CHECK_INTERVAL
-
-  if (G_UNLIKELY (ncm_cmp (x, xb, 1e-4) == 0))
-    g_warning ("_nc_hicosmo_qgw_E2: used outside if its valid interval.");
-
-#endif /* NC_HICOSMO_QGW_CHECK_INTERVAL */
-
-  return 0.0;
+  return three_1pw * x2p3w;
 }
 
 static gdouble
 _nc_hicosmo_qgw_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
 {
-  const gdouble x           = 1.0 + z;
-  const gdouble x2          = x * x;
-  const gdouble x3          = x2 * x;
-  const gdouble x4          = x2 * x2;
-  const gdouble x3w         = pow (x3, W);
-  const gdouble three1p3w   = 3.0 * (1.0 + W);
-  const gdouble three1p3wm1 = three1p3w - 1.0;
-  const gdouble xb          = X_B;
-  const gdouble xb2         = xb * xb;
-  const gdouble xb3         = xb2 * xb;
-  const gdouble xb3w        = pow (xb3, W);
+  const gdouble x         = 1.0 + z;
+  const gdouble three_1pw = 3.0 * (1.0 + W);
+  const gdouble twop3w    = 2.0 + 3.0 * W;
 
-
-#ifdef NC_HICOSMO_QGW_CHECK_INTERVAL
-
-  if (G_UNLIKELY (ncm_cmp (x, xb, 1e-4) == 0))
-    g_warning ("_nc_hicosmo_qgw_E2: used outside if its valid interval.");
-
-#endif /* NC_HICOSMO_QGW_CHECK_INTERVAL */
-
-  return 0.0;
+  return three_1pw * twop3w * pow (x, twop3w - 1.0);
 }
 
 /****************************************************************************
@@ -291,7 +367,7 @@ _nc_hicosmo_qgw_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
 static gdouble
 _nc_hicosmo_qgw_bgp_cs2 (NcHICosmo *cosmo, gdouble z)
 {
-  const gdouble w   = W;
+  const gdouble w = W;
 
   return w;
 }
@@ -302,7 +378,7 @@ _nc_hicosmo_qgw_bgp_cs2 (NcHICosmo *cosmo, gdouble z)
 static gdouble
 _nc_hicosmo_qgw_H0 (NcHICosmo *cosmo)
 {
-  return MACRO_H0 * (OMEGA_R + OMEGA_W);
+  return MACRO_H0 * OMEGA_W;
 }
 
 static gdouble
@@ -323,7 +399,6 @@ _nc_hicosmo_qgw_xb (NcHICosmo *cosmo)
   return X_B;
 }
 
-
 /**
  * nc_hicosmo_qgw_new:
  *
@@ -339,26 +414,3 @@ nc_hicosmo_qgw_new (void)
   return qgw;
 }
 
-
-/**
- * nc_hicosmo_qgw_set_units:
- * @cosmo: a #NcHICosmo
- * @units: gdouble
- * Set the units to @units
- */
-
-void
-nc_hicosmo_qgw_set_units(NcHICosmoQGW *qgw, const gdouble units)
-{
-  NcHICosmoQGWPrivate * const self = qgw->priv = nc_hicosmo_qgw_get_instance_private (qgw);
-  if (units == 1.0)
-    {
-	NcHICosmo *cosmo = NC_HICOSMO (qgw);
-	self->units = units;
-  	self->tb = 2.0 / (3.0 * sqrt(OMEGA_W * pow(X_B,3.0)));
-  	self->RH_mpc = (ncm_c_c() / (1.0e5 * MACRO_H0 / 100.0));
-  	self->RH_m = self->RH_mpc * 3.08e22;
-  	self->lp_RH = 1.0 / (ncm_c_hubble_radius_hm1_planck () / (MACRO_H0 / 100.0));
-  	self->gamma =  0.25 * X_B * OMEGA_W;
-    }
-}

@@ -441,6 +441,7 @@ nc_hipert_em_eval_PE_PB (NcHIPertEM *pem, NcmModel *model, const gdouble tau, gd
   const gdouble k    = pem->k;
   const gdouble x    = nc_hipert_iem_eval_x (iem, tau);
   const gdouble N    = nc_hipert_iem_eval_lapse (iem, tau);
+  const gdouble fact = ncm_c_two_pi_2 ();
 
   NcmCSQ1DState state;
   gdouble J11, J12, J22;
@@ -449,7 +450,7 @@ nc_hipert_em_eval_PE_PB (NcHIPertEM *pem, NcmModel *model, const gdouble tau, gd
 
   ncm_csq1d_state_get_J (&state, &J11, &J12, &J22);
 
-  *PE = unit * unit * gsl_pow_4 (x) * gsl_pow_3 (k) * J22 / gsl_pow_2 (N * m);
-  *PB = unit * unit * gsl_pow_4 (x) * gsl_pow_5 (k) * J11;
+  *PE = unit * unit * gsl_pow_4 (x) * gsl_pow_3 (k) * J22 / gsl_pow_2 (N * m) / fact;
+  *PB = unit * unit * gsl_pow_4 (x) * gsl_pow_5 (k) * J11 / fact;
 }
 

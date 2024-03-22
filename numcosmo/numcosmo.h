@@ -37,7 +37,7 @@
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo_priors.h>
 #include <numcosmo/nc_powspec_ml.h>
-#include <numcosmo/nc_powspec_ml_fix_spline.h>
+#include <numcosmo/nc_powspec_ml_spline.h>
 #include <numcosmo/nc_powspec_ml_transfer.h>
 #include <numcosmo/nc_powspec_ml_cbe.h>
 #include <numcosmo/nc_powspec_mnl.h>
