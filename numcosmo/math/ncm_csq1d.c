@@ -434,7 +434,6 @@ static gdouble _ncm_csq1d_eval_int_qmnu2  (NcmCSQ1D *csq1d, NcmModel *model, con
 static gdouble _ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _ncm_csq1d_eval_F1         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _ncm_csq1d_eval_F2         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
-static gdouble _ncm_csq1d_eval_FN         (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t);
 
 static void
 ncm_csq1d_class_init (NcmCSQ1DClass *klass)
@@ -513,7 +512,6 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
   klass->eval_int_q2mnu2 = &_ncm_csq1d_eval_int_q2mnu2;
   klass->eval_F1         = &_ncm_csq1d_eval_F1;
   klass->eval_F2         = &_ncm_csq1d_eval_F2;
-  klass->eval_FN         = &_ncm_csq1d_eval_FN;
 }
 
 static gdouble
@@ -605,14 +603,6 @@ _ncm_csq1d_eval_F2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
   gdouble err;
 
   return ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_F1_func, &ws, &err) / twonu;
-}
-
-static gdouble
-_ncm_csq1d_eval_FN (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t)
-{
-  g_error ("_ncm_csq1d_eval_FN: not implemented.");
-
-  return 0.0;
 }
 
 /* State related functions */
@@ -1712,15 +1702,6 @@ _ncm_csq1d_J_Um (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_
  * @t: time $t$
  *
  * Returns: $F_2$
- */
-/**
- * ncm_csq1d_eval_FN: (virtual eval_FN)
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- * @n: order $n$
- * @t: time $t$
- *
- * Returns: $F_n$
  */
 
 static NcmCSQ1DEvolStop
