@@ -143,7 +143,6 @@ static gdouble _nc_hipert_gw_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gd
 static gdouble _nc_hipert_gw_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _nc_hipert_gw_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _nc_hipert_gw_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
-static gdouble _nc_hipert_gw_eval_unit (NcmCSQ1D *csq1d, NcmModel *model);
 static void _nc_hipert_gw_prepare (NcmCSQ1D *csq1d, NcmModel *model);
 
 static void
@@ -165,12 +164,11 @@ nc_hipert_gw_class_init (NcHIPertGWClass *klass)
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  csq1d_class->eval_xi   = &_nc_hipert_gw_eval_xi;
-  csq1d_class->eval_F1   = &_nc_hipert_gw_eval_F1;
-  csq1d_class->eval_nu   = &_nc_hipert_gw_eval_nu;
-  csq1d_class->eval_m    = &_nc_hipert_gw_eval_m;
-  csq1d_class->prepare   = &_nc_hipert_gw_prepare;
-  csq1d_class->eval_unit = &_nc_hipert_gw_eval_unit;
+  csq1d_class->eval_xi = &_nc_hipert_gw_eval_xi;
+  csq1d_class->eval_F1 = &_nc_hipert_gw_eval_F1;
+  csq1d_class->eval_nu = &_nc_hipert_gw_eval_nu;
+  csq1d_class->eval_m  = &_nc_hipert_gw_eval_m;
+  csq1d_class->prepare = &_nc_hipert_gw_prepare;
 }
 
 static gdouble
@@ -213,15 +211,6 @@ static void
 _nc_hipert_gw_prepare (NcmCSQ1D *csq1d, NcmModel *model)
 {
   g_assert (NC_IS_HIPERT_IGW (model));
-}
-
-static gdouble
-_nc_hipert_gw_eval_unit (NcmCSQ1D *csq1d, NcmModel *model)
-{
-  NcHIPertGW *pgw = NC_HIPERT_GW (csq1d);
-  const gdouble k = pgw->k;
-
-  return nc_hipert_igw_eval_unit (NC_HIPERT_IGW (model));
 }
 
 /**

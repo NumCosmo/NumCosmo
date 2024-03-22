@@ -173,7 +173,6 @@ static gdouble _nc_hipert_adiab_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const
 static gdouble _nc_hipert_adiab_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _nc_hipert_adiab_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _nc_hipert_adiab_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
-static gdouble _nc_hipert_adiab_eval_unit (NcmCSQ1D *csq1d, NcmModel *model);
 
 static void _nc_hipert_adiab_prepare (NcmCSQ1D *csq1d, NcmModel *model);
 
@@ -197,12 +196,11 @@ nc_hipert_adiab_class_init (NcHIPertAdiabClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 
-  csq1d_class->eval_xi   = &_nc_hipert_adiab_eval_xi;
-  csq1d_class->eval_F1   = &_nc_hipert_adiab_eval_F1;
-  csq1d_class->eval_nu   = &_nc_hipert_adiab_eval_nu;
-  csq1d_class->eval_m    = &_nc_hipert_adiab_eval_m;
-  csq1d_class->prepare   = &_nc_hipert_adiab_prepare;
-  csq1d_class->eval_unit = &_nc_hipert_adiab_eval_unit;
+  csq1d_class->eval_xi = &_nc_hipert_adiab_eval_xi;
+  csq1d_class->eval_F1 = &_nc_hipert_adiab_eval_F1;
+  csq1d_class->eval_nu = &_nc_hipert_adiab_eval_nu;
+  csq1d_class->eval_m  = &_nc_hipert_adiab_eval_m;
+  csq1d_class->prepare = &_nc_hipert_adiab_prepare;
 }
 
 static gdouble
@@ -245,15 +243,6 @@ static void
 _nc_hipert_adiab_prepare (NcmCSQ1D *csq1d, NcmModel *model)
 {
   g_assert (NC_IS_HIPERT_IADIAB (model));
-}
-
-static gdouble
-_nc_hipert_adiab_eval_unit (NcmCSQ1D *csq1d, NcmModel *model)
-{
-  NcHIPertAdiab *pa = NC_HIPERT_ADIAB (csq1d);
-  const gdouble k   = pa->k;
-
-  return nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
 }
 
 /**

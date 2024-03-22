@@ -435,7 +435,6 @@ static gdouble _ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, con
 static gdouble _ncm_csq1d_eval_F1         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _ncm_csq1d_eval_F2         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _ncm_csq1d_eval_FN         (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t);
-static gdouble _ncm_csq1d_eval_unit (NcmCSQ1D *csq1d, NcmModel *model);
 
 static void
 ncm_csq1d_class_init (NcmCSQ1DClass *klass)
@@ -515,7 +514,6 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
   klass->eval_F1         = &_ncm_csq1d_eval_F1;
   klass->eval_F2         = &_ncm_csq1d_eval_F2;
   klass->eval_FN         = &_ncm_csq1d_eval_FN;
-  klass->eval_unit       = &_ncm_csq1d_eval_unit;
 }
 
 static gdouble
@@ -613,14 +611,6 @@ static gdouble
 _ncm_csq1d_eval_FN (NcmCSQ1D *csq1d, NcmModel *model, const gint n, const gdouble t)
 {
   g_error ("_ncm_csq1d_eval_FN: not implemented.");
-
-  return 0.0;
-}
-
-static gdouble
-_ncm_csq1d_eval_unit (NcmCSQ1D *csq1d, NcmModel *model)
-{
-  g_error ("_ncm_csq1d_eval_unit: not implemented.");
 
   return 0.0;
 }
@@ -1730,13 +1720,6 @@ _ncm_csq1d_J_Um (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_
  * @model: (allow-none): a #NcmModel
  * @n: order $n$
  * @t: time $t$
- *
- * Returns: $F_n$
- */
-/**
- * ncm_csq1d_eval_unit: (virtual eval_unit)
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
  *
  * Returns: $F_n$
  */

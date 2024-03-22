@@ -119,6 +119,23 @@ def test_eval_vec(Pk2d: Ncm.Spline2d) -> None:
     assert_allclose(ps_Pka, fa)
 
 
+def test_get_spline2d(Pk2d: Ncm.Spline2d) -> None:
+    """Test the getter of the power spectrum."""
+    ps = Ncm.PowspecSpline2d.new(Pk2d)
+
+    assert ps is not None
+
+    s2d = ps.peek_spline2d()
+
+    assert s2d is not None
+    assert s2d == Pk2d
+
+    sd2 = ps.get_spline_2d()
+
+    assert sd2 is not None
+    assert sd2 == Pk2d
+
+
 def test_serialization(Pk2d: Ncm.Spline2d) -> None:
     """Test the serialization of the power spectrum."""
 

@@ -143,9 +143,6 @@ static gdouble _nc_hipert_em_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gd
 static gdouble _nc_hipert_em_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _nc_hipert_em_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 static gdouble _nc_hipert_em_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
-
-static gdouble _nc_hipert_em_eval_unit (NcmCSQ1D *csq1d, NcmModel *model);
-
 static void _nc_hipert_em_prepare (NcmCSQ1D *csq1d, NcmModel *model);
 
 static void
@@ -167,12 +164,11 @@ nc_hipert_em_class_init (NcHIPertEMClass *klass)
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  csq1d_class->eval_xi   = &_nc_hipert_em_eval_xi;
-  csq1d_class->eval_F1   = &_nc_hipert_em_eval_F1;
-  csq1d_class->eval_nu   = &_nc_hipert_em_eval_nu;
-  csq1d_class->eval_m    = &_nc_hipert_em_eval_m;
-  csq1d_class->prepare   = &_nc_hipert_em_prepare;
-  csq1d_class->eval_unit = &_nc_hipert_em_eval_unit;
+  csq1d_class->eval_xi = &_nc_hipert_em_eval_xi;
+  csq1d_class->eval_F1 = &_nc_hipert_em_eval_F1;
+  csq1d_class->eval_nu = &_nc_hipert_em_eval_nu;
+  csq1d_class->eval_m  = &_nc_hipert_em_eval_m;
+  csq1d_class->prepare = &_nc_hipert_em_prepare;
 }
 
 static gdouble
@@ -215,15 +211,6 @@ static void
 _nc_hipert_em_prepare (NcmCSQ1D *csq1d, NcmModel *model)
 {
   g_assert (NC_IS_HIPERT_IEM (model));
-}
-
-static gdouble
-_nc_hipert_em_eval_unit (NcmCSQ1D *csq1d, NcmModel *model)
-{
-  NcHIPertEM *pem = NC_HIPERT_EM (csq1d);
-  const gdouble k = pem->k;
-
-  return nc_hipert_iem_eval_unit (NC_HIPERT_IEM (model));
 }
 
 /**
@@ -436,7 +423,7 @@ nc_hipert_em_eval_PE_PB (NcHIPertEM *pem, NcmModel *model, const gdouble tau, gd
 {
   NcmCSQ1D *csq1d    = NCM_CSQ1D (pem);
   NcHIPertIEM *iem   = NC_HIPERT_IEM (model);
-  const gdouble unit = ncm_csq1d_eval_unit (csq1d, model);
+  const gdouble unit = nc_hipert_iem_eval_unit (iem);
   const gdouble m    = ncm_csq1d_eval_m (csq1d, model, tau);
   const gdouble k    = pem->k;
   const gdouble x    = nc_hipert_iem_eval_x (iem, tau);
