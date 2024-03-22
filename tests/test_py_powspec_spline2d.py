@@ -165,3 +165,19 @@ def test_serialization(Pk2d: Ncm.Spline2d) -> None:
         ps_dup_Pka.append(Pkv.dup_array())
 
     assert_allclose(ps_Pka, ps_dup_Pka)
+
+
+def test_get_nknots(Pk2d: Ncm.Spline2d) -> None:
+    """Test the getter of the number of knots."""
+    ps = Ncm.PowspecSpline2d.new(Pk2d)
+
+    assert ps is not None
+
+    s2d = ps.peek_spline2d()
+
+    assert s2d is not None
+    assert s2d == Pk2d
+
+    nknots = ps.get_nknots()
+
+    assert nknots == (Pk2d.peek_xv().len(), Pk2d.peek_yv().len())

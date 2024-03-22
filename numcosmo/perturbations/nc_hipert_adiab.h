@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_ode_spline.h>
+#include <numcosmo/math/ncm_powspec_spline2d.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/math/ncm_csq1d.h>
 
@@ -97,9 +98,12 @@ gdouble nc_hipert_adiab_get_k (NcHIPertAdiab *adiab);
 gdouble nc_hipert_adiab_eval_powspec_zeta_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
 gdouble nc_hipert_adiab_eval_powspec_Psi_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
 gdouble nc_hipert_adiab_eval_powspec_drho_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
-GArray *nc_hipert_adiab_eval_powspec_zeta (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tAi, const gdouble tAf, const gdouble adiab_reltol, GArray *k_array, const gdouble tau);
-GArray *nc_hipert_adiab_eval_powspec_Psi (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tAi, const gdouble tAf, const gdouble adiab_reltol, GArray *k_array, const gdouble tau);
-GArray *nc_hipert_adiab_eval_powspec_drho (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tAi, const gdouble tAf, const gdouble adiab_reltol, GArray *k_array, const gdouble tau);
+
+void nc_hipert_adiab_prepare_spectrum (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau_vacuum_max, const gdouble vacuum_reltol, GArray *k_array, GArray *tau_array);
+
+NcmPowspecSpline2d *nc_hipert_adiab_eval_powspec_zeta (NcHIPertAdiab *adiab, NcmModel *model);
+NcmPowspecSpline2d *nc_hipert_adiab_eval_powspec_Psi (NcHIPertAdiab *adiab, NcmModel *model);
+NcmPowspecSpline2d *nc_hipert_adiab_eval_powspec_drho (NcHIPertAdiab *adiab, NcmModel *model);
 
 G_END_DECLS
 

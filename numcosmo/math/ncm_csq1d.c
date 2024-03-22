@@ -1204,7 +1204,6 @@ ncm_csq1d_set_init_cond (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DEvolState evo
   self->t     = ncm_csq1d_state_get_time (initial_state);
   self->state = evol_state;
 
-  ncm_csq1d_set_ti (csq1d, self->t);
   self->init_cond_set = TRUE;
 }
 

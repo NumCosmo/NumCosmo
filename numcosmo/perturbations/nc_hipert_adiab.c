@@ -67,8 +67,9 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_spline_cubic_notaknot.h"
 #include "perturbations/nc_hipert_adiab.h"
+#include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_spline2d_bicubic.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvode/cvode.h>
@@ -80,6 +81,8 @@ struct _NcHIPertAdiab
 {
   NcmCSQ1D parent_instance;
   gdouble k;
+  NcmSpline2d *powspec_alpha;
+  NcmSpline2d *powspec_gamma;
 };
 
 G_DEFINE_INTERFACE (NcHIPertIAdiab, nc_hipert_iadiab, G_TYPE_OBJECT)
@@ -114,7 +117,9 @@ typedef struct _NcHIPertAdiabArg
 static void
 nc_hipert_adiab_init (NcHIPertAdiab *pa)
 {
-  pa->k = 0.0;
+  pa->k             = 0.0;
+  pa->powspec_alpha = NULL;
+  pa->powspec_gamma = NULL;
 }
 
 static void
@@ -156,7 +161,10 @@ _nc_hipert_adiab_get_property (GObject *object, guint prop_id, GValue *value, GP
 static void
 _nc_hipert_adiab_dispose (GObject *object)
 {
-  /*NcHIPertAdiab *pa = NC_HIPERT_ADIAB (object);*/
+  NcHIPertAdiab *pa = NC_HIPERT_ADIAB (object);
+
+  ncm_spline2d_clear (&pa->powspec_alpha);
+  ncm_spline2d_clear (&pa->powspec_gamma);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_adiab_parent_class)->dispose (object);
@@ -453,6 +461,46 @@ nc_hipert_adiab_get_k (NcHIPertAdiab *adiab)
   return adiab->k;
 }
 
+static gdouble
+_nc_hipert_eval_powespec_zeta_from_state (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k)
+{
+  const gdouble unit = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
+  const gdouble fact = ncm_c_two_pi_2 ();
+  gdouble J11, J12, J22;
+
+  ncm_csq1d_state_get_J (state, &J11, &J12, &J22);
+
+  return gsl_pow_2 (unit) * gsl_pow_3 (k) * (J11 / 2.0) / fact;
+}
+
+static gdouble
+_nc_hipert_eval_powespec_Psi_from_state (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k)
+{
+  const gdouble unit  = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
+  const gdouble fact  = ncm_c_two_pi_2 ();
+  const gdouble tau   = ncm_csq1d_state_get_time (state);
+  const gdouble p2Psi = nc_hipert_iadiab_eval_p2Psi (NC_HIPERT_IADIAB (model), tau, k);
+  gdouble J11, J12, J22;
+
+  ncm_csq1d_state_get_J (state, &J11, &J12, &J22);
+
+  return gsl_pow_2 (unit * p2Psi) * gsl_pow_3 (k) * (J22 / 2.0) / fact;
+}
+
+static gdouble
+_nc_hipert_eval_powespec_drho_from_state (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k)
+{
+  const gdouble unit   = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
+  const gdouble fact   = ncm_c_two_pi_2 ();
+  const gdouble tau    = ncm_csq1d_state_get_time (state);
+  const gdouble p2drho = nc_hipert_iadiab_eval_p2drho (NC_HIPERT_IADIAB (model), tau, k);
+  gdouble J11, J12, J22;
+
+  ncm_csq1d_state_get_J (state, &J11, &J12, &J22);
+
+  return gsl_pow_2 (unit * p2drho) * gsl_pow_3 (k) * (J22 / 2.0) / fact;
+}
+
 /**
  * nc_hipert_adiab_eval_powspec_zeta_at:
  * @adiab: a #NcHIPertAdiab
@@ -472,17 +520,12 @@ nc_hipert_adiab_get_k (NcHIPertAdiab *adiab)
 gdouble
 nc_hipert_adiab_eval_powspec_zeta_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau)
 {
-  const gdouble unit = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
-  const gdouble fact = ncm_c_two_pi_2 ();
-  const gdouble k    = nc_hipert_adiab_get_k (adiab);
+  const gdouble k = nc_hipert_adiab_get_k (adiab);
   NcmCSQ1DState state;
-  gdouble J11, J12, J22;
 
   ncm_csq1d_eval_at (NCM_CSQ1D (adiab), tau, &state);
 
-  ncm_csq1d_state_get_J (&state, &J11, &J12, &J22);
-
-  return gsl_pow_2 (unit) * gsl_pow_3 (k) * (J11 / 2.0) / fact;
+  return _nc_hipert_eval_powespec_zeta_from_state (adiab, model, &state, k);
 }
 
 /**
@@ -502,18 +545,12 @@ nc_hipert_adiab_eval_powspec_zeta_at (NcHIPertAdiab *adiab, NcmModel *model, con
 gdouble
 nc_hipert_adiab_eval_powspec_Psi_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau)
 {
-  const gdouble unit  = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
-  const gdouble fact  = ncm_c_two_pi_2 ();
-  const gdouble k     = nc_hipert_adiab_get_k (adiab);
-  const gdouble p2Psi = nc_hipert_iadiab_eval_p2Psi (NC_HIPERT_IADIAB (model), tau, k);
+  const gdouble k = nc_hipert_adiab_get_k (adiab);
   NcmCSQ1DState state;
-  gdouble J11, J12, J22;
 
   ncm_csq1d_eval_at (NCM_CSQ1D (adiab), tau, &state);
 
-  ncm_csq1d_state_get_J (&state, &J11, &J12, &J22);
-
-  return gsl_pow_2 (unit * p2Psi) * gsl_pow_3 (k) * (J22 / 2.0) / fact;
+  return _nc_hipert_eval_powespec_Psi_from_state (adiab, model, &state, k);
 }
 
 /**
@@ -533,176 +570,202 @@ nc_hipert_adiab_eval_powspec_Psi_at (NcHIPertAdiab *adiab, NcmModel *model, cons
 gdouble
 nc_hipert_adiab_eval_powspec_drho_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau)
 {
-  const gdouble unit   = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
-  const gdouble fact   = ncm_c_two_pi_2 ();
-  const gdouble k      = nc_hipert_adiab_get_k (adiab);
-  const gdouble p2drho = nc_hipert_iadiab_eval_p2drho (NC_HIPERT_IADIAB (model), tau, k);
+  const gdouble k = nc_hipert_adiab_get_k (adiab);
   NcmCSQ1DState state;
-  gdouble J11, J12, J22;
 
   ncm_csq1d_eval_at (NCM_CSQ1D (adiab), tau, &state);
 
-  ncm_csq1d_state_get_J (&state, &J11, &J12, &J22);
+  return _nc_hipert_eval_powespec_drho_from_state (adiab, model, &state, k);
+}
 
-  return gsl_pow_2 (unit * p2drho) * gsl_pow_3 (k) * (J22 / 2.0) / fact;
+/**
+ * nc_hipert_adiab_prepare_spectrum:
+ * @adiab: a #NcHIPertAdiab
+ * @model: a #NcmModel
+ * @tau_vacuum_max: $\tau_f$ final time to search for adiabatic limit
+ * @vacuum_reltol: relative tolerance for the adiabatic vacuum limit search
+ * @k_array: (element-type gdouble): array of wave numbers
+ * @tau_array: (element-type gdouble): array of times to evaluate the power spectrum
+ *
+ * Prepares the computation of the power spectrum of the adiabatic mode.
+ *
+ */
+void
+nc_hipert_adiab_prepare_spectrum (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau_vacuum_max, const gdouble vacuum_reltol, GArray *k_array, GArray *tau_array)
+{
+  NcmCSQ1D *csq1d          = NCM_CSQ1D (adiab);
+  NcmMatrix *powspec_alpha = ncm_matrix_new (k_array->len, tau_array->len);
+  NcmMatrix *powspec_gamma = ncm_matrix_new (k_array->len, tau_array->len);
+  const gdouble tauA_i     = ncm_csq1d_get_ti (csq1d);
+  gboolean found;
+  gdouble tauA_d;
+  guint i;
+
+  for (i = 0; i < k_array->len; i++)
+  {
+    nc_hipert_adiab_set_k (adiab, g_array_index (k_array, gdouble, i));
+
+    if (!ncm_csq1d_find_adiab_time_limit (csq1d, model, tauA_i, tau_vacuum_max, vacuum_reltol, &tauA_d))
+    {
+      ncm_matrix_free (powspec_alpha);
+      ncm_matrix_free (powspec_gamma);
+
+      g_error ("Cannot find adiabatic limit for mode k = % 22.15g, in the range [% 22.15g, % 22.15g].",
+               nc_hipert_adiab_get_k (adiab), tauA_i, tau_vacuum_max);
+
+      return;
+    }
+    else
+    {
+      NcmCSQ1DState state;
+      gdouble zeta_k_tau, alpha_reltol, dgamma_reltol;
+      guint j;
+
+      ncm_csq1d_compute_adiab (csq1d, model, tauA_d, &state, &alpha_reltol, &dgamma_reltol);
+
+      ncm_csq1d_set_init_cond_adiab (csq1d, model, tauA_d);
+      ncm_csq1d_prepare (csq1d, model);
+
+      for (j = 0; j < tau_array->len; j++)
+      {
+        const gdouble tau = g_array_index (tau_array, gdouble, j);
+        gdouble alpha, gamma;
+
+        if (tau < tauA_d)
+          ncm_csq1d_compute_adiab_frame (csq1d, model, NCM_CSQ1D_FRAME_ORIG, tau, &state, NULL, NULL);
+        else
+          ncm_csq1d_eval_at (csq1d, tau, &state);
+
+        ncm_csq1d_state_get_ag (&state, &alpha, &gamma);
+
+        ncm_matrix_set (powspec_alpha, i, j, alpha);
+        ncm_matrix_set (powspec_gamma, i, j, gamma);
+      }
+    }
+  }
+
+  {
+    NcmVector *tau_vec = ncm_vector_new_array (tau_array);
+    NcmVector *k_vec   = ncm_vector_new_array (k_array);
+    NcmSpline *s       = ncm_spline_cubic_notaknot_new ();
+
+    ncm_spline2d_clear (&adiab->powspec_alpha);
+    ncm_spline2d_clear (&adiab->powspec_gamma);
+
+    adiab->powspec_alpha = ncm_spline2d_bicubic_notaknot_new ();
+    adiab->powspec_gamma = ncm_spline2d_bicubic_notaknot_new ();
+
+    ncm_spline2d_set (adiab->powspec_alpha, tau_vec, k_vec, powspec_alpha, TRUE);
+    ncm_spline2d_set (adiab->powspec_gamma, tau_vec, k_vec, powspec_gamma, TRUE);
+
+    ncm_matrix_free (powspec_alpha);
+    ncm_matrix_free (powspec_gamma);
+    ncm_vector_free (tau_vec);
+    ncm_vector_free (k_vec);
+  }
+}
+
+static NcmPowspecSpline2d *
+_nc_hipert_adiab_eval_powspec_func (NcHIPertAdiab *adiab, NcmModel *model,
+                                    gdouble (*eval_from_state)(NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k))
+{
+  NcmCSQ1D *csq1d    = NCM_CSQ1D (adiab);
+  const gdouble unit = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
+  gdouble tAd;
+  gboolean found;
+  guint i;
+
+  if (!ncm_spline2d_is_init (adiab->powspec_alpha) || !ncm_spline2d_is_init (adiab->powspec_gamma))
+  {
+    g_error ("Power spectrum not prepared.");
+
+    return NULL;
+  }
+  else
+  {
+    NcmVector *tau_vec     = ncm_spline2d_peek_xv (adiab->powspec_alpha);
+    NcmVector *k_vec       = ncm_spline2d_peek_yv (adiab->powspec_alpha);
+    const guint tau_len    = ncm_vector_len (tau_vec);
+    const guint k_len      = ncm_vector_len (k_vec);
+    NcmMatrix *powspec_mat = ncm_matrix_new (k_len, tau_len);
+    guint i;
+
+    for (i = 0; i < tau_len; i++)
+    {
+      const gdouble tau = ncm_vector_get (tau_vec, i);
+      guint j;
+
+      for (j = 0; j < k_len; j++)
+      {
+        const gdouble k = ncm_vector_get (k_vec, j);
+        NcmCSQ1DState state;
+
+        state.t     = tau;
+        state.frame = NCM_CSQ1D_FRAME_ORIG;
+        state.alpha = ncm_spline2d_eval (adiab->powspec_alpha, tau, k);
+        state.gamma = ncm_spline2d_eval (adiab->powspec_gamma, tau, k);
+
+        ncm_matrix_set (powspec_mat, j, i, eval_from_state (adiab, model, &state, k));
+      }
+    }
+
+    {
+      NcmSpline2d *powspec_spline = ncm_spline2d_bicubic_notaknot_new ();
+      NcmPowspecSpline2d *powspec;
+
+      ncm_spline2d_set (powspec_spline, tau_vec, k_vec, powspec_mat, TRUE);
+
+      powspec = ncm_powspec_spline2d_new (powspec_spline);
+
+      ncm_matrix_free (powspec_mat);
+
+      return powspec;
+    }
+  }
 }
 
 /**
  * nc_hipert_adiab_eval_powspec_zeta:
  * @adiab: a #NcHIPertAdiab
  * @model: a #NcmModel
- * @tAi: $\tau_i$ initial time to search for adiabatic limit
- * @tAf: $\tau_f$ final time to search for adiabatic limit
- * @adiab_reltol: relative tolerance for the adiabatic limit search
- * @k_array: (element-type gdouble): array of wave numbers
- * @tau: $\tau$ time to evaluate the power spectrum
  *
- * Evaluates the power spectrum of the adiabatic mode at a given time $\tau$.
+ * Evaluates the power spectrum for the gauge invariant variable $\zeta$.
  *
- * Returns: (transfer full) (element-type gdouble): the power spectrum of the adiabatic mode.
+ * Returns: (transfer full): the power spectrum of $\zeta$.
  */
-GArray *
-nc_hipert_adiab_eval_powspec_zeta (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tAi, const gdouble tAf, const gdouble adiab_reltol, GArray *k_array, const gdouble tau)
+NcmPowspecSpline2d *
+nc_hipert_adiab_eval_powspec_zeta (NcHIPertAdiab *adiab, NcmModel *model)
 {
-  NcmCSQ1D *csq1d    = NCM_CSQ1D (adiab);
-  const gdouble unit = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
-  GArray *powspec    = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  gdouble tAd;
-  gboolean found;
-  guint i;
-
-  for (i = 0; i < k_array->len; i++)
-  {
-    nc_hipert_adiab_set_k (adiab, g_array_index (k_array, gdouble, i));
-
-    if (!ncm_csq1d_find_adiab_time_limit (csq1d, model, tAi, tAf, adiab_reltol, &tAd))
-    {
-      g_array_free (powspec, TRUE);
-
-      return NULL;
-    }
-    else
-    {
-      NcmCSQ1DState state;
-      gdouble zeta_k_tau, alpha_reltol, dgamma_reltol;
-
-      ncm_csq1d_compute_adiab (csq1d, model, tAd, &state, &alpha_reltol, &dgamma_reltol);
-
-      ncm_csq1d_set_init_cond_adiab (csq1d, model, tAd);
-      ncm_csq1d_prepare (csq1d, model);
-
-      zeta_k_tau = nc_hipert_adiab_eval_powspec_zeta_at (adiab, model, tau);
-
-      g_array_append_val (powspec, zeta_k_tau);
-    }
-  }
-
-  return powspec;
+  return _nc_hipert_adiab_eval_powspec_func (adiab, model, _nc_hipert_eval_powespec_zeta_from_state);
 }
 
 /**
  * nc_hipert_adiab_eval_powspec_Psi:
  * @adiab: a #NcHIPertAdiab
  * @model: a #NcmModel
- * @tAi: $\tau_i$ initial time to search for adiabatic limit
- * @tAf: $\tau_f$ final time to search for adiabatic limit
- * @adiab_reltol: relative tolerance for the adiabatic limit search
- * @k_array: (element-type gdouble): array of wave numbers
- * @tau: $\tau$ time to evaluate the power spectrum
  *
- * Evaluates the power spectrum of the adiabatic mode at a given time $\tau$.
+ * Evaluates the power spectrum for the gauge invariant variable $\Psi$.
  *
- * Returns: (transfer full) (element-type gdouble): the power spectrum of the adiabatic mode.
+ * Returns: (transfer full): the power spectrum of $\Psi$.
  */
-GArray *
-nc_hipert_adiab_eval_powspec_Psi (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tAi, const gdouble tAf, const gdouble adiab_reltol, GArray *k_array, const gdouble tau)
+NcmPowspecSpline2d *
+nc_hipert_adiab_eval_powspec_Psi (NcHIPertAdiab *adiab, NcmModel *model)
 {
-  NcmCSQ1D *csq1d    = NCM_CSQ1D (adiab);
-  const gdouble unit = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
-  GArray *powspec    = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  gdouble tAd;
-  gboolean found;
-  guint i;
-
-  for (i = 0; i < k_array->len; i++)
-  {
-    nc_hipert_adiab_set_k (adiab, g_array_index (k_array, gdouble, i));
-
-    if (!ncm_csq1d_find_adiab_time_limit (csq1d, model, tAi, tAf, adiab_reltol, &tAd))
-    {
-      g_array_free (powspec, TRUE);
-
-      return NULL;
-    }
-    else
-    {
-      NcmCSQ1DState state;
-      gdouble Psi_k_tau, alpha_reltol, dgamma_reltol;
-
-      ncm_csq1d_compute_adiab (csq1d, model, tAd, &state, &alpha_reltol, &dgamma_reltol);
-
-      ncm_csq1d_set_init_cond_adiab (csq1d, model, tAd);
-      ncm_csq1d_prepare (csq1d, model);
-
-      Psi_k_tau = nc_hipert_adiab_eval_powspec_Psi_at (adiab, model, tau);
-
-      g_array_append_val (powspec, Psi_k_tau);
-    }
-  }
-
-  return powspec;
+  return _nc_hipert_adiab_eval_powspec_func (adiab, model, _nc_hipert_eval_powespec_Psi_from_state);
 }
 
 /**
  * nc_hipert_adiab_eval_powspec_drho:
  * @adiab: a #NcHIPertAdiab
  * @model: a #NcmModel
- * @tAi: $\tau_i$ initial time to search for adiabatic limit
- * @tAf: $\tau_f$ final time to search for adiabatic limit
- * @adiab_reltol: relative tolerance for the adiabatic limit search
- * @k_array: (element-type gdouble): array of wave numbers
- * @tau: $\tau$ time to evaluate the power spectrum
  *
- * Evaluates the power spectrum of the adiabatic mode at a given time $\tau$.
+ * Evaluates the power spectrum for the gauge invariant variable $\delta\rho$.
  *
- * Returns: (transfer full) (element-type gdouble): the power spectrum of the adiabatic mode.
+ * Returns: (transfer full): the power spectrum of $\delta\rho$.
  */
-GArray *
-nc_hipert_adiab_eval_powspec_drho (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tAi, const gdouble tAf, const gdouble adiab_reltol, GArray *k_array, const gdouble tau)
+NcmPowspecSpline2d *
+nc_hipert_adiab_eval_powspec_drho (NcHIPertAdiab *adiab, NcmModel *model)
 {
-  NcmCSQ1D *csq1d    = NCM_CSQ1D (adiab);
-  const gdouble unit = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
-  GArray *powspec    = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  gdouble tAd;
-  gboolean found;
-  guint i;
-
-  for (i = 0; i < k_array->len; i++)
-  {
-    nc_hipert_adiab_set_k (adiab, g_array_index (k_array, gdouble, i));
-
-    if (!ncm_csq1d_find_adiab_time_limit (csq1d, model, tAi, tAf, adiab_reltol, &tAd))
-    {
-      g_array_free (powspec, TRUE);
-
-      return NULL;
-    }
-    else
-    {
-      NcmCSQ1DState state;
-      gdouble drho_k_tau, alpha_reltol, dgamma_reltol;
-
-      ncm_csq1d_compute_adiab (csq1d, model, tAd, &state, &alpha_reltol, &dgamma_reltol);
-
-      ncm_csq1d_set_init_cond_adiab (csq1d, model, tAd);
-      ncm_csq1d_prepare (csq1d, model);
-
-      drho_k_tau = nc_hipert_adiab_eval_powspec_drho_at (adiab, model, tau);
-
-      g_array_append_val (powspec, drho_k_tau);
-    }
-  }
-
-  return powspec;
+  return _nc_hipert_adiab_eval_powspec_func (adiab, model, _nc_hipert_eval_powespec_drho_from_state);
 }
 

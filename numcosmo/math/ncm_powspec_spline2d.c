@@ -171,6 +171,16 @@ _ncm_powspec_spline2d_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdou
   }
 }
 
+void
+_ncm_powspec_spline2d_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
+{
+  NcmPowspecSpline2d *ps_s2d             = NCM_POWSPEC_SPLINE2D (powspec);
+  NcmPowspecSpline2dPrivate * const self = ncm_powspec_spline2d_get_instance_private (ps_s2d);
+
+  Nz[0] = ncm_vector_len (ncm_spline2d_peek_xv (self->spline2d));
+  Nk[0] = ncm_vector_len (ncm_spline2d_peek_yv (self->spline2d));
+}
+
 static NcmSpline2d *
 _ncm_powspec_spline2d_get_spline_2d (NcmPowspec *powspec, NcmModel *model)
 {
@@ -207,6 +217,7 @@ ncm_powspec_spline2d_class_init (NcmPowspecSpline2dClass *klass)
   powspec_class->prepare       = &_ncm_powspec_spline2d_prepare;
   powspec_class->eval          = &_ncm_powspec_spline2d_eval;
   powspec_class->eval_vec      = &_ncm_powspec_spline2d_eval_vec;
+  powspec_class->get_nknots    = &_ncm_powspec_spline2d_get_nknots;
   powspec_class->get_spline_2d = &_ncm_powspec_spline2d_get_spline_2d;
 }
 
