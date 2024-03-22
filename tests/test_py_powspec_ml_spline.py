@@ -196,38 +196,3 @@ def test_serialization(Pk: Ncm.Spline) -> None:
         ps_dup_Pka.append(Pkv.dup_array())
 
     assert_allclose(ps_Pka, ps_dup_Pka)
-
-
-def test_serialization(Pk: Ncm.Spline) -> None:
-    """Test the serialization of the power spectrum."""
-
-    ps = Nc.PowspecMLSpline.new(Pk)
-    assert ps is not None
-
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-
-    ps_dup = ser.dup_obj(ps)
-
-    assert ps_dup is not None
-    assert isinstance(ps_dup, Nc.PowspecMLSpline)
-
-    cosmo = Nc.HICosmoDEXcdm()
-    prim = Nc.HIPrimPowerLaw()
-    cosmo.add_submodel(prim)
-
-    ps.prepare(cosmo)
-    ps_dup.prepare(cosmo)
-
-    kv = Pk.peek_xv()
-    Pkv = kv.dup()
-
-    za = np.linspace(0, 1, 50)
-    ps_Pka = []
-    ps_dup_Pka = []
-    for z in za:
-        ps.eval_vec(cosmo, z, kv, Pkv)
-        ps_Pka.append(Pkv.dup_array())
-        ps_dup.eval_vec(cosmo, z, kv, Pkv)
-        ps_dup_Pka.append(Pkv.dup_array())
-
-    assert_allclose(ps_Pka, ps_dup_Pka)
