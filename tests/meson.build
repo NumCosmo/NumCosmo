@@ -148,6 +148,10 @@ c_tests = [
         'sources': ['test_nc_hicosmo_de.c'],
     },
     {
+        'name': 'nc_hicosmo_qgw',
+        'sources': ['test_nc_hicosmo_qgw.c'],
+    },
+    {
         'name': 'nc_window',
         'sources': ['test_nc_window.c'],
     },
@@ -378,6 +382,14 @@ python_tests = [
     {
         'name': 'py_fit',
         'source': 'test_py_fit.py',
+    },
+    {
+        'name': 'py_powspec_ml_spline',
+        'source': 'test_py_powspec_ml_spline.py',
+    },
+    {
+        'name': 'py_powspec_spline2d',
+        'source': 'test_py_powspec_spline2d.py',
     },
 ]
 

@@ -121,6 +121,9 @@ HICOSMO_QGRW_DEFAULT_OMEGA_R: float = 1e-05
 HICOSMO_QGRW_DEFAULT_OMEGA_W: int = 0
 HICOSMO_QGRW_DEFAULT_W: float = 1e-12
 HICOSMO_QGRW_DEFAULT_X_B: float = 1e30
+HICOSMO_QGW_DEFAULT_OMEGA_W: float = 1.0
+HICOSMO_QGW_DEFAULT_W: float = 1e-05
+HICOSMO_QGW_DEFAULT_X_B: float = 1e30
 HICOSMO_QLINEAR_DEFAULT_CD: float = 0.0
 HICOSMO_QLINEAR_DEFAULT_E: float = 1.0
 HICOSMO_QLINEAR_DEFAULT_OMEGA_T: float = 1.0
@@ -145,6 +148,8 @@ HICOSMO_VEXP_DEBUG_EVOL_CL: bool = False
 HICOSMO_VEXP_DEBUG_EVOL_QT: bool = False
 HICOSMO_VEXP_DEFAULT_ALPHA_B: float = 0.1
 HICOSMO_VEXP_DEFAULT_D_PHI: float = 0.3
+HICOSMO_VEXP_DEFAULT_EM_B: float = 0.0
+HICOSMO_VEXP_DEFAULT_EM_BETA: float = 0.1
 HICOSMO_VEXP_DEFAULT_H0: float = 70.0
 HICOSMO_VEXP_DEFAULT_OMEGA_C: float = 0.25
 HICOSMO_VEXP_DEFAULT_OMEGA_L: float = 0.75
@@ -3275,14 +3280,14 @@ class DECont(NumCosmoMath.CSQ1D):
         c_s^2
       w -> gdouble: w
         w
+      k -> gdouble: k
+        k
 
     Properties from NcmCSQ1D:
       reltol -> gdouble: reltol
         Relative tolerance
       abstol -> gdouble: abstol
         Absolute tolerance tolerance
-      k -> gdouble: k
-        Mode k
       ti -> gdouble: ti
         The initial time t_i
       tf -> gdouble: tf
@@ -3304,10 +3309,10 @@ class DECont(NumCosmoMath.CSQ1D):
         OmegaL: float
         Omegaw: float
         cs2: float
+        k: float
         w: float
         abstol: float
         adiab_threshold: float
-        k: float
         max_order_2: bool
         prop_threshold: float
         reltol: float
@@ -3315,17 +3320,15 @@ class DECont(NumCosmoMath.CSQ1D):
         tf: float
         ti: float
     props: Props = ...
-    parent_instance: NumCosmoMath.CSQ1D = ...
-    priv: DEContPrivate = ...
     def __init__(
         self,
         OmegaL: float = ...,
         Omegaw: float = ...,
         cs2: float = ...,
+        k: float = ...,
         w: float = ...,
         abstol: float = ...,
         adiab_threshold: float = ...,
-        k: float = ...,
         max_order_2: bool = ...,
         prop_threshold: float = ...,
         reltol: float = ...,
@@ -3336,9 +3339,11 @@ class DECont(NumCosmoMath.CSQ1D):
     @staticmethod
     def clear(dec: DECont) -> None: ...
     def free(self) -> None: ...
+    def get_k(self) -> float: ...
     @classmethod
     def new(cls, Omegaw: float, OmegaL: float, cs2: float, w: float) -> DECont: ...
     def ref(self) -> DECont: ...
+    def set_k(self, k: float) -> None: ...
 
 class DEContClass(GObject.GPointer):
     r"""
@@ -3349,8 +3354,6 @@ class DEContClass(GObject.GPointer):
         DEContClass()
     """
     parent_class: NumCosmoMath.CSQ1DClass = ...
-
-class DEContPrivate(GObject.GPointer): ...
 
 class DataBaoA(NumCosmoMath.DataGaussDiag):
     r"""
@@ -8606,6 +8609,109 @@ class HICosmoQGRWClass(GObject.GPointer):
     """
     parent_class: HICosmoClass = ...
 
+class HICosmoQGW(HICosmo, HIPertIAdiab):
+    r"""
+    :Constructors:
+
+    ::
+
+        HICosmoQGW(**properties)
+        new() -> NumCosmo.HICosmoQGW
+
+    Object NcHICosmoQGW
+
+    Properties from NcHICosmoQGW:
+      H0 -> gdouble: H0
+        H_0
+      Omegaw -> gdouble: Omegaw
+        \Omega_{w0}
+      w -> gdouble: w
+        w
+      xb -> gdouble: xb
+        x_b
+      H0-fit -> gboolean: H0-fit
+        H_0:fit
+      Omegaw-fit -> gboolean: Omegaw-fit
+        \Omega_{w0}:fit
+      w-fit -> gboolean: w-fit
+        w:fit
+      xb-fit -> gboolean: xb-fit
+        x_b:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        H0: float
+        H0_fit: bool
+        Omegaw: float
+        Omegaw_fit: bool
+        w: float
+        w_fit: bool
+        xb: float
+        xb_fit: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+    props: Props = ...
+    parent_instance: HICosmo = ...
+    priv: HICosmoQGWPrivate = ...
+    def __init__(
+        self,
+        H0: float = ...,
+        H0_fit: bool = ...,
+        Omegaw: float = ...,
+        Omegaw_fit: bool = ...,
+        w: float = ...,
+        w_fit: bool = ...,
+        xb: float = ...,
+        xb_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
+    @classmethod
+    def new(cls) -> HICosmoQGW: ...
+
+class HICosmoQGWClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HICosmoQGWClass()
+    """
+    parent_class: HICosmoClass = ...
+
+class HICosmoQGWPrivate(GObject.GPointer): ...
+
 class HICosmoQLinear(HICosmo):
     r"""
     :Constructors:
@@ -9137,7 +9243,7 @@ class HICosmoQSplineContPriorClass(GObject.GPointer):
     """
     parent_class: NumCosmoMath.ModelClass = ...
 
-class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
+class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
     r"""
     :Constructors:
 
@@ -9153,6 +9259,8 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
         Whether to glue to a DE phase
       set-xb-max -> gboolean: set-xb-max
         Whether to use max xb allowed by the matching
+      em-coupling -> NcHICosmoVexpEMCoupling: em-coupling
+        Electromagnetic coupling
       H0 -> gdouble: H0
         H_0
       Omegac -> gdouble: Omegac
@@ -9167,6 +9275,10 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
         \alpha_b
       xb -> gdouble: xb
         x_b
+      Bem -> gdouble: Bem
+        B_\mathrm{em}
+      betaem -> gdouble: betaem
+        \beta_\mathrm{em}
       H0-fit -> gboolean: H0-fit
         H_0:fit
       Omegac-fit -> gboolean: Omegac-fit
@@ -9181,6 +9293,10 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
         \alpha_b:fit
       xb-fit -> gboolean: xb-fit
         x_b:fit
+      Bem-fit -> gboolean: Bem-fit
+        B_\mathrm{em}:fit
+      betaem-fit -> gboolean: betaem-fit
+        \beta_\mathrm{em}:fit
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -9207,6 +9323,8 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
     """
 
     class Props:
+        Bem: float
+        Bem_fit: bool
         H0: float
         H0_fit: bool
         OmegaL: float
@@ -9215,8 +9333,11 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
         Omegac_fit: bool
         alphab: float
         alphab_fit: bool
+        betaem: float
+        betaem_fit: bool
         dphi: float
         dphi_fit: bool
+        em_coupling: HICosmoVexpEMCoupling
         glue_de: bool
         set_xb_max: bool
         sigmaphi: float
@@ -9237,6 +9358,8 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
     priv: HICosmoVexpPrivate = ...
     def __init__(
         self,
+        Bem: float = ...,
+        Bem_fit: bool = ...,
         H0: float = ...,
         H0_fit: bool = ...,
         OmegaL: float = ...,
@@ -9245,8 +9368,11 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
         Omegac_fit: bool = ...,
         alphab: float = ...,
         alphab_fit: bool = ...,
+        betaem: float = ...,
+        betaem_fit: bool = ...,
         dphi: float = ...,
         dphi_fit: bool = ...,
+        em_coupling: HICosmoVexpEMCoupling = ...,
         glue_de: bool = ...,
         set_xb_max: bool = ...,
         sigmaphi: float = ...,
@@ -9261,18 +9387,11 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
     def alpha(self, tau: float) -> float: ...
     def alpha_0c(self) -> float: ...
     def alpha_0e(self) -> float: ...
-    def cauchy_eval_F(self, tau: float, k: float, B: float, beta: float) -> float: ...
-    def cauchy_eval_F1(self, tau: float, k: float, B: float, beta: float) -> float: ...
-    def cauchy_eval_m(self, tau: float, B: float, beta: float) -> float: ...
-    def cauchy_eval_xi(self, tau: float, k: float, B: float, beta: float) -> float: ...
-    def eval_F(self, tau: float, k: float, B: float, beta: float) -> float: ...
-    def eval_nu(self, tau: float, k: float) -> float: ...
-    def gauss_eval_F1(self, tau: float, k: float, B: float, beta: float) -> float: ...
-    def gauss_eval_m(self, tau: float, B: float, beta: float) -> float: ...
-    def gauss_eval_xi(self, tau: float, k: float, B: float, beta: float) -> float: ...
+    def get_em_coupling(self) -> HICosmoVexpEMCoupling: ...
     @classmethod
     def new(cls) -> HICosmoVexp: ...
     def phi(self, tau: float) -> float: ...
+    def set_em_coupling(self, coupling: HICosmoVexpEMCoupling) -> None: ...
     def tau_max(self) -> float: ...
     def tau_min(self) -> float: ...
     def tau_qt_c(self) -> float: ...
@@ -9354,7 +9473,7 @@ class HIPert(GObject.Object):
     def set_stiff_solver(self, stiff: bool) -> None: ...
     def set_sys_size(self, sys_size: int) -> None: ...
 
-class HIPertAdiab(NumCosmoMath.HOAA):
+class HIPertAdiab(NumCosmoMath.CSQ1D):
     r"""
     :Constructors:
 
@@ -9365,41 +9484,50 @@ class HIPertAdiab(NumCosmoMath.HOAA):
 
     Object NcHIPertAdiab
 
-    Properties from NcmHOAA:
+    Properties from NcHIPertAdiab:
+      k -> gdouble: k
+        Wave number
+
+    Properties from NcmCSQ1D:
       reltol -> gdouble: reltol
         Relative tolerance
       abstol -> gdouble: abstol
         Absolute tolerance tolerance
-      k -> gdouble: k
-        The mode k
       ti -> gdouble: ti
         The initial time t_i
       tf -> gdouble: tf
         The final time t_f
+      adiab-threshold -> gdouble: adiab-threshold
+        The adiabatic threshold
+      prop-threshold -> gdouble: prop-threshold
+        The propagator threshold
       save-evol -> gboolean: save-evol
         Save the system evolution
-      opt -> NcmHOAAOpt: opt
-        Evolution options
+      max-order-2 -> gboolean: max-order-2
+        Whether to always truncate at order 2
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
-        abstol: float
         k: float
-        opt: NumCosmoMath.HOAAOpt
+        abstol: float
+        adiab_threshold: float
+        max_order_2: bool
+        prop_threshold: float
         reltol: float
         save_evol: bool
         tf: float
         ti: float
     props: Props = ...
-    parent_instance: NumCosmoMath.HOAA = ...
     def __init__(
         self,
-        abstol: float = ...,
         k: float = ...,
-        opt: NumCosmoMath.HOAAOpt = ...,
+        abstol: float = ...,
+        adiab_threshold: float = ...,
+        max_order_2: bool = ...,
+        prop_threshold: float = ...,
         reltol: float = ...,
         save_evol: bool = ...,
         tf: float = ...,
@@ -9407,10 +9535,42 @@ class HIPertAdiab(NumCosmoMath.HOAA):
     ): ...
     @staticmethod
     def clear(pa: HIPertAdiab) -> None: ...
+    def eval_powspec_Psi(
+        self,
+        model: NumCosmoMath.Model,
+        tAi: float,
+        tAf: float,
+        adiab_reltol: float,
+        k_array: Sequence[float],
+        tau: float,
+    ) -> list[float]: ...
+    def eval_powspec_Psi_at(self, model: NumCosmoMath.Model, tau: float) -> float: ...
+    def eval_powspec_drho(
+        self,
+        model: NumCosmoMath.Model,
+        tAi: float,
+        tAf: float,
+        adiab_reltol: float,
+        k_array: Sequence[float],
+        tau: float,
+    ) -> list[float]: ...
+    def eval_powspec_drho_at(self, model: NumCosmoMath.Model, tau: float) -> float: ...
+    def eval_powspec_zeta(
+        self,
+        model: NumCosmoMath.Model,
+        tAi: float,
+        tAf: float,
+        adiab_reltol: float,
+        k_array: Sequence[float],
+        tau: float,
+    ) -> list[float]: ...
+    def eval_powspec_zeta_at(self, model: NumCosmoMath.Model, tau: float) -> float: ...
     def free(self) -> None: ...
+    def get_k(self) -> float: ...
     @classmethod
     def new(cls) -> HIPertAdiab: ...
     def ref(self) -> HIPertAdiab: ...
+    def set_k(self, k: float) -> None: ...
 
 class HIPertAdiabClass(GObject.GPointer):
     r"""
@@ -9420,7 +9580,7 @@ class HIPertAdiabClass(GObject.GPointer):
 
         HIPertAdiabClass()
     """
-    parent_class: NumCosmoMath.HOAAClass = ...
+    parent_class: NumCosmoMath.CSQ1DClass = ...
 
 class HIPertBGVar(GObject.Object):
     r"""
@@ -10169,6 +10329,88 @@ class HIPertCompPBClass(GObject.GPointer):
 class HIPertCompPBPrivate(GObject.GPointer): ...
 class HIPertCompPrivate(GObject.GPointer): ...
 
+class HIPertEM(NumCosmoMath.CSQ1D):
+    r"""
+    :Constructors:
+
+    ::
+
+        HIPertEM(**properties)
+        new() -> NumCosmo.HIPertEM
+
+    Object NcHIPertEM
+
+    Properties from NcHIPertEM:
+      k -> gdouble: k
+        Wave number
+
+    Properties from NcmCSQ1D:
+      reltol -> gdouble: reltol
+        Relative tolerance
+      abstol -> gdouble: abstol
+        Absolute tolerance tolerance
+      ti -> gdouble: ti
+        The initial time t_i
+      tf -> gdouble: tf
+        The final time t_f
+      adiab-threshold -> gdouble: adiab-threshold
+        The adiabatic threshold
+      prop-threshold -> gdouble: prop-threshold
+        The propagator threshold
+      save-evol -> gboolean: save-evol
+        Save the system evolution
+      max-order-2 -> gboolean: max-order-2
+        Whether to always truncate at order 2
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        k: float
+        abstol: float
+        adiab_threshold: float
+        max_order_2: bool
+        prop_threshold: float
+        reltol: float
+        save_evol: bool
+        tf: float
+        ti: float
+    props: Props = ...
+    def __init__(
+        self,
+        k: float = ...,
+        abstol: float = ...,
+        adiab_threshold: float = ...,
+        max_order_2: bool = ...,
+        prop_threshold: float = ...,
+        reltol: float = ...,
+        save_evol: bool = ...,
+        tf: float = ...,
+        ti: float = ...,
+    ): ...
+    @staticmethod
+    def clear(pem: HIPertEM) -> None: ...
+    def eval_PE_PB(
+        self, model: NumCosmoMath.Model, tau: float
+    ) -> Tuple[float, float]: ...
+    def free(self) -> None: ...
+    def get_k(self) -> float: ...
+    @classmethod
+    def new(cls) -> HIPertEM: ...
+    def ref(self) -> HIPertEM: ...
+    def set_k(self, k: float) -> None: ...
+
+class HIPertEMClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HIPertEMClass()
+    """
+    parent_class: NumCosmoMath.CSQ1DClass = ...
+
 class HIPertFirstOrder(HIPertBoltzmann):
     r"""
     :Constructors:
@@ -10332,7 +10574,7 @@ class HIPertFirstOrderClass(GObject.GPointer):
 
 class HIPertFirstOrderPrivate(GObject.GPointer): ...
 
-class HIPertGW(NumCosmoMath.HOAA):
+class HIPertGW(NumCosmoMath.CSQ1D):
     r"""
     :Constructors:
 
@@ -10343,52 +10585,63 @@ class HIPertGW(NumCosmoMath.HOAA):
 
     Object NcHIPertGW
 
-    Properties from NcmHOAA:
+    Properties from NcHIPertGW:
+      k -> gdouble: k
+        Wave number
+
+    Properties from NcmCSQ1D:
       reltol -> gdouble: reltol
         Relative tolerance
       abstol -> gdouble: abstol
         Absolute tolerance tolerance
-      k -> gdouble: k
-        The mode k
       ti -> gdouble: ti
         The initial time t_i
       tf -> gdouble: tf
         The final time t_f
+      adiab-threshold -> gdouble: adiab-threshold
+        The adiabatic threshold
+      prop-threshold -> gdouble: prop-threshold
+        The propagator threshold
       save-evol -> gboolean: save-evol
         Save the system evolution
-      opt -> NcmHOAAOpt: opt
-        Evolution options
+      max-order-2 -> gboolean: max-order-2
+        Whether to always truncate at order 2
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
-        abstol: float
         k: float
-        opt: NumCosmoMath.HOAAOpt
+        abstol: float
+        adiab_threshold: float
+        max_order_2: bool
+        prop_threshold: float
         reltol: float
         save_evol: bool
         tf: float
         ti: float
     props: Props = ...
-    parent_instance: NumCosmoMath.HOAA = ...
     def __init__(
         self,
-        abstol: float = ...,
         k: float = ...,
-        opt: NumCosmoMath.HOAAOpt = ...,
+        abstol: float = ...,
+        adiab_threshold: float = ...,
+        max_order_2: bool = ...,
+        prop_threshold: float = ...,
         reltol: float = ...,
         save_evol: bool = ...,
         tf: float = ...,
         ti: float = ...,
     ): ...
     @staticmethod
-    def clear(pa: HIPertGW) -> None: ...
+    def clear(pgw: HIPertGW) -> None: ...
     def free(self) -> None: ...
+    def get_k(self) -> float: ...
     @classmethod
     def new(cls) -> HIPertGW: ...
     def ref(self) -> HIPertGW: ...
+    def set_k(self, k: float) -> None: ...
 
 class HIPertGWClass(GObject.GPointer):
     r"""
@@ -10398,7 +10651,7 @@ class HIPertGWClass(GObject.GPointer):
 
         HIPertGWClass()
     """
-    parent_class: NumCosmoMath.HOAAClass = ...
+    parent_class: NumCosmoMath.CSQ1DClass = ...
 
 class HIPertGrav(GObject.Object):
     r"""
@@ -10703,26 +10956,14 @@ class HIPertIAdiab(GObject.GInterface):
     Signals from GObject:
       notify (GParam)
     """
-    def eval_dlnmnu(self, tau: float, k: float) -> float: ...
-    def eval_mnu(self, tau: float, k: float) -> float: ...
+    def eval_F1(self, tau: float, k: float) -> float: ...
+    def eval_m(self, tau: float, k: float) -> float: ...
     def eval_nu(self, tau: float, k: float) -> float: ...
-    def eval_powspec_factor(self) -> float: ...
-    def eval_sing_dlnmnu(self, tau_m_taus: float, k: float, sing: int) -> float: ...
-    def eval_sing_mnu(self, tau_m_taus: float, k: float, sing: int) -> float: ...
-    def eval_sing_system(
-        self, tau_m_taus: float, k: float, sing: int
-    ) -> Tuple[float, float]: ...
-    def eval_system(self, tau: float, k: float) -> Tuple[float, float]: ...
-    def get_sing_info(
-        self,
-        k: float,
-        sing: int,
-        ts: float,
-        dts_i: float,
-        dts_f: float,
-        st: NumCosmoMath.HOAASingType,
-    ) -> None: ...
-    def nsing(self, k: float) -> int: ...
+    def eval_p2Psi(self, tau: float, k: float) -> float: ...
+    def eval_p2drho(self, tau: float, k: float) -> float: ...
+    def eval_unit(self) -> float: ...
+    def eval_x(self, tau: float) -> float: ...
+    def eval_xi(self, tau: float, k: float) -> float: ...
 
 class HIPertIAdiabInterface(GObject.GPointer):
     r"""
@@ -10733,20 +10974,47 @@ class HIPertIAdiabInterface(GObject.GPointer):
         HIPertIAdiabInterface()
     """
     parent: GObject.TypeInterface = ...
-    eval_mnu: Callable[[HIPertIAdiab, float, float], float] = ...
+    eval_xi: Callable[[HIPertIAdiab, float, float], float] = ...
+    eval_F1: Callable[[HIPertIAdiab, float, float], float] = ...
     eval_nu: Callable[[HIPertIAdiab, float, float], float] = ...
-    eval_dlnmnu: Callable[[HIPertIAdiab, float, float], float] = ...
-    eval_system: Callable[[HIPertIAdiab, float, float], Tuple[float, float]] = ...
-    nsing: Callable[[HIPertIAdiab, float], int] = ...
-    get_sing_info: Callable[
-        [HIPertIAdiab, float, int, float, float, float, NumCosmoMath.HOAASingType], None
-    ] = ...
-    eval_sing_mnu: Callable[[HIPertIAdiab, float, float, int], float] = ...
-    eval_sing_dlnmnu: Callable[[HIPertIAdiab, float, float, int], float] = ...
-    eval_sing_system: Callable[
-        [HIPertIAdiab, float, float, int], Tuple[float, float]
-    ] = ...
-    eval_powspec_factor: Callable[[HIPertIAdiab], float] = ...
+    eval_m: Callable[[HIPertIAdiab, float, float], float] = ...
+    eval_unit: Callable[[HIPertIAdiab], float] = ...
+    eval_x: Callable[[HIPertIAdiab, float], float] = ...
+    eval_p2Psi: Callable[[HIPertIAdiab, float, float], float] = ...
+    eval_p2drho: Callable[[HIPertIAdiab, float, float], float] = ...
+    padding: list[None] = ...
+
+class HIPertIEM(GObject.GInterface):
+    r"""
+    Interface NcHIPertIEM
+
+    Signals from GObject:
+      notify (GParam)
+    """
+    def eval_F1(self, tau: float, k: float) -> float: ...
+    def eval_m(self, tau: float, k: float) -> float: ...
+    def eval_nu(self, tau: float, k: float) -> float: ...
+    def eval_unit(self) -> float: ...
+    def eval_x(self, tau: float) -> float: ...
+    def eval_xi(self, tau: float, k: float) -> float: ...
+
+class HIPertIEMInterface(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HIPertIEMInterface()
+    """
+    parent: GObject.TypeInterface = ...
+    eval_xi: Callable[[HIPertIEM, float, float], float] = ...
+    eval_F1: Callable[[HIPertIEM, float, float], float] = ...
+    eval_nu: Callable[[HIPertIEM, float, float], float] = ...
+    eval_m: Callable[[HIPertIEM, float, float], float] = ...
+    eval_unit: Callable[[HIPertIEM], float] = ...
+    eval_x: Callable[[HIPertIEM, float], float] = ...
+    eval_lapse: Callable[[HIPertIEM, float], float] = ...
+    padding: list[None] = ...
 
 class HIPertIGW(GObject.GInterface):
     r"""
@@ -10755,26 +11023,12 @@ class HIPertIGW(GObject.GInterface):
     Signals from GObject:
       notify (GParam)
     """
-    def eval_dlnmnu(self, tau: float, k: float) -> float: ...
-    def eval_mnu(self, tau: float, k: float) -> float: ...
+    def eval_F1(self, tau: float, k: float) -> float: ...
+    def eval_m(self, tau: float, k: float) -> float: ...
     def eval_nu(self, tau: float, k: float) -> float: ...
-    def eval_powspec_factor(self) -> float: ...
-    def eval_sing_dlnmnu(self, tau_m_taus: float, k: float, sing: int) -> float: ...
-    def eval_sing_mnu(self, tau_m_taus: float, k: float, sing: int) -> float: ...
-    def eval_sing_system(
-        self, tau_m_taus: float, k: float, sing: int
-    ) -> Tuple[float, float]: ...
-    def eval_system(self, tau: float, k: float) -> Tuple[float, float]: ...
-    def get_sing_info(
-        self,
-        k: float,
-        sing: int,
-        ts: float,
-        dts_i: float,
-        dts_f: float,
-        st: NumCosmoMath.HOAASingType,
-    ) -> None: ...
-    def nsing(self, k: float) -> int: ...
+    def eval_unit(self) -> float: ...
+    def eval_x(self, tau: float) -> float: ...
+    def eval_xi(self, tau: float, k: float) -> float: ...
 
 class HIPertIGWInterface(GObject.GPointer):
     r"""
@@ -10785,20 +11039,13 @@ class HIPertIGWInterface(GObject.GPointer):
         HIPertIGWInterface()
     """
     parent: GObject.TypeInterface = ...
-    eval_mnu: Callable[[HIPertIGW, float, float], float] = ...
+    eval_xi: Callable[[HIPertIGW, float, float], float] = ...
+    eval_F1: Callable[[HIPertIGW, float, float], float] = ...
     eval_nu: Callable[[HIPertIGW, float, float], float] = ...
-    eval_dlnmnu: Callable[[HIPertIGW, float, float], float] = ...
-    eval_system: Callable[[HIPertIGW, float, float], Tuple[float, float]] = ...
-    nsing: Callable[[HIPertIGW, float], int] = ...
-    get_sing_info: Callable[
-        [HIPertIGW, float, int, float, float, float, NumCosmoMath.HOAASingType], None
-    ] = ...
-    eval_sing_mnu: Callable[[HIPertIGW, float, float, int], float] = ...
-    eval_sing_dlnmnu: Callable[[HIPertIGW, float, float, int], float] = ...
-    eval_sing_system: Callable[
-        [HIPertIGW, float, float, int], Tuple[float, float]
-    ] = ...
-    eval_powspec_factor: Callable[[HIPertIGW], float] = ...
+    eval_m: Callable[[HIPertIGW, float, float], float] = ...
+    eval_unit: Callable[[HIPertIGW], float] = ...
+    eval_x: Callable[[HIPertIGW, float], float] = ...
+    padding: list[None] = ...
 
 class HIPertITwoFluids(GObject.GInterface):
     r"""
@@ -15311,21 +15558,22 @@ class PowspecMLClass(GObject.GPointer):
         PowspecMLClass()
     """
     parent_class: NumCosmoMath.PowspecClass = ...
+    padding: list[None] = ...
 
-class PowspecMLFixSpline(PowspecML):
+class PowspecMLSpline(PowspecML):
     r"""
     :Constructors:
 
     ::
 
-        PowspecMLFixSpline(**properties)
-        new(filename:str) -> NumCosmo.PowspecMLFixSpline
+        PowspecMLSpline(**properties)
+        new(Pk:NumCosmoMath.Spline) -> NumCosmo.PowspecMLSpline
 
-    Object NcPowspecMLFixSpline
+    Object NcPowspecMLSpline
 
-    Properties from NcPowspecMLFixSpline:
-      filename -> gchararray: filename
-        Filename
+    Properties from NcPowspecMLSpline:
+      spline -> NcmSpline: spline
+        Spline representing Pk at z=0
 
     Properties from NcPowspecML:
       zi -> gdouble: zi
@@ -15354,21 +15602,16 @@ class PowspecMLFixSpline(PowspecML):
     """
 
     class Props:
-        filename: str
+        spline: NumCosmoMath.Spline
         kmax: float
         kmin: float
         zf: float
         zi: float
         reltol: float
     props: Props = ...
-    parent_instance: PowspecML = ...
-    ser: NumCosmoMath.Serialize = ...
-    Pk: NumCosmoMath.Spline = ...
-    gf: GrowthFunc = ...
-    filename: str = ...
     def __init__(
         self,
-        filename: str = ...,
+        spline: NumCosmoMath.Spline = ...,
         kmax: float = ...,
         kmin: float = ...,
         zf: float = ...,
@@ -15376,16 +15619,17 @@ class PowspecMLFixSpline(PowspecML):
         reltol: float = ...,
     ): ...
     @classmethod
-    def new(cls, filename: str) -> PowspecMLFixSpline: ...
-    def set_file(self, filename: str) -> None: ...
+    def new(cls, Pk: NumCosmoMath.Spline) -> PowspecMLSpline: ...
+    def peek_spline(self) -> NumCosmoMath.Spline: ...
+    def set_spline(self, Pk: NumCosmoMath.Spline) -> None: ...
 
-class PowspecMLFixSplineClass(GObject.GPointer):
+class PowspecMLSplineClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        PowspecMLFixSplineClass()
+        PowspecMLSplineClass()
     """
     parent_class: PowspecMLClass = ...
 
@@ -17972,6 +18216,12 @@ class HICosmoQGRWSParams(GObject.GEnum):
     W: HICosmoQGRWSParams = ...
     X_B: HICosmoQGRWSParams = ...
 
+class HICosmoQGWSParams(GObject.GEnum):
+    H0: HICosmoQGWSParams = ...
+    OMEGA_W: HICosmoQGWSParams = ...
+    W: HICosmoQGWSParams = ...
+    X_B: HICosmoQGWSParams = ...
+
 class HICosmoQLinearSParams(GObject.GEnum):
     CD: HICosmoQLinearSParams = ...
     E: HICosmoQLinearSParams = ...
@@ -17999,9 +18249,17 @@ class HICosmoQSplineSParams(GObject.GEnum):
 class HICosmoQSplineVParams(GObject.GEnum):
     Q: HICosmoQSplineVParams = ...
 
+class HICosmoVexpEMCoupling(GObject.GEnum):
+    CAUCHY: HICosmoVexpEMCoupling = ...
+    GAUSS: HICosmoVexpEMCoupling = ...
+    INVALID: HICosmoVexpEMCoupling = ...
+    NONE: HICosmoVexpEMCoupling = ...
+
 class HICosmoVexpSParams(GObject.GEnum):
     ALPHA_B: HICosmoVexpSParams = ...
     D_PHI: HICosmoVexpSParams = ...
+    EM_B: HICosmoVexpSParams = ...
+    EM_BETA: HICosmoVexpSParams = ...
     H0: HICosmoVexpSParams = ...
     OMEGA_C: HICosmoVexpSParams = ...
     OMEGA_L: HICosmoVexpSParams = ...
@@ -18035,15 +18293,21 @@ class HIPertCompPBVar(GObject.GEnum):
     V_B: HIPertCompPBVar = ...
     V_G: HIPertCompPBVar = ...
 
+class HIPertEMVars(GObject.GEnum):
+    IM_H: HIPertEMVars = ...
+    IM_PH: HIPertEMVars = ...
+    RE_H: HIPertEMVars = ...
+    RE_PH: HIPertEMVars = ...
+
 class HIPertFirstOrderInteg(GObject.GEnum):
     ARKODE: HIPertFirstOrderInteg = ...
     CVODE: HIPertFirstOrderInteg = ...
 
 class HIPertGWVars(GObject.GEnum):
-    IM_PZETA: HIPertGWVars = ...
-    IM_ZETA: HIPertGWVars = ...
-    RE_PZETA: HIPertGWVars = ...
-    RE_ZETA: HIPertGWVars = ...
+    IM_H: HIPertGWVars = ...
+    IM_PH: HIPertGWVars = ...
+    RE_H: HIPertGWVars = ...
+    RE_PH: HIPertGWVars = ...
 
 class HIPertGravGauge(GObject.GEnum):
     CONST_CURV: HIPertGravGauge = ...

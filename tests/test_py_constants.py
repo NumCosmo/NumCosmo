@@ -92,6 +92,7 @@ def test_constants_scipy():
     assert_allclose(Ncm.C.G(), constants.G)
     assert_allclose(Ncm.C.hbar(), constants.hbar)
     assert_allclose(Ncm.C.thomson_cs(), physical_constants["Thomson cross section"][0])
+    assert_allclose(Ncm.C.magnetic_constant(), constants.mu_0)
     assert_allclose(Ncm.C.mass_p(), constants.m_p)
     assert_allclose(Ncm.C.mass_e(), constants.m_e)
     assert_allclose(Ncm.C.mass_n(), constants.m_n)
@@ -114,6 +115,7 @@ def test_constants_derived():
     assert_allclose(Ncm.C.Glightyear_Mpc(), 1.0e9 * u.lyr.to(u.Mpc))
     assert_allclose(Ncm.C.hc(), constants.h * constants.c)
     assert_allclose(Ncm.C.fine_struct_square(), constants.alpha**2)
+    assert_allclose(Ncm.C.electric_constant(), constants.epsilon_0)
     assert_allclose(
         Ncm.C.AR(),
         4.0 * physical_constants["Stefan-Boltzmann constant"][0] / constants.c,
@@ -122,9 +124,7 @@ def test_constants_derived():
     assert_allclose(
         Ncm.C.planck_length2(), constants.hbar * constants.G / constants.c**3
     )
-    assert_allclose(
-        Ncm.C.rest_energy_atomic(), constants.atomic_mass * constants.c**2
-    )
+    assert_allclose(Ncm.C.rest_energy_atomic(), constants.atomic_mass * constants.c**2)
     assert_allclose(Ncm.C.rest_energy_e(), constants.m_e * constants.c**2)
     assert_allclose(Ncm.C.rest_energy_p(), constants.m_p * constants.c**2)
     assert_allclose(Ncm.C.rest_energy_n(), constants.m_n * constants.c**2)

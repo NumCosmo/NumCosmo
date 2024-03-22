@@ -289,6 +289,14 @@ ncm_c_class_init (NcmCClass *klass)
  */
 
 /**
+ * ncm_c_magnetic_constant:
+ *
+ * Using CODATA values, see [description][NcmC.description].
+ *
+ * Returns: Magnetic constant $\mu_0 = 1.25663706212 \times 10^{-6} \,\left[\mathrm{N}\,\mathrm{A}^{-2}\right]$.
+ */
+
+/**
  * ncm_c_mass_atomic:
  *
  * Using CODATA values, see [description][NcmC.description].
@@ -410,6 +418,14 @@ ncm_c_class_init (NcmCClass *klass)
  * Derived from CODATA values, see [description][NcmC.description].
  *
  * Returns: The square of the fine struct constant $\alpha^2$.
+ */
+
+/**
+ * ncm_c_electric_constant:
+ *
+ * Derived from CODATA values, see [description][NcmC.description].
+ *
+ * Returns: Electric constant $\varepsilon_0 = 1 / (\mu_0 c^2) \,\left[\mathrm{F}\,\mathrm{m}^{-1}\right]$.
  */
 
 /**
