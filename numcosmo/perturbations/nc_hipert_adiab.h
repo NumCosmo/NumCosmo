@@ -54,6 +54,9 @@ struct _NcHIPertIAdiabInterface
   gdouble (*eval_x) (NcHIPertIAdiab *iad, const gdouble tau);
   gdouble (*eval_p2Psi) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
   gdouble (*eval_p2drho) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+  gdouble (*eval_lapse) (NcHIPertIAdiab *iad, const gdouble tau);
+  gdouble (*eval_tau_hubble) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+  gdouble (*eval_hubble) (NcHIPertIAdiab *iad, const gdouble tau);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[12];
@@ -86,6 +89,9 @@ gdouble nc_hipert_iadiab_eval_unit (NcHIPertIAdiab *iad);
 gdouble nc_hipert_iadiab_eval_x (NcHIPertIAdiab *iad, const gdouble tau);
 gdouble nc_hipert_iadiab_eval_p2Psi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 gdouble nc_hipert_iadiab_eval_p2drho (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+gdouble nc_hipert_iadiab_eval_lapse (NcHIPertIAdiab *iad, const gdouble tau);
+gdouble nc_hipert_iadiab_eval_tau_hubble (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+gdouble nc_hipert_iadiab_eval_hubble (NcHIPertIAdiab *iad, const gdouble tau);
 
 NcHIPertAdiab *nc_hipert_adiab_new (void);
 NcHIPertAdiab *nc_hipert_adiab_ref (NcHIPertAdiab *pa);
@@ -94,6 +100,9 @@ void nc_hipert_adiab_clear (NcHIPertAdiab **pa);
 
 void nc_hipert_adiab_set_k (NcHIPertAdiab *adiab, const gdouble k);
 gdouble nc_hipert_adiab_get_k (NcHIPertAdiab *adiab);
+
+gdouble nc_hipert_adiab_eval_cosmic_time (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
+gdouble nc_hipert_adiab_eval_delta_critial (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
 
 gdouble nc_hipert_adiab_eval_powspec_zeta_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
 gdouble nc_hipert_adiab_eval_powspec_Psi_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);

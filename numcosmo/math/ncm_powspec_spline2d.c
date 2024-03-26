@@ -294,6 +294,17 @@ ncm_powspec_spline2d_set_spline2d (NcmPowspecSpline2d *ps_s2d, NcmSpline2d *spli
   ncm_spline2d_clear (&self->spline2d);
 
   self->spline2d = ncm_spline2d_ref (spline2d);
+
+  {
+    NcmVector *z_vec = ncm_spline2d_peek_xv (self->spline2d);
+    NcmVector *k_vec = ncm_spline2d_peek_yv (self->spline2d);
+
+    ncm_powspec_set_kmin (NCM_POWSPEC (ps_s2d), ncm_vector_get (k_vec, 0));
+    ncm_powspec_set_kmax (NCM_POWSPEC (ps_s2d), ncm_vector_get (k_vec, ncm_vector_len (k_vec) - 1));
+
+    ncm_powspec_set_zi (NCM_POWSPEC (ps_s2d), ncm_vector_get (z_vec, 0));
+    ncm_powspec_set_zf (NCM_POWSPEC (ps_s2d), ncm_vector_get (z_vec, ncm_vector_len (z_vec) - 1));
+  }
 }
 
 /**

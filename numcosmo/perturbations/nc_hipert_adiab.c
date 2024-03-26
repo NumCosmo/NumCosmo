@@ -70,6 +70,8 @@
 #include "perturbations/nc_hipert_adiab.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_spline2d_bicubic.h"
+#include "math/ncm_ode_spline.h"
+#include "math/ncm_model_ctrl.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvode/cvode.h>
@@ -83,6 +85,9 @@ struct _NcHIPertAdiab
   gdouble k;
   NcmSpline2d *powspec_alpha;
   NcmSpline2d *powspec_gamma;
+  NcmOdeSpline *ctime_forward;
+  NcmOdeSpline *ctime_backward;
+  NcmModelCtrl *model_ctrl;
 };
 
 G_DEFINE_INTERFACE (NcHIPertIAdiab, nc_hipert_iadiab, G_TYPE_OBJECT)
@@ -91,14 +96,17 @@ G_DEFINE_TYPE (NcHIPertAdiab, nc_hipert_adiab, NCM_TYPE_CSQ1D)
 static void
 nc_hipert_iadiab_default_init (NcHIPertIAdiabInterface *iface)
 {
-  iface->eval_xi     = NULL;
-  iface->eval_F1     = NULL;
-  iface->eval_nu     = NULL;
-  iface->eval_m      = NULL;
-  iface->eval_unit   = NULL;
-  iface->eval_x      = NULL;
-  iface->eval_p2Psi  = NULL;
-  iface->eval_p2drho = NULL;
+  iface->eval_xi         = NULL;
+  iface->eval_F1         = NULL;
+  iface->eval_nu         = NULL;
+  iface->eval_m          = NULL;
+  iface->eval_unit       = NULL;
+  iface->eval_x          = NULL;
+  iface->eval_p2Psi      = NULL;
+  iface->eval_p2drho     = NULL;
+  iface->eval_lapse      = NULL;
+  iface->eval_tau_hubble = NULL;
+  iface->eval_hubble     = NULL;
 }
 
 enum
@@ -114,12 +122,27 @@ typedef struct _NcHIPertAdiabArg
   NcHIPertAdiab *pa;
 } NcHIPertAdiabArg;
 
+static gdouble _nc_hipert_adiab_cosmic_time_integ_forward (const gdouble t, gdouble tau, void *params);
+static gdouble _nc_hipert_adiab_cosmic_time_integ_backward (const gdouble t, gdouble tau, void *params);
+
 static void
 nc_hipert_adiab_init (NcHIPertAdiab *pa)
 {
-  pa->k             = 0.0;
-  pa->powspec_alpha = NULL;
-  pa->powspec_gamma = NULL;
+  NcmSpline *s1 = ncm_spline_cubic_notaknot_new ();
+  NcmSpline *s2 = ncm_spline_cubic_notaknot_new ();
+
+  pa->k              = 0.0;
+  pa->powspec_alpha  = NULL;
+  pa->powspec_gamma  = NULL;
+  pa->ctime_forward  = ncm_ode_spline_new_full (s1, _nc_hipert_adiab_cosmic_time_integ_forward, 0.0, 0.0, 500.0);
+  pa->ctime_backward = ncm_ode_spline_new_full (s2, _nc_hipert_adiab_cosmic_time_integ_backward, 0.0, 0.0, 500.0);
+  pa->model_ctrl     = ncm_model_ctrl_new (NULL);
+
+  ncm_ode_spline_auto_abstol (pa->ctime_forward, TRUE);
+  ncm_ode_spline_auto_abstol (pa->ctime_backward, TRUE);
+
+  ncm_spline_free (s1);
+  ncm_spline_free (s2);
 }
 
 static void
@@ -379,6 +402,51 @@ nc_hipert_iadiab_eval_p2drho (NcHIPertIAdiab *iad, const gdouble tau, const gdou
 }
 
 /**
+ * nc_hipert_iadiab_eval_lapse:
+ * @iad: a #NcHIPertIAdiab
+ * @tau: $\tau$
+ *
+ * Evaluates the lapse function at a given time $\tau$.
+ *
+ * Returns: the lapse function.
+ */
+gdouble
+nc_hipert_iadiab_eval_lapse (NcHIPertIAdiab *iad, const gdouble tau)
+{
+  return NC_HIPERT_IADIAB_GET_IFACE (iad)->eval_lapse (iad, tau);
+}
+
+/**
+ * nc_hipert_iadiab_eval_tau_hubble:
+ * @iad: a #NcHIPertIAdiab
+ * @tau: $\tau$
+ *
+ * Evaluates the time at where the Hubble radius is equal to the wave number $k$.
+ *
+ * Returns: the time at where the Hubble radius is equal to the wave number $k$.
+ */
+gdouble
+nc_hipert_iadiab_eval_tau_hubble (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+{
+  return NC_HIPERT_IADIAB_GET_IFACE (iad)->eval_tau_hubble (iad, tau, k);
+}
+
+/**
+ * nc_hipert_iadiab_eval_hubble:
+ * @iad: a #NcHIPertIAdiab
+ * @tau: $\tau$
+ *
+ * Evaluates the Hubble function at a given time $\tau$.
+ *
+ * Returns: the Hubble function.
+ */
+gdouble
+nc_hipert_iadiab_eval_hubble (NcHIPertIAdiab *iad, const gdouble tau)
+{
+  return NC_HIPERT_IADIAB_GET_IFACE (iad)->eval_hubble (iad, tau);
+}
+
+/**
  * nc_hipert_adiab_new:
  *
  * Creates a new #NcHIPertAdiab object.
@@ -461,44 +529,127 @@ nc_hipert_adiab_get_k (NcHIPertAdiab *adiab)
   return adiab->k;
 }
 
+typedef struct _NcHIPertAdiabCosmicTimeIntegArg
+{
+  NcHIPertAdiab *adiab;
+  NcmModel *model;
+} NcHIPertAdiabCosmicTimeIntegArg;
+
+static gdouble
+_nc_hipert_adiab_cosmic_time_integ_forward (gdouble t, gdouble tau, void *params)
+{
+  NcHIPertAdiabCosmicTimeIntegArg *arg = (NcHIPertAdiabCosmicTimeIntegArg *) params;
+
+  return nc_hipert_iadiab_eval_lapse (NC_HIPERT_IADIAB (arg->model), tau);
+}
+
+static gdouble
+_nc_hipert_adiab_cosmic_time_integ_backward (gdouble t, gdouble tau, void *params)
+{
+  NcHIPertAdiabCosmicTimeIntegArg *arg = (NcHIPertAdiabCosmicTimeIntegArg *) params;
+
+  return -nc_hipert_iadiab_eval_lapse (NC_HIPERT_IADIAB (arg->model), -tau);
+}
+
+/**
+ * nc_hipert_adiab_eval_cosmic_time:
+ * @adiab: a #NcHIPertAdiab
+ * @model: a #NcmModel
+ * @tau: $\tau$
+ *
+ * Evaluates the cosmic time at a given conformal time $\tau$.
+ *
+ * Returns: the cosmic time.
+ */
+gdouble
+nc_hipert_adiab_eval_cosmic_time (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau)
+{
+  if (ncm_model_ctrl_update (adiab->model_ctrl, model))
+  {
+    NcHIPertAdiabCosmicTimeIntegArg arg;
+
+    arg.adiab = adiab;
+    arg.model = model;
+
+    ncm_ode_spline_prepare (adiab->ctime_forward, &arg);
+    ncm_ode_spline_prepare (adiab->ctime_backward, &arg);
+  }
+
+  if (tau > 0)
+  {
+    NcmSpline *s = ncm_ode_spline_peek_spline (adiab->ctime_forward);
+
+    return ncm_spline_eval (s, tau);
+  }
+  else
+  {
+    NcmSpline *s = ncm_ode_spline_peek_spline (adiab->ctime_backward);
+
+    return -ncm_spline_eval (s, -tau);
+  }
+}
+
+/**
+ * nc_hipert_adiab_eval_delta_critial:
+ * @adiab: a #NcHIPertAdiab
+ * @model: a #NcmModel
+ * @tau: $\tau$
+ *
+ * Evaluates the critical density contrast at a given conformal time $\tau$.
+ *
+ * Returns: the critical density contrast.
+ */
+gdouble
+nc_hipert_adiab_eval_delta_critial (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau)
+{
+  const gdouble tau_hubble = nc_hipert_iadiab_eval_tau_hubble (NC_HIPERT_IADIAB (model), tau, adiab->k);
+  const gdouble E          = nc_hipert_iadiab_eval_hubble (NC_HIPERT_IADIAB (model), tau);
+  const gdouble t_hubble   = nc_hipert_adiab_eval_cosmic_time (adiab, model, -tau_hubble);
+  const gdouble t          = nc_hipert_adiab_eval_cosmic_time (adiab, model, tau);
+  const gdouble delta_t    = t_hubble - t;
+  const gdouble F          = fabs (2.0 * E * delta_t / M_PI);
+  const gdouble cbrt_2     = cbrt (2.0);
+  const gdouble factor1    = cbrt (2.0 + 27.0 * gsl_pow_2 (F) - 3.0 * F * sqrt (12.0 + 81.0 * gsl_pow_2 (F)));
+  const gdouble factor2    = (1.0 + cbrt_2 / factor1 + factor1 / cbrt_2) / (3.0 * F);
+
+  return sqrt (factor2);
+}
+
 static gdouble
 _nc_hipert_eval_powespec_zeta_from_state (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k)
 {
   const gdouble unit = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
-  const gdouble fact = ncm_c_two_pi_2 ();
   gdouble J11, J12, J22;
 
   ncm_csq1d_state_get_J (state, &J11, &J12, &J22);
 
-  return gsl_pow_2 (unit) * gsl_pow_3 (k) * (J11 / 2.0) / fact;
+  return gsl_pow_2 (unit) * (J11 / 2.0);
 }
 
 static gdouble
 _nc_hipert_eval_powespec_Psi_from_state (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k)
 {
   const gdouble unit  = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
-  const gdouble fact  = ncm_c_two_pi_2 ();
   const gdouble tau   = ncm_csq1d_state_get_time (state);
   const gdouble p2Psi = nc_hipert_iadiab_eval_p2Psi (NC_HIPERT_IADIAB (model), tau, k);
   gdouble J11, J12, J22;
 
   ncm_csq1d_state_get_J (state, &J11, &J12, &J22);
 
-  return gsl_pow_2 (unit * p2Psi) * gsl_pow_3 (k) * (J22 / 2.0) / fact;
+  return gsl_pow_2 (unit * p2Psi) * (J22 / 2.0);
 }
 
 static gdouble
 _nc_hipert_eval_powespec_drho_from_state (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k)
 {
   const gdouble unit   = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
-  const gdouble fact   = ncm_c_two_pi_2 ();
   const gdouble tau    = ncm_csq1d_state_get_time (state);
   const gdouble p2drho = nc_hipert_iadiab_eval_p2drho (NC_HIPERT_IADIAB (model), tau, k);
   gdouble J11, J12, J22;
 
   ncm_csq1d_state_get_J (state, &J11, &J12, &J22);
 
-  return gsl_pow_2 (unit * p2drho) * gsl_pow_3 (k) * (J22 / 2.0) / fact;
+  return gsl_pow_2 (unit * p2drho) * (J22 / 2.0);
 }
 
 /**
@@ -597,6 +748,7 @@ nc_hipert_adiab_prepare_spectrum (NcHIPertAdiab *adiab, NcmModel *model, const g
   NcmMatrix *powspec_alpha = ncm_matrix_new (k_array->len, tau_array->len);
   NcmMatrix *powspec_gamma = ncm_matrix_new (k_array->len, tau_array->len);
   const gdouble tauA_i     = ncm_csq1d_get_ti (csq1d);
+  const gdouble tau_f      = g_array_index (tau_array, gdouble, tau_array->len - 1);
   gboolean found;
   gdouble tauA_d;
   guint i;
@@ -621,10 +773,12 @@ nc_hipert_adiab_prepare_spectrum (NcHIPertAdiab *adiab, NcmModel *model, const g
       gdouble zeta_k_tau, alpha_reltol, dgamma_reltol;
       guint j;
 
-      ncm_csq1d_compute_adiab (csq1d, model, tauA_d, &state, &alpha_reltol, &dgamma_reltol);
-
-      ncm_csq1d_set_init_cond_adiab (csq1d, model, tauA_d);
-      ncm_csq1d_prepare (csq1d, model);
+      if (tauA_d < tau_f)
+      {
+        ncm_csq1d_compute_adiab (csq1d, model, tauA_d, &state, &alpha_reltol, &dgamma_reltol);
+        ncm_csq1d_set_init_cond_adiab (csq1d, model, tauA_d);
+        ncm_csq1d_prepare (csq1d, model);
+      }
 
       for (j = 0; j < tau_array->len; j++)
       {
