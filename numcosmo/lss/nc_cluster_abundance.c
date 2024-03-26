@@ -1651,7 +1651,8 @@ nc_cluster_abundance_intp_bin_d2n_bias (NcClusterAbundance *cad, NcHICosmo *cosm
   nc_cluster_redshift_p_bin_limits (clusterz, cosmo, z_obs_lower, z_obs_upper, z_obs_params, &zl, &zu);
   nc_cluster_mass_p_bin_limits (clusterm, cosmo, lnM_obs_lower, lnM_obs_upper, lnM_obs_params, &lnMl, &lnMu);
 
-  ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NCM_DEFAULT_PRECISION, 0.0, &N_bias, &err); 
+  ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NCM_DEFAULT_PRECISION, 0.0, &N_bias, &err);
+
   return N_bias;
 }
 

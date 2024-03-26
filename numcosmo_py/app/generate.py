@@ -122,7 +122,10 @@ class GenerateJpasForecast:
     resample_model: Annotated[
         tuple[float, float, float],
         typer.Option(
-            help="Model for resample.(NcHICosmo:Omegac,NcHICosmo:w,NcHIPrim:ln10e10ASA)",
+            help=(
+                "Model for "
+                "resample.(NcHICosmo:Omegac,NcHICosmo:w,NcHIPrim:ln10e10ASA)"
+            ),
             show_default=True,
         ),
     ] = (0.2612, -1.0, 3.027)
@@ -130,7 +133,10 @@ class GenerateJpasForecast:
     fitting_model: Annotated[
         tuple[float, float, float],
         typer.Option(
-            help="Model for fitting. (NcHICosmo:Omegac,NcHICosmo:w,NcHIPrim:ln10e10ASA)",
+            help=(
+                "Model for fitting. "
+                "(NcHICosmo:Omegac,NcHICosmo:w,NcHIPrim:ln10e10ASA)"
+            ),
             show_default=True,
         ),
     ] = (0.2612, -1.0, 3.027)
@@ -192,7 +198,10 @@ class GenerateJpasForecast:
     survey_area: Annotated[
         float,
         typer.Option(
-            help="Jpas survey area. This option is unvailable for the partial sky cases.",
+            help=(
+                "Jpas survey area. This option is unvailable "
+                "for the partial sky cases."
+            ),
             show_default=True,
             min=0,
         ),
