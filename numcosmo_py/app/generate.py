@@ -23,12 +23,13 @@
 
 """NumCosmo APP subcommands generate experiment files."""
 
-import numpy as np
-from typing import Annotated, Optional, Tuple
+from typing import Annotated, Optional
 import dataclasses
 from pathlib import Path
+
+import numpy as np
 import typer
-from dataclasses import dataclass, field
+
 from numcosmo_py import Ncm
 from numcosmo_py.experiments.planck18 import (
     Planck18Types,
@@ -119,88 +120,81 @@ class GenerateJpasForecast:
     ] = JpasSSCType.NO_SSC
 
     resample_model: Annotated[
-        tuple[float,float,float],
+        tuple[float, float, float],
         typer.Option(
-            help="Model for resample.(NcHICosmo:Omegac,NcHICosmo:w,NcHIPrim:ln10e10ASA)", show_default=True,
+            help="Model for resample.(NcHICosmo:Omegac,NcHICosmo:w,NcHIPrim:ln10e10ASA)",
+            show_default=True,
         ),
-    ] = (0.2612,-1.0,3.027)
-    
+    ] = (0.2612, -1.0, 3.027)
+
     fitting_model: Annotated[
-        tuple[float,float,float],
+        tuple[float, float, float],
         typer.Option(
-            help="Model for fitting. (NcHICosmo:Omegac,NcHICosmo:w,NcHIPrim:ln10e10ASA)", show_default=True,
+            help="Model for fitting. (NcHICosmo:Omegac,NcHICosmo:w,NcHIPrim:ln10e10ASA)",
+            show_default=True,
         ),
-    ] = (0.2612,-1.0,3.027)
+    ] = (0.2612, -1.0, 3.027)
 
     use_fixed_cov: Annotated[
         bool, typer.Option(help="Use fixed covariance matrix.", show_default=True)
     ] = False
-    
+
     z_min: Annotated[
         float,
-        typer.Option(
-            help="Jpas minimum redshift.", show_default=True,
-            min=0
-        ),
+        typer.Option(help="Jpas minimum redshift.", show_default=True, min=0),
     ] = 0.1
-    
+
     z_max: Annotated[
         float,
-        typer.Option(
-            help="Jpas maximum redshift.", show_default=True,
-            max=2.0
-        ),
+        typer.Option(help="Jpas maximum redshift.", show_default=True, max=2.0),
     ] = 0.8
-    
+
     znknots: Annotated[
         int,
-        typer.Option(
-            help="Jpas number of redshift bins.", show_default=True,
-            min=2
-        ),
+        typer.Option(help="Jpas number of redshift bins.", show_default=True, min=2),
     ] = 8
-    
+
     cluster_redshift_type: Annotated[
         Optional[ClusterRedshiftType],
-        typer.Option(
-            help="Cluster photoz relation.", show_default=True
-        ),
+        typer.Option(help="Cluster photoz relation.", show_default=True),
     ] = ClusterRedshiftType.NODIST
-    
+
     lnM_min: Annotated[
         float,
         typer.Option(
-            help="Jpas minimum mass.", show_default=True,
+            help="Jpas minimum mass.",
+            show_default=True,
         ),
-    ] = np.log(10.0) * 14.0
-    
+    ] = (
+        np.log(10.0) * 14.0
+    )
+
     lnM_max: Annotated[
         float,
         typer.Option(
-            help="Jpas maximum mass.", show_default=True,
+            help="Jpas maximum mass.",
+            show_default=True,
         ),
-    ] = np.log(10.0) * 15.0
-    
+    ] = (
+        np.log(10.0) * 15.0
+    )
+
     lnMnknots: Annotated[
         int,
-        typer.Option(
-            help="Jpas number of mass bins.", show_default=True,
-            min=2
-        ),
+        typer.Option(help="Jpas number of mass bins.", show_default=True, min=2),
     ] = 2
-    
+
     cluster_mass_type: Annotated[
         Optional[ClusterMassType],
-        typer.Option(
-            help="Cluster mass-observable relation.", show_default=True
-        ),
+        typer.Option(help="Cluster mass-observable relation.", show_default=True),
     ] = ClusterMassType.NODIST
-    
+
     survey_area: Annotated[
         float,
         typer.Option(
-            help="Jpas survey area. This option is unvailable for the partial sky cases.", show_default=True,
-            min=0
+            help="Jpas survey area. This option is unvailable for the partial sky cases.",
+            show_default=True,
+            min=0,
         ),
     ] = 2959.1
 
