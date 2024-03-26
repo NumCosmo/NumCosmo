@@ -23,23 +23,13 @@
 
 """NumCosmoPy getdist utilities."""
 
-import math
-import dataclasses
-from typing import Optional, Annotated, List
-import typer
-from rich.table import Table
-from rich.text import Text
-import numpy as np
-import matplotlib.pyplot as plt
-import getdist
-import getdist.plots
-
-from typing import Tuple
+from typing import List, Tuple
 import warnings
+
 import re
 import numpy as np
-
 from getdist import MCSamples
+
 from numcosmo_py import Ncm
 
 
