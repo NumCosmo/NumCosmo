@@ -951,3 +951,19 @@ nc_halo_mass_function_peek_multiplicity_function (NcHaloMassFunction *mfp)
  * Returns: $d^2 N / d\ln M d z$.
  */
 
+
+/**
+ * nc_halo_mass_function_peek_survey_area:
+ * @mfp: a #NcHaloMassFunction
+ *
+ * Peeks the survey area.
+ *
+ * Returns: (transfer none): the survey area.
+ */
+gdouble
+nc_halo_mass_function_peek_survey_area (NcHaloMassFunction *mfp)
+{
+  NcHaloMassFunctionPrivate * const self = mfp->priv;
+
+  return self->area_survey;
+}

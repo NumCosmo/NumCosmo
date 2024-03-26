@@ -91,6 +91,7 @@ void nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo
 
 NcmPowspecFilter *nc_halo_mass_function_peek_psf (NcHaloMassFunction *mfp);
 NcMultiplicityFunc *nc_halo_mass_function_peek_multiplicity_function (NcHaloMassFunction *mfp);
+gdouble nc_halo_mass_function_peek_survey_area (NcHaloMassFunction *mfp);
 
 gdouble nc_halo_mass_function_lnM_to_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM);
 gdouble nc_halo_mass_function_lnR_to_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR);
@@ -123,7 +124,7 @@ nc_halo_mass_function_d2n_dzdlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdo
   const gdouble res = ncm_spline2d_eval (mfp->d2NdzdlnM, lnM, z);
   if (res < mfp->mf_lb)
     return mfp->mf_lb;
-  return res
+  return res;
 }
 
 G_END_DECLS

@@ -37,6 +37,8 @@ from numcosmo_py.experiments.planck18 import (
     set_mset_parameters,
 )
 from numcosmo_py.experiments.jpas_forecast24 import (
+    ClusterRedshiftType,
+    ClusterMassType,
     JpasSSCType,
     generate_jpas_forecast_2024,
 )
@@ -158,11 +160,17 @@ class GenerateJpasForecast:
         ),
     ] = 8
     
+    cluster_redshift_type: Annotated[
+        Optional[ClusterRedshiftType],
+        typer.Option(
+            help="Cluster photoz relation.", show_default=True
+        ),
+    ] = ClusterRedshiftType.NODIST
+    
     lnM_min: Annotated[
         float,
         typer.Option(
             help="Jpas minimum mass.", show_default=True,
-            min= np.log(10) * 14.0
         ),
     ] = np.log(10.0) * 14.0
     
@@ -170,7 +178,6 @@ class GenerateJpasForecast:
         float,
         typer.Option(
             help="Jpas maximum mass.", show_default=True,
-            max=np.log(10) * 16.0
         ),
     ] = np.log(10.0) * 15.0
     
@@ -181,6 +188,13 @@ class GenerateJpasForecast:
             min=2
         ),
     ] = 2
+    
+    cluster_mass_type: Annotated[
+        Optional[ClusterMassType],
+        typer.Option(
+            help="Cluster mass-observable relation.", show_default=True
+        ),
+    ] = ClusterMassType.NODIST
     
     survey_area: Annotated[
         float,
@@ -205,9 +219,11 @@ class GenerateJpasForecast:
             z_min=self.z_min,
             z_max=self.z_max,
             znknots=self.znknots,
+            cluster_redshift_type=self.cluster_redshift_type,
             lnM_min=self.lnM_min,
             lnM_max=self.lnM_max,
             lnMnknots=self.lnMnknots,
+            cluster_mass_type=self.cluster_mass_type,
             use_fixed_cov=self.use_fixed_cov,
             fitting_Sij_type=self.fitting_sky_cut,
             resample_Sij_type=self.resample_sky_cut,
