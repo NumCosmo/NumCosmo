@@ -52,10 +52,10 @@ def mcat_to_mcsamples(
     collapse: bool = False,
 ) -> Tuple[MCSamples, np.ndarray, np.ndarray]:
     """Converts a Ncm.MSetCatalog to a getdist.MCSamples object."""
-    
+
     nchains: int = mcat.nchains()
     max_time: int = mcat.max_time()
-    
+
     if burnin % nchains != 0:
         warnings.warn(
             f"burnin ({burnin}) is not a multiple of nchains ({nchains}). "
@@ -74,7 +74,7 @@ def mcat_to_mcsamples(
             for j in range(nchains)
         ]
     )
-    
+
     params: List[str] = [mcat.col_symb(i) for i in range(mcat.ncols())]
     m2lnL: int = mcat.get_m2lnp_var()  # pylint:disable=invalid-name
     posterior: np.ndarray = 0.5 * rows[:, m2lnL]
