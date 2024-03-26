@@ -37,6 +37,7 @@
 
 #include "lss/nc_cluster_abundance.h"
 #include "lss/nc_cluster_mass_benson.h"
+#include "nc_hiprim.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_integrate.h"
@@ -584,6 +585,16 @@ _nc_cluster_abundance_z_intp_lnM_intp_bin_N_integrand (gdouble lnM, gdouble z, g
   const gdouble z_intp            = nc_cluster_redshift_intp_bin (obs_data->clusterz, obs_data->cosmo, lnM, z, obs_data->z_obs_lower, obs_data->z_obs_upper, obs_data->z_obs_params);
   const gdouble lnM_intp          = nc_cluster_mass_intp_bin (obs_data->clusterm, obs_data->cosmo, lnM, z, obs_data->lnM_obs_lower, obs_data->lnM_obs_upper, obs_data->lnM_obs_params);
   const gdouble d2NdzdlnM         = nc_halo_mass_function_d2n_dzdlnM (obs_data->cad->mfp, obs_data->cosmo, lnM, z);
+
+  if (z_intp * lnM_intp * d2NdzdlnM < 0.0)
+  {
+    ncm_model_params_log_all (NCM_MODEL (obs_data->cosmo));
+    ncm_model_params_log_all (ncm_model_peek_submodel_by_mid (NCM_MODEL (obs_data->cosmo), nc_hiprim_id ()));
+
+    g_error ("_nc_cluster_abundance_z_intp_lnM_intp_bin_N_integrand: negative integrand at: "
+             "lnM % 22.15g z % 22.15g z_intp % 22.15g lnM_intp % 22.15g d2NdzdlnM % 22.15g\n",
+             lnM, z, z_intp, lnM_intp, d2NdzdlnM);
+  }
 
   return z_intp * lnM_intp * d2NdzdlnM;
 }

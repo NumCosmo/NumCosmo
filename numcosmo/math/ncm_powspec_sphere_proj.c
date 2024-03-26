@@ -404,14 +404,14 @@ ncm_powspec_sphere_proj_class_init (NcmPowspecSphereProjClass *klass)
                                    g_param_spec_double ("reltol",
                                                         NULL,
                                                         "Relative tolerance for calibration",
-                                                        GSL_DBL_EPSILON, 1.0, 1.0e-5,
+                                                        GSL_DBL_EPSILON, 1.0, 1.0e-9,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_RELTOL_Z,
                                    g_param_spec_double ("reltol-z",
                                                         NULL,
                                                         "Relative tolerance for calibration in the redshift direction",
-                                                        GSL_DBL_EPSILON, 1.0, 1.0e-6,
+                                                        GSL_DBL_EPSILON, 1.0, 1.0e-9,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_POWERSPECTRUM,
