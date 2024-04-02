@@ -1552,7 +1552,7 @@ ncm_fftlog_calibrate_size_gsl (NcmFftlog *fftlog, gsl_function *Fk, const gdoubl
   ncm_vector_free (eval_lnr_vec);
   g_clear_pointer (&s, g_free);
 
-  if (lreltol > reltol)
+  if ((lreltol > reltol) && (self->N < 1000))
     ncm_fftlog_calibrate_size_gsl (fftlog, Fk, reltol);
 }
 

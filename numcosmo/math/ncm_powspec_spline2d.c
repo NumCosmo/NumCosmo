@@ -56,6 +56,8 @@ typedef struct _NcmPowspecSpline2dPrivate
 {
   /*< private > */
   NcmSpline2d *spline2d;
+  gdouble intern_lnkmin;
+  gdouble intern_lnkmax;
 } NcmPowspecSpline2dPrivate;
 
 struct _NcmPowspecSpline2d
@@ -76,7 +78,9 @@ ncm_powspec_spline2d_init (NcmPowspecSpline2d *ps_s2d)
 {
   NcmPowspecSpline2dPrivate * const self = ncm_powspec_spline2d_get_instance_private (ps_s2d);
 
-  self->spline2d = NULL;
+  self->spline2d      = NULL;
+  self->intern_lnkmin = 0.0;
+  self->intern_lnkmax = 0.0;
 }
 
 static void
@@ -149,8 +153,26 @@ _ncm_powspec_spline2d_eval (NcmPowspec *powspec, NcmModel *model, const gdouble 
 {
   NcmPowspecSpline2d *ps_s2d             = NCM_POWSPEC_SPLINE2D (powspec);
   NcmPowspecSpline2dPrivate * const self = ncm_powspec_spline2d_get_instance_private (ps_s2d);
+  const gdouble lnk                      = log (k);
 
-  return ncm_spline2d_eval (self->spline2d, z, k);
+  if (lnk < self->intern_lnkmin)
+  {
+    const gdouble kmin  = exp (self->intern_lnkmin);
+    const gdouble Pkmin = exp (ncm_spline2d_eval (self->spline2d, z, self->intern_lnkmin));
+
+    return Pkmin * pow (k / kmin, 3.0);
+  }
+  else if (lnk > self->intern_lnkmax)
+  {
+    const gdouble kmax  = exp (self->intern_lnkmax);
+    const gdouble Pkmax = exp (ncm_spline2d_eval (self->spline2d, z, self->intern_lnkmax));
+
+    return Pkmax * exp (-1.0 * (k / kmax - 1.0));
+  }
+  else
+  {
+    return exp (ncm_spline2d_eval (self->spline2d, z, lnk));
+  }
 }
 
 static void
@@ -167,7 +189,7 @@ _ncm_powspec_spline2d_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdou
   {
     const gdouble k_i = ncm_vector_get (k, i);
 
-    ncm_vector_set (Pk, i, ncm_spline2d_eval (self->spline2d, z, k_i));
+    ncm_vector_set (Pk, i, _ncm_powspec_spline2d_eval (powspec, model, z, k_i));
   }
 }
 
@@ -296,11 +318,16 @@ ncm_powspec_spline2d_set_spline2d (NcmPowspecSpline2d *ps_s2d, NcmSpline2d *spli
   self->spline2d = ncm_spline2d_ref (spline2d);
 
   {
-    NcmVector *z_vec = ncm_spline2d_peek_xv (self->spline2d);
-    NcmVector *k_vec = ncm_spline2d_peek_yv (self->spline2d);
+    NcmVector *z_vec     = ncm_spline2d_peek_xv (self->spline2d);
+    NcmVector *lnk_vec   = ncm_spline2d_peek_yv (self->spline2d);
+    const gdouble lnkmin = ncm_vector_get (lnk_vec, 0);
+    const gdouble lnkmax = ncm_vector_get (lnk_vec, ncm_vector_len (lnk_vec) - 1);
 
-    ncm_powspec_set_kmin (NCM_POWSPEC (ps_s2d), ncm_vector_get (k_vec, 0));
-    ncm_powspec_set_kmax (NCM_POWSPEC (ps_s2d), ncm_vector_get (k_vec, ncm_vector_len (k_vec) - 1));
+    self->intern_lnkmin = lnkmin;
+    self->intern_lnkmax = lnkmax;
+
+    ncm_powspec_set_kmin (NCM_POWSPEC (ps_s2d), exp (lnkmin));
+    ncm_powspec_set_kmax (NCM_POWSPEC (ps_s2d), exp (lnkmax));
 
     ncm_powspec_set_zi (NCM_POWSPEC (ps_s2d), ncm_vector_get (z_vec, 0));
     ncm_powspec_set_zf (NCM_POWSPEC (ps_s2d), ncm_vector_get (z_vec, ncm_vector_len (z_vec) - 1));

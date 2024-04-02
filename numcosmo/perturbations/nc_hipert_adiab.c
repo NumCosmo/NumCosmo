@@ -585,7 +585,7 @@ nc_hipert_adiab_eval_cosmic_time (NcHIPertAdiab *adiab, NcmModel *model, const g
   {
     NcmSpline *s = ncm_ode_spline_peek_spline (adiab->ctime_backward);
 
-    return -ncm_spline_eval (s, -tau);
+    return ncm_spline_eval (s, -tau);
   }
 }
 
@@ -612,11 +612,15 @@ nc_hipert_adiab_eval_delta_critial (NcHIPertAdiab *adiab, NcmModel *model, const
   const gdouble factor1    = cbrt (2.0 + 27.0 * gsl_pow_2 (F) - 3.0 * F * sqrt (12.0 + 81.0 * gsl_pow_2 (F)));
   const gdouble factor2    = (1.0 + cbrt_2 / factor1 + factor1 / cbrt_2) / (3.0 * F);
 
-  return sqrt (factor2);
+  /* printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", tau, tau_hubble, t, t_hubble, fabs (E * delta_t), 5.0 * t_hubble / t); */
+
+  /*return sqrt (factor2); */
+
+  return 5.0 * t_hubble / t;
 }
 
 static gdouble
-_nc_hipert_eval_powespec_zeta_from_state (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k)
+_nc_hipert_eval_powspec_zeta_from_state (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k)
 {
   const gdouble unit = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
   gdouble J11, J12, J22;
@@ -627,7 +631,7 @@ _nc_hipert_eval_powespec_zeta_from_state (NcHIPertAdiab *adiab, NcmModel *model,
 }
 
 static gdouble
-_nc_hipert_eval_powespec_Psi_from_state (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k)
+_nc_hipert_eval_powspec_Psi_from_state (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k)
 {
   const gdouble unit  = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
   const gdouble tau   = ncm_csq1d_state_get_time (state);
@@ -640,7 +644,7 @@ _nc_hipert_eval_powespec_Psi_from_state (NcHIPertAdiab *adiab, NcmModel *model, 
 }
 
 static gdouble
-_nc_hipert_eval_powespec_drho_from_state (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k)
+_nc_hipert_eval_powspec_drho_from_state (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k)
 {
   const gdouble unit   = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
   const gdouble tau    = ncm_csq1d_state_get_time (state);
@@ -676,7 +680,7 @@ nc_hipert_adiab_eval_powspec_zeta_at (NcHIPertAdiab *adiab, NcmModel *model, con
 
   ncm_csq1d_eval_at (NCM_CSQ1D (adiab), tau, &state);
 
-  return _nc_hipert_eval_powespec_zeta_from_state (adiab, model, &state, k);
+  return _nc_hipert_eval_powspec_zeta_from_state (adiab, model, &state, k);
 }
 
 /**
@@ -701,7 +705,7 @@ nc_hipert_adiab_eval_powspec_Psi_at (NcHIPertAdiab *adiab, NcmModel *model, cons
 
   ncm_csq1d_eval_at (NCM_CSQ1D (adiab), tau, &state);
 
-  return _nc_hipert_eval_powespec_Psi_from_state (adiab, model, &state, k);
+  return _nc_hipert_eval_powspec_Psi_from_state (adiab, model, &state, k);
 }
 
 /**
@@ -726,7 +730,7 @@ nc_hipert_adiab_eval_powspec_drho_at (NcHIPertAdiab *adiab, NcmModel *model, con
 
   ncm_csq1d_eval_at (NCM_CSQ1D (adiab), tau, &state);
 
-  return _nc_hipert_eval_powespec_drho_from_state (adiab, model, &state, k);
+  return _nc_hipert_eval_powspec_drho_from_state (adiab, model, &state, k);
 }
 
 /**
@@ -859,15 +863,20 @@ _nc_hipert_adiab_eval_powspec_func (NcHIPertAdiab *adiab, NcmModel *model,
         state.alpha = ncm_spline2d_eval (adiab->powspec_alpha, tau, k);
         state.gamma = ncm_spline2d_eval (adiab->powspec_gamma, tau, k);
 
-        ncm_matrix_set (powspec_mat, j, i, eval_from_state (adiab, model, &state, k));
+        ncm_matrix_set (powspec_mat, j, i, log (eval_from_state (adiab, model, &state, k)));
       }
     }
 
     {
       NcmSpline2d *powspec_spline = ncm_spline2d_bicubic_notaknot_new ();
+      NcmVector *lnk_vec          = ncm_vector_dup (k_vec);
       NcmPowspecSpline2d *powspec;
+      guint i;
 
-      ncm_spline2d_set (powspec_spline, tau_vec, k_vec, powspec_mat, TRUE);
+      for (i = 0; i < k_len; i++)
+        ncm_vector_set (lnk_vec, i, log (ncm_vector_get (lnk_vec, i)));
+
+      ncm_spline2d_set (powspec_spline, tau_vec, lnk_vec, powspec_mat, TRUE);
 
       powspec = ncm_powspec_spline2d_new (powspec_spline);
 
@@ -890,7 +899,7 @@ _nc_hipert_adiab_eval_powspec_func (NcHIPertAdiab *adiab, NcmModel *model,
 NcmPowspecSpline2d *
 nc_hipert_adiab_eval_powspec_zeta (NcHIPertAdiab *adiab, NcmModel *model)
 {
-  return _nc_hipert_adiab_eval_powspec_func (adiab, model, _nc_hipert_eval_powespec_zeta_from_state);
+  return _nc_hipert_adiab_eval_powspec_func (adiab, model, _nc_hipert_eval_powspec_zeta_from_state);
 }
 
 /**
@@ -905,7 +914,7 @@ nc_hipert_adiab_eval_powspec_zeta (NcHIPertAdiab *adiab, NcmModel *model)
 NcmPowspecSpline2d *
 nc_hipert_adiab_eval_powspec_Psi (NcHIPertAdiab *adiab, NcmModel *model)
 {
-  return _nc_hipert_adiab_eval_powspec_func (adiab, model, _nc_hipert_eval_powespec_Psi_from_state);
+  return _nc_hipert_adiab_eval_powspec_func (adiab, model, _nc_hipert_eval_powspec_Psi_from_state);
 }
 
 /**
@@ -920,6 +929,6 @@ nc_hipert_adiab_eval_powspec_Psi (NcHIPertAdiab *adiab, NcmModel *model)
 NcmPowspecSpline2d *
 nc_hipert_adiab_eval_powspec_drho (NcHIPertAdiab *adiab, NcmModel *model)
 {
-  return _nc_hipert_adiab_eval_powspec_func (adiab, model, _nc_hipert_eval_powespec_drho_from_state);
+  return _nc_hipert_adiab_eval_powspec_func (adiab, model, _nc_hipert_eval_powspec_drho_from_state);
 }
 

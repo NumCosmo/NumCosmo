@@ -545,7 +545,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
       Fdummy_z.function = &_ncm_powspec_filter_dummy_z;
       Fdummy_z.params   = &arg;
 
-      ncm_spline_set_func (dummy_z, NCM_SPLINE_FUNCTION_SPLINE, &Fdummy_z, psf->zi, psf->zf, 0, psf->reltol_z);
+      ncm_spline_set_func (dummy_z, NCM_SPLINE_FUNCTION_SPLINE, &Fdummy_z, psf->zi, psf->zf, 500, psf->reltol_z);
 
       z_vec = ncm_spline_get_xv (dummy_z);
       N_z   = ncm_vector_len (z_vec);
