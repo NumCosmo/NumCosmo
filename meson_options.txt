@@ -131,3 +131,10 @@ option(
        value: false,
        description: 'Enable MPI debug messages',
 )
+
+option(
+       'mpi',
+       type: 'feature',
+       value: 'auto',
+       description: 'Enable MPI support',
+)
