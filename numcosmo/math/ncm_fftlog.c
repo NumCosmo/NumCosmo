@@ -133,6 +133,7 @@ typedef struct _NcmFftlogPrivate
   gint N_2;
   gint Nf;
   gint Nf_2;
+  guint max_n;
   guint nderivs;
   guint pad;
   gdouble lnk0;
@@ -171,6 +172,7 @@ enum
   PROP_LNK0,
   PROP_LR,
   PROP_N,
+  PROP_MAX_N,
   PROP_PAD,
   PROP_NORING,
   PROP_NAME,
@@ -203,6 +205,7 @@ ncm_fftlog_init (NcmFftlog *fftlog)
   self->N_2                  = 0;
   self->Nf                   = 0;
   self->Nf_2                 = 0;
+  self->max_n                = 0;
   self->pad                  = 0;
   self->noring               = FALSE;
   self->prepared             = FALSE;
@@ -252,6 +255,9 @@ _ncm_fftlog_set_property (GObject *object, guint prop_id, const GValue *value, G
       break;
     case PROP_N:
       ncm_fftlog_set_size (fftlog, g_value_get_uint (value));
+      break;
+    case PROP_MAX_N:
+      ncm_fftlog_set_max_size (fftlog, g_value_get_uint (value));
       break;
     case PROP_PAD:
       ncm_fftlog_set_padding (fftlog, g_value_get_double (value));
@@ -307,6 +313,9 @@ _ncm_fftlog_get_property (GObject *object, guint prop_id, GValue *value, GParamS
       break;
     case PROP_N:
       g_value_set_uint (value, ncm_fftlog_get_size (fftlog));
+      break;
+    case PROP_MAX_N:
+      g_value_set_uint (value, ncm_fftlog_get_max_size (fftlog));
       break;
     case PROP_PAD:
       g_value_set_double (value, ncm_fftlog_get_padding (fftlog));
@@ -461,6 +470,21 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
+   * NcmFftlog:max-n:
+   *
+   * The maximum number of knots in the fundamental interval.
+   * This limit is used when calibrating the number of knots.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_MAX_N,
+                                   g_param_spec_uint ("max-n",
+                                                      NULL,
+                                                      "Maximum number of knots",
+                                                      0, G_MAXUINT, 100000,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
    * NcmFftlog:padding:
    *
    * The padding percentage of the number of knots $N$.
@@ -515,6 +539,12 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                          "Whether to use evaluation interval",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFftlog:use-smooth-padding:
+   *
+   * Whether to use a smooth padding
+   */
   g_object_class_install_property (object_class,
                                    PROP_SMOOTH_PADDING,
                                    g_param_spec_boolean ("use-smooth-padding",
@@ -522,6 +552,13 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                          "Whether to use a smooth padding",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFftlog:smooth-padding-scale:
+   *
+   * Log10 of the smoothing scale.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_SMOOTH_PADDING_SCALE,
                                    g_param_spec_double ("smooth-padding-scale",
@@ -529,6 +566,13 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                         "Log10 of the smoothing scale",
                                                         -G_MAXDOUBLE, +G_MAXDOUBLE, -200.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFftlog:eval-r-min:
+   *
+   * The minimum value of the evaluation interval.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_EVAL_R_MIN,
                                    g_param_spec_double ("eval-r-min",
@@ -536,6 +580,13 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                         "Evaluation r_min",
                                                         0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFftlog:eval-r-max:
+   *
+   * The maximum value of the evaluation interval.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_EVAL_R_MAX,
                                    g_param_spec_double ("eval-r-max",
@@ -824,6 +875,37 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
   }
 
 #endif /* HAVE_FFTW3 */
+}
+
+/**
+ * ncm_fftlog_set_max_size:
+ * @fftlog: a #NcmFftlog
+ * @max_n: maximum number of knots
+ *
+ * Sets the maximum number of knots in the fundamental interval.
+ *
+ */
+void
+ncm_fftlog_set_max_size (NcmFftlog *fftlog, guint max_n)
+{
+  NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
+
+  self->max_n = max_n;
+}
+
+/**
+ * ncm_fftlog_get_max_size:
+ * @fftlog: a #NcmFftlog
+ *
+ * Gets the maximum number of knots in the fundamental interval.
+ *
+ */
+guint
+ncm_fftlog_get_max_size (NcmFftlog *fftlog)
+{
+  NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
+
+  return self->max_n;
 }
 
 /**
@@ -1552,7 +1634,16 @@ ncm_fftlog_calibrate_size_gsl (NcmFftlog *fftlog, gsl_function *Fk, const gdoubl
   ncm_vector_free (eval_lnr_vec);
   g_clear_pointer (&s, g_free);
 
-  if ((lreltol > reltol) && (self->N < 1000))
+
+  if (self->N > (gint) self->max_n)
+  {
+    g_warning ("ncm_fftlog_calibrate_size_gsl: maximum number of knots reached. "
+               "Requested precision %e, achieved precision %e.", reltol, lreltol);
+
+    return;
+  }
+
+  if (lreltol > reltol)
     ncm_fftlog_calibrate_size_gsl (fftlog, Fk, reltol);
 }
 
