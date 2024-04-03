@@ -157,17 +157,16 @@ _ncm_powspec_spline2d_eval (NcmPowspec *powspec, NcmModel *model, const gdouble 
 
   if (lnk < self->intern_lnkmin)
   {
-    const gdouble kmin  = exp (self->intern_lnkmin);
-    const gdouble Pkmin = exp (ncm_spline2d_eval (self->spline2d, z, self->intern_lnkmin));
+    const gdouble lnPkmin = ncm_spline2d_eval (self->spline2d, z, self->intern_lnkmin);
 
-    return Pkmin * pow (k / kmin, 3.0);
+    return exp (lnPkmin + 3.0 * (lnk - self->intern_lnkmin));
   }
   else if (lnk > self->intern_lnkmax)
   {
-    const gdouble kmax  = exp (self->intern_lnkmax);
-    const gdouble Pkmax = exp (ncm_spline2d_eval (self->spline2d, z, self->intern_lnkmax));
+    const gdouble kmax    = exp (self->intern_lnkmax);
+    const gdouble lnPkmax = ncm_spline2d_eval (self->spline2d, z, self->intern_lnkmax);
 
-    return Pkmax * exp (-1.0 * (k / kmax - 1.0));
+    return exp (lnPkmax - 1.0 * (k / kmax - 1.0));
   }
   else
   {

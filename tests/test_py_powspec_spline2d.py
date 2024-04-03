@@ -42,16 +42,16 @@ def _f(z, k):
 def fixture_Pk2d() -> Ncm.Spline2d:
     """Fixture for k array."""
     ka = np.geomspace(1.0e-5, 1.0e1, 1000)
-    za = np.linspace(0, 1, 50)
+    za = np.linspace(0.0, 1.0, 50)
 
     za_v, ka_v = np.meshgrid(za, ka)
 
-    Pk = _f(za_v, ka_v)
+    Pk = np.log(_f(za_v, ka_v))
 
     Pk2d = Ncm.Spline2dBicubic(
         spline=Ncm.SplineCubicNotaknot.new(),
         x_vector=Ncm.Vector.new_array(za.tolist()),
-        y_vector=Ncm.Vector.new_array(ka.tolist()),
+        y_vector=Ncm.Vector.new_array(np.log(ka).tolist()),
         z_matrix=Ncm.Matrix.new_array(Pk.flatten().tolist(), len(za)),
     )
 
@@ -81,10 +81,10 @@ def test_eval(Pk2d: Ncm.Spline2d) -> None:
     s2d = ps.peek_spline2d()
 
     za = s2d.peek_xv().dup_array()
-    ka = s2d.peek_yv().dup_array()
+    ka = np.exp(s2d.peek_yv().dup_array())
 
     ps_Pka = np.array([[ps.eval(None, z, k) for k in ka] for z in za])
-    Pka = np.array([[s2d.eval(z, k) for k in ka] for z in za])
+    Pka = np.array([np.exp([s2d.eval(z, np.log(k)) for k in ka]) for z in za])
     fa = np.array([[_f(z, k) for k in ka] for z in za])
 
     assert_allclose(ps_Pka, Pka)
@@ -102,9 +102,9 @@ def test_eval_vec(Pk2d: Ncm.Spline2d) -> None:
     s2d = ps.peek_spline2d()
 
     za = s2d.peek_xv().dup_array()
-    ka = s2d.peek_yv().dup_array()
+    ka = np.exp(s2d.peek_yv().dup_array())
 
-    kv = Ncm.Vector.new_array(ka)
+    kv = Ncm.Vector.new_array(ka.tolist())
     Pkv = kv.dup()
 
     def _evec(z):
@@ -112,7 +112,7 @@ def test_eval_vec(Pk2d: Ncm.Spline2d) -> None:
         return Pkv.dup_array()
 
     ps_Pka = np.array([_evec(z) for z in za])
-    Pka = np.array([[s2d.eval(z, k) for k in ka] for z in za])
+    Pka = np.array([np.exp([s2d.eval(z, np.log(k)) for k in ka]) for z in za])
     fa = np.array([[_f(z, k) for k in ka] for z in za])
 
     assert_allclose(ps_Pka, Pka)
