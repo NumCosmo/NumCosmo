@@ -360,26 +360,39 @@ flint_req = '>= 3.0'
 #######################################################################################
 message('Checking for MPI')
 
-mpi_c_dep = dependency(
-  'mpi',
-  language: 'c',
-  required: false,
-)
+if get_option('mpi').auto() or get_option('mpi').enabled()
 
-mpi_fortran_dep = dependency(
-  'mpi',
-  language: 'fortran',
-  required: false,
-)
+  mpi_c_dep = dependency(
+    'mpi',
+    language: 'c',
+    required: false,
+  )
 
-# MPICH is not found by the mpi dependency, so we need to check for it manually
-if not mpi_c_dep.found()
-  mpi_c_dep = dependency('mpich', required: false)
-endif
+  mpi_fortran_dep = dependency(
+    'mpi',
+    language: 'fortran',
+    required: false,
+  )
 
-# MPICH is not found by the mpi dependency, so we need to check for it manually
-if not mpi_fortran_dep.found()
-  mpi_fortran_dep = dependency('mpichf90', required: false)
+  # MPICH is not found by the mpi dependency, so we need to check for it manually
+  if (not mpi_c_dep.found())
+    mpi_c_dep = dependency('mpich', required: false)
+  endif
+
+  # MPICH is not found by the mpi dependency, so we need to check for it manually
+  if (not mpi_fortran_dep.found())
+    mpi_fortran_dep = dependency('mpichf90', required: false)
+  endif
+
+  if get_option('mpi').enabled() and not mpi_c_dep.found()
+    error(
+      '''MPI support requested but not found. Both attempts to locate MPI dependency, \
+      using Meson's generic finder and MPICH specifically, failed.''',
+    )
+  endif
+else
+  mpi_c_dep = not_found
+  mpi_fortran_dep = not_found
 endif
 
 if mpi_c_dep.found()
