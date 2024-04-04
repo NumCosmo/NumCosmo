@@ -685,7 +685,10 @@ ncm_data_gauss_cov_compute_cov (NcmDataGaussCov *gauss, NcmMSet *mset, gboolean 
   if (gauss_cov_class->cov_func != NULL)
   {
     NcmMatrix *cov     = ncm_matrix_dup (self->cov);
-    gboolean l_updated = gauss_cov_class->cov_func (gauss, mset, cov);
+    gboolean l_updated;
+
+    ncm_data_prepare (NCM_DATA(gauss), mset);
+    l_updated = gauss_cov_class->cov_func (gauss, mset, cov);
 
     if (updated != NULL)
       *updated = l_updated;

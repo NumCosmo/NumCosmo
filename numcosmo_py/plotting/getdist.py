@@ -25,10 +25,11 @@
 
 from typing import List, Tuple
 import warnings
+
 import re
 import numpy as np
-
 from getdist import MCSamples
+
 from numcosmo_py import Ncm
 
 

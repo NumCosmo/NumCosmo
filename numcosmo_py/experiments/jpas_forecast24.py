@@ -24,7 +24,6 @@
 """Factory functions to generate J-Pas 2024 forcasting likelihood and models
 """
 
-from typing import Optional
 from enum import Enum
 import numpy as np
 
@@ -41,55 +40,18 @@ class JpasSSCType(str, Enum):
     GUARANTEED = "guaranteed"
 
 
-class JpasModelTypes(str, Enum):
-    """J-Pas 2024 mass model types."""
+class ClusterMassType(str, Enum):
+    """Mass-observable relation types."""
 
-    FIDUCIAL = "fiducial"
-    EXTREME1 = "extreme1"
-    EXTREME2 = "extreme2"
-    EXTREME3 = "extreme3"
-    EXTREME4 = "extreme4"
-    EXTREME5 = "extreme5"
-    EXTREME6 = "extreme6"
+    NODIST = "nodist"
+    ASCASO = "ascaso"
 
 
-MODEL_PARAMS: dict[str, dict[str, float]] = {
-    JpasModelTypes.FIDUCIAL: {
-        "NcHICosmo:w": -1.0,
-        "NcHICosmo:Omegac": 0.2612,
-        "NcHIPrim:ln10e10ASA": 3.02745,
-    },
-    JpasModelTypes.EXTREME1: {
-        "NcHICosmo:w": 0.0,
-        "NcHICosmo:Omegac": 0.8,
-        "NcHIPrim:ln10e10ASA": 4.5,
-    },
-    JpasModelTypes.EXTREME2: {
-        "NcHICosmo:w": -4.0,
-        "NcHICosmo:Omegac": 0.8,
-        "NcHIPrim:ln10e10ASA": 4.5,
-    },
-    JpasModelTypes.EXTREME3: {
-        "NcHICosmo:w": 0.0,
-        "NcHICosmo:Omegac": 0.8,
-        "NcHIPrim:ln10e10ASA": 2.5,
-    },
-    JpasModelTypes.EXTREME4: {
-        "NcHICosmo:w": -4.0,
-        "NcHICosmo:Omegac": 0.8,
-        "NcHIPrim:ln10e10ASA": 2.5,
-    },
-    JpasModelTypes.EXTREME5: {
-        "NcHICosmo:w": -4.0,
-        "NcHICosmo:Omegac": 0.2,
-        "NcHIPrim:ln10e10ASA": 4.5,
-    },
-    JpasModelTypes.EXTREME6: {
-        "NcHICosmo:w": -4.0,
-        "NcHICosmo:Omegac": 0.2,
-        "NcHIPrim:ln10e10ASA": 2.5,
-    },
-}
+class ClusterRedshiftType(str, Enum):
+    """Photoz types."""
+
+    NODIST = "nodist"
+    GAUSS = "gauss"
 
 
 def create_zbins_kernels(
@@ -120,11 +82,25 @@ def create_zbins_kernels(
     return kernel_z, kernels_T, z_bins_knots
 
 
-def create_lnM_bins() -> np.ndarray:
+def create_lnM_bins(
+    lnM_min: float = np.log(10.0) * 14.0,
+    lnM_max: float = np.log(10.0) * 15.0,
+    nknots: int = 2,
+) -> np.ndarray:
     """Create the mass bins for the J-Pas 2024 forecast."""
-    lnM_bins_knots = np.linspace(np.log(10.0) * 14.0, np.log(10.0) * 15.0, 2)
+    lnM_bins_knots = np.linspace(lnM_min, lnM_max, nknots)
 
     return lnM_bins_knots
+
+
+def survey_area(sky_cut: JpasSSCType):
+    """Return the survey area for the J-Pas 2024 forecast."""
+    if sky_cut == JpasSSCType.FULL:
+        survey_area0 = 20009.97
+    elif sky_cut == JpasSSCType.GUARANTEED:
+        survey_area0 = 2959.1
+
+    return survey_area0
 
 
 def create_mask_guaranteed(nside: int = 512) -> np.ndarray:
@@ -331,24 +307,87 @@ def create_covariance_S(
     return S
 
 
-def _set_mset_params(mset: Ncm.MSet, model_type: JpasModelTypes) -> None:
+def create_cluster_mass(
+    cluster_mass_type: ClusterMassType,
+) -> Nc.ClusterMass:
+    """Create the cluster mass-observable relation."""
+    if cluster_mass_type == ClusterMassType.NODIST:
+        cluster_m = Nc.ClusterMassNodist(
+            lnM_min=np.log(10) * 14.0, lnM_max=np.log(10) * 16.0
+        )
+    elif cluster_mass_type == ClusterMassType.ASCASO:
+        cluster_m = Nc.ClusterMassAscaso(
+            lnRichness_min=0.0, lnRichness_max=np.log(10) * 2.5, z0=0
+        )
+        cluster_m.param_set_by_name("mup0", 3.207)
+        cluster_m.param_set_by_name("mup1", 0.993)
+        cluster_m.param_set_by_name("mup2", 0)
+        cluster_m.param_set_by_name("sigmap0", 0.456)
+        cluster_m.param_set_by_name(
+            "sigmap1", -0.169
+        )  # valor do murata e 0 valor do SRD
+        cluster_m.param_set_by_name("sigmap2", 0)
+        # [2.996 , 5.393 , 5]
+    else:
+        raise ValueError(f"Invalid cluster mass type: {cluster_mass_type}")
+
+    return cluster_m
+
+
+def create_cluster_redshift(
+    cluster_redshift_type: ClusterRedshiftType,
+) -> Nc.ClusterRedshift:
+    """Create the cluster photoz relation."""
+    if cluster_redshift_type == ClusterRedshiftType.NODIST:
+        cluster_z = Nc.ClusterRedshiftNodist(z_min=0.0, z_max=2.0)
+    elif cluster_redshift_type == ClusterRedshiftType.GAUSS:
+        cluster_z = Nc.ClusterPhotozGaussGlobal(pz_min=0.0, pz_max=1.0)
+        cluster_z.param_set_by_name("z-bias", 0)
+        cluster_z.param_set_by_name("sigma0", 0.1)  # year1 0.003 year10
+
+    else:
+        raise ValueError(f"Invalid cluster redshift type: {cluster_redshift_type}")
+
+    return cluster_z
+
+
+def _set_mset_params(mset: Ncm.MSet, params: tuple[float, float, float]) -> None:
     """Set the parameters for the mass model."""
-    for param, value in MODEL_PARAMS[model_type].items():
-        pi = mset.fparam_get_pi_by_name(param)
-        mset.param_set(pi.mid, pi.pid, value)
+    param_names = ["NcHICosmo:Omegac", "NcHICosmo:w", "NcHIPrim:ln10e10ASA"]
+    for i, param_name in enumerate(param_names):
+        pi = mset.fparam_get_pi_by_name(param_name)
+        mset.param_set(pi.mid, pi.pid, params[i])
 
 
 def generate_jpas_forecast_2024(
+    area: float = 2959.1,
+    z_min: float = 0.1,
+    z_max: float = 0.8,
+    znknots: int = 8,
+    cluster_redshift_type: ClusterRedshiftType = ClusterRedshiftType.NODIST,
+    lnM_min: float = np.log(10.0) * 14.0,
+    lnM_max: float = np.log(10.0) * 15.0,
+    lnMnknots: int = 2,
+    cluster_mass_type: ClusterMassType = ClusterMassType.NODIST,
     use_fixed_cov: bool = False,
-    model_for_resample: JpasModelTypes = JpasModelTypes.FIDUCIAL,
+    fitting_model: tuple[float, float, float] = (0.2612, -1.0, 3.027),
+    resample_model: tuple[float, float, float] = (0.2612, -1.0, 3.027),
     resample_seed: int = 1234,
     fitting_Sij_type: JpasSSCType = JpasSSCType.FULLSKY,
     resample_Sij_type: JpasSSCType = JpasSSCType.NO_SSC,
-    model_for_cov: Optional[JpasModelTypes] = None,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Generate J-Pas forecast 2024 experiment dictionary."""
 
     # Computation tools
+    if (
+        resample_Sij_type == JpasSSCType.FULL
+        or resample_Sij_type == JpasSSCType.GUARANTEED
+    ):
+        area = survey_area(fitting_Sij_type)
+        print(
+            f"sky cut is of type {fitting_Sij_type} adjusting to "
+            f"corresponding survey area = {area:.2f} sqd. "
+        )
 
     dist = Nc.Distance.new(2.0)
 
@@ -368,13 +407,11 @@ def generate_jpas_forecast_2024(
     hmf = Nc.HaloMassFunction.new(dist, psf, mulf)
     hbias_Tinker = Nc.HaloBiasTinker.new(hmf)
     cad = Nc.ClusterAbundance.new(hmf, hbias_Tinker)
-
+    cad.set_area(area * (np.pi / 180) ** 2)
     # Models
 
-    cluster_m = Nc.ClusterMassNodist(
-        lnM_min=np.log(10) * 14.0, lnM_max=np.log(10) * 16.0
-    )
-    cluster_z = Nc.ClusterRedshiftNodist(z_min=0.0, z_max=2.0)
+    cluster_m = create_cluster_mass(cluster_mass_type)
+    cluster_z = create_cluster_redshift(cluster_redshift_type)
     cosmo = create_cosmo()
 
     mset = Ncm.MSet.new_array([cosmo, cluster_m, cluster_z])
@@ -383,8 +420,10 @@ def generate_jpas_forecast_2024(
     # Likelihood
     #   Bins and kernels
 
-    kernel_z, kernels_T, z_bins_knots = create_zbins_kernels()
-    lnM_bins_knots = create_lnM_bins()
+    kernel_z, kernels_T, z_bins_knots = create_zbins_kernels(
+        z_min=z_min, z_max=z_max, nknots=znknots
+    )
+    lnM_bins_knots = create_lnM_bins(lnM_min=lnM_min, lnM_max=lnM_max, nknots=lnMnknots)
 
     z_bins_vec = Ncm.Vector.new_array(z_bins_knots.tolist())
     lnM_bins_vec = Ncm.Vector.new_array(lnM_bins_knots.tolist())
@@ -393,22 +432,22 @@ def generate_jpas_forecast_2024(
 
     ncounts_gauss = Nc.DataClusterNCountsGauss.new(cad)
     ncounts_gauss.set_size((z_bins_vec.len() - 1) * (lnM_bins_vec.len() - 1))
+    ncounts_gauss.set_init(True)
     ncounts_gauss.use_norma(True)
     ncounts_gauss.set_z_obs(z_bins_vec)
     ncounts_gauss.set_lnM_obs(lnM_bins_vec)
 
     if fitting_Sij_type != JpasSSCType.NO_SSC:
+        _set_mset_params(mset, fitting_model)
         fitting_S_ij = create_covariance_S(kernel_z, kernels_T, fitting_Sij_type, cosmo)
         ncounts_gauss.set_s_matrix(fitting_S_ij)
 
     if resample_Sij_type != JpasSSCType.NO_SSC:
-        if resample_Sij_type == fitting_Sij_type:
-            ncounts_gauss.set_resample_s_matrix(fitting_S_ij)
-        else:
-            resample_S_ij = create_covariance_S(
-                kernel_z, kernels_T, resample_Sij_type, cosmo
-            )
-            ncounts_gauss.set_resample_s_matrix(resample_S_ij)
+        _set_mset_params(mset, resample_model)
+        resample_S_ij = create_covariance_S(
+            kernel_z, kernels_T, resample_Sij_type, cosmo
+        )
+        ncounts_gauss.set_resample_s_matrix(resample_S_ij)
 
     dset = Ncm.Dataset.new_array([ncounts_gauss])
     likelihood = Ncm.Likelihood.new(dset)
@@ -421,7 +460,7 @@ def generate_jpas_forecast_2024(
 
     rng = Ncm.RNG.seeded_new(None, resample_seed)
 
-    _set_mset_params(mset, model_for_resample)
+    _set_mset_params(mset, resample_model)
     # If resampling uses SSC, then we need to add SSC to resample
     if resample_Sij_type != JpasSSCType.NO_SSC:
         ncounts_gauss.set_has_ssc(True)
@@ -434,21 +473,18 @@ def generate_jpas_forecast_2024(
         ncounts_gauss.set_has_ssc(True)
 
     if use_fixed_cov:
-        if model_for_cov is not None:
-            _set_mset_params(mset, model_for_cov)
-            cov, updated = ncounts_gauss.compute_cov(mset)
-            assert updated
-            ncounts_gauss.set_cov(cov)
+        print("\n")
+        _set_mset_params(mset, fitting_model)
+        cov, updated = ncounts_gauss.compute_cov(mset)
+
+        assert updated
+        ncounts_gauss.set_cov(cov)
 
         ncounts_gauss.set_fix_cov(True)
-    elif model_for_cov is not None:
-        raise ValueError("model_for_cov was set but the covariance is not fixed.")
-
+        print("\n")
     # Set the model back to the resample model
-    _set_mset_params(mset, model_for_resample)
-
+    _set_mset_params(mset, resample_model)
     # Save experiment
-
     experiment = Ncm.ObjDictStr()
 
     experiment.set("likelihood", likelihood)
