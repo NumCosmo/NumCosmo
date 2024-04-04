@@ -123,7 +123,7 @@ nc_halo_mass_function_d2n_dzdlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdo
   const gdouble res = ncm_spline2d_eval (mfp->d2NdzdlnM, lnM, z);
   if (res < mfp->mf_lb)
     return mfp->mf_lb;
-  return res
+  return res;
 }
 
 G_END_DECLS

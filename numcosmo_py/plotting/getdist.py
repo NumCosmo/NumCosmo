@@ -115,5 +115,4 @@ def mcat_to_mcsamples(
         label=name,
         weights=split_weights,
     )
-
     return mcsample, rows, posterior
