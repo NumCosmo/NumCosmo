@@ -63,9 +63,6 @@ struct _NcmCSQ1DClass
   gpointer padding[3];
 };
 
-typedef struct _NcmCSQ1DSingFitUp NcmCSQ1DSingFitUp;
-typedef struct _NcmCSQ1DSingFitUm NcmCSQ1DSingFitUm;
-
 /**
  * NcmCSQ1DEvolState:
  * @NCM_CSQ1D_EVOL_STATE_INVALID: Invalid state
@@ -88,6 +85,35 @@ typedef enum _NcmCSQ1DEvolState
   NCM_CSQ1D_EVOL_STATE_UP,
   NCM_CSQ1D_EVOL_STATE_UM,
 } NcmCSQ1DEvolState;
+
+/**
+ * NcmCSQ1DInitialStateTypeType:
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC: Ad-hoc initial condition
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2: Second order adiabatic vacuum
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4: Fourth order adiabatic vacuum
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_NONADIABATIC2: Second order non-adiabatic vacuum
+ *
+ * Initial conditions for the system. The initial condition
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC is used to set an arbitrary initial
+ * condition. The initial conditions @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2,
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4 and
+ * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_NONADIABATIC2 are used to set the initial
+ * conditions for the adiabatic and non-adiabatic vacuum initial conditions.
+ *
+ * If the initial condition is set to @NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC
+ * the initial condition must be set using the function family ncm_csq1d_set_init_cond*.
+ *
+ */
+typedef enum _NcmCSQ1DInitialStateType /*< enum,underscore_name=NCM_CSQ1D_INITIAL_CONDITION_TYPE >*/
+{
+  NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC = 0,
+  NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2,
+  NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4,
+  NCM_CSQ1D_INITIAL_CONDITION_TYPE_NONADIABATIC2,
+  /*< private >*/
+  NCM_CSQ1D_INITIAL_CONDITION_TYPE_LENGTH,
+} NcmCSQ1DInitialStateType;
+
 
 /**
  * NcmCSQ1DFrame:
@@ -161,9 +187,11 @@ void ncm_csq1d_set_tf (NcmCSQ1D *csq1d, const gdouble tf);
 void ncm_csq1d_set_adiab_threshold (NcmCSQ1D *csq1d, const gdouble adiab_threshold);
 void ncm_csq1d_set_prop_threshold (NcmCSQ1D *csq1d, const gdouble prop_threshold);
 void ncm_csq1d_set_save_evol (NcmCSQ1D *csq1d, const gboolean save);
-void ncm_csq1d_set_max_order_2 (NcmCSQ1D *csq1d, const gboolean truncate);
 void ncm_csq1d_set_init_cond (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DEvolState evol_state, NcmCSQ1DState *initial_state);
 void ncm_csq1d_set_init_cond_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti);
+void ncm_csq1d_set_initial_condition_type (NcmCSQ1D *csq1d, const NcmCSQ1DInitialStateType initial_condition_type);
+void ncm_csq1d_set_vacuum_reltol (NcmCSQ1D *csq1d, const gdouble vacuum_reltol);
+void ncm_csq1d_set_vacuum_max_time (NcmCSQ1D *csq1d, const gdouble vacuum_max_time);
 
 gdouble ncm_csq1d_get_reltol (NcmCSQ1D *csq1d);
 gdouble ncm_csq1d_get_abstol (NcmCSQ1D *csq1d);
@@ -172,7 +200,9 @@ gdouble ncm_csq1d_get_tf (NcmCSQ1D *csq1d);
 gdouble ncm_csq1d_get_adiab_threshold (NcmCSQ1D *csq1d);
 gdouble ncm_csq1d_get_prop_threshold (NcmCSQ1D *csq1d);
 gboolean ncm_csq1d_get_save_evol (NcmCSQ1D *csq1d);
-gboolean ncm_csq1d_get_max_order_2 (NcmCSQ1D *csq1d);
+NcmCSQ1DInitialStateType ncm_csq1d_get_initial_condition_type (NcmCSQ1D *csq1d);
+gdouble ncm_csq1d_get_vacuum_reltol (NcmCSQ1D *csq1d);
+gdouble ncm_csq1d_get_vacuum_max_time (NcmCSQ1D *csq1d);
 
 NCM_INLINE gdouble ncm_csq1d_eval_xi         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_nu         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
@@ -182,11 +212,11 @@ NCM_INLINE gdouble ncm_csq1d_eval_int_1_m    (NcmCSQ1D *csq1d, NcmModel *model, 
 NCM_INLINE gdouble ncm_csq1d_eval_int_mnu2   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_int_qmnu2  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
-NCM_INLINE gdouble ncm_csq1d_eval_dm         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_F1         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_F2         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 
 void ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model);
+gboolean ncm_csq1d_prepare_vacuum (NcmCSQ1D *csq1d, NcmModel *model);
 
 GArray *ncm_csq1d_get_time_array (NcmCSQ1D *csq1d, gdouble *smallest_t);
 

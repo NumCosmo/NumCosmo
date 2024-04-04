@@ -61,6 +61,7 @@
 #include "math/ncm_c.h"
 #include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
+#include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_roots.h>
@@ -106,7 +107,6 @@ typedef struct _NcmCSQ1DPrivate
   gdouble adiab_threshold;
   gdouble prop_threshold;
   gboolean save_evol;
-  gboolean max_order_2;
   NcmModelCtrl *ctrl;
   gpointer cvode;
   gpointer cvode_Up;
@@ -138,6 +138,10 @@ typedef struct _NcmCSQ1DPrivate
   gdouble tf_Prop;
   gdouble ti_Prop;
   NcmCSQ1DState *cur_state;
+  NcmCSQ1DVacuumType initial_condition_type;
+  gdouble vacuum_reltol;
+  gdouble vacuum_max_time;
+  gdouble vacuum_final_time;
 } NcmCSQ1DPrivate;
 
 enum
@@ -150,7 +154,9 @@ enum
   PROP_ADIAB_THRESHOLD,
   PROP_PROP_THRESHOLD,
   PROP_SAVE_EVOL,
-  PROP_MAX_ORDER_2,
+  PROP_VACUUM_TYPE,
+  PROP_VACUUM_RELTOL,
+  PROP_VACUUM_MAX_TIME,
 };
 
 G_DEFINE_BOXED_TYPE (NcmCSQ1DState, ncm_csq1d_state, ncm_csq1d_state_copy, ncm_csq1d_state_free)
@@ -170,7 +176,6 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
   self->adiab_threshold = 0.0;
   self->prop_threshold  = 0.0;
   self->save_evol       = FALSE;
-  self->max_order_2     = FALSE;
   self->ctrl            = ncm_model_ctrl_new (NULL);
 
   self->cvode           = NULL;
@@ -228,6 +233,11 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
 
   self->diff      = ncm_diff_new ();
   self->cur_state = ncm_csq1d_state_new ();
+
+  self->initial_condition_type = NCM_CSQ1D_VACUUM_TYPE_LENGTH;
+  self->vacuum_reltol          = 0.0;
+  self->vacuum_max_time        = 0.0;
+  self->vacuum_final_time      = 0.0;
 }
 
 static void
@@ -376,8 +386,14 @@ _ncm_csq1d_set_property (GObject *object, guint prop_id, const GValue *value, GP
     case PROP_SAVE_EVOL:
       ncm_csq1d_set_save_evol (csq1d, g_value_get_boolean (value));
       break;
-    case PROP_MAX_ORDER_2:
-      ncm_csq1d_set_max_order_2 (csq1d, g_value_get_boolean (value));
+    case PROP_VACUUM_TYPE:
+      ncm_csq1d_set_initial_condition_type (csq1d, g_value_get_enum (value));
+      break;
+    case PROP_VACUUM_RELTOL:
+      ncm_csq1d_set_vacuum_reltol (csq1d, g_value_get_double (value));
+      break;
+    case PROP_VACUUM_MAX_TIME:
+      ncm_csq1d_set_vacuum_max_time (csq1d, g_value_get_double (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -415,8 +431,14 @@ _ncm_csq1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
     case PROP_SAVE_EVOL:
       g_value_set_boolean (value, ncm_csq1d_get_save_evol (csq1d));
       break;
-    case PROP_MAX_ORDER_2:
-      g_value_set_boolean (value, ncm_csq1d_get_max_order_2 (csq1d));
+    case PROP_VACUUM_TYPE:
+      g_value_set_enum (value, ncm_csq1d_get_initial_condition_type (csq1d));
+      break;
+    case PROP_VACUUM_RELTOL:
+      g_value_set_double (value, ncm_csq1d_get_vacuum_reltol (csq1d));
+      break;
+    case PROP_VACUUM_MAX_TIME:
+      g_value_set_double (value, ncm_csq1d_get_vacuum_max_time (csq1d));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -495,12 +517,29 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_MAX_ORDER_2,
-                                   g_param_spec_boolean ("max-order-2",
-                                                         NULL,
-                                                         "Whether to always truncate at order 2",
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   PROP_VACUUM_TYPE,
+                                   g_param_spec_enum ("vacuum-type",
+                                                      NULL,
+                                                      "The vacuum type",
+                                                      NCM_TYPE_CSQ1D_VACUUM_TYPE,
+                                                      NCM_CSQ1D_VACUUM_TYPE_ADIABATIC4,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_VACUUM_RELTOL,
+                                   g_param_spec_double ("vacuum-reltol",
+                                                        NULL,
+                                                        "The vacuum relative tolerance",
+                                                        DBL_EPSILON, 1.0, 1.0e-5,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_VACUUM_MAX_TIME,
+                                   g_param_spec_double ("vacuum-max-time",
+                                                        NULL,
+                                                        "The vacuum maximum time",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   klass->eval_xi         = &_ncm_csq1d_eval_xi;
   klass->eval_nu         = &_ncm_csq1d_eval_nu;
@@ -1026,7 +1065,11 @@ ncm_csq1d_set_reltol (NcmCSQ1D *csq1d, const gdouble reltol)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  self->reltol = reltol;
+  if (self->reltol != reltol)
+  {
+    self->reltol = reltol;
+    ncm_model_ctrl_force_update (self->ctrl);
+  }
 }
 
 /**
@@ -1042,7 +1085,11 @@ ncm_csq1d_set_abstol (NcmCSQ1D *csq1d, const gdouble abstol)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  self->abstol = abstol;
+  if (self->abstol != abstol)
+  {
+    self->abstol = abstol;
+    ncm_model_ctrl_force_update (self->ctrl);
+  }
 }
 
 /**
@@ -1062,6 +1109,7 @@ ncm_csq1d_set_ti (NcmCSQ1D *csq1d, const gdouble ti)
   {
     self->ti            = ti;
     self->init_cond_set = FALSE;
+    ncm_model_ctrl_force_update (self->ctrl);
   }
 }
 
@@ -1078,7 +1126,11 @@ ncm_csq1d_set_tf (NcmCSQ1D *csq1d, const gdouble tf)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  self->tf = tf;
+  if (self->tf != tf)
+  {
+    self->tf = tf;
+    ncm_model_ctrl_force_update (self->ctrl);
+  }
 }
 
 /**
@@ -1094,7 +1146,11 @@ ncm_csq1d_set_adiab_threshold (NcmCSQ1D *csq1d, const gdouble adiab_threshold)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  self->adiab_threshold = adiab_threshold;
+  if (self->adiab_threshold != adiab_threshold)
+  {
+    ncm_model_ctrl_force_update (self->ctrl);
+    self->adiab_threshold = adiab_threshold;
+  }
 }
 
 /**
@@ -1131,26 +1187,6 @@ ncm_csq1d_set_save_evol (NcmCSQ1D *csq1d, gboolean save_evol)
   {
     ncm_model_ctrl_force_update (self->ctrl);
     self->save_evol = save_evol;
-  }
-}
-
-/**
- * ncm_csq1d_set_max_order_2:
- * @csq1d: a #NcmCSQ1D
- * @truncate: whether to truncate the adiabatic series at order 2
- *
- * If true truncates the adiabatic series at order 2.
- *
- */
-void
-ncm_csq1d_set_max_order_2 (NcmCSQ1D *csq1d, gboolean truncate)
-{
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-
-  if (self->max_order_2 != truncate)
-  {
-    ncm_model_ctrl_force_update (self->ctrl);
-    self->max_order_2 = truncate;
   }
 }
 
@@ -1220,6 +1256,72 @@ ncm_csq1d_set_init_cond_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t
              ti, state->alpha, state->gamma);
   else
     ncm_csq1d_set_init_cond (csq1d, model, NCM_CSQ1D_EVOL_STATE_ADIABATIC, state);
+}
+
+/**
+ * ncm_csq1d_set_initial_condition_type:
+ * @csq1d: a #NcmCSQ1D
+ * @initial_condition_type: the vacuum type
+ *
+ * Sets the vacuum type to @initial_condition_type. The vacuum type is used
+ * to determine the vacuum state when preparing the object using
+ * ncm_csq1d_prepare_vacuum().
+ *
+ */
+void
+ncm_csq1d_set_initial_condition_type (NcmCSQ1D *csq1d, NcmCSQ1DVacuumType initial_condition_type)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+
+  if (self->initial_condition_type != initial_condition_type)
+  {
+    ncm_model_ctrl_force_update (self->ctrl);
+    self->initial_condition_type = initial_condition_type;
+  }
+}
+
+/**
+ * ncm_csq1d_set_vacuum_reltol:
+ * @csq1d: a #NcmCSQ1D
+ * @vacuum_reltol: relative tolerance
+ *
+ * Sets the relative tolerance for the vacuum definition. This tolerance
+ * is used to determine the vacuum state when preparing the object using
+ * ncm_csq1d_prepare_vacuum().
+ *
+ */
+void
+ncm_csq1d_set_vacuum_reltol (NcmCSQ1D *csq1d, const gdouble vacuum_reltol)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+
+  if (self->vacuum_reltol != vacuum_reltol)
+  {
+    ncm_model_ctrl_force_update (self->ctrl);
+    self->vacuum_reltol = vacuum_reltol;
+  }
+}
+
+/**
+ * ncm_csq1d_set_vacuum_max_time:
+ * @csq1d: a #NcmCSQ1D
+ * @vacuum_max_time: maximum time
+ *
+ * Sets the maximum time for the vacuum search. This time is used
+ * to determine the vacuum state when preparing the object using
+ * ncm_csq1d_prepare_vacuum().
+ *
+ */
+void
+ncm_csq1d_set_vacuum_max_time (NcmCSQ1D *csq1d, const gdouble vacuum_max_time)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+
+  if (self->vacuum_max_time != vacuum_max_time)
+  {
+    ncm_model_ctrl_force_update (self->ctrl);
+    self->vacuum_max_time = vacuum_max_time;
+  }
 }
 
 /**
@@ -1321,17 +1423,45 @@ ncm_csq1d_get_save_evol (NcmCSQ1D *csq1d)
 }
 
 /**
- * ncm_csq1d_get_max_order_2:
+ * ncm_csq1d_get_initial_condition_type:
  * @csq1d: a #NcmCSQ1D
  *
- * Returns: whether the maximum order of the adiabatic series is 2.
+ * Returns: the vacuum type.
  */
-gboolean
-ncm_csq1d_get_max_order_2 (NcmCSQ1D *csq1d)
+NcmCSQ1DVacuumType
+ncm_csq1d_get_initial_condition_type (NcmCSQ1D *csq1d)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  return self->max_order_2;
+  return self->initial_condition_type;
+}
+
+/**
+ * ncm_csq1d_get_vacuum_reltol:
+ * @csq1d: a #NcmCSQ1D
+ *
+ * Returns: the relative tolerance for the vacuum definition.
+ */
+gdouble
+ncm_csq1d_get_vacuum_reltol (NcmCSQ1D *csq1d)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+
+  return self->vacuum_reltol;
+}
+
+/**
+ * ncm_csq1d_get_vacuum_max_time:
+ * @csq1d: a #NcmCSQ1D
+ *
+ * Returns: the maximum time for the vacuum search.
+ */
+gdouble
+ncm_csq1d_get_vacuum_max_time (NcmCSQ1D *csq1d)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+
+  return self->vacuum_max_time;
 }
 
 static gint _ncm_csq1d_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
@@ -2080,7 +2210,9 @@ _ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *
  * @csq1d: a #NcmCSQ1D
  * @model: (allow-none): a #NcmModel
  *
- * Prepares the object using @model.
+ * Prepares the object using @model. This method expects that the initial
+ * conditions have been set. It computes the evolution of the system and
+ * saves the results in the internal splines.
  *
  */
 void
@@ -2117,6 +2249,51 @@ ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
   {
     g_assert_not_reached ();
   }
+}
+
+/**
+ * ncm_csq1d_prepare_vacuum:
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ *
+ * Prepares the object using @model for the vacuum case. This method will set the
+ * initial conditions to the vacuum case and compute the evolution of the system. The
+ * results are saved in the internal splines. See ncm_csq1d_set_initial_condition_type(),
+ * ncm_csq1d_set_vacuum_reltol() and ncm_csq1d_set_vacuum_max_time() for more
+ * information on how to set the vacuum parameters.
+ *
+ * If the vacuum cannot be computed, this method will return %FALSE.
+ *
+ * Returns: %TRUE if the vacuum was found and the solution was computed.
+ */
+gboolean
+ncm_csq1d_prepare_vacuum (NcmCSQ1D *csq1d, NcmModel *model)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  gdouble vacuum_final_time;
+
+  if (!ncm_csq1d_find_adiab_time_limit (csq1d, model, self->ti, self->vacuum_max_time, self->vacuum_reltol, &vacuum_final_time))
+  {
+    return FALSE;
+  }
+  else
+  {
+    NcmCSQ1DState state;
+    gdouble zeta_k_tau, alpha_reltol, dgamma_reltol;
+
+    /* If the final time is greater than the vacuum time, we need to compute the numerical solution
+     * from the vacuum time to the final time. Otherwise, we just need to compute the adiabatic
+     * solution from the initial time to the final time.
+     */
+    if (self->tf > vacuum_final_time)
+    {
+      ncm_csq1d_compute_adiab (csq1d, model, vacuum_final_time, &state, &alpha_reltol, &dgamma_reltol);
+      ncm_csq1d_set_init_cond_adiab (csq1d, model, vacuum_final_time);
+      ncm_csq1d_prepare (csq1d, model);
+    }
+  }
+
+  return TRUE;
 }
 
 /**
@@ -2461,7 +2638,26 @@ _ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data)
 }
 
 static void
-_ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state, gdouble *alpha_reltol, gdouble *dgamma_reltol)
+_ncm_csq1d_compute_adiab2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state, gdouble *alpha_reltol, gdouble *dgamma_reltol)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  const gdouble F1             = ncm_csq1d_eval_F1 (csq1d, model, t);
+  const gdouble F2             = ncm_csq1d_eval_F2 (csq1d, model, t);
+
+  state->frame = NCM_CSQ1D_FRAME_ADIAB1;
+  state->t     = t;
+  state->alpha = +F1;
+  state->gamma = -F2;
+
+  if (alpha_reltol != NULL)
+    alpha_reltol[0] = fabs (F1);
+
+  if (dgamma_reltol != NULL)
+    dgamma_reltol[0] = fabs (F2);
+}
+
+static void
+_ncm_csq1d_compute_adiab4 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state, gdouble *alpha_reltol, gdouble *dgamma_reltol)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
   NcmCSQ1DWS ws                = {csq1d, model, 0.0, 0.0};
@@ -2481,14 +2677,7 @@ _ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, Ncm
   state->frame = NCM_CSQ1D_FRAME_ADIAB1;
   state->t     = t;
 
-  if (self->max_order_2)
-  {
-    alpha_reltol0  = fabs (F1);
-    dgamma_reltol0 = fabs (F2);
-    state->alpha   = +F1;
-    state->gamma   = -F2;
-  }
-  else if ((fabs (F3) > fabs (F2)) || (fabs (F4) > fabs (F3)))
+  if ((fabs (F3) > fabs (F2)) || (fabs (F4) > fabs (F3)))
   {
     g_warning ("WKB series with |F3| > |F2| or |F4| > |F3|, "
                "|F3/F2| = % 22.15g and |F4/F3| = % 22.15g "
@@ -2523,6 +2712,25 @@ _ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, Ncm
 
   if (dgamma_reltol != NULL)
     dgamma_reltol[0] = dgamma_reltol0;
+}
+
+static void
+_ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state, gdouble *alpha_reltol, gdouble *dgamma_reltol)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+
+  switch (self->initial_condition_type)
+  {
+    case NCM_CSQ1D_VACUUM_TYPE_ADIABATIC2:
+      _ncm_csq1d_compute_adiab2 (csq1d, model, t, state, alpha_reltol, dgamma_reltol);
+      break;
+    case NCM_CSQ1D_VACUUM_TYPE_ADIABATIC4:
+      _ncm_csq1d_compute_adiab4 (csq1d, model, t, state, alpha_reltol, dgamma_reltol);
+      break;
+    default:
+      g_error ("_ncm_csq1d_compute_adiab: vacuum type '%d' not supported.", self->initial_condition_type);
+      break;
+  }
 }
 
 /**
@@ -2573,7 +2781,24 @@ ncm_csq1d_compute_adiab_frame (NcmCSQ1D *csq1d, NcmModel *model, const NcmCSQ1DF
 }
 
 static void
-_ncm_csq1d_eval_adiab_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *alpha, gdouble *dgamma, gdouble *alpha_reltol, gdouble *dgamma_reltol)
+_ncm_csq1d_eval_adiab2_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *alpha, gdouble *dgamma, gdouble *alpha_reltol, gdouble *dgamma_reltol)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  const gdouble F1             = ncm_csq1d_eval_F1 (csq1d, model, t);
+  const gdouble F2             = ncm_csq1d_eval_F2 (csq1d, model, t);
+
+  alpha[0]  = +F1;
+  dgamma[0] = -F2;
+
+  if (alpha_reltol != NULL)
+    alpha_reltol[0] = fabs (F1);
+
+  if (dgamma_reltol != NULL)
+    dgamma_reltol[0] = fabs (F2);
+}
+
+static void
+_ncm_csq1d_eval_adiab4_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *alpha, gdouble *dgamma, gdouble *alpha_reltol, gdouble *dgamma_reltol)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
   NcmCSQ1DWS ws                = {csq1d, model, 0.0, 0.0};
@@ -2585,39 +2810,48 @@ _ncm_csq1d_eval_adiab_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdoubl
   const gdouble twonu          = 2.0 * nu;
   gdouble err, F3, d2F2, dlnnu, F4, alpha_reltol0, dgamma_reltol0;
 
-  if (self->max_order_2)
-  {
-    alpha_reltol0  = fabs (F1);
-    dgamma_reltol0 = fabs (F2);
-    alpha[0]       = +F1;
-    dgamma[0]      = -F2;
-  }
+  F3    = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err) / twonu;
+  d2F2  = ncm_diff_rc_d2_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err);
+  dlnnu = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_lnnu_func, &ws, &err);
+  F4    = d2F2 / gsl_pow_2 (twonu) - dlnnu * F3 / twonu;
+
+  if (F1 != 0.0)
+    alpha_reltol0 = gsl_pow_2 ((F1_3 / 3.0 - F3) / F1);
   else
-  {
-    F3    = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err) / twonu;
-    d2F2  = ncm_diff_rc_d2_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err);
-    dlnnu = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_lnnu_func, &ws, &err);
-    F4    = d2F2 / gsl_pow_2 (twonu) - dlnnu * F3 / twonu;
+    alpha_reltol0 = gsl_pow_2 (F1_3 / 3.0 - F3);
 
-    if (F1 != 0.0)
-      alpha_reltol0 = gsl_pow_2 ((F1_3 / 3.0 - F3) / F1);
-    else
-      alpha_reltol0 = gsl_pow_2 (F1_3 / 3.0 - F3);
+  if (F2 != 0.0)
+    dgamma_reltol0 = gsl_pow_2 ((F4 - F1_2 * F2) / F2);
+  else
+    dgamma_reltol0 = gsl_pow_2 (F4 - F1_2 * F2);
 
-    if (F2 != 0.0)
-      dgamma_reltol0 = gsl_pow_2 ((F4 - F1_2 * F2) / F2);
-    else
-      dgamma_reltol0 = gsl_pow_2 (F4 - F1_2 * F2);
-
-    alpha[0]  = +F1 + F1_3 / 3.0 - F3;
-    dgamma[0] = -(1.0 + F1_2) * F2 + F4;
-  }
+  alpha[0]  = +F1 + F1_3 / 3.0 - F3;
+  dgamma[0] = -(1.0 + F1_2) * F2 + F4;
 
   if (alpha_reltol != NULL)
     alpha_reltol[0] = alpha_reltol0;
 
   if (dgamma_reltol != NULL)
     dgamma_reltol[0] = dgamma_reltol0;
+}
+
+static void
+_ncm_csq1d_eval_adiab_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *alpha, gdouble *dgamma, gdouble *alpha_reltol, gdouble *dgamma_reltol)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+
+  switch (self->initial_condition_type)
+  {
+    case NCM_CSQ1D_VACUUM_TYPE_ADIABATIC2:
+      _ncm_csq1d_eval_adiab2_at_no_test (csq1d, model, t, alpha, dgamma, alpha_reltol, dgamma_reltol);
+      break;
+    case NCM_CSQ1D_VACUUM_TYPE_ADIABATIC4:
+      _ncm_csq1d_eval_adiab4_at_no_test (csq1d, model, t, alpha, dgamma, alpha_reltol, dgamma_reltol);
+      break;
+    default:
+      g_error ("_ncm_csq1d_eval_adiab_at_no_test: vacuum type '%d' not supported.", self->initial_condition_type);
+      break;
+  }
 }
 
 static void
