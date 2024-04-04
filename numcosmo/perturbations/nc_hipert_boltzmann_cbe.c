@@ -78,6 +78,7 @@ static void
 nc_hipert_boltzmann_cbe_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHIPertBoltzmannCBE *boltzmann_cbe = NC_HIPERT_BOLTZMANN_CBE (object);
+
   g_return_if_fail (NC_IS_HIPERT_BOLTZMANN_CBE (object));
 
   switch (prop_id)
@@ -95,6 +96,7 @@ static void
 nc_hipert_boltzmann_cbe_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHIPertBoltzmannCBE *boltzmann_cbe = NC_HIPERT_BOLTZMANN_CBE (object);
+
   g_return_if_fail (NC_IS_HIPERT_BOLTZMANN_CBE (object));
 
   switch (prop_id)
@@ -127,7 +129,6 @@ nc_hipert_boltzmann_cbe_dispose (GObject *object)
 static void
 nc_hipert_boltzmann_cbe_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_boltzmann_cbe_parent_class)->finalize (object);
 }
@@ -144,7 +145,7 @@ static void _nc_hipert_boltzmann_cbe_get_EB_Cls (NcHIPertBoltzmann *pb, NcmVecto
 static void
 nc_hipert_boltzmann_cbe_class_init (NcHIPertBoltzmannCBEClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
 
   object_class->set_property = nc_hipert_boltzmann_cbe_set_property;
@@ -174,6 +175,7 @@ static void
 _nc_hipert_boltzmann_cbe_get_PHIPHI_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 {
   NcHIPertBoltzmannCBE *boltzmann_cbe = NC_HIPERT_BOLTZMANN_CBE (pb);
+
   ncm_vector_memcpy2 (Cls, boltzmann_cbe->PHIPHI_Cls, 0, 0, ncm_vector_len (Cls));
 }
 
@@ -181,6 +183,7 @@ static void
 _nc_hipert_boltzmann_cbe_get_TT_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 {
   NcHIPertBoltzmannCBE *boltzmann_cbe = NC_HIPERT_BOLTZMANN_CBE (pb);
+
   ncm_vector_memcpy2 (Cls, boltzmann_cbe->TT_Cls, 0, 0, ncm_vector_len (Cls));
 }
 
@@ -188,6 +191,7 @@ static void
 _nc_hipert_boltzmann_cbe_get_EE_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 {
   NcHIPertBoltzmannCBE *boltzmann_cbe = NC_HIPERT_BOLTZMANN_CBE (pb);
+
   ncm_vector_memcpy2 (Cls, boltzmann_cbe->EE_Cls, 0, 0, ncm_vector_len (Cls));
 }
 
@@ -195,6 +199,7 @@ static void
 _nc_hipert_boltzmann_cbe_get_BB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 {
   NcHIPertBoltzmannCBE *boltzmann_cbe = NC_HIPERT_BOLTZMANN_CBE (pb);
+
   ncm_vector_memcpy2 (Cls, boltzmann_cbe->BB_Cls, 0, 0, ncm_vector_len (Cls));
 }
 
@@ -202,6 +207,7 @@ static void
 _nc_hipert_boltzmann_cbe_get_TE_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 {
   NcHIPertBoltzmannCBE *boltzmann_cbe = NC_HIPERT_BOLTZMANN_CBE (pb);
+
   ncm_vector_memcpy2 (Cls, boltzmann_cbe->TE_Cls, 0, 0, ncm_vector_len (Cls));
 }
 
@@ -209,6 +215,7 @@ static void
 _nc_hipert_boltzmann_cbe_get_TB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 {
   NcHIPertBoltzmannCBE *boltzmann_cbe = NC_HIPERT_BOLTZMANN_CBE (pb);
+
   ncm_vector_memcpy2 (Cls, boltzmann_cbe->TB_Cls, 0, 0, ncm_vector_len (Cls));
 }
 
@@ -216,6 +223,7 @@ static void
 _nc_hipert_boltzmann_cbe_get_EB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 {
   NcHIPertBoltzmannCBE *boltzmann_cbe = NC_HIPERT_BOLTZMANN_CBE (pb);
+
   ncm_vector_memcpy2 (Cls, boltzmann_cbe->EB_Cls, 0, 0, ncm_vector_len (Cls));
 }
 
@@ -229,10 +237,11 @@ _nc_hipert_boltzmann_cbe_get_EB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 NcHIPertBoltzmannCBE *
 nc_hipert_boltzmann_cbe_new (void)
 {
-  NcCBE *cbe = nc_cbe_new ();
+  NcCBE *cbe                          = nc_cbe_new ();
   NcHIPertBoltzmannCBE *boltzmann_cbe = g_object_new (NC_TYPE_HIPERT_BOLTZMANN_CBE,
                                                       "cbe", cbe,
                                                       NULL);
+
   return boltzmann_cbe;
 }
 
@@ -250,6 +259,7 @@ nc_hipert_boltzmann_cbe_full_new (NcCBE *cbe)
   NcHIPertBoltzmannCBE *boltzmann_cbe = g_object_new (NC_TYPE_HIPERT_BOLTZMANN_CBE,
                                                       "cbe", cbe,
                                                       NULL);
+
   return boltzmann_cbe;
 }
 
@@ -293,6 +303,20 @@ nc_hipert_boltzmann_cbe_clear (NcHIPertBoltzmannCBE **boltzmann_cbe)
   g_clear_object (boltzmann_cbe);
 }
 
+/**
+ * nc_hipert_boltzmann_cbe_peek_cbe:
+ * @boltzmann_cbe: a #NcHIPertBoltzmannCBE
+ *
+ * Gets the #NcCBE of @boltzmann_cbe.
+ *
+ * Returns: (transfer none): the #NcCBE of @boltzmann_cbe.
+ */
+NcCBE *
+nc_hipert_boltzmann_cbe_peek_cbe (NcHIPertBoltzmannCBE *boltzmann_cbe)
+{
+  return boltzmann_cbe->cbe;
+}
+
 static void
 _nc_hipert_boltzmann_cbe_prepare (NcHIPertBoltzmann *pb, NcHICosmo *cosmo)
 {
@@ -306,22 +330,22 @@ _nc_hipert_boltzmann_cbe_prepare (NcHIPertBoltzmann *pb, NcHICosmo *cosmo)
   guint TB_lmax     = nc_hipert_boltzmann_get_TB_lmax (pb);
   guint EB_lmax     = nc_hipert_boltzmann_get_EB_lmax (pb);
   guint scalar_lmax = 0;
-  
-#define _CHECK_VEC(name) \
-G_STMT_START { \
- if (boltzmann_cbe->name##_Cls != NULL) \
- { \
-   if (ncm_vector_len (boltzmann_cbe->name##_Cls) != name##_lmax + 1) \
-   { \
-     ncm_vector_clear (&boltzmann_cbe->name##_Cls); \
-     boltzmann_cbe->name##_Cls = ncm_vector_new (name##_lmax + 1); \
-   } \
- } \
- else \
-   boltzmann_cbe->name##_Cls = ncm_vector_new (name##_lmax + 1); \
-} G_STMT_END
 
-	_CHECK_VEC (PHIPHI);
+#define _CHECK_VEC(name) \
+        G_STMT_START { \
+          if (boltzmann_cbe->name ## _Cls != NULL) \
+          { \
+            if (ncm_vector_len (boltzmann_cbe->name ## _Cls) != name ## _lmax + 1) \
+            { \
+              ncm_vector_clear (&boltzmann_cbe->name ## _Cls); \
+              boltzmann_cbe->name ## _Cls = ncm_vector_new (name ## _lmax + 1); \
+            } \
+          } \
+          else \
+          boltzmann_cbe->name ## _Cls = ncm_vector_new (name ## _lmax + 1); \
+        } G_STMT_END
+
+  _CHECK_VEC (PHIPHI);
   _CHECK_VEC (TT);
   _CHECK_VEC (EE);
   _CHECK_VEC (BB);
@@ -347,9 +371,9 @@ G_STMT_START { \
   nc_cbe_prepare_if_needed (boltzmann_cbe->cbe, cosmo);
   nc_cbe_get_all_Cls (boltzmann_cbe->cbe,
                       boltzmann_cbe->PHIPHI_Cls,
-                      boltzmann_cbe->TT_Cls, 
-                      boltzmann_cbe->EE_Cls, 
-                      boltzmann_cbe->BB_Cls, 
-                      boltzmann_cbe->TE_Cls);  
+                      boltzmann_cbe->TT_Cls,
+                      boltzmann_cbe->EE_Cls,
+                      boltzmann_cbe->BB_Cls,
+                      boltzmann_cbe->TE_Cls);
 }
 

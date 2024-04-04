@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_data_dist1d.h
  *
@@ -44,7 +45,7 @@ struct _NcmDataDist1dClass
   /*< private >*/
   NcmDataClass parent_class;
 
-  gdouble (*m2lnL_val) (NcmDataDist1d *dist1d, NcmMSet *mset, gdouble x);
+  gdouble (*dist1d_m2lnL_val) (NcmDataDist1d *dist1d, NcmMSet *mset, gdouble x);
   gdouble (*inv_pdf) (NcmDataDist1d *dist1d, NcmMSet *mset, gdouble u);
   void (*set_size) (NcmDataDist1d *dist1d, guint np);
   guint (*get_size) (NcmDataDist1d *dist1d);

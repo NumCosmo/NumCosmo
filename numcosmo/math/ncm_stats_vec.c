@@ -306,9 +306,9 @@ _ncm_stats_vec_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_SAVE_X:
       svec->save_x = g_value_get_boolean (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -330,9 +330,9 @@ _ncm_stats_vec_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_SAVE_X:
       g_value_set_boolean (value, svec->save_x);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -1494,7 +1494,7 @@ static gdouble
 _ncm_stats_vec_heidel_diag_pcramer (const gdouble q)
 {
   const gdouble pi_32 = sqrt (gsl_pow_3 (M_PI));
-  const gint maxiter  = 100;
+  const guint maxiter = 100;
   const gdouble ffac  = 1.0 / (pi_32 * sqrt (q));
   gdouble p           = 0.0;
   guint i             = 0;

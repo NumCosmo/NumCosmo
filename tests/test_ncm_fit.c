@@ -36,6 +36,11 @@ typedef struct _TestNcmFit
   guint ntests;
 } TestNcmFit;
 
+#define TEST_NCM_FIT_FISHER_COV_RELTOL 1.0e-2
+#define TEST_NCM_FIT_FISHER_BIAS_RELTOL 3.0e-1
+#define TEST_NCM_FIT_DIM 10
+#define TEST_NCM_FIT_DIM_SMALL 5
+
 #define TESTS_NCM_DECL(lib, algo) \
         void test_ncm_fit_ ## lib ## _ ## algo ## _new (TestNcmFit * test, gconstpointer pdata); \
         void test_ncm_fit_ ## lib ## _ ## algo ## _new_empty (TestNcmFit * test, gconstpointer pdata); \
@@ -60,6 +65,26 @@ typedef struct _TestNcmFit
         g_test_add ("/ncm/fit/" #lib "/" #algo "/set_get", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_set_get, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/log_info", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_log_info, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/log_covar", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_log_covar, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/m2lnL_val", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_m2lnL_val, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/ls_f_J", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_ls_f_J, \
                     &test_ncm_fit_free); \
 \
         g_test_add ("/ncm/fit/" #lib "/" #algo "/params/set_get", TestNcmFit, NULL, \
@@ -110,6 +135,11 @@ typedef struct _TestNcmFit
         g_test_add ("/ncm/fit/" #lib "/" #algo "/run/restart/save/file", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_run_restart_save_file, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/run/likelihood_ratio", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_run_likelihood_ratio, \
                     &test_ncm_fit_free); \
 \
         g_test_add ("/ncm/fit/" #lib "/" #algo "/serialize", TestNcmFit, NULL, \
@@ -175,6 +205,11 @@ typedef struct _TestNcmFit
         g_test_add ("/ncm/fit/" #lib "/" #algo "/fisher/gauss", TestNcmFit, NULL, \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
                     &test_ncm_fit_fisher_gauss, \
+                    &test_ncm_fit_free); \
+\
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/fisher_bias/gauss", TestNcmFit, NULL, \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new, \
+                    &test_ncm_fit_fisher_bias_gauss, \
                     &test_ncm_fit_free); \
 \
         g_test_add ("/ncm/fit/" #lib "/" #algo "/traps", TestNcmFit, NULL, \
@@ -283,6 +318,10 @@ TESTS_NCM_DECL (levmar, bc_der)
 
 void test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_set_get (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_log_info (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_log_covar (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_m2lnL_val (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_ls_f_J (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_params_set_get (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_simple (TestNcmFit *test, gconstpointer pdata);
@@ -295,6 +334,7 @@ void test_ncm_fit_run_restart (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_restart_simple (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_restart_save (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_restart_save_file (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_likelihood_ratio (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_serialize (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_copy_new (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_sub_fit_wrong_fit (TestNcmFit *test, gconstpointer pdata);
@@ -308,6 +348,7 @@ void test_ncm_fit_serialize_constraints (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_fisher_ls (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_fisher_obs (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_fisher_gauss (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_fisher_bias_gauss (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
 
 gint
@@ -368,21 +409,21 @@ main (gint argc, gchar *argv[])
 }
 
 #ifdef HAVE_NLOPT
-TESTS_NCM_NEW (nlopt, neldermead, NCM_FIT_TYPE_NLOPT, FIT_NLOPT, "ln-neldermead", 20, NCM_FIT_DEFAULT_MAXITER)
-TESTS_NCM_NEW (nlopt, slsqp,      NCM_FIT_TYPE_NLOPT, FIT_NLOPT, "ld-slsqp",      20, NCM_FIT_DEFAULT_MAXITER)
+TESTS_NCM_NEW (nlopt, neldermead, NCM_FIT_TYPE_NLOPT, FIT_NLOPT, "ln-neldermead", TEST_NCM_FIT_DIM, NCM_FIT_DEFAULT_MAXITER)
+TESTS_NCM_NEW (nlopt, slsqp,      NCM_FIT_TYPE_NLOPT, FIT_NLOPT, "ld-slsqp",      TEST_NCM_FIT_DIM, NCM_FIT_DEFAULT_MAXITER)
 #endif /* HAVE_NLOPT */
 
-TESTS_NCM_NEW (gsl, ls, NCM_FIT_TYPE_GSL_LS, FIT_GSL_LS, NULL, 20, 10000000)
+TESTS_NCM_NEW (gsl, ls, NCM_FIT_TYPE_GSL_LS, FIT_GSL_LS, NULL, TEST_NCM_FIT_DIM, 10000000)
 
-TESTS_NCM_NEW (gsl, mm_conjugate_fr,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "conjugate-fr",     20, 10000000)
-TESTS_NCM_NEW (gsl, mm_conjugate_pr,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "conjugate-pr",     20, 10000000)
-TESTS_NCM_NEW (gsl, mm_vector_bfgs,      NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "vector-bfgs",      20, 10000000)
-TESTS_NCM_NEW (gsl, mm_vector_bfgs2,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "vector-bfgs2",     20, 10000000)
-TESTS_NCM_NEW (gsl, mm_steepest_descent, NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "steepest-descent", 20, 10000000)
+TESTS_NCM_NEW (gsl, mm_conjugate_fr,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "conjugate-fr",     TEST_NCM_FIT_DIM, 10000000)
+TESTS_NCM_NEW (gsl, mm_conjugate_pr,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "conjugate-pr",     TEST_NCM_FIT_DIM, 10000000)
+TESTS_NCM_NEW (gsl, mm_vector_bfgs,      NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "vector-bfgs",      TEST_NCM_FIT_DIM, 10000000)
+TESTS_NCM_NEW (gsl, mm_vector_bfgs2,     NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "vector-bfgs2",     TEST_NCM_FIT_DIM, 10000000)
+TESTS_NCM_NEW (gsl, mm_steepest_descent, NCM_FIT_TYPE_GSL_MM, FIT_GSL_MM, "steepest-descent", TEST_NCM_FIT_DIM, 10000000)
 
-TESTS_NCM_NEW (gsl, nmsimplex,      NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex",     20, 10000000)
-TESTS_NCM_NEW (gsl, nmsimplex2,     NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex2",     5, 10000000)
-TESTS_NCM_NEW (gsl, nmsimplex2rand, NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex2rand", 5, 10000000)
+TESTS_NCM_NEW (gsl, nmsimplex,      NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex",      TEST_NCM_FIT_DIM_SMALL, 10000000)
+TESTS_NCM_NEW (gsl, nmsimplex2,     NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex2",     TEST_NCM_FIT_DIM_SMALL, 10000000)
+TESTS_NCM_NEW (gsl, nmsimplex2rand, NCM_FIT_TYPE_GSL_MMS, FIT_GSL_MMS, "nmsimplex2rand", TEST_NCM_FIT_DIM_SMALL, 10000000)
 
 TESTS_NCM_NEW (levmar, der,    NCM_FIT_TYPE_LEVMAR, FIT_LEVMAR, "der",    20, 10000000)
 TESTS_NCM_NEW (levmar, dif,    NCM_FIT_TYPE_LEVMAR, FIT_LEVMAR, "dif",    20, 10000000)
@@ -517,6 +558,96 @@ test_ncm_fit_params_set_get (TestNcmFit *test, gconstpointer pdata)
 
     for (i = 0; i < fparams_len; i++)
       g_assert_true (ncm_mset_fparam_get (mset, i) == ncm_vector_get (x_vec, i));
+  }
+}
+
+void
+test_ncm_fit_log_info (TestNcmFit *test, gconstpointer pdata)
+{
+  if (g_test_subprocess ())
+  {
+    NcmFit *fit = test->fit;
+
+    ncm_fit_log_info (fit);
+
+    return;
+  }
+
+  /* Reruns this same test in a subprocess */
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_passed ();
+  g_test_trap_assert_stdout ("*Data used*Model parameters*");
+}
+
+void
+test_ncm_fit_log_covar (TestNcmFit *test, gconstpointer pdata)
+{
+  if (g_test_subprocess ())
+  {
+    NcmFit *fit = test->fit;
+
+    ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-3, 0.0, NULL, NULL);
+    ncm_fit_obs_fisher (fit);
+    ncm_fit_log_covar (fit);
+
+    return;
+  }
+
+  /* Reruns this same test in a subprocess */
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_passed ();
+  g_test_trap_assert_stdout ("*NcmMSet parameters covariance matrix*");
+}
+
+void
+test_ncm_fit_m2lnL_val (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit = test->fit;
+  gdouble m2lnL_val, data_m2lnL_val, priors_m2lnL_val;
+
+  ncm_fit_data_m2lnL_val (fit, &data_m2lnL_val);
+  ncm_fit_priors_m2lnL_val (fit, &priors_m2lnL_val);
+  ncm_fit_m2lnL_val (fit, &m2lnL_val);
+
+  ncm_assert_cmpdouble_e (m2lnL_val, ==, data_m2lnL_val + priors_m2lnL_val, 1.0e-15, 0.0);
+}
+
+void
+test_ncm_fit_ls_f_J (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit = test->fit;
+
+  if (ncm_fit_is_least_squares (fit))
+  {
+    NcmFitState *fstate         = ncm_fit_peek_state (fit);
+    const guint data_len        = ncm_fit_state_get_data_len (fstate);
+    const guint fparams_len     = ncm_fit_state_get_fparam_len (fstate);
+    NcmVector *f1               = ncm_vector_new (data_len);
+    NcmVector *f2               = ncm_vector_new (data_len);
+    NcmMatrix *J1               = ncm_matrix_new (data_len, fparams_len);
+    NcmMatrix *J2               = ncm_matrix_new (data_len, fparams_len);
+    NcmFitGradType grad_type[3] = {
+      NCM_FIT_GRAD_NUMDIFF_FORWARD,
+      NCM_FIT_GRAD_NUMDIFF_CENTRAL,
+      NCM_FIT_GRAD_NUMDIFF_ACCURATE
+    };
+    guint i;
+
+    for (i = 0; i < sizeof (grad_type) / sizeof (NcmFitGradType); i++)
+    {
+      ncm_fit_set_grad_type (fit, grad_type[i]);
+
+      ncm_fit_ls_f_J (fit, f1, J1);
+      ncm_fit_ls_f (fit, f2);
+      ncm_fit_ls_J (fit, J2);
+
+      g_assert_cmpint (ncm_vector_cmp2 (f1, f2, 1.0e-15, 0.0), ==, 0);
+      g_assert_cmpfloat (ncm_matrix_cmp (J1, J2, 0.0), <, 1.0e-15);
+    }
+  }
+  else
+  {
+    g_test_skip ("Fit is not a least squares fit");
   }
 }
 
@@ -802,11 +933,13 @@ test_ncm_fit_run_restart_save_file (TestNcmFit *test, gconstpointer pdata)
   NcmFit *fit       = test->fit;
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
   NcmMSet *mset     = ncm_fit_peek_mset (fit);
+  gchar *tmp_dir    = g_dir_make_tmp ("tmp_test_ncm_fit_run_restart_save_file_XXXXXX", NULL);
+  gchar *filename   = g_strdup_printf ("%s/tmp_test_ncm_fit_run_restart_save_file.mset", tmp_dir);
   NcmMSet *mset_dup;
 
-  ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-3, 0.0, NULL, "tmp_test_ncm_fit_run_restart_save_file.mset");
+  ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-3, 0.0, NULL, filename);
 
-  mset_dup = ncm_mset_load ("tmp_test_ncm_fit_run_restart_save_file.mset", ser);
+  mset_dup = ncm_mset_load (filename, ser);
 
   g_assert_true (ncm_mset_cmp (mset, mset_dup, TRUE));
 
@@ -825,6 +958,39 @@ test_ncm_fit_run_restart_save_file (TestNcmFit *test, gconstpointer pdata)
 
   ncm_mset_free (mset_dup);
   ncm_serialize_free (ser);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+void
+test_ncm_fit_run_likelihood_ratio (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit = test->fit;
+  NcmMatrix *results;
+  guint i;
+
+  ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-3, 0.0, NULL, NULL);
+  results = ncm_fit_lr_test_range (fit, ncm_model_mvnd_id (), 0, -1.0, 1.0, 100);
+
+  for (i = 0; i < 100; i++)
+  {
+    const gdouble val = ncm_matrix_get (results, i, 0);
+
+    if (ncm_matrix_get (results, i, 3) > 1.0e-8)
+      ncm_assert_cmpdouble_e (
+        ncm_fit_lr_test (fit, ncm_model_mvnd_id (), 0, val, 1),
+        ==,
+        ncm_matrix_get (results, i, 3), 1.0e-1, 1.0e-1);
+  }
+
+
+  ncm_matrix_free (results);
+
+  return;
 }
 
 void
@@ -997,7 +1163,7 @@ test_ncm_fit_sub_fit_run (TestNcmFit *test, gconstpointer pdata)
   ncm_mset_param_set_ftype (mset_dup, ncm_model_mvnd_id (), 0, NCM_PARAM_TYPE_FREE);
 
   ncm_fit_set_sub_fit (test->fit, fit_dup);
-  g_assert (ncm_fit_has_sub_fit (test->fit));
+  g_assert_true (ncm_fit_has_sub_fit (test->fit));
 
   ncm_fit_run (test->fit, NCM_FIT_RUN_MSGS_NONE);
 
@@ -1066,7 +1232,7 @@ void
 test_ncm_fit_equality_constraints (TestNcmFit *test, gconstpointer pdata)
 {
   NcmFit *fit       = test->fit;
-  NcmMSetFunc *func = NCM_MSET_FUNC (ncm_prior_gauss_param_new (ncm_model_mvnd_id (), 0, 1.0, 1.0));
+  NcmMSetFunc *func = NCM_MSET_FUNC (ncm_prior_gauss_param_new_name ("NcmModelMVND:mu_0", 1.0, 1.0));
 
   ncm_fit_add_equality_constraint (fit, func, 1.0e-5);
 
@@ -1123,7 +1289,7 @@ void
 test_ncm_fit_inequality_constraints (TestNcmFit *test, gconstpointer pdata)
 {
   NcmFit *fit       = test->fit;
-  NcmMSetFunc *func = NCM_MSET_FUNC (ncm_prior_gauss_param_new (ncm_model_mvnd_id (), 0, 1.0, 1.0));
+  NcmMSetFunc *func = NCM_MSET_FUNC (ncm_prior_gauss_param_new_name ("NcmModelMVND:mu_0", 1.0, 1.0));
 
   ncm_fit_add_inequality_constraint (fit, func, 1.0e-5);
 
@@ -1181,8 +1347,8 @@ test_ncm_fit_serialize_constraints (TestNcmFit *test, gconstpointer pdata)
 {
   NcmFit *fit        = test->fit;
   NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  NcmMSetFunc *func0 = NCM_MSET_FUNC (ncm_prior_gauss_param_new (ncm_model_mvnd_id (), 0, 1.0, 1.0));
-  NcmMSetFunc *func1 = NCM_MSET_FUNC (ncm_prior_gauss_param_new (ncm_model_mvnd_id (), 1, 1.1, 1.1));
+  NcmMSetFunc *func0 = NCM_MSET_FUNC (ncm_prior_gauss_param_new_name ("NcmModelMVND:mu_0", 1.0, 1.0));
+  NcmMSetFunc *func1 = NCM_MSET_FUNC (ncm_prior_gauss_param_new_name ("NcmModelMVND:mu_1", 1.1, 1.1));
   NcmFit *fit_dup;
 
   ncm_fit_add_inequality_constraint (fit, func0, 1.0e-5);
@@ -1199,8 +1365,8 @@ test_ncm_fit_serialize_constraints (TestNcmFit *test, gconstpointer pdata)
     gdouble mu, sigma;
     gdouble tol0_dup;
     gdouble tol1_dup;
-    NcmModelID mid;
-    guint pid;
+    gchar *parameter_name;
+    gchar *model_ns;
 
     ncm_fit_get_inequality_constraint (fit_dup, 0, &func0_dup, &tol0_dup);
     ncm_fit_get_equality_constraint (fit_dup, 0, &func1_dup, &tol1_dup);
@@ -1217,26 +1383,32 @@ test_ncm_fit_serialize_constraints (TestNcmFit *test, gconstpointer pdata)
     g_object_get (func0_dup,
                   "mu", &mu,
                   "sigma", &sigma,
-                  "mid", &mid,
-                  "pid", &pid,
+                  "model-ns", &model_ns,
+                  "parameter-name", &parameter_name,
                   NULL);
 
     g_assert_true (mu == 1.0);
     g_assert_true (sigma == 1.0);
-    g_assert_true (mid == ncm_model_mvnd_id ());
-    g_assert_true (pid == 0);
+    g_assert_cmpstr (model_ns, ==, "NcmModelMVND");
+    g_assert_cmpstr (parameter_name, ==, "mu_0");
+
+    g_clear_pointer (&model_ns, g_free);
+    g_clear_pointer (&parameter_name, g_free);
 
     g_object_get (func1_dup,
                   "mu", &mu,
                   "sigma", &sigma,
-                  "mid", &mid,
-                  "pid", &pid,
+                  "model-ns", &model_ns,
+                  "parameter-name", &parameter_name,
                   NULL);
 
     g_assert_true (mu == 1.1);
     g_assert_true (sigma == 1.1);
-    g_assert_true (mid == ncm_model_mvnd_id ());
-    g_assert_true (pid == 1);
+    g_assert_cmpstr (model_ns, ==, "NcmModelMVND");
+    g_assert_cmpstr (parameter_name, ==, "mu_1");
+
+    g_clear_pointer (&model_ns, g_free);
+    g_clear_pointer (&parameter_name, g_free);
 
     g_assert_true (tol0_dup == 1.0e-5);
     g_assert_true (tol1_dup == 1.0e-5);
@@ -1326,9 +1498,44 @@ test_ncm_fit_fisher_obs (TestNcmFit *test, gconstpointer pdata)
     NcmMatrix *cov      = ncm_fit_get_covar (fit);
     NcmMatrix *true_cov = ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (test->data_mvnd));
 
-    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, 1.0e-3);
+    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, TEST_NCM_FIT_FISHER_COV_RELTOL);
 
     ncm_matrix_free (cov);
+  }
+
+  /* Testing determinant */
+  {
+    const gdouble ln_det     = ncm_fit_numdiff_m2lnL_lndet_covar (fit);
+    NcmMatrix *cov           = ncm_fit_get_covar (fit);
+    NcmMatrix *true_cov      = ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (test->data_mvnd));
+    NcmMatrix *true_cholesky = ncm_matrix_dup (true_cov);
+
+    ncm_matrix_cholesky_decomp (true_cholesky, 'U');
+
+    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, TEST_NCM_FIT_FISHER_COV_RELTOL);
+
+    ncm_assert_cmpdouble_e (ncm_matrix_cholesky_lndet (true_cholesky), ==, ln_det, TEST_NCM_FIT_FISHER_COV_RELTOL, 0.0);
+
+    ncm_matrix_free (cov);
+    ncm_matrix_free (true_cholesky);
+  }
+
+  /* Testing error propagation */
+  {
+    NcmMSetFunc *func = NCM_MSET_FUNC (ncm_prior_gauss_param_new_name ("NcmModelMVND:mu_0", 0.0, 1.0));
+    NcmModel *model   = NCM_MODEL (ncm_mset_peek (ncm_fit_peek_mset (fit), ncm_model_mvnd_id ()));
+    const gdouble val = ncm_model_orig_vparam_get (model, NCM_MODEL_MVND_MEAN, 0);
+    NcmMatrix *cov    = ncm_fit_get_covar (fit);
+
+    gdouble f, sigma_f;
+
+    ncm_fit_function_error (fit, func, NULL, &f, &sigma_f);
+
+    ncm_assert_cmpdouble_e (f, ==, val, 1.0e-3, 0.0);
+    ncm_assert_cmpdouble_e (sigma_f, ==, sqrt (ncm_matrix_get (cov, 0, 0)), 1.0e-3, 0.0);
+
+    ncm_matrix_free (cov);
+    ncm_mset_func_free (func);
   }
 }
 
@@ -1346,10 +1553,71 @@ test_ncm_fit_fisher_gauss (TestNcmFit *test, gconstpointer pdata)
     NcmMatrix *cov      = ncm_fit_get_covar (fit);
     NcmMatrix *true_cov = ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (test->data_mvnd));
 
-    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, 1.0e-3);
+    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, TEST_NCM_FIT_FISHER_COV_RELTOL);
 
     ncm_matrix_free (cov);
   }
+}
+
+void
+test_ncm_fit_fisher_bias_gauss (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit             = test->fit;
+  NcmMSet *mset           = ncm_fit_peek_mset (fit);
+  NcmDataset *dataset     = ncm_likelihood_peek_dataset (ncm_fit_peek_likelihood (fit));
+  const guint fparams_len = ncm_mset_fparams_len (mset);
+  const guint data_n      = ncm_dataset_get_n (dataset);
+  NcmVector *x            = ncm_vector_new (fparams_len);
+  NcmVector *x_bf         = ncm_vector_new (fparams_len);
+  NcmVector *dx           = ncm_vector_new (fparams_len);
+  NcmVector *f_true       = ncm_vector_new (data_n);
+  NcmRNG *rng             = ncm_rng_new (NULL);
+  NcmVector *bias         = NULL;
+  guint i;
+
+  for (i = 0; i < fparams_len; i++)
+  {
+    ncm_vector_set (dx, i, ncm_rng_gaussian_gen (rng, 0.0, 5.0e-2));
+  }
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+  ncm_dataset_mean_vector (dataset, mset, f_true);
+
+  ncm_mset_fparams_get_vector (mset, x_bf);
+  ncm_vector_memcpy (x, x_bf);
+  ncm_vector_sub (x, dx);
+
+  ncm_mset_fparams_set_vector (mset, x);
+
+  bias = ncm_fit_fisher_bias (fit, f_true);
+
+  {
+    NcmMatrix *cov      = ncm_fit_get_covar (fit);
+    NcmMatrix *true_cov = ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (test->data_mvnd));
+
+    g_assert_cmpfloat (ncm_matrix_cmp (cov, true_cov, 0.0), <, TEST_NCM_FIT_FISHER_COV_RELTOL);
+
+    ncm_matrix_free (cov);
+  }
+
+  {
+    for (i = 0; i < fparams_len; i++)
+    {
+      const gdouble bias_i = ncm_vector_get (bias, i);
+      const gdouble dx_i   = ncm_vector_get (dx, i);
+
+      ncm_assert_cmpdouble_e (bias_i, ==, dx_i, TEST_NCM_FIT_FISHER_BIAS_RELTOL, TEST_NCM_FIT_FISHER_BIAS_RELTOL);
+    }
+  }
+
+  ncm_vector_free (x);
+  ncm_vector_free (x_bf);
+  ncm_vector_free (dx);
+  ncm_vector_free (f_true);
+  ncm_rng_free (rng);
+  ncm_vector_free (bias);
 }
 
 #ifdef HAVE_NLOPT

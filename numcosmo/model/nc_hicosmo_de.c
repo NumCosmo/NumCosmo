@@ -600,7 +600,7 @@ _nc_hicosmo_de_Omega_g0 (NcHICosmo *cosmo)
   const gdouble h  = MACRO_H0 / 100.0;
   const gdouble h2 = h * h;
 
-  return ncm_c_radiation_temp_to_h2omega_r (T_GAMMA0) / h2;
+  return ncm_c_radiation_temp_to_h2Omega_r0 (T_GAMMA0) / h2;
 }
 
 static gdouble

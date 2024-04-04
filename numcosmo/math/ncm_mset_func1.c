@@ -29,8 +29,7 @@
  * @short_description: Abstract class for arbitrary MSet functions - bindable version
  *
  * This class is an abstract class for arbitrary MSet functions it behaves
- * exactly like #NcmMSetFunc but it the virtual function #NcmMSetFunc1Class.eval1
- * is bindable.
+ * exactly like #NcmMSetFunc but its virtual function is bindable.
  *
  */
 

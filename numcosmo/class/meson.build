@@ -71,7 +71,13 @@ inc = include_directories('include')
 libclass = static_library(
     'class',
     sources: class_sources,
-    dependencies: [omp_c, glib_dep],
+    dependencies: [
+        glib_dep,
+        gmp_dep,
+        gsl_dep,
+        mpfr_dep,
+        omp_c,
+    ],
     include_directories: [configinc, numcosmoinc, inc],
     install: false,
     gnu_symbol_visibility: 'hidden',

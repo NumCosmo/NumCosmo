@@ -41,6 +41,7 @@
 #include "math/ncm_model_builder.h"
 #include "math/ncm_model.h"
 #include "math/ncm_mset.h"
+#include "math/ncm_obj_array.h"
 
 struct _NcmModelBuilder
 {
@@ -48,19 +49,24 @@ struct _NcmModelBuilder
   GObject parent_instance;
   gchar *name;
   gchar *desc;
+  gchar *parent_type_string;
   GType ptype;
   GType type;
-  GPtrArray *sparams;
-  GPtrArray *vparams;
+  NcmObjArray *sparams;
+  NcmObjArray *vparams;
+  gboolean stackable;
   gboolean created;
 };
 
 enum
 {
   PROP_0,
-  PROP_PARENT_TYPE,
+  PROP_PARENT_TYPE_STRING,
   PROP_NAME,
   PROP_DESC,
+  PROP_SPARAMS,
+  PROP_VPARAMS,
+  PROP_STACKABLE,
 };
 
 G_DEFINE_TYPE (NcmModelBuilder, ncm_model_builder, G_TYPE_OBJECT)
@@ -68,16 +74,14 @@ G_DEFINE_TYPE (NcmModelBuilder, ncm_model_builder, G_TYPE_OBJECT)
 static void
 ncm_model_builder_init (NcmModelBuilder *mb)
 {
-  mb->name    = NULL;
-  mb->desc    = NULL;
-  mb->ptype   = G_TYPE_INVALID;
-  mb->type    = G_TYPE_INVALID;
-  mb->sparams = g_ptr_array_new ();
-  mb->vparams = g_ptr_array_new ();
-  mb->created = FALSE;
-
-  g_ptr_array_set_free_func (mb->sparams, (GDestroyNotify) ncm_sparam_free);
-  g_ptr_array_set_free_func (mb->vparams, (GDestroyNotify) ncm_vparam_free);
+  mb->name               = NULL;
+  mb->desc               = NULL;
+  mb->parent_type_string = NULL;
+  mb->ptype              = G_TYPE_INVALID;
+  mb->type               = G_TYPE_INVALID;
+  mb->sparams            = ncm_obj_array_new ();
+  mb->vparams            = ncm_obj_array_new ();
+  mb->created            = FALSE;
 }
 
 static void
@@ -89,20 +93,54 @@ ncm_model_builder_set_property (GObject *object, guint prop_id, const GValue *va
 
   switch (prop_id)
   {
-    case PROP_PARENT_TYPE:
-      mb->ptype = g_value_get_gtype (value);
+    case PROP_PARENT_TYPE_STRING:
+      g_assert_false (mb->created);
+      mb->parent_type_string = g_value_dup_string (value);
+      mb->ptype              = g_type_from_name (mb->parent_type_string);
       break;
     case PROP_NAME:
+      g_assert_false (mb->created);
       g_clear_pointer (&mb->name, g_free);
       mb->name = g_value_dup_string (value);
       break;
     case PROP_DESC:
+      g_assert_false (mb->created);
       g_clear_pointer (&mb->desc, g_free);
       mb->desc = g_value_dup_string (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    case PROP_SPARAMS:
+    {
+      NcmObjArray *sparams = g_value_get_boxed (value);
+
+      if (sparams)
+      {
+        g_assert_false (mb->created);
+        g_clear_pointer (&mb->sparams, ncm_obj_array_unref);
+        mb->sparams = ncm_obj_array_ref (sparams);
+      }
+
       break;
+    }
+    case PROP_VPARAMS:
+    {
+      NcmObjArray *vparams = g_value_get_boxed (value);
+
+      if (vparams)
+      {
+        g_assert_false (mb->created);
+        g_clear_pointer (&mb->vparams, ncm_obj_array_unref);
+        mb->vparams = ncm_obj_array_ref (vparams);
+      }
+
+      break;
+    }
+    case PROP_STACKABLE:
+      g_assert_false (mb->created);
+      mb->stackable = g_value_get_boolean (value);
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -115,8 +153,8 @@ ncm_model_builder_get_property (GObject *object, guint prop_id, GValue *value, G
 
   switch (prop_id)
   {
-    case PROP_PARENT_TYPE:
-      g_value_set_gtype (value, mb->ptype);
+    case PROP_PARENT_TYPE_STRING:
+      g_value_set_string (value, mb->parent_type_string);
       break;
     case PROP_NAME:
       g_value_set_string (value, mb->name);
@@ -124,9 +162,18 @@ ncm_model_builder_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_DESC:
       g_value_set_string (value, mb->desc);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    case PROP_SPARAMS:
+      g_value_set_boxed (value, mb->sparams);
       break;
+    case PROP_VPARAMS:
+      g_value_set_boxed (value, mb->vparams);
+      break;
+    case PROP_STACKABLE:
+      g_value_set_boolean (value, mb->stackable);
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -147,8 +194,11 @@ ncm_model_builder_finalize (GObject *object)
 {
   NcmModelBuilder *mb = NCM_MODEL_BUILDER (object);
 
-  g_clear_pointer (&mb->sparams, g_ptr_array_unref);
-  g_clear_pointer (&mb->vparams, g_ptr_array_unref);
+  g_clear_pointer (&mb->sparams, ncm_obj_array_unref);
+  g_clear_pointer (&mb->vparams, ncm_obj_array_unref);
+  g_clear_pointer (&mb->name, g_free);
+  g_clear_pointer (&mb->desc, g_free);
+  g_clear_pointer (&mb->parent_type_string, g_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_builder_parent_class)->finalize (object);
@@ -165,12 +215,12 @@ ncm_model_builder_class_init (NcmModelBuilderClass *klass)
   object_class->finalize     = ncm_model_builder_finalize;
 
   g_object_class_install_property (object_class,
-                                   PROP_PARENT_TYPE,
-                                   g_param_spec_gtype ("parent-type",
-                                                       NULL,
-                                                       "Parent type",
-                                                       NCM_TYPE_MODEL,
-                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   PROP_PARENT_TYPE_STRING,
+                                   g_param_spec_string ("parent-type-string",
+                                                        NULL,
+                                                        "Parent type name",
+                                                        "NcmModel",
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_NAME,
                                    g_param_spec_string ("name",
@@ -185,6 +235,27 @@ ncm_model_builder_class_init (NcmModelBuilderClass *klass)
                                                         "Model's description",
                                                         "no-description",
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_SPARAMS,
+                                   g_param_spec_boxed ("sparams",
+                                                       NULL,
+                                                       "Scalar parameters",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_VPARAMS,
+                                   g_param_spec_boxed ("vparams",
+                                                       NULL,
+                                                       "Vector parameters",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_STACKABLE,
+                                   g_param_spec_boolean ("stackable",
+                                                         NULL,
+                                                         "Stackable",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -202,11 +273,12 @@ ncm_model_builder_class_init (NcmModelBuilderClass *klass)
 NcmModelBuilder *
 ncm_model_builder_new (GType ptype, const gchar *name, const gchar *desc)
 {
-  NcmModelBuilder *mb = g_object_new (NCM_TYPE_MODEL_BUILDER,
-                                      "parent-type", ptype,
-                                      "name",        name,
-                                      "description", desc,
-                                      NULL);
+  const gchar *parent_type_string = g_type_name (ptype);
+  NcmModelBuilder *mb             = g_object_new (NCM_TYPE_MODEL_BUILDER,
+                                                  "parent-type-string", parent_type_string,
+                                                  "name",               name,
+                                                  "description",        desc,
+                                                  NULL);
 
   return mb;
 }
@@ -237,7 +309,7 @@ void
 ncm_model_builder_add_sparam_obj (NcmModelBuilder *mb, NcmSParam *sparam)
 {
   g_assert (!mb->created);
-  g_ptr_array_add (mb->sparams, ncm_sparam_ref (sparam));
+  ncm_obj_array_add (mb->sparams, G_OBJECT (sparam));
 }
 
 /**
@@ -252,7 +324,7 @@ void
 ncm_model_builder_add_vparam_obj (NcmModelBuilder *mb, NcmVParam *vparam)
 {
   g_assert (!mb->created);
-  g_ptr_array_add (mb->vparams, ncm_vparam_ref (vparam));
+  ncm_obj_array_add (mb->vparams, G_OBJECT (vparam));
 }
 
 /**
@@ -342,8 +414,7 @@ ncm_model_builder_get_sparams (NcmModelBuilder *mb)
 
   for (i = 0; i < mb->sparams->len; i++)
   {
-    NcmSParam *sparam = NCM_SPARAM (g_ptr_array_index (mb->sparams, i));
-    GObject *obj      = G_OBJECT (ncm_sparam_ref (sparam));
+    GObject *obj = ncm_obj_array_peek (mb->sparams, i);
 
     ncm_obj_array_add (oa, obj);
   }
@@ -359,21 +430,21 @@ _ncm_model_builder_class_init (gpointer g_class, gpointer class_data)
   guint i;
 
   if (model_class->main_model_id == -1)
-    ncm_mset_model_register_id (model_class, mb->name, mb->desc, NULL, FALSE, -1);
+    ncm_mset_model_register_id (model_class, mb->name, mb->desc, NULL, mb->stackable, -1);
 
-  ncm_model_class_set_name_nick (model_class, mb->desc, mb->name);
+  ncm_model_class_set_name_nick (model_class, mb->name, mb->name);
   ncm_model_class_add_params (model_class, mb->sparams->len, mb->vparams->len, 1);
 
   for (i = 0; i < mb->sparams->len; i++)
   {
-    NcmSParam *sparam = NCM_SPARAM (g_ptr_array_index (mb->sparams, i));
+    NcmSParam *sparam = NCM_SPARAM (ncm_obj_array_peek (mb->sparams, i));
 
     ncm_model_class_set_sparam_obj (model_class, i, sparam);
   }
 
   for (i = 0; i < mb->vparams->len; i++)
   {
-    NcmVParam *vparam = NCM_VPARAM (g_ptr_array_index (mb->vparams, i));
+    NcmVParam *vparam = NCM_VPARAM (ncm_obj_array_peek (mb->vparams, i));
 
     ncm_model_class_set_vparam_obj (model_class, i, vparam);
   }
@@ -391,8 +462,10 @@ _ncm_model_builder_instance_init (GTypeInstance *instance, gpointer g_class)
  * @mb: a #NcmModelBuilder
  *
  * Creates a new object type using the scalar and vector parameters defined
- * in @mb.
+ * in @mb. If the object type was already created, this function just returns
+ * the type.
  *
+ * Returns: the new object type.
  */
 GType
 ncm_model_builder_create (NcmModelBuilder *mb)

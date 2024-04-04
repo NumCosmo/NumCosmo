@@ -107,9 +107,9 @@ _ncm_iset_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_N:
       _ncm_iset_set_max_size (iset, g_value_get_uint (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -125,9 +125,9 @@ _ncm_iset_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
     case PROP_N:
       g_value_set_uint (value, ncm_iset_get_max_size (iset));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

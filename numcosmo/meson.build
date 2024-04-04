@@ -703,6 +703,8 @@ libnumcosmo_dep = [
     blas_dep,
     lapack_dep,
     gsl_dep,
+    arb_dep,
+    flint_dep,
 ]
 
 numcosmo_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
@@ -731,7 +733,11 @@ libnumcosmo = library(
     # intl.lib is not compatible with SAFESEH
     link_args: [noseh_link_args],
     include_directories: [configinc, sundials_inc, libcuba_inc, plc_inc],
-    link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass, libplc],
+    # Planck likelihood code uses dlsym to load the Planck likelihood library
+    # components. This requires linking with link_whole to ensure that the
+    # symbols are available at runtime.
+    link_whole: [libplc],
+    link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass],
     dependencies: libnumcosmo_dep,
     c_args: numcosmo_c_args,
 )

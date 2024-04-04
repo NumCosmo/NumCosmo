@@ -67,6 +67,7 @@ struct _NcmMSetClass
   GObjectClass parent_class;
   GHashTable *ns_table;
   GArray *model_desc_array;
+  GRegex *fullname_regex;
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[16];
@@ -137,6 +138,8 @@ NcmMSetPIndex *ncm_mset_pindex_new (NcmModelID mid, guint pid);
 NcmMSetPIndex *ncm_mset_pindex_dup (NcmMSetPIndex *pi);
 void ncm_mset_pindex_free (NcmMSetPIndex *pi);
 
+gboolean ncm_mset_split_full_name (const gchar *fullname, gchar **model_ns, guint *stackpos_id, gchar **pname);
+
 NcmMSet *ncm_mset_empty_new (void);
 NcmMSet *ncm_mset_new (gpointer model0, ...) G_GNUC_NULL_TERMINATED;
 NcmMSet *ncm_mset_newv (gpointer model0, va_list ap);
@@ -152,6 +155,7 @@ NcmModel *ncm_mset_peek (NcmMSet *mset, NcmModelID mid);
 NcmModel *ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint stackpos_id);
 NcmModel *ncm_mset_get (NcmMSet *mset, NcmModelID mid);
 NcmModel *ncm_mset_peek_array_pos (NcmMSet *mset, guint i);
+NcmModel *ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name);
 NcmModelID ncm_mset_get_mid_array_pos (NcmMSet *mset, guint i);
 void ncm_mset_remove (NcmMSet *mset, NcmModelID mid);
 void ncm_mset_set (NcmMSet *mset, NcmModel *model);

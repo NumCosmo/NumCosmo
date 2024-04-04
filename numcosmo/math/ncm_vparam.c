@@ -46,6 +46,7 @@ enum
 {
   PROP_0,
   PROP_DEFAULT_SPARAM,
+  PROP_DEFAULT_LEN,
   PROP_LEN,
 };
 
@@ -81,9 +82,12 @@ _ncm_vparam_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_DEFAULT_SPARAM:
       vparam->default_sparam = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    case PROP_DEFAULT_LEN:
+      ncm_vparam_set_len (vparam, g_value_get_uint (value));
       break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -99,9 +103,12 @@ _ncm_vparam_get_property (GObject *object, guint prop_id, GValue *value, GParamS
     case PROP_DEFAULT_SPARAM:
       g_value_set_object (value, vparam->default_sparam);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    case PROP_DEFAULT_LEN:
+      g_value_set_uint (value, ncm_vparam_get_len (vparam));
       break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -147,6 +154,14 @@ ncm_vparam_class_init (NcmVParamClass *klass)
                                                          "Default sparam for the vector components",
                                                          NCM_TYPE_SPARAM,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_DEFAULT_LEN,
+                                   g_param_spec_uint  ("default-len",
+                                                       NULL,
+                                                       "Default length of the vector",
+                                                       1, G_MAXUINT, 1,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**

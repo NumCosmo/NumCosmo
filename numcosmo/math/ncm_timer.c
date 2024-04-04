@@ -137,9 +137,9 @@ _ncm_timer_set_property (GObject *object, guint prop_id, const GValue *value, GP
     case PROP_NAME:
       ncm_timer_set_name (nt, g_value_get_string (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -161,9 +161,9 @@ _ncm_timer_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
     case PROP_TASK_POS:
       g_value_set_uint (value, nt->task_pos);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

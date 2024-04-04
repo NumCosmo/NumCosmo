@@ -86,7 +86,6 @@ typedef struct _NcmMSetPrivate
   GPtrArray *fullname_parray;
   GArray *pi_array;
   GArray *mid_array;
-  GRegex *fullname_regex;
   gboolean valid_map;
   guint total_len;
   guint fparam_len;
@@ -152,8 +151,6 @@ ncm_mset_init (NcmMSet *mset)
 
 /* self->fpi_array[i] = g_array_sized_new (FALSE, TRUE, sizeof (gint), 10); */
 
-  self->fullname_regex = g_regex_new ("^\\s*([A-Z][A-Za-z]+)\\:?([0-9]+)?\\:([0-9A-Z\\-a-z_]+)\\s*$", G_REGEX_OPTIMIZE, 0, &error);
-
   self->valid_map = FALSE;
   self->total_len = 0;
 }
@@ -190,9 +187,9 @@ _ncm_mset_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
     case PROP_FMAP:
       g_value_take_boxed (value, ncm_mset_get_fmap (mset));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -253,9 +250,9 @@ _ncm_mset_set_property (GObject *object, guint prop_id, const GValue *value, GPa
 
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -284,10 +281,8 @@ _ncm_mset_dispose (GObject *object)
 static void
 _ncm_mset_finalize (GObject *object)
 {
-  NcmMSet *mset               = NCM_MSET (object);
-  NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
-
-  g_regex_unref (self->fullname_regex);
+  /* NcmMSet *mset               = NCM_MSET (object); */
+  /* NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset); */
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_parent_class)->finalize (object);
@@ -324,8 +319,19 @@ ncm_mset_class_init (NcmMSetClass *klass)
                                                        G_TYPE_STRV,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->ns_table         = g_hash_table_new (g_str_hash, g_str_equal);
-  klass->model_desc_array = g_array_new (FALSE, TRUE, sizeof (NcmMSetModelDesc));
+  {
+    GError *error = NULL;
+
+    klass->ns_table         = g_hash_table_new (g_str_hash, g_str_equal);
+    klass->model_desc_array = g_array_new (FALSE, TRUE, sizeof (NcmMSetModelDesc));
+    klass->fullname_regex   = g_regex_new ("^\\s*([A-Z][A-Za-z]+)\\:?([0-9]+)?\\:([0-9A-Z\\-a-z_]+)\\s*$", G_REGEX_OPTIMIZE, 0, &error);
+
+    if (error != NULL)
+    {
+      g_error ("ncm_mset_class_init: %s", error->message);
+      g_error_free (error);
+    }
+  }
 }
 
 /**
@@ -465,6 +471,62 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
 }
 
 /**
+ * ncm_mset_split_full_name:
+ * @fullname: full name of a parameter
+ * @model_ns: (out) (transfer full): model namespace
+ * @stackpos_id: (out): stack position id
+ * @pname: (out) (transfer full): parameter name
+ *
+ * Splits the @fullname into @model_ns, @stackpos_id and @pname. The @fullname
+ * should be specified with the parameter full name "model:parameter_name"
+ * or "model:stackposition:parameter_name".
+ *
+ * Returns: %TRUE if the @fullname is valid, %FALSE otherwise.
+ */
+gboolean
+ncm_mset_split_full_name (const gchar *fullname, gchar **model_ns, guint *stackpos_id, gchar **pname)
+{
+  GMatchInfo *match_info     = NULL;
+  gboolean ret               = FALSE;
+  NcmMSetClass * const klass = g_type_class_ref (NCM_TYPE_MSET);
+
+  if (g_regex_match (klass->fullname_regex, fullname, 0, &match_info))
+  {
+    gint nm           = g_match_info_get_match_count (match_info);
+    gchar *stackpos_s = NULL;
+
+    g_assert_cmpint (nm, ==, 4);
+
+    *model_ns  = g_match_info_fetch (match_info, 1);
+    stackpos_s = g_match_info_fetch (match_info, 2);
+    *pname     = g_match_info_fetch (match_info, 3);
+
+    if (*stackpos_s != '\0')
+    {
+      gchar *endptr = NULL;
+
+      *stackpos_id = g_ascii_strtoll (stackpos_s, &endptr, 10);
+
+      if (*endptr != '\0')
+        g_error ("ncm_mset_param_split_full_name: invalid stackpos number `%s'.", stackpos_s);
+    }
+    else
+    {
+      *stackpos_id = 0;
+    }
+
+    g_free (stackpos_s);
+
+    ret = TRUE;
+  }
+
+  g_match_info_free (match_info);
+  g_type_class_unref (klass);
+
+  return ret;
+}
+
+/**
  * ncm_mset_empty_new:
  *
  * Creates a new empty #NcmMSet.
@@ -513,6 +575,9 @@ ncm_mset_newv (gpointer model0, va_list ap)
 {
   NcmMSet *mset   = ncm_mset_empty_new ();
   NcmModel *model = NULL;
+
+  g_assert (model0 != NULL);
+  g_assert (NCM_IS_MODEL (model0));
 
   ncm_mset_set (mset, model0);
 
@@ -718,6 +783,49 @@ ncm_mset_peek_array_pos (NcmMSet *mset, guint i)
   g_assert_cmpuint (i, <, self->model_array->len);
 
   return ((NcmMSetItem *) g_ptr_array_index (self->model_array, i))->model;
+}
+
+/**
+ * ncm_mset_peek_by_name:
+ * @mset: a #NcmMSet
+ * @name: model namespace
+ *
+ * Peeks a #NcmModel from the #NcmMSet using the model namespace @name.
+ * The name may be specified with the parameter full name "model:stackposition".
+ * If the stack position is not specified, the first model with the model namespace
+ * @name will be returned.
+ *
+ * Returns: (transfer none): a #NcmModel with the model namespace @name.
+ */
+NcmModel *
+ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name)
+{
+  NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
+  gchar **ns_stackpos         = g_strsplit (name, ":", 2);
+  NcmModel *model             = NULL;
+
+  if (ns_stackpos[1] != NULL)
+  {
+    gchar *endptr = NULL;
+    guint stackpos_id;
+
+    stackpos_id = g_ascii_strtoll (ns_stackpos[1], &endptr, 10);
+
+    if (*endptr != '\0')
+      g_error ("ncm_mset_peek_by_name: invalid stackpos number `%s'.", ns_stackpos[1]);
+
+    g_strfreev (ns_stackpos);
+
+    model = ncm_mset_peek_pos (mset, ncm_mset_get_id_by_ns (ns_stackpos[0]), stackpos_id);
+  }
+  else
+  {
+    g_strfreev (ns_stackpos);
+
+    model = ncm_mset_peek (mset, ncm_mset_get_id_by_ns (name));
+  }
+
+  return model;
 }
 
 /**
@@ -1741,7 +1849,7 @@ ncm_mset_params_valid (NcmMSet *mset)
 }
 
 /**
- * ncm_mset_params_bounds:
+ * ncm_mset_params_valid_bounds:
  * @mset: a #NcmMSet
  *
  * Check whenever the parameters respect the bounds.
@@ -2624,53 +2732,37 @@ NcmMSetPIndex *
 ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname)
 {
   NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
+  NcmMSetClass * const klass  = NCM_MSET_GET_CLASS (mset);
   GMatchInfo *match_info      = NULL;
   NcmMSetPIndex *pi           = NULL;
+  gchar *model_ns             = NULL;
+  gchar *pname                = NULL;
+  guint stackpos_id           = 0;
 
-  if (g_regex_match (self->fullname_regex, fullname, 0, &match_info))
+  if (ncm_mset_split_full_name (fullname, &model_ns, &stackpos_id, &pname))
   {
-    gint nm           = g_match_info_get_match_count (match_info);
-    gchar *ns         = NULL;
-    gchar *stackpos_s = NULL;
-    gchar *pid_s      = NULL;
-    gchar *endptr     = NULL;
-    guint pid         = 0;
-    guint stackpos    = 0;
+    guint pid      = 0;
+    guint stackpos = 0;
+    gchar *endptr  = NULL;
     NcmModelID mid;
     NcmModel *model;
 
-    g_assert_cmpint (nm, ==, 4);
-
-    ns         = g_match_info_fetch (match_info, 1);
-    stackpos_s = g_match_info_fetch (match_info, 2);
-    pid_s      = g_match_info_fetch (match_info, 3);
-
-    mid = ncm_mset_get_id_by_ns (ns);
+    mid = ncm_mset_get_id_by_ns (model_ns);
 
     if (mid < 0)
-      g_error ("ncm_mset_param_get_by_full_name: namespace `%s' not found.", ns);
+      g_error ("ncm_mset_param_get_by_full_name: namespace `%s' not found.", model_ns);
 
-    if (*stackpos_s != '\0')
-    {
-      stackpos = g_ascii_strtoll (stackpos_s, &endptr, 10);
-
-      if (*endptr != '\0')
-        g_error ("ncm_mset_param_get_by_full_name: invalid stackpos number `%s'.", stackpos_s);
-    }
-
-    g_free (stackpos_s);
-
-    mid  += stackpos;
+    mid  += stackpos_id;
     model = ncm_mset_peek (mset, mid);
 
     if (model != NULL)
     {
       endptr = NULL;
-      pid    = g_ascii_strtoll (pid_s, &endptr, 10);
+      pid    = g_ascii_strtoll (pname, &endptr, 10);
 
       if (*endptr != '\0')
       {
-        if (ncm_model_param_index_from_name (model, pid_s, &pid))
+        if (ncm_model_param_index_from_name (model, pname, &pid))
           pi = ncm_mset_pindex_new (mid, pid);
       }
       else if (pid < ncm_model_len (model))
@@ -2679,8 +2771,8 @@ ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname)
       }
     }
 
-    g_free (pid_s);
-    g_free (ns);
+    g_free (pname);
+    g_free (model_ns);
   }
   else
   {
@@ -3171,7 +3263,7 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
       gchar *obj_name            = NULL;
       guint nparams, j;
 
-      g_variant_get (model_var, "{s@a{sv}}", &obj_name, &params);
+      g_variant_get (model_var, NCM_SERIALIZE_OBJECT_FORMAT, &obj_name, &params);
       nparams = g_variant_n_children (params);
       g_key_file_set_value (msetfile, group, ns, obj_name);
 
@@ -3364,7 +3456,7 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
         }
       }
 
-      g_string_append_printf (obj_ser, "{\'%s\', @a{sv} {", obj_type);
+      g_string_append_printf (obj_ser, "(\'%s\', @a{sv} {", obj_type);
       g_free (obj_type);
       g_key_file_remove_key (msetfile, groups[i], ns, &error);
 
@@ -3401,7 +3493,7 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
         }
       }
 
-      g_string_append (obj_ser, "}}");
+      g_string_append (obj_ser, "})");
       g_strfreev (keys);
     }
 

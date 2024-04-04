@@ -117,7 +117,6 @@
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_sort.h>
-#include <omp.h>
 #include "levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -211,9 +210,9 @@ _ncm_stats_dist_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_PRINT_FIT:
       ncm_stats_dist_set_print_fit (sd, g_value_get_boolean (value));
       break;
-    default: /* LCOV_EXCL_BR_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -248,9 +247,9 @@ _ncm_stats_dist_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_PRINT_FIT:
       g_value_set_boolean (value, ncm_stats_dist_get_print_fit (sd));
       break;
-    default: /* LCOV_EXCL_BR_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -851,7 +850,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
   {
     NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
     NcmStatsDistEval eval       = {sd, self, sd_class, NULL, m2lnp};
-    const gdouble dbl_limit     = 6.0;
+    const gdouble dbl_limit     = 2.0;
     guint i;
 
     /*

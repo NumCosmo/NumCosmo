@@ -426,9 +426,9 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_READONLY:
       self->readonly = g_value_get_boolean (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -513,9 +513,9 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_READONLY:
       g_value_set_boolean (value, self->readonly);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -2546,6 +2546,24 @@ ncm_mset_catalog_col_name (NcmMSetCatalog *mcat, guint i)
     return g_ptr_array_index (self->add_vals_names, i);
   else
     return ncm_mset_fparam_name (self->mset, i - self->nadd_vals);
+}
+
+/**
+ * ncm_mset_catalog_col_full_name:
+ * @mcat: a #NcmMSetCatalog
+ * @i: column index
+ *
+ * Returns: (transfer none): the full name of the @i-th column.
+ */
+const gchar *
+ncm_mset_catalog_col_full_name (NcmMSetCatalog *mcat, guint i)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  if (i < self->nadd_vals)
+    return g_ptr_array_index (self->add_vals_names, i);
+  else
+    return ncm_mset_fparam_full_name (self->mset, i - self->nadd_vals);
 }
 
 /**

@@ -137,9 +137,9 @@ _ncm_mpi_job_mcmc_set_property (GObject *object, guint prop_id, const GValue *va
 
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -159,9 +159,9 @@ _ncm_mpi_job_mcmc_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_FUNC_ARRAY:
       g_value_set_boxed (value, self->func_oa);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -439,7 +439,7 @@ _ncm_mpi_job_mcmc_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 /**
  * ncm_mpi_job_mcmc_new:
  * @fit: a #NcmFit
- * @func_oa: (array) (element-type NcmMSetFunc) (allow-none): a #NcmObjArray
+ * @func_oa: (nullable): a #NcmObjArray
  *
  * Creates a new #NcmMPIJobMCMC object.
  *

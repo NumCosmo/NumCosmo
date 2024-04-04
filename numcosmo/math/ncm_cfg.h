@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_cfg.h
  *
@@ -51,6 +52,7 @@ void ncm_cfg_enable_gsl_err_handler (void);
 void ncm_cfg_register_obj (GType obj);
 guint ncm_cfg_mpi_nslaves (void);
 gchar *ncm_cfg_get_fullpath (const gchar *filename, ...);
+const gchar *ncm_cfg_get_fullpath_base (void);
 
 void ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc);
 void ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries);
@@ -88,6 +90,7 @@ void ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, gu
 void ncm_cfg_msg_sepa (void);
 
 gchar *ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist);
+gchar *ncm_cfg_get_data_directory (void);
 
 gchar *ncm_cfg_command_line (gchar *argv[], gint argc);
 
@@ -104,10 +107,10 @@ extern guint fftw_default_flags;
 
 #ifdef NUMCOSMO_CHECK_PREPARE
 #define NCM_CHECK_PREPARED(obj, name) \
-  G_STMT_START { \
-    if (!obj->prepared) \
-    g_error ("calling method %s on an unprepared instance.", #name); \
-  } G_STMT_END
+        G_STMT_START { \
+          if (!obj->prepared) \
+          g_error ("calling method %s on an unprepared instance.", #name); \
+        } G_STMT_END
 #else /* NUMCOSMO_CHECK_PREPARE */
 #define NCM_CHECK_PREPARED(obj, name)
 #endif /* NUMCOSMO_CHECK_PREPARE */
@@ -129,14 +132,14 @@ extern guint fftw_default_flags;
 
 #ifndef NUMCOSMO_GIR_SCAN
 #define NCM_FITS_ERROR(status) \
-  G_STMT_START { \
-    if (status) \
-    { \
-      gchar errormsg[30]; \
-      fits_get_errstatus (status, errormsg); \
-      g_error ("FITS: %s", errormsg); \
-    } \
-  } G_STMT_END
+        G_STMT_START { \
+          if (status) \
+          { \
+            gchar errormsg[30]; \
+            fits_get_errstatus (status, errormsg); \
+            g_error ("FITS: %s", errormsg); \
+          } \
+        } G_STMT_END
 #endif /* NUMCOSMO_GIR_SCAN */
 
 G_END_DECLS

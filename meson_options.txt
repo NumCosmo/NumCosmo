@@ -120,3 +120,21 @@ option(
        value: true,
        description: 'Install NumCosmoPy using pip',
 )
+
+#######################################################################################
+# MPI options
+#######################################################################################
+
+option(
+       'debug-mpi',
+       type: 'boolean',
+       value: false,
+       description: 'Enable MPI debug messages',
+)
+
+option(
+       'mpi',
+       type: 'feature',
+       value: 'auto',
+       description: 'Enable MPI support',
+)

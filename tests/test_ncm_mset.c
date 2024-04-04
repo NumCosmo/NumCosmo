@@ -203,8 +203,8 @@ test_ncm_mset_setpeek (TestNcmMSet *test, gconstpointer pdata)
   NcClusterMass *mass = NC_CLUSTER_MASS (ncm_serialize_global_from_string ("NcClusterMassLnnormal"));
   gboolean f          = FALSE;
 
-  g_assert (mass != NULL);
-  g_assert (NC_IS_CLUSTER_MASS (mass));
+  g_assert_true (mass != NULL);
+  g_assert_true (NC_IS_CLUSTER_MASS (mass));
 
   ncm_mset_set (test->mset, NCM_MODEL (mass));
 
@@ -222,8 +222,8 @@ test_ncm_mset_setpospeek (TestNcmMSet *test, gconstpointer pdata)
   NcClusterMass *mass = NC_CLUSTER_MASS (ncm_serialize_global_from_string ("NcClusterMassLnnormal"));
   gboolean f          = FALSE;
 
-  g_assert (mass != NULL);
-  g_assert (NC_IS_CLUSTER_MASS (mass));
+  g_assert_true (mass != NULL);
+  g_assert_true (NC_IS_CLUSTER_MASS (mass));
 
   ncm_mset_set_pos (test->mset, NCM_MODEL (mass), 5);
 
@@ -241,8 +241,8 @@ test_ncm_mset_pushpeek (TestNcmMSet *test, gconstpointer pdata)
   NcClusterMass *mass = NC_CLUSTER_MASS (ncm_serialize_global_from_string ("NcClusterMassLnnormal"));
   gboolean f          = FALSE;
 
-  g_assert (mass != NULL);
-  g_assert (NC_IS_CLUSTER_MASS (mass));
+  g_assert_true (mass != NULL);
+  g_assert_true (NC_IS_CLUSTER_MASS (mass));
 
   ncm_mset_push (test->mset, NCM_MODEL (mass));
   ncm_mset_push (test->mset, NCM_MODEL (mass));
@@ -262,10 +262,10 @@ test_ncm_mset_fparams (TestNcmMSet *test, gconstpointer pdata)
   NcClusterMass *benson = NC_CLUSTER_MASS (ncm_serialize_global_from_string ("NcClusterMassBenson"));
   gboolean f            = FALSE;
 
-  g_assert (mass != NULL);
-  g_assert (NC_IS_CLUSTER_MASS (mass));
-  g_assert (benson != NULL);
-  g_assert (NC_IS_CLUSTER_MASS (benson));
+  g_assert_true (mass != NULL);
+  g_assert_true (NC_IS_CLUSTER_MASS (mass));
+  g_assert_true (benson != NULL);
+  g_assert_true (NC_IS_CLUSTER_MASS (benson));
 
   ncm_mset_set_pos (test->mset, NCM_MODEL (mass), 10);
 
@@ -355,8 +355,8 @@ test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata)
   NcClusterMass *mass = NC_CLUSTER_MASS (ncm_serialize_global_from_string ("NcClusterMassLnnormal"));
   gboolean f          = FALSE;
 
-  g_assert (mass != NULL);
-  g_assert (NC_IS_CLUSTER_MASS (mass));
+  g_assert_true (mass != NULL);
+  g_assert_true (NC_IS_CLUSTER_MASS (mass));
 
   ncm_mset_push (test->mset, NCM_MODEL (mass));
   ncm_mset_push (test->mset, NCM_MODEL (mass));
@@ -383,8 +383,8 @@ test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata)
     NcmSerialize *ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
     NcmMSet *mset_dup     = ncm_mset_dup (test->mset, ser);
 
-    g_assert (benson != NULL);
-    g_assert (NC_IS_CLUSTER_MASS (benson));
+    g_assert_true (benson != NULL);
+    g_assert_true (NC_IS_CLUSTER_MASS (benson));
 
     g_assert_true (ncm_mset_cmp (test->mset, mset_dup, FALSE));
     g_assert_true (ncm_mset_cmp (test->mset, mset_dup, TRUE));
@@ -460,8 +460,8 @@ test_ncm_mset_shallow_copy (TestNcmMSet *test, gconstpointer pdata)
   NcClusterMass *mass = NC_CLUSTER_MASS (ncm_serialize_global_from_string ("NcClusterMassLnnormal"));
   gboolean f          = FALSE;
 
-  g_assert (mass != NULL);
-  g_assert (NC_IS_CLUSTER_MASS (mass));
+  g_assert_true (mass != NULL);
+  g_assert_true (NC_IS_CLUSTER_MASS (mass));
 
   ncm_mset_push (test->mset, NCM_MODEL (mass));
   ncm_mset_push (test->mset, NCM_MODEL (mass));
@@ -515,10 +515,10 @@ test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata)
   NcClusterMass *mass   = NC_CLUSTER_MASS (ncm_serialize_global_from_string ("NcClusterMassLnnormal"));
   gboolean f            = FALSE;
 
-  g_assert (mass != NULL);
-  g_assert (NC_IS_CLUSTER_MASS (mass));
-  g_assert (benson != NULL);
-  g_assert (NC_IS_CLUSTER_MASS (benson));
+  g_assert_true (mass != NULL);
+  g_assert_true (NC_IS_CLUSTER_MASS (mass));
+  g_assert_true (benson != NULL);
+  g_assert_true (NC_IS_CLUSTER_MASS (benson));
 
   ncm_mset_push (test->mset, NCM_MODEL (mass));
   ncm_mset_push (test->mset, NCM_MODEL (mass));
@@ -532,10 +532,12 @@ test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata)
 
   {
     NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_mset_saved_XXXXXX", NULL);
+    gchar *filename   = g_strdup_printf ("%s/test_ncm_mset_saved.mset", tmp_dir);
 
-    ncm_mset_save (test->mset, ser, "test_ncm_mset_saved.mset", TRUE);
+    ncm_mset_save (test->mset, ser, filename, TRUE);
 
-    NcmMSet *mset_dup = ncm_mset_load ("test_ncm_mset_saved.mset", ser);
+    NcmMSet *mset_dup = ncm_mset_load (filename, ser);
 
     g_assert_true (ncm_mset_cmp (test->mset, mset_dup, FALSE));
     g_assert_true (ncm_mset_cmp (test->mset, mset_dup, TRUE));
@@ -584,6 +586,12 @@ test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata)
       ncm_serialize_clear (&ser);
       g_assert_true (destroyed);
     }
+
+    g_unlink (filename);
+    g_rmdir (tmp_dir);
+
+    g_free (filename);
+    g_free (tmp_dir);
   }
 
   nc_cluster_mass_free (benson);

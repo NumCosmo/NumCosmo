@@ -387,9 +387,9 @@ _ncm_fit_esmcmc_set_property (GObject *object, guint prop_id, const GValue *valu
 
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -454,9 +454,9 @@ _ncm_fit_esmcmc_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_FUNC_ARRAY:
       g_value_set_boxed (value, self->func_oa);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -675,7 +675,7 @@ _ncm_fit_esmcmc_worker_dup (gpointer userdata)
     fw->fit = ncm_fit_dup (self->fit, self->ser);
 
     if (self->func_oa != NULL)
-      fw->funcs_array = ncm_obj_array_dup (self->func_oa, self->ser);
+      fw->funcs_array = ncm_serialize_dup_array (self->ser, self->func_oa);
     else
       fw->funcs_array = NULL;
 
@@ -836,7 +836,7 @@ ncm_fit_esmcmc_set_data_file (NcmFitESMCMC *esmcmc, const gchar *filename)
     self->func_oa_file = g_strdup_printf ("%s.oa", base_name);
     g_free (base_name);
 
-    ncm_obj_array_save (self->func_oa, ser, self->func_oa_file, TRUE);
+    ncm_serialize_array_to_key_file (ser, self->func_oa, self->func_oa_file, TRUE);
 
     ncm_serialize_free (ser);
   }

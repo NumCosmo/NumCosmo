@@ -26,9 +26,12 @@
 /**
  * SECTION:ncm_ode_spline
  * @title: NcmOdeSpline
- * @short_description: Automatic generation of splines from ODE solvers (#NcmODE).
+ * @short_description: Automatic generation of splines from ODE solvers.
  * @stability: Stable
  * @include: numcosmo/math/ncm_ode_spline.h
+ *
+ * This class defines an object that integrates an ODE and generates a spline
+ * from the solution.
  *
  */
 
@@ -173,9 +176,9 @@ _ncm_ode_spline_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_INI_STEP:
       ncm_ode_spline_set_ini_step (os, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -220,11 +223,11 @@ _ncm_ode_spline_get_property (GObject *object, guint prop_id, GValue *value, GPa
       g_value_set_boolean (value, self->auto_abstol);
       break;
     case PROP_INI_STEP:
-      g_value_set_boolean (value, ncm_ode_spline_get_ini_step (os));
+      g_value_set_double (value, ncm_ode_spline_get_ini_step (os));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -284,7 +287,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:reltol:
    *
-   * #NcmODE integrator's relative tolerance.
+   * Integrator's relative tolerance.
    *
    */
   g_object_class_install_property (object_class,
@@ -298,7 +301,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:abstol:
    *
-   * #NcmODE integrator's absolute tolerance.
+   * Integrator's absolute tolerance.
    *
    */
   g_object_class_install_property (object_class,

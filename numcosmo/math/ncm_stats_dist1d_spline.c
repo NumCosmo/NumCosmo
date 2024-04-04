@@ -108,9 +108,9 @@ ncm_stats_dist1d_spline_set_property (GObject *object, guint prop_id, const GVal
     case PROP_TAIL_SIGMA:
       sd1s->tail_sigma = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -129,9 +129,9 @@ ncm_stats_dist1d_spline_get_property (GObject *object, guint prop_id, GValue *va
     case PROP_TAIL_SIGMA:
       g_value_set_double (value, sd1s->tail_sigma);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

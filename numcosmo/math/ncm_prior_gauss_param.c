@@ -51,16 +51,19 @@
 enum
 {
   PROP_0,
-  PROP_MID,
-  PROP_PID
+  PROP_MODEL_NS,
+  PROP_STACK_POS,
+  PROP_PARAM_NAME,
 };
 
 struct _NcmPriorGaussParam
 {
   /*< private >*/
   NcmPriorGauss parent_instance;
+  gchar *model_ns;
+  gchar *param_name;
+  guint stack_pos;
   NcmModelID mid;
-  guint pid;
 };
 
 G_DEFINE_TYPE (NcmPriorGaussParam, ncm_prior_gauss_param, NCM_TYPE_PRIOR_GAUSS)
@@ -79,15 +82,18 @@ _ncm_prior_gauss_param_set_property (GObject *object, guint prop_id, const GValu
 
   switch (prop_id)
   {
-    case PROP_MID:
-      pgp->mid = g_value_get_int (value);
+    case PROP_MODEL_NS:
+      ncm_prior_gauss_param_set_model_ns (pgp, g_value_get_string (value));
       break;
-    case PROP_PID:
-      pgp->pid = g_value_get_uint (value);
+    case PROP_STACK_POS:
+      ncm_prior_gauss_param_set_stack_pos (pgp, g_value_get_uint (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    case PROP_PARAM_NAME:
+      ncm_prior_gauss_param_set_param_name (pgp, g_value_get_string (value));
       break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -100,15 +106,18 @@ _ncm_prior_gauss_param_get_property (GObject *object, guint prop_id, GValue *val
 
   switch (prop_id)
   {
-    case PROP_MID:
-      g_value_set_int (value, pgp->mid);
+    case PROP_MODEL_NS:
+      g_value_set_string (value, ncm_prior_gauss_param_peek_model_ns (pgp));
       break;
-    case PROP_PID:
-      g_value_set_uint (value, pgp->pid);
+    case PROP_STACK_POS:
+      g_value_set_uint (value, ncm_prior_gauss_param_get_stack_pos (pgp));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    case PROP_PARAM_NAME:
+      g_value_set_string (value, ncm_prior_gauss_param_peek_param_name (pgp));
       break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -132,20 +141,28 @@ ncm_prior_gauss_param_class_init (NcmPriorGaussParamClass *klass)
   object_class->finalize     = &_ncm_prior_gauss_param_finalize;
 
   g_object_class_install_property (object_class,
-                                   PROP_MID,
-                                   g_param_spec_int ("mid",
-                                                     NULL,
-                                                     "model id",
-                                                     0, G_MAXINT, 0,
-                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   PROP_MODEL_NS,
+                                   g_param_spec_string ("model-ns",
+                                                        NULL,
+                                                        "model namespace",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
-                                   PROP_PID,
-                                   g_param_spec_uint ("pid",
+                                   PROP_STACK_POS,
+                                   g_param_spec_uint ("stack-pos",
                                                       NULL,
-                                                      "parameter id",
-                                                      0, G_MAXUINT32, 0,
+                                                      "stack position",
+                                                      0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_PARAM_NAME,
+                                   g_param_spec_string ("parameter-name",
+                                                        NULL,
+                                                        "parameter name",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   pg_class->mean = &_ncm_prior_gauss_param_mean;
 }
@@ -154,83 +171,75 @@ static gdouble
 _ncm_prior_gauss_param_mean (NcmPriorGauss *pg, NcmMSet *mset)
 {
   NcmPriorGaussParam *pgp = NCM_PRIOR_GAUSS_PARAM (pg);
+  NcmModel *model         = ncm_mset_peek (mset, pgp->mid);
 
-  return ncm_mset_param_get (mset, pgp->mid, pgp->pid);
+  return ncm_model_param_get_by_name (model, pgp->param_name);
 }
 
 /**
  * ncm_prior_gauss_param_new:
- * @mid: model id
+ * @model: a #NcmModel
  * @pid: parameter id
  * @mu: mean
  * @sigma: standard deviation
  *
- * Creates a new Gaussian prior for parameter @pid of model @mid.
+ * Creates a new Gaussian prior for parameter @pid of @model.
  *
  * Returns: (transfer full): @pgp.
  */
 NcmPriorGaussParam *
-ncm_prior_gauss_param_new (NcmModelID mid, guint pid, gdouble mu, gdouble sigma)
+ncm_prior_gauss_param_new (NcmModel *model, guint pid, gdouble mu, gdouble sigma)
 {
+  const gchar *model_ns   = G_OBJECT_TYPE_NAME (model);
+  const gchar *param_name = ncm_model_param_name (model, pid);
   NcmPriorGaussParam *pgp = g_object_new (NCM_TYPE_PRIOR_GAUSS_PARAM,
                                           "mu", mu,
                                           "sigma", sigma,
-                                          "mid", mid,
-                                          "pid", pid,
+                                          "model-ns", model_ns,
+                                          "parameter-name", param_name,
                                           NULL);
 
   return pgp;
 }
 
 /**
- * ncm_prior_gauss_param_new_pindex:
- * @pi: a #NcmMSetPIndex
- * @mu: mean
- * @sigma: standard deviation
- *
- * Creates a new Gaussian prior for parameter @pid of model @mid.
- *
- * Returns: (transfer full): @pgp.
- */
-NcmPriorGaussParam *
-ncm_prior_gauss_param_new_pindex (const NcmMSetPIndex *pi, gdouble mu, gdouble sigma)
-{
-  return ncm_prior_gauss_param_new (pi->mid, pi->pid, mu, sigma);
-}
-
-/**
  * ncm_prior_gauss_param_new_name:
- * @mset: a #NcmMSet
  * @name: parameter name
  * @mu: mean
  * @sigma: standard deviation
  *
- * Creates a new Gaussian prior for parameter named @name in @mset.
+ * Creates a new Gaussian prior for parameter named @name in @mset. See
+ * ncm_mset_split_full_name() for details on the parameter name format.
  *
  * Returns: (transfer full): @pgp.
  */
 NcmPriorGaussParam *
-ncm_prior_gauss_param_new_name (NcmMSet *mset, const gchar *name, gdouble mu, gdouble sigma)
+ncm_prior_gauss_param_new_name (const gchar *name, gdouble mu, gdouble sigma)
 {
-  const NcmMSetPIndex *pi = NULL;
+  gchar *model_ns   = NULL;
+  gchar *param_name = NULL;
+  guint stack_pos   = 0;
 
-  if ((pi = ncm_mset_param_get_by_full_name (mset, name)) != NULL)
+  if (!ncm_mset_split_full_name (name, &model_ns, &stack_pos, &param_name))
   {
-    NcmPriorGaussParam *pgp = ncm_prior_gauss_param_new_pindex (pi, mu, sigma);
-
-    ncm_mset_pindex_free ((NcmMSetPIndex *) pi);
-
-    return pgp;
-  }
-  else if ((pi = ncm_mset_fparam_get_pi_by_name (mset, name)) != NULL)
-  {
-    return ncm_prior_gauss_param_new_pindex (pi, mu, sigma);
-  }
-  else
-  {
-    g_error ("ncm_prior_gauss_param_new_name: cannot find parameter named `%s' in the mset.", name);
+    g_error ("ncm_prior_gauss_param_new_name: invalid parameter name `%s'.", name);
 
     return NULL;
+  }
+
+  {
+    NcmPriorGaussParam *pgp = g_object_new (NCM_TYPE_PRIOR_GAUSS_PARAM,
+                                            "mu", mu,
+                                            "sigma", sigma,
+                                            "model-ns", model_ns,
+                                            "stack-pos", stack_pos,
+                                            "parameter-name", param_name,
+                                            NULL);
+
+    g_free (model_ns);
+    g_free (param_name);
+
+    return pgp;
   }
 }
 
@@ -272,5 +281,109 @@ void
 ncm_prior_gauss_param_clear (NcmPriorGaussParam **pgp)
 {
   g_clear_object (pgp);
+}
+
+/**
+ * ncm_prior_gauss_param_set_model_ns:
+ * @pgp: a #NcmPriorGaussParam
+ * @model_ns: model namespace
+ *
+ * Sets the model namespace of @pgp to @model_ns.
+ *
+ */
+void
+ncm_prior_gauss_param_set_model_ns (NcmPriorGaussParam *pgp, const gchar *model_ns)
+{
+  g_return_if_fail (NCM_IS_PRIOR_GAUSS_PARAM (pgp));
+  {
+    GType model_type = g_type_from_name (model_ns); /* check if the model namespace is valid */
+
+    if (model_type == G_TYPE_INVALID)
+    {
+      g_error ("ncm_prior_gauss_param_set_model_ns: invalid model namespace `%s'.", model_ns);
+    }
+    else
+    {
+      NcmModelID mid = ncm_model_id_by_type (model_type);
+
+      g_clear_pointer (&pgp->model_ns, g_free);
+      pgp->model_ns = g_strdup (model_ns);
+      pgp->mid      = mid;
+    }
+  }
+}
+
+/**
+ * ncm_prior_gauss_param_set_stack_pos:
+ * @pgp: a #NcmPriorGaussParam
+ * @stack_pos: stack position
+ *
+ * Sets the stack position of @pgp to @stack_pos.
+ *
+ */
+void
+ncm_prior_gauss_param_set_stack_pos (NcmPriorGaussParam *pgp, guint stack_pos)
+{
+  g_return_if_fail (NCM_IS_PRIOR_GAUSS_PARAM (pgp));
+  {
+    pgp->stack_pos = stack_pos;
+  }
+}
+
+/**
+ * ncm_prior_gauss_param_set_param_name:
+ * @pgp: a #NcmPriorGaussParam
+ * @param_name: parameter name
+ *
+ * Sets the parameter name of @pgp to @param_name.
+ *
+ */
+void
+ncm_prior_gauss_param_set_param_name (NcmPriorGaussParam *pgp, const gchar *param_name)
+{
+  g_return_if_fail (NCM_IS_PRIOR_GAUSS_PARAM (pgp));
+  {
+    g_clear_pointer (&pgp->param_name, g_free);
+
+    pgp->param_name = g_strdup (param_name);
+  }
+}
+
+/**
+ * ncm_prior_gauss_param_peek_model_ns:
+ * @pgp: a #NcmPriorGaussParam
+ *
+ * Returns: (transfer none): the model namespace of @pgp.
+ */
+const gchar *
+ncm_prior_gauss_param_peek_model_ns (NcmPriorGaussParam *pgp)
+{
+  return pgp->model_ns;
+}
+
+/**
+ * ncm_prior_gauss_param_get_stack_pos:
+ * @pgp: a #NcmPriorGaussParam
+ *
+ * Gets the stack position of the parameter.
+ *
+ * Returns: the stack position of @pgp.
+ */
+guint
+ncm_prior_gauss_param_get_stack_pos (NcmPriorGaussParam *pgp)
+{
+  return pgp->stack_pos;
+}
+
+/**
+ * ncm_prior_gauss_param_peek_param_name:
+ * @pgp: a #NcmPriorGaussParam
+ *
+ * Returns: (transfer none): the parameter name of @pgp.
+ */
+const gchar *
+ncm_prior_gauss_param_peek_param_name (NcmPriorGaussParam *pgp)
+{
+  return pgp->param_name;
 }
 

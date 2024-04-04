@@ -70,7 +70,6 @@
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
-#include <omp.h>
 #include "misc/kdtree.h"
 #include "misc/rb_knn_list.h"
 #include "levmar/levmar.h"
@@ -180,9 +179,9 @@ _ncm_stats_dist_vkde_set_property (GObject *object, guint prop_id, const GValue 
     case PROP_USE_ROT_HREF:
       ncm_stats_dist_vkde_set_use_rot_href (sdvkde, g_value_get_boolean (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -203,9 +202,9 @@ _ncm_stats_dist_vkde_get_property (GObject *object, guint prop_id, GValue *value
     case PROP_USE_ROT_HREF:
       g_value_set_boolean (value, ncm_stats_dist_vkde_get_use_rot_href (sdvkde));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

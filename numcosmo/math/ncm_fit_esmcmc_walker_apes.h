@@ -101,6 +101,8 @@ void ncm_fit_esmcmc_walker_apes_set_cov_fixed_from_mset (NcmFitESMCMCWalkerAPES 
 void ncm_fit_esmcmc_walker_apes_set_cov_robust_diag (NcmFitESMCMCWalkerAPES *apes);
 void ncm_fit_esmcmc_walker_apes_set_cov_robust (NcmFitESMCMCWalkerAPES *apes);
 
+void ncm_fit_esmcmc_walker_apes_set_exploration (NcmFitESMCMCWalkerAPES *apes, guint exploration);
+
 G_END_DECLS
 
 #endif /* _NCM_FIT_ESMCMC_WALKER_APES_H_ */

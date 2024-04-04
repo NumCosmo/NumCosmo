@@ -93,9 +93,9 @@ ncm_dataset_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_OA:
       ncm_dataset_set_data_array (dset, (NcmObjArray *) g_value_get_boxed (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -114,9 +114,9 @@ ncm_dataset_get_property (GObject *object, guint prop_id, GValue *value, GParamS
     case PROP_OA:
       g_value_set_boxed (value, ncm_dataset_peek_data_array (dset));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -959,6 +959,61 @@ ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2ln
 }
 
 /**
+ * ncm_dataset_has_mean_vector:
+ * @dset: a #NcmDataset
+ *
+ * Whether all the #NcmData in @dset have a ncm_data_mean_vector() method.
+ *
+ * Returns: %TRUE if all the #NcmData in @dset have a ncm_data_mean_vector() method.
+ */
+gboolean
+ncm_dataset_has_mean_vector (NcmDataset *dset)
+{
+  guint i;
+
+  for (i = 0; i < dset->oa->len; i++)
+  {
+    NcmData *data = ncm_dataset_peek_data (dset, i);
+
+    if (!ncm_data_has_mean_vector (data))
+      return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+ * ncm_dataset_mean_vector:
+ * @dset: a #NcmDataset
+ * @mset: a #NcmMSet
+ * @mu: a #NcmVector
+ *
+ * Calculates the mean vector @f concatenating the individual ones from each
+ * #NcmData in @dset.
+ *
+ */
+void
+ncm_dataset_mean_vector (NcmDataset *dset, NcmMSet *mset, NcmVector *mu)
+{
+  const guint total_n = ncm_dataset_get_n (dset);
+  guint pos           = 0;
+  guint i;
+
+  g_assert_cmpuint (ncm_vector_len (mu), ==, total_n);
+
+  for (i = 0; i < dset->oa->len; i++)
+  {
+    NcmData *data = ncm_dataset_peek_data (dset, i);
+    guint n       = ncm_data_get_length (data);
+
+    ncm_vector_get_subvector2 (dset->ls_f, mu, pos, n);
+
+    ncm_data_mean_vector (data, mset, dset->ls_f);
+    pos += n;
+  }
+}
+
+/**
  * ncm_dataset_fisher_matrix:
  * @dset: a #NcmDataset
  * @mset: a #NcmMSet
@@ -990,5 +1045,51 @@ ncm_dataset_fisher_matrix (NcmDataset *dset, NcmMSet *mset, NcmMatrix **IM)
   }
 
   ncm_matrix_free (IM0);
+}
+
+/**
+ * ncm_dataset_fisher_matrix_bias:
+ * @dset: a #NcmDataset
+ * @mset: a #NcmMSet
+ * @f_true: a #NcmVector
+ * @IM: (out) (transfer full): The fisher matrix
+ * @delta_theta: (out) (transfer full): The bias vector
+ *
+ * Calculates the Fisher-information matrix @IM and and the bias vector @delta_theta
+ * adding the individual ones from each #NcmData in @dset.
+ *
+ */
+void
+ncm_dataset_fisher_matrix_bias (NcmDataset *dset, NcmMSet *mset, NcmVector *f_true, NcmMatrix **IM, NcmVector **delta_theta)
+{
+  const guint fparams_len = ncm_mset_fparams_len (mset);
+  NcmMatrix *IM0          = ncm_matrix_new (fparams_len, fparams_len);
+  NcmVector *delta_theta0 = ncm_vector_new (fparams_len);
+  guint pos               = 0;
+  guint i;
+
+  *IM          = ncm_matrix_new (fparams_len, fparams_len);
+  *delta_theta = ncm_vector_new (fparams_len);
+
+  ncm_matrix_set_zero (*IM);
+  ncm_vector_set_zero (*delta_theta);
+
+  for (i = 0; i < dset->oa->len; i++)
+  {
+    NcmData *data = ncm_dataset_peek_data (dset, i);
+    guint n       = ncm_data_get_length (data);
+
+    ncm_vector_get_subvector2 (dset->ls_f, f_true, pos, n);
+
+    ncm_data_fisher_matrix_bias (data, mset, dset->ls_f, &IM0, &delta_theta0);
+
+    ncm_matrix_add (*IM, IM0);
+    ncm_vector_add (*delta_theta, delta_theta0);
+
+    pos += n;
+  }
+
+  ncm_matrix_free (IM0);
+  ncm_vector_free (delta_theta0);
 }
 

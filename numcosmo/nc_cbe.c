@@ -2092,7 +2092,7 @@ NcmSpline2d *
 nc_cbe_get_matter_ps (NcCBE *cbe)
 {
   const gint z_size  = cbe->priv->psp.ln_tau_size;
-  const gint partz   = 4;
+  const guint partz  = 4;
   const gint z_tsize = (z_size - 1) * partz + 1;
   NcmVector *lnk_v   = ncm_vector_new (cbe->priv->psp.ln_k_size);
   NcmVector *z_v     = ncm_vector_new (z_tsize);

@@ -28,8 +28,7 @@
  * @title: NcmLHRatio1d
  * @short_description: Likelihood ratio for one dimensional parameter analysis.
  *
- * This object subclasses #NcmLHRatio and defines a likelihood ratio for one
- * dimensional parameter analysis.
+ * This object defines a likelihood ratio for one dimensional parameter analysis.
  *
  */
 
@@ -161,9 +160,9 @@ ncm_lh_ratio1d_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_CONSTRAINT:
       lhr1d->constraint = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -189,9 +188,9 @@ ncm_lh_ratio1d_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_CONSTRAINT:
       g_value_set_object (value, lhr1d->constraint);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

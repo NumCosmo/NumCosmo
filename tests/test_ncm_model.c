@@ -55,6 +55,9 @@ void test_ncm_model_test_setget_vector (TestNcmModel *test, gconstpointer pdata)
 void test_ncm_model_test_setget_model (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_test_name_index (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_test_dup (TestNcmModel *test, gconstpointer pdata);
+void test_ncm_model_test_impl (TestNcmModel *test, gconstpointer pdata);
+void test_ncm_model_param_names (TestNcmModel *test, gconstpointer pdata);
+void test_ncm_model_svparams_len (TestNcmModel *test, gconstpointer pdata);
 
 #define TEST_NCM_MODEL_NTYPES 5
 
@@ -117,6 +120,18 @@ main (gint argc, gchar *argv[])
 
     d = g_strdup_printf ("/ncm/%s/dup", (gchar *) ccc[i][0]);
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_dup, ccc[i][2]);
+    g_free (d);
+
+    d = g_strdup_printf ("/ncm/%s/impl", (gchar *) ccc[i][0]);
+    g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_impl, ccc[i][2]);
+    g_free (d);
+
+    d = g_strdup_printf ("/ncm/%s/param_names", (gchar *) ccc[i][0]);
+    g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_param_names, ccc[i][2]);
+    g_free (d);
+
+    d = g_strdup_printf ("/ncm/%s/svparams_len", (gchar *) ccc[i][0]);
+    g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_svparams_len, ccc[i][2]);
     g_free (d);
   }
 
@@ -208,7 +223,7 @@ _test_ncm_model_create_reparam (TestNcmModel *test)
   NcmVector *v         = ncm_vector_new (size);
   NcmBootstrap *bstrap = ncm_bootstrap_sized_new (size);
   NcmRNG *rng          = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  guint cdesc_n        = size / 10;
+  guint cdesc_n        = g_test_rand_int_range (size / 2, size);
   NcmReparamLinear *relin;
   guint i;
 
@@ -231,12 +246,11 @@ _test_ncm_model_create_reparam (TestNcmModel *test)
 
   for (i = 0; i < cdesc_n; i++)
   {
-    guint j                 = g_test_rand_int_range (0, size - 1);
-    gchar *new_param        = g_strdup_printf ("new_param_%u", j);
-    gchar *new_param_symbol = g_strdup_printf ("NP_%u", j);
+    gchar *new_param        = g_strdup_printf ("new_param_%u", i);
+    gchar *new_param_symbol = g_strdup_printf ("NP_%u", i);
 
     ncm_reparam_set_param_desc_full (NCM_REPARAM (relin),
-                                     j,
+                                     i,
                                      new_param,
                                      new_param_symbol,
                                      -10.0,
@@ -255,6 +269,7 @@ _test_ncm_model_create_reparam (TestNcmModel *test)
   ncm_vector_free (v);
   ncm_matrix_free (T);
   ncm_rng_free (rng);
+  ncm_bootstrap_free (bstrap);
 
   return NCM_REPARAM (relin);
 }
@@ -362,6 +377,21 @@ test_ncm_model_test_name_symbol (TestNcmModel *test, gconstpointer pdata)
     g_assert_true (psymbol != s_symbol_tot[i]);
     g_assert_cmpstr (pname, ==, s_name_tot[i]);
     g_assert_cmpstr (psymbol, ==, s_symbol_tot[i]);
+
+    if (ncm_model_peek_reparam (model) != NULL)
+    {
+      NcmReparam *reparam       = ncm_model_peek_reparam (model);
+      NcmSParam *reparam_sparam = ncm_reparam_get_param_desc (reparam, i);
+
+      if (reparam_sparam != NULL)
+      {
+        const gchar *pname_new   = ncm_model_param_name (model, i);
+        const gchar *psymbol_new = ncm_model_param_symbol (model, i);
+
+        g_assert_cmpstr (pname_new, !=, s_name_tot[i]);
+        g_assert_cmpstr (psymbol_new, !=, s_symbol_tot[i]);
+      }
+    }
   }
 
   for (i = 0; i < test->vparam_len; i++)
@@ -379,6 +409,22 @@ test_ncm_model_test_name_symbol (TestNcmModel *test, gconstpointer pdata)
       g_assert_true (psymbol != vp_symbol);
       g_assert_cmpstr (pname, ==, vp_name);
       g_assert_cmpstr (psymbol, ==, vp_symbol);
+
+      if (ncm_model_peek_reparam (model) != NULL)
+      {
+        guint pindex              = ncm_model_vparam_index (model, i, j);
+        NcmReparam *reparam       = ncm_model_peek_reparam (model);
+        NcmSParam *reparam_sparam = ncm_reparam_get_param_desc (reparam, pindex);
+
+        if (reparam_sparam != NULL)
+        {
+          const gchar *pname_new   = ncm_model_param_name (model, pindex);
+          const gchar *psymbol_new = ncm_model_param_symbol (model, pindex);
+
+          g_assert_cmpstr (pname_new, !=, vp_name);
+          g_assert_cmpstr (psymbol_new, !=, vp_symbol);
+        }
+      }
 
       g_free (vp_name);
       g_free (vp_symbol);
@@ -704,6 +750,111 @@ test_ncm_model_test_dup (TestNcmModel *test, gconstpointer pdata)
     ncm_assert_cmpdouble (ncm_model_param_get_lower_bound (model, i), ==, ncm_model_param_get_lower_bound (model_dup, i));
     ncm_assert_cmpdouble (ncm_model_param_get_upper_bound (model, i), ==, ncm_model_param_get_upper_bound (model_dup, i));
     ncm_assert_cmpdouble (ncm_model_param_get_abstol (model, i),      ==, ncm_model_param_get_abstol (model_dup, i));
+
+    ncm_assert_cmpdouble (ncm_model_orig_param_get (model, i),             ==, ncm_model_orig_param_get (model_dup, i));
+    ncm_assert_cmpdouble (ncm_model_orig_param_get_scale (model, i),       ==, ncm_model_orig_param_get_scale (model_dup, i));
+    ncm_assert_cmpdouble (ncm_model_orig_param_get_lower_bound (model, i), ==, ncm_model_orig_param_get_lower_bound (model_dup, i));
+    ncm_assert_cmpdouble (ncm_model_orig_param_get_upper_bound (model, i), ==, ncm_model_orig_param_get_upper_bound (model_dup, i));
+    ncm_assert_cmpdouble (ncm_model_orig_param_get_abstol (model, i),      ==, ncm_model_orig_param_get_abstol (model_dup, i));
   }
+
+  ncm_model_free (model_dup);
+}
+
+void
+test_ncm_model_test_impl (TestNcmModel *test, gconstpointer pdata)
+{
+  NcmModelTest *tm = test->tm;
+  NcmModel *model  = NCM_MODEL (tm);
+
+  g_assert_true (ncm_model_check_impl_flag (model, 1 << 0));
+  g_assert_true (ncm_model_check_impl_flag (model, 1 << 1));
+  g_assert_true (ncm_model_check_impl_flag (model, 1 << 2));
+  g_assert_false (ncm_model_check_impl_flag (model, 1 << 3));
+  g_assert_false (ncm_model_check_impl_flag (model, 1 << 4));
+  g_assert_false (ncm_model_check_impl_flag (model, 1 << 5));
+
+  g_assert_true (ncm_model_check_impl_opt (model, 0));
+  g_assert_true (ncm_model_check_impl_opt (model, 1));
+  g_assert_true (ncm_model_check_impl_opt (model, 2));
+  g_assert_false (ncm_model_check_impl_opt (model, 3));
+  g_assert_false (ncm_model_check_impl_opt (model, 4));
+  g_assert_false (ncm_model_check_impl_opt (model, 5));
+
+  g_assert_true (ncm_model_check_impl_opts (model, 0, 1, 2, -1));
+  g_assert_true (ncm_model_check_impl_opts (model, 2, 1, 2, -1));
+  g_assert_false (ncm_model_check_impl_opts (model, 2, 1, 4, -1));
+
+  {
+    gint64 flags = 0;
+
+    g_object_get (model, "implementation", &flags, NULL);
+    g_assert_true (flags & (1 << 0));
+    g_assert_true (flags & (1 << 1));
+    g_assert_true (flags & (1 << 2));
+    g_assert_false (flags & (1 << 3));
+    g_assert_false (flags & (1 << 4));
+    g_assert_false (flags & (1 << 5));
+  }
+}
+
+void
+test_ncm_model_param_names (TestNcmModel *test, gconstpointer pdata)
+{
+  NcmModelTest *tm = test->tm;
+  NcmModel *model  = NCM_MODEL (tm);
+  GPtrArray *names = ncm_model_param_names (model);
+  guint nnames     = test->sparam_len;
+  guint i;
+
+  for (i = 0; i < test->vparam_len; i++)
+  {
+    nnames += v_len_tot[i];
+  }
+
+  g_assert_cmpuint (names->len, ==, nnames);
+
+  {
+    guint name_index = 0;
+    guint i;
+
+    for (i = 0; i < test->sparam_len; i++)
+    {
+      const gchar *name = g_ptr_array_index (names, i);
+
+      g_assert_cmpstr (name, ==, ncm_model_param_name (model, i));
+    }
+
+    name_index += test->sparam_len;
+
+    for (i = 0; i < test->vparam_len; i++)
+    {
+      guint j;
+
+      for (j = 0; j < v_len_tot[i]; j++)
+      {
+        const gchar *name   = g_ptr_array_index (names, name_index + j);
+        const gchar *v_name = ncm_model_param_name (model, name_index + j);
+
+        g_assert_cmpstr (name, ==, v_name);
+      }
+
+      name_index += v_len_tot[i];
+    }
+  }
+}
+
+void
+test_ncm_model_svparams_len (TestNcmModel *test, gconstpointer pdata)
+{
+  NcmModelTest *tm = test->tm;
+  NcmModel *model  = NCM_MODEL (tm);
+  guint sparam_len, vparam_len;
+
+  g_object_get (model, "scalar-params-len", &sparam_len, NULL);
+  g_object_get (model, "vector-params-len", &vparam_len, NULL);
+
+  g_assert_cmpuint (sparam_len, ==, test->sparam_len);
+  g_assert_cmpuint (vparam_len, ==, test->vparam_len);
 }
 

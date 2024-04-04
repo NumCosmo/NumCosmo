@@ -116,9 +116,9 @@ _ncm_prior_flat_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_H0:
       ncm_prior_flat_set_h0 (pf, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -147,9 +147,9 @@ _ncm_prior_flat_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_H0:
       g_value_set_double (value, ncm_prior_flat_get_h0 (pf));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -191,21 +191,23 @@ ncm_prior_flat_class_init (NcmPriorFlatClass *klass)
                                    g_param_spec_double ("scale",
                                                         NULL,
                                                         "border scale",
-                                                        G_MINDOUBLE, G_MAXDOUBLE, 1.0,
+                                                        G_MINDOUBLE, G_MAXDOUBLE, 1.0e-10,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_H0,
+                                   g_param_spec_double ("h0",
+                                                        NULL,
+                                                        "Cut magnitude",
+                                                        1.0, G_MAXDOUBLE, 20.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   g_object_class_install_property (object_class,
                                    PROP_VARIABLE,
                                    g_param_spec_double ("variable",
                                                         NULL,
                                                         "variable",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_VARIABLE,
-                                   g_param_spec_double ("h0",
-                                                        NULL,
-                                                        "Cut magnitude",
-                                                        1.0, G_MAXDOUBLE, 20.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   NCM_PRIOR_CLASS (klass)->is_m2lnL = FALSE;
@@ -219,10 +221,8 @@ _ncm_prior_flat_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdoubl
   NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
   const gdouble mean               = NCM_PRIOR_FLAT_GET_CLASS (pf)->mean (pf, mset);
 
-  res[0] =
-    exp (2.0 * self->h0 / self->s * ((self->x_low - mean) + self->s / 2.0)) +
-    exp (2.0 * self->h0 / self->s * ((mean - self->x_upp) + self->s / 2.0))
-  ;
+  res[0] = 0.5 * (exp (-self->h0 / self->s * (mean - self->x_low) + self->h0) +
+                  exp (+self->h0 / self->s * (mean - self->x_upp) + self->h0));
 }
 
 /**

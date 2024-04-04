@@ -1,7 +1,7 @@
 project(
   'numcosmo',
   ['c', 'fortran'],
-  version: '0.19.2',
+  version: '0.21.2',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.2.0',
   default_options: [
@@ -10,7 +10,6 @@ project(
     'c_std=gnu99',
     'b_lto=true',
     'b_lto_threads=2',
-    'optimization=3',
   ],
 )
 
@@ -352,6 +351,7 @@ glib_req = '>= 2.54.0'
 gsl_req = '>= 2.4'
 fftw_req = '>= 3.1.2'
 cfitsio_req = '>= 3.25'
+flint_req = '>= 3.0'
 
 #######################################################################################
 # Checking for MPI:
@@ -360,23 +360,57 @@ cfitsio_req = '>= 3.25'
 #######################################################################################
 message('Checking for MPI')
 
-mpi_c_dep = dependency(
-  'mpi',
-  language: 'c',
-  required: false,
-)
+if get_option('mpi').auto() or get_option('mpi').enabled()
 
-mpi_fortran_dep = dependency(
-  'mpi',
-  language: 'fortran',
-  required: false,
-)
+  mpi_c_dep = dependency(
+    'mpi',
+    language: 'c',
+    required: false,
+  )
+
+  mpi_fortran_dep = dependency(
+    'mpi',
+    language: 'fortran',
+    required: false,
+  )
+
+  # MPICH is not found by the mpi dependency, so we need to check for it manually
+  if (not mpi_c_dep.found())
+    mpi_c_dep = dependency('mpich', required: false)
+  endif
+
+  # MPICH is not found by the mpi dependency, so we need to check for it manually
+  if (not mpi_fortran_dep.found())
+    mpi_fortran_dep = dependency('mpichf90', required: false)
+  endif
+
+  if get_option('mpi').enabled() and not mpi_c_dep.found()
+    error(
+      '''MPI support requested but not found. Both attempts to locate MPI dependency, \
+      using Meson's generic finder and MPICH specifically, failed.''',
+    )
+  endif
+else
+  mpi_c_dep = not_found
+  mpi_fortran_dep = not_found
+endif
 
 if mpi_c_dep.found()
   numcosmo_conf.set('HAVE_MPI', true)
   numcosmo_build_cfg.set('have_mpi_support', '#define NUMCOSMO_HAVE_MPI 1')
+  add_global_arguments(
+    '-DUSE_NCM_MPI',
+    language: 'c',
+  )
 else
   numcosmo_build_cfg.set('have_mpi_support', '')
+endif
+
+if get_option('debug-mpi') and mpi_c_dep.found()
+  add_global_arguments(
+    '-DNCM_MPI_DEBUG',
+    language: 'c',
+  )
 endif
 
 #######################################################################################
@@ -538,6 +572,80 @@ if nlopt_dep.found()
 endif
 
 #######################################################################################
+# Checking for Flint (optional):
+#######################################################################################
+message('Checking for Flint')
+
+# Currently the flint pkg-config file is broken, so we need to check for the
+# library manually. When this is fixed, we can replace 'flint_does_not_work' with
+# 'flint' in the dependency() call below.
+flint_dep = dependency(
+  'flint_does_not_work',
+  version: flint_req,
+  required: false,
+)
+
+if flint_dep.found()
+  arb_dep = flint_dep
+else
+  flint_dep = cc.find_library(
+    'flint',
+    required: false,
+  )
+
+  if flint_dep.found()
+    if cc.has_function('acb_set', dependencies: [flint_dep])
+      arb_dep = flint_dep
+    else
+      arb_lib_names = [
+        'arb',
+        'flint-arb',
+      ]
+      foreach arb_lib_name : arb_lib_names
+        arb_dep = cc.find_library(
+          arb_lib_name,
+          required: false,
+        )
+        if arb_dep.found()
+          if cc.has_function('acb_set', dependencies: [arb_dep, flint_dep])
+            break
+          endif
+        endif
+      endforeach
+    endif
+  else
+    arb_dep = flint_dep
+  endif
+endif
+
+if arb_dep.found()
+  numcosmo_conf.set('HAVE_FLINT', true)
+  flint_headers = [
+    'arb.h',
+    'acb.h',
+  ]
+  foreach h : flint_headers
+    if cc.has_header(
+      h,
+      dependencies: [arb_dep, flint_dep],
+      required: false,
+    )
+      define = 'HAVE_' + h.underscorify().to_upper()
+      numcosmo_conf.set(define, 1)
+    elif cc.has_header(
+      'flint' / h,
+      dependencies: [arb_dep, flint_dep],
+      required: false,
+    )
+      define = 'HAVE_' + h.underscorify().to_upper()
+      define_flint = 'HAVE_FLINT_' + h.underscorify().to_upper()
+      numcosmo_conf.set(define, 1)
+      numcosmo_conf.set(define_flint, 1)
+    endif
+  endforeach
+endif
+
+#######################################################################################
 # Checking for BLAS/LAPACK:
 #######################################################################################
 message('Checking for BLAS/LAPACK')
@@ -681,7 +789,7 @@ python_pip = python_module.find_installation(
 if get_option('numcosmo_py')
   if python_pip.found()
     pip_cmd = [
-      'python',
+      python.full_path(),
       '-m',
       'pip',
       'install',
@@ -734,3 +842,56 @@ subdir('numcosmo')
 subdir('tools')
 subdir('tests')
 subdir('docs')
+
+building_options = {
+  'Build type': get_option('buildtype'),
+  'Optimization level': get_option('optimization'),
+  'Debug': get_option('debug'),
+  'C-Compiler': cc.get_id(),
+  'C-Compiler version': cc.version(),
+  'Fortran-Compiler': fc.get_id(),
+  'Fortran-Compiler version': fc.version(),
+  'Build tests': build_tests,
+  'Build documentation': build_gtk_doc,
+  'Build Python module': get_option('numcosmo_py'),
+  'Build Vala library': have_vala,
+  'Build GObject introspection': enable_gir,
+  'Build MPI support': mpi_c_dep,
+  'Build OpenMP support': omp_c,
+  'Build prefix': numcosmo_prefix,
+  'Build bindir': numcosmo_bindir,
+  'Build libdir': numcosmo_libdir,
+  'Build libexecdir': numcosmo_libexecdir,
+  'Build datadir': numcosmo_datadir,
+  'Build includedir': numcosmo_includedir,
+  'Build pkgdatadir': numcosmo_pkgdatadir,
+  'Build pkgconfigdir': numcosmo_pkgconfigreldir,
+}
+
+summary(
+  building_options,
+  section: 'Building options',
+)
+
+dependencies_summary = {
+  'blas': blas_dep,
+  'cfitsio': cfitsio_dep,
+  'fftw3': fftw3_dep,
+  'fftw3f': fftw3f_dep,
+  'flint': flint_dep,
+  'glib-gio': gio_dep,
+  'glib-gobject': gobject_dep,
+  'glib': glib_dep,
+  'gmp': gmp_dep,
+  'gsl': gsl_dep,
+  'lapack': lapack_dep,
+  'libfyaml': libfyaml_dep,
+  'mpfr': mpfr_dep,
+  'mpi': mpi_c_dep,
+  'nlopt': nlopt_dep,
+  'openmp': omp_c,
+  'python': python,
+}
+
+summary(dependencies_summary, section: 'Dependencies')
+
