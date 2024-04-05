@@ -793,3 +793,29 @@ ncm_data_gauss_cov_bulk_resample (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatr
   ncm_matrix_scale (resample, -1.0);
 }
 
+/**
+ * ncm_data_gauss_cov_compute_mean:
+ * @gauss: a #NcmDataGaussCov
+ * @mset: a #NcmMSet
+ *
+ * Computes the mean vector based on the models in @mset. If
+ * the #NcmDataGaussCovClass::mean_func is not set, returns %NULL.
+ *
+ * Returns: (transfer full): the current data mean #NcmVector.
+ */
+NcmVector *
+ncm_data_gauss_cov_compute_mean (NcmDataGaussCov *gauss, NcmMSet *mset)
+{
+  NcmDataGaussCovClass * const gauss_cov_class = NCM_DATA_GAUSS_COV_GET_CLASS (gauss);
+  NcmDataGaussCovPrivate * const self          = ncm_data_gauss_cov_get_instance_private (gauss);
+
+  if (gauss_cov_class->mean_func != NULL)
+  {
+    NcmVector *mean     = ncm_vector_dup (self->y);
+
+    ncm_data_prepare (NCM_DATA(gauss), mset);
+    gauss_cov_class->mean_func (gauss, mset, mean);
+    return mean;
+  }
+  return NULL;
+}

@@ -369,6 +369,20 @@ _nc_data_cluster_ncounts_gauss_prepare (NcmData *data, NcmMSet *mset)
   nc_cluster_abundance_prepare_if_needed (self->cad, cosmo, clusterz, clusterm);
 }
 
+/**
+ * nc_data_cluster_ncounts_gauss_free:
+ * @ncount: a #NcDataClusterNCountsGauss
+ *
+ * Decreases the reference count of the #NcDataClusterNCountsGauss.
+ * If the reference count reaches zero, the #NcDataClusterNCountsGauss is freed.
+ *
+ */
+void
+nc_data_cluster_ncounts_gauss_free (NcDataClusterNCountsGauss *ncounts_gauss)
+{
+  g_object_unref (ncounts_gauss);
+}
+
 static void
 _nc_data_cluster_ncounts_gauss_set_size (NcmDataGaussCov *gauss_cov, guint np)
 {
@@ -550,9 +564,16 @@ void
 nc_data_cluster_ncounts_gauss_set_z_obs (NcDataClusterNCountsGauss *ncounts_gauss, NcmVector *z_obs)
 {
   NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcmDataGaussCov *gauss_cov =  NCM_DATA_GAUSS_COV (ncounts_gauss);
 
   ncm_vector_clear (&self->z_obs);
   self->z_obs = ncm_vector_ref (z_obs);
+
+  if (self->lnM_obs != NULL)
+  {
+    const guint np = (ncm_vector_len (self->z_obs)-1) * (ncm_vector_len (self->lnM_obs)-1);
+    ncm_data_gauss_cov_set_size(gauss_cov , np);
+  }
 }
 
 /**
@@ -586,9 +607,16 @@ void
 nc_data_cluster_ncounts_gauss_set_lnM_obs (NcDataClusterNCountsGauss *ncounts_gauss, NcmVector *lnM_obs)
 {
   NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcmDataGaussCov *gauss_cov =  NCM_DATA_GAUSS_COV (ncounts_gauss);
 
   ncm_vector_clear (&self->lnM_obs);
   self->lnM_obs = ncm_vector_ref (lnM_obs);
+  
+  if (self->z_obs != NULL)
+  {
+    const guint np = (ncm_vector_len (self->z_obs)-1) * (ncm_vector_len (self->lnM_obs)-1);
+    ncm_data_gauss_cov_set_size(gauss_cov , np);
+  }
 }
 
 /**
@@ -826,3 +854,5 @@ nc_data_cluster_ncounts_gauss_get_fix_cov (NcDataClusterNCountsGauss *ncounts_ga
 
   return self->fix_cov;
 }
+
+

@@ -61,6 +61,7 @@ struct _NcDataClusterNCountsGauss
 GType nc_data_cluster_ncounts_gauss_get_type (void) G_GNUC_CONST;
 
 NcDataClusterNCountsGauss *nc_data_cluster_ncounts_gauss_new (NcClusterAbundance *cad);
+void nc_data_cluster_ncounts_gauss_free (NcDataClusterNCountsGauss *ncounts_gauss);
 
 
 void nc_data_cluster_ncounts_gauss_set_z_obs (NcDataClusterNCountsGauss *ncounts_gauss, NcmVector *z_obs);
