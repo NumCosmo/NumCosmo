@@ -127,10 +127,6 @@ nc_halo_mass_function_d2n_dzdlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdo
 
   if (res < mfp->mf_lb)
     return mfp->mf_lb;
-<<<<<<< HEAD
-=======
-
->>>>>>> b5d2fae411c3c16481fd9badd3e6ed958d756acd
   return res;
 }
 

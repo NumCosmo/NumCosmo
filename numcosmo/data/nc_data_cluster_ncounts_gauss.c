@@ -117,7 +117,7 @@ nc_data_cluster_ncounts_gauss_init (NcDataClusterNCountsGauss *ncounts_gauss)
 }
 
 static void
-nc_data_cluster_ncounts_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_data_cluster_ncounts_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (object);
   NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
@@ -161,7 +161,7 @@ nc_data_cluster_ncounts_gauss_set_property (GObject *object, guint prop_id, cons
 }
 
 static void
-nc_data_cluster_ncounts_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_data_cluster_ncounts_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (object);
   NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
@@ -204,7 +204,7 @@ nc_data_cluster_ncounts_gauss_get_property (GObject *object, guint prop_id, GVal
 }
 
 static void
-nc_data_cluster_ncounts_gauss_dispose (GObject *object)
+_nc_data_cluster_ncounts_gauss_dispose (GObject *object)
 {
   NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (object);
   NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
@@ -224,7 +224,7 @@ nc_data_cluster_ncounts_gauss_dispose (GObject *object)
 }
 
 static void
-nc_data_cluster_ncounts_gauss_finalize (GObject *object)
+_nc_data_cluster_ncounts_gauss_finalize (GObject *object)
 {
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_ncounts_gauss_parent_class)->finalize (object);
@@ -243,10 +243,10 @@ nc_data_cluster_ncounts_gauss_class_init (NcDataClusterNCountsGaussClass *klass)
   NcmDataClass *data_class              = NCM_DATA_CLASS (klass);
   NcmDataGaussCovClass *gauss_cov_class = NCM_DATA_GAUSS_COV_CLASS (klass);
 
-  object_class->set_property = &nc_data_cluster_ncounts_gauss_set_property;
-  object_class->get_property = &nc_data_cluster_ncounts_gauss_get_property;
-  object_class->dispose      = &nc_data_cluster_ncounts_gauss_dispose;
-  object_class->finalize     = &nc_data_cluster_ncounts_gauss_finalize;
+  object_class->set_property = &_nc_data_cluster_ncounts_gauss_set_property;
+  object_class->get_property = &_nc_data_cluster_ncounts_gauss_get_property;
+  object_class->dispose      = &_nc_data_cluster_ncounts_gauss_dispose;
+  object_class->finalize     = &_nc_data_cluster_ncounts_gauss_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_Z_OBS,
