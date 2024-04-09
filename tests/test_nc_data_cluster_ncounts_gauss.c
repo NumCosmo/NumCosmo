@@ -62,6 +62,7 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
+  g_test_set_nonfatal_assertions ();
 
   g_test_add ("/nc/data_cluster_ncounts_gauss/sanity", TestNcClusterNCountsGauss, NULL,
               &test_nc_data_cluster_ncounts_gauss_new,
@@ -294,10 +295,24 @@ void test_nc_data_cluster_ncounts_gauss_cov (TestNcClusterNCountsGauss *test, gc
  g_assert_true (nc_data_cluster_ncounts_gauss_get_fix_cov(test->ncounts_gauss) == FALSE);
 
  cov_diag = ncm_matrix_dup(ncm_data_gauss_cov_compute_cov (gauss_cov , test->mset , NULL));
+ ncm_data_gauss_cov_set_cov(gauss_cov ,cov_diag);
+
+ for (i = 0; i < ncm_matrix_row_len(cov_diag); i++)
+ {
+  for (j = 0; j < ncm_matrix_col_len(cov_diag); j++)
+ {
+ g_assert_true (gsl_finite (ncm_matrix_get(cov_diag, i , j)));
+ if (i != j)
+ {
+  ncm_assert_cmpdouble_e (ncm_matrix_get (cov_diag , i , j), == ,0 , 1.0e-15 ,0.0);
+ }
+ ncm_assert_cmpdouble_e (ncm_matrix_get (cov_diag , i , j), == ,ncm_matrix_get (ncm_data_gauss_cov_peek_cov(gauss_cov),i,j) , 1.0e-15 ,0.0);
+ }
+}
 
  nc_data_cluster_ncounts_gauss_set_has_ssc (test->ncounts_gauss , TRUE);
  
- cov_1 = ncm_matrix_dup(ncm_data_gauss_cov_compute_cov (gauss_cov , test->mset , NULL));
+ cov_1= ncm_matrix_dup(ncm_data_gauss_cov_compute_cov (gauss_cov , test->mset ,  NULL));
 
  ncm_data_resample (NCM_DATA(test->ncounts_gauss) , test->mset, rng);
 
