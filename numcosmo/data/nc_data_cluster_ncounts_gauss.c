@@ -371,7 +371,7 @@ _nc_data_cluster_ncounts_gauss_prepare (NcmData *data, NcmMSet *mset)
 
 /**
  * nc_data_cluster_ncounts_gauss_free:
- * @ncount: a #NcDataClusterNCountsGauss
+ * @ncounts_gauss: a #NcDataClusterNCountsGauss
  *
  * Decreases the reference count of the #NcDataClusterNCountsGauss.
  * If the reference count reaches zero, the #NcDataClusterNCountsGauss is freed.
