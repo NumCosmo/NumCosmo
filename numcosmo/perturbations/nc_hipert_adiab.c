@@ -678,7 +678,7 @@ nc_hipert_adiab_eval_powspec_zeta_at (NcHIPertAdiab *adiab, NcmModel *model, con
   const gdouble k = nc_hipert_adiab_get_k (adiab);
   NcmCSQ1DState state;
 
-  ncm_csq1d_eval_at (NCM_CSQ1D (adiab), tau, &state);
+  ncm_csq1d_eval_at (NCM_CSQ1D (adiab), model, tau, &state);
 
   return _nc_hipert_eval_powspec_zeta_from_state (adiab, model, &state, k);
 }
@@ -703,7 +703,7 @@ nc_hipert_adiab_eval_powspec_Psi_at (NcHIPertAdiab *adiab, NcmModel *model, cons
   const gdouble k = nc_hipert_adiab_get_k (adiab);
   NcmCSQ1DState state;
 
-  ncm_csq1d_eval_at (NCM_CSQ1D (adiab), tau, &state);
+  ncm_csq1d_eval_at (NCM_CSQ1D (adiab), model, tau, &state);
 
   return _nc_hipert_eval_powspec_Psi_from_state (adiab, model, &state, k);
 }
@@ -728,7 +728,7 @@ nc_hipert_adiab_eval_powspec_drho_at (NcHIPertAdiab *adiab, NcmModel *model, con
   const gdouble k = nc_hipert_adiab_get_k (adiab);
   NcmCSQ1DState state;
 
-  ncm_csq1d_eval_at (NCM_CSQ1D (adiab), tau, &state);
+  ncm_csq1d_eval_at (NCM_CSQ1D (adiab), model, tau, &state);
 
   return _nc_hipert_eval_powspec_drho_from_state (adiab, model, &state, k);
 }
@@ -792,7 +792,7 @@ nc_hipert_adiab_prepare_spectrum (NcHIPertAdiab *adiab, NcmModel *model, const g
         if (tau < tauA_d)
           ncm_csq1d_compute_adiab_frame (csq1d, model, NCM_CSQ1D_FRAME_ORIG, tau, &state, NULL, NULL);
         else
-          ncm_csq1d_eval_at (csq1d, tau, &state);
+          ncm_csq1d_eval_at (csq1d, model, tau, &state);
 
         ncm_csq1d_state_get_ag (&state, &alpha, &gamma);
 

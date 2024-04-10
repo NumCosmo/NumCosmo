@@ -433,7 +433,7 @@ nc_hipert_em_eval_PE_PB (NcHIPertEM *pem, NcmModel *model, const gdouble tau, gd
   NcmCSQ1DState state;
   gdouble J11, J12, J22;
 
-  ncm_csq1d_eval_at (csq1d, tau, &state);
+  ncm_csq1d_eval_at (csq1d, model, tau, &state);
 
   ncm_csq1d_state_get_J (&state, &J11, &J12, &J22);
 

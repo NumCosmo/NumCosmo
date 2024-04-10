@@ -137,11 +137,17 @@ def test_csq1d():
     bs.set_save_evol(False)
     assert not bs.get_save_evol()
 
-    bs.set_max_order_2(True)
-    assert bs.get_max_order_2()
+    bs.set_initial_condition_type(Ncm.CSQ1DInitialStateType.AD_HOC)
+    assert bs.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.AD_HOC
 
-    bs.set_max_order_2(False)
-    assert not bs.get_max_order_2()
+    bs.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC2)
+    assert bs.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.ADIABATIC2
+
+    bs.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    assert bs.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.ADIABATIC4
+
+    bs.set_initial_condition_type(Ncm.CSQ1DInitialStateType.NONADIABATIC2)
+    assert bs.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.NONADIABATIC2
 
 
 def test_initial_conditions_time():
@@ -222,7 +228,7 @@ def test_evolution():
     t_a, _smaller_abst = bs.get_time_array()
 
     for t in t_a:
-        state = bs.eval_at(t, state)
+        state = bs.eval_at(None, t, state)
         phi_vec, Pphi_vec = state.get_phi_Pphi()
 
         phi = phi_vec[0] + 1.0j * phi_vec[1]
@@ -247,14 +253,16 @@ def test_evolution():
         assert_allclose(J12, (2.0 * phi * Pphi.conjugate()).real, atol=1.0e-7)
 
 
-def test_evolution_max_order2():
+def test_evolution_adiabatic2():
     """Test initial conditions of NcmCSQ1D."""
 
     bs = BesselTest(alpha=2.0)
-    bs.set_max_order_2(True)
+    bs.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC2)
     bs.set_k(1.0)
-    bs.set_ti(-100.0)
+    bs.set_ti(-1.0e5)
     bs.set_tf(-1.0e-3)
+    bs.set_vacuum_max_time(-1.0e0)
+    bs.set_vacuum_reltol(1.0e-3)
     state = Ncm.CSQ1DState.new()
 
     limit_found, t_adiab = bs.find_adiab_time_limit(None, -1.0e5, -1.0e0, 1.0e-3)
@@ -270,7 +278,7 @@ def test_evolution_max_order2():
     t_a, _smaller_abst = bs.get_time_array()
 
     for t in t_a:
-        state = bs.eval_at(t, state)
+        state = bs.eval_at(None, t, state)
         phi_vec, Pphi_vec = state.get_phi_Pphi()
 
         phi = phi_vec[0] + 1.0j * phi_vec[1]
@@ -472,7 +480,7 @@ def test_nonadiab_evol():
     bs.prepare(None)
     t_a, _smaller_abst = bs.get_time_array()
 
-    evol_J11 = [bs.eval_at(t, state).get_J()[0] for t in t_a]
+    evol_J11 = [bs.eval_at(None, t, state).get_J()[0] for t in t_a]
     analytic_J11 = [2.0 * np.abs(theo_phi(t)) ** 2 for t in t_a]
 
     assert_allclose(evol_J11, analytic_J11, rtol=1.0e-7)
@@ -605,6 +613,7 @@ if __name__ == "__main__":
     test_initial_conditions_time()
     test_initial_conditions_adiabatic()
     test_evolution()
+    test_evolution_adiabatic2()
     for frame0 in [Ncm.CSQ1DFrame.ORIG, Ncm.CSQ1DFrame.ADIAB1, Ncm.CSQ1DFrame.ADIAB2]:
         test_evolution_frame(frame0)
     test_change_frame_orig_adiab1()

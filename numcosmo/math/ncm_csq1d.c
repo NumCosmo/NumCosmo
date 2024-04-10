@@ -138,7 +138,7 @@ typedef struct _NcmCSQ1DPrivate
   gdouble tf_Prop;
   gdouble ti_Prop;
   NcmCSQ1DState *cur_state;
-  NcmCSQ1DVacuumType initial_condition_type;
+  NcmCSQ1DInitialStateType initial_condition_type;
   gdouble vacuum_reltol;
   gdouble vacuum_max_time;
   gdouble vacuum_final_time;
@@ -234,7 +234,7 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
   self->diff      = ncm_diff_new ();
   self->cur_state = ncm_csq1d_state_new ();
 
-  self->initial_condition_type = NCM_CSQ1D_VACUUM_TYPE_LENGTH;
+  self->initial_condition_type = NCM_CSQ1D_INITIAL_CONDITION_TYPE_LENGTH;
   self->vacuum_reltol          = 0.0;
   self->vacuum_max_time        = 0.0;
   self->vacuum_final_time      = 0.0;
@@ -521,8 +521,8 @@ ncm_csq1d_class_init (NcmCSQ1DClass *klass)
                                    g_param_spec_enum ("vacuum-type",
                                                       NULL,
                                                       "The vacuum type",
-                                                      NCM_TYPE_CSQ1D_VACUUM_TYPE,
-                                                      NCM_CSQ1D_VACUUM_TYPE_ADIABATIC4,
+                                                      NCM_TYPE_CSQ1D_INITIAL_CONDITION_TYPE,
+                                                      NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
@@ -1263,13 +1263,13 @@ ncm_csq1d_set_init_cond_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t
  * @csq1d: a #NcmCSQ1D
  * @initial_condition_type: the vacuum type
  *
- * Sets the vacuum type to @initial_condition_type. The vacuum type is used
- * to determine the vacuum state when preparing the object using
- * ncm_csq1d_prepare_vacuum().
+ * Sets the initial condition type to @initial_condition_type. The initial condition
+ * type is used to determine the initial state state when preparing the object using
+ * ncm_csq1d_prepare().
  *
  */
 void
-ncm_csq1d_set_initial_condition_type (NcmCSQ1D *csq1d, NcmCSQ1DVacuumType initial_condition_type)
+ncm_csq1d_set_initial_condition_type (NcmCSQ1D *csq1d, NcmCSQ1DInitialStateType initial_condition_type)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
@@ -1287,7 +1287,7 @@ ncm_csq1d_set_initial_condition_type (NcmCSQ1D *csq1d, NcmCSQ1DVacuumType initia
  *
  * Sets the relative tolerance for the vacuum definition. This tolerance
  * is used to determine the vacuum state when preparing the object using
- * ncm_csq1d_prepare_vacuum().
+ * ncm_csq1d_prepare().
  *
  */
 void
@@ -1309,7 +1309,7 @@ ncm_csq1d_set_vacuum_reltol (NcmCSQ1D *csq1d, const gdouble vacuum_reltol)
  *
  * Sets the maximum time for the vacuum search. This time is used
  * to determine the vacuum state when preparing the object using
- * ncm_csq1d_prepare_vacuum().
+ * ncm_csq1d_prepare().
  *
  */
 void
@@ -1426,9 +1426,9 @@ ncm_csq1d_get_save_evol (NcmCSQ1D *csq1d)
  * ncm_csq1d_get_initial_condition_type:
  * @csq1d: a #NcmCSQ1D
  *
- * Returns: the vacuum type.
+ * Returns: the initial condition type.
  */
-NcmCSQ1DVacuumType
+NcmCSQ1DInitialStateType
 ncm_csq1d_get_initial_condition_type (NcmCSQ1D *csq1d)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
@@ -2205,18 +2205,8 @@ _ncm_csq1d_evol_save (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DWS *ws, GArray *
   }
 }
 
-/**
- * ncm_csq1d_prepare: (virtual prepare)
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- *
- * Prepares the object using @model. This method expects that the initial
- * conditions have been set. It computes the evolution of the system and
- * saves the results in the internal splines.
- *
- */
-void
-ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
+static void
+_ncm_csq1d_prepare_splines (NcmCSQ1D *csq1d, NcmModel *model)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
   NcmCSQ1DWS ws                = {csq1d, model, 0.0, 0.0};
@@ -2251,23 +2241,8 @@ ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
   }
 }
 
-/**
- * ncm_csq1d_prepare_vacuum:
- * @csq1d: a #NcmCSQ1D
- * @model: (allow-none): a #NcmModel
- *
- * Prepares the object using @model for the vacuum case. This method will set the
- * initial conditions to the vacuum case and compute the evolution of the system. The
- * results are saved in the internal splines. See ncm_csq1d_set_initial_condition_type(),
- * ncm_csq1d_set_vacuum_reltol() and ncm_csq1d_set_vacuum_max_time() for more
- * information on how to set the vacuum parameters.
- *
- * If the vacuum cannot be computed, this method will return %FALSE.
- *
- * Returns: %TRUE if the vacuum was found and the solution was computed.
- */
-gboolean
-ncm_csq1d_prepare_vacuum (NcmCSQ1D *csq1d, NcmModel *model)
+static gboolean
+_ncm_csq1d_prepare_adiab (NcmCSQ1D *csq1d, NcmModel *model)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
   gdouble vacuum_final_time;
@@ -2289,11 +2264,59 @@ ncm_csq1d_prepare_vacuum (NcmCSQ1D *csq1d, NcmModel *model)
     {
       ncm_csq1d_compute_adiab (csq1d, model, vacuum_final_time, &state, &alpha_reltol, &dgamma_reltol);
       ncm_csq1d_set_init_cond_adiab (csq1d, model, vacuum_final_time);
-      ncm_csq1d_prepare (csq1d, model);
+      _ncm_csq1d_prepare_splines (csq1d, model);
     }
   }
 
   return TRUE;
+}
+
+/**
+ * ncm_csq1d_prepare: (virtual prepare)
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ *
+ * Prepares the object using @model. It integrates the system from the initial time to
+ * the final time. If the #NcmCSQ1DInitialStateType is set to
+ * #NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC, the initial conditions must be set using
+ * ncm_csq1d_set_init_cond(). Otherwise, the initial conditions are automatically set
+ * using the chosen method. See ncm_csq1d_set_initial_condition_type().
+ *
+ * The initial conditions based on the vacuum are controlled by the parameters
+ * ncm_csq1d_set_vacuum_reltol() and ncm_csq1d_set_vacuum_max_time().
+ *
+ */
+void
+ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  gboolean success             = FALSE;
+
+  switch (self->initial_condition_type)
+  {
+    case NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC:
+
+      if (!self->init_cond_set)
+        g_error ("ncm_csq1d_prepare: initial conditions must be set "
+                 "using ncm_csq1d_set_init_cond().");
+
+      _ncm_csq1d_prepare_splines (csq1d, model);
+      break;
+    case NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2:
+    case NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4:
+      success = _ncm_csq1d_prepare_adiab (csq1d, model);
+
+      if (!success)
+        g_error ("ncm_csq1d_prepare: could not find adiabatic time limit.");
+
+      break;
+    case NCM_CSQ1D_INITIAL_CONDITION_TYPE_NONADIABATIC2:
+      g_error ("ncm_csq1d_prepare: not implemented.");
+      break;
+    default:
+      g_error ("ncm_csq1d_prepare: invalid initial condition type.");
+      break;
+  }
 }
 
 /**
@@ -2721,14 +2744,14 @@ _ncm_csq1d_compute_adiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, Ncm
 
   switch (self->initial_condition_type)
   {
-    case NCM_CSQ1D_VACUUM_TYPE_ADIABATIC2:
+    case NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2:
       _ncm_csq1d_compute_adiab2 (csq1d, model, t, state, alpha_reltol, dgamma_reltol);
       break;
-    case NCM_CSQ1D_VACUUM_TYPE_ADIABATIC4:
+    case NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4:
       _ncm_csq1d_compute_adiab4 (csq1d, model, t, state, alpha_reltol, dgamma_reltol);
       break;
     default:
-      g_error ("_ncm_csq1d_compute_adiab: vacuum type '%d' not supported.", self->initial_condition_type);
+      _ncm_csq1d_compute_adiab4 (csq1d, model, t, state, alpha_reltol, dgamma_reltol);
       break;
   }
 }
@@ -2842,14 +2865,14 @@ _ncm_csq1d_eval_adiab_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdoubl
 
   switch (self->initial_condition_type)
   {
-    case NCM_CSQ1D_VACUUM_TYPE_ADIABATIC2:
+    case NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2:
       _ncm_csq1d_eval_adiab2_at_no_test (csq1d, model, t, alpha, dgamma, alpha_reltol, dgamma_reltol);
       break;
-    case NCM_CSQ1D_VACUUM_TYPE_ADIABATIC4:
+    case NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4:
       _ncm_csq1d_eval_adiab4_at_no_test (csq1d, model, t, alpha, dgamma, alpha_reltol, dgamma_reltol);
       break;
     default:
-      g_error ("_ncm_csq1d_eval_adiab_at_no_test: vacuum type '%d' not supported.", self->initial_condition_type);
+      _ncm_csq1d_eval_adiab4_at_no_test (csq1d, model, t, alpha, dgamma, alpha_reltol, dgamma_reltol);
       break;
   }
 }
@@ -2946,6 +2969,7 @@ _ncm_csq1d_eval_state (NcmCSQ1D *csq1d, const gdouble t, NcmCSQ1DState *state)
 /**
  * ncm_csq1d_eval_at:
  * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
  * @t: time $t$
  * @state: a #NcmCSQ1DState to store the result
  *
@@ -2955,7 +2979,7 @@ _ncm_csq1d_eval_state (NcmCSQ1D *csq1d, const gdouble t, NcmCSQ1DState *state)
  * Returns: (transfer none): the @state object with the result.
  */
 NcmCSQ1DState *
-ncm_csq1d_eval_at (NcmCSQ1D *csq1d, const gdouble t, NcmCSQ1DState *state)
+ncm_csq1d_eval_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state)
 {
   _ncm_csq1d_eval_state (csq1d, t, state);
 
