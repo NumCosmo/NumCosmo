@@ -105,7 +105,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu", "macos"]
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         mpi: ["openmpi", "mpich"]
     defaults:
       run:
@@ -175,7 +175,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu"]
-        python-version: ["3.9"]
+        python-version: ["3.10"]
     defaults:
       run:
         shell: bash -el {0}
