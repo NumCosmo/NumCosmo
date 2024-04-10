@@ -11,10 +11,10 @@ dependencies:
   - fortran-compiler
   - gcovr
   - getdist
-  - glib
-  - glib-tools
+  - glib <=2.78.4
+  - glib-tools <=2.78.4
   - gmp
-  - gobject-introspection
+  - gobject-introspection <=1.78
   - gsl
   - hdf5
   - healpy
@@ -27,7 +27,7 @@ dependencies:
   - mypy
   - ninja
   - nlopt
-  - numpy >= 1.21.0
+  - numpy >= 1.23.0
   - openblas=*=*openmp*
   - openmpi
   - pip
@@ -38,7 +38,7 @@ dependencies:
   - pygobject
   - pylint
   - pytest
-  - python >= 3.9
+  - python >= 3.10
   - rich
   - scipy
   - tqdm
