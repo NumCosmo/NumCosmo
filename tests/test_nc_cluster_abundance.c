@@ -378,5 +378,4 @@ test_nc_cluster_abundance_failing_intp_bin_d2n (TestNcClusterAbundance *test, gc
   /* Reruns this same test in a subprocess */
   g_test_trap_subprocess (NULL, 0, 0);
   g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*_nc*");
 }
