@@ -36,7 +36,7 @@ typedef struct _TestNcClusterNCountsGauss
 {
   NcmMSet *mset;
   NcDataClusterNCountsGauss *ncounts_gauss;
-  NcClusterAbundance *cad;
+  NcClusterAbundance *cad ; 
   NcmVector *z_obs;
   NcmMatrix *z_obs_params;
   NcmVector *lnM_obs;
