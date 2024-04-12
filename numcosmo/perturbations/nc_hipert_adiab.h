@@ -55,7 +55,8 @@ struct _NcHIPertIAdiabInterface
   gdouble (*eval_p2Psi) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
   gdouble (*eval_p2drho) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
   gdouble (*eval_lapse) (NcHIPertIAdiab *iad, const gdouble tau);
-  gdouble (*eval_tau_hubble) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+  gdouble (*eval_tau_hubble) (NcHIPertIAdiab *iad, const gdouble k);
+  gdouble (*eval_tau_jeans) (NcHIPertIAdiab *iad, const gdouble k);
   gdouble (*eval_hubble) (NcHIPertIAdiab *iad, const gdouble tau);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
@@ -90,7 +91,8 @@ gdouble nc_hipert_iadiab_eval_x (NcHIPertIAdiab *iad, const gdouble tau);
 gdouble nc_hipert_iadiab_eval_p2Psi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 gdouble nc_hipert_iadiab_eval_p2drho (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 gdouble nc_hipert_iadiab_eval_lapse (NcHIPertIAdiab *iad, const gdouble tau);
-gdouble nc_hipert_iadiab_eval_tau_hubble (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+gdouble nc_hipert_iadiab_eval_tau_hubble (NcHIPertIAdiab *iad, const gdouble k);
+gdouble nc_hipert_iadiab_eval_tau_jeans (NcHIPertIAdiab *iad, const gdouble k);
 gdouble nc_hipert_iadiab_eval_hubble (NcHIPertIAdiab *iad, const gdouble tau);
 
 NcHIPertAdiab *nc_hipert_adiab_new (void);
@@ -108,7 +110,7 @@ gdouble nc_hipert_adiab_eval_powspec_zeta_at (NcHIPertAdiab *adiab, NcmModel *mo
 gdouble nc_hipert_adiab_eval_powspec_Psi_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
 gdouble nc_hipert_adiab_eval_powspec_drho_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
 
-void nc_hipert_adiab_prepare_spectrum (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau_vacuum_max, const gdouble vacuum_reltol, GArray *k_array, GArray *tau_array);
+void nc_hipert_adiab_prepare_spectrum (NcHIPertAdiab *adiab, NcmModel *model, GArray *k_array, GArray *tau_array);
 
 NcmPowspecSpline2d *nc_hipert_adiab_eval_powspec_zeta (NcHIPertAdiab *adiab, NcmModel *model);
 NcmPowspecSpline2d *nc_hipert_adiab_eval_powspec_Psi (NcHIPertAdiab *adiab, NcmModel *model);

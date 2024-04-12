@@ -2245,9 +2245,8 @@ static gboolean
 _ncm_csq1d_prepare_adiab (NcmCSQ1D *csq1d, NcmModel *model)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  gdouble vacuum_final_time;
 
-  if (!ncm_csq1d_find_adiab_time_limit (csq1d, model, self->ti, self->vacuum_max_time, self->vacuum_reltol, &vacuum_final_time))
+  if (!ncm_csq1d_find_adiab_time_limit (csq1d, model, self->ti, self->vacuum_max_time, self->vacuum_reltol, &self->vacuum_final_time))
   {
     return FALSE;
   }
@@ -2260,10 +2259,10 @@ _ncm_csq1d_prepare_adiab (NcmCSQ1D *csq1d, NcmModel *model)
      * from the vacuum time to the final time. Otherwise, we just need to compute the adiabatic
      * solution from the initial time to the final time.
      */
-    if (self->tf > vacuum_final_time)
+    if (self->tf > self->vacuum_final_time)
     {
-      ncm_csq1d_compute_adiab (csq1d, model, vacuum_final_time, &state, &alpha_reltol, &dgamma_reltol);
-      ncm_csq1d_set_init_cond_adiab (csq1d, model, vacuum_final_time);
+      ncm_csq1d_compute_adiab (csq1d, model, self->vacuum_final_time, &state, &alpha_reltol, &dgamma_reltol);
+      ncm_csq1d_set_init_cond_adiab (csq1d, model, self->vacuum_final_time);
       _ncm_csq1d_prepare_splines (csq1d, model);
     }
   }
@@ -2981,7 +2980,12 @@ _ncm_csq1d_eval_state (NcmCSQ1D *csq1d, const gdouble t, NcmCSQ1DState *state)
 NcmCSQ1DState *
 ncm_csq1d_eval_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state)
 {
-  _ncm_csq1d_eval_state (csq1d, t, state);
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+
+  if (t > self->vacuum_final_time)
+    _ncm_csq1d_eval_state (csq1d, t, state);
+  else
+    ncm_csq1d_compute_adiab_frame (csq1d, model, NCM_CSQ1D_FRAME_ORIG, t, state, NULL, NULL);
 
   return state;
 }
@@ -3002,9 +3006,17 @@ ncm_csq1d_eval_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DSt
 NcmCSQ1DState *
 ncm_csq1d_eval_at_frame (NcmCSQ1D *csq1d, NcmModel *model, const NcmCSQ1DFrame frame, const gdouble t, NcmCSQ1DState *state)
 {
-  _ncm_csq1d_eval_state (csq1d, t, state);
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
 
-  ncm_csq1d_change_frame (csq1d, model, state, frame);
+  if (t > self->vacuum_final_time)
+  {
+    _ncm_csq1d_eval_state (csq1d, t, state);
+    ncm_csq1d_change_frame (csq1d, model, state, frame);
+  }
+  else
+  {
+    ncm_csq1d_compute_adiab_frame (csq1d, model, frame, t, state, NULL, NULL);
+  }
 
   return state;
 }

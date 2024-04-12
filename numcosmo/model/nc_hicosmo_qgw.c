@@ -184,7 +184,8 @@ static gdouble _nc_hicosmo_qgw_adiab_eval_x (NcHIPertIAdiab *iad, const gdouble 
 static gdouble _nc_hicosmo_qgw_adiab_eval_p2Psi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 static gdouble _nc_hicosmo_qgw_adiab_eval_p2drho (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 static gdouble _nc_hicosmo_qgw_adiab_eval_lapse (NcHIPertIAdiab *iad, const gdouble tau);
-static gdouble _nc_hicosmo_qgw_adiab_eval_tau_hubble (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_qgw_adiab_eval_tau_hubble (NcHIPertIAdiab *iad, const gdouble k);
+static gdouble _nc_hicosmo_qgw_adiab_eval_tau_jeans (NcHIPertIAdiab *iad, const gdouble k);
 static gdouble _nc_hicosmo_qgw_adiab_eval_hubble (NcHIPertIAdiab *iad, const gdouble tau);
 
 static void
@@ -200,6 +201,7 @@ nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface)
   iface->eval_p2drho     = &_nc_hicosmo_qgw_adiab_eval_p2drho;
   iface->eval_lapse      = &_nc_hicosmo_qgw_adiab_eval_lapse;
   iface->eval_tau_hubble = &_nc_hicosmo_qgw_adiab_eval_tau_hubble;
+  iface->eval_tau_jeans  = &_nc_hicosmo_qgw_adiab_eval_tau_jeans;
   iface->eval_hubble     = &_nc_hicosmo_qgw_adiab_eval_hubble;
 }
 
@@ -341,7 +343,7 @@ _nc_hicosmo_qgw_adiab_eval_lapse (NcHIPertIAdiab *iad, const gdouble tau)
 }
 
 static gdouble
-_nc_hicosmo_qgw_adiab_eval_tau_hubble (NcHIPertIAdiab *iad, gdouble tau, gdouble k)
+_nc_hicosmo_qgw_adiab_eval_tau_hubble (NcHIPertIAdiab *iad, gdouble k)
 {
   NcHICosmoQGW *qgw     = NC_HICOSMO_QGW (iad);
   NcHICosmo *cosmo      = NC_HICOSMO (iad);
@@ -350,6 +352,22 @@ _nc_hicosmo_qgw_adiab_eval_tau_hubble (NcHIPertIAdiab *iad, gdouble tau, gdouble
   const gdouble w       = W;
   const gdouble xb      = X_B;
   const gdouble xf      = pow (k2 / Omega_w, 1.0 / (1.0 + 3.0 * w));
+  const gdouble xb_xf   = xb / xf;
+  const gdouble f0      = pow (xb_xf, 1.5 * (1.0 - w));
+
+  return acosh (f0);
+}
+
+static gdouble
+_nc_hicosmo_qgw_adiab_eval_tau_jeans (NcHIPertIAdiab *iad, gdouble k)
+{
+  NcHICosmoQGW *qgw     = NC_HICOSMO_QGW (iad);
+  NcHICosmo *cosmo      = NC_HICOSMO (iad);
+  const gdouble k2      = k * k;
+  const gdouble Omega_w = OMEGA_W;
+  const gdouble w       = W;
+  const gdouble xb      = X_B;
+  const gdouble xf      = pow (2.0 * w * k2 / (3.0 * Omega_w), 1.0 / (1.0 + 3.0 * w));
   const gdouble xb_xf   = xb / xf;
   const gdouble f0      = pow (xb_xf, 1.5 * (1.0 - w));
 

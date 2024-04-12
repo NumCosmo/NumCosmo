@@ -106,6 +106,7 @@ nc_hipert_iadiab_default_init (NcHIPertIAdiabInterface *iface)
   iface->eval_p2drho     = NULL;
   iface->eval_lapse      = NULL;
   iface->eval_tau_hubble = NULL;
+  iface->eval_tau_jeans  = NULL;
   iface->eval_hubble     = NULL;
 }
 
@@ -419,16 +420,31 @@ nc_hipert_iadiab_eval_lapse (NcHIPertIAdiab *iad, const gdouble tau)
 /**
  * nc_hipert_iadiab_eval_tau_hubble:
  * @iad: a #NcHIPertIAdiab
- * @tau: $\tau$
+ * @k: $k$
  *
  * Evaluates the time at where the Hubble radius is equal to the wave number $k$.
  *
  * Returns: the time at where the Hubble radius is equal to the wave number $k$.
  */
 gdouble
-nc_hipert_iadiab_eval_tau_hubble (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+nc_hipert_iadiab_eval_tau_hubble (NcHIPertIAdiab *iad, const gdouble k)
 {
-  return NC_HIPERT_IADIAB_GET_IFACE (iad)->eval_tau_hubble (iad, tau, k);
+  return NC_HIPERT_IADIAB_GET_IFACE (iad)->eval_tau_hubble (iad, k);
+}
+
+/**
+ * nc_hipert_iadiab_eval_tau_jeans:
+ * @iad: a #NcHIPertIAdiab
+ * @k: $k$
+ *
+ * Evaluates the time at where the Jeans scale is equal to the wave number $k$.
+ *
+ * Returns: the time at where the Jeans scale is equal to the wave number $k$.
+ */
+gdouble
+nc_hipert_iadiab_eval_tau_jeans (NcHIPertIAdiab *iad, const gdouble k)
+{
+  return NC_HIPERT_IADIAB_GET_IFACE (iad)->eval_tau_jeans (iad, k);
 }
 
 /**
@@ -602,7 +618,7 @@ nc_hipert_adiab_eval_cosmic_time (NcHIPertAdiab *adiab, NcmModel *model, const g
 gdouble
 nc_hipert_adiab_eval_delta_critial (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau)
 {
-  const gdouble tau_hubble = nc_hipert_iadiab_eval_tau_hubble (NC_HIPERT_IADIAB (model), tau, adiab->k);
+  const gdouble tau_hubble = nc_hipert_iadiab_eval_tau_hubble (NC_HIPERT_IADIAB (model), adiab->k);
   const gdouble E          = nc_hipert_iadiab_eval_hubble (NC_HIPERT_IADIAB (model), tau);
   const gdouble t_hubble   = nc_hipert_adiab_eval_cosmic_time (adiab, model, -tau_hubble);
   const gdouble t          = nc_hipert_adiab_eval_cosmic_time (adiab, model, tau);
@@ -737,8 +753,6 @@ nc_hipert_adiab_eval_powspec_drho_at (NcHIPertAdiab *adiab, NcmModel *model, con
  * nc_hipert_adiab_prepare_spectrum:
  * @adiab: a #NcHIPertAdiab
  * @model: a #NcmModel
- * @tau_vacuum_max: $\tau_f$ final time to search for adiabatic limit
- * @vacuum_reltol: relative tolerance for the adiabatic vacuum limit search
  * @k_array: (element-type gdouble): array of wave numbers
  * @tau_array: (element-type gdouble): array of times to evaluate the power spectrum
  *
@@ -746,59 +760,31 @@ nc_hipert_adiab_eval_powspec_drho_at (NcHIPertAdiab *adiab, NcmModel *model, con
  *
  */
 void
-nc_hipert_adiab_prepare_spectrum (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau_vacuum_max, const gdouble vacuum_reltol, GArray *k_array, GArray *tau_array)
+nc_hipert_adiab_prepare_spectrum (NcHIPertAdiab *adiab, NcmModel *model, GArray *k_array, GArray *tau_array)
 {
   NcmCSQ1D *csq1d          = NCM_CSQ1D (adiab);
   NcmMatrix *powspec_alpha = ncm_matrix_new (k_array->len, tau_array->len);
   NcmMatrix *powspec_gamma = ncm_matrix_new (k_array->len, tau_array->len);
-  const gdouble tauA_i     = ncm_csq1d_get_ti (csq1d);
-  const gdouble tau_f      = g_array_index (tau_array, gdouble, tau_array->len - 1);
-  gboolean found;
-  gdouble tauA_d;
   guint i;
 
   for (i = 0; i < k_array->len; i++)
   {
+    NcmCSQ1DState state;
+    guint j;
+
     nc_hipert_adiab_set_k (adiab, g_array_index (k_array, gdouble, i));
+    ncm_csq1d_prepare (csq1d, model);
 
-    if (!ncm_csq1d_find_adiab_time_limit (csq1d, model, tauA_i, tau_vacuum_max, vacuum_reltol, &tauA_d))
+    for (j = 0; j < tau_array->len; j++)
     {
-      ncm_matrix_free (powspec_alpha);
-      ncm_matrix_free (powspec_gamma);
+      const gdouble tau = g_array_index (tau_array, gdouble, j);
+      gdouble alpha, gamma;
 
-      g_error ("Cannot find adiabatic limit for mode k = % 22.15g, in the range [% 22.15g, % 22.15g].",
-               nc_hipert_adiab_get_k (adiab), tauA_i, tau_vacuum_max);
+      ncm_csq1d_eval_at (csq1d, model, tau, &state);
+      ncm_csq1d_state_get_ag (&state, &alpha, &gamma);
 
-      return;
-    }
-    else
-    {
-      NcmCSQ1DState state;
-      gdouble zeta_k_tau, alpha_reltol, dgamma_reltol;
-      guint j;
-
-      if (tauA_d < tau_f)
-      {
-        ncm_csq1d_compute_adiab (csq1d, model, tauA_d, &state, &alpha_reltol, &dgamma_reltol);
-        ncm_csq1d_set_init_cond_adiab (csq1d, model, tauA_d);
-        ncm_csq1d_prepare (csq1d, model);
-      }
-
-      for (j = 0; j < tau_array->len; j++)
-      {
-        const gdouble tau = g_array_index (tau_array, gdouble, j);
-        gdouble alpha, gamma;
-
-        if (tau < tauA_d)
-          ncm_csq1d_compute_adiab_frame (csq1d, model, NCM_CSQ1D_FRAME_ORIG, tau, &state, NULL, NULL);
-        else
-          ncm_csq1d_eval_at (csq1d, model, tau, &state);
-
-        ncm_csq1d_state_get_ag (&state, &alpha, &gamma);
-
-        ncm_matrix_set (powspec_alpha, i, j, alpha);
-        ncm_matrix_set (powspec_gamma, i, j, gamma);
-      }
+      ncm_matrix_set (powspec_alpha, i, j, alpha);
+      ncm_matrix_set (powspec_gamma, i, j, gamma);
     }
   }
 
