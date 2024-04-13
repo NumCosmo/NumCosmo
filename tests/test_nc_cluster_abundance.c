@@ -52,6 +52,7 @@ void test_nc_cluster_abundance_true_n (TestNcClusterAbundance *test, gconstpoint
 void test_nc_cluster_abundance_n (TestNcClusterAbundance *test, gconstpointer pdata);
 void test_nc_cluster_abundance_intp_d2n (TestNcClusterAbundance *test, gconstpointer pdata);
 void test_nc_cluster_abundance_intp_bin_d2n (TestNcClusterAbundance *test, gconstpointer pdata);
+void test_nc_cluster_abundance_failing_intp_bin_d2n (TestNcClusterAbundance *test, gconstpointer pdata);
 void test_nc_cluster_abundance_intp_d2n_bias (TestNcClusterAbundance *test, gconstpointer pdata);
 void test_nc_cluster_abundance_intp_bin_d2n_bias (TestNcClusterAbundance *test, gconstpointer pdata);
 void test_nc_cluster_abundance_mean_bias (TestNcClusterAbundance *test, gconstpointer pdata);
@@ -106,6 +107,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/cluster_abundance/nc_cluster_abundance_mean_bias", TestNcClusterAbundance, NULL,
               &test_nc_cluster_abundance_new,
               &test_nc_cluster_abundance_mean_bias,
+              &test_nc_cluster_abundance_free);
+
+  g_test_add ("/nc/cluster_abundance/nc_cluster_abundance_failing_intp_bin_d2n", TestNcClusterAbundance, NULL,
+              &test_nc_cluster_abundance_new,
+              &test_nc_cluster_abundance_failing_intp_bin_d2n,
               &test_nc_cluster_abundance_free);
 
   g_test_run ();
@@ -164,9 +170,13 @@ test_nc_cluster_abundance_free (TestNcClusterAbundance *test, gconstpointer pdat
 void
 test_nc_cluster_abundance_sanity (TestNcClusterAbundance *test, gconstpointer pdata)
 {
-  NcmRNG *rng = ncm_rng_new (NULL);
+  NcmRNG *rng             = ncm_rng_new (NULL);
+  NcHaloMassFunction *mfp = NC_HALO_MASS_FUNCTION (test->cad->mfp);
+
 
   nc_data_cluster_ncount_init_from_sampling (test->ncdata, test->mset, test->area, rng);
+  g_assert_true (nc_halo_mass_function_peek_survey_area (mfp) == test->area);
+  g_assert_true (nc_halo_mass_function_d2n_dzdlnM (mfp, test->cosmo, 100, 1000) == mfp->mf_lb);
 
   {
     gchar *desc = ncm_data_get_desc (NCM_DATA (test->ncdata));
@@ -281,19 +291,21 @@ void
 test_nc_cluster_abundance_intp_bin_d2n (TestNcClusterAbundance *test, gconstpointer pdata)
 {
   test_nc_cluster_abundance_sanity (test, pdata);
-  {
-    const gdouble lnM_obs_bin_lower[1] = {0.0};
-    const gdouble lnM_obs_bin_upper[1] = {0.5};
-    const gdouble z_obs_bin_lower[1]   = {0.1};
-    const gdouble z_obs_bin_upper[1]   = {0.3};
-    gdouble d2n_bin1                   = nc_cluster_abundance_intp_bin_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_lower, z_obs_bin_upper, NULL);
-    gdouble d2n_bin2                   = nc_cluster_abundance_intp_bin_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_lower, z_obs_bin_upper, NULL);
 
-    g_assert_true (gsl_finite (d2n_bin1));
-    g_assert_true (gsl_finite (d2n_bin2));
+  const gdouble lnM_obs_bin_lower[1] = {0.0};
+  const gdouble lnM_obs_bin_upper[1] = {0.5};
+  const gdouble z_obs_bin_lower[1]   = {0.1};
+  const gdouble z_obs_bin_upper[1]   = {0.3};
 
-    ncm_assert_cmpdouble_e (d2n_bin1, ==, d2n_bin2, 1.0e-15, 0.0);
-  }
+  gdouble d2n_bin1 = nc_cluster_abundance_intp_bin_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_lower, z_obs_bin_upper, NULL);
+  gdouble d2n_bin2 = nc_cluster_abundance_intp_bin_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_lower, z_obs_bin_upper, NULL);
+
+
+
+  g_assert_true (gsl_finite (d2n_bin1));
+  g_assert_true (gsl_finite (d2n_bin2));
+
+  ncm_assert_cmpdouble_e (d2n_bin1, ==, d2n_bin2, 1.0e-15, 0.0);
 }
 
 void
@@ -344,5 +356,29 @@ test_nc_cluster_abundance_mean_bias (TestNcClusterAbundance *test, gconstpointer
 
     ncm_assert_cmpdouble_e (mean_bias1, ==, mean_bias2, 1.0e-15, 0.0);
   }
+}
+
+void
+test_nc_cluster_abundance_failing_intp_bin_d2n (TestNcClusterAbundance *test, gconstpointer pdata)
+{
+  if (g_test_subprocess ())
+  {
+    /* Here we are in the subprocess, it is safe to die here. */
+    test_nc_cluster_abundance_sanity (test, pdata);
+
+    const gdouble lnM_obs_bin_lower[1] = {0.0};
+    const gdouble lnM_obs_bin_upper[1] = {0.5};
+    const gdouble z_obs_bin_lower[1]   = {0.1};
+    const gdouble z_obs_bin_upper[1]   = {0.3};
+
+    nc_cluster_abundance_intp_bin_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_upper, z_obs_bin_lower, NULL);
+
+    return; /* LCOV_EXCL_LINE */
+  }
+
+  /* Reruns this same test in a subprocess */
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_stderr ("*_nc_cluster_abundance_z_intp_lnM_intp_bin_N_integrand: negative integrand at*");
+  g_test_trap_assert_failed ();
 }
 
