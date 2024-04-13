@@ -17,6 +17,7 @@ dependencies:
   - gobject-introspection <=1.78
   - gsl
   - hdf5
+  - healpy
   - lcov
   - libflint
   - libfyaml

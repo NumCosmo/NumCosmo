@@ -33,7 +33,7 @@ from .run_fit import RunFit, RunTest
 from .fisher import ComputeTheoryVector, RunFisher, RunFisherBias
 from .esmcmc import RunMCMC
 from .catalog import AnalyzeMCMC, CalibrateCatalog, PlotCorner
-from .generate import GeneratePlanck
+from .generate import GeneratePlanck, GenerateJpasForecast
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
 app_run = typer.Typer(no_args_is_help=True, help="Run different statistical analyses.")
@@ -119,6 +119,12 @@ GEN_PLANCK_CMD: CMDArg = {
     "help": "Generate Planck 2018 baseline experiments.",
 }
 
+GEN_JPAS_FORECAST_CMD: CMDArg = {
+    "name": "jpas-forecast",
+    "no_args_is_help": True,
+    "help": "Generate JPAS 2024 forecast experiments.",
+}
+
 # ------------------------------------------------------------------------------
 # Installing from-cosmosis command if COSMOSIS is installed and
 # all prerequisites are met.
@@ -144,3 +150,4 @@ app_cat.command(**CAT_PLOT_CORNER_CMD)(PlotCorner)
 # ------------------------------------------------------------------------------
 # Installing experiment generation subcommands
 app_generate.command(**GEN_PLANCK_CMD)(GeneratePlanck)
+app_generate.command(**GEN_JPAS_FORECAST_CMD)(GenerateJpasForecast)
