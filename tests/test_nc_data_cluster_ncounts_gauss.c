@@ -142,8 +142,6 @@ test_nc_data_cluster_ncounts_gauss_new (TestNcClusterNCountsGauss *test, gconstp
 
   nc_data_cluster_ncounts_gauss_set_z_obs (test->ncounts_gauss, test->z_obs);
   nc_data_cluster_ncounts_gauss_set_lnM_obs (test->ncounts_gauss, test->lnM_obs);
-  nc_data_cluster_ncounts_gauss_set_z_obs_params (test->ncounts_gauss, test->z_obs_params);
-  nc_data_cluster_ncounts_gauss_set_lnM_obs_params (test->ncounts_gauss, test->lnM_obs_params);
 
   ncm_model_free (NCM_MODEL (cosmo));
   ncm_model_free (NCM_MODEL (reion));
@@ -231,14 +229,20 @@ test_nc_data_cluster_ncounts_gauss_sanity (TestNcClusterNCountsGauss *test, gcon
 void
 test_nc_data_cluster_ncounts_gauss_serialize (TestNcClusterNCountsGauss *test, gconstpointer pdata)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-  GVariant *var     = ncm_serialize_to_variant (ser, G_OBJECT (test->ncounts_gauss));
+  {
+    nc_data_cluster_ncounts_gauss_set_z_obs_params (test->ncounts_gauss, test->z_obs_params);
+    nc_data_cluster_ncounts_gauss_set_lnM_obs_params (test->ncounts_gauss, test->lnM_obs_params);
+  }
+  {
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    GVariant *var     = ncm_serialize_to_variant (ser, G_OBJECT (test->ncounts_gauss));
 
-  nc_data_cluster_ncounts_gauss_free (test->ncounts_gauss);
-  test->ncounts_gauss = NC_DATA_CLUSTER_NCOUNTS_GAUSS (ncm_serialize_from_variant (ser, var));
+    nc_data_cluster_ncounts_gauss_free (test->ncounts_gauss);
+    test->ncounts_gauss = NC_DATA_CLUSTER_NCOUNTS_GAUSS (ncm_serialize_from_variant (ser, var));
 
-  g_variant_unref (var);
-  ncm_serialize_free (ser);
+    g_variant_unref (var);
+    ncm_serialize_free (ser);
+  }
 }
 
 void
