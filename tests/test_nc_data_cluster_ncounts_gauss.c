@@ -283,23 +283,22 @@ test_nc_data_cluster_ncounts_gauss_mean_func (TestNcClusterNCountsGauss *test, g
 void
 test_nc_data_cluster_ncounts_gauss_cov (TestNcClusterNCountsGauss *test, gconstpointer pdata)
 {
-  nc_data_cluster_ncounts_gauss_set_s_matrix (test->ncounts_gauss, test->s_matrix);
-  nc_data_cluster_ncounts_gauss_set_resample_s_matrix (test->ncounts_gauss, test->resample_s_matrix);
-
-  guint i;
-  guint j;
+  NcmDataGaussCov *gauss_cov = NCM_DATA_GAUSS_COV (test->ncounts_gauss);
+  NcmRNG *rng                = ncm_rng_new (NULL);
+  NcmMatrix *cov_resample;
   NcmMatrix *cov_diag;
   NcmMatrix *cov_1;
   NcmMatrix *cov_2;
   NcmMatrix *cov_3;
   NcmMatrix *cov_4;
-  NcmMatrix *cov_resample;
-  NcmDataGaussCov *gauss_cov = NCM_DATA_GAUSS_COV (test->ncounts_gauss);
-  NcmRNG *rng                = ncm_rng_new (NULL);
+  guint i, j;
+
+  nc_data_cluster_ncounts_gauss_set_s_matrix (test->ncounts_gauss, test->s_matrix);
+  nc_data_cluster_ncounts_gauss_set_resample_s_matrix (test->ncounts_gauss, test->resample_s_matrix);
 
   ncm_data_set_init (NCM_DATA (gauss_cov), TRUE);
 
-  g_assert_true (nc_data_cluster_ncounts_gauss_get_fix_cov (test->ncounts_gauss) == FALSE);
+  g_assert_false (nc_data_cluster_ncounts_gauss_get_fix_cov (test->ncounts_gauss));
 
   cov_diag = ncm_matrix_dup (ncm_data_gauss_cov_compute_cov (gauss_cov, test->mset, NULL));
   ncm_data_gauss_cov_set_cov (gauss_cov, cov_diag);
