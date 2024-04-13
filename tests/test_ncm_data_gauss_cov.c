@@ -264,7 +264,7 @@ test_ncm_data_gauss_cov_test_bad_cov (TestNcmDataGaussCovTest *test, gconstpoint
 
     ncm_data_gauss_cov_get_log_norma (gauss, NULL);
 
-    return;
+    return; /* LCOV_EXCL_LINE */
   }
 
   g_test_trap_subprocess (NULL, 0, 0);
