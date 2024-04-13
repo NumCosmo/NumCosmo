@@ -435,6 +435,7 @@
     <xi:include href="xml/nc_data_dist_mu.xml"/>
     <xi:include href="xml/nc_data_snia_cov.xml"/>
     <xi:include href="xml/nc_data_cluster_ncount.xml"/>
+    <xi:include href="xml/nc_data_cluster_ncounts_gauss.xml"/>
     <xi:include href="xml/nc_data_cluster_pseudo_counts.xml"/>
     <xi:include href="xml/nc_data_cluster_wl.xml"/>
     <xi:include href="xml/nc_data_cluster_mass_rich.xml"/>

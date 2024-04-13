@@ -189,6 +189,10 @@ c_tests = [
         'sources': ['test_nc_cluster_pseudo_counts.c'],
     },
     {
+        'name': 'nc_data_cluster_ncounts_gauss',
+        'sources': ['test_nc_data_cluster_ncounts_gauss.c'],
+    },
+    {
         'name': 'nc_cluster_abundance',
         'sources': ['test_nc_cluster_abundance.c'],
     },

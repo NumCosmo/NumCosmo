@@ -232,7 +232,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
                                    g_param_spec_double ("lnRichness-max",
                                                         NULL,
                                                         "Maximum LnRichness",
-                                                        0.0, G_MAXDOUBLE,  M_LN10 * 2.0,
+                                                        0.0, G_MAXDOUBLE,  M_LN10 * 2.5,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**

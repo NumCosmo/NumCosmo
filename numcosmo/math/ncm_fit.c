@@ -2592,6 +2592,7 @@ ncm_fit_fisher (NcmFit *fit)
   _ncm_fit_fisher_to_covar (fit, IM, FALSE);
 
   ncm_matrix_clear (&IM);
+
 }
 
 /**
