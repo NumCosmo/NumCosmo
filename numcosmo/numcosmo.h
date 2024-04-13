@@ -182,6 +182,7 @@
 #include <numcosmo/data/nc_data_cmb_shift_param.h>
 #include <numcosmo/data/nc_data_cmb.h>
 #include <numcosmo/data/nc_data_cluster_ncount.h>
+#include <numcosmo/data/nc_data_cluster_ncounts_gauss.h>
 #include <numcosmo/data/nc_data_cluster_pseudo_counts.h>
 #include <numcosmo/data/nc_data_cluster_wl.h>
 #include <numcosmo/data/nc_data_reduced_shear_cluster_mass.h>

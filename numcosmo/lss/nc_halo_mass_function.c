@@ -69,7 +69,6 @@ struct _NcHaloMassFunctionPrivate
   gdouble zi;
   gdouble zf;
   gdouble prec;
-  gdouble mf_lb;
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_reion;
   gboolean constructed;
@@ -83,6 +82,7 @@ nc_halo_mass_function_init (NcHaloMassFunction *mfp)
   NcHaloMassFunctionPrivate * const self = mfp->priv = nc_halo_mass_function_get_instance_private (mfp);
 
   mfp->d2NdzdlnM    = NULL;
+  mfp->mf_lb        = 0.0;
   self->lnMi        = 0.0;
   self->lnMf        = 0.0;
   self->zi          = 0.0;
@@ -92,7 +92,6 @@ nc_halo_mass_function_init (NcHaloMassFunction *mfp)
   self->mulf        = NULL;
   self->psf         = NULL;
   self->prec        = 0.0;
-  self->mf_lb       = 0.0;
   self->ctrl_cosmo  = ncm_model_ctrl_new (NULL);
   self->ctrl_reion  = ncm_model_ctrl_new (NULL);
   self->constructed = FALSE;
@@ -191,7 +190,7 @@ _nc_halo_mass_function_set_property (GObject *object, guint prop_id, const GValu
 
       break;
     case PROP_MF_LB:
-      self->mf_lb = g_value_get_double (value);
+      mfp->mf_lb = g_value_get_double (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -237,7 +236,7 @@ _nc_halo_mass_function_get_property (GObject *object, guint prop_id, GValue *val
       g_value_set_double (value, self->zf);
       break;
     case PROP_MF_LB:
-      g_value_set_double (value, self->mf_lb);
+      g_value_set_double (value, mfp->mf_lb);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -754,7 +753,7 @@ nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
         const gdouble lnM          = ncm_vector_get (lnM_vec, j);
         const gdouble d2NdzdlnM_ij = (dVdz * nc_halo_mass_function_dn_dlnM (mfp, cosmo, lnM, z));
 
-        ncm_matrix_set (val_mat, i, j, GSL_MAX (d2NdzdlnM_ij, self->mf_lb));
+        ncm_matrix_set (val_mat, i, j, GSL_MAX (d2NdzdlnM_ij, mfp->mf_lb));
       }
     }
   }
@@ -951,4 +950,20 @@ nc_halo_mass_function_peek_multiplicity_function (NcHaloMassFunction *mfp)
  *
  * Returns: $d^2 N / d\ln M d z$.
  */
+
+/**
+ * nc_halo_mass_function_peek_survey_area:
+ * @mfp: a #NcHaloMassFunction
+ *
+ * Peeks the survey area.
+ *
+ * Returns: the survey area.
+ */
+gdouble
+nc_halo_mass_function_peek_survey_area (NcHaloMassFunction *mfp)
+{
+  NcHaloMassFunctionPrivate * const self = mfp->priv;
+
+  return self->area_survey;
+}
 
