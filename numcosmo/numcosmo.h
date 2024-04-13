@@ -171,6 +171,7 @@
 #include <numcosmo/data/nc_data_bao_rdv.h>
 #include <numcosmo/data/nc_data_bao.h>
 #include <numcosmo/data/nc_data_cluster_ncount.h>
+#include <numcosmo/data/nc_data_cluster_ncounts_gauss.h>
 #include <numcosmo/data/nc_data_cluster_pseudo_counts.h>
 #include <numcosmo/data/nc_data_cluster_wl.h>
 #include <numcosmo/data/nc_data_cmb_dist_priors.h>

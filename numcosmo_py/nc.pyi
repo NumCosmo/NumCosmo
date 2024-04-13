@@ -4644,6 +4644,136 @@ class DataClusterNCountClass(GObject.GPointer):
 
 class DataClusterNCountPrivate(GObject.GPointer): ...
 
+class DataClusterNCountsGauss(NumCosmoMath.DataGaussCov):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataClusterNCountsGauss(**properties)
+        new(cad:NumCosmo.ClusterAbundance) -> NumCosmo.DataClusterNCountsGauss
+
+    Object NcDataClusterNCountsGauss
+
+    Properties from NcDataClusterNCountsGauss:
+      z-obs -> NcmVector: z-obs
+        Clusters redshift observables
+      z-obs-params -> NcmMatrix: z-obs-params
+        Clusters redshift observables parameters
+      lnM-obs -> NcmVector: lnM-obs
+        Clusters mass observables
+      lnM-obs-params -> NcmMatrix: lnM-obs-params
+        Clusters mass observables parameters
+      cluster-abundance -> NcClusterAbundance: cluster-abundance
+        Cluster abundance
+      has-ssc -> gboolean: has-ssc
+        Whether use super sample covariance
+      s-matrix -> NcmMatrix: s-matrix
+        Super sample covariance matrix
+      resample-s-matrix -> NcmMatrix: resample-s-matrix
+        Super sample covariance resample matrix
+      fix-cov -> gboolean: fix-cov
+        Whether the covariance matrix is fixed or not
+
+    Properties from NcmDataGaussCov:
+      n-points -> guint: n-points
+        Data sample size
+      use-norma -> gboolean: use-norma
+        Use the likelihood normalization to calculate -2lnL
+      mean -> NcmVector: mean
+        Data mean
+      cov -> NcmMatrix: cov
+        Data covariance
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        cluster_abundance: ClusterAbundance
+        fix_cov: bool
+        has_ssc: bool
+        lnM_obs: NumCosmoMath.Vector
+        lnM_obs_params: NumCosmoMath.Matrix
+        resample_s_matrix: NumCosmoMath.Matrix
+        s_matrix: NumCosmoMath.Matrix
+        z_obs: NumCosmoMath.Vector
+        z_obs_params: NumCosmoMath.Matrix
+        cov: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        use_norma: bool
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+    props: Props = ...
+    parent_instance: NumCosmoMath.DataGaussCov = ...
+    priv: DataClusterNCountsGaussPrivate = ...
+    def __init__(
+        self,
+        cluster_abundance: ClusterAbundance = ...,
+        fix_cov: bool = ...,
+        has_ssc: bool = ...,
+        lnM_obs: NumCosmoMath.Vector = ...,
+        lnM_obs_params: NumCosmoMath.Matrix = ...,
+        resample_s_matrix: NumCosmoMath.Matrix = ...,
+        s_matrix: NumCosmoMath.Matrix = ...,
+        z_obs: NumCosmoMath.Vector = ...,
+        z_obs_params: NumCosmoMath.Matrix = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ): ...
+    def get_fix_cov(self) -> bool: ...
+    def get_has_ssc(self) -> bool: ...
+    def get_lnM_obs(self) -> NumCosmoMath.Vector: ...
+    def get_lnM_obs_params(self) -> NumCosmoMath.Matrix: ...
+    def get_resample_s_matrix(self) -> NumCosmoMath.Matrix: ...
+    def get_s_matrix(self) -> NumCosmoMath.Matrix: ...
+    def get_z_obs(self) -> NumCosmoMath.Vector: ...
+    def get_z_obs_params(self) -> NumCosmoMath.Matrix: ...
+    @classmethod
+    def new(cls, cad: ClusterAbundance) -> DataClusterNCountsGauss: ...
+    def set_fix_cov(self, on: bool) -> None: ...
+    def set_has_ssc(self, on: bool) -> None: ...
+    def set_lnM_obs(self, lnM_obs: NumCosmoMath.Vector) -> None: ...
+    def set_lnM_obs_params(self, lnM_obs_params: NumCosmoMath.Matrix) -> None: ...
+    def set_resample_s_matrix(self, s_matrix: NumCosmoMath.Matrix) -> None: ...
+    def set_s_matrix(self, s_matrix: NumCosmoMath.Matrix) -> None: ...
+    def set_z_obs(self, z_obs: NumCosmoMath.Vector) -> None: ...
+    def set_z_obs_params(self, z_obs_params: NumCosmoMath.Matrix) -> None: ...
+
+class DataClusterNCountsGaussClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataClusterNCountsGaussClass()
+    """
+    parent_class: NumCosmoMath.DataGaussCovClass = ...
+
+class DataClusterNCountsGaussPrivate(GObject.GPointer): ...
+
 class DataClusterPseudoCounts(NumCosmoMath.Data):
     r"""
     :Constructors:
@@ -13418,6 +13548,7 @@ class HaloMassFunction(GObject.Object):
     parent_instance: GObject.Object = ...
     priv: HaloMassFunctionPrivate = ...
     d2NdzdlnM: NumCosmoMath.Spline2d = ...
+    mf_lb: float = ...
     def __init__(
         self,
         area: float = ...,
@@ -13458,6 +13589,7 @@ class HaloMassFunction(GObject.Object):
     ) -> HaloMassFunction: ...
     def peek_multiplicity_function(self) -> MultiplicityFunc: ...
     def peek_psf(self) -> NumCosmoMath.PowspecFilter: ...
+    def peek_survey_area(self) -> float: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def prepare_if_needed(self, cosmo: HICosmo) -> None: ...
     def set_area(self, area: float) -> None: ...
