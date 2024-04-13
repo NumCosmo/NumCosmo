@@ -154,9 +154,9 @@ _nc_data_cluster_ncounts_gauss_set_property (GObject *object, guint prop_id, con
     case PROP_FIX_COV:
       nc_data_cluster_ncounts_gauss_set_fix_cov (ncounts_gauss, g_value_get_boolean (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -197,9 +197,9 @@ _nc_data_cluster_ncounts_gauss_get_property (GObject *object, guint prop_id, GVa
     case PROP_FIX_COV:
       g_value_set_boolean (value, self->fix_cov);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -389,6 +389,7 @@ _nc_data_cluster_ncounts_gauss_set_size (NcmDataGaussCov *gauss_cov, guint np)
   NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (gauss_cov);
   NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
   const guint cnp                               = ncm_data_gauss_cov_get_size (gauss_cov);
+
   /* Chain up : end */
   NCM_DATA_GAUSS_COV_CLASS (nc_data_cluster_ncounts_gauss_parent_class)->set_size (gauss_cov, np);
 }
@@ -441,6 +442,7 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
 {
   NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (gauss_cov);
   NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+
   if (self->fix_cov)
   {
     return FALSE;
@@ -453,11 +455,11 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
     NcClusterAbundance *cad     = self->cad;
     NcmMatrix *s_matrix;
     guint i, j;
-    
+
     if (ncm_data_is_resampling (NCM_DATA (gauss_cov)) && (self->resample_s_matrix != NULL))
-    s_matrix = self->resample_s_matrix;
+      s_matrix = self->resample_s_matrix;
     else
-    s_matrix = self->s_matrix;
+      s_matrix = self->s_matrix;
 
     if (s_matrix == NULL)
       g_error ("Super sample covariance matrix not set");
@@ -494,7 +496,7 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
                                                                          NULL);
 
             ncm_matrix_set (cov, i, j, poisson_i + bias_i * bias_i * Sij);
-            }
+          }
           else
           {
             const gdouble bias_j = nc_cluster_abundance_intp_bin_d2n_bias (cad, cosmo, clusterz, clusterm,
@@ -531,7 +533,6 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
   }
 }
 
-
 /**
  * nc_data_cluster_ncounts_gauss_new:
  * @cad: a #NcClusterAbundance
@@ -564,15 +565,16 @@ void
 nc_data_cluster_ncounts_gauss_set_z_obs (NcDataClusterNCountsGauss *ncounts_gauss, NcmVector *z_obs)
 {
   NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
-  NcmDataGaussCov *gauss_cov =  NCM_DATA_GAUSS_COV (ncounts_gauss);
+  NcmDataGaussCov *gauss_cov                    =  NCM_DATA_GAUSS_COV (ncounts_gauss);
 
   ncm_vector_clear (&self->z_obs);
   self->z_obs = ncm_vector_ref (z_obs);
 
   if (self->lnM_obs != NULL)
   {
-    const guint np = (ncm_vector_len (self->z_obs)-1) * (ncm_vector_len (self->lnM_obs)-1);
-    ncm_data_gauss_cov_set_size(gauss_cov , np);
+    const guint np = (ncm_vector_len (self->z_obs) - 1) * (ncm_vector_len (self->lnM_obs) - 1);
+
+    ncm_data_gauss_cov_set_size (gauss_cov, np);
   }
 }
 
@@ -607,15 +609,16 @@ void
 nc_data_cluster_ncounts_gauss_set_lnM_obs (NcDataClusterNCountsGauss *ncounts_gauss, NcmVector *lnM_obs)
 {
   NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
-  NcmDataGaussCov *gauss_cov =  NCM_DATA_GAUSS_COV (ncounts_gauss);
+  NcmDataGaussCov *gauss_cov                    =  NCM_DATA_GAUSS_COV (ncounts_gauss);
 
   ncm_vector_clear (&self->lnM_obs);
   self->lnM_obs = ncm_vector_ref (lnM_obs);
-  
+
   if (self->z_obs != NULL)
   {
-    const guint np = (ncm_vector_len (self->z_obs)-1) * (ncm_vector_len (self->lnM_obs)-1);
-    ncm_data_gauss_cov_set_size(gauss_cov , np);
+    const guint np = (ncm_vector_len (self->z_obs) - 1) * (ncm_vector_len (self->lnM_obs) - 1);
+
+    ncm_data_gauss_cov_set_size (gauss_cov, np);
   }
 }
 
@@ -668,7 +671,6 @@ nc_data_cluster_ncounts_gauss_set_s_matrix (NcDataClusterNCountsGauss *ncounts_g
 
   ncm_matrix_clear (&self->s_matrix);
   self->s_matrix = ncm_matrix_ref (s_matrix);
-  
 }
 
 /**
@@ -697,7 +699,6 @@ nc_data_cluster_ncounts_gauss_set_resample_s_matrix (NcDataClusterNCountsGauss *
  * Sets array of #Set if the data covariance matrix is fixed.
  *
  */
-
 
 void
 nc_data_cluster_ncounts_gauss_set_fix_cov (NcDataClusterNCountsGauss *ncounts_gauss, gboolean on)
@@ -854,5 +855,4 @@ nc_data_cluster_ncounts_gauss_get_fix_cov (NcDataClusterNCountsGauss *ncounts_ga
 
   return self->fix_cov;
 }
-
 
