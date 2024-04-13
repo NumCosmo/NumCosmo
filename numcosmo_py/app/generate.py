@@ -23,243 +23,26 @@
 
 """NumCosmo APP subcommands generate experiment files."""
 
-from typing import Annotated
-from enum import Enum
+from typing import Annotated, Optional
 import dataclasses
 from pathlib import Path
+
+import numpy as np
 import typer
 
-from numcosmo_py import Ncm, Nc
-
-
-class Planck18Types(str, Enum):
-    """Planck 18 baseline data combinations."""
-
-    TT = "TT"
-    TTTEEE = "TTTEEE"
-
-
-def create_cosmo_for_cmb(massive_nu: bool = False) -> Nc.HICosmo:
-    """Create a cosmology for CMB experiments."""
-    if massive_nu:
-        cosmo = Nc.HICosmoDEXcdm(massnu_length=1)
-    else:
-        cosmo = Nc.HICosmoDEXcdm()
-
-    cosmo.params_set_default_ftype()
-    cosmo.cmb_params()
-    cosmo.param_set_by_name("H0", 70.0)
-    cosmo.param_set_by_name("omegab", 0.022)
-    cosmo.param_set_by_name("omegac", 0.12)
-
-    if massive_nu:
-        cosmo.orig_param_set(Nc.HICosmoDESParams.ENNU, 2.0328)
-        param_id = cosmo.vparam_index(Nc.HICosmoDEVParams.M, 0)
-        cosmo.param_set_ftype(param_id, Ncm.ParamType.FREE)
-
-    cosmo.set_property("H0_fit", True)
-    cosmo.set_property("Omegac_fit", True)
-    cosmo.set_property("Omegab_fit", True)
-    cosmo.set_property("w_fit", False)
-    cosmo.param_set_by_name("Omegak", 0.00)
-    cosmo.set_property("Omegax_fit", False)
-
-    prim = Nc.HIPrimPowerLaw.new()
-    prim.set_property("ln10e10ASA_fit", True)
-    prim.set_property("n_SA_fit", True)
-
-    reion = Nc.HIReionCamb.new()
-    reion.set_property("z_re_fit", True)
-
-    cosmo.add_submodel(prim)
-    cosmo.add_submodel(reion)
-
-    return cosmo
-
-
-def create_mfunc_array_for_cmb(cbe: Nc.CBE) -> Ncm.ObjArray:
-    """Create a list of extra functions for CMB experiments."""
-    mfunc_oa = Ncm.ObjArray.new()
-
-    psml = Nc.PowspecMLCBE.new_full(cbe=cbe)
-    psml.set_kmin(1.0e-5)
-    psml.set_kmax(1.0e1)
-    psml.require_zi(0.0)
-    psml.require_zf(1.0)
-
-    psf_cbe = Ncm.PowspecFilter.new(psml, Ncm.PowspecFilterType.TOPHAT)
-    psf_cbe.set_best_lnr0()
-
-    mfunc_sigma8 = Ncm.MSetFuncList.new("NcHICosmo:sigma8", psf_cbe)
-    mfunc_oa.add(mfunc_sigma8)
-
-    dist = Nc.Distance.new(10.0)
-
-    mfunc_r_zd = Ncm.MSetFuncList.new("NcDistance:r_zd_Mpc", dist)
-    mfunc_oa.add(mfunc_r_zd)
-
-    mfunc_Omegam = Ncm.MSetFuncList.new("NcHICosmo:Omega_m0", None)
-    mfunc_oa.add(mfunc_Omegam)
-
-    mfunc_theta100 = Ncm.MSetFuncList.new("NcDistance:theta100CMB", dist)
-    mfunc_oa.add(mfunc_theta100)
-
-    return mfunc_oa
-
-
-def generate_planck18_tt() -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
-    """Generate Planck 2018 TT baseline experiment dictionary."""
-
-    # Likelihood
-
-    cbe_boltzmann = Nc.HIPertBoltzmannCBE.new()
-
-    b18_lowl_EE = Nc.DataPlanckLKL.full_new_id(
-        Nc.DataPlanckLKLType.BASELINE_18_LOWL_EE, cbe_boltzmann
-    )
-    b18_lowl_TT = Nc.DataPlanckLKL.full_new_id(
-        Nc.DataPlanckLKLType.BASELINE_18_LOWL_TT, cbe_boltzmann
-    )
-    b18_highl_TT = Nc.DataPlanckLKL.full_new_id(
-        Nc.DataPlanckLKLType.BASELINE_18_HIGHL_TT, cbe_boltzmann
-    )
-
-    dset = Ncm.Dataset.new_array([b18_lowl_EE, b18_lowl_TT, b18_highl_TT])
-    likelihood = Ncm.Likelihood.new(dset)
-    Nc.PlanckFICorTT.add_all_default18_priors(likelihood)
-
-    # Models
-
-    planck_model = Nc.PlanckFICorTT()
-    planck_model.params_set_default_ftype()
-
-    cosmo = create_cosmo_for_cmb()
-
-    mset = Ncm.MSet.new_array([planck_model, cosmo])
-    mset.prepare_fparam_map()
-
-    # Extra functions
-
-    mfunc_oa = create_mfunc_array_for_cmb(cbe_boltzmann.peek_cbe())
-
-    # Save experiment
-
-    experiment = Ncm.ObjDictStr()
-
-    experiment.set("likelihood", likelihood)
-    experiment.set("model-set", mset)
-
-    return experiment, mfunc_oa
-
-
-def generate_planck18_ttteee() -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
-    """Generate Planck 2018 TT baseline experiment dictionary."""
-
-    # Likelihood
-
-    cbe_boltzmann = Nc.HIPertBoltzmannCBE.new()
-
-    b18_lowl_EE = Nc.DataPlanckLKL.full_new_id(
-        Nc.DataPlanckLKLType.BASELINE_18_LOWL_EE, cbe_boltzmann
-    )
-
-    b18_lowl_TT = Nc.DataPlanckLKL.full_new_id(
-        Nc.DataPlanckLKLType.BASELINE_18_LOWL_TT, cbe_boltzmann
-    )
-
-    b18_highl_TTTEEE = Nc.DataPlanckLKL.full_new_id(
-        Nc.DataPlanckLKLType.BASELINE_18_HIGHL_TTTEEE, cbe_boltzmann
-    )
-
-    dset = Ncm.Dataset.new_array([b18_lowl_EE, b18_lowl_TT, b18_highl_TTTEEE])
-    likelihood = Ncm.Likelihood.new(dset)
-    Nc.PlanckFICorTTTEEE.add_all_default18_priors(likelihood)
-
-    # Models
-
-    planck_model = Nc.PlanckFICorTTTEEE()
-    planck_model.params_set_default_ftype()
-
-    cosmo = create_cosmo_for_cmb()
-
-    mset = Ncm.MSet.new_array([planck_model, cosmo])
-    mset.prepare_fparam_map()
-
-    # Extra functions
-
-    mfunc_oa = create_mfunc_array_for_cmb(cbe_boltzmann.peek_cbe())
-
-    # Save experiment
-
-    experiment = Ncm.ObjDictStr()
-
-    experiment.set("likelihood", likelihood)
-    experiment.set("model-set", mset)
-
-    return experiment, mfunc_oa
-
-
-EXP_PARAMETERS: dict[str, dict[str, float]] = {
-    Planck18Types.TT: {
-        "NcHICosmo:H0": 66.86,
-        "NcHICosmo:omegac": 0.12068,
-        "NcHICosmo:omegab": 0.022126,
-        "NcHIPrim:ln10e10ASA": 3.0413,
-        "NcHIPrim:n_SA": 0.9635,
-        "NcHIReion:z_re": 7.54,
-        "NcPlanckFI:A_cib_217": 48.5,
-        "NcPlanckFI:xi_sz_cib": 0.32,
-        "NcPlanckFI:A_sz": 7.03,
-        "NcPlanckFI:ps_A_100_100": 254.9,
-        "NcPlanckFI:ps_A_143_143": 49.8,
-        "NcPlanckFI:ps_A_143_217": 47.3,
-        "NcPlanckFI:ps_A_217_217": 119.9,
-        "NcPlanckFI:ksz_norm": 0.00,
-        "NcPlanckFI:gal545_A_100": 8.86,
-        "NcPlanckFI:gal545_A_143": 10.80,
-        "NcPlanckFI:gal545_A_143_217": 19.43,
-        "NcPlanckFI:gal545_A_217": 94.8,
-        "NcPlanckFI:calib_100T": 0.99965,
-        "NcPlanckFI:calib_217T": 0.99825,
-        "NcPlanckFI:A_planck": 1.00046,
-    },
-    Planck18Types.TTTEEE: {
-        "NcHICosmo:H0": 67.32,
-        "NcHICosmo:omegac": 0.12010,
-        "NcHICosmo:omegab": 0.022377,
-        "NcHIPrim:ln10e10ASA": 3.0447,
-        "NcHIPrim:n_SA": 0.96589,
-        "NcHIReion:z_re": 7.68,
-        "NcPlanckFI:A_cib_217": 47.2,
-        "NcPlanckFI:xi_sz_cib": 0.42,
-        "NcPlanckFI:A_sz": 7.23,
-        "NcPlanckFI:ps_A_100_100": 250.5,
-        "NcPlanckFI:ps_A_143_143": 47.4,
-        "NcPlanckFI:ps_A_143_217": 47.3,
-        "NcPlanckFI:ps_A_217_217": 119.8,
-        "NcPlanckFI:ksz_norm": 0.01,
-        "NcPlanckFI:gal545_A_100": 8.86,
-        "NcPlanckFI:gal545_A_143": 11.10,
-        "NcPlanckFI:gal545_A_143_217": 19.83,
-        "NcPlanckFI:gal545_A_217": 95.1,
-        "NcPlanckFI:calib_100T": 0.99969,
-        "NcPlanckFI:calib_217T": 0.99816,
-        "NcPlanckFI:A_planck": 1.00061,
-        "NcPlanckFI:galf_TE_A_100": 0.1142,
-        "NcPlanckFI:galf_TE_A_100_143": 0.1345,
-        "NcPlanckFI:galf_TE_A_100_217": 0.482,
-        "NcPlanckFI:galf_TE_A_143": 0.224,
-        "NcPlanckFI:galf_TE_A_143_217": 0.664,
-        "NcPlanckFI:galf_TE_A_217": 2.081,
-    },
-}
-
-
-def _set_exp_params(mset: Ncm.MSet, exp_type: Planck18Types):
-    """Set the experiment parameters."""
-    for param, value in EXP_PARAMETERS[exp_type].items():
-        pi = mset.fparam_get_pi_by_name(param)
-        mset.param_set(pi.mid, pi.pid, value)
+from numcosmo_py import Ncm
+from numcosmo_py.experiments.planck18 import (
+    Planck18Types,
+    generate_planck18_tt,
+    generate_planck18_ttteee,
+    set_mset_parameters,
+)
+from numcosmo_py.experiments.jpas_forecast24 import (
+    ClusterRedshiftType,
+    ClusterMassType,
+    JpasSSCType,
+    generate_jpas_forecast_2024,
+)
 
 
 @dataclasses.dataclass
@@ -275,6 +58,10 @@ class GeneratePlanck:
         Planck18Types, typer.Option(help="Data type to use.", show_default=True)
     ] = Planck18Types.TT
 
+    massive_nu: Annotated[
+        bool, typer.Option(help="Use massive neutrinos.", show_default=True)
+    ] = False
+
     def __post_init__(self):
         """Generate Planck 2018 TT baseline experiment."""
 
@@ -286,13 +73,166 @@ class GeneratePlanck:
             )
 
         if self.data_type == Planck18Types.TT:
-            exp, mfunc_array = generate_planck18_tt()
+            exp, mfunc_array = generate_planck18_tt(massive_nu=self.massive_nu)
         elif self.data_type == Planck18Types.TTTEEE:
-            exp, mfunc_array = generate_planck18_ttteee()
+            exp, mfunc_array = generate_planck18_ttteee(massive_nu=self.massive_nu)
         else:
             raise ValueError(f"Invalid data type: {self.data_type}")
 
-        _set_exp_params(exp.peek("model-set"), self.data_type)
+        set_mset_parameters(exp.peek("model-set"), self.data_type)
+
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+
+        if self.experiment.suffix != ".yaml":
+            raise ValueError(
+                f"Invalid experiment file suffix: {self.experiment.suffix}"
+            )
+
+        ser.dict_str_to_yaml_file(exp, self.experiment.absolute().as_posix())
+        ser.array_to_yaml_file(
+            mfunc_array,
+            self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
+        )
+
+
+@dataclasses.dataclass
+class GenerateJpasForecast:
+    """Common block for commands that load an experiment. All commands that load an
+    experiment should inherit from this class."""
+
+    experiment: Annotated[
+        Path, typer.Argument(help="Path to the experiment file to fit.")
+    ]
+
+    fitting_sky_cut: Annotated[
+        Optional[JpasSSCType],
+        typer.Option(
+            help="Super Sample Covariance method for fitting.", show_default=True
+        ),
+    ] = JpasSSCType.FULLSKY
+
+    resample_sky_cut: Annotated[
+        JpasSSCType,
+        typer.Option(
+            help="Super Sample Covariance method for resampling.",
+            show_default=True,
+        ),
+    ] = JpasSSCType.NO_SSC
+
+    resample_model: Annotated[
+        tuple[float, float, float],
+        typer.Option(
+            help=(
+                "Model for "
+                "resample.(NcHICosmo:Omegac,NcHICosmo:w,NcHIPrim:ln10e10ASA)"
+            ),
+            show_default=True,
+        ),
+    ] = (0.2612, -1.0, 3.027)
+
+    fitting_model: Annotated[
+        tuple[float, float, float],
+        typer.Option(
+            help=(
+                "Model for fitting. "
+                "(NcHICosmo:Omegac,NcHICosmo:w,NcHIPrim:ln10e10ASA)"
+            ),
+            show_default=True,
+        ),
+    ] = (0.2612, -1.0, 3.027)
+
+    use_fixed_cov: Annotated[
+        bool, typer.Option(help="Use fixed covariance matrix.", show_default=True)
+    ] = False
+
+    z_min: Annotated[
+        float,
+        typer.Option(help="Jpas minimum redshift.", show_default=True, min=0),
+    ] = 0.1
+
+    z_max: Annotated[
+        float,
+        typer.Option(help="Jpas maximum redshift.", show_default=True, max=2.0),
+    ] = 0.8
+
+    znknots: Annotated[
+        int,
+        typer.Option(help="Jpas number of redshift bins.", show_default=True, min=2),
+    ] = 8
+
+    cluster_redshift_type: Annotated[
+        Optional[ClusterRedshiftType],
+        typer.Option(help="Cluster photoz relation.", show_default=True),
+    ] = ClusterRedshiftType.NODIST
+
+    lnM_min: Annotated[
+        float,
+        typer.Option(
+            help="Jpas minimum mass.",
+            show_default=True,
+        ),
+    ] = (
+        np.log(10.0) * 14.0
+    )
+
+    lnM_max: Annotated[
+        float,
+        typer.Option(
+            help="Jpas maximum mass.",
+            show_default=True,
+        ),
+    ] = (
+        np.log(10.0) * 15.0
+    )
+
+    lnMnknots: Annotated[
+        int,
+        typer.Option(help="Jpas number of mass bins.", show_default=True, min=2),
+    ] = 2
+
+    cluster_mass_type: Annotated[
+        Optional[ClusterMassType],
+        typer.Option(help="Cluster mass-observable relation.", show_default=True),
+    ] = ClusterMassType.NODIST
+
+    survey_area: Annotated[
+        float,
+        typer.Option(
+            help=(
+                "Jpas survey area. This option is unvailable "
+                "for the partial sky cases."
+            ),
+            show_default=True,
+            min=0,
+        ),
+    ] = 2959.1
+
+    def __post_init__(self):
+        """Generate JPAS 2024 forecast experiment."""
+
+        Ncm.cfg_init()
+
+        if self.experiment.suffix != ".yaml":
+            raise ValueError(
+                f"Invalid experiment file suffix: {self.experiment.suffix}"
+            )
+
+        exp, mfunc_array = generate_jpas_forecast_2024(
+            area=self.survey_area,
+            z_min=self.z_min,
+            z_max=self.z_max,
+            znknots=self.znknots,
+            cluster_redshift_type=self.cluster_redshift_type,
+            lnM_min=self.lnM_min,
+            lnM_max=self.lnM_max,
+            lnMnknots=self.lnMnknots,
+            cluster_mass_type=self.cluster_mass_type,
+            use_fixed_cov=self.use_fixed_cov,
+            fitting_Sij_type=self.fitting_sky_cut,
+            resample_Sij_type=self.resample_sky_cut,
+            resample_model=self.resample_model,
+            fitting_model=self.fitting_model,
+        )
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
