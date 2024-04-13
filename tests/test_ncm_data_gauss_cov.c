@@ -43,6 +43,7 @@ typedef struct _TestNcmDataGaussCovTest
 void test_ncm_data_gauss_cov_test_new (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 void test_ncm_data_gauss_cov_test_free (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 void test_ncm_data_gauss_cov_test_sanity (TestNcmDataGaussCovTest *test, gconstpointer pdata);
+void test_ncm_data_gauss_cov_test_bad_cov (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 void test_ncm_data_gauss_cov_test_resample (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 void test_ncm_data_gauss_cov_test_bootstrap_resample (TestNcmDataGaussCovTest *test, gconstpointer pdata);
 void test_ncm_data_gauss_cov_test_bootstrap_resample_norm (TestNcmDataGaussCovTest *test, gconstpointer pdata);
@@ -64,6 +65,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/data_gauss_cov/test/sanity", TestNcmDataGaussCovTest, NULL,
               &test_ncm_data_gauss_cov_test_new,
               &test_ncm_data_gauss_cov_test_sanity,
+              &test_ncm_data_gauss_cov_test_free);
+
+  g_test_add ("/ncm/data_gauss_cov/test/bad_cov", TestNcmDataGaussCovTest, NULL,
+              &test_ncm_data_gauss_cov_test_new,
+              &test_ncm_data_gauss_cov_test_bad_cov,
               &test_ncm_data_gauss_cov_test_free);
 
   g_test_add ("/ncm/data_gauss_cov/test/resample", TestNcmDataGaussCovTest, NULL,
@@ -244,6 +250,26 @@ test_ncm_data_gauss_cov_test_sanity (TestNcmDataGaussCovTest *test, gconstpointe
       }
     }
   }
+}
+
+void
+test_ncm_data_gauss_cov_test_bad_cov (TestNcmDataGaussCovTest *test, gconstpointer pdata)
+{
+  if (g_test_subprocess ())
+  {
+    NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (test->data);
+    NcmMatrix *cov         = ncm_data_gauss_cov_peek_cov (gauss);
+
+    ncm_matrix_scale (cov, -1.0);
+
+    ncm_data_gauss_cov_get_log_norma (gauss, NULL);
+
+    return;
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_stderr ("*_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]*");
+  g_test_trap_assert_failed ();
 }
 
 void

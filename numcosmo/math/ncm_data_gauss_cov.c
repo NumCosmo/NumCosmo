@@ -286,9 +286,7 @@ _ncm_data_gauss_cov_prepare_LLT (NcmData *data)
 
   if (ret != 0) /* if different from 0, something went wrong in the Cholesky decomposition */
   {
-    /* g_error ("_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret); */
-    g_warning ("_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret);
-    ncm_matrix_log_vals (self->cov, "COV: ", "% 22.15g");
+    g_error ("_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret);
     self->prepared_LLT = FALSE;
   }
   else
@@ -684,10 +682,10 @@ ncm_data_gauss_cov_compute_cov (NcmDataGaussCov *gauss, NcmMSet *mset, gboolean 
 
   if (gauss_cov_class->cov_func != NULL)
   {
-    NcmMatrix *cov     = ncm_matrix_dup (self->cov);
+    NcmMatrix *cov = ncm_matrix_dup (self->cov);
     gboolean l_updated;
 
-    ncm_data_prepare (NCM_DATA(gauss), mset);
+    ncm_data_prepare (NCM_DATA (gauss), mset);
     l_updated = gauss_cov_class->cov_func (gauss, mset, cov);
 
     if (updated != NULL)
@@ -811,11 +809,14 @@ ncm_data_gauss_cov_compute_mean (NcmDataGaussCov *gauss, NcmMSet *mset)
 
   if (gauss_cov_class->mean_func != NULL)
   {
-    NcmVector *mean     = ncm_vector_dup (self->y);
+    NcmVector *mean = ncm_vector_dup (self->y);
 
-    ncm_data_prepare (NCM_DATA(gauss), mset);
+    ncm_data_prepare (NCM_DATA (gauss), mset);
     gauss_cov_class->mean_func (gauss, mset, mean);
+
     return mean;
   }
+
   return NULL;
 }
+

@@ -373,8 +373,7 @@ test_nc_cluster_abundance_failing_intp_bin_d2n (TestNcClusterAbundance *test, gc
 
     nc_cluster_abundance_intp_bin_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_upper, z_obs_bin_lower, NULL);
 
-
-    return;
+    return; /* LCOV_EXCL_LINE */
   }
 
   /* Reruns this same test in a subprocess */
