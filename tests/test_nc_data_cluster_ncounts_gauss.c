@@ -232,6 +232,8 @@ test_nc_data_cluster_ncounts_gauss_serialize (TestNcClusterNCountsGauss *test, g
   {
     nc_data_cluster_ncounts_gauss_set_z_obs_params (test->ncounts_gauss, test->z_obs_params);
     nc_data_cluster_ncounts_gauss_set_lnM_obs_params (test->ncounts_gauss, test->lnM_obs_params);
+    nc_data_cluster_ncounts_gauss_set_s_matrix (test->ncounts_gauss, test->s_matrix);
+    nc_data_cluster_ncounts_gauss_set_resample_s_matrix (test->ncounts_gauss, test->resample_s_matrix);
   }
   {
     NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
@@ -265,14 +267,13 @@ test_nc_data_cluster_ncounts_gauss_s_matrix (TestNcClusterNCountsGauss *test, gc
 void
 test_nc_data_cluster_ncounts_gauss_mean_func (TestNcClusterNCountsGauss *test, gconstpointer pdata)
 {
-  guint i;
-  NcmVector *mean;
   NcmDataGaussCov *gauss_cov = NCM_DATA_GAUSS_COV (test->ncounts_gauss);
+  NcmVector *mean;
+  guint i;
 
   ncm_data_set_init (NCM_DATA (gauss_cov), TRUE);
 
   mean = ncm_vector_dup (ncm_data_gauss_cov_compute_mean (gauss_cov, test->mset));
-
 
   for (i = 0; i < ncm_vector_len (mean); i++)
   {

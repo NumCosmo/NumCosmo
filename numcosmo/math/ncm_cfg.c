@@ -243,10 +243,26 @@ static gboolean _enable_msg         = TRUE;
 static gboolean _enable_msg_flush   = TRUE;
 static gsl_error_handler_t *gsl_err = NULL;
 
+# if (defined (__GNUC__) \
+  && ((__GNUC__ == 11 && __GNUC_MINOR__ >= 1) || (__GNUC__ >= 12))) \
+  || (defined (__clang__) && (__clang_major__ >= 12))
+extern void __gcov_dump (void);
+extern void __gcov_reset (void);
+
+#  define __gcov_flush() \
+        do { \
+          __gcov_dump (); __gcov_reset (); \
+        } while (0)
+# else
+extern void __gcov_flush (void);
+
+# endif
+
 static void
 _ncm_cfg_log_message (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
   NCM_UNUSED (log_domain);
+
   NCM_UNUSED (log_level);
   NCM_UNUSED (user_data);
 
@@ -279,13 +295,17 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
     /* print out all the frames to stderr */
     for (i = 0; i < size; i++)
     {
-      fprintf (_log_stream_err, "# (%s): %s-BACKTRACE:[%02zd] %s\n", pname, log_domain, i, trace[i]);
+      fprintf (_log_stream_err, "# (%s): %s-BACKTRACEA:[%02zd] %s\n", pname, log_domain, i, trace[i]);
     }
 
     g_free (trace);
   }
 #endif
   fflush (_log_stream_err);
+
+#ifdef USE_GCOV
+  __gcov_flush ();
+#endif
 
   abort ();
 }
