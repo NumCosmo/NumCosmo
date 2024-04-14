@@ -204,12 +204,12 @@ nc_hicosmo_Vexp_init (NcHICosmoVexp *Vexp)
       NcmVector *mtau_v  = ncm_vector_new_array (mtau);
       NcmVector *tau_v   = ncm_vector_new_array (tau);
       NcmVector *tau_q_v = ncm_vector_new_array (tau_q);
-      NcmVector *mz_v    = ncm_vector_new_array (tau_q);
+      NcmVector *mz_v    = ncm_vector_new_array (mz);
 
       NcmVector *lnqc_v = ncm_vector_new_array (lnqc);
       NcmVector *lnqe_v = ncm_vector_new_array (lnqe);
       NcmVector *phi_v  = ncm_vector_new_array (phi);
-      NcmVector *E2_v   = ncm_vector_new_array (phi);
+      NcmVector *E2_v   = ncm_vector_new_array (E2);
 
       ncm_spline_set (Vexp->priv->lnqc_mtau, mtau_v, lnqc_v, FALSE);
       ncm_spline_set (Vexp->priv->lnqe_tau,   tau_v, lnqe_v, FALSE);
@@ -1738,7 +1738,7 @@ _nc_hicosmo_Vexp_H0 (NcHICosmo *cosmo)
 static gdouble
 _nc_hicosmo_Vexp_Omega_t0 (NcHICosmo *cosmo)
 {
-  return OMEGA_C;
+  return OMEGA_C + OMEGA_L;
 }
 
 static gdouble
@@ -3077,7 +3077,10 @@ nc_hicosmo_Vexp_x_tau (NcHICosmoVexp *Vexp, const gdouble tau)
   {
     const gdouble alpha = Vexp->priv->alpha_b + 0.5 * tau * tau;
 
-    return exp (Vexp->priv->alpha_0e - alpha);
+    if (tau > 0.0)
+      return exp (Vexp->priv->alpha_0e - alpha);
+    else
+      return exp (Vexp->priv->alpha_0c - alpha);
   }
 }
 
