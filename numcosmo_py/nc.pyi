@@ -446,6 +446,7 @@ class ABCClusterNCount(NumCosmoMath.ABC):
         nparticles: int
         prior: NumCosmoMath.MSetTransKern
         trans_kernel: NumCosmoMath.MSetTransKern
+
     props: Props = ...
     def __init__(
         self,
@@ -490,6 +491,7 @@ class ABCClusterNCountClass(GObject.GPointer):
 
         ABCClusterNCountClass()
     """
+
     parent_class: NumCosmoMath.ABCClass = ...
 
 class ACosmoLowz(NumCosmoMath.Model):
@@ -653,6 +655,7 @@ class CBE(GObject.Object):
         use_thermodyn: bool
         vector_lmax: int
         verbosity: int
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     prec: CBEPrecision = ...
@@ -754,6 +757,7 @@ class CBEClass(GObject.GPointer):
 
         CBEClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class CBEPrecision(GObject.Object):
@@ -1227,6 +1231,7 @@ class CBEPrecision(GObject.Object):
         transfer_neglect_late_source: float
         ur_fluid_approximation: int
         ur_fluid_trigger_tau_over_tau_k: float
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: CBEPrecisionPrivate = ...
@@ -1400,6 +1405,7 @@ class CBEPrecisionClass(GObject.GPointer):
 
         CBEPrecisionClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class CBEPrecisionPrivate(GObject.GPointer): ...
@@ -1430,6 +1436,7 @@ class ClusterAbundance(GObject.Object):
     class Props:
         halo_mass_function: HaloMassFunction
         mean_bias: HaloBias
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     mfp: HaloMassFunction = ...
@@ -1591,6 +1598,7 @@ class ClusterAbundanceClass(GObject.GPointer):
 
         ClusterAbundanceClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class ClusterAbundanceDataBin(GObject.GPointer): ...
@@ -1642,6 +1650,7 @@ class ClusterMass(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     priv: ClusterMassPrivate = ...
@@ -1872,6 +1881,7 @@ class ClusterMassAscaso(ClusterMass):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: ClusterMass = ...
     priv: ClusterMassAscasoPrivate = ...
@@ -1906,6 +1916,7 @@ class ClusterMassAscasoClass(GObject.GPointer):
 
         ClusterMassAscasoClass()
     """
+
     parent_class: ClusterMassClass = ...
 
 class ClusterMassAscasoPrivate(GObject.GPointer): ...
@@ -1992,6 +2003,7 @@ class ClusterMassBenson(ClusterMass):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: ClusterMass = ...
     signif_obs_min: float = ...
@@ -2025,6 +2037,7 @@ class ClusterMassBensonClass(GObject.GPointer):
 
         ClusterMassBensonClass()
     """
+
     parent_class: ClusterMassClass = ...
 
 class ClusterMassBensonXRay(ClusterMassBenson):
@@ -2147,6 +2160,7 @@ class ClusterMassBensonXRay(ClusterMassBenson):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: ClusterMassBenson = ...
     Yx_obs_min: float = ...
@@ -2192,6 +2206,7 @@ class ClusterMassBensonXRayClass(GObject.GPointer):
 
         ClusterMassBensonXRayClass()
     """
+
     parent_class: ClusterMassBensonClass = ...
 
 class ClusterMassClass(GObject.GPointer):
@@ -2202,6 +2217,7 @@ class ClusterMassClass(GObject.GPointer):
 
         ClusterMassClass()
     """
+
     parent_class: NumCosmoMath.ModelClass = ...
     P: Callable[
         [
@@ -2329,6 +2345,7 @@ class ClusterMassLnnormal(ClusterMass):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: ClusterMass = ...
     lnMobs_max: float = ...
@@ -2354,6 +2371,7 @@ class ClusterMassLnnormalClass(GObject.GPointer):
 
         ClusterMassLnnormalClass()
     """
+
     parent_class: ClusterMassClass = ...
 
 class ClusterMassNodist(ClusterMass):
@@ -2408,6 +2426,7 @@ class ClusterMassNodist(ClusterMass):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: ClusterMass = ...
     priv: ClusterMassNodistPrivate = ...
@@ -2428,6 +2447,7 @@ class ClusterMassNodistClass(GObject.GPointer):
 
         ClusterMassNodistClass()
     """
+
     parent_class: ClusterMassClass = ...
 
 class ClusterMassNodistPrivate(GObject.GPointer): ...
@@ -2523,6 +2543,7 @@ class ClusterMassPlCL(ClusterMass):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: ClusterMass = ...
     M0: float = ...
@@ -2578,6 +2599,7 @@ class ClusterMassPlCLClass(GObject.GPointer):
 
         ClusterMassPlCLClass()
     """
+
     parent_class: ClusterMassClass = ...
 
 class ClusterMassPrivate(GObject.GPointer): ...
@@ -2664,6 +2686,7 @@ class ClusterMassVanderlinde(ClusterMass):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: ClusterMass = ...
     signif_obs_min: float = ...
@@ -2697,6 +2720,7 @@ class ClusterMassVanderlindeClass(GObject.GPointer):
 
         ClusterMassVanderlindeClass()
     """
+
     parent_class: ClusterMassClass = ...
 
 class ClusterPhotozGauss(ClusterRedshift):
@@ -2752,6 +2776,7 @@ class ClusterPhotozGauss(ClusterRedshift):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: ClusterRedshift = ...
     pz_max: float = ...
@@ -2775,6 +2800,7 @@ class ClusterPhotozGaussClass(GObject.GPointer):
 
         ClusterPhotozGaussClass()
     """
+
     parent_class: ClusterRedshiftClass = ...
 
 class ClusterPhotozGaussGlobal(ClusterRedshift):
@@ -2842,6 +2868,7 @@ class ClusterPhotozGaussGlobal(ClusterRedshift):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: ClusterRedshift = ...
     pz_min: float = ...
@@ -2875,6 +2902,7 @@ class ClusterPhotozGaussGlobalClass(GObject.GPointer):
 
         ClusterPhotozGaussGlobalClass()
     """
+
     parent_class: ClusterRedshiftClass = ...
 
 class ClusterPseudoCounts(NumCosmoMath.Model):
@@ -2951,6 +2979,7 @@ class ClusterPseudoCounts(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     nclusters: int = ...
@@ -3033,6 +3062,7 @@ class ClusterPseudoCountsClass(GObject.GPointer):
 
         ClusterPseudoCountsClass()
     """
+
     parent_class: NumCosmoMath.ModelClass = ...
 
 class ClusterRedshift(NumCosmoMath.Model):
@@ -3079,6 +3109,7 @@ class ClusterRedshift(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     priv: ClusterRedshiftPrivate = ...
@@ -3175,6 +3206,7 @@ class ClusterRedshiftClass(GObject.GPointer):
 
         ClusterRedshiftClass()
     """
+
     parent_class: NumCosmoMath.ModelClass = ...
     P: Callable[[ClusterRedshift, HICosmo, float, float, float, float], float] = ...
     intP: Callable[[ClusterRedshift, HICosmo, float, float], float] = ...
@@ -3185,9 +3217,9 @@ class ClusterRedshiftClass(GObject.GPointer):
         [ClusterRedshift, HICosmo, float, float, NumCosmoMath.RNG],
         Tuple[bool, float, float],
     ] = ...
-    P_limits: Callable[
-        [ClusterRedshift, HICosmo, float, float, float, float], None
-    ] = ...
+    P_limits: Callable[[ClusterRedshift, HICosmo, float, float, float, float], None] = (
+        ...
+    )
     P_bin_limits: Callable[
         [ClusterRedshift, HICosmo, float, float, float, float, float], None
     ] = ...
@@ -3250,6 +3282,7 @@ class ClusterRedshiftNodist(ClusterRedshift):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: ClusterRedshift = ...
     priv: ClusterRedshiftNodistPrivate = ...
@@ -3270,6 +3303,7 @@ class ClusterRedshiftNodistClass(GObject.GPointer):
 
         ClusterRedshiftNodistClass()
     """
+
     parent_class: ClusterRedshiftClass = ...
 
 class ClusterRedshiftNodistPrivate(GObject.GPointer): ...
@@ -3289,6 +3323,7 @@ class CorClusterCmbLensLimber(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     parent_instance: GObject.Object = ...
     oneh_int_mass_spline: NumCosmoMath.Spline = ...
     @classmethod
@@ -3355,6 +3390,7 @@ class CorClusterCmbLensLimberClass(GObject.GPointer):
 
         CorClusterCmbLensLimberClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class DECont(NumCosmoMath.CSQ1D):
@@ -3416,6 +3452,7 @@ class DECont(NumCosmoMath.CSQ1D):
         save_evol: bool
         tf: float
         ti: float
+
     props: Props = ...
     parent_instance: NumCosmoMath.CSQ1D = ...
     priv: DEContPrivate = ...
@@ -3450,6 +3487,7 @@ class DEContClass(GObject.GPointer):
 
         DEContClass()
     """
+
     parent_class: NumCosmoMath.CSQ1DClass = ...
 
 class DEContPrivate(GObject.GPointer): ...
@@ -3510,6 +3548,7 @@ class DataBaoA(NumCosmoMath.DataGaussDiag):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussDiag = ...
     dist: Distance = ...
@@ -3541,6 +3580,7 @@ class DataBaoAClass(GObject.GPointer):
 
         DataBaoAClass()
     """
+
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
 class DataBaoDHrDAr(NumCosmoMath.DataGaussCov):
@@ -3599,6 +3639,7 @@ class DataBaoDHrDAr(NumCosmoMath.DataGaussCov):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussCov = ...
     dist: Distance = ...
@@ -3630,6 +3671,7 @@ class DataBaoDHrDArClass(GObject.GPointer):
 
         DataBaoDHrDArClass()
     """
+
     parent_class: NumCosmoMath.DataGaussCovClass = ...
 
 class DataBaoDMrHr(NumCosmoMath.DataGaussCov):
@@ -3691,6 +3733,7 @@ class DataBaoDMrHr(NumCosmoMath.DataGaussCov):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussCov = ...
     dist: Distance = ...
@@ -3724,6 +3767,7 @@ class DataBaoDMrHrClass(GObject.GPointer):
 
         DataBaoDMrHrClass()
     """
+
     parent_class: NumCosmoMath.DataGaussCovClass = ...
 
 class DataBaoDV(NumCosmoMath.DataGaussDiag):
@@ -3782,6 +3826,7 @@ class DataBaoDV(NumCosmoMath.DataGaussDiag):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussDiag = ...
     dist: Distance = ...
@@ -3813,6 +3858,7 @@ class DataBaoDVClass(GObject.GPointer):
 
         DataBaoDVClass()
     """
+
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
 class DataBaoDVDV(NumCosmoMath.DataGaussDiag):
@@ -3868,6 +3914,7 @@ class DataBaoDVDV(NumCosmoMath.DataGaussDiag):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussDiag = ...
     dist: Distance = ...
@@ -3897,6 +3944,7 @@ class DataBaoDVDVClass(GObject.GPointer):
 
         DataBaoDVDVClass()
     """
+
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
 class DataBaoDtrDHr(NumCosmoMath.DataGaussCov):
@@ -3955,6 +4003,7 @@ class DataBaoDtrDHr(NumCosmoMath.DataGaussCov):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussCov = ...
     dist: Distance = ...
@@ -3986,6 +4035,7 @@ class DataBaoDtrDHrClass(GObject.GPointer):
 
         DataBaoDtrDHrClass()
     """
+
     parent_class: NumCosmoMath.DataGaussCovClass = ...
 
 class DataBaoEmpiricalFit(NumCosmoMath.DataDist1d):
@@ -4048,6 +4098,7 @@ class DataBaoEmpiricalFit(NumCosmoMath.DataDist1d):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataDist1d = ...
     Dv_fiduc: float = ...
@@ -4143,6 +4194,7 @@ class DataBaoEmpiricalFit2d(NumCosmoMath.DataDist2d):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataDist2d = ...
     Dh_rd_fiduc: float = ...
@@ -4190,6 +4242,7 @@ class DataBaoEmpiricalFit2dClass(GObject.GPointer):
 
         DataBaoEmpiricalFit2dClass()
     """
+
     parent_class: NumCosmoMath.DataDist2dClass = ...
 
 class DataBaoEmpiricalFitClass(GObject.GPointer):
@@ -4200,6 +4253,7 @@ class DataBaoEmpiricalFitClass(GObject.GPointer):
 
         DataBaoEmpiricalFitClass()
     """
+
     parent_class: NumCosmoMath.DataDist1dClass = ...
 
 class DataBaoRDV(NumCosmoMath.DataGauss):
@@ -4258,6 +4312,7 @@ class DataBaoRDV(NumCosmoMath.DataGauss):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGauss = ...
     dist: Distance = ...
@@ -4290,6 +4345,7 @@ class DataBaoRDVClass(GObject.GPointer):
 
         DataBaoRDVClass()
     """
+
     parent_class: NumCosmoMath.DataGaussClass = ...
 
 class DataCMBDistPriors(NumCosmoMath.DataGauss):
@@ -4343,6 +4399,7 @@ class DataCMBDistPriors(NumCosmoMath.DataGauss):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGauss = ...
     dist: Distance = ...
@@ -4373,6 +4430,7 @@ class DataCMBDistPriorsClass(GObject.GPointer):
 
         DataCMBDistPriorsClass()
     """
+
     parent_class: NumCosmoMath.DataGaussClass = ...
 
 class DataCMBShiftParam(NumCosmoMath.DataGaussDiag):
@@ -4432,6 +4490,7 @@ class DataCMBShiftParam(NumCosmoMath.DataGaussDiag):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussDiag = ...
     dist: Distance = ...
@@ -4465,6 +4524,7 @@ class DataCMBShiftParamClass(GObject.GPointer):
 
         DataCMBShiftParamClass()
     """
+
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
 class DataClusterNCount(NumCosmoMath.Data):
@@ -4556,6 +4616,7 @@ class DataClusterNCount(NumCosmoMath.Data):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.Data = ...
     priv: DataClusterNCountPrivate = ...
@@ -4640,6 +4701,7 @@ class DataClusterNCountClass(GObject.GPointer):
 
         DataClusterNCountClass()
     """
+
     parent_class: NumCosmoMath.DataClass = ...
 
 class DataClusterNCountPrivate(GObject.GPointer): ...
@@ -4720,6 +4782,7 @@ class DataClusterNCountsGauss(NumCosmoMath.DataGaussCov):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussCov = ...
     priv: DataClusterNCountsGaussPrivate = ...
@@ -4743,6 +4806,7 @@ class DataClusterNCountsGauss(NumCosmoMath.DataGaussCov):
         init: bool = ...,
         long_desc: str = ...,
     ): ...
+    def free(self) -> None: ...
     def get_fix_cov(self) -> bool: ...
     def get_has_ssc(self) -> bool: ...
     def get_lnM_obs(self) -> NumCosmoMath.Vector: ...
@@ -4770,6 +4834,7 @@ class DataClusterNCountsGaussClass(GObject.GPointer):
 
         DataClusterNCountsGaussClass()
     """
+
     parent_class: NumCosmoMath.DataGaussCovClass = ...
 
 class DataClusterNCountsGaussPrivate(GObject.GPointer): ...
@@ -4825,6 +4890,7 @@ class DataClusterPseudoCounts(NumCosmoMath.Data):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.Data = ...
     cad: ClusterAbundance = ...
@@ -4870,6 +4936,7 @@ class DataClusterPseudoCountsClass(GObject.GPointer):
 
         DataClusterPseudoCountsClass()
     """
+
     parent_class: NumCosmoMath.DataClass = ...
 
 class DataClusterWL(NumCosmoMath.Data):
@@ -4923,6 +4990,7 @@ class DataClusterWL(NumCosmoMath.Data):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.Data = ...
     priv: DataClusterWLPrivate = ...
@@ -4955,6 +5023,7 @@ class DataClusterWLClass(GObject.GPointer):
 
         DataClusterWLClass()
     """
+
     parent_class: NumCosmoMath.DataClass = ...
 
 class DataClusterWLPrivate(GObject.GPointer): ...
@@ -5016,6 +5085,7 @@ class DataDistMu(NumCosmoMath.DataGaussDiag):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussDiag = ...
     dist: Distance = ...
@@ -5049,6 +5119,7 @@ class DataDistMuClass(GObject.GPointer):
 
         DataDistMuClass()
     """
+
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
 class DataGalaxyLowz(NumCosmoMath.DataGaussDiag):
@@ -5184,6 +5255,7 @@ class DataHubble(NumCosmoMath.DataGaussDiag):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussDiag = ...
     x: NumCosmoMath.Vector = ...
@@ -5262,6 +5334,7 @@ class DataHubbleBao(NumCosmoMath.DataGaussDiag):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussDiag = ...
     dist: Distance = ...
@@ -5291,6 +5364,7 @@ class DataHubbleBaoClass(GObject.GPointer):
 
         DataHubbleBaoClass()
     """
+
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
 class DataHubbleClass(GObject.GPointer):
@@ -5301,6 +5375,7 @@ class DataHubbleClass(GObject.GPointer):
 
         DataHubbleClass()
     """
+
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
 class DataPlanckLKL(NumCosmoMath.Data):
@@ -5355,6 +5430,7 @@ class DataPlanckLKL(NumCosmoMath.Data):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     def __init__(
         self,
@@ -5387,6 +5463,7 @@ class DataPlanckLKLClass(GObject.GPointer):
 
         DataPlanckLKLClass()
     """
+
     parent_class: NumCosmoMath.DataClass = ...
 
 class DataReducedShearClusterMass(NumCosmoMath.Data):
@@ -5449,6 +5526,7 @@ class DataReducedShearClusterMass(NumCosmoMath.Data):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.Data = ...
     priv: DataReducedShearClusterMassPrivate = ...
@@ -5493,6 +5571,7 @@ class DataReducedShearClusterMassClass(GObject.GPointer):
 
         DataReducedShearClusterMassClass()
     """
+
     parent_class: NumCosmoMath.DataClass = ...
 
 class DataReducedShearClusterMassPrivate(GObject.GPointer): ...
@@ -5605,6 +5684,7 @@ class DataSNIACov(NumCosmoMath.DataGaussCov):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussCov = ...
     priv: DataSNIACovPrivate = ...
@@ -5703,6 +5783,7 @@ class DataSNIACovClass(GObject.GPointer):
 
         DataSNIACovClass()
     """
+
     parent_class: NumCosmoMath.DataGaussCovClass = ...
 
 class DataSNIACovPrivate(GObject.GPointer): ...
@@ -5771,6 +5852,7 @@ class DataXcor(NumCosmoMath.DataGaussCov):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: NumCosmoMath.DataGaussCov = ...
     nobs: int = ...
@@ -5841,6 +5923,7 @@ class DataXcorClass(GObject.GPointer):
 
         DataXcorClass()
     """
+
     parent_class: NumCosmoMath.DataGaussCovClass = ...
 
 class Distance(GObject.Object):
@@ -5870,6 +5953,7 @@ class Distance(GObject.Object):
         compute_inv_comoving: bool
         recomb: Recomb
         zf: float
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     comoving_distance_spline: NumCosmoMath.OdeSpline = ...
@@ -5945,6 +6029,7 @@ class DistanceClass(GObject.GPointer):
 
         DistanceClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class DistanceFunc(GObject.GPointer):
@@ -5955,6 +6040,7 @@ class DistanceFunc(GObject.GPointer):
 
         DistanceFunc()
     """
+
     name: str = ...
     desc: str = ...
     f: Callable[[Distance, HICosmo], float] = ...
@@ -5968,6 +6054,7 @@ class DistanceFuncZ(GObject.GPointer):
 
         DistanceFuncZ()
     """
+
     name: str = ...
     desc: str = ...
     f: Callable[[Distance, HICosmo, float], float] = ...
@@ -5987,6 +6074,7 @@ class GalaxyAcf(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     parent_instance: GObject.Object = ...
     gf: GrowthFunc = ...
     dist: Distance = ...
@@ -6006,6 +6094,7 @@ class GalaxyAcfClass(GObject.GPointer):
 
         GalaxyAcfClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class GalaxyRedshift(GObject.Object):
@@ -6021,6 +6110,7 @@ class GalaxyRedshift(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     parent_instance: GObject.Object = ...
     priv: GalaxyRedshiftPrivate = ...
     @staticmethod
@@ -6060,6 +6150,7 @@ class GalaxyRedshiftClass(GObject.GPointer):
 
         GalaxyRedshiftClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     has_dist: Callable[[GalaxyRedshift], bool] = ...
     mode: Callable[[GalaxyRedshift], float] = ...
@@ -6093,6 +6184,7 @@ class GalaxyRedshiftGauss(GalaxyRedshift):
 
     class Props:
         obs: NumCosmoMath.Matrix
+
     props: Props = ...
     parent_instance: GalaxyRedshift = ...
     priv: GalaxyRedshiftGaussPrivate = ...
@@ -6115,6 +6207,7 @@ class GalaxyRedshiftGaussClass(GObject.GPointer):
 
         GalaxyRedshiftGaussClass()
     """
+
     parent_class: GalaxyRedshiftClass = ...
 
 class GalaxyRedshiftGaussPrivate(GObject.GPointer): ...
@@ -6141,6 +6234,7 @@ class GalaxyRedshiftSpec(GalaxyRedshift):
 
     class Props:
         z_spec: NumCosmoMath.Vector
+
     props: Props = ...
     parent_instance: GalaxyRedshift = ...
     priv: GalaxyRedshiftSpecPrivate = ...
@@ -6162,6 +6256,7 @@ class GalaxyRedshiftSpecClass(GObject.GPointer):
 
         GalaxyRedshiftSpecClass()
     """
+
     parent_class: GalaxyRedshiftClass = ...
 
 class GalaxyRedshiftSpecPrivate(GObject.GPointer): ...
@@ -6190,6 +6285,7 @@ class GalaxyRedshiftSpline(GalaxyRedshift):
     class Props:
         dists: NumCosmoMath.ObjArray
         z_best: float
+
     props: Props = ...
     parent_instance: GalaxyRedshift = ...
     priv: GalaxyRedshiftSplinePrivate = ...
@@ -6214,6 +6310,7 @@ class GalaxyRedshiftSplineClass(GObject.GPointer):
 
         GalaxyRedshiftSplineClass()
     """
+
     parent_class: GalaxyRedshiftClass = ...
 
 class GalaxyRedshiftSplinePrivate(GObject.GPointer): ...
@@ -6242,6 +6339,7 @@ class GalaxySelfunc(GObject.Object):
     class Props:
         nshells: int
         shell_splines: NumCosmoMath.ObjArray
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: GalaxySelfuncPrivate = ...
@@ -6272,6 +6370,7 @@ class GalaxySelfuncClass(GObject.GPointer):
 
         GalaxySelfuncClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class GalaxySelfuncPrivate(GObject.GPointer): ...
@@ -6300,6 +6399,7 @@ class GalaxyWL(GObject.Object):
     class Props:
         gz_dist: GalaxyRedshift
         wl_dist: GalaxyWLDist
+
     props: Props = ...
     parent_instance: GalaxyWLDist = ...
     priv: GalaxyWLPrivate = ...
@@ -6327,6 +6427,7 @@ class GalaxyWLClass(GObject.GPointer):
 
         GalaxyWLClass()
     """
+
     parent_class: GalaxyWLDistClass = ...
 
 class GalaxyWLDist(GObject.Object):
@@ -6342,6 +6443,7 @@ class GalaxyWLDist(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     parent_instance: GObject.Object = ...
     priv: GalaxyWLDistPrivate = ...
     @staticmethod
@@ -6411,6 +6513,7 @@ class GalaxyWLDistClass(GObject.GPointer):
 
         GalaxyWLDistClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     m2lnP_initial_prep: Callable[
         [
@@ -6465,6 +6568,7 @@ class GalaxyWLEllipticityBinned(GalaxyWLDist):
 
     class Props:
         binobs: NumCosmoMath.ObjArray
+
     props: Props = ...
     parent_instance: GalaxyWLDist = ...
     priv: GalaxyWLEllipticityBinnedPrivate = ...
@@ -6489,6 +6593,7 @@ class GalaxyWLEllipticityBinnedClass(GObject.GPointer):
 
         GalaxyWLEllipticityBinnedClass()
     """
+
     parent_class: GalaxyWLDistClass = ...
 
 class GalaxyWLEllipticityBinnedPrivate(GObject.GPointer): ...
@@ -6517,6 +6622,7 @@ class GalaxyWLEllipticityGauss(GalaxyWLDist):
     class Props:
         obs: NumCosmoMath.Matrix
         pos: GalaxyWLEllipticityGaussPos
+
     props: Props = ...
     parent_instance: GalaxyWLDist = ...
     priv: GalaxyWLEllipticityGaussPrivate = ...
@@ -6542,6 +6648,7 @@ class GalaxyWLEllipticityGaussClass(GObject.GPointer):
 
         GalaxyWLEllipticityGaussClass()
     """
+
     parent_class: GalaxyWLDistClass = ...
 
 class GalaxyWLEllipticityGaussPrivate(GObject.GPointer): ...
@@ -6567,6 +6674,7 @@ class GalaxyWLEllipticityKDE(GalaxyWLDist):
 
     class Props:
         obs: NumCosmoMath.Matrix
+
     props: Props = ...
     parent_instance: GalaxyWLDist = ...
     priv: GalaxyWLEllipticityKDEPrivate = ...
@@ -6590,6 +6698,7 @@ class GalaxyWLEllipticityKDEClass(GObject.GPointer):
 
         GalaxyWLEllipticityKDEClass()
     """
+
     parent_class: GalaxyWLDistClass = ...
 
 class GalaxyWLEllipticityKDEPrivate(GObject.GPointer): ...
@@ -6619,6 +6728,7 @@ class GalaxyWLProj(GalaxyWLDist):
     class Props:
         obs: NumCosmoMath.Matrix
         pos: GalaxyWLProjPos
+
     props: Props = ...
     parent_instance: GalaxyWLDist = ...
     priv: GalaxyWLProjPrivate = ...
@@ -6642,6 +6752,7 @@ class GalaxyWLProjClass(GObject.GPointer):
 
         GalaxyWLProjClass()
     """
+
     parent_class: GalaxyWLDistClass = ...
 
 class GalaxyWLProjPrivate(GObject.GPointer): ...
@@ -6673,6 +6784,7 @@ class GrowthFunc(GObject.Object):
         abstol: float
         reltol: float
         x_i: float
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: GrowthFuncPrivate = ...
@@ -6706,6 +6818,7 @@ class GrowthFuncClass(GObject.GPointer):
 
         GrowthFuncClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class GrowthFuncPrivate(GObject.GPointer): ...
@@ -6754,6 +6867,7 @@ class HICosmo(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     is_eternal: bool = ...
@@ -6901,6 +7015,7 @@ class HICosmoClass(GObject.GPointer):
 
         HICosmoClass()
     """
+
     parent_class: NumCosmoMath.ModelClass = ...
     H0: Callable[[HICosmo], float] = ...
     Omega_b0: Callable[[HICosmo], float] = ...
@@ -7063,6 +7178,7 @@ class HICosmoDE(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HICosmo = ...
     priv: HICosmoDEPrivate = ...
@@ -7121,6 +7237,7 @@ class HICosmoDEClass(GObject.GPointer):
 
         HICosmoDEClass()
     """
+
     parent_class: HICosmoClass = ...
     E2Omega_de: Callable[[HICosmoDE, float], float] = ...
     dE2Omega_de_dz: Callable[[HICosmoDE, float], float] = ...
@@ -7266,6 +7383,7 @@ class HICosmoDECpl(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HICosmoDE = ...
     def __init__(
@@ -7315,6 +7433,7 @@ class HICosmoDECplClass(GObject.GPointer):
 
         HICosmoDECplClass()
     """
+
     parent_class: HICosmoDEClass = ...
 
 class HICosmoDEJbp(HICosmoDE):
@@ -7456,6 +7575,7 @@ class HICosmoDEJbp(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HICosmoDE = ...
     def __init__(
@@ -7505,6 +7625,7 @@ class HICosmoDEJbpClass(GObject.GPointer):
 
         HICosmoDEJbpClass()
     """
+
     parent_class: HICosmoDEClass = ...
 
 class HICosmoDEPrivate(GObject.GPointer): ...
@@ -7536,6 +7657,7 @@ class HICosmoDEReparamCMB(NumCosmoMath.Reparam):
         compat_type: str
         length: int
         params_desc: NumCosmoMath.ObjDictInt
+
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     def __init__(
@@ -7555,6 +7677,7 @@ class HICosmoDEReparamCMBClass(GObject.GPointer):
 
         HICosmoDEReparamCMBClass()
     """
+
     parent_class: NumCosmoMath.ReparamClass = ...
 
 class HICosmoDEReparamOk(NumCosmoMath.Reparam):
@@ -7584,6 +7707,7 @@ class HICosmoDEReparamOk(NumCosmoMath.Reparam):
         compat_type: str
         length: int
         params_desc: NumCosmoMath.ObjDictInt
+
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     def __init__(
@@ -7603,6 +7727,7 @@ class HICosmoDEReparamOkClass(GObject.GPointer):
 
         HICosmoDEReparamOkClass()
     """
+
     parent_class: NumCosmoMath.ReparamClass = ...
 
 class HICosmoDEWSpline(HICosmoDE):
@@ -7747,6 +7872,7 @@ class HICosmoDEWSpline(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HICosmoDE = ...
     priv: HICosmoDEWSplinePrivate = ...
@@ -7799,6 +7925,7 @@ class HICosmoDEWSplineClass(GObject.GPointer):
 
         HICosmoDEWSplineClass()
     """
+
     parent_class: HICosmoDEClass = ...
 
 class HICosmoDEWSplinePrivate(GObject.GPointer): ...
@@ -7936,6 +8063,7 @@ class HICosmoDEXcdm(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HICosmoDE = ...
     def __init__(
@@ -7983,6 +8111,7 @@ class HICosmoDEXcdmClass(GObject.GPointer):
 
         HICosmoDEXcdmClass()
     """
+
     parent_class: HICosmoDEClass = ...
 
 class HICosmoFunc(GObject.GPointer):
@@ -7993,6 +8122,7 @@ class HICosmoFunc(GObject.GPointer):
 
         HICosmoFunc()
     """
+
     name: str = ...
     desc: str = ...
     f: Callable[[HICosmo], float] = ...
@@ -8006,6 +8136,7 @@ class HICosmoFuncZ(GObject.GPointer):
 
         HICosmoFuncZ()
     """
+
     name: str = ...
     desc: str = ...
     f: Callable[[HICosmo, float], float] = ...
@@ -8141,6 +8272,7 @@ class HICosmoGCG(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HICosmo = ...
     priv: HICosmoGCGPrivate = ...
@@ -8189,6 +8321,7 @@ class HICosmoGCGClass(GObject.GPointer):
 
         HICosmoGCGClass()
     """
+
     parent_class: HICosmoClass = ...
 
 class HICosmoGCGPrivate(GObject.GPointer): ...
@@ -8220,6 +8353,7 @@ class HICosmoGCGReparamCMB(NumCosmoMath.Reparam):
         compat_type: str
         length: int
         params_desc: NumCosmoMath.ObjDictInt
+
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     def __init__(
@@ -8239,6 +8373,7 @@ class HICosmoGCGReparamCMBClass(GObject.GPointer):
 
         HICosmoGCGReparamCMBClass()
     """
+
     parent_class: NumCosmoMath.ReparamClass = ...
 
 class HICosmoGCGReparamOk(NumCosmoMath.Reparam):
@@ -8268,6 +8403,7 @@ class HICosmoGCGReparamOk(NumCosmoMath.Reparam):
         compat_type: str
         length: int
         params_desc: NumCosmoMath.ObjDictInt
+
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     def __init__(
@@ -8287,6 +8423,7 @@ class HICosmoGCGReparamOkClass(GObject.GPointer):
 
         HICosmoGCGReparamOkClass()
     """
+
     parent_class: NumCosmoMath.ReparamClass = ...
 
 class HICosmoIDEM2(HICosmo):
@@ -8419,6 +8556,7 @@ class HICosmoIDEM2(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HICosmo = ...
     priv: HICosmoIDEM2Private = ...
@@ -8467,6 +8605,7 @@ class HICosmoIDEM2Class(GObject.GPointer):
 
         HICosmoIDEM2Class()
     """
+
     parent_class: HICosmoClass = ...
 
 class HICosmoIDEM2Private(GObject.GPointer): ...
@@ -8498,6 +8637,7 @@ class HICosmoIDEM2ReparamCMB(NumCosmoMath.Reparam):
         compat_type: str
         length: int
         params_desc: NumCosmoMath.ObjDictInt
+
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     def __init__(
@@ -8517,6 +8657,7 @@ class HICosmoIDEM2ReparamCMBClass(GObject.GPointer):
 
         HICosmoIDEM2ReparamCMBClass()
     """
+
     parent_class: NumCosmoMath.ReparamClass = ...
 
 class HICosmoIDEM2ReparamOk(NumCosmoMath.Reparam):
@@ -8546,6 +8687,7 @@ class HICosmoIDEM2ReparamOk(NumCosmoMath.Reparam):
         compat_type: str
         length: int
         params_desc: NumCosmoMath.ObjDictInt
+
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     def __init__(
@@ -8565,6 +8707,7 @@ class HICosmoIDEM2ReparamOkClass(GObject.GPointer):
 
         HICosmoIDEM2ReparamOkClass()
     """
+
     parent_class: NumCosmoMath.ReparamClass = ...
 
 class HICosmoLCDM(HICosmo):
@@ -8656,6 +8799,7 @@ class HICosmoLCDM(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HICosmo = ...
     def __init__(
@@ -8689,6 +8833,7 @@ class HICosmoLCDMClass(GObject.GPointer):
 
         HICosmoLCDMClass()
     """
+
     parent_class: HICosmoClass = ...
 
 class HICosmoQConst(HICosmo):
@@ -8774,6 +8919,7 @@ class HICosmoQConst(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HICosmo = ...
     def __init__(
@@ -8805,6 +8951,7 @@ class HICosmoQConstClass(GObject.GPointer):
 
         HICosmoQConstClass()
     """
+
     parent_class: HICosmoClass = ...
 
 class HICosmoQGRW(HICosmo, HIPertITwoFluids):
@@ -8884,6 +9031,7 @@ class HICosmoQGRW(HICosmo, HIPertITwoFluids):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HICosmo = ...
     eom_two_fluids: HIPertITwoFluidsEOM = ...
@@ -8915,6 +9063,7 @@ class HICosmoQGRWClass(GObject.GPointer):
 
         HICosmoQGRWClass()
     """
+
     parent_class: HICosmoClass = ...
 
 class HICosmoQLinear(HICosmo):
@@ -9006,6 +9155,7 @@ class HICosmoQLinear(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HICosmo = ...
     def __init__(
@@ -9041,6 +9191,7 @@ class HICosmoQLinearClass(GObject.GPointer):
 
         HICosmoQLinearClass()
     """
+
     parent_class: HICosmoClass = ...
 
 class HICosmoQRBF(HICosmo):
@@ -9135,6 +9286,7 @@ class HICosmoQRBF(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HICosmo = ...
     priv: HICosmoQRBFPrivate = ...
@@ -9172,6 +9324,7 @@ class HICosmoQRBFClass(GObject.GPointer):
 
         HICosmoQRBFClass()
     """
+
     parent_class: HICosmoClass = ...
 
 class HICosmoQRBFPrivate(GObject.GPointer): ...
@@ -9207,6 +9360,7 @@ class HICosmoQRBFRprior(NumCosmoMath.Prior):
         dimension: int
         eval_x: NumCosmoMath.Vector
         nvariables: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Prior = ...
     priv: HICosmoQRBFRpriorPrivate = ...
@@ -9227,6 +9381,7 @@ class HICosmoQRBFRpriorClass(GObject.GPointer):
 
         HICosmoQRBFRpriorClass()
     """
+
     parent_class: NumCosmoMath.PriorClass = ...
 
 class HICosmoQRBFRpriorPrivate(GObject.GPointer): ...
@@ -9311,6 +9466,7 @@ class HICosmoQSpline(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HICosmo = ...
     nknots: int = ...
@@ -9349,6 +9505,7 @@ class HICosmoQSplineClass(GObject.GPointer):
 
         HICosmoQSplineClass()
     """
+
     parent_class: HICosmoClass = ...
 
 class HICosmoQSplineContPrior(NumCosmoMath.Model):
@@ -9413,6 +9570,7 @@ class HICosmoQSplineContPrior(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     def __init__(
@@ -9446,6 +9604,7 @@ class HICosmoQSplineContPriorClass(GObject.GPointer):
 
         HICosmoQSplineContPriorClass()
     """
+
     parent_class: NumCosmoMath.ModelClass = ...
 
 class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
@@ -9543,6 +9702,7 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIGW):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HICosmo = ...
     priv: HICosmoVexpPrivate = ...
@@ -9603,6 +9763,7 @@ class HICosmoVexpClass(GObject.GPointer):
 
         HICosmoVexpClass()
     """
+
     parent_class: HICosmoClass = ...
 
 class HICosmoVexpPrivate(GObject.GPointer): ...
@@ -9639,6 +9800,7 @@ class HIPert(GObject.Object):
         k: float
         reltol: float
         sys_size: int
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: HIPertPrivate = ...
@@ -9704,6 +9866,7 @@ class HIPertAdiab(NumCosmoMath.HOAA):
         save_evol: bool
         tf: float
         ti: float
+
     props: Props = ...
     parent_instance: NumCosmoMath.HOAA = ...
     def __init__(
@@ -9731,6 +9894,7 @@ class HIPertAdiabClass(GObject.GPointer):
 
         HIPertAdiabClass()
     """
+
     parent_class: NumCosmoMath.HOAAClass = ...
 
 class HIPertBGVar(GObject.Object):
@@ -9764,6 +9928,7 @@ class HIPertBGVar(GObject.Object):
         recomb: Optional[Recomb]
         scalefactor: Optional[Scalefactor]
         zf: float
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: HIPertBGVarPrivate = ...
@@ -9817,6 +9982,7 @@ class HIPertBGVarClass(GObject.GPointer):
 
         HIPertBGVarClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     bg_var_id_len: int = ...
     ns_table: dict[None, None] = ...
@@ -9830,6 +9996,7 @@ class HIPertBGVarDesc(GObject.GPointer):
 
         HIPertBGVarDesc()
     """
+
     init: bool = ...
     ns: str = ...
     desc: str = ...
@@ -9847,6 +10014,7 @@ class HIPertBGVarYDY(GObject.GBoxed):
         HIPertBGVarYDY()
         new() -> NumCosmo.HIPertBGVarYDY
     """
+
     y: float = ...
     dy: float = ...
     start_index: int = ...
@@ -9930,6 +10098,7 @@ class HIPertBoltzmann(HIPert):
         k: float
         reltol: float
         sys_size: int
+
     props: Props = ...
     parent_instance: HIPert = ...
     recomb: Recomb = ...
@@ -10118,6 +10287,7 @@ class HIPertBoltzmannCBE(HIPertBoltzmann):
         k: float
         reltol: float
         sys_size: int
+
     props: Props = ...
     parent_instance: HIPertBoltzmann = ...
     cbe: CBE = ...
@@ -10167,6 +10337,7 @@ class HIPertBoltzmannCBEClass(GObject.GPointer):
 
         HIPertBoltzmannCBEClass()
     """
+
     parent_class: HIPertBoltzmannClass = ...
 
 class HIPertBoltzmannClass(GObject.GPointer):
@@ -10177,6 +10348,7 @@ class HIPertBoltzmannClass(GObject.GPointer):
 
         HIPertBoltzmannClass()
     """
+
     parent_class: HIPertClass = ...
     init: Callable[[HIPertBoltzmann, HICosmo], None] = ...
     set_opts: Callable[[HIPertBoltzmann], None] = ...
@@ -10283,6 +10455,7 @@ class HIPertBoltzmannStd(HIPertBoltzmann):
         k: float
         reltol: float
         sys_size: int
+
     props: Props = ...
     parent_instance: HIPertBoltzmann = ...
     def __init__(
@@ -10317,6 +10490,7 @@ class HIPertBoltzmannStdClass(GObject.GPointer):
 
         HIPertBoltzmannStdClass()
     """
+
     parent_class: HIPertBoltzmannClass = ...
 
 class HIPertClass(GObject.GPointer):
@@ -10327,6 +10501,7 @@ class HIPertClass(GObject.GPointer):
 
         HIPertClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     set_mode_k: Callable[[HIPert, float], None] = ...
     set_reltol: Callable[[HIPert, float], None] = ...
@@ -10352,6 +10527,7 @@ class HIPertComp(GObject.Object):
 
     class Props:
         gauge: HIPertGravGauge
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: HIPertCompPrivate = ...
@@ -10406,6 +10582,7 @@ class HIPertCompClass(GObject.GPointer):
 
         HIPertCompClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     ndyn_var: Callable[[HIPertComp], int] = ...
     get_deps: Callable[[HIPertComp, int], list[int]] = ...
@@ -10452,6 +10629,7 @@ class HIPertCompPB(HIPertComp):
     class Props:
         l_max: int
         gauge: HIPertGravGauge
+
     props: Props = ...
     parent_instance: HIPertComp = ...
     priv: HIPertCompPBPrivate = ...
@@ -10475,6 +10653,7 @@ class HIPertCompPBClass(GObject.GPointer):
 
         HIPertCompPBClass()
     """
+
     parent_class: HIPertCompClass = ...
 
 class HIPertCompPBPrivate(GObject.GPointer): ...
@@ -10578,6 +10757,7 @@ class HIPertFirstOrder(HIPertBoltzmann):
         alphai: float
         k: float
         sys_size: int
+
     props: Props = ...
     parent_instance: HIPertBoltzmann = ...
     priv: HIPertFirstOrderPrivate = ...
@@ -10639,6 +10819,7 @@ class HIPertFirstOrderClass(GObject.GPointer):
 
         HIPertFirstOrderClass()
     """
+
     parent_class: HIPertBoltzmannClass = ...
 
 class HIPertFirstOrderPrivate(GObject.GPointer): ...
@@ -10682,6 +10863,7 @@ class HIPertGW(NumCosmoMath.HOAA):
         save_evol: bool
         tf: float
         ti: float
+
     props: Props = ...
     parent_instance: NumCosmoMath.HOAA = ...
     def __init__(
@@ -10709,6 +10891,7 @@ class HIPertGWClass(GObject.GPointer):
 
         HIPertGWClass()
     """
+
     parent_class: NumCosmoMath.HOAAClass = ...
 
 class HIPertGrav(GObject.Object):
@@ -10731,6 +10914,7 @@ class HIPertGrav(GObject.Object):
 
     class Props:
         gauge: HIPertGravGauge
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: HIPertGravPrivate = ...
@@ -10787,6 +10971,7 @@ class HIPertGravClass(GObject.GPointer):
 
         HIPertGravClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     ndyn_var: Callable[[HIPertGrav], int] = ...
     get_deps: Callable[[HIPertGrav, int], list[int]] = ...
@@ -10828,6 +11013,7 @@ class HIPertGravEinstein(HIPertGrav):
     class Props:
         nhoc: int
         gauge: HIPertGravGauge
+
     props: Props = ...
     parent_instance: HIPertGrav = ...
     priv: HIPertGravEinsteinPrivate = ...
@@ -10849,6 +11035,7 @@ class HIPertGravEinsteinClass(GObject.GPointer):
 
         HIPertGravEinsteinClass()
     """
+
     parent_class: HIPertGravClass = ...
 
 class HIPertGravEinsteinPrivate(GObject.GPointer): ...
@@ -10862,6 +11049,7 @@ class HIPertGravInfo(GObject.GBoxed):
         HIPertGravInfo()
         new() -> NumCosmo.HIPertGravInfo
     """
+
     phi_deps: list[int] = ...
     dsigma_deps: list[int] = ...
     psi_deps: list[int] = ...
@@ -10891,6 +11079,7 @@ class HIPertGravScalar(GObject.GBoxed):
         HIPertGravScalar()
         new() -> NumCosmo.HIPertGravScalar
     """
+
     phi: float = ...
     dsigma: float = ...
     psi: float = ...
@@ -10909,6 +11098,7 @@ class HIPertGravTScalar(GObject.GBoxed):
         HIPertGravTScalar()
         new() -> NumCosmo.HIPertGravTScalar
     """
+
     drho_m_Aphi: float = ...
     A: float = ...
     rhopp_v: float = ...
@@ -10930,6 +11120,7 @@ class HIPertGravTScalarInfo(GObject.GBoxed):
         HIPertGravTScalarInfo()
         new() -> NumCosmo.HIPertGravTScalarInfo
     """
+
     drho_deps: list[None] = ...
     rhoppv_deps: list[None] = ...
     dp_deps: list[None] = ...
@@ -10950,6 +11141,7 @@ class HIPertGravTTensor(GObject.GBoxed):
         HIPertGravTTensor()
         new() -> NumCosmo.HIPertGravTTensor
     """
+
     a: float = ...
     def add(self, Tt1: HIPertGravTTensor, Tt2: HIPertGravTTensor) -> None: ...
     def dup(self) -> HIPertGravTTensor: ...
@@ -10967,6 +11159,7 @@ class HIPertGravTVector(GObject.GBoxed):
         HIPertGravTVector()
         new() -> NumCosmo.HIPertGravTVector
     """
+
     a: float = ...
     def add(self, Tv1: HIPertGravTVector, Tv2: HIPertGravTVector) -> None: ...
     def dup(self) -> HIPertGravTVector: ...
@@ -10984,6 +11177,7 @@ class HIPertGravTensor(GObject.GBoxed):
         HIPertGravTensor()
         new() -> NumCosmo.HIPertGravTensor
     """
+
     h: list[float] = ...
     def dup(self) -> HIPertGravTensor: ...
     def free(self) -> None: ...
@@ -11000,6 +11194,7 @@ class HIPertGravVector(GObject.GBoxed):
         HIPertGravVector()
         new() -> NumCosmo.HIPertGravVector
     """
+
     dsigma: list[float] = ...
     def dup(self) -> HIPertGravVector: ...
     def free(self) -> None: ...
@@ -11014,6 +11209,7 @@ class HIPertIAdiab(GObject.GInterface):
     Signals from GObject:
       notify (GParam)
     """
+
     def eval_dlnmnu(self, tau: float, k: float) -> float: ...
     def eval_mnu(self, tau: float, k: float) -> float: ...
     def eval_nu(self, tau: float, k: float) -> float: ...
@@ -11043,6 +11239,7 @@ class HIPertIAdiabInterface(GObject.GPointer):
 
         HIPertIAdiabInterface()
     """
+
     parent: GObject.TypeInterface = ...
     eval_mnu: Callable[[HIPertIAdiab, float, float], float] = ...
     eval_nu: Callable[[HIPertIAdiab, float, float], float] = ...
@@ -11066,6 +11263,7 @@ class HIPertIGW(GObject.GInterface):
     Signals from GObject:
       notify (GParam)
     """
+
     def eval_dlnmnu(self, tau: float, k: float) -> float: ...
     def eval_mnu(self, tau: float, k: float) -> float: ...
     def eval_nu(self, tau: float, k: float) -> float: ...
@@ -11095,6 +11293,7 @@ class HIPertIGWInterface(GObject.GPointer):
 
         HIPertIGWInterface()
     """
+
     parent: GObject.TypeInterface = ...
     eval_mnu: Callable[[HIPertIGW, float, float], float] = ...
     eval_nu: Callable[[HIPertIGW, float, float], float] = ...
@@ -11106,9 +11305,9 @@ class HIPertIGWInterface(GObject.GPointer):
     ] = ...
     eval_sing_mnu: Callable[[HIPertIGW, float, float, int], float] = ...
     eval_sing_dlnmnu: Callable[[HIPertIGW, float, float, int], float] = ...
-    eval_sing_system: Callable[
-        [HIPertIGW, float, float, int], Tuple[float, float]
-    ] = ...
+    eval_sing_system: Callable[[HIPertIGW, float, float, int], Tuple[float, float]] = (
+        ...
+    )
     eval_powspec_factor: Callable[[HIPertIGW], float] = ...
 
 class HIPertITwoFluids(GObject.GInterface):
@@ -11118,6 +11317,7 @@ class HIPertITwoFluids(GObject.GInterface):
     Signals from GObject:
       notify (GParam)
     """
+
     def eom_eval(self, alpha: float, k: float) -> HIPertITwoFluidsEOM: ...
     def tv_eval(self, alpha: float, k: float) -> HIPertITwoFluidsTV: ...
 
@@ -11129,6 +11329,7 @@ class HIPertITwoFluidsEOM(GObject.GBoxed):
 
         HIPertITwoFluidsEOM()
     """
+
     skey: int = ...
     alpha: float = ...
     k: float = ...
@@ -11154,6 +11355,7 @@ class HIPertITwoFluidsInterface(GObject.GPointer):
 
         HIPertITwoFluidsInterface()
     """
+
     parent: GObject.TypeInterface = ...
     eom: Callable[[HIPertITwoFluids, float, float], HIPertITwoFluidsEOM] = ...
     tv: Callable[[HIPertITwoFluids, float, float], HIPertITwoFluidsTV] = ...
@@ -11166,6 +11368,7 @@ class HIPertITwoFluidsTV(GObject.GBoxed):
 
         HIPertITwoFluidsTV()
     """
+
     skey: int = ...
     alpha: float = ...
     k: float = ...
@@ -11211,6 +11414,7 @@ class HIPertTwoFluids(HIPert):
         k: float
         reltol: float
         sys_size: int
+
     props: Props = ...
     parent_instance: HIPert = ...
     priv: HIPertTwoFluidsPrivate = ...
@@ -11275,6 +11479,7 @@ class HIPertTwoFluidsClass(GObject.GPointer):
 
         HIPertTwoFluidsClass()
     """
+
     parent_class: HIPertClass = ...
 
 class HIPertTwoFluidsPrivate(GObject.GPointer): ...
@@ -11311,6 +11516,7 @@ class HIPertWKB(HIPert):
         k: float
         reltol: float
         sys_size: int
+
     props: Props = ...
     parent_instance: HIPert = ...
     nuA: NumCosmoMath.Spline = ...
@@ -11377,6 +11583,7 @@ class HIPertWKBClass(GObject.GPointer):
 
         HIPertWKBClass()
     """
+
     parent_class: HIPertClass = ...
     get_nu_V: Callable[
         [HIPertWKB, NumCosmoMath.Model, float, float], Tuple[float, float]
@@ -11420,6 +11627,7 @@ class HIPertWKBQgrwZeta(HIPertWKB):
         k: float
         reltol: float
         sys_size: int
+
     props: Props = ...
     def __init__(
         self,
@@ -11479,6 +11687,7 @@ class HIPrim(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     k_pivot: float = ...
@@ -11611,6 +11820,7 @@ class HIPrimAtan(HIPrim):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HIPrim = ...
     def __init__(
@@ -11646,6 +11856,7 @@ class HIPrimAtanClass(GObject.GPointer):
 
         HIPrimAtanClass()
     """
+
     parent_class: HIPrimClass = ...
 
 class HIPrimBPL(HIPrim):
@@ -11736,6 +11947,7 @@ class HIPrimBPL(HIPrim):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HIPrim = ...
     def __init__(
@@ -11768,6 +11980,7 @@ class HIPrimBPLClass(GObject.GPointer):
 
         HIPrimBPLClass()
     """
+
     parent_class: HIPrimClass = ...
 
 class HIPrimClass(GObject.GPointer):
@@ -11778,6 +11991,7 @@ class HIPrimClass(GObject.GPointer):
 
         HIPrimClass()
     """
+
     parent_class: NumCosmoMath.ModelClass = ...
     lnSA_powspec_lnk: Callable[[HIPrim, float], float] = ...
     lnT_powspec_lnk: Callable[[HIPrim, float], float] = ...
@@ -11877,6 +12091,7 @@ class HIPrimExpc(HIPrim):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HIPrim = ...
     def __init__(
@@ -11911,6 +12126,7 @@ class HIPrimExpcClass(GObject.GPointer):
 
         HIPrimExpcClass()
     """
+
     parent_class: HIPrimClass = ...
 
 class HIPrimPowerLaw(HIPrim):
@@ -11989,6 +12205,7 @@ class HIPrimPowerLaw(HIPrim):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HIPrim = ...
     def __init__(
@@ -12017,6 +12234,7 @@ class HIPrimPowerLawClass(GObject.GPointer):
 
         HIPrimPowerLawClass()
     """
+
     parent_class: HIPrimClass = ...
 
 class HIPrimSBPL(HIPrim):
@@ -12118,6 +12336,7 @@ class HIPrimSBPL(HIPrim):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HIPrim = ...
     def __init__(
@@ -12153,6 +12372,7 @@ class HIPrimSBPLClass(GObject.GPointer):
 
         HIPrimSBPLClass()
     """
+
     parent_class: HIPrimClass = ...
 
 class HIQG1D(GObject.Object):
@@ -12188,6 +12408,7 @@ class HIQG1D(GObject.Object):
         nknots: int
         noboundary: bool
         reltol: float
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: HIQG1DPrivate = ...
@@ -12254,6 +12475,7 @@ class HIQG1DClass(GObject.GPointer):
 
         HIQG1DClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class HIQG1DExp(GObject.GBoxed):
@@ -12265,6 +12487,7 @@ class HIQG1DExp(GObject.GBoxed):
         HIQG1DExp()
         new(n:float, V:float, pV:float) -> NumCosmo.HIQG1DExp
     """
+
     n: float = ...
     V: float = ...
     pV: float = ...
@@ -12285,6 +12508,7 @@ class HIQG1DGauss(GObject.GBoxed):
         HIQG1DGauss()
         new(mean:float, alpha:float, sigma:float, Hi:float) -> NumCosmo.HIQG1DGauss
     """
+
     mean: float = ...
     alpha: float = ...
     sigma: float = ...
@@ -12309,6 +12533,7 @@ class HIQG1DSQ(GObject.GBoxed):
         HIQG1DSQ()
         new(mu:float, V:float, pV:float) -> NumCosmo.HIQG1DSQ
     """
+
     mu: float = ...
     V: float = ...
     pV: float = ...
@@ -12369,6 +12594,7 @@ class HIReion(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     prec: float = ...
@@ -12468,6 +12694,7 @@ class HIReionCamb(HIReion):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HIReion = ...
     HII_HeII_reion_delta: float = ...
@@ -12507,6 +12734,7 @@ class HIReionCambClass(GObject.GPointer):
 
         HIReionCambClass()
     """
+
     parent_class: HIReionClass = ...
 
 class HIReionCambReparamTau(NumCosmoMath.Reparam):
@@ -12541,6 +12769,7 @@ class HIReionCambReparamTau(NumCosmoMath.Reparam):
         compat_type: str
         length: int
         params_desc: NumCosmoMath.ObjDictInt
+
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
     ctrl: NumCosmoMath.ModelCtrl = ...
@@ -12562,6 +12791,7 @@ class HIReionCambReparamTauClass(GObject.GPointer):
 
         HIReionCambReparamTauClass()
     """
+
     parent_class: NumCosmoMath.ReparamClass = ...
 
 class HIReionClass(GObject.GPointer):
@@ -12572,6 +12802,7 @@ class HIReionClass(GObject.GPointer):
 
         HIReionClass()
     """
+
     parent_class: NumCosmoMath.ModelClass = ...
     get_init_x: Callable[[HIReion, HICosmo], float] = ...
     get_Xe: Callable[[HIReion, HICosmo, float, float], float] = ...
@@ -12597,6 +12828,7 @@ class HaloBias(GObject.Object):
 
     class Props:
         mass_function: HaloMassFunction
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     mfp: HaloMassFunction = ...
@@ -12616,6 +12848,7 @@ class HaloBiasClass(GObject.GPointer):
 
         HaloBiasClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     eval: Callable[[HaloBias, HICosmo, float, float], float] = ...
 
@@ -12646,6 +12879,7 @@ class HaloBiasPS(HaloBias):
     class Props:
         critical_delta: float
         mass_function: HaloMassFunction
+
     props: Props = ...
     parent_instance: HaloBias = ...
     delta_c: float = ...
@@ -12667,6 +12901,7 @@ class HaloBiasPSClass(GObject.GPointer):
 
         HaloBiasPSClass()
     """
+
     parent_class: HaloBiasClass = ...
 
 class HaloBiasSTEllip(HaloBias):
@@ -12705,6 +12940,7 @@ class HaloBiasSTEllip(HaloBias):
         c: float
         critical_delta: float
         mass_function: HaloMassFunction
+
     props: Props = ...
     parent_instance: HaloBias = ...
     delta_c: float = ...
@@ -12742,6 +12978,7 @@ class HaloBiasSTEllipClass(GObject.GPointer):
 
         HaloBiasSTEllipClass()
     """
+
     parent_class: HaloBiasClass = ...
 
 class HaloBiasSTSpher(HaloBias):
@@ -12777,6 +13014,7 @@ class HaloBiasSTSpher(HaloBias):
         critical_delta: float
         p: float
         mass_function: HaloMassFunction
+
     props: Props = ...
     parent_instance: HaloBias = ...
     delta_c: float = ...
@@ -12810,6 +13048,7 @@ class HaloBiasSTSpherClass(GObject.GPointer):
 
         HaloBiasSTSpherClass()
     """
+
     parent_class: HaloBiasClass = ...
 
 class HaloBiasTinker(HaloBias):
@@ -12848,6 +13087,7 @@ class HaloBiasTinker(HaloBias):
         c: float
         critical_delta: float
         mass_function: HaloMassFunction
+
     props: Props = ...
     parent_instance: HaloBias = ...
     delta_c: float = ...
@@ -12885,6 +13125,7 @@ class HaloBiasTinkerClass(GObject.GPointer):
 
         HaloBiasTinkerClass()
     """
+
     parent_class: HaloBiasClass = ...
 
 class HaloDensityProfile(NumCosmoMath.Model):
@@ -12960,6 +13201,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     priv: HaloDensityProfilePrivate = ...
@@ -13030,6 +13272,7 @@ class HaloDensityProfileClass(GObject.GPointer):
 
         HaloDensityProfileClass()
     """
+
     parent_class: NumCosmoMath.ModelClass = ...
     eval_dl_density: Callable[[HaloDensityProfile, float], float] = ...
     eval_dl_spher_mass: Callable[[HaloDensityProfile, float], float] = ...
@@ -13126,6 +13369,7 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HaloDensityProfile = ...
     Delta: float = ...
@@ -13160,6 +13404,7 @@ class HaloDensityProfileDK14Class(GObject.GPointer):
 
         HaloDensityProfileDK14Class()
     """
+
     parent_class: HaloDensityProfileClass = ...
 
 class HaloDensityProfileEinasto(HaloDensityProfile):
@@ -13244,6 +13489,7 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HaloDensityProfile = ...
     def __init__(
@@ -13276,6 +13522,7 @@ class HaloDensityProfileEinastoClass(GObject.GPointer):
 
         HaloDensityProfileEinastoClass()
     """
+
     parent_class: HaloDensityProfileClass = ...
 
 class HaloDensityProfileHernquist(HaloDensityProfile):
@@ -13352,6 +13599,7 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HaloDensityProfile = ...
     def __init__(
@@ -13382,6 +13630,7 @@ class HaloDensityProfileHernquistClass(GObject.GPointer):
 
         HaloDensityProfileHernquistClass()
     """
+
     parent_class: HaloDensityProfileClass = ...
 
 class HaloDensityProfileNFW(HaloDensityProfile):
@@ -13458,6 +13707,7 @@ class HaloDensityProfileNFW(HaloDensityProfile):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: HaloDensityProfile = ...
     def __init__(
@@ -13490,6 +13740,7 @@ class HaloDensityProfileNFWClass(GObject.GPointer):
 
         HaloDensityProfileNFWClass()
     """
+
     parent_class: HaloDensityProfileClass = ...
     @staticmethod
     def set_ni(num: bool) -> None: ...
@@ -13544,6 +13795,7 @@ class HaloMassFunction(GObject.Object):
         prec: float
         zf: float
         zi: float
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: HaloMassFunctionPrivate = ...
@@ -13609,6 +13861,7 @@ class HaloMassFunctionClass(GObject.GPointer):
 
         HaloMassFunctionClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class HaloMassFunctionPrivate(GObject.GPointer): ...
@@ -13636,6 +13889,7 @@ class MultiplicityFunc(GObject.Object):
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: MultiplicityFuncPrivate = ...
@@ -13694,6 +13948,7 @@ class MultiplicityFuncBocquet(MultiplicityFunc):
         sim: MultiplicityFuncBocquetSim
         Delta: float
         mass_def: MultiplicityFuncMassDef
+
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncBocquetPrivate = ...
@@ -13727,6 +13982,7 @@ class MultiplicityFuncBocquetClass(GObject.GPointer):
 
         MultiplicityFuncBocquetClass()
     """
+
     parent_class: MultiplicityFuncClass = ...
 
 class MultiplicityFuncBocquetPrivate(GObject.GPointer): ...
@@ -13739,6 +13995,7 @@ class MultiplicityFuncClass(GObject.GPointer):
 
         MultiplicityFuncClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     set_mdef: Callable[[MultiplicityFunc, MultiplicityFuncMassDef], None] = ...
     set_Delta: Callable[[MultiplicityFunc, float], None] = ...
@@ -13775,6 +14032,7 @@ class MultiplicityFuncCrocce(MultiplicityFunc):
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
+
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncCroccePrivate = ...
@@ -13794,6 +14052,7 @@ class MultiplicityFuncCrocceClass(GObject.GPointer):
 
         MultiplicityFuncCrocceClass()
     """
+
     parent_class: MultiplicityFuncClass = ...
 
 class MultiplicityFuncCroccePrivate(GObject.GPointer): ...
@@ -13822,6 +14081,7 @@ class MultiplicityFuncJenkins(MultiplicityFunc):
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
+
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncJenkinsPrivate = ...
@@ -13841,6 +14101,7 @@ class MultiplicityFuncJenkinsClass(GObject.GPointer):
 
         MultiplicityFuncJenkinsClass()
     """
+
     parent_class: MultiplicityFuncClass = ...
 
 class MultiplicityFuncJenkinsPrivate(GObject.GPointer): ...
@@ -13874,6 +14135,7 @@ class MultiplicityFuncPS(MultiplicityFunc):
         critical_delta: float
         Delta: float
         mass_def: MultiplicityFuncMassDef
+
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncPSPrivate = ...
@@ -13900,6 +14162,7 @@ class MultiplicityFuncPSClass(GObject.GPointer):
 
         MultiplicityFuncPSClass()
     """
+
     parent_class: MultiplicityFuncClass = ...
 
 class MultiplicityFuncPSPrivate(GObject.GPointer): ...
@@ -13943,6 +14206,7 @@ class MultiplicityFuncST(MultiplicityFunc):
         p: float
         Delta: float
         mass_def: MultiplicityFuncMassDef
+
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncSTPrivate = ...
@@ -13978,6 +14242,7 @@ class MultiplicityFuncSTClass(GObject.GPointer):
 
         MultiplicityFuncSTClass()
     """
+
     parent_class: MultiplicityFuncClass = ...
 
 class MultiplicityFuncSTPrivate(GObject.GPointer): ...
@@ -14007,6 +14272,7 @@ class MultiplicityFuncTinker(MultiplicityFunc):
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
+
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncTinkerPrivate = ...
@@ -14031,6 +14297,7 @@ class MultiplicityFuncTinkerClass(GObject.GPointer):
 
         MultiplicityFuncTinkerClass()
     """
+
     parent_class: MultiplicityFuncClass = ...
 
 class MultiplicityFuncTinkerMeanNormalized(MultiplicityFunc):
@@ -14057,6 +14324,7 @@ class MultiplicityFuncTinkerMeanNormalized(MultiplicityFunc):
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
+
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncTinkerMeanNormalizedPrivate = ...
@@ -14076,6 +14344,7 @@ class MultiplicityFuncTinkerMeanNormalizedClass(GObject.GPointer):
 
         MultiplicityFuncTinkerMeanNormalizedClass()
     """
+
     parent_class: MultiplicityFuncClass = ...
 
 class MultiplicityFuncTinkerMeanNormalizedPrivate(GObject.GPointer): ...
@@ -14105,6 +14374,7 @@ class MultiplicityFuncWarren(MultiplicityFunc):
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
+
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncWarrenPrivate = ...
@@ -14124,6 +14394,7 @@ class MultiplicityFuncWarrenClass(GObject.GPointer):
 
         MultiplicityFuncWarrenClass()
     """
+
     parent_class: MultiplicityFuncClass = ...
 
 class MultiplicityFuncWarrenPrivate(GObject.GPointer): ...
@@ -14152,6 +14423,7 @@ class MultiplicityFuncWatson(MultiplicityFunc):
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
+
     props: Props = ...
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncWatsonPrivate = ...
@@ -14171,6 +14443,7 @@ class MultiplicityFuncWatsonClass(GObject.GPointer):
 
         MultiplicityFuncWatsonClass()
     """
+
     parent_class: MultiplicityFuncClass = ...
 
 class MultiplicityFuncWatsonPrivate(GObject.GPointer): ...
@@ -14224,6 +14497,7 @@ class PlanckFI(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     version: int = ...
@@ -14250,6 +14524,7 @@ class PlanckFIClass(GObject.GPointer):
 
         PlanckFIClass()
     """
+
     parent_class: NumCosmoMath.ModelClass = ...
 
 class PlanckFICorTT(PlanckFI):
@@ -14423,6 +14698,7 @@ class PlanckFICorTT(PlanckFI):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: PlanckFI = ...
     def __init__(
@@ -14512,6 +14788,7 @@ class PlanckFICorTTClass(GObject.GPointer):
 
         PlanckFICorTTClass()
     """
+
     parent_class: PlanckFIClass = ...
 
 class PlanckFICorTTTEEE(PlanckFICorTT):
@@ -15209,6 +15486,7 @@ class PlanckFICorTTTEEE(PlanckFICorTT):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: PlanckFICorTT = ...
     def __init__(
@@ -15464,6 +15742,7 @@ class PlanckFICorTTTEEEClass(GObject.GPointer):
 
         PlanckFICorTTTEEEClass()
     """
+
     parent_class: PlanckFICorTTClass = ...
 
 class PowspecML(NumCosmoMath.Powspec):
@@ -15508,6 +15787,7 @@ class PowspecML(NumCosmoMath.Powspec):
         zf: float
         zi: float
         reltol: float
+
     props: Props = ...
     parent_instance: NumCosmoMath.Powspec = ...
     def __init__(
@@ -15578,6 +15858,7 @@ class PowspecMLCBE(PowspecML):
         zf: float
         zi: float
         reltol: float
+
     props: Props = ...
     parent_instance: PowspecML = ...
     priv: PowspecMLCBEPrivate = ...
@@ -15611,6 +15892,7 @@ class PowspecMLCBEClass(GObject.GPointer):
 
         PowspecMLCBEClass()
     """
+
     parent_class: PowspecMLClass = ...
 
 class PowspecMLCBEPrivate(GObject.GPointer): ...
@@ -15623,6 +15905,7 @@ class PowspecMLClass(GObject.GPointer):
 
         PowspecMLClass()
     """
+
     parent_class: NumCosmoMath.PowspecClass = ...
 
 class PowspecMLFixSpline(PowspecML):
@@ -15673,6 +15956,7 @@ class PowspecMLFixSpline(PowspecML):
         zf: float
         zi: float
         reltol: float
+
     props: Props = ...
     parent_instance: PowspecML = ...
     ser: NumCosmoMath.Serialize = ...
@@ -15700,6 +15984,7 @@ class PowspecMLFixSplineClass(GObject.GPointer):
 
         PowspecMLFixSplineClass()
     """
+
     parent_class: PowspecMLClass = ...
 
 class PowspecMLTransfer(PowspecML):
@@ -15753,6 +16038,7 @@ class PowspecMLTransfer(PowspecML):
         zf: float
         zi: float
         reltol: float
+
     props: Props = ...
     parent_instance: PowspecML = ...
     tf: TransferFunc = ...
@@ -15783,6 +16069,7 @@ class PowspecMLTransferClass(GObject.GPointer):
 
         PowspecMLTransferClass()
     """
+
     parent_class: PowspecMLClass = ...
 
 class PowspecMNL(NumCosmoMath.Powspec):
@@ -15817,6 +16104,7 @@ class PowspecMNL(NumCosmoMath.Powspec):
         reltol: float
         zf: float
         zi: float
+
     props: Props = ...
     parent_instance: NumCosmoMath.Powspec = ...
     def __init__(
@@ -15840,6 +16128,7 @@ class PowspecMNLClass(GObject.GPointer):
 
         PowspecMNLClass()
     """
+
     parent_class: NumCosmoMath.PowspecClass = ...
 
 class PowspecMNLHaloFit(PowspecMNL):
@@ -15888,6 +16177,7 @@ class PowspecMNLHaloFit(PowspecMNL):
         kmin: float
         zf: float
         zi: float
+
     props: Props = ...
     parent_instance: PowspecMNL = ...
     priv: PowspecMNLHaloFitPrivate = ...
@@ -15917,6 +16207,7 @@ class PowspecMNLHaloFitClass(GObject.GPointer):
 
         PowspecMNLHaloFitClass()
     """
+
     parent_class: PowspecMNLClass = ...
 
 class PowspecMNLHaloFitPrivate(GObject.GPointer): ...
@@ -15948,6 +16239,7 @@ class PriorQSplineCont(NumCosmoMath.Prior):
         dimension: int
         eval_x: NumCosmoMath.Vector
         nvariables: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Prior = ...
     def __init__(
@@ -15967,6 +16259,7 @@ class PriorQSplineContClass(GObject.GPointer):
 
         PriorQSplineContClass()
     """
+
     parent_class: NumCosmoMath.PriorClass = ...
 
 class Recomb(GObject.Object):
@@ -15995,6 +16288,7 @@ class Recomb(GObject.Object):
         init_frac: float
         prec: float
         zi: float
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     zi: float = ...
@@ -16115,6 +16409,7 @@ class RecombCBE(Recomb):
         init_frac: float
         prec: float
         zi: float
+
     props: Props = ...
     parent_instance: Recomb = ...
     cbe: CBE = ...
@@ -16141,6 +16436,7 @@ class RecombCBEClass(GObject.GPointer):
 
         RecombCBEClass()
     """
+
     parent_class: RecombClass = ...
 
 class RecombClass(GObject.GPointer):
@@ -16151,6 +16447,7 @@ class RecombClass(GObject.GPointer):
 
         RecombClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     prepare: Callable[[Recomb, HICosmo], None] = ...
     Xe: Callable[[Recomb, HICosmo, float], float] = ...
@@ -16190,6 +16487,7 @@ class RecombSeager(Recomb):
         init_frac: float
         prec: float
         zi: float
+
     props: Props = ...
     parent_instance: Recomb = ...
     priv: RecombSeagerPrivate = ...
@@ -16226,6 +16524,7 @@ class RecombSeagerClass(GObject.GPointer):
 
         RecombSeagerClass()
     """
+
     parent_class: RecombClass = ...
 
 class RecombSeagerPrivate(GObject.GPointer): ...
@@ -16274,6 +16573,7 @@ class ReducedShearCalib(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     priv: ReducedShearCalibPrivate = ...
@@ -16300,6 +16600,7 @@ class ReducedShearCalibClass(GObject.GPointer):
 
         ReducedShearCalibClass()
     """
+
     parent_class: NumCosmoMath.ModelClass = ...
     eval: Callable[[ReducedShearCalib, float, float, float], float] = ...
 
@@ -16376,6 +16677,7 @@ class ReducedShearCalibWtg(ReducedShearCalib):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: ReducedShearCalib = ...
     priv: ReducedShearCalibWtgPrivate = ...
@@ -16408,6 +16710,7 @@ class ReducedShearCalibWtgClass(GObject.GPointer):
 
         ReducedShearCalibWtgClass()
     """
+
     parent_class: ReducedShearCalibClass = ...
 
 class ReducedShearCalibWtgPrivate(GObject.GPointer): ...
@@ -16501,6 +16804,7 @@ class ReducedShearClusterMass(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     R_Mpc: float = ...
@@ -16551,6 +16855,7 @@ class ReducedShearClusterMassClass(GObject.GPointer):
 
         ReducedShearClusterMassClass()
     """
+
     parent_class: NumCosmoMath.ModelClass = ...
 
 class SNIADistCov(NumCosmoMath.Model):
@@ -16661,6 +16966,7 @@ class SNIADistCov(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     dist: Distance = ...
@@ -16745,6 +17051,7 @@ class SNIADistCovClass(GObject.GPointer):
 
         SNIADistCovClass()
     """
+
     parent_class: NumCosmoMath.ModelClass = ...
 
 class Scalefactor(GObject.Object):
@@ -16783,6 +17090,7 @@ class Scalefactor(GObject.Object):
         dist: Distance
         reltol: float
         zf: float
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     priv: ScalefactorPrivate = ...
@@ -16828,6 +17136,7 @@ class ScalefactorClass(GObject.GPointer):
 
         ScalefactorClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class ScalefactorPrivate(GObject.GPointer): ...
@@ -16845,6 +17154,7 @@ class TransferFunc(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     parent_instance: GObject.Object = ...
     ctrl_cosmo: NumCosmoMath.ModelCtrl = ...
     ctrl_reion: NumCosmoMath.ModelCtrl = ...
@@ -16879,6 +17189,7 @@ class TransferFuncBBKS(TransferFunc):
 
     class Props:
         type: TransferFuncBBKSType
+
     props: Props = ...
     parent_instance: TransferFunc = ...
     priv: TransferFuncBBKSPrivate = ...
@@ -16895,6 +17206,7 @@ class TransferFuncBBKSClass(GObject.GPointer):
 
         TransferFuncBBKSClass()
     """
+
     parent_class: TransferFuncClass = ...
 
 class TransferFuncBBKSPrivate(GObject.GPointer): ...
@@ -16913,6 +17225,7 @@ class TransferFuncCAMB(TransferFunc):
     Signals from GObject:
       notify (GParam)
     """
+
     parent_instance: TransferFunc = ...
     T_spline: NumCosmoMath.Spline = ...
     init: bool = ...
@@ -16927,6 +17240,7 @@ class TransferFuncCAMBClass(GObject.GPointer):
 
         TransferFuncCAMBClass()
     """
+
     parent_class: TransferFuncClass = ...
 
 class TransferFuncClass(GObject.GPointer):
@@ -16937,6 +17251,7 @@ class TransferFuncClass(GObject.GPointer):
 
         TransferFuncClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     alloc: Callable[[], None] = ...
     prepare: Callable[[TransferFunc, HICosmo], None] = ...
@@ -16963,6 +17278,7 @@ class TransferFuncEH(TransferFunc):
 
     class Props:
         CCL_comp: bool
+
     props: Props = ...
     parent_instance: TransferFunc = ...
     priv: TransferFuncEHPrivate = ...
@@ -16979,6 +17295,7 @@ class TransferFuncEHClass(GObject.GPointer):
 
         TransferFuncEHClass()
     """
+
     parent_class: TransferFuncClass = ...
 
 class TransferFuncEHPrivate(GObject.GPointer): ...
@@ -17045,6 +17362,7 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     dist: Distance = ...
@@ -17194,6 +17512,7 @@ class WLSurfaceMassDensityClass(GObject.GPointer):
 
         WLSurfaceMassDensityClass()
     """
+
     parent_class: NumCosmoMath.ModelClass = ...
 
 class WLSurfaceMassDensityOptzs(GObject.GPointer):
@@ -17204,6 +17523,7 @@ class WLSurfaceMassDensityOptzs(GObject.GPointer):
 
         WLSurfaceMassDensityOptzs()
     """
+
     k: int = ...
     sqrt_Omega_k0: float = ...
     dl: float = ...
@@ -17224,6 +17544,7 @@ class Window(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     parent_instance: GObject.Object = ...
     @staticmethod
     def clear(wf: Window) -> None: ...
@@ -17244,6 +17565,7 @@ class WindowClass(GObject.GPointer):
 
         WindowClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     volume: float = ...
     eval_fourier: Callable[[Window, float, float], float] = ...
@@ -17264,6 +17586,7 @@ class WindowGaussian(Window):
     Signals from GObject:
       notify (GParam)
     """
+
     parent_instance: Window = ...
     @classmethod
     def new(cls) -> WindowGaussian: ...
@@ -17276,6 +17599,7 @@ class WindowGaussianClass(GObject.GPointer):
 
         WindowGaussianClass()
     """
+
     parent_class: WindowClass = ...
 
 class WindowTophat(Window):
@@ -17292,6 +17616,7 @@ class WindowTophat(Window):
     Signals from GObject:
       notify (GParam)
     """
+
     parent_instance: Window = ...
     @classmethod
     def new(cls) -> WindowTophat: ...
@@ -17304,6 +17629,7 @@ class WindowTophatClass(GObject.GPointer):
 
         WindowTophatClass()
     """
+
     parent_class: WindowClass = ...
 
 class Xcor(GObject.Object):
@@ -17333,6 +17659,7 @@ class Xcor(GObject.Object):
         distance: Distance
         meth: XcorLimberMethod
         power_spec: NumCosmoMath.Powspec
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     dist: Distance = ...
@@ -17406,6 +17733,7 @@ class XcorAB(GObject.Object):
         ell_lik_min: int
         ell_th_cut_off: int
         mixing: NumCosmoMath.Matrix
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     a: int = ...
@@ -17453,6 +17781,7 @@ class XcorABClass(GObject.GPointer):
 
         XcorABClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     alloc: Callable[[], None] = ...
 
@@ -17464,6 +17793,7 @@ class XcorClass(GObject.GPointer):
 
         XcorClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     alloc: Callable[[], None] = ...
 
@@ -17475,6 +17805,7 @@ class XcorKinetic(GObject.GBoxed):
 
         XcorKinetic()
     """
+
     xi_z: float = ...
     E_z: float = ...
     def copy(self) -> XcorKinetic: ...
@@ -17532,6 +17863,7 @@ class XcorLimberKernel(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     cons_factor: float = ...
@@ -17634,6 +17966,7 @@ class XcorLimberKernelCMBLensing(XcorLimberKernel):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: XcorLimberKernel = ...
     dist: Distance = ...
@@ -17665,6 +17998,7 @@ class XcorLimberKernelCMBLensingClass(GObject.GPointer):
 
         XcorLimberKernelCMBLensingClass()
     """
+
     parent_class: XcorLimberKernelClass = ...
 
 class XcorLimberKernelClass(GObject.GPointer):
@@ -17675,6 +18009,7 @@ class XcorLimberKernelClass(GObject.GPointer):
 
         XcorLimberKernelClass()
     """
+
     parent_class: NumCosmoMath.ModelClass = ...
     eval: Callable[[XcorLimberKernel, HICosmo, float, XcorKinetic, int], float] = ...
     prepare: Callable[[XcorLimberKernel, HICosmo], None] = ...
@@ -17775,6 +18110,7 @@ class XcorLimberKernelGal(XcorLimberKernel):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: XcorLimberKernel = ...
     dn_dz: NumCosmoMath.Spline = ...
@@ -17828,6 +18164,7 @@ class XcorLimberKernelGalClass(GObject.GPointer):
 
         XcorLimberKernelGalClass()
     """
+
     parent_class: XcorLimberKernelClass = ...
 
 class XcorLimberKernelWeakLensing(XcorLimberKernel):
@@ -17897,6 +18234,7 @@ class XcorLimberKernelWeakLensing(XcorLimberKernel):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: XcorLimberKernel = ...
     dn_dz: NumCosmoMath.Spline = ...
@@ -17936,6 +18274,7 @@ class XcorLimberKernelWeakLensingClass(GObject.GPointer):
 
         XcorLimberKernelWeakLensingClass()
     """
+
     parent_class: XcorLimberKernelClass = ...
 
 class DataCMBDataType(GObject.GFlags):

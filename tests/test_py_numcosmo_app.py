@@ -48,7 +48,6 @@ Ncm.cfg_init()
 @pytest.fixture(name="simple_experiment")
 def fixture_simple_experiment(tmp_path) -> Tuple[Path, Ncm.ObjDictStr]:
     """Create a simple experiment."""
-
     rng = Ncm.RNG.seeded_new(None, 1234)
     model_mvnd = Ncm.ModelMVND.new(5)
     mset = Ncm.MSet.new_array([model_mvnd])
@@ -72,29 +71,25 @@ def fixture_simple_experiment(tmp_path) -> Tuple[Path, Ncm.ObjDictStr]:
 
 @pytest.fixture(name="fit_runner", params=[e.value for e in FitRunner])
 def fixture_fit_runner(request) -> str:
-    """Returns a fit runner"""
-
+    """Return a fit runner."""
     return request.param
 
 
 @pytest.fixture(name="fit_grad_type", params=[e.value for e in FitGradType])
 def fixture_fit_grad_type(request) -> str:
-    """Returns a fit grad type"""
-
+    """Return a fit grad type."""
     return request.param
 
 
 @pytest.fixture(name="fit_run_messages", params=[e.value for e in FitRunMessages])
 def fixture_fit_run_messages(request) -> str:
-    """Returns a fit run messages"""
-
+    """Return a fit run messages."""
     return request.param
 
 
 @pytest.fixture(name="fisher_type", params=[e.value for e in FisherType])
 def fixture_fisher_type(request) -> str:
-    """Returns fisher type"""
-
+    """Return fisher type."""
     return request.param
 
 
@@ -102,8 +97,7 @@ def fixture_fisher_type(request) -> str:
     name="interpolation_method", params=[e.value for e in InterpolationMethod]
 )
 def fixture_interpolation_method(request) -> str:
-    """Returns interpolation method"""
-
+    """Return interpolation method."""
     return request.param
 
 
@@ -111,8 +105,7 @@ def fixture_interpolation_method(request) -> str:
     name="interpolation_kernel", params=[e.value for e in InterpolationKernel]
 )
 def fixture_interpolation_kernel(request) -> str:
-    """Returns interpolation kernel"""
-
+    """Return interpolation kernel."""
     return request.param
 
 
@@ -120,21 +113,18 @@ def fixture_interpolation_kernel(request) -> str:
     name="calibration_method", params=[e.value for e in CrossValidationMethod]
 )
 def fixture_calibration_method(request) -> str:
-    """Returns calibration method"""
-
+    """Return calibration method."""
     return request.param
 
 
 @pytest.fixture(name="planck18_type", params=[e.value for e in Planck18Types])
 def fixture_planck18_type(request) -> str:
-    """Returns planck18 type"""
-
+    """Return planck18 type."""
     return request.param
 
 
 def test_run_test(simple_experiment):
     """Test run test."""
-
     filename, _ = simple_experiment
     result = runner.invoke(app, ["run", "test", filename.as_posix()])
     if result.exit_code != 0:
@@ -225,7 +215,6 @@ def test_run_fit_starting_point(
     simple_experiment, fit_runner, fit_grad_type, fit_run_messages
 ):
     """Test run fit with starting point."""
-
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
@@ -260,7 +249,6 @@ def test_run_fit_restart(
     simple_experiment, fit_runner, fit_grad_type, fit_run_messages
 ):
     """Test run fit with starting point."""
-
     filename, _ = simple_experiment
     result = runner.invoke(
         app,
@@ -304,7 +292,6 @@ def test_run_theory_vector(simple_experiment):
 
 def test_run_theory_vector_starting_point(simple_experiment):
     """Test run theory vector with starting point."""
-
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
@@ -339,8 +326,7 @@ def test_run_theory_vector_starting_point(simple_experiment):
 
 
 def test_run_fisher(simple_experiment, fisher_type):
-    """Test run fisher"""
-
+    """Test run fisher."""
     filename, _ = simple_experiment
     result = runner.invoke(
         app,
@@ -352,8 +338,7 @@ def test_run_fisher(simple_experiment, fisher_type):
 
 
 def test_run_fisher_output(simple_experiment, fisher_type):
-    """Test run fisher"""
-
+    """Test run fisher."""
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
@@ -381,7 +366,6 @@ def test_run_fisher_output(simple_experiment, fisher_type):
 
 def test_run_fisher_bias(simple_experiment):
     """Computes fisher bias based on a theory vector."""
-
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
@@ -423,8 +407,7 @@ def test_run_fisher_bias(simple_experiment):
 
 
 def test_run_mcmc_apes(simple_experiment):
-    """Runs a MCMC analysis using APES."""
-
+    """Run a MCMC analysis using APES."""
     filename, _ = simple_experiment
     result = runner.invoke(app, ["run", "mcmc", "apes", filename.as_posix()])
 
@@ -433,8 +416,7 @@ def test_run_mcmc_apes(simple_experiment):
 
 
 def test_run_mcmc_apes_threads(simple_experiment):
-    """Runs a MCMC analysis using APES."""
-
+    """Run a MCMC analysis using APES."""
     filename, _ = simple_experiment
     result = runner.invoke(
         app,
@@ -453,8 +435,7 @@ def test_run_mcmc_apes_threads(simple_experiment):
 
 
 def test_run_mcmc_apes_output(simple_experiment):
-    """Runs a MCMC analysis using APES."""
-
+    """Run a MCMC analysis using APES."""
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
@@ -468,8 +449,7 @@ def test_run_mcmc_apes_output(simple_experiment):
 
 
 def test_run_mcmc_apes_init_gauss_cov(simple_experiment):
-    """Runs a MCMC analysis using APES starting at a best-fit and fisher matrix."""
-
+    """Run a MCMC analysis using APES starting at a best-fit and fisher matrix."""
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
 
@@ -517,8 +497,7 @@ def test_run_mcmc_apes_init_gauss_cov(simple_experiment):
 
 
 def test_run_mcmc_apes_init_catalog(simple_experiment):
-    """Runs a MCMC analysis using APES starting at previously computed catalog."""
-
+    """Run a MCMC analysis using APES starting at previously computed catalog."""
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
 
@@ -550,8 +529,7 @@ def test_run_mcmc_apes_init_catalog(simple_experiment):
 def test_run_mcmc_apes_method_kernel(
     simple_experiment, interpolation_method, interpolation_kernel
 ):
-    """Runs a MCMC analysis using APES."""
-
+    """Run a MCMC analysis using APES."""
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
@@ -576,8 +554,7 @@ def test_run_mcmc_apes_method_kernel(
 def test_run_mcmc_apes_method_kernel_no_interp(
     simple_experiment, interpolation_method, interpolation_kernel
 ):
-    """Runs a MCMC analysis using APES."""
-
+    """Run a MCMC analysis using APES."""
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
@@ -601,8 +578,7 @@ def test_run_mcmc_apes_method_kernel_no_interp(
 
 
 def test_run_mcmc_apes_analyze(simple_experiment):
-    """Runs a MCMC analysis using APES."""
-
+    """Run a MCMC analysis using APES."""
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
@@ -628,9 +604,36 @@ def test_run_mcmc_apes_analyze(simple_experiment):
         raise result.exception
 
 
-def test_run_mcmc_apes_calibrate(simple_experiment, calibration_method):
-    """Runs a MCMC analysis using APES."""
+def test_run_mcmc_apes_analyze_evidence(simple_experiment):
+    """Run a MCMC analysis using APES."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
 
+    assert output.absolute().with_suffix(".mcmc.fits").exists()
+    if result.exit_code != 0:
+        raise result.exception
+
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "analyze",
+            filename.as_posix(),
+            output.absolute().with_suffix(".mcmc.fits").as_posix(),
+            "--evidence",
+        ],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mcmc_apes_calibrate(simple_experiment, calibration_method):
+    """Run a MCMC analysis using APES."""
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
@@ -660,7 +663,6 @@ def test_run_mcmc_apes_calibrate(simple_experiment, calibration_method):
 
 def test_generate_planck(tmp_path, planck18_type):
     """Test run theory vector."""
-
     tmp_file = tmp_path / "planck_generated.yaml"
 
     result = runner.invoke(
@@ -674,7 +676,6 @@ def test_generate_planck(tmp_path, planck18_type):
 
 def test_generate_planck_test(tmp_path, planck18_type):
     """Test run theory vector."""
-
     tmp_file = tmp_path / "planck_generated.yaml"
 
     result = runner.invoke(
