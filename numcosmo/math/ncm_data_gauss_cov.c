@@ -286,8 +286,7 @@ _ncm_data_gauss_cov_prepare_LLT (NcmData *data)
 
   if (ret != 0) /* if different from 0, something went wrong in the Cholesky decomposition */
   {
-    /* g_error ("_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret); */
-    g_warning ("_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret);
+    g_error ("_ncm_data_gauss_cov_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret);
     self->prepared_LLT = FALSE;
   }
   else
@@ -634,6 +633,23 @@ ncm_data_gauss_cov_peek_mean (NcmDataGaussCov *gauss)
 }
 
 /**
+ * ncm_data_gauss_cov_set_cov:
+ * @gauss: a #NcmDataGaussCov
+ * @cov: a #NcmMatrix
+ *
+ * Sets a #NcmMatrix representing the covariance matrix in each bin.
+ *
+ */
+void
+ncm_data_gauss_cov_set_cov (NcmDataGaussCov *gauss, NcmMatrix *cov)
+{
+  NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
+
+  ncm_matrix_clear (&self->cov);
+  self->cov = ncm_matrix_ref (cov);
+}
+
+/**
  * ncm_data_gauss_cov_peek_cov:
  * @gauss: a #NcmDataGaussCov
  *
@@ -645,6 +661,40 @@ ncm_data_gauss_cov_peek_cov (NcmDataGaussCov *gauss)
   NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
 
   return self->cov;
+}
+
+/**
+ * ncm_data_gauss_cov_compute_cov:
+ * @gauss: a #NcmDataGaussCov
+ * @mset: a #NcmMSet
+ * @updated: (out) (allow-none): a #gboolean
+ *
+ * Computes the covariance matrix based on the models in @mset. If
+ * the #NcmDataGaussCovClass::cov_func is not set, returns %NULL.
+ *
+ * Returns: (transfer full): the current data covariance #NcmMatrix.
+ */
+NcmMatrix *
+ncm_data_gauss_cov_compute_cov (NcmDataGaussCov *gauss, NcmMSet *mset, gboolean *updated)
+{
+  NcmDataGaussCovClass * const gauss_cov_class = NCM_DATA_GAUSS_COV_GET_CLASS (gauss);
+  NcmDataGaussCovPrivate * const self          = ncm_data_gauss_cov_get_instance_private (gauss);
+
+  if (gauss_cov_class->cov_func != NULL)
+  {
+    NcmMatrix *cov = ncm_matrix_dup (self->cov);
+    gboolean l_updated;
+
+    ncm_data_prepare (NCM_DATA (gauss), mset);
+    l_updated = gauss_cov_class->cov_func (gauss, mset, cov);
+
+    if (updated != NULL)
+      *updated = l_updated;
+
+    return cov;
+  }
+
+  return NULL;
 }
 
 /**
@@ -739,5 +789,34 @@ ncm_data_gauss_cov_bulk_resample (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatr
   }
 
   ncm_matrix_scale (resample, -1.0);
+}
+
+/**
+ * ncm_data_gauss_cov_compute_mean:
+ * @gauss: a #NcmDataGaussCov
+ * @mset: a #NcmMSet
+ *
+ * Computes the mean vector based on the models in @mset. If
+ * the #NcmDataGaussCovClass::mean_func is not set, returns %NULL.
+ *
+ * Returns: (transfer full): the current data mean #NcmVector.
+ */
+NcmVector *
+ncm_data_gauss_cov_compute_mean (NcmDataGaussCov *gauss, NcmMSet *mset)
+{
+  NcmDataGaussCovClass * const gauss_cov_class = NCM_DATA_GAUSS_COV_GET_CLASS (gauss);
+  NcmDataGaussCovPrivate * const self          = ncm_data_gauss_cov_get_instance_private (gauss);
+
+  if (gauss_cov_class->mean_func != NULL)
+  {
+    NcmVector *mean = ncm_vector_dup (self->y);
+
+    ncm_data_prepare (NCM_DATA (gauss), mset);
+    gauss_cov_class->mean_func (gauss, mset, mean);
+
+    return mean;
+  }
+
+  return NULL;
 }
 

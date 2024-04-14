@@ -195,6 +195,7 @@
 #include "data/nc_data_dist_mu.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
 #include "data/nc_data_cluster_ncount.h"
+#include "data/nc_data_cluster_ncounts_gauss.h"
 #include "data/nc_data_cluster_wl.h"
 #include "data/nc_data_reduced_shear_cluster_mass.h"
 #include "data/nc_data_cmb_shift_param.h"
@@ -245,10 +246,26 @@ static gboolean _enable_msg         = TRUE;
 static gboolean _enable_msg_flush   = TRUE;
 static gsl_error_handler_t *gsl_err = NULL;
 
+# if (defined (__GNUC__) \
+  && ((__GNUC__ == 11 && __GNUC_MINOR__ >= 1) || (__GNUC__ >= 12))) \
+  || (defined (__clang__) && (__clang_major__ >= 12))
+extern void __gcov_dump (void);
+extern void __gcov_reset (void);
+
+#  define __gcov_flush() \
+        do { \
+          __gcov_dump (); __gcov_reset (); \
+        } while (0)
+# else
+extern void __gcov_flush (void);
+
+# endif
+
 static void
 _ncm_cfg_log_message (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
   NCM_UNUSED (log_domain);
+
   NCM_UNUSED (log_level);
   NCM_UNUSED (user_data);
 
@@ -281,13 +298,17 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
     /* print out all the frames to stderr */
     for (i = 0; i < size; i++)
     {
-      fprintf (_log_stream_err, "# (%s): %s-BACKTRACE:[%02zd] %s\n", pname, log_domain, i, trace[i]);
+      fprintf (_log_stream_err, "# (%s): %s-BACKTRACEA:[%02zd] %s\n", pname, log_domain, i, trace[i]);
     }
 
     g_free (trace);
   }
 #endif
   fflush (_log_stream_err);
+
+#ifdef USE_GCOV
+  __gcov_flush ();
+#endif
 
   abort ();
 }
@@ -726,6 +747,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_DATA_SNIA_COV);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNT);
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);
