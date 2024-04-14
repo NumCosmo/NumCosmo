@@ -50,14 +50,18 @@ from .loading import LoadCatalog
 class AnalyzeMCMC(LoadCatalog):
     """Analyzes the results of a MCMC run."""
 
-    info: Annotated[
+    evidence: Annotated[
         bool,
         typer.Option(
-            help="Prints information about the MCMC file.",
+            help=(
+                "Computes the ln-Bayesian evidence and the 1sigma parameter "
+                "space ln-volume."
+            ),
         ),
-    ] = True
+    ] = False
 
     def __post_init__(self) -> None:
+        """Analyzes the results of a MCMC run."""
         super().__post_init__()
 
         mcat = self.mcat
@@ -317,6 +321,43 @@ class AnalyzeMCMC(LoadCatalog):
             covariance_matrix.add_row(*row)
 
         main_table.add_row(covariance_matrix)
+
+        if self.evidence:
+            evidence_table = Table(title="Posterior Analysis", expand=False)
+            evidence_table.add_column("Evidence Type", justify="left", style=desc_color)
+            evidence_table.add_column(
+                "Value +/- 1-sigma", justify="left", style=values_color
+            )
+            evidence_table.add_column(
+                "1-sigma volume", justify="left", style=values_color
+            )
+            evidence_table.add_column(
+                "2-sigma volume", justify="left", style=values_color
+            )
+
+            be, be_sd = mcat.get_post_lnnorm()
+            lnevol_1s, glnvol_1s = mcat.get_post_lnvol(0.682689492137086)
+            lnevol_2s, glnvol_2s = mcat.get_post_lnvol(0.954499736103642)
+
+            evidence_table.add_row(
+                "Bayesian ln-Evidence", f"{be:.5g} +/- {be_sd:.5g}", "--", "--"
+            )
+
+            evidence_table.add_row(
+                "Posterior ln-volume",
+                "--",
+                f"{lnevol_1s:.5g}",
+                f"{lnevol_2s:.5g}",
+            )
+            evidence_table.add_row(
+                "Posterior ln-volume (Gaussian approx.)",
+                "--",
+                f"{glnvol_1s:.5g}",
+                f"{glnvol_2s:.5g}",
+            )
+
+            main_table.add_row(evidence_table)
+
         self.console.print(main_table)
 
         self.end_experiment()
@@ -428,6 +469,7 @@ class CalibrateCatalog(LoadCatalog):
     ] = False
 
     def __post_init__(self) -> None:
+        """Calibrate the APES sampler using a given catalog."""
         super().__post_init__()
 
         mcat = self.mcat
@@ -598,6 +640,7 @@ class PlotCorner(LoadCatalog):
     ] = 0
 
     def __post_init__(self) -> None:
+        """Corner plot of the catalog."""
         super().__post_init__()
 
         mcat = self.mcat
