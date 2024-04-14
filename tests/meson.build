@@ -308,6 +308,10 @@ python_tests = [
         'source': 'test_py_cluster_abundance_sampling.py',
     },
     {
+        'name': 'py_hicosmo_Vexp',
+        'source': 'test_py_hicosmo_Vexp.py',
+    },
+    {
         'name': 'py_diff',
         'source': 'test_py_diff.py',
     },
@@ -523,7 +527,10 @@ if enable_gir
         test(
             python_test['name'],
             python,
-            args: pytest_args + join_paths(meson.current_source_dir(), python_test['source']),
+            args: pytest_args + join_paths(
+                meson.current_source_dir(),
+                python_test['source'],
+            ),
             depends: [numcosmo_gir, numcosmo_math_gir],
             env: env,
             protocol: pytest_protocol,
