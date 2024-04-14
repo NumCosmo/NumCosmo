@@ -255,7 +255,6 @@ def test_evolution():
 
 def test_evolution_adiabatic2():
     """Test initial conditions of NcmCSQ1D."""
-
     bs = BesselTest(alpha=2.0)
     bs.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC2)
     bs.set_k(1.0)
