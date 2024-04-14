@@ -436,6 +436,43 @@ def test_nonadiab_prop():
     assert_allclose(prop_J11, analytic_J11, rtol=1.0e-9)
 
 
+def test_nonadiab_approx():
+    """Test basic functionality of NcmCSQ1D."""
+    k = 8.0
+    alpha = 0.5
+    bs = BesselTest(alpha=alpha, adiab=False)
+    bs.set_k(k)
+
+    ti = 0.0
+    tii = 1.0e-7
+    tf = 2.0
+
+    bs.prepare_prop(None, ti, tii, tf)
+    state0 = Ncm.CSQ1DState.new()
+    state1 = Ncm.CSQ1DState.new()
+    state0.set_up(Ncm.CSQ1DFrame.NONADIAB1, ti, 0.0, 0.0)
+
+    def theo_phi(t):
+        """Theoretical phi."""
+        prefactor = 0.5 * (1.0 - 1.0j) * math.sqrt(math.pi / 2.0) * (k * t) ** (-alpha)
+        return prefactor * (
+            jv(alpha, k * t) - 1.0j * k ** (2.0 * alpha) * yv(alpha, k * t)
+        )
+
+    test_t = np.geomspace(tii, 1.0e-2, 10)
+
+    prop_J11 = [
+        bs.change_frame(
+            None, bs.compute_nonadiab(None, t, state1), Ncm.CSQ1DFrame.ORIG
+        ).get_J()[0]
+        for t in test_t
+    ]
+
+    analytic_J11 = [2.0 * np.abs(theo_phi(t)) ** 2 for t in test_t]
+
+    assert_allclose(prop_J11, analytic_J11, rtol=1.0e-4)
+
+
 def test_nonadiab_evol():
     """Test basic functionality of NcmCSQ1D."""
     k = 8.0
