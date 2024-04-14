@@ -39,7 +39,7 @@ class BesselTest(Ncm.CSQ1D):
     """Test class for NcmCSQ1D."""
 
     def __init__(self, alpha=2.0, k=1.0, adiab=True):
-        """Constructor for BesselTest class."""
+        """Initialize BesselTest."""
         Ncm.CSQ1D.__init__(self)
         self.alpha = alpha
         self.k = k
@@ -103,12 +103,11 @@ class BesselTest(Ncm.CSQ1D):
         )
 
     def do_prepare(self, _model):  # pylint: disable=arguments-differ
-        pass
+        """Prepare method, nothing to do."""
 
 
 def test_csq1d():
     """Test basic functionality of NcmCSQ1D."""
-
     bs = BesselTest(alpha=2.0)
     bs.set_k(1.0)
 
@@ -152,7 +151,6 @@ def test_csq1d():
 
 def test_initial_conditions_time():
     """Test initial conditions of NcmCSQ1D."""
-
     bs = BesselTest(alpha=2.0)
     bs.set_k(1.0)
     bs.set_ti(-100.0)
@@ -173,7 +171,6 @@ def test_initial_conditions_time():
 
 def test_initial_conditions_adiabatic():
     """Test initial conditions of NcmCSQ1D."""
-
     bs = BesselTest(alpha=2.0)
     bs.set_k(1.0)
     bs.set_ti(-100.0)
@@ -208,21 +205,18 @@ def test_initial_conditions_adiabatic():
 
 def test_evolution():
     """Test initial conditions of NcmCSQ1D."""
-
     bs = BesselTest(alpha=2.0)
     bs.set_k(1.0)
-    bs.set_ti(-100.0)
+    bs.set_ti(-1.0e4)
     bs.set_tf(-1.0e-3)
     state = Ncm.CSQ1DState.new()
-
-    limit_found, t_adiab = bs.find_adiab_time_limit(None, -1.0e4, -1.0e1, 1.0e-8)
-
-    assert limit_found
 
     bs.set_save_evol(True)
     bs.set_reltol(1.0e-10)
     bs.set_abstol(0.0)
-    bs.set_init_cond_adiab(None, t_adiab)
+    bs.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    bs.set_vacuum_max_time(-1.0e1)
+    bs.set_vacuum_reltol(1.0e-8)
     bs.prepare(None)
 
     t_a, _smaller_abst = bs.get_time_array()
@@ -309,7 +303,6 @@ def test_evolution_adiabatic2():
 )
 def test_evolution_frame(frame):
     """Test initial conditions of NcmCSQ1D."""
-
     bs = BesselTest(alpha=2.0)
     bs.set_k(1.0)
     bs.set_ti(-100.0)
@@ -336,7 +329,6 @@ def test_evolution_frame(frame):
 
 def test_change_frame_orig_adiab1():
     """Test change_frame method of NcmCSQ1D."""
-
     bs = BesselTest(alpha=2.0)
     bs.set_k(1.0)
     bs.set_ti(-100.0)
@@ -362,7 +354,6 @@ def test_change_frame_orig_adiab1():
 
 def test_change_frame_orig_adiab2():
     """Test change_frame method of NcmCSQ1D."""
-
     bs = BesselTest(alpha=2.0)
     bs.set_k(1.0)
     bs.set_ti(-100.0)
@@ -388,7 +379,6 @@ def test_change_frame_orig_adiab2():
 
 def test_change_frame_adiab1_adiab2():
     """Test change_frame method of NcmCSQ1D."""
-
     bs = BesselTest(alpha=2.0)
     bs.set_k(1.0)
     bs.set_ti(-100.0)
@@ -413,7 +403,6 @@ def test_change_frame_adiab1_adiab2():
 
 def test_nonadiab_prop():
     """Test basic functionality of NcmCSQ1D."""
-
     k = 8.0
     alpha = 0.5
     bs = BesselTest(alpha=alpha, adiab=False)
@@ -449,7 +438,6 @@ def test_nonadiab_prop():
 
 def test_nonadiab_evol():
     """Test basic functionality of NcmCSQ1D."""
-
     k = 8.0
     alpha = 0.5
     bs = BesselTest(alpha=alpha, adiab=False)
@@ -487,7 +475,6 @@ def test_nonadiab_evol():
 
 def test_state_circle():
     """Test circle functionality of NcmCSQ1DState."""
-
     state = Ncm.CSQ1DState.new()
     state.set_up(Ncm.CSQ1DFrame.ORIG, 1.0, 0.1, 0.2)
 
@@ -499,7 +486,6 @@ def test_state_circle():
 
 def test_state_phi_Pphi():
     """Test phi and Pphi functionality of NcmCSQ1DState."""
-
     state = Ncm.CSQ1DState.new()
     alpha_a = np.linspace(-2.0, 2.0, 100)
     gamma_a = np.linspace(-2.0, 2.0, 100)
@@ -523,7 +509,6 @@ def test_state_phi_Pphi():
 
 def test_state_um():
     """Test um functionality of NcmCSQ1DState."""
-
     state = Ncm.CSQ1DState.new()
     alpha_a = np.linspace(-2.0, 2.0, 100)
     gamma_a = np.linspace(-2.0, 2.0, 100)
@@ -547,7 +532,6 @@ def test_state_um():
 
 def test_state_up():
     """Test up functionality of NcmCSQ1DState."""
-
     state = Ncm.CSQ1DState.new()
     alpha_a = np.linspace(-2.0, 2.0, 100)
     gamma_a = np.linspace(-2.0, 2.0, 100)
@@ -571,7 +555,6 @@ def test_state_up():
 
 def test_state_poincare_half_plane():
     """Test poincare_half_plane functionality of NcmCSQ1DState."""
-
     state = Ncm.CSQ1DState.new()
     alpha_a = np.linspace(-2.0, 2.0, 100)
     gamma_a = np.linspace(-2.0, 2.0, 100)
@@ -588,7 +571,6 @@ def test_state_poincare_half_plane():
 
 def test_state_poincare_disc():
     """Test poincare_disc functionality of NcmCSQ1DState."""
-
     state = Ncm.CSQ1DState.new()
     alpha_a = np.linspace(-2.0, 2.0, 100)
     gamma_a = np.linspace(-2.0, 2.0, 100)
