@@ -313,8 +313,6 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
   abort ();
 }
 
-void clencurt_gen (int M);
-
 #ifdef HAVE_OPENBLAS_SET_NUM_THREADS
 void goto_set_num_threads (gint);
 void openblas_set_num_threads (gint);
@@ -1171,7 +1169,7 @@ ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
 
   container.logger = logger;
 
-  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, &container);
+  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_INFO | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, &container);
 }
 
 /**
