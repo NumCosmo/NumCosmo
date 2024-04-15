@@ -138,7 +138,6 @@ def test_get_spline2d(Pk2d: Ncm.Spline2d) -> None:
 
 def test_serialization(Pk2d: Ncm.Spline2d) -> None:
     """Test the serialization of the power spectrum."""
-
     ps = Ncm.PowspecSpline2d.new(Pk2d)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
