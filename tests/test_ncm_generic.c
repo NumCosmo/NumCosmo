@@ -48,6 +48,7 @@ void test_ncm_mpi_job_feval_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
 
 void test_nc_de_cont_basic (void);
+void test_nc_hicosmo_qgw_basic (void);
 void test_nc_hipert_adiab_basic (void);
 void test_nc_hipert_em_basic (void);
 void test_nc_hipert_gw_basic (void);
@@ -75,6 +76,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
 
   g_test_add_func ("/nc/de_cont/basic", test_nc_de_cont_basic);
+  g_test_add_func ("/nc/hicosmo/qgw/basic", test_nc_hicosmo_qgw_basic);
+
   g_test_add_func ("/nc/hipert/adiab/basic", test_nc_hipert_adiab_basic);
   g_test_add_func ("/nc/hipert/em/basic", test_nc_hipert_em_basic);
   g_test_add_func ("/nc/hipert/gw/basic", test_nc_hipert_gw_basic);
@@ -348,6 +351,17 @@ test_ncm_powspec_spline2d_basic (void)
     NCM_TEST_FREE (ncm_powspec_spline2d_free, ps_s2d);
     NCM_TEST_FREE (ncm_spline2d_free, NCM_SPLINE2D (sb2d));
   }
+}
+
+void
+test_nc_hicosmo_qgw_basic (void)
+{
+  NcHICosmoQGW *qgw = nc_hicosmo_qgw_new ();
+
+  g_assert_true (qgw != NULL);
+  g_assert_true (NC_IS_HICOSMO_QGW (qgw));
+
+  NCM_TEST_FREE (nc_hicosmo_free, NC_HICOSMO (qgw));
 }
 
 void
