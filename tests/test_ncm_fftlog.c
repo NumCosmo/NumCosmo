@@ -65,6 +65,7 @@ void test_ncm_fftlog_setget (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_eval (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_eval_vector (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_eval_calibrate (TestNcmFftlog *test, gconstpointer pdata);
+void test_ncm_fftlog_eval_calibrate_fail (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_eval_serialized (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_eval_deriv (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_eval_use_eval_int (TestNcmFftlog *test, gconstpointer pdata);
@@ -88,6 +89,7 @@ TestCases tests[] = {
   {"eval", &test_ncm_fftlog_eval},
   {"eval/vector", &test_ncm_fftlog_eval_vector},
   {"eval/calibrate", &test_ncm_fftlog_eval_calibrate},
+  {"eval/calibrate/fail", &test_ncm_fftlog_eval_calibrate_fail},
   {"eval/serialized", &test_ncm_fftlog_eval_serialized},
   {"eval/deriv", &test_ncm_fftlog_eval_deriv},
   {"eval/use_eval_int", &test_ncm_fftlog_eval_use_eval_int},
@@ -363,7 +365,7 @@ test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata)
 void
 test_ncm_fftlog_sbessel_j_q0_5_new (TestNcmFftlog *test, gconstpointer pdata)
 {
-  const guint N          = g_test_rand_int_range  (1000, 2000);
+  const guint N          = g_test_rand_int_range  (2000, 3000);
   const guint ell        = g_test_rand_int_range  (0, 10);
   NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_sbessel_j_new (ell, 0.0, 0.0, 20.0, N));
   TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
@@ -661,9 +663,26 @@ test_ncm_fftlog_eval_calibrate (TestNcmFftlog *test, gconstpointer pdata)
       nerr++;
     else
       ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
-
-    /* printf ("%u % 22.15g % 22.15g % 22.15g % 22.15e\n", l, test->argK->lnr, res, fftlog_res, fabs (res / fftlog_res - 1.0)); */
   }
+}
+
+void
+test_ncm_fftlog_eval_calibrate_fail (TestNcmFftlog *test, gconstpointer pdata)
+{
+  if (g_test_subprocess ())
+  {
+    NcmFftlog *fftlog = test->fftlog;
+
+    ncm_fftlog_set_max_size (fftlog, 100);
+
+    ncm_fftlog_calibrate_size (fftlog, test->Fk.function, test->Fk.params, 1.0e-1);
+
+    return; /* LCOV_EXCL_LINE */
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*maximum number of knots reached. Requested precision*");
 }
 
 void

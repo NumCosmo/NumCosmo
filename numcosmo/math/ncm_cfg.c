@@ -298,7 +298,7 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
     /* print out all the frames to stderr */
     for (i = 0; i < size; i++)
     {
-      fprintf (_log_stream_err, "# (%s): %s-BACKTRACEA:[%02zd] %s\n", pname, log_domain, i, trace[i]);
+      fprintf (_log_stream_err, "# (%s): %s-BACKTRACE:[%02zd] %s\n", pname, log_domain, i, trace[i]);
     }
 
     g_free (trace);
