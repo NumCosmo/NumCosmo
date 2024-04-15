@@ -48,6 +48,9 @@ void test_ncm_mpi_job_feval_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
 
 void test_nc_de_cont_basic (void);
+void test_nc_hipert_adiab_basic (void);
+void test_nc_hipert_em_basic (void);
+void test_nc_hipert_gw_basic (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -72,6 +75,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
 
   g_test_add_func ("/nc/de_cont/basic", test_nc_de_cont_basic);
+  g_test_add_func ("/nc/hipert/adiab/basic", test_nc_hipert_adiab_basic);
+  g_test_add_func ("/nc/hipert/em/basic", test_nc_hipert_em_basic);
+  g_test_add_func ("/nc/hipert/gw/basic", test_nc_hipert_gw_basic);
 
   g_test_run ();
 }
@@ -363,5 +369,68 @@ test_nc_de_cont_basic (void)
   g_assert_cmpfloat (nc_de_cont_get_k (dec), ==, 0.1);
 
   NCM_TEST_FREE (nc_de_cont_free, dec);
+}
+
+void
+test_nc_hipert_adiab_basic (void)
+{
+  NcHIPertAdiab *adiab = nc_hipert_adiab_new ();
+  NcHIPertAdiab *adiab2;
+
+  g_assert_true (adiab != NULL);
+  g_assert_true (NC_IS_HIPERT_ADIAB (adiab));
+
+  adiab2 = nc_hipert_adiab_ref (adiab);
+  nc_hipert_adiab_clear (&adiab2);
+  g_assert_true (adiab2 == NULL);
+
+  g_assert_true (NC_IS_HIPERT_ADIAB (adiab));
+
+  nc_hipert_adiab_set_k (adiab, 0.1);
+  g_assert_cmpfloat (nc_hipert_adiab_get_k (adiab), ==, 0.1);
+
+  NCM_TEST_FREE (nc_hipert_adiab_free, adiab);
+}
+
+void
+test_nc_hipert_em_basic (void)
+{
+  NcHIPertEM *em = nc_hipert_em_new ();
+  NcHIPertEM *em2;
+
+  g_assert_true (em != NULL);
+  g_assert_true (NC_IS_HIPERT_EM (em));
+
+  em2 = nc_hipert_em_ref (em);
+  nc_hipert_em_clear (&em2);
+  g_assert_true (em2 == NULL);
+
+  g_assert_true (NC_IS_HIPERT_EM (em));
+
+  nc_hipert_em_set_k (em, 0.1);
+  g_assert_cmpfloat (nc_hipert_em_get_k (em), ==, 0.1);
+
+  NCM_TEST_FREE (nc_hipert_em_free, em);
+}
+
+void
+test_nc_hipert_gw_basic (void)
+{
+  NcHIPertGW *gw = nc_hipert_gw_new ();
+  NcHIPertGW *gw2;
+
+  g_assert_true (gw != NULL);
+  g_assert_true (NC_IS_HIPERT_GW (gw));
+
+  gw2 = nc_hipert_gw_ref (gw);
+  nc_hipert_gw_clear (&gw2);
+  g_assert_true (gw2 == NULL);
+
+  g_assert_true (NC_IS_HIPERT_GW (gw));
+
+  nc_hipert_gw_set_k (gw, 0.1);
+  g_assert_cmpfloat (nc_hipert_gw_get_k (gw), ==, 0.1);
+
+  NCM_TEST_FREE (nc_hipert_gw_free, gw);
 }
 

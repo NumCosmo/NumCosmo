@@ -181,3 +181,20 @@ def test_get_nknots(Pk2d: Ncm.Spline2d) -> None:
     nknots = ps.get_nknots()
 
     assert nknots == (Pk2d.peek_xv().len(), Pk2d.peek_yv().len())
+
+
+def test_extrapolation(Pk2d: Ncm.Spline2d) -> None:
+    """Test the evaluation of the power spectrum."""
+    ps = Ncm.PowspecSpline2d.new(Pk2d)
+
+    ps.prepare()
+
+    kmin = ps.get_kmin()
+    kmax = ps.get_kmax()
+
+    # Test extrapolation, decreasing k, must be smaller than the value at kmin
+    for k_small in np.geomspace(kmin * 1.0e-5, kmin * 0.99, 100):
+        assert ps.eval(None, 0.0, k_small) < ps.eval(None, 0.0, kmin)
+    # Test extrapolation, increasing k, must be smaller than the value at kmax
+    for k_large in np.geomspace(kmax * 1.01, kmax * 1.0e5, 100):
+        assert ps.eval(None, 0.0, k_large) < ps.eval(None, 0.0, kmax)
