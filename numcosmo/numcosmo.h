@@ -75,6 +75,7 @@
 #include <numcosmo/perturbations/nc_hipert.h>
 
 /* Model implementations */
+#include <numcosmo/nc_de_cont.h>
 #include <numcosmo/model/nc_hicosmo_idem2.h>
 #include <numcosmo/model/nc_hicosmo_gcg.h>
 #include <numcosmo/model/nc_hicosmo_de.h>

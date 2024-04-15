@@ -47,6 +47,8 @@ void test_ncm_mpi_job_mcmc_basic (void);
 void test_ncm_mpi_job_feval_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
 
+void test_nc_de_cont_basic (void);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -68,6 +70,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mpi_job_mcmc/basic", test_ncm_mpi_job_mcmc_basic);
   g_test_add_func ("/ncm/mpi_job_feval/basic", test_ncm_mpi_job_feval_basic);
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
+
+  g_test_add_func ("/nc/de_cont/basic", test_nc_de_cont_basic);
 
   g_test_run ();
 }
@@ -338,5 +342,26 @@ test_ncm_powspec_spline2d_basic (void)
     NCM_TEST_FREE (ncm_powspec_spline2d_free, ps_s2d);
     NCM_TEST_FREE (ncm_spline2d_free, NCM_SPLINE2D (sb2d));
   }
+}
+
+void
+test_nc_de_cont_basic (void)
+{
+  NcDECont *dec = nc_de_cont_new (0.3, 0.7, 0.01, 0.01);
+  NcDECont *dec2;
+
+  g_assert_true (dec != NULL);
+  g_assert_true (NC_IS_DE_CONT (dec));
+
+  dec2 = nc_de_cont_ref (dec);
+  nc_de_cont_clear (&dec2);
+  g_assert_true (dec2 == NULL);
+
+  g_assert_true (NC_IS_DE_CONT (dec));
+
+  nc_de_cont_set_k (dec, 0.1);
+  g_assert_cmpfloat (nc_de_cont_get_k (dec), ==, 0.1);
+
+  NCM_TEST_FREE (nc_de_cont_free, dec);
 }
 

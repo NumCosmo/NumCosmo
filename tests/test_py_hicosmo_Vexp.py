@@ -41,6 +41,15 @@ def test_init():
     assert isinstance(vexp, Ncm.Model)
 
 
+def test_init_new():
+    """Test NcHICosmoVexp initialization with new."""
+    vexp = Nc.HICosmoVexp.new()
+    assert vexp is not None
+    assert isinstance(vexp, Nc.HICosmoVexp)
+    assert isinstance(vexp, Nc.HICosmo)
+    assert isinstance(vexp, Ncm.Model)
+
+
 def test_hubble_negative_dphi():
     """Test NcHICosmoVexp.hubble."""
     vexp = Nc.HICosmoVexp()
@@ -126,6 +135,34 @@ def test_tau_x():
 
     assert_allclose([vexp.x_tau(tau) for tau in tau_xc_a], xc_a, atol=1.0e-7)
     assert_allclose([vexp.x_tau(tau) for tau in tau_xe_a], xe_a, atol=1.0e-7)
+
+
+def test_serialize():
+    """Test NcHICosmoVexp serialization."""
+    vexp = Nc.HICosmoVexp()
+    assert vexp is not None
+
+    vexp.props.dphi = -1.234e-1  # pylint: disable=no-member
+    vexp.props.Omegac = 0.321  # pylint: disable=no-member
+    vexp.props.OmegaL = 0.679  # pylint: disable=no-member
+
+    vexp.props.glue_de = True  # pylint: disable=no-member
+    vexp.props.xb = 1.0e30  # pylint: disable=no-member
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+
+    vexp2 = ser.dup_obj(vexp)
+
+    assert vexp2 is not None
+    assert isinstance(vexp2, Nc.HICosmoVexp)
+    assert isinstance(vexp2, Nc.HICosmo)
+    assert isinstance(vexp2, Ncm.Model)
+
+    assert vexp2.props.dphi == vexp.props.dphi  # pylint: disable=no-member
+    assert vexp2.props.Omegac == vexp.props.Omegac  # pylint: disable=no-member
+    assert vexp2.props.OmegaL == vexp.props.OmegaL  # pylint: disable=no-member
+    assert vexp2.props.glue_de == vexp.props.glue_de  # pylint: disable=no-member
+    assert vexp2.props.xb == vexp.props.xb  # pylint: disable=no-member
 
 
 if __name__ == "__main__":
