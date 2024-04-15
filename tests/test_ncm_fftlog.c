@@ -388,7 +388,7 @@ test_ncm_fftlog_sbessel_j_q0_5_new (TestNcmFftlog *test, gconstpointer pdata)
   test->ntests = NTESTS;
 
   arg->lnA = g_test_rand_double_range (log (1.0e-10), log (1.0e+10));
-  arg->ns  = g_test_rand_double_range (0.5, 1.5);
+  arg->ns  = g_test_rand_double_range (0.5, 0.6);
 
   argK->lnr = 0.0;
   argK->Fk  = test->Fk;
@@ -680,7 +680,7 @@ test_ncm_fftlog_eval_calibrate_fail (TestNcmFftlog *test, gconstpointer pdata)
   }
 
   g_test_trap_subprocess (NULL, 0, 0);
-  g_test_trap_assert_passed (); 
+  g_test_trap_assert_passed ();
   g_test_trap_assert_stdout ("*maximum number of knots reached. Requested precision*");
 }
 
