@@ -316,6 +316,10 @@ python_tests = [
         'source': 'test_py_hipert_em.py',
     },
     {
+        'name': 'py_hipert_gw',
+        'source': 'test_py_hipert_gw.py',
+    },
+    {
         'name': 'py_diff',
         'source': 'test_py_diff.py',
     },

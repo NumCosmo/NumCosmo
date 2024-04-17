@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# test_py_hipert_adiab.py
+# test_py_hipert_em.py
 #
 # Tue Apr 16 10:24:29 2024
 # Copyright  2024  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# test_hipert_adiab.py
+# test_hipert_em.py
 # Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
@@ -87,7 +87,7 @@ def fixture_em(request):
     return pem, vexp
 
 
-def test_hipert_adiab_vexp(pem_vexp):
+def test_hipert_em_vexp(pem_vexp):
     """Test basic functionality of NcHIPertAdiab."""
     pem, vexp = pem_vexp
 
