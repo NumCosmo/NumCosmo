@@ -35,8 +35,8 @@ from numcosmo_py import Ncm, Nc
 Ncm.cfg_init()
 
 
-@pytest.fixture(name="adiab")
-def fixture_adiab():
+@pytest.fixture(name="adiab_qgw")
+def fixture_adiab_qgw():
     """Fixture for NcHIPertAdiab."""
     adiab = Nc.HIPertAdiab.new()
 
@@ -45,17 +45,29 @@ def fixture_adiab():
     adiab.set_ti(-300.0)
     adiab.set_tf(-10.0)
 
-    return adiab
+    return adiab, Nc.HICosmoQGW()
 
 
-@pytest.fixture(name="qgw")
-def fixture_qgw() -> Nc.HICosmoQGW:
-    """Fixture for NcHIPertAdiab model Nc.HICosmoQGW."""
-    return Nc.HICosmoQGW()
+@pytest.fixture(name="adiab_vexp")
+def fixture_adiab_vexp():
+    """Fixture for NcHIPertAdiab."""
+    adiab = Nc.HIPertAdiab.new()
+    vexp = Nc.HICosmoVexp()
+
+    adiab.set_k(1.0)
+
+    adiab.set_ti(vexp.tau_min())
+    adiab.set_tf(vexp.tau_max())
+    adiab.set_vacuum_max_time(-1.0e-1)
+    adiab.set_vacuum_reltol(1.0e-8)
+
+    return adiab, vexp
 
 
-def test_hipert_adiab_qgw(adiab):
+def test_hipert_adiab_qgw(adiab_qgw):
     """Test basic functionality of NcHIPertAdiab."""
+    adiab, _ = adiab_qgw
+
     assert_allclose(adiab.get_k(), 1.0)
     assert_allclose(adiab.get_ti(), -300.0)
     # We need to set the final time to a value away from the bounce since our
@@ -93,8 +105,49 @@ def test_hipert_adiab_qgw(adiab):
     assert adiab.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.NONADIABATIC2
 
 
-def test_initial_conditions_time_qgw(adiab, qgw):
+def test_hipert_adiab_vexp(adiab_vexp):
+    """Test basic functionality of NcHIPertAdiab."""
+    adiab, vexp = adiab_vexp
+
+    assert_allclose(adiab.get_k(), 1.0)
+    assert_allclose(adiab.get_ti(), vexp.tau_min())
+    assert_allclose(adiab.get_tf(), vexp.tau_max())
+
+    adiab.set_reltol(1.0e-6)
+    adiab.set_abstol(1.0e-7)
+
+    assert_allclose(adiab.get_reltol(), 1.0e-6)
+    assert_allclose(adiab.get_abstol(), 1.0e-7)
+
+    adiab.set_adiab_threshold(1.0e-3)
+    adiab.set_prop_threshold(1.0e-3)
+
+    assert_allclose(adiab.get_adiab_threshold(), 1.0e-3)
+    assert_allclose(adiab.get_prop_threshold(), 1.0e-3)
+
+    adiab.set_save_evol(True)
+    assert adiab.get_save_evol()
+
+    adiab.set_save_evol(False)
+    assert not adiab.get_save_evol()
+
+    adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.AD_HOC)
+    assert adiab.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.AD_HOC
+
+    adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC2)
+    assert adiab.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.ADIABATIC2
+
+    adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    assert adiab.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.ADIABATIC4
+
+    adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.NONADIABATIC2)
+    assert adiab.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.NONADIABATIC2
+
+
+def test_initial_conditions_time_qgw(adiab_qgw):
     """Test initial conditions of NcHIPertAdiab."""
+    adiab, qgw = adiab_qgw
+
     limit_found, t_adiab = adiab.find_adiab_time_limit(qgw, -300.0, -1.0e-3, 1.0e-6)
 
     assert limit_found
@@ -108,8 +161,31 @@ def test_initial_conditions_time_qgw(adiab, qgw):
     assert math.fabs(F1_min - adiab.eval_F1(qgw, t_ub)) <= 1.0e-1
 
 
-def _compute_analytical_solution_qgw(adiab, qgw, t_adiab):
+def test_initial_conditions_time_vexp(adiab_vexp):
+    """Test initial conditions of NcHIPertAdiab."""
+    adiab, vexp = adiab_vexp
+
+    limit_found, t_adiab = adiab.find_adiab_time_limit(
+        vexp, vexp.tau_min(), adiab.get_vacuum_max_time(), 1.0e-6
+    )
+
+    assert limit_found
+    assert t_adiab >= adiab.get_ti()
+    assert t_adiab <= adiab.get_tf()
+
+    t_min, F1_min, t_lb, t_ub = adiab.find_adiab_max(
+        vexp, vexp.tau_min(), vexp.tau_max(), 1.0e-2
+    )
+
+    assert_allclose(F1_min, adiab.eval_F1(vexp, t_min))
+    assert math.fabs(F1_min - adiab.eval_F1(vexp, t_lb)) <= 1.0e-1
+    assert math.fabs(F1_min - adiab.eval_F1(vexp, t_ub)) <= 1.0e-1
+
+
+def _compute_analytical_solution_qgw(adiab_qgw, t_adiab):
     """Compute analytical solution for NcHIPertAdiab using NcHICosmoQGW."""
+    adiab, qgw = adiab_qgw
+
     w = qgw.props.w
     cs2 = w
     Omegaw = qgw.props.Omegaw
@@ -131,8 +207,10 @@ def _compute_analytical_solution_qgw(adiab, qgw, t_adiab):
     return theo_phi, theo_Pphi
 
 
-def test_initial_conditions_adiabatic_qgw(adiab, qgw):
+def test_initial_conditions_adiabatic_qgw(adiab_qgw):
     """Test initial conditions of NcHIPertAdiab."""
+    adiab, qgw = adiab_qgw
+
     state = Ncm.CSQ1DState.new()
 
     for prec in np.geomspace(1.0e-14, 1.0e-6, 100):
@@ -148,15 +226,43 @@ def test_initial_conditions_adiabatic_qgw(adiab, qgw):
         phi = phi_vec[0] + 1.0j * phi_vec[1]
         Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
 
-        theo_phi, theo_Pphi = _compute_analytical_solution_qgw(adiab, qgw, t_adiab)
+        theo_phi, theo_Pphi = _compute_analytical_solution_qgw(adiab_qgw, t_adiab)
 
         # Compare with analytical solution
         assert_allclose(abs(phi), abs(theo_phi), rtol=1.0e-8)
         assert_allclose(abs(Pphi), abs(theo_Pphi), rtol=1.0e-8)
 
 
-def test_evolution_qgw(adiab, qgw):
+def test_initial_conditions_adiabatic_vexp(adiab_vexp):
     """Test initial conditions of NcHIPertAdiab."""
+    adiab, vexp = adiab_vexp
+
+    state = Ncm.CSQ1DState.new()
+
+    for prec in np.geomspace(1.0e-14, 1.0e-6, 100):
+        limit_found, t_adiab = adiab.find_adiab_time_limit(
+            vexp, vexp.tau_min(), adiab.get_vacuum_max_time(), prec
+        )
+
+        assert limit_found
+
+        # Getting the adiabatic solution
+        state, _alpha_reltol, _dgamma_reltol = adiab.compute_adiab(vexp, t_adiab, state)
+        adiab.change_frame(vexp, state, Ncm.CSQ1DFrame.ORIG)
+        phi_vec, Pphi_vec = state.get_phi_Pphi()
+
+        phi = phi_vec[0] + 1.0j * phi_vec[1]
+        Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
+
+        # Compare with analytical solution
+        assert np.isfinite(abs(phi))
+        assert np.isfinite(abs(Pphi))
+
+
+def test_evolution_qgw(adiab_qgw):
+    """Test initial conditions of NcHIPertAdiab."""
+    adiab, qgw = adiab_qgw
+
     state = Ncm.CSQ1DState.new()
 
     adiab.set_save_evol(True)
@@ -177,7 +283,7 @@ def test_evolution_qgw(adiab, qgw):
         Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
 
         # Analytical solution for phi and Pphi
-        theo_phi, theo_Pphi = _compute_analytical_solution_qgw(adiab, qgw, t)
+        theo_phi, theo_Pphi = _compute_analytical_solution_qgw(adiab_qgw, t)
 
         # Compare with analytical solution
         assert_allclose(abs(phi), abs(theo_phi), rtol=1.0e-7)
@@ -190,8 +296,45 @@ def test_evolution_qgw(adiab, qgw):
         assert_allclose(J12, (2.0 * phi * Pphi.conjugate()).real, atol=1.0e-7)
 
 
-def test_evolution_adiabatic2_qgw(adiab, qgw):
+def test_evolution_vexp(adiab_vexp):
     """Test initial conditions of NcHIPertAdiab."""
+    adiab, vexp = adiab_vexp
+
+    state = Ncm.CSQ1DState.new()
+
+    adiab.set_save_evol(True)
+    adiab.set_reltol(1.0e-10)
+    adiab.set_abstol(0.0)
+    adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    adiab.set_vacuum_max_time(-1.0e-1)
+    adiab.set_vacuum_reltol(1.0e-8)
+    adiab.set_tf(1.0)  # We do not want to evolve through the singularity
+    adiab.prepare(vexp)
+
+    t_a, _smaller_abst = adiab.get_time_array()
+
+    for t in t_a:
+        state = adiab.eval_at(vexp, t, state)
+        phi_vec, Pphi_vec = state.get_phi_Pphi()
+
+        phi = phi_vec[0] + 1.0j * phi_vec[1]
+        Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
+
+        # Compare with analytical solution
+        assert np.isfinite(abs(phi))
+        assert np.isfinite(abs(Pphi))
+
+        J11, J12, J22 = state.get_J()
+
+        assert np.isfinite(J11)
+        assert np.isfinite(J22)
+        assert np.isfinite(J12)
+
+
+def test_evolution_adiabatic2_qgw(adiab_qgw):
+    """Test initial conditions of NcHIPertAdiab."""
+    adiab, qgw = adiab_qgw
+
     adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC2)
     adiab.set_vacuum_max_time(-1.0e0)
     adiab.set_vacuum_reltol(1.0e-3)
@@ -212,7 +355,7 @@ def test_evolution_adiabatic2_qgw(adiab, qgw):
         Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
 
         # Analytical solution for phi and Pphi
-        theo_phi, theo_Pphi = _compute_analytical_solution_qgw(adiab, qgw, t)
+        theo_phi, theo_Pphi = _compute_analytical_solution_qgw(adiab_qgw, t)
 
         # Compare with analytical solution
         assert_allclose(abs(phi), abs(theo_phi), rtol=1.0e-7)
@@ -225,13 +368,122 @@ def test_evolution_adiabatic2_qgw(adiab, qgw):
         assert_allclose(J12, (2.0 * phi * Pphi.conjugate()).real, atol=1.0e-7)
 
 
+def test_evolution_adiabatic2_vexp(adiab_vexp):
+    """Test initial conditions of NcHIPertAdiab."""
+    adiab, vexp = adiab_vexp
+
+    adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC2)
+    adiab.set_vacuum_max_time(-1.0e-1)
+    adiab.set_vacuum_reltol(1.0e-3)
+    adiab.set_tf(1.0)  # We do not want to evolve through the singularity
+    state = Ncm.CSQ1DState.new()
+
+    adiab.set_save_evol(True)
+    adiab.set_reltol(1.0e-10)
+    adiab.set_abstol(0.0)
+    adiab.prepare(vexp)
+
+    t_a, _smaller_abst = adiab.get_time_array()
+
+    for t in t_a:
+        state = adiab.eval_at(vexp, t, state)
+        phi_vec, Pphi_vec = state.get_phi_Pphi()
+
+        phi = phi_vec[0] + 1.0j * phi_vec[1]
+        Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
+
+        # Compare with analytical solution
+        assert np.isfinite(abs(phi))
+        assert np.isfinite(abs(Pphi))
+
+        J11, J12, J22 = state.get_J()
+
+        assert np.isfinite(J11)
+        assert np.isfinite(J22)
+        assert np.isfinite(J12)
+
+
+def test_evolution_adiabatic4_qgw(adiab_qgw):
+    """Test initial conditions of NcHIPertAdiab."""
+    adiab, qgw = adiab_qgw
+
+    adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    adiab.set_vacuum_max_time(-1.0e0)
+    adiab.set_vacuum_reltol(1.0e-6)
+    state = Ncm.CSQ1DState.new()
+
+    adiab.set_save_evol(True)
+    adiab.set_reltol(1.0e-10)
+    adiab.set_abstol(0.0)
+    adiab.prepare(qgw)
+
+    t_a, _smaller_abst = adiab.get_time_array()
+
+    for t in t_a:
+        state = adiab.eval_at(qgw, t, state)
+        phi_vec, Pphi_vec = state.get_phi_Pphi()
+
+        phi = phi_vec[0] + 1.0j * phi_vec[1]
+        Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
+
+        # Analytical solution for phi and Pphi
+        theo_phi, theo_Pphi = _compute_analytical_solution_qgw(adiab_qgw, t)
+
+        # Compare with analytical solution
+        assert_allclose(abs(phi), abs(theo_phi), rtol=1.0e-7)
+        assert_allclose(abs(Pphi), abs(theo_Pphi), rtol=1.0e-7)
+
+        J11, J12, J22 = state.get_J()
+
+        assert_allclose(J11, 2.0 * abs(phi) ** 2, atol=1.0e-7)
+        assert_allclose(J22, 2.0 * abs(Pphi) ** 2, atol=1.0e-7)
+        assert_allclose(J12, (2.0 * phi * Pphi.conjugate()).real, atol=1.0e-7)
+
+
+def test_evolution_adiabatic4_vexp(adiab_vexp):
+    """Test initial conditions of NcHIPertAdiab."""
+    adiab, vexp = adiab_vexp
+
+    adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    adiab.set_vacuum_max_time(-1.0e-1)
+    adiab.set_vacuum_reltol(1.0e-6)
+    adiab.set_tf(1.0)  # We do not want to evolve through the singularity
+    state = Ncm.CSQ1DState.new()
+
+    adiab.set_save_evol(True)
+    adiab.set_reltol(1.0e-10)
+    adiab.set_abstol(0.0)
+    adiab.prepare(vexp)
+
+    t_a, _smaller_abst = adiab.get_time_array()
+
+    for t in t_a:
+        state = adiab.eval_at(vexp, t, state)
+        phi_vec, Pphi_vec = state.get_phi_Pphi()
+
+        phi = phi_vec[0] + 1.0j * phi_vec[1]
+        Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
+
+        # Compare with analytical solution
+        assert np.isfinite(abs(phi))
+        assert np.isfinite(abs(Pphi))
+
+        J11, J12, J22 = state.get_J()
+
+        assert np.isfinite(J11)
+        assert np.isfinite(J22)
+        assert np.isfinite(J12)
+
+
 @pytest.mark.parametrize(
     "frame",
     [Ncm.CSQ1DFrame.ORIG, Ncm.CSQ1DFrame.ADIAB1, Ncm.CSQ1DFrame.ADIAB2],
     ids=["orig", "adiab1", "adiab2"],
 )
-def test_evolution_frame_qgw(adiab, qgw, frame):
+def test_evolution_frame_qgw(adiab_qgw, frame):
     """Test initial conditions of NcHIPertAdiab."""
+    adiab, qgw = adiab_qgw
+
     state = Ncm.CSQ1DState.new()
     ti = adiab.get_ti()
     adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
@@ -252,8 +504,41 @@ def test_evolution_frame_qgw(adiab, qgw, frame):
         assert state.get_frame() == frame
 
 
-def test_change_frame_orig_adiab1_qgw(adiab, qgw):
+@pytest.mark.parametrize(
+    "frame",
+    [Ncm.CSQ1DFrame.ORIG, Ncm.CSQ1DFrame.ADIAB1, Ncm.CSQ1DFrame.ADIAB2],
+    ids=["orig", "adiab1", "adiab2"],
+)
+def test_evolution_frame_vexp(adiab_vexp, frame):
+    """Test initial conditions of NcHIPertAdiab."""
+    adiab, vexp = adiab_vexp
+
+    state = Ncm.CSQ1DState.new()
+    ti = adiab.get_ti()
+    adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+
+    limit_found, t_adiab_end = adiab.find_adiab_time_limit(
+        vexp, ti, adiab.get_vacuum_max_time(), 1.0e-1
+    )
+    assert limit_found
+    adiab.set_tf(t_adiab_end)
+
+    adiab.set_save_evol(True)
+    adiab.set_reltol(1.0e-10)
+    adiab.set_abstol(0.0)
+    adiab.prepare(vexp)
+
+    t_a, _smaller_abst = adiab.get_time_array()
+
+    for t in t_a:
+        state = adiab.eval_at_frame(vexp, frame, t, state)
+        assert state.get_frame() == frame
+
+
+def test_change_frame_orig_adiab1_qgw(adiab_qgw):
     """Test change_frame method of NcHIPertAdiab."""
+    adiab, qgw = adiab_qgw
+
     t = -1.4e2
     state = Ncm.CSQ1DState()
     state.set_ag(Ncm.CSQ1DFrame.ORIG, t, 0.1, 0.3)
@@ -272,8 +557,10 @@ def test_change_frame_orig_adiab1_qgw(adiab, qgw):
     assert_allclose(state.get_ag(), (0.1, 0.3))
 
 
-def test_change_frame_orig_adiab2_qgw(adiab, qgw):
+def test_change_frame_orig_adiab2_qgw(adiab_qgw):
     """Test change_frame method of NcHIPertAdiab."""
+    adiab, qgw = adiab_qgw
+
     t = -1.4e2
 
     alpha0 = 0.1
@@ -296,8 +583,10 @@ def test_change_frame_orig_adiab2_qgw(adiab, qgw):
     assert_allclose(state.get_ag(), (alpha0, gamma0))
 
 
-def test_change_frame_adiab1_adiab2_qgw(adiab, qgw):
+def test_change_frame_adiab1_adiab2_qgw(adiab_qgw):
     """Test change_frame method of NcHIPertAdiab."""
+    adiab, qgw = adiab_qgw
+
     t = -1.4e2
     state = Ncm.CSQ1DState()
     state.set_ag(Ncm.CSQ1DFrame.ADIAB1, t, 0.1, 0.3)
