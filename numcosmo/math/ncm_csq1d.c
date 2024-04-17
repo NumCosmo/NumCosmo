@@ -2380,7 +2380,9 @@ _ncm_csq1d_find_adiab_time_limit_f (gdouble t, gpointer params)
  * @ti: (out): adiabatic time limit $t_i$
  *
  * Computes the time upper limit $t_i \in [t_0, t_1]$ where the adiabatic
- * approximation is satisfied up to @reltol.
+ * approximation is satisfied up to @reltol. If both times are adiabatic, the
+ * time closer to the adiabatic limit is chosen. If both times are non-adiabatic,
+ * the function returns %FALSE.
  *
  * Returns: whether the time limit was found.
  */
@@ -2410,7 +2412,7 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
   adiab0 = ((fabs (alpha_reltol0) < reltol) && (fabs (dgamma_reltol0) < reltol));
   adiab1 = ((fabs (alpha_reltol1) < reltol) && (fabs (dgamma_reltol1) < reltol));
 
-  if ((adiab0 && adiab1) || (!adiab0 && !adiab1))
+  if (!adiab0 && !adiab1) /* Both times are non-adiabatic */
   {
     if (PRINT_EVOL)
       g_warning ("# Impossible to find the adiabatic limit: \n"
@@ -2420,6 +2422,18 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
                  t1, alpha1, alpha_reltol1, dgamma1, dgamma_reltol1);
 
     return FALSE;
+  }
+  else if (adiab0 && adiab1) /* Both times are adiabatic, below reltol */
+  {
+    if (PRINT_EVOL)
+      printf ("# Both times are adiabatic: \n"
+              "\tt0 % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n"
+              "\tt1 % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n",
+              t0, alpha0, alpha_reltol0, dgamma0, dgamma_reltol0,
+              t1, alpha1, alpha_reltol1, dgamma1, dgamma_reltol1);
+
+    /* We choose the time that is closer to the adiabatic limit */
+    ti[0] = t1;
   }
   else
   {
@@ -2523,6 +2537,7 @@ ncm_csq1d_find_adiab_max (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, gdouble 
   gdouble atm              = (at0 + at1) * 0.5;
   const guint linsearch    = 100;
   guint iter               = 0;
+  gdouble abs_sum          = 0.0;
   gint status;
   gsl_function F;
   gint ret;
@@ -2539,12 +2554,23 @@ ncm_csq1d_find_adiab_max (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, gdouble 
       const gdouble at    = at0 + (at1 - at0) * i / (linsearch - 1);
       const gdouble test0 = GSL_FN_EVAL (&F, at);
 
+      abs_sum += test0;
+
       if (test0 < test)
       {
         test = test0;
         atm  = at;
       }
     }
+  }
+
+  if (abs_sum == 0.0)
+  {
+    F1_min[0] = 0.0;
+    t_Bl[0]   = t0;
+    t_Bu[0]   = t1;
+
+    return t1;
   }
 
   /* Testing for minimum on the edge */

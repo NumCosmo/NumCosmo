@@ -312,6 +312,14 @@ python_tests = [
         'source': 'test_py_hicosmo_Vexp.py',
     },
     {
+        'name': 'py_hipert_adiab',
+        'source': 'test_py_hipert_adiab.py',
+    },
+    {
+        'name': 'py_hipert_em',
+        'source': 'test_py_hipert_em.py',
+    },
+    {
         'name': 'py_diff',
         'source': 'test_py_diff.py',
     },
