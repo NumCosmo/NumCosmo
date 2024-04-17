@@ -312,10 +312,6 @@ python_tests = [
         'source': 'test_py_hicosmo_Vexp.py',
     },
     {
-        'name': 'py_hipert_adiab',
-        'source': 'test_py_hipert_adiab.py',
-    },
-    {
         'name': 'py_hipert_em',
         'source': 'test_py_hipert_em.py',
     },
@@ -434,6 +430,10 @@ if python_astropy_scipy.found()
         {
             'name': 'py_csq1d',
             'source': 'test_py_csq1d.py',
+        },
+        {
+            'name': 'py_hipert_adiab',
+            'source': 'test_py_hipert_adiab.py',
         },
         {
             'name': 'py_data_dist1d',
