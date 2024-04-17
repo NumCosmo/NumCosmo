@@ -602,3 +602,126 @@ def test_change_frame_adiab1_adiab2_qgw(adiab_qgw):
     adiab.change_frame(qgw, state, Ncm.CSQ1DFrame.ADIAB1)
     assert state.get_frame() == Ncm.CSQ1DFrame.ADIAB1
     assert_allclose(state.get_ag(), (0.1, 0.3))
+
+
+def test_evolution_qgw_duplicate(adiab_qgw):
+    """Test initial conditions of NcHIPertAdiab."""
+    adiab, qgw = adiab_qgw
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    adiab_dup = ser.dup_obj(adiab)
+    qgw_dup = ser.dup_obj(qgw)
+
+    test_evolution_qgw((adiab_dup, qgw_dup))
+
+
+def test_evolution_vexp_duplicate(adiab_vexp):
+    """Test initial conditions of NcHIPertAdiab."""
+    adiab, vexp = adiab_vexp
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    adiab_dup = ser.dup_obj(adiab)
+    vexp_dup = ser.dup_obj(vexp)
+
+    test_evolution_vexp((adiab_dup, vexp_dup))
+
+
+def test_spectrum_zeta_qgw(adiab_qgw):
+    """Test spectrum of NcHIPertAdiab."""
+    adiab, qgw = adiab_qgw
+
+    k_a = np.geomspace(1.0e-2, 1.0e2, 20)
+    t_a = np.linspace(-30.0, -10.0, 10)
+
+    adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    adiab.set_vacuum_max_time(-1.0e0)
+    adiab.set_vacuum_reltol(1.0e-8)
+
+    adiab.set_save_evol(True)
+    adiab.set_reltol(1.0e-10)
+    adiab.set_abstol(0.0)
+    adiab.prepare_spectrum(qgw, k_a, t_a)
+
+    Pzeta = adiab.eval_powspec_zeta(qgw)
+
+    # Interface method should be used this way since different interfaces may have
+    # implemented a method with the same name
+    unit = Nc.HIPertIAdiab.eval_unit
+
+    for k in k_a:
+        adiab.set_k(k)
+        for t in t_a:
+            theo_phi, _ = _compute_analytical_solution_qgw(adiab_qgw, t)
+            assert_allclose(
+                Pzeta.eval(qgw, t, k),
+                np.abs(theo_phi * unit(qgw)) ** 2,
+                rtol=1.0e-7,
+            )
+
+
+def test_spectrum_Psi_qgw(adiab_qgw):
+    """Test spectrum of NcHIPertAdiab."""
+    adiab, qgw = adiab_qgw
+
+    k_a = np.geomspace(1.0e-2, 1.0e2, 20)
+    t_a = np.linspace(-30.0, -10.0, 10)
+
+    adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    adiab.set_vacuum_max_time(-1.0e0)
+    adiab.set_vacuum_reltol(1.0e-8)
+
+    adiab.set_save_evol(True)
+    adiab.set_reltol(1.0e-10)
+    adiab.set_abstol(0.0)
+    adiab.prepare_spectrum(qgw, k_a, t_a)
+
+    PPsi = adiab.eval_powspec_Psi(qgw)
+
+    # Interface method should be used this way since different interfaces may have
+    # implemented a method with the same name
+    p2Psi = Nc.HIPertIAdiab.eval_p2Psi
+    unit = Nc.HIPertIAdiab.eval_unit
+
+    for k in k_a:
+        adiab.set_k(k)
+        for t in t_a:
+            _, theo_Pphi = _compute_analytical_solution_qgw(adiab_qgw, t)
+            assert_allclose(
+                PPsi.eval(qgw, t, k),
+                np.abs(theo_Pphi * unit(qgw) * p2Psi(qgw, t, k)) ** 2,
+                rtol=1.0e-7,
+            )
+
+
+def test_spectrum_drho_qgw(adiab_qgw):
+    """Test spectrum of NcHIPertAdiab."""
+    adiab, qgw = adiab_qgw
+
+    k_a = np.geomspace(1.0e-2, 1.0e2, 20)
+    t_a = np.linspace(-30.0, -10.0, 10)
+
+    adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    adiab.set_vacuum_max_time(-1.0e0)
+    adiab.set_vacuum_reltol(1.0e-8)
+
+    adiab.set_save_evol(True)
+    adiab.set_reltol(1.0e-10)
+    adiab.set_abstol(0.0)
+    adiab.prepare_spectrum(qgw, k_a, t_a)
+
+    Pdrho = adiab.eval_powspec_drho(qgw)
+
+    # Interface method should be used this way since different interfaces may have
+    # implemented a method with the same name
+    p2drho = Nc.HIPertIAdiab.eval_p2drho
+    unit = Nc.HIPertIAdiab.eval_unit
+
+    for k in k_a:
+        adiab.set_k(k)
+        for t in t_a:
+            _, theo_Pphi = _compute_analytical_solution_qgw(adiab_qgw, t)
+            assert_allclose(
+                Pdrho.eval(qgw, t, k),
+                np.abs(theo_Pphi * unit(qgw) * p2drho(qgw, t, k)) ** 2,
+                rtol=1.0e-7,
+            )
