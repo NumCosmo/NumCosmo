@@ -513,20 +513,21 @@ ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const g
 
   if (exp (fabs (rho)) * fabs (A) < 0.1)
   {
-    const gdouble A2     = A * A;
-    gdouble Apow_two_ip1 = A;
+    const double complex z_p_ipi_2 = z + 0.5 * M_PI * I;
+    const double complex T         = cexp (z_p_ipi_2);
+    double complex Tn              = T;
+    gdouble An                     = A;
     gint i;
 
     zp = 0.0;
 
     for (i = 0; ; i++)
     {
-      const gdouble two_ip1 = (2.0 * i + 1.0);
-      const gdouble ip1     = (i + 1.0);
-      double complex dz     = (2.0 * I * ccosh (two_ip1 * z) / two_ip1 - csinh (2.0 * ip1 * z) * A / ip1) *
-                              ((i % 2 == 0) ? 1.0 : -1.0) * Apow_two_ip1;
+      const gdouble n   = i + 1.0;
+      double complex dz = (1.0 / Tn - Tn) * An / n;
 
-      Apow_two_ip1 *= A2;
+      An *= A;
+      Tn *= T;
 
       zp += dz;
 
@@ -534,7 +535,7 @@ ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const g
         break;
     }
 
-    zp = z + zp;
+    zp = z - zp;
   }
   else
   {

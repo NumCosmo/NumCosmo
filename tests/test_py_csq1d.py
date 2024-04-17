@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# test_csq1d.py
+# test_py_csq1d.py
 #
 # thu Dec 28 14:47:00 2023
 # Copyright  2023  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# test_csq1d.py
+# test_py_csq1d.py
 # Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
