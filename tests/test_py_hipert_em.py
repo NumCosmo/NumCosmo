@@ -63,6 +63,10 @@ def fixture_em(request):
     vexp.set_properties(**current_set)
     vexp.set_em_coupling(request.param)
 
+    # No coupling has F1 exactly zero, so computing F2 numerically can be problematic
+    # using ADIABATIC2 avoids this problem.
+    # Gaussians have a very small F1 (suppressed by the Gaussian term), so it is also
+    # problematic to compute F2 numerically.
     if request.param == Nc.HICosmoVexpEMCoupling.NONE:
         pem.set_abstol(1.0e-200)
         pem.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC2)
@@ -74,6 +78,8 @@ def fixture_em(request):
     pem.set_k(1.0)
 
     pem.set_ti(vexp.tau_min())
+    # Warning: this model has a singularity at the expanding phase, the final time
+    # should be set prior to it.
     pem.set_tf(vexp.tau_max())
     pem.set_vacuum_max_time(-1.0e-1)
     pem.set_vacuum_reltol(1.0e-8)
@@ -165,3 +171,32 @@ def test_initial_conditions_adiabatic_vexp(pem_vexp):
         # Compare with analytical solution
         assert np.isfinite(phi)
         assert np.isfinite(Pphi)
+
+
+def test_evolution_vexp(pem_vexp):
+    """Test initial conditions of NcHIPertAdiab."""
+    pem, vexp = pem_vexp
+
+    state = Ncm.CSQ1DState.new()
+
+    pem.set_tf(1.0)  # We do not want to evolve through the singularity
+    pem.prepare(vexp)
+
+    t_a, _smaller_abst = pem.get_time_array()
+
+    for t in t_a:
+        state = pem.eval_at(vexp, t, state)
+        phi_vec, Pphi_vec = state.get_phi_Pphi()
+
+        phi = phi_vec[0] + 1.0j * phi_vec[1]
+        Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
+
+        # Compare with analytical solution
+        assert np.isfinite(abs(phi))
+        assert np.isfinite(abs(Pphi))
+
+        J11, J12, J22 = state.get_J()
+
+        assert np.isfinite(J11)
+        assert np.isfinite(J22)
+        assert np.isfinite(J12)
