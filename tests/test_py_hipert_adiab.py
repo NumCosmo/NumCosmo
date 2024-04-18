@@ -659,6 +659,42 @@ def test_spectrum_zeta_qgw(adiab_qgw):
             )
 
 
+def test_spectrum_zeta_vexp(adiab_vexp):
+    """Test spectrum of NcHIPertAdiab."""
+    adiab, vexp = adiab_vexp
+
+    k_a = np.geomspace(1.0e-2, 1.0e2, 10)
+    t_a = np.linspace(-12.0, -10.0, 10)
+
+    adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    adiab.set_vacuum_max_time(-1.0e0)
+    adiab.set_vacuum_reltol(1.0e-8)
+    adiab.set_tf(1.0)  # We do not want to evolve through the singularity
+
+    adiab.set_save_evol(True)
+    adiab.set_reltol(1.0e-10)
+    adiab.set_abstol(0.0)
+    adiab.prepare_spectrum(vexp, k_a, t_a)
+
+    Pzeta = adiab.eval_powspec_zeta(vexp)
+
+    # Interface method should be used this way since different interfaces may have
+    # implemented a method with the same name
+    unit = Nc.HIPertIAdiab.eval_unit
+    state = Ncm.CSQ1DState.new()
+
+    for k in k_a:
+        adiab.set_k(k)
+        adiab.prepare(vexp)
+        for t in t_a:
+            phi2 = 0.5 * adiab.eval_at(vexp, t, state).get_J()[0]
+            assert_allclose(
+                Pzeta.eval(vexp, t, k),
+                phi2 * unit(vexp) ** 2,
+                rtol=1.0e-7,
+            )
+
+
 def test_spectrum_Psi_qgw(adiab_qgw):
     """Test spectrum of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
