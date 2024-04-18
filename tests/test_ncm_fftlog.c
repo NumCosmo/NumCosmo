@@ -134,50 +134,47 @@ main (gint argc, gchar *argv[])
     }
   }
 
-/*
- *  g_test_add ("/ncm/fftlog/tophatwin2/traps", TestNcmFftlog, NULL,
- *             &test_ncm_fftlog_tophatwin2_new,
- *             &test_ncm_fftlog_tophatwin2_traps,
- *             &test_ncm_fftlog_free);
- *
- *  g_test_add ("/ncm/fftlog/gausswin2/traps", TestNcmFftlog, NULL,
- *             &test_ncm_fftlog_gausswin2_new,
- *             &test_ncm_fftlog_gausswin2_traps,
- *             &test_ncm_fftlog_free);
- *
- *  g_test_add ("/ncm/fftlog/sbessel_j/traps", TestNcmFftlog, NULL,
- *             &test_ncm_fftlog_sbessel_j_new,
- *             &test_ncm_fftlog_sbessel_j_traps,
- *             &test_ncm_fftlog_free);
- */
+  g_test_add ("/ncm/fftlog/tophatwin2/traps", TestNcmFftlog, NULL,
+              &test_ncm_fftlog_tophatwin2_new,
+              &test_ncm_fftlog_tophatwin2_traps,
+              &test_ncm_fftlog_free);
+
+  g_test_add ("/ncm/fftlog/gausswin2/traps", TestNcmFftlog, NULL,
+              &test_ncm_fftlog_gausswin2_new,
+              &test_ncm_fftlog_gausswin2_traps,
+              &test_ncm_fftlog_free);
+
+  g_test_add ("/ncm/fftlog/sbessel_j/traps", TestNcmFftlog, NULL,
+              &test_ncm_fftlog_sbessel_j_new,
+              &test_ncm_fftlog_sbessel_j_traps,
+              &test_ncm_fftlog_free);
+
 #if defined (HAVE_FFTW3) && defined (HAVE_ACB_H)
 
-/*
- *  g_test_add ("/ncm/fftlog/sbessel_jljm/traps", TestNcmFftlog, NULL,
- *             &test_ncm_fftlog_sbessel_jljm_new,
- *             &test_ncm_fftlog_sbessel_jljm_traps,
- *             &test_ncm_fftlog_free);
- */
+  g_test_add ("/ncm/fftlog/sbessel_jljm/traps", TestNcmFftlog, NULL,
+              &test_ncm_fftlog_sbessel_jljm_new,
+              &test_ncm_fftlog_sbessel_jljm_traps,
+              &test_ncm_fftlog_free);
+
 #endif /* defined (HAVE_FFTW3) && defined (HAVE_ACB_H) */
 
-/*
- *  g_test_add ("/ncm/fftlog/tophatwin2/invalid/st/subprocess", TestNcmFftlog, NULL,
- *             &test_ncm_fftlog_tophatwin2_new,
- *             &test_ncm_fftlog_invalid_st,
- *             &test_ncm_fftlog_free);
- *  g_test_add ("/ncm/fftlog/gausswin2/invalid/st/subprocess", TestNcmFftlog, NULL,
- *             &test_ncm_fftlog_gausswin2_new,
- *             &test_ncm_fftlog_invalid_st,
- *             &test_ncm_fftlog_free);
- *  g_test_add ("/ncm/fftlog/sbessel_j/invalid/st/subprocess", TestNcmFftlog, NULL,
- *             &test_ncm_fftlog_sbessel_j_new,
- *             &test_ncm_fftlog_invalid_st,
- *             &test_ncm_fftlog_free);
- *  g_test_add ("/ncm/fftlog/sbessel_jljm/invalid/st/subprocess", TestNcmFftlog, NULL,
- *             &test_ncm_fftlog_sbessel_jljm_new,
- *             &test_ncm_fftlog_invalid_st,
- *             &test_ncm_fftlog_free);
- */
+  g_test_add ("/ncm/fftlog/tophatwin2/invalid/st/subprocess", TestNcmFftlog, NULL,
+              &test_ncm_fftlog_tophatwin2_new,
+              &test_ncm_fftlog_invalid_st,
+              &test_ncm_fftlog_free);
+  g_test_add ("/ncm/fftlog/gausswin2/invalid/st/subprocess", TestNcmFftlog, NULL,
+              &test_ncm_fftlog_gausswin2_new,
+              &test_ncm_fftlog_invalid_st,
+              &test_ncm_fftlog_free);
+  g_test_add ("/ncm/fftlog/sbessel_j/invalid/st/subprocess", TestNcmFftlog, NULL,
+              &test_ncm_fftlog_sbessel_j_new,
+              &test_ncm_fftlog_invalid_st,
+              &test_ncm_fftlog_free);
+  g_test_add ("/ncm/fftlog/sbessel_jljm/invalid/st/subprocess", TestNcmFftlog, NULL,
+              &test_ncm_fftlog_sbessel_jljm_new,
+              &test_ncm_fftlog_invalid_st,
+              &test_ncm_fftlog_free);
+
 #ifdef HAVE_FFTW3
   g_test_run ();
 #endif
@@ -547,7 +544,6 @@ void
 test_ncm_fftlog_eval (TestNcmFftlog *test, gconstpointer pdata)
 {
   NcmFftlog *fftlog = test->fftlog;
-  guint nerr        = 0;
   gdouble reltol    = 1.0e-1;
   NcmVector *lnr;
   guint i, len;
@@ -574,10 +570,7 @@ test_ncm_fftlog_eval (TestNcmFftlog *test, gconstpointer pdata)
     test->argK->lnr = lnr_l;
     ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, 1.0e-3, &res, &err);
 
-    if ((fabs (fftlog_res / res - 1.0) > reltol) && (nerr < 15))
-      nerr++;
-    else
-      ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
+    ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
 
     /* printf ("%u % 22.15g % 22.15g % 22.15g % 22.15e\n", l, test->argK->lnr, res, fftlog_res, fabs (res / fftlog_res - 1.0)); */
   }
@@ -587,7 +580,6 @@ void
 test_ncm_fftlog_eval_vector (TestNcmFftlog *test, gconstpointer pdata)
 {
   NcmFftlog *fftlog = test->fftlog;
-  guint nerr        = 0;
   gdouble reltol    = 1.0e-1;
   guint len         = ncm_fftlog_get_size (fftlog);
   NcmVector *lnk    = ncm_vector_new (len);
@@ -628,10 +620,7 @@ test_ncm_fftlog_eval_vector (TestNcmFftlog *test, gconstpointer pdata)
     test->argK->lnr = lnr_l;
     ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, 1.0e-3, &res, &err);
 
-    if ((fabs (fftlog_res / res - 1.0) > reltol) && (nerr < 15))
-      nerr++;
-    else
-      ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
+    ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
 
     /* printf ("%u % 22.15g % 22.15g % 22.15g % 22.15e\n", l, test->argK->lnr, res, fftlog_res, fabs (res / fftlog_res - 1.0)); */
   }
@@ -689,7 +678,6 @@ test_ncm_fftlog_eval_serialized (TestNcmFftlog *test, gconstpointer pdata)
 {
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
   NcmFftlog *fftlog = NCM_FFTLOG (ncm_serialize_dup_obj (ser, G_OBJECT (test->fftlog)));
-  guint nerr        = 0;
   gdouble reltol    = 1.0e-1;
   NcmVector *lnr;
   guint i, len;
@@ -709,10 +697,7 @@ test_ncm_fftlog_eval_serialized (TestNcmFftlog *test, gconstpointer pdata)
     test->argK->lnr = lnr_l;
     ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, 1.0e-3, &res, &err);
 
-    if ((fabs (fftlog_res / res - 1.0) > reltol) && (nerr < 15))
-      nerr++;
-    else
-      ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
+    ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
 
     /* printf ("%u % 22.15g % 22.15g % 22.15g % 22.15e\n", l, test->argK->lnr, res, fftlog_res, fabs (res / fftlog_res - 1.0)); */
   }
@@ -725,7 +710,6 @@ void
 test_ncm_fftlog_eval_deriv (TestNcmFftlog *test, gconstpointer pdata)
 {
   NcmFftlog *fftlog = test->fftlog;
-  guint nerr        = 0;
   gdouble reltol    = 1.0e-1;
   NcmVector *lnr;
   guint i, len;
@@ -758,12 +742,7 @@ test_ncm_fftlog_eval_deriv (TestNcmFftlog *test, gconstpointer pdata)
     test->argK->lnr = lnr_l;
     ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, 1.0e-3, &res, &err);
 
-    if ((fabs (fftlog_res / res - 1.0) > reltol) && (nerr < 15))
-      nerr++;
-    else
-      ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
-
-    /* printf ("%u % 22.15g % 22.15g % 22.15g % 22.15e\n", l, test->argK->lnr, res, fftlog_res, fabs (res / fftlog_res - 1.0)); */
+    ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
   }
 }
 
@@ -771,7 +750,6 @@ void
 test_ncm_fftlog_eval_use_eval_int (TestNcmFftlog *test, gconstpointer pdata)
 {
   NcmFftlog *fftlog = test->fftlog;
-  guint nerr        = 0;
   gdouble reltol    = 1.0e-1;
   NcmVector *lnr;
   guint i, len;
@@ -808,12 +786,7 @@ test_ncm_fftlog_eval_use_eval_int (TestNcmFftlog *test, gconstpointer pdata)
     test->argK->lnr = lnr_l;
     ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, 1.0e-3, &res, &err);
 
-    if ((fabs (fftlog_res / res - 1.0) > reltol) && (nerr < 15))
-      nerr++;
-    else
-      ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
-
-    /* printf ("%u % 22.15g % 22.15g % 22.15g % 22.15e\n", l, test->argK->lnr, res, fftlog_res, fabs (res / fftlog_res - 1.0)); */
+    ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
   }
 }
 

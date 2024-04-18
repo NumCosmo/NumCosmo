@@ -263,9 +263,9 @@ _nc_hicosmo_Vexp_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_EM_COUPLING:
       g_value_set_enum (value, nc_hicosmo_Vexp_get_em_coupling (Vexp));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -289,9 +289,9 @@ _nc_hicosmo_Vexp_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_EM_COUPLING:
       nc_hicosmo_Vexp_set_em_coupling (Vexp, g_value_get_enum (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

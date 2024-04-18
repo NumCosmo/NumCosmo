@@ -179,3 +179,14 @@ def test_evolution_vexp(pgw_vexp):
         assert np.isfinite(J11)
         assert np.isfinite(J22)
         assert np.isfinite(J12)
+
+
+def test_evolution_vexp_duplicate(pgw_vexp):
+    """Test initial conditions of NcHIPertAdiab."""
+    pgw, vexp = pgw_vexp
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    pgw_dup = ser.dup_obj(pgw)
+    vexp_dup = ser.dup_obj(vexp)
+
+    test_evolution_vexp((pgw_dup, vexp_dup))
