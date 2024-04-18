@@ -24,6 +24,7 @@
 
 """Tests on NcHICosmoVexp cosmological model."""
 
+from itertools import product
 from numpy.testing import assert_allclose
 import numpy as np
 
@@ -163,6 +164,78 @@ def test_serialize():
     assert vexp2.props.OmegaL == vexp.props.OmegaL  # pylint: disable=no-member
     assert vexp2.props.glue_de == vexp.props.glue_de  # pylint: disable=no-member
     assert vexp2.props.xb == vexp.props.xb  # pylint: disable=no-member
+
+
+def test_eval_at():
+    """Evaluate NcHICosmoVexp at a given time."""
+    vexp = Nc.HICosmoVexp()
+    assert vexp is not None
+
+    tau_min = vexp.tau_min()
+    tau_max = vexp.tau_max()
+
+    tau_a = np.linspace(tau_min, tau_max, 1000)
+
+    for tau in tau_a:
+        assert np.isfinite(vexp.x_tau(tau))
+        assert np.isfinite(vexp.alpha(tau))
+        assert np.isfinite(vexp.phi(tau))
+        assert np.isfinite(vexp.Ricci_scale(tau))
+        assert np.all(np.isfinite(vexp.x_y(tau)))
+
+
+def test_iadiab_eval_at():
+    """Evaluate NcHICosmoVexp implementation of NcHIPertAdiab at a given time."""
+    vexp = Nc.HICosmoVexp()
+    assert vexp is not None
+
+    tau_min = vexp.tau_min()
+    tau_max = vexp.tau_max()
+
+    tau_a = np.linspace(tau_min, tau_max, 1000)
+    k_a = np.geomspace(1.0e-3, 1.0e3, 5)
+
+    for tau, k in product(tau_a, k_a):
+        assert np.isfinite(Nc.HIPertIAdiab.eval_F1(vexp, tau, k))
+        assert np.isfinite(Nc.HIPertIAdiab.eval_m(vexp, tau, k))
+        assert np.isfinite(Nc.HIPertIAdiab.eval_nu(vexp, tau, k))
+        assert np.isfinite(Nc.HIPertIAdiab.eval_xi(vexp, tau, k))
+
+
+def test_igw_eval_at():
+    """Evaluate NcHICosmoVexp implementation of NcHIPertIGW at a given time."""
+    vexp = Nc.HICosmoVexp()
+    assert vexp is not None
+
+    tau_min = vexp.tau_min()
+    tau_max = vexp.tau_max()
+
+    tau_a = np.linspace(tau_min, tau_max, 1000)
+    k_a = np.geomspace(1.0e-3, 1.0e3, 5)
+
+    for tau, k in product(tau_a, k_a):
+        assert np.isfinite(Nc.HIPertIGW.eval_F1(vexp, tau, k))
+        assert np.isfinite(Nc.HIPertIGW.eval_m(vexp, tau, k))
+        assert np.isfinite(Nc.HIPertIGW.eval_nu(vexp, tau, k))
+        assert np.isfinite(Nc.HIPertIGW.eval_xi(vexp, tau, k))
+
+
+def test_iem_eval_at():
+    """Evaluate NcHICosmoVexp implementation of NcHIPertIEM at a given time."""
+    vexp = Nc.HICosmoVexp()
+    assert vexp is not None
+
+    tau_min = vexp.tau_min()
+    tau_max = vexp.tau_max()
+
+    tau_a = np.linspace(tau_min, tau_max, 1000)
+    k_a = np.geomspace(1.0e-3, 1.0e3, 5)
+
+    for tau, k in product(tau_a, k_a):
+        assert np.isfinite(Nc.HIPertIEM.eval_F1(vexp, tau, k))
+        assert np.isfinite(Nc.HIPertIEM.eval_m(vexp, tau, k))
+        assert np.isfinite(Nc.HIPertIEM.eval_nu(vexp, tau, k))
+        assert np.isfinite(Nc.HIPertIEM.eval_xi(vexp, tau, k))
 
 
 if __name__ == "__main__":

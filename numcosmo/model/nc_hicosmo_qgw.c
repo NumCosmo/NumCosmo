@@ -73,36 +73,6 @@ nc_hicosmo_qgw_init (NcHICosmoQGW *cosmo_qgw)
 }
 
 static void
-_nc_hicosmo_qgw_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  NcHICosmoQGW *qgw = NC_HICOSMO_QGW (object);
-
-  g_return_if_fail (NC_IS_HICOSMO_QGW (object));
-
-  switch (prop_id)
-  {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-_nc_hicosmo_qgw_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcHICosmoQGW *qgw = NC_HICOSMO_QGW (object);
-
-  g_return_if_fail (NC_IS_HICOSMO_QGW (object));
-
-  switch (prop_id)
-  {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
 nc_hicosmo_qgw_finalize (GObject *object)
 {
   /* Chain up : end */
@@ -127,9 +97,7 @@ nc_hicosmo_qgw_class_init (NcHICosmoQGWClass *klass)
   NcHICosmoClass *parent_class = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property = &_nc_hicosmo_qgw_set_property;
-  model_class->get_property = &_nc_hicosmo_qgw_get_property;
-  object_class->finalize    = nc_hicosmo_qgw_finalize;
+  object_class->finalize = nc_hicosmo_qgw_finalize;
 
   ncm_model_class_set_name_nick (model_class, "QGW", "QGW");
   ncm_model_class_add_params (model_class, NC_HICOSMO_QGW_SPARAM_LEN, 0, PROP_SIZE);
