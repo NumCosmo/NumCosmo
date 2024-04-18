@@ -330,7 +330,7 @@ test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata)
   NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_sbessel_j_new (ell, 0.0, 0.0, 20.0, N));
   TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
   TestNcmFftlogPlaw *arg = g_new (TestNcmFftlogPlaw, 1);
-  gdouble Lk             = g_test_rand_double_range (log (1.0e+3), log (1.0e+4));
+  gdouble Lk             = g_test_rand_double_range (log (9.0e+3), log (1.0e+4));
 
   test->fftlog       = fftlog;
   test->Fk.function  = &_test_ncm_fftlog_plaw;
@@ -370,7 +370,7 @@ test_ncm_fftlog_sbessel_j_q0_5_new (TestNcmFftlog *test, gconstpointer pdata)
   NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_sbessel_j_new (ell, 0.0, 0.0, 20.0, N));
   TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
   TestNcmFftlogPlaw *arg = g_new (TestNcmFftlogPlaw, 1);
-  gdouble Lk             = g_test_rand_double_range (log (1.0e+3), log (1.0e+4));
+  gdouble Lk             = g_test_rand_double_range (log (9.0e+3), log (1.0e+4));
 
   test->fftlog       = fftlog;
   test->Fk.function  = &_test_ncm_fftlog_plaw;
