@@ -125,15 +125,30 @@ def test_xb():
     assert_allclose(vexp.tau_xc(xbc), 0.0, atol=1.0e-6)
 
 
+def _compute_tau_array(vexp, abs_tau_min=1.0e-10):
+    """Compute an array of tau values for testing.
+
+    This includes a range from tau_min to -abs_tau_min and from abs_tau_min to tau_max.
+    This is useful since we want to test the behavior of the model around the bounce.
+    """
+    tau_min = vexp.tau_min()
+    tau_max = vexp.tau_max()
+
+    tau_a = np.concatenate(
+        (
+            np.geomspace(tau_min, -abs_tau_min, 1000),
+            np.geomspace(abs_tau_min, tau_max, 1000),
+        )
+    )
+    return tau_a
+
+
 def test_E_tau_negative_dphi():
     """Test NcHICosmoVexp.E_tau."""
     vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
-    tau_min = vexp.tau_min()
-    tau_max = vexp.tau_max()
-
-    tau_a = np.linspace(tau_min, tau_max, 1000)
+    tau_a = _compute_tau_array(vexp)
 
     for tau in tau_a:
         assert np.isfinite(vexp.E_tau(tau))
@@ -157,10 +172,7 @@ def test_E_tau_positive_dphi():
     assert vexp is not None
     vexp.props.dphi = 1.0e-1  # pylint: disable=no-member
 
-    tau_min = vexp.tau_min()
-    tau_max = vexp.tau_max()
-
-    tau_a = np.linspace(tau_min, tau_max, 1000)
+    tau_a = _compute_tau_array(vexp)
 
     for tau in tau_a:
         assert np.isfinite(vexp.E_tau(tau))
@@ -182,10 +194,7 @@ def test_Ricci_scale():
     vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
-    tau_min = vexp.tau_min()
-    tau_max = vexp.tau_max()
-
-    tau_a = np.linspace(tau_min, tau_max, 1000)
+    tau_a = _compute_tau_array(vexp)
 
     for tau in tau_a:
         assert np.isfinite(vexp.Ricci_scale(tau))
@@ -195,7 +204,7 @@ def test_Ricci_scale():
         # Ricci scale is close to the Hubble scale. This works for our parameters and
         # the range of tau, since the the Hubble parameter goes through zero at the
         # bounce if the tau goes close to zero the first assertion below will fail.
-        assert Ricci_in_Hubble > 1.0e-4
+        assert Ricci_in_Hubble > 1.0e-12
         assert Ricci_in_Hubble < 1.0e1
 
 
@@ -246,10 +255,7 @@ def test_eval_at():
     vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
-    tau_min = vexp.tau_min()
-    tau_max = vexp.tau_max()
-
-    tau_a = np.linspace(tau_min, tau_max, 1000)
+    tau_a = _compute_tau_array(vexp)
 
     for tau in tau_a:
         assert np.isfinite(vexp.xe_tau(tau))
@@ -265,10 +271,7 @@ def test_iadiab_eval_at():
     vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
-    tau_min = vexp.tau_min()
-    tau_max = vexp.tau_max()
-
-    tau_a = np.linspace(tau_min, tau_max, 1000)
+    tau_a = _compute_tau_array(vexp)
     k_a = np.geomspace(1.0e-3, 1.0e3, 5)
 
     for tau, k in product(tau_a, k_a):
@@ -283,10 +286,7 @@ def test_igw_eval_at():
     vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
-    tau_min = vexp.tau_min()
-    tau_max = vexp.tau_max()
-
-    tau_a = np.linspace(tau_min, tau_max, 1000)
+    tau_a = _compute_tau_array(vexp)
     k_a = np.geomspace(1.0e-3, 1.0e3, 5)
 
     for tau, k in product(tau_a, k_a):
@@ -301,10 +301,7 @@ def test_iem_eval_at():
     vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
-    tau_min = vexp.tau_min()
-    tau_max = vexp.tau_max()
-
-    tau_a = np.linspace(tau_min, tau_max, 1000)
+    tau_a = _compute_tau_array(vexp)
     k_a = np.geomspace(1.0e-3, 1.0e3, 5)
 
     for tau, k in product(tau_a, k_a):
