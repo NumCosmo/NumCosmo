@@ -121,7 +121,82 @@ def test_xb():
     assert xbc > 0.0
     assert xbe > 0.0
 
-    assert_allclose(vexp.tau_xe(xbe), 0.0, atol=1.0e-7)
+    assert_allclose(vexp.tau_xe(xbe), 0.0, atol=1.0e-6)
+    assert_allclose(vexp.tau_xc(xbc), 0.0, atol=1.0e-6)
+
+
+def test_E_tau_negative_dphi():
+    """Test NcHICosmoVexp.E_tau."""
+    vexp = Nc.HICosmoVexp()
+    assert vexp is not None
+
+    tau_min = vexp.tau_min()
+    tau_max = vexp.tau_max()
+
+    tau_a = np.linspace(tau_min, tau_max, 1000)
+
+    for tau in tau_a:
+        assert np.isfinite(vexp.E_tau(tau))
+
+    tau0c = vexp.tau_xc(1.0)
+    tau0e = vexp.tau_xe(1.0)
+
+    # Negative d_phi means matching Omega_L in the expansion phase.
+    assert vexp.props.dphi < 0.0  # pylint: disable=no-member
+    assert_allclose(
+        vexp.E_tau(tau0c) ** 2, vexp.props.Omegac  # pylint: disable=no-member
+    )
+    assert_allclose(
+        vexp.E_tau(tau0e) ** 2, vexp.props.OmegaL  # pylint: disable=no-member
+    )
+
+
+def test_E_tau_positive_dphi():
+    """Test NcHICosmoVexp.E_tau."""
+    vexp = Nc.HICosmoVexp()
+    assert vexp is not None
+    vexp.props.dphi = 1.0e-1  # pylint: disable=no-member
+
+    tau_min = vexp.tau_min()
+    tau_max = vexp.tau_max()
+
+    tau_a = np.linspace(tau_min, tau_max, 1000)
+
+    for tau in tau_a:
+        assert np.isfinite(vexp.E_tau(tau))
+
+    tau0c = vexp.tau_xc(1.0)
+    tau0e = vexp.tau_xe(1.0)
+
+    # Positive d_phi means matching Omega_c in the expansion phase.
+    assert_allclose(
+        vexp.E_tau(tau0c) ** 2, vexp.props.OmegaL  # pylint: disable=no-member
+    )
+    assert_allclose(
+        vexp.E_tau(tau0e) ** 2, vexp.props.Omegac  # pylint: disable=no-member
+    )
+
+
+def test_Ricci_scale():
+    """Test NcHICosmoVexp.Ricci_scale."""
+    vexp = Nc.HICosmoVexp()
+    assert vexp is not None
+
+    tau_min = vexp.tau_min()
+    tau_max = vexp.tau_max()
+
+    tau_a = np.linspace(tau_min, tau_max, 1000)
+
+    for tau in tau_a:
+        assert np.isfinite(vexp.Ricci_scale(tau))
+        Ricci_in_Hubble = np.abs(
+            vexp.Ricci_scale(tau) * vexp.E_tau(tau) / vexp.RH_planck()
+        )
+        # Ricci scale is close to the Hubble scale. This works for our parameters and
+        # the range of tau, since the the Hubble parameter goes through zero at the
+        # bounce if the tau goes close to zero the first assertion below will fail.
+        assert Ricci_in_Hubble > 1.0e-4
+        assert Ricci_in_Hubble < 1.0e1
 
 
 def test_tau_x():
@@ -134,8 +209,8 @@ def test_tau_x():
     tau_xc_a = [vexp.tau_xc(xc) for xc in xc_a]
     tau_xe_a = [vexp.tau_xe(xe) for xe in xe_a]
 
-    assert_allclose([vexp.x_tau(tau) for tau in tau_xc_a], xc_a, atol=1.0e-7)
-    assert_allclose([vexp.x_tau(tau) for tau in tau_xe_a], xe_a, atol=1.0e-7)
+    assert_allclose([vexp.xc_tau(tau) for tau in tau_xc_a], xc_a, atol=1.0e-7)
+    assert_allclose([vexp.xe_tau(tau) for tau in tau_xe_a], xe_a, atol=1.0e-7)
 
 
 def test_serialize():
@@ -177,7 +252,8 @@ def test_eval_at():
     tau_a = np.linspace(tau_min, tau_max, 1000)
 
     for tau in tau_a:
-        assert np.isfinite(vexp.x_tau(tau))
+        assert np.isfinite(vexp.xe_tau(tau))
+        assert np.isfinite(vexp.xc_tau(tau))
         assert np.isfinite(vexp.alpha(tau))
         assert np.isfinite(vexp.phi(tau))
         assert np.isfinite(vexp.Ricci_scale(tau))

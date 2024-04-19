@@ -125,7 +125,8 @@ gdouble nc_hicosmo_Vexp_tau_qt_e (NcHICosmoVexp *Vexp);
 gdouble nc_hicosmo_Vexp_xbe (NcHICosmoVexp *Vexp);
 gdouble nc_hicosmo_Vexp_xbc (NcHICosmoVexp *Vexp);
 
-gdouble nc_hicosmo_Vexp_x_tau (NcHICosmoVexp *Vexp, const gdouble tau);
+gdouble nc_hicosmo_Vexp_xe_tau (NcHICosmoVexp *Vexp, const gdouble tau);
+gdouble nc_hicosmo_Vexp_xc_tau (NcHICosmoVexp *Vexp, const gdouble tau);
 
 gdouble nc_hicosmo_Vexp_tau_xe (NcHICosmoVexp *Vexp, const gdouble xe);
 gdouble nc_hicosmo_Vexp_tau_xc (NcHICosmoVexp *Vexp, const gdouble xc);
@@ -135,6 +136,7 @@ gdouble nc_hicosmo_Vexp_alpha_0c (NcHICosmoVexp *Vexp);
 
 gdouble nc_hicosmo_Vexp_alpha (NcHICosmoVexp *Vexp, const gdouble tau);
 gdouble nc_hicosmo_Vexp_phi (NcHICosmoVexp *Vexp, const gdouble tau);
+gdouble nc_hicosmo_Vexp_E_tau (NcHICosmoVexp *Vexp, const gdouble tau);
 gdouble nc_hicosmo_Vexp_Ricci_scale (NcHICosmoVexp *Vexp, const gdouble tau);
 void nc_hicosmo_Vexp_x_y (NcHICosmoVexp *Vexp, const gdouble tau, gdouble *x, gdouble *y);
 

@@ -211,3 +211,19 @@ def test_evolution_vexp_duplicate(pem_vexp):
     vexp_dup = ser.dup_obj(vexp)
 
     test_evolution_vexp((pem_dup, vexp_dup))
+
+
+def test_evolution_EB_vexp(pem_vexp):
+    """Test initial conditions of NcHIPertAdiab."""
+    pem, vexp = pem_vexp
+
+    pem.set_tf(1.0)  # We do not want to evolve through the singularity
+    pem.prepare(vexp)
+
+    t_a, _smaller_abst = pem.get_time_array()
+
+    for t in t_a:
+        PE, PB = pem.eval_PE_PB(vexp, t)
+
+        assert np.isfinite(PE)
+        assert np.isfinite(PB)

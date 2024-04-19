@@ -2077,7 +2077,7 @@ _nc_hicosmo_Vexp_zeta_eval_unit (NcHIPertIAdiab *iad)
 static gdouble
 _nc_hicosmo_Vexp_zeta_eval_x (NcHIPertIAdiab *iad, const gdouble tau)
 {
-  return nc_hicosmo_Vexp_x_tau (NC_HICOSMO_VEXP (iad), tau);
+  return nc_hicosmo_Vexp_xe_tau (NC_HICOSMO_VEXP (iad), tau);
 }
 
 /*
@@ -2305,7 +2305,7 @@ _nc_hicosmo_Vexp_gw_eval_unit (NcHIPertIGW *igw)
 static gdouble
 _nc_hicosmo_Vexp_gw_eval_x (NcHIPertIGW *igw, const gdouble tau)
 {
-  return nc_hicosmo_Vexp_x_tau (NC_HICOSMO_VEXP (igw), tau);
+  return nc_hicosmo_Vexp_xe_tau (NC_HICOSMO_VEXP (igw), tau);
 }
 
 /*
@@ -2368,7 +2368,7 @@ _nc_hicosmo_Vexp_em_eval_unit (NcHIPertIEM *iem)
 static gdouble
 _nc_hicosmo_Vexp_em_eval_x (NcHIPertIEM *iem, const gdouble tau)
 {
-  return nc_hicosmo_Vexp_x_tau (NC_HICOSMO_VEXP (iem), tau);
+  return nc_hicosmo_Vexp_xe_tau (NC_HICOSMO_VEXP (iem), tau);
 }
 
 static gdouble _nc_hicosmo_Vexp_em_eval_m_none (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k);
@@ -2969,9 +2969,10 @@ nc_hicosmo_Vexp_tau_max (NcHICosmoVexp *Vexp)
  * nc_hicosmo_Vexp_tau_qt_c:
  * @Vexp: a #NcHICosmoVexp
  *
- * FIXME
+ * Value of the time $\tau$ when the quantum regime begins during the contraction
+ * phase.
  *
- * Returns: FIXME
+ * Returns: $\tau_\mathrm{qc}$.
  */
 gdouble
 nc_hicosmo_Vexp_tau_qt_c (NcHICosmoVexp *Vexp)
@@ -2985,9 +2986,9 @@ nc_hicosmo_Vexp_tau_qt_c (NcHICosmoVexp *Vexp)
  * nc_hicosmo_Vexp_tau_qt_e:
  * @Vexp: a #NcHICosmoVexp
  *
- * FIXME
+ * Value of the time $\tau$ when the quantum regime ends during the expanding phase.
  *
- * Returns: FIXME
+ * Returns: $\tau_\mathrm{qe}$.
  */
 gdouble
 nc_hicosmo_Vexp_tau_qt_e (NcHICosmoVexp *Vexp)
@@ -3001,9 +3002,12 @@ nc_hicosmo_Vexp_tau_qt_e (NcHICosmoVexp *Vexp)
  * nc_hicosmo_Vexp_xbe:
  * @Vexp: a #NcHICosmoVexp
  *
- * FIXME
+ * Computes the value of $a_{0\mathrm{e}} / a_b$ where $a_{0\mathrm{e}}$ is the value
+ * of the scale factor at the scale when the Hubble parameter is equal to $\Omega_i
+ * H_0$. Where $\Omega_i$ is the density parameter of the cold dark matter if $d_\phi >
+ * 0$ or the density parameter of the cosmological constant if $d_\phi < 0$.
  *
- * Returns: FIXME
+ * Returns: $a_{0\mathrm{e}} / a_b$.
  */
 gdouble
 nc_hicosmo_Vexp_xbe (NcHICosmoVexp *Vexp)
@@ -3017,9 +3021,12 @@ nc_hicosmo_Vexp_xbe (NcHICosmoVexp *Vexp)
  * nc_hicosmo_Vexp_xbc:
  * @Vexp: a #NcHICosmoVexp
  *
- * FIXME
+ * Computes the value of $a_{0\mathrm{c}} / a_b$ where $a_{0\mathrm{c}}$ is the value
+ * of the scale factor at the scale when the Hubble parameter is equal to $\Omega_i
+ * H_0$. Where $\Omega_i$ is the density parameter of the cold dark matter if $d_\phi <
+ * 0$ or the density parameter of the cosmological constant if $d_\phi > 0$.
  *
- * Returns: FIXME
+ * Returns: $a_{0\mathrm{c}} / a_b$.
  */
 gdouble
 nc_hicosmo_Vexp_xbc (NcHICosmoVexp *Vexp)
@@ -3062,25 +3069,46 @@ nc_hicosmo_Vexp_alpha_0c (NcHICosmoVexp *Vexp)
 }
 
 /**
- * nc_hicosmo_Vexp_x_tau:
+ * nc_hicosmo_Vexp_xe_tau:
  * @Vexp: a #NcHICosmoVexp
  * @tau: $\tau$
  *
- * FIXME
+ * Computes the value of $x_e$ at time $\tau$. Note that all interface implementations of
+ * perturbations use the observables computed at $x_\mathrm{e} = 1$, for example, the
+ * physical wave number $k$ at $\tau$ is $k_\mathrm{phys} = k x_\mathrm{e}$.
  *
- * Returns: $x$.
+ * Returns: $x_\mathrm{e}$.
  */
 gdouble
-nc_hicosmo_Vexp_x_tau (NcHICosmoVexp *Vexp, const gdouble tau)
+nc_hicosmo_Vexp_xe_tau (NcHICosmoVexp *Vexp, const gdouble tau)
 {
   _nc_hicosmo_Vexp_prepare (Vexp);
   {
     const gdouble alpha = Vexp->priv->alpha_b + 0.5 * tau * tau;
 
-    if (tau > 0.0)
-      return exp (Vexp->priv->alpha_0e - alpha);
-    else
-      return exp (Vexp->priv->alpha_0c - alpha);
+    return exp (Vexp->priv->alpha_0e - alpha);
+  }
+}
+
+/**
+ * nc_hicosmo_Vexp_xc_tau:
+ * @Vexp: a #NcHICosmoVexp
+ * @tau: $\tau$
+ *
+ * Computes the value of $x_c$ at time $\tau$. Note that all interface implementations of
+ * perturbations use the observables computed at $x_\mathrm{e} = 1$, see nc_hicosmo_Vexp_xe_tau().
+ *
+ *
+ * Returns: $x_mathrm{c}$.
+ */
+gdouble
+nc_hicosmo_Vexp_xc_tau (NcHICosmoVexp *Vexp, const gdouble tau)
+{
+  _nc_hicosmo_Vexp_prepare (Vexp);
+  {
+    const gdouble alpha = Vexp->priv->alpha_b + 0.5 * tau * tau;
+
+    return exp (Vexp->priv->alpha_0c - alpha);
   }
 }
 
@@ -3102,11 +3130,15 @@ nc_hicosmo_Vexp_tau_xe (NcHICosmoVexp *Vexp, const gdouble xe)
     const gdouble alpha  = Vexp->priv->alpha_0e - log_xe;
 
     if (alpha < Vexp->priv->alpha_b)
-      g_warning ("nc_hicosmo_Vexp_tau_xe: too high value of xe = % 22.15g, using the maximum value = % 22.15g.",
+      g_warning ("nc_hicosmo_Vexp_tau_xe: too high value of xe = % 22.15g, "
+                 "using the maximum value = % 22.15g.",
                  xe, exp (Vexp->priv->alpha_0e - Vexp->priv->alpha_b));
 
-
-    return +sqrt (2.0 * (alpha - Vexp->priv->alpha_b));
+    /*
+     * We need to test for alpha < Vexp->priv->alpha_b, the fabs is to avoid domain
+     * problems when alpha is approximately equal to Vexp->priv->alpha_b.
+     */
+    return +sqrt (2.0 * fabs (alpha - Vexp->priv->alpha_b));
   }
 }
 
@@ -3127,7 +3159,11 @@ nc_hicosmo_Vexp_tau_xc (NcHICosmoVexp *Vexp, const gdouble xc)
     const gdouble log_xc = log (xc);
     const gdouble alpha  = Vexp->priv->alpha_0c - log_xc;
 
-    return -sqrt (2.0 * (alpha - Vexp->priv->alpha_b));
+    /*
+     * We need to test for alpha < Vexp->priv->alpha_b, the fabs is to avoid domain
+     * problems when alpha is approximately equal to Vexp->priv->alpha_b.
+     */
+    return -sqrt (2.0 * fabs (alpha - Vexp->priv->alpha_b));
   }
 }
 
@@ -3286,6 +3322,74 @@ nc_hicosmo_Vexp_Ricci_scale (NcHICosmoVexp *Vexp, const gdouble tau)
       }
       default:
         g_assert_not_reached ();
+        break;
+    }
+  }
+}
+
+/**
+ * nc_hicosmo_Vexp_E_tau:
+ * @Vexp: a #NcHICosmoVexp
+ * @tau: $\tau$
+ *
+ * FIXME
+ *
+ * Returns: $E(\tau)$.
+ */
+gdouble
+nc_hicosmo_Vexp_E_tau (NcHICosmoVexp *Vexp, const gdouble tau)
+{
+  _nc_hicosmo_Vexp_prepare (Vexp);
+  {
+    guint branch = 0;
+
+    if (tau > Vexp->priv->tau_qt_c)
+    {
+      branch++;
+
+      if (tau > Vexp->priv->tau_qt_e)
+        branch++;
+    }
+
+    switch (branch)
+    {
+      case 0: /* Classical contraction */
+      {
+        const gdouble lnq = ncm_spline_eval (Vexp->priv->lnqc_mtau, -tau);
+        const gdouble q   = exp (lnq);
+        const gdouble E   = _nc_hicosmo_Vexp_Hc_H0_q (Vexp, q, Vexp->priv->cl_bc);
+
+        return E;
+
+        break;
+      }
+      case 1: /* Quantum phase */
+      {
+        const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
+        const gdouble phi   = (fabs (tau) < _NC_HICOSMO_VEXP_PHIA) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : (ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau);
+        gdouble H_lp, xq;
+
+        _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
+
+        return (H_lp * Vexp->priv->RH_lp);
+
+        break;
+      }
+      case 2: /* Classical expansion */
+      {
+        const gdouble lnq = ncm_spline_eval (Vexp->priv->lnqe_tau, tau);
+        const gdouble q   = exp (lnq);
+        const gdouble E   = _nc_hicosmo_Vexp_He_H0_q (Vexp, q, Vexp->priv->cl_be);
+
+        return E;
+
+        break;
+      }
+      default:
+        g_assert_not_reached ();
+
+        return 0.0;
+
         break;
     }
   }
