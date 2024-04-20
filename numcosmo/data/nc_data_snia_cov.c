@@ -3747,7 +3747,7 @@ gchar *
 nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size)
 {
   gchar *full_filename = ncm_cfg_get_fullpath (filename);
-  gchar *url_str       = g_strdup_printf ("https://github.com/NumCosmo/NumCosmo/releases/download/v"PACKAGE_VERSION "/%s", filename);
+  gchar *url_str       = g_strdup_printf ("https://github.com/NumCosmo/NumCosmo/releases/download/datafile-release-v1.0.0/%s", filename);
   GFile *local         = g_file_new_for_path (full_filename);
   GFile *remote        = g_file_new_for_uri (url_str);
   GError *error        = NULL;

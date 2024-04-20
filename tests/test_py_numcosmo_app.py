@@ -26,8 +26,6 @@
 
 from typing import Tuple
 from pathlib import Path
-import functools
-import sys
 
 import pytest
 from typer.testing import CliRunner
@@ -44,37 +42,6 @@ from numcosmo_py.interpolation.stats_dist import (
 )
 
 runner = CliRunner()
-
-
-@pytest.fixture(name="cli")
-def fixture_cli():
-    """Yield a click.testing.CliRunner to invoke the CLI."""
-    class_ = CliRunner
-
-    def invoke_wrapper(f):
-        """Augment CliRunner.invoke to emit its output to stdout.
-
-        This enables pytest to show the output in its logs on test
-        failures.
-
-        """
-
-        @functools.wraps(f)
-        def wrapper(*args, **kwargs):
-            echo = kwargs.pop("echo", False)
-            result = f(*args, **kwargs)
-
-            if echo is True:
-                sys.stdout.write(result.output)
-            return result
-
-        return wrapper
-
-    class_.invoke = invoke_wrapper(class_.invoke)
-    cli_runner = class_()
-
-    yield cli_runner
-
 
 Ncm.cfg_init()
 
@@ -561,12 +528,12 @@ def test_run_mcmc_apes_init_catalog(simple_experiment):
 
 
 def test_run_mcmc_apes_method_kernel(
-    simple_experiment, interpolation_method, interpolation_kernel, cli
+    simple_experiment, interpolation_method, interpolation_kernel
 ):
     """Run a MCMC analysis using APES."""
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
-    result = cli.invoke(
+    result = runner.invoke(
         app,
         [
             "run",
@@ -579,14 +546,9 @@ def test_run_mcmc_apes_method_kernel(
             interpolation_method,
             "--interpolation-kernel",
             interpolation_kernel,
-            "--run-messages",
-            "full",
         ],
-        echo=True,
-        catch_exceptions=False,
     )
     if result.exit_code != 0:
-        print(result.output)
         raise result.exception
 
 

@@ -170,9 +170,7 @@ jobs:
       #  run: |
       #    pylint --rcfile .pylintrc numcosmo_py
       - name: Check NumCosmo
-        run: |
-          pytest tests/test_py_numcosmo_app.py -v -x -s
-          meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
+        run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge-coverage:
     name: Coverage (${{ matrix.os }}, py${{ matrix.python-version }}, openmpi, Miniforge)
