@@ -461,7 +461,7 @@ if python_typer.found()
         {
             'name': 'py_numcosmo_app',
             'source': 'test_py_numcosmo_app.py',
-            'timeout': 0,
+            'timeout': 60 * 15,
         },
     ]
 endif
