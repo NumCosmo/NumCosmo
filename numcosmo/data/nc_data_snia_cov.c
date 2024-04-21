@@ -3719,19 +3719,6 @@ nc_data_snia_cov_get_catalog_by_id (NcDataSNIAId id)
   }
 }
 
-void
-_nc_data_snia_copy_prog (goffset current_num_bytes, goffset total_num_bytes, gpointer user_data)
-{
-  gint *old_prog = (gint *) user_data;
-  gint prog      = (100 * current_num_bytes) / total_num_bytes;
-
-  if (prog > *old_prog)
-  {
-    ncm_message ("# % 3d%%\r", prog);
-    *old_prog = prog;
-  }
-}
-
 /**
  * nc_data_snia_cov_get_fits:
  * @filename: Catalog fits filename
@@ -3785,14 +3772,17 @@ nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size)
 
   if (download)
   {
+    const gchar *dir = ncm_cfg_get_fullpath_base ();
+    gchar *cmd[]     = { "wget", "-O", full_filename, url_str, NULL };
+
     ncm_message ("# Downloading file [%s]...\n", url_str);
 
-    if (!g_file_copy (remote, local, G_FILE_COPY_OVERWRITE, NULL,
-                      &_nc_data_snia_copy_prog, &prog, &error))
-      g_error ("nc_data_snia_cov_get_fits: cannot get fits file from %s: %s."
-               " To use this catalog, download the file from the url and copy "
-               "to ~/.numcosmo directory.",
-               url_str, error->message);
+    if (!g_spawn_sync (dir, cmd, NULL,
+                       G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, NULL, &error))
+      g_error ("nc_data_snia_cov_get_fits: cannot download file: %s. Error: %s. "
+               "Please download the file manually from %s and extract it to %s.",
+               filename, error->message,
+               url_str, dir);
   }
 
   g_free (url_str);
