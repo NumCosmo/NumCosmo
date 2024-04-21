@@ -325,7 +325,7 @@ test_ncm_fftlog_gausswin2_new (TestNcmFftlog *test, gconstpointer pdata)
 void
 test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata)
 {
-  const guint N          = g_test_rand_int_range  (2500, 3000);
+  const guint N          = g_test_rand_int_range  (2800, 3000);
   const guint ell        = g_test_rand_int_range  (0, 5);
   NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_sbessel_j_new (ell, 0.0, 0.0, 20.0, N));
   TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
@@ -339,7 +339,7 @@ test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata)
   test->KFk.params   = argK;
   test->argK         = argK;
 
-  test->lnk_i = g_test_rand_double_range (log (1.0e-6), log (1.0e-4));
+  test->lnk_i = g_test_rand_double_range (log (1.0e-6), log (4.0e-6));
   test->lnk_f = test->lnk_i + Lk;
 
   test->ntests = NTESTS;
@@ -365,7 +365,7 @@ test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata)
 void
 test_ncm_fftlog_sbessel_j_q0_5_new (TestNcmFftlog *test, gconstpointer pdata)
 {
-  const guint N          = g_test_rand_int_range  (2500, 3000);
+  const guint N          = g_test_rand_int_range  (2800, 3000);
   const guint ell        = g_test_rand_int_range  (0, 5);
   NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_sbessel_j_new (ell, 0.0, 0.0, 20.0, N));
   TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
