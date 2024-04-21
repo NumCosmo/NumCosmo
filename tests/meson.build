@@ -364,6 +364,10 @@ python_tests = [
         'source': 'test_py_data_rosenbrock.py',
     },
     {
+        'name': 'py_data_snia_cov',
+        'source': 'test_py_data_snia_cov.py',
+    },
+    {
         'name': 'py_dataset',
         'source': 'test_py_dataset.py',
     },

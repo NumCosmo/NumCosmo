@@ -1097,8 +1097,6 @@ nc_data_snia_cov_new_full (const gchar *filename, gboolean use_norma)
 
   if (self->cat_version == 0)
   {
-    printf ("AQUI\n");
-    fflush (stdout);
     nc_data_snia_cov_load_V0 (snia_cov, fptr);
   }
   else if (self->cat_version == 1)
