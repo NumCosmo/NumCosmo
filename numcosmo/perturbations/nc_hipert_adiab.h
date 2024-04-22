@@ -29,10 +29,9 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_ode_spline.h>
-#include <numcosmo/math/ncm_powspec_spline2d.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/math/ncm_csq1d.h>
+#include <numcosmo/math/ncm_powspec_spline2d.h>
 
 G_BEGIN_DECLS
 
