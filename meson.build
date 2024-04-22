@@ -400,6 +400,9 @@ if get_option('mpi').auto() or get_option('mpi').enabled()
   # MPICH is not found by the mpi dependency, so we need to check for it manually
   if (not mpi_fortran_dep.found())
     mpi_fortran_dep = dependency('mpichf90', required: false)
+    if mpi_fortran_dep.found()
+      numcosmo_conf.set('HAVE_MPIF90', true)
+    endif
   endif
 
   if get_option('mpi').enabled() and not mpi_c_dep.found()
@@ -448,6 +451,9 @@ omp_fortran = dependency(
   language: 'fortran',
   required: false,
 )
+if omp_fortran.found()
+  numcosmo_conf.set('HAVE_FORTRAN_OPENMP', true)
+endif
 
 #######################################################################################
 # Checking for GObject instrospection:
@@ -496,6 +502,9 @@ message('Checking for Glib, GObject and GIO')
 glib_dep = dependency('glib-2.0', version: glib_req)
 gobject_dep = dependency('gobject-2.0', version: glib_req)
 gio_dep = dependency('gio-2.0', version: glib_req)
+
+# Using structured logging if available
+# add_global_arguments('-DG_LOG_USE_STRUCTURED', language: 'c')
 
 #######################################################################################
 # Checking for GSL:

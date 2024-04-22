@@ -148,6 +148,10 @@ c_tests = [
         'sources': ['test_nc_hicosmo_de.c'],
     },
     {
+        'name': 'nc_hicosmo_qgw',
+        'sources': ['test_nc_hicosmo_qgw.c'],
+    },
+    {
         'name': 'nc_window',
         'sources': ['test_nc_window.c'],
     },
@@ -303,6 +307,22 @@ python_tests = [
         'source': 'test_py_cluster_abundance_sampling.py',
     },
     {
+        'name': 'py_hicosmo_Vexp',
+        'source': 'test_py_hicosmo_Vexp.py',
+    },
+    {
+        'name': 'py_hipert_em',
+        'source': 'test_py_hipert_em.py',
+    },
+    {
+        'name': 'py_hipert_gw',
+        'source': 'test_py_hipert_gw.py',
+    },
+    {
+        'name': 'py_de_cont',
+        'source': 'test_py_de_cont.py',
+    },
+    {
         'name': 'py_diff',
         'source': 'test_py_diff.py',
     },
@@ -347,6 +367,10 @@ python_tests = [
         'source': 'test_py_data_rosenbrock.py',
     },
     {
+        'name': 'py_data_snia_cov',
+        'source': 'test_py_data_snia_cov.py',
+    },
+    {
         'name': 'py_dataset',
         'source': 'test_py_dataset.py',
     },
@@ -382,6 +406,14 @@ python_tests = [
         'name': 'py_fit',
         'source': 'test_py_fit.py',
     },
+    {
+        'name': 'py_powspec_ml_spline',
+        'source': 'test_py_powspec_ml_spline.py',
+    },
+    {
+        'name': 'py_powspec_spline2d',
+        'source': 'test_py_powspec_spline2d.py',
+    },
 ]
 
 if mpi_c_dep.found()
@@ -409,6 +441,10 @@ if python_astropy_scipy.found()
         {
             'name': 'py_csq1d',
             'source': 'test_py_csq1d.py',
+        },
+        {
+            'name': 'py_hipert_adiab',
+            'source': 'test_py_hipert_adiab.py',
         },
         {
             'name': 'py_data_dist1d',
@@ -482,7 +518,7 @@ if enable_gir
         modules: ['pytest_tap'],
         required: false,
     )
-    if py_tap.found()
+    if py_tap.found() and get_option('pytest_tap')
         r = run_command(
             python,
             '-c',
@@ -510,7 +546,10 @@ if enable_gir
         test(
             python_test['name'],
             python,
-            args: pytest_args + join_paths(meson.current_source_dir(), python_test['source']),
+            args: pytest_args + join_paths(
+                meson.current_source_dir(),
+                python_test['source'],
+            ),
             depends: [numcosmo_gir, numcosmo_math_gir],
             env: env,
             protocol: pytest_protocol,

@@ -1,12 +1,12 @@
 /***************************************************************************
- *            nc_powspec_ml.h
+ *            ncm_powspec_spline2d.h
  *
- *  Thu February 18 12:32:25 2016
+ *  Tue February 16 17:01:03 2016
  *  Copyright  2016  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
  ****************************************************************************/
 /*
- * nc_powspec_ml.h
+ * ncm_powspec_spline2d.h
  * Copyright (C) 2016 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -23,35 +23,33 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_POWSPEC_ML_H_
-#define _NC_POWSPEC_ML_H_
+#ifndef _NCM_POWSPEC_SPLINE2D_H_
+#define _NCM_POWSPEC_SPLINE2D_H_
 
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/math/ncm_integral1d_ptr.h>
 #include <numcosmo/math/ncm_powspec.h>
+#include <numcosmo/math/ncm_spline2d.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_POWSPEC_ML (nc_powspec_ml_get_type ())
+#define NCM_TYPE_POWSPEC_SPLINE2D (ncm_powspec_spline2d_get_type ())
 
-G_DECLARE_DERIVABLE_TYPE (NcPowspecML, nc_powspec_ml, NC, POWSPEC_ML, NcmPowspec)
+G_DECLARE_FINAL_TYPE (NcmPowspecSpline2d, ncm_powspec_spline2d, NCM, POWSPEC_SPLINE2D, NcmPowspec)
 
-struct _NcPowspecMLClass
-{
-  /*< private > */
-  NcmPowspecClass parent_class;
+NcmPowspecSpline2d *ncm_powspec_spline2d_new (NcmSpline2d * spline2d);
+NcmPowspecSpline2d *ncm_powspec_spline2d_ref (NcmPowspecSpline2d *ps_s2d);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[18];
-};
+void ncm_powspec_spline2d_free (NcmPowspecSpline2d *ps_s2d);
+void ncm_powspec_spline2d_clear (NcmPowspecSpline2d **ps_s2d);
 
-NcPowspecML *nc_powspec_ml_ref (NcPowspecML *ps_ml);
-
-void nc_powspec_ml_free (NcPowspecML *ps_ml);
-void nc_powspec_ml_clear (NcPowspecML **ps_ml);
+void ncm_powspec_spline2d_set_spline2d (NcmPowspecSpline2d *ps_s2d, NcmSpline2d *spline2d);
+NcmSpline2d *ncm_powspec_spline2d_peek_spline2d (NcmPowspecSpline2d *ps_s2d);
 
 G_END_DECLS
 
-#endif /* _NC_POWSPEC_ML_H_ */
+#endif /* _NCM_POWSPEC_SPLINE2D_H_ */
 
