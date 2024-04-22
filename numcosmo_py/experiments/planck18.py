@@ -172,9 +172,7 @@ def generate_planck18_tt(
     massive_nu: bool = False,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Generate Planck 2018 TT baseline experiment dictionary."""
-
     # Likelihood
-
     cbe_boltzmann = Nc.HIPertBoltzmannCBE.new()
 
     b18_lowl_EE = Nc.DataPlanckLKL.full_new_id(
@@ -219,9 +217,7 @@ def generate_planck18_ttteee(
     massive_nu: bool = False,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Generate Planck 2018 TT baseline experiment dictionary."""
-
     # Likelihood
-
     cbe_boltzmann = Nc.HIPertBoltzmannCBE.new()
 
     b18_lowl_EE = Nc.DataPlanckLKL.full_new_id(

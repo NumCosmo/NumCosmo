@@ -37,7 +37,7 @@
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo_priors.h>
 #include <numcosmo/nc_powspec_ml.h>
-#include <numcosmo/nc_powspec_ml_fix_spline.h>
+#include <numcosmo/nc_powspec_ml_spline.h>
 #include <numcosmo/nc_powspec_ml_transfer.h>
 #include <numcosmo/nc_powspec_ml_cbe.h>
 #include <numcosmo/nc_powspec_mnl.h>
@@ -57,23 +57,25 @@
 #include <numcosmo/nc_hireion_camb.h>
 
 /* Perturbations */
-#include <numcosmo/perturbations/nc_hipert.h>
-#include <numcosmo/perturbations/nc_hipert_bg_var.h>
-#include <numcosmo/perturbations/nc_hipert_wkb.h>
-#include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 #include <numcosmo/perturbations/nc_hipert_adiab.h>
-#include <numcosmo/perturbations/nc_hipert_gw.h>
-#include <numcosmo/perturbations/nc_hipert_two_fluids.h>
-#include <numcosmo/perturbations/nc_hipert_boltzmann.h>
-#include <numcosmo/perturbations/nc_hipert_boltzmann_std.h>
+#include <numcosmo/perturbations/nc_hipert_bg_var.h>
 #include <numcosmo/perturbations/nc_hipert_boltzmann_cbe.h>
-#include <numcosmo/perturbations/nc_hipert_first_order.h>
-#include <numcosmo/perturbations/nc_hipert_grav.h>
-#include <numcosmo/perturbations/nc_hipert_grav_einstein.h>
-#include <numcosmo/perturbations/nc_hipert_comp.h>
+#include <numcosmo/perturbations/nc_hipert_boltzmann_std.h>
+#include <numcosmo/perturbations/nc_hipert_boltzmann.h>
 #include <numcosmo/perturbations/nc_hipert_comp_pb.h>
+#include <numcosmo/perturbations/nc_hipert_comp.h>
+#include <numcosmo/perturbations/nc_hipert_em.h>
+#include <numcosmo/perturbations/nc_hipert_first_order.h>
+#include <numcosmo/perturbations/nc_hipert_grav_einstein.h>
+#include <numcosmo/perturbations/nc_hipert_grav.h>
+#include <numcosmo/perturbations/nc_hipert_gw.h>
+#include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
+#include <numcosmo/perturbations/nc_hipert_two_fluids.h>
+#include <numcosmo/perturbations/nc_hipert_wkb.h>
+#include <numcosmo/perturbations/nc_hipert.h>
 
 /* Model implementations */
+#include <numcosmo/nc_de_cont.h>
 #include <numcosmo/model/nc_hicosmo_idem2.h>
 #include <numcosmo/model/nc_hicosmo_gcg.h>
 #include <numcosmo/model/nc_hicosmo_de.h>
@@ -89,6 +91,7 @@
 #include <numcosmo/model/nc_hicosmo_qspline.h>
 #include <numcosmo/model/nc_hicosmo_qrbf.h>
 #include <numcosmo/model/nc_hicosmo_qgrw.h>
+#include <numcosmo/model/nc_hicosmo_qgw.h>
 #include <numcosmo/model/nc_hicosmo_Vexp.h>
 #include <numcosmo/model/nc_hiprim_power_law.h>
 #include <numcosmo/model/nc_hiprim_atan.h>
@@ -197,3 +200,4 @@
 #include <numcosmo/xcor/nc_xcor_limber_kernel_weak_lensing.h>
 
 #endif /* _NUMCOSMO_H */
+
