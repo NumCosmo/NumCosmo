@@ -1,15 +1,13 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
- *            nc_de_cont.h
+ *            nc_powspec_ml_spline.h
  *
- *  Thu December 15 15:08:26 2020
- *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <vitenti@uel.br>
+ *  Sun Jun 18 10:26:38 2017
+ *  Copyright  2017  Mariana Penna Lima
+ *  <pennalima@gmail.com>
  ****************************************************************************/
 /*
- * nc_de_cont.h
- * Copyright (C) 2020 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * nc_powspec_ml_spline.h
+ * Copyright (C) 2017 Mariana Penna Lima <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,31 +23,28 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_DE_CONT_H_
-#define _NC_DE_CONT_H_
+#ifndef _NC_POWSPEC_ML_SPLINE_H_
+#define _NC_POWSPEC_ML_SPLINE_H_
 
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_csq1d.h>
+#include <numcosmo/math/ncm_spline.h>
+#include <numcosmo/lss/nc_growth_func.h>
+#include <numcosmo/nc_powspec_ml.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_DE_CONT (nc_de_cont_get_type ())
+#define NC_TYPE_POWSPEC_ML_SPLINE (nc_powspec_ml_spline_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcDECont, nc_de_cont, NC, DE_CONT, NcmCSQ1D)
+G_DECLARE_FINAL_TYPE (NcPowspecMLSpline, nc_powspec_ml_spline, NC, POWSPEC_ML_SPLINE, NcPowspecML)
 
+NcPowspecMLSpline *nc_powspec_ml_spline_new (NcmSpline * Pk);
 
-NcDECont *nc_de_cont_new (const gdouble Omegaw, const gdouble OmegaL, const gdouble cs2, const gdouble w);
-NcDECont *nc_de_cont_ref (NcDECont *dec);
-
-void nc_de_cont_free (NcDECont *dec);
-void nc_de_cont_clear (NcDECont **dec);
-
-void nc_de_cont_set_k (NcDECont *dec, const gdouble k);
-gdouble nc_de_cont_get_k (NcDECont *dec);
+void nc_powspec_ml_spline_set_spline (NcPowspecMLSpline *ps_fs, NcmSpline *Pk);
+NcmSpline *nc_powspec_ml_spline_peek_spline (NcPowspecMLSpline *ps_fs);
 
 G_END_DECLS
 
-#endif /* _NC_DE_CONT_H_ */
+#endif /* _NC_POWSPEC_ML_SPLINE_H_ */
 

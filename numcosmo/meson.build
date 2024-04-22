@@ -102,6 +102,7 @@ ncm_sources = files(
     'math/ncm_powspec_corr3d.c',
     'math/ncm_powspec_filter.c',
     'math/ncm_powspec_sphere_proj.c',
+    'math/ncm_powspec_spline2d.c',
     'math/ncm_prior.c',
     'math/ncm_prior_flat.c',
     'math/ncm_prior_flat_func.c',
@@ -235,6 +236,7 @@ ncm_headers = files(
     'math/ncm_powspec_corr3d.h',
     'math/ncm_powspec_filter.h',
     'math/ncm_powspec_sphere_proj.h',
+    'math/ncm_powspec_spline2d.h',
     'math/ncm_prior.h',
     'math/ncm_prior_flat.h',
     'math/ncm_prior_flat_func.h',
@@ -394,6 +396,7 @@ nc_headers = files(
     'model/nc_hicosmo_lcdm.h',
     'model/nc_hicosmo_qconst.h',
     'model/nc_hicosmo_qgrw.h',
+    'model/nc_hicosmo_qgw.h',
     'model/nc_hicosmo_qlinear.h',
     'model/nc_hicosmo_qrbf.h',
     'model/nc_hicosmo_qspline.h',
@@ -410,6 +413,7 @@ nc_headers = files(
     'perturbations/nc_hipert_boltzmann_std.h',
     'perturbations/nc_hipert_comp.h',
     'perturbations/nc_hipert_comp_pb.h',
+    'perturbations/nc_hipert_em.h',
     'perturbations/nc_hipert_first_order.h',
     'perturbations/nc_hipert_grav.h',
     'perturbations/nc_hipert_grav_einstein.h',
@@ -440,7 +444,7 @@ nc_headers = files(
     'nc_planck_fi_cor_ttteee.h',
     'nc_powspec_ml.h',
     'nc_powspec_ml_cbe.h',
-    'nc_powspec_ml_fix_spline.h',
+    'nc_powspec_ml_spline.h',
     'nc_powspec_ml_transfer.h',
     'nc_powspec_mnl.h',
     'nc_powspec_mnl_halofit.h',
@@ -551,6 +555,7 @@ nc_sources = files(
     'model/nc_hicosmo_lcdm.c',
     'model/nc_hicosmo_qconst.c',
     'model/nc_hicosmo_qgrw.c',
+    'model/nc_hicosmo_qgw.c',
     'model/nc_hicosmo_qlinear.c',
     'model/nc_hicosmo_qrbf.c',
     'model/nc_hicosmo_qspline.c',
@@ -567,6 +572,7 @@ nc_sources = files(
     'perturbations/nc_hipert_boltzmann_std.c',
     'perturbations/nc_hipert_comp.c',
     'perturbations/nc_hipert_comp_pb.c',
+    'perturbations/nc_hipert_em.c',
     'perturbations/nc_hipert_first_order.c',
     'perturbations/nc_hipert_grav.c',
     'perturbations/nc_hipert_grav_einstein.c',
@@ -597,7 +603,7 @@ nc_sources = files(
     'nc_planck_fi_cor_ttteee.c',
     'nc_powspec_ml.c',
     'nc_powspec_ml_cbe.c',
-    'nc_powspec_ml_fix_spline.c',
+    'nc_powspec_ml_spline.c',
     'nc_powspec_ml_transfer.c',
     'nc_powspec_mnl.c',
     'nc_powspec_mnl_halofit.c',
@@ -758,7 +764,7 @@ libnumcosmo_dep = declare_dependency(
 
 # Generate pkg-config files
 # Code using NumCosmo frequently depends directly on gsl, glib, gobject, and gio, so we
-# include them in the Requires field. 
+# include them in the Requires field.
 # This happends mostly because of inlining, but also because of the many macros defined
 # in the glib headers.
 pkg.generate(

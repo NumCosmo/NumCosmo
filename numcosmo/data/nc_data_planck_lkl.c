@@ -973,7 +973,7 @@ void
 nc_data_planck_lkl_download_baseline (const gchar *dir)
 {
   const gchar *file    = "COM_Likelihood_Data-baseline_R3.00.tar.gz";
-  const gchar *url_str = "http://pla.esac.esa.int/pla/aio/product-action?COSMOLOGY.FILE_ID=COM_Likelihood_Data-baseline_R3.00.tar.gz";
+  const gchar *url_str = "https://github.com/NumCosmo/NumCosmo/releases/download/datafile-release-v1.0.0/COM_Likelihood_Data-baseline_R3.00.tar.gz";
   gchar *full_filename = g_build_filename (dir, file, NULL);
   GError *error        = NULL;
   gint prog            = 0;
