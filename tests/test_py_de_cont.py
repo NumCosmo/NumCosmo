@@ -114,3 +114,23 @@ def test_de_cont_nonadiab():
             assert_allclose(
                 state_prop.get_phi_Pphi(), state_nonadiab.get_phi_Pphi(), rtol=1.0e-4
             )
+
+
+def test_de_cont_eval():
+    """Test evaluation of NcDECont."""
+    de_cont = Nc.DECont.new(Omegaw=0.3, OmegaL=0.7, cs2=1.0e-5, w=1.0e-5)
+
+    ti = 1.0e0
+    tf = 1.0e10
+    de_cont.set_reltol(1.0e-12)
+    de_cont.set_ti(ti)
+    de_cont.set_tf(tf)
+    de_cont.set_k(1.0)
+
+    N = 100
+    t_a = np.geomspace(ti, tf, N)
+
+    for t in t_a:
+        assert np.isfinite(de_cont.eval_xi(None, t))
+        assert np.isfinite(de_cont.eval_F1(None, t))
+        assert np.isfinite(de_cont.eval_F2(None, t))
