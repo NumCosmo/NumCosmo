@@ -57,10 +57,11 @@
 #include "math/ncm_spline2d_spline.h"
 #include "math/ncm_integral1d.h"
 #include "math/ncm_integral_nd.h"
-#include "math/ncm_powspec.h"
+#include "math/ncm_powspec_corr3d.h"
 #include "math/ncm_powspec_filter.h"
 #include "math/ncm_powspec_sphere_proj.h"
-#include "math/ncm_powspec_corr3d.h"
+#include "math/ncm_powspec_spline2d.h"
+#include "math/ncm_powspec.h"
 #include "math/ncm_model.h"
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_model_builder.h"
@@ -101,6 +102,7 @@
 #include "model/nc_hicosmo_de_cpl.h"
 #include "model/nc_hicosmo_de_jbp.h"
 #include "model/nc_hicosmo_qgrw.h"
+#include "model/nc_hicosmo_qgw.h"
 #include "model/nc_hicosmo_Vexp.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
 #include "model/nc_hicosmo_de_reparam_cmb.h"
@@ -171,11 +173,12 @@
 #include "nc_recomb_seager.h"
 #include "nc_hireion.h"
 #include "nc_hireion_camb.h"
-#include "nc_powspec_ml.h"
-#include "nc_powspec_ml_transfer.h"
 #include "nc_powspec_ml_cbe.h"
-#include "nc_powspec_mnl.h"
+#include "nc_powspec_ml_spline.h"
+#include "nc_powspec_ml_transfer.h"
+#include "nc_powspec_ml.h"
 #include "nc_powspec_mnl_halofit.h"
+#include "nc_powspec_mnl.h"
 #include "nc_snia_dist_cov.h"
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
@@ -296,7 +299,7 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
     /* print out all the frames to stderr */
     for (i = 0; i < size; i++)
     {
-      fprintf (_log_stream_err, "# (%s): %s-BACKTRACEA:[%02zd] %s\n", pname, log_domain, i, trace[i]);
+      fprintf (_log_stream_err, "# (%s): %s-BACKTRACE:[%02zd] %s\n", pname, log_domain, i, trace[i]);
     }
 
     g_free (trace);
@@ -310,8 +313,6 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
 
   abort ();
 }
-
-void clencurt_gen (int M);
 
 #ifdef HAVE_OPENBLAS_SET_NUM_THREADS
 void goto_set_num_threads (gint);
@@ -548,6 +549,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL_ND);
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
+  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPLINE2D);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPHERE_PROJ);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
@@ -609,6 +611,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_CPL);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_JBP);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGRW);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGW);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_VEXP);
 
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_OK);
@@ -712,6 +715,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HIREION_CAMB);
 
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML);
+  ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_SPLINE);
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_TRANSFER);
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_CBE);
 
@@ -1167,7 +1171,7 @@ ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
 
   container.logger = logger;
 
-  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, &container);
+  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_INFO | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, &container);
 }
 
 /**
