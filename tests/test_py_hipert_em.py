@@ -227,3 +227,36 @@ def test_evolution_EB_vexp(pem_vexp):
 
         assert np.isfinite(PE)
         assert np.isfinite(PB)
+
+
+def _compute_tau_array(vexp, abs_tau_min=1.0e-10):
+    """Compute an array of tau values for testing.
+
+    This includes a range from tau_min to -abs_tau_min and from abs_tau_min to tau_max.
+    This is useful since we want to test the behavior of the model around the bounce.
+    """
+    tau_min = vexp.tau_min() + 1.0
+    tau_max = vexp.tau_max()
+
+    tau_a = np.concatenate(
+        (
+            np.geomspace(tau_min, -abs_tau_min, 5000),
+            np.geomspace(abs_tau_min, tau_max, 5000),
+        )
+    )
+    return tau_a
+
+
+def test_interface_eval_vexp(pem_vexp):
+    """Test interface evaluation of NcHIPertAdiab."""
+    _, vexp = pem_vexp
+
+    tau_a = _compute_tau_array(vexp)
+
+    assert np.isfinite(Nc.HIPertIGW.eval_unit(vexp))
+    for tau in tau_a:
+        assert np.isfinite(Nc.HIPertIGW.eval_F1(vexp, tau, 1.0))
+        assert np.isfinite(Nc.HIPertIGW.eval_m(vexp, tau, 1.0))
+        assert np.isfinite(Nc.HIPertIGW.eval_nu(vexp, tau, 1.0))
+        assert np.isfinite(Nc.HIPertIGW.eval_xi(vexp, tau, 1.0))
+        assert np.isfinite(Nc.HIPertIGW.eval_x(vexp, tau))

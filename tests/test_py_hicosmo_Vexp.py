@@ -37,7 +37,7 @@ Ncm.cfg_init()
 @pytest.fixture(name="vexp", params=[1.0e-1, -1.0e-1], ids=["d>0", "d<0"])
 def fixture_vexp(request) -> Nc.HICosmoVexp:
     """Fixture for NcHICosmoVexp."""
-    vexp = Nc.HICosmoVexp()
+    vexp = Nc.HICosmoVexp.new()
     vexp.props.dphi = request.param  # pylint: disable=no-member
 
     return vexp
@@ -275,6 +275,7 @@ def test_iadiab_eval_at(vexp):
         assert np.isfinite(Nc.HIPertIAdiab.eval_m(vexp, tau, k))
         assert np.isfinite(Nc.HIPertIAdiab.eval_nu(vexp, tau, k))
         assert np.isfinite(Nc.HIPertIAdiab.eval_xi(vexp, tau, k))
+        assert np.isfinite(Nc.HIPertIAdiab.eval_x(vexp, tau))
 
 
 def test_igw_eval_at(vexp):
