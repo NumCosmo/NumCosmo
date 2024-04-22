@@ -25,6 +25,7 @@
 """Tests on NcHICosmoVexp cosmological model."""
 
 from itertools import product
+import pytest
 from numpy.testing import assert_allclose
 import numpy as np
 
@@ -33,51 +34,55 @@ from numcosmo_py import Ncm, Nc
 Ncm.cfg_init()
 
 
-def test_init():
+@pytest.fixture(name="vexp", params=[1.0e-1, -1.0e-1], ids=["d>0", "d<0"])
+def fixture_vexp(request) -> Nc.HICosmoVexp:
+    """Fixture for NcHICosmoVexp."""
+    vexp = Nc.HICosmoVexp()
+    vexp.props.dphi = request.param  # pylint: disable=no-member
+
+    return vexp
+
+
+def test_init(vexp):
     """Test NcHICosmoVexp initialization."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
     assert isinstance(vexp, Nc.HICosmoVexp)
     assert isinstance(vexp, Nc.HICosmo)
     assert isinstance(vexp, Ncm.Model)
 
 
-def test_init_new():
+def test_init_new(vexp):
     """Test NcHICosmoVexp initialization with new."""
-    vexp = Nc.HICosmoVexp.new()
     assert vexp is not None
     assert isinstance(vexp, Nc.HICosmoVexp)
     assert isinstance(vexp, Nc.HICosmo)
     assert isinstance(vexp, Ncm.Model)
 
 
-def test_hubble_negative_dphi():
+def test_hubble_negative_dphi(vexp):
     """Test NcHICosmoVexp.hubble."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
     # Negative d_phi means matching Omega_L in the expansion
     # phase.
-    assert vexp.props.dphi < 0.0  # pylint: disable=no-member
-    assert_allclose(vexp.Omega_t0(), 1.0)
-    assert_allclose(vexp.E2(0.0), vexp.props.OmegaL)  # pylint: disable=no-member
+    if vexp.props.dphi < 0.0:  # pylint: disable=no-member
+        assert_allclose(vexp.Omega_t0(), 1.0)
+        assert_allclose(vexp.E2(0.0), vexp.props.OmegaL)  # pylint: disable=no-member
 
 
-def test_hubble_positive_dphi():
+def test_hubble_positive_dphi(vexp):
     """Test NcHICosmoVexp.hubble."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
     # Positive d_phi means matching Omega_c in the expansion
     # phase.
-    vexp.props.dphi = 1.0e-1  # pylint: disable=no-member
-    assert_allclose(vexp.Omega_t0(), 1.0)
-    assert_allclose(vexp.E2(0.0), vexp.props.Omegac)  # pylint: disable=no-member
+    if vexp.props.dphi > 0.0:  # pylint: disable=no-member
+        assert_allclose(vexp.Omega_t0(), 1.0)
+        assert_allclose(vexp.E2(0.0), vexp.props.Omegac)  # pylint: disable=no-member
 
 
-def test_tau_min_max():
+def test_tau_min_max(vexp):
     """Test NcHICosmoVexp.tau_min and NcHICosmoVexp.tau_max."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
     tau_min = vexp.tau_min()
@@ -88,9 +93,8 @@ def test_tau_min_max():
     assert tau_min < tau_max
 
 
-def test_tau_q():
+def test_tau_q(vexp):
     """Test NcHICosmoVexp.tau_q."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
     tau_min = vexp.tau_min()
@@ -110,9 +114,8 @@ def test_tau_q():
     assert tau_qt_e > 0.0
 
 
-def test_xb():
+def test_xb(vexp):
     """Test NcHICosmoVexp.xb."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
     xbc = vexp.xbc()
@@ -136,16 +139,15 @@ def _compute_tau_array(vexp, abs_tau_min=1.0e-10):
 
     tau_a = np.concatenate(
         (
-            np.geomspace(tau_min, -abs_tau_min, 1000),
-            np.geomspace(abs_tau_min, tau_max, 1000),
+            np.geomspace(tau_min, -abs_tau_min, 5000),
+            np.geomspace(abs_tau_min, tau_max, 5000),
         )
     )
     return tau_a
 
 
-def test_E_tau_negative_dphi():
+def test_E_tau_negative_dphi(vexp):
     """Test NcHICosmoVexp.E_tau."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
     tau_a = _compute_tau_array(vexp)
@@ -157,20 +159,18 @@ def test_E_tau_negative_dphi():
     tau0e = vexp.tau_xe(1.0)
 
     # Negative d_phi means matching Omega_L in the expansion phase.
-    assert vexp.props.dphi < 0.0  # pylint: disable=no-member
-    assert_allclose(
-        vexp.E_tau(tau0c) ** 2, vexp.props.Omegac  # pylint: disable=no-member
-    )
-    assert_allclose(
-        vexp.E_tau(tau0e) ** 2, vexp.props.OmegaL  # pylint: disable=no-member
-    )
+    if vexp.props.dphi < 0.0:  # pylint: disable=no-member
+        assert_allclose(
+            vexp.E_tau(tau0c) ** 2, vexp.props.Omegac  # pylint: disable=no-member
+        )
+        assert_allclose(
+            vexp.E_tau(tau0e) ** 2, vexp.props.OmegaL  # pylint: disable=no-member
+        )
 
 
-def test_E_tau_positive_dphi():
+def test_E_tau_positive_dphi(vexp):
     """Test NcHICosmoVexp.E_tau."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
-    vexp.props.dphi = 1.0e-1  # pylint: disable=no-member
 
     tau_a = _compute_tau_array(vexp)
 
@@ -181,17 +181,17 @@ def test_E_tau_positive_dphi():
     tau0e = vexp.tau_xe(1.0)
 
     # Positive d_phi means matching Omega_c in the expansion phase.
-    assert_allclose(
-        vexp.E_tau(tau0c) ** 2, vexp.props.OmegaL  # pylint: disable=no-member
-    )
-    assert_allclose(
-        vexp.E_tau(tau0e) ** 2, vexp.props.Omegac  # pylint: disable=no-member
-    )
+    if vexp.props.dphi > 0.0:  # pylint: disable=no-member
+        assert_allclose(
+            vexp.E_tau(tau0c) ** 2, vexp.props.OmegaL  # pylint: disable=no-member
+        )
+        assert_allclose(
+            vexp.E_tau(tau0e) ** 2, vexp.props.Omegac  # pylint: disable=no-member
+        )
 
 
-def test_Ricci_scale():
+def test_Ricci_scale(vexp):
     """Test NcHICosmoVexp.Ricci_scale."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
     tau_a = _compute_tau_array(vexp)
@@ -208,9 +208,8 @@ def test_Ricci_scale():
         assert Ricci_in_Hubble < 1.0e1
 
 
-def test_tau_x():
+def test_tau_x(vexp):
     """Test NcHICosmoVexp.tau_x."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
     xc_a = np.geomspace(1.0e-3, 1.03, 100)
@@ -222,9 +221,8 @@ def test_tau_x():
     assert_allclose([vexp.xe_tau(tau) for tau in tau_xe_a], xe_a, atol=1.0e-7)
 
 
-def test_serialize():
+def test_serialize(vexp):
     """Test NcHICosmoVexp serialization."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
     vexp.props.dphi = -1.234e-1  # pylint: disable=no-member
@@ -250,9 +248,8 @@ def test_serialize():
     assert vexp2.props.xb == vexp.props.xb  # pylint: disable=no-member
 
 
-def test_eval_at():
+def test_eval_at(vexp):
     """Evaluate NcHICosmoVexp at a given time."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
     tau_a = _compute_tau_array(vexp)
@@ -266,9 +263,8 @@ def test_eval_at():
         assert np.all(np.isfinite(vexp.x_y(tau)))
 
 
-def test_iadiab_eval_at():
+def test_iadiab_eval_at(vexp):
     """Evaluate NcHICosmoVexp implementation of NcHIPertAdiab at a given time."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
     tau_a = _compute_tau_array(vexp)
@@ -281,9 +277,8 @@ def test_iadiab_eval_at():
         assert np.isfinite(Nc.HIPertIAdiab.eval_xi(vexp, tau, k))
 
 
-def test_igw_eval_at():
+def test_igw_eval_at(vexp):
     """Evaluate NcHICosmoVexp implementation of NcHIPertIGW at a given time."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
     tau_a = _compute_tau_array(vexp)
@@ -296,9 +291,8 @@ def test_igw_eval_at():
         assert np.isfinite(Nc.HIPertIGW.eval_xi(vexp, tau, k))
 
 
-def test_iem_eval_at():
+def test_iem_eval_at(vexp):
     """Evaluate NcHICosmoVexp implementation of NcHIPertIEM at a given time."""
-    vexp = Nc.HICosmoVexp()
     assert vexp is not None
 
     tau_a = _compute_tau_array(vexp)
@@ -309,13 +303,3 @@ def test_iem_eval_at():
         assert np.isfinite(Nc.HIPertIEM.eval_m(vexp, tau, k))
         assert np.isfinite(Nc.HIPertIEM.eval_nu(vexp, tau, k))
         assert np.isfinite(Nc.HIPertIEM.eval_xi(vexp, tau, k))
-
-
-if __name__ == "__main__":
-    test_init()
-    test_hubble_negative_dphi()
-    test_hubble_positive_dphi()
-    test_tau_min_max()
-    test_tau_q()
-    test_xb()
-    test_tau_x()

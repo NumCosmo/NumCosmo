@@ -3129,11 +3129,6 @@ nc_hicosmo_Vexp_tau_xe (NcHICosmoVexp *Vexp, const gdouble xe)
     const gdouble log_xe = log (xe);
     const gdouble alpha  = Vexp->priv->alpha_0e - log_xe;
 
-    if (alpha < Vexp->priv->alpha_b)
-      g_warning ("nc_hicosmo_Vexp_tau_xe: too high value of xe = % 22.15g, "
-                 "using the maximum value = % 22.15g.",
-                 xe, exp (Vexp->priv->alpha_0e - Vexp->priv->alpha_b));
-
     /*
      * We need to test for alpha < Vexp->priv->alpha_b, the fabs is to avoid domain
      * problems when alpha is approximately equal to Vexp->priv->alpha_b.
