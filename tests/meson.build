@@ -507,7 +507,7 @@ if enable_gir
         numcosmo_source_dir,
     )
 
-    pytest_args = ['-m', 'pytest', '-s']
+    pytest_args = ['-m', 'pytest']
     pytest_protocol = 'exitcode'
 
     py_tap = python_module.find_installation(
