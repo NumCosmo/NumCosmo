@@ -320,6 +320,10 @@ python_tests = [
         'source': 'test_py_hipert_gw.py',
     },
     {
+        'name': 'py_de_cont',
+        'source': 'test_py_de_cont.py',
+    },
+    {
         'name': 'py_diff',
         'source': 'test_py_diff.py',
     },

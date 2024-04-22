@@ -190,3 +190,18 @@ def test_evolution_vexp_duplicate(pgw_vexp):
     vexp_dup = ser.dup_obj(vexp)
 
     test_evolution_vexp((pgw_dup, vexp_dup))
+
+
+def test_interface_eval_vexp(pgw_vexp):
+    """Test interface evaluation of NcHIPertAdiab."""
+    _, vexp = pgw_vexp
+
+    tau_a = np.linspace(vexp.tau_min() + 1.0, vexp.tau_max(), 1000)
+
+    assert np.isfinite(Nc.HIPertIGW.eval_unit(vexp))
+    for tau in tau_a:
+        assert np.isfinite(Nc.HIPertIGW.eval_F1(vexp, tau, 1.0))
+        assert np.isfinite(Nc.HIPertIGW.eval_m(vexp, tau, 1.0))
+        assert np.isfinite(Nc.HIPertIGW.eval_xi(vexp, tau, 1.0))
+        assert np.isfinite(Nc.HIPertIGW.eval_nu(vexp, tau, 1.0))
+        assert np.isfinite(Nc.HIPertIGW.eval_x(vexp, tau))
