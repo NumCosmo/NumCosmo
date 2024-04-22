@@ -37,7 +37,7 @@
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo_priors.h>
 #include <numcosmo/nc_powspec_ml.h>
-#include <numcosmo/nc_powspec_ml_fix_spline.h>
+#include <numcosmo/nc_powspec_ml_spline.h>
 #include <numcosmo/nc_powspec_ml_transfer.h>
 #include <numcosmo/nc_powspec_ml_cbe.h>
 #include <numcosmo/nc_powspec_mnl.h>
@@ -57,21 +57,22 @@
 #include <numcosmo/nc_hireion_camb.h>
 
 /* Perturbations */
-#include <numcosmo/perturbations/nc_hipert.h>
-#include <numcosmo/perturbations/nc_hipert_bg_var.h>
-#include <numcosmo/perturbations/nc_hipert_wkb.h>
-#include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 #include <numcosmo/perturbations/nc_hipert_adiab.h>
-#include <numcosmo/perturbations/nc_hipert_gw.h>
-#include <numcosmo/perturbations/nc_hipert_two_fluids.h>
-#include <numcosmo/perturbations/nc_hipert_boltzmann.h>
-#include <numcosmo/perturbations/nc_hipert_boltzmann_std.h>
+#include <numcosmo/perturbations/nc_hipert_bg_var.h>
 #include <numcosmo/perturbations/nc_hipert_boltzmann_cbe.h>
-#include <numcosmo/perturbations/nc_hipert_first_order.h>
-#include <numcosmo/perturbations/nc_hipert_grav.h>
-#include <numcosmo/perturbations/nc_hipert_grav_einstein.h>
-#include <numcosmo/perturbations/nc_hipert_comp.h>
+#include <numcosmo/perturbations/nc_hipert_boltzmann_std.h>
+#include <numcosmo/perturbations/nc_hipert_boltzmann.h>
 #include <numcosmo/perturbations/nc_hipert_comp_pb.h>
+#include <numcosmo/perturbations/nc_hipert_comp.h>
+#include <numcosmo/perturbations/nc_hipert_em.h>
+#include <numcosmo/perturbations/nc_hipert_first_order.h>
+#include <numcosmo/perturbations/nc_hipert_grav_einstein.h>
+#include <numcosmo/perturbations/nc_hipert_grav.h>
+#include <numcosmo/perturbations/nc_hipert_gw.h>
+#include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
+#include <numcosmo/perturbations/nc_hipert_two_fluids.h>
+#include <numcosmo/perturbations/nc_hipert_wkb.h>
+#include <numcosmo/perturbations/nc_hipert.h>
 
 /* Model implementations */
 #include <numcosmo/model/nc_acosmo_lowz.h>
@@ -87,6 +88,7 @@
 #include <numcosmo/model/nc_hicosmo_lcdm.h>
 #include <numcosmo/model/nc_hicosmo_qconst.h>
 #include <numcosmo/model/nc_hicosmo_qgrw.h>
+#include <numcosmo/model/nc_hicosmo_qgw.h>
 #include <numcosmo/model/nc_hicosmo_qlinear.h>
 #include <numcosmo/model/nc_hicosmo_qrbf.h>
 #include <numcosmo/model/nc_hicosmo_qspline.h>
@@ -96,6 +98,7 @@
 #include <numcosmo/model/nc_hiprim_expc.h>
 #include <numcosmo/model/nc_hiprim_power_law.h>
 #include <numcosmo/model/nc_hiprim_sbpl.h>
+#include <numcosmo/nc_de_cont.h>
 
 /* Large Scale Structure / Structure Formation */
 #include <numcosmo/lss/nc_window.h>
