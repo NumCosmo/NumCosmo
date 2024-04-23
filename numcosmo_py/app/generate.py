@@ -47,8 +47,10 @@ from numcosmo_py.experiments.jpas_forecast24 import (
 
 @dataclasses.dataclass
 class GeneratePlanck:
-    """Common block for commands that load an experiment. All commands that load an
-    experiment should inherit from this class."""
+    """Common block for commands that load an experiment.
+
+    All commands that load an experiment should inherit from this class.
+    """
 
     experiment: Annotated[
         Path, typer.Argument(help="Path to the experiment file to fit.")
@@ -64,7 +66,6 @@ class GeneratePlanck:
 
     def __post_init__(self):
         """Generate Planck 2018 TT baseline experiment."""
-
         Ncm.cfg_init()
 
         if self.experiment.suffix != ".yaml":
@@ -97,8 +98,10 @@ class GeneratePlanck:
 
 @dataclasses.dataclass
 class GenerateJpasForecast:
-    """Common block for commands that load an experiment. All commands that load an
-    experiment should inherit from this class."""
+    """Common block for commands that load an experiment.
+
+    All commands that load an experiment should inherit from this class.
+    """
 
     experiment: Annotated[
         Path, typer.Argument(help="Path to the experiment file to fit.")
@@ -209,7 +212,6 @@ class GenerateJpasForecast:
 
     def __post_init__(self):
         """Generate JPAS 2024 forecast experiment."""
-
         Ncm.cfg_init()
 
         if self.experiment.suffix != ".yaml":

@@ -193,6 +193,11 @@ HIPRIM_SBPL_DEFAULT_N_SA: float = 0.9742
 HIPRIM_SBPL_DEFAULT_N_T: float = 0.0
 HIPRIM_SBPL_DEFAULT_RA: float = 0.8
 HIPRIM_SBPL_DEFAULT_T_SA_RATIO: float = 0.2
+HIPRIM_TWO_FLUIDS_DEFAULT_LN10E10ASA: float = 3.179
+HIPRIM_TWO_FLUIDS_DEFAULT_LNK0: float = 0.0
+HIPRIM_TWO_FLUIDS_DEFAULT_LNW: int = 0
+HIPRIM_TWO_FLUIDS_DEFAULT_N_T: float = 0.0
+HIPRIM_TWO_FLUIDS_DEFAULT_T_SA_RATIO: float = 0.2
 HIREION_CAMB_DEFAULT_HEIII_REION_DELTA: float = 0.5
 HIREION_CAMB_DEFAULT_HEIII_Z: float = 3.5
 HIREION_CAMB_DEFAULT_HII_HEII_REION_DELTA: float = 0.5
@@ -11532,8 +11537,19 @@ class HIPertTwoFluids(HIPert):
     ): ...
     @staticmethod
     def clear(ptf: HIPertTwoFluids) -> None: ...
+    def compute_zeta_spectrum(
+        self,
+        cosmo: HICosmo,
+        mode: int,
+        alpha_i: float,
+        alpha: float,
+        ki: float,
+        kf: float,
+        nnodes: int,
+    ) -> NumCosmoMath.Spline: ...
     def eom(self, cosmo: HICosmo, alpha: float) -> HIPertITwoFluidsEOM: ...
     def evolve(self, cosmo: HICosmo, alphaf: float) -> None: ...
+    def evolve_array(self, cosmo: HICosmo, alphaf: float) -> NumCosmoMath.Matrix: ...
     def evolve_mode1sub(self, cosmo: HICosmo, alphaf: float) -> None: ...
     def free(self) -> None: ...
     def get_cross_time(
@@ -12475,6 +12491,136 @@ class HIPrimSBPLClass(GObject.GPointer):
     ::
 
         HIPrimSBPLClass()
+    """
+
+    parent_class: HIPrimClass = ...
+
+class HIPrimTwoFluids(HIPrim):
+    r"""
+    :Constructors:
+
+    ::
+
+        HIPrimTwoFluids(**properties)
+        new() -> NumCosmo.HIPrimTwoFluids
+
+    Object NcHIPrimTwoFluids
+
+    Properties from NcHIPrimTwoFluids:
+      lnk-lnw-spline -> NcmSpline2d: lnk-lnw-spline
+        Spline for the primordial adiabatic scalar power spectrum as a function of ln(k) and ln(w)
+      use-default-calib -> gboolean: use-default-calib
+        Use default calibration
+      ln10e10ASA -> gdouble: ln10e10ASA
+        \log(10^{10}A_{\mathrm{SA}})
+      T-SA-ratio -> gdouble: T-SA-ratio
+        A_T/A_{\mathrm{SA}}
+      lnk0 -> gdouble: lnk0
+        \ln(k_0)
+      lnw -> gdouble: lnw
+        \ln(w)
+      n-T -> gdouble: n-T
+        n_{\mathrm{T}}
+      ln10e10ASA-fit -> gboolean: ln10e10ASA-fit
+        \log(10^{10}A_{\mathrm{SA}}):fit
+      T-SA-ratio-fit -> gboolean: T-SA-ratio-fit
+        A_T/A_{\mathrm{SA}}:fit
+      lnk0-fit -> gboolean: lnk0-fit
+        \ln(k_0):fit
+      lnw-fit -> gboolean: lnw-fit
+        \ln(w):fit
+      n-T-fit -> gboolean: n-T-fit
+        n_{\mathrm{T}}:fit
+
+    Properties from NcHIPrim:
+      k-pivot -> gdouble: k-pivot
+        Pivotal value of k
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        T_SA_ratio: float
+        T_SA_ratio_fit: bool
+        ln10e10ASA: float
+        ln10e10ASA_fit: bool
+        lnk_lnw_spline: NumCosmoMath.Spline2d
+        lnk0: float
+        lnk0_fit: bool
+        lnw: float
+        lnw_fit: bool
+        n_T: float
+        n_T_fit: bool
+        use_default_calib: bool
+        k_pivot: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: HIPrim = ...
+    def __init__(
+        self,
+        T_SA_ratio: float = ...,
+        T_SA_ratio_fit: bool = ...,
+        ln10e10ASA: float = ...,
+        ln10e10ASA_fit: bool = ...,
+        lnk_lnw_spline: NumCosmoMath.Spline2d = ...,
+        lnk0: float = ...,
+        lnk0_fit: bool = ...,
+        lnw: float = ...,
+        lnw_fit: bool = ...,
+        n_T: float = ...,
+        n_T_fit: bool = ...,
+        use_default_calib: bool = ...,
+        k_pivot: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
+    def get_use_default_calib(self) -> bool: ...
+    @classmethod
+    def new(cls) -> HIPrimTwoFluids: ...
+    def peek_lnk_lnw_spline(self) -> NumCosmoMath.Spline2d: ...
+    def set_lnk_lnw_spline(
+        self, lnSA_powspec_lnk_lnw: NumCosmoMath.Spline2d
+    ) -> None: ...
+    def set_use_default_calib(self, use_default_calib: bool) -> None: ...
+
+class HIPrimTwoFluidsClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HIPrimTwoFluidsClass()
     """
 
     parent_class: HIPrimClass = ...
@@ -18902,6 +19048,13 @@ class HIPrimSBPLSParams(GObject.GEnum):
     N_T: HIPrimSBPLSParams = ...
     RA: HIPrimSBPLSParams = ...
     T_SA_RATIO: HIPrimSBPLSParams = ...
+
+class HIPrimTwoFluidsSParams(GObject.GEnum):
+    LN10E10ASA: HIPrimTwoFluidsSParams = ...
+    LNK0: HIPrimTwoFluidsSParams = ...
+    LNW: HIPrimTwoFluidsSParams = ...
+    N_T: HIPrimTwoFluidsSParams = ...
+    T_SA_RATIO: HIPrimTwoFluidsSParams = ...
 
 class HIReionCambSParams(GObject.GEnum):
     HEIII_Z: HIReionCambSParams = ...

@@ -1,13 +1,13 @@
 /***************************************************************************
  *            nc_hiprim_two_fluids.h
  *
- *  Tue October 27 14:14:03 2015
- *  Copyright  2015  Sandro Dias Pinto Vitenti
+ *  Tue Apr 23 11:14:19 2024
+ *  Copyright  2024  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hiprim_two_fluids.h
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -52,8 +52,8 @@ typedef struct _NcHIPrimTwoFluids NcHIPrimTwoFluids;
  * @NC_HIPRIM_TWO_FLUIDS_LNW: Logarithm of the equation of state parameter $w$.
  * @NC_HIPRIM_TWO_FLUIDS_N_T: Spectral index of the tensor power spectrum.
  *
- * Parameters for the two fluids primordial power spectrum. 
- * 
+ * Parameters for the two fluids primordial power spectrum.
+ *
  */
 typedef enum /*< enum,underscore_name=NC_HIPRIM_TWO_FLUIDS_SPARAMS >*/
 {
@@ -76,7 +76,6 @@ struct _NcHIPrimTwoFluids
 {
   /*< private >*/
   NcHIPrim parent_instance;
-
 };
 
 GType nc_hiprim_two_fluids_get_type (void) G_GNUC_CONST;
@@ -89,9 +88,13 @@ GType nc_hiprim_two_fluids_get_type (void) G_GNUC_CONST;
 
 NcHIPrimTwoFluids *nc_hiprim_two_fluids_new (void);
 
+void nc_hiprim_two_fluids_set_use_default_calib (NcHIPrimTwoFluids *two_fluids, gboolean use_default_calib);
+gboolean nc_hiprim_two_fluids_get_use_default_calib (NcHIPrimTwoFluids *two_fluids);
+
 void nc_hiprim_two_fluids_set_lnk_lnw_spline (NcHIPrimTwoFluids *two_fluids, NcmSpline2d *lnSA_powspec_lnk_lnw);
 NcmSpline2d *nc_hiprim_two_fluids_peek_lnk_lnw_spline (NcHIPrimTwoFluids *two_fluids);
 
 G_END_DECLS
 
 #endif /* _NC_HIPRIM_TWO_FLUIDS_H_ */
+

@@ -38,9 +38,8 @@ class Planck18Types(str, Enum):
 EXP_PARAMETERS: dict[str, dict[str, float]] = {
     Planck18Types.TT: {
         "NcHICosmo:H0": 66.86,
-        "NcHICosmo:Omegac": 0.12068 / 0.6686**2,
-        "NcHICosmo:Omegab": 0.022126 / 0.6686**2,
-        "NcHICosmo:w": -1.0,
+        "NcHICosmo:omegac": 0.12068,
+        "NcHICosmo:omegab": 0.022126,
         "NcHIPrim:ln10e10ASA": 3.0413,
         "NcHIPrim:n_SA": 0.9635,
         "NcHIReion:z_re": 7.54,
@@ -62,9 +61,8 @@ EXP_PARAMETERS: dict[str, dict[str, float]] = {
     },
     Planck18Types.TTTEEE: {
         "NcHICosmo:H0": 67.32,
-        "NcHICosmo:Omegac": 0.12010 / 0.6732**2,
-        "NcHICosmo:Omegab": 0.022377 / 0.6732**2,
-        "NcHICosmo:w": -1.0,
+        "NcHICosmo:omegac": 0.12010,
+        "NcHICosmo:omegab": 0.022377,
         "NcHIPrim:ln10e10ASA": 3.0447,
         "NcHIPrim:n_SA": 0.96589,
         "NcHIReion:z_re": 7.68,
@@ -108,10 +106,10 @@ def create_cosmo_for_cmb(massive_nu: bool = False) -> Nc.HICosmo:
         cosmo = Nc.HICosmoDEXcdm()
 
     cosmo.params_set_default_ftype()
-    cosmo.omega_x2omega_k()
+    cosmo.cmb_params()
     cosmo.param_set_by_name("H0", 70.0)
-    cosmo.param_set_by_name("Omegab", 0.05)
-    cosmo.param_set_by_name("Omegac", 0.25)
+    cosmo.param_set_by_name("omegab", 0.022)
+    cosmo.param_set_by_name("omegac", 0.12)
 
     if massive_nu:
         cosmo.orig_param_set(Nc.HICosmoDESParams.ENNU, 2.0328)
@@ -121,7 +119,7 @@ def create_cosmo_for_cmb(massive_nu: bool = False) -> Nc.HICosmo:
     cosmo.set_property("H0_fit", True)
     cosmo.set_property("Omegac_fit", True)
     cosmo.set_property("Omegab_fit", True)
-    cosmo.set_property("w_fit", True)
+    cosmo.set_property("w_fit", False)
     cosmo.param_set_by_name("Omegak", 0.00)
     cosmo.set_property("Omegax_fit", False)
 
