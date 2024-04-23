@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * nc_hipert_gw.c
- * Copyright (C) 2014 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2016 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -26,31 +26,11 @@
 /**
  * SECTION:nc_hipert_gw
  * @title: NcHIPertGW
- * @short_description: Perturbation object for gwatic mode only.
+ * @short_description: Perturbation object for gravitational wave mode.
  *
- * This object provides the computation of the gwatic mode for the cosmological
- * perturbations. It solves the equation of motion for the gauge invariant variable
- * (see [Vitenti (2013)][XVitenti2013] for notation and details)
- * $$\zeta \equiv \Psi - \frac{2\bar{K}}{\kappa(\bar{\rho} + \bar{p})} + H\mathcal{V}.$$
- * Its conjugated momentum is give by
- * \begin{split}
- * P_\zeta &= \frac{2\bar{D}^2_\bar{K}\Psi}{x^3H},
- * \end{split}
- *
- * The equations of motion in their first order form are
- * \begin{align}
- * \zeta^\prime &= \frac{P_\zeta}{m_\zeta}, \\\\
- * P_\zeta^\prime &= -m_\zeta\mu_\zeta^2\zeta.
- * \end{align}
- * The mass $m_\zeta$ and the frequency $\mu_\zeta$ are defined by
- * \begin{align}
- * m_\zeta     &= \frac{3\Delta_\bar{K}(\bar{\rho} + \bar{p})}{\rho_\text{crit0} N x^3 c_s^2 E^2}, \\\\
- * \mu_\zeta^2 &= x^2N^2c_s^2k^2,
- * \end{align}
- * where $\bar{\rho} + \bar{p}$ is the background total energy density plus pressure,
- * $E^2 = H^2/H_0^2$ is the dimensionless Hubble function squared (nc_hicosmo_E2()), $c_s^2$ the speed of sound,
- * $N$ is the lapse function that in this case (using $\alpha$ as time variable) is $N \equiv \vert{}E\vert^{-1}$, $\rho_\text{crit0}$
- * is the critical density today defined by $\rho_\text{crit0} \equiv 3H_0^2/\kappa$ and $$\Delta_\bar{K} \equiv \frac{k^2}{k^2 + \Omega_{k0}}.$$
+ * This object provides the computation of the gravitational wave mode for the
+ * cosmological perturbations. It solves the equation of motion for the gauge invariant
+ * variable $h$.
  *
  */
 
@@ -68,82 +48,85 @@
 #include <gsl/gsl_roots.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_INTERFACE (NcHIPertIGW, nc_hipert_igw, G_TYPE_OBJECT)
+struct _NcHIPertGW
+{
+  NcmCSQ1D parent_instance;
+  gdouble k;
+};
 
-static guint _nc_hipert_igw_nsing (NcHIPertIGW *igw, const gdouble k) { return 0; }
-static void _nc_hipert_igw_get_sing_info (NcHIPertIGW *igw, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st) { g_error ("_nc_hipert_igw_get_sing_info: no singularity implemented."); return; }
-static gdouble _nc_hipert_igw_eval_sing_mnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing) { g_error ("_nc_hipert_igw_eval_sing_mnu: no singularity implemented."); return 0.0; }
-static gdouble _nc_hipert_igw_eval_sing_dlnmnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing) { g_error ("_nc_hipert_igw_eval_sing_dlnmnu: no singularity implemented."); return 0.0; }
-static void _nc_hipert_igw_eval_sing_system (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu) { g_error ("_nc_hipert_igw_eval_sing_system: no singularity implemented."); }
-static gdouble _nc_hipert_igw_eval_powspec_factor (NcHIPertIGW *igw);
+G_DEFINE_INTERFACE (NcHIPertIGW, nc_hipert_igw, G_TYPE_OBJECT)
+G_DEFINE_TYPE (NcHIPertGW, nc_hipert_gw, NCM_TYPE_CSQ1D)
+
+static gdouble _nc_hipert_igw_eval_unit (NcHIPertIGW *igw);
 
 static void
 nc_hipert_igw_default_init (NcHIPertIGWInterface *iface)
 {
-  iface->eval_mnu         = NULL;
-  iface->eval_nu          = NULL;
-  iface->eval_dlnmnu      = NULL;
-  iface->eval_system      = NULL;
-
-  iface->nsing            = &_nc_hipert_igw_nsing;
-  iface->get_sing_info    = &_nc_hipert_igw_get_sing_info;
-  iface->eval_sing_mnu    = &_nc_hipert_igw_eval_sing_mnu;
-  iface->eval_sing_dlnmnu = &_nc_hipert_igw_eval_sing_dlnmnu;
-  iface->eval_sing_system = &_nc_hipert_igw_eval_sing_system;
-
-	iface->eval_powspec_factor = &_nc_hipert_igw_eval_powspec_factor;
+  iface->eval_xi   = NULL;
+  iface->eval_F1   = NULL;
+  iface->eval_nu   = NULL;
+  iface->eval_m    = NULL;
+  iface->eval_unit = NULL;
 }
 
-G_DEFINE_TYPE (NcHIPertGW, nc_hipert_gw, NCM_TYPE_HOAA)
-
-enum {
+enum
+{
   PROP_0,
+  PROP_K,
   PROP_SIZE,
 };
 
 typedef struct _NcHIPertGWArg
 {
   NcHICosmo *cosmo;
-  NcHIPertGW *pa;
+  NcHIPertGW *pgw;
 } NcHIPertGWArg;
 
 static void
-nc_hipert_gw_init (NcHIPertGW *pa)
+nc_hipert_gw_init (NcHIPertGW *pgw)
 {
+  pgw->k = 0.0;
 }
 
 static void
 _nc_hipert_gw_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  /* NcHIPertGW *pa = NC_HIPERT_GW (object); */
+  NcHIPertGW *pgw = NC_HIPERT_GW (object);
+
   g_return_if_fail (NC_IS_HIPERT_GW (object));
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    case PROP_K:
+      nc_hipert_gw_set_k (pgw, g_value_get_double (value));
       break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
 static void
 _nc_hipert_gw_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  /* NcHIPertGW *pa = NC_HIPERT_GW (object); */
+  /* NcHIPertGW *pgw = NC_HIPERT_GW (object); */
   g_return_if_fail (NC_IS_HIPERT_GW (object));
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    case PROP_K:
+      g_value_set_double (value, nc_hipert_gw_get_k (NC_HIPERT_GW (object)));
       break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
 static void
 _nc_hipert_gw_dispose (GObject *object)
 {
-  /*NcHIPertGW *pa = NC_HIPERT_GW (object);*/
+  /*NcHIPertGW *pgw = NC_HIPERT_GW (object);*/
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_gw_parent_class)->dispose (object);
@@ -152,208 +135,176 @@ _nc_hipert_gw_dispose (GObject *object)
 static void
 _nc_hipert_gw_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_gw_parent_class)->finalize (object);
 }
 
-static gdouble _nc_hipert_gw_eval_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _nc_hipert_gw_eval_nu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k);
-static gdouble _nc_hipert_gw_eval_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k);
-static void _nc_hipert_gw_eval_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
-
-static guint _nc_hipert_gw_nsing (NcmHOAA *hoaa, NcmModel *model, const gdouble k);
-static void _nc_hipert_gw_get_sing_info (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st);
-static gdouble _nc_hipert_gw_eval_sing_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing);
-static gdouble _nc_hipert_gw_eval_sing_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing);
-static void _nc_hipert_gw_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
-
-static gdouble _nc_hipert_adiab_eval_powspec_factor (NcmHOAA *hoaa, NcmModel *model);
-
-static void _nc_hipert_gw_prepare (NcmHOAA *hoaa, NcmModel *model);
+static gdouble _nc_hipert_gw_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
+static gdouble _nc_hipert_gw_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
+static gdouble _nc_hipert_gw_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
+static gdouble _nc_hipert_gw_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
+static void _nc_hipert_gw_prepare (NcmCSQ1D *csq1d, NcmModel *model);
 
 static void
 nc_hipert_gw_class_init (NcHIPertGWClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  NcmHOAAClass *hoaa_class   = NCM_HOAA_CLASS (klass);
+  NcmCSQ1DClass *csq1d_class = NCM_CSQ1D_CLASS (klass);
 
   object_class->set_property = &_nc_hipert_gw_set_property;
   object_class->get_property = &_nc_hipert_gw_get_property;
   object_class->dispose      = &_nc_hipert_gw_dispose;
   object_class->finalize     = &_nc_hipert_gw_finalize;
 
-  hoaa_class->eval_mnu    = &_nc_hipert_gw_eval_mnu;
-  hoaa_class->eval_nu     = &_nc_hipert_gw_eval_nu;
-  hoaa_class->eval_dlnmnu = &_nc_hipert_gw_eval_dlnmnu;
-  hoaa_class->eval_V      = NULL;
-  hoaa_class->eval_system = &_nc_hipert_gw_eval_system;
-  hoaa_class->prepare     = &_nc_hipert_gw_prepare;
+  g_object_class_install_property (object_class,
+                                   PROP_K,
+                                   g_param_spec_double ("k",
+                                                        NULL,
+                                                        "Wave number",
+                                                        0.0, G_MAXDOUBLE, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  hoaa_class->nsing            = &_nc_hipert_gw_nsing;
-  hoaa_class->get_sing_info    = &_nc_hipert_gw_get_sing_info;
-  hoaa_class->eval_sing_mnu    = &_nc_hipert_gw_eval_sing_mnu;
-  hoaa_class->eval_sing_dlnmnu = &_nc_hipert_gw_eval_sing_dlnmnu;
-  hoaa_class->eval_sing_V      = NULL;
-  hoaa_class->eval_sing_system = &_nc_hipert_gw_eval_sing_system;
-
-	hoaa_class->eval_powspec_factor = &_nc_hipert_adiab_eval_powspec_factor;
+  csq1d_class->eval_xi = &_nc_hipert_gw_eval_xi;
+  csq1d_class->eval_F1 = &_nc_hipert_gw_eval_F1;
+  csq1d_class->eval_nu = &_nc_hipert_gw_eval_nu;
+  csq1d_class->eval_m  = &_nc_hipert_gw_eval_m;
+  csq1d_class->prepare = &_nc_hipert_gw_prepare;
 }
 
-static gdouble 
-_nc_hipert_gw_eval_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k)
+static gdouble
+_nc_hipert_gw_eval_xi (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  return nc_hipert_igw_eval_mnu (NC_HIPERT_IGW (model), t, k);  
+  NcHIPertGW *pgw = NC_HIPERT_GW (csq1d);
+  const gdouble k = pgw->k;
+
+  return nc_hipert_igw_eval_xi (NC_HIPERT_IGW (model), t, k);
 }
 
-static gdouble 
-_nc_hipert_gw_eval_nu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k)
+static gdouble
+_nc_hipert_gw_eval_F1 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
+  NcHIPertGW *pgw = NC_HIPERT_GW (csq1d);
+  const gdouble k = pgw->k;
+
+  return nc_hipert_igw_eval_F1 (NC_HIPERT_IGW (model), t, k);
+}
+
+static gdouble
+_nc_hipert_gw_eval_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
+{
+  NcHIPertGW *pgw = NC_HIPERT_GW (csq1d);
+  const gdouble k = pgw->k;
+
   return nc_hipert_igw_eval_nu (NC_HIPERT_IGW (model), t, k);
 }
 
-static gdouble 
-_nc_hipert_gw_eval_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k)
+static gdouble
+_nc_hipert_gw_eval_m (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
-  return nc_hipert_igw_eval_dlnmnu (NC_HIPERT_IGW (model), t, k);
+  NcHIPertGW *pgw = NC_HIPERT_GW (csq1d);
+  const gdouble k = pgw->k;
+
+  return nc_hipert_igw_eval_m (NC_HIPERT_IGW (model), t, k);
 }
 
-static void 
-_nc_hipert_gw_eval_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu)
-{
-  Vnu[0] = 0.0;  
-  nc_hipert_igw_eval_system (NC_HIPERT_IGW (model), t, k, nu, dlnmnu);
-}
-
-static void 
-_nc_hipert_gw_prepare (NcmHOAA *hoaa, NcmModel *model)
+static void
+_nc_hipert_gw_prepare (NcmCSQ1D *csq1d, NcmModel *model)
 {
   g_assert (NC_IS_HIPERT_IGW (model));
 }
 
-static guint 
-_nc_hipert_gw_nsing (NcmHOAA *hoaa, NcmModel *model, const gdouble k)
-{
-  return nc_hipert_igw_nsing (NC_HIPERT_IGW (model), k);
-}
-
-static void 
-_nc_hipert_gw_get_sing_info (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st)
-{
-  nc_hipert_igw_get_sing_info (NC_HIPERT_IGW (model), k, sing, ts, dts_i, dts_f, st);
-}
-
-static gdouble 
-_nc_hipert_gw_eval_sing_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing)
-{
-  return nc_hipert_igw_eval_sing_mnu (NC_HIPERT_IGW (model), t_m_ts, k, sing);
-}
-
-static gdouble 
-_nc_hipert_gw_eval_sing_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing)
-{
-  return nc_hipert_igw_eval_sing_dlnmnu (NC_HIPERT_IGW (model), t_m_ts, k, sing);
-}
-
-static void 
-_nc_hipert_gw_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu)
-{
-  Vnu[0] = 0.0;
-  nc_hipert_igw_eval_sing_system (NC_HIPERT_IGW (model), t_m_ts, k, sing, nu, dlnmnu);
-}
-
-static gdouble
-_nc_hipert_adiab_eval_powspec_factor (NcmHOAA *hoaa, NcmModel *model)
-{
-	return nc_hipert_igw_eval_powspec_factor (NC_HIPERT_IGW (model));
-}
-
-static gdouble 
-_nc_hipert_igw_eval_powspec_factor (NcHIPertIGW *igw) 
-{ 
-	g_assert (NC_IS_HICOSMO (igw));
-	{
-		NcHICosmo *cosmo    = NC_HICOSMO (igw);
-		const gdouble RH_lp = nc_hicosmo_RH_planck (cosmo);
-		return 16.0 / (M_PI * gsl_pow_2 (RH_lp));
-	}
-}
-
 /**
- * nc_hipert_igw_eval_mnu:
+ * nc_hipert_igw_eval_xi:
  * @igw: a #NcHIPertIGW
  * @tau: $\tau$
  * @k: $k$
  *
- * FIXME
+ * Computes the value of $\xi = \ln(m\nu)$
  *
- * Returns: FIXME.
+ * Returns: $\xi$.
  */
+
+gdouble
+nc_hipert_igw_eval_xi (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
+{
+  return NC_HIPERT_IGW_GET_IFACE (igw)->eval_xi (igw, tau, k);
+}
+
+/**
+ * nc_hipert_igw_eval_F1:
+ * @igw: a #NcHIPertIGW
+ * @tau: $\tau$
+ * @k: $k$
+ *
+ * Computes the value of $F_1 = \dot{\xi}/(2\nu)$.
+ *
+ * Returns: $F_1$.
+ */
+
+gdouble
+nc_hipert_igw_eval_F1 (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
+{
+  return NC_HIPERT_IGW_GET_IFACE (igw)->eval_F1 (igw, tau, k);
+}
+
 /**
  * nc_hipert_igw_eval_nu:
  * @igw: a #NcHIPertIGW
  * @tau: $\tau$
  * @k: $k$
  *
- * FIXME
+ * Computes the value of $\nu$.
  *
- * Returns: FIXME.
+ * Returns: $\nu$.
  */
+gdouble
+nc_hipert_igw_eval_nu (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
+{
+  return NC_HIPERT_IGW_GET_IFACE (igw)->eval_nu (igw, tau, k);
+}
+
 /**
- * nc_hipert_igw_eval_dlnmnu:
+ * nc_hipert_igw_eval_m:
  * @igw: a #NcHIPertIGW
  * @tau: $\tau$
  * @k: $k$
  *
+ * Computes the value of $m$.
+ *
+ * Returns: $m$.
+ */
+gdouble
+nc_hipert_igw_eval_m (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
+{
+  return NC_HIPERT_IGW_GET_IFACE (igw)->eval_m (igw, tau, k);
+}
+
+/**
+ * nc_hipert_igw_eval_unit:
+ * @igw: a #NcHIPertIGW
+ *
  * FIXME
  *
  * Returns: FIXME.
  */
+gdouble
+nc_hipert_igw_eval_unit (NcHIPertIGW *igw)
+{
+  return NC_HIPERT_IGW_GET_IFACE (igw)->eval_unit (igw);
+}
+
 /**
- * nc_hipert_igw_eval_system:
+ * nc_hipert_igw_eval_x:
  * @igw: a #NcHIPertIGW
  * @tau: $\tau$
- * @k: $k$
- * @nu: (out): $\nu$
- * @dlnmnu: (out): FIXME
  *
- * FIXME
- *
+ * Evaluates the value of $x = a_0 / a$ at a given time $\tau$.
  */
-/**
- * nc_hipert_igw_eval_sing_mnu:
- * @igw: a #NcHIPertIGW
- * @tau_m_taus: $\tau - \tau_s$ 
- * @k: $k$
- * @sing: singularity index
- *
- * FIXME
- *
- * Returns: FIXME.
- */
-/**
- * nc_hipert_igw_eval_sing_dlnmnu:
- * @igw: a #NcHIPertIGW
- * @tau_m_taus: $\tau - \tau_s$ 
- * @k: $k$
- * @sing: singularity index
- *
- * FIXME
- *
- * Returns: FIXME.
- */
-/**
- * nc_hipert_igw_eval_sing_system:
- * @igw: a #NcHIPertIGW
- * @tau_m_taus: $\tau - \tau_s$ 
- * @k: $k$
- * @sing: singularity index
- * @nu: (out): FIXME
- * @dlnmnu: (out): FIXME
- *
- * FIXME
- *
- */
+gdouble
+nc_hipert_igw_eval_x (NcHIPertIGW *igw, const gdouble tau)
+{
+  return NC_HIPERT_IGW_GET_IFACE (igw)->eval_x (igw, tau);
+}
 
 /**
  * nc_hipert_gw_new:
@@ -365,48 +316,77 @@ _nc_hipert_igw_eval_powspec_factor (NcHIPertIGW *igw)
 NcHIPertGW *
 nc_hipert_gw_new (void)
 {
-  NcHIPertGW *pa = g_object_new (NC_TYPE_HIPERT_GW,
-                                    "opt", NCM_HOAA_OPT_DLNMNU_ONLY,
-                                    NULL);
-  return pa;
+  NcHIPertGW *pgw = g_object_new (NC_TYPE_HIPERT_GW,
+                                  NULL);
+
+  return pgw;
 }
 
 /**
  * nc_hipert_gw_ref:
- * @pa: a #NcHIPertGW.
+ * @pgw: a #NcHIPertGW
  *
- * Increases the reference count of @pa.
+ * Increases the reference count of @pgw.
  *
- * Returns: (transfer full): @pa.
+ * Returns: (transfer full): @pgw.
  */
 NcHIPertGW *
-nc_hipert_gw_ref (NcHIPertGW *pa)
+nc_hipert_gw_ref (NcHIPertGW *pgw)
 {
-  return g_object_ref (pa);
+  return g_object_ref (pgw);
 }
 
 /**
  * nc_hipert_gw_free:
- * @pa: a #NcHIPertGW.
+ * @pgw: a #NcHIPertGW
  *
- * Decreases the reference count of @pa.
+ * Decreases the reference count of @pgw.
  *
  */
 void
-nc_hipert_gw_free (NcHIPertGW *pa)
+nc_hipert_gw_free (NcHIPertGW *pgw)
 {
-  g_object_unref (pa);
+  g_object_unref (pgw);
 }
 
 /**
  * nc_hipert_gw_clear:
- * @pa: a #NcHIPertGW.
+ * @pgw: a #NcHIPertGW
  *
- * Decreases the reference count of *@pa and sets *@pa to NULL.
+ * Decreases the reference count of *@pgw and sets *@pgw to NULL.
  *
  */
 void
-nc_hipert_gw_clear (NcHIPertGW **pa)
+nc_hipert_gw_clear (NcHIPertGW **pgw)
 {
-  g_clear_object (pa);
+  g_clear_object (pgw);
 }
+
+/**
+ * nc_hipert_gw_set_k:
+ * @pgw: a #NcHIPertGW
+ * @k: the mode $k$
+ *
+ * Sets the mode $k$ for the gravitational wave perturbation mode.
+ *
+ */
+void
+nc_hipert_gw_set_k (NcHIPertGW *pgw, const gdouble k)
+{
+  pgw->k = k;
+}
+
+/**
+ * nc_hipert_gw_get_k:
+ * @pgw: a #NcHIPertGW
+ *
+ * Returns the mode $k$ for the gravitational wave perturbation mode.
+ *
+ * Returns: the mode $k$.
+ */
+gdouble
+nc_hipert_gw_get_k (NcHIPertGW *pgw)
+{
+  return pgw->k;
+}
+
