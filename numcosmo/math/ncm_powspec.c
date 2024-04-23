@@ -685,7 +685,7 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
 /**
  * ncm_powspec_prepare:
  * @powspec: a #NcmPowspec
- * @model: a #NcmModel
+ * @model: (allow-none): a #NcmModel
  *
  * Prepares the power spectrum @powspec using the model @model.
  *
@@ -700,7 +700,7 @@ ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model)
 /**
  * ncm_powspec_prepare_if_needed:
  * @powspec: a #NcmPowspec
- * @model: a #NcmModel
+ * @model: (allow-none): a #NcmModel
  *
  * Prepares the object @powspec using the model @model if it was changed
  * since last preparation.
@@ -719,7 +719,7 @@ ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model)
 /**
  * ncm_powspec_eval:
  * @powspec: a #NcmPowspec
- * @model: a #NcmModel
+ * @model: (allow-none): a #NcmModel
  * @z: time $z$
  * @k: mode $k$
  *
@@ -736,10 +736,10 @@ ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const g
 /**
  * ncm_powspec_eval_vec:
  * @powspec: a #NcmPowspec
- * @model: a #NcmModel
+ * @model: (allow-none): a #NcmModel
  * @z: time $z$
  * @k: a #NcmVector
- * @Pk: (out caller-allocates): a #NcmVector
+ * @Pk: a #NcmVector
  *
  * Evaluates the power spectrum @powspec at $z$ and in the knots
  * contained in @k and puts the result in @Pk.
@@ -754,7 +754,7 @@ ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, Ncm
 /**
  * ncm_powspec_get_spline_2d:
  * @powspec: a #NcmPowspec
- * @model: a #NcmModel compatible with @powspec
+ * @model: (allow-none): a #NcmModel
  *
  * Compute a 2D spline for the power spectrum.
  *
@@ -810,7 +810,7 @@ _ncm_powspec_var_tophat_R_integ (gpointer user_data, gdouble lnk, gdouble weight
 /**
  * ncm_powspec_var_tophat_R:
  * @powspec: a #NcmPowspec
- * @model: a #NcmModel
+ * @model: (allow-none): a #NcmModel
  * @reltol: relative tolerance for integration
  * @z: the value of $z$
  * @R: the value of $R$
@@ -851,7 +851,7 @@ ncm_powspec_var_tophat_R (NcmPowspec *powspec, NcmModel *model, const gdouble re
 /**
  * ncm_powspec_sigma_tophat_R:
  * @powspec: a #NcmPowspec
- * @model: a #NcmModel
+ * @model: (allow-none): a #NcmModel
  * @reltol: relative tolerance for integration
  * @z: the value of $z$
  * @R: the value of $R$
@@ -881,7 +881,7 @@ _ncm_powspec_corr3D_integ (gpointer user_data, gdouble lnk, gdouble weight)
 /**
  * ncm_powspec_corr3d:
  * @powspec: a #NcmPowspec
- * @model: a #NcmModel
+ * @model: (allow-none): a #NcmModel
  * @reltol: relative tolerance for integration
  * @z: the value of $z$
  * @r: the value of $r$
@@ -932,7 +932,7 @@ _ncm_powspec_sproj_integ (gpointer user_data, gdouble lnk, gdouble weight)
 /**
  * ncm_powspec_sproj:
  * @powspec: a #NcmPowspec
- * @model: a #NcmModel
+ * @model: (allow-none): a #NcmModel
  * @reltol: relative tolerance for integration
  * @ell: the value of $\ell$
  * @z1: the value of $z_1$

@@ -28,7 +28,9 @@
  * @title: NcDataPlanckLKL
  * @short_description: Planck Likelihood interface.
  *
- * FIXME
+ * Interface to Planck likelihoods from the Planck Legacy Archive.
+ * This class is a wrapper to the Planck likelihoods code from the Planck Legacy Archive.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -38,13 +40,59 @@
 
 #include "math/ncm_mset.h"
 #include "math/ncm_model.h"
+#include "math/ncm_cfg.h"
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
 #include "data/nc_data_planck_lkl.h"
 
+#include <gio/gio.h>
+#include <glib/gstdio.h>
+
 #ifndef NUMCOSMO_GIR_SCAN
 #include "plc/clik.h"
 #endif /* NUMCOSMO_GIR_SCAN */
+
+static gchar *_nc_data_planck_lkl_files[NC_DATA_PLANCK_LKL_TYPE_LENGTH] = {
+  "baseline/plc_3.0/low_l/commander/commander_dx12_v3_2_29.clik",
+  "baseline/plc_3.0/low_l/simall/simall_100x143_offlike5_EE_Aplanck_B.clik",
+  "baseline/plc_3.0/low_l/simall/simall_100x143_offlike5_BB_Aplanck_B.clik",
+  "baseline/plc_3.0/low_l/simall/simall_100x143_offlike5_EEBB_Aplanck_B.clik",
+  "baseline/plc_3.0/hi_l/plik/plik_rd12_HM_v22_TT.clik",
+  "baseline/plc_3.0/hi_l/plik/plik_rd12_HM_v22b_TTTEEE.clik",
+  "baseline/plc_3.0/hi_l/plik_lite/plik_lite_v22_TT.clik",
+  "baseline/plc_3.0/hi_l/plik_lite/plik_lite_v22_TTTEEE.clik",
+};
+
+struct _NcDataPlanckLKL
+{
+  /*< private >*/
+  NcmData parent_instance;
+  NcHIPertBoltzmann *pb;
+  gchar *filename;
+  gpointer obj;
+  gboolean is_lensing;
+  guint nparams;
+  guint ndata_entry;
+  gchar **pnames;
+  gchar *chksum;
+  gdouble check_m2lnL;
+  NcDataCMBDataType cmb_data;
+  NcmVector *data_params;
+  NcmVector *check_data_params;
+  NcmVector *data_TT;
+  NcmVector *data_EE;
+  NcmVector *data_BB;
+  NcmVector *data_TE;
+  NcmVector *data_TB;
+  NcmVector *data_EB;
+  NcmVector *data_PHIPHI;
+  NcmVector *params;
+  NcmModelCtrl *pfi_ctrl;
+  NcmModelCtrl *cosmo_ctrl;
+  gdouble cm2lnL;
+  gdouble A_planck;
+  GArray *param_map;
+};
 
 enum
 {
@@ -61,18 +109,18 @@ G_DEFINE_TYPE (NcDataPlanckLKL, nc_data_planck_lkl, NCM_TYPE_DATA)
 
 static void _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename);
 
-#define CLIK_OBJ(obj) ((clik_object *)(obj))
-#define CLIK_LENS_OBJ(obj) ((clik_lensing_object *)(obj))
+#define CLIK_OBJ(obj) ((clik_object *) (obj))
+#define CLIK_LENS_OBJ(obj) ((clik_lensing_object *) (obj))
 
-#define CLIK_CHECK_ERROR(str,err) \
-G_STMT_START { \
-  if (isError (err)) \
-  { \
-    gchar error_msg[4096]; \
-    stringError (error_msg, (err)); \
-    g_error ("%s: %s.", (str), error_msg); \
-  } \
-} G_STMT_END
+#define CLIK_CHECK_ERROR(str, err) \
+        G_STMT_START { \
+          if (isError (err)) \
+          { \
+            gchar error_msg[4096]; \
+            stringError (error_msg, (err)); \
+            g_error ("%s: %s.", (str), error_msg); \
+          } \
+        } G_STMT_END
 
 static void
 nc_data_planck_lkl_init (NcDataPlanckLKL *plik)
@@ -108,6 +156,7 @@ static void
 nc_data_planck_lkl_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataPlanckLKL *plik = NC_DATA_PLANCK_LKL (object);
+
   g_return_if_fail (NC_IS_DATA_PLANCK_LKL (object));
 
   switch (prop_id)
@@ -128,6 +177,7 @@ static void
 nc_data_planck_lkl_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataPlanckLKL *plik = NC_DATA_PLANCK_LKL (object);
+
   g_return_if_fail (NC_IS_DATA_PLANCK_LKL (object));
 
   switch (prop_id)
@@ -192,13 +242,16 @@ nc_data_planck_lkl_finalize (GObject *object)
     if (plik->is_lensing)
     {
       clik_lensing_object *obj = CLIK_LENS_OBJ (plik->obj);
+
       clik_lensing_cleanup (&obj);
     }
     else
     {
       clik_object *obj = CLIK_OBJ (plik->obj);
+
       clik_cleanup (&obj);
     }
+
     plik->obj = NULL;
   }
 
@@ -210,13 +263,14 @@ nc_data_planck_lkl_finalize (GObject *object)
 static guint _nc_data_planck_lkl_get_length (NcmData *data);
 static void _nc_data_planck_lkl_begin (NcmData *data);
 static void _nc_data_planck_lkl_prepare (NcmData *data, NcmMSet *mset);
+
 /*static void _nc_data_planck_lkl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);*/
 static void _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 
 static void
 nc_data_planck_lkl_class_init (NcDataPlanckLKLClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
 
   object_class->set_property = nc_data_planck_lkl_set_property;
@@ -268,7 +322,7 @@ nc_data_planck_lkl_class_init (NcDataPlanckLKLClass *klass)
   data_class->begin      = &_nc_data_planck_lkl_begin;
   data_class->prepare    = &_nc_data_planck_lkl_prepare;
   /*data_class->resample   = &_nc_data_planck_lkl_resample;*/
-  data_class->m2lnL_val  = &_nc_data_planck_lkl_m2lnL_val;
+  data_class->m2lnL_val = &_nc_data_planck_lkl_m2lnL_val;
 }
 
 static guint
@@ -288,10 +342,11 @@ static void
 _nc_data_planck_lkl_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataPlanckLKL *clik = NC_DATA_PLANCK_LKL (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
 
   if (clik->pb == NULL)
     g_error ("_nc_data_planck_lkl_prepare: cannot prepare without a #NcHIPertBoltzmann object. Use nc_data_planck_lkl_set_hipert_boltzmann to set the perturbations object.");
+
   if (cosmo == NULL)
     g_error ("_nc_data_planck_lkl_prepare: cannot prepare without a #NcHICosmo object. Add one to the #NcmMSet.");
 
@@ -299,10 +354,10 @@ _nc_data_planck_lkl_prepare (NcmData *data, NcmMSet *mset)
 }
 
 /*static void
- _nc_data_planck_lkl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
- {
- }
-*/
+ *  _nc_data_planck_lkl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
+ *  {
+ *  }
+ */
 
 /*
  * Some parameters have different upper/lower case combination in different
@@ -318,14 +373,17 @@ _nc_data_planck_lkl_find_param (NcmModel *model, gchar *name, guint *pi)
   for (i = 0; i < nparams; i++)
   {
     const gchar *mname = ncm_model_param_name (model, i);
-    const guint ns = strlen (name);
+    const guint ns     = strlen (name);
+
     if (strncasecmp (name, mname, ns) == 0)
     {
       memcpy (name, mname, ns);
       *pi = i;
+
       return TRUE;
     }
   }
+
   return FALSE;
 }
 
@@ -353,17 +411,18 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
       for (i = 0; i < clik->nparams; i++)
       {
-        guint pi = 0;
+        guint pi        = 0;
         gboolean pfound = ncm_model_param_index_from_name (NCM_MODEL (pfi), clik->pnames[i], &pi);
+
         if (!pfound)
         {
           gboolean pfound2 = _nc_data_planck_lkl_find_param (NCM_MODEL (pfi), clik->pnames[i], &pi);
+
           if (!pfound2)
-          {
             g_error ("_nc_data_planck_lkl_m2lnL_val: cannot find parameter `%s' in models `%s'.",
                      clik->pnames[i], ncm_model_name (NCM_MODEL (pfi)));
-          }
         }
+
         g_array_index (clik->param_map, guint, i) = pi;
       }
     }
@@ -371,6 +430,7 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     for (i = 0; i < clik->nparams; i++)
     {
       const gdouble p_i = ncm_model_param_get (NCM_MODEL (pfi), g_array_index (clik->param_map, guint, i));
+
       ncm_vector_set (clik->params, i, p_i);
     }
   }
@@ -378,19 +438,15 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   pfi_up   = ncm_model_ctrl_update (clik->pfi_ctrl, NCM_MODEL (pfi));
   cosmo_up = ncm_model_ctrl_update (clik->cosmo_ctrl, NCM_MODEL (cosmo));
 
-  if (pfi_up && clik->nparams == 1 && g_array_index (clik->param_map, guint, 0) == NC_PLANCK_FI_COR_TT_A_planck)
+  if (pfi_up && (clik->nparams == 1) && (g_array_index (clik->param_map, guint, 0) == NC_PLANCK_FI_COR_TT_A_planck))
   {
     /*printf ("It's the case!\n");*/
     if (clik->A_planck == ncm_vector_get (clik->params, 0))
-    {
       /*printf ("Not changed % 20.16g == % 20.16g\n", clik->A_planck, ncm_vector_get (clik->params, 0));*/
       pfi_up = FALSE;
-    }
     else
-    {
       /*printf ("Updating    % 20.16g to % 20.16g\n", clik->A_planck, ncm_vector_get (clik->params, 0));*/
       clik->A_planck = ncm_vector_get (clik->params, 0);
-    }
   }
 
   if (cosmo_up)
@@ -416,15 +472,17 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     if (clik->cmb_data & NC_DATA_CMB_TYPE_EB)
       nc_hipert_boltzmann_get_EB_Cls (clik->pb, clik->data_EB);
   }
+
   /*
-   ncm_mset_pretty_log (mset);
-   printf ("# data[%p] cosmo_up:%d nparams:%u pfi_up:%d pfi_model_up:%d is_lensing:%d \n", data, cosmo_up, clik->nparams, pfi_up, pfi_model_up, clik->is_lensing);
-   */  
-  if (cosmo_up || (clik->nparams > 0 && (pfi_up || pfi_model_up)))
+   *  ncm_mset_pretty_log (mset);
+   *  printf ("# data[%p] cosmo_up:%d nparams:%u pfi_up:%d pfi_model_up:%d is_lensing:%d \n", data, cosmo_up, clik->nparams, pfi_up, pfi_model_up, clik->is_lensing);
+   */
+  if (cosmo_up || ((clik->nparams > 0) && (pfi_up || pfi_model_up)))
   {
     if (!ncm_vector_is_finite (clik->data_params))
     {
       NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+
       ncm_mset_pretty_log (mset);
       ncm_vector_log_vals (clik->data_params, "cl and vals: ", "% 22.15g", TRUE);
       ncm_mset_save (mset, ser, "debug.mset", TRUE);
@@ -434,9 +492,11 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     if (clik->is_lensing)
     {
       *m2lnL = -2.0 * clik_lensing_compute (clik->obj, cl_and_pars, &err);
+
       if (isError (err))
       {
         gchar error_msg[4096];
+
         stringError (error_msg, (err));
         g_warning ("_nc_data_planck_lkl_m2lnL_val[clik_lensing_compute]: %s.", error_msg);
         *m2lnL = 1.0e10;
@@ -445,14 +505,17 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     else
     {
       *m2lnL = -2.0 * clik_compute (clik->obj, cl_and_pars, &err);
+
       if (isError (err))
       {
         gchar error_msg[4096];
+
         stringError (error_msg, (err));
         g_warning ("_nc_data_planck_lkl_m2lnL_val[clik_compute]: %s.", error_msg);
         *m2lnL = 1.0e10;
       }
     }
+
     /*printf ("# m2lnL % 22.15g\n", *m2lnL);*/
     clik->cm2lnL = *m2lnL;
   }
@@ -462,7 +525,37 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   }
 
   endError (&err);
+
   return;
+}
+
+static gchar *
+_nc_data_planck_lkl_file_exists (const gchar *filename)
+{
+  if (!g_file_test (filename, G_FILE_TEST_EXISTS))
+  {
+    gchar *file_at_default = ncm_cfg_get_fullpath (filename);
+
+    if (!g_file_test (file_at_default, G_FILE_TEST_EXISTS))
+    {
+      gchar *file_at_data = ncm_cfg_get_data_filename (filename, FALSE);
+
+      g_free (file_at_default);
+
+      if (g_file_test (file_at_data, G_FILE_TEST_EXISTS))
+        return file_at_data;
+
+      g_free (file_at_data);
+
+      return NULL;
+    }
+    else
+    {
+      return file_at_default;
+    }
+  }
+
+  return g_strdup (filename);
 }
 
 static void
@@ -472,13 +565,16 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
   g_assert (plik->obj == NULL);
   g_assert (filename != NULL);
 
-  plik->filename = g_strdup (filename);
+  plik->filename = _nc_data_planck_lkl_file_exists (filename);
 
-  g_assert (g_file_test (filename, G_FILE_TEST_EXISTS));
+  if (plik->filename == NULL)
+    g_error ("_nc_data_planck_lkl_set_filename: cannot find file `%s'.", filename);
+
+  g_assert (g_file_test (plik->filename, G_FILE_TEST_EXISTS));
   {
     gchar *names_array[256];
-    parname *names = NULL;
-    error *err = initError ();
+    parname *names       = NULL;
+    error *err           = initError ();
     gint data_params_len = 0;
     guint i;
 
@@ -487,8 +583,9 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
 
     {
       const gchar *type_name = g_type_name (NC_TYPE_DATA_PLANCK_LKL);
-      gchar *bfile     = g_path_get_basename (filename);
-      gchar *data_desc = g_strdup_printf ("%s[%s]", type_name, bfile);
+      gchar *bfile           = g_path_get_basename (filename);
+      gchar *data_desc       = g_strdup_printf ("%s[%s]", type_name, bfile);
+
       ncm_data_set_desc (NCM_DATA (plik), data_desc);
       g_free (bfile);
       g_free (data_desc);
@@ -498,16 +595,17 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
 
 #define N_LENS_CMP 7
 #define N_CMP 6
+
     if (plik->is_lensing)
     {
       gint lmax[N_LENS_CMP];
-      guint vec_pos = 0;
+      guint vec_pos                    = 0;
       NcmVector **data_vec[N_LENS_CMP] =
       {
-      &plik->data_PHIPHI, &plik->data_TT, &plik->data_EE,
-      &plik->data_BB, &plik->data_TE, &plik->data_TB,
-      &plik->data_EB
-    };
+        &plik->data_PHIPHI, &plik->data_TT, &plik->data_EE,
+        &plik->data_BB, &plik->data_TE, &plik->data_TB,
+        &plik->data_EB
+      };
       NcDataCMBDataType data_type_vec[N_LENS_CMP] =
       {
         NC_DATA_CMB_TYPE_PHIPHI,
@@ -520,6 +618,7 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
       };
 
       clik_lensing_object *obj = clik_lensing_init (plik->filename, &err);
+
       CLIK_CHECK_ERROR ("_nc_data_planck_lkl_set_filename[clik_lensing_init]", err);
       plik->obj = obj;
 
@@ -534,7 +633,7 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
 
       plik->ndata_entry = data_params_len;
 
-      data_params_len += plik->nparams;
+      data_params_len  += plik->nparams;
       plik->data_params = ncm_vector_new (data_params_len);
 
       for (i = 0; i < N_LENS_CMP; i++)
@@ -542,16 +641,17 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
         if (lmax[i] >= 0)
         {
           plik->cmb_data |= data_type_vec[i];
-          data_vec[i][0] = ncm_vector_get_subvector (plik->data_params, vec_pos, lmax[i] + 1);
-          vec_pos += lmax[i] + 1;
+          data_vec[i][0]  = ncm_vector_get_subvector (plik->data_params, vec_pos, lmax[i] + 1);
+          vec_pos        += lmax[i] + 1;
         }
       }
+
       plik->params = ncm_vector_get_subvector (plik->data_params, vec_pos, plik->nparams);
     }
     else
     {
       gint lmax[N_CMP];
-      guint vec_pos = 0;
+      guint vec_pos               = 0;
       NcmVector **data_vec[N_CMP] =
       {
         &plik->data_TT, &plik->data_EE,
@@ -569,6 +669,7 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
       };
 
       clik_object *obj = clik_init (plik->filename, &err);
+
       CLIK_CHECK_ERROR ("_nc_data_planck_lkl_set_filename[clik_init]", err);
       plik->obj = obj;
 
@@ -588,7 +689,7 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
 
       plik->ndata_entry = data_params_len;
 
-      data_params_len += plik->nparams;
+      data_params_len  += plik->nparams;
       plik->data_params = ncm_vector_new (data_params_len);
 
       for (i = 0; i < N_CMP; i++)
@@ -596,10 +697,11 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
         if (lmax[i] >= 0)
         {
           plik->cmb_data |= data_type_vec[i];
-          data_vec[i][0] = ncm_vector_get_subvector (plik->data_params, vec_pos, lmax[i] + 1);
-          vec_pos += lmax[i] + 1;
+          data_vec[i][0]  = ncm_vector_get_subvector (plik->data_params, vec_pos, lmax[i] + 1);
+          vec_pos        += lmax[i] + 1;
         }
       }
+
       plik->params = ncm_vector_get_subvector (plik->data_params, vec_pos, plik->nparams);
     }
 
@@ -628,6 +730,7 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
 
       {
         gdouble check_m2lnL = 0.0;
+
         if (plik->is_lensing)
         {
           check_m2lnL = -2.0 * clik_lensing_compute (plik->obj, chkp, &err);
@@ -638,6 +741,7 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
           check_m2lnL = -2.0 * clik_compute (plik->obj, chkp, &err);
           CLIK_CHECK_ERROR ("_nc_data_planck_lkl_m2lnL_val[clik_compute]", err);
         }
+
         ncm_assert_cmpdouble_e (check_m2lnL, ==, plik->check_m2lnL, 1.0e-4, 0.0);
       }
 
@@ -647,11 +751,13 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
     if (plik->nparams > 0)
     {
       GChecksum *names_checksum = g_checksum_new (G_CHECKSUM_MD5);
+
       for (i = 0; i < plik->nparams; i++)
       {
         names_array[i] = names[i];
-        g_checksum_update (names_checksum, (guchar *)names[i], strlen (names[i]));
+        g_checksum_update (names_checksum, (guchar *) names[i], strlen (names[i]));
       }
+
       names_array[plik->nparams] = NULL;
 
       plik->chksum = g_strdup (g_checksum_get_string (names_checksum));
@@ -681,6 +787,7 @@ nc_data_planck_lkl_new (const gchar *filename)
   NcDataPlanckLKL *plik = g_object_new (NC_TYPE_DATA_PLANCK_LKL,
                                         "data-file", filename,
                                         NULL);
+
   return plik;
 }
 
@@ -700,7 +807,38 @@ nc_data_planck_lkl_full_new (const gchar *filename, NcHIPertBoltzmann *pb)
                                         "data-file", filename,
                                         "hipert-boltzmann", pb,
                                         NULL);
+
   return plik;
+}
+
+/**
+ * nc_data_planck_lkl_full_new_id:
+ * @id: a Planck likelihood file id #NcDataPlanckLKLType
+ * @pb: a #NcHIPertBoltzmann
+ *
+ * Create a new #NcDataPlanckLKL object from the given id and #NcHIPertBoltzmann.
+ * If the Planck likelihood file is not found, it will be downloaded.
+ *
+ * Returns: a new #NcDataPlanckLKL
+ */
+NcDataPlanckLKL *
+nc_data_planck_lkl_full_new_id (NcDataPlanckLKLType id, NcHIPertBoltzmann *pb)
+{
+  if (id >= NC_DATA_PLANCK_LKL_TYPE_LENGTH)
+  {
+    g_error ("nc_data_planck_lkl_full_new_id: invalid id %d.", id);
+
+    return NULL;
+  }
+  else
+  {
+    gchar *filename = _nc_data_planck_lkl_file_exists (_nc_data_planck_lkl_files[id]);
+
+    if (filename == NULL)
+      nc_data_planck_lkl_download_baseline (ncm_cfg_get_fullpath_base ());
+
+    return nc_data_planck_lkl_full_new (_nc_data_planck_lkl_files[id], pb);
+  }
 }
 
 /**
@@ -716,6 +854,7 @@ const gchar *
 nc_data_planck_lkl_get_param_name (NcDataPlanckLKL *plik, guint i)
 {
   g_assert_cmpuint (plik->nparams, >, i);
+
   return plik->pnames[i];
 }
 
@@ -752,43 +891,118 @@ nc_data_planck_lkl_set_hipert_boltzmann (NcDataPlanckLKL *plik, NcHIPertBoltzman
   if (plik->data_PHIPHI != NULL)
   {
     guint PHIPHI_lmax = ncm_vector_len (plik->data_PHIPHI) - 1;
+
     if (PHIPHI_lmax > nc_hipert_boltzmann_get_PHIPHI_lmax (plik->pb))
       nc_hipert_boltzmann_set_PHIPHI_lmax (plik->pb, PHIPHI_lmax);
   }
+
   if (plik->data_TT != NULL)
   {
     guint TT_lmax = ncm_vector_len (plik->data_TT) - 1;
+
     if (TT_lmax > nc_hipert_boltzmann_get_TT_lmax (plik->pb))
       nc_hipert_boltzmann_set_TT_lmax (plik->pb, TT_lmax);
   }
+
   if (plik->data_EE != NULL)
   {
     guint EE_lmax = ncm_vector_len (plik->data_EE) - 1;
+
     if (EE_lmax > nc_hipert_boltzmann_get_EE_lmax (plik->pb))
       nc_hipert_boltzmann_set_EE_lmax (plik->pb, EE_lmax);
   }
+
   if (plik->data_BB != NULL)
   {
     guint BB_lmax = ncm_vector_len (plik->data_BB) - 1;
+
     if (BB_lmax > nc_hipert_boltzmann_get_BB_lmax (plik->pb))
       nc_hipert_boltzmann_set_BB_lmax (plik->pb, BB_lmax);
   }
+
   if (plik->data_TE != NULL)
   {
     guint TE_lmax = ncm_vector_len (plik->data_TE) - 1;
+
     if (TE_lmax > nc_hipert_boltzmann_get_TE_lmax (plik->pb))
       nc_hipert_boltzmann_set_TE_lmax (plik->pb, TE_lmax);
   }
+
   if (plik->data_TB != NULL)
   {
     guint TB_lmax = ncm_vector_len (plik->data_TB) - 1;
+
     if (TB_lmax > nc_hipert_boltzmann_get_TB_lmax (plik->pb))
       nc_hipert_boltzmann_set_TB_lmax (plik->pb, TB_lmax);
   }
+
   if (plik->data_EB != NULL)
   {
     guint EB_lmax = ncm_vector_len (plik->data_EB) - 1;
+
     if (EB_lmax > nc_hipert_boltzmann_get_EB_lmax (plik->pb))
       nc_hipert_boltzmann_set_EB_lmax (plik->pb, EB_lmax);
   }
 }
+
+static void
+_nc_data_planck_lkl_copy_prog (goffset current_num_bytes, goffset total_num_bytes, gpointer user_data)
+{
+  gint *old_prog = (gint *) user_data;
+  gint prog      = (100 * current_num_bytes) / total_num_bytes;
+
+  if (prog > *old_prog)
+  {
+    ncm_message ("# % 3d%%\r", prog);
+    *old_prog = prog;
+  }
+}
+
+/**
+ * nc_data_planck_lkl_download_baseline:
+ * @dir: a directory
+ *
+ * Download the Planck baseline likelihood data to the given directory.
+ * This function will download the file `COM_Likelihood_Data-baseline_R3.00.tar.gz'
+ * from the Planck Legacy Archive and extract it to the given directory.
+ *
+ * It requires the `wget' and `tar' commands to be available in the system.
+ *
+ */
+void
+nc_data_planck_lkl_download_baseline (const gchar *dir)
+{
+  const gchar *file    = "COM_Likelihood_Data-baseline_R3.00.tar.gz";
+  const gchar *url_str = "https://github.com/NumCosmo/NumCosmo/releases/download/datafile-release-v1.0.0/COM_Likelihood_Data-baseline_R3.00.tar.gz";
+  gchar *full_filename = g_build_filename (dir, file, NULL);
+  GError *error        = NULL;
+  gint prog            = 0;
+
+  ncm_message ("# Downloading file [%s]...\n", file);
+
+  {
+    gchar *cmd[] = { "wget", "-O", full_filename, (gchar *) url_str, NULL };
+
+    if (!g_spawn_sync (dir, cmd, NULL,
+                       G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, NULL, &error))
+      g_error ("nc_data_planck_lkl_download_baseline: cannot download file: %s. Error: %s. "
+               "Please download the file manually from %s and extract it to %s.",
+               file, error->message,
+               url_str, dir);
+  }
+
+  {
+    gchar *cmd[] = { "tar", "xzf", (gchar *) file, NULL };
+
+    if (!g_spawn_sync (dir, cmd, NULL,
+                       G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, NULL, &error))
+      g_error ("nc_data_planck_lkl_download_baseline: cannot extract tar file: %s. Error: %s",
+               file, error->message);
+  }
+
+  g_unlink (full_filename);
+  g_free (full_filename);
+
+  return;
+}
+

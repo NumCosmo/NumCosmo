@@ -57,8 +57,17 @@ struct _NcHICosmoVexpClass
  * @NC_HICOSMO_VEXP_D_PHI: mean of the scalar field wave function distribution
  * @NC_HICOSMO_VEXP_ALPHA_B: logarithm base e of the scale factor at the bounce
  * @NC_HICOSMO_VEXP_X_B: ratio of the scale factor today and at the bounce
+ * @NC_HICOSMO_VEXP_EM_B: electromagnetic coupling amplitude
+ * @NC_HICOSMO_VEXP_EM_BETA: electromagnetic coupling scale
  *
- * FIXME
+ * Scalar field parameters enumerator. This enumerator is used to access the scalar field parameters
+ * in the NcHICosmoVexp object.
+ *
+ * The parameters @NC_HICOSMO_VEXP_EM_B and @NC_HICOSMO_VEXP_EM_BETA are used to define the
+ * electromagnetic coupling amplitude and scale, respectively. They are only used if the
+ * electromagnetic coupling is set to NC_HICOSMO_VEXP_EM_COUPLING_GAUSS or
+ * NC_HICOSMO_VEXP_EM_COUPLING_CAUCHY.
+ *
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_VEXP_SPARAMS >*/
@@ -70,9 +79,28 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_VEXP_SPARAMS >*/
   NC_HICOSMO_VEXP_D_PHI,
   NC_HICOSMO_VEXP_ALPHA_B,
   NC_HICOSMO_VEXP_X_B,
+  NC_HICOSMO_VEXP_EM_B,
+  NC_HICOSMO_VEXP_EM_BETA,
   /* < private > */
   NC_HICOSMO_VEXP_SPARAM_LEN, /*< skip >*/
 } NcHICosmoVexpSParams;
+
+/**
+ * NcHICosmoVexpEMCoupling:
+ * @NC_HICOSMO_VEXP_EM_COUPLING_NONE: No coupling
+ * @NC_HICOSMO_VEXP_EM_COUPLING_GAUSS: Gaussian coupling
+ * @NC_HICOSMO_VEXP_EM_COUPLING_CAUCHY: Cauchy coupling
+ *
+ * Electromagnetic coupling enumerator.
+ *
+ */
+typedef enum /*< enum,underscore_name=NC_HICOSMO_VEXP_EM_COUPLING >*/
+{
+  NC_HICOSMO_VEXP_EM_COUPLING_NONE = 0,
+  NC_HICOSMO_VEXP_EM_COUPLING_GAUSS,
+  NC_HICOSMO_VEXP_EM_COUPLING_CAUCHY,
+  NC_HICOSMO_VEXP_EM_COUPLING_INVALID,
+} NcHICosmoVexpEMCoupling;
 
 struct _NcHICosmoVexp
 {
@@ -85,6 +113,9 @@ GType nc_hicosmo_Vexp_get_type (void) G_GNUC_CONST;
 
 NcHICosmoVexp *nc_hicosmo_Vexp_new (void);
 
+void nc_hicosmo_Vexp_set_em_coupling (NcHICosmoVexp *Vexp, const NcHICosmoVexpEMCoupling coupling);
+NcHICosmoVexpEMCoupling nc_hicosmo_Vexp_get_em_coupling (NcHICosmoVexp *Vexp);
+
 gdouble nc_hicosmo_Vexp_tau_min (NcHICosmoVexp *Vexp);
 gdouble nc_hicosmo_Vexp_tau_max (NcHICosmoVexp *Vexp);
 
@@ -94,7 +125,8 @@ gdouble nc_hicosmo_Vexp_tau_qt_e (NcHICosmoVexp *Vexp);
 gdouble nc_hicosmo_Vexp_xbe (NcHICosmoVexp *Vexp);
 gdouble nc_hicosmo_Vexp_xbc (NcHICosmoVexp *Vexp);
 
-gdouble nc_hicosmo_Vexp_x_tau (NcHICosmoVexp *Vexp, const gdouble tau);
+gdouble nc_hicosmo_Vexp_xe_tau (NcHICosmoVexp *Vexp, const gdouble tau);
+gdouble nc_hicosmo_Vexp_xc_tau (NcHICosmoVexp *Vexp, const gdouble tau);
 
 gdouble nc_hicosmo_Vexp_tau_xe (NcHICosmoVexp *Vexp, const gdouble xe);
 gdouble nc_hicosmo_Vexp_tau_xc (NcHICosmoVexp *Vexp, const gdouble xc);
@@ -104,22 +136,9 @@ gdouble nc_hicosmo_Vexp_alpha_0c (NcHICosmoVexp *Vexp);
 
 gdouble nc_hicosmo_Vexp_alpha (NcHICosmoVexp *Vexp, const gdouble tau);
 gdouble nc_hicosmo_Vexp_phi (NcHICosmoVexp *Vexp, const gdouble tau);
+gdouble nc_hicosmo_Vexp_E_tau (NcHICosmoVexp *Vexp, const gdouble tau);
 gdouble nc_hicosmo_Vexp_Ricci_scale (NcHICosmoVexp *Vexp, const gdouble tau);
 void nc_hicosmo_Vexp_x_y (NcHICosmoVexp *Vexp, const gdouble tau, gdouble *x, gdouble *y);
-
-gdouble nc_hicosmo_Vexp_eval_nu (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k);
-
-gdouble nc_hicosmo_Vexp_eval_F (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
-
-gdouble nc_hicosmo_Vexp_gauss_eval_m (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble B, const gdouble beta);
-gdouble nc_hicosmo_Vexp_gauss_eval_xi (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
-gdouble nc_hicosmo_Vexp_gauss_eval_F1 (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
-
-gdouble nc_hicosmo_Vexp_cauchy_eval_F (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
-gdouble nc_hicosmo_Vexp_cauchy_eval_m (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble B, const gdouble beta);
-gdouble nc_hicosmo_Vexp_cauchy_eval_xi (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
-gdouble nc_hicosmo_Vexp_cauchy_eval_F1 (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k, const gdouble B, const gdouble beta);
-
 
 #define NC_HICOSMO_VEXP_DEFAULT_H0 (70.0)
 #define NC_HICOSMO_VEXP_DEFAULT_OMEGA_C (0.25)
@@ -128,6 +147,8 @@ gdouble nc_hicosmo_Vexp_cauchy_eval_F1 (NcHICosmoVexp *Vexp, const gdouble tau, 
 #define NC_HICOSMO_VEXP_DEFAULT_D_PHI (-0.3)
 #define NC_HICOSMO_VEXP_DEFAULT_ALPHA_B (0.1)
 #define NC_HICOSMO_VEXP_DEFAULT_X_B (1.0e30)
+#define NC_HICOSMO_VEXP_DEFAULT_EM_B (1.0e-10)
+#define NC_HICOSMO_VEXP_DEFAULT_EM_BETA (1.0e-1)
 
 #define NC_HICOSMO_VEXP_DEBUG_EVOL_QT (FALSE)
 #define NC_HICOSMO_VEXP_DEBUG_EVOL_CL (FALSE)

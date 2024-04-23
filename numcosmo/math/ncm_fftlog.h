@@ -76,6 +76,9 @@ gdouble ncm_fftlog_get_lnk0 (NcmFftlog *fftlog);
 
 void ncm_fftlog_set_size (NcmFftlog *fftlog, guint n);
 
+void ncm_fftlog_set_max_size (NcmFftlog *fftlog, guint max_n);
+guint ncm_fftlog_get_max_size (NcmFftlog *fftlog);
+
 void ncm_fftlog_set_padding (NcmFftlog *fftlog, gdouble pad_p);
 gdouble ncm_fftlog_get_padding (NcmFftlog *fftlog);
 

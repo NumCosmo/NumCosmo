@@ -25,10 +25,11 @@
 
 from typing import List, Tuple
 import warnings
+
 import re
 import numpy as np
-
 from getdist import MCSamples
+
 from numcosmo_py import Ncm
 
 
@@ -39,7 +40,7 @@ def mcat_to_mcsamples(
     burnin: int = 0,
     thin: int = 1,
     collapse: bool = False,
-) -> MCSamples:
+) -> Tuple[MCSamples, np.ndarray, np.ndarray]:
     """Converts a Ncm.MSetCatalog to a getdist.MCSamples object."""
 
     nchains: int = mcat.nchains()
@@ -115,5 +116,4 @@ def mcat_to_mcsamples(
         label=name,
         weights=split_weights,
     )
-
     return mcsample, rows, posterior

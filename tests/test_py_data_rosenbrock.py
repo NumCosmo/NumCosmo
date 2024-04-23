@@ -32,7 +32,6 @@ Ncm.cfg_init()
 
 def test_constructor():
     """Test constructor."""
-
     rosenbrock = Ncm.DataRosenbrock.new()
     assert rosenbrock is not None
     assert isinstance(rosenbrock, Ncm.DataRosenbrock)
@@ -46,7 +45,6 @@ def test_constructor():
 
 def test_eval():
     """Test eval."""
-
     rosenbrock = Ncm.DataRosenbrock()
     rosenbrock_model = Ncm.ModelRosenbrock.new()
     mset = Ncm.MSet.new_array([rosenbrock_model])

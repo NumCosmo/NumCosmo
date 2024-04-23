@@ -11,7 +11,7 @@ on:
 jobs:
 
   build-gcc-ubuntu:
-    name: NumCosmo (ubuntu, apt)
+    name: (ubuntu, apt)
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
     - name: Check NumCosmo
       run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
     - name: Create a NumCosmo tarball
-      run: meson dist -C build --no-tests 
+      run: meson dist -C build --no-tests
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v2
       with:
@@ -51,7 +51,7 @@ jobs:
         path: build/meson-dist/numcosmo-*.tar.xz
     - name: Test example compilation using installed library
       run: |
-        sudo meson install -C build 
+        sudo meson install -C build
         cd examples
         gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple $(pkg-config numcosmo --libs --cflags)
         gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca $(pkg-config numcosmo --libs --cflags)
@@ -59,7 +59,7 @@ jobs:
         ./example_ca
 
   build-gcc-macos:
-    name: NumCosmo (macos, brew)
+    name: (macos, brew)
     runs-on: macos-latest
     env:
       CC: gcc-11
@@ -73,9 +73,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/setup-python@v4 
+    - uses: actions/setup-python@v4
       with:
-        python-version: '3.x' 
+        python-version: '3.x'
     - name: Brew install pre-requisites
       run: |
         brew install gobject-introspection gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran gtk-doc glib openblas
@@ -85,8 +85,8 @@ jobs:
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
-      run: | 
-        meson setup build -Dbuildtype=release -Dnumcosmo_py=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+      run: |
+        meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dmpi=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: |
         meson compile -C build
@@ -98,14 +98,18 @@ jobs:
         python example_cbe.py
     - name: Check NumCosmo
       run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
-  
+
   build-miniforge:
-    name: NumCosmo (${{ matrix.os }}, python-${{ matrix.python-version }}, Miniforge)
+    name: (${{ matrix.os }}, py${{ matrix.python-version }}, ${{ matrix.mpi }}, Miniforge)
     runs-on: ${{ matrix.os }}-latest
     strategy:
       matrix:
         os: ["ubuntu", "macos"]
-        python-version: ["3.9"]
+        python-version: ["3.10"]
+        mpi: ["openmpi", "mpich"]
+        exclude:
+          - os: "macos"
+            mpi: "openmpi"
     defaults:
       run:
         shell: bash -el {0}
@@ -127,13 +131,15 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ env.CONDA }}/envs
-          key: miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
+          key: miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ matrix.mpi }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
         env:
           CACHE_NUMBER: 0
         id: cache
       - name: Update environment
         run: |
-          conda env update -q -v -n numcosmo_developer -f devel_environment.yml
+          mamba env update -q -v -n numcosmo_developer -f devel_environment.yml
+          mamba remove -q -v -n numcosmo_developer openmpi
+          mamba install -q -v -n numcosmo_developer ${{ matrix.mpi }}
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Setting up NumCosmo
         run: |
@@ -167,12 +173,12 @@ jobs:
         run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge-coverage:
-    name: NumCosmo-Coverage (${{ matrix.os }}, python-${{ matrix.python-version }}, Miniforge)
+    name: Coverage (${{ matrix.os }}, py${{ matrix.python-version }}, openmpi, Miniforge)
     runs-on: ${{ matrix.os }}-latest
     strategy:
       matrix:
         os: ["ubuntu"]
-        python-version: ["3.9"]
+        python-version: ["3.10"]
     defaults:
       run:
         shell: bash -el {0}
@@ -221,12 +227,15 @@ jobs:
           meson test -C build --timeout-multiplier 0 || (cat build/meson-logs/testlog.txt && exit 1)
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
-          lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/class/*' '*/levmar/*' '*/libcuba/*' '*/plc/*' '*/sundials/*' '*/toeplitz/*' '*/tools/*' --output-file numcosmo-coverage.info 
+          lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/class/*' '*/levmar/*' '*/libcuba/*' '*/plc/*' '*/sundials/*' '*/toeplitz/*' '*/tools/*' --output-file numcosmo-coverage.info
       - name: CodeCov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          disable_search: true
+          fail_ci_if_error: true
           files: ./numcosmo-coverage.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
       #- name: Generate coverage
       #    # For some reason, gcovr is ignoring the configured gcovr.cfg file
       #    # ninja coverage -C build -v -d stats -d explain

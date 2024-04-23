@@ -148,6 +148,10 @@ c_tests = [
         'sources': ['test_nc_hicosmo_de.c'],
     },
     {
+        'name': 'nc_hicosmo_qgw',
+        'sources': ['test_nc_hicosmo_qgw.c'],
+    },
+    {
         'name': 'nc_window',
         'sources': ['test_nc_window.c'],
     },
@@ -187,6 +191,10 @@ c_tests = [
     {
         'name': 'nc_cluster_pseudo_counts',
         'sources': ['test_nc_cluster_pseudo_counts.c'],
+    },
+    {
+        'name': 'nc_data_cluster_ncounts_gauss',
+        'sources': ['test_nc_data_cluster_ncounts_gauss.c'],
     },
     {
         'name': 'nc_cluster_abundance',
@@ -246,10 +254,74 @@ foreach c_test : c_tests
     )
 endforeach
 
+if mpi_c_dep.found()
+    mpiexec = find_program('mpiexec', required: false)
+    if mpiexec.found()
+
+        c_tests_mpi = [
+            {
+                'name': 'ncm_fit_esmcmc_mpi',
+                'sources': ['test_ncm_fit_esmcmc_mpi.c'],
+                'timeout': 0,
+            },
+        ]
+        foreach c_test_mpi : c_tests_mpi
+            executable_test = executable(
+                c_test_mpi['name'],
+                c_test_mpi['sources'],
+                c_args: tests_c_args,
+                dependencies: [libnumcosmo_dep],
+                include_directories: [configinc, numcosmoinc],
+            )
+            if c_test_mpi.has_key('timeout')
+                timeout = c_test_mpi['timeout']
+            else
+                timeout = 60
+            endif
+
+            mpiexec_args = (
+                [
+                    '-n',
+                    '2',
+                    executable_test.full_path(),
+                ]
+            )
+            test(
+                c_test_mpi['name'],
+                mpiexec,
+                args: mpiexec_args,
+                timeout: timeout,
+                env: [
+                    'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
+                    'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
+                ],
+                protocol: 'tap',
+            )
+        endforeach
+    endif
+
+endif
+
 python_tests = [
     {
         'name': 'py_cluster_abundance_sampling',
         'source': 'test_py_cluster_abundance_sampling.py',
+    },
+    {
+        'name': 'py_hicosmo_Vexp',
+        'source': 'test_py_hicosmo_Vexp.py',
+    },
+    {
+        'name': 'py_hipert_em',
+        'source': 'test_py_hipert_em.py',
+    },
+    {
+        'name': 'py_hipert_gw',
+        'source': 'test_py_hipert_gw.py',
+    },
+    {
+        'name': 'py_de_cont',
+        'source': 'test_py_de_cont.py',
     },
     {
         'name': 'py_diff',
@@ -296,6 +368,10 @@ python_tests = [
         'source': 'test_py_data_rosenbrock.py',
     },
     {
+        'name': 'py_data_snia_cov',
+        'source': 'test_py_data_snia_cov.py',
+    },
+    {
         'name': 'py_dataset',
         'source': 'test_py_dataset.py',
     },
@@ -331,6 +407,14 @@ python_tests = [
         'name': 'py_fit',
         'source': 'test_py_fit.py',
     },
+    {
+        'name': 'py_powspec_ml_spline',
+        'source': 'test_py_powspec_ml_spline.py',
+    },
+    {
+        'name': 'py_powspec_spline2d',
+        'source': 'test_py_powspec_spline2d.py',
+    },
 ]
 
 if mpi_c_dep.found()
@@ -360,6 +444,10 @@ if python_astropy_scipy.found()
             'source': 'test_py_csq1d.py',
         },
         {
+            'name': 'py_hipert_adiab',
+            'source': 'test_py_hipert_adiab.py',
+        },
+        {
             'name': 'py_data_dist1d',
             'source': 'test_py_data_dist1d.py',
         },
@@ -382,6 +470,21 @@ if python_typer.found()
             'name': 'py_numcosmo_app',
             'source': 'test_py_numcosmo_app.py',
             'timeout': 0,
+        },
+    ]
+endif
+
+python_pyccl = python_module.find_installation(
+    'python3',
+    modules: ['pyccl'],
+    required: false,
+)
+
+if python_pyccl.found()
+    python_tests += [
+        {
+            'name': 'py_powspec',
+            'source': 'test_py_powspec.py',
         },
     ]
 endif
@@ -416,7 +519,7 @@ if enable_gir
         modules: ['pytest_tap'],
         required: false,
     )
-    if py_tap.found()
+    if py_tap.found() and get_option('pytest_tap')
         r = run_command(
             python,
             '-c',
@@ -444,7 +547,10 @@ if enable_gir
         test(
             python_test['name'],
             python,
-            args: pytest_args + join_paths(meson.current_source_dir(), python_test['source']),
+            args: pytest_args + join_paths(
+                meson.current_source_dir(),
+                python_test['source'],
+            ),
             depends: [numcosmo_gir, numcosmo_math_gir],
             env: env,
             protocol: pytest_protocol,
