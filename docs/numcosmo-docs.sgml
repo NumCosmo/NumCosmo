@@ -239,6 +239,7 @@
       <xi:include href="xml/nc_hiprim_expc.xml"/>
       <xi:include href="xml/nc_hiprim_bpl.xml"/>
       <xi:include href="xml/nc_hiprim_sbpl.xml"/>
+      <xi:include href="xml/nc_hiprim_two_fluids.xml"/>
     </section>
   </chapter>
 
