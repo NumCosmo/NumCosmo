@@ -330,6 +330,9 @@ nc_hiprim_two_fluids_peek_lnk_lnw_spline (NcHIPrimTwoFluids *two_fluids)
 {
   NcHIPrimTwoFluidsPrivate * const self = nc_hiprim_two_fluids_get_instance_private (two_fluids);
 
+  if (self->use_default_calib)
+    return NULL;
+
   return self->lnSA_powspec_lnk_lnw;
 }
 
