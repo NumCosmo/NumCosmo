@@ -199,7 +199,15 @@ class RunMCMC(RunCommonOptions):
         ),
     ] = 0
 
+    skip_check: Annotated[
+        bool,
+        typer.Option(
+            help="Skip the check of the last ensemble when continuing a run.",
+        ),
+    ] = True
+
     def __post_init__(self) -> None:
+        """Run the ESMCMC algorithm."""
         super().__post_init__()
         self.fit.log_info()
 
@@ -311,6 +319,8 @@ class RunMCMC(RunCommonOptions):
             esmcmc.set_data_file(
                 self.output.absolute().with_suffix(".mcmc.fits").as_posix()
             )
+
+        esmcmc.set_skip_check(self.skip_check)
 
         esmcmc.start_run()
         esmcmc.run(self.nsamples)
