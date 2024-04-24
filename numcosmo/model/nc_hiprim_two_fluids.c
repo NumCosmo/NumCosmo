@@ -162,7 +162,7 @@ nc_hiprim_two_fluids_class_init (NcHIPrimTwoFluidsClass *klass)
 
   /* Set ln(w) param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_TWO_FLUIDS_LNW, "\\ln(w)", "lnw",
-                              -5.0 * M_LN10, -1.0 * M_LN10, 1.0e-1,
+                              -7.0 * M_LN10, -1.0 * M_LN10, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_TWO_FLUIDS_DEFAULT_LNW,
                               NCM_PARAM_TYPE_FIXED);
 
