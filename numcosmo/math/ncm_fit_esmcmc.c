@@ -1671,30 +1671,29 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
     }
   }
 
-  if (read_from_cat)
+  if (read_from_cat && !self->skip_check)
   {
     const guint len   = ncm_mset_catalog_len (self->mcat);
     const guint start = len > self->nwalkers ? len - self->nwalkers : 0;
 
-    if (!self->skip_check)
+    if (!ncm_fit_esmcmc_validate (esmcmc, start, len))
     {
-      if (!ncm_fit_esmcmc_validate (esmcmc, start, len))
+      if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
       {
-        if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
-        {
-          ncm_cfg_msg_sepa ();
-          g_message ("# NcmFitESMCMC: Last ensemble failed in the m2lnL check, the catalog may be corrupted, removing last ensemble and retrying...\n");
-        }
-
-        ncm_fit_esmcmc_end_run (esmcmc);
-
-        ncm_mset_catalog_remove_last_ensemble (self->mcat);
-
-        self->cur_sample_id -= (len - start);
-        self->started        = FALSE;
-
-        ncm_fit_esmcmc_start_run (esmcmc);
+        ncm_cfg_msg_sepa ();
+        g_message ("# NcmFitESMCMC: Last ensemble failed in the m2lnL check, the "
+                   "catalog may be corrupted, removing last ensemble and "
+                   "retrying...\n");
       }
+
+      ncm_fit_esmcmc_end_run (esmcmc);
+
+      ncm_mset_catalog_remove_last_ensemble (self->mcat);
+
+      self->cur_sample_id -= (len - start);
+      self->started        = FALSE;
+
+      ncm_fit_esmcmc_start_run (esmcmc);
     }
   }
 
