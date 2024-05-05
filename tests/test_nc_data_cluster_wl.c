@@ -44,6 +44,8 @@ static void test_nc_data_cluster_wl_free (TestNcDataClusterWL *test, gconstpoint
 
 static void test_nc_data_cluster_wl_fit (TestNcDataClusterWL *test, gconstpointer pdata);
 static void test_nc_data_cluster_wl_kde_cmp (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_set_obs (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_serialize (TestNcDataClusterWL *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -64,6 +66,16 @@ main (gint argc, gchar *argv[])
               &test_nc_data_cluster_wl_kde_cmp,
               &test_nc_data_cluster_wl_free);
 
+  g_test_add ("/nc/data_cluster_wl/flat/set_obs", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_flat,
+              &test_nc_data_cluster_wl_set_obs,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/flat/serialize", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_flat,
+              &test_nc_data_cluster_wl_serialize,
+              &test_nc_data_cluster_wl_free);
+
   g_test_add ("/nc/data_cluster_wl/lsst_srd/fit", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_lsst_srd,
               &test_nc_data_cluster_wl_fit,
@@ -72,6 +84,16 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/data_cluster_wl/lsst_srd/kde_cmp", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_lsst_srd,
               &test_nc_data_cluster_wl_kde_cmp,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/lsst_srd/set_obs", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_lsst_srd,
+              &test_nc_data_cluster_wl_set_obs,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/lsst_srd/serialize", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_lsst_srd,
+              &test_nc_data_cluster_wl_serialize,
               &test_nc_data_cluster_wl_free);
 
   g_test_run ();
@@ -263,6 +285,112 @@ test_nc_data_cluster_wl_kde_cmp (TestNcDataClusterWL *test, gconstpointer pdata)
 
   ncm_vector_free (m2lnP_int_gal);
   ncm_vector_free (m2lnP_kde_gal);
+  ncm_rng_free (rng);
+  nc_hicosmo_free (cosmo);
+  nc_halo_density_profile_free (dp);
+  nc_distance_free (dist);
+  nc_wl_surface_mass_density_free (smd);
+}
+
+static void
+test_nc_data_cluster_wl_set_obs (TestNcDataClusterWL *test, gconstpointer pdata)
+{
+  NcmRNG *rng       = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  const guint ngals = 1000;
+  NcmMatrix *obs    = ncm_matrix_new (ngals, 4);
+  NcmMatrix *dcwl_obs;
+  guint i;
+
+  for (i = 0; i < ngals; i++)
+  {
+    ncm_matrix_set (obs, i, 0, ncm_rng_uniform_gen (rng, 0.0, 2.0));
+    ncm_matrix_set (obs, i, 1, ncm_rng_uniform_gen (rng, 0.0, 2.0));
+    ncm_matrix_set (obs, i, 2, ncm_rng_uniform_gen (rng, 0.0, 2.0));
+    ncm_matrix_set (obs, i, 3, ncm_rng_uniform_gen (rng, 0.0, 2.0));
+  }
+
+  nc_data_cluster_wl_set_obs (test->dcwl, obs);
+
+  dcwl_obs = nc_data_cluster_wl_peek_obs (test->dcwl);
+
+  for (i = 0; i < ngals; i++)
+  {
+    const gdouble w = ncm_matrix_get (obs, i, 0);
+    const gdouble x = ncm_matrix_get (obs, i, 1);
+    const gdouble y = ncm_matrix_get (obs, i, 2);
+    const gdouble z = ncm_matrix_get (obs, i, 3);
+
+    g_assert_cmpfloat (ncm_matrix_get (dcwl_obs, i, 0), ==, w);
+    g_assert_cmpfloat (ncm_matrix_get (dcwl_obs, i, 1), ==, x);
+    g_assert_cmpfloat (ncm_matrix_get (dcwl_obs, i, 2), ==, y);
+    g_assert_cmpfloat (ncm_matrix_get (dcwl_obs, i, 3), ==, z);
+  }
+
+  ncm_rng_free (rng);
+  ncm_matrix_free (obs);
+}
+
+static void
+test_nc_data_cluster_wl_serialize (TestNcDataClusterWL *test, gconstpointer pdata)
+{
+  NcmRNG *rng                  = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcHICosmo *cosmo             = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcHaloDensityProfile *dp     = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
+  NcDistance *dist             = nc_distance_new (100.0);
+  NcWLSurfaceMassDensity *smd  = nc_wl_surface_mass_density_new (dist);
+  const guint ngals            = 200;
+  NcmMatrix *gal_obs           = NULL;
+  NcmVector *m2lnP_int_gal     = ncm_vector_new (ngals);
+  NcmVector *m2lnP_kde_gal     = ncm_vector_new (ngals);
+  NcmVector *m2lnP_int_gal_dup = ncm_vector_new (ngals);
+  NcmVector *m2lnP_kde_gal_dup = ncm_vector_new (ngals);
+  NcmSerialize *ser;
+  gchar *sd_ser;
+  NcDataClusterWL *sd_dup;
+  guint i;
+
+  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, 4.0);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, 14.0);
+
+  nc_wl_surface_mass_density_prepare (smd, cosmo);
+
+  nc_data_cluster_wl_gen_obs (test->dcwl, cosmo, dp, smd, ngals, rng);
+  nc_data_cluster_wl_set_prec (test->dcwl, 1.0e-3);
+  nc_data_cluster_wl_set_use_kde (test->dcwl, FALSE);
+
+  ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  sd_ser = ncm_serialize_to_string (ser, G_OBJECT (test->dcwl), TRUE);
+  sd_dup = NC_DATA_CLUSTER_WL (ncm_serialize_from_string (ser, sd_ser));
+
+  nc_data_cluster_wl_eval_m2lnP (test->dcwl, cosmo, dp, smd, m2lnP_int_gal);
+  nc_data_cluster_wl_eval_m2lnP (sd_dup, cosmo, dp, smd, m2lnP_int_gal_dup);
+
+  for (i = 0; i < ngals; i++)
+  {
+    const gdouble m2lnP_int     = ncm_vector_get (m2lnP_int_gal, i);
+    const gdouble m2lnP_int_dup = ncm_vector_get (m2lnP_int_gal_dup, i);
+
+    ncm_assert_cmpdouble_e (m2lnP_int, ==, m2lnP_int_dup, 1.0e-3, 0.0);
+  }
+
+  nc_data_cluster_wl_kde_eval_m2lnP (test->dcwl, cosmo, dp, smd, m2lnP_kde_gal);
+  nc_data_cluster_wl_kde_eval_m2lnP (sd_dup, cosmo, dp, smd, m2lnP_kde_gal_dup);
+
+  for (i = 0; i < ngals; i++)
+  {
+    const gdouble m2lnP_kde     = ncm_vector_get (m2lnP_kde_gal, i);
+    const gdouble m2lnP_kde_dup = ncm_vector_get (m2lnP_kde_gal_dup, i);
+
+    ncm_assert_cmpdouble_e (m2lnP_kde, ==, m2lnP_kde_dup, 1.0e-3, 0.0);
+  }
+
+  ncm_vector_free (m2lnP_int_gal);
+  ncm_vector_free (m2lnP_kde_gal);
+  ncm_serialize_free (ser);
+  g_free (sd_ser);
+  nc_data_cluster_wl_free (sd_dup);
   ncm_rng_free (rng);
   nc_hicosmo_free (cosmo);
   nc_halo_density_profile_free (dp);

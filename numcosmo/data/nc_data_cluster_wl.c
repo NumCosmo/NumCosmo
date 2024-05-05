@@ -668,52 +668,27 @@ nc_data_cluster_wl_kde_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHa
 
   nc_data_cluster_wl_prepare_kde (dcwl, cosmo, dp, smd);
 
-  if (m2lnP_gal != NULL)
+  for (gal_i = 0; gal_i < self->len; gal_i++)
   {
-    for (gal_i = 0; gal_i < self->len; gal_i++)
+    const gdouble r_i  = ncm_matrix_get (self->obs, gal_i, 0);
+    const gdouble z_i  = ncm_matrix_get (self->obs, gal_i, 1);
+    const gdouble et_i = ncm_matrix_get (self->obs, gal_i, 2);
+    const gdouble ex_i = ncm_matrix_get (self->obs, gal_i, 3);
+
+    ncm_vector_set (data_vec, 0, r_i);
+    ncm_vector_set (data_vec, 1, z_i);
+    ncm_vector_set (data_vec, 2, et_i);
+    ncm_vector_set (data_vec, 3, ex_i);
+
+    if ((self->r_min <= r_i) && (r_i <= self->r_max))
     {
-      const gdouble r_i  = ncm_matrix_get (self->obs, gal_i, 0);
-      const gdouble z_i  = ncm_matrix_get (self->obs, gal_i, 1);
-      const gdouble et_i = ncm_matrix_get (self->obs, gal_i, 2);
-      const gdouble ex_i = ncm_matrix_get (self->obs, gal_i, 3);
+      const gdouble m2lnP_gal_i = ncm_stats_dist_eval_m2lnp (self->kde, data_vec);
 
-      ncm_vector_set (data_vec, 0, r_i);
-      ncm_vector_set (data_vec, 1, z_i);
-      ncm_vector_set (data_vec, 2, et_i);
-      ncm_vector_set (data_vec, 3, ex_i);
-
-      if ((self->r_min <= r_i) && (r_i <= self->r_max))
-      {
-        const gdouble m2lnP_gal_i = ncm_stats_dist_eval_m2lnp (self->kde, data_vec);
-
+      if (m2lnP_gal != NULL)
         ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
 
-        in_cut++;
-        res += m2lnP_gal_i;
-      }
-    }
-  }
-  else
-  {
-    for (gal_i = 0; gal_i < self->len; gal_i++)
-    {
-      const gdouble r_i  = ncm_matrix_get (self->obs, gal_i, 0);
-      const gdouble z_i  = ncm_matrix_get (self->obs, gal_i, 1);
-      const gdouble et_i = ncm_matrix_get (self->obs, gal_i, 2);
-      const gdouble ex_i = ncm_matrix_get (self->obs, gal_i, 3);
-
-      ncm_vector_set (data_vec, 0, r_i);
-      ncm_vector_set (data_vec, 1, z_i);
-      ncm_vector_set (data_vec, 2, et_i);
-      ncm_vector_set (data_vec, 3, ex_i);
-
-      if ((self->r_min <= r_i) && (r_i <= self->r_max))
-      {
-        const gdouble m2lnP_gal_i = ncm_stats_dist_eval_m2lnp (self->kde, data_vec);
-
-        in_cut++;
-        res += m2lnP_gal_i;
-      }
+      in_cut++;
+      res += m2lnP_gal_i;
     }
   }
 
