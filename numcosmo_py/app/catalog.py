@@ -688,9 +688,6 @@ class ParameterAnalysis(LoadCatalog):
         """Parameter analysis."""
         super().__post_init__()
 
-        if self.plot_name is None:
-            self.plot_name = str(self.mcmc_file)
-
         pi = self.mset.fparam_get_pi_by_name(self.param_name)
         if pi is not None:
             pindex = self.mset.fparam_get_fpi(pi.mid, pi.pid) + self.nadd_vals
@@ -733,9 +730,8 @@ class VisualHW(ParameterAnalysis):
         ax.set_xlabel("Iterations")
         ax.set_ylabel("Cumulative sum")
         ax.legend(loc="best")
-        if self.output is not None:
-            filename = self.output.with_suffix(".corner.pdf").absolute().as_posix()
-            plt.savefig(filename, bbox_inches="tight")
+        if self.plot_name is not None:
+            plt.savefig(self.plot_name, bbox_inches="tight")
 
         plt.show()
 
@@ -768,10 +764,8 @@ class ParameterEvolution(ParameterAnalysis):
         param = np.array(param_vec.dup_array())
         evol_a = np.abs(evol_matrix.dup_array())
         min_evol_a = min(evol_a[evol_a > 0.0])
-        max_evol_a = max(evol_a)
         evol_a[evol_a == 0.0] = min_evol_a
         evol = evol_a.reshape((-1, self.grid_size))
-        print(f"min_evol_a={min_evol_a}, max_evol_a={max_evol_a}")
 
         set_rc_params_article(ncol=2)
         _, ax = plt.subplots()
@@ -789,6 +783,8 @@ class ParameterEvolution(ParameterAnalysis):
         ax.set_ylabel(f"${self.symbol}$")
         plt.colorbar(cax, label=rf"$p_t\left({self.symbol}\right)$")
 
+        if self.plot_name is not None:
+            plt.savefig(self.plot_name, bbox_inches="tight")
         plt.show()
 
         self.end_experiment()
