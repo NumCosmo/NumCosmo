@@ -24,6 +24,7 @@
 
 """NumCosmo APP dataclasses and subcommands to load data.
 
+This module contains dataclasses and subcommands to load data from files.
 """
 
 import dataclasses
@@ -36,10 +37,12 @@ from numcosmo_py import Ncm
 from numcosmo_py.sampling import set_ncm_console
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class LoadExperiment:
-    """Common block for commands that load an experiment. All commands that load an
-    experiment should inherit from this class."""
+    """Common block for commands that load an experiment.
+
+    All commands that load an experiment should inherit from this class.
+    """
 
     experiment: Annotated[
         Path, typer.Argument(help="Path to the experiment file to fit.")
@@ -79,6 +82,7 @@ class LoadExperiment:
     ] = None
 
     def __post_init__(self) -> None:
+        """Load the experiment file and prepare the experiment."""
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
         builders_file = self.experiment.with_suffix(".builders.yaml")
@@ -167,9 +171,10 @@ class LoadExperiment:
         self.mset = mset
 
     def _load_saved_mset(self) -> Optional[Ncm.MSet]:
-        """Loads the saved model set from the starting point file "
-        "or the product file."""
+        """Load the saved model-set.
 
+        Loads the model-set from the starting point file or the product file.
+        """
         if self.starting_point is not None:
             if not self.starting_point.exists():
                 raise RuntimeError(
@@ -199,7 +204,7 @@ class LoadExperiment:
         return None
 
     def end_experiment(self):
-        """Ends the experiment and writes the output file."""
+        """End the experiment and writes the output file."""
         if self.output is not None:
             ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
             ser.dict_str_to_yaml_file(
@@ -207,7 +212,7 @@ class LoadExperiment:
             )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class LoadCatalog(LoadExperiment):
     """Analyzes the results of a MCMC run."""
 
@@ -227,6 +232,7 @@ class LoadCatalog(LoadExperiment):
     ] = 0
 
     def __post_init__(self) -> None:
+        """Load the MCMC file and prepare the catalog."""
         super().__post_init__()
         if self.mcmc_file is None:
             raise RuntimeError("No MCMC file given.")

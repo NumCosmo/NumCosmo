@@ -54,7 +54,7 @@ class Parallezation(str, Enum):
     THREADS = "threads"
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class RunMCMC(RunCommonOptions):
     """Computes the MCMC using APES."""
 

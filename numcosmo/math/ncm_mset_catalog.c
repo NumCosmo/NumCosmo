@@ -4861,6 +4861,7 @@ _ncm_mset_catalog_calc_ensemble_evol (NcmMSetCatalog *mcat, guint vi, guint nste
   NcmVector *pv               = ncm_vector_new (nsteps);
   const gdouble pmin          = ncm_vector_get (self->params_min, vi);
   const gdouble pmax          = ncm_vector_get (self->params_max, vi);
+  const guint div             = max_t > 100 ? max_t / 100 : 1;
 
   guint i, t;
 
@@ -4910,14 +4911,13 @@ _ncm_mset_catalog_calc_ensemble_evol (NcmMSetCatalog *mcat, guint vi, guint nste
 
     ncm_stats_dist1d_epdf_reset (epdf1d);
 
-    if (t % (max_t / 100) == 0)
-      if (mtype > NCM_FIT_RUN_MSGS_NONE)
-        ncm_message ("=");
+    if ((mtype > NCM_FIT_RUN_MSGS_NONE) && (t % div == 0))
+      ncm_message ("=");
   }
 
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
   {
-    if (t % (max_t / 100) != 0)
+    if (t % div != 0)
       ncm_message ("=");
 
     ncm_message ("|\n");

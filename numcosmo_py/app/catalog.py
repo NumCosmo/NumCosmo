@@ -31,6 +31,7 @@ from rich.table import Table
 from rich.text import Text
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 import getdist
 import getdist.plots
 
@@ -46,7 +47,7 @@ from ..plotting.getdist import mcat_to_mcsamples
 from .loading import LoadCatalog
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class AnalyzeMCMC(LoadCatalog):
     """Analyzes the results of a MCMC run."""
 
@@ -363,7 +364,7 @@ class AnalyzeMCMC(LoadCatalog):
         self.end_experiment()
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class CalibrateCatalog(LoadCatalog):
     """Calibrate the APES sampler using a given catalog."""
 
@@ -605,7 +606,7 @@ class CalibrateCatalog(LoadCatalog):
                     plt.show()
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class PlotCorner(LoadCatalog):
     """Plots the corner plot of the catalog."""
 
@@ -663,6 +664,130 @@ class PlotCorner(LoadCatalog):
         if self.output is not None:
             filename = self.output.with_suffix(".corner.pdf").absolute().as_posix()
             plt.savefig(filename, bbox_inches="tight")
+
+        plt.show()
+
+        self.end_experiment()
+
+
+@dataclasses.dataclass(kw_only=True)
+class ParameterAnalysis(LoadCatalog):
+    """Plots the corner plot of the catalog."""
+
+    plot_name: Annotated[
+        Optional[str],
+        typer.Option(help="Name of the plot file."),
+    ] = None
+
+    param_name: Annotated[
+        str,
+        typer.Option(help="Name of the plot file."),
+    ]
+
+    def __post_init__(self) -> None:
+        """Parameter analysis."""
+        super().__post_init__()
+
+        if self.plot_name is None:
+            self.plot_name = str(self.mcmc_file)
+
+        pi = self.mset.fparam_get_pi_by_name(self.param_name)
+        if pi is not None:
+            pindex = self.mset.fparam_get_fpi(pi.mid, pi.pid) + self.nadd_vals
+        elif self.param_name.isnumeric():
+            total_len = self.mset.fparams_len() + self.nadd_vals
+            pindex = int(self.param_name)
+            if pindex >= total_len or pindex < 0:
+                raise ValueError(
+                    f'Invalid parameter index "{self.param_name}"=={pindex}.'
+                )
+            if pindex >= self.nadd_vals:
+                pi = self.mset.fparam_get_pi(pindex)
+        else:
+            raise ValueError(f"Parameter {self.param_name} not found.")
+
+        self.pi: Ncm.MSetPIndex = pi
+        self.pindex: int = pindex
+        self.symbol: str = self.mcat.col_symb(pindex)
+
+
+@dataclasses.dataclass(kw_only=True)
+class VisualHW(ParameterAnalysis):
+    """Visual Heidelberger and Welch."""
+
+    def __post_init__(self) -> None:
+        """Visual Heidelberger and Welch."""
+        super().__post_init__()
+
+        cumsum_vec, mean, var = self.stats.visual_heidel_diag(self.pindex, 0)
+        cumsum = np.array(cumsum_vec.dup_array())
+        mean_a = (np.array(range(len(cumsum))) + 1.0) * mean
+
+        set_rc_params_article(ncol=2)
+        _, ax = plt.subplots()
+
+        ax.title.set_text("Visual Heidelberger and Welch.")
+        ax.plot(cumsum, label=f"Cumulative sum -- ${self.symbol}$")
+        ax.plot(mean_a, label=f"Mean, standard deviation = {np.sqrt(var):.2f}")
+
+        ax.set_xlabel("Iterations")
+        ax.set_ylabel("Cumulative sum")
+        ax.legend(loc="best")
+        if self.output is not None:
+            filename = self.output.with_suffix(".corner.pdf").absolute().as_posix()
+            plt.savefig(filename, bbox_inches="tight")
+
+        plt.show()
+
+        self.end_experiment()
+
+
+@dataclasses.dataclass(kw_only=True)
+class ParameterEvolution(ParameterAnalysis):
+    """Parameter evolution."""
+
+    grid_size: Annotated[
+        int,
+        typer.Option(help="Grid size."),
+    ] = 200
+
+    def __post_init__(self) -> None:
+        """Parameter evolution."""
+        super().__post_init__()
+
+        mcat = self.mcat
+        if self.pi is not None:
+            param_vec, evol_matrix = mcat.calc_param_ensemble_evol(
+                self.pi, self.grid_size, Ncm.FitRunMsgs.NONE
+            )
+        else:
+            param_vec, evol_matrix = mcat.calc_add_param_ensemble_evol(
+                self.pindex, self.grid_size, Ncm.FitRunMsgs.NONE
+            )
+
+        param = np.array(param_vec.dup_array())
+        evol_a = np.abs(evol_matrix.dup_array())
+        min_evol_a = min(evol_a[evol_a > 0.0])
+        max_evol_a = max(evol_a)
+        evol_a[evol_a == 0.0] = min_evol_a
+        evol = evol_a.reshape((-1, self.grid_size))
+        print(f"min_evol_a={min_evol_a}, max_evol_a={max_evol_a}")
+
+        set_rc_params_article(ncol=2)
+        _, ax = plt.subplots()
+
+        ax.title.set_text(f"Parameter evolution -- ${self.symbol}$")
+        cax = ax.matshow(
+            evol.T,
+            aspect="auto",
+            origin="lower",
+            cmap="viridis",
+            extent=[0, evol.shape[0], param[0], param[-1]],
+            norm=LogNorm(),
+        )
+        ax.set_xlabel("Iterations")
+        ax.set_ylabel(f"${self.symbol}$")
+        plt.colorbar(cax, label=rf"$p_t\left({self.symbol}\right)$")
 
         plt.show()
 

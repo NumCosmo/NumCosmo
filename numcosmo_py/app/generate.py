@@ -46,7 +46,7 @@ from numcosmo_py.experiments.jpas_forecast24 import (
 )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class GeneratePlanck:
     """Common block for commands that load an experiment.
 
@@ -106,7 +106,7 @@ class GeneratePlanck:
         )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class GenerateJpasForecast:
     """Common block for commands that load an experiment.
 
