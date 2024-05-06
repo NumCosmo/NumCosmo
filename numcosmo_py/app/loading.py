@@ -217,11 +217,11 @@ class LoadCatalog(LoadExperiment):
     """Analyzes the results of a MCMC run."""
 
     mcmc_file: Annotated[
-        Optional[Path],
+        Path,
         typer.Argument(
             help="Path to the MCMC file.",
         ),
-    ] = None
+    ]
 
     burnin: Annotated[
         int,
@@ -234,8 +234,6 @@ class LoadCatalog(LoadExperiment):
     def __post_init__(self) -> None:
         """Load the MCMC file and prepare the catalog."""
         super().__post_init__()
-        if self.mcmc_file is None:
-            raise RuntimeError("No MCMC file given.")
 
         if not self.mcmc_file.exists():
             raise RuntimeError(f"MCMC file {self.mcmc_file} not found.")
