@@ -66,6 +66,11 @@ main (gint argc, gchar *argv[])
 
   /* g_test_set_nonfatal_assertions (); */
 
+  g_test_add ("/nc/galaxy_sd_z_proxy/gauss/basic", TestNcGalaxySDZProxyGauss, NULL,
+              &test_nc_galaxy_sd_z_proxy_gauss_new,
+              &test_nc_galaxy_sd_z_proxy_gauss_basic,
+              &test_nc_galaxy_sd_z_proxy_gauss_free);
+
   g_test_add ("/nc/galaxy_sd_z_proxy/gauss/serialize", TestNcGalaxySDZProxyGauss, NULL,
               &test_nc_galaxy_sd_z_proxy_gauss_new,
               &test_nc_galaxy_sd_z_proxy_gauss_serialize,
@@ -129,8 +134,6 @@ test_nc_galaxy_sd_z_proxy_gauss_basic (TestNcGalaxySDZProxyGauss *test, gconstpo
   g_assert_true (sdzpg2 == NULL);
 
   g_assert_true (NC_IS_GALAXY_SD_Z_PROXY_GAUSS (sdzpg));
-
-  NCM_TEST_FREE (nc_galaxy_sd_z_proxy_gauss_free, sdzpg);
 }
 
 static void
