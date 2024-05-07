@@ -226,6 +226,10 @@ c_tests = [
         'sources': ['test_nc_galaxy_sd_position.c'],
     },
     {
+        'name': 'nc_galaxy_sd_shape_gauss',
+        'sources': ['test_nc_galaxy_sd_shape_gauss.c'],
+    },
+    {
         'name': 'nc_galaxy_sd_z_proxy_dirac',
         'sources': ['test_nc_galaxy_sd_z_proxy_dirac.c'],
     },
