@@ -225,6 +225,10 @@ c_tests = [
         'name': 'nc_galaxy_sd_position',
         'sources': ['test_nc_galaxy_sd_position.c'],
     },
+    {
+        'name': 'nc_galaxy_sd_z_proxy_dirac',
+        'sources': ['test_nc_galaxy_sd_z_proxy_dirac.c'],
+    },
 ]
 tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
 
