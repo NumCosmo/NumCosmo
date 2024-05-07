@@ -42,6 +42,8 @@ static void test_nc_galaxy_sd_z_proxy_dirac_new (TestNcGalaxySDZProxyDirac *test
 
 static void test_nc_galaxy_sd_z_proxy_dirac_free (TestNcGalaxySDZProxyDirac *test, gconstpointer pdata);
 
+static void test_nc_galaxy_sd_z_proxy_dirac_serialize (TestNcGalaxySDZProxyDirac *test, gconstpointer pdata);
+
 static void test_nc_galaxy_sd_z_proxy_dirac_gen (TestNcGalaxySDZProxyDirac *test, gconstpointer pdata);
 
 static void test_nc_galaxy_sd_z_proxy_dirac_integ (TestNcGalaxySDZProxyDirac *test, gconstpointer pdata);
@@ -54,6 +56,11 @@ main (gint argc, gchar *argv[])
   ncm_cfg_enable_gsl_err_handler ();
 
   /* g_test_set_nonfatal_assertions (); */
+
+  g_test_add ("/nc/galaxy_sd_z_proxy/dirac/serialize", TestNcGalaxySDZProxyDirac, NULL,
+              &test_nc_galaxy_sd_z_proxy_dirac_new,
+              &test_nc_galaxy_sd_z_proxy_dirac_serialize,
+              &test_nc_galaxy_sd_z_proxy_dirac_free);
 
   g_test_add ("/nc/galaxy_sd_z_proxy/dirac/gen", TestNcGalaxySDZProxyDirac, NULL,
               &test_nc_galaxy_sd_z_proxy_dirac_new,
@@ -85,6 +92,23 @@ static void
 test_nc_galaxy_sd_z_proxy_dirac_free (TestNcGalaxySDZProxyDirac *test, gconstpointer pdata)
 {
   NCM_TEST_FREE (nc_galaxy_sd_z_proxy_dirac_free, test->sdzpd);
+}
+
+static void
+test_nc_galaxy_sd_z_proxy_dirac_serialize (TestNcGalaxySDZProxyDirac *test, gconstpointer pdata)
+{
+  NcGalaxySDZProxyDirac *sdzpd = test->sdzpd;
+  NcGalaxySDZProxyDirac *sdzpd_dup;
+  NcmSerialize *ser;
+  gchar *sdzpd_ser;
+
+  ser       = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  sdzpd_ser = ncm_serialize_to_string (ser, G_OBJECT (sdzpd), TRUE);
+  sdzpd_dup = NC_GALAXY_SD_Z_PROXY_DIRAC (ncm_serialize_from_string (ser, sdzpd_ser));
+
+  ncm_serialize_free (ser);
+  g_free (sdzpd_ser);
+  nc_galaxy_sd_z_proxy_dirac_free (sdzpd_dup);
 }
 
 static void
