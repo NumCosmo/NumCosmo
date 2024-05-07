@@ -132,6 +132,9 @@ _nc_galaxy_sd_z_proxy_dirac_gen (NcGalaxySDZProxy *gsdp, NcmRNG *rng, const gdou
 static gdouble
 _nc_galaxy_sd_z_proxy_dirac_integ (NcGalaxySDZProxy *gsdp, gdouble z, const gdouble zp)
 {
+  if (fabs (z - zp) < GSL_DBL_EPSILON)
+    return 1.0;
+
   return 0.0;
 }
 
