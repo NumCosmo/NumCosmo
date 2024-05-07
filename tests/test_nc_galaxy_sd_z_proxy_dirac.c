@@ -1,5 +1,5 @@
 /***************************************************************************
- *            test_nc_data_cluster_wl.c
+ *            test_nc_galaxy_sd_z_proxy_dirac.c
  *
  *  mon May 06 23:27:20 2024
  *  Copyright  2024  Caio Lima de Oliveira
