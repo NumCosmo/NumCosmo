@@ -42,6 +42,8 @@ static void test_nc_galaxy_sd_shape_gauss_new (TestNcGalaxySDShapeGauss *test, g
 
 static void test_nc_galaxy_sd_shape_gauss_free (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
 
+static void test_nc_galaxy_sd_shape_gauss_basic (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
+
 static void test_nc_galaxy_sd_shape_gauss_serialize (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
 
 static void test_nc_galaxy_sd_shape_gauss_get_sigma (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
@@ -58,6 +60,11 @@ main (gint argc, gchar *argv[])
   ncm_cfg_enable_gsl_err_handler ();
 
   /* g_test_set_nonfatal_assertions (); */
+
+  g_test_add ("/nc/galaxy_sd_shape/gauss/basic", TestNcGalaxySDShapeGauss, NULL,
+              &test_nc_galaxy_sd_shape_gauss_new,
+              &test_nc_galaxy_sd_shape_gauss_basic,
+              &test_nc_galaxy_sd_shape_gauss_free);
 
   g_test_add ("/nc/galaxy_sd_shape/gauss/serialize", TestNcGalaxySDShapeGauss, NULL,
               &test_nc_galaxy_sd_shape_gauss_new,
@@ -101,6 +108,19 @@ static void
 test_nc_galaxy_sd_shape_gauss_free (TestNcGalaxySDShapeGauss *test, gconstpointer pdata)
 {
   NCM_TEST_FREE (nc_galaxy_sd_shape_gauss_free, test->sdsg);
+}
+
+static void
+test_nc_galaxy_sd_shape_gauss_basic (TestNcGalaxySDShapeGauss *test, gconstpointer pdata)
+{
+  NcGalaxySDShapeGauss *sdsg = test->sdsg;
+  NcGalaxySDShapeGauss *sdsg2;
+
+  sdsg2 = nc_galaxy_sd_shape_gauss_ref (sdsg);
+  nc_galaxy_sd_shape_gauss_clear (&sdsg2);
+  g_assert_true (sdsg2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE_GAUSS (sdsg));
 }
 
 static void

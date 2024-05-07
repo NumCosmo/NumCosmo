@@ -87,9 +87,9 @@ _nc_galaxy_sd_shape_gauss_set_property (GObject *object, guint prop_id, const GV
     case PROP_SIGMA:
       nc_galaxy_sd_shape_gauss_set_sigma (gsdsgauss, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -107,9 +107,9 @@ _nc_galaxy_sd_shape_gauss_get_property (GObject *object, guint prop_id, GValue *
     case PROP_SIGMA:
       g_value_set_double (value, self->sigma);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
