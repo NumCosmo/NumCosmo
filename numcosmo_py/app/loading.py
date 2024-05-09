@@ -55,8 +55,9 @@ class LoadExperiment:
             help=(
                 "If given, the product file is written, the file name is the same as "
                 "the experiment file with the extension .product.yaml. "
-                "This option is incompatible with the output and starting-point options "
-                "since the product file contains the output and starting point."
+                "This option is incompatible with the output and starting-point "
+                "options since the product file contains the output and starting "
+                "point."
             ),
         ),
     ] = False
@@ -78,6 +79,15 @@ class LoadExperiment:
             "-o",
             help="Path to the output file, if given, the computed results are written "
             "to this file, otherwise they are not saved.",
+        ),
+    ] = None
+
+    log_file: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--log-file",
+            "-l",
+            help="Path to the file where the log should be written.",
         ),
     ] = None
 
@@ -103,7 +113,11 @@ class LoadExperiment:
         # this is necessary because when using MPI, the model builders
         # should be created in all processes before initializing NumCosmo.
         Ncm.cfg_init()
-        console = set_ncm_console()
+        self.console_io = None
+        if self.log_file:
+            self.console_io = open(self.log_file, "w", encoding="utf-8")
+
+        console = set_ncm_console(self.console_io)
 
         experiment_objects = ser.dict_str_from_yaml_file(
             self.experiment.absolute().as_posix()
@@ -129,7 +143,8 @@ class LoadExperiment:
                 )
             if self.starting_point is not None:
                 raise RuntimeError(
-                    "The product file option is incompatible with the starting-point option."
+                    "The product file option is incompatible with the starting-point "
+                    "option."
                 )
             self.output = self.experiment.with_suffix(".product.yaml")
 
@@ -210,6 +225,8 @@ class LoadExperiment:
             ser.dict_str_to_yaml_file(
                 self.output_dict, self.output.absolute().as_posix()
             )
+        if self.console_io is not None:
+            self.console_io.close()
 
 
 @dataclasses.dataclass(kw_only=True)
