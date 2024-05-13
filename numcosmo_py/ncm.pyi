@@ -527,6 +527,7 @@ class ABC(GObject.Object):
         nparticles: int
         prior: MSetTransKern
         trans_kernel: MSetTransKern
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -588,6 +589,7 @@ class ABCClass(GObject.GPointer):
 
         ABCClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     data_summary: Callable[[ABC], bool] = ...
     mock_distance: Callable[[ABC, Dataset, Vector, Vector, RNG], float] = ...
@@ -605,6 +607,7 @@ class BinSplit(GObject.GPointer):
 
         BinSplit()
     """
+
     userdata: None = ...
     n1: int = ...
     n2: int = ...
@@ -650,6 +653,7 @@ class Bootstrap(GObject.Object):
         full_size: int
         init: bool
         realization: GLib.Variant
+
     props: Props = ...
     def __init__(
         self,
@@ -685,6 +689,7 @@ class BootstrapClass(GObject.GPointer):
 
         BootstrapClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class C(GObject.Object):
@@ -700,6 +705,7 @@ class C(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     @staticmethod
     def AR() -> float: ...
     @staticmethod
@@ -907,6 +913,8 @@ class C(GObject.Object):
     @staticmethod
     def eV() -> float: ...
     @staticmethod
+    def electric_constant() -> float: ...
+    @staticmethod
     def fine_struct() -> float: ...
     @staticmethod
     def fine_struct_square() -> float: ...
@@ -942,6 +950,8 @@ class C(GObject.Object):
     def lnpi() -> float: ...
     @staticmethod
     def lnpi_4() -> float: ...
+    @staticmethod
+    def magnetic_constant() -> float: ...
     @staticmethod
     def mass_1H() -> float: ...
     @staticmethod
@@ -1059,6 +1069,7 @@ class CClass(GObject.GPointer):
 
         CClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class CSQ1D(GObject.Object):
@@ -1076,8 +1087,6 @@ class CSQ1D(GObject.Object):
         Relative tolerance
       abstol -> gdouble: abstol
         Absolute tolerance tolerance
-      k -> gdouble: k
-        Mode k
       ti -> gdouble: ti
         The initial time t_i
       tf -> gdouble: tf
@@ -1088,8 +1097,12 @@ class CSQ1D(GObject.Object):
         The propagator threshold
       save-evol -> gboolean: save-evol
         Save the system evolution
-      max-order-2 -> gboolean: max-order-2
-        Whether to always truncate at order 2
+      vacuum-type -> NcmCSQ1DInitialStateType: vacuum-type
+        The vacuum type
+      vacuum-reltol -> gdouble: vacuum-reltol
+        The vacuum relative tolerance
+      vacuum-max-time -> gdouble: vacuum-max-time
+        The vacuum maximum time
 
     Signals from GObject:
       notify (GParam)
@@ -1098,93 +1111,85 @@ class CSQ1D(GObject.Object):
     class Props:
         abstol: float
         adiab_threshold: float
-        k: float
-        max_order_2: bool
         prop_threshold: float
         reltol: float
         save_evol: bool
         tf: float
         ti: float
+        vacuum_max_time: float
+        vacuum_reltol: float
+        vacuum_type: CSQ1DInitialStateType
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
         self,
         abstol: float = ...,
         adiab_threshold: float = ...,
-        k: float = ...,
-        max_order_2: bool = ...,
         prop_threshold: float = ...,
         reltol: float = ...,
         save_evol: bool = ...,
         tf: float = ...,
         ti: float = ...,
+        vacuum_max_time: float = ...,
+        vacuum_reltol: float = ...,
+        vacuum_type: CSQ1DInitialStateType = ...,
     ): ...
-    def alpha_dgamma_to_minkowski_frame(
-        self,
-        model: Optional[Model],
-        adiab_frame: int,
-        t: float,
-        alpha: float,
-        dgamma: float,
-    ) -> Tuple[float, float]: ...
-    def alpha_dgamma_to_phi_Pphi(
-        self, model: Optional[Model], t: float, alpha: float, dgamma: float
-    ) -> Tuple[list[float], list[float]]: ...
-    def alpha_gamma_circle(
-        self, model: Optional[Model], alpha: float, gamma: float, r: float, theta: float
-    ) -> Tuple[float, float]: ...
+    def change_frame(
+        self, model: Optional[Model], state: CSQ1DState, frame: CSQ1DFrame
+    ) -> CSQ1DState: ...
     @staticmethod
     def clear(csq1d: CSQ1D) -> None: ...
-    def do_eval_F1(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def do_eval_F2(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def do_eval_FN(
-        self, model: Optional[Model], n: int, t: float, k: float
-    ) -> float: ...
-    def do_eval_dm(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def do_eval_dxi(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def do_eval_int_1_m(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def do_eval_int_mnu2(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def do_eval_int_q2mnu2(
-        self, model: Optional[Model], t: float, k: float
-    ) -> float: ...
-    def do_eval_int_qmnu2(
-        self, model: Optional[Model], t: float, k: float
-    ) -> float: ...
-    def do_eval_m(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def do_eval_nu(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def do_eval_nu2(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def do_eval_powspec_factor(self, model: Optional[Model], k: float) -> float: ...
-    def do_eval_xi(self, model: Optional[Model], t: float, k: float) -> float: ...
+    def compute_H(
+        self, model: Optional[Model], t: float, state: CSQ1DState
+    ) -> CSQ1DState: ...
+    def compute_adiab(
+        self, model: Optional[Model], t: float, state: CSQ1DState
+    ) -> Tuple[CSQ1DState, float, float]: ...
+    def compute_adiab_frame(
+        self, model: Optional[Model], frame: CSQ1DFrame, t: float, state: CSQ1DState
+    ) -> Tuple[CSQ1DState, float, float]: ...
+    def compute_nonadiab(
+        self, model: Optional[Model], t: float, state: CSQ1DState
+    ) -> CSQ1DState: ...
+    def compute_prop_vector(
+        self, model: Model, t: float, state: CSQ1DState
+    ) -> CSQ1DState: ...
+    def do_eval_F1(self, model: Optional[Model], t: float) -> float: ...
+    def do_eval_F2(self, model: Optional[Model], t: float) -> float: ...
+    def do_eval_int_1_m(self, model: Optional[Model], t: float) -> float: ...
+    def do_eval_int_mnu2(self, model: Optional[Model], t: float) -> float: ...
+    def do_eval_int_q2mnu2(self, model: Optional[Model], t: float) -> float: ...
+    def do_eval_int_qmnu2(self, model: Optional[Model], t: float) -> float: ...
+    def do_eval_m(self, model: Optional[Model], t: float) -> float: ...
+    def do_eval_nu(self, model: Optional[Model], t: float) -> float: ...
+    def do_eval_nu2(self, model: Optional[Model], t: float) -> float: ...
+    def do_eval_xi(self, model: Optional[Model], t: float) -> float: ...
     def do_prepare(self, model: Optional[Model] = None) -> None: ...
-    def eval_F1(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def eval_F2(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def eval_FN(self, model: Optional[Model], n: int, t: float, k: float) -> float: ...
-    def eval_adiab_at(
-        self, model: Optional[Model], t: float
-    ) -> Tuple[float, float, float, float]: ...
-    def eval_at(self, t: float) -> Tuple[float, float]: ...
-    def eval_dm(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def eval_dxi(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def eval_int_1_m(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def eval_int_mnu2(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def eval_int_q2mnu2(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def eval_int_qmnu2(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def eval_m(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def eval_nonadiab_at(
-        self, model: Optional[Model], nonadiab_frame: int, t: float
-    ) -> Tuple[float, float]: ...
-    def eval_nu(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def eval_nu2(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def eval_powspec_factor(self, model: Optional[Model], k: float) -> float: ...
-    def eval_xi(self, model: Optional[Model], t: float, k: float) -> float: ...
-    def evolve_prop_vector_chi_Up(
+    def eval_F1(self, model: Optional[Model], t: float) -> float: ...
+    def eval_F2(self, model: Optional[Model], t: float) -> float: ...
+    def eval_at(
+        self, model: Optional[Model], t: float, state: CSQ1DState
+    ) -> CSQ1DState: ...
+    def eval_at_frame(
+        self, model: Optional[Model], frame: CSQ1DFrame, t: float, state: CSQ1DState
+    ) -> CSQ1DState: ...
+    def eval_int_1_m(self, model: Optional[Model], t: float) -> float: ...
+    def eval_int_mnu2(self, model: Optional[Model], t: float) -> float: ...
+    def eval_int_q2mnu2(self, model: Optional[Model], t: float) -> float: ...
+    def eval_int_qmnu2(self, model: Optional[Model], t: float) -> float: ...
+    def eval_m(self, model: Optional[Model], t: float) -> float: ...
+    def eval_nu(self, model: Optional[Model], t: float) -> float: ...
+    def eval_nu2(self, model: Optional[Model], t: float) -> float: ...
+    def eval_xi(self, model: Optional[Model], t: float) -> float: ...
+    def evolve_prop_vector(
         self,
         model: Optional[Model],
+        initial_state: CSQ1DState,
+        frame: CSQ1DFrame,
         t: float,
-        nonadiab_frame: int,
-        chi_i: float,
-        Up_i: float,
-    ) -> Tuple[float, float]: ...
+        state: CSQ1DState,
+    ) -> CSQ1DState: ...
     def find_adiab_max(
         self, model: Optional[Model], t0: float, t1: float, border_eps: float
     ) -> Tuple[float, float, float, float]: ...
@@ -1192,47 +1197,18 @@ class CSQ1D(GObject.Object):
         self, model: Optional[Model], t0: float, t1: float, reltol: float
     ) -> Tuple[bool, float]: ...
     def free(self) -> None: ...
-    def get_H_poincare_disc(
-        self, model: Optional[Model], t: float
-    ) -> Tuple[float, float]: ...
-    def get_H_poincare_hp(
-        self, model: Optional[Model], t: float
-    ) -> Tuple[float, float]: ...
-    def get_Hadiab_poincare_disc(
-        self, model: Optional[Model], t: float
-    ) -> Tuple[float, float]: ...
-    def get_Hadiab_poincare_hp(
-        self, model: Optional[Model], t: float
-    ) -> Tuple[float, float]: ...
-    def get_J_at(
-        self, model: Optional[Model], t: float
-    ) -> Tuple[float, float, float]: ...
     def get_abstol(self) -> float: ...
     def get_adiab_threshold(self) -> float: ...
-    def get_k(self) -> float: ...
-    def get_max_order_2(self) -> bool: ...
-    def get_minkowski_frame(
-        self, model: Optional[Model], adiab_frame: int, t: float
-    ) -> Tuple[float, float]: ...
-    def get_poincare_disc(
-        self, model: Optional[Model], t: float
-    ) -> Tuple[float, float]: ...
-    def get_poincare_hp(
-        self, model: Optional[Model], t: float
-    ) -> Tuple[float, float]: ...
-    def get_poincare_hp_frame(
-        self, model: Optional[Model], adiab_frame: int, t: float
-    ) -> Tuple[float, float]: ...
+    def get_initial_condition_type(self) -> CSQ1DInitialStateType: ...
     def get_prop_threshold(self) -> float: ...
-    def get_prop_vector_chi_Up(
-        self, model: Optional[Model], t: float
-    ) -> Tuple[float, float]: ...
     def get_reltol(self) -> float: ...
     def get_save_evol(self) -> bool: ...
     def get_tf(self) -> float: ...
     def get_tf_prop(self) -> float: ...
     def get_ti(self) -> float: ...
     def get_time_array(self) -> Tuple[list[float], float]: ...
+    def get_vacuum_max_time(self) -> float: ...
+    def get_vacuum_reltol(self) -> float: ...
     def prepare(self, model: Optional[Model] = None) -> None: ...
     def prepare_prop(
         self, model: Optional[Model], ti: float, tii: float, tf: float
@@ -1241,16 +1217,22 @@ class CSQ1D(GObject.Object):
     def set_abstol(self, abstol: float) -> None: ...
     def set_adiab_threshold(self, adiab_threshold: float) -> None: ...
     def set_init_cond(
-        self, state: CSQ1DEvolState, ti: float, x: float, y: float
+        self,
+        model: Optional[Model],
+        evol_state: CSQ1DEvolState,
+        initial_state: CSQ1DState,
     ) -> None: ...
     def set_init_cond_adiab(self, model: Optional[Model], ti: float) -> None: ...
-    def set_k(self, k: float) -> None: ...
-    def set_max_order_2(self, truncate: bool) -> None: ...
+    def set_initial_condition_type(
+        self, initial_condition_type: CSQ1DInitialStateType
+    ) -> None: ...
     def set_prop_threshold(self, prop_threshold: float) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_save_evol(self, save: bool) -> None: ...
     def set_tf(self, tf: float) -> None: ...
     def set_ti(self, ti: float) -> None: ...
+    def set_vacuum_max_time(self, vacuum_max_time: float) -> None: ...
+    def set_vacuum_reltol(self, vacuum_reltol: float) -> None: ...
 
 class CSQ1DClass(GObject.GPointer):
     r"""
@@ -1260,26 +1242,56 @@ class CSQ1DClass(GObject.GPointer):
 
         CSQ1DClass()
     """
+
     parent_class: GObject.ObjectClass = ...
-    eval_xi: Callable[[CSQ1D, Optional[Model], float, float], float] = ...
-    eval_dxi: Callable[[CSQ1D, Optional[Model], float, float], float] = ...
-    eval_nu: Callable[[CSQ1D, Optional[Model], float, float], float] = ...
-    eval_nu2: Callable[[CSQ1D, Optional[Model], float, float], float] = ...
-    eval_m: Callable[[CSQ1D, Optional[Model], float, float], float] = ...
-    eval_int_1_m: Callable[[CSQ1D, Optional[Model], float, float], float] = ...
-    eval_int_mnu2: Callable[[CSQ1D, Optional[Model], float, float], float] = ...
-    eval_int_qmnu2: Callable[[CSQ1D, Optional[Model], float, float], float] = ...
-    eval_int_q2mnu2: Callable[[CSQ1D, Optional[Model], float, float], float] = ...
-    eval_dm: Callable[[CSQ1D, Optional[Model], float, float], float] = ...
-    eval_F1: Callable[[CSQ1D, Optional[Model], float, float], float] = ...
-    eval_F2: Callable[[CSQ1D, Optional[Model], float, float], float] = ...
-    eval_FN: Callable[[CSQ1D, Optional[Model], int, float, float], float] = ...
-    eval_powspec_factor: Callable[[CSQ1D, Optional[Model], float], float] = ...
+    eval_xi: Callable[[CSQ1D, Optional[Model], float], float] = ...
+    eval_nu: Callable[[CSQ1D, Optional[Model], float], float] = ...
+    eval_nu2: Callable[[CSQ1D, Optional[Model], float], float] = ...
+    eval_m: Callable[[CSQ1D, Optional[Model], float], float] = ...
+    eval_int_1_m: Callable[[CSQ1D, Optional[Model], float], float] = ...
+    eval_int_mnu2: Callable[[CSQ1D, Optional[Model], float], float] = ...
+    eval_int_qmnu2: Callable[[CSQ1D, Optional[Model], float], float] = ...
+    eval_int_q2mnu2: Callable[[CSQ1D, Optional[Model], float], float] = ...
+    eval_F1: Callable[[CSQ1D, Optional[Model], float], float] = ...
+    eval_F2: Callable[[CSQ1D, Optional[Model], float], float] = ...
     prepare: Callable[[CSQ1D, Optional[Model]], None] = ...
     padding: list[None] = ...
 
-class CSQ1DSingFitUm(GObject.GPointer): ...
-class CSQ1DSingFitUp(GObject.GPointer): ...
+class CSQ1DState(GObject.GBoxed):
+    r"""
+    :Constructors:
+
+    ::
+
+        CSQ1DState()
+        new() -> NumCosmoMath.CSQ1DState
+    """
+
+    frame: CSQ1DFrame = ...
+    alpha: float = ...
+    gamma: float = ...
+    t: float = ...
+    def compute_distance(self, state1: CSQ1DState) -> float: ...
+    def copy(self) -> CSQ1DState: ...
+    def free(self) -> None: ...
+    def get_J(self) -> Tuple[float, float, float]: ...
+    def get_ag(self) -> Tuple[float, float]: ...
+    def get_circle(self, r: float, theta: float) -> CSQ1DState: ...
+    def get_frame(self) -> CSQ1DFrame: ...
+    def get_minkowski(self) -> Tuple[float, float]: ...
+    def get_phi_Pphi(self) -> Tuple[list[float], list[float]]: ...
+    def get_poincare_disc(self) -> Tuple[float, float]: ...
+    def get_poincare_half_plane(self) -> Tuple[float, float]: ...
+    def get_time(self) -> float: ...
+    def get_um(self) -> Tuple[float, float]: ...
+    def get_up(self) -> Tuple[float, float]: ...
+    @classmethod
+    def new(cls) -> CSQ1DState: ...
+    def set_ag(
+        self, frame: CSQ1DFrame, t: float, alpha: float, gamma: float
+    ) -> None: ...
+    def set_um(self, frame: CSQ1DFrame, t: float, chi: float, Um: float) -> None: ...
+    def set_up(self, frame: CSQ1DFrame, t: float, chi: float, Up: float) -> None: ...
 
 class Complex(GObject.GBoxed):
     r"""
@@ -1290,6 +1302,7 @@ class Complex(GObject.GBoxed):
         Complex()
         new() -> NumCosmoMath.Complex
     """
+
     z: list[float] = ...
     def Im(self) -> float: ...
     def Re(self) -> float: ...
@@ -1317,6 +1330,7 @@ class DTuple2(GObject.GBoxed):
         new(x:float, y:float) -> NumCosmoMath.DTuple2
         new_from_variant(var:GLib.Variant) -> NumCosmoMath.DTuple2
     """
+
     elements: list[float] = ...
     @staticmethod
     def clear(dt2: DTuple2) -> None: ...
@@ -1338,6 +1352,7 @@ class DTuple3(GObject.GBoxed):
         new(x:float, y:float, z:float) -> NumCosmoMath.DTuple3
         new_from_variant(var:GLib.Variant) -> NumCosmoMath.DTuple3
     """
+
     elements: list[float] = ...
     @staticmethod
     def clear(dt3: DTuple3) -> None: ...
@@ -1381,6 +1396,7 @@ class Data(GObject.Object):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -1424,6 +1440,7 @@ class Data(GObject.Object):
     def inv_cov_UH(self, mset: MSet, H: Matrix) -> None: ...
     def inv_cov_Uf(self, mset: MSet, f: Vector) -> None: ...
     def is_init(self) -> bool: ...
+    def is_resampling(self) -> bool: ...
     def leastsquares_f(self, mset: MSet, f: Vector) -> None: ...
     def m2lnL_val(self, mset: MSet) -> float: ...
     def mean_vector(self, mset: MSet, mu: Vector) -> None: ...
@@ -1445,6 +1462,7 @@ class DataClass(GObject.GPointer):
 
         DataClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     name: str = ...
     bootstrap: bool = ...
@@ -1502,6 +1520,7 @@ class DataDist1d(Data):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: Data = ...
     def __init__(
@@ -1529,6 +1548,7 @@ class DataDist1dClass(GObject.GPointer):
 
         DataDist1dClass()
     """
+
     parent_class: DataClass = ...
     dist1d_m2lnL_val: Callable[[DataDist1d, MSet, float], float] = ...
     inv_pdf: Callable[[DataDist1d, MSet, float], float] = ...
@@ -1576,6 +1596,7 @@ class DataDist2d(Data):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: Data = ...
     def __init__(
@@ -1604,6 +1625,7 @@ class DataDist2dClass(GObject.GPointer):
 
         DataDist2dClass()
     """
+
     parent_class: DataClass = ...
     dist2d_m2lnL_val: Callable[[DataDist2d, MSet, float, float], float] = ...
     inv_pdf: Callable[[DataDist2d, MSet, float, float], Tuple[float, float]] = ...
@@ -1644,6 +1666,7 @@ class DataFunnel(Data):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     def __init__(
         self,
@@ -1667,6 +1690,7 @@ class DataFunnelClass(GObject.GPointer):
 
         DataFunnelClass()
     """
+
     parent_class: DataClass = ...
 
 class DataGauss(Data):
@@ -1712,6 +1736,7 @@ class DataGauss(Data):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: Data = ...
     def __init__(
@@ -1741,6 +1766,7 @@ class DataGaussClass(GObject.GPointer):
 
         DataGaussClass()
     """
+
     parent_class: DataClass = ...
     mean_func: Callable[[DataGauss, MSet, Vector], None] = ...
     inv_cov_func: Callable[[DataGauss, MSet, Matrix], bool] = ...
@@ -1794,6 +1820,7 @@ class DataGaussCov(Data):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: Data = ...
     def __init__(
@@ -1808,6 +1835,8 @@ class DataGaussCov(Data):
         long_desc: str = ...,
     ): ...
     def bulk_resample(self, mset: MSet, resample: Matrix, rng: RNG) -> None: ...
+    def compute_cov(self, mset: MSet) -> Tuple[Matrix, bool]: ...
+    def compute_mean(self, mset: MSet) -> Vector: ...
     def do_cov_func(self, mset: MSet, cov: Matrix) -> bool: ...
     def do_get_size(self) -> int: ...
     def do_lnNorma2(self, mset: MSet, m2lnL: float) -> None: ...
@@ -1819,6 +1848,7 @@ class DataGaussCov(Data):
     def peek_cov(self) -> Matrix: ...
     def peek_mean(self) -> Vector: ...
     def replace_mean(self, mean: Vector) -> None: ...
+    def set_cov(self, cov: Matrix) -> None: ...
     def set_size(self, np: int) -> None: ...
     def use_norma(self, use_norma: bool) -> None: ...
 
@@ -1830,6 +1860,7 @@ class DataGaussCovClass(GObject.GPointer):
 
         DataGaussCovClass()
     """
+
     parent_class: DataClass = ...
     mean_func: Callable[[DataGaussCov, MSet, Vector], None] = ...
     cov_func: Callable[[DataGaussCov, MSet, Matrix], bool] = ...
@@ -1887,6 +1918,7 @@ class DataGaussCovMVND(DataGaussCov):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     def __init__(
         self,
@@ -1962,6 +1994,7 @@ class DataGaussCovMVNDClass(GObject.GPointer):
 
         DataGaussCovMVNDClass()
     """
+
     parent_class: DataGaussCovClass = ...
 
 class DataGaussDiag(Data):
@@ -2010,6 +2043,7 @@ class DataGaussDiag(Data):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: Data = ...
     def __init__(
@@ -2040,6 +2074,7 @@ class DataGaussDiagClass(GObject.GPointer):
 
         DataGaussDiagClass()
     """
+
     parent_class: DataClass = ...
     mean_func: Callable[[DataGaussDiag, MSet, Vector], None] = ...
     sigma_func: Callable[[DataGaussDiag, MSet, Vector], bool] = ...
@@ -2080,6 +2115,7 @@ class DataGaussMix2D(Data):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     def __init__(
         self,
@@ -2103,6 +2139,7 @@ class DataGaussMix2DClass(GObject.GPointer):
 
         DataGaussMix2DClass()
     """
+
     parent_class: DataClass = ...
 
 class DataPoisson(Data):
@@ -2145,6 +2182,7 @@ class DataPoisson(Data):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     parent_instance: Data = ...
     def __init__(
@@ -2176,6 +2214,7 @@ class DataPoissonClass(GObject.GPointer):
 
         DataPoissonClass()
     """
+
     parent_class: DataClass = ...
     mean_func: Callable[[DataPoisson, MSet, int], float] = ...
     set_size: Callable[[DataPoisson, int], None] = ...
@@ -2215,6 +2254,7 @@ class DataRosenbrock(Data):
         init: bool
         long_desc: str
         name: str
+
     props: Props = ...
     def __init__(
         self,
@@ -2238,6 +2278,7 @@ class DataRosenbrockClass(GObject.GPointer):
 
         DataRosenbrockClass()
     """
+
     parent_class: DataClass = ...
 
 class Dataset(GObject.Object):
@@ -2265,6 +2306,7 @@ class Dataset(GObject.Object):
     class Props:
         bootstrap_type: DatasetBStrapType
         data_array: ObjArray
+
     props: Props = ...
     def __init__(
         self, bootstrap_type: DatasetBStrapType = ..., data_array: ObjArray = ...
@@ -2316,6 +2358,7 @@ class DatasetClass(GObject.GPointer):
 
         DatasetClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class Diff(GObject.Object):
@@ -2351,6 +2394,7 @@ class Diff(GObject.Object):
         richardson_step: float
         round_off_pad: float
         terr_pad: float
+
     props: Props = ...
     def __init__(
         self,
@@ -2427,6 +2471,7 @@ class DiffClass(GObject.GPointer):
 
         DiffClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class Fftlog(GObject.Object):
@@ -2450,6 +2495,8 @@ class Fftlog(GObject.Object):
         Function log-period
       N -> guint: N
         Number of knots
+      max-n -> guint: max-n
+        Maximum number of knots
       padding -> gdouble: padding
         Padding percentage
       no-ringing -> gboolean: no-ringing
@@ -2478,6 +2525,7 @@ class Fftlog(GObject.Object):
         eval_r_min: float
         lnk0: float
         lnr0: float
+        max_n: int
         name: str
         nderivs: int
         no_ringing: bool
@@ -2485,6 +2533,7 @@ class Fftlog(GObject.Object):
         smooth_padding_scale: float
         use_eval_int: bool
         use_smooth_padding: bool
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -2495,6 +2544,7 @@ class Fftlog(GObject.Object):
         eval_r_min: float = ...,
         lnk0: float = ...,
         lnr0: float = ...,
+        max_n: int = ...,
         nderivs: int = ...,
         no_ringing: bool = ...,
         padding: float = ...,
@@ -2522,6 +2572,7 @@ class Fftlog(GObject.Object):
     def get_lnk0(self) -> float: ...
     def get_lnk_vector(self, lnk: Vector) -> None: ...
     def get_lnr0(self) -> float: ...
+    def get_max_size(self) -> int: ...
     def get_mode_index(self, i: int) -> int: ...
     def get_nderivs(self) -> int: ...
     def get_noring(self) -> bool: ...
@@ -2542,6 +2593,7 @@ class Fftlog(GObject.Object):
     def set_length(self, Lk: float) -> None: ...
     def set_lnk0(self, lnk0: float) -> None: ...
     def set_lnr0(self, lnr0: float) -> None: ...
+    def set_max_size(self, max_n: int) -> None: ...
     def set_nderivs(self, nderivs: int) -> None: ...
     def set_noring(self, active: bool) -> None: ...
     def set_padding(self, pad_p: float) -> None: ...
@@ -2558,6 +2610,7 @@ class FftlogClass(GObject.GPointer):
 
         FftlogClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     name: str = ...
     compute_Ym: Callable[[Fftlog, None], None] = ...
@@ -2585,6 +2638,8 @@ class FftlogGausswin2(Fftlog):
         Function log-period
       N -> guint: N
         Number of knots
+      max-n -> guint: max-n
+        Maximum number of knots
       padding -> gdouble: padding
         Padding percentage
       no-ringing -> gboolean: no-ringing
@@ -2613,6 +2668,7 @@ class FftlogGausswin2(Fftlog):
         eval_r_min: float
         lnk0: float
         lnr0: float
+        max_n: int
         name: str
         nderivs: int
         no_ringing: bool
@@ -2620,6 +2676,7 @@ class FftlogGausswin2(Fftlog):
         smooth_padding_scale: float
         use_eval_int: bool
         use_smooth_padding: bool
+
     props: Props = ...
     def __init__(
         self,
@@ -2629,6 +2686,7 @@ class FftlogGausswin2(Fftlog):
         eval_r_min: float = ...,
         lnk0: float = ...,
         lnr0: float = ...,
+        max_n: int = ...,
         nderivs: int = ...,
         no_ringing: bool = ...,
         padding: float = ...,
@@ -2647,6 +2705,7 @@ class FftlogGausswin2Class(GObject.GPointer):
 
         FftlogGausswin2Class()
     """
+
     parent_class: FftlogClass = ...
 
 class FftlogSBesselJ(Fftlog):
@@ -2677,6 +2736,8 @@ class FftlogSBesselJ(Fftlog):
         Function log-period
       N -> guint: N
         Number of knots
+      max-n -> guint: max-n
+        Maximum number of knots
       padding -> gdouble: padding
         Padding percentage
       no-ringing -> gboolean: no-ringing
@@ -2707,6 +2768,7 @@ class FftlogSBesselJ(Fftlog):
         eval_r_min: float
         lnk0: float
         lnr0: float
+        max_n: int
         name: str
         nderivs: int
         no_ringing: bool
@@ -2714,6 +2776,7 @@ class FftlogSBesselJ(Fftlog):
         smooth_padding_scale: float
         use_eval_int: bool
         use_smooth_padding: bool
+
     props: Props = ...
     def __init__(
         self,
@@ -2725,6 +2788,7 @@ class FftlogSBesselJ(Fftlog):
         eval_r_min: float = ...,
         lnk0: float = ...,
         lnr0: float = ...,
+        max_n: int = ...,
         nderivs: int = ...,
         no_ringing: bool = ...,
         padding: float = ...,
@@ -2751,6 +2815,7 @@ class FftlogSBesselJClass(GObject.GPointer):
 
         FftlogSBesselJClass()
     """
+
     parent_class: FftlogClass = ...
 
 class FftlogSBesselJLJM(Fftlog):
@@ -2783,6 +2848,8 @@ class FftlogSBesselJLJM(Fftlog):
         Function log-period
       N -> guint: N
         Number of knots
+      max-n -> guint: max-n
+        Maximum number of knots
       padding -> gdouble: padding
         Padding percentage
       no-ringing -> gboolean: no-ringing
@@ -2814,6 +2881,7 @@ class FftlogSBesselJLJM(Fftlog):
         eval_r_min: float
         lnk0: float
         lnr0: float
+        max_n: int
         name: str
         nderivs: int
         no_ringing: bool
@@ -2821,6 +2889,7 @@ class FftlogSBesselJLJM(Fftlog):
         smooth_padding_scale: float
         use_eval_int: bool
         use_smooth_padding: bool
+
     props: Props = ...
     def __init__(
         self,
@@ -2833,6 +2902,7 @@ class FftlogSBesselJLJM(Fftlog):
         eval_r_min: float = ...,
         lnk0: float = ...,
         lnr0: float = ...,
+        max_n: int = ...,
         nderivs: int = ...,
         no_ringing: bool = ...,
         padding: float = ...,
@@ -2870,6 +2940,7 @@ class FftlogSBesselJLJMClass(GObject.GPointer):
 
         FftlogSBesselJLJMClass()
     """
+
     parent_class: FftlogClass = ...
 
 class FftlogTophatwin2(Fftlog):
@@ -2894,6 +2965,8 @@ class FftlogTophatwin2(Fftlog):
         Function log-period
       N -> guint: N
         Number of knots
+      max-n -> guint: max-n
+        Maximum number of knots
       padding -> gdouble: padding
         Padding percentage
       no-ringing -> gboolean: no-ringing
@@ -2922,6 +2995,7 @@ class FftlogTophatwin2(Fftlog):
         eval_r_min: float
         lnk0: float
         lnr0: float
+        max_n: int
         name: str
         nderivs: int
         no_ringing: bool
@@ -2929,6 +3003,7 @@ class FftlogTophatwin2(Fftlog):
         smooth_padding_scale: float
         use_eval_int: bool
         use_smooth_padding: bool
+
     props: Props = ...
     def __init__(
         self,
@@ -2938,6 +3013,7 @@ class FftlogTophatwin2(Fftlog):
         eval_r_min: float = ...,
         lnk0: float = ...,
         lnr0: float = ...,
+        max_n: int = ...,
         nderivs: int = ...,
         no_ringing: bool = ...,
         padding: float = ...,
@@ -2956,6 +3032,7 @@ class FftlogTophatwin2Class(GObject.GPointer):
 
         FftlogTophatwin2Class()
     """
+
     parent_class: FftlogClass = ...
 
 class Fit(GObject.Object):
@@ -3014,6 +3091,7 @@ class Fit(GObject.Object):
         params_reltol: float
         state: FitState
         sub_fit: Fit
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -3145,6 +3223,7 @@ class FitClass(GObject.GPointer):
 
         FitClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     copy_new: Callable[[Fit, Likelihood, MSet, FitGradType], Fit] = ...
     reset: Callable[[Fit], None] = ...
@@ -3223,6 +3302,7 @@ class FitESMCMC(GObject.Object):
         trim_type: MSetCatalogTrimType
         use_mpi: bool
         walker: FitESMCMCWalker
+
     props: Props = ...
     def __init__(
         self,
@@ -3305,6 +3385,7 @@ class FitESMCMCClass(GObject.GPointer):
 
         FitESMCMCClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class FitESMCMCWalker(GObject.Object):
@@ -3330,6 +3411,7 @@ class FitESMCMCWalker(GObject.Object):
     class Props:
         nparams: int
         size: int
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(self, nparams: int = ..., size: int = ...): ...
@@ -3456,6 +3538,7 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         use_threads: bool
         nparams: int
         size: int
+
     props: Props = ...
     def __init__(
         self,
@@ -3508,6 +3591,7 @@ class FitESMCMCWalkerAPESClass(GObject.GPointer):
 
         FitESMCMCWalkerAPESClass()
     """
+
     parent_class: FitESMCMCWalkerClass = ...
 
 class FitESMCMCWalkerClass(GObject.GPointer):
@@ -3518,6 +3602,7 @@ class FitESMCMCWalkerClass(GObject.GPointer):
 
         FitESMCMCWalkerClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     set_size: Callable[[FitESMCMCWalker, int], None] = ...
     get_size: Callable[[FitESMCMCWalker], int] = ...
@@ -3580,6 +3665,7 @@ class FitESMCMCWalkerStretch(FitESMCMCWalker):
         scale: float
         nparams: int
         size: int
+
     props: Props = ...
     def __init__(
         self,
@@ -3604,6 +3690,7 @@ class FitESMCMCWalkerStretchClass(GObject.GPointer):
 
         FitESMCMCWalkerStretchClass()
     """
+
     parent_class: FitESMCMCWalkerClass = ...
 
 class FitESMCMCWalkerWalk(FitESMCMCWalker):
@@ -3635,6 +3722,7 @@ class FitESMCMCWalkerWalk(FitESMCMCWalker):
         scale: float
         nparams: int
         size: int
+
     props: Props = ...
     def __init__(self, scale: float = ..., nparams: int = ..., size: int = ...): ...
     def get_scale(self) -> float: ...
@@ -3650,6 +3738,7 @@ class FitESMCMCWalkerWalkClass(GObject.GPointer):
 
         FitESMCMCWalkerWalkClass()
     """
+
     parent_class: FitESMCMCWalkerClass = ...
 
 class FitGSLLS(Fit):
@@ -3709,6 +3798,7 @@ class FitGSLLS(Fit):
         params_reltol: float
         state: FitState
         sub_fit: Fit
+
     props: Props = ...
     def __init__(
         self,
@@ -3737,6 +3827,7 @@ class FitGSLLSClass(GObject.GPointer):
 
         FitGSLLSClass()
     """
+
     parent_class: FitClass = ...
 
 class FitGSLMM(Fit):
@@ -3803,6 +3894,7 @@ class FitGSLMM(Fit):
         params_reltol: float
         state: FitState
         sub_fit: Fit
+
     props: Props = ...
     def __init__(
         self,
@@ -3843,6 +3935,7 @@ class FitGSLMMClass(GObject.GPointer):
 
         FitGSLMMClass()
     """
+
     parent_class: FitClass = ...
 
 class FitGSLMMS(Fit):
@@ -3909,6 +4002,7 @@ class FitGSLMMS(Fit):
         params_reltol: float
         state: FitState
         sub_fit: Fit
+
     props: Props = ...
     def __init__(
         self,
@@ -3949,6 +4043,7 @@ class FitGSLMMSClass(GObject.GPointer):
 
         FitGSLMMSClass()
     """
+
     parent_class: FitClass = ...
 
 class FitGrad(GObject.GPointer):
@@ -3959,6 +4054,7 @@ class FitGrad(GObject.GPointer):
 
         FitGrad()
     """
+
     gtype: FitGradType = ...
     diff_name: str = ...
     ls_J: None = ...
@@ -4030,6 +4126,7 @@ class FitLevmar(Fit):
         params_reltol: float
         state: FitState
         sub_fit: Fit
+
     props: Props = ...
     def __init__(
         self,
@@ -4070,6 +4167,7 @@ class FitLevmarClass(GObject.GPointer):
 
         FitLevmarClass()
     """
+
     parent_class: FitClass = ...
 
 class FitMC(GObject.Object):
@@ -4108,6 +4206,7 @@ class FitMC(GObject.Object):
         mtype: FitRunMsgs
         nthreads: int
         rtype: FitMCResampleType
+
     props: Props = ...
     def __init__(
         self,
@@ -4165,6 +4264,7 @@ class FitMCBS(GObject.Object):
     class Props:
         filename: str
         fit: Fit
+
     props: Props = ...
     def __init__(self, filename: str = ..., fit: Fit = ...): ...
     @staticmethod
@@ -4194,6 +4294,7 @@ class FitMCBSClass(GObject.GPointer):
 
         FitMCBSClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class FitMCClass(GObject.GPointer):
@@ -4204,6 +4305,7 @@ class FitMCClass(GObject.GPointer):
 
         FitMCClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class FitMCMC(GObject.Object):
@@ -4236,6 +4338,7 @@ class FitMCMC(GObject.Object):
         mtype: FitRunMsgs
         nthreads: int
         sampler: MSetTransKern
+
     props: Props = ...
     def __init__(
         self,
@@ -4273,6 +4376,7 @@ class FitMCMCClass(GObject.GPointer):
 
         FitMCMCClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class FitNLOpt(Fit):
@@ -4343,6 +4447,7 @@ class FitNLOpt(Fit):
         params_reltol: float
         state: FitState
         sub_fit: Fit
+
     props: Props = ...
     def __init__(
         self,
@@ -4394,6 +4499,7 @@ class FitNLOptClass(GObject.GPointer):
 
         FitNLOptClass()
     """
+
     parent_class: FitClass = ...
 
 class FitState(GObject.Object):
@@ -4438,6 +4544,7 @@ class FitState(GObject.Object):
         is_best_fit: bool
         is_least_squares: bool
         niters: int
+
     props: Props = ...
     def __init__(
         self,
@@ -4506,6 +4613,7 @@ class FitStateClass(GObject.GPointer):
 
         FitStateClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class FunctionCache(GObject.Object):
@@ -4535,6 +4643,7 @@ class FunctionCache(GObject.Object):
         abstol: float
         dimension: int
         reltol: float
+
     props: Props = ...
     def __init__(
         self, abstol: float = ..., dimension: int = ..., reltol: float = ...
@@ -4561,6 +4670,7 @@ class FunctionCacheClass(GObject.GPointer):
 
         FunctionCacheClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class HOAA(GObject.Object):
@@ -4601,6 +4711,7 @@ class HOAA(GObject.Object):
         save_evol: bool
         tf: float
         ti: float
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -4711,6 +4822,7 @@ class HOAAClass(GObject.GPointer):
 
         HOAAClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     eval_mnu: Callable[[HOAA, Optional[Model], float, float], float] = ...
     eval_nu: Callable[[HOAA, Optional[Model], float, float], float] = ...
@@ -4754,6 +4866,7 @@ class ISet(GObject.Object):
 
     class Props:
         max_index: int
+
     props: Props = ...
     def __init__(self, max_index: int = ...): ...
     def add(self, i: int) -> None: ...
@@ -4794,6 +4907,7 @@ class ISetClass(GObject.GPointer):
 
         ISetClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class Integral1d(GObject.Object):
@@ -4825,6 +4939,7 @@ class Integral1d(GObject.Object):
         partition: int
         reltol: float
         rule: int
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -4866,6 +4981,7 @@ class Integral1dClass(GObject.GPointer):
 
         Integral1dClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     integrand: Callable[[Integral1d, float, float], float] = ...
     padding: list[None] = ...
@@ -4912,6 +5028,7 @@ class Integral1dPtr(Integral1d):
         partition: int
         reltol: float
         rule: int
+
     props: Props = ...
     def __init__(
         self,
@@ -4951,6 +5068,7 @@ class Integral1dPtrClass(GObject.GPointer):
 
         Integral1dPtrClass()
     """
+
     parent_class: Integral1dClass = ...
 
 class IntegralFixed(GObject.GPointer):
@@ -4961,6 +5079,7 @@ class IntegralFixed(GObject.GPointer):
 
         IntegralFixed()
     """
+
     xl: float = ...
     xu: float = ...
     int_nodes: float = ...
@@ -5001,6 +5120,7 @@ class IntegralND(GObject.Object):
         maxeval: int
         method: IntegralNDMethod
         reltol: float
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -5039,6 +5159,7 @@ class IntegralNDClass(GObject.GPointer):
 
         IntegralNDClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     integrand: Callable[[IntegralND, Vector, int, int, int, Vector], None] = ...
     get_dimensions: Callable[[IntegralND], Tuple[int, int]] = ...
@@ -5052,6 +5173,7 @@ class Integrand2dim(GObject.GPointer):
 
         Integrand2dim()
     """
+
     userdata: None = ...
     f: None = ...
 
@@ -5063,6 +5185,7 @@ class Integrand3dim(GObject.GPointer):
 
         Integrand3dim()
     """
+
     userdata: None = ...
     f: None = ...
 
@@ -5093,6 +5216,7 @@ class LHRatio1d(GObject.Object):
         constraint: MSetFunc
         fit: Fit
         pi: MSetPIndex
+
     props: Props = ...
     def __init__(
         self, constraint: MSetFunc = ..., fit: Fit = ..., pi: MSetPIndex = ...
@@ -5113,6 +5237,7 @@ class LHRatio1dClass(GObject.GPointer):
 
         LHRatio1dClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class LHRatio2d(GObject.Object):
@@ -5145,6 +5270,7 @@ class LHRatio2d(GObject.Object):
         pi1: MSetPIndex
         pi2: MSetPIndex
         fit: Fit
+
     props: Props = ...
     def __init__(
         self,
@@ -5176,6 +5302,7 @@ class LHRatio2dClass(GObject.GPointer):
 
         LHRatio2dClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class LHRatio2dPoint(GObject.GPointer):
@@ -5186,6 +5313,7 @@ class LHRatio2dPoint(GObject.GPointer):
 
         LHRatio2dPoint()
     """
+
     x: float = ...
     y: float = ...
     theta: float = ...
@@ -5200,6 +5328,7 @@ class LHRatio2dRegion(GObject.GBoxed):
 
         LHRatio2dRegion()
     """
+
     np: int = ...
     p1: Vector = ...
     p2: Vector = ...
@@ -5219,6 +5348,7 @@ class LapackWS(GObject.GBoxed):
         LapackWS()
         new() -> NumCosmoMath.LapackWS
     """
+
     work: list[None] = ...
     iwork: list[None] = ...
     @staticmethod
@@ -5258,6 +5388,7 @@ class Likelihood(GObject.Object):
         m2lnL_v: Vector
         priors_f: ObjArray
         priors_m2lnL: ObjArray
+
     props: Props = ...
     def __init__(
         self,
@@ -5294,6 +5425,7 @@ class LikelihoodClass(GObject.GPointer):
 
         LikelihoodClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class MPIJob(GObject.Object):
@@ -5316,6 +5448,7 @@ class MPIJob(GObject.Object):
 
     class Props:
         placeholder: int
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(self, placeholder: int = ...): ...
@@ -5374,6 +5507,7 @@ class MPIJobClass(GObject.GPointer):
 
         MPIJobClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     work_init: Callable[[MPIJob], None] = ...
     work_clear: Callable[[MPIJob], None] = ...
@@ -5402,6 +5536,7 @@ class MPIJobCtrl(GObject.GPointer):
 
         MPIJobCtrl()
     """
+
     initialized: int = ...
     rank: int = ...
     size: int = ...
@@ -5437,6 +5572,7 @@ class MPIJobFEval(MPIJob):
         fit: Fit
         function_array: ObjArray
         placeholder: int
+
     props: Props = ...
     def __init__(
         self, fit: Fit = ..., function_array: ObjArray = ..., placeholder: int = ...
@@ -5456,6 +5592,7 @@ class MPIJobFEvalClass(GObject.GPointer):
 
         MPIJobFEvalClass()
     """
+
     parent_class: MPIJobClass = ...
 
 class MPIJobFit(MPIJob):
@@ -5487,6 +5624,7 @@ class MPIJobFit(MPIJob):
         fit: Fit
         function_array: ObjArray
         placeholder: int
+
     props: Props = ...
     def __init__(
         self, fit: Fit = ..., function_array: ObjArray = ..., placeholder: int = ...
@@ -5506,6 +5644,7 @@ class MPIJobFitClass(GObject.GPointer):
 
         MPIJobFitClass()
     """
+
     parent_class: MPIJobClass = ...
 
 class MPIJobMCMC(MPIJob):
@@ -5537,6 +5676,7 @@ class MPIJobMCMC(MPIJob):
         fit: Fit
         function_array: ObjArray
         placeholder: int
+
     props: Props = ...
     def __init__(
         self, fit: Fit = ..., function_array: ObjArray = ..., placeholder: int = ...
@@ -5556,6 +5696,7 @@ class MPIJobMCMCClass(GObject.GPointer):
 
         MPIJobMCMCClass()
     """
+
     parent_class: MPIJobClass = ...
 
 class MPIJobTest(MPIJob):
@@ -5584,6 +5725,7 @@ class MPIJobTest(MPIJob):
     class Props:
         vector: Vector
         placeholder: int
+
     props: Props = ...
     def __init__(self, vector: Vector = ..., placeholder: int = ...): ...
     @staticmethod
@@ -5602,6 +5744,7 @@ class MPIJobTestClass(GObject.GPointer):
 
         MPIJobTestClass()
     """
+
     parent_class: MPIJobClass = ...
 
 class MSet(GObject.Object):
@@ -5633,6 +5776,7 @@ class MSet(GObject.Object):
         fmap: list[str]
         model_array: ObjArray
         valid_map: bool
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -5808,6 +5952,7 @@ class MSetCatalog(GObject.Object):
         sync_interval: float
         tau_method: MSetCatalogTauMethod
         weighted: bool
+
     props: Props = ...
     def __init__(
         self,
@@ -5972,6 +6117,7 @@ class MSetCatalogClass(GObject.GPointer):
 
         MSetCatalogClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class MSetClass(GObject.GPointer):
@@ -5982,6 +6128,7 @@ class MSetClass(GObject.GPointer):
 
         MSetClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     ns_table: dict[None, None] = ...
     model_desc_array: list[None] = ...
@@ -6014,6 +6161,7 @@ class MSetFunc(GObject.Object):
         dimension: int
         eval_x: Vector
         nvariables: int
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -6075,6 +6223,7 @@ class MSetFunc1(MSetFunc):
         dimension: int
         eval_x: Vector
         nvariables: int
+
     props: Props = ...
     parent_instance: MSetFunc = ...
     def __init__(
@@ -6095,6 +6244,7 @@ class MSetFunc1Class(GObject.GPointer):
 
         MSetFunc1Class()
     """
+
     parent_class: MSetFuncClass = ...
     eval1: Callable[[MSetFunc1, MSet, Sequence[float]], list[float]] = ...
     padding: list[None] = ...
@@ -6107,6 +6257,7 @@ class MSetFuncClass(GObject.GPointer):
 
         MSetFuncClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     eval: Callable[[MSetFunc, MSet, Sequence[float], Sequence[float]], None] = ...
     padding: list[None] = ...
@@ -6147,6 +6298,7 @@ class MSetFuncList(MSetFunc):
         dimension: int
         eval_x: Vector
         nvariables: int
+
     props: Props = ...
     parent_instance: MSetFunc = ...
     def __init__(
@@ -6192,6 +6344,7 @@ class MSetFuncListClass(GObject.GPointer):
 
         MSetFuncListClass()
     """
+
     parent_class: MSetFuncClass = ...
     func_array: list[None] = ...
     ns_hash: dict[None, None] = ...
@@ -6205,6 +6358,7 @@ class MSetFuncListStruct(GObject.GPointer):
 
         MSetFuncListStruct()
     """
+
     name: str = ...
     symbol: str = ...
     ns: str = ...
@@ -6223,6 +6377,7 @@ class MSetModelDesc(GObject.GPointer):
 
         MSetModelDesc()
     """
+
     init: bool = ...
     ns: str = ...
     desc: str = ...
@@ -6237,6 +6392,7 @@ class MSetPIndex(GObject.GBoxed):
         MSetPIndex()
         new(mid:int, pid:int) -> NumCosmoMath.MSetPIndex
     """
+
     mid: int = ...
     pid: int = ...
     def dup(self) -> MSetPIndex: ...
@@ -6264,6 +6420,7 @@ class MSetTransKern(GObject.Object):
 
     class Props:
         mset: MSet
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(self, mset: MSet = ...): ...
@@ -6328,6 +6485,7 @@ class MSetTransKernCat(MSetTransKern):
         sampling_type: MSetTransKernCatSampling
         stats_dist: StatsDist
         mset: MSet
+
     props: Props = ...
     def __init__(
         self,
@@ -6355,6 +6513,7 @@ class MSetTransKernCatClass(GObject.GPointer):
 
         MSetTransKernCatClass()
     """
+
     parent_class: MSetTransKernClass = ...
 
 class MSetTransKernClass(GObject.GPointer):
@@ -6365,6 +6524,7 @@ class MSetTransKernClass(GObject.GPointer):
 
         MSetTransKernClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     bernoulli_scheme: bool = ...
     set_mset: Callable[[MSetTransKern, MSet], None] = ...
@@ -6395,6 +6555,7 @@ class MSetTransKernFlat(MSetTransKern):
 
     class Props:
         mset: MSet
+
     props: Props = ...
     def __init__(self, mset: MSet = ...): ...
     @classmethod
@@ -6408,6 +6569,7 @@ class MSetTransKernFlatClass(GObject.GPointer):
 
         MSetTransKernFlatClass()
     """
+
     parent_class: MSetTransKernClass = ...
 
 class MSetTransKernGauss(MSetTransKern):
@@ -6439,6 +6601,7 @@ class MSetTransKernGauss(MSetTransKern):
         cov: Matrix
         length: int
         mset: MSet
+
     props: Props = ...
     def __init__(self, cov: Matrix = ..., length: int = ..., mset: MSet = ...): ...
     def get_cov(self) -> Matrix: ...
@@ -6459,6 +6622,7 @@ class MSetTransKernGaussClass(GObject.GPointer):
 
         MSetTransKernGaussClass()
     """
+
     parent_class: MSetTransKernClass = ...
 
 class Matrix(GObject.Object):
@@ -6487,6 +6651,7 @@ class Matrix(GObject.Object):
 
     class Props:
         values: GLib.Variant
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     mv: int = ...
@@ -6621,6 +6786,7 @@ class MatrixClass(GObject.GPointer):
 
         MatrixClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class MemoryPool(GObject.GPointer):
@@ -6631,6 +6797,7 @@ class MemoryPool(GObject.GPointer):
 
         MemoryPool()
     """
+
     update: GLib.Mutex = ...
     finish: GLib.Cond = ...
     slices_in_use: int = ...
@@ -6654,6 +6821,7 @@ class MemoryPoolSlice(GObject.GPointer):
 
         MemoryPoolSlice()
     """
+
     p: None = ...
     in_use: bool = ...
     mp: MemoryPool = ...
@@ -6702,6 +6870,7 @@ class Model(GObject.Object):
         sparam_array: ObjDictInt
         submodel_array: ObjArray
         vector_params_len: int
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -6871,6 +7040,7 @@ class ModelBuilder(GObject.Object):
         sparams: ObjArray
         stackable: bool
         vparams: ObjArray
+
     props: Props = ...
     def __init__(
         self,
@@ -6921,6 +7091,7 @@ class ModelBuilderClass(GObject.GPointer):
 
         ModelBuilderClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class ModelClass(GObject.GPointer):
@@ -6931,6 +7102,7 @@ class ModelClass(GObject.GPointer):
 
         ModelClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     get_property: Callable[[GObject.Object, int, Any, GObject.ParamSpec], None] = ...
     set_property: Callable[[GObject.Object, int, Any, GObject.ParamSpec], None] = ...
@@ -7004,6 +7176,7 @@ class ModelCtrl(GObject.Object):
 
     class Props:
         model: Model
+
     props: Props = ...
     def __init__(self, model: Model = ...): ...
     @staticmethod
@@ -7028,6 +7201,7 @@ class ModelCtrlClass(GObject.GPointer):
 
         ModelCtrlClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class ModelFunnel(Model):
@@ -7092,6 +7266,7 @@ class ModelFunnel(Model):
         sparam_array: ObjDictInt
         submodel_array: ObjArray
         vector_params_len: int
+
     props: Props = ...
     def __init__(
         self,
@@ -7121,6 +7296,7 @@ class ModelFunnelClass(GObject.GPointer):
 
         ModelFunnelClass()
     """
+
     parent_class: ModelClass = ...
 
 class ModelMVND(Model):
@@ -7182,6 +7358,7 @@ class ModelMVND(Model):
         sparam_array: ObjDictInt
         submodel_array: ObjArray
         vector_params_len: int
+
     props: Props = ...
     def __init__(
         self,
@@ -7211,6 +7388,7 @@ class ModelMVNDClass(GObject.GPointer):
 
         ModelMVNDClass()
     """
+
     parent_class: ModelClass = ...
 
 class ModelRosenbrock(Model):
@@ -7272,6 +7450,7 @@ class ModelRosenbrock(Model):
         sparam_array: ObjDictInt
         submodel_array: ObjArray
         vector_params_len: int
+
     props: Props = ...
     def __init__(
         self,
@@ -7300,6 +7479,7 @@ class ModelRosenbrockClass(GObject.GPointer):
 
         ModelRosenbrockClass()
     """
+
     parent_class: ModelClass = ...
 
 class MpsfSBesselRecur(GObject.GPointer):
@@ -7310,6 +7490,7 @@ class MpsfSBesselRecur(GObject.GPointer):
 
         MpsfSBesselRecur()
     """
+
     prec: int = ...
     l: int = ...
     q: int = ...
@@ -7347,6 +7528,7 @@ class NNLS(GObject.Object):
         nrows: int
         reltol: float
         umethod: NNLSUMethod
+
     props: Props = ...
     def __init__(
         self,
@@ -7382,6 +7564,7 @@ class NNLSClass(GObject.GPointer):
 
         NNLSClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class ObjArray(GObject.GBoxed):
@@ -7393,6 +7576,7 @@ class ObjArray(GObject.GBoxed):
         new() -> NumCosmoMath.ObjArray
         sized_new(n:int) -> NumCosmoMath.ObjArray
     """
+
     def add(self, obj: GObject.Object) -> None: ...
     @staticmethod
     def clear(oa: ObjArray) -> None: ...
@@ -7415,6 +7599,7 @@ class ObjDictInt(GObject.GBoxed):
 
         new() -> NumCosmoMath.ObjDictInt
     """
+
     def add(self, key: int, obj: GObject.Object) -> None: ...
     @staticmethod
     def clear(odi: ObjDictInt) -> None: ...
@@ -7436,6 +7621,7 @@ class ObjDictStr(GObject.GBoxed):
 
         new() -> NumCosmoMath.ObjDictStr
     """
+
     def add(self, key: str, obj: GObject.Object) -> None: ...
     @staticmethod
     def clear(ods: ObjDictStr) -> None: ...
@@ -7501,6 +7687,7 @@ class OdeSpline(GObject.Object):
         xi: float
         yf: float
         yi: float
+
     props: Props = ...
     def __init__(
         self,
@@ -7553,6 +7740,7 @@ class OdeSplineClass(GObject.GPointer):
 
         OdeSplineClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class Powspec(GObject.Object):
@@ -7587,6 +7775,7 @@ class Powspec(GObject.Object):
         reltol: float
         zf: float
         zi: float
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -7599,25 +7788,31 @@ class Powspec(GObject.Object):
     ): ...
     @staticmethod
     def clear(powspec: Powspec) -> None: ...
-    def corr3d(self, model: Model, reltol: float, z: float, r: float) -> float: ...
-    def do_eval(self, model: Model, z: float, k: float) -> float: ...
-    def do_eval_vec(self, model: Model, z: float, k: Vector, Pk: Vector) -> None: ...
+    def corr3d(
+        self, model: Optional[Model], reltol: float, z: float, r: float
+    ) -> float: ...
+    def do_eval(self, model: Optional[Model], z: float, k: float) -> float: ...
+    def do_eval_vec(
+        self, model: Optional[Model], z: float, k: Vector, Pk: Vector
+    ) -> None: ...
     def do_get_nknots(self) -> Tuple[int, int]: ...
-    def do_get_spline_2d(self, model: Model) -> Spline2d: ...
-    def do_prepare(self, model: Model) -> None: ...
-    def eval(self, model: Model, z: float, k: float) -> float: ...
-    def eval_vec(self, model: Model, z: float, k: Vector, Pk: Vector) -> None: ...
+    def do_get_spline_2d(self, model: Optional[Model] = None) -> Spline2d: ...
+    def do_prepare(self, model: Optional[Model] = None) -> None: ...
+    def eval(self, model: Optional[Model], z: float, k: float) -> float: ...
+    def eval_vec(
+        self, model: Optional[Model], z: float, k: Vector, Pk: Vector
+    ) -> None: ...
     def free(self) -> None: ...
     def get_kmax(self) -> float: ...
     def get_kmin(self) -> float: ...
     def get_nknots(self) -> Tuple[int, int]: ...
     def get_reltol_spline(self) -> float: ...
-    def get_spline_2d(self, model: Model) -> Spline2d: ...
+    def get_spline_2d(self, model: Optional[Model] = None) -> Spline2d: ...
     def get_zf(self) -> float: ...
     def get_zi(self) -> float: ...
     def peek_model_ctrl(self) -> ModelCtrl: ...
-    def prepare(self, model: Model) -> None: ...
-    def prepare_if_needed(self, model: Model) -> None: ...
+    def prepare(self, model: Optional[Model] = None) -> None: ...
+    def prepare_if_needed(self, model: Optional[Model] = None) -> None: ...
     def ref(self) -> Powspec: ...
     def require_kmax(self, kmax: float) -> None: ...
     def require_kmin(self, kmin: float) -> None: ...
@@ -7629,11 +7824,11 @@ class Powspec(GObject.Object):
     def set_zf(self, zf: float) -> None: ...
     def set_zi(self, zi: float) -> None: ...
     def sigma_tophat_R(
-        self, model: Model, reltol: float, z: float, R: float
+        self, model: Optional[Model], reltol: float, z: float, R: float
     ) -> float: ...
     def sproj(
         self,
-        model: Model,
+        model: Optional[Model],
         reltol: float,
         ell: int,
         z1: float,
@@ -7642,7 +7837,7 @@ class Powspec(GObject.Object):
         xi2: float,
     ) -> float: ...
     def var_tophat_R(
-        self, model: Model, reltol: float, z: float, R: float
+        self, model: Optional[Model], reltol: float, z: float, R: float
     ) -> float: ...
 
 class PowspecClass(GObject.GPointer):
@@ -7653,12 +7848,13 @@ class PowspecClass(GObject.GPointer):
 
         PowspecClass()
     """
+
     parent_class: GObject.ObjectClass = ...
-    prepare: Callable[[Powspec, Model], None] = ...
-    eval: Callable[[Powspec, Model, float, float], float] = ...
-    eval_vec: Callable[[Powspec, Model, float, Vector, Vector], None] = ...
+    prepare: Callable[[Powspec, Optional[Model]], None] = ...
+    eval: Callable[[Powspec, Optional[Model], float, float], float] = ...
+    eval_vec: Callable[[Powspec, Optional[Model], float, Vector, Vector], None] = ...
     get_nknots: Callable[[Powspec], Tuple[int, int]] = ...
-    get_spline_2d: Callable[[Powspec, Model], Spline2d] = ...
+    get_spline_2d: Callable[[Powspec, Optional[Model]], Spline2d] = ...
     padding: list[None] = ...
 
 class PowspecCorr3d(GObject.Object):
@@ -7697,6 +7893,7 @@ class PowspecCorr3d(GObject.Object):
         reltol_z: float
         zf: float
         zi: float
+
     props: Props = ...
     def __init__(
         self,
@@ -7736,6 +7933,7 @@ class PowspecCorr3dClass(GObject.GPointer):
 
         PowspecCorr3dClass()
     """
+
     parent_class: PowspecClass = ...
 
 class PowspecFilter(GObject.Object):
@@ -7762,6 +7960,10 @@ class PowspecFilter(GObject.Object):
         Relative tolerance for calibration
       reltol-z -> gdouble: reltol-z
         Relative tolerance for calibration in the redshift direction
+      max-k-knots -> guint: max-k-knots
+        Maximum number of knots in the k direction
+      max-z-knots -> guint: max-z-knots
+        Maximum number of knots in the redshift direction
       powerspectrum -> NcmPowspec: powerspectrum
         NcmPowspec object
 
@@ -7771,16 +7973,21 @@ class PowspecFilter(GObject.Object):
 
     class Props:
         lnr0: float
+        max_k_knots: int
+        max_z_knots: int
         powerspectrum: Powspec
         reltol: float
         reltol_z: float
         type: PowspecFilterType
         zf: float
         zi: float
+
     props: Props = ...
     def __init__(
         self,
         lnr0: float = ...,
+        max_k_knots: int = ...,
+        max_z_knots: int = ...,
         powerspectrum: Powspec = ...,
         reltol: float = ...,
         reltol_z: float = ...,
@@ -7831,6 +8038,7 @@ class PowspecFilterClass(GObject.GPointer):
 
         PowspecFilterClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class PowspecSphereProj(GObject.Object):
@@ -7875,6 +8083,7 @@ class PowspecSphereProj(GObject.Object):
         reltol_z: float
         xi_f: float
         xi_i: float
+
     props: Props = ...
     def __init__(
         self,
@@ -7920,6 +8129,76 @@ class PowspecSphereProjClass(GObject.GPointer):
 
         PowspecSphereProjClass()
     """
+
+    parent_class: PowspecClass = ...
+
+class PowspecSpline2d(Powspec):
+    r"""
+    :Constructors:
+
+    ::
+
+        PowspecSpline2d(**properties)
+        new(spline2d:NumCosmoMath.Spline2d) -> NumCosmoMath.PowspecSpline2d
+
+    Object NcmPowspecSpline2d
+
+    Properties from NcmPowspecSpline2d:
+      spline2d -> NcmSpline2d: spline2d
+        Spline2d representing the values of the power-spectrum
+
+    Properties from NcmPowspec:
+      zi -> gdouble: zi
+        Initial time
+      zf -> gdouble: zf
+        Final time
+      kmin -> gdouble: kmin
+        Minimum mode value
+      kmax -> gdouble: kmax
+        Maximum mode value
+      reltol -> gdouble: reltol
+        Relative tolerance on the interpolation error
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        spline2d: Spline2d
+        kmax: float
+        kmin: float
+        reltol: float
+        zf: float
+        zi: float
+
+    props: Props = ...
+    def __init__(
+        self,
+        spline2d: Spline2d = ...,
+        kmax: float = ...,
+        kmin: float = ...,
+        reltol: float = ...,
+        zf: float = ...,
+        zi: float = ...,
+    ): ...
+    @staticmethod
+    def clear(ps_s2d: PowspecSpline2d) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls, spline2d: Spline2d) -> PowspecSpline2d: ...
+    def peek_spline2d(self) -> Spline2d: ...
+    def ref(self) -> PowspecSpline2d: ...
+    def set_spline2d(self, spline2d: Spline2d) -> None: ...
+
+class PowspecSpline2dClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        PowspecSpline2dClass()
+    """
+
     parent_class: PowspecClass = ...
 
 class Prior(MSetFunc):
@@ -7948,6 +8227,7 @@ class Prior(MSetFunc):
         dimension: int
         eval_x: Vector
         nvariables: int
+
     props: Props = ...
     parent_instance: MSetFunc = ...
     def __init__(
@@ -7967,6 +8247,7 @@ class PriorClass(GObject.GPointer):
 
         PriorClass()
     """
+
     parent_class: MSetFuncClass = ...
     is_m2lnL: bool = ...
     padding: list[None] = ...
@@ -8014,6 +8295,7 @@ class PriorFlat(Prior):
         dimension: int
         eval_x: Vector
         nvariables: int
+
     props: Props = ...
     parent_instance: Prior = ...
     def __init__(
@@ -8051,6 +8333,7 @@ class PriorFlatClass(GObject.GPointer):
 
         PriorFlatClass()
     """
+
     parent_class: PriorClass = ...
     mean: Callable[[PriorFlat, MSet], float] = ...
     padding: list[None] = ...
@@ -8104,6 +8387,7 @@ class PriorFlatFunc(PriorFlat):
         dimension: int
         eval_x: Vector
         nvariables: int
+
     props: Props = ...
     def __init__(
         self,
@@ -8139,6 +8423,7 @@ class PriorFlatFuncClass(GObject.GPointer):
 
         PriorFlatFuncClass()
     """
+
     parent_class: PriorFlatClass = ...
 
 class PriorFlatParam(PriorFlat):
@@ -8197,6 +8482,7 @@ class PriorFlatParam(PriorFlat):
         dimension: int
         eval_x: Vector
         nvariables: int
+
     props: Props = ...
     def __init__(
         self,
@@ -8239,6 +8525,7 @@ class PriorFlatParamClass(GObject.GPointer):
 
         PriorFlatParamClass()
     """
+
     parent_class: PriorFlatClass = ...
 
 class PriorGauss(Prior):
@@ -8278,6 +8565,7 @@ class PriorGauss(Prior):
         dimension: int
         eval_x: Vector
         nvariables: int
+
     props: Props = ...
     parent_instance: Prior = ...
     def __init__(
@@ -8309,6 +8597,7 @@ class PriorGaussClass(GObject.GPointer):
 
         PriorGaussClass()
     """
+
     parent_class: PriorClass = ...
     mean: Callable[[PriorGauss, MSet], float] = ...
     padding: list[None] = ...
@@ -8356,6 +8645,7 @@ class PriorGaussFunc(PriorGauss):
         dimension: int
         eval_x: Vector
         nvariables: int
+
     props: Props = ...
     def __init__(
         self,
@@ -8384,6 +8674,7 @@ class PriorGaussFuncClass(GObject.GPointer):
 
         PriorGaussFuncClass()
     """
+
     parent_class: PriorGaussClass = ...
 
 class PriorGaussParam(PriorGauss):
@@ -8436,6 +8727,7 @@ class PriorGaussParam(PriorGauss):
         dimension: int
         eval_x: Vector
         nvariables: int
+
     props: Props = ...
     def __init__(
         self,
@@ -8474,6 +8766,7 @@ class PriorGaussParamClass(GObject.GPointer):
 
         PriorGaussParamClass()
     """
+
     parent_class: PriorGaussClass = ...
 
 class Quaternion(GObject.GBoxed):
@@ -8487,6 +8780,7 @@ class Quaternion(GObject.GBoxed):
         new_from_data(x:float, y:float, z:float, theta:float) -> NumCosmoMath.Quaternion
         new_from_vector(v:NumCosmoMath.TriVec) -> NumCosmoMath.Quaternion
     """
+
     s: float = ...
     v: TriVec = ...
     def conjugate(self) -> None: ...
@@ -8543,6 +8837,7 @@ class RNG(GObject.Object):
         algorithm: str
         seed: int
         state: str
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(self, algorithm: str = ..., seed: int = ..., state: str = ...): ...
@@ -8598,6 +8893,7 @@ class RNGClass(GObject.GPointer):
 
         RNGClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     seed_gen: GLib.Rand = ...
     seed_hash: dict[None, None] = ...
@@ -8611,6 +8907,7 @@ class RNGDiscrete(GObject.GBoxed):
 
         new(weights:list) -> NumCosmoMath.RNGDiscrete
     """
+
     def copy(self) -> RNGDiscrete: ...
     def free(self) -> None: ...
     @classmethod
@@ -8642,6 +8939,7 @@ class Reparam(GObject.Object):
         compat_type: str
         length: int
         params_desc: ObjDictInt
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -8684,6 +8982,7 @@ class ReparamClass(GObject.GPointer):
 
         ReparamClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     old2new: Callable[[Reparam, None], bool] = ...
     new2old: Callable[[Reparam, None], bool] = ...
@@ -8724,6 +9023,7 @@ class ReparamLinear(Reparam):
         compat_type: str
         length: int
         params_desc: ObjDictInt
+
     props: Props = ...
     def __init__(
         self,
@@ -8745,6 +9045,7 @@ class ReparamLinearClass(GObject.GPointer):
 
         ReparamLinearClass()
     """
+
     parent_class: ReparamClass = ...
 
 class SFSphericalHarmonics(GObject.Object):
@@ -8768,6 +9069,7 @@ class SFSphericalHarmonics(GObject.Object):
 
     class Props:
         lmax: int
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     lmax: int = ...
@@ -8797,6 +9099,7 @@ class SFSphericalHarmonicsClass(GObject.GPointer):
 
         SFSphericalHarmonicsClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class SFSphericalHarmonicsK(GObject.GPointer):
@@ -8807,6 +9110,7 @@ class SFSphericalHarmonicsK(GObject.GPointer):
 
         SFSphericalHarmonicsK()
     """
+
     l: float = ...
     lp1: float = ...
 
@@ -8818,6 +9122,7 @@ class SFSphericalHarmonicsP(GObject.GPointer):
 
         SFSphericalHarmonicsP()
     """
+
     x: float = ...
     sqrt1mx2: float = ...
     l0m: float = ...
@@ -8834,6 +9139,7 @@ class SFSphericalHarmonicsY(GObject.GBoxed):
         SFSphericalHarmonicsY()
         new(spha:NumCosmoMath.SFSphericalHarmonics, abstol:float) -> NumCosmoMath.SFSphericalHarmonicsY
     """
+
     x: float = ...
     sqrt1mx2: float = ...
     l: int = ...
@@ -8873,6 +9179,7 @@ class SFSphericalHarmonicsYArray(GObject.GBoxed):
         SFSphericalHarmonicsYArray()
         new(spha:NumCosmoMath.SFSphericalHarmonics, len:int, abstol:float) -> NumCosmoMath.SFSphericalHarmonicsYArray
     """
+
     l: int = ...
     l0: int = ...
     m: int = ...
@@ -8944,6 +9251,7 @@ class SParam(GObject.Object):
         scale: float
         symbol: str
         upper_bound: float
+
     props: Props = ...
     def __init__(
         self,
@@ -8998,6 +9306,7 @@ class SParamClass(GObject.GPointer):
 
         SParamClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class Serialize(GObject.Object):
@@ -9021,6 +9330,7 @@ class Serialize(GObject.Object):
 
     class Props:
         options: SerializeOpt
+
     props: Props = ...
     def __init__(self, options: SerializeOpt = ...): ...
     def array_from_key_file(self, filename: str) -> ObjArray: ...
@@ -9176,6 +9486,7 @@ class SerializeClass(GObject.GPointer):
 
         SerializeClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class SphereMap(GObject.Object):
@@ -9208,6 +9519,7 @@ class SphereMap(GObject.Object):
         lmax: int
         nside: int
         order: SphereMapOrder
+
     props: Props = ...
     def __init__(
         self,
@@ -9279,6 +9591,7 @@ class SphereMapClass(GObject.GPointer):
 
         SphereMapClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class Spline(GObject.Object):
@@ -9307,6 +9620,7 @@ class Spline(GObject.Object):
         length: int
         x: Vector
         y: Vector
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(self, length: int = ..., x: Vector = ..., y: Vector = ...): ...
@@ -9411,6 +9725,7 @@ class Spline2d(GObject.Object):
         x_vector: Vector
         y_vector: Vector
         z_matrix: Matrix
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -9517,6 +9832,7 @@ class Spline2dBicubic(Spline2d):
         x_vector: Vector
         y_vector: Vector
         z_matrix: Matrix
+
     props: Props = ...
     def __init__(
         self,
@@ -9570,6 +9886,7 @@ class Spline2dBicubicClass(GObject.GPointer):
 
         Spline2dBicubicClass()
     """
+
     parent_class: Spline2dClass = ...
 
 class Spline2dBicubicCoeffs(GObject.GPointer):
@@ -9580,6 +9897,7 @@ class Spline2dBicubicCoeffs(GObject.GPointer):
 
         Spline2dBicubicCoeffs()
     """
+
     ij: list[float] = ...
 
 class Spline2dClass(GObject.GPointer):
@@ -9590,6 +9908,7 @@ class Spline2dClass(GObject.GPointer):
 
         Spline2dClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     copy_empty: Callable[[Spline2d], Spline2d] = ...
     reset: Callable[[Spline2d], None] = ...
@@ -9647,6 +9966,7 @@ class Spline2dGsl(Spline2d):
         x_vector: Vector
         y_vector: Vector
         z_matrix: Matrix
+
     props: Props = ...
     def __init__(
         self,
@@ -9670,6 +9990,7 @@ class Spline2dGslClass(GObject.GPointer):
 
         Spline2dGslClass()
     """
+
     parent_class: Spline2dClass = ...
 
 class Spline2dSpline(Spline2d):
@@ -9708,6 +10029,7 @@ class Spline2dSpline(Spline2d):
         x_vector: Vector
         y_vector: Vector
         z_matrix: Matrix
+
     props: Props = ...
     def __init__(
         self,
@@ -9729,6 +10051,7 @@ class Spline2dSplineClass(GObject.GPointer):
 
         Spline2dSplineClass()
     """
+
     parent_class: Spline2dClass = ...
 
 class SplineClass(GObject.GPointer):
@@ -9739,6 +10062,7 @@ class SplineClass(GObject.GPointer):
 
         SplineClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     name: Callable[[Spline], str] = ...
     reset: Callable[[Spline], None] = ...
@@ -9779,6 +10103,7 @@ class SplineCubic(Spline):
         length: int
         x: Vector
         y: Vector
+
     props: Props = ...
     parent_instance: Spline = ...
     def __init__(self, length: int = ..., x: Vector = ..., y: Vector = ...): ...
@@ -9796,6 +10121,7 @@ class SplineCubicClass(GObject.GPointer):
 
         SplineCubicClass()
     """
+
     parent_class: SplineClass = ...
     padding: list[None] = ...
 
@@ -9826,6 +10152,7 @@ class SplineCubicD2(SplineCubic):
         length: int
         x: Vector
         y: Vector
+
     props: Props = ...
     def __init__(self, length: int = ..., x: Vector = ..., y: Vector = ...): ...
     @classmethod
@@ -9839,6 +10166,7 @@ class SplineCubicD2Class(GObject.GPointer):
 
         SplineCubicD2Class()
     """
+
     parent_class: SplineCubicClass = ...
 
 class SplineCubicNotaknot(SplineCubic):
@@ -9869,6 +10197,7 @@ class SplineCubicNotaknot(SplineCubic):
         length: int
         x: Vector
         y: Vector
+
     props: Props = ...
     def __init__(self, length: int = ..., x: Vector = ..., y: Vector = ...): ...
     @classmethod
@@ -9884,6 +10213,7 @@ class SplineCubicNotaknotClass(GObject.GPointer):
 
         SplineCubicNotaknotClass()
     """
+
     parent_class: SplineCubicClass = ...
 
 class SplineFuncTest(GObject.Object):
@@ -9928,6 +10258,7 @@ class SplineFuncTest(GObject.Object):
         type: SplineFuncTestType
         xf: float
         xi: float
+
     props: Props = ...
     def __init__(
         self,
@@ -9986,6 +10317,7 @@ class SplineFuncTestClass(GObject.GPointer):
 
         SplineFuncTestClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class SplineGsl(Spline):
@@ -10023,6 +10355,7 @@ class SplineGsl(Spline):
         length: int
         x: Vector
         y: Vector
+
     props: Props = ...
     def __init__(
         self, type_name: str = ..., length: int = ..., x: Vector = ..., y: Vector = ...
@@ -10049,6 +10382,7 @@ class SplineGslClass(GObject.GPointer):
 
         SplineGslClass()
     """
+
     parent_class: SplineClass = ...
 
 class SplineRBF(Spline):
@@ -10083,6 +10417,7 @@ class SplineRBF(Spline):
         length: int
         x: Vector
         y: Vector
+
     props: Props = ...
     def __init__(
         self,
@@ -10108,6 +10443,7 @@ class SplineRBFClass(GObject.GPointer):
 
         SplineRBFClass()
     """
+
     parent_class: SplineClass = ...
 
 class StatsDist(GObject.Object):
@@ -10148,6 +10484,7 @@ class StatsDist(GObject.Object):
         print_fit: bool
         split_frac: float
         use_threads: bool
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -10245,6 +10582,7 @@ class StatsDist1d(GObject.Object):
         reltol: float
         xf: float
         xi: float
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
@@ -10289,6 +10627,7 @@ class StatsDist1dClass(GObject.GPointer):
 
         StatsDist1dClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     p: Callable[[StatsDist1d, float], float] = ...
     m2lnp: Callable[[StatsDist1d, float], float] = ...
@@ -10356,6 +10695,7 @@ class StatsDist1dEPDF(StatsDist1d):
         reltol: float
         xf: float
         xi: float
+
     props: Props = ...
     def __init__(
         self,
@@ -10400,6 +10740,7 @@ class StatsDist1dEPDFClass(GObject.GPointer):
 
         StatsDist1dEPDFClass()
     """
+
     parent_class: StatsDist1dClass = ...
 
 class StatsDist1dSpline(StatsDist1d):
@@ -10449,6 +10790,7 @@ class StatsDist1dSpline(StatsDist1d):
         reltol: float
         xf: float
         xi: float
+
     props: Props = ...
     def __init__(
         self,
@@ -10472,6 +10814,7 @@ class StatsDist1dSplineClass(GObject.GPointer):
 
         StatsDist1dSplineClass()
     """
+
     parent_class: StatsDist1dClass = ...
 
 class StatsDist2d(GObject.Object):
@@ -10487,6 +10830,7 @@ class StatsDist2d(GObject.Object):
     Signals from GObject:
       notify (GParam)
     """
+
     parent_instance: GObject.Object = ...
     @staticmethod
     def clear(sd2: StatsDist2d) -> None: ...
@@ -10521,6 +10865,7 @@ class StatsDist2dClass(GObject.GPointer):
 
         StatsDist2dClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     xbounds: Callable[[StatsDist2d], Tuple[float, float]] = ...
     ybounds: Callable[[StatsDist2d], Tuple[float, float]] = ...
@@ -10558,6 +10903,7 @@ class StatsDist2dSpline(StatsDist2d):
     class Props:
         m2lnp: Spline2d
         marginal_x: bool
+
     props: Props = ...
     def __init__(self, m2lnp: Spline2d = ..., marginal_x: bool = ...): ...
     @classmethod
@@ -10571,6 +10917,7 @@ class StatsDist2dSplineClass(GObject.GPointer):
 
         StatsDist2dSplineClass()
     """
+
     parent_class: StatsDist2dClass = ...
 
 class StatsDistClass(GObject.GPointer):
@@ -10581,6 +10928,7 @@ class StatsDistClass(GObject.GPointer):
 
         StatsDistClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     set_dim: Callable[[StatsDist, int], None] = ...
     get_href: Callable[[StatsDist], float] = ...
@@ -10645,6 +10993,7 @@ class StatsDistKDE(StatsDist):
         print_fit: bool
         split_frac: float
         use_threads: bool
+
     props: Props = ...
     parent_instance: StatsDist = ...
     def __init__(
@@ -10680,6 +11029,7 @@ class StatsDistKDEClass(GObject.GPointer):
 
         StatsDistKDEClass()
     """
+
     parent_class: StatsDistClass = ...
     padding: list[None] = ...
 
@@ -10703,6 +11053,7 @@ class StatsDistKernel(GObject.Object):
 
     class Props:
         dimension: int
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(self, dimension: int = ...): ...
@@ -10748,6 +11099,7 @@ class StatsDistKernelClass(GObject.GPointer):
 
         StatsDistKernelClass()
     """
+
     parent_class: GObject.ObjectClass = ...
     set_dim: Callable[[StatsDistKernel, int], None] = ...
     get_dim: Callable[[StatsDistKernel], int] = ...
@@ -10785,6 +11137,7 @@ class StatsDistKernelGauss(StatsDistKernel):
 
     class Props:
         dimension: int
+
     props: Props = ...
     def __init__(self, dimension: int = ...): ...
     @staticmethod
@@ -10802,6 +11155,7 @@ class StatsDistKernelGaussClass(GObject.GPointer):
 
         StatsDistKernelGaussClass()
     """
+
     parent_class: StatsDistKernelClass = ...
 
 class StatsDistKernelST(StatsDistKernel):
@@ -10830,6 +11184,7 @@ class StatsDistKernelST(StatsDistKernel):
     class Props:
         nu: float
         dimension: int
+
     props: Props = ...
     def __init__(self, nu: float = ..., dimension: int = ...): ...
     @staticmethod
@@ -10849,6 +11204,7 @@ class StatsDistKernelSTClass(GObject.GPointer):
 
         StatsDistKernelSTClass()
     """
+
     parent_class: StatsDistKernelClass = ...
 
 class StatsDistVKDE(StatsDistKDE):
@@ -10909,6 +11265,7 @@ class StatsDistVKDE(StatsDistKDE):
         print_fit: bool
         split_frac: float
         use_threads: bool
+
     props: Props = ...
     parent_instance: StatsDistKDE = ...
     def __init__(
@@ -10944,6 +11301,7 @@ class StatsDistVKDEClass(GObject.GPointer):
 
         StatsDistVKDEClass()
     """
+
     parent_class: StatsDistKDEClass = ...
     padding: list[None] = ...
 
@@ -10974,6 +11332,7 @@ class StatsVec(GObject.Object):
         length: int
         save_x: bool
         type: StatsVecType
+
     props: Props = ...
     def __init__(
         self, length: int = ..., save_x: bool = ..., type: StatsVecType = ...
@@ -11043,6 +11402,7 @@ class StatsVecClass(GObject.GPointer):
 
         StatsVecClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class Timer(GObject.Object):
@@ -11072,6 +11432,7 @@ class Timer(GObject.Object):
         name: str
         task_len: int
         task_pos: int
+
     props: Props = ...
     def __init__(self, name: str = ...): ...
     @staticmethod
@@ -11122,6 +11483,7 @@ class TimerClass(GObject.GPointer):
 
         TimerClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class TriVec(GObject.GBoxed):
@@ -11135,6 +11497,7 @@ class TriVec(GObject.GBoxed):
         new_full(c:float) -> NumCosmoMath.TriVec
         new_full_c(x:float, y:float, z:float) -> NumCosmoMath.TriVec
     """
+
     c: list[float] = ...
     def dot(self, v2: TriVec) -> float: ...
     def dup(self) -> TriVec: ...
@@ -11179,6 +11542,7 @@ class VParam(GObject.Object):
     class Props:
         default_len: int
         default_sparam: SParam
+
     props: Props = ...
     def __init__(self, default_len: int = ..., default_sparam: SParam = ...): ...
     @staticmethod
@@ -11242,6 +11606,7 @@ class VParamClass(GObject.GPointer):
 
         VParamClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class VarDict(GObject.GBoxed):
@@ -11252,6 +11617,7 @@ class VarDict(GObject.GBoxed):
 
         new() -> NumCosmoMath.VarDict
     """
+
     @staticmethod
     def clear(vd: VarDict) -> None: ...
     def get_boolean(self, key: str) -> Tuple[bool, bool]: ...
@@ -11309,6 +11675,7 @@ class Vector(GObject.Object):
 
     class Props:
         values: GLib.Variant
+
     props: Props = ...
     parent_instance: GObject.Object = ...
     vv: int = ...
@@ -11430,6 +11797,7 @@ class VectorClass(GObject.GPointer):
 
         VectorClass()
     """
+
     parent_class: GObject.ObjectClass = ...
 
 class MSetCatalogTrimType(GObject.GFlags):
@@ -11449,6 +11817,19 @@ class CSQ1DEvolState(GObject.GEnum):
     INVALID: CSQ1DEvolState = ...
     UM: CSQ1DEvolState = ...
     UP: CSQ1DEvolState = ...
+
+class CSQ1DFrame(GObject.GEnum):
+    ADIAB1: CSQ1DFrame = ...
+    ADIAB2: CSQ1DFrame = ...
+    NONADIAB1: CSQ1DFrame = ...
+    NONADIAB2: CSQ1DFrame = ...
+    ORIG: CSQ1DFrame = ...
+
+class CSQ1DInitialStateType(GObject.GEnum):
+    ADIABATIC2: CSQ1DInitialStateType = ...
+    ADIABATIC4: CSQ1DInitialStateType = ...
+    AD_HOC: CSQ1DInitialStateType = ...
+    NONADIABATIC2: CSQ1DInitialStateType = ...
 
 class DataPoissonType(GObject.GEnum):
     INT: DataPoissonType = ...
