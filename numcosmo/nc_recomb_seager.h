@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            nc_recomb_seager.h
  *
@@ -72,9 +73,9 @@ typedef enum _NcRecombSeagerOpt
   NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1_CO   = 1 << 3,
   NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012    = 1 << 4,
   NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012_CO = 1 << 5,
-  NC_RECOM_SEAGER_OPT_ALL                   = (1 << 6) - 1, 
+  NC_RECOM_SEAGER_OPT_ALL                   = (1 << 6) - 1,
   /* < private > */
-  NC_RECOM_SEAGER_OPT_LEN,                                  /*< skip >*/
+  NC_RECOM_SEAGER_OPT_LEN, /*< skip >*/
 } NcRecombSeagerOpt;
 
 typedef gdouble (*NcRecombSeagerKHI2p2Pmean) (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble H);
@@ -117,3 +118,4 @@ gdouble nc_recomb_seager_hummer_HeI_case_B_trip_dTm (NcRecombSeager *recomb_seag
 G_END_DECLS
 
 #endif /* _NC_RECOMB_SEAGER_H_ */
+
