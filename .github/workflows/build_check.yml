@@ -165,7 +165,7 @@ jobs:
           mypy -p numcosmo_py
       - name: Checking indentation
         run: |
-          uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/*.(c|h)
+          uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/*.c numcosmo/*.h
       #- name: Running pylint
       #  run: |
       #    pylint --rcfile .pylintrc numcosmo_py
