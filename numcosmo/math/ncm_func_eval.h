@@ -42,3 +42,4 @@ void ncm_func_eval_log_pool_stats (void);
 G_END_DECLS
 
 #endif /* _NCM_FUNC_EVAL_H */
+

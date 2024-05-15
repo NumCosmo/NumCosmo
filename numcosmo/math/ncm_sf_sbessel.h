@@ -33,6 +33,7 @@
 G_BEGIN_DECLS
 
 gdouble ncm_sf_sbessel (gulong l, gdouble x);
+
 void ncm_sf_sbessel_taylor (gulong l, gdouble x, gdouble *djl);
 NcmSpline *ncm_sf_sbessel_spline (gulong l, gdouble xi, gdouble xf, gdouble reltol);
 
