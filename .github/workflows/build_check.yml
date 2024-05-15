@@ -78,10 +78,9 @@ jobs:
         python-version: '3.x'
     - name: Brew install pre-requisites
       run: |
-        find /usr/local/bin -lname '*/Library/Frameworks/Python.framework/*' -delete
         brew install python3 gobject-introspection pygobject3 numpy meson ninja gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran gtk-doc glib openblas
         brew unlink python && brew link python
-        python -m gi
+        python3 -m gi
     - name: Pip install pre-requisites
       run: |
         python3 -m pip install pytest pytest-tap
