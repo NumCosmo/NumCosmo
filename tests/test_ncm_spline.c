@@ -248,7 +248,7 @@ test_ncm_spline_cubic_notaknot_new_empty (TestNcmSpline *test, gconstpointer pda
   test->error    = 1.0e-4;
   test->error_d1 = 5.0e-3;
   test->error_d2 = 1.0e-2;
-  test->s_base   = ncm_spline_cubic_notaknot_new ();
+  test->s_base   = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   g_assert_true (NCM_IS_SPLINE_CUBIC (test->s_base));
   g_assert_true (NCM_IS_SPLINE_CUBIC_NOTAKNOT (test->s_base));
 
@@ -281,7 +281,7 @@ test_ncm_spline_gsl_cspline_new_empty (TestNcmSpline *test, gconstpointer pdata)
   test->error    = 5.0e-4;
   test->error_d1 = 1.0e-2;
   test->error_d2 = 1.0e-2;
-  test->s_base   = ncm_spline_gsl_new (gsl_interp_cspline);
+  test->s_base   = NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_cspline));
   g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
   {
     NcmVector *xv = ncm_vector_new (test->nknots);

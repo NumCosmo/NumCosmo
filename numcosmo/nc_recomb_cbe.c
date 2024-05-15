@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -54,7 +54,7 @@ static void
 nc_recomb_cbe_init (NcRecombCBE *recomb_cbe)
 {
   recomb_cbe->cbe  = NULL;
-  recomb_cbe->Xe_s = ncm_spline_cubic_notaknot_new ();
+  recomb_cbe->Xe_s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 }
 
 static void
@@ -64,16 +64,15 @@ nc_recomb_cbe_dispose (GObject *object)
 
   nc_cbe_clear (&recomb_cbe->cbe);
   ncm_spline_clear (&recomb_cbe->Xe_s);
-  
-	/* Chain up : end */  
+
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_recomb_cbe_parent_class)->dispose (object);
 }
 
 static void
 nc_recomb_cbe_finalize (GObject *object)
 {
-
-	/* Chain up : end */  
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_recomb_cbe_parent_class)->finalize (object);
 }
 
@@ -81,6 +80,7 @@ static void
 nc_recomb_cbe_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcRecombCBE *recomb_cbe = NC_RECOMB_CBE (object);
+
   g_return_if_fail (NC_IS_RECOMB_CBE (object));
 
   switch (prop_id)
@@ -98,6 +98,7 @@ static void
 nc_recomb_cbe_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcRecombCBE *recomb_cbe = NC_RECOMB_CBE (object);
+
   g_return_if_fail (NC_IS_RECOMB_CBE (object));
 
   switch (prop_id)
@@ -117,8 +118,8 @@ static gdouble _nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble 
 static void
 nc_recomb_cbe_class_init (NcRecombCBEClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-	NcRecombClass *recomb_class = NC_RECOMB_CLASS (klass);
+  GObjectClass *object_class  = G_OBJECT_CLASS (klass);
+  NcRecombClass *recomb_class = NC_RECOMB_CLASS (klass);
 
   object_class->set_property = nc_recomb_cbe_set_property;
   object_class->get_property = nc_recomb_cbe_get_property;
@@ -133,7 +134,7 @@ nc_recomb_cbe_class_init (NcRecombCBEClass *klass)
                                                         NC_TYPE_CBE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-	recomb_class->prepare = &_nc_recomb_cbe_prepare;
+  recomb_class->prepare = &_nc_recomb_cbe_prepare;
   recomb_class->Xe      = &_nc_recomb_Xe;
 }
 
@@ -146,61 +147,62 @@ _nc_recomb_cbe_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 
   ncm_spline_clear (&recomb_cbe->Xe_s);
 
-  recomb_cbe->Xe_s       = nc_cbe_thermodyn_get_Xe (recomb_cbe->cbe);
+  recomb_cbe->Xe_s = nc_cbe_thermodyn_get_Xe (recomb_cbe->cbe);
 
-	_nc_recomb_prepare_tau_splines (recomb, cosmo);
+  _nc_recomb_prepare_tau_splines (recomb, cosmo);
 
-  recomb->v_tau_max_z       = nc_cbe_thermodyn_v_tau_max_z (recomb_cbe->cbe);
-  recomb->tau_drag_z        = nc_cbe_thermodyn_z_d (recomb_cbe->cbe);
+  recomb->v_tau_max_z = nc_cbe_thermodyn_v_tau_max_z (recomb_cbe->cbe);
+  recomb->tau_drag_z  = nc_cbe_thermodyn_z_d (recomb_cbe->cbe);
 
-  recomb->v_tau_max_lambda  = -log1p (recomb->v_tau_max_z);
-  recomb->tau_drag_lambda   = -log1p (recomb->tau_drag_z);
+  recomb->v_tau_max_lambda = -log1p (recomb->v_tau_max_z);
+  recomb->tau_drag_lambda  = -log1p (recomb->tau_drag_z);
 
-  recomb->tau_lambda        = GSL_NAN;
-  recomb->tau_z             = GSL_NAN;
-  
+  recomb->tau_lambda = GSL_NAN;
+  recomb->tau_z      = GSL_NAN;
+
   recomb->tau_cutoff_lambda = GSL_NAN;
   recomb->tau_cutoff_z      = GSL_NAN;
 }
 
-static gdouble 
+static gdouble
 _nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   NcRecombCBE *recomb_cbe = NC_RECOMB_CBE (recomb);
-  
+
   return ncm_spline_eval (recomb_cbe->Xe_s, lambda);
 }
 
 /**
  * nc_recomb_cbe_new:
- * 
+ *
  * Creates a new #NcRecombCBE using default properties.
- * 
+ *
  * Returns: (transfer full): a new #NcRecombCBE.
  */
 NcRecombCBE *
 nc_recomb_cbe_new (void)
 {
   NcCBE *cbe = nc_cbe_new ();
+
   return g_object_new (NC_TYPE_RECOMB_CBE,
-                       "cbe", cbe, 
+                       "cbe", cbe,
                        NULL);
 }
 
 /**
  * nc_recomb_cbe_full_new:
  * @cbe: a #NcCBE object
- * 
+ *
  * Creates a new #NcRecombCBE using default properties
  * and @cbe as the Class backend object #NcCBE.
- * 
+ *
  * Returns: (transfer full): a new #NcRecombCBE.
  */
 NcRecombCBE *
 nc_recomb_cbe_full_new (NcCBE *cbe)
 {
   return g_object_new (NC_TYPE_RECOMB_CBE,
-                       "cbe", cbe, 
+                       "cbe", cbe,
                        NULL);
 }
 
@@ -249,11 +251,11 @@ nc_recomb_cbe_clear (NcRecombCBE **recomb_cbe)
  * nc_recomb_cbe_set_cbe:
  * @recomb_cbe: a #NcRecombCBE
  * @cbe: a #NcCBE
- * 
+ *
  * Sets @cbe as the Class backend to be used.
  *
  */
-void 
+void
 nc_recomb_cbe_set_cbe (NcRecombCBE *recomb_cbe, NcCBE *cbe)
 {
   nc_cbe_ref (cbe);
@@ -267,7 +269,7 @@ nc_recomb_cbe_set_cbe (NcRecombCBE *recomb_cbe, NcCBE *cbe)
  * @recomb_cbe: a #NcRecombCBE.
  *
  * Peeks the currently used #NcCBE.
- * 
+ *
  * Returns: (transfer none): the used #NcCBE.
  */
 NcCBE *
@@ -275,3 +277,4 @@ nc_recomb_cbe_peek_cbe (NcRecombCBE *recomb_cbe)
 {
   return recomb_cbe->cbe;
 }
+
