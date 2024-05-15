@@ -80,6 +80,7 @@ jobs:
       run: |
         brew install python3 gobject-introspection pygobject3 numpy meson ninja gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran gtk-doc glib openblas
         brew unlink python && brew link python
+        python -m gi
     - name: Pip install pre-requisites
       run: |
         python3 -m pip install pytest pytest-tap
