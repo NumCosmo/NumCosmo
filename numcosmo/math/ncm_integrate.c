@@ -491,7 +491,7 @@ ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdo
 
   return FALSE;
 
-#endif //HAVE_LIBCUBA_4_0
+#endif /*HAVE_LIBCUBA_4_0 */
 }
 
 /**
@@ -555,7 +555,7 @@ ncm_integrate_2dim_divonne_peakfinder (NcmIntegrand2dim *integ, gdouble xi, gdou
            result, error, &prob);
 #else
   g_error ("ncm_integrate_2dim_divonne: Needs libcuba > 4.0.");
-#endif //HAVE_LIBCUBA_4_0
+#endif /*HAVE_LIBCUBA_4_0 */
 
   if (neval >= maxeval)
     g_warning ("ncm_integrate_2dim_divonne_peakfinder: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
@@ -608,7 +608,7 @@ ncm_integrate_2dim_vegas (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdoub
          nstart, nincrease, nbatch, gridno, NULL, NULL, &neval, &fail, result, error, &prob);
 #else
   g_error ("ncm_integrate_2dim_vegas: Needs libcuba > 4.0.");
-#endif //HAVE_LIBCUBA_4_0
+#endif /*HAVE_LIBCUBA_4_0 */
 
   if (neval >= maxeval)
     g_warning ("ncm_integrate_2dim_vegas: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
@@ -680,7 +680,7 @@ ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdo
            result, error, &prob);
 #else
   g_error ("ncm_integrate_3dim_divonne: Needs libcuba > 4.0.");
-#endif //HAVE_LIBCUBA_4_0
+#endif /*HAVE_LIBCUBA_4_0 */
 
   if (neval >= maxeval)
     g_warning ("ncm_integrate_3dim_divonne: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
@@ -735,7 +735,7 @@ ncm_integrate_3dim_vegas (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdoub
          nstart, nincrease, nbatch, gridno, NULL, NULL, &neval, &fail, result, error, &prob);
 #else
   g_error ("ncm_integrate_3dim_vegas: Needs libcuba > 4.0.");
-#endif //HAVE_LIBCUBA_4_0
+#endif /*HAVE_LIBCUBA_4_0 */
 
   if (neval >= maxeval)
     g_warning ("ncm_integrate_3dim_vegas: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);

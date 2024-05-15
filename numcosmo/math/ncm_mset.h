@@ -121,17 +121,17 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
  * This macro should be used in the source file of the model.
  *
  */
-#define NCM_MSET_MODEL_REGISTER_ID(model_ns, typemacro) \
-        NcmModelID NCM_MSET_MODEL_ID_FUNC (model_ns) (void) \
-        { \
-          static NcmModelID id = -1; \
-          if (id == -1) \
-          { \
+#define NCM_MSET_MODEL_REGISTER_ID(model_ns, typemacro)                \
+        NcmModelID NCM_MSET_MODEL_ID_FUNC (model_ns) (void)            \
+        {                                                              \
+          static NcmModelID id = -1;                                   \
+          if (id == -1)                                                \
+          {                                                            \
             NcmModelClass *model_class = g_type_class_ref (typemacro); \
-            id = model_class->model_id; \
-            g_type_class_unref (model_class); \
-          } \
-          return id; \
+            id = model_class->model_id;                                \
+            g_type_class_unref (model_class);                          \
+          }                                                            \
+          return id;                                                   \
         }
 
 NcmMSetPIndex *ncm_mset_pindex_new (NcmModelID mid, guint pid);

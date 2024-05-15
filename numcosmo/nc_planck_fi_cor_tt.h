@@ -93,7 +93,7 @@ typedef enum /*< enum,underscore_name=NC_PLANCK_FI_COR_TT_SPARAMS >*/
   NC_PLANCK_FI_COR_TT_A_sbpx_217_217_TT,
   NC_PLANCK_FI_COR_TT_calib_100T,
   NC_PLANCK_FI_COR_TT_calib_217T,
-  NC_PLANCK_FI_COR_TT_A_planck,   
+  NC_PLANCK_FI_COR_TT_A_planck,
   /* < private > */
   NC_PLANCK_FI_COR_TT_SPARAM_LEN, /*< skip >*/
 } NcPlanckFICorTTSParams;
@@ -151,3 +151,4 @@ void nc_planck_fi_cor_tt_add_all_default18_priors (NcmLikelihood *lh);
 G_END_DECLS
 
 #endif /* _NC_PLANCK_FI_COR_TT_H_ */
+

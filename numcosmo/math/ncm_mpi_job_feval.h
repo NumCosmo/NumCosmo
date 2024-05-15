@@ -40,7 +40,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmMPIJobFEval, ncm_mpi_job_feval, NCM, MPI_JOB_FEVAL, NcmMPIJob)
 
-NcmMPIJobFEval *ncm_mpi_job_feval_new (NcmFit *fit, NcmObjArray *func_oa);
+NcmMPIJobFEval *ncm_mpi_job_feval_new (NcmFit * fit, NcmObjArray * func_oa);
 NcmMPIJobFEval *ncm_mpi_job_feval_ref (NcmMPIJobFEval *mjfeval);
 
 void ncm_mpi_job_feval_free (NcmMPIJobFEval *mjfeval);

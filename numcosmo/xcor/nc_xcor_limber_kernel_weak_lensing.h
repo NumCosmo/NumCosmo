@@ -69,25 +69,25 @@ struct _NcXcorLimberKernelWeakLensing
 {
   /*< private >*/
   NcXcorLimberKernel parent_instance;
-  
+
   NcmSpline *dn_dz;
-  
+
   /* NcmSpline* bias_spline; */
   /* guint nknots; */
   /* gdouble* bias; */
-  
+
   NcDistance *dist;
-  
+
   NcmSpline *src_int;
   /* gboolean domagbias; */
-  
+
   /* gboolean fast_update; */
   /* gdouble bias_old; */
   /* gdouble noise_bias_old; */
-  
+
   gdouble nbar;
   gdouble intr_shear;
-  
+
   gdouble noise;
 };
 

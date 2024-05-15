@@ -99,3 +99,4 @@ gdouble nc_scalefactor_eval_eta_t (NcScalefactor *a, const gdouble t);
 G_END_DECLS
 
 #endif /* _NC_SCALEFACTOR_H_ */
+
