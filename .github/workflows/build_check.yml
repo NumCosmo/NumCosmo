@@ -30,6 +30,7 @@ jobs:
       run: |
         uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/*.c numcosmo/*.h
         uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/math/*.c numcosmo/math/*.h
+        uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/model/*.c numcosmo/model/*.h
         uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/xcor/*.c numcosmo/xcor/*.h
     - name: Test python examples
       run: |
