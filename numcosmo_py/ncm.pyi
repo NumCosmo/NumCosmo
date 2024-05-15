@@ -3265,8 +3265,6 @@ class FitESMCMC(GObject.Object):
         Minumum number of runs
       max-runs-time -> gdouble: max-runs-time
         Maximum time between runs
-      skip-check -> gboolean: skip-check
-        Skip check
       log-time-interval -> gdouble: log-time-interval
         Time interval between log
       intermediary-log -> guint: intermediary-log
@@ -3301,7 +3299,6 @@ class FitESMCMC(GObject.Object):
         nthreads: int
         nwalkers: int
         sampler: MSetTransKern
-        skip_check: bool
         trim_type: MSetCatalogTrimType
         use_mpi: bool
         walker: FitESMCMCWalker
@@ -3323,7 +3320,6 @@ class FitESMCMC(GObject.Object):
         nthreads: int = ...,
         nwalkers: int = ...,
         sampler: MSetTransKern = ...,
-        skip_check: bool = ...,
         trim_type: MSetCatalogTrimType = ...,
         use_mpi: bool = ...,
         walker: FitESMCMCWalker = ...,
@@ -3337,7 +3333,6 @@ class FitESMCMC(GObject.Object):
     def get_catalog(self) -> MSetCatalog: ...
     def get_offboard_ratio(self) -> float: ...
     def get_offboard_ratio_last_update(self) -> float: ...
-    def get_skip_check(self) -> bool: ...
     def has_rng(self) -> bool: ...
     def mean_covar(self) -> None: ...
     @classmethod
@@ -3378,7 +3373,6 @@ class FitESMCMC(GObject.Object):
     def set_nthreads(self, nthreads: int) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
     def set_sampler(self, sampler: MSetTransKern) -> None: ...
-    def set_skip_check(self, skip_check: bool) -> None: ...
     def start_run(self) -> None: ...
     def use_mpi(self, use_mpi: bool) -> None: ...
     def validate(self, pi: int, pf: int) -> bool: ...
@@ -10182,8 +10176,8 @@ class SplineCubicNotaknot(SplineCubic):
     ::
 
         SplineCubicNotaknot(**properties)
-        new() -> NumCosmoMath.Spline
-        new_full(xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.Spline
+        new() -> NumCosmoMath.SplineCubicNotaknot
+        new_full(xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.SplineCubicNotaknot
 
     Object NcmSplineCubicNotaknot
 
@@ -10333,10 +10327,10 @@ class SplineGsl(Spline):
     ::
 
         SplineGsl(**properties)
-        new(type:int) -> NumCosmoMath.Spline
-        new_by_id(type_id:NumCosmoMath.SplineGslType) -> NumCosmoMath.Spline
-        new_full(type:int, xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.Spline
-        new_full_by_id(type_id:NumCosmoMath.SplineGslType, xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.Spline
+        new(type:int) -> NumCosmoMath.SplineGsl
+        new_by_id(type_id:NumCosmoMath.SplineGslType) -> NumCosmoMath.SplineGsl
+        new_full(type:int, xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.SplineGsl
+        new_full_by_id(type_id:NumCosmoMath.SplineGslType, xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.SplineGsl
 
     Object NcmSplineGsl
 

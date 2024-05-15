@@ -129,8 +129,8 @@ static gdouble _nc_hipert_adiab_cosmic_time_integ_backward (const gdouble t, gdo
 static void
 nc_hipert_adiab_init (NcHIPertAdiab *pa)
 {
-  NcmSpline *s1 = ncm_spline_cubic_notaknot_new ();
-  NcmSpline *s2 = ncm_spline_cubic_notaknot_new ();
+  NcmSpline *s1 = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  NcmSpline *s2 = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
   pa->k              = 0.0;
   pa->powspec_alpha  = NULL;
@@ -791,7 +791,7 @@ nc_hipert_adiab_prepare_spectrum (NcHIPertAdiab *adiab, NcmModel *model, GArray 
   {
     NcmVector *tau_vec = ncm_vector_new_array (tau_array);
     NcmVector *k_vec   = ncm_vector_new_array (k_array);
-    NcmSpline *s       = ncm_spline_cubic_notaknot_new ();
+    NcmSpline *s       = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
     ncm_spline2d_clear (&adiab->powspec_alpha);
     ncm_spline2d_clear (&adiab->powspec_gamma);

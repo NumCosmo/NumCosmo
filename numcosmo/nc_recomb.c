@@ -175,8 +175,8 @@ static gdouble _nc_recomb_mdtau_drag_dlambda (gdouble y, gdouble x, gpointer use
 static void
 nc_recomb_init (NcRecomb *recomb)
 {
-  NcmSpline *tau_s      = ncm_spline_cubic_notaknot_new ();
-  NcmSpline *tau_drag_s = ncm_spline_cubic_notaknot_new ();
+  NcmSpline *tau_s      = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  NcmSpline *tau_drag_s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
   recomb->zi             = 0.0;
   recomb->prec           = 0.0;
@@ -1408,10 +1408,10 @@ _nc_recomb_prepare_tau_splines (NcRecomb *recomb, NcHICosmo *cosmo)
   gsl_function F;
 
   if (recomb->tau_s == NULL)
-    recomb->tau_s = ncm_spline_cubic_notaknot_new ();
+    recomb->tau_s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
   if (recomb->dtau_dlambda_s == NULL)
-    recomb->dtau_dlambda_s = ncm_spline_cubic_notaknot_new ();
+    recomb->dtau_dlambda_s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
   func.recomb = recomb;
   func.cosmo  = cosmo;
