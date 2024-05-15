@@ -1035,16 +1035,16 @@ _nc_hicosmo_de_w_de (NcHICosmoDE *cosmo_de, gdouble z)
   return 0.0;
 }
 
-#define NC_HICOSMO_DE_SET_IMPL_FUNC(name)                                                                    \
-        void                                                                                                       \
+#define NC_HICOSMO_DE_SET_IMPL_FUNC(name)                                                                               \
+        void                                                                                                            \
         nc_hicosmo_de_set_ ## name ## _impl (NcHICosmoDEClass * cosmo_de_class, NcmFuncF f, NcmFuncPF pf, NcmFuncDF df) \
-        {                                                                                                          \
-          ncm_model_class_add_impl_opts (NCM_MODEL_CLASS (cosmo_de_class), NC_HICOSMO_DE_IMPL_ ## name, -1);         \
-          g_assert (f != NULL);                                                                                    \
-          cosmo_de_class->name    = *ncm_func_stub;                                                                   \
-          cosmo_de_class->name.f  = f;                                                                              \
-          cosmo_de_class->name.pf = pf;                                                                            \
-          cosmo_de_class->name.df = df;                                                                            \
+        {                                                                                                               \
+          ncm_model_class_add_impl_opts (NCM_MODEL_CLASS (cosmo_de_class), NC_HICOSMO_DE_IMPL_ ## name, -1);            \
+          g_assert (f != NULL);                                                                                         \
+          cosmo_de_class->name    = *ncm_func_stub;                                                                     \
+          cosmo_de_class->name.f  = f;                                                                                  \
+          cosmo_de_class->name.pf = pf;                                                                                 \
+          cosmo_de_class->name.df = df;                                                                                 \
         }
 
 /**

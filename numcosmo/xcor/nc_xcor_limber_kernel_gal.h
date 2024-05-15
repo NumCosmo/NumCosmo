@@ -75,22 +75,22 @@ struct _NcXcorLimberKernelGal
 {
   /*< private >*/
   NcXcorLimberKernel parent_instance;
-  
+
   NcmSpline *dn_dz;
-  
+
   NcmSpline *bias_spline;
   guint nknots;
   gdouble *bias;
-  
+
   NcDistance *dist;
-  
+
   NcmSpline *g_func;
   gboolean domagbias;
-  
+
   gboolean fast_update;
   gdouble bias_old;
   gdouble noise_bias_old;
-  
+
   gdouble nbarm1;
 };
 

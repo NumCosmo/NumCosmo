@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_model_mvnd.h
  *
@@ -14,12 +15,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -42,13 +43,13 @@ G_DECLARE_FINAL_TYPE (NcmModelMVND, ncm_model_mvnd, NCM, MODEL_MVND, NcmModel)
 /**
  * NcmModelMVNDVParams:
  * @NCM_MODEL_MVND_MEAN: Mean vector
- * 
+ *
  * MVND model parameters
- * 
+ *
  */
 typedef enum _NcmModelMVNDVParams
 {
-  NCM_MODEL_MVND_MEAN,          
+  NCM_MODEL_MVND_MEAN,
   /* < private > */
   NNCM_MODEL_MVND_VPARAM_LEN, /*< skip >*/
 } NcmModelMVNDVParams;
@@ -65,3 +66,4 @@ void ncm_model_mvnd_mean (NcmModelMVND *model_mvnd, NcmVector *y);
 G_END_DECLS
 
 #endif /* _NCM_MODEL_MVND_H_ */
+

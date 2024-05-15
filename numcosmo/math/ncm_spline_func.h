@@ -39,18 +39,18 @@ G_BEGIN_DECLS
 
 /**
  * NcmSplineFuncType:
- * @NCM_SPLINE_FUNCTION_4POINTS: FIXME 
- * @NCM_SPLINE_FUNCTION_SPLINE: The knots are evenly distributed on a linear base at each step. The test points are place at $\overline{\mathbf{x}} = \frac{\mathbf{x}^{i+1} + \mathbf{x}^{i}}{2}$. 
+ * @NCM_SPLINE_FUNCTION_4POINTS: FIXME
+ * @NCM_SPLINE_FUNCTION_SPLINE: The knots are evenly distributed on a linear base at each step. The test points are place at $\overline{\mathbf{x}} = \frac{\mathbf{x}^{i+1} + \mathbf{x}^{i}}{2}$.
  * @NCM_SPLINE_FUNCTION_SPLINE_LNKNOT: The knots are evenly distributed on a logarithm base at each step. The test points are place at $\overline{\mathbf{x}} = \mathrm{exp}\left( \frac{\ln \mathbf{x}^{i+1} + \ln \mathbf{x}^{i}}{2}  \right)$. This method is only applied for positive intervals and is indicated for functions that changes orders of magnitude across the interval.
  * @NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT: The knots are evenly distributed on a hyperbolic sine base at each step. The test points are place at $\overline{\mathbf{x}} = \sinh \left[ \frac{\sinh^{-1} \left( \mathbf{x}^{i+1} \right) + \sinh^{-1} \left( \mathbf{x}^{i} \right)}{2} \right]$. This method is indicated for functions that changes orders of magnitude across the interval.
  * @NCM_SPLINE_FUNC_GRID_LINEAR: The knots are evenly distributed on a linear base in the entire range [@xi, @xf].
- * @NCM_SPLINE_FUNC_GRID_LOG: The knots are evenly distributed on a natural logarithmic base in the entire range [@xi > 0, @xf > xi > 0]. 
+ * @NCM_SPLINE_FUNC_GRID_LOG: The knots are evenly distributed on a natural logarithmic base in the entire range [@xi > 0, @xf > xi > 0].
  *
- * Enumeration to choose which of the functions to be applied when interpolating the input #gsl_function *@F, $f$, 
- * with the desired @rel_error in the range [@xi, @xf]. 
- * The interpolation knots, $\mathbf{x}$, are automatically defined internally by the functions. 
+ * Enumeration to choose which of the functions to be applied when interpolating the input #gsl_function *@F, $f$,
+ * with the desired @rel_error in the range [@xi, @xf].
+ * The interpolation knots, $\mathbf{x}$, are automatically defined internally by the functions.
  * For more details see [description][numcosmo-NcmSplineFunc.description] above.
- * 
+ *
  */
 typedef enum _NcmSplineFuncType
 {
