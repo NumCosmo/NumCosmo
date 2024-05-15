@@ -66,9 +66,9 @@ jobs:
       FC: gfortran-11
       F77: gfortran-11
       F90: gfortran-11
-      LIBRARY_PATH: /usr/local/lib
-      LD_LIBRARY_PATH: /usr/local/lib
-      DYLD_LIBRARY_PATH: /usr/local/lib
+      LIBRARY_PATH: /usr/local/lib:/opt/homebrew/Cellar/gmp/6.3.0/lib
+      LD_LIBRARY_PATH: /usr/local/lib:/opt/homebrew/Cellar/gmp/6.3.0/lib
+      DYLD_LIBRARY_PATH: /usr/local/lib:/opt/homebrew/Cellar/gmp/6.3.0/lib
       CPATH: /usr/local/include
 
     steps:
