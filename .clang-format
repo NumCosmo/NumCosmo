@@ -12,7 +12,7 @@
     NamespaceIndentation: All, 
     FixNamespaceComments: false,
     AlignConsecutiveAssignments: true,
-    AlignConsecutiveMacros, true,
+    AlignConsecutiveMacros: true,
     IndentPPDirectives: AfterHash,
     SpaceAroundPointerQualifiers: Both,
     SortIncludes: false,
