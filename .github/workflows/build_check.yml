@@ -81,21 +81,15 @@ jobs:
         brew install python3 gobject-introspection pygobject3 gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran gtk-doc glib openblas
     - name: Pip install pre-requisites
       run: |
-        echo $(which python3)
         python3 -m pip install meson ninja pytest pytest-tap numpy
-        echo $(which meson)
-        echo $(which pip3)
-        echo $(brew --prefix python)
-        cat $(which meson)
-        ls -lasth /usr/bin/python
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
       run: |
-        meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dmpi=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+        python3 $(which meson) setup build -Dbuildtype=release -Dnumcosmo_py=true -Dmpi=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: |
-        meson compile -C build
+        python3 $(which meson) compile -C build
     - name: Test python examples
       run: |
         source build/numcosmo_export.sh
@@ -103,7 +97,7 @@ jobs:
         python example_simple.py
         python example_cbe.py
     - name: Check NumCosmo
-      run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
+      run: python3 $(which meson) test -C build || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge:
     name: (${{ matrix.os }}, py${{ matrix.python-version }}, ${{ matrix.mpi }}, Miniforge)
