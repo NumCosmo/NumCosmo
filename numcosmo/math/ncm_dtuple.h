@@ -97,8 +97,8 @@ void ncm_dtuple3_clear (NcmDTuple3 **dt3);
  *
  */
 #define NCM_DTUPLE2_STATIC_INIT(x, y) \
-        { \
-          { x, y } \
+        {                             \
+          { x, y }                    \
         }
 
 
@@ -117,8 +117,8 @@ void ncm_dtuple3_clear (NcmDTuple3 **dt3);
  *
  */
 #define NCM_DTUPLE3_STATIC_INIT(x, y, z) \
-        { \
-          { x, y, z } \
+        {                                \
+          { x, y, z }                    \
         }
 
 /**

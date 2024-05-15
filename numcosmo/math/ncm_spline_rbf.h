@@ -42,8 +42,8 @@ G_DECLARE_FINAL_TYPE (NcmSplineRBF, ncm_spline_rbf, NCM, SPLINE_RBF, NcmSpline)
 
 /**
  * NcmSplineRBFType:
- * @NCM_SPLINE_RBF_TYPE_POSDEF_GAUSS: Gaussian [RBF](https://en.wikipedia.org/wiki/Radial_basis_function) interpolation method for positive defined functions. 
- * @NCM_SPLINE_RBF_TYPE_GAUSS: Gaussian [RBF](https://en.wikipedia.org/wiki/Radial_basis_function) interpolation method for any kind of function. 
+ * @NCM_SPLINE_RBF_TYPE_POSDEF_GAUSS: Gaussian [RBF](https://en.wikipedia.org/wiki/Radial_basis_function) interpolation method for positive defined functions.
+ * @NCM_SPLINE_RBF_TYPE_GAUSS: Gaussian [RBF](https://en.wikipedia.org/wiki/Radial_basis_function) interpolation method for any kind of function.
  *
  * Enumeration to choose which Gaussian [RBF](https://en.wikipedia.org/wiki/Radial_basis_function) interpolation method to be applied by the object.
  *

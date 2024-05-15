@@ -106,9 +106,9 @@ extern guint fftw_default_flags;
 #define NCM_CFG_DATA_DIR_ENV "NUMCOSMO_DATA_DIR"
 
 #ifdef NUMCOSMO_CHECK_PREPARE
-#define NCM_CHECK_PREPARED(obj, name) \
-        G_STMT_START { \
-          if (!obj->prepared) \
+#define NCM_CHECK_PREPARED(obj, name)                                      \
+        G_STMT_START {                                                     \
+          if (!obj->prepared)                                              \
           g_error ("calling method %s on an unprepared instance.", #name); \
         } G_STMT_END
 #else /* NUMCOSMO_CHECK_PREPARE */
@@ -131,14 +131,14 @@ extern guint fftw_default_flags;
 #endif /* mpz_inits */
 
 #ifndef NUMCOSMO_GIR_SCAN
-#define NCM_FITS_ERROR(status) \
-        G_STMT_START { \
-          if (status) \
-          { \
-            gchar errormsg[30]; \
+#define NCM_FITS_ERROR(status)                     \
+        G_STMT_START {                             \
+          if (status)                              \
+          {                                        \
+            gchar errormsg[30];                    \
             fits_get_errstatus (status, errormsg); \
-            g_error ("FITS: %s", errormsg); \
-          } \
+            g_error ("FITS: %s", errormsg);        \
+          }                                        \
         } G_STMT_END
 #endif /* NUMCOSMO_GIR_SCAN */
 

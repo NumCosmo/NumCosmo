@@ -63,13 +63,13 @@ struct _NcXcorLimberKernelCMBLensing
 {
   /*< private >*/
   NcXcorLimberKernel parent_instance;
-  
+
   NcDistance *dist;
   NcRecomb *recomb;
-  
+
   NcmVector *Nl;
   guint Nlmax;
-  
+
   gdouble xi_lss;
 };
 

@@ -47,15 +47,15 @@ struct _NcXcorAB
 {
   /*< private > */
   GObject parent_instance;
-  
+
   guint a;
   guint b;
-  
+
   guint ell_th_cut_off;
   guint ell_lik_min;
   guint ell_lik_max;
   guint nell_lik;
-  
+
   NcmMatrix *mixing;
   NcmMatrix *cl_th; /*column 0 : C_l^th, 1 : C_l^th+N_l, 2 : mixed C_l */
   NcmVector *cl_obs;
@@ -65,7 +65,7 @@ struct _NcXcorABClass
 {
   /*< private > */
   GObjectClass parent_class;
-  
+
   gpointer (*alloc) (void);
 };
 

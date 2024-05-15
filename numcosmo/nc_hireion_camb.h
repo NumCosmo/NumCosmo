@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -60,12 +60,12 @@ struct _NcHIReionCambClass
  * @NC_HIREION_CAMB_HEIII_Z: FIXME
  *
  * FIXME
- * 
+ *
  */
 typedef enum /*< enum,underscore_name=NC_HIREION_CAMB_SPARAMS >*/
 {
   NC_HIREION_CAMB_HII_HEII_Z = 0,
-  NC_HIREION_CAMB_HEIII_Z,    
+  NC_HIREION_CAMB_HEIII_Z,
   /* < private > */
   NC_HIREION_CAMB_SPARAM_LEN, /*< skip >*/
 } NcHIReionCambSParams;
@@ -102,3 +102,4 @@ void nc_hireion_camb_z_to_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo);
 G_END_DECLS
 
 #endif /* _NC_HIREION_CAMB_H_ */
+

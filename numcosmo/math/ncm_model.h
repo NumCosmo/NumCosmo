@@ -215,66 +215,66 @@ void ncm_model___setitem__ (NcmModel *model, gchar *param, gdouble val, GError *
 /*
  * Model set functions
  */
-#define NCM_MODEL_SET_IMPL_FUNC(NS_NAME, NsName, ns_name, type, name) \
-        void \
-        ns_name ## _set_ ## name ## _impl (NsName ## Class * model_class, type f) \
-        { \
+#define NCM_MODEL_SET_IMPL_FUNC(NS_NAME, NsName, ns_name, type, name)                                   \
+        void                                                                                            \
+        ns_name ## _set_ ## name ## _impl (NsName ## Class * model_class, type f)                       \
+        {                                                                                               \
           ncm_model_class_add_impl_opts (NCM_MODEL_CLASS (model_class), NS_NAME ## _IMPL_ ## name, -1); \
-          model_class->name = f; \
+          model_class->name = f;                                                                        \
         }
 
 /*
  * Constant model functions call accessor
  */
-#define NCM_MODEL_FUNC0_IMPL(NS_NAME, NsName, ns_name, name) \
-        gdouble ns_name ## _ ## name (NsName * m) \
-        { \
+#define NCM_MODEL_FUNC0_IMPL(NS_NAME, NsName, ns_name, name)    \
+        gdouble ns_name ## _ ## name (NsName * m)               \
+        {                                                       \
           return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m)); \
         }
 
 /*
  * Model functions call
  */
-#define NCM_MODEL_FUNC1_IMPL(NS_NAME, NsName, ns_name, name, var) \
+#define NCM_MODEL_FUNC1_IMPL(NS_NAME, NsName, ns_name, name, var)    \
         gdouble ns_name ## _ ## name (NsName * m, const gdouble var) \
-        { \
+        {                                                            \
           return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m), var); \
         }
 
 /*
  * Model functions 2d call
  */
-#define NCM_MODEL_FUNC2_IMPL(NS_NAME, NsName, ns_name, name) \
+#define NCM_MODEL_FUNC2_IMPL(NS_NAME, NsName, ns_name, name)                        \
         gdouble ns_name ## _ ## name (NsName * m, const gdouble x, const gdouble y) \
-        { \
-          return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m), x, y); \
+        {                                                                           \
+          return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m), x, y);               \
         }
 
 /*
  * Constant model vector functions call accessor
  */
-#define NCM_MODEL_VFUNC0_IMPL(NS_NAME, NsName, ns_name, name) \
-        gdouble ns_name ## _ ## name (NsName * m, const guint n) \
-        { \
+#define NCM_MODEL_VFUNC0_IMPL(NS_NAME, NsName, ns_name, name)      \
+        gdouble ns_name ## _ ## name (NsName * m, const guint n)   \
+        {                                                          \
           return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m), n); \
         }
 
 /*
  * Model vector functions call
  */
-#define NCM_MODEL_VFUNC1_IMPL(NS_NAME, NsName, ns_name, name, var) \
+#define NCM_MODEL_VFUNC1_IMPL(NS_NAME, NsName, ns_name, name, var)                  \
         gdouble ns_name ## _ ## name (NsName * m, const guint n, const gdouble var) \
-        { \
-          return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m), n, var); \
+        {                                                                           \
+          return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m), n, var);             \
         }
 
 /*
  * Model functions 2d call
  */
-#define NCM_MODEL_VFUNC2_IMPL(NS_NAME, NsName, ns_name, name) \
+#define NCM_MODEL_VFUNC2_IMPL(NS_NAME, NsName, ns_name, name)                                      \
         gdouble ns_name ## _ ## name (NsName * m, const guint n, const gdouble x, const gdouble y) \
-        { \
-          return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m), n, x, y); \
+        {                                                                                          \
+          return NS_NAME ## _GET_CLASS (m)->name (NS_NAME (m), n, x, y);                           \
         }
 
 G_END_DECLS
