@@ -699,7 +699,7 @@ ncm_fftlog_set_nderivs (NcmFftlog *fftlog, guint nderivs)
         for (i = self->nderivs + 1; i <= nderivs; i++)
         {
           NcmVector *Gr_vec_i = ncm_vector_new (self->N);
-          NcmSpline *Gr_s_i   = ncm_spline_cubic_notaknot_new_full (self->lnr_vec, Gr_vec_i, FALSE);
+          NcmSpline *Gr_s_i   = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (self->lnr_vec, Gr_vec_i, FALSE));
           fftw_complex *Ym_i  = fftw_alloc_complex (self->Nf);
 
           g_ptr_array_add (self->Gr_vec, Gr_vec_i);
@@ -859,7 +859,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
     for (i = 0; i <= (gint) self->nderivs; i++)
     {
       NcmVector *Gr_vec_i = ncm_vector_new (self->N);
-      NcmSpline *Gr_s_i   = ncm_spline_cubic_notaknot_new_full (self->lnr_vec, Gr_vec_i, FALSE);
+      NcmSpline *Gr_s_i   = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (self->lnr_vec, Gr_vec_i, FALSE));
       fftw_complex *Ym_i  = fftw_alloc_complex (self->Nf);
 
       g_ptr_array_add (self->Gr_vec, Gr_vec_i);

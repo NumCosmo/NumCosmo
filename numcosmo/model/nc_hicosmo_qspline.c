@@ -104,7 +104,7 @@ _nc_hicosmo_qspline_constructed (GObject *object)
     }
 
     {
-      NcmSpline *s = ncm_spline_cubic_notaknot_new ();
+      NcmSpline *s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
       if (qspline->q_z == NULL)
         qspline->q_z = ncm_spline_new (s, zv, qv, FALSE);

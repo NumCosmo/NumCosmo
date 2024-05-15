@@ -217,10 +217,10 @@ ncm_hoaa_init (NcmHOAA *hoaa)
   self->qbar      = g_array_new (TRUE, TRUE, sizeof (gdouble));
   self->pbar      = g_array_new (TRUE, TRUE, sizeof (gdouble));
 
-  self->upsilon_s = ncm_spline_cubic_notaknot_new ();
-  self->gamma_s   = ncm_spline_cubic_notaknot_new ();
-  self->qbar_s    = ncm_spline_cubic_notaknot_new ();
-  self->pbar_s    = ncm_spline_cubic_notaknot_new ();
+  self->upsilon_s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  self->gamma_s   = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  self->qbar_s    = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  self->pbar_s    = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
   self->sigma0 = 0.0;
 
@@ -234,8 +234,6 @@ _ncm_hoaa_set_property (GObject *object, guint prop_id, const GValue *value, GPa
 {
   NcmHOAA *hoaa               = NCM_HOAA (object);
   NcmHOAAPrivate * const self = ncm_hoaa_get_instance_private (hoaa);
-
-
 
   g_return_if_fail (NCM_IS_HOAA (object));
 
@@ -2167,7 +2165,7 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
     if (FALSE)
     {
       NcmHOAAArg arg     = {hoaa, model, 0.0, -1, NCM_HOAA_SING_TYPE_INVALID};
-      NcmSpline *s       = ncm_spline_cubic_notaknot_new ();
+      NcmSpline *s       = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
       NcmOdeSpline *nu_s = ncm_ode_spline_new (s, _ncm_hoaa_phase_nu);
       gint i;
 
@@ -2196,7 +2194,7 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
     if (FALSE)
     {
       NcmHOAAArg arg       = {hoaa, model, 0.0, -1, NCM_HOAA_SING_TYPE_INVALID};
-      NcmSpline *s         = ncm_spline_cubic_notaknot_new ();
+      NcmSpline *s         = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
       NcmOdeSpline *mnu2_s = ncm_ode_spline_new (s, _ncm_hoaa_phase_mnu2);
       gint i;
 

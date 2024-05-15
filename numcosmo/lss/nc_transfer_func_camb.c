@@ -106,7 +106,7 @@ _nc_transfer_func_camb_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
     i++;
   }
 
-  tf_CAMB->T_spline = ncm_spline_cubic_notaknot_new ();
+  tf_CAMB->T_spline = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   ncm_spline_new_array (tf_CAMB->T_spline, x, y, TRUE);
 
   g_array_unref (x);

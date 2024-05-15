@@ -584,7 +584,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
     N_k = ncm_fftlog_get_size (psf->fftlog);
 
     {
-      NcmSpline *dummy_z = ncm_spline_cubic_notaknot_new ();
+      NcmSpline *dummy_z = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
       gsl_function Fdummy_z;
 
       Fdummy_z.function = &_ncm_powspec_filter_dummy_z;
