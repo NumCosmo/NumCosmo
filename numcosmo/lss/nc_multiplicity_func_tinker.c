@@ -454,10 +454,10 @@ nc_multiplicity_func_tinker_set_linear_interp (NcMultiplicityFuncTinker *mt, gbo
   }
   else
   {
-    self->A_s = ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_LINEAR, log10_delta_v, coeff_A_v, TRUE);
-    self->a_s = ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_LINEAR, log10_delta_v, coeff_a_v, TRUE);
-    self->b_s = ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_LINEAR, log10_delta_v, coeff_b_v, TRUE);
-    self->c_s = ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_LINEAR, log10_delta_v, coeff_c_v, TRUE);
+    self->A_s = NCM_SPLINE (ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_LINEAR, log10_delta_v, coeff_A_v, TRUE));
+    self->a_s = NCM_SPLINE (ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_LINEAR, log10_delta_v, coeff_a_v, TRUE));
+    self->b_s = NCM_SPLINE (ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_LINEAR, log10_delta_v, coeff_b_v, TRUE));
+    self->c_s = NCM_SPLINE (ncm_spline_gsl_new_full_by_id (NCM_SPLINE_GSL_LINEAR, log10_delta_v, coeff_c_v, TRUE));
   }
 
   ncm_vector_free (log10_delta_v);

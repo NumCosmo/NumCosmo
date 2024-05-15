@@ -122,8 +122,8 @@ nc_cluster_abundance_init (NcClusterAbundance *cad)
 
   cad->dbdlnM = NULL;
 
-  cad->inv_z   = ncm_spline_cubic_notaknot_new ();
-  cad->inv_lnM = ncm_spline_cubic_notaknot_new ();
+  cad->inv_z   = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  cad->inv_lnM = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
   ncm_spline_set (cad->inv_z, u1_knots, integ_z_knots, FALSE);
   ncm_spline_set (cad->inv_lnM, u2_knots, integ_lnM_knots, FALSE);
