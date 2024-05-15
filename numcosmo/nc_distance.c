@@ -216,7 +216,7 @@ _nc_distance_constructed (GObject *object)
   G_OBJECT_CLASS (nc_distance_parent_class)->constructed (object);
   {
     NcDistance *dist = NC_DISTANCE (object);
-    NcmSpline *s     = ncm_spline_cubic_notaknot_new ();
+    NcmSpline *s     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
     dist->comoving_distance_spline = ncm_ode_spline_new_full (s, _dcddz, 0.0, 0.0, dist->zf);
     ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);

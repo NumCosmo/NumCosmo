@@ -170,9 +170,9 @@ _nc_hicosmo_de_wspline_constructed (GObject *object)
       NcmSpline *s;
 
       if (self->nknots >= 6)
-        s = ncm_spline_cubic_notaknot_new ();
+        s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
       else
-        s = ncm_spline_gsl_new (gsl_interp_polynomial);
+        s = NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_polynomial));
 
       self->w_alpha = ncm_spline_new (s, alphav, wv, TRUE);
 

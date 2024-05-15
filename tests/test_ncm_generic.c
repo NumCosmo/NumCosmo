@@ -325,7 +325,7 @@ test_ncm_powspec_spline2d_basic (void)
   NcmVector *xv     = ncm_vector_new_data_static (x, 6, 1);
   NcmVector *yv     = ncm_vector_new_data_static (y, 7, 1);
   NcmMatrix *zm     = ncm_matrix_new_data_static (z, 7, 6);
-  NcmSpline *sc     = ncm_spline_cubic_notaknot_new ();
+  NcmSpline *sc     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   NcmSpline2d *sb2d = ncm_spline2d_bicubic_new (sc);
 
   ncm_spline2d_set (NCM_SPLINE2D (sb2d), xv, yv, zm, FALSE);
