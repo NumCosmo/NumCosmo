@@ -175,10 +175,10 @@ nc_hicosmo_Vexp_init (NcHICosmoVexp *Vexp)
   Vexp->priv->evol_c   = g_array_sized_new (TRUE, TRUE, sizeof (NcHICosmoVexpState), 1000);
   Vexp->priv->evol_e   = g_array_sized_new (TRUE, TRUE, sizeof (NcHICosmoVexpState), 1000);
 
-  Vexp->priv->E2_s      = ncm_spline_cubic_notaknot_new ();
-  Vexp->priv->lnqc_mtau = ncm_spline_cubic_notaknot_new ();
-  Vexp->priv->lnqe_tau  = ncm_spline_cubic_notaknot_new ();
-  Vexp->priv->phi_tau   = ncm_spline_cubic_notaknot_new ();
+  Vexp->priv->E2_s      = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  Vexp->priv->lnqc_mtau = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  Vexp->priv->lnqe_tau  = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  Vexp->priv->phi_tau   = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
   {
     GArray *mtau  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);

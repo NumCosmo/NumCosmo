@@ -206,7 +206,7 @@ static void
 nc_halo_density_profile_init (NcHaloDensityProfile *dp)
 {
   NcHaloDensityProfilePrivate * const self = dp->priv = nc_halo_density_profile_get_instance_private (dp);
-  NcmSpline *s                             = ncm_spline_cubic_notaknot_new ();
+  NcmSpline *s                             = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
   self->mdef            = NC_HALO_DENSITY_PROFILE_MASS_DEF_LEN;
   self->z               = 0.0;
@@ -215,8 +215,8 @@ nc_halo_density_profile_init (NcHaloDensityProfile *dp)
   self->lnXi            = 0.0;
   self->lnXf            = 0.0;
   self->dl_spher_mass   = 0.0;
-  self->dl_2d_density_s = ncm_spline_cubic_notaknot_new ();
-  self->dl_cyl_mass_s   = ncm_spline_cubic_notaknot_new ();
+  self->dl_2d_density_s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  self->dl_cyl_mass_s   = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   self->rho_s0          = 0.0;
   self->r_s0            = 0.0;
 

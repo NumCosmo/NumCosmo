@@ -190,7 +190,7 @@ ncm_spline2d_bicubic_new (NcmSpline *s)
 NcmSpline2d *
 ncm_spline2d_bicubic_notaknot_new ()
 {
-  NcmSpline *s     = ncm_spline_cubic_notaknot_new ();
+  NcmSpline *s     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   NcmSpline2d *s2d = ncm_spline2d_bicubic_new (s);
 
   ncm_spline_free (s);
@@ -234,9 +234,9 @@ _ncm_spline2d_bicubic_alloc (NcmSpline2dBicubic *s2dbc)
   s2dbc->z_x_len = ncm_spline_get_len (s2dbc->z_x);
 
   s2dbc->bicoeff          = g_new0 (NcmSpline2dBicubicCoeffs, (ncm_matrix_col_len (zm) - 1) * ncm_matrix_row_len (zm));
-  s2dbc->optimize_dx.s    = ncm_spline_set (ncm_spline_cubic_notaknot_new (), yv, dx_yv, FALSE);
+  s2dbc->optimize_dx.s    = ncm_spline_set (NCM_SPLINE (ncm_spline_cubic_notaknot_new ()), yv, dx_yv, FALSE);
   s2dbc->optimize_dx.init = FALSE;
-  s2dbc->optimize_dy.s    = ncm_spline_set (ncm_spline_cubic_notaknot_new (), xv, dy_yv, FALSE);
+  s2dbc->optimize_dy.s    = ncm_spline_set (NCM_SPLINE (ncm_spline_cubic_notaknot_new ()), xv, dy_yv, FALSE);
   s2dbc->optimize_dy.init = FALSE;
 
   ncm_vector_free (zm_first_row);
