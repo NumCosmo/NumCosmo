@@ -2470,7 +2470,7 @@ ncm_sphere_map_calc_Ctheta (NcmSphereMap *smap, const gdouble reltol)
   }
   else
   {
-    NcmSpline *s = ncm_spline_cubic_notaknot_new ();
+    NcmSpline *s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
     gsl_function F;
 
     F.params   = self;
