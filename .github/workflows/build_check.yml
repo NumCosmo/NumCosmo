@@ -91,8 +91,8 @@ jobs:
       run: |
         source build/numcosmo_export.sh
         cd examples
-        python example_simple.py
-        python example_cbe.py
+        python3 example_simple.py
+        python3 example_cbe.py
     - name: Check NumCosmo
       run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
 
