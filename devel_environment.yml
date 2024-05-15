@@ -43,5 +43,4 @@ dependencies:
   - scipy
   - tqdm
   - typer
-  - uncrustify
 name: numcosmo_developer
