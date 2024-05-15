@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -54,20 +54,20 @@ typedef struct _NcHIPrimSBPL NcHIPrimSBPL;
  * @NC_HIPRIM_SBPL_LAMBDA: Exp parameter $\lambda$
  * @NC_HIPRIM_SBPL_T_SA_RATIO: Tensor-to-scalar ratio
  * @NC_HIPRIM_SBPL_N_T: Tensor spectral index
- * 
+ *
  * FIXME
- * 
+ *
  */
 typedef enum /*< enum,underscore_name=NC_HIPRIM_SBPL_SPARAMS >*/
 {
   NC_HIPRIM_SBPL_LN10E10ASA,
   NC_HIPRIM_SBPL_N_SA,
   NC_HIPRIM_SBPL_DELTA,
-  NC_HIPRIM_SBPL_RA, 
+  NC_HIPRIM_SBPL_RA,
   NC_HIPRIM_SBPL_LNKB,
   NC_HIPRIM_SBPL_LAMBDA,
   NC_HIPRIM_SBPL_T_SA_RATIO,
-  NC_HIPRIM_SBPL_N_T,        
+  NC_HIPRIM_SBPL_N_T,
   /* < private > */
   NC_HIPRIM_SBPL_SPARAM_LEN, /*< skip >*/
 } NcHIPrimSBPLSParams;
@@ -100,3 +100,4 @@ NcHIPrimSBPL *nc_hiprim_sbpl_new (void);
 G_END_DECLS
 
 #endif /* _NC_HIPRIM_SBPL_H_ */
+

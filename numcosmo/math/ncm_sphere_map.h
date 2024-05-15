@@ -72,8 +72,8 @@ typedef enum _NcmSphereMapOrder
  */
 typedef enum _NcmSphereMapCoordSys
 {
-  NCM_SPHERE_MAP_COORD_SYS_GALACTIC = 'G',
-  NCM_SPHERE_MAP_COORD_SYS_ECLIPTIC = 'E',
+  NCM_SPHERE_MAP_COORD_SYS_GALACTIC  = 'G',
+  NCM_SPHERE_MAP_COORD_SYS_ECLIPTIC  = 'E',
   NCM_SPHERE_MAP_COORD_SYS_CELESTIAL = 'C',
   /* < private > */
   NCM_SPHERE_MAP_COORD_SYS_LEN, /*< skip >*/
@@ -146,27 +146,27 @@ void ncm_sphere_map_alm2map (NcmSphereMap *smap);
 NcmSpline *ncm_sphere_map_calc_Ctheta (NcmSphereMap *smap, const gdouble reltol);
 
 #define NCM_SPHERE_MAP_N(nside) (12 * (nside) * (nside))
-#define NCM_SPHERE_MAP_INT_TO_XY(i, x, y) \
-        G_STMT_START { \
-          gint shift = 0, shifted = i; \
-          x = y = 0; \
-          do { \
-            x |= ((shifted & 1) << shift); \
+#define NCM_SPHERE_MAP_INT_TO_XY(i, x, y)         \
+        G_STMT_START {                            \
+          gint shift = 0, shifted = i;            \
+          x          = y = 0;                     \
+          do {                                    \
+            x |= ((shifted & 1) << shift);        \
             y |= (((shifted & 2) >> 1) << shift); \
-            shift++; \
-          } while (shifted >>= 2); \
+            shift++;                              \
+          } while (shifted >>= 2);                \
         } G_STMT_END
 
-#define NCM_SPHERE_MAP_XY_TO_INT(x, y, i) \
-        G_STMT_START { \
-          gint shift = 0, shifted_x = x, shifted_y = y; \
-          g_assert (shifted_x >= 0 && shifted_y >= 0); \
-          i = 0; \
-          do { \
-            i     |= ((shifted_x & 1) << (shift + 0)); \
-            i     |= ((shifted_y & 1) << (shift + 1)); \
+#define NCM_SPHERE_MAP_XY_TO_INT(x, y, i)                 \
+        G_STMT_START {                                    \
+          gint shift = 0, shifted_x = x, shifted_y = y;   \
+          g_assert (shifted_x >= 0 && shifted_y >= 0);    \
+          i = 0;                                          \
+          do {                                            \
+            i     |= ((shifted_x & 1) << (shift + 0));    \
+            i     |= ((shifted_y & 1) << (shift + 1));    \
             shift += 2; shifted_x >>= 1; shifted_y >>= 1; \
-          } while (shifted_x || shifted_y); \
+          } while (shifted_x || shifted_y);               \
         } G_STMT_END
 
 #define NCM_SPHERE_MAP_HEALPIX_NULLVAL (-1.6375e30)

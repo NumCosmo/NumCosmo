@@ -1,17 +1,17 @@
 /* blas/gsl_blas_types.h
- * 
+ *
  * Copyright (C) 1996, 1997, 1998, 1999, 2000 Gerard Jungman
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or (at
  * your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
@@ -19,7 +19,7 @@
 
 /*
  * Author:  G. Jungman
- * 
+ *
  * Modified by Sandro Vitenti <vitenti@uel.br> to make compatible with
  * other blas headers.
  */
@@ -34,10 +34,11 @@
 #undef __END_DECLS
 #ifdef __cplusplus
 # define __BEGIN_DECLS extern "C" {
-# define __END_DECLS }
+# define __END_DECLS \
+        }
 #else
 # define __BEGIN_DECLS /* empty */
-# define __END_DECLS /* empty */
+# define __END_DECLS   /* empty */
 #endif
 
 __BEGIN_DECLS
@@ -45,22 +46,23 @@ __BEGIN_DECLS
 #if defined (CBLAS_H) || defined (__GSL_CBLAS_H__) || defined (__GSL_CBLAS_H__)
 
 #ifdef NCM_BLAS_NOT_TYPEDEFED
-typedef  enum CBLAS_ORDER     CBLAS_ORDER;
+typedef  enum CBLAS_ORDER CBLAS_ORDER;
 typedef  enum CBLAS_TRANSPOSE CBLAS_TRANSPOSE;
-typedef  enum CBLAS_UPLO      CBLAS_UPLO;
-typedef  enum CBLAS_DIAG      CBLAS_DIAG;
-typedef  enum CBLAS_SIDE      CBLAS_SIDE;
+typedef  enum CBLAS_UPLO CBLAS_UPLO;
+typedef  enum CBLAS_DIAG CBLAS_DIAG;
+typedef  enum CBLAS_SIDE CBLAS_SIDE;
 #endif /* NCM_BLAS_NOT_TYPEDEFED */
 
-typedef  CBLAS_INDEX       CBLAS_INDEX_t;
-typedef  CBLAS_ORDER       CBLAS_ORDER_t;
-typedef  CBLAS_TRANSPOSE   CBLAS_TRANSPOSE_t;
-typedef  CBLAS_UPLO        CBLAS_UPLO_t;
-typedef  CBLAS_DIAG        CBLAS_DIAG_t;
-typedef  CBLAS_SIDE        CBLAS_SIDE_t;
+typedef  CBLAS_INDEX CBLAS_INDEX_t;
+typedef  CBLAS_ORDER CBLAS_ORDER_t;
+typedef  CBLAS_TRANSPOSE CBLAS_TRANSPOSE_t;
+typedef  CBLAS_UPLO CBLAS_UPLO_t;
+typedef  CBLAS_DIAG CBLAS_DIAG_t;
+typedef  CBLAS_SIDE CBLAS_SIDE_t;
 
 #endif
 
 __END_DECLS
 
 #endif /* __GSL_BLAS_TYPES_H__ */
+

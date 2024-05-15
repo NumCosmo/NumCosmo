@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -44,6 +44,7 @@ G_BEGIN_DECLS
 #define NC_HIREION_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HIREION, NcHIReionClass))
 
 typedef struct _NcHIReionClass NcHIReionClass;
+
 /*typedef struct _NcHIReion NcHIReion;*/ /* already defined in nc_hicosmo.h! */
 
 struct _NcHIReionClass
@@ -79,3 +80,4 @@ gdouble nc_hireion_get_tau (NcHIReion *reion, NcHICosmo *cosmo);
 G_END_DECLS
 
 #endif /* _NC_HIREION_H_ */
+
