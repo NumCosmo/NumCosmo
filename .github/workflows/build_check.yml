@@ -81,7 +81,11 @@ jobs:
         brew install python3 gobject-introspection pygobject3 gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran gtk-doc glib openblas
     - name: Pip install pre-requisites
       run: |
+        echo $(which python3)
         python3 -m pip install meson ninja pytest pytest-tap numpy
+        echo $(which meson)
+        echo $(which pip3)
+        echo $(brew --prefix python)
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
