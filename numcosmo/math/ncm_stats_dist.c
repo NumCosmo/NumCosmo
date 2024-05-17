@@ -709,7 +709,7 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
       break;
   }
 
-  if (self->n_obs < self->d)
+  if (self->n_obs <= self->d)
     g_error ("_ncm_stats_dist_prepare: the sample is too small.");
 
   sd_class->prepare_kernel (sd, self->sample_array);
