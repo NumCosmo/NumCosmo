@@ -44,7 +44,7 @@ Ncm.cfg_init()
 
 def test_two_fluids_wkb_spec() -> None:
     """Compute WKB approximation for the two-fluids model spectrum."""
-
+    
     #
     #  New homogeneous and isotropic cosmological model NcHICosmoQGRW
     #
@@ -80,8 +80,8 @@ def test_two_fluids_wkb_spec() -> None:
     Ps_S2 = []
     Ps_Pzeta1 = []
     Ps_PS1 = []
-    # Ps_Pzeta2 = []
-    # Ps_PS2 = []
+    Ps_Pzeta2 = []
+    Ps_PS2 = []
 
     out_file = open("twofluids_spectrum_{w}.dat", "w", encoding="utf-8")
 
@@ -93,18 +93,16 @@ def test_two_fluids_wkb_spec() -> None:
         pert.set_mode_k(k)
         k_a.append(k)
 
-        alphaf = cosmo.abs_alpha(1.0e20)
+        alphaf = cosmo.abs_alpha(1.0e10)
 
-        # print ("# Evolving mode %e from %f to %f" % (k, alphai, alphaf))
 
         alphai = -cosmo.abs_alpha(start_alpha1 * k**2)
         pert.get_init_cond_zetaS(cosmo, alphai, 1, 0.25 * math.pi, ci)
         pert.set_init_cond(cosmo, alphai, 1, False, ci)
-
         print(f"# Mode 1 k {k: 21.15e}, state module {pert.get_state_mod():f}")
-
-        pert.evolve(cosmo, alphaf)
+        pert.evolve(cosmo, alphaf)  
         v, _alphac = pert.peek_state(cosmo)
+        print ("# Evolving mode %e from %f to %f" % (k, alphai, alphaf))
 
         Delta_zeta1 = (
             k**3
@@ -148,9 +146,9 @@ def test_two_fluids_wkb_spec() -> None:
 
         alphai = -cosmo.abs_alpha(start_alpha2 * k**2)
         pert.get_init_cond_zetaS(cosmo, alphai, 2, 0.25 * math.pi, ci)
-        pert.set_init_cond(cosmo, alphai, 0, False, ci)
+        pert.set_init_cond(cosmo, alphai, 2, False, ci)
 
-        print("# Mode 2 k {k: 21.15e}, state module {pert.get_state_mod():f}")
+        print(f"# Mode 2 k {k: 21.15e}, state module {pert.get_state_mod():f}")
 
         pert.evolve(cosmo, alphaf)
         v, _alphac = pert.peek_state(cosmo)
@@ -192,8 +190,8 @@ def test_two_fluids_wkb_spec() -> None:
 
         Ps_zeta2.append(Delta_zeta2)
         Ps_S2.append(Delta_S2)
-        Ps_zeta2.append(Delta_Pzeta2)
-        Ps_S2.append(Delta_PS2)
+        Ps_Pzeta2.append(Delta_Pzeta2)
+        Ps_PS2.append(Delta_PS2)
 
         out_file.write(
             f"{k: 20.15e} {Delta_zeta1: 20.15e} {Delta_zeta2: 20.15e} {Delta_S1: 20.15e} "
@@ -216,3 +214,27 @@ def test_two_fluids_wkb_spec() -> None:
 
     plt.show()
     plt.clf()
+    
+test_two_fluids_wkb_spec()
+
+
+'''
+import pandas as pd
+
+data = pd.read_csv('twofluids_spectrum_{w}.dat', header=None, delim_whitespace= True)
+lnk = data[0]
+Ps1zeta = data[1]
+Ps1S = data[2]
+Ps2zeta = data[3]
+Ps2S = data[4]
+
+ns1zeta = np.polyfit(lnk,Ps1zeta,1)
+ns1S = np.polyfit(lnk,Ps1S,1)
+ns2zeta = np.polyfit(lnk,Ps2zeta,1)
+ns2S = np.polyfit(lnk,Ps2S,1)
+
+print(ns1zeta)
+print(ns1S)
+print(ns2zeta)
+print(ns2S)
+'''

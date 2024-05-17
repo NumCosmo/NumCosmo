@@ -77,6 +77,8 @@ enum
   PROP_ZF,
   PROP_RELTOL,
   PROP_RELTOL_Z,
+  PROP_MAX_K_KNOTS,
+  PROP_MAX_Z_KNOTS,
   PROP_POWERSPECTRUM,
   PROP_SIZE,
 };
@@ -96,6 +98,8 @@ struct _NcmPowspecFilter
   gboolean calibrated;
   gdouble reltol;
   gdouble reltol_z;
+  guint max_k_knots;
+  guint max_z_knots;
   NcmSpline2d *var;
   NcmSpline2d *dvar;
   NcmModelCtrl *ctrl;
@@ -115,6 +119,8 @@ ncm_powspec_filter_init (NcmPowspecFilter *psf)
   psf->zf          = 0.0;
   psf->reltol      = 0.0;
   psf->reltol_z    = 0.0;
+  psf->max_k_knots = 0;
+  psf->max_z_knots = 0;
   psf->type        = NCM_POWSPEC_FILTER_TYPE_LEN;
   psf->fftlog      = NULL;
   psf->calibrated  = FALSE;
@@ -150,6 +156,12 @@ _ncm_powspec_filter_set_property (GObject *object, guint prop_id, const GValue *
       break;
     case PROP_RELTOL_Z:
       psf->reltol_z = g_value_get_double (value);
+      break;
+    case PROP_MAX_K_KNOTS:
+      psf->max_k_knots = g_value_get_uint (value);
+      break;
+    case PROP_MAX_Z_KNOTS:
+      psf->max_z_knots = g_value_get_uint (value);
       break;
     case PROP_POWERSPECTRUM:
       psf->ps = g_value_dup_object (value);
@@ -188,6 +200,12 @@ _ncm_powspec_filter_get_property (GObject *object, guint prop_id, GValue *value,
       break;
     case PROP_RELTOL_Z:
       g_value_set_double (value, psf->reltol_z);
+      break;
+    case PROP_MAX_K_KNOTS:
+      g_value_set_uint (value, psf->max_k_knots);
+      break;
+    case PROP_MAX_Z_KNOTS:
+      g_value_set_uint (value, psf->max_z_knots);
       break;
     case PROP_POWERSPECTRUM:
       g_value_set_object (value, psf->ps);
@@ -313,6 +331,32 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                         "Relative tolerance for calibration in the redshift direction",
                                                         GSL_DBL_EPSILON, 1.0, 1.0e-6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmPowspecFilter:max-k-knots:
+   *
+   * The maximum number of knots in the k direction.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_MAX_K_KNOTS,
+                                   g_param_spec_uint ("max-k-knots",
+                                                      NULL,
+                                                      "Maximum number of knots in the k direction",
+                                                      0, G_MAXUINT, 10000,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmPowspecFilter:max-z-knots:
+   *
+   * The maximum number of knots in the redshift direction.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_MAX_Z_KNOTS,
+                                   g_param_spec_uint ("max-z-knots",
+                                                      NULL,
+                                                      "Maximum number of knots in the redshift direction",
+                                                      0, G_MAXUINT, 1000,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmPowspecFilter:type:
@@ -535,11 +579,12 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
 
     ncm_powspec_get_nknots (psf->ps, &N_z, &N_k);
 
+    ncm_fftlog_set_max_size (psf->fftlog, psf->max_k_knots);
     ncm_fftlog_calibrate_size_gsl (psf->fftlog, &F, psf->reltol);
     N_k = ncm_fftlog_get_size (psf->fftlog);
 
     {
-      NcmSpline *dummy_z = ncm_spline_cubic_notaknot_new ();
+      NcmSpline *dummy_z = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
       gsl_function Fdummy_z;
 
       Fdummy_z.function = &_ncm_powspec_filter_dummy_z;

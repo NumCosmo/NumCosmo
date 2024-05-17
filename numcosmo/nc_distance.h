@@ -120,6 +120,7 @@ void nc_distance_set_recomb (NcDistance *dist, NcRecomb *recomb);
 void nc_distance_compute_inv_comoving (NcDistance *dist, gboolean cpu_inv_xi);
 
 void nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo);
+
 NCM_INLINE void nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo);
 
 void nc_distance_free (NcDistance *dist);

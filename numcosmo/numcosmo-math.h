@@ -76,10 +76,11 @@
 #include <numcosmo/math/ncm_spline2d_spline.h>
 #include <numcosmo/math/ncm_spline2d_gsl.h>
 #include <numcosmo/math/ncm_spline2d_bicubic.h>
-#include <numcosmo/math/ncm_powspec.h>
+#include <numcosmo/math/ncm_powspec_corr3d.h>
 #include <numcosmo/math/ncm_powspec_filter.h>
 #include <numcosmo/math/ncm_powspec_sphere_proj.h>
-#include <numcosmo/math/ncm_powspec_corr3d.h>
+#include <numcosmo/math/ncm_powspec_spline2d.h>
+#include <numcosmo/math/ncm_powspec.h>
 #include <numcosmo/math/ncm_hoaa.h>
 #include <numcosmo/math/ncm_csq1d.h>
 #include <numcosmo/math/ncm_func_eval.h>

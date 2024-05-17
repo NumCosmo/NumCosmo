@@ -57,10 +57,11 @@
 #include "math/ncm_spline2d_spline.h"
 #include "math/ncm_integral1d.h"
 #include "math/ncm_integral_nd.h"
-#include "math/ncm_powspec.h"
+#include "math/ncm_powspec_corr3d.h"
 #include "math/ncm_powspec_filter.h"
 #include "math/ncm_powspec_sphere_proj.h"
-#include "math/ncm_powspec_corr3d.h"
+#include "math/ncm_powspec_spline2d.h"
+#include "math/ncm_powspec.h"
 #include "math/ncm_model.h"
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_model_builder.h"
@@ -101,6 +102,7 @@
 #include "model/nc_hicosmo_de_cpl.h"
 #include "model/nc_hicosmo_de_jbp.h"
 #include "model/nc_hicosmo_qgrw.h"
+#include "model/nc_hicosmo_qgw.h"
 #include "model/nc_hicosmo_Vexp.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
 #include "model/nc_hicosmo_de_reparam_cmb.h"
@@ -170,11 +172,12 @@
 #include "nc_recomb_seager.h"
 #include "nc_hireion.h"
 #include "nc_hireion_camb.h"
-#include "nc_powspec_ml.h"
-#include "nc_powspec_ml_transfer.h"
 #include "nc_powspec_ml_cbe.h"
-#include "nc_powspec_mnl.h"
+#include "nc_powspec_ml_spline.h"
+#include "nc_powspec_ml_transfer.h"
+#include "nc_powspec_ml.h"
 #include "nc_powspec_mnl_halofit.h"
+#include "nc_powspec_mnl.h"
 #include "nc_snia_dist_cov.h"
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
@@ -192,6 +195,7 @@
 #include "data/nc_data_dist_mu.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
 #include "data/nc_data_cluster_ncount.h"
+#include "data/nc_data_cluster_ncounts_gauss.h"
 #include "data/nc_data_cluster_wl.h"
 #include "data/nc_data_reduced_shear_cluster_mass.h"
 #include "data/nc_data_cmb_shift_param.h"
@@ -242,10 +246,26 @@ static gboolean _enable_msg         = TRUE;
 static gboolean _enable_msg_flush   = TRUE;
 static gsl_error_handler_t *gsl_err = NULL;
 
+# if (defined (__GNUC__)                                            \
+  && ((__GNUC__ == 11 && __GNUC_MINOR__ >= 1) || (__GNUC__ >= 12))) \
+  || (defined (__clang__) && (__clang_major__ >= 12))
+extern void __gcov_dump (void);
+extern void __gcov_reset (void);
+
+#  define __gcov_flush()                   \
+        do {                               \
+          __gcov_dump (); __gcov_reset (); \
+        } while (0)
+# else
+extern void __gcov_flush (void);
+
+# endif
+
 static void
 _ncm_cfg_log_message (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
   NCM_UNUSED (log_domain);
+
   NCM_UNUSED (log_level);
   NCM_UNUSED (user_data);
 
@@ -286,10 +306,12 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
 #endif
   fflush (_log_stream_err);
 
+#ifdef USE_GCOV
+  __gcov_flush ();
+#endif
+
   abort ();
 }
-
-void clencurt_gen (int M);
 
 #ifdef HAVE_OPENBLAS_SET_NUM_THREADS
 void goto_set_num_threads (gint);
@@ -526,6 +548,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL_ND);
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
+  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPLINE2D);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPHERE_PROJ);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
@@ -587,6 +610,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_CPL);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_JBP);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGRW);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGW);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_VEXP);
 
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_OK);
@@ -689,6 +713,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HIREION_CAMB);
 
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML);
+  ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_SPLINE);
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_TRANSFER);
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_CBE);
 
@@ -720,6 +745,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_DATA_SNIA_COV);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNT);
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);
@@ -1143,7 +1169,7 @@ ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
 
   container.logger = logger;
 
-  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, &container);
+  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_INFO | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, &container);
 }
 
 /**

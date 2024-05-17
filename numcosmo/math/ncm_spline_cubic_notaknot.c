@@ -98,7 +98,7 @@ ncm_spline_cubic_notaknot_class_init (NcmSplineCubicNotaknotClass *klass)
  *
  * Returns: a new #NcmSpline.
  */
-NcmSpline *
+NcmSplineCubicNotaknot *
 ncm_spline_cubic_notaknot_new ()
 {
   return g_object_new (NCM_TYPE_SPLINE_CUBIC_NOTAKNOT, NULL);
@@ -114,12 +114,12 @@ ncm_spline_cubic_notaknot_new ()
  *
  * Returns: a new #NcmSpline.
  */
-NcmSpline *
+NcmSplineCubicNotaknot *
 ncm_spline_cubic_notaknot_new_full (NcmVector *xv, NcmVector *yv, gboolean init)
 {
-  NcmSpline *s = ncm_spline_cubic_notaknot_new ();
+  NcmSplineCubicNotaknot *s = ncm_spline_cubic_notaknot_new ();
 
-  ncm_spline_set (s, xv, yv, init);
+  ncm_spline_set (NCM_SPLINE (s), xv, yv, init);
 
   return s;
 }
@@ -127,9 +127,7 @@ ncm_spline_cubic_notaknot_new_full (NcmVector *xv, NcmVector *yv, gboolean init)
 static NcmSpline *
 _ncm_spline_cubic_notaknot_copy_empty (const NcmSpline *s)
 {
-  NCM_UNUSED (s);
-
-  return ncm_spline_cubic_notaknot_new ();
+  return NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 }
 
 static gsize

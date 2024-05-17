@@ -120,3 +120,4 @@ gdouble ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_functi
 G_END_DECLS
 
 #endif /* _NC_INTEGRAL_H */
+

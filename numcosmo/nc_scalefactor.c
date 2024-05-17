@@ -99,10 +99,10 @@ nc_scalefactor_init (NcScalefactor *a)
 {
   NcScalefactorPrivate * const self = a->priv = nc_scalefactor_get_instance_private (a);
 
-  self->a_eta       = ncm_spline_cubic_notaknot_new ();
-  self->eta_a       = ncm_spline_cubic_notaknot_new ();
-  self->t_eta       = ncm_spline_cubic_notaknot_new ();
-  self->eta_t       = ncm_spline_cubic_notaknot_new ();
+  self->a_eta       = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  self->eta_a       = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  self->t_eta       = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  self->eta_t       = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   self->spline_init = FALSE;
   self->dist        = NULL;
   self->ctrl        = ncm_model_ctrl_new (NULL);

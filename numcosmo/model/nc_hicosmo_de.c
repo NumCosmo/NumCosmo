@@ -165,8 +165,8 @@ _nc_hicosmo_de_constructed (GObject *object)
 
       for (i = 0; i < m_len; i++)
       {
-        cosmo_de->priv->nu_rho_s[i] = ncm_spline_cubic_notaknot_new ();
-        cosmo_de->priv->nu_p_s[i]   = ncm_spline_cubic_notaknot_new ();
+        cosmo_de->priv->nu_rho_s[i] = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+        cosmo_de->priv->nu_p_s[i]   = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
       }
     }
   }
@@ -1052,7 +1052,7 @@ _nc_hicosmo_de_ln_rho_rho0 (NcHICosmoDE *cosmo_de, gdouble z)
   return 0.0;
 }
 
-#define NC_HICOSMO_DE_SET_IMPL_FUNC(name)                                                                         \
+#define NC_HICOSMO_DE_SET_IMPL_FUNC(name)                                                                               \
         void                                                                                                            \
         nc_hicosmo_de_set_ ## name ## _impl (NcHICosmoDEClass * cosmo_de_class, NcmFuncF f, NcmFuncPF pf, NcmFuncDF df) \
         {                                                                                                               \

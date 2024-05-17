@@ -1,9 +1,9 @@
-name: numcosmo_developer
+---
 channels:
   - conda-forge
-dependencies: 
+dependencies:
   - astropy
-  - black<24
+  - black
   - c-compiler
   - cfitsio
   - fftw
@@ -17,6 +17,7 @@ dependencies:
   - gobject-introspection
   - gsl
   - hdf5
+  - healpy
   - lcov
   - libflint
   - libfyaml
@@ -26,19 +27,20 @@ dependencies:
   - mypy
   - ninja
   - nlopt
-  - numpy >= 1.21.0
+  - numpy >= 1.23.0
   - openblas=*=*openmp*
   - openmpi
   - pip
   - pip:
-    - pygobject-stubs
-    - pytest-tap
+      - pygobject-stubs
+      - pytest-tap
   - pyccl >= 3.0.0
   - pygobject
   - pylint
   - pytest
-  - python >= 3.9
+  - python >= 3.10
   - rich
   - scipy
   - tqdm
   - typer
+name: numcosmo_developer

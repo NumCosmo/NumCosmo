@@ -591,8 +591,8 @@ ncm_spline_func_test_init (NcmSplineFuncTest *sft)
   self->stats_mc      = ncm_stats_vec_new (9, NCM_STATS_VEC_VAR, FALSE);
 
   self->len = 0;
-  self->ncm = ncm_spline_cubic_notaknot_new ();
-  self->lin = ncm_spline_cubic_notaknot_new ();
+  self->ncm = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  self->lin = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
   self->nsim = 0;
   self->seed = 0;

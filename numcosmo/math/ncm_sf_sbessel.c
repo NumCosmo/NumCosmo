@@ -133,7 +133,7 @@ _ncm_sf_sbessel_spline_calc (gdouble x, gpointer data)
 NcmSpline *
 ncm_sf_sbessel_spline (gulong l, gdouble xi, gdouble xf, gdouble reltol)
 {
-  NcmSpline *s = ncm_spline_cubic_notaknot_new ();
+  NcmSpline *s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   gsl_function F;
 
   F.function = &_ncm_sf_sbessel_spline_calc;
