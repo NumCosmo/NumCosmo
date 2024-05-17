@@ -2440,19 +2440,6 @@ nc_cbe_precision_assert_default (NcCBEPrecision *cbe_prec)
   input_default_precision (&ppr);
 
 #define _CMP_DBL(name) g_assert_cmpfloat (ppr.name, ==, cbe_prec->priv->ppr.name)
-<<<<<<< HEAD
-#define _CMP_STR(name)                                        \
-  G_STMT_START                                                  \
-  {                                                             \
-    gchar *s1 = g_path_get_basename (ppr.name);                 \
-    gchar *s2 = g_path_get_basename (cbe_prec->priv->ppr.name); \
-    g_assert_cmpstr (s1, ==, s2);                               \
-    /*printf ("`%s'\n", ppr.name);*/                            \
-    g_free (s1);                                                \
-    g_free (s2);                                                \
-  }                                                             \
-  G_STMT_END
-=======
 #define _CMP_STR(name)                                                \
         G_STMT_START                                                  \
         {                                                             \
@@ -2464,7 +2451,6 @@ nc_cbe_precision_assert_default (NcCBEPrecision *cbe_prec)
           g_free (s2);                                                \
         }                                                             \
         G_STMT_END
->>>>>>> master
 
   _CMP_STR (sBBN_file);
   _CMP_STR (hyrec_Alpha_inf_file);
