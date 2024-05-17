@@ -79,15 +79,15 @@ typedef struct _TestNcmStatsDistKernelFunc
 
 static TestNcmStatsDistKernelFunc constructors[TEST_NCM_STATS_DIST_KERNEL_CONSTRUCTORS_LEN] = {
   {"gauss", &test_ncm_stats_dist_kernel_new_gauss},
-  {"st",  &test_ncm_stats_dist_kernel_new_st}
+  {"st",    &test_ncm_stats_dist_kernel_new_st}
 };
 
 static TestNcmStatsDistKernelFunc tests[TEST_NCM_STATS_DIST_KERNEL_TESTS_LEN] = {
-  {"dim",   &test_ncm_stats_dist_kernel_dim},
-  {"band",        &test_ncm_stats_dist_kernel_bandwidth},
-  {"gauss/norm",        &test_ncm_stats_dist_kernel_norm},
-  {"sum",         &test_ncm_stats_dist_kernel_sum},
-  {"sample",      &test_ncm_stats_dist_kernel_sample},
+  {"dim",        &test_ncm_stats_dist_kernel_dim},
+  {"band",       &test_ncm_stats_dist_kernel_bandwidth},
+  {"gauss/norm", &test_ncm_stats_dist_kernel_norm},
+  {"sum",        &test_ncm_stats_dist_kernel_sum},
+  {"sample",     &test_ncm_stats_dist_kernel_sample},
 };
 
 gint
@@ -129,7 +129,7 @@ main (gint argc, gchar *argv[])
 static void
 test_ncm_stats_dist_kernel_new_gauss (TestNcmStatsDistKernel *test, gconstpointer pdata)
 {
-  const guint dim                    = g_test_rand_int_range (2, 4);
+  const guint dim                    = g_test_rand_int_range (1, 4);
   NcmStatsDistKernelGauss *sdk_gauss = ncm_stats_dist_kernel_gauss_new (dim);
 
   test->dim         = dim;
@@ -151,7 +151,7 @@ static void
 test_ncm_stats_dist_kernel_new_st (TestNcmStatsDistKernel *test, gconstpointer pdata)
 {
   const gdouble nu             = g_test_rand_double_range (3.0, 5.0);
-  const guint dim              = g_test_rand_int_range (2, 4);
+  const guint dim              = g_test_rand_int_range (1, 4);
   NcmStatsDistKernelST *sdk_st = ncm_stats_dist_kernel_st_new (dim, nu);
 
   test->dim         = dim;
