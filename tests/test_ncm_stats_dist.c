@@ -159,7 +159,7 @@ main (gint argc, gchar *argv[])
 static void
 test_ncm_stats_dist_new_kde_gauss (TestNcmStatsDist *test, gconstpointer pdata)
 {
-  const guint dim                    = g_test_rand_int_range (2, 4);
+  const guint dim                    = g_test_rand_int_range (1, 4);
   NcmStatsDistKernelGauss *sdk_gauss = ncm_stats_dist_kernel_gauss_new (dim);
   NcmStatsDistKDE *sdkde             = ncm_stats_dist_kde_new (NCM_STATS_DIST_KERNEL (sdk_gauss), NCM_STATS_DIST_CV_NONE);
   NcmStatsDistKDECovType cov_type    = GPOINTER_TO_INT (pdata);
@@ -210,7 +210,7 @@ static void
 test_ncm_stats_dist_new_kde_studentt (TestNcmStatsDist *test, gconstpointer pdata)
 {
   const gdouble nu                = g_test_rand_double_range (3.0, 5.0);
-  const guint dim                 = g_test_rand_int_range (2, 4);
+  const guint dim                 = g_test_rand_int_range (1, 4);
   NcmStatsDistKernelST *sdk_st    = ncm_stats_dist_kernel_st_new (dim, nu);
   NcmStatsDistKDE *sdkde          = ncm_stats_dist_kde_new (NCM_STATS_DIST_KERNEL (sdk_st), NCM_STATS_DIST_CV_NONE);
   NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
@@ -260,7 +260,7 @@ test_ncm_stats_dist_new_kde_studentt (TestNcmStatsDist *test, gconstpointer pdat
 static void
 test_ncm_stats_dist_new_vkde_gauss (TestNcmStatsDist *test, gconstpointer pdata)
 {
-  const guint dim                    = g_test_rand_int_range (2, 4);
+  const guint dim                    = g_test_rand_int_range (1, 4);
   NcmStatsDistKernelGauss *sdk_gauss = ncm_stats_dist_kernel_gauss_new (dim);
   NcmStatsDistVKDE *sdvkde           = ncm_stats_dist_vkde_new (NCM_STATS_DIST_KERNEL (sdk_gauss), NCM_STATS_DIST_CV_NONE);
   NcmStatsDistKDECovType cov_type    = GPOINTER_TO_INT (pdata);
@@ -312,7 +312,7 @@ static void
 test_ncm_stats_dist_new_vkde_studentt (TestNcmStatsDist *test, gconstpointer pdata)
 {
   const gdouble nu                = g_test_rand_double_range (3.0, 5.0);
-  const guint dim                 = g_test_rand_int_range (2, 4);
+  const guint dim                 = g_test_rand_int_range (1, 4);
   NcmStatsDistKernelST *sdk_st    = ncm_stats_dist_kernel_st_new (dim, nu);
   NcmStatsDistVKDE *sdvkde        = ncm_stats_dist_vkde_new (NCM_STATS_DIST_KERNEL (sdk_st), NCM_STATS_DIST_CV_NONE);
   NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
