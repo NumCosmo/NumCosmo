@@ -248,7 +248,7 @@ _ncm_stats_vec_constructed (GObject *object)
     switch (svec->t)
     {
       case NCM_STATS_VEC_COV:
-        g_assert_cmpuint (svec->len, >, 1);
+        g_assert_cmpuint (svec->len, >, 0);
         g_assert (svec->cov == NULL);
 
         svec->cov    = ncm_matrix_new (svec->len, svec->len);
