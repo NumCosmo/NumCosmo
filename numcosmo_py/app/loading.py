@@ -286,6 +286,10 @@ class LoadCatalog(LoadExperiment):
 
     def _extract_indices(self):
         """Extract the indices to include in the analysis."""
+        if self.include is None:
+            self.include = []
+        if self.exclude is None:
+            self.exclude = []
         assert self.include is not None
         assert self.exclude is not None
         if not self.include and not self.exclude:
