@@ -24,6 +24,7 @@
 
 """NumCosmo APP dataclasses and subcommands to load data.
 
+This module contains dataclasses and subcommands to load data from files.
 """
 
 import dataclasses
@@ -36,10 +37,13 @@ from numcosmo_py import Ncm
 from numcosmo_py.sampling import set_ncm_console
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class LoadExperiment:
-    """Common block for commands that load an experiment. All commands that load an
-    experiment should inherit from this class."""
+    """Load an experiment file.
+
+    Common block for commands that load an experiment. All commands that load an
+    experiment should inherit from this class.
+    """
 
     experiment: Annotated[
         Path, typer.Argument(help="Path to the experiment file to fit.")
@@ -52,8 +56,9 @@ class LoadExperiment:
             help=(
                 "If given, the product file is written, the file name is the same as "
                 "the experiment file with the extension .product.yaml. "
-                "This option is incompatible with the output and starting-point options "
-                "since the product file contains the output and starting point."
+                "This option is incompatible with the output and starting-point "
+                "options since the product file contains the output and starting "
+                "point."
             ),
         ),
     ] = False
@@ -79,6 +84,7 @@ class LoadExperiment:
     ] = None
 
     def __post_init__(self) -> None:
+        """Initialize the experiment and load the data."""
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
         builders_file = self.experiment.with_suffix(".builders.yaml")
@@ -167,9 +173,10 @@ class LoadExperiment:
         self.mset = mset
 
     def _load_saved_mset(self) -> Optional[Ncm.MSet]:
-        """Loads the saved model set from the starting point file "
-        "or the product file."""
+        """Load the saved model.
 
+        Load the saved model-set from the starting point file or the product file.
+        """
         if self.starting_point is not None:
             if not self.starting_point.exists():
                 raise RuntimeError(
@@ -199,7 +206,7 @@ class LoadExperiment:
         return None
 
     def end_experiment(self):
-        """Ends the experiment and writes the output file."""
+        """End the experiment and writes the output file."""
         if self.output is not None:
             ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
             ser.dict_str_to_yaml_file(
@@ -207,7 +214,7 @@ class LoadExperiment:
             )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class LoadCatalog(LoadExperiment):
     """Analyzes the results of a MCMC run."""
 
@@ -226,7 +233,22 @@ class LoadCatalog(LoadExperiment):
         ),
     ] = 0
 
+    include: Annotated[
+        Optional[list[str]],
+        typer.Option(
+            help="List of parameters and or model names to include in the analysis.",
+        ),
+    ] = None
+
+    exclude: Annotated[
+        Optional[list[str]],
+        typer.Option(
+            help="List of parameters and or model names to exclude from the analysis.",
+        ),
+    ] = None
+
     def __post_init__(self) -> None:
+        """Initialize the MCMC file and load the data."""
         super().__post_init__()
         if self.mcmc_file is None:
             raise RuntimeError("No MCMC file given.")
@@ -248,6 +270,8 @@ class LoadCatalog(LoadExperiment):
         self.total_columns: int = self.fparams_len + self.nadd_vals
         self.nchains: int = self.mcat.nchains()
 
+        self._extract_indices()
+
         self.full_stats: Ncm.StatsVec = self.mcat.peek_pstats()
         assert isinstance(self.full_stats, Ncm.StatsVec)
 
@@ -259,3 +283,29 @@ class LoadCatalog(LoadExperiment):
             assert isinstance(self.stats, Ncm.StatsVec)
 
         self.nitems: int = self.stats.nitens()
+
+    def _extract_indices(self):
+        """Extract the indices to include in the analysis."""
+        assert self.include is not None
+        assert self.exclude is not None
+        if not self.include and not self.exclude:
+            self.indices = list(range(self.total_columns))
+        else:
+            self.indices = []
+            if self.include and self.exclude:
+                for i in range(self.total_columns):
+                    name = self.mcat.col_full_name(i)
+                    if any(s in name for s in self.include) and not any(
+                        s in name for s in self.exclude
+                    ):
+                        self.indices.append(i)
+            elif self.include:
+                for i in range(self.total_columns):
+                    name = self.mcat.col_full_name(i)
+                    if any(s in name for s in self.include):
+                        self.indices.append(i)
+            else:
+                for i in range(self.total_columns):
+                    name = self.mcat.col_full_name(i)
+                    if not any(s in name for s in self.exclude):
+                        self.indices.append(i)
