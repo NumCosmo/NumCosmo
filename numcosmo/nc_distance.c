@@ -216,7 +216,7 @@ _nc_distance_constructed (GObject *object)
   G_OBJECT_CLASS (nc_distance_parent_class)->constructed (object);
   {
     NcDistance *dist = NC_DISTANCE (object);
-    NcmSpline *s     = ncm_spline_cubic_notaknot_new ();
+    NcmSpline *s     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
     dist->comoving_distance_spline = ncm_ode_spline_new_full (s, _dcddz, 0.0, 0.0, dist->zf);
     ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);
@@ -1553,13 +1553,13 @@ nc_distance_conformal_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
   return result;
 }
 
-#define _NC_DISTANCE_FUNC0_TO_FLIST(fname) \
+#define _NC_DISTANCE_FUNC0_TO_FLIST(fname)                                                                                   \
         static void _nc_distance_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
-        { \
-          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
-          NcDistance *dist = NC_DISTANCE (ncm_mset_func_list_peek_obj (flist)); \
-          nc_distance_prepare_if_needed (dist, cosmo); \
-          res[0] = nc_distance_ ## fname (dist, cosmo); \
+        {                                                                                                                    \
+          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));                                            \
+          NcDistance *dist = NC_DISTANCE (ncm_mset_func_list_peek_obj (flist));                                              \
+          nc_distance_prepare_if_needed (dist, cosmo);                                                                       \
+          res[0] = nc_distance_ ## fname (dist, cosmo);                                                                      \
         }
 
 _NC_DISTANCE_FUNC0_TO_FLIST (decoupling_redshift)
@@ -1572,13 +1572,13 @@ _NC_DISTANCE_FUNC0_TO_FLIST (angular_diameter_curvature_scale)
 _NC_DISTANCE_FUNC0_TO_FLIST (r_zd)
 _NC_DISTANCE_FUNC0_TO_FLIST (r_zd_Mpc)
 
-#define _NC_DISTANCE_FUNC1_TO_FLIST(fname) \
+#define _NC_DISTANCE_FUNC1_TO_FLIST(fname)                                                                                   \
         static void _nc_distance_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
-        { \
-          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
-          NcDistance *dist = NC_DISTANCE (ncm_mset_func_list_peek_obj (flist)); \
-          nc_distance_prepare_if_needed (dist, cosmo); \
-          res[0] = nc_distance_ ## fname (dist, cosmo, x[0]); \
+        {                                                                                                                    \
+          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));                                            \
+          NcDistance *dist = NC_DISTANCE (ncm_mset_func_list_peek_obj (flist));                                              \
+          nc_distance_prepare_if_needed (dist, cosmo);                                                                       \
+          res[0] = nc_distance_ ## fname (dist, cosmo, x[0]);                                                                \
         }
 
 _NC_DISTANCE_FUNC1_TO_FLIST (comoving)

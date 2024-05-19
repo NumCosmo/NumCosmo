@@ -195,9 +195,9 @@ _nc_powspec_mnl_halofit_constructed (GObject *object)
     ncm_powspec_require_zi (NCM_POWSPEC (self->psml), ncm_powspec_get_zi (NCM_POWSPEC (pshf)));
     ncm_powspec_require_zf (NCM_POWSPEC (self->psml), self->zmaxnl);
 
-    self->Rsigma = ncm_spline_cubic_notaknot_new ();
-    self->neff   = ncm_spline_cubic_notaknot_new ();
-    self->Cur    = ncm_spline_cubic_notaknot_new ();
+    self->Rsigma = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+    self->neff   = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+    self->Cur    = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   }
 }
 
@@ -581,7 +581,7 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit *pshf, NcmModel *model)
       {
         self->znl = -1.0;
         ncm_spline_clear (&self->Rsigma);
-        self->Rsigma = ncm_spline_cubic_notaknot_new ();
+        self->Rsigma = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
         return;
       }

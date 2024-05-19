@@ -10178,8 +10178,8 @@ class SplineCubicNotaknot(SplineCubic):
     ::
 
         SplineCubicNotaknot(**properties)
-        new() -> NumCosmoMath.Spline
-        new_full(xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.Spline
+        new() -> NumCosmoMath.SplineCubicNotaknot
+        new_full(xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.SplineCubicNotaknot
 
     Object NcmSplineCubicNotaknot
 
@@ -10329,10 +10329,10 @@ class SplineGsl(Spline):
     ::
 
         SplineGsl(**properties)
-        new(type:int) -> NumCosmoMath.Spline
-        new_by_id(type_id:NumCosmoMath.SplineGslType) -> NumCosmoMath.Spline
-        new_full(type:int, xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.Spline
-        new_full_by_id(type_id:NumCosmoMath.SplineGslType, xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.Spline
+        new(type:int) -> NumCosmoMath.SplineGsl
+        new_by_id(type_id:NumCosmoMath.SplineGslType) -> NumCosmoMath.SplineGsl
+        new_full(type:int, xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.SplineGsl
+        new_full_by_id(type_id:NumCosmoMath.SplineGslType, xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.SplineGsl
 
     Object NcmSplineGsl
 

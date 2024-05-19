@@ -12,20 +12,26 @@ jobs:
 
   build-gcc-ubuntu:
     name: (ubuntu, apt)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
     - name: Install pre-requisites
       run: |
         sudo apt-get update
-        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-arb-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev gtk-doc-tools libopenmpi-dev
-        sudo pip install meson ninja pytest pytest-tap numpy
+        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev gtk-doc-tools libopenmpi-dev uncrustify
+        sudo pip install meson ninja pytest pytest-tap numpy --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
       run: meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dgtkdoc=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: meson compile -C build
+    - name: Checking indentation
+      run: |
+        uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/*.c numcosmo/*.h
+        uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/math/*.c numcosmo/math/*.h
+        uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/model/*.c numcosmo/model/*.h
+        uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/xcor/*.c numcosmo/xcor/*.h
     - name: Test python examples
       run: |
         source build/numcosmo_export.sh
@@ -66,22 +72,19 @@ jobs:
       FC: gfortran-11
       F77: gfortran-11
       F90: gfortran-11
-      LIBRARY_PATH: /usr/local/lib
-      LD_LIBRARY_PATH: /usr/local/lib
-      DYLD_LIBRARY_PATH: /usr/local/lib
+      LIBRARY_PATH: /usr/local/lib:/opt/homebrew/Cellar/gmp/6.3.0/lib
+      LD_LIBRARY_PATH: /usr/local/lib:/opt/homebrew/Cellar/gmp/6.3.0/lib
+      DYLD_LIBRARY_PATH: /usr/local/lib:/opt/homebrew/Cellar/gmp/6.3.0/lib
       CPATH: /usr/local/include
 
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
     - name: Brew install pre-requisites
       run: |
-        brew install gobject-introspection gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran gtk-doc glib openblas
+        brew install python3 gobject-introspection pygobject3 numpy meson ninja gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran gtk-doc glib openblas
     - name: Pip install pre-requisites
       run: |
-        pip3 install meson ninja pytest pytest-tap numpy pygobject
+        python3 -m pip install pytest pytest-tap --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
@@ -94,8 +97,8 @@ jobs:
       run: |
         source build/numcosmo_export.sh
         cd examples
-        python example_simple.py
-        python example_cbe.py
+        python3 example_simple.py
+        python3 example_cbe.py
     - name: Check NumCosmo
       run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
 
@@ -166,6 +169,9 @@ jobs:
       - name: Running mypy
         run: |
           mypy -p numcosmo_py
+      #- name: Checking indentation
+      #  run: |
+      #    uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/*.c numcosmo/*.h
       #- name: Running pylint
       #  run: |
       #    pylint --rcfile .pylintrc numcosmo_py

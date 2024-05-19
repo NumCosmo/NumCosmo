@@ -117,9 +117,7 @@ class AnalyzeMCMC(LoadCatalog):
         param_diag.add_column(
             "Parameter", justify="left", style=desc_color, vertical="middle"
         )
-        param_diag_matrix.append(
-            [mcat.col_full_name(i) for i in range(self.total_columns)]
-        )
+        param_diag_matrix.append([mcat.col_full_name(i) for i in self.indices])
 
         # Values color
         val_color = values_color
@@ -130,25 +128,21 @@ class AnalyzeMCMC(LoadCatalog):
                 "Best-fit", justify="left", style=val_color, vertical="middle"
             )
             param_diag_matrix.append(
-                [f"{best_fit_vec.get(i): .6g}" for i in range(self.total_columns)]
+                [f"{best_fit_vec.get(i): .6g}" for i in self.indices]
             )
 
         # Parameter mean
         param_diag.add_column(
             "Mean", justify="left", style=val_color, vertical="middle"
         )
-        param_diag_matrix.append(
-            [f"{fs.get_mean(i): .6g}" for i in range(self.total_columns)]
-        )
+        param_diag_matrix.append([f"{fs.get_mean(i): .6g}" for i in self.indices])
 
         # Standard Deviation
 
         param_diag.add_column(
             "Standard Deviation", justify="left", style=val_color, vertical="middle"
         )
-        param_diag_matrix.append(
-            [f"{fs.get_sd(i): .6g}" for i in range(self.total_columns)]
-        )
+        param_diag_matrix.append([f"{fs.get_sd(i): .6g}" for i in self.indices])
 
         if self.nitems >= 10:
             # Mean Standard Deviation
@@ -162,7 +156,7 @@ class AnalyzeMCMC(LoadCatalog):
 
             mean_sd_array = [
                 np.sqrt(fs.get_var(i) * tau_vec.get(i) / fs.nitens())
-                for i in range(self.total_columns)
+                for i in self.indices
             ]
             param_diag_matrix.append([f"{mean_sd: .6g}" for mean_sd in mean_sd_array])
 
@@ -181,17 +175,13 @@ class AnalyzeMCMC(LoadCatalog):
             param_diag.add_column(
                 "tau", justify="left", style=val_color, vertical="middle"
             )
-            param_diag_matrix.append(
-                [f"{tau_vec.get(i): .6g}" for i in range(self.total_columns)]
-            )
+            param_diag_matrix.append([f"{tau_vec.get(i): .6g}" for i in self.indices])
 
         if self.nchains > 1:
             # Gelman Rubin
             gelman_rubin_row = []
             gelman_rubin_row.append("Gelman-Rubin (G&B) Shrink Factor (R-1)")
-            skf = [
-                mcat.get_param_shrink_factor(i) - 1 for i in range(self.total_columns)
-            ]
+            skf = [mcat.get_param_shrink_factor(i) - 1 for i in self.indices]
             gelman_rubin_row.append("NA")
             gr_worst = int(np.argmin(skf))
             gelman_rubin_row.append(
@@ -208,7 +198,7 @@ class AnalyzeMCMC(LoadCatalog):
 
         # Constant Break
 
-        cb = [self.stats.estimate_const_break(i) for i in range(self.total_columns)]
+        cb = [self.stats.estimate_const_break(i) for i in self.indices]
         cb_worst = int(np.argmax(cb))
         const_break_row = []
         const_break_row.append("Constant Break (CB) (iterations, points)")
@@ -247,7 +237,7 @@ class AnalyzeMCMC(LoadCatalog):
             param_diag_matrix.append(
                 [
                     f"{ess_vec.get(i):.0f} {ess_vec.get(i) * self.nchains:.0f}"
-                    for i in range(self.total_columns)
+                    for i in self.indices
                 ]
             )
 
@@ -283,10 +273,7 @@ class AnalyzeMCMC(LoadCatalog):
                 style=val_color,
             )
             param_diag_matrix.append(
-                [
-                    f"{(1.0 - hw_vec.get(i)) * 100.0:.1f}"
-                    for i in range(self.total_columns)
-                ]
+                [f"{(1.0 - hw_vec.get(i)) * 100.0:.1f}" for i in self.indices]
             )
 
         for row in np.array(param_diag_matrix).T:
@@ -298,14 +285,14 @@ class AnalyzeMCMC(LoadCatalog):
 
         covariance_matrix = Table(title="Covariance Matrix", expand=False)
         covariance_matrix.add_column("Parameter", justify="right", style="bold")
-        for i in range(self.total_columns):
+        for i in self.indices:
             covariance_matrix.add_column(
                 mcat.col_name(i).split(":")[-1], justify="right"
             )
 
-        for i in range(self.total_columns):
+        for i in self.indices:
             row = [mcat.col_name(i).split(":")[-1]]
-            for j in range(self.total_columns):
+            for j in self.indices:
                 cov_ij = fs.get_cor(i, j)
                 cor_ij_string = f"{cov_ij * 100.0: 3.0f}%"
                 styles_array = [
@@ -612,7 +599,7 @@ class PlotCorner(LoadCatalog):
 
     plot_name: Annotated[
         Optional[str],
-        typer.Argument(
+        typer.Option(
             help="Name of the plot file.",
         ),
     ] = None
@@ -647,7 +634,7 @@ class PlotCorner(LoadCatalog):
         mcat = self.mcat
         if self.plot_name is None:
             self.plot_name = str(self.mcmc_file)
-        mcsample, _, _ = mcat_to_mcsamples(mcat, self.plot_name)
+        mcsample, _, _ = mcat_to_mcsamples(mcat, self.plot_name, indices=self.indices)
 
         set_rc_params_article(ncol=2)
         g = getdist.plots.get_subplot_plotter(

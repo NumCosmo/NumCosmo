@@ -39,9 +39,16 @@ from numcosmo_py.sampling import set_ncm_console
 
 @dataclasses.dataclass(kw_only=True)
 class LoadExperiment:
+<<<<<<< HEAD
     """Common block for commands that load an experiment.
 
     All commands that load an experiment should inherit from this class.
+=======
+    """Load an experiment file.
+
+    Common block for commands that load an experiment. All commands that load an
+    experiment should inherit from this class.
+>>>>>>> master
     """
 
     experiment: Annotated[
@@ -92,7 +99,11 @@ class LoadExperiment:
     ] = None
 
     def __post_init__(self) -> None:
+<<<<<<< HEAD
         """Load the experiment file and prepare the experiment."""
+=======
+        """Initialize the experiment and load the data."""
+>>>>>>> master
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
         builders_file = self.experiment.with_suffix(".builders.yaml")
@@ -186,9 +197,15 @@ class LoadExperiment:
         self.mset = mset
 
     def _load_saved_mset(self) -> Optional[Ncm.MSet]:
+<<<<<<< HEAD
         """Load the saved model-set.
 
         Loads the model-set from the starting point file or the product file.
+=======
+        """Load the saved model.
+
+        Load the saved model-set from the starting point file or the product file.
+>>>>>>> master
         """
         if self.starting_point is not None:
             if not self.starting_point.exists():
@@ -248,8 +265,26 @@ class LoadCatalog(LoadExperiment):
         ),
     ] = 0
 
+    include: Annotated[
+        Optional[list[str]],
+        typer.Option(
+            help="List of parameters and or model names to include in the analysis.",
+        ),
+    ] = None
+
+    exclude: Annotated[
+        Optional[list[str]],
+        typer.Option(
+            help="List of parameters and or model names to exclude from the analysis.",
+        ),
+    ] = None
+
     def __post_init__(self) -> None:
+<<<<<<< HEAD
         """Load the MCMC file and prepare the catalog."""
+=======
+        """Initialize the MCMC file and load the data."""
+>>>>>>> master
         super().__post_init__()
 
         if not self.mcmc_file.exists():
@@ -269,6 +304,8 @@ class LoadCatalog(LoadExperiment):
         self.total_columns: int = self.fparams_len + self.nadd_vals
         self.nchains: int = self.mcat.nchains()
 
+        self._extract_indices()
+
         self.full_stats: Ncm.StatsVec = self.mcat.peek_pstats()
         assert isinstance(self.full_stats, Ncm.StatsVec)
 
@@ -280,3 +317,33 @@ class LoadCatalog(LoadExperiment):
             assert isinstance(self.stats, Ncm.StatsVec)
 
         self.nitems: int = self.stats.nitens()
+
+    def _extract_indices(self):
+        """Extract the indices to include in the analysis."""
+        if self.include is None:
+            self.include = []
+        if self.exclude is None:
+            self.exclude = []
+        assert self.include is not None
+        assert self.exclude is not None
+        if not self.include and not self.exclude:
+            self.indices = list(range(self.total_columns))
+        else:
+            self.indices = []
+            if self.include and self.exclude:
+                for i in range(self.total_columns):
+                    name = self.mcat.col_full_name(i)
+                    if any(s in name for s in self.include) and not any(
+                        s in name for s in self.exclude
+                    ):
+                        self.indices.append(i)
+            elif self.include:
+                for i in range(self.total_columns):
+                    name = self.mcat.col_full_name(i)
+                    if any(s in name for s in self.include):
+                        self.indices.append(i)
+            else:
+                for i in range(self.total_columns):
+                    name = self.mcat.col_full_name(i)
+                    if not any(s in name for s in self.exclude):
+                        self.indices.append(i)

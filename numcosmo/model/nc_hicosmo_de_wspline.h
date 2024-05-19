@@ -85,3 +85,4 @@ NcmVector *nc_hicosmo_de_wspline_get_alpha (NcHICosmoDEWSpline *wspline);
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_DE_WSPLINE_H_ */
+
