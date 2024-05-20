@@ -2778,6 +2778,8 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
         ncm_vector_set (e_var, i, ncm_stats_vec_get_var (self->e_stats, i));
       }
 
+      g_assert_cmpuint (ncm_stats_vec_nitens (self->e_stats), ==, self->nchains);
+
       ncm_stats_vec_append (self->e_mean_stats, e_mean, TRUE);
       g_ptr_array_add (self->e_var_array, e_var);
 
