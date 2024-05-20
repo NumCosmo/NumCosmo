@@ -36,11 +36,12 @@ from .loading import LoadExperiment
 from .run_fit import RunCommonOptions
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class ComputeTheoryVector(LoadExperiment):
-    """Computes theory vectory for a given experiment."""
+    """Compute theory vectory for a given experiment."""
 
     def __post_init__(self) -> None:
+        """Compute theory vector for a given experiment."""
         super().__post_init__()
 
         dset: Ncm.Dataset = self.likelihood.peek_dataset()
@@ -57,9 +58,9 @@ class ComputeTheoryVector(LoadExperiment):
         self.end_experiment()
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class RunFisher(RunCommonOptions):
-    """Computes the Fisher matrix of the model to the data."""
+    """Compute the Fisher matrix of the model to the data."""
 
     fisher_type: Annotated[
         FisherType,
@@ -69,6 +70,7 @@ class RunFisher(RunCommonOptions):
     ] = FisherType.OBSERVED
 
     def __post_init__(self) -> None:
+        """Compute the Fisher matrix of the model to the data."""
         super().__post_init__()
         if self.fisher_type == FisherType.OBSERVED:
             self.fit.obs_fisher()
@@ -86,7 +88,7 @@ class RunFisher(RunCommonOptions):
         self.end_experiment()
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class RunFisherBias(RunCommonOptions):
     """Computes the Fisher matrix of the model to the data and the bias."""
 
@@ -98,6 +100,7 @@ class RunFisherBias(RunCommonOptions):
     ] = None
 
     def __post_init__(self) -> None:
+        """Compute the Fisher matrix of the model to the data and the bias."""
         super().__post_init__()
 
         if self.product_file and self.theory_vector is not None:

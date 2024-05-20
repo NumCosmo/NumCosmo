@@ -39,7 +39,7 @@ from ..sampling import (
 )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class RunCommonOptions(LoadExperiment):
     """Common options for the run command."""
 
@@ -69,6 +69,10 @@ class RunCommonOptions(LoadExperiment):
     ] = FitRunMessages.SIMPLE
 
     def __post_init__(self) -> None:
+        """Create common objects for the run command.
+
+        Create the fit object and set the logger.
+        """
         super().__post_init__()
 
         check_runner_algorithm(self.runner, self.algorithm)
@@ -92,7 +96,7 @@ class RunCommonOptions(LoadExperiment):
         self.fit = fit
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class RunFit(RunCommonOptions):
     """Computes the best fit of the model to the data."""
 
@@ -110,6 +114,7 @@ class RunFit(RunCommonOptions):
     )  # type: ignore
 
     def __post_init__(self) -> None:
+        """Compute the best fit of the model to the data."""
         super().__post_init__()
         self.fit.log_info()
 
@@ -139,11 +144,12 @@ class RunFit(RunCommonOptions):
         self.end_experiment()
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class RunTest(RunCommonOptions):
-    """Loads the experiment file and computes the likelihood once."""
+    """Load the experiment file and computes the likelihood once."""
 
     def __post_init__(self) -> None:
+        """Load the experiment file and computes the likelihood once."""
         super().__post_init__()
         self.mset.param_set_all_ftype(Ncm.ParamType.FIXED)
         self.mset.prepare_fparam_map()
