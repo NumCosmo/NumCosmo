@@ -322,6 +322,10 @@ python_tests = [
         'source': 'test_py_hipert_gw.py',
     },
     {
+        'name': 'py_hipert_two_fluids',
+        'source': 'test_py_hipert_two_fluids.py',
+    },
+    {
         'name': 'py_de_cont',
         'source': 'test_py_de_cont.py',
     },
