@@ -2766,7 +2766,7 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
 
   if (self->nchains > 1)
   {
-    if ((self->cur_id + 1) % self->nchains + 1 == self->nchains)
+    if ((self->cur_id + 1) % self->nchains == 0)
     {
       NcmVector *e_mean = ncm_stats_vec_peek_mean (self->e_stats);
       const guint len   = ncm_vector_len (e_mean);
