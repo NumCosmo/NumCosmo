@@ -26,11 +26,13 @@
 import math
 import dataclasses
 from typing import Optional, Annotated, List
+from pathlib import Path
 import typer
 from rich.table import Table
 from rich.text import Text
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 import getdist
 import getdist.plots
 
@@ -46,7 +48,7 @@ from ..plotting.getdist import mcat_to_mcsamples
 from .loading import LoadCatalog
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class AnalyzeMCMC(LoadCatalog):
     """Analyzes the results of a MCMC run."""
 
@@ -116,9 +118,7 @@ class AnalyzeMCMC(LoadCatalog):
         param_diag.add_column(
             "Parameter", justify="left", style=desc_color, vertical="middle"
         )
-        param_diag_matrix.append(
-            [mcat.col_full_name(i) for i in range(self.total_columns)]
-        )
+        param_diag_matrix.append([mcat.col_full_name(i) for i in self.indices])
 
         # Values color
         val_color = values_color
@@ -129,25 +129,21 @@ class AnalyzeMCMC(LoadCatalog):
                 "Best-fit", justify="left", style=val_color, vertical="middle"
             )
             param_diag_matrix.append(
-                [f"{best_fit_vec.get(i): .6g}" for i in range(self.total_columns)]
+                [f"{best_fit_vec.get(i): .6g}" for i in self.indices]
             )
 
         # Parameter mean
         param_diag.add_column(
             "Mean", justify="left", style=val_color, vertical="middle"
         )
-        param_diag_matrix.append(
-            [f"{fs.get_mean(i): .6g}" for i in range(self.total_columns)]
-        )
+        param_diag_matrix.append([f"{fs.get_mean(i): .6g}" for i in self.indices])
 
         # Standard Deviation
 
         param_diag.add_column(
             "Standard Deviation", justify="left", style=val_color, vertical="middle"
         )
-        param_diag_matrix.append(
-            [f"{fs.get_sd(i): .6g}" for i in range(self.total_columns)]
-        )
+        param_diag_matrix.append([f"{fs.get_sd(i): .6g}" for i in self.indices])
 
         if self.nitems >= 10:
             # Mean Standard Deviation
@@ -161,7 +157,7 @@ class AnalyzeMCMC(LoadCatalog):
 
             mean_sd_array = [
                 np.sqrt(fs.get_var(i) * tau_vec.get(i) / fs.nitens())
-                for i in range(self.total_columns)
+                for i in self.indices
             ]
             param_diag_matrix.append([f"{mean_sd: .6g}" for mean_sd in mean_sd_array])
 
@@ -180,17 +176,13 @@ class AnalyzeMCMC(LoadCatalog):
             param_diag.add_column(
                 "tau", justify="left", style=val_color, vertical="middle"
             )
-            param_diag_matrix.append(
-                [f"{tau_vec.get(i): .6g}" for i in range(self.total_columns)]
-            )
+            param_diag_matrix.append([f"{tau_vec.get(i): .6g}" for i in self.indices])
 
         if self.nchains > 1:
             # Gelman Rubin
             gelman_rubin_row = []
             gelman_rubin_row.append("Gelman-Rubin (G&B) Shrink Factor (R-1)")
-            skf = [
-                mcat.get_param_shrink_factor(i) - 1 for i in range(self.total_columns)
-            ]
+            skf = [mcat.get_param_shrink_factor(i) - 1 for i in self.indices]
             gelman_rubin_row.append("NA")
             gr_worst = int(np.argmin(skf))
             gelman_rubin_row.append(
@@ -207,7 +199,7 @@ class AnalyzeMCMC(LoadCatalog):
 
         # Constant Break
 
-        cb = [self.stats.estimate_const_break(i) for i in range(self.total_columns)]
+        cb = [self.stats.estimate_const_break(i) for i in self.indices]
         cb_worst = int(np.argmax(cb))
         const_break_row = []
         const_break_row.append("Constant Break (CB) (iterations, points)")
@@ -246,7 +238,7 @@ class AnalyzeMCMC(LoadCatalog):
             param_diag_matrix.append(
                 [
                     f"{ess_vec.get(i):.0f} {ess_vec.get(i) * self.nchains:.0f}"
-                    for i in range(self.total_columns)
+                    for i in self.indices
                 ]
             )
 
@@ -282,10 +274,7 @@ class AnalyzeMCMC(LoadCatalog):
                 style=val_color,
             )
             param_diag_matrix.append(
-                [
-                    f"{(1.0 - hw_vec.get(i)) * 100.0:.1f}"
-                    for i in range(self.total_columns)
-                ]
+                [f"{(1.0 - hw_vec.get(i)) * 100.0:.1f}" for i in self.indices]
             )
 
         for row in np.array(param_diag_matrix).T:
@@ -297,14 +286,14 @@ class AnalyzeMCMC(LoadCatalog):
 
         covariance_matrix = Table(title="Covariance Matrix", expand=False)
         covariance_matrix.add_column("Parameter", justify="right", style="bold")
-        for i in range(self.total_columns):
+        for i in self.indices:
             covariance_matrix.add_column(
                 mcat.col_name(i).split(":")[-1], justify="right"
             )
 
-        for i in range(self.total_columns):
+        for i in self.indices:
             row = [mcat.col_name(i).split(":")[-1]]
-            for j in range(self.total_columns):
+            for j in self.indices:
                 cov_ij = fs.get_cor(i, j)
                 cor_ij_string = f"{cov_ij * 100.0: 3.0f}%"
                 styles_array = [
@@ -363,7 +352,7 @@ class AnalyzeMCMC(LoadCatalog):
         self.end_experiment()
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class CalibrateCatalog(LoadCatalog):
     """Calibrate the APES sampler using a given catalog."""
 
@@ -605,13 +594,13 @@ class CalibrateCatalog(LoadCatalog):
                     plt.show()
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class PlotCorner(LoadCatalog):
     """Plots the corner plot of the catalog."""
 
     plot_name: Annotated[
         Optional[str],
-        typer.Argument(
+        typer.Option(
             help="Name of the plot file.",
         ),
     ] = None
@@ -639,6 +628,35 @@ class PlotCorner(LoadCatalog):
         ),
     ] = 0
 
+    mcsample_only: Annotated[
+        bool,
+        typer.Option(
+            help="Generate only the MCSample object.",
+            hidden=True,
+        ),
+    ] = False
+
+    extra_experiment: Annotated[
+        Optional[list[Path]],
+        typer.Option(
+            help="Run extra experiment.",
+        ),
+    ] = None
+
+    extra_mcmc_file: Annotated[
+        Optional[list[Path]],
+        typer.Option(
+            help="Extra MCMC files.",
+        ),
+    ] = None
+
+    extra_burnin: Annotated[
+        Optional[list[int]],
+        typer.Option(
+            help="Extra burn-ins.",
+        ),
+    ] = None
+
     def __post_init__(self) -> None:
         """Corner plot of the catalog."""
         super().__post_init__()
@@ -646,8 +664,49 @@ class PlotCorner(LoadCatalog):
         mcat = self.mcat
         if self.plot_name is None:
             self.plot_name = str(self.mcmc_file)
-        mcsample, _, _ = mcat_to_mcsamples(mcat, self.plot_name)
+        mcsample, _, _ = mcat_to_mcsamples(mcat, self.plot_name, indices=self.indices)
+        self.mcsample = mcsample
 
+        if self.mcsample_only:
+            self.end_experiment()
+            return
+
+        if self.extra_experiment is None:
+            self.extra_experiment = []
+        if self.extra_mcmc_file is None:
+            self.extra_mcmc_file = []
+        if self.extra_burnin is None:
+            self.extra_burnin = []
+
+        if len(self.extra_experiment) != len(self.extra_mcmc_file):
+            raise ValueError(
+                "Extra experiments and MCMC files must have the same length."
+            )
+        if len(self.extra_experiment) != len(self.extra_burnin):
+            raise ValueError(
+                "Extra experiments and burn-ins must have the same length."
+            )
+
+        mcsamples = [mcsample]
+        for extra_experiment, extra_mcmc_file, extra_burnin in zip(
+            self.extra_experiment, self.extra_mcmc_file, self.extra_burnin
+        ):
+            extra_exp = dataclasses.replace(
+                self,
+                experiment=extra_experiment,
+                mcmc_file=extra_mcmc_file,
+                burnin=extra_burnin,
+                log_file=None,
+                mcsample_only=True,
+                plot_name=None,
+            )
+            mcsamples.append(extra_exp.mcsample)
+
+        self.plot_mcsamples(mcsamples)
+
+    def plot_mcsamples(self, mcsamples: list[getdist.MCSamples]):
+        """Plot MCSamples."""
+        mcat = self.mcat
         set_rc_params_article(ncol=2)
         g = getdist.plots.get_subplot_plotter(
             width_inch=plt.rcParams["figure.figsize"][0]
@@ -657,13 +716,133 @@ class PlotCorner(LoadCatalog):
         if self.mark_bestfit:
             bf = np.array(mcat.get_bestfit_row().dup_array())[1:]
         g.triangle_plot(
-            [mcsample], shaded=True, markers=bf, title_limit=self.title_limit
+            mcsamples, shaded=True, markers=bf, title_limit=self.title_limit
         )
 
         if self.output is not None:
             filename = self.output.with_suffix(".corner.pdf").absolute().as_posix()
             plt.savefig(filename, bbox_inches="tight")
 
+        plt.show()
+
+        self.end_experiment()
+
+
+@dataclasses.dataclass(kw_only=True)
+class ParameterAnalysis(LoadCatalog):
+    """Plots the corner plot of the catalog."""
+
+    plot_name: Annotated[
+        Optional[str],
+        typer.Option(help="Name of the plot file."),
+    ] = None
+
+    param_name: Annotated[
+        str,
+        typer.Option(help="Name of the plot file."),
+    ]
+
+    def __post_init__(self) -> None:
+        """Parameter analysis."""
+        super().__post_init__()
+
+        pi = self.mset.fparam_get_pi_by_name(self.param_name)
+        if pi is not None:
+            pindex = self.mset.fparam_get_fpi(pi.mid, pi.pid) + self.nadd_vals
+        elif self.param_name.isnumeric():
+            total_len = self.mset.fparams_len() + self.nadd_vals
+            pindex = int(self.param_name)
+            if pindex >= total_len or pindex < 0:
+                raise ValueError(
+                    f'Invalid parameter index "{self.param_name}"=={pindex}.'
+                )
+            if pindex >= self.nadd_vals:
+                pi = self.mset.fparam_get_pi(pindex)
+        else:
+            raise ValueError(f"Parameter {self.param_name} not found.")
+
+        self.pi: Ncm.MSetPIndex = pi
+        self.pindex: int = pindex
+        self.symbol: str = self.mcat.col_symb(pindex)
+
+
+@dataclasses.dataclass(kw_only=True)
+class VisualHW(ParameterAnalysis):
+    """Visual Heidelberger and Welch."""
+
+    def __post_init__(self) -> None:
+        """Visual Heidelberger and Welch."""
+        super().__post_init__()
+
+        cumsum_vec, mean, var = self.stats.visual_heidel_diag(self.pindex, 0)
+        cumsum = np.array(cumsum_vec.dup_array())
+        mean_a = (np.array(range(len(cumsum))) + 1.0) * mean
+
+        set_rc_params_article(ncol=2)
+        _, ax = plt.subplots()
+
+        ax.title.set_text("Visual Heidelberger and Welch.")
+        ax.plot(cumsum, label=f"Cumulative sum -- ${self.symbol}$")
+        ax.plot(mean_a, label=f"Mean, standard deviation = {np.sqrt(var):.2f}")
+
+        ax.set_xlabel("Iterations")
+        ax.set_ylabel("Cumulative sum")
+        ax.legend(loc="best")
+        if self.plot_name is not None:
+            plt.savefig(self.plot_name, bbox_inches="tight")
+
+        plt.show()
+
+        self.end_experiment()
+
+
+@dataclasses.dataclass(kw_only=True)
+class ParameterEvolution(ParameterAnalysis):
+    """Parameter evolution."""
+
+    grid_size: Annotated[
+        int,
+        typer.Option(help="Grid size."),
+    ] = 200
+
+    def __post_init__(self) -> None:
+        """Parameter evolution."""
+        super().__post_init__()
+
+        mcat = self.mcat
+        if self.pi is not None:
+            param_vec, evol_matrix = mcat.calc_param_ensemble_evol(
+                self.pi, self.grid_size, Ncm.FitRunMsgs.NONE
+            )
+        else:
+            param_vec, evol_matrix = mcat.calc_add_param_ensemble_evol(
+                self.pindex, self.grid_size, Ncm.FitRunMsgs.NONE
+            )
+
+        param = np.array(param_vec.dup_array())
+        evol_a = np.abs(evol_matrix.dup_array())
+        min_evol_a = min(evol_a[evol_a > 0.0])
+        evol_a[evol_a == 0.0] = min_evol_a
+        evol = evol_a.reshape((-1, self.grid_size))
+
+        set_rc_params_article(ncol=2)
+        _, ax = plt.subplots()
+
+        ax.title.set_text(f"Parameter evolution -- ${self.symbol}$")
+        cax = ax.matshow(
+            evol.T,
+            aspect="auto",
+            origin="lower",
+            cmap="viridis",
+            extent=[0, evol.shape[0], param[0], param[-1]],
+            norm=LogNorm(),
+        )
+        ax.set_xlabel("Iterations")
+        ax.set_ylabel(f"${self.symbol}$")
+        plt.colorbar(cax, label=rf"$p_t\left({self.symbol}\right)$")
+
+        if self.plot_name is not None:
+            plt.savefig(self.plot_name, bbox_inches="tight")
         plt.show()
 
         self.end_experiment()

@@ -33,6 +33,7 @@ import typer
 from numcosmo_py import Ncm
 from numcosmo_py.experiments.planck18 import (
     Planck18Types,
+    Planck18HIPrimModel,
     generate_planck18_tt,
     generate_planck18_ttteee,
     set_mset_parameters,
@@ -45,10 +46,12 @@ from numcosmo_py.experiments.jpas_forecast24 import (
 )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class GeneratePlanck:
-    """Common block for commands that load an experiment. All commands that load an
-    experiment should inherit from this class."""
+    """Common block for commands that load an experiment.
+
+    All commands that load an experiment should inherit from this class.
+    """
 
     experiment: Annotated[
         Path, typer.Argument(help="Path to the experiment file to fit.")
@@ -58,13 +61,17 @@ class GeneratePlanck:
         Planck18Types, typer.Option(help="Data type to use.", show_default=True)
     ] = Planck18Types.TT
 
+    prim_model: Annotated[
+        Planck18HIPrimModel,
+        typer.Option(help="Primordial model to use.", show_default=True),
+    ] = Planck18HIPrimModel.POWER_LAW
+
     massive_nu: Annotated[
         bool, typer.Option(help="Use massive neutrinos.", show_default=True)
     ] = False
 
     def __post_init__(self):
         """Generate Planck 2018 TT baseline experiment."""
-
         Ncm.cfg_init()
 
         if self.experiment.suffix != ".yaml":
@@ -73,13 +80,17 @@ class GeneratePlanck:
             )
 
         if self.data_type == Planck18Types.TT:
-            exp, mfunc_array = generate_planck18_tt(massive_nu=self.massive_nu)
+            exp, mfunc_array = generate_planck18_tt(
+                massive_nu=self.massive_nu, prim_model=self.prim_model
+            )
         elif self.data_type == Planck18Types.TTTEEE:
-            exp, mfunc_array = generate_planck18_ttteee(massive_nu=self.massive_nu)
+            exp, mfunc_array = generate_planck18_ttteee(
+                massive_nu=self.massive_nu, prim_model=self.prim_model
+            )
         else:
             raise ValueError(f"Invalid data type: {self.data_type}")
 
-        set_mset_parameters(exp.peek("model-set"), self.data_type)
+        set_mset_parameters(exp.peek("model-set"), self.data_type, self.prim_model)
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
@@ -95,10 +106,12 @@ class GeneratePlanck:
         )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class GenerateJpasForecast:
-    """Common block for commands that load an experiment. All commands that load an
-    experiment should inherit from this class."""
+    """Common block for commands that load an experiment.
+
+    All commands that load an experiment should inherit from this class.
+    """
 
     experiment: Annotated[
         Path, typer.Argument(help="Path to the experiment file to fit.")
@@ -209,7 +222,6 @@ class GenerateJpasForecast:
 
     def __post_init__(self):
         """Generate JPAS 2024 forecast experiment."""
-
         Ncm.cfg_init()
 
         if self.experiment.suffix != ".yaml":

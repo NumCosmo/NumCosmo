@@ -98,6 +98,7 @@
 #include <numcosmo/model/nc_hiprim_expc.h>
 #include <numcosmo/model/nc_hiprim_bpl.h>
 #include <numcosmo/model/nc_hiprim_sbpl.h>
+#include <numcosmo/model/nc_hiprim_two_fluids.h>
 
 /* Large Scale Structure / Structure Formation */
 #include <numcosmo/lss/nc_window.h>

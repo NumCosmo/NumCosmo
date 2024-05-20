@@ -44,6 +44,7 @@ void test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_traps (TestNcmFitESMCMC *test, gconstpointer pdata);
 
 void test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata);
+void test_ncm_fit_esmcmc_properties (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_burnin (TestNcmFitESMCMC *test, gconstpointer pdata);
@@ -74,9 +75,10 @@ TestNcmFitEsmcmcFunc walkers[TEST_NCM_FIT_ESMCMC_NWALKERS] =
   {test_ncm_fit_esmcmc_new_apes,    "apes/kde/gauss",   GINT_TO_POINTER (5)},
 };
 
-#define TEST_NCM_FIT_ESMCMC_TESTS 7
+#define TEST_NCM_FIT_ESMCMC_TESTS 8
 TestNcmFitEsmcmcFunc tests[TEST_NCM_FIT_ESMCMC_TESTS] =
 {
+  {test_ncm_fit_esmcmc_properties,            "properties",            NULL},
   {test_ncm_fit_esmcmc_run,                   "run",                   NULL},
   {test_ncm_fit_esmcmc_run_lre,               "run/lre",               NULL},
   {test_ncm_fit_esmcmc_run_burnin,            "run/burnin",            NULL},
@@ -333,6 +335,65 @@ test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata)
   NCM_TEST_FREE (ncm_fit_free, test->fit);
   NCM_TEST_FREE (ncm_data_free, NCM_DATA (test->data_mvnd));
   NCM_TEST_FREE (ncm_rng_free, test->rng);
+}
+
+void
+test_ncm_fit_esmcmc_properties (TestNcmFitESMCMC *test, gconstpointer pdata)
+{
+  /* auto_trim */
+  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
+
+  {
+    gboolean auto_trim;
+
+    g_object_get (G_OBJECT (test->esmcmc), "auto-trim", &auto_trim, NULL);
+    g_assert_true (auto_trim);
+  }
+
+  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, FALSE);
+
+  {
+    gboolean auto_trim;
+
+    g_object_get (G_OBJECT (test->esmcmc), "auto-trim", &auto_trim, NULL);
+    g_assert_false (auto_trim);
+  }
+
+  /* max_runs_time */
+  ncm_fit_esmcmc_set_max_runs_time (test->esmcmc, 123.0);
+  {
+    gdouble max_runs_time;
+
+    g_object_get (G_OBJECT (test->esmcmc), "max-runs-time", &max_runs_time, NULL);
+    g_assert_cmpfloat (max_runs_time, ==, 123.0);
+  }
+
+  /* skip_check */
+  ncm_fit_esmcmc_set_skip_check (test->esmcmc, TRUE);
+  g_assert_true (ncm_fit_esmcmc_get_skip_check (test->esmcmc));
+  {
+    gboolean skip_check;
+
+    g_object_get (G_OBJECT (test->esmcmc), "skip-check", &skip_check, NULL);
+    g_assert_true (skip_check);
+  }
+  ncm_fit_esmcmc_set_skip_check (test->esmcmc, FALSE);
+  g_assert_false (ncm_fit_esmcmc_get_skip_check (test->esmcmc));
+  {
+    gboolean skip_check;
+
+    g_object_get (G_OBJECT (test->esmcmc), "skip-check", &skip_check, NULL);
+    g_assert_false (skip_check);
+  }
+
+  /* log-time-interval */
+  g_object_set (G_OBJECT (test->esmcmc), "log-time-interval", 54321.0, NULL);
+  {
+    gdouble log_time_interval;
+
+    g_object_get (G_OBJECT (test->esmcmc), "log-time-interval", &log_time_interval, NULL);
+    g_assert_cmpfloat (log_time_interval, ==, 54321.0);
+  }
 }
 
 #define TEST_NCM_FIT_ESMCMC_TOL (2.5e-1)
