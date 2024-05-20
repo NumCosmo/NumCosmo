@@ -54,6 +54,7 @@ void test_ncm_mset_catalog_autocorrelation (TestNcmMSetCatalog *test, gconstpoin
 void test_ncm_mset_catalog_accept_ratio_array (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_calc_param_ensemble_evol (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_calc_add_param_ensemble_evol (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_calc_add_param_ensemble_evol_short (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer pdata);
 
 typedef struct _TestNcmMSetCatalogTests
@@ -85,6 +86,7 @@ TestNcmMSetCatalogTests tests[] =
   {"accept_ratio_array", test_ncm_mset_catalog_accept_ratio_array},
   {"calc_param_ensemble_evol", test_ncm_mset_catalog_calc_param_ensemble_evol},
   {"calc_add_param_ensemble_evol", test_ncm_mset_catalog_calc_add_param_ensemble_evol},
+  {"calc_add_param_ensemble_evol/short", test_ncm_mset_catalog_calc_add_param_ensemble_evol_short},
   {NULL, NULL}
 };
 
@@ -751,49 +753,129 @@ test_ncm_mset_catalog_calc_add_param_ensemble_evol (TestNcmMSetCatalog *test, gc
     return;
   }
 
-  for (i = 0; i < nt; i++)
+  if (g_test_subprocess ())
   {
-    gdouble m2lnL = 0.0;
-
-    ncm_data_resample (data, mset, test->rng);
-    ncm_data_m2lnL_val (data, mset, &m2lnL);
-
-    ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
-  }
-
-  {
-    NcmVector *pval   = NULL;
-    NcmMatrix *t_evol = NULL;
-    guint i;
-
-    ncm_mset_catalog_calc_add_param_ensemble_evol (test->mcat, 0, 100, NCM_FIT_RUN_MSGS_NONE, &pval, &t_evol);
-
-    g_assert_nonnull (pval);
-    g_assert_nonnull (t_evol);
-    g_assert_cmpuint (ncm_vector_len (pval), ==, ncm_matrix_ncols (t_evol));
-
-    for (i = 0; i < ncm_vector_len (pval); i++)
+    for (i = 0; i < nt; i++)
     {
-      const gdouble pval_i = ncm_vector_get (pval, i);
+      gdouble m2lnL = 0.0;
 
-      g_assert_true (gsl_finite (pval_i));
+      ncm_data_resample (data, mset, test->rng);
+      ncm_data_m2lnL_val (data, mset, &m2lnL);
+
+      ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
     }
 
-    for (i = 0; i < ncm_matrix_nrows (t_evol); i++)
     {
-      guint j;
+      NcmVector *pval   = NULL;
+      NcmMatrix *t_evol = NULL;
+      guint i;
 
-      for (j = 0; j < ncm_matrix_ncols (t_evol); j++)
+      ncm_mset_catalog_calc_add_param_ensemble_evol (test->mcat, 0, 100, NCM_FIT_RUN_MSGS_FULL, &pval, &t_evol);
+
+      g_assert_nonnull (pval);
+      g_assert_nonnull (t_evol);
+      g_assert_cmpuint (ncm_vector_len (pval), ==, ncm_matrix_ncols (t_evol));
+
+      for (i = 0; i < ncm_vector_len (pval); i++)
       {
-        const gdouble tval_ij = ncm_matrix_get (t_evol, i, j);
+        const gdouble pval_i = ncm_vector_get (pval, i);
 
-        g_assert_cmpfloat (tval_ij, >=, 0.0);
+        g_assert_true (gsl_finite (pval_i));
       }
+
+      for (i = 0; i < ncm_matrix_nrows (t_evol); i++)
+      {
+        guint j;
+
+        for (j = 0; j < ncm_matrix_ncols (t_evol); j++)
+        {
+          const gdouble tval_ij = ncm_matrix_get (t_evol, i, j);
+
+          g_assert_cmpfloat (tval_ij, >=, 0.0);
+        }
+      }
+
+      ncm_vector_clear (&pval);
+      ncm_matrix_clear (&t_evol);
     }
 
-    ncm_vector_clear (&pval);
-    ncm_matrix_clear (&t_evol);
+    return;
   }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_passed ();
+  g_test_trap_assert_stdout ("*Calculating evolution to time*");
+}
+
+void
+test_ncm_mset_catalog_calc_add_param_ensemble_evol_short (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  NcmData *data        = NCM_DATA (test->data_mvnd);
+  NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
+  NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
+  const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
+  guint i;
+
+  if (ncm_mset_catalog_nchains (test->mcat) == 1)
+  {
+    g_test_skip ("Single chain");
+
+    return;
+  }
+
+  if (g_test_subprocess ())
+  {
+    for (i = 0; i < ncm_mset_catalog_nchains (test->mcat) * 5; i++)
+    {
+      gdouble m2lnL = 0.0;
+
+      ncm_data_resample (data, mset, test->rng);
+      ncm_data_m2lnL_val (data, mset, &m2lnL);
+
+      ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
+    }
+
+    {
+      NcmVector *pval   = NULL;
+      NcmMatrix *t_evol = NULL;
+      guint i;
+
+      ncm_mset_catalog_calc_add_param_ensemble_evol (test->mcat, 0, 100, NCM_FIT_RUN_MSGS_FULL, &pval, &t_evol);
+
+      g_assert_nonnull (pval);
+      g_assert_nonnull (t_evol);
+      g_assert_cmpuint (ncm_vector_len (pval), ==, ncm_matrix_ncols (t_evol));
+
+      for (i = 0; i < ncm_vector_len (pval); i++)
+      {
+        const gdouble pval_i = ncm_vector_get (pval, i);
+
+        g_assert_true (gsl_finite (pval_i));
+      }
+
+      for (i = 0; i < ncm_matrix_nrows (t_evol); i++)
+      {
+        guint j;
+
+        for (j = 0; j < ncm_matrix_ncols (t_evol); j++)
+        {
+          const gdouble tval_ij = ncm_matrix_get (t_evol, i, j);
+
+          g_assert_cmpfloat (tval_ij, >=, 0.0);
+        }
+      }
+
+      ncm_vector_clear (&pval);
+      ncm_matrix_clear (&t_evol);
+    }
+
+    return;
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_passed ();
+  g_test_trap_assert_stdout ("*Calculating evolution to time*");
 }
 
 void
