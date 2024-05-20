@@ -52,6 +52,7 @@ void test_nc_hicosmo_qgw_basic (void);
 void test_nc_hipert_adiab_basic (void);
 void test_nc_hipert_em_basic (void);
 void test_nc_hipert_gw_basic (void);
+void test_nc_hiprim_two_fluids_basic (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -81,6 +82,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/hipert/adiab/basic", test_nc_hipert_adiab_basic);
   g_test_add_func ("/nc/hipert/em/basic", test_nc_hipert_em_basic);
   g_test_add_func ("/nc/hipert/gw/basic", test_nc_hipert_gw_basic);
+  g_test_add_func ("/nc/hiprim/two_fluids/basic", test_nc_hiprim_two_fluids_basic);
 
   g_test_run ();
 }
@@ -446,5 +448,23 @@ test_nc_hipert_gw_basic (void)
   g_assert_cmpfloat (nc_hipert_gw_get_k (gw), ==, 0.1);
 
   NCM_TEST_FREE (nc_hipert_gw_free, gw);
+}
+
+void
+test_nc_hiprim_two_fluids_basic (void)
+{
+  NcHIPrimTwoFluids *tf = nc_hiprim_two_fluids_new ();
+  NcHIPrimTwoFluids *tf2;
+
+  g_assert_true (tf != NULL);
+  g_assert_true (NC_IS_HIPRIM_TWO_FLUIDS (tf));
+
+  tf2 = nc_hiprim_two_fluids_ref (tf);
+  nc_hiprim_two_fluids_clear (&tf2);
+  g_assert_true (tf2 == NULL);
+
+  g_assert_true (NC_IS_HIPRIM_TWO_FLUIDS (tf));
+
+  NCM_TEST_FREE (nc_hiprim_two_fluids_free, tf);
 }
 

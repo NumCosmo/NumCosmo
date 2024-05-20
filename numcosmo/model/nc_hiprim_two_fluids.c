@@ -241,6 +241,46 @@ nc_hiprim_two_fluids_new (void)
 }
 
 /**
+ * nc_hiprim_two_fluids_ref: (skip)
+ * @two_fluids: a #NcHIPrimTwoFluids
+ *
+ * Increases the reference count of the object.
+ *
+ * Returns: (transfer full): the same object.
+ */
+NcHIPrimTwoFluids *
+nc_hiprim_two_fluids_ref (NcHIPrimTwoFluids *two_fluids)
+{
+  return NC_HIPRIM_TWO_FLUIDS (g_object_ref (two_fluids));
+}
+
+/**
+ * nc_hiprim_two_fluids_free: (skip)
+ * @two_fluids: a #NcHIPrimTwoFluids
+ *
+ * Decreases the reference count of the object. When its reference count drops to 0, the
+ * object is finalized.
+ */
+void
+nc_hiprim_two_fluids_free (NcHIPrimTwoFluids *two_fluids)
+{
+  g_object_unref (two_fluids);
+}
+
+/**
+ * nc_hiprim_two_fluids_clear: (skip)
+ * @two_fluids: a #NcHIPrimTwoFluids
+ *
+ * If *@two_fluids is not %NULL, the reference count of the object is decreased and the
+ * pointer is set to %NULL.
+ */
+void
+nc_hiprim_two_fluids_clear (NcHIPrimTwoFluids **two_fluids)
+{
+  g_clear_object (two_fluids);
+}
+
+/**
  * nc_hiprim_two_fluids_set_use_default_calib:
  * @two_fluids: a #NcHIPrimTwoFluids
  * @use_default_calib: a #gboolean
@@ -256,12 +296,12 @@ nc_hiprim_two_fluids_set_use_default_calib (NcHIPrimTwoFluids *two_fluids, gbool
   if ((use_default_calib && self->use_default_calib) || (!use_default_calib && !self->use_default_calib))
     return;
 
+  ncm_spline2d_clear (&self->lnSA_powspec_lnk_lnw);
+
   if (use_default_calib)
   {
     NcmSerialize *ser         = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
     gchar *default_calib_file = ncm_cfg_get_data_filename ("hiprim_2f_spline.bin", TRUE);
-
-    ncm_spline2d_clear (&self->lnSA_powspec_lnk_lnw);
 
     self->lnSA_powspec_lnk_lnw = NCM_SPLINE2D (ncm_serialize_from_binfile (ser, default_calib_file));
     g_assert_nonnull (self->lnSA_powspec_lnk_lnw);
@@ -314,6 +354,9 @@ nc_hiprim_two_fluids_set_lnk_lnw_spline (NcHIPrimTwoFluids *two_fluids, NcmSplin
   ncm_spline2d_clear (&self->lnSA_powspec_lnk_lnw);
 
   self->lnSA_powspec_lnk_lnw = lnSA_powspec_lnk_lnw;
+
+  if (!ncm_spline2d_is_init (self->lnSA_powspec_lnk_lnw))
+    ncm_spline2d_prepare (self->lnSA_powspec_lnk_lnw);
 }
 
 /**

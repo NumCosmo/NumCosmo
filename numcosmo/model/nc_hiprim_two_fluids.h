@@ -87,6 +87,9 @@ GType nc_hiprim_two_fluids_get_type (void) G_GNUC_CONST;
 #define NC_HIPRIM_TWO_FLUIDS_DEFAULT_N_T (0.0)
 
 NcHIPrimTwoFluids *nc_hiprim_two_fluids_new (void);
+NcHIPrimTwoFluids *nc_hiprim_two_fluids_ref (NcHIPrimTwoFluids *two_fluids);
+void nc_hiprim_two_fluids_free (NcHIPrimTwoFluids *two_fluids);
+void nc_hiprim_two_fluids_clear (NcHIPrimTwoFluids **two_fluids);
 
 void nc_hiprim_two_fluids_set_use_default_calib (NcHIPrimTwoFluids *two_fluids, gboolean use_default_calib);
 gboolean nc_hiprim_two_fluids_get_use_default_calib (NcHIPrimTwoFluids *two_fluids);
