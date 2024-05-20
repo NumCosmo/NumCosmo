@@ -72,6 +72,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_spline_func.h"
 #include "perturbations/nc_hipert_two_fluids.h"
 #include "perturbations/nc_hipert_itwo_fluids.h"
 
@@ -95,7 +96,7 @@
 #define SUN_BAND_ACCESS SM_ELEMENT_D
 
 #endif /* NUMCOSMO_GIR_SCAN */
-
+#undef HAVE_SUNDIALS_ARKODE
 #include "perturbations/nc_hipert_private.h"
 
 struct _NcHIPertTwoFluidsPrivate
@@ -116,6 +117,9 @@ typedef struct _NcHIPertTwoFluidsArg
   NcHICosmo *cosmo;
   NcHIPertTwoFluids *ptf;
   gdouble prec;
+  guint mode;
+  gdouble alpha_i;
+  gdouble alpha;
 } NcHIPertTwoFluidsArg;
 
 static void
@@ -132,7 +136,7 @@ nc_hipert_two_fluids_init (NcHIPertTwoFluids *ptf)
   self->arg = g_new0 (NcHIPertTwoFluidsArg, 1);
 
 #ifdef HAVE_SUNDIALS_ARKODE
-  self->arkode = ARKodeCreate ();
+  self->arkode = NULL;
 #endif /* HAVE_SUNDIALS_ARKODE */
 }
 
@@ -159,7 +163,7 @@ nc_hipert_two_fluids_finalize (GObject *object)
 
   if (self->arkode != NULL)
   {
-    ARKodeFree (&self->arkode);
+    ARKStepFree (&self->arkode);
     self->arkode = NULL;
   }
 
@@ -588,7 +592,7 @@ static gint
 _nc_hipert_two_fluids_f_QP_mode1 (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
-  const gdouble k            = NC_HIPERT (arg->ptf)->k;
+  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
   NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
 
   const gdouble Q_R1 = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1);
@@ -627,7 +631,7 @@ static gint
 _nc_hipert_two_fluids_f_QP_mode2 (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
-  const gdouble k            = NC_HIPERT (arg->ptf)->k;
+  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
   NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
 
   const gdouble Q_R2 = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2);
@@ -747,7 +751,7 @@ static gint
 _nc_hipert_two_fluids_f_zetaS_zeta (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
-  const gdouble k            = NC_HIPERT (arg->ptf)->k;
+  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
   NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
 
   const gdouble zeta_R  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R);
@@ -773,7 +777,7 @@ static gint
 _nc_hipert_two_fluids_f_zetaS_S (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
-  const gdouble k            = NC_HIPERT (arg->ptf)->k;
+  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
   NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
 
   const gdouble S_R  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_R);
@@ -882,7 +886,7 @@ static gint
 _nc_hipert_two_fluids_J_QP_mode1 (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
-  const gdouble k            = NC_HIPERT (arg->ptf)->k;
+  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
   NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
 
   const gdouble gammabar11 = eom->gammabar11;
@@ -960,7 +964,7 @@ static gint
 _nc_hipert_two_fluids_J_QP_mode2 (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
-  const gdouble k            = NC_HIPERT (arg->ptf)->k;
+  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
   NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
 
   const gdouble gammabar22 = eom->gammabar22;
@@ -1100,7 +1104,7 @@ static gint
 _nc_hipert_two_fluids_J_zetaS_zeta (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
-  const gdouble k            = NC_HIPERT (arg->ptf)->k;
+  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
   NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
 
   /************************************************************************************************************/
@@ -1158,7 +1162,7 @@ static gint
 _nc_hipert_two_fluids_J_zetaS_S (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
-  const gdouble k            = NC_HIPERT (arg->ptf)->k;
+  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
   NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
 
   /************************************************************************************************************/
@@ -1238,7 +1242,7 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
 
 #ifdef HAVE_SUNDIALS_ARKODE
   ARKRhsFn fE, fI;
-  ARKodeJacFn dfI_dy;
+  ARKLsJacFn dfI_dy;
 #endif /* HAVE_SUNDIALS_ARKODE */
 
   if (vtype != c_vtype)
@@ -1319,8 +1323,8 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
   if (!pert->priv->cvode_init)
   {
 #ifdef HAVE_SUNDIALS_ARKODE
-    flag = ARKodeInit (self->arkode, fE, fI, alpha, pert->priv->y);
-    NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
+    self->arkode = ARKStepCreate (fE, fI, alpha, pert->priv->y);
+    NCM_CVODE_CHECK (self->arkode, "ARKodeInit", 0, );
 #endif /* HAVE_SUNDIALS_ARKODE */
 
     if (useQP)
@@ -1344,7 +1348,7 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
 
 #ifdef HAVE_SUNDIALS_ARKODE
-    flag = ARKodeReInit (self->arkode, fE, fI, alpha, pert->priv->y);
+    flag = ARKStepReInit (self->arkode, fE, fI, alpha, pert->priv->y);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
 #endif /* HAVE_SUNDIALS_ARKODE */
   }
@@ -1364,21 +1368,20 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
   NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
 
 #ifdef HAVE_SUNDIALS_ARKODE
-  flag = ARKodeSStolerances (self->arkode, pert->priv->reltol, 0.0);
+  flag = ARKStepSStolerances (self->arkode, pert->priv->reltol, 0.0);
   NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1, );
 
-  flag = ARKodeSetMaxNumSteps (self->arkode, G_MAXUINT32);
+  flag = ARKStepSetMaxNumSteps (self->arkode, G_MAXUINT32);
   NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
-  flag = ARKodeSetLinearSolver (self->arkode, pert->priv->LS, pert->priv->A);
+  flag = ARKStepSetLinearSolver (self->arkode, pert->priv->LS, pert->priv->A);
   NCM_CVODE_CHECK (&flag, "ARKodeSetLinearSolver", 1, );
 
-  flag = ARKodeSetJacFn (self->arkode, dfI_dy);
+  flag = ARKStepSetJacFn (self->arkode, dfI_dy);
   NCM_CVODE_CHECK (&flag, "ARKodeSetJacFn", 1, );
 
-  flag = ARKodeSetLinear (self->arkode, 1);
+  flag = ARKStepSetLinear (self->arkode, 1);
   NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
-#endif /* HAVE_SUNDIALS_ARKODE */
 
   if (useQP)
   {
@@ -1391,38 +1394,39 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
     NCM_CVODE_CHECK (&flag, "ARKodeSetJacFn", 1, );
   }
 
-#ifdef HAVE_SUNDIALS_ARKODE
-
   switch (main_mode)
   {
     case 1:
     case 2:
-      flag = ARKodeSetImEx (self->arkode);
-      NCM_CVODE_CHECK (&flag, "ARKodeSetImEx", 1, );
+      /* flag = ARKStepSetImEx (self->arkode); */
+      /* NCM_CVODE_CHECK (&flag, "ARKodeSetImEx", 1, ); */
 
-      flag = ARKodeSetOrder (self->arkode, 5);
-      NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
+      /* flag = ARKStepSetOrder (self->arkode, 5); */
+      /* NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, ); */
 
       /*flag = ARKodeSetARKTableNum (self->arkode, 22, 9); */
       /*NCM_CVODE_CHECK (&flag, "ARKodeSetIRKTableNum", 1, ); */
       break;
-    case 3:
-      flag = ARKodeSetExplicit (self->arkode);
-      NCM_CVODE_CHECK (&flag, "ARKodeSetExplicit", 1, );
 
-      flag = ARKodeSetOrder (self->arkode, 6);
-      NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
-
-      flag = ARKodeSetERKTableNum (self->arkode, 10);
-      NCM_CVODE_CHECK (&flag, "ARKodeSetERKTableNum", 1, );
-      break;
-    case 4:
-      flag = ARKodeSetImplicit (self->arkode);
-      NCM_CVODE_CHECK (&flag, "ARKodeSetImplicit", 1, );
-
-      flag = ARKodeSetIRKTableNum (self->arkode, 11 + 11);
-      NCM_CVODE_CHECK (&flag, "ARKodeSetIRKTableNum", 1, );
-      break;
+/*
+ *   case 3:
+ *     flag = ARKStepSetExplicit (self->arkode);
+ *     NCM_CVODE_CHECK (&flag, "ARKodeSetExplicit", 1, );
+ *
+ *     flag = ARKStepSetOrder (self->arkode, 6);
+ *     NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
+ *
+ *     flag = ARKStepSetERKTableNum (self->arkode, 10);
+ *     NCM_CVODE_CHECK (&flag, "ARKodeSetERKTableNum", 1, );
+ *     break;
+ *   case 4:
+ *     flag = ARKStepSetImplicit (self->arkode);
+ *     NCM_CVODE_CHECK (&flag, "ARKodeSetImplicit", 1, );
+ *
+ *     flag = ARKStepSetIRKTableNum (self->arkode, 11 + 11);
+ *     NCM_CVODE_CHECK (&flag, "ARKodeSetIRKTableNum", 1, );
+ *     break;
+ */
     default:
       g_error ("nc_hipert_two_fluids_set_init_cond: Unknown main mode %u.", main_mode);
       break;
@@ -1465,12 +1469,12 @@ nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble a
 
   if (TRUE)
   {
-    flag = ARKodeSetUserData (self->arkode, arg);
+    flag = ARKStepSetUserData (self->arkode, arg);
     NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
 
     /*ARKodeSetDiagnostics (self->arkode, stderr); */
 
-    flag = ARKode (self->arkode, alphaf, pert->priv->y, &alpha_i, CV_NORMAL);
+    flag = ARKStepEvolve (self->arkode, alphaf, pert->priv->y, &alpha_i, ARK_NORMAL);
     NCM_CVODE_CHECK (&flag, "CVode[nc_hipert_two_fluids_evolve]", 1, );
 
     pert->priv->alpha0 = alpha_i;
@@ -1480,6 +1484,9 @@ nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble a
   {
     flag = CVodeSetUserData (pert->priv->cvode, arg);
     NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
+
+    flag = CVodeSetStopTime (pert->priv->cvode, alphaf);
+    NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
 
     flag = CVode (pert->priv->cvode, alphaf, pert->priv->y, &alpha_i, CV_NORMAL);
     NCM_CVODE_CHECK (&flag, "CVode[nc_hipert_two_fluids_evolve]", 1, );
@@ -1508,6 +1515,87 @@ nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble a
 
     ncm_vector_free (ci);
     ncm_vector_free (cmp);
+  }
+}
+
+/**
+ * nc_hipert_two_fluids_evolve_array:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alphaf: the final log-redshift time.
+ *
+ * Evolve the system until @alphaf and store the results in an array.
+ *
+ * Returns: (transfer full): a #NcmMatrix
+ */
+NcmMatrix *
+nc_hipert_two_fluids_evolve_array (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphaf)
+{
+  NcHIPertTwoFluidsPrivate * const self = ptf->priv;
+  NcHIPert *pert                        = NC_HIPERT (ptf);
+  NcHIPertTwoFluidsArg *arg             = self->arg;
+  gdouble *yi                           = NV_DATA_S (pert->priv->y);
+  gdouble alpha_i                       = 0.0;
+  GArray *array                         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  gint flag;
+
+  arg->cosmo = cosmo;
+  arg->ptf   = ptf;
+
+  if (NV_LENGTH_S (pert->priv->y) != NC_HIPERT_ITWO_FLUIDS_VARS_LEN)
+    g_error ("nc_hipert_two_fluids_evolve: cannot evolve subsidiary approximated system, use the appropriated evolve function.");
+
+#ifdef HAVE_SUNDIALS_ARKODE
+
+  if (TRUE)
+  {
+    flag = ARKStepSetUserData (self->arkode, arg);
+    NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, NULL);
+
+    g_array_append_val (array, pert->priv->alpha0);
+    g_array_append_vals (array, NV_DATA_S (pert->priv->y), NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+
+    while (alphaf > pert->priv->alpha0)
+    {
+      flag = ARKStepEvolve (self->arkode, alphaf, pert->priv->y, &alpha_i, ARK_ONE_STEP);
+      NCM_CVODE_CHECK (&flag, "CVode[nc_hipert_two_fluids_evolve]", 1, NULL);
+
+      pert->priv->alpha0 = alpha_i;
+
+      g_array_append_val (array, alpha_i);
+      g_array_append_vals (array, NV_DATA_S (pert->priv->y), NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+    }
+  }
+  else
+#endif /* HAVE_SUNDIALS_ARKODE */
+  {
+    flag = CVodeSetUserData (pert->priv->cvode, arg);
+    NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, NULL);
+
+    g_array_append_val (array, pert->priv->alpha0);
+    g_array_append_vals (array, NV_DATA_S (pert->priv->y), NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+
+    CVodeSetStopTime (pert->priv->cvode, alphaf);
+
+    while (alphaf > pert->priv->alpha0)
+    {
+      flag = CVode (pert->priv->cvode, alphaf, pert->priv->y, &alpha_i, CV_ONE_STEP);
+      NCM_CVODE_CHECK (&flag, "CVode[nc_hipert_two_fluids_evolve_array]", 1, NULL);
+
+      pert->priv->alpha0 = alpha_i;
+
+      g_array_append_val (array, alpha_i);
+      g_array_append_vals (array, NV_DATA_S (pert->priv->y), NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+    }
+  }
+
+  {
+    const guint ncols = NC_HIPERT_ITWO_FLUIDS_VARS_LEN + 1;
+    NcmMatrix *res    = ncm_matrix_new_array (array, ncols);
+
+    g_array_unref (array);
+
+    return res;
   }
 }
 
@@ -1875,5 +1963,91 @@ nc_hipert_two_fluids_get_cross_time (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, N
   gsl_root_fsolver_free (s);
 
   return alpha;
+}
+
+static gdouble
+_nc_hipert_two_fluids_zeta_spectrum (const gdouble lnk, gpointer userdata)
+{
+  NcHIPertTwoFluidsArg *arg             = (NcHIPertTwoFluidsArg *) userdata;
+  NcHIPert *pert                        = NC_HIPERT (arg->ptf);
+  NcHIPertTwoFluidsPrivate * const self = arg->ptf->priv;
+  NcmVector *init_cond                  = ncm_vector_new (NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+  const gdouble k                       = exp (lnk);
+  gdouble alpha_i0, alpha_i;
+
+  nc_hipert_set_mode_k (pert, k);
+
+  alpha_i = nc_hipert_two_fluids_get_cross_time (arg->ptf, arg->cosmo, arg->mode - 1, arg->alpha_i, arg->prec);
+  nc_hipert_two_fluids_get_init_cond_zetaS (arg->ptf, arg->cosmo, alpha_i, arg->mode, M_PI * 0.25, init_cond);
+  nc_hipert_two_fluids_set_init_cond (arg->ptf, arg->cosmo, alpha_i, arg->mode, FALSE, init_cond);
+
+  nc_hipert_two_fluids_evolve (arg->ptf, arg->cosmo, arg->alpha);
+
+  ncm_vector_clear (&init_cond);
+
+  {
+    NcmVector *res       = nc_hipert_two_fluids_peek_state (arg->ptf, arg->cosmo, &alpha_i0);
+    const gdouble zeta_r = ncm_vector_get (res, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R);
+    const gdouble zeta_i = ncm_vector_get (res, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I);
+
+    return log (gsl_pow_3 (k) * (gsl_pow_2 (zeta_r) + gsl_pow_2 (zeta_i)));
+  }
+}
+
+/**
+ * nc_hipert_two_fluids_compute_zeta_spectrum:
+ * @ptf: a #NcHIPertTwoFluids
+ * @cosmo: a #NcHICosmo
+ * @mode: the mode
+ * @alpha_i: the initial log-redshift time
+ * @alpha: the log-redshift time
+ * @ki: the initial k
+ * @kf: the final k
+ * @nnodes: number of knots
+ *
+ * Compute the spectra for the two fluids system.
+ *
+ * Returns: (transfer full): a #NcmSpline
+ */
+NcmSpline *
+nc_hipert_two_fluids_compute_zeta_spectrum (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, guint mode, gdouble alpha_i, gdouble alpha, gdouble ki, gdouble kf, guint nnodes)
+{
+  NcHIPert *pert                        = NC_HIPERT (ptf);
+  NcHIPertTwoFluidsPrivate * const self = ptf->priv;
+  NcHIPertTwoFluidsArg *arg             = self->arg;
+  NcmSpline *spline                     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  const gdouble lnki                    = log (ki);
+  const gdouble lnkf                    = log (kf);
+  NcmVector *xv                         = ncm_vector_new (nnodes);
+  NcmVector *yv                         = ncm_vector_new (nnodes);
+  gsl_function F;
+  guint i;
+
+  F.params = arg;
+
+  arg->cosmo   = cosmo;
+  arg->ptf     = ptf;
+  arg->prec    = 1.0e-5;
+  arg->alpha_i = alpha_i;
+  arg->alpha   = alpha;
+  arg->mode    = mode;
+
+  F.function = &_nc_hipert_two_fluids_zeta_spectrum;
+
+  for (i = 0; i < nnodes; i++)
+  {
+    const gdouble lnk = lnki + (lnkf - lnki) * i / (nnodes - 1);
+    const gdouble y   = F.function (lnk, arg);
+
+    ncm_vector_set (xv, i, lnk);
+    ncm_vector_set (yv, i, y);
+  }
+
+  ncm_spline_set (spline, xv, yv, TRUE);
+
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+
+  return spline;
 }
 

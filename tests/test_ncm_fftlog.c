@@ -406,7 +406,7 @@ test_ncm_fftlog_sbessel_j_q0_5_new (TestNcmFftlog *test, gconstpointer pdata)
 void
 test_ncm_fftlog_sbessel_jljm_new (TestNcmFftlog *test, gconstpointer pdata)
 {
-  const guint N          = 1 * g_test_rand_int_range  (1000, 2000);
+  const guint N          = 1 * g_test_rand_int_range  (7800, 8000);
   const guint ell        = g_test_rand_int_range  (0, 10);
   const gint dell        = ell > 1 ? g_test_rand_int_range  (-2, 2) : g_test_rand_int_range  (-ell, ell + 2);
   const gdouble lnw      = 1.0 / 4.0 * log (g_test_rand_double_range (0.4, 1.0));
