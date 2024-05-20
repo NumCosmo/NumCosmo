@@ -75,6 +75,7 @@
 #include <numcosmo/perturbations/nc_hipert.h>
 
 /* Model implementations */
+#include <numcosmo/nc_de_cont.h>
 #include <numcosmo/model/nc_acosmo_lowz.h>
 #include <numcosmo/model/nc_hicosmo_de_cpl.h>
 #include <numcosmo/model/nc_hicosmo_de_jbp.h>
@@ -98,7 +99,7 @@
 #include <numcosmo/model/nc_hiprim_expc.h>
 #include <numcosmo/model/nc_hiprim_power_law.h>
 #include <numcosmo/model/nc_hiprim_sbpl.h>
-#include <numcosmo/nc_de_cont.h>
+#include <numcosmo/model/nc_hiprim_two_fluids.h>
 
 /* Large Scale Structure / Structure Formation */
 #include <numcosmo/lss/nc_window.h>
