@@ -112,3 +112,11 @@ def test_compute_full_spectrum(two_fluids, cosmo_qgrw):
         Pk0 = s.eval(lnk, np.log(w))
         Pk1 = s_calib.eval(lnk, np.log(w))
         assert_allclose(Pk0, Pk1, rtol=1.0e-3)
+
+
+def test_evolve_array(two_fluids, cosmo_qgrw):
+    """Test NcHIPertTwoFluids evolve_array."""
+    two_fluids.props.reltol = 1.0e-9
+    m = two_fluids.evolve_array(cosmo=cosmo_qgrw, alphaf=-1.0e-1)
+
+    assert all(np.isfinite(m.dup_array()))
