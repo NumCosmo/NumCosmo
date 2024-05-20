@@ -2766,7 +2766,7 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
 
   if (self->nchains > 1)
   {
-    if ((self->cur_id + 1) % self->nchains + 1 == self->nchains)
+    if ((self->cur_id + 1) % self->nchains == 0)
     {
       NcmVector *e_mean = ncm_stats_vec_peek_mean (self->e_stats);
       const guint len   = ncm_vector_len (e_mean);
@@ -2777,6 +2777,8 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
       {
         ncm_vector_set (e_var, i, ncm_stats_vec_get_var (self->e_stats, i));
       }
+
+      g_assert_cmpuint (ncm_stats_vec_nitens (self->e_stats), ==, self->nchains);
 
       ncm_stats_vec_append (self->e_mean_stats, e_mean, TRUE);
       g_ptr_array_add (self->e_var_array, e_var);
@@ -4861,6 +4863,7 @@ _ncm_mset_catalog_calc_ensemble_evol (NcmMSetCatalog *mcat, guint vi, guint nste
   NcmVector *pv               = ncm_vector_new (nsteps);
   const gdouble pmin          = ncm_vector_get (self->params_min, vi);
   const gdouble pmax          = ncm_vector_get (self->params_max, vi);
+  const guint div             = max_t > 100 ? max_t / 100 : 1;
 
   guint i, t;
 
@@ -4910,14 +4913,13 @@ _ncm_mset_catalog_calc_ensemble_evol (NcmMSetCatalog *mcat, guint vi, guint nste
 
     ncm_stats_dist1d_epdf_reset (epdf1d);
 
-    if (t % (max_t / 100) == 0)
-      if (mtype > NCM_FIT_RUN_MSGS_NONE)
-        ncm_message ("=");
+    if ((mtype > NCM_FIT_RUN_MSGS_NONE) && (t % div == 0))
+      ncm_message ("=");
   }
 
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
   {
-    if (t % (max_t / 100) != 0)
+    if (t % div != 0)
       ncm_message ("=");
 
     ncm_message ("|\n");
