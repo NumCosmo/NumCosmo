@@ -150,6 +150,9 @@ gdouble nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, const gd
 gdouble nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_angular_diameter (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_dmodulus (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_comoving_volume_element (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_sigma_critical (NcDistance *dist, NcHICosmo *cosmo, const gdouble zs, const gdouble zl);
+gdouble nc_distance_sigma_critical_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble zl);
 gdouble nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, const gdouble z_he, const gdouble z_cmb);
 gdouble nc_distance_dmodulus_hef (NcDistance *dist, NcHICosmo *cosmo, const gdouble z_he, const gdouble z_cmb);
 gdouble nc_distance_shift_parameter (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);

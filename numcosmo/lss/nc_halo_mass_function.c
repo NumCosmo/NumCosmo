@@ -597,23 +597,16 @@ typedef struct _nc_ca_integ
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * This function computes the comoving volume (flat universe) element per unit solid angle $d\Omega$
- * given @z, namely, $$\frac{\mathrm{d}^2V}{\mathrm{d}z\mathrm{d}\Omega} = \frac{c}{H(z)} D_c^2(z),$$
- * where $H(z)$ is the Hubble function and $D_c$ is the comoving distance.
+ * This function computes the comoving volume element per unit solid angle $d\Omega$
+ * given @z. See #nc_distance_comoving_volume_element.
  *
- * Returns: comoving volume element $\frac{\mathrm{d}^2V}{\mathrm{d}z\mathrm{d}\Omega} \,\left[\mathrm{Mpc}^3\right]$.
+ * Returns: the comoving volume element (dimensionless).
  */
 gdouble
 nc_halo_mass_function_dv_dzdomega (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble z)
 {
   NcHaloMassFunctionPrivate * const self = mfp->priv;
-  const gdouble RH                       = nc_hicosmo_RH_Mpc (cosmo);
-  const gdouble VH                       = gsl_pow_3 (RH);
-  const gdouble E                        = sqrt (nc_hicosmo_E2 (cosmo, z));
-  gdouble dc                             = nc_distance_comoving (self->dist, cosmo, z);
-  gdouble dV_dzdOmega                    = VH * gsl_pow_2 (dc) / E;
-
-  return dV_dzdOmega;
+  return nc_distance_comoving_volume_element (self->dist, cosmo, z);
 }
 
 static void _nc_halo_mass_function_generate_2Dspline_knots (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble rel_error);
@@ -731,6 +724,8 @@ nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
 {
   NcHaloMassFunctionPrivate * const self = mfp->priv;
   guint i, j;
+  const gdouble RH                       = nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble VH                       = gsl_pow_3 (RH);
 
   nc_distance_prepare_if_needed (self->dist, cosmo);
   ncm_powspec_filter_prepare_if_needed (self->psf, NCM_MODEL (cosmo));
@@ -746,7 +741,7 @@ nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
     for (i = 0; i < ncm_vector_len (z_vec); i++)
     {
       const gdouble z    = ncm_vector_get (z_vec, i);
-      const gdouble dVdz = self->area_survey * nc_halo_mass_function_dv_dzdomega (mfp, cosmo, z);
+      const gdouble dVdz = self->area_survey * VH * nc_distance_comoving_volume_element (self->dist, cosmo, z);
 
       for (j = 0; j < ncm_vector_len (lnM_vec); j++)
       {
@@ -840,9 +835,11 @@ static gdouble
 _encapsulated_z (gdouble z, gpointer p)
 {
   _encapsulated_function_args *args = (_encapsulated_function_args *) p;
+  const gdouble RH                       = nc_hicosmo_RH_Mpc (args->cosmo);
+  const gdouble VH                       = gsl_pow_3 (RH);
 
-  gdouble A = args->self->area_survey *
-              nc_halo_mass_function_dv_dzdomega (args->mfp, args->cosmo, z) *
+  gdouble A = args->self->area_survey * VH *
+              nc_distance_comoving_volume_element (args->self->dist, args->cosmo, z) *
               nc_halo_mass_function_dn_dlnM (args->mfp, args->cosmo, args->lnM, z);
 
   /*printf ("z   % 22.15g % 22.15g\n", z, A);fflush(stdout);*/
@@ -866,6 +863,8 @@ _nc_halo_mass_function_generate_2Dspline_knots (NcHaloMassFunction *mfp, NcHICos
   NcHaloMassFunctionPrivate * const self = mfp->priv;
   gsl_function Fx, Fy;
   _encapsulated_function_args args;
+  const gdouble RH                       = nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble VH                       = gsl_pow_3 (RH);
 
   g_assert (mfp->d2NdzdlnM == NULL);
   g_assert_cmpfloat (self->lnMi, <, self->lnMf);
@@ -876,7 +875,7 @@ _nc_halo_mass_function_generate_2Dspline_knots (NcHaloMassFunction *mfp, NcHICos
   args.cosmo = cosmo;
   args.z     = (self->zf + self->zi) / 2.0;
   args.lnM   = (self->lnMf + self->lnMi) / 2.0;
-  args.dVdz  = self->area_survey * nc_halo_mass_function_dv_dzdomega (mfp, cosmo, args.z);
+  args.dVdz  = self->area_survey * VH * nc_distance_comoving_volume_element (self->dist, cosmo, args.z);
 
   Fx.function = _encapsulated_lnM;
   Fx.params   = &args;

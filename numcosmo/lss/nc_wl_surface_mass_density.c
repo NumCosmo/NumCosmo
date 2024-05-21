@@ -338,21 +338,7 @@ nc_wl_surface_mass_density_prepare_if_needed (NcWLSurfaceMassDensity *smd, NcHIC
 gdouble
 nc_wl_surface_mass_density_sigma_critical (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zs, const gdouble zl, const gdouble zc)
 {
-  if (zs < zc)
-  {
-    return GSL_POSINF;
-  }
-  else
-  {
-    const gdouble a   = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc (); /* [ M_solar / Mpc ] */
-    const gdouble Ds  = nc_distance_angular_diameter (smd->dist, cosmo, zs);
-    const gdouble Dl  = nc_distance_angular_diameter (smd->dist, cosmo, zl);
-    const gdouble Dls = nc_distance_angular_diameter_z1_z2 (smd->dist, cosmo, zl, zs);
-
-    const gdouble RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
-
-    return a * Ds / (Dl * Dls * RH_Mpc);
-  }
+  return nc_distance_sigma_critical (smd->dist, cosmo, zs, zl);
 }
 
 /**
@@ -375,15 +361,7 @@ nc_wl_surface_mass_density_sigma_critical (NcWLSurfaceMassDensity *smd, NcHICosm
 gdouble
 nc_wl_surface_mass_density_sigma_critical_infinity (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zl, const gdouble zc)
 {
-  /*g_assert_cmpfloat (nc_hicosmo_Omega_k0 (cosmo), >=, 0.0); */
-  const gdouble a     = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc (); /* [ M_solar / Mpc ] */
-  const gdouble Dinf  = nc_distance_transverse_z_to_infinity (smd->dist, cosmo, 0.0);
-  const gdouble Dl    = nc_distance_angular_diameter (smd->dist, cosmo, zl);
-  const gdouble Dlinf = nc_distance_transverse_z_to_infinity (smd->dist, cosmo, zl);
-
-  const gdouble RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
-
-  return a * Dinf / (Dl * Dlinf * RH_Mpc);
+  return nc_distance_sigma_critical_infinity (smd->dist, cosmo, zl);
 }
 
 /**
