@@ -42,7 +42,7 @@ G_BEGIN_DECLS
 #define NC_IS_DATA_SNIA_COV_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_SNIA_COV))
 #define NC_DATA_SNIA_COV_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_SNIA_COV, NcDataSNIACovClass))
 
-#define NC_DATA_SNIA_COV_ERROR (nc_data_snia_cov_error_quark())
+#define NC_DATA_SNIA_COV_ERROR (nc_data_snia_cov_error_quark ())
 
 typedef struct _NcDataSNIACovClass NcDataSNIACovClass;
 typedef struct _NcDataSNIACov NcDataSNIACov;
@@ -143,6 +143,7 @@ void nc_data_snia_cov_set_ceph_dist (NcDataSNIACov *snia_cov, NcmVector *ceph_di
 void nc_data_snia_cov_set_width (NcDataSNIACov *snia_cov, NcmVector *width);
 void nc_data_snia_cov_set_colour (NcDataSNIACov *snia_cov, NcmVector *colour);
 void nc_data_snia_cov_set_thirdpar (NcDataSNIACov *snia_cov, NcmVector *thirdpar);
+void nc_data_snia_cov_set_sigma_thirdpar (NcDataSNIACov *snia_cov, NcmVector *sigma_thirdpar);
 void nc_data_snia_cov_set_abs_mag_set (NcDataSNIACov *snia_cov, GArray *abs_mag_set);
 void nc_data_snia_cov_set_is_calib (NcDataSNIACov *snia_cov, GArray *is_calib);
 void nc_data_snia_cov_set_used_in_sh0es (NcDataSNIACov *snia_cov, GArray *used_in_sh0es);
