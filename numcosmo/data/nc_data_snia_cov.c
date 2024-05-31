@@ -3952,8 +3952,6 @@ nc_data_snia_cov_apply_filter_sh0es_z (NcDataSNIACov *snia_cov, const gdouble z_
       ncm_iset_get_subarray (is, self->is_calib, selff->is_calib);
       ncm_iset_get_subarray (is, self->used_in_sh0es, selff->used_in_sh0es);
       ncm_iset_get_subarray (is, self->dataset, selff->dataset);
-
-      /*printf ("New catalog has %u\n", selff->mu_len);*/
     }
   }
 

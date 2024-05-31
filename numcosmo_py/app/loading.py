@@ -120,6 +120,13 @@ class LoadExperiment:
 
         console = set_ncm_console(self.console_io)
 
+        dataset_file = self.experiment.with_suffix(".dataset.gvar")
+        if dataset_file.exists():
+            dataset = ser.from_binfile(
+                self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
+            )
+            assert isinstance(dataset, Ncm.Dataset)
+
         experiment_objects = ser.dict_str_from_yaml_file(
             self.experiment.absolute().as_posix()
         )
