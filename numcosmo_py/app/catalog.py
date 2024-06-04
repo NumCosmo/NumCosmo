@@ -846,3 +846,22 @@ class ParameterEvolution(ParameterAnalysis):
         plt.show()
 
         self.end_experiment()
+
+
+@dataclasses.dataclass(kw_only=True)
+class GetBestFit(LoadCatalog):
+    """Get best-fit parameters."""
+
+    def __post_init__(self) -> None:
+        """Get best-fit parameters."""
+        super().__post_init__()
+
+        best_fit = np.array(self.mcat.get_bestfit_row().dup_array())[self.nadd_vals :]
+        self.mset.fparams_set_array(best_fit.tolist())
+
+        if self.output is None:
+            raise ValueError("Output file not defined.")
+
+        self.output_dict.add("model-set", self.mset)
+
+        self.end_experiment()
