@@ -61,6 +61,8 @@ static gchar *_nc_data_planck_lkl_files[NC_DATA_PLANCK_LKL_TYPE_LENGTH] = {
   "baseline/plc_3.0/hi_l/plik/plik_rd12_HM_v22b_TTTEEE.clik",
   "baseline/plc_3.0/hi_l/plik_lite/plik_lite_v22_TT.clik",
   "baseline/plc_3.0/hi_l/plik_lite/plik_lite_v22_TTTEEE.clik",
+  "baseline/plc_3.0/lensing/smicadx12_Dec5_ftl_mv2_ndclpp_p_teb_consext8.clik_lensing",
+  "baseline/plc_3.0/lensing/smicadx12_Dec5_ftl_mv2_ndclpp_p_teb_consext8_CMBmarged.clik_lensing",
 };
 
 struct _NcDataPlanckLKL
@@ -112,14 +114,14 @@ static void _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar
 #define CLIK_OBJ(obj) ((clik_object *) (obj))
 #define CLIK_LENS_OBJ(obj) ((clik_lensing_object *) (obj))
 
-#define CLIK_CHECK_ERROR(str, err) \
-        G_STMT_START { \
-          if (isError (err)) \
-          { \
-            gchar error_msg[4096]; \
-            stringError (error_msg, (err)); \
+#define CLIK_CHECK_ERROR(str, err)                 \
+        G_STMT_START {                             \
+          if (isError (err))                       \
+          {                                        \
+            gchar error_msg[4096];                 \
+            stringError (error_msg, (err));        \
             g_error ("%s: %s.", (str), error_msg); \
-          } \
+          }                                        \
         } G_STMT_END
 
 static void
@@ -742,7 +744,8 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
           CLIK_CHECK_ERROR ("_nc_data_planck_lkl_m2lnL_val[clik_compute]", err);
         }
 
-        ncm_assert_cmpdouble_e (check_m2lnL, ==, plik->check_m2lnL, 1.0e-4, 0.0);
+        if (check_value != 0.0)
+          ncm_assert_cmpdouble_e (check_m2lnL, ==, plik->check_m2lnL, 1.0e-4, 0.0);
       }
 
       g_free (chkp);

@@ -71,6 +71,10 @@ class GeneratePlanck:
         bool, typer.Option(help="Use massive neutrinos.", show_default=True)
     ] = False
 
+    include_lens_lkl: Annotated[
+        bool, typer.Option(help="Include lensing likelihood.", show_default=True)
+    ] = False
+
     include_snia: Annotated[
         Optional[SNIaID], typer.Option(help="Include SNIa data.", show_default=True)
     ] = None
@@ -86,11 +90,15 @@ class GeneratePlanck:
 
         if self.data_type == Planck18Types.TT:
             exp, mfunc_array = generate_planck18_tt(
-                massive_nu=self.massive_nu, prim_model=self.prim_model
+                massive_nu=self.massive_nu,
+                prim_model=self.prim_model,
+                use_lensing_likelihood=self.include_lens_lkl,
             )
         elif self.data_type == Planck18Types.TTTEEE:
             exp, mfunc_array = generate_planck18_ttteee(
-                massive_nu=self.massive_nu, prim_model=self.prim_model
+                massive_nu=self.massive_nu,
+                prim_model=self.prim_model,
+                use_lensing_likelihood=self.include_lens_lkl,
             )
         else:
             raise ValueError(f"Invalid data type: {self.data_type}")
