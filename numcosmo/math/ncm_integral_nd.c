@@ -102,6 +102,8 @@ typedef struct _NcmIntegralNDPrivate
   guint maxeval;
   gdouble reltol;
   gdouble abstol;
+  NcmVector *x_vec;
+  NcmVector *fval_vec;
 } NcmIntegralNDPrivate;
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmIntegralND, ncm_integral_nd, G_TYPE_OBJECT)
@@ -127,6 +129,10 @@ ncm_integral_nd_init (NcmIntegralND *intnd)
   self->maxeval = 0;
   self->reltol  = 0.0;
   self->abstol  = 0.0;
+
+  /* These are dummy vectors to be used in the integrand function */
+  self->x_vec    = ncm_vector_new_data_static ((gdouble *) 1, 1, 1);
+  self->fval_vec = ncm_vector_new_data_static ((gdouble *) 1, 1, 1);
 }
 
 static void
@@ -192,8 +198,11 @@ ncm_integral_nd_get_property (GObject *object, guint prop_id, GValue *value, GPa
 static void
 ncm_integral_nd_finalize (GObject *object)
 {
-  /* NcmIntegralND *intnd              = NCM_INTEGRAL_ND (object); */
-  /* NcmIntegralNDPrivate * const self = intnd->priv; */
+  NcmIntegralND *intnd              = NCM_INTEGRAL_ND (object);
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
+
+  ncm_vector_clear (&self->x_vec);
+  ncm_vector_clear (&self->fval_vec);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_integral_nd_parent_class)->finalize (object);
@@ -466,15 +475,13 @@ ncm_integral_nd_get_abstol (NcmIntegralND *intnd)
 static gint
 _ncm_integral_nd_cubature_int (unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval)
 {
-  NcmIntegralND *intnd = NCM_INTEGRAL_ND (fdata);
-  NcmVector *x_vec     = ncm_vector_new_data_static ((gdouble *) x, ndim, 1);
-  NcmVector *fval_vec  = ncm_vector_new_data_static (fval, fdim, 1);
+  NcmIntegralND *intnd              = NCM_INTEGRAL_ND (fdata);
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
+  ncm_vector_replace_data_full (self->x_vec, (gdouble *) x, ndim, 1);
+  ncm_vector_replace_data_full (self->fval_vec, fval, fdim, 1);
 
-  NCM_INTEGRAL_ND_GET_CLASS (intnd)->integrand (intnd, x_vec, ndim, 1, fdim, fval_vec);
-
-  ncm_vector_free (x_vec);
-  ncm_vector_free (fval_vec);
+  NCM_INTEGRAL_ND_GET_CLASS (intnd)->integrand (intnd, self->x_vec, ndim, 1, fdim, self->fval_vec);
 
   return 0;
 }
@@ -482,14 +489,13 @@ _ncm_integral_nd_cubature_int (unsigned ndim, const double *x, void *fdata, unsi
 static gint
 _ncm_integral_nd_cubature_vint (unsigned ndim, size_t npt, const double *x, void *fdata, unsigned fdim, double *fval)
 {
-  NcmIntegralND *intnd = NCM_INTEGRAL_ND (fdata);
-  NcmVector *x_vec     = ncm_vector_new_data_static ((gdouble *) x, ndim * npt, 1);
-  NcmVector *fval_vec  = ncm_vector_new_data_static (fval, fdim * npt, 1);
+  NcmIntegralND *intnd              = NCM_INTEGRAL_ND (fdata);
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
 
-  NCM_INTEGRAL_ND_GET_CLASS (intnd)->integrand (intnd, x_vec, ndim, npt, fdim, fval_vec);
+  ncm_vector_replace_data_full (self->x_vec, (gdouble *) x, ndim * npt, 1);
+  ncm_vector_replace_data_full (self->fval_vec, fval, fdim * npt, 1);
 
-  ncm_vector_free (x_vec);
-  ncm_vector_free (fval_vec);
+  NCM_INTEGRAL_ND_GET_CLASS (intnd)->integrand (intnd, self->x_vec, ndim, npt, fdim, self->fval_vec);
 
   return 0;
 }
@@ -616,6 +622,6 @@ ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector
       break;
   }
 
-  g_assert (ret == 0);
+  g_assert_cmpint (ret, ==, 0);
 }
 
