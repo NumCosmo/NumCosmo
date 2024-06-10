@@ -573,7 +573,7 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
 
   ncm_integral_nd_set_reltol (lh_int, self->prec);
   ncm_integral_nd_set_abstol (lh_int, 0.0);
-  ncm_integral_nd_set_method (lh_int, NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V);
+  ncm_integral_nd_set_method (lh_int, NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V);
 
   g_assert_cmpuint (ncm_matrix_ncols (self->obs), ==, 4);
 
@@ -620,6 +620,9 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
     }
 
     m2lnP_gal_i = -2.0 * log (vres);
+
+    /* printf ("r = %f, zp = %f, et = %f, ex = %f, m2lnP_gal_i = %f\n", likelihood_integral->data.r, likelihood_integral->data.zp, likelihood_integral->data.et, likelihood_integral->data.ex, m2lnP_gal_i); */
+
 
     if (m2lnP_gal != NULL)
       ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
