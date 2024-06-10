@@ -194,8 +194,12 @@ _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHalo
 
   if (z > z_cluster)
   {
-    gt       = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r, z, z_cluster, z_cluster);
-    e_source = (e_obs - gt) / (1.0 - conj (gt) * e_obs);
+    gt = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r, z, z_cluster, z_cluster);
+
+    if (cabs (gt) > 1.0)
+      e_source = (1.0 - gt * conj (e_obs)) / (conj (e_obs) - conj (gt));
+    else
+      e_source = (e_obs - gt) / (1.0 - conj (gt) * e_obs);
   }
 
   return exp (-0.5 * gsl_pow_2 (cabs (e_source) / self->sigma)) / (2.0 * M_PI * self->sigma * self->sigma);
@@ -221,8 +225,12 @@ _nc_galaxy_sd_shape_gauss_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, 
 
   if (z_source > z_cluster)
   {
-    gt       = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z_source, z_cluster, &self->optzs);
-    e_source = (e_obs - gt) / (1.0 - conj (gt) * e_obs);
+    gt = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z_source, z_cluster, &self->optzs);
+
+    if (cabs (gt) > 1.0)
+      e_source = (1.0 - gt * conj (e_obs)) / (conj (e_obs) - conj (gt));
+    else
+      e_source = (e_obs - gt) / (1.0 - conj (gt) * e_obs);
   }
 
   return exp (-0.5 * gsl_pow_2 (cabs (e_source) / self->sigma)) / (2.0 * M_PI * self->sigma * self->sigma);
