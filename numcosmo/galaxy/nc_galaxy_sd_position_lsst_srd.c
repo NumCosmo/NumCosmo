@@ -53,12 +53,14 @@
 #include <math.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_randist.h>
+#include <gsl/gsl_sf.h>
 
 typedef struct _NcGalaxySDPositionLSSTSRDPrivate
 {
   gdouble z_lb;
   gdouble z_ub;
   gdouble r_norm;
+  gdouble z_norm;
   gdouble r_lb;
   gdouble r_ub;
   gdouble r_lb2;
@@ -87,6 +89,7 @@ nc_galaxy_sd_position_lsst_srd_init (NcGalaxySDPositionLSSTSRD *gsdplsst)
   self->z_lb   = 0.0;
   self->z_ub   = 0.0;
   self->r_norm = 0.0;
+  self->z_norm = 0.0;
   self->r_lb   = 0.0;
   self->r_ub   = 0.0;
   self->r_lb2  = 0.0;
@@ -220,8 +223,8 @@ _nc_galaxy_sd_position_lsst_srd_integ (NcGalaxySDPosition *gsdp, const gdouble r
   const gdouble z0                              = Z0;
   const gdouble y                               = pow (z, alpha);
 
-  return pow (z, beta) * exp (-(y / self->y0)) * r * self->r_norm;
-  // return gsl_ran_gamma_pdf (y, gamma_a, y0) * alpha * y / z * r * self->r_norm;
+  return pow (z, beta) * exp (-(y / self->y0)) * r * self->r_norm * self->z_norm;
+  /* return pow (z, beta) * exp (-(y / self->y0)) * r * self->r_norm; */
 }
 
 static void
@@ -229,13 +232,15 @@ _nc_galaxy_sd_position_lsst_srd_set_z_lim (NcGalaxySDPosition *gsdp, gdouble z_m
 {
   NcGalaxySDPositionLSSTSRD *gsdplsst           = NC_GALAXY_SD_POSITION_LSST_SRD (gsdp);
   NcGalaxySDPositionLSSTSRDPrivate * const self = nc_galaxy_sd_position_lsst_srd_get_instance_private (gsdplsst);
-  const gdouble alpha = ALPHA;
+  const gdouble alpha                           = ALPHA;
+  const gdouble beta                            = BETA;
 
   g_assert_cmpfloat (z_min, <, z_max);
 
-  self->z_lb = z_min;
-  self->z_ub = z_max;
-  self->y0   = pow (Z0, alpha);
+  self->z_lb   = z_min;
+  self->z_ub   = z_max;
+  self->y0     = pow (Z0, alpha);
+  self->z_norm =  alpha / pow (Z0, 1 + beta) / (gsl_sf_gamma_inc ((1 + beta) / alpha, pow (z_min / Z0, alpha)) - gsl_sf_gamma_inc ((1 + beta) / alpha, pow (z_max / Z0, alpha)));
 }
 
 static void
