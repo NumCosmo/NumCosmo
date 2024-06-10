@@ -97,9 +97,9 @@ _nc_galaxy_sd_position_set_property (GObject *object, guint prop_id, const GValu
       nc_galaxy_sd_position_set_r_lim (gsdp, r_lim->elements[0], r_lim->elements[1]);
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -130,9 +130,9 @@ _nc_galaxy_sd_position_get_property (GObject *object, guint prop_id, GValue *val
       g_value_take_boxed (value, ncm_dtuple2_new (r_min, r_max));
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
