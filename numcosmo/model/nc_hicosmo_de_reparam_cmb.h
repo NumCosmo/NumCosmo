@@ -63,3 +63,4 @@ NcHICosmoDEReparamCMB *nc_hicosmo_de_reparam_cmb_new (guint length);
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_DE_REPARAM_CMB_H_ */
+

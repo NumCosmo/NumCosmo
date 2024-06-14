@@ -157,8 +157,8 @@ _nc_hicosmo_gcg_constructed (GObject *object)
 
       for (i = 0; i < m_len; i++)
       {
-        cosmo_de->priv->nu_rho_s[i] = ncm_spline_cubic_notaknot_new ();
-        cosmo_de->priv->nu_p_s[i]   = ncm_spline_cubic_notaknot_new ();
+        cosmo_de->priv->nu_rho_s[i] = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+        cosmo_de->priv->nu_p_s[i]   = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
       }
     }
   }

@@ -27,13 +27,13 @@
  * @title: Gir Scanning Compatibility
  * @short_description: Gir scanning types stubs.
  *
- * Stubs to avoid warnings from gir scanning 
+ * Stubs to avoid warnings from gir scanning
  * all functions/structs using these types
  * must be skipped using (skip).
- * 
+ *
  * These types do not represent anything, do not
  * use this documentation.
- * 
+ *
  */
 
 /**
@@ -295,3 +295,4 @@
  *
  */
 #define fitsfile gint
+

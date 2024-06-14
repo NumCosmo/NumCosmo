@@ -45,6 +45,15 @@ void test_ncm_mpi_job_test_basic (void);
 void test_ncm_mpi_job_fit_basic (void);
 void test_ncm_mpi_job_mcmc_basic (void);
 void test_ncm_mpi_job_feval_basic (void);
+void test_ncm_powspec_spline2d_basic (void);
+
+void test_nc_de_cont_basic (void);
+void test_nc_hicosmo_qgw_basic (void);
+void test_nc_hipert_adiab_basic (void);
+void test_nc_hipert_em_basic (void);
+void test_nc_hipert_gw_basic (void);
+void test_nc_hipert_two_fluids_basic (void);
+void test_nc_hiprim_two_fluids_basic (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -66,6 +75,16 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mpi_job_fit/basic", test_ncm_mpi_job_fit_basic);
   g_test_add_func ("/ncm/mpi_job_mcmc/basic", test_ncm_mpi_job_mcmc_basic);
   g_test_add_func ("/ncm/mpi_job_feval/basic", test_ncm_mpi_job_feval_basic);
+  g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
+
+  g_test_add_func ("/nc/de_cont/basic", test_nc_de_cont_basic);
+  g_test_add_func ("/nc/hicosmo/qgw/basic", test_nc_hicosmo_qgw_basic);
+
+  g_test_add_func ("/nc/hipert/adiab/basic", test_nc_hipert_adiab_basic);
+  g_test_add_func ("/nc/hipert/em/basic", test_nc_hipert_em_basic);
+  g_test_add_func ("/nc/hipert/gw/basic", test_nc_hipert_gw_basic);
+  g_test_add_func ("/nc/hipert/two_fluids/basic", test_nc_hipert_two_fluids_basic);
+  g_test_add_func ("/nc/hiprim/two_fluids/basic", test_nc_hiprim_two_fluids_basic);
 
   g_test_run ();
 }
@@ -299,5 +318,173 @@ test_ncm_mpi_job_feval_basic (void)
   NCM_TEST_FREE (ncm_dataset_free, dset);
   NCM_TEST_FREE (ncm_data_free, data);
   NCM_TEST_FREE (ncm_mset_free, mset);
+}
+
+void
+test_ncm_powspec_spline2d_basic (void)
+{
+  gdouble x[6]      = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
+  gdouble y[7]      = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+  gdouble z[42]     = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0, };
+  NcmVector *xv     = ncm_vector_new_data_static (x, 6, 1);
+  NcmVector *yv     = ncm_vector_new_data_static (y, 7, 1);
+  NcmMatrix *zm     = ncm_matrix_new_data_static (z, 7, 6);
+  NcmSpline *sc     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  NcmSpline2d *sb2d = ncm_spline2d_bicubic_new (sc);
+
+  ncm_spline2d_set (NCM_SPLINE2D (sb2d), xv, yv, zm, FALSE);
+
+  {
+    NcmPowspecSpline2d *ps_s2d = ncm_powspec_spline2d_new (NCM_SPLINE2D (sb2d));
+    NcmPowspecSpline2d *ps_s2d2;
+
+    g_assert_true (ps_s2d != NULL);
+    g_assert_true (NCM_IS_POWSPEC_SPLINE2D (ps_s2d));
+
+    ps_s2d2 = ncm_powspec_spline2d_ref (ps_s2d);
+    ncm_powspec_spline2d_clear (&ps_s2d2);
+    g_assert_true (ps_s2d2 == NULL);
+
+    g_assert_true (NCM_IS_POWSPEC_SPLINE2D (ps_s2d));
+
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
+    ncm_matrix_free (zm);
+    ncm_spline_free (NCM_SPLINE (sc));
+
+    NCM_TEST_FREE (ncm_powspec_spline2d_free, ps_s2d);
+    NCM_TEST_FREE (ncm_spline2d_free, NCM_SPLINE2D (sb2d));
+  }
+}
+
+void
+test_nc_hicosmo_qgw_basic (void)
+{
+  NcHICosmoQGW *qgw = nc_hicosmo_qgw_new ();
+
+  g_assert_true (qgw != NULL);
+  g_assert_true (NC_IS_HICOSMO_QGW (qgw));
+
+  NCM_TEST_FREE (nc_hicosmo_free, NC_HICOSMO (qgw));
+}
+
+void
+test_nc_de_cont_basic (void)
+{
+  NcDECont *dec = nc_de_cont_new (0.3, 0.7, 0.01, 0.01);
+  NcDECont *dec2;
+
+  g_assert_true (dec != NULL);
+  g_assert_true (NC_IS_DE_CONT (dec));
+
+  dec2 = nc_de_cont_ref (dec);
+  nc_de_cont_clear (&dec2);
+  g_assert_true (dec2 == NULL);
+
+  g_assert_true (NC_IS_DE_CONT (dec));
+
+  nc_de_cont_set_k (dec, 0.1);
+  g_assert_cmpfloat (nc_de_cont_get_k (dec), ==, 0.1);
+
+  NCM_TEST_FREE (nc_de_cont_free, dec);
+}
+
+void
+test_nc_hipert_adiab_basic (void)
+{
+  NcHIPertAdiab *adiab = nc_hipert_adiab_new ();
+  NcHIPertAdiab *adiab2;
+
+  g_assert_true (adiab != NULL);
+  g_assert_true (NC_IS_HIPERT_ADIAB (adiab));
+
+  adiab2 = nc_hipert_adiab_ref (adiab);
+  nc_hipert_adiab_clear (&adiab2);
+  g_assert_true (adiab2 == NULL);
+
+  g_assert_true (NC_IS_HIPERT_ADIAB (adiab));
+
+  nc_hipert_adiab_set_k (adiab, 0.1);
+  g_assert_cmpfloat (nc_hipert_adiab_get_k (adiab), ==, 0.1);
+
+  NCM_TEST_FREE (nc_hipert_adiab_free, adiab);
+}
+
+void
+test_nc_hipert_em_basic (void)
+{
+  NcHIPertEM *em = nc_hipert_em_new ();
+  NcHIPertEM *em2;
+
+  g_assert_true (em != NULL);
+  g_assert_true (NC_IS_HIPERT_EM (em));
+
+  em2 = nc_hipert_em_ref (em);
+  nc_hipert_em_clear (&em2);
+  g_assert_true (em2 == NULL);
+
+  g_assert_true (NC_IS_HIPERT_EM (em));
+
+  nc_hipert_em_set_k (em, 0.1);
+  g_assert_cmpfloat (nc_hipert_em_get_k (em), ==, 0.1);
+
+  NCM_TEST_FREE (nc_hipert_em_free, em);
+}
+
+void
+test_nc_hipert_gw_basic (void)
+{
+  NcHIPertGW *gw = nc_hipert_gw_new ();
+  NcHIPertGW *gw2;
+
+  g_assert_true (gw != NULL);
+  g_assert_true (NC_IS_HIPERT_GW (gw));
+
+  gw2 = nc_hipert_gw_ref (gw);
+  nc_hipert_gw_clear (&gw2);
+  g_assert_true (gw2 == NULL);
+
+  g_assert_true (NC_IS_HIPERT_GW (gw));
+
+  nc_hipert_gw_set_k (gw, 0.1);
+  g_assert_cmpfloat (nc_hipert_gw_get_k (gw), ==, 0.1);
+
+  NCM_TEST_FREE (nc_hipert_gw_free, gw);
+}
+
+void
+test_nc_hipert_two_fluids_basic (void)
+{
+  NcHIPertTwoFluids *tf = nc_hipert_two_fluids_new ();
+  NcHIPertTwoFluids *tf2;
+
+  g_assert_true (tf != NULL);
+  g_assert_true (NC_IS_HIPERT_TWO_FLUIDS (tf));
+
+  tf2 = nc_hipert_two_fluids_ref (tf);
+  nc_hipert_two_fluids_clear (&tf2);
+  g_assert_true (tf2 == NULL);
+
+  g_assert_true (NC_IS_HIPERT_TWO_FLUIDS (tf));
+
+  NCM_TEST_FREE (nc_hipert_two_fluids_free, tf);
+}
+
+void
+test_nc_hiprim_two_fluids_basic (void)
+{
+  NcHIPrimTwoFluids *tf = nc_hiprim_two_fluids_new ();
+  NcHIPrimTwoFluids *tf2;
+
+  g_assert_true (tf != NULL);
+  g_assert_true (NC_IS_HIPRIM_TWO_FLUIDS (tf));
+
+  tf2 = nc_hiprim_two_fluids_ref (tf);
+  nc_hiprim_two_fluids_clear (&tf2);
+  g_assert_true (tf2 == NULL);
+
+  g_assert_true (NC_IS_HIPRIM_TWO_FLUIDS (tf));
+
+  NCM_TEST_FREE (nc_hiprim_two_fluids_free, tf);
 }
 

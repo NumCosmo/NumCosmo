@@ -111,6 +111,7 @@ typedef struct _NcmFitESMCMCWalkerAPESPrivate
   gboolean use_interp;
   gboolean use_threads;
   gboolean constructed;
+  guint exploration;
 } NcmFitESMCMCWalkerAPESPrivate;
 
 struct _NcmFitESMCMCWalkerAPES
@@ -147,6 +148,7 @@ ncm_fit_esmcmc_walker_apes_init (NcmFitESMCMCWalkerAPES *apes)
   self->use_interp  = FALSE;
   self->use_threads = FALSE;
   self->constructed = FALSE;
+  self->exploration = 0;
 
   g_ptr_array_set_free_func (self->thetastar, (GDestroyNotify) ncm_vector_free);
 }
@@ -557,6 +559,9 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
       } while (!ncm_mset_fparam_valid_bounds (mset, thetastar_i));
     }
   }
+
+  if (self->exploration > 0)
+    self->exploration--;
 }
 
 static void
@@ -614,7 +619,10 @@ _ncm_fit_esmcmc_walker_apes_prob (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
  *     exp (- 0.5 * (m2lnL_star - m2lnL_cur)), exp (- 0.5 * (m2lnp_cur - m2lnp_star)));
  */
 
-  return exp (-0.5 * ((m2lnL_star - m2lnp_star) - (m2lnL_cur - m2lnp_cur)));
+  if (self->exploration)
+    return exp (-0.5 * (m2lnL_star - m2lnL_cur));
+  else
+    return exp (-0.5 * ((m2lnL_star - m2lnp_star) - (m2lnL_cur - m2lnp_cur)));
 }
 
 static gdouble
@@ -625,7 +633,10 @@ _ncm_fit_esmcmc_walker_apes_prob_norm (NcmFitESMCMCWalker *walker, GPtrArray *th
   const gdouble m2lnp_star                   = ncm_vector_get (self->m2lnp_star, k);
   const gdouble m2lnp_cur                    = ncm_vector_get (self->m2lnp_cur, k);
 
-  return -0.5 * (m2lnp_cur - m2lnp_star);
+  if (self->exploration)
+    return 0.0;
+  else
+    return -0.5 * (m2lnp_cur - m2lnp_star);
 }
 
 static void
@@ -1106,5 +1117,26 @@ ncm_fit_esmcmc_walker_apes_set_cov_robust (NcmFitESMCMCWalkerAPES *apes)
 
   ncm_stats_dist_kde_set_cov_type (NCM_STATS_DIST_KDE (self->sd0), NCM_STATS_DIST_KDE_COV_TYPE_ROBUST);
   ncm_stats_dist_kde_set_cov_type (NCM_STATS_DIST_KDE (self->sd1), NCM_STATS_DIST_KDE_COV_TYPE_ROBUST);
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_set_exploration:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @exploration: a guint
+ *
+ * Sets the exploration parameter to be used when building the
+ * posterior approximation. During the exploration phase, the
+ * new samples are accepted considering only the posterior.
+ * This makes the exploration phase to be more efficient to find
+ * the global maximum of the posterior, but this phase should be
+ * discarded in the final analysis.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_exploration (NcmFitESMCMCWalkerAPES *apes, guint exploration)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  self->exploration = exploration;
 }
 

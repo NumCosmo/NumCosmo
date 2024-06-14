@@ -709,7 +709,7 @@ _ncm_stats_dist_prepare (NcmStatsDist *sd)
       break;
   }
 
-  if (self->n_obs < self->d)
+  if (self->n_obs <= self->d)
     g_error ("_ncm_stats_dist_prepare: the sample is too small.");
 
   sd_class->prepare_kernel (sd, self->sample_array);
@@ -850,7 +850,7 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
   {
     NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
     NcmStatsDistEval eval       = {sd, self, sd_class, NULL, m2lnp};
-    const gdouble dbl_limit     = 6.0;
+    const gdouble dbl_limit     = 2.0;
     guint i;
 
     /*
