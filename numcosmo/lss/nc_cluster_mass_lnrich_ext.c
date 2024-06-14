@@ -72,6 +72,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassLnrichExt, nc_cluster_mass_lnrich_ext, 
 #define SIGMA_M2 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_M2))
 #define SIGMA_Z2 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_Z2))
 #define SIGMA_MZ (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_MZ))
+#define A0    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_A0))
 #define CUT      (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT))
 #define CUT_M1   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT_M1))
 #define CUT_Z1   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT_Z1))
@@ -387,6 +388,7 @@ nc_cluster_mass_lnrich_ext_class_init (NcClusterMassLnrichExtClass *klass)
                               NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_Z2,
                               NCM_PARAM_TYPE_FIXED);
 
+
   /**
    * NcClusterMassLnrichExt:sigma_MZ:
    *
@@ -398,7 +400,18 @@ nc_cluster_mass_lnrich_ext_class_init (NcClusterMassLnrichExtClass *klass)
                               NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_MZ,
                               NCM_PARAM_TYPE_FIXED);
 
-  /**
+ /**
+   * NcClusterMassLnrichExt:A0:
+   *
+   * A standard deviation term.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_LNRICH_EXT_A0, "\\mu_\\mathrm{A_0}", "A0",
+                              -10.0,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_LNRICH_EXT_DEFAULT_A0,
+                              NCM_PARAM_TYPE_FIXED);
+ 
+ /**
    * NcClusterMassLnrichExt:cut:
    *
    * Cut in richness.
@@ -457,8 +470,8 @@ _nc_cluster_mass_lnrich_ext_lnR_sigma (NcClusterMass *clusterm, const gdouble ln
   const gdouble DlnM                         = lnM - self->lnM0;
   const gdouble Vz                           = self->use_ln1pz ? log1p (z) - self->ln1pz0 : z / self-> z0;
 
-  lnR[0] = MU + MU_M1 * DlnM + MU_Z1 * Vz + MU_M2 * DlnM * DlnM + MU_Z2 * Vz * Vz + MU_MZ * DlnM * Vz;
-  sigma[0] = SIGMA_0 + SIGMA_M1 * DlnM + SIGMA_Z1 * Vz + SIGMA_M2 * DlnM * DlnM + SIGMA_Z2 * Vz * Vz + SIGMA_MZ * DlnM * Vz;   
+  lnR[0] = MU +  ( MU_M1 * DlnM ) + ( MU_Z1 * Vz ) + ( MU_M2 * DlnM * DlnM ) + ( MU_Z2 * Vz * Vz ) + ( MU_MZ * DlnM * Vz );
+  sigma[0] = A0 + exp (- (SIGMA_0 + SIGMA_M1 * DlnM + SIGMA_Z1 * Vz + SIGMA_M2 * DlnM * DlnM + SIGMA_Z2 * Vz * Vz + SIGMA_MZ * DlnM * Vz));   
 }
 
 static gdouble
@@ -594,7 +607,7 @@ nc_cluster_mass_lnrich_ext_get_mean_richness (NcClusterMassLnrichExt *lnrich_ext
   const gdouble DlnM                         = lnM - self->lnM0;
   const gdouble Vz                           = self->use_ln1pz ? log1p (z) - self->ln1pz0 : z / self-> z0;
     
-  return MU + MU_M1 * DlnM + MU_Z1 * Vz + MU_M2 * DlnM * DlnM + MU_Z2 * Vz * Vz + MU_MZ * DlnM * Vz;
+  return MU + ( MU_M1 * DlnM ) + ( MU_Z1 * Vz ) + ( MU_M2 * DlnM * DlnM ) + ( MU_Z2 * Vz * Vz ) + ( MU_MZ * DlnM * Vz );
 }
 
 /**
@@ -613,7 +626,7 @@ nc_cluster_mass_lnrich_ext_get_std_richness (NcClusterMassLnrichExt *lnrich_ext,
   const gdouble DlnM                         = lnM - self->lnM0;
   const gdouble Vz                           = self->use_ln1pz ? log1p (z) - self->ln1pz0 : z / self-> z0;
 
-  return SIGMA_0 + ( SIGMA_M1 * DlnM ) + ( SIGMA_Z1 * Vz ) + ( SIGMA_M2 * DlnM * DlnM ) + ( SIGMA_Z2 * Vz * Vz ) + ( SIGMA_MZ * DlnM * Vz );
+  return A0 + exp ( - ( SIGMA_0 + ( SIGMA_M1 * DlnM ) + ( SIGMA_Z1 * Vz ) + ( SIGMA_M2 * DlnM * DlnM ) + ( SIGMA_Z2 * Vz * Vz ) + ( SIGMA_MZ * DlnM * Vz ) ) );
 }
 
 /**
