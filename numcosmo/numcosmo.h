@@ -143,6 +143,7 @@
 #include <numcosmo/lss/nc_cluster_mass_benson_xray.h>
 #include <numcosmo/lss/nc_cluster_mass_plcl.h>
 #include <numcosmo/lss/nc_cluster_mass_ascaso.h>
+#include <numcosmo/lss/nc_cluster_mass_lnrich_ext.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_pseudo_counts.h>
 #include <numcosmo/lss/nc_galaxy_redshift.h>
@@ -185,6 +186,7 @@
 #include <numcosmo/data/nc_data_cluster_ncounts_gauss.h>
 #include <numcosmo/data/nc_data_cluster_pseudo_counts.h>
 #include <numcosmo/data/nc_data_cluster_wl.h>
+#include <numcosmo/data/nc_data_cluster_mass_rich.h>
 #include <numcosmo/data/nc_data_reduced_shear_cluster_mass.h>
 #include <numcosmo/data/nc_data_planck_lkl.h>
 #include <numcosmo/data/nc_data_xcor.h>
