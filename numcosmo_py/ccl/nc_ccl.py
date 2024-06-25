@@ -115,7 +115,7 @@ def create_nc_obj(
         psf.set_best_lnr0()
 
     # pylint: enable=protected-access
-    return cosmo, dist, ps_lin, ps_nln, hmfunc
+    return cosmo, dist, ps_lin, ps_nln, psf
 
 
 class CCLParams:

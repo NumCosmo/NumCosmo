@@ -144,6 +144,7 @@
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_mass_nodist.h"
 #include "lss/nc_cluster_mass_lnnormal.h"
+#include "lss/nc_cluster_mass_richness.h"
 #include "lss/nc_cluster_mass_vanderlinde.h"
 #include "lss/nc_cluster_mass_benson.h"
 #include "lss/nc_cluster_mass_benson_xray.h"
@@ -670,6 +671,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_LNNORMAL);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_RICHNESS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_VANDERLINDE);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_BENSON);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_BENSON_XRAY);

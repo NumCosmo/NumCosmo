@@ -134,6 +134,7 @@
 #include <numcosmo/lss/nc_cluster_mass.h>
 #include <numcosmo/lss/nc_cluster_mass_nodist.h>
 #include <numcosmo/lss/nc_cluster_mass_lnnormal.h>
+#include <numcosmo/lss/nc_cluster_mass_richness.h>
 #include <numcosmo/lss/nc_cluster_mass_vanderlinde.h>
 #include <numcosmo/lss/nc_cluster_mass_benson.h>
 #include <numcosmo/lss/nc_cluster_mass_benson_xray.h>
