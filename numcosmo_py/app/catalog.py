@@ -26,11 +26,13 @@
 import math
 import dataclasses
 from typing import Optional, Annotated, List
+import warnings
 from pathlib import Path
 import typer
 from rich.table import Table
 from rich.text import Text
 import numpy as np
+
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 import getdist
@@ -699,6 +701,8 @@ class PlotCorner(LoadCatalog):
                 log_file=None,
                 mcsample_only=True,
                 plot_name=None,
+                output=None,
+                product_file=False,
             )
             mcsamples.append(extra_exp.mcsample)
 
@@ -719,9 +723,20 @@ class PlotCorner(LoadCatalog):
             mcsamples, shaded=True, markers=bf, title_limit=self.title_limit
         )
 
+        def _set_rasterized(element):
+            if hasattr(element, "set_rasterized"):
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    element.set_rasterized(True)
+            if hasattr(element, "get_children"):
+                for child in element.get_children():
+                    _set_rasterized(child)
+
+        _set_rasterized(g.fig)
+
         if self.output is not None:
             filename = self.output.with_suffix(".corner.pdf").absolute().as_posix()
-            plt.savefig(filename, bbox_inches="tight")
+            plt.savefig(filename, bbox_inches="tight", dpi=300)
 
         plt.show()
 

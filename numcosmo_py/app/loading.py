@@ -147,7 +147,8 @@ class LoadExperiment:
         if self.product_file:
             if self.output is not None:
                 raise RuntimeError(
-                    "The product file option is incompatible with the output option."
+                    f"The product file option is incompatible with the output "
+                    f"option {self.output}."
                 )
             if self.starting_point is not None:
                 raise RuntimeError(
