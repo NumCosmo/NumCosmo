@@ -33,18 +33,19 @@ function which samples the cosmological model and the mass-observable
 relation and stores the results in the NcmData object. The NcmData object
 can then be used to generate a mock catalog by calling the catalog_save
 function.
-
 """
+
 import math
+import pytest
 import numpy as np
 from numcosmo_py import Nc, Ncm
 
 Ncm.cfg_init()
 
 
-def test_cluster_abundance_sampling():
-    """Example of using the cluster abundance module to generate a mock catalog."""
-
+@pytest.fixture(name="cosmo_hmf")
+def fixture_cosmo_hmf():
+    """Fixture for the halo mass function."""
     cosmo = Nc.HICosmoDEXcdm()
     reion = Nc.HIReionCamb()
     prim = Nc.HIPrimPowerLaw()
@@ -68,7 +69,19 @@ def test_cluster_abundance_sampling():
     mulf.set_Delta(200.0)
     mulf.set_sim(Nc.MultiplicityFuncBocquetSim.DM)
 
-    mf = Nc.HaloMassFunction.new(dist, psf, mulf)
+    hmf = Nc.HaloMassFunction.new(dist, psf, mulf)
+
+    hmf.prepare(cosmo)
+
+    return cosmo, hmf
+
+
+def test_cluster_abundance_sampling(cosmo_hmf):
+    """Test the cluster abundance sampling.
+
+    Example of using the cluster abundance module to generate a mock catalog.
+    """
+    cosmo, hmf = cosmo_hmf
 
     lnMobs_min = math.log(1.0e14)
     lnMobs_max = math.log(1.0e16)
@@ -80,7 +93,7 @@ def test_cluster_abundance_sampling():
         pz_min=z_min, pz_max=z_max, z_bias=0.0, sigma0=0.03
     )
 
-    cad = Nc.ClusterAbundance.new(mf, None)
+    cad = Nc.ClusterAbundance.new(hmf, None)
 
     ncdata = Nc.DataClusterNCount.new(
         cad, "NcClusterPhotozGaussGlobal", "NcClusterMassLnnormal"
@@ -129,3 +142,24 @@ def test_cluster_abundance_sampling():
     assert np.isfinite(z_true.dup_array()).all()
     assert np.isfinite(lnM_obs.dup_array()).all()
     assert np.isfinite(z_obs.dup_array()).all()
+
+
+def test_hmf_volume(cosmo_hmf):
+    """Test the halo mass function volume.
+
+    Test the comoving volume of the halo mass function.
+    """
+    cosmo, hmf = cosmo_hmf
+
+    dist = Nc.Distance.new(2.0)
+    dist.prepare(cosmo)
+
+    z = 0.3
+    dV = hmf.dv_dzdomega(cosmo, z)
+
+    assert dV > 0.0
+    assert np.isfinite(dV)
+
+    dist_dV = dist.comoving_volume_element(cosmo, z)
+
+    assert np.isclose(dV, dist_dV, rtol=1.0e-13, atol=0.0)
