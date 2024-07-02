@@ -32,7 +32,13 @@ from . import from_cosmosis
 from .run_fit import RunFit, RunTest
 from .fisher import ComputeTheoryVector, RunFisher, RunFisherBias
 from .esmcmc import RunMCMC
-from .catalog import AnalyzeMCMC, CalibrateCatalog, PlotCorner
+from .catalog import (
+    AnalyzeMCMC,
+    CalibrateCatalog,
+    PlotCorner,
+    VisualHW,
+    ParameterEvolution,
+)
 from .generate import GeneratePlanck, GenerateJpasForecast
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
@@ -113,6 +119,18 @@ CAT_PLOT_CORNER_CMD: CMDArg = {
     "help": "Plots the corner plot for a given catalog.",
 }
 
+CAT_VISUAL_HW_CMD: CMDArg = {
+    "name": "visual-hw",
+    "no_args_is_help": True,
+    "help": "Visualizes the Heidelberger and Welch convergence test.",
+}
+
+CAT_PARAM_EVOLUTION_CMD: CMDArg = {
+    "name": "param-evolution",
+    "no_args_is_help": True,
+    "help": "Plots the parameter evolution for a given catalog.",
+}
+
 GEN_PLANCK_CMD: CMDArg = {
     "name": "planck18",
     "no_args_is_help": True,
@@ -147,6 +165,8 @@ app_run_mcmc.command(**RUN_MCMC_APES_CMD)(RunMCMC)
 app_cat.command(**CAT_ANALYZE_CMD)(AnalyzeMCMC)
 app_cat.command(**CAT_CALIBRATE_CMD)(CalibrateCatalog)
 app_cat.command(**CAT_PLOT_CORNER_CMD)(PlotCorner)
+app_cat.command(**CAT_VISUAL_HW_CMD)(VisualHW)
+app_cat.command(**CAT_PARAM_EVOLUTION_CMD)(ParameterEvolution)
 # ------------------------------------------------------------------------------
 # Installing experiment generation subcommands
 app_generate.command(**GEN_PLANCK_CMD)(GeneratePlanck)

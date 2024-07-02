@@ -37,8 +37,8 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmSplineCubicNotaknot, ncm_spline_cubic_notaknot, NCM, SPLINE_CUBIC_NOTAKNOT, NcmSplineCubic)
 
-NcmSpline *ncm_spline_cubic_notaknot_new (void);
-NcmSpline *ncm_spline_cubic_notaknot_new_full (NcmVector *xv, NcmVector *yv, gboolean init);
+NcmSplineCubicNotaknot *ncm_spline_cubic_notaknot_new (void);
+NcmSplineCubicNotaknot *ncm_spline_cubic_notaknot_new_full (NcmVector *xv, NcmVector *yv, gboolean init);
 
 G_END_DECLS
 

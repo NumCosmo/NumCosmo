@@ -134,8 +134,8 @@ ncm_stats_dist1d_epdf_init (NcmStatsDist1dEPDF *epdf1d)
   epdf1d->fft_data_to_tilde = NULL;
   epdf1d->fft_tilde_to_est  = NULL;
 
-  epdf1d->ph_spline = ncm_spline_cubic_notaknot_new ();
-  epdf1d->p_spline  = ncm_spline_cubic_notaknot_new ();
+  epdf1d->ph_spline = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  epdf1d->p_spline  = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   epdf1d->bw_set    = FALSE;
 
   ncm_stats_vec_enable_quantile (epdf1d->obs_stats, 0.5);

@@ -146,7 +146,7 @@ _nc_xcor_limber_kernel_weak_lensing_constructed (GObject *object)
     NcXcorLimberKernel *xclk             = NC_XCOR_LIMBER_KERNEL (xclkg);
 
     /* Initialize the source integral */
-    xclkg->src_int = ncm_spline_cubic_notaknot_new ();
+    xclkg->src_int = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
     /* Normalize the redshift distribution */
     ncm_spline_prepare (xclkg->dn_dz);

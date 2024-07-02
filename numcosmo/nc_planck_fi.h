@@ -72,3 +72,4 @@ void nc_planck_fi_log_all_models (void);
 G_END_DECLS
 
 #endif /* _NC_PLANCK_FI_H_ */
+

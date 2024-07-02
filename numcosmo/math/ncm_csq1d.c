@@ -88,7 +88,7 @@
 
 typedef enum _NcmCSQ1DEvolStop
 {
-  NCM_CSQ1D_EVOL_STOP_ERROR = -1,
+  NCM_CSQ1D_EVOL_STOP_ERROR    = -1,
   NCM_CSQ1D_EVOL_STOP_FINISHED = 0,
   NCM_CSQ1D_EVOL_STOP_ADIABATIC_START,
   NCM_CSQ1D_EVOL_STOP_UP_START,
@@ -218,15 +218,15 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
   self->LS_Prop = SUNDenseLinearSolver (self->y_Prop, self->A_Prop);
   NCM_CVODE_CHECK ((gpointer) self->LS_Um, "SUNDenseLinearSolver", 0, );
 
-  self->alpha_s  = ncm_spline_cubic_notaknot_new ();
-  self->dgamma_s = ncm_spline_cubic_notaknot_new ();
-  self->gamma_s  = ncm_spline_cubic_notaknot_new ();
+  self->alpha_s  = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  self->dgamma_s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  self->gamma_s  = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
   {
     gint i;
 
     for (i = 0; i < 4; i++)
-      self->R[i] = ncm_spline_cubic_notaknot_new ();
+      self->R[i] = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   }
   self->tf_Prop = 0.0;
   self->ti_Prop = 0.0;

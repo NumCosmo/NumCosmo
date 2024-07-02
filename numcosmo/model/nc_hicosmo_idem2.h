@@ -70,8 +70,8 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_IDEM2_SPARAMS >*/
   NC_HICOSMO_IDEM2_T_GAMMA0,
   NC_HICOSMO_IDEM2_HE_YP,
   NC_HICOSMO_IDEM2_ENNU,
-  NC_HICOSMO_IDEM2_OMEGA_B,    
-  NC_HICOSMO_IDEM2_GAMMA,    
+  NC_HICOSMO_IDEM2_OMEGA_B,
+  NC_HICOSMO_IDEM2_GAMMA,
   /* < private > */
   NC_HICOSMO_IDEM2_SPARAM_LEN, /*< skip >*/
 } NcHICosmoIDEM2SParams;
@@ -82,7 +82,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_IDEM2_SPARAMS >*/
  * @NC_HICOSMO_IDEM2_MASSNU_T: FIXME
  * @NC_HICOSMO_IDEM2_MASSNU_MU: FIXME
  * @NC_HICOSMO_IDEM2_MASSNU_G: FIXME
- * 
+ *
  * FIXME
  *
  */
@@ -190,3 +190,4 @@ NcHICosmoIDEM2ReparamOk *nc_hicosmo_idem2_reparam_ok_new (guint length);
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_IDEM2_H_ */
+

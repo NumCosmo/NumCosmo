@@ -106,11 +106,12 @@
 #include "model/nc_hicosmo_Vexp.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
 #include "model/nc_hicosmo_de_reparam_cmb.h"
-#include "model/nc_hiprim_power_law.h"
 #include "model/nc_hiprim_atan.h"
-#include "model/nc_hiprim_expc.h"
 #include "model/nc_hiprim_bpl.h"
+#include "model/nc_hiprim_expc.h"
+#include "model/nc_hiprim_power_law.h"
 #include "model/nc_hiprim_sbpl.h"
+#include "model/nc_hiprim_two_fluids.h"
 #include "lss/nc_window_tophat.h"
 #include "lss/nc_window_gaussian.h"
 #include "lss/nc_growth_func.h"
@@ -246,14 +247,14 @@ static gboolean _enable_msg         = TRUE;
 static gboolean _enable_msg_flush   = TRUE;
 static gsl_error_handler_t *gsl_err = NULL;
 
-# if (defined (__GNUC__) \
+# if (defined (__GNUC__)                                            \
   && ((__GNUC__ == 11 && __GNUC_MINOR__ >= 1) || (__GNUC__ >= 12))) \
   || (defined (__clang__) && (__clang_major__ >= 12))
 extern void __gcov_dump (void);
 extern void __gcov_reset (void);
 
-#  define __gcov_flush() \
-        do { \
+#  define __gcov_flush()                   \
+        do {                               \
           __gcov_dump (); __gcov_reset (); \
         } while (0)
 # else
@@ -622,11 +623,12 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_OK);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_CMB);
 
-  ncm_cfg_register_obj (NC_TYPE_HIPRIM_POWER_LAW);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_ATAN);
-  ncm_cfg_register_obj (NC_TYPE_HIPRIM_EXPC);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_BPL);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_EXPC);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_POWER_LAW);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_SBPL);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_TWO_FLUIDS);
 
   ncm_cfg_register_obj (NC_TYPE_CBE_PRECISION);
 
