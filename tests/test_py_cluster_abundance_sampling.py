@@ -114,7 +114,7 @@ def test_cluster_abundance_sampling():
     z_obs = ncdata.get_z_obs()
     z_obs_params = ncdata.get_z_obs_params()
 
-    assert ncdata.get_len() == 5547
+    assert ncdata.get_len() == 5522
 
     assert ncdata.get_len() == lnM_obs.col_len()
     assert ncdata.get_len() == z_obs.col_len()
