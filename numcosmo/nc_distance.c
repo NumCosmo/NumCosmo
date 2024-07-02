@@ -794,9 +794,9 @@ nc_distance_dmodulus (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 gdouble
 nc_distance_comoving_volume_element (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 {
-  const gdouble E                        = sqrt (nc_hicosmo_E2 (cosmo, z));
-  gdouble Dt                             = nc_distance_transverse (dist, cosmo, z);
-  gdouble dV_dzdOmega                    = gsl_pow_2 (Dt) / E;
+  const gdouble E     = sqrt (nc_hicosmo_E2 (cosmo, z));
+  gdouble Dt          = nc_distance_transverse (dist, cosmo, z);
+  gdouble dV_dzdOmega = gsl_pow_2 (Dt) / E;
 
   return dV_dzdOmega;
 }
@@ -849,7 +849,7 @@ nc_distance_sigma_critical (NcDistance *dist, NcHICosmo *cosmo, const gdouble zs
  * \Sigma_c = \frac{c^2}{4\pi G} \frac{D_\infty}{D_l D_{l\infty}},
  * \end{equation}
  * where $c^2$ is the speed of light squared [ncm_c_c2 ()], $G$ is the gravitational constant in units of $m^3/s^2 M_\odot^{-1}$ [ncm_c_G_mass_solar()],
- * $D_\infty$ ($D_l$) is the angular diameter distance from the observer to the source at infinite redshift (lens), and $D_{l\infty}$ is the angular diameter 
+ * $D_\infty$ ($D_l$) is the angular diameter distance from the observer to the source at infinite redshift (lens), and $D_{l\infty}$ is the angular diameter
  * the lens and the source.
  *
  * Returns: the critical surface density $\Sigma_c$ in units of $M_\odot / Mpc^2$
