@@ -48,14 +48,14 @@ typedef struct _NcSNIADistCov NcSNIADistCov;
 
 /**
  * NcSNIADistCovSParams:
- * @NC_SNIA_DIST_COV_ALPHA: FIXME
- * @NC_SNIA_DIST_COV_BETA: FIXME
- * @NC_SNIA_DIST_COV_M1: FIXME
- * @NC_SNIA_DIST_COV_M2: FIXME
- * @NC_SNIA_DIST_COV_LNSIGMA_PECZ: FIXME
- * @NC_SNIA_DIST_COV_LNSIGMA_LENS: FIXME
+ * @NC_SNIA_DIST_COV_ALPHA: Stretch parameter $\alpha$
+ * @NC_SNIA_DIST_COV_BETA: Colour parameter $\beta$
+ * @NC_SNIA_DIST_COV_M1: Absolute magnitude parameter $M_1$
+ * @NC_SNIA_DIST_COV_M2: Absolute magnitude parameter $M_2$
+ * @NC_SNIA_DIST_COV_LNSIGMA_PECZ: Logarithm of the dispersion due to peculiar velocities
+ * @NC_SNIA_DIST_COV_LNSIGMA_LENS: Logarithm of the dispersion due to lensing
  *
- * FIXME
+ * SN Ia distance covariance model parameters.
  *
  */
 typedef enum _NcSNIADistCovSParams
@@ -72,10 +72,10 @@ typedef enum _NcSNIADistCovSParams
 
 /**
  * NcSNIADistCovVParams:
- * @NC_SNIA_DIST_COV_LNSIGMA_INT: FIXME
- * @NC_SNIA_DIST_COV_MU: FIXME
+ * @NC_SNIA_DIST_COV_LNSIGMA_INT: Intrinsic dispersion parameter $\ln \sigma_{\rm int}$
+ * @NC_SNIA_DIST_COV_MU: Mean absolute magnitude parameter $\mu$
  *
- * FIXME
+ * SN Ia distance covariance model parameters.
  *
  */
 typedef enum _NcSNIADistCovVParams

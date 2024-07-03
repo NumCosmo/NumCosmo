@@ -22,8 +22,11 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Example of how to use the numcosmo library object to compute 
-the probability density function of a distribution of points."""
+"""Example for Ncm.StatsDist1dEPDF.
+
+Example of how to use the numcosmo library object to compute
+the probability density function of a distribution of points.
+"""
 
 
 import matplotlib.pyplot as plot
@@ -41,10 +44,12 @@ Ncm.cfg_init()
 
 
 def test_epdf1d() -> None:
-    """Generate a distribution of points from a Gaussian mixture
-    distribution and reconstruct the probability density function
-    using the numcosmo library."""
+    """Test the 1D probability density function.
 
+    Generate a distribution of points from a Gaussian mixture
+    distribution and reconstruct the probability density function
+    using the numcosmo library.
+    """
     np.random.seed(0)
 
     #
@@ -60,7 +65,7 @@ def test_epdf1d() -> None:
 
     # Cumulative distribution function
     def true_cdf(x):
-        """True cumulative distribution function."""
+        """Compute the true cumulative distribution function."""
         return 0.5 * (norm.cdf(x, peak1, sigma1) + norm.cdf(x, peak2, sigma2))
 
     cdf_cut_l = true_cdf(cut_l)
@@ -70,7 +75,7 @@ def test_epdf1d() -> None:
 
     # Probability density function
     def true_p(x):
-        """True probability density function."""
+        """Compute the true probability density function."""
         return 0.5 * (norm.pdf(x, peak1, sigma1) + norm.pdf(x, peak2, sigma2)) / rbnorm
 
     n = 8000
@@ -82,7 +87,7 @@ def test_epdf1d() -> None:
     for si in s:
         if si >= cut_l and si <= cut_u:
             sa.append(si)
-    s = sa
+    s = np.array(sa)
     n = len(s)
 
     print(f"# Number of points = {n}")

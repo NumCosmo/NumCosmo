@@ -3265,6 +3265,8 @@ class FitESMCMC(GObject.Object):
         Minumum number of runs
       max-runs-time -> gdouble: max-runs-time
         Maximum time between runs
+      skip-check -> gboolean: skip-check
+        Skip check
       log-time-interval -> gdouble: log-time-interval
         Time interval between log
       intermediary-log -> guint: intermediary-log
@@ -3299,6 +3301,7 @@ class FitESMCMC(GObject.Object):
         nthreads: int
         nwalkers: int
         sampler: MSetTransKern
+        skip_check: bool
         trim_type: MSetCatalogTrimType
         use_mpi: bool
         walker: FitESMCMCWalker
@@ -3320,6 +3323,7 @@ class FitESMCMC(GObject.Object):
         nthreads: int = ...,
         nwalkers: int = ...,
         sampler: MSetTransKern = ...,
+        skip_check: bool = ...,
         trim_type: MSetCatalogTrimType = ...,
         use_mpi: bool = ...,
         walker: FitESMCMCWalker = ...,

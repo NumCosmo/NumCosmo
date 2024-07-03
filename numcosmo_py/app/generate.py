@@ -30,7 +30,7 @@ from pathlib import Path
 import numpy as np
 import typer
 
-from numcosmo_py import Ncm
+from numcosmo_py import Ncm, Nc
 from numcosmo_py.experiments.planck18 import (
     Planck18Types,
     Planck18HIPrimModel,
@@ -44,6 +44,7 @@ from numcosmo_py.experiments.jpas_forecast24 import (
     JpasSSCType,
     generate_jpas_forecast_2024,
 )
+from numcosmo_py.experiments.xcdm_no_perturbations import SNIaID, add_snia_likelihood
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -70,7 +71,15 @@ class GeneratePlanck:
         bool, typer.Option(help="Use massive neutrinos.", show_default=True)
     ] = False
 
-    def __post_init__(self):
+    include_lens_lkl: Annotated[
+        bool, typer.Option(help="Include lensing likelihood.", show_default=True)
+    ] = False
+
+    include_snia: Annotated[
+        Optional[SNIaID], typer.Option(help="Include SNIa data.", show_default=True)
+    ] = None
+
+    def __post_init__(self) -> None:
         """Generate Planck 2018 TT baseline experiment."""
         Ncm.cfg_init()
 
@@ -81,16 +90,35 @@ class GeneratePlanck:
 
         if self.data_type == Planck18Types.TT:
             exp, mfunc_array = generate_planck18_tt(
-                massive_nu=self.massive_nu, prim_model=self.prim_model
+                massive_nu=self.massive_nu,
+                prim_model=self.prim_model,
+                use_lensing_likelihood=self.include_lens_lkl,
             )
         elif self.data_type == Planck18Types.TTTEEE:
             exp, mfunc_array = generate_planck18_ttteee(
-                massive_nu=self.massive_nu, prim_model=self.prim_model
+                massive_nu=self.massive_nu,
+                prim_model=self.prim_model,
+                use_lensing_likelihood=self.include_lens_lkl,
             )
         else:
             raise ValueError(f"Invalid data type: {self.data_type}")
 
-        set_mset_parameters(exp.peek("model-set"), self.data_type, self.prim_model)
+        mset = exp.peek("model-set")
+        assert isinstance(mset, Ncm.MSet)
+
+        likelihood = exp.peek("likelihood")
+        assert isinstance(likelihood, Ncm.Likelihood)
+
+        dataset = likelihood.peek_dataset()
+        assert isinstance(dataset, Ncm.Dataset)
+
+        set_mset_parameters(mset, self.data_type, self.prim_model)
+
+        if self.include_snia is not None:
+            dist = Nc.Distance.new(10.0)
+            add_snia_likelihood(dataset, mset, dist, self.include_snia)
+            cosmo = mset.peek(Nc.HICosmo.id())
+            cosmo.set_property("w_fit", True)
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
@@ -99,6 +127,9 @@ class GeneratePlanck:
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
+        ser.to_binfile(
+            dataset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
+        )
         ser.dict_str_to_yaml_file(exp, self.experiment.absolute().as_posix())
         ser.array_to_yaml_file(
             mfunc_array,
@@ -246,6 +277,15 @@ class GenerateJpasForecast:
             fitting_model=self.fitting_model,
         )
 
+        mset = exp.peek("model-set")
+        assert isinstance(mset, Ncm.MSet)
+
+        likelihood = exp.peek("likelihood")
+        assert isinstance(likelihood, Ncm.Likelihood)
+
+        dataset = likelihood.peek_dataset()
+        assert isinstance(dataset, Ncm.Dataset)
+
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
         if self.experiment.suffix != ".yaml":
@@ -253,6 +293,9 @@ class GenerateJpasForecast:
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
+        ser.to_binfile(
+            dataset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
+        )
         ser.dict_str_to_yaml_file(exp, self.experiment.absolute().as_posix())
         ser.array_to_yaml_file(
             mfunc_array,
