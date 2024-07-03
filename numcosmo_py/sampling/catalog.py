@@ -46,7 +46,6 @@ class Catalog:
         weighted: bool = False,
     ):
         """Initialize the catalog."""
-
         if mcat is not None:
             self._catalog = mcat
             if ndim is not None or nwalkers is not None:
@@ -75,7 +74,6 @@ class Catalog:
         interweaved: bool = True,
     ):
         """Add a new sample to the catalog."""
-
         ncols = self._catalog.ncols()
 
         if len(sample.shape) == 1:
@@ -111,7 +109,6 @@ class Catalog:
         weights: Optional[np.ndarray] = None,
     ):
         """Add a new point to the catalog."""
-
         if self._catalog.weighted() and weights is None:
             raise ValueError("weights must be provided for a weighted catalog")
 
@@ -145,8 +142,8 @@ class Catalog:
         effective samples, the autocorrelation time, the maximum
         autocorrelation time, the maximum effective sample size, the
         maximum effective sample size time, the Heidelberger-Welch
-        statistic, the maximum Heidelberger-Welch statistic."""
-
+        statistic, the maximum Heidelberger-Welch statistic.
+        """
         mcat = self._catalog
         mcat.estimate_autocorrelation_tau(False)
         mcat.log_current_stats()
@@ -159,8 +156,8 @@ class Catalog:
         effective samples, the autocorrelation time, the maximum
         autocorrelation time, the maximum effective sample size, the
         maximum effective sample size time, the Heidelberger-Welch
-        statistic, the maximum Heidelberger-Welch statistic."""
-
+        statistic, the maximum Heidelberger-Welch statistic.
+        """
         mcat = self._catalog
         mset = mcat.peek_mset()
         mcat.estimate_autocorrelation_tau(False)
@@ -180,30 +177,27 @@ class Catalog:
 
     def trim(self, nsteps: int, thin: Optional[int] = None):
         """Trim the catalog to remove the first `nsteps` steps.
+
         Optionally, thin the catalog by a factor of `thin`.
 
         :param nsteps: number of steps to remove
         :param thin: thinning factor
         """
-
         if thin is None:
             thin = 1
         self._catalog.trim(nsteps, thin)
 
     def get_mean(self) -> np.ndarray:
         """Get the mean of the catalog."""
-
         return np.array(self._catalog.get_mean().dup_array())
 
     def get_covar(self) -> np.ndarray:
         """Get the covariance matrix of the catalog."""
-
         return np.array(self._catalog.get_covar().dup_array()).reshape(
             self.ndim, self.ndim
         )
 
     def get_mcsamples(self, name: str) -> MCSamples:
         """Get the MCSamples object from the catalog."""
-
         mcsample, _, _ = mcat_to_mcsamples(self._catalog, name)
         return mcsample

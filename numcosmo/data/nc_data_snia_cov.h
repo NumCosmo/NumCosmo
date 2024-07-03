@@ -35,18 +35,11 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_DATA_SNIA_COV             (nc_data_snia_cov_get_type ())
-#define NC_DATA_SNIA_COV(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_SNIA_COV, NcDataSNIACov))
-#define NC_DATA_SNIA_COV_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_SNIA_COV, NcDataSNIACovClass))
-#define NC_IS_DATA_SNIA_COV(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_DATA_SNIA_COV))
-#define NC_IS_DATA_SNIA_COV_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_SNIA_COV))
-#define NC_DATA_SNIA_COV_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_SNIA_COV, NcDataSNIACovClass))
+#define NC_TYPE_DATA_SNIA_COV (nc_data_snia_cov_get_type ())
 
-#define NC_DATA_SNIA_COV_ERROR (nc_data_snia_cov_error_quark())
+G_DECLARE_FINAL_TYPE (NcDataSNIACov, nc_data_snia_cov, NC, DATA_SNIA_COV, NcmDataGaussCov)
 
-typedef struct _NcDataSNIACovClass NcDataSNIACovClass;
-typedef struct _NcDataSNIACov NcDataSNIACov;
-typedef struct _NcDataSNIACovPrivate NcDataSNIACovPrivate;
+#define NC_DATA_SNIA_COV_ERROR (nc_data_snia_cov_error_quark ())
 
 /**
  * NcDataSNIACovOrder:
@@ -72,19 +65,6 @@ typedef enum _NcDataSNIACovOrder
   NC_DATA_SNIA_COV_ORDER_LENGTH, /*< skip >*/
 } NcDataSNIACovOrder;
 
-struct _NcDataSNIACovClass
-{
-  /*< private >*/
-  NcmDataGaussCovClass parent_class;
-};
-
-struct _NcDataSNIACov
-{
-  /*< private >*/
-  NcmDataGaussCov parent_instance;
-  NcDataSNIACovPrivate *priv;
-};
-
 /**
  * NcDataSNIACovError:
  * @NC_DATA_SNIA_COV_ERROR_ID_NOT_FOUND: id not found
@@ -103,7 +83,6 @@ typedef enum /*< enum,underscore_name=NC_DATA_SNIA_COV_ERROR >*/
   NC_DATA_SNIA_COV_ERROR_LENGTH, /*< skip >*/
 } NcDataSNIACovError;
 
-GType nc_data_snia_cov_get_type (void) G_GNUC_CONST;
 GQuark nc_data_snia_cov_error_quark (void) G_GNUC_CONST;
 
 NcDataSNIACov *nc_data_snia_cov_new (gboolean use_norma, guint cat_version);
@@ -143,6 +122,7 @@ void nc_data_snia_cov_set_ceph_dist (NcDataSNIACov *snia_cov, NcmVector *ceph_di
 void nc_data_snia_cov_set_width (NcDataSNIACov *snia_cov, NcmVector *width);
 void nc_data_snia_cov_set_colour (NcDataSNIACov *snia_cov, NcmVector *colour);
 void nc_data_snia_cov_set_thirdpar (NcDataSNIACov *snia_cov, NcmVector *thirdpar);
+void nc_data_snia_cov_set_sigma_thirdpar (NcDataSNIACov *snia_cov, NcmVector *sigma_thirdpar);
 void nc_data_snia_cov_set_abs_mag_set (NcDataSNIACov *snia_cov, GArray *abs_mag_set);
 void nc_data_snia_cov_set_is_calib (NcDataSNIACov *snia_cov, GArray *is_calib);
 void nc_data_snia_cov_set_used_in_sh0es (NcDataSNIACov *snia_cov, GArray *used_in_sh0es);
