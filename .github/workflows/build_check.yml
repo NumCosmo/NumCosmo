@@ -160,6 +160,7 @@ jobs:
           cd examples
           python example_simple.py
           python example_cbe.py
+          numcosmo generate planck18 test_exp_gen.yaml --data-type TT
       - name: Running black check
         run: |
           black --check numcosmo_py

@@ -57,14 +57,15 @@ class HID(str, Enum):
     ALL_COMBINED_JAN_2023 = "ALL_COMBINED_JAN_2023"
 
 
-def gen_snia_likelihood(
+def add_snia_likelihood(
     dataset: Ncm.Dataset,
     modelset: Ncm.MSet,
     dist: Nc.Distance,
     snia_id: SNIaID = SNIaID.COV_PANTHEON_PLUS_SH0ES_SYS_STAT,
 ) -> None:
     """Generate a likelihood for SNIa data."""
-    assert modelset.peek(Nc.HICosmo.id()) is not None
+    cosmo = modelset.peek(Nc.HICosmo.id())
+    assert cosmo is not None
 
     snia_data = Nc.DataSNIACov.new_from_cat_id(snia_id.genum, False)
     if snia_id == SNIaID.COV_PANTHEON_PLUS_SH0ES_SYS_STAT:
@@ -78,7 +79,7 @@ def gen_snia_likelihood(
     dataset.append_data(snia_data)
 
 
-def gen_bao_likelihood(
+def add_bao_likelihood(
     dataset: Ncm.Dataset,
     modelset: Ncm.MSet,
     dist: Nc.Distance,
@@ -105,7 +106,7 @@ def gen_bao_likelihood(
         raise ValueError(f"Unknown BAO data set id: {bao_id}")
 
 
-def gen_h_likelihood(
+def add_h_likelihood(
     dataset: Ncm.Dataset,
     modelset: Ncm.MSet,
     h_id: HID = HID.ALL_COMBINED_JAN_2023,

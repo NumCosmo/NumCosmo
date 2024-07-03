@@ -38,6 +38,7 @@ from .catalog import (
     PlotCorner,
     VisualHW,
     ParameterEvolution,
+    GetBestFit,
 )
 from .generate import GeneratePlanck, GenerateJpasForecast
 
@@ -131,6 +132,12 @@ CAT_PARAM_EVOLUTION_CMD: CMDArg = {
     "help": "Plots the parameter evolution for a given catalog.",
 }
 
+CAT_GET_BEST_FIT_CMD: CMDArg = {
+    "name": "get-best-fit",
+    "no_args_is_help": True,
+    "help": "Get the best fit from a given catalog.",
+}
+
 GEN_PLANCK_CMD: CMDArg = {
     "name": "planck18",
     "no_args_is_help": True,
@@ -167,6 +174,7 @@ app_cat.command(**CAT_CALIBRATE_CMD)(CalibrateCatalog)
 app_cat.command(**CAT_PLOT_CORNER_CMD)(PlotCorner)
 app_cat.command(**CAT_VISUAL_HW_CMD)(VisualHW)
 app_cat.command(**CAT_PARAM_EVOLUTION_CMD)(ParameterEvolution)
+app_cat.command(**CAT_GET_BEST_FIT_CMD)(GetBestFit)
 # ------------------------------------------------------------------------------
 # Installing experiment generation subcommands
 app_generate.command(**GEN_PLANCK_CMD)(GeneratePlanck)

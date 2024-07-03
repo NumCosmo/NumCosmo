@@ -51,6 +51,8 @@ G_DECLARE_FINAL_TYPE (NcDataPlanckLKL, nc_data_planck_lkl, NC, DATA_PLANCK_LKL, 
  * @NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TTTEEE: Planck 2018 baseline high-ell likelihood for TT, TE and EE.
  * @NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TT_LITE: Planck 2018 baseline high-ell likelihood for TT (lite).
  * @NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TTTEEE_LITE: Planck 2018 baseline high-ell likelihood for TT, TE and EE (lite).
+ * @NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LENSING: Planck 2018 baseline lensing likelihood.
+ * @NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LENSING_CMB_MARGINALIZED: Planck 2018 baseline lensing likelihood with CMB marginalized.
  *
  * The Planck likelihood types.
  *
@@ -65,6 +67,8 @@ typedef enum _NcDataPlanckLKLType
   NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TTTEEE,
   NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TT_LITE,
   NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TTTEEE_LITE,
+  NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LENSING,
+  NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LENSING_CMB_MARGINALIZED,
   /* < private > */
   NC_DATA_PLANCK_LKL_TYPE_LENGTH,
 } NcDataPlanckLKLType;
