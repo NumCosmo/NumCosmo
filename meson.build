@@ -1,7 +1,7 @@
 project(
   'numcosmo',
   ['c', 'fortran'],
-  version: '0.21.2',
+  version: '0.22.0',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.2.0',
   default_options: [
@@ -191,8 +191,7 @@ numcosmo_build_shared_only = numcosmo_build_shared and not numcosmo_build_static
 if (
   numcosmo_build_shared
   and numcosmo_build_static
-  and (host_system == 'windows'
-  or host_system == 'cygwin')
+  and (host_system == 'windows' or host_system == 'cygwin')
 )
   error(
     'On Windows default_library must be "shared" or "static" but not "both"',
@@ -826,12 +825,10 @@ if get_option('numcosmo_py')
   if python_pip.found()
     pip_cmd = [
       python.full_path(),
-      '-m',
-      'pip',
+      '-m', 'pip',
       'install',
       numcosmo_source_dir,
-      '-t',
-      python.get_install_dir(),
+      '-t', python.get_install_dir(),
       '--no-dependencies',
     ]
     meson.add_install_script(pip_cmd, skip_if_destdir: true)
@@ -930,4 +927,3 @@ dependencies_summary = {
 }
 
 summary(dependencies_summary, section: 'Dependencies')
-
