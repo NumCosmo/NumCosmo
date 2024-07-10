@@ -17,7 +17,11 @@ from scipy import integrate
 from scipy.interpolate import interp1d
 from scipy.special import spherical_jn as jn
 from scipy.special import jv as Jn
-import healpy
+
+try:
+    import healpy
+except ImportError:
+    healpy = None
 
 from . import numcosmo_class
 
@@ -568,6 +572,8 @@ def get_mask_quantities(clmask=None, mask=None, mask2=None, verbose=False):
     partial sky Sij routines.
 
     """
+    if healpy is None:
+        raise ImportError("Healpy is needed to compute Sij for partial sky.")
 
     if mask is None:  # User gives Cl(mask)
         if verbose:
@@ -664,6 +670,9 @@ def test_mask(mask, clmask, mask2=None):
     """Assert that either the mask or its Cl has been provided. If two masks are
     provided, check that they have the same resolution.
     """
+    if healpy is None:
+        raise ImportError("Healpy is needed to compute Sij for partial sky.")
+
     assert (mask is not None) or (
         clmask is not None
     ), "You need to provide either the mask or its angular power spectrum Cl."
