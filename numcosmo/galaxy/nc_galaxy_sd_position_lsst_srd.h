@@ -57,9 +57,9 @@ typedef enum /*< enum,underscore_name=NC_GALAXY_SD_POSITION_SPARAMS >*/
   NC_GALAXY_SD_POSITION_LSST_SRD_SPARAM_LEN, /*< skip >*/
 } NcGalaxySDPositionSParams;
 
-#define NC_GALAXY_SD_POSITION_LSST_SRD_DEFAULT_ALPHA  (0.78)
-#define NC_GALAXY_SD_POSITION_LSST_SRD_DEFAULT_BETA   (2.00)
-#define NC_GALAXY_SD_POSITION_LSST_SRD_DEFAULT_Z0     (0.13)
+#define NC_GALAXY_SD_POSITION_LSST_SRD_DEFAULT_ALPHA  (1.152)
+#define NC_GALAXY_SD_POSITION_LSST_SRD_DEFAULT_BETA   (2.146)
+#define NC_GALAXY_SD_POSITION_LSST_SRD_DEFAULT_Z0     (0.363)
 
 #define NC_GALAXY_SD_POSITION_LSST_SRD_Y10_ALPHA  (0.68)
 #define NC_GALAXY_SD_POSITION_LSST_SRD_Y10_BETA   (2.00)
@@ -67,8 +67,8 @@ typedef enum /*< enum,underscore_name=NC_GALAXY_SD_POSITION_SPARAMS >*/
 
 #define NC_GALAXY_SD_POSITION_LSST_SRD_DEFAULT_PARAMS_ABSTOL (0.0)
 
-NcGalaxySDPositionLSSTSRD *nc_galaxy_sd_position_lsst_srd_new (const gdouble z_min, const gdouble z_max, const gdouble r_min, const gdouble r_max);
-NcGalaxySDPositionLSSTSRD *nc_galaxy_sd_position_lsst_srd_new_y10 (const gdouble z_min, const gdouble z_max, const gdouble r_min, const gdouble r_max);
+NcGalaxySDPositionLSSTSRD *nc_galaxy_sd_position_lsst_srd_new (const gdouble z_min, const gdouble z_max, const gdouble theta_min, const gdouble theta_max);
+NcGalaxySDPositionLSSTSRD *nc_galaxy_sd_position_lsst_srd_new_y10 (const gdouble z_min, const gdouble z_max, const gdouble theta_min, const gdouble theta_max);
 NcGalaxySDPositionLSSTSRD *nc_galaxy_sd_position_lsst_srd_ref (NcGalaxySDPositionLSSTSRD *gsdplsst);
 
 void nc_galaxy_sd_position_lsst_srd_free (NcGalaxySDPositionLSSTSRD *gsdplsst);

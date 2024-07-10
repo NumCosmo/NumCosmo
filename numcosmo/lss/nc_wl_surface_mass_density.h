@@ -113,27 +113,27 @@ void nc_wl_surface_mass_density_clear (NcWLSurfaceMassDensity **smd);
 void nc_wl_surface_mass_density_prepare (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo);
 void nc_wl_surface_mass_density_prepare_if_needed (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo);
 
-gdouble nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc);
-gdouble nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc);
-gdouble nc_wl_surface_mass_density_sigma_excess (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc);
+gdouble nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zc);
+gdouble nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zc);
+gdouble nc_wl_surface_mass_density_sigma_excess (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zc);
 gdouble nc_wl_surface_mass_density_sigma_critical (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zs, const gdouble zl, const gdouble zc);
 gdouble nc_wl_surface_mass_density_sigma_critical_infinity (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zl, const gdouble zc);
 
-gdouble nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
-gdouble nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc);
-gdouble nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
-gdouble nc_wl_surface_mass_density_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc);
-gdouble nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
-gdouble nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
-gdouble nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
+gdouble nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zs, const gdouble zl, const gdouble zc);
+gdouble nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zl, const gdouble zc);
+gdouble nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zs, const gdouble zl, const gdouble zc);
+gdouble nc_wl_surface_mass_density_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zl, const gdouble zc);
+gdouble nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zs, const gdouble zl, const gdouble zc);
+gdouble nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zs, const gdouble zl, const gdouble zc);
+gdouble nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zs, const gdouble zl, const gdouble zc);
 
-void nc_wl_surface_mass_density_reduced_shear_optzs_prep (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensityOptzs *optzs);
+void nc_wl_surface_mass_density_reduced_shear_optzs_prep (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensityOptzs *optzs);
 gdouble nc_wl_surface_mass_density_reduced_shear_optzs (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble zs, const gdouble zl, NcWLSurfaceMassDensityOptzs *optzs);
 
-GArray *nc_wl_surface_mass_density_sigma_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble zc);
-GArray *nc_wl_surface_mass_density_sigma_excess_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble zc);
-GArray *nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, GArray *zs, const gdouble zl, const gdouble zc);
-GArray *nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, GArray *zs, const gdouble zl, const gdouble zc);
+GArray *nc_wl_surface_mass_density_sigma_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *theta, gdouble fin, gdouble fout, const gdouble zc);
+GArray *nc_wl_surface_mass_density_sigma_excess_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *theta, gdouble fin, gdouble fout, const gdouble zc);
+GArray *nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *theta, gdouble fin, gdouble fout, GArray *zs, const gdouble zl, const gdouble zc);
+GArray *nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *theta, gdouble fin, gdouble fout, GArray *zs, const gdouble zl, const gdouble zc);
 
 G_END_DECLS
 

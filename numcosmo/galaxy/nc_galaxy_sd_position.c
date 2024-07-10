@@ -33,7 +33,7 @@
  *
  *
  * This class describes a galaxy sample position distributions.
- * It is composed by two distributions: an image position distribution $P(r)$ and a redshift distribution $P(z)$.
+ * It is composed by two distributions: an image position distribution $P(\theta)$ and a redshift distribution $P(z)$.
  *
  */
 
@@ -57,7 +57,7 @@ enum
 {
   PROP_0,
   PROP_Z_LIM,
-  PROP_R_LIM,
+  PROP_THETA_LIM,
   PROP_LEN,
 };
 
@@ -87,14 +87,14 @@ _nc_galaxy_sd_position_set_property (GObject *object, guint prop_id, const GValu
       nc_galaxy_sd_position_set_z_lim (gsdp, z_lim->elements[0], z_lim->elements[1]);
       break;
     }
-    case PROP_R_LIM:
+    case PROP_THETA_LIM:
     {
-      NcmDTuple2 *r_lim = g_value_get_boxed (value);
+      NcmDTuple2 *theta_lim = g_value_get_boxed (value);
 
-      if (r_lim == NULL)
+      if (theta_lim == NULL)
         g_error ("_nc_galaxy_sd_position_set_property: r_lim is NULL.");
 
-      nc_galaxy_sd_position_set_r_lim (gsdp, r_lim->elements[0], r_lim->elements[1]);
+      nc_galaxy_sd_position_set_theta_lim (gsdp, theta_lim->elements[0], theta_lim->elements[1]);
       break;
     }
     default:                                                      /* LCOV_EXCL_LINE */
@@ -121,13 +121,13 @@ _nc_galaxy_sd_position_get_property (GObject *object, guint prop_id, GValue *val
       g_value_take_boxed (value, ncm_dtuple2_new (z_min, z_max));
       break;
     }
-    case PROP_R_LIM:
+    case PROP_THETA_LIM:
     {
-      gdouble r_min, r_max;
+      gdouble theta_min, theta_max;
 
-      nc_galaxy_sd_position_get_r_lim (gsdp, &r_min, &r_max);
+      nc_galaxy_sd_position_get_theta_lim (gsdp, &theta_min, &theta_max);
 
-      g_value_take_boxed (value, ncm_dtuple2_new (r_min, r_max));
+      g_value_take_boxed (value, ncm_dtuple2_new (theta_min, theta_max));
       break;
     }
     default:                                                      /* LCOV_EXCL_LINE */
@@ -145,9 +145,9 @@ _nc_galaxy_sd_position_finalize (GObject *object)
 NCM_MSET_MODEL_REGISTER_ID (nc_galaxy_sd_position, NC_TYPE_GALAXY_SD_POSITION)
 
 static gdouble
-_nc_galaxy_sd_position_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng)
+_nc_galaxy_sd_position_gen_theta (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 {
-  g_error ("_nc_galaxy_sd_position_gen_r: method not implemented.");
+  g_error ("_nc_galaxy_sd_position_gen_theta: method not implemented.");
 
   return 0.0;
 }
@@ -161,7 +161,7 @@ _nc_galaxy_sd_position_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 }
 
 static gdouble
-_nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z)
+_nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, const gdouble theta, const gdouble z)
 {
   g_error ("_nc_galaxy_sd_position_integ: method not implemented.");
 
@@ -175,9 +175,9 @@ _nc_galaxy_sd_position_set_z_lim (NcGalaxySDPosition *gsdp, const gdouble z_min,
 }
 
 static void
-_nc_galaxy_sd_position_set_r_lim (NcGalaxySDPosition *gsdp, const gdouble r_min, const gdouble r_max)
+_nc_galaxy_sd_position_set_theta_lim (NcGalaxySDPosition *gsdp, const gdouble r_min, const gdouble r_max)
 {
-  g_error ("_nc_galaxy_sd_position_set_r_lim: method not implemented.");
+  g_error ("_nc_galaxy_sd_position_set_theta_lim: method not implemented.");
 }
 
 static void
@@ -187,9 +187,9 @@ _nc_galaxy_sd_position_get_z_lim (NcGalaxySDPosition *gsdp, gdouble *z_min, gdou
 }
 
 static void
-_nc_galaxy_sd_position_get_r_lim (NcGalaxySDPosition *gsdp, gdouble *r_min, gdouble *r_max)
+_nc_galaxy_sd_position_get_theta_lim (NcGalaxySDPosition *gsdp, gdouble *r_min, gdouble *r_max)
 {
-  g_error ("_nc_galaxy_sd_position_get_r_lim: method not implemented.");
+  g_error ("_nc_galaxy_sd_position_get_theta_lim: method not implemented.");
 }
 
 static void
@@ -220,14 +220,14 @@ nc_galaxy_sd_position_class_init (NcGalaxySDPositionClass *klass)
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcGalaxySDPosition:r-lim:
+   * NcGalaxySDPosition:theta-lim:
    *
    * Galaxy sample radius distribution limits.
    *
    */
   g_object_class_install_property (object_class,
-                                   PROP_R_LIM,
-                                   g_param_spec_boxed ("r-lim",
+                                   PROP_THETA_LIM,
+                                   g_param_spec_boxed ("theta-lim",
                                                        NULL,
                                                        "Galaxy sample radius distribution limits",
                                                        NCM_TYPE_DTUPLE2,
@@ -242,13 +242,13 @@ nc_galaxy_sd_position_class_init (NcGalaxySDPositionClass *klass)
 
   ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
 
-  klass->gen_r     = &_nc_galaxy_sd_position_gen_r;
-  klass->gen_z     = &_nc_galaxy_sd_position_gen_z;
-  klass->integ     = &_nc_galaxy_sd_position_integ;
-  klass->set_z_lim = &_nc_galaxy_sd_position_set_z_lim;
-  klass->set_r_lim = &_nc_galaxy_sd_position_set_r_lim;
-  klass->get_z_lim = &_nc_galaxy_sd_position_get_z_lim;
-  klass->get_r_lim = &_nc_galaxy_sd_position_get_r_lim;
+  klass->gen_theta     = &_nc_galaxy_sd_position_gen_theta;
+  klass->gen_z         = &_nc_galaxy_sd_position_gen_z;
+  klass->integ         = &_nc_galaxy_sd_position_integ;
+  klass->set_z_lim     = &_nc_galaxy_sd_position_set_z_lim;
+  klass->set_theta_lim = &_nc_galaxy_sd_position_set_theta_lim;
+  klass->get_z_lim     = &_nc_galaxy_sd_position_get_z_lim;
+  klass->get_theta_lim = &_nc_galaxy_sd_position_get_theta_lim;
 }
 
 /**
@@ -325,51 +325,51 @@ nc_galaxy_sd_position_get_z_lim (NcGalaxySDPosition *gsdp, gdouble *z_min, gdoub
 }
 
 /**
- * nc_galaxy_sd_position_set_r_lim:
+ * nc_galaxy_sd_position_set_theta_lim:
  * @gsdp: a #NcGalaxySDPosition
- * @r_min: a #gdouble representing the minimum radial position
- * @r_max: a #gdouble representing the maximum radial position
+ * @theta_min: a #gdouble representing the minimum angular radial position
+ * @theta_max: a #gdouble representing the maximum angular radial position
  *
  * Sets the radial position limits of the distribution.
  *
  *
  */
 void
-nc_galaxy_sd_position_set_r_lim (NcGalaxySDPosition *gsdp, const gdouble r_min, const gdouble r_max)
+nc_galaxy_sd_position_set_theta_lim (NcGalaxySDPosition *gsdp, const gdouble theta_min, const gdouble theta_max)
 {
-  NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->set_r_lim (gsdp, r_min, r_max);
+  NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->set_theta_lim (gsdp, theta_min, theta_max);
 }
 
 /**
- * nc_galaxy_sd_position_get_r_lim:
+ * nc_galaxy_sd_position_get_theta_lim:
  * @gsdp: a #NcGalaxySDPosition
- * @r_min: (out): a #gdouble representing the minimum radial position
- * @r_max: (out): a #gdouble representing the maximum radial position
+ * @theta_min: (out): a #gdouble representing the minimum angular radial position
+ * @theta_max: (out): a #gdouble representing the maximum angular radial position
  *
  * Gets the radial position limits of the distribution.
  *
  *
  */
 void
-nc_galaxy_sd_position_get_r_lim (NcGalaxySDPosition *gsdp, gdouble *r_min, gdouble *r_max)
+nc_galaxy_sd_position_get_theta_lim (NcGalaxySDPosition *gsdp, gdouble *theta_min, gdouble *theta_max)
 {
-  NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->get_r_lim (gsdp, r_min, r_max);
+  NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->get_theta_lim (gsdp, theta_min, theta_max);
 }
 
 /**
- * nc_galaxy_sd_position_gen_r: (virtual gen_r)
+ * nc_galaxy_sd_position_gen_theta: (virtual gen_theta)
  * @gsdp: a #NcGalaxySDPosition
  * @rng: a #NcmRNG
  *
- * Generates a $r$ value from the distribution using @rng
- * and saves it in @r.
+ * Generates a $\theta$ value from the distribution using @rng
+ * and saves it in @theta.
  *
- * Returns: the generated $r$ value.
+ * Returns: the generated $\theta$ value.
  */
 gdouble
-nc_galaxy_sd_position_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng)
+nc_galaxy_sd_position_gen_theta (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 {
-  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen_r (gsdp, rng);
+  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen_theta (gsdp, rng);
 }
 
 /**
@@ -391,17 +391,17 @@ nc_galaxy_sd_position_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 /**
  * nc_galaxy_sd_position_integ: (virtual integ)
  * @gsdp: a #NcGalaxySDPosition
- * @r: a #gdouble representing the radial position
+ * @theta: a #gdouble representing the angular radial position
  * @z: a #gdouble representing the redshift
  *
- * Computes the probability density of the observables $r$ and $z$ given the redshift.
- * The probability density is given by $P(z)P(r)$.
+ * Computes the probability density of the observables $rtheta and $z$ given the redshift.
+ * The probability density is given by $P(z)P(\theta)$.
  *
- * Returns: the probability density at $(r, z)$, $P(z)P(r)$.
+ * Returns: the probability density at $(\theta, z)$, $P(z)P(\theta)$.
  */
 gdouble
-nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z)
+nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, const gdouble theta, const gdouble z)
 {
-  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->integ (gsdp, r, z);
+  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->integ (gsdp, theta, z);
 }
 

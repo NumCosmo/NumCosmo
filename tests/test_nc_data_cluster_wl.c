@@ -154,7 +154,10 @@ test_nc_data_cluster_wl_new_flat (TestNcDataClusterWL *test, gconstpointer pdata
   NcDataClusterWL *dcwl         = nc_data_cluster_wl_new (NC_GALAXY_SD_SHAPE (gss),
                                                           NC_GALAXY_SD_Z_PROXY (gsdzpg),
                                                           NC_GALAXY_SD_POSITION (gsdpf),
-                                                          0.4);
+                                                          0.4,
+                                                          0,
+                                                          0,
+                                                          NC_DATA_CLUSTER_WL_COORD_SKY);
 
   nc_galaxy_sd_shape_gauss_set_sigma (gss, 0.001);
   nc_data_cluster_wl_set_cut (dcwl, 0.0, 2.0);
@@ -177,7 +180,10 @@ test_nc_data_cluster_wl_new_lsst_srd (TestNcDataClusterWL *test, gconstpointer p
   NcDataClusterWL *dcwl               = nc_data_cluster_wl_new (NC_GALAXY_SD_SHAPE (gss),
                                                                 NC_GALAXY_SD_Z_PROXY (gsdzpg),
                                                                 NC_GALAXY_SD_POSITION (gsdplsst),
-                                                                0.4);
+                                                                0.4,
+                                                                0,
+                                                                0,
+                                                                NC_DATA_CLUSTER_WL_COORD_SKY);
 
   nc_galaxy_sd_shape_gauss_set_sigma (gss, 0.001);
   nc_data_cluster_wl_set_cut (dcwl, 0.0, 2.0);

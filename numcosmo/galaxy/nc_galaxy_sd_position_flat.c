@@ -53,11 +53,11 @@ typedef struct _NcGalaxySDPositionFlatPrivate
 {
   gdouble z_lb;
   gdouble z_ub;
-  gdouble r_norm;
-  gdouble r_lb;
-  gdouble r_ub;
-  gdouble r_lb2;
-  gdouble r_ub2;
+  gdouble theta_norm;
+  gdouble theta_lb;
+  gdouble theta_ub;
+  gdouble theta_lb2;
+  gdouble theta_ub2;
 } NcGalaxySDPositionFlatPrivate;
 
 struct _NcGalaxySDPositionFlat
@@ -78,13 +78,13 @@ nc_galaxy_sd_position_flat_init (NcGalaxySDPositionFlat *gsdpflat)
 {
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
 
-  self->z_lb   = 0.0;
-  self->z_ub   = 0.0;
-  self->r_norm = 0.0;
-  self->r_lb   = 0.0;
-  self->r_ub   = 0.0;
-  self->r_lb2  = 0.0;
-  self->r_ub2  = 0.0;
+  self->z_lb       = 0.0;
+  self->z_ub       = 0.0;
+  self->theta_norm = 0.0;
+  self->theta_lb   = 0.0;
+  self->theta_ub   = 0.0;
+  self->theta_lb2  = 0.0;
+  self->theta_ub2  = 0.0;
 }
 
 static void
@@ -101,13 +101,13 @@ _nc_galaxy_sd_position_flat_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_position_flat_parent_class)->finalize (object);
 }
 
-static gdouble _nc_galaxy_sd_position_flat_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng);
+static gdouble _nc_galaxy_sd_position_flat_gen_theta (NcGalaxySDPosition *gsdp, NcmRNG *rng);
 static gdouble _nc_galaxy_sd_position_flat_gen_z (NcGalaxySDPosition *gsdp, NcmRNG *rng);
 static gdouble _nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z);
 static void _nc_galaxy_sd_position_flat_set_z_lim (NcGalaxySDPosition *gsdp, gdouble z_min, gdouble z_max);
 static void _nc_galaxy_sd_position_flat_get_z_lim (NcGalaxySDPosition *gsdp, gdouble *z_min, gdouble *z_max);
-static void _nc_galaxy_sd_position_flat_set_r_lim (NcGalaxySDPosition *gsdp, gdouble r_min, gdouble r_max);
-static void _nc_galaxy_sd_position_flat_get_r_lim (NcGalaxySDPosition *gsdp, gdouble *r_min, gdouble *r_max);
+static void _nc_galaxy_sd_position_flat_set_theta_lim (NcGalaxySDPosition *gsdp, gdouble theta_min, gdouble theta_max);
+static void _nc_galaxy_sd_position_flat_get_theta_lim (NcGalaxySDPosition *gsdp, gdouble *theta_min, gdouble *theta_max);
 
 static void
 nc_galaxy_sd_position_flat_class_init (NcGalaxySDPositionFlatClass *klass)
@@ -124,23 +124,23 @@ nc_galaxy_sd_position_flat_class_init (NcGalaxySDPositionFlatClass *klass)
 
   ncm_model_class_check_params_info (model_class);
 
-  sd_position_class->gen_r     = &_nc_galaxy_sd_position_flat_gen_r;
-  sd_position_class->gen_z     = &_nc_galaxy_sd_position_flat_gen_z;
-  sd_position_class->integ     = &_nc_galaxy_sd_position_flat_integ;
-  sd_position_class->set_z_lim = &_nc_galaxy_sd_position_flat_set_z_lim;
-  sd_position_class->get_z_lim = &_nc_galaxy_sd_position_flat_get_z_lim;
-  sd_position_class->set_r_lim = &_nc_galaxy_sd_position_flat_set_r_lim;
-  sd_position_class->get_r_lim = &_nc_galaxy_sd_position_flat_get_r_lim;
+  sd_position_class->gen_theta     = &_nc_galaxy_sd_position_flat_gen_theta;
+  sd_position_class->gen_z         = &_nc_galaxy_sd_position_flat_gen_z;
+  sd_position_class->integ         = &_nc_galaxy_sd_position_flat_integ;
+  sd_position_class->set_z_lim     = &_nc_galaxy_sd_position_flat_set_z_lim;
+  sd_position_class->get_z_lim     = &_nc_galaxy_sd_position_flat_get_z_lim;
+  sd_position_class->set_theta_lim = &_nc_galaxy_sd_position_flat_set_theta_lim;
+  sd_position_class->get_theta_lim = &_nc_galaxy_sd_position_flat_get_theta_lim;
 }
 
 static gdouble
-_nc_galaxy_sd_position_flat_gen_r (NcGalaxySDPosition *gsdp, NcmRNG *rng)
+_nc_galaxy_sd_position_flat_gen_theta (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 {
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
   const gdouble cumul_gen                    = ncm_rng_uniform_gen (rng, 0.0, 1.0);
 
-  return sqrt (cumul_gen * 2.0 / self->r_norm + self->r_lb2);
+  return sqrt (cumul_gen * 2.0 / self->theta_norm + self->theta_lb2);
 }
 
 static gdouble
@@ -158,7 +158,7 @@ _nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, const gdouble r, co
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
 
-  if ((z >= self->z_lb) && (z <= self->z_ub) && (r >= self->r_lb) && (r <= self->r_ub))
+  if ((z >= self->z_lb) && (z <= self->z_ub) && (r >= self->theta_lb) && (r <= self->theta_ub))
     return r;
 
   return 0.0;
@@ -190,53 +190,53 @@ _nc_galaxy_sd_position_flat_get_z_lim (NcGalaxySDPosition *gsdp, gdouble *z_min,
 }
 
 static void
-_nc_galaxy_sd_position_flat_set_r_lim (NcGalaxySDPosition *gsdp, gdouble r_min, gdouble r_max)
+_nc_galaxy_sd_position_flat_set_theta_lim (NcGalaxySDPosition *gsdp, gdouble theta_min, gdouble theta_max)
 {
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
 
-  g_assert_cmpfloat (r_min, <, r_max);
+  g_assert_cmpfloat (theta_min, <, theta_max);
 
-  self->r_lb = r_min;
-  self->r_ub = r_max;
+  self->theta_lb = theta_min;
+  self->theta_ub = theta_max;
 
-  self->r_lb2  = self->r_lb * self->r_lb;
-  self->r_ub2  = self->r_ub * self->r_ub;
-  self->r_norm = 2.0 / (self->r_ub2 - self->r_lb2);
+  self->theta_lb2  = self->theta_lb * self->theta_lb;
+  self->theta_ub2  = self->theta_ub * self->theta_ub;
+  self->theta_norm = 2.0 / (self->theta_ub2 - self->theta_lb2);
 }
 
 static void
-_nc_galaxy_sd_position_flat_get_r_lim (NcGalaxySDPosition *gsdp, gdouble *r_min, gdouble *r_max)
+_nc_galaxy_sd_position_flat_get_theta_lim (NcGalaxySDPosition *gsdp, gdouble *theta_min, gdouble *theta_max)
 {
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
 
-  g_assert_nonnull (r_min);
-  g_assert_nonnull (r_max);
+  g_assert_nonnull (theta_min);
+  g_assert_nonnull (theta_max);
 
-  *r_min = self->r_lb;
-  *r_max = self->r_ub;
+  *theta_min = self->theta_lb;
+  *theta_max = self->theta_ub;
 }
 
 /**
  * nc_galaxy_sd_position_flat_new:
  * @z_min: minimum redshift
  * @z_max: maximum redshift
- * @r_min: minimum radius
- * @r_max: maximum radius
+ * @theta_min: minimum radius
+ * @theta_max: maximum radius
  *
  * Creates a new #NcGalaxySDPositionFlat
  *
  * Returns: (transfer full): a new NcGalaxySDPositionFlat.
  */
 NcGalaxySDPositionFlat *
-nc_galaxy_sd_position_flat_new (const gdouble z_min, const gdouble z_max, const gdouble r_min, const gdouble r_max)
+nc_galaxy_sd_position_flat_new (const gdouble z_min, const gdouble z_max, const gdouble theta_min, const gdouble theta_max)
 {
   NcmDTuple2 z_lim                 = NCM_DTUPLE2_STATIC_INIT (z_min, z_max);
-  NcmDTuple2 r_lim                 = NCM_DTUPLE2_STATIC_INIT (r_min, r_max);
+  NcmDTuple2 theta_lim             = NCM_DTUPLE2_STATIC_INIT (theta_min, theta_max);
   NcGalaxySDPositionFlat *gsdpflat = g_object_new (NC_TYPE_GALAXY_SD_POSITION_FLAT,
                                                    "z-lim", &z_lim,
-                                                   "r-lim", &r_lim,
+                                                   "r-lim", &theta_lim,
                                                    NULL);
 
   return gsdpflat;

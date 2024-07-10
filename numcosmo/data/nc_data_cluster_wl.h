@@ -77,8 +77,16 @@ struct _NcDataClusterWL
   NcDataClusterWLPrivate *priv;
 };
 
+typedef enum _NcDataClusterWLCoord
+{
+  NC_DATA_CLUSTER_WL_COORD_SKY,
+  NC_DATA_CLUSTER_WL_COORD_CCD,
+  /* < private > */
+  NC_DATA_CLUSTER_WL_COORD_LEN, /*< skip >*/
+} NcDataClusterWLCoord;
 
-NcDataClusterWL *nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *rz_dist, const gdouble z_cluster);
+
+NcDataClusterWL *nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *pos_dist, const gdouble z_cluster, const gdouble ra_cluster, const gdouble dec_cluster, NcDataClusterWLCoord coord);
 NcDataClusterWL *nc_data_cluster_wl_new_from_file (const gchar *filename);
 NcDataClusterWL *nc_data_cluster_wl_ref (NcDataClusterWL *dcwl);
 void nc_data_cluster_wl_prepare_kde (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd);
@@ -90,7 +98,7 @@ void nc_data_cluster_wl_set_use_kde (NcDataClusterWL *dcwl, gboolean kde);
 void nc_data_cluster_wl_set_prec (NcDataClusterWL *dcwl, gdouble prec);
 void nc_data_cluster_wl_set_ndata (NcDataClusterWL *dcwl, gdouble ndata);
 void nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcmMatrix *obs);
-void nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gdouble r_max);
+void nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble theta_min, const gdouble theta_max);
 void nc_data_cluster_wl_gen_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, guint nobs, NcmRNG *rng);
 NcmMatrix *nc_data_cluster_wl_peek_obs (NcDataClusterWL *dcwl);
 NcmStatsDist *nc_data_cluster_wl_peek_kde (NcDataClusterWL *dcwl);

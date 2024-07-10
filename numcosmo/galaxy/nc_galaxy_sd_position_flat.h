@@ -39,7 +39,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcGalaxySDPositionFlat, nc_galaxy_sd_position_flat, NC, GALAXY_SD_POSITION_FLAT, NcGalaxySDPosition)
 
-NcGalaxySDPositionFlat *nc_galaxy_sd_position_flat_new (const gdouble z_min, const gdouble z_max, const gdouble r_min, const gdouble r_max);
+NcGalaxySDPositionFlat *nc_galaxy_sd_position_flat_new (const gdouble z_min, const gdouble z_max, const gdouble theta_min, const gdouble theta_max);
 NcGalaxySDPositionFlat *nc_galaxy_sd_position_flat_ref (NcGalaxySDPositionFlat *gsdpflat);
 
 void nc_galaxy_sd_position_flat_free (NcGalaxySDPositionFlat *gsdpflat);

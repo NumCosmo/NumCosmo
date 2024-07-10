@@ -391,16 +391,17 @@ nc_wl_surface_mass_density_sigma_critical_infinity (NcWLSurfaceMassDensity *smd,
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: projected radius with respect to the center of the lens / halo
+ * @theta: angular radius with respect to the center of the lens / halo
  * @zc: cluster redshift $z_\mathrm{cluster}$
  *
- * Computes the surface mass density at @R, see Eq. $\eqref{eq:sigma}$.
+ * Computes the surface mass density at @theta, see Eq. $\eqref{eq:sigma}$.
  *
- * Returns: $\Sigma (R)$
+ * Returns: $\Sigma (\theta)$
  */
 gdouble
-nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
+nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zc)
 {
+  gdouble R           = theta * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo);
   const gdouble Sigma = nc_halo_density_profile_eval_2d_density (dp, cosmo, R, zc);
 
   return Sigma;
@@ -411,16 +412,17 @@ nc_wl_surface_mass_density_sigma (NcWLSurfaceMassDensity *smd, NcHaloDensityProf
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: projected radius with respect to the center of the lens / halo
+ * @theta: angular radius with respect to the center of the lens / halo
  * @zc: cluster redshift $z_\mathrm{cluster}$
  *
- * Computes the mean surface mass density inside the circle with radius @R, Eq. $\eqref{eq:sigma_mean}$.
+ * Computes the mean surface mass density inside the circle with radius @theta, Eq. $\eqref{eq:sigma_mean}$.
  *
- * Returns: $\overline{\Sigma} (<R)$
+ * Returns: $\overline{\Sigma} (<\theta)$
  */
 gdouble
-nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
+nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zc)
 {
+  gdouble R                    = theta * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo);
   const gdouble mean_sigma_2x2 = nc_halo_density_profile_eval_cyl_mass (dp, cosmo, R, zc) / (ncm_c_pi () * R * R);
 
   return mean_sigma_2x2;
@@ -431,16 +433,17 @@ nc_wl_surface_mass_density_sigma_mean (NcWLSurfaceMassDensity *smd, NcHaloDensit
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: projected radius with respect to the center of the lens / halo
+ * @theta: angular radius with respect to the center of the lens / halo
  * @zc: cluster redshift $z_\mathrm{cluster}$
  *
- * Computes difference between the mean surface mass density inside the circle with radius @R (Eq. $\eqref{eq:sigma_mean}$) and the surface mass density at @R (Eq. $\eqref{eq:sigma}$).
+ * Computes difference between the mean surface mass density inside the circle with radius @theta (Eq. $\eqref{eq:sigma_mean}$) and the surface mass density at @R (Eq. $\eqref{eq:sigma}$).
  *
- * Returns: $\overline{\Sigma} (<R) - \Sigma (R)$
+ * Returns: $\overline{\Sigma} (<\theta) - \Sigma (\theta)$
  */
 gdouble
-nc_wl_surface_mass_density_sigma_excess (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zc)
+nc_wl_surface_mass_density_sigma_excess (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zc)
 {
+  gdouble R                    = theta * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo);
   const gdouble mean_sigma_2x2 = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
   const gdouble sigma          = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
 
@@ -464,18 +467,20 @@ nc_wl_surface_mass_density_sigma_excess (NcWLSurfaceMassDensity *smd, NcHaloDens
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: projected radius with respect to the center of the lens / halo
+ * @theta: angular radius with respect to the center of the lens / halo
  * @zs: source redshift $z_\mathrm{source}$
  * @zl: lens redshift $z_\mathrm{lens}$
  * @zc: cluster redshift $z_\mathrm{cluster}$
  *
- * Computes the convergence $\kappa(R)$ at @R, see Eq $\eqref{eq:convergence}$.
+ * Computes the convergence $\kappa(\theta)$ at @theta, see Eq $\eqref{eq:convergence}$.
  *
- * Returns: $\kappa(R)$
+ * Returns: $\kappa(\theta)$
  */
 gdouble
-nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zs, const gdouble zl, const gdouble zc)
 {
+  gdouble R = theta * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo);
+
   if (zs < zc)
   {
     return 0.0;
@@ -494,17 +499,18 @@ nc_wl_surface_mass_density_convergence (NcWLSurfaceMassDensity *smd, NcHaloDensi
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: projected radius with respect to the center of the lens / halo
+ * @theta: angular radius with respect to the center of the lens / halo
  * @zl: lens redshift $z_\mathrm{lens}$
  * @zc: cluster redshift $z_\mathrm{cluster}$
  *
- * Computes the convergence $\kappa_\infty(R)$ at @R, see Eq $\eqref{eq:convergence}$, and sources at infinite redshift.
+ * Computes the convergence $\kappa_\infty(\theta)$ at @theta, see Eq $\eqref{eq:convergence}$, and sources at infinite redshift.
  *
- * Returns: $\kappa_\infty(R)$
+ * Returns: $\kappa_\infty(\theta)$
  */
 gdouble
-nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zl, const gdouble zc)
 {
+  gdouble R              = theta * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo);
   gdouble sigma          = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
   gdouble sigma_crit_inf = nc_wl_surface_mass_density_sigma_critical_infinity (smd, cosmo, zl, zc);
 
@@ -516,18 +522,20 @@ nc_wl_surface_mass_density_convergence_infinity (NcWLSurfaceMassDensity *smd, Nc
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: projected radius with respect to the center of the lens / halo
+ * @theta: projected radius with respect to the center of the lens / halo
  * @zs: source redshift $z_\mathrm{source}$
  * @zl: lens redshift $z_\mathrm{lens}$
  * @zc: cluster redshift $z_\mathrm{cluster}$
  *
- * Computes the shear $\gamma(R)$ at @R, see Eq $\eqref{eq:shear}$.
+ * Computes the shear $\gamma(\theta)$ at @theta, see Eq $\eqref{eq:shear}$.
  *
- * Returns: $\gamma(R)$
+ * Returns: $\gamma(\theta)$
  */
 gdouble
-nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zs, const gdouble zl, const gdouble zc)
 {
+  gdouble R = theta * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo);
+
   if (zs < zc)
   {
     return 0.0;
@@ -547,17 +555,18 @@ nc_wl_surface_mass_density_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProf
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: projected radius with respect to the center of the lens / halo
+ * @theta: angular radius with respect to the center of the lens / halo
  * @zl: lens redshift $z_\mathrm{lens}$
  * @zc: cluster redshift $z_\mathrm{cluster}$
  *
- * Computes the shear $\gamma_\infty (R)$ at @R, see Eq $\eqref{eq:shear}$, and source at infinite redshift.
+ * Computes the shear $\gamma_\infty (\theta)$ at @theta, see Eq $\eqref{eq:shear}$, and source at infinite redshift.
  *
- * Returns: $\gamma_\infty (R)$
+ * Returns: $\gamma_\infty (\theta)$
  */
 gdouble
-nc_wl_surface_mass_density_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zl, const gdouble zc)
 {
+  gdouble R              = theta * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo);
   gdouble sigma          = nc_wl_surface_mass_density_sigma (smd, dp, cosmo, R, zc);
   gdouble mean_sigma     = nc_wl_surface_mass_density_sigma_mean (smd, dp, cosmo, R, zc);
   gdouble sigma_crit_inf = nc_wl_surface_mass_density_sigma_critical_infinity (smd, cosmo, zl, zc);
@@ -570,21 +579,22 @@ nc_wl_surface_mass_density_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDe
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: projected radius with respect to the center of the lens / halo
+ * @theta: projected radius with respect to the center of the lens / halo
  * @zs: source redshift $z_\mathrm{source}$
  * @zl: lens redshift $z_\mathrm{lens}$
  * @zc: cluster redshift $z_\mathrm{cluster}$
  *
  * Computes the reduced shear:
- * $$ g(R) = \frac{\gamma(R)}{1 - \kappa(R)},$$
- * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
+ * $$ g(\theta) = \frac{\gamma(\theta)}{1 - \kappa(\theta)},$$
+ * where $\gamma(\theta)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(\theta)$ is the convergence
  * [nc_wl_surface_mass_density_convergence()].
  *
- * Returns: $g(R)$
+ * Returns: $g(\theta)$
  */
 gdouble
-nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zs, const gdouble zl, const gdouble zc)
 {
+  gdouble R = theta * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo);
   gdouble r_s, rho_s;
 
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
@@ -704,22 +714,23 @@ nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcHaloDen
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: projected radius with respect to the center of the lens / halo
+ * @theta: angular radius with respect to the center of the lens / halo
  * @zl: lens redshift $z_\mathrm{lens}$
  * @zc: cluster redshift $z_\mathrm{cluster}$
  * @optzs: a #NcWLSurfaceMassDensityOptzs
  *
  * Computes the reduced shear:
- * $$ g(R) = \frac{\gamma(R)}{1 - \kappa(R)},$$
- * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
+ * $$ g(\theta) = \frac{\gamma(\theta)}{1 - \kappa(\theta)},$$
+ * where $\gamma(\theta)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(\theta)$ is the convergence
  * [nc_wl_surface_mass_density_convergence()].
  *
  * FIXME
  *
  */
 void
-nc_wl_surface_mass_density_reduced_shear_optzs_prep (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensityOptzs *optzs)
+nc_wl_surface_mass_density_reduced_shear_optzs_prep (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensityOptzs *optzs)
 {
+  gdouble R = theta * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo);
   gdouble r_s, rho_s;
 
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
@@ -782,13 +793,13 @@ nc_wl_surface_mass_density_reduced_shear_optzs_prep (NcWLSurfaceMassDensity *smd
  * @optzs: a #NcWLSurfaceMassDensityOptzs
  *
  * Computes the reduced shear:
- * $$ g(R) = \frac{\gamma(R)}{1 - \kappa(R)},$$
- * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
+ * $$ g(\theta) = \frac{\gamma(\theta)}{1 - \kappa(\theta)},$$
+ * where $\gamma(\theta)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(\theta)$ is the convergence
  * [nc_wl_surface_mass_density_convergence()].
  *
  * FIXME
  *
- * Returns: $g(R)$
+ * Returns: $g(\theta)$
  */
 gdouble
 nc_wl_surface_mass_density_reduced_shear_optzs (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble zs, const gdouble zl, NcWLSurfaceMassDensityOptzs *optzs)
@@ -851,23 +862,25 @@ nc_wl_surface_mass_density_reduced_shear_optzs (NcWLSurfaceMassDensity *smd, NcH
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: projected radius with respect to the center of the lens / halo
+ * @theta: angular radius with respect to the center of the lens / halo
  * @zs: source redshift $z_\mathrm{source}$
  * @zl: lens redshift $z_\mathrm{lens}$
  * @zc: cluster redshift $z_\mathrm{cluster}$
  *
  * Computes the reduced shear assuming a lensed source at infinite redshift:
- * $$ g(R) = \frac{\beta_s(zb)\gamma(R)}{1 - \beta_s(zb) \kappa(R)}, $$
- * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()], $\kappa(R)$ is the convergence
+ * $$ g(\theta) = \frac{\beta_s(zb)\gamma(\theta)}{1 - \beta_s(zb) \kappa(\theta)}, $$
+ * where $\gamma(\theta)$ is the shear [nc_wl_surface_mass_density_shear()], $\kappa(\theta)$ is the convergence
  * [nc_wl_surface_mass_density_convergence()], $z_b$ is the background-galaxy redshift and
  * $$\beta_s = \frac{D_s}{D_l D_{ls}} \frac{D_\infty}{D_l D_{l\infty}}.$$
  * See [Applegate (2014)][XApplegate2014]
  *
- * Returns: $g(R)$, source at $z = \infty$
+ * Returns: $g(\theta)$, source at $z = \infty$
  */
 gdouble
-nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zs, const gdouble zl, const gdouble zc)
 {
+  gdouble R = theta * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo);
+
   if (zs < zc)
   {
     return 0.0;
@@ -899,21 +912,23 @@ nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensity *smd, 
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: projected radius with respect to the center of the lens / halo
+ * @theta: projected radius with respect to the center of the lens / halo
  * @zs: source redshift $z_\mathrm{source}$
  * @zl: lens redshift $z_\mathrm{lens}$
  * @zc: cluster redshift $z_\mathrm{cluster}$
  *
  * Computes the reduced shear:
- * $$ \mu(R) = \frac{1}{(1 - \kappa(R))^2 - \vert\gamma^2(R) \vert},$$
- * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
+ * $$ \mu(\theta) = \frac{1}{(1 - \kappa(\theta))^2 - \vert\gamma^2(\theta) \vert},$$
+ * where $\gamma(\theta)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(\theta)$ is the convergence
  * [nc_wl_surface_mass_density_convergence()].
  *
- * Returns: $\mu(R)$
+ * Returns: $\mu(\theta)$
  */
 gdouble
-nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble theta, const gdouble zs, const gdouble zl, const gdouble zc)
 {
+  gdouble R = theta * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo);
+
   if (zs < zc)
   {
     return 1.0;
@@ -935,18 +950,31 @@ nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, NcHaloDen
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: (element-type gdouble): projected radius with respect to the center of the lens / halo
- * @fin: factor to multiply $R$, it should be $1$ or the appropriated unit conversion
- * @fout: factor to multiply $\rho(R)$, it should be $1$ or the appropriated unit conversion
+ * @theta: (element-type gdouble): angular radius with respect to the center of the lens / halo
+ * @fin: factor to multiply $\theta$, it should be $1$ or the appropriated unit conversion
+ * @fout: factor to multiply $\rho(\theta)$, it should be $1$ or the appropriated unit conversion
  * @zc: cluster redshift $z_\mathrm{cluster}$
  *
- * Computes the surface mass density at @R, see Eq. $\eqref{eq:sigma}$.
+ * Computes the surface mass density at @theta, see Eq. $\eqref{eq:sigma}$.
  *
- * Returns: (transfer full) (element-type gdouble): $\Sigma (R)$
+ * Returns: (transfer full) (element-type gdouble): $\Sigma (\theta)$
  */
 GArray *
-nc_wl_surface_mass_density_sigma_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble zc)
+nc_wl_surface_mass_density_sigma_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *theta, gdouble fin, gdouble fout, const gdouble zc)
 {
+  GArray *R = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), theta->len);
+  guint i;
+
+  g_array_set_size (R, theta->len);
+
+  for (i = 0; i < theta->len; i++)
+  {
+    gdouble theta_i = g_array_index (theta, gdouble, i);
+    gdouble R_i     = theta_i * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo);
+
+    g_array_index (R, gdouble, i) = R_i;
+  }
+
   return nc_halo_density_profile_eval_2d_density_array (dp, cosmo, R, fin, fout, zc);
 }
 
@@ -955,21 +983,21 @@ nc_wl_surface_mass_density_sigma_array (NcWLSurfaceMassDensity *smd, NcHaloDensi
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: (element-type gdouble): projected radius with respect to the center of the lens / halo
- * @fin: factor to multiply $R$, it should be $1$ or the appropriated unit conversion
- * @fout: factor to multiply $\rho(R)$, it should be $1$ or the appropriated unit conversion
+ * @theta: (element-type gdouble): angular radius with respect to the center of the lens / halo
+ * @fin: factor to multiply $\theta$, it should be $1$ or the appropriated unit conversion
+ * @fout: factor to multiply $\rho(\theta)$, it should be $1$ or the appropriated unit conversion
  * @zc: cluster redshift $z_\mathrm{cluster}$
  *
- * Computes difference between the mean surface mass density inside the circle with radius @R (Eq. $\eqref{eq:sigma_mean}$) and the surface mass density at @R (Eq. $\eqref{eq:sigma}$).
+ * Computes difference between the mean surface mass density inside the circle with radius @theta (Eq. $\eqref{eq:sigma_mean}$) and the surface mass density at @theta (Eq. $\eqref{eq:sigma}$).
  *
- * Returns: (transfer full) (element-type gdouble): $\overline{\Sigma} (<R) - \Sigma (R)$
+ * Returns: (transfer full) (element-type gdouble): $\overline{\Sigma} (<\theta) - \Sigma (\theta)$
  */
 GArray *
-nc_wl_surface_mass_density_sigma_excess_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble zc)
+nc_wl_surface_mass_density_sigma_excess_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *theta, gdouble fin, gdouble fout, const gdouble zc)
 {
   gdouble r_s, rho_s;
 
-  g_assert_cmpint (R->len, >, 0);
+  g_assert_cmpint (theta->len, >, 0);
 
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
 
@@ -977,14 +1005,14 @@ nc_wl_surface_mass_density_sigma_excess_array (NcWLSurfaceMassDensity *smd, NcHa
   fout = fout * rho_s * r_s;
 
   {
-    GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), R->len);
+    GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), theta->len);
     guint i;
 
-    g_array_set_size (res, R->len);
+    g_array_set_size (res, theta->len);
 
-    for (i = 0; i < R->len; i++)
+    for (i = 0; i < theta->len; i++)
     {
-      const gdouble X        = g_array_index (R, gdouble, i) * fin;
+      const gdouble X        = g_array_index (theta, gdouble, i) * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo) * fin;
       const gdouble barSigma = 2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X);
       const gdouble sigma    = nc_halo_density_profile_eval_dl_2d_density (dp, X);
 
@@ -1000,26 +1028,26 @@ nc_wl_surface_mass_density_sigma_excess_array (NcWLSurfaceMassDensity *smd, NcHa
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: (element-type gdouble): projected radius with respect to the center of the lens / halo
- * @fin: factor to multiply $R$, it should be $1$ or the appropriated unit conversion
- * @fout: factor to multiply $g(R)$, it should be $1$ or the appropriated unit conversion
+ * @theta: (element-type gdouble): angular radius with respect to the center of the lens / halo
+ * @fin: factor to multiply $\theta$, it should be $1$ or the appropriated unit conversion
+ * @fout: factor to multiply $g(\theta)$, it should be $1$ or the appropriated unit conversion
  * @zs: (element-type gdouble): source redshift $z_\mathrm{source}$
  * @zl: lens redshift $z_\mathrm{lens}$
  * @zc: cluster redshift $z_\mathrm{cluster}$
  *
  * Computes the reduced shear:
- * $$ g(R) = \frac{\gamma(R)}{1 - \kappa(R)},$$
- * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
+ * $$ g(\theta) = \frac{\gamma(\theta)}{1 - \kappa(\theta)},$$
+ * where $\gamma(\theta)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(\theta)$ is the convergence
  * [nc_wl_surface_mass_density_convergence()].
  *
- * Returns: (transfer full) (element-type gdouble): $g(R)$
+ * Returns: (transfer full) (element-type gdouble): $g(\theta)$
  */
 GArray *
-nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, GArray *zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *theta, gdouble fin, gdouble fout, GArray *zs, const gdouble zl, const gdouble zc)
 {
   gdouble r_s, rho_s;
 
-  g_assert_cmpint (R->len, >, 0);
+  g_assert_cmpint (theta->len, >, 0);
   g_assert_cmpint (zs->len, >, 0);
 
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
@@ -1027,22 +1055,22 @@ nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcH
   fin = fin / r_s;
 
   {
-    GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), R->len * zs->len);
+    GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), theta->len * zs->len);
     const gdouble a             = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc () / nc_hicosmo_RH_Mpc (cosmo); /* [ M_solar / Mpc^2 ] */
     const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
     const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
     const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
     guint i, j;
 
-    g_array_set_size (res, R->len * zs->len);
+    g_array_set_size (res, theta->len * zs->len);
 
     switch (k)
     {
       case -1:
 
-        for (i = 0; i < R->len; i++)
+        for (i = 0; i < theta->len; i++)
         {
-          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble X          = g_array_index (theta, gdouble, i) * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo) * fin;
           const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
           const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
           const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
@@ -1076,9 +1104,9 @@ nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcH
         break;
       case 0:
 
-        for (i = 0; i < R->len; i++)
+        for (i = 0; i < theta->len; i++)
         {
-          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble X          = g_array_index (theta, gdouble, i) * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo) * fin;
           const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
           const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
           const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
@@ -1112,9 +1140,9 @@ nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcH
         break;
       case 1:
 
-        for (i = 0; i < R->len; i++)
+        for (i = 0; i < theta->len; i++)
         {
-          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble X          = g_array_index (theta, gdouble, i) * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo) * fin;
           const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
           const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
           const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
@@ -1160,26 +1188,26 @@ nc_wl_surface_mass_density_reduced_shear_array (NcWLSurfaceMassDensity *smd, NcH
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: (element-type gdouble): projected radius with respect to the center of the lens / halo
- * @fin: factor to multiply $R$, it should be $1$ or the appropriated unit conversion
- * @fout: factor to multiply $g(R)$, it should be $1$ or the appropriated unit conversion
+ * @theta: (element-type gdouble): angular radius with respect to the center of the lens / halo
+ * @fin: factor to multiply $\theta$, it should be $1$ or the appropriated unit conversion
+ * @fout: factor to multiply $g(\theta)$, it should be $1$ or the appropriated unit conversion
  * @zs: (element-type gdouble): source redshift $z_\mathrm{source}$
  * @zl: lens redshift $z_\mathrm{lens}$
  * @zc: cluster redshift $z_\mathrm{cluster}$
  *
  * Computes the reduced shear:
- * $$ g(R) = \frac{\gamma(R)}{1 - \kappa(R)},$$
- * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
+ * $$ g(\theta) = \frac{\gamma(\theta)}{1 - \kappa(\theta)},$$
+ * where $\gamma(\theta)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(\theta)$ is the convergence
  * [nc_wl_surface_mass_density_convergence()].
  *
- * Returns: (transfer full) (element-type gdouble): $g(R)$
+ * Returns: (transfer full) (element-type gdouble): $g(\theta)$
  */
 GArray *
-nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, GArray *zs, const gdouble zl, const gdouble zc)
+nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *theta, gdouble fin, gdouble fout, GArray *zs, const gdouble zl, const gdouble zc)
 {
   gdouble r_s, rho_s;
 
-  g_assert_cmpint (R->len, ==, zs->len);
+  g_assert_cmpint (theta->len, ==, zs->len);
   g_assert_cmpint (zs->len, >, 0);
 
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
@@ -1187,22 +1215,22 @@ nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *sm
   fin = fin / r_s;
 
   {
-    GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), R->len);
+    GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), theta->len);
     const gdouble a             = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc () / nc_hicosmo_RH_Mpc (cosmo); /* [ M_solar / Mpc^2 ] */
     const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
     const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
     const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
     guint i;
 
-    g_array_set_size (res, R->len);
+    g_array_set_size (res, theta->len);
 
     switch (k)
     {
       case -1:
 
-        for (i = 0; i < R->len; i++)
+        for (i = 0; i < theta->len; i++)
         {
-          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble X          = g_array_index (theta, gdouble, i) * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo) * fin;
           const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
           const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
           const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
@@ -1231,9 +1259,9 @@ nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *sm
         break;
       case 0:
 
-        for (i = 0; i < R->len; i++)
+        for (i = 0; i < theta->len; i++)
         {
-          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble X          = g_array_index (theta, gdouble, i) * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo) * fin;
           const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
           const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
           const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);
@@ -1262,9 +1290,9 @@ nc_wl_surface_mass_density_reduced_shear_array_equal (NcWLSurfaceMassDensity *sm
         break;
       case 1:
 
-        for (i = 0; i < R->len; i++)
+        for (i = 0; i < theta->len; i++)
         {
-          const gdouble X          = g_array_index (R, gdouble, i) * fin;
+          const gdouble X          = g_array_index (theta, gdouble, i) * nc_distance_angular_diameter (smd->dist, cosmo, zc) * nc_distance_hubble (smd->dist, cosmo) * fin;
           const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
           const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
           const gdouble dl         = nc_distance_comoving (smd->dist, cosmo, zl);

@@ -101,9 +101,9 @@ test_nc_galaxy_sd_position_flat_new (TestNcGalaxySDPosition *test, gconstpointer
 {
   const gdouble z_ll               = g_test_rand_double_range (0.1, 0.5);
   const gdouble z_ul               = g_test_rand_double_range (5, 1000);
-  const gdouble r_ll               = g_test_rand_double_range (0.001, 0.1);
-  const gdouble r_ul               = g_test_rand_double_range (1, 10);
-  NcGalaxySDPositionFlat *gsdpflat = nc_galaxy_sd_position_flat_new (z_ll, z_ul, r_ll, r_ul);
+  const gdouble theta_ll           = g_test_rand_double_range (0.001, 0.1);
+  const gdouble theta_ul           = g_test_rand_double_range (1, 10);
+  NcGalaxySDPositionFlat *gsdpflat = nc_galaxy_sd_position_flat_new (z_ll, z_ul, theta_ll, theta_ul);
 
   test->gsdp = NC_GALAXY_SD_POSITION (gsdpflat);
 
@@ -115,9 +115,9 @@ test_nc_galaxy_sd_position_lsst_srd_new (TestNcGalaxySDPosition *test, gconstpoi
 {
   const gdouble z_ll                  = g_test_rand_double_range (0.1, 0.5);
   const gdouble z_ul                  = g_test_rand_double_range (5, 1000);
-  const gdouble r_ll                  = g_test_rand_double_range (0.001, 0.1);
-  const gdouble r_ul                  = g_test_rand_double_range (1, 10);
-  NcGalaxySDPositionLSSTSRD *gsdplsst = nc_galaxy_sd_position_lsst_srd_new (z_ll, z_ul, r_ll, r_ul);
+  const gdouble theta_ll              = g_test_rand_double_range (0.001, 0.1);
+  const gdouble theta_ul              = g_test_rand_double_range (1, 10);
+  NcGalaxySDPositionLSSTSRD *gsdplsst = nc_galaxy_sd_position_lsst_srd_new (z_ll, z_ul, theta_ll, theta_ul);
 
   test->gsdp = NC_GALAXY_SD_POSITION (gsdplsst);
 
@@ -137,19 +137,19 @@ test_nc_galaxy_sd_position_set_get_lim (TestNcGalaxySDPosition *test, gconstpoin
 
   for (i = 0; i < 10000; i++)
   {
-    const gdouble z_ll = g_test_rand_double_range (0.1, 0.5);
-    const gdouble z_ul = g_test_rand_double_range (5, 1000);
-    const gdouble r_ll = g_test_rand_double_range (0.001, 0.1);
-    const gdouble r_ul = g_test_rand_double_range (1, 10);
+    const gdouble z_ll     = g_test_rand_double_range (0.1, 0.5);
+    const gdouble z_ul     = g_test_rand_double_range (5, 1000);
+    const gdouble theta_ll = g_test_rand_double_range (0.001, 0.1);
+    const gdouble theta_ul = g_test_rand_double_range (1, 10);
     gdouble z_ll_peek, z_ul_peek;
-    gdouble r_ll_peek, r_ul_peek;
+    gdouble theta_ll_peek, theta_ul_peek;
     gint j;
 
     nc_galaxy_sd_position_set_z_lim (test->gsdp, z_ll, z_ul);
-    nc_galaxy_sd_position_set_r_lim (test->gsdp, r_ll, r_ul);
+    nc_galaxy_sd_position_set_theta_lim (test->gsdp, theta_ll, theta_ul);
 
     nc_galaxy_sd_position_get_z_lim (test->gsdp, &z_ll_peek, &z_ul_peek);
-    nc_galaxy_sd_position_get_r_lim (test->gsdp, &r_ll_peek, &r_ul_peek);
+    nc_galaxy_sd_position_get_theta_lim (test->gsdp, &theta_ll_peek, &theta_ul_peek);
 
     g_assert_cmpint (z_ll, ==, z_ll_peek);
     g_assert_cmpint (z_ul, ==, z_ul_peek);
@@ -166,29 +166,29 @@ test_nc_galaxy_sd_position_gen_lim (TestNcGalaxySDPosition *test, gconstpointer 
 
   for (i = 0; i < nlims; i++)
   {
-    const gdouble z_ll = g_test_rand_double_range (0.1, 0.5);
-    const gdouble z_ul = g_test_rand_double_range (5, 1000);
-    const gdouble r_ll = g_test_rand_double_range (0.001, 0.1);
-    const gdouble r_ul = g_test_rand_double_range (1, 10);
+    const gdouble z_ll     = g_test_rand_double_range (0.1, 0.5);
+    const gdouble z_ul     = g_test_rand_double_range (5, 1000);
+    const gdouble theta_ll = g_test_rand_double_range (0.001, 0.1);
+    const gdouble theta_ul = g_test_rand_double_range (1, 10);
     gdouble z_ll_peek, z_ul_peek;
-    gdouble r_ll_peek, r_ul_peek;
+    gdouble theta_ll_peek, theta_ul_peek;
     gint j;
 
     nc_galaxy_sd_position_set_z_lim (test->gsdp, z_ll, z_ul);
-    nc_galaxy_sd_position_set_r_lim (test->gsdp, r_ll, r_ul);
+    nc_galaxy_sd_position_set_theta_lim (test->gsdp, theta_ll, theta_ul);
 
     nc_galaxy_sd_position_get_z_lim (test->gsdp, &z_ll_peek, &z_ul_peek);
-    nc_galaxy_sd_position_get_r_lim (test->gsdp, &r_ll_peek, &r_ul_peek);
+    nc_galaxy_sd_position_get_theta_lim (test->gsdp, &theta_ll_peek, &theta_ul_peek);
 
     for (j = 0; j < nruns; j++)
     {
-      const gdouble gen_z = nc_galaxy_sd_position_gen_z (test->gsdp, rng);
-      const gdouble gen_r = nc_galaxy_sd_position_gen_r (test->gsdp, rng);
+      const gdouble gen_z     = nc_galaxy_sd_position_gen_z (test->gsdp, rng);
+      const gdouble gen_theta = nc_galaxy_sd_position_gen_theta (test->gsdp, rng);
 
       g_assert_cmpfloat (gen_z, >, z_ll_peek);
       g_assert_cmpfloat (gen_z, <, z_ul_peek);
-      g_assert_cmpfloat (gen_r, >, r_ll_peek);
-      g_assert_cmpfloat (gen_r, <, r_ul_peek);
+      g_assert_cmpfloat (gen_theta, >, theta_ll_peek);
+      g_assert_cmpfloat (gen_theta, <, theta_ul_peek);
     }
   }
 }
@@ -199,21 +199,21 @@ test_nc_galaxy_sd_position_flat_gen_dist (TestNcGalaxySDPosition *test, gconstpo
   NcGalaxySDPositionFlat *gsdpflat = NC_GALAXY_SD_POSITION_FLAT (test->gsdp);
   NcmRNG *rng                      = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcmVector *z_lim                 = ncm_vector_new (2);
-  NcmVector *r_lim                 = ncm_vector_new (2);
+  NcmVector *theta_lim             = ncm_vector_new (2);
   const gdouble z_ll               = g_test_rand_double_range (0.1, 0.5);
   const gdouble z_ul               = g_test_rand_double_range (5.0, 1000.0);
-  const gdouble r_ll               = g_test_rand_double_range (0.001, 0.1);
-  const gdouble r_ul               = g_test_rand_double_range (1.0, 10.0);
+  const gdouble theta_ll           = g_test_rand_double_range (0.001, 0.1);
+  const gdouble theta_ul           = g_test_rand_double_range (1.0, 10.0);
   const gdouble z_avg              = (z_ul + z_ll) / 2.0;
-  const gdouble r_avg              = 2.0 / 3.0 * (r_ll + r_ul - r_ll * r_ul / (r_ll + r_ul));
+  const gdouble theta_avg          = 2.0 / 3.0 * (theta_ll + theta_ul - theta_ll * theta_ul / (theta_ll + theta_ul));
   const gdouble z_var              = 1.0 / 12.0 * (gsl_pow_2 (z_ul - z_ll));
-  const gdouble r_var              = 1.0 / 18.0 * (gsl_pow_2 (r_ul - r_ll) * (gsl_pow_2 (r_ul + r_ll) + 2.0 * r_ul * r_ll) / gsl_pow_2 (r_ll + r_ul));
+  const gdouble theta_var          = 1.0 / 18.0 * (gsl_pow_2 (theta_ul - theta_ll) * (gsl_pow_2 (theta_ul + theta_ll) + 2.0 * theta_ul * theta_ll) / gsl_pow_2 (theta_ll + theta_ul));
   const gint nruns                 = 10;
   const gint ndata                 = 10000;
   gint i;
 
   nc_galaxy_sd_position_set_z_lim (test->gsdp, z_ll, z_ul);
-  nc_galaxy_sd_position_set_r_lim (test->gsdp, r_ll, r_ul);
+  nc_galaxy_sd_position_set_theta_lim (test->gsdp, theta_ll, theta_ul);
 
   for (i = 0; i < nruns; i++)
   {
@@ -222,11 +222,11 @@ test_nc_galaxy_sd_position_flat_gen_dist (TestNcGalaxySDPosition *test, gconstpo
 
     for (j = 0; j < ndata; j++)
     {
-      const gdouble gen_z = nc_galaxy_sd_position_gen_z (test->gsdp, rng);
-      const gdouble gen_r = nc_galaxy_sd_position_gen_r (test->gsdp, rng);
+      const gdouble gen_z     = nc_galaxy_sd_position_gen_z (test->gsdp, rng);
+      const gdouble gen_theta = nc_galaxy_sd_position_gen_theta (test->gsdp, rng);
 
       ncm_stats_vec_set (pos_sample, 0, gen_z);
-      ncm_stats_vec_set (pos_sample, 1, gen_r);
+      ncm_stats_vec_set (pos_sample, 1, gen_theta);
 
       ncm_stats_vec_update (pos_sample);
     }
@@ -234,17 +234,17 @@ test_nc_galaxy_sd_position_flat_gen_dist (TestNcGalaxySDPosition *test, gconstpo
     g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), <, z_avg + 5.0 * sqrt (z_var / ndata));
     g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), >, z_avg - 5.0 * sqrt (z_var / ndata));
 
-    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 1), <, r_avg + 5.0 * sqrt (r_var / ndata));
-    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 1), >, r_avg - 5.0 * sqrt (r_var / ndata));
+    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 1), <, theta_avg + 5.0 * sqrt (theta_var / ndata));
+    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 1), >, theta_avg - 5.0 * sqrt (theta_var / ndata));
 
     g_assert_cmpfloat (fabs (ncm_stats_vec_get_var (pos_sample, 0) / z_var - 1.0), <, 1.0e-1);
-    g_assert_cmpfloat (fabs (ncm_stats_vec_get_var (pos_sample, 1) / r_var - 1.0), <, 1.0e-1);
+    g_assert_cmpfloat (fabs (ncm_stats_vec_get_var (pos_sample, 1) / theta_var - 1.0), <, 1.0e-1);
 
     ncm_stats_vec_free (pos_sample);
   }
 
   ncm_vector_free (z_lim);
-  ncm_vector_free (r_lim);
+  ncm_vector_free (theta_lim);
   ncm_rng_free (rng);
 }
 
@@ -296,19 +296,19 @@ test_nc_galaxy_sd_position_lsst_srd_gen_dist (TestNcGalaxySDPosition *test, gcon
   NcmRNG *rng                         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   const gdouble z_ll                  = g_test_rand_double_range (0.1, 0.5);
   const gdouble z_ul                  = g_test_rand_double_range (5.0, 1000.0);
-  const gdouble r_ll                  = g_test_rand_double_range (0.001, 0.1);
-  const gdouble r_ul                  = g_test_rand_double_range (1.0, 10.0);
+  const gdouble theta_ll              = g_test_rand_double_range (0.001, 0.1);
+  const gdouble theta_ul              = g_test_rand_double_range (1.0, 10.0);
 
   nc_galaxy_sd_position_set_z_lim (test->gsdp, z_ll, z_ul);
-  nc_galaxy_sd_position_set_r_lim (test->gsdp, r_ll, r_ul);
+  nc_galaxy_sd_position_set_theta_lim (test->gsdp, theta_ll, theta_ul);
 
   {
-    const gdouble z_avg = _test_get_z_avr (gsdplsst);
-    const gdouble r_avg = 2.0 / 3.0 * (r_ll + r_ul - r_ll * r_ul / (r_ll + r_ul));
-    const gdouble z_var = _test_get_z_var (gsdplsst);
-    const gdouble r_var = 1.0 / 18.0 * (gsl_pow_2 (r_ul - r_ll) * (gsl_pow_2 (r_ul + r_ll) + 2.0 * r_ul * r_ll) / gsl_pow_2 (r_ll + r_ul));
-    const gint nruns    = 10;
-    const gint ndata    = 10000;
+    const gdouble z_avg     = _test_get_z_avr (gsdplsst);
+    const gdouble theta_avg = 2.0 / 3.0 * (theta_ll + theta_ul - theta_ll * theta_ul / (theta_ll + theta_ul));
+    const gdouble z_var     = _test_get_z_var (gsdplsst);
+    const gdouble theta_var = 1.0 / 18.0 * (gsl_pow_2 (theta_ul - theta_ll) * (gsl_pow_2 (theta_ul + theta_ll) + 2.0 * theta_ul * theta_ll) / gsl_pow_2 (theta_ll + theta_ul));
+    const gint nruns        = 10;
+    const gint ndata        = 10000;
     gint i;
 
     for (i = 0; i < nruns; i++)
@@ -318,22 +318,22 @@ test_nc_galaxy_sd_position_lsst_srd_gen_dist (TestNcGalaxySDPosition *test, gcon
 
       for (j = 0; j < ndata; j++)
       {
-        const gdouble gen_z = nc_galaxy_sd_position_gen_z (test->gsdp, rng);
-        const gdouble gen_r = nc_galaxy_sd_position_gen_r (test->gsdp, rng);
+        const gdouble gen_z     = nc_galaxy_sd_position_gen_z (test->gsdp, rng);
+        const gdouble gen_theta = nc_galaxy_sd_position_gen_theta (test->gsdp, rng);
 
         ncm_stats_vec_set (pos_sample, 0, gen_z);
-        ncm_stats_vec_set (pos_sample, 1, gen_r);
+        ncm_stats_vec_set (pos_sample, 1, gen_theta);
 
         ncm_stats_vec_update (pos_sample);
       }
 
       g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), <, z_avg + 5.0 * sqrt (z_var / ndata));
       g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), >, z_avg - 5.0 * sqrt (z_var / ndata));
-      g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 1), <, r_avg + 5.0 * sqrt (r_var / ndata));
-      g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 1), >, r_avg - 5.0 * sqrt (r_var / ndata));
+      g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 1), <, theta_avg + 5.0 * sqrt (theta_var / ndata));
+      g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 1), >, theta_avg - 5.0 * sqrt (theta_var / ndata));
 
       g_assert_cmpfloat (fabs (ncm_stats_vec_get_var (pos_sample, 0) / z_var - 1.0), <, 2.0e-1);
-      g_assert_cmpfloat (fabs (ncm_stats_vec_get_var (pos_sample, 1) / r_var - 1.0), <, 1.0e-1);
+      g_assert_cmpfloat (fabs (ncm_stats_vec_get_var (pos_sample, 1) / theta_var - 1.0), <, 1.0e-1);
 
       ncm_stats_vec_free (pos_sample);
     }
