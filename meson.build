@@ -1,7 +1,7 @@
 project(
   'numcosmo',
   ['c', 'fortran'],
-  version: '0.21.2',
+  version: '0.22.0',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.2.0',
   default_options: [
@@ -83,7 +83,11 @@ numcosmo_libdir = join_paths(numcosmo_prefix, get_option('libdir'))
 numcosmo_libexecdir = join_paths(numcosmo_prefix, get_option('libexecdir'))
 numcosmo_datadir = join_paths(numcosmo_prefix, get_option('datadir'))
 numcosmo_pkgdatadir = join_paths(numcosmo_datadir, numcosmo_fullname)
-numcosmo_includedir = join_paths(numcosmo_prefix, get_option('includedir'), 'numcosmo')
+numcosmo_includedir = join_paths(
+  numcosmo_prefix,
+  get_option('includedir'),
+  'numcosmo',
+)
 
 numcosmo_pkgconfigreldir = join_paths(numcosmo_libdir, 'pkgconfig')
 
@@ -140,9 +144,15 @@ numcosmo_conf.set('NUMCOSMO_MINOR_VERSION', minor_version)
 numcosmo_conf.set('NUMCOSMO_MICRO_VERSION', micro_version)
 numcosmo_conf.set('NUMCOSMO_INTERFACE_AGE', interface_age)
 numcosmo_conf.set('NUMCOSMO_BINARY_AGE', binary_age)
-numcosmo_conf.set_quoted('PACKAGE_BUGREPORT', 'https://github.com/NumCosmo/NumCosmo/issues')
+numcosmo_conf.set_quoted(
+  'PACKAGE_BUGREPORT',
+  'https://github.com/NumCosmo/NumCosmo/issues',
+)
 numcosmo_conf.set_quoted('PACKAGE_NAME', 'numcosmo')
-numcosmo_conf.set_quoted('PACKAGE_STRING', 'numcosmo @0@'.format(meson.project_version()))
+numcosmo_conf.set_quoted(
+  'PACKAGE_STRING',
+  'numcosmo @0@'.format(meson.project_version()),
+)
 numcosmo_conf.set_quoted('PACKAGE_TARNAME', 'numcosmo')
 numcosmo_conf.set_quoted('PACKAGE_URL', 'https://github.com/NumCosmo/NumCosmo')
 numcosmo_conf.set_quoted('PACKAGE_VERSION', meson.project_version())
@@ -181,10 +191,11 @@ numcosmo_build_shared_only = numcosmo_build_shared and not numcosmo_build_static
 if (
   numcosmo_build_shared
   and numcosmo_build_static
-  and (host_system == 'windows'
-  or host_system == 'cygwin')
+  and (host_system == 'windows' or host_system == 'cygwin')
 )
-  error('On Windows default_library must be "shared" or "static" but not "both"')
+  error(
+    'On Windows default_library must be "shared" or "static" but not "both"',
+  )
 endif
 
 if numcosmo_build_static_only
@@ -203,9 +214,11 @@ numcosmo_debug_cflags = []
 numcosmo_debug = get_option('numcosmo_debug')
 if (
   numcosmo_debug.enabled()
-  or (numcosmo_debug.auto()
-  and get_option('debug')
-  and get_option('optimization') in ['0', 'g'])
+  or (
+    numcosmo_debug.auto()
+    and get_option('debug')
+    and get_option('optimization') in ['0', 'g']
+  )
 )
   numcosmo_debug_cflags += ['-DG_ENABLE_DEBUG']
   message('Enabling various debug infrastructure')
@@ -316,6 +329,10 @@ if cc.compiles(
   cc_supports_c99_vla = true
 endif
 
+if get_option('b_coverage')
+  add_global_arguments('-DUSE_GCOV', language: 'c')
+endif
+
 #######################################################################################
 # Types:
 #######################################################################################
@@ -360,26 +377,42 @@ flint_req = '>= 3.0'
 #######################################################################################
 message('Checking for MPI')
 
-mpi_c_dep = dependency(
-  'mpi',
-  language: 'c',
-  required: false,
-)
+if get_option('mpi').auto() or get_option('mpi').enabled()
 
-mpi_fortran_dep = dependency(
-  'mpi',
-  language: 'fortran',
-  required: false,
-)
+  mpi_c_dep = dependency(
+    'mpi',
+    language: 'c',
+    required: false,
+  )
 
-# MPICH is not found by the mpi dependency, so we need to check for it manually
-if not mpi_c_dep.found()
-  mpi_c_dep = dependency('mpich', required: false)
-endif
+  mpi_fortran_dep = dependency(
+    'mpi',
+    language: 'fortran',
+    required: false,
+  )
 
-# MPICH is not found by the mpi dependency, so we need to check for it manually
-if not mpi_fortran_dep.found()
-  mpi_fortran_dep = dependency('mpichf90', required: false)
+  # MPICH is not found by the mpi dependency, so we need to check for it manually
+  if (not mpi_c_dep.found())
+    mpi_c_dep = dependency('mpich', required: false)
+  endif
+
+  # MPICH is not found by the mpi dependency, so we need to check for it manually
+  if (not mpi_fortran_dep.found())
+    mpi_fortran_dep = dependency('mpichf90', required: false)
+    if mpi_fortran_dep.found()
+      numcosmo_conf.set('HAVE_MPIF90', true)
+    endif
+  endif
+
+  if get_option('mpi').enabled() and not mpi_c_dep.found()
+    error(
+      '''MPI support requested but not found. Both attempts to locate MPI dependency, \
+      using Meson's generic finder and MPICH specifically, failed.''',
+    )
+  endif
+else
+  mpi_c_dep = not_found
+  mpi_fortran_dep = not_found
 endif
 
 if mpi_c_dep.found()
@@ -417,6 +450,9 @@ omp_fortran = dependency(
   language: 'fortran',
   required: false,
 )
+if omp_fortran.found()
+  numcosmo_conf.set('HAVE_FORTRAN_OPENMP', true)
+endif
 
 #######################################################################################
 # Checking for GObject instrospection:
@@ -427,7 +463,10 @@ omp_fortran = dependency(
 #######################################################################################
 message('Checking for GObject introspection')
 
-gir_scanner = find_program('g-ir-scanner', required: get_option('introspection'))
+gir_scanner = find_program(
+  'g-ir-scanner',
+  required: get_option('introspection'),
+)
 
 enable_gir = false
 if gir_scanner.found()
@@ -462,6 +501,9 @@ message('Checking for Glib, GObject and GIO')
 glib_dep = dependency('glib-2.0', version: glib_req)
 gobject_dep = dependency('gobject-2.0', version: glib_req)
 gio_dep = dependency('gio-2.0', version: glib_req)
+
+# Using structured logging if available
+# add_global_arguments('-DG_LOG_USE_STRUCTURED', language: 'c')
 
 #######################################################################################
 # Checking for GSL:
@@ -542,6 +584,12 @@ endif
 
 numcosmo_conf.set('HAVE_LIBCUBA', 1)
 numcosmo_conf.set('HAVE_LIBCUBA_4_0', 1)
+
+#######################################################################################
+# Using internal sundials:
+#######################################################################################
+
+numcosmo_conf.set('HAVE_SUNDIALS_ARKODE', 1)
 
 #######################################################################################
 # Checking for NLopt (optional):
@@ -777,12 +825,10 @@ if get_option('numcosmo_py')
   if python_pip.found()
     pip_cmd = [
       python.full_path(),
-      '-m',
-      'pip',
+      '-m', 'pip',
       'install',
       numcosmo_source_dir,
-      '-t',
-      python.get_install_dir(),
+      '-t', python.get_install_dir(),
       '--no-dependencies',
     ]
     meson.add_install_script(pip_cmd, skip_if_destdir: true)
@@ -881,4 +927,3 @@ dependencies_summary = {
 }
 
 summary(dependencies_summary, section: 'Dependencies')
-

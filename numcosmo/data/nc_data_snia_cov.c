@@ -195,14 +195,14 @@ typedef enum _NcDataSNIACovDataV2
 #define NC_DATA_SNIA_COV_V1_INIT(D) (1UL << NC_DATA_SNIA_COV_V1_ ## D)
 #define NC_DATA_SNIA_COV_V2_INIT(D) (1UL << NC_DATA_SNIA_COV_V2_ ## D)
 
-#define NC_DATA_SNIA_COV_V1_ALL \
-        (NC_DATA_SNIA_COV_V1_INIT (ZCMB) | \
-         NC_DATA_SNIA_COV_V1_INIT (ZHE) | \
-         NC_DATA_SNIA_COV_V1_INIT (SIGMA_Z) | \
-         NC_DATA_SNIA_COV_V1_INIT (MAG) | \
-         NC_DATA_SNIA_COV_V1_INIT (WIDTH) | \
-         NC_DATA_SNIA_COV_V1_INIT (COLOUR) | \
-         NC_DATA_SNIA_COV_V1_INIT (THIRDPAR) | \
+#define NC_DATA_SNIA_COV_V1_ALL                  \
+        (NC_DATA_SNIA_COV_V1_INIT (ZCMB) |       \
+         NC_DATA_SNIA_COV_V1_INIT (ZHE) |        \
+         NC_DATA_SNIA_COV_V1_INIT (SIGMA_Z) |    \
+         NC_DATA_SNIA_COV_V1_INIT (MAG) |        \
+         NC_DATA_SNIA_COV_V1_INIT (WIDTH) |      \
+         NC_DATA_SNIA_COV_V1_INIT (COLOUR) |     \
+         NC_DATA_SNIA_COV_V1_INIT (THIRDPAR) |   \
          NC_DATA_SNIA_COV_V1_INIT (ABSMAG_SET) | \
          NC_DATA_SNIA_COV_V1_INIT (COV_FULL))
 
@@ -241,7 +241,7 @@ typedef enum _NcDataSNIACovDataV2
 
 #define NC_DATA_SNIA_COV_MBC_MBC_KEY "mbc-mbc"
 
-struct _NcDataSNIACovPrivate
+typedef struct _NcDataSNIACovPrivate
 {
   guint mu_len;
   guint uppertri_len;
@@ -297,15 +297,18 @@ struct _NcDataSNIACovPrivate
   guint dataset_len;
   guint64 data_init;
   guint cat_version;
+  gchar *catalog_file;
+  gboolean catalog_backend;
   NcmModelCtrl *cosmo_resample_ctrl;
   NcmModelCtrl *dcov_resample_ctrl;
   NcmModelCtrl *dcov_cov_full_ctrl;
-};
+} NcDataSNIACovPrivate;
 
 enum
 {
   PROP_0,
   PROP_CAT_VERSION,
+  PROP_CATALOG_FILE,
   PROP_MAG_CUT,
   PROP_ZHD,
   PROP_ZCMB,
@@ -327,6 +330,11 @@ enum
   PROP_SIZE,
 };
 
+struct _NcDataSNIACov
+{
+  NcmDataGaussCov parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcDataSNIACov, nc_data_snia_cov, NCM_TYPE_DATA_GAUSS_COV)
 G_DEFINE_QUARK (nc - data - snia - cov - error - quark, nc_data_snia_cov_error)
 
@@ -340,7 +348,11 @@ enum
 static void
 nc_data_snia_cov_init (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv = nc_data_snia_cov_get_instance_private (snia_cov);
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
+
+  self->cat_version     = 0;
+  self->catalog_file    = NULL;
+  self->catalog_backend = FALSE;
 
   self->mu_len       = 0;
   self->uppertri_len = 0;
@@ -416,11 +428,13 @@ nc_data_snia_cov_init (NcDataSNIACov *snia_cov)
   self->dcov_cov_full_ctrl  = ncm_model_ctrl_new (NULL);
 }
 
+static void _nc_data_snia_cov_load_catalog (NcDataSNIACov *snia_cov);
+
 static void
 nc_data_snia_cov_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataSNIACov *snia_cov           = NC_DATA_SNIA_COV (object);
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   g_return_if_fail (NC_IS_DATA_SNIA_COV (object));
 
@@ -428,6 +442,10 @@ nc_data_snia_cov_set_property (GObject *object, guint prop_id, const GValue *val
   {
     case PROP_CAT_VERSION:
       self->cat_version = g_value_get_uint (value);
+      break;
+    case PROP_CATALOG_FILE:
+      g_assert_null (self->catalog_file);
+      self->catalog_file = g_value_dup_string (value);
       break;
     case PROP_MAG_CUT:
       nc_data_snia_cov_set_mag_cut (snia_cov, g_value_get_double (value));
@@ -463,7 +481,7 @@ nc_data_snia_cov_set_property (GObject *object, guint prop_id, const GValue *val
       nc_data_snia_cov_set_thirdpar (snia_cov, g_value_get_object (value));
       break;
     case PROP_SIGMA_THIRDPAR:
-      ncm_vector_substitute (&self->sigma_thirdpar, g_value_get_object (value), TRUE);
+      nc_data_snia_cov_set_sigma_thirdpar (snia_cov, g_value_get_object (value));
       break;
     case PROP_ABSMAG_SET:
     {
@@ -520,7 +538,7 @@ static void
 nc_data_snia_cov_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataSNIACov *snia_cov           = NC_DATA_SNIA_COV (object);
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   g_return_if_fail (NC_IS_DATA_SNIA_COV (object));
 
@@ -528,6 +546,9 @@ nc_data_snia_cov_get_property (GObject *object, guint prop_id, GValue *value, GP
   {
     case PROP_CAT_VERSION:
       g_value_set_uint (value, self->cat_version);
+      break;
+    case PROP_CATALOG_FILE:
+      g_value_set_string (value, self->catalog_file);
       break;
     case PROP_MAG_CUT:
       g_value_set_double (value, nc_data_snia_cov_get_mag_cut (snia_cov));
@@ -566,13 +587,22 @@ nc_data_snia_cov_get_property (GObject *object, guint prop_id, GValue *value, GP
       g_value_set_object (value, self->sigma_thirdpar);
       break;
     case PROP_ABSMAG_SET:
-      g_value_take_variant (value, ncm_cfg_array_to_variant (self->dataset, G_VARIANT_TYPE ("u")));
+
+      if (self->dataset != NULL)
+        g_value_take_variant (value, ncm_cfg_array_to_variant (self->dataset, G_VARIANT_TYPE ("u")));
+
       break;
     case PROP_IS_CALIB:
-      g_value_take_variant (value, ncm_cfg_array_to_variant (self->is_calib, G_VARIANT_TYPE ("u")));
+
+      if (self->is_calib != NULL)
+        g_value_take_variant (value, ncm_cfg_array_to_variant (self->is_calib, G_VARIANT_TYPE ("u")));
+
       break;
     case PROP_USED_IN_SH0ES:
-      g_value_take_variant (value, ncm_cfg_array_to_variant (self->used_in_sh0es, G_VARIANT_TYPE ("u")));
+
+      if (self->used_in_sh0es != NULL)
+        g_value_take_variant (value, ncm_cfg_array_to_variant (self->used_in_sh0es, G_VARIANT_TYPE ("u")));
+
       break;
     case PROP_COV_FULL:
       g_value_set_object (value, nc_data_snia_cov_peek_cov_full (snia_cov));
@@ -599,6 +629,10 @@ nc_data_snia_cov_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (nc_data_snia_cov_parent_class)->constructed (object);
   {
+    NcDataSNIACov *snia_cov           = NC_DATA_SNIA_COV (object);
+    NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
+
+    _nc_data_snia_cov_load_catalog (snia_cov);
   }
 }
 
@@ -606,9 +640,10 @@ static void
 nc_data_snia_cov_dispose (GObject *object)
 {
   NcDataSNIACov *snia_cov           = NC_DATA_SNIA_COV (object);
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   NcmDataGaussCov *gauss            = NCM_DATA_GAUSS_COV (object);
 
+  self->catalog_backend = FALSE;
   ncm_data_gauss_cov_set_size (gauss, 0);
 
   ncm_model_ctrl_clear (&self->cosmo_resample_ctrl);
@@ -622,7 +657,10 @@ nc_data_snia_cov_dispose (GObject *object)
 static void
 nc_data_snia_cov_finalize (GObject *object)
 {
-  /* NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (object); */
+  NcDataSNIACov *snia_cov           = NC_DATA_SNIA_COV (object);
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
+
+  g_clear_pointer (&self->catalog_file, g_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_snia_cov_parent_class)->finalize (object);
@@ -647,6 +685,7 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
   object_class->dispose      = &nc_data_snia_cov_dispose;
   object_class->finalize     = &nc_data_snia_cov_finalize;
 
+
   g_object_class_install_property (object_class,
                                    PROP_CAT_VERSION,
                                    g_param_spec_uint ("cat-version",
@@ -654,6 +693,13 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
                                                       "Catalog version",
                                                       0, NC_DATA_SNIA_COV_CAT_LAST_VERSION, NC_DATA_SNIA_COV_CAT_LAST_VERSION,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_CATALOG_FILE,
+                                   g_param_spec_string ("catalog-file",
+                                                        NULL,
+                                                        "Catalog file",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_MAG_CUT,
                                    g_param_spec_double ("magnitude-cut",
@@ -784,97 +830,116 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->resample = &_nc_data_snia_cov_resample;
-  data_class->prepare  = &_nc_data_snia_cov_prepare;
+
+  data_class->prepare = &_nc_data_snia_cov_prepare;
 
   gauss_class->mean_func = &_nc_data_snia_cov_mean_func;
   gauss_class->cov_func  = &_nc_data_snia_cov_func;
   gauss_class->set_size  = &_nc_data_snia_cov_set_size;
 }
 
-static void
-_nc_data_snia_cov_prepare (NcmData *data, NcmMSet *mset)
-{
-  NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
+#define _NC_DATA_SNIA_COV_SET_DATA_INIT(D)                                        \
+        G_STMT_START {                                                            \
+          guint64 data_bw = 0;                                                    \
+          switch (self->cat_version)                                              \
+          {                                                                       \
+            case 0:                                                               \
+            case 1:                                                               \
+              data_bw         = NC_DATA_SNIA_COV_V1_INIT (D);                     \
+              self->data_init = self->data_init | data_bw;                        \
+              if ((self->data_init & NC_DATA_SNIA_COV_V1_ALL) == self->data_init) \
+              ncm_data_set_init (NCM_DATA (snia_cov), TRUE);                      \
+              else                                                                \
+              ncm_data_set_init (NCM_DATA (snia_cov), FALSE);                     \
+              break;                                                              \
+            case 2:                                                               \
+              data_bw         = NC_DATA_SNIA_COV_V2_INIT (D);                     \
+              self->data_init = self->data_init | data_bw;                        \
+              if ((self->data_init & NC_DATA_SNIA_COV_V2_ALL) == self->data_init) \
+              ncm_data_set_init (NCM_DATA (snia_cov), TRUE);                      \
+              else                                                                \
+              ncm_data_set_init (NCM_DATA (snia_cov), FALSE);                     \
+              break;                                                              \
+            default:                                                              \
+              g_assert_not_reached ();                                            \
+              break;                                                              \
+          }                                                                       \
+        } G_STMT_END
 
-  g_assert (dcov != NULL);
+#define _NC_DATA_SNIA_COV_SET_DATA_INIT_V01(D)                                                                      \
+        G_STMT_START {                                                                                              \
+          guint64 data_bw = 0;                                                                                      \
+          switch (self->cat_version)                                                                                \
+          {                                                                                                         \
+            case 0:                                                                                                 \
+            case 1:                                                                                                 \
+              data_bw         = NC_DATA_SNIA_COV_V1_INIT (D);                                                       \
+              self->data_init = self->data_init | data_bw;                                                          \
+              if ((self->data_init & NC_DATA_SNIA_COV_V1_ALL) == self->data_init)                                   \
+              ncm_data_set_init (NCM_DATA (snia_cov), TRUE);                                                        \
+              else                                                                                                  \
+              ncm_data_set_init (NCM_DATA (snia_cov), FALSE);                                                       \
+              break;                                                                                                \
+            case 2:                                                                                                 \
+              /*g_warning ("_NC_DATA_SNIA_COV_SET_DATA_INIT_V01: element `" #D "' does not exists in version 2");*/ \
+              break;                                                                                                \
+            default:                                                                                                \
+              g_assert_not_reached ();                                                                              \
+              break;                                                                                                \
+          }                                                                                                         \
+        } G_STMT_END
 
-  nc_snia_dist_cov_prepare_if_needed (dcov, mset);
-}
+#define _NC_DATA_SNIA_COV_SET_DATA_INIT_V2(D)                                                                      \
+        G_STMT_START {                                                                                             \
+          guint64 data_bw = 0;                                                                                     \
+          switch (self->cat_version)                                                                               \
+          {                                                                                                        \
+            case 0:                                                                                                \
+            case 1:                                                                                                \
+              /*g_warning ("_NC_DATA_SNIA_COV_SET_DATA_INIT_V2: element `" #D "' does not exists in version 1");*/ \
+              break;                                                                                               \
+            case 2:                                                                                                \
+              data_bw         = NC_DATA_SNIA_COV_V2_INIT (D);                                                      \
+              self->data_init = self->data_init | data_bw;                                                         \
+              if ((self->data_init & NC_DATA_SNIA_COV_V2_ALL) == self->data_init)                                  \
+              ncm_data_set_init (NCM_DATA (snia_cov), TRUE);                                                       \
+              else                                                                                                 \
+              ncm_data_set_init (NCM_DATA (snia_cov), FALSE);                                                      \
+              break;                                                                                               \
+            default:                                                                                               \
+              g_assert_not_reached ();                                                                             \
+              break;                                                                                               \
+          }                                                                                                        \
+        } G_STMT_END
 
-static void
-_nc_data_snia_cov_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp)
-{
-  NcDataSNIACov *snia_cov           = NC_DATA_SNIA_COV (gauss);
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
-  NcHICosmo *cosmo                  = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcSNIADistCov *dcov               = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
+#define _NC_DATA_SNIA_COV_SET_DATA_INIT_ALL                                       \
+        G_STMT_START {                                                            \
+          guint64 data_bw = 0;                                                    \
+          switch (self->cat_version)                                              \
+          {                                                                       \
+            case 0:                                                               \
+            case 1:                                                               \
+              data_bw         = NC_DATA_SNIA_COV_V1_ALL;                          \
+              self->data_init = self->data_init | data_bw;                        \
+              if ((self->data_init & NC_DATA_SNIA_COV_V1_ALL) == self->data_init) \
+              ncm_data_set_init (NCM_DATA (snia_cov), TRUE);                      \
+              else                                                                \
+              ncm_data_set_init (NCM_DATA (snia_cov), FALSE);                     \
+              break;                                                              \
+            case 2:                                                               \
+              data_bw         = NC_DATA_SNIA_COV_V2_ALL;                          \
+              self->data_init = self->data_init | data_bw;                        \
+              if ((self->data_init & NC_DATA_SNIA_COV_V2_ALL) == self->data_init) \
+              ncm_data_set_init (NCM_DATA (snia_cov), TRUE);                      \
+              else                                                                \
+              ncm_data_set_init (NCM_DATA (snia_cov), FALSE);                     \
+              break;                                                              \
+            default:                                                              \
+              g_assert_not_reached ();                                            \
+              break;                                                              \
+          }                                                                       \
+        } G_STMT_END
 
-  switch (self->cat_version)
-  {
-    case 0:
-    case 1:
-      nc_snia_dist_cov_mean (dcov, cosmo, snia_cov, vp);
-      break;
-    case 2:
-      nc_snia_dist_cov_mean_V2 (dcov, cosmo, snia_cov, vp);
-      break;
-    default:
-      g_assert_not_reached ();
-      break;
-  }
-}
-
-static gboolean
-_nc_data_snia_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov)
-{
-  NcDataSNIACov *snia_cov           = NC_DATA_SNIA_COV (gauss);
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
-
-  switch (self->cat_version)
-  {
-    case 0:
-    case 1:
-    {
-      NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
-
-      return nc_snia_dist_cov_calc (dcov, snia_cov, cov);
-    }
-    case 2:
-      ncm_matrix_memcpy (cov, self->cov_mbc_mbc);
-
-      return FALSE;
-
-      break;
-    default:
-      g_assert_not_reached ();
-
-      return FALSE;
-
-      break;
-  }
-}
-
-/**
- * nc_data_snia_cov_new:
- * @use_norma: Whether to use the correct Likelihood normalization
- * @cat_version: Catalog version
- *
- * Creates a new empty #NcDataSNIACov object. If @use_norma is
- * true the object will use the correct Likelihood normalization
- * when calculating $-2\ln(L)$.
- *
- * @cat_version indicates the data format used by the likelihood.
- *
- * Returns: (transfer full): the newly created instance of #NcDataSNIACov.
- */
-NcDataSNIACov *
-nc_data_snia_cov_new (gboolean use_norma, guint cat_version)
-{
-  return g_object_new (NC_TYPE_DATA_SNIA_COV,
-                       "use-norma", use_norma,
-                       "cat-version", cat_version,
-                       NULL);
-}
 
 #ifdef HAVE_CFITSIO
 static void nc_data_snia_cov_load_V0 (NcDataSNIACov *snia_cov, fitsfile *fptr);
@@ -894,124 +959,10 @@ static void _nc_data_snia_cov_diag_to_full_cov (NcDataSNIACov *snia_cov,
                                                 NcmVector     *diag_width_colour);
 static void _nc_data_snia_cov_save_cov_lowertri (NcDataSNIACov *snia_cov);
 
-#define _NC_DATA_SNIA_COV_SET_DATA_INIT(D) \
-        G_STMT_START { \
-          guint64 data_bw = 0; \
-          switch (self->cat_version) \
-          { \
-            case 0: \
-            case 1: \
-              data_bw         = NC_DATA_SNIA_COV_V1_INIT (D); \
-              self->data_init = self->data_init | data_bw; \
-              if ((self->data_init & NC_DATA_SNIA_COV_V1_ALL) == self->data_init) \
-              ncm_data_set_init (NCM_DATA (snia_cov), TRUE); \
-              else \
-              ncm_data_set_init (NCM_DATA (snia_cov), FALSE); \
-              break; \
-            case 2: \
-              data_bw         = NC_DATA_SNIA_COV_V2_INIT (D); \
-              self->data_init = self->data_init | data_bw; \
-              if ((self->data_init & NC_DATA_SNIA_COV_V2_ALL) == self->data_init) \
-              ncm_data_set_init (NCM_DATA (snia_cov), TRUE); \
-              else \
-              ncm_data_set_init (NCM_DATA (snia_cov), FALSE); \
-              break; \
-            default: \
-              g_assert_not_reached (); \
-              break; \
-          } \
-        } G_STMT_END
-
-#define _NC_DATA_SNIA_COV_SET_DATA_INIT_V01(D) \
-        G_STMT_START { \
-          guint64 data_bw = 0; \
-          switch (self->cat_version) \
-          { \
-            case 0: \
-            case 1: \
-              data_bw         = NC_DATA_SNIA_COV_V1_INIT (D); \
-              self->data_init = self->data_init | data_bw; \
-              if ((self->data_init & NC_DATA_SNIA_COV_V1_ALL) == self->data_init) \
-              ncm_data_set_init (NCM_DATA (snia_cov), TRUE); \
-              else \
-              ncm_data_set_init (NCM_DATA (snia_cov), FALSE); \
-              break; \
-            case 2: \
-              /*g_warning ("_NC_DATA_SNIA_COV_SET_DATA_INIT_V01: element `" #D "' does not exists in version 2");*/ \
-              break; \
-            default: \
-              g_assert_not_reached (); \
-              break; \
-          } \
-        } G_STMT_END
-
-#define _NC_DATA_SNIA_COV_SET_DATA_INIT_V2(D) \
-        G_STMT_START { \
-          guint64 data_bw = 0; \
-          switch (self->cat_version) \
-          { \
-            case 0: \
-            case 1: \
-              /*g_warning ("_NC_DATA_SNIA_COV_SET_DATA_INIT_V2: element `" #D "' does not exists in version 1");*/ \
-              break; \
-            case 2: \
-              data_bw         = NC_DATA_SNIA_COV_V2_INIT (D); \
-              self->data_init = self->data_init | data_bw; \
-              if ((self->data_init & NC_DATA_SNIA_COV_V2_ALL) == self->data_init) \
-              ncm_data_set_init (NCM_DATA (snia_cov), TRUE); \
-              else \
-              ncm_data_set_init (NCM_DATA (snia_cov), FALSE); \
-              break; \
-            default: \
-              g_assert_not_reached (); \
-              break; \
-          } \
-        } G_STMT_END
-
-#define _NC_DATA_SNIA_COV_SET_DATA_INIT_ALL \
-        G_STMT_START { \
-          guint64 data_bw = 0; \
-          switch (self->cat_version) \
-          { \
-            case 0: \
-            case 1: \
-              data_bw         = NC_DATA_SNIA_COV_V1_ALL; \
-              self->data_init = self->data_init | data_bw; \
-              if ((self->data_init & NC_DATA_SNIA_COV_V1_ALL) == self->data_init) \
-              ncm_data_set_init (NCM_DATA (snia_cov), TRUE); \
-              else \
-              ncm_data_set_init (NCM_DATA (snia_cov), FALSE); \
-              break; \
-            case 2: \
-              data_bw         = NC_DATA_SNIA_COV_V2_ALL; \
-              self->data_init = self->data_init | data_bw; \
-              if ((self->data_init & NC_DATA_SNIA_COV_V2_ALL) == self->data_init) \
-              ncm_data_set_init (NCM_DATA (snia_cov), TRUE); \
-              else \
-              ncm_data_set_init (NCM_DATA (snia_cov), FALSE); \
-              break; \
-            default: \
-              g_assert_not_reached (); \
-              break; \
-          } \
-        } G_STMT_END
-
-/**
- * nc_data_snia_cov_new_full: (constructor)
- * @filename: catalog file name
- * @use_norma: Whether to use the correct Likelihood normalization
- *
- * Creates a new #NcDataSNIACov object and load with the catalog
- * in @filename. If @use_norma is true the object will use the
- * correct Likelihood normalization when calculating $-2\ln(L)$
- *
- * Returns: (transfer full): the newly created instance of #NcDataSNIACov.
- */
-NcDataSNIACov *
-nc_data_snia_cov_new_full (const gchar *filename, gboolean use_norma)
+static void
+_nc_data_snia_cov_load_catalog (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACov *snia_cov    = NULL;
-  NcDataSNIACovPrivate *self = NULL;
+  NcDataSNIACovPrivate *self = nc_data_snia_cov_get_instance_private (snia_cov);
   fitsfile *fptr;
   gchar *desc = NULL;
   gchar comment[FLEN_COMMENT];
@@ -1020,11 +971,23 @@ nc_data_snia_cov_new_full (const gchar *filename, gboolean use_norma)
   gdouble mag_cut = NC_DATA_SNIA_COV_MAG_CUT_DEFAULT;
   gint status     = 0;
 
-  if (filename == NULL)
-    g_error ("nc_data_snia_cov_load: null filename");
+  if (self->catalog_file == NULL)
+    return;
 
-  fits_open_file (&fptr, filename, READONLY, &status);
-  NCM_FITS_ERROR (status);
+  if (g_file_test (self->catalog_file, G_FILE_TEST_EXISTS))
+  {
+    fits_open_file (&fptr, self->catalog_file, READONLY, &status);
+    NCM_FITS_ERROR (status);
+  }
+  else
+  {
+    gchar *full_filename = nc_data_snia_cov_get_fits (self->catalog_file, TRUE);
+
+    fits_open_file (&fptr, full_filename, READONLY, &status);
+    NCM_FITS_ERROR (status);
+
+    g_free (full_filename);
+  }
 
   fits_movabs_hdu (fptr, 2, &hdutype, &status);
   NCM_FITS_ERROR (status);
@@ -1040,14 +1003,7 @@ nc_data_snia_cov_new_full (const gchar *filename, gboolean use_norma)
     status      = 0;
   }
 
-  snia_cov = nc_data_snia_cov_new (use_norma, cat_version);
-  self     = snia_cov->priv;
-
-  if (cat_version != self->cat_version)
-    g_error ("nc_data_snia_cov_load: cannot load catalog `%s', object was created for version %d but catalog is version %ld",
-             filename,
-             self->cat_version,
-             cat_version);
+  self->cat_version = cat_version;
 
   fits_read_key_log (fptr, NC_DATA_SNIA_COV_CAT_HAS_COMPLETE_COV, &self->has_complete_cov, NULL, &status);
 
@@ -1097,8 +1053,6 @@ nc_data_snia_cov_new_full (const gchar *filename, gboolean use_norma)
 
   if (self->cat_version == 0)
   {
-    printf ("AQUI\n");
-    fflush (stdout);
     nc_data_snia_cov_load_V0 (snia_cov, fptr);
   }
   else if (self->cat_version == 1)
@@ -1241,6 +1195,113 @@ nc_data_snia_cov_new_full (const gchar *filename, gboolean use_norma)
   _NC_DATA_SNIA_COV_SET_DATA_INIT_ALL;
   nc_data_snia_cov_set_cov_full (snia_cov, self->cov_full);
 
+  self->catalog_backend = TRUE;
+}
+
+static void
+_nc_data_snia_cov_prepare (NcmData *data, NcmMSet *mset)
+{
+  NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
+
+  g_assert (dcov != NULL);
+
+  nc_snia_dist_cov_prepare_if_needed (dcov, mset);
+}
+
+static void
+_nc_data_snia_cov_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp)
+{
+  NcDataSNIACov *snia_cov           = NC_DATA_SNIA_COV (gauss);
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
+  NcHICosmo *cosmo                  = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcSNIADistCov *dcov               = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
+
+  switch (self->cat_version)
+  {
+    case 0:
+    case 1:
+      nc_snia_dist_cov_mean (dcov, cosmo, snia_cov, vp);
+      break;
+    case 2:
+      nc_snia_dist_cov_mean_V2 (dcov, cosmo, snia_cov, vp);
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+}
+
+static gboolean
+_nc_data_snia_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov)
+{
+  NcDataSNIACov *snia_cov           = NC_DATA_SNIA_COV (gauss);
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
+
+  switch (self->cat_version)
+  {
+    case 0:
+    case 1:
+    {
+      NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
+
+      return nc_snia_dist_cov_calc (dcov, snia_cov, cov);
+    }
+    case 2:
+      ncm_matrix_memcpy (cov, self->cov_mbc_mbc);
+
+      return FALSE;
+
+      break;
+    default:
+      g_assert_not_reached ();
+
+      return FALSE;
+
+      break;
+  }
+}
+
+/**
+ * nc_data_snia_cov_new:
+ * @use_norma: Whether to use the correct Likelihood normalization
+ * @cat_version: Catalog version
+ *
+ * Creates a new empty #NcDataSNIACov object. If @use_norma is
+ * true the object will use the correct Likelihood normalization
+ * when calculating $-2\ln(L)$.
+ *
+ * @cat_version indicates the data format used by the likelihood.
+ *
+ * Returns: (transfer full): the newly created instance of #NcDataSNIACov.
+ */
+NcDataSNIACov *
+nc_data_snia_cov_new (gboolean use_norma, guint cat_version)
+{
+  return g_object_new (NC_TYPE_DATA_SNIA_COV,
+                       "use-norma", use_norma,
+                       "cat-version", cat_version,
+                       NULL);
+}
+
+/**
+ * nc_data_snia_cov_new_full: (constructor)
+ * @filename: catalog file name
+ * @use_norma: Whether to use the correct Likelihood normalization
+ *
+ * Creates a new #NcDataSNIACov object and load with the catalog
+ * in @filename. If @use_norma is true the object will use the
+ * correct Likelihood normalization when calculating $-2\ln(L)$
+ *
+ * Returns: (transfer full): the newly created instance of #NcDataSNIACov.
+ */
+NcDataSNIACov *
+nc_data_snia_cov_new_full (const gchar *filename, gboolean use_norma)
+{
+  NcDataSNIACov *snia_cov = g_object_new (NC_TYPE_DATA_SNIA_COV,
+                                          "use-norma", use_norma,
+                                          "catalog-file", filename,
+                                          NULL);
+
   return snia_cov;
 }
 
@@ -1281,7 +1342,7 @@ nc_data_snia_cov_new_from_cat_id (NcDataSNIAId id, gboolean use_norma)
 guint
 nc_data_snia_cov_sigma_int_len (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->dataset_len;
 }
@@ -1298,7 +1359,7 @@ nc_data_snia_cov_sigma_int_len (NcDataSNIACov *snia_cov)
 guint
 nc_data_snia_cov_snia_len (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->mu_len;
 }
@@ -1310,7 +1371,7 @@ _nc_data_snia_cov_set_size (NcmDataGaussCov *gauss, guint mu_len)
   NCM_DATA_GAUSS_COV_CLASS (nc_data_snia_cov_parent_class)->set_size (gauss, mu_len);
   {
     NcDataSNIACov *snia_cov           = NC_DATA_SNIA_COV (gauss);
-    NcDataSNIACovPrivate * const self = snia_cov->priv;
+    NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
     NcmVector *y                      = ncm_data_gauss_cov_peek_mean (gauss);
 
     if ((mu_len == 0) || (mu_len != self->mu_len))
@@ -1377,10 +1438,11 @@ _nc_data_snia_cov_set_size (NcmDataGaussCov *gauss, guint mu_len)
         self->dataset_len  = 0;
       }
 
+      self->mu_len = 0;
       ncm_data_set_init (NCM_DATA (snia_cov), FALSE);
     }
 
-    if ((mu_len > 0) && (mu_len != self->mu_len))
+    if (mu_len > 0)
     {
       self->mu_len       = mu_len;
       self->uppertri_len = (mu_len * (mu_len + 1)) / 2;
@@ -1479,7 +1541,7 @@ _nc_data_snia_cov_set_size (NcmDataGaussCov *gauss, guint mu_len)
 NcmVector *
 nc_data_snia_cov_peek_z_hd (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->z_hd;
 }
@@ -1495,7 +1557,7 @@ nc_data_snia_cov_peek_z_hd (NcDataSNIACov *snia_cov)
 NcmVector *
 nc_data_snia_cov_peek_z_cmb (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->z_cmb;
 }
@@ -1511,7 +1573,7 @@ nc_data_snia_cov_peek_z_cmb (NcDataSNIACov *snia_cov)
 NcmVector *
 nc_data_snia_cov_peek_z_he (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->z_he;
 }
@@ -1527,7 +1589,7 @@ nc_data_snia_cov_peek_z_he (NcDataSNIACov *snia_cov)
 NcmVector *
 nc_data_snia_cov_peek_sigma_z (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->sigma_z;
 }
@@ -1543,7 +1605,7 @@ nc_data_snia_cov_peek_sigma_z (NcDataSNIACov *snia_cov)
 NcmVector *
 nc_data_snia_cov_peek_mag (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->mag;
 }
@@ -1559,7 +1621,7 @@ nc_data_snia_cov_peek_mag (NcDataSNIACov *snia_cov)
 NcmVector *
 nc_data_snia_cov_peek_width (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->width;
 }
@@ -1575,7 +1637,7 @@ nc_data_snia_cov_peek_width (NcDataSNIACov *snia_cov)
 NcmVector *
 nc_data_snia_cov_peek_colour (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->colour;
 }
@@ -1591,7 +1653,7 @@ nc_data_snia_cov_peek_colour (NcDataSNIACov *snia_cov)
 NcmVector *
 nc_data_snia_cov_peek_thirdpar (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->thirdpar;
 }
@@ -1607,7 +1669,7 @@ nc_data_snia_cov_peek_thirdpar (NcDataSNIACov *snia_cov)
 NcmVector *
 nc_data_snia_cov_peek_ceph_dist (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->ceph_dist;
 }
@@ -1623,7 +1685,7 @@ nc_data_snia_cov_peek_ceph_dist (NcDataSNIACov *snia_cov)
 GArray *
 nc_data_snia_cov_peek_abs_mag_set (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->dataset;
 }
@@ -1639,7 +1701,7 @@ nc_data_snia_cov_peek_abs_mag_set (NcDataSNIACov *snia_cov)
 void
 nc_data_snia_cov_set_mag_cut (NcDataSNIACov *snia_cov, const gdouble mag_cut)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   self->mag_cut = mag_cut;
 }
@@ -1653,7 +1715,7 @@ nc_data_snia_cov_set_mag_cut (NcDataSNIACov *snia_cov, const gdouble mag_cut)
 gdouble
 nc_data_snia_cov_get_mag_cut (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->mag_cut;
 }
@@ -1669,7 +1731,7 @@ nc_data_snia_cov_get_mag_cut (NcDataSNIACov *snia_cov)
 NcmMatrix *
 nc_data_snia_cov_peek_cov_full (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   if (self->mu_len > 0)
     _nc_data_snia_cov_restore_full_cov (snia_cov);
@@ -1688,7 +1750,7 @@ nc_data_snia_cov_peek_cov_full (NcDataSNIACov *snia_cov)
 NcmVector *
 nc_data_snia_cov_peek_cov_packed (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->cov_packed;
 }
@@ -1704,7 +1766,7 @@ nc_data_snia_cov_peek_cov_packed (NcDataSNIACov *snia_cov)
 NcmMatrix *
 nc_data_snia_cov_peek_cov_mbc_mbc (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->cov_mbc_mbc;
 }
@@ -1720,7 +1782,7 @@ nc_data_snia_cov_peek_cov_mbc_mbc (NcDataSNIACov *snia_cov)
 GArray *
 nc_data_snia_cov_peek_dataset (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->dataset;
 }
@@ -1736,7 +1798,7 @@ nc_data_snia_cov_peek_dataset (NcDataSNIACov *snia_cov)
 GArray *
 nc_data_snia_cov_peek_is_calib (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->is_calib;
 }
@@ -1752,7 +1814,7 @@ nc_data_snia_cov_peek_is_calib (NcDataSNIACov *snia_cov)
 GArray *
 nc_data_snia_cov_peek_used_in_sh0es (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->used_in_sh0es;
 }
@@ -1768,7 +1830,7 @@ nc_data_snia_cov_peek_used_in_sh0es (NcDataSNIACov *snia_cov)
 void
 nc_data_snia_cov_set_z_hd (NcDataSNIACov *snia_cov, NcmVector *z_hd)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   if (z_hd != self->z_hd)
   {
@@ -1791,7 +1853,7 @@ nc_data_snia_cov_set_z_hd (NcDataSNIACov *snia_cov, NcmVector *z_hd)
 void
 nc_data_snia_cov_set_z_cmb (NcDataSNIACov *snia_cov, NcmVector *z_cmb)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   if (z_cmb != self->z_cmb)
   {
@@ -1814,7 +1876,7 @@ nc_data_snia_cov_set_z_cmb (NcDataSNIACov *snia_cov, NcmVector *z_cmb)
 void
 nc_data_snia_cov_set_z_he (NcDataSNIACov *snia_cov, NcmVector *z_he)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   if (z_he != self->z_he)
   {
@@ -1837,7 +1899,7 @@ nc_data_snia_cov_set_z_he (NcDataSNIACov *snia_cov, NcmVector *z_he)
 void
 nc_data_snia_cov_set_sigma_z (NcDataSNIACov *snia_cov, NcmVector *sigma_z)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   if (sigma_z != self->sigma_z)
   {
@@ -1860,7 +1922,7 @@ nc_data_snia_cov_set_sigma_z (NcDataSNIACov *snia_cov, NcmVector *sigma_z)
 void
 nc_data_snia_cov_set_mag (NcDataSNIACov *snia_cov, NcmVector *mag)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   if (mag != self->mag)
   {
@@ -1888,7 +1950,7 @@ nc_data_snia_cov_set_mag (NcDataSNIACov *snia_cov, NcmVector *mag)
 void
 nc_data_snia_cov_set_mag_b_corr (NcDataSNIACov *snia_cov, NcmVector *mag_b_corr)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   if (mag_b_corr != self->mag_b_corr)
   {
@@ -1916,7 +1978,7 @@ nc_data_snia_cov_set_mag_b_corr (NcDataSNIACov *snia_cov, NcmVector *mag_b_corr)
 void
 nc_data_snia_cov_set_ceph_dist (NcDataSNIACov *snia_cov, NcmVector *ceph_dist)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   if (ceph_dist != self->ceph_dist)
   {
@@ -1939,7 +2001,7 @@ nc_data_snia_cov_set_ceph_dist (NcDataSNIACov *snia_cov, NcmVector *ceph_dist)
 void
 nc_data_snia_cov_set_width (NcDataSNIACov *snia_cov, NcmVector *width)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   if (width != self->width)
   {
@@ -1962,7 +2024,7 @@ nc_data_snia_cov_set_width (NcDataSNIACov *snia_cov, NcmVector *width)
 void
 nc_data_snia_cov_set_colour (NcDataSNIACov *snia_cov, NcmVector *colour)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   if (colour != self->colour)
   {
@@ -1985,7 +2047,7 @@ nc_data_snia_cov_set_colour (NcDataSNIACov *snia_cov, NcmVector *colour)
 void
 nc_data_snia_cov_set_thirdpar (NcDataSNIACov *snia_cov, NcmVector *thirdpar)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   if (thirdpar != self->thirdpar)
   {
@@ -1995,6 +2057,22 @@ nc_data_snia_cov_set_thirdpar (NcDataSNIACov *snia_cov, NcmVector *thirdpar)
   }
 
   _NC_DATA_SNIA_COV_SET_DATA_INIT_V01 (THIRDPAR);
+}
+
+/**
+ * nc_data_snia_cov_set_sigma_thirdpar:
+ * @snia_cov: a #NcDataSNIACov
+ * @sigma_thirdpar: the sigma thirdpar #NcmVector
+ *
+ * Sets the sigma thirdpar vector to @sigma_thirdpar.
+ *
+ */
+void
+nc_data_snia_cov_set_sigma_thirdpar (NcDataSNIACov *snia_cov, NcmVector *sigma_thirdpar)
+{
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
+
+  ncm_vector_substitute (&self->sigma_thirdpar, sigma_thirdpar, TRUE);
 }
 
 /**
@@ -2009,7 +2087,7 @@ nc_data_snia_cov_set_thirdpar (NcDataSNIACov *snia_cov, NcmVector *thirdpar)
 void
 nc_data_snia_cov_set_abs_mag_set (NcDataSNIACov *snia_cov, GArray *abs_mag_set)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   guint total;
   guint max_id = 0;
   guint i;
@@ -2062,7 +2140,7 @@ nc_data_snia_cov_set_abs_mag_set (NcDataSNIACov *snia_cov, GArray *abs_mag_set)
 void
 nc_data_snia_cov_set_is_calib (NcDataSNIACov *snia_cov, GArray *is_calib)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   g_assert_cmpuint (self->mu_len, ==, is_calib->len);
 
@@ -2087,7 +2165,7 @@ nc_data_snia_cov_set_is_calib (NcDataSNIACov *snia_cov, GArray *is_calib)
 void
 nc_data_snia_cov_set_used_in_sh0es (NcDataSNIACov *snia_cov, GArray *used_in_sh0es)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   g_assert_cmpuint (self->mu_len, ==, used_in_sh0es->len);
 
@@ -2113,7 +2191,7 @@ nc_data_snia_cov_set_used_in_sh0es (NcDataSNIACov *snia_cov, GArray *used_in_sh0
 void
 nc_data_snia_cov_set_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov_full)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   const guint mu_len                = self->mu_len;
   const guint tmu_len               = 3 * mu_len;
   guint i, j, ij;
@@ -2202,7 +2280,7 @@ nc_data_snia_cov_set_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov_full)
 void
 nc_data_snia_cov_set_cov_mbc_mbc (NcDataSNIACov *snia_cov, NcmMatrix *cov_mbc_mbc)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   if (cov_mbc_mbc != self->cov_mbc_mbc)
   {
@@ -2226,7 +2304,7 @@ nc_data_snia_cov_set_cov_mbc_mbc (NcDataSNIACov *snia_cov, NcmMatrix *cov_mbc_mb
 void
 nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   GKeyFile *snia_keyfile            = g_key_file_new ();
   GError *error                     = NULL;
   NcmMatrix *cov                    = NULL;
@@ -2494,7 +2572,7 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
 static void
 _nc_data_snia_cov_load_snia_data_V01 (NcDataSNIACov *snia_cov, const gchar *filename)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   GArray *dataset                   = self->dataset;
   gchar *line                       = NULL;
   gsize len = 0, tpos = 0;
@@ -2650,7 +2728,7 @@ _nc_data_snia_cov_load_snia_data_V01 (NcDataSNIACov *snia_cov, const gchar *file
 static void
 _nc_data_snia_cov_load_snia_data_V2 (NcDataSNIACov *snia_cov, const gchar *filename)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   gchar *line                       = NULL;
   gsize len = 0, tpos = 0;
   GError *error    = NULL;
@@ -2836,7 +2914,7 @@ _nc_data_snia_cov_diag_to_full_cov (NcDataSNIACov *snia_cov,
                                     NcmVector     *diag_mag_colour,
                                     NcmVector     *diag_width_colour)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   const guint mu_len                = self->mu_len;
   guint i;
 
@@ -2865,7 +2943,7 @@ _nc_data_snia_cov_diag_to_full_cov (NcDataSNIACov *snia_cov,
 static void
 _nc_data_snia_cov_matrix_to_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov, guint i, guint j)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   const guint mu_len                = self->mu_len;
   NcmMatrix *subcov                 = ncm_matrix_get_submatrix (self->cov_full, i * mu_len, j * mu_len, mu_len, mu_len);
 
@@ -2878,7 +2956,7 @@ _nc_data_snia_cov_matrix_to_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov, g
 static void
 nc_data_snia_cov_load_V0 (NcDataSNIACov *snia_cov, fitsfile *fptr)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   NcmVector *sigma_mag              = ncm_vector_new (self->mu_len);
   NcmVector *sigma_width            = ncm_vector_new (self->mu_len);
   NcmVector *sigma_colour           = ncm_vector_new (self->mu_len);
@@ -2981,7 +3059,7 @@ nc_data_snia_cov_load_V0 (NcDataSNIACov *snia_cov, fitsfile *fptr)
 void
 nc_data_snia_cov_save (NcDataSNIACov *snia_cov, const gchar *filename, gboolean overwrite)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   /*******************************************************************/
   /* Create a binary table extension                                 */
   /*******************************************************************/
@@ -3244,7 +3322,7 @@ nc_data_snia_cov_save (NcDataSNIACov *snia_cov, const gchar *filename, gboolean 
 static void
 _nc_data_snia_cov_restore_full_cov (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   const guint mu_len                = self->mu_len;
   const guint tmu_len               = 3 * mu_len;
   guint i, j;
@@ -3265,7 +3343,7 @@ _nc_data_snia_cov_restore_full_cov (NcDataSNIACov *snia_cov)
 static void
 _nc_data_snia_cov_prep_to_resample (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   const guint mu_len                = self->mu_len;
   const guint tmu_len               = 3 * self->mu_len;
   guint i, j;
@@ -3274,6 +3352,9 @@ _nc_data_snia_cov_prep_to_resample (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov
   if ((mu_len == 0) || !self->has_complete_cov)
     g_error ("_nc_data_snia_cov_prep_to_resample: cannot prepare to resample, empty catalog %d or it hasn't a complete covariance %d.\n",
              mu_len == 0, !self->has_complete_cov);
+
+  g_clear_pointer (&self->catalog_file, g_free);
+  self->catalog_backend = FALSE;
 
   for (i = 0; i < tmu_len; i++)
   {
@@ -3298,7 +3379,7 @@ _nc_data_snia_cov_prep_to_resample (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov
 static void
 _nc_data_snia_cov_prep_to_estimate (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   const guint mu_len                = self->mu_len;
   const guint tmu_len               = 3 * self->mu_len;
   guint i, j;
@@ -3346,7 +3427,7 @@ _nc_data_snia_cov_prep_to_estimate (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov
 static void
 _nc_data_snia_cov_save_cov_lowertri (NcDataSNIACov *snia_cov)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   const guint mu_len                = self->mu_len;
   const guint tmu_len               = 3 * self->mu_len;
   guint i, j;
@@ -3384,7 +3465,7 @@ static void
 _nc_data_snia_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
   NcDataSNIACov *snia_cov           = NC_DATA_SNIA_COV (data);
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   if (self->has_complete_cov)
   {
@@ -3457,7 +3538,7 @@ _nc_data_snia_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 gdouble
 nc_data_snia_cov_estimate_width_colour (NcDataSNIACov *snia_cov, NcmMSet *mset)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   const guint mu_len                = self->mu_len;
 
   if (mu_len == 0)
@@ -3571,7 +3652,7 @@ nc_data_snia_cov_estimate_width_colour (NcDataSNIACov *snia_cov, NcmMSet *mset)
 NcmVector *
 nc_data_snia_cov_get_estimated_mag (NcDataSNIACov *snia_cov, NcmMSet *mset)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   NcHICosmo *cosmo                  = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcSNIADistCov *dcov               = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
   gboolean dcov_resample_up         = ncm_model_ctrl_update (self->dcov_resample_ctrl, NCM_MODEL (dcov));
@@ -3607,7 +3688,7 @@ nc_data_snia_cov_get_estimated_mag (NcDataSNIACov *snia_cov, NcmMSet *mset)
 NcmVector *
 nc_data_snia_cov_get_estimated_width (NcDataSNIACov *snia_cov, NcmMSet *mset)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   NcHICosmo *cosmo                  = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcSNIADistCov *dcov               = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
   gboolean dcov_resample_up         = ncm_model_ctrl_update (self->dcov_resample_ctrl, NCM_MODEL (dcov));
@@ -3632,7 +3713,7 @@ nc_data_snia_cov_get_estimated_width (NcDataSNIACov *snia_cov, NcmMSet *mset)
 NcmVector *
 nc_data_snia_cov_get_estimated_colour (NcDataSNIACov *snia_cov, NcmMSet *mset)
 {
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   NcHICosmo *cosmo                  = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcSNIADistCov *dcov               = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
   gboolean dcov_resample_up         = ncm_model_ctrl_update (self->dcov_resample_ctrl, NCM_MODEL (dcov));
@@ -3721,19 +3802,6 @@ nc_data_snia_cov_get_catalog_by_id (NcDataSNIAId id)
   }
 }
 
-void
-_nc_data_snia_copy_prog (goffset current_num_bytes, goffset total_num_bytes, gpointer user_data)
-{
-  gint *old_prog = (gint *) user_data;
-  gint prog      = (100 * current_num_bytes) / total_num_bytes;
-
-  if (prog > *old_prog)
-  {
-    ncm_message ("# % 3d%%\r", prog);
-    *old_prog = prog;
-  }
-}
-
 /**
  * nc_data_snia_cov_get_fits:
  * @filename: Catalog fits filename
@@ -3747,7 +3815,7 @@ gchar *
 nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size)
 {
   gchar *full_filename = ncm_cfg_get_fullpath (filename);
-  gchar *url_str       = g_strdup_printf ("https://github.com/NumCosmo/NumCosmo/releases/download/v"PACKAGE_VERSION "/%s", filename);
+  gchar *url_str       = g_strdup_printf ("https://github.com/NumCosmo/NumCosmo/releases/download/datafile-release-v1.0.0/%s", filename);
   GFile *local         = g_file_new_for_path (full_filename);
   GFile *remote        = g_file_new_for_uri (url_str);
   GError *error        = NULL;
@@ -3787,14 +3855,17 @@ nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size)
 
   if (download)
   {
+    const gchar *dir = ncm_cfg_get_fullpath_base ();
+    gchar *cmd[]     = { "wget", "-O", full_filename, url_str, NULL };
+
     ncm_message ("# Downloading file [%s]...\n", url_str);
 
-    if (!g_file_copy (remote, local, G_FILE_COPY_OVERWRITE, NULL,
-                      &_nc_data_snia_copy_prog, &prog, &error))
-      g_error ("nc_data_snia_cov_get_fits: cannot get fits file from %s: %s."
-               " To use this catalog, download the file from the url and copy "
-               "to ~/.numcosmo directory.",
-               url_str, error->message);
+    if (!g_spawn_sync (dir, cmd, NULL,
+                       G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, NULL, &error))
+      g_error ("nc_data_snia_cov_get_fits: cannot download file: %s. Error: %s. "
+               "Please download the file manually from %s and extract it to %s.",
+               filename, error->message,
+               url_str, dir);
   }
 
   g_free (url_str);
@@ -3820,7 +3891,7 @@ NcDataSNIACov *
 nc_data_snia_cov_apply_filter_sh0es_z (NcDataSNIACov *snia_cov, const gdouble z_min, const gboolean use_calib, GError **err)
 {
   NcDataSNIACov *snia_cov_filter    = NULL;
-  NcDataSNIACovPrivate * const self = snia_cov->priv;
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
   NcmISet *is                       = ncm_iset_new (self->mu_len);
   guint i;
 
@@ -3852,7 +3923,7 @@ nc_data_snia_cov_apply_filter_sh0es_z (NcDataSNIACov *snia_cov, const gdouble z_
     ncm_data_set_desc (NCM_DATA (snia_cov_filter), ncm_data_peek_desc (NCM_DATA (snia_cov)));
 
     {
-      NcDataSNIACovPrivate * const selff = snia_cov_filter->priv;
+      NcDataSNIACovPrivate * const selff = nc_data_snia_cov_get_instance_private (snia_cov_filter);
       NcmVector *vec_from[34]            = {
         self->z_hd, self->z_cmb, self->z_he, self->mag_b_corr, self->mu_corr,
         self->ceph_dist, self->ampl, self->vpec, self->mag, self->width, self->colour, self->thirdpar,
@@ -3881,8 +3952,6 @@ nc_data_snia_cov_apply_filter_sh0es_z (NcDataSNIACov *snia_cov, const gdouble z_
       ncm_iset_get_subarray (is, self->is_calib, selff->is_calib);
       ncm_iset_get_subarray (is, self->used_in_sh0es, selff->used_in_sh0es);
       ncm_iset_get_subarray (is, self->dataset, selff->dataset);
-
-      /*printf ("New catalog has %u\n", selff->mu_len);*/
     }
   }
 

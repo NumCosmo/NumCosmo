@@ -69,10 +69,10 @@ typedef enum _NcmMSetCatalogSync
  */
 typedef enum _NcmMSetCatalogTrimType
 {
-  NCM_MSET_CATALOG_TRIM_TYPE_ESS = 1 << 0,
+  NCM_MSET_CATALOG_TRIM_TYPE_ESS    = 1 << 0,
   NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL = 1 << 1,
-  NCM_MSET_CATALOG_TRIM_TYPE_CK = 1 << 2,
-  NCM_MSET_CATALOG_TRIM_TYPE_ALL = (1 << 3) - 1,
+  NCM_MSET_CATALOG_TRIM_TYPE_CK     = 1 << 2,
+  NCM_MSET_CATALOG_TRIM_TYPE_ALL    = (1 << 3) - 1,
 } NcmMSetCatalogTrimType;
 
 /**

@@ -59,10 +59,10 @@ typedef enum _NcmSplineGslType
   NCM_SPLINE_GSL_TYPES_LEN, /*< skip >*/
 } NcmSplineGslType;
 
-NcmSpline *ncm_spline_gsl_new (const gsl_interp_type *type);
-NcmSpline *ncm_spline_gsl_new_full (const gsl_interp_type *type, NcmVector *xv, NcmVector *yv, gboolean init);
-NcmSpline *ncm_spline_gsl_new_by_id (NcmSplineGslType type_id);
-NcmSpline *ncm_spline_gsl_new_full_by_id (NcmSplineGslType type_id, NcmVector *xv, NcmVector *yv, gboolean init);
+NcmSplineGsl *ncm_spline_gsl_new (const gsl_interp_type *type);
+NcmSplineGsl *ncm_spline_gsl_new_full (const gsl_interp_type *type, NcmVector *xv, NcmVector *yv, gboolean init);
+NcmSplineGsl *ncm_spline_gsl_new_by_id (NcmSplineGslType type_id);
+NcmSplineGsl *ncm_spline_gsl_new_full_by_id (NcmSplineGslType type_id, NcmVector *xv, NcmVector *yv, gboolean init);
 void ncm_spline_gsl_set_type (NcmSplineGsl *sg, const gsl_interp_type *type);
 void ncm_spline_gsl_set_type_by_id (NcmSplineGsl *sg, NcmSplineGslType type_id);
 void ncm_spline_gsl_set_type_by_name (NcmSplineGsl *sg, const gchar *type_name);

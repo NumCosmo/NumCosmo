@@ -57,6 +57,7 @@ struct _NcHaloMassFunction
   GObject parent_instance;
   NcHaloMassFunctionPrivate *priv;
   NcmSpline2d *d2NdzdlnM;
+  gdouble mf_lb;
 };
 
 /**
@@ -90,6 +91,7 @@ void nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo
 
 NcmPowspecFilter *nc_halo_mass_function_peek_psf (NcHaloMassFunction *mfp);
 NcMultiplicityFunc *nc_halo_mass_function_peek_multiplicity_function (NcHaloMassFunction *mfp);
+gdouble nc_halo_mass_function_peek_survey_area (NcHaloMassFunction *mfp);
 
 gdouble nc_halo_mass_function_lnM_to_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM);
 gdouble nc_halo_mass_function_lnR_to_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR);
@@ -102,6 +104,7 @@ gdouble nc_halo_mass_function_dn_dlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo
 
 gdouble nc_halo_mass_function_dv_dzdomega (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble z);
 NCM_INLINE gdouble nc_halo_mass_function_d2n_dzdlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
+
 gdouble nc_halo_mass_function_dn_dz (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble z, gboolean spline);
 gdouble nc_halo_mass_function_n (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble zl, gdouble zu, NcHaloMassFunctionSplineOptimize spline);
 
@@ -119,7 +122,11 @@ G_BEGIN_DECLS
 NCM_INLINE gdouble
 nc_halo_mass_function_d2n_dzdlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
-  return ncm_spline2d_eval (mfp->d2NdzdlnM, lnM, z);
+  const gdouble res = ncm_spline2d_eval (mfp->d2NdzdlnM, lnM, z);
+
+  if (res < mfp->mf_lb)
+    return mfp->mf_lb;
+  return res;
 }
 
 G_END_DECLS

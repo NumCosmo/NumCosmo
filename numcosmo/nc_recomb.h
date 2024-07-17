@@ -60,7 +60,7 @@ struct _NcRecombClass
   void (*prepare) (NcRecomb *recomb, NcHICosmo *cosmo);
   gdouble (*Xe) (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
   gdouble (*XHII) (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
-  gdouble (*XHeII) (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda); 
+  gdouble (*XHeII) (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 };
 
 struct _NcRecomb
@@ -90,6 +90,7 @@ void nc_recomb_free (NcRecomb *recomb);
 void nc_recomb_clear (NcRecomb **recomb);
 
 void nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo);
+
 NCM_INLINE void nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHICosmo *cosmo);
 
 void nc_recomb_set_zi (NcRecomb *recomb, const gdouble zi);
@@ -167,19 +168,19 @@ nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHICosmo *cosmo)
     nc_recomb_prepare (recomb, cosmo);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   return NC_RECOMB_GET_CLASS (recomb)->Xe (recomb, cosmo, lambda);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   return NC_RECOMB_GET_CLASS (recomb)->XHII (recomb, cosmo, lambda);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   return NC_RECOMB_GET_CLASS (recomb)->XHeII (recomb, cosmo, lambda);
@@ -188,7 +189,7 @@ nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 NCM_INLINE gdouble
 nc_recomb_dtau_dlambda_Xe (NcHICosmo *cosmo, const gdouble lambda)
 {
-	const gdouble x        = exp (-lambda);
+  const gdouble x        = exp (-lambda);
   const gdouble x3       = gsl_pow_3 (x);
   const gdouble h2       = nc_hicosmo_h2 (cosmo);
   const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (cosmo);
@@ -202,61 +203,61 @@ nc_recomb_dtau_dlambda_Xe (NcHICosmo *cosmo, const gdouble lambda)
 NCM_INLINE gdouble
 nc_recomb_He_fully_ionized_dtau_dlambda (NcHICosmo *cosmo, const gdouble lambda)
 {
-	const gdouble x        = exp (-lambda);
-	const gdouble x3       = gsl_pow_3 (x);
-	const gdouble h2       = nc_hicosmo_h2 (cosmo);
-	const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (cosmo);
-	const gdouble n_b0     = Omega_b0 * ncm_c_crit_number_density_p () * h2;
-	const gdouble n_0      = nc_hicosmo_Yp_1H (cosmo) * n_b0;
+  const gdouble x        = exp (-lambda);
+  const gdouble x3       = gsl_pow_3 (x);
+  const gdouble h2       = nc_hicosmo_h2 (cosmo);
+  const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (cosmo);
+  const gdouble n_b0     = Omega_b0 * ncm_c_crit_number_density_p () * h2;
+  const gdouble n_0      = nc_hicosmo_Yp_1H (cosmo) * n_b0;
   const gdouble H        = nc_hicosmo_H (cosmo, x - 1.0) / (ncm_c_kpc ());
   const gdouble Xe       = nc_recomb_He_fully_ionized_Xe (cosmo, x);
 
-	return -Xe * ncm_c_c () * ncm_c_thomson_cs () * n_0 * x3 / H;
+  return -Xe *ncm_c_c () * ncm_c_thomson_cs () * n_0 * x3 / H;
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_recomb_get_v_tau_max_lambda (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   return recomb->v_tau_max_lambda;
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_recomb_get_tau_lambda (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   return recomb->tau_lambda;
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_recomb_get_tau_drag_lambda (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   return recomb->tau_drag_lambda;
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_recomb_get_tau_cutoff_lambda (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   return recomb->tau_cutoff_lambda;
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_recomb_get_v_tau_max_z (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   return recomb->v_tau_max_z;
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_recomb_get_tau_z (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   return recomb->tau_z;
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_recomb_get_tau_drag_z (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   return recomb->tau_drag_z;
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_recomb_get_tau_cutoff_z (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   return recomb->tau_cutoff_z;
@@ -267,3 +268,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_RECOMB_INLINE_H_ */
+

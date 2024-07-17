@@ -812,7 +812,7 @@ ncm_spline2d_gsl_new (NcmSpline *s)
 NcmSpline2d *
 ncm_spline2d_gsl_natural_new ()
 {
-  NcmSpline *s     = ncm_spline_gsl_new (gsl_interp_cspline);
+  NcmSpline *s     = NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_cspline));
   NcmSpline2d *s2d = ncm_spline2d_gsl_new (s);
 
   ncm_spline_free (s);

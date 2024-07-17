@@ -32,21 +32,26 @@ Ncm.cfg_init()
 
 
 class RhsF:
-    """Test function for the ODE, it describes the right-hand
-    side of the equation $y_x = f(y,x)$."""
+    """Test function for the ODE.
+
+    It describes the right-hand side of the equation $y_x = f(y,x)$.
+    """
 
     def __init__(self, alpha):
+        """Initialize the test function."""
         self.alpha = alpha
 
     def rhs(self, y, _x, _data):
-        r"""Test function for the ODE, it describes the right-hand
-        side of the equation $y_x = f(y,x)$, here we use $f(y,x) = \alpha y$."""
+        r"""Test function for the ODE.
+
+        It describes the right-hand side of the equation $y_x = f(y,x)$, here we use
+        $f(y,x) = \alpha y$.
+        """
         return self.alpha * y
 
 
 def test_ode_spline() -> None:
     """Test function for the ODE spline."""
-
     f = RhsF(2.5)
 
     s = Ncm.SplineCubicNotaknot.new()
@@ -74,7 +79,6 @@ def test_ode_spline() -> None:
 
 def test_ode_spline_copy_props() -> None:
     """Test function for the ODE spline."""
-
     f = RhsF(2.5)
 
     s = Ncm.SplineCubicNotaknot.new()
@@ -92,9 +96,8 @@ def test_ode_spline_copy_props() -> None:
 
     os = Ncm.OdeSpline.new(s, f.rhs)
     for prop in os0.list_properties():
-        if prop.name == "dydx" or prop.name == "yf":
+        if prop.name in ("dydx", "yf"):
             continue
-        print(prop.name)
         os.set_property(prop.name, os0.get_property(prop.name))
 
     assert isinstance(os, Ncm.OdeSpline)

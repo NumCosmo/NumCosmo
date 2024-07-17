@@ -52,8 +52,8 @@ def compare_ccl_nc_func(
     diff[non_zind] = y_nc[non_zind] / y_ccl[non_zind] - 1.0
     diff[zind] = y_nc[zind] - y_ccl[zind]
     print(
-        f"[{y_name:10}]: rel diff min: {min(abs(diff)):.e}\t"
-        f"rel diff max: {max(abs(diff)):.e}"
+        f"[{y_name:10}]: rel diff min: {min(abs(diff)):.8e}\t"
+        f"rel diff max: {max(abs(diff)):.8e}"
     )
 
     fig, axs = plt.subplots(2, sharex=True, **subplots_pars)

@@ -94,9 +94,9 @@ static void
 ncm_stats_dist1d_init (NcmStatsDist1d *sd1)
 {
   NcmStatsDist1dPrivate *self = ncm_stats_dist1d_get_instance_private (sd1);
-  NcmSpline *s1               = ncm_spline_cubic_notaknot_new ();
-  NcmSpline *s2               = ncm_spline_cubic_notaknot_new ();
-  NcmSpline *s3               = ncm_spline_cubic_notaknot_new ();
+  NcmSpline *s1               = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  NcmSpline *s2               = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  NcmSpline *s3               = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
   self->xi          = 0.0;
   self->xf          = 0.0;

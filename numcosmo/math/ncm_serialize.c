@@ -2649,6 +2649,13 @@ ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
   {
     var = g_value_dup_variant (val);
   }
+  else if (t == G_TYPE_STRING)
+  {
+    const gchar *str = g_value_get_string (val);
+
+    if (str != NULL)
+      var = g_variant_ref_sink (g_variant_new_string (str));
+  }
   else
   {
     var = g_dbus_gvalue_to_gvariant (val, var_type);

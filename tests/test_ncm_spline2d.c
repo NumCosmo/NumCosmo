@@ -403,7 +403,7 @@ test_ncm_spline2d_gsl_cspline_new_empty (TestNcmSpline2d *test, gconstpointer pd
 void
 test_ncm_spline2d_spline_new_empty (TestNcmSpline2d *test, gconstpointer pdata)
 {
-  test->s_base     = ncm_spline_cubic_notaknot_new ();
+  test->s_base     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   test->s2d_base   = ncm_spline2d_spline_new (test->s_base);
   test->test_error = 1.0e-4;
 

@@ -175,7 +175,7 @@ _nc_xcor_limber_kernel_gal_constructed (GObject *object)
 
       ncm_spline_clear (&xclkg->g_func);
 
-      xclkg->g_func = ncm_spline_cubic_notaknot_new ();
+      xclkg->g_func = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
       ncm_spline_set_len (xclkg->g_func, NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN);
       gzv = ncm_spline_get_xv (xclkg->g_func);
 
@@ -222,7 +222,7 @@ _nc_xcor_limber_kernel_gal_constructed (GObject *object)
       case 2:
         ncm_vector_set (zv, 0, xclk->zmin);
         ncm_vector_set (zv, 1, xclk->zmax);
-        xclkg->bias_spline = ncm_spline_gsl_new_full (gsl_interp_linear, zv, bv, FALSE);
+        xclkg->bias_spline = NCM_SPLINE (ncm_spline_gsl_new_full (gsl_interp_linear, zv, bv, FALSE));
         break;
       default:
       {
@@ -233,7 +233,7 @@ _nc_xcor_limber_kernel_gal_constructed (GObject *object)
           ncm_vector_set (zv, i, zi);
         }
 
-        xclkg->bias_spline = ncm_spline_gsl_new_full (gsl_interp_polynomial, zv, bv, FALSE);
+        xclkg->bias_spline = NCM_SPLINE (ncm_spline_gsl_new_full (gsl_interp_polynomial, zv, bv, FALSE));
         break;
       }
     }
@@ -488,7 +488,7 @@ _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
     {
       NcmVector *gzv;
 
-      xclkg->g_func = ncm_spline_cubic_notaknot_new ();
+      xclkg->g_func = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
       ncm_spline_set_len (xclkg->g_func, NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN);
 
       gzv = ncm_spline_get_xv (xclkg->g_func);
