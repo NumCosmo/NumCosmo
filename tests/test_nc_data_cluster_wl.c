@@ -156,8 +156,7 @@ test_nc_data_cluster_wl_new_flat (TestNcDataClusterWL *test, gconstpointer pdata
                                                           NC_GALAXY_SD_POSITION (gsdpf),
                                                           0.4,
                                                           0,
-                                                          0,
-                                                          NC_DATA_CLUSTER_WL_COORD_SKY);
+                                                          0);
 
   nc_galaxy_sd_shape_gauss_set_sigma (gss, 0.001);
   nc_data_cluster_wl_set_cut (dcwl, 0.0, 2.0);
@@ -182,8 +181,7 @@ test_nc_data_cluster_wl_new_lsst_srd (TestNcDataClusterWL *test, gconstpointer p
                                                                 NC_GALAXY_SD_POSITION (gsdplsst),
                                                                 0.4,
                                                                 0,
-                                                                0,
-                                                                NC_DATA_CLUSTER_WL_COORD_SKY);
+                                                                0);
 
   nc_galaxy_sd_shape_gauss_set_sigma (gss, 0.001);
   nc_data_cluster_wl_set_cut (dcwl, 0.0, 2.0);
@@ -221,7 +219,7 @@ test_nc_data_cluster_wl_fit (TestNcDataClusterWL *test, gconstpointer pdata)
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
 
-  nc_data_cluster_wl_gen_obs (test->dcwl, cosmo, dp, smd, ngals, rng);
+  nc_data_cluster_wl_gen_data (test->dcwl, cosmo, dp, smd, ngals, rng);
 
   {
     nc_data_cluster_wl_set_use_kde (test->dcwl, FALSE);
@@ -288,10 +286,10 @@ test_nc_data_cluster_wl_kde_cmp (TestNcDataClusterWL *test, gconstpointer pdata)
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
 
-  nc_data_cluster_wl_gen_obs (test->dcwl, cosmo, dp, smd, ngals, rng);
+  nc_data_cluster_wl_gen_data (test->dcwl, cosmo, dp, smd, ngals, rng);
   nc_data_cluster_wl_set_ndata (test->dcwl, 1000);
 
-  obs = nc_data_cluster_wl_peek_obs (test->dcwl);
+  obs = nc_data_cluster_wl_peek_data (test->dcwl);
 
   nc_data_cluster_wl_eval_m2lnP (test->dcwl, cosmo, dp, smd, m2lnP_int_gal);
   nc_data_cluster_wl_kde_eval_m2lnP (test->dcwl, cosmo, dp, smd, m2lnP_kde_gal);
@@ -345,18 +343,19 @@ test_nc_data_cluster_wl_kde_cmp (TestNcDataClusterWL *test, gconstpointer pdata)
 static void
 test_nc_data_cluster_wl_set_obs (TestNcDataClusterWL *test, gconstpointer pdata)
 {
-  NcmRNG *rng       = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  const guint ngals = 1000;
-  NcmMatrix *obs    = ncm_matrix_new (ngals, 4);
-  NcmMatrix *dcwl_obs;
+  NcmRNG *rng        = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  const guint ngals  = 1000;
+  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (ngals, NC_GALAXY_WL_OBS_COORD_PIXEL);
+  NcGalaxyWLObs *dcwl_obs;
   guint i;
 
   for (i = 0; i < ngals; i++)
   {
-    ncm_matrix_set (obs, i, 0, ncm_rng_uniform_gen (rng, 0.0, 2.0));
-    ncm_matrix_set (obs, i, 1, ncm_rng_uniform_gen (rng, 0.0, 2.0));
-    ncm_matrix_set (obs, i, 2, ncm_rng_uniform_gen (rng, 0.0, 2.0));
-    ncm_matrix_set (obs, i, 3, ncm_rng_uniform_gen (rng, 0.0, 2.0));
+    nc_galaxy_wl_obs_set (obs, i, 0, ncm_rng_uniform_gen (rng, 0.0, 2.0));
+    nc_galaxy_wl_obs_set (obs, i, 1, ncm_rng_uniform_gen (rng, 0.0, 2.0));
+    nc_galaxy_wl_obs_set (obs, i, 2, ncm_rng_uniform_gen (rng, 0.0, 2.0));
+    nc_galaxy_wl_obs_set (obs, i, 3, ncm_rng_uniform_gen (rng, 0.0, 2.0));
+    nc_galaxy_wl_obs_set (obs, i, 4, ncm_rng_uniform_gen (rng, 0.0, 2.0));
   }
 
   nc_data_cluster_wl_set_obs (test->dcwl, obs);
@@ -365,19 +364,21 @@ test_nc_data_cluster_wl_set_obs (TestNcDataClusterWL *test, gconstpointer pdata)
 
   for (i = 0; i < ngals; i++)
   {
-    const gdouble w = ncm_matrix_get (obs, i, 0);
-    const gdouble x = ncm_matrix_get (obs, i, 1);
-    const gdouble y = ncm_matrix_get (obs, i, 2);
-    const gdouble z = ncm_matrix_get (obs, i, 3);
+    const gdouble v = nc_galaxy_wl_obs_get (obs, i, 0);
+    const gdouble w = nc_galaxy_wl_obs_get (obs, i, 1);
+    const gdouble x = nc_galaxy_wl_obs_get (obs, i, 2);
+    const gdouble y = nc_galaxy_wl_obs_get (obs, i, 3);
+    const gdouble z = nc_galaxy_wl_obs_get (obs, i, 4);
 
-    g_assert_cmpfloat (ncm_matrix_get (dcwl_obs, i, 0), ==, w);
-    g_assert_cmpfloat (ncm_matrix_get (dcwl_obs, i, 1), ==, x);
-    g_assert_cmpfloat (ncm_matrix_get (dcwl_obs, i, 2), ==, y);
-    g_assert_cmpfloat (ncm_matrix_get (dcwl_obs, i, 3), ==, z);
+    g_assert_cmpfloat (nc_galaxy_wl_obs_get (dcwl_obs, i, 0), ==, v);
+    g_assert_cmpfloat (nc_galaxy_wl_obs_get (dcwl_obs, i, 1), ==, w);
+    g_assert_cmpfloat (nc_galaxy_wl_obs_get (dcwl_obs, i, 2), ==, x);
+    g_assert_cmpfloat (nc_galaxy_wl_obs_get (dcwl_obs, i, 3), ==, y);
+    g_assert_cmpfloat (nc_galaxy_wl_obs_get (dcwl_obs, i, 4), ==, z);
   }
 
   ncm_rng_free (rng);
-  ncm_matrix_free (obs);
+  nc_galaxy_wl_obs_clear (&obs);
 }
 
 static void
@@ -406,7 +407,7 @@ test_nc_data_cluster_wl_serialize (TestNcDataClusterWL *test, gconstpointer pdat
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
 
-  nc_data_cluster_wl_gen_obs (test->dcwl, cosmo, dp, smd, ngals, rng);
+  nc_data_cluster_wl_gen_data (test->dcwl, cosmo, dp, smd, ngals, rng);
   nc_data_cluster_wl_set_prec (test->dcwl, 1.0e-3);
   nc_data_cluster_wl_set_use_kde (test->dcwl, FALSE);
 

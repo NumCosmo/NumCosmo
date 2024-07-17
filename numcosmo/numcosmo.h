@@ -157,6 +157,7 @@
 #include <numcosmo/lss/nc_galaxy_selfunc.h>
 
 /* Galaxy / Galaxy sample distributions */
+#include <numcosmo/galaxy/nc_galaxy_wl_obs.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_position.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_position_flat.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_position_lsst_srd.h>

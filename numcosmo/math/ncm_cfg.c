@@ -163,6 +163,7 @@
 #include "lss/nc_reduced_shear_cluster_mass.h"
 #include "lss/nc_reduced_shear_calib.h"
 #include "lss/nc_reduced_shear_calib_wtg.h"
+#include "galaxy/nc_galaxy_wl_obs.h"
 #include "galaxy/nc_galaxy_sd_position.h"
 #include "galaxy/nc_galaxy_sd_position_flat.h"
 #include "galaxy/nc_galaxy_sd_position_lsst_srd.h"
@@ -704,6 +705,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB);
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB_WTG);
 
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_OBS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_FLAT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_LSST_SRD);
