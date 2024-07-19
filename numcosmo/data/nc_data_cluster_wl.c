@@ -87,7 +87,6 @@ enum
   PROP_S_DIST,
   PROP_ZP_DIST,
   PROP_RZ_DIST,
-  PROP_KDE,
   PROP_R_MIN,
   PROP_R_MAX,
   PROP_ZP_MIN,
@@ -107,19 +106,20 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
   NcDataClusterWLPrivate * const self = dcwl->priv = nc_data_cluster_wl_get_instance_private (dcwl);
   NcmStatsDistKernelGauss *kernel     = ncm_stats_dist_kernel_gauss_new (4);
 
-  self->obs         = NULL;
-  self->s_dist      = NULL;
-  self->zp_dist     = NULL;
-  self->rz_dist     = NULL;
-  self->kde         = NCM_STATS_DIST (ncm_stats_dist_vkde_new (NCM_STATS_DIST_KERNEL (kernel), NCM_STATS_DIST_CV_NONE));
-  self->len         = 0;
-  self->r_max       = 0.0;
-  self->r_min       = 0.0;
-  self->ndata       = 0.0;
-  self->prec        = 1.0e-11;
-  self->constructed = FALSE;
-  self->z_cluster   = 0.0;
-  self->use_kde     = FALSE;
+  self->obs          = NULL;
+  self->s_dist       = NULL;
+  self->zp_dist      = NULL;
+  self->rz_dist      = NULL;
+  self->kde          = NCM_STATS_DIST (ncm_stats_dist_vkde_new (NCM_STATS_DIST_KERNEL (kernel), NCM_STATS_DIST_CV_NONE));
+  self->cut_fraction = 0.0;
+  self->len          = 0;
+  self->r_max        = 0.0;
+  self->r_min        = 0.0;
+  self->ndata        = 0.0;
+  self->prec         = 1.0e-11;
+  self->constructed  = FALSE;
+  self->z_cluster    = 0.0;
+  self->use_kde      = FALSE;
 }
 
 static void
@@ -198,9 +198,6 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
       break;
     case PROP_RZ_DIST:
       g_value_set_object (value, self->rz_dist);
-      break;
-    case PROP_KDE:
-      g_value_set_object (value, nc_data_cluster_wl_peek_kde (dcwl));
       break;
     case PROP_R_MIN:
       g_value_set_double (value, self->r_min);
@@ -575,7 +572,10 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
   ncm_integral_nd_set_abstol (lh_int, 0.0);
   ncm_integral_nd_set_method (lh_int, NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V);
 
-  g_assert_cmpuint (ncm_matrix_ncols (self->obs), ==, 4);
+  if (self->obs != NULL)
+    g_assert_cmpuint (ncm_matrix_ncols (self->obs), ==, 4);
+  else
+    g_error ("Weak lensing observables matrix is not set.");
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
@@ -661,10 +661,12 @@ nc_data_cluster_wl_kde_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHa
   NcmVector *data_vec                 = ncm_vector_new (4);
   gdouble res                         = 0.0;
   glong in_cut                        = 0;
-
   guint gal_i;
 
-  g_assert_cmpuint (ncm_matrix_ncols (self->obs), ==, 4);
+  if (self->obs != NULL)
+    g_assert_cmpuint (ncm_matrix_ncols (self->obs), ==, 4);
+  else
+    g_error ("Weak lensing observables matrix is not set.");
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
@@ -769,24 +771,6 @@ nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGa
                                         "rz-dist", rz_dist,
                                         "z-cluster", z_cluster,
                                         NULL);
-
-  return dcwl;
-}
-
-/**
- * nc_data_cluster_wl_new_from_file:
- * @filename: file containing a serialized #NcDataClusterWL
- *
- * Creates a new #NcDataClusterWL from @filename.
- *
- * Returns: (transfer full): the newly created #NcDataClusterWL.
- */
-NcDataClusterWL *
-nc_data_cluster_wl_new_from_file (const gchar *filename)
-{
-  NcDataClusterWL *dcwl = NC_DATA_CLUSTER_WL (ncm_serialize_global_from_file (filename));
-
-  g_assert (NC_IS_DATA_CLUSTER_WL (dcwl));
 
   return dcwl;
 }

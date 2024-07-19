@@ -50,6 +50,7 @@ static void test_nc_data_cluster_wl_r_lim (TestNcDataClusterWL *test, gconstpoin
 static void test_nc_data_cluster_wl_peek_kde (TestNcDataClusterWL *test, gconstpointer pdata);
 static void test_nc_data_cluster_wl_basic (TestNcDataClusterWL *test, gconstpointer pdata);
 static void test_nc_data_cluster_wl_prepare_kde (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_val_kde (TestNcDataClusterWL *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -95,9 +96,9 @@ main (gint argc, gchar *argv[])
               &test_nc_data_cluster_wl_basic,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/data_cluster_wl/flat/prepare_kde", TestNcDataClusterWL, NULL,
+  g_test_add ("/nc/data_cluster_wl/flat/val_kde", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_flat,
-              &test_nc_data_cluster_wl_prepare_kde,
+              &test_nc_data_cluster_wl_val_kde,
               &test_nc_data_cluster_wl_free);
 
   g_test_add ("/nc/data_cluster_wl/lsst_srd/fit", TestNcDataClusterWL, NULL,
@@ -135,9 +136,9 @@ main (gint argc, gchar *argv[])
               &test_nc_data_cluster_wl_basic,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/data_cluster_wl/lsst_srd/prepare_kde", TestNcDataClusterWL, NULL,
+  g_test_add ("/nc/data_cluster_wl/lsst_srd/val_kde", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_lsst_srd,
-              &test_nc_data_cluster_wl_prepare_kde,
+              &test_nc_data_cluster_wl_val_kde,
               &test_nc_data_cluster_wl_free);
 
   g_test_run ();
@@ -449,6 +450,7 @@ test_nc_data_cluster_wl_r_lim (TestNcDataClusterWL *test, gconstpointer pdata)
   gdouble r_min;
   gdouble r_max;
 
+  g_object_set (dcwl, "r-min", 0.0, "r-max", 2.0, NULL);
   g_object_get (dcwl, "r-min", &r_min, "r-max", &r_max, NULL);
 
   g_assert_cmpfloat (r_min, ==, 0.0);
@@ -506,6 +508,7 @@ test_nc_data_cluster_wl_prepare_kde (TestNcDataClusterWL *test, gconstpointer pd
   NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
   NcDistance *dist            = nc_distance_new (100.0);
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
+  NcmMatrix *obs              = ncm_matrix_new (1, 4);
   gdouble cut_fraction;
 
   ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, NCM_PARAM_TYPE_FREE);
@@ -519,7 +522,13 @@ test_nc_data_cluster_wl_prepare_kde (TestNcDataClusterWL *test, gconstpointer pd
   nc_data_cluster_wl_set_cut (dcwl, 10.0, 12.0);
   nc_data_cluster_wl_prepare_kde (dcwl, cosmo, dp, smd);
 
-  g_object_get (dcwl, "cut-fraction", &cut_fraction, NULL);
+  ncm_matrix_set (obs, 0, 0, 0.0);
+  ncm_matrix_set (obs, 0, 1, 0.0);
+  ncm_matrix_set (obs, 0, 2, 0.0);
+  ncm_matrix_set (obs, 0, 3, 0.0);
+
+  printf ("pipipipopopo: %g\n", nc_data_cluster_wl_kde_eval_m2lnP (dcwl, cosmo, dp, smd, NULL));
+
   g_assert_cmpfloat (cut_fraction, ==, 0.0);
 
   nc_data_cluster_wl_set_cut (dcwl, 0.0, 10.0);
@@ -527,5 +536,54 @@ test_nc_data_cluster_wl_prepare_kde (TestNcDataClusterWL *test, gconstpointer pd
 
   g_object_get (dcwl, "cut-fraction", &cut_fraction, NULL);
   g_assert_cmpfloat (cut_fraction, ==, 1.0);
+}
+
+static void
+test_nc_data_cluster_wl_val_kde (TestNcDataClusterWL *test, gconstpointer pdata)
+{
+  NcDataClusterWL *dcwl_int   = test->dcwl;
+  NcDataClusterWL *dcwl_kde   = nc_data_cluster_wl_ref (dcwl_int);
+  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
+  NcDistance *dist            = nc_distance_new (100.0);
+  NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
+  NcmMSet *mset               = ncm_mset_new (cosmo, dp, smd, NULL);
+  NcmMatrix *obs              = ncm_matrix_new (1, 4);
+  gdouble m2lnL_int           = 0.0;
+  gdouble m2lnL_kde           = 0.0;
+  NcmStatsDist *kde;
+  guint i;
+
+  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, 4.0);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, 14.0);
+
+  nc_wl_surface_mass_density_prepare (smd, cosmo);
+  nc_data_cluster_wl_set_use_kde (dcwl_kde, TRUE);
+  nc_data_cluster_wl_set_ndata (dcwl_kde, 1000);
+  nc_data_cluster_wl_prepare_kde (dcwl_kde, cosmo, dp, smd);
+
+  ncm_matrix_set (obs, 0, 0, 0.0);
+  ncm_matrix_set (obs, 0, 1, 0.0);
+  ncm_matrix_set (obs, 0, 2, 0.0);
+  ncm_matrix_set (obs, 0, 3, 0.0);
+
+  nc_data_cluster_wl_set_obs (dcwl_kde, obs);
+
+  ncm_data_set_init (NCM_DATA (dcwl_int), TRUE);
+  ncm_data_set_init (NCM_DATA (dcwl_kde), TRUE);
+
+  ncm_data_m2lnL_val (NCM_DATA (dcwl_int), mset, &m2lnL_int);
+  ncm_data_m2lnL_val (NCM_DATA (dcwl_kde), mset, &m2lnL_kde);
+
+  g_assert_cmpfloat (m2lnL_int, ==, m2lnL_kde);
+
+  nc_data_cluster_wl_free (dcwl_kde);
+  nc_hicosmo_free (cosmo);
+  nc_halo_density_profile_free (dp);
+  nc_distance_free (dist);
+  nc_wl_surface_mass_density_free (smd);
+  ncm_mset_free (mset);
 }
 
