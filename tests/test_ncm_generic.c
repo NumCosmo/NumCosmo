@@ -52,6 +52,8 @@ void test_nc_galaxy_sd_position_basic (void);
 void test_nc_galaxy_sd_position_flat_basic (void);
 void test_nc_galaxy_sd_position_lsst_srd_basic (void);
 void test_nc_galaxy_sd_position_lsst_srd_y10_basic (void);
+void test_nc_galaxy_sd_shape_basic (void);
+void test_nc_galaxy_sd_shape_gauss_basic (void);
 void test_nc_galaxy_sd_z_proxy_basic (void);
 void test_nc_galaxy_sd_z_proxy_dirac_basic (void);
 void test_nc_galaxy_sd_z_proxy_gauss_basic (void);
@@ -89,6 +91,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy/sd_position_flat/basic", test_nc_galaxy_sd_position_flat_basic);
   g_test_add_func ("/nc/galaxy/sd_position_lsst_srd/basic", test_nc_galaxy_sd_position_lsst_srd_basic);
   g_test_add_func ("/nc/galaxy/sd_position_lsst_srd_y10/basic", test_nc_galaxy_sd_position_lsst_srd_y10_basic);
+  g_test_add_func ("/nc/galaxy/sd_shape/basic", test_nc_galaxy_sd_shape_basic);
+  g_test_add_func ("/nc/galaxy/sd_shape_gauss/basic", test_nc_galaxy_sd_shape_gauss_basic);
   g_test_add_func ("/nc/galaxy/sd_z_proxy/basic", test_nc_galaxy_sd_z_proxy_basic);
   g_test_add_func ("/nc/galaxy/sd_z_proxy_dirac/basic", test_nc_galaxy_sd_z_proxy_dirac_basic);
   g_test_add_func ("/nc/galaxy/sd_z_proxy_gauss/basic", test_nc_galaxy_sd_z_proxy_gauss_basic);
@@ -473,6 +477,42 @@ test_nc_galaxy_sd_position_lsst_srd_y10_basic (void)
   g_assert_true (NC_IS_GALAXY_SD_POSITION_LSST_SRD (gsdplsy10));
 
   NCM_TEST_FREE (nc_galaxy_sd_position_lsst_srd_free, gsdplsy10);
+}
+
+void
+test_nc_galaxy_sd_shape_basic (void)
+{
+  NcGalaxySDShape *gsds = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new (0.0, 2.0, 0.05));
+  NcGalaxySDShape *gsds2;
+
+  g_assert_true (gsds != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE (gsds));
+
+  gsds2 = nc_galaxy_sd_shape_ref (gsds);
+  nc_galaxy_sd_shape_clear (&gsds2);
+  g_assert_true (gsds2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE (gsds));
+
+  NCM_TEST_FREE (nc_galaxy_sd_shape_free, gsds);
+}
+
+void
+test_nc_galaxy_sd_shape_gauss_basic (void)
+{
+  NcGalaxySDShapeGauss *gsdsg = nc_galaxy_sd_shape_gauss_new (0.0, 2.0, 0.05);
+  NcGalaxySDShapeGauss *gsdsg2;
+
+  g_assert_true (gsdsg != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE_GAUSS (gsdsg));
+
+  gsdsg2 = nc_galaxy_sd_shape_gauss_ref (gsdsg);
+  nc_galaxy_sd_shape_gauss_clear (&gsdsg2);
+  g_assert_true (gsdsg2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE_GAUSS (gsdsg));
+
+  NCM_TEST_FREE (nc_galaxy_sd_shape_gauss_free, gsdsg);
 }
 
 void
