@@ -43,6 +43,7 @@ typedef struct _TestNcGalaxySDPosition
 
 static void test_nc_galaxy_sd_position_flat_new (TestNcGalaxySDPosition *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_position_lsst_srd_new (TestNcGalaxySDPosition *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_position_lsst_srd_new_y10 (TestNcGalaxySDPosition *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_position_free (TestNcGalaxySDPosition *test, gconstpointer pdata);
 
 static void test_nc_galaxy_sd_position_set_get_lim (TestNcGalaxySDPosition *test, gconstpointer pdata);
@@ -91,6 +92,20 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_sd_position_lsst_srd_gen_dist,
               &test_nc_galaxy_sd_position_free);
 
+  g_test_add ("/nc/galaxy_sd_position_lsst_srd_y10/set_lim", TestNcGalaxySDPosition, NULL,
+              &test_nc_galaxy_sd_position_lsst_srd_new_y10,
+              &test_nc_galaxy_sd_position_set_get_lim,
+              &test_nc_galaxy_sd_position_free);
+
+  g_test_add ("/nc/galaxy_sd_position_lsst_srd_y10/gen_lim", TestNcGalaxySDPosition, NULL,
+              &test_nc_galaxy_sd_position_lsst_srd_new_y10,
+              &test_nc_galaxy_sd_position_gen_lim,
+              &test_nc_galaxy_sd_position_free);
+
+  g_test_add ("/nc/galaxy_sd_position_lsst_srd_y10/gen_dist", TestNcGalaxySDPosition, NULL,
+              &test_nc_galaxy_sd_position_lsst_srd_new_y10,
+              &test_nc_galaxy_sd_position_lsst_srd_gen_dist,
+              &test_nc_galaxy_sd_position_free);
   g_test_run ();
 
   return 0;
@@ -122,6 +137,20 @@ test_nc_galaxy_sd_position_lsst_srd_new (TestNcGalaxySDPosition *test, gconstpoi
   test->gsdp = NC_GALAXY_SD_POSITION (gsdplsst);
 
   g_assert_true (NC_IS_GALAXY_SD_POSITION_LSST_SRD (gsdplsst));
+}
+
+static void
+test_nc_galaxy_sd_position_lsst_srd_new_y10 (TestNcGalaxySDPosition *test, gconstpointer pdata)
+{
+  const gdouble z_ll                     = g_test_rand_double_range (0.1, 0.5);
+  const gdouble z_ul                     = g_test_rand_double_range (5, 1000);
+  const gdouble r_ll                     = g_test_rand_double_range (0.001, 0.1);
+  const gdouble r_ul                     = g_test_rand_double_range (1, 10);
+  NcGalaxySDPositionLSSTSRD *gsdplssty10 = nc_galaxy_sd_position_lsst_srd_new_y10 (z_ll, z_ul, r_ll, r_ul);
+
+  test->gsdp = NC_GALAXY_SD_POSITION (gsdplssty10);
+
+  g_assert_true (NC_IS_GALAXY_SD_POSITION_LSST_SRD (gsdplssty10));
 }
 
 static void

@@ -48,6 +48,10 @@ void test_ncm_mpi_job_feval_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
 
 void test_nc_de_cont_basic (void);
+void test_nc_galaxy_sd_position_basic (void);
+void test_nc_galaxy_sd_position_flat_basic (void);
+void test_nc_galaxy_sd_position_lsst_srd_basic (void);
+void test_nc_galaxy_sd_position_lsst_srd_y10_basic (void);
 void test_nc_hicosmo_qgw_basic (void);
 void test_nc_hipert_adiab_basic (void);
 void test_nc_hipert_em_basic (void);
@@ -78,6 +82,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
 
   g_test_add_func ("/nc/de_cont/basic", test_nc_de_cont_basic);
+  g_test_add_func ("/nc/galaxy/sd_position/basic", test_nc_galaxy_sd_position_basic);
+  g_test_add_func ("/nc/galaxy/sd_position_flat/basic", test_nc_galaxy_sd_position_flat_basic);
+  g_test_add_func ("/nc/galaxy/sd_position_lsst_srd/basic", test_nc_galaxy_sd_position_lsst_srd_basic);
+  g_test_add_func ("/nc/galaxy/sd_position_lsst_srd_y10/basic", test_nc_galaxy_sd_position_lsst_srd_y10_basic);
   g_test_add_func ("/nc/hicosmo/qgw/basic", test_nc_hicosmo_qgw_basic);
 
   g_test_add_func ("/nc/hipert/adiab/basic", test_nc_hipert_adiab_basic);
@@ -387,6 +395,78 @@ test_nc_de_cont_basic (void)
   g_assert_cmpfloat (nc_de_cont_get_k (dec), ==, 0.1);
 
   NCM_TEST_FREE (nc_de_cont_free, dec);
+}
+
+void
+test_nc_galaxy_sd_position_basic (void)
+{
+  NcGalaxySDPosition *sdpos = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (0, 2, 0, 2));
+  NcGalaxySDPosition *sdpos2;
+
+  g_assert_true (sdpos != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_POSITION (sdpos));
+
+  sdpos2 = nc_galaxy_sd_position_ref (sdpos);
+  nc_galaxy_sd_position_clear (&sdpos2);
+  g_assert_true (sdpos2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_POSITION (sdpos));
+
+  NCM_TEST_FREE (nc_galaxy_sd_position_free, sdpos);
+}
+
+void
+test_nc_galaxy_sd_position_flat_basic (void)
+{
+  NcGalaxySDPositionFlat *gsdpf = nc_galaxy_sd_position_flat_new (0, 2, 0, 2);
+  NcGalaxySDPositionFlat *gsdpf2;
+
+  g_assert_true (gsdpf != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_POSITION_FLAT (gsdpf));
+
+  gsdpf2 = nc_galaxy_sd_position_flat_ref (gsdpf);
+  nc_galaxy_sd_position_flat_clear (&gsdpf2);
+  g_assert_true (gsdpf2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_POSITION_FLAT (gsdpf));
+
+  NCM_TEST_FREE (nc_galaxy_sd_position_flat_free, gsdpf);
+}
+
+void
+test_nc_galaxy_sd_position_lsst_srd_basic (void)
+{
+  NcGalaxySDPositionLSSTSRD *gsdpls = nc_galaxy_sd_position_lsst_srd_new (0, 2, 0, 2);
+  NcGalaxySDPositionLSSTSRD *gsdpls2;
+
+  g_assert_true (gsdpls != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_POSITION_LSST_SRD (gsdpls));
+
+  gsdpls2 = nc_galaxy_sd_position_lsst_srd_ref (gsdpls);
+  nc_galaxy_sd_position_lsst_srd_clear (&gsdpls2);
+  g_assert_true (gsdpls2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_POSITION_LSST_SRD (gsdpls));
+
+  NCM_TEST_FREE (nc_galaxy_sd_position_lsst_srd_free, gsdpls);
+}
+
+void
+test_nc_galaxy_sd_position_lsst_srd_y10_basic (void)
+{
+  NcGalaxySDPositionLSSTSRD *gsdplsy10 = nc_galaxy_sd_position_lsst_srd_new_y10 (0, 2, 0, 2);
+  NcGalaxySDPositionLSSTSRD *gsdplsy102;
+
+  g_assert_true (gsdplsy10 != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_POSITION_LSST_SRD (gsdplsy10));
+
+  gsdplsy102 = nc_galaxy_sd_position_lsst_srd_ref (gsdplsy10);
+  nc_galaxy_sd_position_lsst_srd_clear (&gsdplsy102);
+  g_assert_true (gsdplsy102 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_POSITION_LSST_SRD (gsdplsy10));
+
+  NCM_TEST_FREE (nc_galaxy_sd_position_lsst_srd_free, gsdplsy10);
 }
 
 void
