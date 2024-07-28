@@ -56,6 +56,10 @@ static void test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test,
 
 static void test_nc_galaxy_sd_shape_gauss_integ_strong (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
 
+static void test_nc_galaxy_sd_shape_gauss_integ_optzs (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
+
+static void test_nc_galaxy_sd_shape_gauss_integ_optzs_strong (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -98,6 +102,16 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_sd_shape/gauss/integ_strong", TestNcGalaxySDShapeGauss, NULL,
               &test_nc_galaxy_sd_shape_gauss_new,
               &test_nc_galaxy_sd_shape_gauss_integ_strong,
+              &test_nc_galaxy_sd_shape_gauss_free);
+
+  g_test_add ("/nc/galaxy_sd_shape/gauss/integ_optzs", TestNcGalaxySDShapeGauss, NULL,
+              &test_nc_galaxy_sd_shape_gauss_new,
+              &test_nc_galaxy_sd_shape_gauss_integ_optzs,
+              &test_nc_galaxy_sd_shape_gauss_free);
+
+  g_test_add ("/nc/galaxy_sd_shape/gauss/integ_optzs_strong", TestNcGalaxySDShapeGauss, NULL,
+              &test_nc_galaxy_sd_shape_gauss_new,
+              &test_nc_galaxy_sd_shape_gauss_integ_optzs_strong,
               &test_nc_galaxy_sd_shape_gauss_free);
 
 
@@ -284,6 +298,65 @@ test_nc_galaxy_sd_shape_gauss_integ_strong (TestNcGalaxySDShapeGauss *test, gcon
   ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", log10 (1.0e16));
 
   res = nc_galaxy_sd_shape_integ (NC_GALAXY_SD_SHAPE (sdsg), cosmo, dp, smd, z_cluster, r, z, et, ex);
+
+  g_assert_cmpfloat (res, >, 1.0e-110);
+
+  nc_hicosmo_free (cosmo);
+  nc_halo_density_profile_free (dp);
+  nc_distance_free (dist);
+  nc_wl_surface_mass_density_free (smd);
+}
+
+static void
+test_nc_galaxy_sd_shape_gauss_integ_optzs (TestNcGalaxySDShapeGauss *test, gconstpointer pdata)
+{
+  NcGalaxySDShapeGauss *sdsg  = test->sdsg;
+  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
+  NcDistance *dist            = nc_distance_new (100.0);
+  NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
+  gdouble z_cluster           = 0.4;
+  gdouble r                   = 1.0;
+  gdouble z                   = 0.6;
+  gdouble et                  = 0.0;
+  gdouble ex                  = 0.0;
+  gdouble res;
+
+  nc_wl_surface_mass_density_prepare (smd, cosmo);
+
+  nc_galaxy_sd_shape_integ_optzs_prep (NC_GALAXY_SD_SHAPE (sdsg), cosmo, dp, smd, z_cluster, r);
+
+  res = nc_galaxy_sd_shape_integ_optzs (NC_GALAXY_SD_SHAPE (sdsg), cosmo, dp, smd, z_cluster, z, et, ex);
+
+  g_assert_cmpfloat (res, >, 0.0);
+
+  nc_hicosmo_free (cosmo);
+  nc_halo_density_profile_free (dp);
+  nc_distance_free (dist);
+  nc_wl_surface_mass_density_free (smd);
+}
+
+static void
+test_nc_galaxy_sd_shape_gauss_integ_optzs_strong (TestNcGalaxySDShapeGauss *test, gconstpointer pdata)
+{
+  NcGalaxySDShapeGauss *sdsg  = test->sdsg;
+  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_lcdm_new ());
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0));
+  NcDistance *dist            = nc_distance_new (10.0);
+  NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
+  gdouble z_cluster           = 0.4;
+  gdouble r                   = 0.1;
+  gdouble z                   = 0.6;
+  gdouble et                  = 0.0;
+  gdouble ex                  = 0.0;
+  gdouble res;
+
+  nc_wl_surface_mass_density_prepare (smd, cosmo);
+  ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", log10 (1.0e16));
+
+  nc_galaxy_sd_shape_integ_optzs_prep (NC_GALAXY_SD_SHAPE (sdsg), cosmo, dp, smd, z_cluster, r);
+
+  res = nc_galaxy_sd_shape_integ_optzs (NC_GALAXY_SD_SHAPE (sdsg), cosmo, dp, smd, z_cluster, z, et, ex);
 
   g_assert_cmpfloat (res, >, 1.0e-110);
 
