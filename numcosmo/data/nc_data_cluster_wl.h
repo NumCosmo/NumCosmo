@@ -1,12 +1,16 @@
 /***************************************************************************
  *           nc_data_cluster_wl.h
  *
+ *  Mon Jul 27 16:10:25 2020
+ *  Copyright  2020  Mariana Penna Lima
+ *  <pennalima@gmail.com>
  *  Tue Jun 15 16:24:17 2023
  *  Copyright  2023  Caio Lima de Oliveira
  *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * nc_data_cluster_wl.h
+ * Copyright (C) 2020 Mariana Penna Lima <pennalima@gmail.com>
  * Copyright (C) 2023 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
