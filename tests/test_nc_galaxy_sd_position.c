@@ -395,12 +395,9 @@ test_nc_galaxy_sd_position_model_id (TestNcGalaxySDPosition *test, gconstpointer
   NcGalaxySDPosition *gsdp = test->gsdp;
   NcmMSet *model_set       = ncm_mset_empty_new ();
   NcmSerialize *ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  gint model_id;
 
   ncm_mset_set (model_set, ncm_model_dup (NCM_MODEL (gsdp), ser));
 
-  model_id = ncm_model_id (NCM_MODEL (gsdp));
-
-  g_assert_true (NC_IS_GALAXY_SD_POSITION (ncm_mset_peek (model_set, model_id)));
+  g_assert_true (NC_IS_GALAXY_SD_POSITION (ncm_mset_peek (model_set, nc_galaxy_sd_position_id ())));
 }
 
