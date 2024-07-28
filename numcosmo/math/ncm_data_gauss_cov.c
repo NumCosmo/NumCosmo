@@ -670,7 +670,7 @@ ncm_data_gauss_cov_peek_cov (NcmDataGaussCov *gauss)
  * @updated: (out) (allow-none): a #gboolean
  *
  * Computes the covariance matrix based on the models in @mset. If
- * the ncm_data_gauss_cov_func() is not set, returns %NULL.
+ * the ncm_data_gauss_cov_func is not set, returns %NULL.
  *
  * Returns: (transfer full): the current data covariance #NcmMatrix.
  */
@@ -797,7 +797,7 @@ ncm_data_gauss_cov_bulk_resample (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatr
  * @mset: a #NcmMSet
  *
  * Computes the mean vector based on the models in @mset. If
- * the #NcmDataGaussCovClass::mean_func is not set, returns %NULL.
+ * the ncm_data_gauss_cov_mean_func is not set, returns %NULL.
  *
  * Returns: (transfer full): the current data mean #NcmVector.
  */

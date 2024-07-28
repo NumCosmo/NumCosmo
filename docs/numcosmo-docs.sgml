@@ -11,6 +11,7 @@
     <title>NumCosmo Overview</title>
     <xi:include href="introduction.xml"/>
     <xi:include href="refs.xml"/>
+    <xi:include href="glib_doc.xml"/>
     <xi:include href="xml/build_cfg.xml"/>
   </chapter>
 

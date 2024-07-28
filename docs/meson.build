@@ -64,7 +64,13 @@ if build_gtk_doc
         main_sgml: 'numcosmo-docs.sgml',
         gobject_typesfile: 'numcosmo.types',
         dependencies: [libnumcosmo_dep],
-        content_files: ['introduction.xml', 'refs.xml', manual_head_xml, 'references.xml'],
+        content_files: [
+            'introduction.xml',
+            'refs.xml',
+            'glib_doc.xml',
+            manual_head_xml,
+            'references.xml',
+        ],
         expand_content_files: [manual_head_xml],
         src_dir: ['numcosmo'],
         scan_args: [
