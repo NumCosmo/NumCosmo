@@ -53,6 +53,8 @@ static void test_nc_galaxy_sd_position_flat_gen_dist (TestNcGalaxySDPosition *te
 
 static void test_nc_galaxy_sd_position_lsst_srd_gen_dist (TestNcGalaxySDPosition *test, gconstpointer pdata);
 
+static void test_nc_galaxy_sd_position_model_id (TestNcGalaxySDPosition *test, gconstpointer pdata);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -77,6 +79,11 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_sd_position_flat_gen_dist,
               &test_nc_galaxy_sd_position_free);
 
+  g_test_add ("/nc/galaxy_sd_position_flat/model_id", TestNcGalaxySDPosition, NULL,
+              &test_nc_galaxy_sd_position_flat_new,
+              &test_nc_galaxy_sd_position_model_id,
+              &test_nc_galaxy_sd_position_free);
+
   g_test_add ("/nc/galaxy_sd_position_lsst_srd/set_lim", TestNcGalaxySDPosition, NULL,
               &test_nc_galaxy_sd_position_lsst_srd_new,
               &test_nc_galaxy_sd_position_set_get_lim,
@@ -90,6 +97,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_sd_position_lsst_srd/gen_dist", TestNcGalaxySDPosition, NULL,
               &test_nc_galaxy_sd_position_lsst_srd_new,
               &test_nc_galaxy_sd_position_lsst_srd_gen_dist,
+              &test_nc_galaxy_sd_position_free);
+
+  g_test_add ("/nc/galaxy_sd_position_lsst_srd/model_id", TestNcGalaxySDPosition, NULL,
+              &test_nc_galaxy_sd_position_lsst_srd_new,
+              &test_nc_galaxy_sd_position_model_id,
               &test_nc_galaxy_sd_position_free);
 
   g_test_add ("/nc/galaxy_sd_position_lsst_srd_y10/set_lim", TestNcGalaxySDPosition, NULL,
@@ -106,6 +118,12 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_sd_position_lsst_srd_new_y10,
               &test_nc_galaxy_sd_position_lsst_srd_gen_dist,
               &test_nc_galaxy_sd_position_free);
+
+  g_test_add ("/nc/galaxy_sd_position_lsst_srd_y10/model_id", TestNcGalaxySDPosition, NULL,
+              &test_nc_galaxy_sd_position_lsst_srd_new_y10,
+              &test_nc_galaxy_sd_position_model_id,
+              &test_nc_galaxy_sd_position_free);
+
   g_test_run ();
 
   return 0;
@@ -369,5 +387,20 @@ test_nc_galaxy_sd_position_lsst_srd_gen_dist (TestNcGalaxySDPosition *test, gcon
   }
 
   ncm_rng_free (rng);
+}
+
+static void
+test_nc_galaxy_sd_position_model_id (TestNcGalaxySDPosition *test, gconstpointer pdata)
+{
+  NcGalaxySDPosition *gsdp = test->gsdp;
+  NcmMSet *model_set       = ncm_mset_empty_new ();
+  NcmSerialize *ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  gint model_id;
+
+  ncm_mset_set (model_set, ncm_model_dup (NCM_MODEL (gsdp), ser));
+
+  model_id = ncm_model_id (NCM_MODEL (gsdp));
+
+  g_assert_true (NC_IS_GALAXY_SD_POSITION (ncm_mset_peek (model_set, model_id)));
 }
 
