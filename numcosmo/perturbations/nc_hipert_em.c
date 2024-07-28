@@ -411,6 +411,7 @@ nc_hipert_em_get_k (NcHIPertEM *pem)
 /**
  * nc_hipert_em_eval_PE_PB:
  * @pem: a #NcHIPertEM
+ * @model: a #NcmModel
  * @tau: $\tau$
  * @PE: (out): the electric field power spectrum
  * @PB: (out): the magnetic field power spectrum

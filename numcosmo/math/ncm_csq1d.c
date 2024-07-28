@@ -3894,6 +3894,7 @@ _ncm_csq1d_evolve_prop_vector (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *
  * @initial_state: initial state
  * @frame: frame
  * @t: time $t$
+ * @state: a #NcmCSQ1DState to store the result
  *
  * Uses the propagator to evolve the state vector @initial_state to time $t$ and
  * at frame @frame.
