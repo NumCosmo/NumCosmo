@@ -101,6 +101,11 @@ main (gint argc, gchar *argv[])
               &test_nc_data_cluster_wl_val_kde,
               &test_nc_data_cluster_wl_free);
 
+  g_test_add ("/nc/data_cluster_wl/flat/prepare_kde", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_flat,
+              &test_nc_data_cluster_wl_prepare_kde,
+              &test_nc_data_cluster_wl_free);
+
   g_test_add ("/nc/data_cluster_wl/lsst_srd/fit", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_lsst_srd,
               &test_nc_data_cluster_wl_fit,
@@ -139,6 +144,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/data_cluster_wl/lsst_srd/val_kde", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_lsst_srd,
               &test_nc_data_cluster_wl_val_kde,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/lsst_srd/prepare_kde", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_lsst_srd,
+              &test_nc_data_cluster_wl_prepare_kde,
               &test_nc_data_cluster_wl_free);
 
   g_test_run ();
@@ -321,11 +331,6 @@ test_nc_data_cluster_wl_kde_cmp (TestNcDataClusterWL *test, gconstpointer pdata)
     }
   }
 
-  /*
-   *  printf ("mean: %g\n", ncm_stats_vec_get_mean (m2lnP_stats, 2));
-   *  printf ("sd: %g\n", ncm_stats_vec_get_sd (m2lnP_stats, 2));
-   *  printf ("q50: %g\n", ncm_stats_vec_get_quantile (m2lnP_stats, 2));
-   */
   g_assert_cmpfloat (ncm_stats_vec_get_quantile (m2lnP_stats, 2), <, 0.1);
 
   ncm_vector_free (m2lnP_int_gal);
@@ -516,26 +521,25 @@ test_nc_data_cluster_wl_prepare_kde (TestNcDataClusterWL *test, gconstpointer pd
   ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, 4.0);
   ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, 14.0);
 
+  ncm_matrix_set (obs, 0, 0, 0.0);
+  ncm_matrix_set (obs, 0, 1, 0.0);
+  ncm_matrix_set (obs, 0, 2, 0.0);
+  ncm_matrix_set (obs, 0, 3, 0.0);
+
+  nc_data_cluster_wl_set_obs (dcwl, obs);
+
   nc_wl_surface_mass_density_prepare (smd, cosmo);
   nc_data_cluster_wl_set_use_kde (dcwl, TRUE);
   nc_data_cluster_wl_set_ndata (dcwl, 100);
   nc_data_cluster_wl_set_cut (dcwl, 10.0, 12.0);
   nc_data_cluster_wl_prepare_kde (dcwl, cosmo, dp, smd);
 
-  ncm_matrix_set (obs, 0, 0, 0.0);
-  ncm_matrix_set (obs, 0, 1, 0.0);
-  ncm_matrix_set (obs, 0, 2, 0.0);
-  ncm_matrix_set (obs, 0, 3, 0.0);
-
-  printf ("pipipipopopo: %g\n", nc_data_cluster_wl_kde_eval_m2lnP (dcwl, cosmo, dp, smd, NULL));
-
-  g_assert_cmpfloat (cut_fraction, ==, 0.0);
+  g_assert_true (gsl_isnan (nc_data_cluster_wl_kde_eval_m2lnP (dcwl, cosmo, dp, smd, NULL)));
 
   nc_data_cluster_wl_set_cut (dcwl, 0.0, 10.0);
   nc_data_cluster_wl_prepare_kde (dcwl, cosmo, dp, smd);
 
-  g_object_get (dcwl, "cut-fraction", &cut_fraction, NULL);
-  g_assert_cmpfloat (cut_fraction, ==, 1.0);
+  g_assert_true (!gsl_isnan (nc_data_cluster_wl_kde_eval_m2lnP (dcwl, cosmo, dp, smd, NULL)));
 }
 
 static void
