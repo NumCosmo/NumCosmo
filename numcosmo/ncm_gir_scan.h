@@ -295,3 +295,4 @@
  *
  */
 #define fitsfile gint
+
