@@ -65,6 +65,7 @@ _nc_galaxy_sd_z_proxy_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_z_proxy_parent_class)->finalize (object);
 }
 
+/* LCOV_EXCL_START */
 static gboolean
 _nc_galaxy_sd_z_proxy_gen (NcGalaxySDZProxy *gsdzp, NcmRNG *rng, const gdouble z, gdouble *gen_zp)
 {
@@ -86,6 +87,8 @@ _nc_galaxy_sd_z_proxy_get_true_z_lim (NcGalaxySDZProxy *gsdzp, const gdouble zp,
 {
   g_error ("_nc_galaxy_sd_z_proxy_get_true_z_lim: method not implemented.");
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 nc_galaxy_sd_z_proxy_class_init (NcGalaxySDZProxyClass *klass)

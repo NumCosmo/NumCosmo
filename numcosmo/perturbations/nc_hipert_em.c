@@ -39,7 +39,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_spline2d_bicubic.h"
 #include "perturbations/nc_hipert_em.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -411,6 +411,7 @@ nc_hipert_em_get_k (NcHIPertEM *pem)
 /**
  * nc_hipert_em_eval_PE_PB:
  * @pem: a #NcHIPertEM
+ * @model: a #NcmModel
  * @tau: $\tau$
  * @PE: (out): the electric field power spectrum
  * @PB: (out): the magnetic field power spectrum
@@ -439,5 +440,71 @@ nc_hipert_em_eval_PE_PB (NcHIPertEM *pem, NcmModel *model, const gdouble tau, gd
 
   *PE = unit * unit * gsl_pow_4 (x) * gsl_pow_3 (k) * J22 / gsl_pow_2 (N * m) / fact;
   *PB = unit * unit * gsl_pow_4 (x) * gsl_pow_5 (k) * J11 / fact;
+}
+
+/**
+ * nc_hipert_em_prepare_spectrum:
+ * @pem: a #NcHIPertEM
+ * @model: a #NcmModel
+ * @k_array: (element-type gdouble): a #GArray with the wave numbers
+ * @tau_array: (element-type gdouble): a #GArray with the times
+ * @ps_E: (out callee-allocates) (transfer full): the electric field power spectrum
+ * @ps_B: (out callee-allocates) (transfer full): the magnetic field power spectrum
+ *
+ * Prepares the electric and magnetic field power spectra in units of Gauss squared
+ * $G_\mathrm{s}^2$.
+ *
+ */
+void
+nc_hipert_em_prepare_spectrum (NcHIPertEM *pem, NcmModel *model, GArray *k_array, GArray *tau_array, NcmPowspecSpline2d **ps_E, NcmPowspecSpline2d **ps_B)
+{
+  NcmCSQ1D *csq1d    = NCM_CSQ1D (pem);
+  NcmMatrix *ps_m_E  = ncm_matrix_new (k_array->len, tau_array->len);
+  NcmMatrix *ps_m_B  = ncm_matrix_new (k_array->len, tau_array->len);
+  NcmVector *lnk_vec = ncm_vector_new (k_array->len);
+  NcmSpline2d *ps_s_E, *ps_s_B;
+  guint i;
+
+  for (i = 0; i < k_array->len; i++)
+  {
+    NcmCSQ1DState state;
+    const gdouble k = g_array_index (k_array, gdouble, i);
+    guint j;
+
+    nc_hipert_em_set_k (pem, k);
+    ncm_vector_set (lnk_vec, i, log (k));
+    ncm_csq1d_prepare (csq1d, model);
+
+    for (j = 0; j < tau_array->len; j++)
+    {
+      const gdouble tau = g_array_index (tau_array, gdouble, j);
+      gdouble ps_E_k_tau, ps_B_k_tau;
+
+      nc_hipert_em_eval_PE_PB (pem, model, tau, &ps_E_k_tau, &ps_B_k_tau);
+
+      ncm_matrix_set (ps_m_E, i, j, log (ps_E_k_tau));
+      ncm_matrix_set (ps_m_B, i, j, log (ps_B_k_tau));
+    }
+  }
+
+  {
+    NcmVector *tau_vec = ncm_vector_new_array (tau_array);
+
+    ps_s_E = ncm_spline2d_bicubic_notaknot_new ();
+    ps_s_B = ncm_spline2d_bicubic_notaknot_new ();
+
+    ncm_spline2d_set (ps_s_E, tau_vec, lnk_vec, ps_m_E, TRUE);
+    ncm_spline2d_set (ps_s_B, tau_vec, lnk_vec, ps_m_B, TRUE);
+
+    *ps_E = ncm_powspec_spline2d_new (ps_s_E);
+    *ps_B = ncm_powspec_spline2d_new (ps_s_B);
+
+    ncm_matrix_free (ps_m_E);
+    ncm_matrix_free (ps_m_B);
+    ncm_vector_free (tau_vec);
+    ncm_vector_free (lnk_vec);
+    ncm_spline2d_free (ps_s_E);
+    ncm_spline2d_free (ps_s_B);
+  }
 }
 

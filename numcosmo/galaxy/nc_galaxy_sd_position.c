@@ -144,6 +144,7 @@ _nc_galaxy_sd_position_finalize (GObject *object)
 
 NCM_MSET_MODEL_REGISTER_ID (nc_galaxy_sd_position, NC_TYPE_GALAXY_SD_POSITION)
 
+/* LCOV_EXCL_START */
 static gdouble
 _nc_galaxy_sd_position_gen_theta (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 {
@@ -191,6 +192,8 @@ _nc_galaxy_sd_position_get_theta_lim (NcGalaxySDPosition *gsdp, gdouble *r_min, 
 {
   g_error ("_nc_galaxy_sd_position_get_theta_lim: method not implemented.");
 }
+
+/* LCOV_LINE_STOP */
 
 static void
 nc_galaxy_sd_position_class_init (NcGalaxySDPositionClass *klass)

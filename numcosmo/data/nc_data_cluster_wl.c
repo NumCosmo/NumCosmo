@@ -65,7 +65,7 @@ struct _NcDataClusterWLPrivate
   NcGalaxyWLObs *obs;
   NcGalaxySDShape *s_dist;
   NcGalaxySDZProxy *zp_dist;
-  NcGalaxySDPosition *pos_dist;
+  NcGalaxySDPosition *rz_dist;
   NcmMatrix *data;
   NcmStatsDist *kde;
   gdouble cut_fraction;
@@ -89,8 +89,7 @@ enum
   PROP_OBS,
   PROP_S_DIST,
   PROP_ZP_DIST,
-  PROP_POS_DIST,
-  PROP_KDE,
+  PROP_RZ_DIST,
   PROP_THETA_MIN,
   PROP_THETA_MAX,
   PROP_ZP_MIN,
@@ -115,7 +114,7 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
   self->obs         = NULL;
   self->s_dist      = NULL;
   self->zp_dist     = NULL;
-  self->pos_dist    = NULL;
+  self->rz_dist     = NULL;
   self->data        = NULL;
   self->kde         = NCM_STATS_DIST (ncm_stats_dist_vkde_new (NCM_STATS_DIST_KERNEL (kernel), NCM_STATS_DIST_CV_NONE));
   self->len         = 0;
@@ -150,8 +149,8 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_ZP_DIST:
       self->zp_dist = g_value_dup_object (value);
       break;
-    case PROP_POS_DIST:
-      self->pos_dist = g_value_dup_object (value);
+    case PROP_RZ_DIST:
+      self->rz_dist = g_value_dup_object (value);
       break;
     case PROP_THETA_MIN:
       self->theta_min = g_value_get_double (value);
@@ -210,11 +209,8 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_ZP_DIST:
       g_value_set_object (value, self->zp_dist);
       break;
-    case PROP_POS_DIST:
-      g_value_set_object (value, self->pos_dist);
-      break;
-    case PROP_KDE:
-      g_value_set_object (value, nc_data_cluster_wl_peek_kde (dcwl));
+    case PROP_RZ_DIST:
+      g_value_set_object (value, self->rz_dist);
       break;
     case PROP_THETA_MIN:
       g_value_set_double (value, self->theta_min);
@@ -256,7 +252,7 @@ nc_data_cluster_wl_dispose (GObject *object)
   ncm_matrix_clear (&self->data);
   nc_galaxy_sd_shape_clear (&self->s_dist);
   nc_galaxy_sd_z_proxy_clear (&self->zp_dist);
-  nc_galaxy_sd_position_clear (&self->pos_dist);
+  nc_galaxy_sd_position_clear (&self->rz_dist);
 
   ncm_stats_dist_clear (&self->kde);
 
@@ -351,12 +347,12 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
   /**
    * NcDataClusterWL:rz-dist:
    *
-   * A #NcGalaxySDZPosition object.
+   * A #NcGalaxySDPosition object.
    *
    */
 
   g_object_class_install_property (object_class,
-                                   PROP_POS_DIST,
+                                   PROP_RZ_DIST,
                                    g_param_spec_object ("rz-dist",
                                                         NULL,
                                                         "Galaxy sample position distribution",
@@ -554,13 +550,13 @@ nc_data_cluster_wl_prepare_kde (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloD
 
   while (i < self->ndata)
   {
-    const gdouble theta = nc_galaxy_sd_position_gen_theta (self->pos_dist, rng);
+    const gdouble theta = nc_galaxy_sd_position_gen_theta (self->rz_dist, rng);
     gdouble z           = 0.0;
     gdouble zp          = 0.0;
 
     while (TRUE)
     {
-      z = nc_galaxy_sd_position_gen_z (self->pos_dist, rng);
+      z = nc_galaxy_sd_position_gen_z (self->rz_dist, rng);
 
       if (nc_galaxy_sd_z_proxy_gen (self->zp_dist, rng, z, &zp))
         break;
@@ -626,7 +622,10 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
   ncm_integral_nd_set_abstol (lh_int, 0.0);
   ncm_integral_nd_set_method (lh_int, NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V);
 
-  g_assert_cmpuint (ncm_matrix_ncols (self->data), ==, 4);
+  if ((self->obs != NULL) && (self->data != NULL))
+    g_assert_cmpuint (ncm_matrix_ncols (self->data), ==, 4);
+  else
+    g_error ("Weak lensing observables matrix is not set.");
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
@@ -636,7 +635,7 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
     gdouble m2lnP_gal_i;
     gdouble z_min, z_max;
 
-    likelihood_integral->data.pos_dist  = NC_GALAXY_SD_POSITION (self->pos_dist);
+    likelihood_integral->data.pos_dist  = NC_GALAXY_SD_POSITION (self->rz_dist);
     likelihood_integral->data.zp_dist   = NC_GALAXY_SD_Z_PROXY (self->zp_dist);
     likelihood_integral->data.s_dist    = NC_GALAXY_SD_SHAPE (self->s_dist);
     likelihood_integral->data.cosmo     = cosmo;
@@ -709,10 +708,12 @@ nc_data_cluster_wl_kde_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHa
   NcmVector *data_vec                 = ncm_vector_new (4);
   gdouble res                         = 0.0;
   glong in_cut                        = 0;
-
   guint gal_i;
 
-  g_assert_cmpuint (ncm_matrix_ncols (self->data), ==, 4);
+  if ((self->obs != NULL) && (self->data != NULL))
+    g_assert_cmpuint (ncm_matrix_ncols (self->data), ==, 4);
+  else
+    g_error ("Weak lensing observables matrix is not set.");
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
@@ -822,24 +823,6 @@ nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGa
                                         "ra-cluster", ra_cluster,
                                         "dec-cluster", dec_cluster,
                                         NULL);
-
-  return dcwl;
-}
-
-/**
- * nc_data_cluster_wl_new_from_file:
- * @filename: file containing a serialized #NcDataClusterWL
- *
- * Creates a new #NcDataClusterWL from @filename.
- *
- * Returns: (transfer full): the newly created #NcDataClusterWL.
- */
-NcDataClusterWL *
-nc_data_cluster_wl_new_from_file (const gchar *filename)
-{
-  NcDataClusterWL *dcwl = NC_DATA_CLUSTER_WL (ncm_serialize_global_from_file (filename));
-
-  g_assert (NC_IS_DATA_CLUSTER_WL (dcwl));
 
   return dcwl;
 }
@@ -1028,6 +1011,9 @@ nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble theta_min, cons
 /**
  * nc_data_cluster_wl_gen_data:
  * @dcwl: a #NcDataClusterWL
+ * @cosmo: a #NcHICosmo
+ * @dp: a #NcHaloDensityProfile
+ * @smd: a #NcWLSurfaceMassDensity
  * @nobs: number of observables to generate
  * @rng: a #NcmRNG
  *
@@ -1048,12 +1034,12 @@ nc_data_cluster_wl_gen_data (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDens
     gdouble zp    = 0.0;
 
     do {
-      theta = nc_galaxy_sd_position_gen_theta (self->pos_dist, rng);
+      theta = nc_galaxy_sd_position_gen_theta (self->rz_dist, rng);
     } while ((self->theta_min > theta) || (theta > self->theta_max));
 
     while (TRUE)
     {
-      z = nc_galaxy_sd_position_gen_z (self->pos_dist, rng);
+      z = nc_galaxy_sd_position_gen_z (self->rz_dist, rng);
 
       if (nc_galaxy_sd_z_proxy_gen (self->zp_dist, rng, z, &zp))
         break;

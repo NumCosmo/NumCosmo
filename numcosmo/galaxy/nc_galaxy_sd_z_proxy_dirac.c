@@ -42,7 +42,6 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-/* #include "nc_enum_types.h" */
 #include "galaxy/nc_galaxy_sd_z_proxy_dirac.h"
 #include "galaxy/nc_galaxy_sd_z_proxy.h"
 #include <math.h>
@@ -65,6 +64,7 @@ nc_galaxy_sd_z_proxy_dirac_init (NcGalaxySDZProxyDirac *gsdzpdirac)
 {
 }
 
+/* LCOV_EXCL_START */
 static void
 _nc_galaxy_sd_z_proxy_dirac_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
@@ -72,9 +72,9 @@ _nc_galaxy_sd_z_proxy_dirac_set_property (GObject *object, guint prop_id, const 
 
   switch (prop_id)
   {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -85,11 +85,13 @@ _nc_galaxy_sd_z_proxy_dirac_get_property (GObject *object, guint prop_id, GValue
 
   switch (prop_id)
   {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 _nc_galaxy_sd_z_proxy_dirac_dispose (GObject *object)

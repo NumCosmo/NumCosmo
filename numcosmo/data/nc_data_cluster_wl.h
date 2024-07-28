@@ -78,8 +78,7 @@ struct _NcDataClusterWL
   NcDataClusterWLPrivate *priv;
 };
 
-NcDataClusterWL *nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *pos_dist, const gdouble z_cluster, const gdouble ra_cluster, const gdouble dec_cluster);
-NcDataClusterWL *nc_data_cluster_wl_new_from_file (const gchar *filename);
+NcDataClusterWL *nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *rz_dist, const gdouble z_cluster, const gdouble ra_cluster, const gdouble dec_cluster);
 NcDataClusterWL *nc_data_cluster_wl_ref (NcDataClusterWL *dcwl);
 void nc_data_cluster_wl_prepare_kde (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd);
 gdouble nc_data_cluster_wl_kde_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcmVector *m2lnP_gal);

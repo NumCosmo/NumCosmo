@@ -31,7 +31,7 @@
  * @short_description: Class describing galaxy sample shape distribution with gaussian distribution.
  * @stability: Unstable
  *
- *
+ *`
  * his class describes a galaxy sample shape gaussian
  * probability distribution $P(s)$.
  *
@@ -175,8 +175,12 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
 
   if (z > z_cluster)
   {
-    gt    = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, theta, z, z_cluster, z_cluster);
-    e_obs = (e_source + gt) / (1.0 + conj (gt) * e_source);
+    gt = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, theta, z, z_cluster, z_cluster);
+
+    if (cabs (gt) > 1.0)
+      e_obs = (1.0 + gt * conj (e_source)) / (conj (e_source) + conj (gt));
+    else
+      e_obs = (e_source + gt) / (1.0 + conj (gt) * e_source);
   }
 
   *et = creal (e_obs);

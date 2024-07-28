@@ -66,6 +66,7 @@ _nc_galaxy_sd_shape_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_shape_parent_class)->finalize (object);
 }
 
+/* LCOV_EXCL_START */
 static void
 _nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, const gdouble z_cluster, NcmRNG *rng, const gdouble theta, const gdouble z, gdouble *et, gdouble *ex)
 {
@@ -93,6 +94,8 @@ _nc_galaxy_sd_shape_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHalo
 
   return 0.0;
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 nc_galaxy_sd_shape_class_init (NcGalaxySDShapeClass *klass)
