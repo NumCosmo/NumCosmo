@@ -87,7 +87,7 @@ typedef enum _NcmCSQ1DEvolState
 } NcmCSQ1DEvolState;
 
 /**
- * NcmCSQ1DInitialStateTypeType:
+ * NcmCSQ1DInitialStateType:
  * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC: Ad-hoc initial condition
  * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2: Second order adiabatic vacuum
  * @NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4: Fourth order adiabatic vacuum
@@ -140,14 +140,16 @@ typedef enum _NcmCSQ1DFrame
  *
  * Represents the state of the system.
  */
-typedef struct _NcmCSQ1DState
+typedef struct _NcmCSQ1DState NcmCSQ1DState;
+
+struct _NcmCSQ1DState
 {
   /*< private >*/
   NcmCSQ1DFrame frame;
   gdouble alpha;
   gdouble gamma;
   gdouble t;
-} NcmCSQ1DState;
+};
 
 /* State related functions */
 

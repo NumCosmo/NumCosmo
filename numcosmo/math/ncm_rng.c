@@ -575,7 +575,7 @@ ncm_rng_get_seed (NcmRNG *rng)
  * @allow_colisions: a gboolean
  *
  * Sets the algorithm seed using a PRNG seeded by /dev/urandom (Unix/Linux)
- * or current time, when the first is not available (see #g_rand_new()).
+ * or current time, when the first is not available (see #g_rand_new).
  * If @allow_colisions is FALSE this function will set the first unused seed generated.
  *
  */

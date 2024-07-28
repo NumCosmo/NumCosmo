@@ -2146,9 +2146,9 @@ ncm_matrix_cov_dup_cor (const NcmMatrix *cov)
  * ncm_matrix_dup_array:
  * @cm: a #NcmMatrix
  *
- * This function returns an #GArray containing a copy of its elements..
+ * This function returns an GArray containing a copy of its elements..
  *
- * Returns: (transfer full) (element-type double): A pointer to a double #GArray.
+ * Returns: (transfer full) (element-type double): A pointer to a double GArray.
  */
 
 /**
