@@ -77,8 +77,7 @@ if build_gtk_doc
             '--output-format=xml',
             '--name-space=nc',
             '--name-space=ncm',
-            '--ignore-files',
-            ignore_files_str,
+            '--ignore-files', ignore_files_str,
         ],
         html_assets: [
             'container.css',
@@ -100,7 +99,9 @@ if build_gtk_doc
     )
 
     if not python_bf4.found()
-        message('WARNING: python3-bs4 not found, skipping adding mathjax to html docs')
+        message(
+            'WARNING: python3-bs4 not found, skipping adding mathjax to html docs',
+        )
     else
         addmathjax = find_program('addmathjax.py', required: true)
         custom_target(

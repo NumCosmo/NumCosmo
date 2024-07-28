@@ -204,6 +204,7 @@
     <xi:include href="xml/nc_hicosmo_lcdm.xml"/>
     <xi:include href="xml/nc_hicosmo_gcg.xml"/>
     <xi:include href="xml/nc_hicosmo_idem2.xml"/>
+    <xi:include href="xml/nc_hicosmo_qgw.xml"/>
     <xi:include href="xml/nc_de_cont.xml"/>
     <section>
       <title>Darkenergy</title>

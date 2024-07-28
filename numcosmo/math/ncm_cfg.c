@@ -2119,7 +2119,7 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
 
 /**
  * ncm_cfg_array_set_variant: (skip)
- * @a: a #GArray.
+ * @a: a GArray.
  * @var: a variant of array type.
  *
  * Transfers the data from @var to @a.
@@ -2138,7 +2138,7 @@ ncm_cfg_array_set_variant (GArray *a, GVariant *var)
 
 /**
  * ncm_cfg_array_to_variant: (skip)
- * @a: a #GArray.
+ * @a: a GArray.
  * @etype: element type.
  *
  * Creates a variant of array type from @a.

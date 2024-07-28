@@ -399,8 +399,8 @@ _nc_xcor_limber_kernel_weak_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo
 /* / ** */
 /*  * nc_xcor_limber_kernel_weak_lensing_set_dndz: */
 /*  * @xclkg: a #NcXcorLimberKernelWeakLensing */
-/*  * @z: (element-type double): a #GArray */
-/*  * @dn_dz_array: (element-type double): a #GArray */
+/*  * @z: (element-type double): a GArray */
+/*  * @dn_dz_array: (element-type double): a GArray */
 /*  * */
 /*  * FIXME */
 /*  * */

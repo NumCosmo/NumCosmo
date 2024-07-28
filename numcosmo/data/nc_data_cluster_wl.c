@@ -327,7 +327,7 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
   /**
    * NcDataClusterWL:rz-dist:
    *
-   * A #NcGalaxySDZPosition object.
+   * A #NcGalaxySDPosition object.
    *
    */
 
@@ -909,6 +909,9 @@ nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gd
 /**
  * nc_data_cluster_wl_gen_obs:
  * @dcwl: a #NcDataClusterWL
+ * @cosmo: a #NcHICosmo
+ * @dp: a #NcHaloDensityProfile
+ * @smd: a #NcWLSurfaceMassDensity
  * @nobs: number of observables to generate
  * @rng: a #NcmRNG
  *

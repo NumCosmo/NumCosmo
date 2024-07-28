@@ -645,7 +645,7 @@ nc_data_cluster_ncounts_gauss_set_lnM_obs_params (NcDataClusterNCountsGauss *nco
  * @ncounts_gauss: a #NcDataClusterNCountsGauss
  * @on: Whether the data has super sample covariance.
  *
- * Sets array of #Set if the data has super sample covariance.
+ * Sets array of Set if the data has super sample covariance.
  *
  */
 void
@@ -696,7 +696,7 @@ nc_data_cluster_ncounts_gauss_set_resample_s_matrix (NcDataClusterNCountsGauss *
  * @ncounts_gauss: a #NcDataClusterNCountsGauss
  * @on: Whether the covariance matrix is fixed or not.
  *
- * Sets array of #Set if the data covariance matrix is fixed.
+ * Sets array of Set if the data covariance matrix is fixed.
  *
  */
 

@@ -55,7 +55,7 @@ typedef enum /*< enum,underscore_name=NC_GALAXY_SD_POSITION_SPARAMS >*/
   NC_GALAXY_SD_POSITION_LSST_SRD_Z0,
   /* < private > */
   NC_GALAXY_SD_POSITION_LSST_SRD_SPARAM_LEN, /*< skip >*/
-} NcGalaxySDPositionSParams;
+} NcGalaxySDPositionLSSTSRDSParams;
 
 #define NC_GALAXY_SD_POSITION_LSST_SRD_DEFAULT_ALPHA  (0.78)
 #define NC_GALAXY_SD_POSITION_LSST_SRD_DEFAULT_BETA   (2.00)
