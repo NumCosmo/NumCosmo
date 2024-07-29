@@ -56,7 +56,7 @@ static void
 nc_galaxy_wl_obs_init (NcGalaxyWLObs *obs)
 {
   obs->data  = NULL;
-  obs->coord = NC_GALAXY_WL_OBS_COORD_PIXEL;
+  obs->coord = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
   obs->len   = 0;
 }
 
@@ -139,7 +139,7 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
                                                       "Coordinate system",
                                                       "Coordinate system used to store the data",
                                                       NC_TYPE_GALAXY_WL_OBS_COORD,
-                                                      NC_GALAXY_WL_OBS_COORD_PIXEL,
+                                                      NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 }
 
@@ -199,7 +199,7 @@ nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const guint i, const guint j)
  *
  * Gets the observation data.
  *
- * Returns: the observation data.
+ * Returns: (transfer none): the observation data.
  *
  */
 NcmMatrix *

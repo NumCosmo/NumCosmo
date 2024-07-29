@@ -963,14 +963,14 @@ nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs)
     {
       switch (nc_galaxy_wl_obs_get_coord (obs))
       {
-        case NC_GALAXY_WL_OBS_COORD_PIXEL:
-          phi = atan2 (dec - self->dec_cluster, (ra - self->ra_cluster) * cos (self->dec_cluster));
+        case NC_GALAXY_WL_OBS_COORD_EUCLIDEAN:
+          phi2 = 2 * atan2 (dec - self->dec_cluster, -(ra - self->ra_cluster) * cos (self->dec_cluster));
           break;
-        case NC_GALAXY_WL_OBS_COORD_SKY:
-          phi = atan2 (dec - self->dec_cluster, -(ra - self->ra_cluster) * cos (self->dec_cluster));
+        case NC_GALAXY_WL_OBS_COORD_CELESTIAL:
+          phi2 = 2 * atan2 (dec - self->dec_cluster, (ra - self->ra_cluster) * cos (self->dec_cluster));
           break;
         default:
-          g_assert_not_reached ();
+          g_error ("Undefined coordinate system.");
           break;
       }
 

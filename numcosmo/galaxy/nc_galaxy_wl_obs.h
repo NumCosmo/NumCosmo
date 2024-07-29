@@ -42,8 +42,8 @@ typedef struct _NcGalaxyWLObsPrivate NcGalaxyWLObsPrivate;
 
 typedef enum _NcGalaxyWLObsCoord
 {
-  NC_GALAXY_WL_OBS_COORD_SKY,
-  NC_GALAXY_WL_OBS_COORD_PIXEL,
+  NC_GALAXY_WL_OBS_COORD_CELESTIAL,
+  NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
 } NcGalaxyWLObsCoord;
 
 
