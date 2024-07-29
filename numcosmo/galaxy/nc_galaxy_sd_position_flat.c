@@ -236,7 +236,7 @@ nc_galaxy_sd_position_flat_new (const gdouble z_min, const gdouble z_max, const 
   NcmDTuple2 theta_lim             = NCM_DTUPLE2_STATIC_INIT (theta_min, theta_max);
   NcGalaxySDPositionFlat *gsdpflat = g_object_new (NC_TYPE_GALAXY_SD_POSITION_FLAT,
                                                    "z-lim", &z_lim,
-                                                   "r-lim", &theta_lim,
+                                                   "theta-lim", &theta_lim,
                                                    NULL);
 
   return gsdpflat;

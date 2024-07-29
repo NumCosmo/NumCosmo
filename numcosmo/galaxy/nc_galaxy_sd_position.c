@@ -92,7 +92,7 @@ _nc_galaxy_sd_position_set_property (GObject *object, guint prop_id, const GValu
       NcmDTuple2 *theta_lim = g_value_get_boxed (value);
 
       if (theta_lim == NULL)
-        g_error ("_nc_galaxy_sd_position_set_property: r_lim is NULL.");
+        g_error ("_nc_galaxy_sd_position_set_property: theta_lim is NULL.");
 
       nc_galaxy_sd_position_set_theta_lim (gsdp, theta_lim->elements[0], theta_lim->elements[1]);
       break;
