@@ -3,11 +3,11 @@
  *
  *  Wed June 15 18:57:38 2011
  *  Copyright  2011 Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -71,6 +71,7 @@ struct _NcmMemoryPoolSlice
 NcmMemoryPool *ncm_memory_pool_new (NcmMemoryPoolAlloc mp_alloc, gpointer userdata, GDestroyNotify mp_free);
 void ncm_memory_pool_free (NcmMemoryPool *mp, gboolean free_slices);
 
+guint ncm_memory_pool_empty (NcmMemoryPool *mp, gboolean free_slices);
 void ncm_memory_pool_set_min_size (NcmMemoryPool *mp, gsize n);
 void ncm_memory_pool_add (NcmMemoryPool *mp, gpointer p);
 gpointer ncm_memory_pool_get (NcmMemoryPool *mp);
@@ -79,3 +80,4 @@ void ncm_memory_pool_return (gpointer p);
 G_END_DECLS
 
 #endif /* _NCM_MEMORY_POOL_H_ */
+

@@ -3,11 +3,11 @@
  *
  *  Thu February 18 12:32:25 2016
  *  Copyright  2016  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_powspec_ml.h
- * Copyright (C) 2016 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2016 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -33,31 +33,19 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_POWSPEC_ML             (nc_powspec_ml_get_type ())
-#define NC_POWSPEC_ML(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_POWSPEC_ML, NcPowspecML))
-#define NC_POWSPEC_ML_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_POWSPEC_ML, NcPowspecMLClass))
-#define NC_IS_POWSPEC_ML(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_POWSPEC_ML))
-#define NC_IS_POWSPEC_ML_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_POWSPEC_ML))
-#define NC_POWSPEC_ML_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_POWSPEC_ML, NcPowspecMLClass))
+#define NC_TYPE_POWSPEC_ML (nc_powspec_ml_get_type ())
 
-typedef struct _NcPowspecMLClass NcPowspecMLClass;
-typedef struct _NcPowspecML NcPowspecML;
+G_DECLARE_DERIVABLE_TYPE (NcPowspecML, nc_powspec_ml, NC, POWSPEC_ML, NcmPowspec)
 
 struct _NcPowspecMLClass
 {
   /*< private > */
   NcmPowspecClass parent_class;
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[18];
 };
 
-struct _NcPowspecML
-{
-  /*< private > */
-  NcmPowspec parent_instance;
-};
-
-GType nc_powspec_ml_get_type (void) G_GNUC_CONST;
-
-NcPowspecML *nc_powspec_ml_new_from_name (const gchar *ps_ml_name);
 NcPowspecML *nc_powspec_ml_ref (NcPowspecML *ps_ml);
 
 void nc_powspec_ml_free (NcPowspecML *ps_ml);

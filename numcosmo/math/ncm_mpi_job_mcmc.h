@@ -5,11 +5,11 @@
  *
  *  Fri April 27 16:32:34 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_mpi_job_mcmc.h
- * Copyright (C) 2018 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2018 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -36,33 +36,11 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MPI_JOB_MCMC             (ncm_mpi_job_mcmc_get_type ())
-#define NCM_MPI_JOB_MCMC(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MPI_JOB_MCMC, NcmMPIJobMCMC))
-#define NCM_MPI_JOB_MCMC_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MPI_JOB_MCMC, NcmMPIJobMCMCClass))
-#define NCM_IS_MPI_JOB_MCMC(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MPI_JOB_MCMC))
-#define NCM_IS_MPI_JOB_MCMC_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MPI_JOB_MCMC))
-#define NCM_MPI_JOB_MCMC_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MPI_JOB_MCMC, NcmMPIJobMCMCClass))
+#define NCM_TYPE_MPI_JOB_MCMC (ncm_mpi_job_mcmc_get_type ())
 
-typedef struct _NcmMPIJobMCMCClass NcmMPIJobMCMCClass;
-typedef struct _NcmMPIJobMCMC NcmMPIJobMCMC;
-typedef struct _NcmMPIJobMCMCPrivate NcmMPIJobMCMCPrivate;
+G_DECLARE_FINAL_TYPE (NcmMPIJobMCMC, ncm_mpi_job_mcmc, NCM, MPI_JOB_MCMC, NcmMPIJob)
 
-struct _NcmMPIJobMCMCClass
-{
-  /*< private >*/
-  NcmMPIJobClass parent_class;
-};
-
-struct _NcmMPIJobMCMC
-{
-  /*< private >*/
-  NcmMPIJob parent_instance;
-  NcmMPIJobMCMCPrivate *priv;
-};
-
-GType ncm_mpi_job_mcmc_get_type (void) G_GNUC_CONST;
-
-NcmMPIJobMCMC *ncm_mpi_job_mcmc_new (NcmFit *fit, NcmObjArray *func_oa);
+NcmMPIJobMCMC *ncm_mpi_job_mcmc_new (NcmFit * fit, NcmObjArray * func_oa);
 NcmMPIJobMCMC *ncm_mpi_job_mcmc_ref (NcmMPIJobMCMC *mjmcmc);
 
 void ncm_mpi_job_mcmc_free (NcmMPIJobMCMC *mjmcmc);

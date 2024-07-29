@@ -35,7 +35,7 @@
  * \end{equation}
  * where $\delta$ is the matter density field.
  *
- * Kernels also implement the nosie power spectrum.
+ * Kernels also implement the noise power spectrum.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -43,14 +43,15 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_serialize.h"
 #include "xcor/nc_xcor_limber_kernel.h"
 #include "xcor/nc_xcor.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcXcorLimberKernel, nc_xcor_limber_kernel, NCM_TYPE_MODEL);
+G_DEFINE_ABSTRACT_TYPE (NcXcorLimberKernel, nc_xcor_limber_kernel, NCM_TYPE_MODEL)
+G_DEFINE_BOXED_TYPE (NcXcorKinetic, nc_xcor_kinetic, nc_xcor_kinetic_copy, nc_xcor_kinetic_free)
 
 enum
 {
@@ -86,9 +87,9 @@ static void
 _nc_xcor_limber_kernel_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcXcorLimberKernel *xclk = NC_XCOR_LIMBER_KERNEL (object);
-  
+
   g_return_if_fail (NC_IS_XCOR_LIMBER_KERNEL (object));
-  
+
   switch (prop_id)
   {
     case PROP_ZMIN:
@@ -97,9 +98,9 @@ _nc_xcor_limber_kernel_set_property (GObject *object, guint prop_id, const GValu
     case PROP_ZMAX:
       xclk->zmax = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -107,9 +108,9 @@ static void
 _nc_xcor_limber_kernel_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcXcorLimberKernel *xclk = NC_XCOR_LIMBER_KERNEL (object);
-  
+
   g_return_if_fail (NC_IS_XCOR_LIMBER_KERNEL (object));
-  
+
   switch (prop_id)
   {
     case PROP_ZMIN:
@@ -118,9 +119,9 @@ _nc_xcor_limber_kernel_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_ZMAX:
       g_value_set_double (value, xclk->zmax);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -131,17 +132,17 @@ nc_xcor_limber_kernel_class_init (NcXcorLimberKernelClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-  
+
   model_class->set_property = &_nc_xcor_limber_kernel_set_property;
   model_class->get_property = &_nc_xcor_limber_kernel_get_property;
   object_class->dispose     = &_nc_xcor_limber_kernel_dispose;
   object_class->finalize    = &_nc_xcor_limber_kernel_finalize;
-  
+
   ncm_model_class_set_name_nick (model_class, "Cross-correlation Limber Kernels", "xcor-limber-kernel");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
-  
+
   ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
-  
+
   g_object_class_install_property (object_class,
                                    PROP_ZMIN,
                                    g_param_spec_double ("zmin",
@@ -156,32 +157,9 @@ nc_xcor_limber_kernel_class_init (NcXcorLimberKernelClass *klass)
                                                         "Maximum redshift",
                                                         0.0, 1e5, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   ncm_mset_model_register_id (model_class, "NcXcorLimberKernel", "Cross-correlation Limber Kernels",
                               NULL, TRUE, NCM_MSET_MODEL_MAIN);
-}
-
-/**
- * nc_xcor_limber_kernel_new_from_name:
- * @xcor_name: string which specifies the type of the observable
- *
- * This function returns a new #NcXcorLimberKernel whose type is defined by
- * @xcor_name.
- *
- * Returns: (transfer full): A new #NcXcorLimberKernel.
- */
-NcXcorLimberKernel *
-nc_xcor_limber_kernel_new_from_name (gchar *xcor_name)
-{
-  GObject *obj    = ncm_serialize_global_from_string (xcor_name);
-  GType xcor_type = G_OBJECT_TYPE (obj);
-  
-  if (!g_type_is_a (xcor_type, NC_TYPE_XCOR_LIMBER_KERNEL))
-    g_error ("nc_xcor_limber_kernel_new_from_name: NcXcorLimberKernel %s do not "
-             "descend from %s.",
-             xcor_name, g_type_name (NC_TYPE_XCOR_LIMBER_KERNEL));
-  
-  return NC_XCOR_LIMBER_KERNEL (obj);
 }
 
 /**
@@ -222,6 +200,37 @@ void
 nc_xcor_limber_kernel_clear (NcXcorLimberKernel **xclk)
 {
   g_clear_object (xclk);
+}
+
+/**
+ * nc_xcor_kinetic_copy:
+ * @xck: a #NcXcorKinetic
+ *
+ * Creates a copy of @xck.
+ *
+ * Returns: (transfer full): a new #NcXcorKinetic copy of @xck.
+ */
+NcXcorKinetic *
+nc_xcor_kinetic_copy (NcXcorKinetic *xck)
+{
+  NcXcorKinetic *xck_copy = g_new (NcXcorKinetic, 1);
+
+  xck_copy[0] = xck[0];
+
+  return xck_copy;
+}
+
+/**
+ * nc_xcor_kinetic_free:
+ * @xck: a #NcXcorKinetic
+ *
+ * Frees @xck.
+ *
+ */
+void
+nc_xcor_kinetic_free (NcXcorKinetic *xck)
+{
+  g_free (xck);
 }
 
 /**
@@ -291,7 +300,7 @@ nc_xcor_limber_kernel_eval_full (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdo
   const gdouble xi_z      = nc_distance_comoving (dist, cosmo, z); /* in units of Hubble radius */
   const gdouble E_z       = nc_hicosmo_E (cosmo, z);
   const NcXcorKinetic xck = { xi_z, E_z };
-  
+
   if ((xclk->zmin <= z) && (xclk->zmax >= z))
     return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, &xck, l) * xclk->cons_factor;
   else
@@ -333,25 +342,25 @@ _nc_xcor_limber_kernel_log_all_models_go (GType model_type, guint n)
 {
   guint nc, i, j;
   GType *models = g_type_children (model_type, &nc);
-  
+
   for (i = 0; i < nc; i++)
   {
     guint ncc;
     GType *modelsc = g_type_children (models[i], &ncc);
-    
+
     g_message ("#  ");
-    
+
     for (j = 0; j < n; j++)
       g_message (" ");
-    
+
     g_message ("%s\n", g_type_name (models[i]));
-    
+
     if (ncc)
       _nc_xcor_limber_kernel_log_all_models_go (models[i], n + 2);
-    
+
     g_free (modelsc);
   }
-  
+
   g_free (models);
 }
 

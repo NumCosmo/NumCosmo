@@ -3,11 +3,11 @@
  *
  *  Sun May  6 17:20:29 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -37,7 +37,7 @@
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo_priors.h>
 #include <numcosmo/nc_powspec_ml.h>
-#include <numcosmo/nc_powspec_ml_fix_spline.h>
+#include <numcosmo/nc_powspec_ml_spline.h>
 #include <numcosmo/nc_powspec_ml_transfer.h>
 #include <numcosmo/nc_powspec_ml_cbe.h>
 #include <numcosmo/nc_powspec_mnl.h>
@@ -57,23 +57,25 @@
 #include <numcosmo/nc_hireion_camb.h>
 
 /* Perturbations */
-#include <numcosmo/perturbations/nc_hipert.h>
-#include <numcosmo/perturbations/nc_hipert_bg_var.h>
-#include <numcosmo/perturbations/nc_hipert_wkb.h>
-#include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 #include <numcosmo/perturbations/nc_hipert_adiab.h>
-#include <numcosmo/perturbations/nc_hipert_gw.h>
-#include <numcosmo/perturbations/nc_hipert_two_fluids.h>
-#include <numcosmo/perturbations/nc_hipert_boltzmann.h>
-#include <numcosmo/perturbations/nc_hipert_boltzmann_std.h>
+#include <numcosmo/perturbations/nc_hipert_bg_var.h>
 #include <numcosmo/perturbations/nc_hipert_boltzmann_cbe.h>
-#include <numcosmo/perturbations/nc_hipert_first_order.h>
-#include <numcosmo/perturbations/nc_hipert_grav.h>
-#include <numcosmo/perturbations/nc_hipert_grav_einstein.h>
-#include <numcosmo/perturbations/nc_hipert_comp.h>
+#include <numcosmo/perturbations/nc_hipert_boltzmann_std.h>
+#include <numcosmo/perturbations/nc_hipert_boltzmann.h>
 #include <numcosmo/perturbations/nc_hipert_comp_pb.h>
+#include <numcosmo/perturbations/nc_hipert_comp.h>
+#include <numcosmo/perturbations/nc_hipert_em.h>
+#include <numcosmo/perturbations/nc_hipert_first_order.h>
+#include <numcosmo/perturbations/nc_hipert_grav_einstein.h>
+#include <numcosmo/perturbations/nc_hipert_grav.h>
+#include <numcosmo/perturbations/nc_hipert_gw.h>
+#include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
+#include <numcosmo/perturbations/nc_hipert_two_fluids.h>
+#include <numcosmo/perturbations/nc_hipert_wkb.h>
+#include <numcosmo/perturbations/nc_hipert.h>
 
 /* Model implementations */
+#include <numcosmo/nc_de_cont.h>
 #include <numcosmo/model/nc_hicosmo_idem2.h>
 #include <numcosmo/model/nc_hicosmo_gcg.h>
 #include <numcosmo/model/nc_hicosmo_de.h>
@@ -82,18 +84,21 @@
 #include <numcosmo/model/nc_hicosmo_de_cpl.h>
 #include <numcosmo/model/nc_hicosmo_de_jbp.h>
 #include <numcosmo/model/nc_hicosmo_de_xcdm.h>
+#include <numcosmo/model/nc_hicosmo_de_wspline.h>
 #include <numcosmo/model/nc_hicosmo_lcdm.h>
 #include <numcosmo/model/nc_hicosmo_qconst.h>
 #include <numcosmo/model/nc_hicosmo_qlinear.h>
 #include <numcosmo/model/nc_hicosmo_qspline.h>
 #include <numcosmo/model/nc_hicosmo_qrbf.h>
 #include <numcosmo/model/nc_hicosmo_qgrw.h>
+#include <numcosmo/model/nc_hicosmo_qgw.h>
 #include <numcosmo/model/nc_hicosmo_Vexp.h>
 #include <numcosmo/model/nc_hiprim_power_law.h>
 #include <numcosmo/model/nc_hiprim_atan.h>
 #include <numcosmo/model/nc_hiprim_expc.h>
 #include <numcosmo/model/nc_hiprim_bpl.h>
 #include <numcosmo/model/nc_hiprim_sbpl.h>
+#include <numcosmo/model/nc_hiprim_two_fluids.h>
 
 /* Large Scale Structure / Structure Formation */
 #include <numcosmo/lss/nc_window.h>
@@ -119,13 +124,13 @@
 #include <numcosmo/lss/nc_multiplicity_func_tinker_mean_normalized.h>
 #include <numcosmo/lss/nc_multiplicity_func_crocce.h>
 #include <numcosmo/lss/nc_multiplicity_func_bocquet.h>
+#include <numcosmo/lss/nc_multiplicity_func_watson.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
-#include <numcosmo/lss/nc_halo_bias_type.h>
-#include <numcosmo/lss/nc_halo_bias_type_ps.h>
-#include <numcosmo/lss/nc_halo_bias_type_st_spher.h>
-#include <numcosmo/lss/nc_halo_bias_type_st_ellip.h>
-#include <numcosmo/lss/nc_halo_bias_type_tinker.h>
-#include <numcosmo/lss/nc_halo_bias_func.h>
+#include <numcosmo/lss/nc_halo_bias.h>
+#include <numcosmo/lss/nc_halo_bias_ps.h>
+#include <numcosmo/lss/nc_halo_bias_st_spher.h>
+#include <numcosmo/lss/nc_halo_bias_st_ellip.h>
+#include <numcosmo/lss/nc_halo_bias_tinker.h>
 #include <numcosmo/lss/nc_cluster_redshift.h>
 #include <numcosmo/lss/nc_cluster_redshift_nodist.h>
 #include <numcosmo/lss/nc_cluster_photoz_gauss.h>
@@ -140,20 +145,22 @@
 #include <numcosmo/lss/nc_cluster_mass_ascaso.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_pseudo_counts.h>
-#include <numcosmo/lss/nc_galaxy_redshift.h>
-#include <numcosmo/lss/nc_galaxy_redshift_spec.h>
-#include <numcosmo/lss/nc_galaxy_redshift_spline.h>
-#include <numcosmo/lss/nc_galaxy_redshift_gauss.h>
-#include <numcosmo/lss/nc_galaxy_wl.h>
-#include <numcosmo/lss/nc_galaxy_wl_dist.h>
-#include <numcosmo/lss/nc_galaxy_wl_reduced_shear_gauss.h>
-#include <numcosmo/lss/nc_galaxy_wl_proj.h>
 #include <numcosmo/lss/nc_cor_cluster_cmb_lens_limber.h>
 #include <numcosmo/lss/nc_wl_surface_mass_density.h>
 #include <numcosmo/lss/nc_reduced_shear_cluster_mass.h>
 #include <numcosmo/lss/nc_reduced_shear_calib.h>
 #include <numcosmo/lss/nc_reduced_shear_calib_wtg.h>
 #include <numcosmo/lss/nc_galaxy_selfunc.h>
+
+/* Galaxy / Galaxy sample distributions */
+#include <numcosmo/galaxy/nc_galaxy_sd_position.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_position_flat.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_position_lsst_srd.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_z_proxy.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_z_proxy_gauss.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_z_proxy_dirac.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_shape_gauss.h>
 
 /* Observable data */
 #include <numcosmo/data/nc_data_snia.h>
@@ -168,17 +175,16 @@
 #include <numcosmo/data/nc_data_bao_empirical_fit.h>
 #include <numcosmo/data/nc_data_bao_empirical_fit_2d.h>
 #include <numcosmo/data/nc_data_bao_dhr_dar.h>
+#include <numcosmo/data/nc_data_bao_dtr_dhr.h>
 #include <numcosmo/data/nc_data_bao_dmr_hr.h>
 #include <numcosmo/data/nc_data_bao.h>
 #include <numcosmo/data/nc_data_cmb_dist_priors.h>
 #include <numcosmo/data/nc_data_cmb_shift_param.h>
 #include <numcosmo/data/nc_data_cmb.h>
 #include <numcosmo/data/nc_data_cluster_ncount.h>
-#include <numcosmo/data/nc_data_cluster_poisson.h>
-#include <numcosmo/data/nc_data_cluster_counts_box_poisson.h>
+#include <numcosmo/data/nc_data_cluster_ncounts_gauss.h>
 #include <numcosmo/data/nc_data_cluster_pseudo_counts.h>
 #include <numcosmo/data/nc_data_cluster_wl.h>
-#include <numcosmo/data/nc_data_reduced_shear_cluster_mass.h>
 #include <numcosmo/data/nc_data_planck_lkl.h>
 #include <numcosmo/data/nc_data_xcor.h>
 
@@ -194,3 +200,4 @@
 #include <numcosmo/xcor/nc_xcor_limber_kernel_weak_lensing.h>
 
 #endif /* _NUMCOSMO_H */
+

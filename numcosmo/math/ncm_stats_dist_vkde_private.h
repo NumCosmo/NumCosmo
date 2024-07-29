@@ -5,11 +5,11 @@
  *
  *  Thu July 22 15:12:38 2018
  *  Copyright  2021  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_stats_dist_vkde_private.h
- * Copyright (C) 2021 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2021 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -30,19 +30,20 @@
 
 #include <glib.h>
 #include "math/ncm_stats_dist_vkde.h"
+#include "math/ncm_memory_pool.h"
 
 G_BEGIN_DECLS
 
-struct _NcmStatsDistVKDEPrivate
+typedef struct _NcmStatsDistVKDEPrivate
 {
   /*< private >*/
-  NcmStatsVec *sample;
   GPtrArray *cov_array;
-  NcmMatrix *tmp_cov;
-  NcmVector *delta_x;
   NcmVector *lnnorms;
   gdouble local_frac;
-};
+  gboolean use_rot_href;
+  NcmMemoryPool *mp_stats_vec;
+  NcmMemoryPool *mp_eval_vars;
+} NcmStatsDistVKDEPrivate;
 
 G_END_DECLS
 

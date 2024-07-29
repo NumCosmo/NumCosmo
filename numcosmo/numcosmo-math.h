@@ -3,11 +3,11 @@
  *
  *  Sun May  6 17:20:29 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -40,6 +40,7 @@
 #include <numcosmo/math/ncm_mpi_job_feval.h>
 
 /* Base types and components */
+#include <numcosmo/math/ncm_dtuple.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/math/ncm_nnls.h>
@@ -47,6 +48,7 @@
 #include <numcosmo/math/ncm_obj_array.h>
 #include <numcosmo/math/ncm_integral1d.h>
 #include <numcosmo/math/ncm_integral1d_ptr.h>
+#include <numcosmo/math/ncm_integral_nd.h>
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_stats_vec.h>
 #include <numcosmo/math/ncm_stats_dist1d.h>
@@ -68,24 +70,23 @@
 #include <numcosmo/math/ncm_spline_gsl.h>
 #include <numcosmo/math/ncm_spline_cubic.h>
 #include <numcosmo/math/ncm_spline_cubic_notaknot.h>
+#include <numcosmo/math/ncm_spline_cubic_d2.h>
 #include <numcosmo/math/ncm_spline_rbf.h>
 #include <numcosmo/math/ncm_spline2d.h>
 #include <numcosmo/math/ncm_spline2d_spline.h>
 #include <numcosmo/math/ncm_spline2d_gsl.h>
 #include <numcosmo/math/ncm_spline2d_bicubic.h>
-#include <numcosmo/math/ncm_powspec.h>
+#include <numcosmo/math/ncm_powspec_corr3d.h>
 #include <numcosmo/math/ncm_powspec_filter.h>
 #include <numcosmo/math/ncm_powspec_sphere_proj.h>
-#include <numcosmo/math/ncm_powspec_corr3d.h>
+#include <numcosmo/math/ncm_powspec_spline2d.h>
+#include <numcosmo/math/ncm_powspec.h>
 #include <numcosmo/math/ncm_hoaa.h>
 #include <numcosmo/math/ncm_csq1d.h>
 #include <numcosmo/math/ncm_func_eval.h>
-#include <numcosmo/math/grid_one.h>
 #include <numcosmo/math/ncm_mpsf_trig_int.h>
 #include <numcosmo/math/ncm_mpsf_sbessel.h>
-#include <numcosmo/math/ncm_mpsf_sbessel_int.h>
 #include <numcosmo/math/ncm_sf_sbessel.h>
-#include <numcosmo/math/ncm_sf_sbessel_int.h>
 #include <numcosmo/math/ncm_sf_spherical_harmonics.h>
 #include <numcosmo/math/ncm_mpsf_0F1.h>
 #include <numcosmo/math/ncm_fftlog.h>
@@ -106,7 +107,6 @@
 #include <numcosmo/math/ncm_mset_func.h>
 #include <numcosmo/math/ncm_mset_func1.h>
 #include <numcosmo/math/ncm_mset_func_list.h>
-#include <numcosmo/math/ncm_calc.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/math/ncm_reparam_linear.h>
 #include <numcosmo/math/ncm_data.h>
@@ -117,6 +117,7 @@
 #include <numcosmo/math/ncm_data_poisson.h>
 #include <numcosmo/math/ncm_data_gauss_cov_mvnd.h>
 #include <numcosmo/math/ncm_data_rosenbrock.h>
+#include <numcosmo/math/ncm_data_gaussmix2d.h>
 #include <numcosmo/math/ncm_data_funnel.h>
 #include <numcosmo/math/ncm_dataset.h>
 #include <numcosmo/math/ncm_likelihood.h>
@@ -132,8 +133,6 @@
 #include <numcosmo/math/ncm_util.h>
 #include <numcosmo/math/ncm_iset.h>
 #include <numcosmo/math/ncm_diff.h>
-#include <numcosmo/math/ncm_ode.h>
-#include <numcosmo/math/ncm_ode_eval.h>
 #include <numcosmo/math/ncm_timer.h>
 
 /* Likelihood object */
@@ -165,17 +164,12 @@
 #include <numcosmo/math/ncm_quaternion.h>
 
 /* Utilities */
+#include <numcosmo/math/ncm_binsplit.h>
 #include <numcosmo/math/ncm_memory_pool.h>
-#include <numcosmo/math/mpq_tree.h>
-#include <numcosmo/math/integral.h>
-#include <numcosmo/math/poly.h>
-#include <numcosmo/math/quadrature.h>
-#include <numcosmo/math/matrix_exp.h>
-#include <numcosmo/math/magnus_iserles_ode.h>
-#include <numcosmo/math/binsplit.h>
-#include <numcosmo/math/dividedifference.h>
+#include <numcosmo/math/ncm_integrate.h>
 
 /* Spherical maps, HEALPIX implementation */
 #include <numcosmo/math/ncm_sphere_map.h>
 
 #endif /* _NUMCOSMO_MATH_H */
+

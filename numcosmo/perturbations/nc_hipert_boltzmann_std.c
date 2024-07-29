@@ -3,11 +3,11 @@
  *
  *  Thu Nov 12 12:37:02 2009
  *  Copyright  2009  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hipert_boltzmann_std.c
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -59,7 +59,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcHIPertBoltzmannStd, nc_hipert_boltzmann_std, NC_TYPE_HIPERT_BOLTZMANN);
+G_DEFINE_TYPE (NcHIPertBoltzmannStd, nc_hipert_boltzmann_std, NC_TYPE_HIPERT_BOLTZMANN)
 
 static void
 nc_hipert_boltzmann_std_init (NcHIPertBoltzmannStd *pbs)

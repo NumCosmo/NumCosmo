@@ -3,11 +3,11 @@
  *
  *  Thu Apr 22 14:34:54 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  * 
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -51,7 +51,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataHubble, nc_data_hubble, NCM_TYPE_DATA_GAUSS_DIAG);
+G_DEFINE_TYPE (NcDataHubble, nc_data_hubble, NCM_TYPE_DATA_GAUSS_DIAG)
 
 static void
 nc_data_hubble_init (NcDataHubble *hubble)
@@ -162,10 +162,11 @@ static void
 _nc_data_hubble_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataHubble *hubble = NC_DATA_HUBBLE (diag);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo     = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  const guint np       = ncm_data_gauss_diag_get_size (diag);
   guint i;
 
-  for (i = 0; i < diag->np; i++)
+  for (i = 0; i < np; i++)
   {
     const gdouble z = ncm_vector_get (hubble->x, i);
     const gdouble H = nc_hicosmo_H (cosmo, z); 
@@ -177,11 +178,12 @@ void
 _nc_data_hubble_set_size (NcmDataGaussDiag *diag, guint np)
 {
   NcDataHubble *hubble = NC_DATA_HUBBLE (diag);
+  const guint cnp      = ncm_data_gauss_diag_get_size (diag);
   
-  if ((np == 0) || (np != diag->np))
+  if ((np == 0) || (np != cnp))
     ncm_vector_clear (&hubble->x);
 
-  if ((np != 0) && (np != diag->np))
+  if ((np != 0) && (np != cnp))
     hubble->x = ncm_vector_new (np);
   
   /* Chain up : end */
@@ -270,6 +272,12 @@ nc_data_hubble_new_from_id (NcDataHubbleId id)
       break;
     case NC_DATA_HUBBLE_RIESS2016_HST_WFC3:
       filename = ncm_cfg_get_data_filename ("nc_data_hubble_riess2016.obj", TRUE);
+      break;
+    case NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_gomez_valent_comp.obj", TRUE);
+      break;
+    case NC_DATA_HUBBLE_RIESS2018:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_riess2018.obj", TRUE);
       break;
     default:
       g_error ("nc_data_hubble_new_from_id: id %d not recognized.", id);

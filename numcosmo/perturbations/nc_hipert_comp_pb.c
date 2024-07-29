@@ -4,11 +4,11 @@
  *
  *  Fri October 13 11:10:24 2017
  *  Copyright  2017  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hipert_comp_pb.c
- * Copyright (C) 2017 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2017 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -51,7 +51,7 @@ enum
   PROP_LMAX
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertCompPB, nc_hipert_comp_pb, NC_TYPE_HIPERT_COMP);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertCompPB, nc_hipert_comp_pb, NC_TYPE_HIPERT_COMP)
 
 static void
 nc_hipert_comp_pb_init (NcHIPertCompPB *pb)

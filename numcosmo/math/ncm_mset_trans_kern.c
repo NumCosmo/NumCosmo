@@ -3,22 +3,22 @@
  *
  *  Fri August 29 18:57:07 2014
  *  Copyright  2014  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_mset_trans_kern.c
- * Copyright (C) 2014 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2014 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -27,9 +27,18 @@
  * SECTION:ncm_mset_trans_kern
  * @title: NcmMSetTransKern
  * @short_description: Abstract Class for a transition kernel and prior.
- * 
- * FIXME
- * 
+ *
+ * This object defines the abstract class for a transition kernel and prior. It serves
+ * as the base class for all transition kernels and priors, with two main purposes:
+ *
+ * - To define the interface for all transition kernels for use in the NcmFitMCMC
+ *   object.
+ * - To define the interface for all priors, generating random parameter vectors with
+ *   multivariate parameters.
+ *
+ * Notably, it acts as a prior sampler for NcmFitESMCMC, generating the initial
+ * population's first set of random parameter vectors.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -41,28 +50,40 @@
 
 enum
 {
-   PROP_0,
-   PROP_MSET,
-   PROP_SIZE
+  PROP_0,
+  PROP_MSET,
+  PROP_SIZE
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcmMSetTransKern, ncm_mset_trans_kern, G_TYPE_OBJECT);
+typedef struct _NcmMSetTransKernPrivate
+{
+  /*< private >*/
+  GObject parent_instance;
+  NcmMSet *mset;
+  NcmVector *theta;
+} NcmMSetTransKernPrivate;
+
+
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmMSetTransKern, ncm_mset_trans_kern, G_TYPE_OBJECT)
 
 static void
 ncm_mset_trans_kern_init (NcmMSetTransKern *tkern)
 {
-  tkern->mset  = NULL;
-  tkern->theta = NULL;
+  NcmMSetTransKernPrivate *self = ncm_mset_trans_kern_get_instance_private (tkern);
+
+  self->mset  = NULL;
+  self->theta = NULL;
 }
 
 static void
 ncm_mset_trans_kern_dispose (GObject *object)
 {
-  NcmMSetTransKern *tkern = NCM_MSET_TRANS_KERN (object);
+  NcmMSetTransKern *tkern       = NCM_MSET_TRANS_KERN (object);
+  NcmMSetTransKernPrivate *self = ncm_mset_trans_kern_get_instance_private (tkern);
 
-  ncm_mset_clear (&tkern->mset);
-  ncm_vector_clear (&tkern->theta);
-  
+  ncm_mset_clear (&self->mset);
+  ncm_vector_clear (&self->theta);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_trans_kern_parent_class)->dispose (object);
 }
@@ -70,7 +91,6 @@ ncm_mset_trans_kern_dispose (GObject *object)
 static void
 ncm_mset_trans_kern_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_trans_kern_parent_class)->finalize (object);
 }
@@ -79,6 +99,7 @@ static void
 ncm_mset_trans_kern_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmMSetTransKern *tkern = NCM_MSET_TRANS_KERN (object);
+
   g_return_if_fail (NCM_IS_MSET_TRANS_KERN (object));
 
   switch (prop_id)
@@ -86,33 +107,37 @@ ncm_mset_trans_kern_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_MSET:
       ncm_mset_trans_kern_set_mset (tkern, g_value_get_object (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
 static void
 ncm_mset_trans_kern_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmMSetTransKern *tkern = NCM_MSET_TRANS_KERN (object);
+  NcmMSetTransKern *tkern       = NCM_MSET_TRANS_KERN (object);
+  NcmMSetTransKernPrivate *self = ncm_mset_trans_kern_get_instance_private (tkern);
+
   g_return_if_fail (NCM_IS_MSET_TRANS_KERN (object));
 
   switch (prop_id)
   {
     case PROP_MSET:
-      g_value_set_object (value, tkern->mset);
+      g_value_set_object (value, self->mset);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
+
+static void _ncm_mset_trans_kern_reset (NcmMSetTransKern *tkern);
 
 static void
 ncm_mset_trans_kern_class_init (NcmMSetTransKernClass *klass)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class         = G_OBJECT_CLASS (klass);
   NcmMSetTransKernClass *tkern_class = NCM_MSET_TRANS_KERN_CLASS (klass);
 
   object_class->set_property = ncm_mset_trans_kern_set_property;
@@ -130,8 +155,14 @@ ncm_mset_trans_kern_class_init (NcmMSetTransKernClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   tkern_class->bernoulli_scheme = FALSE;
-  tkern_class->set_mset = NULL;
-  tkern_class->generate = NULL;
+  tkern_class->set_mset         = NULL;
+  tkern_class->generate         = NULL;
+  tkern_class->reset            = &_ncm_mset_trans_kern_reset;
+}
+
+static void
+_ncm_mset_trans_kern_reset (NcmMSetTransKern *tkern)
+{
 }
 
 /**
@@ -155,7 +186,7 @@ ncm_mset_trans_kern_ref (NcmMSetTransKern *tkern)
  * Increases the reference count of @tkern.
  *
  */
-void 
+void
 ncm_mset_trans_kern_free (NcmMSetTransKern *tkern)
 {
   g_object_unref (tkern);
@@ -165,10 +196,10 @@ ncm_mset_trans_kern_free (NcmMSetTransKern *tkern)
  * ncm_mset_trans_kern_clear:
  * @tkern: a #NcmMSetTransKern.
  *
- * FIXME
+ * If *@tkern is not %NULL, unrefs it and sets *@tkern to %NULL.
  *
  */
-void 
+void
 ncm_mset_trans_kern_clear (NcmMSetTransKern **tkern)
 {
   g_clear_object (tkern);
@@ -179,22 +210,40 @@ ncm_mset_trans_kern_clear (NcmMSetTransKern **tkern)
  * @tkern: a #NcmMSetTransKern.
  * @mset: a #NcmMSet.
  *
- * FIXME
- * 
+ * Sets the @mset as the internal set #NcmMSet to be used by the transition kernel.
+ *
  */
 void
 ncm_mset_trans_kern_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
 {
-  ncm_mset_clear (&tkern->mset);
+  NcmMSetTransKernPrivate *self = ncm_mset_trans_kern_get_instance_private (tkern);
+
+  ncm_mset_clear (&self->mset);
+
   if (mset != NULL)
   {
-    g_assert (mset->valid_map);
+    g_assert (ncm_mset_fparam_map_valid (mset));
+
     if (ncm_mset_fparam_len (mset) == 0)
       g_error ("ncm_mset_trans_kern_set_mset: invalid mset, no free parameters.");
-    
-    tkern->mset = ncm_mset_ref (mset);
+
+    self->mset = ncm_mset_ref (mset);
     NCM_MSET_TRANS_KERN_GET_CLASS (tkern)->set_mset (tkern, mset);
   }
+}
+
+/**
+ * ncm_mset_trans_kern_peek_mset:
+ * @tkern: a #NcmMSetTransKern.
+ *
+ * Returns: (transfer none): the internal set #NcmMSet.
+ */
+NcmMSet *
+ncm_mset_trans_kern_peek_mset (NcmMSetTransKern *tkern)
+{
+  NcmMSetTransKernPrivate *self = ncm_mset_trans_kern_get_instance_private (tkern);
+
+  return self->mset;
 }
 
 /**
@@ -204,31 +253,36 @@ ncm_mset_trans_kern_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
  *
  * Sets the @theta as the prior mean. This allows the transition kernel to
  * be used as a prior sampler.
- * 
+ *
  */
 void
 ncm_mset_trans_kern_set_prior (NcmMSetTransKern *tkern, NcmVector *theta)
 {
-  ncm_vector_clear (&tkern->theta);
-  tkern->theta = ncm_vector_ref (theta);
+  NcmMSetTransKernPrivate *self = ncm_mset_trans_kern_get_instance_private (tkern);
+
+  ncm_vector_clear (&self->theta);
+  self->theta = ncm_vector_ref (theta);
 }
 
 /**
  * ncm_mset_trans_kern_set_prior_from_mset:
  * @tkern: a #NcmMSetTransKern.
  *
- * As ncm_mset_trans_kern_set_prior() but uses the values present in the 
+ * As ncm_mset_trans_kern_set_prior() but uses the values present in the
  * internal set #NcmMSet.
- * 
+ *
  */
 void
 ncm_mset_trans_kern_set_prior_from_mset (NcmMSetTransKern *tkern)
 {
-  g_assert (tkern->mset != NULL);
+  NcmMSetTransKernPrivate *self = ncm_mset_trans_kern_get_instance_private (tkern);
+
+  g_assert (self->mset != NULL);
   {
-    guint fparams_len = ncm_mset_fparams_len (tkern->mset);
-    NcmVector *theta = ncm_vector_new (fparams_len);
-    ncm_mset_fparams_get_vector (tkern->mset, theta);
+    guint fparams_len = ncm_mset_fparams_len (self->mset);
+    NcmVector *theta  = ncm_vector_new (fparams_len);
+
+    ncm_mset_fparams_get_vector (self->mset, theta);
     ncm_mset_trans_kern_set_prior (tkern, theta);
     ncm_vector_free (theta);
   }
@@ -241,8 +295,8 @@ ncm_mset_trans_kern_set_prior_from_mset (NcmMSetTransKern *tkern)
  * @thetastar: try point.
  * @rng: a #NcmRNG.
  *
- * FIXME
- * 
+ * Generates a new point @thetastar from @theta using the transition kernel.
+ *
  */
 void
 ncm_mset_trans_kern_generate (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
@@ -256,8 +310,8 @@ ncm_mset_trans_kern_generate (NcmMSetTransKern *tkern, NcmVector *theta, NcmVect
  * @theta: current point.
  * @thetastar: try point.
  *
- * FIXME
- * 
+ * Computes the value of the kernel at (@theta, @thetastar).
+ *
  * Returns: the value of the kernel at (@theta, @thetastar).
  */
 gdouble
@@ -273,14 +327,16 @@ ncm_mset_trans_kern_pdf (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *t
  * @rng: a #NcmRNG.
  *
  * Sample from the transition kernel using it as a prior. To use as a prior one must
- * call one of the functions ncm_mset_trans_kern_set_prior_* first. 
- * 
+ * call one of the functions ncm_mset_trans_kern_set_prior_* first.
+ *
  */
-void 
+void
 ncm_mset_trans_kern_prior_sample (NcmMSetTransKern *tkern, NcmVector *thetastar, NcmRNG *rng)
 {
-  g_assert (tkern->theta != NULL);
-  ncm_mset_trans_kern_generate (tkern, tkern->theta, thetastar, rng);
+  NcmMSetTransKernPrivate *self = ncm_mset_trans_kern_get_instance_private (tkern);
+
+  g_assert (self->theta != NULL);
+  ncm_mset_trans_kern_generate (tkern, self->theta, thetastar, rng);
 }
 
 /**
@@ -288,26 +344,45 @@ ncm_mset_trans_kern_prior_sample (NcmMSetTransKern *tkern, NcmVector *thetastar,
  * @tkern: a #NcmMSetTransKern.
  * @thetastar: try point.
  *
- * FIXME
+ * Computes the value of the kernel at (@ktern->theta, @thetastar).
+ * To use as a prior one must call the ncm_mset_trans_kern_set_prior()
+ * or ncm_mset_trans_kern_set_prior_from_mset() first.
  *
  * Returns: the value of the kernel at (@ktern->theta, @thetastar).
  */
 gdouble
 ncm_mset_trans_kern_prior_pdf (NcmMSetTransKern *tkern, NcmVector *thetastar)
 {
-  g_assert (tkern->theta != NULL);
-  return NCM_MSET_TRANS_KERN_GET_CLASS (tkern)->pdf (tkern, tkern->theta, thetastar);
+  NcmMSetTransKernPrivate *self = ncm_mset_trans_kern_get_instance_private (tkern);
+
+  g_assert (self->theta != NULL);
+
+  return NCM_MSET_TRANS_KERN_GET_CLASS (tkern)->pdf (tkern, self->theta, thetastar);
+}
+
+/**
+ * ncm_mset_trans_kern_reset: (virtual reset)
+ * @tkern: a #NcmMSetTransKern.
+ *
+ * Resets the transition kernel.
+ *
+ */
+void
+ncm_mset_trans_kern_reset (NcmMSetTransKern *tkern)
+{
+  NCM_MSET_TRANS_KERN_GET_CLASS (tkern)->reset (tkern);
 }
 
 /**
  * ncm_mset_trans_kern_get_name: (virtual get_name)
  * @tkern: a #NcmMSetTransKern.
  *
- * Returns: the name of the sampler. 
- * 
+ * Returns: the name of the sampler.
+ *
  */
 const gchar *
 ncm_mset_trans_kern_get_name (NcmMSetTransKern *tkern)
 {
   return NCM_MSET_TRANS_KERN_GET_CLASS (tkern)->get_name (tkern);
 }
+

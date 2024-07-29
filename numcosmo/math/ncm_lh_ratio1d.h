@@ -3,22 +3,22 @@
  *
  *  Fri Aug 15 15:22:57 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * 
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -33,54 +33,24 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_LH_RATIO1D             (ncm_lh_ratio1d_get_type ())
-#define NCM_LH_RATIO1D(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_LH_RATIO1D, NcmLHRatio1d))
-#define NCM_LH_RATIO1D_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_LH_RATIO1D, NcmLHRatio1dClass))
-#define NCM_IS_LH_RATIO1D(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_LH_RATIO1D))
-#define NCM_IS_LH_RATIO1D_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_LH_RATIO1D))
-#define NCM_LH_RATIO1D_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_LH_RATIO1D, NcmLHRatio1dClass))
+#define NCM_TYPE_LH_RATIO1D (ncm_lh_ratio1d_get_type ())
 
-typedef struct _NcmLHRatio1dClass NcmLHRatio1dClass;
-typedef struct _NcmLHRatio1d NcmLHRatio1d;
+G_DECLARE_FINAL_TYPE (NcmLHRatio1d, ncm_lh_ratio1d, NCM, LH_RATIO1D, GObject)
 
 /**
  * NcmLHRatio1dRoot:
- * @NCM_LH_RATIO1D_ROOT_BRACKET: FIXME
- * @NCM_LH_RATIO1D_ROOT_NUMDIFF: FIXME
- * 
- */ 
+ * @NCM_LH_RATIO1D_ROOT_BRACKET: Root finding by bracketing
+ * @NCM_LH_RATIO1D_ROOT_NUMDIFF: Root finding by numerical differentiation
+ *
+ * Root finding methods used by #NcmLHRatio1d.
+ *
+ */
 typedef enum _NcmLHRatio1dRoot
 {
   NCM_LH_RATIO1D_ROOT_BRACKET = 0,
   NCM_LH_RATIO1D_ROOT_NUMDIFF,
 } NcmLHRatio1dRoot;
 
-struct _NcmLHRatio1dClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcmLHRatio1d
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmFit *fit;
-  NcmFit *constrained;
-  NcmFitRunMsgs mtype;
-  NcmLHRatio1dRoot rtype;
-  NcmMSetPIndex pi;
-  NcmMSetFunc *constraint;
-  gdouble chisquare;
-  gdouble lb;
-  gdouble ub;
-  gdouble bf;
-  guint niter;
-  guint func_eval;
-  guint grad_eval;
-};
-
-GType ncm_lh_ratio1d_get_type (void) G_GNUC_CONST;
 
 NcmLHRatio1d *ncm_lh_ratio1d_new (NcmFit *fit, const NcmMSetPIndex *pi);
 void ncm_lh_ratio1d_free (NcmLHRatio1d *lhr1d);

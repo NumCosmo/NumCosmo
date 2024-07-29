@@ -5,11 +5,11 @@
  *
  *  Fri February 21 11:16:32 2020
  *  Copyright  2020  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_mpi_job_feval.c
- * Copyright (C) 2020 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2020 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -30,7 +30,15 @@
  * @title: NcmMPIJobFEval
  * @short_description: MPI job object for evaluating fit steps
  *
- * FIXME
+ * This object is a subclass of #NcmMPIJob and is designed to implement an MPI job
+ * for evaluating fit steps. It is employed by #NcmFit to parallelize the evaluation
+ * of the posterior function. The job entails computing the posterior function and,
+ * if applicable, additional functions (e.g., derived quantities) at a specified
+ * point within the parameter space.
+ *
+ * The MPI job is implemented as a function that takes a vector of parameters as input
+ * and produces a vector of values as output. The first value represents the posterior
+ * function's value, while the subsequent values correspond to those of additional functions.
  *
  */
 
@@ -47,13 +55,13 @@
 #define MPI_DOUBLE (0)
 #endif /* HAVE_MPI */
 
-struct _NcmMPIJobFEvalPrivate
+typedef struct _NcmMPIJobFEvalPrivate
 {
   NcmFit *fit;
   NcmObjArray *func_oa;
   gint fparam_len;
   gint nadd_vals;
-};
+} NcmMPIJobFEvalPrivate;
 
 enum
 {
@@ -63,16 +71,21 @@ enum
   PROP_JOB_TYPE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobFEval, ncm_mpi_job_feval, NCM_TYPE_MPI_JOB);
+struct _NcmMPIJobFEval
+{
+  NcmMPIJob parent_instance;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcmMPIJobFEval, ncm_mpi_job_feval, NCM_TYPE_MPI_JOB)
 
 static void
 ncm_mpi_job_feval_init (NcmMPIJobFEval *mjfeval)
 {
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv = ncm_mpi_job_feval_get_instance_private (mjfeval);
-  
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
+
   self->fit     = NULL;
   self->func_oa = NULL;
-  
+
   self->fparam_len = 0;
   self->nadd_vals  = 0;
 }
@@ -81,10 +94,10 @@ static void
 _ncm_mpi_job_feval_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (object);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
-  
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
+
   g_return_if_fail (NCM_IS_MPI_JOB_FEVAL (object));
-  
+
   switch (prop_id)
   {
     case PROP_FIT:
@@ -96,26 +109,26 @@ _ncm_mpi_job_feval_set_property (GObject *object, guint prop_id, const GValue *v
     {
       ncm_obj_array_clear (&self->func_oa);
       self->func_oa = g_value_dup_boxed (value);
-      
+
       if (self->func_oa != NULL)
       {
         guint i;
-        
+
         for (i = 0; i < self->func_oa->len; i++)
         {
           NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (self->func_oa, i));
-          
+
           g_assert (NCM_IS_MSET_FUNC (func));
           g_assert (ncm_mset_func_is_scalar (func));
           g_assert (ncm_mset_func_is_const (func));
         }
       }
-      
+
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -123,10 +136,10 @@ static void
 _ncm_mpi_job_feval_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (object);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
-  
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
+
   g_return_if_fail (NCM_IS_MPI_JOB_FEVAL (object));
-  
+
   switch (prop_id)
   {
     case PROP_FIT:
@@ -135,9 +148,9 @@ _ncm_mpi_job_feval_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_FUNC_ARRAY:
       g_value_set_boxed (value, self->func_oa);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -145,11 +158,12 @@ static void
 _ncm_mpi_job_feval_constructed (GObject *object)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (object);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
-  
-  self->fparam_len = ncm_mset_fparam_len (self->fit->mset);
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
+  NcmMSet *mset                      = ncm_fit_peek_mset (self->fit);
+
+  self->fparam_len = ncm_mset_fparam_len (mset);
   self->nadd_vals  = 1 + ((self->func_oa != NULL) ? self->func_oa->len : 0);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mpi_job_feval_parent_class)->constructed (object);
 }
@@ -158,11 +172,11 @@ static void
 _ncm_mpi_job_feval_dispose (GObject *object)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (object);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
-  
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
+
   ncm_fit_clear (&self->fit);
   ncm_obj_array_clear (&self->func_oa);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mpi_job_feval_parent_class)->dispose (object);
 }
@@ -202,13 +216,13 @@ ncm_mpi_job_feval_class_init (NcmMPIJobFEvalClass *klass)
 {
   GObjectClass *object_class    = G_OBJECT_CLASS (klass);
   NcmMPIJobClass *mpi_job_class = NCM_MPI_JOB_CLASS (klass);
-  
+
   object_class->set_property = &_ncm_mpi_job_feval_set_property;
   object_class->get_property = &_ncm_mpi_job_feval_get_property;
   object_class->constructed  = &_ncm_mpi_job_feval_constructed;
   object_class->dispose      = &_ncm_mpi_job_feval_dispose;
   object_class->finalize     = &_ncm_mpi_job_feval_finalize;
-  
+
   g_object_class_install_property (object_class,
                                    PROP_FIT,
                                    g_param_spec_object ("fit",
@@ -223,28 +237,28 @@ ncm_mpi_job_feval_class_init (NcmMPIJobFEvalClass *klass)
                                                        "Functions array",
                                                        NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   mpi_job_class->input_datatype  = &_ncm_mpi_job_feval_input_datatype;
   mpi_job_class->return_datatype = &_ncm_mpi_job_feval_return_datatype;
-  
+
   mpi_job_class->create_input  = &_ncm_mpi_job_feval_create_input;
   mpi_job_class->create_return = &_ncm_mpi_job_feval_create_return;
-  
+
   mpi_job_class->destroy_input  = &_ncm_mpi_job_feval_destroy_input;
   mpi_job_class->destroy_return = &_ncm_mpi_job_feval_destroy_return;
-  
+
   mpi_job_class->get_input_buffer  = &_ncm_mpi_job_feval_get_input_buffer;
   mpi_job_class->get_return_buffer = &_ncm_mpi_job_feval_get_return_buffer;
-  
+
   mpi_job_class->destroy_input_buffer  = &_ncm_mpi_job_feval_destroy_input_buffer;
   mpi_job_class->destroy_return_buffer = &_ncm_mpi_job_feval_destroy_return_buffer;
-  
+
   mpi_job_class->pack_input  = &_ncm_mpi_job_feval_pack_input;
   mpi_job_class->pack_return = &_ncm_mpi_job_feval_pack_return;
-  
+
   mpi_job_class->unpack_input  = &_ncm_mpi_job_feval_unpack_input;
   mpi_job_class->unpack_return = &_ncm_mpi_job_feval_unpack_return;
-  
+
   mpi_job_class->run = &_ncm_mpi_job_feval_run;
 }
 
@@ -252,11 +266,11 @@ static NcmMPIDatatype
 _ncm_mpi_job_feval_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (mpi_job);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
-  
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
+
   len[0]  = self->fparam_len;
   size[0] = sizeof (gdouble) * len[0];
-  
+
   return MPI_DOUBLE;
 }
 
@@ -264,11 +278,11 @@ static NcmMPIDatatype
 _ncm_mpi_job_feval_return_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (mpi_job);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
-  
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
+
   len[0]  = self->nadd_vals;
   size[0] = sizeof (gdouble) * len[0];
-  
+
   return MPI_DOUBLE;
 }
 
@@ -276,8 +290,8 @@ static gpointer
 _ncm_mpi_job_feval_create_input (NcmMPIJob *mpi_job)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (mpi_job);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
-  
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
+
   return ncm_vector_new (self->fparam_len);
 }
 
@@ -285,8 +299,8 @@ static gpointer
 _ncm_mpi_job_feval_create_return (NcmMPIJob *mpi_job)
 {
   NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (mpi_job);
-  NcmMPIJobFEvalPrivate * const self = mjfeval->priv;
-  
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
+
   return ncm_vector_new (self->nadd_vals);
 }
 
@@ -353,22 +367,23 @@ _ncm_mpi_job_feval_unpack_return (NcmMPIJob *mpi_job, gpointer buf, gpointer ret
 static void
 _ncm_mpi_job_feval_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 {
-  NcmMPIJobFEval *mjt                = NCM_MPI_JOB_FEVAL (mpi_job);
-  NcmMPIJobFEvalPrivate * const self = mjt->priv;
+  NcmMPIJobFEval *mjfeval            = NCM_MPI_JOB_FEVAL (mpi_job);
+  NcmMPIJobFEvalPrivate * const self = ncm_mpi_job_feval_get_instance_private (mjfeval);
   gdouble *m2lnL_star                = ncm_vector_ptr (ret, 0);
-  
+  NcmMSet *mset                      = ncm_fit_peek_mset (self->fit);
+
   ncm_fit_params_set_vector (self->fit, input);
   ncm_fit_m2lnL_val (self->fit, m2lnL_star);
-  
+
   if (self->func_oa != NULL)
   {
-    gint i;
-    
+    guint i;
+
     for (i = 0; i < self->func_oa->len; i++)
     {
       NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (self->func_oa, i));
-      const gdouble a_i = ncm_mset_func_eval0 (func, self->fit->mset);
-      
+      const gdouble a_i = ncm_mset_func_eval0 (func, mset);
+
       ncm_vector_set (ret, i + 1, a_i);
     }
   }
@@ -377,7 +392,7 @@ _ncm_mpi_job_feval_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 /**
  * ncm_mpi_job_feval_new:
  * @fit: a #NcmFit
- * @func_oa: (array) (element-type NcmMSetFunc) (allow-none): a #NcmObjArray
+ * @func_oa: (nullable): a #NcmObjArray
  *
  * Creates a new #NcmMPIJobFEval object.
  *
@@ -390,7 +405,7 @@ ncm_mpi_job_feval_new (NcmFit *fit, NcmObjArray *func_oa)
                                           "fit",            fit,
                                           "function-array", func_oa,
                                           NULL);
-  
+
   return mjfeval;
 }
 

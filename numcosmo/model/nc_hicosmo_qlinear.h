@@ -3,11 +3,11 @@
  *
  *  Mon Aug 11 20:00:24 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -60,18 +60,18 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_QLINEAR_SPARAMS >*/
   NC_HICOSMO_QLINEAR_E,
   NC_HICOSMO_QLINEAR_Q,
   NC_HICOSMO_QLINEAR_QP,
-  NC_HICOSMO_QLINEAR_Z1,         
+  NC_HICOSMO_QLINEAR_Z1,
   /* < private > */
   NC_HICOSMO_QLINEAR_SPARAM_LEN, /*< skip >*/
 } NcHICosmoQLinearSParams;
 
 #define NC_HICOSMO_QLINEAR_DEFAULT_H0      ncm_c_hubble_cte_planck6_base ()
-#define NC_HICOSMO_QLINEAR_DEFAULT_OMEGA_T ( 1.0)
-#define NC_HICOSMO_QLINEAR_DEFAULT_CD      ( 0.0)
-#define NC_HICOSMO_QLINEAR_DEFAULT_E       ( 1.0)
+#define NC_HICOSMO_QLINEAR_DEFAULT_OMEGA_T (1.0)
+#define NC_HICOSMO_QLINEAR_DEFAULT_CD      (0.0)
+#define NC_HICOSMO_QLINEAR_DEFAULT_E       (1.0)
 #define NC_HICOSMO_QLINEAR_DEFAULT_Q       (-0.5)
-#define NC_HICOSMO_QLINEAR_DEFAULT_QP      ( 1.0)
-#define NC_HICOSMO_QLINEAR_DEFAULT_Z1      ( 0.0)
+#define NC_HICOSMO_QLINEAR_DEFAULT_QP      (1.0)
+#define NC_HICOSMO_QLINEAR_DEFAULT_Z1      (0.0)
 
 struct _NcHICosmoQLinearClass
 {
@@ -93,3 +93,4 @@ gdouble nc_hicosmo_qlinear_dE (gdouble z2, gdouble z1, gdouble q, gdouble qp);
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_QLINEAR_H_ */
+

@@ -3,22 +3,22 @@
  *
  *  Tue September 30 15:46:33 2014
  *  Copyright  2014  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_abc.h
- * Copyright (C) 2014 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2014 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -37,64 +37,26 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_ABC             (ncm_abc_get_type ())
-#define NCM_ABC(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_ABC, NcmABC))
-#define NCM_ABC_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_ABC, NcmABCClass))
-#define NCM_IS_ABC(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_ABC))
-#define NCM_IS_ABC_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_ABC))
-#define NCM_ABC_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_ABC, NcmABCClass))
+#define NCM_TYPE_ABC (ncm_abc_get_type ())
 
-typedef struct _NcmABCClass NcmABCClass;
-typedef struct _NcmABC NcmABC;
+G_DECLARE_DERIVABLE_TYPE (NcmABC, ncm_abc, NCM, ABC, GObject)
 
 struct _NcmABCClass
 {
   /*< private >*/
   GObjectClass parent_class;
+
   gboolean (*data_summary) (NcmABC *abc);
   gdouble (*mock_distance) (NcmABC *abc, NcmDataset *dset, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng);
   gdouble (*distance_prob) (NcmABC *abc, gdouble distance);
   void (*update_tkern) (NcmABC *abc);
+
   const gchar *(*get_desc) (NcmABC *abc);
   const gchar *(*log_info) (NcmABC *abc);
-};
 
-struct _NcmABC
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmMSetCatalog *mcat;
-  NcmDataset *dset;
-  NcmDataset *dset_mock;
-  NcmMemoryPool *mp;
-  NcmMSetTransKern *prior;
-  NcmMSetTransKern *tkern;
-  NcmTimer *nt;
-  NcmSerialize *ser;
-  NcmFitRunMsgs mtype;
-  NcmVector *theta;
-  NcmVector *thetastar;
-  NcmMatrix *covar;
-  GArray *weights;
-  GArray *weights_tm1;
-  GArray *pchoice;
-  GArray *dists;
-  gdouble epsilon;
-  gdouble depsilon;
-  gboolean dists_sorted;
-  gsl_ran_discrete_t *wran;
-  gboolean started;
-  gboolean started_up;
-  gint cur_sample_id;
-  guint ntotal;
-  guint naccepted;
-  guint nthreads;
-  guint nupdates;
-  guint n;
-  guint nparticles;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[12];
 };
-
-GType ncm_abc_get_type (void) G_GNUC_CONST;
 
 void ncm_abc_free (NcmABC *abc);
 void ncm_abc_clear (NcmABC **abc);
@@ -117,6 +79,12 @@ gdouble ncm_abc_get_accept_ratio (NcmABC *abc);
 void ncm_abc_update_epsilon (NcmABC *abc, gdouble epsilon);
 gdouble ncm_abc_get_epsilon (NcmABC *abc);
 gdouble ncm_abc_get_depsilon (NcmABC *abc);
+NcmFitRunMsgs ncm_abc_get_mtype (NcmABC *abc);
+
+NcmMSetCatalog *ncm_abc_peek_catalog (NcmABC *abc);
+NcmDataset *ncm_abc_peek_dataset (NcmABC *abc);
+NcmMatrix *ncm_abc_peek_covar (NcmABC *abc);
+NcmMSetTransKern *ncm_abc_peek_trans_kern (NcmABC *abc);
 
 void ncm_abc_start_run (NcmABC *abc);
 void ncm_abc_end_run (NcmABC *abc);

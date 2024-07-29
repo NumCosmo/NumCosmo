@@ -5,11 +5,11 @@
  *
  *  Fri February 21 11:16:10 2020
  *  Copyright  2020  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_mpi_job_feval.h
- * Copyright (C) 2020 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2020 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -36,33 +36,11 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MPI_JOB_FEVAL             (ncm_mpi_job_feval_get_type ())
-#define NCM_MPI_JOB_FEVAL(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MPI_JOB_FEVAL, NcmMPIJobFEval))
-#define NCM_MPI_JOB_FEVAL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MPI_JOB_FEVAL, NcmMPIJobFEvalClass))
-#define NCM_IS_MPI_JOB_FEVAL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MPI_JOB_FEVAL))
-#define NCM_IS_MPI_JOB_FEVAL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MPI_JOB_FEVAL))
-#define NCM_MPI_JOB_FEVAL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MPI_JOB_FEVAL, NcmMPIJobFEvalClass))
+#define NCM_TYPE_MPI_JOB_FEVAL (ncm_mpi_job_feval_get_type ())
 
-typedef struct _NcmMPIJobFEvalClass NcmMPIJobFEvalClass;
-typedef struct _NcmMPIJobFEval NcmMPIJobFEval;
-typedef struct _NcmMPIJobFEvalPrivate NcmMPIJobFEvalPrivate;
+G_DECLARE_FINAL_TYPE (NcmMPIJobFEval, ncm_mpi_job_feval, NCM, MPI_JOB_FEVAL, NcmMPIJob)
 
-struct _NcmMPIJobFEvalClass
-{
-  /*< private >*/
-  NcmMPIJobClass parent_class;
-};
-
-struct _NcmMPIJobFEval
-{
-  /*< private >*/
-  NcmMPIJob parent_instance;
-  NcmMPIJobFEvalPrivate *priv;
-};
-
-GType ncm_mpi_job_feval_get_type (void) G_GNUC_CONST;
-
-NcmMPIJobFEval *ncm_mpi_job_feval_new (NcmFit *fit, NcmObjArray *func_oa);
+NcmMPIJobFEval *ncm_mpi_job_feval_new (NcmFit * fit, NcmObjArray * func_oa);
 NcmMPIJobFEval *ncm_mpi_job_feval_ref (NcmMPIJobFEval *mjfeval);
 
 void ncm_mpi_job_feval_free (NcmMPIJobFEval *mjfeval);

@@ -3,16 +3,16 @@
  *
  *  Mon Aug 11 19:56:24 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
-   * numcosmo is free software: you can redistribute it and/or modify it
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
+ * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
-   *
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -60,3 +60,4 @@ NcHICosmoLCDM *nc_hicosmo_lcdm_new (void);
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_LCDM_H_ */
+

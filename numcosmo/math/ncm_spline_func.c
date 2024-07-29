@@ -3,12 +3,12 @@
  *
  *  Wed Nov 21 19:09:20 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -109,23 +109,25 @@
 #include <gsl/gsl_poly.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-typedef struct { gdouble x;
-                 gdouble y;
-                 gint ok;
+typedef struct
+{
+  gdouble x;
+  gdouble y;
+  gint ok;
 } _BIVec;
 
-#define BIVEC_LIST_APPEND(dlist, xX, yY) \
-  do { \
-    _BIVec *bv = g_slice_new (_BIVec); \
-    bv->x = (xX); bv->y = (yY); bv->ok = FALSE; \
-    dlist = g_list_append (dlist, bv); \
-  } while (FALSE)
-#define BIVEC_LIST_INSERT_BEFORE(dlist, node, xX, yY) \
-  do { \
-    _BIVec *bv = g_slice_new (_BIVec); \
-    bv->x = (xX); bv->y = (yY); bv->ok = FALSE; \
-    dlist = g_list_insert_before (dlist, node, bv); \
-  } while (FALSE)
+#define BIVEC_LIST_APPEND(dlist, xX, yY)              \
+        do {                                          \
+          _BIVec *bv = g_slice_new (_BIVec);          \
+          bv->x = (xX); bv->y = (yY); bv->ok = FALSE; \
+          dlist = g_list_append (dlist, bv);          \
+        } while (FALSE)
+#define BIVEC_LIST_INSERT_BEFORE(dlist, node, xX, yY)     \
+        do {                                              \
+          _BIVec *bv = g_slice_new (_BIVec);              \
+          bv->x = (xX); bv->y = (yY); bv->ok = FALSE;     \
+          dlist = g_list_insert_before (dlist, node, bv); \
+        } while (FALSE)
 
 #define BIVEC_LIST_X(dlist) (((_BIVec *) (dlist)->data)->x)
 #define BIVEC_LIST_Y(dlist) (((_BIVec *) (dlist)->data)->y)
@@ -135,31 +137,31 @@ static void
 _test_and_eval_interior_4 (GList *nodes, gsl_function *F, const gdouble yinterp1, const gdouble yinterp2, const gdouble rel_error, const gdouble f_scale, gboolean ok)
 {
   gint i;
-  
+
   GList *wnodes[3];
   gdouble poly3_dd[4];
   gdouble poly3_x[4];
   gdouble poly3_y[4];
   gdouble step, sub_step;
   gboolean go_ok = FALSE;
-  
+
   poly3_x[0] = BIVEC_LIST_X (nodes);
   poly3_x[3] = BIVEC_LIST_X (nodes->next);
   poly3_y[0] = BIVEC_LIST_Y (nodes);
   poly3_y[3] = BIVEC_LIST_Y (nodes->next);
-  
+
   step       = (poly3_x[3] - poly3_x[0]) / 3.0;
   sub_step   = step / 3.0;
   poly3_x[1] = poly3_x[0] + step;
   poly3_x[2] = poly3_x[1] + step;
   poly3_y[1] = GSL_FN_EVAL (F, poly3_x[1]);
   poly3_y[2] = GSL_FN_EVAL (F, poly3_x[2]);
-  
+
   BIVEC_LIST_INSERT_BEFORE (nodes, nodes->next, poly3_x[2], poly3_y[2]);
   BIVEC_LIST_INSERT_BEFORE (nodes, nodes->next, poly3_x[1], poly3_y[1]);
-  
+
   gsl_poly_dd_init (poly3_dd, poly3_x, poly3_y, 4);
-  
+
   if ((fabs (poly3_y[1] - yinterp1) < ((fabs (poly3_y[1]) + f_scale) * rel_error)) &&
       (fabs (poly3_y[2] - yinterp2) < ((fabs (poly3_y[2]) + f_scale) * rel_error)))
   {
@@ -168,15 +170,15 @@ _test_and_eval_interior_4 (GList *nodes, gsl_function *F, const gdouble yinterp1
     else
       go_ok = TRUE;
   }
-  
+
   wnodes[0] = nodes;
   wnodes[1] = wnodes[0]->next;
   wnodes[2] = wnodes[1]->next;
-  
+
   for (i = 0; i < 3; i++)
   {
     gdouble try_yinterp1, try_yinterp2;
-    
+
     try_yinterp1 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + sub_step);
     try_yinterp2 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + 2.0 * sub_step);
     _test_and_eval_interior_4 (wnodes[i], F, try_yinterp1, try_yinterp2, rel_error, f_scale, go_ok);
@@ -203,49 +205,49 @@ ncm_spline_new_function_4 (NcmSpline *s, gsl_function *F, const gdouble xi, cons
   GArray *x_array;
   GArray *y_array;
   gsize n_elem;
-  
+
   max_nodes = (max_nodes <= 0) ? G_MAXUINT64 : max_nodes;
   g_assert_cmpfloat (f_scale, >=, 0.0);
-  
+
   for (i = 0; i < 4; i++)
   {
     poly3_x[i] = xi + i * step;
     poly3_y[i] = GSL_FN_EVAL (F, poly3_x[i]);
     BIVEC_LIST_APPEND (nodes, poly3_x[i], poly3_y[i]);
   }
-  
+
   gsl_poly_dd_init (poly3_dd, poly3_x, poly3_y, 4);
-  
+
   wnodes[0] = nodes;
   wnodes[1] = wnodes[0]->next;
   wnodes[2] = wnodes[1]->next;
-  
+
   for (i = 0; i < 3; i++)
   {
     gdouble yinterp1, yinterp2;
-    
+
     yinterp1 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + sub_step);
     yinterp2 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + 2.0 * sub_step);
-    
+
     _test_and_eval_interior_4 (wnodes[i], F, yinterp1, yinterp2, rel_error, f_scale, FALSE);
   }
-  
+
   n_elem  = g_list_length (nodes);
   x_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), n_elem);
   y_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), n_elem);
-  
+
   wnodes[0] = nodes;
-  
+
   do {
     g_array_append_val (x_array, BIVEC_LIST_X (nodes));
     g_array_append_val (y_array, BIVEC_LIST_Y (nodes));
     nodes = nodes->next;
   } while (nodes != NULL);
-  
+
   g_list_free_full (wnodes[0], _BIVec_free);
-  
+
   ncm_spline_set_array (s, x_array, y_array, TRUE);
-  
+
   g_array_unref (x_array);
   g_array_unref (y_array);
 
@@ -255,74 +257,74 @@ ncm_spline_new_function_4 (NcmSpline *s, gsl_function *F, const gdouble xi, cons
 static void
 ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi, const gdouble xf, gsize max_nodes, const gdouble rel_error, const gdouble f_scale, gint refine, gdouble refine_ns)
 {
-  GArray *x_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-  GArray *y_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  GArray *x_array  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  GArray *y_array  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   GArray *xt_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   GArray *yt_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   GList *nodes = NULL, *wnodes = NULL;
   NcmStatsVec *dx_stats = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
-  gsize n = ncm_spline_min_size (s);
+  gsize n               = ncm_spline_min_size (s);
   gdouble max_dx, min_dx;
   guint i;
-  
+
   n = (n < 3) ? 3 : n;
-  
+
   ncm_assert_cmpdouble_e (xf, >, xi, DBL_EPSILON, 0.0);
   g_assert_cmpfloat (f_scale, >=, 0.0);
-  
+
   max_nodes = (max_nodes <= 0) ? G_MAXUINT64 : max_nodes;
-  
+
   g_array_set_size (xt_array, n);
   g_array_set_size (yt_array, n);
-  
+
   for (i = 0; i < n; i++)
   {
     const gdouble x = xi + (xf - xi) / (n - 1.0) * i;
     const gdouble y = GSL_FN_EVAL (F, x);
-    
+
     BIVEC_LIST_APPEND (nodes, x, y);
     BIVEC_LIST_OK (nodes) = 0;
-    
+
     g_array_append_val (x_array, x);
     g_array_append_val (y_array, y);
     g_assert (gsl_finite (x));
     g_assert (gsl_finite (y));
   }
-  
+
   ncm_spline_set_array (s, x_array, y_array, TRUE);
-  
-#define SWAP_PTR(a, b) \
-  do { \
-    const gpointer tmp = (b); (b) = (a); (a) = tmp; \
-  } while (FALSE)
-  
+
+#define SWAP_PTR(a, b)                                    \
+        do {                                              \
+          const gpointer tmp = (b); (b) = (a); (a) = tmp; \
+        } while (FALSE)
+
   while (TRUE)
   {
     gsize improves = 0;
-    
+
     wnodes = nodes;
     g_array_set_size (xt_array, 0);
     g_array_set_size (yt_array, 0);
-    
+
     ncm_stats_vec_reset (dx_stats, TRUE);
-    
+
     max_dx = 0.0;
     min_dx = 1.0e300;
-    
+
     do {
       const gdouble x0 = BIVEC_LIST_X (wnodes);
       const gdouble x1 = BIVEC_LIST_X (wnodes->next);
       const gdouble dx = x1 - x0;
-      
+
       max_dx = MAX (max_dx, dx);
       min_dx = MIN (min_dx, dx);
-      
+
       g_array_append_val (xt_array, BIVEC_LIST_X (wnodes));
       g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
-      
+
       ncm_stats_vec_set (dx_stats, 0, x1 - x0);
       ncm_stats_vec_update (dx_stats);
-      
+
       if (BIVEC_LIST_OK (wnodes) == 1)
       {
         continue;
@@ -336,9 +338,9 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
         const gdouble ys      = ncm_spline_eval (s, x);
         const gdouble Iyc     = dx * (y1 + y0 + 4.0 * y) / 6.0;
         const gdouble Iys     = ncm_spline_eval_integ (s, x0, x1);
-        const gboolean test_p = fabs (y - ys)    < rel_error * (fabs (y)   + f_scale);
-        const gboolean test_I = fabs (Iyc - Iys) < rel_error * (fabs (Iyc) + f_scale * dx);
-        
+        const gboolean test_p = fabs (y - ys)    <= rel_error * (fabs (y)   + f_scale);
+        const gboolean test_I = fabs (Iyc - Iys) <= rel_error * (fabs (Iyc) + f_scale * dx);
+
         if (fabs ((x - x0) / x) < NCM_SPLINE_KNOT_DIFF_TOL)
           g_error ("Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous at x = (% 20.15g, % 20.15g, % 20.15g).\n"
                    "\tFunction value at f(x0) = % 22.15g, f(x) = % 22.15g and f(x1) = % 22.15g, cmp (%e, %e).",
@@ -346,13 +348,13 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
                    y0, y, y1,
                    fabs (y0 / y - 1.0),
                    fabs (y1 / y - 1.0));
-        
+
         BIVEC_LIST_INSERT_BEFORE (nodes, wnodes->next, x, y);
         wnodes = g_list_next (wnodes);
         g_array_append_val (xt_array, BIVEC_LIST_X (wnodes));
         g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
         BIVEC_LIST_OK (wnodes) = BIVEC_LIST_OK (wnodes->prev);
-        
+
         if (test_p && test_I)
         {
           BIVEC_LIST_OK (wnodes->prev)++;
@@ -364,28 +366,30 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
         }
       }
     } while ((wnodes = g_list_next (wnodes)) && wnodes->next);
-    
+
     if (wnodes != NULL)
     {
       g_array_append_val (xt_array, BIVEC_LIST_X (wnodes));
       g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
     }
-    
+
     SWAP_PTR (x_array, xt_array);
     SWAP_PTR (y_array, yt_array);
-    
+
     ncm_spline_set_array (s, x_array, y_array, TRUE);
-    
+
     if (x_array->len > max_nodes)
     {
       g_warning ("ncm_spline_new_function_spline: cannot archive requested precision with at most %zu nodes", max_nodes);
       break;
     }
-    
+
     if (improves == 0)
     {
       if (refine < 1)
+      {
         break;
+      }
       else
       {
         const gdouble dx_mean = ncm_stats_vec_get_mean (dx_stats, 0);
@@ -414,24 +418,24 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
       }
     }
   }
-  
+
   g_list_free_full (nodes, _BIVec_free);
-  
+
   g_array_unref (x_array);
   g_array_unref (xt_array);
   g_array_unref (y_array);
   g_array_unref (yt_array);
-  
+
   ncm_stats_vec_clear (&dx_stats);
-  
+
   return;
 }
 
 static void
 ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, const gdouble xi, const gdouble xf, gsize max_nodes, gdouble rel_error, const gdouble f_scale)
 {
-  GArray *x_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-  GArray *y_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  GArray *x_array  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  GArray *y_array  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   GArray *xt_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   GArray *yt_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   GList *nodes = NULL, *wnodes = NULL;
@@ -439,47 +443,47 @@ ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, const gdou
   guint i;
   const gdouble lnxi = log (xi);
   const gdouble lnxf = log (xf);
-  
+
   n = (n < 3) ? 3 : n;
-  
+
   max_nodes = (max_nodes <= 0) ? G_MAXUINT64 : max_nodes;
-  
+
   g_assert (xi > 0.0 && xf > xi);
   g_assert_cmpfloat (f_scale, >=, 0.0);
-  
+
   g_array_set_size (xt_array, n);
   g_array_set_size (yt_array, n);
-  
+
   for (i = 0; i < n; i++)
   {
     gdouble x = exp (lnxi + (lnxf - lnxi) / (n - 1.0) * i);
     gdouble y = GSL_FN_EVAL (F, x);
-    
+
     BIVEC_LIST_APPEND (nodes, x, y);
     BIVEC_LIST_OK (nodes) = 0;
     g_array_append_val (x_array, x);
     g_array_append_val (y_array, y);
   }
-  
+
   ncm_spline_set_array (s, x_array, y_array, TRUE);
-  
-#define SWAP_PTR(a, b) \
-  do { \
-    const gpointer tmp = (b); (b) = (a); (a) = tmp; \
-  } while (FALSE)
-  
+
+#define SWAP_PTR(a, b)                                    \
+        do {                                              \
+          const gpointer tmp = (b); (b) = (a); (a) = tmp; \
+        } while (FALSE)
+
   while (TRUE)
   {
     gsize improves = 0;
-    
+
     wnodes = nodes;
     g_array_set_size (xt_array, 0);
     g_array_set_size (yt_array, 0);
-    
+
     do {
       g_array_append_val (xt_array, BIVEC_LIST_X (wnodes));
       g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
-      
+
       if (BIVEC_LIST_OK (wnodes) == 1)
       {
         continue;
@@ -499,9 +503,9 @@ ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, const gdou
         const gdouble delta   = (x - 0.5 * (x1 + x0)) / (0.5 * (x1 - x0));
         const gdouble Iyc     = (x1 - x0) * (y1 * (3.0 - 2.0 / (1.0 - delta)) + y0 * (3.0 - 2.0 / (1.0 + delta)) + 4.0 * y / (1.0 - delta * delta)) / 6.0;
         const gdouble Iys     = ncm_spline_eval_integ (s, x0, x1);
-        const gboolean test_p = fabs (y - ys)    < rel_error * (fabs (y)   + f_scale);
-        const gboolean test_I = fabs (Iyc - Iys) < rel_error * (fabs (Iyc) + f_scale * (x1 - x0));
-        
+        const gboolean test_p = fabs (y - ys)    <= rel_error * (fabs (y)   + f_scale);
+        const gboolean test_I = fabs (Iyc - Iys) <= rel_error * (fabs (Iyc) + f_scale * (x1 - x0));
+
         if (fabs ((x - x0) / x) < NCM_SPLINE_KNOT_DIFF_TOL)
           g_error ("Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous at x = (% 20.15g, % 20.15g, % 20.15g).\n"
                    "\tFunction value at f(x0) = % 22.15g, f(x) = % 22.15g and f(x1) = % 22.15g, cmp (%e, %e).",
@@ -509,13 +513,13 @@ ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, const gdou
                    y0, y, y1,
                    fabs (y0 / y - 1.0),
                    fabs (y1 / y - 1.0));
-        
+
         BIVEC_LIST_INSERT_BEFORE (nodes, wnodes->next, x, y);
         wnodes = g_list_next (wnodes);
         g_array_append_val (xt_array, BIVEC_LIST_X (wnodes));
         g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
         BIVEC_LIST_OK (wnodes) = BIVEC_LIST_OK (wnodes->prev);
-        
+
         if (test_p && test_I)
         {
           BIVEC_LIST_OK (wnodes->prev)++;
@@ -527,43 +531,43 @@ ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, const gdou
         }
       }
     } while ((wnodes = g_list_next (wnodes)) && wnodes->next);
-    
+
     if (wnodes != NULL)
     {
       g_array_append_val (xt_array, BIVEC_LIST_X (wnodes));
       g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
     }
-    
+
     SWAP_PTR (x_array, xt_array);
     SWAP_PTR (y_array, yt_array);
-    
+
     ncm_spline_set_array (s, x_array, y_array, TRUE);
-    
+
     if (x_array->len > max_nodes)
     {
       g_warning ("ncm_spline_new_function_spline: cannot archive requested precision with at most %zu nodes", max_nodes);
       break;
     }
-    
+
     if (improves == 0)
       break;
   }
-  
+
   g_list_free_full (nodes, _BIVec_free);
-  
+
   g_array_unref (x_array);
   g_array_unref (xt_array);
   g_array_unref (y_array);
   g_array_unref (yt_array);
-  
+
   return;
 }
 
 static void
 ncm_spline_new_function_spline_sinhknot (NcmSpline *s, gsl_function *F, const gdouble xi, const gdouble xf, gsize max_nodes, const gdouble rel_error, const gdouble f_scale)
 {
-  GArray *x_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-  GArray *y_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  GArray *x_array  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  GArray *y_array  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   GArray *xt_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   GArray *yt_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   GList *nodes = NULL, *wnodes = NULL;
@@ -571,47 +575,47 @@ ncm_spline_new_function_spline_sinhknot (NcmSpline *s, gsl_function *F, const gd
   guint i;
   const gdouble axi = asinh (xi);
   const gdouble axf = asinh (xf);
-  
+
   g_assert_cmpfloat (f_scale, >=, 0.0);
-  
+
   n = (n < 3) ? 3 : n;
-  
+
   max_nodes = (max_nodes <= 0) ? G_MAXUINT64 : max_nodes;
-  
+
   g_array_set_size (xt_array, n);
   g_array_set_size (yt_array, n);
-  
+
   for (i = 0; i < n; i++)
   {
     gdouble x = sinh (axi + (axf - axi) / (n - 1.0) * i);
     gdouble y = GSL_FN_EVAL (F, x);
-    
+
     BIVEC_LIST_APPEND (nodes, x, y);
     BIVEC_LIST_OK (nodes) = 0;
-    
+
     g_array_append_val (x_array, x);
     g_array_append_val (y_array, y);
   }
-  
+
   ncm_spline_set_array (s, x_array, y_array, TRUE);
-  
-#define SWAP_PTR(a, b) \
-  do { \
-    const gpointer tmp = (b); (b) = (a); (a) = tmp; \
-  } while (FALSE)
-  
+
+#define SWAP_PTR(a, b)                                    \
+        do {                                              \
+          const gpointer tmp = (b); (b) = (a); (a) = tmp; \
+        } while (FALSE)
+
   while (TRUE)
   {
     gsize improves = 0;
-    
+
     wnodes = nodes;
     g_array_set_size (xt_array, 0);
     g_array_set_size (yt_array, 0);
-    
+
     do {
       g_array_append_val (xt_array, BIVEC_LIST_X (wnodes));
       g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
-      
+
       if (BIVEC_LIST_OK (wnodes) == 1)
       {
         continue;
@@ -631,9 +635,9 @@ ncm_spline_new_function_spline_sinhknot (NcmSpline *s, gsl_function *F, const gd
         const gdouble delta   = (x - 0.5 * (x1 + x0)) / (0.5 * (x1 - x0));
         const gdouble Iyc     = (x1 - x0) * (y1 * (3.0 - 2.0 / (1.0 - delta)) + y0 * (3.0 - 2.0 / (1.0 + delta)) + 4.0 * y / (1.0 - delta * delta)) / 6.0;
         const gdouble Iys     = ncm_spline_eval_integ (s, x0, x1);
-        const gboolean test_p = fabs (y - ys)    < rel_error * (fabs (y)   + f_scale);
-        const gboolean test_I = fabs (Iyc - Iys) < rel_error * (fabs (Iyc) + f_scale * (x1 - x0));
-        
+        const gboolean test_p = fabs (y - ys)    <= rel_error * (fabs (y)   + f_scale);
+        const gboolean test_I = fabs (Iyc - Iys) <= rel_error * (fabs (Iyc) + f_scale * (x1 - x0));
+
         if (fabs ((x - x0) / x) < NCM_SPLINE_KNOT_DIFF_TOL)
           g_error ("Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous at x = (% 20.15g, % 20.15g, % 20.15g).\n"
                    "\tFunction value at f(x0) = % 22.15g, f(x) = % 22.15g and f(x1) = % 22.15g, cmp (%e, %e).",
@@ -641,13 +645,13 @@ ncm_spline_new_function_spline_sinhknot (NcmSpline *s, gsl_function *F, const gd
                    y0, y, y1,
                    fabs (y0 / y - 1.0),
                    fabs (y1 / y - 1.0));
-        
+
         BIVEC_LIST_INSERT_BEFORE (nodes, wnodes->next, x, y);
         wnodes = g_list_next (wnodes);
         g_array_append_val (xt_array, BIVEC_LIST_X (wnodes));
         g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
         BIVEC_LIST_OK (wnodes) = BIVEC_LIST_OK (wnodes->prev);
-        
+
         if (test_p && test_I)
         {
           BIVEC_LIST_OK (wnodes->prev)++;
@@ -659,35 +663,35 @@ ncm_spline_new_function_spline_sinhknot (NcmSpline *s, gsl_function *F, const gd
         }
       }
     } while ((wnodes = g_list_next (wnodes)) && wnodes->next);
-    
+
     if (wnodes != NULL)
     {
       g_array_append_val (xt_array, BIVEC_LIST_X (wnodes));
       g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
     }
-    
+
     SWAP_PTR (x_array, xt_array);
     SWAP_PTR (y_array, yt_array);
-    
+
     ncm_spline_set_array (s, x_array, y_array, TRUE);
-    
+
     if (x_array->len > max_nodes)
     {
       g_warning ("ncm_spline_new_function_spline: cannot achive requested precision with at most %zu nodes", max_nodes);
       break;
     }
-    
+
     if (improves == 0)
       break;
   }
-  
+
   g_list_free_full (nodes, _BIVec_free);
-  
+
   g_array_unref (x_array);
   g_array_unref (xt_array);
   g_array_unref (y_array);
   g_array_unref (yt_array);
-  
+
   return;
 }
 
@@ -707,7 +711,7 @@ void
 ncm_spline_set_func (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, const gdouble xi, const gdouble xf, gsize max_nodes, const gdouble rel_error)
 {
   ncm_assert_cmpdouble_e (xf, >, xi, DBL_EPSILON, 0.0);
-  
+
   switch (ftype)
   {
     case NCM_SPLINE_FUNCTION_4POINTS:
@@ -724,7 +728,7 @@ ncm_spline_set_func (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, con
       break;
     default:
       g_assert_not_reached ();
-      
+
       return;
   }
 }
@@ -748,7 +752,7 @@ void
 ncm_spline_set_func_scale (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, const gdouble xi, const gdouble xf, gsize max_nodes, const gdouble rel_error, const gdouble scale, const gint refine, gdouble refine_ns)
 {
   ncm_assert_cmpdouble_e (xf, >, xi, DBL_EPSILON, 0.0);
-  
+
   switch (ftype)
   {
     case NCM_SPLINE_FUNCTION_4POINTS:
@@ -765,7 +769,7 @@ ncm_spline_set_func_scale (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *
       break;
     default:
       g_assert_not_reached ();
-      
+
       return;
   }
 }
@@ -775,7 +779,7 @@ ncm_spline_set_func_scale (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *
  * @s: a #NcmSpline.
  * @ftype: a #NcmSplineFuncType
  * @F: (scope call): function to be approximated by spline functions
- * @obj: (allow-none): #GObject used by the function @F
+ * @obj: (allow-none): GObject used by the function @F
  * @xi: lower knot
  * @xf: upper knot
  * @max_nodes: maximum number of knots
@@ -788,8 +792,8 @@ ncm_spline_set_func_scale (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *
 void
 ncm_spline_set_func1 (NcmSpline *s, NcmSplineFuncType ftype, NcmSplineFuncF F, GObject *obj, gdouble xi, gdouble xf, gsize max_nodes, gdouble rel_error)
 {
-  gsl_function gslF = {(gdouble (*)(gdouble, gpointer))F, obj};
-  
+  gsl_function gslF = {(gdouble (*)(gdouble, gpointer)) F, obj};
+
   ncm_spline_set_func (s, ftype, &gslF, xi, xf, max_nodes, rel_error);
 }
 
@@ -799,24 +803,24 @@ _ncm_spline_new_function_grid_linear (NcmSpline *s, gsl_function *F, const gdoub
   guint i;
   NcmVector *xv = ncm_vector_new (nnodes);
   NcmVector *yv = ncm_vector_new (nnodes);
-  
+
   for (i = 0; i < nnodes; i++)
   {
     const gdouble x = xi + (xf - xi) / (nnodes - 1.0) * i;
     const gdouble y = GSL_FN_EVAL (F, x);
-    
+
     g_assert (gsl_finite (x));
     g_assert (gsl_finite (y));
-    
+
     ncm_vector_set (xv, i, x);
     ncm_vector_set (yv, i, y);
   }
-  
+
   ncm_spline_set (s, xv, yv, TRUE);
-  
+
   ncm_vector_free (xv);
   ncm_vector_free (yv);
-  
+
   return;
 }
 
@@ -828,26 +832,26 @@ _ncm_spline_new_function_grid_log (NcmSpline *s, gsl_function *F, const gdouble 
   const gdouble lnxf = log (xf);
   NcmVector *xv      = ncm_vector_new (nnodes);
   NcmVector *yv      = ncm_vector_new (nnodes);
-  
+
   g_assert (xi > 0.0);
-  
+
   for (i = 0; i < nnodes; i++)
   {
     const gdouble x = exp (lnxi + (lnxf - lnxi) / (nnodes - 1.0) * i);
     const gdouble y = GSL_FN_EVAL (F, x);
-    
+
     g_assert (gsl_finite (x));
     g_assert (gsl_finite (y));
-    
+
     ncm_vector_set (xv, i, x);
     ncm_vector_set (yv, i, y);
   }
-  
+
   ncm_spline_set (s, xv, yv, TRUE);
-  
+
   ncm_vector_free (xv);
   ncm_vector_free (yv);
-  
+
   return;
 }
 
@@ -868,10 +872,10 @@ void
 ncm_spline_set_func_grid (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, const gdouble xi, const gdouble xf, gsize nnodes)
 {
   ncm_assert_cmpdouble_e (xf, >, xi, DBL_EPSILON, 0.0);
-  
+
   g_assert_cmpuint (nnodes, <, NCM_SPLINE_FUNC_DEFAULT_MAX_NODES);
   g_assert_cmpuint (nnodes, >, ncm_spline_min_size (s));
-  
+
   switch (ftype)
   {
     case NCM_SPLINE_FUNC_GRID_LINEAR:
@@ -882,7 +886,7 @@ ncm_spline_set_func_grid (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F
       break;
     default:
       g_assert_not_reached ();
-      
+
       return;
   }
 }
@@ -892,7 +896,7 @@ ncm_spline_set_func_grid (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F
  * @s: a #NcmSpline.
  * @ftype: a #NcmSplineFuncType: must be either #NCM_SPLINE_FUNC_GRID_LINEAR or #NCM_SPLINE_FUNC_GRID_LOG
  * @F: (scope call): function to be interpolated
- * @obj: (allow-none): #GObject used by the function @F
+ * @obj: (allow-none): GObject used by the function @F
  * @xi: lower knot
  * @xf: upper knot
  * @nnodes: number of knots including both limits knots [@xi, @xf]
@@ -908,8 +912,8 @@ ncm_spline_set_func_grid (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F
 void
 ncm_spline_set_func_grid1 (NcmSpline *s, NcmSplineFuncType ftype, NcmSplineFuncF F, GObject *obj, gdouble xi, gdouble xf, gsize nnodes)
 {
-  gsl_function gslF = {(gdouble (*)(gdouble, gpointer))F, obj};
-  
+  gsl_function gslF = {(gdouble (*)(gdouble, gpointer)) F, obj};
+
   ncm_spline_set_func_grid (s, ftype, &gslF, xi, xf, nnodes);
 }
 

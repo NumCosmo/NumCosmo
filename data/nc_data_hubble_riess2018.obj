@@ -1,0 +1,13 @@
+(
+  'NcDataHubble', 
+  {
+    'desc':      <'Riess 2018'>, 
+    'long-desc': <''>, 
+    'init':      <true>, 
+    'n-points':  <uint32 1>, 
+    'w-mean':    <false>, 
+    'mean':      <[73.45]>, 
+    'sigma':     <[ 1.66]>, 
+    'z':         <[ 0.0]>
+  }
+)

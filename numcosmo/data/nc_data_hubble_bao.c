@@ -3,11 +3,11 @@
  *
  *  Thu Apr 22 14:34:54 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  * 
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -52,7 +52,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataHubbleBao, nc_data_hubble_bao, NCM_TYPE_DATA_GAUSS_DIAG);
+G_DEFINE_TYPE (NcDataHubbleBao, nc_data_hubble_bao, NCM_TYPE_DATA_GAUSS_DIAG)
 
 static void
 nc_data_hubble_bao_init (NcDataHubbleBao *hubble_bao)
@@ -180,7 +180,8 @@ static void
 _nc_data_hubble_bao_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataHubbleBao *hubble_bao = NC_DATA_HUBBLE_BAO (diag);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  const guint np              = ncm_data_gauss_diag_get_size (diag);
   gdouble r_zd;
   guint i;
 
@@ -192,7 +193,7 @@ _nc_data_hubble_bao_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector 
     r_zd = nc_distance_sound_horizon (hubble_bao->dist, cosmo, zd);
   }
 
-  for (i = 0; i < diag->np; i++)
+  for (i = 0; i < np; i++)
   {
     const gdouble z = ncm_vector_get (hubble_bao->x, i);
     const gdouble E = nc_hicosmo_E (cosmo, z);
@@ -224,14 +225,15 @@ static void
 _nc_data_hubble_bao_set_size (NcmDataGaussDiag *diag, guint np)
 {
   NcDataHubbleBao *hubble_bao = NC_DATA_HUBBLE_BAO (diag);
+  const guint cnp             = ncm_data_gauss_diag_get_size (diag);
 
-  if (diag->np != 0)
-    g_assert (hubble_bao->x != NULL && ncm_vector_len (hubble_bao->x) == diag->np);
+  if (cnp != 0)
+    g_assert (hubble_bao->x != NULL && ncm_vector_len (hubble_bao->x) == cnp);
   
-  if ((np == 0) || (np != diag->np))
+  if ((np == 0) || (np != cnp))
     ncm_vector_clear (&hubble_bao->x);
 
-  if ((np != 0) && (np != diag->np))
+  if ((np != 0) && (np != cnp))
     hubble_bao->x = ncm_vector_new (np);
 
   /* Chain up : end */
@@ -249,17 +251,19 @@ _nc_data_hubble_bao_set_size (NcmDataGaussDiag *diag, guint np)
 void
 nc_data_hubble_bao_set_sample (NcDataHubbleBao *hubble_bao, NcDataHubbleBaoId id)
 {
-  NcmData *data = NCM_DATA (hubble_bao);
+  NcmData *data          = NCM_DATA (hubble_bao);
   NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (hubble_bao);
+  NcmVector *y           = ncm_data_gauss_diag_peek_mean (diag);
+  NcmVector *sigma       = ncm_data_gauss_diag_peek_std (diag);
   
   g_assert (id < NC_DATA_HUBBLE_BAO_NSAMPLES);
 
   ncm_data_set_desc (data, "Busca 2013 H(z)r_s(z_d)/(1+z) from BAO"); /* Busca 2013 Eq. (27) */
   ncm_data_gauss_diag_set_size (diag, 1);
   
-  ncm_vector_set (hubble_bao->x,  0, 2.3);
-  ncm_vector_set (diag->y,        0, 3.455724026e-2); /* (1.036 * 10^4 km / s) / c */
-  ncm_vector_set (diag->sigma,    0, 0.120083074e-2); /* (0.036 * 10^4 km / s) / c */
+  ncm_vector_set (hubble_bao->x,  0, 2.3);            /* redshift */
+  ncm_vector_set (y,              0, 3.455724026e-2); /* (1.036 * 10^4 km / s) / c */
+  ncm_vector_set (sigma,          0, 0.120083074e-2); /* (0.036 * 10^4 km / s) / c */
 
   ncm_data_set_init (data, TRUE);
 }

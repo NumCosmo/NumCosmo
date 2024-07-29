@@ -3,11 +3,11 @@
  *
  *  Tue February 16 14:02:12 2016
  *  Copyright  2016  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2016 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2016 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -56,32 +56,32 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
-  
+
   g_test_add ("/ncm/model_ctrl/model_update", TestNcmModelCtrl, NULL,
               &test_ncm_model_ctrl_new,
               &test_ncm_model_ctrl_model_update,
               &test_ncm_model_ctrl_free);
-  
+
   g_test_add ("/ncm/model_ctrl/update", TestNcmModelCtrl, NULL,
               &test_ncm_model_ctrl_new,
               &test_ncm_model_ctrl_update,
               &test_ncm_model_ctrl_free);
-  
+
   g_test_add ("/ncm/model_ctrl/submodel_update", TestNcmModelCtrl, NULL,
               &test_ncm_model_ctrl_new,
               &test_ncm_model_ctrl_submodel_update,
               &test_ncm_model_ctrl_free);
-  
+
   g_test_add ("/ncm/model_ctrl/traps", TestNcmModelCtrl, NULL,
               &test_ncm_model_ctrl_new,
               &test_ncm_model_ctrl_traps,
               &test_ncm_model_ctrl_free);
-#if GLIB_CHECK_VERSION (2, 38, 0)
+
   g_test_add ("/ncm/model_ctrl/invalid/submodel_last_update/subprocess", TestNcmModelCtrl, NULL,
               &test_ncm_model_ctrl_new,
               &test_ncm_model_ctrl_invalid_submodel_last_update,
               &test_ncm_model_ctrl_free);
-#endif
+
   g_test_run ();
 }
 
@@ -92,16 +92,16 @@ test_ncm_model_ctrl_new (TestNcmModelCtrl *test, gconstpointer pdata)
   test->model     = NCM_MODEL (nc_hicosmo_lcdm_new ());
   test->submodel1 = NCM_MODEL (nc_hiprim_power_law_new ());
   test->submodel2 = NCM_MODEL (nc_hireion_camb_new ());
-  
+
   g_assert_true (test->ctrl != NULL);
   g_assert_true (NCM_IS_MODEL_CTRL (test->ctrl));
-  
+
   g_assert_true (test->model != NULL);
   g_assert_true (NCM_IS_MODEL (test->model));
-  
+
   g_assert_true (test->submodel1 != NULL);
   g_assert_true (NCM_IS_MODEL (test->submodel1));
-  
+
   g_assert_true (test->submodel2 != NULL);
   g_assert_true (NCM_IS_MODEL (test->submodel2));
 }
@@ -110,7 +110,7 @@ void
 _set_destroyed (gpointer b)
 {
   gboolean *destroyed = b;
-  
+
   *destroyed = TRUE;
 }
 
@@ -128,26 +128,26 @@ test_ncm_model_ctrl_model_update (TestNcmModelCtrl *test, gconstpointer pdata)
 {
   g_assert_true (ncm_model_ctrl_set_model (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_set_model (test->ctrl, test->model));
-  
+
   ncm_model_add_submodel (test->model, test->submodel1);
   g_assert_true (ncm_model_ctrl_set_model (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_set_model (test->ctrl, test->model));
-  
+
   ncm_model_add_submodel (test->model, test->submodel2);
   g_assert_true (ncm_model_ctrl_set_model (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_set_model (test->ctrl, test->model));
-  
+
   {
     NcmModel *submodel2 = NCM_MODEL (nc_hireion_camb_new ());
-    
+
     ncm_model_add_submodel (test->model, submodel2);
     g_assert_true (ncm_model_ctrl_set_model (test->ctrl, test->model));
     g_assert_true (!ncm_model_ctrl_set_model (test->ctrl, test->model));
-    
+
     ncm_model_add_submodel (test->model, test->submodel2);
     g_assert_true (ncm_model_ctrl_set_model (test->ctrl, test->model));
     g_assert_true (!ncm_model_ctrl_set_model (test->ctrl, test->model));
-    
+
     NCM_TEST_FREE (ncm_model_free, submodel2);
   }
 }
@@ -157,30 +157,30 @@ test_ncm_model_ctrl_update (TestNcmModelCtrl *test, gconstpointer pdata)
 {
   g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_update (test->ctrl, test->model));
-  
+
   ncm_model_orig_param_set (test->model, 0,
                             ncm_model_orig_param_get (test->model, 0) * 0.999);
   g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
-  
+
   g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
-  
+
   g_assert_true (!ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
-  
+
   /* Now testing with submodels added */
   ncm_model_ctrl_force_update (test->ctrl);
   test_ncm_model_ctrl_model_update (test, pdata);
-  
+
   g_assert_true (!ncm_model_ctrl_update (test->ctrl, test->model));
-  
+
   ncm_model_orig_param_set (test->model, 0,
                             ncm_model_orig_param_get (test->model, 0) * 0.999);
   g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
-  
+
   g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
-  
+
   g_assert_true (!ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
 }
@@ -192,64 +192,64 @@ test_ncm_model_ctrl_submodel_update (TestNcmModelCtrl *test, gconstpointer pdata
   g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (!ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
-  
+
   ncm_model_orig_param_set (test->model, 0,
                             ncm_model_orig_param_get (test->model, 0) * 0.999);
   g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
-  
+
   g_assert_true (!ncm_model_ctrl_model_has_submodel (test->ctrl, nc_hiprim_id ()));
   g_assert_true (!ncm_model_ctrl_model_has_submodel (test->ctrl, nc_hireion_id ()));
-  
+
   ncm_model_add_submodel (test->model, test->submodel1);
   g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (ncm_model_ctrl_model_has_submodel (test->ctrl, nc_hiprim_id ()));
   g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
-  
+
   g_assert_true (!ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
-  
+
   ncm_model_orig_param_set (test->model, 0,
                             ncm_model_orig_param_get (test->model, 0) * 0.999);
   g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
-  
+
   ncm_model_orig_param_set (test->submodel1, 0,
                             ncm_model_orig_param_get (test->submodel1, 0) * 0.999);
   g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
-  
+
   ncm_model_add_submodel (test->model, test->submodel2);
   g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (ncm_model_ctrl_model_has_submodel (test->ctrl, nc_hireion_id ()));
   g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
-  
+
   ncm_model_orig_param_set (test->model, 0,
                             ncm_model_orig_param_get (test->model, 0) * 0.999);
   g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
   g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
-  
+
   ncm_model_orig_param_set (test->submodel1, 0,
                             ncm_model_orig_param_get (test->submodel1, 0) * 0.999);
   g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
   g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
-  
+
   ncm_model_orig_param_set (test->submodel2, 0,
                             ncm_model_orig_param_get (test->submodel2, 0) * 0.999);
   g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
   g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
-  
+
   ncm_model_orig_param_set (test->submodel1, 0,
                             ncm_model_orig_param_get (test->submodel1, 0) * 0.999);
   ncm_model_orig_param_set (test->submodel2, 0,
@@ -258,7 +258,7 @@ test_ncm_model_ctrl_submodel_update (TestNcmModelCtrl *test, gconstpointer pdata
   g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
   g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
-  
+
   ncm_model_orig_param_set (test->model, 0,
                             ncm_model_orig_param_get (test->model, 0) * 0.999);
   ncm_model_orig_param_set (test->submodel1, 0,
@@ -269,21 +269,21 @@ test_ncm_model_ctrl_submodel_update (TestNcmModelCtrl *test, gconstpointer pdata
   g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
   g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
-  
+
   {
     NcmModel *submodel2 = NCM_MODEL (nc_hireion_camb_new ());
-    
+
     ncm_model_add_submodel (test->model, submodel2);
-    
+
     g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
     g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
     g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
     g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
-    
+
     ncm_model_add_submodel (test->model, test->submodel2);
     g_assert_true (ncm_model_ctrl_set_model (test->ctrl, test->model));
     g_assert_true (!ncm_model_ctrl_set_model (test->ctrl, test->model));
-    
+
     NCM_TEST_FREE (ncm_model_free, submodel2);
   }
 }
@@ -291,10 +291,8 @@ test_ncm_model_ctrl_submodel_update (TestNcmModelCtrl *test, gconstpointer pdata
 void
 test_ncm_model_ctrl_traps (TestNcmModelCtrl *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/ncm/model_ctrl/invalid/submodel_last_update/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void

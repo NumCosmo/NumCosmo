@@ -5,11 +5,11 @@
  *
  *  Sun April 22 14:47:43 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_mpi_job_test.h
- * Copyright (C) 2018 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2018 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -36,31 +36,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MPI_JOB_TEST             (ncm_mpi_job_test_get_type ())
-#define NCM_MPI_JOB_TEST(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MPI_JOB_TEST, NcmMPIJobTest))
-#define NCM_MPI_JOB_TEST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MPI_JOB_TEST, NcmMPIJobTestClass))
-#define NCM_IS_MPI_JOB_TEST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MPI_JOB_TEST))
-#define NCM_IS_MPI_JOB_TEST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MPI_JOB_TEST))
-#define NCM_MPI_JOB_TEST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MPI_JOB_TEST, NcmMPIJobTestClass))
+#define NCM_TYPE_MPI_JOB_TEST (ncm_mpi_job_test_get_type ())
 
-typedef struct _NcmMPIJobTestClass NcmMPIJobTestClass;
-typedef struct _NcmMPIJobTest NcmMPIJobTest;
-typedef struct _NcmMPIJobTestPrivate NcmMPIJobTestPrivate;
-
-struct _NcmMPIJobTestClass
-{
-  /*< private >*/
-  NcmMPIJobClass parent_class;
-};
-
-struct _NcmMPIJobTest
-{
-  /*< private >*/
-  NcmMPIJob parent_instance;
-  NcmMPIJobTestPrivate *priv;
-};
-
-GType ncm_mpi_job_test_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcmMPIJobTest, ncm_mpi_job_test, NCM, MPI_JOB_TEST, NcmMPIJob)
 
 NcmMPIJobTest *ncm_mpi_job_test_new (void);
 NcmMPIJobTest *ncm_mpi_job_test_ref (NcmMPIJobTest *mjt);

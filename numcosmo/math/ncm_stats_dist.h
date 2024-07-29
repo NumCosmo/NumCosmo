@@ -5,11 +5,11 @@
  *
  *  Wed November 07 16:02:25 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_stats_dist.h
- * Copyright (C) 2018 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2018 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -39,22 +39,15 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_STATS_DIST             (ncm_stats_dist_get_type ())
-#define NCM_STATS_DIST(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST, NcmStatsDist))
-#define NCM_STATS_DIST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST, NcmStatsDistClass))
-#define NCM_IS_STATS_DIST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_STATS_DIST))
-#define NCM_IS_STATS_DIST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_STATS_DIST))
-#define NCM_STATS_DIST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST, NcmStatsDistClass))
+#define NCM_TYPE_STATS_DIST (ncm_stats_dist_get_type ())
 
-typedef struct _NcmStatsDistClass NcmStatsDistClass;
-typedef struct _NcmStatsDist NcmStatsDist;
-typedef struct _NcmStatsDistPrivate NcmStatsDistPrivate;
+G_DECLARE_DERIVABLE_TYPE (NcmStatsDist, ncm_stats_dist, NCM, STATS_DIST, GObject)
 
 struct _NcmStatsDistClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  
+
   void (*set_dim) (NcmStatsDist *sd, const guint dim);
   gdouble (*get_href) (NcmStatsDist *sd);
   void (*prepare_kernel) (NcmStatsDist *sd, GPtrArray *sample_array);
@@ -66,19 +59,17 @@ struct _NcmStatsDistClass
   gdouble (*eval_weights) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
   gdouble (*eval_weights_m2lnp) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
   void (*reset) (NcmStatsDist *sd);
-};
 
-struct _NcmStatsDist
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmStatsDistPrivate *priv;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[7];
 };
 
 /**
  * NcmStatsDistCV:
  * @NCM_STATS_DIST_CV_NONE: No cross validation
  * @NCM_STATS_DIST_CV_SPLIT: Sample split cross validation
+ * @NCM_STATS_DIST_CV_SPLIT_NOFIT: Sample split cross validation without fitting
+ * @NCM_STATS_DIST_CV_LOO: Leave-one-out cross validation
  *
  * Cross-validation method to be applied.
  *
@@ -87,11 +78,11 @@ typedef enum _NcmStatsDistCV
 {
   NCM_STATS_DIST_CV_NONE,
   NCM_STATS_DIST_CV_SPLIT,
+  NCM_STATS_DIST_CV_SPLIT_NOFIT,
+  NCM_STATS_DIST_CV_LOO,
   /* < private > */
   NCM_STATS_DIST_CV_LEN, /*< skip >*/
 } NcmStatsDistCV;
-
-GType ncm_stats_dist_get_type (void) G_GNUC_CONST;
 
 NcmStatsDist *ncm_stats_dist_ref (NcmStatsDist *sd);
 void ncm_stats_dist_free (NcmStatsDist *sd);
@@ -103,6 +94,7 @@ NcmStatsDistKernel *ncm_stats_dist_get_kernel (NcmStatsDist *sd);
 
 guint ncm_stats_dist_get_dim (NcmStatsDist *sd);
 guint ncm_stats_dist_get_sample_size (NcmStatsDist *sd);
+guint ncm_stats_dist_get_n_kernels (NcmStatsDist *sd);
 gdouble ncm_stats_dist_get_href (NcmStatsDist *sd);
 
 void ncm_stats_dist_set_over_smooth (NcmStatsDist *sd, const gdouble over_smooth);
@@ -117,6 +109,9 @@ gboolean ncm_stats_dist_get_print_fit (NcmStatsDist *sd);
 void ncm_stats_dist_set_cv_type (NcmStatsDist *sd, const NcmStatsDistCV cv_type);
 NcmStatsDistCV ncm_stats_dist_get_cv_type (NcmStatsDist *sd);
 
+void ncm_stats_dist_set_use_threads (NcmStatsDist *sd, const gboolean use_threads);
+gboolean ncm_stats_dist_get_use_threads (NcmStatsDist *sd);
+
 void ncm_stats_dist_prepare_kernel (NcmStatsDist *sd, GPtrArray *sample_array);
 void ncm_stats_dist_prepare (NcmStatsDist *sd);
 void ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp);
@@ -124,7 +119,7 @@ void ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp);
 gdouble ncm_stats_dist_eval (NcmStatsDist *sd, NcmVector *x);
 gdouble ncm_stats_dist_eval_m2lnp (NcmStatsDist *sd, NcmVector *x);
 
-gint ncm_stats_dist_kernel_choose (NcmStatsDist *sd, NcmRNG *rng);
+guint ncm_stats_dist_kernel_choose (NcmStatsDist *sd, NcmRNG *rng);
 void ncm_stats_dist_sample (NcmStatsDist *sd, NcmVector *x, NcmRNG *rng);
 
 gdouble ncm_stats_dist_get_rnorm (NcmStatsDist *sd);

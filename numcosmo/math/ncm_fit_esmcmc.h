@@ -3,11 +3,11 @@
  *
  *  Tue January 20 16:59:54 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti & Mariana Penna-Lima
- *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
+ *  <vitenti@uel.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -34,43 +34,14 @@
 #include <numcosmo/math/ncm_mset_trans_kern.h>
 #include <numcosmo/math/ncm_fit_esmcmc_walker.h>
 
-#ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_histogram.h>
-#ifdef NUMCOSMO_HAVE_CFITSIO
-#include <fitsio.h>
-#endif /* NUMCOSMO_HAVE_CFITSIO */
-#endif /* NUMCOSMO_GIR_SCAN */
-
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FIT_ESMCMC             (ncm_fit_esmcmc_get_type ())
-#define NCM_FIT_ESMCMC(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FIT_ESMCMC, NcmFitESMCMC))
-#define NCM_FIT_ESMCMC_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FIT_ESMCMC, NcmFitESMCMCClass))
-#define NCM_IS_FIT_ESMCMC(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FIT_ESMCMC))
-#define NCM_IS_FIT_ESMCMC_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FIT_ESMCMC))
-#define NCM_FIT_ESMCMC_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FIT_ESMCMC, NcmFitESMCMCClass))
+#define NCM_TYPE_FIT_ESMCMC (ncm_fit_esmcmc_get_type ())
 
-typedef struct _NcmFitESMCMCClass NcmFitESMCMCClass;
-typedef struct _NcmFitESMCMC NcmFitESMCMC;
-typedef struct _NcmFitESMCMCPrivate NcmFitESMCMCPrivate;
+G_DECLARE_FINAL_TYPE (NcmFitESMCMC, ncm_fit_esmcmc, NCM, FIT_ESMCMC, GObject)
 
-struct _NcmFitESMCMCClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcmFitESMCMC
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmFitESMCMCPrivate *priv;
-};
-
-GType ncm_fit_esmcmc_get_type (void) G_GNUC_CONST;
-
-NcmFitESMCMC *ncm_fit_esmcmc_new (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype);
-NcmFitESMCMC *ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype, NcmObjArray *funcs_array);
+NcmFitESMCMC *ncm_fit_esmcmc_new (NcmFit * fit, guint nwalkers, NcmMSetTransKern * sampler, NcmFitESMCMCWalker * walker, NcmFitRunMsgs mtype);
+NcmFitESMCMC *ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, guint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype, NcmObjArray *funcs_array);
 
 NcmFitESMCMC *ncm_fit_esmcmc_ref (NcmFitESMCMC *esmcmc);
 
@@ -89,6 +60,9 @@ void ncm_fit_esmcmc_set_auto_trim_div (NcmFitESMCMC *esmcmc, guint div);
 void ncm_fit_esmcmc_set_auto_trim_type (NcmFitESMCMC *esmcmc, NcmMSetCatalogTrimType ttype);
 void ncm_fit_esmcmc_set_min_runs (NcmFitESMCMC *esmcmc, guint min_runs);
 void ncm_fit_esmcmc_set_max_runs_time (NcmFitESMCMC *esmcmc, gdouble max_runs_time);
+void ncm_fit_esmcmc_set_skip_check (NcmFitESMCMC *esmcmc, gboolean skip_check);
+
+gboolean ncm_fit_esmcmc_get_skip_check (NcmFitESMCMC *esmcmc);
 
 gboolean ncm_fit_esmcmc_has_rng (NcmFitESMCMC *esmcmc);
 

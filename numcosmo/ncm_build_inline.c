@@ -3,11 +3,11 @@
  *
  *  Mon Oct 29 23:35:29 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -30,3 +30,4 @@
 #undef NCM_INLINE
 #define NCM_INLINE
 #include <numcosmo/numcosmo.h>
+

@@ -3,11 +3,11 @@
  *
  *  Fri June 22 13:44:51 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -44,7 +44,14 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcClusterRedshiftNodist, nc_cluster_redshift_nodist, NC_TYPE_CLUSTER_REDSHIFT);
+struct _NcClusterRedshiftNodistPrivate
+{
+  gdouble z_min;
+  gdouble z_max;
+  gdouble norma;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcClusterRedshiftNodist, nc_cluster_redshift_nodist, NC_TYPE_CLUSTER_REDSHIFT)
 
 enum
 {
@@ -54,82 +61,33 @@ enum
   PROP_SIZE
 };
 
-static gdouble
-_nc_cluster_redshift_nodist_p (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
+static void
+nc_cluster_redshift_nodist_init (NcClusterRedshiftNodist *zn)
 {
-  g_error ("This object don't implement p.");
-  NCM_UNUSED (clusterz);
-  NCM_UNUSED (lnM);
-  NCM_UNUSED (z);
-  NCM_UNUSED (z_obs);
-  NCM_UNUSED (z_obs_params);
-  return GSL_NAN;
-}
+  NcClusterRedshiftNodistPrivate * const self = zn->priv = nc_cluster_redshift_nodist_get_instance_private (zn);
 
-static gdouble
-_nc_cluster_redshift_nodist_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble z)
-{
-  g_error ("This object don't implement n_z_lnm.");
-  NCM_UNUSED (clusterz);
-  NCM_UNUSED (lnM);
-  NCM_UNUSED (z);
-  return GSL_NAN;
-}
-
-static gboolean
-_nc_cluster_redshift_nodist_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params, NcmRNG *rng)
-{
-  NcClusterRedshiftNodist *zn = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
-
-  NCM_UNUSED (lnM);
-  NCM_UNUSED (z);
-  NCM_UNUSED (z_obs_params);
-
-  z_obs[0] = z;
-  return (z_obs[0] <= zn->z_max) && (z_obs[0] >= zn->z_min);
+  self->z_min = 0.0;
+  self->z_max = 0.0;
+  self->norma = 0.0;
 }
 
 static void
-_nc_cluster_redshift_nodist_p_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
+_nc_cluster_redshift_nodist_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  g_error ("This object don't implement p_limits.");
+  NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (object);
+  NcClusterRedshiftNodistPrivate * const self = zn->priv;
 
-  NCM_UNUSED (clusterz);
-  NCM_UNUSED (z_obs);
-  NCM_UNUSED (z_obs_params);
-  NCM_UNUSED (z_lower);
-  NCM_UNUSED (z_upper);
-  
-  return;
-}
-
-static void
-_nc_cluster_redshift_nodist_n_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper)
-{
-  NcClusterRedshiftNodist *zn = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
-
-  *z_lower = zn->z_min;
-  *z_upper = zn->z_max;
-
-  return;
-}
-
-guint _nc_cluster_redshift_nodist_obs_len (NcClusterRedshift *clusterz) { NCM_UNUSED (clusterz); return 1; }
-guint _nc_cluster_redshift_nodist_obs_params_len (NcClusterRedshift *clusterz) { NCM_UNUSED (clusterz); return 0; }
-
-static void
-_nc_cluster_redshift_nodist_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
-{
-  NcClusterRedshiftNodist *zn = NC_CLUSTER_REDSHIFT_NODIST (object);
   g_return_if_fail (NC_IS_CLUSTER_REDSHIFT_NODIST (object));
 
   switch (prop_id)
   {
     case PROP_Z_MIN:
-      zn->z_min = g_value_get_double (value);
+      self->z_min = g_value_get_double (value);
+      self->norma = 1.0 / (self->z_max - self->z_min);
       break;
-	case PROP_Z_MAX:
-      zn->z_max = g_value_get_double (value);
+    case PROP_Z_MAX:
+      self->z_max = g_value_get_double (value);
+      self->norma = 1.0 / (self->z_max - self->z_min);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -140,16 +98,18 @@ _nc_cluster_redshift_nodist_set_property (GObject * object, guint prop_id, const
 static void
 _nc_cluster_redshift_nodist_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcClusterRedshiftNodist *zn = NC_CLUSTER_REDSHIFT_NODIST (object);
+  NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (object);
+  NcClusterRedshiftNodistPrivate * const self = zn->priv;
+
   g_return_if_fail (NC_IS_CLUSTER_REDSHIFT_NODIST (object));
 
   switch (prop_id)
   {
     case PROP_Z_MIN:
-      g_value_set_double (value, zn->z_min);
+      g_value_set_double (value, self->z_min);
       break;
     case PROP_Z_MAX:
-      g_value_set_double (value, zn->z_max);
+      g_value_set_double (value, self->z_max);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -158,45 +118,36 @@ _nc_cluster_redshift_nodist_get_property (GObject *object, guint prop_id, GValue
 }
 
 static void
-nc_cluster_redshift_nodist_init (NcClusterRedshiftNodist *zn)
-{
-  zn->z_min = 0.0;
-  zn->z_max = 0.0;
-}
-
-static void
 nc_cluster_redshift_nodist_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_cluster_redshift_nodist_parent_class)->finalize (object);
 }
 
+static gdouble _nc_cluster_redshift_nodist_p (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs, const gdouble *z_obs_params);
+static gdouble _nc_cluster_redshift_nodist_intp (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z);
+static gdouble _nc_cluster_redshift_nodist_intp_bin (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params);
+static gboolean _nc_cluster_redshift_nodist_resample (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble *z_obs, const gdouble *z_obs_params, NcmRNG *rng);
+static void _nc_cluster_redshift_nodist_p_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
+static void _nc_cluster_redshift_nodist_p_bin_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
+static void _nc_cluster_redshift_nodist_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
+static gdouble _nc_cluster_redshift_nodist_volume (NcClusterRedshift *clusterz);
+
 static void
 nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
 {
-  GObjectClass* object_class           = G_OBJECT_CLASS (klass);
-  NcClusterRedshiftClass* parent_class = NC_CLUSTER_REDSHIFT_CLASS (klass);
+  GObjectClass *object_class           = G_OBJECT_CLASS (klass);
+  NcClusterRedshiftClass *parent_class = NC_CLUSTER_REDSHIFT_CLASS (klass);
   NcmModelClass *model_class           = NCM_MODEL_CLASS (klass);
 
-  parent_class->P              = &_nc_cluster_redshift_nodist_p;
-  parent_class->intP           = &_nc_cluster_redshift_nodist_intp;
-  parent_class->resample       = &_nc_cluster_redshift_nodist_resample;
-  parent_class->P_limits       = &_nc_cluster_redshift_nodist_p_limits;
-  parent_class->N_limits       = &_nc_cluster_redshift_nodist_n_limits;
-  parent_class->obs_len        = &_nc_cluster_redshift_nodist_obs_len;
-  parent_class->obs_params_len = &_nc_cluster_redshift_nodist_obs_params_len;
+  object_class->finalize =  &nc_cluster_redshift_nodist_finalize;
 
-  ncm_model_class_add_impl_opts (model_class, NC_CLUSTER_REDSHIFT_N_LIMTS, NC_CLUSTER_REDSHIFT_RESAMPLE, -1);
-
-  object_class->finalize    =  &nc_cluster_redshift_nodist_finalize;
-  
   model_class->set_property = &_nc_cluster_redshift_nodist_set_property;
   model_class->get_property = &_nc_cluster_redshift_nodist_get_property;
 
   ncm_model_class_set_name_nick (model_class, "No redshift distribution", "No_distribution");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
-  
+
   /**
    * NcClusterRedshiftNodist:z_min:
    *
@@ -208,7 +159,7 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
                                                         NULL,
                                                         "Minimum z",
                                                         0.0, G_MAXDOUBLE, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcClusterRedshiftNodist:z_max:
@@ -221,8 +172,102 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
                                                         NULL,
                                                         "Maximum z",
                                                         0.0, G_MAXDOUBLE, 1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
+
+  parent_class->P               = &_nc_cluster_redshift_nodist_p;
+  parent_class->intP            = &_nc_cluster_redshift_nodist_intp;
+  parent_class->intP_bin        = &_nc_cluster_redshift_nodist_intp_bin;
+  parent_class->resample        = &_nc_cluster_redshift_nodist_resample;
+  parent_class->P_limits        = &_nc_cluster_redshift_nodist_p_limits;
+  parent_class->P_bin_limits    = &_nc_cluster_redshift_nodist_p_bin_limits;
+  parent_class->N_limits        = &_nc_cluster_redshift_nodist_n_limits;
+  parent_class->volume          = &_nc_cluster_redshift_nodist_volume;
+  parent_class->_obs_len        = 1;
+  parent_class->_obs_params_len = 0;
+
+  ncm_model_class_add_impl_opts (model_class, NC_CLUSTER_REDSHIFT_N_LIMTS, NC_CLUSTER_REDSHIFT_RESAMPLE, -1);
 }
+
+static gdouble
+_nc_cluster_redshift_nodist_p (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs, const gdouble *z_obs_params)
+{
+  g_error ("This object don't implement p.");
+
+  return GSL_NAN;
+}
+
+static gdouble
+_nc_cluster_redshift_nodist_intp (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z)
+{
+  /*NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);*/
+  /*NcClusterRedshiftNodistPrivate * const self = zn->priv;*/
+
+  return 1.0;
+}
+
+static gdouble
+_nc_cluster_redshift_nodist_intp_bin (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params)
+{
+  /*NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);*/
+  /*NcClusterRedshiftNodistPrivate * const self = zn->priv;*/
+
+  if ((z < z_obs_lower[0]) || (z > z_obs_upper[0]))
+    return 0.0;
+  else
+    return 1.0;
+}
+
+static gboolean
+_nc_cluster_redshift_nodist_resample (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble *z_obs, const gdouble *z_obs_params, NcmRNG *rng)
+{
+  NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
+  NcClusterRedshiftNodistPrivate * const self = zn->priv;
+
+  z_obs[0] = z;
+
+  return (z_obs[0] <= self->z_max) && (z_obs[0] >= self->z_min);
+}
+
+static void
+_nc_cluster_redshift_nodist_p_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
+{
+  NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
+  NcClusterRedshiftNodistPrivate * const self = zn->priv;
+
+  *z_lower = self->z_min;
+  *z_upper = self->z_max;
+
+  return;
+}
+
+static void
+_nc_cluster_redshift_nodist_p_bin_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
+{
+  *z_lower = z_obs_lower[0];
+  *z_upper = z_obs_upper[0];
+}
+
+static void
+_nc_cluster_redshift_nodist_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper)
+{
+  NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
+  NcClusterRedshiftNodistPrivate * const self = zn->priv;
+
+  *z_lower = self->z_min;
+  *z_upper = self->z_max;
+
+  return;
+}
+
+static gdouble
+_nc_cluster_redshift_nodist_volume (NcClusterRedshift *clusterz)
+{
+  NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
+  NcClusterRedshiftNodistPrivate * const self = zn->priv;
+
+  return (self->z_max - self->z_min);
+}
+

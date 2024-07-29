@@ -3,11 +3,11 @@
  *
  *  Sat October 27 13:08:34 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_fit_esmcmc_walker_apes.h
- * Copyright (C) 2018 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2018 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -36,29 +36,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FIT_ESMCMC_WALKER_APES             (ncm_fit_esmcmc_walker_apes_get_type ())
-#define NCM_FIT_ESMCMC_WALKER_APES(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_APES, NcmFitESMCMCWalkerAPES))
-#define NCM_FIT_ESMCMC_WALKER_APES_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FIT_ESMCMC_WALKER_APES, NcmFitESMCMCWalkerAPESClass))
-#define NCM_IS_FIT_ESMCMC_WALKER_APES(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_APES))
-#define NCM_IS_FIT_ESMCMC_WALKER_APES_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FIT_ESMCMC_WALKER_APES))
-#define NCM_FIT_ESMCMC_WALKER_APES_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_APES, NcmFitESMCMCWalkerAPESClass))
+#define NCM_TYPE_FIT_ESMCMC_WALKER_APES (ncm_fit_esmcmc_walker_apes_get_type ())
 
-typedef struct _NcmFitESMCMCWalkerAPESClass NcmFitESMCMCWalkerAPESClass;
-typedef struct _NcmFitESMCMCWalkerAPES NcmFitESMCMCWalkerAPES;
-typedef struct _NcmFitESMCMCWalkerAPESPrivate NcmFitESMCMCWalkerAPESPrivate;
-
-struct _NcmFitESMCMCWalkerAPESClass
-{
-  /*< private >*/
-  NcmFitESMCMCWalkerClass parent_class;
-};
-
-struct _NcmFitESMCMCWalkerAPES
-{
-  /*< private >*/
-  NcmFitESMCMCWalker parent_instance;
-  NcmFitESMCMCWalkerAPESPrivate *priv;
-};
+G_DECLARE_FINAL_TYPE (NcmFitESMCMCWalkerAPES, ncm_fit_esmcmc_walker_apes, NCM, FIT_ESMCMC_WALKER_APES, NcmFitESMCMCWalker)
 
 /**
  * NcmFitESMCMCWalkerAPESMethod:
@@ -94,8 +74,6 @@ typedef enum _NcmFitESMCMCWalkerAPESKType /*< enum,underscore_name=NCM_FIT_ESMCM
   NCM_FIT_ESMCMC_WALKER_APES_KTYPE_LEN, /*< skip >*/
 } NcmFitESMCMCWalkerAPESKType;
 
-GType ncm_fit_esmcmc_walker_apes_get_type (void) G_GNUC_CONST;
-
 NcmFitESMCMCWalkerAPES *ncm_fit_esmcmc_walker_apes_new (guint nwalkers, guint nparams);
 NcmFitESMCMCWalkerAPES *ncm_fit_esmcmc_walker_apes_new_full (guint nwalkers, guint nparams, NcmFitESMCMCWalkerAPESMethod method, NcmFitESMCMCWalkerAPESKType k_type, gdouble over_smooth, gboolean use_interp);
 NcmFitESMCMCWalkerAPES *ncm_fit_esmcmc_walker_apes_ref (NcmFitESMCMCWalkerAPES *apes);
@@ -113,7 +91,17 @@ gdouble ncm_fit_esmcmc_walker_apes_get_over_smooth (NcmFitESMCMCWalkerAPES *apes
 void ncm_fit_esmcmc_walker_apes_use_interp (NcmFitESMCMCWalkerAPES *apes, gboolean use_interp);
 gboolean ncm_fit_esmcmc_walker_apes_interp (NcmFitESMCMCWalkerAPES *apes);
 
+void ncm_fit_esmcmc_walker_apes_set_use_threads (NcmFitESMCMCWalkerAPES *apes, gboolean use_threads);
+gboolean ncm_fit_esmcmc_walker_apes_get_use_threads (NcmFitESMCMCWalkerAPES *apes);
+
 void ncm_fit_esmcmc_walker_apes_peek_sds (NcmFitESMCMCWalkerAPES *apes, NcmStatsDist **sd0, NcmStatsDist **sd1);
+
+void ncm_fit_esmcmc_walker_apes_set_local_frac (NcmFitESMCMCWalkerAPES *apes, gdouble local_frac);
+void ncm_fit_esmcmc_walker_apes_set_cov_fixed_from_mset (NcmFitESMCMCWalkerAPES *apes, NcmMSet *mset);
+void ncm_fit_esmcmc_walker_apes_set_cov_robust_diag (NcmFitESMCMCWalkerAPES *apes);
+void ncm_fit_esmcmc_walker_apes_set_cov_robust (NcmFitESMCMCWalkerAPES *apes);
+
+void ncm_fit_esmcmc_walker_apes_set_exploration (NcmFitESMCMCWalkerAPES *apes, guint exploration);
 
 G_END_DECLS
 

@@ -3,22 +3,22 @@
  *
  *  Thu July 20 13:06:51 2017
  *  Copyright  2017  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hiprim_sbpl.c
- * Copyright (C) 2016 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2016 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -27,9 +27,9 @@
  * SECTION:nc_hiprim_sbpl
  * @title: NcHIPrimSBPL
  * @short_description: Smooth Broken power law modification of the power law primordial spectrum
- * 
+ *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -39,9 +39,10 @@
 
 #include "model/nc_hiprim_sbpl.h"
 
-G_DEFINE_TYPE (NcHIPrimSBPL, nc_hiprim_sbpl, NC_TYPE_HIPRIM);
+G_DEFINE_TYPE (NcHIPrimSBPL, nc_hiprim_sbpl, NC_TYPE_HIPRIM)
 
-enum {
+enum
+{
   PROP_0,
   PROP_SIZE,
 };
@@ -54,7 +55,6 @@ nc_hiprim_sbpl_init (NcHIPrimSBPL *nc_hiprim_sbpl)
 static void
 nc_hiprim_sbpl_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hiprim_sbpl_parent_class)->finalize (object);
 }
@@ -65,7 +65,7 @@ static gdouble _nc_hiprim_sbpl_lnT_powespec_lnk (NcHIPrim *prim, const gdouble l
 static void
 nc_hiprim_sbpl_class_init (NcHIPrimSBPLClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcHIPrimClass *prim_class  = NC_HIPRIM_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
@@ -133,19 +133,20 @@ NcHIPrimSBPL *
 nc_hiprim_sbpl_new (void)
 {
   NcHIPrimSBPL *prim_bpl = g_object_new (NC_TYPE_HIPRIM_SBPL,
-                                          NULL);
+                                         NULL);
+
   return prim_bpl;
 }
 
-#define VECTOR     (NCM_MODEL (prim)->params)
-#define LN10E10ASA (ncm_vector_get (VECTOR, NC_HIPRIM_SBPL_LN10E10ASA))
-#define N_SA       (ncm_vector_get (VECTOR, NC_HIPRIM_SBPL_N_SA))
-#define DELTA      (ncm_vector_get (VECTOR, NC_HIPRIM_SBPL_DELTA))
-#define RA         (ncm_vector_get (VECTOR, NC_HIPRIM_SBPL_RA))
-#define LNKB       (ncm_vector_get (VECTOR, NC_HIPRIM_SBPL_LNKB))
-#define LAMBDA     (ncm_vector_get (VECTOR, NC_HIPRIM_SBPL_LAMBDA))
-#define T_SA_RATIO (ncm_vector_get (VECTOR, NC_HIPRIM_SBPL_T_SA_RATIO))
-#define N_T        (ncm_vector_get (VECTOR, NC_HIPRIM_SBPL_N_T))
+#define VECTOR     (NCM_MODEL (prim))
+#define LN10E10ASA (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_SBPL_LN10E10ASA))
+#define N_SA       (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_SBPL_N_SA))
+#define DELTA      (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_SBPL_DELTA))
+#define RA         (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_SBPL_RA))
+#define LNKB       (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_SBPL_LNKB))
+#define LAMBDA     (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_SBPL_LAMBDA))
+#define T_SA_RATIO (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_SBPL_T_SA_RATIO))
+#define N_T        (ncm_model_orig_param_get (VECTOR, NC_HIPRIM_SBPL_N_T))
 
 /****************************************************************************
  * Power spectrum
@@ -154,20 +155,20 @@ nc_hiprim_sbpl_new (void)
 static gdouble
 _nc_hiprim_sbpl_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 {
-  const gdouble ln_ka   = lnk - prim->lnk_pivot;
-  const gdouble delta   = DELTA;
-  const gdouble ra      = RA;
-  const gdouble lnk_b   = LNKB;
-  const gdouble lambda  = LAMBDA;
+  const gdouble ln_ka  = lnk - prim->lnk_pivot;
+  const gdouble delta  = DELTA;
+  const gdouble ra     = RA;
+  const gdouble lnk_b  = LNKB;
+  const gdouble lambda = LAMBDA;
 
   const gdouble lnA_eff = LN10E10ASA - 10.0 * M_LN10;
 
   const gdouble lnPplaw = (N_SA - 1.0) * ln_ka + lnA_eff;
 
-  const gdouble lnX     = (lnk - lnk_b);
+  const gdouble lnX = (lnk - lnk_b);
 
   gdouble one_1px_plambda, one_1px_mlambda;
-    
+
   if (lnX > 0.0)
   {
     const gdouble x_mlambda = exp (-lambda * lnX);
@@ -185,6 +186,7 @@ _nc_hiprim_sbpl_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 
   {
     const gdouble lnxi = log (ra * exp (delta * ln_ka) * one_1px_plambda + one_1px_mlambda);
+
     return lnxi + lnPplaw;
   }
 }
@@ -193,6 +195,7 @@ static gdouble
 _nc_hiprim_sbpl_lnT_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 {
   const gdouble ln_ka = lnk - prim->lnk_pivot;
+
   return N_T * ln_ka + LN10E10ASA - 10.0 * M_LN10 + log (T_SA_RATIO);
 }
 

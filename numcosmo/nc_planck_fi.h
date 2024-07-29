@@ -3,11 +3,11 @@
  *
  *  Thu October 22 15:47:48 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_planck_fi.h
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -61,7 +61,6 @@ GType nc_planck_fi_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_planck_fi);
 
-NcPlanckFI *nc_planck_fi_new_from_name (gchar *pfi_name);
 NcPlanckFI *nc_planck_fi_ref (NcPlanckFI *pfi);
 void nc_planck_fi_free (NcPlanckFI *pfi);
 void nc_planck_fi_clear (NcPlanckFI **pfi);
@@ -73,3 +72,4 @@ void nc_planck_fi_log_all_models (void);
 G_END_DECLS
 
 #endif /* _NC_PLANCK_FI_H_ */
+

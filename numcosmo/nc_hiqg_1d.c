@@ -1,25 +1,26 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            nc_hiqg_1d.c
  *
  *  Thu February 15 14:44:56 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hiqg_1d.c
- * Copyright (C) 2018 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2018 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -40,7 +41,7 @@
 
 #include "nc_hiqg_1d.h"
 #include "math/ncm_matrix.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_integral1d.h"
 #include "math/ncm_integral1d_ptr.h"
@@ -66,8 +67,13 @@
 #include <gsl/gsl_poly.h>
 
 #ifdef HAVE_ACB_H
+#ifdef HAVE_FLINT_ACB_H
+#include <flint/acb.h>
+#include <flint/acb_hypgeom.h>
+#else /* HAVE_FLINT_ACB_H */
 #include <acb.h>
 #include <acb_hypgeom.h>
+#endif /* HAVE_FLINT_ACB_H */
 #endif /* HAVE_ACB_H  */
 
 #include <nvector/nvector_serial.h>
@@ -140,7 +146,7 @@ struct _NcHIQG1DPrivate
   NcmVector *vlvr;
   gint nBohm;
   N_Vector yBohm;
- };
+};
 
 enum
 {
@@ -152,46 +158,47 @@ enum
   PROP_NOBOUNDARY,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHIQG1D, nc_hiqg_1d, G_TYPE_OBJECT);
-G_DEFINE_BOXED_TYPE (NcHIQG1DGauss, nc_hiqg_1d_gauss, nc_hiqg_1d_gauss_dup, nc_hiqg_1d_gauss_free);
-G_DEFINE_BOXED_TYPE (NcHIQG1DExp,   nc_hiqg_1d_exp,   nc_hiqg_1d_exp_dup,   nc_hiqg_1d_exp_free);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIQG1D, nc_hiqg_1d, G_TYPE_OBJECT)
+G_DEFINE_BOXED_TYPE (NcHIQG1DGauss, nc_hiqg_1d_gauss, nc_hiqg_1d_gauss_dup, nc_hiqg_1d_gauss_free)
+G_DEFINE_BOXED_TYPE (NcHIQG1DExp,   nc_hiqg_1d_exp,   nc_hiqg_1d_exp_dup,   nc_hiqg_1d_exp_free)
+G_DEFINE_BOXED_TYPE (NcHIQG1DSQ,    nc_hiqg_1d_sq,    nc_hiqg_1d_sq_dup,    nc_hiqg_1d_sq_free)
 
 static void
 nc_hiqg_1d_init (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv = nc_hiqg_1d_get_instance_private (qg1d);
 
-  self->lambda     = 0.0;
-  self->acs_a      = 0.0;
-  self->basis_a    = 0.0;
-  self->nu         = 0.0;
-  self->mu         = 0.0;
+  self->lambda  = 0.0;
+  self->acs_a   = 0.0;
+  self->basis_a = 0.0;
+  self->nu      = 0.0;
+  self->mu      = 0.0;
 
-  self->abstol     = 0.0;
-  self->reltol     = 0.0;
+  self->abstol = 0.0;
+  self->reltol = 0.0;
 
   /* PDE */
-  self->nknots     = 0;
-  self->fknots     = NULL;
-  self->knots      = NULL;
-  self->psi        = NULL;
-  self->fpsi       = NULL;
-  self->fRePsi     = NULL;
-  self->fImPsi     = NULL;
-  self->RePsi      = NULL;
-  self->ImPsi      = NULL;
-  self->frho       = NULL;
-  self->RePsi_s    = NULL;
-  self->ImPsi_s    = NULL;
-  self->rho_s      = NULL;
-  
-  self->C0         = NULL;
-  self->ReC0       = NULL;
-  self->ImC0       = NULL;
-  self->A0         = NULL;
-  self->C          = NULL;
-  self->ReC        = NULL;
-  self->ImC        = NULL;
+  self->nknots  = 0;
+  self->fknots  = NULL;
+  self->knots   = NULL;
+  self->psi     = NULL;
+  self->fpsi    = NULL;
+  self->fRePsi  = NULL;
+  self->fImPsi  = NULL;
+  self->RePsi   = NULL;
+  self->ImPsi   = NULL;
+  self->frho    = NULL;
+  self->RePsi_s = NULL;
+  self->ImPsi_s = NULL;
+  self->rho_s   = NULL;
+
+  self->C0   = NULL;
+  self->ReC0 = NULL;
+  self->ImC0 = NULL;
+  self->A0   = NULL;
+  self->C    = NULL;
+  self->ReC  = NULL;
+  self->ImC  = NULL;
 
   self->up_splines = FALSE;
   self->noboundary = FALSE;
@@ -201,35 +208,35 @@ nc_hiqg_1d_init (NcHIQG1D *qg1d)
   self->ti         = 0.0;
   self->xi         = 0.0;
   self->xf         = 0.0;
-  
-  self->bohm       = NULL;
 
-  self->work       = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  self->ipiv       = g_array_new (FALSE, FALSE, sizeof (gint));
-  self->iwork      = g_array_new (FALSE, FALSE, sizeof (gint));
+  self->bohm = NULL;
 
-  self->IM         = NULL;
-  self->IM_fact    = NULL;
-  self->KM         = NULL;
-  self->JM         = NULL;
-  self->err_norm   = NULL;
-  self->err_comp   = NULL;
-  self->scaling    = NULL;
-  self->Escaling   = NULL;
-  self->berr       = NULL;
-  self->wr         = NULL;
-  self->wi         = NULL;
-  self->vl         = NULL;
-  self->vr         = NULL;
-  self->vlvr       = NULL;
+  self->work  = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->ipiv  = g_array_new (FALSE, FALSE, sizeof (gint));
+  self->iwork = g_array_new (FALSE, FALSE, sizeof (gint));
 
-  self->nBohm      = 0;
-  self->yBohm      = NULL;
+  self->IM       = NULL;
+  self->IM_fact  = NULL;
+  self->KM       = NULL;
+  self->JM       = NULL;
+  self->err_norm = NULL;
+  self->err_comp = NULL;
+  self->scaling  = NULL;
+  self->Escaling = NULL;
+  self->berr     = NULL;
+  self->wr       = NULL;
+  self->wi       = NULL;
+  self->vl       = NULL;
+  self->vr       = NULL;
+  self->vlvr     = NULL;
+
+  self->nBohm = 0;
+  self->yBohm = NULL;
 }
 
-#define _XI(i,n)   (i)
-#define _LNRI(i,n) ((n) + (i) * 2 + 0)
-#define _SI(i,n)   ((n) + (i) * 2 + 1)
+#define _XI(i, n)   (i)
+#define _LNRI(i, n) ((n) + (i) * 2 + 0)
+#define _SI(i, n)   ((n) + (i) * 2 + 1)
 
 #define _XI_STRIDE   (1)
 #define _LNRI_STRIDE (2)
@@ -238,8 +245,9 @@ nc_hiqg_1d_init (NcHIQG1D *qg1d)
 static void
 _nc_hiqg_1d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHIQG1D *qg1d = NC_HIQG_1D (object);
+  NcHIQG1D *qg1d               = NC_HIQG_1D (object);
   NcHIQG1DPrivate * const self = qg1d->priv;
+
   g_return_if_fail (NC_IS_HIQG_1D (object));
 
   switch (prop_id)
@@ -272,8 +280,9 @@ _nc_hiqg_1d_set_property (GObject *object, guint prop_id, const GValue *value, G
 static void
 _nc_hiqg_1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHIQG1D *qg1d = NC_HIQG_1D (object);
+  NcHIQG1D *qg1d               = NC_HIQG_1D (object);
   NcHIQG1DPrivate * const self = qg1d->priv;
+
   g_return_if_fail (NC_IS_HIQG_1D (object));
 
   switch (prop_id)
@@ -302,7 +311,7 @@ _nc_hiqg_1d_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 static void
 _nc_hiqg_1d_dispose (GObject *object)
 {
-  NcHIQG1D *qg1d = NC_HIQG_1D (object);
+  NcHIQG1D *qg1d               = NC_HIQG_1D (object);
   NcHIQG1DPrivate * const self = qg1d->priv;
 
   g_clear_pointer (&self->LS, SUNLinSolFree);
@@ -357,7 +366,7 @@ _nc_hiqg_1d_dispose (GObject *object)
 static void
 _nc_hiqg_1d_finalize (GObject *object)
 {
-  NcHIQG1D *qg1d = NC_HIQG_1D (object);
+  NcHIQG1D *qg1d               = NC_HIQG_1D (object);
   NcHIQG1DPrivate * const self = qg1d->priv;
 
   if (self->bohm != NULL)
@@ -365,7 +374,7 @@ _nc_hiqg_1d_finalize (GObject *object)
     ARKStepFree (&self->bohm);
     self->bohm = NULL;
   }
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hiqg_1d_parent_class)->finalize (object);
 }
@@ -373,13 +382,13 @@ _nc_hiqg_1d_finalize (GObject *object)
 static void
 nc_hiqg_1d_class_init (NcHIQG1DClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = &_nc_hiqg_1d_set_property;
   object_class->get_property = &_nc_hiqg_1d_get_property;
   object_class->dispose      = &_nc_hiqg_1d_dispose;
   object_class->finalize     = &_nc_hiqg_1d_finalize;
-  
+
   g_object_class_install_property (object_class,
                                    PROP_LAMBDA,
                                    g_param_spec_double ("lambda",
@@ -415,18 +424,17 @@ nc_hiqg_1d_class_init (NcHIQG1DClass *klass)
                                                          "no boundary condition at x_f",
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
 }
 
 /**
  * nc_hiqg_1d_gauss_new:
  * @mean: gaussian mean
- * @alpha: power-law 
- * @sigma: Gaussian width 
+ * @alpha: power-law
+ * @sigma: Gaussian width
  * @Hi: linear imaginary phase
- * 
+ *
  * Creates a new Gaussian wave function.
- * 
+ *
  * Returns: (transfer full): a new #NcHIQG1DGauss
  */
 NcHIQG1DGauss *
@@ -440,20 +448,21 @@ nc_hiqg_1d_gauss_new (const gdouble mean, const gdouble alpha, const gdouble sig
   qm_gauss->Hi    = Hi;
 
   g_assert_cmpfloat (alpha, >, -0.5);
-  
+
   {
     gint signp             = 0;
     const gdouble f1       = (alpha - 0.5) * M_LN2 + (2.0 * alpha + 1.0) * log (sigma);
     const gdouble ap12     = (alpha + 0.5);
     const gdouble lng_ap12 = lgamma_r (ap12, &signp);
+
     if (mean != 0.0)
     {
       const gdouble ap1     = (alpha + 1.0);
       const gdouble arg     = mean / (M_SQRT2 * sigma);
       const gdouble arg2    = arg * arg;
       const gdouble lng_ap1 = lgamma_r (ap1,  &signp);
-      const gdouble t1      = log (2.0 * fabs (arg)) + lng_ap1  + log (gsl_sf_hyperg_1F1 (0.5 - alpha, 1.5, - arg2));
-      const gdouble t2      =                          lng_ap12 + log (gsl_sf_hyperg_1F1 (    - alpha, 0.5, - arg2));
+      const gdouble t1      = log (2.0 * fabs (arg)) + lng_ap1  + log (gsl_sf_hyperg_1F1 (0.5 - alpha, 1.5, -arg2));
+      const gdouble t2      =                          lng_ap12 + log (gsl_sf_hyperg_1F1 (-alpha, 0.5, -arg2));
 
       qm_gauss->lnNorm = log (exp (t2) + GSL_SIGN (arg) * exp (t1)) + f1;
     }
@@ -462,22 +471,23 @@ nc_hiqg_1d_gauss_new (const gdouble mean, const gdouble alpha, const gdouble sig
       qm_gauss->lnNorm = lng_ap12 + f1;
     }
   }
-  
+
   return qm_gauss;
 }
 
 /**
  * nc_hiqg_1d_gauss_dup:
  * @qm_gauss: a #NcHIQG1DGauss
- * 
+ *
  * Duplicates @qm_gauss.
- * 
+ *
  * Returns: (transfer full): a duplicate of @qm_gauss.
  */
 NcHIQG1DGauss *
 nc_hiqg_1d_gauss_dup (NcHIQG1DGauss *qm_gauss)
 {
   NcHIQG1DGauss *qm_gauss_dup = g_new (NcHIQG1DGauss, 1);
+
   qm_gauss_dup[0] = qm_gauss[0];
 
   return qm_gauss_dup;
@@ -486,11 +496,11 @@ nc_hiqg_1d_gauss_dup (NcHIQG1DGauss *qm_gauss)
 /**
  * nc_hiqg_1d_gauss_free:
  * @qm_gauss: a #NcHIQG1DGauss
- * 
+ *
  * Frees @qm_gauss.
- * 
+ *
  */
-void 
+void
 nc_hiqg_1d_gauss_free (NcHIQG1DGauss *qm_gauss)
 {
   g_free (qm_gauss);
@@ -501,20 +511,21 @@ nc_hiqg_1d_gauss_free (NcHIQG1DGauss *qm_gauss)
  * @qm_gauss: a #NcHIQG1DGauss
  * @x: the point where to evaluate $\psi(x)$
  * @psi: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\psi$
- * 
+ *
  * Evaluates @qm_gauss at @x.
- * 
+ *
  */
-void 
+void
 nc_hiqg_1d_gauss_eval (NcHIQG1DGauss *qm_gauss, const gdouble x, gdouble *psi)
-{  
-  const gdouble lnx     = log (x);
-  const gdouble xmean   = x - qm_gauss->mean;
-  const gdouble xmean2  = xmean * xmean;
-  const gdouble sigma2  = qm_gauss->sigma * qm_gauss->sigma;
-  complex double psi0c  = cexp (- 0.5 * qm_gauss->lnNorm + qm_gauss->alpha * lnx - 0.25 * xmean2 / sigma2 + 0.5 * xmean2 * I * qm_gauss->Hi);
-  //complex double psi0c  = cexp (- 0.5 * qm_gauss->lnNorm + qm_gauss->alpha * lnx - 0.25 * xmean2 / sigma2 + xmean * I * qm_gauss->Hi);
-  
+{
+  const gdouble lnx    = log (x);
+  const gdouble xmean  = x - qm_gauss->mean;
+  const gdouble xmean2 = xmean * xmean;
+  const gdouble sigma2 = qm_gauss->sigma * qm_gauss->sigma;
+  complex double psi0c = cexp (-0.5 * qm_gauss->lnNorm + qm_gauss->alpha * lnx - 0.25 * xmean2 / sigma2 + 0.5 * xmean2 * I * qm_gauss->Hi);
+
+  /*complex double psi0c  = cexp (- 0.5 * qm_gauss->lnNorm + qm_gauss->alpha * lnx - 0.25 * xmean2 / sigma2 + xmean * I * qm_gauss->Hi); */
+
   psi[0] = creal (psi0c);
   psi[1] = cimag (psi0c);
 }
@@ -524,16 +535,16 @@ nc_hiqg_1d_gauss_eval (NcHIQG1DGauss *qm_gauss, const gdouble x, gdouble *psi)
  * @qm_gauss: a #NcHIQG1DGauss
  * @x: the point where to evaluate $\psi(x)$
  * @psi: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\psi$
- * 
+ *
  * Evaluates @qm_gauss at @x removing the Hemite weight.
- * 
+ *
  */
-void 
+void
 nc_hiqg_1d_gauss_eval_hermit (NcHIQG1DGauss *qm_gauss, const gdouble x, gdouble *psi)
-{  
-  const gdouble xmean   = x - qm_gauss->mean;
-  const gdouble xmean2  = xmean * xmean;
-  complex double psi0c  = cexp (- 0.5 * qm_gauss->lnNorm + 0.5 * xmean2 * I * qm_gauss->Hi);
+{
+  const gdouble xmean  = x - qm_gauss->mean;
+  const gdouble xmean2 = xmean * xmean;
+  complex double psi0c = cexp (-0.5 * qm_gauss->lnNorm + 0.5 * xmean2 * I * qm_gauss->Hi);
 
   psi[0] = creal (psi0c);
   psi[1] = cimag (psi0c);
@@ -544,20 +555,21 @@ nc_hiqg_1d_gauss_eval_hermit (NcHIQG1DGauss *qm_gauss, const gdouble x, gdouble 
  * @qm_gauss: a #NcHIQG1DGauss
  * @x: the point where to evaluate $\psi(x)$
  * @lnRS: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\ln(R)$ and $S$ in $\psi = e^{\ln(R) + iS}$
- * 
+ *
  * Evaluates @qm_gauss at @x.
- * 
+ *
  */
-void 
+void
 nc_hiqg_1d_gauss_eval_lnRS (NcHIQG1DGauss *qm_gauss, const gdouble x, gdouble *lnRS)
-{  
-  const gdouble lnx     = log (x);
-  const gdouble xmean   = x - qm_gauss->mean;
-  const gdouble xmean2  = xmean * xmean;
-  const gdouble sigma2  = qm_gauss->sigma * qm_gauss->sigma;
-  const gdouble lnR     = - 0.5 * qm_gauss->lnNorm + qm_gauss->alpha * lnx - 0.25 * xmean2 / sigma2;
-  const gdouble S       = 0.5 * x * x * qm_gauss->Hi;
-  //const gdouble S       = x * qm_gauss->Hi;
+{
+  const gdouble lnx    = log (x);
+  const gdouble xmean  = x - qm_gauss->mean;
+  const gdouble xmean2 = xmean * xmean;
+  const gdouble sigma2 = qm_gauss->sigma * qm_gauss->sigma;
+  const gdouble lnR    = -0.5 * qm_gauss->lnNorm + qm_gauss->alpha * lnx - 0.25 * xmean2 / sigma2;
+  const gdouble S      = 0.5 * x * x * qm_gauss->Hi;
+
+  /*const gdouble S       = x * qm_gauss->Hi; */
 
   lnRS[0] = lnR;
   lnRS[1] = S;
@@ -565,12 +577,12 @@ nc_hiqg_1d_gauss_eval_lnRS (NcHIQG1DGauss *qm_gauss, const gdouble x, gdouble *l
 
 /**
  * nc_hiqg_1d_exp_new:
- * @n: power-law 
- * @V: Volume 
+ * @n: power-law
+ * @V: Volume
  * @pV: Volume momentum
- * 
+ *
  * Creates a new Exponential wave function.
- * 
+ *
  * Returns: (transfer full): a new #NcHIQG1DExp
  */
 NcHIQG1DExp *
@@ -584,27 +596,29 @@ nc_hiqg_1d_exp_new (const gdouble n, const gdouble V, const gdouble pV)
 
   g_assert_cmpfloat (n, >, 2.0);
   g_assert_cmpfloat (V, >, 0.0);
-  
+
   {
-    gint signp     = 0;
-    qm_exp->lnNorm = - n * log (n - 1.0) + lgamma_r (n, &signp) + log (V);
+    gint signp = 0;
+
+    qm_exp->lnNorm = -n *log (n - 1.0) + lgamma_r (n, &signp) + log (V);
   }
-  
+
   return qm_exp;
 }
 
 /**
  * nc_hiqg_1d_exp_dup:
  * @qm_exp: a #NcHIQG1DExp
- * 
+ *
  * Duplicates @qm_exp.
- * 
+ *
  * Returns: (transfer full): a duplicate of @qm_exp.
  */
 NcHIQG1DExp *
 nc_hiqg_1d_exp_dup (NcHIQG1DExp *qm_exp)
 {
   NcHIQG1DExp *qm_exp_dup = g_new (NcHIQG1DExp, 1);
+
   qm_exp_dup[0] = qm_exp[0];
 
   return qm_exp_dup;
@@ -613,11 +627,11 @@ nc_hiqg_1d_exp_dup (NcHIQG1DExp *qm_exp)
 /**
  * nc_hiqg_1d_exp_free:
  * @qm_exp: a #NcHIQG1DExp
- * 
+ *
  * Frees @qm_exp.
- * 
+ *
  */
-void 
+void
 nc_hiqg_1d_exp_free (NcHIQG1DExp *qm_exp)
 {
   g_free (qm_exp);
@@ -628,17 +642,17 @@ nc_hiqg_1d_exp_free (NcHIQG1DExp *qm_exp)
  * @qm_exp: a #NcHIQG1DExp
  * @x: the point where to evaluate $\psi(x)$
  * @psi: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $psi$
- * 
+ *
  * Evaluates @qm_exp at @x.
- * 
+ *
  */
-void 
+void
 nc_hiqg_1d_exp_eval (NcHIQG1DExp *qm_exp, const gdouble x, gdouble *psi)
-{  
-  const gdouble xV      = x / qm_exp->V;
-  const gdouble lnxV    = log (xV);
-  complex double psi0c  = cexp (-0.5 * qm_exp->lnNorm + 0.5 * (qm_exp->n - 1.0) * (lnxV - xV) + I * qm_exp->pV * x);
-  
+{
+  const gdouble xV     = x / qm_exp->V;
+  const gdouble lnxV   = log (xV);
+  complex double psi0c = cexp (-0.5 * qm_exp->lnNorm + 0.5 * (qm_exp->n - 1.0) * (lnxV - xV) + I * qm_exp->pV * x);
+
   psi[0] = creal (psi0c);
   psi[1] = cimag (psi0c);
 }
@@ -648,13 +662,13 @@ nc_hiqg_1d_exp_eval (NcHIQG1DExp *qm_exp, const gdouble x, gdouble *psi)
  * @qm_exp: a #NcHIQG1DExp
  * @x: the point where to evaluate $\psi(x)$
  * @lnRS: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\ln(R)$ and $S$ in $\psi = e^{\ln(R) + iS}$
- * 
+ *
  * Evaluates @qm_exp at @x.
- * 
+ *
  */
-void 
+void
 nc_hiqg_1d_exp_eval_lnRS (NcHIQG1DExp *qm_exp, const gdouble x, gdouble *lnRS)
-{  
+{
   const gdouble xV   = x / qm_exp->V;
   const gdouble lnxV = log (xV);
   const gdouble lnR  = -0.5 * qm_exp->lnNorm + 0.5 * (qm_exp->n - 1.0) * (lnxV - xV);
@@ -665,10 +679,109 @@ nc_hiqg_1d_exp_eval_lnRS (NcHIQG1DExp *qm_exp, const gdouble x, gdouble *lnRS)
 }
 
 /**
+ * nc_hiqg_1d_sq_new:
+ * @mu: $\mu$
+ * @V: Volume
+ * @pV: Volume momentum
+ *
+ * Creates a new fiducial semi-quantum wave function.
+ *
+ * Returns: (transfer full): a new #NcHIQG1DExp
+ */
+NcHIQG1DSQ *
+nc_hiqg_1d_sq_new (const gdouble mu, const gdouble V, const gdouble pV)
+{
+  NcHIQG1DSQ *qm_sq = g_new (NcHIQG1DSQ, 1);
+
+  qm_sq->mu = mu;
+  qm_sq->V  = V;
+  qm_sq->pV = pV;
+
+  g_assert_cmpfloat (mu, >, 0.0);
+  g_assert_cmpfloat (V, >, 0.0);
+
+  qm_sq->lnNorm = 0.5 * log (M_PI / mu);
+
+  return qm_sq;
+}
+
+/**
+ * nc_hiqg_1d_sq_dup:
+ * @qm_sq: a #NcHIQG1DSQ
+ *
+ * Duplicates @qm_sq.
+ *
+ * Returns: (transfer full): a duplicate of @qm_sq.
+ */
+NcHIQG1DSQ *
+nc_hiqg_1d_sq_dup (NcHIQG1DSQ *qm_sq)
+{
+  NcHIQG1DSQ *qm_sq_dup = g_new (NcHIQG1DSQ, 1);
+
+  qm_sq_dup[0] = qm_sq[0];
+
+  return qm_sq_dup;
+}
+
+/**
+ * nc_hiqg_1d_sq_free:
+ * @qm_sq: a #NcHIQG1DSQ
+ *
+ * Frees @qm_sq.
+ *
+ */
+void
+nc_hiqg_1d_sq_free (NcHIQG1DSQ *qm_sq)
+{
+  g_free (qm_sq);
+}
+
+/**
+ * nc_hiqg_1d_sq_eval:
+ * @qm_sq: a #NcHIQG1DSQ
+ * @x: the point where to evaluate $\psi(x)$
+ * @psi: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $psi$
+ *
+ * Evaluates @qm_sq at @x.
+ *
+ */
+void
+nc_hiqg_1d_sq_eval (NcHIQG1DSQ *qm_sq, const gdouble x, gdouble *psi)
+{
+  const gdouble xV     = x / qm_sq->V;
+  const gdouble lnxV   = log (xV);
+  complex double psi0c = cexp (-0.5 * qm_sq->lnNorm - 0.5 * log (x) - 0.5 * qm_sq->mu * gsl_pow_2 (lnxV + 0.25 / qm_sq->mu) + I * qm_sq->pV * x);
+
+  psi[0] = creal (psi0c);
+  psi[1] = cimag (psi0c);
+}
+
+/**
+ * nc_hiqg_1d_sq_eval_lnRS:
+ * @qm_sq: a #NcHIQG1DSQ
+ * @x: the point where to evaluate $\psi(x)$
+ * @lnRS: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\ln(R)$ and $S$ in $\psi = e^{\ln(R) + iS}$
+ *
+ * Evaluates @qm_sq at @x.
+ *
+ */
+void
+nc_hiqg_1d_sq_eval_lnRS (NcHIQG1DSQ *qm_sq, const gdouble x, gdouble *lnRS)
+{
+  const gdouble xV   = x / qm_sq->V;
+  const gdouble lnxV = log (xV);
+  const gdouble lnR  = -0.5 * qm_sq->lnNorm - 0.5 * log (x) - 0.5 * qm_sq->mu * gsl_pow_2 (lnxV + 0.25 / qm_sq->mu);
+  const gdouble S    = qm_sq->pV * x;
+
+  lnRS[0] = lnR;
+  lnRS[1] = S;
+}
+
+/**
  * nc_hiqg_1d_new:
- * 
+ *
  * Creates a new #NcHIQG1D object.
- * 
+ *
  * Returns: (transfer full): a new #NcHIQG1D.
  */
 NcHIQG1D *
@@ -676,6 +789,7 @@ nc_hiqg_1d_new (void)
 {
   NcHIQG1D *qg1d = g_object_new (NC_TYPE_HIQG_1D,
                                  NULL);
+
   return qg1d;
 }
 
@@ -683,9 +797,9 @@ nc_hiqg_1d_new (void)
  * nc_hiqg_1d_new_full:
  * @nknots: number of knots
  * @lambda: $\lambda$
- * 
+ *
  * Creates a new #NcHIQG1D object.
- * 
+ *
  * Returns: (transfer full): a new #NcHIQG1D.
  */
 NcHIQG1D *
@@ -694,7 +808,8 @@ nc_hiqg_1d_new_full (guint nknots, gdouble lambda)
   NcHIQG1D *qg1d = g_object_new (NC_TYPE_HIQG_1D,
                                  "nknots", nknots,
                                  "lambda", lambda,
-                                  NULL);
+                                 NULL);
+
   return qg1d;
 }
 
@@ -745,12 +860,13 @@ nc_hiqg_1d_clear (NcHIQG1D **qg1d)
  * @nknots: number of knots
  *
  * Sets the initial number of knots to be used in the wave function mesh.
- * 
+ *
  */
-void 
+void
 nc_hiqg_1d_set_nknots (NcHIQG1D *qg1d, const guint nknots)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
+
   if (self->nknots != nknots)
   {
     if (self->nknots > 0)
@@ -766,7 +882,7 @@ nc_hiqg_1d_set_nknots (NcHIQG1D *qg1d, const guint nknots)
       ncm_matrix_clear (&self->C);
       ncm_vector_clear (&self->ReC);
       ncm_vector_clear (&self->ImC);
-      
+
       ncm_matrix_clear (&self->IM);
       ncm_matrix_clear (&self->IM_fact);
       ncm_matrix_clear (&self->KM);
@@ -784,6 +900,7 @@ nc_hiqg_1d_set_nknots (NcHIQG1D *qg1d, const guint nknots)
     }
 
     self->nknots = nknots;
+
     if (self->nknots > 0)
     {
       self->fknots   = ncm_vector_new (self->nknots + 1);
@@ -795,9 +912,9 @@ nc_hiqg_1d_set_nknots (NcHIQG1D *qg1d, const guint nknots)
       self->RePsi    = ncm_matrix_get_row (self->psi, 0);
       self->ImPsi    = ncm_matrix_get_row (self->psi, 1);
       self->frho     = ncm_vector_new (self->nknots + 1);
-      self->RePsi_s  = ncm_spline_cubic_notaknot_new_full (self->fknots, self->fRePsi, FALSE); 
-      self->ImPsi_s  = ncm_spline_cubic_notaknot_new_full (self->fknots, self->fImPsi, FALSE); 
-      self->rho_s    = ncm_spline_cubic_notaknot_new_full (self->fknots, self->frho, FALSE);       
+      self->RePsi_s  = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (self->fknots, self->fRePsi, FALSE));
+      self->ImPsi_s  = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (self->fknots, self->fImPsi, FALSE));
+      self->rho_s    = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (self->fknots, self->frho, FALSE));
       self->C0       = ncm_matrix_new (2, self->nknots);
       self->A0       = ncm_vector_new (self->nknots * 2);
       self->ReC0     = ncm_matrix_get_row (self->C0, 0);
@@ -828,13 +945,14 @@ nc_hiqg_1d_set_nknots (NcHIQG1D *qg1d, const guint nknots)
  * @qg1d: a #NcHIQG1D
  *
  * Gets the current number of knots used in the wave function mesh.
- * 
+ *
  * Returns: the current number of knots used in the wave function mesh.
  */
-guint 
+guint
 nc_hiqg_1d_get_nknots (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
+
   return self->nknots;
 }
 
@@ -851,16 +969,16 @@ typedef struct _NcHIQG1DInitCond
  * @psi_data: Initial wave-function data
  * @xi: initial point
  * @xf: final point
- * 
+ *
  * Sets the initial condition using @psi0, it calculates the best
  * mesh for the initial condition using the real part of @psi0.
- * 
+ *
  */
 void
 nc_hiqg_1d_set_init_cond (NcHIQG1D *qg1d, NcHIQG1DPsi psi0_lnRS, gpointer psi_data, const gdouble xi, const gdouble xf)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
-  gint i;
+  guint i;
 
   g_assert_cmpfloat (xi, <, xf);
   self->ti = 0.0;
@@ -870,7 +988,7 @@ nc_hiqg_1d_set_init_cond (NcHIQG1D *qg1d, NcHIQG1DPsi psi0_lnRS, gpointer psi_da
   ncm_vector_set (self->fRePsi, 0, 0.0);
   ncm_vector_set (self->fImPsi, 0, 0.0);
   ncm_vector_set (self->frho,   0, 0.0);
-  
+
   for (i = 0; i < self->nknots; i++)
   {
     const gdouble x = xi + (xf - xi) / (self->nknots * 1.0) * (i + 1);
@@ -879,7 +997,7 @@ nc_hiqg_1d_set_init_cond (NcHIQG1D *qg1d, NcHIQG1DPsi psi0_lnRS, gpointer psi_da
 
     ncm_vector_fast_set (self->knots, i, x);
 
-    psi0_lnRS (psi_data, x, (gdouble *)&ln_psi);
+    psi0_lnRS (psi_data, x, (gdouble *) &ln_psi);
 
     psi = cexp (ln_psi);
 
@@ -900,16 +1018,16 @@ nc_hiqg_1d_set_init_cond (NcHIQG1D *qg1d, NcHIQG1DPsi psi0_lnRS, gpointer psi_da
  * @qm_gauss: Initial wave-function data
  * @xi: initial point
  * @xf: final point
- * 
- * Sets the initial condition using @psi0 and nc_hiqg_1d_gauss_eval(), 
- * it calculates the best mesh for the initial condition using the real 
+ *
+ * Sets the initial condition using @psi0 and nc_hiqg_1d_gauss_eval(),
+ * it calculates the best mesh for the initial condition using the real
  * part of @psi0.
- * 
+ *
  */
 void
 nc_hiqg_1d_set_init_cond_gauss (NcHIQG1D *qg1d, NcHIQG1DGauss *qm_gauss, const gdouble xi, const gdouble xf)
 {
-  nc_hiqg_1d_set_init_cond (qg1d, (NcHIQG1DPsi) &nc_hiqg_1d_gauss_eval_lnRS, qm_gauss, xi, xf);
+  nc_hiqg_1d_set_init_cond (qg1d, (NcHIQG1DPsi) & nc_hiqg_1d_gauss_eval_lnRS, qm_gauss, xi, xf);
 }
 
 /**
@@ -918,16 +1036,34 @@ nc_hiqg_1d_set_init_cond_gauss (NcHIQG1D *qg1d, NcHIQG1DGauss *qm_gauss, const g
  * @qm_exp: Initial wave-function data
  * @xi: initial point
  * @xf: final point
- * 
- * Sets the initial condition using @psi0 and nc_hiqg_1d_exp_eval(), 
- * it calculates the best mesh for the initial condition using the real 
+ *
+ * Sets the initial condition using @psi0 and nc_hiqg_1d_exp_eval(),
+ * it calculates the best mesh for the initial condition using the real
  * part of @psi0.
- * 
+ *
  */
 void
 nc_hiqg_1d_set_init_cond_exp (NcHIQG1D *qg1d, NcHIQG1DExp *qm_exp, const gdouble xi, const gdouble xf)
 {
-  nc_hiqg_1d_set_init_cond (qg1d, (NcHIQG1DPsi) &nc_hiqg_1d_exp_eval_lnRS, qm_exp, xi, xf);
+  nc_hiqg_1d_set_init_cond (qg1d, (NcHIQG1DPsi) & nc_hiqg_1d_exp_eval_lnRS, qm_exp, xi, xf);
+}
+
+/**
+ * nc_hiqg_1d_set_init_cond_sq:
+ * @qg1d: a #NcHIQG1D
+ * @qm_sq: Initial wave-function data
+ * @xi: initial point
+ * @xf: final point
+ *
+ * Sets the initial condition using @psi0 and nc_hiqg_1d_sq_eval(),
+ * it calculates the best mesh for the initial condition using the real
+ * part of @psi0.
+ *
+ */
+void
+nc_hiqg_1d_set_init_cond_sq (NcHIQG1D *qg1d, NcHIQG1DSQ *qm_sq, const gdouble xi, const gdouble xf)
+{
+  nc_hiqg_1d_set_init_cond (qg1d, (NcHIQG1DPsi) & nc_hiqg_1d_sq_eval_lnRS, qm_sq, xi, xf);
 }
 
 gdouble
@@ -942,13 +1078,9 @@ _nc_hiqg_1d_basis (const gdouble x, const gdouble y, const gdouble h, const gdou
   const gdouble xya  = pow (xy, a);
 
   if (xyh2 < 1.0)
-  {
     return 2.0 * xya * sinh (xyh2) * exp (-a1);
-  }
   else
-  {
     return 2.0 * xya * exp (-a1 + gsl_sf_lnsinh (xyh2));
-  }
 }
 
 /**
@@ -973,7 +1105,6 @@ nc_hiqg_1d_basis (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdoubl
  * READ HERE
  */
 
-
 /*
  * Computes H . K(x, y)
  */
@@ -989,13 +1120,9 @@ _nc_hiqg_1d_Hbasis (const gdouble x, const gdouble y, const gdouble h, const gdo
   const gdouble xya  = pow (xy, a);
 
   if (xyh2 < 1.0)
-  {
     return 2.0 * h2 * xya * (2.0 * xyh2 * cosh (xyh2) + (1.0 + 2.0 * a - 2.0 * a1) * sinh (xyh2) + 2.0 * h2 * xyh2 * y2 * a * ncm_util_sinhx_m_xcoshx_x3 (xyh2)) * exp (-a1);
-  }
   else
-  {
     return 2.0 * h2 * xya * (2.0 * xyh2 * (1.0 - a / (h2 * x2)) * exp (-a1 + gsl_sf_lncosh (xyh2)) + (1.0 + 2.0 * a - 2.0 * a1 + 2.0 * a / (h2 * x2)) * exp (-a1 + gsl_sf_lnsinh (xyh2)));
-  }
 }
 
 /**
@@ -1018,10 +1145,10 @@ nc_hiqg_1d_Hbasis (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdoub
 
 /*
  * Computes: K(x, y) / (x x^a)
- * 
+ *
  * It uses the function sinh1(x) = sinh(x)/x, such that when computing close
  * to the border x = 0 it avoids computing 0/0.
- * 
+ *
  */
 static gdouble
 _nc_hiqg_1d_basis_xxa (const gdouble x, const gdouble y, const gdouble h, const gdouble a)
@@ -1035,21 +1162,17 @@ _nc_hiqg_1d_basis_xxa (const gdouble x, const gdouble y, const gdouble h, const 
   const gdouble ya   = pow (y, a);
 
   if (xyh2 < 1.0)
-  {
     return 2.0 * ya * y * h2 * ncm_util_sinh1 (xyh2) * exp (-a1);
-  }
   else
-  {
     return 2.0 * ya * exp (-a1 + gsl_sf_lnsinh (xyh2)) / x;
-  }
 }
 
 /*
  * Computes: (K(x,y1)dK(x,y2)/dx - K(x,y2)dK(x,y1)/dx) / x^3
- * 
+ *
  * Computes the subtraction above (necessary to compute the derivative of the phase)
  * taking care of all the cancellations.
- * 
+ *
  */
 static gdouble
 _nc_hiqg_1d_Sbasis_x3 (const gdouble x, const gdouble y1, const gdouble y2, const gdouble h, const gdouble a)
@@ -1076,6 +1199,7 @@ _nc_hiqg_1d_Sbasis_x3 (const gdouble x, const gdouble y1, const gdouble y2, cons
   else
   {
     const gdouble x3 = x2 * x;
+
     if (y1 > y2)
       return (h2 / x3) * y1y2a * (+exp (-a1 + gsl_sf_lnsinh (+h2x * y1my2)) * y1py2 - exp (-a1 + gsl_sf_lnsinh (h2x * y1py2)) * y1my2);
     else
@@ -1114,6 +1238,7 @@ gdouble
 nc_hiqg_1d_get_lambda (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
+
   return self->lambda;
 }
 
@@ -1129,6 +1254,7 @@ gdouble
 nc_hiqg_1d_get_basis_a (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
+
   return self->basis_a;
 }
 
@@ -1144,6 +1270,7 @@ gdouble
 nc_hiqg_1d_get_acs_a (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
+
   return self->acs_a;
 }
 
@@ -1159,6 +1286,7 @@ gdouble
 nc_hiqg_1d_get_nu (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
+
   return self->nu;
 }
 
@@ -1174,33 +1302,22 @@ gdouble
 nc_hiqg_1d_get_mu (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
+
   return self->mu;
 }
 
 static gdouble
 _nc_hiqg_1d_If2 (const gdouble y1, const gdouble y2, const gdouble h, const gdouble a)
 {
-  const gdouble h2      = h * h;
-  const gdouble y12     = y1 * y1;
-  const gdouble y22     = y2 * y2;
-  const gdouble y1y2    = y1 * y2;
-  const gdouble y1y2ha  = pow (y1y2 / h2, a);
-  const gdouble a1      = 0.25 * h2 * (y12 + y22);
+  const gdouble h2     = h * h;
+  const gdouble y12    = y1 * y1;
+  const gdouble y22    = y2 * y2;
+  const gdouble y1y2   = y1 * y2;
+  const gdouble y1y2ha = pow (y1y2 / h2, a);
+  const gdouble a1     = 0.25 * h2 * (y12 + y22);
   gint signp;
 
   return exp (-a1 + lgamma_r (0.5 + a, &signp)) * y1y2ha / h * (gsl_sf_hyperg_1F1 (0.5 + a, 0.5, gsl_pow_2 (y1 + y2)) - gsl_sf_hyperg_1F1 (0.5 + a, 0.5, gsl_pow_2 (y1 - y2)));
-}
-
-static gdouble
-_nc_hiqg_1d_Ixf2 (const gdouble y1, const gdouble y2, const gdouble h)
-{
-  const gdouble h2     = h * h;
-  const gdouble ym12   = 0.5 * h * (y1 - y2);
-  const gdouble yp12   = 0.5 * h * (y1 + y2);
-  const gdouble ym12_2 = ym12 * ym12;
-  const gdouble yp12_2 = yp12 * yp12;
-
-  return (exp (-ym12_2) * yp12 * erf (yp12) - exp (-yp12_2) * ym12 * erf (ym12)) * ncm_c_sqrt_pi () / h2;
 }
 
 static void _nc_hiqg_1d_evol_C (NcHIQG1D *qg1d, const gdouble t);
@@ -1209,10 +1326,10 @@ static void _nc_hiqg_1d_prepare_splines (NcHIQG1D *qg1d);
 static gint
 _nc_hiqg_1d_bohm_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
 {
-  NcHIQG1D *qg1d = NC_HIQG_1D (user_data);
+  NcHIQG1D *qg1d               = NC_HIQG_1D (user_data);
   NcHIQG1DPrivate * const self = qg1d->priv;
-  gdouble *psi  = N_VGetArrayPointer (y);
-  gdouble *dpsi = N_VGetArrayPointer (ydot);
+  gdouble *psi                 = N_VGetArrayPointer (y);
+  gdouble *dpsi                = N_VGetArrayPointer (ydot);
   gint i;
 
   _nc_hiqg_1d_evol_C (qg1d, t);
@@ -1230,8 +1347,8 @@ void
 _nc_hiqg_1d_init_solver (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
-  const gdouble t0    = 0.0;
-  const gdouble ini_q = nc_hiqg_1d_int_xrho_0_inf (qg1d);
+  const gdouble t0             = 0.0;
+  const gdouble ini_q          = nc_hiqg_1d_int_xrho_0_inf (qg1d);
   gint flag;
   gint i;
 
@@ -1266,7 +1383,7 @@ _nc_hiqg_1d_init_solver (NcHIQG1D *qg1d)
  * @qg1d: a #NcHIQG1D
  *
  * FIXME
- * 
+ *
  * READ HERE
  *
  */
@@ -1274,7 +1391,8 @@ void
 nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
-  gint i, ret;
+  gint ret                     = 0;
+  guint i;
 
   ncm_vector_set (self->fknots, 0, 0.0);
   ncm_matrix_set (self->fpsi,   0, 0, 0.0);
@@ -1285,30 +1403,31 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
   self->h = 1.0 / (1.99 * (self->xf - self->xi) / (1.0 * self->nknots));
   ncm_matrix_set_zero (self->IM);
 
-	for (i = 0; i < self->nknots; i++)
-	{
-		const gdouble xi    = ncm_vector_get (self->knots, i);
+  for (i = 0; i < self->nknots; i++)
+  {
+    const gdouble xi    = ncm_vector_get (self->knots, i);
     const gdouble Ixixi = _nc_hiqg_1d_basis (xi, xi, self->h, self->basis_a);
-    const gdouble Kxixi = /*Ixixi;//*/_nc_hiqg_1d_Hbasis (xi, xi, self->h, self->basis_a);
+    const gdouble Kxixi = /*Ixixi;//*/ _nc_hiqg_1d_Hbasis (xi, xi, self->h, self->basis_a);
     guint j;
 
     ncm_matrix_set (self->IM, i, i, Ixixi);
     ncm_matrix_set (self->KM, i, i, Kxixi);
+
     /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g\n", h, xi, xi, Ixixi);*/
-		for (j = i + 1; j < self->nknots; j++)
-		{
-			const gdouble xj    = ncm_vector_get (self->knots, j);
-			const gdouble Ixixj = _nc_hiqg_1d_basis (xi, xj, self->h, self->basis_a);
-			const gdouble Kxixj = /*Ixixj;//*/_nc_hiqg_1d_Hbasis (xi, xj, self->h, self->basis_a);
-			const gdouble Kxjxi = /*Ixixj;//*/_nc_hiqg_1d_Hbasis (xj, xi, self->h, self->basis_a);
+    for (j = i + 1; j < self->nknots; j++)
+    {
+      const gdouble xj    = ncm_vector_get (self->knots, j);
+      const gdouble Ixixj = _nc_hiqg_1d_basis (xi, xj, self->h, self->basis_a);
+      const gdouble Kxixj = /*Ixixj;//*/ _nc_hiqg_1d_Hbasis (xi, xj, self->h, self->basis_a);
+      const gdouble Kxjxi = /*Ixixj;//*/ _nc_hiqg_1d_Hbasis (xj, xi, self->h, self->basis_a);
 
       /*printf ("% 22.15g % 22.15g\n", Kxixj, Kxjxi);*/
 
-			ncm_matrix_set (self->IM, j, i, Ixixj);
+      ncm_matrix_set (self->IM, j, i, Ixixj);
       ncm_matrix_set (self->KM, i, j, Kxjxi);
       ncm_matrix_set (self->KM, j, i, Kxixj);
     }
-	}
+  }
 
   /*ncm_vector_log_vals (self->knots, "#    KNOTS:  ", "% .5e", TRUE);*/
   /*ncm_vector_log_vals (self->hv,    "#       HV:  ", "% .5e", TRUE);*/
@@ -1318,10 +1437,12 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
     gint lwork  = -1;
     gchar equed = 'Y';
     gdouble rcond;
+
 #ifdef HAVE_DSYSVXX_
-    gint nparams = 3;
+    gint nparams      = 3;
     gdouble params[3] = {1.0, 99.0, 0.0};
     gdouble rpvgrw;
+
 #endif /* HAVE_DSYSVXX_ */
     gint ilo, ihi;
     gdouble abnrm;
@@ -1343,41 +1464,44 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
     ret = ncm_lapack_dsysvxx ('E', 'L', self->nknots, self->nknots,
                               ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
                               ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
-                              (gint *)self->ipiv->data, &equed,
+                              (gint *) self->ipiv->data, &equed,
                               ncm_vector_data (self->scaling),
                               ncm_matrix_data (self->KM), ncm_matrix_tda (self->KM),
                               ncm_matrix_data (self->JM), ncm_matrix_tda (self->JM),
                               &rcond, &rpvgrw,
                               ncm_vector_data (self->berr),
                               3, ncm_matrix_data (self->err_norm), ncm_matrix_data (self->err_comp), 0, NULL,
-                              (gdouble *)self->work->data, (gint *)self->iwork->data);
+                              (gdouble *) self->work->data, (gint *) self->iwork->data);
 #elif defined (HAVE_DSYSVX_)
     lwork = -1;
     equed = 'N';
-    ret = ncm_lapack_dsysvx ('N', 'L', self->nknots, self->nknots,
-                             ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
-                             ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
-                             (gint *)self->ipiv->data, 
-                             ncm_matrix_data (self->KM), ncm_matrix_tda (self->KM),
-                             ncm_matrix_data (self->JM), ncm_matrix_tda (self->JM),
-                             &rcond, ncm_matrix_data (self->err_norm),
-                             ncm_vector_data (self->berr),
-                             (gdouble *)self->work->data, lwork, (gint *)self->iwork->data); 
+    ret   = ncm_lapack_dsysvx ('N', 'L', self->nknots, self->nknots,
+                               ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
+                               ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
+                               (gint *) self->ipiv->data,
+                               ncm_matrix_data (self->KM), ncm_matrix_tda (self->KM),
+                               ncm_matrix_data (self->JM), ncm_matrix_tda (self->JM),
+                               &rcond, ncm_matrix_data (self->err_norm),
+                               ncm_vector_data (self->berr),
+                               (gdouble *) self->work->data, lwork, (gint *) self->iwork->data);
     g_assert_cmpint (ret, ==, 0);
 
     lwork = g_array_index (self->work, gdouble, 0);
-    if (lwork > self->work->len)
+
+    g_assert_cmpint (lwork, >=, 0);
+
+    if ((guint) lwork > self->work->len)
       g_array_set_size (self->work, lwork);
 
     ret = ncm_lapack_dsysvx ('N', 'L', self->nknots, self->nknots,
                              ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
                              ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
-                             (gint *)self->ipiv->data, 
+                             (gint *) self->ipiv->data,
                              ncm_matrix_data (self->KM), ncm_matrix_tda (self->KM),
                              ncm_matrix_data (self->JM), ncm_matrix_tda (self->JM),
                              &rcond, ncm_matrix_data (self->err_norm),
                              ncm_vector_data (self->berr),
-                             (gdouble *)self->work->data, lwork, (gint *)self->iwork->data); 
+                             (gdouble *) self->work->data, lwork, (gint *) self->iwork->data);
 #endif /* HAVE_DSYSVXX_ */
     /*printf ("#    RCOND:  % 22.15g\n", rcond);*/
     /*printf ("#   RPVGRW:  % 22.15g\n", rpvgrw);*/
@@ -1391,19 +1515,20 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
     g_assert_cmpint (ret, ==, 0);
 
     lwork = -1;
-    ret = ncm_lapack_dgeevx ('B', 'V', 'V', 'B', self->nknots,
-                             ncm_matrix_data (self->JM), ncm_matrix_tda (self->JM),
-                             ncm_vector_data (self->wr), ncm_vector_data (self->wi),
-                             ncm_matrix_data (self->vr), ncm_matrix_tda (self->vr),
-                             ncm_matrix_data (self->vl), ncm_matrix_tda (self->vl),
-                             &ilo, &ihi,
-                             ncm_vector_data (self->Escaling),
-                             &abnrm, ncm_matrix_data (self->err_norm), ncm_matrix_data (self->err_comp),
-                             (gdouble *)self->work->data, lwork, (gint *)self->iwork->data);
+    ret   = ncm_lapack_dgeevx ('B', 'V', 'V', 'B', self->nknots,
+                               ncm_matrix_data (self->JM), ncm_matrix_tda (self->JM),
+                               ncm_vector_data (self->wr), ncm_vector_data (self->wi),
+                               ncm_matrix_data (self->vr), ncm_matrix_tda (self->vr),
+                               ncm_matrix_data (self->vl), ncm_matrix_tda (self->vl),
+                               &ilo, &ihi,
+                               ncm_vector_data (self->Escaling),
+                               &abnrm, ncm_matrix_data (self->err_norm), ncm_matrix_data (self->err_comp),
+                               (gdouble *) self->work->data, lwork, (gint *) self->iwork->data);
     g_assert_cmpint (ret, ==, 0);
 
     lwork = g_array_index (self->work, gdouble, 0);
-    if (lwork > self->work->len)
+
+    if (lwork > (gint) self->work->len)
       g_array_set_size (self->work, lwork);
 
     ret = ncm_lapack_dgeevx ('B', 'V', 'V', 'B', self->nknots,
@@ -1414,7 +1539,7 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
                              &ilo, &ihi,
                              ncm_vector_data (self->Escaling),
                              &abnrm, ncm_matrix_data (self->err_norm), ncm_matrix_data (self->err_comp),
-                             (gdouble *)self->work->data, lwork, (gint *)self->iwork->data);
+                             (gdouble *) self->work->data, lwork, (gint *) self->iwork->data);
     g_assert_cmpint (ret, ==, 0);
 
     /*ncm_vector_log_vals (self->wr, "#       WR:  ", "% .5e", TRUE);*/
@@ -1436,40 +1561,42 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
     ret = ncm_lapack_dsysvxx ('F', 'L', self->nknots, 2,
                               ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
                               ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
-                              (gint *)self->ipiv->data, &equed,
+                              (gint *) self->ipiv->data, &equed,
                               ncm_vector_data (self->scaling),
                               ncm_matrix_data (self->psi), ncm_matrix_tda (self->psi),
                               ncm_matrix_data (self->C0), ncm_matrix_tda (self->C0),
                               &rcond, &rpvgrw,
                               ncm_vector_data (self->berr),
                               3, ncm_matrix_data (self->err_norm), ncm_matrix_data (self->err_comp), nparams, params,
-                              (gdouble *)self->work->data, (gint *)self->iwork->data);
+                              (gdouble *) self->work->data, (gint *) self->iwork->data);
 #elif defined (HAVE_DSYSVX_)
     lwork = -1;
-    ret = ncm_lapack_dsysvx ('F', 'L', self->nknots, 2,
-                             ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
-                             ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
-                             (gint *)self->ipiv->data, 
-                             ncm_matrix_data (self->psi), ncm_matrix_tda (self->psi),
-                             ncm_matrix_data (self->C0), ncm_matrix_tda (self->C0),
-                             &rcond, ncm_matrix_data (self->err_norm),
-                             ncm_vector_data (self->berr),
-                             (gdouble *)self->work->data, lwork, (gint *)self->iwork->data);
+    ret   = ncm_lapack_dsysvx ('F', 'L', self->nknots, 2,
+                               ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
+                               ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
+                               (gint *) self->ipiv->data,
+                               ncm_matrix_data (self->psi), ncm_matrix_tda (self->psi),
+                               ncm_matrix_data (self->C0), ncm_matrix_tda (self->C0),
+                               &rcond, ncm_matrix_data (self->err_norm),
+                               ncm_vector_data (self->berr),
+                               (gdouble *) self->work->data, lwork, (gint *) self->iwork->data);
     g_assert_cmpint (ret, ==, 0);
-    
+
     lwork = g_array_index (self->work, gdouble, 0);
-    if (lwork > self->work->len)
+    g_assert_cmpint (lwork, >=, 0);
+
+    if ((guint) lwork > self->work->len)
       g_array_set_size (self->work, lwork);
-    
+
     ret = ncm_lapack_dsysvx ('F', 'L', self->nknots, 2,
                              ncm_matrix_data (self->IM), ncm_matrix_tda (self->IM),
                              ncm_matrix_data (self->IM_fact), ncm_matrix_tda (self->IM_fact),
-                             (gint *)self->ipiv->data, 
+                             (gint *) self->ipiv->data,
                              ncm_matrix_data (self->psi), ncm_matrix_tda (self->psi),
                              ncm_matrix_data (self->C0), ncm_matrix_tda (self->C0),
                              &rcond, ncm_matrix_data (self->err_norm),
                              ncm_vector_data (self->berr),
-                             (gdouble *)self->work->data, lwork, (gint *)self->iwork->data);
+                             (gdouble *) self->work->data, lwork, (gint *) self->iwork->data);
 #endif /* HAVE_DSYSVXX_ */
 
     /*printf ("#    RCOND:  % 22.15g\n", rcond);*/
@@ -1489,12 +1616,13 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
       for (i = 0; i < self->nknots; i++)
       {
         const gdouble si_m1 = 1.0 / ncm_vector_get (self->scaling, i);
-        gint j;
+        guint j;
 
         for (j = i; j < self->nknots; j++)
         {
           const gdouble sj_m1    = 1.0 / ncm_vector_get (self->scaling, j);
           const gdouble sisjIMij = ncm_matrix_get (self->IM, j, i);
+
           ncm_matrix_set (self->IM, j, i, sisjIMij * si_m1 * sj_m1);
         }
       }
@@ -1540,6 +1668,7 @@ NcmVector *
 nc_hiqg_1d_peek_knots (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
+
   return self->knots;
 }
 
@@ -1557,11 +1686,12 @@ gdouble
 nc_hiqg_1d_eval_ev (NcHIQG1D *qg1d, const gint i, const gdouble x)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
+
   g_assert_cmpint (i, <, self->nknots);
   {
     NcmVector *vr_i = ncm_matrix_get_row (self->vr, i);
-    gdouble res = 0.0;
-    gint j;
+    gdouble res     = 0.0;
+    guint j;
 
     for (j = 0; j < self->nknots; j++)
     {
@@ -1590,10 +1720,11 @@ void
 nc_hiqg_1d_eval_psi0 (NcHIQG1D *qg1d, const gdouble x, gdouble *psi0)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
-  gint i;
+  guint i;
 
   psi0[0] = 0.0;
   psi0[1] = 0.0;
+
   for (i = 0; i < self->nknots; i++)
   {
     const gdouble xi     = ncm_vector_get (self->knots, i);
@@ -1610,14 +1741,16 @@ static void
 _nc_hiqg_1d_evol_C (NcHIQG1D *qg1d, const gdouble t)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
-  complex double *A0 = (complex double *) ncm_vector_data (self->A0);
-  gint i;
+  complex double *A0           = (complex double *) ncm_vector_data (self->A0);
+  guint i;
 
   ncm_matrix_set_zero (self->C);
+
   for (i = 0; i < self->nknots; i++)
   {
     const gdouble wr = ncm_vector_get (self->wr, i);
     complex double A = A0[i] * cexp (-I * wr * t);
+
     cblas_daxpy (self->nknots, creal (A), ncm_matrix_ptr (self->vr, i, 0), 1, ncm_vector_data (self->ReC), 1);
     cblas_daxpy (self->nknots, cimag (A), ncm_matrix_ptr (self->vr, i, 0), 1, ncm_vector_data (self->ImC), 1);
   }
@@ -1628,7 +1761,7 @@ _nc_hiqg_1d_prepare_splines (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
   gint ret;
-  gint i;
+  guint i;
 
   ret = gsl_blas_dsymv (CblasLower, 1.0, ncm_matrix_gsl (self->IM), ncm_vector_gsl (self->ReC), 0.0, ncm_vector_gsl (self->RePsi));
   NCM_TEST_GSL_RESULT ("_nc_hiqg_1d_prepare_splines", ret);
@@ -1691,12 +1824,13 @@ void
 nc_hiqg_1d_eval_psi (NcHIQG1D *qg1d, const gdouble x, gdouble *psi)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
-  gint i;
+  guint i;
 
   if (FALSE)
   {
     psi[0] = 0.0;
     psi[1] = 0.0;
+
     for (i = 0; i < self->nknots; i++)
     {
       const gdouble xi    = ncm_vector_get (self->knots, i);
@@ -1728,10 +1862,10 @@ gdouble
 nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble x)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
-  gdouble dS_rho_x3 = 0.0;
-  gdouble Re_psi_x  = 0.0;
-  gdouble Im_psi_x  = 0.0;
-  gint i, j;
+  gdouble dS_rho_x3            = 0.0;
+  gdouble Re_psi_x             = 0.0;
+  gdouble Im_psi_x             = 0.0;
+  guint i, j;
 
   for (i = 0; i < self->nknots; i++)
   {
@@ -1757,22 +1891,24 @@ nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble x)
       dS_rho_x3 += Sij * Cij;
     }
   }
+
   /*printf ("# BLA % 22.15g % 22.15g % 22.15g\n", x * x * x * dS_rho_x3, x * x * (Re_psi_x * Re_psi_x + Im_psi_x * Im_psi_x), x * dS_rho_x3 / (Re_psi_x * Re_psi_x + Im_psi_x * Im_psi_x));*/
 
   if (FALSE)
   {
     const gdouble dS_rho   = 2.0 * x * x * x * dS_rho_x3;
     const gdouble dS_rho_s = ncm_spline_eval (self->RePsi_s, x) * ncm_spline_eval_deriv (self->ImPsi_s, x) - ncm_spline_eval_deriv (self->RePsi_s, x) * ncm_spline_eval (self->ImPsi_s, x);
-    printf ("% 22.15g % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g\n", 
-            x, 
-            dS_rho, 
-            dS_rho_s, 
-            dS_rho_s / dS_rho, 
-            ncm_spline_eval (self->RePsi_s, x) * ncm_spline_eval_deriv (self->ImPsi_s, x), 
+
+    printf ("% 22.15g % 22.15g % 22.15g % 22.15g | % 22.15g % 22.15g\n",
+            x,
+            dS_rho,
+            dS_rho_s,
+            dS_rho_s / dS_rho,
+            ncm_spline_eval (self->RePsi_s, x) * ncm_spline_eval_deriv (self->ImPsi_s, x),
             ncm_spline_eval_deriv (self->RePsi_s, x) * ncm_spline_eval (self->ImPsi_s, x)
-            );
+           );
   }
-  
+
   return 2.0 * x * dS_rho_x3 / (Re_psi_x * Re_psi_x + Im_psi_x * Im_psi_x);
 }
 
@@ -1788,11 +1924,11 @@ gdouble
 nc_hiqg_1d_int_rho_0_inf (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
-  gdouble int_rho = 0.0;
+  gdouble int_rho              = 0.0;
 
   if (FALSE)
   {
-    gint i, j;
+    guint i, j;
 
     for (i = 0; i < self->nknots; i++)
     {
@@ -1819,7 +1955,9 @@ nc_hiqg_1d_int_rho_0_inf (NcHIQG1D *qg1d)
     }
   }
   else
+  {
     int_rho = ncm_spline_eval_integ (self->rho_s, 0.0, self->xf);
+  }
 
   return int_rho;
 }
@@ -1831,9 +1969,21 @@ _nc_hiqg_1d_xrho (gdouble x, NcHIQG1DPrivate * const self)
 }
 
 static gdouble
+_nc_hiqg_1d_x2rho (gdouble x, NcHIQG1DPrivate * const self)
+{
+  return x * x * ncm_spline_eval (self->rho_s, x);
+}
+
+static gdouble
 _nc_hiqg_1d_mean_p_int (gdouble x, NcHIQG1DPrivate * const self)
 {
   return ncm_spline_eval (self->RePsi_s, x) * ncm_spline_eval_deriv (self->ImPsi_s, x) - ncm_spline_eval_deriv (self->RePsi_s, x) * ncm_spline_eval (self->ImPsi_s, x);
+}
+
+static gdouble
+_nc_hiqg_1d_mean_d_int (gdouble x, NcHIQG1DPrivate * const self)
+{
+  return x * (ncm_spline_eval (self->RePsi_s, x) * ncm_spline_eval_deriv (self->ImPsi_s, x) - ncm_spline_eval_deriv (self->RePsi_s, x) * ncm_spline_eval (self->ImPsi_s, x));
 }
 
 /**
@@ -1848,46 +1998,48 @@ gdouble
 nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
-  gdouble int_xrho = 0.0;
+  gdouble int_xrho             = 0.0;
 
-  if (FALSE)
-  {
-    gint i, j;
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  gsl_function F;
+  gdouble abserr;
 
-    for (i = 0; i < self->nknots; i++)
-    {
-      const gdouble xi       = ncm_vector_get (self->knots, i);
-      const gdouble ReC_i    = ncm_vector_get (self->ReC, i);
-      const gdouble ImC_i    = ncm_vector_get (self->ImC, i);
-      const gdouble IKxixi_x = _nc_hiqg_1d_Ixf2 (xi, xi, self->h);
+  F.function = (gdouble (*)(gdouble, gpointer)) _nc_hiqg_1d_xrho;
+  F.params   = (gpointer) self;
 
-      int_xrho += (ReC_i * ReC_i + ImC_i * ImC_i) * IKxixi_x;
+  gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &int_xrho, &abserr);
 
-      for (j = i + 1; j < self->nknots; j++)
-      {
-        const gdouble xj       = ncm_vector_get (self->knots, j);
-        const gdouble ReC_j    = ncm_vector_get (self->ReC, j);
-        const gdouble ImC_j    = ncm_vector_get (self->ImC, j);
-        const gdouble IKxixi_x = _nc_hiqg_1d_Ixf2 (xi, xj, self->h);
-        const gdouble CRij     = 2.0 * (ReC_i * ReC_j + ImC_i * ImC_j);
-
-        int_xrho += IKxixi_x * CRij;
-      }
-    }
-  }
-  else
-  {
-    gsl_integration_workspace **w = ncm_integral_get_workspace ();
-    gsl_function F;
-    gdouble abserr;
-
-    F.function = (gdouble (*)(gdouble, gpointer))_nc_hiqg_1d_xrho;
-    F.params   = (gpointer) self;
-
-    gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &int_xrho, &abserr);
-  }
+  ncm_memory_pool_return (w);
 
   return int_xrho;
+}
+
+/**
+ * nc_hiqg_1d_int_x2rho_0_inf:
+ * @qg1d: a #NcHIQG1D
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_hiqg_1d_int_x2rho_0_inf (NcHIQG1D *qg1d)
+{
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  gdouble int_x2rho            = 0.0;
+
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  gsl_function F;
+  gdouble abserr;
+
+  F.function = (gdouble (*)(gdouble, gpointer)) _nc_hiqg_1d_x2rho;
+  F.params   = (gpointer) self;
+
+  gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &int_x2rho, &abserr);
+
+  ncm_memory_pool_return (w);
+
+  return int_x2rho;
 }
 
 /**
@@ -1902,18 +2054,48 @@ gdouble
 nc_hiqg_1d_expect_p (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
-  gdouble mean_p = 0.0;
+  gdouble mean_p               = 0.0;
 
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
   gsl_function F;
   gdouble abserr;
 
-  F.function = (gdouble (*)(gdouble, gpointer))_nc_hiqg_1d_mean_p_int;
+  F.function = (gdouble (*)(gdouble, gpointer)) _nc_hiqg_1d_mean_p_int;
   F.params   = (gpointer) self;
 
   gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &mean_p, &abserr);
 
+  ncm_memory_pool_return (w);
+
   return mean_p;
+}
+
+/**
+ * nc_hiqg_1d_expect_d:
+ * @qg1d: a #NcHIQG1D
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_hiqg_1d_expect_d (NcHIQG1D *qg1d)
+{
+  NcHIQG1DPrivate * const self = qg1d->priv;
+  gdouble mean_d               = 0.0;
+
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  gsl_function F;
+  gdouble abserr;
+
+  F.function = (gdouble (*)(gdouble, gpointer)) _nc_hiqg_1d_mean_d_int;
+  F.params   = (gpointer) self;
+
+  gsl_integration_qag (&F, 0.0, self->xf, self->abstol, self->reltol, NCM_INTEGRAL_PARTITION, 0, *w, &mean_d, &abserr);
+
+  ncm_memory_pool_return (w);
+
+  return mean_d;
 }
 
 /**
@@ -1945,6 +2127,7 @@ gdouble
 nc_hiqg_1d_Bohm (NcHIQG1D *qg1d, gint i)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
+
   return NV_Ith_S (self->yBohm, i);
 }
 
@@ -1961,6 +2144,8 @@ gdouble
 nc_hiqg_1d_Bohm_p (NcHIQG1D *qg1d, gint i)
 {
   NcHIQG1DPrivate * const self = qg1d->priv;
-  const gdouble a = NV_Ith_S (self->yBohm, i);
+  const gdouble a              = NV_Ith_S (self->yBohm, i);
+
   return nc_hiqg_1d_eval_dS (qg1d, a);
 }
+

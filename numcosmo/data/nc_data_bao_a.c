@@ -3,11 +3,11 @@
  *
  *  Thu Apr 22 15:31:32 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -53,7 +53,7 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcDataBaoA, nc_data_bao_a, NCM_TYPE_DATA_GAUSS_DIAG);
+G_DEFINE_TYPE (NcDataBaoA, nc_data_bao_a, NCM_TYPE_DATA_GAUSS_DIAG)
 
 static void
 nc_data_bao_a_init (NcDataBaoA *bao_a)
@@ -66,6 +66,7 @@ static void
 nc_data_bao_a_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataBaoA *bao_a = NC_DATA_BAO_A (object);
+
   g_return_if_fail (NC_IS_DATA_BAO_A (object));
 
   switch (prop_id)
@@ -86,6 +87,7 @@ static void
 nc_data_bao_a_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataBaoA *bao_a = NC_DATA_BAO_A (object);
+
   g_return_if_fail (NC_IS_DATA_BAO_A (object));
 
   switch (prop_id)
@@ -114,7 +116,6 @@ nc_data_bao_a_dispose (GObject *object)
   G_OBJECT_CLASS (nc_data_bao_a_parent_class)->dispose (object);
 }
 
-
 static void
 nc_data_bao_a_finalize (GObject *object)
 {
@@ -129,9 +130,9 @@ static void _nc_data_bao_a_set_size (NcmDataGaussDiag *diag, guint np);
 static void
 nc_data_bao_a_class_init (NcDataBaoAClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
-  NcmDataGaussDiagClass* diag_class = NCM_DATA_GAUSS_DIAG_CLASS (klass);
+  GObjectClass *object_class        = G_OBJECT_CLASS (klass);
+  NcmDataClass *data_class          = NCM_DATA_CLASS (klass);
+  NcmDataGaussDiagClass *diag_class = NCM_DATA_GAUSS_DIAG_CLASS (klass);
 
   object_class->set_property = &nc_data_bao_a_set_property;
   object_class->get_property = &nc_data_bao_a_get_property;
@@ -163,7 +164,7 @@ static void
 _nc_data_bao_a_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataBaoA *bao_a = NC_DATA_BAO_A (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo  = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
 
   nc_distance_prepare_if_needed (bao_a->dist, cosmo);
 }
@@ -172,13 +173,15 @@ static void
 _nc_data_bao_a_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataBaoA *bao_a = NC_DATA_BAO_A (diag);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo  = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  const guint np    = ncm_data_gauss_diag_get_size (diag);
   guint i;
 
-  for (i = 0; i < diag->np; i++)
+  for (i = 0; i < np; i++)
   {
     const gdouble z = ncm_vector_get (bao_a->x, i);
     const gdouble A = nc_distance_bao_A_scale (bao_a->dist, cosmo, z);
+
     ncm_vector_set (vp, i, A);
   }
 }
@@ -195,6 +198,7 @@ NcDataBaoA *
 nc_data_bao_a_new_from_file (const gchar *filename)
 {
   NcDataBaoA *bao_a = NC_DATA_BAO_A (ncm_serialize_global_from_file (filename));
+
   g_assert (NC_IS_DATA_BAO_A (bao_a));
 
   return bao_a;
@@ -205,7 +209,8 @@ nc_data_bao_a_new_from_file (const gchar *filename)
  * @dist: a #NcDistance
  * @id: a #NcDataBaoId
  *
- * FIXME
+ * Creates a new acustic scale data object #NcDataBaoA from @id.
+ * This object requires a #NcDistance object to be set.
  *
  * Returns: a #NcDataBaoA
  */
@@ -236,11 +241,12 @@ static void
 _nc_data_bao_a_set_size (NcmDataGaussDiag *diag, guint np)
 {
   NcDataBaoA *bao_a = NC_DATA_BAO_A (diag);
+  const guint cnp   = ncm_data_gauss_diag_get_size (diag);
 
-  if ((np == 0) || (np != diag->np))
+  if ((np == 0) || (np != cnp))
     ncm_vector_clear (&bao_a->x);
 
-  if ((np != 0) && (np != diag->np))
+  if ((np != 0) && (np != cnp))
     bao_a->x = ncm_vector_new (np);
 
   /* Chain up : end */
@@ -261,3 +267,4 @@ nc_data_bao_a_set_dist (NcDataBaoA *bao_a, NcDistance *dist)
   nc_distance_clear (&bao_a->dist);
   bao_a->dist = nc_distance_ref (dist);
 }
+

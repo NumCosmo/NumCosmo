@@ -1,25 +1,26 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_iset.c
  *
  *  Sun April 7 16:59:36 2021
  *  Copyright  2021  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_iset.c
- * Copyright (C) 2021 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2021 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -29,7 +30,8 @@
  * @title: NcmISet
  * @short_description: Index set object
  *
- * FIXME
+ * #NcmISet is an object that stores a set of indexes. It is used to store the indexes
+ * of the components of a vector or matrix that are being used in a calculation.
  *
  */
 
@@ -39,6 +41,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_iset.h"
+#include "math/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_permutation.h>
@@ -46,7 +49,7 @@
 #include <gsl/gsl_sort.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmISetPrivate
+typedef struct _NcmISetPrivate
 {
   guint n;
   GQueue *iq;
@@ -55,6 +58,11 @@ struct _NcmISetPrivate
   NcmVector *tmp;
   GArray *ptmp;
   GArray *atmp;
+} NcmISetPrivate;
+
+struct _NcmISet
+{
+  GObject parent_instance;
 };
 
 enum
@@ -63,14 +71,19 @@ enum
   PROP_N,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmISet, ncm_iset, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcmISet, ncm_iset, G_TYPE_OBJECT)
 
-static gint _ncm_iset_cmp (gconstpointer a, gconstpointer b, gpointer user_data) {return GPOINTER_TO_INT (a) - GPOINTER_TO_INT (b); }
+static gint
+_ncm_iset_cmp (gconstpointer a, gconstpointer b, gpointer user_data)
+{
+  return GPOINTER_TO_INT (a) - GPOINTER_TO_INT (b);
+}
 
 static void
 ncm_iset_init (NcmISet *iset)
 {
-  NcmISetPrivate *const self = iset->priv = ncm_iset_get_instance_private (iset);
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+
   self->n          = 0;
   self->iq         = g_queue_new ();
   self->consistent = TRUE;
@@ -86,6 +99,7 @@ static void
 _ncm_iset_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmISet *iset = NCM_ISET (object);
+
   g_return_if_fail (NCM_IS_ISET (object));
 
   switch (prop_id)
@@ -93,9 +107,9 @@ _ncm_iset_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_N:
       _ncm_iset_set_max_size (iset, g_value_get_uint (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -103,6 +117,7 @@ static void
 _ncm_iset_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmISet *iset = NCM_ISET (object);
+
   g_return_if_fail (NCM_IS_ISET (object));
 
   switch (prop_id)
@@ -110,9 +125,9 @@ _ncm_iset_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
     case PROP_N:
       g_value_set_uint (value, ncm_iset_get_max_size (iset));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -123,16 +138,15 @@ _ncm_iset_constructed (GObject *object)
   G_OBJECT_CLASS (ncm_iset_parent_class)->constructed (object);
   {
     /*NcmISet *iset = NCM_ISET (object);*/
-
   }
 }
 
 static void
 _ncm_iset_dispose (GObject *object)
 {
-  NcmISet *iset = NCM_ISET (object);
-  NcmISetPrivate * const self = iset->priv;
-  
+  NcmISet *iset               = NCM_ISET (object);
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+
   ncm_vector_clear (&self->tmp);
 
   /* Chain up : end */
@@ -142,8 +156,8 @@ _ncm_iset_dispose (GObject *object)
 static void
 _ncm_iset_finalize (GObject *object)
 {
-  NcmISet *iset = NCM_ISET (object);
-  NcmISetPrivate * const self = iset->priv;
+  NcmISet *iset               = NCM_ISET (object);
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
 
   g_array_unref (self->ptmp);
   g_array_unref (self->atmp);
@@ -156,7 +170,7 @@ _ncm_iset_finalize (GObject *object)
 static void
 ncm_iset_class_init (NcmISetClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = &_ncm_iset_set_property;
   object_class->get_property = &_ncm_iset_get_property;
@@ -176,7 +190,8 @@ ncm_iset_class_init (NcmISetClass *klass)
 static void
 _ncm_iset_set_max_size (NcmISet *iset, guint n)
 {
-  NcmISetPrivate * const self = iset->priv;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+
   self->n = n;
   ncm_vector_clear (&self->tmp);
 
@@ -188,9 +203,9 @@ _ncm_iset_set_max_size (NcmISet *iset, guint n)
 /**
  * ncm_iset_new:
  * @n: maximum index
- * 
+ *
  * Creates a new #NcmISet object.
- * 
+ *
  * Returns: a new #NcmISet.
  */
 NcmISet *
@@ -199,6 +214,7 @@ ncm_iset_new (guint n)
   NcmISet *iset = g_object_new (NCM_TYPE_ISET,
                                 "max-index", n,
                                 NULL);
+
   return iset;
 }
 
@@ -246,7 +262,8 @@ ncm_iset_clear (NcmISet **iset)
 guint
 ncm_iset_get_max_size (NcmISet *iset)
 {
-  NcmISetPrivate * const self = iset->priv;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+
   return self->n;
 }
 
@@ -263,13 +280,14 @@ ncm_iset_get_max_size (NcmISet *iset)
 void
 ncm_iset_add_range (NcmISet *iset, gint ii, gint fi)
 {
-  NcmISetPrivate *const self = iset->priv;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
   gint i;
 
   for (i = ii; i < fi; i++)
   {
     g_queue_push_tail (self->iq, GINT_TO_POINTER (i));
   }
+
   self->sorted = FALSE;
 }
 
@@ -284,7 +302,8 @@ ncm_iset_add_range (NcmISet *iset, gint ii, gint fi)
 void
 ncm_iset_add (NcmISet *iset, gint i)
 {
-  NcmISetPrivate *const self = iset->priv;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+
   if (self->consistent)
     g_assert (g_queue_find (self->iq, GINT_TO_POINTER (i)) == NULL);
 
@@ -303,7 +322,8 @@ ncm_iset_add (NcmISet *iset, gint i)
 void
 ncm_iset_del (NcmISet *iset, gint i)
 {
-  NcmISetPrivate *const self = iset->priv;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+
   if (self->consistent)
     g_assert (g_queue_remove (self->iq, GINT_TO_POINTER (i)));
   else
@@ -320,14 +340,15 @@ ncm_iset_del (NcmISet *iset, gint i)
 void
 ncm_iset_reset (NcmISet *iset)
 {
-  NcmISetPrivate *const self = iset->priv;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+
   g_queue_clear (self->iq);
   self->sorted = FALSE;
 }
 
 typedef struct _NcmISetData
 {
-  NcmISetPrivate *const self;
+  NcmISetPrivate * const self;
   NcmVector *v;
   gdouble max;
   gint max_i;
@@ -336,7 +357,8 @@ typedef struct _NcmISetData
 static void
 _ncm_iset_sort (NcmISet *iset)
 {
-  NcmISetPrivate *const self = iset->priv;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+
   if (!self->sorted)
   {
     g_queue_sort (self->iq, _ncm_iset_cmp, NULL);
@@ -355,7 +377,7 @@ _ncm_iset_sort (NcmISet *iset)
 void
 ncm_iset_copy (NcmISet *iset, NcmISet *target)
 {
-  NcmISetPrivate *const self = iset->priv;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
   GList *node;
 
   g_assert_cmpint (ncm_iset_get_max_size (iset), ==, ncm_iset_get_max_size (target));
@@ -368,6 +390,7 @@ ncm_iset_copy (NcmISet *iset, NcmISet *target)
   while (node != NULL)
   {
     const gint i = GPOINTER_TO_INT (node->data);
+
     ncm_iset_add (target, i);
     node = node->next;
   }
@@ -382,7 +405,8 @@ ncm_iset_copy (NcmISet *iset, NcmISet *target)
 guint
 ncm_iset_get_len (NcmISet *iset)
 {
-  NcmISetPrivate *const self = iset->priv;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+
   return g_queue_get_length (self->iq);
 }
 
@@ -398,19 +422,20 @@ ncm_iset_get_len (NcmISet *iset)
 gdouble
 ncm_iset_get_vector_max (NcmISet *iset, NcmVector *v, gint *max_i)
 {
-  NcmISetPrivate *const self = iset->priv;
-  gdouble max = GSL_NEGINF;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+  gdouble max                 = GSL_NEGINF;
   GList *node;
 
   _ncm_iset_sort (iset);
   g_assert_cmpint (ncm_vector_len (v), >=, self->n);
 
-  node = g_queue_peek_head_link (self->iq);
+  node     = g_queue_peek_head_link (self->iq);
   max_i[0] = -1;
 
   while (node != NULL)
   {
     gdouble v_i;
+
     if ((v_i = ncm_vector_get (v, GPOINTER_TO_INT (node->data))) > max)
     {
       max      = v_i;
@@ -439,8 +464,8 @@ ncm_iset_get_vector_max (NcmISet *iset, NcmVector *v, gint *max_i)
 NcmVector *
 ncm_iset_get_subvector (NcmISet *iset, NcmVector *v, NcmVector *v_dup)
 {
-  NcmISetPrivate *const self = iset->priv;
-  const guint nsub = g_queue_get_length (self->iq);
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+  const guint nsub            = g_queue_get_length (self->iq);
   NcmVector *sub;
   GList *node;
   gint i;
@@ -449,11 +474,13 @@ ncm_iset_get_subvector (NcmISet *iset, NcmVector *v, NcmVector *v_dup)
 
   if (v_dup != NULL)
   {
-    g_assert_cmpuint (self->n, ==, ncm_vector_len (v_dup));
+    g_assert_cmpuint (nsub, <=, ncm_vector_len (v_dup));
     sub = ncm_vector_get_subvector (v_dup, 0, nsub);
   }
   else
+  {
     sub = ncm_vector_new (nsub);
+  }
 
   _ncm_iset_sort (iset);
   node = g_queue_peek_head_link (self->iq);
@@ -464,6 +491,59 @@ ncm_iset_get_subvector (NcmISet *iset, NcmVector *v, NcmVector *v_dup)
     const gint j = GPOINTER_TO_INT (node->data);
 
     ncm_vector_set (sub, i, ncm_vector_get (v, j));
+
+    i++;
+    node = node->next;
+  }
+
+  return sub;
+}
+
+/**
+ * ncm_iset_get_subarray: (skip)
+ * @iset: a #NcmISet
+ * @a: a GArray
+ * @a_dup: a GArray
+ *
+ * Construct a continuous array using the values from @a
+ * and the indexes in @iset. If @a_dup is not null use
+ * this array to build the subarray, otherwise, allocates
+ * a new array.
+ *
+ * Returns: (transfer full): the subarray.
+ */
+GArray *
+ncm_iset_get_subarray (NcmISet *iset, GArray *a, GArray *a_dup)
+{
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+  const guint nsub            = g_queue_get_length (self->iq);
+  const guint esize           = g_array_get_element_size (a);
+  GArray *sub;
+  GList *node;
+  gint i;
+
+  g_assert_cmpuint (self->n, ==, a->len);
+
+  if (a_dup != NULL)
+  {
+    g_assert_cmpuint (nsub, <=, a_dup->len);
+    g_assert_cmpuint (esize, ==, g_array_get_element_size (a_dup));
+    sub = a_dup;
+  }
+  else
+  {
+    sub = g_array_new (FALSE, FALSE, esize);
+  }
+
+  _ncm_iset_sort (iset);
+  node = g_queue_peek_head_link (self->iq);
+  i    = 0;
+
+  while (node != NULL)
+  {
+    const gint j = GPOINTER_TO_INT (node->data);
+
+    memcpy (&sub->data[i * esize], &a->data[j * esize], esize);
 
     i++;
     node = node->next;
@@ -488,8 +568,8 @@ ncm_iset_get_subvector (NcmISet *iset, NcmVector *v, NcmVector *v_dup)
 NcmMatrix *
 ncm_iset_get_submatrix (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
 {
-  NcmISetPrivate *const self = iset->priv;
-  const guint nsub = g_queue_get_length (self->iq);
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+  const guint nsub            = g_queue_get_length (self->iq);
   NcmMatrix *sub;
   GList *node0, *node;
   gint i, j;
@@ -499,13 +579,15 @@ ncm_iset_get_submatrix (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
 
   if (M_dup != NULL)
   {
-    g_assert_cmpuint (self->n, ==, ncm_matrix_nrows (M_dup));
-    g_assert_cmpuint (self->n, ==, ncm_matrix_ncols (M_dup));
+    g_assert_cmpuint (nsub, <=, ncm_matrix_nrows (M_dup));
+    g_assert_cmpuint (nsub, <=, ncm_matrix_ncols (M_dup));
 
     sub = ncm_matrix_get_submatrix (M_dup, 0, 0, nsub, nsub);
   }
   else
+  {
     sub = ncm_matrix_new (nsub, nsub);
+  }
 
   _ncm_iset_sort (iset);
   node0 = node = g_queue_peek_head_link (self->iq);
@@ -517,6 +599,7 @@ ncm_iset_get_submatrix (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
     GList *nodei = node0;
 
     j = 0;
+
     while (nodei != NULL)
     {
       const gint l = GPOINTER_TO_INT (nodei->data);
@@ -540,7 +623,7 @@ ncm_iset_get_submatrix (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
  * @M: a #NcmMatrix
  * @M_dup: a #NcmMatrix
  *
- * Construct a continuous matrix retangular $S$ using the columns
+ * Construct a continuous matrix rectangular $S$ using the columns
  * from the rectangular matrix @M and the indexes in @iset. If
  * @M_dup is not null use this matrix to build the submatrix,
  * otherwise, allocates a new matrix.
@@ -550,10 +633,10 @@ ncm_iset_get_submatrix (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
 NcmMatrix *
 ncm_iset_get_submatrix_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
 {
-  NcmISetPrivate *const self = iset->priv;
-  const guint nsub  = g_queue_get_length (self->iq);
-  const guint nrows = ncm_matrix_nrows (M);
-  const guint ncols = ncm_matrix_ncols (M);
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+  const guint nsub            = g_queue_get_length (self->iq);
+  const guint nrows           = ncm_matrix_nrows (M);
+  const guint ncols           = ncm_matrix_ncols (M);
   NcmMatrix *sub;
   GList *node;
   gint i;
@@ -568,7 +651,9 @@ ncm_iset_get_submatrix_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
     sub = ncm_matrix_get_submatrix (M_dup, 0, 0, nrows, nsub);
   }
   else
+  {
     sub = ncm_matrix_new (nrows, nsub);
+  }
 
   _ncm_iset_sort (iset);
   node = g_queue_peek_head_link (self->iq);
@@ -576,11 +661,14 @@ ncm_iset_get_submatrix_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
 
   while (node != NULL)
   {
-    const gint k = GPOINTER_TO_INT (node->data);
+    const gint k     = GPOINTER_TO_INT (node->data);
     NcmVector *col_k = ncm_matrix_get_col (M, k);
     NcmVector *col_i = ncm_matrix_get_col (sub, i);
 
     ncm_vector_memcpy (col_i, col_k);
+
+    ncm_vector_free (col_i);
+    ncm_vector_free (col_k);
 
     i++;
     node = node->next;
@@ -589,6 +677,68 @@ ncm_iset_get_submatrix_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
   return sub;
 }
 
+/**
+ * ncm_iset_get_submatrix_colmajor_cols:
+ * @iset: a #NcmISet
+ * @M: a #NcmMatrix
+ * @M_dup: a #NcmMatrix
+ *
+ * Construct a continuous matrix rectangular $S$ using the columns
+ * from the rectangular matrix @M and the indexes in @iset. If
+ * @M_dup is not null use this matrix to build the submatrix,
+ * otherwise, allocates a new matrix. It writes the columns in $S$
+ * using a colmajor memory scheme. This is useful when using
+ * the output matrix into Lapack routines.
+ *
+ * Returns: (transfer full): the matrix $S$.
+ */
+NcmMatrix *
+ncm_iset_get_submatrix_colmajor_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
+{
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+  const guint nsub            = g_queue_get_length (self->iq);
+  const guint nrows           = ncm_matrix_nrows (M);
+  const guint ncols           = ncm_matrix_ncols (M);
+  NcmMatrix *sub;
+  GList *node;
+  gint i;
+
+  g_assert_cmpuint (self->n, ==, ncols);
+
+  if (M_dup != NULL)
+  {
+    g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (M_dup));
+    g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (M_dup));
+
+    sub = ncm_matrix_get_submatrix (M_dup, 0, 0, nrows, nsub);
+  }
+  else
+  {
+    sub = ncm_matrix_new (nrows, nsub);
+  }
+
+  _ncm_iset_sort (iset);
+  node = g_queue_peek_head_link (self->iq);
+  i    = 0;
+
+  while (node != NULL)
+  {
+    const gint k = GPOINTER_TO_INT (node->data);
+    guint j;
+
+    for (j = 0; j < nrows; j++)
+    {
+      const gdouble M_jk = ncm_matrix_get (M, j, k);
+
+      ncm_matrix_set_colmajor (sub, j, i, M_jk);
+    }
+
+    i++;
+    node = node->next;
+  }
+
+  return sub;
+}
 
 /**
  * ncm_iset_get_sym_submatrix:
@@ -608,8 +758,8 @@ ncm_iset_get_submatrix_cols (NcmISet *iset, NcmMatrix *M, NcmMatrix *M_dup)
 NcmMatrix *
 ncm_iset_get_sym_submatrix (NcmISet *iset, gchar UL, NcmMatrix *M, NcmMatrix *M_dup)
 {
-  NcmISetPrivate *const self = iset->priv;
-  const guint nsub = g_queue_get_length (self->iq);
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+  const guint nsub            = g_queue_get_length (self->iq);
   NcmMatrix *sub;
   GList *node;
   gint i, j;
@@ -625,7 +775,9 @@ ncm_iset_get_sym_submatrix (NcmISet *iset, gchar UL, NcmMatrix *M, NcmMatrix *M_
     sub = ncm_matrix_get_submatrix (M_dup, 0, 0, nsub, nsub);
   }
   else
+  {
     sub = ncm_matrix_new (nsub, nsub);
+  }
 
   _ncm_iset_sort (iset);
   node = g_queue_peek_head_link (self->iq);
@@ -634,12 +786,14 @@ ncm_iset_get_sym_submatrix (NcmISet *iset, gchar UL, NcmMatrix *M, NcmMatrix *M_
   switch (UL)
   {
     case 'U':
+
       while (node != NULL)
       {
         const gint k = GPOINTER_TO_INT (node->data);
         GList *nodei = node;
 
         j = i;
+
         while (nodei != NULL)
         {
           const gint l = GPOINTER_TO_INT (nodei->data);
@@ -653,14 +807,17 @@ ncm_iset_get_sym_submatrix (NcmISet *iset, gchar UL, NcmMatrix *M, NcmMatrix *M_
         i++;
         node = node->next;
       }
+
       break;
     case 'L':
+
       while (node != NULL)
       {
         const gint k = GPOINTER_TO_INT (node->data);
         GList *nodei = node;
 
         j = i;
+
         while (nodei != NULL)
         {
           const gint l = GPOINTER_TO_INT (nodei->data);
@@ -674,6 +831,7 @@ ncm_iset_get_sym_submatrix (NcmISet *iset, gchar UL, NcmMatrix *M, NcmMatrix *M_
         i++;
         node = node->next;
       }
+
       break;
     default:
       g_assert_not_reached ();
@@ -696,7 +854,7 @@ ncm_iset_get_sym_submatrix (NcmISet *iset, gchar UL, NcmMatrix *M, NcmMatrix *M_
 void
 ncm_iset_get_subset_vec_lt (NcmISet *iset, NcmISet *out, NcmVector *v, const gdouble tol)
 {
-  NcmISetPrivate *const self = iset->priv;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
   GList *node;
 
   ncm_iset_reset (out);
@@ -729,7 +887,7 @@ ncm_iset_get_subset_vec_lt (NcmISet *iset, NcmISet *out, NcmVector *v, const gdo
 void
 ncm_iset_remove_subset (NcmISet *iset, NcmISet *target)
 {
-  NcmISetPrivate *const self = iset->priv;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
   GList *node;
 
   _ncm_iset_sort (iset);
@@ -741,6 +899,7 @@ ncm_iset_remove_subset (NcmISet *iset, NcmISet *target)
   while (node != NULL)
   {
     const gint i = GPOINTER_TO_INT (node->data);
+
     ncm_iset_del (target, i);
     node = node->next;
   }
@@ -762,8 +921,8 @@ ncm_iset_remove_subset (NcmISet *iset, NcmISet *target)
 guint
 ncm_iset_remove_smallest_subset (NcmISet *iset, NcmISet *target, NcmVector *v, guint max_remove)
 {
-  NcmISetPrivate *const self = iset->priv;
-  const gint rsize = ncm_iset_get_len (iset);
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+  const guint rsize           = ncm_iset_get_len (iset);
   GList *node;
 
   g_assert_cmpuint (max_remove, >, 0);
@@ -772,12 +931,13 @@ ncm_iset_remove_smallest_subset (NcmISet *iset, NcmISet *target, NcmVector *v, g
   if (max_remove >= rsize)
   {
     ncm_iset_remove_subset (iset, target);
+
     return rsize;
   }
   else
   {
     NcmVector *invalid_v = ncm_vector_get_subvector (self->tmp, 0, rsize);
-    gint j;
+    guint j;
 
     g_assert_cmpint (ncm_iset_get_max_size (iset), ==, ncm_iset_get_max_size (target));
 
@@ -835,14 +995,14 @@ ncm_iset_remove_smallest_subset (NcmISet *iset, NcmISet *target, NcmVector *v, g
 guint
 ncm_iset_add_largest_subset (NcmISet *iset, NcmVector *v, const gdouble min, const gdouble add_frac)
 {
-  NcmISetPrivate *const self = iset->priv;
-  const gint max_size = ncm_iset_get_max_size (iset);
-  const gint rsize    = ncm_iset_get_len (iset);
-  const gint csize    = max_size - rsize;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+  const guint max_size        = ncm_iset_get_max_size (iset);
+  const guint rsize           = ncm_iset_get_len (iset);
+  const guint csize           = max_size - rsize;
   NcmVector *v_cmplm;
   GList *node;
   guint adds;
-  gint j, k;
+  guint j, k;
 
   if (csize == 0)
     return 0;
@@ -865,10 +1025,12 @@ ncm_iset_add_largest_subset (NcmISet *iset, NcmVector *v, const gdouble min, con
 
   while (node != NULL)
   {
-    const gint i = GPOINTER_TO_INT (node->data);
-    for (; j < i; j++)
+    const guint i = GPOINTER_TO_UINT (node->data);
+
+    for ( ; j < i; j++)
     {
       const gdouble v_j = ncm_vector_get (v, j);
+
       if (v_j > min)
       {
         /*ncm_message ("Adding to cmplm %d % .2e\n", j, v_j);*/
@@ -877,13 +1039,15 @@ ncm_iset_add_largest_subset (NcmISet *iset, NcmVector *v, const gdouble min, con
         k++;
       }
     }
-    j = i + 1;
+
+    j    = i + 1;
     node = node->next;
   }
 
-  for (; j < max_size; j++)
+  for ( ; j < max_size; j++)
   {
     const gdouble v_j = ncm_vector_get (v, j);
+
     if (v_j > min)
     {
       /*ncm_message ("Adding to cmplm %d % .2e\n", j, v_j);*/
@@ -915,8 +1079,6 @@ ncm_iset_add_largest_subset (NcmISet *iset, NcmVector *v, const gdouble min, con
   return adds;
 }
 
-
-
 /**
  * ncm_iset_set_complement:
  * @iset: a #NcmISet
@@ -928,13 +1090,14 @@ ncm_iset_add_largest_subset (NcmISet *iset, NcmVector *v, const gdouble min, con
 void
 ncm_iset_set_complement (NcmISet *iset, NcmISet *cmplm)
 {
-  NcmISetPrivate *const self = iset->priv;
-  const guint n = ncm_iset_get_max_size (iset);
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+  const guint n               = ncm_iset_get_max_size (iset);
   GList *node;
 
   g_assert_cmpint (n, ==, ncm_iset_get_max_size (cmplm));
 
   ncm_iset_reset (cmplm);
+
   if (ncm_iset_get_len (iset) == n)
     return;
 
@@ -946,6 +1109,7 @@ ncm_iset_set_complement (NcmISet *iset, NcmISet *cmplm)
   while (node != NULL)
   {
     const gint i = GPOINTER_TO_INT (node->data);
+
     ncm_iset_del (cmplm, i);
     node = node->next;
   }
@@ -967,8 +1131,8 @@ ncm_iset_set_complement (NcmISet *iset, NcmISet *cmplm)
 NcmVector *
 ncm_iset_get_vector_inv_cmp (NcmISet *iset, NcmVector *u, NcmVector *v, NcmVector *v_dup)
 {
-  NcmISetPrivate *const self = iset->priv;
-  const guint nsub = g_queue_get_length (self->iq);
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
+  const guint nsub            = g_queue_get_length (self->iq);
   NcmVector *cmp;
   GList *node;
   gint i;
@@ -982,7 +1146,9 @@ ncm_iset_get_vector_inv_cmp (NcmISet *iset, NcmVector *u, NcmVector *v, NcmVecto
     cmp = ncm_vector_get_subvector (v_dup, 0, nsub);
   }
   else
+  {
     cmp = ncm_vector_new (nsub);
+  }
 
   _ncm_iset_sort (iset);
   node = g_queue_peek_head_link (self->iq);
@@ -990,7 +1156,7 @@ ncm_iset_get_vector_inv_cmp (NcmISet *iset, NcmVector *u, NcmVector *v, NcmVecto
 
   while (node != NULL)
   {
-    const gint j = GPOINTER_TO_INT (node->data);
+    const gint j      = GPOINTER_TO_INT (node->data);
     const gdouble u_i = ncm_vector_get (u, j);
     const gdouble v_i = ncm_vector_get (v, j);
 
@@ -1015,7 +1181,7 @@ ncm_iset_get_vector_inv_cmp (NcmISet *iset, NcmVector *u, NcmVector *v, NcmVecto
 void
 ncm_iset_set_subvector (NcmISet *iset, NcmVector *v, NcmVector *sub)
 {
-  NcmISetPrivate *const self = iset->priv;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
   GList *node;
   gint j;
 
@@ -1026,6 +1192,7 @@ ncm_iset_set_subvector (NcmISet *iset, NcmVector *v, NcmVector *sub)
   node = g_queue_peek_head_link (self->iq);
 
   j = 0;
+
   while (node != NULL)
   {
     const gint i = GPOINTER_TO_INT (node->data);
@@ -1048,7 +1215,7 @@ ncm_iset_set_subvector (NcmISet *iset, NcmVector *v, NcmVector *sub)
 void
 ncm_iset_log_vals (NcmISet *iset, const gchar *prefix)
 {
-  NcmISetPrivate *const self = iset->priv;
+  NcmISetPrivate * const self = ncm_iset_get_instance_private (iset);
   GList *node;
 
   _ncm_iset_sort (iset);
@@ -1060,8 +1227,11 @@ ncm_iset_log_vals (NcmISet *iset, const gchar *prefix)
   while (node != NULL)
   {
     const gint i = GPOINTER_TO_INT (node->data);
+
     ncm_message (" %d", i);
     node = node->next;
   }
+
   ncm_message ("\n");
 }
+

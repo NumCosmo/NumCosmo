@@ -3,11 +3,11 @@
  *
  *  Sat October 24 11:57:37 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hipert_boltzmann_cbe.h
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -56,7 +56,7 @@ struct _NcHIPertBoltzmannCBE
   /*< private >*/
   NcHIPertBoltzmann parent_instance;
   NcCBE *cbe;
-	NcmVector *PHIPHI_Cls;
+  NcmVector *PHIPHI_Cls;
   NcmVector *TT_Cls;
   NcmVector *EE_Cls;
   NcmVector *BB_Cls;
@@ -73,6 +73,9 @@ NcHIPertBoltzmannCBE *nc_hipert_boltzmann_cbe_ref (NcHIPertBoltzmannCBE *boltzma
 void nc_hipert_boltzmann_cbe_free (NcHIPertBoltzmannCBE *boltzmann_cbe);
 void nc_hipert_boltzmann_cbe_clear (NcHIPertBoltzmannCBE **boltzmann_cbe);
 
+NcCBE *nc_hipert_boltzmann_cbe_peek_cbe (NcHIPertBoltzmannCBE *boltzmann_cbe);
+
 G_END_DECLS
 
 #endif /* _NC_HIPERT_BOLTZMANN_CBE_H_ */
+

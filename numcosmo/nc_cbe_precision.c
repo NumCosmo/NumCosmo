@@ -3,11 +3,11 @@
  *
  *  Sun October 25 20:44:43 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_cbe_precision.c
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -216,7 +216,7 @@ enum
   PROP_SIZE
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcCBEPrecision, nc_cbe_precision, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcCBEPrecision, nc_cbe_precision, G_TYPE_OBJECT)
 
 static void
 nc_cbe_precision_init (NcCBEPrecision *cbe_prec)
@@ -228,9 +228,9 @@ static void
 nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcCBEPrecision *cbe_prec = NC_CBE_PRECISION (object);
-  
+
   g_return_if_fail (NC_IS_CBE_PRECISION (object));
-  
+
   switch (prop_id)
   {
     case PROP_A_INI_A_0:
@@ -273,22 +273,22 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
     {
       gchar *sBBN_file    = g_value_dup_string (value);
       guint sBBN_file_len = strlen (sBBN_file);
-      
+
       g_assert_cmpuint (sBBN_file_len, <=, _FILENAMESIZE_);
-      
+
       if (!g_file_test (sBBN_file, G_FILE_TEST_EXISTS))
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", sBBN_file);
         g_free (sBBN_file);
-        
+
         sBBN_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "bbn"G_DIR_SEPARATOR_S "sBBN.dat", TRUE);
         sBBN_file_len = strlen (sBBN_file);
         g_assert_cmpuint (sBBN_file_len, <=, _FILENAMESIZE_);
       }
-      
+
       memcpy (cbe_prec->priv->ppr.sBBN_file, sBBN_file, sBBN_file_len + 1);
       g_free (sBBN_file);
-      
+
       break;
     }
     case PROP_RECFAST_Z_INI:
@@ -376,67 +376,67 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
     {
       gchar *Alpha_inf_file    = g_value_dup_string (value);
       guint Alpha_inf_file_len = strlen (Alpha_inf_file);
-      
+
       g_assert_cmpuint (Alpha_inf_file_len, <=, _FILENAMESIZE_);
-      
+
       if (!g_file_test (Alpha_inf_file, G_FILE_TEST_EXISTS))
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", Alpha_inf_file);
         g_free (Alpha_inf_file);
-        
+
         Alpha_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "hyrec"G_DIR_SEPARATOR_S "Alpha_inf.dat", TRUE);
         Alpha_inf_file_len = strlen (Alpha_inf_file);
         g_assert_cmpuint (Alpha_inf_file_len, <=, _FILENAMESIZE_);
       }
-      
+
       memcpy (cbe_prec->priv->ppr.hyrec_Alpha_inf_file, Alpha_inf_file, Alpha_inf_file_len + 1);
       g_free (Alpha_inf_file);
-      
+
       break;
     }
     case PROP_HYREC_R_INF_FILE:
     {
       gchar *R_inf_file    = g_value_dup_string (value);
       guint R_inf_file_len = strlen (R_inf_file);
-      
+
       g_assert_cmpuint (R_inf_file_len, <=, _FILENAMESIZE_);
-      
+
       if (!g_file_test (R_inf_file, G_FILE_TEST_EXISTS))
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", R_inf_file);
         g_free (R_inf_file);
-        
+
         R_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "hyrec"G_DIR_SEPARATOR_S "R_inf.dat", TRUE);
         R_inf_file_len = strlen (R_inf_file);
-        
+
         g_assert_cmpuint (R_inf_file_len, <=, _FILENAMESIZE_);
       }
-      
+
       memcpy (cbe_prec->priv->ppr.hyrec_R_inf_file, R_inf_file, R_inf_file_len + 1);
       g_free (R_inf_file);
-      
+
       break;
     }
     case PROP_HYREC_TWO_PHOTON_TABLES_FILE:
     {
       gchar *two_photon_tables_file    = g_value_dup_string (value);
       guint two_photon_tables_file_len = strlen (two_photon_tables_file);
-      
+
       g_assert_cmpuint (two_photon_tables_file_len, <=, _FILENAMESIZE_);
-      
+
       if (!g_file_test (two_photon_tables_file, G_FILE_TEST_EXISTS))
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", two_photon_tables_file);
         g_free (two_photon_tables_file);
-        
+
         two_photon_tables_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "hyrec"G_DIR_SEPARATOR_S "two_photon_tables.dat", TRUE);
         two_photon_tables_file_len = strlen (two_photon_tables_file);
-        
+
         g_assert_cmpuint (two_photon_tables_file_len, <=, _FILENAMESIZE_);
       }
-      
+
       memcpy (cbe_prec->priv->ppr.hyrec_two_photon_tables_file, two_photon_tables_file, two_photon_tables_file_len + 1);
-      
+
       g_free (two_photon_tables_file);
       break;
     }
@@ -774,9 +774,9 @@ static void
 nc_cbe_precision_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcCBEPrecision *cbe_prec = NC_CBE_PRECISION (object);
-  
+
   g_return_if_fail (NC_IS_CBE_PRECISION (object));
-  
+
   switch (prop_id)
   {
     case PROP_A_INI_A_0:
@@ -1249,11 +1249,11 @@ static void
 nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->set_property = &nc_cbe_precision_set_property;
   object_class->get_property = &nc_cbe_precision_get_property;
   object_class->finalize     = &nc_cbe_precision_finalize;
-  
+
   /*
    * Background related parameters.
    */
@@ -1341,13 +1341,13 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         "parameter controlling precision with which tau_eq (conformal time at radiation/matter equality) is found (units: Mpc)",
                                                         0.0, G_MAXDOUBLE, 1.0e-6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /*
    * Thermodynamics related parameters
    */
   {
     gchar *sBBN_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "bbn" G_DIR_SEPARATOR_S "sBBN_2017.dat", TRUE);
-    
+
     g_object_class_install_property (object_class,
                                      PROP_SBBN_FILE,
                                      g_param_spec_string ("sBBN-file",
@@ -1548,7 +1548,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   {
     gchar *hyrec_Alpha_inf_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "Alpha_inf.dat", TRUE);
-    
+
     g_object_class_install_property (object_class,
                                      PROP_HYREC_ALPHA_INF_FILE,
                                      g_param_spec_string ("hyrec-Alpha-inf-file",
@@ -1560,7 +1560,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
   }
   {
     gchar *hyrec_R_inf_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "R_inf.dat", TRUE);
-    
+
     g_object_class_install_property (object_class,
                                      PROP_HYREC_R_INF_FILE,
                                      g_param_spec_string ("hyrec-R-inf-file",
@@ -1572,7 +1572,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
   }
   {
     gchar *hyrec_two_photon_tables_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "two_photon_tables.dat", TRUE);
-    
+
     g_object_class_install_property (object_class,
                                      PROP_HYREC_TWO_PHOTON_TABLES_FILE,
                                      g_param_spec_string ("hyrec-two-photon-tables-file",
@@ -1619,7 +1619,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                      "plays a minor (almost aesthetic) role in the definition of the variation rate of thermodynamical quantities",
                                                      0, G_MAXINT, 50,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /*
    * Perturbations parameters
    */
@@ -1896,7 +1896,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         "neglect CMB sources below visibility",
                                                         0.0, G_MAXDOUBLE, 1.0e-3,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /*
    * Primordial spectra parameters
    */
@@ -2019,7 +2019,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         "primordial inflation extra efolds",
                                                         0.0, G_MAXDOUBLE, 2.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /*
    * Transfer functions parameters
    */
@@ -2268,7 +2268,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         "controls how smooth are the edge of top-hat window function (<<1 for very sharp, 0.1 for sharp)",
                                                         0.0, G_MAXDOUBLE, 0.1,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /*
    * Nonlinear module parameters
    */
@@ -2321,7 +2321,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         "tolerance for finding the equivalent models of the pk_equal method",
                                                         0.0, G_MAXDOUBLE, 1.0e-7,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /*
    * parameter related to lensing
    */
@@ -2346,11 +2346,11 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                      "difference between l_max in unlensed and lensed spectra",
                                                      0.0, G_MAXINT, 500,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /*
    * general precision parameters
    */
-  
+
   g_object_class_install_property (object_class,
                                    PROP_SMALLEST_ALLOWED_VARIATION,
                                    g_param_spec_double ("smallest-allowed-variation",
@@ -2379,7 +2379,7 @@ nc_cbe_precision_new (void)
 {
   NcCBEPrecision *cbe_prec = g_object_new (NC_TYPE_CBE_PRECISION,
                                            NULL);
-  
+
   return cbe_prec;
 }
 
@@ -2434,27 +2434,27 @@ void
 nc_cbe_precision_assert_default (NcCBEPrecision *cbe_prec)
 {
   struct precision ppr;
-  
+
   input_default_precision (&ppr);
-  
+
 #define _CMP_DBL(name) g_assert_cmpfloat (ppr.name, ==, cbe_prec->priv->ppr.name)
-#define _CMP_STR(name)                                        \
-  G_STMT_START                                                  \
-  {                                                             \
-    gchar *s1 = g_path_get_basename (ppr.name);                 \
-    gchar *s2 = g_path_get_basename (cbe_prec->priv->ppr.name); \
-    g_assert_cmpstr (s1, ==, s2);                               \
-    /*printf ("`%s'\n", ppr.name);*/                            \
-    g_free (s1);                                                \
-    g_free (s2);                                                \
-  }                                                             \
-  G_STMT_END
-  
+#define _CMP_STR(name)                                                \
+        G_STMT_START                                                  \
+        {                                                             \
+          gchar *s1 = g_path_get_basename (ppr.name);                 \
+          gchar *s2 = g_path_get_basename (cbe_prec->priv->ppr.name); \
+          g_assert_cmpstr (s1, ==, s2);                               \
+          /*printf ("`%s'\n", ppr.name);*/                            \
+          g_free (s1);                                                \
+          g_free (s2);                                                \
+        }                                                             \
+        G_STMT_END
+
   _CMP_STR (sBBN_file);
   _CMP_STR (hyrec_Alpha_inf_file);
   _CMP_STR (hyrec_R_inf_file);
   _CMP_STR (hyrec_two_photon_tables_file);
-  
+
   _CMP_DBL (a_ini_over_a_today_default);
   _CMP_DBL (back_integration_stepsize);
   _CMP_DBL (tol_background_integration);

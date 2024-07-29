@@ -34,29 +34,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_SPLINE_FUNC_TEST             (ncm_spline_func_test_get_type ())
-#define NCM_SPLINE_FUNC_TEST(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_SPLINE_FUNC_TEST, NcmSplineFuncTest))
-#define NCM_SPLINE_FUNC_TEST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_SPLINE_FUNC_TEST, NcmSplineFuncTestClass))
-#define NCM_IS_SPLINE_FUNC_TEST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_SPLINE_FUNC_TEST))
-#define NCM_IS_SPLINE_FUNC_TEST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_SPLINE_FUNC_TEST))
-#define NCM_SPLINE_FUNC_TEST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_SPLINE_FUNC_TEST, NcmSplineFuncTestClass))
+#define NCM_TYPE_SPLINE_FUNC_TEST (ncm_spline_func_test_get_type ())
 
-typedef struct _NcmSplineFuncTestClass NcmSplineFuncTestClass;
-typedef struct _NcmSplineFuncTest NcmSplineFuncTest;
-typedef struct _NcmSplineFuncTestPrivate NcmSplineFuncTestPrivate;
-
-struct _NcmSplineFuncTestClass
-{
-  /*< private > */
-  GObjectClass parent_class;
-};
-
-struct _NcmSplineFuncTest
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmSplineFuncTestPrivate *priv;
-};
+G_DECLARE_FINAL_TYPE (NcmSplineFuncTest, ncm_spline_func_test, NCM, SPLINE_FUNC_TEST, GObject)
 
 /**
  * NcmSplineFuncTestType:
@@ -89,8 +69,6 @@ typedef enum _NcmSplineFuncTestTypePDF
   NCM_SPLINE_FUNC_TEST_TYPE_PDF_FLAT,
   NCM_SPLINE_FUNC_TEST_TYPE_PDF_NORMAL,
 } NcmSplineFuncTestTypePDF;
-
-GType ncm_spline_func_test_get_type (void) G_GNUC_CONST;
 
 NcmSplineFuncTest *ncm_spline_func_test_new (void);
 NcmSplineFuncTest *ncm_spline_func_test_ref (NcmSplineFuncTest *sft);

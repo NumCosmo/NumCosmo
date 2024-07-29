@@ -3,11 +3,11 @@
  *
  *  Wed Mar 10 17:15:46 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -28,45 +28,16 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/grid_one.h>
 #include <numcosmo/math/ncm_spline.h>
 
 G_BEGIN_DECLS
 
-typedef struct _NcmSFSBesselRecur NcmSFSBesselRecur;
-
-/**
- * NcmSFSBesselRecur:
- *
- * FIXME
- */
-struct _NcmSFSBesselRecur
-{
-  /*< private >*/
-  gint32 l;
-  NcmGrid *x_grid;
-  gdouble *jl;
-  gdouble *jlp1;
-  gboolean prepared;
-};
-
-NcmSFSBesselRecur *ncm_sf_sbessel_recur_new (NcmGrid *x_grid);
-NcmSFSBesselRecur *ncm_sf_sbessel_recur_read (FILE *f);
-
-void ncm_sf_sbessel_recur_free (NcmSFSBesselRecur *jlrec, gboolean free_grid);
-void ncm_sf_sbessel_recur_set (NcmSFSBesselRecur *jlrec, glong l);
-void ncm_sf_sbessel_recur_next (NcmSFSBesselRecur *jlrec);
-void ncm_sf_sbessel_recur_previous (NcmSFSBesselRecur *jlrec);
-void ncm_sf_sbessel_recur_goto (NcmSFSBesselRecur *jlrec, glong l);
-void ncm_sf_sbessel_taylor_coeff_jl_jlp1 (NcmSFSBesselRecur *jlrec, guint n, gdouble *djl, gdouble *djlp1);
-void ncm_sf_sbessel_recur_write (NcmSFSBesselRecur *jlrec, FILE *f);
-
 gdouble ncm_sf_sbessel (gulong l, gdouble x);
-void ncm_sf_sbessel_taylor (gulong l, gdouble x, gdouble *djl);
-void ncm_sf_sbessel_deriv (gulong l, gdouble x, gdouble jl, gdouble jlp1, gdouble *djl);
 
+void ncm_sf_sbessel_taylor (gulong l, gdouble x, gdouble *djl);
 NcmSpline *ncm_sf_sbessel_spline (gulong l, gdouble xi, gdouble xf, gdouble reltol);
 
 G_END_DECLS
 
 #endif /* _NCM_SF_SBESSEL_H */
+

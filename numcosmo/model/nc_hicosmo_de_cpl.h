@@ -3,11 +3,11 @@
  *
  *  Mon Aug 11 19:56:54 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -47,18 +47,18 @@ typedef struct _NcHICosmoDECpl NcHICosmoDECpl;
  * @NC_HICOSMO_DE_CPL_W1: constant parameter which multiplies the redshift term
  *
  * Dark Energy equation of state: $w(z) = w_0 + w_1 \frac{z}{1.0 + z}$
- * 
+ *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_CPL_SPARAMS >*/
 {
   NC_HICOSMO_DE_CPL_W0 = NC_HICOSMO_DE_SPARAM_LEN,
-  NC_HICOSMO_DE_CPL_W1,         
+  NC_HICOSMO_DE_CPL_W1,
   /* < private > */
   NC_HICOSMO_DE_CPL_SPARAM_LEN, /*< skip >*/
 } NcHICosmoDECplSParams;
 
 #define NC_HICOSMO_DE_CPL_DEFAULT_W0 (-1.0)
-#define NC_HICOSMO_DE_CPL_DEFAULT_W1 ( 0.0)
+#define NC_HICOSMO_DE_CPL_DEFAULT_W1 (0.0)
 
 #define NC_HICOSMO_DE_CPL_N (NC_HICOSMO_DE_CPL_W1 + 1 - NC_HICOSMO_DE_BASE_N)
 
@@ -81,3 +81,4 @@ NcHICosmoDECpl *nc_hicosmo_de_cpl_new (void);
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_DE_CPL_H_ */
+

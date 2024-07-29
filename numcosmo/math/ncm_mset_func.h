@@ -3,11 +3,11 @@
  *
  *  Wed June 06 15:32:36 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -34,15 +34,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MSET_FUNC             (ncm_mset_func_get_type ())
-#define NCM_MSET_FUNC(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MSET_FUNC, NcmMSetFunc))
-#define NCM_MSET_FUNC_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MSET_FUNC, NcmMSetFuncClass))
-#define NCM_IS_MSET_FUNC(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MSET_FUNC))
-#define NCM_IS_MSET_FUNC_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MSET_FUNC))
-#define NCM_MSET_FUNC_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MSET_FUNC, NcmMSetFuncClass))
+#define NCM_TYPE_MSET_FUNC (ncm_mset_func_get_type ())
 
-typedef struct _NcmMSetFuncClass NcmMSetFuncClass;
-typedef struct _NcmMSetFunc NcmMSetFunc;
+G_DECLARE_DERIVABLE_TYPE (NcmMSetFunc, ncm_mset_func, NCM, MSET_FUNC, GObject)
 
 typedef void (*NcmMSetFuncN) (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res);
 
@@ -51,25 +45,10 @@ struct _NcmMSetFuncClass
   /*< private >*/
   GObjectClass parent_class;
   NcmMSetFuncN eval;
-};
 
-struct _NcmMSetFunc
-{
-  /*< private >*/
-  GObject parent_instance;
-  guint nvar;
-  guint dim;
-  NcmVector *eval_x;
-  gchar *name;
-  gchar *symbol;
-  gchar *ns;
-  gchar *desc;
-  gchar *uname;
-  gchar *usymbol;
-  NcmDiff *diff;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[17];
 };
-
-GType ncm_mset_func_get_type (void) G_GNUC_CONST;
 
 NcmMSetFunc *ncm_mset_func_ref (NcmMSetFunc *func);
 
@@ -78,11 +57,11 @@ void ncm_mset_func_clear (NcmMSetFunc **func);
 
 GPtrArray *ncm_mset_func_array_new (void);
 
-NCM_INLINE void ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, gdouble *x, gdouble *res);
-NCM_INLINE gdouble ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x);
-NCM_INLINE gdouble ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset);
-NCM_INLINE gdouble ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x);
-NCM_INLINE void ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, NcmVector *res_v);
+void ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, gdouble *x, gdouble *res);
+gdouble ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x);
+gdouble ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset);
+gdouble ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x);
+void ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, NcmVector *res_v);
 
 void ncm_mset_func_set_eval_x (NcmMSetFunc *func, gdouble *x, guint len);
 
@@ -93,6 +72,8 @@ gboolean ncm_mset_func_has_nvar (NcmMSetFunc *func, guint nvar);
 
 guint ncm_mset_func_get_nvar (NcmMSetFunc *func);
 guint ncm_mset_func_get_dim (NcmMSetFunc *func);
+
+void ncm_mset_func_set_meta (NcmMSetFunc *func, const gchar *name, const gchar *symbol, const gchar *ns, const gchar *desc, const guint nvar, const guint dim);
 
 const gchar *ncm_mset_func_peek_name (NcmMSetFunc *func);
 const gchar *ncm_mset_func_peek_symbol (NcmMSetFunc *func);
@@ -108,66 +89,3 @@ G_END_DECLS
 
 #endif /* _NCM_MSET_FUNC_H_ */
 
-#ifndef _NCM_MSET_FUNC_INLINE_H_
-#define _NCM_MSET_FUNC_INLINE_H_
-#ifdef NUMCOSMO_HAVE_INLINE
-#ifndef __GTK_DOC_IGNORE__
-
-G_BEGIN_DECLS
-
-NCM_INLINE void
-ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, gdouble *x, gdouble *res)
-{
-  if (func->eval_x != NULL)
-  {
-    if (x != NULL)
-      g_warning ("ncm_mset_func_eval: function called with arguments while an eval x was already used, ignoring argument.");
-    NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, ncm_vector_data (func->eval_x), res);
-  }
-  else
-  {
-    NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, x, res);
-  }
-}
-
-NCM_INLINE gdouble
-ncm_mset_func_eval_nvar (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x)
-{
-  gdouble res;
-	
-  NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, x, &res);
-  return res;
-}
-
-NCM_INLINE gdouble
-ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset)
-{
-  gdouble res;
-	NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, (func->eval_x != NULL) ? ncm_vector_data (func->eval_x) : NULL, &res);	
-  return res;
-}
-
-NCM_INLINE gdouble
-ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x)
-{
-  gdouble res;
-	
-  NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, &x, &res);
-  return res;
-}
-
-NCM_INLINE void 
-ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, NcmVector *res_v)
-{
-  guint i;
-  for (i = 0; i < ncm_vector_len (x_v); i++)
-  {		
-    NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, ncm_vector_ptr (x_v, i), ncm_vector_ptr (res_v, i));
-  }
-}
-
-G_END_DECLS
-
-#endif /* __GTK_DOC_IGNORE__ */
-#endif /* NUMCOSMO_HAVE_INLINE */
-#endif /* _NCM_MSET_FUNC_INLINE_H_ */

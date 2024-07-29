@@ -3,16 +3,16 @@
  *
  *  Mon Aug 11 19:58:22 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
-   * numcosmo is free software: you can redistribute it and/or modify it
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
+ * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
-   *
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -59,17 +59,17 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_QCONST_SPARAMS >*/
   NC_HICOSMO_QCONST_CD,
   NC_HICOSMO_QCONST_E,
   NC_HICOSMO_QCONST_Q,
-  NC_HICOSMO_QCONST_Z1,         
+  NC_HICOSMO_QCONST_Z1,
   /* < private > */
   NC_HICOSMO_QCONST_SPARAM_LEN, /*< skip >*/
 } NcHICosmoQConstSParams;
 
 #define NC_HICOSMO_QCONST_DEFAULT_H0      ncm_c_hubble_cte_planck6_base ()
-#define NC_HICOSMO_QCONST_DEFAULT_OMEGA_T ( 1.0)
-#define NC_HICOSMO_QCONST_DEFAULT_CD      ( 0.0)
-#define NC_HICOSMO_QCONST_DEFAULT_E       ( 1.0)
+#define NC_HICOSMO_QCONST_DEFAULT_OMEGA_T (1.0)
+#define NC_HICOSMO_QCONST_DEFAULT_CD      (0.0)
+#define NC_HICOSMO_QCONST_DEFAULT_E       (1.0)
 #define NC_HICOSMO_QCONST_DEFAULT_Q       (-0.5)
-#define NC_HICOSMO_QCONST_DEFAULT_Z1      ( 0.0)
+#define NC_HICOSMO_QCONST_DEFAULT_Z1      (0.0)
 
 struct _NcHICosmoQConstClass
 {
@@ -90,3 +90,4 @@ NcHICosmoQConst *nc_hicosmo_qconst_new (void);
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_QCONST_H_ */
+

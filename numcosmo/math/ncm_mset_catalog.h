@@ -3,11 +3,11 @@
  *
  *  Tue February 18 10:49:59 2014
  *  Copyright  2014  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_mset_catalog.h
- * Copyright (C) 2014 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2014 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -35,22 +35,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MSET_CATALOG             (ncm_mset_catalog_get_type ())
-#define NCM_MSET_CATALOG(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MSET_CATALOG, NcmMSetCatalog))
-#define NCM_MSET_CATALOG_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MSET_CATALOG, NcmMSetCatalogClass))
-#define NCM_IS_MSET_CATALOG(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MSET_CATALOG))
-#define NCM_IS_MSET_CATALOG_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MSET_CATALOG))
-#define NCM_MSET_CATALOG_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MSET_CATALOG, NcmMSetCatalogClass))
+#define NCM_TYPE_MSET_CATALOG (ncm_mset_catalog_get_type ())
 
-typedef struct _NcmMSetCatalogClass NcmMSetCatalogClass;
-typedef struct _NcmMSetCatalog NcmMSetCatalog;
-typedef struct _NcmMSetCatalogPrivate NcmMSetCatalogPrivate;
-
-struct _NcmMSetCatalogClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
+G_DECLARE_FINAL_TYPE (NcmMSetCatalog, ncm_mset_catalog, NCM, MSET_CATALOG, GObject)
 
 /**
  * NcmMSetCatalogSync:
@@ -82,10 +69,10 @@ typedef enum _NcmMSetCatalogSync
  */
 typedef enum _NcmMSetCatalogTrimType
 {
-  NCM_MSET_CATALOG_TRIM_TYPE_ESS = 1 << 0,
+  NCM_MSET_CATALOG_TRIM_TYPE_ESS    = 1 << 0,
   NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL = 1 << 1,
-  NCM_MSET_CATALOG_TRIM_TYPE_CK = 1 << 2,
-  NCM_MSET_CATALOG_TRIM_TYPE_ALL = (1 << 3) - 1,
+  NCM_MSET_CATALOG_TRIM_TYPE_CK     = 1 << 2,
+  NCM_MSET_CATALOG_TRIM_TYPE_ALL    = (1 << 3) - 1,
 } NcmMSetCatalogTrimType;
 
 /**
@@ -121,15 +108,6 @@ typedef enum _NcmMSetCatalogTauMethod
   /* < private > */
   NCM_MSET_CATALOG_TAU_METHOD_LEN, /*< skip >*/
 } NcmMSetCatalogTauMethod;
-
-struct _NcmMSetCatalog
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmMSetCatalogPrivate *priv;
-};
-
-GType ncm_mset_catalog_get_type (void) G_GNUC_CONST;
 
 NcmMSetCatalog *ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, ...) G_GNUC_NULL_TERMINATED;
 NcmMSetCatalog *ncm_mset_catalog_new_array (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, gchar **names, gchar **symbols);
@@ -172,6 +150,7 @@ gint ncm_mset_catalog_get_cur_id (NcmMSetCatalog *mcat);
 
 guint ncm_mset_catalog_ncols (NcmMSetCatalog *mcat);
 const gchar *ncm_mset_catalog_col_name (NcmMSetCatalog *mcat, guint i);
+const gchar *ncm_mset_catalog_col_full_name (NcmMSetCatalog *mcat, guint i);
 const gchar *ncm_mset_catalog_col_symb (NcmMSetCatalog *mcat, guint i);
 
 gboolean ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, guint *col_index);
@@ -196,6 +175,7 @@ const gchar *ncm_mset_catalog_get_run_type (NcmMSetCatalog *mcat);
 NcmStatsVec *ncm_mset_catalog_peek_pstats (NcmMSetCatalog *mcat);
 NcmStatsVec *ncm_mset_catalog_peek_e_mean_stats (NcmMSetCatalog *mcat);
 NcmStatsVec *ncm_mset_catalog_peek_chain_pstats (NcmMSetCatalog *mcat, const guint i);
+GArray *ncm_mset_catalog_peek_accept_ratio_array (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_row (NcmMSetCatalog *mcat, guint i);
 NcmVector *ncm_mset_catalog_peek_current_row (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_current_e_mean (NcmMSetCatalog *mcat);
@@ -205,7 +185,9 @@ NcmVector *ncm_mset_catalog_peek_e_var_t (NcmMSetCatalog *mcat, guint t);
 
 gdouble ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd);
 gdouble ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdouble *glnvol);
+gdouble ncm_mset_catalog_get_nth_m2lnL_percentile (NcmMSetCatalog *mcat, const gdouble p, guint *nth);
 gdouble ncm_mset_catalog_get_bestfit_m2lnL (NcmMSetCatalog *mcat);
+NcmVector *ncm_mset_catalog_get_bestfit_row (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_get_mean (NcmMSetCatalog *mcat, NcmVector  **mean);
 void ncm_mset_catalog_get_covar (NcmMSetCatalog *mcat, NcmMatrix **cov);

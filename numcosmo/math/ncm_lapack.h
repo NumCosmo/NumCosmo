@@ -3,11 +3,11 @@
  *
  *  Sun March 18 22:33:15 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -77,8 +77,9 @@ GArray *ncm_lapack_dggglm_alloc (NcmMatrix *L, NcmMatrix *X, NcmVector *p, NcmVe
 gint ncm_lapack_dggglm_run (GArray *ws, NcmMatrix *L, NcmMatrix *X, NcmVector *p, NcmVector *d, NcmVector *y);
 
 gint ncm_lapack_dgels (gchar trans, const gint m, const gint n, const gint nrhs, gdouble *a, const gint lda, gdouble *b, const gint ldb, double *work, const gint lwork);
+gint ncm_lapack_dgelsd (const gint m, const gint n, const gint nrhs, gdouble *a, const gint lda, gdouble *b, const gint ldb, gdouble *s, gdouble *rcond, gint *rank, NcmLapackWS *ws);
 
-#define NCM_LAPACK_CHECK_INFO(func,info) G_STMT_START { if ((info) != 0) g_error ("# NcmLapack[%s] error %4d", func, (info)); } G_STMT_END 
+#define NCM_LAPACK_CHECK_INFO(func, info) G_STMT_START { if ((info) != 0) g_error ("# NcmLapack[%s] error %4d", func, (info)); } G_STMT_END
 
 G_END_DECLS
 
@@ -96,3 +97,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NCM_LAPACK_INLINE_H_ */
+

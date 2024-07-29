@@ -1073,6 +1073,7 @@ void genrcm ( gint node_num, gint adj_num, gint adj_row[], gint adj[], gint perm
   gint num;
   gint root;
 
+  g_assert (node_num > 0);
   level_row = g_new0 (gint, node_num + 1);
   mask      = g_new0 (gint, node_num);
 

@@ -3,11 +3,11 @@
  *
  *  Thu February 18 12:32:13 2016
  *  Copyright  2016  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_powspec_ml.c
- * Copyright (C) 2016 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2016 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_powspec_ml
  * @title: NcPowspecML
- * @short_description: Abstrac class for linear matter power spectrum implementation.
+ * @short_description: Abstract class for linear matter power spectrum implementation.
  * @stability: Stable
  * @include: numcosmo/nc_powspec_ml.h
  *
@@ -47,11 +47,77 @@
 
 #include "nc_powspec_ml.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcPowspecML, nc_powspec_ml, NCM_TYPE_POWSPEC);
+enum
+{
+  PROP_0,
+  PROP_ZI,
+  PROP_ZF,
+  PROP_KMIN,
+  PROP_KMAX,
+  PROP_SIZE
+};
+
+G_DEFINE_ABSTRACT_TYPE (NcPowspecML, nc_powspec_ml, NCM_TYPE_POWSPEC)
 
 static void
 nc_powspec_ml_init (NcPowspecML *nc_powspec_ml)
 {
+}
+
+static void
+_nc_powspec_ml_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcPowspecML *ps_mlt = NC_POWSPEC_ML (object);
+  NcmPowspec *ps      = NCM_POWSPEC (ps_mlt);
+
+  g_return_if_fail (NC_IS_POWSPEC_ML (object));
+
+  switch (prop_id)
+  {
+    case PROP_ZI:
+      ncm_powspec_set_zi (ps, g_value_get_double (value));
+      break;
+    case PROP_ZF:
+      ncm_powspec_set_zf (ps, g_value_get_double (value));
+      break;
+    case PROP_KMIN:
+      ncm_powspec_set_kmin (ps, g_value_get_double (value));
+      break;
+    case PROP_KMAX:
+      ncm_powspec_set_kmax (ps, g_value_get_double (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_powspec_ml_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcPowspecML *ps_mlt = NC_POWSPEC_ML (object);
+  NcmPowspec *ps      = NCM_POWSPEC (ps_mlt);
+
+  g_return_if_fail (NC_IS_POWSPEC_ML (object));
+
+  switch (prop_id)
+  {
+    case PROP_ZI:
+      g_value_set_double (value, ncm_powspec_get_zi (ps));
+      break;
+    case PROP_ZF:
+      g_value_set_double (value, ncm_powspec_get_zf (ps));
+      break;
+    case PROP_KMIN:
+      g_value_set_double (value, ncm_powspec_get_kmin (ps));
+      break;
+    case PROP_KMAX:
+      g_value_set_double (value, ncm_powspec_get_kmax (ps));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
 }
 
 static void
@@ -65,27 +131,62 @@ static void
 nc_powspec_ml_class_init (NcPowspecMLClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
-  object_class->finalize = &_nc_powspec_ml_finalize;
-}
 
-/**
- * nc_powspec_ml_new_from_name:
- * @ps_ml_name: string which specifies the linear matter power spectrum object to be used
- *
- * This function returns a new #NcPowspecML whose type is defined by @ps_ml_name.
- *
- * Returns: A new #NcPowspecML.
- */
-NcPowspecML *
-nc_powspec_ml_new_from_name (const gchar *ps_ml_name)
-{
-  GObject *obj = ncm_serialize_global_from_string (ps_ml_name);
-  
-  if (!NC_IS_POWSPEC_ML (obj))
-    g_error ("nc_powspec_ml_new_from_name: NcPowspecML %s do not descend from %s.", ps_ml_name, g_type_name (NC_TYPE_POWSPEC_ML));
-  
-  return NC_POWSPEC_ML (obj);
+  object_class->set_property = &_nc_powspec_ml_set_property;
+  object_class->get_property = &_nc_powspec_ml_get_property;
+  object_class->finalize     = &_nc_powspec_ml_finalize;
+
+  /**
+   * NcPowspecML:zi:
+   *
+   * The initial time (redshift) to compute $P(k,z)$.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ZI,
+                                   g_param_spec_double ("zi",
+                                                        NULL,
+                                                        "Initial redshift",
+                                                        0.0, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcPowspecML:zf:
+   *
+   * The final time (redshift) to compute $P(k,z)$.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ZF,
+                                   g_param_spec_double ("zf",
+                                                        NULL,
+                                                        "Final redshift",
+                                                        0.0, G_MAXDOUBLE, 5.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcPowspecML:kmin:
+   *
+   * The minimum mode (wave-number) value to compute $P(k,z)$.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_KMIN,
+                                   g_param_spec_double ("kmin",
+                                                        NULL,
+                                                        "Minimum mode value",
+                                                        0.0, G_MAXDOUBLE, 1.0e-6,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcPowspecML:kmax:
+   *
+   * The maximum mode (wave-number) value to compute $P(k,z)$.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_KMAX,
+                                   g_param_spec_double ("kmax",
+                                                        NULL,
+                                                        "Maximum mode value",
+                                                        0.0, G_MAXDOUBLE, 1.0e3,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**

@@ -16,7 +16,9 @@
 #define _BSD_SOURCE
 #define _SVID_SOURCE
 */
+#ifndef _DEFAULT_SOURCE
 #define _DEFAULT_SOURCE
+#endif /* _DEFAULT_SOURCE */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -123,7 +125,7 @@ enum { uninitialized = 0x61627563 };
 #define POW2(n) ldexp(1., -n)
 #endif
 
-#define NOTZERO POW2(104)
+#define NOTZERO POW2(300)
 
 #define ABORT -999
 

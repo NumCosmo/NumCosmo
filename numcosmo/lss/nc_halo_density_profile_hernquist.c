@@ -70,17 +70,17 @@
 #include "lss/nc_halo_density_profile_hernquist.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_expint.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcHaloDensityProfileHernquist, nc_halo_density_profile_hernquist, NC_TYPE_HALO_DENSITY_PROFILE);
+G_DEFINE_TYPE (NcHaloDensityProfileHernquist, nc_halo_density_profile_hernquist, NC_TYPE_HALO_DENSITY_PROFILE)
 
-#define VECTOR  (NCM_MODEL (dph)->params)
-#define M_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_M_DELTA))
-#define C_DELTA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA))
+#define VECTOR  (NCM_MODEL (dph))
+#define M_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_M_DELTA))
+#define C_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA))
 
 enum
 {
@@ -98,7 +98,7 @@ _nc_halo_density_profile_hernquist_set_property (GObject *object, guint prop_id,
 {
   /* NcHaloDensityProfileHernquist *dph = NC_HALO_DENSITY_PROFILE_HERNQUIST (object); */
   g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE_HERNQUIST (object));
-  
+
   switch (prop_id)
   {
     default:
@@ -112,7 +112,7 @@ _nc_halo_density_profile_hernquist_get_property (GObject *object, guint prop_id,
 {
   /* NcHaloDensityProfileHernquist *dph = NC_HALO_DENSITY_PROFILE_HERNQUIST (object); */
   g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE_HERNQUIST (object));
-  
+
   switch (prop_id)
   {
     default:
@@ -139,17 +139,17 @@ nc_halo_density_profile_hernquist_class_init (NcHaloDensityProfileHernquistClass
   GObjectClass *object_class          = G_OBJECT_CLASS (klass);
   NcHaloDensityProfileClass *dp_class = NC_HALO_DENSITY_PROFILE_CLASS (klass);
   NcmModelClass *model_class          = NCM_MODEL_CLASS (klass);
-  
+
   model_class->set_property = &_nc_halo_density_profile_hernquist_set_property;
   model_class->get_property = &_nc_halo_density_profile_hernquist_get_property;
   object_class->finalize    = &_nc_halo_density_profile_hernquist_finalize;
-  
+
   ncm_model_class_set_name_nick (model_class, "Hernquist Density Profile", "Hernquist");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
-  
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
-  
+
   dp_class->eval_dl_density    = &_nc_halo_density_profile_hernquist_eval_dl_density;
   dp_class->eval_dl_spher_mass = &_nc_halo_density_profile_hernquist_eval_dl_spher_mass;
   dp_class->eval_dl_2d_density = &_nc_halo_density_profile_hernquist_eval_dl_2d_density;
@@ -178,7 +178,7 @@ _nc_halo_density_profile_hernquist_eval_dl_2d_density (NcHaloDensityProfile *dp,
   const gdouble X2m1_2           = X2m1 * X2m1;
   const gdouble sqrt_abs_X2m1    = sqrt (fabs (X2m1));
   const gdouble sqrt_abs_Xm1_Xp1 = sqrt (abs_Xm1 / Xp1);
-  
+
   if (abs_Xm1 < pow (GSL_DBL_EPSILON, 1.0 / 4.0))
     return 4.0 * (1.0 / 15.0 + (-4.0 / 35.0 + (2.0 / 15.0 - 92.0 / 693.0 * Xm1) * Xm1) * Xm1);
   else if (X2m1 < 0.0)
@@ -196,7 +196,7 @@ _nc_halo_density_profile_hernquist_eval_dl_cyl_mass (NcHaloDensityProfile *dp, c
   const gdouble abs_Xm1          = fabs (Xm1);
   const gdouble sqrt_abs_X2m1    = sqrt (fabs (X2m1));
   const gdouble sqrt_abs_Xm1_Xp1 = sqrt (abs_Xm1 / Xp1);
-  
+
   if (abs_Xm1 < pow (GSL_DBL_EPSILON, 1.0 / 4.0))
   {
     return 1.0 / 3.0 + (4.0 / 15.0 + (-2.0 / 21.0 + 8.0 / 315.0 * Xm1) * Xm1) * Xm1;
@@ -208,7 +208,7 @@ _nc_halo_density_profile_hernquist_eval_dl_cyl_mass (NcHaloDensityProfile *dp, c
       const gdouble X_2    = 0.5 * X;
       const gdouble X_22   = X_2 * X_2;
       const gdouble ln_X_2 = log (X_2);
-      
+
       return -4.0 * (
         (
           (1.0 + ln_X_2) +
@@ -253,7 +253,7 @@ nc_halo_density_profile_hernquist_new (const NcHaloDensityProfileMassDef mdef, c
                                                      "mass-def", mdef,
                                                      "Delta",    Delta,
                                                      NULL);
-  
+
   return dph;
 }
 

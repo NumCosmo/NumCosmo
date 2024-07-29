@@ -45,7 +45,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_serialize.h"
@@ -69,8 +69,7 @@ enum
   PROP_METH,
 };
 
-G_DEFINE_TYPE (NcXcor, nc_xcor, G_TYPE_OBJECT);
-G_DEFINE_BOXED_TYPE (NcXcorKinetic, nc_xcor_kinetic, nc_xcor_kinetic_copy, nc_xcor_kinetic_free);
+G_DEFINE_TYPE (NcXcor, nc_xcor, G_TYPE_OBJECT)
 
 static void
 nc_xcor_init (NcXcor *xc)
@@ -85,9 +84,9 @@ static void
 _nc_xcor_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcXcor *xc = NC_XCOR (object);
-  
+
   g_return_if_fail (NC_IS_XCOR (object));
-  
+
   switch (prop_id)
   {
     case PROP_DISTANCE:
@@ -101,10 +100,9 @@ _nc_xcor_set_property (GObject *object, guint prop_id, const GValue *value, GPar
     case PROP_METH:
       xc->meth = g_value_get_enum (value);
       break;
-      
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -112,9 +110,9 @@ static void
 _nc_xcor_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcXcor *xc = NC_XCOR (object);
-  
+
   g_return_if_fail (NC_IS_XCOR (object));
-  
+
   switch (prop_id)
   {
     case PROP_DISTANCE:
@@ -126,10 +124,9 @@ _nc_xcor_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
     case PROP_METH:
       g_value_set_enum (value, xc->meth);
       break;
-      
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -137,10 +134,10 @@ static void
 _nc_xcor_dispose (GObject *object)
 {
   NcXcor *xc = NC_XCOR (object);
-  
+
   nc_distance_clear (&xc->dist);
   ncm_powspec_clear (&xc->ps);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_parent_class)->dispose (object);
 }
@@ -156,14 +153,14 @@ static void
 nc_xcor_class_init (NcXcorClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   /*GObjectClass* parent_class = G_OBJECT_CLASS (klass); */
-  
+
   object_class->set_property = &_nc_xcor_set_property;
   object_class->get_property = &_nc_xcor_get_property;
   object_class->dispose      = &_nc_xcor_dispose;
   object_class->finalize     = &_nc_xcor_finalize;
-  
+
   /**
    * NcXcor:distance:
    *
@@ -176,7 +173,7 @@ nc_xcor_class_init (NcXcorClass *klass)
                                                         "Distance.",
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcXcor:power-spec:
    *
@@ -189,7 +186,7 @@ nc_xcor_class_init (NcXcorClass *klass)
                                                         "Matter power spectrum.",
                                                         NCM_TYPE_POWSPEC,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcXcor:meth:
    *
@@ -265,37 +262,6 @@ nc_xcor_clear (NcXcor **xc)
 }
 
 /**
- * nc_xcor_kinetic_copy:
- * @xck: a #NcXcorKinetic
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
-NcXcorKinetic *
-nc_xcor_kinetic_copy (NcXcorKinetic *xck)
-{
-  NcXcorKinetic *xck_copy = g_new (NcXcorKinetic, 1);
-  
-  xck_copy[0] = xck[0];
-  
-  return xck_copy;
-}
-
-/**
- * nc_xcor_kinetic_free:
- * @xck: a #NcXcorKinetic
- *
- * FIXME
- *
- */
-void
-nc_xcor_kinetic_free (NcXcorKinetic *xck)
-{
-  g_free (xck);
-}
-
-/**
  * nc_xcor_prepare:
  * @xc: a #NcXcor
  * @cosmo: a #NcHICosmo
@@ -308,7 +274,7 @@ nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo)
 {
   nc_distance_prepare_if_needed (xc->dist, cosmo);
   ncm_powspec_prepare_if_needed (xc->ps, NCM_MODEL (cosmo));
-  
+
   xc->RH = nc_hicosmo_RH_Mpc (cosmo);
 }
 
@@ -334,17 +300,17 @@ _xcor_limber_cvode_int (realtype z, N_Vector y, N_Vector ydot, gpointer params)
   const gdouble E_z       = nc_hicosmo_E (xclc->cosmo, z);
   const NcXcorKinetic xck = { xi_z, E_z };
   const gdouble k1z       = nc_xcor_limber_kernel_eval (xclc->xclk1, xclc->cosmo, z, &xck, 0);
-  
+
   gdouble geoW1W2;
   guint i, l;
-  
+
   if (G_UNLIKELY (z == 0.0))
   {
     N_VConst (0.0, ydot);
-    
+
     return 0;
   }
-  
+
   if (xclc->isauto)
   {
     geoW1W2 = E_z * gsl_pow_2 (k1z / xi_z);
@@ -352,23 +318,23 @@ _xcor_limber_cvode_int (realtype z, N_Vector y, N_Vector ydot, gpointer params)
   else
   {
     const gdouble k2z = nc_xcor_limber_kernel_eval (xclc->xclk2, xclc->cosmo, z, &xck, 0);
-    
+
     geoW1W2 = E_z * k1z * k2z / (xi_z * xi_z);
   }
-  
+
   for (i = 0; i < xclc->nell; i++)
   {
     l = i + xclc->lmin;
     ncm_vector_fast_set (xclc->k, i, ((gdouble) l + 0.5) / xi_z_phys); /* in Mpc-1 */
   }
-  
+
   ncm_powspec_eval_vec (xclc->xc->ps, NCM_MODEL (xclc->cosmo), z, xclc->k, xclc->Pk);
-  
+
   for (i = 0; i < xclc->nell; i++)
   {
     NV_Ith_S (ydot, i) = ncm_vector_fast_get (xclc->Pk, i) * geoW1W2;
   }
-  
+
   return 0;
 }
 
@@ -377,7 +343,7 @@ _nc_xcor_limber_cvode (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel
 {
   const guint nell = lmax - lmin + 1;
   const gdouble dz = (zmax - zmin) * NC_XCOR_PRECISION;
-  
+
   N_Vector yv        = N_VNew_Serial (nell);
   N_Vector yv0       = N_VNew_Serial (nell);
   SUNMatrix A        = SUNDenseMatrix (nell, nell);
@@ -389,28 +355,28 @@ _nc_xcor_limber_cvode (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel
   gdouble z;
   gint flag;
   guint i;
-  
+
   ncm_vector_set_zero (k);
   ncm_vector_set_zero (Pk);
-  
+
   for (i = 0; i < nell; i++)
   {
     NV_Ith_S (yv, i)  = 0.0;
     NV_Ith_S (yv0, i) = 0.0;
   }
-  
+
   xcor_limber_cvode xclc = { isauto, lmin, lmax, nell, k, Pk, xc, xclk1, xclk2, cosmo };
-  
+
   /* Find initial value = y'(zmid) * dz */
   const gdouble zmid = expm1 ((log1p (xclk1->zmid) + log1p (xclk2->zmid)) / 2.0);
-  
+
   _xcor_limber_cvode_int (zmid, yv, yv0, &xclc);
   N_VScale (dz, yv0, yv0);
-  
+
   /* Init and set flags */
   flag = CVodeInit (cvode, cvodefunc, zmid, yv0);
   NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
-  
+
   flag = CVodeSStolerances (cvode, NC_XCOR_PRECISION, 0.0);
   NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
   flag = CVodeSetMaxNumSteps (cvode, G_MAXUINT32);
@@ -419,17 +385,17 @@ _nc_xcor_limber_cvode (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel
   NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
   flag = CVodeSetLinearSolver (cvode, LS, A);
   NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
-  
+
   /* First integrate from zmid to zmin */
   flag = CVode (cvode, zmin, yv, &z, CV_NORMAL);
   NCM_CVODE_CHECK (&flag, "CVode", 1, );
-  
+
   /* Put int[zmin->zmid] in yv */
   for (i = 0; i < nell; i++)
   {
     NV_Ith_S (yv, i) = -(NV_Ith_S (yv, i) - NV_Ith_S (yv0, i));
   }
-  
+
   /* Then integrate from zmid to zmax */
   flag = CVodeReInit (cvode, zmid, yv);
   NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
@@ -441,22 +407,22 @@ _nc_xcor_limber_cvode (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel
   NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
   flag = CVodeSetLinearSolver (cvode, LS, A);
   NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
-  
+
   flag = CVode (cvode, zmax, yv, &z, CV_NORMAL);
   NCM_CVODE_CHECK (&flag, "CVode", 1, );
-  
+
   /* Finally put the result in vp */
   for (i = 0; i < nell; i++)
   {
     ncm_vector_set (vp, i, NV_Ith_S (yv, i));
   }
-  
+
   CVodeFree (&cvode);
   N_VDestroy (yv);
   N_VDestroy (yv0);
   SUNMatDestroy (A);
   SUNLinSolFree (LS);
-  
+
   ncm_vector_free (k);
   ncm_vector_free (Pk);
 }
@@ -485,30 +451,30 @@ gint
 _nc_xcor_limber_suave_integrand (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble f[], gpointer userdata)
 {
   xcor_limber_suave *xcls = (xcor_limber_suave *) userdata;
-  
+
   const gdouble z = xcls->zmin + x[0] * xcls->zmax_zmin; /* x goes from 0 to 1 */
-  
+
   /* printf("counter = %15i, z = %g\n", xcls->counter, z); */
-  
+
   const gdouble xi_z      = nc_distance_comoving (xcls->xc->dist, xcls->cosmo, z); /* in units of Hubble radius */
   const gdouble xi_z_phys = xi_z * xcls->xc->RH;                                   /* in Mpc */
   const gdouble E_z       = nc_hicosmo_E (xcls->cosmo, z);
   const NcXcorKinetic xck = { xi_z, E_z };
   const gdouble k1z       = nc_xcor_limber_kernel_eval (xcls->xclk1, xcls->cosmo, z, &xck, 0);
-  
+
   gdouble geoW1W2;
   guint i, l;
-  
+
   if (G_UNLIKELY (z == 0.0))
   {
     for (i = 0; i < xcls->nell; i++)
     {
       f[i] = 0.0;
     }
-    
+
     return 0; /*supposes f is initialized to zero */
   }
-  
+
   if (xcls->isauto)
   {
     geoW1W2 = E_z * gsl_pow_2 (k1z / xi_z);
@@ -516,25 +482,25 @@ _nc_xcor_limber_suave_integrand (const gint *ndim, const gdouble x[], const gint
   else
   {
     const gdouble k2z = nc_xcor_limber_kernel_eval (xcls->xclk2, xcls->cosmo, z, &xck, 0);
-    
+
     geoW1W2 = E_z * k1z * k2z / (xi_z * xi_z);
   }
-  
+
   for (i = 0; i < xcls->nell; i++)
   {
     l = i + xcls->lmin;
     ncm_vector_fast_set (xcls->k, i, ((gdouble) l + 0.5) / xi_z_phys); /* in Mpc-1 */
   }
-  
+
   ncm_powspec_eval_vec (xcls->xc->ps, NCM_MODEL (xcls->cosmo), z, xcls->k, xcls->Pk);
-  
+
   for (i = 0; i < xcls->nell; i++)
   {
     f[i] = ncm_vector_fast_get (xcls->Pk, i) * geoW1W2;
   }
-  
+
   xcls->counter += 1;
-  
+
   return 0;
 }
 
@@ -544,14 +510,14 @@ _nc_xcor_limber_suave (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel
   const guint nell = lmax - lmin + 1;
   NcmVector *Pk    = ncm_vector_new (nell);
   NcmVector *k     = ncm_vector_new (nell);
-  
+
   ncm_vector_set_zero (k);
   ncm_vector_set_zero (Pk);
-  
+
   guint counter = 0;
-  
+
   xcor_limber_suave xcls = { isauto, lmin, lmax, nell, k, Pk, xc, xclk1, xclk2, cosmo, zmin, zmax - zmin, counter };
-  
+
   /*  in */
   const gdouble flatness = 100.0;
   const guint mineval    = 1;
@@ -559,14 +525,14 @@ _nc_xcor_limber_suave (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel
   const guint nnew       = 1000;
   const guint nmin       = 500;
   const gint flags       = 0;
-  
+
   /* out */
   gint nregions, neval, fail;
-  
+
   gdouble integral[nell];
   gdouble error[nell];
   gdouble prob[nell];
-  
+
   Suave (1, nell,
          &_nc_xcor_limber_suave_integrand, &xcls, 1,
          NC_XCOR_PRECISION, 0.0,
@@ -576,17 +542,17 @@ _nc_xcor_limber_suave (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel
          flatness, "", NULL,
          &nregions, &neval, &fail,
          integral, error, prob);
-  
+
   /* printf("nregions = %i, neval = %i, fail = %i \n", nregions, neval, fail ); */
-  
+
   guint i;
-  
+
   for (i = 0; i < nell; i++)
   {
     ncm_vector_set (vp, i, integral[i]);
     /* printf("%i, integral = %14.10g, error = %14.10g, prob = %14.10g \n", i, integral[i], error[i], prob[i]); */
   }
-  
+
   /* suave integrates over the hypercube, so scaling is necessary */
   ncm_vector_scale (vp, zmax - zmin);
 }
@@ -599,11 +565,11 @@ typedef struct _xcor_limber_gsl
   NcHICosmo *cosmo;
   NcDistance *dist;
   NcmPowspec *ps;
-  
+
   NcXcorLimberKernel *xclk1;
   NcXcorLimberKernel *xclk2;
   guint l;
-  
+
   gdouble RH;
 } xcor_limber_gsl;
 
@@ -617,10 +583,10 @@ _xcor_limber_gsl_cross_int (gdouble z, gpointer ptr)
   const NcXcorKinetic xck  = { xi_z, E_z };
   const gdouble k          = (xclki->l + 0.5) / (xi_z_phys); /* in Mpc-1 */
   const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xclki->ps), NCM_MODEL (xclki->cosmo), z, k);
-  
+
   const gdouble k1z = nc_xcor_limber_kernel_eval (xclki->xclk1, xclki->cosmo, z, &xck, xclki->l);
   const gdouble k2z = nc_xcor_limber_kernel_eval (xclki->xclk2, xclki->cosmo, z, &xck, xclki->l);
-  
+
   return E_z * k1z * k2z * power_spec / (xi_z * xi_z);
 }
 
@@ -635,7 +601,7 @@ _xcor_limber_gsl_auto_int (gdouble z, gpointer ptr)
   const gdouble k          = (xclki->l + 0.5) / (xi_z_phys); /* in Mpc-1 */
   const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xclki->ps), NCM_MODEL (xclki->cosmo), z, k);
   const gdouble k1z        = nc_xcor_limber_kernel_eval (xclki->xclk1, xclki->cosmo, z, &xck, xclki->l);
-  
+
   return E_z * gsl_pow_2 (k1z / xi_z) * power_spec;
 }
 
@@ -647,34 +613,34 @@ _nc_xcor_limber_gsl (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *
   gsl_function F;
   guint i;
   gint ret;
-  
+
   xclki.xclk1 = xclk1;
   xclki.xclk2 = xclk2;
   xclki.cosmo = cosmo;
   xclki.dist  = xc->dist;
   xclki.ps    = xc->ps;
   xclki.RH    = xc->RH;
-  
+
   if (isauto)
     F.function = &_xcor_limber_gsl_auto_int;
   else
     F.function = &_xcor_limber_gsl_cross_int;
 
   F.params = &xclki;
-  
+
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
-  
+
   for (i = 0; i < lmax - lmin + 1; i++)
   {
     xclki.l = lmin + i;
     ret     = gsl_integration_qag (&F, zmin, zmax, 0.0, NC_XCOR_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &r, &err);
-    
+
     if (ret != GSL_SUCCESS)
       g_error ("_nc_xcor_limber_gsl: %s.", gsl_strerror (ret));
-    
+
     ncm_vector_set (vp, i, r);
   }
-  
+
   ncm_memory_pool_return (w);
 }
 
@@ -694,14 +660,14 @@ _nc_xcor_limber_gsl (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *
 void
 nc_xcor_limber (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp)
 {
-  const guint nell = ncm_vector_len (vp);
-  const gboolean isauto = (xclk2 == NULL);
+  const guint nell          = ncm_vector_len (vp);
+  const gboolean isauto     = (xclk2 == NULL);
   const gdouble cons_factor = ((isauto) ? gsl_pow_2 (xclk1->cons_factor) : xclk1->cons_factor * xclk2->cons_factor) / gsl_pow_3 (xc->RH);
   gdouble zmin, zmax;
-  
+
   if (nell != lmax - lmin + 1)
     g_error ("nc_xcor_limber: vector size does not match multipole limits");
-  
+
   if (isauto)
   {
     zmin = xclk1->zmin;
@@ -712,7 +678,7 @@ nc_xcor_limber (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2
     zmin = GSL_MAX (xclk1->zmin, xclk2->zmin);
     zmax = GSL_MIN (xclk1->zmax, xclk2->zmax);
   }
-  
+
   if (zmin < zmax)
   {
     switch (xc->meth)
@@ -732,7 +698,7 @@ nc_xcor_limber (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2
         g_assert_not_reached ();
         break;
     }
-    
+
     ncm_vector_scale (vp, cons_factor);
   }
   else

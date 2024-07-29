@@ -3,11 +3,11 @@
  *
  *  Fri May 11 21:18:21 2012
  *  Copyright  2012 Fernando de Simoni & Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Fernando de Simoni & Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Fernando de Simoni & Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -46,19 +46,19 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
-  
+
   g_test_set_nonfatal_assertions ();
-  
+
   g_test_add ("/nc/galaxy/acf/traps", TestNcGalaxyAcf, NULL,
               &test_nc_galaxy_acf_new,
               &test_nc_galaxy_acf_traps,
               &test_nc_galaxy_acf_free);
-#if GLIB_CHECK_VERSION (2, 38, 0)
+
   g_test_add ("/nc/galaxy/acf/invalid/st/subprocess", TestNcGalaxyAcf, NULL,
               &test_nc_galaxy_acf_new,
               &test_nc_galaxy_acf_invalid_st,
               &test_nc_galaxy_acf_free);
-#endif
+
   g_test_run ();
 }
 
@@ -75,10 +75,8 @@ test_nc_galaxy_acf_free (TestNcGalaxyAcf *test, gconstpointer pdata)
 void
 test_nc_galaxy_acf_traps (TestNcGalaxyAcf *test, gconstpointer pdata)
 {
-#if GLIB_CHECK_VERSION (2, 38, 0)
   g_test_trap_subprocess ("/nc/galaxy/acf/invalid/st/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-#endif
 }
 
 void

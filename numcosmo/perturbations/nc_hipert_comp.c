@@ -4,11 +4,11 @@
  *
  *  Wed October 11 15:54:13 2017
  *  Copyright  2017  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hipert_comp.c
- * Copyright (C) 2017 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2017 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -27,7 +27,7 @@
 /**
  * SECTION:nc_hipert_comp
  * @title: NcHIPertComp
- * @short_description: Abstract class describing a general perturbation compoment.
+ * @short_description: Abstract class describing a general perturbation component.
  *
  * FIXME
  *
@@ -53,7 +53,7 @@ enum
   PROP_LEN
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHIPertComp, nc_hipert_comp, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHIPertComp, nc_hipert_comp, G_TYPE_OBJECT)
 
 static void
 nc_hipert_comp_init (NcHIPertComp *comp)

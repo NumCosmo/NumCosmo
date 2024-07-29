@@ -3,11 +3,11 @@
  *
  *  Mon Nov 23 10:05:14 2009
  *  Copyright  2009  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -57,17 +57,9 @@ struct _NcmMpsfSBesselRecur
 
 void ncm_mpsf_sbessel (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd);
 void ncm_mpsf_sbessel_d (gulong l, gdouble x, mpfr_ptr res, mp_rnd_t rnd);
-
-NcmMpsfSBesselRecur *ncm_mpsf_sbessel_recur_new (gulong prec);
-NcmMpsfSBesselRecur *ncm_mpsf_sbessel_recur_read (FILE *f);
-void ncm_mpsf_sbessel_recur_free (NcmMpsfSBesselRecur *jlrec);
-void ncm_mpsf_sbessel_recur_set_q (NcmMpsfSBesselRecur *jlrec, glong l, mpq_ptr q, mp_rnd_t rnd);
-void ncm_mpsf_sbessel_recur_set_d (NcmMpsfSBesselRecur *jlrec, glong l, gdouble x, mp_rnd_t rnd);
-void ncm_mpsf_sbessel_recur_next (NcmMpsfSBesselRecur *jlrec, mp_rnd_t rnd);
-void ncm_mpsf_sbessel_recur_previous (NcmMpsfSBesselRecur *jlrec, mp_rnd_t rnd);
-void ncm_mpsf_sbessel_recur_goto (NcmMpsfSBesselRecur *jlrec, glong l, mp_rnd_t rnd);
-void ncm_mpsf_sbessel_recur_write (NcmMpsfSBesselRecur *jlrec, FILE *f);
+void ncm_mpsf_sbessel_free_cache (void);
 
 G_END_DECLS
 
 #endif /* _NCM_MPSF_SBESSEL_H */
+

@@ -34,35 +34,11 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_STATS_DIST2D_SPLINE             (ncm_stats_dist2d_spline_get_type ())
-#define NCM_STATS_DIST2D_SPLINE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST2D_SPLINE, NcmStatsDist2dSpline))
-#define NCM_STATS_DIST2D_SPLINE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST2D_SPLINE, NcmStatsDist2dSplineClass))
-#define NCM_IS_STATS_DIST2D_SPLINE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_STATS_DIST2D_SPLINE))
-#define NCM_IS_STATS_DIST2D_SPLINE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_STATS_DIST2D_SPLINE))
-#define NCM_STATS_DIST2D_SPLINE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST2D_SPLINE, NcmStatsDist2dSplineClass))
+#define NCM_TYPE_STATS_DIST2D_SPLINE (ncm_stats_dist2d_spline_get_type ())
 
-typedef struct _NcmStatsDist2dSplineClass NcmStatsDist2dSplineClass;
-typedef struct _NcmStatsDist2dSpline NcmStatsDist2dSpline;
+G_DECLARE_FINAL_TYPE (NcmStatsDist2dSpline, ncm_stats_dist2d_spline, NCM, STATS_DIST2D_SPLINE, NcmStatsDist2d)
 
-struct _NcmStatsDist2dSplineClass
-{
-  /*< private >*/
-  NcmStatsDist2dClass parent_class;
-};
-
-struct _NcmStatsDist2dSpline
-{
-  /*< private >*/
-  NcmStatsDist2d parent_instance;
-  NcmSpline2d *m2lnp;
-  gboolean marginal_x;
-  gdouble norma;
-  gdouble m2lnnorma;
-};
-
-GType ncm_stats_dist2d_spline_get_type (void) G_GNUC_CONST;
-
-NcmStatsDist2dSpline *ncm_stats_dist2d_spline_new (NcmSpline2d *m2lnp);
+NcmStatsDist2dSpline *ncm_stats_dist2d_spline_new (NcmSpline2d * m2lnp);
 
 G_END_DECLS
 

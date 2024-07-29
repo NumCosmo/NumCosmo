@@ -4,11 +4,11 @@
  *
  *  Tue June 03 15:47:45 2014
  *  Copyright  2014  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hipert.c
- * Copyright (C) 2014 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2014 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -66,7 +66,7 @@ enum {
   PROP_SIZE,
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHIPert, nc_hipert, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHIPert, nc_hipert, G_TYPE_OBJECT)
 
 static void
 nc_hipert_init (NcHIPert *pert)

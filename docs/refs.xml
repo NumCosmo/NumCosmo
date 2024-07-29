@@ -5,14 +5,14 @@
 ]>
 <?asciidoc-toc?>
 <?asciidoc-numbered?>
-<refentry lang="en" id="refs">
+<refentry lang="en" id="refs" xmlns:xi="http://www.w3.org/2001/XInclude">
 <refentryinfo>
     <title>Bibliography(3)</title>
     <author>
         <firstname>Sandro</firstname>
         <othername>Dias Pinto</othername>
         <surname>Vitenti</surname>
-        <email>sandro@isoftware.com.br</email>
+        <email>vitenti@uel.br</email>
     </author>
     <authorinitials>SDV</authorinitials>
 </refentryinfo>

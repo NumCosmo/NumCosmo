@@ -42,7 +42,7 @@
 
 #include "nc_powspec_mnl.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcPowspecMNL, nc_powspec_mnl, NCM_TYPE_POWSPEC);
+G_DEFINE_ABSTRACT_TYPE (NcPowspecMNL, nc_powspec_mnl, NCM_TYPE_POWSPEC)
 
 static void
 nc_powspec_mnl_init (NcPowspecMNL *nc_powspec_mnl)
@@ -60,34 +60,15 @@ static void
 nc_powspec_mnl_class_init (NcPowspecMNLClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
-  object_class->finalize = nc_powspec_mnl_finalize;
-}
 
-/**
- * nc_powspec_mnl_new_from_name:
- * @ps_mnl_name: string which specifies the matter linear power spectrum object to be used
- *
- * This function returns a new #NcPowspecMNL whose type is defined by @ps_mnl_name.
- *
- * Returns: A new #NcPowspecMNL.
- */
-NcPowspecMNL *
-nc_powspec_mnl_new_from_name (const gchar *ps_mnl_name)
-{
-  GObject *obj = ncm_serialize_global_from_string (ps_mnl_name);
-  
-  if (!NC_IS_POWSPEC_MNL (obj))
-    g_error ("nc_powspec_mnl_new_from_name: NcPowspecMNL %s does not descend from %s.", ps_mnl_name, g_type_name (NC_TYPE_POWSPEC_MNL));
-  
-  return NC_POWSPEC_MNL (obj);
+  object_class->finalize = nc_powspec_mnl_finalize;
 }
 
 /**
  * nc_powspec_mnl_ref:
  * @ps_mnl: a #NcmMSetCatalog
  *
- * Increases the reference count of @ps_mnl by one atomically. 
+ * Increases the reference count of @ps_mnl by one atomically.
  *
  * Returns: (transfer full): @ps_mnl.
  */
@@ -101,8 +82,8 @@ nc_powspec_mnl_ref (NcPowspecMNL *ps_mnl)
  * nc_powspec_mnl_free:
  * @ps_mnl: a #NcmMSetCatalog
  *
- * Atomically decrements the reference count of @ps_mnl by one. 
- * If the reference count drops to 0, all memory allocated by @ps_mnl is released. 
+ * Atomically decrements the reference count of @ps_mnl by one.
+ * If the reference count drops to 0, all memory allocated by @ps_mnl is released.
  *
  */
 void
@@ -115,10 +96,10 @@ nc_powspec_mnl_free (NcPowspecMNL *ps_mnl)
  * nc_powspec_mnl_clear:
  * @ps_mnl: a #NcmMSetCatalog
  *
- * If @ps_mnl is different from NULL, 
- * atomically decrements the reference count of @ps_mnl by one. 
- * If the reference count drops to 0, 
- * all memory allocated by @ps_mnl is released and @ps_mnl is set to NULL. 
+ * If @ps_mnl is different from NULL,
+ * atomically decrements the reference count of @ps_mnl by one.
+ * If the reference count drops to 0,
+ * all memory allocated by @ps_mnl is released and @ps_mnl is set to NULL.
  *
  */
 void

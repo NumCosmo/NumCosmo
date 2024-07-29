@@ -3,22 +3,22 @@
  *
  *  Sat February 20 14:29:48 2016
  *  Copyright  2016  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_integral1d.h
- * Copyright (C) 2016 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2016 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -32,16 +32,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_INTEGRAL1D             (ncm_integral1d_get_type ())
-#define NCM_INTEGRAL1D(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_INTEGRAL1D, NcmIntegral1d))
-#define NCM_INTEGRAL1D_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_INTEGRAL1D, NcmIntegral1dClass))
-#define NCM_IS_INTEGRAL1D(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_INTEGRAL1D))
-#define NCM_IS_INTEGRAL1D_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_INTEGRAL1D))
-#define NCM_INTEGRAL1D_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_INTEGRAL1D, NcmIntegral1dClass))
+#define NCM_TYPE_INTEGRAL1D (ncm_integral1d_get_type ())
 
-typedef struct _NcmIntegral1dClass NcmIntegral1dClass;
-typedef struct _NcmIntegral1d NcmIntegral1d;
-typedef struct _NcmIntegral1dPrivate NcmIntegral1dPrivate;
+G_DECLARE_DERIVABLE_TYPE (NcmIntegral1d, ncm_integral1d, NCM, INTEGRAL1D, GObject)
 
 typedef gdouble (*NcmIntegral1dF) (NcmIntegral1d *int1d, const gdouble x, const gdouble w);
 
@@ -50,17 +43,10 @@ struct _NcmIntegral1dClass
   /*< private >*/
   GObjectClass parent_class;
   NcmIntegral1dF integrand;
-  gpointer padding[9];
-};
 
-struct _NcmIntegral1d
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmIntegral1dPrivate *priv;
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[17];
 };
-
-GType ncm_integral1d_get_type (void) G_GNUC_CONST;
 
 NcmIntegral1d *ncm_integral1d_ref (NcmIntegral1d *int1d);
 void ncm_integral1d_free (NcmIntegral1d *int1d);
@@ -76,7 +62,7 @@ guint ncm_integral1d_get_rule (NcmIntegral1d *int1d);
 gdouble ncm_integral1d_get_reltol (NcmIntegral1d *int1d);
 gdouble ncm_integral1d_get_abstol (NcmIntegral1d *int1d);
 
-NCM_INLINE gdouble ncm_integral1d_integrand (NcmIntegral1d *int1d, const gdouble x, const gdouble w);
+gdouble ncm_integral1d_integrand (NcmIntegral1d *int1d, const gdouble x, const gdouble w);
 
 gdouble ncm_integral1d_eval (NcmIntegral1d *int1d, const gdouble xi, const gdouble xf, gdouble *err);
 gdouble ncm_integral1d_eval_gauss_hermite_p (NcmIntegral1d *int1d, gdouble *err);
@@ -98,23 +84,4 @@ gdouble ncm_integral1d_eval_gauss_laguerre_r (NcmIntegral1d *int1d, const gdoubl
 G_END_DECLS
 
 #endif /* _NCM_INTEGRAL1D_H_ */
-
-#ifndef _NCM_INTEGRAL1D_INLINE_H_
-#define _NCM_INTEGRAL1D_INLINE_H_
-#ifdef NUMCOSMO_HAVE_INLINE
-#ifndef __GTK_DOC_IGNORE__
-
-G_BEGIN_DECLS
-
-NCM_INLINE gdouble 
-ncm_integral1d_integrand (NcmIntegral1d *int1d, const gdouble x, const gdouble w)
-{
-  return NCM_INTEGRAL1D_GET_CLASS (int1d)->integrand (int1d, x, w);  
-}
-
-G_END_DECLS
-
-#endif /* __GTK_DOC_IGNORE__ */
-#endif /* NUMCOSMO_HAVE_INLINE */
-#endif /* _NCM_INTEGRAL1D_INLINE_H_ */
 

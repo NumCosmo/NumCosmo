@@ -3,12 +3,12 @@
  *
  *  Fri May 18 16:44:28 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -39,36 +39,22 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FFTLOG             (ncm_fftlog_get_type ())
-#define NCM_FFTLOG(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FFTLOG, NcmFftlog))
-#define NCM_FFTLOG_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FFTLOG, NcmFftlogClass))
-#define NCM_IS_FFTLOG(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FFTLOG))
-#define NCM_IS_FFTLOG_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FFTLOG))
-#define NCM_FFTLOG_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FFTLOG, NcmFftlogClass))
+#define NCM_TYPE_FFTLOG (ncm_fftlog_get_type ())
 
-typedef struct _NcmFftlogClass NcmFftlogClass;
-typedef struct _NcmFftlog NcmFftlog;
-typedef struct _NcmFftlogPrivate NcmFftlogPrivate;
+G_DECLARE_DERIVABLE_TYPE (NcmFftlog, ncm_fftlog, NCM, FFTLOG, GObject)
 
 struct _NcmFftlogClass
 {
   /*< private >*/
   GObjectClass parent_class;
   const gchar *name;
-  
-  void (*get_Ym) (NcmFftlog *fftlog, gpointer Ym_0);
+
+  void (*compute_Ym) (NcmFftlog *fftlog, gpointer Ym_0);
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[16];
 };
 
 typedef gdouble (*NcmFftlogFunc) (const gdouble x, gpointer user_data);
-
-struct _NcmFftlog
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmFftlogPrivate *priv;
-};
-
-GType ncm_fftlog_get_type (void) G_GNUC_CONST;
 
 NcmFftlog *ncm_fftlog_ref (NcmFftlog *fftlog);
 
@@ -89,6 +75,9 @@ void ncm_fftlog_set_lnk0 (NcmFftlog *fftlog, const gdouble lnk0);
 gdouble ncm_fftlog_get_lnk0 (NcmFftlog *fftlog);
 
 void ncm_fftlog_set_size (NcmFftlog *fftlog, guint n);
+
+void ncm_fftlog_set_max_size (NcmFftlog *fftlog, guint max_n);
+guint ncm_fftlog_get_max_size (NcmFftlog *fftlog);
 
 void ncm_fftlog_set_padding (NcmFftlog *fftlog, gdouble pad_p);
 gdouble ncm_fftlog_get_padding (NcmFftlog *fftlog);
@@ -141,17 +130,4 @@ NcmVector *ncm_fftlog_peek_output_vector (NcmFftlog *fftlog, guint nderiv);
 G_END_DECLS
 
 #endif /* _NCM_FFTLOG_H_ */
-
-#ifndef _NCM_FFTLOG_INLINE_H_
-#define _NCM_FFTLOG_INLINE_H_
-#ifdef NUMCOSMO_HAVE_INLINE
-#ifndef __GTK_DOC_IGNORE__
-
-G_BEGIN_DECLS
-
-G_END_DECLS
-
-#endif /* __GTK_DOC_IGNORE__ */
-#endif /* NUMCOSMO_HAVE_INLINE */
-#endif /* _NCM_FFTLOG_INLINE_H_ */
 

@@ -3,11 +3,11 @@
  *
  *  Wed Apr 21 15:19:05 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -35,21 +35,18 @@
  *
  * This section shows the macros controling which prerequisite/option was
  * used when compiling NumCosmo.
- * 
+ *
  */
-
-@have_fftw3_support@
-@have_fftw3f_support@
-@have_cfitsio_support@
 
 @have_nlopt_support@
 @have_mpi_support@
 
+#ifdef NUMCOSMO_GIR_SCAN
+#define NUMCOSMO_HAVE_INLINE
+#define NCM_INLINE
+#else /* NUMCOSMO_GIR_SCAN */
 @have_inline_support@
 @have_inline_macro@
-
-#ifndef NUMCOSMO_GIR_SCAN
-@numcosmo_blas_include@
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #define NUMCOSMO_MAJOR_VERSION @NUMCOSMO_MAJOR_VERSION@
@@ -58,3 +55,4 @@
 #define NUMCOSMO_VERSION "@NUMCOSMO_VERSION@"
 
 #endif /* _NCM_BUILD_CFG_H_ */
+

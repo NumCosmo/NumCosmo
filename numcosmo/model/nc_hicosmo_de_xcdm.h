@@ -3,16 +3,16 @@
  *
  *  Mon Aug 11 19:57:16 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
-   * numcosmo is free software: you can redistribute it and/or modify it
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
+ * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
-   *
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -47,13 +47,13 @@ typedef struct _NcHICosmoDEXcdm NcHICosmoDEXcdm;
  * @NC_HICOSMO_DE_XCDM_W: constant parameter
  *
  * Dark Energy equation of state: $w(z) = w$.
- * 
+ *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_XCDM_SPARAMS >*/
 {
-  NC_HICOSMO_DE_XCDM_W = NC_HICOSMO_DE_SPARAM_LEN, 
+  NC_HICOSMO_DE_XCDM_W = NC_HICOSMO_DE_SPARAM_LEN,
   /* < private > */
-  NC_HICOSMO_DE_XCDM_SPARAM_LEN,                   /*< skip >*/
+  NC_HICOSMO_DE_XCDM_SPARAM_LEN, /*< skip >*/
 } NcHICosmoDEXCDMSParams;
 
 #define NC_HICOSMO_DE_XCDM_DEFAULT_W0 (-1.0)
@@ -79,3 +79,4 @@ NcHICosmoDEXcdm *nc_hicosmo_de_xcdm_new (void);
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_DE_XCDM_H_ */
+

@@ -1,14 +1,16 @@
+/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_c.c
  *
  *  Wed Oct 15 17:31:25 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -50,7 +52,7 @@
  * resolutions for the astronomical unit ncm_c_au(), parsec ncm_c_pc() and derived constants.
  * See also [Luzum 2011][XLuzum2011].
  *
- * - Atomic Specra: National Institute of Standards and Technology (NIST) [Atomic Spectra](http://www.nist.gov/pml/data/asd.cfm)
+ * - Atomic Spectra: National Institute of Standards and Technology (NIST) [Atomic Spectra](http://www.nist.gov/pml/data/asd.cfm)
  * Standard Reference Database 78 - Version 5.7 (October 2018).
  *
  */
@@ -64,7 +66,12 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
-G_DEFINE_TYPE (NcmC, ncm_c, G_TYPE_OBJECT);
+struct _NcmC
+{
+  GObject parent_instance;
+};
+
+G_DEFINE_TYPE (NcmC, ncm_c, G_TYPE_OBJECT)
 
 static void
 ncm_c_init (NcmC *ncm_c)
@@ -83,7 +90,7 @@ static void
 ncm_c_class_init (NcmCClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->finalize = ncm_c_finalize;
 }
 
@@ -158,7 +165,7 @@ ncm_c_class_init (NcmCClass *klass)
  */
 
 /**
- * ncm_c_2_pi_2:
+ * ncm_c_twp_pi_2:
  *
  * Returns: $2\pi^2$.
  */
@@ -279,6 +286,14 @@ ncm_c_class_init (NcmCClass *klass)
  * Using CODATA values, see [description][NcmC.description].
  *
  * Returns: Stefan Boltzmann constant $\sigma_\mathrm{SB} = 5.670374419 \times 10^{-8} \,\left[\mathrm{W}\,\mathrm{m}^{-2}\,\mathrm{K}^{-4}\right]$.
+ */
+
+/**
+ * ncm_c_magnetic_constant:
+ *
+ * Using CODATA values, see [description][NcmC.description].
+ *
+ * Returns: Magnetic constant $\mu_0 = 1.25663706212 \times 10^{-6} \,\left[\mathrm{N}\,\mathrm{A}^{-2}\right]$.
  */
 
 /**
@@ -403,6 +418,14 @@ ncm_c_class_init (NcmCClass *klass)
  * Derived from CODATA values, see [description][NcmC.description].
  *
  * Returns: The square of the fine struct constant $\alpha^2$.
+ */
+
+/**
+ * ncm_c_electric_constant:
+ *
+ * Derived from CODATA values, see [description][NcmC.description].
+ *
+ * Returns: Electric constant $\varepsilon_0 = 1 / (\mu_0 c^2) \,\left[\mathrm{F}\,\mathrm{m}^{-1}\right]$.
  */
 
 /**
@@ -1811,51 +1834,6 @@ ncm_c_class_init (NcmCClass *klass)
 /*******************************************************************************
  * START: Observational data
  *******************************************************************************/
-
-/**
- * ncm_c_wmap5_coadded_I_K:
- *
- * WMAP-5 noise per observation for resolution 9 and 10 $I$ maps, to $\sim$0.1\% uncertainty for differencing assembly (DA) $\text{K1}$. See [Hinshaw (2009)][X2009ApJS..180..225H] [[arXiv](https://arxiv.org/abs/0803.0732)].
- *
- * Returns: $\sigma_0(I) = 1.436 \left[ \text{mK} \right]$.
- *
- */
-
-/**
- * ncm_c_wmap5_coadded_I_Ka:
- *
- * WMAP-5 noise per observation for resolution 9 and 10 $I$ maps, to $\sim$0.1\% uncertainty for differencing assembly (DA) $\text{Ka1}$. See [Hinshaw (2009)][X2009ApJS..180..225H] [[arXiv](https://arxiv.org/abs/0803.0732)].
- *
- * Returns: $\sigma_0(I) = 1.470 \left[ \text{mK} \right]$.
- *
- */
-
-/**
- * ncm_c_wmap5_coadded_I_Q:
- *
- * WMAP-5 noise per observation for resolution 9 and 10 $I$ maps, to $\sim$0.1\% uncertainty for differencing assembly (DA) $\text{Q}$. See [Smidt (2009)][X2009PhRvD..80l3005S] [[arXiv](https://arxiv.org/abs/0907.4051)].
- *
- * Returns: $\sigma_0(I) = 2.197 \left[ \text{mK} \right]$.
- *
- */
-
-/**
- * ncm_c_wmap5_coadded_I_V:
- *
- * WMAP-5 noise per observation for resolution 9 and 10 $I$ maps, to $\sim$0.1\% uncertainty for differencing assembly (DA) $\text{V}$. See [Smidt (2009)][X2009PhRvD..80l3005S] [[arXiv](https://arxiv.org/abs/0907.4051)].
- *
- * Returns: $\sigma_0(I) = 3.133 \left[ \text{mK} \right]$.
- *
- */
-
-/**
- * ncm_c_wmap5_coadded_I_W:
- *
- * WMAP-5 noise per observation for resolution 9 and 10 $I$ maps, to $\sim$0.1\% uncertainty for differencing assembly (DA) $\text{W}$. See [Smidt (2009)][X2009PhRvD..80l3005S] [[arXiv](https://arxiv.org/abs/0907.4051)].
- *
- * Returns: $\sigma_0(I) = 6.538 \left[ \text{mK} \right]$.
- *
- */
 
 /**
  * ncm_c_hubble_cte_planck6_base:

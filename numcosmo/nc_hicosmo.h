@@ -3,11 +3,11 @@
  *
  *  Mon Jul 16 18:03:42 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -63,8 +63,8 @@ G_BEGIN_DECLS
  * @NC_HICOSMO_IMPL_Omega_r0: Total radiation density today $\Omega_{r0} = \rho_{r0} / \rho_{\mathrm{crit}0}$
  * @NC_HICOSMO_IMPL_Omega_t0: Total density today $\Omega_{t0}$
  * @NC_HICOSMO_IMPL_T_gamma0: Radiation temperature today
- * @NC_HICOSMO_IMPL_Yp_4He: Primordial Helium mass fraction 
- * @NC_HICOSMO_IMPL_z_lss: Redshift of the last scatering surface
+ * @NC_HICOSMO_IMPL_Yp_4He: Primordial Helium mass fraction
+ * @NC_HICOSMO_IMPL_z_lss: Redshift of the last scattering surface
  * @NC_HICOSMO_IMPL_as_drag: Acoustic Scale at drag redshift
  * @NC_HICOSMO_IMPL_xb: Maximum redshift
  * @NC_HICOSMO_IMPL_E2Omega_b: Baryonic density $E^2\Omega_{b} = \rho_b(z) / \rho_{\mathrm{crit}0}$
@@ -87,12 +87,12 @@ G_BEGIN_DECLS
  * @NC_HICOSMO_IMPL_MassNuInfo: Massive neutrino info
  * @NC_HICOSMO_IMPL_get_bg_var: Background variables interface for perturbations
  *
- * Flags defining the implementation options of the NcHICosmo abstract object. 
- * 
+ * Flags defining the implementation options of the NcHICosmo abstract object.
+ *
  */
 typedef enum /*< flags,underscore_name=NC_HICOSMO_IMPL >*/
 {
-  NC_HICOSMO_IMPL_H0 = 0, 
+  NC_HICOSMO_IMPL_H0 = 0,
   NC_HICOSMO_IMPL_Omega_b0,
   NC_HICOSMO_IMPL_Omega_c0,
   NC_HICOSMO_IMPL_Omega_g0,
@@ -129,7 +129,7 @@ typedef enum /*< flags,underscore_name=NC_HICOSMO_IMPL >*/
   NC_HICOSMO_IMPL_MassNuInfo,
   NC_HICOSMO_IMPL_get_bg_var,
   /* < private > */
-  NC_HICOSMO_IMPL_LAST,       /*< skip >*/
+  NC_HICOSMO_IMPL_LAST, /*< skip >*/
 } NcHICosmoImpl;
 
 #define NC_HICOSMO_IMPL_FLAG_RH_Mpc       NCM_MODEL_OPT2IMPL  (NC_HICOSMO_IMPL_H0)
@@ -199,37 +199,37 @@ struct _NcHICosmoClass
 {
   /*< private >*/
   NcmModelClass parent_class;
-  NcHICosmoFunc0   H0;
-  NcHICosmoFunc0   Omega_b0;
-  NcHICosmoFunc0   Omega_c0;
-  NcHICosmoFunc0   Omega_g0;
-  NcHICosmoFunc0   Omega_nu0;
-  NcHICosmoFunc0   Omega_mnu0;
-  NcHICosmoFunc0   Press_mnu0;
-  NcHICosmoFunc0   Omega_m0;
-  NcHICosmoFunc0   Omega_r0;
-  NcHICosmoFunc0   Omega_t0;
-  NcHICosmoFunc0   T_gamma0;
-  NcHICosmoFunc0   Yp_4He;
-  NcHICosmoFunc0   z_lss;
-  NcHICosmoFunc0   as_drag;
-  NcHICosmoFunc0   xb;
-  NcHICosmoVFunc0  Omega_mnu0_n;
-  NcHICosmoVFunc0  Press_mnu0_n;
-  NcHICosmoFunc1Z  E2Omega_b;
-  NcHICosmoFunc1Z  E2Omega_c;
-  NcHICosmoFunc1Z  E2Omega_g;
-  NcHICosmoFunc1Z  E2Omega_nu;
-  NcHICosmoFunc1Z  E2Omega_mnu;
-  NcHICosmoFunc1Z  E2Press_mnu;
-  NcHICosmoFunc1Z  E2Omega_m;
-  NcHICosmoFunc1Z  E2Omega_r;
-  NcHICosmoFunc1Z  E2Omega_t;
-  NcHICosmoFunc1Z  E2;
-  NcHICosmoFunc1Z  dE2_dz;
-  NcHICosmoFunc1Z  d2E2_dz2;
-  NcHICosmoFunc1Z  bgp_cs2;
-  NcHICosmoFunc1Z  Dc;
+  NcHICosmoFunc0 H0;
+  NcHICosmoFunc0 Omega_b0;
+  NcHICosmoFunc0 Omega_c0;
+  NcHICosmoFunc0 Omega_g0;
+  NcHICosmoFunc0 Omega_nu0;
+  NcHICosmoFunc0 Omega_mnu0;
+  NcHICosmoFunc0 Press_mnu0;
+  NcHICosmoFunc0 Omega_m0;
+  NcHICosmoFunc0 Omega_r0;
+  NcHICosmoFunc0 Omega_t0;
+  NcHICosmoFunc0 T_gamma0;
+  NcHICosmoFunc0 Yp_4He;
+  NcHICosmoFunc0 z_lss;
+  NcHICosmoFunc0 as_drag;
+  NcHICosmoFunc0 xb;
+  NcHICosmoVFunc0 Omega_mnu0_n;
+  NcHICosmoVFunc0 Press_mnu0_n;
+  NcHICosmoFunc1Z E2Omega_b;
+  NcHICosmoFunc1Z E2Omega_c;
+  NcHICosmoFunc1Z E2Omega_g;
+  NcHICosmoFunc1Z E2Omega_nu;
+  NcHICosmoFunc1Z E2Omega_mnu;
+  NcHICosmoFunc1Z E2Press_mnu;
+  NcHICosmoFunc1Z E2Omega_m;
+  NcHICosmoFunc1Z E2Omega_r;
+  NcHICosmoFunc1Z E2Omega_t;
+  NcHICosmoFunc1Z E2;
+  NcHICosmoFunc1Z dE2_dz;
+  NcHICosmoFunc1Z d2E2_dz2;
+  NcHICosmoFunc1Z bgp_cs2;
+  NcHICosmoFunc1Z Dc;
   NcHICosmoVFunc1Z E2Omega_mnu_n;
   NcHICosmoVFunc1Z E2Press_mnu_n;
   NcHICosmoFuncNMassNu NMassNu;
@@ -237,12 +237,6 @@ struct _NcHICosmoClass
   NcHICosmoGetBGVar get_bg_var;
 };
 
-/**
- * NcHICosmo:
- *
- * FIXME
- *
- */
 struct _NcHICosmo
 {
   /*< private >*/
@@ -300,7 +294,6 @@ void nc_hicosmo_set_MassNuInfo_impl (NcHICosmoClass *model_class, NcHICosmoFuncM
 
 void nc_hicosmo_set_get_bg_var_impl (NcHICosmoClass *model_class, NcHICosmoGetBGVar f);
 
-NcHICosmo *nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name);
 NcHICosmo *nc_hicosmo_ref (NcHICosmo *cosmo);
 void nc_hicosmo_free (NcHICosmo *cosmo);
 void nc_hicosmo_clear (NcHICosmo **cosmo);
@@ -416,47 +409,46 @@ G_END_DECLS
 #ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, H0)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, Omega_b0)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, Omega_c0)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, Omega_g0)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, Omega_nu0)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, Omega_mnu0)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, Press_mnu0)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, Omega_m0)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, Omega_r0)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, Omega_t0)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, T_gamma0)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, Yp_4He)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, z_lss)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, as_drag)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, xb)
 
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,H0)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_b0)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_c0)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_g0)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_nu0)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_mnu0)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Press_mnu0)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_m0)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_r0)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_t0)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,T_gamma0)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Yp_4He)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,z_lss)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,as_drag)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,xb)
+NCM_MODEL_VFUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, Omega_mnu0_n)
+NCM_MODEL_VFUNC0_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, Press_mnu0_n)
 
-NCM_MODEL_VFUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_mnu0_n)
-NCM_MODEL_VFUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Press_mnu0_n)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, E2Omega_b, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, E2Omega_c, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, E2Omega_g, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, E2Omega_nu, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, E2Omega_mnu, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, E2Press_mnu, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, E2Omega_m, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, E2Omega_r, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, E2Omega_t, z)
 
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,E2Omega_b,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,E2Omega_c,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,E2Omega_g,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,E2Omega_nu,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,E2Omega_mnu,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,E2Press_mnu,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,E2Omega_m,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,E2Omega_r,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,E2Omega_t,z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, E2, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, dE2_dz, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, d2E2_dz2, z)
 
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,E2,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,dE2_dz,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,d2E2_dz2,z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, bgp_cs2, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, Dc, z)
 
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,bgp_cs2,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Dc,z)
+NCM_MODEL_VFUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, E2Omega_mnu_n, z)
+NCM_MODEL_VFUNC1_IMPL (NC_HICOSMO, NcHICosmo, nc_hicosmo, E2Press_mnu_n, z)
 
-NCM_MODEL_VFUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,E2Omega_mnu_n,z)
-NCM_MODEL_VFUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,E2Press_mnu_n,z)
-
-NCM_INLINE guint 
+NCM_INLINE guint
 nc_hicosmo_NMassNu (NcHICosmo *cosmo)
 {
   return NC_HICOSMO_GET_CLASS (cosmo)->NMassNu (cosmo);
@@ -468,7 +460,7 @@ nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdouble *
   NC_HICOSMO_GET_CLASS (cosmo)->MassNuInfo (cosmo, nu_i, mass_eV, T_0, xi, g);
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 nc_hicosmo_get_bg_var (NcHICosmo *cosmo, const gdouble t, NcHIPertBGVar *bg_var)
 {
   NC_HICOSMO_GET_CLASS (cosmo)->get_bg_var (cosmo, t, bg_var);
@@ -490,6 +482,7 @@ NCM_INLINE gdouble
 nc_hicosmo_Omega_k0 (NcHICosmo *cosmo)
 {
   const gdouble Omega_k0 = (1.0 - nc_hicosmo_Omega_t0 (cosmo));
+
   return fabs (Omega_k0) < NC_HICOSMO_OMEGA_K0_LIMIT ? 0.0 : Omega_k0;
 }
 
@@ -565,14 +558,15 @@ nc_hicosmo_XHe (NcHICosmo *cosmo)
   return nc_hicosmo_Yp_4He (cosmo) / (ncm_c_mass_ratio_4He_1H () * nc_hicosmo_Yp_1H (cosmo));
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_hicosmo_crit_density (NcHICosmo *cosmo)
 {
   const gdouble h2 = nc_hicosmo_h2 (cosmo);
+
   return ncm_c_crit_density_h2 () * h2;
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_hicosmo_baryon_density (NcHICosmo *cosmo)
 {
   const gdouble rho_crit = nc_hicosmo_crit_density (cosmo);
@@ -582,7 +576,7 @@ nc_hicosmo_baryon_density (NcHICosmo *cosmo)
   return rho_b0;
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_hicosmo_He_number_density (NcHICosmo *cosmo)
 {
   const gdouble rho_b0 = nc_hicosmo_baryon_density (cosmo);
@@ -592,7 +586,7 @@ nc_hicosmo_He_number_density (NcHICosmo *cosmo)
   return Yp_4He * rho_b0 / E_4He;
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_hicosmo_H_number_density (NcHICosmo *cosmo)
 {
   const gdouble rho_b0 = nc_hicosmo_baryon_density (cosmo);
@@ -618,10 +612,10 @@ NCM_INLINE gdouble
 nc_hicosmo_dH_dz (NcHICosmo *cosmo, const gdouble z)
 {
   return nc_hicosmo_H0 (cosmo) *
-	nc_hicosmo_dE2_dz (cosmo, z) / (2.0 * sqrt (nc_hicosmo_E2 (cosmo, z)));
+         nc_hicosmo_dE2_dz (cosmo, z) / (2.0 * sqrt (nc_hicosmo_E2 (cosmo, z)));
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_hicosmo_Neff (NcHICosmo *cosmo)
 {
   const gdouble conv = 7.0 / 8.0 * pow (4.0 / 11.0, 4.0 / 3.0);
@@ -631,7 +625,7 @@ nc_hicosmo_Neff (NcHICosmo *cosmo)
   return Neff;
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_hicosmo_E2Omega_k (NcHICosmo *cosmo, const gdouble z)
 {
   return nc_hicosmo_Omega_k0 (cosmo) * gsl_pow_2 (1.0 + z);
@@ -642,7 +636,7 @@ nc_hicosmo_q (NcHICosmo *cosmo, const gdouble z)
 {
   const gdouble E2     = nc_hicosmo_E2 (cosmo, z);
   const gdouble dE2_dz = nc_hicosmo_dE2_dz (cosmo, z);
-  
+
   return (dE2_dz * (1.0 + z) / (2.0 * E2) - 1.0);
 }
 
@@ -712,8 +706,8 @@ nc_hicosmo_kinetic_w (NcHICosmo *cosmo, const gdouble z)
 NCM_INLINE gdouble
 nc_hicosmo_mqE2 (NcHICosmo *cosmo, const gdouble z)
 {
-  const gdouble q        = nc_hicosmo_q (cosmo, z);
-  const gdouble E2       = nc_hicosmo_E2 (cosmo, z);
+  const gdouble q  = nc_hicosmo_q (cosmo, z);
+  const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
 
   return -q * E2;
 }
@@ -722,13 +716,15 @@ NCM_INLINE gdouble
 nc_hicosmo_x_alpha (NcHICosmo *cosmo, gdouble alpha)
 {
   const gdouble xb = nc_hicosmo_xb (cosmo);
-  return xb * exp (- fabs (alpha));
+
+  return xb * exp (-fabs (alpha));
 }
 
 NCM_INLINE gdouble
 nc_hicosmo_abs_alpha (NcHICosmo *cosmo, gdouble x)
 {
   const gdouble xb = nc_hicosmo_xb (cosmo);
+
   return log (xb / x);
 }
 
@@ -749,3 +745,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HICOSMO_INLINE_H_ */
+

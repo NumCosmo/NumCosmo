@@ -3,11 +3,11 @@
  *
  *  Fri June 17 10:11:55 2016
  *  Copyright  2016  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_powspec_filter.h
- * Copyright (C) 2016 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2016 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -35,21 +35,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_POWSPEC_FILTER             (ncm_powspec_filter_get_type ())
-#define NCM_POWSPEC_FILTER(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_POWSPEC_FILTER, NcmPowspecFilter))
-#define NCM_POWSPEC_FILTER_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_POWSPEC_FILTER, NcmPowspecFilterClass))
-#define NCM_IS_POWSPEC_FILTER(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_POWSPEC_FILTER))
-#define NCM_IS_POWSPEC_FILTER_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_POWSPEC_FILTER))
-#define NCM_POWSPEC_FILTER_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_POWSPEC_FILTER, NcmPowspecFilterClass))
+#define NCM_TYPE_POWSPEC_FILTER (ncm_powspec_filter_get_type ())
 
-typedef struct _NcmPowspecFilterClass NcmPowspecFilterClass;
-typedef struct _NcmPowspecFilter NcmPowspecFilter;
-
-struct _NcmPowspecFilterClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
+G_DECLARE_FINAL_TYPE (NcmPowspecFilter, ncm_powspec_filter, NCM, POWSPEC_FILTER, GObject)
 
 /**
  * NcmPowspecFilterType:
@@ -68,29 +56,6 @@ typedef enum _NcmPowspecFilterType
   NCM_POWSPEC_FILTER_TYPE_LEN, /*< skip >*/
 } NcmPowspecFilterType;
 
-struct _NcmPowspecFilter
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmPowspec *ps;
-  NcmPowspecFilterType type;
-  NcmFftlog *fftlog;
-  gdouble lnr0;
-  gdouble lnk0;
-  gdouble Lk;
-  gdouble zi;
-  gdouble zf;
-  gboolean calibrated;
-  gdouble reltol;
-  gdouble reltol_z;
-  NcmSpline2d *var;
-  NcmSpline2d *dvar;
-  NcmModelCtrl *ctrl;
-  gboolean constructed;
-};
-
-GType ncm_powspec_filter_get_type (void) G_GNUC_CONST;
-
 NcmPowspecFilter *ncm_powspec_filter_new (NcmPowspec *ps, NcmPowspecFilterType type);
 NcmPowspecFilter *ncm_powspec_filter_ref (NcmPowspecFilter *psf);
 
@@ -104,11 +69,19 @@ void ncm_powspec_filter_set_type (NcmPowspecFilter *psf, NcmPowspecFilterType ty
 void ncm_powspec_filter_set_lnr0 (NcmPowspecFilter *psf, gdouble lnr0);
 void ncm_powspec_filter_set_best_lnr0 (NcmPowspecFilter *psf);
 
+void ncm_powspec_filter_set_reltol (NcmPowspecFilter *psf, const gdouble reltol);
+void ncm_powspec_filter_set_reltol_z (NcmPowspecFilter *psf, const gdouble reltol_z);
+
 void ncm_powspec_filter_set_zi (NcmPowspecFilter *psf, gdouble zi);
 void ncm_powspec_filter_set_zf (NcmPowspecFilter *psf, gdouble zf);
 
 void ncm_powspec_filter_require_zi (NcmPowspecFilter *psf, gdouble zi);
 void ncm_powspec_filter_require_zf (NcmPowspecFilter *psf, gdouble zf);
+
+NcmPowspecFilterType ncm_powspec_filter_get_filter_type (NcmPowspecFilter *psf);
+
+gdouble ncm_powspec_filter_get_reltol (NcmPowspecFilter *psf);
+gdouble ncm_powspec_filter_get_reltol_z (NcmPowspecFilter *psf);
 
 gdouble ncm_powspec_filter_get_r_min (NcmPowspecFilter *psf);
 gdouble ncm_powspec_filter_get_r_max (NcmPowspecFilter *psf);
@@ -127,6 +100,8 @@ gdouble ncm_powspec_filter_eval_dnvar_dlnrn (NcmPowspecFilter *psf, const gdoubl
 gdouble ncm_powspec_filter_eval_dnlnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr, guint n);
 
 gdouble ncm_powspec_filter_volume_rm3 (NcmPowspecFilter *psf);
+
+NcmPowspec *ncm_powspec_filter_peek_powspec (NcmPowspecFilter *psf);
 
 #define NCM_POWSPEC_FILTER_DEFAULT_SIZE (200)
 

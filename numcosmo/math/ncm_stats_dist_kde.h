@@ -5,11 +5,11 @@
  *
  *  Wed November 07 16:02:25 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_stats_dist_kde.h
- * Copyright (C) 2018 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2018 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -40,31 +40,38 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_STATS_DIST_KDE             (ncm_stats_dist_kde_get_type ())
-#define NCM_STATS_DIST_KDE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST_KDE, NcmStatsDistKDE))
-#define NCM_STATS_DIST_KDE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST_KDE, NcmStatsDistKDEClass))
-#define NCM_IS_STATS_DIST_KDE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_STATS_DIST_KDE))
-#define NCM_IS_STATS_DIST_KDE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_STATS_DIST_KDE))
-#define NCM_STATS_DIST_KDE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST_KDE, NcmStatsDistKDEClass))
+#define NCM_TYPE_STATS_DIST_KDE (ncm_stats_dist_kde_get_type ())
 
-typedef struct _NcmStatsDistKDEClass NcmStatsDistKDEClass;
-typedef struct _NcmStatsDistKDE NcmStatsDistKDE;
-typedef struct _NcmStatsDistKDEPrivate NcmStatsDistKDEPrivate;
+G_DECLARE_DERIVABLE_TYPE (NcmStatsDistKDE, ncm_stats_dist_kde, NCM, STATS_DIST_KDE, NcmStatsDist)
 
 struct _NcmStatsDistKDEClass
 {
   /*< private >*/
   NcmStatsDistClass parent_class;
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[7];
 };
 
-struct _NcmStatsDistKDE
+/**
+ * NcmStatsDistKDECovType:
+ * @NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE: Use sample covariance.
+ * @NCM_STATS_DIST_KDE_COV_TYPE_FIXED: Use a fixed covariance matrix.
+ * @NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG: Use an 1D robust estimator to build a diagonal covariance.
+ * @NCM_STATS_DIST_KDE_COV_TYPE_ROBUST: Use the OGK method to build a covariance.
+ *
+ * Selects the covariance type to use in the kernel interpolation.
+ *
+ */
+typedef enum _NcmStatsDistKDECovType
 {
-  /*< private >*/
-  NcmStatsDist parent_instance;
-  NcmStatsDistKDEPrivate *priv;
-};
-
-GType ncm_stats_dist_kde_get_type (void) G_GNUC_CONST;
+  NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE,
+  NCM_STATS_DIST_KDE_COV_TYPE_FIXED,
+  NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG,
+  NCM_STATS_DIST_KDE_COV_TYPE_ROBUST,
+  /* < private > */
+  NCM_STATS_DIST_KDE_COV_TYPE_LEN, /*< skip >*/
+} NcmStatsDistKDECovType;
 
 NcmStatsDistKDE *ncm_stats_dist_kde_new (NcmStatsDistKernel *sdk, NcmStatsDistCV CV_type);
 NcmStatsDistKDE *ncm_stats_dist_kde_ref (NcmStatsDistKDE *sdkde);
@@ -73,6 +80,12 @@ void ncm_stats_dist_kde_clear (NcmStatsDistKDE **sdkde);
 
 void ncm_stats_dist_kde_set_nearPD_maxiter (NcmStatsDistKDE *sdkde, const guint maxiter);
 guint ncm_stats_dist_kde_get_nearPD_maxiter (NcmStatsDistKDE *sdkde);
+
+void ncm_stats_dist_kde_set_cov_type (NcmStatsDistKDE *sdkde, NcmStatsDistKDECovType cov_type);
+NcmStatsDistKDECovType ncm_stats_dist_kde_get_cov_type (NcmStatsDistKDE *sdkde);
+
+void ncm_stats_dist_kde_set_cov_fixed (NcmStatsDistKDE *sdkde, NcmMatrix *cov_fixed);
+NcmMatrix *ncm_stats_dist_kde_peek_cov_fixed (NcmStatsDistKDE *sdkde);
 
 G_END_DECLS
 

@@ -3,11 +3,11 @@
  *
  *  Sat March 14 19:31:53 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_stats_dist1d_epdf.h
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -34,21 +34,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_STATS_DIST1D_EPDF             (ncm_stats_dist1d_epdf_get_type ())
-#define NCM_STATS_DIST1D_EPDF(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST1D_EPDF, NcmStatsDist1dEPDF))
-#define NCM_STATS_DIST1D_EPDF_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST1D_EPDF, NcmStatsDist1dEPDFClass))
-#define NCM_IS_STATS_DIST1D_EPDF(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_STATS_DIST1D_EPDF))
-#define NCM_IS_STATS_DIST1D_EPDF_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_STATS_DIST1D_EPDF))
-#define NCM_STATS_DIST1D_EPDF_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST1D_EPDF, NcmStatsDist1dEPDFClass))
+#define NCM_TYPE_STATS_DIST1D_EPDF (ncm_stats_dist1d_epdf_get_type ())
 
-typedef struct _NcmStatsDist1dEPDFClass NcmStatsDist1dEPDFClass;
-typedef struct _NcmStatsDist1dEPDF NcmStatsDist1dEPDF;
-
-struct _NcmStatsDist1dEPDFClass
-{
-  /*< private >*/
-  NcmStatsDist1dClass parent_class;
-};
+G_DECLARE_FINAL_TYPE (NcmStatsDist1dEPDF, ncm_stats_dist1d_epdf, NCM, STATS_DIST1D_EPDF, NcmStatsDist1d)
 
 /**
  * NcmStatsDist1dEPDFBw:
@@ -68,44 +56,18 @@ typedef enum _NcmStatsDist1dEPDFBw
   NCM_STATS_DIST1D_EPDF_BW_LEN, /*< skip >*/
 } NcmStatsDist1dEPDFBw;
 
-struct _NcmStatsDist1dEPDF
-{
-  /*< private >*/
-  NcmStatsDist1d parent_instance;
-  NcmStatsVec *obs_stats;
-  guint max_obs;
-  NcmStatsDist1dEPDFBw bw;
-  gdouble h_fixed;
-  gdouble sd_min_scale;
-  gdouble outliers_threshold;
-  gdouble h;
-  guint n_obs;
-  guint np_obs;
-  gdouble WT;
-  GArray *obs;
-  GSequence *obs_seq;
-  gdouble min;
-  gdouble max;
-  gboolean list_sorted;
-  guint fftsize;
-  NcmVector *Iv;
-  NcmVector *p_data;
-  NcmVector *p_tilde;
-  NcmVector *p_tilde2;
-  NcmVector *p_est;
-  NcmVector *xv;
-  NcmVector *pv;
-  gpointer fft_data_to_tilde;
-  gpointer fft_tilde_to_est;
-  NcmSpline *ph_spline;
-  NcmSpline *p_spline;
-  gboolean bw_set;
-};
-
-GType ncm_stats_dist1d_epdf_get_type (void) G_GNUC_CONST;
-
 NcmStatsDist1dEPDF *ncm_stats_dist1d_epdf_new_full (guint max_obs, NcmStatsDist1dEPDFBw bw, gdouble h_fixed, gdouble sd_min_scale);
 NcmStatsDist1dEPDF *ncm_stats_dist1d_epdf_new (gdouble sd_min_scale);
+
+NcmStatsDist1dEPDF *ncm_stats_dist1d_epdf_ref (NcmStatsDist1dEPDF *epdf1d);
+void ncm_stats_dist1d_epdf_free (NcmStatsDist1dEPDF *epdf1d);
+void ncm_stats_dist1d_epdf_clear (NcmStatsDist1dEPDF **epdf1d);
+
+void ncm_stats_dist1d_epdf_set_bw_type (NcmStatsDist1dEPDF *epdf1d, NcmStatsDist1dEPDFBw bw);
+NcmStatsDist1dEPDFBw ncm_stats_dist1d_epdf_get_bw_type (NcmStatsDist1dEPDF *epdf1d);
+
+void ncm_stats_dist1d_epdf_set_h_fixed (NcmStatsDist1dEPDF *epdf1d, gdouble h_fixed);
+gdouble ncm_stats_dist1d_epdf_get_h_fixed (NcmStatsDist1dEPDF *epdf1d);
 
 void ncm_stats_dist1d_epdf_add_obs_weight (NcmStatsDist1dEPDF *epdf1d, const gdouble x, const gdouble w);
 void ncm_stats_dist1d_epdf_add_obs (NcmStatsDist1dEPDF *epdf1d, const gdouble x);

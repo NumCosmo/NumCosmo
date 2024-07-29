@@ -3,22 +3,22 @@
  *
  *  Mon Jun 11 13:28:00 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * 
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -28,8 +28,8 @@
  * @title: NcmLHRatio1d
  * @short_description: Likelihood ratio for one dimensional parameter analysis.
  *
- * FIXME
- * 
+ * This object defines a likelihood ratio for one dimensional parameter analysis.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -58,7 +58,26 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE (NcmLHRatio1d, ncm_lh_ratio1d, G_TYPE_OBJECT);
+struct _NcmLHRatio1d
+{
+  /*< private >*/
+  GObject parent_instance;
+  NcmFit *fit;
+  NcmFit *constrained;
+  NcmFitRunMsgs mtype;
+  NcmLHRatio1dRoot rtype;
+  NcmMSetPIndex pi;
+  NcmMSetFunc *constraint;
+  gdouble chisquare;
+  gdouble lb;
+  gdouble ub;
+  gdouble bf;
+  guint niter;
+  guint func_eval;
+  guint grad_eval;
+};
+
+G_DEFINE_TYPE (NcmLHRatio1d, ncm_lh_ratio1d, G_TYPE_OBJECT)
 
 static void
 ncm_lh_ratio1d_init (NcmLHRatio1d *lhr1d)
@@ -86,33 +105,36 @@ ncm_lh_ratio1d_constructed (GObject *object)
   G_OBJECT_CLASS (ncm_lh_ratio1d_parent_class)->constructed (object);
   {
     NcmLHRatio1d *lhr1d = NCM_LH_RATIO1D (object);
-    NcmSerialize *ser = ncm_serialize_global ();
-    NcmMSet *mset = ncm_mset_dup (lhr1d->fit->mset, ser);
+    NcmSerialize *ser   = ncm_serialize_global ();
+    NcmMSet *fit_mset   = ncm_fit_peek_mset (lhr1d->fit);
+    NcmFitState *fstate = ncm_fit_peek_state (lhr1d->fit);
+    NcmLikelihood *lh   = ncm_fit_peek_likelihood (lhr1d->fit);
+    NcmMSet *mset       = ncm_mset_dup (fit_mset, ser);
 
     ncm_serialize_free (ser);
     g_assert_cmpint (lhr1d->pi.mid, >=, 0);
-    
-    g_assert (lhr1d->fit->fstate->is_best_fit);
 
-    if (ncm_mset_peek (lhr1d->fit->mset, lhr1d->pi.mid) == NULL)
-      g_error ("ncm_lh_ratio1d_constructed: cannot use parameter[%d:%u], model not set.", 
+    g_assert (ncm_fit_state_is_best_fit (fstate));
+
+    if (ncm_mset_peek (fit_mset, lhr1d->pi.mid) == NULL)
+      g_error ("ncm_lh_ratio1d_constructed: cannot use parameter[%d:%u], model not set.",
                lhr1d->pi.mid, lhr1d->pi.pid);
-    
-    if (ncm_mset_param_get_ftype (lhr1d->fit->mset, lhr1d->pi.mid, lhr1d->pi.pid) != NCM_PARAM_TYPE_FREE)
-      g_error ("ncm_lh_ratio1d_constructed: cannot find for a non fitted parameter[%d:%u].", 
+
+    if (ncm_mset_param_get_ftype (fit_mset, lhr1d->pi.mid, lhr1d->pi.pid) != NCM_PARAM_TYPE_FREE)
+      g_error ("ncm_lh_ratio1d_constructed: cannot find for a non fitted parameter[%d:%u].",
                lhr1d->pi.mid, lhr1d->pi.pid);
 
     ncm_mset_param_set_ftype (mset,
-                              lhr1d->pi.mid, lhr1d->pi.pid, 
+                              lhr1d->pi.mid, lhr1d->pi.pid,
                               NCM_PARAM_TYPE_FIXED);
 
-    lhr1d->constrained = ncm_fit_copy_new (lhr1d->fit, lhr1d->fit->lh, mset,
-                                           lhr1d->fit->grad.gtype);
+    lhr1d->constrained = ncm_fit_copy_new (lhr1d->fit, lh, mset,
+                                           ncm_fit_get_grad_type (lhr1d->fit));
     ncm_mset_free (mset);
 
-    lhr1d->lb = ncm_mset_param_get_lower_bound (lhr1d->fit->mset, lhr1d->pi.mid, lhr1d->pi.pid);
-    lhr1d->ub = ncm_mset_param_get_upper_bound (lhr1d->fit->mset, lhr1d->pi.mid, lhr1d->pi.pid);
-    lhr1d->bf = ncm_mset_param_get (lhr1d->fit->mset, lhr1d->pi.mid, lhr1d->pi.pid);
+    lhr1d->lb = ncm_mset_param_get_lower_bound (fit_mset, lhr1d->pi.mid, lhr1d->pi.pid);
+    lhr1d->ub = ncm_mset_param_get_upper_bound (fit_mset, lhr1d->pi.mid, lhr1d->pi.pid);
+    lhr1d->bf = ncm_mset_param_get (fit_mset, lhr1d->pi.mid, lhr1d->pi.pid);
   }
 }
 
@@ -120,6 +142,7 @@ static void
 ncm_lh_ratio1d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmLHRatio1d *lhr1d = NCM_LH_RATIO1D (object);
+
   g_return_if_fail (NCM_IS_LH_RATIO1D (object));
 
   switch (prop_id)
@@ -130,15 +153,16 @@ ncm_lh_ratio1d_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_PI:
     {
       NcmMSetPIndex *pi = g_value_get_boxed (value);
+
       lhr1d->pi = *pi;
       break;
     }
     case PROP_CONSTRAINT:
       lhr1d->constraint = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -146,6 +170,7 @@ static void
 ncm_lh_ratio1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmLHRatio1d *lhr1d = NCM_LH_RATIO1D (object);
+
   g_return_if_fail (NCM_IS_LH_RATIO1D (object));
 
   switch (prop_id)
@@ -156,15 +181,16 @@ ncm_lh_ratio1d_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_PI:
     {
       NcmMSetPIndex *pi = ncm_mset_pindex_new (lhr1d->pi.mid, lhr1d->pi.pid);
+
       g_value_take_boxed (value, pi);
       break;
     }
     case PROP_CONSTRAINT:
       g_value_set_object (value, lhr1d->constraint);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -183,7 +209,6 @@ ncm_lh_ratio1d_dispose (GObject *object)
 static void
 ncm_lh_ratio1d_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_lh_ratio1d_parent_class)->finalize (object);
 }
@@ -191,7 +216,7 @@ ncm_lh_ratio1d_finalize (GObject *object)
 static void
 ncm_lh_ratio1d_class_init (NcmLHRatio1dClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->constructed  = &ncm_lh_ratio1d_constructed;
   object_class->set_property = &ncm_lh_ratio1d_set_property;
@@ -214,7 +239,7 @@ ncm_lh_ratio1d_class_init (NcmLHRatio1dClass *klass)
                                                        "Param index",
                                                        NCM_TYPE_MSET_PINDEX,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   g_object_class_install_property (object_class,
                                    PROP_CONSTRAINT,
                                    g_param_spec_object ("constraint",
@@ -224,33 +249,34 @@ ncm_lh_ratio1d_class_init (NcmLHRatio1dClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
-
 /**
  * ncm_lh_ratio1d_new:
  * @fit: a #NcmFit
  * @pi: a #NcmMSetPIndex
  *
- * FIXME
- * 
- * Returns: FIXME
+ * Creates a new #NcmLHRatio1d object. The parameter @pi must be a free
+ * parameter of the model @mid.
+ *
+ *
+ * Returns: (transfer full): a #NcmLHRatio1d.
  */
 NcmLHRatio1d *
 ncm_lh_ratio1d_new (NcmFit *fit, const NcmMSetPIndex *pi)
 {
-  return g_object_new (NCM_TYPE_LH_RATIO1D, 
+  return g_object_new (NCM_TYPE_LH_RATIO1D,
                        "fit", fit,
                        "pi", pi,
-                       NULL); 
+                       NULL);
 }
 
 /**
  * ncm_lh_ratio1d_free:
  * @lhr1d: a #NcmLHRatio1d
  *
- * FIXME
+ * Decrement the reference count of @lhr1d, if it reaches zero, free it.
  *
  */
-void 
+void
 ncm_lh_ratio1d_free (NcmLHRatio1d *lhr1d)
 {
   g_object_unref (lhr1d);
@@ -260,10 +286,11 @@ ncm_lh_ratio1d_free (NcmLHRatio1d *lhr1d)
  * ncm_lh_ratio1d_clear:
  * @lhr1d: a #NcmLHRatio1d
  *
- * FIXME
+ * If *@lhr1d is not %NULL, decrement the reference count of @lhr1d. Sets
+ * *@lhr1d to %NULL.
  *
  */
-void 
+void
 ncm_lh_ratio1d_clear (NcmLHRatio1d **lhr1d)
 {
   g_clear_object (lhr1d);
@@ -274,27 +301,31 @@ ncm_lh_ratio1d_clear (NcmLHRatio1d **lhr1d)
  * @lhr1d: a #NcmLHRatio1d
  * @pi: a #NcmMSetPIndex
  *
- * FIXME
+ * Sets the parameter index of @lhr1d to @pi. The parameter @pi must be a free
+ * parameter of the model @mid.
  *
  */
-void 
+void
 ncm_lh_ratio1d_set_pindex (NcmLHRatio1d *lhr1d, NcmMSetPIndex *pi)
 {
-  if (ncm_mset_param_get_ftype (lhr1d->fit->mset, pi->mid, pi->pid) != NCM_PARAM_TYPE_FREE)
-    g_error ("ncm_lh_ratio1d_set_pindex: cannot find bounds for a non fitted parameter[%d:%u].", 
+  NcmMSet *fit_mset         = ncm_fit_peek_mset (lhr1d->fit);
+  NcmMSet *constrained_mset = ncm_fit_peek_mset (lhr1d->constrained);
+
+  if (ncm_mset_param_get_ftype (fit_mset, pi->mid, pi->pid) != NCM_PARAM_TYPE_FREE)
+    g_error ("ncm_lh_ratio1d_set_pindex: cannot find bounds for a non fitted parameter[%d:%u].",
              pi->mid, pi->pid);
 
-  ncm_mset_param_set_ftype (lhr1d->constrained->mset, 
-                            lhr1d->pi.mid, lhr1d->pi.pid, 
+  ncm_mset_param_set_ftype (constrained_mset,
+                            lhr1d->pi.mid, lhr1d->pi.pid,
                             NCM_PARAM_TYPE_FREE);
   lhr1d->pi = *pi;
-  ncm_mset_param_set_ftype (lhr1d->constrained->mset, 
-                            lhr1d->pi.mid, lhr1d->pi.pid, 
+  ncm_mset_param_set_ftype (constrained_mset,
+                            lhr1d->pi.mid, lhr1d->pi.pid,
                             NCM_PARAM_TYPE_FIXED);
 
-  lhr1d->lb = ncm_mset_param_get_lower_bound (lhr1d->fit->mset, pi->mid, pi->pid);
-  lhr1d->ub = ncm_mset_param_get_upper_bound (lhr1d->fit->mset, pi->mid, pi->pid);
-  lhr1d->bf = ncm_mset_param_get (lhr1d->fit->mset, pi->mid, pi->pid);
+  lhr1d->lb = ncm_mset_param_get_lower_bound (fit_mset, pi->mid, pi->pid);
+  lhr1d->ub = ncm_mset_param_get_upper_bound (fit_mset, pi->mid, pi->pid);
+  lhr1d->bf = ncm_mset_param_get (fit_mset, pi->mid, pi->pid);
 }
 
 static gboolean _ncm_lh_ratio1d_log_dot = FALSE;
@@ -305,8 +336,9 @@ ncm_lh_ratio1d_log_start (NcmLHRatio1d *lhr1d, gdouble clevel)
   if (lhr1d->mtype > NCM_FIT_RUN_MSGS_NONE)
   {
     ncm_cfg_msg_sepa ();
-    g_message ("# Likelihood ratio bounds at %2.3f%%, bestfit % 12.8g:\n", 
+    g_message ("# Likelihood ratio bounds at %2.3f%%, bestfit % 12.8g:\n",
                100.0 * clevel, lhr1d->bf);
+
     if (lhr1d->mtype == NCM_FIT_RUN_MSGS_SIMPLE)
     {
       g_message ("#");
@@ -327,11 +359,14 @@ ncm_lh_ratio1d_log_param_val (NcmLHRatio1d *lhr1d, gdouble p, gdouble val)
         g_message ("#");
         _ncm_lh_ratio1d_log_dot = TRUE;
       }
+
       g_message (".");
     }
     else
-      g_message ("#  parameter % 12.8g likelihood ratio % 12.8g.\n", 
+    {
+      g_message ("#  parameter % 12.8g likelihood ratio % 12.8g.\n",
                  lhr1d->bf + p, val);
+    }
   }
 }
 
@@ -345,8 +380,10 @@ ncm_lh_ratio1d_log_root_start (NcmLHRatio1d *lhr1d, gdouble pl, gdouble pu)
       g_message ("\n");
       _ncm_lh_ratio1d_log_dot = FALSE;
     }
-    g_message ("#  looking for a root in interval [% 12.8g % 12.8g]:\n", 
+
+    g_message ("#  looking for a root in interval [% 12.8g % 12.8g]:\n",
                lhr1d->bf + pl, lhr1d->bf + pu);
+
     if (lhr1d->mtype == NCM_FIT_RUN_MSGS_SIMPLE)
     {
       g_message ("#");
@@ -363,7 +400,7 @@ ncm_lh_ratio1d_log_root_step (NcmLHRatio1d *lhr1d, gdouble pl, gdouble pu)
     if (lhr1d->mtype == NCM_FIT_RUN_MSGS_SIMPLE)
       g_message (".");
     else
-      g_message ("#  parameter root bounds [% 12.8g % 12.8g].\n", 
+      g_message ("#  parameter root bounds [% 12.8g % 12.8g].\n",
                  lhr1d->bf + pl, lhr1d->bf + pu);
   }
 }
@@ -378,9 +415,10 @@ ncm_lh_ratio1d_log_root_finish (NcmLHRatio1d *lhr1d, gdouble pr, gdouble prec)
       g_message ("\n");
       _ncm_lh_ratio1d_log_dot = FALSE;
     }
-    g_message ("#  root found at % 12.8g with precision %1.8e.\n", 
+
+    g_message ("#  root found at % 12.8g with precision %1.8e.\n",
                lhr1d->bf + pr, prec);
-  }  
+  }
 }
 
 static void
@@ -393,46 +431,53 @@ ncm_lh_ratio1d_log_finish (NcmLHRatio1d *lhr1d, gdouble pl, gdouble pu)
       g_message ("\n");
       _ncm_lh_ratio1d_log_dot = FALSE;
     }
-    g_message ("#  lower and upper bounds found [% 12.8g % 12.8g].\n", 
+
+    g_message ("#  lower and upper bounds found [% 12.8g % 12.8g].\n",
                lhr1d->bf + pl, lhr1d->bf + pu);
     g_message ("#  iteration            [%06d]\n", lhr1d->niter);
     g_message ("#  function evaluations [%06d]\n", lhr1d->func_eval);
     g_message ("#  gradient evaluations [%06d]\n", lhr1d->grad_eval);
-    
-  }  
+  }
 }
 
 static gdouble
 ncm_lh_ratio1d_f (gdouble x, gpointer ptr)
 {
-  NcmLHRatio1d *lhr1d = NCM_LH_RATIO1D (ptr);
-  gdouble p = lhr1d->bf + x;
+  NcmLHRatio1d *lhr1d             = NCM_LH_RATIO1D (ptr);
+  NcmMSet *constrained_mset       = ncm_fit_peek_mset (lhr1d->constrained);
+  NcmFitState *constrained_fstate = ncm_fit_peek_state (lhr1d->constrained);
+  NcmFitState *fit_fstate         = ncm_fit_peek_state (lhr1d->fit);
+  gdouble p                       = lhr1d->bf + x;
 
   p = GSL_MAX (p, lhr1d->lb);
   p = GSL_MIN (p, lhr1d->ub);
 
-  ncm_mset_param_set (lhr1d->constrained->mset, lhr1d->pi.mid, lhr1d->pi.pid, p);
+  ncm_mset_param_set (constrained_mset, lhr1d->pi.mid, lhr1d->pi.pid, p);
 
   ncm_fit_run (lhr1d->constrained, NCM_FIT_RUN_MSGS_NONE);
 
-  lhr1d->niter     += lhr1d->constrained->fstate->niter;
-  lhr1d->func_eval += lhr1d->constrained->fstate->func_eval;
-  lhr1d->grad_eval += lhr1d->constrained->fstate->grad_eval;
+  lhr1d->niter     += ncm_fit_state_get_niter (constrained_fstate);
+  lhr1d->func_eval += ncm_fit_state_get_func_eval (constrained_fstate);
+  lhr1d->grad_eval += ncm_fit_state_get_grad_eval (constrained_fstate);
 
   if (p == lhr1d->lb)
   {
     g_warning ("reached lower bound stoping...");
+
     return 0.0;
   }
+
   if (p == lhr1d->ub)
   {
     g_warning ("reached upper bound stoping...");
+
     return 0.0;
   }
 
   {
-    const gdouble m2lnL_const = ncm_fit_state_get_m2lnL_curval (lhr1d->constrained->fstate);
-    const gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (lhr1d->fit->fstate);
+    const gdouble m2lnL_const = ncm_fit_state_get_m2lnL_curval (constrained_fstate);
+    const gdouble m2lnL       = ncm_fit_state_get_m2lnL_curval (fit_fstate);
+
     return m2lnL_const - (m2lnL + lhr1d->chisquare);
   }
 }
@@ -456,20 +501,21 @@ ncm_lh_ratio1d_root_brent (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x)
 
   ncm_lh_ratio1d_log_root_start (lhr1d, x0, x);
 
-  do
-  {
+  do {
     iter++;
     status = gsl_root_fsolver_iterate (s);
+
     if (status)
     {
       g_warning ("%s", gsl_strerror (status));
       gsl_root_fsolver_free (s);
+
       return GSL_NAN;
     }
 
-    x = gsl_root_fsolver_root (s);
-    x0 = gsl_root_fsolver_x_lower (s);
-    x1 = gsl_root_fsolver_x_upper (s);
+    x      = gsl_root_fsolver_root (s);
+    x0     = gsl_root_fsolver_x_lower (s);
+    x1     = gsl_root_fsolver_x_upper (s);
     status = gsl_root_test_interval (x0, x1, 0, prec);
 
     ncm_lh_ratio1d_log_root_step (lhr1d, x0, x1);
@@ -480,8 +526,7 @@ ncm_lh_ratio1d_root_brent (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x)
       x = GSL_NAN;
       break;
     }
-  }
-  while (status == GSL_CONTINUE && iter < max_iter);
+  } while (status == GSL_CONTINUE && iter < max_iter);
 
   gsl_root_fsolver_free (s);
   ncm_lh_ratio1d_log_root_finish (lhr1d, x, prec);
@@ -493,9 +538,10 @@ static gdouble
 ncm_lh_ratio1d_numdiff_df (gdouble x, gpointer p)
 {
   NcmLHRatio1d *lhr1d = NCM_LH_RATIO1D (p);
+  NcmDiff *diff       = ncm_fit_peek_diff (lhr1d->fit);
   gdouble res, err;
 
-  res = ncm_diff_rf_d1_1_to_1 (lhr1d->fit->diff, x, ncm_lh_ratio1d_f, p, &err);
+  res = ncm_diff_rf_d1_1_to_1 (diff, x, ncm_lh_ratio1d_f, p, &err);
 
   return res;
 }
@@ -504,10 +550,10 @@ static void
 ncm_lh_ratio1d_numdiff_fdf (gdouble x, gpointer p, gdouble *y, gdouble *dy)
 {
   *dy = ncm_lh_ratio1d_numdiff_df (x, p);
-  *y = ncm_lh_ratio1d_f (x, p);
+  *y  = ncm_lh_ratio1d_f (x, p);
+
   return;
 }
-
 
 static gdouble
 ncm_lh_ratio1d_root_steffenson (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x1)
@@ -518,11 +564,11 @@ ncm_lh_ratio1d_root_steffenson (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x1)
   gsl_root_fdfsolver *s;
   gsl_function_fdf F;
   gdouble prec = 1e-5;
-  gdouble x = (x0 + x1) * 0.5;
+  gdouble x    = (x0 + x1) * 0.5;
 
-  F.f = &ncm_lh_ratio1d_f;
-  F.df = &ncm_lh_ratio1d_numdiff_df;
-  F.fdf = &ncm_lh_ratio1d_numdiff_fdf;
+  F.f      = &ncm_lh_ratio1d_f;
+  F.df     = &ncm_lh_ratio1d_numdiff_df;
+  F.fdf    = &ncm_lh_ratio1d_numdiff_fdf;
   F.params = lhr1d;
 
   T = gsl_root_fdfsolver_steffenson;
@@ -530,9 +576,8 @@ ncm_lh_ratio1d_root_steffenson (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x1)
   gsl_root_fdfsolver_set (s, &F, x);
 
   ncm_lh_ratio1d_log_root_start (lhr1d, x0, x);
-  
-  do
-  {
+
+  do {
     iter++;
     status = gsl_root_fdfsolver_iterate (s);
 
@@ -540,11 +585,12 @@ ncm_lh_ratio1d_root_steffenson (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x1)
     {
       g_warning ("%s", gsl_strerror (status));
       gsl_root_fdfsolver_free (s);
+
       return GSL_NAN;
     }
 
-    x0 = x;
-    x = gsl_root_fdfsolver_root (s);
+    x0     = x;
+    x      = gsl_root_fdfsolver_root (s);
     status = gsl_root_test_delta (x, x0, 0, prec);
 
     ncm_lh_ratio1d_log_root_step (lhr1d, x, x0);
@@ -555,12 +601,12 @@ ncm_lh_ratio1d_root_steffenson (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x1)
       x = GSL_NAN;
       break;
     }
-  }
-  while (status == GSL_CONTINUE && iter < max_iter);
+  } while (status == GSL_CONTINUE && iter < max_iter);
 
   ncm_lh_ratio1d_log_root_finish (lhr1d, x, prec);
-    
+
   gsl_root_fdfsolver_free (s);
+
   return x;
 }
 
@@ -572,15 +618,18 @@ ncm_lh_ratio1d_root_steffenson (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x1)
  * @clevel: the confidence level (0,1)
  * @mtype: a #NcmFitRunMsgs
  * @lb: (out): lower bound
- * @ub: (out): upper bound 
- * 
- * FIXME
- * 
+ * @ub: (out): upper bound
+ *
+ * Finds the lower and upper bounds of the parameter @pid of model @mid
+ * constrained by the likelihood ratio @clevel. The bounds are stored in
+ * *@lb and *@ub.
+ *
  */
-void 
+void
 ncm_lh_ratio1d_find_bounds (NcmLHRatio1d *lhr1d, gdouble clevel, NcmFitRunMsgs mtype, gdouble *lb, gdouble *ub)
 {
   gdouble scale, r, r_min, r_max, val;
+
   static gdouble (*root) (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x);
 
   g_assert_cmpfloat (clevel, >, 0.0);
@@ -588,8 +637,8 @@ ncm_lh_ratio1d_find_bounds (NcmLHRatio1d *lhr1d, gdouble clevel, NcmFitRunMsgs m
 
   lhr1d->chisquare = gsl_cdf_chisq_Qinv (1.0 - clevel, 1.0);
 
-  scale = sqrt (lhr1d->chisquare) * 
-    ncm_fit_covar_sd (lhr1d->fit, lhr1d->pi.mid, lhr1d->pi.pid);
+  scale = sqrt (lhr1d->chisquare) *
+          ncm_fit_covar_sd (lhr1d->fit, lhr1d->pi.mid, lhr1d->pi.pid);
 
   r = 0.0;
 
@@ -618,22 +667,25 @@ ncm_lh_ratio1d_find_bounds (NcmLHRatio1d *lhr1d, gdouble clevel, NcmFitRunMsgs m
   lhr1d->mtype = mtype;
 
   ncm_lh_ratio1d_log_start (lhr1d, clevel);
-  
+
   while ((val = ncm_lh_ratio1d_f (r_min, lhr1d)) < 0.0)
   {
     ncm_lh_ratio1d_log_param_val (lhr1d, r_min, val);
-    r = r_min;
+    r      = r_min;
     r_min *= NCM_LH_RATIO1D_SCALE_INCR;
   }
+
   r_min = root (lhr1d, r_min, r);
 
   r = 0.0;
+
   while ((val = ncm_lh_ratio1d_f (r_max, lhr1d)) < 0.0)
   {
     ncm_lh_ratio1d_log_param_val (lhr1d, r_max, val);
-    r = r_max;
+    r      = r_max;
     r_max *= NCM_LH_RATIO1D_SCALE_INCR;
   }
+
   r_max = root (lhr1d, r, r_max);
 
   *lb = r_min;

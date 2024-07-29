@@ -3,11 +3,11 @@
  *
  *  Thu October 29 15:15:24 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hiprim_atan.h
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -57,14 +57,14 @@ typedef struct _NcHIPrimAtan NcHIPrimAtan;
  *
  * Primordial adiabatic scalar power spectrum:
  * $$ \mathcal{P}_{SA}(k) = \xi_\mathrm{neq}(k)\mathcal{P}_{\mathrm{F}}(k),$$
- * where 
+ * where
  * $$ \mathcal{P}_{\mathrm{F}}(k) \equiv \mathcal{A}_\mathrm{s}\left(\frac{k}{k_\star}\right)^{n_s -1 } $$
- * and 
+ * and
  * $$ \xi_\mathrm{neq}(k) = \arctan \left[ \left(\frac{k}{k_\mathrm{c}}\right)^\lambda + c_2\right] - \frac{\pi}{2} + c_3. $$
- * 
+ *
  * Primordial tensor power spectrum:
  * $$ \mathcal{P}_T(k) = r \mathcal{A}_\mathrm{s} \left(\frac{k}{k_\star}\right)^{n_T -1 }.$$
- * 
+ *
  */
 typedef enum /*< enum,underscore_name=NC_HIPRIM_ATAN_SPARAMS >*/
 {
@@ -73,7 +73,7 @@ typedef enum /*< enum,underscore_name=NC_HIPRIM_ATAN_SPARAMS >*/
   NC_HIPRIM_ATAN_LNKC,
   NC_HIPRIM_ATAN_C2,
   NC_HIPRIM_ATAN_C3,
-  NC_HIPRIM_ATAN_LAMBDA,     
+  NC_HIPRIM_ATAN_LAMBDA,
   NC_HIPRIM_ATAN_T_SA_RATIO,
   NC_HIPRIM_ATAN_N_T,
   /* < private > */
@@ -108,3 +108,4 @@ NcHIPrimAtan *nc_hiprim_atan_new (void);
 G_END_DECLS
 
 #endif /* _NC_HIPRIM_ATAN_H_ */
+

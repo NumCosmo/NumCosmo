@@ -1,13 +1,15 @@
+/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_cfg.c
  *
  *  Wed Aug 13 20:59:22 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -27,7 +29,8 @@
  * @title: NcmCfg
  * @short_description: Library configuration and helper functions.
  *
- * FIXME
+ * These functions are used to configure the library, including helper
+ * functions related to the library configuration.
  *
  */
 
@@ -48,13 +51,17 @@
 #include "math/ncm_spline_gsl.h"
 #include "math/ncm_spline_cubic.h"
 #include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_spline_cubic_d2.h"
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_spline2d_gsl.h"
 #include "math/ncm_spline2d_spline.h"
-#include "math/ncm_powspec.h"
+#include "math/ncm_integral1d.h"
+#include "math/ncm_integral_nd.h"
+#include "math/ncm_powspec_corr3d.h"
 #include "math/ncm_powspec_filter.h"
 #include "math/ncm_powspec_sphere_proj.h"
-#include "math/ncm_powspec_corr3d.h"
+#include "math/ncm_powspec_spline2d.h"
+#include "math/ncm_powspec.h"
 #include "math/ncm_model.h"
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_model_builder.h"
@@ -91,17 +98,20 @@
 #include "model/nc_hicosmo_gcg.h"
 #include "model/nc_hicosmo_idem2.h"
 #include "model/nc_hicosmo_de_xcdm.h"
+#include "model/nc_hicosmo_de_wspline.h"
 #include "model/nc_hicosmo_de_cpl.h"
 #include "model/nc_hicosmo_de_jbp.h"
 #include "model/nc_hicosmo_qgrw.h"
+#include "model/nc_hicosmo_qgw.h"
 #include "model/nc_hicosmo_Vexp.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
 #include "model/nc_hicosmo_de_reparam_cmb.h"
-#include "model/nc_hiprim_power_law.h"
 #include "model/nc_hiprim_atan.h"
-#include "model/nc_hiprim_expc.h"
 #include "model/nc_hiprim_bpl.h"
+#include "model/nc_hiprim_expc.h"
+#include "model/nc_hiprim_power_law.h"
 #include "model/nc_hiprim_sbpl.h"
+#include "model/nc_hiprim_two_fluids.h"
 #include "lss/nc_window_tophat.h"
 #include "lss/nc_window_gaussian.h"
 #include "lss/nc_growth_func.h"
@@ -123,13 +133,8 @@
 #include "lss/nc_multiplicity_func_tinker_mean_normalized.h"
 #include "lss/nc_multiplicity_func_crocce.h"
 #include "lss/nc_multiplicity_func_bocquet.h"
+#include "lss/nc_multiplicity_func_watson.h"
 #include "lss/nc_halo_mass_function.h"
-#include "lss/nc_galaxy_acf.h"
-#include "lss/nc_galaxy_redshift_spec.h"
-#include "lss/nc_galaxy_redshift_spline.h"
-#include "lss/nc_galaxy_redshift_gauss.h"
-#include "lss/nc_galaxy_wl.h"
-#include "lss/nc_galaxy_wl_reduced_shear_gauss.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_mass_nodist.h"
@@ -143,11 +148,10 @@
 #include "lss/nc_cluster_redshift_nodist.h"
 #include "lss/nc_cluster_photoz_gauss_global.h"
 #include "lss/nc_cluster_photoz_gauss.h"
-#include "lss/nc_halo_bias_func.h"
-#include "lss/nc_halo_bias_type_ps.h"
-#include "lss/nc_halo_bias_type_st_ellip.h"
-#include "lss/nc_halo_bias_type_st_spher.h"
-#include "lss/nc_halo_bias_type_tinker.h"
+#include "lss/nc_halo_bias_ps.h"
+#include "lss/nc_halo_bias_st_ellip.h"
+#include "lss/nc_halo_bias_st_spher.h"
+#include "lss/nc_halo_bias_tinker.h"
 #include "lss/nc_cluster_abundance.h"
 #include "lss/nc_cluster_pseudo_counts.h"
 #include "lss/nc_cor_cluster_cmb_lens_limber.h"
@@ -155,17 +159,26 @@
 #include "lss/nc_reduced_shear_cluster_mass.h"
 #include "lss/nc_reduced_shear_calib.h"
 #include "lss/nc_reduced_shear_calib_wtg.h"
+#include "galaxy/nc_galaxy_sd_position.h"
+#include "galaxy/nc_galaxy_sd_position_flat.h"
+#include "galaxy/nc_galaxy_sd_position_lsst_srd.h"
+#include "galaxy/nc_galaxy_sd_z_proxy.h"
+#include "galaxy/nc_galaxy_sd_z_proxy_gauss.h"
+#include "galaxy/nc_galaxy_sd_z_proxy_dirac.h"
+#include "galaxy/nc_galaxy_sd_shape.h"
+#include "galaxy/nc_galaxy_sd_shape_gauss.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_cbe.h"
 #include "nc_recomb_seager.h"
 #include "nc_hireion.h"
 #include "nc_hireion_camb.h"
-#include "nc_powspec_ml.h"
-#include "nc_powspec_ml_transfer.h"
 #include "nc_powspec_ml_cbe.h"
-#include "nc_powspec_mnl.h"
+#include "nc_powspec_ml_spline.h"
+#include "nc_powspec_ml_transfer.h"
+#include "nc_powspec_ml.h"
 #include "nc_powspec_mnl_halofit.h"
+#include "nc_powspec_mnl.h"
 #include "nc_snia_dist_cov.h"
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
@@ -178,12 +191,13 @@
 #include "data/nc_data_bao_empirical_fit.h"
 #include "data/nc_data_bao_empirical_fit_2d.h"
 #include "data/nc_data_bao_dhr_dar.h"
+#include "data/nc_data_bao_dtr_dhr.h"
 #include "data/nc_data_bao_dmr_hr.h"
 #include "data/nc_data_dist_mu.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
-#include "data/nc_data_cluster_counts_box_poisson.h"
+#include "data/nc_data_cluster_ncount.h"
+#include "data/nc_data_cluster_ncounts_gauss.h"
 #include "data/nc_data_cluster_wl.h"
-#include "data/nc_data_reduced_shear_cluster_mass.h"
 #include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
 #include "data/nc_data_hubble.h"
@@ -200,14 +214,18 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <stdlib.h>
 #include <gio/gio.h>
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #include <cuba.h>
 
 #ifdef HAVE_MPI
 #include <mpi.h>
 #endif /* HAVE_MPI */
+
+#ifdef HAVE_BLIS
+#include <blis/blis.h>
+#endif /* HAVE_BLIS */
 
 #ifndef G_VALUE_INIT
 #define G_VALUE_INIT {0}
@@ -228,17 +246,33 @@ static gboolean _enable_msg         = TRUE;
 static gboolean _enable_msg_flush   = TRUE;
 static gsl_error_handler_t *gsl_err = NULL;
 
+# if (defined (__GNUC__)                                            \
+  && ((__GNUC__ == 11 && __GNUC_MINOR__ >= 1) || (__GNUC__ >= 12))) \
+  || (defined (__clang__) && (__clang_major__ >= 12))
+extern void __gcov_dump (void);
+extern void __gcov_reset (void);
+
+#  define __gcov_flush()                   \
+        do {                               \
+          __gcov_dump (); __gcov_reset (); \
+        } while (0)
+# else
+extern void __gcov_flush (void);
+
+# endif
+
 static void
 _ncm_cfg_log_message (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
   NCM_UNUSED (log_domain);
+
   NCM_UNUSED (log_level);
   NCM_UNUSED (user_data);
-  
+
   if (_enable_msg && _log_stream)
   {
     fprintf (_log_stream, "%s", message);
-    
+
     if (_enable_msg_flush)
       fflush (_log_stream);
   }
@@ -248,11 +282,11 @@ static void
 _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
   const gchar *pname = g_get_prgname ();
-  
+
   NCM_UNUSED (log_domain);
   NCM_UNUSED (log_level);
   NCM_UNUSED (user_data);
-  
+
   fprintf (_log_stream_err, "# (%s): %s-ERROR: %s\n", pname, log_domain, message);
 #if defined (HAVE_BACKTRACE) && defined (HAVE_BACKTRACE_SYMBOLS)
   {
@@ -260,24 +294,27 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
     gsize size    = backtrace (tarray, 30);
     gchar **trace = backtrace_symbols (tarray, size);
     gsize i;
-    
+
     /* print out all the frames to stderr */
     for (i = 0; i < size; i++)
     {
       fprintf (_log_stream_err, "# (%s): %s-BACKTRACE:[%02zd] %s\n", pname, log_domain, i, trace[i]);
     }
-    
+
     g_free (trace);
   }
 #endif
   fflush (_log_stream_err);
-  
+
+#ifdef USE_GCOV
+  __gcov_flush ();
+#endif
+
   abort ();
 }
 
-void clencurt_gen (int M);
-
 #ifdef HAVE_OPENBLAS_SET_NUM_THREADS
+void goto_set_num_threads (gint);
 void openblas_set_num_threads (gint);
 
 #endif /* HAVE_OPENBLAS_SET_NUM_THREADS */
@@ -309,25 +346,25 @@ void
 ncm_cfg_mpi_kill_all_slaves (void)
 {
 #ifdef HAVE_MPI
-  
+
   if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
     return;
-  
+
   if (_mpi_ctrl.size > 1)
   {
     gint i;
-    
+
     for (i = 0; i < _mpi_ctrl.nslaves; i++)
     {
       gint slave_id = i + 1;
       gint cmd      = NCM_MPI_CTRL_SLAVE_KILL;
-      
+
       MPI_Send (&cmd, 1, MPI_INT, slave_id, NCM_MPI_CTRL_TAG_CMD, MPI_COMM_WORLD);
     }
-    
+
     NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] All slaves killed!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
   }
-  
+
 #else
 #endif /* HAVE_MPI */
 }
@@ -337,15 +374,18 @@ _ncm_cfg_exit (void)
 {
 #ifdef HAVE_MPI
   NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Dying [%d]!\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.initialized);
-  
+
   if (_mpi_ctrl.initialized)
   {
     ncm_cfg_mpi_kill_all_slaves ();
     MPI_Barrier (MPI_COMM_WORLD);
     MPI_Finalize ();
   }
-  
+
 #endif /* HAVE_MPI */
+#ifdef HAVE_FFTW3
+  fftw_forget_wisdom ();
+#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -374,14 +414,14 @@ _ncm_cfg_make_strv (gint argc, gchar **argv)
   {
     gchar **argv_dup = g_new (gchar *, argc + 1);
     gint i;
-    
+
     for (i = 0; i < argc; i++)
     {
       argv_dup[i] = g_strdup (argv[i]);
     }
-    
+
     argv_dup[i] = NULL;
-    
+
     return argv_dup;
   }
 }
@@ -408,12 +448,12 @@ ncm_cfg_init_full (gint argc, gchar **argv)
   gchar **argv1 = _ncm_cfg_make_strv (argc, argv);
   gchar **argv2 = argv1;
   gchar **argv_ret;
-  
+
   ncm_cfg_init_full_ptr (&argc, &argv1);
-  
+
   argv_ret = _ncm_cfg_make_strv (argc, argv1);
   g_strfreev (argv2);
-  
+
   return argv_ret;
 }
 
@@ -435,23 +475,28 @@ void
 ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 {
   const gchar *home;
-  
+
   if (numcosmo_init)
     return;
-  
+
+#ifdef HAVE_FFTW3
+
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
-  
+
+#endif /* HAVE_FFTW3 */
+
   home          = g_get_home_dir ();
   numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
-  
+
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
     g_mkdir_with_parents (numcosmo_path, 0755);
-  
-  ncm_cfg_set_openmp_nthreads (1);
-  ncm_cfg_set_openblas_nthreads (1);
-  ncm_cfg_set_mkl_nthreads (1);
-  
+
+  /* ncm_cfg_set_openmp_nthreads (1); */
+  /* ncm_cfg_set_openblas_nthreads (1); */
+  /* ncm_cfg_set_blis_nthreads (1); */
+  /* ncm_cfg_set_mkl_nthreads (1); */
+
   g_setenv ("CUBACORES", "0", TRUE);
   g_setenv ("CUBACORESMAX", "0", TRUE);
   g_setenv ("CUBAACCEL", "0", TRUE);
@@ -460,96 +505,98 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   cubaaccel (0, 0);
   cubacores (0, 0);
 #endif
-  
+
   gsl_err = gsl_set_error_handler_off ();
-  
-#ifdef NUMCOSMO_HAVE_FFTW3
+
+#ifdef HAVE_FFTW3
   fftw_set_timelimit (10.0);
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 #ifdef HAVE_FFTW3F
   fftwf_set_timelimit (10.0);
 #endif /* HAVE_FFTW3F */
-  
-#if !GLIB_CHECK_VERSION (2, 36, 0)
-  g_type_init ();
-#endif
-  
+
   _log_stream     = stdout;
   _log_stream_err = stderr;
-  
+
   _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message, NULL);
   _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_error, NULL);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_RNG);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_VECTOR);
   ncm_cfg_register_obj (NCM_TYPE_MATRIX);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_MPI_JOB);
   ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_TEST);
   ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_FIT);
   ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_MCMC);
   ncm_cfg_register_obj (NCM_TYPE_MPI_JOB_FEVAL);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_SPLINE);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_NOTAKNOT);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_D2);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_GSL);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_BICUBIC);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_GSL);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_SPLINE);
-  
+
+  ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D);
+  ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D_PTR);
+  ncm_cfg_register_obj (NCM_TYPE_INTEGRAL_ND);
+
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
+  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPLINE2D);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPHERE_PROJ);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_MODEL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_CTRL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_BUILDER);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_MODEL_MVND);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_ROSENBROCK);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_FUNNEL);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_REPARAM);
   ncm_cfg_register_obj (NCM_TYPE_REPARAM_LINEAR);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_BOOTSTRAP);
   ncm_cfg_register_obj (NCM_TYPE_STATS_VEC);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_DATA);
   ncm_cfg_register_obj (NCM_TYPE_DATASET);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_DATA_GAUSS_COV_MVND);
   ncm_cfg_register_obj (NCM_TYPE_DATA_ROSENBROCK);
   ncm_cfg_register_obj (NCM_TYPE_DATA_FUNNEL);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_FIT);
 
   ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_LS);
   ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_MM);
   ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_MMS);
- 
-#ifdef NUMCOSMO_HAVE_NLOPT
+
+#ifdef HAVE_NLOPT
   ncm_cfg_register_obj (NCM_TYPE_FIT_NLOPT);
-#endif /* NUMCOSMO_HAVE_NLOPT */
+#endif /* HAVE_NLOPT */
 
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_PARAM);
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_J);
   ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_JLJM);
 
   ncm_cfg_register_obj (NCM_TYPE_DATA);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_STATS_DIST1D_EPDF);
   ncm_cfg_register_obj (NCM_TYPE_STATS_DIST1D_SPLINE);
-  
+
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QCONST);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QLINEAR);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE);
@@ -559,45 +606,48 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_WSPLINE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_CPL);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_JBP);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGRW);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGW);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_VEXP);
-  
+
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_OK);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_CMB);
-  
+
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG_REPARAM_OK);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG_REPARAM_CMB);
-  
+
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_OK);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_CMB);
-  
-  ncm_cfg_register_obj (NC_TYPE_HIPRIM_POWER_LAW);
+
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_ATAN);
-  ncm_cfg_register_obj (NC_TYPE_HIPRIM_EXPC);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_BPL);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_EXPC);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_POWER_LAW);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_SBPL);
-  
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_TWO_FLUIDS);
+
   ncm_cfg_register_obj (NC_TYPE_CBE_PRECISION);
-  
+
   ncm_cfg_register_obj (NC_TYPE_WINDOW);
   ncm_cfg_register_obj (NC_TYPE_WINDOW_TOPHAT);
   ncm_cfg_register_obj (NC_TYPE_WINDOW_GAUSSIAN);
-  
+
   ncm_cfg_register_obj (NC_TYPE_GROWTH_FUNC);
-  
+
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_BBKS);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_CAMB);
-  
+
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_NFW);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_EINASTO);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_DK14);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST);
-  
+
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_PS);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_ST);
@@ -607,16 +657,11 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_CROCCE);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_BOCQUET);
-  
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_WATSON);
+
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);
-  
+
   ncm_cfg_register_obj (NC_TYPE_GALAXY_ACF);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPEC);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPLINE);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_GAUSS);
-  
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_REDUCED_SHEAR_GAUSS);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
@@ -625,57 +670,66 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_BENSON);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_BENSON_XRAY);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_PLCL);
-  
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_ASCASO);
+
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT_NODIST);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_PHOTOZ_GAUSS_GLOBAL);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_PHOTOZ_GAUSS);
-  
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_FUNC);
-  
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE);
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_PS);
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_ST_ELLIP);
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_ST_SPHER);
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_TINKER);
-  
+
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_PS);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_ELLIP);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_SPHER);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TINKER);
+
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_ABUNDANCE);
-  
+
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_PSEUDO_COUNTS);
-  
+
   ncm_cfg_register_obj (NC_TYPE_COR_CLUSTER_CMB_LENS_LIMBER);
-  
+
   ncm_cfg_register_obj (NC_TYPE_WL_SURFACE_MASS_DENSITY);
-  
+
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CLUSTER_MASS);
-  
+
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB);
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB_WTG);
-  
+
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_FLAT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_LSST_SRD);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY_DIRAC);
+
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
-  
+
   ncm_cfg_register_obj (NC_TYPE_RECOMB);
   ncm_cfg_register_obj (NC_TYPE_RECOMB_CBE);
   ncm_cfg_register_obj (NC_TYPE_RECOMB_SEAGER);
-  
+
   ncm_cfg_register_obj (NC_TYPE_HIREION);
   ncm_cfg_register_obj (NC_TYPE_HIREION_CAMB);
-  
+
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML);
+  ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_SPLINE);
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_TRANSFER);
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_CBE);
-  
+
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_MNL);
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_MNL_HALOFIT);
-  
+
   ncm_cfg_register_obj (NC_TYPE_SNIA_DIST_COV);
-  
+
   ncm_cfg_register_obj (NC_TYPE_PLANCK_FI);
   ncm_cfg_register_obj (NC_TYPE_PLANCK_FI_COR_TT);
   ncm_cfg_register_obj (NC_TYPE_PLANCK_FI_COR_TTTEEE);
-  
+
   ncm_cfg_register_obj (NC_TYPE_HIPERT_BOLTZMANN_CBE);
-  
+
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_A);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DV);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DVDV);
@@ -683,22 +737,23 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT_2D);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DHR_DAR);
+  ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DTR_DHR);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DMR_HR);
-  
+
   ncm_cfg_register_obj (NC_TYPE_DATA_DIST_MU);
-  
+
   ncm_cfg_register_obj (NC_TYPE_DATA_HUBBLE);
-  
+
   ncm_cfg_register_obj (NC_TYPE_DATA_SNIA_COV);
-  
-  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_COUNTS_BOX_POISSON);
-  ncm_cfg_register_obj (NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS);
+
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNT);
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);
-  
+
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_SHIFT_PARAM);
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_DIST_PRIORS);
-  
+
   ncm_cfg_register_obj (NC_TYPE_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_GAL);
@@ -706,29 +761,29 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
-  
+
   ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_LKL);
-  
+
   _nc_hicosmo_register_functions ();
   _nc_hicosmo_de_register_functions ();
   _nc_hiprim_register_functions ();
   _nc_hireion_register_functions ();
   _nc_distance_register_functions ();
   _nc_planck_fi_cor_tt_register_functions ();
-  
+
   numcosmo_init = TRUE;
-  
+
   _mpi_ctrl.initialized    = 0;
   _mpi_ctrl.size           = 1;
   _mpi_ctrl.rank           = 0;
   _mpi_ctrl.nslaves        = 0;
   _mpi_ctrl.working_slaves = 0;
-  
+
   atexit (_ncm_cfg_exit);
-  
+
 #ifdef HAVE_MPI
   MPI_Initialized (&_mpi_ctrl.initialized);
-  
+
   if (!_mpi_ctrl.initialized)
   {
     NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI not initialized, calling MPI_Init.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
@@ -739,17 +794,17 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   {
     NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI was already initialized!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
   }
-  
+
   {
     gchar mpi_hostname[MPI_MAX_PROCESSOR_NAME];
     gint len = 0;
-    
+
     MPI_Comm_size (MPI_COMM_WORLD, &_mpi_ctrl.size);
     MPI_Comm_rank (MPI_COMM_WORLD, &_mpi_ctrl.rank);
     MPI_Get_processor_name (mpi_hostname, &len);
-    
+
     NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] We have %d MPI process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);
-    
+
     if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
     {
       _ncm_cfg_mpi_main_loop ();
@@ -761,7 +816,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
     }
   }
 #endif /* HAVE_MPI */
-  
+
   return;
 }
 
@@ -773,16 +828,16 @@ static void
 _ncm_cfg_mpi_main_loop (void)
 {
   GMainLoop *mpi_ml = g_main_loop_new (NULL, FALSE);
-  
+
   NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Starting slave!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-  
+
   g_timeout_add (100, &_ncm_cfg_mpi_cmd_handler, mpi_ml);
-  
+
   g_main_loop_run (mpi_ml);
-  
+
   g_main_loop_unref (mpi_ml);
-  
-  NCM_MPI_JOB_DEBUG_PRINT ("#[%d %d] Dying slave!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+
+  NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Dying slave!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
   exit (0);
 }
 
@@ -795,9 +850,11 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
     ret_type,
     msg_type,
   };
-  struct buf_desc { gpointer obj;
-                    gpointer buf;
-                    enum buf_type t;
+  struct buf_desc
+  {
+    gpointer obj;
+    gpointer buf;
+    enum buf_type t;
   };
   GMainLoop *mpi_ml        = user_data;
   NcmSerialize *ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
@@ -815,19 +872,19 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
   gboolean normal_exit     = TRUE;
   MPI_Datatype input_dtype;
   MPI_Datatype return_dtype;
-  
+
   while (TRUE)
   {
     gboolean end = FALSE;
     gint cmd     = 0;
     MPI_Status status;
-    
+
     NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Waiting for command...\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-    
+
     MPI_Recv (&cmd, 1, MPI_INT, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_CMD, MPI_COMM_WORLD, &status);
-    
+
     NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Received %d\n", _mpi_ctrl.size, _mpi_ctrl.rank, cmd);
-    
+
     switch (cmd)
     {
       case NCM_MPI_CTRL_SLAVE_INIT:
@@ -836,42 +893,42 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
         gint job_size     = 0;
         gint job_recv     = 0;
         gchar *job        = NULL;
-        
+
         if (init)
           g_error ("_ncm_cfg_mpi_cmd_handler: slave %d already initialized.", _mpi_ctrl.rank);
-        
+
         NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Initializing slave.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-        
+
         MPI_Probe (NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_JOB, MPI_COMM_WORLD, &status);
         MPI_Get_count (&status, MPI_BYTE, &job_size);
-        
+
         NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave object size %d.\n", _mpi_ctrl.size, _mpi_ctrl.rank, job_size);
-        
+
         job = g_new (gchar, job_size);
         MPI_Recv (job, job_size, MPI_BYTE, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_JOB, MPI_COMM_WORLD, &status);
         MPI_Get_count (&status, MPI_BYTE, &job_recv);
-        
+
         NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave object received size %d.\n", _mpi_ctrl.size, _mpi_ctrl.rank, job_recv);
-        
+
         g_assert_cmpint (job_recv, ==, job_size);
-        
+
         job_ser = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), job, job_size, TRUE, g_free, job);
-        
+
         /*NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave object received string `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, g_variant_print (job_ser, TRUE));*/
-        
+
         mpi_job = NCM_MPI_JOB (ncm_serialize_from_variant (ser, job_ser));
-        
+
         ncm_mpi_job_work_init (mpi_job);
-        
+
         input_dtype  = ncm_mpi_job_input_datatype  (mpi_job, &input_len,  &input_size);
         return_dtype = ncm_mpi_job_return_datatype (mpi_job, &return_len, &return_size);
         input        = ncm_mpi_job_create_input (mpi_job);
         input_buf    = ncm_mpi_job_get_input_buffer (mpi_job, input);
-        
+
         g_assert (NCM_IS_MPI_JOB (mpi_job));
-        
+
         g_variant_unref (job_ser);
-        
+
         init = TRUE;
         break;
       }
@@ -893,9 +950,9 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
           struct buf_desc bd = {NULL, NULL, ret_type};
           gint input_recv    = 0;
           MPI_Request wr_request;
-          
+
           NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Slave received a work request, command %d.\n",
-              _mpi_ctrl.size, _mpi_ctrl.rank, cmd);
+                                   _mpi_ctrl.size, _mpi_ctrl.rank, cmd);
 
           MPI_Recv (input_buf, input_len, input_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_INPUT, MPI_COMM_WORLD, &status);
           MPI_Get_count (&status, input_dtype, &input_recv);
@@ -905,104 +962,104 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
           g_assert_cmpint (input_recv, ==, input_len);
 
           ncm_mpi_job_unpack_input (mpi_job, input_buf, input);
-          
+
           bd.obj = ncm_mpi_job_create_return (mpi_job);
-          
+
           ncm_mpi_job_run (mpi_job, input, bd.obj);
           bd.buf = ncm_mpi_job_pack_return (mpi_job, bd.obj);
-          
+
           NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Job done, sending result, length %d!\n",
-              _mpi_ctrl.size, _mpi_ctrl.rank, return_len);
-          
+                                   _mpi_ctrl.size, _mpi_ctrl.rank, return_len);
+
           MPI_Isend (bd.buf, return_len, return_dtype, NCM_MPI_CTRL_MASTER_ID, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, &wr_request);
 
           g_array_append_val (work_ret_request, wr_request);
           g_array_append_val (work_ret_bufs,    bd);
         }
-        
+
         break;
       }
       default:
         g_error ("_ncm_cfg_mpi_cmd_handler: unknown MPI message `%d' to slave %d", cmd, _mpi_ctrl.rank);
         break;
     }
-    
+
     if (work_ret_request->len > 0)
     {
       gint i;
-      
+
       NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Testing %d sends:\n", _mpi_ctrl.size, _mpi_ctrl.rank, work_ret_request->len);
-      
+
       for (i = work_ret_request->len - 1; i >= 0; i--)
       {
         gint done = 0;
-        
+
         MPI_Test (&g_array_index (work_ret_request, MPI_Request, i), &done, &status);
         NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Send %d is %s!\n",
-            _mpi_ctrl.size, _mpi_ctrl.rank, i, done ? "done" : "not done");
-        
+                                 _mpi_ctrl.size, _mpi_ctrl.rank, i, done ? "done" : "not done");
+
         if (done)
         {
           struct buf_desc bd = g_array_index (work_ret_bufs, struct buf_desc, i);
-          
+
           ncm_mpi_job_destroy_return_buffer (mpi_job, bd.obj, bd.buf);
           ncm_mpi_job_destroy_return (mpi_job, bd.obj);
-          
+
           g_array_remove_index_fast (work_ret_request, i);
           g_array_remove_index_fast (work_ret_bufs, i);
         }
       }
     }
-    
+
     NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Finished command %d, %d requests left%s\n",
-        _mpi_ctrl.size, _mpi_ctrl.rank, cmd, work_ret_request->len, end ? ", exiting!" : ".");
-    
+                             _mpi_ctrl.size, _mpi_ctrl.rank, cmd, work_ret_request->len, end ? ", exiting!" : ".");
+
     if (end)
       break;
   }
-  
+
   if (work_ret_request->len > 0)
   {
-    gint i;
-    
+    guint i;
+
     MPI_Waitall (work_ret_request->len, (MPI_Request *) work_ret_request->data, MPI_STATUSES_IGNORE);
-    
+
     NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] All sent, freeing %d buffers!\n", _mpi_ctrl.size, _mpi_ctrl.rank, work_ret_request->len);
-    
+
     for (i = 0; i < work_ret_bufs->len; i++)
     {
       struct buf_desc bd = g_array_index (work_ret_bufs, struct buf_desc, i);
-      
+
       ncm_mpi_job_destroy_return_buffer (mpi_job, bd.obj, bd.buf);
       ncm_mpi_job_destroy_return (mpi_job, bd.obj);
     }
   }
-  
+
   NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Freeing arrays!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-  
+
   g_array_unref (input_array);
   g_array_unref (work_ret_request);
   g_array_unref (work_ret_bufs);
-  
+
   NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Freeing input buffer %p [input %p, mpi_job %p]!\n", _mpi_ctrl.size, _mpi_ctrl.rank, input_buf, input, mpi_job);
-  
+
   if (input_buf != NULL)
     ncm_mpi_job_destroy_input_buffer (mpi_job, input, input_buf);
-  
+
   NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Freeing input %p [mpi_job %p]!\n", _mpi_ctrl.size, _mpi_ctrl.rank, input, mpi_job);
-  
+
   if (input != NULL)
     ncm_mpi_job_destroy_input (mpi_job, input);
-  
+
   NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Clearing MPI job %p!\n", _mpi_ctrl.size, _mpi_ctrl.rank, mpi_job);
-  
+
   ncm_mpi_job_clear (&mpi_job);
-  
+
   NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Returning %d!\n", _mpi_ctrl.size, _mpi_ctrl.rank, normal_exit);
-  
+
   if (!normal_exit)
     g_main_loop_quit (mpi_ml);
-  
+
   return normal_exit;
 }
 
@@ -1011,7 +1068,8 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
 /**
  * ncm_cfg_enable_gsl_err_handler:
  *
- * FIXME
+ * Enables the GSL error handler.
+ *
  */
 void
 ncm_cfg_enable_gsl_err_handler (void)
@@ -1020,24 +1078,25 @@ ncm_cfg_enable_gsl_err_handler (void)
   gsl_set_error_handler (gsl_err);
 }
 
-static uint nreg_model = 0;
+static guint nreg_model = 0;
 
 /**
  * ncm_cfg_register_obj:
- * @obj: FIXME
+ * @obj: a #GType
  *
- * FIXME
+ * Registers the object @obj in the GObject type system.
+ *
  */
 void
 ncm_cfg_register_obj (GType obj)
 {
-#if GLIB_CHECK_VERSION (2, 34, 0)
   g_type_ensure (obj);
-#endif /* GLIB >= 2.34*/
-  gpointer obj_class = g_type_class_ref (obj);
-  
-  g_type_class_unref (obj_class);
-  nreg_model++;
+  {
+    gpointer obj_class = g_type_class_ref (obj);
+
+    g_type_class_unref (obj_class);
+    nreg_model++;
+  }
 }
 
 /**
@@ -1056,12 +1115,13 @@ ncm_cfg_mpi_nslaves (void)
  * @filename: name of the log-file
  *
  * Sets all log information to @filename.
+ *
  */
 void
 ncm_cfg_set_logfile (gchar *filename)
 {
   FILE *out = g_fopen (filename, "w");
-  
+
   if (out != NULL)
     _log_stream = out;
   else
@@ -1073,6 +1133,7 @@ ncm_cfg_set_logfile (gchar *filename)
  * @stream: a stream
  *
  * Sets all log information to @stream.
+ *
  */
 void
 ncm_cfg_set_logstream (FILE *stream)
@@ -1081,18 +1142,18 @@ ncm_cfg_set_logstream (FILE *stream)
   _log_stream = stream;
 }
 
+typedef struct _NcmCfgLoggerFuncContainer
+{
+  NcmCfgLoggerFunc logger;
+} NcmCfgLoggerFuncContainer;
+
 static void
 _ncm_cfg_log_message_logger (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
-  NCM_UNUSED (log_domain);
-  NCM_UNUSED (log_level);
-  NCM_UNUSED (user_data);
-  
+  NcmCfgLoggerFuncContainer *container = (NcmCfgLoggerFuncContainer *) user_data;
+
   if (_enable_msg && _log_stream)
-  {
-    void (*logger) (const gchar *msg) = user_data;
-    logger (message);
-  }
+    container->logger (message);
 }
 
 /**
@@ -1100,11 +1161,16 @@ _ncm_cfg_log_message_logger (const gchar *log_domain, GLogLevelFlags log_level, 
  * @logger: (scope notified): a logger function
  *
  * Sets all log information to @stream.
+ *
  */
 void
 ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
 {
-  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, logger);
+  static NcmCfgLoggerFuncContainer container = {NULL};
+
+  container.logger = logger;
+
+  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_INFO | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, &container);
 }
 
 /**
@@ -1112,11 +1178,16 @@ ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
  * @logger: (scope notified): a logger function
  *
  * Sets all log information to @stream.
+ *
  */
 void
 ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger)
 {
-  _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_message_logger, logger);
+  static NcmCfgLoggerFuncContainer container = {NULL};
+
+  container.logger = logger;
+
+  _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_message_logger, &container);
 }
 
 /**
@@ -1146,7 +1217,23 @@ ncm_cfg_set_openblas_nthreads (gint n)
 {
 #ifdef HAVE_OPENBLAS_SET_NUM_THREADS
   openblas_set_num_threads (n);
+  goto_set_num_threads (n);
 #endif /* HAVE_OPENBLAS_SET_NUM_THREADS */
+}
+
+/**
+ * ncm_cfg_set_blis_nthreads:
+ * @n: number of threads
+ *
+ * Sets BLIS number of threads to @n when available.
+ *
+ */
+void
+ncm_cfg_set_blis_nthreads (gint n)
+{
+#ifdef HAVE_BLIS
+  bli_thread_set_num_threads (n);
+#endif /* HAVE_BLIS */
 }
 
 /**
@@ -1166,9 +1253,10 @@ ncm_cfg_set_mkl_nthreads (gint n)
 
 /**
  * ncm_cfg_logfile:
- * @on: FIXME
+ * @on: a gboolean
  *
- * FIXME
+ * Enables or disables the log file.
+ *
  */
 void
 ncm_cfg_logfile (gboolean on)
@@ -1178,9 +1266,10 @@ ncm_cfg_logfile (gboolean on)
 
 /**
  * ncm_cfg_logfile_flush:
- * @on: FIXME
+ * @on: a gboolean
  *
- * FIXME
+ * Enables or disables the log file flush.
+ *
  */
 void
 ncm_cfg_logfile_flush (gboolean on)
@@ -1191,7 +1280,8 @@ ncm_cfg_logfile_flush (gboolean on)
 /**
  * ncm_cfg_logfile_flush_now:
  *
- * FIXME
+ * Flushes the log file.
+ *
  */
 void
 ncm_cfg_logfile_flush_now (void)
@@ -1200,17 +1290,31 @@ ncm_cfg_logfile_flush_now (void)
 }
 
 /**
- * ncm_message:
- * @msg: FIXME
- * @...: FIXME
+ * ncm_message_str:
+ * @msg: a string
  *
- * FIXME
+ * Logs a message string.
+ *
+ */
+void
+ncm_message_str (const gchar *msg)
+{
+  g_log (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE, "%s", msg);
+}
+
+/**
+ * ncm_message:
+ * @msg: a string
+ * @...: a variable number of arguments
+ *
+ * Logs a message.
+ *
  */
 void
 ncm_message (const gchar *msg, ...)
 {
   va_list ap;
-  
+
   va_start (ap, msg);
   g_logv (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE, msg, ap);
   va_end (ap);
@@ -1218,12 +1322,12 @@ ncm_message (const gchar *msg, ...)
 
 /**
  * ncm_string_ww:
- * @msg: FIXME
- * @first: FIXME
- * @rest: FIXME
- * @ncols: FIXME
+ * @msg: a string
+ * @first: a string
+ * @rest: a string
+ * @ncols: number of columns
  *
- * FIXME
+ * Creates a word wrapped string.
  *
  * Returns: (transfer full): word wraped string @msg.
  */
@@ -1238,62 +1342,63 @@ ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint nc
   guint msg_final_len = msg_len + first_size + msg_len / ncols * rest_size;
   GString *msg_ww     = g_string_sized_new (msg_final_len);
   guint i             = 1;
-  
+
   g_string_append_printf (msg_ww, "%s%s", first, msg_split[0]);
-  
+
   while (msg_split[i] != NULL)
   {
     guint lsize = strlen (msg_split[i]);
-    
+
     if (size_print + lsize + 1 > (ncols - first_size))
       break;
-    
+
     g_string_append_printf (msg_ww, " %s", msg_split[i]);
     size_print += lsize + 1;
     i++;
   }
-  
+
   g_string_append_printf (msg_ww, "\n");
-  
+
   while (msg_split[i] != NULL)
   {
     size_print = 0;
     g_string_append_printf (msg_ww, "%s", rest);
-    
+
     while (msg_split[i] != NULL)
     {
       guint lsize = strlen (msg_split[i]);
-      
+
       if (size_print + lsize + 1 > (ncols - rest_size))
         break;
-      
+
       g_string_append_printf (msg_ww, " %s", msg_split[i]);
       size_print += lsize + 1;
       i++;
     }
-    
+
     g_string_append_printf (msg_ww, "\n");
   }
-  
+
   g_strfreev (msg_split);
-  
+
   return g_string_free (msg_ww, FALSE);
 }
 
 /**
  * ncm_message_ww:
- * @msg: FIXME
- * @first: FIXME
- * @rest: FIXME
- * @ncols: FIXME
+ * @msg: a string
+ * @first: a string
+ * @rest: a string
+ * @ncols: number of columns
  *
- * FIXME
+ * Logs a word wrapped message.
+ *
  */
 void
 ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols)
 {
   gchar *msg_ww = ncm_string_ww (msg, first, rest, ncols);
-  
+
   g_message ("%s", msg_ww);
   g_free (msg_ww);
 }
@@ -1312,41 +1417,58 @@ ncm_cfg_msg_sepa (void)
 
 /**
  * ncm_cfg_get_fullpath:
- * @filename: FIXME
- * @...: FIXME
+ * @filename: filename
+ * @...: a variable number of arguments
  *
- * FIXME
+ * Gets the full path of @filename.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): the full path of @filename.
  */
 gchar *
 ncm_cfg_get_fullpath (const gchar *filename, ...)
 {
   gchar *file, *full_filename;
-  
+
   g_assert (numcosmo_init);
+
   va_list ap;
-  
+
   va_start (ap, filename);
   file = g_strdup_vprintf (filename, ap);
   va_end (ap);
-  
+
   full_filename = g_build_filename (numcosmo_path, file, NULL);
-  
+
   g_free (file);
-  
+
   return full_filename;
 }
 
 /**
- * ncm_cfg_keyfile_to_arg:
- * @kfile: FIXME
- * @group_name: FIXME
- * @entries: FIXME
- * @argv: FIXME
- * @argc: FIXME
+ * ncm_cfg_get_fullpath_base:
  *
- * FIXME
+ * Gets the full path base directory.
+ *
+ * Returns: (transfer none): the full path base directory.
+ */
+const gchar *
+ncm_cfg_get_fullpath_base (void)
+{
+  g_assert (numcosmo_init);
+
+  return numcosmo_path;
+}
+
+/**
+ * ncm_cfg_keyfile_to_arg:
+ * @kfile: keyfile filename
+ * @group_name: group name
+ * @entries: a #GOptionEntry
+ * @argv: an array of strings
+ * @argc: a pointer to an integer
+ *
+ * Transforms the @entries in a keyfile @kfile group @group_name into an array of
+ * strings representing the command line arguments.
  *
  */
 void
@@ -1356,7 +1478,7 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *
   {
     GError *error = NULL;
     gint i;
-    
+
     for (i = 0; entries[i].long_name != NULL; i++)
     {
       if (g_key_file_has_key (kfile, group_name, entries[i].long_name, &error))
@@ -1366,31 +1488,31 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *
           guint j;
           gsize length;
           gchar **vals = g_key_file_get_string_list (kfile, group_name, entries[i].long_name, &length, &error);
-          
+
           if (error != NULL)
             g_error ("ncm_cfg_keyfile_to_arg: Cannot parse key file[%s]", error->message);
-          
+
           for (j = 0; j < length; j++)
           {
             argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
             argv[argc[0]++] = vals[j];
           }
-          
+
           g_free (vals);
         }
         else
         {
           gchar *val = g_key_file_get_value (kfile, group_name, entries[i].long_name, &error);
-          
+
           if (error != NULL)
             g_error ("ncm_cfg_keyfile_to_arg: Cannot parse key file[%s]", error->message);
-          
+
           if (entries[i].arg == G_OPTION_ARG_NONE)
           {
             if ((g_ascii_strcasecmp (val, "1") == 0) ||
                 (g_ascii_strcasecmp (val, "true") == 0))
               argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
-            
+
             g_free (val);
           }
           else if (strlen (val) > 0)
@@ -1406,11 +1528,11 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *
 
 /**
  * ncm_cfg_string_to_comment:
- * @str: FIXME
+ * @str: a string
  *
- * FIXME
+ * Transforms @str into a comment string.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a comment string.
  */
 gchar *
 ncm_cfg_string_to_comment (const gchar *str)
@@ -1419,20 +1541,20 @@ ncm_cfg_string_to_comment (const gchar *str)
   {
     gchar *desc_ww = ncm_string_ww (str, "  ", "  ", 80);
     gchar *desc    = g_strdup_printf ("###############################################################################\n\n%s\n", desc_ww);
-    
+
     g_free (desc_ww);
-    
+
     return desc;
   }
 }
 
 /**
  * ncm_cfg_entries_to_keyfile:
- * @kfile: FIXME
- * @group_name: FIXME
- * @entries: FIXME
+ * @kfile: a #GKeyFile
+ * @group_name: group name
+ * @entries: a null terminated array of #GOptionEntry
  *
- * FIXME
+ * Transforms the @entries into a keyfile @kfile group @group_name.
  *
  */
 void
@@ -1440,17 +1562,17 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEnt
 {
   GError *error = NULL;
   gint i;
-  
+
   for (i = 0; entries[i].long_name != NULL; i++)
   {
     gboolean skip_comment = FALSE;
-    
+
     switch (entries[i].arg)
     {
       case G_OPTION_ARG_NONE:
       {
         gboolean arg_b = ((gboolean *) entries[i].arg_data)[0];
-        
+
         g_key_file_set_boolean (kfile, group_name, entries[i].long_name, arg_b);
         break;
       }
@@ -1458,7 +1580,7 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEnt
       case G_OPTION_ARG_FILENAME:
       {
         gchar **arg_s = (gchar **) entries[i].arg_data;
-        
+
         g_key_file_set_string (kfile, group_name, entries[i].long_name, *arg_s != NULL ? *arg_s : "");
         break;
       }
@@ -1467,32 +1589,32 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEnt
       {
         const gchar ***arg_as = (const gchar ***) entries[i].arg_data;
         gchar ***arg_cas      = (gchar ***) entries[i].arg_data;
-        
+
         if (*arg_cas != NULL)
           g_key_file_set_string_list (kfile, group_name, entries[i].long_name, *arg_as, g_strv_length (*arg_cas));
         else
           g_key_file_set_string_list (kfile, group_name, entries[i].long_name, NULL, 0);
-        
+
         break;
       }
       case G_OPTION_ARG_INT:
       {
         gint arg_i = ((gint *) entries[i].arg_data)[0];
-        
+
         g_key_file_set_integer (kfile, group_name, entries[i].long_name, arg_i);
         break;
       }
       case G_OPTION_ARG_INT64:
       {
         gint64 arg_l = ((gint64 *) entries[i].arg_data)[0];
-        
+
         g_key_file_set_int64 (kfile, group_name, entries[i].long_name, arg_l);
         break;
       }
       case G_OPTION_ARG_DOUBLE:
       {
         gdouble arg_d = ((double *) entries[i].arg_data)[0];
-        
+
         g_key_file_set_double (kfile, group_name, entries[i].long_name, arg_d);
         break;
       }
@@ -1502,14 +1624,14 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEnt
         /*g_error ("ncm_cfg_entries_to_keyfile: cannot convert entry type %d to keyfile", entries[i].arg); */
         break;
     }
-    
+
     if (!skip_comment)
     {
       gchar *desc = ncm_cfg_string_to_comment (entries[i].description);
-      
+
       if (!g_key_file_set_comment (kfile, group_name, entries[i].long_name, desc, &error))
         g_error ("ncm_cfg_entries_to_keyfile: %s", error->message);
-      
+
       g_free (desc);
     }
   }
@@ -1517,12 +1639,12 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEnt
 
 /**
  * ncm_cfg_get_enum_by_id_name_nick:
- * @enum_type: FIXME
- * @id_name_nick: FIXME
+ * @enum_type: enum type #GType
+ * @id_name_nick: id, name or nick
  *
- * FIXME
+ * Gets the enum value from @enum_type by @id_name_nick.
  *
- * Returns: FIXME
+ * Returns: (transfer none): the enum value #GEnumValue.
  */
 const GEnumValue *
 ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick)
@@ -1533,15 +1655,15 @@ ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick)
     gchar *endptr          = NULL;
     gint64 id              = g_ascii_strtoll (id_name_nick, &endptr, 10);
     GEnumClass *enum_class = NULL;
-    
+
     g_assert (G_TYPE_IS_ENUM (enum_type));
-    
+
     enum_class = g_type_class_ref (enum_type);
-    
+
     if ((endptr == id_name_nick) || (strlen (endptr) > 0))
     {
       res = g_enum_get_value_by_name (enum_class, id_name_nick);
-      
+
       if (res == NULL)
         res = g_enum_get_value_by_nick (enum_class, id_name_nick);
     }
@@ -1549,44 +1671,44 @@ ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick)
     {
       res = g_enum_get_value (enum_class, id);
     }
-    
+
     g_type_class_unref (enum_class);
-    
+
     return res;
   }
 }
 
 /**
  * ncm_cfg_enum_get_value:
- * @enum_type: FIXME
- * @n: FIXME
+ * @enum_type: enum type #GType
+ * @n: enum value position
  *
- * FIXME
+ * Gets the enum value from @enum_type by @n.
  *
- * Returns: (transfer none)
+ * Returns: (transfer none): the enum value #GEnumValue.
  */
 const GEnumValue *
 ncm_cfg_enum_get_value (GType enum_type, guint n)
 {
   GEnumClass *enum_class;
   GEnumValue *val;
-  
+
   g_assert (G_TYPE_IS_ENUM (enum_type));
   enum_class = g_type_class_ref (enum_type);
-  
+
   val = g_enum_get_value (enum_class, n);
-  
+
   g_type_class_unref (enum_class);
-  
+
   return val;
 }
 
 /**
  * ncm_cfg_enum_print_all:
- * @enum_type: FIXME
- * @header: FIXME
+ * @enum_type: enum type #GType
+ * @header: header string
  *
- * FIXME
+ * Prints all enum values from @enum_type.
  *
  */
 void
@@ -1598,45 +1720,45 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
   gint name_max_len = 4;
   gint nick_max_len = 4;
   gint pad;
-  
+
   g_assert (G_TYPE_IS_ENUM (enum_type));
-  
+
   enum_class = g_type_class_ref (enum_type);
-  
+
   while ((snia = g_enum_get_value (enum_class, i++)) != NULL)
   {
     name_max_len = GSL_MAX (name_max_len, strlen (snia->value_name));
     nick_max_len = GSL_MAX (nick_max_len, strlen (snia->value_nick));
   }
-  
+
   printf ("# %s:\n", header);
   pad = 10 + name_max_len + nick_max_len;
   printf ("#");
-  
+
   while (pad-- != 0)
     printf ("-");
-  
+
   printf ("#\n");
   printf ("# Id | %-*s | %-*s |\n", name_max_len, "Name", nick_max_len, "Nick");
   i = 0;
-  
+
   while ((snia = g_enum_get_value (enum_class, i++)) != NULL)
   {
     printf ("# %02d | %-*s | %-*s |\n", snia->value, name_max_len, snia->value_name, nick_max_len, snia->value_nick);
   }
-  
+
   pad = 10 + name_max_len + nick_max_len;
   printf ("#");
-  
+
   while (pad-- != 0)
     printf ("-");
-  
+
   printf ("#\n");
-  
+
   g_type_class_unref (enum_class);
 }
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 
 G_LOCK_DEFINE_STATIC (fftw_saveload_lock);
 
@@ -1645,7 +1767,7 @@ G_LOCK_DEFINE_STATIC (fftw_plan_lock);
 /**
  * ncm_cfg_lock_plan_fftw:
  *
- * FIXME
+ * Locks the FFTW plan. This is a generic lock for all FFTW plans.
  *
  */
 void
@@ -1657,7 +1779,7 @@ ncm_cfg_lock_plan_fftw (void)
 /**
  * ncm_cfg_unlock_plan_fftw:
  *
- * FIXME
+ * Unlocks the FFTW plan. This is a generic lock for all FFTW plans.
  *
  */
 void
@@ -1668,12 +1790,12 @@ ncm_cfg_unlock_plan_fftw (void)
 
 /**
  * ncm_cfg_load_fftw_wisdom:
- * @filename: FIXME
- * @...: FIXME
+ * @filename: filename to load the wisdom
+ * @...: variable number of arguments for @filename string
  *
- * FIXME
+ * Loads the FFTW wisdom from @filename.
  *
- * Returns: FIXME
+ * Returns: TRUE if the wisdom was loaded.
  */
 gboolean
 ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
@@ -1682,59 +1804,59 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   gchar *full_filename;
   va_list ap;
   gboolean ret = FALSE;
-  
+
   g_assert (numcosmo_init);
-  
+
   G_LOCK (fftw_saveload_lock);
-  
+
   va_start (ap, filename);
   file = g_strdup_vprintf (filename, ap);
   va_end (ap);
-  
+
   g_free (file);
-  file = g_strdup ("ncm_cfg_wisdom"); /* overwrite, unifying wisdom */
-  
+  file = g_strdup_printf ("ncm_cfg_wisdom_rank%d", _mpi_ctrl.rank); /* overwrite, unifying wisdom */
+
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
-  
+
   if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
   {
     fftw_import_wisdom_from_filename (full_filename);
     ret = TRUE;
   }
-  
+
 #ifdef HAVE_FFTW3F
   g_free (file_ext);
   g_free (full_filename);
-  
+
   file_ext      = g_strdup_printf ("%s.fftw3f", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
-  
+
   if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
   {
     fftwf_import_wisdom_from_filename (full_filename);
     ret = TRUE;
   }
-  
+
 #endif
-  
+
   g_free (file);
   g_free (file_ext);
   g_free (full_filename);
-  
+
   G_UNLOCK (fftw_saveload_lock);
-  
+
   return ret;
 }
 
 /**
  * ncm_cfg_save_fftw_wisdom:
- * @filename: FIXME
- * @...: FIXME
+ * @filename: filename to save the wisdom
+ * @...: variable number of arguments for @filename string
  *
- * FIXME
+ * Saves the current FFTW wisdom to @filename.
  *
- * Returns: FIXME
+ * Returns: TRUE if the wisdom was saved.
  */
 gboolean
 ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
@@ -1742,120 +1864,90 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   gchar *file, *file_ext;
   gchar *full_filename;
   va_list ap;
-  
+
   g_assert (numcosmo_init);
-  
+
   G_LOCK (fftw_saveload_lock);
-  
+
   va_start (ap, filename);
   file = g_strdup_vprintf (filename, ap);
   va_end (ap);
-  
+
   g_free (file);
-  file = g_strdup ("ncm_cfg_wisdom"); /* overwrite, unifying wisdom */
-  
+  file = g_strdup_printf ("ncm_cfg_wisdom_rank%d", _mpi_ctrl.rank); /* overwrite, unifying wisdom */
+
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
-  
-  fftw_export_wisdom_to_filename (full_filename);
-  
+
+  {
+    char *wisdown_str = fftw_export_wisdom_to_string ();
+
+    if (wisdown_str != NULL)
+    {
+      gssize len  = strlen (wisdown_str);
+      gboolean OK = FALSE;
+
+#if GLIB_CHECK_VERSION (2, 66, 0)
+      OK = g_file_set_contents_full (full_filename, wisdown_str, len,
+                                     G_FILE_SET_CONTENTS_CONSISTENT,
+                                     0666, NULL);
+#else /* GLIB_CHECK_VERSION (2, 66, 0) */
+      OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+#endif /* GLIB_CHECK_VERSION (2, 66, 0) */
+      g_assert (OK);
+      g_free (wisdown_str);
+    }
+  }
+
 #ifdef HAVE_FFTW3F
   g_free (file_ext);
   g_free (full_filename);
-  
+
   file_ext      = g_strdup_printf ("%s.fftw3f", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
-  
-  fftwf_export_wisdom_to_filename (full_filename);
+
+  {
+    char *wisdown_str = fftwf_export_wisdom_to_string ();
+
+    if (wisdown_str != NULL)
+    {
+      gssize len  = strlen (wisdown_str);
+      gboolean OK = FALSE;
+
+#if GLIB_CHECK_VERSION (2, 66, 0)
+      OK = g_file_set_contents_full (full_filename, wisdown_str, len,
+                                     G_FILE_SET_CONTENTS_CONSISTENT,
+                                     0666, NULL);
+#else /* GLIB_CHECK_VERSION (2, 66, 0) */
+      OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+#endif /* GLIB_CHECK_VERSION (2, 66, 0) */
+
+      g_assert (OK);
+
+      g_free (wisdown_str);
+    }
+  }
 #endif
-  
+
   g_free (file);
   g_free (file_ext);
   g_free (full_filename);
-  
+
   G_UNLOCK (fftw_saveload_lock);
-  
+
   return TRUE;
 }
 
-#endif /* NUMCOSMO_HAVE_FFTW3 */
-
-/**
- * ncm_cfg_fopen:
- * @filename: FIXME
- * @mode: FIXME
- * @...: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-FILE *
-ncm_cfg_fopen (const gchar *filename, const gchar *mode, ...)
-{
-  FILE *F;
-  gchar *file;
-  gchar *full_filename;
-  va_list ap;
-  
-  g_assert (numcosmo_init);
-  
-  va_start (ap, mode);
-  file = g_strdup_vprintf (filename, ap);
-  va_end (ap);
-  full_filename = g_build_filename (numcosmo_path, file, NULL);
-  
-  F = g_fopen (full_filename, mode);
-  
-  if (F == NULL)
-    g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
-  
-  g_free (file);
-  g_free (full_filename);
-  
-  return F;
-}
-
-/**
- * ncm_cfg_vfopen: (skip)
- * @filename: FIXME
- * @mode: FIXME
- * @ap: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-FILE *
-ncm_cfg_vfopen (const gchar *filename, const gchar *mode, va_list ap)
-{
-  FILE *F;
-  gchar *file;
-  gchar *full_filename;
-  
-  g_assert (numcosmo_init);
-  file          = g_strdup_vprintf (filename, ap);
-  full_filename = g_build_filename (numcosmo_path, file, NULL);
-  
-  F = g_fopen (full_filename, mode);
-  
-  if (F == NULL)
-    g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
-  
-  g_free (file);
-  g_free (full_filename);
-  
-  return F;
-}
+#endif /* HAVE_FFTW3 */
 
 /**
  * ncm_cfg_exists:
- * @filename: FIXME
- * @...: FIXME
+ * @filename: filename to search in the numcosmo path.
+ * @...: a variable number of arguments for @filename string.
  *
- * FIXME
+ * Checks if @filename exists in the numcosmo path.
  *
- * Returns: FIXME
+ * Returns: TRUE if @filename exists.
  */
 gboolean
 ncm_cfg_exists (const gchar *filename, ...)
@@ -1864,124 +1956,19 @@ ncm_cfg_exists (const gchar *filename, ...)
   gchar *file;
   gchar *full_filename;
   va_list ap;
-  
+
   g_assert (numcosmo_init);
-  
+
   va_start (ap, filename);
   file = g_strdup_vprintf (filename, ap);
   va_end (ap);
-  
+
   full_filename = g_build_filename (numcosmo_path, file, NULL);
   exists        = g_file_test (full_filename, G_FILE_TEST_EXISTS);
   g_free (file);
   g_free (full_filename);
-  
+
   return exists;
-}
-
-/**
- * ncm_cfg_load_spline: (skip)
- * @filename: FIXME
- * @stype: FIXME
- * @s: FIXME
- * @...: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gboolean
-ncm_cfg_load_spline (const gchar *filename, const gsl_interp_type *stype, NcmSpline **s, ...)
-{
-  guint64 size;
-  NcmVector *xv, *yv;
-  va_list ap;
-  
-  va_start (ap, s);
-  FILE *F = ncm_cfg_vfopen (filename, "r", ap);
-  
-  va_end (ap);
-  
-  if (F == NULL)
-    return FALSE;
-  
-  if (fread (&size, sizeof (guint64), 1, F) != 1)
-    g_error ("ncm_cfg_save_spline: fwrite error");
-  
-  if (*s == NULL)
-  {
-    xv = ncm_vector_new (size);
-    yv = ncm_vector_new (size);
-  }
-  else
-  {
-    xv = ncm_spline_get_xv (*s);
-    yv = ncm_spline_get_yv (*s);
-    g_assert (size == ncm_vector_len (xv));
-  }
-  
-  if (fread (ncm_vector_ptr (xv, 0), sizeof (gdouble), size, F) != size)
-    g_error ("ncm_cfg_save_spline: fwrite error");
-  
-  if (fread (ncm_vector_ptr (yv, 0), sizeof (gdouble), size, F) != size)
-    g_error ("ncm_cfg_save_spline: fwrite error");
-  
-  if (*s == NULL)
-  {
-    *s = ncm_spline_gsl_new (stype);
-    ncm_spline_set (*s, xv, yv, TRUE);
-  }
-  else
-  {
-    ncm_spline_prepare (*s);
-  }
-  
-  ncm_vector_free (xv);
-  ncm_vector_free (yv);
-  
-  fclose (F);
-  
-  return TRUE;
-}
-
-/**
- * ncm_cfg_save_spline:
- * @filename: FIXME
- * @s: FIXME
- * @...: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gboolean
-ncm_cfg_save_spline (const gchar *filename, NcmSpline *s, ...)
-{
-  guint64 size;
-  va_list ap;
-  
-  va_start (ap, s);
-  FILE *F = ncm_cfg_vfopen (filename, "w", ap);
-  
-  va_end (ap);
-  
-  if (F == NULL)
-    return FALSE;
-  
-  size = s->len;
-  
-  if (fwrite (&size, sizeof (guint64), 1, F) != 1)
-    g_error ("ncm_cfg_save_spline: fwrite error");
-  
-  if (fwrite (ncm_vector_ptr (s->xv, 0), sizeof (gdouble), size, F) != size)
-    g_error ("ncm_cfg_save_spline: fwrite error");
-  
-  if (fwrite (ncm_vector_ptr (s->yv, 0), sizeof (gdouble), size, F) != size)
-    g_error ("ncm_cfg_save_spline: fwrite error");
-  
-  fclose (F);
-  
-  return TRUE;
 }
 
 /**
@@ -1999,26 +1986,26 @@ ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist)
 {
   const gchar *data_dir = g_getenv (NCM_CFG_DATA_DIR_ENV);
   gchar *full_filename  = NULL;
-  
+
   if (data_dir != NULL)
   {
     full_filename = g_build_filename (data_dir, "data", filename, NULL);
-    
+
     if (!g_file_test (full_filename, G_FILE_TEST_EXISTS))
       g_clear_pointer (&full_filename, g_free);
   }
-  
+
   if (full_filename == NULL)
   {
     full_filename = g_build_filename (PACKAGE_DATA_DIR, "data", filename, NULL);
-    
+
     if (!g_file_test (full_filename, G_FILE_TEST_EXISTS))
       g_clear_pointer (&full_filename, g_free);
   }
-  
+
   if (full_filename == NULL)
     full_filename = g_build_filename (PACKAGE_SOURCE_DIR, "data", filename, NULL);
-  
+
   if (!g_file_test (full_filename, G_FILE_TEST_EXISTS))
   {
     if (must_exist)
@@ -2026,18 +2013,63 @@ ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist)
     else
       g_clear_pointer (&full_filename, g_free);
   }
-  
+
   return full_filename;
 }
 
 /**
+ * ncm_cfg_get_data_directory:
+ *
+ * Gets the data directory path. It first checks the environment variable
+ * NCM_CFG_DATA_DIR_ENV, then the package data directory and finally the
+ * package source directory. If none of these directories exists, it raises
+ * an error.
+ *
+ * Returns: (transfer full): Full path for the data directory.
+ */
+gchar *
+ncm_cfg_get_data_directory (void)
+{
+  const gchar *data_dir = g_getenv (NCM_CFG_DATA_DIR_ENV);
+  gchar *full_directory = NULL;
+
+  if (data_dir != NULL)
+  {
+    full_directory = g_build_filename (data_dir, "data", NULL);
+
+    if (!g_file_test (full_directory, G_FILE_TEST_IS_DIR))
+      g_clear_pointer (&full_directory, g_free);
+  }
+
+  if (full_directory == NULL)
+  {
+    full_directory = g_build_filename (PACKAGE_DATA_DIR, "data", NULL);
+
+    if (!g_file_test (full_directory, G_FILE_TEST_IS_DIR))
+      g_clear_pointer (&full_directory, g_free);
+  }
+
+  if (full_directory == NULL)
+    full_directory = g_build_filename (PACKAGE_SOURCE_DIR, "data", NULL);
+
+  if (!g_file_test (full_directory, G_FILE_TEST_IS_DIR))
+  {
+    g_clear_pointer (&full_directory, g_free);
+    g_error ("ncm_cfg_get_data_directory: cannot determine data directory.");
+  }
+
+
+  return full_directory;
+}
+
+/**
  * ncm_cfg_command_line:
- * @argv: FIXME
- * @argc: FIXME
+ * @argv: array of strings
+ * @argc: number of strings in @argv
  *
- * FIXME
+ * Converts @argv to a single string.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a command line string.
  */
 gchar *
 ncm_cfg_command_line (gchar *argv[], gint argc)
@@ -2046,73 +2078,51 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
   gchar *full_cmd_line_ptr;
   guint tsize = (argc - 1) + 1;
   gint argv_size, i;
-  
+
   for (i = 0; i < argc; i++)
   {
     tsize += strlen (argv[i]);
-    
+
     if (g_strrstr (argv[i], " ") != NULL)
       tsize += 2;
   }
-  
+
   full_cmd_line_ptr = full_cmd_line = g_new (gchar, tsize);
-  
+
   argv_size = strlen (argv[0]);
   memcpy (full_cmd_line_ptr, argv[0], argv_size);
   full_cmd_line_ptr = &full_cmd_line_ptr[argv_size];
-  
+
   for (i = 1; i < argc; i++)
   {
     gboolean has_space = FALSE;
-    
+
     full_cmd_line_ptr[0] = ' ';
     full_cmd_line_ptr++;
     argv_size = strlen (argv[i]);
     has_space = (g_strrstr (argv[i], " ") != NULL);
-    
+
     if (has_space)
       (full_cmd_line_ptr++)[0] = '\'';
-    
+
     memcpy (full_cmd_line_ptr, argv[i], argv_size);
     full_cmd_line_ptr = &full_cmd_line_ptr[argv_size];
-    
+
     if (has_space)
       (full_cmd_line_ptr++)[0] = '\'';
   }
-  
+
   full_cmd_line_ptr[0] = '\0';
-  
+
   return full_cmd_line;
 }
 
 /**
- * ncm_cfg_variant_to_array: (skip)
- * @var: a variant of array type.
- * @esize: element size.
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
-GArray *
-ncm_cfg_variant_to_array (GVariant *var, gsize esize)
-{
-  g_assert (g_variant_is_of_type (var, G_VARIANT_TYPE_ARRAY));
-  {
-    GArray *a = g_array_new (FALSE, FALSE, esize);
-    
-    ncm_cfg_array_set_variant (a, var);
-    
-    return a;
-  }
-}
-
-/**
  * ncm_cfg_array_set_variant: (skip)
- * @a: a #GArray.
+ * @a: a GArray.
  * @var: a variant of array type.
  *
- * FIXME
+ * Transfers the data from @var to @a.
  *
  */
 void
@@ -2121,19 +2131,19 @@ ncm_cfg_array_set_variant (GArray *a, GVariant *var)
   gsize esize        = g_array_get_element_size (a);
   gsize n_elements   = 0;
   gconstpointer data = g_variant_get_fixed_array (var, &n_elements, esize);
-  
+
   g_array_set_size (a, n_elements);
   memcpy (a->data, data, n_elements * esize);
 }
 
 /**
  * ncm_cfg_array_to_variant: (skip)
- * @a: a #GArray.
+ * @a: a GArray.
  * @etype: element type.
  *
- * FIXME
+ * Creates a variant of array type from @a.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a variant of array type.
  */
 GVariant *
 ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
@@ -2147,15 +2157,15 @@ ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
                                                  TRUE,
                                                  (GDestroyNotify) & g_array_unref,
                                                  g_array_ref (a));
-  
+
   g_variant_type_free (atype);
-  
+
   return g_variant_ref_sink (vvar);
 }
 
 gdouble fftw_default_timeout = 60.0;
 
-#ifdef NUMCOSMO_HAVE_FFTW3
+#ifdef HAVE_FFTW3
 guint fftw_default_flags = FFTW_MEASURE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
 
 /**
@@ -2181,5 +2191,5 @@ ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout)
 #else
 guint fftw_default_flags = 0;
 
-#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* HAVE_FFTW3 */
 

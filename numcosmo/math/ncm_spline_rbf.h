@@ -5,12 +5,12 @@
  *
  *  Fri April 06 20:44:33 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 
 /*
  * ncm_spline_rbf.h
- * Copyright (C) 2018 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2018 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -36,34 +36,14 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_SPLINE_RBF             (ncm_spline_rbf_get_type ())
-#define NCM_SPLINE_RBF(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_SPLINE_RBF, NcmSplineRBF))
-#define NCM_SPLINE_RBF_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_SPLINE_RBF, NcmSplineRBFClass))
-#define NCM_IS_SPLINE_RBF(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_SPLINE_RBF))
-#define NCM_IS_SPLINE_RBF_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_SPLINE_RBF))
-#define NCM_SPLINE_RBF_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_SPLINE_RBF, NcmSplineRBFClass))
+#define NCM_TYPE_SPLINE_RBF (ncm_spline_rbf_get_type ())
 
-typedef struct _NcmSplineRBFClass NcmSplineRBFClass;
-typedef struct _NcmSplineRBF NcmSplineRBF;
-typedef struct _NcmSplineRBFPrivate NcmSplineRBFPrivate;
-
-struct _NcmSplineRBFClass
-{
-  /*< private >*/
-  NcmSplineClass parent_class;
-};
-
-struct _NcmSplineRBF
-{
-  /*< private >*/
-  NcmSpline parent_instance;
-  NcmSplineRBFPrivate *priv;
-};
+G_DECLARE_FINAL_TYPE (NcmSplineRBF, ncm_spline_rbf, NCM, SPLINE_RBF, NcmSpline)
 
 /**
  * NcmSplineRBFType:
- * @NCM_SPLINE_RBF_TYPE_POSDEF_GAUSS: Gaussian [RBF](https://en.wikipedia.org/wiki/Radial_basis_function) interpolation method for positive defined functions. 
- * @NCM_SPLINE_RBF_TYPE_GAUSS: Gaussian [RBF](https://en.wikipedia.org/wiki/Radial_basis_function) interpolation method for any kind of function. 
+ * @NCM_SPLINE_RBF_TYPE_POSDEF_GAUSS: Gaussian [RBF](https://en.wikipedia.org/wiki/Radial_basis_function) interpolation method for positive defined functions.
+ * @NCM_SPLINE_RBF_TYPE_GAUSS: Gaussian [RBF](https://en.wikipedia.org/wiki/Radial_basis_function) interpolation method for any kind of function.
  *
  * Enumeration to choose which Gaussian [RBF](https://en.wikipedia.org/wiki/Radial_basis_function) interpolation method to be applied by the object.
  *
@@ -75,8 +55,6 @@ typedef enum _NcmSplineRBFType
   /* < private > */
   NCM_SPLINE_RBF_TYPE_LEN, /*< skip >*/
 } NcmSplineRBFType;
-
-GType ncm_spline_rbf_get_type (void) G_GNUC_CONST;
 
 NcmSplineRBF *ncm_spline_rbf_new (NcmSplineRBFType type_id);
 NcmSplineRBF *ncm_spline_rbf_ref (NcmSplineRBF *rbf);

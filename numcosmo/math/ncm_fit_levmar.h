@@ -3,22 +3,22 @@
  *
  *  Wed Feb 24 21:19:48 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * 
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -33,55 +33,30 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FIT_LEVMAR             (ncm_fit_levmar_get_type ())
-#define NCM_FIT_LEVMAR(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FIT_LEVMAR, NcmFitLevmar))
-#define NCM_FIT_LEVMAR_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FIT_LEVMAR, NcmFitLevmarClass))
-#define NCM_IS_FIT_LEVMAR(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FIT_LEVMAR))
-#define NCM_IS_FIT_LEVMAR_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FIT_LEVMAR))
-#define NCM_FIT_LEVMAR_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FIT_LEVMAR, NcmFitLevmarClass))
+#define NCM_TYPE_FIT_LEVMAR (ncm_fit_levmar_get_type ())
 
-typedef struct _NcmFitLevmarClass NcmFitLevmarClass;
-typedef struct _NcmFitLevmar NcmFitLevmar;
+G_DECLARE_FINAL_TYPE (NcmFitLevmar, ncm_fit_levmar, NCM, FIT_LEVMAR, NcmFit)
 
 /**
  * NcmFitLevmarAlgos:
- * @NCM_FIT_LEVMAR_DER: with external derivatives. 
+ * @NCM_FIT_LEVMAR_DER: with external derivatives.
  * @NCM_FIT_LEVMAR_DIF: with internal derivatives (inside levmar).
- * @NCM_FIT_LEVMAR_BC_DER: with box constraints and external derivatives. 
+ * @NCM_FIT_LEVMAR_BC_DER: with box constraints and external derivatives.
  * @NCM_FIT_LEVMAR_BC_DIF: with box constraints and internal derivatives (inside levmar).
  *
- * Levmar algorithms. 
- * 
+ * Levmar algorithms.
+ *
  */
 typedef enum _NcmFitLevmarAlgos
 {
   NCM_FIT_LEVMAR_DER = 0,
   NCM_FIT_LEVMAR_DIF,
   NCM_FIT_LEVMAR_BC_DER,
-  NCM_FIT_LEVMAR_BC_DIF,    
+  NCM_FIT_LEVMAR_BC_DIF,
   /* < private > */
   NCM_FIT_LEVMAR_NUM_ALGOS, /*< skip >*/
 } NcmFitLevmarAlgos;
 
-struct _NcmFitLevmarClass
-{
-  /*< private >*/
-  NcmFitClass parent_class;
-};
-
-struct _NcmFitLevmar
-{
-  /*< private >*/
-  NcmFit parent_instance;
-  gpointer workz;
-  guint fparam_len;
-  guint data_len;
-  NcmVector *lb;
-  NcmVector *ub;
-  NcmFitLevmarAlgos algo;
-};
-
-GType ncm_fit_levmar_get_type (void) G_GNUC_CONST;
 
 NcmFit *ncm_fit_levmar_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, NcmFitLevmarAlgos algo);
 NcmFit *ncm_fit_levmar_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
@@ -91,3 +66,4 @@ void ncm_fit_levmar_set_algo (NcmFitLevmar *fit_levmar, NcmFitLevmarAlgos algo);
 G_END_DECLS
 
 #endif /* _NCM_FIT_LEVMAR_H_ */
+

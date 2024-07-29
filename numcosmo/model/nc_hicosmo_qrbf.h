@@ -1,10 +1,11 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            nc_hicosmo_qrbf.h
  *
  *  Fri November 01 14:17:49 2019
  *  Copyright  2019  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hicosmo_qrbf.h
@@ -58,13 +59,13 @@ typedef struct _NcHICosmoQRBFPrivate NcHICosmoQRBFPrivate;
  * @NC_HICOSMO_QRBF_H0: Hubble constant
  * @NC_HICOSMO_QRBF_OMEGA_T: Total energy density of the universe
  * @NC_HICOSMO_QRBF_AS_DRAG: FIXME
- * @NC_HICOSMO_QRBF_RBF_H: the rbf wave-length 
+ * @NC_HICOSMO_QRBF_RBF_H: the rbf wave-length
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_QRBF_SPARAMS >*/
 {
   NC_HICOSMO_QRBF_H0 = 0,
-  NC_HICOSMO_QRBF_OMEGA_T,    
+  NC_HICOSMO_QRBF_OMEGA_T,
   NC_HICOSMO_QRBF_AS_DRAG,
   NC_HICOSMO_QRBF_RBF_H,
   /* < private > */
@@ -86,13 +87,13 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_QRBF_VPARAMS >*/
 } NcHICosmoQRBFVParams;
 
 #define NC_HICOSMO_QRBF_DEFAULT_H0              (73.0)
-#define NC_HICOSMO_QRBF_DEFAULT_OMEGA_T         ( 1.0)
-#define NC_HICOSMO_QRBF_DEFAULT_AS_DRAG         ( 0.035)
-#define NC_HICOSMO_QRBF_DEFAULT_RBF_H           ( 0.5)
-#define NC_HICOSMO_QRBF_DEFAULT_RBF_CENTERS     ( 1.0)
-#define NC_HICOSMO_QRBF_DEFAULT_RBF_CENTERS_LEN ( 3  )
+#define NC_HICOSMO_QRBF_DEFAULT_OMEGA_T         (1.0)
+#define NC_HICOSMO_QRBF_DEFAULT_AS_DRAG         (0.035)
+#define NC_HICOSMO_QRBF_DEFAULT_RBF_H           (0.5)
+#define NC_HICOSMO_QRBF_DEFAULT_RBF_CENTERS     (1.0)
+#define NC_HICOSMO_QRBF_DEFAULT_RBF_CENTERS_LEN (3)
 #define NC_HICOSMO_QRBF_DEFAULT_RBF_COEFFS      (+0.5)
-#define NC_HICOSMO_QRBF_DEFAULT_RBF_COEFFS_LEN  ( 3  )
+#define NC_HICOSMO_QRBF_DEFAULT_RBF_COEFFS_LEN  (3)
 
 struct _NcHICosmoQRBFClass
 {
@@ -147,3 +148,4 @@ NcHICosmoQRBFRprior *nc_hicosmo_qrbf_rprior_new (gdouble lambda);
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_QRBF_H_ */
+

@@ -3,12 +3,12 @@
  *
  *  Wed Nov 21 19:09:20 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -26,9 +26,12 @@
 /**
  * SECTION:ncm_ode_spline
  * @title: NcmOdeSpline
- * @short_description: Automatic generation of splines from ODE solvers (#NcmODE).
+ * @short_description: Automatic generation of splines from ODE solvers.
  * @stability: Stable
  * @include: numcosmo/math/ncm_ode_spline.h
+ *
+ * This class defines an object that integrates an ODE and generates a spline
+ * from the solution.
  *
  */
 
@@ -38,7 +41,6 @@
 #include "build_cfg.h"
 
 #include "math/ncm_ode_spline.h"
-#include "math/integral.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvode/cvode.h>
@@ -47,7 +49,7 @@
 #include <gsl/gsl_linalg.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcmOdeSplinePrivate
+typedef struct _NcmOdeSplinePrivate
 {
   gpointer cvode;
   SUNNonlinearSolver NLS;
@@ -68,7 +70,8 @@ struct _NcmOdeSplinePrivate
   gboolean auto_abstol;
   gdouble ini_step;
   NcmModelCtrl *ctrl;
-};
+  NcmSpline *spline;
+} NcmOdeSplinePrivate;
 
 enum
 {
@@ -86,7 +89,12 @@ enum
   PROP_INI_STEP,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcmOdeSpline, ncm_ode_spline, G_TYPE_OBJECT);
+struct _NcmOdeSpline
+{
+  GObject parent_instance;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcmOdeSpline, ncm_ode_spline, G_TYPE_OBJECT)
 
 typedef struct _NcmOdeSplineDydxData
 {
@@ -97,9 +105,9 @@ typedef struct _NcmOdeSplineDydxData
 static void
 ncm_ode_spline_init (NcmOdeSpline *os)
 {
-  NcmOdeSplinePrivate * const self = os->priv = ncm_ode_spline_get_instance_private (os);
-  
-  os->spline        = NULL;
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
+  self->spline      = NULL;
   self->cvode       = CVodeCreate (CV_ADAMS);
   self->cvode_init  = FALSE;
   self->y           = N_VNew_Serial (1);
@@ -119,7 +127,7 @@ ncm_ode_spline_init (NcmOdeSpline *os)
   self->auto_abstol = FALSE;
   self->ini_step    = 0.0;
   self->ctrl        = ncm_model_ctrl_new (NULL);
-  
+
   self->NLS = SUNNonlinSol_FixedPoint (self->y, 0);
   NCM_CVODE_CHECK (self->NLS, "SUNNonlinSol_FixedPoint", 0, );
 }
@@ -128,10 +136,10 @@ static void
 _ncm_ode_spline_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmOdeSpline *os                 = NCM_ODE_SPLINE (object);
-  NcmOdeSplinePrivate * const self = os->priv;
-  
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
   g_return_if_fail (NCM_IS_ODE_SPLINE (object));
-  
+
   switch (prop_id)
   {
     case PROP_RELTOL:
@@ -156,8 +164,8 @@ _ncm_ode_spline_set_property (GObject *object, guint prop_id, const GValue *valu
       self->dydx = (NcmOdeSplineDydx) g_value_get_pointer (value);
       break;
     case PROP_SPLINE:
-      ncm_spline_clear (&os->spline);
-      os->spline = g_value_dup_object (value);
+      ncm_spline_clear (&self->spline);
+      self->spline = g_value_dup_object (value);
       break;
     case PROP_STOP_HNIL:
       self->stop_hnil = g_value_get_boolean (value);
@@ -168,9 +176,9 @@ _ncm_ode_spline_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_INI_STEP:
       ncm_ode_spline_set_ini_step (os, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -178,10 +186,10 @@ static void
 _ncm_ode_spline_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmOdeSpline *os                 = NCM_ODE_SPLINE (object);
-  NcmOdeSplinePrivate * const self = os->priv;
-  
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
   g_return_if_fail (NCM_IS_ODE_SPLINE (object));
-  
+
   switch (prop_id)
   {
     case PROP_RELTOL:
@@ -206,7 +214,7 @@ _ncm_ode_spline_get_property (GObject *object, guint prop_id, GValue *value, GPa
       g_value_set_pointer (value, self->dydx);
       break;
     case PROP_SPLINE:
-      g_value_set_object (value, os->spline);
+      g_value_set_object (value, self->spline);
       break;
     case PROP_STOP_HNIL:
       g_value_set_boolean (value, self->stop_hnil);
@@ -215,11 +223,11 @@ _ncm_ode_spline_get_property (GObject *object, guint prop_id, GValue *value, GPa
       g_value_set_boolean (value, self->auto_abstol);
       break;
     case PROP_INI_STEP:
-      g_value_set_boolean (value, ncm_ode_spline_get_ini_step (os));
+      g_value_set_double (value, ncm_ode_spline_get_ini_step (os));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -227,13 +235,13 @@ static void
 _ncm_ode_spline_dispose (GObject *object)
 {
   NcmOdeSpline *os                 = NCM_ODE_SPLINE (object);
-  NcmOdeSplinePrivate * const self = os->priv;
-  
-  ncm_spline_clear (&os->spline);
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
+  ncm_spline_clear (&self->spline);
   g_clear_pointer (&self->x_array, g_array_unref);
   g_clear_pointer (&self->y_array, g_array_unref);
   ncm_model_ctrl_clear (&self->ctrl);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_ode_spline_parent_class)->dispose (object);
 }
@@ -242,26 +250,26 @@ static void
 _ncm_ode_spline_finalize (GObject *object)
 {
   NcmOdeSpline *os                 = NCM_ODE_SPLINE (object);
-  NcmOdeSplinePrivate * const self = os->priv;
-  
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
   if (self->cvode != NULL)
   {
     CVodeFree (&self->cvode);
     self->cvode = NULL;
   }
-  
+
   if (self->y != NULL)
   {
     N_VDestroy (self->y);
     self->y = NULL;
   }
-  
+
   if (self->NLS != NULL)
   {
     SUNNonlinSolFree (self->NLS);
     self->NLS = NULL;
   }
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_ode_spline_parent_class)->finalize (object);
 }
@@ -270,17 +278,17 @@ static void
 ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-  
+
   object_class->set_property = &_ncm_ode_spline_set_property;
   object_class->get_property = &_ncm_ode_spline_get_property;
   object_class->dispose      = &_ncm_ode_spline_dispose;
   object_class->finalize     = &_ncm_ode_spline_finalize;
-  
- /**   
+
+  /**
    * NcmOdeSpline:reltol:
    *
-   * #NcmODE integrator's relative tolerance. 
-   * 
+   * Integrator's relative tolerance.
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
@@ -289,12 +297,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         "Relative tolerance",
                                                         0.0, 1.0, NCM_ODE_SPLINE_DEFAULT_RELTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
- /**   
+
+  /**
    * NcmOdeSpline:abstol:
    *
-   * #NcmODE integrator's absolute tolerance. 
-   * 
+   * Integrator's absolute tolerance.
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_ABSTOL,
@@ -303,12 +311,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         "Absolute tolerance",
                                                         0.0, 1.0, NCM_ODE_SPLINE_DEFAULT_ABSTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
- /**   
+
+  /**
    * NcmOdeSpline:xi:
    *
-   * The initial point to integrate the ode. 
-   * 
+   * The initial point to integrate the ode.
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_XI,
@@ -317,12 +325,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         "Initial point",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
- /**   
+
+  /**
    * NcmOdeSpline:xf:
    *
-   * The final point to integrate the ode. 
-   * 
+   * The final point to integrate the ode.
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_XF,
@@ -331,12 +339,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         "Final point",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
- /**   
+
+  /**
    * NcmOdeSpline:yi:
    *
-   * The initial value of the function to be evaluated. 
-   * 
+   * The initial value of the function to be evaluated.
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_YI,
@@ -345,12 +353,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         "Initial Value",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
- /**   
+
+  /**
    * NcmOdeSpline:yf:
    *
-   * The final value of the function to be evaluated. 
-   * 
+   * The final value of the function to be evaluated.
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_YF,
@@ -359,12 +367,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         "Final Value",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
- /**   
+
+  /**
    * NcmOdeSpline:dydx:
    *
-   * A pointer to the dydx function, a.k.a. the jacobian. 
-   * 
+   * A pointer to the dydx function, a.k.a. the jacobian.
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_DYDX,
@@ -372,11 +380,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                          NULL,
                                                          "Pointer to the dydx function",
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
- /**   
+
+  /**
    * NcmOdeSpline:spline:
    *
-   * The spline algorithm to be used. 
-   * 
+   * The spline algorithm to be used.
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_SPLINE,
@@ -385,11 +394,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         "Spline algorithm to be used",
                                                         NCM_TYPE_SPLINE,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
- /**   
+
+  /**
    * NcmOdeSpline:stop-hnil:
    *
-   * Whether treat hnil as error. 
-   * 
+   * Whether treat hnil as error.
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_STOP_HNIL,
@@ -398,11 +408,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                          "Whether treat hnil as error",
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
- /**   
+
+  /**
    * NcmOdeSpline:auto-abstol:
    *
-   * Boolean to set whether or not the absolute tolerance is going to be estimated internally by the ode integrator. 
-   * 
+   * Boolean to set whether or not the absolute tolerance is going to be estimated internally by the ode integrator.
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_AUTO_ABSTOL,
@@ -411,11 +422,12 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                          "Automatic abstol",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
- /**   
+
+  /**
    * NcmOdeSpline:ini-step:
    *
-   * The integration initial step size. 
-   * 
+   * The integration initial step size.
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_INI_STEP,
@@ -430,10 +442,10 @@ static gint
 _ncm_ode_spline_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcmOdeSplineDydxData *dydx_data  = (NcmOdeSplineDydxData *) f_data;
-  NcmOdeSplinePrivate * const self = dydx_data->os->priv;
-  
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (dydx_data->os);
+
   NV_Ith_S (ydot, 0) = self->dydx (NV_Ith_S (y, 0), x, dydx_data->userdata);
-  
+
   return 0;
 }
 
@@ -442,7 +454,7 @@ _ncm_ode_spline_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
  * @s: a #NcmSpline
  * @dydx: (scope notified): a #NcmOdeSplineDydx
  *
- * This function creates a new #NcmOdeSpline. 
+ * This function creates a new #NcmOdeSpline.
  *
  * Returns: a new #NcmOdeSpline.
  */
@@ -453,7 +465,7 @@ ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx)
                                    "dydx", dydx,
                                    "spline", s,
                                    NULL);
-  
+
   return os;
 }
 
@@ -461,13 +473,13 @@ ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx)
  * ncm_ode_spline_new_full:
  * @s: a #NcmSpline
  * @dydx: (scope notified): a #NcmOdeSplineDydx
- * @yi: initial value of the function to be evaluated 
+ * @yi: initial value of the function to be evaluated
  * @xi: initial point to integrate the edo
  * @xf: final point to integrate the edo
  *
  * This function creates a new #NcmOdeSpline setting all its members.
  *
- * Returns: a new #NcmOdeSpline. 
+ * Returns: a new #NcmOdeSpline.
  */
 NcmOdeSpline *
 ncm_ode_spline_new_full (NcmSpline *s, NcmOdeSplineDydx dydx, gdouble yi, gdouble xi, gdouble xf)
@@ -479,7 +491,7 @@ ncm_ode_spline_new_full (NcmSpline *s, NcmOdeSplineDydx dydx, gdouble yi, gdoubl
                                    "dydx", dydx,
                                    "spline", s,
                                    NULL);
-  
+
   return os;
 }
 
@@ -487,100 +499,100 @@ static gint
 _ncm_ode_spline_yf_root (realtype lambda, N_Vector y, realtype *gout, gpointer user_data)
 {
   NcmOdeSplineDydxData *dydx_data  = (NcmOdeSplineDydxData *) user_data;
-  NcmOdeSplinePrivate * const self = dydx_data->os->priv;
-  
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (dydx_data->os);
+
   gout[0] = (NV_Ith_S (y, 0) - self->yf);
-  
+
   return 0;
 }
 
 /**
  * ncm_ode_spline_prepare:
  * @os: a #NcmOdeSpline
- * @userdata: (closure): ode additional parameters 
+ * @userdata: (nullable): ode additional parameters
  *
- * This function prepares the #NcmOdeSpline @os and fills its internal #NcmSpline with the evaluated ode's solution. 
+ * This function prepares the #NcmOdeSpline @os and fills its internal #NcmSpline with the evaluated ode's solution.
  */
 void
 ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
 {
-  NcmOdeSplinePrivate * const self = os->priv;
-  NcmOdeSplineDydxData f_data = {os, userdata};
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+  NcmOdeSplineDydxData f_data      = {os, userdata};
   gdouble x, x0;
   gint flag;
-  
+
   NV_Ith_S (self->y, 0) = self->yi;
-  
+
   if (self->auto_abstol)
     self->abstol = fabs (self->dydx (NV_Ith_S (self->y, 0), self->xi, userdata) * self->reltol * NCM_ODE_SPLINE_MIN_STEP);
   else if ((self->yi == 0.0) && (self->abstol == 0.0))
     g_error ("ncm_ode_spline_prepare: cannot integrate system where y_ini == 0.0 and abstol == 0.0.");
-  
+
   if (!self->cvode_init)
   {
     flag = CVodeInit (self->cvode, &_ncm_ode_spline_f, self->xi, self->y);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
-    
+
     flag = CVodeSetNonlinearSolver (self->cvode, self->NLS);
     NCM_CVODE_CHECK (&flag, "CVodeSetNonlinearSolver", 1, );
-    
+
     self->cvode_init = TRUE;
   }
   else
   {
     flag = CVodeReInit (self->cvode, self->xi, self->y);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
-    
+
     flag = CVodeSetNonlinearSolver (self->cvode, self->NLS);
     NCM_CVODE_CHECK (&flag, "CVodeSetNonlinearSolver", 1, );
   }
-  
+
   g_array_set_size (self->x_array, 0);
   g_array_set_size (self->y_array, 0);
-  
+
   g_array_append_val (self->x_array, self->xi);
   g_array_append_val (self->y_array, NV_Ith_S (self->y, 0));
-  
+
   flag = CVodeSStolerances (self->cvode, self->reltol, self->abstol);
   NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
-  
-  flag = CVodeSetMaxNumSteps (self->cvode, NCM_INTEGRAL_PARTITION);
+
+  flag = CVodeSetMaxNumSteps (self->cvode, 100000);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
   flag = CVodeSetMaxOrd (self->cvode, 3); /* Cubic splines */
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxOrd", 1, );
-  
+
   flag = CVodeSetUserData (self->cvode, &f_data);
   NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
-  
+
   if (self->ini_step > 0.0)
   {
     flag = CVodeSetInitStep (self->cvode, self->ini_step);
     NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
   }
-  
+
   x0 = self->xi;
-  
+
   if (!gsl_finite (self->dydx (NV_Ith_S (self->y, 0), x0, f_data.userdata)))
     g_error ("ncm_ode_spline_prepare: not finite integrand at (% 22.15g, % 22.15g; % 22.15g).",
              x0,
              NV_Ith_S (self->y, 0),
              self->dydx (NV_Ith_S (self->y, 0), x0, f_data.userdata));
-  
+
   if (!gsl_finite (self->yf))
   {
     g_assert (gsl_finite (self->xf));
-    
+
     flag = CVodeSetStopTime (self->cvode, self->xf);
     NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
-    
+
     self->hnil = FALSE;
-    
+
     while (TRUE)
     {
       flag = CVode (self->cvode, self->xf, self->y, &x, CV_ONE_STEP);
       NCM_CVODE_CHECK (&flag, "ncm_ode_spline_prepare[CVode]", 1, );
-      
+
       if (G_UNLIKELY (self->hnil))
       {
         if (self->stop_hnil)
@@ -588,14 +600,14 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
         else
           break;
       }
-      
+
       if (x > x0 + fabs (x0) * NCM_ODE_SPLINE_MIN_STEP)
       {
         g_array_append_val (self->x_array, x);
         g_array_append_val (self->y_array, NV_Ith_S (self->y, 0));
         x0 = x;
       }
-      
+
       if (x == self->xf)
         break;
     }
@@ -604,17 +616,17 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   {
     const gdouble xf = (self->xi != 0.0) ? self->xi * 2.0 : 1.0;
     gdouble last_y   = GSL_NEGINF;
-    
+
     flag = CVodeRootInit (self->cvode, 1, &_ncm_ode_spline_yf_root);
     NCM_CVODE_CHECK (&flag, "CVodeRootInit", 1, );
-    
+
     self->hnil = FALSE;
-    
+
     while (TRUE)
     {
       flag = CVode (self->cvode, xf, self->y, &x, CV_ONE_STEP);
       NCM_CVODE_CHECK (&flag, "ncm_ode_spline_prepare[CVode]", 1, );
-      
+
       if (G_UNLIKELY (self->hnil))
       {
         if (self->stop_hnil)
@@ -622,30 +634,30 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
         else
           break;
       }
-      
+
       if (x > x0 + fabs (x0) * NCM_ODE_SPLINE_MIN_STEP)
       {
         g_array_append_val (self->x_array, x);
         g_array_append_val (self->y_array, NV_Ith_S (self->y, 0));
         x0 = x;
       }
-      
+
       /* Possible problem if the integrand stalls for a long time but resume growing afterwards! ATT */
       if (NV_Ith_S (self->y, 0) == last_y)
         break;
-      
+
       last_y = NV_Ith_S (self->y, 0);
-      
+
       if (flag == CV_ROOT_RETURN)
         break;
     }
-    
+
     if (ncm_cmp (last_y, self->yf, 1.0e-2, 0.0) != 0)
       g_warning ("ncm_ode_spline_prepare: system has saturated at `% 22.15g' before attaining the required final value `% 22.15g'.",
                  last_y, self->yf);
   }
-  
-  ncm_spline_set_array (os->spline, self->x_array, self->y_array, TRUE);
+
+  ncm_spline_set_array (self->spline, self->x_array, self->y_array, TRUE);
   self->s_init = TRUE;
 }
 
@@ -653,7 +665,7 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
  * ncm_ode_spline_free:
  * @os: a #NcmOdeSpline
  *
- * Decreases the reference count of @os by one. 
+ * Decreases the reference count of @os by one.
  */
 void
 ncm_ode_spline_free (NcmOdeSpline *os)
@@ -677,7 +689,7 @@ ncm_ode_spline_clear (NcmOdeSpline **os)
 /**
  * ncm_ode_spline_set_interval:
  * @os: a #NcmOdeSpline
- * @yi: initial value of the function to be evaluated 
+ * @yi: initial value of the function to be evaluated
  * @xi: initial point to integrate the edo
  * @xf: final point to integrate the edo
  *
@@ -688,7 +700,7 @@ void
 ncm_ode_spline_set_interval (NcmOdeSpline *os, gdouble yi, gdouble xi, gdouble xf)
 {
   g_assert_cmpfloat (xf, >, xi);
-  
+
   ncm_ode_spline_set_xi (os, xi);
   ncm_ode_spline_set_xf (os, xf);
   ncm_ode_spline_set_yi (os, yi);
@@ -697,39 +709,39 @@ ncm_ode_spline_set_interval (NcmOdeSpline *os, gdouble yi, gdouble xi, gdouble x
 /**
  * ncm_ode_spline_set_reltol:
  * @os: a #NcmOdeSpline
- * @reltol: relative tolerance of the ode integrator 
+ * @reltol: relative tolerance of the ode integrator
  *
- * This functions sets the relative tolerance, @reltol, of the edo integrator. 
+ * This functions sets the relative tolerance, @reltol, of the edo integrator.
  *
  */
 void
 ncm_ode_spline_set_reltol (NcmOdeSpline *os, gdouble reltol)
 {
-  NcmOdeSplinePrivate * const self = os->priv;
-  
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
   self->reltol = reltol;
 }
 
 /**
  * ncm_ode_spline_set_abstol:
  * @os: a #NcmOdeSpline
- * @abstol: absolute tolerance of the ode integrator  
+ * @abstol: absolute tolerance of the ode integrator
  *
- * This functions sets the absolute tolerance, @abstol, of the edo integrator.  
+ * This functions sets the absolute tolerance, @abstol, of the edo integrator.
  *
  */
 void
 ncm_ode_spline_set_abstol (NcmOdeSpline *os, gdouble abstol)
 {
-  NcmOdeSplinePrivate * const self = os->priv;
-  
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
   self->abstol = abstol;
 }
 
 /**
  * ncm_ode_spline_set_xi:
  * @os: a #NcmOdeSpline
- * @xi: initial point to integrate the edo 
+ * @xi: initial point to integrate the edo
  *
  * This function sets the initial point, @xi, to integrate the edo.
  *
@@ -737,27 +749,27 @@ ncm_ode_spline_set_abstol (NcmOdeSpline *os, gdouble abstol)
 void
 ncm_ode_spline_set_xi (NcmOdeSpline *os, gdouble xi)
 {
-  NcmOdeSplinePrivate * const self = os->priv;
-  
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
   self->xi = xi;
 }
 
 /**
  * ncm_ode_spline_set_xf:
  * @os: a #NcmOdeSpline
- * @xf: final point to integrate the edo 
+ * @xf: final point to integrate the edo
  *
- * This function sets the final point, @xf, to integrate the edo. 
+ * This function sets the final point, @xf, to integrate the edo.
  * Note that if @yf is also set, @yf will take precedence.
  *
  */
 void
 ncm_ode_spline_set_xf (NcmOdeSpline *os, gdouble xf)
 {
-  NcmOdeSplinePrivate * const self = os->priv;
-  
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
   self->xf = xf;
-  
+
   if (gsl_finite (self->yf))
     g_warning ("ncm_ode_spline_set_xf: setting xf when yf was also set, yf will take precedence.");
 }
@@ -765,36 +777,36 @@ ncm_ode_spline_set_xf (NcmOdeSpline *os, gdouble xf)
 /**
  * ncm_ode_spline_set_yi:
  * @os: a #NcmOdeSpline
- * @yi: initial value of the function to be evaluated  
+ * @yi: initial value of the function to be evaluated
  *
- * This function sets the initial value of the function to be evaluated. 
+ * This function sets the initial value of the function to be evaluated.
  *
  */
 void
 ncm_ode_spline_set_yi (NcmOdeSpline *os, gdouble yi)
 {
-  NcmOdeSplinePrivate * const self = os->priv;
-  
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
   self->yi = yi;
 }
 
 /**
  * ncm_ode_spline_set_yf:
  * @os: a #NcmOdeSpline
- * @yf: final value of the function to be evaluated 
+ * @yf: final value of the function to be evaluated
  *
- * This function sets the final value of the function to be evaluated. 
- * When @yf is reached, the edo's integration is stopped. 
+ * This function sets the final value of the function to be evaluated.
+ * When @yf is reached, the edo's integration is stopped.
  * Note that if @xf is also set, @yf will take precedence.
  *
  */
 void
 ncm_ode_spline_set_yf (NcmOdeSpline *os, gdouble yf)
 {
-  NcmOdeSplinePrivate * const self = os->priv;
-  
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
   self->yf = yf;
-  
+
   if (gsl_finite (self->xf))
     g_warning ("ncm_ode_spline_set_yf: setting yf when xf was also set, yf will take precedence.");
 }
@@ -812,8 +824,8 @@ ncm_ode_spline_set_yf (NcmOdeSpline *os, gdouble yf)
 void
 ncm_ode_spline_auto_abstol (NcmOdeSpline *os, gboolean on)
 {
-  NcmOdeSplinePrivate * const self = os->priv;
-  
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
   self->auto_abstol = on;
 }
 
@@ -830,8 +842,8 @@ ncm_ode_spline_auto_abstol (NcmOdeSpline *os, gboolean on)
 void
 ncm_ode_spline_set_ini_step (NcmOdeSpline *os, gdouble ini_step)
 {
-  NcmOdeSplinePrivate * const self = os->priv;
-  
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
   self->ini_step = ini_step;
 }
 
@@ -846,8 +858,8 @@ ncm_ode_spline_set_ini_step (NcmOdeSpline *os, gdouble ini_step)
 gdouble
 ncm_ode_spline_get_ini_step (NcmOdeSpline *os)
 {
-  NcmOdeSplinePrivate * const self = os->priv;
-  
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
   return self->ini_step;
 }
 
@@ -859,4 +871,11 @@ ncm_ode_spline_get_ini_step (NcmOdeSpline *os)
  *
  * Returns: (transfer none): the last prepared spline.
  */
+NcmSpline *
+ncm_ode_spline_peek_spline (NcmOdeSpline *os)
+{
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
+  return self->spline;
+}
 

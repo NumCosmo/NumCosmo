@@ -3,11 +3,11 @@
  *
  *  Wed February 15 11:31:28 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -60,8 +60,8 @@ typedef struct _NcHICosmoQSplineContPrior NcHICosmoQSplineContPrior;
 typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_SPARAMS >*/
 {
   NC_HICOSMO_QSPLINE_H0 = 0,
-  NC_HICOSMO_QSPLINE_OMEGA_T,    
-  NC_HICOSMO_QSPLINE_AS_DRAG,    
+  NC_HICOSMO_QSPLINE_OMEGA_T,
+  NC_HICOSMO_QSPLINE_AS_DRAG,
   /* < private > */
   NC_HICOSMO_QSPLINE_SPARAM_LEN, /*< skip >*/
 } NcHICosmoQSplineSParams;
@@ -73,14 +73,14 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_SPARAMS >*/
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_VPARAMS >*/
 {
-  NC_HICOSMO_QSPLINE_Q,          
+  NC_HICOSMO_QSPLINE_Q,
   /* < private > */
   NC_HICOSMO_QSPLINE_VPARAM_LEN, /*< skip >*/
 } NcHICosmoQSplineVParams;
 
 #define NC_HICOSMO_QSPLINE_DEFAULT_H0      ncm_c_hubble_cte_planck6_base ()
-#define NC_HICOSMO_QSPLINE_DEFAULT_OMEGA_T ( 1.0)
-#define NC_HICOSMO_QSPLINE_DEFAULT_AS_DRAG ( 0.035)
+#define NC_HICOSMO_QSPLINE_DEFAULT_OMEGA_T (1.0)
+#define NC_HICOSMO_QSPLINE_DEFAULT_AS_DRAG (0.035)
 #define NC_HICOSMO_QSPLINE_DEFAULT_Q       (-0.5)
 #define NC_HICOSMO_QSPLINE_DEFAULT_Q_LEN   (3)
 
@@ -176,3 +176,4 @@ NcPriorQSplineCont *nc_prior_qspline_cont_new (void);
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_QSPLINE_H_ */
+

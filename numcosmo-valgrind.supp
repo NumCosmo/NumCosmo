@@ -1,0 +1,60 @@
+{
+   <NumCosmo_PMPI_Init>
+   Memcheck:Leak
+   match-leak-kinds: all
+   ...
+   fun:PMPI_Init
+   fun:ncm_cfg_init_full_ptr.part.0
+   fun:main
+}
+{
+   <libhwloc>
+   Memcheck:Leak
+   ...
+   obj:/usr/*lib*/libhwloc*
+}
+{
+   <libopen-rte>
+   Memcheck:Leak
+   ...
+   obj:/usr/*lib*/libopen-rte*
+}
+{
+   <PMPI_Init>
+   Memcheck:Leak
+   match-leak-kinds: all
+   ...
+   fun:PMPI_Init
+}
+{
+   <g_test_trap_subprocess>
+   Memcheck:Leak
+   match-leak-kinds: all
+   ...
+   fun:g_test_trap_subprocess
+}
+{
+   <event_process_active_single_queue>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   ...
+   fun:event_process_active_single_queue
+}
+{
+   <libfyaml_use_uninitialised>
+   Memcheck:Cond
+   obj:/usr/lib/libfyaml.so.0.0.0
+   ...
+   fun:fy_emit_document_to_string
+   ...
+}
+{
+   <libfyaml_donot_free_anchor_bug>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   ...
+   fun:g_strdup
+   fun:g_strdup_inline
+   fun:_ncm_serialize_to_yaml_node
+   ...
+}

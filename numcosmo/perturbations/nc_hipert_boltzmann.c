@@ -3,11 +3,11 @@
  *
  *  Sat Oct 25 21:02:36 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hipert_boltzmann.c
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -52,7 +52,7 @@
 
 #include "perturbations/nc_hipert_private.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcHIPertBoltzmann, nc_hipert_boltzmann, NC_TYPE_HIPERT);
+G_DEFINE_ABSTRACT_TYPE (NcHIPertBoltzmann, nc_hipert_boltzmann, NC_TYPE_HIPERT)
 
 enum
 {

@@ -4,11 +4,11 @@
  *
  *  Fri October 13 15:57:34 2017
  *  Copyright  2017  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hipert_bg_var.c
- * Copyright (C) 2017 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2017 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -55,8 +55,8 @@ enum
   PROP_LEN,
 };
 
-G_DEFINE_BOXED_TYPE (NcHIPertBGVarYDY, nc_hipert_bg_var_ydy, nc_hipert_bg_var_ydy_dup, nc_hipert_bg_var_ydy_free);
-G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertBGVar, nc_hipert_bg_var, G_TYPE_OBJECT);
+G_DEFINE_BOXED_TYPE (NcHIPertBGVarYDY, nc_hipert_bg_var_ydy, nc_hipert_bg_var_ydy_dup, nc_hipert_bg_var_ydy_free)
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertBGVar, nc_hipert_bg_var, G_TYPE_OBJECT)
 
 static void
 nc_hipert_bg_var_init (NcHIPertBGVar *bg_var)

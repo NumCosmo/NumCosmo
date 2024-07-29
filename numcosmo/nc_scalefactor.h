@@ -3,11 +3,11 @@
  *
  *  Wed Nov 12 14:46:40 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -99,3 +99,4 @@ gdouble nc_scalefactor_eval_eta_t (NcScalefactor *a, const gdouble t);
 G_END_DECLS
 
 #endif /* _NC_SCALEFACTOR_H_ */
+

@@ -3,11 +3,11 @@
  *
  *  Tue March 29 10:42:03 2016
  *  Copyright  2016  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_fit_esmcmc_walker_walk.h
- * Copyright (C) 2016 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2016 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -34,38 +34,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FIT_ESMCMC_WALKER_WALK             (ncm_fit_esmcmc_walker_walk_get_type ())
-#define NCM_FIT_ESMCMC_WALKER_WALK(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_WALK, NcmFitESMCMCWalkerWalk))
-#define NCM_FIT_ESMCMC_WALKER_WALK_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FIT_ESMCMC_WALKER_WALK, NcmFitESMCMCWalkerWalkClass))
-#define NCM_IS_FIT_ESMCMC_WALKER_WALK(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_WALK))
-#define NCM_IS_FIT_ESMCMC_WALKER_WALK_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FIT_ESMCMC_WALKER_WALK))
-#define NCM_FIT_ESMCMC_WALKER_WALK_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FIT_ESMCMC_WALKER_WALK, NcmFitESMCMCWalkerWalkClass))
+#define NCM_TYPE_FIT_ESMCMC_WALKER_WALK (ncm_fit_esmcmc_walker_walk_get_type ())
 
-typedef struct _NcmFitESMCMCWalkerWalkClass NcmFitESMCMCWalkerWalkClass;
-typedef struct _NcmFitESMCMCWalkerWalk NcmFitESMCMCWalkerWalk;
-
-struct _NcmFitESMCMCWalkerWalkClass
-{
-  /*< private >*/
-  NcmFitESMCMCWalkerClass parent_class;
-};
-
-struct _NcmFitESMCMCWalkerWalk
-{
-  /*< private >*/
-  NcmFitESMCMCWalker parent_instance;
-  guint size;
-  guint size_2;
-  guint nparams;
-  gdouble a;
-  gdouble sqrt_nparams;
-  NcmMatrix *z;
-  GPtrArray *thetabar;
-  GArray *indices;
-  GArray *numbers;
-};
-
-GType ncm_fit_esmcmc_walker_walk_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcmFitESMCMCWalkerWalk, ncm_fit_esmcmc_walker_walk, NCM, FIT_ESMCMC_WALKER_WALK, NcmFitESMCMCWalker)
 
 NcmFitESMCMCWalkerWalk *ncm_fit_esmcmc_walker_walk_new (guint nwalkers);
 

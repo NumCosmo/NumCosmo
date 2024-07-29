@@ -3,11 +3,11 @@
  *
  *  Thu October 22 16:22:20 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_planck_fi_cor_tt.h
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -93,7 +93,7 @@ typedef enum /*< enum,underscore_name=NC_PLANCK_FI_COR_TT_SPARAMS >*/
   NC_PLANCK_FI_COR_TT_A_sbpx_217_217_TT,
   NC_PLANCK_FI_COR_TT_calib_100T,
   NC_PLANCK_FI_COR_TT_calib_217T,
-  NC_PLANCK_FI_COR_TT_A_planck,   
+  NC_PLANCK_FI_COR_TT_A_planck,
   /* < private > */
   NC_PLANCK_FI_COR_TT_SPARAM_LEN, /*< skip >*/
 } NcPlanckFICorTTSParams;
@@ -151,3 +151,4 @@ void nc_planck_fi_cor_tt_add_all_default18_priors (NcmLikelihood *lh);
 G_END_DECLS
 
 #endif /* _NC_PLANCK_FI_COR_TT_H_ */
+

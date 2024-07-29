@@ -11,7 +11,7 @@
  *
  *  Sat September 02 18:11:24 2017
  *  Copyright  2017  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 
 /*
@@ -41,39 +41,11 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_fftlog.h>
 
-#ifndef NUMCOSMO_GIR_SCAN
-#ifdef HAVE_ACB_H
-#include <acb.h>
-#endif /* HAVE_ACB_H */
-#endif /* NUMCOSMO_GIR_SCAN */
-
 G_BEGIN_DECLS
 
-#define NCM_TYPE_FFTLOG_SBESSEL_J             (ncm_fftlog_sbessel_j_get_type ())
-#define NCM_FFTLOG_SBESSEL_J(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FFTLOG_SBESSEL_J, NcmFftlogSBesselJ))
-#define NCM_FFTLOG_SBESSEL_J_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_FFTLOG_SBESSEL_J, NcmFftlogSBesselJClass))
-#define NCM_IS_FFTLOG_SBESSEL_J(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FFTLOG_SBESSEL_J))
-#define NCM_IS_FFTLOG_SBESSEL_J_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FFTLOG_SBESSEL_J))
-#define NCM_FFTLOG_SBESSEL_J_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FFTLOG_SBESSEL_J, NcmFftlogSBesselJClass))
+#define NCM_TYPE_FFTLOG_SBESSEL_J (ncm_fftlog_sbessel_j_get_type ())
 
-typedef struct _NcmFftlogSBesselJClass NcmFftlogSBesselJClass;
-typedef struct _NcmFftlogSBesselJ NcmFftlogSBesselJ;
-typedef struct _NcmFftlogSBesselJPrivate NcmFftlogSBesselJPrivate;
-
-struct _NcmFftlogSBesselJClass
-{
-  /*< private >*/
-  NcmFftlogClass parent_class;
-};
-
-struct _NcmFftlogSBesselJ
-{
-  /*< private >*/
-  NcmFftlog parent_instance;
-  NcmFftlogSBesselJPrivate *priv;
-};
-
-GType ncm_fftlog_sbessel_j_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcmFftlogSBesselJ, ncm_fftlog_sbessel_j, NCM, FFTLOG_SBESSEL_J, NcmFftlog)
 
 NcmFftlogSBesselJ *ncm_fftlog_sbessel_j_new (guint ell, gdouble lnr0, gdouble lnk0, gdouble Lk, guint N);
 

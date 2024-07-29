@@ -3,11 +3,11 @@
  *
  *  Mon Aug 11 19:54:00 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -49,7 +49,7 @@ typedef struct _NcHICosmoDEPrivate NcHICosmoDEPrivate;
 /**
  * NcHICosmoDEImpl:
  * @NC_HICOSMO_DE_IMPL_E2Omega_de: dark energy (DE) component of the normalized Hubble function (squared) $E^2(z)$
- * @NC_HICOSMO_DE_IMPL_dE2Omega_de_dz: DE component of the first derivative of $E^2(z)$ with respect to the redshift $z$ 
+ * @NC_HICOSMO_DE_IMPL_dE2Omega_de_dz: DE component of the first derivative of $E^2(z)$ with respect to the redshift $z$
  * @NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2: DE component of the second derivative of $E^2(z)$ with respect to $z$
  * @NC_HICOSMO_DE_IMPL_w_de: DE equation of state
  *
@@ -61,7 +61,7 @@ typedef enum /*< flags,underscore_name=NC_HICOSMO_DE_IMPL >*/
   NC_HICOSMO_DE_IMPL_E2Omega_de = NC_HICOSMO_IMPL_LAST,
   NC_HICOSMO_DE_IMPL_dE2Omega_de_dz,
   NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2,
-  NC_HICOSMO_DE_IMPL_w_de, 
+  NC_HICOSMO_DE_IMPL_w_de,
   /* < private > */
   NC_HICOSMO_DE_IMPL_LAST, /*< skip >*/
 } NcHICosmoDEImpl;
@@ -100,7 +100,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_SPARAMS >*/
  * @NC_HICOSMO_DE_MASSNU_T: massive neutrino temperatures
  * @NC_HICOSMO_DE_MASSNU_MU: massive neutrino chemical potentials
  * @NC_HICOSMO_DE_MASSNU_G: massive neutrino degeneracy factors
- * 
+ *
  * FIXME
  *
  */
@@ -109,7 +109,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_VPARAMS >*/
   NC_HICOSMO_DE_MASSNU_M = 0,
   NC_HICOSMO_DE_MASSNU_T,
   NC_HICOSMO_DE_MASSNU_MU,
-  NC_HICOSMO_DE_MASSNU_G,   
+  NC_HICOSMO_DE_MASSNU_G,
   /* < private > */
   NC_HICOSMO_DE_VPARAM_LEN, /*< skip >*/
 } NcHICosmoDEVParams;
@@ -171,11 +171,10 @@ G_END_DECLS
 #ifndef __GTK_DOC_IGNORE__
 
 G_BEGIN_DECLS
-
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,E2Omega_de,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,dE2Omega_de_dz,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,d2E2Omega_de_dz2,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,w_de,z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, E2Omega_de, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, dE2Omega_de_dz, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, d2E2Omega_de_dz2, z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, w_de, z)
 
 NCM_INLINE gdouble
 nc_hicosmo_de_E2Omega_de_onepw (NcHICosmoDE *cosmo_de, gdouble z)
@@ -188,3 +187,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HICOSMO_DE_INLINE_H_ */
+

@@ -30,7 +30,7 @@
  *
  * This object implements the #NcHaloDensityProfile class for a Diemer \& Kravtsov (DK14) density profile.
  *
- * The DK14 profile is defined as ... Implementation incomplete! FIXME 
+ * The DK14 profile is defined as ... Implementation incomplete! FIXME
  *
  */
 
@@ -42,17 +42,17 @@
 #include "lss/nc_halo_density_profile_dk14.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_expint.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcHaloDensityProfileDK14, nc_halo_density_profile_dk14, NC_TYPE_HALO_DENSITY_PROFILE);
+G_DEFINE_TYPE (NcHaloDensityProfileDK14, nc_halo_density_profile_dk14, NC_TYPE_HALO_DENSITY_PROFILE)
 
-#define VECTOR (NCM_MODEL (dpdk)->params)
-#define RT   (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_DK14_RT))
-#define BETA (ncm_vector_get (VECTOR, NC_HALO_DENSITY_PROFILE_DK14_BETA))
+#define VECTOR (NCM_MODEL (dpdk))
+#define RT     (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_DK14_RT))
+#define BETA   (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_DK14_BETA))
 
 enum
 {
@@ -72,9 +72,9 @@ static void
 _nc_halo_density_profile_dk14_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHaloDensityProfileDK14 *dpdk = NC_HALO_DENSITY_PROFILE_DK14 (object);
-  
+
   g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE_DK14 (object));
-  
+
   switch (prop_id)
   {
     case PROP_DELTA:
@@ -90,9 +90,9 @@ static void
 _nc_halo_density_profile_dk14_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHaloDensityProfileDK14 *dpdk = NC_HALO_DENSITY_PROFILE_DK14 (object);
-  
+
   g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE_DK14 (object));
-  
+
   switch (prop_id)
   {
     case PROP_DELTA:
@@ -117,14 +117,14 @@ nc_halo_density_profile_dk14_class_init (NcHaloDensityProfileDK14Class *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   /*NcHaloDensityProfileClass *parent_class = NC_HALO_DENSITY_PROFILE_CLASS (klass);*/
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-  
+
   model_class->set_property = &_nc_halo_density_profile_dk14_set_property;
   model_class->get_property = &_nc_halo_density_profile_dk14_get_property;
   object_class->finalize    = &nc_halo_density_profile_dk14_finalize;
-  
+
   ncm_model_class_set_name_nick (model_class, "DK14 Density Profile", "DK14");
   ncm_model_class_add_params (model_class, NC_HALO_DENSITY_PROFILE_DK14_SPARAM_LEN, 0, PROP_SIZE);
-  
+
   /**
    * NcHaloDensityProfileDK14:Delta:
    *
@@ -138,7 +138,7 @@ nc_halo_density_profile_dk14_class_init (NcHaloDensityProfileDK14Class *klass)
                                                         "Overdensity constant",
                                                         200, 1500, 200,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   /**
    * NcHaloDensityProfileDK14:rt:
    *
@@ -149,7 +149,7 @@ nc_halo_density_profile_dk14_class_init (NcHaloDensityProfileDK14Class *klass)
                               0.5,  10.0, 1.0e-1,
                               NC_HALO_DENSITY_PROFILE_DK14_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_DK14_DEFAULT_RT,
                               NCM_PARAM_TYPE_FIXED);
-  
+
   /**
    * NcHaloDensityProfileDK14:beta:
    *

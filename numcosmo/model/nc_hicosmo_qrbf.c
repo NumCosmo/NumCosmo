@@ -1,10 +1,11 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            nc_hicosmo_qrbf.c
  *
  *  Fri November 01 14:18:09 2019
  *  Copyright  2019  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hicosmo_qrbf.c
@@ -41,7 +42,7 @@
 #include "build_cfg.h"
 
 #include "model/nc_hicosmo_qrbf.h"
-#include "math/integral.h"
+#include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
 
 
@@ -49,7 +50,7 @@
 #include <gsl/gsl_fit.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcHICosmoQRBFPrivate 
+struct _NcHICosmoQRBFPrivate
 {
   NcmVector *centers;
   NcmVector *coeffs;
@@ -61,18 +62,20 @@ struct _NcHICosmoQRBFPrivate
   gboolean constructed;
 };
 
-enum {
+enum
+{
   PROP_0,
   PROP_Z_F,
   PROP_SIZE,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoQRBF, nc_hicosmo_qrbf, NC_TYPE_HICOSMO);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoQRBF, nc_hicosmo_qrbf, NC_TYPE_HICOSMO)
 
 static void
 nc_hicosmo_qrbf_init (NcHICosmoQRBF *qrbf)
 {
   NcHICosmoQRBFPrivate * const self = qrbf->priv = nc_hicosmo_qrbf_get_instance_private (qrbf);
+
   self->centers     = NULL;
   self->coeffs      = NULL;
   self->int_z0      = NULL;
@@ -89,20 +92,21 @@ _nc_hicosmo_qrbf_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (nc_hicosmo_qrbf_parent_class)->constructed (object);
   {
-    NcHICosmoQRBF *qrbf = NC_HICOSMO_QRBF (object);
+    NcHICosmoQRBF *qrbf               = NC_HICOSMO_QRBF (object);
     NcHICosmoQRBFPrivate * const self = qrbf->priv;
-    NcmModel *model      = NCM_MODEL (qrbf);
-    const guint rbf_size = ncm_model_vparam_len (model, NC_HICOSMO_QRBF_RBF_CENTERS);
+    NcmModel *model                   = NCM_MODEL (qrbf);
+    NcmVector *orig_vec               = ncm_model_orig_params_peek_vector (model);
+    const guint rbf_size              = ncm_model_vparam_len (model, NC_HICOSMO_QRBF_RBF_CENTERS);
     guint centers_i, coeffs_i;
-    gint i;
+    guint i;
 
     g_assert_cmpuint (rbf_size, ==, ncm_model_vparam_len (model, NC_HICOSMO_QRBF_RBF_COEFFS));
 
     centers_i = ncm_model_vparam_index (model, NC_HICOSMO_QRBF_RBF_CENTERS, 0);
-    coeffs_i  = ncm_model_vparam_index (model, NC_HICOSMO_QRBF_RBF_COEFFS, 0);    
+    coeffs_i  = ncm_model_vparam_index (model, NC_HICOSMO_QRBF_RBF_COEFFS, 0);
 
-    self->centers  = ncm_vector_get_subvector (model->params, centers_i, rbf_size);
-    self->coeffs   = ncm_vector_get_subvector (model->params, coeffs_i, rbf_size);
+    self->centers  = ncm_vector_get_subvector (orig_vec, centers_i, rbf_size);
+    self->coeffs   = ncm_vector_get_subvector (orig_vec, coeffs_i, rbf_size);
     self->int_z0   = ncm_vector_dup (self->centers);
     self->rbf_size = rbf_size;
 
@@ -121,7 +125,7 @@ _nc_hicosmo_qrbf_constructed (GObject *object)
 static void
 _nc_hicosmo_qrbf_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHICosmoQRBF *qrbf = NC_HICOSMO_QRBF (object);
+  NcHICosmoQRBF *qrbf               = NC_HICOSMO_QRBF (object);
   NcHICosmoQRBFPrivate * const self = qrbf->priv;
 
   g_return_if_fail (NC_IS_HICOSMO_QRBF (object));
@@ -141,6 +145,7 @@ static void
 _nc_hicosmo_qrbf_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHICosmoQRBF *qrbf = NC_HICOSMO_QRBF (object);
+
   /*NcHICosmoQRBFPrivate * const self = qrbf->priv;*/
   g_return_if_fail (NC_IS_HICOSMO_QRBF (object));
 
@@ -158,7 +163,7 @@ _nc_hicosmo_qrbf_set_property (GObject *object, guint prop_id, const GValue *val
 static void
 _nc_hicosmo_qrbf_dispose (GObject *object)
 {
-  NcHICosmoQRBF *qrbf = NC_HICOSMO_QRBF (object);
+  NcHICosmoQRBF *qrbf               = NC_HICOSMO_QRBF (object);
   NcHICosmoQRBFPrivate * const self = qrbf->priv;
 
   ncm_vector_clear (&self->coeffs);
@@ -172,7 +177,6 @@ _nc_hicosmo_qrbf_dispose (GObject *object)
 static void
 _nc_hicosmo_qrbf_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_qrbf_parent_class)->finalize (object);
 }
@@ -187,8 +191,8 @@ static gdouble _nc_hicosmo_qrbf_as_drag (NcHICosmo *cosmo);
 static void
 nc_hicosmo_qrbf_class_init (NcHICosmoQRBFClass *klass)
 {
-  GObjectClass* object_class   = G_OBJECT_CLASS (klass);
-  NcHICosmoClass* parent_class = NC_HICOSMO_CLASS (klass);
+  GObjectClass *object_class   = G_OBJECT_CLASS (klass);
+  NcHICosmoClass *parent_class = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
 
   model_class->set_property = &_nc_hicosmo_qrbf_set_property;
@@ -238,7 +242,7 @@ nc_hicosmo_qrbf_class_init (NcHICosmoQRBFClass *klass)
                               1.0e-1, 1.0e1, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QRBF_DEFAULT_RBF_H,
                               NCM_PARAM_TYPE_FREE);
-  
+
   ncm_model_class_set_vparam (model_class, NC_HICOSMO_QRBF_RBF_CENTERS, NC_HICOSMO_QRBF_DEFAULT_RBF_CENTERS_LEN, "x_i", "xi",
                               0.0, 1.0, 1.0e-1, NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QRBF_DEFAULT_RBF_CENTERS,
                               NCM_PARAM_TYPE_FREE);
@@ -266,13 +270,13 @@ nc_hicosmo_qrbf_class_init (NcHICosmoQRBFClass *klass)
   nc_hicosmo_set_as_drag_impl  (parent_class, &_nc_hicosmo_qrbf_as_drag);
 }
 
-#define VECTOR     (NCM_MODEL (cosmo)->params)
-#define QRBF_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QRBF_H0))
-#define OMEGA_T    (ncm_vector_get (VECTOR, NC_HICOSMO_QRBF_OMEGA_T))
-#define AS_DRAG    (ncm_vector_get (VECTOR, NC_HICOSMO_QRBF_AS_DRAG))
-#define HRBF       (ncm_vector_get (VECTOR, NC_HICOSMO_QRBF_RBF_H))
+#define VECTOR  (NCM_MODEL (cosmo))
+#define QRBF_H0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QRBF_H0))
+#define OMEGA_T (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QRBF_OMEGA_T))
+#define AS_DRAG (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QRBF_AS_DRAG))
+#define HRBF    (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QRBF_RBF_H))
 
-static gdouble 
+static gdouble
 _nc_hicosmo_qrbf_f (const gdouble z, const gdouble zi, const gdouble h)
 {
   const gdouble u = h * (z - zi);
@@ -280,30 +284,30 @@ _nc_hicosmo_qrbf_f (const gdouble z, const gdouble zi, const gdouble h)
   return 1.0 / (1.0 + u * u);
 }
 
-static gdouble 
+static gdouble
 _nc_hicosmo_qrbf_df (const gdouble z, const gdouble zi, const gdouble h)
 {
   const gdouble u = h * (z - zi);
-  
-  return - 2.0 * h * u / gsl_pow_2 (1.0 + u * u);
+
+  return -2.0 * h * u / gsl_pow_2 (1.0 + u * u);
 }
 
-static gdouble 
+static gdouble
 _nc_hicosmo_qrbf_d2f (const gdouble z, const gdouble zi, const gdouble h)
 {
   const gdouble u  = h * (z - zi);
   const gdouble u2 = u * u;
-  
+
   return 2.0 * h * h * (3.0 * u2 - 1.0) / gsl_pow_3 (1.0 + u2);
 }
 
-static gdouble 
+static gdouble
 _nc_hicosmo_qrbf_int_2f_1pz (const gdouble z, const gdouble zi, const gdouble h)
 {
-  const gdouble w  = h * (1.0 + zi);
-  const gdouble u  = h * (z - zi);
-  const gdouble x  = 1.0 + z;
-  
+  const gdouble w = h * (1.0 + zi);
+  const gdouble u = h * (z - zi);
+  const gdouble x = 1.0 + z;
+
   return (2.0 * w * atan (u) + log (x * x / (1.0 + u * u))) / (1.0 + w * w);
 }
 
@@ -313,9 +317,9 @@ _nc_hicosmo_qrbf_prepare (NcHICosmoQRBF *qrbf)
   if (!ncm_model_state_is_update (NCM_MODEL (qrbf)))
   {
     NcHICosmoQRBFPrivate * const self = qrbf->priv;
-    NcHICosmoQRBF *cosmo = qrbf;
-    gint i;
-    
+    NcHICosmoQRBF *cosmo              = qrbf;
+    guint i;
+
     /*printf ("# Preparing!\n");*/
 
     self->h = HRBF;
@@ -324,31 +328,33 @@ _nc_hicosmo_qrbf_prepare (NcHICosmoQRBF *qrbf)
     {
       const gdouble z_i      = ncm_vector_get (self->centers, i);
       const gdouble int_z0_i = _nc_hicosmo_qrbf_int_2f_1pz (0.0, z_i, self->h);
-      
+
       ncm_vector_set (self->int_z0, i, int_z0_i);
     }
 
     ncm_model_state_set_update (NCM_MODEL (qrbf));
   }
   else
+  {
     return;
+  }
 }
 
 static gdouble
 _nc_hicosmo_qrbf_q (NcHICosmo *cosmo, gdouble z)
 {
-  NcHICosmoQRBF *qrbf = NC_HICOSMO_QRBF (cosmo);
+  NcHICosmoQRBF *qrbf               = NC_HICOSMO_QRBF (cosmo);
   NcHICosmoQRBFPrivate * const self = qrbf->priv;
-  gdouble qp1 = 0.0;
-  gint i;
+  gdouble qp1                       = 0.0;
+  guint i;
 
   _nc_hicosmo_qrbf_prepare (qrbf);
-  
+
   for (i = 0; i < self->rbf_size; i++)
   {
     const gdouble z_i     = ncm_vector_get (self->centers, i);
     const gdouble coeff_i = ncm_vector_get (self->coeffs, i);
-    
+
     qp1 += coeff_i * _nc_hicosmo_qrbf_f (z, z_i, self->h);
   }
 
@@ -359,59 +365,60 @@ _nc_hicosmo_qrbf_q (NcHICosmo *cosmo, gdouble z)
 static gdouble
 _nc_hicosmo_qrbf_dq_dz (NcHICosmo *cosmo, gdouble z)
 {
-  NcHICosmoQRBF *qrbf = NC_HICOSMO_QRBF (cosmo);
+  NcHICosmoQRBF *qrbf               = NC_HICOSMO_QRBF (cosmo);
   NcHICosmoQRBFPrivate * const self = qrbf->priv;
-  gdouble dq = 0.0;
-  gint i;
+  gdouble dq                        = 0.0;
+  guint i;
 
   _nc_hicosmo_qrbf_prepare (qrbf);
-  
+
   for (i = 0; i < self->rbf_size; i++)
   {
     const gdouble z_i     = ncm_vector_get (self->centers, i);
     const gdouble coeff_i = ncm_vector_get (self->coeffs, i);
-    
+
     dq += coeff_i * _nc_hicosmo_qrbf_df (z, z_i, self->h);
   }
-  
+
   return dq;
 }
 
 static gdouble
 _nc_hicosmo_qrbf_d2q_dz2 (NcHICosmo *cosmo, gdouble z)
 {
-  NcHICosmoQRBF *qrbf = NC_HICOSMO_QRBF (cosmo);
+  NcHICosmoQRBF *qrbf               = NC_HICOSMO_QRBF (cosmo);
   NcHICosmoQRBFPrivate * const self = qrbf->priv;
-  gdouble d2q = 0.0;
-  gint i;
+  gdouble d2q                       = 0.0;
+  guint i;
 
   _nc_hicosmo_qrbf_prepare (qrbf);
-  
+
   for (i = 0; i < self->rbf_size; i++)
   {
     const gdouble z_i     = ncm_vector_get (self->centers, i);
     const gdouble coeff_i = ncm_vector_get (self->coeffs, i);
-    
+
     d2q += coeff_i * _nc_hicosmo_qrbf_d2f (z, z_i, self->h);
   }
-  
+
   return d2q;
 }
 
-static gdouble 
+static gdouble
 _nc_hicosmo_qrbf_d2q2 (gdouble z, gpointer user_data)
 {
   NcHICosmo *cosmo = NC_HICOSMO (user_data);
+
   return gsl_pow_2 (_nc_hicosmo_qrbf_d2q_dz2 (cosmo, z));
 }
 
 static gdouble
 _nc_hicosmo_qrbf_E2 (NcHICosmo *cosmo, gdouble z)
 {
-  NcHICosmoQRBF *qrbf = NC_HICOSMO_QRBF (cosmo);
+  NcHICosmoQRBF *qrbf               = NC_HICOSMO_QRBF (cosmo);
   NcHICosmoQRBFPrivate * const self = qrbf->priv;
-  gdouble lnE2 = 0.0;
-  gint i;
+  gdouble lnE2                      = 0.0;
+  guint i;
 
   _nc_hicosmo_qrbf_prepare (qrbf);
 
@@ -437,13 +444,13 @@ _nc_hicosmo_qrbf_dE2_dz (NcHICosmo *cosmo, gdouble z)
   const gdouble dE2_dz = 2.0 * E2 * (q + 1.0) / (1.0 + z);
 
   /*printf ("# dE2_dz % 22.15g % 22.15g % 22.15g % 22.15g\n", z, E2, q, (dE2_dz * (1.0 + z) / (2.0 * E2) - 1.0));*/
-  
+
   return dE2_dz;
 }
 
 static gdouble
 _nc_hicosmo_qrbf_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
-{  
+{
   const gdouble q   = _nc_hicosmo_qrbf_q (cosmo, z);
   const gdouble dq  = _nc_hicosmo_qrbf_dq_dz (cosmo, z);
   const gdouble E2  = _nc_hicosmo_qrbf_E2 (cosmo, z);
@@ -453,9 +460,23 @@ _nc_hicosmo_qrbf_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
   return dE2 * dE2 / E2 + 2.0 * E2 * (dq - q / x) / x;
 }
 
-static gdouble _nc_hicosmo_qrbf_H0 (NcHICosmo *cosmo) { return QRBF_H0; }
-static gdouble _nc_hicosmo_qrbf_Omega_t0 (NcHICosmo *cosmo) { return OMEGA_T; }
-static gdouble _nc_hicosmo_qrbf_as_drag (NcHICosmo *cosmo) { return AS_DRAG; }
+static gdouble
+_nc_hicosmo_qrbf_H0 (NcHICosmo *cosmo)
+{
+  return QRBF_H0;
+}
+
+static gdouble
+_nc_hicosmo_qrbf_Omega_t0 (NcHICosmo *cosmo)
+{
+  return OMEGA_T;
+}
+
+static gdouble
+_nc_hicosmo_qrbf_as_drag (NcHICosmo *cosmo)
+{
+  return AS_DRAG;
+}
 
 /**
  * nc_hicosmo_qrbf_new:
@@ -474,6 +495,7 @@ nc_hicosmo_qrbf_new (gsize np, gdouble z_f)
                                       "xi-length", np,
                                       "ci-length", np,
                                       NULL);
+
   return qrbf;
 }
 
@@ -483,13 +505,13 @@ nc_hicosmo_qrbf_new (gsize np, gdouble z_f)
  * @z_f: FIXME
  *
  * FIXME
- * 
+ *
  */
-void 
+void
 nc_hicosmo_qrbf_set_z_f (NcHICosmoQRBF *qrbf, const gdouble z_f)
 {
   NcHICosmoQRBFPrivate * const self = qrbf->priv;
-  
+
   self->z_f = z_f;
 
   if (self->constructed)
@@ -497,9 +519,8 @@ nc_hicosmo_qrbf_set_z_f (NcHICosmoQRBF *qrbf, const gdouble z_f)
     NcmModel *model       = NCM_MODEL (qrbf);
     const guint rbf_size  = ncm_model_vparam_len (model, NC_HICOSMO_QRBF_RBF_CENTERS);
     const guint centers_i = ncm_model_vparam_index (model, NC_HICOSMO_QRBF_RBF_CENTERS, 0);
+    guint i;
 
-    gint i;
-    
     for (i = 0; i < rbf_size; i++)
     {
       ncm_model_param_set_lower_bound (model, centers_i + i, 0.0);
@@ -511,21 +532,21 @@ nc_hicosmo_qrbf_set_z_f (NcHICosmoQRBF *qrbf, const gdouble z_f)
 /**
  * nc_hicosmo_qrbf_q_roughness:
  * @qrbf: a #NcHICosmoQRBF
- * 
- * 
+ *
+ *
  * Returns: the roughness of $q(z)$.
  */
 gdouble
 nc_hicosmo_qrbf_q_roughness (NcHICosmoQRBF *qrbf)
 {
   NcHICosmoQRBFPrivate * const self = qrbf->priv;
-  gsl_integration_workspace **w = ncm_integral_get_workspace();
+  gsl_integration_workspace **w     = ncm_integral_get_workspace ();
   gsl_function F;
   gdouble rn, err;
 
   F.function = &_nc_hicosmo_qrbf_d2q2;
   F.params   = qrbf;
-  
+
   gsl_integration_qag (&F, 0.0, self->z_f, 0.0, 1.0e-4, NCM_INTEGRAL_PARTITION, 6, *w, &rn, &err);
 
   ncm_memory_pool_return (w);
@@ -546,20 +567,22 @@ enum
   PROP_LAMBDA,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoQRBFRprior, nc_hicosmo_qrbf_rprior, NCM_TYPE_PRIOR);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoQRBFRprior, nc_hicosmo_qrbf_rprior, NCM_TYPE_PRIOR)
 
 static void
 nc_hicosmo_qrbf_rprior_init (NcHICosmoQRBFRprior *qrprior)
 {
   NcHICosmoQRBFRpriorPrivate * const self = qrprior->priv = nc_hicosmo_qrbf_rprior_get_instance_private (qrprior);
+
   self->lambda = 0.0;
 }
 
 static void
 _nc_hicosmo_qrbf_rprior_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHICosmoQRBFRprior *qrprior = NC_HICOSMO_QRBF_RPRIOR (object);
+  NcHICosmoQRBFRprior *qrprior            = NC_HICOSMO_QRBF_RPRIOR (object);
   NcHICosmoQRBFRpriorPrivate * const self = qrprior->priv;
+
   g_return_if_fail (NC_IS_HICOSMO_QRBF_RPRIOR (object));
 
   switch (prop_id)
@@ -576,8 +599,9 @@ _nc_hicosmo_qrbf_rprior_set_property (GObject *object, guint prop_id, const GVal
 static void
 _nc_hicosmo_qrbf_rprior_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHICosmoQRBFRprior *qrprior = NC_HICOSMO_QRBF_RPRIOR (object);
+  NcHICosmoQRBFRprior *qrprior            = NC_HICOSMO_QRBF_RPRIOR (object);
   NcHICosmoQRBFRpriorPrivate * const self = qrprior->priv;
+
   g_return_if_fail (NC_IS_HICOSMO_QRBF_RPRIOR (object));
 
   switch (prop_id)
@@ -594,17 +618,16 @@ _nc_hicosmo_qrbf_rprior_get_property (GObject *object, guint prop_id, GValue *va
 static void
 _nc_hicosmo_qrbf_rprior_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_qrbf_rprior_parent_class)->finalize (object);
 }
 
-static void 
+static void
 _nc_hicosmo_qrbf_rprior_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
-  NcHICosmoQRBFRprior *qrprior = NC_HICOSMO_QRBF_RPRIOR (func);
+  NcHICosmoQRBFRprior *qrprior            = NC_HICOSMO_QRBF_RPRIOR (func);
   NcHICosmoQRBFRpriorPrivate * const self = qrprior->priv;
-  NcHICosmoQRBF *qrbf = NC_HICOSMO_QRBF (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmoQRBF *qrbf                     = NC_HICOSMO_QRBF (ncm_mset_peek (mset, nc_hicosmo_id ()));
 
   /*g_assert (qrbf != NULL);*/
   /*g_assert (NC_IS_HICOSMO_QRBF (qrbf));*/
@@ -615,7 +638,7 @@ _nc_hicosmo_qrbf_rprior_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x
 static void
 nc_hicosmo_qrbf_rprior_class_init (NcHICosmoQRBFRpriorClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class        = G_OBJECT_CLASS (klass);
   NcmMSetFuncClass *mset_func_class = NCM_MSET_FUNC_CLASS (klass);
 
   object_class->set_property = &_nc_hicosmo_qrbf_rprior_set_property;
@@ -646,5 +669,7 @@ nc_hicosmo_qrbf_rprior_new (gdouble lambda)
   NcHICosmoQRBFRprior *qrprior = g_object_new (NC_TYPE_HICOSMO_QRBF_RPRIOR,
                                                "lambda", lambda,
                                                NULL);
+
   return qrprior;
 }
+

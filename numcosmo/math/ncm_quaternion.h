@@ -3,11 +3,11 @@
  *
  *  Fri Aug 22 16:40:54 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -107,14 +107,23 @@ void ncm_quaternion_inv_rotate (NcmQuaternion *q, NcmTriVec *v);
  * NCM_QUATERNION_INIT:
  *
  */
-#define NCM_QUATERNION_INIT {0.0, {{0.0, 0.0, 0.0}}}
+#define NCM_QUATERNION_INIT \
+        {0.0, {             \
+           {0.0, 0.0, 0.0}  \
+         }                  \
+        }
 
 /**
  * NCM_QUATERNION_INIT_I:
  *
  */
-#define NCM_QUATERNION_INIT_I {1.0, {{0.0, 0.0, 0.0}}}
+#define NCM_QUATERNION_INIT_I \
+        {1.0, {               \
+           {0.0, 0.0, 0.0}    \
+         }                    \
+        }
 
 G_END_DECLS
 
 #endif /* _NCM_QUATERNION_H */
+

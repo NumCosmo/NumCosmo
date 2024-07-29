@@ -3,11 +3,11 @@
  *
  *  Sun August 03 20:39:19 2014
  *  Copyright  2014  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hipert_wkb.h
- * Copyright (C) 2014 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2014 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -108,7 +108,6 @@ struct _NcHIPertWKB
 
 GType nc_hipert_wkb_get_type (void) G_GNUC_CONST;
 
-NcHIPertWKB *nc_hipert_wkb_new_by_name (const gchar *wkb_name);
 NcHIPertWKB *nc_hipert_wkb_ref (NcHIPertWKB *wkb);
 void nc_hipert_wkb_free (NcHIPertWKB *wkb);
 void nc_hipert_wkb_clear (NcHIPertWKB **wkb);

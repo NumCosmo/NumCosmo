@@ -3,7 +3,7 @@
  *
  *  Tue September 17 17:57:01 2019
  *  Copyright  2019  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * config_extra.h
@@ -36,18 +36,21 @@
 #ifndef HAVE_SINCOS
 #include <math.h>
 
-static inline void 
+static inline void
 sincos (double x, double *s, double *c)
 {
   s[0] = sin (x);
   c[0] = cos (x);
 }
+
 #endif /* HAVE_SINCOS */
 
 #if HAVE_DECL_LGAMMA_R == 0
-double lgamma_r(double x, int *signp);
+double lgamma_r (double x, int *signp);
+
 #endif /* HAVE_DECL_LGAMMA_R == 0 */
 
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #endif /* _CONFIG_EXTRA_H_ */
+

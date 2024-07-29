@@ -3,11 +3,11 @@
  *
  *  Sat Apr 24 14:40:43 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -113,10 +113,9 @@ struct _NcDEDataClusterEntries
   gint n_bins;
   gchar **cata_file;
   gchar *save_cata;
-  gboolean print_mass_function;
 };
 
-#define NC_DE_DATA_CLUSTER_ENTRIES {NULL, NULL, NULL, NULL, NULL, 0, FALSE, FALSE, FALSE, FALSE, FALSE, 5000.0, 10, NULL, NULL, FALSE}
+#define NC_DE_DATA_CLUSTER_ENTRIES {NULL, NULL, NULL, NULL, NULL, 0, FALSE, FALSE, FALSE, FALSE, FALSE, 5000.0, 10, NULL, NULL}
 
 typedef struct _NcDEFitEntries NcDEFitEntries;
 
@@ -171,12 +170,11 @@ struct _NcDEFitEntries
   gint fisher;
   gboolean qspline_cp;
   gdouble qspline_cp_sigma;
-  gboolean save_fisher;
   gboolean save_best_fit;
   gchar *save_mset;
 };
 
-#define NC_DE_FIT_ENTRIES { NULL, NULL, NULL, NULL, 1e-8, 1e-5, -1, -1, {NULL, NULL}, NULL, NULL, 1.0e-5, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 100, 0, 100, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, 0.0, 1.0e-4, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 1.0, 0, FALSE, 1.0, FALSE, FALSE, NULL}
+#define NC_DE_FIT_ENTRIES { NULL, NULL, NULL, NULL, 1e-8, 1e-5, -1, -1, {NULL, NULL}, NULL, NULL, 1.0e-5, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 100, 0, 100, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, 0.0, 1.0e-4, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 1.0, 0, FALSE, 1.0, FALSE, NULL}
 
 GOptionGroup *nc_de_opt_get_run_group (NcDERunEntries *de_run);
 GOptionGroup *nc_de_opt_get_model_group (NcDEModelEntries *de_model, GOptionEntry **de_model_entries);

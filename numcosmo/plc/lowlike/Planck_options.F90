@@ -56,7 +56,6 @@ contains
     print *, ""
     print *, "use_lowl_pol =      ", use_lowl_pol         
     print *, ""
-    print *, "lowl_tt_res = ", lowl_tt_res
     print *, "lowl_max =    ", lowl_max
     print *, ""
   end subroutine planck_print_options

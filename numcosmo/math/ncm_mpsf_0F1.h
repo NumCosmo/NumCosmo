@@ -3,11 +3,11 @@
  *
  *  Thu October 13 22:17:46 2011
  *  Copyright  2011  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -36,10 +36,14 @@
 
 G_BEGIN_DECLS
 
-void ncm_mpsf_0F1_q (mpq_t b, mpq_t x, mpfr_ptr res, mp_rnd_t rnd);
+void ncm_mpsf_0F1_q (mpq_t b, mpq_t q, mpfr_ptr res, mp_rnd_t rnd);
+
 void ncm_mpsf_0F1_d (gdouble b, gdouble x, mpfr_ptr res, mp_rnd_t rnd);
 gdouble ncm_sf_0F1 (gdouble b, gdouble x);
+
+void ncm_mpsf_0F1_free_cache (void);
 
 G_END_DECLS
 
 #endif /* _NCM_MPSF_0F1_H */
+

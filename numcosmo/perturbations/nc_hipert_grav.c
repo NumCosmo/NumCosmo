@@ -4,11 +4,11 @@
  *
  *  Thu October 12 14:32:22 2017
  *  Copyright  2017  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_hipert_grav.c
- * Copyright (C) 2017 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2017 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -53,18 +53,18 @@ enum
   PROP_LEN
 };
 
-G_DEFINE_BOXED_TYPE (NcHIPertGravScalar,  nc_hipert_grav_scalar,   nc_hipert_grav_scalar_dup,   nc_hipert_grav_scalar_free);
-G_DEFINE_BOXED_TYPE (NcHIPertGravVector,  nc_hipert_grav_vector,   nc_hipert_grav_vector_dup,   nc_hipert_grav_vector_free);
-G_DEFINE_BOXED_TYPE (NcHIPertGravTensor,  nc_hipert_grav_tensor,   nc_hipert_grav_tensor_dup,   nc_hipert_grav_tensor_free);
+G_DEFINE_BOXED_TYPE (NcHIPertGravScalar,  nc_hipert_grav_scalar,   nc_hipert_grav_scalar_dup,   nc_hipert_grav_scalar_free)
+G_DEFINE_BOXED_TYPE (NcHIPertGravVector,  nc_hipert_grav_vector,   nc_hipert_grav_vector_dup,   nc_hipert_grav_vector_free)
+G_DEFINE_BOXED_TYPE (NcHIPertGravTensor,  nc_hipert_grav_tensor,   nc_hipert_grav_tensor_dup,   nc_hipert_grav_tensor_free)
 
-G_DEFINE_BOXED_TYPE (NcHIPertGravTScalar, nc_hipert_grav_T_scalar, nc_hipert_grav_T_scalar_dup, nc_hipert_grav_T_scalar_free);
-G_DEFINE_BOXED_TYPE (NcHIPertGravTVector, nc_hipert_grav_T_vector, nc_hipert_grav_T_vector_dup, nc_hipert_grav_T_vector_free);
-G_DEFINE_BOXED_TYPE (NcHIPertGravTTensor, nc_hipert_grav_T_tensor, nc_hipert_grav_T_tensor_dup, nc_hipert_grav_T_tensor_free);
+G_DEFINE_BOXED_TYPE (NcHIPertGravTScalar, nc_hipert_grav_T_scalar, nc_hipert_grav_T_scalar_dup, nc_hipert_grav_T_scalar_free)
+G_DEFINE_BOXED_TYPE (NcHIPertGravTVector, nc_hipert_grav_T_vector, nc_hipert_grav_T_vector_dup, nc_hipert_grav_T_vector_free)
+G_DEFINE_BOXED_TYPE (NcHIPertGravTTensor, nc_hipert_grav_T_tensor, nc_hipert_grav_T_tensor_dup, nc_hipert_grav_T_tensor_free)
 
-G_DEFINE_BOXED_TYPE (NcHIPertGravInfo,        nc_hipert_grav_info,          nc_hipert_grav_info_dup,          nc_hipert_grav_info_free);
-G_DEFINE_BOXED_TYPE (NcHIPertGravTScalarInfo, nc_hipert_grav_T_scalar_info, nc_hipert_grav_T_scalar_info_dup, nc_hipert_grav_T_scalar_info_free);
+G_DEFINE_BOXED_TYPE (NcHIPertGravInfo,        nc_hipert_grav_info,          nc_hipert_grav_info_dup,          nc_hipert_grav_info_free)
+G_DEFINE_BOXED_TYPE (NcHIPertGravTScalarInfo, nc_hipert_grav_T_scalar_info, nc_hipert_grav_T_scalar_info_dup, nc_hipert_grav_T_scalar_info_free)
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertGrav, nc_hipert_grav, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertGrav, nc_hipert_grav, G_TYPE_OBJECT)
 
 static void
 nc_hipert_grav_init (NcHIPertGrav *grav)

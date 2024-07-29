@@ -3,11 +3,11 @@
  *
  *  Wed March 08 13:49:14 2017
  *  Copyright  2017  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2017 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2017 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -70,8 +70,8 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_GCG_SPARAMS >*/
   NC_HICOSMO_GCG_T_GAMMA0,
   NC_HICOSMO_GCG_HE_YP,
   NC_HICOSMO_GCG_ENNU,
-  NC_HICOSMO_GCG_OMEGA_B,    
-  NC_HICOSMO_GCG_GAMMA,   
+  NC_HICOSMO_GCG_OMEGA_B,
+  NC_HICOSMO_GCG_GAMMA,
   /* < private > */
   NC_HICOSMO_GCG_SPARAM_LEN, /*< skip >*/
 } NcHICosmoGCGSParams;
@@ -82,7 +82,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_GCG_SPARAMS >*/
  * @NC_HICOSMO_GCG_MASSNU_T: FIXME
  * @NC_HICOSMO_GCG_MASSNU_MU: FIXME
  * @NC_HICOSMO_GCG_MASSNU_G: FIXME
- * 
+ *
  * FIXME
  *
  */
@@ -91,7 +91,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_GCG_VPARAMS >*/
   NC_HICOSMO_GCG_MASSNU_M = 0,
   NC_HICOSMO_GCG_MASSNU_T,
   NC_HICOSMO_GCG_MASSNU_MU,
-  NC_HICOSMO_GCG_MASSNU_G,   
+  NC_HICOSMO_GCG_MASSNU_G,
   /* < private > */
   NC_HICOSMO_GCG_VPARAM_LEN, /*< skip >*/
 } NcHICosmoGCGVParams;
@@ -190,3 +190,4 @@ NcHICosmoGCGReparamOk *nc_hicosmo_gcg_reparam_ok_new (guint length);
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_GCG_H_ */
+

@@ -3,7 +3,7 @@
  *
  *  Tue Apr 20 10:59:01 2010
  *  Copyright  2010  Mariana Penna Lima & Sandro Dias Pinto Vitenti
- *  <pennalima@gmail.com> & <sandro@isoftware.com.br>
+ *  <pennalima@gmail.com> & <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
@@ -52,7 +52,7 @@ typedef struct _NcClusterPhotozGaussGlobal NcClusterPhotozGaussGlobal;
 typedef enum /*< enum,underscore_name=NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SPARAMS >*/
 {
   NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS = 0,
-  NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0,  
+  NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0,
   /* < private > */
   NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SPARAM_LEN, /*< skip >*/
 } NcClusterPhotozGaussGlobalSParams;
@@ -75,9 +75,9 @@ GType nc_cluster_photoz_gauss_global_get_type (void) G_GNUC_CONST;
 
 NcClusterRedshift *nc_cluster_photoz_gauss_global_new (gdouble pz_min, gdouble pz_max, gdouble z_bias, gdouble sigma0);
 void nc_cluster_photoz_gauss_global_set_z_bias (NcClusterPhotozGaussGlobal *pzg_global, gdouble z_bias);
-gdouble nc_cluster_photoz_gauss_global_get_z_bias (const NcClusterPhotozGaussGlobal *pzg_global);
+gdouble nc_cluster_photoz_gauss_global_get_z_bias (NcClusterPhotozGaussGlobal *pzg_global);
 void nc_cluster_photoz_gauss_global_set_sigma0 (NcClusterPhotozGaussGlobal *pzg_global, gdouble sigma0);
-gdouble nc_cluster_photoz_gauss_global_get_sigma0 (const NcClusterPhotozGaussGlobal *pzg_global);
+gdouble nc_cluster_photoz_gauss_global_get_sigma0 (NcClusterPhotozGaussGlobal *pzg_global);
 
 #define NC_CLUSTER_REDSHIFT_PHOTOZ_GAUSS_GLOBAL_DEFAULT_BIAS (0.0)
 #define NC_CLUSTER_REDSHIFT_PHOTOZ_GAUSS_GLOBAL_DEFAULT_SIGMA0 (0.03)
@@ -86,3 +86,4 @@ gdouble nc_cluster_photoz_gauss_global_get_sigma0 (const NcClusterPhotozGaussGlo
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_H_ */
+

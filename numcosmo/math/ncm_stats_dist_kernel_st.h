@@ -5,11 +5,11 @@
  *
  *  Wed November 07 17:41:38 2018
  *  Copyright  2018  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * ncm_stats_dist_kernel_st.h
- * Copyright (C) 2018 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2018 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -36,31 +36,9 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_STATS_DIST_KERNEL_ST             (ncm_stats_dist_kernel_st_get_type ())
-#define NCM_STATS_DIST_KERNEL_ST(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_STATS_DIST_KERNEL_ST,  NcmStatsDistKernelST))
-#define NCM_STATS_DIST_KERNEL_ST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_STATS_DIST_KERNEL_ST,  NcmStatsDistKernelSTClass))
-#define NCM_IS_STATS_DIST_KERNEL_ST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_STATS_DIST_KERNEL_ST))
-#define NCM_IS_STATS_DIST_KERNEL_ST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_STATS_DIST_KERNEL_ST))
-#define NCM_STATS_DIST_KERNEL_ST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_STATS_DIST_KERNEL_ST,  NcmStatsDistKernelSTClass))
+#define NCM_TYPE_STATS_DIST_KERNEL_ST (ncm_stats_dist_kernel_st_get_type ())
 
-typedef struct _NcmStatsDistKernelSTClass NcmStatsDistKernelSTClass;
-typedef struct _NcmStatsDistKernelST NcmStatsDistKernelST;
-typedef struct _NcmStatsDistKernelSTPrivate NcmStatsDistKernelSTPrivate;
-
-
-struct _NcmStatsDistKernelSTClass
-{
-  NcmStatsDistKernelClass parent_class;
-};
-
-struct _NcmStatsDistKernelST
-{
-  NcmStatsDistKernel parent_instance;
-  
-  NcmStatsDistKernelSTPrivate *priv;
-};
-
-GType ncm_stats_dist_kernel_st_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcmStatsDistKernelST, ncm_stats_dist_kernel_st, NCM, STATS_DIST_KERNEL_ST, NcmStatsDistKernel)
 
 NcmStatsDistKernelST *ncm_stats_dist_kernel_st_new (const guint dim, const gdouble nu);
 

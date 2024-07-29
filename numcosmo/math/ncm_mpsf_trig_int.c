@@ -3,11 +3,11 @@
  *
  *  Tue Feb  2 22:16:05 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -27,8 +27,10 @@
  * @title: NcmMpsfTrigInt
  * @short_description: Multiple precision sin integral implementation.
  *
- * FIXME
- * 
+ * Implementation of multiple precision sine integral using the GNU MPFR library.
+ * This implementation employs binary splitting to compute the integral utilizing
+ * the Taylor series and asymptotic expansion methods.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -37,14 +39,14 @@
 #include "build_cfg.h"
 
 #include "math/ncm_mpsf_trig_int.h"
-#include "math/binsplit.h"
+#include "math/ncm_binsplit.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
 #define NC_BINSPLIT_EVAL_NAME binsplit_sin_integral_taylor
-#define _mx2 (((mpq_ptr)data))
+#define _mx2 (((mpq_ptr) data))
 
-NCM_BINSPLIT_DECL(binsplit_sin_integral_taylor_p,v,u,n,data)
+NCM_BINSPLIT_DECL (binsplit_sin_integral_taylor_p, v, u, n, data)
 {
   if (n == 0)
     mpz_set (v, u);
@@ -53,19 +55,21 @@ NCM_BINSPLIT_DECL(binsplit_sin_integral_taylor_p,v,u,n,data)
 }
 #define _BINSPLIT_FUNC_P binsplit_sin_integral_taylor_p
 
-NCM_BINSPLIT_DECL(binsplit_sin_integral_taylor_q,v,u,n,data)
+NCM_BINSPLIT_DECL (binsplit_sin_integral_taylor_q, v, u, n, data)
 {
   if (n == 0)
+  {
     mpz_set (v, u);
+  }
   else
   {
     mpz_mul_ui (v, u, n * (2L * n + 1L));
-    mpz_mul (v, v, mpq_denref(_mx2));
+    mpz_mul (v, v, mpq_denref (_mx2));
   }
 }
 #define _BINSPLIT_FUNC_Q binsplit_sin_integral_taylor_q
 
-NCM_BINSPLIT_DECL(binsplit_sin_integral_taylor_b,v,u,n,data)
+NCM_BINSPLIT_DECL (binsplit_sin_integral_taylor_b, v, u, n, data)
 {
   NCM_UNUSED (data);
   mpz_mul_ui (v, u, (2L * n + 1L));
@@ -75,17 +79,19 @@ NCM_BINSPLIT_DECL(binsplit_sin_integral_taylor_b,v,u,n,data)
 
 #define _BINSPLIT_FUNC_A NCM_BINSPLIT_DENC_NULL
 
-#include "binsplit_eval.c"
+#include "ncm_binsplit_eval.c"
 #undef _mx2
 
 #define NC_BINSPLIT_EVAL_NAME binsplit_sin_integral_assym
-#define _m2x2 (((mpq_ptr *)data)[0])
-#define _sincos (GPOINTER_TO_INT(((gpointer *)data)[1]))
+#define _m2x2 (((mpq_ptr *) data)[0])
+#define _sincos (GPOINTER_TO_INT (((gpointer *) data)[1]))
 
-NCM_BINSPLIT_DECL(binsplit_sin_integral_assym_p,v,u,n,data)
+NCM_BINSPLIT_DECL (binsplit_sin_integral_assym_p, v, u, n, data)
 {
   if (n == 0)
+  {
     mpz_set (v, u);
+  }
   else
   {
     mpz_mul (v, u, mpq_denref (_m2x2));
@@ -94,37 +100,39 @@ NCM_BINSPLIT_DECL(binsplit_sin_integral_assym_p,v,u,n,data)
 }
 #define _BINSPLIT_FUNC_P binsplit_sin_integral_assym_p
 
-NCM_BINSPLIT_DECL(binsplit_sin_integral_assym_q,v,u,n,data)
+NCM_BINSPLIT_DECL (binsplit_sin_integral_assym_q, v, u, n, data)
 {
   if (n == 0)
     mpz_set (v, u);
   else
-    mpz_mul (v, u, mpq_numref(_m2x2));
+    mpz_mul (v, u, mpq_numref (_m2x2));
 }
 #define _BINSPLIT_FUNC_Q binsplit_sin_integral_assym_q
 
 #define _BINSPLIT_FUNC_B NCM_BINSPLIT_DENC_NULL
 #define _BINSPLIT_FUNC_A NCM_BINSPLIT_DENC_NULL
 
-#include "binsplit_eval.c"
+#include "ncm_binsplit_eval.c"
 #undef _m2x2
 
 static void
 _taylor_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 {
   static NcmBinSplit *bs = NULL;
-  static mpq_ptr mq2 = NULL;
+  static mpq_ptr mq2     = NULL;
+
   if (mq2 == NULL)
   {
     mq2 = g_slice_new (__mpq_struct);
     mpq_init (mq2);
   }
+
   mpq_mul (mq2, q, q);
   mpq_neg (mq2, mq2);
   mpq_div_2exp (mq2, mq2, 1);
 
   if (bs == NULL)
-    bs = ncm_binsplit_alloc ((gpointer)mq2);
+    bs = ncm_binsplit_alloc ((gpointer) mq2);
 
   ncm_binsplit_eval_prec (bs, binsplit_sin_integral_taylor, 10, mpfr_get_prec (res));
   ncm_binsplit_get (bs, res);
@@ -135,26 +143,28 @@ static void
 _assym_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 {
   static NcmBinSplit *bs = NULL;
-  glong prec = mpfr_get_prec (res);
+  glong prec             = mpfr_get_prec (res);
   glong mprec;
 
   mpfr_set_q (res, q, rnd);
   mprec = res->_mpfr_exp;
-//  printf ("%ld %ld | %ld\n", prec, mprec, prec - mprec);
 
   if ((prec - mprec) > 0)
   {
     gulong nf;
     static gpointer *data = NULL;
     mpq_t mq2_2;
+
     mpq_init (mq2_2);
     mpq_mul (mq2_2, q, q);
     mpq_neg (mq2_2, mq2_2);
     mpq_div_2exp (mq2_2, mq2_2, 1);
     MPFR_DECL_INIT (sin_x, prec);
     MPFR_DECL_INIT (cos_x, prec);
+
     if (data == NULL)
-      data = g_slice_alloc (2 * sizeof(gpointer));
+      data = g_slice_alloc (2 * sizeof (gpointer));
+
     if (bs == NULL)
       bs = ncm_binsplit_alloc (data);
 
@@ -163,16 +173,19 @@ _assym_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
     mpfr_div_q (sin_x, sin_x, q, rnd);
     mpfr_div_q (cos_x, cos_x, q, rnd);
 
-    nf = ceil(fabs(prec * M_LN2 / (log (fabs(mpq_get_d (mq2_2))))));
-    if (nf == 0) nf = 4;
+    nf = ceil (fabs (prec * M_LN2 / (log (fabs (mpq_get_d (mq2_2))))));
+
+    if (nf == 0)
+      nf = 4;
+
     data[0] = mq2_2;
 
-    data[1] = GINT_TO_POINTER(-1);
+    data[1] = GINT_TO_POINTER (-1);
     ncm_binsplit_eval_prec (bs, binsplit_sin_integral_assym, nf, prec - mprec);
     mpfr_mul_z (cos_x, cos_x, bs->T, rnd);
     mpfr_div_z (cos_x, cos_x, bs->Q, rnd);
 
-    data[1] = GINT_TO_POINTER(1);
+    data[1] = GINT_TO_POINTER (1);
     ncm_binsplit_eval_prec (bs, binsplit_sin_integral_assym, nf, prec - mprec);
     mpfr_mul_z (sin_x, sin_x, bs->T, rnd);
     mpfr_div_z (sin_x, sin_x, bs->Q, rnd);
@@ -194,31 +207,64 @@ _assym_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 
 /**
  * ncm_mpsf_sin_int_mpfr: (skip)
- * @q: FIXME
- * @res: FIXME
- * @rnd: FIXME
+ * @q: argument as a rational number $x = q$
+ * @res: mpfr variable containing the result $\mathrm{Si}(x)$
+ * @rnd: mpfr rounding mode
  *
- * FIXME
- * 
+ * Computes the sine integral
+ * $$\mathrm{Si}(x) = \int_0^x \frac{\sin x'}{x'}\mathrm{d}x.$$
+ *
  */
 void
 ncm_mpsf_sin_int_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 {
-  gdouble x = mpq_get_d (q);
-  gdouble dnmax = 1.0 / 4.0 * (-5.0 + sqrt (1.0 + 4.0 * x * x));
-  gdouble nmax = (dnmax > 0) ? ceil (dnmax) : 0;
-  gulong prec = mpfr_get_prec (res);
-  //printf ("# dnmax %g nmax %g\n", dnmax, nmax);
+  const gdouble x     = mpq_get_d (q);
+  const gdouble dnmax = 1.0 / 4.0 * (-5.0 + sqrt (1.0 + 4.0 * x * x));
+  const gdouble nmax  = (dnmax > 0) ? ceil (dnmax) : 0;
+  const gulong prec   = mpfr_get_prec (res);
+
+  /*printf ("# dnmax %g nmax %g\n", dnmax, nmax); */
 
   if (nmax == 0)
+  {
     _taylor_mpfr (q, res, rnd);
+  }
   else
   {
-    gdouble maxsize = ((2.0 * nmax + 0.0) * log (x) - lgamma (1.0 + 2.0 * nmax)) / M_LN2;
-    //printf ("# maxsize %f\n", maxsize);
+    const gdouble maxsize = ((2.0 * nmax + 0.0) * log (x) - lgamma (1.0 + 2.0 * nmax)) / M_LN2;
+
     if (maxsize > prec)
       _assym_mpfr (q, res, rnd);
     else
       _taylor_mpfr (q, res, rnd);
   }
 }
+
+/**
+ * ncm_sf_sin_int:
+ * @x: value of the argument $x$
+ *
+ * Computes the sine integral
+ * $$\mathrm{Si}(x) = \int_0^x \frac{\sin x'}{x'}\mathrm{d}x.$$
+ *
+ * Returns: the value of $\mathrm{Si}(x)$.
+ */
+gdouble
+ncm_sf_sin_int (gdouble x)
+{
+  MPFR_DECL_INIT (res, 53);
+
+  mpq_t xq;
+  gdouble res_d;
+
+  mpq_init (xq);
+
+  ncm_rational_coarce_double (x, xq);
+  ncm_mpsf_sin_int_mpfr (xq, res, GMP_RNDN);
+  mpq_clear (xq);
+
+  res_d = mpfr_get_d (res, GMP_RNDN);
+
+  return res_d;
+}
+

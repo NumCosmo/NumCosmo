@@ -3,11 +3,11 @@
  *
  *  Fri May 25 09:38:14 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -38,24 +38,19 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_MSET             (ncm_mset_get_type ())
-#define NCM_MSET(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MSET, NcmMSet))
-#define NCM_MSET_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MSET, NcmMSetClass))
-#define NCM_IS_MSET(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MSET))
-#define NCM_IS_MSET_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MSET))
-#define NCM_MSET_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MSET, NcmMSetClass))
+#define NCM_TYPE_MSET (ncm_mset_get_type ())
+
+G_DECLARE_DERIVABLE_TYPE (NcmMSet, ncm_mset, NCM, MSET, GObject)
 
 #define NCM_TYPE_MSET_PINDEX (ncm_mset_pindex_get_type ())
 
-typedef struct _NcmMSetClass NcmMSetClass;
-typedef struct _NcmMSet NcmMSet;
 typedef struct _NcmMSetPIndex NcmMSetPIndex;
 typedef struct _NcmMSetModelDesc NcmMSetModelDesc;
 
 #define NCM_MSET_MAX_STACKSIZE 1000
 #define NCM_MSET_INIT_MARRAY 32
 #define NCM_MSET_GET_BASE_MID(mid) (mid / NCM_MSET_MAX_STACKSIZE)
-#define NCM_MSET_MID(id,pos) ((id) + pos)
+#define NCM_MSET_MID(id, pos) ((id) + pos)
 
 struct _NcmMSetModelDesc
 {
@@ -72,24 +67,10 @@ struct _NcmMSetClass
   GObjectClass parent_class;
   GHashTable *ns_table;
   GArray *model_desc_array;
-};
-
-struct _NcmMSet
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmObjArray *model_array;
-  GHashTable *mid_item_hash;
-  GHashTable *model_item_hash;
-  GHashTable *fpi_hash;
-  GPtrArray *fullname_parray;
-  GArray *pi_array;
-  GArray *mid_array;
   GRegex *fullname_regex;
-  gboolean valid_map;
-  guint total_len;
-  guint fparam_len;
-  NcmVector *temp_fparams;
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[16];
 };
 
 struct _NcmMSetPIndex
@@ -99,7 +80,6 @@ struct _NcmMSetPIndex
   guint pid;
 };
 
-GType ncm_mset_get_type (void) G_GNUC_CONST;
 GType ncm_mset_pindex_get_type (void) G_GNUC_CONST;
 
 void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc, gboolean can_stack, NcmModelID main_model_id);
@@ -107,53 +87,58 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
 /**
  * NCM_MSET_MODEL_MAIN: (skip)
  *
- * FIXME
+ * Id of a main model. Used to identify the main model in
+ * hierarchy of models.
  *
  */
 #define NCM_MSET_MODEL_MAIN (-1)
 
 /**
  * NCM_MSET_MODEL_ID_FUNC: (skip)
- * @model_ns: FIXME
+ * @model_ns: model namespace in snake case
  *
- * FIXME
+ * Defines a function to get the model id from the model namespace.
  *
  */
-#define NCM_MSET_MODEL_ID_FUNC(model_ns) model_ns##_id
+#define NCM_MSET_MODEL_ID_FUNC(model_ns) model_ns ## _id
 
 /**
  * NCM_MSET_MODEL_DECLARE_ID: (skip)
- * @model_ns: FIXME
+ * @model_ns: model namespace in snake case
  *
- * FIXME
+ * Declares a function to get the model id from the model namespace.
+ * This macro should be used in the header file of the model.
  *
  */
-#define NCM_MSET_MODEL_DECLARE_ID(model_ns) NcmModelID NCM_MSET_MODEL_ID_FUNC(model_ns) (void) G_GNUC_CONST
+#define NCM_MSET_MODEL_DECLARE_ID(model_ns) NcmModelID NCM_MSET_MODEL_ID_FUNC (model_ns) (void) G_GNUC_CONST
 
 /**
  * NCM_MSET_MODEL_REGISTER_ID: (skip)
- * @model_ns: FIXME
- * @typemacro: FIXME
+ * @model_ns: model namespace in snake case
+ * @typemacro: macro that returns the #GType of the model
  *
- * FIXME
+ * Defines the function to get the model id from the model namespace.
+ * This macro should be used in the source file of the model.
  *
  */
-#define NCM_MSET_MODEL_REGISTER_ID(model_ns,typemacro) \
-NcmModelID NCM_MSET_MODEL_ID_FUNC(model_ns) (void) \
-{ \
-  static NcmModelID id = -1; \
-  if (id == -1) \
-  { \
-    NcmModelClass *model_class = g_type_class_ref (typemacro); \
-    id = model_class->model_id; \
-    g_type_class_unref (model_class); \
-  } \
-  return id; \
-}
+#define NCM_MSET_MODEL_REGISTER_ID(model_ns, typemacro)                \
+        NcmModelID NCM_MSET_MODEL_ID_FUNC (model_ns) (void)            \
+        {                                                              \
+          static NcmModelID id = -1;                                   \
+          if (id == -1)                                                \
+          {                                                            \
+            NcmModelClass *model_class = g_type_class_ref (typemacro); \
+            id = model_class->model_id;                                \
+            g_type_class_unref (model_class);                          \
+          }                                                            \
+          return id;                                                   \
+        }
 
 NcmMSetPIndex *ncm_mset_pindex_new (NcmModelID mid, guint pid);
 NcmMSetPIndex *ncm_mset_pindex_dup (NcmMSetPIndex *pi);
 void ncm_mset_pindex_free (NcmMSetPIndex *pi);
+
+gboolean ncm_mset_split_full_name (const gchar *fullname, gchar **model_ns, guint *stackpos_id, gchar **pname);
 
 NcmMSet *ncm_mset_empty_new (void);
 NcmMSet *ncm_mset_new (gpointer model0, ...) G_GNUC_NULL_TERMINATED;
@@ -170,6 +155,7 @@ NcmModel *ncm_mset_peek (NcmMSet *mset, NcmModelID mid);
 NcmModel *ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint stackpos_id);
 NcmModel *ncm_mset_get (NcmMSet *mset, NcmModelID mid);
 NcmModel *ncm_mset_peek_array_pos (NcmMSet *mset, guint i);
+NcmModel *ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name);
 NcmModelID ncm_mset_get_mid_array_pos (NcmMSet *mset, guint i);
 void ncm_mset_remove (NcmMSet *mset, NcmModelID mid);
 void ncm_mset_set (NcmMSet *mset, NcmModel *model);
@@ -185,9 +171,10 @@ NcmModelID ncm_mset_get_id_by_ns (const gchar *ns);
 const gchar *ncm_mset_get_ns_by_id (NcmModelID id);
 GType ncm_mset_get_type_by_id (NcmModelID id);
 
-void ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap, gboolean update_models);
+void ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_models);
 gchar **ncm_mset_get_fmap (NcmMSet *mset);
 void ncm_mset_prepare_fparam_map (NcmMSet *mset);
+gboolean ncm_mset_fparam_map_valid (NcmMSet *mset);
 
 guint ncm_mset_total_len (NcmMSet *mset);
 guint ncm_mset_fparam_len (NcmMSet *mset);
@@ -246,6 +233,7 @@ NcmMSetPIndex *ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *full
 gdouble ncm_mset_fparam_get_scale (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_lower_bound (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n);
+NcmMatrix *ncm_mset_fparam_get_bound_matrix (NcmMSet *mset);
 gdouble ncm_mset_fparam_get_abstol (NcmMSet *mset, guint n);
 void ncm_mset_fparam_set_scale (NcmMSet *mset, guint n, gdouble scale);
 gboolean ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta);
@@ -265,3 +253,4 @@ NcmMSet *ncm_mset_load (const gchar *filename, NcmSerialize *ser);
 G_END_DECLS
 
 #endif /* _NCM_MSET_H_ */
+

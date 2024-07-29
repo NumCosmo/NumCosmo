@@ -60,8 +60,6 @@ struct _NcWindow
 
 GType nc_window_get_type (void) G_GNUC_CONST;
 
-NcWindow *nc_window_new_from_name (gchar *window_name);
-
 gdouble nc_window_volume (NcWindow *wf);
 gdouble nc_window_eval_fourier (const NcWindow *wf, const gdouble k, const gdouble R);
 gdouble nc_window_deriv_fourier (const NcWindow *wf, const gdouble k, const gdouble R);

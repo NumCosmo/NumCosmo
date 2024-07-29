@@ -3,11 +3,11 @@
  *
  *  Sat October 24 11:57:37 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_cbe.h
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -30,10 +30,10 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/math/ncm_spline.h>
 #include <numcosmo/math/ncm_spline2d.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/nc_hireion.h>
-#include <numcosmo/nc_hiprim.h>
 #include <numcosmo/nc_scalefactor.h>
 #include <numcosmo/nc_cbe_precision.h>
 #include <numcosmo/data/nc_data_cmb.h>

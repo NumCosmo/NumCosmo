@@ -3,12 +3,12 @@
  *
  *  Wed March 20 15:22:26 2019
  *  Copyright  2019  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 
 /*
  * ncm_powspec_corr3d.h
- * Copyright (C) 2019 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2019 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -36,48 +36,21 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_POWSPEC_CORR3D             (ncm_powspec_corr3d_get_type ())
-#define NCM_POWSPEC_CORR3D(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_POWSPEC_CORR3D, NcmPowspecCorr3d))
-#define NCM_POWSPEC_CORR3D_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_POWSPEC_CORR3D, NcmPowspecCorr3dClass))
-#define NCM_IS_POWSPEC_CORR3D(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_POWSPEC_CORR3D))
-#define NCM_IS_POWSPEC_CORR3D_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_POWSPEC_CORR3D))
-#define NCM_POWSPEC_CORR3D_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_POWSPEC_CORR3D, NcmPowspecCorr3dClass))
+#define NCM_TYPE_POWSPEC_CORR3D (ncm_powspec_corr3d_get_type ())
 
-typedef struct _NcmPowspecCorr3dClass NcmPowspecCorr3dClass;
-typedef struct _NcmPowspecCorr3d NcmPowspecCorr3d;
+G_DECLARE_FINAL_TYPE (NcmPowspecCorr3d, ncm_powspec_corr3d, NCM, POWSPEC_CORR3D, NcmPowspec)
 
-struct _NcmPowspecCorr3dClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcmPowspecCorr3d
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmPowspec *ps;
-  NcmFftlog *fftlog;
-  gdouble lnr0;
-  gdouble lnk0;
-  gdouble Lk;
-  gdouble zi;
-  gdouble zf;
-  gboolean calibrated;
-  gdouble reltol;
-  gdouble reltol_z;
-  NcmSpline2d *xi;
-  NcmModelCtrl *ctrl;
-  gboolean constructed;
-};
-
-GType ncm_powspec_corr3d_get_type (void) G_GNUC_CONST;
-
-NcmPowspecCorr3d *ncm_powspec_corr3d_new (NcmPowspec *ps);
+NcmPowspecCorr3d *ncm_powspec_corr3d_new (NcmPowspec * ps);
 NcmPowspecCorr3d *ncm_powspec_corr3d_ref (NcmPowspecCorr3d *psc);
 
 void ncm_powspec_corr3d_free (NcmPowspecCorr3d *psc);
 void ncm_powspec_corr3d_clear (NcmPowspecCorr3d **psc);
+
+void ncm_powspec_corr3d_set_reltol (NcmPowspecCorr3d *psc, const gdouble reltol);
+void ncm_powspec_corr3d_set_reltol_z (NcmPowspecCorr3d *psc, const gdouble reltol_z);
+
+gdouble ncm_powspec_corr3d_get_reltol (NcmPowspecCorr3d *psc);
+gdouble ncm_powspec_corr3d_get_reltol_z (NcmPowspecCorr3d *psc);
 
 void ncm_powspec_corr3d_prepare (NcmPowspecCorr3d *psc, NcmModel *model);
 void ncm_powspec_corr3d_prepare_if_needed (NcmPowspecCorr3d *psc, NcmModel *model);

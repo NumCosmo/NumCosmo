@@ -3,22 +3,22 @@
  *
  *  Mon December 03 19:34:20 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * 
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -48,42 +48,42 @@ typedef struct _NcSNIADistCov NcSNIADistCov;
 
 /**
  * NcSNIADistCovSParams:
- * @NC_SNIA_DIST_COV_ALPHA: FIXME
- * @NC_SNIA_DIST_COV_BETA: FIXME
- * @NC_SNIA_DIST_COV_M1: FIXME
- * @NC_SNIA_DIST_COV_M2: FIXME
- * @NC_SNIA_DIST_COV_LNSIGMA_PECZ: FIXME
- * @NC_SNIA_DIST_COV_LNSIGMA_LENS: FIXME
+ * @NC_SNIA_DIST_COV_ALPHA: Stretch parameter $\alpha$
+ * @NC_SNIA_DIST_COV_BETA: Colour parameter $\beta$
+ * @NC_SNIA_DIST_COV_M1: Absolute magnitude parameter $M_1$
+ * @NC_SNIA_DIST_COV_M2: Absolute magnitude parameter $M_2$
+ * @NC_SNIA_DIST_COV_LNSIGMA_PECZ: Logarithm of the dispersion due to peculiar velocities
+ * @NC_SNIA_DIST_COV_LNSIGMA_LENS: Logarithm of the dispersion due to lensing
  *
- * FIXME
- * 
+ * SN Ia distance covariance model parameters.
+ *
  */
 typedef enum _NcSNIADistCovSParams
 {
   NC_SNIA_DIST_COV_ALPHA = 0,
   NC_SNIA_DIST_COV_BETA,
   NC_SNIA_DIST_COV_M1,
-  NC_SNIA_DIST_COV_M2,         
+  NC_SNIA_DIST_COV_M2,
   NC_SNIA_DIST_COV_LNSIGMA_PECZ,
-  NC_SNIA_DIST_COV_LNSIGMA_LENS, 
+  NC_SNIA_DIST_COV_LNSIGMA_LENS,
   /* < private > */
-  NC_SNIA_DIST_COV_SPARAM_LEN,   /*< skip >*/
+  NC_SNIA_DIST_COV_SPARAM_LEN, /*< skip >*/
 } NcSNIADistCovSParams;
 
 /**
  * NcSNIADistCovVParams:
- * @NC_SNIA_DIST_COV_LNSIGMA_INT: FIXME
- * @NC_SNIA_DIST_COV_MU: FIXME
- * 
- * FIXME
- * 
+ * @NC_SNIA_DIST_COV_LNSIGMA_INT: Intrinsic dispersion parameter $\ln \sigma_{\rm int}$
+ * @NC_SNIA_DIST_COV_MU: Mean absolute magnitude parameter $\mu$
+ *
+ * SN Ia distance covariance model parameters.
+ *
  */
 typedef enum _NcSNIADistCovVParams
 {
   NC_SNIA_DIST_COV_LNSIGMA_INT = 0,
-  NC_SNIA_DIST_COV_MU,            
+  NC_SNIA_DIST_COV_MU,
   /* < private > */
-  NC_SNIA_DIST_COV_VPARAM_LEN,    /*< skip >*/
+  NC_SNIA_DIST_COV_VPARAM_LEN, /*< skip >*/
 } NcSNIADistCovVParams;
 
 struct _NcSNIADistCovClass
@@ -111,6 +111,7 @@ GType nc_snia_dist_cov_get_type (void) G_GNUC_CONST;
 NCM_MSET_MODEL_DECLARE_ID (nc_snia_dist_cov);
 
 NcSNIADistCov *nc_snia_dist_cov_new (NcDistance *dist, guint sigma_int_len);
+NcSNIADistCov *nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id);
 NcSNIADistCov *nc_snia_dist_cov_ref (NcSNIADistCov *dcov);
 void nc_snia_dist_cov_free (NcSNIADistCov *dcov);
 void nc_snia_dist_cov_clear (NcSNIADistCov **dcov);
@@ -123,14 +124,13 @@ void nc_snia_dist_cov_prepare_if_needed (NcSNIADistCov *dcov, NcmMSet *mset);
 
 gboolean nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *cov);
 void nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, NcmVector *y);
+void nc_snia_dist_cov_mean_V2 (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, NcmVector *y);
 
 gdouble nc_snia_dist_cov_mag (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, guint i, gdouble width_th, gdouble colour_th);
 void nc_snia_dist_cov_mag_to_width_colour (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, NcmVector *obs, NcmMatrix *X, gboolean colmajor);
 gdouble nc_snia_dist_cov_extra_var (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, guint i);
 
 void nc_snia_dist_cov_alpha_beta (NcSNIADistCov *dcov, gdouble *alpha, gdouble *beta);
-
-void nc_snia_dist_cov_set_default_params_by_id (NcSNIADistCov *dcov, NcDataSNIAId snia_id);
 
 #define NC_SNIA_DIST_COV_DEFAULT_ALPHA (0.145)
 #define NC_SNIA_DIST_COV_DEFAULT_BETA (3.16)

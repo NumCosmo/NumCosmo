@@ -1,4 +1,3 @@
-
 #ifndef NUMCOSMO_GIR_SCAN
 
 extern double dasum_ (int *, double *, int *);
@@ -22,8 +21,8 @@ extern void dsytrf_ (const gchar *uplo, gint *n, gdouble *a, gint *lda, gint *ip
 extern void dsytrs_ (const gchar *uplo, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, const gint *ipiv, gdouble *b, const gint *ldb, gint *info);
 extern void dsytri_ (const gchar *uplo, const gint *n, gdouble *a, const gint *lda, const gint *ipiv, gdouble *work, gint *info);
 extern void dsysv_  (const gchar *uplo, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, gint *ipiv, gdouble *b, const gint *ldb, gdouble *work, gint *lwork, gint *info);
-extern void dsysvx_ (const gchar *fact, gchar *uplo, const gint* n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *af, const gint *ldaf, gint *ipiv, gdouble *b, const gint *ldb, gdouble *x, const gint *ldx, gdouble *rcond, gdouble *ferr, gdouble *berr, gdouble *work, gint *lwork, gint *iwork, gint *info);
-extern void dsysvxx_ (const gchar *fact, gchar *uplo, const gint* n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *af, const gint *ldaf, gint *ipiv, gchar *equed, gdouble *s, gdouble *b, const gint *ldb, gdouble *x, const gint *ldx, gdouble *rcond, gdouble *rpvgrw, gdouble *berr, const gint *n_err_bnds, gdouble *err_bnds_norm, gdouble *err_bnds_comp, const gint *nparams, gdouble *params, gdouble *work, gint *iwork, gint *info);
+extern void dsysvx_ (const gchar *fact, gchar *uplo, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *af, const gint *ldaf, gint *ipiv, gdouble *b, const gint *ldb, gdouble *x, const gint *ldx, gdouble *rcond, gdouble *ferr, gdouble *berr, gdouble *work, gint *lwork, gint *iwork, gint *info);
+extern void dsysvxx_ (const gchar *fact, gchar *uplo, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *af, const gint *ldaf, gint *ipiv, gchar *equed, gdouble *s, gdouble *b, const gint *ldb, gdouble *x, const gint *ldx, gdouble *rcond, gdouble *rpvgrw, gdouble *berr, const gint *n_err_bnds, gdouble *err_bnds_norm, gdouble *err_bnds_comp, const gint *nparams, gdouble *params, gdouble *work, gint *iwork, gint *info);
 
 extern void dsyevr_ (const gchar *jobz, const gchar *range, const gchar *uplo, const gint *n, gdouble *a, const gint *lda, const gdouble *vl, const gdouble *vu, const gint *il, const gint *iu, const gdouble *abstol, gint *m, gdouble *w, double *z, const gint *ldz, gint *isuppz, gdouble *work, const gint *lwork, gint *iwork, const gint *liwork, gint *info);
 extern void dsyevd_ (const gchar *jobz, const gchar *uplo, const gint *n, gdouble *a, const gint *lda, gdouble *w, gdouble *work, const gint *lwork, gint *iwork, const gint *liwork, gint *info);
@@ -39,5 +38,8 @@ extern void dgeqlf_ (const gint *m, const gint *n, gdouble *a, const gint *lda, 
 extern void dgelqf_ (const gint *m, const gint *n, gdouble *a, const gint *lda, gdouble *tau, gdouble *work, const gint *lwork, gint *info);
 
 extern void dgels_ (const gchar *trans, const gint *m, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *b, const gint *ldb, gdouble *work, const gint *lwork, gint *info);
+extern void dgelsd_ (const gint *m, const gint *n, const gint *nrhs, gdouble *a, const gint *lda, gdouble *b, const gint *ldb, gdouble *s, gdouble *rcond, gint *rank, gdouble *work, const gint *lwork, gint *iwork, gint *info);
+
 
 #endif /* NUMCOSMO_GIR_SCAN */
+
