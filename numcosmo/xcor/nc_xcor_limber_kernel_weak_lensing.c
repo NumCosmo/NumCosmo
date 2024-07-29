@@ -55,11 +55,32 @@
 #include <gsl/gsl_randist.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcXcorLimberKernelWeakLensing, nc_xcor_limber_kernel_weak_lensing, NC_TYPE_XCOR_LIMBER_KERNEL)
 
-#define VECTOR     (NCM_MODEL (xclkg))
-#define MAG_BIAS   (ncm_model_orig_param_get (VECTOR, NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_MAG_BIAS))
-#define NOISE_BIAS (ncm_model_orig_param_get (VECTOR, NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_NOISE_BIAS))
+struct _NcXcorLimberKernelWeakLensing
+{
+  /*< private >*/
+  NcXcorLimberKernel parent_instance;
+
+  NcmSpline *dn_dz;
+
+  /* NcmSpline* bias_spline; */
+  /* guint nknots; */
+  /* gdouble* bias; */
+
+  NcDistance *dist;
+
+  NcmSpline *src_int;
+  /* gboolean domagbias; */
+
+  /* gboolean fast_update; */
+  /* gdouble bias_old; */
+  /* gdouble noise_bias_old; */
+
+  gdouble nbar;
+  gdouble intr_shear;
+
+  gdouble noise;
+};
 
 enum
 {
@@ -70,6 +91,12 @@ enum
   PROP_DIST,
   PROP_SIZE,
 };
+
+G_DEFINE_TYPE (NcXcorLimberKernelWeakLensing, nc_xcor_limber_kernel_weak_lensing, NC_TYPE_XCOR_LIMBER_KERNEL)
+
+#define VECTOR     (NCM_MODEL (xclkg))
+#define MAG_BIAS   (ncm_model_orig_param_get (VECTOR, NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_MAG_BIAS))
+#define NOISE_BIAS (ncm_model_orig_param_get (VECTOR, NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_NOISE_BIAS))
 
 static void
 nc_xcor_limber_kernel_weak_lensing_init (NcXcorLimberKernelWeakLensing *xclkg)
@@ -144,6 +171,9 @@ _nc_xcor_limber_kernel_weak_lensing_constructed (GObject *object)
   {
     NcXcorLimberKernelWeakLensing *xclkg = NC_XCOR_LIMBER_KERNEL_WEAK_LENSING (object);
     NcXcorLimberKernel *xclk             = NC_XCOR_LIMBER_KERNEL (xclkg);
+    gdouble zmin, zmax, zmid;
+
+    nc_xcor_limber_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
 
     /* Initialize the source integral */
     xclkg->src_int = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
@@ -151,7 +181,7 @@ _nc_xcor_limber_kernel_weak_lensing_constructed (GObject *object)
     /* Normalize the redshift distribution */
     ncm_spline_prepare (xclkg->dn_dz);
 
-    gdouble ngal  = ncm_spline_eval_integ (xclkg->dn_dz, xclk->zmin, xclk->zmax);
+    gdouble ngal  = ncm_spline_eval_integ (xclkg->dn_dz, zmin, zmax);
     NcmVector *yv = ncm_spline_get_yv (xclkg->dn_dz);
 
     ncm_vector_scale (yv, 1.0 / ngal);
@@ -321,8 +351,11 @@ _nc_xcor_limber_kernel_weak_lensing_src_int (gdouble z, gpointer params)
   NcXcorLimberKernelWeakLensing *xclkg = ts->xclkg;
   NcXcorLimberKernel *xclk             = NC_XCOR_LIMBER_KERNEL (xclkg);
   NcHICosmo *cosmo                     = ts->cosmo;
+  gdouble zmin, zmax, zmid;
 
-  if (z > xclk->zmax)
+  nc_xcor_limber_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
+
+  if (z > zmax)
     return 0.0;
 
   if (z == 0.)
@@ -344,7 +377,7 @@ _nc_xcor_limber_kernel_weak_lensing_src_int (gdouble z, gpointer params)
   F.function = &_nc_xcor_limber_kernel_weak_lensing_src_int_integrand;
   F.params   = &int_ts;
 
-  gsl_integration_qag (&F, z, xclk->zmax, 0., NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, w, &result, &error);
+  gsl_integration_qag (&F, z, zmax, 0., NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, w, &result, &error);
 
   /* printf ("_nc_xcor_limber_kernel_weak_lensing_src_int integration result = %g with integration error = %g for interval z = %g to zmax = %g, chiz = %g \n", result, error, z, xclk->zmax, chiz); */
 
@@ -359,20 +392,23 @@ static void
 _nc_xcor_limber_kernel_weak_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
 {
   NcXcorLimberKernelWeakLensing *xclkg = NC_XCOR_LIMBER_KERNEL_WEAK_LENSING (xclk);
+  gdouble zmin, zmax, zmid;
 
-  xclk->cons_factor = 1.5 * nc_hicosmo_Omega_m0 (cosmo);
+  nc_xcor_limber_kernel_set_const_factor (xclk, 1.5 * nc_hicosmo_Omega_m0 (cosmo));
+  nc_xcor_limber_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
 
   /* zmin should always be zero for lensing, so just checking for consistency */
-  g_assert_cmpfloat (xclk->zmin, ==, 0.0);
+  g_assert_cmpfloat (zmin, ==, 0.0);
 
   ncm_spline_prepare (xclkg->dn_dz);
 
   /* Check if the spline includes the boundaries to avoid running into errors when computing */
-  g_assert (gsl_finite (ncm_spline_eval (xclkg->dn_dz, xclk->zmin)));
-  g_assert (gsl_finite (ncm_spline_eval (xclkg->dn_dz, xclk->zmax)));
+  g_assert (gsl_finite (ncm_spline_eval (xclkg->dn_dz, zmin)));
+  g_assert (gsl_finite (ncm_spline_eval (xclkg->dn_dz, zmax)));
 
   /* Assign zmid as middle redshift between 0 and max of dn/dz */
-  xclk->zmid = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz))) / 2.0;
+  zmid = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz))) / 2.0;
+  nc_xcor_limber_kernel_set_z_range (xclk, zmin, zmax, zmid);
 
   nc_distance_prepare_if_needed (xclkg->dist, cosmo);
 
@@ -390,7 +426,7 @@ _nc_xcor_limber_kernel_weak_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo
 
     guint dn_dz_size = ncm_spline_get_len (xclkg->dn_dz);
 
-    ncm_spline_set_func (xclkg->src_int, NCM_SPLINE_FUNCTION_SPLINE, &F, xclk->zmin, xclk->zmax, dn_dz_size * 10, 1e-5);
+    ncm_spline_set_func (xclkg->src_int, NCM_SPLINE_FUNCTION_SPLINE, &F, zmin, zmax, dn_dz_size * 10, 1e-5);
 
     ncm_spline_prepare (xclkg->src_int);
   }

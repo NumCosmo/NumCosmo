@@ -48,9 +48,20 @@
 #include <gsl/gsl_randist.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcXcorLimberKernelCMBLensing, nc_xcor_limber_kernel_cmb_lensing, NC_TYPE_XCOR_LIMBER_KERNEL)
 
-#define VECTOR (NCM_MODEL (xclkl))
+struct _NcXcorLimberKernelCMBLensing
+{
+  /*< private >*/
+  NcXcorLimberKernel parent_instance;
+
+  NcDistance *dist;
+  NcRecomb *recomb;
+
+  NcmVector *Nl;
+  guint Nlmax;
+
+  gdouble xi_lss;
+};
 
 enum
 {
@@ -60,6 +71,10 @@ enum
   PROP_NL,
   PROP_SIZE,
 };
+
+G_DEFINE_TYPE (NcXcorLimberKernelCMBLensing, nc_xcor_limber_kernel_cmb_lensing, NC_TYPE_XCOR_LIMBER_KERNEL)
+
+#define VECTOR (NCM_MODEL (xclkl))
 
 static void
 nc_xcor_limber_kernel_cmb_lensing_init (NcXcorLimberKernelCMBLensing *xclkl)
@@ -254,15 +269,13 @@ _nc_xcor_limber_kernel_cmb_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo 
 
   nc_distance_prepare_if_needed (xclkl->dist, cosmo);
 
-  xclkl->xi_lss     = nc_distance_comoving_lss (xclkl->dist, cosmo);
-  xclk->cons_factor = (3.0 * nc_hicosmo_Omega_m0 (cosmo)) / 2.0;
+  xclkl->xi_lss = nc_distance_comoving_lss (xclkl->dist, cosmo);
 
   /* nc_recomb_prepare (xclkl->recomb, cosmo); */
   /* gdouble lamb = nc_recomb_tau_zstar (xclkl->recomb, cosmo); */
 
-  xclk->zmax = 1090.0; /*exp (-lamb) - 1.0; */
-  xclk->zmin = 0.0;
-  xclk->zmid = 2.0; /* appriximately where the kernel peaks */
+  nc_xcor_limber_kernel_set_const_factor (xclk, (3.0 * nc_hicosmo_Omega_m0 (cosmo)) / 2.0);
+  nc_xcor_limber_kernel_set_z_range (xclk, 0.0, 1090.0, 2.0);
 }
 
 static void

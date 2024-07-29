@@ -70,6 +70,35 @@
 #include <gsl/gsl_multifit.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+struct _NcDataXcor
+{
+  /*< private >*/
+  NcmDataGaussCov parent_instance;
+
+  guint nobs;
+
+  NcXcorAB *xcab[NC_DATA_XCOR_MAX][NC_DATA_XCOR_MAX];
+
+  NcmObjArray *xcab_oa;
+  /* guint xcab_oa_idx[NC_DATA_XCOR_MAX * NC_DATA_XCOR_MAX][2]; */
+  /* guint xcab_oa_ctr; */
+
+  gint xcidx[NC_DATA_XCOR_MAX][NC_DATA_XCOR_MAX];
+  guint xcidx_ctr;
+
+  /* gboolean X_init; */
+  NcmMatrix *X1; /*[NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS]; */
+  NcmMatrix *X2; /*[NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS]; / * X matrices (=mask dependent, cosmology independent part of the covariances <C_l^{a,b}C_l'^{c,d}>) * / */
+
+  NcmVector *pcl;
+  NcmMatrix *pcov;
+
+  NcXcor *xc;
+
+  NcmModelCtrl *cosmo_ctrl;
+  GPtrArray *xclk_ctrl;
+};
+
 enum
 {
   PROP_0,
@@ -355,48 +384,53 @@ _nc_data_xcor_fast_update (NcDataXcor *dxc, NcXcorLimberKernel *xcl, guint a, Nc
   {
     NcXcorLimberKernelGal *xclkg = NC_XCOR_LIMBER_KERNEL_GAL (xcl);
 
-    if (xclkg->fast_update)
+    if (nc_xcor_limber_kernel_gal_get_fast_update (xclkg))
     {
-      const gdouble biasratio = *(xclkg->bias) / xclkg->bias_old;
+      gdouble bias, bias_old, noise_bias_old;
 
-      NcmVector *cl_th_0_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0);
-      NcmVector *cl_th_1_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 1);
-
-      ncm_vector_add_constant (cl_th_0_aa, -1.0 * xclkg->noise_bias_old);
-      ncm_vector_scale (cl_th_0_aa, gsl_pow_2 (biasratio));
-      nc_xcor_limber_kernel_add_noise (xcl, cl_th_0_aa, cl_th_1_aa, 0);
-
-      ncm_vector_free (cl_th_0_aa);
-      ncm_vector_free (cl_th_1_aa);
-
-      const guint nobs = dxc->nobs;
-      guint b;
-
-      if (nobs > 1)
+      nc_xcor_limber_kernel_gal_get_bias (xclkg, &bias, &bias_old, &noise_bias_old);
       {
-        for (b = 0; b < nobs; b++)
+        const gdouble biasratio = bias / bias_old;
+
+        NcmVector *cl_th_0_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0);
+        NcmVector *cl_th_1_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 1);
+
+        ncm_vector_add_constant (cl_th_0_aa, -1.0 * noise_bias_old);
+        ncm_vector_scale (cl_th_0_aa, gsl_pow_2 (biasratio));
+        nc_xcor_limber_kernel_add_noise (xcl, cl_th_0_aa, cl_th_1_aa, 0);
+
+        ncm_vector_free (cl_th_0_aa);
+        ncm_vector_free (cl_th_1_aa);
+
+        const guint nobs = dxc->nobs;
+        guint b;
+
+        if (nobs > 1)
         {
-          if (a < b)
+          for (b = 0; b < nobs; b++)
           {
-            NcmVector *cl_th_0_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 0);
-            NcmVector *cl_th_1_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 1);
+            if (a < b)
+            {
+              NcmVector *cl_th_0_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 0);
+              NcmVector *cl_th_1_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 1);
 
-            ncm_vector_scale (cl_th_0_ab, biasratio);
-            ncm_vector_memcpy (cl_th_1_ab, cl_th_0_ab);
+              ncm_vector_scale (cl_th_0_ab, biasratio);
+              ncm_vector_memcpy (cl_th_1_ab, cl_th_0_ab);
 
-            ncm_vector_free (cl_th_0_ab);
-            ncm_vector_free (cl_th_1_ab);
-          }
-          else if (b < a)
-          {
-            NcmVector *cl_th_0_ba = ncm_matrix_get_col (dxc->xcab[b][a]->cl_th, 0);
-            NcmVector *cl_th_1_ba = ncm_matrix_get_col (dxc->xcab[b][a]->cl_th, 1);
+              ncm_vector_free (cl_th_0_ab);
+              ncm_vector_free (cl_th_1_ab);
+            }
+            else if (b < a)
+            {
+              NcmVector *cl_th_0_ba = ncm_matrix_get_col (dxc->xcab[b][a]->cl_th, 0);
+              NcmVector *cl_th_1_ba = ncm_matrix_get_col (dxc->xcab[b][a]->cl_th, 1);
 
-            ncm_vector_scale (cl_th_0_ba, biasratio);
-            ncm_vector_memcpy (cl_th_1_ba, cl_th_0_ba);
+              ncm_vector_scale (cl_th_0_ba, biasratio);
+              ncm_vector_memcpy (cl_th_1_ba, cl_th_0_ba);
 
-            ncm_vector_free (cl_th_0_ba);
-            ncm_vector_free (cl_th_1_ba);
+              ncm_vector_free (cl_th_0_ba);
+              ncm_vector_free (cl_th_1_ba);
+            }
           }
         }
       }
@@ -404,8 +438,10 @@ _nc_data_xcor_fast_update (NcDataXcor *dxc, NcXcorLimberKernel *xcl, guint a, Nc
       {
         NcmVector *orig_vec = ncm_model_orig_params_peek_vector (NCM_MODEL (xclkg));
 
-        xclkg->bias_old       = *(xclkg->bias);
-        xclkg->noise_bias_old = ncm_vector_get (orig_vec, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS);
+        nc_xcor_limber_kernel_gal_set_bias_old (xclkg,
+                                                bias,
+                                                ncm_vector_get (orig_vec, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS)
+                                               );
       }
 
       return TRUE;

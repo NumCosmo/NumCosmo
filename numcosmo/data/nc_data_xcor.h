@@ -38,11 +38,8 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_DATA_XCOR (nc_data_xcor_get_type ())
-#define NC_DATA_XCOR(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_XCOR, NcDataXcor))
-#define NC_DATA_XCOR_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_XCOR, NcDataXcorClass))
-#define NC_IS_DATA_XCOR(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_DATA_XCOR))
-#define NC_IS_DATA_XCOR_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_XCOR))
-#define NC_DATA_XCOR_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_XCOR, NcDataXcorClass))
+
+G_DECLARE_FINAL_TYPE (NcDataXcor, nc_data_xcor, NC, DATA_XCOR, NcmDataGaussCov)
 
 #define NC_DATA_XCOR_MAX (5)
 
@@ -62,48 +59,8 @@ G_BEGIN_DECLS
 /* */
 /* } NcDataXcorAB; */
 
-typedef struct _NcDataXcorClass NcDataXcorClass;
-typedef struct _NcDataXcor NcDataXcor;
-
-struct _NcDataXcor
-{
-  /*< private >*/
-  NcmDataGaussCov parent_instance;
-
-  guint nobs;
-
-  NcXcorAB *xcab[NC_DATA_XCOR_MAX][NC_DATA_XCOR_MAX];
-
-  NcmObjArray *xcab_oa;
-  /* guint xcab_oa_idx[NC_DATA_XCOR_MAX * NC_DATA_XCOR_MAX][2]; */
-  /* guint xcab_oa_ctr; */
-
-  gint xcidx[NC_DATA_XCOR_MAX][NC_DATA_XCOR_MAX];
-  guint xcidx_ctr;
-
-  /* gboolean X_init; */
-  NcmMatrix *X1; /*[NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS]; */
-  NcmMatrix *X2; /*[NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS]; / * X matrices (=mask dependent, cosmology independent part of the covariances <C_l^{a,b}C_l'^{c,d}>) * / */
-
-  NcmVector *pcl;
-  NcmMatrix *pcov;
-
-  NcXcor *xc;
-
-  NcmModelCtrl *cosmo_ctrl;
-  GPtrArray *xclk_ctrl;
-};
-
-struct _NcDataXcorClass
-{
-  /*< private >*/
-  NcmDataGaussCovClass parent_class;
-};
-
-GType nc_data_xcor_get_type (void) G_GNUC_CONST;
-
 /* NcmData* nc_data_xcor_new (gboolean use_norma); */
-NcDataXcor *nc_data_xcor_new_full (const guint nobs, NcXcor *xc, gboolean use_norma); /*, const gchar* xcname[]); */
+NcDataXcor * nc_data_xcor_new_full (const guint nobs, NcXcor * xc, gboolean use_norma); /*, const gchar* xcname[]); */
 void nc_data_xcor_set_2 (NcDataXcor *dxc, guint a, guint b, guint ell_th_cut_off, guint ell_lik_min, guint ell_lik_max, const gchar *clobs_filename, const gchar *mixing_filename, const guint mixing_filelength);
 void nc_data_xcor_set_AB (NcDataXcor *dxc, NcXcorAB *xcab);
 void nc_data_xcor_set_3 (NcDataXcor *dxc);

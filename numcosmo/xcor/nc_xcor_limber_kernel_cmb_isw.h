@@ -37,45 +37,12 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_LIMBER_KERNEL_CMB_ISW (nc_xcor_limber_kernel_cmb_isw_get_type ())
-#define NC_XCOR_LIMBER_KERNEL_CMB_ISW(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_CMB_ISW, NcXcorLimberKernelCMBISW))
-#define NC_XCOR_LIMBER_KERNEL_CMB_ISW_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_XCOR_LIMBER_KERNEL_CMB_ISW, NcXcorLimberKernelCMBISWClass))
-#define NC_IS_XCOR_LIMBER_KERNEL_CMB_ISW(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_CMB_ISW))
-#define NC_IS_XCOR_LIMBER_KERNEL_CMB_ISW_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_XCOR_LIMBER_KERNEL_CMB_ISW))
-#define NC_XCOR_LIMBER_KERNEL_CMB_ISW_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_CMB_ISW, NcXcorLimberKernelCMBISWClass))
 
-typedef struct _NcXcorLimberKernelCMBISWClass NcXcorLimberKernelCMBISWClass;
-typedef struct _NcXcorLimberKernelCMBISW NcXcorLimberKernelCMBISW;
-typedef struct _NcXcorLimberKernelCMBISWPrivate NcXcorLimberKernelCMBISWPrivate;
+G_DECLARE_FINAL_TYPE (NcXcorLimberKernelCMBISW, nc_xcor_limber_kernel_cmb_isw, NC, XCOR_LIMBER_KERNEL_CMB_ISW, NcXcorLimberKernel)
 
-/**
- * NcXcorLimberKernelCMBISWSParams:
- * @NC_XCOR_LIMBER_KERNEL_CMB_ISW_SPARAM_LEN: FIXME
- *
- * FIXME
- */
-typedef enum /*< enum,underscore_name=NC_XCOR_LIMBER_KERNEL_CMB_ISW_SPARAMS >*/
-{
-  NC_XCOR_LIMBER_KERNEL_CMB_ISW_SPARAM_LEN,
-} NcXcorLimberKernelCMBISWSParams;
-
-struct _NcXcorLimberKernelCMBISWClass
-{
-  /*< private >*/
-  NcXcorLimberKernelClass parent_class;
-};
-
-struct _NcXcorLimberKernelCMBISW
-{
-  /*< private >*/
-  NcXcorLimberKernel parent_instance;
-  NcXcorLimberKernelCMBISWPrivate *priv;
-};
+NcXcorLimberKernelCMBISW *nc_xcor_limber_kernel_cmb_isw_new (NcDistance * dist, NcRecomb * recomb, NcmVector * Nl);
 
 #define NC_XCOR_LIMBER_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL (0.0)
-
-GType nc_xcor_limber_kernel_cmb_isw_get_type (void) G_GNUC_CONST;
-
-NcXcorLimberKernelCMBISW *nc_xcor_limber_kernel_cmb_isw_new (NcDistance *dist, NcRecomb *recomb, NcmVector *Nl);
 
 G_END_DECLS
 

@@ -60,11 +60,28 @@
 #include <gsl/gsl_randist.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcXcorLimberKernelGal, nc_xcor_limber_kernel_gal, NC_TYPE_XCOR_LIMBER_KERNEL)
+struct _NcXcorLimberKernelGal
+{
+  /*< private >*/
+  NcXcorLimberKernel parent_instance;
 
-#define VECTOR     (NCM_MODEL (xclkg))
-#define MAG_BIAS   (ncm_model_orig_param_get (VECTOR, NC_XCOR_LIMBER_KERNEL_GAL_MAG_BIAS))
-#define NOISE_BIAS (ncm_model_orig_param_get (VECTOR, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS))
+  NcmSpline *dn_dz;
+
+  NcmSpline *bias_spline;
+  guint nknots;
+  gdouble *bias;
+
+  NcDistance *dist;
+
+  NcmSpline *g_func;
+  gboolean domagbias;
+
+  gboolean fast_update;
+  gdouble bias_old;
+  gdouble noise_bias_old;
+
+  gdouble nbarm1;
+};
 
 enum
 {
@@ -76,6 +93,12 @@ enum
   PROP_DIST,
   PROP_SIZE,
 };
+
+G_DEFINE_TYPE (NcXcorLimberKernelGal, nc_xcor_limber_kernel_gal, NC_TYPE_XCOR_LIMBER_KERNEL)
+
+#define VECTOR     (NCM_MODEL (xclkg))
+#define MAG_BIAS   (ncm_model_orig_param_get (VECTOR, NC_XCOR_LIMBER_KERNEL_GAL_MAG_BIAS))
+#define NOISE_BIAS (ncm_model_orig_param_get (VECTOR, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS))
 
 static void
 nc_xcor_limber_kernel_gal_init (NcXcorLimberKernelGal *xclkg)
@@ -166,7 +189,10 @@ _nc_xcor_limber_kernel_gal_constructed (GObject *object)
     NcXcorLimberKernelGal *xclkg = NC_XCOR_LIMBER_KERNEL_GAL (object);
     NcXcorLimberKernel *xclk     = NC_XCOR_LIMBER_KERNEL (xclkg);
     NcmModel *model              = NCM_MODEL (xclkg);
+    gdouble zmin, zmax, zmid;
     guint i;
+
+    nc_xcor_limber_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
 
     /* Initialize g function spline for magnification bias */
     if (xclkg->domagbias)
@@ -181,7 +207,7 @@ _nc_xcor_limber_kernel_gal_constructed (GObject *object)
 
       for (i = 0; i < NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN; i++)
       {
-        ncm_vector_set (gzv, i, xclk->zmin + (xclk->zmax - xclk->zmin) / (NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN - 1) * i);
+        ncm_vector_set (gzv, i, zmin + (zmax - zmin) / (NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN - 1.0) * i);
       }
 
       ncm_vector_free (gzv);
@@ -191,7 +217,7 @@ _nc_xcor_limber_kernel_gal_constructed (GObject *object)
     /* Normalize the redshift distribution */
     ncm_spline_prepare (xclkg->dn_dz);
 
-    gdouble ngal  = ncm_spline_eval_integ (xclkg->dn_dz, xclk->zmin, xclk->zmax);
+    gdouble ngal  = ncm_spline_eval_integ (xclkg->dn_dz, zmin, zmax);
     NcmVector *yv = ncm_spline_get_yv (xclkg->dn_dz);
 
     ncm_vector_scale (yv, 1.0 / ngal);
@@ -220,15 +246,15 @@ _nc_xcor_limber_kernel_gal_constructed (GObject *object)
         xclkg->bias        = ncm_vector_ptr (bv, 0);
         break;
       case 2:
-        ncm_vector_set (zv, 0, xclk->zmin);
-        ncm_vector_set (zv, 1, xclk->zmax);
+        ncm_vector_set (zv, 0, zmin);
+        ncm_vector_set (zv, 1, zmax);
         xclkg->bias_spline = NCM_SPLINE (ncm_spline_gsl_new_full (gsl_interp_linear, zv, bv, FALSE));
         break;
       default:
       {
         for (i = 0; i < bz_size; i++)
         {
-          gdouble zi = xclk->zmin + (xclk->zmax - xclk->zmin) / (bz_size - 1) * i;
+          gdouble zi = zmin + (zmax - zmin) / (bz_size - 1) * i;
 
           ncm_vector_set (zv, i, zi);
         }
@@ -424,8 +450,11 @@ _nc_xcor_limber_kernel_gal_g_func (gdouble z, gpointer params)
   NcXcorLimberKernelGal *xclkg = ts->xclkg;
   NcXcorLimberKernel *xclk     = NC_XCOR_LIMBER_KERNEL (xclkg);
   NcHICosmo *cosmo             = ts->cosmo;
+  gdouble zmin, zmax, zmid;
 
-  if (z > xclk->zmax)
+  nc_xcor_limber_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
+
+  if (z > zmax)
     return 0.0;
 
   gdouble result, error;
@@ -444,7 +473,7 @@ _nc_xcor_limber_kernel_gal_g_func (gdouble z, gpointer params)
   F.function = &_nc_xcor_limber_kernel_gal_g_func_integrand;
   F.params   = &int_ts;
 
-  gsl_integration_qag (&F, GSL_MAX (z, xclk->zmin), xclk->zmax, 0., NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, w, &result, &error);
+  gsl_integration_qag (&F, GSL_MAX (z, zmin), zmax, 0., NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, w, &result, &error);
 
   /* printf ("integration result = %g with integration error = %g \n", result, error); */
 
@@ -458,11 +487,14 @@ _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
 {
   NcXcorLimberKernelGal *xclkg = NC_XCOR_LIMBER_KERNEL_GAL (xclk);
   NcmModel *model              = NCM_MODEL (xclk);
+  gdouble zmin, zmax, zmid;
 
-  xclk->cons_factor = 1.0;
-  xclk->zmid        = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz)));
+  nc_xcor_limber_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
+  nc_xcor_limber_kernel_set_const_factor (xclk, 1.0);
+
+  zmid = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz)));
+  nc_xcor_limber_kernel_set_z_range (xclk, zmin, zmax, zmid);
   /* printf("zmid = %g \n", xclk->zmid); */
-
 
   nc_distance_prepare_if_needed (xclkg->dist, cosmo);
 
@@ -495,7 +527,7 @@ _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
 
       for (i = 0; i < NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN; i++)
       {
-        ncm_vector_set (gzv, i, xclk->zmin + (xclk->zmax - xclk->zmin) / (NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN - 1) * i);
+        ncm_vector_set (gzv, i, zmin + (zmax - zmin) / (NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN - 1.0) * i);
       }
 
       ncm_vector_free (gzv);
@@ -621,5 +653,67 @@ _nc_xcor_limber_kernel_gal_obs_params_len (NcXcorLimberKernel *xclk)
   NCM_UNUSED (xclk);
 
   return 1;
+}
+
+/**
+ * nc_xcor_limber_kernel_gal_set_fast_update:
+ * @xclk: a #NcXcorLimberKernelGal
+ * @fast_update: a gboolean
+ *
+ * Set the fast update flag.
+ *
+ */
+void
+nc_xcor_limber_kernel_gal_set_fast_update (NcXcorLimberKernelGal *xclk, gboolean fast_update)
+{
+  xclk->fast_update = fast_update;
+}
+
+/**
+ * nc_xcor_limber_kernel_gal_get_fast_update:
+ * @xclk: a #NcXcorLimberKernelGal
+ *
+ * Get the fast update flag.
+ *
+ * Returns: a gboolean
+ */
+gboolean
+nc_xcor_limber_kernel_gal_get_fast_update (NcXcorLimberKernelGal *xclk)
+{
+  return xclk->fast_update;
+}
+
+/**
+ * nc_xcor_limber_kernel_gal_set_bias_old:
+ * @xclk: a #NcXcorLimberKernelGal
+ * @bias_old: a gdouble
+ * @noise_bias_old: a gdouble
+ *
+ * Set the bias parameters.
+ *
+ */
+void
+nc_xcor_limber_kernel_gal_set_bias_old (NcXcorLimberKernelGal *xclk, gdouble bias_old, gdouble noise_bias_old)
+{
+  xclk->bias_old       = bias_old;
+  xclk->noise_bias_old = noise_bias_old;
+}
+
+/**
+ * nc_xcor_limber_kernel_gal_get_bias:
+ * @xclk: a #NcXcorLimberKernelGal
+ * @bias: a gdouble
+ * @bias_old: a gdouble
+ * @noise_bias_old: a gdouble
+ *
+ * Get the bias parameters.
+ *
+ */
+void
+nc_xcor_limber_kernel_gal_get_bias (NcXcorLimberKernelGal *xclk, gdouble *bias, gdouble *bias_old, gdouble *noise_bias_old)
+{
+  *bias           = *(xclk->bias);
+  *bias_old       = xclk->bias_old;
+  *noise_bias_old = xclk->noise_bias_old;
 }
 
