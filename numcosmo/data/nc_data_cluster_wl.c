@@ -73,8 +73,6 @@ struct _NcDataClusterWLPrivate
   NcmMatrix *data;
   NcmStatsDist *kde;
   gdouble cut_fraction;
-  gdouble zp_min;
-  gdouble zp_max;
   gdouble theta_min;
   gdouble theta_max;
   gint ndata;
@@ -94,10 +92,9 @@ enum
   PROP_S_DIST,
   PROP_ZP_DIST,
   PROP_RZ_DIST,
+  PROP_DATA,
   PROP_THETA_MIN,
   PROP_THETA_MAX,
-  PROP_ZP_MIN,
-  PROP_ZP_MAX,
   PROP_NDATA,
   PROP_PREC,
   PROP_Z_CLUSTER,
@@ -155,6 +152,9 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
       break;
     case PROP_RZ_DIST:
       self->rz_dist = g_value_dup_object (value);
+      break;
+    case PROP_DATA:
+      self->data = g_value_dup_object (value);
       break;
     case PROP_THETA_MIN:
       self->theta_min = g_value_get_double (value);
@@ -216,6 +216,9 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_RZ_DIST:
       g_value_set_object (value, self->rz_dist);
       break;
+    case PROP_DATA:
+      g_value_set_object (value, nc_data_cluster_wl_peek_data (dcwl));
+      break;
     case PROP_THETA_MIN:
       g_value_set_double (value, self->theta_min);
       break;
@@ -252,11 +255,15 @@ nc_data_cluster_wl_dispose (GObject *object)
   NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (object);
   NcDataClusterWLPrivate * const self = dcwl->priv;
 
-  nc_galaxy_wl_obs_clear (&self->obs);
-  ncm_matrix_clear (&self->data);
+  if (self->obs != NULL)
+    nc_galaxy_wl_obs_clear (&self->obs);
+
   nc_galaxy_sd_shape_clear (&self->s_dist);
   nc_galaxy_sd_z_proxy_clear (&self->zp_dist);
   nc_galaxy_sd_position_clear (&self->rz_dist);
+
+  if (self->data != NULL)
+    ncm_matrix_clear (&self->data);
 
   ncm_stats_dist_clear (&self->kde);
 
@@ -314,7 +321,7 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                    PROP_OBS,
                                    g_param_spec_object ("obs",
                                                         NULL,
-                                                        "Weak lensing observation data",
+                                                        "Weak lensing observation object",
                                                         NC_TYPE_GALAXY_WL_OBS,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -362,6 +369,21 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                         "Galaxy sample position distribution",
                                                         NC_TYPE_GALAXY_SD_POSITION,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataClusterWL:data:
+   *
+   * A #NcmMatrix object.
+   *
+   */
+
+  g_object_class_install_property (object_class,
+                                   PROP_DATA,
+                                   g_param_spec_object ("data",
+                                                        NULL,
+                                                        "Weak lensing observation matrix",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcDataClusterWL:theta-min:
@@ -491,7 +513,7 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
 
 struct _NcDataClusterWLIntArg
 {
-  NcGalaxySDPosition *pos_dist;
+  NcGalaxySDPosition *rz_dist;
   NcGalaxySDZProxy *zp_dist;
   NcGalaxySDShape *s_dist;
   NcHICosmo *cosmo;
@@ -518,7 +540,7 @@ nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint n
   for (i = 0; i < npoints; i++)
   {
     const gdouble z = ncm_vector_get (x, i);
-    gdouble res     = nc_galaxy_sd_position_integ (lh_int->data.pos_dist, lh_int->data.theta, z) *
+    gdouble res     = nc_galaxy_sd_position_integ (lh_int->data.rz_dist, lh_int->data.theta, z) *
                       nc_galaxy_sd_z_proxy_integ (lh_int->data.zp_dist, z, lh_int->data.zp) *
                       nc_galaxy_sd_shape_integ_optzs (lh_int->data.s_dist,
                                                       lh_int->data.cosmo,
@@ -626,10 +648,10 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
   ncm_integral_nd_set_abstol (lh_int, 0.0);
   ncm_integral_nd_set_method (lh_int, NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V);
 
-  if ((self->obs != NULL) && (self->data != NULL))
+  if (self->data != NULL)
     g_assert_cmpuint (ncm_matrix_ncols (self->data), ==, 4);
   else
-    g_error ("Weak lensing observables matrix is not set.");
+    g_error ("Weak lensing observables data matrix is not set.");
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
@@ -639,7 +661,7 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
     gdouble m2lnP_gal_i;
     gdouble z_min, z_max;
 
-    likelihood_integral->data.pos_dist  = NC_GALAXY_SD_POSITION (self->rz_dist);
+    likelihood_integral->data.rz_dist   = NC_GALAXY_SD_POSITION (self->rz_dist);
     likelihood_integral->data.zp_dist   = NC_GALAXY_SD_Z_PROXY (self->zp_dist);
     likelihood_integral->data.s_dist    = NC_GALAXY_SD_SHAPE (self->s_dist);
     likelihood_integral->data.cosmo     = cosmo;
@@ -714,7 +736,7 @@ nc_data_cluster_wl_kde_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHa
   glong in_cut                        = 0;
   guint gal_i;
 
-  if ((self->obs != NULL) && (self->data != NULL))
+  if (self->data != NULL)
     g_assert_cmpuint (ncm_matrix_ncols (self->data), ==, 4);
   else
     g_error ("Weak lensing observables matrix is not set.");
@@ -805,11 +827,10 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
  * nc_data_cluster_wl_new:
  * @s_dist: a #NcGalaxySDShape
  * @zp_dist: a #NcGalaxySDZProxy
- * @pos_dist: a #NcGalaxySDPosition
+ * @rz_dist: a #NcGalaxySDPosition
  * @z_cluster: cluster (halo) redshift
  * @ra_cluster: cluster (halo) right ascension in radians
  * @dec_cluster: cluster (halo) declination in radians
- * @coord: a #NcDataClusterWLCoord
  *
  * Creates a new galaxy weak lensing object.
  * Requires an instance of #NcGalaxySDShape, #NcGalaxySDZProxy, and #NcGalaxySDPosition.
@@ -817,12 +838,12 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
  * Returns: (transfer full): a new NcDataClusterWL.
  */
 NcDataClusterWL *
-nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *pos_dist, gdouble z_cluster, gdouble ra_cluster, gdouble dec_cluster)
+nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDZProxy *zp_dist, NcGalaxySDPosition *rz_dist, gdouble z_cluster, gdouble ra_cluster, gdouble dec_cluster)
 {
   NcDataClusterWL *dcwl = g_object_new (NC_TYPE_DATA_CLUSTER_WL,
                                         "s-dist", s_dist,
                                         "zp-dist", zp_dist,
-                                        "rz-dist", pos_dist,
+                                        "rz-dist", rz_dist,
                                         "z-cluster", z_cluster,
                                         "ra-cluster", ra_cluster,
                                         "dec-cluster", dec_cluster,
@@ -938,7 +959,7 @@ void
 nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs)
 {
   NcDataClusterWLPrivate * const self = dcwl->priv;
-  NcDistance *dist                    = nc_distance_new (1100);
+  NcDistance *dist                    = nc_distance_new (1100.0);
   GArray *arr                         = g_array_new (FALSE, FALSE, sizeof (gdouble));
   NcmMatrix *data;
   guint gal_i;
@@ -946,6 +967,7 @@ nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs)
   g_assert_cmpuint (nc_galaxy_wl_obs_len (obs), >, 0);
 
   nc_galaxy_wl_obs_clear (&self->obs);
+  ncm_matrix_clear (&self->data);
 
   for (gal_i = 0; gal_i < nc_galaxy_wl_obs_len (obs); gal_i++)
   {
@@ -955,7 +977,7 @@ nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs)
     gdouble e1    = nc_galaxy_wl_obs_get (obs, gal_i, 3);
     gdouble e2    = nc_galaxy_wl_obs_get (obs, gal_i, 4);
     gdouble theta = acos (sin (dec) * sin (self->dec_cluster) + cos (dec) * cos (self->dec_cluster) * cos (ra - self->ra_cluster));
-    gdouble phi;
+    gdouble phi2;
     gdouble et;
     gdouble ex;
 
@@ -974,9 +996,9 @@ nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs)
           break;
       }
 
-      et = -(e1 * cos (2.0 * phi) + e2 * sin (2.0 * phi));
+      et = -(e1 * cos (phi2) + e2 * sin (phi2));
 
-      ex = e1 * sin (2.0 * phi) - e2 * cos (2.0 * phi);
+      ex = e1 * sin (phi2) - e2 * cos (phi2);
 
       g_array_append_val (arr, theta);
       g_array_append_val (arr, z);
@@ -1010,6 +1032,9 @@ nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble theta_min, cons
 
   self->theta_min = theta_min;
   self->theta_max = theta_max;
+
+  if (self->obs != NULL)
+    nc_data_cluster_wl_set_obs (dcwl, self->obs);
 }
 
 /**
@@ -1030,6 +1055,9 @@ nc_data_cluster_wl_gen_data (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDens
   NcmMatrix *obs                      = ncm_matrix_new (nobs, 4);
   NcmVector *sample                   = ncm_vector_new (4);
   guint i;
+
+  if (self->data != NULL)
+    ncm_matrix_clear (&self->data);
 
   for (i = 0; i < nobs; i++)
   {
@@ -1057,6 +1085,7 @@ nc_data_cluster_wl_gen_data (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDens
   }
 
   self->data = obs;
+  self->len  = ncm_matrix_nrows (obs);
 
   ncm_vector_free (sample);
 }
