@@ -23,14 +23,18 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _nc_galaxy_wl_obs_H
-#define _nc_galaxy_wl_obs_H
+#ifndef _NC_GALAXY_WL_OBS_H
+#define _NC_GALAXY_WL_OBS_H
 
 #include <glib.h>
 #include <glib-object.h>
+#include <stdarg.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/nc_enum_types.h>
+#include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/math/ncm_obj_array.h>
+#include <numcosmo/math/ncm_spline.h>
+
 
 G_BEGIN_DECLS
 
@@ -46,27 +50,31 @@ typedef enum _NcGalaxyWLObsCoord
   NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
 } NcGalaxyWLObsCoord;
 
+struct _NcGalaxyWLObsClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
 
 struct _NcGalaxyWLObs
 {
   /*< private >*/
   GObject parent_instance;
   NcGalaxyWLObsPrivate *priv;
-  NcmMatrix *data;
-  NcGalaxyWLObsCoord coord;
-  gdouble len;
 };
 
-NcGalaxyWLObs *nc_galaxy_wl_obs_new (const guint nrows, NcGalaxyWLObsCoord coord);
+NcGalaxyWLObs *nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, gdouble nrows, ...);
 
-void nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const guint i, const guint j, gdouble val);
-gdouble nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const guint i, const guint j);
+void nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdouble val);
+void nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcmSpline *pz);
 
-NcmMatrix *nc_galaxy_wl_obs_get_data (NcGalaxyWLObs *obs);
-void nc_galaxy_wl_obs_set_data (NcGalaxyWLObs *obs, NcmMatrix *data);
+gdouble nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint i);
+NcmSpline *nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i);
 
-NcGalaxyWLObsCoord nc_galaxy_wl_obs_get_coord (NcGalaxyWLObs *obs);
+NcmVarDict *nc_galaxy_wl_obs_peek_header (NcGalaxyWLObs *obs);
+
 void nc_galaxy_wl_obs_set_coord (NcGalaxyWLObs *obs, NcGalaxyWLObsCoord coord);
+NcGalaxyWLObsCoord nc_galaxy_wl_obs_get_coord (NcGalaxyWLObs *obs);
 
 gdouble nc_galaxy_wl_obs_len (NcGalaxyWLObs *obs);
 
@@ -76,5 +84,5 @@ void nc_galaxy_wl_obs_clear (NcGalaxyWLObs **obs);
 
 G_END_DECLS
 
-#endif /* _nc_galaxy_wl_obs_H */
+#endif /* _NC_GALAXY_WL_OBS_H */
 
