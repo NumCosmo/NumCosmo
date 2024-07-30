@@ -139,8 +139,8 @@ c_tests = [
         'timeout': 0,
     },
     {
-        'name': 'ncm_utils',
-        'sources': ['test_ncm_utils.c'],
+        'name': 'ncm_util',
+        'sources': ['test_ncm_util.c'],
     },
     {
         'name': 'nc_halo_bias',

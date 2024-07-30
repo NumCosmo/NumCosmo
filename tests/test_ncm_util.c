@@ -1,5 +1,5 @@
 /***************************************************************************
- *            test_ncm_utils.c
+ *            test_ncm_util.c
  *
  *  Tue July 30 19:54:22 2024
  *  Copyright  2024  Caio Lima de Oliveira
