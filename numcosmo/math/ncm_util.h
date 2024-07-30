@@ -111,6 +111,8 @@ NCM_INLINE void ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble
 
 NCM_INLINE gdouble ncm_util_position_angle (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2);
 NCM_INLINE gdouble ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2);
+NCM_INLINE gdouble ncm_util_projected_radius (gdouble theta, gdouble d);
+NCM_INLINE void ncm_util_polar_angles (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2, gdouble *theta, gdouble *phi);
 
 
 
@@ -215,7 +217,7 @@ void _ncm_util_set_destroyed (gpointer b);
         }                                                  \
         G_STMT_END
 
-G_END_DECLS
+  G_END_DECLS
 #endif /* _NCM_UTIL_H_ */
 
 #ifndef _NCM_UTIL_INLINE_H_
@@ -354,6 +356,29 @@ ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gdouble ra2, gdouble 
   const gdouble denom       = d1 + d2;
 
   return atan2 (num, denom) / deg2rad;
+}
+
+NCM_INLINE gdouble
+ncm_util_projected_radius (gdouble theta, gdouble d)
+{
+  return d * sin (theta);
+}
+
+NCM_INLINE void
+ncm_util_polar_angles (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2, gdouble *theta, gdouble *phi)
+{
+  const gdouble deg2rad  = M_PI / 180.0;
+  const gdouble ra1_rad  = ra1 * deg2rad;
+  const gdouble dec1_rad = dec1 * deg2rad;
+  const gdouble ra2_rad  = ra2 * deg2rad;
+  const gdouble dec2_rad = dec2 * deg2rad;
+  const gdouble raDelta  = ra2_rad - ra1_rad;
+  const gdouble decDelta = dec2_rad - dec1_rad;
+  const gdouble xDelta   = raDelta * cos (dec1_rad);
+  const gdouble yDelta   = decDelta;
+
+  *theta = acos (sin (dec2_rad) * sin (dec1_rad) + cos (dec2_rad) * cos (dec1_rad) * cos (raDelta));
+  *phi   = atan2 (yDelta, xDelta);
 }
 
 /* NcmComplex methods */
