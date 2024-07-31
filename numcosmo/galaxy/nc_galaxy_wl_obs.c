@@ -47,8 +47,9 @@
 
 struct _NcGalaxyWLObsPrivate
 {
-  NcmObjArray *data;
+  NcmMatrix *data;
   NcmVarDict *header;
+  NcmObjArray *pz;
   NcGalaxyWLObsCoord coord;
   gdouble len;
 };
@@ -57,6 +58,7 @@ enum
 {
   PROP_0,
   PROP_DATA,
+  PROP_PZ,
   PROP_HEADER,
   PROP_COORD,
   PROP_LEN,
@@ -71,6 +73,7 @@ nc_galaxy_wl_obs_init (NcGalaxyWLObs *obs)
 
   self->data   = NULL;
   self->header = NULL;
+  self->pz     = NULL;
   self->coord  = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
   self->len    = 0;
 }
@@ -78,7 +81,7 @@ nc_galaxy_wl_obs_init (NcGalaxyWLObs *obs)
 static void
 nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcGalaxyWLObs *obs         = NC_GALAXY_WL_OBS (object);
+  NcGalaxyWLObs *obs                = NC_GALAXY_WL_OBS (object);
   NcGalaxyWLObsPrivate * const self = obs->priv;
 
   switch (prop_id)
@@ -105,10 +108,19 @@ static void
 nc_galaxy_wl_obs_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcGalaxyWLObs *obs         = NC_GALAXY_WL_OBS (object);
-  NcGalaxyWLObsPrivate *priv = obs->priv;
+  NcGalaxyWLObsPrivate *self = obs->priv;
 
   switch (prop_id)
   {
+    case PROP_DATA:
+      self->data = g_value_dup_object (value);
+      break;
+    case PROP_PZ:
+      self->pz = g_value_dup_boxed (value);
+      break;
+    case PROP_HEADER:
+      self->header = g_value_dup_boxed (value);
+      break;
     case PROP_COORD:
       nc_galaxy_wl_obs_set_coord (obs, g_value_get_enum (value));
       break;
@@ -127,7 +139,10 @@ nc_galaxy_wl_obs_dispose (GObject *object)
   ncm_var_dict_clear (&self->header);
 
   if (self->data)
-    ncm_obj_array_clear (&self->data);
+    ncm_matrix_clear (&self->data);
+
+  if (self->pz)
+    ncm_obj_array_clear (&self->pz);
 
   G_OBJECT_CLASS (nc_galaxy_wl_obs_parent_class)->dispose (object);
 }
@@ -163,9 +178,23 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
    */
   g_object_class_install_property (object_class,
                                    PROP_DATA,
-                                   g_param_spec_boxed ("data",
-                                                       "Data",
-                                                       "Weak lensing observation data",
+                                   g_param_spec_object ("data",
+                                                        "Data",
+                                                        "Weak lensing observation data matrix",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+
+  /**
+   * NcGalaxyWLObs:pz:
+   *
+   * P(z) splines.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_PZ,
+                                   g_param_spec_boxed ("pz",
+                                                       "P(z)",
+                                                       "P(z) splines",
                                                        NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
@@ -203,56 +232,41 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
  * nc_galaxy_wl_obs_new:
  * @coord: the coordinate system used to store the data.
  * @nrows: the number of data rows.
- * @...: the data columns names, must end with NULL.
+ * @col_names: a #GStrv.
  *
  * Creates a new #NcGalaxyWLObs object.
  *
  * Returns: (transfer full): a new #NcGalaxyWLObs object.
  */
 NcGalaxyWLObs *
-nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, gdouble nrows, ...)
+nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names)
 {
   NcmVarDict *header = ncm_var_dict_new ();
-  NcmObjArray *data  = ncm_obj_array_sized_new (nrows);
+  NcmMatrix *data    = ncm_matrix_new (nrows, g_strv_length (col_names));
   gboolean has_pz    = FALSE;
-  gint i             = 0;
   NcGalaxyWLObs *obs;
-  va_list args;
-  gint j;
+  gchar **str;
+  guint i;
+  guint j;
 
-  va_start (args, nrows);
+  i = 0;
 
-  while (TRUE)
+  for (str = col_names; *str; str++)
   {
-    const gchar *key = va_arg (args, const gchar *);
-
-    if (!key)
-      break;
-
-    if (g_strcmp0 (key, "pz") == 0)
+    if (g_strcmp0 (*str, "pz"))
     {
-      has_pz = TRUE;
+      ncm_var_dict_set_int (header, *str, i);
+      i++;
     }
     else
     {
-      ncm_var_dict_set_int (header, key, i);
-      i++;
+      has_pz = TRUE;
     }
-  }
-
-  va_end (args);
-
-  for (j = 0; j < nrows; j++)
-  {
-    NcmObjArray *data_i = ncm_obj_array_sized_new (2);
-    NcmVector *vec      = ncm_vector_new (i + 1);
-
-    ncm_obj_array_set (data_i, 0, G_OBJECT (vec));
-    ncm_obj_array_set (data, j, G_OBJECT (data_i));
   }
 
   obs = g_object_new (NC_TYPE_GALAXY_WL_OBS,
                       "data", data,
+                      "pz", has_pz ? ncm_obj_array_sized_new (nrows) : NULL,
                       "header", header,
                       "coord", coord,
                       NULL);
@@ -274,18 +288,13 @@ void
 nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdouble val)
 {
   NcGalaxyWLObsPrivate * const self = obs->priv;
-  NcmObjArray *data_i               = NCM_OBJ_ARRAY (ncm_obj_array_peek (self->data, i));
-  NcmVarDict *header                = self->header;
-  NcmVector *vec;
   gint j;
 
   if (g_strcmp0 (col, "pz") == 0)
     g_error ("nc_galaxy_wl_obs_set: call nc_galaxy_wl_obs_set_pz to set P(z) splines.");
 
-  vec = NCM_VECTOR (ncm_obj_array_peek (data_i, 0));
-
-  ncm_var_dict_get_int (header, col, &j);
-  ncm_vector_set (vec, j, val);
+  ncm_var_dict_get_int (self->header, col, &j);
+  ncm_matrix_set (self->data, i, j, val);
 }
 
 /**
@@ -301,9 +310,8 @@ void
 nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcmSpline *pz)
 {
   NcGalaxyWLObsPrivate * const self = obs->priv;
-  NcmObjArray *data_i               = NCM_OBJ_ARRAY (ncm_obj_array_peek (self->data, i));
 
-  ncm_obj_array_set (data_i, 1, G_OBJECT (pz));
+  ncm_obj_array_set (self->pz, i, G_OBJECT (pz));
 }
 
 /**
@@ -319,19 +327,14 @@ gdouble
 nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint i)
 {
   NcGalaxyWLObsPrivate * const self = obs->priv;
-  NcmObjArray *data_i               = NCM_OBJ_ARRAY (ncm_obj_array_peek (self->data, i));
-  NcmVarDict *header                = self->header;
-  NcmVector *vec;
   gint j;
 
   if (g_strcmp0 (col, "pz") == 0)
     g_error ("nc_galaxy_wl_obs_get: call nc_galaxy_wl_obs_get_pz to get P(z) splines.");
 
-  ncm_var_dict_get_int (header, col, &j);
+  ncm_var_dict_get_int (self->header, col, &j);
 
-  vec = NCM_VECTOR (ncm_obj_array_peek (data_i, 0));
-
-  return ncm_vector_get (vec, j);
+  return ncm_matrix_get (self->data, i, j);
 }
 
 /**
@@ -348,9 +351,8 @@ NcmSpline *
 nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i)
 {
   NcGalaxyWLObsPrivate * const self = obs->priv;
-  NcmObjArray *data_i               = NCM_OBJ_ARRAY (ncm_obj_array_peek (self->data, i));
 
-  return NCM_SPLINE (ncm_obj_array_peek (data_i, 1));
+  return NCM_SPLINE (ncm_obj_array_peek (self->pz, i));
 }
 
 /**
@@ -415,7 +417,7 @@ nc_galaxy_wl_obs_len (NcGalaxyWLObs *obs)
 {
   NcGalaxyWLObsPrivate * const self = obs->priv;
 
-  return ncm_obj_array_len (self->data);
+  return ncm_matrix_nrows (self->data);
 }
 
 /**

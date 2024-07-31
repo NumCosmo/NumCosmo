@@ -63,7 +63,7 @@ struct _NcGalaxyWLObs
   NcGalaxyWLObsPrivate *priv;
 };
 
-NcGalaxyWLObs *nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, gdouble nrows, ...);
+NcGalaxyWLObs *nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names);
 
 void nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdouble val);
 void nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcmSpline *pz);
