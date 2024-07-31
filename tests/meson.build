@@ -225,6 +225,10 @@ c_tests = [
         'sources': ['test_nc_data_cluster_wl.c'],
     },
     {
+        'name': 'nc_galaxy_wl_obs',
+        'sources': ['test_nc_galaxy_wl_obs.c'],
+    },
+    {
         'name': 'nc_galaxy_sd_position',
         'sources': ['test_nc_galaxy_sd_position.c'],
     },
