@@ -93,7 +93,7 @@ nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, GP
       g_value_set_boxed (value, self->pz);
       break;
     case PROP_HEADER:
-      g_value_set_object (value, nc_galaxy_wl_obs_peek_header (obs));
+      g_value_set_boxed (value, self->header);
       break;
     case PROP_COORD:
       g_value_set_enum (value, nc_galaxy_wl_obs_get_coord (obs));
@@ -295,8 +295,15 @@ nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdoub
   if (g_strcmp0 (col, "pz") == 0)
     g_error ("nc_galaxy_wl_obs_set: call nc_galaxy_wl_obs_set_pz to set P(z) splines.");
 
-  ncm_var_dict_get_int (self->header, col, &j);
-  ncm_matrix_set (self->data, i, j, val);
+  if (!ncm_var_dict_has_key (self->header, col))
+  {
+    g_error ("nc_galaxy_wl_obs_set: column '%s' not found.", col);
+  }
+  else
+  {
+    ncm_var_dict_get_int (self->header, col, &j);
+    ncm_matrix_set (self->data, i, j, val);
+  }
 }
 
 /**

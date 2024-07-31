@@ -57,6 +57,7 @@ void test_nc_galaxy_sd_shape_gauss_basic (void);
 void test_nc_galaxy_sd_z_proxy_basic (void);
 void test_nc_galaxy_sd_z_proxy_dirac_basic (void);
 void test_nc_galaxy_sd_z_proxy_gauss_basic (void);
+void test_nc_galaxy_wl_obs_basic (void);
 void test_nc_hicosmo_qgw_basic (void);
 void test_nc_hipert_adiab_basic (void);
 void test_nc_hipert_em_basic (void);
@@ -96,6 +97,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy/sd_z_proxy/basic", test_nc_galaxy_sd_z_proxy_basic);
   g_test_add_func ("/nc/galaxy/sd_z_proxy_dirac/basic", test_nc_galaxy_sd_z_proxy_dirac_basic);
   g_test_add_func ("/nc/galaxy/sd_z_proxy_gauss/basic", test_nc_galaxy_sd_z_proxy_gauss_basic);
+  g_test_add_func ("/nc/galaxy/wl_obs/basic", test_nc_galaxy_wl_obs_basic);
   g_test_add_func ("/nc/hicosmo/qgw/basic", test_nc_hicosmo_qgw_basic);
 
   g_test_add_func ("/nc/hipert/adiab/basic", test_nc_hipert_adiab_basic);
@@ -567,6 +569,25 @@ test_nc_galaxy_sd_z_proxy_gauss_basic (void)
   g_assert_true (NC_IS_GALAXY_SD_Z_PROXY_GAUSS (gsdzpg));
 
   NCM_TEST_FREE (nc_galaxy_sd_z_proxy_gauss_free, gsdzpg);
+}
+
+void
+test_nc_galaxy_wl_obs_basic (void)
+{
+  GStrv names        = g_strsplit ("e1 e2 ra dec z sz", " ", -1);
+  NcGalaxyWLObs *gwl = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_COORD_CELESTIAL, 100, names);
+  NcGalaxyWLObs *gwl2;
+
+  g_assert_true (gwl != NULL);
+  g_assert_true (NC_IS_GALAXY_WL_OBS (gwl));
+
+  gwl2 = nc_galaxy_wl_obs_ref (gwl);
+  nc_galaxy_wl_obs_clear (&gwl2);
+  g_assert_true (gwl2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_WL_OBS (gwl));
+
+  NCM_TEST_FREE (nc_galaxy_wl_obs_free, gwl);
 }
 
 void
