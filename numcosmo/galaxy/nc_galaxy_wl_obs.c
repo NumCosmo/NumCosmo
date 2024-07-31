@@ -49,7 +49,7 @@ struct _NcGalaxyWLObsPrivate
 {
   NcmMatrix *data;
   NcmVarDict *header;
-  NcmObjArray *pz;
+  NcmObjDictInt *pz;
   NcGalaxyWLObsCoord coord;
   gdouble len;
 };
@@ -88,6 +88,9 @@ nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, GP
   {
     case PROP_DATA:
       g_value_set_object (value, self->data);
+      break;
+    case PROP_PZ:
+      g_value_set_boxed (value, self->pz);
       break;
     case PROP_HEADER:
       g_value_set_object (value, nc_galaxy_wl_obs_peek_header (obs));
@@ -142,7 +145,7 @@ nc_galaxy_wl_obs_dispose (GObject *object)
     ncm_matrix_clear (&self->data);
 
   if (self->pz)
-    ncm_obj_array_clear (&self->pz);
+    ncm_obj_dict_int_clear (&self->pz);
 
   G_OBJECT_CLASS (nc_galaxy_wl_obs_parent_class)->dispose (object);
 }
@@ -195,7 +198,7 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
                                    g_param_spec_boxed ("pz",
                                                        "P(z)",
                                                        "P(z) splines",
-                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       NCM_TYPE_OBJ_DICT_INT,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
   /**
@@ -241,13 +244,12 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
 NcGalaxyWLObs *
 nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names)
 {
+  NcmObjDictInt *pz  = ncm_obj_dict_int_new ();
   NcmVarDict *header = ncm_var_dict_new ();
   NcmMatrix *data    = ncm_matrix_new (nrows, g_strv_length (col_names));
-  gboolean has_pz    = FALSE;
   NcGalaxyWLObs *obs;
   gchar **str;
   guint i;
-  guint j;
 
   i = 0;
 
@@ -260,13 +262,13 @@ nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names)
     }
     else
     {
-      has_pz = TRUE;
+      ncm_var_dict_set_boolean (header, *str, TRUE);
     }
   }
 
   obs = g_object_new (NC_TYPE_GALAXY_WL_OBS,
                       "data", data,
-                      "pz", has_pz ? ncm_obj_array_sized_new (nrows) : NULL,
+                      "pz", pz,
                       "header", header,
                       "coord", coord,
                       NULL);
@@ -311,7 +313,7 @@ nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcmSpline *pz)
 {
   NcGalaxyWLObsPrivate * const self = obs->priv;
 
-  ncm_obj_array_set (self->pz, i, G_OBJECT (pz));
+  ncm_obj_dict_int_add (self->pz, i, G_OBJECT (pz));
 }
 
 /**
@@ -352,7 +354,7 @@ nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i)
 {
   NcGalaxyWLObsPrivate * const self = obs->priv;
 
-  return NCM_SPLINE (ncm_obj_array_peek (self->pz, i));
+  return NCM_SPLINE (ncm_obj_dict_int_get (self->pz, i));
 }
 
 /**
@@ -426,6 +428,7 @@ nc_galaxy_wl_obs_len (NcGalaxyWLObs *obs)
  *
  * Increases the reference count of the #NcGalaxyWLObs object.
  *
+ * Returns: (transfer full): the #NcGalaxyWLObs object.
  */
 NcGalaxyWLObs *
 nc_galaxy_wl_obs_ref (NcGalaxyWLObs *obs)

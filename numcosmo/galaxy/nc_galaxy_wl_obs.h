@@ -64,6 +64,7 @@ struct _NcGalaxyWLObs
 };
 
 NcGalaxyWLObs *nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names);
+NcGalaxyWLObs *nc_galaxy_wl_obs_ref (NcGalaxyWLObs *obs);
 
 void nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdouble val);
 void nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcmSpline *pz);
@@ -80,6 +81,7 @@ gdouble nc_galaxy_wl_obs_len (NcGalaxyWLObs *obs);
 
 static void nc_galaxy_wl_obs_dispose (GObject *object);
 static void nc_galaxy_wl_obs_finalize (GObject *object);
+void nc_galaxy_wl_obs_free (NcGalaxyWLObs *obs);
 void nc_galaxy_wl_obs_clear (NcGalaxyWLObs **obs);
 
 G_END_DECLS
