@@ -114,8 +114,6 @@ NCM_INLINE gdouble ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gd
 NCM_INLINE gdouble ncm_util_projected_radius (gdouble theta, gdouble d);
 NCM_INLINE void ncm_util_polar_angles (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2, gdouble *theta, gdouble *phi);
 
-
-
 /* Macros */
 
 #define ncm_acb_get_complex(z) (arf_get_d (arb_midref (acb_realref (z)), ARF_RND_NEAR) + I * arf_get_d (arb_midref (acb_imagref (z)), ARF_RND_NEAR))
