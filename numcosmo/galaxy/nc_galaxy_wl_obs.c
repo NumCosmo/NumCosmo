@@ -51,7 +51,7 @@ struct _NcGalaxyWLObsPrivate
   NcmVarDict *header;
   NcmObjDictInt *pz;
   NcGalaxyWLObsCoord coord;
-  gdouble len;
+  guint len;
 };
 
 enum
@@ -97,9 +97,6 @@ nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, GP
       break;
     case PROP_COORD:
       g_value_set_enum (value, nc_galaxy_wl_obs_get_coord (obs));
-      break;
-    case PROP_LEN:
-      g_value_set_double (value, nc_galaxy_wl_obs_len (obs));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
