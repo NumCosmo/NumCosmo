@@ -42,12 +42,11 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-/* #include "nc_enum_types.h" */
+#include "math.h"
+#include "gsl/gsl_math.h"
 #include "galaxy/nc_galaxy_sd_position_flat.h"
 #include "galaxy/nc_galaxy_sd_position.h"
 #include "math/ncm_dtuple.h"
-#include <math.h>
-#include <gsl/gsl_math.h>
 
 typedef struct _NcGalaxySDPositionFlatPrivate
 {
@@ -57,6 +56,7 @@ typedef struct _NcGalaxySDPositionFlatPrivate
   gdouble dec_lb;
   gdouble dec_ub;
   gdouble dec_norm;
+  GStrv header;
 } NcGalaxySDPositionFlatPrivate;
 
 struct _NcGalaxySDPositionFlat
@@ -83,6 +83,7 @@ nc_galaxy_sd_position_flat_init (NcGalaxySDPositionFlat *gsdpflat)
   self->dec_lb   = 0.0;
   self->dec_ub   = 0.0;
   self->dec_norm = 0.0;
+  self->header   = NULL;
 }
 
 static void
@@ -101,11 +102,13 @@ _nc_galaxy_sd_position_flat_finalize (GObject *object)
 
 static gdouble _nc_galaxy_sd_position_flat_gen_ra (NcGalaxySDPosition *gsdp, NcmRNG *rng);
 static gdouble _nc_galaxy_sd_position_flat_gen_dec (NcGalaxySDPosition *gsdp, NcmRNG *rng);
-static gdouble _nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, const gdouble ra, const gdouble dec);
-static void _nc_galaxy_sd_position_flat_set_ra_lim (NcGalaxySDPosition *gsdp, gdouble ra_min, gdouble ra_max);
-static void _nc_galaxy_sd_position_flat_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
-static void _nc_galaxy_sd_position_flat_set_dec_lim (NcGalaxySDPosition *gsdp, gdouble dec_min, gdouble dec_max);
-static void _nc_galaxy_sd_position_flat_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
+static gdouble _nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, NcmVector *data);
+static gboolean _nc_galaxy_sd_position_flat_set_ra_lim (NcGalaxySDPosition *gsdp, gdouble ra_min, gdouble ra_max);
+static gboolean _nc_galaxy_sd_position_flat_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
+static gboolean _nc_galaxy_sd_position_flat_set_dec_lim (NcGalaxySDPosition *gsdp, gdouble dec_min, gdouble dec_max);
+static gboolean _nc_galaxy_sd_position_flat_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
+static gboolean _nc_galaxy_sd_position_flat_set_header (NcGalaxySDPosition *gsdp, GStrv header);
+static GStrv _nc_galaxy_sd_position_flat_get_header (NcGalaxySDPosition *gsdp);
 
 static void
 nc_galaxy_sd_position_flat_class_init (NcGalaxySDPositionFlatClass *klass)
@@ -129,6 +132,8 @@ nc_galaxy_sd_position_flat_class_init (NcGalaxySDPositionFlatClass *klass)
   sd_position_class->get_ra_lim  = &_nc_galaxy_sd_position_flat_get_ra_lim;
   sd_position_class->set_dec_lim = &_nc_galaxy_sd_position_flat_set_dec_lim;
   sd_position_class->get_dec_lim = &_nc_galaxy_sd_position_flat_get_dec_lim;
+  sd_position_class->set_header  = &_nc_galaxy_sd_position_flat_set_header;
+  sd_position_class->get_header  = &_nc_galaxy_sd_position_flat_get_header;
 }
 
 static gdouble
@@ -150,18 +155,20 @@ _nc_galaxy_sd_position_flat_gen_dec (NcGalaxySDPosition *gsdp, NcmRNG *rng)
 }
 
 static gdouble
-_nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, const gdouble r, const gdouble z)
+_nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, NcmVector *data)
 {
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
+  gdouble ra = ncm_vector_get (data, 0);
+  gdouble dec = ncm_vector_get (data, 1);
 
-  if ((z >= self->ra_lb) && (z <= self->ra_ub) && (r >= self->dec_lb) && (r <= self->dec_ub))
+  if ((ra >= self->ra_lb) && (ra <= self->ra_ub) && (dec >= self->dec_lb) && (dec <= self->dec_ub))
     return self->ra_norm * self->dec_norm;
 
   return 0.0;
 }
 
-static void
+static gboolean
 _nc_galaxy_sd_position_flat_set_ra_lim (NcGalaxySDPosition *gsdp, gdouble ra_min, gdouble ra_max)
 {
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
@@ -172,9 +179,11 @@ _nc_galaxy_sd_position_flat_set_ra_lim (NcGalaxySDPosition *gsdp, gdouble ra_min
   self->ra_lb   = ra_min;
   self->ra_ub   = ra_max;
   self->ra_norm = 1.0 / (self->ra_ub - self->ra_lb);
+  
+  return TRUE;
 }
 
-static void
+static gboolean
 _nc_galaxy_sd_position_flat_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max)
 {
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
@@ -185,9 +194,11 @@ _nc_galaxy_sd_position_flat_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_mi
 
   *ra_min = self->ra_lb;
   *ra_max = self->ra_ub;
+
+  return TRUE;
 }
 
-static void
+static gboolean
 _nc_galaxy_sd_position_flat_set_dec_lim (NcGalaxySDPosition *gsdp, gdouble dec_min, gdouble dec_max)
 {
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
@@ -198,9 +209,11 @@ _nc_galaxy_sd_position_flat_set_dec_lim (NcGalaxySDPosition *gsdp, gdouble dec_m
   self->dec_lb   = dec_min;
   self->dec_ub   = dec_max;
   self->dec_norm = 1.0 / (self->dec_ub - self->dec_lb);
+
+  return TRUE;
 }
 
-static void
+static gboolean
 _nc_galaxy_sd_position_flat_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max)
 {
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
@@ -211,6 +224,31 @@ _nc_galaxy_sd_position_flat_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_
 
   *dec_min = self->dec_lb;
   *dec_max = self->dec_ub;
+
+  return TRUE;
+}
+
+static gboolean
+_nc_galaxy_sd_position_flat_set_header (NcGalaxySDPosition *gsdp, GStrv header)
+{
+  NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
+  NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
+
+  g_assert_cmpint (g_strv_length (header), ==, 2);
+
+  g_clear_pointer (&self->header, g_strfreev);
+  self->header = g_strdupv (header);
+
+  return TRUE;
+}
+
+static GStrv
+_nc_galaxy_sd_position_flat_get_header (NcGalaxySDPosition *gsdp)
+{
+  NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
+  NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
+
+  return g_strdupv (self->header);
 }
 
 /**
@@ -225,14 +263,21 @@ _nc_galaxy_sd_position_flat_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_
  * Returns: (transfer full): a new NcGalaxySDPositionFlat.
  */
 NcGalaxySDPositionFlat *
-nc_galaxy_sd_position_flat_new (const gdouble ra_min, const gdouble ra_max, const gdouble dec_min, const gdouble dec_max)
+nc_galaxy_sd_position_flat_new (const gdouble ra_min, const gdouble ra_max, const gdouble dec_min, const gdouble dec_max, GStrv header)
 {
-  NcmDTuple2 ra_lim                = NCM_DTUPLE2_STATIC_INIT (ra_min, ra_max);
-  NcmDTuple2 dec_lim               = NCM_DTUPLE2_STATIC_INIT (dec_min, dec_max);
-  NcGalaxySDPositionFlat *gsdpflat = g_object_new (NC_TYPE_GALAXY_SD_POSITION_FLAT,
-                                                   "ra-lim", &ra_lim,
-                                                   "dec-lim", &dec_lim,
-                                                   NULL);
+  NcmDTuple2 ra_lim  = NCM_DTUPLE2_STATIC_INIT (ra_min, ra_max);
+  NcmDTuple2 dec_lim = NCM_DTUPLE2_STATIC_INIT (dec_min, dec_max);
+  NcGalaxySDPositionFlat *gsdpflat;
+
+  g_assert_cmpfloat (ra_min, <, ra_max);
+  g_assert_cmpfloat (dec_min, <, dec_max);
+  g_assert_cmpint (g_strv_length (header), ==, 2);
+
+  gsdpflat = g_object_new (NC_TYPE_GALAXY_SD_POSITION_FLAT,
+                           "ra-lim", &ra_lim,
+                           "dec-lim", &dec_lim,
+                           "header", header,
+                           NULL);
 
   return gsdpflat;
 }

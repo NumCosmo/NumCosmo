@@ -29,7 +29,6 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_position.h>
 
@@ -39,7 +38,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcGalaxySDPositionFlat, nc_galaxy_sd_position_flat, NC, GALAXY_SD_POSITION_FLAT, NcGalaxySDPosition)
 
-NcGalaxySDPositionFlat *nc_galaxy_sd_position_flat_new (const gdouble ra_min, const gdouble ra_max, const gdouble dec_min, const gdouble dec_max);
+NcGalaxySDPositionFlat *nc_galaxy_sd_position_flat_new (const gdouble ra_min, const gdouble ra_max, const gdouble dec_min, const gdouble dec_max, GStrv header);
 NcGalaxySDPositionFlat *nc_galaxy_sd_position_flat_ref (NcGalaxySDPositionFlat *gsdpflat);
 
 void nc_galaxy_sd_position_flat_free (NcGalaxySDPositionFlat *gsdpflat);

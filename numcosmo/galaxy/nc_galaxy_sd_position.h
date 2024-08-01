@@ -48,11 +48,13 @@ struct _NcGalaxySDPositionClass
 
   gdouble (*gen_ra) (NcGalaxySDPosition *gsdp, NcmRNG *rng);
   gdouble (*gen_dec) (NcGalaxySDPosition *gsdp, NcmRNG *rng);
-  gdouble (*integ) (NcGalaxySDPosition *gsdp, const gdouble ra, const gdouble dec);
-  void (*set_ra_lim) (NcGalaxySDPosition *gsdp, const gdouble ra_min, const gdouble ra_max);
-  void (*set_dec_lim) (NcGalaxySDPosition *gsdp, const gdouble dec_min, const gdouble dec_max);
-  void (*get_ra_lim) (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
-  void (*get_dec_lim) (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
+  gdouble (*integ) (NcGalaxySDPosition *gsdp, NcmVector *data);
+  gboolean (*set_ra_lim) (NcGalaxySDPosition *gsdp, const gdouble ra_min, const gdouble ra_max);
+  gboolean (*set_dec_lim) (NcGalaxySDPosition *gsdp, const gdouble dec_min, const gdouble dec_max);
+  gboolean (*set_header) (NcGalaxySDPosition *gsdp, const GStrv header);
+  gboolean (*get_ra_lim) (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
+  gboolean (*get_dec_lim) (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
+  gboolean (*get_header) (NcGalaxySDPosition *gsdp);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[11];
@@ -65,14 +67,16 @@ NcGalaxySDPosition *nc_galaxy_sd_position_ref (NcGalaxySDPosition *gsdp);
 void nc_galaxy_sd_position_free (NcGalaxySDPosition *gsdp);
 void nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp);
 
-void nc_galaxy_sd_position_set_ra_lim (NcGalaxySDPosition *gsdp, const gdouble ra_min, const gdouble ra_max);
-void nc_galaxy_sd_position_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
-void nc_galaxy_sd_position_set_dec_lim (NcGalaxySDPosition *gsdp, const gdouble dec_min, const gdouble dec_max);
-void nc_galaxy_sd_position_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
+gboolean nc_galaxy_sd_position_set_ra_lim (NcGalaxySDPosition *gsdp, const gdouble ra_min, const gdouble ra_max);
+gboolean nc_galaxy_sd_position_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
+gboolean nc_galaxy_sd_position_set_dec_lim (NcGalaxySDPosition *gsdp, const gdouble dec_min, const gdouble dec_max);
+gboolean nc_galaxy_sd_position_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
+gboolean nc_galaxy_sd_position_set_header (NcGalaxySDPosition *gsdp, const GStrv header);
+GStrv nc_galaxy_sd_position_get_header (NcGalaxySDPosition *gsdp);
 
 gdouble nc_galaxy_sd_position_gen_ra (NcGalaxySDPosition *gsdp, NcmRNG *rng);
 gdouble nc_galaxy_sd_position_gen_dec (NcGalaxySDPosition *gsdp, NcmRNG *rng);
-gdouble nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, const gdouble ra, const gdouble dec);
+gdouble nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, NcmVector *data);
 
 G_END_DECLS
 
