@@ -130,20 +130,20 @@ _nc_galaxy_sd_redshift_gen (NcGalaxySDRedshift *gsdr, NcmRNG *rng)
 }
 
 static gdouble
-_nc_galaxy_sd_redshift_integ (NcGalaxySDRedshift *gsdr, const gdouble z)
+_nc_galaxy_sd_redshift_integ (NcGalaxySDRedshift *gsdr, NcmVector *data)
 {
   g_error ("_nc_galaxy_sd_redshift_integ: not implemented");
 
   return 0.0;
 }
 
-static void
+static gboolean
 _nc_galaxy_sd_redshift_set_lim (NcGalaxySDRedshift *gsdr, const gdouble z_min, const gdouble z_max)
 {
   g_error ("_nc_galaxy_sd_redshift_set_lim: not implemented");
 }
 
-static void
+static gboolean
 _nc_galaxy_sd_redshift_get_lim (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdouble *z_max)
 {
   g_error ("_nc_galaxy_sd_redshift_get_lim: not implemented");
@@ -178,7 +178,7 @@ nc_galaxy_sd_redshift_class_init (NcGalaxySDRedshiftClass *klass)
                                                        NCM_TYPE_DTUPLE2,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  NCM_MODEL_CLASS_CHECK_PARAMS_INFO (NCM_MODEL_CLASS (klass));
+  ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
 
   klass->gen     = &_nc_galaxy_sd_redshift_gen;
   klass->integ   = &_nc_galaxy_sd_redshift_integ;
@@ -236,7 +236,7 @@ nc_galaxy_sd_redshift_clear (NcGalaxySDRedshift **gsdr)
  * Sets the redshift limits of the galaxy sample redshift distribution.
  *
  */
-void
+gboolean
 nc_galaxy_sd_redshift_set_lim (NcGalaxySDRedshift *gsdr, const gdouble z_min, const gdouble z_max)
 {
   NC_GALAXY_SD_REDSHIFT_GET_CLASS (gsdr)->set_lim (gsdr, z_min, z_max);
@@ -251,7 +251,7 @@ nc_galaxy_sd_redshift_set_lim (NcGalaxySDRedshift *gsdr, const gdouble z_min, co
  * Gets the redshift limits of the galaxy sample redshift distribution.
  *
  */
-void
+gboolean
 nc_galaxy_sd_redshift_get_lim (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdouble *z_max)
 {
   NC_GALAXY_SD_REDSHIFT_GET_CLASS (gsdr)->get_lim (gsdr, z_min, z_max);
@@ -282,8 +282,8 @@ nc_galaxy_sd_redshift_gen (NcGalaxySDRedshift *gsdr, NcmRNG *rng)
  * Returns: the probability density at $z$, $P(z)$.
  */
 gdouble
-nc_galaxy_sd_redshift_integ (NcGalaxySDRedshift *gsdr, const gdouble z)
+nc_galaxy_sd_redshift_integ (NcGalaxySDRedshift *gsdr, NcmVector *data)
 {
-  return NC_GALAXY_SD_REDSHIFT_GET_CLASS (gsdr)->integ (gsdr, z);
+  return NC_GALAXY_SD_REDSHIFT_GET_CLASS (gsdr)->integ (gsdr, data);
 }
 

@@ -42,13 +42,14 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
+#include "math.h"
+#include "gsl/gsl_sf.h"
 #include "galaxy/nc_galaxy_sd_redshift_lsst_srd.h"
 #include "galaxy/nc_galaxy_sd_redshift.h"
 #include "math/ncm_dtuple.h"
-#include "math.h"
-#include "gsl/gsl_math.h"
-#include "gsl/gsl_randist.h"
-#include "gsl/gsl_sf.h"
+#include "math/ncm_model.h"
+#include "math/ncm_rng.h"
+#include "math/ncm_vector.h"
 
 typedef struct _NcGalaxySDRedshiftLSSTSRDPrivate
 {
@@ -97,9 +98,9 @@ _nc_galaxy_sd_redshift_lsst_srd_finalize (GObject *object)
 }
 
 static gdouble _nc_galaxy_sd_redshift_lsst_srd_gen (NcGalaxySDRedshift *gsdrlsst, NcmRNG *rng);
-static gdouble _nc_galaxy_sd_redshift_lsst_srd_integ (NcGalaxySDRedshift *gsdrlsst, const gdouble z);
-static void _nc_galaxy_sd_redshift_lsst_srd_set_lim (NcGalaxySDRedshift *gsdrlsst, const gdouble z_min, const gdouble z_max);
-static void _nc_galaxy_sd_redshift_lsst_srd_get_lim (NcGalaxySDRedshift *gsdrlsst, gdouble *z_min, gdouble *z_max);
+static gdouble _nc_galaxy_sd_redshift_lsst_srd_integ (NcGalaxySDRedshift *gsdrlsst, NcmVector *data);
+static gboolean _nc_galaxy_sd_redshift_lsst_srd_set_lim (NcGalaxySDRedshift *gsdrlsst, const gdouble z_min, const gdouble z_max);
+static gboolean _nc_galaxy_sd_redshift_lsst_srd_get_lim (NcGalaxySDRedshift *gsdrlsst, gdouble *z_min, gdouble *z_max);
 
 static void
 nc_galaxy_sd_redshift_lsst_srd_class_init (NcGalaxySDRedshiftLSSTSRDClass *klass)
@@ -156,9 +157,9 @@ nc_galaxy_sd_redshift_lsst_srd_class_init (NcGalaxySDRedshiftLSSTSRDClass *klass
 }
 
 #define VECTOR (NCM_MODEL (gsdr))
-#define ALPHA  (ncm_model_get_sparam (VECTOR, NC_GALAXY_SD_REDSHIFT_LSST_SRD_ALPHA))
-#define BETA   (ncm_model_get_sparam (VECTOR, NC_GALAXY_SD_REDSHIFT_LSST_SRD_BETA))
-#define Z0     (ncm_model_get_sparam (VECTOR, NC_GALAXY_SD_REDSHIFT_LSST_SRD_Z0))
+#define ALPHA  (ncm_model_orig_param_get (VECTOR, NC_GALAXY_SD_REDSHIFT_LSST_SRD_ALPHA))
+#define BETA   (ncm_model_orig_param_get (VECTOR, NC_GALAXY_SD_REDSHIFT_LSST_SRD_BETA))
+#define Z0     (ncm_model_orig_param_get (VECTOR, NC_GALAXY_SD_REDSHIFT_LSST_SRD_Z0))
 
 static gdouble
 _nc_galaxy_sd_redshift_lsst_srd_gen (NcGalaxySDRedshift *gsdr, NcmRNG *rng)
@@ -182,19 +183,20 @@ _nc_galaxy_sd_redshift_lsst_srd_gen (NcGalaxySDRedshift *gsdr, NcmRNG *rng)
 }
 
 static gdouble
-_nc_galaxy_sd_redshift_lsst_srd_integ (NcGalaxySDRedshift *gsdr, const gdouble z)
+_nc_galaxy_sd_redshift_lsst_srd_integ (NcGalaxySDRedshift *gsdr, NcmVector *data)
 {
   NcGalaxySDRedshiftLSSTSRD *gsdrlsst           = NC_GALAXY_SD_REDSHIFT_LSST_SRD (gsdr);
   NcGalaxySDRedshiftLSSTSRDPrivate * const self = nc_galaxy_sd_redshift_lsst_srd_get_instance_private (gsdrlsst);
   const gdouble alpha                           = ALPHA;
   const gdouble beta                            = BETA;
   const gdouble z0                              = Z0;
+  const gdouble z                               = ncm_vector_get (data, 0);
   const gdouble y                               = pow (z0, alpha);
 
   return pow (z, beta) * exp (-(y / self->y0)) * self->z_norm;
 }
 
-static void
+static gboolean
 _nc_galaxy_sd_redshift_lsst_srd_set_lim (NcGalaxySDRedshift *gsdr, const gdouble z_min, const gdouble z_max)
 {
   NcGalaxySDRedshiftLSSTSRD *gsdrlsst           = NC_GALAXY_SD_REDSHIFT_LSST_SRD (gsdr);
@@ -208,9 +210,11 @@ _nc_galaxy_sd_redshift_lsst_srd_set_lim (NcGalaxySDRedshift *gsdr, const gdouble
   self->z_ub   = z_max;
   self->y0     = pow (Z0, alpha);
   self->z_norm = alpha / pow (Z0, 1 + beta) / (gsl_sf_gamma_inc ((1 + beta) / alpha, pow (z_min / Z0, alpha)) - gsl_sf_gamma_inc ((1 + beta) / alpha, pow (z_max / Z0, alpha)));
+
+  return TRUE;
 }
 
-static void
+static gboolean
 _nc_galaxy_sd_redshift_lsst_srd_get_lim (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdouble *z_max)
 {
   NcGalaxySDRedshiftLSSTSRD *gsdrlsst           = NC_GALAXY_SD_REDSHIFT_LSST_SRD (gsdr);
@@ -221,6 +225,8 @@ _nc_galaxy_sd_redshift_lsst_srd_get_lim (NcGalaxySDRedshift *gsdr, gdouble *z_mi
 
   *z_min = self->z_lb;
   *z_max = self->z_ub;
+
+  return TRUE;
 }
 
 /**
@@ -237,7 +243,8 @@ NcGalaxySDRedshiftLSSTSRD *
 nc_galaxy_sd_redshift_lsst_srd_new (const gdouble z_min, const gdouble z_max)
 {
   NcmDTuple2 lim                      = NCM_DTUPLE2_STATIC_INIT (z_min, z_max);
-  NcGalaxySDRedshiftLSSTSRD *gsdrlsst = g_object_new (NC_TYPE_GALAXY_SD_REDSHIFT_LSST_SRD, "lim", &lim,
+  NcGalaxySDRedshiftLSSTSRD *gsdrlsst = g_object_new (NC_TYPE_GALAXY_SD_REDSHIFT_LSST_SRD,
+                                                      "lim", &lim,
                                                       NULL);
 
   return gsdrlsst;
@@ -257,7 +264,8 @@ NcGalaxySDRedshiftLSSTSRD *
 nc_galaxy_sd_redshift_lsst_srd_new_y10 (const gdouble z_min, const gdouble z_max)
 {
   NcmDTuple2 lim                      = NCM_DTUPLE2_STATIC_INIT (z_min, z_max);
-  NcGalaxySDRedshiftLSSTSRD *gsdrlsst = g_object_new (NC_TYPE_GALAXY_SD_REDSHIFT_LSST_SRD, "lim", &lim,
+  NcGalaxySDRedshiftLSSTSRD *gsdrlsst = g_object_new (NC_TYPE_GALAXY_SD_REDSHIFT_LSST_SRD,
+                                                      "lim", &lim,
                                                       "alpha", NC_GALAXY_SD_REDSHIFT_LSST_SRD_Y10_ALPHA,
                                                       "beta", NC_GALAXY_SD_REDSHIFT_LSST_SRD_Y10_BETA,
                                                       "z0", NC_GALAXY_SD_REDSHIFT_LSST_SRD_Y10_Z0,

@@ -24,8 +24,8 @@
  * You should have received a copy of the GNU General Public License along
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _NC_GALAXY_SD_POSITION_H_
-#define _NC_GALAXY_SD_POSITION_H_
+#ifndef _NC_GALAXY_SD_REDSHIFT_H_
+#define _NC_GALAXY_SD_REDSHIFT_H_
 
 #include <glib.h>
 #include <glib-object.h>
@@ -46,9 +46,9 @@ struct _NcGalaxySDRedshiftClass
   NcmModelClass parent_class;
 
   gdouble (*gen) (NcGalaxySDRedshift *gsdr, NcmRNG *rng);
-  gdouble (*integ) (NcGalaxySDRedshift *gsdr, const gdouble z);
-  void (*set_lim) (NcGalaxySDRedshift *gsdr, const gdouble z_min, const gdouble z_max);
-  void (*get_lim) (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdouble *z_max);
+  gdouble (*integ) (NcGalaxySDRedshift *gsdr, NcmVector *data);
+  gboolean (*set_lim) (NcGalaxySDRedshift *gsdr, const gdouble z_min, const gdouble z_max);
+  gboolean (*get_lim) (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdouble *z_max);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[14];
@@ -56,16 +56,16 @@ struct _NcGalaxySDRedshiftClass
 
 NCM_MSET_MODEL_DECLARE_ID (nc_galaxy_sd_redshift);
 
-NcGalaxySDRedshift *nc_galaxy_sd_redshift_ref (void);
+NcGalaxySDRedshift *nc_galaxy_sd_redshift_ref (NcGalaxySDRedshift *gsdr);
 
 void nc_galaxy_sd_redshift_free (NcGalaxySDRedshift *gsdr);
 void nc_galaxy_sd_redshift_clear (NcGalaxySDRedshift **gsdr);
 
-void nc_galaxy_sd_redshift_set_lim (NcGalaxySDRedshift *gsdr, const gdouble z_min, const gdouble z_max);
-void nc_galaxy_sd_redshift_get_lim (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdouble *z_max);
+gboolean nc_galaxy_sd_redshift_set_lim (NcGalaxySDRedshift *gsdr, const gdouble z_min, const gdouble z_max);
+gboolean nc_galaxy_sd_redshift_get_lim (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdouble *z_max);
 
 gdouble nc_galaxy_sd_redshift_gen (NcGalaxySDRedshift *gsdr, NcmRNG *rng);
-gdouble nc_galaxy_sd_redshift_integ (NcGalaxySDRedshift *gsdr, const gdouble z);
+gdouble nc_galaxy_sd_redshift_integ (NcGalaxySDRedshift *gsdr, NcmVector *data);
 
 G_END_DECLS
 
