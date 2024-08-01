@@ -1,0 +1,67 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
+
+/***************************************************************************
+ *            nc_galaxy_redshift.h
+ *
+ *  Thu Aug 1 00:48:12 2024
+ *  Copyright  2024  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
+ ****************************************************************************/
+/*
+ * nc_galaxy_redshift.h
+ * Copyright (C) 2024 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
+ *
+ * numcosmo is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * numcosmo is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+#ifndef _NC_GALAXY_REDSHIFT_H_
+#define _NC_GALAXY_REDSHIFT_H_
+
+#include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_rng.h>
+#include <numcosmo/math/ncm_vector.h>
+
+G_BEGIN_DECLS
+
+#define NC_TYPE_GALAXY_REDSHIFT (nc_galaxy_redshift_get_type ())
+
+G_DECLARE_DERIVABLE_TYPE (NcGalaxyRedshift, nc_galaxy_redshift, NC, GALAXY_REDSHIFT, GObject)
+
+struct _NcGalaxyRedshiftClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+
+  gdouble (*gen) (NcGalaxyRedshift *gz, NcmRNG *rng, NcmVector *data);
+  gdouble (*integ) (NcGalaxyRedshift *gz, NcmVector *data);
+  gboolean (*get_header) (NcGalaxyRedshift *gz);
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[15];
+};
+
+NcGalaxyRedshift *nc_galaxy_redshift_ref (NcGalaxyRedshift *gz);
+
+void nc_galaxy_redshift_free (NcGalaxyRedshift *gz);
+void nc_galaxy_redshift_clear (NcGalaxyRedshift **gz);
+
+gdouble nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng, NcmVector *data);
+gdouble nc_galaxy_redshift_integ (NcGalaxyRedshift *gz, NcmVector *data);
+gboolean nc_galaxy_redshift_get_header (NcGalaxyRedshift *gz);
+
+G_END_DECLS
+
+#endif /* _NC_GALAXY_REDSHIFT_H_ */
+
