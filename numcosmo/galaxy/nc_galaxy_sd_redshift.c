@@ -275,15 +275,15 @@ nc_galaxy_sd_redshift_gen (NcGalaxySDRedshift *gsdr, NcmRNG *rng)
 /**
  * nc_galaxy_sd_redshift_integ:
  * @gsdr: a #NcGalaxySDRedshift
- * @z: a #gdouble representing the redshift
+ * @z: the redshift
  *
  * Evaluates the galaxy sample redshift distribution at redshift @z.
  *
  * Returns: the probability density at $z$, $P(z)$.
  */
 gdouble
-nc_galaxy_sd_redshift_integ (NcGalaxySDRedshift *gsdr, NcmVector *data)
+nc_galaxy_sd_redshift_integ (NcGalaxySDRedshift *gsdr, gdouble z)
 {
-  return NC_GALAXY_SD_REDSHIFT_GET_CLASS (gsdr)->integ (gsdr, data);
+  return NC_GALAXY_SD_REDSHIFT_GET_CLASS (gsdr)->integ (gsdr, z);
 }
 

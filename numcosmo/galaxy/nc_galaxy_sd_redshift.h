@@ -46,7 +46,7 @@ struct _NcGalaxySDRedshiftClass
   NcmModelClass parent_class;
 
   gdouble (*gen) (NcGalaxySDRedshift *gsdr, NcmRNG *rng);
-  gdouble (*integ) (NcGalaxySDRedshift *gsdr, NcmVector *data);
+  gdouble (*integ) (NcGalaxySDRedshift *gsdr, gdouble z);
   gboolean (*set_lim) (NcGalaxySDRedshift *gsdr, const gdouble z_min, const gdouble z_max);
   gboolean (*get_lim) (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdouble *z_max);
 
@@ -65,7 +65,7 @@ gboolean nc_galaxy_sd_redshift_set_lim (NcGalaxySDRedshift *gsdr, const gdouble 
 gboolean nc_galaxy_sd_redshift_get_lim (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdouble *z_max);
 
 gdouble nc_galaxy_sd_redshift_gen (NcGalaxySDRedshift *gsdr, NcmRNG *rng);
-gdouble nc_galaxy_sd_redshift_integ (NcGalaxySDRedshift *gsdr, NcmVector *data);
+gdouble nc_galaxy_sd_redshift_integ (NcGalaxySDRedshift *gsdr, gdouble z);
 
 G_END_DECLS
 
