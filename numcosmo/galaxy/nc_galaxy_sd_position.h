@@ -51,7 +51,6 @@ struct _NcGalaxySDPositionClass
   gdouble (*integ) (NcGalaxySDPosition *gsdp, NcmVector *data);
   gboolean (*set_ra_lim) (NcGalaxySDPosition *gsdp, const gdouble ra_min, const gdouble ra_max);
   gboolean (*set_dec_lim) (NcGalaxySDPosition *gsdp, const gdouble dec_min, const gdouble dec_max);
-  gboolean (*set_header) (NcGalaxySDPosition *gsdp, const GStrv header);
   gboolean (*get_ra_lim) (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
   gboolean (*get_dec_lim) (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
   gboolean (*get_header) (NcGalaxySDPosition *gsdp);
@@ -71,7 +70,6 @@ gboolean nc_galaxy_sd_position_set_ra_lim (NcGalaxySDPosition *gsdp, const gdoub
 gboolean nc_galaxy_sd_position_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
 gboolean nc_galaxy_sd_position_set_dec_lim (NcGalaxySDPosition *gsdp, const gdouble dec_min, const gdouble dec_max);
 gboolean nc_galaxy_sd_position_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
-gboolean nc_galaxy_sd_position_set_header (NcGalaxySDPosition *gsdp, const GStrv header);
 GStrv nc_galaxy_sd_position_get_header (NcGalaxySDPosition *gsdp);
 
 gdouble nc_galaxy_sd_position_gen_ra (NcGalaxySDPosition *gsdp, NcmRNG *rng);

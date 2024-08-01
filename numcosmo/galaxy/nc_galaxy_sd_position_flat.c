@@ -57,7 +57,6 @@ typedef struct _NcGalaxySDPositionFlatPrivate
   gdouble dec_lb;
   gdouble dec_ub;
   gdouble dec_norm;
-  GStrv header;
 } NcGalaxySDPositionFlatPrivate;
 
 struct _NcGalaxySDPositionFlat
@@ -84,7 +83,6 @@ nc_galaxy_sd_position_flat_init (NcGalaxySDPositionFlat *gsdpflat)
   self->dec_lb   = 0.0;
   self->dec_ub   = 0.0;
   self->dec_norm = 0.0;
-  self->header   = NULL;
 }
 
 static void
@@ -108,7 +106,6 @@ static gboolean _nc_galaxy_sd_position_flat_set_ra_lim (NcGalaxySDPosition *gsdp
 static gboolean _nc_galaxy_sd_position_flat_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
 static gboolean _nc_galaxy_sd_position_flat_set_dec_lim (NcGalaxySDPosition *gsdp, gdouble dec_min, gdouble dec_max);
 static gboolean _nc_galaxy_sd_position_flat_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
-static gboolean _nc_galaxy_sd_position_flat_set_header (NcGalaxySDPosition *gsdp, GStrv header);
 static GStrv _nc_galaxy_sd_position_flat_get_header (NcGalaxySDPosition *gsdp);
 
 static void
@@ -133,7 +130,6 @@ nc_galaxy_sd_position_flat_class_init (NcGalaxySDPositionFlatClass *klass)
   sd_position_class->get_ra_lim  = &_nc_galaxy_sd_position_flat_get_ra_lim;
   sd_position_class->set_dec_lim = &_nc_galaxy_sd_position_flat_set_dec_lim;
   sd_position_class->get_dec_lim = &_nc_galaxy_sd_position_flat_get_dec_lim;
-  sd_position_class->set_header  = &_nc_galaxy_sd_position_flat_set_header;
   sd_position_class->get_header  = &_nc_galaxy_sd_position_flat_get_header;
 }
 
@@ -229,27 +225,12 @@ _nc_galaxy_sd_position_flat_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_
   return TRUE;
 }
 
-static gboolean
-_nc_galaxy_sd_position_flat_set_header (NcGalaxySDPosition *gsdp, GStrv header)
-{
-  NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
-  NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
-
-  g_assert_cmpint (g_strv_length (header), ==, 2);
-
-  g_clear_pointer (&self->header, g_strfreev);
-  self->header = g_strdupv (header);
-
-  return TRUE;
-}
-
 static GStrv
 _nc_galaxy_sd_position_flat_get_header (NcGalaxySDPosition *gsdp)
 {
-  NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
-  NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
+  GStrv header = g_strsplit ("ra dec", " ", -1);
 
-  return g_strdupv (self->header);
+  return header;
 }
 
 /**
@@ -264,7 +245,7 @@ _nc_galaxy_sd_position_flat_get_header (NcGalaxySDPosition *gsdp)
  * Returns: (transfer full): a new NcGalaxySDPositionFlat.
  */
 NcGalaxySDPositionFlat *
-nc_galaxy_sd_position_flat_new (const gdouble ra_min, const gdouble ra_max, const gdouble dec_min, const gdouble dec_max, GStrv header)
+nc_galaxy_sd_position_flat_new (const gdouble ra_min, const gdouble ra_max, const gdouble dec_min, const gdouble dec_max)
 {
   NcmDTuple2 ra_lim  = NCM_DTUPLE2_STATIC_INIT (ra_min, ra_max);
   NcmDTuple2 dec_lim = NCM_DTUPLE2_STATIC_INIT (dec_min, dec_max);
@@ -272,12 +253,10 @@ nc_galaxy_sd_position_flat_new (const gdouble ra_min, const gdouble ra_max, cons
 
   g_assert_cmpfloat (ra_min, <, ra_max);
   g_assert_cmpfloat (dec_min, <, dec_max);
-  g_assert_cmpint (g_strv_length (header), ==, 2);
 
   gsdpflat = g_object_new (NC_TYPE_GALAXY_SD_POSITION_FLAT,
                            "ra-lim", &ra_lim,
                            "dec-lim", &dec_lim,
-                           "header", header,
                            NULL);
 
   return gsdpflat;
@@ -287,7 +266,7 @@ nc_galaxy_sd_position_flat_new (const gdouble ra_min, const gdouble ra_max, cons
  * nc_galaxy_sd_position_flat_ref:
  * @gsdpflat: a #NcGalaxySDPositionFlat
  *
- * Increase the reference of @gsdpflat by one.
+ * Increases the reference count of @gsdpflat by one.
  *
  * Returns: (transfer full): @gsdpflat.
  */
@@ -301,7 +280,7 @@ nc_galaxy_sd_position_flat_ref (NcGalaxySDPositionFlat *gsdpflat)
  * nc_galaxy_sd_position_flat_free:
  * @gsdpflat: a #NcGalaxySDPositionFlat
  *
- * Decrease the reference count of @gsdpflat by one.
+ * Decrease sthe reference count of @gsdpflat by one.
  *
  */
 void

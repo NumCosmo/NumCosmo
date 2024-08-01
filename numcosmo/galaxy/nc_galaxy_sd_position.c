@@ -59,7 +59,6 @@ enum
   PROP_0,
   PROP_RA_LIM,
   PROP_DEC_LIM,
-  PROP_HEADER,
   PROP_LEN,
 };
 
@@ -99,11 +98,6 @@ _nc_galaxy_sd_position_set_property (GObject *object, guint prop_id, const GValu
       nc_galaxy_sd_position_set_dec_lim (gsdp, dec_lim->elements[0], dec_lim->elements[1]);
       break;
     }
-    case PROP_HEADER:
-    {
-      nc_galaxy_sd_position_set_header (gsdp, g_value_get_string (value));
-      break;
-    }
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -135,11 +129,6 @@ _nc_galaxy_sd_position_get_property (GObject *object, guint prop_id, GValue *val
       nc_galaxy_sd_position_get_dec_lim (gsdp, &dec_min, &dec_max);
 
       g_value_take_boxed (value, ncm_dtuple2_new (dec_min, dec_max));
-      break;
-    }
-    case PROP_HEADER:
-    {
-      g_value_set_string (value, nc_galaxy_sd_position_get_header (gsdp));
       break;
     }
     default:                                                      /* LCOV_EXCL_LINE */
@@ -193,14 +182,6 @@ static gboolean
 _nc_galaxy_sd_position_set_dec_lim (NcGalaxySDPosition *gsdp, const gdouble dec_min, const gdouble dec_max)
 {
   g_error ("_nc_galaxy_sd_position_set_dec_lim: method not implemented.");
-
-  return FALSE;
-}
-
-static gboolean
-_nc_galaxy_sd_position_set_header (NcGalaxySDPosition *gsdp, const GStrv header)
-{
-  g_error ("_nc_galaxy_sd_position_set_header: method not implemented.");
 
   return FALSE;
 }
@@ -272,20 +253,6 @@ nc_galaxy_sd_position_class_init (NcGalaxySDPositionClass *klass)
                                                        NCM_TYPE_DTUPLE2,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  /**
-   * NcGalaxySDPosition:header:
-   *
-   * Galaxy sample position distribution header.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_HEADER,
-                                   g_param_spec_string ("header",
-                                                        NULL,
-                                                        "Galaxy sample position distribution header",
-                                                        NULL,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
   ncm_mset_model_register_id (model_class,
                               "NcGalaxySDPosition",
                               "Galaxy sample position distribution.",
@@ -300,7 +267,6 @@ nc_galaxy_sd_position_class_init (NcGalaxySDPositionClass *klass)
   klass->integ       = &_nc_galaxy_sd_position_integ;
   klass->set_ra_lim  = &_nc_galaxy_sd_position_set_ra_lim;
   klass->set_dec_lim = &_nc_galaxy_sd_position_set_dec_lim;
-  klass->set_header  = &_nc_galaxy_sd_position_set_header;
   klass->get_ra_lim  = &_nc_galaxy_sd_position_get_ra_lim;
   klass->get_dec_lim = &_nc_galaxy_sd_position_get_dec_lim;
   klass->get_header  = &_nc_galaxy_sd_position_get_header;
@@ -310,7 +276,7 @@ nc_galaxy_sd_position_class_init (NcGalaxySDPositionClass *klass)
  * nc_galaxy_sd_position_ref:
  * @gsdp: a #NcGalaxySDPosition
  *
- * Increase the reference of @gsdp by one.
+ * Increase the reference count of @gsdp by one.
  *
  * Returns: (transfer full): @gsdp.
  */
@@ -324,7 +290,7 @@ nc_galaxy_sd_position_ref (NcGalaxySDPosition *gsdp)
  * nc_galaxy_sd_position_free:
  * @gsdp: a #NcGalaxySDPosition
  *
- * Decrease the reference count of @gsdp by one.
+ * Decreases the reference count of @gsdp by one.
  *
  */
 void
@@ -377,21 +343,6 @@ gboolean
 nc_galaxy_sd_position_set_dec_lim (NcGalaxySDPosition *gsdp, const gdouble dec_min, const gdouble dec_max)
 {
   NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->set_dec_lim (gsdp, dec_min, dec_max);
-}
-
-/**
- * nc_galaxy_sd_position_set_header:
- * @gsdp: a #NcGalaxySDPosition
- * @header: a #GStrv
- *
- * Sets the header of the distribution.
- *
- * Returns: TRUE if the header was set successfully, FALSE otherwise.
- */
-gboolean
-nc_galaxy_sd_position_set_header (NcGalaxySDPosition *gsdp, const GStrv header)
-{
-  NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->set_header (gsdp, header);
 }
 
 /**
