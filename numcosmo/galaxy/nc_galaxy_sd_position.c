@@ -43,8 +43,10 @@
 
 #include "galaxy/nc_galaxy_sd_position.h"
 #include "math/ncm_dtuple.h"
-#include "math.h"
-#include "gsl/gsl_math.h"
+#include "math/ncm_model.h"
+#include "math/ncm_mset.h"
+#include "math/ncm_rng.h"
+#include "math/ncm_vector.h"
 
 
 typedef struct _NcGalaxySDPositionPrivate

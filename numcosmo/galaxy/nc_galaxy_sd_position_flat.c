@@ -42,11 +42,12 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math.h"
-#include "gsl/gsl_math.h"
 #include "galaxy/nc_galaxy_sd_position_flat.h"
 #include "galaxy/nc_galaxy_sd_position.h"
 #include "math/ncm_dtuple.h"
+#include "math/ncm_model.h"
+#include "math/ncm_vector.h"
+#include "math/ncm_rng.h"
 
 typedef struct _NcGalaxySDPositionFlatPrivate
 {
@@ -159,8 +160,8 @@ _nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, NcmVector *data)
 {
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
-  gdouble ra = ncm_vector_get (data, 0);
-  gdouble dec = ncm_vector_get (data, 1);
+  gdouble ra                                 = ncm_vector_get (data, 0);
+  gdouble dec                                = ncm_vector_get (data, 1);
 
   if ((ra >= self->ra_lb) && (ra <= self->ra_ub) && (dec >= self->dec_lb) && (dec <= self->dec_ub))
     return self->ra_norm * self->dec_norm;
@@ -179,7 +180,7 @@ _nc_galaxy_sd_position_flat_set_ra_lim (NcGalaxySDPosition *gsdp, gdouble ra_min
   self->ra_lb   = ra_min;
   self->ra_ub   = ra_max;
   self->ra_norm = 1.0 / (self->ra_ub - self->ra_lb);
-  
+
   return TRUE;
 }
 
