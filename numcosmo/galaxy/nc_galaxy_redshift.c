@@ -110,7 +110,7 @@ _nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng, NcmVector *data)
 }
 
 static gdouble
-_nc_galaxy_redshift_integ (NcGalaxyRedshift *gz, NcmVector *data)
+_nc_galaxy_redshift_integ (NcGalaxyRedshift *gz, gdouble z, NcmVector *data)
 {
   g_error ("_nc_galaxy_redshift_integ: method not implemented");
 
@@ -206,9 +206,9 @@ nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng, NcmVector *data)
  * Returns: the probability density at $z_p$, $P(z_p)$.
  */
 gdouble
-nc_galaxy_redshift_integ (NcGalaxyRedshift *gz, NcmVector *data)
+nc_galaxy_redshift_integ (NcGalaxyRedshift *gz, gdouble z, NcmVector *data)
 {
-  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->integ (gz, data);
+  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->integ (gz, z, data);
 }
 
 /**

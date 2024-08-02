@@ -45,7 +45,7 @@ struct _NcGalaxyRedshiftClass
   GObjectClass parent_class;
 
   gdouble (*gen) (NcGalaxyRedshift *gz, NcmRNG *rng, NcmVector *data);
-  gdouble (*integ) (NcGalaxyRedshift *gz, NcmVector *data);
+  gdouble (*integ) (NcGalaxyRedshift *gz, gdouble z, NcmVector *data);
   gboolean (*get_header) (NcGalaxyRedshift *gz);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
@@ -58,7 +58,7 @@ void nc_galaxy_redshift_free (NcGalaxyRedshift *gz);
 void nc_galaxy_redshift_clear (NcGalaxyRedshift **gz);
 
 gdouble nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng, NcmVector *data);
-gdouble nc_galaxy_redshift_integ (NcGalaxyRedshift *gz, NcmVector *data);
+gdouble nc_galaxy_redshift_integ (NcGalaxyRedshift *gz, gdouble z, NcmVector *data);
 gboolean nc_galaxy_redshift_get_header (NcGalaxyRedshift *gz);
 
 G_END_DECLS

@@ -139,8 +139,10 @@ nc_galaxy_sd_redshift_gauss_class_init (NcGalaxyRedshiftGaussClass *klass)
   NcGalaxyRedshiftClass *gz_class = NC_GALAXY_REDSHIFT_CLASS (klass);
   GObjectClass *object_class      = G_OBJECT_CLASS (klass);
 
-  object_class->dispose  = &_nc_galaxy_redshift_gauss_dispose;
-  object_class->finalize = &nc_galaxy_redshift_gauss_finalize;
+  object_class->set_property = &_nc_galaxy_redshift_set_property;
+  object_class->get_property = &_nc_galaxy_redshift_get_property;
+  object_class->dispose      = &_nc_galaxy_redshift_gauss_dispose;
+  object_class->finalize     = &nc_galaxy_redshift_gauss_finalize;
 
   /**
    * NcGalaxyRedshiftGauss:sdz:
