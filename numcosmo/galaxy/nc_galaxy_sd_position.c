@@ -276,7 +276,7 @@ nc_galaxy_sd_position_class_init (NcGalaxySDPositionClass *klass)
  * nc_galaxy_sd_position_ref:
  * @gsdp: a #NcGalaxySDPosition
  *
- * Increase the reference count of @gsdp by one.
+ * Increases the reference count of @gsdp by one.
  *
  * Returns: (transfer full): @gsdp.
  */
@@ -303,7 +303,7 @@ nc_galaxy_sd_position_free (NcGalaxySDPosition *gsdp)
  * nc_galaxy_sd_position_clear:
  * @gsdp: a #NcGalaxySDPosition
  *
- * Decrease the reference count of @gsdp by one, and sets the pointer *@gsdp to
+ * Decreases the reference count of @gsdp by one, and sets the pointer *@gsdp to
  * NULL.
  *
  */
@@ -314,7 +314,7 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
 }
 
 /**
- * nc_galaxy_sd_position_set_ra_lim:
+ * nc_galaxy_sd_position_set_ra_lim: (virtual set_ra_lim)
  * @gsdp: a #NcGalaxySDPosition
  * @ra_min: the minimum right ascension
  * @ra_max: the maximum right ascension
@@ -330,7 +330,7 @@ nc_galaxy_sd_position_set_ra_lim (NcGalaxySDPosition *gsdp, const gdouble ra_min
 }
 
 /**
- * nc_galaxy_sd_position_set_dec_lim:
+ * nc_galaxy_sd_position_set_dec_lim: (virtual set_dec_lim)
  * @gsdp: a #NcGalaxySDPosition
  * @dec_min: the minimum declination
  * @dec_max: the maximum declination
@@ -346,7 +346,7 @@ nc_galaxy_sd_position_set_dec_lim (NcGalaxySDPosition *gsdp, const gdouble dec_m
 }
 
 /**
- * nc_galaxy_sd_position_get_ra_lim:
+ * nc_galaxy_sd_position_get_ra_lim: (virtual get_ra_lim)
  * @gsdp: a #NcGalaxySDPosition
  * @ra_min: (out): the minimum right ascension
  * @ra_max: (out): the maximum right ascension
@@ -362,7 +362,7 @@ nc_galaxy_sd_position_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdo
 }
 
 /**
- * nc_galaxy_sd_position_get_dec_lim:
+ * nc_galaxy_sd_position_get_dec_lim: (virtual get_dec_lim)
  * @gsdp: a #NcGalaxySDPosition
  * @dec_min: (out): the minimum declination
  * @dec_max: (out): the maximum declination
@@ -378,12 +378,12 @@ nc_galaxy_sd_position_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, g
 }
 
 /**
- * nc_galaxy_sd_position_get_header:
+ * nc_galaxy_sd_position_get_header: (virtual get_header)
  * @gsdp: a #NcGalaxySDPosition
  *
  * Gets the header of the distribution.
  *
- * Returns: the header of the distribution.
+ * Returns: (transfer full): the header of the distribution.
  */
 GStrv
 nc_galaxy_sd_position_get_header (NcGalaxySDPosition *gsdp)
