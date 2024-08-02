@@ -36,40 +36,33 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_GALAXY_SD_SHAPE_GAUSS             (nc_galaxy_sd_shape_gauss_get_type ())
-#define NC_GALAXY_SD_SHAPE_GAUSS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_GALAXY_SD_SHAPE_GAUSS, NcGalaxySDShapeGauss))
-#define NC_GALAXY_SD_SHAPE_GAUSS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_GALAXY_SD_SHAPE_GAUSS, NcGalaxySDShapeGaussClass))
-#define NC_IS_GALAXY_SD_SHAPE_GAUSS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_GALAXY_SD_SHAPE_GAUSS))
-#define NC_IS_GALAXY_SD_SHAPE_GAUSS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_GALAXY_SD_SHAPE_GAUSS))
-#define NC_GALAXY_SD_SHAPE_GAUSS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_GALAXY_SD_SHAPE_GAUSS, NcGalaxySDShapeGaussClass))
+#define NC_TYPE_GALAXY_SD_SHAPE_GAUSS (nc_galaxy_sd_shape_gauss_get_type ())
 
-typedef struct _NcGalaxySDShapeGaussClass NcGalaxySDShapeGaussClass;
-typedef struct _NcGalaxySDShapeGauss NcGalaxySDShapeGauss;
-typedef struct _NcGalaxySDShapeGaussPrivate NcGalaxySDShapeGaussPrivate;
+G_DECLARE_FINAL_TYPE (NcGalaxySDShapeGauss, nc_galaxy_sd_shape_gauss, NC, GALAXY_SD_SHAPE_GAUSS, NcGalaxySDShape)
 
-struct _NcGalaxySDShapeGaussClass
+/**
+ * NcGalaxySDShapeGaussParams:
+ * @NC_GALAXY_SD_SHAPE_GAUSS_SIGMA: Standard deviation
+ *
+ * Gaussian galaxy shape distribution model parameters.
+ *
+ */
+typedef enum /*< enum,underscore_name=NC_GALAXY_SD_SHAPE_GAUSS_PARAMS >*/
 {
-  /*< private >*/
-  NcGalaxySDShapeClass parent_class;
-};
+  NC_GALAXY_SD_SHAPE_GAUSS_SIGMA = 0,
+  /* < private > */
+  NC_GALAXY_SD_SHAPE_GAUSS_SPARAM_LEN, /*< skip >*/
+} NcGalaxySDShapeGaussParams;
 
-struct _NcGalaxySDShapeGauss
-{
-  /*< private >*/
-  NcGalaxySDShape parent_instance;
-  NcGalaxySDShapeGaussPrivate *priv;
-};
+#define NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA  (0.3)
 
-GType nc_galaxy_sd_shape_gauss_get_type (void) G_GNUC_CONST;
+#define NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_PARAMS_ABSTOL (0.0)
 
-NcGalaxySDShapeGauss *nc_galaxy_sd_shape_gauss_new ();
+NcGalaxySDShapeGauss *nc_galaxy_sd_shape_gauss_new (NcDistance *dist);
 NcGalaxySDShapeGauss *nc_galaxy_sd_shape_gauss_ref (NcGalaxySDShapeGauss *gsdsgauss);
 
 void nc_galaxy_sd_shape_gauss_free (NcGalaxySDShapeGauss *gsdsgauss);
 void nc_galaxy_sd_shape_gauss_clear (NcGalaxySDShapeGauss **gsdsgauss);
-
-void nc_galaxy_sd_shape_gauss_set_sigma (NcGalaxySDShapeGauss *gsdsgauss, gdouble sigma);
-gdouble nc_galaxy_sd_shape_gauss_get_sigma (NcGalaxySDShapeGauss *gsdsgauss);
 
 G_END_DECLS
 
