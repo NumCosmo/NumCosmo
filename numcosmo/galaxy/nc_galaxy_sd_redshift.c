@@ -178,7 +178,7 @@ nc_galaxy_sd_redshift_class_init (NcGalaxySDRedshiftClass *klass)
                                                        NCM_TYPE_DTUPLE2,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
+  ncm_model_class_check_params_info (model_class);
 
   klass->gen     = &_nc_galaxy_sd_redshift_gen;
   klass->integ   = &_nc_galaxy_sd_redshift_integ;
