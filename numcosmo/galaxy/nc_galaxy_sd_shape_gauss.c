@@ -359,6 +359,7 @@ NcGalaxySDShapeGauss *
 nc_galaxy_sd_shape_gauss_new (NcDistance *dist)
 {
   NcGalaxySDShapeGauss *gsdsgauss = g_object_new (NC_TYPE_GALAXY_SD_SHAPE_GAUSS,
+                                                  "dist", dist,
                                                   NULL);
 
   return gsdsgauss;
