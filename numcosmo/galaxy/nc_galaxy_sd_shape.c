@@ -107,7 +107,7 @@ _nc_galaxy_sd_shape_finalize (GObject *object)
 
 /* LCOV_EXCL_START */
 static gboolean
-_nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcmRNG *rng, gdouble *e1, gdouble *e2, NcmVector *data)
+_nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcmRNG *rng, const gdouble ra, const gdouble dec, const gdouble z, gdouble *e1, gdouble *e2, NcmVector *data)
 {
   g_error ("_nc_galaxy_sd_shape_gen: method not implemented.");
 
@@ -225,6 +225,9 @@ nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds)
  * @dp: a #NcHaloDensityProfile
  * @smd: a #NcWLSurfaceMassDensity
  * @rng: a #NcmRNG
+ * @ra: the right ascension of the galaxy
+ * @dec: the declination of the galaxy
+ * @z: the redshift of the galaxy
  * @e1: (out): the generated first ellipticity component $e_1$
  * @e2: (out): the generated second ellipticity component $e_2$
  * @data: a #NcmVector
@@ -233,9 +236,9 @@ nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds)
  *
  */
 gboolean
-nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcmRNG *rng, gdouble *e1, gdouble *e2, NcmVector *data)
+nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcmRNG *rng, const gdouble ra, const gdouble dec, const gdouble z, gdouble *e1, gdouble *e2, NcmVector *data)
 {
-  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->gen (gsds, cosmo, dp, smd, rng, e1, e2, data);
+  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->gen (gsds, cosmo, dp, smd, rng, ra, dec, z, e1, e2, data);
 
   return FALSE;
 }

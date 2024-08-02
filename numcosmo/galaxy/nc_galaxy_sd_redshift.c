@@ -130,7 +130,7 @@ _nc_galaxy_sd_redshift_gen (NcGalaxySDRedshift *gsdr, NcmRNG *rng)
 }
 
 static gdouble
-_nc_galaxy_sd_redshift_integ (NcGalaxySDRedshift *gsdr, NcmVector *data)
+_nc_galaxy_sd_redshift_integ (NcGalaxySDRedshift *gsdr, gdouble z)
 {
   g_error ("_nc_galaxy_sd_redshift_integ: not implemented");
 
@@ -141,12 +141,16 @@ static gboolean
 _nc_galaxy_sd_redshift_set_lim (NcGalaxySDRedshift *gsdr, const gdouble z_min, const gdouble z_max)
 {
   g_error ("_nc_galaxy_sd_redshift_set_lim: not implemented");
+
+  return FALSE;
 }
 
 static gboolean
 _nc_galaxy_sd_redshift_get_lim (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdouble *z_max)
 {
   g_error ("_nc_galaxy_sd_redshift_get_lim: not implemented");
+  
+  return FALSE;
 }
 
 /* LCOV_EXCL_STOP */
@@ -239,7 +243,7 @@ nc_galaxy_sd_redshift_clear (NcGalaxySDRedshift **gsdr)
 gboolean
 nc_galaxy_sd_redshift_set_lim (NcGalaxySDRedshift *gsdr, const gdouble z_min, const gdouble z_max)
 {
-  NC_GALAXY_SD_REDSHIFT_GET_CLASS (gsdr)->set_lim (gsdr, z_min, z_max);
+  return NC_GALAXY_SD_REDSHIFT_GET_CLASS (gsdr)->set_lim (gsdr, z_min, z_max);
 }
 
 /**
@@ -254,7 +258,7 @@ nc_galaxy_sd_redshift_set_lim (NcGalaxySDRedshift *gsdr, const gdouble z_min, co
 gboolean
 nc_galaxy_sd_redshift_get_lim (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdouble *z_max)
 {
-  NC_GALAXY_SD_REDSHIFT_GET_CLASS (gsdr)->get_lim (gsdr, z_min, z_max);
+  return NC_GALAXY_SD_REDSHIFT_GET_CLASS (gsdr)->get_lim (gsdr, z_min, z_max);
 }
 
 /**

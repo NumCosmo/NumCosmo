@@ -53,10 +53,10 @@ struct _NcGalaxySDPositionClass
   gboolean (*set_dec_lim) (NcGalaxySDPosition *gsdp, const gdouble dec_min, const gdouble dec_max);
   gboolean (*get_ra_lim) (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
   gboolean (*get_dec_lim) (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
-  gboolean (*get_header) (NcGalaxySDPosition *gsdp);
+  GStrv (*get_header) (NcGalaxySDPosition *gsdp);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[11];
+  gpointer padding[10];
 };
 
 NCM_MSET_MODEL_DECLARE_ID (nc_galaxy_sd_position);

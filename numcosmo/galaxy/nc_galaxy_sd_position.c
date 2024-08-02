@@ -326,7 +326,7 @@ nc_galaxy_sd_position_clear (NcGalaxySDPosition **gsdp)
 gboolean
 nc_galaxy_sd_position_set_ra_lim (NcGalaxySDPosition *gsdp, const gdouble ra_min, const gdouble ra_max)
 {
-  NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->set_ra_lim (gsdp, ra_min, ra_max);
+  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->set_ra_lim (gsdp, ra_min, ra_max);
 }
 
 /**
@@ -342,7 +342,7 @@ nc_galaxy_sd_position_set_ra_lim (NcGalaxySDPosition *gsdp, const gdouble ra_min
 gboolean
 nc_galaxy_sd_position_set_dec_lim (NcGalaxySDPosition *gsdp, const gdouble dec_min, const gdouble dec_max)
 {
-  NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->set_dec_lim (gsdp, dec_min, dec_max);
+  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->set_dec_lim (gsdp, dec_min, dec_max);
 }
 
 /**
@@ -358,7 +358,7 @@ nc_galaxy_sd_position_set_dec_lim (NcGalaxySDPosition *gsdp, const gdouble dec_m
 gboolean
 nc_galaxy_sd_position_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max)
 {
-  NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->get_ra_lim (gsdp, ra_min, ra_max);
+  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->get_ra_lim (gsdp, ra_min, ra_max);
 }
 
 /**
@@ -374,7 +374,7 @@ nc_galaxy_sd_position_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdo
 gboolean
 nc_galaxy_sd_position_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max)
 {
-  NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->get_dec_lim (gsdp, dec_min, dec_max);
+  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->get_dec_lim (gsdp, dec_min, dec_max);
 }
 
 /**
