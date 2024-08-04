@@ -24,7 +24,6 @@
 
 """Unit tests for NumCosmo powwer-spectra."""
 
-from itertools import product
 import time
 import pytest
 
@@ -34,126 +33,28 @@ from numpy.testing import assert_allclose
 import pyccl
 
 from numcosmo_py import Ncm, Nc
-from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams
+from numcosmo_py.ccl.nc_ccl import create_nc_obj
+
+from .ccl_fixtures import (  # pylint: disable=unused-import # noqa: F401
+    fixture_k_a,
+    fixture_z_a,
+    fixture_z_high_a,
+    fixture_ccl_cosmo_eh_linear,
+    fixture_ccl_cosmo_eh_halofit,
+)
 
 Ncm.cfg_init()
 
-
-@pytest.fixture(name="k_a")
-def k_a_fixture():
-    """Fixture for k array."""
-    return np.geomspace(1.0e-5, 1.0e1, 1000)
+COMPARE_TIME = False
 
 
-@pytest.fixture(name="z_a")
-def z_a_fixture():
-    """Fixture for z array."""
-    return np.linspace(0.0, 5.0, 1000)
-
-
-@pytest.fixture(
-    name="ccl_cosmo_eh_linear",
-    params=product([False, True], range(3)),
-    ids=lambda x: f"high_prec={x[0]},index={x[1]}",
-)
-def fixture_ccl_cosmo_eh_linear(request) -> pyccl.Cosmology:
-    """Fixture for CCL Cosmology."""
-    Omega_c = 0.25
-    Omega_b = 0.05
-    Omega_k = 0.0
-    h = 0.7
-    n_s = 0.96
-    Neff = 0.0
-    sigma8 = 0.9
-
-    Omega_v_vals = np.array([0.7, 0.65, 0.75])
-    w0_vals = np.array([-1.0, -0.9, -1.1])
-    wa_vals = np.array([0.0, 0.1, -0.1])
-
-    high_prec, index = request.param
-
-    Omega_k = 1.0 - Omega_c - Omega_b - Omega_v_vals[index]
-
-    if high_prec:
-        CCLParams.set_high_prec_params()
-    else:
-        CCLParams.set_default_params()
-
-    ccl_cosmo = pyccl.Cosmology(
-        Omega_c=Omega_c,
-        Omega_b=Omega_b,
-        Neff=Neff,
-        h=h,
-        sigma8=sigma8,
-        n_s=n_s,
-        Omega_k=Omega_k,
-        w0=w0_vals[index],
-        wa=wa_vals[index],
-        transfer_function="eisenstein_hu",
-        matter_power_spectrum="linear",
-    )
-
-    ccl_cosmo.high_precision = high_prec
-    return ccl_cosmo
-
-
-# CCL Halofit is too slow for high precision
-@pytest.fixture(
-    name="ccl_cosmo_eh_halofit",
-    params=product([False], range(3)),
-    ids=lambda x: f"high_prec={x[0]},index={x[1]}",
-)
-def fixture_ccl_cosmo_eh_halofit(request) -> pyccl.Cosmology:
-    """Fixture for CCL Cosmology."""
-    Omega_c = 0.25
-    Omega_b = 0.05
-    Omega_k = 0.0
-    h = 0.7
-    n_s = 0.96
-    Neff = 0.0
-    sigma8_vals = [0.9, 0.7, 0.6]
-
-    Omega_v = 0.7
-    w0 = -1.0
-    wa = 0.0
-
-    high_prec, index = request.param
-
-    Omega_k = 1.0 - Omega_c - Omega_b - Omega_v
-
-    if high_prec:
-        CCLParams.set_high_prec_params()
-    else:
-        CCLParams.set_default_params()
-
-    ccl_cosmo = pyccl.Cosmology(
-        Omega_c=Omega_c,
-        Omega_b=Omega_b,
-        Neff=Neff,
-        h=h,
-        sigma8=sigma8_vals[index],
-        n_s=n_s,
-        Omega_k=Omega_k,
-        w0=w0,
-        wa=wa,
-        transfer_function="eisenstein_hu",
-        matter_power_spectrum="halofit",
-    )
-
-    ccl_cosmo.high_precision = high_prec
-    return ccl_cosmo
-
-
-def test_powspec_transfer(
-    ccl_cosmo_eh_linear: pyccl.Cosmology, k_a: np.ndarray, z_a: np.ndarray
+def _test_powspec_transfer_any(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    k_a: np.ndarray,
+    z_a: np.ndarray,
+    reltol_target: float,
 ) -> None:
     """Compare NumCosmo and CCL transfer functions."""
-
-    if ccl_cosmo_eh_linear.high_precision:
-        reltol_target: float = 1.0e-7
-    else:
-        reltol_target = 1.0e-3
-
     nc_elapse = 0.0
     ccl_elapse = 0.0
 
@@ -183,14 +84,36 @@ def test_powspec_transfer(
 
         assert_allclose(pk_nc, pk_ccl, rtol=reltol_target)
 
-    print(f"# CCL time: {ccl_elapse:.3f} s, NumCosmo time: {nc_elapse:.3f} s")
+    if COMPARE_TIME:
+        print(f"# CCL time: {ccl_elapse:.3f} s, NumCosmo time: {nc_elapse:.3f} s")
+
+
+def test_powspec_transfer_lowz(
+    ccl_cosmo_eh_linear: pyccl.Cosmology, k_a: np.ndarray, z_a: np.ndarray
+) -> None:
+    """Compare NumCosmo and CCL transfer functions for low redshifts."""
+    if ccl_cosmo_eh_linear.high_precision:
+        reltol_target: float = 1.0e-8
+    else:
+        reltol_target = 1.0e-3
+    _test_powspec_transfer_any(ccl_cosmo_eh_linear, k_a, z_a, reltol_target)
+
+
+def test_powspec_transfer_highz(
+    ccl_cosmo_eh_linear: pyccl.Cosmology, k_a: np.ndarray, z_high_a: np.ndarray
+) -> None:
+    """Compare NumCosmo and CCL transfer functions."""
+    if ccl_cosmo_eh_linear.high_precision:
+        reltol_target: float = 1.0e-4
+    else:
+        reltol_target = 1.0e-2
+    _test_powspec_transfer_any(ccl_cosmo_eh_linear, k_a, z_high_a, reltol_target)
 
 
 def test_powspec_halofit(
     ccl_cosmo_eh_halofit: pyccl.Cosmology, k_a: np.ndarray, z_a: np.ndarray
 ) -> None:
     """Compare NumCosmo and CCL transfer functions."""
-
     cosmo, _, _, ps_mnl, _ = create_nc_obj(ccl_cosmo_eh_halofit)
 
     if ccl_cosmo_eh_halofit.high_precision:
@@ -225,7 +148,8 @@ def test_powspec_halofit(
         ccl_elapse += t1 - t0
         assert_allclose(pk_nc, pk_ccl, rtol=reltol_target)
 
-    print(f"# CCL time: {ccl_elapse:.3f} s, NumCosmo time: {nc_elapse:.3f} s")
+    if COMPARE_TIME:
+        print(f"# CCL time: {ccl_elapse:.3f} s, NumCosmo time: {nc_elapse:.3f} s")
 
 
 @pytest.mark.parametrize("sigma8", [0.01, 0.05, 0.1, 0.2, 0.5])
@@ -233,7 +157,6 @@ def test_powspec_halofit_linear_universe(
     sigma8, k_a: np.ndarray, z_a: np.ndarray
 ) -> None:
     """Test NumCosmo for an linear universe (very small sigma8)."""
-
     # Linear universe, halofit power spectrum
     ccl_cosmo = pyccl.Cosmology(
         Omega_c=0.25,

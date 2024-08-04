@@ -40,13 +40,19 @@ Ncm.cfg_init()
 @pytest.fixture(name="k_a")
 def fixture_k_a():
     """Fixture for k array."""
-    return np.geomspace(1.0e-5, 1.0e1, 1000)
+    return np.geomspace(1.0e-6, 1.0e2, 1000)
 
 
 @pytest.fixture(name="z_a")
 def fixture_z_a():
     """Fixture for z array."""
     return np.linspace(0.0, 5.0, 1000)
+
+
+@pytest.fixture(name="z_high_a")
+def fixture_z_high_a():
+    """Fixture for z array with high redshifts."""
+    return np.geomspace(0.01, 1100.0, 2000)
 
 
 @pytest.fixture(
