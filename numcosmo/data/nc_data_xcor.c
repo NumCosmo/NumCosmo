@@ -311,8 +311,7 @@ static void
 nc_data_xcor_finalize (GObject *object)
 {
   /* Chain up : end */
-  G_OBJECT_CLASS (nc_data_xcor_parent_class)
-  ->finalize (object);
+  G_OBJECT_CLASS (nc_data_xcor_parent_class)->finalize (object);
 }
 
 static void _nc_data_xcor_prepare (NcmData *data, NcmMSet *mset);
