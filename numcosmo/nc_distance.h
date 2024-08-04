@@ -87,6 +87,7 @@ struct _NcDistance
   gdouble zf;
   gboolean use_cache;
   gboolean cpu_inv_comoving;
+  gdouble max_comoving;
   NcRecomb *recomb;
   NcDistanceComovingMethod cmethod;
 };

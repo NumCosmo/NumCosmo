@@ -150,6 +150,7 @@ nc_distance_init (NcDistance *dist)
   dist->comoving_distance_spline = NULL;
   dist->inv_comoving_dist        = NULL;
   dist->cpu_inv_comoving         = FALSE;
+  dist->max_comoving             = 0.0;
 
   dist->recomb = NULL;
 
@@ -458,6 +459,7 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
     dist->inv_comoving_dist = ncm_spline_copy_empty (s);
 
     ncm_spline_set (dist->inv_comoving_dist, xi_vec, z_vec, TRUE);
+    dist->max_comoving = ncm_vector_get (xi_vec, ncm_vector_len (xi_vec) - 1);
 
     ncm_vector_free (z_vec);
     ncm_vector_free (xi_vec);
@@ -1482,6 +1484,10 @@ gdouble
 nc_distance_inv_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble xi)
 {
   g_assert (dist->cpu_inv_comoving);
+
+  if (xi > dist->max_comoving)
+    g_error ("nc_distance_inv_comoving: maximum comoving distance exceeded. "
+             "Increase the maximum redshift in the cosmology object.");
 
   return ncm_spline_eval (dist->inv_comoving_dist, xi);
 }
