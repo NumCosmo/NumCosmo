@@ -29,6 +29,19 @@ import pyccl
 
 from numcosmo_py import Ncm, Nc
 
+# CCL uses an older release of CODATA
+# The following function is a workaround to use the latest CODATA values
+pyccl.physical_constants.unfreeze()
+pyccl.physical_constants.KBOLTZ = Ncm.C.kb()
+pyccl.physical_constants.STBOLTZ = Ncm.C.stefan_boltzmann()
+pyccl.physical_constants.GNEWT = Ncm.C.G()
+pyccl.physical_constants.HPLANCK = Ncm.C.h()
+pyccl.physical_constants.CLIGHT = Ncm.C.c()
+pyccl.physical_constants.SOLAR_MASS = Ncm.C.mass_solar()
+pyccl.physical_constants.MPC_TO_METER = Ncm.C.Mpc()
+pyccl.physical_constants.RHO_CRITICAL = Ncm.C.crit_mass_density_h2_solar_mass_Mpc3()
+pyccl.physical_constants.freeze()
+
 
 # pylint:disable-next=too-many-arguments,too-many-locals
 def create_nc_obj(
@@ -40,7 +53,6 @@ def create_nc_obj(
     k_max=1.0e3,
 ):
     """Create a NumCosmo object from a CCL cosmology."""
-
     cosmo = Nc.HICosmoDECpl(massnu_length=0)
     cosmo.omega_x2omega_k()
     cosmo.param_set_by_name("H0", ccl_cosmo["h"] * 100)
@@ -122,6 +134,13 @@ class CCLParams:
     """CCL cosmology parameters."""
 
     DEFAULT_INTEGRATION_EPSREL: float = pyccl.gsl_params.INTEGRATION_EPSREL
+    DEFAULT_INTEGRATION_DISTANCE_EPSREL: float = (
+        pyccl.gsl_params.INTEGRATION_DISTANCE_EPSREL
+    )
+    DEFAULT_INTEGRATION_LIMBER_EPSREL: float = (
+        pyccl.gsl_params.INTEGRATION_LIMBER_EPSREL
+    )
+    DEFAULT_EPS_SCALEFAC_GROWTH: float = pyccl.gsl_params.EPS_SCALEFAC_GROWTH
     DEFAULT_ODE_GROWTH_EPSREL: float = pyccl.gsl_params.ODE_GROWTH_EPSREL
     DEFAULT_N_ITERATION: int = pyccl.gsl_params.N_ITERATION
     DEFAULT_INTEGRATION_SIGMAR_EPSREL: float = (
@@ -141,8 +160,14 @@ class CCLParams:
     @staticmethod
     def set_default_params():
         """Set CCL parameters to default values."""
-
         pyccl.gsl_params.INTEGRATION_EPSREL = CCLParams.DEFAULT_INTEGRATION_EPSREL
+        pyccl.gsl_params.INTEGRATION_DISTANCE_EPSREL = (
+            CCLParams.DEFAULT_INTEGRATION_DISTANCE_EPSREL
+        )
+        pyccl.gsl_params.INTEGRATION_LIMBER_EPSREL = (
+            CCLParams.DEFAULT_INTEGRATION_DISTANCE_EPSREL
+        )
+        pyccl.gsl_params.EPS_SCALEFAC_GROWTH = CCLParams.DEFAULT_EPS_SCALEFAC_GROWTH
         pyccl.gsl_params.ODE_GROWTH_EPSREL = CCLParams.DEFAULT_ODE_GROWTH_EPSREL
         pyccl.gsl_params.N_ITERATION = CCLParams.DEFAULT_N_ITERATION
         pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL = (
@@ -162,13 +187,15 @@ class CCLParams:
     @staticmethod
     def set_high_prec_params():
         """Set CCL parameters to high precision values."""
-
         pyccl.gsl_params.INTEGRATION_EPSREL = 1.0e-13
+        pyccl.gsl_params.INTEGRATION_DISTANCE_EPSREL = 1.0e-13
+        pyccl.gsl_params.INTEGRATION_LIMBER_EPSREL = 1.0e-9
+        pyccl.gsl_params.EPS_SCALEFAC_GROWTH = 1.0e-30
         pyccl.gsl_params.ODE_GROWTH_EPSREL = 1.0e-13
         pyccl.gsl_params.N_ITERATION = 10000
         pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL = 1.0e-9
         pyccl.spline_params.A_SPLINE_NLOG = 1000
-        pyccl.spline_params.A_SPLINE_NA = 1000
+        pyccl.spline_params.A_SPLINE_NA = 8000
         pyccl.spline_params.A_SPLINE_NA_PK = 1000
         pyccl.spline_params.A_SPLINE_NLOG_PK = 1000
         pyccl.spline_params.N_K = 1000
@@ -181,9 +208,11 @@ class CCLParams:
 
 # Missing function in CCL
 def dsigmaM_dlnM(cosmo, M, a):  # pylint: disable=invalid-name
-    """Derivative of the mass variance with respect to the logarithm of the
-    mass."""
+    """Compute the logarithmic derivative of the mass variance.
 
+    Compute the logarithmic derivative of the mass variance with respect to
+    the natural logarithm of the mass.
+    """
     cosmo.compute_sigma()
 
     logM = np.log10(np.atleast_1d(M))  # pylint: disable=invalid-name
