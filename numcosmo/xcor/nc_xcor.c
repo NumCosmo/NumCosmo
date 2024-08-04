@@ -685,11 +685,9 @@ nc_xcor_limber (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2
   if (nell != lmax - lmin + 1)
     g_error ("nc_xcor_limber: vector size does not match multipole limits");
 
-  if (isauto)
-  {
-    nc_xcor_limber_kernel_get_z_range (xclk1, &zmin, &zmax, &zmid);
-  }
-  else
+  nc_xcor_limber_kernel_get_z_range (xclk1, &zmin, &zmax, &zmid);
+
+  if (!isauto)
   {
     gdouble zmin_2, zmax_2, zmid_2;
 
