@@ -256,10 +256,10 @@ static gdouble
 _nc_xcor_limber_kernel_cmb_lensing_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l) /*, gdouble geo_z[]) */
 {
   NcXcorLimberKernelCMBLensing *xclkl = NC_XCOR_LIMBER_KERNEL_CMB_LENSING (xclk);
+  const gdouble nu                    = l + 0.5;
+  const gdouble cor_factor            = l * (l + 1.0) / (nu * nu);
 
-  NCM_UNUSED (l);
-
-  return ((1.0 + z) * xck->xi_z * (xclkl->xi_lss - xck->xi_z)) / (xck->E_z * xclkl->xi_lss);
+  return cor_factor * ((1.0 + z) * xck->xi_z * (xclkl->xi_lss - xck->xi_z)) / (xck->E_z * xclkl->xi_lss);
 }
 
 static void
@@ -269,13 +269,17 @@ _nc_xcor_limber_kernel_cmb_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo 
 
   nc_distance_prepare_if_needed (xclkl->dist, cosmo);
 
-  xclkl->xi_lss = nc_distance_comoving_lss (xclkl->dist, cosmo);
+  {
+    const gdouble z_lss = nc_distance_decoupling_redshift (xclkl->dist, cosmo);
 
-  /* nc_recomb_prepare (xclkl->recomb, cosmo); */
-  /* gdouble lamb = nc_recomb_tau_zstar (xclkl->recomb, cosmo); */
+    xclkl->xi_lss = nc_distance_comoving_lss (xclkl->dist, cosmo);
 
-  nc_xcor_limber_kernel_set_const_factor (xclk, (3.0 * nc_hicosmo_Omega_m0 (cosmo)) / 2.0);
-  nc_xcor_limber_kernel_set_z_range (xclk, 0.0, 1090.0, 2.0);
+    /* nc_recomb_prepare (xclkl->recomb, cosmo); */
+    /* gdouble lamb = nc_recomb_tau_zstar (xclkl->recomb, cosmo); */
+
+    nc_xcor_limber_kernel_set_const_factor (xclk, (3.0 * nc_hicosmo_Omega_m0 (cosmo)) / 2.0);
+    nc_xcor_limber_kernel_set_z_range (xclk, 0.0, z_lss, 2.0);
+  }
 }
 
 static void
