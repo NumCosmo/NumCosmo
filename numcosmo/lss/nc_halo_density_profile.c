@@ -350,7 +350,7 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
    *
    */
   ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_C_DELTA, "c_{\\Delta}", "cDelta",
-                              2.5,  10.0, 1.0e-1,
+                              1.0e-1,  30.0, 1.0e-1,
                               NC_HALO_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_DEFAULT_C_DELTA,
                               NCM_PARAM_TYPE_FIXED);
 

@@ -496,10 +496,10 @@ ncm_model_class_init (NcmModelClass *klass)
 
 /*
  * ncm_model_class_get_property:
- * @object: a #GObject descending from NcmModel
+ * @object: a GObject descending from NcmModel
  * @prop_id: the gobject property id
- * @value: a #GValue
- * @pspec: a #GParamSpec
+ * @value: a GValue
+ * @pspec: a GParamSpec
  *
  * get_property function, it should be used only when implementing NcmModels
  * in binded languages.
@@ -569,10 +569,10 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
 
 /*
  * ncm_model_class_set_property:
- * @object: a #GObject descending from NcmModel
+ * @object: a GObject descending from NcmModel
  * @prop_id: the gobject property id
- * @value: a #GValue
- * @pspec: a #GParamSpec
+ * @value: a GValue
+ * @pspec: a GParamSpec
  *
  * get_property function, it should be used only when implementing NcmModels
  * in binded languages.
@@ -1492,7 +1492,7 @@ ncm_model_id (NcmModel *model)
 
 /**
  * ncm_model_id_by_type:
- * @model_type: a #GType
+ * @model_type: a GType
  *
  * Gets the model id of a model type. It is an error to call this function
  * with a type that is not a subclass of #NcmModel.
@@ -2716,7 +2716,7 @@ ncm_model_orig_param_get_by_name (NcmModel *model, const gchar *param_name)
 
 /**
  * ncm_model_type_is_submodel:
- * @model_type: a #GType
+ * @model_type: a GType
  *
  * Tests if @model_type is a submodel of other model class.
  *
@@ -2738,7 +2738,7 @@ ncm_model_type_is_submodel (GType model_type)
 
 /**
  * ncm_model_type_main_model:
- * @model_type: a #GType
+ * @model_type: a GType
  *
  * If @model_type is a submodel returns the #NcmModelID of its
  * main model, otherwise returns -1.
@@ -2937,7 +2937,7 @@ ncm_model_peek_submodel_pos_by_mid (NcmModel *model, NcmModelID mid)
  * ncm_model___getitem__:
  * @model: a #NcmModel
  * @param: parameter name
- * @err: a #GError
+ * @err: a GError
  *
  * Gets the parameter by name.
  *
@@ -2969,7 +2969,7 @@ ncm_model___getitem__ (NcmModel *model, gchar *param, GError **err)
  * @model: a #NcmModel
  * @param: parameter name
  * @val: parameter value
- * @err: a pointer for #GError
+ * @err: a pointer for GError
  *
  * Sets the parameter by name.
  *

@@ -579,22 +579,26 @@ _nc_hicosmo_Vexp_init_dx_alpha_series (const gdouble dalpha)
 #define LAMBDAp (1.0 + 1.0 / M_SQRT2)
 #define LAMBDAm (1.0 - 1.0 / M_SQRT2)
 
-static gdouble _nc_hicosmo_Vexp_zeta_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-static gdouble _nc_hicosmo_Vexp_zeta_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-static gdouble _nc_hicosmo_Vexp_zeta_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-static gdouble _nc_hicosmo_Vexp_zeta_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
-static gdouble _nc_hicosmo_Vexp_zeta_eval_unit (NcHIPertIAdiab *iad);
-static gdouble _nc_hicosmo_Vexp_zeta_eval_x (NcHIPertIAdiab *iad, const gdouble tau);
+static gdouble _nc_hicosmo_Vexp_adiab_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_Vexp_adiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_Vexp_adiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_Vexp_adiab_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_Vexp_adiab_eval_unit (NcHIPertIAdiab *iad);
+static gdouble _nc_hicosmo_Vexp_adiab_eval_x (NcHIPertIAdiab *iad, const gdouble tau);
+static gdouble _nc_hicosmo_Vexp_adiab_eval_p2Psi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_Vexp_adiab_eval_p2drho (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
 
 static void
 nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface)
 {
-  iface->eval_xi   = &_nc_hicosmo_Vexp_zeta_eval_xi;
-  iface->eval_F1   = &_nc_hicosmo_Vexp_zeta_eval_F1;
-  iface->eval_nu   = &_nc_hicosmo_Vexp_zeta_eval_nu;
-  iface->eval_m    = &_nc_hicosmo_Vexp_zeta_eval_m;
-  iface->eval_unit = &_nc_hicosmo_Vexp_zeta_eval_unit;
-  iface->eval_x    = &_nc_hicosmo_Vexp_zeta_eval_x;
+  iface->eval_xi     = &_nc_hicosmo_Vexp_adiab_eval_xi;
+  iface->eval_F1     = &_nc_hicosmo_Vexp_adiab_eval_F1;
+  iface->eval_nu     = &_nc_hicosmo_Vexp_adiab_eval_nu;
+  iface->eval_m      = &_nc_hicosmo_Vexp_adiab_eval_m;
+  iface->eval_unit   = &_nc_hicosmo_Vexp_adiab_eval_unit;
+  iface->eval_x      = &_nc_hicosmo_Vexp_adiab_eval_x;
+  iface->eval_p2Psi  = &_nc_hicosmo_Vexp_adiab_eval_p2Psi;
+  iface->eval_p2drho = &_nc_hicosmo_Vexp_adiab_eval_p2drho;
 }
 
 static gdouble _nc_hicosmo_Vexp_gw_eval_xi (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
@@ -1754,7 +1758,7 @@ _nc_hicosmo_Vexp_xb (NcHICosmo *cosmo)
  */
 
 static gdouble
-_nc_hicosmo_Vexp_zeta_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+_nc_hicosmo_Vexp_adiab_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
 {
   NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (iad);
 
@@ -1839,7 +1843,7 @@ _nc_hicosmo_Vexp_zeta_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdo
 }
 
 static gdouble
-_nc_hicosmo_Vexp_zeta_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+_nc_hicosmo_Vexp_adiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
 {
   NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (iad);
 
@@ -1912,7 +1916,7 @@ _nc_hicosmo_Vexp_zeta_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gdo
 }
 
 static gdouble
-_nc_hicosmo_Vexp_zeta_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+_nc_hicosmo_Vexp_adiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
 {
   NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (iad);
 
@@ -1976,7 +1980,7 @@ _nc_hicosmo_Vexp_zeta_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdo
 }
 
 static gdouble
-_nc_hicosmo_Vexp_zeta_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+_nc_hicosmo_Vexp_adiab_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
 {
   NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (iad);
 
@@ -2063,21 +2067,41 @@ _nc_hicosmo_Vexp_zeta_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdou
 }
 
 static gdouble
-_nc_hicosmo_Vexp_zeta_eval_unit (NcHIPertIAdiab *iad)
+_nc_hicosmo_Vexp_adiab_eval_unit (NcHIPertIAdiab *iad)
 {
   NcHICosmoVexp *Vexp  = NC_HICOSMO_VEXP (iad);
   NcHICosmo *cosmo     = NC_HICOSMO (iad);
   const gdouble RH_lp  = nc_hicosmo_RH_planck (cosmo);
-  const gdouble factor = sqrt (8.0 * ncm_c_pi () / 3.0);
+  const gdouble factor = sqrt (8.0 * ncm_c_pi () / 6.0);
 
 
   return factor / RH_lp;
 }
 
 static gdouble
-_nc_hicosmo_Vexp_zeta_eval_x (NcHIPertIAdiab *iad, const gdouble tau)
+_nc_hicosmo_Vexp_adiab_eval_x (NcHIPertIAdiab *iad, const gdouble tau)
 {
   return nc_hicosmo_Vexp_xe_tau (NC_HICOSMO_VEXP (iad), tau);
+}
+
+static gdouble
+_nc_hicosmo_Vexp_adiab_eval_p2Psi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+{
+  NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (iad);
+  NcHICosmo *cosmo    = NC_HICOSMO (iad);
+  const gdouble E     = nc_hicosmo_Vexp_E_tau (Vexp, tau);
+  const gdouble x     = _nc_hicosmo_Vexp_adiab_eval_x (iad, tau);
+
+  g_assert_not_reached ();
+  /* Needs a double check */
+
+  return -1.0 / (6.0 * E * x * k * k);
+}
+
+static gdouble
+_nc_hicosmo_Vexp_adiab_eval_p2drho (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+{
+  g_assert_not_reached ();
 }
 
 /*
@@ -3327,7 +3351,7 @@ nc_hicosmo_Vexp_Ricci_scale (NcHICosmoVexp *Vexp, const gdouble tau)
  * @Vexp: a #NcHICosmoVexp
  * @tau: $\tau$
  *
- * FIXME
+ * Computes the value of $E(\tau)$, where $E(\tau) = H(\tau) / H_0$.
  *
  * Returns: $E(\tau)$.
  */

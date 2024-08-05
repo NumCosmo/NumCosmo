@@ -217,13 +217,24 @@ c_tests = [
         'sources': ['test_nc_distance.c'],
     },
     {
-        'name': 'nc_galaxy_wl_ellipticity_kde',
-        'sources': ['test_nc_galaxy_wl_ellipticity_kde.c'],
-        'timeout': 0,
+        'name': 'nc_data_cluster_wl',
+        'sources': ['test_nc_data_cluster_wl.c'],
     },
     {
-        'name': 'nc_galaxy_wl_ellipticity_binned',
-        'sources': ['test_nc_galaxy_wl_ellipticity_binned.c'],
+        'name': 'nc_galaxy_sd_position',
+        'sources': ['test_nc_galaxy_sd_position.c'],
+    },
+    {
+        'name': 'nc_galaxy_sd_shape',
+        'sources': ['test_nc_galaxy_sd_shape.c'],
+    },
+    {
+        'name': 'nc_galaxy_sd_z_proxy_dirac',
+        'sources': ['test_nc_galaxy_sd_z_proxy_dirac.c'],
+    },
+    {
+        'name': 'nc_galaxy_sd_z_proxy_gauss',
+        'sources': ['test_nc_galaxy_sd_z_proxy_gauss.c'],
     },
 ]
 tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
@@ -233,7 +244,7 @@ foreach c_test : c_tests
         c_test['name'],
         c_test['sources'],
         c_args: tests_c_args,
-        dependencies: [libnumcosmo_dep],
+        dependencies: [libnumcosmo_dep, gsl_dep],
         include_directories: [configinc, numcosmoinc],
     )
     if c_test.has_key('timeout')
