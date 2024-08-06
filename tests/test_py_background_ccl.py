@@ -195,21 +195,44 @@ def test_background_growth_lowz(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
     cosmo, dist, ps_lin, _, _ = create_nc_obj(ccl_cosmo_eh_linear)
     dist.prepare(cosmo)
     if ccl_cosmo_eh_linear.high_precision:
-        rtol = 1.0e-10
+        reltol_growth = 1.0e-10
+        reltol_rate = 1.0e-8
     else:
-        rtol = 1.0e-6
+        reltol_growth = 1.0e-6
+        reltol_rate = 1.0e-6
 
+    k_pivot = 1.0
     z_test = np.linspace(0.0, 5.0, 2000)[1:]
     a_test = 1.0 / (1.0 + z_test)
 
     gf = ps_lin.peek_gf()
     gf.prepare(cosmo)
 
+    nc_D_a = np.array([gf.eval(cosmo, z) for z in z_test])
+    nc_D2_a = np.array(
+        [
+            ps_lin.eval(cosmo, z, k_pivot) / ps_lin.eval(cosmo, 0.0, k_pivot)
+            for z in z_test
+        ]
+    )
+    nc_dD_a = np.array([gf.eval_deriv(cosmo, z) for z in z_test])
+    nc_dD2_a = np.array(
+        [
+            ps_lin.deriv_z(cosmo, z, k_pivot) / ps_lin.eval(cosmo, 0.0, k_pivot)
+            for z in z_test
+        ]
+    )
+    nc_f_a = -(1.0 + z_test) * nc_dD_a / nc_D_a
+
+    assert_allclose(nc_D_a**2, nc_D2_a, rtol=1.0e-15, atol=0.0)
+    assert_allclose(nc_dD2_a / (2.0 * nc_D_a), nc_dD_a, rtol=1.0e-15, atol=0.0)
+
     assert_allclose(
-        [gf.eval(cosmo, z) for z in z_test],
-        ccl_cosmo_eh_linear.growth_factor(a_test),
-        rtol=rtol,
-        atol=0.0,
+        nc_D_a, ccl_cosmo_eh_linear.growth_factor(a_test), rtol=reltol_growth, atol=0.0
+    )
+
+    assert_allclose(
+        nc_f_a, ccl_cosmo_eh_linear.growth_rate(a_test), rtol=reltol_rate, atol=0.0
     )
 
 
@@ -218,9 +241,11 @@ def test_background_growth_highz(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
     cosmo, dist, ps_lin, _, _ = create_nc_obj(ccl_cosmo_eh_linear)
     dist.prepare(cosmo)
     if ccl_cosmo_eh_linear.high_precision:
-        rtol = 1.0e-4
+        reltol_growth = 1.0e-4
+        reltol_rate = 1.0e-4
     else:
-        rtol = 1.0e-3
+        reltol_growth = 1.0e-3
+        reltol_rate = 1.0e-2
 
     z_test = np.geomspace(0.001, 1100.0, 4000)[1:]
     a_test = 1.0 / (1.0 + z_test)
@@ -228,9 +253,14 @@ def test_background_growth_highz(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
     gf = ps_lin.peek_gf()
     gf.prepare(cosmo)
 
+    nc_D_a = np.array([gf.eval(cosmo, z) for z in z_test])
+    nc_f_a = (
+        -(1.0 + z_test) * np.array([gf.eval_deriv(cosmo, z) for z in z_test]) / nc_D_a
+    )
     assert_allclose(
-        [gf.eval(cosmo, z) for z in z_test],
-        ccl_cosmo_eh_linear.growth_factor(a_test),
-        rtol=rtol,
-        atol=0.0,
+        nc_D_a, ccl_cosmo_eh_linear.growth_factor(a_test), rtol=reltol_growth, atol=0.0
+    )
+
+    assert_allclose(
+        nc_f_a, ccl_cosmo_eh_linear.growth_rate(a_test), rtol=reltol_rate, atol=0.0
     )

@@ -262,7 +262,7 @@ _nc_powspec_ml_transfer_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdo
   NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (powspec);
   const gdouble kh            = k / nc_hicosmo_h (cosmo);
   const gdouble growth        = nc_growth_func_eval (ps_mlt->gf, cosmo, z);
-  const gdouble deriv_growth  = nc_growth_func_eval_deriv (ps_mlt->gf, cosmo, z) * (-1.0 / gsl_pow_2 (1.0 + z));
+  const gdouble deriv_growth  = nc_growth_func_eval_deriv (ps_mlt->gf, cosmo, z);
   const gdouble tf            = nc_transfer_func_eval (ps_mlt->tf, cosmo, kh);
   const gdouble tf2           = tf * tf;
   const gdouble Delta_zeta_k  = nc_hiprim_SA_powspec_k (prim, k);

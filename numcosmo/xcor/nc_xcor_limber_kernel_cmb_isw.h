@@ -38,9 +38,9 @@ G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_LIMBER_KERNEL_CMB_ISW (nc_xcor_limber_kernel_cmb_isw_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcXcorLimberKernelCMBISW, nc_xcor_limber_kernel_cmb_isw, NC, XCOR_LIMBER_KERNEL_CMB_ISW, NcXcorLimberKernel)
+G_DECLARE_FINAL_TYPE (NcXcorLimberKernelCMBISW, nc_xcor_limber_kernel_cmb_isw, NC, XCOR_LIMBER_KERNEL_CMB_ISW, NcXcorLimberKernel);
 
-NcXcorLimberKernelCMBISW *nc_xcor_limber_kernel_cmb_isw_new (NcDistance * dist, NcRecomb * recomb, NcmVector * Nl);
+NcXcorLimberKernelCMBISW *nc_xcor_limber_kernel_cmb_isw_new (NcDistance *dist, NcmPowspec *ps, NcRecomb *recomb, NcmVector *Nl);
 
 #define NC_XCOR_LIMBER_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL (0.0)
 

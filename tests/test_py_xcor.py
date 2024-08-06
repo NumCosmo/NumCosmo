@@ -93,6 +93,29 @@ def test_cmb_lens_kernel(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=0.0)
 
 
+def test_cmb_lens_serialization(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
+    """Check that CMB lensing tracer can be serialized."""
+    cosmo, dist, _, _, _ = create_nc_obj(ccl_cosmo_eh_linear, dist_z_max=2000.0)
+
+    lmax = 3000
+    nc_cmb_lens = Nc.XcorLimberKernelCMBLensing.new(
+        dist, Nc.RecombSeager(), Ncm.Vector.new_array(np.zeros(lmax + 1).tolist())
+    )
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    nc_cmb_lens_dup = ser.dup_obj(nc_cmb_lens)
+    assert nc_cmb_lens_dup is not None
+    assert nc_cmb_lens_dup is not nc_cmb_lens
+    assert isinstance(nc_cmb_lens_dup, Nc.XcorLimberKernelCMBLensing)
+
+    nc_cmb_lens.prepare(cosmo)
+    nc_cmb_lens_dup.prepare(cosmo)
+
+    assert_allclose(
+        nc_cmb_lens.eval_full(cosmo, 0.0, dist, 2),
+        nc_cmb_lens_dup.eval_full(cosmo, 0.0, dist, 2),
+    )
+
+
 def test_cmb_auto_integrand(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
     """Compare NumCosmo and CCL transfer functions."""
     cosmo, dist, ps_lin, _, _ = create_nc_obj(ccl_cosmo_eh_linear)
@@ -208,3 +231,75 @@ def test_cmb_auto(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
     nc_cmb_lens_auto = np.array(nc_cmb_lens_auto_v.dup_array())
 
     assert_allclose(ccl_cmb_lens_auto, nc_cmb_lens_auto, rtol=reltol_target, atol=0.0)
+
+
+def test_cmb_isw_kernel(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
+    """Compare NumCosmo and CCL correlation windows."""
+    cosmo, dist, ps_lin, _, _ = create_nc_obj(ccl_cosmo_eh_linear, dist_z_max=2000.0)
+    if ccl_cosmo_eh_linear["Omega_k"] != 0.0:
+        pytest.skip("CMB lensing not implemented for non-flat cosmologies")
+    if ccl_cosmo_eh_linear.high_precision:
+        reltol_target: float = 1.0e-7
+    else:
+        reltol_target = 1.0e-4
+
+    dist.compute_inv_comoving(True)
+    dist.prepare(cosmo)
+    recomb = Nc.RecombSeager()
+
+    lmax = 3000
+    RH_Mpc = cosmo.RH_Mpc()
+    ell = 77.0
+
+    ccl_cmb_lens = pyccl.ISWTracer(ccl_cosmo_eh_linear, n_chi=10000)
+    assert ccl_cmb_lens is not None
+
+    Wchi_list, chi_list = ccl_cmb_lens.get_kernel()
+    assert chi_list is not None
+    assert Wchi_list is not None
+    assert len(chi_list) == 1  # Single tracer
+    assert len(Wchi_list) == 1  # Single tracer
+
+    chi_a = np.array(chi_list[0])[1:-1]
+    Wchi_a = np.array(Wchi_list[0])[1:-1] / (ell + 0.5) ** 2
+
+    nc_cmb_isw = Nc.XcorLimberKernelCMBISW.new(
+        dist, ps_lin, recomb, Ncm.Vector.new_array(np.zeros(lmax + 1).tolist())
+    )
+    nc_cmb_isw.prepare(cosmo)
+
+    z_array = [dist.inv_comoving(cosmo, chi / RH_Mpc) for chi in chi_a]
+
+    nc_Wchi_a = np.array(
+        [
+            nc_cmb_isw.eval_full(cosmo, z, dist, int(ell)) * cosmo.E(z) / RH_Mpc
+            for z in z_array
+        ]
+    )
+    assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=0.0)
+
+
+def test_cmb_isw_serialization(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
+    """Check that CMB ISW tracer can be serialized."""
+    cosmo, dist, ps_lin, _, _ = create_nc_obj(ccl_cosmo_eh_linear, dist_z_max=2000.0)
+
+    lmax = 3000
+    nc_cmb_isw = Nc.XcorLimberKernelCMBISW.new(
+        dist,
+        ps_lin,
+        Nc.RecombSeager(),
+        Ncm.Vector.new_array(np.zeros(lmax + 1).tolist()),
+    )
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    nc_cmb_isw_dup = ser.dup_obj(nc_cmb_isw)
+    assert nc_cmb_isw_dup is not None
+    assert nc_cmb_isw_dup is not nc_cmb_isw
+    assert isinstance(nc_cmb_isw_dup, Nc.XcorLimberKernelCMBISW)
+
+    nc_cmb_isw.prepare(cosmo)
+    nc_cmb_isw_dup.prepare(cosmo)
+
+    assert_allclose(
+        nc_cmb_isw.eval_full(cosmo, 0.0, dist, 2),
+        nc_cmb_isw_dup.eval_full(cosmo, 0.0, dist, 2),
+    )
