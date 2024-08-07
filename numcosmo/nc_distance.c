@@ -631,6 +631,40 @@ nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 }
 
 /**
+ * nc_distance_comoving_z1_z2:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z1: redshift $z_1$
+ * @z2: redshift $z_2$
+ *
+ * Compute the comoving distance between $z_1$ and $z_2$, $D_c (z_1, z_2)$.
+ *
+ * Returns: $D_c(z_1, z_2)$.
+ */
+gdouble
+nc_distance_comoving_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2)
+{
+  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
+  const gdouble dc1      = nc_distance_comoving (dist, cosmo, z1);
+  const gdouble dc2      = nc_distance_comoving (dist, cosmo, z2);
+  const gdouble dc       = dc2 - dc1;
+
+  if (fabs (2.0 * dc / (dc1 + dc2)) > 1.0e-3)
+  {
+    return dc;
+  }
+  else
+  {
+    gsl_function F = {&_comoving_distance_integral_argument, cosmo};
+    gdouble result, error;
+
+    ncm_integral_locked_a_b (&F, z1, z2, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+
+    return result;
+  }
+}
+
+/**
  * nc_distance_transverse_z1_z2:
  * @dist: a #NcDistance
  * @cosmo: a #NcHICosmo
@@ -645,10 +679,9 @@ gdouble
 nc_distance_transverse_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2)
 {
   const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
-  const gdouble dc1      = nc_distance_comoving (dist, cosmo, z1);
-  const gdouble dc2      = nc_distance_comoving (dist, cosmo, z2);
+  const gdouble dc       = nc_distance_comoving_z1_z2 (dist, cosmo, z1, z2);
 
-  return _nc_distance_sinn (dc2 - dc1, Omega_k0);
+  return _nc_distance_sinn (dc, Omega_k0);
 }
 
 /**
