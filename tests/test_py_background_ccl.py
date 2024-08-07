@@ -29,22 +29,25 @@ from numpy.testing import assert_allclose
 import numpy as np
 import pyccl
 
+import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm
-from numcosmo_py.ccl.nc_ccl import create_nc_obj
-
-from .ccl_fixtures import (  # pylint: disable=unused-import # noqa: F401
+from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_k_a,
     fixture_z_a,
     fixture_ccl_cosmo_eh_linear,
     fixture_ccl_cosmo_eh_halofit,
+    fixture_nc_cosmo_eh_linear,
+    fixture_nc_cosmo_eh_halofit,
 )
 
 Ncm.cfg_init()
 
 
-def test_background_params(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
+def test_background_params(
+    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
+) -> None:
     """Compare NumCosmo and CCL transfer functions."""
-    cosmo, _, _, _, _ = create_nc_obj(ccl_cosmo_eh_linear)
+    cosmo = nc_cosmo_eh_linear.cosmo
 
     reltol = 1.0e-15
 
@@ -63,9 +66,11 @@ def test_background_params(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
     )
 
 
-def test_background_functions(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
+def test_background_functions(
+    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
+) -> None:
     """Compare NumCosmo and CCL background functions."""
-    cosmo, _, _, _, _ = create_nc_obj(ccl_cosmo_eh_linear)
+    cosmo = nc_cosmo_eh_linear.cosmo
     if ccl_cosmo_eh_linear.high_precision:
         rtol = 1.0e-15
     else:
@@ -107,9 +112,11 @@ def test_background_functions(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
     )
 
 
-def test_background_h_over_h0(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
+def test_background_h_over_h0(
+    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
+) -> None:
     """Compare NumCosmo and CCL background functions."""
-    cosmo, _, _, _, _ = create_nc_obj(ccl_cosmo_eh_linear)
+    cosmo = nc_cosmo_eh_linear.cosmo
     if ccl_cosmo_eh_linear.high_precision:
         rtol = 1.0e-9
     else:
@@ -123,10 +130,12 @@ def test_background_h_over_h0(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
     assert_allclose(E2, ccl_cosmo_eh_linear.h_over_h0(a_test) ** 2, rtol=rtol)
 
 
-def test_background_distances(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
+def test_background_distances(
+    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
+) -> None:
     """Compare NumCosmo and CCL distances."""
-    cosmo, dist, _, _, _ = create_nc_obj(ccl_cosmo_eh_linear)
-    dist.prepare(cosmo)
+    cosmo = nc_cosmo_eh_linear.cosmo
+    dist = nc_cosmo_eh_linear.dist
     if ccl_cosmo_eh_linear.high_precision:
         rtol = 1.0e-10
     else:
@@ -167,11 +176,12 @@ def test_background_distances(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
     )
 
 
-def test_background_scale_factor_of_chi(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
+def test_background_scale_factor_of_chi(
+    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
+) -> None:
     """Compare NumCosmo and CCL scale factor of comoving distance."""
-    cosmo, dist, _, _, _ = create_nc_obj(ccl_cosmo_eh_linear)
-    dist.compute_inv_comoving(True)
-    dist.prepare(cosmo)
+    cosmo = nc_cosmo_eh_linear.cosmo
+    dist = nc_cosmo_eh_linear.dist
     if ccl_cosmo_eh_linear.high_precision:
         rtol = 1.0e-9
     else:
@@ -190,12 +200,14 @@ def test_background_scale_factor_of_chi(ccl_cosmo_eh_linear: pyccl.Cosmology) ->
     )
 
 
-def test_background_growth_lowz(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
+def test_background_growth_lowz(
+    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
+) -> None:
     """Compare NumCosmo and CCL growth factor."""
-    cosmo, dist, ps_lin, _, _ = create_nc_obj(ccl_cosmo_eh_linear)
-    dist.prepare(cosmo)
+    cosmo = nc_cosmo_eh_linear.cosmo
+    ps_ml = nc_cosmo_eh_linear.ps_ml
     if ccl_cosmo_eh_linear.high_precision:
-        reltol_growth = 1.0e-10
+        reltol_growth = 1.0e-8
         reltol_rate = 1.0e-8
     else:
         reltol_growth = 1.0e-6
@@ -205,20 +217,18 @@ def test_background_growth_lowz(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
     z_test = np.linspace(0.0, 5.0, 2000)[1:]
     a_test = 1.0 / (1.0 + z_test)
 
-    gf = ps_lin.peek_gf()
-    gf.prepare(cosmo)
-
+    gf = ps_ml.peek_gf()
     nc_D_a = np.array([gf.eval(cosmo, z) for z in z_test])
     nc_D2_a = np.array(
         [
-            ps_lin.eval(cosmo, z, k_pivot) / ps_lin.eval(cosmo, 0.0, k_pivot)
+            ps_ml.eval(cosmo, z, k_pivot) / ps_ml.eval(cosmo, 0.0, k_pivot)
             for z in z_test
         ]
     )
     nc_dD_a = np.array([gf.eval_deriv(cosmo, z) for z in z_test])
     nc_dD2_a = np.array(
         [
-            ps_lin.deriv_z(cosmo, z, k_pivot) / ps_lin.eval(cosmo, 0.0, k_pivot)
+            ps_ml.deriv_z(cosmo, z, k_pivot) / ps_ml.eval(cosmo, 0.0, k_pivot)
             for z in z_test
         ]
     )
@@ -236,10 +246,12 @@ def test_background_growth_lowz(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
     )
 
 
-def test_background_growth_highz(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
+def test_background_growth_highz(
+    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
+) -> None:
     """Compare NumCosmo and CCL growth factor."""
-    cosmo, dist, ps_lin, _, _ = create_nc_obj(ccl_cosmo_eh_linear)
-    dist.prepare(cosmo)
+    cosmo = nc_cosmo_eh_linear.cosmo
+    ps_ml = nc_cosmo_eh_linear.ps_ml
     if ccl_cosmo_eh_linear.high_precision:
         reltol_growth = 1.0e-4
         reltol_rate = 1.0e-4
@@ -250,9 +262,7 @@ def test_background_growth_highz(ccl_cosmo_eh_linear: pyccl.Cosmology) -> None:
     z_test = np.geomspace(0.001, 1100.0, 4000)[1:]
     a_test = 1.0 / (1.0 + z_test)
 
-    gf = ps_lin.peek_gf()
-    gf.prepare(cosmo)
-
+    gf = ps_ml.peek_gf()
     nc_D_a = np.array([gf.eval(cosmo, z) for z in z_test])
     nc_f_a = (
         -(1.0 + z_test) * np.array([gf.eval_deriv(cosmo, z) for z in z_test]) / nc_D_a

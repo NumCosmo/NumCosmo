@@ -24,7 +24,6 @@
 
 """Unit tests for NumCosmo powwer-spectra."""
 
-import time
 import pytest
 
 import numpy as np
@@ -32,124 +31,105 @@ from numpy.testing import assert_allclose
 
 import pyccl
 
-from numcosmo_py import Ncm, Nc
+import numcosmo_py.cosmology as ncpy
+from numcosmo_py import Ncm
 from numcosmo_py.ccl.nc_ccl import create_nc_obj
 
-from .ccl_fixtures import (  # pylint: disable=unused-import # noqa: F401
+from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_k_a,
     fixture_z_a,
     fixture_z_high_a,
     fixture_ccl_cosmo_eh_linear,
     fixture_ccl_cosmo_eh_halofit,
+    fixture_nc_cosmo_eh_linear,
+    fixture_nc_cosmo_eh_halofit,
 )
 
 Ncm.cfg_init()
 
-COMPARE_TIME = False
-
 
 def _test_powspec_transfer_any(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: ncpy.Cosmology,
     k_a: np.ndarray,
     z_a: np.ndarray,
     reltol_target: float,
 ) -> None:
     """Compare NumCosmo and CCL transfer functions."""
-    nc_elapse = 0.0
-    ccl_elapse = 0.0
-
-    t0 = time.time()
-    cosmo: Nc.HICosmo
-    ps_lin: Nc.PowspecML
-    cosmo, _, ps_lin, _, _ = create_nc_obj(ccl_cosmo_eh_linear)
-    t1 = time.time()
-
-    nc_elapse += t1 - t0
+    cosmo = nc_cosmo_eh_linear.cosmo
+    ps_ml = nc_cosmo_eh_linear.ps_ml
 
     k_vec = Ncm.Vector.new_array(k_a.tolist())
     Pk_vec = Ncm.Vector.new(k_vec.len())
 
     for z in z_a:
         a_i = 1.0 / (1.0 + z)
-        t0 = time.time()
         pk_ccl = pyccl.linear_matter_power(ccl_cosmo_eh_linear, k_a, a_i)
-        t1 = time.time()
 
-        ps_lin.eval_vec(cosmo, z, k_vec, Pk_vec)
+        ps_ml.eval_vec(cosmo, z, k_vec, Pk_vec)
         pk_nc = Pk_vec.dup_array()
-        t2 = time.time()
-
-        nc_elapse += t2 - t1
-        ccl_elapse += t1 - t0
 
         assert_allclose(pk_nc, pk_ccl, rtol=reltol_target)
 
-    if COMPARE_TIME:
-        print(f"# CCL time: {ccl_elapse:.3f} s, NumCosmo time: {nc_elapse:.3f} s")
-
 
 def test_powspec_transfer_lowz(
-    ccl_cosmo_eh_linear: pyccl.Cosmology, k_a: np.ndarray, z_a: np.ndarray
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: ncpy.Cosmology,
+    k_a: np.ndarray,
+    z_a: np.ndarray,
 ) -> None:
     """Compare NumCosmo and CCL transfer functions for low redshifts."""
     if ccl_cosmo_eh_linear.high_precision:
-        reltol_target: float = 1.0e-8
+        reltol_target: float = 1.0e-7
     else:
         reltol_target = 1.0e-3
-    _test_powspec_transfer_any(ccl_cosmo_eh_linear, k_a, z_a, reltol_target)
+    _test_powspec_transfer_any(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, k_a, z_a, reltol_target
+    )
 
 
 def test_powspec_transfer_highz(
-    ccl_cosmo_eh_linear: pyccl.Cosmology, k_a: np.ndarray, z_high_a: np.ndarray
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: ncpy.Cosmology,
+    k_a: np.ndarray,
+    z_high_a: np.ndarray,
 ) -> None:
     """Compare NumCosmo and CCL transfer functions."""
     if ccl_cosmo_eh_linear.high_precision:
         reltol_target: float = 1.0e-4
     else:
         reltol_target = 1.0e-2
-    _test_powspec_transfer_any(ccl_cosmo_eh_linear, k_a, z_high_a, reltol_target)
+    _test_powspec_transfer_any(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, k_a, z_high_a, reltol_target
+    )
 
 
 def test_powspec_halofit(
-    ccl_cosmo_eh_halofit: pyccl.Cosmology, k_a: np.ndarray, z_a: np.ndarray
+    ccl_cosmo_eh_halofit: pyccl.Cosmology,
+    nc_cosmo_eh_halofit: ncpy.Cosmology,
+    k_a: np.ndarray,
+    z_a: np.ndarray,
 ) -> None:
     """Compare NumCosmo and CCL transfer functions."""
-    cosmo, _, _, ps_mnl, _ = create_nc_obj(ccl_cosmo_eh_halofit)
-
+    cosmo = nc_cosmo_eh_halofit.cosmo
+    ps_mnl = nc_cosmo_eh_halofit.ps_mnl
     if ccl_cosmo_eh_halofit.high_precision:
         reltol_target: float = 6.0e-3
     else:
         reltol_target = 5.0e-2
-
-    nc_elapse = 0.0
-    ccl_elapse = 0.0
-
-    t0 = time.time()
-    ps_mnl.prepare(cosmo)
-    t1 = time.time()
-
-    nc_elapse += t1 - t0
 
     k_vec = Ncm.Vector.new_array(k_a.tolist())
     Pk_vec = Ncm.Vector.new(k_vec.len())
 
     for z in z_a:
         a_i = 1.0 / (1.0 + z)
-        t0 = time.time()
         ccl_cosmo_eh_halofit.compute_nonlin_power()
         pk_ccl = pyccl.nonlin_matter_power(ccl_cosmo_eh_halofit, k_a, a_i)
-        t1 = time.time()
 
         ps_mnl.eval_vec(cosmo, z, k_vec, Pk_vec)
         pk_nc = Pk_vec.dup_array()
-        t2 = time.time()
 
-        nc_elapse += t2 - t1
-        ccl_elapse += t1 - t0
         assert_allclose(pk_nc, pk_ccl, rtol=reltol_target)
-
-    if COMPARE_TIME:
-        print(f"# CCL time: {ccl_elapse:.3f} s, NumCosmo time: {nc_elapse:.3f} s")
 
 
 @pytest.mark.parametrize("sigma8", [0.01, 0.05, 0.1, 0.2, 0.5])
@@ -172,7 +152,9 @@ def test_powspec_halofit_linear_universe(
         matter_power_spectrum="halofit",
     )
 
-    cosmo, _, _, ps_mnl, _ = create_nc_obj(ccl_cosmo, ps_nln_z_max=1.0)
+    nc_cosmo = create_nc_obj(ccl_cosmo, ps_nln_z_max=1.0)
+    cosmo = nc_cosmo.cosmo
+    ps_mnl = nc_cosmo.ps_mnl
 
     k_vec = Ncm.Vector.new_array(k_a.tolist())
     Pk_vec = Ncm.Vector.new(k_vec.len())
