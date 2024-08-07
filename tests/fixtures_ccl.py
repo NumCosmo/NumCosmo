@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# ccl_fixtures.py
+# fixtures_ccl.py
 #
 # Thu Aug 01 11:44:12 2024
 # Copyright  2024  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# test_py_powspec.py
+# fixtures_ccl.py
 # Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Unit tests for NumCosmo powwer-spectra."""
+"""Fixtures for CCL tests."""
 
 from itertools import product
 import pytest
@@ -31,10 +31,8 @@ import numpy as np
 
 import pyccl
 
-from numcosmo_py import Ncm
-from numcosmo_py.ccl.nc_ccl import CCLParams
-
-Ncm.cfg_init()
+from numcosmo_py.cosmology import Cosmology
+from numcosmo_py.ccl.nc_ccl import CCLParams, create_nc_obj
 
 
 @pytest.fixture(name="k_a")
@@ -109,7 +107,7 @@ def fixture_ccl_cosmo_eh_linear(request) -> pyccl.Cosmology:
 )
 def fixture_ccl_cosmo_eh_halofit(request) -> pyccl.Cosmology:
     """Fixture for CCL Cosmology."""
-    Omega_c = 0.25
+    Omega_c_vals = [0.25, 0.24, 0.26]
     Omega_b = 0.05
     Omega_k = 0.0
     h = 0.7
@@ -123,7 +121,7 @@ def fixture_ccl_cosmo_eh_halofit(request) -> pyccl.Cosmology:
 
     high_prec, index = request.param
 
-    Omega_k = 1.0 - Omega_c - Omega_b - Omega_v
+    Omega_k = 1.0 - Omega_c_vals[index] - Omega_b - Omega_v
 
     if high_prec:
         CCLParams.set_high_prec_params()
@@ -131,7 +129,7 @@ def fixture_ccl_cosmo_eh_halofit(request) -> pyccl.Cosmology:
         CCLParams.set_default_params()
 
     ccl_cosmo = pyccl.Cosmology(
-        Omega_c=Omega_c,
+        Omega_c=Omega_c_vals[index],
         Omega_b=Omega_b,
         Neff=Neff,
         h=h,
@@ -146,3 +144,15 @@ def fixture_ccl_cosmo_eh_halofit(request) -> pyccl.Cosmology:
 
     ccl_cosmo.high_precision = high_prec
     return ccl_cosmo
+
+
+@pytest.fixture(name="nc_cosmo_eh_linear")
+def fixture_nc_cosmo_eh_linear(ccl_cosmo_eh_linear) -> Cosmology:
+    """Fixture for CCL and NumCosmo Cosmology."""
+    return create_nc_obj(ccl_cosmo_eh_linear, dist_z_max=2000.0)
+
+
+@pytest.fixture(name="nc_cosmo_eh_halofit")
+def fixture_nc_cosmo_eh_halofit(ccl_cosmo_eh_halofit) -> Cosmology:
+    """Fixture for CCL and NumCosmo Cosmology."""
+    return create_nc_obj(ccl_cosmo_eh_halofit, dist_z_max=2000.0)
