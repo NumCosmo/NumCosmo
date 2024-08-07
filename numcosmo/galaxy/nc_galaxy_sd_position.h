@@ -46,8 +46,7 @@ struct _NcGalaxySDPositionClass
   /*< private >*/
   NcmModelClass parent_class;
 
-  gdouble (*gen_ra) (NcGalaxySDPosition *gsdp, NcmRNG *rng);
-  gdouble (*gen_dec) (NcGalaxySDPosition *gsdp, NcmRNG *rng);
+  gboolean (*gen) (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *ra, gdouble *dec);
   gdouble (*integ) (NcGalaxySDPosition *gsdp, NcmVector *data);
   gboolean (*set_ra_lim) (NcGalaxySDPosition *gsdp, const gdouble ra_min, const gdouble ra_max);
   gboolean (*set_dec_lim) (NcGalaxySDPosition *gsdp, const gdouble dec_min, const gdouble dec_max);
@@ -72,8 +71,7 @@ gboolean nc_galaxy_sd_position_set_dec_lim (NcGalaxySDPosition *gsdp, const gdou
 gboolean nc_galaxy_sd_position_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
 GStrv nc_galaxy_sd_position_get_header (NcGalaxySDPosition *gsdp);
 
-gdouble nc_galaxy_sd_position_gen_ra (NcGalaxySDPosition *gsdp, NcmRNG *rng);
-gdouble nc_galaxy_sd_position_gen_dec (NcGalaxySDPosition *gsdp, NcmRNG *rng);
+gboolean nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *ra, gdouble *dec);
 gdouble nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, NcmVector *data);
 
 G_END_DECLS

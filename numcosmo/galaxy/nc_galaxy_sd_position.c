@@ -146,20 +146,12 @@ _nc_galaxy_sd_position_finalize (GObject *object)
 NCM_MSET_MODEL_REGISTER_ID (nc_galaxy_sd_position, NC_TYPE_GALAXY_SD_POSITION)
 
 /* LCOV_EXCL_START */
-static gdouble
-_nc_galaxy_sd_position_gen_ra (NcGalaxySDPosition *gsdp, NcmRNG *rng)
+static gboolean
+_nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *ra, gdouble *dec)
 {
-  g_error ("_nc_galaxy_sd_position_gen_ra: method not implemented.");
+  g_error ("_nc_galaxy_sd_position_gen: method not implemented.");
 
-  return 0.0;
-}
-
-static gdouble
-_nc_galaxy_sd_position_gen_dec (NcGalaxySDPosition *gsdp, NcmRNG *rng)
-{
-  g_error ("_nc_galaxy_sd_position_gen_dec: method not implemented.");
-
-  return 0.0;
+  return FALSE;
 }
 
 static gdouble
@@ -262,8 +254,7 @@ nc_galaxy_sd_position_class_init (NcGalaxySDPositionClass *klass)
 
   ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
 
-  klass->gen_ra      = &_nc_galaxy_sd_position_gen_ra;
-  klass->gen_dec     = &_nc_galaxy_sd_position_gen_dec;
+  klass->gen         = &_nc_galaxy_sd_position_gen;
   klass->integ       = &_nc_galaxy_sd_position_integ;
   klass->set_ra_lim  = &_nc_galaxy_sd_position_set_ra_lim;
   klass->set_dec_lim = &_nc_galaxy_sd_position_set_dec_lim;
@@ -392,33 +383,20 @@ nc_galaxy_sd_position_get_header (NcGalaxySDPosition *gsdp)
 }
 
 /**
- * nc_galaxy_sd_position_gen_ra: (virtual gen_ra)
+ * nc_galaxy_sd_position_gen: (virtual gen)
  * @gsdp: a #NcGalaxySDPosition
  * @rng: a #NcmRNG
+ * @ra: (out): the generated right ascension value
+ * @dec: (out): the generated declination value
  *
- * Generates a right ascension value from the distribution using @rng.
+ * Generates a right ascension and declination value from the distribution using @rng.
  *
- * Returns: the generated right ascension value.
+ * Returns: TRUE if the values were generated successfully, FALSE otherwise.
  */
-gdouble
-nc_galaxy_sd_position_gen_ra (NcGalaxySDPosition *gsdp, NcmRNG *rng)
+gboolean
+nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble *ra, gdouble *dec)
 {
-  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen_ra (gsdp, rng);
-}
-
-/**
- * nc_galaxy_sd_position_gen_dec: (virtual gen_dec)
- * @gsdp: a #NcGalaxySDPosition
- * @rng: a #NcmRNG
- *
- * Generates a declination value from the distribution using @rng
- *
- * Returns: the generated declination value.
- */
-gdouble
-nc_galaxy_sd_position_gen_dec (NcGalaxySDPosition *gsdp, NcmRNG *rng)
-{
-  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen_dec (gsdp, rng);
+  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen (gsdp, rng, ra , dec);
 }
 
 /**
