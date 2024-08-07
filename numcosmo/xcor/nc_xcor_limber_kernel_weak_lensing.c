@@ -313,6 +313,7 @@ nc_xcor_limber_kernel_weak_lensing_new (gdouble zmin, gdouble zmax, NcmSpline *d
 
 typedef struct _int_src_int_params
 {
+  gdouble z;
   gdouble chiz;
   NcDistance *dist;
   NcHICosmo *cosmo;
@@ -332,7 +333,7 @@ _nc_xcor_limber_kernel_weak_lensing_src_int_integrand (gdouble zz, gpointer para
   }
   else
   {
-    const gdouble a = 1.0 - ts->chiz / nc_distance_comoving (ts->dist, ts->cosmo, zz);
+    const gdouble a = nc_distance_comoving_z1_z2 (ts->dist, ts->cosmo, ts->z, zz) / nc_distance_comoving (ts->dist, ts->cosmo, zz);
 
     return a * dn_dz_zz;
   }
@@ -369,6 +370,7 @@ _nc_xcor_limber_kernel_weak_lensing_src_int (gdouble z, gpointer params)
 
   const gdouble chiz = nc_distance_comoving (xclkg->dist, cosmo, z);
 
+  int_ts.z     = z;
   int_ts.chiz  = chiz;
   int_ts.dist  = xclkg->dist;
   int_ts.cosmo = cosmo;
@@ -377,9 +379,7 @@ _nc_xcor_limber_kernel_weak_lensing_src_int (gdouble z, gpointer params)
   F.function = &_nc_xcor_limber_kernel_weak_lensing_src_int_integrand;
   F.params   = &int_ts;
 
-  gsl_integration_qag (&F, z, zmax, 0., NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, w, &result, &error);
-
-  /* printf ("_nc_xcor_limber_kernel_weak_lensing_src_int integration result = %g with integration error = %g for interval z = %g to zmax = %g, chiz = %g \n", result, error, z, xclk->zmax, chiz); */
+  gsl_integration_qag (&F, z, zmax, 0., NCM_DEFAULT_PRECISION * 1.0e-4, NCM_INTEGRAL_PARTITION, 6, w, &result, &error);
 
   gsl_integration_workspace_free (w);
 
@@ -426,7 +426,7 @@ _nc_xcor_limber_kernel_weak_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo
 
     guint dn_dz_size = ncm_spline_get_len (xclkg->dn_dz);
 
-    ncm_spline_set_func (xclkg->src_int, NCM_SPLINE_FUNCTION_SPLINE, &F, zmin, zmax, dn_dz_size * 10, 1e-5);
+    ncm_spline_set_func_scale (xclkg->src_int, NCM_SPLINE_FUNCTION_SPLINE, &F, zmin, zmax, dn_dz_size * 10, 1e-5, 1.0e-50, 1, 1.0);
 
     ncm_spline_prepare (xclkg->src_int);
   }
