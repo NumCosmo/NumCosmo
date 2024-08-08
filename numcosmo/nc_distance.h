@@ -87,6 +87,7 @@ struct _NcDistance
   gdouble zf;
   gboolean use_cache;
   gboolean cpu_inv_comoving;
+  gdouble max_comoving;
   NcRecomb *recomb;
   NcDistanceComovingMethod cmethod;
 };
@@ -167,6 +168,7 @@ gdouble nc_distance_Dt_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 
+gdouble nc_distance_comoving_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2);
 gdouble nc_distance_transverse_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2);
 gdouble nc_distance_angular_diameter_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2);
 

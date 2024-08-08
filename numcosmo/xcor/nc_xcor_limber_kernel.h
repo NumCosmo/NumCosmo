@@ -41,15 +41,23 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_LIMBER_KERNEL (nc_xcor_limber_kernel_get_type ())
-#define NC_XCOR_LIMBER_KERNEL(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_XCOR_LIMBER_KERNEL, NcXcorLimberKernel))
-#define NC_XCOR_LIMBER_KERNEL_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_XCOR_LIMBER_KERNEL, NcXcorLimberKernelClass))
-#define NC_IS_XCOR_LIMBER_KERNEL(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_XCOR_LIMBER_KERNEL))
-#define NC_IS_XCOR_LIMBER_KERNEL_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_XCOR_LIMBER_KERNEL))
-#define NC_XCOR_LIMBER_KERNEL_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_XCOR_LIMBER_KERNEL, NcXcorLimberKernelClass))
 
-typedef struct _NcXcorLimberKernelClass NcXcorLimberKernelClass;
-typedef struct _NcXcorLimberKernel NcXcorLimberKernel;
+G_DECLARE_DERIVABLE_TYPE (NcXcorLimberKernel, nc_xcor_limber_kernel, NC, XCOR_LIMBER_KERNEL, NcmModel);
+
 typedef struct _NcXcorKinetic NcXcorKinetic;
+
+struct _NcXcorLimberKernelClass
+{
+  /*< private >*/
+  NcmModelClass parent_class;
+
+  gdouble (*eval) (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+  void (*prepare) (NcXcorLimberKernel *xclk, NcHICosmo *cosmo);
+  void (*add_noise) (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
+  guint (*obs_len) (NcXcorLimberKernel *xclk);
+  guint (*obs_params_len) (NcXcorLimberKernel *xclk);
+};
+
 
 /**
  * NcXcorLimberKernelImpl:
@@ -82,34 +90,6 @@ struct _NcXcorKinetic
   gdouble E_z;
 };
 
-struct _NcXcorLimberKernelClass
-{
-  /*< private >*/
-  NcmModelClass parent_class;
-
-  gdouble (*eval) (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
-  void (*prepare) (NcXcorLimberKernel *xclk, NcHICosmo *cosmo);
-  void (*add_noise) (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
-  guint (*obs_len) (NcXcorLimberKernel *xclk);
-  guint (*obs_params_len) (NcXcorLimberKernel *xclk);
-};
-
-/**
- * NcXcorLimberKernel:
- *
- * A #NcXcorLimberKernel is an abstract object for the kernels of projected observables used in cross-correlations.
- *
- */
-struct _NcXcorLimberKernel
-{
-  /*< private >*/
-  NcmModel parent_instance;
-  gdouble cons_factor;
-  gdouble zmin, zmax, zmid;
-};
-
-GType nc_xcor_limber_kernel_get_type (void) G_GNUC_CONST;
-
 NCM_MSET_MODEL_DECLARE_ID (nc_xcor_limber_kernel);
 
 NcXcorLimberKernel *nc_xcor_limber_kernel_ref (NcXcorLimberKernel *xclk);
@@ -121,6 +101,12 @@ void nc_xcor_kinetic_free (NcXcorKinetic *xck);
 
 guint nc_xcor_limber_kernel_obs_len (NcXcorLimberKernel *xclk);
 guint nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel *xclk);
+
+void nc_xcor_limber_kernel_set_z_range (NcXcorLimberKernel *xclk, gdouble zmin, gdouble zmax, gdouble zmid);
+void nc_xcor_limber_kernel_get_z_range (NcXcorLimberKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
+
+void nc_xcor_limber_kernel_set_const_factor (NcXcorLimberKernel *xclk, gdouble cf);
+gdouble nc_xcor_limber_kernel_get_const_factor (NcXcorLimberKernel *xclk);
 
 gdouble nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 gdouble nc_xcor_limber_kernel_eval_full (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l);

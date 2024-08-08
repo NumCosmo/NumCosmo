@@ -30,7 +30,7 @@
  *
  * The angular power spectrum between observables $A$ and $B$ with kernels $W^A$ and $W^B$ is
  * \begin{equation}
- * C_{\ell}^{AB} &= \int dz W^A(z) \int dz^\prime W^B (z^\prime) \times \int dk \frac{2}{\pi} k^2 P(k, z, z^\prime) j_{\ell}(k\chi(z)) j_{\ell} (k\chi(z^\prime)).
+ * C_{\ell}^{AB} = \int dz W^A(z) \int dz^\prime W^B (z^\prime) \times \int dk \frac{2}{\pi} k^2 P(k, z, z^\prime) j_{\ell}(k\chi(z)) j_{\ell} (k\chi(z^\prime)).
  * \end{equation}
  * In the Limber approximation, it reduces to
  * \begin{equation}
@@ -60,6 +60,16 @@
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
 #endif /* NUMCOSMO_GIR_SCAN */
+
+struct _NcXcor
+{
+  /*< private > */
+  GObject parent_instance;
+  NcDistance *dist;
+  NcmPowspec *ps;
+  gdouble RH;
+  NcXcorLimberMethod meth;
+};
 
 enum
 {
@@ -352,9 +362,13 @@ _nc_xcor_limber_cvode (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel
   gpointer cvodefunc = &_xcor_limber_cvode_int;
   NcmVector *Pk      = ncm_vector_new (nell);
   NcmVector *k       = ncm_vector_new (nell);
+  gdouble zmin_1, zmin_2, zmax_1, zmax_2, zmid_1, zmid_2;
   gdouble z;
   gint flag;
   guint i;
+
+  nc_xcor_limber_kernel_get_z_range (xclk1, &zmin_1, &zmax_1, &zmid_1);
+  nc_xcor_limber_kernel_get_z_range (xclk2, &zmin_2, &zmax_2, &zmid_2);
 
   ncm_vector_set_zero (k);
   ncm_vector_set_zero (Pk);
@@ -368,7 +382,7 @@ _nc_xcor_limber_cvode (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel
   xcor_limber_cvode xclc = { isauto, lmin, lmax, nell, k, Pk, xc, xclk1, xclk2, cosmo };
 
   /* Find initial value = y'(zmid) * dz */
-  const gdouble zmid = expm1 ((log1p (xclk1->zmid) + log1p (xclk2->zmid)) / 2.0);
+  const gdouble zmid = expm1 ((log1p (zmid_1) + log1p (zmid_2)) / 2.0);
 
   _xcor_limber_cvode_int (zmid, yv, yv0, &xclc);
   N_VScale (dz, yv0, yv0);
@@ -662,21 +676,24 @@ nc_xcor_limber (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2
 {
   const guint nell          = ncm_vector_len (vp);
   const gboolean isauto     = (xclk2 == NULL);
-  const gdouble cons_factor = ((isauto) ? gsl_pow_2 (xclk1->cons_factor) : xclk1->cons_factor * xclk2->cons_factor) / gsl_pow_3 (xc->RH);
-  gdouble zmin, zmax;
+  const gdouble cons_factor = ((isauto) ?
+                               gsl_pow_2 (nc_xcor_limber_kernel_get_const_factor (xclk1)) :
+                               nc_xcor_limber_kernel_get_const_factor (xclk1) *
+                               nc_xcor_limber_kernel_get_const_factor (xclk2)) / gsl_pow_3 (xc->RH);
+  gdouble zmin, zmax, zmid;
 
   if (nell != lmax - lmin + 1)
     g_error ("nc_xcor_limber: vector size does not match multipole limits");
 
-  if (isauto)
+  nc_xcor_limber_kernel_get_z_range (xclk1, &zmin, &zmax, &zmid);
+
+  if (!isauto)
   {
-    zmin = xclk1->zmin;
-    zmax = xclk1->zmax;
-  }
-  else
-  {
-    zmin = GSL_MAX (xclk1->zmin, xclk2->zmin);
-    zmax = GSL_MIN (xclk1->zmax, xclk2->zmax);
+    gdouble zmin_2, zmax_2, zmid_2;
+
+    nc_xcor_limber_kernel_get_z_range (xclk2, &zmin_2, &zmax_2, &zmid_2);
+    zmin = GSL_MAX (zmin, zmin_2);
+    zmax = GSL_MIN (zmax, zmax_2);
   }
 
   if (zmin < zmax)

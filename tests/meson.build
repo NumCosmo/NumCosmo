@@ -500,8 +500,19 @@ python_pyccl = python_module.find_installation(
 if python_pyccl.found()
     python_tests += [
         {
+            'name': 'py_background_ccl',
+            'source': 'test_py_background_ccl.py',
+            'timeout': 0,
+        },
+        {
             'name': 'py_powspec',
             'source': 'test_py_powspec.py',
+            'timeout': 0,
+        },
+        {
+            'name': 'py_xcor',
+            'source': 'test_py_xcor.py',
+            'timeout': 0,
         },
     ]
 endif

@@ -50,8 +50,22 @@
 #include "xcor/nc_xcor_limber_kernel.h"
 #include "xcor/nc_xcor.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcXcorLimberKernel, nc_xcor_limber_kernel, NCM_TYPE_MODEL)
-G_DEFINE_BOXED_TYPE (NcXcorKinetic, nc_xcor_kinetic, nc_xcor_kinetic_copy, nc_xcor_kinetic_free)
+/**
+ * NcXcorLimberKernel:
+ *
+ * A #NcXcorLimberKernel is an abstract object for the kernels of projected observables
+ * used in cross-correlations.
+ *
+ */
+
+
+typedef struct _NcXcorLimberKernelPrivate
+{
+  /*< private >*/
+  NcmModel parent_instance;
+  gdouble cons_factor;
+  gdouble zmin, zmax, zmid;
+} NcXcorLimberKernelPrivate;
 
 enum
 {
@@ -61,12 +75,19 @@ enum
   PROP_SIZE,
 };
 
+
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcXcorLimberKernel, nc_xcor_limber_kernel, NCM_TYPE_MODEL)
+G_DEFINE_BOXED_TYPE (NcXcorKinetic, nc_xcor_kinetic, nc_xcor_kinetic_copy, nc_xcor_kinetic_free)
+
 static void
 nc_xcor_limber_kernel_init (NcXcorLimberKernel *xclk)
 {
-  xclk->cons_factor = 0.0;
-  xclk->zmin        = 0.0;
-  xclk->zmax        = 0.0;
+  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+
+  self->cons_factor = 0.0;
+  self->zmin        = 0.0;
+  self->zmax        = 0.0;
+  self->zmid        = 0.0;
 }
 
 static void
@@ -86,17 +107,18 @@ _nc_xcor_limber_kernel_finalize (GObject *object)
 static void
 _nc_xcor_limber_kernel_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcXcorLimberKernel *xclk = NC_XCOR_LIMBER_KERNEL (object);
+  NcXcorLimberKernel *xclk        = NC_XCOR_LIMBER_KERNEL (object);
+  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
 
   g_return_if_fail (NC_IS_XCOR_LIMBER_KERNEL (object));
 
   switch (prop_id)
   {
     case PROP_ZMIN:
-      xclk->zmin = g_value_get_double (value);
+      self->zmin = g_value_get_double (value);
       break;
     case PROP_ZMAX:
-      xclk->zmax = g_value_get_double (value);
+      self->zmax = g_value_get_double (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -107,17 +129,18 @@ _nc_xcor_limber_kernel_set_property (GObject *object, guint prop_id, const GValu
 static void
 _nc_xcor_limber_kernel_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcXcorLimberKernel *xclk = NC_XCOR_LIMBER_KERNEL (object);
+  NcXcorLimberKernel *xclk        = NC_XCOR_LIMBER_KERNEL (object);
+  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
 
   g_return_if_fail (NC_IS_XCOR_LIMBER_KERNEL (object));
 
   switch (prop_id)
   {
     case PROP_ZMIN:
-      g_value_set_double (value, xclk->zmin);
+      g_value_set_double (value, self->zmin);
       break;
     case PROP_ZMAX:
-      g_value_set_double (value, xclk->zmax);
+      g_value_set_double (value, self->zmax);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -262,6 +285,78 @@ nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel *xclk)
 }
 
 /**
+ * nc_xcor_limber_kernel_set_z_range:
+ * @xclk: a #NcXcorLimberKernel
+ * @zmin: minimum redshift
+ * @zmax: maximum redshift
+ * @zmid: mid redshift
+ *
+ * Set the redshift range of the kernel.
+ *
+ */
+void
+nc_xcor_limber_kernel_set_z_range (NcXcorLimberKernel *xclk, gdouble zmin, gdouble zmax, gdouble zmid)
+{
+  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+
+  self->zmin = zmin;
+  self->zmax = zmax;
+  self->zmid = zmid;
+}
+
+/**
+ * nc_xcor_limber_kernel_get_z_range:
+ * @xclk: a #NcXcorLimberKernel
+ * @zmin: (out): minimum redshift
+ * @zmax: (out): maximum redshift
+ * @zmid: (out) (allow-none): mid redshift
+ *
+ * Get the redshift range of the kernel.
+ *
+ */
+void
+nc_xcor_limber_kernel_get_z_range (NcXcorLimberKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid)
+{
+  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+
+  *zmin = self->zmin;
+  *zmax = self->zmax;
+  *zmid = self->zmid;
+}
+
+/**
+ * nc_xcor_limber_kernel_set_const_factor:
+ * @xclk: a #NcXcorLimberKernel
+ * @cf: a #gdouble
+ *
+ * Set the constant factor of the kernel.
+ *
+ */
+void
+nc_xcor_limber_kernel_set_const_factor (NcXcorLimberKernel *xclk, gdouble cf)
+{
+  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+
+  self->cons_factor = cf;
+}
+
+/**
+ * nc_xcor_limber_kernel_get_const_factor:
+ * @xclk: a #NcXcorLimberKernel
+ *
+ * Get the constant factor of the kernel.
+ *
+ * Returns: the constant factor.
+ */
+gdouble
+nc_xcor_limber_kernel_get_const_factor (NcXcorLimberKernel *xclk)
+{
+  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+
+  return self->cons_factor;
+}
+
+/**
  * nc_xcor_limber_kernel_eval: (virtual eval)
  * @xclk: a #NcXcorLimberKernel
  * @cosmo: a #NcHICosmo
@@ -276,7 +371,9 @@ nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel *xclk)
 gdouble
 nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
-  if ((xclk->zmin <= z) && (xclk->zmax >= z))
+  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+
+  if ((self->zmin <= z) && (self->zmax >= z))
     return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, xck, l);
   else
     return 0.0;
@@ -297,12 +394,13 @@ nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble 
 gdouble
 nc_xcor_limber_kernel_eval_full (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l)
 {
-  const gdouble xi_z      = nc_distance_comoving (dist, cosmo, z); /* in units of Hubble radius */
-  const gdouble E_z       = nc_hicosmo_E (cosmo, z);
-  const NcXcorKinetic xck = { xi_z, E_z };
+  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+  const gdouble xi_z              = nc_distance_comoving (dist, cosmo, z); /* in units of Hubble radius */
+  const gdouble E_z               = nc_hicosmo_E (cosmo, z);
+  const NcXcorKinetic xck         = { xi_z, E_z };
 
-  if ((xclk->zmin <= z) && (xclk->zmax >= z))
-    return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, &xck, l) * xclk->cons_factor;
+  if ((self->zmin <= z) && (self->zmax >= z))
+    return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, &xck, l) * self->cons_factor;
   else
     return 0.0;
 }

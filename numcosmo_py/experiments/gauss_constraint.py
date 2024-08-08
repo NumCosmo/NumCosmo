@@ -21,8 +21,10 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Example of using a Gaussian distribution with positivity constraint to
-test the MCMC sampler.
+"""Gaussian distribution with positivity constraint.
+
+This module contains functions to create a Gaussian distribution with a positivity
+constraint.
 """
 
 from pathlib import Path
@@ -43,7 +45,7 @@ from numcosmo_py.external.minimax_tilting_sampler import TruncatedMVN
 
 
 def create_mset(dim: int) -> Tuple[Ncm.MSet, Ncm.ModelMVND]:
-    """Creates a MSet with a Gaussian distribution with positivity constraint."""
+    """Create a MSet with a Gaussian distribution with positivity constraint."""
     mgc = Ncm.ModelMVND.new(dim)
     for i in range(dim):
         if i % 2 == 0:
@@ -63,8 +65,7 @@ def create_mset(dim: int) -> Tuple[Ncm.MSet, Ncm.ModelMVND]:
 
 
 def create_data_object(mset: Ncm.MSet, dim: int, rng: Ncm.RNG) -> Ncm.DataGaussCovMVND:
-    """Creates a dataset with a Gaussian distribution with positivity constraint."""
-
+    """Create a dataset with a Gaussian distribution with positivity constraint."""
     dgc = Ncm.DataGaussCovMVND.new(dim)
     mean = Ncm.Vector.new(dim)
     mean.set_all(0.0)
@@ -89,8 +90,7 @@ def create_data_object(mset: Ncm.MSet, dim: int, rng: Ncm.RNG) -> Ncm.DataGaussC
 def sample_with_tmvn(
     mset: Ncm.MSet, mgc: Ncm.ModelMVND, dgc: Ncm.DataGaussCovMVND, dim: int, ssize: int
 ) -> str:
-    """Samples the likelihood posterior using TruncatedMVN."""
-
+    """Sample the likelihood posterior using TruncatedMVN."""
     Ncm.message_str("# Sampling the likelihood posterior using TruncatedMVN: \n")
     bounds = np.array(
         [
@@ -111,7 +111,7 @@ def sample_with_tmvn(
     for s in np.transpose(tmvn_sampler.sample(ssize)):
         dgc.peek_mean().set_array(s)
         st = np.concatenate(([dgc.m2lnL_val(mset)], s))
-        sv.append(Ncm.Vector.new_array(st), True)
+        sv.append(Ncm.Vector.new_array(st.tolist()), True)
 
     filename = f"gauss_constraint_{dim}d_tmvn_samples.dat"
     with open(filename, "w", encoding="utf-8") as f:
@@ -149,8 +149,7 @@ def run_gauss_constraint_mcmc(
     start_catalog: Optional[Path] = None,
     tmvn: bool = False,
 ) -> str:
-    """Runs the Funnel MCMC example."""
-
+    """Run the Funnel MCMC example."""
     rng = Ncm.RNG.seeded_new(None, 0)
 
     mset, mgc = create_mset(dim)

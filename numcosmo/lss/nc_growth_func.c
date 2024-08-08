@@ -78,10 +78,6 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_cfg.h"
 
-
-#ifndef NUMCOSMO_GIR_SCAN
-#endif /* NUMCOSMO_GIR_SCAN */
-
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvode/cvode.h>
 
