@@ -1,14 +1,14 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
 
 /***************************************************************************
- *            nc_galaxy_sd_redshift.c
+ *            nc_galaxy_sd_true_redshift.c
  *
  *  Wed Jul 31 20:52:43 2024
  *  Copyright  2024  Caio Lima de Oliveira
  *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
- * nc_galaxy_sd_redshift.c
+ * nc_galaxy_sd_true_redshift.c
  * Copyright (C) 2024 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -26,8 +26,8 @@
  */
 
 /**
- * SECTION: nc_galaxy_sd_redshift
- * @title: NcGalaxySDRedshift
+ * SECTION: nc_galaxy_sd_true_redshift
+ * @title: NcGalaxySDTrueRedshift
  * @short_description: Class describing galaxy sample redshift distributions.
  * @stability: Unstable
  *
@@ -41,13 +41,13 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "galaxy/nc_galaxy_sd_redshift.h"
+#include "galaxy/nc_galaxy_sd_true_redshift.h"
 #include "math/ncm_dtuple.h"
 
-typedef struct _NcGalaxySDRedshiftPrivate
+typedef struct _NcGalaxySDTrueRedshiftPrivate
 {
   gint placeholder;
-} NcGalaxySDRedshiftPrivate;
+} NcGalaxySDTrueRedshiftPrivate;
 
 enum
 {
@@ -56,19 +56,19 @@ enum
   PROP_LEN,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDRedshift, nc_galaxy_sd_redshift, NCM_TYPE_MODEL)
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDTrueRedshift, nc_galaxy_sd_true_redshift, NCM_TYPE_MODEL)
 
 static void
-nc_galaxy_sd_redshift_init (NcGalaxySDRedshift *gsdr)
+nc_galaxy_sd_true_redshift_init (NcGalaxySDTrueRedshift *gsdtr)
 {
 }
 
 static void
-_nc_galaxy_sd_redshift_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_galaxy_sd_true_redshift_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcGalaxySDRedshift *gsdr = NC_GALAXY_SD_REDSHIFT (object);
+  NcGalaxySDTrueRedshift *gsdtr = NC_GALAXY_SD_TRUE_REDSHIFT (object);
 
-  g_return_if_fail (NC_IS_GALAXY_SD_REDSHIFT (gsdr));
+  g_return_if_fail (NC_IS_GALAXY_SD_TRUE_REDSHIFT (gsdtr));
 
   switch (prop_id)
   {
@@ -77,9 +77,9 @@ _nc_galaxy_sd_redshift_set_property (GObject *object, guint prop_id, const GValu
       NcmDTuple2 *lim = g_value_get_boxed (value);
 
       if (lim == NULL)
-        g_error ("_nc_galaxy_sd_redshift_set_property: lim is NULL");
+        g_error ("_nc_galaxy_sd_true_redshift_set_property: lim is NULL");
 
-      nc_galaxy_sd_redshift_set_lim (gsdr, lim->elements[0], lim->elements[1]);
+      nc_galaxy_sd_true_redshift_set_lim (gsdtr, lim->elements[0], lim->elements[1]);
       break;
     }
     default:                                                      /* LCOV_EXCL_LINE */
@@ -89,11 +89,11 @@ _nc_galaxy_sd_redshift_set_property (GObject *object, guint prop_id, const GValu
 }
 
 static void
-_nc_galaxy_sd_redshift_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_galaxy_sd_true_redshift_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcGalaxySDRedshift *gsdr = NC_GALAXY_SD_REDSHIFT (object);
+  NcGalaxySDTrueRedshift *gsdtr = NC_GALAXY_SD_TRUE_REDSHIFT (object);
 
-  g_return_if_fail (NC_IS_GALAXY_SD_REDSHIFT (gsdr));
+  g_return_if_fail (NC_IS_GALAXY_SD_TRUE_REDSHIFT (gsdtr));
 
   switch (prop_id)
   {
@@ -101,7 +101,7 @@ _nc_galaxy_sd_redshift_get_property (GObject *object, guint prop_id, GValue *val
     {
       gdouble z_min, z_max;
 
-      nc_galaxy_sd_redshift_get_lim (gsdr, &z_min, &z_max);
+      nc_galaxy_sd_true_redshift_get_lim (gsdtr, &z_min, &z_max);
 
       g_value_set_boxed (value, ncm_dtuple2_new (z_min, z_max));
       break;
@@ -113,42 +113,42 @@ _nc_galaxy_sd_redshift_get_property (GObject *object, guint prop_id, GValue *val
 }
 
 static void
-_nc_galaxy_sd_redshift_finalize (GObject *object)
+_nc_galaxy_sd_true_redshift_finalize (GObject *object)
 {
-  G_OBJECT_CLASS (nc_galaxy_sd_redshift_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_galaxy_sd_true_redshift_parent_class)->finalize (object);
 }
 
-NCM_MSET_MODEL_REGISTER_ID (nc_galaxy_sd_redshift, NC_TYPE_GALAXY_SD_REDSHIFT)
+NCM_MSET_MODEL_REGISTER_ID (nc_galaxy_sd_true_redshift, NC_TYPE_GALAXY_SD_TRUE_REDSHIFT)
 
 /* LCOV_EXCL_START */
 static gdouble
-_nc_galaxy_sd_redshift_gen (NcGalaxySDRedshift *gsdr, NcmRNG *rng)
+_nc_galaxy_sd_true_redshift_gen (NcGalaxySDTrueRedshift *gsdtr, NcmRNG *rng)
 {
-  g_error ("_nc_galaxy_sd_redshift_gen_z: not implemented");
+  g_error ("_nc_galaxy_sd_true_redshift_gen_z: not implemented");
 
   return 0.0;
 }
 
 static gdouble
-_nc_galaxy_sd_redshift_integ (NcGalaxySDRedshift *gsdr, gdouble z)
+_nc_galaxy_sd_true_redshift_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
 {
-  g_error ("_nc_galaxy_sd_redshift_integ: not implemented");
+  g_error ("_nc_galaxy_sd_true_redshift_integ: not implemented");
 
   return 0.0;
 }
 
 static gboolean
-_nc_galaxy_sd_redshift_set_lim (NcGalaxySDRedshift *gsdr, const gdouble z_min, const gdouble z_max)
+_nc_galaxy_sd_true_redshift_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max)
 {
-  g_error ("_nc_galaxy_sd_redshift_set_lim: not implemented");
+  g_error ("_nc_galaxy_sd_true_redshift_set_lim: not implemented");
 
   return FALSE;
 }
 
 static gboolean
-_nc_galaxy_sd_redshift_get_lim (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdouble *z_max)
+_nc_galaxy_sd_true_redshift_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max)
 {
-  g_error ("_nc_galaxy_sd_redshift_get_lim: not implemented");
+  g_error ("_nc_galaxy_sd_true_redshift_get_lim: not implemented");
   
   return FALSE;
 }
@@ -156,20 +156,20 @@ _nc_galaxy_sd_redshift_get_lim (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdoubl
 /* LCOV_EXCL_STOP */
 
 static void
-nc_galaxy_sd_redshift_class_init (NcGalaxySDRedshiftClass *klass)
+nc_galaxy_sd_true_redshift_class_init (NcGalaxySDTrueRedshiftClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property = &_nc_galaxy_sd_redshift_set_property;
-  model_class->get_property = &_nc_galaxy_sd_redshift_get_property;
-  object_class->finalize    = &_nc_galaxy_sd_redshift_finalize;
+  model_class->set_property = &_nc_galaxy_sd_true_redshift_set_property;
+  model_class->get_property = &_nc_galaxy_sd_true_redshift_get_property;
+  object_class->finalize    = &_nc_galaxy_sd_true_redshift_finalize;
 
-  ncm_model_class_set_name_nick (model_class, "Galaxy sample redshift distribution", "GalaxySDRedshift");
+  ncm_model_class_set_name_nick (model_class, "Galaxy sample redshift distribution", "GalaxySDTrueRedshift");
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
 
   /**
-   * NcGalaxySDRedshift:lim:
+   * NcGalaxySDTrueRedshift:lim:
    *
    * Galaxy sample redshift distribution limits.
    *
@@ -184,56 +184,56 @@ nc_galaxy_sd_redshift_class_init (NcGalaxySDRedshiftClass *klass)
 
   ncm_model_class_check_params_info (model_class);
 
-  klass->gen     = &_nc_galaxy_sd_redshift_gen;
-  klass->integ   = &_nc_galaxy_sd_redshift_integ;
-  klass->set_lim = &_nc_galaxy_sd_redshift_set_lim;
-  klass->get_lim = &_nc_galaxy_sd_redshift_get_lim;
+  klass->gen     = &_nc_galaxy_sd_true_redshift_gen;
+  klass->integ   = &_nc_galaxy_sd_true_redshift_integ;
+  klass->set_lim = &_nc_galaxy_sd_true_redshift_set_lim;
+  klass->get_lim = &_nc_galaxy_sd_true_redshift_get_lim;
 }
 
 /**
- * nc_galaxy_sd_redshift_ref:
- * @gsdr: a #NcGalaxySDRedshift
+ * nc_galaxy_sd_true_redshift_ref:
+ * @gsdtr: a #NcGalaxySDTrueRedshift
  *
- * Increases the reference count of @gsdr by one.
+ * Increases the reference count of @gsdtr by one.
  *
- * Returns: (transfer full): @gsdr.
+ * Returns: (transfer full): @gsdtr.
  */
-NcGalaxySDRedshift *
-nc_galaxy_sd_redshift_ref (NcGalaxySDRedshift *gsdr)
+NcGalaxySDTrueRedshift *
+nc_galaxy_sd_true_redshift_ref (NcGalaxySDTrueRedshift *gsdtr)
 {
-  return g_object_ref (gsdr);
+  return g_object_ref (gsdtr);
 }
 
 /**
- * nc_galaxy_sd_redshift_free:
- * @gsdr: a #NcGalaxySDRedshift
+ * nc_galaxy_sd_true_redshift_free:
+ * @gsdtr: a #NcGalaxySDTrueRedshift
  *
- * Decreases the reference count of @gsdr by one.
- *
- */
-void
-nc_galaxy_sd_redshift_free (NcGalaxySDRedshift *gsdr)
-{
-  g_object_unref (gsdr);
-}
-
-/**
- * nc_galaxy_sd_redshift_clear:
- * @gsdr: a #NcGalaxySDRedshift
- *
- * Decreases the reference count of @gsdr by one, and sets the
- * pointer @gsdr to NULL.
+ * Decreases the reference count of @gsdtr by one.
  *
  */
 void
-nc_galaxy_sd_redshift_clear (NcGalaxySDRedshift **gsdr)
+nc_galaxy_sd_true_redshift_free (NcGalaxySDTrueRedshift *gsdtr)
 {
-  g_clear_object (gsdr);
+  g_object_unref (gsdtr);
 }
 
 /**
- * nc_galaxy_sd_redshift_set_lim:
- * @gsdr: a #NcGalaxySDRedshift
+ * nc_galaxy_sd_true_redshift_clear:
+ * @gsdtr: a #NcGalaxySDTrueRedshift
+ *
+ * Decreases the reference count of @gsdtr by one, and sets the
+ * pointer @gsdtr to NULL.
+ *
+ */
+void
+nc_galaxy_sd_true_redshift_clear (NcGalaxySDTrueRedshift **gsdtr)
+{
+  g_clear_object (gsdtr);
+}
+
+/**
+ * nc_galaxy_sd_true_redshift_set_lim:
+ * @gsdtr: a #NcGalaxySDTrueRedshift
  * @z_min: a #gdouble representing minimum redshift
  * @z_max: a #gdouble representing maximum redshift
  *
@@ -241,14 +241,14 @@ nc_galaxy_sd_redshift_clear (NcGalaxySDRedshift **gsdr)
  *
  */
 gboolean
-nc_galaxy_sd_redshift_set_lim (NcGalaxySDRedshift *gsdr, const gdouble z_min, const gdouble z_max)
+nc_galaxy_sd_true_redshift_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max)
 {
-  return NC_GALAXY_SD_REDSHIFT_GET_CLASS (gsdr)->set_lim (gsdr, z_min, z_max);
+  return NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->set_lim (gsdtr, z_min, z_max);
 }
 
 /**
- * nc_galaxy_sd_redshift_get_lim:
- * @gsdr: a #NcGalaxySDRedshift
+ * nc_galaxy_sd_true_redshift_get_lim:
+ * @gsdtr: a #NcGalaxySDTrueRedshift
  * @z_min: a #gdouble pointer representing minimum redshift
  * @z_max: a #gdouble pointer representing maximum redshift
  *
@@ -256,14 +256,14 @@ nc_galaxy_sd_redshift_set_lim (NcGalaxySDRedshift *gsdr, const gdouble z_min, co
  *
  */
 gboolean
-nc_galaxy_sd_redshift_get_lim (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdouble *z_max)
+nc_galaxy_sd_true_redshift_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max)
 {
-  return NC_GALAXY_SD_REDSHIFT_GET_CLASS (gsdr)->get_lim (gsdr, z_min, z_max);
+  return NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->get_lim (gsdtr, z_min, z_max);
 }
 
 /**
- * nc_galaxy_sd_redshift_gen:
- * @gsdr: a #NcGalaxySDRedshift
+ * nc_galaxy_sd_true_redshift_gen:
+ * @gsdtr: a #NcGalaxySDTrueRedshift
  * @rng: a #NcmRNG
  *
  * Generates a redshift value from the galaxy sample redshift distribution.
@@ -271,14 +271,14 @@ nc_galaxy_sd_redshift_get_lim (NcGalaxySDRedshift *gsdr, gdouble *z_min, gdouble
  * Returns: the generated redshift.
  */
 gdouble
-nc_galaxy_sd_redshift_gen (NcGalaxySDRedshift *gsdr, NcmRNG *rng)
+nc_galaxy_sd_true_redshift_gen (NcGalaxySDTrueRedshift *gsdtr, NcmRNG *rng)
 {
-  return NC_GALAXY_SD_REDSHIFT_GET_CLASS (gsdr)->gen (gsdr, rng);
+  return NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->gen (gsdtr, rng);
 }
 
 /**
- * nc_galaxy_sd_redshift_integ:
- * @gsdr: a #NcGalaxySDRedshift
+ * nc_galaxy_sd_true_redshift_integ:
+ * @gsdtr: a #NcGalaxySDTrueRedshift
  * @z: the redshift
  *
  * Evaluates the galaxy sample redshift distribution at redshift @z.
@@ -286,8 +286,8 @@ nc_galaxy_sd_redshift_gen (NcGalaxySDRedshift *gsdr, NcmRNG *rng)
  * Returns: the probability density at $z$, $P(z)$.
  */
 gdouble
-nc_galaxy_sd_redshift_integ (NcGalaxySDRedshift *gsdr, gdouble z)
+nc_galaxy_sd_true_redshift_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
 {
-  return NC_GALAXY_SD_REDSHIFT_GET_CLASS (gsdr)->integ (gsdr, z);
+  return NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->integ (gsdtr, z);
 }
 

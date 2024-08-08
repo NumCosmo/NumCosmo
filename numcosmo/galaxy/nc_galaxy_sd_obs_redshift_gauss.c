@@ -1,12 +1,12 @@
 /***************************************************************************
- *            nc_galaxy_redshift_gauss.c
+ *            nc_galaxy_sd_obs_redshift_gauss.c
  *
  *  Thu Aug 1 20:03:55 2024
  *  Copyright  2024  Caio Lima de Oliveira
  *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
- * nc_galaxy_redshift_gauss.c
+ * nc_galaxy_sd_obs_redshift_gauss.c
  * Copyright (C) 2024 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -24,8 +24,8 @@
  */
 
 /**
- * SECTION:nc_galaxy_redshift_gauss
- * @title: NcGalaxyRedshiftGauss
+ * SECTION:nc_galaxy_sd_obs_redshift_gauss
+ * @title: NcGalaxySDObsRedshiftGauss
  * @short_description: Class describing photometric redshift observations with gaussian errors.
  * @stability: Unstable
  *
@@ -40,20 +40,20 @@
 #include "build_cfg.h"
 
 #include "gsl/gsl_randist.h"
-#include "galaxy/nc_galaxy_redshift.h"
-#include "galaxy/nc_galaxy_redshift_gauss.h"
-#include "galaxy/nc_galaxy_sd_redshift.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift_gauss.h"
+#include "galaxy/nc_galaxy_sd_true_redshift.h"
 #include "math/ncm_vector.h"
 #include "math/ncm_rng.h"
 
-typedef struct _NcGalaxyRedshiftGaussPrivate
+typedef struct _NcGalaxySDObsRedshiftGaussPrivate
 {
-  NcGalaxySDRedshift *sdz;
-} NcGalaxyRedshiftGaussPrivate;
+  NcGalaxySDTrueRedshift *sdz;
+} NcGalaxySDObsRedshiftGaussPrivate;
 
-struct _NcGalaxyRedshiftGauss
+struct _NcGalaxySDObsRedshiftGauss
 {
-  NcGalaxyRedshift parent_instance;
+  NcGalaxySDObsRedshift parent_instance;
 };
 
 enum
@@ -62,23 +62,23 @@ enum
   PROP_SDZ,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshiftGauss, nc_galaxy_redshift_gauss, NC_TYPE_GALAXY_REDSHIFT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDObsRedshiftGauss, nc_galaxy_sd_obs_redshift_gauss, NC_TYPE_GALAXY_SD_OBS_REDSHIFT);
 
 static void
-nc_galaxy_redshift_gauss_init (NcGalaxyRedshiftGauss *gzgauss)
+nc_galaxy_sd_obs_redshift_gauss_init (NcGalaxySDObsRedshiftGauss *gsdorgauss)
 {
-  NcGalaxyRedshiftGaussPrivate * const self = nc_galaxy_redshift_gauss_get_instance_private (gzgauss);
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
 
   self->sdz = NULL;
 }
 
 static void
-_nc_galaxy_redshift_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_galaxy_sd_obs_redshift_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcGalaxyRedshiftGauss *gzgauss            = NC_GALAXY_REDSHIFT_GAUSS (object);
-  NcGalaxyRedshiftGaussPrivate * const self = nc_galaxy_redshift_gauss_get_instance_private (gzgauss);
+  NcGalaxySDObsRedshiftGauss *gsdorgauss            = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (object);
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
 
-  g_return_if_fail (NC_IS_GALAXY_REDSHIFT_GAUSS (gzgauss));
+  g_return_if_fail (NC_IS_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdorgauss));
 
   switch (prop_id)
   {
@@ -92,12 +92,12 @@ _nc_galaxy_redshift_set_property (GObject *object, guint prop_id, const GValue *
 }
 
 static void
-_nc_galaxy_redshift_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_galaxy_sd_obs_redshift_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcGalaxyRedshiftGauss *gzgauss            = NC_GALAXY_REDSHIFT_GAUSS (object);
-  NcGalaxyRedshiftGaussPrivate * const self = nc_galaxy_redshift_gauss_get_instance_private (gzgauss);
+  NcGalaxySDObsRedshiftGauss *gsdorgauss            = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (object);
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
 
-  g_return_if_fail (NC_IS_GALAXY_REDSHIFT_GAUSS (gzgauss));
+  g_return_if_fail (NC_IS_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdorgauss));
 
   switch (prop_id)
   {
@@ -111,41 +111,41 @@ _nc_galaxy_redshift_get_property (GObject *object, guint prop_id, GValue *value,
 }
 
 static void
-_nc_galaxy_redshift_gauss_dispose (GObject *object)
+_nc_galaxy_sd_obs_redshift_gauss_dispose (GObject *object)
 {
-  NcGalaxyRedshiftGauss *gzgauss            = NC_GALAXY_REDSHIFT_GAUSS (object);
-  NcGalaxyRedshiftGaussPrivate * const self = nc_galaxy_redshift_gauss_get_instance_private (gzgauss);
+  NcGalaxySDObsRedshiftGauss *gsdorgauss            = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (object);
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
 
-  nc_galaxy_sd_redshift_clear (&self->sdz);
+  nc_galaxy_sd_true_redshift_clear (&self->sdz);
 
   /* Chain up: end */
-  G_OBJECT_CLASS (nc_galaxy_redshift_gauss_parent_class)->dispose (object);
+  G_OBJECT_CLASS (nc_galaxy_sd_obs_redshift_gauss_parent_class)->dispose (object);
 }
 
 static void
-nc_galaxy_redshift_gauss_finalize (GObject *object)
+nc_galaxy_sd_obs_redshift_gauss_finalize (GObject *object)
 {
   /* Chain up: end */
-  G_OBJECT_CLASS (nc_galaxy_redshift_gauss_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_galaxy_sd_obs_redshift_gauss_parent_class)->finalize (object);
 }
 
-static gdouble _nc_galaxy_redshift_gauss_gen (NcGalaxyRedshift *gz, NcmRNG *rng, NcmVector *data);
-static gdouble _nc_galaxy_redshift_gauss_integ (NcGalaxyRedshift *gz, gdouble z, NcmVector *data);
-static GStrv _nc_galaxy_redshift_gauss_get_header (NcGalaxyRedshift *gz);
+static gdouble _nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data);
+static gdouble _nc_galaxy_sd_obs_redshift_gauss_integ (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data);
+static GStrv _nc_galaxy_sd_obs_redshift_gauss_get_header (NcGalaxySDObsRedshift *gsdor);
 
 static void
-nc_galaxy_sd_redshift_gauss_class_init (NcGalaxyRedshiftGaussClass *klass)
+nc_galaxy_sd_true_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *klass)
 {
-  NcGalaxyRedshiftClass *gz_class = NC_GALAXY_REDSHIFT_CLASS (klass);
+  NcGalaxySDObsRedshiftClass *gsdor_class = NC_GALAXY_SD_OBS_REDSHIFT_CLASS (klass);
   GObjectClass *object_class      = G_OBJECT_CLASS (klass);
 
-  object_class->set_property = &_nc_galaxy_redshift_set_property;
-  object_class->get_property = &_nc_galaxy_redshift_get_property;
-  object_class->dispose      = &_nc_galaxy_redshift_gauss_dispose;
-  object_class->finalize     = &nc_galaxy_redshift_gauss_finalize;
+  object_class->set_property = &_nc_galaxy_sd_obs_redshift_set_property;
+  object_class->get_property = &_nc_galaxy_sd_obs_redshift_get_property;
+  object_class->dispose      = &_nc_galaxy_sd_obs_redshift_gauss_dispose;
+  object_class->finalize     = &nc_galaxy_sd_obs_redshift_gauss_finalize;
 
   /**
-   * NcGalaxyRedshiftGauss:sdz:
+   * NcGalaxySDObsRedshiftGauss:sdz:
    *
    * The galaxy redshift sample distribution.
    *
@@ -154,30 +154,30 @@ nc_galaxy_sd_redshift_gauss_class_init (NcGalaxyRedshiftGaussClass *klass)
                                    g_param_gauss_object ("sdz",
                                                          "Galaxy redshift sample distribution",
                                                          "The galaxy redshift sample distribution",
-                                                         NC_TYPE_GALAXY_SD_REDSHIFT,
+                                                         NC_TYPE_GALAXY_SD_TRUE_REDSHIFT,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  gz_class->gen        = &_nc_galaxy_redshift_gauss_gen;
-  gz_class->integ      = &_nc_galaxy_redshift_gauss_integ;
-  gz_class->get_header = &_nc_galaxy_redshift_gauss_get_header;
+  gsdor_class->gen        = &_nc_galaxy_sd_obs_redshift_gauss_gen;
+  gsdor_class->integ      = &_nc_galaxy_sd_obs_redshift_gauss_integ;
+  gsdor_class->get_header = &_nc_galaxy_sd_obs_redshift_gauss_get_header;
 }
 
 static gdouble
-_nc_galaxy_redshift_gauss_gen (NcGalaxyRedshift *gz, NcmRNG *rng, NcmVector *data)
+_nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data)
 {
-  NcGalaxyRedshiftGauss *gzgauss            = NC_GALAXY_REDSHIFT_GAUSS (gz);
-  NcGalaxyRedshiftGaussPrivate * const self = nc_galaxy_redshift_gauss_get_instance_private (gzgauss);
+  NcGalaxySDObsRedshiftGauss *gsdorgauss            = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
   gdouble sigma                             = ncm_vector_get (data, 1);
   gdouble z_min                             = 0.0;
   gdouble z_max                             = 0.0;
   gdouble zp;
   gdouble z;
 
-  if (!nc_galaxy_sd_redshift_get_lim (self->sdz, &z_min, &z_max))
+  if (!nc_galaxy_sd_true_redshift_get_lim (self->sdz, &z_min, &z_max))
     g_error ("Failed to get redshift limits.");
 
   do {
-    z  = nc_galaxy_sd_redshift_gen (self->sdz, rng);
+    z  = nc_galaxy_sd_true_redshift_gen (self->sdz, rng);
     zp = ncm_rng_gaussian_gen (rng, z, sigma * (1.0 + z));
   } while ((zp > z_max) || (zp < z_min));
 
@@ -185,18 +185,18 @@ _nc_galaxy_redshift_gauss_gen (NcGalaxyRedshift *gz, NcmRNG *rng, NcmVector *dat
 }
 
 static gdouble
-_nc_galaxy_redshift_gauss_integ (NcGalaxyRedshift *gz, gdouble z, NcmVector *data)
+_nc_galaxy_sd_obs_redshift_gauss_integ (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data)
 {
-  NcGalaxyRedshiftGauss *gzgauss            = NC_GALAXY_REDSHIFT_GAUSS (gz);
-  NcGalaxyRedshiftGaussPrivate * const self = nc_galaxy_redshift_gauss_get_instance_private (gzgauss);
+  NcGalaxySDObsRedshiftGauss *gsdorgauss            = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
   gdouble zp                                = ncm_vector_get (data, 0);
   gdouble sigma                             = ncm_vector_get (data, 1);
 
-  return nc_galaxy_sd_redshift_integ (self->sdz, z) * gsl_ran_gaussian_pdf (zp - z, sigma * (1.0 + z));
+  return nc_galaxy_sd_true_redshift_integ (self->sdz, z) * gsl_ran_gaussian_pdf (zp - z, sigma * (1.0 + z));
 }
 
 static GStrv
-_nc_galaxy_redshift_gauss_get_header (NcGalaxyRedshift *gz)
+_nc_galaxy_sd_obs_redshift_gauss_get_header (NcGalaxySDObsRedshift *gsdor)
 {
   GStrv header = g_strsplit ("zp zp_sigma", " ", -1);
 
@@ -204,57 +204,57 @@ _nc_galaxy_redshift_gauss_get_header (NcGalaxyRedshift *gz)
 }
 
 /**
- * nc_galaxy_redshift_gauss_new:
+ * nc_galaxy_sd_obs_redshift_gauss_new:
  * @sdz: The galaxy redshift sample distribution.
  *
- * Creates a new #NcGalaxyRedshiftGauss object.
+ * Creates a new #NcGalaxySDObsRedshiftGauss object.
  *
- * Returns: (transfer full): a new #NcGalaxyRedshiftGauss object.
+ * Returns: (transfer full): a new #NcGalaxySDObsRedshiftGauss object.
  */
-NcGalaxyRedshiftGauss *
-nc_galaxy_redshift_gauss_new (NcGalaxySDRedshift *sdz)
+NcGalaxySDObsRedshiftGauss *
+nc_galaxy_sd_obs_redshift_gauss_new (NcGalaxySDTrueRedshift *sdz)
 {
-  return g_object_new (NC_TYPE_GALAXY_REDSHIFT_GAUSS, "sdz", sdz, NULL);
+  return g_object_new (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_GAUSS, "sdz", sdz, NULL);
 }
 
 /**
- * nc_galaxy_redshift_gauss_ref:
- * @gzgauss: a #NcGalaxyRedshiftGauss
+ * nc_galaxy_sd_obs_redshift_gauss_ref:
+ * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
  *
- * Increases the reference count of @gzgauss by one.
+ * Increases the reference count of @gsdorgauss by one.
  *
- * Returns: (transfer full): @gzgauss.
+ * Returns: (transfer full): @gsdorgauss.
  */
-NcGalaxyRedshiftGauss *
-nc_galaxy_redshift_gauss_ref (NcGalaxyRedshiftGauss *gzgauss)
+NcGalaxySDObsRedshiftGauss *
+nc_galaxy_sd_obs_redshift_gauss_ref (NcGalaxySDObsRedshiftGauss *gsdorgauss)
 {
-  return g_object_ref (gzgauss);
+  return g_object_ref (gsdorgauss);
 }
 
 /**
- * nc_galaxy_redshift_gauss_free:
- * @gzgauss: a #NcGalaxyRedshiftGauss
+ * nc_galaxy_sd_obs_redshift_gauss_free:
+ * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
  *
- * Decreases the reference count of @gzgauss by one.
+ * Decreases the reference count of @gsdorgauss by one.
  *
  */
 void
-nc_galaxy_redshift_gauss_free (NcGalaxyRedshiftGauss *gzgauss)
+nc_galaxy_sd_obs_redshift_gauss_free (NcGalaxySDObsRedshiftGauss *gsdorgauss)
 {
-  g_object_unref (gzgauss);
+  g_object_unref (gsdorgauss);
 }
 
 /**
- * nc_galaxy_redshift_gauss_clear:
- * @gzgauss: a #NcGalaxyRedshiftGauss
+ * nc_galaxy_sd_obs_redshift_gauss_clear:
+ * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
  *
- * Decreases the reference count of @gzgauss by one, and sets the pointer *@gzgauss to
+ * Decreases the reference count of @gsdorgauss by one, and sets the pointer *@gsdorgauss to
  * NULL.
  *
  */
 void
-nc_galaxy_redshift_gauss_clear (NcGalaxyRedshiftGauss **gzgauss)
+nc_galaxy_sd_obs_redshift_gauss_clear (NcGalaxySDObsRedshiftGauss **gsdorgauss)
 {
-  g_clear_object (gzgauss);
+  g_clear_object (gsdorgauss);
 }
 

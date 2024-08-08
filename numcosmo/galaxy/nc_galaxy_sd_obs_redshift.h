@@ -1,14 +1,14 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
 
 /***************************************************************************
- *            nc_galaxy_redshift.h
+ *            nc_galaxy_sd_obs_redshift.h
  *
  *  Thu Aug 1 00:48:12 2024
  *  Copyright  2024  Caio Lima de Oliveira
  *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
- * nc_galaxy_redshift.h
+ * nc_galaxy_sd_obs_redshift.h
  * Copyright (C) 2024 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -24,8 +24,8 @@
  * You should have received a copy of the GNU General Public License along
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _NC_GALAXY_REDSHIFT_H_
-#define _NC_GALAXY_REDSHIFT_H_
+#ifndef _NC_GALAXY_SD_OBS_REDSHIFT_H_
+#define _NC_GALAXY_SD_OBS_REDSHIFT_H_
 
 #include <glib.h>
 #include <glib-object.h>
@@ -35,33 +35,33 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_GALAXY_REDSHIFT (nc_galaxy_redshift_get_type ())
+#define NC_TYPE_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_get_type ())
 
-G_DECLARE_DERIVABLE_TYPE (NcGalaxyRedshift, nc_galaxy_redshift, NC, GALAXY_REDSHIFT, GObject)
+G_DECLARE_DERIVABLE_TYPE (NcGalaxySDObsRedshift, nc_galaxy_sd_obs_redshift, NC, GALAXY_SD_OBS_REDSHIFT, GObject)
 
-struct _NcGalaxyRedshiftClass
+struct _NcGalaxySDObsRedshiftClass
 {
   /*< private >*/
   GObjectClass parent_class;
 
-  gdouble (*gen) (NcGalaxyRedshift *gz, NcmRNG *rng, NcmVector *data);
-  gdouble (*integ) (NcGalaxyRedshift *gz, gdouble z, NcmVector *data);
-  gboolean (*get_header) (NcGalaxyRedshift *gz);
+  gdouble (*gen) (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data);
+  gdouble (*integ) (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data);
+  gboolean (*get_header) (NcGalaxySDObsRedshift *gsdor);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[15];
 };
 
-NcGalaxyRedshift *nc_galaxy_redshift_ref (NcGalaxyRedshift *gz);
+NcGalaxySDObsRedshift *nc_galaxy_sd_obs_redshift_ref (NcGalaxySDObsRedshift *gsdor);
 
-void nc_galaxy_redshift_free (NcGalaxyRedshift *gz);
-void nc_galaxy_redshift_clear (NcGalaxyRedshift **gz);
+void nc_galaxy_sd_obs_redshift_free (NcGalaxySDObsRedshift *gsdor);
+void nc_galaxy_sd_obs_redshift_clear (NcGalaxySDObsRedshift **gsdor);
 
-gdouble nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng, NcmVector *data);
-gdouble nc_galaxy_redshift_integ (NcGalaxyRedshift *gz, gdouble z, NcmVector *data);
-gboolean nc_galaxy_redshift_get_header (NcGalaxyRedshift *gz);
+gdouble nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data);
+gdouble nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data);
+gboolean nc_galaxy_sd_obs_redshift_get_header (NcGalaxySDObsRedshift *gsdor);
 
 G_END_DECLS
 
-#endif /* _NC_GALAXY_REDSHIFT_H_ */
+#endif /* _NC_GALAXY_SD_OBS_REDSHIFT_H_ */
 

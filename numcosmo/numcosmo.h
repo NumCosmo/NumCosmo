@@ -153,12 +153,12 @@
 #include <numcosmo/lss/nc_galaxy_selfunc.h>
 
 /* Galaxy / Galaxy sample distributions */
-#include <numcosmo/galaxy/nc_galaxy_redshift.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift.h>
 #include <numcosmo/galaxy/nc_galaxy_wl_obs.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_position.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_position_flat.h>
-#include <numcosmo/galaxy/nc_galaxy_sd_redshift.h>
-#include <numcosmo/galaxy/nc_galaxy_sd_redshift_lsst_srd.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_true_redshift.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape_gauss.h>
 

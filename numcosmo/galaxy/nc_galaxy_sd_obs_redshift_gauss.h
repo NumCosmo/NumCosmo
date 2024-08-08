@@ -1,12 +1,12 @@
 /***************************************************************************
- *            nc_galaxy_redshift_gauss.h
+ *            nc_galaxy_sd_obs_redshift_gauss.h
  *
  *  Thu Aug 1 20:02:19 2024
  *  Copyright  2024  Caio Lima de Oliveira
  *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
- * nc_galaxy_redshift_gauss.h
+ * nc_galaxy_sd_obs_redshift_gauss.h
  * Copyright (C) 2024 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -23,27 +23,27 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_GALAXY_REDSHIFT_GAUSS_H_
-#define _NC_GALAXY_REDSHIFT_GAUSS_H_
+#ifndef _NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_H_
+#define _NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_H_
 
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/galaxy/nc_galaxy_redshift.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_GALAXY_REDSHIFT_GAUSS (nc_galaxy_redshift_gauss_get_type ())
+#define NC_TYPE_GALAXY_SD_OBS_REDSHIFT_GAUSS (nc_galaxy_sd_obs_redshift_gauss_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcGalaxyRedshiftGauss, nc_galaxy_redshift_gauss, NC, GALAXY_REDSHIFT_GAUSS, NcGalaxyRedshift)
+G_DECLARE_FINAL_TYPE (NcGalaxySDObsRedshiftGauss, nc_galaxy_sd_obs_redshift_gauss, NC, GALAXY_SD_OBS_REDSHIFT_GAUSS, NcGalaxySDObsRedshift)
 
-NcGalaxyRedshiftGauss *nc_galaxy_redshift_gauss_new ();
-NcGalaxyRedshiftGauss *nc_galaxy_redshift_gauss_ref (NcGalaxyRedshiftGauss *gzgauss);
+NcGalaxySDObsRedshiftGauss *nc_galaxy_sd_obs_redshift_gauss_new ();
+NcGalaxySDObsRedshiftGauss *nc_galaxy_sd_obs_redshift_gauss_ref (NcGalaxySDObsRedshiftGauss *gsdorgauss);
 
-void nc_galaxy_redshift_gauss_free (NcGalaxyRedshiftGauss *gzgauss);
-void nc_galaxy_redshift_gauss_clear (NcGalaxyRedshiftGauss **gzgauss);
+void nc_galaxy_sd_obs_redshift_gauss_free (NcGalaxySDObsRedshiftGauss *gsdorgauss);
+void nc_galaxy_sd_obs_redshift_gauss_clear (NcGalaxySDObsRedshiftGauss **gsdorgauss);
 
 G_END_DECLS
 
-#endif /* _NC_GALAXY_REDSHIFT_GAUSS_H_ */
+#endif /* _NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_H_ */
 

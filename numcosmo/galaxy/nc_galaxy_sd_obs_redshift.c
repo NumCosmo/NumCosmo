@@ -1,14 +1,14 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
 
 /***************************************************************************
- *            nc_galaxy_redshift.c
+ *            nc_galaxy_sd_obs_redshift.c
  *
  *  Thu Aug 1 00:45:32 2024
  *  Copyright  2024  Caio Lima de Oliveira
  *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
- * nc_galaxy_redshift.c
+ * nc_galaxy_sd_obs_redshift.c
  * Copyright (C) 2024 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -26,14 +26,14 @@
  */
 
 /**
- * SECTION: nc_galaxy_redshift
- * @title: NcGalaxyRedshift
- * @short_description: Class describing galaxy observed redshift.
+ * SECTION: nc_galaxy_sd_obs_redshift
+ * @title: NcGalaxySDObsRedshift
+ * @short_description: Class describing galaxy sample observed redshift 
+ * distribution.
  * @stability: Unstable
  *
  *
- * This class describes a galaxy observed redshift. It is used to store the
- * redshift of a galaxy and its associated error.
+ * This class describes galaxy sample observed redshift distribution. 
  *
  */
 
@@ -42,34 +42,34 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "galaxy/nc_galaxy_redshift.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift.h"
 #include "math/ncm_vector.h"
 #include "math/ncm_rng.h"
 
-typedef struct _NcGalaxyRedshiftPrivate
+typedef struct _NcGalaxySDObsRedshiftPrivate
 {
   gint placeholder;
-} NcGalaxyRedshiftPrivate;
+} NcGalaxySDObsRedshiftPrivate;
 
 enum
 {
   PROP_0,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshift, nc_galaxy_redshift, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDObsRedshift, nc_galaxy_sd_obs_redshift, G_TYPE_OBJECT);
 
 static void
-nc_galaxy_redshift_init (NcGalaxyRedshift *gz)
+nc_galaxy_sd_obs_redshift_init (NcGalaxySDObsRedshift *gsdor)
 {
 }
 
 static void
-_nc_galaxy_redshift_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_galaxy_sd_obs_redshift_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcGalaxyRedshift *gz                 = NC_GALAXY_REDSHIFT (object);
-  NcGalaxyRedshiftPrivate * const self = nc_galaxy_redshift_get_instance_private (gz);
+  NcGalaxySDObsRedshift *gsdor                 = NC_GALAXY_SD_OBS_REDSHIFT (object);
+  NcGalaxySDObsRedshiftPrivate * const self = nc_galaxy_sd_obs_redshift_get_instance_private (gsdor);
 
-  g_return_if_fail (NC_IS_GALAXY_REDSHIFT (gz));
+  g_return_if_fail (NC_IS_GALAXY_SD_OBS_REDSHIFT (gsdor));
 
   switch (prop_id)
   {
@@ -80,11 +80,11 @@ _nc_galaxy_redshift_set_property (GObject *object, guint prop_id, const GValue *
 }
 
 static void
-_nc_galaxy_redshift_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_galaxy_sd_obs_redshift_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcGalaxyRedshift *gz = NC_GALAXY_REDSHIFT (object);
+  NcGalaxySDObsRedshift *gsdor = NC_GALAXY_SD_OBS_REDSHIFT (object);
 
-  g_return_if_fail (NC_IS_GALAXY_REDSHIFT (gz));
+  g_return_if_fail (NC_IS_GALAXY_SD_OBS_REDSHIFT (gsdor));
 
   switch (prop_id)
   {
@@ -95,32 +95,32 @@ _nc_galaxy_redshift_get_property (GObject *object, guint prop_id, GValue *value,
 }
 
 static void
-_nc_galaxy_redshift_finalize (GObject *object)
+_nc_galaxy_sd_obs_redshift_finalize (GObject *object)
 {
-  G_OBJECT_CLASS (nc_galaxy_redshift_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_galaxy_sd_obs_redshift_parent_class)->finalize (object);
 }
 
 /*  LCOV_EXCL_START */
 static gdouble
-_nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng, NcmVector *data)
+_nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data)
 {
-  g_error ("_nc_galaxy_redshift_gen: method not implemented");
+  g_error ("_nc_galaxy_sd_obs_redshift_gen: method not implemented");
 
   return 0.0;
 }
 
 static gdouble
-_nc_galaxy_redshift_integ (NcGalaxyRedshift *gz, gdouble z, NcmVector *data)
+_nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data)
 {
-  g_error ("_nc_galaxy_redshift_integ: method not implemented");
+  g_error ("_nc_galaxy_sd_obs_redshift_integ: method not implemented");
 
   return 0.0;
 }
 
 static gboolean
-_nc_galaxy_redshift_get_header (NcGalaxyRedshift *gz)
+_nc_galaxy_sd_obs_redshift_get_header (NcGalaxySDObsRedshift *gsdor)
 {
-  g_error ("_nc_galaxy_redshift_get_header: method not implemented");
+  g_error ("_nc_galaxy_sd_obs_redshift_get_header: method not implemented");
 
   return FALSE;
 }
@@ -128,61 +128,61 @@ _nc_galaxy_redshift_get_header (NcGalaxyRedshift *gz)
 /*  LCOV_EXCL_STOP */
 
 static void
-nc_galaxy_redshift_class_init (NcGalaxyRedshiftClass *klass)
+nc_galaxy_sd_obs_redshift_class_init (NcGalaxySDObsRedshiftClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  object_class->finalize = &_nc_galaxy_redshift_finalize;
+  object_class->finalize = &_nc_galaxy_sd_obs_redshift_finalize;
 
-  klass->gen        = &_nc_galaxy_redshift_gen;
-  klass->integ      = &_nc_galaxy_redshift_integ;
-  klass->get_header = &_nc_galaxy_redshift_get_header;
+  klass->gen        = &_nc_galaxy_sd_obs_redshift_gen;
+  klass->integ      = &_nc_galaxy_sd_obs_redshift_integ;
+  klass->get_header = &_nc_galaxy_sd_obs_redshift_get_header;
 }
 
 /**
- * nc_galaxy_redshift_ref:
- * @gz: a #NcGalaxyRedshift
+ * nc_galaxy_sd_obs_redshift_ref:
+ * @gsdor: a #NcGalaxySDObsRedshift
  *
- * Increases the reference count of @gz by one.
+ * Increases the reference count of @gsdor by one.
  *
- * Returns: (transfer full): @gz
+ * Returns: (transfer full): @gsdor
  */
-NcGalaxyRedshift *
-nc_galaxy_redshift_ref (NcGalaxyRedshift *gz)
+NcGalaxySDObsRedshift *
+nc_galaxy_sd_obs_redshift_ref (NcGalaxySDObsRedshift *gsdor)
 {
-  return g_object_ref (gz);
+  return g_object_ref (gsdor);
 }
 
 /**
- * nc_galaxy_redshift_free:
- * @gz: a #NcGalaxyRedshift
+ * nc_galaxy_sd_obs_redshift_free:
+ * @gsdor: a #NcGalaxySDObsRedshift
  *
- * Decreases the reference count of @gz by one.
+ * Decreases the reference count of @gsdor by one.
  *
  */
 void
-nc_galaxy_redshift_free (NcGalaxyRedshift *gz)
+nc_galaxy_sd_obs_redshift_free (NcGalaxySDObsRedshift *gsdor)
 {
-  g_object_unref (gz);
+  g_object_unref (gsdor);
 }
 
 /**
- * nc_galaxy_redshift_clear:
- * @gz: a #NcGalaxyRedshift
+ * nc_galaxy_sd_obs_redshift_clear:
+ * @gsdor: a #NcGalaxySDObsRedshift
  *
- * Decreases the reference count of @gz by one, and sets the pointer *@gz to
+ * Decreases the reference count of @gsdor by one, and sets the pointer *@gsdor to
  * NULL.
  *
  */
 void
-nc_galaxy_redshift_clear (NcGalaxyRedshift **gz)
+nc_galaxy_sd_obs_redshift_clear (NcGalaxySDObsRedshift **gsdor)
 {
-  g_clear_object (gz);
+  g_clear_object (gsdor);
 }
 
 /**
- * nc_galaxy_redshift_gen:
- * @gz: a #NcGalaxyRedshift
+ * nc_galaxy_sd_obs_redshift_gen:
+ * @gsdor: a #NcGalaxySDObsRedshift
  * @rng: a #NcmRNG
  * @data: a #NcmVector
  *
@@ -191,14 +191,14 @@ nc_galaxy_redshift_clear (NcGalaxyRedshift **gz)
  * Returns: the generated redshift value.
  */
 gdouble
-nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng, NcmVector *data)
+nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data)
 {
-  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->gen (gz, rng, data);
+  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->gen (gsdor, rng, data);
 }
 
 /**
- * nc_galaxy_redshift_integ:
- * @gz: a #NcGalaxyRedshift
+ * nc_galaxy_sd_obs_redshift_integ:
+ * @gsdor: a #NcGalaxySDObsRedshift
  * @data: a #NcmVector
  *
  * Computes the probability density of the observable $z_p$.
@@ -206,22 +206,22 @@ nc_galaxy_redshift_gen (NcGalaxyRedshift *gz, NcmRNG *rng, NcmVector *data)
  * Returns: the probability density at $z_p$, $P(z_p)$.
  */
 gdouble
-nc_galaxy_redshift_integ (NcGalaxyRedshift *gz, gdouble z, NcmVector *data)
+nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data)
 {
-  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->integ (gz, z, data);
+  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->integ (gsdor, z, data);
 }
 
 /**
- * nc_galaxy_redshift_get_header:
- * @gz: a #NcGalaxyRedshift
+ * nc_galaxy_sd_obs_redshift_get_header:
+ * @gsdor: a #NcGalaxySDObsRedshift
  *
  * Gets the header of the galaxy redshift data.
  *
  * Returns: the header of the galaxy redshift data.
  */
 gboolean
-nc_galaxy_redshift_get_header (NcGalaxyRedshift *gz)
+nc_galaxy_sd_obs_redshift_get_header (NcGalaxySDObsRedshift *gsdor)
 {
-  return NC_GALAXY_REDSHIFT_GET_CLASS (gz)->get_header (gz);
+  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->get_header (gsdor);
 }
 
