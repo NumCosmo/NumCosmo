@@ -58,22 +58,6 @@ struct _NcDataClusterWLClass
   NcmDataClass parent_class;
 };
 
-/**
- * NcDataClusterWLObs:
- * @NC_DATA_CLUSTER_WL_ZCLUSTER: cluster redshift
- * @NC_DATA_CLUSTER_WL_GOBS: measured reduced shear
- * @NC_DATA_CLUSTER_WL_PZ: redshift distribution (photometric)
- *
- */
-typedef enum _NcDataClusterWLObs
-{
-  NC_DATA_CLUSTER_WL_ZCLUSTER = 0,
-  NC_DATA_CLUSTER_WL_GOBS,
-  NC_DATA_CLUSTER_WL_PZ,
-  /* < private > */
-  NC_DATA_CLUSTER_WL_LEN, /*< skip >*/
-} NcDataClusterWLObs;
-
 struct _NcDataClusterWL
 {
   /*< private >*/

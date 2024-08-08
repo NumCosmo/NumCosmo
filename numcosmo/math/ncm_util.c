@@ -40,6 +40,7 @@
 
 #include "math/ncm_util.h"
 #include "math/ncm_memory_pool.h"
+#include "numcosmo/nc_hicosmo.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_legendre.h>
@@ -750,6 +751,32 @@ ncm_complex_clear (NcmComplex **c)
  * The input coordinates ((@ra1, @dec1), (@ra2, @dec2)) must be given in decimal degrees.
  *
  * Returns: the great circle distance in decimal degrees
+ */
+
+/**
+ * ncm_util_projected_radius:
+ * @theta: a gdouble in radians
+ * @d: a gdouble in Mpc
+ *
+ * Converts the the angular separation `$\theta$' of a galaxy
+ * at redshift `$z$' to the projected physical distance in Mpc.
+ *
+ * Returns: the physical distance in Mpc.
+ */
+
+/**
+ * ncm_util_polar_angles:
+ * @ra1: Right ascension of object 1
+ * @dec1: Declination of object 1
+ * @ra2: Right ascension of object 2
+ * @dec2: Declination of object 2
+ * @theta: (out): the angular separation in radians
+ * @phi: (out): the position angle in radians
+ *
+ * Computes the angular separation `$\theta$' and the position angle `$\phi$' between
+ * object1 (@ra1, @dec1) and object2 (@ra2, dec2), where object1 is at the center of
+ * the coordinate system.
+ * The input coordinates ((@ra1, @dec1), (@ra2, @dec2)) must be given in decimal degrees.
  */
 
 /**

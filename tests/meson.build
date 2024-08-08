@@ -139,6 +139,10 @@ c_tests = [
         'timeout': 0,
     },
     {
+        'name': 'ncm_util',
+        'sources': ['test_ncm_util.c'],
+    },
+    {
         'name': 'nc_halo_bias',
         'sources': ['test_nc_halo_bias.c'],
     },
@@ -219,6 +223,10 @@ c_tests = [
     {
         'name': 'nc_data_cluster_wl',
         'sources': ['test_nc_data_cluster_wl.c'],
+    },
+    {
+        'name': 'nc_galaxy_wl_obs',
+        'sources': ['test_nc_galaxy_wl_obs.c'],
     },
     {
         'name': 'nc_galaxy_sd_position',
