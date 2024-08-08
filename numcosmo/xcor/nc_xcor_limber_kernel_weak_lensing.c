@@ -531,8 +531,10 @@ static gdouble
 _nc_xcor_limber_kernel_weak_lensing_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   NcXcorLimberKernelWeakLensing *xclkg = NC_XCOR_LIMBER_KERNEL_WEAK_LENSING (xclk);
+  const gdouble nu                     = l + 0.5;
+  const gdouble lfactor                = sqrt ((l + 2.0) * (l + 1.0) * l * (l - 1.0)) / (nu * nu);
 
-  return xck->xi_z / xck->E_z * (1.0 + z) * ncm_spline_eval (xclkg->kernel_W_mz, -z);
+  return lfactor * (1.0 + z) * xck->xi_z / xck->E_z * ncm_spline_eval (xclkg->kernel_W_mz, -z);
 }
 
 static void

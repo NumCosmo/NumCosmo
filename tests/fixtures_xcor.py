@@ -138,7 +138,10 @@ def fixture_ccl_gal(
     ccl_gal = pyccl.NumberCountsTracer(
         ccl_cosmo_eh_linear,
         has_rsd=False,
-        dndz=(dndz.peek_xv().dup_array(), dndz.peek_yv().dup_array()),
+        dndz=(
+            np.array(dndz.peek_xv().dup_array()),
+            np.array(dndz.peek_yv().dup_array()),
+        ),
     )
     return ccl_gal
 
@@ -151,7 +154,7 @@ def fixture_nc_weak_lensing(
     """Fixture for NumCosmo weak lensing tracer."""
     mu = request.param
     sigma = SRC_GAL_Z_SIGMA
-    z_a = np.linspace(0.0, 2.0, 2000)
+    z_a = np.linspace(0.0, 2.0, 20_000)
     nz_a = np.exp(-((z_a - mu) ** 2) / sigma**2 / 2.0) / np.sqrt(2.0 * np.pi * sigma**2)
 
     z_v = Ncm.Vector.new_array(z_a.tolist())
@@ -176,6 +179,10 @@ def fixture_ccl_weak_lensing(
 
     ccl_wl = pyccl.WeakLensingTracer(
         ccl_cosmo_eh_linear,
-        dndz=(dndz.peek_xv().dup_array(), dndz.peek_yv().dup_array()),
+        dndz=(
+            np.array(dndz.peek_xv().dup_array()),
+            np.array(dndz.peek_yv().dup_array()),
+        ),
+        n_samples=10_000,
     )
     return ccl_wl

@@ -262,7 +262,7 @@ def test_cmb_lens_kernel(
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=0.0)
 
 
-def test_cmb_auto_integrand(
+def test_cmb_lens_auto_integrand(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
     nc_cosmo_eh_linear: ncpy.Cosmology,
     ccl_cmb_lens: pyccl.CMBLensingTracer,
@@ -323,7 +323,7 @@ def test_cmb_auto_integrand(
     assert_allclose(nc_f, ccl_f, rtol=reltol_f, atol=0.0)
 
 
-def test_cmb_auto(
+def test_cmb_lens_auto(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
     nc_cosmo_eh_linear: ncpy.Cosmology,
     ccl_cmb_lens: pyccl.CMBLensingTracer,
@@ -409,3 +409,45 @@ def test_cmb_isw_kernel(
         ]
     )
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=0.0)
+
+
+def test_weak_lensing_kernel(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: ncpy.Cosmology,
+    ccl_weak_lensing: pyccl.WeakLensingTracer,
+    nc_weak_lensing: Nc.XcorLimberKernelWeakLensing,
+) -> None:
+    """Compare NumCosmo and CCL correlation windows."""
+    cosmo = nc_cosmo_eh_linear.cosmo
+    dist = nc_cosmo_eh_linear.dist
+    if ccl_cosmo_eh_linear.high_precision:
+        reltol_target: float = 1.0e-4
+    else:
+        reltol_target = 1.0e-4
+
+    RH_Mpc = cosmo.RH_Mpc()
+    ell = 77.0
+
+    Wchi_list, chi_list = ccl_weak_lensing.get_kernel()
+    assert chi_list is not None
+    assert Wchi_list is not None
+    assert len(chi_list) == 1  # Single tracer
+    assert len(Wchi_list) == 1  # Single tracer
+
+    chi_a = np.array(chi_list[0])[1:-1]
+    Wchi_a = (
+        np.array(Wchi_list[0])[1:-1]
+        * np.sqrt((ell + 2.0) * (ell + 1.0) * ell * (ell - 1.0))
+        / (ell + 0.5) ** 2
+    )
+    nc_weak_lensing.prepare(cosmo)
+
+    z_array = [dist.inv_comoving(cosmo, chi / RH_Mpc) for chi in chi_a]
+
+    nc_Wchi_a = np.array(
+        [
+            nc_weak_lensing.eval_full(cosmo, z, dist, int(ell)) * cosmo.E(z) / RH_Mpc
+            for z in z_array
+        ]
+    )
+    assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-30)
