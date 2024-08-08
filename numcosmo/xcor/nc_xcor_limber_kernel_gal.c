@@ -475,8 +475,6 @@ _nc_xcor_limber_kernel_gal_g_func (gdouble z, gpointer params)
 
   gsl_integration_qag (&F, GSL_MAX (z, zmin), zmax, 0., NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, w, &result, &error);
 
-  /* printf ("integration result = %g with integration error = %g \n", result, error); */
-
   gsl_integration_workspace_free (w);
 
   return result * chiz;
@@ -564,27 +562,6 @@ _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
   }
 }
 
-/* / ** */
-/*  * nc_xcor_limber_kernel_gal_set_dndz: */
-/*  * @xclkg: a #NcXcorLimberKernelGal */
-/*  * @z: (element-type double): a GArray */
-/*  * @dn_dz_array: (element-type double): a GArray */
-/*  * */
-/*  * FIXME */
-/*  * */
-/*  * Returns: FIXME */
-/*  * */
-/* * / */
-/* void */
-/* nc_xcor_limber_kernel_gal_set_dndz (NcXcorLimberKernelGal* xclkg, GArray* z, GArray* dn_dz_array) */
-/* { */
-/*  ncm_spline_set_array (xclkg->dn_dz, z, dn_dz_array, TRUE); */
-/* */
-/*  // NcXcorLimberKernel* xclk = NC_XCOR_LIMBER_KERNEL (xclkg); */
-/*  // xclk->zmin = g_array_index (z, gdouble, 0); */
-/*  // xclk->zmax = g_array_index (z, gdouble, z->len - 1); */
-/* } */
-
 static gdouble
 _nc_xcor_limber_kernel_gal_bias (NcXcorLimberKernelGal *xclkg, gdouble z)
 {
@@ -615,19 +592,11 @@ _nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdo
   {
     const gdouble g_z = ncm_spline_eval (xclkg->g_func, z);
 
-    res += 1.5 * nc_hicosmo_Omega_m0 (cosmo) * (5. * MAG_BIAS - 2.) * (1.0 + z) * g_z / xck->E_z;
+    res += 1.5 * nc_hicosmo_Omega_m0 (cosmo) * (5.0 * MAG_BIAS - 2.0) * (1.0 + z) * g_z / xck->E_z;
   }
 
   return res;
 }
-
-/* static gdouble */
-/* _nc_xcor_limber_kernel_gal_noise_spec (NcXcorLimberKernel* xclk, guint l) */
-/* { */
-/*  NcXcorLimberKernelGal* xclkg = NC_XCOR_LIMBER_KERNEL_GAL (xclk); */
-/* */
-/*  return xclkg->nbarm1 + NOISE_BIAS; */
-/* } */
 
 static void
 _nc_xcor_limber_kernel_gal_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin)
