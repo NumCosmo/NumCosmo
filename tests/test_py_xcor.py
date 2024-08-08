@@ -451,3 +451,42 @@ def test_weak_lensing_kernel(
         ]
     )
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-30)
+
+
+def test_gal_kernel(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: ncpy.Cosmology,
+    ccl_gal: pyccl.NumberCountsTracer,
+    nc_gal: Nc.XcorLimberKernelGal,
+) -> None:
+    """Compare NumCosmo and CCL correlation windows."""
+    cosmo = nc_cosmo_eh_linear.cosmo
+    dist = nc_cosmo_eh_linear.dist
+    if ccl_cosmo_eh_linear.high_precision:
+        reltol_target: float = 1.0e-4
+    else:
+        reltol_target = 1.0e-4
+
+    RH_Mpc = cosmo.RH_Mpc()
+    ell = 77.0
+
+    Wchi_list, chi_list = ccl_gal.get_kernel()
+    assert chi_list is not None
+    assert Wchi_list is not None
+    assert len(chi_list) == 1  # Single tracer
+    assert len(Wchi_list) == 1  # Single tracer
+
+    chi_a = np.array(chi_list[0])[1:-1]
+    Wchi_a = np.array(Wchi_list[0])[1:-1]
+    nc_gal.prepare(cosmo)
+
+    z_array = [dist.inv_comoving(cosmo, chi / RH_Mpc) for chi in chi_a]
+
+    nc_Wchi_a = np.array(
+        [
+            nc_gal.eval_full(cosmo, z, dist, int(ell)) * cosmo.E(z) / RH_Mpc
+            for z in z_array
+        ]
+    )
+
+    assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-30)

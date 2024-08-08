@@ -120,7 +120,7 @@ def fixture_nc_gal(
     dndz = Ncm.SplineCubicNotaknot.new_full(z_v, nz_v, True)
 
     nc_gal = Nc.XcorLimberKernelGal.new(
-        0.2, 2.0, 100, 1.234, dndz, nc_cosmo_eh_linear.dist, False
+        0.0, 2.0, 100, 1.234, dndz, nc_cosmo_eh_linear.dist, False
     )
 
     return nc_gal
@@ -135,13 +135,15 @@ def fixture_ccl_gal(
     dndz: Ncm.Spline = nc_gal.props.dndz
     assert isinstance(dndz, Ncm.Spline)
 
+    z_array = np.array(dndz.peek_xv().dup_array())
     ccl_gal = pyccl.NumberCountsTracer(
         ccl_cosmo_eh_linear,
         has_rsd=False,
         dndz=(
-            np.array(dndz.peek_xv().dup_array()),
+            z_array,
             np.array(dndz.peek_yv().dup_array()),
         ),
+        bias=(z_array, np.ones_like(z_array)),
     )
     return ccl_gal
 
