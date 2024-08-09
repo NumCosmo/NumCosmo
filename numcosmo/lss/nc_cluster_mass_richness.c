@@ -315,72 +315,6 @@ _nc_cluster_mass_richness_mean (NcClusterMass *clusterm, const gdouble lnM, cons
 
 
 static gdouble
-_nc_cluster_mass_richness_normalization_integrand (gdouble richness_true ,gpointer userdata)
-{
-  NcClusterMassRichnessInt *obs_data = (NcClusterMassRichnessInt *) userdata;
-  NcClusterMassRichnessPrivate * const self = obs_data->richness->priv;
-  NcClusterMass *clusterm = NC_CLUSTER_MASS ( obs_data->richness);
-  gdouble richness_obs_true = 0;
-  
-
-  gdouble mean;
-  gdouble sigma;
-  const gdouble sigma_obs       = obs_data->richness_obs_params[NC_CLUSTER_MASS_RICHNESS_SIGMA_OBS];
-  const gdouble sqrt2_sigma_obs   = M_SQRT2 * sigma_obs;
-  const gdouble x_obs_min             = (richness_true - self->richnessobs_min) / sqrt2_sigma_obs;
-  const gdouble x_obs_max             = (richness_true - self->richnessobs_max ) / sqrt2_sigma_obs;
-
-   if (x_obs_max > 4.0)
-  {
-    richness_obs_true =  -(erfc (x_obs_min) - erfc (x_obs_max));}
-  else
-  {
-    richness_obs_true =  (erf (x_obs_min) - erf (x_obs_max));}
-  
-
-  _nc_cluster_mass_richness_mean (clusterm, obs_data->lnM, obs_data->z, &mean , &sigma);
-
-  const gdouble sqrt2_sigma   = M_SQRT2 * sigma;
-  const gdouble x             = (log(richness_true) - mean) / sqrt2_sigma;
-
-  const gdouble mass_richness = exp (-x * x);
-  return richness_obs_true * mass_richness;
-}
-
-
-static gdouble
-_nc_cluster_mass_richness_normalization (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z , const gdouble *lnM_obs_params)
-{
-  NcClusterMassRichness *richness  = NC_CLUSTER_MASS_RICHNESS (clusterm);
-  NcClusterMassRichnessInt obs_data;
-
-  gdouble normalization, err;
-  gsl_function F;
-  gsl_integration_workspace **w = ncm_integral_get_workspace ();
-
-  obs_data.cosmo          = cosmo;
-  obs_data.richness       = richness;
-  obs_data.z              = z;
-  obs_data.lnM            = lnM;
-  obs_data.richness_obs_params = lnM_obs_params;
-
-
-  F.function = &_nc_cluster_mass_richness_normalization_integrand;
-  F.params   = &obs_data;
-  
-  NcClusterMassRichnessPrivate * const self = richness->priv;
-
-  const gdouble sigma_obs        = obs_data.richness_obs_params[NC_CLUSTER_MASS_RICHNESS_SIGMA_OBS];
-  const gdouble richness_true_lb = 1;
-  const gdouble richness_true_ub = self->richnessobs_max + 7 * sigma_obs;
-
-  gsl_integration_qag (&F, richness_true_lb, richness_true_ub, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_RICHNESS_DEFAULT_INT_KEY, *w, &normalization, &err);
-  ncm_memory_pool_return (w);
-  
-  return normalization;
-}
-
-static gdouble
 _nc_cluster_mass_richness_p_integrand (gdouble richness_true ,gpointer userdata)
 {
   NcClusterMassRichnessInt *obs_data = (NcClusterMassRichnessInt *) userdata;
@@ -392,7 +326,7 @@ _nc_cluster_mass_richness_p_integrand (gdouble richness_true ,gpointer userdata)
   const gdouble sqrt2_sigma_obs   = M_SQRT2 * sigma_obs;
   const gdouble x_obs             = (obs_data->richness_obs[0] - richness_true) / sqrt2_sigma_obs;
   
-  const gdouble richness_obs_true =exp (-x_obs * x_obs);
+  const gdouble richness_obs_true =exp (-x_obs * x_obs)/(ncm_c_sqrt_2pi () * sigma_obs);
   
 
   _nc_cluster_mass_richness_mean (clusterm, obs_data->lnM, obs_data->z, &mean , &sigma);
@@ -400,7 +334,7 @@ _nc_cluster_mass_richness_p_integrand (gdouble richness_true ,gpointer userdata)
   const gdouble sqrt2_sigma   = M_SQRT2 * sigma;
   const gdouble x             = (log(richness_true) - mean) / sqrt2_sigma;
 
-  const gdouble mass_richness = exp (-x * x);
+  const gdouble mass_richness = exp (-x * x) /(ncm_c_sqrt_2pi () * sigma * richness_true);
 
   return richness_obs_true * mass_richness;
 }
@@ -435,7 +369,7 @@ _nc_cluster_mass_richness_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble
   gsl_integration_qag (&F, richness_true_lb, richness_true_ub, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_RICHNESS_DEFAULT_INT_KEY, *w, &clusterm_p, &err);
   ncm_memory_pool_return (w);
 
-  return clusterm_p / _nc_cluster_mass_richness_normalization (clusterm , cosmo , lnM , z , lnM_obs_params);
+  return clusterm_p;
 }
 
 static gdouble
@@ -456,10 +390,10 @@ _nc_cluster_mass_richness_intp_integrand (gdouble richness_true ,gpointer userda
   
   if (x_obs_max > 4.0)
   {
-    richness_obs_true =  -(erfc (x_obs_min) - erfc (x_obs_max));}
+    richness_obs_true =  -(erfc (x_obs_min) - erfc (x_obs_max))/2;}
   else
   {
-    richness_obs_true =  (erf (x_obs_min) - erf (x_obs_max));}
+    richness_obs_true =  (erf (x_obs_min) - erf (x_obs_max))/2;}
   
 
   _nc_cluster_mass_richness_mean (clusterm, obs_data->lnM, obs_data->z, &mean , &sigma);
@@ -467,7 +401,7 @@ _nc_cluster_mass_richness_intp_integrand (gdouble richness_true ,gpointer userda
   const gdouble sqrt2_sigma   = M_SQRT2 * sigma;
   const gdouble x             = (log(richness_true) - mean) / sqrt2_sigma;
 
-  const gdouble mass_richness = exp (-x * x);
+  const gdouble mass_richness = exp (-x * x)/(ncm_c_sqrt_2pi () * sigma * richness_true);
   return richness_obs_true * mass_richness;
 }
 
@@ -520,11 +454,11 @@ _nc_cluster_mass_richness_intp_bin_integrand (gdouble richness_true ,gpointer us
   
   if (x_obs_max > 4.0)
   {
-    richness_obs_true =  -(erfc (x_obs_min) - erfc (x_obs_max));}
+    richness_obs_true =  -(erfc (x_obs_min) - erfc (x_obs_max))/2;}
     
   else
   {
-    richness_obs_true =  (erf (x_obs_min) - erf (x_obs_max));}
+    richness_obs_true =  (erf (x_obs_min) - erf (x_obs_max))/2;}
   
 
   _nc_cluster_mass_richness_mean (clusterm, obs_data->lnM, obs_data->z, &mean , &sigma);
@@ -534,7 +468,7 @@ _nc_cluster_mass_richness_intp_bin_integrand (gdouble richness_true ,gpointer us
 
   const gdouble mass_richness = exp (-x * x);
   //printf("%.15g , %.15g  , %.15g , %.15g , %.15g  , %.15g , %.15g  \n " ,richness_obs_true , mass_richness , richness_true , log(richness_true) , x , mean , obs_data->lnM);
-  return richness_obs_true * mass_richness;
+  return richness_obs_true * mass_richness/(ncm_c_sqrt_2pi () * sigma * richness_true);
 }
 
 static gdouble
@@ -567,7 +501,7 @@ _nc_cluster_mass_richness_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, g
 
   gsl_integration_qag (&F, richness_true_lb, richness_true_ub, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_RICHNESS_DEFAULT_INT_KEY, *w, &clusterm_intp_bin, &err);
   ncm_memory_pool_return (w);
-  return clusterm_intp_bin / _nc_cluster_mass_richness_normalization (clusterm , cosmo , lnM , z , lnM_obs_params);
+  return clusterm_intp_bin;
 }
 
 static gboolean

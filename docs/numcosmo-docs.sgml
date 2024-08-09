@@ -337,14 +337,16 @@
     <section>
       <title>Multiplicity Function</title>
       <xi:include href="xml/nc_multiplicity_func.xml"/>
+      <xi:include href="xml/nc_multiplicity_func_bocquet.xml"/>
+      <xi:include href="xml/nc_multiplicity_func_crocce.xml"/>
+      <xi:include href="xml/nc_multiplicity_func_despali.xml"/>
       <xi:include href="xml/nc_multiplicity_func_ps.xml"/>
       <xi:include href="xml/nc_multiplicity_func_st.xml"/>
       <xi:include href="xml/nc_multiplicity_func_jenkins.xml"/>
       <xi:include href="xml/nc_multiplicity_func_warren.xml"/>
       <xi:include href="xml/nc_multiplicity_func_tinker.xml"/>
       <xi:include href="xml/nc_multiplicity_func_tinker_mean_normalized.xml"/>
-      <xi:include href="xml/nc_multiplicity_func_crocce.xml"/>
-      <xi:include href="xml/nc_multiplicity_func_bocquet.xml"/>
+      
       <xi:include href="xml/nc_multiplicity_func_watson.xml"/>
     </section>
     <xi:include href="xml/nc_halo_mass_function.xml"/>
