@@ -100,12 +100,18 @@ GAL_Z_CENTERS = np.linspace(0.3, 1.2, 2)
 GAL_Z_SIGMA = 0.02
 GAL_MAG_BIAS = [0.0, 1.345]
 GAL_BIAS = [0.0, 3.13]
+GAL_BIAS_NKNOTS = [1, 2, 4]
 GAL_PARAMS = [
-    (mu, mbias, bias)
-    for mu, mbias, bias in product(GAL_Z_CENTERS, GAL_MAG_BIAS, GAL_BIAS)
-    if bias != 0.0 or mbias != 0.0  # avoid zero bias
+    (mu, mbias, bias, bias_nknots)
+    for mu, mbias, bias, bias_nknots in product(
+        GAL_Z_CENTERS, GAL_MAG_BIAS, GAL_BIAS, GAL_BIAS_NKNOTS
+    )
+    if not (bias == 0.0 and mbias == 0.0)  # avoid zero bias
 ]
-GAL_IDS = [f"z={mu:.2f}, mbias={mbias}, bias={bias}" for mu, mbias, bias in GAL_PARAMS]
+GAL_IDS = [
+    f"z={mu:.2f}, mbias={mbias}, bias={bias}, bias_nknots={bias_nknots}"
+    for mu, mbias, bias, bias_nknots in GAL_PARAMS
+]
 
 SRC_GAL_Z_CENTERS = np.linspace(0.5, 1.6, 2)
 SRC_GAL_Z_SIGMA = 0.02
@@ -118,7 +124,7 @@ def fixture_nc_gal(
     request,
 ) -> Nc.XcorLimberKernelGal:
     """Fixture for NumCosmo galaxy tracer."""
-    mu, mbias, bias = request.param
+    mu, mbias, bias, bias_nknots = request.param
     sigma = GAL_Z_SIGMA
     z_a = np.linspace(0.0, 2.0, 20_000)
     nz_a = np.exp(-((z_a - mu) ** 2) / sigma**2 / 2.0) / np.sqrt(2.0 * np.pi * sigma**2)
@@ -129,9 +135,10 @@ def fixture_nc_gal(
 
     magbias = mbias != 0.0
     nc_gal = Nc.XcorLimberKernelGal.new(
-        0.0, 2.0, 1, 1.234, dndz, nc_cosmo_eh_linear.dist, magbias
+        0.0, 2.0, bias_nknots, 1.234, dndz, nc_cosmo_eh_linear.dist, magbias
     )
-    nc_gal.orig_vparam_set(Nc.XcorLimberKernelGalVParams.BIAS, 0, bias)
+    for i in range(bias_nknots):
+        nc_gal.orig_vparam_set(Nc.XcorLimberKernelGalVParams.BIAS, i, bias)
     nc_gal.orig_param_set(Nc.XcorLimberKernelGalSParams.MAG_BIAS, mbias)
 
     return nc_gal

@@ -399,11 +399,17 @@ ncm_spline_gsl_new_full_by_id (NcmSplineGslType type_id, NcmVector *xv, NcmVecto
 void
 ncm_spline_gsl_set_type (NcmSplineGsl *sg, const gsl_interp_type *type)
 {
+  const GEnumValue *type_id = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_SPLINE_GSL_TYPE, type->name);
+
   if (sg->interp != NULL)
   {
     if (sg->type != type)
     {
-      sg->type = type;
+      sg->type    = type;
+      sg->type_id = type_id->value;
+      g_free (sg->inst_name);
+      sg->inst_name = g_strdup_printf ("NcmSplineGsl[%s]", type->name);
+
       gsl_interp_free (sg->interp);
       sg->interp = NULL;
       _ncm_spline_gsl_reset (NCM_SPLINE (sg));
@@ -411,9 +417,9 @@ ncm_spline_gsl_set_type (NcmSplineGsl *sg, const gsl_interp_type *type)
   }
   else
   {
-    sg->type = type;
+    sg->type    = type;
+    sg->type_id = type_id->value;
     g_free (sg->inst_name);
-    /* printf("NcmSplineGsl[%s]", type->name); */
     sg->inst_name = g_strdup_printf ("NcmSplineGsl[%s]", type->name);
   }
 }
@@ -429,8 +435,6 @@ ncm_spline_gsl_set_type (NcmSplineGsl *sg, const gsl_interp_type *type)
 void
 ncm_spline_gsl_set_type_by_id (NcmSplineGsl *sg, NcmSplineGslType type_id)
 {
-  sg->type_id = type_id;
-
   switch (type_id)
   {
     case NCM_SPLINE_GSL_LINEAR:
