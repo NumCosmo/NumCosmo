@@ -281,9 +281,11 @@ test_nc_distance_comoving_z1_z2 (TestNcDistance *test, gconstpointer pdata)
   {
     const gdouble delta = 1.0e-5;
     gdouble d1pdelta    = nc_distance_comoving (dist, cosmo, test->z1 + delta);
+    gdouble d11pdelta   = nc_distance_comoving_z1_z2 (dist, cosmo, test->z1, test->z1 + delta);
 
     g_assert_cmpfloat (d1pdelta, >, d1);
     ncm_assert_cmpdouble_e (d1pdelta, ==, d1 + 1.0 / nc_hicosmo_E (cosmo, test->z1) * delta, 1.0e-10, 0.0);
+    ncm_assert_cmpdouble_e (d11pdelta, ==, 1.0 / nc_hicosmo_E (cosmo, test->z1) * delta, 1.0e-5, 0.0);
   }
 }
 
