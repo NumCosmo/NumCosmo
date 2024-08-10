@@ -49,6 +49,7 @@
 
 #include "math/ncm_cfg.h"
 #include "xcor/nc_xcor_limber_kernel_gal.h"
+#include "xcor/nc_xcor_limber_kernel_weak_lensing.h"
 #include "xcor/nc_xcor.h"
 
 #include "math/ncm_integrate.h"
@@ -73,7 +74,7 @@ struct _NcXcorLimberKernelGal
 
   NcDistance *dist;
 
-  NcmSpline *g_func;
+  NcXcorLimberKernelWeakLensing *xclkw;
   gboolean domagbias;
 
   gboolean fast_update;
@@ -110,7 +111,7 @@ nc_xcor_limber_kernel_gal_init (NcXcorLimberKernelGal *xclkg)
 
   xclkg->dist = NULL;
 
-  xclkg->g_func    = NULL;
+  xclkg->xclkw     = NULL;
   xclkg->domagbias = FALSE;
 
   xclkg->fast_update    = FALSE;
@@ -199,19 +200,9 @@ _nc_xcor_limber_kernel_gal_constructed (GObject *object)
     {
       NcmVector *gzv;
 
-      ncm_spline_clear (&xclkg->g_func);
+      g_clear_object (&xclkg->xclkw);
 
-      xclkg->g_func = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-      ncm_spline_set_len (xclkg->g_func, NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN);
-      gzv = ncm_spline_get_xv (xclkg->g_func);
-
-      for (i = 0; i < NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN; i++)
-      {
-        ncm_vector_set (gzv, i, zmin + (zmax - zmin) / (NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN - 1.0) * i);
-      }
-
-      ncm_vector_free (gzv);
-      /*ncm_spline_acc (xclkg->g_func, TRUE);*/
+      xclkg->xclkw = nc_xcor_limber_kernel_weak_lensing_new (zmin, zmax, xclkg->dn_dz, 1.0, 1.0, xclkg->dist);
     }
 
     /* Normalize the redshift distribution */
@@ -279,7 +270,7 @@ _nc_xcor_limber_kernel_gal_dispose (GObject *object)
 
   ncm_spline_clear (&xclkg->bias_spline);
   ncm_spline_clear (&xclkg->dn_dz);
-  ncm_spline_clear (&xclkg->g_func);
+  g_clear_object (&xclkg->xclkw);
 
   nc_distance_clear (&xclkg->dist);
 
@@ -419,67 +410,6 @@ nc_xcor_limber_kernel_gal_new (gdouble zmin, gdouble zmax, gsize np, gdouble nba
   return xclkg;
 }
 
-typedef struct _int_g_func_params
-{
-  gdouble chiz;
-  NcDistance *dist;
-  NcHICosmo *cosmo;
-  NcmSpline *dn_dz;
-} int_g_func_params;
-
-static gdouble
-_nc_xcor_limber_kernel_gal_g_func_integrand (gdouble zz, gpointer params)
-{
-  int_g_func_params *ts = (int_g_func_params *) params;
-  const gdouble a       = 1.0 - ts->chiz / nc_distance_comoving (ts->dist, ts->cosmo, zz);
-  const gdouble dn_dz_z = ncm_spline_eval (ts->dn_dz, zz);
-
-  return a * dn_dz_z;
-}
-
-typedef struct _g_func_params
-{
-  NcXcorLimberKernelGal *xclkg;
-  NcHICosmo *cosmo;
-} g_func_params;
-
-static gdouble
-_nc_xcor_limber_kernel_gal_g_func (gdouble z, gpointer params)
-{
-  g_func_params *ts            = (g_func_params *) params;
-  NcXcorLimberKernelGal *xclkg = ts->xclkg;
-  NcXcorLimberKernel *xclk     = NC_XCOR_LIMBER_KERNEL (xclkg);
-  NcHICosmo *cosmo             = ts->cosmo;
-  gdouble zmin, zmax, zmid;
-
-  nc_xcor_limber_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
-
-  if (z > zmax)
-    return 0.0;
-
-  gdouble result, error;
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
-
-  gsl_function F;
-  int_g_func_params int_ts;
-
-  const gdouble chiz = nc_distance_comoving (xclkg->dist, cosmo, z);
-
-  int_ts.chiz  = chiz;
-  int_ts.dist  = xclkg->dist;
-  int_ts.cosmo = cosmo;
-  int_ts.dn_dz = xclkg->dn_dz;
-
-  F.function = &_nc_xcor_limber_kernel_gal_g_func_integrand;
-  F.params   = &int_ts;
-
-  gsl_integration_qag (&F, GSL_MAX (z, zmin), zmax, 0., NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, w, &result, &error);
-
-  gsl_integration_workspace_free (w);
-
-  return result * chiz;
-}
-
 static void
 _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
 {
@@ -492,7 +422,6 @@ _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
 
   zmid = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz)));
   nc_xcor_limber_kernel_set_z_range (xclk, zmin, zmax, zmid);
-  /* printf("zmid = %g \n", xclk->zmid); */
 
   nc_distance_prepare_if_needed (xclkg->dist, cosmo);
 
@@ -511,55 +440,7 @@ _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
   }
 
   if (xclkg->domagbias)
-  {
-    guint i;
-
-    if (xclkg->g_func == NULL)
-    {
-      NcmVector *gzv;
-
-      xclkg->g_func = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-      ncm_spline_set_len (xclkg->g_func, NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN);
-
-      gzv = ncm_spline_get_xv (xclkg->g_func);
-
-      for (i = 0; i < NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN; i++)
-      {
-        ncm_vector_set (gzv, i, zmin + (zmax - zmin) / (NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN - 1.0) * i);
-      }
-
-      ncm_vector_free (gzv);
-      /*ncm_spline_acc (xclkg->g_func, TRUE);*/
-    }
-
-    /* ncm_spline_set_len(xclkg->g_func, 6); */
-    /* gsl_function F; */
-
-    /* */
-    /* F.function = &_nc_xcor_limber_kernel_gal_g_func; */
-    /* F.params = &ts; */
-    /* */
-    /* ncm_spline_set_func (xclkg->g_func, NCM_SPLINE_FUNCTION_SPLINE, &F, xclk->zmin, xclk->zmax, 3000, 1e-4); */
-
-    {
-      g_func_params ts;
-      NcmVector *xv = ncm_spline_get_xv (xclkg->g_func);
-      NcmVector *yv = ncm_spline_get_yv (xclkg->g_func);
-
-      ts.xclkg = xclkg;
-      ts.cosmo = cosmo;
-
-      for (i = 0; i < NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN; i++)
-      {
-        ncm_vector_set (yv, i, _nc_xcor_limber_kernel_gal_g_func (ncm_vector_get (xv, i), &ts));
-      }
-
-      ncm_vector_free (xv);
-      ncm_vector_free (yv);
-    }
-
-    ncm_spline_prepare (xclkg->g_func);
-  }
+    nc_xcor_limber_kernel_prepare (NC_XCOR_LIMBER_KERNEL (xclkg->xclkw), cosmo);
 }
 
 static gdouble
@@ -579,7 +460,7 @@ _nc_xcor_limber_kernel_gal_bias (NcXcorLimberKernelGal *xclkg, gdouble z)
 }
 
 static gdouble
-_nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l) /*, gdouble geo_z[]) */
+_nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   NcXcorLimberKernelGal *xclkg = NC_XCOR_LIMBER_KERNEL_GAL (xclk);
   const gdouble dn_dz_z        = ncm_spline_eval (xclkg->dn_dz, z);
@@ -590,9 +471,12 @@ _nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdo
 
   if (xclkg->domagbias)
   {
-    const gdouble g_z = ncm_spline_eval (xclkg->g_func, z);
+    const gdouble lfactor = sqrt ((l + 2.0) * (l + 1.0) * l * (l - 1.0));
+    const gdouble llp1    = l * (l + 1.0);
+    const gdouble g_z     = nc_xcor_limber_kernel_eval (NC_XCOR_LIMBER_KERNEL (xclkg->xclkw), cosmo, z, xck, l) *
+                            nc_xcor_limber_kernel_get_const_factor (NC_XCOR_LIMBER_KERNEL (xclkg->xclkw)) / lfactor;
 
-    res += 1.5 * nc_hicosmo_Omega_m0 (cosmo) * (5.0 * MAG_BIAS - 2.0) * (1.0 + z) * g_z / xck->E_z;
+    res += llp1 * (5.0 * MAG_BIAS - 2.0) * g_z;
   }
 
   return res;

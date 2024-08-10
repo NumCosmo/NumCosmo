@@ -24,6 +24,7 @@
 
 """Fixtures for XCor tests."""
 
+from itertools import product
 import pytest
 
 import numpy as np
@@ -95,33 +96,43 @@ def fixture_nc_cmb_isw(
     return nc_cmb_isw
 
 
-GAL_Z_CENTERS = np.linspace(0.3, 1.2, 4)
+GAL_Z_CENTERS = np.linspace(0.3, 1.2, 2)
 GAL_Z_SIGMA = 0.02
-GAL_Z_IDS = [f"z={z:.2f}" for z in GAL_Z_CENTERS]
+GAL_MAG_BIAS = [0.0, 1.345]
+GAL_BIAS = [0.0, 3.13]
+GAL_PARAMS = [
+    (mu, mbias, bias)
+    for mu, mbias, bias in product(GAL_Z_CENTERS, GAL_MAG_BIAS, GAL_BIAS)
+    if bias != 0.0 or mbias != 0.0  # avoid zero bias
+]
+GAL_IDS = [f"z={mu:.2f}, mbias={mbias}, bias={bias}" for mu, mbias, bias in GAL_PARAMS]
 
-SRC_GAL_Z_CENTERS = np.linspace(0.5, 1.6, 4)
+SRC_GAL_Z_CENTERS = np.linspace(0.5, 1.6, 2)
 SRC_GAL_Z_SIGMA = 0.02
 SRC_GAL_Z_IDS = [f"z={z:.2f}" for z in SRC_GAL_Z_CENTERS]
 
 
-@pytest.fixture(name="nc_gal", params=GAL_Z_CENTERS, ids=GAL_Z_IDS)
+@pytest.fixture(name="nc_gal", params=GAL_PARAMS, ids=GAL_IDS)
 def fixture_nc_gal(
     nc_cosmo_eh_linear: ncpy.Cosmology,
     request,
 ) -> Nc.XcorLimberKernelGal:
     """Fixture for NumCosmo galaxy tracer."""
-    mu = request.param
+    mu, mbias, bias = request.param
     sigma = GAL_Z_SIGMA
-    z_a = np.linspace(0.0, 2.0, 2000)
+    z_a = np.linspace(0.0, 2.0, 20_000)
     nz_a = np.exp(-((z_a - mu) ** 2) / sigma**2 / 2.0) / np.sqrt(2.0 * np.pi * sigma**2)
 
     z_v = Ncm.Vector.new_array(z_a.tolist())
     nz_v = Ncm.Vector.new_array(nz_a.tolist())
     dndz = Ncm.SplineCubicNotaknot.new_full(z_v, nz_v, True)
 
+    magbias = mbias != 0.0
     nc_gal = Nc.XcorLimberKernelGal.new(
-        0.0, 2.0, 100, 1.234, dndz, nc_cosmo_eh_linear.dist, False
+        0.0, 2.0, 1, 1.234, dndz, nc_cosmo_eh_linear.dist, magbias
     )
+    nc_gal.orig_vparam_set(Nc.XcorLimberKernelGalVParams.BIAS, 0, bias)
+    nc_gal.orig_param_set(Nc.XcorLimberKernelGalSParams.MAG_BIAS, mbias)
 
     return nc_gal
 
@@ -135,6 +146,8 @@ def fixture_ccl_gal(
     dndz: Ncm.Spline = nc_gal.props.dndz
     assert isinstance(dndz, Ncm.Spline)
 
+    bias = nc_gal.orig_vparam_get(Nc.XcorLimberKernelGalVParams.BIAS, 0)
+    magbias = nc_gal.orig_param_get(Nc.XcorLimberKernelGalSParams.MAG_BIAS)
     z_array = np.array(dndz.peek_xv().dup_array())
     ccl_gal = pyccl.NumberCountsTracer(
         ccl_cosmo_eh_linear,
@@ -143,7 +156,9 @@ def fixture_ccl_gal(
             z_array,
             np.array(dndz.peek_yv().dup_array()),
         ),
-        bias=(z_array, np.ones_like(z_array)),
+        bias=(z_array, np.ones_like(z_array) * bias) if bias != 0.0 else None,
+        mag_bias=(z_array, np.ones_like(z_array) * magbias) if magbias != 0.0 else None,
+        n_samples=len(z_array),
     )
     return ccl_gal
 

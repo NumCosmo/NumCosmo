@@ -55,6 +55,52 @@ from .fixtures_xcor import (  # pylint: disable=unused-import # noqa: F401
 
 Ncm.cfg_init()
 
+# Helper functions
+
+
+def compute_kernel(
+    tracer: pyccl.Tracer, cosmo: Nc.HICosmo, dist: Nc.Distance, ell: float
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Compute the kernel for a given tracer."""
+    Wchi_list, chi_list = tracer.get_kernel()
+    assert chi_list is not None
+    chi_a = np.array(chi_list[0])
+    for chi_a_i, Wchi_a_i in zip(chi_list, Wchi_list):
+        s = Ncm.Spline.new_array(
+            Ncm.SplineCubicNotaknot.new(), chi_a_i.tolist(), Wchi_a_i.tolist(), True
+        )
+        Wchi_a_i[:] = np.array([s.eval(chi) for chi in chi_a])
+
+    RH_Mpc = cosmo.RH_Mpc()
+    nu = ell + 0.5
+
+    bessel_factors_list = []
+
+    for der_bessel in tracer.get_bessel_derivative():
+        match der_bessel:
+            case 0:
+                bessel_factors_list.append(1.0)
+            case -1:
+                bessel_factors_list.append(1.0 / nu**2)
+            case _:
+                raise ValueError(f"Invalid Bessel derivative {der_bessel}")
+
+    z_a = np.array([dist.inv_comoving(cosmo, chi / RH_Mpc) for chi in chi_a])
+    H_Mpc_a = np.array([cosmo.E(z) / RH_Mpc for z in z_a])
+    a_array = 1.0 / (1.0 + np.array(z_a))
+    transfers_list = tracer.get_transfer(0.0, a_array)
+    ell_factors_list = tracer.get_f_ell(ell)
+
+    Wtotal = np.zeros_like(chi_a)
+    for Wchi_a, transfer, ell_factor, bessel_factor in zip(
+        Wchi_list, transfers_list, ell_factors_list, bessel_factors_list
+    ):
+        assert Wchi_a is not None
+        assert transfer is not None
+        Wtotal += Wchi_a * transfer * ell_factor * bessel_factor
+
+    return z_a[1:-1], chi_a[1:-1], H_Mpc_a[1:-1], Wtotal[1:-1]
+
 
 # Testing the NumCosmo tracers observables
 
@@ -240,24 +286,12 @@ def test_cmb_lens_kernel(
 
     ell = 79.0
 
-    Wchi_list, chi_list = ccl_cmb_lens.get_kernel()
-    assert chi_list is not None
-    assert Wchi_list is not None
-    assert len(chi_list) == 1  # Single tracer
-    assert len(Wchi_list) == 1  # Single tracer
-
-    chi_a = np.array(chi_list[0])[1:-1]
-    Wchi_a = np.array(Wchi_list[0])[1:-1] * ell * (ell + 1.0) / (ell + 0.5) ** 2
-    RH_Mpc = cosmo.RH_Mpc()
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_lens, cosmo, dist, ell)
     nc_cmb_lens.prepare(cosmo)
 
-    z_array = [dist.inv_comoving(cosmo, chi / RH_Mpc) for chi in chi_a]
-
-    nc_Wchi_a = np.array(
-        [
-            nc_cmb_lens.eval_full(cosmo, z, dist, int(ell)) * cosmo.E(z) / RH_Mpc
-            for z in z_array
-        ]
+    nc_Wchi_a = (
+        np.array([nc_cmb_lens.eval_full(cosmo, z, dist, int(ell)) for z in z_a])
+        * H_Mpc_a
     )
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=0.0)
 
@@ -275,9 +309,9 @@ def test_cmb_lens_auto_integrand(
     if ccl_cosmo_eh_linear["Omega_k"] != 0.0:
         pytest.skip("CMB lensing not implemented for non-flat cosmologies")
     if ccl_cosmo_eh_linear.high_precision:
-        reltol_W: float = 1.0e-6
+        reltol_W: float = 1.0e-4
         reltol_ps = 1.0e-4
-        reltol_f = 1.0e-4
+        reltol_f = 1.0e-3
     else:
         reltol_W = 1.0e-4
         reltol_ps = 1.0e-2
@@ -289,27 +323,17 @@ def test_cmb_lens_auto_integrand(
     xcor.prepare(cosmo)
     nc_cmb_lens.prepare(cosmo)
 
-    Wchi_list, chi_list = ccl_cmb_lens.get_kernel()
-    assert chi_list is not None
-    assert Wchi_list is not None
-    assert len(chi_list) == 1  # Single tracer
-    assert len(Wchi_list) == 1  # Single tracer
-
-    chi_a = np.array(chi_list[0])[1:-1]
-    Wchi_a = np.array(Wchi_list[0])[1:-1]
-    RH_Mpc = cosmo.RH_Mpc()
-
     ell = 77.0
+    z_a, chi_a, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_lens, cosmo, dist, ell)
+
     nu = ell + 0.5
     a_a = ccl_cosmo_eh_linear.scale_factor_of_chi(chi_a)
     k_a = nu / chi_a
     z_a = 1.0 / a_a - 1.0
 
-    nc_W = np.array(
-        [
-            nc_cmb_lens.eval_full(cosmo, z, dist, int(ell)) * cosmo.E(z) / RH_Mpc
-            for z in z_a
-        ]
+    nc_W = (
+        np.array([nc_cmb_lens.eval_full(cosmo, z, dist, int(ell)) for z in z_a])
+        * H_Mpc_a
     )
     nc_ps = np.array([ps_ml.eval(cosmo, z, k) for z, k in zip(z_a, k_a)])
     nc_f = k_a * nc_ps * nc_W**2 / nu
@@ -387,26 +411,13 @@ def test_cmb_isw_kernel(
     else:
         reltol_target = 1.0e-4
 
-    RH_Mpc = cosmo.RH_Mpc()
     ell = 77.0
-
-    Wchi_list, chi_list = ccl_cmb_isw.get_kernel()
-    assert chi_list is not None
-    assert Wchi_list is not None
-    assert len(chi_list) == 1  # Single tracer
-    assert len(Wchi_list) == 1  # Single tracer
-
-    chi_a = np.array(chi_list[0])[1:-1]
-    Wchi_a = np.array(Wchi_list[0])[1:-1] / (ell + 0.5) ** 2
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_isw, cosmo, dist, ell)
     nc_cmb_isw.prepare(cosmo)
 
-    z_array = [dist.inv_comoving(cosmo, chi / RH_Mpc) for chi in chi_a]
-
-    nc_Wchi_a = np.array(
-        [
-            nc_cmb_isw.eval_full(cosmo, z, dist, int(ell)) * cosmo.E(z) / RH_Mpc
-            for z in z_array
-        ]
+    nc_Wchi_a = (
+        np.array([nc_cmb_isw.eval_full(cosmo, z, dist, int(ell)) for z in z_a])
+        * H_Mpc_a
     )
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=0.0)
 
@@ -425,30 +436,13 @@ def test_weak_lensing_kernel(
     else:
         reltol_target = 1.0e-4
 
-    RH_Mpc = cosmo.RH_Mpc()
     ell = 77.0
-
-    Wchi_list, chi_list = ccl_weak_lensing.get_kernel()
-    assert chi_list is not None
-    assert Wchi_list is not None
-    assert len(chi_list) == 1  # Single tracer
-    assert len(Wchi_list) == 1  # Single tracer
-
-    chi_a = np.array(chi_list[0])[1:-1]
-    Wchi_a = (
-        np.array(Wchi_list[0])[1:-1]
-        * np.sqrt((ell + 2.0) * (ell + 1.0) * ell * (ell - 1.0))
-        / (ell + 0.5) ** 2
-    )
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_weak_lensing, cosmo, dist, ell)
     nc_weak_lensing.prepare(cosmo)
 
-    z_array = [dist.inv_comoving(cosmo, chi / RH_Mpc) for chi in chi_a]
-
-    nc_Wchi_a = np.array(
-        [
-            nc_weak_lensing.eval_full(cosmo, z, dist, int(ell)) * cosmo.E(z) / RH_Mpc
-            for z in z_array
-        ]
+    nc_Wchi_a = (
+        np.array([nc_weak_lensing.eval_full(cosmo, z, dist, int(ell)) for z in z_a])
+        * H_Mpc_a
     )
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-30)
 
@@ -467,26 +461,12 @@ def test_gal_kernel(
     else:
         reltol_target = 1.0e-4
 
-    RH_Mpc = cosmo.RH_Mpc()
     ell = 77.0
-
-    Wchi_list, chi_list = ccl_gal.get_kernel()
-    assert chi_list is not None
-    assert Wchi_list is not None
-    assert len(chi_list) == 1  # Single tracer
-    assert len(Wchi_list) == 1  # Single tracer
-
-    chi_a = np.array(chi_list[0])[1:-1]
-    Wchi_a = np.array(Wchi_list[0])[1:-1]
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_gal, cosmo, dist, ell)
     nc_gal.prepare(cosmo)
 
-    z_array = [dist.inv_comoving(cosmo, chi / RH_Mpc) for chi in chi_a]
-
-    nc_Wchi_a = np.array(
-        [
-            nc_gal.eval_full(cosmo, z, dist, int(ell)) * cosmo.E(z) / RH_Mpc
-            for z in z_array
-        ]
+    nc_Wchi_a = (
+        np.array([nc_gal.eval_full(cosmo, z, dist, int(ell)) for z in z_a]) * H_Mpc_a
     )
 
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-30)

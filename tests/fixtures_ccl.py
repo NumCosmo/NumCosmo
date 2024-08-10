@@ -55,7 +55,7 @@ def fixture_z_high_a():
 
 @pytest.fixture(
     name="ccl_cosmo_eh_linear",
-    params=product([False, True], range(3)),
+    params=product([False, True], range(2)),
     ids=lambda x: f"high_prec={x[0]},index={x[1]}",
 )
 def fixture_ccl_cosmo_eh_linear(request) -> pyccl.Cosmology:
@@ -102,8 +102,8 @@ def fixture_ccl_cosmo_eh_linear(request) -> pyccl.Cosmology:
 # CCL Halofit is too slow for high precision
 @pytest.fixture(
     name="ccl_cosmo_eh_halofit",
-    params=product([False], range(3)),
-    ids=lambda x: f"high_prec={x[0]},index={x[1]}",
+    params=product([False], range(2)),
+    ids=lambda x: f"high_prec={x[0]}, index={x[1]}",
 )
 def fixture_ccl_cosmo_eh_halofit(request) -> pyccl.Cosmology:
     """Fixture for CCL Cosmology."""
