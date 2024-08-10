@@ -69,7 +69,11 @@ def create_nc_obj(
     hiprim = Nc.HIPrimPowerLaw.new()
     hiprim.param_set_by_name("n_SA", ccl_cosmo["n_s"])
 
+    # Creates the HI Reionization object
+    hireion = Nc.HIReionCamb.new()
+
     cosmo.add_submodel(hiprim)
+    cosmo.add_submodel(hireion)
 
     dist = Nc.Distance.new(dist_z_max)
     dist.prepare(cosmo)

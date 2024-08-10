@@ -32,7 +32,7 @@ from numpy.testing import assert_allclose
 import pyccl
 
 import numcosmo_py.cosmology as ncpy
-from numcosmo_py import Ncm
+from numcosmo_py import Ncm, Nc
 from numcosmo_py.ccl.nc_ccl import create_nc_obj
 
 from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
@@ -168,3 +168,57 @@ def test_powspec_halofit_linear_universe(
         for i, k in enumerate(k_a[::step]):
             Pk = ps_mnl.eval(cosmo, z, k)
             assert_allclose(Pk_vec.get(i * step), Pk)
+
+
+def test_powspec_class(nc_cosmo_eh_linear: ncpy.Cosmology) -> None:
+    """Test the power spectrum class."""
+    ps_ml = Nc.PowspecMLCBE.new()
+    cbe = ps_ml.peek_cbe()
+    cbe.use_ppf(True)
+
+    ps_ml.prepare(nc_cosmo_eh_linear.cosmo)
+
+    ik_min = ps_ml.get_intern_k_min()
+    ik_max = ps_ml.get_intern_k_max()
+    kmin = ps_ml.get_kmin()
+    kmax = ps_ml.get_kmax()
+
+    assert ik_min > 0
+    assert ik_max > ik_min
+
+    k_a = np.geomspace(kmin, kmax, 100)
+
+    ps_a = np.array([ps_ml.eval(nc_cosmo_eh_linear.cosmo, 0.0, k) for k in k_a])
+
+    assert np.all(np.isfinite(ps_a))
+
+
+def test_powspec_class_deriv_z(nc_cosmo_eh_linear: ncpy.Cosmology) -> None:
+    """Test the power spectrum class."""
+    ps_ml = Nc.PowspecMLCBE.new()
+    cbe = ps_ml.peek_cbe()
+    cbe.use_ppf(True)
+
+    ps_ml.prepare(nc_cosmo_eh_linear.cosmo)
+
+    ik_min = ps_ml.get_intern_k_min()
+    ik_max = ps_ml.get_intern_k_max()
+    kmin = ps_ml.get_kmin()
+    kmax = ps_ml.get_kmax()
+
+    assert kmin < ik_min
+    assert kmax > ik_max
+    assert ik_min > 0
+    assert ik_max > ik_min
+
+    k_a = np.geomspace(kmin, kmax, 100)
+
+    diff = Ncm.Diff.new()
+
+    for k in k_a:
+        dps, _ = diff.rc_d1_1_to_1(
+            0.2, lambda z, k0: ps_ml.eval(nc_cosmo_eh_linear.cosmo, z, k0), k
+        )
+        assert_allclose(
+            dps, ps_ml.deriv_z(nc_cosmo_eh_linear.cosmo, 0.2, k), atol=0.0, rtol=1e-11
+        )
