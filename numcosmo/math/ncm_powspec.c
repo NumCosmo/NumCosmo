@@ -192,6 +192,7 @@ _ncm_powspec_get_property (GObject *object, guint prop_id, GValue *value, GParam
   }
 }
 
+/* LCOV_EXCL_START */
 static void
 _ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model)
 {
@@ -213,6 +214,8 @@ _ncm_powspec_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, con
 
   return 0.0;
 }
+
+/* LCOV_EXCL_STOP */
 
 static void _ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
 
