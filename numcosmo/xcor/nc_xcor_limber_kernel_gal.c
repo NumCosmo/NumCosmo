@@ -555,9 +555,9 @@ nc_xcor_limber_kernel_gal_set_bias_old (NcXcorLimberKernelGal *xclk, gdouble bia
 /**
  * nc_xcor_limber_kernel_gal_get_bias:
  * @xclk: a #NcXcorLimberKernelGal
- * @bias: a gdouble
- * @bias_old: a gdouble
- * @noise_bias_old: a gdouble
+ * @bias: (out): a gdouble
+ * @bias_old: (out): a gdouble
+ * @noise_bias_old: (out): a gdouble
  *
  * Get the bias parameters.
  *

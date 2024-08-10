@@ -5755,6 +5755,7 @@ class Distance(GObject.Object):
     def comoving(self, cosmo: HICosmo, z: float) -> float: ...
     def comoving_lss(self, cosmo: HICosmo) -> float: ...
     def comoving_volume_element(self, cosmo: HICosmo, z: float) -> float: ...
+    def comoving_z1_z2(self, cosmo: HICosmo, z1: float, z2: float) -> float: ...
     def comoving_z_to_infinity(self, cosmo: HICosmo, z: float) -> float: ...
     def compute_inv_comoving(self, cpu_inv_xi: bool) -> None: ...
     def conformal_lookback_time(self, cosmo: HICosmo, z: float) -> float: ...
@@ -18566,7 +18567,7 @@ class XcorLimberKernelGal(XcorLimberKernel):
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
-    def get_bias(self, bias: float, bias_old: float, noise_bias_old: float) -> None: ...
+    def get_bias(self) -> Tuple[float, float, float]: ...
     def get_fast_update(self) -> bool: ...
     @classmethod
     def new(
@@ -18613,6 +18614,10 @@ class XcorLimberKernelWeakLensing(XcorLimberKernel):
         Intrinsic galaxy shear
       dist -> NcDistance: dist
         Distance object
+      reltol -> gdouble: reltol
+        Relative tolerance
+      abstol -> gdouble: abstol
+        Absolute tolerance tolerance
 
     Properties from NcXcorLimberKernel:
       zmin -> gdouble: zmin
@@ -18645,10 +18650,12 @@ class XcorLimberKernelWeakLensing(XcorLimberKernel):
     """
 
     class Props:
+        abstol: float
         dist: Distance
         dndz: NumCosmoMath.Spline
         intr_shear: float
         nbar: float
+        reltol: float
         zmax: float
         zmin: float
         implementation: int
@@ -18664,10 +18671,12 @@ class XcorLimberKernelWeakLensing(XcorLimberKernel):
     props: Props = ...
     def __init__(
         self,
+        abstol: float = ...,
         dist: Distance = ...,
         dndz: NumCosmoMath.Spline = ...,
         intr_shear: float = ...,
         nbar: float = ...,
+        reltol: float = ...,
         zmax: float = ...,
         zmin: float = ...,
         reparam: NumCosmoMath.Reparam = ...,

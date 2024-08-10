@@ -128,6 +128,22 @@ def test_gal_obs(nc_gal: Nc.XcorLimberKernelGal) -> None:
     assert nc_gal.obs_len() == 2
     assert nc_gal.obs_params_len() == 1
 
+    nc_gal.set_fast_update(True)
+    assert nc_gal.get_fast_update()
+
+    nc_gal.set_fast_update(False)
+    assert not nc_gal.get_fast_update()
+
+    if nc_gal.vparam_len(Nc.XcorLimberKernelGalVParams.BIAS) == 1:
+        nc_gal.orig_vparam_set(Nc.XcorLimberKernelGalVParams.BIAS, 0, 3.21)
+        nc_gal.set_bias_old(1.2345, 0.9876)
+
+        bias0, bias_old0, noise_bias_old0 = nc_gal.get_bias()
+
+        assert_allclose(bias0, 3.21, atol=0.0)
+        assert_allclose(bias_old0, 1.2345, atol=0.0)
+        assert_allclose(noise_bias_old0, 0.9876, atol=0.0)
+
 
 def test_weak_lensing_obs(nc_weak_lensing: Nc.XcorLimberKernelWeakLensing) -> None:
     """Check that weak lensing tracer has the correct number of observables."""
