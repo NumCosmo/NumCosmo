@@ -450,6 +450,9 @@ _nc_xcor_limber_kernel_weak_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo
 
       x_array = ncm_vector_get_array (xv);
       y_array = ncm_vector_get_array (yv);
+
+      g_array_set_size (x_array, 0);
+      g_array_set_size (y_array, 0);
     }
     else
     {

@@ -160,6 +160,13 @@ def test_cmb_lens_serialization(
         nc_cmb_lens_dup.eval_full(cosmo, 0.0, dist, 2),
     )
 
+    # Prepare for a second time
+    nc_cmb_lens.prepare(cosmo)
+    assert_allclose(
+        nc_cmb_lens.eval_full(cosmo, 0.0, dist, 2),
+        nc_cmb_lens_dup.eval_full(cosmo, 0.0, dist, 2),
+    )
+
 
 def test_cmb_isw_serialization(
     nc_cosmo_eh_linear: ncpy.Cosmology, nc_cmb_isw: Nc.XcorLimberKernelCMBISW
@@ -176,6 +183,13 @@ def test_cmb_isw_serialization(
     nc_cmb_isw.prepare(cosmo)
     nc_cmb_isw_dup.prepare(cosmo)
 
+    assert_allclose(
+        nc_cmb_isw.eval_full(cosmo, 0.0, dist, 2),
+        nc_cmb_isw_dup.eval_full(cosmo, 0.0, dist, 2),
+    )
+
+    # Prepare for a second time
+    nc_cmb_isw.prepare(cosmo)
     assert_allclose(
         nc_cmb_isw.eval_full(cosmo, 0.0, dist, 2),
         nc_cmb_isw_dup.eval_full(cosmo, 0.0, dist, 2),
@@ -203,6 +217,13 @@ def test_gal_serialization(
         nc_gal_dup.eval_full(cosmo, 0.0, dist, 2),
     )
 
+    # Prepare for a second time
+    nc_gal.prepare(cosmo)
+    assert_allclose(
+        nc_gal.eval_full(cosmo, 0.0, dist, 2),
+        nc_gal_dup.eval_full(cosmo, 0.0, dist, 2),
+    )
+
 
 def test_weak_lensing_serialization(
     nc_cosmo_eh_linear: ncpy.Cosmology, nc_weak_lensing: Nc.XcorLimberKernelWeakLensing
@@ -220,6 +241,12 @@ def test_weak_lensing_serialization(
     nc_weak_lensing.prepare(cosmo)
     nc_wl_dup.prepare(cosmo)
 
+    assert_allclose(
+        nc_weak_lensing.eval_full(cosmo, 0.0, dist, 2),
+        nc_wl_dup.eval_full(cosmo, 0.0, dist, 2),
+    )
+    # Prepare for a second time
+    nc_weak_lensing.prepare(cosmo)
     assert_allclose(
         nc_weak_lensing.eval_full(cosmo, 0.0, dist, 2),
         nc_wl_dup.eval_full(cosmo, 0.0, dist, 2),
