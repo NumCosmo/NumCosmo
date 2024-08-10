@@ -483,3 +483,31 @@ ncm_spline_gsl_set_type_by_name (NcmSplineGsl *sg, const gchar *type_name)
   ncm_spline_gsl_set_type_by_id (sg, type_id->value);
 }
 
+/**
+ * ncm_spline_gsl_get_type_id:
+ * @sg: a #NcmSplineGsl
+ *
+ * This function returns the interpolation method id of @sg.
+ *
+ * Returns: the interpolation method id.
+ */
+NcmSplineGslType
+ncm_spline_gsl_get_type_id (NcmSplineGsl *sg)
+{
+  return sg->type_id;
+}
+
+/**
+ * ncm_spline_gsl_get_gsl_type:
+ * @sg: a #NcmSplineGsl
+ *
+ * This function returns the interpolation method of @sg.
+ *
+ * Returns: the gsl interpolation method.
+ */
+const gsl_interp_type *
+ncm_spline_gsl_get_gsl_type (NcmSplineGsl *sg)
+{
+  return sg->type;
+}
+
