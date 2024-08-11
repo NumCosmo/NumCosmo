@@ -28,17 +28,16 @@ import math
 from numpy.testing import assert_allclose
 import numpy as np
 
-from test_py_data_gauss_diag import DataGaussDiagTest
-from test_py_data_gauss import DataGaussTest
-
 from numcosmo_py import Ncm
+
+from .test_py_data_gauss_diag import DataGaussDiagTest
+from .test_py_data_gauss import DataGaussTest
 
 Ncm.cfg_init()
 
 
 def test_dataset_constructor():
     """Test constructor."""
-
     dset = Ncm.Dataset.new()
     assert dset is not None
     assert isinstance(dset, Ncm.Dataset)
@@ -59,7 +58,6 @@ def test_dataset_constructor():
 
 def test_dataset_new_array_eval():
     """Test eval."""
-
     dset = Ncm.Dataset.new_array(
         [Ncm.DataRosenbrock.new(), Ncm.DataRosenbrock.new(), Ncm.DataFunnel.new()]
     )
@@ -75,7 +73,6 @@ def test_dataset_new_array_eval():
 
 def test_dataset_new_array_dup():
     """Test eval."""
-
     dset = Ncm.Dataset.new_array(
         [Ncm.DataRosenbrock.new(), Ncm.DataRosenbrock.new(), Ncm.DataFunnel.new()]
     )
@@ -97,7 +94,6 @@ def test_dataset_new_array_dup():
 
 def test_dataset_new_array_copy():
     """Test eval."""
-
     dset = Ncm.Dataset.new_array(
         [Ncm.DataRosenbrock.new(), Ncm.DataRosenbrock.new(), Ncm.DataFunnel.new()]
     )
@@ -123,7 +119,6 @@ def test_dataset_new_array_copy():
 
 def test_dataset_new_array_get_data_array():
     """Test eval."""
-
     dset = Ncm.Dataset.new_array(
         [Ncm.DataRosenbrock.new(), Ncm.DataRosenbrock.new(), Ncm.DataFunnel.new()]
     )
@@ -139,7 +134,6 @@ def test_dataset_new_array_get_data_array():
 
 def test_dataset_resample():
     """Test resample."""
-
     rng = Ncm.RNG.new()
     dset = Ncm.Dataset.new_array(
         [
@@ -180,7 +174,6 @@ def test_dataset_resample():
 
 def test_dataset_bootstrap_partial_resample():
     """Test resample."""
-
     rng = Ncm.RNG.new()
     dset = Ncm.Dataset.new_array(
         [
@@ -209,7 +202,6 @@ def test_dataset_bootstrap_partial_resample():
 
 def test_dataset_bootstrap_total_resample():
     """Test resample."""
-
     rng = Ncm.RNG.new()
     dset = Ncm.Dataset.new_array(
         [
@@ -238,7 +230,6 @@ def test_dataset_bootstrap_total_resample():
 
 def test_dataset_log_info():
     """Test log_info."""
-
     dset = Ncm.Dataset.new_array(
         [Ncm.DataRosenbrock.new(), Ncm.DataRosenbrock.new(), Ncm.DataFunnel.new()]
     )
@@ -249,7 +240,6 @@ def test_dataset_log_info():
 
 def test_dataset_no_mean_vector():
     """Test mean vector."""
-
     dset = Ncm.Dataset.new_array(
         [Ncm.DataRosenbrock.new(), Ncm.DataRosenbrock.new(), Ncm.DataFunnel.new()]
     )
@@ -259,7 +249,6 @@ def test_dataset_no_mean_vector():
 
 def test_dataset_mixed_mean_vector():
     """Test mean vector."""
-
     dset = Ncm.Dataset.new_array(
         [
             DataGaussDiagTest(n_points=200),
@@ -273,7 +262,6 @@ def test_dataset_mixed_mean_vector():
 
 def test_dataset_has_mean_vector():
     """Test mean vector."""
-
     dset = Ncm.Dataset.new_array(
         [
             DataGaussDiagTest(n_points=200),
@@ -286,7 +274,6 @@ def test_dataset_has_mean_vector():
 
 def test_dataset_mean_vector():
     """Test mean vector."""
-
     dset = Ncm.Dataset.new_array(
         [
             DataGaussDiagTest(n_points=200),
@@ -315,7 +302,6 @@ def test_dataset_mean_vector():
 
 def test_dataset_fisher():
     """Test resample."""
-
     theta_true = np.array([1.0, 2.0])
     delta_theta = np.array([0.1, 0.2])
 
@@ -340,7 +326,6 @@ def test_dataset_fisher():
 
 def test_dataset_fisher_bias():
     """Test resample."""
-
     true_theta = np.array([1.0, 2.0])
     theta_shift = np.array([0.1, 0.2])
 
