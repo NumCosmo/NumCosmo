@@ -45,8 +45,6 @@ G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
 /**
  * NcXcorLimberMethod:
  * @NC_XCOR_LIMBER_METHOD_GSL: FIXME
- * @NC_XCOR_LIMBER_METHOD_CVODE: FIXME
- * @NC_XCOR_LIMBER_METHOD_SUAVE: FIXME
  *
  * FIXME
  *
@@ -55,8 +53,6 @@ G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
 typedef enum _NcXcorLimberMethod
 {
   NC_XCOR_LIMBER_METHOD_GSL = 0,
-  NC_XCOR_LIMBER_METHOD_CVODE,
-  NC_XCOR_LIMBER_METHOD_SUAVE,
 } NcXcorLimberMethod;
 
 #define NC_XCOR_PRECISION (1e-5)
