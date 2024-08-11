@@ -167,6 +167,7 @@ _nc_powspec_ml_cbe_finalize (GObject *object)
 
 static void _nc_powspec_ml_cbe_prepare (NcmPowspec *powspec, NcmModel *model);
 static gdouble _nc_powspec_ml_cbe_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
+static gdouble _nc_powspec_ml_cbe_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
 static void _nc_powspec_ml_cbe_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
 
 static void
@@ -226,6 +227,7 @@ nc_powspec_ml_cbe_class_init (NcPowspecMLCBEClass *klass)
 
   powspec_class->prepare    = &_nc_powspec_ml_cbe_prepare;
   powspec_class->eval       = &_nc_powspec_ml_cbe_eval;
+  powspec_class->deriv_z    = &_nc_powspec_ml_cbe_deriv_z;
   powspec_class->get_nknots = &_nc_powspec_ml_cbe_get_nknots;
 }
 
@@ -275,6 +277,32 @@ _nc_powspec_ml_cbe_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, 
   else
   {
     return exp (ncm_spline2d_eval (self->lnPk, log (k), z));
+  }
+}
+
+static gdouble
+_nc_powspec_ml_cbe_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
+{
+  NcPowspecMLCBE *ps_cbe             = NC_POWSPEC_ML_CBE (powspec);
+  NcPowspecMLCBEPrivate * const self = ps_cbe->priv;
+
+  if (k < self->intern_k_min)
+  {
+    const gdouble lnkmin = log (self->intern_k_min);
+    const gdouble match  = exp (ncm_spline2d_eval (self->lnPk, lnkmin, z)) / ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, self->intern_k_min);
+
+    return match * ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, k) * ncm_spline2d_deriv_dzdy (self->lnPk, lnkmin, z);
+  }
+  else if (k > self->intern_k_max)
+  {
+    const gdouble lnkmax = log (self->intern_k_max);
+    const gdouble match  = exp (ncm_spline2d_eval (self->lnPk, lnkmax, z)) / ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, self->intern_k_max);
+
+    return match * ncm_powspec_eval (NCM_POWSPEC (self->eh), model, z, k) * ncm_spline2d_deriv_dzdy (self->lnPk, lnkmax, z);
+  }
+  else
+  {
+    return exp (ncm_spline2d_eval (self->lnPk, log (k), z)) * ncm_spline2d_deriv_dzdy (self->lnPk, log (k), z);
   }
 }
 

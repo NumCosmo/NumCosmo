@@ -1572,7 +1572,7 @@ ncm_c_crit_number_density_n (void)
 NCM_INLINE gdouble
 ncm_c_blackbody_energy_density (void)
 {
-  return 4.0 * (gsl_pow_2 (ncm_c_pi ()) * gsl_pow_4 (ncm_c_kb ()) / (60.0 * gsl_pow_3 (ncm_c_h () / (2.0 * ncm_c_pi ())) * gsl_pow_2 (ncm_c_c ()))) / ncm_c_c ();
+  return 4.0 * ncm_c_stefan_boltzmann () / ncm_c_c ();
 }
 
 NCM_INLINE gdouble
