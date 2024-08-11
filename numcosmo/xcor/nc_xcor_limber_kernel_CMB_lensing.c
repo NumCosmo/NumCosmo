@@ -60,7 +60,10 @@ struct _NcXcorLimberKernelCMBLensing
   NcmVector *Nl;
   guint Nlmax;
 
+  gdouble z_lss;
   gdouble xi_lss;
+  gdouble dt_lss;
+  gdouble dt;
 };
 
 enum
@@ -84,6 +87,11 @@ nc_xcor_limber_kernel_cmb_lensing_init (NcXcorLimberKernelCMBLensing *xclkl)
 
   xclkl->Nl    = NULL;
   xclkl->Nlmax = 0;
+
+  xclkl->z_lss  = 0.0;
+  xclkl->xi_lss = 0.0;
+  xclkl->dt_lss = 0.0;
+  xclkl->dt     = 0.0;
 }
 
 static void
@@ -258,8 +266,10 @@ _nc_xcor_limber_kernel_cmb_lensing_eval (NcXcorLimberKernel *xclk, NcHICosmo *co
   NcXcorLimberKernelCMBLensing *xclkl = NC_XCOR_LIMBER_KERNEL_CMB_LENSING (xclk);
   const gdouble nu                    = l + 0.5;
   const gdouble cor_factor            = l * (l + 1.0) / (nu * nu);
+  const gdouble dt                    = nc_distance_transverse (xclkl->dist, cosmo, z);
+  const gdouble dt_z_zlss             = nc_distance_transverse_z1_z2 (xclkl->dist, cosmo, z, xclkl->z_lss);
 
-  return cor_factor * ((1.0 + z) * xck->xi_z * (xclkl->xi_lss - xck->xi_z)) / (xck->E_z * xclkl->xi_lss);
+  return cor_factor * (1.0 + z) * xck->xi_z * xck->xi_z * dt_z_zlss / (xck->E_z * xclkl->dt_lss * dt);
 }
 
 static void
@@ -269,17 +279,15 @@ _nc_xcor_limber_kernel_cmb_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo 
 
   nc_distance_prepare_if_needed (xclkl->dist, cosmo);
 
-  {
-    const gdouble z_lss = nc_distance_decoupling_redshift (xclkl->dist, cosmo);
+  xclkl->z_lss  = nc_distance_decoupling_redshift (xclkl->dist, cosmo);
+  xclkl->xi_lss = nc_distance_comoving_lss (xclkl->dist, cosmo);
+  xclkl->dt_lss = nc_distance_transverse (xclkl->dist, cosmo, xclkl->z_lss);
 
-    xclkl->xi_lss = nc_distance_comoving_lss (xclkl->dist, cosmo);
+  /* nc_recomb_prepare (xclkl->recomb, cosmo); */
+  /* gdouble lamb = nc_recomb_tau_zstar (xclkl->recomb, cosmo); */
 
-    /* nc_recomb_prepare (xclkl->recomb, cosmo); */
-    /* gdouble lamb = nc_recomb_tau_zstar (xclkl->recomb, cosmo); */
-
-    nc_xcor_limber_kernel_set_const_factor (xclk, (3.0 * nc_hicosmo_Omega_m0 (cosmo)) / 2.0);
-    nc_xcor_limber_kernel_set_z_range (xclk, 0.0, z_lss, 2.0);
-  }
+  nc_xcor_limber_kernel_set_const_factor (xclk, (3.0 * nc_hicosmo_Omega_m0 (cosmo)) / 2.0);
+  nc_xcor_limber_kernel_set_z_range (xclk, 0.0, xclkl->z_lss, 2.0);
 }
 
 static void

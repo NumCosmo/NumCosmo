@@ -192,7 +192,7 @@ class CCLParams:
         """Set CCL parameters to high precision values."""
         pyccl.gsl_params.INTEGRATION_EPSREL = 1.0e-13
         pyccl.gsl_params.INTEGRATION_DISTANCE_EPSREL = 1.0e-13
-        pyccl.gsl_params.INTEGRATION_LIMBER_EPSREL = 1.0e-9
+        pyccl.gsl_params.INTEGRATION_LIMBER_EPSREL = 1.0e-6
         pyccl.gsl_params.EPS_SCALEFAC_GROWTH = 1.0e-30
         pyccl.gsl_params.ODE_GROWTH_EPSREL = 1.0e-8
         pyccl.gsl_params.N_ITERATION = 10000
