@@ -18040,7 +18040,7 @@ class XcorAB(GObject.Object):
     ::
 
         XcorAB(**properties)
-        new(a:int, b:int, ell_th_cut_off:int, ell_lik_min:int, ell_lik_max:int, clobs_filename:str, mixing_filename:str, mixing_filelength:int) -> NumCosmo.XcorAB
+        new(a:int, b:int, ell_th_cut_off:int, ell_lik_min:int, ell_lik_max:int, clobs_filename:str=None, mixing_filename:str=None, mixing_filelength:int) -> NumCosmo.XcorAB
 
     Object NcXcorAB
 
@@ -18109,8 +18109,8 @@ class XcorAB(GObject.Object):
         ell_th_cut_off: int,
         ell_lik_min: int,
         ell_lik_max: int,
-        clobs_filename: str,
-        mixing_filename: str,
+        clobs_filename: Optional[str],
+        mixing_filename: Optional[str],
         mixing_filelength: int,
     ) -> XcorAB: ...
     def ref(self) -> XcorAB: ...
@@ -18701,6 +18701,89 @@ class XcorLimberKernelWeakLensingClass(GObject.GPointer):
     ::
 
         XcorLimberKernelWeakLensingClass()
+    """
+
+    parent_class: XcorLimberKernelClass = ...
+
+class XcorLimberKerneltSZ(XcorLimberKernel):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorLimberKerneltSZ(**properties)
+        new(zmax:float) -> NumCosmo.XcorLimberKerneltSZ
+
+    Object NcXcorLimberKerneltSZ
+
+    Properties from NcXcorLimberKerneltSZ:
+      noise -> gdouble: noise
+        Constant noise level
+
+    Properties from NcXcorLimberKernel:
+      zmin -> gdouble: zmin
+        Minimum redshift
+      zmax -> gdouble: zmax
+        Maximum redshift
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        noise: float
+        zmax: float
+        zmin: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        noise: float = ...,
+        zmax: float = ...,
+        zmin: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
+    @classmethod
+    def new(cls, zmax: float) -> XcorLimberKerneltSZ: ...
+
+class XcorLimberKerneltSZClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorLimberKerneltSZClass()
     """
 
     parent_class: XcorLimberKernelClass = ...
@@ -19450,6 +19533,9 @@ class XcorLimberKernelWeakLensingSParams(GObject.GEnum):
 
 class XcorLimberKernelWeakLensingVParams(GObject.GEnum):
     LEN: XcorLimberKernelWeakLensingVParams = ...
+
+class XcorLimberKerneltSZSParams(GObject.GEnum):
+    LEN: XcorLimberKerneltSZSParams = ...
 
 class XcorLimberMethod(GObject.GEnum):
     GSL: XcorLimberMethod = ...

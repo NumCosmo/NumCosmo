@@ -256,8 +256,8 @@ nc_xcor_AB_class_init (NcXcorABClass *klass)
  * @ell_th_cut_off: a #guint, the cut-off for the computation of the theoretical full-sky angular power spectrum
  * @ell_lik_min: a #guint, the minimum multipole to be included in the likelihood
  * @ell_lik_max: a #guint, the maximum multipole to be included in the likelihood
- * @clobs_filename: a #gchar, the name of the file containing the observed pseudo spectrum (should start at zero, even if not used in the likelihod)
- * @mixing_filename: a #gchar, the name of the file containing the mixing matrix
+ * @clobs_filename: (allow-none): a #gchar, the name of the file containing the observed pseudo spectrum (should start at zero, even if not used in the likelihood)
+ * @mixing_filename: (allow-none): a #gchar, the name of the file containing the mixing matrix
  * @mixing_filelength: a #guint, the size of the matrix in @mixing_filename (in case it is larger than @ell_th_cut_off)
  *
  * FIXME
