@@ -96,6 +96,22 @@ def fixture_nc_cmb_isw(
     return nc_cmb_isw
 
 
+@pytest.fixture(name="ccl_tsz")
+def fixture_ccl_tsz(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+) -> pyccl.tSZTracer:
+    """Fixture for CCL tSZ tracer."""
+    ccl_tsz = pyccl.tSZTracer(ccl_cosmo_eh_linear, z_max=6.0, n_chi=10_000)
+    return ccl_tsz
+
+
+@pytest.fixture(name="nc_tsz")
+def fixture_nc_tsz() -> Nc.XcorLimberKerneltSZ:
+    """Fixture for NumCosmo tSZ tracer."""
+    nc_tsz = Nc.XcorLimberKerneltSZ.new(6.0)
+    return nc_tsz
+
+
 GAL_Z_CENTERS = np.linspace(0.3, 1.2, 2)
 GAL_Z_SIGMA = 0.02
 GAL_MAG_BIAS = [0.0, 1.345]

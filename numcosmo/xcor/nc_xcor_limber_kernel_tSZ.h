@@ -34,45 +34,23 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_LIMBER_KERNEL_TSZ (nc_xcor_limber_kernel_tsz_get_type ())
-#define NC_XCOR_LIMBER_KERNEL_TSZ(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_TSZ, NcXcorLimberKerneltSZ))
-#define NC_XCOR_LIMBER_KERNEL_TSZ_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_XCOR_LIMBER_KERNEL_TSZ, NcXcorLimberKerneltSZClass))
-#define NC_IS_XCOR_LIMBER_KERNEL_TSZ(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_TSZ))
-#define NC_IS_XCOR_LIMBER_KERNEL_TSZ_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_XCOR_LIMBER_KERNEL_TSZ))
-#define NC_XCOR_LIMBER_KERNEL_TSZ_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_TSZ, NcXcorLimberKerneltSZClass))
 
-typedef struct _NcXcorLimberKerneltSZClass NcXcorLimberKerneltSZClass;
-typedef struct _NcXcorLimberKerneltSZ NcXcorLimberKerneltSZ;
+G_DECLARE_FINAL_TYPE (NcXcorLimberKerneltSZ, nc_xcor_limber_kernel_tsz, NC, XCOR_LIMBER_KERNEL_TSZ, NcXcorLimberKernel)
+
 
 /**
  * NcXcorLimberKerneltSZSParams:
- * @NC_XCOR_LIMBER_KERNEL_TSZ_SPARAM_LEN: FIXME
+ * @NC_XCOR_LIMBER_KERNEL_TSZ_SPARAM_LEN: Number of parameters.
  *
- * FIXME
+ * Enum values for the tSZ kernel parameters.
+ *
  */
 typedef enum /*< enum,underscore_name=NC_XCOR_LIMBER_KERNEL_TSZ_SPARAMS >*/
 {
   NC_XCOR_LIMBER_KERNEL_TSZ_SPARAM_LEN
-
 } NcXcorLimberKerneltSZSParams;
 
-struct _NcXcorLimberKerneltSZ
-{
-  /*< private >*/
-  NcXcorLimberKernel parent_instance;
-
-  gdouble Zmax;
-
-};
-
-struct _NcXcorLimberKerneltSZClass
-{
-  /*< private >*/
-  NcXcorLimberKernelClass parent_class;
-};
-
-GType nc_xcor_limber_kernel_tsz_get_type (void) G_GNUC_CONST;
-
-NcXcorLimberKerneltSZ *nc_xcor_limber_kernel_tsz_new ( gdouble Zmax);
+NcXcorLimberKerneltSZ *nc_xcor_limber_kernel_tsz_new (gdouble zmax);
 
 G_END_DECLS
 

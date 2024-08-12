@@ -47,6 +47,8 @@ from .fixtures_xcor import (  # pylint: disable=unused-import # noqa: F401
     fixture_nc_cmb_lens,
     fixture_ccl_cmb_isw,
     fixture_nc_cmb_isw,
+    fixture_ccl_tsz,
+    fixture_nc_tsz,
     fixture_ccl_gal,
     fixture_nc_gal,
     fixture_ccl_weak_lensing,
@@ -119,6 +121,14 @@ def test_cmb_isw_obs(nc_cmb_isw: Nc.XcorLimberKernelCMBISW) -> None:
     assert isinstance(nc_cmb_isw, Nc.XcorLimberKernelCMBISW)
     assert nc_cmb_isw.obs_len() == 1
     assert nc_cmb_isw.obs_params_len() == 0
+
+
+def test_tsz_obs(nc_tsz: Nc.XcorLimberKerneltSZ) -> None:
+    """Check that tSZ tracer has the correct number of observables."""
+    assert nc_tsz is not None
+    assert isinstance(nc_tsz, Nc.XcorLimberKerneltSZ)
+    assert nc_tsz.obs_len() == 1
+    assert nc_tsz.obs_params_len() == 0
 
 
 def test_gal_obs(nc_gal: Nc.XcorLimberKernelGal) -> None:
@@ -212,6 +222,34 @@ def test_cmb_isw_serialization(
     )
 
 
+def test_tsz_serialization(
+    nc_cosmo_eh_linear: ncpy.Cosmology, nc_tsz: Nc.XcorLimberKerneltSZ
+) -> None:
+    """Check that tSZ tracer can be serialized."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    nc_tsz_dup = ser.dup_obj(nc_tsz)
+    assert nc_tsz_dup is not None
+    assert nc_tsz_dup is not nc_tsz
+    assert isinstance(nc_tsz_dup, Nc.XcorLimberKerneltSZ)
+
+    cosmo = nc_cosmo_eh_linear.cosmo
+    dist = nc_cosmo_eh_linear.dist
+    nc_tsz.prepare(cosmo)
+    nc_tsz_dup.prepare(cosmo)
+
+    assert_allclose(
+        nc_tsz.eval_full(cosmo, 0.0, dist, 2),
+        nc_tsz_dup.eval_full(cosmo, 0.0, dist, 2),
+    )
+
+    # Prepare for a second time
+    nc_tsz.prepare(cosmo)
+    assert_allclose(
+        nc_tsz.eval_full(cosmo, 0.0, dist, 2),
+        nc_tsz_dup.eval_full(cosmo, 0.0, dist, 2),
+    )
+
+
 def test_gal_serialization(
     nc_cosmo_eh_linear: ncpy.Cosmology, nc_gal: Nc.XcorLimberKernelGal
 ) -> None:
@@ -288,6 +326,15 @@ def test_cmb_isw_noise(nc_cmb_isw: Nc.XcorLimberKernelCMBISW) -> None:
     vp1.set_all(1.0)
     nc_cmb_isw.add_noise(vp1, vp2, 5)
     assert_allclose(vp2.dup_array(), np.arange(6, 16), atol=0.0)
+
+
+def test_tsz_noise(nc_tsz: Nc.XcorLimberKerneltSZ) -> None:
+    """Check that tSZ tracer has the correct noise."""
+    vp1 = Ncm.Vector.new(10)
+    vp2 = Ncm.Vector.new(10)
+    vp1.set_all(1.0)
+    nc_tsz.add_noise(vp1, vp2, 5)
+    assert_allclose(vp2.dup_array(), np.ones(10) * 1.0, atol=0.0)
 
 
 def test_gal_noise(nc_gal: Nc.XcorLimberKernelGal) -> None:
@@ -461,6 +508,30 @@ def test_cmb_isw_kernel(
     nc_Wchi_a = (
         np.array([nc_cmb_isw.eval_full(cosmo, z, dist, int(ell)) for z in z_a])
         * H_Mpc_a
+    )
+    assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=0.0)
+
+
+def test_tsz_kernel(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: ncpy.Cosmology,
+    ccl_tsz: pyccl.tSZTracer,
+    nc_tsz: Nc.XcorLimberKerneltSZ,
+) -> None:
+    """Compare NumCosmo and CCL correlation windows."""
+    cosmo = nc_cosmo_eh_linear.cosmo
+    dist = nc_cosmo_eh_linear.dist
+    if ccl_cosmo_eh_linear.high_precision:
+        reltol_target: float = 1.0e-4
+    else:
+        reltol_target = 1.0e-4
+
+    ell = 77.0
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_tsz, cosmo, dist, ell)
+    nc_tsz.prepare(cosmo)
+
+    nc_Wchi_a = (
+        np.array([nc_tsz.eval_full(cosmo, z, dist, int(ell)) for z in z_a]) * H_Mpc_a
     )
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=0.0)
 
