@@ -1,0 +1,20 @@
+{ 
+    BasedOnStyle: GNU, 
+    UseTab: Never, 
+    IndentWidth: 2, 
+    TabWidth: 4, 
+    BreakBeforeBraces: Allman, 
+    AlignAfterOpenBracket: BlockIndent,
+    AllowShortIfStatementsOnASingleLine: false, 
+    IndentCaseLabels: true, 
+    ColumnLimit: 120, 
+    AccessModifierOffset: -4, 
+    NamespaceIndentation: All, 
+    FixNamespaceComments: false,
+    AlignConsecutiveAssignments: true,
+    AlignConsecutiveMacros: true,
+    IndentPPDirectives: AfterHash,
+    SpaceAroundPointerQualifiers: Both,
+    SortIncludes: false,
+}
+

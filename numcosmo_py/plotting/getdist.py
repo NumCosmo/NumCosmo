@@ -23,11 +23,12 @@
 
 """NumCosmoPy getdist utilities."""
 
-from typing import List, Tuple
+from typing import Optional
 import warnings
 
 import re
 import numpy as np
+import numpy.typing as npt
 from getdist import MCSamples
 
 from numcosmo_py import Ncm
@@ -36,13 +37,13 @@ from numcosmo_py import Ncm
 def mcat_to_mcsamples(
     mcat: Ncm.MSetCatalog,
     name: str,
-    asinh_transform: Tuple[int, ...] = (),
+    asinh_transform: tuple[int, ...] = (),
     burnin: int = 0,
     thin: int = 1,
     collapse: bool = False,
-) -> Tuple[MCSamples, np.ndarray, np.ndarray]:
-    """Converts a Ncm.MSetCatalog to a getdist.MCSamples object."""
-
+    indices: Optional[npt.NDArray[np.int64]] = None,
+) -> tuple[MCSamples, np.ndarray, np.ndarray]:
+    """Convert a Ncm.MSetCatalog to a getdist.MCSamples object."""
     nchains: int = mcat.nchains()
     max_time: int = mcat.max_time()
 
@@ -65,14 +66,17 @@ def mcat_to_mcsamples(
         ]
     )
 
-    params: List[str] = [mcat.col_symb(i) for i in range(mcat.ncols())]
+    if indices is not None:
+        indices_array = np.array(indices)
+    else:
+        indices_array = np.arange(mcat.ncols())
+
+    # Get the -2 log likelihood column
     m2lnL: int = mcat.get_m2lnp_var()  # pylint:disable=invalid-name
     posterior: np.ndarray = 0.5 * rows[:, m2lnL]
+    indices_array = indices_array[indices_array != m2lnL]
 
-    rows = np.delete(rows, m2lnL, 1)
-    params = list(np.delete(params, m2lnL, 0))
-    names = [re.sub("[^A-Za-z0-9_]", "", param) for param in params]
-
+    # Get the weights column
     weights = None
     if mcat.weighted():
         # Original index is nadd_vals - 1,
@@ -80,15 +84,19 @@ def mcat_to_mcsamples(
         weight_index = mcat.nadd_vals() - 2
         assert weight_index >= 0
         weights = rows[:, weight_index]
-        rows = np.delete(rows, weight_index, 1)
-        params = list(np.delete(params, weight_index, 0))
-        names = list(np.delete(names, weight_index, 0))
+        indices_array = indices_array[indices_array != weight_index]
+
+    rows = rows[:, indices_array]
+    param_symbols: list[str] = list(mcat.col_symb(i) for i in indices_array)
+    param_names: list[str] = [
+        re.sub("[^A-Za-z0-9_]", "", param) for param in param_symbols
+    ]
 
     if len(asinh_transform) > 0:
         rows[:, asinh_transform] = np.arcsinh(rows[:, asinh_transform])
         for i in asinh_transform:
-            params[i] = f"\\mathrm{{sinh}}^{{-1}}({params[i]})"
-            names[i] = f"asinh_{names[i]}"
+            param_symbols[i] = f"\\mathrm{{sinh}}^{{-1}}({param_symbols[i]})"
+            param_names[i] = f"asinh_{param_names[i]}"
 
     if not collapse:
         split_chains = np.array([rows[(burnin + n) :: nchains] for n in range(nchains)])
@@ -111,8 +119,8 @@ def mcat_to_mcsamples(
     mcsample = MCSamples(
         samples=split_chains,
         loglikes=split_posterior,
-        names=names,
-        labels=params,
+        names=param_names,
+        labels=param_symbols,
         label=name,
         weights=split_weights,
     )

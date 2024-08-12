@@ -133,11 +133,14 @@ F_sin_poly_deriv2 (gdouble x, gpointer p)
 
 void test_ncm_spline_cubic_notaknot_new_empty (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_gsl_cspline_new_empty (TestNcmSpline *test, gconstpointer pdata);
+void test_ncm_spline_gsl_linear_new_empty (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_new (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_new_array (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_new_data (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_copy_empty (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_copy (TestNcmSpline *test, gconstpointer pdata);
+void test_ncm_spline_set_type (TestNcmSpline *test, gconstpointer pdata);
+void test_ncm_spline_set_type_serialize (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_serialize (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_eval_deriv (TestNcmSpline *test, gconstpointer pdata);
@@ -181,17 +184,19 @@ TestNcmSplineFunc _test_ncm_spline_traps[] = {
 };
 
 TestNcmSplineFunc _test_ncm_spline_tests[] = {
-  {&test_ncm_spline_new,         "/new"},
-  {&test_ncm_spline_new_array,   "/new/array"},
-  {&test_ncm_spline_new_data,    "/new/data"},
-  {&test_ncm_spline_copy_empty,  "/copy/empty"},
-  {&test_ncm_spline_copy,        "/copy"},
-  {&test_ncm_spline_serialize,   "/serialize"},
-  {&test_ncm_spline_eval,        "/eval"},
-  {&test_ncm_spline_eval_deriv,  "/eval/deriv"},
-  {&test_ncm_spline_eval_deriv2, "/eval/deriv2"},
-  {&test_ncm_spline_eval_int,    "/int"},
-  {&test_ncm_spline_traps,       "/traps"},
+  {&test_ncm_spline_new,                "/new"},
+  {&test_ncm_spline_new_array,          "/new/array"},
+  {&test_ncm_spline_new_data,           "/new/data"},
+  {&test_ncm_spline_copy_empty,         "/copy/empty"},
+  {&test_ncm_spline_copy,               "/copy"},
+  {&test_ncm_spline_set_type,           "/set_type"},
+  {&test_ncm_spline_set_type_serialize, "/set_type/serialize"},
+  {&test_ncm_spline_serialize,          "/serialize"},
+  {&test_ncm_spline_eval,               "/eval"},
+  {&test_ncm_spline_eval_deriv,         "/eval/deriv"},
+  {&test_ncm_spline_eval_deriv2,        "/eval/deriv2"},
+  {&test_ncm_spline_eval_int,           "/int"},
+  {&test_ncm_spline_traps,              "/traps"},
   {NULL}
 };
 
@@ -230,6 +235,9 @@ main (gint argc, gchar *argv[])
   _test_ncm_spline_add_tests (&test_ncm_spline_gsl_cspline_new_empty,
                               &test_ncm_spline_free_empty,
                               "spline_gsl/cspline");
+  _test_ncm_spline_add_tests (&test_ncm_spline_gsl_linear_new_empty,
+                              &test_ncm_spline_free_empty,
+                              "spline_gsl/linear");
   g_test_run ();
 }
 
@@ -282,6 +290,37 @@ test_ncm_spline_gsl_cspline_new_empty (TestNcmSpline *test, gconstpointer pdata)
   test->error_d1 = 1.0e-2;
   test->error_d2 = 1.0e-2;
   test->s_base   = NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_cspline));
+  g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
+  {
+    NcmVector *xv = ncm_vector_new (test->nknots);
+    NcmVector *yv = ncm_vector_new (test->nknots);
+    guint i;
+
+    for (i = 0; i < test->nknots; i++)
+    {
+      ncm_vector_set (xv, i, i * M_PI);
+      ncm_vector_set (yv, i, i * M_PI_2);
+    }
+
+    ncm_spline_set (test->s_base, xv, yv, FALSE);
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
+  }
+}
+
+void
+test_ncm_spline_gsl_linear_new_empty (TestNcmSpline *test, gconstpointer pdata)
+{
+  test->name     = "spline_gsl/linear";
+  test->deriv2   = FALSE;
+  test->nknots   = g_test_rand_int_range (_NCM_SPLINE_TEST_NKNOTS, 2 * _NCM_SPLINE_TEST_NKNOTS);
+  test->dx       = _NCM_SPLINE_TEST_DX;
+  test->xi       = 10.0 * GSL_SIGN (g_test_rand_double_range (-1.0, 1.0));
+  test->prec     = 1.0e-5;
+  test->error    = 5.0e-4;
+  test->error_d1 = 1.0e-2;
+  test->error_d2 = 1.0e-2;
+  test->s_base   = NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_linear));
   g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
   {
     NcmVector *xv = ncm_vector_new (test->nknots);
@@ -522,6 +561,67 @@ test_ncm_spline_serialize (TestNcmSpline *test, gconstpointer pdata)
 
   ncm_vector_free (xv);
   ncm_vector_free (yv);
+}
+
+void
+test_ncm_spline_set_type (TestNcmSpline *test, gconstpointer pdata)
+{
+  if (!NCM_IS_SPLINE_GSL (test->s_base))
+  {
+    return;
+  }
+  else
+  {
+    ncm_spline_gsl_set_type (NCM_SPLINE_GSL (test->s_base), gsl_interp_linear);
+    g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
+    g_assert_true (ncm_spline_gsl_get_type_id (NCM_SPLINE_GSL (test->s_base)) == NCM_SPLINE_GSL_LINEAR);
+    g_assert_true (ncm_spline_gsl_get_gsl_type (NCM_SPLINE_GSL (test->s_base)) == gsl_interp_linear);
+
+    ncm_spline_gsl_set_type (NCM_SPLINE_GSL (test->s_base), gsl_interp_polynomial);
+    g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
+    g_assert_true (ncm_spline_gsl_get_type_id (NCM_SPLINE_GSL (test->s_base)) == NCM_SPLINE_GSL_POLYNOMIAL);
+    g_assert_true (ncm_spline_gsl_get_gsl_type (NCM_SPLINE_GSL (test->s_base)) == gsl_interp_polynomial);
+
+    ncm_spline_gsl_set_type (NCM_SPLINE_GSL (test->s_base), gsl_interp_cspline);
+    g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
+    g_assert_true (ncm_spline_gsl_get_type_id (NCM_SPLINE_GSL (test->s_base)) == NCM_SPLINE_GSL_CSPLINE);
+    g_assert_true (ncm_spline_gsl_get_gsl_type (NCM_SPLINE_GSL (test->s_base)) == gsl_interp_cspline);
+
+    ncm_spline_gsl_set_type (NCM_SPLINE_GSL (test->s_base), gsl_interp_akima);
+    g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
+    g_assert_true (ncm_spline_gsl_get_type_id (NCM_SPLINE_GSL (test->s_base)) == NCM_SPLINE_GSL_AKIMA);
+    g_assert_true (ncm_spline_gsl_get_gsl_type (NCM_SPLINE_GSL (test->s_base)) == gsl_interp_akima);
+
+    ncm_spline_gsl_set_type (NCM_SPLINE_GSL (test->s_base), gsl_interp_akima_periodic);
+    g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
+    g_assert_true (ncm_spline_gsl_get_type_id (NCM_SPLINE_GSL (test->s_base)) == NCM_SPLINE_GSL_AKIMA_PERIODIC);
+    g_assert_true (ncm_spline_gsl_get_gsl_type (NCM_SPLINE_GSL (test->s_base)) == gsl_interp_akima_periodic);
+
+    ncm_spline_gsl_set_type (NCM_SPLINE_GSL (test->s_base), gsl_interp_cspline_periodic);
+    g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
+    g_assert_true (ncm_spline_gsl_get_type_id (NCM_SPLINE_GSL (test->s_base)) == NCM_SPLINE_GSL_CSPLINE_PERIODIC);
+    g_assert_true (ncm_spline_gsl_get_gsl_type (NCM_SPLINE_GSL (test->s_base)) == gsl_interp_cspline_periodic);
+  }
+}
+
+void
+test_ncm_spline_set_type_serialize (TestNcmSpline *test, gconstpointer pdata)
+{
+  if (!NCM_IS_SPLINE_GSL (test->s_base))
+  {
+    return;
+  }
+  else
+  {
+    const gsl_interp_type *type = ncm_spline_gsl_get_gsl_type (NCM_SPLINE_GSL (test->s_base));
+    NcmSerialize *ser           = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSplineGsl *s             = NCM_SPLINE_GSL (ncm_serialize_dup_obj (ser, G_OBJECT (test->s_base)));
+
+    g_assert_true (NCM_IS_SPLINE_GSL (s));
+    g_assert_true (ncm_spline_gsl_get_gsl_type (s) == type);
+    ncm_serialize_free (ser);
+    NCM_TEST_FREE (ncm_spline_free, NCM_SPLINE (s));
+  }
 }
 
 #define _TEST_EPSILON (1.00000001)

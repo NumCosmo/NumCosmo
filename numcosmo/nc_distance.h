@@ -61,14 +61,14 @@ struct _NcDistanceClass
  * @NC_DISTANCE_COMOVING_METHOD_FROM_MODEL: uses the method defined by the implementation of #NcHICosmo.
  *
  * Enumeration to define which method to be applied in order to compute the cosmological distances.
- * 
+ *
  */
 typedef enum _NcDistanceComovingMethod
 {
   NC_DISTANCE_COMOVING_METHOD_INT_E = 0,
   NC_DISTANCE_COMOVING_METHOD_FROM_MODEL,
   /* < private > */
-  NC_DISTANCE_COMOVING_METHOD_LEN,   /*< skip >*/  
+  NC_DISTANCE_COMOVING_METHOD_LEN, /*< skip >*/
 } NcDistanceComovingMethod;
 
 struct _NcDistance
@@ -78,7 +78,7 @@ struct _NcDistance
   NcmOdeSpline *comoving_distance_spline;
   NcmSpline *inv_comoving_dist;
   NcmFunctionCache *comoving_distance_cache;
-	NcmFunctionCache *comoving_infinity;
+  NcmFunctionCache *comoving_infinity;
   NcmFunctionCache *time_cache;
   NcmFunctionCache *lookback_time_cache;
   NcmFunctionCache *conformal_time_cache;
@@ -87,6 +87,7 @@ struct _NcDistance
   gdouble zf;
   gboolean use_cache;
   gboolean cpu_inv_comoving;
+  gdouble max_comoving;
   NcRecomb *recomb;
   NcDistanceComovingMethod cmethod;
 };
@@ -103,7 +104,7 @@ typedef struct _NcDistanceFuncZ
 {
   const gchar *name;
 
-  
+
   const gchar *desc;
   NcDistanceFunc1 f;
   NcHICosmoImpl impl;
@@ -119,6 +120,7 @@ void nc_distance_set_recomb (NcDistance *dist, NcRecomb *recomb);
 void nc_distance_compute_inv_comoving (NcDistance *dist, gboolean cpu_inv_xi);
 
 void nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo);
+
 NCM_INLINE void nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo);
 
 void nc_distance_free (NcDistance *dist);
@@ -149,6 +151,9 @@ gdouble nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, const gd
 gdouble nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_angular_diameter (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_dmodulus (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_comoving_volume_element (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_sigma_critical (NcDistance *dist, NcHICosmo *cosmo, const gdouble zs, const gdouble zl);
+gdouble nc_distance_sigma_critical_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble zl);
 gdouble nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, const gdouble z_he, const gdouble z_cmb);
 gdouble nc_distance_dmodulus_hef (NcDistance *dist, NcHICosmo *cosmo, const gdouble z_he, const gdouble z_cmb);
 gdouble nc_distance_shift_parameter (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
@@ -163,6 +168,7 @@ gdouble nc_distance_Dt_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 
+gdouble nc_distance_comoving_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2);
 gdouble nc_distance_transverse_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2);
 gdouble nc_distance_angular_diameter_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2);
 

@@ -409,7 +409,7 @@ nc_cluster_mass_volume (NcClusterMass *clusterm)
  * @z: a #NcmVector
  * @lnM_obs: a #NcmMatrix
  * @lnM_obs_params: a #NcmMatrix
- * @res: (element-type gdouble): a #GArray
+ * @res: (element-type gdouble): a GArray
  *
  * FIXME
  *

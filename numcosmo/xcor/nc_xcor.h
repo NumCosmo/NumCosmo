@@ -39,17 +39,12 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR (nc_xcor_get_type ())
-#define NC_XCOR(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_XCOR, NcXcor))
-#define NC_XCOR_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_XCOR, NcXcorClass))
-#define NC_IS_XCOR(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_XCOR))
-#define NC_IS_XCOR_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_XCOR))
-#define NC_XCOR_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_XCOR, NcXcorClass))
+
+G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
 
 /**
  * NcXcorLimberMethod:
  * @NC_XCOR_LIMBER_METHOD_GSL: FIXME
- * @NC_XCOR_LIMBER_METHOD_CVODE: FIXME
- * @NC_XCOR_LIMBER_METHOD_SUAVE: FIXME
  *
  * FIXME
  *
@@ -58,34 +53,10 @@ G_BEGIN_DECLS
 typedef enum _NcXcorLimberMethod
 {
   NC_XCOR_LIMBER_METHOD_GSL = 0,
-  NC_XCOR_LIMBER_METHOD_CVODE,
-  NC_XCOR_LIMBER_METHOD_SUAVE,
 } NcXcorLimberMethod;
 
 #define NC_XCOR_PRECISION (1e-5)
 
-typedef struct _NcXcorClass NcXcorClass;
-typedef struct _NcXcor NcXcor;
-
-struct _NcXcor
-{
-  /*< private > */
-  GObject parent_instance;
-  NcDistance *dist;
-  NcmPowspec *ps;
-  gdouble RH;
-  NcXcorLimberMethod meth;
-};
-
-struct _NcXcorClass
-{
-  /*< private > */
-  GObjectClass parent_class;
-
-  gpointer (*alloc) (void);
-};
-
-GType nc_xcor_get_type (void) G_GNUC_CONST;
 GType nc_xcor_kinetic_get_type (void) G_GNUC_CONST;
 
 NcXcor *nc_xcor_new (NcDistance *dist, NcmPowspec *ps, NcXcorLimberMethod meth);

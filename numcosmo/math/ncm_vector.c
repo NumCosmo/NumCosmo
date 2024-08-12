@@ -986,7 +986,7 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
 /**
  * ncm_vector_set_array:
  * @cv: a #NcmVector
- * @array: (array) (element-type double): a pointer to a double #GArray
+ * @array: (array) (element-type double): a pointer to a double GArray
  *
  * This function sets all the components of the vector @cv using the data array @array.
  * @array->len must match the vector size.
@@ -1123,6 +1123,21 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  * ncm_vector_replace_data: (skip)
  * @cv: a #NcmVector
  * @data: a pointer to the new data
+ *
+ * This function replaces the data of the vector @cv by @data.
+ * It does not make any check on the size of the new data.
+ * It assumes that the new data has the same size of the vector @cv
+ * and that the original data was statically allocated.
+ *
+ * It is useful when one needs to convert a data pointer to a #NcmVector.
+ *
+ */
+/**
+ * ncm_vector_replace_data_full: (skip)
+ * @cv: a #NcmVector
+ * @data: a pointer to the new data
+ * @size: the size of the new data
+ * @stride: the step-size from one element to the next in physical memory, measured in units of double
  *
  * This function replaces the data of the vector @cv by @data.
  * It does not make any check on the size of the new data.

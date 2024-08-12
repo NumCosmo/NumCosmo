@@ -60,6 +60,9 @@ void ncm_fit_esmcmc_set_auto_trim_div (NcmFitESMCMC *esmcmc, guint div);
 void ncm_fit_esmcmc_set_auto_trim_type (NcmFitESMCMC *esmcmc, NcmMSetCatalogTrimType ttype);
 void ncm_fit_esmcmc_set_min_runs (NcmFitESMCMC *esmcmc, guint min_runs);
 void ncm_fit_esmcmc_set_max_runs_time (NcmFitESMCMC *esmcmc, gdouble max_runs_time);
+void ncm_fit_esmcmc_set_skip_check (NcmFitESMCMC *esmcmc, gboolean skip_check);
+
+gboolean ncm_fit_esmcmc_get_skip_check (NcmFitESMCMC *esmcmc);
 
 gboolean ncm_fit_esmcmc_has_rng (NcmFitESMCMC *esmcmc);
 

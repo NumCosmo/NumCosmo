@@ -36,14 +36,8 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING (nc_xcor_limber_kernel_weak_lensing_get_type ())
-#define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING, NcXcorLimberKernelWeakLensing))
-#define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING, NcXcorLimberKernelWeakLensingClass))
-#define NC_IS_XCOR_LIMBER_KERNEL_WEAK_LENSING(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING))
-#define NC_IS_XCOR_LIMBER_KERNEL_WEAK_LENSING_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING))
-#define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING, NcXcorLimberKernelWeakLensingClass))
 
-typedef struct _NcXcorLimberKernelWeakLensingClass NcXcorLimberKernelWeakLensingClass;
-typedef struct _NcXcorLimberKernelWeakLensing NcXcorLimberKernelWeakLensing;
+G_DECLARE_FINAL_TYPE (NcXcorLimberKernelWeakLensing, nc_xcor_limber_kernel_weak_lensing, NC, XCOR_LIMBER_KERNEL_WEAK_LENSING, NcXcorLimberKernel)
 
 /**
  * NcXcorLimberKernelWeakLensingSParams:
@@ -65,38 +59,6 @@ typedef enum _NcXcorLimberKernelWeakLensingVParams
   NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_VPARAM_LEN,
 } NcXcorLimberKernelWeakLensingVParams;
 
-struct _NcXcorLimberKernelWeakLensing
-{
-  /*< private >*/
-  NcXcorLimberKernel parent_instance;
-  
-  NcmSpline *dn_dz;
-  
-  /* NcmSpline* bias_spline; */
-  /* guint nknots; */
-  /* gdouble* bias; */
-  
-  NcDistance *dist;
-  
-  NcmSpline *src_int;
-  /* gboolean domagbias; */
-  
-  /* gboolean fast_update; */
-  /* gdouble bias_old; */
-  /* gdouble noise_bias_old; */
-  
-  gdouble nbar;
-  gdouble intr_shear;
-  
-  gdouble noise;
-};
-
-struct _NcXcorLimberKernelWeakLensingClass
-{
-  /*< private >*/
-  NcXcorLimberKernelClass parent_class;
-};
-
 /* #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_BIAS_DEFAULT_LEN (1) */
 /* #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_DEFAULT_BIAS (1.0) */
 
@@ -106,8 +68,6 @@ struct _NcXcorLimberKernelWeakLensingClass
 /* #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_G_FUNC_LEN (200) */
 
 #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL (0.0)
-
-GType nc_xcor_limber_kernel_weak_lensing_get_type (void) G_GNUC_CONST;
 
 NcXcorLimberKernelWeakLensing *nc_xcor_limber_kernel_weak_lensing_new (gdouble zmin, gdouble zmax, NcmSpline *dn_dz, gdouble nbar, gdouble intr_shear, NcDistance *dist);
 

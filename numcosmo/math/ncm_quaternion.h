@@ -107,14 +107,23 @@ void ncm_quaternion_inv_rotate (NcmQuaternion *q, NcmTriVec *v);
  * NCM_QUATERNION_INIT:
  *
  */
-#define NCM_QUATERNION_INIT {0.0, {{0.0, 0.0, 0.0}}}
+#define NCM_QUATERNION_INIT \
+        {0.0, {             \
+           {0.0, 0.0, 0.0}  \
+         }                  \
+        }
 
 /**
  * NCM_QUATERNION_INIT_I:
  *
  */
-#define NCM_QUATERNION_INIT_I {1.0, {{0.0, 0.0, 0.0}}}
+#define NCM_QUATERNION_INIT_I \
+        {1.0, {               \
+           {0.0, 0.0, 0.0}    \
+         }                    \
+        }
 
 G_END_DECLS
 
 #endif /* _NCM_QUATERNION_H */
+
