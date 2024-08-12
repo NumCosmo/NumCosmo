@@ -1,13 +1,13 @@
 /***************************************************************************
- *            nc_xcor_limber_kernel_CMB_lensing.h
+ *            nc_xcor_limber_kernel_cmb_isw.h
  *
- *  Tue July 14 12:00:00 2015
- *  Copyright  2015  Cyrille Doux
- *  <cdoux@apc.in2p3.fr>
+ *  Tue Sept 28 17:17:26 2021
+ *  Copyright  2021  Mariana Penna-Lima
+ *  <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2015 Cyrille Doux <cdoux@apc.in2p3.fr>
+ * Copyright (C) 2021 Mariana Penna-Lima  <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,8 +23,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_XCOR_LIMBER_KERNEL_CMB_LENSING_H_
-#define _NC_XCOR_LIMBER_KERNEL_CMB_LENSING_H_
+#ifndef _NC_XCOR_LIMBER_KERNEL_CMB_ISW_H_
+#define _NC_XCOR_LIMBER_KERNEL_CMB_ISW_H_
 
 #include <glib.h>
 #include <glib-object.h>
@@ -36,26 +36,15 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING (nc_xcor_limber_kernel_cmb_lensing_get_type ())
+#define NC_TYPE_XCOR_LIMBER_KERNEL_CMB_ISW (nc_xcor_limber_kernel_cmb_isw_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcXcorLimberKernelCMBLensing, nc_xcor_limber_kernel_cmb_lensing, NC, XCOR_LIMBER_KERNEL_CMB_LENSING, NcXcorLimberKernel)
+G_DECLARE_FINAL_TYPE (NcXcorLimberKernelCMBISW, nc_xcor_limber_kernel_cmb_isw, NC, XCOR_LIMBER_KERNEL_CMB_ISW, NcXcorLimberKernel);
 
-/**
- * NcXcorLimberKernelCMBLensingSParams:
- * @NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAM_LEN: FIXME
- *
- * FIXME
- */
-typedef enum /*< enum,underscore_name=NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAMS >*/
-{
-  NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAM_LEN,
-} NcXcorLimberKernelCMBLensingSParams;
+NcXcorLimberKernelCMBISW *nc_xcor_limber_kernel_cmb_isw_new (NcDistance *dist, NcmPowspec *ps, NcRecomb *recomb, NcmVector *Nl);
 
-#define NC_XCOR_LIMBER_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL (0.0)
-
-NcXcorLimberKernelCMBLensing *nc_xcor_limber_kernel_cmb_lensing_new (NcDistance *dist, NcRecomb *recomb, NcmVector *Nl);
+#define NC_XCOR_LIMBER_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL (0.0)
 
 G_END_DECLS
 
-#endif /* _NC_XCOR_LIMBER_KERNEL_CMB_LENSING_H_ */
+#endif /* _NC_XCOR_LIMBER_KERNEL_CMB_ISW_H_ */
 
