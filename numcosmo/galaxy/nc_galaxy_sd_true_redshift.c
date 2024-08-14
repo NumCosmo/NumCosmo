@@ -118,7 +118,7 @@ _nc_galaxy_sd_true_redshift_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_true_redshift_parent_class)->finalize (object);
 }
 
-NCM_MSET_MODEL_REGISTER_ID (nc_galaxy_sd_true_redshift, NC_TYPE_GALAXY_SD_TRUE_REDSHIFT)
+NCM_MSET_MODEL_REGISTER_ID (nc_galaxy_sd_true_redshift, NC_TYPE_GALAXY_SD_TRUE_REDSHIFT);
 
 /* LCOV_EXCL_START */
 static gdouble
@@ -149,7 +149,7 @@ static gboolean
 _nc_galaxy_sd_true_redshift_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max)
 {
   g_error ("_nc_galaxy_sd_true_redshift_get_lim: not implemented");
-  
+
   return FALSE;
 }
 

@@ -106,8 +106,8 @@ static void
 nc_galaxy_sd_true_redshift_lsst_srd_class_init (NcGalaxySDTrueRedshiftLSSTSRDClass *klass)
 {
   NcGalaxySDTrueRedshiftClass *sd_redshift_class = NC_GALAXY_SD_TRUE_REDSHIFT_CLASS (klass);
-  GObjectClass *object_class                 = G_OBJECT_CLASS (klass);
-  NcmModelClass *model_class                 = NCM_MODEL_CLASS (klass);
+  GObjectClass *object_class                     = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class                     = NCM_MODEL_CLASS (klass);
 
   object_class->dispose  = &_nc_galaxy_sd_true_redshift_lsst_srd_dispose;
   object_class->finalize = &_nc_galaxy_sd_true_redshift_lsst_srd_finalize;
@@ -122,7 +122,7 @@ nc_galaxy_sd_true_redshift_lsst_srd_class_init (NcGalaxySDTrueRedshiftLSSTSRDCla
    *
    */
   ncm_model_class_set_sparam (model_class, NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_ALPHA, "\\alpha", "alpha",
-                              1e-8, 1.0, 1.0e-2,
+                              1.0e-8, 1.0, 1.0e-2,
                               NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_PARAMS_ABSTOL, NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_ALPHA,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -133,7 +133,7 @@ nc_galaxy_sd_true_redshift_lsst_srd_class_init (NcGalaxySDTrueRedshiftLSSTSRDCla
    *
    */
   ncm_model_class_set_sparam (model_class, NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_BETA, "\\beta", "beta",
-                              1e-8, 5.0, 1.0e-1,
+                              1.0e-8, 5.0, 1.0e-1,
                               NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_PARAMS_ABSTOL, NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_BETA,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -144,7 +144,7 @@ nc_galaxy_sd_true_redshift_lsst_srd_class_init (NcGalaxySDTrueRedshiftLSSTSRDCla
    *
    */
   ncm_model_class_set_sparam (model_class, NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Z0, "z_0", "z0",
-                              1e-8, 1.0, 1.0e-2,
+                              1.0e-8, 1.0, 1.0e-2,
                               NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_PARAMS_ABSTOL, NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z0,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -164,13 +164,13 @@ nc_galaxy_sd_true_redshift_lsst_srd_class_init (NcGalaxySDTrueRedshiftLSSTSRDCla
 static gdouble
 _nc_galaxy_sd_true_redshift_lsst_srd_gen (NcGalaxySDTrueRedshift *gsdtr, NcmRNG *rng)
 {
-  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst           = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtr);
+  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst          = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtr);
   NcGalaxySDTrueRedshiftLSSTSRDPrivate * const self = nc_galaxy_sd_true_redshift_lsst_srd_get_instance_private (gsdtrlsst);
-  const gdouble alpha                           = ALPHA;
-  const gdouble beta                            = BETA;
-  const gdouble z0                              = Z0;
-  const gdouble y0                              = pow (z0, alpha);
-  const gdouble gamma_a                         = (1.0 + beta) / alpha;
+  const gdouble alpha                               = ALPHA;
+  const gdouble beta                                = BETA;
+  const gdouble z0                                  = Z0;
+  const gdouble y0                                  = pow (z0, alpha);
+  const gdouble gamma_a                             = (1.0 + beta) / alpha;
   gdouble z;
 
   do {
@@ -185,12 +185,12 @@ _nc_galaxy_sd_true_redshift_lsst_srd_gen (NcGalaxySDTrueRedshift *gsdtr, NcmRNG 
 static gdouble
 _nc_galaxy_sd_true_redshift_lsst_srd_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
 {
-  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst           = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtr);
+  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst          = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtr);
   NcGalaxySDTrueRedshiftLSSTSRDPrivate * const self = nc_galaxy_sd_true_redshift_lsst_srd_get_instance_private (gsdtrlsst);
-  const gdouble alpha                           = ALPHA;
-  const gdouble beta                            = BETA;
-  const gdouble z0                              = Z0;
-  const gdouble y                               = pow (z0, alpha);
+  const gdouble alpha                               = ALPHA;
+  const gdouble beta                                = BETA;
+  const gdouble z0                                  = Z0;
+  const gdouble y                                   = pow (z0, alpha);
 
   return pow (z, beta) * exp (-(y / self->y0)) * self->z_norm;
 }
@@ -198,10 +198,10 @@ _nc_galaxy_sd_true_redshift_lsst_srd_integ (NcGalaxySDTrueRedshift *gsdtr, gdoub
 static gboolean
 _nc_galaxy_sd_true_redshift_lsst_srd_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max)
 {
-  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst           = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtr);
+  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst          = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtr);
   NcGalaxySDTrueRedshiftLSSTSRDPrivate * const self = nc_galaxy_sd_true_redshift_lsst_srd_get_instance_private (gsdtrlsst);
-  const gdouble alpha                           = ALPHA;
-  const gdouble beta                            = BETA;
+  const gdouble alpha                               = ALPHA;
+  const gdouble beta                                = BETA;
 
   g_assert_cmpfloat (z_min, <, z_max);
 
@@ -216,7 +216,7 @@ _nc_galaxy_sd_true_redshift_lsst_srd_set_lim (NcGalaxySDTrueRedshift *gsdtr, con
 static gboolean
 _nc_galaxy_sd_true_redshift_lsst_srd_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max)
 {
-  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst           = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtr);
+  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst          = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtr);
   NcGalaxySDTrueRedshiftLSSTSRDPrivate * const self = nc_galaxy_sd_true_redshift_lsst_srd_get_instance_private (gsdtrlsst);
 
   g_assert_nonnull (z_min);
@@ -241,10 +241,10 @@ _nc_galaxy_sd_true_redshift_lsst_srd_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdo
 NcGalaxySDTrueRedshiftLSSTSRD *
 nc_galaxy_sd_true_redshift_lsst_srd_new (const gdouble z_min, const gdouble z_max)
 {
-  NcmDTuple2 lim                      = NCM_DTUPLE2_STATIC_INIT (z_min, z_max);
+  NcmDTuple2 lim                           = NCM_DTUPLE2_STATIC_INIT (z_min, z_max);
   NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst = g_object_new (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD,
-                                                      "lim", &lim,
-                                                      NULL);
+                                                           "lim", &lim,
+                                                           NULL);
 
   return gsdtrlsst;
 }
@@ -262,13 +262,13 @@ nc_galaxy_sd_true_redshift_lsst_srd_new (const gdouble z_min, const gdouble z_ma
 NcGalaxySDTrueRedshiftLSSTSRD *
 nc_galaxy_sd_true_redshift_lsst_srd_new_y10 (const gdouble z_min, const gdouble z_max)
 {
-  NcmDTuple2 lim                      = NCM_DTUPLE2_STATIC_INIT (z_min, z_max);
+  NcmDTuple2 lim                           = NCM_DTUPLE2_STATIC_INIT (z_min, z_max);
   NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst = g_object_new (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD,
-                                                      "lim", &lim,
-                                                      "alpha", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_ALPHA,
-                                                      "beta", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_BETA,
-                                                      "z0", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_Z0,
-                                                      NULL);
+                                                           "lim", &lim,
+                                                           "alpha", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_ALPHA,
+                                                           "beta", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_BETA,
+                                                           "z0", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_Z0,
+                                                           NULL);
 
   return gsdtrlsst;
 }

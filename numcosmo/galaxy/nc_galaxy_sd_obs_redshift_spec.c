@@ -74,7 +74,7 @@ nc_galaxy_sd_obs_redshift_spec_init (NcGalaxySDObsRedshiftSpec *gsdorspec)
 static void
 _nc_galaxy_sd_obs_redshift_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcGalaxySDObsRedshiftSpec *gsdorspec             = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (object);
+  NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (object);
   NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
 
   g_return_if_fail (NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdorspec));
@@ -93,7 +93,7 @@ _nc_galaxy_sd_obs_redshift_set_property (GObject *object, guint prop_id, const G
 static void
 _nc_galaxy_sd_obs_redshift_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcGalaxySDObsRedshiftSpec *gsdorspec             = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (object);
+  NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (object);
   NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
 
   g_return_if_fail (NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdorspec));
@@ -112,7 +112,7 @@ _nc_galaxy_sd_obs_redshift_get_property (GObject *object, guint prop_id, GValue 
 static void
 _nc_galaxy_sd_obs_redshift_spec_dispose (GObject *object)
 {
-  NcGalaxySDObsRedshiftSpec *gsdorspec             = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (object);
+  NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (object);
   NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
 
   nc_galaxy_sd_true_redshift_clear (&self->sdz);
@@ -133,10 +133,10 @@ static gdouble _nc_galaxy_sd_obs_redshift_spec_integ (NcGalaxySDObsRedshift *gsd
 static GStrv _nc_galaxy_sd_obs_redshift_spec_get_header (NcGalaxySDObsRedshift *gsdor);
 
 static void
-nc_galaxy_sd_true_redshift_spec_class_init (NcGalaxySDObsRedshiftSpecClass *klass)
+nc_galaxy_sd_obs_redshift_spec_class_init (NcGalaxySDObsRedshiftSpecClass *klass)
 {
   NcGalaxySDObsRedshiftClass *gsdor_class = NC_GALAXY_SD_OBS_REDSHIFT_CLASS (klass);
-  GObjectClass *object_class      = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class              = G_OBJECT_CLASS (klass);
 
   object_class->set_property = &_nc_galaxy_sd_obs_redshift_set_property;
   object_class->get_property = &_nc_galaxy_sd_obs_redshift_get_property;
@@ -164,7 +164,7 @@ nc_galaxy_sd_true_redshift_spec_class_init (NcGalaxySDObsRedshiftSpecClass *klas
 static gdouble
 _nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data)
 {
-  NcGalaxySDObsRedshiftSpec *gsdorspec             = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdor);
+  NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdor);
   NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
 
   return nc_galaxy_sd_true_redshift_gen (self->sdz, rng);
@@ -173,7 +173,7 @@ _nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, 
 static gdouble
 _nc_galaxy_sd_obs_redshift_spec_integ (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data)
 {
-  NcGalaxySDObsRedshiftSpec *gsdorspec             = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdor);
+  NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdor);
   NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
 
   return nc_galaxy_sd_true_redshift_integ (self->sdz, z);
@@ -189,7 +189,7 @@ _nc_galaxy_sd_obs_redshift_spec_get_header (NcGalaxySDObsRedshift *gsdor)
 
 /**
  * nc_galaxy_sd_obs_redshift_spec_new:
- * @sdz: The galaxy redshift sample distribution.
+ * @sdz: a #NcGalaxySDTrueRedshift.
  *
  * Creates a new #NcGalaxySDObsRedshiftSpec object.
  *

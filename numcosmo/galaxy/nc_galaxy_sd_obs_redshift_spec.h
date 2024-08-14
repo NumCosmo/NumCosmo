@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_true_redshift.h>
 
 G_BEGIN_DECLS
 
@@ -37,7 +38,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcGalaxySDObsRedshiftSpec, nc_galaxy_sd_obs_redshift_spec, NC, GALAXY_SD_OBS_REDSHIFT_SPEC, NcGalaxySDObsRedshift)
 
-NcGalaxySDObsRedshiftSpec *nc_galaxy_sd_obs_redshift_spec_new ();
+NcGalaxySDObsRedshiftSpec *nc_galaxy_sd_obs_redshift_spec_new (NcGalaxySDTrueRedshift * sdz);
 NcGalaxySDObsRedshiftSpec *nc_galaxy_sd_obs_redshift_spec_ref (NcGalaxySDObsRedshiftSpec *gsdorspec);
 
 void nc_galaxy_sd_obs_redshift_spec_free (NcGalaxySDObsRedshiftSpec *gsdorspec);
