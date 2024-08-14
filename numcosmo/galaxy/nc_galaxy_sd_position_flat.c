@@ -232,10 +232,10 @@ _nc_galaxy_sd_position_flat_get_header (NcGalaxySDPosition *gsdp)
 
 /**
  * nc_galaxy_sd_position_flat_new:
- * @z_min: minimum redshift
- * @z_max: maximum redshift
- * @r_min: minimum radius
- * @r_max: maximum radius
+ * @ra_min: minimum right ascension
+ * @ra_max: maximum right ascension
+ * @dec_min: minimum declination
+ * @dec_max: maximum declination
  *
  * Creates a new #NcGalaxySDPositionFlat
  *
