@@ -1,12 +1,12 @@
 /***************************************************************************
- *            nc_halo_center.h
+ *            nc_halo_position.h
  *
  *  The Aug 08 08:19:02 2024
  *  Copyright  2024
  *  <code.caio@limadeoliveira.me>
  ****************************************************************************/
 /*
- * nc_halo_center.h
+ * nc_halo_position.h
  * Copyright (C) 2024 Caio Lima de Oliveira <code.caio@limadeoliveira.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -23,8 +23,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_HALO_CENTER_H_
-#define _NC_HALO_CENTER_H_
+#ifndef _NC_HALO_POSITION_H_
+#define _NC_HALO_POSITION_H_
 
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
@@ -33,11 +33,11 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_HALO_CENTER (nc_halo_center_get_type ())
+#define NC_TYPE_HALO_POSITION (nc_halo_position_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcHaloCenter, nc_halo_center, NC, HALO_CENTER, NcmModel)
+G_DECLARE_FINAL_TYPE (NcHaloPosition, nc_halo_position, NC, HALO_POSITION, NcmModel)
 
-struct _NcHaloCenterClass
+struct _NcHaloPositionClass
 {
   /*< private >*/
   NcmModelClass parent_class;
@@ -47,38 +47,38 @@ struct _NcHaloCenterClass
 };
 
 /**
- * NcHaloCenterSParams:
- * @NC_HALO_CENTER_RA: Right ascension
- * @NC_HALO_CENTER_DEC: Declination
- * @NC_HALO_CENTER_Z: Redshift
+ * NcHaloPositionSParams:
+ * @NC_HALO_POSITION_RA: Right ascension
+ * @NC_HALO_POSITION_DEC: Declination
+ * @NC_HALO_POSITION_Z: Redshift
  *
  * Halo center model parameters.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HALO_CENTER_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HALO_POSITION_SPARAMS >*/
 {
-  NC_HALO_CENTER_RA,
-  NC_HALO_CENTER_DEC,
-  NC_HALO_CENTER_Z,
+  NC_HALO_POSITION_RA,
+  NC_HALO_POSITION_DEC,
+  NC_HALO_POSITION_Z,
   /* < private > */
-  NC_HALO_CENTER_SPARAM_LEN, /*< skip >*/
-} NcHaloCenterSParams;
+  NC_HALO_POSITION_SPARAM_LEN, /*< skip >*/
+} NcHaloPositionSParams;
 
-NCM_MSET_MODEL_DECLARE_ID (nc_halo_center);
+NCM_MSET_MODEL_DECLARE_ID (nc_halo_position);
 
-NcHaloCenter *nc_halo_center_new (void);
-NcHaloCenter *nc_halo_center_ref (NcHaloCenter *hc);
+NcHaloPosition *nc_halo_position_new (void);
+NcHaloPosition *nc_halo_position_ref (NcHaloPosition *hc);
 
-void nc_halo_center_free (NcHaloCenter *hc);
-void nc_halo_center_clear (NcHaloCenter *hc);
+void nc_halo_position_free (NcHaloPosition *hc);
+void nc_halo_position_clear (NcHaloPosition **hc);
 
-#define NC_HALO_CENTER_DEFAULT_RA (0.0)
-#define NC_HALO_CENTER_DEFAULT_DEC (0.0)
-#define NC_HALO_CENTER_DEFAULT_Z (0.2)
+#define NC_HALO_POSITION_DEFAULT_RA (0.0)
+#define NC_HALO_POSITION_DEFAULT_DEC (0.0)
+#define NC_HALO_POSITION_DEFAULT_Z (0.2)
 
-#define NC_HALO_CENTER_DEFAULT_PARAMS_ABSTOL (0.0)
+#define NC_HALO_POSITION_DEFAULT_PARAMS_ABSTOL (0.0)
 
 G_END_DECLS
 
-#endif /* _NC_HALO_CENTER_H_ */
+#endif /* _NC_HALO_POSITION_H_ */
 
