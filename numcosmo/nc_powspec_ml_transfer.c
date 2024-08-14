@@ -142,6 +142,7 @@ _nc_powspec_ml_transfer_finalize (GObject *object)
 static void _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model);
 static gdouble _nc_powspec_ml_transfer_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
 static void _nc_powspec_ml_transfer_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
+static gdouble _nc_powspec_ml_transfer_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
 static void _nc_powspec_ml_transfer_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
 
 static void
@@ -189,6 +190,7 @@ nc_powspec_ml_transfer_class_init (NcPowspecMLTransferClass *klass)
   powspec_class->prepare    = &_nc_powspec_ml_transfer_prepare;
   powspec_class->eval       = &_nc_powspec_ml_transfer_eval;
   powspec_class->eval_vec   = &_nc_powspec_ml_transfer_eval_vec;
+  powspec_class->deriv_z    = &_nc_powspec_ml_transfer_deriv_z;
   powspec_class->get_nknots = &_nc_powspec_ml_transfer_get_nknots;
 }
 
@@ -250,6 +252,22 @@ _nc_powspec_ml_transfer_eval_vec (NcmPowspec *powspec, NcmModel *model, const gd
 
     ncm_vector_set (Pk, i, ki * Delta_zeta_k * ps_mlt->Pm_k2Pzeta * tf2 * gf2);
   }
+}
+
+static gdouble
+_nc_powspec_ml_transfer_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
+{
+  NcHICosmo *cosmo            = NC_HICOSMO (model);
+  NcHIPrim *prim              = NC_HIPRIM (ncm_model_peek_submodel_by_mid (model, nc_hiprim_id ()));
+  NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (powspec);
+  const gdouble kh            = k / nc_hicosmo_h (cosmo);
+  const gdouble growth        = nc_growth_func_eval (ps_mlt->gf, cosmo, z);
+  const gdouble deriv_growth  = nc_growth_func_eval_deriv (ps_mlt->gf, cosmo, z);
+  const gdouble tf            = nc_transfer_func_eval (ps_mlt->tf, cosmo, kh);
+  const gdouble tf2           = tf * tf;
+  const gdouble Delta_zeta_k  = nc_hiprim_SA_powspec_k (prim, k);
+
+  return k * Delta_zeta_k * ps_mlt->Pm_k2Pzeta * tf2 * 2.0 * growth * deriv_growth;
 }
 
 static void

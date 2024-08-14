@@ -28,19 +28,32 @@ import numpy as np
 import pyccl
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.cosmology import Cosmology
+
+# CCL uses an older release of CODATA
+# The following function is a workaround to use the latest CODATA values
+pyccl.physical_constants.unfreeze()
+pyccl.physical_constants.KBOLTZ = Ncm.C.kb()
+pyccl.physical_constants.STBOLTZ = Ncm.C.stefan_boltzmann()
+pyccl.physical_constants.GNEWT = Ncm.C.G()
+pyccl.physical_constants.HPLANCK = Ncm.C.h()
+pyccl.physical_constants.CLIGHT = Ncm.C.c()
+pyccl.physical_constants.SOLAR_MASS = Ncm.C.mass_solar()
+pyccl.physical_constants.MPC_TO_METER = Ncm.C.Mpc()
+pyccl.physical_constants.RHO_CRITICAL = Ncm.C.crit_mass_density_h2_solar_mass_Mpc3()
+pyccl.physical_constants.freeze()
 
 
 # pylint:disable-next=too-many-arguments,too-many-locals
 def create_nc_obj(
-    ccl_cosmo,
-    prec=1.0e-7,
-    dist_z_max=15.0,
-    ps_nln_z_max=10.0,
-    k_min=1.0e-6,
-    k_max=1.0e3,
-):
+    ccl_cosmo: pyccl.Cosmology,
+    prec: float = 1.0e-7,
+    dist_z_max: float = 15.0,
+    ps_nln_z_max: float = 10.0,
+    k_min: float = 1.0e-6,
+    k_max: float = 1.0e3,
+) -> Cosmology:
     """Create a NumCosmo object from a CCL cosmology."""
-
     cosmo = Nc.HICosmoDECpl(massnu_length=0)
     cosmo.omega_x2omega_k()
     cosmo.param_set_by_name("H0", ccl_cosmo["h"] * 100)
@@ -56,7 +69,11 @@ def create_nc_obj(
     hiprim = Nc.HIPrimPowerLaw.new()
     hiprim.param_set_by_name("n_SA", ccl_cosmo["n_s"])
 
+    # Creates the HI Reionization object
+    hireion = Nc.HIReionCamb.new()
+
     cosmo.add_submodel(hiprim)
+    cosmo.add_submodel(hireion)
 
     dist = Nc.Distance.new(dist_z_max)
     dist.prepare(cosmo)
@@ -72,14 +89,14 @@ def create_nc_obj(
 
     # Creating the transfer/linear power spectrum
     tf = None  # pylint: disable=invalid-name
-    ps_lin = None
+    ps_ml = None
 
     # pylint: disable=protected-access
     if ccl_cosmo._config_init_kwargs["transfer_function"] == "eisenstein_hu":
         tf = Nc.TransferFuncEH.new()  # pylint: disable=invalid-name
         tf.props.CCL_comp = True
 
-        ps_lin = Nc.PowspecMLTransfer.new(tf)
+        ps_ml = Nc.PowspecMLTransfer.new(tf)
     else:
         raise ValueError(
             "Transfer function type `"
@@ -87,9 +104,9 @@ def create_nc_obj(
             + "` not supported"  # noqa: W503
         )
 
-    ps_lin.set_kmin(k_min)
-    ps_lin.set_kmax(k_max)
-    ps_lin.prepare(cosmo)
+    ps_ml.set_kmin(k_min)
+    ps_ml.set_kmax(k_max)
+    ps_ml.prepare(cosmo)
 
     if not math.isnan(ccl_cosmo["A_s"]):
         hiprim.param_set_by_name("ln10e10ASA", math.log(1.0e10 * ccl_cosmo["A_s"]))
@@ -97,31 +114,36 @@ def create_nc_obj(
         A_s = math.exp(hiprim.param_get_by_name("ln10e10ASA")) * 1.0e-10
         fact = (
             ccl_cosmo["sigma8"]
-            / ps_lin.sigma_tophat_R(cosmo, prec, 0.0, 8.0 / cosmo.h())  # noqa: W503
+            / ps_ml.sigma_tophat_R(cosmo, prec, 0.0, 8.0 / cosmo.h())  # noqa: W503
         ) ** 2
         hiprim.param_set_by_name("ln10e10ASA", math.log(1.0e10 * A_s * fact))
 
-    ps_nln = None
+    ps_mln = None
     if ccl_cosmo._config_init_kwargs["matter_power_spectrum"] == "halofit":
-        ps_nln = Nc.PowspecMNLHaloFit.new(ps_lin, ps_nln_z_max, prec)
-        ps_nln.set_kmin(k_min)
-        ps_nln.set_kmax(k_max)
-        ps_nln.prepare(cosmo)
+        ps_mln = Nc.PowspecMNLHaloFit.new(ps_ml, ps_nln_z_max, prec)
+        ps_mln.set_kmin(k_min)
+        ps_mln.set_kmax(k_max)
+        ps_mln.prepare(cosmo)
 
-    hmfunc = None
-
-    if ps_lin:
-        psf = Ncm.PowspecFilter.new(ps_lin, Ncm.PowspecFilterType.TOPHAT)
+    if ps_ml:
+        psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)
         psf.set_best_lnr0()
 
     # pylint: enable=protected-access
-    return cosmo, dist, ps_lin, ps_nln, hmfunc
+    return Cosmology(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mln)
 
 
 class CCLParams:
     """CCL cosmology parameters."""
 
     DEFAULT_INTEGRATION_EPSREL: float = pyccl.gsl_params.INTEGRATION_EPSREL
+    DEFAULT_INTEGRATION_DISTANCE_EPSREL: float = (
+        pyccl.gsl_params.INTEGRATION_DISTANCE_EPSREL
+    )
+    DEFAULT_INTEGRATION_LIMBER_EPSREL: float = (
+        pyccl.gsl_params.INTEGRATION_LIMBER_EPSREL
+    )
+    DEFAULT_EPS_SCALEFAC_GROWTH: float = pyccl.gsl_params.EPS_SCALEFAC_GROWTH
     DEFAULT_ODE_GROWTH_EPSREL: float = pyccl.gsl_params.ODE_GROWTH_EPSREL
     DEFAULT_N_ITERATION: int = pyccl.gsl_params.N_ITERATION
     DEFAULT_INTEGRATION_SIGMAR_EPSREL: float = (
@@ -141,8 +163,14 @@ class CCLParams:
     @staticmethod
     def set_default_params():
         """Set CCL parameters to default values."""
-
         pyccl.gsl_params.INTEGRATION_EPSREL = CCLParams.DEFAULT_INTEGRATION_EPSREL
+        pyccl.gsl_params.INTEGRATION_DISTANCE_EPSREL = (
+            CCLParams.DEFAULT_INTEGRATION_DISTANCE_EPSREL
+        )
+        pyccl.gsl_params.INTEGRATION_LIMBER_EPSREL = (
+            CCLParams.DEFAULT_INTEGRATION_DISTANCE_EPSREL
+        )
+        pyccl.gsl_params.EPS_SCALEFAC_GROWTH = CCLParams.DEFAULT_EPS_SCALEFAC_GROWTH
         pyccl.gsl_params.ODE_GROWTH_EPSREL = CCLParams.DEFAULT_ODE_GROWTH_EPSREL
         pyccl.gsl_params.N_ITERATION = CCLParams.DEFAULT_N_ITERATION
         pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL = (
@@ -162,13 +190,15 @@ class CCLParams:
     @staticmethod
     def set_high_prec_params():
         """Set CCL parameters to high precision values."""
-
         pyccl.gsl_params.INTEGRATION_EPSREL = 1.0e-13
-        pyccl.gsl_params.ODE_GROWTH_EPSREL = 1.0e-13
+        pyccl.gsl_params.INTEGRATION_DISTANCE_EPSREL = 1.0e-13
+        pyccl.gsl_params.INTEGRATION_LIMBER_EPSREL = 1.0e-6
+        pyccl.gsl_params.EPS_SCALEFAC_GROWTH = 1.0e-30
+        pyccl.gsl_params.ODE_GROWTH_EPSREL = 1.0e-8
         pyccl.gsl_params.N_ITERATION = 10000
         pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL = 1.0e-9
         pyccl.spline_params.A_SPLINE_NLOG = 1000
-        pyccl.spline_params.A_SPLINE_NA = 1000
+        pyccl.spline_params.A_SPLINE_NA = 8000
         pyccl.spline_params.A_SPLINE_NA_PK = 1000
         pyccl.spline_params.A_SPLINE_NLOG_PK = 1000
         pyccl.spline_params.N_K = 1000
@@ -181,9 +211,11 @@ class CCLParams:
 
 # Missing function in CCL
 def dsigmaM_dlnM(cosmo, M, a):  # pylint: disable=invalid-name
-    """Derivative of the mass variance with respect to the logarithm of the
-    mass."""
+    """Compute the logarithmic derivative of the mass variance.
 
+    Compute the logarithmic derivative of the mass variance with respect to
+    the natural logarithm of the mass.
+    """
     cosmo.compute_sigma()
 
     logM = np.log10(np.atleast_1d(M))  # pylint: disable=invalid-name
