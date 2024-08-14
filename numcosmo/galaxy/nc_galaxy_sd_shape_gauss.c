@@ -45,7 +45,7 @@
 #include "galaxy/nc_galaxy_wl_obs.h"
 #include "galaxy/nc_galaxy_sd_shape_gauss.h"
 #include "galaxy/nc_galaxy_sd_shape.h"
-#include "lss/nc_halo_center.h"
+#include "lss/nc_halo_position.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
@@ -56,11 +56,9 @@
 typedef struct _NcGalaxySDShapeGaussPrivate
 {
   NcDistance *dist;
-  NcGalaxyWLObsCoord coord;
   NcWLSurfaceMassDensityOptzs optzs;
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_hc;
-  NcmMatrix *data;
 } NcGalaxySDShapeGaussPrivate;
 
 struct _NcGalaxySDShapeGauss
@@ -72,7 +70,6 @@ enum
 {
   PROP_0,
   PROP_DIST,
-  PROP_COORD,
   PROP_LEN,
 };
 
@@ -86,7 +83,6 @@ nc_galaxy_sd_shape_gauss_init (NcGalaxySDShapeGauss *gsdsgauss)
   self->dist       = NULL;
   self->ctrl_cosmo = NULL;
   self->ctrl_hc    = NULL;
-  self->data       = NULL;
 }
 
 static void
@@ -101,9 +97,6 @@ _nc_galaxy_sd_shape_gauss_set_property (GObject *object, guint prop_id, const GV
   {
     case PROP_DIST:
       self->dist = g_value_get_object (value);
-      break;
-    case PROP_COORD:
-      self->coord = g_value_get_enum (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -124,9 +117,6 @@ _nc_galaxy_sd_shape_gauss_get_property (GObject *object, guint prop_id, GValue *
     case PROP_DIST:
       g_value_set_object (value, self->dist);
       break;
-    case PROP_COORD:
-      g_value_set_enum (value, self->coord);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -136,6 +126,18 @@ _nc_galaxy_sd_shape_gauss_get_property (GObject *object, guint prop_id, GValue *
 static void
 _nc_galaxy_sd_shape_gauss_dispose (GObject *object)
 {
+  NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (object);
+  NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
+
+  if (self->dist)
+    nc_distance_clear (&self->dist);
+
+  if (self->ctrl_cosmo)
+    ncm_model_ctrl_clear (&self->ctrl_cosmo);
+
+  if (self->ctrl_hc)
+    ncm_model_ctrl_clear (&self->ctrl_hc);
+
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_sd_shape_gauss_parent_class)->dispose (object);
 }
@@ -147,14 +149,14 @@ _nc_galaxy_sd_shape_gauss_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_shape_gauss_parent_class)->finalize (object);
 }
 
-static gboolean _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloCenter *hc, NcmRNG *rng, const gdouble ra, const gdouble dec, const gdouble z, gdouble *e1, gdouble *e2);
-static gdouble _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloCenter *hc, gdouble z, NcmVector *data);
-static void _nc_galaxy_sd_shape_gauss_integ_optzs_prep (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloCenter *hc, NcmVector *data);
-static gdouble _nc_galaxy_sd_shape_gauss_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloCenter *hc, gdouble z, NcmVector *data);
-static NcmMatrix *_nc_galaxy_sd_shape_gauss_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloCenter *hc, NcmMatrix *data);
+static gboolean _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, NcmRNG *rng, NcGalaxyWLObsCoord coord, const gdouble ra, const gdouble dec, const gdouble z, gdouble *e1, gdouble *e2);
+static gdouble _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, gdouble z, NcmVector *data);
+static void _nc_galaxy_sd_shape_gauss_integ_optzs_prep (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, NcmVector *data);
+static gdouble _nc_galaxy_sd_shape_gauss_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, gdouble z, NcmVector *data);
+static gboolean _nc_galaxy_sd_shape_gauss_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hc, NcGalaxyWLObsCoord coord, NcmObjArray *data, NcmObjArray *data_prep);
 static GStrv _nc_galaxy_sd_shape_gauss_get_header (NcGalaxySDShape *gsds);
-static gboolean _nc_galaxy_sd_shape_gauss_set_coord (NcGalaxySDShape *gsds, NcGalaxyWLObsCoord coord);
-static gboolean _nc_galaxy_sd_shape_gauss_set_models (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloCenter *hc);
+static guint _nc_galaxy_sd_shape_gauss_get_vec_size (NcGalaxySDShape *gsds);
+static gboolean _nc_galaxy_sd_shape_gauss_set_models (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hc);
 
 static void
 nc_galaxy_sd_shape_gauss_class_init (NcGalaxySDShapeGaussClass *klass)
@@ -177,7 +179,7 @@ nc_galaxy_sd_shape_gauss_class_init (NcGalaxySDShapeGaussClass *klass)
    * The standard deviation of the gaussian distribution.
    *
    */
-  ncm_model_class_set_sparam (model_class, NC_GALAXY_SD_SHAPE_GAUSS_SIGMA, "\\sigma", "sigma", 1e-8, 2.0, 1e-1, NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_PARAMS_ABSTOL, NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA, NCM_PARAM_TYPE_FIXED);
+  ncm_model_class_set_sparam (model_class, NC_GALAXY_SD_SHAPE_GAUSS_SIGMA, "\\sigma", "sigma", 0.0, 2.0, 1.0e-1, NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_PARAMS_ABSTOL, NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA, NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_check_params_info (model_class);
 
@@ -187,14 +189,15 @@ nc_galaxy_sd_shape_gauss_class_init (NcGalaxySDShapeGaussClass *klass)
   sd_position_class->integ_optzs      = &_nc_galaxy_sd_shape_gauss_integ_optzs;
   sd_position_class->prepare          = &_nc_galaxy_sd_shape_gauss_prepare;
   sd_position_class->get_header       = &_nc_galaxy_sd_shape_gauss_get_header;
-  sd_position_class->set_coord        = &_nc_galaxy_sd_shape_gauss_set_coord;
+  sd_position_class->get_vec_size     = &_nc_galaxy_sd_shape_gauss_get_vec_size;
+  sd_position_class->set_models       = &_nc_galaxy_sd_shape_gauss_set_models;
 }
 
 #define VECTOR (NCM_MODEL (gsds))
 #define SIGMA  (ncm_model_orig_param_get (VECTOR, NC_GALAXY_SD_SHAPE_GAUSS_SIGMA))
 
 static gboolean
-_nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloCenter *hc, NcmRNG *rng, const gdouble ra, const gdouble dec, const gdouble z, gdouble *e1, gdouble *e2)
+_nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, NcmRNG *rng, NcGalaxyWLObsCoord coord, const gdouble ra, const gdouble dec, const gdouble z, gdouble *e1, gdouble *e2)
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
@@ -213,7 +216,7 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
 
   ncm_util_polar_angles (ra_cl, dec_cl, ra, dec, &theta, &phi);
 
-  if (self->coord == NC_GALAXY_WL_OBS_COORD_CELESTIAL)
+  if (coord == NC_GALAXY_WL_OBS_COORD_CELESTIAL)
     phi = M_PI - phi;
 
   r = ncm_util_projected_radius (theta, nc_distance_angular_diameter (self->dist, cosmo, z_cl) * nc_distance_hubble (self->dist, cosmo));
@@ -235,7 +238,7 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
 }
 
 static gdouble
-_nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloCenter *hc, gdouble z, NcmVector *data)
+_nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, gdouble z, NcmVector *data)
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
@@ -267,7 +270,7 @@ _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHalo
 }
 
 static void
-_nc_galaxy_sd_shape_gauss_integ_optzs_prep (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloCenter *hc, NcmVector *data)
+_nc_galaxy_sd_shape_gauss_integ_optzs_prep (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, NcmVector *data)
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
@@ -278,7 +281,7 @@ _nc_galaxy_sd_shape_gauss_integ_optzs_prep (NcGalaxySDShape *gsds, NcHICosmo *co
 }
 
 static gdouble
-_nc_galaxy_sd_shape_gauss_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloCenter *hc, gdouble z, NcmVector *data)
+_nc_galaxy_sd_shape_gauss_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, gdouble z, NcmVector *data)
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
@@ -309,48 +312,55 @@ _nc_galaxy_sd_shape_gauss_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, 
   return gsl_ran_gaussian_pdf (creal (e_s), e1_sigma) * gsl_ran_gaussian_pdf (cimag (e_s), e2_sigma);
 }
 
-static NcmMatrix *
-_nc_galaxy_sd_shape_gauss_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloCenter *hc, NcmMatrix *data)
+static gboolean
+_nc_galaxy_sd_shape_gauss_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hc, NcGalaxyWLObsCoord coord, NcmObjArray *data, NcmObjArray *data_prep)
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
 
-  if (ncm_model_ctrl_update (self->ctrl_cosmo, cosmo) && (ncm_model_ctrl_update (self->ctrl_hc, hc)))
+  if ((ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo))) && (ncm_model_ctrl_update (self->ctrl_hc, NCM_MODEL (hc))))
   {
     guint i;
 
-    for (i = 0; i < ncm_matrix_nrows (data); i++)
+    for (i = 0; i < ncm_obj_array_len (data); i++)
     {
-      gdouble ra_cl    = ncm_model_param_get_by_name (NCM_MODEL (hc), "ra");
-      gdouble dec_cl   = ncm_model_param_get_by_name (NCM_MODEL (hc), "dec");
-      gdouble z_cl     = ncm_model_param_get_by_name (NCM_MODEL (hc), "z");
-      gdouble ra       = ncm_matrix_get (data, i, 0);
-      gdouble dec      = ncm_matrix_get (data, i, 1);
-      gdouble e1       = ncm_matrix_get (data, i, 2);
-      gdouble e1_sigma = ncm_matrix_get (data, i, 3);
-      gdouble e2       = ncm_matrix_get (data, i, 4);
-      gdouble e2_sigma = ncm_matrix_get (data, i, 5);
-      gdouble theta    = 0.0;
-      gdouble phi      = 0.0;
+      NcmVector *data_i = NCM_VECTOR (ncm_obj_array_get (data, i));
+      gdouble ra_cl     = ncm_model_param_get_by_name (NCM_MODEL (hc), "ra");
+      gdouble dec_cl    = ncm_model_param_get_by_name (NCM_MODEL (hc), "dec");
+      gdouble z_cl      = ncm_model_param_get_by_name (NCM_MODEL (hc), "z");
+      gdouble ra        = ncm_vector_get (data_i, 0);
+      gdouble dec       = ncm_vector_get (data_i, 1);
+      gdouble e1        = ncm_vector_get (data_i, 2);
+      gdouble e1_sigma  = ncm_vector_get (data_i, 3);
+      gdouble e2        = ncm_vector_get (data_i, 4);
+      gdouble e2_sigma  = ncm_vector_get (data_i, 5);
+      gdouble theta     = 0.0;
+      gdouble phi       = 0.0;
       gdouble r;
 
       ncm_util_polar_angles (ra_cl, dec_cl, ra, dec, &theta, &phi);
 
       r = ncm_util_projected_radius (theta, nc_distance_angular_diameter (self->dist, cosmo, z_cl) * nc_distance_hubble (self->dist, cosmo));
 
-      if (self->coord == NC_GALAXY_WL_OBS_COORD_CELESTIAL)
+      if (coord == NC_GALAXY_WL_OBS_COORD_CELESTIAL)
         phi = M_PI - phi;
 
-      ncm_matrix_set (self->data, i, 0, r);
-      ncm_matrix_set (self->data, i, 1, phi);
-      ncm_matrix_set (self->data, i, 2, e1);
-      ncm_matrix_set (self->data, i, 3, e1_sigma);
-      ncm_matrix_set (self->data, i, 4, e2);
-      ncm_matrix_set (self->data, i, 5, e2_sigma);
-    }
-  }
+      ncm_vector_set (data_i, 0, r);
+      ncm_vector_set (data_i, 1, phi);
+      ncm_vector_set (data_i, 2, e1);
+      ncm_vector_set (data_i, 3, e1_sigma);
+      ncm_vector_set (data_i, 4, e2);
+      ncm_vector_set (data_i, 5, e2_sigma);
 
-  return ncm_matrix_dup (self->data);
+      ncm_obj_array_add (data_prep, G_OBJECT (data_i));
+    }
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 
 static GStrv
@@ -361,19 +371,14 @@ _nc_galaxy_sd_shape_gauss_get_header (NcGalaxySDShape *gsds)
   return header;
 }
 
-static gboolean
-_nc_galaxy_sd_shape_gauss_set_coord (NcGalaxySDShape *gsds, NcGalaxyWLObsCoord coord)
+static guint
+_nc_galaxy_sd_shape_gauss_get_vec_size (NcGalaxySDShape *gsds)
 {
-  NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
-  NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
-
-  self->coord = coord;
-
-  return TRUE;
+  return 6;
 }
 
 static gboolean
-_nc_galaxy_sd_shape_gauss_set_models (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloCenter *hc)
+_nc_galaxy_sd_shape_gauss_set_models (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hc)
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);

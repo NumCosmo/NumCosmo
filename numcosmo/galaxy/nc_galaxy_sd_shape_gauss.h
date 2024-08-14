@@ -31,7 +31,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/lss/nc_halo_center.h>
+#include <numcosmo/lss/nc_halo_position.h>
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
 
