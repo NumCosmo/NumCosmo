@@ -51,13 +51,13 @@
 
 typedef struct _NcGalaxySDPositionFlatPrivate
 {
-  gdouble ra_lb;
-  gdouble ra_ub;
-  gdouble cos_ra_min;
-  gdouble cos_ra_max;
+  gdouble ra_min;
+  gdouble ra_max;
   gdouble ra_norm;
-  gdouble dec_lb;
-  gdouble dec_ub;
+  gdouble dec_min;
+  gdouble dec_max;
+  gdouble sin_dec_min;
+  gdouble sin_dec_max;
   gdouble dec_norm;
 } NcGalaxySDPositionFlatPrivate;
 
@@ -79,12 +79,14 @@ nc_galaxy_sd_position_flat_init (NcGalaxySDPositionFlat *gsdpflat)
 {
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
 
-  self->ra_lb    = 0.0;
-  self->ra_ub    = 0.0;
-  self->ra_norm  = 0.0;
-  self->dec_lb   = 0.0;
-  self->dec_ub   = 0.0;
-  self->dec_norm = 0.0;
+  self->ra_min      = 0.0;
+  self->ra_max      = 0.0;
+  self->ra_norm     = 0.0;
+  self->dec_min     = 0.0;
+  self->dec_max     = 0.0;
+  self->sin_dec_min = 0.0;
+  self->sin_dec_max = 0.0;
+  self->dec_norm    = 0.0;
 }
 
 static void
@@ -138,10 +140,10 @@ _nc_galaxy_sd_position_flat_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng, gdouble 
 {
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
-  gdouble cos_ra                             = ncm_rng_uniform_gen (rng, self->cos_ra_min, self->cos_ra_max);
+  gdouble sin_dec                            = ncm_rng_uniform_gen (rng, self->sin_dec_min, self->sin_dec_max);
 
-  *ra  = acos (cos_ra);
-  *dec = ncm_rng_uniform_gen (rng, self->dec_lb, self->dec_ub);
+  *ra  = ncm_rng_uniform_gen (rng, self->ra_min, self->ra_max);
+  *dec = asin (sin_dec);
 
   return TRUE;
 }
@@ -154,8 +156,8 @@ _nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, NcmVector *data)
   gdouble ra                                 = ncm_vector_get (data, 0);
   gdouble dec                                = ncm_vector_get (data, 1);
 
-  if ((ra >= self->ra_lb) && (ra <= self->ra_ub) && (dec >= self->dec_lb) && (dec <= self->dec_ub))
-    return self->ra_norm * self->dec_norm * sin (ra);
+  if ((ra >= self->ra_min) && (ra <= self->ra_max) && (dec >= self->dec_min) && (dec <= self->dec_max))
+    return self->ra_norm * self->dec_norm * cos (dec);
 
   return 0.0;
 }
@@ -168,11 +170,9 @@ _nc_galaxy_sd_position_flat_set_ra_lim (NcGalaxySDPosition *gsdp, gdouble ra_min
 
   g_assert_cmpfloat (ra_min, <, ra_max);
 
-  self->ra_lb      = ra_min;
-  self->ra_ub      = ra_max;
-  self->cos_ra_min = cos (ra_max);
-  self->cos_ra_max = cos (ra_min);
-  self->ra_norm    = 1.0 / (self->cos_ra_max - self->cos_ra_min);
+  self->ra_min  = ra_min;
+  self->ra_max  = ra_max;
+  self->ra_norm = 1.0 / (self->ra_max - self->ra_min);
 
   return TRUE;
 }
@@ -186,8 +186,8 @@ _nc_galaxy_sd_position_flat_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_mi
   g_assert_nonnull (ra_min);
   g_assert_nonnull (ra_max);
 
-  *ra_min = self->ra_lb;
-  *ra_max = self->ra_ub;
+  *ra_min = self->ra_min;
+  *ra_max = self->ra_max;
 
   return TRUE;
 }
@@ -200,9 +200,11 @@ _nc_galaxy_sd_position_flat_set_dec_lim (NcGalaxySDPosition *gsdp, gdouble dec_m
 
   g_assert_cmpfloat (dec_min, <, dec_max);
 
-  self->dec_lb   = dec_min;
-  self->dec_ub   = dec_max;
-  self->dec_norm = 1.0 / (self->dec_ub - self->dec_lb);
+  self->dec_min     = dec_min;
+  self->dec_max     = dec_max;
+  self->sin_dec_min = sin (dec_min);
+  self->sin_dec_max = sin (dec_max);
+  self->dec_norm    = 1.0 / (self->sin_dec_max - self->sin_dec_min);
 
   return TRUE;
 }
@@ -216,8 +218,8 @@ _nc_galaxy_sd_position_flat_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_
   g_assert_nonnull (dec_min);
   g_assert_nonnull (dec_max);
 
-  *dec_min = self->dec_lb;
-  *dec_max = self->dec_ub;
+  *dec_min = self->dec_min;
+  *dec_max = self->dec_max;
 
   return TRUE;
 }
