@@ -412,7 +412,7 @@ test_nc_de_cont_basic (void)
 void
 test_nc_galaxy_sd_position_basic (void)
 {
-  NcGalaxySDPosition *sdpos = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (0, 2, 0, 2));
+  NcGalaxySDPosition *sdpos = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (0.0, 2.0, -0.5, 0.5));
   NcGalaxySDPosition *sdpos2;
 
   g_assert_true (sdpos != NULL);
@@ -430,7 +430,7 @@ test_nc_galaxy_sd_position_basic (void)
 void
 test_nc_galaxy_sd_position_flat_basic (void)
 {
-  NcGalaxySDPositionFlat *gsdpf = nc_galaxy_sd_position_flat_new (0, 2, 0, 2);
+  NcGalaxySDPositionFlat *gsdpf = nc_galaxy_sd_position_flat_new (0.0, 2.0, -0.5, 0.5);
   NcGalaxySDPositionFlat *gsdpf2;
 
   g_assert_true (gsdpf != NULL);
