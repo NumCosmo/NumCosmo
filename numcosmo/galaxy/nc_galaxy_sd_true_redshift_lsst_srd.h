@@ -70,7 +70,7 @@ NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_new_y10 (cons
 NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_ref (NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst);
 
 void nc_galaxy_sd_true_redshift_lsst_srd_free (NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst);
-void nc_galaxy_sd_true_redshift_lsst_clear (NcGalaxySDTrueRedshiftLSSTSRD **gsdtrlsst);
+void nc_galaxy_sd_true_redshift_lsst_srd_clear (NcGalaxySDTrueRedshiftLSSTSRD **gsdtrlsst);
 
 G_END_DECLS
 
