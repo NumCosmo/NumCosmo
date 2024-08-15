@@ -376,7 +376,7 @@ ncm_util_polar_angles (gdouble ra1, gdouble dec1, gdouble ra2, gdouble dec2, gdo
   const gdouble yDelta   = decDelta;
 
   *theta = acos (sin (dec2_rad) * sin (dec1_rad) + cos (dec2_rad) * cos (dec1_rad) * cos (raDelta));
-  *phi   = atan2 (yDelta, - xDelta);
+  *phi   = atan2 (yDelta, -xDelta);
 }
 
 /* NcmComplex methods */
