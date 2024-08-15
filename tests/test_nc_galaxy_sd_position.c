@@ -165,17 +165,16 @@ test_nc_galaxy_sd_position_lim (TestNcGalaxySDPosition *test, gconstpointer pdat
 static void
 test_nc_galaxy_sd_position_serialize (TestNcGalaxySDPosition *test, gconstpointer pdata)
 {
-  NcGalaxySDPosition *gsdp     = test->gsdp;
   NcmSerialize *ser            = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  gchar *gsdp_ser              = ncm_serialize_to_string (ser, G_OBJECT (gsdp), TRUE);
+  gchar *gsdp_ser              = ncm_serialize_to_string (ser, G_OBJECT (test->gsdp), TRUE);
   NcGalaxySDPosition *gsdp_dup = NC_GALAXY_SD_POSITION (ncm_serialize_from_string (ser, gsdp_ser));
   gdouble ra_min, ra_max, dec_min, dec_max;
   gdouble ra_min_dup, ra_max_dup, dec_min_dup, dec_max_dup;
 
   g_assert_true (NC_IS_GALAXY_SD_POSITION (gsdp_dup));
 
-  nc_galaxy_sd_position_get_ra_lim (gsdp, &ra_min, &ra_max);
-  nc_galaxy_sd_position_get_dec_lim (gsdp, &dec_min, &dec_max);
+  nc_galaxy_sd_position_get_ra_lim (test->gsdp, &ra_min, &ra_max);
+  nc_galaxy_sd_position_get_dec_lim (test->gsdp, &dec_min, &dec_max);
   nc_galaxy_sd_position_get_ra_lim (gsdp_dup, &ra_min_dup, &ra_max_dup);
   nc_galaxy_sd_position_get_dec_lim (gsdp_dup, &dec_min_dup, &dec_max_dup);
 
@@ -192,11 +191,10 @@ test_nc_galaxy_sd_position_serialize (TestNcGalaxySDPosition *test, gconstpointe
 static void
 test_nc_galaxy_sd_position_model_id (TestNcGalaxySDPosition *test, gconstpointer pdata)
 {
-  NcGalaxySDPosition *gsdp = test->gsdp;
   NcmMSet *model_set       = ncm_mset_empty_new ();
   NcmSerialize *ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
 
-  ncm_mset_set (model_set, ncm_model_dup (NCM_MODEL (gsdp), ser));
+  ncm_mset_set (model_set, ncm_model_dup (NCM_MODEL (test->gsdp), ser));
 
   g_assert_true (NC_IS_GALAXY_SD_POSITION (ncm_mset_peek (model_set, nc_galaxy_sd_position_id ())));
 }
@@ -213,7 +211,6 @@ test_nc_galaxy_sd_position_flat_header (TestNcGalaxySDPosition *test, gconstpoin
 static void
 test_nc_galaxy_sd_position_flat_gen (TestNcGalaxySDPosition *test, gconstpointer pdata)
 {
-  NcGalaxySDPositionFlat *gsdpflat = NC_GALAXY_SD_POSITION_FLAT (test->gsdp);
   NcmRNG *rng                      = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   const guint nruns                = 10;
   const guint ndata                = 10000;
@@ -281,11 +278,9 @@ test_nc_galaxy_sd_position_flat_gen (TestNcGalaxySDPosition *test, gconstpointer
 static void
 test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpointer pdata)
 {
-  NcGalaxySDPositionFlat *gsdpflat = NC_GALAXY_SD_POSITION_FLAT (test->gsdp);
   NcmRNG *rng                      = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   const guint nruns                = 10000;
   gdouble ra_min, ra_max, dec_min, dec_max;
-  gdouble ra_avg, ra_var, dec_avg, dec_var;
   guint i;
 
   ra_min = g_test_rand_double_range (0.0, 2.0 * M_PI);
