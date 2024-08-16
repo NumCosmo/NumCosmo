@@ -59,52 +59,52 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add ("/nc/galaxy_sd_true_redsfhit_lsst_srd/lim", TestNcGalaxySDTrueRedshift, NULL,
+  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd/lim", TestNcGalaxySDTrueRedshift, NULL,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_new,
               &test_nc_galaxy_sd_true_redshift_lim,
               &test_nc_galaxy_sd_true_redshift_free);
 
-  g_test_add ("/nc/galaxy_sd_true_redsfhit_lsst_srd/serialize", TestNcGalaxySDTrueRedshift, NULL,
+  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd/serialize", TestNcGalaxySDTrueRedshift, NULL,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_new,
               &test_nc_galaxy_sd_true_redshift_serialize,
               &test_nc_galaxy_sd_true_redshift_free);
 
-  g_test_add ("/nc/galaxy_sd_true_redsfhit_lsst_srd/model_id", TestNcGalaxySDTrueRedshift, NULL,
+  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd/model_id", TestNcGalaxySDTrueRedshift, NULL,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_new,
               &test_nc_galaxy_sd_true_redshift_model_id,
               &test_nc_galaxy_sd_true_redshift_free);
 
-  g_test_add ("/nc/galaxy_sd_true_redsfhit_lsst_srd/gen", TestNcGalaxySDTrueRedshift, NULL,
+  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd/gen", TestNcGalaxySDTrueRedshift, NULL,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_new,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_gen,
               &test_nc_galaxy_sd_true_redshift_free);
 
-  g_test_add ("/nc/galaxy_sd_true_redsfhit_lsst_srd/integ", TestNcGalaxySDTrueRedshift, NULL,
+  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd/integ", TestNcGalaxySDTrueRedshift, NULL,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_new,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_integ,
               &test_nc_galaxy_sd_true_redshift_free);
 
-  g_test_add ("/nc/galaxy_sd_true_redsfhit_lsst_srd_y10/lim", TestNcGalaxySDTrueRedshift, NULL,
+  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd_y10/lim", TestNcGalaxySDTrueRedshift, NULL,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new,
               &test_nc_galaxy_sd_true_redshift_lim,
               &test_nc_galaxy_sd_true_redshift_free);
 
-  g_test_add ("/nc/galaxy_sd_true_redsfhit_lsst_srd_y10/serialize", TestNcGalaxySDTrueRedshift, NULL,
+  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd_y10/serialize", TestNcGalaxySDTrueRedshift, NULL,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new,
               &test_nc_galaxy_sd_true_redshift_serialize,
               &test_nc_galaxy_sd_true_redshift_free);
 
-  g_test_add ("/nc/galaxy_sd_true_redsfhit_lsst_srd_y10/model_id", TestNcGalaxySDTrueRedshift, NULL,
+  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd_y10/model_id", TestNcGalaxySDTrueRedshift, NULL,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new,
               &test_nc_galaxy_sd_true_redshift_model_id,
               &test_nc_galaxy_sd_true_redshift_free);
 
-  g_test_add ("/nc/galaxy_sd_true_redsfhit_lsst_srd_y10/gen", TestNcGalaxySDTrueRedshift, NULL,
+  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd_y10/gen", TestNcGalaxySDTrueRedshift, NULL,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_gen,
               &test_nc_galaxy_sd_true_redshift_free);
 
-  g_test_add ("/nc/galaxy_sd_true_redsfhit_lsst_srd_y10/integ", TestNcGalaxySDTrueRedshift, NULL,
+  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd_y10/integ", TestNcGalaxySDTrueRedshift, NULL,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_integ,
               &test_nc_galaxy_sd_true_redshift_free);
