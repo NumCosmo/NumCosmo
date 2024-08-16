@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model.h>
+#include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo.h>
 
 G_BEGIN_DECLS
@@ -67,7 +68,7 @@ typedef enum /*< enum,underscore_name=NC_HALO_POSITION_SPARAMS >*/
 
 NCM_MSET_MODEL_DECLARE_ID (nc_halo_position);
 
-NcHaloPosition *nc_halo_position_new (void);
+NcHaloPosition *nc_halo_position_new (NcDistance *dist);
 NcHaloPosition *nc_halo_position_ref (NcHaloPosition *hp);
 
 void nc_halo_position_free (NcHaloPosition *hp);

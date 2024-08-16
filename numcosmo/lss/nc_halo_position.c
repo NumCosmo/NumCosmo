@@ -56,6 +56,7 @@ struct _NcHaloPosition
 enum
 {
   PROP_0,
+  PROP_DIST,
   PROP_LEN,
 };
 
@@ -74,12 +75,16 @@ nc_halo_position_init (NcHaloPosition *hp)
 static void
 _nc_halo_position_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHaloPosition *hp = NC_HALO_POSITION (object);
+  NcHaloPosition *hp                 = NC_HALO_POSITION (object);
+  NcHaloPositionPrivate * const self = nc_halo_position_get_instance_private (hp);
 
   g_return_if_fail (NC_IS_HALO_POSITION (hp));
 
   switch (prop_id)
   {
+    case PROP_DIST:
+      self->dist = g_value_get_object (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -89,12 +94,16 @@ _nc_halo_position_set_property (GObject *object, guint prop_id, const GValue *va
 static void
 _nc_halo_position_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHaloPosition *hp = NC_HALO_POSITION (object);
+  NcHaloPosition *hp                 = NC_HALO_POSITION (object);
+  NcHaloPositionPrivate * const self = nc_halo_position_get_instance_private (hp);
 
   g_return_if_fail (NC_IS_HALO_POSITION (hp));
 
   switch (prop_id)
   {
+    case PROP_DIST:
+      g_value_set_object (value, self->dist);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -104,6 +113,12 @@ _nc_halo_position_get_property (GObject *object, guint prop_id, GValue *value, G
 static void
 _nc_halo_position_dispose (GObject *object)
 {
+  NcHaloPosition *hp                 = NC_HALO_POSITION (object);
+  NcHaloPositionPrivate * const self = nc_halo_position_get_instance_private (hp);
+
+  if (self->dist)
+    nc_distance_clear (&self->dist);
+
   G_OBJECT_CLASS (nc_halo_position_parent_class)->dispose (object);
 }
 
@@ -121,10 +136,10 @@ nc_halo_position_class_init (NcHaloPositionClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  object_class->set_property = &_nc_halo_position_set_property;
-  object_class->get_property = &_nc_halo_position_get_property;
-  object_class->dispose      = &_nc_halo_position_dispose;
-  object_class->finalize     = &_nc_halo_position_finalize;
+  model_class->set_property = &_nc_halo_position_set_property;
+  model_class->get_property = &_nc_halo_position_get_property;
+  object_class->dispose     = &_nc_halo_position_dispose;
+  object_class->finalize    = &_nc_halo_position_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Halo position", "Halo position");
   ncm_model_class_add_params (model_class, NC_HALO_POSITION_SPARAM_LEN, 0, PROP_LEN);
@@ -153,6 +168,18 @@ nc_halo_position_class_init (NcHaloPositionClass *klass)
    */
   ncm_model_class_set_sparam (model_class, NC_HALO_POSITION_Z, "z", "z", 0.0, 1100.0, 1.0e-3, NC_HALO_POSITION_DEFAULT_PARAMS_ABSTOL, NC_HALO_POSITION_DEFAULT_Z, NCM_PARAM_TYPE_FIXED);
 
+  /**
+   * NcHaloPosition:dist:
+   *
+   * A #NcDistance object.
+   *
+   */
+  g_object_class_install_property (object_class, PROP_DIST,
+                                   g_param_spec_object ("dist", "Distance",
+                                                        "A NcDistance object",
+                                                        NC_TYPE_DISTANCE,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+
   ncm_model_class_check_params_info (model_class);
 }
 
@@ -165,9 +192,11 @@ nc_halo_position_class_init (NcHaloPositionClass *klass)
  *
  */
 NcHaloPosition *
-nc_halo_position_new (void)
+nc_halo_position_new (NcDistance *dist)
 {
-  return g_object_new (NC_TYPE_HALO_POSITION, NULL);
+  return g_object_new (NC_TYPE_HALO_POSITION,
+                       "dist", dist,
+                       NULL);
 }
 
 /**

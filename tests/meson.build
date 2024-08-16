@@ -208,6 +208,10 @@ c_tests = [
         'sources': ['test_nc_halo_density_profile.c'],
     },
     {
+        'name': 'nc_halo_position',
+        'sources': ['test_nc_halo_position.c'],
+    },
+    {
         'name': 'nc_wl_surface_mass_density',
         'sources': ['test_nc_wl_surface_mass_density.c'],
     },

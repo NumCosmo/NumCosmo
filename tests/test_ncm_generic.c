@@ -59,6 +59,7 @@ void test_nc_galaxy_sd_z_proxy_basic (void);
 void test_nc_galaxy_sd_z_proxy_dirac_basic (void);
 void test_nc_galaxy_sd_z_proxy_gauss_basic (void);
 void test_nc_galaxy_wl_obs_basic (void);
+void test_nc_halo_position_basic (void);
 void test_nc_hicosmo_qgw_basic (void);
 void test_nc_hipert_adiab_basic (void);
 void test_nc_hipert_em_basic (void);
@@ -100,6 +101,7 @@ main (gint argc, gchar *argv[])
   /* g_test_add_func ("/nc/galaxy/sd_z_proxy_dirac/basic", test_nc_galaxy_sd_z_proxy_dirac_basic); */
   /* g_test_add_func ("/nc/galaxy/sd_z_proxy_gauss/basic", test_nc_galaxy_sd_z_proxy_gauss_basic); */
   g_test_add_func ("/nc/galaxy/wl_obs/basic", test_nc_galaxy_wl_obs_basic);
+  g_test_add_func ("/nc/halo_position/basic", test_nc_halo_position_basic);
   g_test_add_func ("/nc/hicosmo/qgw/basic", test_nc_hicosmo_qgw_basic);
 
   g_test_add_func ("/nc/hipert/adiab/basic", test_nc_hipert_adiab_basic);
@@ -377,6 +379,30 @@ test_ncm_powspec_spline2d_basic (void)
     NCM_TEST_FREE (ncm_powspec_spline2d_free, ps_s2d);
     NCM_TEST_FREE (ncm_spline2d_free, NCM_SPLINE2D (sb2d));
   }
+}
+
+void
+test_nc_halo_position_basic (void)
+{
+  NcHaloPosition *hp;
+  NcHaloPosition *hp2;
+  NcDistance *dist = nc_distance_new (1100.0);
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+
+  nc_distance_prepare (dist, cosmo);
+
+  hp = nc_halo_position_new (dist);
+
+  g_assert_true (hp != NULL);
+  g_assert_true (NC_IS_HALO_POSITION (hp));
+
+  hp2 = nc_halo_position_ref (hp);
+  nc_halo_position_clear (&hp2);
+  g_assert_true (hp2 == NULL);
+
+  g_assert_true (NC_IS_HALO_POSITION (hp));
+
+  NCM_TEST_FREE (nc_halo_position_free, hp);
 }
 
 void
