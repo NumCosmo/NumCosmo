@@ -26,6 +26,7 @@
 #ifndef _NC_HALO_POSITION_H_
 #define _NC_HALO_POSITION_H_
 
+#include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model.h>
@@ -67,16 +68,19 @@ typedef enum /*< enum,underscore_name=NC_HALO_POSITION_SPARAMS >*/
 NCM_MSET_MODEL_DECLARE_ID (nc_halo_position);
 
 NcHaloPosition *nc_halo_position_new (void);
-NcHaloPosition *nc_halo_position_ref (NcHaloPosition *hc);
+NcHaloPosition *nc_halo_position_ref (NcHaloPosition *hp);
 
-void nc_halo_position_free (NcHaloPosition *hc);
-void nc_halo_position_clear (NcHaloPosition **hc);
+void nc_halo_position_free (NcHaloPosition *hp);
+void nc_halo_position_clear (NcHaloPosition **hp);
 
 #define NC_HALO_POSITION_DEFAULT_RA (0.0)
 #define NC_HALO_POSITION_DEFAULT_DEC (0.0)
 #define NC_HALO_POSITION_DEFAULT_Z (0.2)
 
 #define NC_HALO_POSITION_DEFAULT_PARAMS_ABSTOL (0.0)
+
+void nc_halo_position_polar_angles (NcHaloPosition *hp, gdouble ra, gdouble dec, gdouble *theta, gdouble *phi);
+gdouble nc_halo_position_projected_radius (NcHaloPosition *hp, NcHICosmo *cosmo, gdouble theta);
 
 G_END_DECLS
 
