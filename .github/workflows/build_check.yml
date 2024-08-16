@@ -68,10 +68,10 @@ jobs:
     name: (macos, brew)
     runs-on: macos-latest
     env:
-      CC: gcc-11
-      FC: gfortran-11
-      F77: gfortran-11
-      F90: gfortran-11
+      CC: gcc-14
+      FC: gfortran-14
+      F77: gfortran-14
+      F90: gfortran-14
       LIBRARY_PATH: /usr/local/lib:/opt/homebrew/Cellar/gmp/6.3.0/lib
       LD_LIBRARY_PATH: /usr/local/lib:/opt/homebrew/Cellar/gmp/6.3.0/lib
       DYLD_LIBRARY_PATH: /usr/local/lib:/opt/homebrew/Cellar/gmp/6.3.0/lib
