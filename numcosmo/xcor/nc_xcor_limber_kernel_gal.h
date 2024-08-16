@@ -36,14 +36,8 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_LIMBER_KERNEL_GAL (nc_xcor_limber_kernel_gal_get_type ())
-#define NC_XCOR_LIMBER_KERNEL_GAL(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_GAL, NcXcorLimberKernelGal))
-#define NC_XCOR_LIMBER_KERNEL_GAL_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_XCOR_LIMBER_KERNEL_GAL, NcXcorLimberKernelGalClass))
-#define NC_IS_XCOR_LIMBER_KERNEL_GAL(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_GAL))
-#define NC_IS_XCOR_LIMBER_KERNEL_GAL_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_XCOR_LIMBER_KERNEL_GAL))
-#define NC_XCOR_LIMBER_KERNEL_GAL_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_GAL, NcXcorLimberKernelGalClass))
 
-typedef struct _NcXcorLimberKernelGalClass NcXcorLimberKernelGalClass;
-typedef struct _NcXcorLimberKernelGal NcXcorLimberKernelGal;
+G_DECLARE_FINAL_TYPE (NcXcorLimberKernelGal, nc_xcor_limber_kernel_gal, NC, XCOR_LIMBER_KERNEL_GAL, NcXcorLimberKernel)
 
 /**
  * NcXcorLimberKernelGalSParams:
@@ -71,34 +65,6 @@ typedef enum _NcXcorLimberKernelGalVParams
   NC_XCOR_LIMBER_KERNEL_GAL_VPARAM_LEN, /*< skip >*/
 } NcXcorLimberKernelGalVParams;
 
-struct _NcXcorLimberKernelGal
-{
-  /*< private >*/
-  NcXcorLimberKernel parent_instance;
-  
-  NcmSpline *dn_dz;
-  
-  NcmSpline *bias_spline;
-  guint nknots;
-  gdouble *bias;
-  
-  NcDistance *dist;
-  
-  NcmSpline *g_func;
-  gboolean domagbias;
-  
-  gboolean fast_update;
-  gdouble bias_old;
-  gdouble noise_bias_old;
-  
-  gdouble nbarm1;
-};
-
-struct _NcXcorLimberKernelGalClass
-{
-  /*< private >*/
-  NcXcorLimberKernelClass parent_class;
-};
 
 #define NC_XCOR_LIMBER_KERNEL_GAL_BIAS_DEFAULT_LEN (1)
 #define NC_XCOR_LIMBER_KERNEL_GAL_DEFAULT_BIAS (1.0)
@@ -110,9 +76,13 @@ struct _NcXcorLimberKernelGalClass
 
 #define NC_XCOR_LIMBER_KERNEL_GAL_DEFAULT_PARAMS_ABSTOL (0.0)
 
-GType nc_xcor_limber_kernel_gal_get_type (void) G_GNUC_CONST;
-
 NcXcorLimberKernelGal *nc_xcor_limber_kernel_gal_new (gdouble zmin, gdouble zmax, gsize np, gdouble nbarm1, NcmSpline *dn_dz, NcDistance *dist, gboolean domagbias);
+
+void nc_xcor_limber_kernel_gal_set_fast_update (NcXcorLimberKernelGal *xclk, gboolean fast_update);
+gboolean nc_xcor_limber_kernel_gal_get_fast_update (NcXcorLimberKernelGal *xclk);
+
+void nc_xcor_limber_kernel_gal_set_bias_old (NcXcorLimberKernelGal *xclk, gdouble bias_old, gdouble noise_bias_old);
+void nc_xcor_limber_kernel_gal_get_bias (NcXcorLimberKernelGal *xclk, gdouble *bias, gdouble *bias_old, gdouble *noise_bias_old);
 
 G_END_DECLS
 

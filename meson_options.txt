@@ -138,3 +138,15 @@ option(
        value: 'auto',
        description: 'Enable MPI support',
 )
+
+
+#######################################################################################
+# pytest tap plugin
+#######################################################################################
+
+option(
+       'pytest_tap',
+       type: 'boolean',
+       value: true,
+       description: 'Enable pytest tap plugin',
+)

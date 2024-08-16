@@ -40,7 +40,7 @@ typedef struct _NcmBinSplit NcmBinSplit;
 
 /**
  * NcmBinSplit:
- * 
+ *
  * FIXME
  */
 struct _NcmBinSplit
@@ -73,8 +73,8 @@ void ncm_binsplit_get (NcmBinSplit *bs, mpfr_t res);
 void ncm_binsplit_get_q (NcmBinSplit *bs, mpq_t q);
 gdouble ncm_binsplit_get_d (NcmBinSplit *bs, mp_rnd_t rnd);
 
-#define NCM_BINSPLIT_DECL(name,v,u,n,data) static inline void name (mpz_t v, mpz_t u, gulong n, gpointer data)
-#define NCM_BINSPLIT_DENC_NULL(a,b,c,d) 
+#define NCM_BINSPLIT_DECL(name, v, u, n, data) static inline void name (mpz_t v, mpz_t u, gulong n, gpointer data)
+#define NCM_BINSPLIT_DENC_NULL(a, b, c, d)
 
 G_END_DECLS
 

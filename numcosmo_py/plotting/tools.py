@@ -34,8 +34,10 @@ from matplotlib import cm
 
 
 def confidence_ellipse(mu, cov, ax, n_std=1.0, facecolor="none", **kwargs):
-    """Adds a confidence ellipse to the given axis based on the given
-    covariance matrix.
+    """Add confidence ellipse.
+
+    This function adds an confidence ellipse to the given axes, given the mean
+    and covariance of the data.
     """
     pearson = cov[0, 1] / np.sqrt(cov[0, 0] * cov[1, 1])
     # Using a special case to obtain the eigenvalues of this
@@ -84,7 +86,7 @@ def latex_float(value: float):
         if exponent == 0.0:
             return f"{base}"
 
-        return f"{base} \times 10^{{{int(exponent)}}}"
+        return rf"{base} \times 10^{{{int(exponent)}}}"
 
     return float_str
 
@@ -122,7 +124,6 @@ def plot_m2lnp(
     vmax: float = 1.0,
 ):
     """Plot the -2lnp."""
-
     z = z - np.min(z)
     z = np.exp(-0.5 * z)
     exp_z = z.reshape(plotn, plotn)

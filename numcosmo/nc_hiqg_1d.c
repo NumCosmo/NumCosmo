@@ -912,9 +912,9 @@ nc_hiqg_1d_set_nknots (NcHIQG1D *qg1d, const guint nknots)
       self->RePsi    = ncm_matrix_get_row (self->psi, 0);
       self->ImPsi    = ncm_matrix_get_row (self->psi, 1);
       self->frho     = ncm_vector_new (self->nknots + 1);
-      self->RePsi_s  = ncm_spline_cubic_notaknot_new_full (self->fknots, self->fRePsi, FALSE);
-      self->ImPsi_s  = ncm_spline_cubic_notaknot_new_full (self->fknots, self->fImPsi, FALSE);
-      self->rho_s    = ncm_spline_cubic_notaknot_new_full (self->fknots, self->frho, FALSE);
+      self->RePsi_s  = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (self->fknots, self->fRePsi, FALSE));
+      self->ImPsi_s  = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (self->fknots, self->fImPsi, FALSE));
+      self->rho_s    = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (self->fknots, self->frho, FALSE));
       self->C0       = ncm_matrix_new (2, self->nknots);
       self->A0       = ncm_vector_new (self->nknots * 2);
       self->ReC0     = ncm_matrix_get_row (self->C0, 0);

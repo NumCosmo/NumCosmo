@@ -64,7 +64,13 @@ if build_gtk_doc
         main_sgml: 'numcosmo-docs.sgml',
         gobject_typesfile: 'numcosmo.types',
         dependencies: [libnumcosmo_dep],
-        content_files: ['introduction.xml', 'refs.xml', manual_head_xml, 'references.xml'],
+        content_files: [
+            'introduction.xml',
+            'refs.xml',
+            'glib_doc.xml',
+            manual_head_xml,
+            'references.xml',
+        ],
         expand_content_files: [manual_head_xml],
         src_dir: ['numcosmo'],
         scan_args: [
@@ -77,8 +83,7 @@ if build_gtk_doc
             '--output-format=xml',
             '--name-space=nc',
             '--name-space=ncm',
-            '--ignore-files',
-            ignore_files_str,
+            '--ignore-files', ignore_files_str,
         ],
         html_assets: [
             'container.css',
@@ -100,7 +105,9 @@ if build_gtk_doc
     )
 
     if not python_bf4.found()
-        message('WARNING: python3-bs4 not found, skipping adding mathjax to html docs')
+        message(
+            'WARNING: python3-bs4 not found, skipping adding mathjax to html docs',
+        )
     else
         addmathjax = find_program('addmathjax.py', required: true)
         custom_target(

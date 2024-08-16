@@ -165,8 +165,8 @@ _nc_hicosmo_de_constructed (GObject *object)
 
       for (i = 0; i < m_len; i++)
       {
-        cosmo_de->priv->nu_rho_s[i] = ncm_spline_cubic_notaknot_new ();
-        cosmo_de->priv->nu_p_s[i]   = ncm_spline_cubic_notaknot_new ();
+        cosmo_de->priv->nu_rho_s[i] = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+        cosmo_de->priv->nu_p_s[i]   = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
       }
     }
   }
@@ -875,7 +875,7 @@ _nc_hicosmo_de_valid (NcmModel *model)
     gdouble z_max         = 4.0;
     gint i;
 
-    for (i = 0; i <= 40; i++)
+    for (i = 0; i <= 120; i++)
     {
       const gdouble z  = 0.05 * i;
       const gdouble E2 = _nc_hicosmo_de_E2 (NC_HICOSMO (model), z);
@@ -903,19 +903,22 @@ _nc_hicosmo_de_valid (NcmModel *model)
       F.function = &min_E2;
       F.params   = model;
 
-      ret = gsl_min_fminimizer_set (cosmo_de->priv->min, &F, z_min, 0.0, z_max);
-
-      if (ret == GSL_SUCCESS)
+      if (z_min > 0.0)
       {
-        do {
-          iter++;
-          status = gsl_min_fminimizer_iterate (cosmo_de->priv->min);
-          z_min  = gsl_min_fminimizer_x_minimum (cosmo_de->priv->min);
-          a      = gsl_min_fminimizer_x_lower (cosmo_de->priv->min);
-          b      = gsl_min_fminimizer_x_upper (cosmo_de->priv->min);
+        ret = gsl_min_fminimizer_set (cosmo_de->priv->min, &F, z_min, 0.0, z_max);
 
-          status = gsl_min_test_interval (a, b, 0.01, 0.0);
-        } while (status == GSL_CONTINUE && iter < max_iter);
+        if (ret == GSL_SUCCESS)
+        {
+          do {
+            iter++;
+            status = gsl_min_fminimizer_iterate (cosmo_de->priv->min);
+            z_min  = gsl_min_fminimizer_x_minimum (cosmo_de->priv->min);
+            a      = gsl_min_fminimizer_x_lower (cosmo_de->priv->min);
+            b      = gsl_min_fminimizer_x_upper (cosmo_de->priv->min);
+
+            status = gsl_min_test_interval (a, b, 0.01, 0.0);
+          } while (status == GSL_CONTINUE && iter < max_iter);
+        }
       }
 
       {
@@ -1032,16 +1035,16 @@ _nc_hicosmo_de_w_de (NcHICosmoDE *cosmo_de, gdouble z)
   return 0.0;
 }
 
-#define NC_HICOSMO_DE_SET_IMPL_FUNC(name)                                                                    \
-        void                                                                                                       \
+#define NC_HICOSMO_DE_SET_IMPL_FUNC(name)                                                                               \
+        void                                                                                                            \
         nc_hicosmo_de_set_ ## name ## _impl (NcHICosmoDEClass * cosmo_de_class, NcmFuncF f, NcmFuncPF pf, NcmFuncDF df) \
-        {                                                                                                          \
-          ncm_model_class_add_impl_opts (NCM_MODEL_CLASS (cosmo_de_class), NC_HICOSMO_DE_IMPL_ ## name, -1);         \
-          g_assert (f != NULL);                                                                                    \
-          cosmo_de_class->name    = *ncm_func_stub;                                                                   \
-          cosmo_de_class->name.f  = f;                                                                              \
-          cosmo_de_class->name.pf = pf;                                                                            \
-          cosmo_de_class->name.df = df;                                                                            \
+        {                                                                                                               \
+          ncm_model_class_add_impl_opts (NCM_MODEL_CLASS (cosmo_de_class), NC_HICOSMO_DE_IMPL_ ## name, -1);            \
+          g_assert (f != NULL);                                                                                         \
+          cosmo_de_class->name    = *ncm_func_stub;                                                                     \
+          cosmo_de_class->name.f  = f;                                                                                  \
+          cosmo_de_class->name.pf = pf;                                                                                 \
+          cosmo_de_class->name.df = df;                                                                                 \
         }
 
 /**

@@ -53,7 +53,7 @@ typedef struct _NcHIPrimPowerLaw NcHIPrimPowerLaw;
  *
  * Primordial adiabatic scalar power spectrum:
  * $$ \mathcal{P}_{SA}(k) = \mathcal{A}_\mathrm{s}\left(\frac{k}{k_\star}\right)^{n_s -1 }.$$
- * 
+ *
  * Primordial tensor power spectrum:
  * $$ \mathcal{P}_T(k) = r \mathcal{A}_\mathrm{s} \left(\frac{k}{k_\star}\right)^{n_T -1 }.$$
  *
@@ -63,7 +63,7 @@ typedef enum /*< enum,underscore_name=NC_HIPRIM_POWER_LAW_SPARAMS >*/
   NC_HIPRIM_POWER_LAW_LN10E10ASA,
   NC_HIPRIM_POWER_LAW_T_SA_RATIO,
   NC_HIPRIM_POWER_LAW_N_SA,
-  NC_HIPRIM_POWER_LAW_N_T, 
+  NC_HIPRIM_POWER_LAW_N_T,
   /* < private > */
   NC_HIPRIM_POWER_LAW_SPARAM_LEN, /*< skip >*/
 } NcHIPrimPowerLawSParams;
@@ -78,7 +78,6 @@ struct _NcHIPrimPowerLaw
 {
   /*< private >*/
   NcHIPrim parent_instance;
-
 };
 
 GType nc_hiprim_power_law_get_type (void) G_GNUC_CONST;
@@ -93,3 +92,4 @@ NcHIPrimPowerLaw *nc_hiprim_power_law_new (void);
 G_END_DECLS
 
 #endif /* _NC_HIPRIM_POWER_LAW_H_ */
+

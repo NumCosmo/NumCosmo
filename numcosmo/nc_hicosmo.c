@@ -2036,11 +2036,11 @@ nc_hicosmo_sigma8 (NcHICosmo *cosmo, NcmPowspecFilter *psf)
   return ncm_powspec_filter_eval_sigma (psf, 0.0, 8.0 / nc_hicosmo_h (cosmo));
 }
 
-#define _NC_HICOSMO_FUNC0_TO_FLIST(fname) \
+#define _NC_HICOSMO_FUNC0_TO_FLIST(fname)                                                                                   \
         static void _nc_hicosmo_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
-        { \
-          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
-          res[0] = nc_hicosmo_ ## fname (cosmo); \
+        {                                                                                                                   \
+          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));                                           \
+          res[0] = nc_hicosmo_ ## fname (cosmo);                                                                            \
         }
 
 _NC_HICOSMO_FUNC0_TO_FLIST (H0)
@@ -2081,11 +2081,11 @@ _nc_hicosmo_flist_sigma8 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *
   res[0] = nc_hicosmo_sigma8 (cosmo, NCM_POWSPEC_FILTER (ncm_mset_func_list_peek_obj (flist)));
   }
 
-#define _NC_HICOSMO_FUNC1_TO_FLIST(fname) \
+#define _NC_HICOSMO_FUNC1_TO_FLIST(fname)                                                                                   \
         static void _nc_hicosmo_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
-        { \
-          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
-          res[0] = nc_hicosmo_ ## fname (cosmo, x[0]); \
+        {                                                                                                                   \
+          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));                                           \
+          res[0] = nc_hicosmo_ ## fname (cosmo, x[0]);                                                                      \
         }
 
 _NC_HICOSMO_FUNC1_TO_FLIST (E2Omega_b)
@@ -2116,11 +2116,11 @@ _NC_HICOSMO_FUNC1_TO_FLIST (kinetic_w)
 _NC_HICOSMO_FUNC1_TO_FLIST (mqE2)
 _NC_HICOSMO_FUNC1_TO_FLIST (zt)
 
-#define _NC_HICOSMO_FUNC1R2_TO_FLIST(fname) \
+#define _NC_HICOSMO_FUNC1R2_TO_FLIST(fname)                                                                                 \
         static void _nc_hicosmo_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
-        { \
-          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
-          nc_hicosmo_ ## fname (cosmo, x[0], &res[0], &res[1]); \
+        {                                                                                                                   \
+          NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));                                           \
+          nc_hicosmo_ ## fname (cosmo, x[0], &res[0], &res[1]);                                                             \
         }
 
 _NC_HICOSMO_FUNC1R2_TO_FLIST (mqE2_max)

@@ -22,8 +22,10 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-"""Factory functions to generate cosmology likelihoods that do
-not depend on perturbations.
+"""Factory functions to generate background cosmology likelihoods.
+
+This module contains factory functions to generate likelihoods for
+cosmology observables that do not involve perturbations.
 """
 
 from enum import Enum
@@ -55,15 +57,15 @@ class HID(str, Enum):
     ALL_COMBINED_JAN_2023 = "ALL_COMBINED_JAN_2023"
 
 
-def gen_snia_likelihood(
+def add_snia_likelihood(
     dataset: Ncm.Dataset,
     modelset: Ncm.MSet,
     dist: Nc.Distance,
     snia_id: SNIaID = SNIaID.COV_PANTHEON_PLUS_SH0ES_SYS_STAT,
 ) -> None:
     """Generate a likelihood for SNIa data."""
-
-    assert modelset.peek(Nc.HICosmo.id()) is not None
+    cosmo = modelset.peek(Nc.HICosmo.id())
+    assert cosmo is not None
 
     snia_data = Nc.DataSNIACov.new_from_cat_id(snia_id.genum, False)
     if snia_id == SNIaID.COV_PANTHEON_PLUS_SH0ES_SYS_STAT:
@@ -77,14 +79,13 @@ def gen_snia_likelihood(
     dataset.append_data(snia_data)
 
 
-def gen_bao_likelihood(
+def add_bao_likelihood(
     dataset: Ncm.Dataset,
     modelset: Ncm.MSet,
     dist: Nc.Distance,
     bao_id: BAOID = BAOID.ALL_COMBINED_JAN_2023,
 ) -> None:
     """Generate a likelihood for BAO data."""
-
     assert modelset.peek(Nc.HICosmo.id()) is not None
 
     if bao_id == BAOID.ALL_COMBINED_JAN_2023:
@@ -105,13 +106,12 @@ def gen_bao_likelihood(
         raise ValueError(f"Unknown BAO data set id: {bao_id}")
 
 
-def gen_h_likelihood(
+def add_h_likelihood(
     dataset: Ncm.Dataset,
     modelset: Ncm.MSet,
     h_id: HID = HID.ALL_COMBINED_JAN_2023,
 ) -> None:
     """Generate a likelihood for Hubble data."""
-
     assert modelset.peek(Nc.HICosmo.id()) is not None
 
     if h_id == HID.ALL_COMBINED_JAN_2023:

@@ -305,7 +305,7 @@ _ncm_spline_gsl_copy_empty (const NcmSpline *s)
 {
   NcmSplineGsl *sg = NCM_SPLINE_GSL ((NcmSpline *) s);
 
-  return ncm_spline_gsl_new (sg->type);
+  return NCM_SPLINE (ncm_spline_gsl_new (sg->type));
 }
 
 /**
@@ -317,14 +317,14 @@ _ncm_spline_gsl_copy_empty (const NcmSpline *s)
  *
  * Returns: a new #NcmSpline.
  */
-NcmSpline *
+NcmSplineGsl *
 ncm_spline_gsl_new (const gsl_interp_type *type)
 {
   NcmSplineGsl *sg = g_object_new (NCM_TYPE_SPLINE_GSL, NULL);
 
   ncm_spline_gsl_set_type (sg, type);
 
-  return NCM_SPLINE (sg);
+  return sg;
 }
 
 /**
@@ -336,14 +336,14 @@ ncm_spline_gsl_new (const gsl_interp_type *type)
  *
  * Returns: a new #NcmSpline.
  */
-NcmSpline *
+NcmSplineGsl *
 ncm_spline_gsl_new_by_id (NcmSplineGslType type_id)
 {
   NcmSplineGsl *sg = g_object_new (NCM_TYPE_SPLINE_GSL, NULL);
 
   ncm_spline_gsl_set_type_by_id (sg, type_id);
 
-  return NCM_SPLINE (sg);
+  return sg;
 }
 
 /**
@@ -357,12 +357,12 @@ ncm_spline_gsl_new_by_id (NcmSplineGslType type_id)
  *
  * Returns: a new #NcmSpline.
  */
-NcmSpline *
+NcmSplineGsl *
 ncm_spline_gsl_new_full (const gsl_interp_type *type, NcmVector *xv, NcmVector *yv, gboolean init)
 {
-  NcmSpline *s = ncm_spline_gsl_new (type);
+  NcmSplineGsl *s = ncm_spline_gsl_new (type);
 
-  ncm_spline_set (s, xv, yv, init);
+  ncm_spline_set (NCM_SPLINE (s), xv, yv, init);
 
   return s;
 }
@@ -374,16 +374,16 @@ ncm_spline_gsl_new_full (const gsl_interp_type *type, NcmVector *xv, NcmVector *
  * @yv: #NcmVector of the values of the function, to be interpolated, computed at @xv
  * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it
  *
- * This function returns a new gsl #NcmSpline setting all its members.
+ * This function returns a new gsl #NcmSplineGsl setting all its members.
  *
- * Returns: a new #NcmSpline.
+ * Returns: a new #NcmSplineGsl.
  */
-NcmSpline *
+NcmSplineGsl *
 ncm_spline_gsl_new_full_by_id (NcmSplineGslType type_id, NcmVector *xv, NcmVector *yv, gboolean init)
 {
-  NcmSpline *s = ncm_spline_gsl_new_by_id (type_id);
+  NcmSplineGsl *s = ncm_spline_gsl_new_by_id (type_id);
 
-  ncm_spline_set (s, xv, yv, init);
+  ncm_spline_set (NCM_SPLINE (s), xv, yv, init);
 
   return s;
 }
@@ -399,11 +399,17 @@ ncm_spline_gsl_new_full_by_id (NcmSplineGslType type_id, NcmVector *xv, NcmVecto
 void
 ncm_spline_gsl_set_type (NcmSplineGsl *sg, const gsl_interp_type *type)
 {
+  const GEnumValue *type_id = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_SPLINE_GSL_TYPE, type->name);
+
   if (sg->interp != NULL)
   {
     if (sg->type != type)
     {
-      sg->type = type;
+      sg->type    = type;
+      sg->type_id = type_id->value;
+      g_free (sg->inst_name);
+      sg->inst_name = g_strdup_printf ("NcmSplineGsl[%s]", type->name);
+
       gsl_interp_free (sg->interp);
       sg->interp = NULL;
       _ncm_spline_gsl_reset (NCM_SPLINE (sg));
@@ -411,9 +417,9 @@ ncm_spline_gsl_set_type (NcmSplineGsl *sg, const gsl_interp_type *type)
   }
   else
   {
-    sg->type = type;
+    sg->type    = type;
+    sg->type_id = type_id->value;
     g_free (sg->inst_name);
-    /* printf("NcmSplineGsl[%s]", type->name); */
     sg->inst_name = g_strdup_printf ("NcmSplineGsl[%s]", type->name);
   }
 }
@@ -429,8 +435,6 @@ ncm_spline_gsl_set_type (NcmSplineGsl *sg, const gsl_interp_type *type)
 void
 ncm_spline_gsl_set_type_by_id (NcmSplineGsl *sg, NcmSplineGslType type_id)
 {
-  sg->type_id = type_id;
-
   switch (type_id)
   {
     case NCM_SPLINE_GSL_LINEAR:
@@ -477,5 +481,33 @@ ncm_spline_gsl_set_type_by_name (NcmSplineGsl *sg, const gchar *type_name)
   }
 
   ncm_spline_gsl_set_type_by_id (sg, type_id->value);
+}
+
+/**
+ * ncm_spline_gsl_get_type_id:
+ * @sg: a #NcmSplineGsl
+ *
+ * This function returns the interpolation method id of @sg.
+ *
+ * Returns: the interpolation method id.
+ */
+NcmSplineGslType
+ncm_spline_gsl_get_type_id (NcmSplineGsl *sg)
+{
+  return sg->type_id;
+}
+
+/**
+ * ncm_spline_gsl_get_gsl_type:
+ * @sg: a #NcmSplineGsl
+ *
+ * This function returns the interpolation method of @sg.
+ *
+ * Returns: the gsl interpolation method.
+ */
+const gsl_interp_type *
+ncm_spline_gsl_get_gsl_type (NcmSplineGsl *sg)
+{
+  return sg->type;
 }
 

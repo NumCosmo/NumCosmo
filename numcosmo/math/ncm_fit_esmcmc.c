@@ -75,6 +75,7 @@ typedef struct _NcmFitESMCMCPrivate
   gdouble max_runs_time;
   gdouble log_time_interval;
   guint interm_log;
+  gboolean skip_check;
   GPtrArray *full_theta;
   GPtrArray *full_thetastar;
   GPtrArray *full_thetastar_inout;
@@ -123,6 +124,7 @@ enum
   PROP_TRIM_TYPE,
   PROP_MIN_RUNS,
   PROP_MAX_RUNS_TIME,
+  PROP_SKIP_CHECK,
   PROP_LOG_TIME_INTERVAL,
   PROP_INTERM_LOG,
   PROP_MTYPE,
@@ -165,8 +167,10 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
   self->min_runs          = 0;
   self->max_runs_time     = 0.0;
   self->log_time_interval = 0.0;
+  self->interm_log        = 0;
   self->nadd_vals         = 0;
   self->fparam_len        = 0;
+  self->skip_check        = FALSE;
 
   self->m2lnL                = g_ptr_array_new ();
   self->theta                = g_ptr_array_new ();
@@ -348,6 +352,9 @@ _ncm_fit_esmcmc_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_MAX_RUNS_TIME:
       self->max_runs_time = g_value_get_double (value);
       break;
+    case PROP_SKIP_CHECK:
+      ncm_fit_esmcmc_set_skip_check (esmcmc, g_value_get_boolean (value));
+      break;
     case PROP_LOG_TIME_INTERVAL:
       self->log_time_interval = g_value_get_double (value);
       break;
@@ -432,6 +439,9 @@ _ncm_fit_esmcmc_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_MAX_RUNS_TIME:
       g_value_set_double (value, self->max_runs_time);
+      break;
+    case PROP_SKIP_CHECK:
+      g_value_set_boolean (value, ncm_fit_esmcmc_get_skip_check (esmcmc));
       break;
     case PROP_LOG_TIME_INTERVAL:
       g_value_set_double (value, self->log_time_interval);
@@ -603,6 +613,13 @@ ncm_fit_esmcmc_class_init (NcmFitESMCMCClass *klass)
                                                         "Maximum time between runs",
                                                         1.0, G_MAXDOUBLE, 2.0 * 60.0 * 60.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_SKIP_CHECK,
+                                   g_param_spec_boolean ("skip-check",
+                                                         NULL,
+                                                         "Skip check",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_LOG_TIME_INTERVAL,
                                    g_param_spec_double ("log-time-interval",
@@ -1030,6 +1047,39 @@ ncm_fit_esmcmc_set_max_runs_time (NcmFitESMCMC *esmcmc, gdouble max_runs_time)
 
   g_assert_cmpfloat (max_runs_time, >=, 1.0);
   self->max_runs_time = max_runs_time;
+}
+
+/**
+ * ncm_fit_esmcmc_set_skip_check:
+ * @esmcmc: a #NcmFitESMCMC
+ * @skip_check: a boolean
+ *
+ * Set whether to skip the check of the last ensemble in the catalog when continuing a
+ * run.
+ */
+void
+ncm_fit_esmcmc_set_skip_check (NcmFitESMCMC *esmcmc, gboolean skip_check)
+{
+  NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
+
+  self->skip_check = skip_check;
+}
+
+/**
+ * ncm_fit_esmcmc_get_skip_check:
+ * @esmcmc: a #NcmFitESMCMC
+ *
+ * Get whether to skip the check of the last ensemble in the catalog when continuing a
+ * run.
+ *
+ * Returns: the value of the skip_check property.
+ */
+gboolean
+ncm_fit_esmcmc_get_skip_check (NcmFitESMCMC *esmcmc)
+{
+  NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
+
+  return self->skip_check;
 }
 
 /**
@@ -1621,7 +1671,7 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
     }
   }
 
-  if (read_from_cat)
+  if (read_from_cat && !self->skip_check)
   {
     const guint len   = ncm_mset_catalog_len (self->mcat);
     const guint start = len > self->nwalkers ? len - self->nwalkers : 0;
@@ -1631,7 +1681,9 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
       if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
       {
         ncm_cfg_msg_sepa ();
-        g_message ("# NcmFitESMCMC: Last ensemble failed in the m2lnL check, the catalog may be corrupted, removing last ensemble and retrying...\n");
+        g_message ("# NcmFitESMCMC: Last ensemble failed in the m2lnL check, the "
+                   "catalog may be corrupted, removing last ensemble and "
+                   "retrying...\n");
       }
 
       ncm_fit_esmcmc_end_run (esmcmc);

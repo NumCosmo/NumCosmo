@@ -37,7 +37,7 @@
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo_priors.h>
 #include <numcosmo/nc_powspec_ml.h>
-#include <numcosmo/nc_powspec_ml_fix_spline.h>
+#include <numcosmo/nc_powspec_ml_spline.h>
 #include <numcosmo/nc_powspec_ml_transfer.h>
 #include <numcosmo/nc_powspec_ml_cbe.h>
 #include <numcosmo/nc_powspec_mnl.h>
@@ -57,23 +57,25 @@
 #include <numcosmo/nc_hireion_camb.h>
 
 /* Perturbations */
-#include <numcosmo/perturbations/nc_hipert.h>
-#include <numcosmo/perturbations/nc_hipert_bg_var.h>
-#include <numcosmo/perturbations/nc_hipert_wkb.h>
-#include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 #include <numcosmo/perturbations/nc_hipert_adiab.h>
-#include <numcosmo/perturbations/nc_hipert_gw.h>
-#include <numcosmo/perturbations/nc_hipert_two_fluids.h>
-#include <numcosmo/perturbations/nc_hipert_boltzmann.h>
-#include <numcosmo/perturbations/nc_hipert_boltzmann_std.h>
+#include <numcosmo/perturbations/nc_hipert_bg_var.h>
 #include <numcosmo/perturbations/nc_hipert_boltzmann_cbe.h>
-#include <numcosmo/perturbations/nc_hipert_first_order.h>
-#include <numcosmo/perturbations/nc_hipert_grav.h>
-#include <numcosmo/perturbations/nc_hipert_grav_einstein.h>
-#include <numcosmo/perturbations/nc_hipert_comp.h>
+#include <numcosmo/perturbations/nc_hipert_boltzmann_std.h>
+#include <numcosmo/perturbations/nc_hipert_boltzmann.h>
 #include <numcosmo/perturbations/nc_hipert_comp_pb.h>
+#include <numcosmo/perturbations/nc_hipert_comp.h>
+#include <numcosmo/perturbations/nc_hipert_em.h>
+#include <numcosmo/perturbations/nc_hipert_first_order.h>
+#include <numcosmo/perturbations/nc_hipert_grav_einstein.h>
+#include <numcosmo/perturbations/nc_hipert_grav.h>
+#include <numcosmo/perturbations/nc_hipert_gw.h>
+#include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
+#include <numcosmo/perturbations/nc_hipert_two_fluids.h>
+#include <numcosmo/perturbations/nc_hipert_wkb.h>
+#include <numcosmo/perturbations/nc_hipert.h>
 
 /* Model implementations */
+#include <numcosmo/nc_de_cont.h>
 #include <numcosmo/model/nc_hicosmo_idem2.h>
 #include <numcosmo/model/nc_hicosmo_gcg.h>
 #include <numcosmo/model/nc_hicosmo_de.h>
@@ -89,12 +91,14 @@
 #include <numcosmo/model/nc_hicosmo_qspline.h>
 #include <numcosmo/model/nc_hicosmo_qrbf.h>
 #include <numcosmo/model/nc_hicosmo_qgrw.h>
+#include <numcosmo/model/nc_hicosmo_qgw.h>
 #include <numcosmo/model/nc_hicosmo_Vexp.h>
 #include <numcosmo/model/nc_hiprim_power_law.h>
 #include <numcosmo/model/nc_hiprim_atan.h>
 #include <numcosmo/model/nc_hiprim_expc.h>
 #include <numcosmo/model/nc_hiprim_bpl.h>
 #include <numcosmo/model/nc_hiprim_sbpl.h>
+#include <numcosmo/model/nc_hiprim_two_fluids.h>
 
 /* Large Scale Structure / Structure Formation */
 #include <numcosmo/lss/nc_window.h>
@@ -143,22 +147,22 @@
 #include <numcosmo/lss/nc_cluster_mass_ascaso.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_pseudo_counts.h>
-#include <numcosmo/lss/nc_galaxy_redshift.h>
-#include <numcosmo/lss/nc_galaxy_redshift_spec.h>
-#include <numcosmo/lss/nc_galaxy_redshift_spline.h>
-#include <numcosmo/lss/nc_galaxy_redshift_gauss.h>
-#include <numcosmo/lss/nc_galaxy_wl.h>
-#include <numcosmo/lss/nc_galaxy_wl_dist.h>
-#include <numcosmo/lss/nc_galaxy_wl_ellipticity_gauss.h>
-#include <numcosmo/lss/nc_galaxy_wl_ellipticity_kde.h>
-#include <numcosmo/lss/nc_galaxy_wl_ellipticity_binned.h>
-#include <numcosmo/lss/nc_galaxy_wl_proj.h>
 #include <numcosmo/lss/nc_cor_cluster_cmb_lens_limber.h>
 #include <numcosmo/lss/nc_wl_surface_mass_density.h>
 #include <numcosmo/lss/nc_reduced_shear_cluster_mass.h>
 #include <numcosmo/lss/nc_reduced_shear_calib.h>
 #include <numcosmo/lss/nc_reduced_shear_calib_wtg.h>
 #include <numcosmo/lss/nc_galaxy_selfunc.h>
+
+/* Galaxy / Galaxy sample distributions */
+#include <numcosmo/galaxy/nc_galaxy_sd_position.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_position_flat.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_position_lsst_srd.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_z_proxy.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_z_proxy_gauss.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_z_proxy_dirac.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_shape_gauss.h>
 
 /* Observable data */
 #include <numcosmo/data/nc_data_snia.h>
@@ -183,7 +187,6 @@
 #include <numcosmo/data/nc_data_cluster_ncounts_gauss.h>
 #include <numcosmo/data/nc_data_cluster_pseudo_counts.h>
 #include <numcosmo/data/nc_data_cluster_wl.h>
-#include <numcosmo/data/nc_data_reduced_shear_cluster_mass.h>
 #include <numcosmo/data/nc_data_planck_lkl.h>
 #include <numcosmo/data/nc_data_xcor.h>
 
@@ -197,5 +200,7 @@
 #include <numcosmo/xcor/nc_xcor_limber_kernel_gal.h>
 #include <numcosmo/xcor/nc_xcor_limber_kernel_CMB_lensing.h>
 #include <numcosmo/xcor/nc_xcor_limber_kernel_weak_lensing.h>
+#include <numcosmo/xcor/nc_xcor_limber_kernel_tSZ.h>
 
 #endif /* _NUMCOSMO_H */
+

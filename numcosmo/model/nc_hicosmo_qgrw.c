@@ -26,15 +26,18 @@
 /**
  * SECTION:nc_hicosmo_qgrw
  * @title: NcHICosmoQGRW
- * @short_description: Radiation plus $w$-fluid model with a quantum generated bounce phase model.
+ * @short_description: Radiation plus $w$-fluid model with a quantum generated bounce
+ * phase model.
  *
- * In this model the adiabatic mode $\zeta$ has its mass, speed of sound square $c_s^2$ and frequency square $\nu_\zeta^2$ given by
- * \begin{align}
- * m_\zeta &= 3 \Delta_\bar{K}\sqrt{\Omega_{w0}} x^{-3(1-w)/2}\frac{(1 + w) +  4R/3}{c_s^2}\frac{1}{\sqrt{(1-exp(-2\vert\alpha\vert)) + (1-exp(-3(1-w)\vert\alpha\vert))}}, \\\\
+ * In this model the adiabatic mode $\zeta$ has its mass, speed of sound square $c_s^2$
+ * and frequency square $\nu_\zeta^2$ given by \begin{align} m_\zeta &= 3
+ * \Delta_\bar{K}\sqrt{\Omega_{w0}} x^{-3(1-w)/2}\frac{(1 + w) +
+ * 4R/3}{c_s^2}\frac{1}{\sqrt{(1-exp(-2\vert\alpha\vert)) +
+ * (1-exp(-3(1-w)\vert\alpha\vert))}}, \\\\
  * c_s^2 &= \frac{w (1 + w) + 4R/9}{(1+w) + 4R/3}, \\\\
- * \nu_\zeta^2 &= \frac {c_s^2 k^2}{\Omega_{w0} x^{1+3w} ((1-exp(-2\vert\alpha\vert)) + (1-exp(-3(1-w)\vert\alpha\vert)))},
- * \end{align}
- * where $$R \equiv \frac{\Omega_{r0} x}{\Omega_{w0} x^{3w}}.$$
+ * \nu_\zeta^2 &= \frac {c_s^2 k^2}{\Omega_{w0} x^{1+3w} ((1-exp(-2\vert\alpha\vert)) +
+ * (1-exp(-3(1-w)\vert\alpha\vert)))}, \end{align} where $$R \equiv \frac{\Omega_{r0}
+ * x}{\Omega_{w0} x^{3w}}.$$
  *
  */
 
@@ -283,52 +286,52 @@ _nc_hicosmo_qgrw_xb (NcHICosmo *cosmo)
 #define _d2ln(pn) (d2 ## pn / pn - d1ln ## pn * d1ln ## pn)
 #define _d3ln(pn) (d3 ## pn / pn - d1ln ## pn * d1ln ## pn * d1ln ## pn - 3.0 * d1ln ## pn * d2ln ## pn)
 
-#define _NC_HICOSMO_QGRW_WKB_COMMON1 \
-        const gdouble w2       = 1.0 / 3.0; \
-        const gdouble alpha2   = alpha * alpha; \
-        const gdouble alpha2_2 = alpha2 * 0.5; \
-        const gdouble w        = W; \
-        const gdouble Omegar   = OMEGA_R; \
-        const gdouble Omegaw   = OMEGA_W; \
- \
-        const gdouble x   = nc_hicosmo_x_alpha (cosmo, alpha); \
-        const gdouble x2  = x * x; \
-        const gdouble x3  = x2 * x; \
-        const gdouble x3w = pow (x3, w); \
- \
-        const gdouble onepw     = 1.0 + w; \
-        const gdouble threex1mw = 3.0 * (1.0 - w); \
-        const gdouble onepw2    = 4.0 / 3.0; \
- \
-        const gdouble R    = Omegar * x / (Omegaw * x3w); \
+#define _NC_HICOSMO_QGRW_WKB_COMMON1                                               \
+        const gdouble w2       = 1.0 / 3.0;                                        \
+        const gdouble alpha2   = alpha * alpha;                                    \
+        const gdouble alpha2_2 = alpha2 * 0.5;                                     \
+        const gdouble w        = W;                                                \
+        const gdouble Omegar   = OMEGA_R;                                          \
+        const gdouble Omegaw   = OMEGA_W;                                          \
+                                                                                   \
+        const gdouble x   = nc_hicosmo_x_alpha (cosmo, alpha);                     \
+        const gdouble x2  = x * x;                                                 \
+        const gdouble x3  = x2 * x;                                                \
+        const gdouble x3w = pow (x3, w);                                           \
+                                                                                   \
+        const gdouble onepw     = 1.0 + w;                                         \
+        const gdouble threex1mw = 3.0 * (1.0 - w);                                 \
+        const gdouble onepw2    = 4.0 / 3.0;                                       \
+                                                                                   \
+        const gdouble R    = Omegar * x / (Omegaw * x3w);                          \
         const gdouble p2f1 = 0.5 * threex1mw * ncm_exprel (-threex1mw * alpha2_2); \
-        const gdouble p2f2 = R * ncm_exprel (-2.0 * alpha2_2); \
-        const gdouble p2   = p2f1 + p2f2; \
+        const gdouble p2f2 = R * ncm_exprel (-2.0 * alpha2_2);                     \
+        const gdouble p2   = p2f1 + p2f2;                                          \
         const gdouble p4   = onepw + onepw2 * R;
 
-#define _NC_HICOSMO_QGRW_WKB_COMMON2 \
-        const gdouble onem3w = 1.0 - 3.0 * w; \
- \
-        const gdouble d1R = onem3w * R; \
- \
-        const gdouble d1p2f1 = 0.5 * gsl_pow_2 (threex1mw) * ncm_d1exprel (-threex1mw * alpha2_2); \
+#define _NC_HICOSMO_QGRW_WKB_COMMON2                                                                          \
+        const gdouble onem3w = 1.0 - 3.0 * w;                                                                 \
+                                                                                                              \
+        const gdouble d1R = onem3w * R;                                                                       \
+                                                                                                              \
+        const gdouble d1p2f1 = 0.5 * gsl_pow_2 (threex1mw) * ncm_d1exprel (-threex1mw * alpha2_2);            \
         const gdouble d1p2f2 = 2.0 * R * ncm_d1exprel (-2.0 * alpha2_2) + d1R * ncm_exprel (-2.0 * alpha2_2); \
-        const gdouble d1p2   = d1p2f1 + d1p2f2; \
-        const gdouble d1p4   = onepw2 * d1R; \
- \
-        const gdouble d1lnp2 = _d1ln (p2); \
+        const gdouble d1p2   = d1p2f1 + d1p2f2;                                                               \
+        const gdouble d1p4   = onepw2 * d1R;                                                                  \
+                                                                                                              \
+        const gdouble d1lnp2 = _d1ln (p2);                                                                    \
         const gdouble d1lnp4 = _d1ln (p4);
 
 #define _NC_HICOSMO_QGRW_WKB_COMMON22 \
         const gdouble d2R = onem3w * d1R;
 
-#define _NC_HICOSMO_QGRW_WKB_COMMON222 \
-        const gdouble d2p2f1 = 0.5 * gsl_pow_3 (threex1mw) * ncm_d2exprel (-threex1mw * alpha2_2); \
+#define _NC_HICOSMO_QGRW_WKB_COMMON222                                                                                                                     \
+        const gdouble d2p2f1 = 0.5 * gsl_pow_3 (threex1mw) * ncm_d2exprel (-threex1mw * alpha2_2);                                                         \
         const gdouble d2p2f2 = 4.0 * R * ncm_d2exprel (-2.0 * alpha2_2) + 4.0 * d1R * ncm_d1exprel (-2.0 * alpha2_2) + d2R * ncm_exprel (-2.0 * alpha2_2); \
-        const gdouble d2p2   = d2p2f1 + d2p2f2; \
+        const gdouble d2p2   = d2p2f1 + d2p2f2;                                                                                                            \
         const gdouble d2lnp2 = _d2ln (p2);
 
-#define _NC_HICOSMO_QGRW_WKB_COMMON2222 \
+#define _NC_HICOSMO_QGRW_WKB_COMMON2222      \
         const gdouble d2p4   = onepw2 * d2R; \
         const gdouble d2lnp4 = _d2ln (p4);
 
@@ -339,22 +342,22 @@ _nc_hicosmo_qgrw_xb (NcHICosmo *cosmo)
         const gdouble p5 = sqrt (x3 / (x3w * Omegaw)) / 3.0;
 
 #define _NC_HICOSMO_QGRW_WKB_COMMON4 \
-        const gdouble k2 = k * k; \
+        const gdouble k2 = k * k;    \
         const gdouble p0 = k2 / (Omegaw * x * x3w);
 
 #define _NC_HICOSMO_QGRW_WKB_COMMON44 \
         const gdouble p3 = w2 * onepw + w * onepw2 * R;
 
-#define _NC_HICOSMO_QGRW_WKB_COMMON5 \
+#define _NC_HICOSMO_QGRW_WKB_COMMON5          \
         const gdouble onep3w = 1.0 + 3.0 * w; \
-        const gdouble d1p0   = -onep3w * p0; \
+        const gdouble d1p0   = -onep3w * p0;  \
         const gdouble d1lnp0 = _d1ln (p0);
 
-#define _NC_HICOSMO_QGRW_WKB_COMMON51 \
+#define _NC_HICOSMO_QGRW_WKB_COMMON51             \
         const gdouble d1p1   = w2 * onepw2 * d1R; \
         const gdouble d1lnp1 = _d1ln (p1);
 
-#define _NC_HICOSMO_QGRW_WKB_COMMON53 \
+#define _NC_HICOSMO_QGRW_WKB_COMMON53            \
         const gdouble d1p3   = w * onepw2 * d1R; \
         const gdouble d1lnp3 = _d1ln (p3);
 
@@ -364,7 +367,7 @@ _nc_hicosmo_qgrw_xb (NcHICosmo *cosmo)
 #define _NC_HICOSMO_QGRW_WKB_D1LNSQRTNUZETA \
         const gdouble d1lnsqrtnuzeta = 0.25 * (d1lnp0 + d1lnp1 - d1lnp2 - d1lnp4);
 
-#define _NC_HICOSMO_QGRW_WKB_COMMON56 \
+#define _NC_HICOSMO_QGRW_WKB_COMMON56          \
         const gdouble onep3w_2 = onep3w * 0.5; \
         const gdouble d1lnp6   = onep3w_2;
 
@@ -374,28 +377,28 @@ _nc_hicosmo_qgrw_xb (NcHICosmo *cosmo)
 #define _NC_HICOSMO_QGRW_WKB_COMMON555 \
         const gdouble d2lnp0 = 0.0;
 
-#define _NC_HICOSMO_QGRW_WKB_COMMON5555 \
+#define _NC_HICOSMO_QGRW_WKB_COMMON5555    \
         const gdouble d2lnp3 = _d2ln (p3); \
         const gdouble d2lnp6 = 0.0;
 
 #define _NC_HICOSMO_QGRW_WKB_NUZETA2 \
         const gdouble nuzeta2 = p0 * p1 / (p2 * p4);
 
-#define _NC_HICOSMO_QGRW_WKB_D1LNP5 \
-        const gdouble threex1mw_2 = threex1mw * 0.5; \
+#define _NC_HICOSMO_QGRW_WKB_D1LNP5                   \
+        const gdouble threex1mw_2 = threex1mw * 0.5;  \
         const gdouble d1p5        = threex1mw_2 * p5; \
         const gdouble d1lnp5      = _d1ln (p5);
 
 #define _NC_HICOSMO_QGRW_WKB_DLNSQRTMZETANUZETA \
-        _NC_HICOSMO_QGRW_WKB_D1LNP5; \
+        _NC_HICOSMO_QGRW_WKB_D1LNP5;            \
         const gdouble d1lnsqrtmzetanuzeta = 0.75 * d1lnp4 + 0.25 * d1lnp0 - 0.25 * d1lnp1 - 0.5 * d1lnp2 - 0.5 * d1lnp5 + 1.0 / alpha2;
 
-#define _NC_HICOSMO_QGRW_WKB_VZETA \
-        const gdouble d2p1                              = w2 * onepw2 * d2R; \
-        const gdouble d2lnp1                            = _d2ln (p1); \
-        const gdouble d2lnp5                            = 0.0; \
+#define _NC_HICOSMO_QGRW_WKB_VZETA                                                                                                                               \
+        const gdouble d2p1                              = w2 * onepw2 * d2R;                                                                                     \
+        const gdouble d2lnp1                            = _d2ln (p1);                                                                                            \
+        const gdouble d2lnp5                            = 0.0;                                                                                                   \
         const gdouble d2lnsqrtmzetanuzeta               = 0.75 * d2lnp4 + 0.25 * d2lnp0 - 0.25 * d2lnp1 - 0.5 * d2lnp2 - 0.5 * d2lnp5 + 2.0 / (alpha2 * alpha2); \
-        const gdouble d2sqrtmzetanuzeta_sqrtmzetanuzeta = d1lnsqrtmzetanuzeta * d1lnsqrtmzetanuzeta + d2lnsqrtmzetanuzeta; \
+        const gdouble d2sqrtmzetanuzeta_sqrtmzetanuzeta = d1lnsqrtmzetanuzeta * d1lnsqrtmzetanuzeta + d2lnsqrtmzetanuzeta;                                       \
         const gdouble Vzeta                             = (alpha2 * d2sqrtmzetanuzeta_sqrtmzetanuzeta -  d1lnsqrtmzetanuzeta) - 2.0 * alpha2 * d1lnsqrtmzetanuzeta * d1lnsqrtnuzeta;
 
 #define _NC_HICOSMO_QGRW_WKB_NUA2 \
@@ -410,9 +413,9 @@ _nc_hicosmo_qgrw_xb (NcHICosmo *cosmo)
 #define _NC_HICOSMO_QGRW_WKB_DLNSQRTMSNUS \
         const gdouble d1lnsqrtmSnuS = (0.25 * d1lnp0 + 0.5 * d1lnp6) * 0.0 + 0.75 * d1lnp4 - 0.25 * d1lnp3;
 
-#define _NC_HICOSMO_QGRW_WKB_VS \
+#define _NC_HICOSMO_QGRW_WKB_VS                                                                             \
         const gdouble d2lnsqrtmSnuS         = 0.25 * d2lnp0 + 0.75 * d2lnp4 + 0.5 * d2lnp6 - 0.25 * d2lnp3; \
-        const gdouble d2sqrtmSnuS_sqrtmSnuS = d1lnsqrtmSnuS * d1lnsqrtmSnuS + d2lnsqrtmSnuS; \
+        const gdouble d2sqrtmSnuS_sqrtmSnuS = d1lnsqrtmSnuS * d1lnsqrtmSnuS + d2lnsqrtmSnuS;                \
         const gdouble VS                    = (alpha2 * d2sqrtmSnuS_sqrtmSnuS -  d1lnsqrtmSnuS) - 2.0 * alpha2 * d1lnsqrtmSnuS * d1lnsqrtnuS;
 
 #define _NC_HICOSMO_QGRW_WKB_NUB2 \
@@ -421,21 +424,21 @@ _nc_hicosmo_qgrw_xb (NcHICosmo *cosmo)
 #define _NC_HICOSMO_QGRW_WKB_P6 \
         const gdouble p6 = sqrt (x3 / (x3w * Omegaw)) / (3.0 * onepw * onepw2 * R);
 
-#define _NC_HICOSMO_QGRW_WKB_MS \
+#define _NC_HICOSMO_QGRW_WKB_MS  \
         _NC_HICOSMO_QGRW_WKB_P6; \
         const gdouble mS = sqrt (p2) * p4 * p4 * p6 / p3;
 
 #define _NC_HICOSMO_QGRW_ONE_M_Y2 \
         const gdouble one_m_y2 = w * w2 * gsl_pow_2 (onepw + onepw2 * R) / (p1 * p3);
 
-#define _NC_HICOSMO_QGRW_ODE_FULL_DIFF \
-        /*const gdouble d1lnp1mp3 = -onepw2 * d1R / (onepw - onepw2 * R);*/ \
-        const gdouble dlnmzetanuzeta2           = -2.0 / alpha - alpha * (d1lnp0 - 1.5 * d1lnp2 - d1lnp5); \
-        const gdouble dlnmSnuS2                 = -alpha * (d1lnp0 - 0.5 * d1lnp2 + d1lnp4 + d1lnp6); \
+#define _NC_HICOSMO_QGRW_ODE_FULL_DIFF                                                                        \
+        /*const gdouble d1lnp1mp3 = -onepw2 * d1R / (onepw - onepw2 * R);*/                                   \
+        const gdouble dlnmzetanuzeta2           = -2.0 / alpha - alpha * (d1lnp0 - 1.5 * d1lnp2 - d1lnp5);    \
+        const gdouble dlnmSnuS2                 = -alpha * (d1lnp0 - 0.5 * d1lnp2 + d1lnp4 + d1lnp6);         \
         const gdouble dlnmzetanuzeta2_mSnuS2    = -2.0 / alpha + alpha * (d1lnp2 + d1lnp4 + d1lnp5 + d1lnp6); \
-        const gdouble dlnlambda_s2_lambda_zeta2 = -alpha * d1R / R; \
-        /*const gdouble dlnnu_plus2 = - alpha * (d1lnp0 - d1lnp2);*/ \
-        const gdouble dlnnu_minus2         = -alpha * (d1lnp0 - d1lnp2); \
+        const gdouble dlnlambda_s2_lambda_zeta2 = -alpha * d1R / R;                                           \
+        /*const gdouble dlnnu_plus2 = - alpha * (d1lnp0 - d1lnp2);*/                                          \
+        const gdouble dlnnu_minus2         = -alpha * (d1lnp0 - d1lnp2);                                      \
         const gdouble dlnmSnuS2_dlnnu_plus = -alpha * (d1lnp4 + 0.0 * (0.5 * d1lnp0 + d1lnp6));
 
 /****************************************************************************

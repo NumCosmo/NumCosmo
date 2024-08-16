@@ -37,14 +37,8 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING (nc_xcor_limber_kernel_cmb_lensing_get_type ())
-#define NC_XCOR_LIMBER_KERNEL_CMB_LENSING(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING, NcXcorLimberKernelCMBLensing))
-#define NC_XCOR_LIMBER_KERNEL_CMB_LENSING_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING, NcXcorLimberKernelCMBLensingClass))
-#define NC_IS_XCOR_LIMBER_KERNEL_CMB_LENSING(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING))
-#define NC_IS_XCOR_LIMBER_KERNEL_CMB_LENSING_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING))
-#define NC_XCOR_LIMBER_KERNEL_CMB_LENSING_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING, NcXcorLimberKernelCMBLensingClass))
 
-typedef struct _NcXcorLimberKernelCMBLensingClass NcXcorLimberKernelCMBLensingClass;
-typedef struct _NcXcorLimberKernelCMBLensing NcXcorLimberKernelCMBLensing;
+G_DECLARE_FINAL_TYPE (NcXcorLimberKernelCMBLensing, nc_xcor_limber_kernel_cmb_lensing, NC, XCOR_LIMBER_KERNEL_CMB_LENSING, NcXcorLimberKernel)
 
 /**
  * NcXcorLimberKernelCMBLensingSParams:
@@ -58,28 +52,6 @@ typedef enum /*< enum,underscore_name=NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAMS 
 } NcXcorLimberKernelCMBLensingSParams;
 
 #define NC_XCOR_LIMBER_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL (0.0)
-
-struct _NcXcorLimberKernelCMBLensing
-{
-  /*< private >*/
-  NcXcorLimberKernel parent_instance;
-  
-  NcDistance *dist;
-  NcRecomb *recomb;
-  
-  NcmVector *Nl;
-  guint Nlmax;
-  
-  gdouble xi_lss;
-};
-
-struct _NcXcorLimberKernelCMBLensingClass
-{
-  /*< private >*/
-  NcXcorLimberKernelClass parent_class;
-};
-
-GType nc_xcor_limber_kernel_cmb_lensing_get_type (void) G_GNUC_CONST;
 
 NcXcorLimberKernelCMBLensing *nc_xcor_limber_kernel_cmb_lensing_new (NcDistance *dist, NcRecomb *recomb, NcmVector *Nl);
 

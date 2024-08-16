@@ -2110,7 +2110,7 @@ nc_cbe_thermodyn_get_Xe (NcCBE *cbe)
   const guint size = cbe->priv->pth.tt_size;
   NcmVector *z_v   = ncm_vector_new (size);
   NcmVector *Xe_v  = ncm_vector_new (size);
-  NcmSpline *Xe_s  = ncm_spline_cubic_notaknot_new_full (z_v, Xe_v, FALSE);
+  NcmSpline *Xe_s  = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (z_v, Xe_v, FALSE));
   guint i;
 
   for (i = 0; i < size; i++)

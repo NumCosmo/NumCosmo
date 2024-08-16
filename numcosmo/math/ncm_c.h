@@ -80,6 +80,7 @@ NCM_INLINE gdouble ncm_c_G (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_planck_length (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_thomson_cs (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_stefan_boltzmann (void) G_GNUC_CONST;
+NCM_INLINE gdouble ncm_c_magnetic_constant (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_mass_atomic (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_mass_e (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_mass_p (void) G_GNUC_CONST;
@@ -100,6 +101,7 @@ NCM_INLINE gdouble ncm_c_lightyear_pc (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_Glightyear_Mpc (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_hc (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_fine_struct_square (void) G_GNUC_CONST;
+NCM_INLINE gdouble ncm_c_electric_constant (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_AR (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_c2 (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_planck_length2 (void) G_GNUC_CONST;
@@ -549,6 +551,12 @@ ncm_c_stefan_boltzmann (void)
 }
 
 NCM_INLINE gdouble
+ncm_c_magnetic_constant (void)
+{
+  return 1.25663706212e-6;
+}
+
+NCM_INLINE gdouble
 ncm_c_mass_atomic (void)
 {
   return 1.66053906660e-27;
@@ -640,6 +648,12 @@ NCM_INLINE gdouble
 ncm_c_fine_struct_square (void)
 {
   return ncm_c_fine_struct () * ncm_c_fine_struct ();
+}
+
+NCM_INLINE gdouble
+ncm_c_electric_constant (void)
+{
+  return 1.0 / (ncm_c_magnetic_constant () * ncm_c_c () * ncm_c_c ());
 }
 
 NCM_INLINE gdouble
@@ -1558,7 +1572,7 @@ ncm_c_crit_number_density_n (void)
 NCM_INLINE gdouble
 ncm_c_blackbody_energy_density (void)
 {
-  return 4.0 * (gsl_pow_2 (ncm_c_pi ()) * gsl_pow_4 (ncm_c_kb ()) / (60.0 * gsl_pow_3 (ncm_c_h () / (2.0 * ncm_c_pi ())) * gsl_pow_2 (ncm_c_c ()))) / ncm_c_c ();
+  return 4.0 * ncm_c_stefan_boltzmann () / ncm_c_c ();
 }
 
 NCM_INLINE gdouble

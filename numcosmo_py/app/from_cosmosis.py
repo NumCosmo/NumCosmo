@@ -21,7 +21,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""NumCosmo APP subcommand to convert CosmoSIS likelihoods to NumCosmo"""
+"""NumCosmo APP subcommand to convert CosmoSIS likelihoods to NumCosmo."""
 
 from typing import Optional, Annotated
 from pathlib import Path
@@ -82,12 +82,17 @@ if COSMOSIS:
             ),
         ] = False,
     ):
-        """Converts a Cosmosis ini file to a NumCosmo yaml file, containing
-        the same information. The NumCosmo yaml file can be used to run the
-        same likelihoods in NumCosmo.
+        """Convert a Cosmosis ini file to a NumCosmo yaml file.
 
+        The NumCosmo yaml will contain the model builders and experiment matching the
+        Cosmosis ini file. The NumCosmo yaml file can be used to run the same
+        likelihoods in NumCosmo.
+
+        Due to the differences between the two frameworks, some likelihoods may not be
+        converted correctly, usually due to the different parameter names or the
+        different parameterizations of the models. In this case, the user should
+        manually adjust the model builders.
         """
-
         Ncm.cfg_init()
 
         if outfile is None:

@@ -78,10 +78,6 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_cfg.h"
 
-
-#ifndef NUMCOSMO_GIR_SCAN
-#endif /* NUMCOSMO_GIR_SCAN */
-
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvode/cvode.h>
 
@@ -595,7 +591,7 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
   gf->Da0 = 2.5 * Omega_m0 * (NV_Ith_S (self->yv, 2) - dDa0);
 
   if (gf->s == NULL)
-    gf->s = ncm_spline_cubic_notaknot_new ();
+    gf->s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
   {
     NcmVector *xv = ncm_vector_new_array (x_array);

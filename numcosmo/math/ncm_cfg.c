@@ -57,10 +57,11 @@
 #include "math/ncm_spline2d_spline.h"
 #include "math/ncm_integral1d.h"
 #include "math/ncm_integral_nd.h"
-#include "math/ncm_powspec.h"
+#include "math/ncm_powspec_corr3d.h"
 #include "math/ncm_powspec_filter.h"
 #include "math/ncm_powspec_sphere_proj.h"
-#include "math/ncm_powspec_corr3d.h"
+#include "math/ncm_powspec_spline2d.h"
+#include "math/ncm_powspec.h"
 #include "math/ncm_model.h"
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_model_builder.h"
@@ -101,14 +102,16 @@
 #include "model/nc_hicosmo_de_cpl.h"
 #include "model/nc_hicosmo_de_jbp.h"
 #include "model/nc_hicosmo_qgrw.h"
+#include "model/nc_hicosmo_qgw.h"
 #include "model/nc_hicosmo_Vexp.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
 #include "model/nc_hicosmo_de_reparam_cmb.h"
-#include "model/nc_hiprim_power_law.h"
 #include "model/nc_hiprim_atan.h"
-#include "model/nc_hiprim_expc.h"
 #include "model/nc_hiprim_bpl.h"
+#include "model/nc_hiprim_expc.h"
+#include "model/nc_hiprim_power_law.h"
 #include "model/nc_hiprim_sbpl.h"
+#include "model/nc_hiprim_two_fluids.h"
 #include "lss/nc_window_tophat.h"
 #include "lss/nc_window_gaussian.h"
 #include "lss/nc_growth_func.h"
@@ -134,14 +137,6 @@
 #include "lss/nc_multiplicity_func_watson.h"
 #include "lss/nc_halo_mass_function.h"
 #include "lss/nc_galaxy_acf.h"
-#include "lss/nc_galaxy_redshift_spec.h"
-#include "lss/nc_galaxy_redshift_spline.h"
-#include "lss/nc_galaxy_redshift_gauss.h"
-#include "lss/nc_galaxy_wl.h"
-#include "lss/nc_galaxy_wl_ellipticity_gauss.h"
-#include "lss/nc_galaxy_wl_ellipticity_kde.h"
-#include "lss/nc_galaxy_wl_ellipticity_binned.h"
-#include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_mass_nodist.h"
 #include "lss/nc_cluster_mass_lnnormal.h"
@@ -166,17 +161,26 @@
 #include "lss/nc_reduced_shear_cluster_mass.h"
 #include "lss/nc_reduced_shear_calib.h"
 #include "lss/nc_reduced_shear_calib_wtg.h"
+#include "galaxy/nc_galaxy_sd_position.h"
+#include "galaxy/nc_galaxy_sd_position_flat.h"
+#include "galaxy/nc_galaxy_sd_position_lsst_srd.h"
+#include "galaxy/nc_galaxy_sd_z_proxy.h"
+#include "galaxy/nc_galaxy_sd_z_proxy_gauss.h"
+#include "galaxy/nc_galaxy_sd_z_proxy_dirac.h"
+#include "galaxy/nc_galaxy_sd_shape.h"
+#include "galaxy/nc_galaxy_sd_shape_gauss.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_cbe.h"
 #include "nc_recomb_seager.h"
 #include "nc_hireion.h"
 #include "nc_hireion_camb.h"
-#include "nc_powspec_ml.h"
-#include "nc_powspec_ml_transfer.h"
 #include "nc_powspec_ml_cbe.h"
-#include "nc_powspec_mnl.h"
+#include "nc_powspec_ml_spline.h"
+#include "nc_powspec_ml_transfer.h"
+#include "nc_powspec_ml.h"
 #include "nc_powspec_mnl_halofit.h"
+#include "nc_powspec_mnl.h"
 #include "nc_snia_dist_cov.h"
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
@@ -196,7 +200,6 @@
 #include "data/nc_data_cluster_ncount.h"
 #include "data/nc_data_cluster_ncounts_gauss.h"
 #include "data/nc_data_cluster_wl.h"
-#include "data/nc_data_reduced_shear_cluster_mass.h"
 #include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
 #include "data/nc_data_hubble.h"
@@ -209,6 +212,7 @@
 #include "xcor/nc_xcor_limber_kernel_gal.h"
 #include "xcor/nc_xcor_limber_kernel_CMB_lensing.h"
 #include "xcor/nc_xcor_limber_kernel_weak_lensing.h"
+#include "xcor/nc_xcor_limber_kernel_tSZ.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <stdlib.h>
@@ -245,14 +249,14 @@ static gboolean _enable_msg         = TRUE;
 static gboolean _enable_msg_flush   = TRUE;
 static gsl_error_handler_t *gsl_err = NULL;
 
-# if (defined (__GNUC__) \
+# if (defined (__GNUC__)                                            \
   && ((__GNUC__ == 11 && __GNUC_MINOR__ >= 1) || (__GNUC__ >= 12))) \
   || (defined (__clang__) && (__clang_major__ >= 12))
 extern void __gcov_dump (void);
 extern void __gcov_reset (void);
 
-#  define __gcov_flush() \
-        do { \
+#  define __gcov_flush()                   \
+        do {                               \
           __gcov_dump (); __gcov_reset (); \
         } while (0)
 # else
@@ -297,7 +301,7 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
     /* print out all the frames to stderr */
     for (i = 0; i < size; i++)
     {
-      fprintf (_log_stream_err, "# (%s): %s-BACKTRACEA:[%02zd] %s\n", pname, log_domain, i, trace[i]);
+      fprintf (_log_stream_err, "# (%s): %s-BACKTRACE:[%02zd] %s\n", pname, log_domain, i, trace[i]);
     }
 
     g_free (trace);
@@ -311,8 +315,6 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
 
   abort ();
 }
-
-void clencurt_gen (int M);
 
 #ifdef HAVE_OPENBLAS_SET_NUM_THREADS
 void goto_set_num_threads (gint);
@@ -549,6 +551,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL_ND);
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
+  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPLINE2D);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPHERE_PROJ);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
@@ -610,6 +613,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_CPL);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_JBP);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGRW);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGW);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_VEXP);
 
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_OK);
@@ -621,11 +625,12 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_OK);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_CMB);
 
-  ncm_cfg_register_obj (NC_TYPE_HIPRIM_POWER_LAW);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_ATAN);
-  ncm_cfg_register_obj (NC_TYPE_HIPRIM_EXPC);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_BPL);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_EXPC);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_POWER_LAW);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_SBPL);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_TWO_FLUIDS);
 
   ncm_cfg_register_obj (NC_TYPE_CBE_PRECISION);
 
@@ -661,14 +666,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);
 
   ncm_cfg_register_obj (NC_TYPE_GALAXY_ACF);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPEC);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPLINE);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_GAUSS);
-
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_GAUSS);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_KDE);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_BINNED);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
@@ -704,6 +701,15 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB);
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB_WTG);
 
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_FLAT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_LSST_SRD);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY_DIRAC);
+
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
   ncm_cfg_register_obj (NC_TYPE_RECOMB);
@@ -714,6 +720,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HIREION_CAMB);
 
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML);
+  ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_SPLINE);
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_TRANSFER);
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_CBE);
 
@@ -746,7 +753,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNT);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS);
-  ncm_cfg_register_obj (NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);
 
@@ -756,6 +762,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_GAL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_TSZ);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
@@ -1169,7 +1176,7 @@ ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger)
 
   container.logger = logger;
 
-  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, &container);
+  _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_INFO | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message_logger, &container);
 }
 
 /**
@@ -2118,7 +2125,7 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
 
 /**
  * ncm_cfg_array_set_variant: (skip)
- * @a: a #GArray.
+ * @a: a GArray.
  * @var: a variant of array type.
  *
  * Transfers the data from @var to @a.
@@ -2137,7 +2144,7 @@ ncm_cfg_array_set_variant (GArray *a, GVariant *var)
 
 /**
  * ncm_cfg_array_to_variant: (skip)
- * @a: a #GArray.
+ * @a: a GArray.
  * @etype: element type.
  *
  * Creates a variant of array type from @a.

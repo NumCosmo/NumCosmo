@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            ncm_util.h
  *
@@ -119,100 +120,100 @@ NCM_INLINE gdouble ncm_util_great_circle_distance (gdouble ra1, gdouble dec1, gd
 
 #define ncm_util_exp10(x) (exp ((x) * M_LN10))
 
-#define NCM_GARRAY_MEMCPY(dest, src) \
-  G_STMT_START { \
-    g_assert_cmpuint ((src)->len, ==, (dest)->len); \
-    g_assert_cmpuint (g_array_get_element_size (src), ==, g_array_get_element_size (dest)); \
-    memcpy ((dest)->data, (src)->data, (src)->len * g_array_get_element_size (src)); \
-  } G_STMT_END
+#define NCM_GARRAY_MEMCPY(dest, src)                                                              \
+        G_STMT_START {                                                                            \
+          g_assert_cmpuint ((src)->len, ==, (dest)->len);                                         \
+          g_assert_cmpuint (g_array_get_element_size (src), ==, g_array_get_element_size (dest)); \
+          memcpy ((dest)->data, (src)->data, (src)->len * g_array_get_element_size (src));        \
+        } G_STMT_END
 
-#define NCM_GARRAY_DUP(dest, src) \
-  G_STMT_START { \
-    dest = g_array_sized_new (FALSE, FALSE, g_array_get_element_size (src), (src)->len); \
-    g_array_set_size ((dest), (src)->len); \
-    memcpy ((dest)->data, (src)->data, (src)->len * g_array_get_element_size (src)); \
-  } G_STMT_END
+#define NCM_GARRAY_DUP(dest, src)                                                              \
+        G_STMT_START {                                                                         \
+          dest = g_array_sized_new (FALSE, FALSE, g_array_get_element_size (src), (src)->len); \
+          g_array_set_size ((dest), (src)->len);                                               \
+          memcpy ((dest)->data, (src)->data, (src)->len * g_array_get_element_size (src));     \
+        } G_STMT_END
 
-#define ncm_assert_cmpdouble(n1, cmp, n2) \
-  do { \
-    if (ncm_cmp ((n1), (n2), GSL_DBL_EPSILON, 0.0) cmp 0); else \
-    _ncm_assertion_message_cmpdouble (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
-                                      #n1 " " #cmp " " #n2, (n1), #cmp, (n2), GSL_DBL_EPSILON, 0.0); \
-  } while (0)
+#define ncm_assert_cmpdouble(n1, cmp, n2)                                                                  \
+        do {                                                                                               \
+          if (ncm_cmp ((n1), (n2), GSL_DBL_EPSILON, 0.0) cmp 0); else                                      \
+          _ncm_assertion_message_cmpdouble (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC,                   \
+                                            #n1 " " #cmp " " #n2, (n1), #cmp, (n2), GSL_DBL_EPSILON, 0.0); \
+        } while (0)
 
-#define ncm_assert_cmpdouble_e(n1, cmp, n2, epsilon, abstol) \
-  do { \
-    if (ncm_cmp ((n1), (n2), (epsilon), (abstol)) cmp 0); else \
-    _ncm_assertion_message_cmpdouble (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
-                                      #n1 " " #cmp " " #n2, (n1), #cmp, (n2), (epsilon), (abstol)); \
-  } while (0)
+#define ncm_assert_cmpdouble_e(n1, cmp, n2, epsilon, abstol)                                              \
+        do {                                                                                              \
+          if (ncm_cmp ((n1), (n2), (epsilon), (abstol)) cmp 0); else                                      \
+          _ncm_assertion_message_cmpdouble (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC,                  \
+                                            #n1 " " #cmp " " #n2, (n1), #cmp, (n2), (epsilon), (abstol)); \
+        } while (0)
 
 #define NCM_TEST_GSL_RESULT(func, ret) \
-  if (ret != GSL_SUCCESS) g_error ("%s: %s", func, gsl_strerror (ret))
+        if (ret != GSL_SUCCESS) g_error ("%s: %s", func, gsl_strerror (ret))
 
 #define NCM_COMPLEX_ZERO \
-  { \
-    {0.0, 0.0} \
-  }
+        {                \
+          {0.0, 0.0}     \
+        }
 
 #define NCM_COMPLEX(p) ((NcmComplex *) (p))
 #define NCM_COMPLEX_PTR(p) ((NcmComplex **) (p))
 
-#define ncm_g_string_clear(s) \
-  G_STMT_START \
-  if (*(s) != NULL) \
-  { \
-    g_string_free (*(s), TRUE); *(s) = NULL; \
-  } \
-  G_STMT_END
+#define ncm_g_string_clear(s)                      \
+        G_STMT_START                               \
+        if (*(s) != NULL)                          \
+        {                                          \
+          g_string_free (*(s), TRUE); *(s) = NULL; \
+        }                                          \
+        G_STMT_END
 
 #define NCM_UNUSED(x) (void) (x)
 
 void _ncm_util_set_destroyed (gpointer b);
 
-#define NCM_TEST_FREE(cmd, obj) \
-  G_STMT_START { \
-    gboolean destroyed = FALSE; \
-    g_object_set_data_full (G_OBJECT (obj), "test-destroy", &destroyed, _ncm_util_set_destroyed); \
-    cmd (obj); \
-    g_assert (destroyed); \
-  } G_STMT_END
+#define NCM_TEST_FREE(cmd, obj)                                                                         \
+        G_STMT_START {                                                                                  \
+          gboolean destroyed = FALSE;                                                                   \
+          g_object_set_data_full (G_OBJECT (obj), "test-destroy", &destroyed, _ncm_util_set_destroyed); \
+          cmd (obj);                                                                                    \
+          g_assert (destroyed);                                                                         \
+        } G_STMT_END
 
-#define NCM_TEST_FAIL(cmd) \
-  G_STMT_START { \
-    if (g_test_subprocess ()) \
-    { \
-      cmd; \
-      exit (0); \
-    } \
-    else \
-    { \
-      g_test_trap_subprocess (NULL, 0, 0); \
-      g_test_trap_assert_failed (); \
-    } \
-  } G_STMT_END
+#define NCM_TEST_FAIL(cmd)                       \
+        G_STMT_START {                           \
+          if (g_test_subprocess ())              \
+          {                                      \
+            cmd;                                 \
+            exit (0);                            \
+          }                                      \
+          else                                   \
+          {                                      \
+            g_test_trap_subprocess (NULL, 0, 0); \
+            g_test_trap_assert_failed ();        \
+          }                                      \
+        } G_STMT_END
 
-#define NCM_TEST_PASS(cmd) \
-  G_STMT_START { \
-    if (g_test_subprocess ()) \
-    { \
-      cmd; \
-      exit (0); \
-    } \
-    else \
-    { \
-      g_test_trap_subprocess (NULL, 0, 0); \
-      g_test_trap_assert_passed (); \
-    } \
-  } G_STMT_END
+#define NCM_TEST_PASS(cmd)                       \
+        G_STMT_START {                           \
+          if (g_test_subprocess ())              \
+          {                                      \
+            cmd;                                 \
+            exit (0);                            \
+          }                                      \
+          else                                   \
+          {                                      \
+            g_test_trap_subprocess (NULL, 0, 0); \
+            g_test_trap_assert_passed ();        \
+          }                                      \
+        } G_STMT_END
 
 
-#define NCM_CVODE_CHECK(chk, name, val, ret) \
-  G_STMT_START { \
-    if (!ncm_util_cvode_check_flag (chk, name, val)) \
-    return ret; \
-  } \
-  G_STMT_END
+#define NCM_CVODE_CHECK(chk, name, val, ret)               \
+        G_STMT_START {                                     \
+          if (!ncm_util_cvode_check_flag (chk, name, val)) \
+          return ret;                                      \
+        }                                                  \
+        G_STMT_END
 
 G_END_DECLS
 #endif /* _NCM_UTIL_H_ */

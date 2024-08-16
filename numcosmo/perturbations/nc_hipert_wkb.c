@@ -79,7 +79,7 @@ typedef struct _NcHIPertWKBArg
 static void
 nc_hipert_wkb_init (NcHIPertWKB *wkb)
 {
-  wkb->nuA = ncm_spline_cubic_notaknot_new ();
+  wkb->nuA = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
   wkb->alpha_i = 0.0;
   wkb->alpha_f = 0.0;
@@ -88,8 +88,8 @@ nc_hipert_wkb_init (NcHIPertWKB *wkb)
   wkb->alpha_phase = 0.0;
   wkb->cur_phase   = 0.0;
 
-  wkb->lnF  = ncm_spline_cubic_notaknot_new ();
-  wkb->dlnF = ncm_spline_cubic_notaknot_new ();
+  wkb->lnF  = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  wkb->dlnF = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 }
 
 static void

@@ -1,7 +1,7 @@
-name: numcosmo_developer
+---
 channels:
   - conda-forge
-dependencies: 
+dependencies:
   - astropy
   - black
   - c-compiler
@@ -11,13 +11,12 @@ dependencies:
   - fortran-compiler
   - gcovr
   - getdist
-  - glib <=2.78.4
-  - glib-tools <=2.78.4
+  - glib
+  - glib-tools
   - gmp
-  - gobject-introspection <=1.78
+  - gobject-introspection
   - gsl
   - hdf5
-  - healpy
   - lcov
   - libflint
   - libfyaml
@@ -32,8 +31,8 @@ dependencies:
   - openmpi
   - pip
   - pip:
-    - pygobject-stubs
-    - pytest-tap
+      - pygobject-stubs
+      - pytest-tap
   - pyccl >= 3.0.0
   - pygobject
   - pylint
@@ -43,3 +42,4 @@ dependencies:
   - scipy
   - tqdm
   - typer
+name: numcosmo_developer
