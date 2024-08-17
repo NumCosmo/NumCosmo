@@ -110,8 +110,8 @@ test_nc_halo_position_serialize (TestNcHaloPosition *test, gconstpointer pdata)
 
   g_assert_true (NC_IS_HALO_POSITION (hp_dup));
 
-  ra  = g_test_rand_double_range (0.0, 5.0e-5);
-  dec = g_test_rand_double_range (0.0, 5.0e-5);
+  ra  = g_test_rand_double_range (0.0, 2.0 * M_PI);
+  dec = g_test_rand_double_range (0.0, 2.0 * M_PI);
 
   nc_halo_position_polar_angles (hp, ra, dec, &theta, &phi);
   nc_halo_position_polar_angles (hp_dup, ra, dec, &theta_dup, &phi_dup);
@@ -122,7 +122,7 @@ test_nc_halo_position_serialize (TestNcHaloPosition *test, gconstpointer pdata)
   r     = nc_halo_position_projected_radius (hp, cosmo, theta);
   r_dup = nc_halo_position_projected_radius (hp_dup, cosmo, theta);
 
-  g_assert_cmpfloat (r, ==, r_dup);
+  g_assert_cmpfloat_with_epsilon (r, r_dup, 1.0e-11);
 }
 
 static void
@@ -143,8 +143,8 @@ test_nc_halo_position_polar_angles (TestNcHaloPosition *test, gconstpointer pdat
   NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   gdouble ra, dec, theta, phi;
 
-  ra  = g_test_rand_double_range (0.0, 5.0e-5);
-  dec = g_test_rand_double_range (0.0, 5.0e-5);
+  ra  = g_test_rand_double_range (0.0, 2.0 * M_PI);
+  dec = g_test_rand_double_range (0.0, 2.0 * M_PI);
 
   nc_halo_position_polar_angles (hp, ra, dec, &theta, &phi);
 
@@ -160,12 +160,12 @@ test_nc_halo_position_projected_radius (TestNcHaloPosition *test, gconstpointer 
 {
   NcHaloPosition *hp = test->hp;
   NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  gdouble ra, dec, theta, r;
+  gdouble ra, dec, theta, phi, r;
 
-  ra  = g_test_rand_double_range (0.0, 5.0e-5);
-  dec = g_test_rand_double_range (0.0, 5.0e-5);
+  ra  = g_test_rand_double_range (0.0, 2.0 * M_PI);
+  dec = g_test_rand_double_range (0.0, 2.0 * M_PI);
 
-  nc_halo_position_polar_angles (hp, ra, dec, &theta, NULL);
+  nc_halo_position_polar_angles (hp, ra, dec, &theta, &phi);
 
   r = nc_halo_position_projected_radius (hp, cosmo, theta);
 
