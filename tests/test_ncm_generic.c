@@ -48,6 +48,15 @@ void test_ncm_mpi_job_feval_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
 
 void test_nc_de_cont_basic (void);
+void test_nc_galaxy_sd_position_basic (void);
+void test_nc_galaxy_sd_position_flat_basic (void);
+void test_nc_galaxy_sd_position_lsst_srd_basic (void);
+void test_nc_galaxy_sd_position_lsst_srd_y10_basic (void);
+void test_nc_galaxy_sd_shape_basic (void);
+void test_nc_galaxy_sd_shape_gauss_basic (void);
+void test_nc_galaxy_sd_z_proxy_basic (void);
+void test_nc_galaxy_sd_z_proxy_dirac_basic (void);
+void test_nc_galaxy_sd_z_proxy_gauss_basic (void);
 void test_nc_hicosmo_qgw_basic (void);
 void test_nc_hipert_adiab_basic (void);
 void test_nc_hipert_em_basic (void);
@@ -78,6 +87,15 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
 
   g_test_add_func ("/nc/de_cont/basic", test_nc_de_cont_basic);
+  g_test_add_func ("/nc/galaxy/sd_position/basic", test_nc_galaxy_sd_position_basic);
+  g_test_add_func ("/nc/galaxy/sd_position_flat/basic", test_nc_galaxy_sd_position_flat_basic);
+  g_test_add_func ("/nc/galaxy/sd_position_lsst_srd/basic", test_nc_galaxy_sd_position_lsst_srd_basic);
+  g_test_add_func ("/nc/galaxy/sd_position_lsst_srd_y10/basic", test_nc_galaxy_sd_position_lsst_srd_y10_basic);
+  g_test_add_func ("/nc/galaxy/sd_shape/basic", test_nc_galaxy_sd_shape_basic);
+  g_test_add_func ("/nc/galaxy/sd_shape_gauss/basic", test_nc_galaxy_sd_shape_gauss_basic);
+  g_test_add_func ("/nc/galaxy/sd_z_proxy/basic", test_nc_galaxy_sd_z_proxy_basic);
+  g_test_add_func ("/nc/galaxy/sd_z_proxy_dirac/basic", test_nc_galaxy_sd_z_proxy_dirac_basic);
+  g_test_add_func ("/nc/galaxy/sd_z_proxy_gauss/basic", test_nc_galaxy_sd_z_proxy_gauss_basic);
   g_test_add_func ("/nc/hicosmo/qgw/basic", test_nc_hicosmo_qgw_basic);
 
   g_test_add_func ("/nc/hipert/adiab/basic", test_nc_hipert_adiab_basic);
@@ -387,6 +405,168 @@ test_nc_de_cont_basic (void)
   g_assert_cmpfloat (nc_de_cont_get_k (dec), ==, 0.1);
 
   NCM_TEST_FREE (nc_de_cont_free, dec);
+}
+
+void
+test_nc_galaxy_sd_position_basic (void)
+{
+  NcGalaxySDPosition *sdpos = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (0, 2, 0, 2));
+  NcGalaxySDPosition *sdpos2;
+
+  g_assert_true (sdpos != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_POSITION (sdpos));
+
+  sdpos2 = nc_galaxy_sd_position_ref (sdpos);
+  nc_galaxy_sd_position_clear (&sdpos2);
+  g_assert_true (sdpos2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_POSITION (sdpos));
+
+  NCM_TEST_FREE (nc_galaxy_sd_position_free, sdpos);
+}
+
+void
+test_nc_galaxy_sd_position_flat_basic (void)
+{
+  NcGalaxySDPositionFlat *gsdpf = nc_galaxy_sd_position_flat_new (0, 2, 0, 2);
+  NcGalaxySDPositionFlat *gsdpf2;
+
+  g_assert_true (gsdpf != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_POSITION_FLAT (gsdpf));
+
+  gsdpf2 = nc_galaxy_sd_position_flat_ref (gsdpf);
+  nc_galaxy_sd_position_flat_clear (&gsdpf2);
+  g_assert_true (gsdpf2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_POSITION_FLAT (gsdpf));
+
+  NCM_TEST_FREE (nc_galaxy_sd_position_flat_free, gsdpf);
+}
+
+void
+test_nc_galaxy_sd_position_lsst_srd_basic (void)
+{
+  NcGalaxySDPositionLSSTSRD *gsdpls = nc_galaxy_sd_position_lsst_srd_new (0, 2, 0, 2);
+  NcGalaxySDPositionLSSTSRD *gsdpls2;
+
+  g_assert_true (gsdpls != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_POSITION_LSST_SRD (gsdpls));
+
+  gsdpls2 = nc_galaxy_sd_position_lsst_srd_ref (gsdpls);
+  nc_galaxy_sd_position_lsst_srd_clear (&gsdpls2);
+  g_assert_true (gsdpls2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_POSITION_LSST_SRD (gsdpls));
+
+  NCM_TEST_FREE (nc_galaxy_sd_position_lsst_srd_free, gsdpls);
+}
+
+void
+test_nc_galaxy_sd_position_lsst_srd_y10_basic (void)
+{
+  NcGalaxySDPositionLSSTSRD *gsdplsy10 = nc_galaxy_sd_position_lsst_srd_new_y10 (0, 2, 0, 2);
+  NcGalaxySDPositionLSSTSRD *gsdplsy102;
+
+  g_assert_true (gsdplsy10 != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_POSITION_LSST_SRD (gsdplsy10));
+
+  gsdplsy102 = nc_galaxy_sd_position_lsst_srd_ref (gsdplsy10);
+  nc_galaxy_sd_position_lsst_srd_clear (&gsdplsy102);
+  g_assert_true (gsdplsy102 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_POSITION_LSST_SRD (gsdplsy10));
+
+  NCM_TEST_FREE (nc_galaxy_sd_position_lsst_srd_free, gsdplsy10);
+}
+
+void
+test_nc_galaxy_sd_shape_basic (void)
+{
+  NcGalaxySDShape *gsds = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new (0.0, 2.0, 0.05));
+  NcGalaxySDShape *gsds2;
+
+  g_assert_true (gsds != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE (gsds));
+
+  gsds2 = nc_galaxy_sd_shape_ref (gsds);
+  nc_galaxy_sd_shape_clear (&gsds2);
+  g_assert_true (gsds2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE (gsds));
+
+  NCM_TEST_FREE (nc_galaxy_sd_shape_free, gsds);
+}
+
+void
+test_nc_galaxy_sd_shape_gauss_basic (void)
+{
+  NcGalaxySDShapeGauss *gsdsg = nc_galaxy_sd_shape_gauss_new (0.0, 2.0, 0.05);
+  NcGalaxySDShapeGauss *gsdsg2;
+
+  g_assert_true (gsdsg != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE_GAUSS (gsdsg));
+
+  gsdsg2 = nc_galaxy_sd_shape_gauss_ref (gsdsg);
+  nc_galaxy_sd_shape_gauss_clear (&gsdsg2);
+  g_assert_true (gsdsg2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE_GAUSS (gsdsg));
+
+  NCM_TEST_FREE (nc_galaxy_sd_shape_gauss_free, gsdsg);
+}
+
+void
+test_nc_galaxy_sd_z_proxy_basic (void)
+{
+  NcGalaxySDZProxy *gsdzp = NC_GALAXY_SD_Z_PROXY (nc_galaxy_sd_z_proxy_dirac_new ());
+  NcGalaxySDZProxy *gsdzp2;
+
+  g_assert_true (gsdzp != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_Z_PROXY (gsdzp));
+
+  gsdzp2 = nc_galaxy_sd_z_proxy_ref (gsdzp);
+  nc_galaxy_sd_z_proxy_clear (&gsdzp2);
+  g_assert_true (gsdzp2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_Z_PROXY (gsdzp));
+
+  NCM_TEST_FREE (nc_galaxy_sd_z_proxy_free, gsdzp);
+}
+
+void
+test_nc_galaxy_sd_z_proxy_dirac_basic (void)
+{
+  NcGalaxySDZProxyDirac *gsdzpd = nc_galaxy_sd_z_proxy_dirac_new ();
+  NcGalaxySDZProxyDirac *gsdzpd2;
+
+  g_assert_true (gsdzpd != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_Z_PROXY_DIRAC (gsdzpd));
+
+  gsdzpd2 = nc_galaxy_sd_z_proxy_dirac_ref (gsdzpd);
+  nc_galaxy_sd_z_proxy_dirac_clear (&gsdzpd2);
+  g_assert_true (gsdzpd2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_Z_PROXY_DIRAC (gsdzpd));
+
+  NCM_TEST_FREE (nc_galaxy_sd_z_proxy_dirac_free, gsdzpd);
+}
+
+void
+test_nc_galaxy_sd_z_proxy_gauss_basic (void)
+{
+  NcGalaxySDZProxyGauss *gsdzpg = nc_galaxy_sd_z_proxy_gauss_new (0.0, 2.0, 0.05);
+  NcGalaxySDZProxyGauss *gsdzpg2;
+
+  g_assert_true (gsdzpg != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_Z_PROXY_GAUSS (gsdzpg));
+
+  gsdzpg2 = nc_galaxy_sd_z_proxy_gauss_ref (gsdzpg);
+  nc_galaxy_sd_z_proxy_gauss_clear (&gsdzpg2);
+  g_assert_true (gsdzpg2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_Z_PROXY_GAUSS (gsdzpg));
+
+  NCM_TEST_FREE (nc_galaxy_sd_z_proxy_gauss_free, gsdzpg);
 }
 
 void

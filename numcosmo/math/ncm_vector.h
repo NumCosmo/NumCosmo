@@ -149,6 +149,7 @@ NCM_INLINE gdouble *ncm_vector_data (NcmVector *cv);
 NCM_INLINE const gdouble *ncm_vector_const_data (const NcmVector *cv);
 
 NCM_INLINE void ncm_vector_replace_data (NcmVector *cv, gdouble *data);
+NCM_INLINE void ncm_vector_replace_data_full (NcmVector *cv, gdouble *data, guint size, guint stride);
 NCM_INLINE gsl_vector *ncm_vector_gsl (NcmVector *cv);
 NCM_INLINE const gsl_vector *ncm_vector_const_gsl (const NcmVector *cv);
 
@@ -433,6 +434,14 @@ NCM_INLINE void
 ncm_vector_replace_data (NcmVector *cv, gdouble *data)
 {
   cv->vv.vector.data = data;
+}
+
+NCM_INLINE void
+ncm_vector_replace_data_full (NcmVector *cv, gdouble *data, guint size, guint stride)
+{
+  cv->vv.vector.data   = data;
+  cv->vv.vector.size   = size;
+  cv->vv.vector.stride = stride;
 }
 
 NCM_INLINE gsl_vector *

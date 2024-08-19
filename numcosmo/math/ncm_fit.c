@@ -2396,7 +2396,6 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
     worst_relerror = GSL_MAX (worst_relerror, rel_error);
   }
 
-
   if (worst_relerror > reltol)
   {
     const gdouble old_h_ini = ncm_diff_get_ini_h (self->diff);
@@ -2411,22 +2410,47 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
       self->start_update (fit, "Computing Hessian matrix: ");
     }
 
-    g_array_unref (H_a);
-    g_clear_pointer (&errors_a, g_array_unref);
 
     /* Trying again with larger initial step. */
-    ncm_diff_set_ini_h (self->diff, 4.0e-1);
-    H_a = ncm_diff_rf_Hessian_N_to_1 (self->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, &errors_a);
-    ncm_diff_set_ini_h (self->diff, old_h_ini);
-
-    worst_relerror = 0.0;
-
-    for (i = 0; i < H_a->len; i++)
     {
-      const gdouble abs_error = g_array_index (errors_a, gdouble, i);
-      const gdouble rel_error =  g_array_index (H_a, gdouble, i) != 0.0 ? fabs (abs_error / g_array_index (H_a, gdouble, i)) : abs_error;
+      GArray *H_try_a            = NULL;
+      GArray *errors_try_a       = NULL;
+      gdouble worst_relerror_try = 0.0;
 
-      worst_relerror = GSL_MAX (worst_relerror, rel_error);
+      ncm_diff_set_ini_h (self->diff, 2.0 * old_h_ini);
+      H_try_a = ncm_diff_rf_Hessian_N_to_1 (self->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, &errors_try_a);
+      ncm_diff_set_ini_h (self->diff, old_h_ini);
+
+      for (i = 0; i < H_try_a->len; i++)
+      {
+        const gdouble abs_error = g_array_index (errors_try_a, gdouble, i);
+        const gdouble rel_error =  g_array_index (H_try_a, gdouble, i) != 0.0 ? fabs (abs_error / g_array_index (H_try_a, gdouble, i)) : abs_error;
+
+        if (!gsl_finite (abs_error) || !gsl_finite (rel_error))
+        {
+          worst_relerror_try = GSL_POSINF;
+          break;
+        }
+
+        worst_relerror_try = GSL_MAX (worst_relerror_try, rel_error);
+      }
+
+      if (worst_relerror_try < worst_relerror)
+      {
+        g_array_unref (H_a);
+        g_clear_pointer (&errors_a, g_array_unref);
+
+        H_a            = H_try_a;
+        errors_a       = errors_try_a;
+        worst_relerror = worst_relerror_try;
+      }
+      else
+      {
+        _ncm_fit_message (fit, "#  - worst relative error not improved: (%.2e > %.2e)\n", worst_relerror_try, worst_relerror);
+
+        g_array_unref (H_try_a);
+        g_array_unref (errors_try_a);
+      }
     }
 
     if (self->mtype > NCM_FIT_RUN_MSGS_NONE)

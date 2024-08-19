@@ -102,7 +102,7 @@ EXP_PARAMETERS: dict[tuple[str, str], dict[str, float]] = {
         "NcHICosmo:omegac": 0.12068,
         "NcHICosmo:omegab": 0.022126,
         "NcHIPrim:ln10e10ASA": 3.0413,
-        "NcHIPrim:lnk0": 0.0,
+        "NcHIPrim:lnk0": -6.0,
         "NcHIPrim:lnw": np.log(1.0e-4),
         "NcHIReion:z_re": 7.54,
         "NcPlanckFI:A_cib_217": 48.5,
@@ -126,7 +126,7 @@ EXP_PARAMETERS: dict[tuple[str, str], dict[str, float]] = {
         "NcHICosmo:omegac": 0.12010,
         "NcHICosmo:omegab": 0.022377,
         "NcHIPrim:ln10e10ASA": 3.0447,
-        "NcHIPrim:lnk0": 0.0,
+        "NcHIPrim:lnk0": -6.0,
         "NcHIPrim:lnw": np.log(1.0e-4),
         "NcHIReion:z_re": 7.68,
         "NcPlanckFI:A_cib_217": 47.2,
@@ -248,6 +248,7 @@ def create_mfunc_array_for_cmb(cbe: Nc.CBE) -> Ncm.ObjArray:
 def generate_planck18_tt(
     massive_nu: bool = False,
     prim_model: Planck18HIPrimModel = Planck18HIPrimModel.POWER_LAW,
+    use_lensing_likelihood: bool = False,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Generate Planck 2018 TT baseline experiment dictionary."""
     # Likelihood
@@ -267,8 +268,13 @@ def generate_planck18_tt(
     b18_highl_TT = Nc.DataPlanckLKL.full_new_id(
         Nc.DataPlanckLKLType.BASELINE_18_HIGHL_TT, cbe_boltzmann
     )
-
-    dset = Ncm.Dataset.new_array([b18_lowl_EE, b18_lowl_TT, b18_highl_TT])
+    if not use_lensing_likelihood:
+        dset = Ncm.Dataset.new_array([b18_lowl_EE, b18_lowl_TT, b18_highl_TT])
+    else:
+        b18_PP = Nc.DataPlanckLKL.full_new_id(
+            Nc.DataPlanckLKLType.BASELINE_18_LENSING, cbe_boltzmann
+        )
+        dset = Ncm.Dataset.new_array([b18_lowl_EE, b18_lowl_TT, b18_highl_TT, b18_PP])
     likelihood = Ncm.Likelihood.new(dset)
     Nc.PlanckFICorTT.add_all_default18_priors(likelihood)
 
@@ -299,6 +305,7 @@ def generate_planck18_tt(
 def generate_planck18_ttteee(
     massive_nu: bool = False,
     prim_model: Planck18HIPrimModel = Planck18HIPrimModel.POWER_LAW,
+    use_lensing_likelihood: bool = False,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Generate Planck 2018 TT baseline experiment dictionary."""
     # Likelihood
@@ -320,8 +327,16 @@ def generate_planck18_ttteee(
     b18_highl_TTTEEE = Nc.DataPlanckLKL.full_new_id(
         Nc.DataPlanckLKLType.BASELINE_18_HIGHL_TTTEEE, cbe_boltzmann
     )
+    if not use_lensing_likelihood:
+        dset = Ncm.Dataset.new_array([b18_lowl_EE, b18_lowl_TT, b18_highl_TTTEEE])
+    else:
+        b18_PP = Nc.DataPlanckLKL.full_new_id(
+            Nc.DataPlanckLKLType.BASELINE_18_LENSING, cbe_boltzmann
+        )
+        dset = Ncm.Dataset.new_array(
+            [b18_lowl_EE, b18_lowl_TT, b18_highl_TTTEEE, b18_PP]
+        )
 
-    dset = Ncm.Dataset.new_array([b18_lowl_EE, b18_lowl_TT, b18_highl_TTTEEE])
     likelihood = Ncm.Likelihood.new(dset)
     Nc.PlanckFICorTTTEEE.add_all_default18_priors(likelihood)
 

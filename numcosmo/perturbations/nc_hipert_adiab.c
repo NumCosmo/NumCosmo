@@ -374,6 +374,7 @@ nc_hipert_iadiab_eval_x (NcHIPertIAdiab *iad, const gdouble tau)
  * nc_hipert_iadiab_eval_p2Psi:
  * @iad: a #NcHIPertIAdiab
  * @tau: $\tau$
+ * @k: $k$
  *
  * Evaluates the conversion factor to convert the momentum of the adiabatic mode to the
  * gauge invariant variable $\Psi$.
@@ -390,6 +391,7 @@ nc_hipert_iadiab_eval_p2Psi (NcHIPertIAdiab *iad, const gdouble tau, const gdoub
  * nc_hipert_iadiab_eval_p2drho:
  * @iad: a #NcHIPertIAdiab
  * @tau: $\tau$
+ * @k: $k$
  *
  * Evaluates the conversion factor to convert the momentum of the adiabatic mode to the
  * gauge invariant variable $\delta\rho$.
