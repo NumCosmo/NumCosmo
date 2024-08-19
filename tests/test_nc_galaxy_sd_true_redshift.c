@@ -195,9 +195,9 @@ test_nc_galaxy_sd_true_redshift_serialize (TestNcGalaxySDTrueRedshift *test, gco
   g_assert_cmpfloat (z_min, ==, z_min_dup);
   g_assert_cmpfloat (z_max, ==, z_max_dup);
 
-  ncm_serialize_free (ser);
+  ncm_serialize_clear (&ser);
   g_free (gsdtr_ser);
-  nc_galaxy_sd_true_redshift_free (gsdtr_dup);
+  nc_galaxy_sd_true_redshift_clear (&gsdtr_dup);
 }
 
 static void
@@ -209,6 +209,9 @@ test_nc_galaxy_sd_true_redshift_model_id (TestNcGalaxySDTrueRedshift *test, gcon
   ncm_mset_set (model_set, ncm_model_dup (NCM_MODEL (test->gsdtr), ser));
 
   g_assert_true (NC_IS_GALAXY_SD_TRUE_REDSHIFT (ncm_mset_peek (model_set, nc_galaxy_sd_true_redshift_id ())));
+
+  ncm_mset_clear (&model_set);
+  ncm_serialize_clear (&ser);
 }
 
 static gdouble
@@ -297,7 +300,7 @@ test_nc_galaxy_sd_true_redshift_lsst_srd_gen (TestNcGalaxySDTrueRedshift *test, 
     }
   }
 
-  ncm_rng_free (rng);
+  ncm_rng_clear (&rng);
 }
 
 static void
@@ -325,5 +328,7 @@ test_nc_galaxy_sd_true_redshift_lsst_srd_integ (TestNcGalaxySDTrueRedshift *test
     else
       g_assert_cmpfloat (nc_galaxy_sd_true_redshift_integ (test->gsdtr, z), >, 0.0);
   }
+
+  ncm_rng_clear (&rng);
 }
 
