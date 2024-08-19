@@ -46,6 +46,7 @@
 typedef struct _NcHaloPositionPrivate
 {
   NcDistance *dist;
+  NcmModelCtrl *ctrl_cosmo;
 } NcHaloPositionPrivate;
 
 struct _NcHaloPosition
@@ -70,6 +71,10 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcHaloPosition, nc_halo_position, NCM_TYPE_MODEL)
 static void
 nc_halo_position_init (NcHaloPosition *hp)
 {
+  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
+
+  self->dist       = NULL;
+  self->ctrl_cosmo = ncm_model_ctrl_new (NULL);
 }
 
 static void
@@ -83,7 +88,7 @@ _nc_halo_position_set_property (GObject *object, guint prop_id, const GValue *va
   switch (prop_id)
   {
     case PROP_DIST:
-      self->dist = g_value_get_object (value);
+      self->dist = g_value_dup_object (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -118,6 +123,9 @@ _nc_halo_position_dispose (GObject *object)
 
   if (self->dist)
     nc_distance_clear (&self->dist);
+
+  if (self->ctrl_cosmo)
+    ncm_model_ctrl_clear (&self->ctrl_cosmo);
 
   G_OBJECT_CLASS (nc_halo_position_parent_class)->dispose (object);
 }
@@ -277,5 +285,38 @@ nc_halo_position_projected_radius (NcHaloPosition *hp, NcHICosmo *cosmo, gdouble
   gdouble z_halo              = Z;
 
   return ncm_util_projected_radius (theta, nc_distance_angular_diameter (self->dist, cosmo, z_halo) * nc_distance_hubble (self->dist, cosmo));
+}
+
+/**
+ * nc_halo_position_prepare:
+ * @hp: A #NcHaloPosition.
+ * @cosmo: A #NcHICosmo.
+ *
+ * Prepares the #NcHaloPosition object @hp for computation.
+ *
+ */
+void
+nc_halo_position_prepare (NcHaloPosition *hp, NcHICosmo *cosmo)
+{
+  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
+
+  nc_distance_prepare_if_needed (self->dist, cosmo);
+}
+
+/**
+ * nc_halo_position_prepare_if_needed:
+ * @hp: A #NcHaloPosition.
+ * @cosmo: A #NcHICosmo.
+ *
+ * Prepares the #NcHaloPosition object @hp for computation if necessary.
+ *
+ */
+void
+nc_halo_position_prepare_if_needed (NcHaloPosition *hp, NcHICosmo *cosmo)
+{
+  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
+
+  if (ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo)))
+    nc_distance_prepare_if_needed (self->dist, cosmo);
 }
 

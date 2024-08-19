@@ -85,10 +85,9 @@ test_nc_halo_position_new (TestNcHaloPosition *test, gconstpointer pdata)
   NcDistance *dist = nc_distance_new (1100.0);
   NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
 
-  nc_distance_prepare (dist, cosmo);
-
   test->hp = nc_halo_position_new (dist);
 
+  nc_halo_position_prepare_if_needed (test->hp, cosmo);
   g_assert_true (NC_IS_HALO_POSITION (test->hp));
 }
 
@@ -108,6 +107,8 @@ test_nc_halo_position_serialize (TestNcHaloPosition *test, gconstpointer pdata)
   NcHICosmo *cosmo       = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   gdouble ra, dec, theta, phi, r, theta_dup, phi_dup, r_dup;
 
+  nc_halo_position_prepare_if_needed (hp_dup, cosmo);
+
   g_assert_true (NC_IS_HALO_POSITION (hp_dup));
 
   ra  = g_test_rand_double_range (0.0, 2.0 * M_PI);
@@ -122,7 +123,7 @@ test_nc_halo_position_serialize (TestNcHaloPosition *test, gconstpointer pdata)
   r     = nc_halo_position_projected_radius (hp, cosmo, theta);
   r_dup = nc_halo_position_projected_radius (hp_dup, cosmo, theta);
 
-  g_assert_cmpfloat_with_epsilon (r, r_dup, 1.0e-11);
+  g_assert_cmpfloat (r, ==, r_dup);
 }
 
 static void

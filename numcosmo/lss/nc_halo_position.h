@@ -82,6 +82,8 @@ void nc_halo_position_clear (NcHaloPosition **hp);
 
 void nc_halo_position_polar_angles (NcHaloPosition *hp, gdouble ra, gdouble dec, gdouble *theta, gdouble *phi);
 gdouble nc_halo_position_projected_radius (NcHaloPosition *hp, NcHICosmo *cosmo, gdouble theta);
+void nc_halo_position_prepare (NcHaloPosition *hp, NcHICosmo *cosmo);
+void nc_halo_position_prepare_if_needed (NcHaloPosition *hp, NcHICosmo *cosmo);
 
 G_END_DECLS
 
