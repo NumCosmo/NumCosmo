@@ -87,8 +87,12 @@ test_nc_halo_position_new (TestNcHaloPosition *test, gconstpointer pdata)
 
   test->hp = nc_halo_position_new (dist);
 
-  nc_halo_position_prepare_if_needed (test->hp, cosmo);
   g_assert_true (NC_IS_HALO_POSITION (test->hp));
+
+  nc_halo_position_prepare (test->hp, cosmo);
+
+  nc_distance_clear (&dist);
+  nc_hicosmo_clear (&cosmo);
 }
 
 static void
@@ -124,6 +128,11 @@ test_nc_halo_position_serialize (TestNcHaloPosition *test, gconstpointer pdata)
   r_dup = nc_halo_position_projected_radius (hp_dup, cosmo, theta);
 
   g_assert_cmpfloat (r, ==, r_dup);
+
+  ncm_serialize_clear (&ser);
+  g_free (hp_ser);
+  nc_halo_position_clear (&hp_dup);
+  nc_hicosmo_clear (&cosmo);
 }
 
 static void
@@ -135,6 +144,9 @@ test_nc_halo_position_model_id (TestNcHaloPosition *test, gconstpointer pdata)
   ncm_mset_set (model_set, ncm_model_dup (NCM_MODEL (test->hp), ser));
 
   g_assert_true (NC_IS_HALO_POSITION (ncm_mset_peek (model_set, nc_halo_position_id ())));
+
+  ncm_mset_clear (&model_set);
+  ncm_serialize_clear (&ser);
 }
 
 static void
@@ -154,6 +166,8 @@ test_nc_halo_position_polar_angles (TestNcHaloPosition *test, gconstpointer pdat
 
   g_assert_cmpfloat (phi, >=, 0.0);
   g_assert_cmpfloat (phi, <=, 2.0 * M_PI);
+
+  nc_hicosmo_clear (&cosmo);
 }
 
 static void
@@ -171,5 +185,7 @@ test_nc_halo_position_projected_radius (TestNcHaloPosition *test, gconstpointer 
   r = nc_halo_position_projected_radius (hp, cosmo, theta);
 
   g_assert_cmpfloat (r, >=, 0.0);
+
+  nc_hicosmo_clear (&cosmo);
 }
 
