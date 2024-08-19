@@ -197,6 +197,9 @@ test_nc_galaxy_sd_position_model_id (TestNcGalaxySDPosition *test, gconstpointer
   ncm_mset_set (model_set, ncm_model_dup (NCM_MODEL (test->gsdp), ser));
 
   g_assert_true (NC_IS_GALAXY_SD_POSITION (ncm_mset_peek (model_set, nc_galaxy_sd_position_id ())));
+
+  ncm_mset_free (model_set);
+  ncm_serialize_free (ser);
 }
 
 static void
@@ -206,6 +209,9 @@ test_nc_galaxy_sd_position_flat_header (TestNcGalaxySDPosition *test, gconstpoin
   GStrv header_ctrl = g_strsplit ("ra dec", " ", -1);
 
   g_assert_cmpstrv (header, header_ctrl);
+
+  g_strfreev (header);
+  g_strfreev (header_ctrl);
 }
 
 static void
@@ -312,5 +318,7 @@ test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpoint
     else
       g_assert_cmpfloat (nc_galaxy_sd_position_integ (test->gsdp, data), >, 0.0);
   }
+
+  ncm_rng_free (rng);
 }
 
