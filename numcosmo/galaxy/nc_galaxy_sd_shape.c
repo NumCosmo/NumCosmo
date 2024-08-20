@@ -70,6 +70,7 @@ nc_galaxy_sd_shape_init (NcGalaxySDShape *gsds)
 {
 }
 
+/* LCOV_EXCL_START */
 static void
 _nc_galaxy_sd_shape_set_property (GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
@@ -99,6 +100,8 @@ _nc_galaxy_sd_shape_get_property (GObject *object, guint property_id, GValue *va
       break;
   }
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 _nc_galaxy_sd_shape_finalize (GObject *object)
@@ -185,7 +188,7 @@ nc_galaxy_sd_shape_class_init (NcGalaxySDShapeClass *klass)
 
   ncm_model_class_set_name_nick (model_class, "Galaxy sample shape distribution", "GalaxySDShape");
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
-
+  ncm_mset_model_register_id (model_class, "NcGalaxySDShape", "Galaxy sample shape distribution", NULL, FALSE, NCM_MSET_MODEL_MAIN);
   ncm_model_class_check_params_info (model_class);
 
   klass->gen              = &_nc_galaxy_sd_shape_gen;
@@ -357,9 +360,9 @@ nc_galaxy_sd_shape_get_header (NcGalaxySDShape *gsds)
 /**
  * nc_galaxy_sd_shape_get_vec_size: (virtual get_vec_size)
  * @gsds: a #NcGalaxySDShape
- * 
+ *
  * Gets the size of the expected data vector.
- * 
+ *
  * Returns: the size of the expected data vector.
  */
 guint

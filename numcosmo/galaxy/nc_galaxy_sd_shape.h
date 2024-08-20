@@ -50,7 +50,7 @@ G_DECLARE_DERIVABLE_TYPE (NcGalaxySDShape, nc_galaxy_sd_shape, NC, GALAXY_SD_SHA
 struct _NcGalaxySDShapeClass
 {
   /*< private >*/
-  GObjectClass parent_class;
+  NcmModelClass parent_class;
 
   gboolean (*gen) (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, NcmRNG *rng, NcGalaxyWLObsCoord coord, const gdouble ra, const gdouble dec, const gdouble z, gdouble *e1, gdouble *e2);
   gdouble (*integ) (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, gdouble z, NcmVector *data);

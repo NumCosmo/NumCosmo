@@ -64,6 +64,7 @@ nc_galaxy_sd_obs_redshift_init (NcGalaxySDObsRedshift *gsdor)
 {
 }
 
+/* LCOV_EXCL_START */
 static void
 _nc_galaxy_sd_obs_redshift_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
@@ -74,9 +75,9 @@ _nc_galaxy_sd_obs_redshift_set_property (GObject *object, guint prop_id, const G
 
   switch (prop_id)
   {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -89,11 +90,13 @@ _nc_galaxy_sd_obs_redshift_get_property (GObject *object, guint prop_id, GValue 
 
   switch (prop_id)
   {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 _nc_galaxy_sd_obs_redshift_finalize (GObject *object)

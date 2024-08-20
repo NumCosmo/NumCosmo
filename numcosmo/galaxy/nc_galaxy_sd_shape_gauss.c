@@ -82,6 +82,7 @@ nc_galaxy_sd_shape_gauss_init (NcGalaxySDShapeGauss *gsdsgauss)
   self->ctrl_hc    = NULL;
 }
 
+/* LCOV_EXCL_START */
 static void
 _nc_galaxy_sd_shape_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
@@ -113,6 +114,8 @@ _nc_galaxy_sd_shape_gauss_get_property (GObject *object, guint prop_id, GValue *
       break;
   }
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 _nc_galaxy_sd_shape_gauss_dispose (GObject *object)
@@ -153,8 +156,8 @@ nc_galaxy_sd_shape_gauss_class_init (NcGalaxySDShapeGaussClass *klass)
   GObjectClass *object_class              = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class              = NCM_MODEL_CLASS (klass);
 
-  object_class->set_property = &_nc_galaxy_sd_shape_gauss_set_property;
-  object_class->get_property = &_nc_galaxy_sd_shape_gauss_get_property;
+  model_class->set_property = &_nc_galaxy_sd_shape_gauss_set_property;
+  model_class->get_property = &_nc_galaxy_sd_shape_gauss_get_property;
   object_class->dispose      = &_nc_galaxy_sd_shape_gauss_dispose;
   object_class->finalize     = &_nc_galaxy_sd_shape_gauss_finalize;
 
@@ -199,13 +202,10 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
   gdouble ex_s       = ncm_rng_gaussian_gen (rng, 0.0, SIGMA);
   complex double e_s = et_s + I * ex_s;
   complex double e_o = e_s;
-  complex double gt  = 0.0;
+  gdouble gt  = 0.0;
   gdouble r;
 
   nc_halo_position_polar_angles (hp, ra, dec, &theta, &phi);
-
-  if (coord == NC_GALAXY_WL_OBS_COORD_CELESTIAL)
-    phi = M_PI - phi;
 
   r = nc_halo_position_projected_radius (hp, cosmo, theta);
 
@@ -213,14 +213,18 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
   {
     gt = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r, z, z_cl, z_cl);
 
-    if (cabs (gt) > 1.0)
-      e_o = (1.0 + gt * conj (e_s)) / (conj (e_s) + conj (gt));
+    // printf ("gt = %f\n", creal(gt));
+    if (gt > 1.0)
+      e_o = (1.0 + gt * conj (e_s)) / (conj (e_s) + gt);
     else
-      e_o = (e_s + gt) / (1.0 + conj (gt) * e_s);
+      e_o = (e_s + gt) / (1.0 + gt * e_s);
   }
 
   *e1 = -creal (e_o) * cos (2 * phi) + cimag (e_o) * sin (2 * phi);
   *e2 = -creal (e_o) * sin (2 * phi) - cimag (e_o) * cos (2 * phi);
+
+  if (coord == NC_GALAXY_WL_OBS_COORD_CELESTIAL)
+    *e2 = -*e2;
 
   return TRUE;
 }

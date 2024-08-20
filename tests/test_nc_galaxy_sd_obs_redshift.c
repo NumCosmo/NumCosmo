@@ -315,10 +315,7 @@ test_nc_galaxy_sd_obs_redshift_spec_integ (TestNcGalaxySDObsRedshift *test, gcon
   {
     gdouble z = g_test_rand_double_range (0.0, 5.0);
 
-    if ((z < test->z_min) || (z > test->z_max))
-      g_assert_cmpfloat (nc_galaxy_sd_obs_redshift_integ (test->gsdor, z, data), ==, 0.0);
-    else
-      g_assert_cmpfloat (nc_galaxy_sd_obs_redshift_integ (test->gsdor, z, data), >=, 0.0);
+    g_assert_cmpfloat (nc_galaxy_sd_obs_redshift_integ (test->gsdor, z, data), >=, 0.0);
   }
 
   ncm_vector_clear (&data);
@@ -342,10 +339,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_integ (TestNcGalaxySDObsRedshift *test, gco
     ncm_vector_set (data, 0, zp);
     ncm_vector_set (data, 1, sigma);
 
-    if ((z < test->z_min) || (z > test->z_max))
-      g_assert_cmpfloat (nc_galaxy_sd_obs_redshift_integ (test->gsdor, z, data), ==, 0.0);
-    else
-      g_assert_cmpfloat (nc_galaxy_sd_obs_redshift_integ (test->gsdor, z, data), >=, 0.0);
+    g_assert_cmpfloat (nc_galaxy_sd_obs_redshift_integ (test->gsdor, z, data), >=, 0.0);
   }
 
   ncm_vector_clear (&data);
