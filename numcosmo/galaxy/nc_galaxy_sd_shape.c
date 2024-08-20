@@ -143,7 +143,7 @@ _nc_galaxy_sd_shape_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHalo
 }
 
 static gboolean
-_nc_galaxy_sd_shape_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hc, NcGalaxyWLObsCoord coord, NcmObjArray *data, NcmObjArray *data_prep)
+_nc_galaxy_sd_shape_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hc, NcGalaxyWLObsCoord coord, gboolean force, NcmObjArray *data, NcmObjArray *data_prep)
 {
   g_error ("_nc_galaxy_sd_shape_prepare: method not implemented.");
 
@@ -330,6 +330,7 @@ nc_galaxy_sd_shape_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloD
  * @cosmo: a #NcHICosmo
  * @hc: a #NcHaloPosition
  * @coord: a #NcGalaxyWLObsCoord
+ * @force: a #gboolean
  * @data: a #NcmObjArray
  * @data_prep: a #NcmObjArray
  *
@@ -338,9 +339,9 @@ nc_galaxy_sd_shape_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloD
  * Returns: TRUE if the matrix was prepared, FALSE otherwise.
  */
 gboolean
-nc_galaxy_sd_shape_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hc, NcGalaxyWLObsCoord coord, NcmObjArray *data, NcmObjArray *data_prep)
+nc_galaxy_sd_shape_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hc, NcGalaxyWLObsCoord coord, gboolean force, NcmObjArray *data, NcmObjArray *data_prep)
 {
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->prepare (gsds, cosmo, hc, coord, data, data_prep);
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->prepare (gsds, cosmo, hc, coord, force, data, data_prep);
 }
 
 /**

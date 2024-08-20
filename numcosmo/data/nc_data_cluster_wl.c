@@ -345,10 +345,10 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_S_OBS,
                                    g_param_spec_boxed ("s-obs",
-                                                         NULL,
-                                                         "Galaxy shape observables matrix",
-                                                         NCM_TYPE_OBJ_ARRAY,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                       NULL,
+                                                       "Galaxy shape observables matrix",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcDataClusterWL:s-obs-prep:
@@ -359,10 +359,10 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_S_OBS_PREP,
                                    g_param_spec_boxed ("s-obs-prep",
-                                                         NULL,
-                                                         "Prepared galaxy shape observables matrix",
-                                                         NCM_TYPE_OBJ_ARRAY,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                       NULL,
+                                                       "Prepared galaxy shape observables matrix",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcDataClusterWL:z-obs:
@@ -373,10 +373,10 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_Z_OBS,
                                    g_param_spec_boxed ("z-obs",
-                                                         NULL,
-                                                         "Galaxy redshift observables matrix",
-                                                         NCM_TYPE_OBJ_ARRAY,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                       NULL,
+                                                       "Galaxy redshift observables matrix",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcDataClusterWL:p-obs:
@@ -387,10 +387,10 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_P_OBS,
                                    g_param_spec_boxed ("p-obs",
-                                                         NULL,
-                                                         "Galaxy position observables matrix",
-                                                         NCM_TYPE_OBJ_ARRAY,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                       NULL,
+                                                       "Galaxy position observables matrix",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcDataClusterWL:s-dist:
@@ -526,7 +526,7 @@ struct _NcDataClusterWLIntArg
   NcHICosmo *cosmo;
   NcHaloDensityProfile *dp;
   NcWLSurfaceMassDensity *smd;
-  NcHaloPosition *hc;
+  NcHaloPosition *hp;
   NcmVector *s_obs;
   NcmVector *z_obs;
   NcmVector *p_obs;
@@ -548,7 +548,7 @@ nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint n
     const gdouble z = ncm_vector_get (x, i);
     gdouble res     = nc_galaxy_sd_position_integ (lh_int->data.p_dist, lh_int->data.p_obs) *
                       nc_galaxy_sd_obs_redshift_integ (lh_int->data.z_dist, z, lh_int->data.z_obs) *
-                      nc_galaxy_sd_shape_integ_optzs (lh_int->data.s_dist, lh_int->data.cosmo, lh_int->data.dp, lh_int->data.smd, lh_int->data.hc, z, lh_int->data.s_obs);
+                      nc_galaxy_sd_shape_integ_optzs (lh_int->data.s_dist, lh_int->data.cosmo, lh_int->data.dp, lh_int->data.smd, lh_int->data.hp, z, lh_int->data.s_obs);
 
     ncm_vector_set (fval, i, res);
   }
@@ -573,7 +573,7 @@ nc_data_cluster_wl_prepare_kde (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloD
  * @cosmo: a #NcHICosmo
  * @dp: a #NcHaloDensityProfile
  * @smd: a #NcWLSurfaceMassDensity
- * @hc: a #NcHaloPosition
+ * @hp: a #NcHaloPosition
  * @m2lnP_gal: (out) (optional): a #NcmVector
  *
  * Computes the observables probability given the theoretical modeling using
@@ -583,7 +583,7 @@ nc_data_cluster_wl_prepare_kde (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloD
  * Returns: $-2\ln(P)$.
  */
 gdouble
-nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, NcmVector *m2lnP_gal)
+nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmVector *m2lnP_gal)
 {
   NcDataClusterWLPrivate * const self     = dcwl->priv;
   NcDataClusterWLInt *likelihood_integral = g_object_new (nc_data_cluster_wl_integ_get_type (), NULL);
@@ -604,7 +604,7 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
   ncm_integral_nd_set_abstol (lh_int, 0.0);
   ncm_integral_nd_set_method (lh_int, NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V);
 
-  nc_galaxy_sd_shape_prepare (self->s_dist, cosmo, hc, nc_galaxy_wl_obs_get_coord (self->obs), self->s_obs, self->s_obs_prep);
+  nc_galaxy_sd_shape_prepare (self->s_dist, cosmo, hp, nc_galaxy_wl_obs_get_coord (self->obs), FALSE, self->s_obs, self->s_obs_prep);
 
   if ((self->s_obs != NULL) && (self->z_obs != NULL) && (self->p_obs != NULL))
   {
@@ -623,7 +623,6 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
   for (gal_i = 0; gal_i < self->len; gal_i++)
   {
     gdouble m2lnP_gal_i;
-    gdouble z_min, z_max;
 
     likelihood_integral->data.p_dist = NC_GALAXY_SD_POSITION (self->p_dist);
     likelihood_integral->data.z_dist = NC_GALAXY_SD_OBS_REDSHIFT (self->z_dist);
@@ -631,12 +630,12 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
     likelihood_integral->data.cosmo  = cosmo;
     likelihood_integral->data.dp     = dp;
     likelihood_integral->data.smd    = smd;
-    likelihood_integral->data.hc     = hc;
+    likelihood_integral->data.hp     = hp;
     likelihood_integral->data.s_obs  = NCM_VECTOR (ncm_obj_array_get (self->s_obs_prep, gal_i));
     likelihood_integral->data.z_obs  = NCM_VECTOR (ncm_obj_array_get (self->z_obs, gal_i));
     likelihood_integral->data.p_obs  = NCM_VECTOR (ncm_obj_array_get (self->p_obs, gal_i));
 
-    nc_galaxy_sd_shape_integ_optzs_prep (self->s_dist, cosmo, dp, smd, hc, likelihood_integral->data.s_obs);
+    nc_galaxy_sd_shape_integ_optzs_prep (self->s_dist, cosmo, dp, smd, hp, likelihood_integral->data.s_obs);
 
     ncm_integral_nd_eval (lh_int, zpi, zpf, res, err);
 
@@ -687,7 +686,7 @@ _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   NcHICosmo *cosmo                    = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcWLSurfaceMassDensity *smd         = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
   NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
-  NcHaloPosition *hc                  = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
+  NcHaloPosition *hp                  = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
   guint i;
 
   m2lnL[0] = 0.0;
@@ -695,7 +694,7 @@ _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   if (self->use_kde)
     m2lnL[0] += nc_data_cluster_wl_kde_eval_m2lnP (dcwl, cosmo, dp, smd, NULL);
   else
-    m2lnL[0] += nc_data_cluster_wl_eval_m2lnP (dcwl, cosmo, dp, smd, hc, NULL);
+    m2lnL[0] += nc_data_cluster_wl_eval_m2lnP (dcwl, cosmo, dp, smd, hp, NULL);
 
   return;
 }
@@ -720,11 +719,13 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
   NcHICosmo *cosmo                    = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcWLSurfaceMassDensity *smd         = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
   NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
-  NcHaloPosition *hc                  = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
+  NcHaloPosition *hp                  = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
 
-  g_assert ((cosmo != NULL) && (smd != NULL) && (dp != NULL) && (hc != NULL));
+  g_assert ((cosmo != NULL) && (smd != NULL) && (dp != NULL) && (hp != NULL));
 
   nc_wl_surface_mass_density_prepare_if_needed (smd, cosmo);
+
+  nc_galaxy_sd_shape_prepare (self->s_dist, cosmo, hp, nc_galaxy_wl_obs_get_coord (self->obs), TRUE, self->s_obs, self->s_obs_prep);
 }
 
 /**
@@ -960,14 +961,14 @@ nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble theta_min, cons
  * @cosmo: a #NcHICosmo
  * @dp: a #NcHaloDensityProfile
  * @smd: a #NcWLSurfaceMassDensity
- * @hc: a #NcHaloPosition
+ * @hp: a #NcHaloPosition
  * @nobs: number of observables to generate
  * @rng: a #NcmRNG
  *
  * Generates @nobs observables.
  */
 void
-nc_data_cluster_wl_gen_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, guint nobs, NcmRNG *rng)
+nc_data_cluster_wl_gen_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, guint nobs, NcmRNG *rng)
 {
   /* TO DO */
 }

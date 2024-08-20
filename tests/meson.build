@@ -240,6 +240,10 @@ c_tests = [
         'name': 'nc_galaxy_sd_obs_redshift',
         'sources': ['test_nc_galaxy_sd_obs_redshift.c'],
     },
+    {
+        'name': 'nc_galaxy_sd_shape',
+        'sources': ['test_nc_galaxy_sd_shape.c'],
+    },
 ]
 tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
 
