@@ -74,7 +74,7 @@ nc_galaxy_sd_obs_redshift_gauss_init (NcGalaxySDObsRedshiftGauss *gsdorgauss)
 }
 
 static void
-_nc_galaxy_sd_obs_redshift_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_galaxy_sd_obs_redshift_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (object);
   NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
@@ -84,7 +84,7 @@ _nc_galaxy_sd_obs_redshift_set_property (GObject *object, guint prop_id, const G
   switch (prop_id)
   {
     case PROP_SDZ:
-      self->sdz = g_value_get_object (value);
+      self->sdz = g_value_dup_object (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -93,7 +93,7 @@ _nc_galaxy_sd_obs_redshift_set_property (GObject *object, guint prop_id, const G
 }
 
 static void
-_nc_galaxy_sd_obs_redshift_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_galaxy_sd_obs_redshift_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (object);
   NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
@@ -141,22 +141,13 @@ nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *kla
   GObjectClass *object_class              = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class              = NCM_MODEL_CLASS (klass);
 
-  object_class->set_property = &_nc_galaxy_sd_obs_redshift_set_property;
-  object_class->get_property = &_nc_galaxy_sd_obs_redshift_get_property;
-  object_class->dispose      = &_nc_galaxy_sd_obs_redshift_gauss_dispose;
-  object_class->finalize     = &nc_galaxy_sd_obs_redshift_gauss_finalize;
+  model_class->set_property = &_nc_galaxy_sd_obs_redshift_gauss_set_property;
+  model_class->get_property = &_nc_galaxy_sd_obs_redshift_gauss_get_property;
+  object_class->dispose     = &_nc_galaxy_sd_obs_redshift_gauss_dispose;
+  object_class->finalize    = &nc_galaxy_sd_obs_redshift_gauss_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Gaussian Observed Redshift", "GalaxySDObsRedshiftGauss");
   ncm_model_class_add_params (model_class, NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_SPARAM_LEN, 0, PROP_LEN);
-
-  /**
-   * NcGalaxySDObsRedshiftGauss:sigma:
-   *
-   * The standard deviation of the gaussian distribution.
-   *
-   */
-  ncm_model_class_set_sparam (model_class, NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_SIGMA, "\\sigma", "sigma",
-                              0.0, 1.0, 1.0e-3, NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_DEFAULT_PARAMS_ABSTOL, NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_DEFAULT_SIGMA, NCM_PARAM_TYPE_FIXED);
 
   /**
    * NcGalaxySDObsRedshiftGauss:sdz:
@@ -170,6 +161,17 @@ nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *kla
                                                         "The galaxy redshift sample distribution",
                                                         NC_TYPE_GALAXY_SD_TRUE_REDSHIFT,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcGalaxySDObsRedshiftGauss:sigma:
+   *
+   * The standard deviation of the gaussian distribution.
+   *
+   */
+  ncm_model_class_set_sparam (model_class, NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_SIGMA, "\\sigma", "sigma",
+                              0.0, 1.0, 1.0e-3, NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_DEFAULT_PARAMS_ABSTOL, NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_DEFAULT_SIGMA, NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_check_params_info (model_class);
 
   gsdor_class->gen        = &_nc_galaxy_sd_obs_redshift_gauss_gen;
   gsdor_class->integ      = &_nc_galaxy_sd_obs_redshift_gauss_integ;
@@ -209,7 +211,7 @@ _nc_galaxy_sd_obs_redshift_gauss_integ (NcGalaxySDObsRedshift *gsdor, gdouble z,
   gdouble zp                                     = ncm_vector_get (data, 0);
   gdouble sigma                                  = ncm_vector_get (data, 1);
 
-  return nc_galaxy_sd_true_redshift_integ (self->sdz, z) * gsl_ran_gaussian_pdf (zp - z, sigma * (1.0 + z));
+  return nc_galaxy_sd_true_redshift_integ (self->sdz, z) * exp (-0.5 * (zp - z) * (zp - z) / (sigma * sigma * (1.0 + z) * (1.0 + z))) / (sqrt (2.0 * M_PI) * sigma * (1.0 + z));
 }
 
 static GStrv

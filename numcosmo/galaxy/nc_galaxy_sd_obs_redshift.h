@@ -44,7 +44,7 @@ G_DECLARE_DERIVABLE_TYPE (NcGalaxySDObsRedshift, nc_galaxy_sd_obs_redshift, NC, 
 struct _NcGalaxySDObsRedshiftClass
 {
   /*< private >*/
-  GObjectClass parent_class;
+  NcmModelClass parent_class;
 
   gdouble (*gen) (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data);
   gdouble (*integ) (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data);

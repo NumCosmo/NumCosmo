@@ -142,7 +142,7 @@ nc_galaxy_sd_obs_redshift_class_init (NcGalaxySDObsRedshiftClass *klass)
 
   ncm_model_class_set_name_nick (model_class, "Galaxy sample observed redshift distribution", "GalaxySDObsRedshift");
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
-
+  ncm_mset_model_register_id (model_class, "NcGalaxySDObsRedshift", "Galaxy sample observed redshift distribution", NULL, FALSE, NCM_MSET_MODEL_MAIN);
   ncm_model_class_check_params_info (model_class);
 
   klass->gen        = &_nc_galaxy_sd_obs_redshift_gen;

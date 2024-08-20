@@ -59,6 +59,7 @@ enum
 {
   PROP_0,
   PROP_SDZ,
+  PROP_LEN,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDObsRedshiftSpec, nc_galaxy_sd_obs_redshift_spec, NC_TYPE_GALAXY_SD_OBS_REDSHIFT);
@@ -72,7 +73,7 @@ nc_galaxy_sd_obs_redshift_spec_init (NcGalaxySDObsRedshiftSpec *gsdorspec)
 }
 
 static void
-_nc_galaxy_sd_obs_redshift_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_galaxy_sd_obs_redshift_spec_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (object);
   NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
@@ -82,7 +83,7 @@ _nc_galaxy_sd_obs_redshift_set_property (GObject *object, guint prop_id, const G
   switch (prop_id)
   {
     case PROP_SDZ:
-      self->sdz = g_value_get_object (value);
+      self->sdz = g_value_dup_object (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -91,7 +92,7 @@ _nc_galaxy_sd_obs_redshift_set_property (GObject *object, guint prop_id, const G
 }
 
 static void
-_nc_galaxy_sd_obs_redshift_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_galaxy_sd_obs_redshift_spec_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (object);
   NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
@@ -137,11 +138,15 @@ nc_galaxy_sd_obs_redshift_spec_class_init (NcGalaxySDObsRedshiftSpecClass *klass
 {
   NcGalaxySDObsRedshiftClass *gsdor_class = NC_GALAXY_SD_OBS_REDSHIFT_CLASS (klass);
   GObjectClass *object_class              = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class              = NCM_MODEL_CLASS (klass);
 
-  object_class->set_property = &_nc_galaxy_sd_obs_redshift_set_property;
-  object_class->get_property = &_nc_galaxy_sd_obs_redshift_get_property;
-  object_class->dispose      = &_nc_galaxy_sd_obs_redshift_spec_dispose;
-  object_class->finalize     = &nc_galaxy_sd_obs_redshift_spec_finalize;
+  model_class->set_property = &_nc_galaxy_sd_obs_redshift_spec_set_property;
+  model_class->get_property = &_nc_galaxy_sd_obs_redshift_spec_get_property;
+  object_class->dispose     = &_nc_galaxy_sd_obs_redshift_spec_dispose;
+  object_class->finalize    = &nc_galaxy_sd_obs_redshift_spec_finalize;
+
+  ncm_model_class_set_name_nick (model_class, "Spectroscopic Observed Redshift", "GalaxySDObsRedshiftSpec");
+  ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
 
   /**
    * NcGalaxySDObsRedshiftSpec:sdz:
@@ -155,6 +160,8 @@ nc_galaxy_sd_obs_redshift_spec_class_init (NcGalaxySDObsRedshiftSpecClass *klass
                                                         "The galaxy redshift sample distribution",
                                                         NC_TYPE_GALAXY_SD_TRUE_REDSHIFT,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  ncm_model_class_check_params_info (model_class);
 
   gsdor_class->gen        = &_nc_galaxy_sd_obs_redshift_spec_gen;
   gsdor_class->integ      = &_nc_galaxy_sd_obs_redshift_spec_integ;
