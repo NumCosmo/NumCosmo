@@ -236,9 +236,9 @@ _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHalo
   gdouble r                                = ncm_vector_get (data, 0);
   gdouble phi                              = ncm_vector_get (data, 1);
   gdouble e1                               = ncm_vector_get (data, 2);
-  gdouble e1_sigma                         = ncm_vector_get (data, 3);
-  gdouble e2                               = ncm_vector_get (data, 4);
-  gdouble e2_sigma                         = ncm_vector_get (data, 5);
+  gdouble e2                               = ncm_vector_get (data, 3);
+  gdouble e_rms                            = ncm_vector_get (data, 4);
+  gdouble e_sigma                          = ncm_vector_get (data, 5);
   gdouble gt                               = 0.0;
   complex double e_o                       = e1 + I * e2;
   complex double e_s                       = e_o;
@@ -255,7 +255,7 @@ _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHalo
       e_s = (e_o - g) / (1.0 - conj (g) * e_o);
   }
 
-  return gsl_ran_gaussian_pdf (creal (e_s), e1_sigma) * gsl_ran_gaussian_pdf (cimag (e_s), e2_sigma);
+  return exp (-0.5 * (cabs (e_s) / (gsl_pow_2 (e_rms) + gsl_pow_2 (e_sigma)))) / sqrt (2.0 * M_PI) / (gsl_pow_2 (e_rms) + gsl_pow_2 (e_sigma));
 }
 
 static void
@@ -277,9 +277,9 @@ _nc_galaxy_sd_shape_gauss_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, 
   gdouble z_cl                             = ncm_model_param_get_by_name (NCM_MODEL (hp), "z");
   gdouble phi                              = ncm_vector_get (data, 1);
   gdouble e1                               = ncm_vector_get (data, 2);
-  gdouble e1_sigma                         = ncm_vector_get (data, 3);
-  gdouble e2                               = ncm_vector_get (data, 4);
-  gdouble e2_sigma                         = ncm_vector_get (data, 5);
+  gdouble e2                               = ncm_vector_get (data, 3);
+  gdouble e_rms                            = ncm_vector_get (data, 4);
+  gdouble e_sigma                          = ncm_vector_get (data, 5);
   gdouble gt                               = 0.0;
   complex double e_o                       = e1 + I * e2;
   complex double e_s                       = e_s;
@@ -296,7 +296,7 @@ _nc_galaxy_sd_shape_gauss_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, 
       e_s = (e_o - g) / (1.0 - conj (g) * e_o);
   }
 
-  return gsl_ran_gaussian_pdf (creal (e_s), e1_sigma) * gsl_ran_gaussian_pdf (cimag (e_s), e2_sigma);
+  return exp (-0.5 * (cabs (e_s) / (gsl_pow_2 (e_rms) + gsl_pow_2 (e_sigma)))) / sqrt (2.0 * M_PI) / (gsl_pow_2 (e_rms) + gsl_pow_2 (e_sigma));
 }
 
 static gboolean
@@ -319,9 +319,9 @@ _nc_galaxy_sd_shape_gauss_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHa
       gdouble ra             = ncm_vector_get (data_i, 0);
       gdouble dec            = ncm_vector_get (data_i, 1);
       gdouble e1             = ncm_vector_get (data_i, 2);
-      gdouble e1_sigma       = ncm_vector_get (data_i, 3);
-      gdouble e2             = ncm_vector_get (data_i, 4);
-      gdouble e2_sigma       = ncm_vector_get (data_i, 5);
+      gdouble e2             = ncm_vector_get (data_i, 3);
+      gdouble e_rms          = ncm_vector_get (data_i, 4);
+      gdouble e_sigma        = ncm_vector_get (data_i, 5);
       gdouble theta          = 0.0;
       gdouble phi            = 0.0;
       gdouble r;
@@ -336,9 +336,9 @@ _nc_galaxy_sd_shape_gauss_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHa
       ncm_vector_set (data_prep_i, 0, r);
       ncm_vector_set (data_prep_i, 1, phi);
       ncm_vector_set (data_prep_i, 2, e1);
-      ncm_vector_set (data_prep_i, 3, e1_sigma);
-      ncm_vector_set (data_prep_i, 4, e2);
-      ncm_vector_set (data_prep_i, 5, e2_sigma);
+      ncm_vector_set (data_prep_i, 3, e2);
+      ncm_vector_set (data_prep_i, 4, e_rms);
+      ncm_vector_set (data_prep_i, 5, e_sigma);
     }
 
     return TRUE;
@@ -352,7 +352,7 @@ _nc_galaxy_sd_shape_gauss_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHa
 static GStrv
 _nc_galaxy_sd_shape_gauss_get_header (NcGalaxySDShape *gsds)
 {
-  GStrv header = g_strsplit ("ra dec e1 e1_sigma e2 e2_sigma", " ", -1);
+  GStrv header = g_strsplit ("ra dec e1 e2 e_rms e_sigma", " ", -1);
 
   return header;
 }
