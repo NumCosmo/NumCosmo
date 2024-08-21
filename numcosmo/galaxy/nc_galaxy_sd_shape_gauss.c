@@ -249,7 +249,7 @@ _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHalo
     gt = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r, z, z_cl, z_cl);
     g  = -creal (gt) * cos (2 * phi) - I * creal (gt) * sin (2 * phi);
 
-    if (cabs (gt) > 1.0)
+    if (gt > 1.0)
       e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
     else
       e_s = (e_o - g) / (1.0 - conj (g) * e_o);
@@ -290,7 +290,7 @@ _nc_galaxy_sd_shape_gauss_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, 
     gt = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z, z_cl, &self->optzs);
     g  = -creal (gt) * cos (2 * phi) - I * creal (gt) * sin (2 * phi);
 
-    if (cabs (gt) > 1.0)
+    if (gt > 1.0)
       e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
     else
       e_s = (e_o - g) / (1.0 - conj (g) * e_o);

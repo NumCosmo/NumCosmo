@@ -182,7 +182,7 @@ test_nc_galaxy_sd_shape_gauss_gen (TestNcGalaxySDShapeGauss *test, gconstpointer
   NcGalaxySDShapeGauss *gsds  = NC_GALAXY_SD_SHAPE_GAUSS (test->gsds);
   NcmRNG *rng                 = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0));
   NcDistance *dist            = nc_distance_new (100.0);
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
   NcHaloPosition *hp          = nc_halo_position_new (dist);
@@ -312,7 +312,7 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test, gconstpoint
 {
   NcGalaxySDShapeGauss *gsds  = NC_GALAXY_SD_SHAPE_GAUSS (test->gsds);
   NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0));
   NcDistance *dist            = nc_distance_new (100.0);
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
   NcHaloPosition *hp          = nc_halo_position_new (dist);
@@ -321,6 +321,8 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test, gconstpoint
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
   nc_halo_position_prepare (hp, cosmo);
+
+  ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", log10 (1.0e16));
 
   for (i = 0; i < nruns; i++)
   {
@@ -357,7 +359,7 @@ test_nc_galaxy_sd_shape_gauss_integ_optzs (TestNcGalaxySDShapeGauss *test, gcons
 {
   NcGalaxySDShapeGauss *gsds  = NC_GALAXY_SD_SHAPE_GAUSS (test->gsds);
   NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL, 200.0));
   NcDistance *dist            = nc_distance_new (100.0);
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
   NcHaloPosition *hp          = nc_halo_position_new (dist);
@@ -366,6 +368,8 @@ test_nc_galaxy_sd_shape_gauss_integ_optzs (TestNcGalaxySDShapeGauss *test, gcons
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
   nc_halo_position_prepare (hp, cosmo);
+
+  ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", log10 (1.0e16));
 
   for (i = 0; i < nruns; i++)
   {
@@ -405,7 +409,7 @@ test_nc_galaxy_sd_shape_gauss_prepare (TestNcGalaxySDShapeGauss *test, gconstpoi
   NcGalaxySDShapeGauss *gsds = NC_GALAXY_SD_SHAPE_GAUSS (test->gsds);
   NcHICosmo *cosmo           = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHaloPosition *hp         = nc_halo_position_new (nc_distance_new (10.0));
-  NcGalaxyWLObsCoord coord   = NC_GALAXY_WL_OBS_COORD_CELESTIAL;
+  NcGalaxyWLObsCoord coord   = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
   NcmObjArray *data          = ncm_obj_array_new ();
   NcmObjArray *data_prep     = ncm_obj_array_new ();
   NcmObjArray *data_prep1    = ncm_obj_array_new ();
