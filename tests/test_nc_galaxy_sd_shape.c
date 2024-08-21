@@ -409,11 +409,11 @@ test_nc_galaxy_sd_shape_gauss_prepare (TestNcGalaxySDShapeGauss *test, gconstpoi
   NcGalaxySDShapeGauss *gsds = NC_GALAXY_SD_SHAPE_GAUSS (test->gsds);
   NcHICosmo *cosmo           = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHaloPosition *hp         = nc_halo_position_new (nc_distance_new (10.0));
-  NcGalaxyWLObsCoord coord   = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
   NcmObjArray *data          = ncm_obj_array_new ();
   NcmObjArray *data_prep     = ncm_obj_array_new ();
   NcmObjArray *data_prep1    = ncm_obj_array_new ();
   NcmObjArray *data_prep2    = ncm_obj_array_new ();
+  NcmObjArray *data_prep3    = ncm_obj_array_new ();
   guint ndata                = 1000;
   guint i;
 
@@ -423,6 +423,7 @@ test_nc_galaxy_sd_shape_gauss_prepare (TestNcGalaxySDShapeGauss *test, gconstpoi
     NcmVector *vec_prep  = ncm_vector_new (6);
     NcmVector *vec_prep1 = ncm_vector_new (6);
     NcmVector *vec_prep2 = ncm_vector_new (6);
+    NcmVector *vec_prep3 = ncm_vector_new (6);
     gdouble ra           = g_test_rand_double_range (0.0, 1.0e-3);
     gdouble dec          = g_test_rand_double_range (0.0, 1.0e-3);
     gdouble e1           = g_test_rand_double_range (-1.0, 1.0);
@@ -458,21 +459,31 @@ test_nc_galaxy_sd_shape_gauss_prepare (TestNcGalaxySDShapeGauss *test, gconstpoi
     ncm_vector_set (vec_prep2, 4, 10000.0);
     ncm_vector_set (vec_prep2, 5, 10000.0);
 
+    ncm_vector_set (vec_prep3, 0, 10000.0);
+    ncm_vector_set (vec_prep3, 1, 10000.0);
+    ncm_vector_set (vec_prep3, 2, 10000.0);
+    ncm_vector_set (vec_prep3, 3, 10000.0);
+    ncm_vector_set (vec_prep3, 4, 10000.0);
+    ncm_vector_set (vec_prep3, 5, 10000.0);
+
     ncm_obj_array_add (data, G_OBJECT (vec));
     ncm_obj_array_add (data_prep, G_OBJECT (vec_prep));
     ncm_obj_array_add (data_prep1, G_OBJECT (vec_prep1));
     ncm_obj_array_add (data_prep2, G_OBJECT (vec_prep2));
+    ncm_obj_array_add (data_prep3, G_OBJECT (vec_prep3));
   }
 
 
   nc_halo_position_prepare (hp, cosmo);
   nc_galaxy_sd_shape_set_models (NC_GALAXY_SD_SHAPE (gsds), cosmo, hp);
 
-  g_assert_true (nc_galaxy_sd_shape_prepare (NC_GALAXY_SD_SHAPE (gsds), cosmo, hp, coord, TRUE, data, data_prep));
+  g_assert_true (nc_galaxy_sd_shape_prepare (NC_GALAXY_SD_SHAPE (gsds), cosmo, hp, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, TRUE, data, data_prep));
+  g_assert_true (nc_galaxy_sd_shape_prepare (NC_GALAXY_SD_SHAPE (gsds), cosmo, hp, NC_GALAXY_WL_OBS_COORD_CELESTIAL, TRUE, data, data_prep3));
 
   for (i = 0; i < ndata; i++)
   {
     NcmVector *vec = NCM_VECTOR (ncm_obj_array_get (data_prep, i));
+    NcmVector *vec3 = NCM_VECTOR (ncm_obj_array_get (data_prep3, i));
 
     g_assert_cmpfloat (ncm_vector_get (vec, 0), !=, 10000.0);
     g_assert_cmpfloat (ncm_vector_get (vec, 1), !=, 10000.0);
@@ -480,9 +491,11 @@ test_nc_galaxy_sd_shape_gauss_prepare (TestNcGalaxySDShapeGauss *test, gconstpoi
     g_assert_cmpfloat (ncm_vector_get (vec, 3), !=, 10000.0);
     g_assert_cmpfloat (ncm_vector_get (vec, 4), !=, 10000.0);
     g_assert_cmpfloat (ncm_vector_get (vec, 5), !=, 10000.0);
+
+    g_assert_cmpfloat (ncm_vector_get (vec3, 1), ==, M_PI - ncm_vector_get (vec, 1));
   }
 
-  g_assert_false (nc_galaxy_sd_shape_prepare (NC_GALAXY_SD_SHAPE (gsds), cosmo, hp, coord, FALSE, data, data_prep1));
+  g_assert_false (nc_galaxy_sd_shape_prepare (NC_GALAXY_SD_SHAPE (gsds), cosmo, hp, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, FALSE, data, data_prep1));
 
   for (i = 0; i < ndata; i++)
   {
@@ -498,7 +511,7 @@ test_nc_galaxy_sd_shape_gauss_prepare (TestNcGalaxySDShapeGauss *test, gconstpoi
 
   ncm_model_param_set_by_name (NCM_MODEL (hp), "ra", 0.001);
 
-  g_assert_true (nc_galaxy_sd_shape_prepare (NC_GALAXY_SD_SHAPE (gsds), cosmo, hp, coord, FALSE, data, data_prep2));
+  g_assert_true (nc_galaxy_sd_shape_prepare (NC_GALAXY_SD_SHAPE (gsds), cosmo, hp, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, FALSE, data, data_prep2));
 
   for (i = 0; i < ndata; i++)
   {
