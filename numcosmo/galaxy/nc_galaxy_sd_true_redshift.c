@@ -182,6 +182,7 @@ nc_galaxy_sd_true_redshift_class_init (NcGalaxySDTrueRedshiftClass *klass)
                                                        NCM_TYPE_DTUPLE2,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  ncm_mset_model_register_id (model_class, "NcGalaxySDTrueRedshift", "Galaxy sample redshift distribution", NULL, FALSE, NCM_MSET_MODEL_MAIN);
   ncm_model_class_check_params_info (model_class);
 
   klass->gen     = &_nc_galaxy_sd_true_redshift_gen;
