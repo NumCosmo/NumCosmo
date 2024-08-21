@@ -100,7 +100,6 @@ static void
 nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
 {
   NcDataClusterWLPrivate * const self = dcwl->priv = nc_data_cluster_wl_get_instance_private (dcwl);
-  NcmStatsDistKernelGauss *kernel     = ncm_stats_dist_kernel_gauss_new (4);
 
   self->obs         = NULL;
   self->s_obs       = NULL;
