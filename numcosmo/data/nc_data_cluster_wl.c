@@ -47,11 +47,6 @@
 #include "galaxy/nc_galaxy_sd_shape.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift.h"
 #include "galaxy/nc_galaxy_sd_position.h"
-#include "math/ncm_stats_dist.h"
-#include "math/ncm_stats_dist_kde.h"
-#include "math/ncm_stats_dist_vkde.h"
-#include "math/ncm_stats_dist_kernel_gauss.h"
-#include "math/ncm_stats_dist_kernel_st.h"
 #include "math/ncm_integral_nd.h"
 #include <math.h>
 #include <gsl/gsl_math.h>
@@ -75,14 +70,10 @@ struct _NcDataClusterWLPrivate
   NcGalaxySDShape *s_dist;
   NcGalaxySDObsRedshift *z_dist;
   NcGalaxySDPosition *p_dist;
-  NcmStatsDist *kde;
   gboolean constructed;
-  gboolean use_kde;
-  gdouble cut_fraction;
   gdouble theta_min;
   gdouble theta_max;
   gdouble prec;
-  guint ndata;
   guint len;
 };
 
@@ -99,9 +90,7 @@ enum
   PROP_P_DIST,
   PROP_THETA_MIN,
   PROP_THETA_MAX,
-  PROP_NDATA,
   PROP_PREC,
-  PROP_USE_KDE,
   PROP_SIZE,
 };
 
@@ -113,23 +102,19 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
   NcDataClusterWLPrivate * const self = dcwl->priv = nc_data_cluster_wl_get_instance_private (dcwl);
   NcmStatsDistKernelGauss *kernel     = ncm_stats_dist_kernel_gauss_new (4);
 
-  self->obs          = NULL;
-  self->s_obs        = NULL;
-  self->s_obs_prep   = NULL;
-  self->z_obs        = NULL;
-  self->p_obs        = NULL;
-  self->s_dist       = NULL;
-  self->z_dist       = NULL;
-  self->p_dist       = NULL;
-  self->kde          = NCM_STATS_DIST (ncm_stats_dist_vkde_new (NCM_STATS_DIST_KERNEL (kernel), NCM_STATS_DIST_CV_NONE));
-  self->constructed  = FALSE;
-  self->use_kde      = FALSE;
-  self->cut_fraction = 0.0;
-  self->theta_max    = 0.0;
-  self->theta_min    = 0.0;
-  self->prec         = 1.0e-11;
-  self->ndata        = 0;
-  self->len          = 0;
+  self->obs         = NULL;
+  self->s_obs       = NULL;
+  self->s_obs_prep  = NULL;
+  self->z_obs       = NULL;
+  self->p_obs       = NULL;
+  self->s_dist      = NULL;
+  self->z_dist      = NULL;
+  self->p_dist      = NULL;
+  self->constructed = FALSE;
+  self->theta_max   = 0.0;
+  self->theta_min   = 0.0;
+  self->prec        = 1.0e-6;
+  self->len         = 0;
 }
 
 static void
@@ -181,14 +166,8 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
         g_assert_cmpfloat (self->theta_min, <, self->theta_max);
 
       break;
-    case PROP_NDATA:
-      nc_data_cluster_wl_set_ndata (dcwl, g_value_get_int (value));
-      break;
     case PROP_PREC:
       nc_data_cluster_wl_set_prec (dcwl, g_value_get_double (value));
-      break;
-    case PROP_USE_KDE:
-      nc_data_cluster_wl_set_use_kde (dcwl, g_value_get_boolean (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -236,14 +215,8 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_THETA_MAX:
       g_value_set_double (value, self->theta_max);
       break;
-    case PROP_NDATA:
-      g_value_set_int (value, self->ndata);
-      break;
     case PROP_PREC:
       g_value_set_double (value, self->prec);
-      break;
-    case PROP_USE_KDE:
-      g_value_set_boolean (value, self->use_kde);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -275,8 +248,6 @@ nc_data_cluster_wl_dispose (GObject *object)
   nc_galaxy_sd_shape_clear (&self->s_dist);
   nc_galaxy_sd_obs_redshift_clear (&self->z_dist);
   nc_galaxy_sd_position_clear (&self->p_dist);
-
-  ncm_stats_dist_clear (&self->kde);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_wl_parent_class)->dispose (object);
@@ -468,21 +439,6 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcDataClusterWL:ndata:
-   *
-   * Number of data points to sample for KDE.
-   *
-   */
-
-  g_object_class_install_property (object_class,
-                                   PROP_NDATA,
-                                   g_param_spec_uint ("ndata",
-                                                      NULL,
-                                                      "Number of data points to sample for KDE",
-                                                      0, G_MAXUINT, 10000,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
    * NcDataClusterWL:prec:
    *
    * Precision for integral.
@@ -494,24 +450,8 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                    g_param_spec_double ("prec",
                                                         NULL,
                                                         "Precision for integral",
-                                                        0.0, G_MAXDOUBLE, 1.e-11,
+                                                        0.0, G_MAXDOUBLE, 1.0e-6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcDataClusterWL:use-kde:
-   *
-   * Whether to use KDE method.
-   *
-   */
-
-  g_object_class_install_property (object_class,
-                                   PROP_USE_KDE,
-                                   g_param_spec_boolean ("use-kde",
-                                                         NULL,
-                                                         "Whether to use KDE method",
-                                                         TRUE,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
 
   data_class->m2lnL_val  = &_nc_data_cluster_wl_m2lnL_val;
   data_class->get_length = &_nc_data_cluster_wl_get_len;
@@ -559,12 +499,6 @@ nc_data_cluster_wl_int_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
 {
   *dim  = 1;
   *fdim = 1;
-}
-
-void
-nc_data_cluster_wl_prepare_kde (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd)
-{
-  /* TO DO */
 }
 
 /**
@@ -657,27 +591,6 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
   return result;
 }
 
-/**
- * nc_data_cluster_wl_kde_eval_m2lnP:
- * @dcwl: a #NcDataClusterWL
- * @cosmo: a #NcHICosmo
- * @dp: a #NcHaloDensityProfile
- * @smd: a #NcWLSurfaceMassDensity
- * @m2lnP_gal: (out) (optional): a #NcmVector
- *
- * Computes the observables probability given the theoretical modeling using
- * kernel density estimation method.
- *
- *
- * Returns: $-2\ln(P)$.
- */
-gdouble
-nc_data_cluster_wl_kde_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcmVector *m2lnP_gal)
-{
-  /* TO DO */
-  return 0.0;
-}
-
 static void
 _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
@@ -691,10 +604,7 @@ _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
   m2lnL[0] = 0.0;
 
-  if (self->use_kde)
-    m2lnL[0] += nc_data_cluster_wl_kde_eval_m2lnP (dcwl, cosmo, dp, smd, NULL);
-  else
-    m2lnL[0] += nc_data_cluster_wl_eval_m2lnP (dcwl, cosmo, dp, smd, hp, NULL);
+  m2lnL[0] += nc_data_cluster_wl_eval_m2lnP (dcwl, cosmo, dp, smd, hp, NULL);
 
   return;
 }
@@ -793,23 +703,6 @@ nc_data_cluster_wl_clear (NcDataClusterWL **dcwl)
 }
 
 /**
- * nc_data_cluster_wl_set_use_kde:
- * @dcwl: a #NcDataClusterWL
- * @kde: whether to use KDE method
- *
- * The reference count of @dcwl is decreased and the pointer is set to NULL.
- *
- */
-void
-nc_data_cluster_wl_set_use_kde (NcDataClusterWL *data, gboolean use_kde)
-{
-  NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (data);
-  NcDataClusterWLPrivate * const self = dcwl->priv;
-
-  self->use_kde = use_kde;
-}
-
-/**
  * nc_data_cluster_wl_set_prec:
  * @dcwl: a #NcDataClusterWL
  * @prec: precision for integral
@@ -823,22 +716,6 @@ nc_data_cluster_wl_set_prec (NcDataClusterWL *dcwl, gdouble prec)
   NcDataClusterWLPrivate * const self = dcwl->priv;
 
   self->prec = prec;
-}
-
-/**
- * nc_data_cluster_wl_set_ndata:
- * @dcwl: a #NcDataClusterWL
- * @ndata: number of samples to take for KDE
- *
- * Sets the number of samples ndata.
- *
- */
-void
-nc_data_cluster_wl_set_ndata (NcDataClusterWL *dcwl, gdouble ndata)
-{
-  NcDataClusterWLPrivate * const self = dcwl->priv;
-
-  self->ndata = ndata;
 }
 
 /**
@@ -987,21 +864,5 @@ nc_data_cluster_wl_peek_obs (NcDataClusterWL *dcwl)
   NcDataClusterWLPrivate * const self = dcwl->priv;
 
   return self->obs;
-}
-
-/**
- * nc_data_cluster_wl_peek_kde:
- * @dcwl: a #NcDataClusterWL
- *
- * Gets the observables matrix.
- *
- * Returns: (transfer none): the observables matrix.
- */
-NcmStatsDist *
-nc_data_cluster_wl_peek_kde (NcDataClusterWL *dcwl)
-{
-  NcDataClusterWLPrivate * const self = dcwl->priv;
-
-  return self->kde;
 }
 
