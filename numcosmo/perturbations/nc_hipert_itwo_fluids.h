@@ -76,6 +76,10 @@ struct _NcHIPertITwoFluidsEOM
   gdouble mnu2_zeta;
   gdouble mnu2_s;
   gdouble y;
+  gdouble sin2phi;
+  gdouble cos2phi;
+  gdouble cs2;
+  gdouble cm2;
 };
 
 /**
