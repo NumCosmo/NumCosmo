@@ -67,6 +67,7 @@ struct _NcDataClusterWL
 NcDataClusterWL *nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDObsRedshift *z_dist, NcGalaxySDPosition *p_dist);
 NcDataClusterWL *nc_data_cluster_wl_ref (NcDataClusterWL *dcwl);
 gdouble nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmVector *m2lnP_gal);
+gdouble nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmVector *m2lnP_gal);
 void nc_data_cluster_wl_free (NcDataClusterWL *dcwl);
 void nc_data_cluster_wl_clear (NcDataClusterWL **dcwl);
 void nc_data_cluster_wl_set_prec (NcDataClusterWL *dcwl, gdouble prec);

@@ -46,6 +46,8 @@
 
 #include "galaxy/nc_galaxy_sd_shape.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift_gauss.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift_spec.h"
 #include "galaxy/nc_galaxy_sd_position.h"
 #include "math/ncm_integral_nd.h"
 #include <math.h>
@@ -501,7 +503,7 @@ nc_data_cluster_wl_int_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
 }
 
 /**
- * nc_data_cluster_wl_eval_m2lnP:
+ * nc_data_cluster_wl_eval_m2lnP_integ:
  * @dcwl: a #NcDataClusterWL
  * @cosmo: a #NcHICosmo
  * @dp: a #NcHaloDensityProfile
@@ -516,7 +518,7 @@ nc_data_cluster_wl_int_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
  * Returns: $-2\ln(P)$.
  */
 gdouble
-nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmVector *m2lnP_gal)
+nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmVector *m2lnP_gal)
 {
   NcDataClusterWLPrivate * const self     = dcwl->priv;
   NcDataClusterWLInt *likelihood_integral = g_object_new (nc_data_cluster_wl_integ_get_type (), NULL);
@@ -539,17 +541,6 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
 
   nc_galaxy_sd_shape_prepare (self->s_dist, cosmo, hp, nc_galaxy_wl_obs_get_coord (self->obs), FALSE, self->s_obs, self->s_obs_prep);
 
-  if ((self->s_obs != NULL) && (self->z_obs != NULL) && (self->p_obs != NULL))
-  {
-    g_assert_cmpuint (ncm_obj_array_len (self->s_obs), >, 0);
-    g_assert_cmpuint (ncm_obj_array_len (self->z_obs), >, 0);
-    g_assert_cmpuint (ncm_obj_array_len (self->p_obs), >, 0);
-  }
-  else
-  {
-    g_error ("Weak lensing observables matrices are not set.");
-  }
-
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
 
@@ -564,9 +555,9 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
     likelihood_integral->data.dp     = dp;
     likelihood_integral->data.smd    = smd;
     likelihood_integral->data.hp     = hp;
-    likelihood_integral->data.s_obs  = NCM_VECTOR (ncm_obj_array_get (self->s_obs_prep, gal_i));
-    likelihood_integral->data.z_obs  = NCM_VECTOR (ncm_obj_array_get (self->z_obs, gal_i));
-    likelihood_integral->data.p_obs  = NCM_VECTOR (ncm_obj_array_get (self->p_obs, gal_i));
+    likelihood_integral->data.s_obs  = NCM_VECTOR (ncm_obj_array_peek (self->s_obs_prep, gal_i));
+    likelihood_integral->data.z_obs  = NCM_VECTOR (ncm_obj_array_peek (self->z_obs, gal_i));
+    likelihood_integral->data.p_obs  = NCM_VECTOR (ncm_obj_array_peek (self->p_obs, gal_i));
 
     nc_galaxy_sd_shape_integ_optzs_prep (self->s_dist, cosmo, dp, smd, hp, likelihood_integral->data.s_obs);
 
@@ -590,6 +581,46 @@ nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDe
   return result;
 }
 
+/**
+ * nc_data_cluster_wl_eval_m2lnP:
+ * @dcwl: a #NcDataClusterWL
+ * @cosmo: a #NcHICosmo
+ * @dp: a #NcHaloDensityProfile
+ * @smd: a #NcWLSurfaceMassDensity
+ * @hp: a #NcHaloPosition
+ * @m2lnP_gal: (out) (optional): a #NcmVector
+ *
+ * Computes the observables probability given the theoretical modeling using
+ * integration method.
+ *
+ *
+ * Returns: $-2\ln(P)$.
+ */
+gdouble
+nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmVector *m2lnP_gal)
+{
+  NcDataClusterWLPrivate * const self = dcwl->priv;
+  gdouble result                      = 0;
+  guint gal_i;
+
+  nc_galaxy_sd_shape_prepare (self->s_dist, cosmo, hp, nc_galaxy_wl_obs_get_coord (self->obs), FALSE, self->s_obs, self->s_obs_prep);
+
+  if (m2lnP_gal != NULL)
+    g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
+
+  for (gal_i = 0; gal_i < self->len; gal_i++)
+  {
+    gdouble z           = ncm_vector_get (NCM_VECTOR (ncm_obj_array_peek (self->z_obs, gal_i)), 0);
+    gdouble m2lnP_gal_i =  nc_galaxy_sd_position_integ (self->p_dist, NCM_VECTOR (ncm_obj_array_peek (self->p_obs, gal_i))) *
+                          nc_galaxy_sd_obs_redshift_integ (self->z_dist, z, NCM_VECTOR (ncm_obj_array_peek (self->z_obs, gal_i))) *
+                          nc_galaxy_sd_shape_integ_optzs (self->s_dist, cosmo, dp, smd, hp, z, NCM_VECTOR (ncm_obj_array_peek (self->s_obs, gal_i)));
+
+    result += m2lnP_gal_i;
+  }
+
+  return result;
+}
+
 static void
 _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
@@ -601,9 +632,23 @@ _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   NcHaloPosition *hp                  = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
   guint i;
 
+  if ((self->s_obs != NULL) && (self->z_obs != NULL) && (self->p_obs != NULL))
+  {
+    g_assert_cmpuint (ncm_obj_array_len (self->s_obs), >, 0);
+    g_assert_cmpuint (ncm_obj_array_len (self->z_obs), >, 0);
+    g_assert_cmpuint (ncm_obj_array_len (self->p_obs), >, 0);
+  }
+  else
+  {
+    g_error ("Weak lensing observables matrices are not set.");
+  }
+
   m2lnL[0] = 0.0;
 
-  m2lnL[0] += nc_data_cluster_wl_eval_m2lnP (dcwl, cosmo, dp, smd, hp, NULL);
+  if (NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (self->z_dist))
+    m2lnL[0] += nc_data_cluster_wl_eval_m2lnP (dcwl, cosmo, dp, smd, hp, NULL);
+  else
+    m2lnL[0] += nc_data_cluster_wl_eval_m2lnP_integ (dcwl, cosmo, dp, smd, hp, NULL);
 
   return;
 }
