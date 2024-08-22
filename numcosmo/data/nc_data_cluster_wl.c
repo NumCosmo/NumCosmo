@@ -889,9 +889,60 @@ nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble theta_min, cons
  * Generates @nobs observables.
  */
 void
-nc_data_cluster_wl_gen_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, guint nobs, NcmRNG *rng)
+nc_data_cluster_wl_gen_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, guint nobs, NcmRNG *rng, NcGalaxyWLObsCoord coord)
 {
-  /* TO DO */
+  NcDataClusterWLPrivate * const self = dcwl->priv;
+  GStrv s_header                      = nc_galaxy_sd_shape_get_header (self->s_dist);
+  GStrv z_header                      = nc_galaxy_sd_obs_redshift_get_header (self->z_dist);
+  GStrv p_header                      = nc_galaxy_sd_position_get_header (self->p_dist);
+  gchar *s_string                     = g_strjoinv (" ", s_header);
+  gchar *z_string                     = g_strjoinv (" ", z_header);
+  gchar *p_string                     = g_strjoinv (" ", p_header);
+  gchar *header_string                = g_strconcat (s_string, " ", z_string, " ", p_string, NULL);
+  NcGalaxyWLObs *obs                  = nc_galaxy_wl_obs_new (coord, nobs, g_strsplit (header_string, " ", -1));
+  guint i;
+
+  for (i = 0; i < nobs; i++)
+  {
+    NcmVector *p_obs = ncm_vector_new (g_strv_length (p_header));
+    NcmVector *z_obs = ncm_vector_new (g_strv_length (z_header));
+    NcmVector *s_obs = ncm_vector_new (g_strv_length (s_header));
+    gchar **str;
+    guint j;
+
+    nc_galaxy_sd_position_gen (self->p_dist, rng, p_obs);
+    nc_galaxy_sd_obs_redshift_gen (self->z_dist, rng, z_obs);
+    nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, hp, rng, coord, p_obs, z_obs, s_obs);
+
+    j = 0;
+
+    for (str = s_header; *str != NULL; str++)
+    {
+      nc_galaxy_wl_obs_set (obs, *str, i, ncm_vector_get (s_obs, j));
+
+      j++;
+    }
+
+    j = 0;
+
+    for (str = z_header; *str != NULL; str++)
+    {
+      nc_galaxy_wl_obs_set (obs, *str, i, ncm_vector_get (z_obs, j));
+
+      j++;
+    }
+
+    j = 0;
+
+    for (str = p_header; *str != NULL; str++)
+    {
+      nc_galaxy_wl_obs_set (obs, *str, i, ncm_vector_get (p_obs, j));
+
+      j++;
+    }
+  }
+
+  nc_data_cluster_wl_set_obs (dcwl, obs);
 }
 
 /**

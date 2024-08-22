@@ -46,7 +46,7 @@ struct _NcGalaxySDObsRedshiftClass
   /*< private >*/
   NcmModelClass parent_class;
 
-  gdouble (*gen) (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data);
+  void (*gen) (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data);
   gdouble (*integ) (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data);
   GStrv (*get_header) (NcGalaxySDObsRedshift *gsdor);
 
@@ -61,7 +61,7 @@ NcGalaxySDObsRedshift *nc_galaxy_sd_obs_redshift_ref (NcGalaxySDObsRedshift *gsd
 void nc_galaxy_sd_obs_redshift_free (NcGalaxySDObsRedshift *gsdor);
 void nc_galaxy_sd_obs_redshift_clear (NcGalaxySDObsRedshift **gsdor);
 
-gdouble nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data);
+void nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data);
 gdouble nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data);
 GStrv nc_galaxy_sd_obs_redshift_get_header (NcGalaxySDObsRedshift *gsdor);
 

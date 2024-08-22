@@ -130,7 +130,7 @@ nc_galaxy_sd_obs_redshift_gauss_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_obs_redshift_gauss_parent_class)->finalize (object);
 }
 
-static gdouble _nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data);
+static void _nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data);
 static gdouble _nc_galaxy_sd_obs_redshift_gauss_integ (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data);
 static GStrv _nc_galaxy_sd_obs_redshift_gauss_get_header (NcGalaxySDObsRedshift *gsdor);
 
@@ -181,7 +181,7 @@ nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *kla
 #define VECTOR (NCM_MODEL (gsdor))
 #define SIGMA  (ncm_model_orig_param_get (VECTOR, NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_SIGMA))
 
-static gdouble
+static void
 _nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data)
 {
   NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
@@ -192,15 +192,13 @@ _nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng,
   gdouble zp;
   gdouble z;
 
-  if (!nc_galaxy_sd_true_redshift_get_lim (self->sdz, &z_min, &z_max))
-    g_error ("Failed to get redshift limits.");
-
   do {
     z  = nc_galaxy_sd_true_redshift_gen (self->sdz, rng);
     zp = ncm_rng_gaussian_gen (rng, z, sigma * (1.0 + z));
   } while ((zp > z_max) || (zp < z_min));
 
-  return zp;
+  ncm_vector_set (data, 0, zp);
+  ncm_vector_set (data, 1, sigma);
 }
 
 static gdouble

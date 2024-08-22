@@ -107,12 +107,10 @@ _nc_galaxy_sd_obs_redshift_finalize (GObject *object)
 NCM_MSET_MODEL_REGISTER_ID (nc_galaxy_sd_obs_redshift, NC_TYPE_GALAXY_SD_OBS_REDSHIFT)
 
 /*  LCOV_EXCL_START */
-static gdouble
+static void
 _nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data)
 {
   g_error ("_nc_galaxy_sd_obs_redshift_gen: method not implemented");
-
-  return 0.0;
 }
 
 static gdouble
@@ -202,9 +200,8 @@ nc_galaxy_sd_obs_redshift_clear (NcGalaxySDObsRedshift **gsdor)
  *
  * Generates an observed redshift value from the distribution using @rng.
  *
- * Returns: the generated redshift value.
  */
-gdouble
+void
 nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data)
 {
   return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->gen (gsdor, rng, data);

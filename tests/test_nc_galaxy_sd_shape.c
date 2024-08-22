@@ -194,7 +194,6 @@ test_nc_galaxy_sd_shape_gauss_gen (TestNcGalaxySDShapeGauss *test, gconstpointer
   gdouble e2_var              = gsl_pow_2 (ncm_model_param_get_by_name (NCM_MODEL (gsds), "sigma"));
   guint nruns                 = 10;
   guint ndata                 = 10000;
-  gdouble e1_celestial, e2_celestial, e1_euclidean, e2_euclidean;
   gdouble e1_avg, e2_avg, et, theta, phi, r;
   guint i;
 
@@ -220,19 +219,31 @@ test_nc_galaxy_sd_shape_gauss_gen (TestNcGalaxySDShapeGauss *test, gconstpointer
       gint seed    = g_test_rand_int ();
       NcmRNG *rng1 = ncm_rng_seeded_new (NULL, seed);
       NcmRNG *rng2 = ncm_rng_seeded_new (NULL, seed);
+      NcmVector *p_data = ncm_vector_new (2);
+      NcmVector *z_data = ncm_vector_new (1);
+      NcmVector *s_data_celestial = ncm_vector_new (6);
+      NcmVector *s_data_euclidean = ncm_vector_new (6);
 
-      nc_galaxy_sd_shape_gen (NC_GALAXY_SD_SHAPE (gsds), cosmo, dp, smd, hp, rng1, NC_GALAXY_WL_OBS_COORD_CELESTIAL, ra, dec, z, &e1_celestial, &e2_celestial);
-      nc_galaxy_sd_shape_gen (NC_GALAXY_SD_SHAPE (gsds), cosmo, dp, smd, hp, rng2, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, ra, dec, z, &e1_euclidean, &e2_euclidean);
+      ncm_vector_set (p_data, 0, ra);
+      ncm_vector_set (p_data, 1, dec);
+      ncm_vector_set (z_data, 0, z);
 
-      g_assert_cmpfloat (e1_celestial, ==, e1_euclidean);
-      g_assert_cmpfloat (e2_celestial, ==, -e2_euclidean);
+      nc_galaxy_sd_shape_gen (NC_GALAXY_SD_SHAPE (gsds), cosmo, dp, smd, hp, rng1, NC_GALAXY_WL_OBS_COORD_CELESTIAL, p_data, z_data, s_data_celestial);
+      nc_galaxy_sd_shape_gen (NC_GALAXY_SD_SHAPE (gsds), cosmo, dp, smd, hp, rng2, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, p_data, z_data, s_data_euclidean);
 
-      ncm_stats_vec_set (pos_sample, 0, e1_euclidean);
-      ncm_stats_vec_set (pos_sample, 1, e2_euclidean);
+      g_assert_cmpfloat (ncm_vector_get (s_data_celestial, 2), ==, ncm_vector_get (s_data_euclidean, 2));
+      g_assert_cmpfloat (ncm_vector_get (s_data_celestial, 3), ==, -ncm_vector_get (s_data_euclidean, 3));
+
+      ncm_stats_vec_set (pos_sample, 0, ncm_vector_get (s_data_euclidean, 2));
+      ncm_stats_vec_set (pos_sample, 1, ncm_vector_get (s_data_euclidean, 3));
 
       ncm_stats_vec_update (pos_sample);
       ncm_rng_free (rng1);
       ncm_rng_free (rng2);
+      ncm_vector_free (p_data);
+      ncm_vector_free (z_data);
+      ncm_vector_free (s_data_celestial);
+      ncm_vector_free (s_data_euclidean);
     }
 
     g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), <, e1_avg + 5 * sqrt (e1_var / ndata));
@@ -286,9 +297,14 @@ test_nc_galaxy_sd_shape_gauss_gen_strong (TestNcGalaxySDShapeGauss *test, gconst
 
     for (j = 0; j < ndata; j++)
     {
-      gdouble e1, e2;
+      NcmVector *p_data = ncm_vector_new (2);
+      NcmVector *z_data = ncm_vector_new (1);
+      NcmVector *s_data = ncm_vector_new (6);
 
-      nc_galaxy_sd_shape_gen (NC_GALAXY_SD_SHAPE (gsds), cosmo, dp, smd, hp, rng, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, ra, dec, z, &e1, &e2);
+      nc_galaxy_sd_shape_gen (NC_GALAXY_SD_SHAPE (gsds), cosmo, dp, smd, hp, rng, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, p_data, z_data, s_data);
+
+      gdouble e1 = ncm_vector_get (s_data, 2);
+      gdouble e2 = ncm_vector_get (s_data, 3);
 
       ncm_stats_vec_set (pos_sample, 0, e1 * e1 + e2 * e2);
       ncm_stats_vec_update (pos_sample);

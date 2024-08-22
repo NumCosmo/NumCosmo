@@ -129,7 +129,7 @@ nc_galaxy_sd_obs_redshift_spec_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_obs_redshift_spec_parent_class)->finalize (object);
 }
 
-static gdouble _nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data);
+static void _nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data);
 static gdouble _nc_galaxy_sd_obs_redshift_spec_integ (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data);
 static GStrv _nc_galaxy_sd_obs_redshift_spec_get_header (NcGalaxySDObsRedshift *gsdor);
 
@@ -168,13 +168,13 @@ nc_galaxy_sd_obs_redshift_spec_class_init (NcGalaxySDObsRedshiftSpecClass *klass
   gsdor_class->get_header = &_nc_galaxy_sd_obs_redshift_spec_get_header;
 }
 
-static gdouble
+static void
 _nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data)
 {
   NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdor);
   NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
 
-  return nc_galaxy_sd_true_redshift_gen (self->sdz, rng);
+  ncm_vector_set (data, 0, nc_galaxy_sd_true_redshift_gen (self->sdz, rng));
 }
 
 static gdouble

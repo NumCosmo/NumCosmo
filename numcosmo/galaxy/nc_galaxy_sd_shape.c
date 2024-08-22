@@ -112,12 +112,10 @@ _nc_galaxy_sd_shape_finalize (GObject *object)
 NCM_MSET_MODEL_REGISTER_ID (nc_galaxy_sd_shape, NC_TYPE_GALAXY_SD_SHAPE);
 
 /* LCOV_EXCL_START */
-static gboolean
-_nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, NcmRNG *rng, NcGalaxyWLObsCoord coord, const gdouble ra, const gdouble dec, const gdouble z, gdouble *e1, gdouble *e2)
+static void
+_nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, NcmRNG *rng, NcGalaxyWLObsCoord coord, NcmVector *data_p, NcmVector *data_z, NcmVector *data_s)
 {
   g_error ("_nc_galaxy_sd_shape_gen: method not implemented.");
-
-  return FALSE;
 }
 
 static gdouble
@@ -251,21 +249,17 @@ nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds)
  * @hc: a #NcHaloPosition
  * @rng: a #NcmRNG
  * @coord: a #NcGalaxyWLObsCoord
- * @ra: the right ascension of the galaxy
- * @dec: the declination of the galaxy
- * @z: the redshift of the galaxy
- * @e1: (out): the generated first ellipticity component $e_1$
- * @e2: (out): the generated second ellipticity component $e_2$
+ * @data_p: a #NcmVector
+ * @data_z: a #NcmVector
+ * @data_s: (out): a #NcmVector
  *
  * Generates a shape value from the position using @rng.
  *
  */
-gboolean
-nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, NcmRNG *rng, NcGalaxyWLObsCoord coord, const gdouble ra, const gdouble dec, const gdouble z, gdouble *e1, gdouble *e2)
+void
+nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, NcmRNG *rng, NcGalaxyWLObsCoord coord, NcmVector *data_p, NcmVector *data_z, NcmVector *data_s)
 {
-  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->gen (gsds, cosmo, dp, smd, hc, rng, coord, ra, dec, z, e1, e2);
-
-  return FALSE;
+  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->gen (gsds, cosmo, dp, smd, hc, rng, coord, data_p, data_z, data_s);
 }
 
 /**

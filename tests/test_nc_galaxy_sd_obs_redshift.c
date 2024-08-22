@@ -247,9 +247,9 @@ test_nc_galaxy_sd_obs_redshift_spec_gen (TestNcGalaxySDObsRedshift *test, gconst
 
     for (j = 0; j < ndata; j++)
     {
-      const gdouble z = nc_galaxy_sd_obs_redshift_gen (test->gsdor, rng, data);
+      nc_galaxy_sd_obs_redshift_gen (test->gsdor, rng, data);
 
-      ncm_stats_vec_set (pos_sample, 0, z);
+      ncm_stats_vec_set (pos_sample, 0, ncm_vector_get (data, 0));
 
       ncm_stats_vec_update (pos_sample);
     }
@@ -270,7 +270,7 @@ static void
 test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift *test, gconstpointer pdata)
 {
   NcmRNG *rng         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcmVector *data     = ncm_vector_new (1);
+  NcmVector *data     = ncm_vector_new (2);
   const gdouble z_avg = _test_get_z_avg (test);
   const gdouble z_var = sqrt (gsl_pow_4 (ncm_model_param_get_by_name (NCM_MODEL (test->gsdor), "sigma") * (1 + z_avg)) + gsl_pow_2 (_test_get_z_var (test)));
   const guint nruns   = 10;
@@ -284,9 +284,9 @@ test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift *test, gcons
 
     for (j = 0; j < ndata; j++)
     {
-      const gdouble z = nc_galaxy_sd_obs_redshift_gen (test->gsdor, rng, data);
+      nc_galaxy_sd_obs_redshift_gen (test->gsdor, rng, data);
 
-      ncm_stats_vec_set (pos_sample, 0, z);
+      ncm_stats_vec_set (pos_sample, 0, ncm_vector_get (data, 0));
 
       ncm_stats_vec_update (pos_sample);
     }

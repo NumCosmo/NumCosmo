@@ -251,9 +251,12 @@ test_nc_galaxy_sd_position_flat_gen (TestNcGalaxySDPosition *test, gconstpointer
 
     for (j = 0; j < ndata; j++)
     {
-      gdouble gen_ra, gen_dec;
+      NcmVector *data = ncm_vector_new (2);
 
-      nc_galaxy_sd_position_gen (test->gsdp, rng, &gen_ra, &gen_dec);
+      nc_galaxy_sd_position_gen (test->gsdp, rng, data);
+
+      gdouble gen_ra  = ncm_vector_get (data, 0);
+      gdouble gen_dec = ncm_vector_get (data, 1);
 
       g_assert_cmpfloat (gen_ra, >, ra_min);
       g_assert_cmpfloat (gen_ra, <, ra_max);
@@ -264,6 +267,7 @@ test_nc_galaxy_sd_position_flat_gen (TestNcGalaxySDPosition *test, gconstpointer
       ncm_stats_vec_set (pos_sample, 1, gen_dec);
 
       ncm_stats_vec_update (pos_sample);
+      ncm_vector_free (data);
     }
 
     g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), <, ra_avg + 5.0 * sqrt (ra_var / ndata));
