@@ -344,7 +344,7 @@ _nc_galaxy_sd_shape_gauss_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHa
       gdouble phi            = 0.0;
       gdouble r;
 
-      nc_halo_position_polar_angles (hp, ra_cl, dec_cl, &theta, &phi);
+      nc_halo_position_polar_angles (hp, ra, dec, &theta, &phi);
 
       r = nc_halo_position_projected_radius (hp, cosmo, theta);
 

@@ -188,6 +188,8 @@ nc_halo_position_class_init (NcHaloPositionClass *klass)
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
+  ncm_mset_model_register_id (model_class, "NcHaloPosition", "Halo position.", NULL, TRUE, NCM_MSET_MODEL_MAIN);
+
   ncm_model_class_check_params_info (model_class);
 }
 
