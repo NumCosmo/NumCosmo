@@ -192,8 +192,12 @@ _nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng,
   gdouble zp;
   gdouble z;
 
+  if (!nc_galaxy_sd_true_redshift_get_lim (self->sdz, &z_min, &z_max))
+    g_error ("Failed to get redshift limits.");
+
+  z  = nc_galaxy_sd_true_redshift_gen (self->sdz, rng);
+
   do {
-    z  = nc_galaxy_sd_true_redshift_gen (self->sdz, rng);
     zp = ncm_rng_gaussian_gen (rng, z, sigma * (1.0 + z));
   } while ((zp > z_max) || (zp < z_min));
 
