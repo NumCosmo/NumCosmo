@@ -190,8 +190,8 @@ test_nc_galaxy_sd_shape_gauss_gen (TestNcGalaxySDShapeGauss *test, gconstpointer
   gdouble ra                  = g_test_rand_double_range (0.0, 1.0e-3);
   gdouble dec                 = g_test_rand_double_range (0.0, 1.0e-3);
   gdouble z                   = g_test_rand_double_range (0.4, 0.6);
-  gdouble e1_var              = gsl_pow_2 (ncm_model_param_get_by_name (NCM_MODEL (gsds), "sigma"));
-  gdouble e2_var              = gsl_pow_2 (ncm_model_param_get_by_name (NCM_MODEL (gsds), "sigma"));
+  gdouble e1_var              = gsl_pow_2 (ncm_model_param_get_by_name (NCM_MODEL (gsds), "e-rms")) + gsl_pow_2 (ncm_model_param_get_by_name (NCM_MODEL (gsds), "e-sigma"));
+  gdouble e2_var              = gsl_pow_2 (ncm_model_param_get_by_name (NCM_MODEL (gsds), "e-rms")) + gsl_pow_2 (ncm_model_param_get_by_name (NCM_MODEL (gsds), "e-sigma"));
   guint nruns                 = 10;
   guint ndata                 = 10000;
   gdouble e1_avg, e2_avg, et, theta, phi, r;
@@ -216,11 +216,11 @@ test_nc_galaxy_sd_shape_gauss_gen (TestNcGalaxySDShapeGauss *test, gconstpointer
 
     for (j = 0; j < ndata; j++)
     {
-      gint seed    = g_test_rand_int ();
-      NcmRNG *rng1 = ncm_rng_seeded_new (NULL, seed);
-      NcmRNG *rng2 = ncm_rng_seeded_new (NULL, seed);
-      NcmVector *p_data = ncm_vector_new (2);
-      NcmVector *z_data = ncm_vector_new (1);
+      gint seed                   = g_test_rand_int ();
+      NcmRNG *rng1                = ncm_rng_seeded_new (NULL, seed);
+      NcmRNG *rng2                = ncm_rng_seeded_new (NULL, seed);
+      NcmVector *p_data           = ncm_vector_new (2);
+      NcmVector *z_data           = ncm_vector_new (1);
       NcmVector *s_data_celestial = ncm_vector_new (6);
       NcmVector *s_data_euclidean = ncm_vector_new (6);
 
@@ -342,21 +342,21 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test, gconstpoint
 
   for (i = 0; i < nruns; i++)
   {
-    NcmVector *data  = ncm_vector_new (6);
-    gdouble r        = g_test_rand_double_range (0.0, 1.0);
-    gdouble phi      = g_test_rand_double_range (0.0, 2.0 * M_PI);
-    gdouble e1       = g_test_rand_double_range (-1.0, 1.0);
-    gdouble e1_sigma = g_test_rand_double_range (0.1, 0.5);
-    gdouble e2       = g_test_rand_double_range (-1.0, 1.0);
-    gdouble e2_sigma = g_test_rand_double_range (0.1, 0.5);
-    gdouble z        = g_test_rand_double_range (0.0, 5.0);
+    NcmVector *data = ncm_vector_new (6);
+    gdouble r       = g_test_rand_double_range (0.0, 1.0);
+    gdouble phi     = g_test_rand_double_range (0.0, 2.0 * M_PI);
+    gdouble e1      = g_test_rand_double_range (-1.0, 1.0);
+    gdouble e2      = g_test_rand_double_range (-1.0, 1.0);
+    gdouble e_rms   = g_test_rand_double_range (0.1, 0.5);
+    gdouble e_sigma = g_test_rand_double_range (0.01, 0.1);
+    gdouble z       = g_test_rand_double_range (0.0, 5.0);
 
     ncm_vector_set (data, 0, r);
     ncm_vector_set (data, 1, phi);
     ncm_vector_set (data, 2, e1);
-    ncm_vector_set (data, 3, e1_sigma);
-    ncm_vector_set (data, 4, e2);
-    ncm_vector_set (data, 5, e2_sigma);
+    ncm_vector_set (data, 3, e2);
+    ncm_vector_set (data, 4, e_rms);
+    ncm_vector_set (data, 5, e_sigma);
 
     g_assert_cmpfloat (nc_galaxy_sd_shape_integ (NC_GALAXY_SD_SHAPE (gsds), cosmo, dp, smd, hp, z, data), >=, 0.0);
 
@@ -389,21 +389,21 @@ test_nc_galaxy_sd_shape_gauss_integ_optzs (TestNcGalaxySDShapeGauss *test, gcons
 
   for (i = 0; i < nruns; i++)
   {
-    NcmVector *data  = ncm_vector_new (6);
-    gdouble r        = g_test_rand_double_range (0.0, 1.0);
-    gdouble phi      = g_test_rand_double_range (0.0, 2.0 * M_PI);
-    gdouble e1       = g_test_rand_double_range (-1.0, 1.0);
-    gdouble e1_sigma = g_test_rand_double_range (0.1, 0.5);
-    gdouble e2       = g_test_rand_double_range (-1.0, 1.0);
-    gdouble e2_sigma = g_test_rand_double_range (0.1, 0.5);
-    gdouble z        = g_test_rand_double_range (0.0, 5.0);
+    NcmVector *data = ncm_vector_new (6);
+    gdouble r       = g_test_rand_double_range (0.0, 1.0);
+    gdouble phi     = g_test_rand_double_range (0.0, 2.0 * M_PI);
+    gdouble e1      = g_test_rand_double_range (-1.0, 1.0);
+    gdouble e2      = g_test_rand_double_range (-1.0, 1.0);
+    gdouble e_rms   = g_test_rand_double_range (0.1, 0.5);
+    gdouble e_sigma = g_test_rand_double_range (0.01, 0.1);
+    gdouble z       = g_test_rand_double_range (0.0, 5.0);
 
     ncm_vector_set (data, 0, r);
     ncm_vector_set (data, 1, phi);
     ncm_vector_set (data, 2, e1);
-    ncm_vector_set (data, 3, e1_sigma);
-    ncm_vector_set (data, 4, e2);
-    ncm_vector_set (data, 5, e2_sigma);
+    ncm_vector_set (data, 3, e2);
+    ncm_vector_set (data, 4, e_rms);
+    ncm_vector_set (data, 5, e_sigma);
 
     nc_galaxy_sd_shape_integ_optzs_prep (NC_GALAXY_SD_SHAPE (gsds), cosmo, dp, smd, hp, data);
 
@@ -443,16 +443,17 @@ test_nc_galaxy_sd_shape_gauss_prepare (TestNcGalaxySDShapeGauss *test, gconstpoi
     gdouble ra           = g_test_rand_double_range (0.0, 1.0e-3);
     gdouble dec          = g_test_rand_double_range (0.0, 1.0e-3);
     gdouble e1           = g_test_rand_double_range (-1.0, 1.0);
-    gdouble e1_sigma     = g_test_rand_double_range (0.1, 0.5);
     gdouble e2           = g_test_rand_double_range (-1.0, 1.0);
-    gdouble e2_sigma     = g_test_rand_double_range (0.1, 0.5);
+    gdouble e_rms        = g_test_rand_double_range (0.1, 0.5);
+    gdouble e_sigma      = g_test_rand_double_range (0.01, 0.1);
+    gdouble z            = g_test_rand_double_range (0.0, 5.0);
 
     ncm_vector_set (vec, 0, ra);
     ncm_vector_set (vec, 1, dec);
     ncm_vector_set (vec, 2, e1);
-    ncm_vector_set (vec, 3, e1_sigma);
-    ncm_vector_set (vec, 4, e2);
-    ncm_vector_set (vec, 5, e2_sigma);
+    ncm_vector_set (vec, 3, e2);
+    ncm_vector_set (vec, 4, e_rms);
+    ncm_vector_set (vec, 5, e_sigma);
 
     ncm_vector_set (vec_prep, 0, 10000.0);
     ncm_vector_set (vec_prep, 1, 10000.0);
@@ -498,7 +499,7 @@ test_nc_galaxy_sd_shape_gauss_prepare (TestNcGalaxySDShapeGauss *test, gconstpoi
 
   for (i = 0; i < ndata; i++)
   {
-    NcmVector *vec = NCM_VECTOR (ncm_obj_array_get (data_prep, i));
+    NcmVector *vec  = NCM_VECTOR (ncm_obj_array_get (data_prep, i));
     NcmVector *vec3 = NCM_VECTOR (ncm_obj_array_get (data_prep3, i));
 
     g_assert_cmpfloat (ncm_vector_get (vec, 0), !=, 10000.0);
@@ -547,7 +548,7 @@ test_nc_galaxy_sd_shape_gauss_get_header (TestNcGalaxySDShapeGauss *test, gconst
 {
   NcGalaxySDShapeGauss *gsds = NC_GALAXY_SD_SHAPE_GAUSS (test->gsds);
   GStrv header               = nc_galaxy_sd_shape_get_header (NC_GALAXY_SD_SHAPE (gsds));
-  GStrv header_ctrl          = g_strsplit ("ra dec e1 e1_sigma e2 e2_sigma", " ", -1);
+  GStrv header_ctrl          = g_strsplit ("ra dec e1 e2 e_rms e_sigma", " ", -1);
 
   g_assert_cmpstrv (header, header_ctrl);
 }
