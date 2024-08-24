@@ -118,6 +118,7 @@ nc_hipert_itwo_fluids_tv_free (NcHIPertITwoFluidsTV *tf_tv)
  * nc_hipert_itwo_fluids_eom_eval:
  * @itf: a #NcHIPertITwoFluids
  * @alpha: time in log of scale factor
+ * @k: wave number
  *
  * Computes the coefficients of the differential equation for the
  * perturbations of the two fluids system.
@@ -131,6 +132,7 @@ nc_hipert_itwo_fluids_tv_free (NcHIPertITwoFluidsTV *tf_tv)
  * nc_hipert_itwo_fluids_tv_eval:
  * @itf: a #NcHIPertITwoFluids
  * @alpha: time in log of scale factor
+ * @k: wave number
  *
  * Computes the transformation matrix between the perturbations of the
  * two fluids system and the variables used in the differential

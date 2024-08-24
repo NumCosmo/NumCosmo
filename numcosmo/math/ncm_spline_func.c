@@ -779,7 +779,7 @@ ncm_spline_set_func_scale (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *
  * @s: a #NcmSpline.
  * @ftype: a #NcmSplineFuncType
  * @F: (scope call): function to be approximated by spline functions
- * @obj: (allow-none): #GObject used by the function @F
+ * @obj: (allow-none): GObject used by the function @F
  * @xi: lower knot
  * @xf: upper knot
  * @max_nodes: maximum number of knots
@@ -896,7 +896,7 @@ ncm_spline_set_func_grid (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F
  * @s: a #NcmSpline.
  * @ftype: a #NcmSplineFuncType: must be either #NCM_SPLINE_FUNC_GRID_LINEAR or #NCM_SPLINE_FUNC_GRID_LOG
  * @F: (scope call): function to be interpolated
- * @obj: (allow-none): #GObject used by the function @F
+ * @obj: (allow-none): GObject used by the function @F
  * @xi: lower knot
  * @xf: upper knot
  * @nnodes: number of knots including both limits knots [@xi, @xf]
