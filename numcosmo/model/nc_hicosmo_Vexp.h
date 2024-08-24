@@ -57,7 +57,7 @@ struct _NcHICosmoVexpClass
  * @NC_HICOSMO_VEXP_D_PHI: mean of the scalar field wave function distribution
  * @NC_HICOSMO_VEXP_ALPHA_B: logarithm base e of the scale factor at the bounce
  * @NC_HICOSMO_VEXP_X_B: ratio of the scale factor today and at the bounce
- * @NC_HICOSMO_VEXP_EM_B: electromagnetic coupling amplitude
+ * @NC_HICOSMO_VEXP_EM_ALPHA: electromagnetic coupling amplitude parameter
  * @NC_HICOSMO_VEXP_EM_BETA: electromagnetic coupling scale
  *
  * Scalar field parameters enumerator. This enumerator is used to access the scalar field parameters
@@ -79,7 +79,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_VEXP_SPARAMS >*/
   NC_HICOSMO_VEXP_D_PHI,
   NC_HICOSMO_VEXP_ALPHA_B,
   NC_HICOSMO_VEXP_X_B,
-  NC_HICOSMO_VEXP_EM_B,
+  NC_HICOSMO_VEXP_EM_ALPHA,
   NC_HICOSMO_VEXP_EM_BETA,
   /* < private > */
   NC_HICOSMO_VEXP_SPARAM_LEN, /*< skip >*/
@@ -148,7 +148,7 @@ void nc_hicosmo_Vexp_x_y (NcHICosmoVexp *Vexp, const gdouble tau, gdouble *x, gd
 #define NC_HICOSMO_VEXP_DEFAULT_D_PHI (-0.3)
 #define NC_HICOSMO_VEXP_DEFAULT_ALPHA_B (0.1)
 #define NC_HICOSMO_VEXP_DEFAULT_X_B (1.0e30)
-#define NC_HICOSMO_VEXP_DEFAULT_EM_B (1.0e-10)
+#define NC_HICOSMO_VEXP_DEFAULT_EM_ALPHA (13.6)
 #define NC_HICOSMO_VEXP_DEFAULT_EM_BETA (1.0e-1)
 
 #define NC_HICOSMO_VEXP_DEBUG_EVOL_QT (FALSE)
