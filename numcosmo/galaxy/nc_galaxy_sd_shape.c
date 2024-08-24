@@ -113,13 +113,13 @@ NCM_MSET_MODEL_REGISTER_ID (nc_galaxy_sd_shape, NC_TYPE_GALAXY_SD_SHAPE);
 
 /* LCOV_EXCL_START */
 static void
-_nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, NcmRNG *rng, NcGalaxyWLObsCoord coord, NcmVector *data_p, NcmVector *data_z, NcmVector *data_s)
+_nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmRNG *rng, NcGalaxyWLObsCoord coord, NcmVector *data_p, NcmVector *data_z, NcmVector *data_s)
 {
   g_error ("_nc_galaxy_sd_shape_gen: method not implemented.");
 }
 
 static gdouble
-_nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp,  NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, gdouble z, NcmVector *data)
+_nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp,  NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, gdouble z, NcmVector *data)
 {
   g_error ("_nc_galaxy_sd_shape_integ: method not implemented.");
 
@@ -127,13 +127,13 @@ _nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensit
 }
 
 static void
-_nc_galaxy_sd_shape_integ_optzs_prep (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, NcmVector *data)
+_nc_galaxy_sd_shape_integ_optzs_prep (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmVector *data)
 {
   g_error ("_nc_galaxy_sd_shape_integ_optzs_prep: method not implemented.");
 }
 
 static gdouble
-_nc_galaxy_sd_shape_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, gdouble z, NcmVector *data)
+_nc_galaxy_sd_shape_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, gdouble z, NcmVector *data)
 {
   g_error ("_nc_galaxy_sd_shape_integ_optzs: method not implemented.");
 
@@ -141,7 +141,7 @@ _nc_galaxy_sd_shape_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHalo
 }
 
 static gboolean
-_nc_galaxy_sd_shape_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hc, NcGalaxyWLObsCoord coord, gboolean force, NcmObjArray *data, NcmObjArray *data_prep)
+_nc_galaxy_sd_shape_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hp, NcGalaxyWLObsCoord coord, gboolean force, NcmObjArray *data, NcmObjArray *data_prep)
 {
   g_error ("_nc_galaxy_sd_shape_prepare: method not implemented.");
 
@@ -165,7 +165,7 @@ _nc_galaxy_sd_shape_get_vec_size (NcGalaxySDShape *gsds)
 }
 
 static gboolean
-_nc_galaxy_sd_shape_set_models (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hc)
+_nc_galaxy_sd_shape_set_models (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hp)
 {
   g_error ("_nc_galaxy_sd_shape_set_models: method not implemented.");
 
@@ -246,7 +246,7 @@ nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds)
  * @cosmo: a #NcHICosmo
  * @dp: a #NcHaloDensityProfile
  * @smd: a #NcWLSurfaceMassDensity
- * @hc: a #NcHaloPosition
+ * @hp: a #NcHaloPosition
  * @rng: a #NcmRNG
  * @coord: a #NcGalaxyWLObsCoord
  * @data_p: a #NcmVector
@@ -257,9 +257,9 @@ nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds)
  *
  */
 void
-nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, NcmRNG *rng, NcGalaxyWLObsCoord coord, NcmVector *data_p, NcmVector *data_z, NcmVector *data_s)
+nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmRNG *rng, NcGalaxyWLObsCoord coord, NcmVector *data_p, NcmVector *data_z, NcmVector *data_s)
 {
-  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->gen (gsds, cosmo, dp, smd, hc, rng, coord, data_p, data_z, data_s);
+  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->gen (gsds, cosmo, dp, smd, hp, rng, coord, data_p, data_z, data_s);
 }
 
 /**
@@ -268,7 +268,7 @@ nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityPr
  * @cosmo: a #NcHICosmo
  * @dp: a #NcHaloDensityProfile
  * @smd: a #NcWLSurfaceMassDensity
- * @hc: a #NcHaloPosition
+ * @hp: a #NcHaloPosition
  * @data: a #NcmVector
  *
  * Computes the probability density of the observable shape given the position.
@@ -276,9 +276,9 @@ nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityPr
  * Returns: the probability density of observable shape, $P(s)$.
  */
 gdouble
-nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, gdouble z, NcmVector *data)
+nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, gdouble z, NcmVector *data)
 {
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ (gsds, cosmo, dp, smd, hc, z, data);
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ (gsds, cosmo, dp, smd, hp, z, data);
 }
 
 /**
@@ -287,16 +287,16 @@ nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensity
  * @cosmo: a #NcHICosmo
  * @dp: a #NcHaloDensityProfile
  * @smd: a #NcWLSurfaceMassDensity
- * @hc: a #NcHaloPosition
+ * @hp: a #NcHaloPosition
  * @data: a #NcmVector
  *
  * Prepares $gsds$ to compute the probability density of the observable shape given the position.
  *
  */
 void
-nc_galaxy_sd_shape_integ_optzs_prep (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, NcmVector *data)
+nc_galaxy_sd_shape_integ_optzs_prep (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmVector *data)
 {
-  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ_optzs_prep (gsds, cosmo, dp, smd, hc, data);
+  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ_optzs_prep (gsds, cosmo, dp, smd, hp, data);
 }
 
 /**
@@ -305,7 +305,7 @@ nc_galaxy_sd_shape_integ_optzs_prep (NcGalaxySDShape *gsds, NcHICosmo *cosmo, Nc
  * @cosmo: a #NcHICosmo
  * @dp: a #NcHaloDensityProfile
  * @smd: a #NcWLSurfaceMassDensity
- * @hc: a #NcHaloPosition
+ * @hp: a #NcHaloPosition
  * @data: a #NcmVector
  *
  * Computes the probability density of the observable shape given the position.
@@ -313,16 +313,16 @@ nc_galaxy_sd_shape_integ_optzs_prep (NcGalaxySDShape *gsds, NcHICosmo *cosmo, Nc
  * Returns: the probability density of observable shape, $P(s)$.
  */
 gdouble
-nc_galaxy_sd_shape_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hc, gdouble z, NcmVector *data)
+nc_galaxy_sd_shape_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, gdouble z, NcmVector *data)
 {
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ_optzs (gsds, cosmo, dp, smd, hc, z, data);
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ_optzs (gsds, cosmo, dp, smd, hp, z, data);
 }
 
 /**
  * nc_galaxy_sd_shape_prepare: (virtual prepare)
  * @gsds: a #NcGalaxySDShape
  * @cosmo: a #NcHICosmo
- * @hc: a #NcHaloPosition
+ * @hp: a #NcHaloPosition
  * @coord: a #NcGalaxyWLObsCoord
  * @force: a #gboolean
  * @data: a #NcmObjArray
@@ -333,9 +333,9 @@ nc_galaxy_sd_shape_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloD
  * Returns: TRUE if the matrix was prepared, FALSE otherwise.
  */
 gboolean
-nc_galaxy_sd_shape_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hc, NcGalaxyWLObsCoord coord, gboolean force, NcmObjArray *data, NcmObjArray *data_prep)
+nc_galaxy_sd_shape_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hp, NcGalaxyWLObsCoord coord, gboolean force, NcmObjArray *data, NcmObjArray *data_prep)
 {
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->prepare (gsds, cosmo, hc, coord, force, data, data_prep);
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->prepare (gsds, cosmo, hp, coord, force, data, data_prep);
 }
 
 /**
@@ -370,15 +370,15 @@ nc_galaxy_sd_shape_get_vec_size (NcGalaxySDShape *gsds)
  * nc_galaxy_sd_shape_set_models: (virtual set_models)
  * @gsds: a #NcGalaxySDShape
  * @cosmo: a #NcHICosmo
- * @hc: a #NcHaloPosition
+ * @hp: a #NcHaloPosition
  *
  * Sets the cosmological and density profile models.
  *
  * Returns: TRUE if the models were set, FALSE otherwise.
  */
 gboolean
-nc_galaxy_sd_shape_set_models (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hc)
+nc_galaxy_sd_shape_set_models (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hp)
 {
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->set_models (gsds, cosmo, hc);
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->set_models (gsds, cosmo, hp);
 }
 

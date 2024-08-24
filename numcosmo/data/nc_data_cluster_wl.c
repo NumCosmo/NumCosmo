@@ -73,8 +73,8 @@ struct _NcDataClusterWLPrivate
   NcGalaxySDObsRedshift *z_dist;
   NcGalaxySDPosition *p_dist;
   gboolean constructed;
-  gdouble theta_min;
-  gdouble theta_max;
+  gdouble r_min;
+  gdouble r_max;
   gdouble prec;
   guint len;
 };
@@ -90,9 +90,10 @@ enum
   PROP_S_DIST,
   PROP_Z_DIST,
   PROP_P_DIST,
-  PROP_THETA_MIN,
-  PROP_THETA_MAX,
+  PROP_R_MIN,
+  PROP_R_MAX,
   PROP_PREC,
+  PROP_LEN,
   PROP_SIZE,
 };
 
@@ -112,8 +113,8 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
   self->z_dist      = NULL;
   self->p_dist      = NULL;
   self->constructed = FALSE;
-  self->theta_max   = 0.0;
-  self->theta_min   = 0.0;
+  self->r_max       = 0.0;
+  self->r_min       = 0.0;
   self->prec        = 1.0e-6;
   self->len         = 0;
 }
@@ -130,19 +131,19 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
   {
     case PROP_OBS:
       nc_galaxy_wl_obs_clear (&self->obs);
-      nc_data_cluster_wl_set_obs (dcwl, g_value_get_object (value));
+      self->obs = g_value_dup_object (value);
       break;
     case PROP_S_OBS:
-      self->s_obs = g_value_dup_object (value);
+      self->s_obs = g_value_dup_boxed (value);
       break;
     case PROP_S_OBS_PREP:
-      self->s_obs_prep = g_value_dup_object (value);
+      self->s_obs_prep = g_value_dup_boxed (value);
       break;
     case PROP_Z_OBS:
-      self->z_obs = g_value_dup_object (value);
+      self->z_obs = g_value_dup_boxed (value);
       break;
     case PROP_P_OBS:
-      self->p_obs = g_value_dup_object (value);
+      self->p_obs = g_value_dup_boxed (value);
       break;
     case PROP_S_DIST:
       self->s_dist = g_value_dup_object (value);
@@ -153,22 +154,25 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_P_DIST:
       self->p_dist = g_value_dup_object (value);
       break;
-    case PROP_THETA_MIN:
-      self->theta_min = g_value_get_double (value);
+    case PROP_R_MIN:
+      self->r_min = g_value_get_double (value);
 
       if (self->constructed)
-        g_assert_cmpfloat (self->theta_min, <, self->theta_max);
+        g_assert_cmpfloat (self->r_min, <, self->r_max);
 
       break;
-    case PROP_THETA_MAX:
-      self->theta_max = g_value_get_double (value);
+    case PROP_R_MAX:
+      self->r_max = g_value_get_double (value);
 
       if (self->constructed)
-        g_assert_cmpfloat (self->theta_min, <, self->theta_max);
+        g_assert_cmpfloat (self->r_min, <, self->r_max);
 
       break;
     case PROP_PREC:
       nc_data_cluster_wl_set_prec (dcwl, g_value_get_double (value));
+      break;
+    case PROP_LEN:
+      self->len = g_value_get_uint (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -190,16 +194,16 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
       g_value_set_object (value, nc_data_cluster_wl_peek_obs (dcwl));
       break;
     case PROP_S_OBS:
-      g_value_set_object (value, self->s_obs);
+      g_value_set_boxed (value, self->s_obs);
       break;
     case PROP_S_OBS_PREP:
-      g_value_set_object (value, self->s_obs_prep);
+      g_value_set_boxed (value, self->s_obs_prep);
       break;
     case PROP_Z_OBS:
-      g_value_set_object (value, self->z_obs);
+      g_value_set_boxed (value, self->z_obs);
       break;
     case PROP_P_OBS:
-      g_value_set_object (value, self->p_obs);
+      g_value_set_boxed (value, self->p_obs);
       break;
     case PROP_S_DIST:
       g_value_set_object (value, self->s_dist);
@@ -210,14 +214,17 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_P_DIST:
       g_value_set_object (value, self->p_dist);
       break;
-    case PROP_THETA_MIN:
-      g_value_set_double (value, self->theta_min);
+    case PROP_R_MIN:
+      g_value_set_double (value, self->r_min);
       break;
-    case PROP_THETA_MAX:
-      g_value_set_double (value, self->theta_max);
+    case PROP_R_MAX:
+      g_value_set_double (value, self->r_max);
       break;
     case PROP_PREC:
       g_value_set_double (value, self->prec);
+      break;
+    case PROP_LEN:
+      g_value_set_uint (value, self->len);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -272,7 +279,7 @@ _nc_data_cluster_wl_constructed (GObject *object)
     NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (object);
     NcDataClusterWLPrivate * const self = dcwl->priv;
 
-    g_assert_cmpfloat (self->theta_min, <, self->theta_max);
+    g_assert_cmpfloat (self->r_min, <, self->r_max);
 
     self->constructed = TRUE;
   }
@@ -370,7 +377,6 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
    * A #NcGalaxySDShape object.
    *
    */
-
   g_object_class_install_property (object_class,
                                    PROP_S_DIST,
                                    g_param_spec_object ("s-dist",
@@ -385,7 +391,6 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
    * A #NcGalaxySDObsRedshift object.
    *
    */
-
   g_object_class_install_property (object_class,
                                    PROP_Z_DIST,
                                    g_param_spec_object ("z-dist",
@@ -400,7 +405,6 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
    * A #NcGalaxySDPosition object.
    *
    */
-
   g_object_class_install_property (object_class,
                                    PROP_P_DIST,
                                    g_param_spec_object ("p-dist",
@@ -415,9 +419,8 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
    * Minimum radius of the weak lensing observables.
    *
    */
-
   g_object_class_install_property (object_class,
-                                   PROP_THETA_MIN,
+                                   PROP_R_MIN,
                                    g_param_spec_double ("theta-min",
                                                         NULL,
                                                         "Minimum radius of the weak lensing observables",
@@ -430,9 +433,8 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
    * Maximum theta of the weak lensing observables.
    *
    */
-
   g_object_class_install_property (object_class,
-                                   PROP_THETA_MAX,
+                                   PROP_R_MAX,
                                    g_param_spec_double ("r-max",
                                                         NULL,
                                                         "Maximum radius of the weak lensing observables",
@@ -445,7 +447,6 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
    * Precision for integral.
    *
    */
-
   g_object_class_install_property (object_class,
                                    PROP_PREC,
                                    g_param_spec_double ("prec",
@@ -453,6 +454,20 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                         "Precision for integral",
                                                         0.0, G_MAXDOUBLE, 1.0e-6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataClusterWL:len:
+   * 
+   * Number of galaxies.
+   * 
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_LEN,
+                                   g_param_spec_uint ("len",
+                                                      NULL,
+                                                      "Number of galaxies",
+                                                      0, G_MAXUINT, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->m2lnL_val  = &_nc_data_cluster_wl_m2lnL_val;
   data_class->get_length = &_nc_data_cluster_wl_get_len;
@@ -632,7 +647,7 @@ _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   NcHaloPosition *hp                  = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
   guint i;
 
-  if ((self->s_obs != NULL) && (self->z_obs != NULL) && (self->p_obs != NULL))
+  if ((self->s_obs != NULL) && (self->z_obs != NULL) && (self->p_obs != NULL) && (self->s_obs_prep != NULL))
   {
     g_assert_cmpuint (ncm_obj_array_len (self->s_obs), >, 0);
     g_assert_cmpuint (ncm_obj_array_len (self->z_obs), >, 0);
@@ -662,7 +677,7 @@ _nc_data_cluster_wl_get_len (NcmData *data)
   if (self->obs == NULL)
     return 0;
   else
-    return self->len;
+    return nc_galaxy_wl_obs_len (self->obs);
 }
 
 static void
@@ -679,7 +694,7 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
 
   nc_wl_surface_mass_density_prepare_if_needed (smd, cosmo);
 
-  nc_galaxy_sd_shape_prepare (self->s_dist, cosmo, hp, nc_galaxy_wl_obs_get_coord (self->obs), TRUE, self->s_obs, self->s_obs_prep);
+  nc_galaxy_sd_shape_set_models (self->s_dist, cosmo, hp);
 }
 
 /**
@@ -770,7 +785,7 @@ nc_data_cluster_wl_set_prec (NcDataClusterWL *dcwl, gdouble prec)
  * Sets the observables matrix @obs.
  */
 void
-nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs)
+nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloPosition *hp, NcGalaxyWLObs *obs)
 {
   NcDataClusterWLPrivate * const self = dcwl->priv;
   NcmVarDict *obs_header              = nc_galaxy_wl_obs_peek_header (obs);
@@ -846,34 +861,38 @@ nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs)
 
   nc_galaxy_wl_obs_clear (&self->obs);
   ncm_obj_array_clear (&self->s_obs);
+  ncm_obj_array_clear (&self->s_obs_prep);
   ncm_obj_array_clear (&self->z_obs);
   ncm_obj_array_clear (&self->p_obs);
 
-  self->len   = nc_galaxy_wl_obs_len (obs);
-  self->obs   = nc_galaxy_wl_obs_ref (obs);
-  self->s_obs = s_obs;
-  self->z_obs = z_obs;
-  self->p_obs = p_obs;
+  nc_galaxy_sd_shape_prepare (self->s_dist, cosmo, hp, nc_galaxy_wl_obs_get_coord (obs), TRUE, s_obs, s_obs_prep);
+
+  self->len        = nc_galaxy_wl_obs_len (obs);
+  self->obs        = nc_galaxy_wl_obs_ref (obs);
+  self->s_obs      = s_obs;
+  self->s_obs_prep = s_obs_prep;
+  self->z_obs      = z_obs;
+  self->p_obs      = p_obs;
 }
 
 /**
  * nc_data_cluster_wl_set_cut:
  * @dcwl: a #NcDataClusterWL
- * @theta_min: minimum angular radius $\theta_\mathrm{min}$
- * @theta_max: maximum angular radius $\theta_\mathrm{max}$
+ * @r_min: minimum angular radius $\theta_\mathrm{min}$
+ * @r_max: maximum angular radius $\theta_\mathrm{max}$
  *
  * Sets the radial cut in the observables.
  *
  */
 void
-nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble theta_min, const gdouble theta_max)
+nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gdouble r_max)
 {
   NcDataClusterWLPrivate * const self = dcwl->priv;
 
-  g_assert_cmpfloat (theta_min, <, theta_max);
+  g_assert_cmpfloat (r_min, <, r_max);
 
-  self->theta_min = theta_min;
-  self->theta_max = theta_max;
+  self->r_min = r_min;
+  self->r_max = r_max;
 }
 
 /**
@@ -907,10 +926,19 @@ nc_data_cluster_wl_gen_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensi
     NcmVector *p_obs = ncm_vector_new (g_strv_length (p_header));
     NcmVector *z_obs = ncm_vector_new (g_strv_length (z_header));
     NcmVector *s_obs = ncm_vector_new (g_strv_length (s_header));
+    gdouble theta    = 0.0;
+    gdouble phi      = 0.0;
+    gdouble r;
     gchar **str;
     guint j;
 
-    nc_galaxy_sd_position_gen (self->p_dist, rng, p_obs);
+    do {
+      nc_galaxy_sd_position_gen (self->p_dist, rng, p_obs);
+      nc_halo_position_polar_angles (hp, ncm_vector_get (p_obs, 0), ncm_vector_get (p_obs, 1), &theta, &phi);
+
+      r = nc_halo_position_projected_radius (hp, cosmo, theta);
+    } while (r < self->r_min || r > self->r_max);
+
     nc_galaxy_sd_obs_redshift_gen (self->z_dist, rng, z_obs);
     nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, hp, rng, coord, p_obs, z_obs, s_obs);
 
@@ -942,7 +970,7 @@ nc_data_cluster_wl_gen_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensi
     }
   }
 
-  nc_data_cluster_wl_set_obs (dcwl, obs);
+  nc_data_cluster_wl_set_obs (dcwl, cosmo, hp, obs);
 }
 
 /**
