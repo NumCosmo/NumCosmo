@@ -39,11 +39,11 @@
  *
  * - High precision mathematical constants obtained from [MPFR](http://www.mpfr.org/).
  *
- * - Fundamental constants: 2022 [CODATA](http://physics.nist.gov/cuu/Constants/index.html)
+ * - Fundamental constants: [CODATA 2022](http://physics.nist.gov/cuu/Constants/index.html)
  * recommended values, see constants.txt distributed with NumCosmo sources.
  *
  * - The atomic weights: Commission on Isotopic Abundances and Atomic Weights
- *   ([CIAAW](http://www.ciaaw.org/atomic-weights.htm)) of the International Union of
+ *   ([CIAAW 2021](http://www.ciaaw.org/atomic-weights.htm)) of the International Union of
  *   Pure and Applied Chemistry (IUPAC). See also the [NIST
  *   compilation](http://www.nist.gov/pml/data/comp.cfm).
  *
@@ -55,6 +55,8 @@
  * - Atomic Spectra: National Institute of Standards and Technology (NIST) [Atomic
  *   Spectra](http://www.nist.gov/pml/data/asd.cfm) Standard Reference Database 78 -
  *   Version 5.11 (October 2023).
+ *
+ *   Last checked: August 24, 2024.
  *
  */
 
@@ -250,7 +252,7 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Fine structure constant $\alpha = 7.2973525693 \times 10^{-3} $.
+ * Returns: Fine structure constant $\alpha = 7.2973525643 \times 10^{-3} $.
  */
 
 /**
@@ -283,7 +285,7 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Thomson cross section $\sigma_\mathrm{T} = 0.66524587321 \times 10^{-28}
+ * Returns: Thomson cross section $\sigma_\mathrm{T} = 6.6524587051 \times 10^{-29}
  * \,\left[\mathrm{m}^2\right]$.
  */
 
@@ -613,11 +615,11 @@ ncm_c_class_init (NcmCClass *klass)
  */
 
 /*******************************************************************************
- * END: 2018 CODATA recommended values
+ * END: 2022 CODATA recommended values
  *******************************************************************************/
 
 /*******************************************************************************
- * START: IUPAC related constants
+ * START: 2021 IUPAC related constants
  *******************************************************************************/
 
 /**
@@ -769,7 +771,7 @@ ncm_c_class_init (NcmCClass *klass)
  */
 
 /*******************************************************************************
- * END: IUPAC related constants
+ * END: 2021 IUPAC related constants
  *******************************************************************************/
 
 /*******************************************************************************
@@ -841,7 +843,7 @@ ncm_c_class_init (NcmCClass *klass)
  *******************************************************************************/
 
 /*******************************************************************************
- * START: NIST Atomic Spectra database
+ * START: 2023 NIST Atomic Spectra database
  *******************************************************************************/
 
 /*******************************************************************************
