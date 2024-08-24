@@ -37,14 +37,13 @@ Ncm.cfg_init()
 
 
 def test_constants_object():
-    """Test constants from ncm_c.h"""
+    """Test constants from ncm_c.h."""
     c = Ncm.C()
     assert c is not None
 
 
 def test_constants_math():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.sqrt_1_4pi(), math.sqrt(1.0 / (4.0 * math.pi)))
     assert_allclose(Ncm.C.sqrt_pi(), math.sqrt(math.pi))
     assert_allclose(Ncm.C.sqrt_2pi(), math.sqrt(2.0 * math.pi))
@@ -82,8 +81,7 @@ def test_constants_math():
 
 
 def test_constants_scipy():
-    """Test constants from scipy.constants"""
-
+    """Test constants from scipy.constants."""
     assert_allclose(Ncm.C.c(), constants.c)
     assert_allclose(Ncm.C.h(), constants.h)
     assert_allclose(Ncm.C.hbar(), constants.hbar)
@@ -107,12 +105,13 @@ def test_constants_scipy():
 
 
 def test_constants_derived():
-    """Test constants from ncm_c.h"""
-
-    assert_allclose(Ncm.C.year(), u.year.to(u.s))
-    assert_allclose(Ncm.C.lightyear(), u.lyr.to(u.m))
-    assert_allclose(Ncm.C.lightyear_pc(), u.lyr.to(u.pc))
-    assert_allclose(Ncm.C.Glightyear_Mpc(), 1.0e9 * u.lyr.to(u.Mpc))
+    """Test constants from ncm_c.h."""
+    assert_allclose(Ncm.C.year(), u.year.to(u.s))  # pylint: disable=no-member
+    assert_allclose(Ncm.C.lightyear(), u.lyr.to(u.m))  # pylint: disable=no-member
+    assert_allclose(Ncm.C.lightyear_pc(), u.lyr.to(u.pc))  # pylint: disable=no-member
+    assert_allclose(
+        Ncm.C.Glightyear_Mpc(), 1.0e9 * u.lyr.to(u.Mpc)  # pylint: disable=no-member
+    )
     assert_allclose(Ncm.C.hc(), constants.h * constants.c)
     assert_allclose(Ncm.C.fine_struct_square(), constants.alpha**2)
     assert_allclose(Ncm.C.electric_constant(), constants.epsilon_0)
@@ -144,8 +143,7 @@ def test_constants_derived():
 
 
 def test_constants_masses_atomic_unit():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.mass_1H_u(), 1.00782503)
     assert_allclose(Ncm.C.mass_2H_u(), 2.0141017778)
     assert_allclose(Ncm.C.mass_3H_u(), 3.0160492777)
@@ -154,8 +152,7 @@ def test_constants_masses_atomic_unit():
 
 
 def test_constants_masses():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.mass_1H(), 1.00782503 * constants.atomic_mass)
     assert_allclose(Ncm.C.mass_2H(), 2.0141017778 * constants.atomic_mass)
     assert_allclose(Ncm.C.mass_3H(), 3.0160492777 * constants.atomic_mass)
@@ -164,8 +161,7 @@ def test_constants_masses():
 
 
 def test_constants_rest_energy():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(
         Ncm.C.rest_energy_1H(), 1.00782503 * constants.atomic_mass * constants.c**2
     )
@@ -185,25 +181,25 @@ def test_constants_rest_energy():
 
 
 def test_constants_mass_ratio():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.mass_ratio_4He_1H(), 4.00260325413 / 1.00782503)
 
 
 def test_constants_distances():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.au(), constants.au)
-    assert_allclose(Ncm.C.pc(), u.pc.to(u.m))
-    assert_allclose(Ncm.C.kpc(), u.kpc.to(u.m))
-    assert_allclose(Ncm.C.Mpc(), u.Mpc.to(u.m))
-    assert_allclose(Ncm.C.G_mass_solar(), constants.G * u.M_sun.to(u.kg))
-    assert_allclose(Ncm.C.mass_solar(), u.M_sun.to(u.kg))
+    assert_allclose(Ncm.C.pc(), u.pc.to(u.m))  # pylint: disable=no-member
+    assert_allclose(Ncm.C.kpc(), u.kpc.to(u.m))  # pylint: disable=no-member
+    assert_allclose(Ncm.C.Mpc(), u.Mpc.to(u.m))  # pylint: disable=no-member
+    assert_allclose(
+        Ncm.C.G_mass_solar(),
+        constants.G * u.M_sun.to(u.kg),  # pylint: disable=no-member
+    )
+    assert_allclose(Ncm.C.mass_solar(), u.M_sun.to(u.kg))  # pylint: disable=no-member
 
 
 def test_constants_HI_ion_wn():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.HI_ion_wn_1s_2S0_5(), 10967877.174307)
     assert_allclose(Ncm.C.HI_ion_wn_2s_2S0_5(), 2741981.734379)
     assert_allclose(Ncm.C.HI_ion_wn_2p_2P0_5(), 2741985.262977)
@@ -212,8 +208,7 @@ def test_constants_HI_ion_wn():
 
 
 def test_constants_HI_ion_E():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.HI_ion_E_1s_2S0_5(), 2.1787094174620437e-18)
     assert_allclose(Ncm.C.HI_ion_E_2s_2S0_5(), 5.44679825663478e-19)
     assert_allclose(Ncm.C.HI_ion_E_2p_2P0_5(), 5.446805266004078e-19)
@@ -222,8 +217,7 @@ def test_constants_HI_ion_E():
 
 
 def test_constants_HI_Lyman_wn():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.HI_Lyman_wn_2s_2S0_5(), 8.22589543992821e6)
     assert_allclose(Ncm.C.HI_Lyman_wn_2p_2P0_5(), 8.22589191133e6)
     assert_allclose(Ncm.C.HI_Lyman_wn_2p_2P3_5(), 8.22592850014e6)
@@ -231,8 +225,7 @@ def test_constants_HI_Lyman_wn():
 
 
 def test_constants_HI_Lyman_wl():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.HI_Lyman_wl_2s_2S0_5(), 1.0 / 8.22589543992821e6)
     assert_allclose(Ncm.C.HI_Lyman_wl_2p_2P0_5(), 1.0 / 8.22589191133e6)
     assert_allclose(Ncm.C.HI_Lyman_wl_2p_2P3_5(), 1.0 / 8.22592850014e6)
@@ -240,8 +233,7 @@ def test_constants_HI_Lyman_wl():
 
 
 def test_constants_HI_Lyman_wl3_8pi():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(
         Ncm.C.HI_Lyman_wl3_8pi_2s_2S0_5(),
         (1.0 / 8.22589543992821e6) ** 3 / (8.0 * math.pi),
@@ -261,8 +253,7 @@ def test_constants_HI_Lyman_wl3_8pi():
 
 
 def test_constants_boltzmann_factor():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.boltzmann_factor_HI_1s_2S0_5(5.0e3), 47450557.836754)
     assert_allclose(Ncm.C.boltzmann_factor_HI_2s_2S0_5(5.0e3), 9.040447e17)
     assert_allclose(Ncm.C.boltzmann_factor_HI_2p_2P0_5(5.0e3), 9.040355e17)
@@ -271,8 +262,7 @@ def test_constants_boltzmann_factor():
 
 
 def test_constants_HeI_ion_wn():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.HeI_ion_wn_1s_1S0(), 19831066.637)
     assert_allclose(Ncm.C.HeI_ion_wn_2s_1S0(), 3203322.6229)
     assert_allclose(Ncm.C.HeI_ion_wn_2s_3S1(), 3845469.20403)
@@ -284,8 +274,7 @@ def test_constants_HeI_ion_wn():
 
 
 def test_constants_HeI_Lyman_wn():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.HeI_Lyman_wn_2s_1S0(), 16627744.0141)
     assert_allclose(Ncm.C.HeI_Lyman_wn_2s_3S1(), 15985597.43297)
     assert_allclose(Ncm.C.HeI_Lyman_wn_2p_1P1(), 17113489.6946)
@@ -296,8 +285,7 @@ def test_constants_HeI_Lyman_wn():
 
 
 def test_constants_HeI_Lyman_wl():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.HeI_Lyman_wl_2s_1S0(), 1.0 / 16627744.0141)
     assert_allclose(Ncm.C.HeI_Lyman_wl_2s_3S1(), 1.0 / 15985597.43297)
     assert_allclose(Ncm.C.HeI_Lyman_wl_2p_1P1(), 1.0 / 17113489.6946)
@@ -308,8 +296,7 @@ def test_constants_HeI_Lyman_wl():
 
 
 def test_constants_HeI_Lyman_wl3_8pi():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(
         Ncm.C.HeI_Lyman_wl3_8pi_2s_1S0(), (1.0 / 16627744.0141) ** 3 / (8.0 * math.pi)
     )
@@ -335,57 +322,50 @@ def test_constants_HeI_Lyman_wl3_8pi():
 
 
 def test_constants_boltzmann_factor_HeI():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.boltzmann_factor_HeI_1s_1S0(7.0e3), 4794.233313)
-    assert_allclose(Ncm.C.boltzmann_factor_HeI_2s_1S0(7.0e3), 3.337521e18)
-    assert_allclose(Ncm.C.boltzmann_factor_HeI_2s_3S1(7.0e3), 8.916898e17)
-    assert_allclose(Ncm.C.boltzmann_factor_HeI_2p_1P1(7.0e3), 9.057814e18)
-    assert_allclose(Ncm.C.boltzmann_factor_HeI_2p_3P0(7.0e3), 5.946928e18)
-    assert_allclose(Ncm.C.boltzmann_factor_HeI_2p_3P1(7.0e3), 5.94572e18)
-    assert_allclose(Ncm.C.boltzmann_factor_HeI_2p_3P2(7.0e3), 5.945627e18)
-    assert_allclose(Ncm.C.boltzmann_factor_HeI_2p_3Pmean(7.0e3), 5.946092e18)
+    assert_allclose(Ncm.C.boltzmann_factor_HeI_2s_1S0(7.0e3), 3.33751917723292e18)
+    assert_allclose(Ncm.C.boltzmann_factor_HeI_2s_3S1(7.0e3), 8.91689359682507e17)
+    assert_allclose(Ncm.C.boltzmann_factor_HeI_2p_1P1(7.0e3), 9.057809147219715e18)
+    assert_allclose(Ncm.C.boltzmann_factor_HeI_2p_3P0(7.0e3), 5.946924548237951e18)
+    assert_allclose(Ncm.C.boltzmann_factor_HeI_2p_3P1(7.0e3), 5.945717114203423e18)
+    assert_allclose(Ncm.C.boltzmann_factor_HeI_2p_3P2(7.0e3), 5.945623716858642e18)
+    assert_allclose(Ncm.C.boltzmann_factor_HeI_2p_3Pmean(7.0e3), 5.946088430254898e18)
 
 
 def test_constants_HeI_Balmer_wn():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.HeI_Balmer_wn_2p_1P1_2s_1S0(), 485745.6805)
     assert_allclose(Ncm.C.HeI_Balmer_wn_2p_3Pmean_2s_3S1(), 923117.239813)
 
 
 def test_constants_HeI_Balmer_E_kb():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.HeI_Balmer_E_kb_2p_1P1_2s_1S0(), 6988.796535)
     assert_allclose(Ncm.C.HeI_Balmer_E_kb_2p_3Pmean_2s_3S1(), 13281.597399)
 
 
 def test_constants_HeII_ion():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.HeII_ion_wn_1s_2S0_5(), 43890887.85)
     assert_allclose(Ncm.C.HeII_ion_E_1s_2S0_5(), 8.718687e-18)
 
 
 def test_constants_decay():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.decay_H_rate_2s_1s(), 8.224581)
     assert_allclose(Ncm.C.decay_He_rate_2s_1s(), 51.3)
 
 
 def test_constants_stats():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.stats_1sigma(), 0.682689492137)
     assert_allclose(Ncm.C.stats_2sigma(), 0.954499736104)
     assert_allclose(Ncm.C.stats_3sigma(), 0.997300203937)
 
 
 def test_constants_hubble():
-    """Test constants from ncm_c.h"""
-
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.hubble_cte_planck6_base(), 67.36)
     assert_allclose(Ncm.C.hubble_cte_hst(), 72.0)
     assert_allclose(Ncm.C.hubble_radius_hm1_Mpc(), 2997.92458)
@@ -393,9 +373,7 @@ def test_constants_hubble():
 
 
 def test_constants_crit_density():
-    """Test constants from ncm_c.h"""
-
-    print(Ncm.C.crit_mass_density_h2())
+    """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.crit_density_h2(), 1.6881692556555728e-09)
     assert_allclose(Ncm.C.crit_mass_density_h2(), 1.8783416169331677e-26)
     assert_allclose(Ncm.C.crit_mass_density_h2_solar_mass_Mpc3(), 2.775366e11)
