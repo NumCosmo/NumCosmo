@@ -1777,7 +1777,7 @@ nc_data_snia_cov_peek_cov_mbc_mbc (NcDataSNIACov *snia_cov)
  *
  * Gets an array containing the dataset id for each SNIa.
  *
- * Returns: (transfer none) (element-type guint32): an #GArray containing the dataset id for each SNIa.
+ * Returns: (transfer none) (element-type guint32): an GArray containing the dataset id for each SNIa.
  */
 GArray *
 nc_data_snia_cov_peek_dataset (NcDataSNIACov *snia_cov)
@@ -1793,7 +1793,7 @@ nc_data_snia_cov_peek_dataset (NcDataSNIACov *snia_cov)
  *
  * Gets an array containing whether the SNIa is a calibrator.
  *
- * Returns: (transfer none) (element-type guint32): an #GArray containing whether the SNIa is a calibrator.
+ * Returns: (transfer none) (element-type guint32): an GArray containing whether the SNIa is a calibrator.
  */
 GArray *
 nc_data_snia_cov_peek_is_calib (NcDataSNIACov *snia_cov)
@@ -1809,7 +1809,7 @@ nc_data_snia_cov_peek_is_calib (NcDataSNIACov *snia_cov)
  *
  * Gets an array containing whether the SNIa was used in SH0ES.
  *
- * Returns: (transfer none) (element-type guint32): an #GArray containing containing whether the SNIa was used in SH0ES.
+ * Returns: (transfer none) (element-type guint32): an GArray containing containing whether the SNIa was used in SH0ES.
  */
 GArray *
 nc_data_snia_cov_peek_used_in_sh0es (NcDataSNIACov *snia_cov)

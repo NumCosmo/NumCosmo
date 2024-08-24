@@ -47,6 +47,7 @@ struct _NcmPowspecClass
   void (*prepare) (NcmPowspec *powspec, NcmModel *model);
   gdouble (*eval) (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
   void (*eval_vec) (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
+  gdouble (*deriv_z) (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
   void (*get_nknots) (NcmPowspec *powspec, guint *Nz, guint *Nk);
   NcmSpline2d *(*get_spline_2d) (NcmPowspec *powspec, NcmModel *model);
 
@@ -84,6 +85,7 @@ void ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model);
 void ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model);
 gdouble ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
 void ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
+gdouble ncm_powspec_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
 NcmSpline2d *ncm_powspec_get_spline_2d (NcmPowspec *powspec, NcmModel *model);
 NcmModelCtrl *ncm_powspec_peek_model_ctrl (NcmPowspec *powspec);
 

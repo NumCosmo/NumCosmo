@@ -502,8 +502,8 @@ ncm_iset_get_subvector (NcmISet *iset, NcmVector *v, NcmVector *v_dup)
 /**
  * ncm_iset_get_subarray: (skip)
  * @iset: a #NcmISet
- * @a: a #GArray
- * @a_dup: a #GArray
+ * @a: a GArray
+ * @a_dup: a GArray
  *
  * Construct a continuous array using the values from @a
  * and the indexes in @iset. If @a_dup is not null use

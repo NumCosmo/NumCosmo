@@ -33,27 +33,30 @@
  * @stability: Stable
  * @include: numcosmo/math/ncm_c.h
  *
- * Mathematical and physical constants and constants manipulation
- * functions.
+ * Mathematical and physical constants and constants manipulation functions.
  *
  * The sources are:
  *
  * - High precision mathematical constants obtained from [MPFR](http://www.mpfr.org/).
  *
- * - Fundamental constants: 2018 [CODATA](http://physics.nist.gov/cuu/Constants/index.html)
+ * - Fundamental constants: [CODATA 2022](http://physics.nist.gov/cuu/Constants/index.html)
  * recommended values, see constants.txt distributed with NumCosmo sources.
  *
  * - The atomic weights: Commission on Isotopic Abundances and Atomic Weights
- * ([CIAAW](http://www.ciaaw.org/atomic-weights.htm)) of the
- * International Union of Pure and Applied Chemistry (IUPAC). See also from the
- * [NIST compilation](http://www.nist.gov/pml/data/comp.cfm).
+ *   ([CIAAW 2021](http://www.ciaaw.org/atomic-weights.htm)) of the International Union of
+ *   Pure and Applied Chemistry (IUPAC). See also the [NIST
+ *   compilation](http://www.nist.gov/pml/data/comp.cfm).
  *
- * - Astronomical constants: [IAU 2015](https://www.iau.org/administration/resolutions/general_assemblies/)
- * resolutions for the astronomical unit ncm_c_au(), parsec ncm_c_pc() and derived constants.
- * See also [Luzum 2011][XLuzum2011].
+ * - Astronomical constants: [IAU
+ *   2015](https://www.iau.org/administration/resolutions/general_assemblies/)
+ *   resolutions for the astronomical unit ncm_c_au(), parsec ncm_c_pc() and derived
+ *   constants. See also [Luzum 2011][XLuzum2011].
  *
- * - Atomic Spectra: National Institute of Standards and Technology (NIST) [Atomic Spectra](http://www.nist.gov/pml/data/asd.cfm)
- * Standard Reference Database 78 - Version 5.7 (October 2018).
+ * - Atomic Spectra: National Institute of Standards and Technology (NIST) [Atomic
+ *   Spectra](http://www.nist.gov/pml/data/asd.cfm) Standard Reference Database 78 -
+ *   Version 5.11 (October 2023).
+ *
+ *   Last checked: August 24, 2024.
  *
  */
 
@@ -214,7 +217,7 @@ ncm_c_class_init (NcmCClass *klass)
  */
 
 /*******************************************************************************
- * START: 2018 CODATA recommended values (see constants.txt)
+ * START: 2022 CODATA recommended values (see constants.txt)
  *******************************************************************************/
 
 /**
@@ -231,7 +234,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Planck constant $h = 6.62607015 \times 10^{-34} \,\left[\mathrm{J}\,\mathrm{s}\right]$.
+ * Returns: Planck constant $h = 6.62607015 \times 10^{-34}
+ * \,\left[\mathrm{J}\,\mathrm{s}\right]$.
  */
 
 /**
@@ -239,7 +243,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Planck constant over $2\pi$, $\hbar \equiv h / (2\pi) = 1.054571817 \times 10^{-34} \,\left[\mathrm{J}\,\mathrm{s}\right]$.
+ * Returns: Planck constant over $2\pi$, $\hbar \equiv h / (2\pi) = 1.054571817 \times
+ * 10^{-34} \,\left[\mathrm{J}\,\mathrm{s}\right]$.
  */
 
 /**
@@ -247,7 +252,7 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Fine structure constant $\alpha = 7.2973525693 \times 10^{-3} $.
+ * Returns: Fine structure constant $\alpha = 7.2973525643 \times 10^{-3} $.
  */
 
 /**
@@ -255,7 +260,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Boltzmann constant $k_\mathrm{B} = 1.380649 \times 10^{-23} \,\left[\mathrm{J}\,\mathrm{K}^{-1}\right]$.
+ * Returns: Boltzmann constant $k_\mathrm{B} = 1.380649 \times 10^{-23}
+ * \,\left[\mathrm{J}\,\mathrm{K}^{-1}\right]$.
  */
 
 /**
@@ -263,13 +269,15 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Newton's (or gravitational) constant $\mathrm{G} = 6.67430 \times 10^{-11} \,\left[\mathrm{m}^3\,\mathrm{kg}^{-1}\,\mathrm{s}^{-2}\right]$.
+ * Returns: Newton's (or gravitational) constant $\mathrm{G} = 6.67430 \times 10^{-11}
+ * \,\left[\mathrm{m}^3\,\mathrm{kg}^{-1}\,\mathrm{s}^{-2}\right]$.
  */
 
 /**
  * ncm_c_planck_length:
  *
- * Returns: Planck length $l_\mathrm{P} = 1.616255 \times 10^{-35} \,\left[\mathrm{m}\right]$.
+ * Returns: Planck length $l_\mathrm{P} = 1.616255 \times 10^{-35}
+ * \,\left[\mathrm{m}\right]$.
  */
 
 /**
@@ -277,7 +285,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Thomson cross section $\sigma_\mathrm{T} = 0.66524587321 \times 10^{-28} \,\left[\mathrm{m}^2\right]$.
+ * Returns: Thomson cross section $\sigma_\mathrm{T} = 6.6524587051 \times 10^{-29}
+ * \,\left[\mathrm{m}^2\right]$.
  */
 
 /**
@@ -285,7 +294,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Stefan Boltzmann constant $\sigma_\mathrm{SB} = 5.670374419 \times 10^{-8} \,\left[\mathrm{W}\,\mathrm{m}^{-2}\,\mathrm{K}^{-4}\right]$.
+ * Returns: Stefan Boltzmann constant $\sigma_\mathrm{SB} = 5.670374419 \times 10^{-8}
+ * \,\left[\mathrm{W}\,\mathrm{m}^{-2}\,\mathrm{K}^{-4}\right]$.
  */
 
 /**
@@ -293,7 +303,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Magnetic constant $\mu_0 = 1.25663706212 \times 10^{-6} \,\left[\mathrm{N}\,\mathrm{A}^{-2}\right]$.
+ * Returns: Magnetic constant $\mu_0 = 1.25663706127 \times 10^{-6}
+ * \,\left[\mathrm{N}\,\mathrm{A}^{-2}\right]$.
  */
 
 /**
@@ -301,7 +312,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Atomic mass constant $m_\mathrm{A} = 1.66053906660 \times 10^{-27} \,\left[\mathrm{kg}\right]$.
+ * Returns: Atomic mass constant $m_\mathrm{A} = 1.66053906892 \times 10^{-27}
+ * \,\left[\mathrm{kg}\right]$.
  */
 
 /**
@@ -309,7 +321,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Electron mass $m_\mathrm{e} = 9.1093837015 \times 10^{-31} \,\left[\mathrm{kg}\right]$.
+ * Returns: Electron mass $m_\mathrm{e} = 9.1093837139 \times 10^{-31}
+ * \,\left[\mathrm{kg}\right]$.
  */
 
 /**
@@ -317,7 +330,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Proton mass $m_\mathrm{p} = 1.67262192369 \times 10^{-27} \,\left[\mathrm{kg}\right]$.
+ * Returns: Proton mass $m_\mathrm{p} = 1.67262192595 \times 10^{-27}
+ * \,\left[\mathrm{kg}\right]$.
  */
 
 /**
@@ -325,7 +339,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Neuton mass $m_\mathrm{n} = 1.67492749804 \times 10^{-27} \,\left[\mathrm{kg}\right]$.
+ * Returns: Neuton mass $m_\mathrm{n} = 1.67492750056 \times 10^{-27}
+ * \,\left[\mathrm{kg}\right]$.
  */
 
 /**
@@ -333,7 +348,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: The proton and alpha particle (Helium-4 III) mass ratio $m_\alpha / m_\mathrm{p} = 3.97259969009$.
+ * Returns: The proton and alpha particle (Helium-4 III) mass ratio $m_\alpha /
+ * m_\mathrm{p} = 3.972599690252$.
  */
 
 /**
@@ -341,7 +357,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: The electron and proton mass ratio $m_\mathrm{e} / m_\mathrm{p} = 5.44617021487 \times 10^{-4}$.
+ * Returns: The electron and proton mass ratio $m_\mathrm{e} / m_\mathrm{p} =
+ * 5.446170214889 \times 10^{-4}$.
  */
 
 /**
@@ -349,7 +366,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: The Rydberg constant $\mathrm{R}_\infty = 10973731.568160 \,\left[\mathrm{m}^{-1}\right]$.
+ * Returns: The Rydberg constant $\mathrm{R}_\infty = 10973731.568157
+ * \,\left[\mathrm{m}^{-1}\right]$.
  */
 
 /**
@@ -357,7 +375,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: The Rydberg unity of energy $\mathrm{Ry} = hc\mathrm{R}_\infty = 2.1798723611035 \times 10^{-18} \,\left[\mathrm{J}\right]$.
+ * Returns: The Rydberg unity of energy $\mathrm{Ry} = hc\mathrm{R}_\infty =
+ * 2.1798723611030 \times 10^{-18} \,\left[\mathrm{J}\right]$.
  */
 
 /**
@@ -365,7 +384,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: The value of one electron volt $\mathrm{eV} = 1.602176634 \times 10^{-19} \,\left[\mathrm{J}\right]$.
+ * Returns: The value of one electron volt $\mathrm{eV} = 1.602176634 \times 10^{-19}
+ * \,\left[\mathrm{J}\right]$.
  */
 
 /*******************************************************************************
@@ -385,7 +405,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * One year times the speed of light ncm_c_c() in meters.
  *
- * Returns: $1$ light-year $365.25 \times 24 \times 60 \times 60 \times c \,\left[\mathrm{m}\right]$.
+ * Returns: $1$ light-year $365.25 \times 24 \times 60 \times 60 \times c
+ * \,\left[\mathrm{m}\right]$.
  */
 
 /**
@@ -393,7 +414,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * One light-year in parsecs.
  *
- * Returns: $1$ light-year $365.25 \times 24 \times 60 \times 60 \times c \,\left[\mathrm{pc}\right]$.
+ * Returns: $1$ light-year $365.25 \times 24 \times 60 \times 60 \times c
+ * \,\left[\mathrm{pc}\right]$.
  */
 
 /**
@@ -401,7 +423,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * One giga light-year in mega parsecs.
  *
- * Returns: $1$ giga light-year $10^6 \times 365.25 \times 24 \times 60 \times 60 \times c \,\left[\mathrm{Mpc}\right]$.
+ * Returns: $1$ giga light-year $10^6 \times 365.25 \times 24 \times 60 \times 60 \times
+ * c \,\left[\mathrm{Mpc}\right]$.
  */
 
 /**
@@ -409,7 +432,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Derived from CODATA values, see [description][NcmC.description].
  *
- * Returns: Planck constant times the speed of light $hc \,\left[\mathrm{kg}\,\mathrm{m}^3\,\mathrm{s}^{-2}\right]$.
+ * Returns: Planck constant times the speed of light $hc
+ * \,\left[\mathrm{kg}\,\mathrm{m}^3\,\mathrm{s}^{-2}\right]$.
  */
 
 /**
@@ -425,7 +449,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Derived from CODATA values, see [description][NcmC.description].
  *
- * Returns: Electric constant $\varepsilon_0 = 1 / (\mu_0 c^2) \,\left[\mathrm{F}\,\mathrm{m}^{-1}\right]$.
+ * Returns: Electric constant $\varepsilon_0 = 1 / (\mu_0 c^2)
+ * \,\left[\mathrm{F}\,\mathrm{m}^{-1}\right]$.
  */
 
 /**
@@ -441,7 +466,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Derived from CODATA values, see [description][NcmC.description].
  *
- * Returns: Square of the speed of light $c^2 \,\left[\mathrm{m}^2\,\mathrm{s}^{-2}\right]$.
+ * Returns: Square of the speed of light $c^2
+ * \,\left[\mathrm{m}^2\,\mathrm{s}^{-2}\right]$.
  */
 
 /**
@@ -500,7 +526,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Derived from CODATA values, see [description][NcmC.description].
  *
- * The electron termal wavelength is $\lambda_\mathrm{e} = \sqrt{2\pi\hbar^2/(m_\mathrm{e}k_\mathrm{B}T)} \,\left[\mathrm{m}\right]$.
+ * The electron termal wavelength is $\lambda_\mathrm{e} =
+ * \sqrt{2\pi\hbar^2/(m_\mathrm{e}k_\mathrm{B}T)} \,\left[\mathrm{m}\right]$.
  *
  * Returns: Thermal electron wavelength times the temperature $\lambda_\mathrm{e}\sqrt{T}$.
  */
@@ -510,7 +537,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Derived from CODATA values, see [description][NcmC.description].
  *
- * The proton termal wavelength is $\lambda_\mathrm{p} = \sqrt{2\pi\hbar^2/(m_\mathrm{p}k_\mathrm{B}T)} \,\left[\mathrm{m}\right]$.
+ * The proton termal wavelength is $\lambda_\mathrm{p} =
+ * \sqrt{2\pi\hbar^2/(m_\mathrm{p}k_\mathrm{B}T)} \,\left[\mathrm{m}\right]$.
  *
  * Returns: Thermal electron wavelength times the temperature $\lambda_\mathrm{p}\sqrt{T}$.
  */
@@ -520,7 +548,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Derived from CODATA values, see [description][NcmC.description].
  *
- * The neutron termal wavelength is $\lambda_\mathrm{n} = \sqrt{2\pi\hbar^2/(m_\mathrm{n}k_\mathrm{B}T)} \,\left[\mathrm{m}\right]$.
+ * The neutron termal wavelength is $\lambda_\mathrm{n} =
+ * \sqrt{2\pi\hbar^2/(m_\mathrm{n}k_\mathrm{B}T)} \,\left[\mathrm{m}\right]$.
  *
  * Returns: Thermal electron wavelength times the temperature $\lambda_\mathrm{n}\sqrt{T}$.
  */
@@ -586,11 +615,11 @@ ncm_c_class_init (NcmCClass *klass)
  */
 
 /*******************************************************************************
- * END: 2018 CODATA recommended values
+ * END: 2022 CODATA recommended values
  *******************************************************************************/
 
 /*******************************************************************************
- * START: IUPAC related constants
+ * START: 2021 IUPAC related constants
  *******************************************************************************/
 
 /**
@@ -598,7 +627,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
  *
- * Returns: Hydrogen-1's mass over one atomic mass $m_\mathrm{1H}/m_\mathrm{A} = 1.00782503223$.
+ * Returns: Hydrogen-1's mass over one atomic mass $m_\mathrm{1H}/m_\mathrm{A} =
+ * 1.00782503223$.
  */
 
 /**
@@ -606,7 +636,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
  *
- * Returns: Hydrogen-2's mass over one atomic mass $m_\mathrm{2H}/m_\mathrm{A} = 2.01410177812$.
+ * Returns: Hydrogen-2's mass over one atomic mass $m_\mathrm{2H}/m_\mathrm{A} =
+ * 2.01410177812$.
  */
 
 /**
@@ -614,7 +645,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
  *
- * Returns: Hydrogen-3's mass over one atomic mass $m_\mathrm{3H}/m_\mathrm{A} = 3.0160492779$.
+ * Returns: Hydrogen-3's mass over one atomic mass $m_\mathrm{3H}/m_\mathrm{A} =
+ * 3.0160492779$.
  */
 
 /**
@@ -622,7 +654,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
  *
- * Returns: Helium-3's mass over one atomic mass $m_\mathrm{3He}/m_\mathrm{A} = 3.0160293201$.
+ * Returns: Helium-3's mass over one atomic mass $m_\mathrm{3He}/m_\mathrm{A} =
+ * 3.0160293201$.
  */
 
 /**
@@ -630,7 +663,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
  *
- * Returns: Helium-4's mass over one atomic mass $m_\mathrm{4He}/m_\mathrm{A} = 4.00260325413$.
+ * Returns: Helium-4's mass over one atomic mass $m_\mathrm{4He}/m_\mathrm{A} =
+ * 4.00260325413$.
  */
 
 /**
@@ -737,7 +771,7 @@ ncm_c_class_init (NcmCClass *klass)
  */
 
 /*******************************************************************************
- * END: IUPAC related constants
+ * END: 2021 IUPAC related constants
  *******************************************************************************/
 
 /*******************************************************************************
@@ -751,7 +785,8 @@ ncm_c_class_init (NcmCClass *klass)
  * compatible with [NASA JPL](http://ssd.jpl.nasa.gov/?constants) recommendations
  * (as in 5 January 2016).
  *
- * Returns: One astronomical unit in meters $\mathrm{au} = 1.49597870700 \times 10^{11} \,\left[\mathrm{m}\right]$.
+ * Returns: One astronomical unit in meters $\mathrm{au} = 1.49597870700 \times 10^{11}
+ * \,\left[\mathrm{m}\right]$.
  */
 
 /**
@@ -759,7 +794,8 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * Using IAU 2015 recommendation see [description][NcmC.description].
  *
- * Returns: One parsec in meters $\mathrm{pc} = 648000 \mathrm{au} / \pi = 3.0856775814913672789139379577965 \times 10^{16} \,\left[\mathrm{m}\right]$.
+ * Returns: One parsec in meters $\mathrm{pc} = 648000 \mathrm{au} / \pi =
+ * 3.0856775814913672789139379577965 \times 10^{16} \,\left[\mathrm{m}\right]$.
  */
 
 /**
@@ -786,7 +822,8 @@ ncm_c_class_init (NcmCClass *klass)
  * IAU recomends the use of a fixed value for the gravitational constant
  * times the solar mass.
  *
- * Returns: One solar mass times the gravitational constant $(\mathcal{GM})_\odot = 1.3271244 \times 10^{20} \,\left[\mathrm{m}^3\,\mathrm{s}^{-2}\right]$.
+ * Returns: One solar mass times the gravitational constant $(\mathcal{GM})_\odot =
+ * 1.3271244 \times 10^{20} \,\left[\mathrm{m}^3\,\mathrm{s}^{-2}\right]$.
  */
 
 /**
@@ -797,7 +834,8 @@ ncm_c_class_init (NcmCClass *klass)
  * As in the recomendation above $\mathrm{M}_\odot = (\mathcal{GM})_\odot / \mathrm{G}$.
  * Here we use the CODATA 2018 value for $G$, see ncm_c_G().
  *
- * Returns: One solar mass $\mathrm{M}_\odot = (\mathcal{GM})_\odot / \mathrm{G} \,\left[\mathrm{kg}\right]$.
+ * Returns: One solar mass $\mathrm{M}_\odot = (\mathcal{GM})_\odot / \mathrm{G}
+ * \,\left[\mathrm{kg}\right]$.
  */
 
 /*******************************************************************************
@@ -805,7 +843,7 @@ ncm_c_class_init (NcmCClass *klass)
  *******************************************************************************/
 
 /*******************************************************************************
- * START: NIST Atomic Spectra database
+ * START: 2023 NIST Atomic Spectra database
  *******************************************************************************/
 
 /*******************************************************************************
