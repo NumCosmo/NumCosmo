@@ -1006,13 +1006,13 @@ ncm_c_HI_Lyman_wn_2s_2S0_5 (void)
 NCM_INLINE gdouble
 ncm_c_HI_Lyman_wn_2p_2P0_5 (void)
 {
-  return 8.22589191133e6; 
+  return 8.22589191133e6;
 }
 
 NCM_INLINE gdouble
 ncm_c_HI_Lyman_wn_2p_2P3_5 (void)
 {
-  return 8.22592850014e6; 
+  return 8.22592850014e6;
 }
 
 NCM_INLINE gdouble
