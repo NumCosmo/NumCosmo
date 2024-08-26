@@ -1399,7 +1399,7 @@ ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_mod
  * @mset: a #NcmMSet
  *
  * Gets the free parameters map for @mset. The returned array must be
- * freed with g_strfreev(). It contains the full names of the free
+ * freed with g_strfreev. It contains the full names of the free
  * parameters in @mset.
  *
  * Returns: (transfer full) (array zero-terminated=1) (element-type utf8): an array of strings

@@ -139,14 +139,6 @@
 #include "lss/nc_multiplicity_func_watson.h"
 #include "lss/nc_halo_mass_function.h"
 #include "lss/nc_galaxy_acf.h"
-#include "lss/nc_galaxy_redshift_spec.h"
-#include "lss/nc_galaxy_redshift_spline.h"
-#include "lss/nc_galaxy_redshift_gauss.h"
-#include "lss/nc_galaxy_wl.h"
-#include "lss/nc_galaxy_wl_ellipticity_gauss.h"
-#include "lss/nc_galaxy_wl_ellipticity_kde.h"
-#include "lss/nc_galaxy_wl_ellipticity_binned.h"
-#include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_mass_nodist.h"
 #include "lss/nc_cluster_mass_lnnormal.h"
@@ -170,6 +162,14 @@
 #include "lss/nc_reduced_shear_cluster_mass.h"
 #include "lss/nc_reduced_shear_calib.h"
 #include "lss/nc_reduced_shear_calib_wtg.h"
+#include "galaxy/nc_galaxy_sd_position.h"
+#include "galaxy/nc_galaxy_sd_position_flat.h"
+#include "galaxy/nc_galaxy_sd_position_lsst_srd.h"
+#include "galaxy/nc_galaxy_sd_z_proxy.h"
+#include "galaxy/nc_galaxy_sd_z_proxy_gauss.h"
+#include "galaxy/nc_galaxy_sd_z_proxy_dirac.h"
+#include "galaxy/nc_galaxy_sd_shape.h"
+#include "galaxy/nc_galaxy_sd_shape_gauss.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_cbe.h"
@@ -199,6 +199,7 @@
 #include "data/nc_data_cluster_ncount.h"
 #include "data/nc_data_cluster_ncounts_gauss.h"
 #include "data/nc_data_cluster_wl.h"
+#include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
 #include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_dist_mu.h"
@@ -214,6 +215,7 @@
 #include "xcor/nc_xcor_limber_kernel_gal.h"
 #include "xcor/nc_xcor_limber_kernel_CMB_lensing.h"
 #include "xcor/nc_xcor_limber_kernel_weak_lensing.h"
+#include "xcor/nc_xcor_limber_kernel_tSZ.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <stdlib.h>
@@ -668,14 +670,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);
 
   ncm_cfg_register_obj (NC_TYPE_GALAXY_ACF);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPEC);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPLINE);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_GAUSS);
-
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_GAUSS);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_KDE);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_BINNED);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
@@ -709,6 +703,15 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB);
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB_WTG);
+
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_FLAT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_LSST_SRD);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY_DIRAC);
 
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
@@ -755,7 +758,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNT);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS);
-  ncm_cfg_register_obj (NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);
 
@@ -765,6 +767,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_GAL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_TSZ);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
@@ -2127,7 +2130,7 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
 
 /**
  * ncm_cfg_array_set_variant: (skip)
- * @a: a #GArray.
+ * @a: a GArray.
  * @var: a variant of array type.
  *
  * Transfers the data from @var to @a.
@@ -2146,7 +2149,7 @@ ncm_cfg_array_set_variant (GArray *a, GVariant *var)
 
 /**
  * ncm_cfg_array_to_variant: (skip)
- * @a: a #GArray.
+ * @a: a GArray.
  * @etype: element type.
  *
  * Creates a variant of array type from @a.

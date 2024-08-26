@@ -32,6 +32,7 @@
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/math/ncm_csq1d.h>
+#include <numcosmo/math/ncm_powspec_spline2d.h>
 
 G_BEGIN_DECLS
 
@@ -92,6 +93,8 @@ void nc_hipert_em_set_k (NcHIPertEM *pem, const gdouble k);
 gdouble nc_hipert_em_get_k (NcHIPertEM *pem);
 
 void nc_hipert_em_eval_PE_PB (NcHIPertEM *pem, NcmModel *model, const gdouble tau, gdouble *PE, gdouble *PB);
+
+void nc_hipert_em_prepare_spectrum (NcHIPertEM *pem, NcmModel *model, GArray *k_array, GArray *tau_array, NcmPowspecSpline2d **ps_E, NcmPowspecSpline2d **ps_B);
 
 G_END_DECLS
 

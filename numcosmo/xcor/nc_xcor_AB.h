@@ -34,14 +34,8 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_AB (nc_xcor_AB_get_type ())
-#define NC_XCOR_AB(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_XCOR_AB, NcXcorAB))
-#define NC_XCOR_AB_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_XCOR_AB, NcXcorABClass))
-#define NC_IS_XCOR_AB(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_XCOR_AB))
-#define NC_IS_XCOR_AB_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_XCOR_AB))
-#define NC_XCOR_AB_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_XCOR_AB, NcXcorABClass))
 
-typedef struct _NcXcorABClass NcXcorABClass;
-typedef struct _NcXcorAB NcXcorAB;
+G_DECLARE_FINAL_TYPE (NcXcorAB, nc_xcor_AB, NC, XCOR_AB, GObject)
 
 struct _NcXcorAB
 {
@@ -60,17 +54,6 @@ struct _NcXcorAB
   NcmMatrix *cl_th; /*column 0 : C_l^th, 1 : C_l^th+N_l, 2 : mixed C_l */
   NcmVector *cl_obs;
 };
-
-struct _NcXcorABClass
-{
-  /*< private > */
-  GObjectClass parent_class;
-
-  gpointer (*alloc) (void);
-};
-
-GType nc_xcor_AB_get_type (void) G_GNUC_CONST;
-
 
 /* void nc_xcor_AB_prepare (NcXcorAB* xc, NcHICosmo* model); */
 /* NcXcorAB* nc_xcor_AB_new (NcDistance* dist, NcTransferFunc* tf, NcGrowthFunc* gf, gdouble zl, gdouble zu); */

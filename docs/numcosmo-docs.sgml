@@ -11,6 +11,7 @@
     <title>NumCosmo Overview</title>
     <xi:include href="introduction.xml"/>
     <xi:include href="refs.xml"/>
+    <xi:include href="glib_doc.xml"/>
     <xi:include href="xml/build_cfg.xml"/>
   </chapter>
 
@@ -204,6 +205,7 @@
     <xi:include href="xml/nc_hicosmo_lcdm.xml"/>
     <xi:include href="xml/nc_hicosmo_gcg.xml"/>
     <xi:include href="xml/nc_hicosmo_idem2.xml"/>
+    <xi:include href="xml/nc_hicosmo_qgw.xml"/>
     <xi:include href="xml/nc_de_cont.xml"/>
     <section>
       <title>Darkenergy</title>
@@ -394,24 +396,22 @@
     <xi:include href="xml/nc_cluster_pseudo_counts.xml"/>
     <xi:include href="xml/nc_cor_cluster_cmb_lens_limber.xml"/>
     <section>
-      <title>Galaxy Redshift</title>
-      <xi:include href="xml/nc_galaxy_redshift.xml"/>
-      <xi:include href="xml/nc_galaxy_redshift_spec.xml"/>
-      <xi:include href="xml/nc_galaxy_redshift_spline.xml"/>
-      <xi:include href="xml/nc_galaxy_redshift_gauss.xml"/>
-    </section>	
+      <title>Galaxy Distribution</title>
+      <xi:include href="xml/nc_galaxy_sd_position.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_position_flat.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_position_lsst_srd.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_shape.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_shape_gauss.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_z_proxy.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_z_proxy_gauss.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_z_proxy_dirac.xml"/>
+    </section>
     <section>
       <title>Weak Lensing</title>
       <xi:include href="xml/nc_wl_surface_mass_density.xml"/>
       <xi:include href="xml/nc_reduced_shear_cluster_mass.xml"/>
       <xi:include href="xml/nc_reduced_shear_calib.xml"/>
       <xi:include href="xml/nc_reduced_shear_calib_wtg.xml"/>
-      <xi:include href="xml/nc_galaxy_wl.xml"/>
-      <xi:include href="xml/nc_galaxy_wl_dist.xml"/>
-      <xi:include href="xml/nc_galaxy_wl_ellipticity_gauss.xml"/>
-      <xi:include href="xml/nc_galaxy_wl_ellipticity_kde.xml"/>
-      <xi:include href="xml/nc_galaxy_wl_ellipticity_binned.xml"/>
-      <xi:include href="xml/nc_galaxy_wl_proj.xml"/>
     </section>
     <section>
       <title>Galaxy ACF</title>
