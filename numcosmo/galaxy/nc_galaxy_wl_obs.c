@@ -293,14 +293,10 @@ nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdoub
     g_error ("nc_galaxy_wl_obs_set: call nc_galaxy_wl_obs_set_pz to set P(z) splines.");
 
   if (!ncm_var_dict_has_key (self->header, col))
-  {
     g_error ("nc_galaxy_wl_obs_set: column '%s' not found.", col);
-  }
-  else
-  {
-    ncm_var_dict_get_int (self->header, col, &j);
-    ncm_matrix_set (self->data, i, j, val);
-  }
+
+  ncm_var_dict_get_int (self->header, col, &j);
+  ncm_matrix_set (self->data, i, j, val);
 }
 
 /**
@@ -337,6 +333,9 @@ nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint i)
 
   if (g_strcmp0 (col, "pz") == 0)
     g_error ("nc_galaxy_wl_obs_get: call nc_galaxy_wl_obs_get_pz to get P(z) splines.");
+
+  if (!ncm_var_dict_has_key (self->header, col))
+    g_error ("nc_galaxy_wl_obs_get: column '%s' not found.", col);
 
   ncm_var_dict_get_int (self->header, col, &j);
 
