@@ -1595,7 +1595,7 @@ nc_hipert_two_fluids_evolve_array (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdo
 
       pert->priv->alpha0 = alpha_i;
 
-      if (fabs (alpha_i - step_reltol) > step_reltol * fabs (last_step) + step_abstol)
+      if (fabs (alpha_i - last_step) > step_reltol * fabs (last_step) + step_abstol)
       {
         g_array_append_val (array, alpha_i);
         g_array_append_vals (array, NV_DATA_S (pert->priv->y), NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
