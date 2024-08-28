@@ -130,8 +130,7 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
   switch (prop_id)
   {
     case PROP_OBS:
-      nc_galaxy_wl_obs_clear (&self->obs);
-      self->obs = g_value_dup_object (value);
+      nc_data_cluster_wl_set_obs (dcwl, g_value_dup_object (value));
       break;
     case PROP_S_OBS:
       self->s_obs = g_value_dup_boxed (value);
@@ -695,6 +694,8 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
   nc_wl_surface_mass_density_prepare_if_needed (smd, cosmo);
 
   nc_galaxy_sd_shape_set_models (self->s_dist, cosmo, hp);
+
+  nc_galaxy_sd_shape_prepare (self->s_dist, cosmo, hp, nc_galaxy_wl_obs_get_coord (self->obs), TRUE, self->s_obs, self->s_obs_prep);
 }
 
 /**
@@ -785,7 +786,7 @@ nc_data_cluster_wl_set_prec (NcDataClusterWL *dcwl, gdouble prec)
  * Sets the observables matrix @obs.
  */
 void
-nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloPosition *hp, NcGalaxyWLObs *obs)
+nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs)
 {
   NcDataClusterWLPrivate * const self = dcwl->priv;
   NcmVarDict *obs_header              = nc_galaxy_wl_obs_peek_header (obs);
@@ -864,8 +865,6 @@ nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloPosit
   ncm_obj_array_clear (&self->s_obs_prep);
   ncm_obj_array_clear (&self->z_obs);
   ncm_obj_array_clear (&self->p_obs);
-
-  nc_galaxy_sd_shape_prepare (self->s_dist, cosmo, hp, nc_galaxy_wl_obs_get_coord (obs), TRUE, s_obs, s_obs_prep);
 
   self->len        = nc_galaxy_wl_obs_len (obs);
   self->obs        = nc_galaxy_wl_obs_ref (obs);
@@ -970,7 +969,7 @@ nc_data_cluster_wl_gen_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensi
     }
   }
 
-  nc_data_cluster_wl_set_obs (dcwl, cosmo, hp, obs);
+  nc_data_cluster_wl_set_obs (dcwl, obs);
 }
 
 /**
@@ -986,6 +985,6 @@ nc_data_cluster_wl_peek_obs (NcDataClusterWL *dcwl)
 {
   NcDataClusterWLPrivate * const self = dcwl->priv;
 
-  return self->obs;
+  return nc_galaxy_wl_obs_ref (self->obs);
 }
 

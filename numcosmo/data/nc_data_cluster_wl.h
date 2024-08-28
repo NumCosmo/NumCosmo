@@ -71,7 +71,7 @@ gdouble nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcHICosmo *c
 void nc_data_cluster_wl_free (NcDataClusterWL *dcwl);
 void nc_data_cluster_wl_clear (NcDataClusterWL **dcwl);
 void nc_data_cluster_wl_set_prec (NcDataClusterWL *dcwl, gdouble prec);
-void nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloPosition *hp, NcGalaxyWLObs *obs);
+void nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs);
 void nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gdouble r_max);
 void nc_data_cluster_wl_gen_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, guint nobs, NcmRNG *rng, NcGalaxyWLObsCoord coord);
 NcGalaxyWLObs *nc_data_cluster_wl_peek_obs (NcDataClusterWL *dcwl);
