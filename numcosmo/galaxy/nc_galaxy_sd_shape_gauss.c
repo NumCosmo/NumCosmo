@@ -201,9 +201,9 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
-  gdouble ra_cl                            = ncm_model_param_get_by_name (NCM_MODEL (hp), "ra");
-  gdouble dec_cl                           = ncm_model_param_get_by_name (NCM_MODEL (hp), "dec");
-  gdouble z_cl                             = ncm_model_param_get_by_name (NCM_MODEL (hp), "z");
+  gdouble ra_cl                            = ncm_model_param_get (NCM_MODEL (hp), NC_HALO_POSITION_RA);
+  gdouble dec_cl                           = ncm_model_param_get (NCM_MODEL (hp), NC_HALO_POSITION_DEC);
+  gdouble z_cl                             = ncm_model_param_get (NCM_MODEL (hp), NC_HALO_POSITION_Z);
   gdouble ra                               = ncm_vector_get (data_p, 0);
   gdouble dec                              = ncm_vector_get (data_p, 1);
   gdouble z                                = ncm_vector_get (data_z, 0);
@@ -250,7 +250,7 @@ _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHalo
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
-  gdouble z_cl                             = ncm_model_param_get_by_name (NCM_MODEL (hp), "z");
+  gdouble z_cl                             = ncm_model_param_get (NCM_MODEL (hp), NC_HALO_POSITION_Z);
   gdouble r                                = ncm_vector_get (data, 0);
   gdouble phi                              = ncm_vector_get (data, 1);
   gdouble e1                               = ncm_vector_get (data, 2);
@@ -281,7 +281,7 @@ _nc_galaxy_sd_shape_gauss_integ_optzs_prep (NcGalaxySDShape *gsds, NcHICosmo *co
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
-  gdouble z_cl                             = ncm_model_param_get_by_name (NCM_MODEL (hp), "z");
+  gdouble z_cl                             = ncm_model_param_get (NCM_MODEL (hp), NC_HALO_POSITION_Z);
   gdouble r                                = ncm_vector_get (data, 0);
 
   nc_wl_surface_mass_density_reduced_shear_optzs_prep (smd, dp, cosmo, r, z_cl, z_cl, &self->optzs);
@@ -292,7 +292,7 @@ _nc_galaxy_sd_shape_gauss_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, 
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
-  gdouble z_cl                             = ncm_model_param_get_by_name (NCM_MODEL (hp), "z");
+  gdouble z_cl                             = ncm_model_param_get (NCM_MODEL (hp), NC_HALO_POSITION_Z);
   gdouble phi                              = ncm_vector_get (data, 1);
   gdouble e1                               = ncm_vector_get (data, 2);
   gdouble e2                               = ncm_vector_get (data, 3);
@@ -331,9 +331,9 @@ _nc_galaxy_sd_shape_gauss_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHa
     {
       NcmVector *data_i      = NCM_VECTOR (ncm_obj_array_peek (data, i));
       NcmVector *data_prep_i = NCM_VECTOR (ncm_obj_array_peek (data_prep, i));
-      gdouble ra_cl          = ncm_model_param_get_by_name (NCM_MODEL (hp), "ra");
-      gdouble dec_cl         = ncm_model_param_get_by_name (NCM_MODEL (hp), "dec");
-      gdouble z_cl           = ncm_model_param_get_by_name (NCM_MODEL (hp), "z");
+      gdouble ra_cl          = ncm_model_param_get (NCM_MODEL (hp), NC_HALO_POSITION_RA);
+      gdouble dec_cl         = ncm_model_param_get (NCM_MODEL (hp), NC_HALO_POSITION_DEC);
+      gdouble z_cl           = ncm_model_param_get (NCM_MODEL (hp), NC_HALO_POSITION_Z);
       gdouble ra             = ncm_vector_get (data_i, 0);
       gdouble dec            = ncm_vector_get (data_i, 1);
       gdouble e1             = ncm_vector_get (data_i, 2);
