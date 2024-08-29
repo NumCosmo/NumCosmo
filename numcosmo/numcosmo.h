@@ -187,7 +187,6 @@
 #include <numcosmo/data/nc_data_cluster_pseudo_counts.h>
 #include <numcosmo/data/nc_data_cluster_wl.h>
 #include <numcosmo/data/nc_data_cluster_mass_rich.h>
-#include <numcosmo/data/nc_data_reduced_shear_cluster_mass.h>
 #include <numcosmo/data/nc_data_planck_lkl.h>
 #include <numcosmo/data/nc_data_xcor.h>
 
