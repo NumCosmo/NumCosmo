@@ -73,6 +73,7 @@ gdouble nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint 
 NcmSpline *nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i);
 
 NcmVarDict *nc_galaxy_wl_obs_peek_header (NcGalaxyWLObs *obs);
+GStrv nc_galaxy_wl_obs_peek_columns (NcGalaxyWLObs *obs);
 
 void nc_galaxy_wl_obs_set_coord (NcGalaxyWLObs *obs, NcGalaxyWLObsCoord coord);
 NcGalaxyWLObsCoord nc_galaxy_wl_obs_get_coord (NcGalaxyWLObs *obs);

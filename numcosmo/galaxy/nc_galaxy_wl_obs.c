@@ -51,6 +51,7 @@ struct _NcGalaxyWLObsPrivate
   NcmVarDict *header;
   NcmObjDictInt *pz;
   NcGalaxyWLObsCoord coord;
+  GStrv columns;
   guint len;
 };
 
@@ -59,6 +60,7 @@ enum
   PROP_0,
   PROP_DATA,
   PROP_PZ,
+  PROP_COLUNMS,
   PROP_HEADER,
   PROP_COORD,
   PROP_LEN,
@@ -71,11 +73,12 @@ nc_galaxy_wl_obs_init (NcGalaxyWLObs *obs)
 {
   NcGalaxyWLObsPrivate * const self = obs->priv = nc_galaxy_wl_obs_get_instance_private (obs);
 
-  self->data   = NULL;
-  self->header = NULL;
-  self->pz     = NULL;
-  self->coord  = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
-  self->len    = 0;
+  self->data    = NULL;
+  self->header  = NULL;
+  self->pz      = NULL;
+  self->coord   = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
+  self->columns = NULL;
+  self->len     = 0;
 }
 
 static void
@@ -95,6 +98,9 @@ nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_HEADER:
       g_value_set_boxed (value, self->header);
       break;
+    case PROP_COLUNMS:
+      g_value_set_boxed (value, self->columns);
+      break;
     case PROP_COORD:
       g_value_set_enum (value, nc_galaxy_wl_obs_get_coord (obs));
       break;
@@ -113,13 +119,23 @@ nc_galaxy_wl_obs_set_property (GObject *object, guint prop_id, const GValue *val
   switch (prop_id)
   {
     case PROP_DATA:
+      ncm_matrix_clear (&self->data);
       self->data = g_value_dup_object (value);
       break;
     case PROP_PZ:
+      ncm_obj_dict_int_clear (&self->pz);
       self->pz = g_value_dup_boxed (value);
       break;
     case PROP_HEADER:
+      ncm_var_dict_clear (&self->header);
       self->header = g_value_dup_boxed (value);
+      break;
+    case PROP_COLUNMS:
+
+      if (self->columns != NULL)
+        g_strfreev (self->columns);
+
+      self->columns = g_value_dup_boxed (value);
       break;
     case PROP_COORD:
       nc_galaxy_wl_obs_set_coord (obs, g_value_get_enum (value));
@@ -137,13 +153,13 @@ nc_galaxy_wl_obs_dispose (GObject *object)
   NcGalaxyWLObsPrivate * const self = obs->priv;
 
   ncm_var_dict_clear (&self->header);
+  ncm_matrix_clear (&self->data);
+  ncm_obj_dict_int_clear (&self->pz);
 
-  if (self->data)
-    ncm_matrix_clear (&self->data);
+  if (self->columns != NULL)
+    g_strfreev (self->columns);
 
-  if (self->pz)
-    ncm_obj_dict_int_clear (&self->pz);
-
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_wl_obs_parent_class)->dispose (object);
 }
 
@@ -157,6 +173,7 @@ nc_galaxy_wl_obs_dispose (GObject *object)
 static void
 nc_galaxy_wl_obs_finalize (GObject *object)
 {
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_wl_obs_parent_class)->finalize (object);
 }
 
@@ -182,7 +199,7 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
                                                         "Data",
                                                         "Weak lensing observation data matrix",
                                                         NCM_TYPE_MATRIX,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcGalaxyWLObs:pz:
@@ -196,7 +213,7 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
                                                        "P(z)",
                                                        "P(z) splines",
                                                        NCM_TYPE_OBJ_DICT_INT,
-                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcGalaxyWLObs:header:
@@ -210,7 +227,21 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
                                                        "Header",
                                                        "Data columns headers",
                                                        NCM_TYPE_VAR_DICT,
-                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcGalaxyWLObs:columns:
+   *
+   * Data columns names.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_COLUNMS,
+                                   g_param_spec_boxed ("columns",
+                                                       "Colunms",
+                                                       "Data columns names",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcGalaxyWLObs:coord:
@@ -267,6 +298,7 @@ nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names)
                       "data", data,
                       "pz", pz,
                       "header", header,
+                      "columns", col_names,
                       "coord", coord,
                       NULL);
 
@@ -375,6 +407,22 @@ nc_galaxy_wl_obs_peek_header (NcGalaxyWLObs *obs)
   NcGalaxyWLObsPrivate * const self = obs->priv;
 
   return self->header;
+}
+
+/**
+ * nc_galaxy_wl_obs_peek_columns:
+ * @obs: a #NcGalaxyWLObs object.
+ *
+ * Gets the data columns names.
+ *
+ * Returns: (transfer none): the data columns names.
+ */
+GStrv
+nc_galaxy_wl_obs_peek_columns (NcGalaxyWLObs *obs)
+{
+  NcGalaxyWLObsPrivate * const self = obs->priv;
+
+  return self->columns;
 }
 
 /**

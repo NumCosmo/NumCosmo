@@ -48,6 +48,7 @@
 #include "math/ncm_model.h"
 #include "math/ncm_vector.h"
 #include "math/ncm_rng.h"
+#include "math/ncm_c.h"
 
 typedef struct _NcGalaxySDPositionFlatPrivate
 {
@@ -143,7 +144,7 @@ _nc_galaxy_sd_position_flat_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng, NcmVecto
   gdouble sin_dec                            = ncm_rng_uniform_gen (rng, self->sin_dec_min, self->sin_dec_max);
 
   ncm_vector_set (data, 0, ncm_rng_uniform_gen (rng, self->ra_min, self->ra_max));
-  ncm_vector_set (data, 1, asin (sin_dec));
+  ncm_vector_set (data, 1, ncm_c_radian_to_degree (asin (sin_dec)));
 }
 
 static gdouble
@@ -155,7 +156,7 @@ _nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, NcmVector *data)
   gdouble dec                                = ncm_vector_get (data, 1);
 
   if ((ra >= self->ra_min) && (ra <= self->ra_max) && (dec >= self->dec_min) && (dec <= self->dec_max))
-    return self->ra_norm * self->dec_norm * cos (dec);
+    return self->ra_norm * self->dec_norm * cos (ncm_c_degree_to_radian (dec));
 
   return 0.0;
 }
@@ -200,9 +201,9 @@ _nc_galaxy_sd_position_flat_set_dec_lim (NcGalaxySDPosition *gsdp, gdouble dec_m
 
   self->dec_min     = dec_min;
   self->dec_max     = dec_max;
-  self->sin_dec_min = sin (dec_min);
-  self->sin_dec_max = sin (dec_max);
-  self->dec_norm    = 1.0 / (self->sin_dec_max - self->sin_dec_min);
+  self->sin_dec_min = sin (ncm_c_degree_to_radian (dec_min));
+  self->sin_dec_max = sin (ncm_c_degree_to_radian (dec_max));
+  self->dec_norm    = ncm_c_pi () / (180.0 * (self->sin_dec_max - self->sin_dec_min));
 
   return TRUE;
 }

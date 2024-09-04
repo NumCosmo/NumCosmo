@@ -456,9 +456,9 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
 
   /**
    * NcDataClusterWL:len:
-   * 
+   *
    * Number of galaxies.
-   * 
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_LEN,
@@ -931,12 +931,12 @@ nc_data_cluster_wl_gen_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensi
     gchar **str;
     guint j;
 
-    do {
-      nc_galaxy_sd_position_gen (self->p_dist, rng, p_obs);
-      nc_halo_position_polar_angles (hp, ncm_vector_get (p_obs, 0), ncm_vector_get (p_obs, 1), &theta, &phi);
+    /* do { */
+    nc_galaxy_sd_position_gen (self->p_dist, rng, p_obs);
+    nc_halo_position_polar_angles (hp, ncm_vector_get (p_obs, 0), ncm_vector_get (p_obs, 1), &theta, &phi);
 
-      r = nc_halo_position_projected_radius (hp, cosmo, theta);
-    } while (r < self->r_min || r > self->r_max);
+    r = nc_halo_position_projected_radius (hp, cosmo, theta);
+    /* } while (r < self->r_min || r > self->r_max); */
 
     nc_galaxy_sd_obs_redshift_gen (self->z_dist, rng, z_obs);
     nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, hp, rng, coord, p_obs, z_obs, s_obs);

@@ -765,21 +765,6 @@ ncm_complex_clear (NcmComplex **c)
  */
 
 /**
- * ncm_util_polar_angles:
- * @ra1: Right ascension of object 1
- * @dec1: Declination of object 1
- * @ra2: Right ascension of object 2
- * @dec2: Declination of object 2
- * @theta: (out): the angular separation in radians
- * @phi: (out): the position angle in radians
- *
- * Computes the angular separation `$\theta$' and the position angle `$\phi$' between
- * object1 (@ra1, @dec1) and object2 (@ra2, dec2), where object1 is at the center of
- * the coordinate system.
- * The input coordinates ((@ra1, @dec1), (@ra2, @dec2)) must be given in decimal degrees.
- */
-
-/**
  * ncm_util_cvode_check_flag:
  * @flagvalue: pointer to flag value
  * @funcname: cvode function name

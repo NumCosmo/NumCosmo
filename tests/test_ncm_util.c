@@ -44,8 +44,7 @@ main (int argc, char *argv[])
 
   g_test_set_nonfatal_assertions ();
 
-  g_test_add_func ("/numcosmo/ncm_util_projected_radius", test_ncm_util_projected_radius);
-  g_test_add_func ("/numcosmo/ncm_util_polar_angles", test_ncm_util_polar_angles);
+  g_test_add_func ("/ncm/util/projected_radius", test_ncm_util_projected_radius);
 
   g_test_run ();
 }
@@ -63,30 +62,6 @@ test_ncm_util_projected_radius (void)
     gdouble theta = ncm_rng_uniform_gen (rng, 0.0, M_PI);
 
     g_assert_cmpfloat (ncm_util_projected_radius (theta, d), >=, 0);
-  }
-}
-
-void
-test_ncm_util_polar_angles (void)
-{
-  NcmRNG *rng    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  gdouble ntests = 1000;
-  guint i;
-
-  for (i = 0; i < ntests; i++)
-  {
-    gdouble ra1   = ncm_rng_uniform_gen (rng, 0.0, 360.0);
-    gdouble dec1  = ncm_rng_uniform_gen (rng, -90.0, 90.0);
-    gdouble ra2   = ncm_rng_uniform_gen (rng, 0.0, 360.0);
-    gdouble dec2  = ncm_rng_uniform_gen (rng, -90.0, 90.0);
-    gdouble theta = 0;
-    gdouble phi   = 0;
-
-    ncm_util_polar_angles (ra1, dec1, ra2, dec2, &theta, &phi);
-
-    g_assert_cmpfloat (theta, >=, 0);
-    g_assert_cmpfloat (phi, >=, -M_PI);
-    g_assert_cmpfloat (phi, <=, M_PI);
   }
 }
 

@@ -41,16 +41,19 @@
 #include "nc_enum_types.h"
 #include "nc_distance.h"
 #include "lss/nc_halo_position.h"
+#include "math/ncm_quaternion.h"
 
 
 typedef struct _NcHaloPositionPrivate
 {
   NcDistance *dist;
   NcmModelCtrl *ctrl_cosmo;
+  NcmQuaternion q;
 } NcHaloPositionPrivate;
 
 struct _NcHaloPosition
 {
+  /*< private >*/
   NcmModel parent_instance;
 };
 
@@ -258,35 +261,76 @@ nc_halo_position_clear (NcHaloPosition **hp)
  * @theta: (out): The polar angle.
  * @phi: (out): The azimuthal angle.
  *
- * Calculates the polar and azimuthal angles of the halo position.
+ * Considering a spherical coordinate system where the halo is at the north pole, this
+ * function calculates the polar and azimuthal angles of a point in the sky. That is,
+ * $\theta$ = @theta provides the angular separation from the halo to the point in the
+ * sky, and $\phi$ = @phi provides the azimuthal angle.
  *
  */
 void
 nc_halo_position_polar_angles (NcHaloPosition *hp, gdouble ra, gdouble dec, gdouble *theta, gdouble *phi)
 {
-  gdouble ra_halo  = RA;
-  gdouble dec_halo = DEC;
+  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
+  NcmModel *model             = NCM_MODEL (hp);
+  NcmTriVec v;
+  gdouble r;
 
-  ncm_util_polar_angles (ra_halo, dec_halo, ra, dec, theta, phi);
+  if (!ncm_model_state_is_update (model))
+  {
+    const gdouble ra_halo  = RA;
+    const gdouble dec_halo = DEC;
+
+    ncm_trivec_set_astro_ra_dec (&v, 1.0, ra_halo, dec_halo);
+    ncm_quaternion_set_to_rotate_to_z (&self->q, &v);
+
+    ncm_model_state_set_update (model);
+  }
+
+  ncm_trivec_set_astro_ra_dec (&v, 1.0, ra, dec);
+  ncm_quaternion_rotate (&self->q, &v);
+  ncm_trivec_get_spherical_coord (&v, &r, theta, phi);
 }
 
 /**
  * nc_halo_position_projected_radius:
- * @hp: A #NcHaloPosition.
- * @theta: The angular separation.
+ * @hp: A #NcHaloPosition
+ * @cosmo: A #NcHICosmo
+ * @theta: The angular separation
  *
  * Calculates the projected radius of the halo position.
  *
- * Returns: The projected radius.
- *
+ * Returns: The projected radius in Mpc.
  */
 gdouble
 nc_halo_position_projected_radius (NcHaloPosition *hp, NcHICosmo *cosmo, gdouble theta)
 {
   NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
-  gdouble z_halo              = Z;
+  const gdouble RH_Mpc        = nc_distance_hubble (self->dist, cosmo);
+  const gdouble z_halo        = Z;
+  const gdouble dA            = nc_distance_angular_diameter (self->dist, cosmo, z_halo);
 
-  return ncm_util_projected_radius (theta, nc_distance_angular_diameter (self->dist, cosmo, z_halo) * nc_distance_hubble (self->dist, cosmo));
+  return ncm_util_projected_radius (theta, dA * RH_Mpc);
+}
+
+/**
+ * nc_halo_position_projected_radius_from_ra_dec:
+ * @hp: A #NcHaloPosition
+ * @cosmo: A #NcHICosmo
+ * @ra: The right ascension
+ * @dec: The declination
+ *
+ * Calculates the projected radius of the halo position from the right ascension and declination.
+ *
+ * Returns: The projected radius in Mpc.
+ */
+gdouble
+nc_halo_position_projected_radius_from_ra_dec (NcHaloPosition *hp, NcHICosmo *cosmo, gdouble ra, gdouble dec)
+{
+  gdouble theta, phi;
+
+  nc_halo_position_polar_angles (hp, ra, dec, &theta, &phi);
+
+  return nc_halo_position_projected_radius (hp, cosmo, theta);
 }
 
 /**

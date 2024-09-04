@@ -143,6 +143,10 @@ c_tests = [
         'sources': ['test_ncm_util.c'],
     },
     {
+        'name': 'ncm_quaternion',
+        'sources': ['test_ncm_quaternion.c'],
+    },
+    {
         'name': 'nc_halo_bias',
         'sources': ['test_nc_halo_bias.c'],
     },
