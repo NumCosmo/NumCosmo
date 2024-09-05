@@ -291,13 +291,15 @@ ncm_prior_flat_param_clear (NcmPriorFlatParam **pfp)
  * ncm_prior_flat_param_set_model_ns:
  * @pfp: a #NcmPriorFlatParam
  * @model_ns: model namespace
+ * @error: a #GError
  *
  * Sets the model namespace of @pfp to @model_ns.
  *
  */
 void
-ncm_prior_flat_param_set_model_ns (NcmPriorFlatParam *pfp, const gchar *model_ns)
+ncm_prior_flat_param_set_model_ns (NcmPriorFlatParam *pfp, const gchar *model_ns, GError **error)
 {
+  g_return_if_fail (error == NULL || *error == NULL);
   g_return_if_fail (NCM_IS_PRIOR_FLAT_PARAM (pfp));
   {
     GType model_type = g_type_from_name (model_ns); /* check if the model namespace is valid */
@@ -308,7 +310,10 @@ ncm_prior_flat_param_set_model_ns (NcmPriorFlatParam *pfp, const gchar *model_ns
     }
     else
     {
-      NcmModelID mid = ncm_model_id_by_type (model_type);
+      NcmModelID mid = ncm_model_id_by_type (model_type, error);
+
+      if (error && *error)
+        return;
 
       g_clear_pointer (&pfp->model_ns, g_free);
       pfp->model_ns = g_strdup (model_ns);

@@ -46,7 +46,7 @@ NcmPriorGaussParam *ncm_prior_gauss_param_ref (NcmPriorGaussParam *pgp);
 void ncm_prior_gauss_param_free (NcmPriorGaussParam *pgp);
 void ncm_prior_gauss_param_clear (NcmPriorGaussParam **pgp);
 
-void ncm_prior_gauss_param_set_model_ns (NcmPriorGaussParam *pgp, const gchar *model_ns);
+void ncm_prior_gauss_param_set_model_ns (NcmPriorGaussParam *pgp, const gchar *model_ns, GError **error);
 void ncm_prior_gauss_param_set_stack_pos (NcmPriorGaussParam *pgp, guint stack_pos);
 void ncm_prior_gauss_param_set_param_name (NcmPriorGaussParam *pgp, const gchar *param_name);
 

@@ -411,19 +411,32 @@ nc_hireion_camb_set_z_from_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, con
  * nc_hireion_camb_z_to_tau:
  * @reion_camb: a #NcHIReionCamb
  * @cosmo: a #NcHICosmo
+ * @error: a #GError
  *
  * Changes the parametrization to use $\tau_\mathrm{reion}$ instead of $z_\mathrm{reion}$.
  *
  */
 void
-nc_hireion_camb_z_to_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo)
+nc_hireion_camb_z_to_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, GError **error)
 {
-  NcHIReionCambReparamTau *reparam_tau = nc_hireion_camb_reparam_tau_new (ncm_model_len (NCM_MODEL (reion_camb)), cosmo);
-  NcmReparam *reparam                  = NCM_REPARAM (reparam_tau);
+  g_return_if_fail (error == NULL || *error == NULL);
+  {
+    NcHIReionCambReparamTau *reparam_tau = nc_hireion_camb_reparam_tau_new (ncm_model_len (NCM_MODEL (reion_camb)), cosmo);
+    NcmReparam *reparam                  = NCM_REPARAM (reparam_tau);
 
-  ncm_model_set_reparam (NCM_MODEL (reion_camb), reparam);
-  ncm_reparam_clear (&reparam);
+    ncm_model_set_reparam (NCM_MODEL (reion_camb), reparam, error);
 
-  return;
+    if (error && *error)
+    {
+      g_object_unref (reparam);
+
+      return;
+    }
+
+
+    ncm_reparam_clear (&reparam);
+
+    return;
+  }
 }
 

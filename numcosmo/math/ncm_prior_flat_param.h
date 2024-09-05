@@ -45,7 +45,7 @@ NcmPriorFlatParam *ncm_prior_flat_param_ref (NcmPriorFlatParam *pfp);
 void ncm_prior_flat_param_free (NcmPriorFlatParam *pfp);
 void ncm_prior_flat_param_clear (NcmPriorFlatParam **pfp);
 
-void ncm_prior_flat_param_set_model_ns (NcmPriorFlatParam *pfp, const gchar *model_ns);
+void ncm_prior_flat_param_set_model_ns (NcmPriorFlatParam *pfp, const gchar *model_ns, GError **error);
 void ncm_prior_flat_param_set_stack_pos (NcmPriorFlatParam *pfp, guint stack_pos);
 void ncm_prior_flat_param_set_param_name (NcmPriorFlatParam *pfp, const gchar *param_name);
 

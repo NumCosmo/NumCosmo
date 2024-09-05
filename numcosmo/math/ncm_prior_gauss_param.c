@@ -287,13 +287,15 @@ ncm_prior_gauss_param_clear (NcmPriorGaussParam **pgp)
  * ncm_prior_gauss_param_set_model_ns:
  * @pgp: a #NcmPriorGaussParam
  * @model_ns: model namespace
+ * @error: a #GError
  *
  * Sets the model namespace of @pgp to @model_ns.
  *
  */
 void
-ncm_prior_gauss_param_set_model_ns (NcmPriorGaussParam *pgp, const gchar *model_ns)
+ncm_prior_gauss_param_set_model_ns (NcmPriorGaussParam *pgp, const gchar *model_ns, GError **error)
 {
+  g_return_if_fail (error == NULL || *error == NULL);
   g_return_if_fail (NCM_IS_PRIOR_GAUSS_PARAM (pgp));
   {
     GType model_type = g_type_from_name (model_ns); /* check if the model namespace is valid */
@@ -304,7 +306,10 @@ ncm_prior_gauss_param_set_model_ns (NcmPriorGaussParam *pgp, const gchar *model_
     }
     else
     {
-      NcmModelID mid = ncm_model_id_by_type (model_type);
+      NcmModelID mid = ncm_model_id_by_type (model_type, error);
+
+      if (error && *error)
+        return;
 
       g_clear_pointer (&pgp->model_ns, g_free);
       pgp->model_ns = g_strdup (model_ns);
