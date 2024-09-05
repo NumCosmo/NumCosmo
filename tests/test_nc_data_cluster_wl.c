@@ -211,8 +211,11 @@ test_nc_data_cluster_wl_r_cut (TestNcDataClusterWL *test, gconstpointer pdata)
     nc_halo_position_polar_angles (hp, ra, dec, &theta, &phi);
     r = nc_halo_position_projected_radius (hp, cosmo, theta);
 
-    g_assert_cmpfloat (r, >=, 0.3);
-    g_assert_cmpfloat (r, <=, 3.0);
+    g_assert_cmpfloat (ra, >=, -0.2);
+    g_assert_cmpfloat (ra, <=, 0.2);
+
+    g_assert_cmpfloat (dec, >=, -0.2);
+    g_assert_cmpfloat (dec, <=, 0.2);
   }
 
   ncm_rng_free (rng);
@@ -229,7 +232,7 @@ test_nc_data_cluster_wl_set_obs_spec (TestNcDataClusterWL *test, gconstpointer p
 {
   NcmRNG *rng        = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   guint ngals        = 200;
-  GStrv header       = g_strsplit ("ra dec z e1 e2 e_rms e_sigma", " ", -1);
+  GStrv header       = g_strsplit ("ra dec z e1 e2 e1_int e2_int e_rms e_sigma", " ", -1);
   NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, ngals, header);
   NcGalaxyWLObs *obs2;
   guint i;
@@ -238,8 +241,8 @@ test_nc_data_cluster_wl_set_obs_spec (TestNcDataClusterWL *test, gconstpointer p
 
   for (i = 0; i < ngals; i++)
   {
-    gdouble ra      = ncm_rng_uniform_gen (rng, 0.0, 2.0 * M_PI);
-    gdouble dec     = ncm_rng_uniform_gen (rng, -M_PI / 2.0, M_PI / 2.0);
+    gdouble ra      = ncm_rng_uniform_gen (rng, 0.0, 360.0);
+    gdouble dec     = ncm_rng_uniform_gen (rng, -90.0, 90.0);
     gdouble z       = ncm_rng_uniform_gen (rng, 0.0, 5.0);
     gdouble e1      = ncm_rng_uniform_gen (rng, -1.0, 1.0);
     gdouble e2      = ncm_rng_uniform_gen (rng, -1.0, 1.0);
@@ -251,6 +254,8 @@ test_nc_data_cluster_wl_set_obs_spec (TestNcDataClusterWL *test, gconstpointer p
     nc_galaxy_wl_obs_set (obs, "z", i, z);
     nc_galaxy_wl_obs_set (obs, "e1", i, e1);
     nc_galaxy_wl_obs_set (obs, "e2", i, e2);
+    nc_galaxy_wl_obs_set (obs, "e1_int", i, e1);
+    nc_galaxy_wl_obs_set (obs, "e2_int", i, e2);
     nc_galaxy_wl_obs_set (obs, "e_rms", i, e_rms);
     nc_galaxy_wl_obs_set (obs, "e_sigma", i, e_sigma);
   }
@@ -287,18 +292,17 @@ test_nc_data_cluster_wl_set_obs_gauss (TestNcDataClusterWL *test, gconstpointer 
 {
   NcmRNG *rng        = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   guint ngals        = 200;
-  GStrv header       = g_strsplit ("ra dec zp zp_sigma e1 e2 e_rms e_sigma", " ", -1);
+  GStrv header       = g_strsplit ("ra dec zp zp_sigma e1 e2 e1_int e2_int e_rms e_sigma", " ", -1);
   NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, ngals, header);
   NcGalaxyWLObs *obs2;
   guint i;
-
 
   nc_data_cluster_wl_set_cut (test->dcwl, 0.3, 3.0);
 
   for (i = 0; i < ngals; i++)
   {
-    gdouble ra       = ncm_rng_uniform_gen (rng, 0.0, 2.0 * M_PI);
-    gdouble dec      = ncm_rng_uniform_gen (rng, -M_PI / 2.0, M_PI / 2.0);
+    gdouble ra       = ncm_rng_uniform_gen (rng, 0.0, 360.0);
+    gdouble dec      = ncm_rng_uniform_gen (rng, -90.0, 90.0);
     gdouble zp       = ncm_rng_uniform_gen (rng, 0.0, 5.0);
     gdouble zp_sigma = ncm_rng_uniform_gen (rng, 0.0, 0.05);
     gdouble e1       = ncm_rng_uniform_gen (rng, -1.0, 1.0);
@@ -312,6 +316,8 @@ test_nc_data_cluster_wl_set_obs_gauss (TestNcDataClusterWL *test, gconstpointer 
     nc_galaxy_wl_obs_set (obs, "zp_sigma", i, zp_sigma);
     nc_galaxy_wl_obs_set (obs, "e1", i, e1);
     nc_galaxy_wl_obs_set (obs, "e2", i, e2);
+    nc_galaxy_wl_obs_set (obs, "e1_int", i, e1);
+    nc_galaxy_wl_obs_set (obs, "e2_int", i, e2);
     nc_galaxy_wl_obs_set (obs, "e_rms", i, e_rms);
     nc_galaxy_wl_obs_set (obs, "e_sigma", i, e_sigma);
   }
@@ -380,8 +386,10 @@ test_nc_data_cluster_wl_gen_obs_spec (TestNcDataClusterWL *test, gconstpointer p
     nc_halo_position_polar_angles (hp, ra, dec, &theta, &phi);
     r = nc_halo_position_projected_radius (hp, cosmo, theta);
 
-    g_assert_cmpfloat (r, >=, 0.3);
-    g_assert_cmpfloat (r, <=, 3.0);
+    g_assert_cmpfloat (ra, >=, -0.2);
+    g_assert_cmpfloat (ra, <=, 0.2);
+    g_assert_cmpfloat (dec, >=, -0.2);
+    g_assert_cmpfloat (dec, <=, 0.2);
     g_assert_cmpfloat (z, >=, 0.0);
     g_assert_cmpfloat (z, <=, 5.0);
     g_assert_cmpfloat (e1, >=, -5 * sqrt (e_rms * e_rms + e_sigma * e_sigma));
@@ -431,8 +439,10 @@ test_nc_data_cluster_wl_gen_obs_gauss (TestNcDataClusterWL *test, gconstpointer 
     nc_halo_position_polar_angles (hp, ra, dec, &theta, &phi);
     r = nc_halo_position_projected_radius (hp, cosmo, theta);
 
-    g_assert_cmpfloat (r, >=, 0.3);
-    g_assert_cmpfloat (r, <=, 3.0);
+    g_assert_cmpfloat (ra, >=, -0.2);
+    g_assert_cmpfloat (ra, <=, 0.2);
+    g_assert_cmpfloat (dec, >=, -0.2);
+    g_assert_cmpfloat (dec, <=, 0.2);
     g_assert_cmpfloat (zp, >=, 0.0);
     g_assert_cmpfloat (zp, <=, 5.0);
     g_assert_cmpfloat (zp_sigma, ==, 0.05);
