@@ -171,21 +171,23 @@ test_nc_galaxy_sd_obs_redshift_serialize (TestNcGalaxySDObsRedshift *test, gcons
 
   g_assert_true (NC_IS_GALAXY_SD_OBS_REDSHIFT (gsdor_dup));
 
-  ncm_serialize_free (ser);
   g_free (gsdor_ser);
+  ncm_serialize_free (ser);
   nc_galaxy_sd_obs_redshift_free (gsdor_dup);
 }
 
 static void
 test_nc_galaxy_sd_obs_redshift_model_id (TestNcGalaxySDObsRedshift *test, gconstpointer pdata)
 {
-  NcmMSet *model_set = ncm_mset_empty_new ();
-  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmMSet *model_set  = ncm_mset_empty_new ();
+  NcmSerialize *ser   = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmModel *model_dup = ncm_model_dup (NCM_MODEL (test->gsdor), ser);
 
-  ncm_mset_set (model_set, ncm_model_dup (NCM_MODEL (test->gsdor), ser));
+  ncm_mset_set (model_set, model_dup);
 
   g_assert_true (NC_IS_GALAXY_SD_OBS_REDSHIFT (ncm_mset_peek (model_set, nc_galaxy_sd_obs_redshift_id ())));
 
+  ncm_model_free (model_dup);
   ncm_mset_free (model_set);
   ncm_serialize_free (ser);
 }
