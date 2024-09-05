@@ -82,6 +82,34 @@ typedef gdouble (*NcmModelVFunc0) (NcmModel *model, const guint n);
 typedef gdouble (*NcmModelVFunc1) (NcmModel *model, const guint n, const gdouble x);
 typedef gdouble (*NcmModelVFunc2) (NcmModel *model, const guint n, const gdouble x, const gdouble y);
 
+/* Error domain for the NcmModel class */
+
+/**
+ * NcmModelError:
+ * @NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND: The parameter name was not found.
+ * @NCM_MODEL_ERROR_PARAM_ID_OUT_OF_RANGE: The parameter id is out of range.
+ * @NCM_MODEL_ERROR_ORIG_PARAM_NAME_NOT_FOUND: The original parameter name was not found.
+ * @NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE: The reparam is incompatible.
+ * @NCM_MODEL_ERROR_INVALID_TYPE: The type is invalid.
+ * @NCM_MODEL_ERROR_PARAM_CHANGED: The parameter was changed.
+ *
+ * Error codes returned by the #NcmModel class.
+ *
+ */
+typedef enum _NcmModelError
+{
+  NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
+  NCM_MODEL_ERROR_PARAM_ID_OUT_OF_RANGE,
+  NCM_MODEL_ERROR_ORIG_PARAM_NAME_NOT_FOUND,
+  NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE,
+  NCM_MODEL_ERROR_INVALID_TYPE,
+  NCM_MODEL_ERROR_PARAM_CHANGED
+} NcmModelError;
+
+GQuark ncm_model_error_quark (void);
+
+#define NCM_MODEL_ERROR (ncm_model_error_quark ())
+
 void ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint vparam_len, guint nonparam_prop_len);
 void ncm_model_class_set_name_nick (NcmModelClass *model_class, const gchar *name, const gchar *nick);
 
@@ -101,11 +129,11 @@ NcmModel *ncm_model_ref (NcmModel *model);
 
 void ncm_model_free (NcmModel *model);
 void ncm_model_clear (NcmModel **model);
-void ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam);
+void ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error);
 gboolean ncm_model_is_equal (NcmModel *model1, NcmModel *model2);
 
 NcmModelID ncm_model_id (NcmModel *model);
-NcmModelID ncm_model_id_by_type (GType model_type);
+NcmModelID ncm_model_id_by_type (GType model_type, GError **error);
 gboolean ncm_model_check_impl_flag (NcmModel *model, guint64 impl);
 gboolean ncm_model_check_impl_opt (NcmModel *model, gint opt);
 
@@ -160,17 +188,17 @@ gboolean ncm_model_params_valid (NcmModel *model);
 gboolean ncm_model_params_valid_bounds (NcmModel *model);
 
 gboolean ncm_model_orig_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i);
-gboolean ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i);
+gboolean ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i, GError **error);
 const gchar *ncm_model_orig_param_name (NcmModel *model, guint n);
 const gchar *ncm_model_param_name (NcmModel *model, guint n);
 const gchar *ncm_model_orig_param_symbol (NcmModel *model, guint n);
 const gchar *ncm_model_param_symbol (NcmModel *model, guint n);
 GPtrArray *ncm_model_param_names (NcmModel *model);
 
-void ncm_model_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val);
-void ncm_model_orig_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val);
-gdouble ncm_model_param_get_by_name (NcmModel *model, const gchar *param_name);
-gdouble ncm_model_orig_param_get_by_name (NcmModel *model, const gchar *param_name);
+void ncm_model_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val, GError **error);
+void ncm_model_orig_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val, GError **error);
+gdouble ncm_model_param_get_by_name (NcmModel *model, const gchar *param_name, GError **error);
+gdouble ncm_model_orig_param_get_by_name (NcmModel *model, const gchar *param_name, GError **error);
 
 gdouble ncm_model_orig_param_get_scale (NcmModel *model, guint n);
 gdouble ncm_model_orig_param_get_lower_bound (NcmModel *model, guint n);
@@ -203,8 +231,8 @@ gboolean ncm_model_type_is_submodel (GType model_type);
 NcmModelID ncm_model_type_main_model (GType model_type);
 
 /* pygobject dict */
-gdouble ncm_model___getitem__ (NcmModel *model, gchar *param, GError **err);
-void ncm_model___setitem__ (NcmModel *model, gchar *param, gdouble val, GError **err);
+gdouble ncm_model___getitem__ (NcmModel *model, gchar *param, GError **error);
+void ncm_model___setitem__ (NcmModel *model, gchar *param, gdouble val, GError **error);
 
 #define NCM_MODEL_CLASS_IMPL_ALL ((guint64) (~((guint64) 0)))
 #define NCM_MODEL_OPT2IMPL(opt) (((guint64) 1) << ((guint64) (opt)))

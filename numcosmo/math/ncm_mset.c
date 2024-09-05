@@ -64,6 +64,7 @@
 #include "math/ncm_mset.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 #include "math/ncm_obj_array.h"
 
 enum
@@ -75,6 +76,9 @@ enum
   PROP_SIZE,
 };
 
+/* *INDENT-OFF* */
+G_DEFINE_QUARK (ncm-mset-error-quark, ncm_mset_error) 
+/* *INDENT-ON* */
 typedef struct _NcmMSetPrivate
 {
   /*< private >*/
@@ -246,7 +250,7 @@ _ncm_mset_set_property (GObject *object, guint prop_id, const GValue *value, GPa
       const gchar * const *fmap = g_value_get_boxed (value);
 
       if (fmap != NULL)
-        ncm_mset_set_fmap (mset, fmap, FALSE);
+        ncm_mset_set_fmap (mset, fmap, FALSE, NULL);
 
       break;
     }
@@ -1327,6 +1331,7 @@ ncm_mset_fparam_map_valid (NcmMSet *mset)
  * @mset: a #NcmMSet
  * @fmap: (in) (array zero-terminated=1) (element-type utf8): an array of strings
  * @update_models: a boolean
+ * @error: a #GError
  *
  * Sets the free parameters map for @mset. This function must be called
  * before any other function that uses the free parameters map. The @fmap
@@ -1335,7 +1340,7 @@ ncm_mset_fparam_map_valid (NcmMSet *mset)
  *
  */
 void
-ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_models)
+ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_models, GError **error)
 {
   g_assert (fmap != NULL);
   {
@@ -1369,11 +1374,17 @@ ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_mod
 
     for (i = 0; i < len; i++)
     {
-      NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (mset, fmap[i]);
+      NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (mset, fmap[i], error);
+
+      if (error && *error)
+        return;
 
       if (pi == NULL)
       {
-        g_error ("ncm_mset_set_fmap: cannot set fmap, invalid param `%s'.", fmap[i]);
+        ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_NOT_FOUND,
+                                    "ncm_mset_set_fmap: cannot set fmap, invalid param `%s'.", fmap[i]);
+
+        return;
       }
       else
       {
@@ -2720,6 +2731,7 @@ ncm_mset_fparam_full_name (NcmMSet *mset, guint n)
  * ncm_mset_param_get_by_full_name:
  * @mset: a #NcmMSet
  * @fullname: param's full name
+ * @error: a #GError
  *
  * Gets the #NcmMSetPIndex of the parameter identified by @fullname.
  * The @fullname must be in the form "model:stackpos:param_name" when
@@ -2729,15 +2741,16 @@ ncm_mset_fparam_full_name (NcmMSet *mset, guint n)
  * Returns: (transfer full): the #NcmMSetPIndex of the parameter identified by @fullname.
  */
 NcmMSetPIndex *
-ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname)
+ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname, GError **error)
 {
   NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
   NcmMSetClass * const klass  = NCM_MSET_GET_CLASS (mset);
-  GMatchInfo *match_info      = NULL;
   NcmMSetPIndex *pi           = NULL;
   gchar *model_ns             = NULL;
   gchar *pname                = NULL;
   guint stackpos_id           = 0;
+
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
 
   if (ncm_mset_split_full_name (fullname, &model_ns, &stackpos_id, &pname))
   {
@@ -2750,7 +2763,15 @@ ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname)
     mid = ncm_mset_get_id_by_ns (model_ns);
 
     if (mid < 0)
-      g_error ("ncm_mset_param_get_by_full_name: namespace `%s' not found.", model_ns);
+    {
+      ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_NOT_FOUND,
+                                  "ncm_mset_param_get_by_full_name: namespace `%s' not found.",
+                                  model_ns);
+      g_free (pname);
+      g_free (model_ns);
+
+      return NULL;
+    }
 
     mid  += stackpos_id;
     model = ncm_mset_peek (mset, mid);
@@ -2762,7 +2783,12 @@ ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname)
 
       if (*endptr != '\0')
       {
-        if (ncm_model_param_index_from_name (model, pname, &pid))
+        gboolean found = ncm_model_param_index_from_name (model, pname, &pid, error);
+
+        if (error && *error)
+          return NULL;
+
+        if (found)
           pi = ncm_mset_pindex_new (mid, pid);
       }
       else if (pid < ncm_model_len (model))
@@ -2776,10 +2802,11 @@ ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname)
   }
   else
   {
-    g_error ("ncm_mset_param_get_by_full_name: invalid full name `%s'.",  fullname);
-  }
+    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
+                                "ncm_mset_param_get_by_full_name: invalid full name `%s'.",  fullname);
 
-  g_match_info_free (match_info);
+    return NULL;
+  }
 
   return pi;
 }

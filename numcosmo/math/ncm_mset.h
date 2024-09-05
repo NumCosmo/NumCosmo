@@ -84,6 +84,28 @@ GType ncm_mset_pindex_get_type (void) G_GNUC_CONST;
 
 void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc, gboolean can_stack, NcmModelID main_model_id);
 
+/* Error domain for the NcmMSet class */
+
+/**
+ * NcmMSetError:
+ * @NCM_MSET_ERROR_NAMESPACE_NOT_FOUND: The namespace was not found.
+ * @NCM_MSET_ERROR_FULLNAME_INVALID: The fullname is invalid.
+ * @NCM_MSET_ERROR_FULLNAME_NOT_FOUND: The fullname was not found.
+ *
+ * Error codes returned by the #NcmMSet class.
+ *
+ */
+typedef enum _NcmMSetError
+{
+  NCM_MSET_ERROR_NAMESPACE_NOT_FOUND,
+  NCM_MSET_ERROR_FULLNAME_INVALID,
+  NCM_MSET_ERROR_FULLNAME_NOT_FOUND,
+} NcmMSetError;
+
+GQuark ncm_mset_error_quark (void);
+
+#define NCM_MSET_ERROR (ncm_mset_error_quark ())
+
 /**
  * NCM_MSET_MODEL_MAIN: (skip)
  *
@@ -171,7 +193,7 @@ NcmModelID ncm_mset_get_id_by_ns (const gchar *ns);
 const gchar *ncm_mset_get_ns_by_id (NcmModelID id);
 GType ncm_mset_get_type_by_id (NcmModelID id);
 
-void ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_models);
+void ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_models, GError **error);
 gchar **ncm_mset_get_fmap (NcmMSet *mset);
 void ncm_mset_prepare_fparam_map (NcmMSet *mset);
 gboolean ncm_mset_fparam_map_valid (NcmMSet *mset);
@@ -229,7 +251,7 @@ guint ncm_mset_fparams_len (NcmMSet *mset);
 const gchar *ncm_mset_fparam_name (NcmMSet *mset, guint n);
 const gchar *ncm_mset_fparam_symbol (NcmMSet *mset, guint n);
 const gchar *ncm_mset_fparam_full_name (NcmMSet *mset, guint n);
-NcmMSetPIndex *ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname);
+NcmMSetPIndex *ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname, GError **error);
 gdouble ncm_mset_fparam_get_scale (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_lower_bound (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n);
