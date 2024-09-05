@@ -1189,6 +1189,7 @@ test_ncm_quaternion_rotate_axis (void)
     ncm_assert_cmpdouble_e (v->c[1], ==, w->c[1], 0.0, eps);
     ncm_assert_cmpdouble_e (v->c[2], ==, w->c[2], 0.0, eps);
 
+    ncm_trivec_free (w);
     ncm_trivec_free (v);
     ncm_quaternion_free (q);
   }
@@ -1219,6 +1220,7 @@ test_ncm_quaternion_rotate_inverse (void)
     ncm_assert_cmpdouble_e (v->c[2], ==, w->c[2], 0.0, eps);
 
     ncm_trivec_free (v);
+    ncm_trivec_free (w);
     ncm_quaternion_free (q);
   }
 }

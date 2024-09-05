@@ -120,24 +120,28 @@ static void
 test_nc_galaxy_wl_obs_new (TestNcGalaxyWLObs *test, gconstpointer pdata)
 {
   NcGalaxyWLObsCoord coord = NC_GALAXY_WL_OBS_COORD_CELESTIAL;
-  guint nrows              = 100;
   GStrv col_names          = g_strsplit ("ra dec z", " ", -1);
+  guint nrows              = 100;
 
   test->obs = nc_galaxy_wl_obs_new (coord, nrows, col_names);
   g_assert_nonnull (test->obs);
   g_assert_true (NC_IS_GALAXY_WL_OBS (test->obs));
+
+  g_strfreev (col_names);
 }
 
 static void
 test_nc_galaxy_wl_obs_new_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 {
   NcGalaxyWLObsCoord coord = NC_GALAXY_WL_OBS_COORD_CELESTIAL;
-  guint nrows              = 100;
   GStrv col_names          = g_strsplit ("ra dec pz", " ", -1);
+  guint nrows              = 100;
 
   test->obs = nc_galaxy_wl_obs_new (coord, nrows, col_names);
   g_assert_nonnull (test->obs);
   g_assert_true (NC_IS_GALAXY_WL_OBS (test->obs));
+
+  g_strfreev (col_names);
 }
 
 static void
@@ -207,6 +211,11 @@ test_nc_galaxy_wl_obs_serialize (TestNcGalaxyWLObs *test, gconstpointer pdata)
   }
 
   g_assert_cmpint (nc_galaxy_wl_obs_get_coord (test->obs), ==, nc_galaxy_wl_obs_get_coord (obs_dup));
+
+  g_variant_unref (obs_ser);
+  nc_galaxy_wl_obs_free (obs_dup);
+  ncm_serialize_free (ser);
+  ncm_rng_free (rng);
 }
 
 static void
@@ -242,7 +251,6 @@ test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata
 
     pz = ncm_spline_new (NCM_SPLINE (nak), xv, yv, TRUE);
 
-
     val = ncm_rng_uniform_gen (rng, 0.0, 360.0);
     nc_galaxy_wl_obs_set (test->obs, "ra", i, val);
 
@@ -250,6 +258,11 @@ test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata
     nc_galaxy_wl_obs_set (test->obs, "dec", i, val);
 
     nc_galaxy_wl_obs_set_pz (test->obs, i, pz);
+
+    ncm_spline_free (NCM_SPLINE (nak));
+    ncm_spline_free (pz);
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
   }
 
   ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
@@ -288,17 +301,22 @@ test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata
 
     for (l = 0; l < 100; l++)
     {
-      g_assert_cmpfloat (ncm_spline_eval (nc_galaxy_wl_obs_peek_pz (test->obs, i), j), ==, ncm_spline_eval (nc_galaxy_wl_obs_peek_pz (obs_dup, i), j));
+      g_assert_cmpfloat (ncm_spline_eval (nc_galaxy_wl_obs_peek_pz (test->obs, i), l), ==, ncm_spline_eval (nc_galaxy_wl_obs_peek_pz (obs_dup, i), l));
     }
   }
+
+  g_free (obs_ser);
+  ncm_serialize_free (ser);
+  ncm_rng_free (rng);
+  nc_galaxy_wl_obs_free (obs_dup);
 }
 
 static void
 test_nc_galaxy_wl_obs_data (TestNcGalaxyWLObs *test, gconstpointer pdata)
 {
   NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  guint i;
   gdouble val;
+  guint i;
 
   for (i = 0; i < nc_galaxy_wl_obs_len (test->obs); i++)
   {
@@ -314,6 +332,8 @@ test_nc_galaxy_wl_obs_data (TestNcGalaxyWLObs *test, gconstpointer pdata)
     nc_galaxy_wl_obs_set (test->obs, "z", i, val);
     g_assert_cmpfloat (nc_galaxy_wl_obs_get (test->obs, "z", i), ==, val);
   }
+
+  ncm_rng_free (rng);
 }
 
 static void
@@ -354,7 +374,14 @@ test_nc_galaxy_wl_obs_data_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
     {
       g_assert_cmpfloat_with_epsilon (ncm_spline_eval (nc_galaxy_wl_obs_peek_pz (test->obs, i), j), j * j, 1e-10);
     }
+
+    ncm_spline_free (NCM_SPLINE (nak));
+    ncm_spline_free (pz);
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
   }
+
+  ncm_rng_free (rng);
 }
 
 static void
@@ -417,6 +444,8 @@ test_nc_galaxy_wl_obs_bad_set_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 
   g_test_trap_subprocess (NULL, 0, 0);
   g_test_trap_assert_failed ();
+
+  ncm_rng_free (rng);
 }
 
 static void
@@ -429,6 +458,7 @@ test_nc_galaxy_wl_obs_bad_set (TestNcGalaxyWLObs *test, gconstpointer pdata)
 
   g_test_trap_subprocess (NULL, 0, 0);
   g_test_trap_assert_failed ();
+  ncm_rng_free (rng);
 }
 
 static void
@@ -441,5 +471,6 @@ test_nc_galaxy_wl_obs_bad_get_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 
   g_test_trap_subprocess (NULL, 0, 0);
   g_test_trap_assert_failed ();
+  ncm_rng_free (rng);
 }
 
