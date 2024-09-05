@@ -103,7 +103,7 @@ _nc_galaxy_sd_true_redshift_get_property (GObject *object, guint prop_id, GValue
 
       nc_galaxy_sd_true_redshift_get_lim (gsdtr, &z_min, &z_max);
 
-      g_value_set_boxed (value, ncm_dtuple2_new (z_min, z_max));
+      g_value_take_boxed (value, ncm_dtuple2_new (z_min, z_max));
       break;
     }
     default:                                                      /* LCOV_EXCL_LINE */

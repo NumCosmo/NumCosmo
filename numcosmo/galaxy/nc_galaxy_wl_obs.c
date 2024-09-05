@@ -123,9 +123,31 @@ nc_galaxy_wl_obs_set_property (GObject *object, guint prop_id, const GValue *val
       self->data = g_value_dup_object (value);
       break;
     case PROP_PZ:
+    {
+      guint i;
+
       ncm_obj_dict_int_clear (&self->pz);
       self->pz = g_value_dup_boxed (value);
+
+      if (self->pz != NULL)
+      {
+        GArray *keys  = ncm_obj_dict_int_keys (self->pz);
+        const guint n = keys->len;
+
+        for (i = 0; i < n; i++)
+        {
+          const gint key = g_array_index (keys, gint, i);
+          GObject *obj   = ncm_obj_dict_int_peek (self->pz, key);
+
+          g_assert (NCM_IS_SPLINE (obj));
+          ncm_spline_prepare (NCM_SPLINE (obj));
+        }
+
+        g_array_unref (keys);
+      }
+
       break;
+    }
     case PROP_HEADER:
       ncm_var_dict_clear (&self->header);
       self->header = g_value_dup_boxed (value);
@@ -279,6 +301,7 @@ nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names)
   gchar **str;
   guint i;
 
+  ncm_matrix_set_all (data, 0.0);
   i = 0;
 
   for (str = col_names; *str; str++)
@@ -301,6 +324,10 @@ nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names)
                       "columns", col_names,
                       "coord", coord,
                       NULL);
+
+  ncm_obj_dict_int_unref (pz);
+  ncm_var_dict_unref (header);
+  ncm_matrix_free (data);
 
   return obs;
 }
@@ -389,7 +416,7 @@ nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i)
 {
   NcGalaxyWLObsPrivate * const self = obs->priv;
 
-  return NCM_SPLINE (ncm_obj_dict_int_get (self->pz, i));
+  return NCM_SPLINE (ncm_obj_dict_int_peek (self->pz, i));
 }
 
 /**
