@@ -79,6 +79,8 @@ gulong ncm_util_fact_size (const gulong n);
 
 void ncm_util_sleep_ms (gint milliseconds);
 
+void ncm_util_set_or_call_error (GError **error, GQuark domain, gint code, const gchar *format, ...);
+
 typedef struct _NcmComplex NcmComplex;
 
 struct _NcmComplex
@@ -215,7 +217,7 @@ void _ncm_util_set_destroyed (gpointer b);
         }                                                  \
         G_STMT_END
 
-G_END_DECLS
+  G_END_DECLS
 #endif /* _NCM_UTIL_H_ */
 
 #ifndef _NCM_UTIL_INLINE_H_

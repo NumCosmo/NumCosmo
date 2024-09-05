@@ -1044,3 +1044,32 @@ ncm_util_sleep_ms (gint milliseconds)
 #endif
 }
 
+/**
+ * ncm_util_set_or_call_error:
+ * @error: a #GError or NULL
+ * @domain: an error domain #GQuark
+ * @code: an error code
+ * @format: a printf format string
+ * @...: arguments for @format
+ *
+ * If @error is not NULL, it sets the error message, otherwise it calls g_error.
+ *
+ */
+void
+ncm_util_set_or_call_error (GError **error, GQuark domain, gint code, const gchar *format, ...)
+{
+  va_list ap;
+  gchar *message;
+
+  va_start (ap, format);
+  message = g_strdup_vprintf (format, ap);
+  va_end (ap);
+
+  if (error != NULL)
+    g_set_error (error, domain, code, "%s", message);
+  else
+    g_error ("%s", message);
+
+  g_free (message);
+}
+
