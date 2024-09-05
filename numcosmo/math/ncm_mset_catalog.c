@@ -1304,7 +1304,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
         }
         else
         {
-          NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (self->mset, d_colname);
+          NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (self->mset, d_colname, NULL);
 
           if (pi == NULL)
           {
@@ -1395,7 +1395,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 
       for (i = 0; i < remap_remove->len; i++)
       {
-        NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (self->mset, g_ptr_array_index (remap_remove, i));
+        NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (self->mset, g_ptr_array_index (remap_remove, i), NULL);
 
         if (pi == NULL)
         {

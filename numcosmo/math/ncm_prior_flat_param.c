@@ -84,7 +84,7 @@ _ncm_prior_flat_param_set_property (GObject *object, guint prop_id, const GValue
   switch (prop_id)
   {
     case PROP_MODEL_NS:
-      ncm_prior_flat_param_set_model_ns (pfp, g_value_get_string (value));
+      ncm_prior_flat_param_set_model_ns (pfp, g_value_get_string (value), NULL);
       break;
     case PROP_STACK_POS:
       ncm_prior_flat_param_set_stack_pos (pfp, g_value_get_uint (value));
@@ -173,7 +173,7 @@ _ncm_prior_flat_param_mean (NcmPriorFlat *pf, NcmMSet *mset)
   NcmPriorFlatParam *pfp = NCM_PRIOR_FLAT_PARAM (pf);
   NcmModel *model        = ncm_mset_peek (mset, pfp->mid);
 
-  return ncm_model_param_get_by_name (model, pfp->param_name);
+  return ncm_model_param_get_by_name (model, pfp->param_name, NULL);
 }
 
 /**

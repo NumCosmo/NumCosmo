@@ -336,19 +336,19 @@ main (gint argc, gchar *argv[])
   {
     if (is_de)
     {
-      nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
+      nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
       ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.0);
       ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FIXED);
     }
     else if (is_gcg)
     {
-      nc_hicosmo_gcg_omega_x2omega_k (NC_HICOSMO_GCG (cosmo));
+      nc_hicosmo_gcg_omega_x2omega_k (NC_HICOSMO_GCG (cosmo), NULL);
       ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_GCG_OMEGA_X, 0.0);
       ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_GCG_OMEGA_X, NCM_PARAM_TYPE_FIXED);
     }
     else if (is_idem2)
     {
-      nc_hicosmo_idem2_omega_x2omega_k (NC_HICOSMO_IDEM2 (cosmo));
+      nc_hicosmo_idem2_omega_x2omega_k (NC_HICOSMO_IDEM2 (cosmo), NULL);
       ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_IDEM2_OMEGA_X, 0.0);
       ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_IDEM2_OMEGA_X, NCM_PARAM_TYPE_FIXED);
     }
@@ -361,17 +361,17 @@ main (gint argc, gchar *argv[])
   {
     if (is_de)
     {
-      nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
+      nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
       ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FREE);
     }
     else if (is_gcg)
     {
-      nc_hicosmo_gcg_omega_x2omega_k (NC_HICOSMO_GCG (cosmo));
+      nc_hicosmo_gcg_omega_x2omega_k (NC_HICOSMO_GCG (cosmo), NULL);
       ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_GCG_OMEGA_X, NCM_PARAM_TYPE_FREE);
     }
     else if (is_idem2)
     {
-      nc_hicosmo_idem2_omega_x2omega_k (NC_HICOSMO_IDEM2 (cosmo));
+      nc_hicosmo_idem2_omega_x2omega_k (NC_HICOSMO_IDEM2 (cosmo), NULL);
       ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_IDEM2_OMEGA_X, NCM_PARAM_TYPE_FREE);
     }
     else
@@ -695,7 +695,7 @@ main (gint argc, gchar *argv[])
         if (!g_variant_lookup (prior_hash, "param", "s", &p_name))
           g_error ("Prior must contain `param' key.");
 
-        if (!ncm_model_param_index_from_name (ncm_mset_peek (mset, p_i.mid), p_name, &p_i.pid))
+        if (!ncm_model_param_index_from_name (ncm_mset_peek (mset, p_i.mid), p_name, &p_i.pid, NULL))
           g_error ("Parameter `%s' not found in model `%s'.", p_name, model_ns);
 
         if (!g_variant_lookup (prior_hash, "mean", "d", &mu))

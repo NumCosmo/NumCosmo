@@ -302,9 +302,9 @@ _test_get_z_avr (NcGalaxySDPositionLSSTSRD *gsdplsst)
 
   nc_galaxy_sd_position_get_z_lim (NC_GALAXY_SD_POSITION (gsdplsst), &z_lb, &z_ub);
   {
-    const gdouble alpha = ncm_model_param_get_by_name (NCM_MODEL (gsdplsst), "alpha");
-    const gdouble beta  = ncm_model_param_get_by_name (NCM_MODEL (gsdplsst), "beta");
-    const gdouble z0    = ncm_model_param_get_by_name (NCM_MODEL (gsdplsst), "z0");
+    const gdouble alpha = ncm_model_param_get_by_name (NCM_MODEL (gsdplsst), "alpha", NULL);
+    const gdouble beta  = ncm_model_param_get_by_name (NCM_MODEL (gsdplsst), "beta", NULL);
+    const gdouble z0    = ncm_model_param_get_by_name (NCM_MODEL (gsdplsst), "z0", NULL);
     const gdouble y_lb  = pow (z_lb / z0, alpha);
     const gdouble y_ub  = pow (z_ub / z0, alpha);
 
@@ -322,9 +322,9 @@ _test_get_z_var (NcGalaxySDPositionLSSTSRD *gsdplsst)
 
   nc_galaxy_sd_position_get_z_lim (NC_GALAXY_SD_POSITION (gsdplsst), &z_lb, &z_ub);
   {
-    const gdouble alpha = ncm_model_param_get_by_name (NCM_MODEL (gsdplsst), "alpha");
-    const gdouble beta  = ncm_model_param_get_by_name (NCM_MODEL (gsdplsst), "beta");
-    const gdouble z0    = ncm_model_param_get_by_name (NCM_MODEL (gsdplsst), "z0");
+    const gdouble alpha = ncm_model_param_get_by_name (NCM_MODEL (gsdplsst), "alpha", NULL);
+    const gdouble beta  = ncm_model_param_get_by_name (NCM_MODEL (gsdplsst), "beta", NULL);
+    const gdouble z0    = ncm_model_param_get_by_name (NCM_MODEL (gsdplsst), "z0", NULL);
     const gdouble y_lb  = pow (z_lb / z0, alpha);
     const gdouble y_ub  = pow (z_ub / z0, alpha);
 

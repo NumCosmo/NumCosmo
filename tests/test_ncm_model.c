@@ -263,7 +263,7 @@ _test_ncm_model_create_reparam (TestNcmModel *test)
     g_free (new_param_symbol);
   }
 
-  ncm_model_set_reparam (NCM_MODEL (test->tm), NCM_REPARAM (relin));
+  ncm_model_set_reparam (NCM_MODEL (test->tm), NCM_REPARAM (relin), NULL);
   ncm_reparam_free (NCM_REPARAM (relin));
 
   ncm_vector_free (v);

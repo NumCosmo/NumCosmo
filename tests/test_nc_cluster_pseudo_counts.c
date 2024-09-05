@@ -163,22 +163,22 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   ncm_model_orig_param_set (NCM_MODEL (test->prim), NC_HIPRIM_POWER_LAW_N_SA,       0.9608);
   ncm_model_orig_param_set (NCM_MODEL (test->prim), NC_HIPRIM_POWER_LAW_LN10E10ASA, 3.1);
 
-  ncm_model_param_set_by_name (NCM_MODEL (clusterm), "Asz", 0.7);      /*1.0); */
-  ncm_model_param_set_by_name (NCM_MODEL (clusterm), "Bsz", 0.35);     /*0.2); */
-  ncm_model_param_set_by_name (NCM_MODEL (clusterm), "sigma_sz", 0.1); /*vary until 0.005; */
-  ncm_model_param_set_by_name (NCM_MODEL (clusterm), "Al", 1.0);       /* vary until 0.001; */
-  ncm_model_param_set_by_name (NCM_MODEL (clusterm), "Bl", 0.0);
-  ncm_model_param_set_by_name (NCM_MODEL (clusterm), "sigma_l", 0.1); /* vary until 0.15); */
-  ncm_model_param_set_by_name (NCM_MODEL (clusterm), "cor", 0.4);     /*0.4); */
+  ncm_model_param_set_by_name (NCM_MODEL (clusterm), "Asz", 0.7, NULL);      /*1.0); */
+  ncm_model_param_set_by_name (NCM_MODEL (clusterm), "Bsz", 0.35, NULL);     /*0.2); */
+  ncm_model_param_set_by_name (NCM_MODEL (clusterm), "sigma_sz", 0.1, NULL); /*vary until 0.005; */
+  ncm_model_param_set_by_name (NCM_MODEL (clusterm), "Al", 1.0, NULL);       /* vary until 0.001; */
+  ncm_model_param_set_by_name (NCM_MODEL (clusterm), "Bl", 0.0, NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (clusterm), "sigma_l", 0.1, NULL); /* vary until 0.15); */
+  ncm_model_param_set_by_name (NCM_MODEL (clusterm), "cor", 0.4, NULL);     /*0.4); */
 
   ncm_model_param_set_ftype (NCM_MODEL (clusterm), 0, NCM_PARAM_TYPE_FREE);
   ncm_model_param_set_ftype (NCM_MODEL (clusterm), 1, NCM_PARAM_TYPE_FREE);
   ncm_model_param_set_ftype (NCM_MODEL (clusterm), 3, NCM_PARAM_TYPE_FREE);
 
-  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "lnMCut",     33.5);
-  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "sigma_Mcut",  0.05);
-  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "zmin",        0.188);
-  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "Deltaz",      0.72);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "lnMCut",     33.5, NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "sigma_Mcut",  0.05, NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "zmin",        0.188, NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "Deltaz",      0.72, NULL);
 
   ncm_matrix_set (m, 0, 0, test->z);
   ncm_matrix_set (m, 0, 1, test->Mobs[0]);

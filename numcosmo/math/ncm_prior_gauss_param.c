@@ -83,7 +83,7 @@ _ncm_prior_gauss_param_set_property (GObject *object, guint prop_id, const GValu
   switch (prop_id)
   {
     case PROP_MODEL_NS:
-      ncm_prior_gauss_param_set_model_ns (pgp, g_value_get_string (value));
+      ncm_prior_gauss_param_set_model_ns (pgp, g_value_get_string (value), NULL);
       break;
     case PROP_STACK_POS:
       ncm_prior_gauss_param_set_stack_pos (pgp, g_value_get_uint (value));
@@ -173,7 +173,7 @@ _ncm_prior_gauss_param_mean (NcmPriorGauss *pg, NcmMSet *mset)
   NcmPriorGaussParam *pgp = NCM_PRIOR_GAUSS_PARAM (pg);
   NcmModel *model         = ncm_mset_peek (mset, pgp->mid);
 
-  return ncm_model_param_get_by_name (model, pgp->param_name);
+  return ncm_model_param_get_by_name (model, pgp->param_name, NULL);
 }
 
 /**

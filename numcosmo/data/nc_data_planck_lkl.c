@@ -414,7 +414,7 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       for (i = 0; i < clik->nparams; i++)
       {
         guint pi        = 0;
-        gboolean pfound = ncm_model_param_index_from_name (NCM_MODEL (pfi), clik->pnames[i], &pi);
+        gboolean pfound = ncm_model_param_index_from_name (NCM_MODEL (pfi), clik->pnames[i], &pi, NULL);
 
         if (!pfound)
         {
