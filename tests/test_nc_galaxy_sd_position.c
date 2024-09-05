@@ -101,16 +101,16 @@ test_nc_galaxy_sd_position_flat_new (TestNcGalaxySDPosition *test, gconstpointer
 {
   gdouble ra_min, ra_max, dec_min, dec_max;
 
-  ra_min = g_test_rand_double_range (0.0, 2.0 * M_PI);
+  ra_min = g_test_rand_double_range (0.0, 360.0);
 
   do {
-    ra_max = g_test_rand_double_range (0.0, 2.0 * M_PI);
+    ra_max = g_test_rand_double_range (0.0, 360.0);
   } while (ra_max <= ra_min);
 
-  dec_min = g_test_rand_double_range (-M_PI / 2.0, M_PI / 2.0);
+  dec_min = g_test_rand_double_range (-90.0, 90.0);
 
   do {
-    dec_max = g_test_rand_double_range (-M_PI / 2.0, M_PI / 2.0);
+    dec_max = g_test_rand_double_range (-90.0, 90.0);
   } while (dec_max <= dec_min);
 
   NcGalaxySDPositionFlat *gsdpflat = nc_galaxy_sd_position_flat_new (ra_min, ra_max, dec_min, dec_max);
@@ -136,16 +136,16 @@ test_nc_galaxy_sd_position_lim (TestNcGalaxySDPosition *test, gconstpointer pdat
     gdouble ra_min, ra_max, dec_min, dec_max;
     gdouble ra_min_peek, ra_max_peek, dec_min_peek, dec_max_peek;
 
-    ra_min = g_test_rand_double_range (0.0, 2.0 * M_PI);
+    ra_min = g_test_rand_double_range (0.0, 360.0);
 
     do {
-      ra_max = g_test_rand_double_range (0.0, 2.0 * M_PI);
+      ra_max = g_test_rand_double_range (0.0, 360.0);
     } while (ra_max <= ra_min);
 
-    dec_min = g_test_rand_double_range (-M_PI / 2.0, M_PI / 2.0);
+    dec_min = g_test_rand_double_range (-90.0, 90.0);
 
     do {
-      dec_max = g_test_rand_double_range (-M_PI / 2.0, M_PI / 2.0);
+      dec_max = g_test_rand_double_range (-90.0, 90.0);
     } while (dec_max <= dec_min);
 
 
@@ -191,13 +191,15 @@ test_nc_galaxy_sd_position_serialize (TestNcGalaxySDPosition *test, gconstpointe
 static void
 test_nc_galaxy_sd_position_model_id (TestNcGalaxySDPosition *test, gconstpointer pdata)
 {
-  NcmMSet *model_set       = ncm_mset_empty_new ();
-  NcmSerialize *ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmMSet *model_set  = ncm_mset_empty_new ();
+  NcmSerialize *ser   = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmModel *model_dup = ncm_model_dup (NCM_MODEL (test->gsdp), ser);
 
-  ncm_mset_set (model_set, ncm_model_dup (NCM_MODEL (test->gsdp), ser));
+  ncm_mset_set (model_set, model_dup);
 
   g_assert_true (NC_IS_GALAXY_SD_POSITION (ncm_mset_peek (model_set, nc_galaxy_sd_position_id ())));
 
+  ncm_model_free (model_dup);
   ncm_mset_free (model_set);
   ncm_serialize_free (ser);
 }
@@ -217,29 +219,39 @@ test_nc_galaxy_sd_position_flat_header (TestNcGalaxySDPosition *test, gconstpoin
 static void
 test_nc_galaxy_sd_position_flat_gen (TestNcGalaxySDPosition *test, gconstpointer pdata)
 {
-  NcmRNG *rng                      = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  const guint nruns                = 10;
-  const guint ndata                = 10000;
+  NcmRNG *rng       = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  const guint nruns = 10;
+  const guint ndata = 10000;
   gdouble ra_min, ra_max, dec_min, dec_max;
   gdouble ra_avg, ra_var, dec_avg, dec_var;
   guint i;
 
-  ra_min = g_test_rand_double_range (0.0, 2.0 * M_PI);
+  ra_min = g_test_rand_double_range (0.0, 360.0);
 
   do {
-    ra_max = g_test_rand_double_range (0.0, 2.0 * M_PI);
+    ra_max = g_test_rand_double_range (0.0, 360.0);
   } while (ra_max <= ra_min);
 
-  dec_min = g_test_rand_double_range (-M_PI / 2.0, M_PI / 2.0);
+  dec_min = g_test_rand_double_range (-90.0, 90.0);
 
   do {
-    dec_max = g_test_rand_double_range (-M_PI / 2.0, M_PI / 2.0);
+    dec_max = g_test_rand_double_range (-90.0, 90.0);
   } while (dec_max <= dec_min);
 
-  ra_avg  = (ra_max * ra_max - ra_min * ra_min) / (2.0 * (ra_max - ra_min));
-  ra_var  = (ra_max * ra_max + ra_max * ra_min + ra_min * ra_min) / 3 - ra_avg * ra_avg;
-  dec_avg = (dec_max * sin (dec_max) + cos (dec_max) - dec_min * sin (dec_min) - cos (dec_min)) / (sin (dec_max) - sin (dec_min));
-  dec_var = ((dec_max * dec_max - 2) * sin (dec_max) + 2 * dec_max * cos (dec_max) - (dec_min * dec_min - 2) * sin (dec_min) - 2 * dec_min * cos (dec_min)) / (sin (dec_max) - sin (dec_min)) - dec_avg * dec_avg;
+  ra_avg = 0.5 * (ra_max + ra_min);
+  ra_var = (ra_max - ra_min) * (ra_max - ra_min) / 12.0;
+
+  {
+    const gdouble delta_min  = ncm_c_degree_to_radian (dec_min);
+    const gdouble delta_max  = ncm_c_degree_to_radian (dec_max);
+    const gdouble delta_p    = 0.5 * (delta_max + delta_min);
+    const gdouble delta_m    = 0.5 * (delta_max - delta_min);
+    const gdouble delta_mean = delta_p - tan (delta_p) + delta_m * tan (delta_p) / tan (delta_m);
+    const gdouble delta_var  = gsl_pow_2 (delta_m / sin (delta_m)) - 1.0 - gsl_pow_2 ((1.0 - delta_m / tan (delta_m)) / cos (delta_p));
+
+    dec_avg = ncm_c_radian_to_degree (delta_mean);
+    dec_var = ncm_c_radian_to_degree (ncm_c_radian_to_degree (delta_var));
+  }
 
   nc_galaxy_sd_position_set_ra_lim (test->gsdp, ra_min, ra_max);
   nc_galaxy_sd_position_set_dec_lim (test->gsdp, dec_min, dec_max);
@@ -288,21 +300,21 @@ test_nc_galaxy_sd_position_flat_gen (TestNcGalaxySDPosition *test, gconstpointer
 static void
 test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpointer pdata)
 {
-  NcmRNG *rng                      = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  const guint nruns                = 10000;
+  NcmRNG *rng       = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  const guint nruns = 10000;
   gdouble ra_min, ra_max, dec_min, dec_max;
   guint i;
 
-  ra_min = g_test_rand_double_range (0.0, 2.0 * M_PI);
+  ra_min = g_test_rand_double_range (0.0, 360.0);
 
   do {
-    ra_max = g_test_rand_double_range (0.0, 2.0 * M_PI);
+    ra_max = g_test_rand_double_range (0.0, 360.0);
   } while (ra_max <= ra_min);
 
-  dec_min = g_test_rand_double_range (-M_PI / 2.0, M_PI / 2.0);
+  dec_min = g_test_rand_double_range (-90.0, 90.0);
 
   do {
-    dec_max = g_test_rand_double_range (-M_PI / 2.0, M_PI / 2.0);
+    dec_max = g_test_rand_double_range (-90.0, 90.0);
   } while (dec_max <= dec_min);
 
   nc_galaxy_sd_position_set_ra_lim (test->gsdp, ra_min, ra_max);
@@ -310,9 +322,9 @@ test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpoint
 
   for (i = 0; i < nruns; i++)
   {
-    NcmVector *data =  ncm_vector_new (2);
-    gdouble ra      = g_test_rand_double_range (0.0, 2.0 * M_PI);
-    gdouble dec     = g_test_rand_double_range (-M_PI / 2.0, M_PI / 2.0);
+    NcmVector *data = ncm_vector_new (2);
+    gdouble ra      = g_test_rand_double_range (0.0, 360.0);
+    gdouble dec     = g_test_rand_double_range (-90.0, 90.0);
 
     ncm_vector_set (data, 0, ra);
     ncm_vector_set (data, 1, dec);
@@ -321,6 +333,8 @@ test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpoint
       g_assert_cmpfloat (nc_galaxy_sd_position_integ (test->gsdp, data), ==, 0.0);
     else
       g_assert_cmpfloat (nc_galaxy_sd_position_integ (test->gsdp, data), >, 0.0);
+
+    ncm_vector_free (data);
   }
 
   ncm_rng_free (rng);
