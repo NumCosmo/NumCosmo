@@ -1135,11 +1135,17 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
       return;
     }
 
-    ncm_reparam_clear (&self->reparam);
-    self->reparam = ncm_reparam_ref (reparam);
+    if (self->reparam != reparam)
+    {
+      ncm_reparam_clear (&self->reparam);
+      self->reparam = ncm_reparam_ref (reparam);
+    }
 
-    ncm_vector_clear (&self->p);
-    self->p = ncm_vector_ref (ncm_reparam_peek_params (self->reparam));
+    if (self->p != ncm_reparam_peek_params (self->reparam))
+    {
+      ncm_vector_clear (&self->p);
+      self->p = ncm_vector_ref (ncm_reparam_peek_params (self->reparam));
+    }
 
     ncm_reparam_old2new (self->reparam, model);
   }
