@@ -147,11 +147,8 @@ _nc_galaxy_sd_shape_gauss_dispose (GObject *object)
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (object);
   NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
 
-  if (self->ctrl_cosmo)
-    ncm_model_ctrl_clear (&self->ctrl_cosmo);
-
-  if (self->ctrl_hp)
-    ncm_model_ctrl_clear (&self->ctrl_hp);
+  ncm_model_ctrl_clear (&self->ctrl_cosmo);
+  ncm_model_ctrl_clear (&self->ctrl_hp);
 
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_sd_shape_gauss_parent_class)->dispose (object);
@@ -235,10 +232,13 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
   gdouble phi                              = 0.0;
   gdouble et_s                             = ncm_rng_gaussian_gen (rng, 0.0, E_RMS);
   gdouble ex_s                             = ncm_rng_gaussian_gen (rng, 0.0, E_RMS);
+  gdouble noise1                           = ncm_rng_gaussian_gen (rng, 0.0, E_SIGMA);
+  gdouble noise2                           = ncm_rng_gaussian_gen (rng, 0.0, E_SIGMA);
   gdouble gt                               = 0.0;
   complex double e_s                       = et_s + I * ex_s;
   complex double e_o                       = e_s;
   complex double g                         = 0.0;
+  complex double noise                     = noise1 + I * noise2;
   gdouble e1, e2, e1_int, e2_int;
   gdouble r;
 
@@ -256,7 +256,7 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDe
       e_o = (e_s + gt) / (1.0 + gt * e_s);
   }
 
-  e_o = e_o * cexp (2.0 * I * phi) + ncm_rng_gaussian_gen (rng, 0.0, E_SIGMA);
+  e_o = e_o * cexp (2.0 * I * phi) + noise;
 
   e1 = creal (e_o);
   e2 = cimag (e_o);
@@ -302,7 +302,7 @@ _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHalo
   if (z > z_cl)
   {
     gt = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, r, z, z_cl, z_cl);
-    g  = -creal (gt) * cos (2 * phi) - I * creal (gt) * sin (2 * phi);
+    g  = gt * cexp (2.0 * I * phi);
 
     if (gt > 1.0)
       e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
@@ -310,7 +310,11 @@ _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHalo
       e_s = (e_o - g) / (1.0 - conj (g) * e_o);
   }
 
-  return exp (-0.5 * (cabs (e_s) / (gsl_pow_2 (e_rms) + gsl_pow_2 (e_sigma)))) / sqrt (2.0 * M_PI) / (gsl_pow_2 (e_rms) + gsl_pow_2 (e_sigma));
+  {
+    const gdouble total_var = gsl_pow_2 (e_rms) + gsl_pow_2 (e_sigma);
+
+    return exp (-0.5 * gsl_pow_2 (cabs (e_s)) / total_var) / sqrt (2.0 * M_PI * total_var);
+  }
 }
 
 static void
@@ -337,13 +341,13 @@ _nc_galaxy_sd_shape_gauss_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, 
   gdouble e_sigma                          = ncm_vector_get (data, OUTPUT_E_SIGMA);
   gdouble gt                               = 0.0;
   complex double e_o                       = e1 + I * e2;
-  complex double e_s                       = e_s;
+  complex double e_s                       = e_o;
   complex double g                         = 0.0;
 
   if (z > z_cl)
   {
     gt = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z, z_cl, &self->optzs);
-    g  = -creal (gt) * cos (2 * phi) - I * creal (gt) * sin (2 * phi);
+    g  = gt * cexp (2.0 * I * phi);
 
     if (gt > 1.0)
       e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
@@ -351,7 +355,11 @@ _nc_galaxy_sd_shape_gauss_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, 
       e_s = (e_o - g) / (1.0 - conj (g) * e_o);
   }
 
-  return exp (-0.5 * (cabs (e_s) / (gsl_pow_2 (e_rms) + gsl_pow_2 (e_sigma)))) / sqrt (2.0 * M_PI) / (gsl_pow_2 (e_rms) + gsl_pow_2 (e_sigma));
+  {
+    const gdouble total_var = gsl_pow_2 (e_rms) + gsl_pow_2 (e_sigma);
+
+    return exp (-0.5 * gsl_pow_2 (cabs (e_s)) / total_var) / sqrt (2.0 * M_PI * total_var);
+  }
 }
 
 static gboolean
