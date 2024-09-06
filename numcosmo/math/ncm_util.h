@@ -238,7 +238,7 @@ void _ncm_util_set_destroyed (gpointer b);
         }                                                  \
         G_STMT_END
 
-  G_END_DECLS
+G_END_DECLS
 #endif /* _NCM_UTIL_H_ */
 
 #ifndef _NCM_UTIL_INLINE_H_
