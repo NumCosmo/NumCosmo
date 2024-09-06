@@ -211,6 +211,7 @@ ncm_prior_flat_param_new (NcmModel *model, guint pid, gdouble x_low, gdouble x_u
  * @x_low: parameter lower limit
  * @x_upp: parameter upper limit
  * @scale: parameter scale
+ * @error: a #GError
  *
  * Creates a new Flat prior for parameter named @name in @mset. See
  * ncm_mset_split_full_name() for details on the parameter name format.
@@ -218,17 +219,27 @@ ncm_prior_flat_param_new (NcmModel *model, guint pid, gdouble x_low, gdouble x_u
  * Returns: (transfer full): @pfp.
  */
 NcmPriorFlatParam *
-ncm_prior_flat_param_new_name (const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale)
+ncm_prior_flat_param_new_name (const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale, GError **error)
 {
-  gchar *model_ns   = NULL;
-  gchar *param_name = NULL;
-  guint stack_pos   = 0;
+  gchar *model_ns          = NULL;
+  gchar *param_name        = NULL;
+  guint stack_pos          = 0;
+  gboolean full_name_found = FALSE;
 
-  if (!ncm_mset_split_full_name (name, &model_ns, &stack_pos, &param_name))
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+  full_name_found = ncm_mset_split_full_name (name, &model_ns, &stack_pos, &param_name, error);
+  NCM_UTIL_ON_ERROR_RETURN (error,
+                            g_free (model_ns);
+                            g_free (param_name), NULL);
+
+  if (!full_name_found)
   {
-    g_error ("ncm_prior_flat_param_new_name: invalid parameter name `%s'.", name);
-
-    return NULL;
+    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
+                                "ncm_prior_flat_param_new_name: invalid parameter name `%s'.", name);
+    NCM_UTIL_ON_ERROR_RETURN (error,
+                              g_free (model_ns);
+                              g_free (param_name), NULL);
   }
 
   {

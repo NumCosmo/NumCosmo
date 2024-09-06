@@ -39,7 +39,7 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (NcmPriorGaussParam, ncm_prior_gauss_param, NCM, PRIOR_GAUSS_PARAM, NcmPriorGauss)
 
 NcmPriorGaussParam *ncm_prior_gauss_param_new (NcmModel * model, guint pid, gdouble mu, gdouble sigma);
-NcmPriorGaussParam *ncm_prior_gauss_param_new_name (const gchar *name, gdouble mu, gdouble sigma);
+NcmPriorGaussParam *ncm_prior_gauss_param_new_name (const gchar *name, gdouble mu, gdouble sigma, GError **error);
 
 NcmPriorGaussParam *ncm_prior_gauss_param_ref (NcmPriorGaussParam *pgp);
 

@@ -207,6 +207,7 @@ ncm_prior_gauss_param_new (NcmModel *model, guint pid, gdouble mu, gdouble sigma
  * @name: parameter name
  * @mu: mean
  * @sigma: standard deviation
+ * @error: a #GError
  *
  * Creates a new Gaussian prior for parameter named @name in @mset. See
  * ncm_mset_split_full_name() for details on the parameter name format.
@@ -214,15 +215,32 @@ ncm_prior_gauss_param_new (NcmModel *model, guint pid, gdouble mu, gdouble sigma
  * Returns: (transfer full): @pgp.
  */
 NcmPriorGaussParam *
-ncm_prior_gauss_param_new_name (const gchar *name, gdouble mu, gdouble sigma)
+ncm_prior_gauss_param_new_name (const gchar *name, gdouble mu, gdouble sigma, GError **error)
 {
-  gchar *model_ns   = NULL;
-  gchar *param_name = NULL;
-  guint stack_pos   = 0;
+  gchar *model_ns          = NULL;
+  gchar *param_name        = NULL;
+  guint stack_pos          = 0;
+  gboolean full_name_found = FALSE;
 
-  if (!ncm_mset_split_full_name (name, &model_ns, &stack_pos, &param_name))
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+  full_name_found = ncm_mset_split_full_name (name, &model_ns, &stack_pos, &param_name, error);
+
+  if (error && *error)
   {
-    g_error ("ncm_prior_gauss_param_new_name: invalid parameter name `%s'.", name);
+    g_free (model_ns);
+    g_free (param_name);
+
+    return NULL;
+  }
+
+  if (!full_name_found)
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
+                                "ncm_prior_gauss_param_new_name: invalid parameter name `%s'.", name);
+
+    g_free (model_ns);
+    g_free (param_name);
 
     return NULL;
   }

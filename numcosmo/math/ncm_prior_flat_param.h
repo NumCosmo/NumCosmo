@@ -38,7 +38,7 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (NcmPriorFlatParam, ncm_prior_flat_param, NCM, PRIOR_FLAT_PARAM, NcmPriorFlat)
 
 NcmPriorFlatParam *ncm_prior_flat_param_new (NcmModel * model, guint pid, gdouble x_low, gdouble x_upp, gdouble scale);
-NcmPriorFlatParam *ncm_prior_flat_param_new_name (const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale);
+NcmPriorFlatParam *ncm_prior_flat_param_new_name (const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale, GError **error);
 
 NcmPriorFlatParam *ncm_prior_flat_param_ref (NcmPriorFlatParam *pfp);
 
