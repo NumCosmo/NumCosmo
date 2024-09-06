@@ -77,7 +77,7 @@ enum
 };
 
 /* *INDENT-OFF* */
-G_DEFINE_QUARK (ncm-mset-error-quark, ncm_mset_error) 
+G_DEFINE_QUARK (ncm-mset-error, ncm_mset_error) 
 /* *INDENT-ON* */
 typedef struct _NcmMSetPrivate
 {
@@ -517,11 +517,11 @@ ncm_mset_split_full_name (const gchar *fullname, gchar **model_ns, guint *stackp
 
         *stackpos_id = g_ascii_strtoll (stackpos_s, &endptr, 10);
 
-        if (*endptr != '\0')
+        if ((*endptr != '\0') || (*stackpos_id >= NCM_MSET_MAX_STACKSIZE))
         {
           ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
-                                      "ncm_mset_param_split_full_name: invalid stackpos number `%s'.",
-                                      stackpos_s);
+                                      "ncm_mset_param_split_full_name: invalid stackpos number (%s >= %d).",
+                                      stackpos_s, NCM_MSET_MAX_STACKSIZE);
           g_free (*model_ns);
           g_free (*pname);
           g_free (stackpos_s);
@@ -852,15 +852,15 @@ ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name, GError **error)
 
     if (ns_stackpos[1] != NULL)
     {
-      gchar *endptr = NULL;
-      guint stackpos_id;
+      gchar *endptr     = NULL;
+      guint stackpos_id = 0;
 
       stackpos_id = g_ascii_strtoll (ns_stackpos[1], &endptr, 10);
 
-      if (*endptr != '\0')
+      if ((*endptr != '\0') || (stackpos_id >= NCM_MSET_MAX_STACKSIZE))
       {
         ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
-                                    "ncm_mset_peek_by_name: invalid stackpos number `%s'.",
+                                    "ncm_mset_peek_by_name: invalid stackpos number (%s).",
                                     ns_stackpos[1]);
 
         g_strfreev (ns_stackpos);

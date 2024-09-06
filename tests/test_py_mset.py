@@ -24,7 +24,9 @@
 
 """Unit tests for the NcmMSet class."""
 
-from numcosmo_py import Ncm
+import re
+import pytest
+from numcosmo_py import Ncm, Nc, GLib
 
 Ncm.cfg_init()
 
@@ -267,3 +269,96 @@ def test_mset_fparam_get_pi_by_name():
 
     assert mset.fparam_get_pi_by_name("NcmModelFunnel:Idontexist") is None
     assert mset.fparam_get_pi_by_name("NcmModelIdontexist:not") is None
+
+
+def test_mset_split_full_name_invalid_stackpos():
+    """Test exception handling in NcmMSet.split_full_name."""
+    with pytest.raises(
+        GLib.GError,
+        match=re.escape(
+            "ncm-mset-error: ncm_mset_param_split_full_name: "
+            "invalid stackpos number (132344 >= 1000). (1)"
+        ),
+    ):
+        _ = Ncm.MSet.split_full_name("NcHICosmo:132344:w")
+
+
+def test_mset_split_full_name_invalid_name():
+    """Test exception handling in NcmMSet.split_full_name."""
+    found, _, _, _ = Ncm.MSet.split_full_name("ncHICosmo:132:w")
+    assert not found
+
+    found, _, _, _ = Ncm.MSet.split_full_name("NcHICosmo:1a32:w")
+    assert not found
+
+    found, _, _, _ = Ncm.MSet.split_full_name("NcHICosmo:132:w:")
+
+
+def test_mset_peek_by_name():
+    """Test the NcmMSet peek_by_name function."""
+    mset = Ncm.MSet.new_array(
+        [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
+    )
+
+    with pytest.raises(
+        GLib.GError,
+        match=re.escape(
+            "ncm-mset-error: ncm_mset_peek_by_name: "
+            "invalid stackpos number (sadd). (1)"
+        ),
+    ):
+        _ = mset.peek_by_name("NcmModelMVND:sadd")
+
+
+def test_mset_set_pos_with_submodel():
+    """Test the NcmMSet set_pos with submodel."""
+    mset = Ncm.MSet.new_array(
+        [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
+    )
+    hireion = Nc.HIReionCamb.new()
+
+    with pytest.raises(
+        GLib.GError,
+        match=re.compile(
+            rf"^ncm-mset-error: ncm_mset_set_pos: cannot add "
+            rf"model.*\({int(Ncm.MSetError.SUBMODEL)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        mset.set_pos(hireion, 10)
+
+
+def test_mset_pos_with_non_stackable_model():
+    """Test the NcmMSet pos with non-stackable model."""
+    mset = Ncm.MSet.new_array(
+        [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
+    )
+    cosmo = Nc.HICosmoLCDM.new()
+
+    with pytest.raises(
+        GLib.GError,
+        match=re.compile(
+            rf"^ncm-mset-error: ncm_mset_set_pos: cannot stack object in position "
+            rf"10 NcmMSet, type `NcHICosmoLCDM' is not "
+            rf"stackable.*\({int(Ncm.MSetError.MODEL_NOT_STACKABLE)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        mset.set_pos(cosmo, 10)
+
+
+def test_mset_set_fmap_invalid_parameter():
+    """Test the NcmMSet set_fmap with invalid parameter."""
+    mset = Ncm.MSet.new_array(
+        [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
+    )
+
+    with pytest.raises(
+        GLib.GError,
+        match=re.compile(
+            rf"^ncm-mset-error: ncm_mset_set_fmap: cannot set fmap, invalid param "
+            rf"`NcHICosmo:ble'..*\({int(Ncm.MSetError.FULLNAME_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        mset.set_fmap(["NcHICosmo:ble"], True)

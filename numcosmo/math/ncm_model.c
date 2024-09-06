@@ -85,7 +85,7 @@ enum
 };
 
 /* *INDENT-OFF* */
-G_DEFINE_QUARK (ncm-model-error-quark, ncm_model_error) 
+G_DEFINE_QUARK (ncm-model-error, ncm_model_error) 
 /* *INDENT-ON* */
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmModel, ncm_model, G_TYPE_OBJECT)
