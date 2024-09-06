@@ -80,6 +80,27 @@ gulong ncm_util_fact_size (const gulong n);
 void ncm_util_sleep_ms (gint milliseconds);
 
 void ncm_util_set_or_call_error (GError **error, GQuark domain, gint code, const gchar *format, ...);
+void ncm_util_forward_or_call_error (GError **error, GError *local_error, const gchar *format, ...);
+
+
+#define NCM_UTIL_ON_ERROR_RETURN(error, body, value) \
+        G_STMT_START {                               \
+          if ((error != NULL) && (*error) != NULL)   \
+          {                                          \
+            body;                                    \
+            return value;                            \
+          }                                          \
+        } G_STMT_END
+
+#define NCM_UTIL_ON_ERROR_FORWARD(error, body, value, prefix, ...) \
+        G_STMT_START {                                             \
+          if ((error != NULL) && (*error) != NULL)                 \
+          {                                                        \
+            g_prefix_error (error, prefix, ## __VA_ARGS__);        \
+            body;                                                  \
+            return value;                                          \
+          }                                                        \
+        } G_STMT_END
 
 typedef struct _NcmComplex NcmComplex;
 
