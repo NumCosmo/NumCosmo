@@ -3260,9 +3260,11 @@ ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name, GError **error
 
   if (match > 1)
   {
-    g_warning ("ncm_mset_fparam_get_pi_by_name: more than one [%u] parameters with the same name %s, "
-               "use the full name to avoid ambiguities, returning the last match.",
-               match, name);
+    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_PARAM_NAME_AMBIGUOUS,
+                                "ncm_mset_fparam_get_pi_by_name: more than one [%u] "
+                                "parameters with the same name %s, "
+                                "use the full name to avoid ambiguities.",
+                                match, name);
 
     return NULL;
   }
@@ -3283,22 +3285,12 @@ ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name, GError **error
       }
     }
 
-    if (match == 0)
-    {
-      return NULL;
-    }
-    else if (match > 1)
-    {
-      ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_AMBIGUOUS,
-                                  "ncm_mset_fparam_get_pi_by_name: more than one full name "
-                                  "[%u] match %s.", match, name);
+    g_assert_cmpuint (match, <=, 1);
 
+    if (match == 0)
       return NULL;
-    }
     else
-    {
       return ncm_mset_fparam_get_pi (mset, match_i);
-    }
   }
 }
 

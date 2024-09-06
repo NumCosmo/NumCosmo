@@ -91,7 +91,6 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
  * @NCM_MSET_ERROR_NAMESPACE_NOT_FOUND: The namespace was not found.
  * @NCM_MSET_ERROR_FULLNAME_INVALID: The fullname is invalid.
  * @NCM_MSET_ERROR_FULLNAME_NOT_FOUND: The fullname was not found.
- * @NCM_MSET_ERROR_FULLNAME_AMBIGUOUS: The fullname is ambiguous.
  * @NCM_MSET_ERROR_MAIN_MODEL_NOT_FOUND: The main model was not found.
  * @NCM_MSET_ERROR_SUBMODEL: Submodels cannot be added directly to the #NcmMSet.
  * @NCM_MSET_ERROR_MODEL_NOT_STACKABLE: The model is not stackable.
@@ -99,6 +98,7 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
  * @NCM_MSET_ERROR_MODEL_ALREADY_SET: The model is already set.
  * @NCM_MSET_ERROR_MODEL_PROPERTY_NOT_FOUND: The model property was not found.
  * @NCM_MSET_ERROR_KEY_FILE_INVALID: The key file is invalid.
+ * @NCM_MSET_ERROR_PARAM_NAME_AMBIGUOUS: The parameter name is ambiguous.
  *
  *
  * Error codes returned by the #NcmMSet class.
@@ -109,7 +109,6 @@ typedef enum _NcmMSetError
   NCM_MSET_ERROR_NAMESPACE_NOT_FOUND,
   NCM_MSET_ERROR_FULLNAME_INVALID,
   NCM_MSET_ERROR_FULLNAME_NOT_FOUND,
-  NCM_MSET_ERROR_FULLNAME_AMBIGUOUS,
   NCM_MSET_ERROR_MAIN_MODEL_NOT_FOUND,
   NCM_MSET_ERROR_SUBMODEL,
   NCM_MSET_ERROR_MODEL_NOT_STACKABLE,
@@ -117,6 +116,7 @@ typedef enum _NcmMSetError
   NCM_MSET_ERROR_MODEL_ALREADY_SET,
   NCM_MSET_ERROR_MODEL_PROPERTY_NOT_FOUND,
   NCM_MSET_ERROR_KEY_FILE_INVALID,
+  NCM_MSET_ERROR_PARAM_NAME_AMBIGUOUS,
 } NcmMSetError;
 
 GQuark ncm_mset_error_quark (void);

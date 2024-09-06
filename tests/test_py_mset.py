@@ -288,6 +288,130 @@ def test_mset_fparam_get_pi_by_name():
     assert mset.fparam_get_pi_by_name("NcmModelIdontexist:not") is None
 
 
+def test_mset_fparam_get_pi_by_param_name_only():
+    """Test the NcmMSet free parameter map."""
+    mset = Ncm.MSet.new_array(
+        [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
+    )
+
+    mvnd_id = Ncm.ModelMVND.id()
+    funnel_id = Ncm.ModelFunnel.id()
+    rosenbrock_id = Ncm.ModelRosenbrock.id()
+
+    mset.peek(mvnd_id).param_set_ftype(0, Ncm.ParamType.FREE)
+    mset.peek(mvnd_id).param_set_ftype(1, Ncm.ParamType.FREE)
+    mset.peek(mvnd_id).param_set_ftype(2, Ncm.ParamType.FREE)
+
+    mset.peek(rosenbrock_id).param_set_ftype(0, Ncm.ParamType.FREE)
+
+    mset.peek(funnel_id).param_set_ftype(0, Ncm.ParamType.FREE)
+    mset.peek(funnel_id).param_set_ftype(3, Ncm.ParamType.FREE)
+    mset.peek(funnel_id).param_set_ftype(4, Ncm.ParamType.FREE)
+
+    mset.prepare_fparam_map()
+
+    assert mset.total_len() == 16
+    assert mset.fparams_len() == 7
+
+    assert mset.fparam_get_pi_by_name("mu_0").mid == mvnd_id
+    assert mset.fparam_get_pi_by_name("mu_0").pid == 0
+
+    assert mset.fparam_get_pi_by_name("mu_1").mid == mvnd_id
+    assert mset.fparam_get_pi_by_name("mu_1").pid == 1
+
+    assert mset.fparam_get_pi_by_name("mu_2").mid == mvnd_id
+    assert mset.fparam_get_pi_by_name("mu_2").pid == 2
+
+    assert mset.fparam_get_pi_by_name("x1").mid == rosenbrock_id
+    assert mset.fparam_get_pi_by_name("x1").pid == 0
+
+    assert mset.fparam_get_pi_by_name("nu").mid == funnel_id
+    assert mset.fparam_get_pi_by_name("nu").pid == 0
+
+    assert mset.fparam_get_pi_by_name("x_3").mid == funnel_id
+    assert mset.fparam_get_pi_by_name("x_3").pid == 4
+
+    assert mset.fparam_get_pi_by_name("Idontexist") is None
+    assert mset.fparam_get_pi_by_name("not") is None
+
+
+def test_mset_fparam_get_pi_by_param_name_amiguity():
+    """Test the NcmMSet free parameter map."""
+    mset = Ncm.MSet.new_array(
+        [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
+    )
+
+    mvnd_id = Ncm.ModelMVND.id()
+    funnel_id = Ncm.ModelFunnel.id()
+    rosenbrock_id = Ncm.ModelRosenbrock.id()
+
+    rosenbrock = mset.peek(rosenbrock_id)
+
+    reparam = Ncm.ReparamLinear.new(2, Ncm.Matrix.new(2, 2), Ncm.Vector.new(2))
+    reparam.set_param_desc_full(
+        0, "mu_0", "mu_0", -1.0, 1.0, 1.0, 0.0, 0.0, Ncm.ParamType.FREE
+    )
+    reparam.set_param_desc_full(
+        1, "mu_1", "mu_1", -1.0, 1.0, 1.0, 0.0, 0.0, Ncm.ParamType.FREE
+    )
+
+    rosenbrock.set_reparam(reparam)
+    mset.peek(mvnd_id).param_set_ftype(0, Ncm.ParamType.FREE)
+    mset.peek(mvnd_id).param_set_ftype(1, Ncm.ParamType.FREE)
+    mset.peek(mvnd_id).param_set_ftype(2, Ncm.ParamType.FREE)
+
+    mset.peek(rosenbrock_id).param_set_ftype(0, Ncm.ParamType.FREE)
+
+    mset.peek(funnel_id).param_set_ftype(0, Ncm.ParamType.FREE)
+    mset.peek(funnel_id).param_set_ftype(3, Ncm.ParamType.FREE)
+    mset.peek(funnel_id).param_set_ftype(4, Ncm.ParamType.FREE)
+
+    mset.prepare_fparam_map()
+
+    assert mset.total_len() == 16
+    assert mset.fparams_len() == 7
+
+    with pytest.raises(
+        GLib.GError,
+        match=re.compile(
+            rf"^ncm-mset-error: ncm_mset_fparam_get_pi_by_name: more than one \[2\] "
+            rf"parameters with the same name mu_0, use the full name to avoid "
+            rf"ambiguities. "
+            rf"\({int(Ncm.MSetError.PARAM_NAME_AMBIGUOUS)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        _ = mset.fparam_get_pi_by_name("mu_0")
+
+
+def test_mset_fparam_get_pi_by_param_full_stacking():
+    """Test the NcmMSet free parameter map."""
+    mset = Ncm.MSet.new_array(
+        [
+            Nc.ClusterPhotozGaussGlobal.new(0.0, 1.0, 1.234, 432.1),
+            Nc.ClusterPhotozGaussGlobal.new(0.1, 1.1, 1.235, 432.2),
+        ]
+    )
+
+    mset.peek_pos(Nc.ClusterPhotozGaussGlobal.id(), 0).param_set_ftype(
+        Nc.ClusterPhotozGaussGlobalSParams.Z_BIAS, Ncm.ParamType.FREE
+    )
+    mset.peek_pos(Nc.ClusterPhotozGaussGlobal.id(), 1).param_set_ftype(
+        Nc.ClusterPhotozGaussGlobalSParams.Z_BIAS, Ncm.ParamType.FREE
+    )
+
+    mset.prepare_fparam_map()
+
+    assert (
+        mset.fparam_get_pi_by_name("NcClusterRedshift:z-bias").mid
+        == Nc.ClusterPhotozGaussGlobal.id()
+    )
+    assert (
+        mset.fparam_get_pi_by_name("NcClusterRedshift:01:z-bias").pid
+        == Nc.ClusterPhotozGaussGlobalSParams.Z_BIAS
+    )
+
+
 def test_mset_split_full_name_invalid_stackpos():
     """Test exception handling in NcmMSet.split_full_name."""
     with pytest.raises(
@@ -397,3 +521,51 @@ def test_mset_param_get_ftype_invalid_mid():
         ),
     ):
         mset.param_get_ftype(-1, 0)
+
+
+def test_mset_param_get_by_full_name():
+    """Test the NcmMSet param_get_by_full_name."""
+    mset = Ncm.MSet.new_array(
+        [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
+    )
+
+    pi = mset.param_get_by_full_name("NcmModelFunnel:nu")
+    assert pi.mid == Ncm.ModelFunnel.id()
+    assert pi.pid == Ncm.ModelFunnelSParams.NU
+
+    pi = mset.param_get_by_full_name("NcmModelFunnel:0:nu")
+    assert pi.mid == Ncm.ModelFunnel.id()
+    assert pi.pid == Ncm.ModelFunnelSParams.NU
+
+    pi = mset.param_get_by_full_name(
+        f"NcmModelFunnel:0:{int(Ncm.ModelFunnelSParams.NU)}"
+    )
+    assert pi.mid == Ncm.ModelFunnel.id()
+    assert pi.pid == Ncm.ModelFunnelSParams.NU
+
+
+def test_mset_param_get_by_full_name_invalid_ns():
+    """Test the NcmMSet param_get_by_full_name."""
+    mset = Ncm.MSet.new_array(
+        [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
+    )
+
+    with pytest.raises(
+        GLib.GError,
+        match=re.compile(
+            rf"^ncm-mset-error: ncm_mset_param_get_by_full_name: namespace "
+            rf"`NcmModelBla' not found. "
+            rf"\({int(Ncm.MSetError.NAMESPACE_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        _ = mset.param_get_by_full_name("NcmModelBla:ble")
+
+
+def test_mset_param_get_by_full_name_not_found():
+    """Test the NcmMSet param_get_by_full_name."""
+    mset = Ncm.MSet.new_array(
+        [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
+    )
+
+    assert mset.param_get_by_full_name("NcmModelFunnel:ble") is None
