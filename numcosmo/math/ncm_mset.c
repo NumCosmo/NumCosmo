@@ -868,16 +868,14 @@ ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name, GError **error)
         return NULL;
       }
 
-      g_strfreev (ns_stackpos);
-
       model = ncm_mset_peek_pos (mset, ncm_mset_get_id_by_ns (ns_stackpos[0]), stackpos_id);
     }
     else
     {
-      g_strfreev (ns_stackpos);
-
       model = ncm_mset_peek (mset, ncm_mset_get_id_by_ns (name));
     }
+
+    g_strfreev (ns_stackpos);
 
     return model;
   }

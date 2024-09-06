@@ -67,7 +67,7 @@ def test_mset_peek_model():
     assert isinstance(mset.peek(Ncm.ModelRosenbrock.id()), Ncm.ModelRosenbrock)
 
 
-def test_mset_peek_model_by_name():
+def test_mset_model_peek_by_name():
     """Test the NcmMSet peek_model_by_name function."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -79,6 +79,23 @@ def test_mset_peek_model_by_name():
     assert mset.peek_by_name("NcmModelMVND") == mset.peek(Ncm.ModelMVND.id())
     assert mset.peek_by_name("NcmModelFunnel") == mset.peek(Ncm.ModelFunnel.id())
     assert mset.peek_by_name("NcmModelRosenbrock") == mset.peek(
+        Ncm.ModelRosenbrock.id()
+    )
+
+
+def test_mset_peek_by_name_with_stackpos():
+    """Test the NcmMSet peek_by_name function."""
+    mset = Ncm.MSet.new_array(
+        [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
+    )
+
+    assert isinstance(mset.peek_by_name("NcmModelMVND:0"), Ncm.ModelMVND)
+    assert isinstance(mset.peek_by_name("NcmModelFunnel:0"), Ncm.ModelFunnel)
+    assert isinstance(mset.peek_by_name("NcmModelRosenbrock:0"), Ncm.ModelRosenbrock)
+
+    assert mset.peek_by_name("NcmModelMVND:0") == mset.peek(Ncm.ModelMVND.id())
+    assert mset.peek_by_name("NcmModelFunnel:0") == mset.peek(Ncm.ModelFunnel.id())
+    assert mset.peek_by_name("NcmModelRosenbrock:0") == mset.peek(
         Ncm.ModelRosenbrock.id()
     )
 
@@ -294,7 +311,7 @@ def test_mset_split_full_name_invalid_name():
     found, _, _, _ = Ncm.MSet.split_full_name("NcHICosmo:132:w:")
 
 
-def test_mset_peek_by_name():
+def test_mset_peek_by_name_invalid_stackpos():
     """Test the NcmMSet peek_by_name function."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -362,3 +379,21 @@ def test_mset_set_fmap_invalid_parameter():
         ),
     ):
         mset.set_fmap(["NcHICosmo:ble"], True)
+
+
+def test_mset_param_get_ftype_invalid_mid():
+    """Test the NcmMSet get_ftype with invalid mid."""
+    mset = Ncm.MSet.new_array(
+        [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
+    )
+
+    with pytest.raises(
+        GLib.GError,
+        match=re.compile(
+            rf"^ncm-mset-error: ncm_mset_param_get_ftype: cannot get ftype of "
+            rf"model-id -1, model not set.*"
+            rf"\({int(Ncm.MSetError.MODEL_NOT_SET)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        mset.param_get_ftype(-1, 0)
