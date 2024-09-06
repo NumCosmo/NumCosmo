@@ -239,7 +239,7 @@ _ncm_mset_set_property (GObject *object, guint prop_id, const GValue *value, GPa
             g_error ("_ncm_mset_set_property: NcmMSet model array cannot contain submodels `%s'.",
                      G_OBJECT_TYPE_NAME (model));
 
-          ncm_mset_push (mset, model);
+          ncm_mset_push (mset, model, NULL);
         }
       }
 
@@ -445,10 +445,10 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
     model_desc->init = TRUE;
 
     if (ns == NULL)
-      g_error ("Cannot register model without a namespace.");
+      g_error ("ncm_mset_model_register_id: Cannot register model without a namespace.");
 
     if (desc == NULL)
-      g_error ("Cannot register model without a description.");
+      g_error ("ncm_mset_model_register_id: Cannot register model without a description.");
 
     model_desc->ns   = g_strdup (ns);
     model_desc->desc = g_strdup (desc);
@@ -459,7 +459,7 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
       model_desc->long_desc = NULL;
 
     if (g_hash_table_lookup (mset_class->ns_table, ns) != NULL)
-      g_error ("Model namespace <%s> already registered.", ns);
+      g_error ("ncm_mset_model_register_id: Model namespace <%s> already registered.", ns);
 
     g_hash_table_insert (mset_class->ns_table, model_desc->ns, GINT_TO_POINTER (model_class->model_id));
 
@@ -468,7 +468,9 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
   }
   else
   {
-    g_error ("This model or its parent is already registered, id = %d. This function must be use once and only in the defining model.", model_class->model_id);
+    g_error ("ncm_mset_model_register_id: This model or its parent is already registered, "
+             "id = %d. This function must be use once and only in the defining model.",
+             model_class->model_id);
   }
 
   return;
@@ -480,6 +482,7 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
  * @model_ns: (out) (transfer full): model namespace
  * @stackpos_id: (out): stack position id
  * @pname: (out) (transfer full): parameter name
+ * @error: a #GError
  *
  * Splits the @fullname into @model_ns, @stackpos_id and @pname. The @fullname
  * should be specified with the parameter full name "model:parameter_name"
@@ -488,46 +491,59 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
  * Returns: %TRUE if the @fullname is valid, %FALSE otherwise.
  */
 gboolean
-ncm_mset_split_full_name (const gchar *fullname, gchar **model_ns, guint *stackpos_id, gchar **pname)
+ncm_mset_split_full_name (const gchar *fullname, gchar **model_ns, guint *stackpos_id, gchar **pname, GError **error)
 {
-  GMatchInfo *match_info     = NULL;
-  gboolean ret               = FALSE;
-  NcmMSetClass * const klass = g_type_class_ref (NCM_TYPE_MSET);
-
-  if (g_regex_match (klass->fullname_regex, fullname, 0, &match_info))
+  g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
   {
-    gint nm           = g_match_info_get_match_count (match_info);
-    gchar *stackpos_s = NULL;
+    NcmMSetClass * const klass = g_type_class_ref (NCM_TYPE_MSET);
+    GMatchInfo *match_info     = NULL;
+    gboolean ret               = FALSE;
 
-    g_assert_cmpint (nm, ==, 4);
 
-    *model_ns  = g_match_info_fetch (match_info, 1);
-    stackpos_s = g_match_info_fetch (match_info, 2);
-    *pname     = g_match_info_fetch (match_info, 3);
-
-    if (*stackpos_s != '\0')
+    if (g_regex_match (klass->fullname_regex, fullname, 0, &match_info))
     {
-      gchar *endptr = NULL;
+      gint nm           = g_match_info_get_match_count (match_info);
+      gchar *stackpos_s = NULL;
 
-      *stackpos_id = g_ascii_strtoll (stackpos_s, &endptr, 10);
+      g_assert_cmpint (nm, ==, 4);
 
-      if (*endptr != '\0')
-        g_error ("ncm_mset_param_split_full_name: invalid stackpos number `%s'.", stackpos_s);
+      *model_ns  = g_match_info_fetch (match_info, 1);
+      stackpos_s = g_match_info_fetch (match_info, 2);
+      *pname     = g_match_info_fetch (match_info, 3);
+
+      if (*stackpos_s != '\0')
+      {
+        gchar *endptr = NULL;
+
+        *stackpos_id = g_ascii_strtoll (stackpos_s, &endptr, 10);
+
+        if (*endptr != '\0')
+        {
+          ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
+                                      "ncm_mset_param_split_full_name: invalid stackpos number `%s'.",
+                                      stackpos_s);
+          g_free (*model_ns);
+          g_free (*pname);
+          g_free (stackpos_s);
+
+          return FALSE;
+        }
+      }
+      else
+      {
+        *stackpos_id = 0;
+      }
+
+      g_free (stackpos_s);
+
+      ret = TRUE;
     }
-    else
-    {
-      *stackpos_id = 0;
-    }
 
-    g_free (stackpos_s);
+    g_match_info_free (match_info);
+    g_type_class_unref (klass);
 
-    ret = TRUE;
+    return ret;
   }
-
-  g_match_info_free (match_info);
-  g_type_class_unref (klass);
-
-  return ret;
 }
 
 /**
@@ -553,14 +569,18 @@ ncm_mset_empty_new (void)
  * Returns: (transfer full): a new #NcmMSet
  */
 NcmMSet *
-ncm_mset_new (gpointer model0, ...)
+ncm_mset_new (gpointer model0, GError **error, ...)
 {
-  NcmMSet *mset;
+  NcmMSet *mset = NULL;
   va_list ap;
 
-  va_start (ap, model0);
-  mset = ncm_mset_newv (model0, ap);
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+  va_start (ap, error);
+  mset = ncm_mset_newv (model0, ap, error);
   va_end (ap);
+
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
   return mset;
 }
@@ -569,54 +589,66 @@ ncm_mset_new (gpointer model0, ...)
  * ncm_mset_newv:
  * @model0: a #NcmModel
  * @ap: a va_list
+ * @error: a #GError
  *
  * Creates a new #NcmMSet with the models passed as arguments.
  *
  * Returns: (transfer full): a new #NcmMSet
  */
 NcmMSet *
-ncm_mset_newv (gpointer model0, va_list ap)
+ncm_mset_newv (gpointer model0, va_list ap, GError **error)
 {
-  NcmMSet *mset   = ncm_mset_empty_new ();
-  NcmModel *model = NULL;
-
-  g_assert (model0 != NULL);
-  g_assert (NCM_IS_MODEL (model0));
-
-  ncm_mset_set (mset, model0);
-
-  while ((model = va_arg (ap, NcmModel *)) != NULL)
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
   {
-    g_assert (NCM_IS_MODEL (model));
-    ncm_mset_push (mset, model);
-  }
+    NcmMSet *mset   = ncm_mset_empty_new ();
+    NcmModel *model = NULL;
 
-  return mset;
+
+    g_assert (model0 != NULL);
+    g_assert (NCM_IS_MODEL (model0));
+
+    ncm_mset_set (mset, model0, error);
+    NCM_UTIL_ON_ERROR_RETURN (error, g_clear_object (&mset), NULL);
+
+    while ((model = va_arg (ap, NcmModel *)) != NULL)
+    {
+      g_assert (NCM_IS_MODEL (model));
+      ncm_mset_push (mset, model, error);
+      NCM_UTIL_ON_ERROR_RETURN (error, g_clear_object (&mset), NULL);
+    }
+
+    return mset;
+  }
 }
 
 /**
  * ncm_mset_new_array:
- * @model_array: (array) (element-type NcmModel): a #GPtrArray of #NcmModel.
+ * @model_array: (array) (element-type NcmModel): a #GPtrArray of #NcmModel
+ * @error: a #GError
  *
  * Creates a new #NcmMSet with the models passed as arguments.
  *
  * Returns: (transfer full): a new #NcmMSet
  */
 NcmMSet *
-ncm_mset_new_array (GPtrArray *model_array)
+ncm_mset_new_array (GPtrArray *model_array, GError **error)
 {
-  NcmMSet *mset = ncm_mset_empty_new ();
-  guint i;
-
-  for (i = 0; i < model_array->len; i++)
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
   {
-    NcmModel *model = NCM_MODEL (g_ptr_array_index (model_array, i));
+    NcmMSet *mset = ncm_mset_empty_new ();
+    guint i;
 
-    g_assert (NCM_IS_MODEL (model));
-    ncm_mset_push (mset, model);
+    for (i = 0; i < model_array->len; i++)
+    {
+      NcmModel *model = NCM_MODEL (g_ptr_array_index (model_array, i));
+
+      g_assert (NCM_IS_MODEL (model));
+      ncm_mset_push (mset, model, error);
+      NCM_UTIL_ON_ERROR_RETURN (error, g_clear_object (&mset), NULL);
+    }
+
+    return mset;
   }
-
-  return mset;
 }
 
 /**
@@ -651,31 +683,38 @@ ncm_mset_dup (NcmMSet *mset, NcmSerialize *ser)
 /**
  * ncm_mset_shallow_copy:
  * @mset: a #NcmMSet
+ * @error: a #GError
  *
  * Creates a new #NcmMSet with the same models of @mset.
  *
  * Returns: (transfer full): a new #NcmMSet
  */
 NcmMSet *
-ncm_mset_shallow_copy (NcmMSet *mset)
+ncm_mset_shallow_copy (NcmMSet *mset, GError **error)
 {
-  NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
-  NcmMSet *mset_sc            = ncm_mset_empty_new ();
-  const guint nmodels         = ncm_mset_nmodels (mset);
-  guint i;
-
-  for (i = 0; i < nmodels; i++)
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
   {
-    NcmModel *model = ncm_mset_peek_array_pos (mset, i);
+    NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
+    NcmMSet *mset_sc            = ncm_mset_empty_new ();
+    const guint nmodels         = ncm_mset_nmodels (mset);
+    guint i;
 
-    if (!ncm_model_is_submodel (model))
-      ncm_mset_push (mset_sc, model);
+    for (i = 0; i < nmodels; i++)
+    {
+      NcmModel *model = ncm_mset_peek_array_pos (mset, i);
+
+      if (!ncm_model_is_submodel (model))
+      {
+        ncm_mset_push (mset_sc, model, error);
+        NCM_UTIL_ON_ERROR_RETURN (error, g_clear_object (&mset_sc), NULL);
+      }
+    }
+
+    if (self->valid_map)
+      ncm_mset_prepare_fparam_map (mset_sc);
+
+    return mset_sc;
   }
-
-  if (self->valid_map)
-    ncm_mset_prepare_fparam_map (mset_sc);
-
-  return mset_sc;
 }
 
 /**
@@ -793,6 +832,7 @@ ncm_mset_peek_array_pos (NcmMSet *mset, guint i)
  * ncm_mset_peek_by_name:
  * @mset: a #NcmMSet
  * @name: model namespace
+ * @error: a #GError
  *
  * Peeks a #NcmModel from the #NcmMSet using the model namespace @name.
  * The name may be specified with the parameter full name "model:stackposition".
@@ -802,34 +842,45 @@ ncm_mset_peek_array_pos (NcmMSet *mset, guint i)
  * Returns: (transfer none): a #NcmModel with the model namespace @name.
  */
 NcmModel *
-ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name)
+ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name, GError **error)
 {
-  NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
-  gchar **ns_stackpos         = g_strsplit (name, ":", 2);
-  NcmModel *model             = NULL;
-
-  if (ns_stackpos[1] != NULL)
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
   {
-    gchar *endptr = NULL;
-    guint stackpos_id;
+    NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
+    gchar **ns_stackpos         = g_strsplit (name, ":", 2);
+    NcmModel *model             = NULL;
 
-    stackpos_id = g_ascii_strtoll (ns_stackpos[1], &endptr, 10);
+    if (ns_stackpos[1] != NULL)
+    {
+      gchar *endptr = NULL;
+      guint stackpos_id;
 
-    if (*endptr != '\0')
-      g_error ("ncm_mset_peek_by_name: invalid stackpos number `%s'.", ns_stackpos[1]);
+      stackpos_id = g_ascii_strtoll (ns_stackpos[1], &endptr, 10);
 
-    g_strfreev (ns_stackpos);
+      if (*endptr != '\0')
+      {
+        ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
+                                    "ncm_mset_peek_by_name: invalid stackpos number `%s'.",
+                                    ns_stackpos[1]);
 
-    model = ncm_mset_peek_pos (mset, ncm_mset_get_id_by_ns (ns_stackpos[0]), stackpos_id);
+        g_strfreev (ns_stackpos);
+
+        return NULL;
+      }
+
+      g_strfreev (ns_stackpos);
+
+      model = ncm_mset_peek_pos (mset, ncm_mset_get_id_by_ns (ns_stackpos[0]), stackpos_id);
+    }
+    else
+    {
+      g_strfreev (ns_stackpos);
+
+      model = ncm_mset_peek (mset, ncm_mset_get_id_by_ns (name));
+    }
+
+    return model;
   }
-  else
-  {
-    g_strfreev (ns_stackpos);
-
-    model = ncm_mset_peek (mset, ncm_mset_get_id_by_ns (name));
-  }
-
-  return model;
 }
 
 /**
@@ -886,6 +937,7 @@ ncm_mset_remove (NcmMSet *mset, NcmModelID mid)
  * ncm_mset_set:
  * @mset: a #NcmMSet
  * @model: a #NcmModel
+ * @error: a #GError
  *
  * Sets a #NcmModel in the #NcmMSet. If there is already a model with the same
  * model id, it will be replaced. If it is a stackable model, it will be added
@@ -893,15 +945,18 @@ ncm_mset_remove (NcmMSet *mset, NcmModelID mid)
  *
  */
 void
-ncm_mset_set (NcmMSet *mset, NcmModel *model)
+ncm_mset_set (NcmMSet *mset, NcmModel *model, GError **error)
 {
-  ncm_mset_set_pos (mset, model, 0);
+  g_return_if_fail (error == NULL || *error == NULL);
+  ncm_mset_set_pos (mset, model, 0, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 }
 
 /**
  * ncm_mset_push:
  * @mset: a #NcmMSet
  * @model: a #NcmModel
+ * @error: a #GError
  *
  * Pushes a #NcmModel to the end of the #NcmMSet. If the model is not stackable,
  * it will be added to the first position, if there is already a model with the
@@ -909,8 +964,9 @@ ncm_mset_set (NcmMSet *mset, NcmModel *model)
  *
  */
 void
-ncm_mset_push (NcmMSet *mset, NcmModel *model)
+ncm_mset_push (NcmMSet *mset, NcmModel *model, GError **error)
 {
+  g_return_if_fail (error == NULL || *error == NULL);
   g_assert (model != NULL);
   {
     NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
@@ -923,7 +979,9 @@ ncm_mset_push (NcmMSet *mset, NcmModel *model)
 
       if (g_hash_table_lookup (self->mid_item_hash, GINT_TO_POINTER (mid)) == NULL)
       {
-        ncm_mset_set_pos (mset, model, stackpos_id);
+        ncm_mset_set_pos (mset, model, stackpos_id, error);
+        NCM_UTIL_ON_ERROR_RETURN (error, , );
+
         break;
       }
 
@@ -932,13 +990,14 @@ ncm_mset_push (NcmMSet *mset, NcmModel *model)
   }
 }
 
-static void _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id);
+static void _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id, GError **error);
 
 /**
  * ncm_mset_set_pos:
  * @mset: a #NcmMSet
  * @model: a #NcmModel
  * @stackpos_id: stack position
+ * @error: a #GError
  *
  * Sets a #NcmModel in the #NcmMSet in the stack position @stackpos_id.
  * If there is already a model with the same model id, it will be replaced.
@@ -950,22 +1009,34 @@ static void _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stac
  *
  */
 void
-ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id)
+ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id, GError **error)
 {
   NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
 
+  g_return_if_fail (error == NULL || *error == NULL);
+
   if (model_class->is_submodel)
-    g_error ("ncm_mset_set_pos: cannot add model `%s' directly to a NcmMSet.\n"
-             "                  This model is a submodel of `%s' and it should"
-             " be added to it instead of directly to a NcmMSet",
-             G_OBJECT_TYPE_NAME (model), ncm_mset_get_ns_by_id (model_class->main_model_id));
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_SUBMODEL,
+                                "ncm_mset_set_pos: cannot add model `%s' directly to a NcmMSet.\n"
+                                "This model is a submodel of `%s' and it should "
+                                "be added to it instead of directly to a NcmMSet",
+                                G_OBJECT_TYPE_NAME (model),
+                                ncm_mset_get_ns_by_id (model_class->main_model_id));
+
+    return;
+  }
   else
-    _ncm_mset_set_pos_intern (mset, model, stackpos_id);
+  {
+    _ncm_mset_set_pos_intern (mset, model, stackpos_id, error);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
+  }
 }
 
 static void
-_ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id)
+_ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id, GError **error)
 {
+  g_return_if_fail (error == NULL || *error == NULL);
   g_assert (model != NULL);
   {
     NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
@@ -977,8 +1048,14 @@ _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id)
     guint i;
 
     if ((stackpos_id > 0) && !(NCM_MODEL_GET_CLASS (model)->can_stack))
-      g_error ("ncm_mset_set_pos: cannot stack object in position %u NcmMSet, type `%s' not allowed.",
-               stackpos_id, G_OBJECT_TYPE_NAME (model));
+    {
+      ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_NOT_STACKABLE,
+                                  "ncm_mset_set_pos: cannot stack object in position %u NcmMSet, type `%s' is not stackable.",
+                                  stackpos_id, G_OBJECT_TYPE_NAME (model));
+      g_slice_free (NcmMSetItem, item);
+
+      return;
+    }
 
     ncm_mset_remove (mset, mid);
 
@@ -1024,7 +1101,8 @@ _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id)
     {
       NcmModel *submodel = ncm_model_peek_submodel (model, i);
 
-      _ncm_mset_set_pos_intern (mset, submodel, 0);
+      _ncm_mset_set_pos_intern (mset, submodel, 0, error);
+      NCM_UTIL_ON_ERROR_RETURN (error, , );
     }
   }
 }
@@ -1342,6 +1420,7 @@ ncm_mset_fparam_map_valid (NcmMSet *mset)
 void
 ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_models, GError **error)
 {
+  g_return_if_fail (error == NULL || *error == NULL);
   g_assert (fmap != NULL);
   {
     NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
@@ -1376,8 +1455,7 @@ ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_mod
     {
       NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (mset, fmap[i], error);
 
-      if (error && *error)
-        return;
+      NCM_UTIL_ON_ERROR_RETURN (error, , );
 
       if (pi == NULL)
       {
@@ -2392,18 +2470,25 @@ ncm_mset_param_set_mset (NcmMSet *mset_dest, NcmMSet *mset_src)
  * @mset: a #NcmMSet
  * @mid: a #NcmModelID
  * @pid: parameter id
+ * @error: a #GError
  *
  * Gets the type #NcmParamType of the parameter @pid in the model @mid.
  *
  * Returns: the type #NcmParamType of the parameter @pid in the model @mid.
  */
 NcmParamType
-ncm_mset_param_get_ftype (NcmMSet *mset, NcmModelID mid, guint pid)
+ncm_mset_param_get_ftype (NcmMSet *mset, NcmModelID mid, guint pid, GError **error)
 {
   NcmModel *model = ncm_mset_peek (mset, mid);
 
   if (model == NULL)
-    g_error ("ncm_mset_param_get_ftype: cannot get ftype of mode %d, model not set.", mid);
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_NOT_SET,
+                                "ncm_mset_param_get_ftype: cannot get ftype of model-id %d, "
+                                "model not set.", mid);
+
+    return -1;
+  }
 
   return ncm_model_param_get_ftype (model, pid);
 }
@@ -2743,72 +2828,76 @@ ncm_mset_fparam_full_name (NcmMSet *mset, guint n)
 NcmMSetPIndex *
 ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname, GError **error)
 {
-  NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
-  NcmMSetClass * const klass  = NCM_MSET_GET_CLASS (mset);
-  NcmMSetPIndex *pi           = NULL;
-  gchar *model_ns             = NULL;
-  gchar *pname                = NULL;
-  guint stackpos_id           = 0;
-
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
-
-  if (ncm_mset_split_full_name (fullname, &model_ns, &stackpos_id, &pname))
   {
-    guint pid      = 0;
-    guint stackpos = 0;
-    gchar *endptr  = NULL;
-    NcmModelID mid;
-    NcmModel *model;
+    NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
+    NcmMSetClass * const klass  = NCM_MSET_GET_CLASS (mset);
+    NcmMSetPIndex *pi           = NULL;
+    gchar *model_ns             = NULL;
+    gchar *pname                = NULL;
+    guint stackpos_id           = 0;
+    gboolean full_name_found    = FALSE;
 
-    mid = ncm_mset_get_id_by_ns (model_ns);
+    full_name_found = ncm_mset_split_full_name (fullname, &model_ns, &stackpos_id, &pname, error);
+    NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
-    if (mid < 0)
+    if (full_name_found)
     {
-      ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_NOT_FOUND,
-                                  "ncm_mset_param_get_by_full_name: namespace `%s' not found.",
-                                  model_ns);
+      guint pid      = 0;
+      guint stackpos = 0;
+      gchar *endptr  = NULL;
+      NcmModelID mid;
+      NcmModel *model;
+
+      mid = ncm_mset_get_id_by_ns (model_ns);
+
+      if (mid < 0)
+      {
+        ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_NOT_FOUND,
+                                    "ncm_mset_param_get_by_full_name: namespace `%s' not found.",
+                                    model_ns);
+        g_free (pname);
+        g_free (model_ns);
+
+        return NULL;
+      }
+
+      mid  += stackpos_id;
+      model = ncm_mset_peek (mset, mid);
+
+      if (model != NULL)
+      {
+        endptr = NULL;
+        pid    = g_ascii_strtoll (pname, &endptr, 10);
+
+        if (*endptr != '\0')
+        {
+          gboolean found = ncm_model_param_index_from_name (model, pname, &pid, error);
+
+          NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
+
+          if (found)
+            pi = ncm_mset_pindex_new (mid, pid);
+        }
+        else if (pid < ncm_model_len (model))
+        {
+          pi = ncm_mset_pindex_new (mid, pid);
+        }
+      }
+
       g_free (pname);
       g_free (model_ns);
+    }
+    else
+    {
+      ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
+                                  "ncm_mset_param_get_by_full_name: invalid full name `%s'.",  fullname);
 
       return NULL;
     }
 
-    mid  += stackpos_id;
-    model = ncm_mset_peek (mset, mid);
-
-    if (model != NULL)
-    {
-      endptr = NULL;
-      pid    = g_ascii_strtoll (pname, &endptr, 10);
-
-      if (*endptr != '\0')
-      {
-        gboolean found = ncm_model_param_index_from_name (model, pname, &pid, error);
-
-        if (error && *error)
-          return NULL;
-
-        if (found)
-          pi = ncm_mset_pindex_new (mid, pid);
-      }
-      else if (pid < ncm_model_len (model))
-      {
-        pi = ncm_mset_pindex_new (mid, pid);
-      }
-    }
-
-    g_free (pname);
-    g_free (model_ns);
+    return pi;
   }
-  else
-  {
-    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
-                                "ncm_mset_param_get_by_full_name: invalid full name `%s'.",  fullname);
-
-    return NULL;
-  }
-
-  return pi;
 }
 
 /**
@@ -3142,6 +3231,7 @@ ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid)
  * ncm_mset_fparam_get_pi_by_name:
  * @mset: a #NcmMSet
  * @name: parameter name
+ * @error: a #GError
  *
  * Gets the #NcmMSetPIndex of the parameter identified by @name.
  * The name can be the parameter name or the full name.
@@ -3149,13 +3239,14 @@ ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid)
  * Returns: (transfer none): the #NcmMSetPIndex of the parameter identified by @name.
  */
 const NcmMSetPIndex *
-ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name)
+ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name, GError **error)
 {
   NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
   guint match                 = 0;
   guint match_i               = 0;
   guint i;
 
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
   g_assert (self->valid_map);
 
   for (i = 0; i < self->fparam_len; i++)
@@ -3171,7 +3262,8 @@ ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name)
 
   if (match > 1)
   {
-    g_warning ("ncm_mset_fparam_get_pi_by_name: more than one [%u] parameters with the same name %s, use the full name to avoid ambiguities, returning the last match.",
+    g_warning ("ncm_mset_fparam_get_pi_by_name: more than one [%u] parameters with the same name %s, "
+               "use the full name to avoid ambiguities, returning the last match.",
                match, name);
 
     return NULL;
@@ -3199,7 +3291,9 @@ ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name)
     }
     else if (match > 1)
     {
-      g_error ("ncm_mset_fparam_get_pi_by_name: more than one full names [%u] match %s.", match, name);
+      ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_AMBIGUOUS,
+                                  "ncm_mset_fparam_get_pi_by_name: more than one full name "
+                                  "[%u] match %s.", match, name);
 
       return NULL;
     }
@@ -3216,171 +3310,213 @@ ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name)
  * @ser: a #NcmSerialize
  * @filename: a filename
  * @save_comment: whether to save comments
+ * @error: a #GError
  *
  * Saves the #NcmMSet to a file using #GKeyFile.
  *
  */
 void
-ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean save_comment)
+ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean save_comment, GError **error)
 {
-  NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
-  NcmMSetClass *mset_class    = NCM_MSET_GET_CLASS (mset);
-  GKeyFile *msetfile          = g_key_file_new ();
-  guint i;
-
+  g_return_if_fail (error == NULL || *error == NULL);
   {
-    GError *error              = NULL;
-    gchar *mset_desc           = ncm_cfg_string_to_comment ("NcmMSet");
-    gchar *mset_valid_map_desc = ncm_cfg_string_to_comment ("valid-map property");
+    NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
+    NcmMSetClass *mset_class    = NCM_MSET_GET_CLASS (mset);
+    GKeyFile *msetfile          = g_key_file_new ();
+    guint i;
 
-    g_key_file_set_boolean (msetfile, "NcmMSet", "valid_map", self->valid_map);
-
-    if (save_comment)
     {
-      if (!g_key_file_set_comment (msetfile, "NcmMSet", NULL, mset_desc, &error))
-        g_error ("ncm_mset_save: %s", error->message);
+      GError *local_error        = NULL;
+      gchar *mset_desc           = ncm_cfg_string_to_comment ("NcmMSet");
+      gchar *mset_valid_map_desc = ncm_cfg_string_to_comment ("valid-map property");
 
-      if (!g_key_file_set_comment (msetfile, "NcmMSet", "valid_map", mset_valid_map_desc, &error))
-        g_error ("ncm_mset_save: %s", error->message);
-    }
-
-    g_free (mset_desc);
-    g_free (mset_valid_map_desc);
-  }
-
-  for (i = 0; i < self->model_array->len; i++)
-  {
-    NcmMSetItem *item       = g_ptr_array_index (self->model_array, i);
-    NcmModelID mid_base     = item->mid / NCM_MSET_MAX_STACKSIZE;
-    const guint stackpos_id = item->mid % NCM_MSET_MAX_STACKSIZE;
-    const gchar *ns         = g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, mid_base).ns;
-    GError *error           = NULL;
-    gchar *group;
-
-    if (stackpos_id > 0)
-      group = g_strdup_printf ("%s:%02u", ns, stackpos_id);
-    else
-      group = g_strdup_printf ("%s", ns);
-
-    if (item->dup)
-    {
-      NcmMSetItem *item0 = g_hash_table_lookup (self->model_item_hash, item->model);
-
-      g_assert (item0 != NULL);
-
-      g_key_file_set_uint64 (msetfile, group, ns, item0->mid % NCM_MSET_MAX_STACKSIZE);
+      g_key_file_set_boolean (msetfile, "NcmMSet", "valid_map", self->valid_map);
 
       if (save_comment)
       {
-        gchar *model_desc = ncm_cfg_string_to_comment (g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, mid_base).desc);
-
-        if (!g_key_file_set_comment (msetfile, group, NULL, model_desc, &error))
-          g_error ("ncm_mset_save: %s", error->message);
-
-        g_free (model_desc);
-      }
-    }
-    else
-    {
-      NcmModelClass *model_class = NCM_MODEL_GET_CLASS (item->model);
-      GObjectClass *oclass       = G_OBJECT_CLASS (model_class);
-      GVariant *model_var        = ncm_serialize_to_variant (ser, G_OBJECT (item->model));
-      guint nsubmodels           = ncm_model_get_submodel_len (item->model);
-      GVariant *params           = NULL;
-      gchar *obj_name            = NULL;
-      guint nparams, j;
-
-      g_variant_get (model_var, NCM_SERIALIZE_OBJECT_FORMAT, &obj_name, &params);
-      nparams = g_variant_n_children (params);
-      g_key_file_set_value (msetfile, group, ns, obj_name);
-
-      if (save_comment)
-      {
-        gchar *model_desc = ncm_cfg_string_to_comment (g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, mid_base).desc);
-
-        if (!g_key_file_set_comment (msetfile, group, NULL, model_desc, &error))
-          g_error ("ncm_mset_save: %s", error->message);
-
-        g_free (model_desc);
-      }
-
-      for (j = 0; j < nsubmodels; j++)
-      {
-        NcmModel *submodel = ncm_model_peek_submodel (item->model, j);
-
-        ncm_serialize_unset (ser, submodel);
-        ncm_serialize_remove_ser (ser, submodel);
-      }
-
-      if (nparams != 0)
-      {
-        GVariantIter iter;
-        GVariant *value;
-        gchar *key;
-
-        g_variant_iter_init (&iter, params);
-
-        while (g_variant_iter_next (&iter, "{sv}", &key, &value))
+        if (!g_key_file_set_comment (msetfile, "NcmMSet", NULL, mset_desc, &local_error))
         {
-          if (strcmp (key, "submodel-array") == 0)
-          {
-            g_variant_unref (value);
-            g_free (key);
-            continue;
-          }
-          else
-          {
-            GParamSpec *param_spec = g_object_class_find_property (oclass, key);
-            gchar *param_str       = g_variant_print (value, TRUE);
+          ncm_util_forward_or_call_error (error, local_error, "ncm_mset_save: ");
 
-            if (param_spec == NULL)
-              g_error ("ncm_mset_save: property `%s' not found in object `%s'.", key, obj_name);
+          NCM_UTIL_ON_ERROR_RETURN (error, , );
+        }
 
-            g_key_file_set_value (msetfile, group, key, param_str);
+        if (!g_key_file_set_comment (msetfile, "NcmMSet", "valid_map", mset_valid_map_desc, &local_error))
+        {
+          ncm_util_forward_or_call_error (error, local_error, "ncm_mset_save: ");
 
-            if (save_comment)
-            {
-              const gchar *blurb = g_param_spec_get_blurb (param_spec);
-
-              if ((blurb != NULL) && (blurb[0] != 0))
-              {
-                gchar *desc = ncm_cfg_string_to_comment (blurb);
-
-                if (!g_key_file_set_comment (msetfile, group, key, desc, &error))
-                  g_error ("ncm_mset_save: %s", error->message);
-
-                g_free (desc);
-              }
-            }
-
-            g_variant_unref (value);
-            g_free (key);
-            g_free (param_str);
-          }
+          NCM_UTIL_ON_ERROR_RETURN (error, , );
         }
       }
 
-      g_free (obj_name);
-      g_variant_unref (params);
-      g_variant_unref (model_var);
+      g_free (mset_desc);
+      g_free (mset_valid_map_desc);
     }
 
-    g_free (group);
-  }
+    for (i = 0; i < self->model_array->len; i++)
+    {
+      NcmMSetItem *item       = g_ptr_array_index (self->model_array, i);
+      NcmModelID mid_base     = item->mid / NCM_MSET_MAX_STACKSIZE;
+      const guint stackpos_id = item->mid % NCM_MSET_MAX_STACKSIZE;
+      const gchar *ns         = g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, mid_base).ns;
+      GError *local_error     = NULL;
+      gchar *group;
 
-  {
-    GError *error    = NULL;
-    gsize len        = 0;
-    gchar *mset_data = g_key_file_to_data (msetfile, &len, &error);
+      if (stackpos_id > 0)
+        group = g_strdup_printf ("%s:%02u", ns, stackpos_id);
+      else
+        group = g_strdup_printf ("%s", ns);
 
-    if (error != NULL)
-      g_error ("Error converting NcmMSet to configuration file: %s", error->message);
+      if (item->dup)
+      {
+        NcmMSetItem *item0 = g_hash_table_lookup (self->model_item_hash, item->model);
 
-    if (!g_file_set_contents (filename, mset_data, len, &error))
-      g_error ("Error saving configuration file to disk: %s", error->message);
+        g_assert (item0 != NULL);
 
-    g_free (mset_data);
-    g_key_file_free (msetfile);
+        g_key_file_set_uint64 (msetfile, group, ns, item0->mid % NCM_MSET_MAX_STACKSIZE);
+
+        if (save_comment)
+        {
+          gchar *model_desc = ncm_cfg_string_to_comment (g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, mid_base).desc);
+
+          if (!g_key_file_set_comment (msetfile, group, NULL, model_desc, &local_error))
+          {
+            ncm_util_forward_or_call_error (error, local_error, "ncm_mset_save: ");
+
+            NCM_UTIL_ON_ERROR_RETURN (error, , );
+          }
+
+          g_free (model_desc);
+        }
+      }
+      else
+      {
+        NcmModelClass *model_class = NCM_MODEL_GET_CLASS (item->model);
+        GObjectClass *oclass       = G_OBJECT_CLASS (model_class);
+        GVariant *model_var        = ncm_serialize_to_variant (ser, G_OBJECT (item->model));
+        guint nsubmodels           = ncm_model_get_submodel_len (item->model);
+        GVariant *params           = NULL;
+        gchar *obj_name            = NULL;
+        guint nparams, j;
+
+        g_variant_get (model_var, NCM_SERIALIZE_OBJECT_FORMAT, &obj_name, &params);
+        nparams = g_variant_n_children (params);
+        g_key_file_set_value (msetfile, group, ns, obj_name);
+
+        if (save_comment)
+        {
+          gchar *model_desc = ncm_cfg_string_to_comment (g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, mid_base).desc);
+
+          if (!g_key_file_set_comment (msetfile, group, NULL, model_desc, &local_error))
+          {
+            ncm_util_forward_or_call_error (error, local_error, "ncm_mset_save: ");
+
+            NCM_UTIL_ON_ERROR_RETURN (error, , );
+          }
+
+          g_free (model_desc);
+        }
+
+        for (j = 0; j < nsubmodels; j++)
+        {
+          NcmModel *submodel = ncm_model_peek_submodel (item->model, j);
+
+          ncm_serialize_unset (ser, submodel);
+          ncm_serialize_remove_ser (ser, submodel);
+        }
+
+        if (nparams != 0)
+        {
+          GVariantIter iter;
+          GVariant *value;
+          gchar *key;
+
+          g_variant_iter_init (&iter, params);
+
+          while (g_variant_iter_next (&iter, "{sv}", &key, &value))
+          {
+            if (strcmp (key, "submodel-array") == 0)
+            {
+              g_variant_unref (value);
+              g_free (key);
+              continue;
+            }
+            else
+            {
+              GParamSpec *param_spec = g_object_class_find_property (oclass, key);
+              gchar *param_str       = g_variant_print (value, TRUE);
+
+              if (param_spec == NULL)
+              {
+                ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_PROPERTY_NOT_FOUND,
+                                            "ncm_mset_save: property `%s' not found in object `%s'.", key, obj_name);
+
+                g_free (obj_name);
+                g_free (group);
+                g_variant_unref (params);
+                g_variant_unref (model_var);
+
+                return;
+              }
+
+              g_key_file_set_value (msetfile, group, key, param_str);
+
+              if (save_comment)
+              {
+                const gchar *blurb = g_param_spec_get_blurb (param_spec);
+
+                if ((blurb != NULL) && (blurb[0] != 0))
+                {
+                  gchar *desc = ncm_cfg_string_to_comment (blurb);
+
+                  if (!g_key_file_set_comment (msetfile, group, key, desc, &local_error))
+                  {
+                    ncm_util_forward_or_call_error (error, local_error, "ncm_mset_save: ");
+
+                    NCM_UTIL_ON_ERROR_RETURN (error, , );
+                  }
+
+                  g_free (desc);
+                }
+              }
+
+              g_variant_unref (value);
+              g_free (key);
+              g_free (param_str);
+            }
+          }
+        }
+
+        g_free (obj_name);
+        g_variant_unref (params);
+        g_variant_unref (model_var);
+      }
+
+      g_free (group);
+    }
+
+    {
+      GError *local_error = NULL;
+      gsize len           = 0;
+      gchar *mset_data    = g_key_file_to_data (msetfile, &len, &local_error);
+
+      ncm_util_forward_or_call_error (error, local_error, "ncm_mset_save: Error converting NcmMSet to configuration file: ");
+
+      NCM_UTIL_ON_ERROR_RETURN (error,
+                                g_free (mset_data);
+                                g_key_file_free (msetfile), );
+
+      if (!g_file_set_contents (filename, mset_data, len, &local_error))
+      {
+        ncm_util_forward_or_call_error (error, local_error, "ncm_mset_save: Error saving configuration file to disk: ");
+
+        NCM_UTIL_ON_ERROR_RETURN (error, g_free (mset_data);
+                                  g_key_file_free (msetfile), );
+      }
+
+      g_free (mset_data);
+      g_key_file_free (msetfile);
+    }
   }
 }
 
@@ -3388,6 +3524,7 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
  * ncm_mset_load: (constructor)
  * @filename: mset filename
  * @ser: a #NcmSerialize
+ * @error: a #GError
  *
  * Loads a #NcmMSet from a configuration file using the #NcmSerialize
  * object @ser. The file must be in the same format as the one
@@ -3396,188 +3533,225 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
  * Returns: (transfer full): the loaded #NcmMSet.
  */
 NcmMSet *
-ncm_mset_load (const gchar *filename, NcmSerialize *ser)
+ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
 {
-  NcmMSet *mset             = ncm_mset_empty_new ();
-  GKeyFile *msetfile        = g_key_file_new ();
-  GError *error             = NULL;
-  gchar **groups            = NULL;
-  gsize ngroups             = 0;
-  gboolean valid_map        = FALSE;
-  GPtrArray *submodel_array = g_ptr_array_new ();
-  guint i;
-
-  g_ptr_array_set_free_func (submodel_array, (GDestroyNotify) ncm_model_free);
-
-  if (!g_key_file_load_from_file (msetfile, filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
   {
-    g_error ("ncm_mset_load: Invalid mset configuration file: %s %s", filename, error->message);
+    NcmMSet *mset             = ncm_mset_empty_new ();
+    GKeyFile *msetfile        = g_key_file_new ();
+    gchar **groups            = NULL;
+    gsize ngroups             = 0;
+    gboolean valid_map        = FALSE;
+    GPtrArray *submodel_array = g_ptr_array_new ();
+    GError *local_error       = NULL;
+    guint i;
 
-    return NULL;
-  }
+    g_ptr_array_set_free_func (submodel_array, (GDestroyNotify) ncm_model_free);
 
-  if (g_key_file_has_group (msetfile, "NcmMSet"))
-  {
-    if (g_key_file_has_key (msetfile, "NcmMSet", "valid_map", &error))
+    if (!g_key_file_load_from_file (msetfile, filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &local_error))
     {
-      if (error != NULL)
-        g_error ("ncm_mset_load: %s", error->message);
+      ncm_util_forward_or_call_error (error, local_error,
+                                      "ncm_mset_load: Invalid mset configuration file: %s: ",
+                                      filename);
 
-      valid_map = g_key_file_get_boolean (msetfile, "NcmMSet", "valid_map", &error);
-
-      if (error != NULL)
-        g_error ("ncm_mset_load: %s", error->message);
+      return NULL;
     }
 
-    g_key_file_remove_group (msetfile, "NcmMSet", &error);
-
-    if (error != NULL)
-      g_error ("ncm_mset_load: %s", error->message);
-  }
-
-  groups = g_key_file_get_groups (msetfile, &ngroups);
-
-  for (i = 0; i < ngroups; i++)
-  {
-    GString *obj_ser = g_string_sized_new (200);
-    gchar *ns        = g_strdup (groups[i]);
-    gchar *twopoints = g_strrstr (ns, ":");
-    guint stackpos   = 0;
-
-    if (twopoints != NULL)
+    if (g_key_file_has_group (msetfile, "NcmMSet"))
     {
-      *twopoints = '\0';
-      stackpos   = atoi (++twopoints);
-    }
-
-    if (!g_key_file_has_key (msetfile, groups[i], ns, &error))
-    {
-      if (error != NULL)
-        g_error ("ncm_mset_load: %s", error->message);
-
-      g_error ("ncm_mset_load: Every group must contain a key with same name indicating the object type `%s' `%s'.", groups[i], ns);
-    }
-
-    {
-      gchar *obj_type = g_key_file_get_value (msetfile, groups[i], ns, &error);
-
-      if (strlen (obj_type) < 5)
+      if (g_key_file_has_key (msetfile, "NcmMSet", "valid_map", &local_error))
       {
-        gchar *endptr       = NULL;
-        guint stackpos_orig = g_ascii_strtoll (obj_type, &endptr, 10);
+        ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
+        NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
-        g_assert (endptr != NULL);
-
-        if (*endptr == '\0')
-        {
-          NcmModelID id = ncm_mset_get_id_by_ns (ns);
-
-          g_assert_cmpint (id, >, -1);
-          {
-            NcmModel *model = ncm_mset_peek_pos (mset, id, stackpos_orig);
-
-            g_assert (model != NULL);
-            ncm_mset_set_pos (mset, model, stackpos);
-          }
-          continue;
-        }
+        valid_map = g_key_file_get_boolean (msetfile, "NcmMSet", "valid_map", &local_error);
+        ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
+        NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
       }
 
-      g_string_append_printf (obj_ser, "(\'%s\', @a{sv} {", obj_type);
-      g_free (obj_type);
-      g_key_file_remove_key (msetfile, groups[i], ns, &error);
-
-      if (error != NULL)
-        g_error ("ncm_mset_load: %s", error->message);
+      g_key_file_remove_group (msetfile, "NcmMSet", &local_error);
+      ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
+      NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
     }
 
+    groups = g_key_file_get_groups (msetfile, &ngroups);
+
+    for (i = 0; i < ngroups; i++)
     {
-      gsize nkeys  = 0;
-      gchar **keys = g_key_file_get_keys (msetfile, groups[i], &nkeys, &error);
-      guint j;
+      GString *obj_ser = g_string_sized_new (200);
+      gchar *ns        = g_strdup (groups[i]);
+      gchar *twopoints = g_strrstr (ns, ":");
+      guint stackpos   = 0;
 
-      if (error != NULL)
-        g_error ("ncm_mset_load: %s", error->message);
-
-      for (j = 0; j < nkeys; j++)
+      if (twopoints != NULL)
       {
-        if (strcmp (keys[j], "submodel-array") == 0)
+        *twopoints = '\0';
+        stackpos   = atoi (++twopoints);
+      }
+
+      if (!g_key_file_has_key (msetfile, groups[i], ns, &local_error))
+      {
+        ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
+        NCM_UTIL_ON_ERROR_RETURN (error, g_free (ns), NULL);
+
+        ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_KEY_FILE_INVALID,
+                                    "ncm_mset_load: Every group must contain a key with same name "
+                                    "indicating the object type `%s' `%s'.", groups[i], ns);
+
+        return NULL;
+      }
+
+      {
+        gchar *obj_type = g_key_file_get_value (msetfile, groups[i], ns, &local_error);
+
+        ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
+        NCM_UTIL_ON_ERROR_RETURN (error, g_free (obj_type), NULL);
+
+        if (strlen (obj_type) < 5)
         {
-          g_error ("ncm_mset_load: serialized version of mset models cannot contain the submodel-array property.");
+          gchar *endptr       = NULL;
+          guint stackpos_orig = g_ascii_strtoll (obj_type, &endptr, 10);
+
+          g_assert (endptr != NULL);
+
+          if (*endptr == '\0')
+          {
+            NcmModelID id = ncm_mset_get_id_by_ns (ns);
+
+            g_assert_cmpint (id, >, -1);
+            {
+              NcmModel *model = ncm_mset_peek_pos (mset, id, stackpos_orig);
+
+              g_assert (model != NULL);
+              ncm_mset_set_pos (mset, model, stackpos, error);
+
+              NCM_UTIL_ON_ERROR_FORWARD (error, g_free (obj_type), NULL, "ncm_mset_load: ");
+            }
+
+            g_free (ns);
+            g_free (obj_type);
+            g_string_free (obj_ser, TRUE);
+            continue;
+          }
+        }
+
+        g_string_append_printf (obj_ser, "(\'%s\', @a{sv} {", obj_type);
+        g_free (obj_type);
+        g_key_file_remove_key (msetfile, groups[i], ns, &local_error);
+        ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
+        NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
+      }
+
+      {
+        gsize nkeys  = 0;
+        gchar **keys = g_key_file_get_keys (msetfile, groups[i], &nkeys, &local_error);
+        guint j;
+
+        ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
+        NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
+
+
+        for (j = 0; j < nkeys; j++)
+        {
+          if (strcmp (keys[j], "submodel-array") == 0)
+          {
+            ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_KEY_FILE_INVALID,
+                                        "ncm_mset_load: serialized version of mset models cannot "
+                                        "contain the submodel-array property.");
+
+            return NULL;
+          }
+          else
+          {
+            gchar *propval = g_key_file_get_value (msetfile, groups[i], keys[j], &local_error);
+
+            ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
+            NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
+
+            g_string_append_printf (obj_ser, "\'%s\':<%s>", keys[j], propval);
+            g_free (propval);
+
+            if (j + 1 != nkeys)
+              g_string_append (obj_ser, ", ");
+          }
+        }
+
+        g_string_append (obj_ser, "})");
+        g_strfreev (keys);
+      }
+
+      {
+        GObject *obj = ncm_serialize_from_string (ser, obj_ser->str);
+
+        g_assert (NCM_IS_MODEL (obj));
+
+        if (ncm_mset_exists_pos (mset, NCM_MODEL (obj), stackpos))
+        {
+          ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_ALREADY_SET,
+                                      "ncm_mset_load: a model ``%s'' already exists in NcmMSet.", obj_ser->str);
+          g_object_unref (obj);
+          g_string_free (obj_ser, TRUE);
+          g_free (ns);
+
+          return NULL;
+        }
+
+        if (ncm_model_is_submodel (NCM_MODEL (obj)))
+        {
+          NcmModel *submodel = ncm_model_ref (NCM_MODEL (obj));
+
+          g_ptr_array_add (submodel_array, submodel);
         }
         else
         {
-          gchar *propval = g_key_file_get_value (msetfile, groups[i], keys[j], &error);
-
-          if (error != NULL)
-            g_error ("ncm_mset_load: %s", error->message);
-
-          g_string_append_printf (obj_ser, "\'%s\':<%s>", keys[j], propval);
-          g_free (propval);
-
-          if (j + 1 != nkeys)
-            g_string_append (obj_ser, ", ");
+          ncm_mset_set_pos (mset, NCM_MODEL (obj), stackpos, error);
+          NCM_UTIL_ON_ERROR_FORWARD (error, , NULL, "ncm_mset_load: ");
         }
-      }
 
-      g_string_append (obj_ser, "})");
-      g_strfreev (keys);
+        ncm_model_free (NCM_MODEL (obj));
+      }
+      g_string_free (obj_ser, TRUE);
+      g_free (ns);
     }
 
+    for (i = 0; i < submodel_array->len; i++)
     {
-      GObject *obj = ncm_serialize_from_string (ser, obj_ser->str);
+      NcmModel *submodel  = g_ptr_array_index (submodel_array, i);
+      NcmModelID mid      = ncm_model_main_model (submodel);
+      NcmModel *mainmodel = ncm_mset_peek (mset, mid);
 
-      g_assert (NCM_IS_MODEL (obj));
+      g_assert_cmpint (mid, >=, 0);
 
-      if (ncm_mset_exists_pos (mset, NCM_MODEL (obj), stackpos))
-        g_error ("ncm_mset_load: a model ``%s'' already exists in NcmMSet.", obj_ser->str);
-
-      if (ncm_model_is_submodel (NCM_MODEL (obj)))
+      if (mainmodel == NULL)
       {
-        NcmModel *submodel = ncm_model_ref (NCM_MODEL (obj));
+        ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MAIN_MODEL_NOT_FOUND,
+                                    "ncm_mset_load: cannot add submodel `%s', main model `%s' not found.",
+                                    G_OBJECT_TYPE_NAME (submodel),
+                                    ncm_mset_get_ns_by_id (mid));
 
-        g_ptr_array_add (submodel_array, submodel);
+        g_ptr_array_unref (submodel_array);
+        g_key_file_unref (msetfile);
+        g_strfreev (groups);
+
+        return NULL;
       }
       else
       {
-        ncm_mset_set_pos (mset, NCM_MODEL (obj), stackpos);
+        ncm_model_add_submodel (mainmodel, submodel);
+        _ncm_mset_set_pos_intern (mset, submodel, 0, error);
+        NCM_UTIL_ON_ERROR_FORWARD (error, , NULL, "ncm_mset_load: ");
       }
-
-      ncm_model_free (NCM_MODEL (obj));
     }
-    g_string_free (obj_ser, TRUE);
-    g_free (ns);
+
+    g_key_file_unref (msetfile);
+    g_strfreev (groups);
+
+    if (valid_map)
+      ncm_mset_prepare_fparam_map (mset);
+
+    g_ptr_array_unref (submodel_array);
+
+    return mset;
   }
-
-  for (i = 0; i < submodel_array->len; i++)
-  {
-    NcmModel *submodel  = g_ptr_array_index (submodel_array, i);
-    NcmModelID mid      = ncm_model_main_model (submodel);
-    NcmModel *mainmodel = ncm_mset_peek (mset, mid);
-
-    g_assert_cmpint (mid, >=, 0);
-
-    if (mainmodel == NULL)
-    {
-      g_error ("ncm_mset_load: cannot add submodel `%s', main model `%s' not found.",
-               G_OBJECT_TYPE_NAME (submodel),
-               ncm_mset_get_ns_by_id (mid));
-    }
-    else
-    {
-      ncm_model_add_submodel (mainmodel, submodel);
-      _ncm_mset_set_pos_intern (mset, submodel, 0);
-    }
-  }
-
-  g_key_file_unref (msetfile);
-  g_strfreev (groups);
-
-  if (valid_map)
-    ncm_mset_prepare_fparam_map (mset);
-
-  g_ptr_array_unref (submodel_array);
-
-  return mset;
 }
 

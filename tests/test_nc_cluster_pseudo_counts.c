@@ -117,7 +117,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   NcClusterRedshift *clusterz     = NC_CLUSTER_REDSHIFT (ncm_serialize_global_from_string ("NcClusterRedshiftNodist{'z-min':<0.1>, 'z-max':<1.0>}"));
   NcClusterAbundance *cad         = nc_cluster_abundance_new (mfp, NULL);
   NcDataClusterPseudoCounts *dcpc = nc_data_cluster_pseudo_counts_new (cad);
-  NcmMSet *mset                   = ncm_mset_new (cosmo, clusterz, clusterm, cpc, NULL);
+  NcmMSet *mset                   = ncm_mset_new (cosmo, NULL, clusterz, clusterm, cpc, NULL);
   NcmDataset *dset                = ncm_dataset_new ();
   NcmMatrix *m                    = ncm_matrix_new (1, 5);
   gdouble z                       = g_test_rand_double_range (0.188, 0.890);

@@ -1127,8 +1127,7 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
 
     if (!g_type_is_a (G_OBJECT_TYPE (model), compat_type))
     {
-      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR,
-                                  NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE,
+      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE,
                                   "ncm_model_set_reparam: model `%s' is not compatible with the reparametrization `%s'",
                                   g_type_name (G_OBJECT_TYPE (model)), g_type_name (compat_type));
 
@@ -2528,7 +2527,7 @@ ncm_model_orig_param_symbol (NcmModel *model, guint n)
  *
  * Gets an array containing the parameters names.
  *
- * Returns: (transfer full) (element-type utf8): an array containing the parameters names.
+ * Returns: (transfer container) (element-type utf8): an array containing the parameters names.
  */
 GPtrArray *
 ncm_model_param_names (NcmModel *model)
@@ -2537,7 +2536,7 @@ ncm_model_param_names (NcmModel *model)
   GPtrArray *names             = g_ptr_array_new ();
   guint i;
 
-  /* g_ptr_array_set_free_func (names, g_free); */
+  g_ptr_array_set_free_func (names, g_free);
 
   for (i = 0; i < self->sparams->len; i++)
   {

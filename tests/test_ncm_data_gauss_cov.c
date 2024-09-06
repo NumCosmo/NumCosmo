@@ -150,7 +150,7 @@ void
 test_ncm_data_gauss_cov_mvnd_sanity (TestNcmDataGaussCovTest *test, gconstpointer pdata)
 {
   NcmRNG *rng           = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcmMSet *mset         = ncm_mset_new (NCM_MODEL (test->model), NULL);
+  NcmMSet *mset         = ncm_mset_new (NCM_MODEL (test->model), NULL, NULL);
   gdouble lower_data[5] = {-2.0, -2.0, -2.0, -2.0, 0.0};
   NcmVector *lower      = ncm_vector_new_data_static (lower_data, 5, 1);
   gdouble upper_data[5] = {2.0, 2.0, 2.0, 2.0, 2.0};

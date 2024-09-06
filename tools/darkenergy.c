@@ -253,7 +253,7 @@ main (gint argc, gchar *argv[])
   ncm_serialize_global_set (dist, "MainDist", FALSE);
 
   if (de_model.mset_file != NULL)
-    mset = ncm_mset_load (de_model.mset_file, ser);
+    mset = ncm_mset_load (de_model.mset_file, ser, NULL);
   else
     mset = ncm_mset_empty_new ();
 
@@ -309,7 +309,7 @@ main (gint argc, gchar *argv[])
   }
 
   if (ncm_mset_peek (mset, nc_hicosmo_id ()) == NULL)
-    ncm_mset_push (mset, NCM_MODEL (cosmo));
+    ncm_mset_push (mset, NCM_MODEL (cosmo), NULL);
 
   if (g_type_is_a (G_OBJECT_TYPE (cosmo), NC_TYPE_HICOSMO_DE))
     is_de = TRUE;
@@ -383,7 +383,7 @@ main (gint argc, gchar *argv[])
   if (de_model.pos_Omega_x)
   {
     if (is_de || is_gcg || is_idem2)
-      ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_flat_param_new_name ("NcHICosmo:Omegax", 0.0, HUGE_VAL, 1.0)));
+      ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_flat_param_new_name ("NcHICosmo:Omegax", 0.0, HUGE_VAL, 1.0, NULL)));
     else
       g_error ("omegak > 0 option is valid only for darkenergy models");
   }
@@ -420,7 +420,7 @@ main (gint argc, gchar *argv[])
           dcov = NC_SNIA_DIST_COV (ncm_serialize_global_from_string (de_data_simple.snia_objser));
 
         g_assert (NC_IS_SNIA_DIST_COV (dcov));
-        ncm_mset_set (mset, NCM_MODEL (dcov));
+        ncm_mset_set (mset, NCM_MODEL (dcov), NULL);
         nc_snia_dist_cov_free (dcov);
       }
 
@@ -548,7 +548,7 @@ main (gint argc, gchar *argv[])
 
       g_assert (NC_IS_PLANCK_FI (planck_fi));
 
-      ncm_mset_push (mset, NCM_MODEL (planck_fi));
+      ncm_mset_push (mset, NCM_MODEL (planck_fi), NULL);
       nc_planck_fi_free (planck_fi);
     }
 
@@ -612,7 +612,7 @@ main (gint argc, gchar *argv[])
       NcHICosmoQSplineContPrior *qspline_cp =
         nc_hicosmo_qspline_add_continuity_priors (NC_HICOSMO_QSPLINE (cosmo), lh, 1.0e-10, de_fit.qspline_cp_sigma);
 
-      ncm_mset_set (mset, NCM_MODEL (qspline_cp));
+      ncm_mset_set (mset, NCM_MODEL (qspline_cp), NULL);
       nc_hicosmo_qspline_cont_prior_free (qspline_cp);
     }
   }
@@ -628,7 +628,7 @@ main (gint argc, gchar *argv[])
   }
 
   if (de_fit.fiducial != NULL)
-    fiduc = ncm_mset_load (de_fit.fiducial, ser);
+    fiduc = ncm_mset_load (de_fit.fiducial, ser, NULL);
   else
     fiduc = ncm_mset_ref (mset);
 
@@ -708,7 +708,7 @@ main (gint argc, gchar *argv[])
 
         fullname = g_strdup_printf ("%s:%s", model_ns, p_name);
 
-        ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name (fullname, mu, sigma)));
+        ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name (fullname, mu, sigma, NULL)));
         g_variant_unref (prior_hash);
         g_free (model_ns);
         g_free (p_name);
@@ -1075,7 +1075,7 @@ main (gint argc, gchar *argv[])
     while (onedim_cr[0] != NULL)
     {
       const gchar *pname      = onedim_cr[0];
-      const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, onedim_cr[0]);
+      const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, onedim_cr[0], NULL);
 
       onedim_cr = &onedim_cr[1];
 
@@ -1119,8 +1119,8 @@ main (gint argc, gchar *argv[])
   if ((de_fit.nsigma >= 0) && (de_fit.bidim_cr[0] != NULL) && (de_fit.bidim_cr[1] != NULL))
   {
     NcmLHRatio2d *lhr2d;
-    const NcmMSetPIndex *pi1      = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[0]);
-    const NcmMSetPIndex *pi2      = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[1]);
+    const NcmMSetPIndex *pi1      = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[0], NULL);
+    const NcmMSetPIndex *pi2      = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[1], NULL);
     NcmLHRatio2dRegion *rg_1sigma = NULL;
     NcmLHRatio2dRegion *rg_2sigma = NULL;
     NcmLHRatio2dRegion *rg_3sigma = NULL;
@@ -1194,8 +1194,8 @@ main (gint argc, gchar *argv[])
   if ((de_fit.nsigma_fisher >= 0) && (de_fit.bidim_cr[0] != NULL) && (de_fit.bidim_cr[1] != NULL))
   {
     NcmLHRatio2d *lhr2d;
-    const NcmMSetPIndex *pi1      = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[0]);
-    const NcmMSetPIndex *pi2      = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[1]);
+    const NcmMSetPIndex *pi1      = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[0], NULL);
+    const NcmMSetPIndex *pi2      = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[1], NULL);
     NcmLHRatio2dRegion *rg_1sigma = NULL;
     NcmLHRatio2dRegion *rg_2sigma = NULL;
     NcmLHRatio2dRegion *rg_3sigma = NULL;
@@ -1268,7 +1268,7 @@ main (gint argc, gchar *argv[])
     g_ptr_array_free (ca_array, TRUE);
 
   if (de_fit.save_mset != NULL)
-    ncm_mset_save (mset, ser, de_fit.save_mset, TRUE);
+    ncm_mset_save (mset, ser, de_fit.save_mset, TRUE, NULL);
 
   g_free (de_model_entries);
   de_model_entries = NULL;

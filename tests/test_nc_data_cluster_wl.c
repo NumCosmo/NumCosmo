@@ -235,7 +235,7 @@ test_nc_data_cluster_wl_fit (TestNcDataClusterWL *test, gconstpointer pdata)
     {
       NcmDataset *dataset       = ncm_dataset_new_list (test->dcwl, NULL);
       NcmLikelihood *likelihood = ncm_likelihood_new (dataset);
-      NcmMSet *mset             = ncm_mset_new (cosmo, dp, smd, NULL);
+      NcmMSet *mset             = ncm_mset_new (cosmo, NULL, dp, smd, NULL);
       NcmFit *fit               = ncm_fit_factory (NCM_FIT_TYPE_NLOPT, "ln-neldermead", likelihood, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
 
       ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-3, 0.0, NULL, NULL);
@@ -551,7 +551,7 @@ test_nc_data_cluster_wl_val_kde (TestNcDataClusterWL *test, gconstpointer pdata)
   NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
   NcDistance *dist            = nc_distance_new (100.0);
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
-  NcmMSet *mset               = ncm_mset_new (cosmo, dp, smd, NULL);
+  NcmMSet *mset               = ncm_mset_new (cosmo, NULL, dp, smd, NULL);
   NcmMatrix *obs              = ncm_matrix_new (1, 4);
   gdouble m2lnL_int           = 0.0;
   gdouble m2lnL_kde           = 0.0;

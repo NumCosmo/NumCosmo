@@ -390,6 +390,8 @@ test_ncm_model_test_name_symbol (TestNcmModel *test, gconstpointer pdata)
 
         g_assert_cmpstr (pname_new, !=, s_name_tot[i]);
         g_assert_cmpstr (psymbol_new, !=, s_symbol_tot[i]);
+
+        ncm_sparam_free (reparam_sparam);
       }
     }
   }
@@ -423,6 +425,8 @@ test_ncm_model_test_name_symbol (TestNcmModel *test, gconstpointer pdata)
 
           g_assert_cmpstr (pname_new, !=, vp_name);
           g_assert_cmpstr (psymbol_new, !=, vp_symbol);
+
+          ncm_sparam_free (reparam_sparam);
         }
       }
 
@@ -842,6 +846,8 @@ test_ncm_model_param_names (TestNcmModel *test, gconstpointer pdata)
       name_index += v_len_tot[i];
     }
   }
+
+  g_ptr_array_unref (names);
 }
 
 void
