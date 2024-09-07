@@ -3745,3 +3745,136 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
   }
 }
 
+/**
+ * ncm_mset___getitem__:
+ * @mset: a #NcmMSet
+ * @model_id: a #GValue
+ * @error: a #GError
+ *
+ * Gets the model with the id @model_id.
+ * This method is used to implement the Python __getitem__ method.
+ * The parameter @model_id is a #GValue which can be an integer
+ * containing the model id or a string containing the model namespace.
+ *
+ * Returns: (transfer none): the model with the id @model_id.
+ */
+NcmModel *
+ncm_mset___getitem__ (NcmMSet *mset, GValue *model_id, GError **error)
+{
+  NcmModelID mid = 0;
+
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+  if (G_VALUE_HOLDS_INT (model_id))
+  {
+    mid = g_value_get_int (model_id);
+  }
+  else if (G_VALUE_HOLDS_STRING (model_id))
+  {
+    const gchar *ns = g_value_get_string (model_id);
+
+    mid = ncm_mset_get_id_by_ns (ns);
+
+    if (mid < 0)
+    {
+      ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_NOT_FOUND,
+                                  "ncm_mset___getitem__: namespace `%s' not found.", ns);
+
+      return NULL;
+    }
+  }
+  else
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_INVALID_ID,
+                                "ncm_mset___getitem__: invalid argument type.");
+
+    return NULL;
+  }
+
+  return ncm_mset_peek (mset, mid);
+}
+
+/**
+ * ncm_mset___setitem__:
+ * @mset: a #NcmMSet
+ * @model_id: a #GValue
+ * @model: a #NcmModel
+ * @error: a #GError
+ *
+ * Sets the model with the id @model_id to @model.
+ * This method is used to implement the Python __setitem__ method.
+ * The parameter @model_id is a #GValue which can be an integer
+ * containing the model id or a string containing the model namespace.
+ *
+ */
+void
+ncm_mset___setitem__ (NcmMSet *mset, GValue *model_id, NcmModel *model, GError **error)
+{
+  NcmModelID mid = 0;
+  guint stackpos = 0;
+
+  g_return_if_fail (error == NULL || *error == NULL);
+
+  if (G_VALUE_HOLDS_INT (model_id))
+  {
+    mid = g_value_get_int (model_id);
+  }
+  else if (G_VALUE_HOLDS_STRING (model_id))
+  {
+    const gchar *ns     = g_value_get_string (model_id);
+    gchar **ns_stackpos = g_strsplit (ns, ":", 2);
+    guint nelem         = g_strv_length (ns_stackpos);
+
+    if (nelem == 1)
+    {
+      stackpos = 0;
+    }
+    else
+    {
+      gchar *endptr = NULL;
+
+      stackpos = g_ascii_strtoll (ns_stackpos[0], &endptr, 10);
+
+      if (*endptr != '\0')
+      {
+        ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_INVALID,
+                                    "ncm_mset___setitem__: invalid namespace `%s'.", ns);
+        g_strfreev (ns_stackpos);
+
+        return;
+      }
+    }
+
+    mid = ncm_mset_get_id_by_ns (ns_stackpos[0]);
+
+    g_strfreev (ns_stackpos);
+
+    if (mid < 0)
+    {
+      ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_NOT_FOUND,
+                                  "ncm_mset___setitem__: namespace `%s' not found.", ns);
+
+      return;
+    }
+  }
+  else
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_INVALID_ID,
+                                "ncm_mset___setitem__: invalid argument type.");
+
+    return;
+  }
+
+  if (ncm_model_id (model) != mid)
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_ID_MISMATCH,
+                                "ncm_mset___setitem__: model id mismatch, expected %d, got %d.",
+                                mid, ncm_model_id (model));
+
+    return;
+  }
+
+  ncm_mset_set (mset, model, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+}
+

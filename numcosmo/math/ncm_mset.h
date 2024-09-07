@@ -89,6 +89,7 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
 /**
  * NcmMSetError:
  * @NCM_MSET_ERROR_NAMESPACE_NOT_FOUND: The namespace was not found.
+ * @NCM_MSET_ERROR_NAMESPACE_INVALID: The namespace is invalid.
  * @NCM_MSET_ERROR_FULLNAME_INVALID: The fullname is invalid.
  * @NCM_MSET_ERROR_FULLNAME_NOT_FOUND: The fullname was not found.
  * @NCM_MSET_ERROR_MAIN_MODEL_NOT_FOUND: The main model was not found.
@@ -97,6 +98,8 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
  * @NCM_MSET_ERROR_MODEL_NOT_SET: The model is not set.
  * @NCM_MSET_ERROR_MODEL_ALREADY_SET: The model is already set.
  * @NCM_MSET_ERROR_MODEL_PROPERTY_NOT_FOUND: The model property was not found.
+ * @NCM_MSET_ERROR_MODEL_INVALID_ID: The model id is invalid.
+ * @NCM_MSET_ERROR_MODEL_ID_MISMATCH: The model id mismatch.
  * @NCM_MSET_ERROR_KEY_FILE_INVALID: The key file is invalid.
  * @NCM_MSET_ERROR_PARAM_NAME_AMBIGUOUS: The parameter name is ambiguous.
  *
@@ -107,6 +110,7 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
 typedef enum _NcmMSetError
 {
   NCM_MSET_ERROR_NAMESPACE_NOT_FOUND,
+  NCM_MSET_ERROR_NAMESPACE_INVALID,
   NCM_MSET_ERROR_FULLNAME_INVALID,
   NCM_MSET_ERROR_FULLNAME_NOT_FOUND,
   NCM_MSET_ERROR_MAIN_MODEL_NOT_FOUND,
@@ -115,6 +119,8 @@ typedef enum _NcmMSetError
   NCM_MSET_ERROR_MODEL_NOT_SET,
   NCM_MSET_ERROR_MODEL_ALREADY_SET,
   NCM_MSET_ERROR_MODEL_PROPERTY_NOT_FOUND,
+  NCM_MSET_ERROR_MODEL_INVALID_ID,
+  NCM_MSET_ERROR_MODEL_ID_MISMATCH,
   NCM_MSET_ERROR_KEY_FILE_INVALID,
   NCM_MSET_ERROR_PARAM_NAME_AMBIGUOUS,
 } NcmMSetError;
@@ -288,6 +294,10 @@ const NcmMSetPIndex *ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar 
 
 void ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean save_comment, GError **error);
 NcmMSet *ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error);
+
+/* pygobject dict */
+NcmModel *ncm_mset___getitem__ (NcmMSet *mset, GValue *model_id, GError **error);
+void ncm_mset___setitem__ (NcmMSet *mset, GValue *model_id, NcmModel *model, GError **error);
 
 G_END_DECLS
 

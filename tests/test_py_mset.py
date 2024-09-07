@@ -347,7 +347,13 @@ def test_mset_fparam_get_pi_by_param_name_amiguity():
 
     rosenbrock = mset.peek(rosenbrock_id)
 
-    reparam = Ncm.ReparamLinear.new(2, Ncm.Matrix.new(2, 2), Ncm.Vector.new(2))
+    m = Ncm.Matrix.new(2, 2)
+    m.set_identity()
+
+    v = Ncm.Vector.new(2)
+    v.set_all(0.0)
+
+    reparam = Ncm.ReparamLinear.new(2, m, v)
     reparam.set_param_desc_full(
         0, "mu_0", "mu_0", -1.0, 1.0, 1.0, 0.0, 0.0, Ncm.ParamType.FREE
     )
@@ -417,8 +423,9 @@ def test_mset_split_full_name_invalid_stackpos():
     with pytest.raises(
         GLib.GError,
         match=re.escape(
-            "ncm-mset-error: ncm_mset_param_split_full_name: "
-            "invalid stackpos number (132344 >= 1000). (1)"
+            rf"ncm-mset-error: ncm_mset_param_split_full_name: "
+            rf"invalid stackpos number (132344 >= 1000). "
+            rf"({int(Ncm.MSetError.FULLNAME_INVALID)})"
         ),
     ):
         _ = Ncm.MSet.split_full_name("NcHICosmo:132344:w")
@@ -444,8 +451,8 @@ def test_mset_peek_by_name_invalid_stackpos():
     with pytest.raises(
         GLib.GError,
         match=re.escape(
-            "ncm-mset-error: ncm_mset_peek_by_name: "
-            "invalid stackpos number (sadd). (1)"
+            rf"ncm-mset-error: ncm_mset_peek_by_name: "
+            rf"invalid stackpos number (sadd). ({int(Ncm.MSetError.FULLNAME_INVALID)})"
         ),
     ):
         _ = mset.peek_by_name("NcmModelMVND:sadd")
@@ -569,3 +576,43 @@ def test_mset_param_get_by_full_name_not_found():
     )
 
     assert mset.param_get_by_full_name("NcmModelFunnel:ble") is None
+
+
+def test_mset_param_get_by_full_name_invalid():
+    """Test the NcmMSet param_get_by_full_name."""
+    mset = Ncm.MSet.new_array(
+        [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
+    )
+
+    with pytest.raises(
+        GLib.GError,
+        match=re.compile(
+            rf"^ncm-mset-error: ncm_mset_param_get_by_full_name: invalid "
+            rf"full name `NcmModelFunnelbleble'. "
+            rf"\({int(Ncm.MSetError.FULLNAME_INVALID)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        _ = mset.param_get_by_full_name("NcmModelFunnelbleble")
+
+
+def test_mset_setitem():
+    """Test the NcmMSet setitem."""
+    mset = Ncm.MSet.new_array(
+        [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
+    )
+
+    mset[Ncm.ModelFunnel.id()] = Ncm.ModelFunnel.new(6)
+    mset["NcmModelRosenbrock"] = Ncm.ModelRosenbrock.new()
+    mset["NcmModelMVND"] = Ncm.ModelMVND.new(9)
+
+
+def test_mset_getitem():
+    """Test the NcmMSet getitem."""
+    mset = Ncm.MSet.new_array(
+        [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
+    )
+
+    assert isinstance(mset[Ncm.ModelFunnel.id()], Ncm.ModelFunnel)
+    assert isinstance(mset["NcmModelRosenbrock"], Ncm.ModelRosenbrock)
+    assert isinstance(mset["NcmModelMVND"], Ncm.ModelMVND)
