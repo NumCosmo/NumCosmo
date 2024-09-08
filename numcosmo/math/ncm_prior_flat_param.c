@@ -229,9 +229,7 @@ ncm_prior_flat_param_new_name (const gchar *name, gdouble x_low, gdouble x_upp, 
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
 
   full_name_found = ncm_mset_split_full_name (name, &model_ns, &stack_pos, &param_name, error);
-  NCM_UTIL_ON_ERROR_RETURN (error,
-                            g_free (model_ns);
-                            g_free (param_name), NULL);
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
   if (!full_name_found)
   {

@@ -225,14 +225,7 @@ ncm_prior_gauss_param_new_name (const gchar *name, gdouble mu, gdouble sigma, GE
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
 
   full_name_found = ncm_mset_split_full_name (name, &model_ns, &stack_pos, &param_name, error);
-
-  if (error && *error)
-  {
-    g_free (model_ns);
-    g_free (param_name);
-
-    return NULL;
-  }
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
   if (!full_name_found)
   {

@@ -141,20 +141,34 @@ def test_py_prior_gauss_param_new_name_stackpos() -> None:
     assert prior.is_scalar()
 
 
+def test_py_prior_gauss_param_new_name_invalid_stackpos() -> None:
+    """Test NumCosmo Gaussian Priors on parameters."""
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-mset-error: ncm_mset_param_split_full_name: invalid stackpos "
+            rf"number \(2301 \>\= 1000\). "
+            rf"\({int(Ncm.MSetError.FULLNAME_INVALID)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        _ = Ncm.PriorGaussParam.new_name(
+            name="NcmModelMVND:2301:mu_0", mu=0.0, sigma=1.0
+        )
+
+
 def test_py_prior_gauss_param_new_name_invalid() -> None:
     """Test NumCosmo Gaussian Priors on parameters."""
     with pytest.raises(
         GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_prior_gauss_param_new_name: invalid parameter "
-            rf"name `NcmModelMVND:2a3:mu_0'. "
+            rf"name `ncmModelMVND:23:mu_0'. "
             rf"\({int(Ncm.MSetError.FULLNAME_INVALID)}\)$",
             re.DOTALL,
         ),
     ):
-        _ = Ncm.PriorGaussParam.new_name(
-            name="NcmModelMVND:2a3:mu_0", mu=0.0, sigma=1.0
-        )
+        _ = Ncm.PriorGaussParam.new_name(name="ncmModelMVND:23:mu_0", mu=0.0, sigma=1.0)
 
 
 def test_py_prior_flat() -> None:
@@ -282,17 +296,33 @@ def test_py_prior_flat_param_new_name_stackpos() -> None:
     assert prior.is_scalar()
 
 
+def test_py_prior_flat_param_new_name_invalid_stackpos() -> None:
+    """Test NumCosmo Flat Priors on parameters."""
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-mset-error: ncm_mset_param_split_full_name: invalid stackpos "
+            rf"number \(2300 \>\= 1000\). "
+            rf"\({int(Ncm.MSetError.FULLNAME_INVALID)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        _ = Ncm.PriorFlatParam.new_name(
+            name="NcmModelMVND:2300:mu_0", x_low=-1.0, x_upp=1.0, scale=1.0
+        )
+
+
 def test_py_prior_flat_param_new_name_invalid() -> None:
     """Test NumCosmo Flat Priors on parameters."""
     with pytest.raises(
         GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_prior_flat_param_new_name: invalid parameter "
-            rf"name `NcmModelMVND:2a3:mu_0'. "
+            rf"name `ncmModelMVND:23:mu_0'. "
             rf"\({int(Ncm.MSetError.FULLNAME_INVALID)}\)$",
             re.DOTALL,
         ),
     ):
         _ = Ncm.PriorFlatParam.new_name(
-            name="NcmModelMVND:2a3:mu_0", x_low=-1.0, x_upp=1.0, scale=1.0
+            name="ncmModelMVND:23:mu_0", x_low=-1.0, x_upp=1.0, scale=1.0
         )
