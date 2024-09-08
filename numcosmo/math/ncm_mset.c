@@ -768,6 +768,29 @@ ncm_mset_peek (NcmMSet *mset, NcmModelID mid)
 }
 
 /**
+ * ncm_mset_fetch:
+ * @mset: a #NcmMSet
+ * @mid: a #NcmModelID
+ *
+ * Fetches a #NcmModel from the #NcmMSet using the model id @mid.
+ * If the model is not found, an error is set.
+ *
+ * Returns: (transfer none): a #NcmModel with the model id @mid
+ */
+NcmModel *
+ncm_mset_fetch (NcmMSet *mset, NcmModelID mid, GError **error)
+{
+  NcmModel *model = ncm_mset_peek (mset, mid);
+
+  if (model == NULL)
+    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_NOT_SET,
+                                "ncm_mset_fetch: model with id %d not found.", mid);
+
+
+  return model;
+}
+
+/**
  * ncm_mset_peek_pos:
  * @mset: a #NcmMSet
  * @base_mid: a #NcmModelID
@@ -859,7 +882,7 @@ ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name, GError **error)
 
       if ((*endptr != '\0') || (stackpos_id >= NCM_MSET_MAX_STACKSIZE))
       {
-        ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
+        ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_INVALID,
                                     "ncm_mset_peek_by_name: invalid stackpos number (%s).",
                                     ns_stackpos[1]);
 
@@ -879,6 +902,34 @@ ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name, GError **error)
 
     return model;
   }
+}
+
+/**
+ * ncm_mset_fetch_by_name:
+ * @mset: a #NcmMSet
+ * @name: model namespace
+ * @error: a #GError
+ *
+ * Fetches a #NcmModel from the #NcmMSet using the model namespace @name.
+ * The name may be specified with the parameter full name "model:stackposition".
+ * If the stack position is not specified, the first model with the model namespace
+ * @name will be returned.
+ * If the model is not found, an error is set.
+ *
+ * Returns: (transfer none): a #NcmModel with the model namespace @name.
+ */
+NcmModel *
+ncm_mset_fetch_by_name (NcmMSet *mset, const gchar *name, GError **error)
+{
+  NcmModel *model = ncm_mset_peek_by_name (mset, name, error);
+
+  NCM_UTIL_ON_ERROR_FORWARD (error, , NULL, "ncm_mset_fetch_by_name: ");
+
+  if (model == NULL)
+    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_NOT_SET,
+                                "ncm_mset_fetch_by_name: model with name `%s' not found.", name);
+
+  return model;
 }
 
 /**
@@ -3761,27 +3812,25 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
 NcmModel *
 ncm_mset___getitem__ (NcmMSet *mset, GValue *model_id, GError **error)
 {
-  NcmModelID mid = 0;
-
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
 
   if (G_VALUE_HOLDS_INT (model_id))
   {
-    mid = g_value_get_int (model_id);
+    NcmModelID mid  = g_value_get_int (model_id);
+    NcmModel *model = ncm_mset_fetch (mset, mid, error);
+
+    NCM_UTIL_ON_ERROR_FORWARD (error, , NULL, "ncm_mset___getitem__: ");
+
+    return model;
   }
   else if (G_VALUE_HOLDS_STRING (model_id))
   {
     const gchar *ns = g_value_get_string (model_id);
+    NcmModel *model = ncm_mset_fetch_by_name (mset, ns, error);
 
-    mid = ncm_mset_get_id_by_ns (ns);
+    NCM_UTIL_ON_ERROR_FORWARD (error, , NULL, "ncm_mset___getitem__: ");
 
-    if (mid < 0)
-    {
-      ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_NAMESPACE_NOT_FOUND,
-                                  "ncm_mset___getitem__: namespace `%s' not found.", ns);
-
-      return NULL;
-    }
+    return model;
   }
   else
   {
@@ -3790,8 +3839,6 @@ ncm_mset___getitem__ (NcmMSet *mset, GValue *model_id, GError **error)
 
     return NULL;
   }
-
-  return ncm_mset_peek (mset, mid);
 }
 
 /**
