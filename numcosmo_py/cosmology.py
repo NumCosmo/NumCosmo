@@ -23,7 +23,7 @@
 
 """NumCosmo cosmology class."""
 
-from . import Nc
+from . import Ncm, Nc
 
 
 class Cosmology:
@@ -40,6 +40,7 @@ class Cosmology:
         dist: Nc.Distance,
         ps_ml: Nc.PowspecML | None = None,
         ps_mnl: Nc.PowspecMNL | None = None,
+        psf_tophat: Ncm.PowspecFilter | None = None,
         compute_inv_comoving: bool = True,
     ) -> None:
         """Initialize the NumCosmo cosmology class."""
@@ -47,6 +48,7 @@ class Cosmology:
         self.dist = dist
         self._ps_ml = ps_ml
         self._ps_mnl = ps_mnl
+        self._psf_tophat = psf_tophat
         self.dist.compute_inv_comoving(compute_inv_comoving)
         self.recomb = Nc.RecombSeager()
 
@@ -65,6 +67,13 @@ class Cosmology:
         if self._ps_mnl is None:
             raise ValueError("Non-linear matter power spectrum not set.")
         return self._ps_mnl
+
+    @property
+    def psf_tophat(self) -> Ncm.PowspecFilter:
+        """Return the top-hat power spectrum filter."""
+        if self._psf_tophat is None:
+            raise ValueError("Top-hat power spectrum filter not set.")
+        return self._psf_tophat
 
     def prepare(self) -> None:
         """Prepare the cosmology for calculations."""

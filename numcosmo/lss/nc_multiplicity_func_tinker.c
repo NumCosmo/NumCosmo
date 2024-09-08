@@ -191,7 +191,7 @@ _nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
   const gdouble alpha         = pow (10.0, log10alpha);
   const gdouble b             = self->b0 * pow (1.0 + z, -alpha);
   const gdouble f_Tinker_mean = A * (pow (sigma / b, -a) + 1.0) * exp (-self->c / (sigma * sigma));
-
+  
   return f_Tinker_mean;
 }
 
@@ -239,6 +239,7 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
 
     return f_Tinker_Delta_spline;
   }
+  
 }
 
 static void
@@ -283,7 +284,7 @@ _nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, g
 {
   NcMultiplicityFuncTinker *mt                 = NC_MULTIPLICITY_FUNC_TINKER (mulf);
   NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
-
+  
   return self->eval (mulf, cosmo, sigma, z);
 }
 

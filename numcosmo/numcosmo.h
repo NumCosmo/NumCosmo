@@ -124,6 +124,7 @@
 #include <numcosmo/lss/nc_multiplicity_func_tinker_mean_normalized.h>
 #include <numcosmo/lss/nc_multiplicity_func_crocce.h>
 #include <numcosmo/lss/nc_multiplicity_func_bocquet.h>
+#include <numcosmo/lss/nc_multiplicity_func_despali.h>
 #include <numcosmo/lss/nc_multiplicity_func_watson.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
 #include <numcosmo/lss/nc_halo_bias.h>
@@ -138,6 +139,7 @@
 #include <numcosmo/lss/nc_cluster_mass.h>
 #include <numcosmo/lss/nc_cluster_mass_nodist.h>
 #include <numcosmo/lss/nc_cluster_mass_lnnormal.h>
+#include <numcosmo/lss/nc_cluster_mass_richness.h>
 #include <numcosmo/lss/nc_cluster_mass_vanderlinde.h>
 #include <numcosmo/lss/nc_cluster_mass_benson.h>
 #include <numcosmo/lss/nc_cluster_mass_benson_xray.h>
