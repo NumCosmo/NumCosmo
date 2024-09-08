@@ -124,8 +124,8 @@ struct _NcHICosmoIDEM2
 
 GType nc_hicosmo_idem2_get_type (void) G_GNUC_CONST;
 
-void nc_hicosmo_idem2_omega_x2omega_k (NcHICosmoIDEM2 *cosmo_idem2);
-void nc_hicosmo_idem2_cmb_params (NcHICosmoIDEM2 *cosmo_idem2);
+void nc_hicosmo_idem2_omega_x2omega_k (NcHICosmoIDEM2 *cosmo_idem2, GError **error);
+void nc_hicosmo_idem2_cmb_params (NcHICosmoIDEM2 *cosmo_idem2, GError **error);
 
 /***********************************************************************/
 /* Reparam CMB                                                         */

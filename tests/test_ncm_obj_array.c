@@ -578,7 +578,7 @@ test_ncm_obj_dict_str_add (TestNcmObjDictStr *test, gconstpointer pdata)
     NcDataBaoA *baoa = nc_data_bao_a_new_from_id (dist, 0);
 
     /* This sets an object containing a DictInt into cosmo */
-    nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
+    nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
 
     ncm_vector_set_all (v, 1.2);
     ncm_matrix_set_all (m, 2.0);
@@ -772,7 +772,7 @@ test_ncm_obj_dict_int_add (TestNcmObjDictInt *test, gconstpointer pdata)
     NcDataBaoA *baoa = nc_data_bao_a_new_from_id (dist, 0);
 
     /* This sets an object containing a DictInt into cosmo */
-    nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
+    nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
 
     ncm_vector_set_all (v, 1.2);
     ncm_matrix_set_all (m, 2.0);

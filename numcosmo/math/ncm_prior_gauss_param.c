@@ -83,7 +83,7 @@ _ncm_prior_gauss_param_set_property (GObject *object, guint prop_id, const GValu
   switch (prop_id)
   {
     case PROP_MODEL_NS:
-      ncm_prior_gauss_param_set_model_ns (pgp, g_value_get_string (value));
+      ncm_prior_gauss_param_set_model_ns (pgp, g_value_get_string (value), NULL);
       break;
     case PROP_STACK_POS:
       ncm_prior_gauss_param_set_stack_pos (pgp, g_value_get_uint (value));
@@ -173,7 +173,7 @@ _ncm_prior_gauss_param_mean (NcmPriorGauss *pg, NcmMSet *mset)
   NcmPriorGaussParam *pgp = NCM_PRIOR_GAUSS_PARAM (pg);
   NcmModel *model         = ncm_mset_peek (mset, pgp->mid);
 
-  return ncm_model_param_get_by_name (model, pgp->param_name);
+  return ncm_model_param_get_by_name (model, pgp->param_name, NULL);
 }
 
 /**
@@ -207,6 +207,7 @@ ncm_prior_gauss_param_new (NcmModel *model, guint pid, gdouble mu, gdouble sigma
  * @name: parameter name
  * @mu: mean
  * @sigma: standard deviation
+ * @error: a #GError
  *
  * Creates a new Gaussian prior for parameter named @name in @mset. See
  * ncm_mset_split_full_name() for details on the parameter name format.
@@ -214,15 +215,25 @@ ncm_prior_gauss_param_new (NcmModel *model, guint pid, gdouble mu, gdouble sigma
  * Returns: (transfer full): @pgp.
  */
 NcmPriorGaussParam *
-ncm_prior_gauss_param_new_name (const gchar *name, gdouble mu, gdouble sigma)
+ncm_prior_gauss_param_new_name (const gchar *name, gdouble mu, gdouble sigma, GError **error)
 {
-  gchar *model_ns   = NULL;
-  gchar *param_name = NULL;
-  guint stack_pos   = 0;
+  gchar *model_ns          = NULL;
+  gchar *param_name        = NULL;
+  guint stack_pos          = 0;
+  gboolean full_name_found = FALSE;
 
-  if (!ncm_mset_split_full_name (name, &model_ns, &stack_pos, &param_name))
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+  full_name_found = ncm_mset_split_full_name (name, &model_ns, &stack_pos, &param_name, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
+
+  if (!full_name_found)
   {
-    g_error ("ncm_prior_gauss_param_new_name: invalid parameter name `%s'.", name);
+    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
+                                "ncm_prior_gauss_param_new_name: invalid parameter name `%s'.", name);
+
+    g_free (model_ns);
+    g_free (param_name);
 
     return NULL;
   }
@@ -287,13 +298,15 @@ ncm_prior_gauss_param_clear (NcmPriorGaussParam **pgp)
  * ncm_prior_gauss_param_set_model_ns:
  * @pgp: a #NcmPriorGaussParam
  * @model_ns: model namespace
+ * @error: a #GError
  *
  * Sets the model namespace of @pgp to @model_ns.
  *
  */
 void
-ncm_prior_gauss_param_set_model_ns (NcmPriorGaussParam *pgp, const gchar *model_ns)
+ncm_prior_gauss_param_set_model_ns (NcmPriorGaussParam *pgp, const gchar *model_ns, GError **error)
 {
+  g_return_if_fail (error == NULL || *error == NULL);
   g_return_if_fail (NCM_IS_PRIOR_GAUSS_PARAM (pgp));
   {
     GType model_type = g_type_from_name (model_ns); /* check if the model namespace is valid */
@@ -304,7 +317,10 @@ ncm_prior_gauss_param_set_model_ns (NcmPriorGaussParam *pgp, const gchar *model_
     }
     else
     {
-      NcmModelID mid = ncm_model_id_by_type (model_type);
+      NcmModelID mid = ncm_model_id_by_type (model_type, error);
+
+      if (error && *error)
+        return;
 
       g_clear_pointer (&pgp->model_ns, g_free);
       pgp->model_ns = g_strdup (model_ns);

@@ -195,10 +195,10 @@ nc_planck_fi_cor_tt_add_gal_priors (NcmLikelihood *lh, NcmVector *mean, NcmVecto
   g_assert_cmpuint (ncm_vector_len (mean), ==, 4);
   g_assert_cmpuint (ncm_vector_len (sigma), ==, 4);
 
-  ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name ("NcPlanckFICorTT:gal545_A_100",     ncm_vector_get (mean, 0), ncm_vector_get (sigma, 0))));
-  ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name ("NcPlanckFICorTT:gal545_A_143",     ncm_vector_get (mean, 1), ncm_vector_get (sigma, 1))));
-  ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name ("NcPlanckFICorTT:gal545_A_143_217", ncm_vector_get (mean, 2), ncm_vector_get (sigma, 2))));
-  ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name ("NcPlanckFICorTT:gal545_A_217",     ncm_vector_get (mean, 3), ncm_vector_get (sigma, 3))));
+  ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name ("NcPlanckFICorTT:gal545_A_100",     ncm_vector_get (mean, 0), ncm_vector_get (sigma, 0), NULL)));
+  ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name ("NcPlanckFICorTT:gal545_A_143",     ncm_vector_get (mean, 1), ncm_vector_get (sigma, 1), NULL)));
+  ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name ("NcPlanckFICorTT:gal545_A_143_217", ncm_vector_get (mean, 2), ncm_vector_get (sigma, 2), NULL)));
+  ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name ("NcPlanckFICorTT:gal545_A_217",     ncm_vector_get (mean, 3), ncm_vector_get (sigma, 3), NULL)));
 }
 
 /**
@@ -260,9 +260,9 @@ nc_planck_fi_cor_tt_add_calib_priors (NcmLikelihood *lh, NcmVector *mean, NcmVec
   g_assert_cmpuint (ncm_vector_len (mean), ==, 3);
   g_assert_cmpuint (ncm_vector_len (sigma), ==, 3);
 
-  ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name ("NcPlanckFICorTT:calib_100T", ncm_vector_get (mean, 0), ncm_vector_get (sigma, 0))));
-  ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name ("NcPlanckFICorTT:calib_217T", ncm_vector_get (mean, 1), ncm_vector_get (sigma, 1))));
-  ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name ("NcPlanckFICorTT:A_planck",   ncm_vector_get (mean, 2), ncm_vector_get (sigma, 2))));
+  ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name ("NcPlanckFICorTT:calib_100T", ncm_vector_get (mean, 0), ncm_vector_get (sigma, 0), NULL)));
+  ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name ("NcPlanckFICorTT:calib_217T", ncm_vector_get (mean, 1), ncm_vector_get (sigma, 1), NULL)));
+  ncm_likelihood_priors_take (lh, NCM_PRIOR (ncm_prior_gauss_param_new_name ("NcPlanckFICorTT:A_planck",   ncm_vector_get (mean, 2), ncm_vector_get (sigma, 2), NULL)));
 }
 
 /**

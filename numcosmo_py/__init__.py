@@ -58,12 +58,14 @@ class GEnum(str, Enum):
     """Enum for GObject enums."""
 
     def __new__(cls, value):
+        """Create a new instance of the enum."""
         name = value.value_nick
         obj = str.__new__(cls, name)
         obj._value_ = name
         return obj
 
     def __init__(self, genum) -> None:
+        """Initialize the enum."""
         super().__init__()
         self.genum = genum
 

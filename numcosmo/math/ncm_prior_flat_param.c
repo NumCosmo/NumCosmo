@@ -84,7 +84,7 @@ _ncm_prior_flat_param_set_property (GObject *object, guint prop_id, const GValue
   switch (prop_id)
   {
     case PROP_MODEL_NS:
-      ncm_prior_flat_param_set_model_ns (pfp, g_value_get_string (value));
+      ncm_prior_flat_param_set_model_ns (pfp, g_value_get_string (value), NULL);
       break;
     case PROP_STACK_POS:
       ncm_prior_flat_param_set_stack_pos (pfp, g_value_get_uint (value));
@@ -173,7 +173,7 @@ _ncm_prior_flat_param_mean (NcmPriorFlat *pf, NcmMSet *mset)
   NcmPriorFlatParam *pfp = NCM_PRIOR_FLAT_PARAM (pf);
   NcmModel *model        = ncm_mset_peek (mset, pfp->mid);
 
-  return ncm_model_param_get_by_name (model, pfp->param_name);
+  return ncm_model_param_get_by_name (model, pfp->param_name, NULL);
 }
 
 /**
@@ -211,6 +211,7 @@ ncm_prior_flat_param_new (NcmModel *model, guint pid, gdouble x_low, gdouble x_u
  * @x_low: parameter lower limit
  * @x_upp: parameter upper limit
  * @scale: parameter scale
+ * @error: a #GError
  *
  * Creates a new Flat prior for parameter named @name in @mset. See
  * ncm_mset_split_full_name() for details on the parameter name format.
@@ -218,17 +219,25 @@ ncm_prior_flat_param_new (NcmModel *model, guint pid, gdouble x_low, gdouble x_u
  * Returns: (transfer full): @pfp.
  */
 NcmPriorFlatParam *
-ncm_prior_flat_param_new_name (const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale)
+ncm_prior_flat_param_new_name (const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale, GError **error)
 {
-  gchar *model_ns   = NULL;
-  gchar *param_name = NULL;
-  guint stack_pos   = 0;
+  gchar *model_ns          = NULL;
+  gchar *param_name        = NULL;
+  guint stack_pos          = 0;
+  gboolean full_name_found = FALSE;
 
-  if (!ncm_mset_split_full_name (name, &model_ns, &stack_pos, &param_name))
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+  full_name_found = ncm_mset_split_full_name (name, &model_ns, &stack_pos, &param_name, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
+
+  if (!full_name_found)
   {
-    g_error ("ncm_prior_flat_param_new_name: invalid parameter name `%s'.", name);
-
-    return NULL;
+    ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_FULLNAME_INVALID,
+                                "ncm_prior_flat_param_new_name: invalid parameter name `%s'.", name);
+    NCM_UTIL_ON_ERROR_RETURN (error,
+                              g_free (model_ns);
+                              g_free (param_name), NULL);
   }
 
   {
@@ -237,6 +246,7 @@ ncm_prior_flat_param_new_name (const gchar *name, gdouble x_low, gdouble x_upp, 
                                            "x-upp", x_upp,
                                            "scale", scale,
                                            "model-ns", model_ns,
+                                           "stack-pos", stack_pos,
                                            "parameter-name", param_name,
                                            NULL);
 
@@ -291,13 +301,15 @@ ncm_prior_flat_param_clear (NcmPriorFlatParam **pfp)
  * ncm_prior_flat_param_set_model_ns:
  * @pfp: a #NcmPriorFlatParam
  * @model_ns: model namespace
+ * @error: a #GError
  *
  * Sets the model namespace of @pfp to @model_ns.
  *
  */
 void
-ncm_prior_flat_param_set_model_ns (NcmPriorFlatParam *pfp, const gchar *model_ns)
+ncm_prior_flat_param_set_model_ns (NcmPriorFlatParam *pfp, const gchar *model_ns, GError **error)
 {
+  g_return_if_fail (error == NULL || *error == NULL);
   g_return_if_fail (NCM_IS_PRIOR_FLAT_PARAM (pfp));
   {
     GType model_type = g_type_from_name (model_ns); /* check if the model namespace is valid */
@@ -308,7 +320,10 @@ ncm_prior_flat_param_set_model_ns (NcmPriorFlatParam *pfp, const gchar *model_ns
     }
     else
     {
-      NcmModelID mid = ncm_model_id_by_type (model_type);
+      NcmModelID mid = ncm_model_id_by_type (model_type, error);
+
+      if (error && *error)
+        return;
 
       g_clear_pointer (&pfp->model_ns, g_free);
       pfp->model_ns = g_strdup (model_ns);

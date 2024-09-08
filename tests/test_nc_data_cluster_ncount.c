@@ -165,7 +165,7 @@ test_nc_data_cluster_ncount_new (TestNcDataClusterNCount *test, gconstpointer pd
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
 
   test->cad    = nc_cluster_abundance_new (mfp, NULL);
-  test->mset   = ncm_mset_new (cosmo, clusterm, clusterz, NULL);
+  test->mset   = ncm_mset_new (cosmo, NULL, clusterm, clusterz, NULL);
   test->ncdata = nc_data_cluster_ncount_new (test->cad, "NcClusterRedshiftNodist", "NcClusterMassAscaso");
   test->area   = g_test_rand_double_range (0.21, 0.27) * 4.0 * ncm_c_pi () / 100.0;
 

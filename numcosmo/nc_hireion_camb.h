@@ -90,7 +90,7 @@ GType nc_hireion_camb_get_type (void) G_GNUC_CONST;
 NcHIReionCamb *nc_hireion_camb_new (void);
 gdouble nc_hireion_camb_calc_z_from_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, const gdouble tau);
 void nc_hireion_camb_set_z_from_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, const gdouble tau);
-void nc_hireion_camb_z_to_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo);
+void nc_hireion_camb_z_to_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, GError **error);
 
 #define NC_HIREION_CAMB_DEFAULT_HII_HEII_REION_DELTA (0.5)
 #define NC_HIREION_CAMB_DEFAULT_HEIII_REION_DELTA    (0.5)

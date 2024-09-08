@@ -950,39 +950,56 @@ nc_hicosmo_de_set_wmap5_params (NcHICosmoDE *cosmo_de)
 /**
  * nc_hicosmo_de_omega_x2omega_k:
  * @cosmo_de: a #NcHICosmoDE
+ * @error: a #GError
  *
- * FIXME
+ * Set the reparametrization of the dark energy density to the curvature density.
  *
  */
 void
-nc_hicosmo_de_omega_x2omega_k (NcHICosmoDE *cosmo_de)
+nc_hicosmo_de_omega_x2omega_k (NcHICosmoDE *cosmo_de, GError **error)
 {
-  NcHICosmoDEReparamOk *de_reparam_ok = nc_hicosmo_de_reparam_ok_new (ncm_model_len (NCM_MODEL (cosmo_de)));
+  g_return_if_fail (error == NULL || *error == NULL);
+  {
+    NcHICosmoDEReparamOk *de_reparam_ok = nc_hicosmo_de_reparam_ok_new (ncm_model_len (NCM_MODEL (cosmo_de)));
 
-  ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (de_reparam_ok));
+    ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (de_reparam_ok), error);
 
-  ncm_reparam_free (NCM_REPARAM (de_reparam_ok));
+    /* This looks unnecessary, but it is not. */
+    if (error && *error)
+    {
+      ncm_reparam_free (NCM_REPARAM (de_reparam_ok));
 
-  return;
+      return;
+    }
+
+
+    ncm_reparam_free (NCM_REPARAM (de_reparam_ok));
+
+    return;
+  }
 }
 
 /**
  * nc_hicosmo_de_cmb_params:
  * @cosmo_de: a #NcHICosmoDE
+ * @error: a #GError
  *
- * FIXME
+ * Set the reparametrization of the dark energy density to the curvature density.
  *
  */
 void
-nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de)
+nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de, GError **error)
 {
-  NcHICosmoDEReparamCMB *de_reparam_cmb = nc_hicosmo_de_reparam_cmb_new (ncm_model_len (NCM_MODEL (cosmo_de)));
+  g_return_if_fail (error == NULL || *error == NULL);
+  {
+    NcHICosmoDEReparamCMB *de_reparam_cmb = nc_hicosmo_de_reparam_cmb_new (ncm_model_len (NCM_MODEL (cosmo_de)));
 
-  ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (de_reparam_cmb));
+    ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (de_reparam_cmb), error);
 
-  ncm_reparam_free (NCM_REPARAM (de_reparam_cmb));
+    ncm_reparam_free (NCM_REPARAM (de_reparam_cmb));
 
-  return;
+    return;
+  }
 }
 
 /**

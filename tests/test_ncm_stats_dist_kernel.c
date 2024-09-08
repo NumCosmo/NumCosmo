@@ -207,7 +207,7 @@ test_ncm_stats_dist_kernel_norm (TestNcmStatsDistKernel *test, gconstpointer pda
   NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 5.0e-1, 1.0, -2.0, 2.0, rng);
   NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (test->dim);
-  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
+  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
   const guint np                 = TESTMULT * test->dim;
   NcmVector *m2lnp_v             = ncm_vector_new (np);
   const guint ntests             = 100 * g_test_rand_int_range (1, 5);

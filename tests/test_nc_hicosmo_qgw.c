@@ -75,17 +75,16 @@ test_nc_hicosmo_qgw_new (TestNcHIcosmoQGW *test, gconstpointer pdata)
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.7245);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_B,   0.045);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
-  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo));
-  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.0);
-
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo), NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.0, NULL);
 }
 
 void
 test_nc_hicosmo_qgw_units (TestNcHIcosmoQGW *test, gconstpointer pdata)
 {
   NcHICosmo *cosmo = test->cosmo;
-  gdouble units = 1.0;
-  //g_assert_true(NC_IS_HICOSMO_QGW(cosmo)); 
+  gdouble units    = 1.0;
+  /*g_assert_true(NC_IS_HICOSMO_QGW(cosmo)); */
   /*nc_hicosmo_qgw_set_units(cosmo, units);*/
-
 }
+

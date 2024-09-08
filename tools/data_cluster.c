@@ -84,8 +84,8 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
     g_assert (NC_IS_CLUSTER_MASS (clusterm));
     g_assert (NC_IS_CLUSTER_REDSHIFT (clusterz));
 
-    ncm_mset_set (mset, NCM_MODEL (clusterm));
-    ncm_mset_set (mset, NCM_MODEL (clusterz));
+    ncm_mset_set (mset, NCM_MODEL (clusterm), NULL);
+    ncm_mset_set (mset, NCM_MODEL (clusterz), NULL);
   }
 
   {

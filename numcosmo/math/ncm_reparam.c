@@ -408,7 +408,6 @@ ncm_reparam_set_param_desc_full (NcmReparam *reparam, guint i, const gchar *name
 
   ncm_reparam_set_param_desc (reparam, i, sp);
 
-
   ncm_sparam_free (sp);
 }
 

@@ -41,7 +41,7 @@
 #include "math/ncm_prior_gauss_func.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_cfg.h"
-
+#include "math/ncm_util.h"
 
 struct _NcHICosmoGCGPrivate
 {
@@ -859,35 +859,50 @@ _nc_hicosmo_gcg_E2Press_mnu (NcHICosmo *cosmo, const gdouble z)
 /**
  * nc_hicosmo_gcg_omega_x2omega_k:
  * @cosmo_gcg: a #NcHICosmoGCG
+ * @error: a #GError
  *
- * FIXME
+ * Set the reparametrization of the cosmological parameters from
+ * \Omega_{x0} to \Omega_{k0}.
  *
  */
 void
-nc_hicosmo_gcg_omega_x2omega_k (NcHICosmoGCG *cosmo_de)
+nc_hicosmo_gcg_omega_x2omega_k (NcHICosmoGCG *cosmo_de, GError **error)
 {
-  NcHICosmoGCGReparamOk *gcg_reparam_ok = nc_hicosmo_gcg_reparam_ok_new (ncm_model_len (NCM_MODEL (cosmo_de)));
+  g_return_if_fail (error == NULL || *error == NULL);
+  {
+    NcHICosmoGCGReparamOk *gcg_reparam_ok = nc_hicosmo_gcg_reparam_ok_new (ncm_model_len (NCM_MODEL (cosmo_de)));
 
-  ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (gcg_reparam_ok));
+    ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (gcg_reparam_ok), error);
+    NCM_UTIL_ON_ERROR_RETURN (error, ncm_reparam_free (NCM_REPARAM (gcg_reparam_ok)), );
 
-  return;
+    ncm_reparam_free (NCM_REPARAM (gcg_reparam_ok));
+
+    return;
+  }
 }
 
 /**
  * nc_hicosmo_gcg_cmb_params:
  * @cosmo_gcg: a #NcHICosmoGCG
+ * @error: a #GError
  *
- * FIXME
+ * Set the reparametrization of the cosmological parameters for the CMB.
  *
  */
 void
-nc_hicosmo_gcg_cmb_params (NcHICosmoGCG *cosmo_de)
+nc_hicosmo_gcg_cmb_params (NcHICosmoGCG *cosmo_de, GError **error)
 {
-  NcHICosmoGCGReparamCMB *gcg_reparam_cmb = nc_hicosmo_gcg_reparam_cmb_new (ncm_model_len (NCM_MODEL (cosmo_de)));
+  g_return_if_fail (error == NULL || *error == NULL);
+  {
+    NcHICosmoGCGReparamCMB *gcg_reparam_cmb = nc_hicosmo_gcg_reparam_cmb_new (ncm_model_len (NCM_MODEL (cosmo_de)));
 
-  ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (gcg_reparam_cmb));
+    ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (gcg_reparam_cmb), error);
+    NCM_UTIL_ON_ERROR_RETURN (error, ncm_reparam_free (NCM_REPARAM (gcg_reparam_cmb)), );
 
-  return;
+    ncm_reparam_free (NCM_REPARAM (gcg_reparam_cmb));
+
+    return;
+  }
 }
 
 /***********************************************************************/

@@ -240,7 +240,7 @@ test_nc_galaxy_sd_shape_gauss_gen_strong (TestNcGalaxySDShapeGauss *test, gconst
   gdouble ex                  = 0.0;
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
-  ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", log10 (1.0e16));
+  ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", log10 (1.0e16), NULL);
   nc_galaxy_sd_shape_gen (NC_GALAXY_SD_SHAPE (sdsg), cosmo, dp, smd, z_cluster, rng, r, z, &et, &ex);
 
   g_assert_cmpfloat (sqrt (et * et + ex * ex), <, 1.0);
@@ -295,7 +295,7 @@ test_nc_galaxy_sd_shape_gauss_integ_strong (TestNcGalaxySDShapeGauss *test, gcon
   gdouble res;
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
-  ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", log10 (1.0e16));
+  ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", log10 (1.0e16), NULL);
 
   res = nc_galaxy_sd_shape_integ (NC_GALAXY_SD_SHAPE (sdsg), cosmo, dp, smd, z_cluster, r, z, et, ex);
 
@@ -352,7 +352,7 @@ test_nc_galaxy_sd_shape_gauss_integ_optzs_strong (TestNcGalaxySDShapeGauss *test
   gdouble res;
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
-  ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", log10 (1.0e16));
+  ncm_model_param_set_by_name (NCM_MODEL (dp), "log10MDelta", log10 (1.0e16), NULL);
 
   nc_galaxy_sd_shape_integ_optzs_prep (NC_GALAXY_SD_SHAPE (sdsg), cosmo, dp, smd, z_cluster, r);
 
