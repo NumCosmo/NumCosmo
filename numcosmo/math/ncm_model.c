@@ -2477,6 +2477,254 @@ ncm_model_params_set_default_ftype (NcmModel *model)
 }
 
 /**
+ * ncm_model_param_get_desc:
+ * @model: a #NcmModel
+ * @param: parameter name
+ * @error: a #GError
+ *
+ * Gets the description of the parameter @param. The output is a #GHashTable which
+ * contains the following keys:
+ * - "name": the name of the parameter.
+ * - "symbol": the symbol of the parameter.
+ * - "scale": the scale of the parameter.
+ * - "lower-bound": the lower bound of the parameter.
+ * - "upper-bound": the upper bound of the parameter.
+ * - "abstol": the absolute tolerance of the parameter.
+ * - "fit": whether the parameter is a fitting parameter.
+ * - "value": the current value of the parameter.
+ *
+ * Returns: (transfer full) (element-type utf8 GValue): the description of the parameter @param.
+ */
+GHashTable *
+ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
+{
+  NcmModelPrivate * const self = ncm_model_get_instance_private (model);
+
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+  {
+    guint i;
+    const gboolean has_param = ncm_model_param_index_from_name (model, param, &i, error);
+
+    if (!has_param)
+    {
+      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
+                                  "ncm_model_param_get_desc: model `%s' does not have a parameter called `%s'.",
+                                  G_OBJECT_TYPE_NAME (model), param);
+
+      return NULL;
+    }
+    else
+    {
+      GHashTable *desc = g_hash_table_new (g_str_hash, g_str_equal);
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_STRING);
+        g_value_set_static_string (value, ncm_model_param_name (model, i));
+        g_hash_table_insert (desc, g_strdup ("name"), value);
+      }
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_STRING);
+        g_value_set_static_string (value, ncm_model_param_symbol (model, i));
+        g_hash_table_insert (desc, g_strdup ("symbol"), value);
+      }
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_DOUBLE);
+        g_value_set_double (value, ncm_model_param_get_scale (model, i));
+        g_hash_table_insert (desc, g_strdup ("scale"), value);
+      }
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_DOUBLE);
+        g_value_set_double (value, ncm_model_param_get_lower_bound (model, i));
+        g_hash_table_insert (desc, g_strdup ("lower-bound"), value);
+      }
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_DOUBLE);
+        g_value_set_double (value, ncm_model_param_get_upper_bound (model, i));
+        g_hash_table_insert (desc, g_strdup ("upper-bound"), value);
+      }
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_DOUBLE);
+        g_value_set_double (value, ncm_model_param_get_abstol (model, i));
+        g_hash_table_insert (desc, g_strdup ("abstol"), value);
+      }
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_BOOLEAN);
+        g_value_set_boolean (value, (ncm_model_param_get_ftype (model, i) == NCM_PARAM_TYPE_FREE) ? TRUE : FALSE);
+        g_hash_table_insert (desc, g_strdup ("fit"), value);
+      }
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_DOUBLE);
+        g_value_set_double (value, ncm_model_param_get (model, i));
+        g_hash_table_insert (desc, g_strdup ("value"), value);
+      }
+
+      return desc;
+    }
+  }
+}
+
+/**
+ * ncm_model_param_set_desc:
+ * @model: a #NcmModel
+ * @param: parameter name
+ * @desc: (element-type utf8 GValue): a #GHashTable
+ *
+ * Sets the description of the parameter @param. The input is a #GHashTable which
+ * may contain the following keys:
+ *
+ * - "name": the name of the parameter.
+ * - "symbol": the symbol of the parameter.
+ * - "scale": the scale of the parameter.
+ * - "lower-bound": the lower bound of the parameter.
+ * - "upper-bound": the upper bound of the parameter.
+ * - "abstol": the absolute tolerance of the parameter.
+ * - "fit": whether the parameter is a fitting parameter.
+ * - "value": the current value of the parameter.
+ *
+ * Other keys are ignored.
+ *
+ */
+void
+ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GError **error)
+{
+  NcmModelPrivate * const self = ncm_model_get_instance_private (model);
+
+  g_return_if_fail (error == NULL || *error == NULL);
+
+  {
+    guint i;
+    const gboolean has_param = ncm_model_param_index_from_name (model, param, &i, error);
+
+    if (!has_param)
+    {
+      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
+                                  "ncm_model_param_set_desc: model `%s' does not have a parameter called `%s'.",
+                                  G_OBJECT_TYPE_NAME (model), param);
+
+      return;
+    }
+    else
+    {
+      if (g_hash_table_lookup (desc, "scale"))
+      {
+        GValue *value = g_hash_table_lookup (desc, "scale");
+
+        if (!G_VALUE_HOLDS_DOUBLE (value))
+        {
+          ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
+                                      "ncm_model_param_set_desc: scale must be a double.");
+
+          return;
+        }
+
+        ncm_model_param_set_scale (model, i, g_value_get_double (value));
+      }
+
+      if (g_hash_table_lookup (desc, "lower-bound"))
+      {
+        GValue *value = g_hash_table_lookup (desc, "lower-bound");
+
+        if (!G_VALUE_HOLDS_DOUBLE (value))
+        {
+          ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
+                                      "ncm_model_param_set_desc: lower-bound must be a double.");
+
+          return;
+        }
+
+        ncm_model_param_set_lower_bound (model, i, g_value_get_double (value));
+      }
+
+      if (g_hash_table_lookup (desc, "upper-bound"))
+      {
+        GValue *value = g_hash_table_lookup (desc, "upper-bound");
+
+        if (!G_VALUE_HOLDS_DOUBLE (value))
+        {
+          ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
+                                      "ncm_model_param_set_desc: upper-bound must be a double.");
+
+          return;
+        }
+
+        ncm_model_param_set_upper_bound (model, i, g_value_get_double (value));
+      }
+
+      if (g_hash_table_lookup (desc, "abstol"))
+      {
+        GValue *value = g_hash_table_lookup (desc, "abstol");
+
+        if (!G_VALUE_HOLDS_DOUBLE (value))
+        {
+          ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
+                                      "ncm_model_param_set_desc: abstol must be a double.");
+
+          return;
+        }
+
+        ncm_model_param_set_abstol (model, i, g_value_get_double (value));
+      }
+
+      if (g_hash_table_lookup (desc, "fit"))
+      {
+        GValue *value = g_hash_table_lookup (desc, "fit");
+
+        if (!G_VALUE_HOLDS_BOOLEAN (value))
+        {
+          ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
+                                      "ncm_model_param_set_desc: fit must be a boolean.");
+
+          return;
+        }
+
+        ncm_model_param_set_ftype (model, i, g_value_get_boolean (value) ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
+      }
+
+      if (g_hash_table_lookup (desc, "value"))
+      {
+        GValue *value = g_hash_table_lookup (desc, "value");
+
+        if (!G_VALUE_HOLDS_DOUBLE (value))
+        {
+          ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
+                                      "ncm_model_param_set_desc: value must be a double.");
+
+          return;
+        }
+
+        ncm_model_param_set (model, i, g_value_get_double (value));
+      }
+
+      return;
+    }
+  }
+}
+
+/**
  * ncm_model_orig_param_get_name:
  * @model: a #NcmModel
  * @n: parameter index

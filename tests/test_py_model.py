@@ -314,3 +314,187 @@ def test_model_setitem_getitem_not_found() -> None:
         ),
     ):
         rosenbrock["x3"] = 1.0
+
+
+def test_model_get_desc() -> None:
+    """Test the Ncm.Model.param_get_desc() method."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+    x1_desc = rosenbrock.param_get_desc("x1")
+
+    assert x1_desc["name"] == rosenbrock.param_name(Ncm.ModelRosenbrockSParams.X1)
+    assert x1_desc["symbol"] == rosenbrock.param_symbol(Ncm.ModelRosenbrockSParams.X1)
+    assert x1_desc["lower-bound"] == rosenbrock.param_get_lower_bound(
+        Ncm.ModelRosenbrockSParams.X1
+    )
+    assert x1_desc["upper-bound"] == rosenbrock.param_get_upper_bound(
+        Ncm.ModelRosenbrockSParams.X1
+    )
+    assert x1_desc["scale"] == rosenbrock.param_get_scale(Ncm.ModelRosenbrockSParams.X1)
+    assert x1_desc["abstol"] == rosenbrock.param_get_abstol(
+        Ncm.ModelRosenbrockSParams.X1
+    )
+    assert (
+        Ncm.ParamType.FREE if x1_desc["fit"] else Ncm.ParamType.FIXED
+    ) == rosenbrock.param_get_ftype(Ncm.ModelRosenbrockSParams.X1)
+
+
+def test_model_get_desc_not_found() -> None:
+    """Test the Ncm.Model.param_get_desc() method."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-model-error: ncm_model_param_get_desc: model `NcmModelRosenbrock' "
+            rf"does not have a parameter called `x3'. "
+            rf"\({int(Ncm.ModelError.PARAM_NAME_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        _ = rosenbrock.param_get_desc("x3")
+
+
+def test_model_set_desc() -> None:
+    """Test the Ncm.Model.param_set_desc() method."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    rosenbrock.param_set_desc(
+        "x1",
+        {
+            "lower-bound": -1.023,
+            "upper-bound": 21.0,
+            "scale": 155.0,
+            "abstol": 1.0e-50,
+            "fit": True,
+            "value": 45.22,
+        },
+    )
+
+    assert_allclose(rosenbrock.param_get_by_name("x1"), 45.22)
+    assert_allclose(
+        rosenbrock.param_get_lower_bound(Ncm.ModelRosenbrockSParams.X1), -1.023
+    )
+    assert_allclose(
+        rosenbrock.param_get_upper_bound(Ncm.ModelRosenbrockSParams.X1), 21.0
+    )
+    assert_allclose(rosenbrock.param_get_scale(Ncm.ModelRosenbrockSParams.X1), 155.0)
+    assert_allclose(rosenbrock.param_get_abstol(Ncm.ModelRosenbrockSParams.X1), 1.0e-50)
+    assert (
+        rosenbrock.param_get_ftype(Ncm.ModelRosenbrockSParams.X1) == Ncm.ParamType.FREE
+    )
+
+
+def test_model_set_desc_not_found() -> None:
+    """Test the Ncm.Model.param_set_desc() method."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-model-error: ncm_model_param_set_desc: model `NcmModelRosenbrock' "
+            rf"does not have a parameter called `x3'. "
+            rf"\({int(Ncm.ModelError.PARAM_NAME_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        rosenbrock.param_set_desc(
+            "x3",
+            {
+                "lower-bound": -1.023,
+                "upper-bound": 21.0,
+                "scale": 155.0,
+                "abstol": 1.0e-50,
+                "fit": True,
+                "value": 45.22,
+            },
+        )
+
+
+def test_model_set_desc_invalid_scale() -> None:
+    """Test the Ncm.Model.param_set_desc() method."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-model-error: ncm_model_param_set_desc: scale must be a double. "
+            rf"\({int(Ncm.ModelError.PARAM_INVALID_TYPE)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        rosenbrock.param_set_desc("x1", {"scale": ("as", "234")})
+
+
+def test_model_set_desc_invalid_abstol() -> None:
+    """Test the Ncm.Model.param_set_desc() method."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-model-error: ncm_model_param_set_desc: abstol must be a double. "
+            rf"\({int(Ncm.ModelError.PARAM_INVALID_TYPE)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        rosenbrock.param_set_desc("x1", {"abstol": "Not a float"})
+
+
+def test_model_set_desc_invalid_fit() -> None:
+    """Test the Ncm.Model.param_set_desc() method."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-model-error: ncm_model_param_set_desc: fit must be a boolean. "
+            rf"\({int(Ncm.ModelError.PARAM_INVALID_TYPE)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        rosenbrock.param_set_desc("x1", {"fit": 1.0})
+
+
+def test_model_set_desc_invalid_value() -> None:
+    """Test the Ncm.Model.param_set_desc() method."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-model-error: ncm_model_param_set_desc: value must be a double. "
+            rf"\({int(Ncm.ModelError.PARAM_INVALID_TYPE)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        rosenbrock.param_set_desc("x1", {"value": "Not a float"})
+
+
+def test_model_set_desc_invalid_lower_bound() -> None:
+    """Test the Ncm.Model.param_set_desc() method."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-model-error: ncm_model_param_set_desc: lower-bound must be a double. "
+            rf"\({int(Ncm.ModelError.PARAM_INVALID_TYPE)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        rosenbrock.param_set_desc("x1", {"lower-bound": "Not a float"})
+
+
+def test_model_set_desc_invalid_upper_bound() -> None:
+    """Test the Ncm.Model.param_set_desc() method."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-model-error: ncm_model_param_set_desc: upper-bound must be a double. "
+            rf"\({int(Ncm.ModelError.PARAM_INVALID_TYPE)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        rosenbrock.param_set_desc("x1", {"upper-bound": "Not a float"})

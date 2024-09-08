@@ -88,6 +88,7 @@ typedef gdouble (*NcmModelVFunc2) (NcmModel *model, const guint n, const gdouble
  * NcmModelError:
  * @NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND: The parameter name was not found.
  * @NCM_MODEL_ERROR_PARAM_ID_OUT_OF_RANGE: The parameter id is out of range.
+ * @NCM_MODEL_ERROR_PARAM_INVALID_TYPE: The parameter type is invalid.
  * @NCM_MODEL_ERROR_ORIG_PARAM_NAME_NOT_FOUND: The original parameter name was not found.
  * @NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE: The reparam is incompatible.
  * @NCM_MODEL_ERROR_INVALID_TYPE: The type is invalid.
@@ -100,6 +101,7 @@ typedef enum _NcmModelError
 {
   NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
   NCM_MODEL_ERROR_PARAM_ID_OUT_OF_RANGE,
+  NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
   NCM_MODEL_ERROR_ORIG_PARAM_NAME_NOT_FOUND,
   NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE,
   NCM_MODEL_ERROR_INVALID_TYPE,
@@ -218,6 +220,9 @@ void ncm_model_param_set_upper_bound (NcmModel *model, guint n, const gdouble ub
 void ncm_model_param_set_abstol (NcmModel *model, guint n, const gdouble abstol);
 void ncm_model_param_set_ftype (NcmModel *model, guint n, const NcmParamType ptype);
 void ncm_model_params_set_default_ftype (NcmModel *model);
+
+GHashTable *ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error);
+void ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GError **error);
 
 gboolean ncm_model_is_submodel (NcmModel *model);
 NcmModelID ncm_model_main_model (NcmModel *model);
