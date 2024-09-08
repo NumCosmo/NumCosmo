@@ -29,14 +29,13 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
-
 gint
 main (gint argc, gchar *argv[])
 {
-  gchar **models = NULL;
-  gchar *outfile = NULL;
+  gchar **models         = NULL;
+  gchar *outfile         = NULL;
   gboolean save_comments = FALSE;
-  gboolean overwrite = FALSE;
+  gboolean overwrite     = FALSE;
 
   GError *error = NULL;
   GOptionContext *context;
@@ -70,19 +69,20 @@ main (gint argc, gchar *argv[])
   }
   else
   {
-    NcmMSet *mset = ncm_mset_empty_new ();
+    NcmMSet *mset     = ncm_mset_empty_new ();
     NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-    guint nmodels = g_strv_length (models);
+    guint nmodels     = g_strv_length (models);
     guint i;
 
     for (i = 0; i < nmodels; i++)
     {
       NcmModel *model = NCM_MODEL (ncm_serialize_from_string (ser, models[i]));
+
       g_assert (NCM_IS_MODEL (model));
 
       if (ncm_model_is_submodel (model))
       {
-        NcmModelID mid = ncm_model_main_model (model);
+        NcmModelID mid       = ncm_model_main_model (model);
         NcmModel *main_model = ncm_mset_peek (mset, mid);
 
         if (main_model == NULL)
@@ -90,22 +90,23 @@ main (gint argc, gchar *argv[])
 
         ncm_model_add_submodel (main_model, model);
 
-        ncm_mset_set (mset, main_model);
+        ncm_mset_set (mset, main_model, NULL);
       }
       else
       {
-        ncm_mset_set (mset, model);
+        ncm_mset_set (mset, model, NULL);
       }
     }
 
     outfile = outfile != NULL ? outfile : "models.mset";
+
     if (g_file_test (outfile, G_FILE_TEST_EXISTS) && !overwrite)
     {
       g_print ("File `%s' already exists, choose --overwrite/-w to overwrite.\n", outfile);
       exit (1);
     }
 
-    ncm_mset_save (mset, ser, outfile, save_comments);
+    ncm_mset_save (mset, ser, outfile, save_comments, NULL);
 
     ncm_mset_clear (&mset);
     ncm_serialize_clear (&ser);
@@ -113,3 +114,4 @@ main (gint argc, gchar *argv[])
 
   return 0;
 }
+
