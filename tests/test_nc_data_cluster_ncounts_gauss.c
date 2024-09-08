@@ -132,7 +132,7 @@ test_nc_data_cluster_ncounts_gauss_new (TestNcClusterNCountsGauss *test, gconstp
   test->lnM_obs           = ncm_vector_new_data_dup (lnM_obs_array, 2, 1);
   test->lnM_obs_params    = ncm_matrix_new0 (7, 7);
   test->cad               = nc_cluster_abundance_new (mfp, hbias);
-  test->mset              = ncm_mset_new (cosmo, clusterm, clusterz, NULL);
+  test->mset              = ncm_mset_new (cosmo, NULL, clusterm, clusterz, NULL);
   test->ncounts_gauss     = nc_data_cluster_ncounts_gauss_new (test->cad);
   test->area              = g_test_rand_double_range (0.21, 0.27) * 4.0 * ncm_c_pi () / 100.0;
   test->s_matrix          = s;
