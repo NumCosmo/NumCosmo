@@ -207,7 +207,7 @@ test_nc_galaxy_sd_true_redshift_model_id (TestNcGalaxySDTrueRedshift *test, gcon
   NcmSerialize *ser   = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
   NcmModel *model_dup = ncm_model_dup (NCM_MODEL (test->gsdtr), ser);
 
-  ncm_mset_set (model_set, model_dup);
+  ncm_mset_set (model_set, model_dup, NULL);
 
   g_assert_true (NC_IS_GALAXY_SD_TRUE_REDSHIFT (ncm_mset_peek (model_set, nc_galaxy_sd_true_redshift_id ())));
 
@@ -223,9 +223,9 @@ _test_get_z_avg (NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst)
 
   nc_galaxy_sd_true_redshift_get_lim (NC_GALAXY_SD_TRUE_REDSHIFT (gsdtrlsst), &z_min, &z_max);
   {
-    const gdouble alpha = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "alpha");
-    const gdouble beta  = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "beta");
-    const gdouble z0    = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "z0");
+    const gdouble alpha = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "alpha", NULL);
+    const gdouble beta  = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "beta", NULL);
+    const gdouble z0    = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "z0", NULL);
     const gdouble y_lb  = pow (z_min / z0, alpha);
     const gdouble y_ub  = pow (z_max / z0, alpha);
 
@@ -243,9 +243,9 @@ _test_get_z_var (NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst)
 
   nc_galaxy_sd_true_redshift_get_lim (NC_GALAXY_SD_TRUE_REDSHIFT (gsdtrlsst), &z_min, &z_max);
   {
-    const gdouble alpha = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "alpha");
-    const gdouble beta  = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "beta");
-    const gdouble z0    = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "z0");
+    const gdouble alpha = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "alpha", NULL);
+    const gdouble beta  = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "beta", NULL);
+    const gdouble z0    = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "z0", NULL);
     const gdouble y_lb  = pow (z_min / z0, alpha);
     const gdouble y_ub  = pow (z_max / z0, alpha);
 

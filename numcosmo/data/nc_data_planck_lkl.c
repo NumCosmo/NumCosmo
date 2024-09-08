@@ -414,7 +414,7 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       for (i = 0; i < clik->nparams; i++)
       {
         guint pi        = 0;
-        gboolean pfound = ncm_model_param_index_from_name (NCM_MODEL (pfi), clik->pnames[i], &pi);
+        gboolean pfound = ncm_model_param_index_from_name (NCM_MODEL (pfi), clik->pnames[i], &pi, NULL);
 
         if (!pfound)
         {
@@ -487,7 +487,7 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
       ncm_mset_pretty_log (mset);
       ncm_vector_log_vals (clik->data_params, "cl and vals: ", "% 22.15g", TRUE);
-      ncm_mset_save (mset, ser, "debug.mset", TRUE);
+      ncm_mset_save (mset, ser, "debug.mset", TRUE, NULL);
       g_error ("_nc_data_planck_lkl_m2lnL_val: non-finite Cls or parameters.");
     }
 

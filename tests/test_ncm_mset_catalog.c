@@ -136,7 +136,7 @@ test_ncm_mset_catalog_new (TestNcmMSetCatalog *test, gconstpointer pdata)
   NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (dim, 5.0e-3, 1.0e-2, 1.0, 1.0, 2.0, rng);
   NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (dim);
-  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
+  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
   NcmVector *y                   = ncm_data_gauss_cov_peek_mean (NCM_DATA_GAUSS_COV (data_mvnd));
   NcmMSetCatalog *mcat;
 
@@ -171,7 +171,7 @@ test_ncm_mset_catalog_new_2_chains (TestNcmMSetCatalog *test, gconstpointer pdat
   NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (dim, 5.0e-3, 1.0e-2, 1.0, 1.0, 2.0, rng);
   NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (dim);
-  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
+  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
   NcmVector *y                   = ncm_data_gauss_cov_peek_mean (NCM_DATA_GAUSS_COV (data_mvnd));
   NcmMSetCatalog *mcat;
 

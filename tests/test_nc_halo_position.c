@@ -141,7 +141,7 @@ test_nc_halo_position_model_id (TestNcHaloPosition *test, gconstpointer pdata)
   NcmMSet *model_set = ncm_mset_empty_new ();
   NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
 
-  ncm_mset_set (model_set, ncm_model_dup (NCM_MODEL (test->hp), ser));
+  ncm_mset_set (model_set, ncm_model_dup (NCM_MODEL (test->hp), ser), NULL);
 
   g_assert_true (NC_IS_HALO_POSITION (ncm_mset_peek (model_set, nc_halo_position_id ())));
 

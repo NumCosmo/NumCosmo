@@ -195,7 +195,7 @@ test_nc_galaxy_sd_position_model_id (TestNcGalaxySDPosition *test, gconstpointer
   NcmSerialize *ser   = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
   NcmModel *model_dup = ncm_model_dup (NCM_MODEL (test->gsdp), ser);
 
-  ncm_mset_set (model_set, model_dup);
+  ncm_mset_set (model_set, model_dup, NULL);
 
   g_assert_true (NC_IS_GALAXY_SD_POSITION (ncm_mset_peek (model_set, nc_galaxy_sd_position_id ())));
 

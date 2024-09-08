@@ -120,7 +120,7 @@ ncm_lh_ratio1d_constructed (GObject *object)
       g_error ("ncm_lh_ratio1d_constructed: cannot use parameter[%d:%u], model not set.",
                lhr1d->pi.mid, lhr1d->pi.pid);
 
-    if (ncm_mset_param_get_ftype (fit_mset, lhr1d->pi.mid, lhr1d->pi.pid) != NCM_PARAM_TYPE_FREE)
+    if (ncm_mset_param_get_ftype (fit_mset, lhr1d->pi.mid, lhr1d->pi.pid, NULL) != NCM_PARAM_TYPE_FREE)
       g_error ("ncm_lh_ratio1d_constructed: cannot find for a non fitted parameter[%d:%u].",
                lhr1d->pi.mid, lhr1d->pi.pid);
 
@@ -311,7 +311,7 @@ ncm_lh_ratio1d_set_pindex (NcmLHRatio1d *lhr1d, NcmMSetPIndex *pi)
   NcmMSet *fit_mset         = ncm_fit_peek_mset (lhr1d->fit);
   NcmMSet *constrained_mset = ncm_fit_peek_mset (lhr1d->constrained);
 
-  if (ncm_mset_param_get_ftype (fit_mset, pi->mid, pi->pid) != NCM_PARAM_TYPE_FREE)
+  if (ncm_mset_param_get_ftype (fit_mset, pi->mid, pi->pid, NULL) != NCM_PARAM_TYPE_FREE)
     g_error ("ncm_lh_ratio1d_set_pindex: cannot find bounds for a non fitted parameter[%d:%u].",
              pi->mid, pi->pid);
 

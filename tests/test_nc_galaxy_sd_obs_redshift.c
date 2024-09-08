@@ -183,7 +183,7 @@ test_nc_galaxy_sd_obs_redshift_model_id (TestNcGalaxySDObsRedshift *test, gconst
   NcmSerialize *ser   = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
   NcmModel *model_dup = ncm_model_dup (NCM_MODEL (test->gsdor), ser);
 
-  ncm_mset_set (model_set, model_dup);
+  ncm_mset_set (model_set, model_dup, NULL);
 
   g_assert_true (NC_IS_GALAXY_SD_OBS_REDSHIFT (ncm_mset_peek (model_set, nc_galaxy_sd_obs_redshift_id ())));
 
@@ -197,9 +197,9 @@ _test_get_z_avg (TestNcGalaxySDObsRedshift *test)
 {
   NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst = nc_galaxy_sd_true_redshift_lsst_srd_new (test->z_min, test->z_max);
 
-  const gdouble alpha = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "alpha");
-  const gdouble beta  = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "beta");
-  const gdouble z0    = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "z0");
+  const gdouble alpha = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "alpha", NULL);
+  const gdouble beta  = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "beta", NULL);
+  const gdouble z0    = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "z0", NULL);
   const gdouble y_lb  = pow (test->z_min / z0, alpha);
   const gdouble y_ub  = pow (test->z_max / z0, alpha);
 
@@ -216,9 +216,9 @@ _test_get_z_var (TestNcGalaxySDObsRedshift *test)
 {
   NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst = nc_galaxy_sd_true_redshift_lsst_srd_new (test->z_min, test->z_max);
 
-  const gdouble alpha = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "alpha");
-  const gdouble beta  = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "beta");
-  const gdouble z0    = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "z0");
+  const gdouble alpha = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "alpha", NULL);
+  const gdouble beta  = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "beta", NULL);
+  const gdouble z0    = ncm_model_param_get_by_name (NCM_MODEL (gsdtrlsst), "z0", NULL);
   const gdouble y_lb  = pow (test->z_min / z0, alpha);
   const gdouble y_ub  = pow (test->z_max / z0, alpha);
 
@@ -274,7 +274,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift *test, gcons
   NcmRNG *rng         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcmVector *data     = ncm_vector_new (2);
   const gdouble z_avg = _test_get_z_avg (test);
-  const gdouble z_var = sqrt (gsl_pow_4 (ncm_model_param_get_by_name (NCM_MODEL (test->gsdor), "sigma") * (1 + z_avg)) + gsl_pow_2 (_test_get_z_var (test)));
+  const gdouble z_var = sqrt (gsl_pow_4 (ncm_model_param_get_by_name (NCM_MODEL (test->gsdor), "sigma", NULL) * (1 + z_avg)) + gsl_pow_2 (_test_get_z_var (test)));
   const guint nruns   = 10;
   const guint ndata   = 10000;
   guint i;

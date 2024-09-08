@@ -801,7 +801,7 @@ main (gint argc, gchar *argv[])
 
       for (i = 0; i < nparams; i++)
       {
-        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, params[i]);
+        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, params[i], NULL);
         gchar *end_ptr          = NULL;
         glong add_param         = strtol (params[i], &end_ptr, 10);
         guint k;
@@ -855,7 +855,7 @@ main (gint argc, gchar *argv[])
 
       for (i = 0; i < nparams; i++)
       {
-        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, params_evol[i]);
+        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, params_evol[i], NULL);
         gchar *end_ptr          = NULL;
         glong add_param         = strtol (params_evol[i], &end_ptr, 10);
         guint t, k;
@@ -910,7 +910,7 @@ main (gint argc, gchar *argv[])
 
       for (i = 0; i < nparams; i++)
       {
-        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, mode_errors[i]);
+        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, mode_errors[i], NULL);
         gchar *end_ptr          = NULL;
         glong add_param         = strtol (mode_errors[i], &end_ptr, 10);
 
@@ -966,7 +966,7 @@ main (gint argc, gchar *argv[])
 
       for (i = 0; i < nparams; i++)
       {
-        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, median_errors[i]);
+        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, median_errors[i], NULL);
         gchar *end_ptr          = NULL;
         glong add_param         = strtol (median_errors[i], &end_ptr, 10);
 
@@ -1049,7 +1049,7 @@ main (gint argc, gchar *argv[])
           }
           else
           {
-            const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, name);
+            const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, name, NULL);
             gchar *end_ptr          = NULL;
             glong add_param         = strtol (name, &end_ptr, 10);
 
@@ -1228,7 +1228,7 @@ main (gint argc, gchar *argv[])
           }
           else
           {
-            const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, name);
+            const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, name, NULL);
             gchar *end_ptr          = NULL;
             glong add_param         = strtol (name, &end_ptr, 10);
             glong pindex;
@@ -1272,7 +1272,7 @@ main (gint argc, gchar *argv[])
           }
           else
           {
-            const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, name);
+            const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, name, NULL);
             gchar *end_ptr          = NULL;
             glong add_param         = strtol (name, &end_ptr, 10);
             glong pindex;
@@ -1359,7 +1359,7 @@ main (gint argc, gchar *argv[])
 
       for (i = 0; i < nparams; i++)
       {
-        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, visual_hw[i]);
+        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, visual_hw[i], NULL);
         gchar *end_ptr          = NULL;
         glong add_param         = strtol (visual_hw[i], &end_ptr, 10);
         guint k;
