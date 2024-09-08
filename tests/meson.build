@@ -409,6 +409,10 @@ python_tests = [
         'source': 'test_py_obj_array.py',
     },
     {
+        'name': 'py_model',
+        'source': 'test_py_model.py',
+    },
+    {
         'name': 'py_mset',
         'source': 'test_py_mset.py',
     },
