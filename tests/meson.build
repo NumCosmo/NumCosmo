@@ -317,8 +317,16 @@ python_tests = [
         'source': 'test_py_cluster_abundance_sampling.py',
     },
     {
+        'name': 'py_hicosmo',
+        'source': 'test_py_hicosmo.py',
+    },
+    {
         'name': 'py_hicosmo_Vexp',
         'source': 'test_py_hicosmo_Vexp.py',
+    },
+    {
+        'name': 'py_hireion',
+        'source': 'test_py_hireion.py',
     },
     {
         'name': 'py_hiprim_two_fluids',
@@ -407,6 +415,10 @@ python_tests = [
     {
         'name': 'py_obj_array',
         'source': 'test_py_obj_array.py',
+    },
+    {
+        'name': 'py_model',
+        'source': 'test_py_model.py',
     },
     {
         'name': 'py_mset',

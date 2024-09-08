@@ -138,7 +138,7 @@ test_nc_cluster_abundance_new (TestNcClusterAbundance *test, gconstpointer pdata
 
   test->cosmo    = nc_hicosmo_ref (cosmo);
   test->cad      = nc_cluster_abundance_new (mfp, hbias);
-  test->mset     = ncm_mset_new (cosmo, clusterm, clusterz, NULL);
+  test->mset     = ncm_mset_new (cosmo, NULL, clusterm, clusterz, NULL);
   test->ncdata   = nc_data_cluster_ncount_new (test->cad, "NcClusterPhotozGaussGlobal", "NcClusterMassAscaso");
   test->clusterm = clusterm;
   test->clusterz = clusterz;
