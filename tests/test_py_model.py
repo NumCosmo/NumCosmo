@@ -33,7 +33,7 @@ from numcosmo_py import Ncm, Nc, GLib, GObject
 Ncm.cfg_init()
 
 
-def test_ncm_model_reparam_lin_shift():
+def test_ncm_model_reparam_lin_shift() -> None:
     """Test the Ncm.ModelReparamLin class."""
     rosenbrock = Ncm.ModelRosenbrock.new()
 
@@ -65,7 +65,7 @@ def test_ncm_model_reparam_lin_shift():
     assert_allclose(rosenbrock.orig_param_get_by_name("x2"), 3.3 - 5.678)
 
 
-def test_ncm_model_reparam_lin_rot():
+def test_ncm_model_reparam_lin_rot() -> None:
     """Test the Ncm.ModelReparamLin class."""
     rosenbrock = Ncm.ModelRosenbrock.new()
 
@@ -107,14 +107,14 @@ def test_ncm_model_reparam_lin_rot():
     )
 
 
-def test_ncm_model_reparam_invalid():
+def test_ncm_model_reparam_invalid() -> None:
     """Test the Ncm.ModelReparamLin class."""
     rosenbrock = Ncm.ModelRosenbrock.new()
 
     reparam = Nc.HICosmoDEReparamOk.new(6)
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-model-error: ncm_model_set_reparam: model `NcmModelRosenbrock' is "
             rf"not compatible with the reparametrization `NcHICosmoDE' "
@@ -125,7 +125,7 @@ def test_ncm_model_reparam_invalid():
         rosenbrock.set_reparam(reparam)
 
 
-def test_ncm_model_reparam_param_changed():
+def test_ncm_model_reparam_param_changed() -> None:
     """Test the Ncm.ModelReparamLin class."""
     rosenbrock = Ncm.ModelRosenbrock.new()
 
@@ -148,7 +148,7 @@ def test_ncm_model_reparam_param_changed():
     assert rosenbrock.peek_reparam() == reparam
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-model-error: ncm_model_param_index_from_name: parameter \(x1\) "
             rf"was changed by a NcmReparam, it is now named \(mu_0\). "
@@ -159,7 +159,7 @@ def test_ncm_model_reparam_param_changed():
         _ = rosenbrock["x1"]
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-model-error: ncm_model_param_index_from_name: parameter \(x2\) "
             rf"was changed by a NcmReparam, it is now named \(mu_1\). "
@@ -170,7 +170,7 @@ def test_ncm_model_reparam_param_changed():
         rosenbrock["x2"] = 1.0
 
 
-def test_model_id_by_type():
+def test_model_id_by_type() -> None:
     """Test the Ncm.Model.id_by_type() method."""
     assert Ncm.Model.id_by_type(Nc.HICosmo) == Nc.HICosmo.id()
     assert Ncm.Model.id_by_type(Nc.HICosmoDE) == Nc.HICosmoDE.id()
@@ -180,10 +180,10 @@ def test_model_id_by_type():
     assert Ncm.Model.id_by_type(Nc.HIReionCamb) == Nc.HIReionCamb.id()
 
 
-def test_model_id_by_type_invalid():
+def test_model_id_by_type_invalid() -> None:
     """Test the Ncm.Model.id_by_name() method."""
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-model-error: ncm_model_id_by_type: type \(GObject\) "
             rf"is not a NcmModel "
@@ -194,7 +194,7 @@ def test_model_id_by_type_invalid():
         _ = Ncm.Model.id_by_type(GObject.Object)
 
 
-def test_model_setget_by_name():
+def test_model_setget_by_name() -> None:
     """Test the Ncm.Model.set_by_name() method."""
     rosenbrock = Ncm.ModelRosenbrock.new()
 
@@ -205,12 +205,12 @@ def test_model_setget_by_name():
     assert_allclose(rosenbrock.param_get_by_name("x2"), 2.0)
 
 
-def test_model_setget_by_name_not_found():
+def test_model_setget_by_name_not_found() -> None:
     """Test the Ncm.Model.set_by_name() method."""
     rosenbrock = Ncm.ModelRosenbrock.new()
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-model-error: ncm_model_param_get_by_name: model "
             rf"`NcmModelRosenbrock' does not have a parameter called `x3'. Use the "
@@ -223,7 +223,7 @@ def test_model_setget_by_name_not_found():
         _ = rosenbrock.param_get_by_name("x3")
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-model-error: ncm_model_param_set_by_name: model "
             rf"`NcmModelRosenbrock' does not have a parameter called `x3'. Use the "
@@ -236,7 +236,7 @@ def test_model_setget_by_name_not_found():
         rosenbrock.param_set_by_name("x3", 1.0)
 
 
-def test_model_orig_setget_by_name():
+def test_model_orig_setget_by_name() -> None:
     """Test the Ncm.Model.orig_param_set_by_name() method."""
     rosenbrock = Ncm.ModelRosenbrock.new()
 
@@ -247,12 +247,12 @@ def test_model_orig_setget_by_name():
     assert_allclose(rosenbrock.orig_param_get_by_name("x2"), 2.0)
 
 
-def test_model_orig_setget_by_name_not_found():
+def test_model_orig_setget_by_name_not_found() -> None:
     """Test the Ncm.Model.orig_param_set_by_name() method."""
     rosenbrock = Ncm.ModelRosenbrock.new()
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-model-error: ncm_model_orig_param_get_by_name: model "
             rf"`NcmModelRosenbrock' does not have a parameter called `x3'. "
@@ -265,7 +265,7 @@ def test_model_orig_setget_by_name_not_found():
         _ = rosenbrock.orig_param_get_by_name("x3")
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-model-error: ncm_model_orig_param_set_by_name: model "
             rf"`NcmModelRosenbrock' does not have a parameter called `x3'. "
@@ -278,7 +278,7 @@ def test_model_orig_setget_by_name_not_found():
         rosenbrock.orig_param_set_by_name("x3", 1.0)
 
 
-def test_model_setitem_getitem():
+def test_model_setitem_getitem() -> None:
     """Test the Ncm.Model.__getitem__() and Ncm.Model.__setitem__() methods."""
     rosenbrock = Ncm.ModelRosenbrock.new()
 
@@ -289,12 +289,12 @@ def test_model_setitem_getitem():
     assert_allclose(rosenbrock["x2"], 2.0)
 
 
-def test_model_setitem_getitem_not_found():
+def test_model_setitem_getitem_not_found() -> None:
     """Test the Ncm.Model.__getitem__() and Ncm.Model.__setitem__() methods."""
     rosenbrock = Ncm.ModelRosenbrock.new()
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-model-error: Parameter named: x3 does not exist in "
             rf"NcmModelRosenbrock "
@@ -305,7 +305,7 @@ def test_model_setitem_getitem_not_found():
         _ = rosenbrock["x3"]
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-model-error: Parameter named: x3 does not exist in "
             rf"NcmModelRosenbrock "

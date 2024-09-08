@@ -248,6 +248,7 @@ ncm_prior_flat_param_new_name (const gchar *name, gdouble x_low, gdouble x_upp, 
                                            "x-upp", x_upp,
                                            "scale", scale,
                                            "model-ns", model_ns,
+                                           "stack-pos", stack_pos,
                                            "parameter-name", param_name,
                                            NULL);
 

@@ -41,6 +41,7 @@
 
 #include "nc_hireion_camb.h"
 #include "nc_hireion_camb_reparam_tau.h"
+#include "math/ncm_util.h"
 
 enum
 {
@@ -425,14 +426,7 @@ nc_hireion_camb_z_to_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, GError **
     NcmReparam *reparam                  = NCM_REPARAM (reparam_tau);
 
     ncm_model_set_reparam (NCM_MODEL (reion_camb), reparam, error);
-
-    if (error && *error)
-    {
-      g_object_unref (reparam);
-
-      return;
-    }
-
+    NCM_UTIL_ON_ERROR_RETURN (error, ncm_reparam_clear (&reparam), );
 
     ncm_reparam_clear (&reparam);
 

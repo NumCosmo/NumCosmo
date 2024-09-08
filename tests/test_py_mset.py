@@ -31,7 +31,7 @@ from numcosmo_py import Ncm, Nc, GLib
 Ncm.cfg_init()
 
 
-def test_mset_new_empty():
+def test_mset_new_empty() -> None:
     """Test the NcmMSet constructor."""
     mset = Ncm.MSet.empty_new()
     assert mset.total_len() == 0
@@ -43,7 +43,7 @@ def test_mset_new_empty():
     assert mset.fparams_len() == 0
 
 
-def test_mset_new_array():
+def test_mset_new_array() -> None:
     """Test the NcmMSet constructor."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -57,7 +57,7 @@ def test_mset_new_array():
     assert mset.fparams_len() == 0
 
 
-def test_mset_peek_model():
+def test_mset_peek_model() -> None:
     """Test the NcmMSet peek_model function."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -67,7 +67,7 @@ def test_mset_peek_model():
     assert isinstance(mset.peek(Ncm.ModelRosenbrock.id()), Ncm.ModelRosenbrock)
 
 
-def test_mset_fetch_model():
+def test_mset_fetch_model() -> None:
     """Test the NcmMSet fetch_model function."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -77,7 +77,7 @@ def test_mset_fetch_model():
     assert isinstance(mset.fetch(Ncm.ModelRosenbrock.id()), Ncm.ModelRosenbrock)
 
 
-def test_mset_model_peek_by_name():
+def test_mset_model_peek_by_name() -> None:
     """Test the NcmMSet peek_model_by_name function."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -93,7 +93,7 @@ def test_mset_model_peek_by_name():
     )
 
 
-def test_mset_model_fetch_by_name():
+def test_mset_model_fetch_by_name() -> None:
     """Test the NcmMSet fetch_model_by_name function."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -109,7 +109,7 @@ def test_mset_model_fetch_by_name():
     )
 
 
-def test_mset_peek_by_name_with_stackpos():
+def test_mset_peek_by_name_with_stackpos() -> None:
     """Test the NcmMSet peek_by_name function."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -126,11 +126,11 @@ def test_mset_peek_by_name_with_stackpos():
     )
 
 
-def test_mset_fetch_model_not_set():
+def test_mset_fetch_model_not_set() -> None:
     """Test the NcmMSet fetch_model function."""
     mset = Ncm.MSet.new_array([Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new()])
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset_fetch: model with id -1 not found. "
             rf"\({int(Ncm.MSetError.MODEL_NOT_SET)}\)$",
@@ -140,11 +140,11 @@ def test_mset_fetch_model_not_set():
         _ = mset.fetch(-1)
 
 
-def test_mset_fetch_by_name_not_set():
+def test_mset_fetch_by_name_not_set() -> None:
     """Test the NcmMSet fetch_by_name function."""
     mset = Ncm.MSet.new_array([Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new()])
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset_fetch_by_name: model with name `NcmModelMVND' "
             rf"not found. \({int(Ncm.MSetError.MODEL_NOT_SET)}\)$",
@@ -154,7 +154,7 @@ def test_mset_fetch_by_name_not_set():
         _ = mset.fetch_by_name("NcmModelMVND")
 
 
-def test_mset_fparam_map():
+def test_mset_fparam_map() -> None:
     """Test the NcmMSet free parameter map."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -207,7 +207,7 @@ def test_mset_fparam_map():
     assert mset.fparam_get_fpi(Ncm.ModelFunnel.id(), 4) == 5
 
 
-def test_mset_fparam_map_change():
+def test_mset_fparam_map_change() -> None:
     """Test the NcmMSet free parameter map."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -295,7 +295,7 @@ def test_mset_fparam_map_change():
     assert mset.fparam_get_fpi(Ncm.ModelFunnel.id(), 4) == 4
 
 
-def test_mset_fparam_get_pi_by_name():
+def test_mset_fparam_get_pi_by_name() -> None:
     """Test the NcmMSet free parameter map."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -342,7 +342,7 @@ def test_mset_fparam_get_pi_by_name():
     assert mset.fparam_get_pi_by_name("NcmModelIdontexist:not") is None
 
 
-def test_mset_fparam_get_pi_by_param_name_only():
+def test_mset_fparam_get_pi_by_param_name_only() -> None:
     """Test the NcmMSet free parameter map."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -389,7 +389,7 @@ def test_mset_fparam_get_pi_by_param_name_only():
     assert mset.fparam_get_pi_by_name("not") is None
 
 
-def test_mset_fparam_get_pi_by_param_name_amiguity():
+def test_mset_fparam_get_pi_by_param_name_amiguity() -> None:
     """Test the NcmMSet free parameter map."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -432,7 +432,7 @@ def test_mset_fparam_get_pi_by_param_name_amiguity():
     assert mset.fparams_len() == 7
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset_fparam_get_pi_by_name: more than one \[2\] "
             rf"parameters with the same name mu_0, use the full name to avoid "
@@ -444,7 +444,7 @@ def test_mset_fparam_get_pi_by_param_name_amiguity():
         _ = mset.fparam_get_pi_by_name("mu_0")
 
 
-def test_mset_fparam_get_pi_by_param_full_stacking():
+def test_mset_fparam_get_pi_by_param_full_stacking() -> None:
     """Test the NcmMSet free parameter map."""
     mset = Ncm.MSet.new_array(
         [
@@ -472,10 +472,10 @@ def test_mset_fparam_get_pi_by_param_full_stacking():
     )
 
 
-def test_mset_split_full_name_invalid_stackpos():
+def test_mset_split_full_name_invalid_stackpos() -> None:
     """Test exception handling in NcmMSet.split_full_name."""
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.escape(
             rf"ncm-mset-error: ncm_mset_param_split_full_name: "
             rf"invalid stackpos number (132344 >= 1000). "
@@ -485,7 +485,7 @@ def test_mset_split_full_name_invalid_stackpos():
         _ = Ncm.MSet.split_full_name("NcHICosmo:132344:w")
 
 
-def test_mset_split_full_name_invalid_name():
+def test_mset_split_full_name_invalid_name() -> None:
     """Test exception handling in NcmMSet.split_full_name."""
     found, _, _, _ = Ncm.MSet.split_full_name("ncHICosmo:132:w")
     assert not found
@@ -496,14 +496,14 @@ def test_mset_split_full_name_invalid_name():
     found, _, _, _ = Ncm.MSet.split_full_name("NcHICosmo:132:w:")
 
 
-def test_mset_peek_by_name_invalid_stackpos():
+def test_mset_peek_by_name_invalid_stackpos() -> None:
     """Test the NcmMSet peek_by_name function."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
     )
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.escape(
             rf"ncm-mset-error: ncm_mset_peek_by_name: "
             rf"invalid stackpos number (sadd). ({int(Ncm.MSetError.NAMESPACE_INVALID)})"
@@ -512,7 +512,7 @@ def test_mset_peek_by_name_invalid_stackpos():
         _ = mset.peek_by_name("NcmModelMVND:sadd")
 
 
-def test_mset_set_pos_with_submodel():
+def test_mset_set_pos_with_submodel() -> None:
     """Test the NcmMSet set_pos with submodel."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -520,7 +520,7 @@ def test_mset_set_pos_with_submodel():
     hireion = Nc.HIReionCamb.new()
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset_set_pos: cannot add "
             rf"model.*\({int(Ncm.MSetError.SUBMODEL)}\)$",
@@ -530,7 +530,7 @@ def test_mset_set_pos_with_submodel():
         mset.set_pos(hireion, 10)
 
 
-def test_mset_pos_with_non_stackable_model():
+def test_mset_pos_with_non_stackable_model() -> None:
     """Test the NcmMSet pos with non-stackable model."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -538,7 +538,7 @@ def test_mset_pos_with_non_stackable_model():
     cosmo = Nc.HICosmoLCDM.new()
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset_set_pos: cannot stack object in position "
             rf"10 NcmMSet, type `NcHICosmoLCDM' is not "
@@ -549,14 +549,14 @@ def test_mset_pos_with_non_stackable_model():
         mset.set_pos(cosmo, 10)
 
 
-def test_mset_set_fmap_invalid_parameter():
+def test_mset_set_fmap_invalid_parameter() -> None:
     """Test the NcmMSet set_fmap with invalid parameter."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
     )
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset_set_fmap: cannot set fmap, invalid param "
             rf"`NcHICosmo:ble'..*\({int(Ncm.MSetError.FULLNAME_NOT_FOUND)}\)$",
@@ -566,14 +566,14 @@ def test_mset_set_fmap_invalid_parameter():
         mset.set_fmap(["NcHICosmo:ble"], True)
 
 
-def test_mset_param_get_ftype_invalid_mid():
+def test_mset_param_get_ftype_invalid_mid() -> None:
     """Test the NcmMSet get_ftype with invalid mid."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
     )
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset_param_get_ftype: cannot get ftype of "
             rf"model-id -1, model not set.*"
@@ -584,7 +584,7 @@ def test_mset_param_get_ftype_invalid_mid():
         mset.param_get_ftype(-1, 0)
 
 
-def test_mset_param_get_by_full_name():
+def test_mset_param_get_by_full_name() -> None:
     """Test the NcmMSet param_get_by_full_name."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -605,14 +605,14 @@ def test_mset_param_get_by_full_name():
     assert pi.pid == Ncm.ModelFunnelSParams.NU
 
 
-def test_mset_param_get_by_full_name_invalid_ns():
+def test_mset_param_get_by_full_name_invalid_ns() -> None:
     """Test the NcmMSet param_get_by_full_name."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
     )
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset_param_get_by_full_name: namespace "
             rf"`NcmModelBla' not found. "
@@ -623,7 +623,7 @@ def test_mset_param_get_by_full_name_invalid_ns():
         _ = mset.param_get_by_full_name("NcmModelBla:ble")
 
 
-def test_mset_param_get_by_full_name_not_found():
+def test_mset_param_get_by_full_name_not_found() -> None:
     """Test the NcmMSet param_get_by_full_name."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -632,14 +632,14 @@ def test_mset_param_get_by_full_name_not_found():
     assert mset.param_get_by_full_name("NcmModelFunnel:ble") is None
 
 
-def test_mset_param_get_by_full_name_invalid():
+def test_mset_param_get_by_full_name_invalid() -> None:
     """Test the NcmMSet param_get_by_full_name."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
     )
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset_param_get_by_full_name: invalid "
             rf"full name `NcmModelFunnelbleble'. "
@@ -650,7 +650,7 @@ def test_mset_param_get_by_full_name_invalid():
         _ = mset.param_get_by_full_name("NcmModelFunnelbleble")
 
 
-def test_mset_setitem():
+def test_mset_setitem() -> None:
     """Test the NcmMSet setitem."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -661,7 +661,7 @@ def test_mset_setitem():
     mset["NcmModelMVND"] = Ncm.ModelMVND.new(9)
 
 
-def test_mset_getitem():
+def test_mset_getitem() -> None:
     """Test the NcmMSet getitem."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
@@ -672,14 +672,14 @@ def test_mset_getitem():
     assert isinstance(mset["NcmModelMVND"], Ncm.ModelMVND)
 
 
-def test_mset_setitem_invalid_mid():
+def test_mset_setitem_invalid_mid() -> None:
     """Test the NcmMSet setitem."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
     )
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset___setitem__: model id mismatch, "
             rf"expected -1, got 2000. "
@@ -690,14 +690,14 @@ def test_mset_setitem_invalid_mid():
         mset[-1] = Ncm.ModelFunnel.new(6)
 
 
-def test_mset_setitem_mid_mismatch():
+def test_mset_setitem_mid_mismatch() -> None:
     """Test the NcmMSet setitem."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
     )
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset___setitem__: model id mismatch, "
             rf"expected {Ncm.ModelRosenbrock.id()}, got {Ncm.ModelFunnel.id()}. "
@@ -708,14 +708,14 @@ def test_mset_setitem_mid_mismatch():
         mset[Ncm.ModelRosenbrock.id()] = Ncm.ModelFunnel.new(6)
 
 
-def test_mset_setitem_invalid_arg():
+def test_mset_setitem_invalid_arg() -> None:
     """Test the NcmMSet setitem."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
     )
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset___setitem__: invalid argument type. "
             rf"\({int(Ncm.MSetError.MODEL_INVALID_ID)}\)$",
@@ -725,14 +725,14 @@ def test_mset_setitem_invalid_arg():
         mset[(1, 2, 4)] = Ncm.ModelFunnel.new(6)
 
 
-def test_mset_setitem_invalid_ns():
+def test_mset_setitem_invalid_ns() -> None:
     """Test the NcmMSet setitem."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
     )
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset___setitem__: namespace "
             rf"`NcmModelBla' not found. "
@@ -743,14 +743,14 @@ def test_mset_setitem_invalid_ns():
         mset["NcmModelBla"] = Ncm.ModelFunnel.new(6)
 
 
-def test_mset_setitem_invalid_ns_stackpos():
+def test_mset_setitem_invalid_ns_stackpos() -> None:
     """Test the NcmMSet setitem."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
     )
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset___setitem__: invalid namespace "
             rf"`NcmModelBla:zaa2'. "
@@ -761,14 +761,14 @@ def test_mset_setitem_invalid_ns_stackpos():
         mset["NcmModelBla:zaa2"] = Ncm.ModelFunnel.new(6)
 
 
-def test_mset_getitem_invalid_ns():
+def test_mset_getitem_invalid_ns() -> None:
     """Test the NcmMSet getitem."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
     )
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset___getitem__: ncm_mset_fetch_by_name: "
             rf"model with name `NcmModelBla' not found. "
@@ -779,14 +779,14 @@ def test_mset_getitem_invalid_ns():
         _ = mset["NcmModelBla"]
 
 
-def test_mset_getitem_invalid_ns_stackpos():
+def test_mset_getitem_invalid_ns_stackpos() -> None:
     """Test the NcmMSet getitem."""
     mset = Ncm.MSet.new_array(
         [Ncm.ModelFunnel.new(5), Ncm.ModelRosenbrock.new(), Ncm.ModelMVND.new(8)]
     )
 
     with pytest.raises(
-        GLib.GError,
+        GLib.Error,
         match=re.compile(
             rf"^ncm-mset-error: ncm_mset___getitem__: ncm_mset_fetch_by_name: "
             rf"ncm_mset_peek_by_name: invalid stackpos number \(zaa2\). "

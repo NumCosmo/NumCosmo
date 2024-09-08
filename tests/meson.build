@@ -325,6 +325,10 @@ python_tests = [
         'source': 'test_py_hicosmo_Vexp.py',
     },
     {
+        'name': 'py_hireion',
+        'source': 'test_py_hireion.py',
+    },
+    {
         'name': 'py_hiprim_two_fluids',
         'source': 'test_py_hiprim_two_fluids.py',
     },
