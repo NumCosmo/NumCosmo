@@ -124,8 +124,8 @@ struct _NcHICosmoGCG
 
 GType nc_hicosmo_gcg_get_type (void) G_GNUC_CONST;
 
-void nc_hicosmo_gcg_omega_x2omega_k (NcHICosmoGCG *cosmo_gcg);
-void nc_hicosmo_gcg_cmb_params (NcHICosmoGCG *cosmo_gcg);
+void nc_hicosmo_gcg_omega_x2omega_k (NcHICosmoGCG *cosmo_gcg, GError **error);
+void nc_hicosmo_gcg_cmb_params (NcHICosmoGCG *cosmo_gcg, GError **error);
 
 /***********************************************************************/
 /* Reparam CMB                                                         */
