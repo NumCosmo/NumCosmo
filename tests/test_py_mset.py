@@ -795,3 +795,67 @@ def test_mset_getitem_invalid_ns_stackpos() -> None:
         ),
     ):
         _ = mset["NcmModelBla:zaa2"]
+
+
+def test_mset_save_no_comments(tmp_path):
+    """Test the NcmMSet save function."""
+    mset = Ncm.MSet.new_array(
+        [
+            Ncm.ModelRosenbrock.new(),
+        ]
+    )
+
+    tmp_file = tmp_path / "simple_keyfile.ini"
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    mset.save(ser, tmp_file.as_posix(), False)
+
+    assert tmp_file.exists()
+
+    mset2 = Ncm.MSet.load(tmp_file.as_posix(), ser)
+    assert mset2.total_len() == mset.total_len()
+
+
+def test_mset_save_with_comments(tmp_path):
+    """Test the NcmMSet save function."""
+    mset = Ncm.MSet.new_array(
+        [
+            Ncm.ModelRosenbrock.new(),
+        ]
+    )
+
+    tmp_file = tmp_path / "simple_keyfile.ini"
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    mset.save(ser, tmp_file.as_posix(), True)
+
+    assert tmp_file.exists()
+
+    mset2 = Ncm.MSet.load(tmp_file.as_posix(), ser)
+    assert mset2.total_len() == mset.total_len()
+
+
+def test_mset_load_empty(tmp_path):
+    """Test the NcmMSet load function."""
+    keyfile = GLib.KeyFile.new()
+
+    tmp_file = tmp_path / "simple_keyfile.ini"
+    keyfile.save_to_file(tmp_file.as_posix())
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    mset = Ncm.MSet.load(tmp_file.as_posix(), ser)
+
+    assert mset is not None
+    assert isinstance(mset, Ncm.MSet)
+
+
+def test_mset_load_not_found():
+    """Test the NcmMSet load function."""
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            r"^g-file-error-quark: ncm_mset_load: Invalid mset configuration file: "
+            r"file_not_found.ini: : No such file or directory \(\d*\)$",
+            re.DOTALL,
+        ),
+    ):
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        _ = Ncm.MSet.load("file_not_found.ini", ser)
