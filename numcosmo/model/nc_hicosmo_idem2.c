@@ -41,6 +41,7 @@
 #include "math/ncm_prior_gauss_func.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 struct _NcHICosmoIDEM2Private
 {
@@ -872,14 +873,7 @@ nc_hicosmo_idem2_omega_x2omega_k (NcHICosmoIDEM2 *cosmo_de, GError **error)
     NcHICosmoIDEM2ReparamOk *idem2_reparam_ok = nc_hicosmo_idem2_reparam_ok_new (ncm_model_len (NCM_MODEL (cosmo_de)));
 
     ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (idem2_reparam_ok), error);
-
-    /* This looks unnecessary, but it is not. */
-    if (error && *error)
-    {
-      ncm_reparam_free (NCM_REPARAM (idem2_reparam_ok));
-
-      return;
-    }
+    NCM_UTIL_ON_ERROR_RETURN (error, ncm_reparam_free (NCM_REPARAM (idem2_reparam_ok)), );
 
     ncm_reparam_free (NCM_REPARAM (idem2_reparam_ok));
 
@@ -903,14 +897,7 @@ nc_hicosmo_idem2_cmb_params (NcHICosmoIDEM2 *cosmo_de, GError **error)
     NcHICosmoIDEM2ReparamCMB *idem2_reparam_cmb = nc_hicosmo_idem2_reparam_cmb_new (ncm_model_len (NCM_MODEL (cosmo_de)));
 
     ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (idem2_reparam_cmb), error);
-
-    /* This looks unnecessary, but it is not. */
-    if (error && *error)
-    {
-      ncm_reparam_free (NCM_REPARAM (idem2_reparam_cmb));
-
-      return;
-    }
+    NCM_UTIL_ON_ERROR_RETURN (error, ncm_reparam_free (NCM_REPARAM (idem2_reparam_cmb)), );
 
     ncm_reparam_free (NCM_REPARAM (idem2_reparam_cmb));
 

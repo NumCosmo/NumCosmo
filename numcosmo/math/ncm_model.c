@@ -3013,13 +3013,16 @@ ncm_model___getitem__ (NcmModel *model, gchar *param, GError **error)
       return GSL_NAN;
 
     if (exists)
+    {
       return ncm_model_param_get (model, i);
+    }
     else
-      g_set_error (error,
-                   NCM_MODEL_ERROR,
-                   NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
-                   "Parameter named: %s does not exist in %s",
-                   param, G_OBJECT_TYPE_NAME (model));
+    {
+      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
+                                  "Parameter named: %s does not exist in %s",
+                                  param, G_OBJECT_TYPE_NAME (model));
+      NCM_UTIL_ON_ERROR_RETURN (error, , GSL_NAN);
+    }
 
     return GSL_NAN;
   }
@@ -3047,11 +3050,16 @@ ncm_model___setitem__ (NcmModel *model, gchar *param, gdouble val, GError **erro
       return;
 
     if (exists)
+    {
       ncm_model_param_set (model, i, val);
+    }
     else
+    {
       ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
                                   "Parameter named: %s does not exist in %s",
                                   param, G_OBJECT_TYPE_NAME (model));
+      NCM_UTIL_ON_ERROR_RETURN (error, , );
+    }
   }
 }
 

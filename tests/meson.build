@@ -317,6 +317,10 @@ python_tests = [
         'source': 'test_py_cluster_abundance_sampling.py',
     },
     {
+        'name': 'py_hicosmo',
+        'source': 'test_py_hicosmo.py',
+    },
+    {
         'name': 'py_hicosmo_Vexp',
         'source': 'test_py_hicosmo_Vexp.py',
     },

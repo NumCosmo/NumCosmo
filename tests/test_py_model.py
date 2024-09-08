@@ -234,3 +234,83 @@ def test_model_setget_by_name_not_found():
         ),
     ):
         rosenbrock.param_set_by_name("x3", 1.0)
+
+
+def test_model_orig_setget_by_name():
+    """Test the Ncm.Model.orig_param_set_by_name() method."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    rosenbrock.orig_param_set_by_name("x1", 1.0)
+    rosenbrock.orig_param_set_by_name("x2", 2.0)
+
+    assert_allclose(rosenbrock.orig_param_get_by_name("x1"), 1.0)
+    assert_allclose(rosenbrock.orig_param_get_by_name("x2"), 2.0)
+
+
+def test_model_orig_setget_by_name_not_found():
+    """Test the Ncm.Model.orig_param_set_by_name() method."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    with pytest.raises(
+        GLib.GError,
+        match=re.compile(
+            rf"^ncm-model-error: ncm_model_orig_param_get_by_name: model "
+            rf"`NcmModelRosenbrock' does not have a parameter called `x3'. "
+            rf"Use the method ncm_model_orig_param_index_from_name\(\) to "
+            rf"check if the parameter exists. "
+            rf"\({int(Ncm.ModelError.ORIG_PARAM_NAME_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        _ = rosenbrock.orig_param_get_by_name("x3")
+
+    with pytest.raises(
+        GLib.GError,
+        match=re.compile(
+            rf"^ncm-model-error: ncm_model_orig_param_set_by_name: model "
+            rf"`NcmModelRosenbrock' does not have a parameter called `x3'. "
+            rf"Use the method ncm_model_orig_param_index_from_name\(\) to "
+            rf"check if the parameter exists. "
+            rf"\({int(Ncm.ModelError.ORIG_PARAM_NAME_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        rosenbrock.orig_param_set_by_name("x3", 1.0)
+
+
+def test_model_setitem_getitem():
+    """Test the Ncm.Model.__getitem__() and Ncm.Model.__setitem__() methods."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    rosenbrock["x1"] = 1.0
+    rosenbrock["x2"] = 2.0
+
+    assert_allclose(rosenbrock["x1"], 1.0)
+    assert_allclose(rosenbrock["x2"], 2.0)
+
+
+def test_model_setitem_getitem_not_found():
+    """Test the Ncm.Model.__getitem__() and Ncm.Model.__setitem__() methods."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    with pytest.raises(
+        GLib.GError,
+        match=re.compile(
+            rf"^ncm-model-error: Parameter named: x3 does not exist in "
+            rf"NcmModelRosenbrock "
+            rf"\({int(Ncm.ModelError.PARAM_NAME_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        _ = rosenbrock["x3"]
+
+    with pytest.raises(
+        GLib.GError,
+        match=re.compile(
+            rf"^ncm-model-error: Parameter named: x3 does not exist in "
+            rf"NcmModelRosenbrock "
+            rf"\({int(Ncm.ModelError.PARAM_NAME_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        rosenbrock["x3"] = 1.0
