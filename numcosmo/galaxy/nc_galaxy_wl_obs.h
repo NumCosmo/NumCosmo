@@ -2,12 +2,13 @@
  *           nc_galaxy_wl_obs.h
  *
  *  Tue Jul 16 06:25:17 2024
- *  Copyright  2024 Caio Lima de Oliveira
- *  <caiooliveiracode@pm.me>
+ *  Copyright  2024 Caio Lima de Oliveira, Sandro Dias Pinto Vitenti
+ *  <caiooliveiracode@pm.me>, <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_galaxy_wl_obs.h
  * Copyright (C) 2024 Caio Lima de Oliveira <caiooliveiracode@pm.me>
+ * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -35,6 +36,14 @@
 #include <numcosmo/math/ncm_obj_array.h>
 #include <numcosmo/math/ncm_spline.h>
 
+typedef struct _NcHICosmo NcHICosmo;
+typedef struct _NcHaloDensityProfile NcHaloDensityProfile;
+typedef struct _NcHaloPosition NcHaloPosition;
+typedef struct _NcWLSurfaceMassDensity NcWLSurfaceMassDensity;
+typedef struct _NcGalaxySDPosition NcGalaxySDPosition;
+typedef struct _NcGalaxySDObsRedshift NcGalaxySDObsRedshift;
+typedef struct _NcGalaxySDShape NcGalaxySDShape;
+
 
 G_BEGIN_DECLS
 
@@ -50,18 +59,40 @@ typedef enum _NcGalaxyWLObsCoord
   NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
 } NcGalaxyWLObsCoord;
 
-struct _NcGalaxyWLObsClass
+typedef struct _NcGalaxyWLObsModels NcGalaxyWLObsModels;
+
+/**
+ * NcGalaxyWLObsModels:
+ * @cosmo: a #NcHICosmo object.
+ * @density_profile: a #NcHaloDensityProfile object.
+ * @surface_mass_density: a #NcWLSurfaceMassDensity object.
+ * @galaxy_position: a #NcGalaxySDPosition object.
+ * @galaxy_redshift: a #NcGalaxySDObsRedshift object.
+ * @galaxy_shape: a #NcGalaxySDShape object.
+ *
+ * A structure to store the models used to analyze the weak lensing galaxy samples.
+ * This is a simple structure to store the models, it will not handle the memory
+ * management of the models. The user must control the reference count of the models.
+ *
+ */
+struct _NcGalaxyWLObsModels
 {
-  /*< private >*/
-  GObjectClass parent_class;
+  NcHICosmo *cosmo;
+  NcHaloDensityProfile *density_profile;
+  NcHaloPosition *halo_position;
+  NcWLSurfaceMassDensity *surface_mass_density;
+  NcGalaxySDPosition *galaxy_position;
+  NcGalaxySDObsRedshift *galaxy_redshift;
+  NcGalaxySDShape *galaxy_shape;
 };
 
-struct _NcGalaxyWLObs
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcGalaxyWLObsPrivate *priv;
-};
+#define NC_TYPE_GALAXY_WL_OBS_MODELS (nc_galaxy_wl_obs_models_get_type ())
+GType nc_galaxy_wl_obs_models_get_type (void) G_GNUC_CONST;
+
+NcGalaxyWLObsModels *nc_galaxy_wl_obs_models_new ();
+NcGalaxyWLObsModels *nc_galaxy_wl_obs_models_dup (const NcGalaxyWLObsModels *models);
+void nc_galaxy_wl_obs_models_free (NcGalaxyWLObsModels *models);
+
 
 NcGalaxyWLObs *nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names);
 NcGalaxyWLObs *nc_galaxy_wl_obs_ref (NcGalaxyWLObs *obs);
@@ -75,13 +106,12 @@ void nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcmSpline *pz);
 gdouble nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint i);
 NcmSpline *nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i);
 
-NcmVarDict *nc_galaxy_wl_obs_peek_header (NcGalaxyWLObs *obs);
 GStrv nc_galaxy_wl_obs_peek_columns (NcGalaxyWLObs *obs);
 
 void nc_galaxy_wl_obs_set_coord (NcGalaxyWLObs *obs, NcGalaxyWLObsCoord coord);
 NcGalaxyWLObsCoord nc_galaxy_wl_obs_get_coord (NcGalaxyWLObs *obs);
 
-gdouble nc_galaxy_wl_obs_len (NcGalaxyWLObs *obs);
+guint nc_galaxy_wl_obs_len (NcGalaxyWLObs *obs);
 
 G_END_DECLS
 

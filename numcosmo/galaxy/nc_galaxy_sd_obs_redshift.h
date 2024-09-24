@@ -34,6 +34,7 @@
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/galaxy/nc_galaxy_wl_obs.h>
 
 G_BEGIN_DECLS
 
@@ -46,9 +47,9 @@ struct _NcGalaxySDObsRedshiftClass
   /*< private >*/
   NcmModelClass parent_class;
 
-  void (*gen) (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data);
-  gdouble (*integ) (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data);
-  GStrv (*get_header) (NcGalaxySDObsRedshift *gsdor);
+  void (*gen) (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, GArray *data);
+  gdouble (*integ) (NcGalaxySDObsRedshift *gsdor, NcGalaxyWLObsModels *models, gdouble z, gpointer data);
+  GStrv (*get_columns) (NcGalaxySDObsRedshift *gsdor);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[15];
@@ -61,9 +62,9 @@ NcGalaxySDObsRedshift *nc_galaxy_sd_obs_redshift_ref (NcGalaxySDObsRedshift *gsd
 void nc_galaxy_sd_obs_redshift_free (NcGalaxySDObsRedshift *gsdor);
 void nc_galaxy_sd_obs_redshift_clear (NcGalaxySDObsRedshift **gsdor);
 
-void nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data);
-gdouble nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data);
-GStrv nc_galaxy_sd_obs_redshift_get_header (NcGalaxySDObsRedshift *gsdor);
+void nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, GArray *data);
+gdouble nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, NcGalaxyWLObsModels *models, gdouble z, gpointer data);
+GStrv nc_galaxy_sd_obs_redshift_get_columns (NcGalaxySDObsRedshift *gsdor);
 
 G_END_DECLS
 

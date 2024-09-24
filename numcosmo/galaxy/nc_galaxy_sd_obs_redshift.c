@@ -217,9 +217,9 @@ nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVec
  * Returns: the probability density at $z_p$, $P(z_p)$.
  */
 gdouble
-nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data)
+nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, NcGalaxyWLObsModels *models, gdouble z, gpointer data)
 {
-  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->integ (gsdor, z, data);
+  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->integ (gsdor, models, z, data);
 }
 
 /**

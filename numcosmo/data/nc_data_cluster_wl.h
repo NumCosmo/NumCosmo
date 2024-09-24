@@ -46,28 +46,14 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_DATA_CLUSTER_WL (nc_data_cluster_wl_get_type ())
-G_DECLARE_FINAL_TYPE            (NcDataClusterWL, nc_data_cluster_wl, NC, DATA_CLUSTER_WL, NcmData);
+
+G_DECLARE_FINAL_TYPE (NcDataClusterWL, nc_data_cluster_wl, NC, DATA_CLUSTER_WL, NcmData);
 
 typedef struct _NcDataClusterWLPrivate NcDataClusterWLPrivate;
 
-struct _NcDataClusterWLClass
-{
-  /*< private >*/
-  NcmDataClass parent_class;
-};
-
-struct _NcDataClusterWL
-{
-  /*< private >*/
-  NcmData parent_instance;
-  NcDataClusterWLPrivate *priv;
-};
-
-
-NcDataClusterWL *nc_data_cluster_wl_new (NcGalaxySDShape *s_dist, NcGalaxySDObsRedshift *z_dist, NcGalaxySDPosition *p_dist);
+NcDataClusterWL *nc_data_cluster_wl_new ();
 NcDataClusterWL *nc_data_cluster_wl_ref (NcDataClusterWL *dcwl);
-gdouble nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmVector *m2lnP_gal);
-gdouble nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmVector *m2lnP_gal);
+
 void nc_data_cluster_wl_free (NcDataClusterWL *dcwl);
 void nc_data_cluster_wl_clear (NcDataClusterWL **dcwl);
 void nc_data_cluster_wl_set_prec (NcDataClusterWL *dcwl, gdouble prec);
