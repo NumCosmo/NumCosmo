@@ -51,7 +51,7 @@ jobs:
     - name: Create a NumCosmo tarball
       run: meson dist -C build --no-tests
     - name: Upload a Build Artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: release
         path: build/meson-dist/numcosmo-*.tar.xz
