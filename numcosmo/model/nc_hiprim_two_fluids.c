@@ -45,6 +45,7 @@ typedef struct _NcHIPrimTwoFluidsPrivate
 {
   NcmSpline2d *lnSA_powspec_lnk_lnw;
   gboolean use_default_calib;
+  gdouble Omega_r_fiducial;
 } NcHIPrimTwoFluidsPrivate;
 
 
@@ -65,6 +66,7 @@ nc_hiprim_two_fluids_init (NcHIPrimTwoFluids *two_fluids)
 
   self->lnSA_powspec_lnk_lnw = NULL;
   self->use_default_calib    = FALSE;
+  self->Omega_r_fiducial     = 0.0;
 }
 
 static void
@@ -313,6 +315,7 @@ nc_hiprim_two_fluids_set_use_default_calib (NcHIPrimTwoFluids *two_fluids, gbool
   }
 
   self->use_default_calib = use_default_calib;
+  self->Omega_r_fiducial  = 1.0e-5;
 }
 
 /**
