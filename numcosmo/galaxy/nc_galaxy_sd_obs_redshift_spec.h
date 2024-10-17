@@ -44,6 +44,8 @@ NcGalaxySDObsRedshiftSpec *nc_galaxy_sd_obs_redshift_spec_ref (NcGalaxySDObsReds
 void nc_galaxy_sd_obs_redshift_spec_free (NcGalaxySDObsRedshiftSpec *gsdorspec);
 void nc_galaxy_sd_obs_redshift_spec_clear (NcGalaxySDObsRedshiftSpec **gsdorspec);
 
+void nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshiftSpec *gsdorspec, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
+
 G_END_DECLS
 
 #endif /* _NC_GALAXY_SD_OBS_REDSHIFT_SPEC_H_ */

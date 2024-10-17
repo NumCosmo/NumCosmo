@@ -28,8 +28,7 @@
 /**
  * SECTION: nc_galaxy_sd_obs_redshift
  * @title: NcGalaxySDObsRedshift
- * @short_description: Class describing galaxy sample observed redshift
- * distribution.
+ * @short_description: Class describing galaxy sample observed redshift distribution.
  * @stability: Unstable
  *
  *
@@ -58,6 +57,13 @@ enum
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDObsRedshift, nc_galaxy_sd_obs_redshift, NCM_TYPE_MODEL);
+G_DEFINE_BOXED_TYPE (NcGalaxySDObsRedshiftData, nc_galaxy_sd_obs_redshift_data, nc_galaxy_sd_obs_redshift_data_copy, nc_galaxy_sd_obs_redshift_data_free);
+NCM_UTIL_DEFINE_CALLBACK (NcGalaxySDObsRedshiftIntegrand,
+                          NC_GALAXY_SD_OBS_REDSHIFT_INTEGRAND,
+                          nc_galaxy_sd_obs_redshift_integrand,
+                          gdouble,
+                          NCM_UTIL_CALLBACK_ARGS (const gdouble z, NcGalaxySDObsRedshiftData * data),
+                          NCM_UTIL_CALLBACK_ARGS (z, data))
 
 static void
 nc_galaxy_sd_obs_redshift_init (NcGalaxySDObsRedshift *gsdor)
@@ -108,23 +114,23 @@ NCM_MSET_MODEL_REGISTER_ID (nc_galaxy_sd_obs_redshift, NC_TYPE_GALAXY_SD_OBS_RED
 
 /*  LCOV_EXCL_START */
 static void
-_nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data)
+_nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng)
 {
   g_error ("_nc_galaxy_sd_obs_redshift_gen: method not implemented");
 }
 
-static gdouble
-_nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, gdouble z, NcmVector *data)
+static NcGalaxySDObsRedshiftIntegrand *
+_nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor)
 {
   g_error ("_nc_galaxy_sd_obs_redshift_integ: method not implemented");
 
-  return 0.0;
+  return NULL;
 }
 
-static GStrv
-_nc_galaxy_sd_obs_redshift_get_header (NcGalaxySDObsRedshift *gsdor)
+static NcGalaxySDObsRedshiftData *
+_nc_galaxy_sd_obs_redshift_data_new (NcGalaxySDObsRedshift *gsdor)
 {
-  g_error ("_nc_galaxy_sd_obs_redshift_get_header: method not implemented");
+  g_error ("_nc_galaxy_sd_obs_redshift_data_new: method not implemented");
 
   return NULL;
 }
@@ -146,10 +152,138 @@ nc_galaxy_sd_obs_redshift_class_init (NcGalaxySDObsRedshiftClass *klass)
   ncm_mset_model_register_id (model_class, "NcGalaxySDObsRedshift", "Galaxy sample observed redshift distribution", NULL, FALSE, NCM_MSET_MODEL_MAIN);
   ncm_model_class_check_params_info (model_class);
 
-  klass->gen        = &_nc_galaxy_sd_obs_redshift_gen;
-  klass->integ      = &_nc_galaxy_sd_obs_redshift_integ;
-  klass->get_header = &_nc_galaxy_sd_obs_redshift_get_header;
+  klass->gen      = &_nc_galaxy_sd_obs_redshift_gen;
+  klass->integ    = &_nc_galaxy_sd_obs_redshift_integ;
+  klass->data_new = &_nc_galaxy_sd_obs_redshift_data_new;
 }
+
+/**
+ * nc_galaxy_sd_obs_redshift_data_copy:
+ * @data: a #NcGalaxySDObsRedshiftData
+ *
+ * Copies the galaxy redshift data.
+ *
+ * Returns: (transfer full): a copy of @data
+ */
+NcGalaxySDObsRedshiftData *
+nc_galaxy_sd_obs_redshift_data_copy (NcGalaxySDObsRedshiftData *data)
+{
+  NcGalaxySDObsRedshiftData *new_data = g_new0 (NcGalaxySDObsRedshiftData, 1);
+
+  g_assert_nonnull (data->ldata_copy);
+  g_assert_nonnull (data->ldata_destroy);
+
+  new_data->z                      = data->z;
+  new_data->ldata                  = data->ldata_copy (data->ldata);
+  new_data->ldata_destroy          = data->ldata_destroy;
+  new_data->ldata_copy             = data->ldata_copy;
+  new_data->ldata_read_row         = data->ldata_read_row;
+  new_data->ldata_write_row        = data->ldata_write_row;
+  new_data->ldata_required_columns = data->ldata_required_columns;
+
+  return new_data;
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_data_free:
+ * @data: a #NcGalaxySDObsRedshiftData
+ *
+ * Frees the galaxy redshift data.
+ */
+void
+nc_galaxy_sd_obs_redshift_data_free (NcGalaxySDObsRedshiftData *data)
+{
+  g_assert_nonnull (data->ldata_destroy);
+  data->ldata_destroy (data->ldata);
+  g_free (data);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_data_read_row:
+ * @data: a #NcGalaxySDObsRedshiftData
+ * @obs: a #NcGalaxyWLObs
+ * @i: the row index
+ *
+ * Reads the galaxy redshift data from the observation.
+ *
+ */
+void
+nc_galaxy_sd_obs_redshift_data_read_row (NcGalaxySDObsRedshiftData *data, NcGalaxyWLObs *obs, const guint i)
+{
+  data->z = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_OBS_REDSHIFT_COL_Z, i);
+  data->ldata_read_row (data, obs, i);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_data_write_row:
+ * @data: a #NcGalaxySDObsRedshiftData
+ * @obs: a #NcGalaxyWLObs
+ * @i: the row index
+ *
+ * Writes the galaxy redshift data to the observation.
+ *
+ */
+void
+nc_galaxy_sd_obs_redshift_data_write_row (NcGalaxySDObsRedshiftData *data, NcGalaxyWLObs *obs, const guint i)
+{
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_OBS_REDSHIFT_COL_Z, i, data->z);
+  data->ldata_write_row (data, obs, i);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_data_required_columns:
+ * @data: a #NcGalaxySDObsRedshiftData
+ *
+ * Returns: (element-type utf8) (transfer full): the required columns for the galaxy redshift data.
+ */
+GList *
+nc_galaxy_sd_obs_redshift_data_required_columns (NcGalaxySDObsRedshiftData *data)
+{
+  GList *columns = NULL;
+
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_OBS_REDSHIFT_COL_Z));
+  data->ldata_required_columns (data, columns);
+
+  return columns;
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_integrand_new:
+ * @func: (scope async) (closure callback_data): a #NcGalaxySDObsRedshiftIntegrandFunc
+ * @callback_data_free: (scope async) (closure callback_data): a #NcGalaxySDObsRedshiftIntegrandFreeData
+ * @callback_data_copy: (scope async) (closure callback_data): a #NcGalaxySDObsRedshiftIntegrandCopyData
+ * @callback_data_prepare: (scope async) (closure callback_data): a #NcGalaxySDObsRedshiftIntegrandPrepareData
+ * @callback_data: a gpointer
+ *
+ * Creates a new integrand for the galaxy redshift data.
+ * The integrand is a function that takes the redshift @z and the galaxy redshift data @data as arguments.
+ * The function should return the integrand value at @z.
+ *
+ * Returns: (transfer full): a new #NcGalaxySDObsRedshiftIntegrand object.
+ */
+/**
+ * nc_galaxy_sd_obs_redshift_integrand_copy:
+ * @callback_obj: a #NcGalaxySDObsRedshiftIntegrand
+ *
+ * Copies the integrand for the galaxy redshift data.
+ *
+ * Returns: (transfer full): a copy of @callback_obj
+ */
+/**
+ * nc_galaxy_sd_obs_redshift_integrand_free:
+ * @callback_obj: a #NcGalaxySDObsRedshiftIntegrand
+ *
+ * Frees the integrand for the galaxy redshift data.
+ *
+ */
+/**
+ * nc_galaxy_sd_obs_redshift_integrand_prepare:
+ * @callback_obj: a #NcGalaxySDObsRedshiftIntegrand
+ * @mset: a #NcmMSet
+ *
+ * Prepares the integrand for the galaxy redshift data.
+ *
+ */
 
 /**
  * nc_galaxy_sd_obs_redshift_ref:
@@ -193,46 +327,37 @@ nc_galaxy_sd_obs_redshift_clear (NcGalaxySDObsRedshift **gsdor)
 }
 
 /**
- * nc_galaxy_sd_obs_redshift_gen:
- * @gsdor: a #NcGalaxySDObsRedshift
- * @rng: a #NcmRNG
- * @data: a #NcmVector
- *
- * Generates an observed redshift value from the distribution using @rng.
- *
- */
-void
-nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, NcmVector *data)
-{
-  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->gen (gsdor, rng, data);
-}
-
-/**
  * nc_galaxy_sd_obs_redshift_integ:
  * @gsdor: a #NcGalaxySDObsRedshift
- * @data: a #NcmVector
  *
- * Computes the probability density of the observable $z_p$.
+ * Prepares the integrand for the galaxy redshift data.
  *
- * Returns: the probability density at $z_p$, $P(z_p)$.
  */
-gdouble
-nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, NcGalaxyWLObsModels *models, gdouble z, gpointer data)
+NcGalaxySDObsRedshiftIntegrand *
+nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor)
 {
-  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->integ (gsdor, models, z, data);
+  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->integ (gsdor);
 }
 
 /**
- * nc_galaxy_sd_obs_redshift_get_header:
+ * nc_galaxy_sd_obs_redshift_data_new:
  * @gsdor: a #NcGalaxySDObsRedshift
  *
- * Gets the header of the galaxy redshift data.
+ * Creates a new galaxy redshift data.
  *
- * Returns: (transfer full): the header of the galaxy redshift data.
+ * Returns: (transfer full): a new #NcGalaxySDObsRedshiftData object.
  */
-GStrv
-nc_galaxy_sd_obs_redshift_get_header (NcGalaxySDObsRedshift *gsdor)
+NcGalaxySDObsRedshiftData *
+nc_galaxy_sd_obs_redshift_data_new (NcGalaxySDObsRedshift *gsdor)
 {
-  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->get_header (gsdor);
+  NcGalaxySDObsRedshiftData *data = NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->data_new (gsdor);
+
+  g_assert_nonnull (data->ldata_copy);
+  g_assert_nonnull (data->ldata_destroy);
+  g_assert_nonnull (data->ldata_read_row);
+  g_assert_nonnull (data->ldata_write_row);
+  g_assert_nonnull (data->ldata_required_columns);
+
+  return data;
 }
 

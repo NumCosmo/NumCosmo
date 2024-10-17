@@ -43,6 +43,7 @@ static void test_nc_galaxy_wl_obs_free (TestNcGalaxyWLObs *test, gconstpointer p
 
 static void test_nc_galaxy_wl_obs_serialize (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_obs_setget (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_data (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_data_pz (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_header (TestNcGalaxyWLObs *test, gconstpointer pdata);
@@ -69,6 +70,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/numcosmo/nc_galaxy_wl_obs/serialize_pz", TestNcGalaxyWLObs, NULL,
               &test_nc_galaxy_wl_obs_new_pz,
               &test_nc_galaxy_wl_obs_serialize_pz,
+              &test_nc_galaxy_wl_obs_free);
+
+  g_test_add ("/numcosmo/nc_galaxy_wl_obs/setget", TestNcGalaxyWLObs, NULL,
+              &test_nc_galaxy_wl_obs_new,
+              &test_nc_galaxy_wl_obs_setget,
               &test_nc_galaxy_wl_obs_free);
 
   g_test_add ("/numcosmo/nc_galaxy_wl_obs/data", TestNcGalaxyWLObs, NULL,
@@ -156,8 +162,6 @@ test_nc_galaxy_wl_obs_serialize (TestNcGalaxyWLObs *test, gconstpointer pdata)
   NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcGalaxyWLObs *obs_dup;
   NcmSerialize *ser;
-  NcmVarDict *header;
-  NcmVarDict *header_dup;
   GVariant *obs_ser;
   gboolean a;
   gboolean b;
@@ -185,22 +189,16 @@ test_nc_galaxy_wl_obs_serialize (TestNcGalaxyWLObs *test, gconstpointer pdata)
   g_assert_nonnull (obs_dup);
   g_assert_true (NC_IS_GALAXY_WL_OBS (obs_dup));
 
-  header     = nc_galaxy_wl_obs_peek_header (test->obs);
-  header_dup = nc_galaxy_wl_obs_peek_header (obs_dup);
-
-  g_assert_nonnull (header);
-  g_assert_nonnull (header_dup);
-
-  g_assert_true (ncm_var_dict_get_int (header, "ra", &j));
-  g_assert_true (ncm_var_dict_get_int (header_dup, "ra", &k));
+  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "ra", &j));
+  g_assert_true (nc_galaxy_wl_obs_get_index (obs_dup, "ra", &k));
   g_assert_cmpint (j, ==, k);
 
-  g_assert_true (ncm_var_dict_get_int (header, "dec", &j));
-  g_assert_true (ncm_var_dict_get_int (header_dup, "dec", &k));
+  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "dec", &j));
+  g_assert_true (nc_galaxy_wl_obs_get_index (obs_dup, "dec", &k));
   g_assert_cmpint (j, ==, k);
 
-  g_assert_true (ncm_var_dict_get_int (header, "z", &j));
-  g_assert_true (ncm_var_dict_get_int (header_dup, "z", &k));
+  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "z", &j));
+  g_assert_true (nc_galaxy_wl_obs_get_index (obs_dup, "z", &k));
   g_assert_cmpint (j, ==, k);
 
   for (i = 0; i < nc_galaxy_wl_obs_len (test->obs); i++)
@@ -224,9 +222,7 @@ test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata
   NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcGalaxyWLObs *obs_dup;
   NcmSerialize *ser;
-  NcmVarDict *header;
-  NcmVarDict *header_dup;
-  gchar *obs_ser;
+  GVariant *obs_ser;
   gboolean a;
   gboolean b;
   gdouble val;
@@ -266,29 +262,19 @@ test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata
   }
 
   ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  obs_ser = ncm_serialize_to_string (ser, G_OBJECT (test->obs), TRUE);
-  obs_dup = NC_GALAXY_WL_OBS (ncm_serialize_from_string (ser, obs_ser));
+  obs_ser = ncm_serialize_to_variant (ser, G_OBJECT (test->obs));
+  obs_dup = NC_GALAXY_WL_OBS (ncm_serialize_from_variant (ser, obs_ser));
 
   g_assert_nonnull (obs_dup);
   g_assert_true (NC_IS_GALAXY_WL_OBS (obs_dup));
 
-  header     = nc_galaxy_wl_obs_peek_header (test->obs);
-  header_dup = nc_galaxy_wl_obs_peek_header (obs_dup);
-
-  g_assert_nonnull (header);
-  g_assert_nonnull (header_dup);
-
-  g_assert_true (ncm_var_dict_get_int (header, "ra", &j));
-  g_assert_true (ncm_var_dict_get_int (header_dup, "ra", &k));
+  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "ra", &j));
+  g_assert_true (nc_galaxy_wl_obs_get_index (obs_dup, "ra", &k));
   g_assert_cmpint (j, ==, k);
 
-  g_assert_true (ncm_var_dict_get_int (header, "dec", &j));
-  g_assert_true (ncm_var_dict_get_int (header_dup, "dec", &k));
+  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "dec", &j));
+  g_assert_true (nc_galaxy_wl_obs_get_index (obs_dup, "dec", &k));
   g_assert_cmpint (j, ==, k);
-
-  g_assert_true (ncm_var_dict_get_boolean (header, "pz", &a));
-  g_assert_true (ncm_var_dict_get_boolean (header_dup, "pz", &b));
-  g_assert_false (a ^ b);
 
   g_assert_cmpint (nc_galaxy_wl_obs_get_coord (test->obs), ==, nc_galaxy_wl_obs_get_coord (obs_dup));
 
@@ -305,10 +291,70 @@ test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata
     }
   }
 
-  g_free (obs_ser);
+  g_variant_unref (obs_ser);
   ncm_serialize_free (ser);
   ncm_rng_free (rng);
   nc_galaxy_wl_obs_free (obs_dup);
+}
+
+static void
+test_nc_galaxy_wl_obs_setget (TestNcGalaxyWLObs *test, gconstpointer pdata)
+{
+  NcmRNG *rng        = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  guint ngals        = 200;
+  GStrv header       = g_strsplit ("ra dec z e1 e2 e1_int e2_int e_rms e_sigma", " ", -1);
+  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, ngals, header);
+  NcGalaxyWLObs *obs2;
+  guint i;
+
+  for (i = 0; i < ngals; i++)
+  {
+    gdouble ra      = ncm_rng_uniform_gen (rng, 0.0, 360.0);
+    gdouble dec     = ncm_rng_uniform_gen (rng, -90.0, 90.0);
+    gdouble z       = ncm_rng_uniform_gen (rng, 0.0, 5.0);
+    gdouble e1      = ncm_rng_uniform_gen (rng, -1.0, 1.0);
+    gdouble e2      = ncm_rng_uniform_gen (rng, -1.0, 1.0);
+    gdouble e_rms   = ncm_rng_uniform_gen (rng, 0.0, 0.3);
+    gdouble e_sigma = ncm_rng_uniform_gen (rng, 0.0, 0.1);
+
+    nc_galaxy_wl_obs_set (obs, "ra", i, ra);
+    nc_galaxy_wl_obs_set (obs, "dec", i, dec);
+    nc_galaxy_wl_obs_set (obs, "z", i, z);
+    nc_galaxy_wl_obs_set (obs, "e1", i, e1);
+    nc_galaxy_wl_obs_set (obs, "e2", i, e2);
+    nc_galaxy_wl_obs_set (obs, "e1_int", i, e1);
+    nc_galaxy_wl_obs_set (obs, "e2_int", i, e2);
+    nc_galaxy_wl_obs_set (obs, "e_rms", i, e_rms);
+    nc_galaxy_wl_obs_set (obs, "e_sigma", i, e_sigma);
+  }
+
+  obs2 = NC_GALAXY_WL_OBS (ncm_serialize_dup_obj (ser, G_OBJECT (obs)));
+
+  for (i = 0; i < ngals; i++)
+  {
+    gdouble ra      = nc_galaxy_wl_obs_get (obs2, "ra", i);
+    gdouble dec     = nc_galaxy_wl_obs_get (obs2, "dec", i);
+    gdouble z       = nc_galaxy_wl_obs_get (obs2, "z", i);
+    gdouble e1      = nc_galaxy_wl_obs_get (obs2, "e1", i);
+    gdouble e2      = nc_galaxy_wl_obs_get (obs2, "e2", i);
+    gdouble e_rms   = nc_galaxy_wl_obs_get (obs2, "e_rms", i);
+    gdouble e_sigma = nc_galaxy_wl_obs_get (obs2, "e_sigma", i);
+
+    g_assert_cmpfloat (ra, ==, nc_galaxy_wl_obs_get (obs, "ra", i));
+    g_assert_cmpfloat (dec, ==, nc_galaxy_wl_obs_get (obs, "dec", i));
+    g_assert_cmpfloat (z, ==, nc_galaxy_wl_obs_get (obs, "z", i));
+    g_assert_cmpfloat (e1, ==, nc_galaxy_wl_obs_get (obs, "e1", i));
+    g_assert_cmpfloat (e2, ==, nc_galaxy_wl_obs_get (obs, "e2", i));
+    g_assert_cmpfloat (e_rms, ==, nc_galaxy_wl_obs_get (obs, "e_rms", i));
+    g_assert_cmpfloat (e_sigma, ==, nc_galaxy_wl_obs_get (obs, "e_sigma", i));
+  }
+
+  nc_galaxy_wl_obs_free (obs);
+  nc_galaxy_wl_obs_free (obs2);
+  ncm_serialize_free (ser);
+  g_strfreev (header);
+  ncm_rng_free (rng);
 }
 
 static void
@@ -387,41 +433,32 @@ test_nc_galaxy_wl_obs_data_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 static void
 test_nc_galaxy_wl_obs_header (TestNcGalaxyWLObs *test, gconstpointer pdata)
 {
-  NcmVarDict *header = nc_galaxy_wl_obs_peek_header (test->obs);
   gboolean a;
   gint i;
 
-  g_assert_nonnull (header);
-
-  g_assert_true (ncm_var_dict_get_int (header, "ra", &i));
+  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "ra", &i));
   g_assert_cmpint (i, ==, 0);
 
-  g_assert_true (ncm_var_dict_get_int (header, "dec", &i));
+  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "dec", &i));
   g_assert_cmpint (i, ==, 1);
 
-  g_assert_true (ncm_var_dict_get_int (header, "z", &i));
+  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "z", &i));
   g_assert_cmpint (i, ==, 2);
 
-  g_assert_false (ncm_var_dict_get_boolean (header, "pz", &a));
+  g_assert_false (nc_galaxy_wl_obs_get_index (test->obs, "pz", &i));
 }
 
 static void
 test_nc_galaxy_wl_obs_header_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 {
-  NcmVarDict *header = nc_galaxy_wl_obs_peek_header (test->obs);
   gboolean a;
   gint i;
 
-  g_assert_nonnull (header);
-
-  g_assert_true (ncm_var_dict_get_int (header, "ra", &i));
+  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "ra", &i));
   g_assert_cmpint (i, ==, 0);
 
-  g_assert_true (ncm_var_dict_get_int (header, "dec", &i));
+  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "dec", &i));
   g_assert_cmpint (i, ==, 1);
-
-  g_assert_true (ncm_var_dict_get_boolean (header, "pz", &a));
-  g_assert_true (a);
 }
 
 static void

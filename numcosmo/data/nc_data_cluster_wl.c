@@ -65,25 +65,34 @@
 struct _NcDataClusterWLPrivate
 {
   NcGalaxyWLObs *obs;
-  NcmObjArray *s_obs;
-  NcmObjArray *s_obs_prep;
-  NcmObjArray *z_obs;
-  NcmObjArray *p_obs;
+  GPtrArray *shape_data;
   gboolean constructed;
   gdouble r_min;
   gdouble r_max;
   gdouble prec;
   guint len;
+  NcmModelCtrl *ctrl_redshift;
+  NcmModelCtrl *ctrl_position;
+  NcmModelCtrl *ctrl_shape;
+  /* Integration temporary variables */
+  NcmVector *err;
+  NcmVector *zpi;
+  NcmVector *zpf;
+  NcmVector *res;
+  NcmVector *tmp;
+  NcHICosmo *cosmo;
+  NcWLSurfaceMassDensity *surface_mass_density;
+  NcHaloDensityProfile *density_profile;
+  NcHaloPosition *halo_position;
+  NcGalaxySDShape *galaxy_shape;
+  NcGalaxySDObsRedshift *galaxy_redshift;
+  NcGalaxySDPosition *galaxy_position;
 };
 
 enum
 {
   PROP_0,
   PROP_OBS,
-  PROP_S_OBS,
-  PROP_S_OBS_PREP,
-  PROP_Z_OBS,
-  PROP_P_OBS,
   PROP_R_MIN,
   PROP_R_MAX,
   PROP_PREC,
@@ -104,16 +113,24 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
 {
   NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
 
-  self->obs         = NULL;
-  self->s_obs       = NULL;
-  self->s_obs_prep  = NULL;
-  self->z_obs       = NULL;
-  self->p_obs       = NULL;
-  self->constructed = FALSE;
-  self->r_max       = 0.0;
-  self->r_min       = 0.0;
-  self->prec        = 1.0e-6;
-  self->len         = 0;
+  self->obs           = NULL;
+  self->shape_data    = g_ptr_array_new ();
+  self->constructed   = FALSE;
+  self->r_max         = 0.0;
+  self->r_min         = 0.0;
+  self->prec          = 1.0e-6;
+  self->len           = 0;
+  self->ctrl_redshift = ncm_model_ctrl_new (NULL);
+  self->ctrl_position = ncm_model_ctrl_new (NULL);
+  self->ctrl_shape    = ncm_model_ctrl_new (NULL);
+
+  self->err = ncm_vector_new (1);
+  self->zpi = ncm_vector_new (1);
+  self->zpf = ncm_vector_new (1);
+  self->res = ncm_vector_new (1);
+  self->tmp = ncm_vector_new (1);
+
+  g_ptr_array_set_free_func (self->shape_data, (GDestroyNotify) nc_galaxy_sd_shape_data_free);
 }
 
 static void
@@ -128,18 +145,6 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
   {
     case PROP_OBS:
       nc_data_cluster_wl_set_obs (dcwl, g_value_dup_object (value));
-      break;
-    case PROP_S_OBS:
-      self->s_obs = g_value_dup_boxed (value);
-      break;
-    case PROP_S_OBS_PREP:
-      self->s_obs_prep = g_value_dup_boxed (value);
-      break;
-    case PROP_Z_OBS:
-      self->z_obs = g_value_dup_boxed (value);
-      break;
-    case PROP_P_OBS:
-      self->p_obs = g_value_dup_boxed (value);
       break;
     case PROP_R_MIN:
       self->r_min = g_value_get_double (value);
@@ -180,18 +185,6 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_OBS:
       g_value_set_object (value, nc_data_cluster_wl_peek_obs (dcwl));
       break;
-    case PROP_S_OBS:
-      g_value_set_boxed (value, self->s_obs);
-      break;
-    case PROP_S_OBS_PREP:
-      g_value_set_boxed (value, self->s_obs_prep);
-      break;
-    case PROP_Z_OBS:
-      g_value_set_boxed (value, self->z_obs);
-      break;
-    case PROP_P_OBS:
-      g_value_set_boxed (value, self->p_obs);
-      break;
     case PROP_R_MIN:
       g_value_set_double (value, self->r_min);
       break;
@@ -216,20 +209,13 @@ nc_data_cluster_wl_dispose (GObject *object)
   NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (object);
   NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
 
-  if (self->obs != NULL)
-    nc_galaxy_wl_obs_clear (&self->obs);
+  nc_galaxy_wl_obs_clear (&self->obs);
 
-  if (self->s_obs != NULL)
-    ncm_obj_array_clear (&self->s_obs);
+  ncm_model_ctrl_clear (&self->ctrl_redshift);
+  ncm_model_ctrl_clear (&self->ctrl_position);
+  ncm_model_ctrl_clear (&self->ctrl_shape);
 
-  if (self->s_obs_prep != NULL)
-    ncm_obj_array_clear (&self->s_obs_prep);
-
-  if (self->z_obs != NULL)
-    ncm_obj_array_clear (&self->z_obs);
-
-  if (self->p_obs != NULL)
-    ncm_obj_array_clear (&self->p_obs);
+  g_clear_pointer (&self->shape_data, g_ptr_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_wl_parent_class)->dispose (object);
@@ -238,7 +224,14 @@ nc_data_cluster_wl_dispose (GObject *object)
 static void
 nc_data_cluster_wl_finalize (GObject *object)
 {
-  /*NcDataClusterWL *dcwl = NC_DATA_CLUSTER_WL (object);*/
+  NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (object);
+  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
+
+  ncm_vector_clear (&self->err);
+  ncm_vector_clear (&self->zpi);
+  ncm_vector_clear (&self->zpf);
+  ncm_vector_clear (&self->res);
+  ncm_vector_clear (&self->tmp);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_wl_parent_class)->finalize (object);
@@ -288,62 +281,6 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                         "Galaxy weak lensing observables",
                                                         NC_TYPE_GALAXY_WL_OBS,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcDataClusterWL:s-obs:
-   *
-   * Galaxy shape observables matrix.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_S_OBS,
-                                   g_param_spec_boxed ("s-obs",
-                                                       NULL,
-                                                       "Galaxy shape observables matrix",
-                                                       NCM_TYPE_OBJ_ARRAY,
-                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcDataClusterWL:s-obs-prep:
-   *
-   * Prepared galaxy shape observables matrix.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_S_OBS_PREP,
-                                   g_param_spec_boxed ("s-obs-prep",
-                                                       NULL,
-                                                       "Prepared galaxy shape observables matrix",
-                                                       NCM_TYPE_OBJ_ARRAY,
-                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcDataClusterWL:z-obs:
-   *
-   * Galaxy redshift observables matrix.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_Z_OBS,
-                                   g_param_spec_boxed ("z-obs",
-                                                       NULL,
-                                                       "Galaxy redshift observables matrix",
-                                                       NCM_TYPE_OBJ_ARRAY,
-                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcDataClusterWL:p-obs:
-   *
-   * Galaxy position observables matrix.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_P_OBS,
-                                   g_param_spec_boxed ("p-obs",
-                                                       NULL,
-                                                       "Galaxy position observables matrix",
-                                                       NCM_TYPE_OBJ_ARRAY,
-                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcDataClusterWL:theta-min:
@@ -408,16 +345,10 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
 
 struct _NcDataClusterWLIntArg
 {
-  NcGalaxySDPosition *p_dist;
-  NcGalaxySDObsRedshift *z_dist;
-  NcGalaxySDShape *s_dist;
-  NcHICosmo *cosmo;
-  NcHaloDensityProfile *dp;
-  NcWLSurfaceMassDensity *smd;
-  NcHaloPosition *hp;
-  NcmVector *s_obs;
-  NcmVector *z_obs;
-  NcmVector *p_obs;
+  NcGalaxySDObsRedshiftIntegrand *integrand_redshift;
+  NcGalaxySDPositionIntegrand *integrand_position;
+  NcGalaxySDShapeIntegrand *integrand_shape;
+  NcGalaxySDShapeData *data;
 };
 
 static void nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
@@ -428,15 +359,19 @@ NCM_INTEGRAL_ND_DEFINE_TYPE (NC, DATA_CLUSTER_WL_INT, NcDataClusterWLInt, nc_dat
 static void
 nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
 {
-  NcDataClusterWLInt *lh_int = NC_DATA_CLUSTER_WL_INT (intnd);
+  NcDataClusterWLInt *lh_int                         = NC_DATA_CLUSTER_WL_INT (intnd);
+  NcGalaxySDShapeData *data                          = lh_int->data.data;
+  NcGalaxySDObsRedshiftIntegrand *integrand_redshift = lh_int->data.integrand_redshift;
+  NcGalaxySDPositionIntegrand *integrand_position    = lh_int->data.integrand_position;
+  NcGalaxySDShapeIntegrand *integrand_shape          = lh_int->data.integrand_shape;
   guint i;
 
   for (i = 0; i < npoints; i++)
   {
-    const gdouble z = ncm_vector_get (x, i);
-    gdouble res     = nc_galaxy_sd_position_integ (lh_int->data.p_dist, lh_int->data.p_obs) *
-                      nc_galaxy_sd_obs_redshift_integ (lh_int->data.z_dist, z, lh_int->data.z_obs) *
-                      nc_galaxy_sd_shape_integ_optzs (lh_int->data.s_dist, lh_int->data.cosmo, lh_int->data.dp, lh_int->data.smd, lh_int->data.hp, z, lh_int->data.s_obs);
+    const gdouble z = ncm_vector_fast_get (x, i);
+    gdouble res     = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, data->sdpos_data->sdz_data) *
+                      nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data) *
+                      nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
 
     ncm_vector_set (fval, i, res);
   }
@@ -450,55 +385,45 @@ nc_data_cluster_wl_int_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
 }
 
 static gdouble
-_nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcHICosmo *cosmo,
-                                      NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp,
-                                      NcGalaxySDPosition *p_dist, NcGalaxySDObsRedshift *z_dist, NcGalaxySDShape *s_dist,
-                                      NcmVector *m2lnP_gal)
+_nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
-  NcDataClusterWLPrivate * const self     = nc_data_cluster_wl_get_instance_private (dcwl);
-  NcDataClusterWLInt *likelihood_integral = g_object_new (nc_data_cluster_wl_integ_get_type (), NULL);
-  NcmIntegralND *lh_int                   = NCM_INTEGRAL_ND (likelihood_integral);
-  gdouble verr, vzpi, vzpf, vres, vtmp;
-  NcmVector *err = ncm_vector_new_data_static (&verr, 1, 1);
-  NcmVector *zpi = ncm_vector_new_data_static (&vzpi, 1, 1);
-  NcmVector *zpf = ncm_vector_new_data_static (&vzpf, 1, 1);
-  NcmVector *res = ncm_vector_new_data_static (&vres, 1, 1);
-  NcmVector *tmp = ncm_vector_new_data_static (&vtmp, 1, 1);
-  gdouble result = 0;
+  NcDataClusterWLPrivate * const self                = nc_data_cluster_wl_get_instance_private (dcwl);
+  NcDataClusterWLInt *likelihood_integral            = g_object_new (nc_data_cluster_wl_integ_get_type (), NULL);
+  NcmIntegralND *lh_int                              = NCM_INTEGRAL_ND (likelihood_integral);
+  NcGalaxySDObsRedshiftIntegrand *integrand_redshift = nc_galaxy_sd_obs_redshift_integ (self->galaxy_redshift);
+  NcGalaxySDPositionIntegrand *integrand_position    = nc_galaxy_sd_position_integ (self->galaxy_position);
+  NcGalaxySDShapeIntegrand *integrand_shape          = nc_galaxy_sd_shape_integ (self->galaxy_shape);
+  gdouble result                                     = 0;
   guint gal_i;
 
-  vzpi = 0.0;
-  vzpf = 10.0;
+  ncm_vector_fast_set (self->zpi, 0, 0.0);
+  ncm_vector_fast_set (self->zpf, 0, 10.0);
 
   ncm_integral_nd_set_reltol (lh_int, self->prec);
   ncm_integral_nd_set_abstol (lh_int, 0.0);
   ncm_integral_nd_set_method (lh_int, NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V);
 
-  nc_galaxy_sd_shape_prepare (s_dist, cosmo, hp, nc_galaxy_wl_obs_get_coord (self->obs), FALSE, self->s_obs, self->s_obs_prep);
+  likelihood_integral->data.integrand_redshift = integrand_redshift;
+  likelihood_integral->data.integrand_position = integrand_position;
+  likelihood_integral->data.integrand_shape    = integrand_shape;
+
+  nc_galaxy_sd_obs_redshift_integrand_prepare (integrand_redshift, mset);
+  nc_galaxy_sd_position_integrand_prepare (integrand_position, mset);
+  nc_galaxy_sd_shape_integrand_prepare (integrand_shape, mset);
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
 
   for (gal_i = 0; gal_i < self->len; gal_i++)
   {
+    NcGalaxySDShapeData *data = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
     gdouble m2lnP_gal_i;
 
-    likelihood_integral->data.p_dist = NC_GALAXY_SD_POSITION (p_dist);
-    likelihood_integral->data.z_dist = NC_GALAXY_SD_OBS_REDSHIFT (z_dist);
-    likelihood_integral->data.s_dist = NC_GALAXY_SD_SHAPE (s_dist);
-    likelihood_integral->data.cosmo  = cosmo;
-    likelihood_integral->data.dp     = dp;
-    likelihood_integral->data.smd    = smd;
-    likelihood_integral->data.hp     = hp;
-    likelihood_integral->data.s_obs  = NCM_VECTOR (ncm_obj_array_peek (self->s_obs_prep, gal_i));
-    likelihood_integral->data.z_obs  = NCM_VECTOR (ncm_obj_array_peek (self->z_obs, gal_i));
-    likelihood_integral->data.p_obs  = NCM_VECTOR (ncm_obj_array_peek (self->p_obs, gal_i));
+    likelihood_integral->data.data = data;
 
-    nc_galaxy_sd_shape_integ_optzs_prep (s_dist, cosmo, dp, smd, hp, likelihood_integral->data.s_obs);
+    ncm_integral_nd_eval (lh_int, self->zpi, self->zpf, self->res, self->err);
 
-    ncm_integral_nd_eval (lh_int, zpi, zpf, res, err);
-
-    m2lnP_gal_i = -2.0 * log (vres);
+    m2lnP_gal_i = -2.0 * log (ncm_vector_fast_get (self->res, 0));
 
     if (m2lnP_gal != NULL)
       ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
@@ -506,40 +431,45 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcHICosmo *cosmo,
     result += m2lnP_gal_i;
   }
 
-  ncm_vector_free (err);
-  ncm_vector_free (zpi);
-  ncm_vector_free (zpf);
-  ncm_vector_free (res);
-  ncm_vector_free (tmp);
   ncm_integral_nd_clear (&lh_int);
+  nc_galaxy_sd_shape_integrand_free (integrand_shape);
+  nc_galaxy_sd_position_integrand_free (integrand_position);
+  nc_galaxy_sd_obs_redshift_integrand_free (integrand_redshift);
 
   return result;
 }
 
 static gdouble
-_nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo,
-                                NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp,
-                                NcGalaxySDPosition *p_dist, NcGalaxySDObsRedshift *z_dist, NcGalaxySDShape *s_dist,
-                                NcmVector *m2lnP_gal)
+_nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
-  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
-  gdouble result                      = 0;
+  NcDataClusterWLPrivate * const self                = nc_data_cluster_wl_get_instance_private (dcwl);
+  NcGalaxySDObsRedshiftIntegrand *integrand_redshift = nc_galaxy_sd_obs_redshift_integ (self->galaxy_redshift);
+  NcGalaxySDPositionIntegrand *integrand_position    = nc_galaxy_sd_position_integ (self->galaxy_position);
+  NcGalaxySDShapeIntegrand *integrand_shape          = nc_galaxy_sd_shape_integ (self->galaxy_shape);
+  gdouble result                                     = 0;
   guint gal_i;
-
-  nc_galaxy_sd_shape_prepare (s_dist, cosmo, hp, nc_galaxy_wl_obs_get_coord (self->obs), FALSE, self->s_obs, self->s_obs_prep);
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
 
+  nc_galaxy_sd_obs_redshift_integrand_prepare (integrand_redshift, mset);
+  nc_galaxy_sd_position_integrand_prepare (integrand_position, mset);
+  nc_galaxy_sd_shape_integrand_prepare (integrand_shape, mset);
+
   for (gal_i = 0; gal_i < self->len; gal_i++)
   {
-    gdouble z           = ncm_vector_get (NCM_VECTOR (ncm_obj_array_peek (self->z_obs, gal_i)), 0);
-    gdouble m2lnP_gal_i = nc_galaxy_sd_position_integ (p_dist, NCM_VECTOR (ncm_obj_array_peek (self->p_obs, gal_i))) *
-                          nc_galaxy_sd_obs_redshift_integ (z_dist, z, NCM_VECTOR (ncm_obj_array_peek (self->z_obs, gal_i))) *
-                          nc_galaxy_sd_shape_integ_optzs (s_dist, cosmo, dp, smd, hp, z, NCM_VECTOR (ncm_obj_array_peek (self->s_obs, gal_i)));
+    NcGalaxySDShapeData *data = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+    const gdouble z           = data->sdpos_data->sdz_data->z;
+    gdouble m2lnP_gal_i       = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data) *
+                                nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, data->sdpos_data->sdz_data) *
+                                nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
 
     result += m2lnP_gal_i;
   }
+
+  nc_galaxy_sd_shape_integrand_free (integrand_shape);
+  nc_galaxy_sd_position_integrand_free (integrand_position);
+  nc_galaxy_sd_obs_redshift_integrand_free (integrand_redshift);
 
   return result;
 }
@@ -547,35 +477,15 @@ _nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcHICosmo *cosmo,
 static void
 _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
-  NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (data);
-  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
-  NcHICosmo *cosmo                    = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcWLSurfaceMassDensity *smd         = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
-  NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
-  NcHaloPosition *hp                  = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
-  NcGalaxySDShape *s_dist             = NC_GALAXY_SD_SHAPE (ncm_mset_peek (mset, nc_galaxy_sd_shape_id ()));
-  NcGalaxySDObsRedshift *z_dist       = NC_GALAXY_SD_OBS_REDSHIFT (ncm_mset_peek (mset, nc_galaxy_sd_obs_redshift_id ()));
-  NcGalaxySDPosition *p_dist          = NC_GALAXY_SD_POSITION (ncm_mset_peek (mset, nc_galaxy_sd_position_id ()));
-
+  NcDataClusterWL *dcwl                  = NC_DATA_CLUSTER_WL (data);
+  NcDataClusterWLPrivate * const self    = nc_data_cluster_wl_get_instance_private (dcwl);
+  NcGalaxySDObsRedshift *galaxy_redshift = NC_GALAXY_SD_OBS_REDSHIFT (ncm_mset_peek (mset, nc_galaxy_sd_obs_redshift_id ()));
   guint i;
 
-  if ((self->s_obs != NULL) && (self->z_obs != NULL) && (self->p_obs != NULL) && (self->s_obs_prep != NULL))
-  {
-    g_assert_cmpuint (ncm_obj_array_len (self->s_obs), >, 0);
-    g_assert_cmpuint (ncm_obj_array_len (self->z_obs), >, 0);
-    g_assert_cmpuint (ncm_obj_array_len (self->p_obs), >, 0);
-  }
+  if (NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (galaxy_redshift))
+    m2lnL[0] = _nc_data_cluster_wl_eval_m2lnP (dcwl, mset, NULL);
   else
-  {
-    g_error ("Weak lensing observables matrices are not set.");
-  }
-
-  m2lnL[0] = 0.0;
-
-  if (NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (z_dist))
-    m2lnL[0] += _nc_data_cluster_wl_eval_m2lnP (dcwl, cosmo, dp, smd, hp, p_dist, z_dist, s_dist, NULL);
-  else
-    m2lnL[0] += _nc_data_cluster_wl_eval_m2lnP_integ (dcwl, cosmo, dp, smd, hp, p_dist, z_dist, s_dist, NULL);
+    m2lnL[0] = _nc_data_cluster_wl_eval_m2lnP_integ (dcwl, mset, NULL);
 
   return;
 }
@@ -593,26 +503,59 @@ _nc_data_cluster_wl_get_len (NcmData *data)
 }
 
 static void
+_nc_data_cluster_wl_load_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs, GPtrArray *shape_data)
+{
+  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
+  guint i;
+
+  g_ptr_array_set_size (shape_data, 0);
+
+  for (i = 0; i < nc_galaxy_wl_obs_len (obs); i++)
+  {
+    NcGalaxySDObsRedshiftData *z_data = nc_galaxy_sd_obs_redshift_data_new (self->galaxy_redshift);
+    NcGalaxySDPositionData *p_data    = nc_galaxy_sd_position_data_new (self->galaxy_position, z_data);
+    NcGalaxySDShapeData *s_data       = nc_galaxy_sd_shape_data_new (self->galaxy_shape, p_data);
+
+    nc_galaxy_sd_shape_data_read_row (s_data, obs, i);
+    g_ptr_array_add (shape_data, s_data);
+  }
+}
+
+static void
 _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
 {
-  NcDataClusterWL *dcwl               = NC_DATA_CLUSTER_WL (data);
-  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
-  NcHICosmo *cosmo                    = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcWLSurfaceMassDensity *smd         = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
-  NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
-  NcHaloPosition *hp                  = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
-  NcGalaxySDShape *s_dist             = NC_GALAXY_SD_SHAPE (ncm_mset_peek (mset, nc_galaxy_sd_shape_id ()));
-  NcGalaxySDObsRedshift *z_dist       = NC_GALAXY_SD_OBS_REDSHIFT (ncm_mset_peek (mset, nc_galaxy_sd_obs_redshift_id ()));
-  NcGalaxySDPosition *p_dist          = NC_GALAXY_SD_POSITION (ncm_mset_peek (mset, nc_galaxy_sd_position_id ()));
+  NcDataClusterWL *dcwl                        = NC_DATA_CLUSTER_WL (data);
+  NcDataClusterWLPrivate * const self          = nc_data_cluster_wl_get_instance_private (dcwl);
+  NcHICosmo *cosmo                             = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcWLSurfaceMassDensity *surface_mass_density = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
+  NcHaloDensityProfile *density_profile        = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
+  NcHaloPosition *halo_position                = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
+  NcGalaxySDShape *galaxy_shape                = NC_GALAXY_SD_SHAPE (ncm_mset_peek (mset, nc_galaxy_sd_shape_id ()));
+  NcGalaxySDObsRedshift *galaxy_redshift       = NC_GALAXY_SD_OBS_REDSHIFT (ncm_mset_peek (mset, nc_galaxy_sd_obs_redshift_id ()));
+  NcGalaxySDPosition *galaxy_position          = NC_GALAXY_SD_POSITION (ncm_mset_peek (mset, nc_galaxy_sd_position_id ()));
 
-  g_assert ((cosmo != NULL) && (smd != NULL) && (dp != NULL) && (hp != NULL));
-  g_assert ((s_dist != NULL) && (z_dist != NULL) && (p_dist != NULL));
+  g_assert ((cosmo != NULL) && (surface_mass_density != NULL) && (density_profile != NULL) && (halo_position != NULL));
+  g_assert ((galaxy_shape != NULL) && (galaxy_redshift != NULL) && (galaxy_position != NULL));
 
-  nc_wl_surface_mass_density_prepare_if_needed (smd, cosmo);
+  self->cosmo                = cosmo;
+  self->surface_mass_density = surface_mass_density;
+  self->density_profile      = density_profile;
+  self->halo_position        = halo_position;
+  self->galaxy_shape         = galaxy_shape;
+  self->galaxy_redshift      = galaxy_redshift;
+  self->galaxy_position      = galaxy_position;
 
-  nc_galaxy_sd_shape_set_models (s_dist, cosmo, hp);
+  nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
+  {
+    const gboolean model_update = ncm_model_ctrl_model_update (self->ctrl_position, NCM_MODEL (galaxy_position)) ||
+                                  ncm_model_ctrl_model_update (self->ctrl_redshift, NCM_MODEL (galaxy_redshift)) ||
+                                  ncm_model_ctrl_model_update (self->ctrl_shape, NCM_MODEL (galaxy_shape));
 
-  nc_galaxy_sd_shape_prepare (s_dist, cosmo, hp, nc_galaxy_wl_obs_get_coord (self->obs), TRUE, self->s_obs, self->s_obs_prep);
+    if (model_update)
+      _nc_data_cluster_wl_load_obs (dcwl, self->obs, self->shape_data);
+
+    nc_galaxy_sd_shape_prepare_data_array (galaxy_shape, mset, self->shape_data);
+  }
 }
 
 /**
@@ -623,7 +566,7 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
  * Returns: (transfer full): a new NcDataClusterWL.
  */
 NcDataClusterWL *
-nc_data_cluster_wl_new ()
+nc_data_cluster_wl_new (void)
 {
   NcDataClusterWL *dcwl = g_object_new (NC_TYPE_DATA_CLUSTER_WL,
                                         NULL);
@@ -699,89 +642,9 @@ void
 nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs)
 {
   NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
-  NcmVarDict *obs_header              = nc_galaxy_wl_obs_peek_header (obs);
-  GStrv s_header                      = nc_galaxy_sd_shape_get_header (self->s_dist);
-  GStrv z_header                      = nc_galaxy_sd_obs_redshift_get_header (self->z_dist);
-  GStrv p_header                      = nc_galaxy_sd_position_get_header (self->p_dist);
-  NcmObjArray *s_obs                  = ncm_obj_array_sized_new (nc_galaxy_wl_obs_len (obs));
-  NcmObjArray *s_obs_prep             = ncm_obj_array_sized_new (nc_galaxy_wl_obs_len (obs));
-  NcmObjArray *z_obs                  = ncm_obj_array_sized_new (nc_galaxy_wl_obs_len (obs));
-  NcmObjArray *p_obs                  = ncm_obj_array_sized_new (nc_galaxy_wl_obs_len (obs));
-  gchar **str;
-  guint i;
 
-  for (str = s_header; *str != NULL; str++)
-  {
-    g_assert_true (ncm_var_dict_has_key (obs_header, *str));
-  }
-
-  for (str = z_header; *str != NULL; str++)
-  {
-    g_assert_true (ncm_var_dict_has_key (obs_header, *str));
-  }
-
-  for (str = p_header; *str != NULL; str++)
-  {
-    g_assert_true (ncm_var_dict_has_key (obs_header, *str));
-  }
-
-  g_assert_cmpuint (ncm_var_dict_len (obs_header), >=, 4);
-  g_assert_cmpuint (nc_galaxy_wl_obs_len (obs), >, 0);
-
-  for (i = 0; i < nc_galaxy_wl_obs_len (obs); i++)
-  {
-    NcmVector *s_obs_i      = ncm_vector_new (g_strv_length (s_header));
-    NcmVector *s_obs_prep_i = ncm_vector_new (nc_galaxy_sd_shape_get_vec_size (self->s_dist));
-    NcmVector *z_obs_i      = ncm_vector_new (g_strv_length (z_header));
-    NcmVector *p_obs_i      = ncm_vector_new (g_strv_length (p_header));
-    gint j                  = 0;
-
-    for (str = s_header; *str != NULL; str++)
-    {
-      gdouble val = nc_galaxy_wl_obs_get (obs, *str, i);
-
-      ncm_vector_set (s_obs_i, j, val);
-      j++;
-    }
-
-    j = 0;
-
-    for (str = z_header; *str != NULL; str++)
-    {
-      gdouble val = nc_galaxy_wl_obs_get (obs, *str, i);
-
-      ncm_vector_set (z_obs_i, j, val);
-      j++;
-    }
-
-    j = 0;
-
-    for (str = p_header; *str != NULL; str++)
-    {
-      gdouble val = nc_galaxy_wl_obs_get (obs, *str, i);
-
-      ncm_vector_set (p_obs_i, j, val);
-      j++;
-    }
-
-    ncm_obj_array_add (s_obs, G_OBJECT (s_obs_i));
-    ncm_obj_array_add (s_obs_prep, G_OBJECT (s_obs_prep_i));
-    ncm_obj_array_add (z_obs, G_OBJECT (z_obs_i));
-    ncm_obj_array_add (p_obs, G_OBJECT (p_obs_i));
-  }
-
-  nc_galaxy_wl_obs_clear (&self->obs);
-  ncm_obj_array_clear (&self->s_obs);
-  ncm_obj_array_clear (&self->s_obs_prep);
-  ncm_obj_array_clear (&self->z_obs);
-  ncm_obj_array_clear (&self->p_obs);
-
-  self->len        = nc_galaxy_wl_obs_len (obs);
-  self->obs        = nc_galaxy_wl_obs_ref (obs);
-  self->s_obs      = s_obs;
-  self->s_obs_prep = s_obs_prep;
-  self->z_obs      = z_obs;
-  self->p_obs      = p_obs;
+  self->len = nc_galaxy_wl_obs_len (obs);
+  self->obs = nc_galaxy_wl_obs_ref (obs);
 }
 
 /**
@@ -805,84 +668,6 @@ nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gd
 }
 
 /**
- * nc_data_cluster_wl_gen_obs:
- * @dcwl: a #NcDataClusterWL
- * @cosmo: a #NcHICosmo
- * @dp: a #NcHaloDensityProfile
- * @smd: a #NcWLSurfaceMassDensity
- * @hp: a #NcHaloPosition
- * @nobs: number of observables to generate
- * @rng: a #NcmRNG
- *
- * Generates @nobs observables.
- */
-void
-nc_data_cluster_wl_gen_obs (NcDataClusterWL *dcwl, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, guint nobs, NcmRNG *rng, NcGalaxyWLObsCoord coord)
-{
-  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
-  GStrv s_header                      = nc_galaxy_sd_shape_get_header (self->s_dist);
-  GStrv z_header                      = nc_galaxy_sd_obs_redshift_get_header (self->z_dist);
-  GStrv p_header                      = nc_galaxy_sd_position_get_header (self->p_dist);
-  gchar *s_string                     = g_strjoinv (" ", s_header);
-  gchar *z_string                     = g_strjoinv (" ", z_header);
-  gchar *p_string                     = g_strjoinv (" ", p_header);
-  gchar *header_string                = g_strconcat (s_string, " ", z_string, " ", p_string, NULL);
-  NcGalaxyWLObs *obs                  = nc_galaxy_wl_obs_new (coord, nobs, g_strsplit (header_string, " ", -1));
-  guint i;
-
-  for (i = 0; i < nobs; i++)
-  {
-    NcmVector *p_obs = ncm_vector_new (g_strv_length (p_header));
-    NcmVector *z_obs = ncm_vector_new (g_strv_length (z_header));
-    NcmVector *s_obs = ncm_vector_new (g_strv_length (s_header));
-    gdouble theta    = 0.0;
-    gdouble phi      = 0.0;
-    gdouble r;
-    gchar **str;
-    guint j;
-
-    /* do { */
-    nc_galaxy_sd_position_gen (self->p_dist, rng, p_obs);
-    nc_halo_position_polar_angles (hp, ncm_vector_get (p_obs, 0), ncm_vector_get (p_obs, 1), &theta, &phi);
-
-    r = nc_halo_position_projected_radius (hp, cosmo, theta);
-    /* } while (r < self->r_min || r > self->r_max); */
-
-    nc_galaxy_sd_obs_redshift_gen (self->z_dist, rng, z_obs);
-    nc_galaxy_sd_shape_gen (self->s_dist, cosmo, dp, smd, hp, rng, coord, p_obs, z_obs, s_obs);
-
-    j = 0;
-
-    for (str = s_header; *str != NULL; str++)
-    {
-      nc_galaxy_wl_obs_set (obs, *str, i, ncm_vector_get (s_obs, j));
-
-      j++;
-    }
-
-    j = 0;
-
-    for (str = z_header; *str != NULL; str++)
-    {
-      nc_galaxy_wl_obs_set (obs, *str, i, ncm_vector_get (z_obs, j));
-
-      j++;
-    }
-
-    j = 0;
-
-    for (str = p_header; *str != NULL; str++)
-    {
-      nc_galaxy_wl_obs_set (obs, *str, i, ncm_vector_get (p_obs, j));
-
-      j++;
-    }
-  }
-
-  nc_data_cluster_wl_set_obs (dcwl, obs);
-}
-
-/**
  * nc_data_cluster_wl_peek_obs:
  * @dcwl: a #NcDataClusterWL
  *
@@ -895,6 +680,6 @@ nc_data_cluster_wl_peek_obs (NcDataClusterWL *dcwl)
 {
   NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
 
-  return nc_galaxy_wl_obs_ref (self->obs);
+  return self->obs;
 }
 

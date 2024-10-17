@@ -46,6 +46,14 @@
 #include "math/ncm_vector.h"
 #include "nc_enum_types.h"
 #include "nc_galaxy_wl_obs.h"
+#include "nc_hicosmo.h"
+#include "lss/nc_halo_density_profile.h"
+#include "lss/nc_halo_position.h"
+#include "lss/nc_wl_surface_mass_density.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift.h"
+#include "galaxy/nc_galaxy_sd_position.h"
+#include "galaxy/nc_galaxy_sd_shape.h"
+
 
 struct _NcGalaxyWLObs
 {
@@ -74,7 +82,6 @@ enum
   PROP_LEN,
 };
 
-G_DEFINE_BOXED_TYPE (NcGalaxyWLObsModels, nc_galaxy_wl_obs_models, nc_galaxy_wl_obs_models_dup, nc_galaxy_wl_obs_models_free)
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLObs, nc_galaxy_wl_obs, G_TYPE_OBJECT)
 
 static void
@@ -86,7 +93,7 @@ nc_galaxy_wl_obs_init (NcGalaxyWLObs *obs)
   self->pz           = NULL;
   self->coord        = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
   self->columns      = NULL;
-  self->columns_hash = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+  self->columns_hash = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
   self->len          = 0;
   self->ncols        = 0;
 }
@@ -172,14 +179,20 @@ _nc_galaxy_wl_obs_constructed (GObject *object)
     for (i = 0; i < self->ncols; i++)
     {
       const gchar *col = self->columns[i];
+      guint *index     = g_new0 (guint, 1);
+
+      *index = i;
 
       g_assert (col != NULL);
       g_assert (!g_hash_table_contains (self->columns_hash, col));
-      g_hash_table_insert (self->columns_hash, g_strdup (col), GINT_TO_POINTER (i));
+      g_hash_table_insert (self->columns_hash, g_strdup (col), index);
     }
 
     if (self->data == NULL)
+    {
       self->data = ncm_matrix_new (self->len, self->ncols);
+      ncm_matrix_set_zero (self->data);
+    }
   }
 }
 
@@ -191,6 +204,7 @@ _nc_galaxy_wl_obs_dispose (GObject *object)
 
   ncm_matrix_clear (&self->data);
   ncm_obj_dict_int_clear (&self->pz);
+  g_clear_pointer (&self->columns_hash, g_hash_table_unref);
 
   if (self->columns != NULL)
     g_strfreev (self->columns);
@@ -320,6 +334,10 @@ _nc_galaxy_wl_obs_take_pz (NcGalaxyWLObsPrivate *self, NcmObjDictInt *pz)
 
     g_array_unref (keys);
   }
+  else
+  {
+    self->pz = ncm_obj_dict_int_new ();
+  }
 }
 
 static void
@@ -334,52 +352,6 @@ _nc_galaxy_wl_obs_data (NcGalaxyWLObsPrivate *self, NcmMatrix *data)
     g_assert_cmpuint (ncm_matrix_ncols (self->data), ==, self->ncols);
     g_assert_cmpuint (ncm_matrix_nrows (self->data), ==, self->len);
   }
-}
-
-/**
- * nc_galaxy_wl_obs_models_new:
- *
- * Creates a new empty #NcGalaxyWLObsModels object. All fields are set to NULL.
- *
- * Returns: (transfer full): a new #NcGalaxyWLObsModels object.
- */
-NcGalaxyWLObsModels *
-nc_galaxy_wl_obs_models_new (void)
-{
-  return g_new0 (NcGalaxyWLObsModels, 1);
-}
-
-/**
- * nc_galaxy_wl_obs_models_dup:
- * @models: a #NcGalaxyWLObsModels object
- *
- * Duplicates a #NcGalaxyWLObsModels object. The structure is copied as is.
- * The user must control the reference count of the models.
- *
- * Returns: (transfer full): a new #NcGalaxyWLObsModels object.
- */
-NcGalaxyWLObsModels *
-nc_galaxy_wl_obs_models_dup (const NcGalaxyWLObsModels *models)
-{
-  NcGalaxyWLObsModels *new_models = nc_galaxy_wl_obs_models_new ();
-
-  *new_models = *models;
-
-  return new_models;
-}
-
-/**
- * nc_galaxy_wl_obs_models_free:
- * @models: a #NcGalaxyWLObsModels object
- *
- * Frees a #NcGalaxyWLObsModels structure.
- * No memory management is done for the models.
- *
- */
-void
-nc_galaxy_wl_obs_models_free (NcGalaxyWLObsModels *models)
-{
-  g_free (models);
 }
 
 /**
@@ -443,6 +415,32 @@ nc_galaxy_wl_obs_clear (NcGalaxyWLObs **obs)
 }
 
 /**
+ * nc_galaxy_wl_obs_get_index:
+ * @obs: a #NcGalaxyWLObs object
+ * @col: column name
+ * @i: a pointer to store the column index
+ *
+ * Gets the column index from the column name.
+ *
+ * Returns: %TRUE if the column was found, %FALSE otherwise.
+ */
+gboolean
+nc_galaxy_wl_obs_get_index (NcGalaxyWLObs *obs, const gchar *col, guint *i)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+  guint *j;
+
+  j = g_hash_table_lookup (self->columns_hash, col);
+
+  if (j == NULL)
+    return FALSE;
+
+  *i = *j;
+
+  return TRUE;
+}
+
+/**
  * nc_galaxy_wl_obs_set:
  * @obs: a #NcGalaxyWLObs object
  * @col: column name
@@ -456,7 +454,7 @@ void
 nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdouble val)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
-  gint *j;
+  guint *j;
 
   j = g_hash_table_lookup (self->columns_hash, col);
 
@@ -496,7 +494,7 @@ gdouble
 nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint i)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
-  gint *j;
+  guint *j;
 
   j = g_hash_table_lookup (self->columns_hash, col);
 

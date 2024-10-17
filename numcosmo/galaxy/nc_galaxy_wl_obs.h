@@ -35,15 +35,7 @@
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/math/ncm_obj_array.h>
 #include <numcosmo/math/ncm_spline.h>
-
-typedef struct _NcHICosmo NcHICosmo;
-typedef struct _NcHaloDensityProfile NcHaloDensityProfile;
-typedef struct _NcHaloPosition NcHaloPosition;
-typedef struct _NcWLSurfaceMassDensity NcWLSurfaceMassDensity;
-typedef struct _NcGalaxySDPosition NcGalaxySDPosition;
-typedef struct _NcGalaxySDObsRedshift NcGalaxySDObsRedshift;
-typedef struct _NcGalaxySDShape NcGalaxySDShape;
-
+#include <numcosmo/math/ncm_mset.h>
 
 G_BEGIN_DECLS
 
@@ -59,46 +51,13 @@ typedef enum _NcGalaxyWLObsCoord
   NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
 } NcGalaxyWLObsCoord;
 
-typedef struct _NcGalaxyWLObsModels NcGalaxyWLObsModels;
-
-/**
- * NcGalaxyWLObsModels:
- * @cosmo: a #NcHICosmo object.
- * @density_profile: a #NcHaloDensityProfile object.
- * @surface_mass_density: a #NcWLSurfaceMassDensity object.
- * @galaxy_position: a #NcGalaxySDPosition object.
- * @galaxy_redshift: a #NcGalaxySDObsRedshift object.
- * @galaxy_shape: a #NcGalaxySDShape object.
- *
- * A structure to store the models used to analyze the weak lensing galaxy samples.
- * This is a simple structure to store the models, it will not handle the memory
- * management of the models. The user must control the reference count of the models.
- *
- */
-struct _NcGalaxyWLObsModels
-{
-  NcHICosmo *cosmo;
-  NcHaloDensityProfile *density_profile;
-  NcHaloPosition *halo_position;
-  NcWLSurfaceMassDensity *surface_mass_density;
-  NcGalaxySDPosition *galaxy_position;
-  NcGalaxySDObsRedshift *galaxy_redshift;
-  NcGalaxySDShape *galaxy_shape;
-};
-
-#define NC_TYPE_GALAXY_WL_OBS_MODELS (nc_galaxy_wl_obs_models_get_type ())
-GType nc_galaxy_wl_obs_models_get_type (void) G_GNUC_CONST;
-
-NcGalaxyWLObsModels *nc_galaxy_wl_obs_models_new ();
-NcGalaxyWLObsModels *nc_galaxy_wl_obs_models_dup (const NcGalaxyWLObsModels *models);
-void nc_galaxy_wl_obs_models_free (NcGalaxyWLObsModels *models);
-
-
 NcGalaxyWLObs *nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names);
 NcGalaxyWLObs *nc_galaxy_wl_obs_ref (NcGalaxyWLObs *obs);
 
 void nc_galaxy_wl_obs_free (NcGalaxyWLObs *obs);
 void nc_galaxy_wl_obs_clear (NcGalaxyWLObs **obs);
+
+gboolean nc_galaxy_wl_obs_get_index (NcGalaxyWLObs *obs, const gchar *col, guint *i);
 
 void nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdouble val);
 void nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcmSpline *pz);

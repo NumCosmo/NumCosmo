@@ -64,6 +64,13 @@ enum
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDShape, nc_galaxy_sd_shape, NCM_TYPE_MODEL);
+G_DEFINE_BOXED_TYPE (NcGalaxySDShapeData, nc_galaxy_sd_shape_data, nc_galaxy_sd_shape_data_copy, nc_galaxy_sd_shape_data_free);
+NCM_UTIL_DEFINE_CALLBACK (NcGalaxySDShapeIntegrand,
+                          NC_GALAXY_SD_SHAPE_INTEGRAND,
+                          nc_galaxy_sd_shape_integrand,
+                          gdouble,
+                          NCM_UTIL_CALLBACK_ARGS (const gdouble z, NcGalaxySDShapeData * data),
+                          NCM_UTIL_CALLBACK_ARGS (z, data))
 
 static void
 nc_galaxy_sd_shape_init (NcGalaxySDShape *gsds)
@@ -113,63 +120,33 @@ NCM_MSET_MODEL_REGISTER_ID (nc_galaxy_sd_shape, NC_TYPE_GALAXY_SD_SHAPE);
 
 /* LCOV_EXCL_START */
 static void
-_nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmRNG *rng, NcGalaxyWLObsCoord coord, NcmVector *data_p, NcmVector *data_z, NcmVector *data_s)
+_nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng)
 {
   g_error ("_nc_galaxy_sd_shape_gen: method not implemented.");
 }
 
-static gdouble
-_nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp,  NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, gdouble z, NcmVector *data)
+static NcGalaxySDShapeIntegrand *
+_nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds)
 {
   g_error ("_nc_galaxy_sd_shape_integ: method not implemented.");
 
-  return 0.0;
-}
-
-static void
-_nc_galaxy_sd_shape_integ_optzs_prep (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmVector *data)
-{
-  g_error ("_nc_galaxy_sd_shape_integ_optzs_prep: method not implemented.");
-}
-
-static gdouble
-_nc_galaxy_sd_shape_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, gdouble z, NcmVector *data)
-{
-  g_error ("_nc_galaxy_sd_shape_integ_optzs: method not implemented.");
-
-  return 0.0;
+  return NULL;
 }
 
 static gboolean
-_nc_galaxy_sd_shape_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hp, NcGalaxyWLObsCoord coord, gboolean force, NcmObjArray *data, NcmObjArray *data_prep)
+_nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array)
 {
   g_error ("_nc_galaxy_sd_shape_prepare: method not implemented.");
 
   return FALSE;
 }
 
-static GStrv
-_nc_galaxy_sd_shape_get_header (NcGalaxySDShape *gsds)
+static NcGalaxySDShapeData *
+_nc_galaxy_sd_shape_data_new (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data)
 {
-  g_error ("_nc_galaxy_sd_shape_get_header: method not implemented.");
+  g_error ("_nc_galaxy_sd_shape_data_new: method not implemented.");
 
   return NULL;
-}
-
-static guint
-_nc_galaxy_sd_shape_get_vec_size (NcGalaxySDShape *gsds)
-{
-  g_error ("_nc_galaxy_sd_shape_get_vec_size: method not implemented.");
-
-  return 0;
-}
-
-static gboolean
-_nc_galaxy_sd_shape_set_models (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hp)
-{
-  g_error ("_nc_galaxy_sd_shape_set_models: method not implemented.");
-
-  return FALSE;
 }
 
 /* LCOV_EXCL_STOP */
@@ -189,15 +166,155 @@ nc_galaxy_sd_shape_class_init (NcGalaxySDShapeClass *klass)
   ncm_mset_model_register_id (model_class, "NcGalaxySDShape", "Galaxy sample shape distribution", NULL, FALSE, NCM_MSET_MODEL_MAIN);
   ncm_model_class_check_params_info (model_class);
 
-  klass->gen              = &_nc_galaxy_sd_shape_gen;
-  klass->integ            = &_nc_galaxy_sd_shape_integ;
-  klass->integ_optzs_prep = &_nc_galaxy_sd_shape_integ_optzs_prep;
-  klass->integ_optzs      = &_nc_galaxy_sd_shape_integ_optzs;
-  klass->prepare          = &_nc_galaxy_sd_shape_prepare;
-  klass->get_header       = &_nc_galaxy_sd_shape_get_header;
-  klass->get_vec_size     = &_nc_galaxy_sd_shape_get_vec_size;
-  klass->set_models       = &_nc_galaxy_sd_shape_set_models;
+  klass->gen                = &_nc_galaxy_sd_shape_gen;
+  klass->integ              = &_nc_galaxy_sd_shape_integ;
+  klass->prepare_data_array = &_nc_galaxy_sd_shape_prepare_data_array;
+  klass->data_new           = &_nc_galaxy_sd_shape_data_new;
 }
+
+/**
+ * nc_galaxy_sd_shape_data_copy:
+ * @data: a #NcGalaxySDShapeData
+ *
+ * Copies the galaxy shape data.
+ *
+ */
+NcGalaxySDShapeData *
+nc_galaxy_sd_shape_data_copy (NcGalaxySDShapeData *data)
+{
+  NcGalaxySDShapeData *new_data = g_new0 (NcGalaxySDShapeData, 1);
+
+  g_assert_nonnull (data->ldata_copy);
+  g_assert_nonnull (data->ldata_destroy);
+
+  new_data->sdpos_data             = nc_galaxy_sd_position_data_copy (data->sdpos_data);
+  new_data->ldata                  = data->ldata_copy (data->ldata);
+  new_data->ldata_destroy          = data->ldata_destroy;
+  new_data->ldata_copy             = data->ldata_copy;
+  new_data->ldata_read_row         = data->ldata_read_row;
+  new_data->ldata_write_row        = data->ldata_write_row;
+  new_data->ldata_required_columns = data->ldata_required_columns;
+
+  return new_data;
+}
+
+/**
+ * nc_galaxy_sd_shape_data_free:
+ *
+ * Frees the galaxy shape data.
+ *
+ */
+void
+nc_galaxy_sd_shape_data_free (NcGalaxySDShapeData *data)
+{
+  g_assert_nonnull (data->ldata_destroy);
+  data->ldata_destroy (data->ldata);
+  nc_galaxy_sd_position_data_free (data->sdpos_data);
+  g_free (data);
+}
+
+/**
+ * nc_galaxy_sd_shape_data_read_row:
+ * @data: a #NcGalaxySDShapeData
+ * @obs: a #NcGalaxyWLObs
+ * @i: the row index
+ *
+ * Reads the row @i from the galaxy shape data.
+ *
+ */
+void
+nc_galaxy_sd_shape_data_read_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i)
+{
+  nc_galaxy_sd_position_data_read_row (data->sdpos_data, obs, i);
+  {
+    data->coord         = nc_galaxy_wl_obs_get_coord (obs);
+    data->epsilon_int_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_1, i);
+    data->epsilon_int_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2, i);
+
+    data->ldata_read_row (data->ldata, obs, i);
+  }
+}
+
+/**
+ * nc_galaxy_sd_shape_data_write_row:
+ * @data: a #NcGalaxySDShapeData
+ * @obs: a #NcGalaxyWLObs
+ * @i: the row index
+ *
+ * Writes the row @i to the galaxy shape data.
+ *
+ */
+void
+nc_galaxy_sd_shape_data_write_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i)
+{
+  nc_galaxy_sd_position_data_write_row (data->sdpos_data, obs, i);
+  {
+    nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_1, i, data->epsilon_int_1);
+    nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2, i, data->epsilon_int_2);
+
+    data->ldata_write_row (data, obs, i);
+  }
+}
+
+/**
+ * nc_galaxy_sd_shape_data_required_columns:
+ * @data: a #NcGalaxySDShapeData
+ *
+ * Returns: (element-type utf8) (transfer full): the required columns for the galaxy shape data.
+ */
+GList *
+nc_galaxy_sd_shape_data_required_columns (NcGalaxySDShapeData *data)
+{
+  GList *columns = NULL;
+
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_1));
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2));
+  data->ldata_required_columns (data, columns);
+
+  {
+    GList *sdpos_columns = nc_galaxy_sd_position_data_required_columns (data->sdpos_data);
+
+    columns = g_list_concat (columns, sdpos_columns);
+  }
+
+  return columns;
+}
+
+/**
+ * nc_galaxy_sd_shape_integrand_new:
+ * @func: (scope async) (closure callback_data): a #NcGalaxySDShapeIntegrandFunc
+ * @callback_data_free: (scope async) (closure callback_data): a #NcGalaxySDShapeIntegrandFreeData
+ * @callback_data_copy: (scope async) (closure callback_data): a #NcGalaxySDShapeIntegrandCopyData
+ * @callback_data_prepare: (scope async) (closure callback_data): a #NcGalaxySDShapeIntegrandPrepareData
+ * @callback_data: a gpointer
+ *
+ * Creates a new galaxy shape integrand.
+ *
+ * Returns: (transfer full): a new #NcGalaxySDShapeIntegrand object.
+ */
+/**
+ * nc_galaxy_sd_shape_integrand_copy:
+ * @callback_obj: a #NcGalaxySDShapeIntegrand
+ *
+ * Copies the integrand for the galaxy shape data.
+ *
+ * Returns: (transfer full): a copy of @callback_obj
+ */
+/**
+ * nc_galaxy_sd_shape_integrand_free:
+ * @callback_obj: a #NcGalaxySDShapeIntegrand
+ *
+ * Frees the integrand for the galaxy shape data.
+ *
+ */
+/**
+ * nc_galaxy_sd_shape_integrand_prepare:
+ * @callback_obj: a #NcGalaxySDShapeIntegrand
+ * @mset: a #NcmMSet
+ *
+ * Prepares the integrand for the galaxy shape data.
+ *
+ */
 
 /**
  * nc_galaxy_sd_shape_ref:
@@ -241,144 +358,55 @@ nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds)
 }
 
 /**
- * nc_galaxy_sd_shape_gen: (virtual gen)
- * @gsds: a #NcGalaxySDShape
- * @cosmo: a #NcHICosmo
- * @dp: a #NcHaloDensityProfile
- * @smd: a #NcWLSurfaceMassDensity
- * @hp: a #NcHaloPosition
- * @rng: a #NcmRNG
- * @coord: a #NcGalaxyWLObsCoord
- * @data_p: a #NcmVector
- * @data_z: a #NcmVector
- * @data_s: (out): a #NcmVector
- *
- * Generates a shape value from the position using @rng.
- *
- */
-void
-nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmRNG *rng, NcGalaxyWLObsCoord coord, NcmVector *data_p, NcmVector *data_z, NcmVector *data_s)
-{
-  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->gen (gsds, cosmo, dp, smd, hp, rng, coord, data_p, data_z, data_s);
-}
-
-/**
  * nc_galaxy_sd_shape_integ: (virtual integ)
  * @gsds: a #NcGalaxySDShape
- * @cosmo: a #NcHICosmo
- * @dp: a #NcHaloDensityProfile
- * @smd: a #NcWLSurfaceMassDensity
- * @hp: a #NcHaloPosition
- * @data: a #NcmVector
  *
- * Computes the probability density of the observable shape given the position.
+ * Creates a new galaxy shape integrand.
  *
- * Returns: the probability density of observable shape, $P(s)$.
+ * Returns: (transfer full): a new #NcGalaxySDShapeIntegrand object.
  */
-gdouble
-nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, gdouble z, NcmVector *data)
+NcGalaxySDShapeIntegrand *
+nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds)
 {
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ (gsds, cosmo, dp, smd, hp, z, data);
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ (gsds);
 }
 
 /**
- * nc_galaxy_sd_shape_integ_optzs_prep: (virtual integ_optzs_prep)
+ * nc_galaxy_sd_shape_prepare_data_array: (virtual prepare_data_array)
  * @gsds: a #NcGalaxySDShape
- * @cosmo: a #NcHICosmo
- * @dp: a #NcHaloDensityProfile
- * @smd: a #NcWLSurfaceMassDensity
- * @hp: a #NcHaloPosition
- * @data: a #NcmVector
- *
- * Prepares $gsds$ to compute the probability density of the observable shape given the position.
- *
- */
-void
-nc_galaxy_sd_shape_integ_optzs_prep (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, NcmVector *data)
-{
-  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ_optzs_prep (gsds, cosmo, dp, smd, hp, data);
-}
-
-/**
- * nc_galaxy_sd_shape_integ_optzs: (virtual integ_optzs)
- * @gsds: a #NcGalaxySDShape
- * @cosmo: a #NcHICosmo
- * @dp: a #NcHaloDensityProfile
- * @smd: a #NcWLSurfaceMassDensity
- * @hp: a #NcHaloPosition
- * @data: a #NcmVector
- *
- * Computes the probability density of the observable shape given the position.
- *
- * Returns: the probability density of observable shape, $P(s)$.
- */
-gdouble
-nc_galaxy_sd_shape_integ_optzs (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloDensityProfile *dp, NcWLSurfaceMassDensity *smd, NcHaloPosition *hp, gdouble z, NcmVector *data)
-{
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ_optzs (gsds, cosmo, dp, smd, hp, z, data);
-}
-
-/**
- * nc_galaxy_sd_shape_prepare: (virtual prepare)
- * @gsds: a #NcGalaxySDShape
- * @cosmo: a #NcHICosmo
- * @hp: a #NcHaloPosition
- * @coord: a #NcGalaxyWLObsCoord
- * @force: a #gboolean
- * @data: a #NcmObjArray
- * @data_prep: a #NcmObjArray
+ * @mset: a #NcmMSet
+ * @data_array: (element-type NcGalaxySDShapeData): a #GPtrArray of #NcGalaxySDShapeData
  *
  * Prepares the matrix to compute the probability density of the observaple shape.
  *
  * Returns: TRUE if the matrix was prepared, FALSE otherwise.
  */
 gboolean
-nc_galaxy_sd_shape_prepare (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hp, NcGalaxyWLObsCoord coord, gboolean force, NcmObjArray *data, NcmObjArray *data_prep)
+nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array)
 {
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->prepare (gsds, cosmo, hp, coord, force, data, data_prep);
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->prepare_data_array (gsds, mset, data_array);
 }
 
 /**
- * nc_galaxy_sd_shape_get_header: (virtual get_header)
+ * nc_galaxy_sd_shape_data_new:
  * @gsds: a #NcGalaxySDShape
+ * @sdpos_data: a #NcGalaxySDPositionData
  *
- * Gets the header of the distribution.
+ * Creates a new galaxy shape data.
  *
- * Returns: (transfer full): the header of the data.
+ * Returns: (transfer full): a new #NcGalaxySDShapeData object.
  */
-GStrv
-nc_galaxy_sd_shape_get_header (NcGalaxySDShape *gsds)
+NcGalaxySDShapeData *
+nc_galaxy_sd_shape_data_new (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data)
 {
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->get_header (gsds);
-}
+  NcGalaxySDShapeData *data = NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->data_new (gsds, sdpos_data);
 
-/**
- * nc_galaxy_sd_shape_get_vec_size: (virtual get_vec_size)
- * @gsds: a #NcGalaxySDShape
- *
- * Gets the size of the expected data vector.
- *
- * Returns: the size of the expected data vector.
- */
-guint
-nc_galaxy_sd_shape_get_vec_size (NcGalaxySDShape *gsds)
-{
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->get_vec_size (gsds);
-}
+  g_assert_nonnull (data->ldata_copy);
+  g_assert_nonnull (data->ldata_destroy);
+  g_assert_nonnull (data->ldata_read_row);
+  g_assert_nonnull (data->ldata_write_row);
+  g_assert_nonnull (data->ldata_required_columns);
 
-/**
- * nc_galaxy_sd_shape_set_models: (virtual set_models)
- * @gsds: a #NcGalaxySDShape
- * @cosmo: a #NcHICosmo
- * @hp: a #NcHaloPosition
- *
- * Sets the cosmological and density profile models.
- *
- * Returns: TRUE if the models were set, FALSE otherwise.
- */
-gboolean
-nc_galaxy_sd_shape_set_models (NcGalaxySDShape *gsds, NcHICosmo *cosmo, NcHaloPosition *hp)
-{
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->set_models (gsds, cosmo, hp);
+  return data;
 }
 

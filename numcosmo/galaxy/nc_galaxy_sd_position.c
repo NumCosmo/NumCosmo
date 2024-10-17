@@ -63,6 +63,13 @@ enum
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDPosition, nc_galaxy_sd_position, NCM_TYPE_MODEL)
+G_DEFINE_BOXED_TYPE (NcGalaxySDPositionData, nc_galaxy_sd_position_data, nc_galaxy_sd_position_data_copy, nc_galaxy_sd_position_data_free);
+NCM_UTIL_DEFINE_CALLBACK (NcGalaxySDPositionIntegrand,
+                          NC_GALAXY_SD_POSITION_INTEGRAND,
+                          nc_galaxy_sd_position_integrand,
+                          gdouble,
+                          NCM_UTIL_CALLBACK_ARGS (NcGalaxySDPositionData * data),
+                          NCM_UTIL_CALLBACK_ARGS (data))
 
 static void
 nc_galaxy_sd_position_init (NcGalaxySDPosition *gsdp)
@@ -147,17 +154,17 @@ NCM_MSET_MODEL_REGISTER_ID (nc_galaxy_sd_position, NC_TYPE_GALAXY_SD_POSITION)
 
 /* LCOV_EXCL_START */
 static void
-_nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng, NcmVector *data)
+_nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcGalaxySDPositionData *data, NcmRNG *rng)
 {
   g_error ("_nc_galaxy_sd_position_gen: method not implemented.");
 }
 
-static gdouble
-_nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, NcmVector *data)
+static NcGalaxySDPositionIntegrand *
+_nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp)
 {
   g_error ("_nc_galaxy_sd_position_integ: method not implemented.");
 
-  return 0.0;
+  return NULL;
 }
 
 static gboolean
@@ -192,10 +199,10 @@ _nc_galaxy_sd_position_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, 
   return FALSE;
 }
 
-GStrv
-_nc_galaxy_sd_position_get_header (NcGalaxySDPosition *gsdp)
+static NcGalaxySDPositionData *
+_nc_galaxy_sd_position_data_new (NcGalaxySDPosition *gsdp, NcGalaxySDObsRedshiftData *sdz_data)
 {
-  g_error ("_nc_galaxy_sd_position_get_header: method not implemented.");
+  g_error ("_nc_galaxy_sd_position_data_new: method not implemented.");
 
   return NULL;
 }
@@ -258,8 +265,152 @@ nc_galaxy_sd_position_class_init (NcGalaxySDPositionClass *klass)
   klass->set_dec_lim = &_nc_galaxy_sd_position_set_dec_lim;
   klass->get_ra_lim  = &_nc_galaxy_sd_position_get_ra_lim;
   klass->get_dec_lim = &_nc_galaxy_sd_position_get_dec_lim;
-  klass->get_header  = &_nc_galaxy_sd_position_get_header;
+  klass->data_new    = &_nc_galaxy_sd_position_data_new;
 }
+
+/**
+ * nc_galaxy_sd_position_data_copy:
+ * @data: a #NcGalaxySDPositionData
+ *
+ * Copies the galaxy position data.
+ *
+ * Returns: (transfer full): a copy of @data
+ */
+NcGalaxySDPositionData *
+nc_galaxy_sd_position_data_copy (NcGalaxySDPositionData *data)
+{
+  NcGalaxySDPositionData *new_data = g_new0 (NcGalaxySDPositionData, 1);
+
+  g_assert_nonnull (data->ldata_copy);
+  g_assert_nonnull (data->ldata_destroy);
+
+  new_data->sdz_data               = nc_galaxy_sd_obs_redshift_data_copy (data->sdz_data);
+  new_data->ldata                  = data->ldata_copy (data->ldata);
+  new_data->ldata_destroy          = data->ldata_destroy;
+  new_data->ldata_copy             = data->ldata_copy;
+  new_data->ldata_read_row         = data->ldata_read_row;
+  new_data->ldata_write_row        = data->ldata_write_row;
+  new_data->ldata_required_columns = data->ldata_required_columns;
+
+  return new_data;
+}
+
+/**
+ * nc_galaxy_sd_position_data_free:
+ * @data: a #NcGalaxySDPositionData
+ *
+ * Frees the galaxy position data.
+ *
+ */
+void
+nc_galaxy_sd_position_data_free (NcGalaxySDPositionData *data)
+{
+  g_assert_nonnull (data->ldata_destroy);
+  data->ldata_destroy (data->ldata);
+  nc_galaxy_sd_obs_redshift_data_free (data->sdz_data);
+  g_free (data);
+}
+
+/**
+ * nc_galaxy_sd_position_data_read_row:
+ * @data: a #NcGalaxySDPositionData
+ * @obs: a #NcGalaxyWLObs
+ * @i: the row index
+ *
+ * Reads the row @i from the galaxy position data.
+ *
+ */
+void
+nc_galaxy_sd_position_data_read_row (NcGalaxySDPositionData *data, NcGalaxyWLObs *obs, const guint i)
+{
+  nc_galaxy_sd_obs_redshift_data_read_row (data->sdz_data, obs, i);
+  {
+    data->ra  = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_POSITION_COL_RA, i);
+    data->dec = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_POSITION_COL_DEC, i);
+    data->ldata_read_row (data, obs, i);
+  }
+}
+
+/**
+ * nc_galaxy_sd_position_data_write_row:
+ * @data: a #NcGalaxySDPositionData
+ * @obs: a #NcGalaxyWLObs
+ * @i: the row index
+ *
+ * Writes the galaxy position data to the observation.
+ *
+ */
+void
+nc_galaxy_sd_position_data_write_row (NcGalaxySDPositionData *data, NcGalaxyWLObs *obs, const guint i)
+{
+  nc_galaxy_sd_obs_redshift_data_write_row (data->sdz_data, obs, i);
+  {
+    nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_POSITION_COL_RA, i, data->ra);
+    nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_POSITION_COL_DEC, i, data->dec);
+    data->ldata_write_row (data, obs, i);
+  }
+}
+
+/**
+ * nc_galaxy_sd_position_data_required_columns:
+ * @data: a #NcGalaxySDPositionData
+ *
+ * Gets the required columns for the galaxy position data.
+ *
+ * Returns: (element-type utf8) (transfer full): the required columns for the galaxy position data.
+ */
+GList *
+nc_galaxy_sd_position_data_required_columns (NcGalaxySDPositionData *data)
+{
+  GList *columns = NULL;
+
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_POSITION_COL_RA));
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_POSITION_COL_DEC));
+  data->ldata_required_columns (data, columns);
+
+  {
+    GList *sdz_columns = nc_galaxy_sd_obs_redshift_data_required_columns (data->sdz_data);
+
+    columns = g_list_concat (columns, sdz_columns);
+  }
+
+  return columns;
+}
+
+/**
+ * nc_galaxy_sd_position_integrand_new:
+ * @func: (scope async) (closure callback_data): a #NcGalaxySDPositionIntegrandFunc
+ * @callback_data_free: (scope async) (closure callback_data): a #NcGalaxySDPositionIntegrandFreeData
+ * @callback_data_copy: (scope async) (closure callback_data): a #NcGalaxySDPositionIntegrandCopyData
+ * @callback_data_prepare: (scope async) (closure callback_data): a #NcGalaxySDPositionIntegrandPrepareData
+ * @callback_data: a gpointer
+ *
+ * Creates a new galaxy position integrand.
+ *
+ */
+/**
+ * nc_galaxy_sd_position_integrand_copy:
+ * @callback_obj: a #NcGalaxySDPositionIntegrand
+ *
+ * Copies the galaxy position integrand.
+ *
+ * Returns: (transfer full): a copy of @callback_obj
+ */
+/**
+ * nc_galaxy_sd_position_integrand_free:
+ * @callback_obj: a #NcGalaxySDPositionIntegrand
+ *
+ * Frees the galaxy position integrand.
+ *
+ */
+/**
+ * nc_galaxy_sd_position_integrand_prepare:
+ * @callback_obj: a #NcGalaxySDPositionIntegrand
+ * @mset: a #NcmMSet
+ *
+ * Prepares the galaxy position integrand.
+ *
+ */
 
 /**
  * nc_galaxy_sd_position_ref:
@@ -367,46 +518,39 @@ nc_galaxy_sd_position_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, g
 }
 
 /**
- * nc_galaxy_sd_position_get_header: (virtual get_header)
- * @gsdp: a #NcGalaxySDPosition
- *
- * Gets the header of the distribution.
- *
- * Returns: (transfer full): the header of the distribution.
- */
-GStrv
-nc_galaxy_sd_position_get_header (NcGalaxySDPosition *gsdp)
-{
-  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->get_header (gsdp);
-}
-
-/**
- * nc_galaxy_sd_position_gen: (virtual gen)
- * @gsdp: a #NcGalaxySDPosition
- * @rng: a #NcmRNG
- * @data: (out): a #NcmVector
- *
- * Generates a right ascension and declination value from the distribution using @rng.
- *
- */
-void
-nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcmRNG *rng, NcmVector *data)
-{
-  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen (gsdp, rng, data);
-}
-
-/**
  * nc_galaxy_sd_position_integ: (virtual integ)
  * @gsdp: a #NcGalaxySDPosition
- * @data: a #NcmVector
  *
- * Computes the probability density of the right ascension and declination.
+ * Prepares the integrand for the galaxy position distribution.
  *
- * Returns: the probability density at $(\text{ra}, \text{dec})$, $P(\text{ra})P(\text{dec})$.
+ * Returns: (transfer full): a new #NcGalaxySDPositionIntegrand object.
  */
-gdouble
-nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, NcmVector *data)
+NcGalaxySDPositionIntegrand *
+nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp)
 {
-  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->integ (gsdp, data);
+  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->integ (gsdp);
+}
+
+/**
+ * nc_galaxy_sd_position_data_new:
+ * @gsdp: a #NcGalaxySDPosition
+ * @sdz_data: a #NcGalaxySDObsRedshiftData
+ *
+ * Creates a new galaxy position data.
+ *
+ * Returns: (transfer full): a new #NcGalaxySDPositionData object.
+ */
+NcGalaxySDPositionData *
+nc_galaxy_sd_position_data_new (NcGalaxySDPosition *gsdp, NcGalaxySDObsRedshiftData *sdz_data)
+{
+  NcGalaxySDPositionData *data = NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->data_new (gsdp, sdz_data);
+
+  g_assert_nonnull (data->ldata_copy);
+  g_assert_nonnull (data->ldata_destroy);
+  g_assert_nonnull (data->ldata_read_row);
+  g_assert_nonnull (data->ldata_write_row);
+  g_assert_nonnull (data->ldata_required_columns);
+
+  return data;
 }
 

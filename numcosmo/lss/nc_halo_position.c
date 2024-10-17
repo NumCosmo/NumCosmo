@@ -254,6 +254,67 @@ nc_halo_position_clear (NcHaloPosition **hp)
 }
 
 /**
+ * nc_halo_position_prepare:
+ * @hp: A #NcHaloPosition.
+ * @cosmo: A #NcHICosmo.
+ *
+ * Prepares the #NcHaloPosition object @hp for computation.
+ *
+ */
+void
+nc_halo_position_prepare (NcHaloPosition *hp, NcHICosmo *cosmo)
+{
+  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
+
+  nc_distance_prepare_if_needed (self->dist, cosmo);
+}
+
+/**
+ * nc_halo_position_prepare_if_needed:
+ * @hp: A #NcHaloPosition.
+ * @cosmo: A #NcHICosmo.
+ *
+ * Prepares the #NcHaloPosition object @hp for computation if necessary.
+ *
+ */
+void
+nc_halo_position_prepare_if_needed (NcHaloPosition *hp, NcHICosmo *cosmo)
+{
+  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
+
+  if (ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo)))
+    nc_distance_prepare_if_needed (self->dist, cosmo);
+}
+
+/**
+ * nc_halo_position_get_redshift:
+ * @hp: A #NcHaloPosition
+ *
+ * Returns the redshift of the halo position.
+ */
+gdouble
+nc_halo_position_get_redshift (NcHaloPosition *hp)
+{
+  return Z;
+}
+
+/**
+ * nc_halo_position_get_ra_dec:
+ * @hp: A #NcHaloPosition
+ * @ra: (out): The right ascension
+ * @dec: (out): The declination
+ *
+ * Returns the right ascension and declination of the halo position.
+ *
+ */
+void
+nc_halo_position_get_ra_dec (NcHaloPosition *hp, gdouble *ra, gdouble *dec)
+{
+  *ra  = RA;
+  *dec = DEC;
+}
+
+/**
  * nc_halo_position_polar_angles:
  * @hp: A #NcHaloPosition.
  * @ra: The right ascension.
@@ -331,38 +392,5 @@ nc_halo_position_projected_radius_from_ra_dec (NcHaloPosition *hp, NcHICosmo *co
   nc_halo_position_polar_angles (hp, ra, dec, &theta, &phi);
 
   return nc_halo_position_projected_radius (hp, cosmo, theta);
-}
-
-/**
- * nc_halo_position_prepare:
- * @hp: A #NcHaloPosition.
- * @cosmo: A #NcHICosmo.
- *
- * Prepares the #NcHaloPosition object @hp for computation.
- *
- */
-void
-nc_halo_position_prepare (NcHaloPosition *hp, NcHICosmo *cosmo)
-{
-  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
-
-  nc_distance_prepare_if_needed (self->dist, cosmo);
-}
-
-/**
- * nc_halo_position_prepare_if_needed:
- * @hp: A #NcHaloPosition.
- * @cosmo: A #NcHICosmo.
- *
- * Prepares the #NcHaloPosition object @hp for computation if necessary.
- *
- */
-void
-nc_halo_position_prepare_if_needed (NcHaloPosition *hp, NcHICosmo *cosmo)
-{
-  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
-
-  if (ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo)))
-    nc_distance_prepare_if_needed (self->dist, cosmo);
 }
 

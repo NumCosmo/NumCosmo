@@ -237,6 +237,116 @@ void _ncm_util_set_destroyed (gpointer b);
         }                                                  \
         G_STMT_END
 
+
+
+/* Simple Callback macros */
+
+/**
+ * NCM_UTIL_DECLARE_CALLBACK:
+ * @CallBack: The name of the callback structure in camel case
+ * @CALL_BACK: The name of the callback function in uppercase
+ * @callback: The name of the callback function in lowercase
+ * @ret: The return type of the callback function
+ * @args_decl: The declaration of the arguments of the callback function
+ *
+ * This macro declares a callback structure and the functions to handle it. You must use
+ * NCM_UTIL_CALLBACK_ARGS to declare the arguments of the callback function.
+ * The argument @arg_decl can be empty.
+ *
+ */
+#define NCM_UTIL_CALLBACK_ARGS(...) , ## __VA_ARGS__
+#define NCM_UTIL_DECLARE_CALLBACK(CallBack, CALL_BACK, callback, ret, args_decl)         \
+        typedef struct _ ## CallBack CallBack;                                           \
+        G_GNUC_UNUSED static inline CallBack *CALL_BACK (gpointer callback_ptr) {        \
+          return callback_ptr;                                                           \
+        }                                                                                \
+        typedef ret (*CallBack ## Func) (gpointer callback_data args_decl);              \
+        typedef gpointer (*CallBack ## CopyData) (gpointer callback_data);               \
+        typedef void (*CallBack ## FreeData) (gpointer callback_data);                   \
+        typedef void (*CallBack ## PrepareData) (gpointer callback_data, NcmMSet *mset); \
+        struct _ ## CallBack                                                             \
+        {                                                                                \
+          /*< private >*/                                                                \
+          CallBack ## Func func;                                                         \
+          CallBack ## FreeData callback_data_free;                                       \
+          CallBack ## CopyData callback_data_copy;                                       \
+          CallBack ## PrepareData callback_data_prepare;                                 \
+          gpointer callback_data;                                                        \
+        };                                                                               \
+        GType callback ## _get_type (void) G_GNUC_CONST;                                 \
+        CallBack *callback ## _new (CallBack ## Func func,                               \
+                                    CallBack ## FreeData callback_data_free,             \
+                                    CallBack ## CopyData callback_data_copy,             \
+                                    CallBack ## PrepareData callback_data_prepare,       \
+                                    gpointer callback_data);                             \
+        CallBack *callback ## _copy (CallBack * callback_obj);                           \
+        void callback ## _free (CallBack * callback_obj);                                \
+        ret callback ## _eval (CallBack * callback_obj args_decl);                       \
+        void callback ## _prepare (CallBack * callback_obj, NcmMSet * mset);
+
+/**
+ * NCM_UTIL_DEFINE_CALLBACK:
+ * @CallBack: The name of the callback structure in camel case
+ * @CALL_BACK: The name of the callback function in uppercase
+ * @callback: The name of the callback function in lowercase
+ * @ret: The return type of the callback function
+ * @args_decl: The declaration of the arguments of the callback function
+ * @args: The arguments of the callback function
+ *
+ * This macro defines the functions to handle the callback structure. You must use
+ * NCM_UTIL_CALLBACK_ARGS to declare both the arguments declaration of the callback
+ * function and the arguments of the function. They can be empty.
+ *
+ */
+#define NCM_UTIL_DEFINE_CALLBACK(CallBack, CALL_BACK, callback, ret, args_decl, args)                               \
+        G_DEFINE_BOXED_TYPE (CallBack, callback, callback ## _copy, callback ## _free)                              \
+        CallBack *callback ## _new (CallBack ## Func func,                                                          \
+                                    CallBack ## FreeData callback_data_free,                                        \
+                                    CallBack ## CopyData callback_data_copy,                                        \
+                                    CallBack ## PrepareData callback_data_prepare,                                  \
+                                    gpointer callback_data)                                                         \
+        {                                                                                                           \
+          CallBack *callback_obj = g_new0 (CallBack, 1);                                                            \
+          g_assert_nonnull (func);                                                                                  \
+          g_assert_nonnull (callback_data_free);                                                                    \
+          g_assert_nonnull (callback_data_copy);                                                                    \
+          callback_obj->func                  = func;                                                               \
+          callback_obj->callback_data_free    = callback_data_free;                                                 \
+          callback_obj->callback_data_copy    = callback_data_copy;                                                 \
+          callback_obj->callback_data         = callback_data;                                                      \
+          callback_obj->callback_data_prepare = callback_data_prepare;                                              \
+          return callback_obj;                                                                                      \
+        }                                                                                                           \
+        CallBack *                                                                                                  \
+        callback ## _copy (CallBack * callback_obj)                                                                 \
+        {                                                                                                           \
+          CallBack *new_callback_obj = g_new0 (CallBack, 1);                                                        \
+          new_callback_obj->func                  = callback_obj->func;                                             \
+          new_callback_obj->callback_data_free    = callback_obj->callback_data_free;                               \
+          new_callback_obj->callback_data_copy    = callback_obj->callback_data_copy;                               \
+          new_callback_obj->callback_data_prepare = callback_obj->callback_data_prepare;                            \
+          new_callback_obj->callback_data         = callback_obj->callback_data_copy (callback_obj->callback_data); \
+          return new_callback_obj;                                                                                  \
+        }                                                                                                           \
+        void                                                                                                        \
+        callback ## _free (CallBack * callback_obj)                                                                 \
+        {                                                                                                           \
+          callback_obj->callback_data_free (callback_obj->callback_data);                                           \
+          g_free (callback_obj);                                                                                    \
+        }                                                                                                           \
+        ret                                                                                                         \
+        callback ## _eval (CallBack * callback_obj args_decl)                                                       \
+        {                                                                                                           \
+          return callback_obj->func (callback_obj->callback_data args);                                             \
+        }                                                                                                           \
+        void                                                                                                        \
+        callback ## _prepare (CallBack * callback_obj, NcmMSet * mset)                                              \
+        {                                                                                                           \
+          if (callback_obj->callback_data_prepare != NULL)                                                          \
+          callback_obj->callback_data_prepare (callback_obj->callback_data, mset);                                  \
+        }
+
+
 G_END_DECLS
 #endif /* _NCM_UTIL_H_ */
 

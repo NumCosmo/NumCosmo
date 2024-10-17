@@ -35,36 +35,68 @@
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/galaxy/nc_galaxy_wl_obs.h>
+#include <numcosmo/nc_hicosmo.h>
 
 G_BEGIN_DECLS
 
 #define NC_TYPE_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_get_type ())
+#define NC_TYPE_GALAXY_SD_OBS_REDSHIFT_DATA (nc_galaxy_sd_obs_redshift_data_get_type ())
+#define NC_TYPE_GALAXY_SD_OBS_REDSHIFT_INTEGRAND (nc_galaxy_sd_obs_redshift_integrand_get_type ())
 
 G_DECLARE_DERIVABLE_TYPE (NcGalaxySDObsRedshift, nc_galaxy_sd_obs_redshift, NC, GALAXY_SD_OBS_REDSHIFT, NcmModel)
+typedef struct _NcGalaxySDObsRedshiftData NcGalaxySDObsRedshiftData;
+
+NCM_UTIL_DECLARE_CALLBACK (NcGalaxySDObsRedshiftIntegrand,
+                           NC_GALAXY_SD_OBS_REDSHIFT_INTEGRAND,
+                           nc_galaxy_sd_obs_redshift_integrand,
+                           gdouble,
+                           NCM_UTIL_CALLBACK_ARGS (const gdouble z, NcGalaxySDObsRedshiftData * data))
+
+#define NC_GALAXY_SD_OBS_REDSHIFT_DATA(obj) ((NcGalaxySDObsRedshiftData *) (obj))
 
 struct _NcGalaxySDObsRedshiftClass
 {
   /*< private >*/
   NcmModelClass parent_class;
 
-  void (*gen) (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, GArray *data);
-  gdouble (*integ) (NcGalaxySDObsRedshift *gsdor, NcGalaxyWLObsModels *models, gdouble z, gpointer data);
-  GStrv (*get_columns) (NcGalaxySDObsRedshift *gsdor);
+  void (*gen) (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
+  NcGalaxySDObsRedshiftIntegrand *(*integ) (NcGalaxySDObsRedshift *gsdor);
+  NcGalaxySDObsRedshiftData *(*data_new) (NcGalaxySDObsRedshift *gsdor);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[15];
 };
 
+struct _NcGalaxySDObsRedshiftData
+{
+  gdouble z;
+  gpointer ldata;
+  GDestroyNotify ldata_destroy;
+  gpointer (*ldata_copy) (gpointer ldata);
+  void (*ldata_read_row) (NcGalaxySDObsRedshiftData *data, NcGalaxyWLObs *obs, const guint i);
+  void (*ldata_write_row) (NcGalaxySDObsRedshiftData *data, NcGalaxyWLObs *obs, const guint i);
+  void (*ldata_required_columns) (NcGalaxySDObsRedshiftData *data, GList *columns);
+};
+
 NCM_MSET_MODEL_DECLARE_ID (nc_galaxy_sd_obs_redshift);
+
+GType nc_galaxy_sd_obs_redshift_data_get_type (void) G_GNUC_CONST;
+
+NcGalaxySDObsRedshiftData *nc_galaxy_sd_obs_redshift_data_copy (NcGalaxySDObsRedshiftData *data);
+void nc_galaxy_sd_obs_redshift_data_free (NcGalaxySDObsRedshiftData *data);
+void nc_galaxy_sd_obs_redshift_data_read_row (NcGalaxySDObsRedshiftData *data, NcGalaxyWLObs *obs, const guint i);
+void nc_galaxy_sd_obs_redshift_data_write_row (NcGalaxySDObsRedshiftData *data, NcGalaxyWLObs *obs, const guint i);
+GList *nc_galaxy_sd_obs_redshift_data_required_columns (NcGalaxySDObsRedshiftData *data);
 
 NcGalaxySDObsRedshift *nc_galaxy_sd_obs_redshift_ref (NcGalaxySDObsRedshift *gsdor);
 
 void nc_galaxy_sd_obs_redshift_free (NcGalaxySDObsRedshift *gsdor);
 void nc_galaxy_sd_obs_redshift_clear (NcGalaxySDObsRedshift **gsdor);
 
-void nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcmRNG *rng, GArray *data);
-gdouble nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, NcGalaxyWLObsModels *models, gdouble z, gpointer data);
-GStrv nc_galaxy_sd_obs_redshift_get_columns (NcGalaxySDObsRedshift *gsdor);
+NcGalaxySDObsRedshiftIntegrand *nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor);
+NcGalaxySDObsRedshiftData *nc_galaxy_sd_obs_redshift_data_new (NcGalaxySDObsRedshift *gsdor);
+
+#define NC_GALAXY_SD_OBS_REDSHIFT_COL_Z "z"
 
 G_END_DECLS
 

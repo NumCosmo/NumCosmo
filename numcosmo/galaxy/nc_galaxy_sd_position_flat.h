@@ -44,6 +44,8 @@ NcGalaxySDPositionFlat *nc_galaxy_sd_position_flat_ref (NcGalaxySDPositionFlat *
 void nc_galaxy_sd_position_flat_free (NcGalaxySDPositionFlat *gsdpflat);
 void nc_galaxy_sd_position_flat_clear (NcGalaxySDPositionFlat **gsdpflat);
 
+void nc_galaxy_sd_position_flat_gen (NcGalaxySDPositionFlat *gsdpflat, NcmMSet *mset, NcGalaxySDPositionData *data, NcmRNG *rng);
+
 G_END_DECLS
 
 #endif /* _NC_GALAXY_SD_POSITION_FLAT_H_ */

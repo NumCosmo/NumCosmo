@@ -38,7 +38,9 @@
 
 typedef struct _TestNcGalaxySDPosition
 {
+  NcGalaxySDObsRedshift *gsdor;
   NcGalaxySDPosition *gsdp;
+  NcmMSet *mset;
 } TestNcGalaxySDPosition;
 
 static void test_nc_galaxy_sd_position_flat_new (TestNcGalaxySDPosition *test, gconstpointer pdata);
@@ -48,7 +50,7 @@ static void test_nc_galaxy_sd_position_lim (TestNcGalaxySDPosition *test, gconst
 static void test_nc_galaxy_sd_position_serialize (TestNcGalaxySDPosition *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_position_model_id (TestNcGalaxySDPosition *test, gconstpointer pdata);
 
-static void test_nc_galaxy_sd_position_flat_header (TestNcGalaxySDPosition *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_position_flat_required_columns (TestNcGalaxySDPosition *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_position_flat_gen (TestNcGalaxySDPosition *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpointer pdata);
 
@@ -76,9 +78,9 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_sd_position_model_id,
               &test_nc_galaxy_sd_position_free);
 
-  g_test_add ("/nc/galaxy_sd_position_flat/header", TestNcGalaxySDPosition, NULL,
+  g_test_add ("/nc/galaxy_sd_position_flat/required_columns", TestNcGalaxySDPosition, NULL,
               &test_nc_galaxy_sd_position_flat_new,
-              &test_nc_galaxy_sd_position_flat_header,
+              &test_nc_galaxy_sd_position_flat_required_columns,
               &test_nc_galaxy_sd_position_free);
 
   g_test_add ("/nc/galaxy_sd_position_flat/gen", TestNcGalaxySDPosition, NULL,
@@ -113,16 +115,26 @@ test_nc_galaxy_sd_position_flat_new (TestNcGalaxySDPosition *test, gconstpointer
     dec_max = g_test_rand_double_range (-90.0, 90.0);
   } while (dec_max <= dec_min);
 
-  NcGalaxySDPositionFlat *gsdpflat = nc_galaxy_sd_position_flat_new (ra_min, ra_max, dec_min, dec_max);
+  {
+    NcGalaxySDTrueRedshift *gsdtr    = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new (0.0, 1100.0));
+    NcGalaxySDObsRedshift *gsdor     = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_spec_new (gsdtr));
+    NcGalaxySDPositionFlat *gsdpflat = nc_galaxy_sd_position_flat_new (ra_min, ra_max, dec_min, dec_max);
 
-  test->gsdp = NC_GALAXY_SD_POSITION (gsdpflat);
+    test->gsdp  = NC_GALAXY_SD_POSITION (gsdpflat);
+    test->gsdor = gsdor;
+    test->mset  = ncm_mset_empty_new ();
 
-  g_assert_true (NC_IS_GALAXY_SD_POSITION_FLAT (gsdpflat));
+    g_assert_true (NC_IS_GALAXY_SD_POSITION_FLAT (gsdpflat));
+
+    nc_galaxy_sd_true_redshift_free (gsdtr);
+  }
 }
 
 static void
 test_nc_galaxy_sd_position_free (TestNcGalaxySDPosition *test, gconstpointer pdata)
 {
+  nc_galaxy_sd_obs_redshift_free (test->gsdor);
+  ncm_mset_free (test->mset);
   NCM_TEST_FREE (nc_galaxy_sd_position_free, test->gsdp);
 }
 
@@ -205,23 +217,30 @@ test_nc_galaxy_sd_position_model_id (TestNcGalaxySDPosition *test, gconstpointer
 }
 
 static void
-test_nc_galaxy_sd_position_flat_header (TestNcGalaxySDPosition *test, gconstpointer pdata)
+test_nc_galaxy_sd_position_flat_required_columns (TestNcGalaxySDPosition *test, gconstpointer pdata)
 {
-  GStrv header      = nc_galaxy_sd_position_get_header (test->gsdp);
-  GStrv header_ctrl = g_strsplit ("ra dec", " ", -1);
+  NcGalaxySDObsRedshiftData *sdz_data = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
+  NcGalaxySDPositionData *gsdp_data   = nc_galaxy_sd_position_data_new (test->gsdp, sdz_data);
+  GList *columns                      = nc_galaxy_sd_position_data_required_columns (gsdp_data);
 
-  g_assert_cmpstrv (header, header_ctrl);
+  g_assert_cmpint (g_list_length (columns), ==, 3);
 
-  g_strfreev (header);
-  g_strfreev (header_ctrl);
+  g_assert_cmpstr (g_list_nth_data (columns, 0), ==, NC_GALAXY_SD_POSITION_COL_RA);
+  g_assert_cmpstr (g_list_nth_data (columns, 1), ==, NC_GALAXY_SD_POSITION_COL_DEC);
+  g_assert_cmpstr (g_list_nth_data (columns, 2), ==, NC_GALAXY_SD_OBS_REDSHIFT_COL_Z);
+
+  nc_galaxy_sd_position_data_free (gsdp_data);
+  g_list_free_full (columns, g_free);
 }
 
 static void
 test_nc_galaxy_sd_position_flat_gen (TestNcGalaxySDPosition *test, gconstpointer pdata)
 {
-  NcmRNG *rng       = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  const guint nruns = 10;
-  const guint ndata = 10000;
+  NcmRNG *rng                         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcGalaxySDObsRedshiftData *sdz_data = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
+  NcGalaxySDPositionData *gsdp_data   = nc_galaxy_sd_position_data_new (test->gsdp, sdz_data);
+  const guint nruns                   = 10;
+  const guint ndata                   = 10000;
   gdouble ra_min, ra_max, dec_min, dec_max;
   gdouble ra_avg, ra_var, dec_avg, dec_var;
   guint i;
@@ -263,12 +282,13 @@ test_nc_galaxy_sd_position_flat_gen (TestNcGalaxySDPosition *test, gconstpointer
 
     for (j = 0; j < ndata; j++)
     {
-      NcmVector *data = ncm_vector_new (2);
+      gdouble gen_ra, gen_dec;
 
-      nc_galaxy_sd_position_gen (test->gsdp, rng, data);
+      nc_galaxy_sd_obs_redshift_spec_gen (NC_GALAXY_SD_OBS_REDSHIFT_SPEC (test->gsdor), test->mset, sdz_data, rng);
+      nc_galaxy_sd_position_flat_gen (NC_GALAXY_SD_POSITION_FLAT (test->gsdp), test->mset, gsdp_data, rng);
 
-      gdouble gen_ra  = ncm_vector_get (data, 0);
-      gdouble gen_dec = ncm_vector_get (data, 1);
+      gen_ra  = gsdp_data->ra;
+      gen_dec = gsdp_data->dec;
 
       g_assert_cmpfloat (gen_ra, >, ra_min);
       g_assert_cmpfloat (gen_ra, <, ra_max);
@@ -279,7 +299,6 @@ test_nc_galaxy_sd_position_flat_gen (TestNcGalaxySDPosition *test, gconstpointer
       ncm_stats_vec_set (pos_sample, 1, gen_dec);
 
       ncm_stats_vec_update (pos_sample);
-      ncm_vector_free (data);
     }
 
     g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), <, ra_avg + 5.0 * sqrt (ra_var / ndata));
@@ -294,14 +313,19 @@ test_nc_galaxy_sd_position_flat_gen (TestNcGalaxySDPosition *test, gconstpointer
     ncm_stats_vec_free (pos_sample);
   }
 
+  nc_galaxy_sd_position_data_free (gsdp_data);
   ncm_rng_free (rng);
 }
 
 static void
 test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpointer pdata)
 {
-  NcmRNG *rng       = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  const guint nruns = 10000;
+  NcmRNG *rng                            = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcGalaxySDObsRedshiftData *sdz_data    = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
+  NcGalaxySDPositionData *gsdp_data      = nc_galaxy_sd_position_data_new (test->gsdp, sdz_data);
+  NcGalaxySDPositionIntegrand *integrand = nc_galaxy_sd_position_integ (test->gsdp);
+  NcmMSet *mset                          = ncm_mset_empty_new ();
+  const guint nruns                      = 10000;
   gdouble ra_min, ra_max, dec_min, dec_max;
   guint i;
 
@@ -320,23 +344,25 @@ test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpoint
   nc_galaxy_sd_position_set_ra_lim (test->gsdp, ra_min, ra_max);
   nc_galaxy_sd_position_set_dec_lim (test->gsdp, dec_min, dec_max);
 
+  nc_galaxy_sd_position_integrand_prepare (integrand, mset);
+
   for (i = 0; i < nruns; i++)
   {
-    NcmVector *data = ncm_vector_new (2);
-    gdouble ra      = g_test_rand_double_range (0.0, 360.0);
-    gdouble dec     = g_test_rand_double_range (-90.0, 90.0);
+    gdouble ra  = g_test_rand_double_range (0.0, 360.0);
+    gdouble dec = g_test_rand_double_range (-90.0, 90.0);
 
-    ncm_vector_set (data, 0, ra);
-    ncm_vector_set (data, 1, dec);
+    gsdp_data->ra  = ra;
+    gsdp_data->dec = dec;
 
     if ((ra < ra_min) || (ra > ra_max) || (dec < dec_min) || (dec > dec_max))
-      g_assert_cmpfloat (nc_galaxy_sd_position_integ (test->gsdp, data), ==, 0.0);
+      g_assert_cmpfloat (nc_galaxy_sd_position_integrand_eval (integrand, gsdp_data), ==, 0.0);
     else
-      g_assert_cmpfloat (nc_galaxy_sd_position_integ (test->gsdp, data), >, 0.0);
-
-    ncm_vector_free (data);
+      g_assert_cmpfloat (nc_galaxy_sd_position_integrand_eval (integrand, gsdp_data), >, 0.0);
   }
 
+  nc_galaxy_sd_position_data_free (gsdp_data);
+  nc_galaxy_sd_position_integrand_free (integrand);
   ncm_rng_free (rng);
+  ncm_mset_free (mset);
 }
 
