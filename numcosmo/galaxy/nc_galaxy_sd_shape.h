@@ -107,8 +107,6 @@ void nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds);
 NcGalaxySDShapeIntegrand *nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds);
 gboolean nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
 
-guint nc_galaxy_sd_shape_get_vec_size (NcGalaxySDShape *gsds);
-
 NcGalaxySDShapeData *nc_galaxy_sd_shape_data_new (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data);
 
 #define NC_GALAXY_SD_SHAPE_COL_COORD "coord"

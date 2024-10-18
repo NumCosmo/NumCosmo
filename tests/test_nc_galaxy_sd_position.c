@@ -50,9 +50,9 @@ static void test_nc_galaxy_sd_position_lim (TestNcGalaxySDPosition *test, gconst
 static void test_nc_galaxy_sd_position_serialize (TestNcGalaxySDPosition *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_position_model_id (TestNcGalaxySDPosition *test, gconstpointer pdata);
 
-static void test_nc_galaxy_sd_position_flat_required_columns (TestNcGalaxySDPosition *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_position_flat_gen (TestNcGalaxySDPosition *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_position_flat_required_columns (TestNcGalaxySDPosition *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -78,11 +78,6 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_sd_position_model_id,
               &test_nc_galaxy_sd_position_free);
 
-  g_test_add ("/nc/galaxy_sd_position_flat/required_columns", TestNcGalaxySDPosition, NULL,
-              &test_nc_galaxy_sd_position_flat_new,
-              &test_nc_galaxy_sd_position_flat_required_columns,
-              &test_nc_galaxy_sd_position_free);
-
   g_test_add ("/nc/galaxy_sd_position_flat/gen", TestNcGalaxySDPosition, NULL,
               &test_nc_galaxy_sd_position_flat_new,
               &test_nc_galaxy_sd_position_flat_gen,
@@ -91,6 +86,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_sd_position_flat/integ", TestNcGalaxySDPosition, NULL,
               &test_nc_galaxy_sd_position_flat_new,
               &test_nc_galaxy_sd_position_flat_integ,
+              &test_nc_galaxy_sd_position_free);
+
+  g_test_add ("/nc/galaxy_sd_position_flat/required_columns", TestNcGalaxySDPosition, NULL,
+              &test_nc_galaxy_sd_position_flat_new,
+              &test_nc_galaxy_sd_position_flat_required_columns,
               &test_nc_galaxy_sd_position_free);
 
   g_test_run ();

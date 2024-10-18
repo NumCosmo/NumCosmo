@@ -188,6 +188,20 @@ nc_galaxy_sd_shape_gauss_class_init (NcGalaxySDShapeGaussClass *klass)
 #define VECTOR  (NCM_MODEL (gsds))
 #define SIGMA_INT   (ncm_model_orig_param_get (VECTOR, NC_GALAXY_SD_SHAPE_GAUSS_SIGMA_INT))
 
+static complex double
+_gauss_cut_gen (NcmRNG *rng, const gdouble sigma)
+{
+  gdouble x;
+  gdouble y;
+
+  do {
+    x = ncm_rng_gaussian_gen (rng, 0.0, sigma);
+    y = ncm_rng_gaussian_gen (rng, 0.0, sigma);
+  } while (hypot (x, y) > 1.0);
+
+  return x + I * y;
+}
+
 static void
 _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng)
 {
@@ -204,14 +218,12 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDS
   const gdouble z                              = data->sdpos_data->sdz_data->z;
   const gdouble sigma_int                      = SIGMA_INT;
   const gdouble sigma_obs                      = ldata->sigma_obs;
-  gdouble et_s                                 = ncm_rng_gaussian_gen (rng, 0.0, sigma_int);
-  gdouble ex_s                                 = ncm_rng_gaussian_gen (rng, 0.0, sigma_int);
-  gdouble noise1                               = ncm_rng_gaussian_gen (rng, 0.0, sigma_obs);
-  gdouble noise2                               = ncm_rng_gaussian_gen (rng, 0.0, sigma_obs);
+  const gdouble noise1                         = ncm_rng_gaussian_gen (rng, 0.0, sigma_obs);
+  const gdouble noise2                         = ncm_rng_gaussian_gen (rng, 0.0, sigma_obs);
+  complex double e_s                           = _gauss_cut_gen (rng, sigma_int);
   gdouble theta                                = 0.0;
   gdouble phi                                  = 0.0;
   gdouble gt                                   = 0.0;
-  complex double e_s                           = et_s + I * ex_s;
   complex double e_o                           = e_s;
   complex double g                             = 0.0;
   complex double noise                         = noise1 + I * noise2;
@@ -333,6 +345,7 @@ _nc_galaxy_sd_shape_gauss_integ_f (gpointer callback_data, const gdouble z, NcGa
       e_s = (e_o - g) / (1.0 - conj (g) * e_o);
   }
 
+  /* TODO: compute the actual convolution */
   {
     const gdouble total_var = gsl_pow_2 (sigma_int) + gsl_pow_2 (sigma_obs);
 
@@ -562,5 +575,47 @@ nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShapeGauss *gsdsgauss, NcmMSet *mset, Nc
   ldata->sigma_obs = sigma_obs;
 
   sd_position_class->gen (NC_GALAXY_SD_SHAPE (gsdsgauss), mset, data, rng);
+}
+
+/**
+ * nc_galaxy_sd_shape_gauss_data_set:
+ * @gsdsgauss: a #NcGalaxySDShapeGauss
+ * @data: a #NcGalaxySDShapeData
+ * @epsilon_obs_1: the observed ellipticity component 1
+ * @epsilon_obs_2: the observed ellipticity component 2
+ * @sigma_obs: the observational shape dispersion
+ *
+ * Sets the observed ellipticity components and the observational shape dispersion.
+ *
+ */
+void
+nc_galaxy_sd_shape_gauss_data_set (NcGalaxySDShapeGauss *gsdsgauss, NcGalaxySDShapeData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble sigma_obs)
+{
+  NcGalaxySDShapeGaussData *ldata = (NcGalaxySDShapeGaussData *) data->ldata;
+
+  ldata->epsilon_obs_1 = epsilon_obs_1;
+  ldata->epsilon_obs_2 = epsilon_obs_2;
+  ldata->sigma_obs     = sigma_obs;
+}
+
+/**
+ * nc_galaxy_sd_shape_gauss_data_get:
+ * @gsdsgauss: a #NcGalaxySDShapeGauss
+ * @data: a #NcGalaxySDShapeData
+ * @epsilon_obs_1: (out): the observed ellipticity component 1
+ * @epsilon_obs_2: (out): the observed ellipticity component 2
+ * @sigma_obs: (out): the observational shape dispersion
+ *
+ * Gets the observed ellipticity components and the observational shape dispersion.
+ *
+ */
+void
+nc_galaxy_sd_shape_gauss_data_get (NcGalaxySDShapeGauss *gsdsgauss, NcGalaxySDShapeData *data, gdouble *epsilon_obs_1, gdouble *epsilon_obs_2, gdouble *sigma_obs)
+{
+  NcGalaxySDShapeGaussData *ldata = (NcGalaxySDShapeGaussData *) data->ldata;
+
+  *epsilon_obs_1 = ldata->epsilon_obs_1;
+  *epsilon_obs_2 = ldata->epsilon_obs_2;
+  *sigma_obs     = ldata->sigma_obs;
 }
 

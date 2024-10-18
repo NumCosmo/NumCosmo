@@ -360,3 +360,41 @@ nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshiftGauss *gsdorgauss, Ncm
   klass->gen (NC_GALAXY_SD_OBS_REDSHIFT (gsdorgauss), data, rng);
 }
 
+/**
+ * nc_galaxy_sd_obs_redshift_gauss_data_set:
+ * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
+ * @data: a #NcGalaxySDObsRedshiftData
+ * @zp: the observed redshift
+ * @sigma_z: the standard deviation of the redshift errors
+ *
+ * Sets the observed redshift and the standard deviation of the redshift errors.
+ *
+ */
+void
+nc_galaxy_sd_obs_redshift_gauss_data_set (NcGalaxySDObsRedshiftGauss *gsdorgauss, NcGalaxySDObsRedshiftData *data, const gdouble zp, const gdouble sigma_z)
+{
+  NcGalaxySDObsRedshiftGaussData * const ldata = (NcGalaxySDObsRedshiftGaussData *) data->ldata;
+
+  ldata->zp    = zp;
+  ldata->sigma = sigma_z;
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_gauss_data_get:
+ * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
+ * @data: a #NcGalaxySDObsRedshiftData
+ * @zp: the observed redshift
+ * @sigma_z: the standard deviation of the redshift errors
+ *
+ * Gets the observed redshift and the standard deviation of the redshift errors.
+ *
+ */
+void
+nc_galaxy_sd_obs_redshift_gauss_data_get (NcGalaxySDObsRedshiftGauss *gsdorgauss, NcGalaxySDObsRedshiftData *data, gdouble *zp, gdouble *sigma_z)
+{
+  NcGalaxySDObsRedshiftGaussData * const ldata = (NcGalaxySDObsRedshiftGaussData *) data->ldata;
+
+  *zp      = ldata->zp;
+  *sigma_z = ldata->sigma;
+}
+
