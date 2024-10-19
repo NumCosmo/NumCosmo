@@ -162,14 +162,13 @@ _nc_galaxy_sd_obs_redshift_spec_integ_f (gpointer callback_data, const gdouble z
 static NcGalaxySDObsRedshiftIntegrand *
 _nc_galaxy_sd_obs_redshift_spec_integ (NcGalaxySDObsRedshift *gsdor)
 {
-  NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdor);
-  NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
-  struct _IntegData *int_data                   = g_new0 (struct _IntegData, 1);
-  NcGalaxySDObsRedshiftIntegrand *integ         = nc_galaxy_sd_obs_redshift_integrand_new (_nc_galaxy_sd_obs_redshift_spec_integ_f,
-                                                                                           _integ_data_free,
-                                                                                           _integ_data_copy,
-                                                                                           NULL,
-                                                                                           int_data);
+  NcGalaxySDObsRedshiftSpec *gsdorspec  = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdor);
+  struct _IntegData *int_data           = g_new0 (struct _IntegData, 1);
+  NcGalaxySDObsRedshiftIntegrand *integ = nc_galaxy_sd_obs_redshift_integrand_new (_nc_galaxy_sd_obs_redshift_spec_integ_f,
+                                                                                   _integ_data_free,
+                                                                                   _integ_data_copy,
+                                                                                   NULL,
+                                                                                   int_data);
 
   int_data->gsdorspec = gsdorspec;
 
@@ -213,10 +212,9 @@ _nc_galaxy_sd_obs_redshift_spec_ldata_required_columns (NcGalaxySDObsRedshiftDat
 static NcGalaxySDObsRedshiftData *
 _nc_galaxy_sd_obs_redshift_spec_data_new (NcGalaxySDObsRedshift *gsdor)
 {
-  NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdor);
-  NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
-  NcGalaxySDObsRedshiftData *data               = g_new0 (NcGalaxySDObsRedshiftData, 1);
-  NcGalaxySDObsRedshiftSpecData *ldata          = g_new0 (NcGalaxySDObsRedshiftSpecData, 1);
+  NcGalaxySDObsRedshiftSpec *gsdorspec = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdor);
+  NcGalaxySDObsRedshiftData *data      = g_new0 (NcGalaxySDObsRedshiftData, 1);
+  NcGalaxySDObsRedshiftSpecData *ldata = g_new0 (NcGalaxySDObsRedshiftSpecData, 1);
 
   data->ldata                  = ldata;
   data->ldata_copy             = &_nc_galaxy_sd_obs_redshift_spec_ldata_copy;

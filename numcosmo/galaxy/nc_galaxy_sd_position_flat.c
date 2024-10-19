@@ -183,7 +183,6 @@ _nc_galaxy_sd_position_flat_integ_f (gpointer callback_data, NcGalaxySDPositionD
   const gdouble dec_norm                     = self->dec_norm;
   const gdouble ra                           = data->ra;
   const gdouble dec                          = data->dec;
-  const gdouble sin_dec                      = sin (ncm_c_degree_to_radian (dec));
 
   if ((ra >= self->ra_min) && (ra <= self->ra_max) && (dec >= self->dec_min) && (dec <= self->dec_max))
     return ra_norm * dec_norm * cos (ncm_c_degree_to_radian (dec));
@@ -194,14 +193,13 @@ _nc_galaxy_sd_position_flat_integ_f (gpointer callback_data, NcGalaxySDPositionD
 static NcGalaxySDPositionIntegrand *
 _nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp)
 {
-  NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
-  NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
-  struct _IntegData *int_data                = g_new0 (struct _IntegData, 1);
-  NcGalaxySDPositionIntegrand *integ         = nc_galaxy_sd_position_integrand_new (_nc_galaxy_sd_position_flat_integ_f,
-                                                                                    _integ_data_free,
-                                                                                    _integ_data_copy,
-                                                                                    NULL,
-                                                                                    int_data);
+  NcGalaxySDPositionFlat *gsdpflat   = NC_GALAXY_SD_POSITION_FLAT (gsdp);
+  struct _IntegData *int_data        = g_new0 (struct _IntegData, 1);
+  NcGalaxySDPositionIntegrand *integ = nc_galaxy_sd_position_integrand_new (_nc_galaxy_sd_position_flat_integ_f,
+                                                                            _integ_data_free,
+                                                                            _integ_data_copy,
+                                                                            NULL,
+                                                                            int_data);
 
   int_data->gsdpflat = gsdpflat;
 

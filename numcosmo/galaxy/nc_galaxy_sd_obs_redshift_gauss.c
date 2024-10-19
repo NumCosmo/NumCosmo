@@ -192,14 +192,13 @@ _nc_galaxy_sd_obs_redshift_gauss_integ_f (gpointer callback_data, const gdouble 
 static NcGalaxySDObsRedshiftIntegrand *
 _nc_galaxy_sd_obs_redshift_gauss_integ (NcGalaxySDObsRedshift *gsdor)
 {
-  NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
-  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
-  struct _IntegData *int_data                    = g_new0 (struct _IntegData, 1);
-  NcGalaxySDObsRedshiftIntegrand *integ          = nc_galaxy_sd_obs_redshift_integrand_new (&_nc_galaxy_sd_obs_redshift_gauss_integ_f,
-                                                                                            &_integ_data_free,
-                                                                                            &_integ_data_copy,
-                                                                                            NULL,
-                                                                                            int_data);
+  NcGalaxySDObsRedshiftGauss *gsdorgauss = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
+  struct _IntegData *int_data            = g_new0 (struct _IntegData, 1);
+  NcGalaxySDObsRedshiftIntegrand *integ  = nc_galaxy_sd_obs_redshift_integrand_new (&_nc_galaxy_sd_obs_redshift_gauss_integ_f,
+                                                                                    &_integ_data_free,
+                                                                                    &_integ_data_copy,
+                                                                                    NULL,
+                                                                                    int_data);
 
   int_data->gsdorgauss = gsdorgauss;
 
@@ -250,10 +249,9 @@ _nc_galaxy_sd_obs_redshift_gauss_ldata_required_columns (NcGalaxySDObsRedshiftDa
 static NcGalaxySDObsRedshiftData *
 _nc_galaxy_sd_obs_redshift_gauss_data_new (NcGalaxySDObsRedshift *gsdor)
 {
-  NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
-  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
-  NcGalaxySDObsRedshiftData *data                = g_new0 (NcGalaxySDObsRedshiftData, 1);
-  NcGalaxySDObsRedshiftGaussData *ldata          = g_new0 (NcGalaxySDObsRedshiftGaussData, 1);
+  NcGalaxySDObsRedshiftGauss *gsdorgauss = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
+  NcGalaxySDObsRedshiftData *data        = g_new0 (NcGalaxySDObsRedshiftData, 1);
+  NcGalaxySDObsRedshiftGaussData *ldata  = g_new0 (NcGalaxySDObsRedshiftGaussData, 1);
 
   data->ldata                  = ldata;
   data->ldata_copy             = &_nc_galaxy_sd_obs_redshift_gauss_ldata_copy;

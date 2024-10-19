@@ -74,8 +74,7 @@ nc_galaxy_sd_obs_redshift_init (NcGalaxySDObsRedshift *gsdor)
 static void
 _nc_galaxy_sd_obs_redshift_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcGalaxySDObsRedshift *gsdor              = NC_GALAXY_SD_OBS_REDSHIFT (object);
-  NcGalaxySDObsRedshiftPrivate * const self = nc_galaxy_sd_obs_redshift_get_instance_private (gsdor);
+  NcGalaxySDObsRedshift *gsdor = NC_GALAXY_SD_OBS_REDSHIFT (object);
 
   g_return_if_fail (NC_IS_GALAXY_SD_OBS_REDSHIFT (gsdor));
 

@@ -64,14 +64,15 @@ NcGalaxySDShapeGauss *nc_galaxy_sd_shape_gauss_ref (NcGalaxySDShapeGauss *gsdsga
 void nc_galaxy_sd_shape_gauss_free (NcGalaxySDShapeGauss *gsdsgauss);
 void nc_galaxy_sd_shape_gauss_clear (NcGalaxySDShapeGauss **gsdsgauss);
 
-void nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShapeGauss *gsdsgauss, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble sigma_obs, NcmRNG *rng);
+void nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShapeGauss *gsdsgauss, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble sigma_obs_1, const gdouble sigma_obs_2, NcGalaxyWLObsCoord coord, NcmRNG *rng);
 
-void nc_galaxy_sd_shape_gauss_data_set (NcGalaxySDShapeGauss *gsdsgauss, NcGalaxySDShapeData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble sigma_obs);
-void nc_galaxy_sd_shape_gauss_data_get (NcGalaxySDShapeGauss *gsdsgauss, NcGalaxySDShapeData *data, gdouble *epsilon_obs_1, gdouble *epsilon_obs_2, gdouble *sigma_obs);
+void nc_galaxy_sd_shape_gauss_data_set (NcGalaxySDShapeGauss *gsdsgauss, NcGalaxySDShapeData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble sigma_obs_1, const gdouble sigma_obs_2);
+void nc_galaxy_sd_shape_gauss_data_get (NcGalaxySDShapeGauss *gsdsgauss, NcGalaxySDShapeData *data, gdouble *epsilon_obs_1, gdouble *epsilon_obs_2, gdouble *sigma_obs_1, gdouble *sigma_obs_2);
 
 #define NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_1 "epsilon_obs_1"
 #define NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_2 "epsilon_obs_2"
-#define NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS "sigma_obs"
+#define NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_1 "sigma_obs_1"
+#define NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_2 "sigma_obs_2"
 
 G_END_DECLS
 
