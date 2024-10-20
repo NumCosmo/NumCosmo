@@ -1453,7 +1453,7 @@ ncm_model_params_get_all (NcmModel *model)
 gboolean
 ncm_model_params_valid (NcmModel *model)
 {
-  NcmModelClass *model_class   = NCM_MODEL_GET_CLASS (model);
+  NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
 
   return model_class->valid (model);
 }

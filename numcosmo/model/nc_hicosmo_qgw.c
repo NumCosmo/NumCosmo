@@ -251,9 +251,9 @@ _nc_hicosmo_qgw_adiab_eval_unit (NcHIPertIAdiab *iad)
 static gdouble
 _nc_hicosmo_qgw_adiab_eval_x (NcHIPertIAdiab *iad, const gdouble tau)
 {
-  NcHICosmo *cosmo  = NC_HICOSMO (iad);
-  const gdouble xb  = X_B;
-  const gdouble w   = W;
+  NcHICosmo *cosmo = NC_HICOSMO (iad);
+  const gdouble xb = X_B;
+  const gdouble w  = W;
 
   return xb / pow (cosh (tau), 2.0 / (3.0 * (1 - w)));
 }
@@ -344,9 +344,9 @@ _nc_hicosmo_qgw_adiab_eval_hubble (NcHIPertIAdiab *iad, const gdouble tau)
 static gdouble
 _nc_hicosmo_qgw_E2 (NcHICosmo *cosmo, gdouble z)
 {
-  const gdouble x                  = 1.0 + z;
-  const gdouble x3_1pw             = pow (x, 3.0 * (1.0 + W));
-  const gdouble Omega_w            = OMEGA_W;
+  const gdouble x       = 1.0 + z;
+  const gdouble x3_1pw  = pow (x, 3.0 * (1.0 + W));
+  const gdouble Omega_w = OMEGA_W;
 
   return Omega_w * x3_1pw;
 }

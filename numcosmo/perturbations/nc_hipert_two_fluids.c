@@ -1967,10 +1967,10 @@ nc_hipert_two_fluids_get_cross_time (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, N
 static gdouble
 _nc_hipert_two_fluids_zeta_spectrum (const gdouble lnk, gpointer userdata)
 {
-  NcHIPertTwoFluidsArg *arg             = (NcHIPertTwoFluidsArg *) userdata;
-  NcHIPert *pert                        = NC_HIPERT (arg->ptf);
-  NcmVector *init_cond                  = ncm_vector_new (NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
-  const gdouble k                       = exp (lnk);
+  NcHIPertTwoFluidsArg *arg = (NcHIPertTwoFluidsArg *) userdata;
+  NcHIPert *pert            = NC_HIPERT (arg->ptf);
+  NcmVector *init_cond      = ncm_vector_new (NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+  const gdouble k           = exp (lnk);
   gdouble alpha_i0, alpha_i;
 
   nc_hipert_set_mode_k (pert, k);

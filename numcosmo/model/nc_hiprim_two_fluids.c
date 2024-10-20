@@ -70,7 +70,7 @@ nc_hiprim_two_fluids_init (NcHIPrimTwoFluids *two_fluids)
 static void
 _nc_hiprim_two_fluids_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHIPrimTwoFluids *two_fluids         = NC_HIPRIM_TWO_FLUIDS (object);
+  NcHIPrimTwoFluids *two_fluids = NC_HIPRIM_TWO_FLUIDS (object);
 
   switch (prop_id)
   {
@@ -89,7 +89,7 @@ _nc_hiprim_two_fluids_set_property (GObject *object, guint prop_id, const GValue
 static void
 _nc_hiprim_two_fluids_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHIPrimTwoFluids *two_fluids         = NC_HIPRIM_TWO_FLUIDS (object);
+  NcHIPrimTwoFluids *two_fluids = NC_HIPRIM_TWO_FLUIDS (object);
 
   switch (prop_id)
   {
