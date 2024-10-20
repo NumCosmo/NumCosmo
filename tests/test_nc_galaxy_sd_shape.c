@@ -234,7 +234,9 @@ test_nc_galaxy_sd_shape_gauss_gen (TestNcGalaxySDShapeGauss *test, gconstpointer
   ncm_assert_cmpdouble_e (ncm_stats_vec_get_sd (stats, 0), ==, sigma_obs, 1.0e-1, 0.0);
   ncm_assert_cmpdouble_e (ncm_stats_vec_get_sd (stats, 1), ==, sigma_obs, 1.0e-1, 0.0);
 
+  nc_galaxy_sd_shape_data_free (s_data);
   ncm_stats_vec_free (stats);
+  ncm_rng_free (rng);
 }
 
 static void
@@ -331,8 +333,11 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test, gconstpoint
   ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 4), ==, ncm_stats_vec_get_mean (stats, 6), 0.0, 1.0e-2);
   ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 5), ==, 0.0, 0.0, 1.0e-2);
 
+  nc_galaxy_sd_shape_data_free (s_data);
   nc_galaxy_sd_shape_integrand_free (integrand);
   ncm_stats_vec_free (stats);
+  ncm_rng_free (rng);
+  g_ptr_array_unref (data_array);
 }
 
 static void
