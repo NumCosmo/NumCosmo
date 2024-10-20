@@ -67,7 +67,7 @@ struct _NcGalaxySDPositionClass
   gboolean (*set_dec_lim) (NcGalaxySDPosition *gsdp, const gdouble dec_min, const gdouble dec_max);
   gboolean (*get_ra_lim) (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
   gboolean (*get_dec_lim) (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
-  NcGalaxySDPositionData *(*data_new) (NcGalaxySDPosition *gsdp, NcGalaxySDObsRedshiftData *sdz_data);
+  void (*data_init) (NcGalaxySDPosition *gsdp, NcGalaxySDObsRedshiftData *sdz_data, NcGalaxySDPositionData *data);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[10];
@@ -80,18 +80,18 @@ struct _NcGalaxySDPositionData
   gdouble dec;
   gpointer ldata;
   GDestroyNotify ldata_destroy;
-  gpointer (*ldata_copy) (gpointer ldata);
   void (*ldata_read_row) (NcGalaxySDPositionData *data, NcGalaxyWLObs *obs, const guint i);
   void (*ldata_write_row) (NcGalaxySDPositionData *data, NcGalaxyWLObs *obs, const guint i);
   void (*ldata_required_columns) (NcGalaxySDPositionData *data, GList *columns);
+  gatomicrefcount ref_count;
 };
 
 NCM_MSET_MODEL_DECLARE_ID (nc_galaxy_sd_position);
 
 GType nc_galaxy_sd_position_data_get_type (void) G_GNUC_CONST;
 
-NcGalaxySDPositionData *nc_galaxy_sd_position_data_copy (NcGalaxySDPositionData *data);
-void nc_galaxy_sd_position_data_free (NcGalaxySDPositionData *data);
+NcGalaxySDPositionData *nc_galaxy_sd_position_data_ref (NcGalaxySDPositionData *data);
+void nc_galaxy_sd_position_data_unref (NcGalaxySDPositionData *data);
 void nc_galaxy_sd_position_data_read_row (NcGalaxySDPositionData *data, NcGalaxyWLObs *obs, const guint i);
 void nc_galaxy_sd_position_data_write_row (NcGalaxySDPositionData *data, NcGalaxyWLObs *obs, const guint i);
 GList *nc_galaxy_sd_position_data_required_columns (NcGalaxySDPositionData *data);

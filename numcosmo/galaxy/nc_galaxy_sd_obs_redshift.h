@@ -61,7 +61,7 @@ struct _NcGalaxySDObsRedshiftClass
 
   void (*gen) (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
   NcGalaxySDObsRedshiftIntegrand *(*integ) (NcGalaxySDObsRedshift *gsdor);
-  NcGalaxySDObsRedshiftData *(*data_new) (NcGalaxySDObsRedshift *gsdor);
+  void (*data_init) (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[15];
@@ -72,18 +72,18 @@ struct _NcGalaxySDObsRedshiftData
   gdouble z;
   gpointer ldata;
   GDestroyNotify ldata_destroy;
-  gpointer (*ldata_copy) (gpointer ldata);
   void (*ldata_read_row) (NcGalaxySDObsRedshiftData *data, NcGalaxyWLObs *obs, const guint i);
   void (*ldata_write_row) (NcGalaxySDObsRedshiftData *data, NcGalaxyWLObs *obs, const guint i);
   void (*ldata_required_columns) (NcGalaxySDObsRedshiftData *data, GList *columns);
+  gatomicrefcount ref_count;
 };
 
 NCM_MSET_MODEL_DECLARE_ID (nc_galaxy_sd_obs_redshift);
 
 GType nc_galaxy_sd_obs_redshift_data_get_type (void) G_GNUC_CONST;
 
-NcGalaxySDObsRedshiftData *nc_galaxy_sd_obs_redshift_data_copy (NcGalaxySDObsRedshiftData *data);
-void nc_galaxy_sd_obs_redshift_data_free (NcGalaxySDObsRedshiftData *data);
+NcGalaxySDObsRedshiftData *nc_galaxy_sd_obs_redshift_data_ref (NcGalaxySDObsRedshiftData *data);
+void nc_galaxy_sd_obs_redshift_data_unref (NcGalaxySDObsRedshiftData *data);
 void nc_galaxy_sd_obs_redshift_data_read_row (NcGalaxySDObsRedshiftData *data, NcGalaxyWLObs *obs, const guint i);
 void nc_galaxy_sd_obs_redshift_data_write_row (NcGalaxySDObsRedshiftData *data, NcGalaxyWLObs *obs, const guint i);
 GList *nc_galaxy_sd_obs_redshift_data_required_columns (NcGalaxySDObsRedshiftData *data);

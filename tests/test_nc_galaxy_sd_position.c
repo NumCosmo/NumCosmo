@@ -229,7 +229,8 @@ test_nc_galaxy_sd_position_flat_required_columns (TestNcGalaxySDPosition *test, 
   g_assert_cmpstr (g_list_nth_data (columns, 1), ==, NC_GALAXY_SD_POSITION_COL_DEC);
   g_assert_cmpstr (g_list_nth_data (columns, 2), ==, NC_GALAXY_SD_OBS_REDSHIFT_COL_Z);
 
-  nc_galaxy_sd_position_data_free (gsdp_data);
+  nc_galaxy_sd_obs_redshift_data_unref (sdz_data);
+  nc_galaxy_sd_position_data_unref (gsdp_data);
   g_list_free_full (columns, g_free);
 }
 
@@ -313,7 +314,8 @@ test_nc_galaxy_sd_position_flat_gen (TestNcGalaxySDPosition *test, gconstpointer
     ncm_stats_vec_free (pos_sample);
   }
 
-  nc_galaxy_sd_position_data_free (gsdp_data);
+  nc_galaxy_sd_obs_redshift_data_unref (sdz_data);
+  nc_galaxy_sd_position_data_unref (gsdp_data);
   ncm_rng_free (rng);
 }
 
@@ -360,7 +362,8 @@ test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpoint
       g_assert_cmpfloat (nc_galaxy_sd_position_integrand_eval (integrand, gsdp_data), >, 0.0);
   }
 
-  nc_galaxy_sd_position_data_free (gsdp_data);
+  nc_galaxy_sd_obs_redshift_data_unref (sdz_data);
+  nc_galaxy_sd_position_data_unref (gsdp_data);
   nc_galaxy_sd_position_integrand_free (integrand);
   ncm_rng_free (rng);
   ncm_mset_free (mset);

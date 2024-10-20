@@ -274,7 +274,7 @@ test_nc_galaxy_sd_obs_redshift_spec_gen (TestNcGalaxySDObsRedshift *test, gconst
     ncm_stats_vec_free (pos_sample);
   }
 
-  nc_galaxy_sd_obs_redshift_data_free (data);
+  nc_galaxy_sd_obs_redshift_data_unref (data);
   ncm_rng_free (rng);
 }
 
@@ -312,7 +312,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift *test, gcons
     ncm_stats_vec_free (pos_sample);
   }
 
-  nc_galaxy_sd_obs_redshift_data_free (data);
+  nc_galaxy_sd_obs_redshift_data_unref (data);
   ncm_rng_free (rng);
 }
 
@@ -344,7 +344,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_integ (TestNcGalaxySDObsRedshift *test, gco
     ncm_assert_cmpdouble_e (int_obs_z, ==, int_true_z * int_pz, 1.0e-10, 0.0);
   }
 
-  nc_galaxy_sd_obs_redshift_data_free (data);
+  nc_galaxy_sd_obs_redshift_data_unref (data);
   nc_galaxy_sd_obs_redshift_integrand_free (integrand);
   ncm_mset_free (mset);
   ncm_rng_clear (&rng);
@@ -372,7 +372,7 @@ test_nc_galaxy_sd_obs_redshift_spec_integ (TestNcGalaxySDObsRedshift *test, gcon
     ncm_assert_cmpdouble_e (int_obs_z, ==, int_true_z, 1.0e-10, 0.0);
   }
 
-  nc_galaxy_sd_obs_redshift_data_free (data);
+  nc_galaxy_sd_obs_redshift_data_unref (data);
   nc_galaxy_sd_obs_redshift_integrand_free (integrand);
   ncm_mset_free (mset);
   ncm_rng_clear (&rng);
@@ -389,7 +389,7 @@ test_nc_galaxy_sd_obs_redshift_spec_required_columns (TestNcGalaxySDObsRedshift 
   g_assert_cmpstr (g_list_nth_data (columns, 0), ==, "z");
 
   g_list_free_full (columns, g_free);
-  nc_galaxy_sd_obs_redshift_data_free (data);
+  nc_galaxy_sd_obs_redshift_data_unref (data);
 }
 
 static void
@@ -404,7 +404,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_required_columns (TestNcGalaxySDObsRedshift
   g_assert_cmpstr (g_list_nth_data (columns, 2), ==, "sigma_z");
 
   g_list_free_full (columns, g_free);
-  nc_galaxy_sd_obs_redshift_data_free (data);
+  nc_galaxy_sd_obs_redshift_data_unref (data);
 }
 
 static void
@@ -428,6 +428,6 @@ test_nc_galaxy_sd_obs_redshift_gauss_data_setget (TestNcGalaxySDObsRedshift *tes
     g_assert_cmpfloat (sigma_z_out, ==, sigma_z);
   }
 
-  nc_galaxy_sd_obs_redshift_data_free (data);
+  nc_galaxy_sd_obs_redshift_data_unref (data);
 }
 

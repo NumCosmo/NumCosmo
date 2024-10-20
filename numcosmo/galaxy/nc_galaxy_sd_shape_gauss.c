@@ -151,7 +151,7 @@ _nc_galaxy_sd_shape_gauss_finalize (GObject *object)
 static void _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng);
 static NcGalaxySDShapeIntegrand *_nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds);
 static gboolean _nc_galaxy_sd_shape_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
-static NcGalaxySDShapeData *_nc_galaxy_sd_shape_gauss_data_new (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data);
+static void _nc_galaxy_sd_shape_gauss_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data);
 
 static void
 nc_galaxy_sd_shape_gauss_class_init (NcGalaxySDShapeGaussClass *klass)
@@ -181,7 +181,7 @@ nc_galaxy_sd_shape_gauss_class_init (NcGalaxySDShapeGaussClass *klass)
   sd_position_class->gen                = &_nc_galaxy_sd_shape_gauss_gen;
   sd_position_class->integ              = &_nc_galaxy_sd_shape_gauss_integ;
   sd_position_class->prepare_data_array = &_nc_galaxy_sd_shape_gauss_prepare_data_array;
-  sd_position_class->data_new           = &_nc_galaxy_sd_shape_gauss_data_new;
+  sd_position_class->data_init          = &_nc_galaxy_sd_shape_gauss_data_init;
 }
 
 #define VECTOR  (NCM_MODEL (gsds))
@@ -426,16 +426,6 @@ _nc_galaxy_sd_shape_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *ms
   return TRUE;
 }
 
-static gpointer
-_nc_galaxy_sd_shape_gauss_ldata_copy (gpointer ldata)
-{
-  NcGalaxySDShapeGaussData *new_ldata = g_new0 (NcGalaxySDShapeGaussData, 1);
-
-  *new_ldata = *(NcGalaxySDShapeGaussData *) ldata;
-
-  return new_ldata;
-}
-
 static void
 _nc_galaxy_sd_shape_gauss_ldata_free (gpointer ldata)
 {
@@ -475,21 +465,17 @@ _nc_galaxy_sd_shape_gauss_ldata_required_columns (NcGalaxySDShapeData *data, GLi
   columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_2));
 }
 
-static NcGalaxySDShapeData *
-_nc_galaxy_sd_shape_gauss_data_new (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data)
+static void
+_nc_galaxy_sd_shape_gauss_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data)
 {
   NcGalaxySDShapeGaussData *ldata = g_new0 (NcGalaxySDShapeGaussData, 1);
-  NcGalaxySDShapeData *data       = g_new0 (NcGalaxySDShapeData, 1);
 
   data->sdpos_data             = sdpos_data;
   data->ldata                  = ldata;
-  data->ldata_copy             = &_nc_galaxy_sd_shape_gauss_ldata_copy;
   data->ldata_destroy          = &_nc_galaxy_sd_shape_gauss_ldata_free;
   data->ldata_read_row         = &_nc_galaxy_sd_shape_gauss_ldata_read_row;
   data->ldata_write_row        = &_nc_galaxy_sd_shape_gauss_ldata_write_row;
   data->ldata_required_columns = &_nc_galaxy_sd_shape_gauss_ldata_required_columns;
-
-  return data;
 }
 
 /**

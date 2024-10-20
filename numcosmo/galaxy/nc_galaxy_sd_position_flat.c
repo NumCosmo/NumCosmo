@@ -115,7 +115,7 @@ static gboolean _nc_galaxy_sd_position_flat_set_ra_lim (NcGalaxySDPosition *gsdp
 static gboolean _nc_galaxy_sd_position_flat_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
 static gboolean _nc_galaxy_sd_position_flat_set_dec_lim (NcGalaxySDPosition *gsdp, gdouble dec_min, gdouble dec_max);
 static gboolean _nc_galaxy_sd_position_flat_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
-static NcGalaxySDPositionData *_nc_galaxy_sd_position_flat_data_new (NcGalaxySDPosition *gsdp, NcGalaxySDObsRedshiftData *sdz_data);
+static void _nc_galaxy_sd_position_flat_data_init (NcGalaxySDPosition *gsdp, NcGalaxySDObsRedshiftData *sdz_data, NcGalaxySDPositionData *data);
 
 static void
 nc_galaxy_sd_position_flat_class_init (NcGalaxySDPositionFlatClass *klass)
@@ -138,7 +138,7 @@ nc_galaxy_sd_position_flat_class_init (NcGalaxySDPositionFlatClass *klass)
   sd_position_class->get_ra_lim  = &_nc_galaxy_sd_position_flat_get_ra_lim;
   sd_position_class->set_dec_lim = &_nc_galaxy_sd_position_flat_set_dec_lim;
   sd_position_class->get_dec_lim = &_nc_galaxy_sd_position_flat_get_dec_lim;
-  sd_position_class->data_new    = &_nc_galaxy_sd_position_flat_data_new;
+  sd_position_class->data_init   = &_nc_galaxy_sd_position_flat_data_init;
 }
 
 static void
@@ -268,16 +268,6 @@ _nc_galaxy_sd_position_flat_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_
   return TRUE;
 }
 
-static gpointer
-_nc_galaxy_sd_position_flat_ldata_copy (gpointer ldata)
-{
-  NcGalaxySDPositionFlatData *new_ldata = g_new0 (NcGalaxySDPositionFlatData, 1);
-
-  *new_ldata = *(NcGalaxySDPositionFlatData *) ldata;
-
-  return new_ldata;
-}
-
 static void
 _nc_galaxy_sd_position_flat_ldata_free (gpointer ldata)
 {
@@ -302,23 +292,19 @@ _nc_galaxy_sd_position_flat_ldata_required_columns (NcGalaxySDPositionData *data
   /* Nothing to do */
 }
 
-static NcGalaxySDPositionData *
-_nc_galaxy_sd_position_flat_data_new (NcGalaxySDPosition *gsdp, NcGalaxySDObsRedshiftData *sdz_data)
+static void
+_nc_galaxy_sd_position_flat_data_init (NcGalaxySDPosition *gsdp, NcGalaxySDObsRedshiftData *sdz_data, NcGalaxySDPositionData *data)
 {
-  NcGalaxySDPositionData *data      = g_new0 (NcGalaxySDPositionData, 1);
   NcGalaxySDPositionFlatData *ldata = g_new0 (NcGalaxySDPositionFlatData, 1);
 
   data->sdz_data               = sdz_data;
   data->ra                     = 0.0;
   data->dec                    = 0.0;
   data->ldata                  = ldata;
-  data->ldata_copy             = &_nc_galaxy_sd_position_flat_ldata_copy;
   data->ldata_destroy          = &_nc_galaxy_sd_position_flat_ldata_free;
   data->ldata_read_row         = &_nc_galaxy_sd_position_flat_ldata_read_row;
   data->ldata_write_row        = &_nc_galaxy_sd_position_flat_ldata_write_row;
   data->ldata_required_columns = &_nc_galaxy_sd_position_flat_ldata_required_columns;
-
-  return data;
 }
 
 /**

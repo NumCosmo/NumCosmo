@@ -247,7 +247,9 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
 
   nc_data_cluster_wl_set_obs (test->dcwl, obs);
 
-  nc_galaxy_sd_shape_data_free (s_data);
+  nc_galaxy_sd_obs_redshift_data_unref (z_data);
+  nc_galaxy_sd_position_data_unref (p_data);
+  nc_galaxy_sd_shape_data_unref (s_data);
   nc_galaxy_wl_obs_clear (&obs);
   ncm_rng_free (rng);
   g_strv_builder_unref (builder);

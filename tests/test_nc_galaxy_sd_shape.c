@@ -234,7 +234,9 @@ test_nc_galaxy_sd_shape_gauss_gen (TestNcGalaxySDShapeGauss *test, gconstpointer
   ncm_assert_cmpdouble_e (ncm_stats_vec_get_sd (stats, 0), ==, sigma_obs, 1.0e-1, 0.0);
   ncm_assert_cmpdouble_e (ncm_stats_vec_get_sd (stats, 1), ==, sigma_obs, 1.0e-1, 0.0);
 
-  nc_galaxy_sd_shape_data_free (s_data);
+  nc_galaxy_sd_obs_redshift_data_unref (z_data);
+  nc_galaxy_sd_position_data_unref (p_data);
+  nc_galaxy_sd_shape_data_unref (s_data);
   ncm_stats_vec_free (stats);
   ncm_rng_free (rng);
 }
@@ -333,7 +335,9 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test, gconstpoint
   ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 4), ==, ncm_stats_vec_get_mean (stats, 6), 0.0, 1.0e-2);
   ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 5), ==, 0.0, 0.0, 1.0e-2);
 
-  nc_galaxy_sd_shape_data_free (s_data);
+  nc_galaxy_sd_obs_redshift_data_unref (z_data);
+  nc_galaxy_sd_position_data_unref (p_data);
+  nc_galaxy_sd_shape_data_unref (s_data);
   nc_galaxy_sd_shape_integrand_free (integrand);
   ncm_stats_vec_free (stats);
   ncm_rng_free (rng);
@@ -357,6 +361,8 @@ test_nc_galaxy_sd_shape_gauss_required_columns (TestNcGalaxySDShapeGauss *test, 
   g_assert_cmpstr (g_list_nth_data (columns, 5), ==, NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_2);
 
   g_list_free_full (columns, g_free);
-  nc_galaxy_sd_shape_data_free (s_data);
+  nc_galaxy_sd_obs_redshift_data_unref (z_data);
+  nc_galaxy_sd_position_data_unref (p_data);
+  nc_galaxy_sd_shape_data_unref (s_data);
 }
 

@@ -97,7 +97,7 @@ nc_galaxy_sd_obs_redshift_spec_finalize (GObject *object)
 
 static void _nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_spec_integ (NcGalaxySDObsRedshift *gsdor);
-static NcGalaxySDObsRedshiftData *_nc_galaxy_sd_obs_redshift_spec_data_new (NcGalaxySDObsRedshift *gsdor);
+static void _nc_galaxy_sd_obs_redshift_spec_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static void _nc_galaxy_sd_obs_redshift_spec_add_submodel (NcmModel *model, NcmModel *submodel);
 
 static void
@@ -116,7 +116,7 @@ nc_galaxy_sd_obs_redshift_spec_class_init (NcGalaxySDObsRedshiftSpecClass *klass
 
   gsdor_class->gen          = &_nc_galaxy_sd_obs_redshift_spec_gen;
   gsdor_class->integ        = &_nc_galaxy_sd_obs_redshift_spec_integ;
-  gsdor_class->data_new     = &_nc_galaxy_sd_obs_redshift_spec_data_new;
+  gsdor_class->data_init    = &_nc_galaxy_sd_obs_redshift_spec_data_init;
   model_class->add_submodel = &_nc_galaxy_sd_obs_redshift_spec_add_submodel;
 }
 
@@ -175,16 +175,6 @@ _nc_galaxy_sd_obs_redshift_spec_integ (NcGalaxySDObsRedshift *gsdor)
   return integ;
 }
 
-static gpointer
-_nc_galaxy_sd_obs_redshift_spec_ldata_copy (gpointer ldata)
-{
-  NcGalaxySDObsRedshiftSpecData *new_ldata = g_new0 (NcGalaxySDObsRedshiftSpecData, 1);
-
-  *new_ldata = *(NcGalaxySDObsRedshiftSpecData *) ldata;
-
-  return new_ldata;
-}
-
 static void
 _nc_galaxy_sd_obs_redshift_spec_ldata_free (gpointer ldata)
 {
@@ -209,20 +199,16 @@ _nc_galaxy_sd_obs_redshift_spec_ldata_required_columns (NcGalaxySDObsRedshiftDat
   /* Nothing to do */
 }
 
-static NcGalaxySDObsRedshiftData *
-_nc_galaxy_sd_obs_redshift_spec_data_new (NcGalaxySDObsRedshift *gsdor)
+static void
+_nc_galaxy_sd_obs_redshift_spec_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data)
 {
-  NcGalaxySDObsRedshiftData *data      = g_new0 (NcGalaxySDObsRedshiftData, 1);
   NcGalaxySDObsRedshiftSpecData *ldata = g_new0 (NcGalaxySDObsRedshiftSpecData, 1);
 
   data->ldata                  = ldata;
-  data->ldata_copy             = &_nc_galaxy_sd_obs_redshift_spec_ldata_copy;
   data->ldata_destroy          = &_nc_galaxy_sd_obs_redshift_spec_ldata_free;
   data->ldata_read_row         = &_nc_galaxy_sd_obs_redshift_spec_ldata_read_row;
   data->ldata_write_row        = &_nc_galaxy_sd_obs_redshift_spec_ldata_write_row;
   data->ldata_required_columns = &_nc_galaxy_sd_obs_redshift_spec_ldata_required_columns;
-
-  return data;
 }
 
 static void

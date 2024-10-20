@@ -130,7 +130,7 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
   self->res = ncm_vector_new (1);
   self->tmp = ncm_vector_new (1);
 
-  g_ptr_array_set_free_func (self->shape_data, (GDestroyNotify) nc_galaxy_sd_shape_data_free);
+  g_ptr_array_set_free_func (self->shape_data, (GDestroyNotify) nc_galaxy_sd_shape_data_unref);
 }
 
 static void

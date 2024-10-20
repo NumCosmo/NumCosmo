@@ -57,7 +57,7 @@ enum
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDObsRedshift, nc_galaxy_sd_obs_redshift, NCM_TYPE_MODEL);
-G_DEFINE_BOXED_TYPE (NcGalaxySDObsRedshiftData, nc_galaxy_sd_obs_redshift_data, nc_galaxy_sd_obs_redshift_data_copy, nc_galaxy_sd_obs_redshift_data_free);
+G_DEFINE_BOXED_TYPE (NcGalaxySDObsRedshiftData, nc_galaxy_sd_obs_redshift_data, nc_galaxy_sd_obs_redshift_data_ref, nc_galaxy_sd_obs_redshift_data_unref);
 NCM_UTIL_DEFINE_CALLBACK (NcGalaxySDObsRedshiftIntegrand,
                           NC_GALAXY_SD_OBS_REDSHIFT_INTEGRAND,
                           nc_galaxy_sd_obs_redshift_integrand,
@@ -126,12 +126,10 @@ _nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor)
   return NULL;
 }
 
-static NcGalaxySDObsRedshiftData *
-_nc_galaxy_sd_obs_redshift_data_new (NcGalaxySDObsRedshift *gsdor)
+static void
+_nc_galaxy_sd_obs_redshift_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data)
 {
   g_error ("_nc_galaxy_sd_obs_redshift_data_new: method not implemented");
-
-  return NULL;
 }
 
 /*  LCOV_EXCL_STOP */
@@ -151,50 +149,43 @@ nc_galaxy_sd_obs_redshift_class_init (NcGalaxySDObsRedshiftClass *klass)
   ncm_mset_model_register_id (model_class, "NcGalaxySDObsRedshift", "Galaxy sample observed redshift distribution", NULL, FALSE, NCM_MSET_MODEL_MAIN);
   ncm_model_class_check_params_info (model_class);
 
-  klass->gen      = &_nc_galaxy_sd_obs_redshift_gen;
-  klass->integ    = &_nc_galaxy_sd_obs_redshift_integ;
-  klass->data_new = &_nc_galaxy_sd_obs_redshift_data_new;
+  klass->gen       = &_nc_galaxy_sd_obs_redshift_gen;
+  klass->integ     = &_nc_galaxy_sd_obs_redshift_integ;
+  klass->data_init = &_nc_galaxy_sd_obs_redshift_data_init;
 }
 
 /**
- * nc_galaxy_sd_obs_redshift_data_copy:
+ * nc_galaxy_sd_obs_redshift_data_ref:
  * @data: a #NcGalaxySDObsRedshiftData
  *
- * Copies the galaxy redshift data.
+ * Increments the reference count of @data by one.
  *
  * Returns: (transfer full): a copy of @data
  */
 NcGalaxySDObsRedshiftData *
-nc_galaxy_sd_obs_redshift_data_copy (NcGalaxySDObsRedshiftData *data)
+nc_galaxy_sd_obs_redshift_data_ref (NcGalaxySDObsRedshiftData *data)
 {
-  NcGalaxySDObsRedshiftData *new_data = g_new0 (NcGalaxySDObsRedshiftData, 1);
+  g_atomic_ref_count_inc (&data->ref_count);
 
-  g_assert_nonnull (data->ldata_copy);
-  g_assert_nonnull (data->ldata_destroy);
-
-  new_data->z                      = data->z;
-  new_data->ldata                  = data->ldata_copy (data->ldata);
-  new_data->ldata_destroy          = data->ldata_destroy;
-  new_data->ldata_copy             = data->ldata_copy;
-  new_data->ldata_read_row         = data->ldata_read_row;
-  new_data->ldata_write_row        = data->ldata_write_row;
-  new_data->ldata_required_columns = data->ldata_required_columns;
-
-  return new_data;
+  return data;
 }
 
 /**
- * nc_galaxy_sd_obs_redshift_data_free:
+ * nc_galaxy_sd_obs_redshift_data_unref:
  * @data: a #NcGalaxySDObsRedshiftData
  *
- * Frees the galaxy redshift data.
+ * Decreases the reference count of @data by one. If the reference count reaches 0, the
+ * data is freed.
  */
 void
-nc_galaxy_sd_obs_redshift_data_free (NcGalaxySDObsRedshiftData *data)
+nc_galaxy_sd_obs_redshift_data_unref (NcGalaxySDObsRedshiftData *data)
 {
-  g_assert_nonnull (data->ldata_destroy);
-  data->ldata_destroy (data->ldata);
-  g_free (data);
+  if (g_atomic_ref_count_dec (&data->ref_count))
+  {
+    g_assert_nonnull (data->ldata_destroy);
+    data->ldata_destroy (data->ldata);
+    g_free (data);
+  }
 }
 
 /**
@@ -349,9 +340,18 @@ nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor)
 NcGalaxySDObsRedshiftData *
 nc_galaxy_sd_obs_redshift_data_new (NcGalaxySDObsRedshift *gsdor)
 {
-  NcGalaxySDObsRedshiftData *data = NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->data_new (gsdor);
+  NcGalaxySDObsRedshiftData *data = g_new0 (NcGalaxySDObsRedshiftData, 1);
 
-  g_assert_nonnull (data->ldata_copy);
+  data->z                      = 0.0;
+  data->ldata                  = NULL;
+  data->ldata_destroy          = NULL;
+  data->ldata_read_row         = NULL;
+  data->ldata_write_row        = NULL;
+  data->ldata_required_columns = NULL;
+
+  g_atomic_ref_count_init (&data->ref_count);
+  NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->data_init (gsdor, data);
+
   g_assert_nonnull (data->ldata_destroy);
   g_assert_nonnull (data->ldata_read_row);
   g_assert_nonnull (data->ldata_write_row);

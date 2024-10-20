@@ -64,7 +64,7 @@ enum
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDShape, nc_galaxy_sd_shape, NCM_TYPE_MODEL);
-G_DEFINE_BOXED_TYPE (NcGalaxySDShapeData, nc_galaxy_sd_shape_data, nc_galaxy_sd_shape_data_copy, nc_galaxy_sd_shape_data_free);
+G_DEFINE_BOXED_TYPE (NcGalaxySDShapeData, nc_galaxy_sd_shape_data, nc_galaxy_sd_shape_data_ref, nc_galaxy_sd_shape_data_unref);
 NCM_UTIL_DEFINE_CALLBACK (NcGalaxySDShapeIntegrand,
                           NC_GALAXY_SD_SHAPE_INTEGRAND,
                           nc_galaxy_sd_shape_integrand,
@@ -141,12 +141,10 @@ _nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GP
   return FALSE;
 }
 
-static NcGalaxySDShapeData *
-_nc_galaxy_sd_shape_data_new (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data)
+static void
+_nc_galaxy_sd_shape_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data)
 {
   g_error ("_nc_galaxy_sd_shape_data_new: method not implemented.");
-
-  return NULL;
 }
 
 /* LCOV_EXCL_STOP */
@@ -169,48 +167,41 @@ nc_galaxy_sd_shape_class_init (NcGalaxySDShapeClass *klass)
   klass->gen                = &_nc_galaxy_sd_shape_gen;
   klass->integ              = &_nc_galaxy_sd_shape_integ;
   klass->prepare_data_array = &_nc_galaxy_sd_shape_prepare_data_array;
-  klass->data_new           = &_nc_galaxy_sd_shape_data_new;
+  klass->data_init          = &_nc_galaxy_sd_shape_data_init;
 }
 
 /**
- * nc_galaxy_sd_shape_data_copy:
+ * nc_galaxy_sd_shape_data_ref:
  * @data: a #NcGalaxySDShapeData
  *
- * Copies the galaxy shape data.
+ * Increases the reference count of @data by one.
  *
  */
 NcGalaxySDShapeData *
-nc_galaxy_sd_shape_data_copy (NcGalaxySDShapeData *data)
+nc_galaxy_sd_shape_data_ref (NcGalaxySDShapeData *data)
 {
-  NcGalaxySDShapeData *new_data = g_new0 (NcGalaxySDShapeData, 1);
+  g_atomic_ref_count_inc (&data->ref_count);
 
-  g_assert_nonnull (data->ldata_copy);
-  g_assert_nonnull (data->ldata_destroy);
-
-  new_data->sdpos_data             = nc_galaxy_sd_position_data_copy (data->sdpos_data);
-  new_data->ldata                  = data->ldata_copy (data->ldata);
-  new_data->ldata_destroy          = data->ldata_destroy;
-  new_data->ldata_copy             = data->ldata_copy;
-  new_data->ldata_read_row         = data->ldata_read_row;
-  new_data->ldata_write_row        = data->ldata_write_row;
-  new_data->ldata_required_columns = data->ldata_required_columns;
-
-  return new_data;
+  return data;
 }
 
 /**
- * nc_galaxy_sd_shape_data_free:
+ * nc_galaxy_sd_shape_data_unref:
  *
- * Frees the galaxy shape data.
+ * Decreases the reference count of @data by one. If the reference count reaches 0, the
+ * data is freed.
  *
  */
 void
-nc_galaxy_sd_shape_data_free (NcGalaxySDShapeData *data)
+nc_galaxy_sd_shape_data_unref (NcGalaxySDShapeData *data)
 {
-  g_assert_nonnull (data->ldata_destroy);
-  data->ldata_destroy (data->ldata);
-  nc_galaxy_sd_position_data_free (data->sdpos_data);
-  g_free (data);
+  if (g_atomic_ref_count_dec (&data->ref_count))
+  {
+    g_assert_nonnull (data->ldata_destroy);
+    data->ldata_destroy (data->ldata);
+    nc_galaxy_sd_position_data_unref (data->sdpos_data);
+    g_free (data);
+  }
 }
 
 /**
@@ -399,9 +390,21 @@ nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPt
 NcGalaxySDShapeData *
 nc_galaxy_sd_shape_data_new (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data)
 {
-  NcGalaxySDShapeData *data = NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->data_new (gsds, sdpos_data);
+  NcGalaxySDShapeData *data = g_new0 (NcGalaxySDShapeData, 1);
 
-  g_assert_nonnull (data->ldata_copy);
+  data->sdpos_data             = nc_galaxy_sd_position_data_ref (sdpos_data);
+  data->coord                  = NC_GALAXY_WL_OBS_COORD_CELESTIAL;
+  data->epsilon_int_1          = 0.0;
+  data->epsilon_int_2          = 0.0;
+  data->ldata                  = NULL;
+  data->ldata_destroy          = NULL;
+  data->ldata_read_row         = NULL;
+  data->ldata_write_row        = NULL;
+  data->ldata_required_columns = NULL;
+
+  g_atomic_ref_count_init (&data->ref_count);
+  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->data_init (gsds, sdpos_data, data);
+
   g_assert_nonnull (data->ldata_destroy);
   g_assert_nonnull (data->ldata_read_row);
   g_assert_nonnull (data->ldata_write_row);

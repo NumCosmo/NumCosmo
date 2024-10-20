@@ -63,7 +63,7 @@ enum
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDPosition, nc_galaxy_sd_position, NCM_TYPE_MODEL)
-G_DEFINE_BOXED_TYPE (NcGalaxySDPositionData, nc_galaxy_sd_position_data, nc_galaxy_sd_position_data_copy, nc_galaxy_sd_position_data_free);
+G_DEFINE_BOXED_TYPE (NcGalaxySDPositionData, nc_galaxy_sd_position_data, nc_galaxy_sd_position_data_ref, nc_galaxy_sd_position_data_unref);
 NCM_UTIL_DEFINE_CALLBACK (NcGalaxySDPositionIntegrand,
                           NC_GALAXY_SD_POSITION_INTEGRAND,
                           nc_galaxy_sd_position_integrand,
@@ -199,12 +199,10 @@ _nc_galaxy_sd_position_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, 
   return FALSE;
 }
 
-static NcGalaxySDPositionData *
-_nc_galaxy_sd_position_data_new (NcGalaxySDPosition *gsdp, NcGalaxySDObsRedshiftData *sdz_data)
+static void
+_nc_galaxy_sd_position_data_init (NcGalaxySDPosition *gsdp, NcGalaxySDObsRedshiftData *sdz_data, NcGalaxySDPositionData *data)
 {
   g_error ("_nc_galaxy_sd_position_data_new: method not implemented.");
-
-  return NULL;
 }
 
 /* LCOV_LINE_STOP */
@@ -265,50 +263,45 @@ nc_galaxy_sd_position_class_init (NcGalaxySDPositionClass *klass)
   klass->set_dec_lim = &_nc_galaxy_sd_position_set_dec_lim;
   klass->get_ra_lim  = &_nc_galaxy_sd_position_get_ra_lim;
   klass->get_dec_lim = &_nc_galaxy_sd_position_get_dec_lim;
-  klass->data_new    = &_nc_galaxy_sd_position_data_new;
+  klass->data_init   = &_nc_galaxy_sd_position_data_init;
 }
 
 /**
- * nc_galaxy_sd_position_data_copy:
+ * nc_galaxy_sd_position_data_ref:
  * @data: a #NcGalaxySDPositionData
  *
- * Copies the galaxy position data.
+ * Increases the reference count of @data by one.
  *
  * Returns: (transfer full): a copy of @data
  */
 NcGalaxySDPositionData *
-nc_galaxy_sd_position_data_copy (NcGalaxySDPositionData *data)
+nc_galaxy_sd_position_data_ref (NcGalaxySDPositionData *data)
 {
-  NcGalaxySDPositionData *new_data = g_new0 (NcGalaxySDPositionData, 1);
+  g_return_val_if_fail (data != NULL, NULL);
 
-  g_assert_nonnull (data->ldata_copy);
-  g_assert_nonnull (data->ldata_destroy);
+  g_atomic_ref_count_inc (&data->ref_count);
 
-  new_data->sdz_data               = nc_galaxy_sd_obs_redshift_data_copy (data->sdz_data);
-  new_data->ldata                  = data->ldata_copy (data->ldata);
-  new_data->ldata_destroy          = data->ldata_destroy;
-  new_data->ldata_copy             = data->ldata_copy;
-  new_data->ldata_read_row         = data->ldata_read_row;
-  new_data->ldata_write_row        = data->ldata_write_row;
-  new_data->ldata_required_columns = data->ldata_required_columns;
-
-  return new_data;
+  return data;
 }
 
 /**
- * nc_galaxy_sd_position_data_free:
+ * nc_galaxy_sd_position_data_unref:
  * @data: a #NcGalaxySDPositionData
  *
- * Frees the galaxy position data.
+ * Decreases the reference count of @data by one. If the reference count reaches 0, the
+ * data is freed.
  *
  */
 void
-nc_galaxy_sd_position_data_free (NcGalaxySDPositionData *data)
+nc_galaxy_sd_position_data_unref (NcGalaxySDPositionData *data)
 {
-  g_assert_nonnull (data->ldata_destroy);
-  data->ldata_destroy (data->ldata);
-  nc_galaxy_sd_obs_redshift_data_free (data->sdz_data);
-  g_free (data);
+  if (g_atomic_ref_count_dec (&data->ref_count))
+  {
+    g_assert_nonnull (data->ldata_destroy);
+    data->ldata_destroy (data->ldata);
+    nc_galaxy_sd_obs_redshift_data_unref (data->sdz_data);
+    g_free (data);
+  }
 }
 
 /**
@@ -543,9 +536,20 @@ nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp)
 NcGalaxySDPositionData *
 nc_galaxy_sd_position_data_new (NcGalaxySDPosition *gsdp, NcGalaxySDObsRedshiftData *sdz_data)
 {
-  NcGalaxySDPositionData *data = NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->data_new (gsdp, sdz_data);
+  NcGalaxySDPositionData *data = g_new0 (NcGalaxySDPositionData, 1);
 
-  g_assert_nonnull (data->ldata_copy);
+  data->sdz_data               = nc_galaxy_sd_obs_redshift_data_ref (sdz_data);
+  data->ra                     = 0.0;
+  data->dec                    = 0.0;
+  data->ldata                  = NULL;
+  data->ldata_destroy          = NULL;
+  data->ldata_read_row         = NULL;
+  data->ldata_write_row        = NULL;
+  data->ldata_required_columns = NULL;
+
+  g_atomic_ref_count_init (&data->ref_count);
+  NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->data_init (gsdp, sdz_data, data);
+
   g_assert_nonnull (data->ldata_destroy);
   g_assert_nonnull (data->ldata_read_row);
   g_assert_nonnull (data->ldata_write_row);
