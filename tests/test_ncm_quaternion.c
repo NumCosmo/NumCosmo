@@ -335,8 +335,6 @@ test_ncm_trivec_memcpy (void)
 void
 test_ncm_trivec_set_0 (void)
 {
-  const gdouble reltol = 1.0e-15;
-  const gdouble abstol = 1.0e-15;
   gint i;
 
   for (i = 0; i < NTESTS; i++)

@@ -204,7 +204,6 @@ _gauss_cut_gen (NcmRNG *rng, const gdouble sigma)
 static void
 _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng)
 {
-  NcGalaxySDShapeGauss *gsdsgauss              = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussData *ldata              = (NcGalaxySDShapeGaussData *) data->ldata;
   NcHICosmo *cosmo                             = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHaloPosition *halo_position                = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
@@ -311,7 +310,6 @@ _nc_galaxy_sd_shape_gauss_integ_f (gpointer callback_data, const gdouble z, NcGa
 {
   struct _IntegData *int_data     = (struct _IntegData *) callback_data;
   NcGalaxySDShape *gsds           = NC_GALAXY_SD_SHAPE (int_data->gsdsgauss);
-  NcGalaxySDShapeGauss *gsdsgauss = int_data->gsdsgauss;
   NcGalaxySDShapeGaussData *ldata = (NcGalaxySDShapeGaussData *) data->ldata;
   gdouble z_cl                    = nc_halo_position_get_redshift (int_data->halo_position);
   gdouble phi                     = ldata->phi;
@@ -395,7 +393,6 @@ _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds)
 static gboolean
 _nc_galaxy_sd_shape_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array)
 {
-  NcGalaxySDShapeGauss *gsdsgauss              = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcHICosmo *cosmo                             = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHaloPosition *halo_position                = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
   NcWLSurfaceMassDensity *surface_mass_density = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
@@ -481,7 +478,6 @@ _nc_galaxy_sd_shape_gauss_ldata_required_columns (NcGalaxySDShapeData *data, GLi
 static NcGalaxySDShapeData *
 _nc_galaxy_sd_shape_gauss_data_new (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data)
 {
-  NcGalaxySDShapeGauss *gsdsgauss = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussData *ldata = g_new0 (NcGalaxySDShapeGaussData, 1);
   NcGalaxySDShapeData *data       = g_new0 (NcGalaxySDShapeData, 1);
 

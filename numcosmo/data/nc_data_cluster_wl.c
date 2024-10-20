@@ -478,9 +478,7 @@ static void
 _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
   NcDataClusterWL *dcwl                  = NC_DATA_CLUSTER_WL (data);
-  NcDataClusterWLPrivate * const self    = nc_data_cluster_wl_get_instance_private (dcwl);
   NcGalaxySDObsRedshift *galaxy_redshift = NC_GALAXY_SD_OBS_REDSHIFT (ncm_mset_peek (mset, nc_galaxy_sd_obs_redshift_id ()));
-  guint i;
 
   if (NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (galaxy_redshift))
     m2lnL[0] = _nc_data_cluster_wl_eval_m2lnP (dcwl, mset, NULL);

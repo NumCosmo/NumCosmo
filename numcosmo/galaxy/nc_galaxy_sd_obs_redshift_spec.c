@@ -212,7 +212,6 @@ _nc_galaxy_sd_obs_redshift_spec_ldata_required_columns (NcGalaxySDObsRedshiftDat
 static NcGalaxySDObsRedshiftData *
 _nc_galaxy_sd_obs_redshift_spec_data_new (NcGalaxySDObsRedshift *gsdor)
 {
-  NcGalaxySDObsRedshiftSpec *gsdorspec = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdor);
   NcGalaxySDObsRedshiftData *data      = g_new0 (NcGalaxySDObsRedshiftData, 1);
   NcGalaxySDObsRedshiftSpecData *ldata = g_new0 (NcGalaxySDObsRedshiftSpecData, 1);
 

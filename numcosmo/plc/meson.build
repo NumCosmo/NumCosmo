@@ -1,4 +1,3 @@
-
 clik_sources = files(
     'cldf/cldf.c',
     'cldf/cldf.h',
@@ -131,6 +130,7 @@ disable_warnings = [
     '-Wno-sign-compare',
     '-Wno-maybe-uninitialized',
     '-Wno-unused-parameter',
+    '-Wno-unused',
 ]
 
 foreach flag : disable_warnings

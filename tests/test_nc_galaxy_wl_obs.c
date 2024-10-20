@@ -163,12 +163,10 @@ test_nc_galaxy_wl_obs_serialize (TestNcGalaxyWLObs *test, gconstpointer pdata)
   NcGalaxyWLObs *obs_dup;
   NcmSerialize *ser;
   GVariant *obs_ser;
-  gboolean a;
-  gboolean b;
   gdouble val;
   guint i;
-  gint j;
-  gint k;
+  guint j;
+  guint k;
 
   for (i = 0; i < nc_galaxy_wl_obs_len (test->obs); i++)
   {
@@ -223,12 +221,9 @@ test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata
   NcGalaxyWLObs *obs_dup;
   NcmSerialize *ser;
   GVariant *obs_ser;
-  gboolean a;
-  gboolean b;
-  gdouble val;
   guint i;
-  gint j;
-  gint k;
+  guint j;
+  guint k;
 
   for (i = 0; i < nc_galaxy_wl_obs_len (test->obs); i++)
   {
@@ -433,8 +428,7 @@ test_nc_galaxy_wl_obs_data_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 static void
 test_nc_galaxy_wl_obs_header (TestNcGalaxyWLObs *test, gconstpointer pdata)
 {
-  gboolean a;
-  gint i;
+  guint i;
 
   g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "ra", &i));
   g_assert_cmpint (i, ==, 0);
@@ -451,8 +445,7 @@ test_nc_galaxy_wl_obs_header (TestNcGalaxyWLObs *test, gconstpointer pdata)
 static void
 test_nc_galaxy_wl_obs_header_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 {
-  gboolean a;
-  gint i;
+  guint i;
 
   g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "ra", &i));
   g_assert_cmpint (i, ==, 0);

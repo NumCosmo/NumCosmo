@@ -249,9 +249,8 @@ _nc_galaxy_sd_obs_redshift_gauss_ldata_required_columns (NcGalaxySDObsRedshiftDa
 static NcGalaxySDObsRedshiftData *
 _nc_galaxy_sd_obs_redshift_gauss_data_new (NcGalaxySDObsRedshift *gsdor)
 {
-  NcGalaxySDObsRedshiftGauss *gsdorgauss = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
-  NcGalaxySDObsRedshiftData *data        = g_new0 (NcGalaxySDObsRedshiftData, 1);
-  NcGalaxySDObsRedshiftGaussData *ldata  = g_new0 (NcGalaxySDObsRedshiftGaussData, 1);
+  NcGalaxySDObsRedshiftData *data       = g_new0 (NcGalaxySDObsRedshiftData, 1);
+  NcGalaxySDObsRedshiftGaussData *ldata = g_new0 (NcGalaxySDObsRedshiftGaussData, 1);
 
   data->ldata                  = ldata;
   data->ldata_copy             = &_nc_galaxy_sd_obs_redshift_gauss_ldata_copy;

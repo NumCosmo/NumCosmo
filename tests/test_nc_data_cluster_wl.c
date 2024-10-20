@@ -54,11 +54,8 @@ static void test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointe
 static void test_nc_data_cluster_wl_ra_dec_limits (TestNcDataClusterWL *test, gconstpointer pdata);
 
 static void test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_serialize_spec (TestNcDataClusterWL *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_serialize_gauss (TestNcDataClusterWL *test, gconstpointer pdata);
 static void test_nc_gata_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata);
 static void test_nc_data_cluster_wl_m2lnP_integ (TestNcDataClusterWL *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_fit (TestNcDataClusterWL *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -279,10 +276,9 @@ test_nc_data_cluster_wl_ra_dec_limits (TestNcDataClusterWL *test, gconstpointer 
   {
     gdouble ra  = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_POSITION_COL_RA, i);
     gdouble dec = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_POSITION_COL_DEC, i);
-    gdouble theta, phi, r;
+    gdouble theta, phi;
 
     nc_halo_position_polar_angles (test->halo_position, ra, dec, &theta, &phi);
-    r = nc_halo_position_projected_radius (test->halo_position, test->cosmo, theta);
 
     g_assert_cmpfloat (ra, >=, ra_min);
     g_assert_cmpfloat (ra, <=, ra_max);
@@ -323,8 +319,6 @@ test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata)
     const gdouble dec           = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_POSITION_COL_DEC, i);
     const gdouble epsilon_int_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_1, i);
     const gdouble epsilon_int_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2, i);
-    const gdouble epsilon_obs_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_1, i);
-    const gdouble epsilon_obs_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_2, i);
     const gdouble sigma_obs_1   = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_1, i);
     const gdouble sigma_obs_2   = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_2, i);
     const gdouble var_obs_1     = sigma_obs_1 * sigma_obs_1;
@@ -333,10 +327,9 @@ test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata)
     const gdouble var_int       = sigma_int * sigma_int;
     const gdouble e_rms_1       = sqrt (var_int + var_obs_1);
     const gdouble e_rms_2       = sqrt (var_int + var_obs_2);
-    gdouble theta, phi, r;
+    gdouble theta, phi;
 
     nc_halo_position_polar_angles (test->halo_position, ra, dec, &theta, &phi);
-    r = nc_halo_position_projected_radius (test->halo_position, test->cosmo, theta);
 
     g_assert_cmpfloat (ra, >=, -0.2);
     g_assert_cmpfloat (ra, <=, 0.2);
@@ -363,11 +356,6 @@ test_nc_gata_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
 
 static void
 test_nc_data_cluster_wl_m2lnP_integ (TestNcDataClusterWL *test, gconstpointer pdata)
-{
-}
-
-static void
-test_nc_data_cluster_wl_fit (TestNcDataClusterWL *test, gconstpointer pdata)
 {
 }
 
