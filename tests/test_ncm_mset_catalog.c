@@ -813,7 +813,6 @@ test_ncm_mset_catalog_calc_add_param_ensemble_evol_short (TestNcmMSetCatalog *te
   NcmData *data        = NCM_DATA (test->data_mvnd);
   NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
   NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
-  const guint nt       = g_test_rand_int_range (NTESTS_MIN, NTESTS_MAX);
   NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
   guint i;
 

@@ -54,6 +54,9 @@ GType ncm_quaternion_get_type (void) G_GNUC_CONST;
 NcmTriVec *ncm_trivec_new (void);
 NcmTriVec *ncm_trivec_new_full (const gdouble c[3]);
 NcmTriVec *ncm_trivec_new_full_c (const gdouble x, const gdouble y, const gdouble z);
+NcmTriVec *ncm_trivec_new_sphere (gdouble r, gdouble theta, gdouble phi);
+NcmTriVec *ncm_trivec_new_astro_coord (gdouble r, gdouble delta, gdouble alpha);
+NcmTriVec *ncm_trivec_new_astro_ra_dec (gdouble r, gdouble ra, gdouble dec);
 
 NcmTriVec *ncm_trivec_dup (NcmTriVec *v);
 void ncm_trivec_free (NcmTriVec *v);
@@ -69,7 +72,13 @@ void ncm_trivec_normalize (NcmTriVec *v);
 
 gdouble ncm_trivec_get_phi (NcmTriVec *v);
 void ncm_trivec_set_spherical_coord (NcmTriVec *v, gdouble r, gdouble theta, gdouble phi);
-void ncm_trivec_get_spherical_coord (NcmTriVec *v, gdouble *theta, gdouble *phi);
+void ncm_trivec_get_spherical_coord (NcmTriVec *v, gdouble *r, gdouble *theta, gdouble *phi);
+
+void ncm_trivec_set_astro_coord (NcmTriVec *v, gdouble r, gdouble delta, gdouble alpha);
+void ncm_trivec_get_astro_coord (NcmTriVec *v, gdouble *r, gdouble *delta, gdouble *alpha);
+
+void ncm_trivec_set_astro_ra_dec (NcmTriVec *v, gdouble r, gdouble ra, gdouble dec);
+void ncm_trivec_get_astro_ra_dec (NcmTriVec *v, gdouble *r, gdouble *ra, gdouble *dec);
 
 /* Quaternions */
 
@@ -102,6 +111,9 @@ void ncm_quaternion_conjugate_q_mul (NcmQuaternion *q, NcmQuaternion *u, NcmQuat
 
 void ncm_quaternion_rotate (NcmQuaternion *q, NcmTriVec *v);
 void ncm_quaternion_inv_rotate (NcmQuaternion *q, NcmTriVec *v);
+
+void ncm_quaternion_set_to_rotate_to_x (NcmQuaternion *q, NcmTriVec *v);
+void ncm_quaternion_set_to_rotate_to_z (NcmQuaternion *q, NcmTriVec *v);
 
 /**
  * NCM_QUATERNION_INIT:

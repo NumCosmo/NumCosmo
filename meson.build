@@ -33,7 +33,8 @@ foreach std : ['legacy', 'f77', 'f90', 'f95', 'f2003', 'f2008', 'f2018']
   endif
 endforeach
 
-global_warn_suppress = ['-Wno-unused', '-Wno-pedantic', '-Wno-unused-parameter']
+# global_warn_suppress = ['-Wno-unused', '-Wno-pedantic', '-Wno-unused-parameter']
+global_warn_suppress = ['-Wno-unused-parameter']
 
 foreach warn : global_warn_suppress
   if cc.has_argument(warn)

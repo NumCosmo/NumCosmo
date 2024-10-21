@@ -57,8 +57,6 @@ struct _NcHIPertGW
 G_DEFINE_INTERFACE (NcHIPertIGW, nc_hipert_igw, G_TYPE_OBJECT)
 G_DEFINE_TYPE (NcHIPertGW, nc_hipert_gw, NCM_TYPE_CSQ1D)
 
-static gdouble _nc_hipert_igw_eval_unit (NcHIPertIGW *igw);
-
 static void
 nc_hipert_igw_default_init (NcHIPertIGWInterface *iface)
 {

@@ -629,8 +629,7 @@ nc_data_snia_cov_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (nc_data_snia_cov_parent_class)->constructed (object);
   {
-    NcDataSNIACov *snia_cov           = NC_DATA_SNIA_COV (object);
-    NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
+    NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (object);
 
     _nc_data_snia_cov_load_catalog (snia_cov);
   }
@@ -3819,7 +3818,6 @@ nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size)
   GFile *local         = g_file_new_for_path (full_filename);
   GFile *remote        = g_file_new_for_uri (url_str);
   GError *error        = NULL;
-  gint prog            = 0;
   gboolean download    = FALSE;
 
   if (g_file_test (full_filename, G_FILE_TEST_EXISTS))

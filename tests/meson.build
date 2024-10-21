@@ -139,6 +139,14 @@ c_tests = [
         'timeout': 0,
     },
     {
+        'name': 'ncm_util',
+        'sources': ['test_ncm_util.c'],
+    },
+    {
+        'name': 'ncm_quaternion',
+        'sources': ['test_ncm_quaternion.c'],
+    },
+    {
         'name': 'nc_halo_bias',
         'sources': ['test_nc_halo_bias.c'],
     },
@@ -204,6 +212,10 @@ c_tests = [
         'sources': ['test_nc_halo_density_profile.c'],
     },
     {
+        'name': 'nc_halo_position',
+        'sources': ['test_nc_halo_position.c'],
+    },
+    {
         'name': 'nc_wl_surface_mass_density',
         'sources': ['test_nc_wl_surface_mass_density.c'],
     },
@@ -221,20 +233,24 @@ c_tests = [
         'sources': ['test_nc_data_cluster_wl.c'],
     },
     {
+        'name': 'nc_galaxy_wl_obs',
+        'sources': ['test_nc_galaxy_wl_obs.c'],
+    },
+    {
         'name': 'nc_galaxy_sd_position',
         'sources': ['test_nc_galaxy_sd_position.c'],
     },
     {
+        'name': 'nc_galaxy_sd_true_redshift',
+        'sources': ['test_nc_galaxy_sd_true_redshift.c'],
+    },
+    {
+        'name': 'nc_galaxy_sd_obs_redshift',
+        'sources': ['test_nc_galaxy_sd_obs_redshift.c'],
+    },
+    {
         'name': 'nc_galaxy_sd_shape',
         'sources': ['test_nc_galaxy_sd_shape.c'],
-    },
-    {
-        'name': 'nc_galaxy_sd_z_proxy_dirac',
-        'sources': ['test_nc_galaxy_sd_z_proxy_dirac.c'],
-    },
-    {
-        'name': 'nc_galaxy_sd_z_proxy_gauss',
-        'sources': ['test_nc_galaxy_sd_z_proxy_gauss.c'],
     },
 ]
 tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']

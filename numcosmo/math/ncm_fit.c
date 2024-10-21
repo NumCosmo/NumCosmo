@@ -559,7 +559,6 @@ static void
 _ncm_fit_end_update (NcmFit *fit, const gchar *start_msg)
 {
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
-  const guint niter          = ncm_fit_state_get_niter (self->fstate);
 
   self->writer (fit, "\n");
 }

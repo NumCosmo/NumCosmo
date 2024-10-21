@@ -198,8 +198,6 @@ _nc_xcor_limber_kernel_gal_constructed (GObject *object)
     /* Initialize g function spline for magnification bias */
     if (xclkg->domagbias)
     {
-      NcmVector *gzv;
-
       g_clear_object (&xclkg->xclkw);
 
       xclkg->xclkw = nc_xcor_limber_kernel_weak_lensing_new (zmin, zmax, xclkg->dn_dz, 1.0, 1.0, xclkg->dist);

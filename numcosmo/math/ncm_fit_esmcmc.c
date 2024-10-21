@@ -282,7 +282,7 @@ _ncm_fit_esmcmc_constructed (GObject *object)
         NcmVector *m2lnL_k                = ncm_vector_get_subvector (full_theta_k, NCM_FIT_ESMCMC_M2LNL_ID, 1);
         NcmVector *theta_k                = ncm_vector_get_subvector (full_theta_k, nadd_vals, self->fparam_len);
         NcmVector *thetastar_k            = ncm_vector_get_subvector (full_thetastar_k, nadd_vals, self->fparam_len);
-        NcmVector *thetastar_in_k         = ncm_vector_get_subvector (full_thetastar_inout_k, nadd_vals + NCM_FIT_ESMCMC_MPI_OUT_LEN, self->fparam_len + NCM_FIT_ESMCMC_MPI_OUT_LEN);
+        NcmVector *thetastar_in_k         = ncm_vector_get_subvector (full_thetastar_inout_k, nadd_vals + NCM_FIT_ESMCMC_MPI_OUT_LEN, self->fparam_len + NCM_FIT_ESMCMC_MPI_IN_LEN);
         NcmVector *thetastar_out_k        = ncm_vector_get_subvector (full_thetastar_inout_k, 0, nadd_vals + NCM_FIT_ESMCMC_MPI_OUT_LEN);
 
         g_ptr_array_add (self->m2lnL,     m2lnL_k);
