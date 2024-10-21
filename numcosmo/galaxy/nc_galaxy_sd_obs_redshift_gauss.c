@@ -181,12 +181,10 @@ _nc_galaxy_sd_obs_redshift_gauss_integ_f (gpointer callback_data, const gdouble 
   const gdouble sigma                            = ldata->sigma;
   const gdouble sigmaz                           = sigma * (1.0 + z);
   const gdouble norm                             =  (sqrt (2.0 * M_PI) * sigmaz);
-  {
-    const gdouble int_z  = nc_galaxy_sd_true_redshift_integ (self->sdz, z);
-    const gdouble int_zp = exp (-0.5 * gsl_pow_2 ((zp - z) / sigmaz)) / norm;
+  const gdouble int_z                            = nc_galaxy_sd_true_redshift_integ (self->sdz, z);
+  const gdouble int_zp                           = exp (-0.5 * gsl_pow_2 ((zp - z) / sigmaz)) / norm;
 
-    return int_z * int_zp;
-  }
+  return int_z * int_zp;
 }
 
 static NcGalaxySDObsRedshiftIntegrand *

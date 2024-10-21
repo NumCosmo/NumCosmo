@@ -161,7 +161,7 @@ nc_halo_position_class_init (NcHaloPositionClass *klass)
    * The right ascension of the halo position.
    *
    */
-  ncm_model_class_set_sparam (model_class, NC_HALO_POSITION_RA, "ra", "ra", 0.0, 2.0 * M_PI, 1.0e-2, NC_HALO_POSITION_DEFAULT_PARAMS_ABSTOL, NC_HALO_POSITION_DEFAULT_RA, NCM_PARAM_TYPE_FIXED);
+  ncm_model_class_set_sparam (model_class, NC_HALO_POSITION_RA, "ra", "ra", -180.0, 180.0, 1.0e-2, NC_HALO_POSITION_DEFAULT_PARAMS_ABSTOL, NC_HALO_POSITION_DEFAULT_RA, NCM_PARAM_TYPE_FIXED);
 
   /**
    * NcHaloPosition:dec:
@@ -169,7 +169,7 @@ nc_halo_position_class_init (NcHaloPositionClass *klass)
    * The declination of the halo position.
    *
    */
-  ncm_model_class_set_sparam (model_class, NC_HALO_POSITION_DEC, "dec", "dec", -M_PI_2, M_PI_2, 1.0e-2, NC_HALO_POSITION_DEFAULT_PARAMS_ABSTOL, NC_HALO_POSITION_DEFAULT_DEC, NCM_PARAM_TYPE_FIXED);
+  ncm_model_class_set_sparam (model_class, NC_HALO_POSITION_DEC, "dec", "dec", -90.0, 90.0, 1.0e-2, NC_HALO_POSITION_DEFAULT_PARAMS_ABSTOL, NC_HALO_POSITION_DEFAULT_DEC, NCM_PARAM_TYPE_FIXED);
 
   /**
    * NcHaloPosition:z:
@@ -186,10 +186,11 @@ nc_halo_position_class_init (NcHaloPositionClass *klass)
    *
    */
   g_object_class_install_property (object_class, PROP_DIST,
-                                   g_param_spec_object ("dist", "Distance",
+                                   g_param_spec_object ("dist",
+                                                        "Distance",
                                                         "A NcDistance object",
                                                         NC_TYPE_DISTANCE,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
   ncm_mset_model_register_id (model_class, "NcHaloPosition", "Halo position.", NULL, TRUE, NCM_MSET_MODEL_MAIN);
 

@@ -225,8 +225,10 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDS
   gdouble e1, e2, e1_int, e2_int;
   gdouble r;
 
-  nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
+  nc_halo_position_prepare_if_needed (halo_position, cosmo);
+  nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
 
+  nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
   r = nc_halo_position_projected_radius (halo_position, cosmo, theta);
 
   if (z > z_cl)
@@ -345,7 +347,7 @@ _nc_galaxy_sd_shape_gauss_integ_f (gpointer callback_data, const gdouble z, NcGa
     const gdouble chi2_1      = gsl_pow_2 (creal (e_s)) / total_var_1;
     const gdouble chi2_2      = gsl_pow_2 (cimag (e_s)) / total_var_2;
 
-    return exp (-0.5 * (chi2_1 + chi2_2)) / sqrt (2.0 * M_PI * total_var_1 * total_var_2);
+    return exp (-0.5 * (chi2_1 + chi2_2)); /*/ sqrt (2.0 * M_PI * total_var_1 * total_var_2); */
   }
 }
 
@@ -372,6 +374,9 @@ _integ_data_prepare (gpointer user_data, NcmMSet *mset)
   int_data->halo_position        = nc_halo_position_ref (halo_position);
   int_data->surface_mass_density = nc_wl_surface_mass_density_ref (surface_mass_density);
   int_data->density_profile      = nc_halo_density_profile_ref (density_profile);
+
+  nc_halo_position_prepare_if_needed (halo_position, cosmo);
+  nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
 }
 
 static NcGalaxySDShapeIntegrand *
@@ -413,6 +418,7 @@ _nc_galaxy_sd_shape_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *ms
 
     nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
     ldata_i->radius = nc_halo_position_projected_radius (halo_position, cosmo, theta);
+    ldata_i->phi    = phi;
 
     nc_wl_surface_mass_density_reduced_shear_optzs_prep (surface_mass_density,
                                                          density_profile,

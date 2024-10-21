@@ -368,10 +368,11 @@ nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint n
 
   for (i = 0; i < npoints; i++)
   {
-    const gdouble z = ncm_vector_fast_get (x, i);
-    gdouble res     = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, data->sdpos_data->sdz_data) *
-                      nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data) *
-                      nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
+    const gdouble z         = ncm_vector_fast_get (x, i);
+    const gdouble int_z     = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, data->sdpos_data->sdz_data);
+    const gdouble int_pos   = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data);
+    const gdouble int_shape = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
+    const gdouble res       = int_z * int_pos * int_shape;
 
     ncm_vector_set (fval, i, res);
   }
@@ -460,9 +461,10 @@ _nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector 
   {
     NcGalaxySDShapeData *data = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
     const gdouble z           = data->sdpos_data->sdz_data->z;
-    gdouble m2lnP_gal_i       = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data) *
-                                nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, data->sdpos_data->sdz_data) *
-                                nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
+    const gdouble int_z       = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, data->sdpos_data->sdz_data);
+    const gdouble int_pos     = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data);
+    const gdouble int_shape   = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
+    const gdouble m2lnP_gal_i = -2.0 * log (int_z * int_pos * int_shape);
 
     result += m2lnP_gal_i;
   }
@@ -516,6 +518,9 @@ _nc_data_cluster_wl_load_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs, GPtrArr
 
     nc_galaxy_sd_shape_data_read_row (s_data, obs, i);
     g_ptr_array_add (shape_data, s_data);
+
+    nc_galaxy_sd_position_data_unref (p_data);
+    nc_galaxy_sd_obs_redshift_data_unref (z_data);
   }
 }
 
@@ -543,6 +548,7 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
   self->galaxy_redshift      = galaxy_redshift;
   self->galaxy_position      = galaxy_position;
 
+  nc_halo_position_prepare_if_needed (halo_position, cosmo);
   nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
   {
     const gboolean model_update = ncm_model_ctrl_model_update (self->ctrl_position, NCM_MODEL (galaxy_position)) ||
@@ -643,6 +649,8 @@ nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs)
 
   self->len = nc_galaxy_wl_obs_len (obs);
   self->obs = nc_galaxy_wl_obs_ref (obs);
+
+  ncm_data_set_init (NCM_DATA (dcwl), TRUE);
 }
 
 /**

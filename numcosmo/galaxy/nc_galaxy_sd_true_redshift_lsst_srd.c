@@ -192,10 +192,7 @@ _nc_galaxy_sd_true_redshift_lsst_srd_integ (NcGalaxySDTrueRedshift *gsdtr, gdoub
   const gdouble z0                                  = Z0;
   const gdouble y                                   = pow (z0, alpha);
 
-  if ((z >= self->z_min) && (z < self->z_max))
-    return pow (z, beta) * exp (-(y / self->y0)) * self->z_norm;
-
-  return 0.0;
+  return pow (z, beta) * exp (-(y / self->y0)) * self->z_norm;
 }
 
 static gboolean
