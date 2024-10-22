@@ -145,10 +145,7 @@ _nc_galaxy_wl_obs_set_property (GObject *object, guint prop_id, const GValue *va
       _nc_galaxy_wl_obs_take_pz (self, g_value_dup_boxed (value));
       break;
     case PROP_COLUNMS:
-
-      if (self->columns != NULL)
-        g_strfreev (self->columns);
-
+      g_assert_null (self->columns);
       self->columns = g_value_dup_boxed (value);
       break;
     case PROP_COORD:
