@@ -380,29 +380,13 @@ message('Checking for MPI')
 
 if get_option('mpi').auto() or get_option('mpi').enabled()
 
-  mpi_c_dep = dependency(
-    'mpi',
-    language: 'c',
-    required: false,
-  )
+  # Meson has a bug that prevents it from getting the correct MPICH-MPI dependency
+  # when detected the required option is set to false. We need to check for MPICH
+  # first and then for the generic MPI dependency.
+  mpi_c_dep = dependency('mpich', required: false)
 
-  mpi_fortran_dep = dependency(
-    'mpi',
-    language: 'fortran',
-    required: false,
-  )
-
-  # MPICH is not found by the mpi dependency, so we need to check for it manually
   if (not mpi_c_dep.found())
-    mpi_c_dep = dependency('mpich', required: false)
-  endif
-
-  # MPICH is not found by the mpi dependency, so we need to check for it manually
-  if (not mpi_fortran_dep.found())
-    mpi_fortran_dep = dependency('mpichf90', required: false)
-    if mpi_fortran_dep.found()
-      numcosmo_conf.set('HAVE_MPIF90', true)
-    endif
+    mpi_c_dep = dependency('mpi', language: 'c', required: false)
   endif
 
   if get_option('mpi').enabled() and not mpi_c_dep.found()
@@ -413,7 +397,6 @@ if get_option('mpi').auto() or get_option('mpi').enabled()
   endif
 else
   mpi_c_dep = not_found
-  mpi_fortran_dep = not_found
 endif
 
 if mpi_c_dep.found()
