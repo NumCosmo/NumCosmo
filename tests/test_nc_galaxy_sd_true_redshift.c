@@ -327,10 +327,7 @@ test_nc_galaxy_sd_true_redshift_lsst_srd_integ (TestNcGalaxySDTrueRedshift *test
   {
     gdouble z = g_test_rand_double_range (0.0, 5.0);
 
-    if ((z < z_min) || (z > z_max))
-      g_assert_cmpfloat (nc_galaxy_sd_true_redshift_integ (test->gsdtr, z), ==, 0.0);
-    else
-      g_assert_cmpfloat (nc_galaxy_sd_true_redshift_integ (test->gsdtr, z), >, 0.0);
+    g_assert_cmpfloat (nc_galaxy_sd_true_redshift_integ (test->gsdtr, z), >, 0.0);
   }
 
   ncm_rng_clear (&rng);
