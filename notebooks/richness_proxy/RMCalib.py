@@ -73,8 +73,8 @@ class BinningData:
                     lnM_0 = lnM_0 + d_m
                     lnM_1 = lnM_1 + d_m
             
-            n_perc_bin = ( len(lenbins) / len(halos_bin_mz) ) * 100   # Percentage of bins with < 6 elements.
-            print(f'{n_perc_bin}% of bins contains < 6 elements')
+            #n_perc_bin = ( len(lenbins) / len(halos_bin_mz) ) * 100   # Percentage of bins with < 6 elements.
+            #print(f'{n_perc_bin}% of bins contains < 6 elements')
             
             return halos_bin_mz 
 
@@ -146,7 +146,7 @@ class FittingModel:
             case "ext_ln1pz":
                 model = Nc.ClusterMassLnrichExt(use_ln1pz = True)
                 fixed_parameters = [4, 10, 13, 14, 15] #fixing cut parameters
-                model.param_set_by_name("muZ2", 0) #Set cut parameter value
+                # model.param_set_by_name("muZ2", 0) #Set cut parameter value
 
             
             case "ext_z":

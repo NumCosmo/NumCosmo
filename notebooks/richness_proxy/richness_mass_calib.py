@@ -14,7 +14,7 @@ DC2_halos_m200c = fits.open(
 dt_halos = Table(DC2_halos_m200c[1].data)
 
 
-def create_richness_mass_calib(dt_halos):
+def create_richness_mass_calib(dt_halos, mass_col_name: str="m200c"):
     """Create a RichnessMassCalib object."""
 
     catalog_len = len(dt_halos)
@@ -23,7 +23,7 @@ def create_richness_mass_calib(dt_halos):
     z_v = Ncm.Vector.new(catalog_len)
     rich_v = Ncm.Vector.new(catalog_len)
 
-    for i, mass in enumerate(dt_halos["m200c"]):
+    for i, mass in enumerate(dt_halos[mass_col_name]):
         lnM_v.set(i, np.log(mass))
 
     for i, z in enumerate(dt_halos["redshift_true"]):
