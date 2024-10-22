@@ -37,7 +37,7 @@ Ncm.cfg_init()
 def test_wl_likelihood() -> None:
     """Example using weak lensing likelihood."""
     seed = 1235
-    use_photoz = False
+    use_spec = True
     H0 = 70.0
     Omegab = 0.045
     Omegac = 0.255
@@ -52,8 +52,8 @@ def test_wl_likelihood() -> None:
     galaxy_true_z_min = 0.2
     galaxy_true_z_max = 1.2
     galaxies_ang_dist = 0.15
-    galaxy_shape_e_rms = 3.0e-1
-    galaxy_shape_e_sigma = 1.0e-1
+    galaxy_shape_e_rms = 2.0e-1
+    galaxy_shape_e_sigma = 1.0e-4
     min_r, max_r = 0.3, 3.0
 
     dist = Nc.Distance.new(5.0)
@@ -81,7 +81,7 @@ def test_wl_likelihood() -> None:
     galaxy_redshift_true = Nc.GalaxySDTrueRedshiftLSSTSRD.new(
         galaxy_true_z_min, galaxy_true_z_max
     )
-    if use_photoz:
+    if use_spec:
         galaxy_redshift = Nc.GalaxySDObsRedshiftSpec.new(galaxy_redshift_true)
     else:
         galaxy_redshift = Nc.GalaxySDObsRedshiftGauss.new(galaxy_redshift_true)
@@ -133,7 +133,7 @@ def test_wl_likelihood() -> None:
     )
 
     for i in range(n_galaxies):
-        if use_photoz:
+        if use_spec:
             galaxy_redshift.gen(mset, z_data, rng)
         else:
             galaxy_redshift.gen(mset, z_data, sigma_z, rng)  # type: ignore
@@ -161,13 +161,14 @@ def test_wl_likelihood() -> None:
     fit.run(Ncm.FitRunMsgs.SIMPLE)
     fit.log_info()
 
-    fit.obs_fisher()
-    fit.log_covar()
+    # fit.obs_fisher()
+    # fit.log_covar()
 
     init_sampler = Ncm.MSetTransKernGauss.new(0)
     init_sampler.set_mset(mset)
     init_sampler.set_prior_from_mset()
-    init_sampler.set_cov(fit.get_covar())
+    # init_sampler.set_cov(fit.get_covar())
+    init_sampler.set_cov_from_rescale(1.0)
 
     nwalkers = 300
     apes = Ncm.FitESMCMCWalkerAPES.new(nwalkers, mset.fparams_len())

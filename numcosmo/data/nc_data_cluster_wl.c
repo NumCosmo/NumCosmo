@@ -144,7 +144,7 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
   switch (prop_id)
   {
     case PROP_OBS:
-      nc_data_cluster_wl_set_obs (dcwl, g_value_dup_object (value));
+      nc_data_cluster_wl_set_obs (dcwl, g_value_get_object (value));
       break;
     case PROP_R_MIN:
       self->r_min = g_value_get_double (value);
@@ -647,6 +647,7 @@ nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs)
 {
   NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
 
+  nc_galaxy_wl_obs_clear (&self->obs);
   self->len = nc_galaxy_wl_obs_len (obs);
   self->obs = nc_galaxy_wl_obs_ref (obs);
 
