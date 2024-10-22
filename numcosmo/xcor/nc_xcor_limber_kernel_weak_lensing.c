@@ -400,7 +400,6 @@ _kernel_wl_W_U_J (realtype mz, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_d
 {
   src_int_params *ts = (src_int_params *) jac_data;
   NcHICosmo *cosmo   = ts->cosmo;
-  NcDistance *dist   = ts->xclkg->dist;
   const gdouble z    = -mz;
   const gdouble E    = nc_hicosmo_E (cosmo, z);
 

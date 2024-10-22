@@ -4,6 +4,7 @@ Debug/
 Intel/
 Optimized/
 Profiling/
+numcosmo_py.egg-info/
 .vscode
 genchangelog.sh
 examples/*.png
@@ -22,7 +23,7 @@ docs/references.out
 scripts/*.pyc
 __pycache__
 .ipynb_checkpoints
-*~
+
 
 # Generated pdfs, log and fits
 *.pdf

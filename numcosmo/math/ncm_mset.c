@@ -140,7 +140,6 @@ static void
 ncm_mset_init (NcmMSet *mset)
 {
   NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
-  GError *error               = NULL;
 
   self->model_array     = g_ptr_array_sized_new (20);
   self->model_item_hash = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, NULL);
@@ -869,9 +868,8 @@ ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name, GError **error)
 {
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
   {
-    NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
-    gchar **ns_stackpos         = g_strsplit (name, ":", 2);
-    NcmModel *model             = NULL;
+    gchar **ns_stackpos = g_strsplit (name, ":", 2);
+    NcmModel *model     = NULL;
 
     if (ns_stackpos[1] != NULL)
     {
@@ -2879,22 +2877,19 @@ ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname, GError **
 {
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
   {
-    NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
-    NcmMSetClass * const klass  = NCM_MSET_GET_CLASS (mset);
-    NcmMSetPIndex *pi           = NULL;
-    gchar *model_ns             = NULL;
-    gchar *pname                = NULL;
-    guint stackpos_id           = 0;
-    gboolean full_name_found    = FALSE;
+    NcmMSetPIndex *pi        = NULL;
+    gchar *model_ns          = NULL;
+    gchar *pname             = NULL;
+    guint stackpos_id        = 0;
+    gboolean full_name_found = FALSE;
 
     full_name_found = ncm_mset_split_full_name (fullname, &model_ns, &stackpos_id, &pname, error);
     NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
     if (full_name_found)
     {
-      guint pid      = 0;
-      guint stackpos = 0;
-      gchar *endptr  = NULL;
+      guint pid     = 0;
+      gchar *endptr = NULL;
       NcmModelID mid;
       NcmModel *model;
 
@@ -3880,7 +3875,7 @@ ncm_mset___setitem__ (NcmMSet *mset, GValue *model_id, NcmModel *model, GError *
     {
       gchar *endptr = NULL;
 
-      stackpos = g_ascii_strtoll (ns_stackpos[0], &endptr, 10);
+      stackpos = g_ascii_strtoll (ns_stackpos[1], &endptr, 10);
 
       if (*endptr != '\0')
       {
@@ -3921,7 +3916,11 @@ ncm_mset___setitem__ (NcmMSet *mset, GValue *model_id, NcmModel *model, GError *
     return;
   }
 
-  ncm_mset_set (mset, model, error);
+  if (stackpos > 0)
+    ncm_mset_set_pos (mset, model, stackpos, error);
+  else
+    ncm_mset_set (mset, model, error);
+
   NCM_UTIL_ON_ERROR_RETURN (error, , );
 }
 

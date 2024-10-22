@@ -82,9 +82,9 @@ test_nc_hicosmo_qgw_new (TestNcHIcosmoQGW *test, gconstpointer pdata)
 void
 test_nc_hicosmo_qgw_units (TestNcHIcosmoQGW *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo = test->cosmo;
-  gdouble units    = 1.0;
-  /*g_assert_true(NC_IS_HICOSMO_QGW(cosmo)); */
-  /*nc_hicosmo_qgw_set_units(cosmo, units);*/
+  /* NcHICosmo *cosmo = test->cosmo; */
+  /* gdouble units    = 1.0; */
+  /* g_assert_true(NC_IS_HICOSMO_QGW(cosmo)); */
+  /* nc_hicosmo_qgw_set_units(cosmo, units); */
 }
 

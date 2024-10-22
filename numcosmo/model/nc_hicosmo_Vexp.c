@@ -520,51 +520,6 @@ _nc_hicosmo_Vexp_init_x_alpha_series (const gdouble dalpha)
   return dalpha * res;
 }
 
-static gdouble
-_nc_hicosmo_Vexp_init_dx_alpha_series (const gdouble dalpha)
-{
-  const gdouble an[25] = {
-    +2.1213203435596425732   *  1.0,
-    -3.1819805153394638598   *  2.0,
-    +0.0                     *  3.0,
-    +14.318912319027587369   *  4.0,
-    -38.661063261374485897   *  5.0,
-    +30.069715869957933475   *  6.0,
-    +133.47271840236429655   *  7.0,
-    -562.31135761409854934   *  8.0,
-    +852.95970820407459509   *  9.0,
-    +879.60822680923629430   * 10.0,
-    -7833.1017094058379035   * 11.0,
-    +17969.469996896215007   * 12.0,
-    -5132.5309707529267568   * 13.0,
-    -97212.641401182025488   * 14.0,
-    +325940.66821809623956   * 15.0,
-    -370774.67123243092981   * 16.0,
-    -949452.26167748074539   * 17.0,
-    +5.2556176004654939455e6 * 18.0,
-    -9.9203647608405914131e6 * 19.0,
-    -3.5322017625266955972e6 * 20.0,
-    +7.4749084074478288480e7 * 21.0,
-    -2.0578628366558384105e8 * 22.0,
-    +1.4591930291931796152e8 * 23.0,
-    +8.8839574285216097773e8 * 24.0,
-    -3.6743882793601701195e9 * 25.0
-  };
-  register gint i;
-  register gdouble res = an[24];
-
-  for (i = 23; i >= 0; i--)
-  {
-#ifdef HAVE_FMA
-    res = fma (dalpha, res, an[i]);
-#else
-    res = dalpha * res + an[i];
-#endif
-  }
-
-  return res;
-}
-
 #define VECTOR    (NCM_MODEL (cosmo))
 #define MACRO_H0  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_H0))
 #define OMEGA_C   (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_OMEGA_C))
@@ -2069,7 +2024,6 @@ _nc_hicosmo_Vexp_adiab_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdo
 static gdouble
 _nc_hicosmo_Vexp_adiab_eval_unit (NcHIPertIAdiab *iad)
 {
-  NcHICosmoVexp *Vexp  = NC_HICOSMO_VEXP (iad);
   NcHICosmo *cosmo     = NC_HICOSMO (iad);
   const gdouble RH_lp  = nc_hicosmo_RH_planck (cosmo);
   const gdouble factor = sqrt (8.0 * ncm_c_pi () / 6.0);
@@ -2088,7 +2042,6 @@ static gdouble
 _nc_hicosmo_Vexp_adiab_eval_p2Psi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
 {
   NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (iad);
-  NcHICosmo *cosmo    = NC_HICOSMO (iad);
   const gdouble E     = nc_hicosmo_Vexp_E_tau (Vexp, tau);
   const gdouble x     = _nc_hicosmo_Vexp_adiab_eval_x (iad, tau);
 
@@ -2318,7 +2271,6 @@ _nc_hicosmo_Vexp_gw_eval_m (NcHIPertIGW *igw, const gdouble tau, const gdouble k
 static gdouble
 _nc_hicosmo_Vexp_gw_eval_unit (NcHIPertIGW *igw)
 {
-  NcHICosmoVexp *Vexp  = NC_HICOSMO_VEXP (igw);
   NcHICosmo *cosmo     = NC_HICOSMO (igw);
   const gdouble RH_lp  = nc_hicosmo_RH_planck (cosmo);
   const gdouble factor = sqrt (32.0 * ncm_c_pi ());
@@ -2379,7 +2331,6 @@ _nc_hicosmo_Vexp_em_eval_m (NcHIPertIEM *iem, const gdouble tau, const gdouble k
 static gdouble
 _nc_hicosmo_Vexp_em_eval_unit (NcHIPertIEM *iem)
 {
-  NcHICosmoVexp *Vexp      = NC_HICOSMO_VEXP (iem);
   NcHICosmo *cosmo         = NC_HICOSMO (iem);
   const gdouble hbar_c_mu0 = ncm_c_hbar () * ncm_c_c () * ncm_c_magnetic_constant ();
   const gdouble RH         = nc_hicosmo_RH_Mpc (cosmo) * ncm_c_Mpc ();

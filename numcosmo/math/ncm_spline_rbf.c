@@ -499,7 +499,6 @@ _ncm_spline_rbf_deriv (const NcmSpline *s, const gdouble x)
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF ((NcmSpline *) s);
   NcmSplineRBFPrivate * const self = ncm_spline_rbf_get_instance_private (rbf);
   NcmVector *s_xv                  = ncm_spline_peek_xv ((NcmSpline *) s);
-  NcmVector *s_yv                  = ncm_spline_peek_yv ((NcmSpline *) s);
 
   return self->deriv (rbf, s_xv, x);
 }
@@ -510,7 +509,6 @@ _ncm_spline_rbf_deriv2 (const NcmSpline *s, const gdouble x)
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF ((NcmSpline *) s);
   NcmSplineRBFPrivate * const self = ncm_spline_rbf_get_instance_private (rbf);
   NcmVector *s_xv                  = ncm_spline_peek_xv ((NcmSpline *) s);
-  NcmVector *s_yv                  = ncm_spline_peek_yv ((NcmSpline *) s);
 
   return self->deriv2 (rbf, s_xv, x);
 }
@@ -521,7 +519,6 @@ _ncm_spline_rbf_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
   NcmSplineRBF *rbf                = NCM_SPLINE_RBF ((NcmSpline *) s);
   NcmSplineRBFPrivate * const self = ncm_spline_rbf_get_instance_private (rbf);
   NcmVector *s_xv                  = ncm_spline_peek_xv ((NcmSpline *) s);
-  NcmVector *s_yv                  = ncm_spline_peek_yv ((NcmSpline *) s);
 
   return self->integ (rbf, s_xv, x0, x1);
 }

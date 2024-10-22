@@ -699,7 +699,6 @@ test_ncm_serialize_from_yaml_special_types (TestNcmSerialize *test, gconstpointe
   g_assert_true (NCM_IS_OBJECT_TEST (obj_new));
 
   {
-    NcmObjectTest *obj_test = NCM_OBJECT_TEST (obj_new);
     NcmDTuple2 *dt2;
     NcmDTuple3 *dt3;
     NcmVector *vector;
@@ -758,7 +757,6 @@ test_ncm_serialize_from_yaml_special_types_block_flow (TestNcmSerialize *test, g
   g_assert_true (NCM_IS_OBJECT_TEST (obj_new));
 
   {
-    NcmObjectTest *obj_test = NCM_OBJECT_TEST (obj_new);
     NcmDTuple2 *dt2;
     NcmDTuple3 *dt3;
     NcmVector *vector;

@@ -644,10 +644,9 @@ nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 gdouble
 nc_distance_comoving_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2)
 {
-  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
-  const gdouble dc1      = nc_distance_comoving (dist, cosmo, z1);
-  const gdouble dc2      = nc_distance_comoving (dist, cosmo, z2);
-  const gdouble dc       = dc2 - dc1;
+  const gdouble dc1 = nc_distance_comoving (dist, cosmo, z1);
+  const gdouble dc2 = nc_distance_comoving (dist, cosmo, z2);
+  const gdouble dc  = dc2 - dc1;
 
   if (fabs (2.0 * dc / (dc1 + dc2)) > 1.0e-3)
   {

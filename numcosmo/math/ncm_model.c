@@ -1198,7 +1198,6 @@ ncm_model_is_equal (NcmModel *model1, NcmModel *model2)
 NcmReparam *
 ncm_model_get_reparam (NcmModel *model)
 {
-  NcmModelPrivate * const self = ncm_model_get_instance_private (model);
   NcmReparam *reparam;
 
   g_object_get (model, "reparam", &reparam, NULL);
@@ -1354,7 +1353,6 @@ ncm_model_params_set_vector (NcmModel *model, NcmVector *v)
 void
 ncm_model_params_set_model (NcmModel *model, NcmModel *model_src)
 {
-  NcmModelPrivate * const self     = ncm_model_get_instance_private (model);
   NcmModelPrivate * const self_src = ncm_model_get_instance_private (model_src);
 
   g_assert (ncm_model_is_equal (model, model_src));
@@ -1455,8 +1453,7 @@ ncm_model_params_get_all (NcmModel *model)
 gboolean
 ncm_model_params_valid (NcmModel *model)
 {
-  NcmModelPrivate * const self = ncm_model_get_instance_private (model);
-  NcmModelClass *model_class   = NCM_MODEL_GET_CLASS (model);
+  NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
 
   return model_class->valid (model);
 }
@@ -2498,8 +2495,6 @@ ncm_model_params_set_default_ftype (NcmModel *model)
 GHashTable *
 ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
 {
-  NcmModelPrivate * const self = ncm_model_get_instance_private (model);
-
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
 
   {
@@ -2611,8 +2606,6 @@ ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
 void
 ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GError **error)
 {
-  NcmModelPrivate * const self = ncm_model_get_instance_private (model);
-
   g_return_if_fail (error == NULL || *error == NULL);
 
   {
