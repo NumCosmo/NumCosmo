@@ -26,10 +26,10 @@ def create_richness_mass_calib(dt_halos, mass_col_name: str="m200c"):
     for i, mass in enumerate(dt_halos[mass_col_name]):
         lnM_v.set(i, np.log(mass))
 
-    for i, z in enumerate(dt_halos["redshift_true"]):
+    for i, z in enumerate(dt_halos['redshift_true']):
         z_v.set(i, z)
 
-    for i, rich in enumerate(dt_halos["richness"]):
+    for i, rich in enumerate(dt_halos['richness']):
         rich_v.set(i, np.log(rich))
 
     dmr = Nc.DataClusterMassRich.new()
