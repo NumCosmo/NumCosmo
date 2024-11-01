@@ -145,7 +145,7 @@ class FittingModel:
         match mod:
             case "ext_ln1pz":
                 model = Nc.ClusterMassLnrichExt(use_ln1pz = True)
-                fixed_parameters = [4, 10, 13, 14, 15] #fixing cut parameters
+                fixed_parameters = [13, 14, 15] #fixing cut parameters
                 # model.param_set_by_name("muZ2", 0) #Set cut parameter value
 
             
