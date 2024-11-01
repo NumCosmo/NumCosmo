@@ -362,6 +362,7 @@
       <xi:include href="xml/nc_halo_bias_st_spher.xml"/>
       <xi:include href="xml/nc_halo_bias_st_ellip.xml"/>
       <xi:include href="xml/nc_halo_bias_tinker.xml"/>
+      <xi:include href="xml/nc_halo_bias_despali.xml"/>
     </section>
     <xi:include href="xml/nc_galaxy_acf.xml"/>
     <section>

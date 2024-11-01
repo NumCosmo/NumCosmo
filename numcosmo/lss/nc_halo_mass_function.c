@@ -547,13 +547,12 @@ nc_halo_mass_function_dn_dlnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdoubl
   const gdouble V                        = ncm_powspec_filter_volume_rm3 (self->psf) * exp (3.0 * lnR);
   const gdouble sigma                    = ncm_powspec_filter_eval_sigma_lnr (self->psf, z, lnR);
   const gdouble dlnvar_dlnR              = ncm_powspec_filter_eval_dlnvar_dlnr (self->psf, z, lnR);
-  const gdouble f                        = nc_multiplicity_func_eval (self->mulf, cosmo, sigma, z);
+  const gdouble lnM                      = nc_halo_mass_function_lnR_to_lnM (mfp, cosmo, lnR);
+  const gdouble f                        = nc_multiplicity_func_eval (self->mulf, cosmo, sigma, z, lnM);
   const gdouble dn_dlnR                  = -(1.0 / V) * f * 0.5 * dlnvar_dlnR;
 
   if (nc_multiplicity_func_has_correction_factor (self->mulf))
   {
-    const gdouble lnM = nc_halo_mass_function_lnR_to_lnM (mfp, cosmo, lnR);
-
     return dn_dlnR * nc_multiplicity_func_correction_factor (self->mulf, cosmo, sigma, z, lnM);
   }
   else

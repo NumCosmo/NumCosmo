@@ -46,8 +46,9 @@
 struct _NcMultiplicityFuncDespaliPrivate
 {
   NcMultiplicityFuncMassDef mdef;
-  gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+  gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
   gboolean EO;
+  gboolean CMF;
   gdouble Delta;
   
 };
@@ -56,13 +57,14 @@ enum
 {
   PROP_0,
   PROP_EO,
+  PROP_CMF,
   PROP_SIZE,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncDespali, nc_multiplicity_func_despali, NC_TYPE_MULTIPLICITY_FUNC)
 
 static gdouble
-_nc_multiplicity_func_despali_eval_error (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_multiplicity_func_despali_eval_error (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
 {
   g_error ("method eval not correctly initialized by %s.", G_OBJECT_TYPE_NAME (mulf));
 
@@ -79,6 +81,7 @@ nc_multiplicity_func_despali_init (NcMultiplicityFuncDespali *md)
   self->mdef  = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
   self->eval  = &_nc_multiplicity_func_despali_eval_error;
   self->EO    = FALSE;
+  self->CMF   = FALSE;
   self->Delta = 0.0;
 }
 
@@ -96,7 +99,10 @@ _nc_multiplicity_func_despali_set_property (GObject *object, guint prop_id, cons
     case PROP_EO:
       nc_multiplicity_func_despali_set_eo (md, g_value_get_boolean (value));
       break;
-    default:
+    case PROP_CMF:
+      nc_multiplicity_func_despali_set_cmf (md, g_value_get_boolean (value));
+      break;
+      default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
@@ -115,6 +121,9 @@ _nc_multiplicity_func_despali_get_property (GObject *object, guint prop_id, GVal
   {
     case PROP_EO:
       g_value_set_boolean (value, self->EO);
+      break;
+    case PROP_CMF:
+      g_value_set_boolean (value, self->CMF);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -143,7 +152,7 @@ static void _nc_multiplicity_func_despali_set_mdef (NcMultiplicityFunc *mulf, Nc
 static void _nc_multiplicity_func_despali_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_despali_get_mdef (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_despali_get_Delta (NcMultiplicityFunc *mulf);
-static gdouble _nc_multiplicity_func_despali_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_multiplicity_func_despali_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
 static void
 nc_multiplicity_func_despali_class_init (NcMultiplicityFuncDespaliClass *klass)
@@ -163,6 +172,15 @@ nc_multiplicity_func_despali_class_init (NcMultiplicityFuncDespaliClass *klass)
                                                          "Whether the halo finder uses eliptical overdensity",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+    
+  
+    g_object_class_install_property (object_class,
+                                   PROP_CMF,
+                                   g_param_spec_boolean ("CMF",
+                                                         NULL,
+                                                         "Whether the use of the cluster mass function",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   parent_class->set_mdef  = &_nc_multiplicity_func_despali_set_mdef;
   parent_class->set_Delta = &_nc_multiplicity_func_despali_set_Delta;
@@ -174,7 +192,7 @@ nc_multiplicity_func_despali_class_init (NcMultiplicityFuncDespaliClass *klass)
 }
 
 static gdouble
-_nc_multiplicity_func_despali_virial_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $f(\sigma)$ Despali: MNRAS 456, 2486–2504 (2016) */
+_nc_multiplicity_func_despali_virial_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM) /* $f(\sigma)$ Despali: MNRAS 456, 2486–2504 (2016) */
 {
 NcMultiplicityFuncDespali *md                 = NC_MULTIPLICITY_FUNC_DESPALI (mulf);
 NcMultiplicityFuncDespaliPrivate * const self = md->priv;
@@ -195,19 +213,30 @@ gdouble f_Despali_virial = 0;
 
   else
   {
-  const gdouble A                = 0.3295;
-  const gdouble a                = 0.7689;
-  const gdouble p                = 0.2536;
-  const gdouble nu_prime         = a * nu;
-
-  f_Despali_virial = log(10) * A * (1.0 + pow (nu_prime, -p)) * pow(nu_prime  ,0.5) / ncm_c_sqrt_2pi () * exp (-nu_prime * 0.5); // 2 ou log10?
+      if(self->CMF)
+      {
+      const gdouble A                = 0.8199;
+      const gdouble a                = 0.3141;
+      const gdouble p                = 0.0;
+      const gdouble nu_prime         = a * nu;
+      f_Despali_virial = log(10) * A * (1.0 + pow (nu_prime, -p)) * pow(nu_prime  ,0.5) / ncm_c_sqrt_2pi () * exp (-nu_prime * 0.5);
+      }
+      else
+      {
+      const gdouble A                = 0.3295;
+      const gdouble a                = 0.7689;
+      const gdouble p                = 0.2536;
+      const gdouble nu_prime         = a * nu;
+      f_Despali_virial = log(10) * A * (1.0 + pow (nu_prime, -p)) * pow(nu_prime  ,0.5) / ncm_c_sqrt_2pi () * exp (-nu_prime * 0.5);
+      }
+  
   }
   return f_Despali_virial;
 }
 
 
 static gdouble
-_nc_multiplicity_func_despali_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $f(\sigma)$ Despali: MNRAS 456, 2486–2504 (2016) */
+_nc_multiplicity_func_despali_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM) /* $f(\sigma)$ Despali: MNRAS 456, 2486–2504 (2016) */
 {
   NcMultiplicityFuncDespali *md                 = NC_MULTIPLICITY_FUNC_DESPALI (mulf);
   NcMultiplicityFuncDespaliPrivate * const self = md->priv;
@@ -265,7 +294,7 @@ _nc_multiplicity_func_despali_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *co
 }
 
 static gdouble
-_nc_multiplicity_func_despali_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $f(\sigma)$ Despali: MNRAS 456, 2.0486–2504 (2016) */
+_nc_multiplicity_func_despali_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM) /* $f(\sigma)$ Despali: MNRAS 456, 2.0486–2504 (2016) */
 {
 
  NcMultiplicityFuncDespali *md                 = NC_MULTIPLICITY_FUNC_DESPALI (mulf);
@@ -361,12 +390,12 @@ _nc_multiplicity_func_despali_get_mdef (NcMultiplicityFunc *mulf)
 }
 
 static gdouble
-_nc_multiplicity_func_despali_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $f(\sigma)$ Despali: MNRAS 456, 2486–2504 (2016) */
+_nc_multiplicity_func_despali_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM) /* $f(\sigma)$ Despali: MNRAS 456, 2486–2504 (2016) */
 {
   NcMultiplicityFuncDespali *md                 = NC_MULTIPLICITY_FUNC_DESPALI (mulf);
   NcMultiplicityFuncDespaliPrivate * const self = md->priv;
 
-  return self->eval (mulf, cosmo, sigma, z);
+  return self->eval (mulf, cosmo, sigma, z, lnM);
 }
 
 /**
@@ -457,20 +486,12 @@ _nc_multiplicity_func_despali_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta
   NcMultiplicityFuncDespali *md                 = NC_MULTIPLICITY_FUNC_DESPALI (mulf);
   NcMultiplicityFuncDespaliPrivate * const self = md->priv;
   const gdouble log10_Delta                    = log10 (Delta);
-
-  if (self->mdef == NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL)
-  {
-    g_error ("NcMultiplicityFuncMassDef virial sets Delta automatically.");
-  }
-
-  else
-  {
+    
   self->Delta = Delta;
-  }
 }
 
 /**
- * nc_multiplicity_func_despali_get_Delta:
+ * _nc_multiplicity_func_despali_get_Delta:
  * @md: a #NcMultiplicityFuncDespali.
  *
  * Returns: the value of #NcMultiplicityFuncDespali:Delta property.
@@ -569,4 +590,37 @@ nc_multiplicity_func_despali_get_eo (NcMultiplicityFuncDespali *md)
   NcMultiplicityFuncDespaliPrivate * const self = md->priv;
 
   return self->EO;
+}
+
+/**
+ * nc_multiplicity_func_despali_set_cmf:
+ * @md: a #NcMultiplicityFuncDespali
+ * @on: Whether the we use cluster mass function.
+ *
+ * Sets array of #Set if  uses eliptical  mass function.
+ *
+ */
+void
+nc_multiplicity_func_despali_set_cmf (NcMultiplicityFuncDespali *md, gboolean on)
+{
+  
+NcMultiplicityFuncDespaliPrivate * const self = md->priv;
+
+  self->CMF = on;
+}
+
+/**
+ * nc_multiplicity_func_despali_get_cmf:
+ * @md: a #NcMultiplicityFuncDespali
+ *
+ * Gets if the cmf option is on.
+ *
+ *Returns: TRUE or FALSE.
+ */
+gboolean
+nc_multiplicity_func_despali_get_cmf (NcMultiplicityFuncDespali *md)
+{
+  NcMultiplicityFuncDespaliPrivate * const self = md->priv;
+
+  return self->CMF;
 }

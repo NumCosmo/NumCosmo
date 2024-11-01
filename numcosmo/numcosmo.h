@@ -129,6 +129,7 @@
 #include <numcosmo/lss/nc_halo_mass_function.h>
 #include <numcosmo/lss/nc_halo_bias.h>
 #include <numcosmo/lss/nc_halo_bias_ps.h>
+#include <numcosmo/lss/nc_halo_bias_despali.h>
 #include <numcosmo/lss/nc_halo_bias_st_spher.h>
 #include <numcosmo/lss/nc_halo_bias_st_ellip.h>
 #include <numcosmo/lss/nc_halo_bias_tinker.h>
@@ -145,6 +146,7 @@
 #include <numcosmo/lss/nc_cluster_mass_benson_xray.h>
 #include <numcosmo/lss/nc_cluster_mass_plcl.h>
 #include <numcosmo/lss/nc_cluster_mass_ascaso.h>
+#include <numcosmo/lss/nc_cluster_mass_lnrich_ext.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_pseudo_counts.h>
 #include <numcosmo/lss/nc_cor_cluster_cmb_lens_limber.h>
@@ -183,6 +185,7 @@
 #include <numcosmo/data/nc_data_cmb_dist_priors.h>
 #include <numcosmo/data/nc_data_cmb_shift_param.h>
 #include <numcosmo/data/nc_data_cmb.h>
+#include <numcosmo/data/nc_data_cluster_mass_rich.h>
 #include <numcosmo/data/nc_data_cluster_ncount.h>
 #include <numcosmo/data/nc_data_cluster_ncounts_gauss.h>
 #include <numcosmo/data/nc_data_cluster_pseudo_counts.h>

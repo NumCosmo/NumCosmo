@@ -188,9 +188,9 @@ nc_halo_bias_class_init (NcHaloBiasClass *klass)
  * Returns: a double, the halo bias.
  */
 gdouble
-nc_halo_bias_eval (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+nc_halo_bias_eval (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
 {
-  return NC_HALO_BIAS_GET_CLASS (bias)->eval (bias, cosmo, sigma, z);
+  return NC_HALO_BIAS_GET_CLASS (bias)->eval (bias, cosmo, sigma, z, lnM);
 }
 
 /**
@@ -241,7 +241,7 @@ nc_halo_bias_integrand (NcHaloBias *mbiasf, NcHICosmo *cosmo, gdouble lnM, gdoub
 {
   const gdouble d2n_dzdlnM = nc_halo_mass_function_d2n_dzdlnM (mbiasf->mfp, cosmo, lnM, z);
   const gdouble sigma      = nc_halo_mass_function_sigma_lnM (mbiasf->mfp, cosmo, lnM, z);
-  const gdouble bias       = nc_halo_bias_eval (mbiasf, cosmo, sigma, z);
+  const gdouble bias       = nc_halo_bias_eval (mbiasf, cosmo, sigma, z, lnM);
 
   return d2n_dzdlnM * bias;
 }

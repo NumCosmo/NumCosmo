@@ -163,7 +163,7 @@ _nc_multiplicity_func_get_matter_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cos
 }
 
 static gdouble
-_nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
 {
   g_error ("method eval not implemented by %s.", G_OBJECT_TYPE_NAME (mulf));
 
@@ -400,9 +400,9 @@ nc_multiplicity_func_get_matter_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cosm
  * Returns: FIXME
  */
 gdouble
-nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
 {
-  return NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->eval (mulf, cosmo, sigma, z);
+  return NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->eval (mulf, cosmo, sigma, z, lnM);
 }
 
 /**

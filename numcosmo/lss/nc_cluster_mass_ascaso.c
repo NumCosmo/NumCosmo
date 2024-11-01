@@ -63,6 +63,8 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassAscaso, nc_cluster_mass_ascaso, NC_TYPE
 #define SIGMA_P0 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_ASCASO_SIGMA_P0))
 #define SIGMA_P1 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_ASCASO_SIGMA_P1))
 #define SIGMA_P2 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_ASCASO_SIGMA_P2))
+#define CUT      (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_ASCASO_CUT))
+
 
 enum
 {
@@ -177,8 +179,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   object_class->finalize    = &_nc_cluster_mass_ascaso_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Ascaso Ln-normal richness distribution", "Ascaso");
-  ncm_model_class_add_params (model_class, 6, 0, PROP_SIZE);
-
+  ncm_model_class_add_params (model_class, NC_CLUSTER_MASS_ASCASO_SPARAM_LEN, 0, PROP_SIZE);
 
   /**
    * NcClusterMassAscaso:M0:
@@ -299,6 +300,17 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_SIGMA_P2, "\\sigma_p2", "sigmap2",
                               -10.0,  10.0, 1.0e-2,
                               NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P2,
+                              NCM_PARAM_TYPE_FIXED);
+
+/**
+ * NcClusterMassAscaso:cut:
+ *
+ * Cut in richness.
+ *
+ */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_CUT, "cut", "cut",
+                              0.0,  1.0e16, 1.0e-2,
+                              NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_ASCASO_DEFAULT_CUT,
                               NCM_PARAM_TYPE_FIXED);
 
   /* Check for errors in parameters initialization */
@@ -496,3 +508,58 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
   }
 }
 
+/**
+ * nc_cluster_mass_ascaso_get_mean_richness:
+ * @ascaso: a #NcClusterMassAscaso
+ * @lnM: ln of the mass
+ * @z: redshift
+ *
+ * Computes the mean of the richness distribution.
+ *
+ */
+gdouble
+nc_cluster_mass_ascaso_get_mean_richness (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z)
+{
+  NcClusterMassAscasoPrivate * const self = ascaso->priv;
+  const gdouble DlnM                      = lnM - self->lnM0;
+  const gdouble Dln1pz                    = log1p (z) - self->ln1pz0;
+
+  return MU_P0    + MU_P1    * DlnM + MU_P2    * Dln1pz;
+}
+
+/**
+ * nc_cluster_mass_ascaso_get_std_richness:
+ * @ascaso: a #NcClusterMassAscaso
+ * @lnM: ln of the mass
+ * @z: redshift
+ *
+ * Computes the standard deviation of the richness distribution.
+ *
+ */
+gdouble
+nc_cluster_mass_ascaso_get_std_richness (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z)
+{
+  NcClusterMassAscasoPrivate * const self = ascaso->priv;
+  const gdouble DlnM                      = lnM - self->lnM0;
+  const gdouble Dln1pz                    = log1p (z) - self->ln1pz0;
+
+  return SIGMA_P0 + SIGMA_P1 * DlnM + SIGMA_P2 * Dln1pz;
+}
+
+/**
+ * nc_cluster_mass_ascaso_get_cut:
+ * @ascaso: a #NcClusterMassAscaso
+ * @lnM: ln of the mass
+ * @z: redshift
+ *
+ * Computes the cut in richness.
+ *
+ * Returns: the cut in richness.
+ */
+gdouble
+nc_cluster_mass_ascaso_get_cut (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z)
+{
+  NcClusterMassAscasoPrivate * const self = ascaso->priv;
+
+  return CUT;
+}

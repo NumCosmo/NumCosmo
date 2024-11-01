@@ -102,7 +102,7 @@ static void _nc_multiplicity_func_jenkins_set_mdef (NcMultiplicityFunc *mulf, Nc
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_jenkins_get_mdef (NcMultiplicityFunc *mulf);
 static void _nc_multiplicity_func_jenkins_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
 static double _nc_multiplicity_func_jenkins_get_Delta (NcMultiplicityFunc *mulf);
-static gdouble _nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
 /* _NC_MULTIPLICITY_FUNCTION_JENKINS_DATASET_FOF_0005260 = {0.315, 0.0, 0.61, 0.0, 3.8, 0.0}; */
 
@@ -179,7 +179,7 @@ _nc_multiplicity_func_jenkins_get_Delta (NcMultiplicityFunc *mulf)
 }
 
 static gdouble
-_nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
 {
   /* NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
    *  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv; */

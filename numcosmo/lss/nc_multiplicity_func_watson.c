@@ -43,7 +43,7 @@
 struct _NcMultiplicityFuncWatsonPrivate
 {
   NcMultiplicityFuncMassDef mdef;
-  gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z); 
+  gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM); 
   gdouble Delta;
 };
 
@@ -103,7 +103,7 @@ static void _nc_multiplicity_func_watson_set_mdef (NcMultiplicityFunc *mulf, NcM
 static void _nc_multiplicity_func_watson_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta); 
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_watson_get_mdef (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_watson_get_Delta (NcMultiplicityFunc *mulf); 
-static gdouble _nc_multiplicity_func_watson_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_multiplicity_func_watson_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
 // _NC_MULTIPLICITY_FUNCTION_WATSON_DATASET_FOF_0005260 = {0.315, 0.0, 0.61, 0.0, 3.8, 0.0};
 
@@ -126,7 +126,7 @@ nc_multiplicity_func_watson_class_init (NcMultiplicityFuncWatsonClass *klass)
 }
 
 static gdouble
-_nc_multiplicity_func_watson_fof_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_multiplicity_func_watson_fof_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
 {
   /*NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf); */
   /*NcMultiplicityFuncWatsonPrivate * const self = mwat->priv; */
@@ -145,7 +145,7 @@ _nc_multiplicity_func_watson_fof_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosm
 }
 
 static gdouble
-_nc_multiplicity_func_watson_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_multiplicity_func_watson_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
 {
   NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf);
   NcMultiplicityFuncWatsonPrivate * const self = mwat->priv; 
@@ -244,12 +244,12 @@ _nc_multiplicity_func_watson_get_mdef (NcMultiplicityFunc *mulf)
 }
 
 static gdouble
-_nc_multiplicity_func_watson_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $f(\sigma)$ watson: astro-ph/0803.2706 */
+_nc_multiplicity_func_watson_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)   /* $f(\sigma)$ watson: astro-ph/0803.2706 */
 {
   NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf);
   NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
   
-  return self->eval(mulf, cosmo, sigma, z);
+  return self->eval(mulf, cosmo, sigma, z, lnM);
 }
 
 

@@ -102,7 +102,7 @@ static void _nc_multiplicity_func_warren_set_mdef (NcMultiplicityFunc *mulf, NcM
 static void _nc_multiplicity_func_warren_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta); 
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_warren_get_mdef (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_warren_get_Delta (NcMultiplicityFunc *mulf); 
-static gdouble _nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
 static void
 nc_multiplicity_func_warren_class_init (NcMultiplicityFuncWarrenClass *klass)
@@ -159,7 +159,7 @@ _nc_multiplicity_func_warren_get_mdef (NcMultiplicityFunc *mulf)
 }
 
 static gdouble
-_nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $f(\sigma)$ Warren: astro-ph/0506395 */
+_nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)   /* $f(\sigma)$ Warren: astro-ph/0506395 */
 {
   /* NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (mulf);
   NcMultiplicityFuncWarrenPrivate * const self = mw->priv; */

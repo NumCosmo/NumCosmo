@@ -140,7 +140,7 @@ static void _nc_multiplicity_func_st_set_mdef (NcMultiplicityFunc *mulf, NcMulti
 static void _nc_multiplicity_func_st_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_st_get_mdef (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_st_get_Delta (NcMultiplicityFunc *mulf);
-static gdouble _nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
 static void
 nc_multiplicity_func_st_class_init (NcMultiplicityFuncSTClass *klass)
@@ -266,7 +266,7 @@ _nc_multiplicity_func_st_get_Delta (NcMultiplicityFunc *mulf)
 }
 
 static gdouble
-_nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* f(\sigma) - Sheth \& Tormen (ST) */
+_nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM) /* f(\sigma) - Sheth \& Tormen (ST) */
 {
   NcMultiplicityFuncST *mst                = NC_MULTIPLICITY_FUNC_ST (mulf);
   NcMultiplicityFuncSTPrivate * const self = mst->priv;

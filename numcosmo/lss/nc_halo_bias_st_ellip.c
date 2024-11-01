@@ -139,7 +139,7 @@ _nc_halo_bias_st_ellip_get_property (GObject *object, guint prop_id, GValue *val
   }
 }
 
-static gdouble _nc_halo_bias_st_ellip_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_halo_bias_st_ellip_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
 static void
 nc_halo_bias_st_ellip_class_init (NcHaloBiasSTEllipClass *klass)
@@ -207,7 +207,7 @@ nc_halo_bias_st_ellip_class_init (NcHaloBiasSTEllipClass *klass)
 }
 
 static gdouble
-_nc_halo_bias_st_ellip_eval (NcHaloBias *biasf,  NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_halo_bias_st_ellip_eval (NcHaloBias *biasf,  NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
 {
   NcHaloBiasSTEllip *bias_st_ellip = NC_HALO_BIAS_ST_ELLIP (biasf);
   const gdouble a                  = bias_st_ellip->a;

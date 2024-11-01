@@ -102,7 +102,7 @@ _nc_multiplicity_func_crocce_finalize (GObject *object)
 
 static void _nc_multiplicity_func_crocce_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_crocce_get_mdef (NcMultiplicityFunc *mulf);
-static gdouble _nc_multiplicity_func_crocce_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_multiplicity_func_crocce_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
 static void
 nc_multiplicity_func_crocce_class_init (NcMultiplicityFuncCrocceClass *klass)
@@ -157,7 +157,7 @@ _nc_multiplicity_func_crocce_get_mdef (NcMultiplicityFunc *mulf)
 }
 
 static gdouble
-_nc_multiplicity_func_crocce_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   
+_nc_multiplicity_func_crocce_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)   
 {
   /* NcMultiplicityFuncCrocce *mc = NC_MULTIPLICITY_FUNC_CROCCE (mulf); */
   

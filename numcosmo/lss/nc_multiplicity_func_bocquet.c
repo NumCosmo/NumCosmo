@@ -168,7 +168,7 @@ static void _nc_multiplicity_func_bocquet_set_mdef (NcMultiplicityFunc *mulf, Nc
 static void _nc_multiplicity_func_bocquet_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta); 
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_bocquet_get_mdef (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_bocquet_get_Delta (NcMultiplicityFunc *mulf); 
-static gdouble _nc_multiplicity_func_bocquet_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_multiplicity_func_bocquet_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 static gboolean _nc_multiplicity_func_bocquet_has_correction_factor (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_bocquet_correction_factor (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
@@ -388,7 +388,7 @@ _nc_multiplicity_func_bocquet_correction_factor (NcMultiplicityFunc *mulf, NcHIC
 }
 
 static gdouble
-_nc_multiplicity_func_bocquet_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $f(\sigma)$ Bocquet: astro-ph/0803.2706 */
+_nc_multiplicity_func_bocquet_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)   /* $f(\sigma)$ Bocquet: astro-ph/0803.2706 */
 {
   NcMultiplicityFuncBocquet *mt = NC_MULTIPLICITY_FUNC_BOCQUET (mulf);
   NcMultiplicityFuncBocquetPrivate * const self = mt->priv;

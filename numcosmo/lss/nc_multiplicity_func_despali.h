@@ -71,6 +71,8 @@ gdouble nc_multiplicity_func_despali_delta_c (NcMultiplicityFuncDespali *md , Nc
 gdouble nc_multiplicity_func_despali_delta_vir (NcMultiplicityFuncDespali *md , NcHICosmo *cosmo ,gdouble z);
 void nc_multiplicity_func_despali_set_eo (NcMultiplicityFuncDespali *md, gboolean on);
 gboolean nc_multiplicity_func_despali_get_eo (NcMultiplicityFuncDespali *md);
+void nc_multiplicity_func_despali_set_cmf (NcMultiplicityFuncDespali *md, gboolean on);
+gboolean nc_multiplicity_func_despali_get_cmf (NcMultiplicityFuncDespali *md);
 
 G_END_DECLS
 

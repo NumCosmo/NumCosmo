@@ -132,7 +132,7 @@ _nc_halo_bias_st_spher_get_property (GObject *object, guint prop_id, GValue *val
   }
 }
 
-static gdouble _nc_halo_bias_st_spher_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_halo_bias_st_spher_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
 static void
 nc_halo_bias_st_spher_class_init (NcHaloBiasSTSpherClass *klass)
@@ -187,7 +187,7 @@ nc_halo_bias_st_spher_class_init (NcHaloBiasSTSpherClass *klass)
 }
 
 static gdouble
-_nc_halo_bias_st_spher_eval (NcHaloBias *biasf,  NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_halo_bias_st_spher_eval (NcHaloBias *biasf,  NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
 {
   NcHaloBiasSTSpher *bias_st_spher = NC_HALO_BIAS_ST_SPHER (biasf);
   const gdouble a                  = bias_st_spher->a;

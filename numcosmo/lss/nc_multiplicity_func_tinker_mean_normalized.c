@@ -116,7 +116,7 @@ static void _nc_multiplicity_func_tinker_mean_normalized_set_mdef (NcMultiplicit
 static void _nc_multiplicity_func_tinker_mean_normalized_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_tinker_mean_normalized_get_mdef (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_tinker_mean_normalized_get_Delta (NcMultiplicityFunc *mulf);
-static gdouble _nc_multiplicity_func_tinker_mean_normalized_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_multiplicity_func_tinker_mean_normalized_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
 static void
 nc_multiplicity_func_tinker_mean_normalized_class_init (NcMultiplicityFuncTinkerMeanNormalizedClass *klass)
@@ -175,7 +175,7 @@ _nc_multiplicity_func_tinker_mean_normalized_get_mdef (NcMultiplicityFunc *mulf)
 }
 
 static gdouble
-_nc_multiplicity_func_tinker_mean_normalized_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $g(\sigma) = \nu x f(\nu)$ Tinker: Eq. 8 1001.3162 */
+_nc_multiplicity_func_tinker_mean_normalized_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)   /* $g(\sigma) = \nu x f(\nu)$ Tinker: Eq. 8 1001.3162 */
 {
   NcMultiplicityFuncTinkerMeanNormalized *mt10 = NC_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (mulf);
   NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = mt10->priv;
