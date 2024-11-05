@@ -47,12 +47,16 @@
 #include "build_cfg.h"
 
 #include "model/nc_hicosmo_qgrw.h"
+#include "perturbations/nc_hipert_gw.h"
 
 static void nc_hipert_itwo_fluids_interface_init (NcHIPertITwoFluidsInterface *iface);
+static void nc_hipert_igw_interface_init (NcHIPertIGWInterface *iface);
 
 G_DEFINE_TYPE_WITH_CODE (NcHICosmoQGRW, nc_hicosmo_qgrw, NC_TYPE_HICOSMO,
                          G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_ITWO_FLUIDS,
                                                 nc_hipert_itwo_fluids_interface_init)
+                         G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IGW,
+                                                nc_hipert_igw_interface_init)
                         );
 
 enum
@@ -143,6 +147,24 @@ nc_hipert_itwo_fluids_interface_init (NcHIPertITwoFluidsInterface *iface)
 {
   iface->eom = &_nc_hipert_itwo_fluids_eom;
   iface->tv  = &_nc_hipert_itwo_fluids_tv;
+}
+
+static gdouble _nc_hicosmo_qgrw_gw_eval_xi (NcHIPertIGW *igw, const gdouble alpha, const gdouble k);
+static gdouble _nc_hicosmo_qgrw_gw_eval_F1 (NcHIPertIGW *igw, const gdouble alpha, const gdouble k);
+static gdouble _nc_hicosmo_qgrw_gw_eval_nu (NcHIPertIGW *igw, const gdouble alpha, const gdouble k);
+static gdouble _nc_hicosmo_qgrw_gw_eval_m (NcHIPertIGW *igw, const gdouble alpha, const gdouble k);
+static gdouble _nc_hicosmo_qgrw_gw_eval_unit (NcHIPertIGW *igw);
+static gdouble _nc_hicosmo_qgrw_gw_eval_x (NcHIPertIGW *igw, const gdouble alpha);
+
+static void
+nc_hipert_igw_interface_init (NcHIPertIGWInterface *iface)
+{
+  iface->eval_xi   = &_nc_hicosmo_qgrw_gw_eval_xi;
+  iface->eval_F1   = &_nc_hicosmo_qgrw_gw_eval_F1;
+  iface->eval_nu   = &_nc_hicosmo_qgrw_gw_eval_nu;
+  iface->eval_m    = &_nc_hicosmo_qgrw_gw_eval_m;
+  iface->eval_unit = &_nc_hicosmo_qgrw_gw_eval_unit;
+  iface->eval_x    = &_nc_hicosmo_qgrw_gw_eval_x;
 }
 
 #define VECTOR   (NCM_MODEL (cosmo))
@@ -651,6 +673,122 @@ _nc_hipert_itwo_fluids_tv (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
   }
 
   return &qgrw->tv_two_fluids;
+}
+
+static gdouble
+_nc_hicosmo_qgrw_gw_eval_xi (NcHIPertIGW *igw, const gdouble alpha, const gdouble k)
+{
+  NcHICosmo *cosmo       = NC_HICOSMO (igw);
+  NcHICosmoQGRW *qgrw    = NC_HICOSMO_QGRW (igw);
+  const gdouble absalpha = fabs (alpha);
+  const gdouble x        = X_B * exp (-absalpha);
+
+  return log (k) - 2.0 * log (x);
+}
+
+static gdouble
+_nc_hicosmo_qgrw_gw_eval_F1 (NcHIPertIGW *igw, const gdouble alpha, const gdouble k)
+{
+  NcHICosmo *cosmo        = NC_HICOSMO (igw);
+  NcHICosmoQGRW *qgrw     = NC_HICOSMO_QGRW (igw);
+  const gdouble w2        = W;
+  const gdouble epsilon   = GSL_SIGN (alpha);
+  const gdouble absalpha  = fabs (alpha);
+  const gdouble x         = X_B * exp (-absalpha);
+  const gdouble x2        = x * x;
+  const gdouble x3        = x2 * x;
+  const gdouble x4        = x2 * x2;
+  const gdouble x3_1pw    = x3 * pow (x3, w2);
+  const gdouble x_m3w     = x / pow (x3, w2);
+  const gdouble three_1pw = 3.0 * (1.0 + w2);
+  const gdouble three_1mw = 3.0 * (1.0 - w2);
+  const gdouble x_xb3_1mw = exp (-three_1mw * absalpha);
+  const gdouble x_xb2     = exp (-2.0 * absalpha);
+  const gdouble oneF1_r   = ncm_exprel (-2.0 * absalpha);
+  const gdouble oneF1_p   = ncm_exprel (-three_1mw * absalpha);
+  const gdouble R0        = OMEGA_R / OMEGA_W;
+  const gdouble F         = (R0 * x_m3w * 2.0 * oneF1_r + three_1mw * oneF1_p) * epsilon * alpha;
+  const gdouble E2        = OMEGA_W * x3_1pw * F;
+  const gdouble absE      = sqrt (E2);
+  const gdouble Fnu       = x * k / absE;
+
+  return -epsilon / Fnu;
+}
+
+static gdouble
+_nc_hicosmo_qgrw_gw_eval_nu (NcHIPertIGW *igw, const gdouble alpha, const gdouble k)
+{
+  NcHICosmo *cosmo        = NC_HICOSMO (igw);
+  NcHICosmoQGRW *qgrw     = NC_HICOSMO_QGRW (igw);
+  const gdouble w2        = W;
+  const gdouble epsilon   = GSL_SIGN (alpha);
+  const gdouble absalpha  = fabs (alpha);
+  const gdouble x         = X_B * exp (-absalpha);
+  const gdouble x2        = x * x;
+  const gdouble x3        = x2 * x;
+  const gdouble x4        = x2 * x2;
+  const gdouble x3_1pw    = x3 * pow (x3, w2);
+  const gdouble x_m3w     = x / pow (x3, w2);
+  const gdouble three_1pw = 3.0 * (1.0 + w2);
+  const gdouble three_1mw = 3.0 * (1.0 - w2);
+  const gdouble x_xb3_1mw = exp (-three_1mw * absalpha);
+  const gdouble x_xb2     = exp (-2.0 * absalpha);
+  const gdouble oneF1_r   = ncm_exprel (-2.0 * absalpha);
+  const gdouble oneF1_p   = ncm_exprel (-three_1mw * absalpha);
+  const gdouble R0        = OMEGA_R / OMEGA_W;
+  const gdouble F         = (R0 * x_m3w * 2.0 * oneF1_r + three_1mw * oneF1_p) * epsilon * alpha;
+  const gdouble E2        = OMEGA_W * x3_1pw * F;
+  const gdouble absE      = sqrt (E2);
+  const gdouble Fnu       = x * k / absE;
+
+  return Fnu;
+}
+
+static gdouble
+_nc_hicosmo_qgrw_gw_eval_m (NcHIPertIGW *igw, const gdouble alpha, const gdouble k)
+{
+  NcHICosmo *cosmo        = NC_HICOSMO (igw);
+  NcHICosmoQGRW *qgrw     = NC_HICOSMO_QGRW (igw);
+  const gdouble w2        = W;
+  const gdouble epsilon   = GSL_SIGN (alpha);
+  const gdouble absalpha  = fabs (alpha);
+  const gdouble x         = X_B * exp (-absalpha);
+  const gdouble x2        = x * x;
+  const gdouble x3        = x2 * x;
+  const gdouble x4        = x2 * x2;
+  const gdouble x3_1pw    = x3 * pow (x3, w2);
+  const gdouble x_m3w     = x / pow (x3, w2);
+  const gdouble three_1pw = 3.0 * (1.0 + w2);
+  const gdouble three_1mw = 3.0 * (1.0 - w2);
+  const gdouble x_xb3_1mw = exp (-three_1mw * absalpha);
+  const gdouble x_xb2     = exp (-2.0 * absalpha);
+  const gdouble oneF1_r   = ncm_exprel (-2.0 * absalpha);
+  const gdouble oneF1_p   = ncm_exprel (-three_1mw * absalpha);
+  const gdouble R0        = OMEGA_R / OMEGA_W;
+  const gdouble F         = (R0 * x_m3w * 2.0 * oneF1_r + three_1mw * oneF1_p) * epsilon * alpha;
+  const gdouble E2        = OMEGA_W * x3_1pw * F;
+  const gdouble absE      = sqrt (E2);
+
+  return absE / x3;
+}
+
+static gdouble
+_nc_hicosmo_qgrw_gw_eval_unit (NcHIPertIGW *igw)
+{
+  NcHICosmo *cosmo     = NC_HICOSMO (igw);
+  const gdouble RH_lp  = nc_hicosmo_RH_planck (cosmo);
+  const gdouble factor = sqrt (32.0 * ncm_c_pi ());
+
+  return factor / RH_lp;
+}
+
+static gdouble
+_nc_hicosmo_qgrw_gw_eval_x (NcHIPertIGW *igw, const gdouble alpha)
+{
+  NcHICosmo *cosmo    = NC_HICOSMO (igw);
+  NcHICosmoQGRW *qgrw = NC_HICOSMO_QGRW (igw);
+
+  return X_B * exp (-fabs (alpha));
 }
 
 /**
