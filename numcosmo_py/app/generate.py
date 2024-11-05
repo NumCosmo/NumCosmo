@@ -44,15 +44,16 @@ from numcosmo_py.experiments.jpas_forecast24 import (
     JpasSSCType,
     generate_jpas_forecast_2024,
 )
+from numcosmo_py.experiments.cluster_wl import (
+    generate_lsst_cluster_wl,
+    GalaxySDShapeDist,
+)
 from numcosmo_py.experiments.xcdm_no_perturbations import SNIaID, add_snia_likelihood
 
 
 @dataclasses.dataclass(kw_only=True)
 class GeneratePlanck:
-    """Common block for commands that load an experiment.
-
-    All commands that load an experiment should inherit from this class.
-    """
+    """Generate Planck 2018 experiment."""
 
     experiment: Annotated[
         Path, typer.Argument(help="Path to the experiment file to fit.")
@@ -139,10 +140,7 @@ class GeneratePlanck:
 
 @dataclasses.dataclass(kw_only=True)
 class GenerateJpasForecast:
-    """Common block for commands that load an experiment.
-
-    All commands that load an experiment should inherit from this class.
-    """
+    """Generate JPAS 2024 forecast experiment."""
 
     experiment: Annotated[
         Path, typer.Argument(help="Path to the experiment file to fit.")
@@ -301,3 +299,132 @@ class GenerateJpasForecast:
             mfunc_array,
             self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
         )
+
+
+@dataclasses.dataclass(kw_only=True)
+class GenerateClusterWL:
+    """Generate LSST cluster weak lensing experiment."""
+
+    experiment: Annotated[
+        Path, typer.Argument(help="Path to the experiment file to fit.")
+    ]
+
+    cluster_ra: Annotated[
+        float, typer.Option(help="Cluster right ascension.", show_default=True)
+    ] = 12.34
+
+    cluster_dec: Annotated[
+        float, typer.Option(help="Cluster declination.", show_default=True)
+    ] = -55.123
+
+    cluster_z: Annotated[
+        float, typer.Option(help="Cluster redshift.", show_default=True)
+    ] = 0.2
+
+    cluster_mass: Annotated[
+        float, typer.Option(help="Cluster mass.", show_default=True)
+    ] = 1.0e14
+
+    cluster_c: Annotated[
+        float, typer.Option(help="Cluster concentration.", show_default=True)
+    ] = 4.0
+
+    ra_min: Annotated[
+        float, typer.Option(help="Minimum right ascension.", show_default=True)
+    ] = 12.0
+
+    ra_max: Annotated[
+        float, typer.Option(help="Maximum right ascension.", show_default=True)
+    ] = 13.0
+
+    dec_min: Annotated[
+        float, typer.Option(help="Minimum declination.", show_default=True)
+    ] = -56.0
+
+    dec_max: Annotated[
+        float, typer.Option(help="Maximum declination.", show_default=True)
+    ] = -55.0
+
+    z_min: Annotated[
+        float, typer.Option(help="Minimum redshift.", show_default=True)
+    ] = 0.01
+
+    z_max: Annotated[
+        float, typer.Option(help="Maximum redshift.", show_default=True)
+    ] = 1.2
+
+    z_dist: Annotated[
+        ClusterRedshiftType,
+        typer.Option(help="Galaxy redshift distribution.", show_default=True),
+    ] = ClusterRedshiftType.GAUSS
+
+    sigma_z: Annotated[
+        float, typer.Option(help="Galaxy redshift dispersion.", show_default=True)
+    ] = 0.03
+
+    shape_dist: Annotated[
+        GalaxySDShapeDist,
+        typer.Option(help="Galaxy shape distribution.", show_default=True),
+    ] = GalaxySDShapeDist.GAUSS
+
+    galaxy_shape_e_rms: Annotated[
+        float, typer.Option(help="Galaxy shape rms.", show_default=True)
+    ] = 2.0e-1
+
+    galaxy_shape_e_sigma: Annotated[
+        float, typer.Option(help="Galaxy shape sigma.", show_default=True)
+    ] = 1.0e-4
+
+    seed: Annotated[
+        Optional[int], typer.Option(help="Random seed.", show_default=True)
+    ] = None
+
+    def __post_init__(self):
+        """Generate LSST cluster weak lensing experiment."""
+        Ncm.cfg_init()
+
+        if self.experiment.suffix != ".yaml":
+            raise ValueError(
+                f"Invalid experiment file suffix: {self.experiment.suffix}"
+            )
+
+        exp = generate_lsst_cluster_wl(
+            cluster_ra=self.cluster_ra,
+            cluster_dec=self.cluster_dec,
+            cluster_z=self.cluster_z,
+            cluster_mass=self.cluster_mass,
+            cluster_c=self.cluster_c,
+            ra_min=self.ra_min,
+            ra_max=self.ra_max,
+            dec_min=self.dec_min,
+            dec_max=self.dec_max,
+            z_min=self.z_min,
+            z_max=self.z_max,
+            z_dist=self.z_dist,
+            sigma_z=self.sigma_z,
+            shape_dist=self.shape_dist,
+            galaxy_shape_e_rms=self.galaxy_shape_e_rms,
+            galaxy_shape_e_sigma=self.galaxy_shape_e_sigma,
+            seed=self.seed,
+        )
+
+        mset = exp.peek("model-set")
+        assert isinstance(mset, Ncm.MSet)
+
+        likelihood = exp.peek("likelihood")
+        assert isinstance(likelihood, Ncm.Likelihood)
+
+        dataset = likelihood.peek_dataset()
+        assert isinstance(dataset, Ncm.Dataset)
+
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+
+        if self.experiment.suffix != ".yaml":
+            raise ValueError(
+                f"Invalid experiment file suffix: {self.experiment.suffix}"
+            )
+
+        ser.to_binfile(
+            dataset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
+        )
+        ser.dict_str_to_yaml_file(exp, self.experiment.absolute().as_posix())

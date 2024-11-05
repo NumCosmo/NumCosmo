@@ -584,8 +584,10 @@ ncm_rng_set_random_seed (NcmRNG *rng, gboolean allow_colisions)
   NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);
   gulong seed            = g_rand_int (rng_class->seed_gen) + 1;
 
-  while (!ncm_rng_check_seed (rng, seed))
-    seed = g_rand_int (rng_class->seed_gen) + 1;
+  if (!allow_colisions)
+    while (!ncm_rng_check_seed (rng, seed))
+      seed = g_rand_int (rng_class->seed_gen) + 1;
+
 
   ncm_rng_set_seed (rng, seed);
 }

@@ -40,8 +40,9 @@ G_DECLARE_FINAL_TYPE (NcGalaxySDTrueRedshiftLSSTSRD, nc_galaxy_sd_true_redshift_
 
 /**
  * NcGalaxySDTrueRedshiftLSSTSRDSParams:
- * @NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Z_MIN: Minimum redshift
- * @NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Z_MAX: Maximum redshift
+ * @NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_ALPHA: Alpha parameter
+ * @NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_BETA: Beta parameter
+ * @NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Z0: Z0 parameter
  *
  * LSST SRD galaxy redshift distribution model parameters.
  *
@@ -64,9 +65,11 @@ typedef enum /*< enum,underscore_name=NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_PARAMS
 #define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_Z0     (0.11)
 
 #define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_PARAMS_ABSTOL (0.0)
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_LOW         (0.0)
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_HIGH        (20.0)
 
-NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_new (const gdouble z_min, const gdouble z_max);
-NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_new_y10 (const gdouble z_min, const gdouble z_max);
+NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_new (void);
+NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_new_y10 (void);
 NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_ref (NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst);
 
 void nc_galaxy_sd_true_redshift_lsst_srd_free (NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst);
