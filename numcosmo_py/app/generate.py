@@ -47,6 +47,7 @@ from numcosmo_py.experiments.jpas_forecast24 import (
 from numcosmo_py.experiments.cluster_wl import (
     generate_lsst_cluster_wl,
     GalaxySDShapeDist,
+    GalaxyZDist,
 )
 from numcosmo_py.experiments.xcdm_no_perturbations import SNIaID, add_snia_likelihood
 
@@ -331,19 +332,19 @@ class GenerateClusterWL:
 
     ra_min: Annotated[
         float, typer.Option(help="Minimum right ascension.", show_default=True)
-    ] = 12.0
+    ] = (12.34 - 0.18)
 
     ra_max: Annotated[
         float, typer.Option(help="Maximum right ascension.", show_default=True)
-    ] = 13.0
+    ] = (12.34 + 0.18)
 
     dec_min: Annotated[
         float, typer.Option(help="Minimum declination.", show_default=True)
-    ] = -56.0
+    ] = (-55.123 - 0.18)
 
     dec_max: Annotated[
         float, typer.Option(help="Maximum declination.", show_default=True)
-    ] = -55.0
+    ] = (-55.123 + 0.18)
 
     z_min: Annotated[
         float, typer.Option(help="Minimum redshift.", show_default=True)
@@ -354,9 +355,9 @@ class GenerateClusterWL:
     ] = 1.2
 
     z_dist: Annotated[
-        ClusterRedshiftType,
+        GalaxyZDist,
         typer.Option(help="Galaxy redshift distribution.", show_default=True),
-    ] = ClusterRedshiftType.GAUSS
+    ] = GalaxyZDist.GAUSS
 
     sigma_z: Annotated[
         float, typer.Option(help="Galaxy redshift dispersion.", show_default=True)
@@ -375,9 +376,26 @@ class GenerateClusterWL:
         float, typer.Option(help="Galaxy shape sigma.", show_default=True)
     ] = 1.0e-4
 
+    parameter_list: Annotated[
+        list[str],
+        typer.Option(
+            help="Parameter to fit.",
+            show_default=True,
+            default_factory=lambda: [
+                "NcHaloDensityProfile:log10MDelta",
+                "NcHaloPosition:ra",
+                "NcHaloPosition:dec",
+            ],
+        ),
+    ]
+
     seed: Annotated[
         Optional[int], typer.Option(help="Random seed.", show_default=True)
     ] = None
+
+    summary: Annotated[
+        bool, typer.Option(help="Print experiment summary.", show_default=True)
+    ] = False
 
     def __post_init__(self):
         """Generate LSST cluster weak lensing experiment."""
@@ -406,6 +424,7 @@ class GenerateClusterWL:
             galaxy_shape_e_rms=self.galaxy_shape_e_rms,
             galaxy_shape_e_sigma=self.galaxy_shape_e_sigma,
             seed=self.seed,
+            summary=self.summary,
         )
 
         mset = exp.peek("model-set")
@@ -418,6 +437,14 @@ class GenerateClusterWL:
         assert isinstance(dataset, Ncm.Dataset)
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+
+        for param in self.parameter_list:
+            pindex = mset.param_get_by_full_name(param)
+            if pindex is None:
+                raise ValueError(f"Invalid parameter: {param}")
+            mset.param_set_ftype(pindex.mid, pindex.pid, Ncm.ParamType.FREE)
+
+        mset.prepare_fparam_map()
 
         if self.experiment.suffix != ".yaml":
             raise ValueError(

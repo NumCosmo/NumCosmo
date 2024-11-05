@@ -30,6 +30,9 @@ for the LSS Weak Lensing cluster forecast.
 from enum import Enum
 from dataclasses import dataclass
 import numpy as np
+from rich.console import Console
+from rich.table import Table
+
 
 from numcosmo_py import Ncm, Nc
 
@@ -100,6 +103,9 @@ class ClusterModel:
         if dist is None:
             dist = Nc.Distance.new(5.0)
 
+        self.mass_def = mass_def
+        self.mass_delta = delta
+        self.profile_type = profile_type
         match profile_type:
             case HaloProfileType.NFW:
                 self.density_profile = Nc.HaloDensityProfileNFW.new(mass_def, delta)
@@ -136,6 +142,11 @@ class ClusterModel:
         """Return the cluster mass."""
         return 10.0 ** self.density_profile["log10MDelta"]
 
+    @property
+    def concentration(self) -> float:
+        """Return the cluster concentration."""
+        return self.density_profile["cDelta"]
+
     def prepare(self, cosmo: Nc.HICosmo) -> None:
         """Prepare the cluster model."""
         self.surface_mass_density.prepare(cosmo)
@@ -158,8 +169,9 @@ class GalaxyDistributionModel:
         self.galaxy_position = Nc.GalaxySDPositionFlat.new(
             galaxies.ra_min, galaxies.ra_max, galaxies.dec_min, galaxies.dec_max
         )
-        self.galaxy_redshift_true = Nc.GalaxySDTrueRedshiftLSSTSRD.new(
-            galaxies.z_min, galaxies.z_max
+        self.galaxy_redshift_true = Nc.GalaxySDTrueRedshiftLSSTSRD.new()
+        self.galaxy_redshift_true.set_property(
+            "lim", Ncm.DTuple2.new(galaxies.z_min, galaxies.z_max)
         )
 
         dist = self.galaxy_redshift_true.dist(1.0e-5, 1.0e-20)
@@ -178,7 +190,7 @@ class GalaxyDistributionModel:
                 def gen_z_spec(mset, z_data, rng):
                     self.galaxy_redshift.gen(mset, z_data, rng)
 
-                self.en_z = gen_z_spec
+                self.gen_z = gen_z_spec
 
             case GalaxyZDist.GAUSS:
                 self.galaxy_redshift = Nc.GalaxySDObsRedshiftGauss.new(
@@ -280,23 +292,24 @@ def create_cosmo() -> Nc.HICosmo:
 
 def generate_lsst_cluster_wl(
     *,
-    cluster_ra: float = 12.34,
-    cluster_dec: float = -55.123,
-    cluster_z: float = 0.2,
-    cluster_mass: float = 1.0e14,
-    cluster_c: float = 4.0,
-    ra_min: float = 12.0,
-    ra_max: float = 13.0,
-    dec_min: float = -56.0,
-    dec_max: float = -55.0,
-    z_min: float = 0.01,
-    z_max: float = 1.2,
-    z_dist: GalaxyZDist = GalaxyZDist.GAUSS,
-    sigma_z: float = 0.03,
-    shape_dist: GalaxySDShapeDist = GalaxySDShapeDist.GAUSS,
-    galaxy_shape_e_rms: float = 2.0e-1,
-    galaxy_shape_e_sigma: float = 1.0e-4,
-    seed: None | int = None,
+    cluster_ra: float,
+    cluster_dec: float,
+    cluster_z: float,
+    cluster_mass: float,
+    cluster_c: float,
+    ra_min: float,
+    ra_max: float,
+    dec_min: float,
+    dec_max: float,
+    z_min: float,
+    z_max: float,
+    z_dist: GalaxyZDist,
+    sigma_z: float,
+    shape_dist: GalaxySDShapeDist,
+    galaxy_shape_e_rms: float,
+    galaxy_shape_e_sigma: float,
+    seed: None | int,
+    summary: bool,
 ) -> Ncm.ObjDictStr:
     """Generate J-Pas forecast 2024 experiment dictionary."""
     halo_position = HaloPositionData(ra=cluster_ra, dec=cluster_dec, z=cluster_z)
@@ -327,9 +340,9 @@ def generate_lsst_cluster_wl(
         rng = Ncm.RNG.new("mt19937")
         rng.set_random_seed(True)
 
-    cluster, mset = galaxy_model.generate_data(create_cosmo(), cluster, rng)
+    cluster_data, mset = galaxy_model.generate_data(create_cosmo(), cluster, rng)
 
-    dset = Ncm.Dataset.new_array([cluster])
+    dset = Ncm.Dataset.new_array([cluster_data])
     likelihood = Ncm.Likelihood.new(dset)
 
     # Save experiment
@@ -337,5 +350,45 @@ def generate_lsst_cluster_wl(
 
     experiment.set("likelihood", likelihood)
     experiment.set("model-set", mset)
+
+    if summary:
+        # Here we use typer and rich to print the summary
+        # We print the Halo parameters
+        # Then the Galaxy parameters
+        # The number of galaxies
+        console = Console()
+
+        table = Table(title="Cluster Parameters")
+        table.add_column("Parameter")
+        table.add_column("Value")
+        table.add_row("RA", f"{halo_position.ra}")
+        table.add_row("DEC", f"{halo_position.dec}")
+        table.add_row("z", f"{halo_position.z}")
+        table.add_row("Mass Profile", f"{cluster.profile_type}")
+        table.add_row("Mass Definition", f"{cluster.mass_def.value_name}")
+        table.add_row("Mass Delta", f"{cluster.mass_delta}")
+        table.add_row("Mass", f"{cluster.mass:.2e}")
+        table.add_row("Concentration", f"{cluster.concentration}")
+        console.print(table)
+
+        table = Table(title="Galaxy Sample Parameters")
+        table.add_column("Parameter")
+        table.add_column("Value")
+        table.add_row("RA min", f"{galaxy_distribution.ra_min}")
+        table.add_row("RA max", f"{galaxy_distribution.ra_max}")
+        table.add_row("DEC min", f"{galaxy_distribution.dec_min}")
+        table.add_row("DEC max", f"{galaxy_distribution.dec_max}")
+        table.add_row("z min", f"{galaxy_distribution.z_min}")
+        table.add_row("z max", f"{galaxy_distribution.z_max}")
+        table.add_row("Density", f"{galaxy_distribution.density}")
+        table.add_row("z Distribution", f"{z_dist}")
+        table.add_row("z Sigma", f"{sigma_z}")
+        table.add_row("Shape Distribution", f"{shape_dist}")
+        table.add_row("Shape e_rms", f"{galaxy_shape_e_rms}")
+        table.add_row("Shape e_sigma", f"{galaxy_shape_e_sigma}")
+
+        console.print(table)
+
+        console.print(f"Number of galaxies: {galaxy_model.n_galaxies}")
 
     return experiment

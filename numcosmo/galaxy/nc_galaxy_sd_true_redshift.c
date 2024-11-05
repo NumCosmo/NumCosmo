@@ -324,14 +324,14 @@ NcmStatsDist1d *
 nc_galaxy_sd_true_redshift_dist (NcGalaxySDTrueRedshift *gsdtr, const gdouble reltol, const gdouble abstol)
 {
   NcmSpline *s                               = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-  const gdouble z_min                        = 0.0;
-  const gdouble z_max                        = 20.0;
   NcGalaxySDTrueRedshiftIntegData integ_data = {gsdtr, abstol};
   gsl_function F;
+  gdouble z_min, z_max;
 
   F.function = _nc_galaxy_sd_true_redshift_integ_f;
   F.params   = &integ_data;
 
+  nc_galaxy_sd_true_redshift_get_lim (gsdtr, &z_min, &z_max);
   ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, z_min, z_max, 0, reltol);
 
   {

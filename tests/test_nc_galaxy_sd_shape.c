@@ -282,7 +282,8 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test, gconstpoint
       complex double data_e_s = s_data->epsilon_int_1 + I * s_data->epsilon_int_2;
       complex double e_s      = 0.0;
       complex double g        = 0.0;
-      gdouble theta, phi, gt, r;
+      gdouble gt              = 0.0;
+      gdouble theta, phi, r;
 
       nc_halo_position_polar_angles (test->halo_position, p_data->ra, p_data->dec, &theta, &phi);
       r = nc_halo_position_projected_radius (test->halo_position, test->cosmo, theta);

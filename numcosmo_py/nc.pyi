@@ -77,6 +77,8 @@ GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_ALPHA: float = 0.78
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_BETA: float = 2.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_PARAMS_ABSTOL: float = 0.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z0: float = 0.13
+GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_HIGH: float = 20.0
+GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_LOW: float = 0.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_ALPHA: float = 0.68
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_BETA: float = 2.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_Z0: float = 0.11
@@ -6740,8 +6742,8 @@ class GalaxySDTrueRedshiftLSSTSRD(GalaxySDTrueRedshift):
     ::
 
         GalaxySDTrueRedshiftLSSTSRD(**properties)
-        new(z_min:float, z_max:float) -> NumCosmo.GalaxySDTrueRedshiftLSSTSRD
-        new_y10(z_min:float, z_max:float) -> NumCosmo.GalaxySDTrueRedshiftLSSTSRD
+        new() -> NumCosmo.GalaxySDTrueRedshiftLSSTSRD
+        new_y10() -> NumCosmo.GalaxySDTrueRedshiftLSSTSRD
 
     Object NcGalaxySDTrueRedshiftLSSTSRD
 
@@ -6823,9 +6825,9 @@ class GalaxySDTrueRedshiftLSSTSRD(GalaxySDTrueRedshift):
     def clear(gsdtrlsst: GalaxySDTrueRedshiftLSSTSRD) -> None: ...
     def free(self) -> None: ...
     @classmethod
-    def new(cls, z_min: float, z_max: float) -> GalaxySDTrueRedshiftLSSTSRD: ...
+    def new(cls) -> GalaxySDTrueRedshiftLSSTSRD: ...
     @classmethod
-    def new_y10(cls, z_min: float, z_max: float) -> GalaxySDTrueRedshiftLSSTSRD: ...
+    def new_y10(cls) -> GalaxySDTrueRedshiftLSSTSRD: ...
     def ref(self) -> GalaxySDTrueRedshiftLSSTSRD: ...
 
 class GalaxySDTrueRedshiftLSSTSRDClass(GObject.GPointer):
