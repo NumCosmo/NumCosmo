@@ -6,10 +6,13 @@
  *  Mon June 5 15:22:39 2023
  *  Copyright  2023  Caio Lima de Oliveira
  *  <caiolimadeoliveira@pm.me>
+ *  Copyright  2024  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_galaxy_sd_shape_gauss.h
  * Copyright (C) 2023 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
+ * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -31,36 +34,32 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/lss/nc_halo_position.h>
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_GALAXY_SD_SHAPE_GAUSS             (nc_galaxy_sd_shape_gauss_get_type ())
-#define NC_GALAXY_SD_SHAPE_GAUSS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_GALAXY_SD_SHAPE_GAUSS, NcGalaxySDShapeGauss))
-#define NC_GALAXY_SD_SHAPE_GAUSS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_GALAXY_SD_SHAPE_GAUSS, NcGalaxySDShapeGaussClass))
-#define NC_IS_GALAXY_SD_SHAPE_GAUSS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_GALAXY_SD_SHAPE_GAUSS))
-#define NC_IS_GALAXY_SD_SHAPE_GAUSS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_GALAXY_SD_SHAPE_GAUSS))
-#define NC_GALAXY_SD_SHAPE_GAUSS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_GALAXY_SD_SHAPE_GAUSS, NcGalaxySDShapeGaussClass))
+#define NC_TYPE_GALAXY_SD_SHAPE_GAUSS (nc_galaxy_sd_shape_gauss_get_type ())
 
-typedef struct _NcGalaxySDShapeGaussClass NcGalaxySDShapeGaussClass;
-typedef struct _NcGalaxySDShapeGauss NcGalaxySDShapeGauss;
-typedef struct _NcGalaxySDShapeGaussPrivate NcGalaxySDShapeGaussPrivate;
+G_DECLARE_FINAL_TYPE (NcGalaxySDShapeGauss, nc_galaxy_sd_shape_gauss, NC, GALAXY_SD_SHAPE_GAUSS, NcGalaxySDShape)
 
-struct _NcGalaxySDShapeGaussClass
+/**
+ * NcGalaxySDShapeGaussParams:
+ * @NC_GALAXY_SD_SHAPE_GAUSS_SIGMA_INT: Standard deviation of the ellipticity distribution.
+ *
+ * Gaussian galaxy shape distribution model parameters.
+ *
+ */
+typedef enum /*< enum,underscore_name=NC_GALAXY_SD_SHAPE_GAUSS_PARAMS >*/
 {
-  /*< private >*/
-  NcGalaxySDShapeClass parent_class;
-};
+  NC_GALAXY_SD_SHAPE_GAUSS_SIGMA_INT = 0,
+  /* < private > */
+  NC_GALAXY_SD_SHAPE_GAUSS_SPARAM_LEN, /*< skip >*/
+} NcGalaxySDShapeGaussParams;
 
-struct _NcGalaxySDShapeGauss
-{
-  /*< private >*/
-  NcGalaxySDShape parent_instance;
-  NcGalaxySDShapeGaussPrivate *priv;
-};
-
-GType nc_galaxy_sd_shape_gauss_get_type (void) G_GNUC_CONST;
+#define NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA_INT   (0.3)
+#define NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_PARAMS_ABSTOL (0.0)
 
 NcGalaxySDShapeGauss *nc_galaxy_sd_shape_gauss_new ();
 NcGalaxySDShapeGauss *nc_galaxy_sd_shape_gauss_ref (NcGalaxySDShapeGauss *gsdsgauss);
@@ -68,8 +67,15 @@ NcGalaxySDShapeGauss *nc_galaxy_sd_shape_gauss_ref (NcGalaxySDShapeGauss *gsdsga
 void nc_galaxy_sd_shape_gauss_free (NcGalaxySDShapeGauss *gsdsgauss);
 void nc_galaxy_sd_shape_gauss_clear (NcGalaxySDShapeGauss **gsdsgauss);
 
-void nc_galaxy_sd_shape_gauss_set_sigma (NcGalaxySDShapeGauss *gsdsgauss, gdouble sigma);
-gdouble nc_galaxy_sd_shape_gauss_get_sigma (NcGalaxySDShapeGauss *gsdsgauss);
+void nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShapeGauss *gsdsgauss, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble sigma_obs_1, const gdouble sigma_obs_2, NcGalaxyWLObsCoord coord, NcmRNG *rng);
+
+void nc_galaxy_sd_shape_gauss_data_set (NcGalaxySDShapeGauss *gsdsgauss, NcGalaxySDShapeData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble sigma_obs_1, const gdouble sigma_obs_2);
+void nc_galaxy_sd_shape_gauss_data_get (NcGalaxySDShapeGauss *gsdsgauss, NcGalaxySDShapeData *data, gdouble *epsilon_obs_1, gdouble *epsilon_obs_2, gdouble *sigma_obs_1, gdouble *sigma_obs_2);
+
+#define NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_1 "epsilon_obs_1"
+#define NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_2 "epsilon_obs_2"
+#define NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_1 "sigma_obs_1"
+#define NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_2 "sigma_obs_2"
 
 G_END_DECLS
 

@@ -27,6 +27,20 @@
    fun:PMPI_Init
 }
 {
+   <ompi_mpi_init>
+   Memcheck:Leak
+   match-leak-kinds: all
+   ...
+   fun:ompi_mpi_init
+}
+{
+   <dl_open_worker>
+   Memcheck:Leak
+   match-leak-kinds: all
+   ...
+   fun:dl_open_worker
+}
+{
    <g_test_trap_subprocess>
    Memcheck:Leak
    match-leak-kinds: all

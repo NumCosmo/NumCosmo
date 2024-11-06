@@ -1104,7 +1104,7 @@ static gboolean
 _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnMobs, const gdouble *lnMobs_params, NcmRNG *rng)
 {
   NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
-  gdouble r_SZ, r_L, sz_ran, l_ran, M_pl, M_cl;
+  gdouble r_SZ, r_L, M_pl, M_cl;
   gdouble lnM_SZ_ran, lnM_L_ran, M_SZ_ran, M_L_ran;
   const gdouble lnM_SZ = _SZ_lnmass_mean (mszl, lnM);
   const gdouble lnM_L  = _Lens_lnmass_mean (mszl, lnM);

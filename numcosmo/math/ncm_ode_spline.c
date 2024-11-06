@@ -60,6 +60,7 @@ typedef struct _NcmOdeSplinePrivate
   gdouble xf;
   gdouble yi;
   gdouble yf;
+  gdouble yf_attained;
   gdouble reltol;
   gdouble abstol;
   NcmOdeSplineDydx dydx;
@@ -118,6 +119,7 @@ ncm_ode_spline_init (NcmOdeSpline *os)
   self->xf          = GSL_NAN;
   self->yi          = GSL_NAN;
   self->yf          = GSL_NAN;
+  self->yf_attained = GSL_NAN;
   self->reltol      = 0.0;
   self->abstol      = 0.0;
   self->dydx        = NULL;
@@ -652,9 +654,7 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
         break;
     }
 
-    if (ncm_cmp (last_y, self->yf, 1.0e-2, 0.0) != 0)
-      g_warning ("ncm_ode_spline_prepare: system has saturated at `% 22.15g' before attaining the required final value `% 22.15g'.",
-                 last_y, self->yf);
+    self->yf_attained = last_y;
   }
 
   ncm_spline_set_array (self->spline, self->x_array, self->y_array, TRUE);
@@ -795,9 +795,9 @@ ncm_ode_spline_set_yi (NcmOdeSpline *os, gdouble yi)
  * @os: a #NcmOdeSpline
  * @yf: final value of the function to be evaluated
  *
- * This function sets the final value of the function to be evaluated.
- * When @yf is reached, the edo's integration is stopped.
- * Note that if @xf is also set, @yf will take precedence.
+ * This function sets the final value of the function to be evaluated. When @yf is
+ * reached, the edo's integration is stopped. Note that if @xf is also set, @yf will
+ * take precedence.
  *
  */
 void
@@ -861,6 +861,22 @@ ncm_ode_spline_get_ini_step (NcmOdeSpline *os)
   NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
 
   return self->ini_step;
+}
+
+/**
+ * ncm_ode_spline_get_yf_attained:
+ * @os: a #NcmOdeSpline
+ *
+ * Gets the last value of the function attained during the integration.
+ *
+ * Returns: the last value of the function attained during the integration.
+ */
+gdouble
+ncm_ode_spline_get_yf_attained (NcmOdeSpline *os)
+{
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
+  return self->yf_attained;
 }
 
 /**

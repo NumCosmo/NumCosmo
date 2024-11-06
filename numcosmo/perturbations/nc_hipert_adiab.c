@@ -621,17 +621,16 @@ gdouble
 nc_hipert_adiab_eval_delta_critial (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau)
 {
   const gdouble tau_hubble = nc_hipert_iadiab_eval_tau_hubble (NC_HIPERT_IADIAB (model), adiab->k);
-  const gdouble E          = nc_hipert_iadiab_eval_hubble (NC_HIPERT_IADIAB (model), tau);
   const gdouble t_hubble   = nc_hipert_adiab_eval_cosmic_time (adiab, model, -tau_hubble);
   const gdouble t          = nc_hipert_adiab_eval_cosmic_time (adiab, model, tau);
-  const gdouble delta_t    = t_hubble - t;
-  const gdouble F          = fabs (2.0 * E * delta_t / M_PI);
-  const gdouble cbrt_2     = cbrt (2.0);
-  const gdouble factor1    = cbrt (2.0 + 27.0 * gsl_pow_2 (F) - 3.0 * F * sqrt (12.0 + 81.0 * gsl_pow_2 (F)));
-  const gdouble factor2    = (1.0 + cbrt_2 / factor1 + factor1 / cbrt_2) / (3.0 * F);
 
+  /* const gdouble E          = nc_hipert_iadiab_eval_hubble (NC_HIPERT_IADIAB (model), tau); */
+  /* const gdouble delta_t    = t_hubble - t; */
+  /* const gdouble F          = fabs (2.0 * E * delta_t / M_PI); */
+  /* const gdouble cbrt_2     = cbrt (2.0); */
+  /* const gdouble factor1    = cbrt (2.0 + 27.0 * gsl_pow_2 (F) - 3.0 * F * sqrt (12.0 + 81.0 * gsl_pow_2 (F))); */
+  /* const gdouble factor2    = (1.0 + cbrt_2 / factor1 + factor1 / cbrt_2) / (3.0 * F); */
   /* printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", tau, tau_hubble, t, t_hubble, fabs (E * delta_t), 5.0 * t_hubble / t); */
-
   /*return sqrt (factor2); */
 
   return 5.0 * t_hubble / t;
@@ -793,7 +792,6 @@ nc_hipert_adiab_prepare_spectrum (NcHIPertAdiab *adiab, NcmModel *model, GArray 
   {
     NcmVector *tau_vec = ncm_vector_new_array (tau_array);
     NcmVector *k_vec   = ncm_vector_new_array (k_array);
-    NcmSpline *s       = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
     ncm_spline2d_clear (&adiab->powspec_alpha);
     ncm_spline2d_clear (&adiab->powspec_gamma);
@@ -815,12 +813,6 @@ static NcmPowspecSpline2d *
 _nc_hipert_adiab_eval_powspec_func (NcHIPertAdiab *adiab, NcmModel *model,
                                     gdouble (*eval_from_state)(NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k))
 {
-  NcmCSQ1D *csq1d    = NCM_CSQ1D (adiab);
-  const gdouble unit = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
-  gdouble tAd;
-  gboolean found;
-  guint i;
-
   if (!ncm_spline2d_is_init (adiab->powspec_alpha) || !ncm_spline2d_is_init (adiab->powspec_gamma))
   {
     g_error ("Power spectrum not prepared.");
