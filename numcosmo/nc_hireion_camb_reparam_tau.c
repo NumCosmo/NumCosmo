@@ -122,7 +122,6 @@ nc_hireion_camb_reparam_tau_finalize (GObject *object)
 
 static gboolean _nc_hireion_camb_reparam_tau_old2new (NcmReparam *reparam, NcmModel *model);
 static gboolean _nc_hireion_camb_reparam_tau_new2old (NcmReparam *reparam, NcmModel *model);
-static gboolean _nc_hireion_camb_reparam_tau_jac (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *jac);
 
 static void
 nc_hireion_camb_reparam_tau_class_init (NcHIReionCambReparamTauClass *klass)

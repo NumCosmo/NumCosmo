@@ -38,14 +38,14 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (NcmPriorFlatParam, ncm_prior_flat_param, NCM, PRIOR_FLAT_PARAM, NcmPriorFlat)
 
 NcmPriorFlatParam *ncm_prior_flat_param_new (NcmModel * model, guint pid, gdouble x_low, gdouble x_upp, gdouble scale);
-NcmPriorFlatParam *ncm_prior_flat_param_new_name (const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale);
+NcmPriorFlatParam *ncm_prior_flat_param_new_name (const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale, GError **error);
 
 NcmPriorFlatParam *ncm_prior_flat_param_ref (NcmPriorFlatParam *pfp);
 
 void ncm_prior_flat_param_free (NcmPriorFlatParam *pfp);
 void ncm_prior_flat_param_clear (NcmPriorFlatParam **pfp);
 
-void ncm_prior_flat_param_set_model_ns (NcmPriorFlatParam *pfp, const gchar *model_ns);
+void ncm_prior_flat_param_set_model_ns (NcmPriorFlatParam *pfp, const gchar *model_ns, GError **error);
 void ncm_prior_flat_param_set_stack_pos (NcmPriorFlatParam *pfp, guint stack_pos);
 void ncm_prior_flat_param_set_param_name (NcmPriorFlatParam *pfp, const gchar *param_name);
 

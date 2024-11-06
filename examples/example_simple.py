@@ -97,7 +97,7 @@ def test_distances() -> None:
     for i in range(0, N):
         z = 1.0 / (N - 1.0) * i
         Dc = dist.comoving(cosmo, z)
-        dc = RH_Mpc * Dc
+        dc = RH_Mpc * Dc / (1.0 + z)
 
         print(f"{z: 10.8f} {Dc: 22.15g} [c/H0] {dc: 22.15g} [Mpc]")
 

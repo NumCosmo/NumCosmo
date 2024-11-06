@@ -40,7 +40,7 @@ from .catalog import (
     ParameterEvolution,
     GetBestFit,
 )
-from .generate import GeneratePlanck, GenerateJpasForecast
+from .generate import GeneratePlanck, GenerateJpasForecast, GenerateClusterWL
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
 app_run = typer.Typer(no_args_is_help=True, help="Run different statistical analyses.")
@@ -150,6 +150,12 @@ GEN_JPAS_FORECAST_CMD: CMDArg = {
     "help": "Generate JPAS 2024 forecast experiments.",
 }
 
+GEN_CLUSTER_WL_CMD: CMDArg = {
+    "name": "cluster-wl",
+    "no_args_is_help": True,
+    "help": "Generate cluster weak lensing experiments.",
+}
+
 # ------------------------------------------------------------------------------
 # Installing from-cosmosis command if COSMOSIS is installed and
 # all prerequisites are met.
@@ -179,3 +185,4 @@ app_cat.command(**CAT_GET_BEST_FIT_CMD)(GetBestFit)
 # Installing experiment generation subcommands
 app_generate.command(**GEN_PLANCK_CMD)(GeneratePlanck)
 app_generate.command(**GEN_JPAS_FORECAST_CMD)(GenerateJpasForecast)
+app_generate.command(**GEN_CLUSTER_WL_CMD)(GenerateClusterWL)

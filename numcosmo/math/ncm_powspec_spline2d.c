@@ -166,7 +166,6 @@ _ncm_powspec_spline2d_eval (NcmPowspec *powspec, NcmModel *model, const gdouble 
   else if (lnk > self->intern_lnkmax)
   {
     const gdouble lnkmax     = self->intern_lnkmax;
-    const gdouble kmax       = exp (self->intern_lnkmax);
     const gdouble lnPkmax    = ncm_spline2d_eval (self->spline2d, z, self->intern_lnkmax);
     const gdouble lnPkmax_m1 = ncm_spline2d_eval (self->spline2d, z, self->intern_lnkmax_m1);
     const gdouble delta_lnk  = lnk - lnkmax;
@@ -183,9 +182,7 @@ _ncm_powspec_spline2d_eval (NcmPowspec *powspec, NcmModel *model, const gdouble 
 static void
 _ncm_powspec_spline2d_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk)
 {
-  NcmPowspecSpline2d *ps_s2d             = NCM_POWSPEC_SPLINE2D (powspec);
-  NcmPowspecSpline2dPrivate * const self = ncm_powspec_spline2d_get_instance_private (ps_s2d);
-  guint n                                = ncm_vector_len (k);
+  guint n = ncm_vector_len (k);
   guint i;
 
   g_assert_cmpuint (n, ==, ncm_vector_len (Pk));

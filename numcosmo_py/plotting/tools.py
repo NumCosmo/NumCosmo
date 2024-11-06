@@ -25,6 +25,7 @@
 
 import math
 import numpy as np
+import numpy.typing as npt
 
 from matplotlib.patches import Ellipse
 from matplotlib import transforms
@@ -71,6 +72,67 @@ def confidence_ellipse(mu, cov, ax, n_std=1.0, facecolor="none", **kwargs):
 
     ellipse.set_transform(transf + ax.transData)
     return ax.add_patch(ellipse)
+
+
+def add_ellipse_from_ellipticity(
+    ax: plt.Axes,
+    ra_a: npt.NDArray[np.float64],
+    dec_a: npt.NDArray[np.float64],
+    e1_a: npt.NDArray[np.float64],
+    e2_a: npt.NDArray[np.float64],
+    ellipse_scale: float = 0.5,
+    ellipse_area: float = 1.0,
+    edgecolor: str = "black",
+    facecolor: str = "none",
+) -> None:
+    """Add an ellipse to a plot based on the ellipticity.
+
+    The ellipticity is given by the e1 and e2 components of the ellipticity vector. The
+    semi-major and semi-minor axes are calculated from the ellipticity and the angle of
+    the ellipse is calculated from the ellipticity components. The equation for the
+    angle is given by:
+    $$
+    \\theta = 0.5 \\arctan2(e2, e1),$$ $$q = \\frac{1 - \\epsilon}{1 + \\epsilon},
+    $$
+    where $q$ is the axis ratio, $a$ is the semi-major axis, and $b$ is the semi-minor
+    axis. The area of the ellipse is given by:
+    $$
+    A = \\pi a b.
+    $$
+
+    :param ax: The axes to add the ellipse to.
+    :param ra_a: The right ascension of the center of the ellipse.
+    :param dec_a: The declination of the center of the ellipse.
+    :param e1_a: The e1 component of the ellipticity.
+    :param e2_a: The e2 component of the ellipticity.
+    :param ellipse_scale: The scale factor for the ellipse axes.
+    :param ellipse_area: The area of the ellipse.
+    :param edgecolor: The color of the ellipse edge.
+    :param facecolor: The color of the ellipse face.
+
+    """
+    for ra, dec, e1, e2 in zip(ra_a, dec_a, e1_a, e2_a):
+        # Calculate the ellipse parameters
+        ellip: float = np.hypot(e1, e2)
+        theta: float = 0.5 * np.arctan2(e2, e1)
+
+        # Convert ellipticity to semi-major and semi-minor axes
+        q = (1.0 - ellip) / (1.0 + ellip)
+        a = np.sqrt(ellipse_area / q)
+        b = np.sqrt(ellipse_area * q)
+
+        # Create an ellipse
+        ellipse = Ellipse(
+            xy=(ra, dec),
+            width=ellipse_scale * a,
+            height=ellipse_scale * b,
+            angle=np.degrees(theta),
+            edgecolor=edgecolor,
+            facecolor=facecolor,
+        )
+
+        # Add the ellipse to the plot
+        ax.add_patch(ellipse)
 
 
 def latex_float(value: float):
