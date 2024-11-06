@@ -326,25 +326,33 @@ class GenerateClusterWL:
         float, typer.Option(help="Cluster mass.", show_default=True)
     ] = 1.0e14
 
+    cluster_mass_min: Annotated[
+        float, typer.Option(help="Minimum cluster mass.", show_default=True)
+    ] = 1.0e13
+
+    cluster_mass_max: Annotated[
+        float, typer.Option(help="Maximum cluster mass.", show_default=True)
+    ] = 1.0e15
+
     cluster_c: Annotated[
         float, typer.Option(help="Cluster concentration.", show_default=True)
     ] = 4.0
 
     ra_min: Annotated[
         float, typer.Option(help="Minimum right ascension.", show_default=True)
-    ] = (12.34 - 0.18)
+    ] = 12.14
 
     ra_max: Annotated[
         float, typer.Option(help="Maximum right ascension.", show_default=True)
-    ] = (12.34 + 0.18)
+    ] = 12.54
 
     dec_min: Annotated[
         float, typer.Option(help="Minimum declination.", show_default=True)
-    ] = (-55.123 - 0.18)
+    ] = -55.323
 
     dec_max: Annotated[
         float, typer.Option(help="Maximum declination.", show_default=True)
-    ] = (-55.123 + 0.18)
+    ] = -54.923
 
     z_min: Annotated[
         float, typer.Option(help="Minimum redshift.", show_default=True)
@@ -352,7 +360,7 @@ class GenerateClusterWL:
 
     z_max: Annotated[
         float, typer.Option(help="Maximum redshift.", show_default=True)
-    ] = 1.2
+    ] = 1.6
 
     z_dist: Annotated[
         GalaxyZDist,
@@ -370,11 +378,11 @@ class GenerateClusterWL:
 
     galaxy_shape_e_rms: Annotated[
         float, typer.Option(help="Galaxy shape rms.", show_default=True)
-    ] = 2.0e-1
+    ] = 1.5e-1
 
     galaxy_shape_e_sigma: Annotated[
         float, typer.Option(help="Galaxy shape sigma.", show_default=True)
-    ] = 1.0e-4
+    ] = 1.0e-2
 
     parameter_list: Annotated[
         list[str],
@@ -412,6 +420,8 @@ class GenerateClusterWL:
             cluster_z=self.cluster_z,
             cluster_mass=self.cluster_mass,
             cluster_c=self.cluster_c,
+            cluster_mass_min=self.cluster_mass_min,
+            cluster_mass_max=self.cluster_mass_max,
             ra_min=self.ra_min,
             ra_max=self.ra_max,
             dec_min=self.dec_min,

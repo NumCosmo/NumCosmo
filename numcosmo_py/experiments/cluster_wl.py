@@ -170,16 +170,18 @@ class GalaxyDistributionModel:
             galaxies.ra_min, galaxies.ra_max, galaxies.dec_min, galaxies.dec_max
         )
         self.galaxy_redshift_true = Nc.GalaxySDTrueRedshiftLSSTSRD.new()
-        self.galaxy_redshift_true.set_property(
-            "lim", Ncm.DTuple2.new(galaxies.z_min, galaxies.z_max)
-        )
-
-        dist = self.galaxy_redshift_true.dist(1.0e-5, 1.0e-20)
+        # self.galaxy_redshift_true.set_property(
+        #    "lim", Ncm.DTuple2.new(galaxies.z_min, galaxies.z_max)
+        # )
+        dist = self.galaxy_redshift_true.dist(1.0e-5, 1.0e-15)
         frac = dist.eval_pdf(galaxies.z_max) - dist.eval_pdf(galaxies.z_min)
         self.sky_area = (galaxies.ra_max - galaxies.ra_min) * (
             galaxies.dec_max - galaxies.dec_min
         )
         self.n_galaxies = int(galaxies.density * frac * self.sky_area)
+        print(
+            f"Number of galaxies: {self.n_galaxies} = {galaxies.density} * {frac} * {self.sky_area}"
+        )
 
         match z_dist:
             case GalaxyZDist.SPEC:
@@ -296,6 +298,8 @@ def generate_lsst_cluster_wl(
     cluster_dec: float,
     cluster_z: float,
     cluster_mass: float,
+    cluster_mass_min: float,
+    cluster_mass_max: float,
     cluster_c: float,
     ra_min: float,
     ra_max: float,
@@ -339,6 +343,20 @@ def generate_lsst_cluster_wl(
     else:
         rng = Ncm.RNG.new("mt19937")
         rng.set_random_seed(True)
+
+    cluster.halo_position.param_set_desc(
+        "ra", {"lower-bound": ra_min, "upper-bound": ra_max}
+    )
+    cluster.halo_position.param_set_desc(
+        "dec", {"lower-bound": dec_min, "upper-bound": dec_max}
+    )
+    cluster.density_profile.param_set_desc(
+        "log10MDelta",
+        {
+            "lower-bound": float(np.log10(cluster_mass_min)),
+            "upper-bound": float(np.log10(cluster_mass_max)),
+        },
+    )
 
     cluster_data, mset = galaxy_model.generate_data(create_cosmo(), cluster, rng)
 
