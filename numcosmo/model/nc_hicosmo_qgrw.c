@@ -682,6 +682,11 @@ _nc_hicosmo_qgrw_gw_eval_xi (NcHIPertIGW *igw, const gdouble alpha, const gdoubl
   const gdouble absalpha = fabs (alpha);
   const gdouble x        = X_B * exp (-absalpha);
 
+  /* m = x^-3 / N */
+  /* N = 1/|E| */
+  /* w = N k x */
+  /* xi = log(m w) = log(k / x^2) */
+  /* F1 = dot(xi) / (2w) */
   return log (k) - 2.0 * log (x);
 }
 
@@ -704,9 +709,9 @@ _nc_hicosmo_qgrw_gw_eval_F1 (NcHIPertIGW *igw, const gdouble alpha, const gdoubl
   const gdouble F         = (R0 * x_m3w * 2.0 * oneF1_r + three_1mw * oneF1_p) * epsilon * alpha;
   const gdouble E2        = OMEGA_W * x3_1pw * F;
   const gdouble absE      = sqrt (E2);
-  const gdouble Fnu       = x * k / absE;
+  const gdouble nu        = x * k / absE;
 
-  return -epsilon / Fnu;
+  return epsilon / nu;
 }
 
 static gdouble
@@ -728,9 +733,9 @@ _nc_hicosmo_qgrw_gw_eval_nu (NcHIPertIGW *igw, const gdouble alpha, const gdoubl
   const gdouble F         = (R0 * x_m3w * 2.0 * oneF1_r + three_1mw * oneF1_p) * epsilon * alpha;
   const gdouble E2        = OMEGA_W * x3_1pw * F;
   const gdouble absE      = sqrt (E2);
-  const gdouble Fnu       = x * k / absE;
+  const gdouble nu        = x * k / absE;
 
-  return Fnu;
+  return nu;
 }
 
 static gdouble
