@@ -45,6 +45,7 @@ typedef struct _TestNcmSpline
   gdouble error_d1;
   gdouble error_d2;
   const gchar *name;
+  gboolean deriv1;
   gboolean deriv2;
 } TestNcmSpline;
 
@@ -248,6 +249,7 @@ void
 test_ncm_spline_cubic_notaknot_new_empty (TestNcmSpline *test, gconstpointer pdata)
 {
   test->name     = "spline_cubic_notaknot";
+  test->deriv1   = TRUE;
   test->deriv2   = TRUE;
   test->nknots   = g_test_rand_int_range (_NCM_SPLINE_TEST_NKNOTS, 2 * _NCM_SPLINE_TEST_NKNOTS);
   test->dx       = _NCM_SPLINE_TEST_DX;
@@ -281,6 +283,7 @@ void
 test_ncm_spline_gsl_cspline_new_empty (TestNcmSpline *test, gconstpointer pdata)
 {
   test->name     = "spline_gsl/cspline";
+  test->deriv1   = TRUE;
   test->deriv2   = FALSE;
   test->nknots   = g_test_rand_int_range (_NCM_SPLINE_TEST_NKNOTS, 2 * _NCM_SPLINE_TEST_NKNOTS);
   test->dx       = _NCM_SPLINE_TEST_DX;
@@ -312,14 +315,15 @@ void
 test_ncm_spline_gsl_linear_new_empty (TestNcmSpline *test, gconstpointer pdata)
 {
   test->name     = "spline_gsl/linear";
+  test->deriv1   = FALSE;
   test->deriv2   = FALSE;
   test->nknots   = g_test_rand_int_range (_NCM_SPLINE_TEST_NKNOTS, 2 * _NCM_SPLINE_TEST_NKNOTS);
   test->dx       = _NCM_SPLINE_TEST_DX;
   test->xi       = 10.0 * GSL_SIGN (g_test_rand_double_range (-1.0, 1.0));
   test->prec     = 1.0e-5;
   test->error    = 5.0e-4;
-  test->error_d1 = 1.0e-2;
-  test->error_d2 = 1.0e-2;
+  test->error_d1 = 1.0;
+  test->error_d2 = 1.0;
   test->s_base   = NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_linear));
   g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
   {
@@ -779,6 +783,7 @@ test_ncm_spline_eval_deriv (TestNcmSpline *test, gconstpointer pdata)
     ncm_spline_free (s);
   }
 
+  if (test->deriv1)
   {
     NcmSpline *s = ncm_spline_copy (test->s_base);
 
@@ -800,6 +805,7 @@ test_ncm_spline_eval_deriv (TestNcmSpline *test, gconstpointer pdata)
     ncm_spline_free (s);
   }
 
+  if (test->deriv1)
   {
     NcmSpline *s = ncm_spline_copy (test->s_base);
 

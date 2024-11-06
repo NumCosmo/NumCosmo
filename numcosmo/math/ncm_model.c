@@ -45,6 +45,7 @@
 #include "math/ncm_mset.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 #include "math/ncm_obj_array.h"
 
 typedef struct _NcmModelPrivate
@@ -83,13 +84,9 @@ enum
   PROP_SUBMODEL_ARRAY,
 };
 
-enum
-{
-  NCM_MODEL_ERROR_PARAM_NOT_FOUND,
-};
-
-G_DEFINE_QUARK (ncm - model - error - quark, ncm_model_error)
-#define NCM_MODEL_ERROR (ncm_model_error_quark ())
+/* *INDENT-OFF* */
+G_DEFINE_QUARK (ncm-model-error, ncm_model_error) 
+/* *INDENT-ON* */
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmModel, ncm_model, G_TYPE_OBJECT)
 
@@ -288,7 +285,7 @@ _ncm_model_set_property (GObject *object, guint prop_id, const GValue *value, GP
       _ncm_model_set_sparams_from_dict (model, g_value_get_boxed (value));
       break;
     case PROP_REPARAM:
-      ncm_model_set_reparam (model, g_value_get_object (value));
+      ncm_model_set_reparam (model, g_value_get_object (value), NULL);
       break;
     case PROP_SUBMODEL_ARRAY:
     {
@@ -809,8 +806,9 @@ ncm_model_class_set_sparam_obj (NcmModelClass *model_class, guint sparam_id, Ncm
   const guint prop_fit_id    = prop_id + (model_class->sparam_len - model_class->parent_sparam_len) + 2 * (model_class->vparam_len - model_class->parent_vparam_len);
 
   if (sparam_id >= model_class->sparam_len)
-    g_error ("ncm_model_class_set_sparam: setting parameter %u-th of %u (%s) parameters declared for model ``%s''.",
-             sparam_id + 1, model_class->sparam_len, ncm_sparam_name (sparam), model_class->name);
+    g_error ("ncm_model_class_set_sparam: cannot set parameter `%s` in model ``%s''. "
+             "Parameter id %u is out of range (0-%u)",
+             ncm_sparam_name (sparam), model_class->name, sparam_id + 1, model_class->sparam_len);
 
   g_assert_cmpint (prop_id, >, 0);
 
@@ -1111,28 +1109,42 @@ ncm_model_clear (NcmModel **model)
  * ncm_model_set_reparam:
  * @model: a #NcmModel
  * @reparam: a #NcmReparam
+ * @error: a #GError
  *
  * Sets the reparametrization of @model to @reparam.
  *
  */
 void
-ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam)
+ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
 {
   NcmModelPrivate * const self = ncm_model_get_instance_private (model);
+
+  g_return_if_fail (error == NULL || *error == NULL);
 
   if (reparam != NULL)
   {
     GType compat_type = ncm_reparam_get_compat_type (reparam);
 
     if (!g_type_is_a (G_OBJECT_TYPE (model), compat_type))
-      g_error ("ncm_model_set_reparam: model `%s' is not compatible with the reparametrization `%s'",
-               g_type_name (G_OBJECT_TYPE (model)), g_type_name (compat_type));
+    {
+      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE,
+                                  "ncm_model_set_reparam: model `%s' is not compatible with the reparametrization `%s'",
+                                  g_type_name (G_OBJECT_TYPE (model)), g_type_name (compat_type));
 
-    ncm_reparam_clear (&self->reparam);
-    self->reparam = ncm_reparam_ref (reparam);
+      return;
+    }
 
-    ncm_vector_clear (&self->p);
-    self->p = ncm_vector_ref (ncm_reparam_peek_params (self->reparam));
+    if (self->reparam != reparam)
+    {
+      ncm_reparam_clear (&self->reparam);
+      self->reparam = ncm_reparam_ref (reparam);
+    }
+
+    if (self->p != ncm_reparam_peek_params (self->reparam))
+    {
+      ncm_vector_clear (&self->p);
+      self->p = ncm_vector_ref (ncm_reparam_peek_params (self->reparam));
+    }
 
     ncm_reparam_old2new (self->reparam, model);
   }
@@ -1186,7 +1198,6 @@ ncm_model_is_equal (NcmModel *model1, NcmModel *model2)
 NcmReparam *
 ncm_model_get_reparam (NcmModel *model)
 {
-  NcmModelPrivate * const self = ncm_model_get_instance_private (model);
   NcmReparam *reparam;
 
   g_object_get (model, "reparam", &reparam, NULL);
@@ -1342,7 +1353,6 @@ ncm_model_params_set_vector (NcmModel *model, NcmVector *v)
 void
 ncm_model_params_set_model (NcmModel *model, NcmModel *model_src)
 {
-  NcmModelPrivate * const self     = ncm_model_get_instance_private (model);
   NcmModelPrivate * const self_src = ncm_model_get_instance_private (model_src);
 
   g_assert (ncm_model_is_equal (model, model_src));
@@ -1443,8 +1453,7 @@ ncm_model_params_get_all (NcmModel *model)
 gboolean
 ncm_model_params_valid (NcmModel *model)
 {
-  NcmModelPrivate * const self = ncm_model_get_instance_private (model);
-  NcmModelClass *model_class   = NCM_MODEL_GET_CLASS (model);
+  NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
 
   return model_class->valid (model);
 }
@@ -1493,6 +1502,7 @@ ncm_model_id (NcmModel *model)
 /**
  * ncm_model_id_by_type:
  * @model_type: a GType
+ * @error: a #GError
  *
  * Gets the model id of a model type. It is an error to call this function
  * with a type that is not a subclass of #NcmModel.
@@ -1500,11 +1510,16 @@ ncm_model_id (NcmModel *model)
  * Returns: The model id of @model_type.
  */
 NcmModelID
-ncm_model_id_by_type (GType model_type)
+ncm_model_id_by_type (GType model_type, GError **error)
 {
+  g_return_val_if_fail (error == NULL || *error == NULL, 0);
+
   if (!g_type_is_a (model_type, NCM_TYPE_MODEL))
   {
-    g_error ("ncm_model_id_by_type: type (%s) is not a %s", g_type_name (model_type), g_type_name (NCM_TYPE_MODEL));
+    ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_INVALID_TYPE,
+                                "ncm_model_id_by_type: type (%s) is not a %s",
+                                g_type_name (model_type),
+                                g_type_name (NCM_TYPE_MODEL));
 
     return 0;
   }
@@ -2459,6 +2474,250 @@ ncm_model_params_set_default_ftype (NcmModel *model)
 }
 
 /**
+ * ncm_model_param_get_desc:
+ * @model: a #NcmModel
+ * @param: parameter name
+ * @error: a #GError
+ *
+ * Gets the description of the parameter @param. The output is a #GHashTable which
+ * contains the following keys:
+ * - "name": the name of the parameter.
+ * - "symbol": the symbol of the parameter.
+ * - "scale": the scale of the parameter.
+ * - "lower-bound": the lower bound of the parameter.
+ * - "upper-bound": the upper bound of the parameter.
+ * - "abstol": the absolute tolerance of the parameter.
+ * - "fit": whether the parameter is a fitting parameter.
+ * - "value": the current value of the parameter.
+ *
+ * Returns: (transfer full) (element-type utf8 GValue): the description of the parameter @param.
+ */
+GHashTable *
+ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
+{
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+  {
+    guint i;
+    const gboolean has_param = ncm_model_param_index_from_name (model, param, &i, error);
+
+    if (!has_param)
+    {
+      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
+                                  "ncm_model_param_get_desc: model `%s' does not have a parameter called `%s'.",
+                                  G_OBJECT_TYPE_NAME (model), param);
+
+      return NULL;
+    }
+    else
+    {
+      GHashTable *desc = g_hash_table_new (g_str_hash, g_str_equal);
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_STRING);
+        g_value_set_static_string (value, ncm_model_param_name (model, i));
+        g_hash_table_insert (desc, g_strdup ("name"), value);
+      }
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_STRING);
+        g_value_set_static_string (value, ncm_model_param_symbol (model, i));
+        g_hash_table_insert (desc, g_strdup ("symbol"), value);
+      }
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_DOUBLE);
+        g_value_set_double (value, ncm_model_param_get_scale (model, i));
+        g_hash_table_insert (desc, g_strdup ("scale"), value);
+      }
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_DOUBLE);
+        g_value_set_double (value, ncm_model_param_get_lower_bound (model, i));
+        g_hash_table_insert (desc, g_strdup ("lower-bound"), value);
+      }
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_DOUBLE);
+        g_value_set_double (value, ncm_model_param_get_upper_bound (model, i));
+        g_hash_table_insert (desc, g_strdup ("upper-bound"), value);
+      }
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_DOUBLE);
+        g_value_set_double (value, ncm_model_param_get_abstol (model, i));
+        g_hash_table_insert (desc, g_strdup ("abstol"), value);
+      }
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_BOOLEAN);
+        g_value_set_boolean (value, (ncm_model_param_get_ftype (model, i) == NCM_PARAM_TYPE_FREE) ? TRUE : FALSE);
+        g_hash_table_insert (desc, g_strdup ("fit"), value);
+      }
+
+      {
+        GValue *value = g_new0 (GValue, 1);
+
+        g_value_init (value, G_TYPE_DOUBLE);
+        g_value_set_double (value, ncm_model_param_get (model, i));
+        g_hash_table_insert (desc, g_strdup ("value"), value);
+      }
+
+      return desc;
+    }
+  }
+}
+
+/**
+ * ncm_model_param_set_desc:
+ * @model: a #NcmModel
+ * @param: parameter name
+ * @desc: (element-type utf8 GValue): a #GHashTable
+ *
+ * Sets the description of the parameter @param. The input is a #GHashTable which
+ * may contain the following keys:
+ *
+ * - "name": the name of the parameter.
+ * - "symbol": the symbol of the parameter.
+ * - "scale": the scale of the parameter.
+ * - "lower-bound": the lower bound of the parameter.
+ * - "upper-bound": the upper bound of the parameter.
+ * - "abstol": the absolute tolerance of the parameter.
+ * - "fit": whether the parameter is a fitting parameter.
+ * - "value": the current value of the parameter.
+ *
+ * Other keys are ignored.
+ *
+ */
+void
+ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GError **error)
+{
+  g_return_if_fail (error == NULL || *error == NULL);
+
+  {
+    guint i;
+    const gboolean has_param = ncm_model_param_index_from_name (model, param, &i, error);
+
+    if (!has_param)
+    {
+      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
+                                  "ncm_model_param_set_desc: model `%s' does not have a parameter called `%s'.",
+                                  G_OBJECT_TYPE_NAME (model), param);
+
+      return;
+    }
+    else
+    {
+      if (g_hash_table_lookup (desc, "scale"))
+      {
+        GValue *value = g_hash_table_lookup (desc, "scale");
+
+        if (!G_VALUE_HOLDS_DOUBLE (value))
+        {
+          ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
+                                      "ncm_model_param_set_desc: scale must be a double.");
+
+          return;
+        }
+
+        ncm_model_param_set_scale (model, i, g_value_get_double (value));
+      }
+
+      if (g_hash_table_lookup (desc, "lower-bound"))
+      {
+        GValue *value = g_hash_table_lookup (desc, "lower-bound");
+
+        if (!G_VALUE_HOLDS_DOUBLE (value))
+        {
+          ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
+                                      "ncm_model_param_set_desc: lower-bound must be a double.");
+
+          return;
+        }
+
+        ncm_model_param_set_lower_bound (model, i, g_value_get_double (value));
+      }
+
+      if (g_hash_table_lookup (desc, "upper-bound"))
+      {
+        GValue *value = g_hash_table_lookup (desc, "upper-bound");
+
+        if (!G_VALUE_HOLDS_DOUBLE (value))
+        {
+          ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
+                                      "ncm_model_param_set_desc: upper-bound must be a double.");
+
+          return;
+        }
+
+        ncm_model_param_set_upper_bound (model, i, g_value_get_double (value));
+      }
+
+      if (g_hash_table_lookup (desc, "abstol"))
+      {
+        GValue *value = g_hash_table_lookup (desc, "abstol");
+
+        if (!G_VALUE_HOLDS_DOUBLE (value))
+        {
+          ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
+                                      "ncm_model_param_set_desc: abstol must be a double.");
+
+          return;
+        }
+
+        ncm_model_param_set_abstol (model, i, g_value_get_double (value));
+      }
+
+      if (g_hash_table_lookup (desc, "fit"))
+      {
+        GValue *value = g_hash_table_lookup (desc, "fit");
+
+        if (!G_VALUE_HOLDS_BOOLEAN (value))
+        {
+          ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
+                                      "ncm_model_param_set_desc: fit must be a boolean.");
+
+          return;
+        }
+
+        ncm_model_param_set_ftype (model, i, g_value_get_boolean (value) ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
+      }
+
+      if (g_hash_table_lookup (desc, "value"))
+      {
+        GValue *value = g_hash_table_lookup (desc, "value");
+
+        if (!G_VALUE_HOLDS_DOUBLE (value))
+        {
+          ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
+                                      "ncm_model_param_set_desc: value must be a double.");
+
+          return;
+        }
+
+        ncm_model_param_set (model, i, g_value_get_double (value));
+      }
+
+      return;
+    }
+  }
+}
+
+/**
  * ncm_model_orig_param_get_name:
  * @model: a #NcmModel
  * @n: parameter index
@@ -2509,7 +2768,7 @@ ncm_model_orig_param_symbol (NcmModel *model, guint n)
  *
  * Gets an array containing the parameters names.
  *
- * Returns: (transfer full) (element-type utf8): an array containing the parameters names.
+ * Returns: (transfer container) (element-type utf8): an array containing the parameters names.
  */
 GPtrArray *
 ncm_model_param_names (NcmModel *model)
@@ -2518,7 +2777,7 @@ ncm_model_param_names (NcmModel *model)
   GPtrArray *names             = g_ptr_array_new ();
   guint i;
 
-  /* g_ptr_array_set_free_func (names, g_free); */
+  g_ptr_array_set_free_func (names, g_free);
 
   for (i = 0; i < self->sparams->len; i++)
   {
@@ -2580,6 +2839,7 @@ ncm_model_orig_param_index_from_name (NcmModel *model, const gchar *param_name, 
  * @model: a #NcmModel
  * @param_name: parameter name
  * @i: (out): parameter index
+ * @error: a #GError
  *
  * Looks for parameter named @param_name in @model and puts its index in @i
  * and returns TRUE if found.
@@ -2587,9 +2847,11 @@ ncm_model_orig_param_index_from_name (NcmModel *model, const gchar *param_name, 
  * Returns: whether the parameter @param_name is found in the @model.
  */
 gboolean
-ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i)
+ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i, GError **error)
 {
   NcmReparam *reparam = ncm_model_peek_reparam (model);
+
+  g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
 
   if (reparam != NULL)
   {
@@ -2601,8 +2863,9 @@ ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint
     {
       if (ncm_reparam_peek_param_desc (reparam, *i) != NULL)
       {
-        g_error ("ncm_model_param_index_from_name: parameter (%s) was changed by a NcmReparam, it is now named (%s).",
-                 param_name, ncm_sparam_name (ncm_reparam_peek_param_desc (reparam, *i)));
+        ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_CHANGED,
+                                    "ncm_model_param_index_from_name: parameter (%s) was changed by a NcmReparam, it is now named (%s).",
+                                    param_name, ncm_sparam_name (ncm_reparam_peek_param_desc (reparam, *i)));
 
         return FALSE;
       }
@@ -2627,22 +2890,31 @@ ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint
  * @model: a #NcmModel
  * @param_name: parameter name
  * @val: parameter value
+ * @error: a #GError
  *
  * Sets the parameter value @val by @param_name.
  *
  */
 void
-ncm_model_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val)
+ncm_model_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val, GError **error)
 {
-  guint i;
-  const gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i);
+  g_return_if_fail (error == NULL || *error == NULL);
+  {
+    guint i;
+    const gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i, error);
 
-  if (!has_param)
-    g_error ("ncm_model_param_set_by_name: model `%s' does not have a parameter called `%s'. "
-             "Use the method ncm_model_param_index_from_name() to check if the parameter exists.",
-             G_OBJECT_TYPE_NAME (model), param_name);
+    if (!has_param)
+    {
+      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
+                                  "ncm_model_param_set_by_name: model `%s' does not have a parameter called `%s'. "
+                                  "Use the method ncm_model_param_index_from_name() to check if the parameter exists.",
+                                  G_OBJECT_TYPE_NAME (model), param_name);
 
-  ncm_model_param_set (model, i, val);
+      return;
+    }
+
+    ncm_model_param_set (model, i, val);
+  }
 }
 
 /**
@@ -2650,68 +2922,95 @@ ncm_model_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble v
  * @model: a #NcmModel
  * @param_name: parameter name
  * @val: parameter value
+ * @error: a #GError
  *
  * Sets the parameter value @val by @param_name.
  *
  */
 void
-ncm_model_orig_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val)
+ncm_model_orig_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val, GError **error)
 {
-  guint i;
-  const gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);
+  g_return_if_fail (error == NULL || *error == NULL);
+  {
+    guint i;
+    const gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);
 
-  if (!has_param)
-    g_error ("ncm_model_orig_param_set_by_name: model `%s' does not have a parameter called `%s'. "
-             "Use the method ncm_model_orig_param_index_from_name() to check if the parameter exists.",
-             G_OBJECT_TYPE_NAME (model), param_name);
+    if (!has_param)
+    {
+      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_ORIG_PARAM_NAME_NOT_FOUND,
+                                  "ncm_model_orig_param_set_by_name: model `%s' does not have a parameter called `%s'. "
+                                  "Use the method ncm_model_orig_param_index_from_name() to check if the parameter exists.",
+                                  G_OBJECT_TYPE_NAME (model), param_name);
 
-  ncm_model_orig_param_set (model, i, val);
+      return;
+    }
+
+    ncm_model_orig_param_set (model, i, val);
+  }
 }
 
 /**
  * ncm_model_param_get_by_name:
  * @model: a #NcmModel
  * @param_name: parameter name
+ * @error: a #GError
  *
  * Gets the parameter value by @param_name.
  *
  * Returns: parameter value.
  */
 gdouble
-ncm_model_param_get_by_name (NcmModel *model, const gchar *param_name)
+ncm_model_param_get_by_name (NcmModel *model, const gchar *param_name, GError **error)
 {
-  guint i;
-  const gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i);
+  g_return_val_if_fail (error == NULL || *error == NULL, GSL_NAN);
+  {
+    guint i;
+    const gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i, error);
 
-  if (!has_param)
-    g_error ("ncm_model_param_get_by_name: model `%s' does not have a parameter called `%s'. "
-             "Use the method ncm_model_param_index_from_name() to check if the parameter exists.",
-             G_OBJECT_TYPE_NAME (model), param_name);
+    if (!has_param)
+    {
+      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
+                                  "ncm_model_param_get_by_name: model `%s' does not have a parameter called `%s'. "
+                                  "Use the method ncm_model_param_index_from_name() to check if the parameter exists.",
+                                  G_OBJECT_TYPE_NAME (model), param_name);
 
-  return ncm_model_param_get (model, i);
+      return GSL_NAN;
+    }
+
+    return ncm_model_param_get (model, i);
+  }
 }
 
 /**
  * ncm_model_orig_param_get_by_name:
  * @model: a #NcmModel
  * @param_name: parameter name
+ * @error: a #GError
  *
  * Gets the original parameter value by @param_name.
  *
  * Returns: parameter value.
  */
 gdouble
-ncm_model_orig_param_get_by_name (NcmModel *model, const gchar *param_name)
+ncm_model_orig_param_get_by_name (NcmModel *model, const gchar *param_name, GError **error)
 {
-  guint i;
-  const gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);
+  g_return_val_if_fail (error == NULL || *error == NULL, GSL_NAN);
+  {
+    guint i;
+    const gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);
 
-  if (!has_param)
-    g_error ("ncm_model_orig_param_get_by_name: model `%s' does not have a parameter called `%s'. "
-             "Use the method ncm_model_orig_param_index_from_name() to check if the parameter exists.",
-             G_OBJECT_TYPE_NAME (model), param_name);
+    if (!has_param)
+    {
+      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_ORIG_PARAM_NAME_NOT_FOUND,
+                                  "ncm_model_orig_param_get_by_name: model `%s' does not have a parameter called `%s'. "
+                                  "Use the method ncm_model_orig_param_index_from_name() to check if the parameter exists.",
+                                  G_OBJECT_TYPE_NAME (model), param_name);
 
-  return ncm_model_orig_param_get (model, i);
+      return GSL_NAN;
+    }
+
+    return ncm_model_orig_param_get (model, i);
+  }
 }
 
 /**
@@ -2937,28 +3236,34 @@ ncm_model_peek_submodel_pos_by_mid (NcmModel *model, NcmModelID mid)
  * ncm_model___getitem__:
  * @model: a #NcmModel
  * @param: parameter name
- * @err: a GError
+ * @error: a GError
  *
  * Gets the parameter by name.
  *
  * Returns: parameter value
  */
 gdouble
-ncm_model___getitem__ (NcmModel *model, gchar *param, GError **err)
+ncm_model___getitem__ (NcmModel *model, gchar *param, GError **error)
 {
-  g_return_val_if_fail (err == NULL || *err == NULL, GSL_NAN);
+  g_return_val_if_fail (error == NULL || *error == NULL, GSL_NAN);
   {
     guint i;
-    gboolean exists = ncm_model_param_index_from_name (model, param, &i);
+    gboolean exists = ncm_model_param_index_from_name (model, param, &i, error);
+
+    if (error && *error)
+      return GSL_NAN;
 
     if (exists)
+    {
       return ncm_model_param_get (model, i);
+    }
     else
-      g_set_error (err,
-                   NCM_MODEL_ERROR,
-                   NCM_MODEL_ERROR_PARAM_NOT_FOUND,
-                   "Parameter named: %s does not exist in %s",
-                   param, G_OBJECT_TYPE_NAME (model));
+    {
+      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
+                                  "Parameter named: %s does not exist in %s",
+                                  param, G_OBJECT_TYPE_NAME (model));
+      NCM_UTIL_ON_ERROR_RETURN (error, , GSL_NAN);
+    }
 
     return GSL_NAN;
   }
@@ -2969,27 +3274,33 @@ ncm_model___getitem__ (NcmModel *model, gchar *param, GError **err)
  * @model: a #NcmModel
  * @param: parameter name
  * @val: parameter value
- * @err: a pointer for GError
+ * @error: a pointer for GError
  *
  * Sets the parameter by name.
  *
  */
 void
-ncm_model___setitem__ (NcmModel *model, gchar *param, gdouble val, GError **err)
+ncm_model___setitem__ (NcmModel *model, gchar *param, gdouble val, GError **error)
 {
-  g_return_if_fail (err == NULL || *err == NULL);
+  g_return_if_fail (error == NULL || *error == NULL);
   {
     guint i;
-    gboolean exists = ncm_model_param_index_from_name (model, param, &i);
+    gboolean exists = ncm_model_param_index_from_name (model, param, &i, error);
+
+    if (error && *error)
+      return;
 
     if (exists)
+    {
       ncm_model_param_set (model, i, val);
+    }
     else
-      g_set_error (err,
-                   NCM_MODEL_ERROR,
-                   NCM_MODEL_ERROR_PARAM_NOT_FOUND,
-                   "Parameter named: %s does not exist in %s",
-                   param, G_OBJECT_TYPE_NAME (model));
+    {
+      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
+                                  "Parameter named: %s does not exist in %s",
+                                  param, G_OBJECT_TYPE_NAME (model));
+      NCM_UTIL_ON_ERROR_RETURN (error, , );
+    }
   }
 }
 
