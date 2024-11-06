@@ -6,10 +6,13 @@
  *  Sat May 20 18:41:47 2023
  *  Copyright  2023  Caio Lima de Oliveira
  *  <caiolimadeoliveira@pm.me>
+ *  Copyright  2024  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_galaxy_sd_position.h
  * Copyright (C) 2023 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
+ * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

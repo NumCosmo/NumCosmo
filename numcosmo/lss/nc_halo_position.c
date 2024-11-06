@@ -4,10 +4,13 @@
  *  Thu Aug 08 08:45:20 2024
  *  Copyright  2024
  *  <code.caio@limadeoliveira.me>
+ *  Copyright  2024  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_halo_position.c
  * Copyright (C) 2024 Caio Lima de Oliveira <code.caio@limadeoliveira.me>
+ * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

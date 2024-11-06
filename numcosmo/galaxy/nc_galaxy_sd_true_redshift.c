@@ -6,10 +6,13 @@
  *  Wed Jul 31 20:52:43 2024
  *  Copyright  2024  Caio Lima de Oliveira
  *  <caiolimadeoliveira@pm.me>
+ *  Copyright  2024  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_galaxy_sd_true_redshift.c
  * Copyright (C) 2024 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
+ * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

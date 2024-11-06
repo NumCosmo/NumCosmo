@@ -1,15 +1,16 @@
-/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_galaxy_sd_obs_redshift.c
  *
  *  Thu Aug 1 00:45:32 2024
  *  Copyright  2024  Caio Lima de Oliveira
  *  <caiolimadeoliveira@pm.me>
+ *  Copyright  2024  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_galaxy_sd_obs_redshift.c
  * Copyright (C) 2024 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
+ * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

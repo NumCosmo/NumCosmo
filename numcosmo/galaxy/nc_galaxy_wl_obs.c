@@ -2,14 +2,16 @@
  *            nc_galaxy_wl_obs.c
  *
  *  Tue Jul 16 06:43:45 2024
- *  Copyright  2024 Caio Lima de Oliveira, Sandro Dias Pinto Vitenti
- *  <caiooliveiracode@proton.me>, <vitenti@uel.br>
+ *  Copyright  2024 Caio Lima de Oliveira
+ *  <caiooliveiracode@proton.me>
+ *  Copyright  2024  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
-
 /*
- * numcosmo
- * Copyright (C) Caio Lima de Oliveira 2024 <caiooliveiracode@proton.me>
- * Copyright (C) Sandro Dias Pinto Vitenti 2024 <vitenti@uel.br>
+ * nc_galaxy_wl_obs.c
+ * Copyright (C) 2024 Caio Lima de Oliveira <caiooliveiracode@proton.me>
+ * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or

@@ -2,8 +2,10 @@
  *           nc_galaxy_wl_obs.h
  *
  *  Tue Jul 16 06:25:17 2024
- *  Copyright  2024 Caio Lima de Oliveira, Sandro Dias Pinto Vitenti
- *  <caiooliveiracode@pm.me>, <vitenti@uel.br>
+ *  Copyright  2024 Caio Lima de Oliveira
+ *  <caiooliveiracode@pm.me>
+ *  Copyright  2024  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_galaxy_wl_obs.h
