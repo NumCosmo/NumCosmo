@@ -70,8 +70,7 @@ nc_hiprim_two_fluids_init (NcHIPrimTwoFluids *two_fluids)
 static void
 _nc_hiprim_two_fluids_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHIPrimTwoFluids *two_fluids         = NC_HIPRIM_TWO_FLUIDS (object);
-  NcHIPrimTwoFluidsPrivate * const self = nc_hiprim_two_fluids_get_instance_private (two_fluids);
+  NcHIPrimTwoFluids *two_fluids = NC_HIPRIM_TWO_FLUIDS (object);
 
   switch (prop_id)
   {
@@ -90,8 +89,7 @@ _nc_hiprim_two_fluids_set_property (GObject *object, guint prop_id, const GValue
 static void
 _nc_hiprim_two_fluids_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHIPrimTwoFluids *two_fluids         = NC_HIPRIM_TWO_FLUIDS (object);
-  NcHIPrimTwoFluidsPrivate * const self = nc_hiprim_two_fluids_get_instance_private (two_fluids);
+  NcHIPrimTwoFluids *two_fluids = NC_HIPRIM_TWO_FLUIDS (object);
 
   switch (prop_id)
   {
@@ -110,9 +108,6 @@ _nc_hiprim_two_fluids_get_property (GObject *object, guint prop_id, GValue *valu
 static void
 _nc_hiprim_two_fluids_dispose (GObject *object)
 {
-  NcHIPrimTwoFluids *two_fluids         = NC_HIPRIM_TWO_FLUIDS (object);
-  NcHIPrimTwoFluidsPrivate * const self = nc_hiprim_two_fluids_get_instance_private (two_fluids);
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hiprim_two_fluids_parent_class)->dispose (object);
 }
