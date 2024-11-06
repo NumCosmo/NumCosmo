@@ -140,7 +140,7 @@ def latex_float(value: float):
     float_str = f"{value:.2g}"
     if "e" in float_str:
         base, exponent = float_str.split("e")
-        if base == 1.0:
+        if math.isclose(float(base), 1.0):
             if exponent == 0.0:
                 return r"1"
             return f"10^{{{int(exponent)}}}"

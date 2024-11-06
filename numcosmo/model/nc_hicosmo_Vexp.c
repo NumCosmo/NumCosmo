@@ -428,14 +428,14 @@ nc_hicosmo_Vexp_class_init (NcHICosmoVexpClass *klass)
                               NCM_PARAM_TYPE_FIXED);
 
   /* Set em_b param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_VEXP_EM_B, "B_\\mathrm{em}", "Bem",
-                              1.0e-100,  1.0e100, 1.0e-2,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_VEXP_DEFAULT_EM_B,
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_VEXP_EM_ALPHA, "\\alpha_{\\mathrm{em}}", "alphaem",
+                              1.0e-1,  50.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_VEXP_DEFAULT_EM_ALPHA,
                               NCM_PARAM_TYPE_FIXED);
   /* Set em_beta param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_VEXP_EM_BETA, "\\beta_\\mathrm{em}", "betaem",
                               1.0e-10,  1.0e4, 1.0e-2,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_VEXP_DEFAULT_EM_B,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_VEXP_DEFAULT_EM_BETA,
                               NCM_PARAM_TYPE_FIXED);
 
   /* Check for errors in parameters initialization */
@@ -528,7 +528,7 @@ _nc_hicosmo_Vexp_init_x_alpha_series (const gdouble dalpha)
 #define D_PHI     (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_D_PHI))
 #define ALPHA_B   (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_ALPHA_B))
 #define X_B       (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_X_B))
-#define EM_B      (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_EM_B))
+#define EM_ALPHA  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_EM_ALPHA))
 #define EM_BETA   (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_VEXP_EM_BETA))
 
 #define LAMBDAp (1.0 + 1.0 / M_SQRT2)
@@ -2504,8 +2504,8 @@ static gdouble
 _nc_hicosmo_Vexp_em_eval_xi_cauchy (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k)
 {
   NcHICosmo *cosmo   = NC_HICOSMO (Vexp);
-  const gdouble B    = EM_B;
   const gdouble beta = EM_BETA;
+  const gdouble B    = exp (gsl_pow_2 (EM_ALPHA));
   const gdouble phi  = nc_hicosmo_Vexp_phi (Vexp, tau);
 
   return log (0.25 * k)  + log1p (4.0 * B / (1.0 + gsl_pow_2 (phi / beta)));
@@ -2515,8 +2515,8 @@ static gdouble
 _nc_hicosmo_Vexp_em_eval_F1_cauchy (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k)
 {
   NcHICosmo *cosmo   = NC_HICOSMO (Vexp);
-  const gdouble B    = EM_B;
   const gdouble beta = EM_BETA;
+  const gdouble B    = exp (gsl_pow_2 (EM_ALPHA));
   const gdouble phi  = nc_hicosmo_Vexp_phi (Vexp, tau);
   const gdouble t1   = -8.0 * phi * B / (beta * beta) * 1.0 / gsl_pow_2 (1.0 + gsl_pow_2 (phi / beta)) * 1.0 / (1.0 + 4.0 * B / (1.0 + gsl_pow_2 (phi / beta)));
   gdouble x;
@@ -2603,8 +2603,8 @@ static gdouble
 _nc_hicosmo_Vexp_em_eval_m_cauchy (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k)
 {
   NcHICosmo *cosmo   = NC_HICOSMO (Vexp);
-  const gdouble B    = EM_B;
   const gdouble beta = EM_BETA;
+  const gdouble B    = exp (gsl_pow_2 (EM_ALPHA));
   const gdouble phi  = nc_hicosmo_Vexp_phi (Vexp, tau);
   const gdouble F    = 0.25 + B / (1.0 + gsl_pow_2 (phi / beta));
 
@@ -2668,22 +2668,24 @@ _nc_hicosmo_Vexp_em_eval_m_cauchy (NcHICosmoVexp *Vexp, const gdouble tau, const
 static gdouble
 _nc_hicosmo_Vexp_em_eval_xi_gauss (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k)
 {
-  NcHICosmo *cosmo   = NC_HICOSMO (Vexp);
-  const gdouble B    = EM_B;
-  const gdouble beta = EM_BETA;
-  const gdouble phi  = nc_hicosmo_Vexp_phi (Vexp, tau);
+  NcHICosmo *cosmo       = NC_HICOSMO (Vexp);
+  const gdouble beta     = EM_BETA;
+  const gdouble em_alpha = EM_ALPHA;
+  const gdouble phi      = nc_hicosmo_Vexp_phi (Vexp, tau);
+  const gdouble exponent = gsl_pow_2 (em_alpha) - gsl_pow_2 (phi / beta);
 
-  return log (0.25 * k)  + log1p (4.0 * B * exp (-gsl_pow_2 (phi / beta)));
+  return log (0.25 * k)  + log1p (4.0 * exp (exponent));
 }
 
 static gdouble
 _nc_hicosmo_Vexp_em_eval_F1_gauss (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k)
 {
-  NcHICosmo *cosmo   = NC_HICOSMO (Vexp);
-  const gdouble B    = EM_B;
-  const gdouble beta = EM_BETA;
-  const gdouble phi  = nc_hicosmo_Vexp_phi (Vexp, tau);
-  const gdouble t1   = -8.0 * phi * B / (beta * beta) * exp (-gsl_pow_2 (phi / beta)) / (1.0 + 4.0 * B * exp (-gsl_pow_2 (phi / beta)));
+  NcHICosmo *cosmo       = NC_HICOSMO (Vexp);
+  const gdouble beta     = EM_BETA;
+  const gdouble em_alpha = EM_ALPHA;
+  const gdouble phi      = nc_hicosmo_Vexp_phi (Vexp, tau);
+  const gdouble exponent = gsl_pow_2 (em_alpha) - gsl_pow_2 (phi / beta);
+  const gdouble t1       = -8.0 * phi / (beta * beta) * exp (exponent) / (1.0 + 4.0 * exp (exponent));
   gdouble x;
 
   {
@@ -2767,11 +2769,12 @@ _nc_hicosmo_Vexp_em_eval_F1_gauss (NcHICosmoVexp *Vexp, const gdouble tau, const
 static gdouble
 _nc_hicosmo_Vexp_em_eval_m_gauss (NcHICosmoVexp *Vexp, const gdouble tau, const gdouble k)
 {
-  NcHICosmo *cosmo   = NC_HICOSMO (Vexp);
-  const gdouble B    = EM_B;
-  const gdouble beta = EM_BETA;
-  const gdouble phi  = nc_hicosmo_Vexp_phi (Vexp, tau);
-  const gdouble F    = 0.25 + B * exp (-gsl_pow_2 (phi / beta));
+  NcHICosmo *cosmo       = NC_HICOSMO (Vexp);
+  const gdouble beta     = EM_BETA;
+  const gdouble em_alpha = EM_ALPHA;
+  const gdouble phi      = nc_hicosmo_Vexp_phi (Vexp, tau);
+  const gdouble exponent = gsl_pow_2 (em_alpha) - gsl_pow_2 (phi / beta);
+  const gdouble F        = 0.25 + exp (exponent);
 
   {
     const gdouble tau2    = tau * tau;
