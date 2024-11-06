@@ -1,5 +1,3 @@
-
-
 clik_sources = files(
     'cldf/cldf.c',
     'cldf/cldf.h',
@@ -108,7 +106,6 @@ clik_lens_lkl_sources = files(
 
 clik_simall_sources = files('simall/clik_simall.c')
 
-
 plc_inc = include_directories(['.', 'cldf', 'minipmc', 'plik'])
 
 plc_preprocessor_args = [
@@ -128,7 +125,13 @@ if numcosmo_conf.has('HAVE_RTLD_DEFAULT')
     plc_c_args += '-DHAS_RTLD_DEFAULT'
 endif
 
-disable_warnings = ['-Wno-implicit-fallthrough', '-Wno-sign-compare', '-Wno-maybe-uninitialized']
+disable_warnings = [
+    '-Wno-implicit-fallthrough',
+    '-Wno-sign-compare',
+    '-Wno-maybe-uninitialized',
+    '-Wno-unused-parameter',
+    '-Wno-unused',
+]
 
 foreach flag : disable_warnings
     if cc.has_argument(flag)
@@ -146,8 +149,7 @@ freeform_args = [
     '-Mfreeform',
     '-freeform',
     '-f free',
-    '-8',
-    '+source=free',
+    '-8', '+source=free',
     '-nfix',
     '--nfix',
     '-Free',
@@ -195,8 +197,7 @@ line_length_args = [
     '-unlimited',
     '-extend_source',
     '-Wunlimited',
-    '-W',
-    '+extend_source',
+    '-W', '+extend_source',
     '+es',
     '-wide',
     '--wide',
@@ -245,7 +246,6 @@ foreach flag : disable_warnings_fortran
         plc_fc_args += flag
     endif
 endforeach
-
 
 libplc = static_library(
     'plc',

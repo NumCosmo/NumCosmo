@@ -58,6 +58,7 @@ void ncm_ode_spline_auto_abstol (NcmOdeSpline *os, gboolean on);
 
 void ncm_ode_spline_set_ini_step (NcmOdeSpline *os, gdouble ini_step);
 gdouble ncm_ode_spline_get_ini_step (NcmOdeSpline *os);
+gdouble ncm_ode_spline_get_yf_attained (NcmOdeSpline *os);
 
 NcmSpline *ncm_ode_spline_peek_spline (NcmOdeSpline *os);
 

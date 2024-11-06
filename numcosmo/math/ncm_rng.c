@@ -518,10 +518,9 @@ ncm_rng_set_state (NcmRNG *rng, const gchar *state)
 gboolean
 ncm_rng_check_seed (NcmRNG *rng, gulong seed)
 {
-  NcmRNGClass *rng_class     = NCM_RNG_GET_CLASS (rng);
-  NcmRNGPrivate * const self = ncm_rng_get_instance_private (rng);
-  gint seed_int              = seed;
-  gpointer b                 = g_hash_table_lookup (rng_class->seed_hash, GINT_TO_POINTER (seed_int));
+  NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);
+  gint seed_int          = seed;
+  gpointer b             = g_hash_table_lookup (rng_class->seed_hash, GINT_TO_POINTER (seed_int));
 
   return GPOINTER_TO_INT (b) == 0;
 }
@@ -585,8 +584,10 @@ ncm_rng_set_random_seed (NcmRNG *rng, gboolean allow_colisions)
   NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);
   gulong seed            = g_rand_int (rng_class->seed_gen) + 1;
 
-  while (!ncm_rng_check_seed (rng, seed))
-    seed = g_rand_int (rng_class->seed_gen) + 1;
+  if (!allow_colisions)
+    while (!ncm_rng_check_seed (rng, seed))
+      seed = g_rand_int (rng_class->seed_gen) + 1;
+
 
   ncm_rng_set_seed (rng, seed);
 }

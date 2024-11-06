@@ -4,10 +4,13 @@
  *  Wed March 1 12:53:13 2023
  *  Copyright  2023  Caio Lima de Oliveira
  *  <caiolimadeoliveira@pm.me>
+ *  Copyright  2024  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_galaxy_sd_position_flat.h
  * Copyright (C) 2023 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
+ * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -29,7 +32,6 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_position.h>
 
@@ -39,11 +41,13 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcGalaxySDPositionFlat, nc_galaxy_sd_position_flat, NC, GALAXY_SD_POSITION_FLAT, NcGalaxySDPosition)
 
-NcGalaxySDPositionFlat *nc_galaxy_sd_position_flat_new (const gdouble z_min, const gdouble z_max, const gdouble r_min, const gdouble r_max);
+NcGalaxySDPositionFlat *nc_galaxy_sd_position_flat_new (const gdouble ra_min, const gdouble ra_max, const gdouble dec_min, const gdouble dec_max);
 NcGalaxySDPositionFlat *nc_galaxy_sd_position_flat_ref (NcGalaxySDPositionFlat *gsdpflat);
 
 void nc_galaxy_sd_position_flat_free (NcGalaxySDPositionFlat *gsdpflat);
 void nc_galaxy_sd_position_flat_clear (NcGalaxySDPositionFlat **gsdpflat);
+
+void nc_galaxy_sd_position_flat_gen (NcGalaxySDPositionFlat *gsdpflat, NcmMSet *mset, NcGalaxySDPositionData *data, NcmRNG *rng);
 
 G_END_DECLS
 

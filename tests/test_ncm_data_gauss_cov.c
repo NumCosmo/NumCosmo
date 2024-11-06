@@ -150,7 +150,7 @@ void
 test_ncm_data_gauss_cov_mvnd_sanity (TestNcmDataGaussCovTest *test, gconstpointer pdata)
 {
   NcmRNG *rng           = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcmMSet *mset         = ncm_mset_new (NCM_MODEL (test->model), NULL);
+  NcmMSet *mset         = ncm_mset_new (NCM_MODEL (test->model), NULL, NULL);
   gdouble lower_data[5] = {-2.0, -2.0, -2.0, -2.0, 0.0};
   NcmVector *lower      = ncm_vector_new_data_static (lower_data, 5, 1);
   gdouble upper_data[5] = {2.0, 2.0, 2.0, 2.0, 2.0};
@@ -336,11 +336,8 @@ test_ncm_data_gauss_cov_test_bootstrap_resample (TestNcmDataGaussCovTest *test, 
   guint np               = ncm_data_gauss_cov_get_size (gauss);
   NcmStatsVec *stat      = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
   NcmRNG *rng            = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcmMatrix *cov         = ncm_data_gauss_cov_peek_cov (gauss);
-  NcmVector *y           = ncm_data_gauss_cov_peek_mean (gauss);
   NcmVector *mean        = ncm_vector_new (np);
   guint resample_size    = 10000 * np;
-  guint nerr             = 0;
   guint i;
 
   ncm_data_gauss_cov_test_mean_func (gauss, NULL, mean);
@@ -381,11 +378,8 @@ test_ncm_data_gauss_cov_test_bootstrap_resample_norm (TestNcmDataGaussCovTest *t
   guint np               = ncm_data_gauss_cov_get_size (gauss);
   NcmStatsVec *stat      = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
   NcmRNG *rng            = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcmMatrix *cov         = ncm_data_gauss_cov_peek_cov (gauss);
-  NcmVector *y           = ncm_data_gauss_cov_peek_mean (gauss);
   NcmVector *mean        = ncm_vector_new (np);
   guint resample_size    = 10000 * np;
-  guint nerr             = 0;
   guint i;
 
   ncm_data_gauss_cov_use_norma (gauss, TRUE);

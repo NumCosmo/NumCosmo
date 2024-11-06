@@ -1,11 +1,11 @@
 #
-# planck18.py
+# jpas_forecast24.py
 #
 # Mon Feb 20 22:31:10 2024
 # Copyright  2024  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# planck18.py
+# jpas_forecast24.py
 # Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
@@ -21,7 +21,10 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Factory functions to generate J-Pas 2024 forcasting likelihood and models
+"""Factory functions for J-Pas 2024 forcasting.
+
+This module provides factory functions to create the J-Pas 2024 forecast
+experiment dictionary and the extra functions for the forecast.
 """
 
 from enum import Enum
@@ -62,9 +65,7 @@ def create_zbins_kernels(
     kernel_zmax: float = 1.9,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Create the redshift bins and kernels for the J-Pas 2024 forecast."""
-
     # Redshift bins and kernels
-
     z_bins_len = nknots - 1
     z_bins_knots = np.linspace(z_min, z_max, num=nknots)
 
@@ -95,10 +96,13 @@ def create_lnM_bins(
 
 def survey_area(sky_cut: JpasSSCType):
     """Return the survey area for the J-Pas 2024 forecast."""
-    if sky_cut == JpasSSCType.FULL:
-        survey_area0 = 20009.97
-    elif sky_cut == JpasSSCType.GUARANTEED:
-        survey_area0 = 2959.1
+    match sky_cut:
+        case JpasSSCType.FULLSKY:
+            survey_area0 = 20009.97
+        case JpasSSCType.GUARANTEED:
+            survey_area0 = 2959.1
+        case _:
+            raise ValueError(f"Invalid sky cut type: {sky_cut}")
 
     return survey_area0
 
@@ -243,9 +247,7 @@ def create_mfunc_array(psml: Nc.PowspecML) -> Ncm.ObjArray:
 def create_covariance_S_fullsky(
     kernel_z: np.ndarray, kernels_T: np.ndarray, cosmo: Nc.HICosmo
 ) -> Ncm.Matrix:
-    """Create the base covariance matrix S_ij for the J-Pas 2024 forecast
-    based on the full sky."""
-
+    """Create the base covariance matrix S_ij  based on the full sky."""
     S_fullsky_array = PySSC.Sij(kernel_z, kernels_T, cosmo)
 
     S_fullsky = Ncm.Matrix.new_array(
@@ -258,9 +260,7 @@ def create_covariance_S_fullsky(
 def create_covariance_S_guaranteed(
     kernel_z: np.ndarray, kernels_T: np.ndarray, cosmo: Nc.HICosmo
 ) -> Ncm.Matrix:
-    """Create the base covariance matrix S_ij for the J-Pas 2024 forecast
-    based on the guaranteed mask."""
-
+    """Create the base covariance matrix S_ij for the guaranteed mask."""
     mask = create_mask_guaranteed()
 
     S_guaranteed_array = PySSC.Sij_psky(kernel_z, kernels_T, cosmo, mask=mask)
@@ -275,9 +275,7 @@ def create_covariance_S_guaranteed(
 def create_covariance_S_full(
     kernel_z: np.ndarray, kernels_T: np.ndarray, cosmo: Nc.HICosmo
 ) -> Ncm.Matrix:
-    """Create the base covariance matrix S_ij for the J-Pas 2024 forecast
-    based on the full mask."""
-
+    """Create the base covariance matrix S_ij for the full mask."""
     mask = create_mask_full()
 
     S_full_array = PySSC.Sij_psky(kernel_z, kernels_T, cosmo, mask=mask)
@@ -293,8 +291,7 @@ def create_covariance_S(
     sky_cut: JpasSSCType,
     cosmo: Nc.HICosmo,
 ) -> Ncm.Matrix:
-    """Create the base covariance matrix S_ij for the J-Pas 2024 forecast."""
-
+    """Create the base covariance matrix S_ij."""
     if sky_cut == JpasSSCType.FULLSKY:
         S = create_covariance_S_fullsky(kernel_z, kernels_T, cosmo)
     elif sky_cut == JpasSSCType.FULL:
@@ -377,7 +374,6 @@ def generate_jpas_forecast_2024(
     resample_Sij_type: JpasSSCType = JpasSSCType.NO_SSC,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Generate J-Pas forecast 2024 experiment dictionary."""
-
     # Computation tools
     if (
         resample_Sij_type == JpasSSCType.FULL
