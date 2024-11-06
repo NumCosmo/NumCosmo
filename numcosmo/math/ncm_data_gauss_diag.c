@@ -515,7 +515,6 @@ _ncm_data_gauss_diag_inv_cov_Uf (NcmData *data, NcmMSet *mset, NcmVector *f)
   NcmDataGaussDiag *diag                  = NCM_DATA_GAUSS_DIAG (data);
   NcmDataGaussDiagPrivate * const self    = ncm_data_gauss_diag_get_instance_private (diag);
   NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (diag);
-  guint i;
 
   if (ncm_data_bootstrap_enabled (data))
     g_error ("NcmDataGaussDiag: does not support bootstrap with least squares");

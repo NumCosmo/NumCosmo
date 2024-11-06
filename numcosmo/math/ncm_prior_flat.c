@@ -94,8 +94,7 @@ ncm_prior_flat_init (NcmPriorFlat *pf)
 static void
 _ncm_prior_flat_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmPriorFlat *pf                 = NCM_PRIOR_FLAT (object);
-  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
+  NcmPriorFlat *pf = NCM_PRIOR_FLAT (object);
 
   g_return_if_fail (NCM_IS_PRIOR_FLAT (object));
 
@@ -125,8 +124,7 @@ _ncm_prior_flat_set_property (GObject *object, guint prop_id, const GValue *valu
 static void
 _ncm_prior_flat_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmPriorFlat *pf                 = NCM_PRIOR_FLAT (object);
-  NcmPriorFlatPrivate * const self = ncm_prior_flat_get_instance_private (pf);
+  NcmPriorFlat *pf = NCM_PRIOR_FLAT (object);
 
   g_return_if_fail (NCM_IS_PRIOR_FLAT (object));
 
