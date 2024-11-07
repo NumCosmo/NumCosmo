@@ -54,14 +54,16 @@ def fixture_cosmo_qgrw() -> Nc.HICosmo:
     return cosmo
 
 
-def test_init(two_fluids):
+def test_init(two_fluids: Nc.HIPertTwoFluids) -> None:
     """Test NcHIPertTwoFluids initialization."""
     assert two_fluids is not None
     assert isinstance(two_fluids, Nc.HIPertTwoFluids)
     assert isinstance(two_fluids, Nc.HIPert)
 
 
-def test_compute_full_spectrum(two_fluids, cosmo_qgrw):
+def test_compute_full_spectrum(
+    two_fluids: Nc.HIPertTwoFluids, cosmo_qgrw: Nc.HICosmo
+) -> None:
     """Test NcHIPertTwoFluids compute_full_spectrum."""
     two_fluids.props.reltol = 1.0e-9
 
@@ -107,6 +109,7 @@ def test_compute_full_spectrum(two_fluids, cosmo_qgrw):
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     default_calib_file = Ncm.cfg_get_data_filename("hiprim_2f_spline.bin", True)
     s_calib = ser.from_binfile(default_calib_file)
+    assert isinstance(s_calib, Ncm.Spline2dBicubic)
 
     for w, lnk in product(w_a, lnk_v.dup_array()):
         Pk0 = s.eval(lnk, np.log(w))
@@ -114,9 +117,11 @@ def test_compute_full_spectrum(two_fluids, cosmo_qgrw):
         assert_allclose(Pk0, Pk1, rtol=1.0e-3)
 
 
-def test_evolve_array(two_fluids, cosmo_qgrw):
+def test_evolve_array(two_fluids: Nc.HIPertTwoFluids, cosmo_qgrw: Nc.HICosmo):
     """Test NcHIPertTwoFluids evolve_array."""
     two_fluids.props.reltol = 1.0e-9
-    m = two_fluids.evolve_array(cosmo=cosmo_qgrw, alphaf=-1.0e-1)
+    m = two_fluids.evolve_array(
+        cosmo=cosmo_qgrw, alphaf=-1.0e-1, step_abstol=0.0, step_reltol=1.0e-5
+    )
 
     assert all(np.isfinite(m.dup_array()))
