@@ -202,6 +202,7 @@ nc_halo_position_class_init (NcHaloPositionClass *klass)
 
 /**
  * nc_halo_position_new:
+ * @dist: A #NcDistance
  *
  * Creates a new halo position.
  *
