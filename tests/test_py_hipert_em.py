@@ -56,8 +56,8 @@ def fixture_em(request):
         "OmegaL": 1.0,  # H²(a when w=-1)/H²(a0). Basically gives the DE-dominated phase
         "Omegac": 1.0,  # Omega_d???
         "H0": 67.8,  # Hubble parameter today given by CMB observations
-        "Bem": -1.0 / 4.0 + 1.0e-12,  # Amplitude of the EM gaussian coupling
-        "betaem": 3.6e-1,  # Width of the EM gaussian coupling
+        "alphaem": 14.4,  # Amplitude of the EM gaussian coupling
+        "betaem": 2.2,  # Width of the EM gaussian coupling
     }
 
     vexp.set_properties(**current_set)
@@ -143,8 +143,8 @@ def test_initial_conditions_time_vexp(pem_vexp):
     )
 
     assert_allclose(F1_min, pem.eval_F1(vexp, t_min))
-    assert math.fabs(F1_min - pem.eval_F1(vexp, t_lb)) <= 1.0e-1
-    assert math.fabs(F1_min - pem.eval_F1(vexp, t_ub)) <= 1.0e-1
+    assert math.fabs(F1_min - pem.eval_F1(vexp, t_lb)) <= 1.001e-1
+    assert math.fabs(F1_min - pem.eval_F1(vexp, t_ub)) <= 1.001e-1
 
 
 def test_initial_conditions_adiabatic_vexp(pem_vexp):

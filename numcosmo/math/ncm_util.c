@@ -1059,7 +1059,7 @@ ncm_util_sleep_ms (gint milliseconds)
 /**
  * ncm_util_set_or_call_error:
  * @error: a #GError or NULL
- * @domain: an error domain #GQuark
+ * @domain: an error domain GQuark
  * @code: an error code
  * @format: a printf format string
  * @...: arguments for @format
@@ -1108,7 +1108,7 @@ ncm_util_set_or_call_error (GError **error, GQuark domain, gint code, const gcha
  * Forwards the error from @local_error, adding a prefix message formatted with @format
  * and its arguments, if @local_error is not NULL. If @local_error is NULL, the function
  * does nothing. If @error is not NULL, the function forwards @local_error to @error. If
- * @error is NULL, the function calls g_error() with @local_error.
+ * @error is NULL, the function calls g_error with @local_error.
  *
  */
 void

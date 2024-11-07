@@ -365,6 +365,7 @@ ncm_trivec_get_spherical_coord (NcmTriVec *v, gdouble *r, gdouble *theta, gdoubl
 /**
  * ncm_trivec_set_astro_coord:
  * @v: a #NcmTriVec
+ * @r: the radius
  * @delta: the declination
  * @alpha: the right ascension
  *

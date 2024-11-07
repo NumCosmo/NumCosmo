@@ -47,6 +47,14 @@ G_DECLARE_FINAL_TYPE (NcGalaxyWLObs, nc_galaxy_wl_obs, NC, GALAXY_WL_OBS, GObjec
 
 typedef struct _NcGalaxyWLObsPrivate NcGalaxyWLObsPrivate;
 
+/**
+ * NcGalaxyWLObsCoord:
+ * @NC_GALAXY_WL_OBS_COORD_CELESTIAL: Celestial coordinates.
+ * @NC_GALAXY_WL_OBS_COORD_EUCLIDEAN: Euclidean coordinates.
+ *
+ * Coordinate system for the galaxy weak lensing ellipticity data.
+ *
+ */
 typedef enum _NcGalaxyWLObsCoord
 {
   NC_GALAXY_WL_OBS_COORD_CELESTIAL,

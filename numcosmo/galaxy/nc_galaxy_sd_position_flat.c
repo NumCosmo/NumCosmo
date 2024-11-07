@@ -383,6 +383,7 @@ nc_galaxy_sd_position_flat_clear (NcGalaxySDPositionFlat **gsdpflat)
 /**
  * nc_galaxy_sd_position_flat_gen:
  * @gsdpflat: a #NcGalaxySDPositionFlat
+ * @mset: a #NcmMSet
  * @data: a #NcGalaxySDPositionData
  * @rng: a #NcmRNG
  *

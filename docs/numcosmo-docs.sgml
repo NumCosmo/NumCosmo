@@ -332,12 +332,13 @@
       <xi:include href="xml/nc_powspec_mnl_halofit.xml"/>
     </section>
     <section>
-      <title> Density Profile</title>
+      <title>Cluster Halo</title>
       <xi:include href="xml/nc_halo_density_profile.xml"/>
       <xi:include href="xml/nc_halo_density_profile_nfw.xml"/>
       <xi:include href="xml/nc_halo_density_profile_einasto.xml"/>
       <xi:include href="xml/nc_halo_density_profile_dk14.xml"/>
       <xi:include href="xml/nc_halo_density_profile_hernquist.xml"/>
+      <xi:include href="xml/nc_halo_position.xml"/>
     </section>
     <section>
       <title>Multiplicity Function</title>
@@ -388,8 +389,10 @@
       <xi:include href="xml/nc_xcor.xml"/>
       <xi:include href="xml/nc_xcor_AB.xml"/>
       <xi:include href="xml/nc_xcor_limber_kernel.xml"/>
-      <xi:include href="xml/nc_xcor_limber_kernel_gal.xml"/>
+      <xi:include href="xml/nc_xcor_limber_kernel_cmb_isw.xml"/>
       <xi:include href="xml/nc_xcor_limber_kernel_CMB_lensing.xml"/>
+      <xi:include href="xml/nc_xcor_limber_kernel_gal.xml"/>
+      <xi:include href="xml/nc_xcor_limber_kernel_tSZ.xml"/>
       <xi:include href="xml/nc_xcor_limber_kernel_weak_lensing.xml"/>
     </section>
     <xi:include href="xml/nc_cluster_abundance.xml"/>
@@ -397,14 +400,15 @@
     <xi:include href="xml/nc_cor_cluster_cmb_lens_limber.xml"/>
     <section>
       <title>Galaxy Distribution</title>
+      <xi:include href="xml/nc_galaxy_sd_obs_redshift.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_obs_redshift_gauss.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_obs_redshift_spec.xml"/>
       <xi:include href="xml/nc_galaxy_sd_position.xml"/>
       <xi:include href="xml/nc_galaxy_sd_position_flat.xml"/>
-      <xi:include href="xml/nc_galaxy_sd_position_lsst_srd.xml"/>
       <xi:include href="xml/nc_galaxy_sd_shape.xml"/>
       <xi:include href="xml/nc_galaxy_sd_shape_gauss.xml"/>
-      <xi:include href="xml/nc_galaxy_sd_z_proxy.xml"/>
-      <xi:include href="xml/nc_galaxy_sd_z_proxy_gauss.xml"/>
-      <xi:include href="xml/nc_galaxy_sd_z_proxy_dirac.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_true_redshift.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_true_redshift_lsst_srd.xml"/>
     </section>
     <section>
       <title>Weak Lensing</title>
@@ -412,6 +416,7 @@
       <xi:include href="xml/nc_reduced_shear_cluster_mass.xml"/>
       <xi:include href="xml/nc_reduced_shear_calib.xml"/>
       <xi:include href="xml/nc_reduced_shear_calib_wtg.xml"/>
+      <xi:include href="xml/nc_galaxy_wl_obs.xml"/>
     </section>
     <section>
       <title>Galaxy ACF</title>
