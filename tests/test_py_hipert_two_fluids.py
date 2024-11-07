@@ -119,9 +119,21 @@ def test_compute_full_spectrum(
 
 def test_evolve_array(two_fluids: Nc.HIPertTwoFluids, cosmo_qgrw: Nc.HICosmo):
     """Test NcHIPertTwoFluids evolve_array."""
+    init_cond = Ncm.Vector.new_array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     two_fluids.props.reltol = 1.0e-9
+
+    alpha_i = two_fluids.get_cross_time(
+        cosmo_qgrw, Nc.HIPertTwoFluidsCross.MODE1MAIN, -90.0, 1.0e-8
+    )
+    assert alpha_i < 0.0
+    two_fluids.get_init_cond_zetaS(cosmo_qgrw, alpha_i, 1, np.pi * 0.25, init_cond)
+    two_fluids.set_init_cond(cosmo_qgrw, alpha_i, 1, False, init_cond)
+
     m = two_fluids.evolve_array(
         cosmo=cosmo_qgrw, alphaf=-1.0e-1, step_abstol=0.0, step_reltol=1.0e-5
     )
 
-    assert all(np.isfinite(m.dup_array()))
+    m_a = np.array(m.dup_array())
+
+    assert len(m_a) > 0
+    assert all(np.isfinite(m_a))
