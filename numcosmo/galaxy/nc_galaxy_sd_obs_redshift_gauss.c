@@ -327,6 +327,7 @@ nc_galaxy_sd_obs_redshift_gauss_clear (NcGalaxySDObsRedshiftGauss **gsdorgauss)
 /**
  * nc_galaxy_sd_obs_redshift_gauss_gen:
  * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
+ * @mset: a #NcmMSet
  * @data: a #NcGalaxySDObsRedshiftData
  * @sigma_z: the standard deviation of the redshift errors
  * @rng: a #NcmRNG

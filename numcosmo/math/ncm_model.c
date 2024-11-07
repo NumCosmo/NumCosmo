@@ -2587,6 +2587,7 @@ ncm_model_param_get_desc (NcmModel *model, gchar *param, GError **error)
  * @model: a #NcmModel
  * @param: parameter name
  * @desc: (element-type utf8 GValue): a #GHashTable
+ * @error: a #GError pointer
  *
  * Sets the description of the parameter @param. The input is a #GHashTable which
  * may contain the following keys:

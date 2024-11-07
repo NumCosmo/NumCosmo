@@ -190,6 +190,7 @@ nc_galaxy_sd_shape_data_ref (NcGalaxySDShapeData *data)
 
 /**
  * nc_galaxy_sd_shape_data_unref:
+ * @data: a #NcGalaxySDShapeData
  *
  * Decreases the reference count of @data by one. If the reference count reaches 0, the
  * data is freed.
