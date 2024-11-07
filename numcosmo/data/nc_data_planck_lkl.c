@@ -948,19 +948,6 @@ nc_data_planck_lkl_set_hipert_boltzmann (NcDataPlanckLKL *plik, NcHIPertBoltzman
   }
 }
 
-static void
-_nc_data_planck_lkl_copy_prog (goffset current_num_bytes, goffset total_num_bytes, gpointer user_data)
-{
-  gint *old_prog = (gint *) user_data;
-  gint prog      = (100 * current_num_bytes) / total_num_bytes;
-
-  if (prog > *old_prog)
-  {
-    ncm_message ("# % 3d%%\r", prog);
-    *old_prog = prog;
-  }
-}
-
 /**
  * nc_data_planck_lkl_download_baseline:
  * @dir: a directory
@@ -979,7 +966,6 @@ nc_data_planck_lkl_download_baseline (const gchar *dir)
   const gchar *url_str = "https://github.com/NumCosmo/NumCosmo/releases/download/datafile-release-v1.0.0/COM_Likelihood_Data-baseline_R3.00.tar.gz";
   gchar *full_filename = g_build_filename (dir, file, NULL);
   GError *error        = NULL;
-  gint prog            = 0;
 
   ncm_message ("# Downloading file [%s]...\n", file);
 

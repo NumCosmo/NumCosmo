@@ -40,6 +40,7 @@ dependencies:
   - python >= 3.10
   - rich
   - scipy
+  - setuptools < 74
   - tqdm
   - typer
 name: numcosmo_developer
