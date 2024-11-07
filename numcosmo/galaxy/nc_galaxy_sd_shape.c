@@ -190,6 +190,7 @@ nc_galaxy_sd_shape_data_ref (NcGalaxySDShapeData *data)
 
 /**
  * nc_galaxy_sd_shape_data_unref:
+ * @data: a #NcGalaxySDShapeData
  *
  * Decreases the reference count of @data by one. If the reference count reaches 0, the
  * data is freed.
@@ -284,11 +285,11 @@ nc_galaxy_sd_shape_data_required_columns (NcGalaxySDShapeData *data)
  *
  * Creates a new galaxy shape integrand.
  *
- * Returns: (transfer full): a new #NcGalaxySDShapeIntegrand object.
+ * Returns: (transfer full): a new NcGalaxySDShapeIntegrand object.
  */
 /**
  * nc_galaxy_sd_shape_integrand_copy:
- * @callback_obj: a #NcGalaxySDShapeIntegrand
+ * @callback_obj: a NcGalaxySDShapeIntegrand
  *
  * Copies the integrand for the galaxy shape data.
  *
@@ -296,14 +297,14 @@ nc_galaxy_sd_shape_data_required_columns (NcGalaxySDShapeData *data)
  */
 /**
  * nc_galaxy_sd_shape_integrand_free:
- * @callback_obj: a #NcGalaxySDShapeIntegrand
+ * @callback_obj: a NcGalaxySDShapeIntegrand
  *
  * Frees the integrand for the galaxy shape data.
  *
  */
 /**
  * nc_galaxy_sd_shape_integrand_prepare:
- * @callback_obj: a #NcGalaxySDShapeIntegrand
+ * @callback_obj: a NcGalaxySDShapeIntegrand
  * @mset: a #NcmMSet
  *
  * Prepares the integrand for the galaxy shape data.
@@ -357,7 +358,7 @@ nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds)
  *
  * Creates a new galaxy shape integrand.
  *
- * Returns: (transfer full): a new #NcGalaxySDShapeIntegrand object.
+ * Returns: (transfer full): a new NcGalaxySDShapeIntegrand object.
  */
 NcGalaxySDShapeIntegrand *
 nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds)

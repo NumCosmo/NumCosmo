@@ -49,8 +49,6 @@ def test_wl_likelihood() -> None:
     cluster_mass = 1.0e14
     n_galaxies = 10000
     sigma_z = 0.03
-    galaxy_true_z_min = 0.2
-    galaxy_true_z_max = 1.2
     galaxies_ang_dist = 0.15
     galaxy_shape_e_rms = 2.0e-1
     galaxy_shape_e_sigma = 1.0e-4
@@ -78,9 +76,7 @@ def test_wl_likelihood() -> None:
     galaxy_position = Nc.GalaxySDPositionFlat.new(
         galaxies_ra0, galaxies_ra1, galaxies_dec0, galaxies_dec1
     )
-    galaxy_redshift_true = Nc.GalaxySDTrueRedshiftLSSTSRD.new(
-        galaxy_true_z_min, galaxy_true_z_max
-    )
+    galaxy_redshift_true = Nc.GalaxySDTrueRedshiftLSSTSRD.new()
     if use_spec:
         galaxy_redshift = Nc.GalaxySDObsRedshiftSpec.new(galaxy_redshift_true)
     else:

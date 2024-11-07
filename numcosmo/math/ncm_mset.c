@@ -561,6 +561,7 @@ ncm_mset_empty_new (void)
 /**
  * ncm_mset_new:
  * @model0: a #NcmModel
+ * @error: a #GError
  * @...: a null terminated list of #NcmModel
  *
  * Creates a new #NcmMSet with the models passed as arguments.
@@ -770,6 +771,7 @@ ncm_mset_peek (NcmMSet *mset, NcmModelID mid)
  * ncm_mset_fetch:
  * @mset: a #NcmMSet
  * @mid: a #NcmModelID
+ * @error: a #GError
  *
  * Fetches a #NcmModel from the #NcmMSet using the model id @mid.
  * If the model is not found, an error is set.
