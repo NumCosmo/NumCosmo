@@ -57,8 +57,6 @@ struct _NcHIPertEM
 G_DEFINE_INTERFACE (NcHIPertIEM, nc_hipert_iem, G_TYPE_OBJECT)
 G_DEFINE_TYPE (NcHIPertEM, nc_hipert_em, NCM_TYPE_CSQ1D)
 
-static gdouble _nc_hipert_iem_eval_unit (NcHIPertIEM *iem);
-
 static void
 nc_hipert_iem_default_init (NcHIPertIEMInterface *iface)
 {
@@ -467,7 +465,6 @@ nc_hipert_em_prepare_spectrum (NcHIPertEM *pem, NcmModel *model, GArray *k_array
 
   for (i = 0; i < k_array->len; i++)
   {
-    NcmCSQ1DState state;
     const gdouble k = g_array_index (k_array, gdouble, i);
     guint j;
 

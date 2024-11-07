@@ -404,10 +404,10 @@ _nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gd
 static void
 _nc_cluster_mass_ascaso_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
-  const gdouble mean          = lnM_obs[0] - MU_P0; /* - P2 * log10(1.0 + z);  FIX This!!!! What is the mean richeness? */
-  const gdouble logRichnessl  = M_LN10 * log10 (1e13);
-  const gdouble logRichnessu  = M_LN10 * log10 (1e15);
+  /* NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm); */
+  /* const gdouble mean          = lnM_obs[0] - MU_P0; / * - P2 * log10(1.0 + z);  FIX This!!!! What is the mean richeness? * / */
+  const gdouble logRichnessl = M_LN10 * log10 (1e13);
+  const gdouble logRichnessu = M_LN10 * log10 (1e15);
 
   *lnM_lower = logRichnessl;
   *lnM_upper = logRichnessu;
@@ -418,9 +418,8 @@ _nc_cluster_mass_ascaso_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, co
 static void
 _nc_cluster_mass_ascaso_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
-  const gdouble lnMl          = M_LN10 * log10 (1e13);
-  const gdouble lnMu          = M_LN10 * log10 (1e15);
+  const gdouble lnMl = M_LN10 * log10 (1e13);
+  const gdouble lnMu = M_LN10 * log10 (1e15);
 
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;
@@ -429,9 +428,8 @@ _nc_cluster_mass_ascaso_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo,
 static void
 _nc_cluster_mass_ascaso_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
-  const gdouble lnMl          =  M_LN10 * log10 (1e13);
-  const gdouble lnMu          =  M_LN10 * log10 (1e15);
+  const gdouble lnMl = M_LN10 * log10 (1e13);
+  const gdouble lnMu = M_LN10 * log10 (1e15);
 
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;
