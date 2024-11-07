@@ -296,7 +296,7 @@ def generate_planck18_tt(
 
     # Extra functions
 
-    mfunc_oa = create_mfunc_array_for_cmb(dist, psml)
+    mfunc_oa = create_mfunc_array_for_cmb(dist, psf)
 
     # Save experiment
 
