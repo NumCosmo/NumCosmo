@@ -2496,7 +2496,11 @@ static gdouble _ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data);
  * @t_Bl: (out): the value of $t_{B,\mathrm{lower}}$
  * @t_Bu: (out): the value of $t_{B,\mathrm{upper}}$
  *
- * Computes the time $t_\mathrm{min}$ that minimizes $F_1(t)$.
+ * Computes the time $t_\mathrm{min}$ that minimizes $F_1(t)$. Also computes the border
+ * values $t_{B,\mathrm{lower}}$ and $t_{B,\mathrm{upper}}$ such that
+ * $|F_1(t_{B,\mathrm{lower}}) - F_1(t_\mathrm{min})| = \epsilon$ for
+ * $t_{B,\mathrm{lower}} < t_\mathrm{min}$ and $|F_1(t_{B,\mathrm{upper}}) -
+ * F_1(t_\mathrm{min})| = \epsilon$ for $t_{B,\mathrm{upper}} > t_\mathrm{min}$.
  *
  * Returns: the time $t_\mathrm{min}$.
  */

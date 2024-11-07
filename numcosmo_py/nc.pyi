@@ -174,7 +174,7 @@ HICOSMO_VEXP_DEBUG_EVOL_CL: bool = False
 HICOSMO_VEXP_DEBUG_EVOL_QT: bool = False
 HICOSMO_VEXP_DEFAULT_ALPHA_B: float = 0.1
 HICOSMO_VEXP_DEFAULT_D_PHI: float = 0.3
-HICOSMO_VEXP_DEFAULT_EM_B: float = 0.0
+HICOSMO_VEXP_DEFAULT_EM_ALPHA: float = 13.6
 HICOSMO_VEXP_DEFAULT_EM_BETA: float = 0.1
 HICOSMO_VEXP_DEFAULT_H0: float = 70.0
 HICOSMO_VEXP_DEFAULT_OMEGA_C: float = 0.25
@@ -9962,8 +9962,8 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
         \alpha_b
       xb -> gdouble: xb
         x_b
-      Bem -> gdouble: Bem
-        B_\mathrm{em}
+      alphaem -> gdouble: alphaem
+        \alpha_{\mathrm{em}}
       betaem -> gdouble: betaem
         \beta_\mathrm{em}
       H0-fit -> gboolean: H0-fit
@@ -9980,8 +9980,8 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
         \alpha_b:fit
       xb-fit -> gboolean: xb-fit
         x_b:fit
-      Bem-fit -> gboolean: Bem-fit
-        B_\mathrm{em}:fit
+      alphaem-fit -> gboolean: alphaem-fit
+        \alpha_{\mathrm{em}}:fit
       betaem-fit -> gboolean: betaem-fit
         \beta_\mathrm{em}:fit
 
@@ -10010,8 +10010,6 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
     """
 
     class Props:
-        Bem: float
-        Bem_fit: bool
         H0: float
         H0_fit: bool
         OmegaL: float
@@ -10020,6 +10018,8 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
         Omegac_fit: bool
         alphab: float
         alphab_fit: bool
+        alphaem: float
+        alphaem_fit: bool
         betaem: float
         betaem_fit: bool
         dphi: float
@@ -10046,8 +10046,6 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
     priv: HICosmoVexpPrivate = ...
     def __init__(
         self,
-        Bem: float = ...,
-        Bem_fit: bool = ...,
         H0: float = ...,
         H0_fit: bool = ...,
         OmegaL: float = ...,
@@ -10056,6 +10054,8 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
         Omegac_fit: bool = ...,
         alphab: float = ...,
         alphab_fit: bool = ...,
+        alphaem: float = ...,
+        alphaem_fit: bool = ...,
         betaem: float = ...,
         betaem_fit: bool = ...,
         dphi: float = ...,
@@ -19592,7 +19592,7 @@ class HICosmoVexpEMCoupling(GObject.GEnum):
 class HICosmoVexpSParams(GObject.GEnum):
     ALPHA_B: HICosmoVexpSParams = ...
     D_PHI: HICosmoVexpSParams = ...
-    EM_B: HICosmoVexpSParams = ...
+    EM_ALPHA: HICosmoVexpSParams = ...
     EM_BETA: HICosmoVexpSParams = ...
     H0: HICosmoVexpSParams = ...
     OMEGA_C: HICosmoVexpSParams = ...

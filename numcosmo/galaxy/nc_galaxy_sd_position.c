@@ -386,7 +386,7 @@ nc_galaxy_sd_position_data_required_columns (NcGalaxySDPositionData *data)
  */
 /**
  * nc_galaxy_sd_position_integrand_copy:
- * @callback_obj: a #NcGalaxySDPositionIntegrand
+ * @callback_obj: a NcGalaxySDPositionIntegrand
  *
  * Copies the galaxy position integrand.
  *
@@ -394,14 +394,14 @@ nc_galaxy_sd_position_data_required_columns (NcGalaxySDPositionData *data)
  */
 /**
  * nc_galaxy_sd_position_integrand_free:
- * @callback_obj: a #NcGalaxySDPositionIntegrand
+ * @callback_obj: a NcGalaxySDPositionIntegrand
  *
  * Frees the galaxy position integrand.
  *
  */
 /**
  * nc_galaxy_sd_position_integrand_prepare:
- * @callback_obj: a #NcGalaxySDPositionIntegrand
+ * @callback_obj: a NcGalaxySDPositionIntegrand
  * @mset: a #NcmMSet
  *
  * Prepares the galaxy position integrand.
@@ -519,7 +519,7 @@ nc_galaxy_sd_position_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, g
  *
  * Prepares the integrand for the galaxy position distribution.
  *
- * Returns: (transfer full): a new #NcGalaxySDPositionIntegrand object.
+ * Returns: (transfer full): a new NcGalaxySDPositionIntegrand object.
  */
 NcGalaxySDPositionIntegrand *
 nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp)

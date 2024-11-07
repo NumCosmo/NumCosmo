@@ -268,10 +268,10 @@ _nc_galaxy_sd_true_redshift_lsst_srd_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdo
 /**
  * nc_galaxy_sd_true_redshift_lsst_srd_new:
  *
- * Creates a new #NcGalaxySDPositionLSSTSRD, the parameter values correspond to the
+ * Creates a new #NcGalaxySDTrueRedshiftLSSTSRD, the parameter values correspond to the
  * LSST SRD year 1.
  *
- * Returns: (transfer full): a new #NcGalaxySDPositionLSSTSRD
+ * Returns: (transfer full): a new #NcGalaxySDTrueRedshiftLSSTSRD
  */
 NcGalaxySDTrueRedshiftLSSTSRD *
 nc_galaxy_sd_true_redshift_lsst_srd_new (void)
@@ -288,10 +288,10 @@ nc_galaxy_sd_true_redshift_lsst_srd_new (void)
 /**
  * nc_galaxy_sd_true_redshift_lsst_srd_new_y10:
  *
- * Creates a new #NcGalaxySDPositionLSSTSRD, the parameter values correspond to the
+ * Creates a new #NcGalaxySDTrueRedshiftLSSTSRD, the parameter values correspond to the
  * LSST SRD year 10.
  *
- * Returns: (transfer full): a new #NcGalaxySDPositionLSSTSRD
+ * Returns: (transfer full): a new #NcGalaxySDTrueRedshiftLSSTSRD
  */
 NcGalaxySDTrueRedshiftLSSTSRD *
 nc_galaxy_sd_true_redshift_lsst_srd_new_y10 (void)
