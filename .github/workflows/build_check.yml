@@ -127,7 +127,6 @@ jobs:
           miniforge-variant: Mambaforge
           show-channel-urls: true
           use-mamba: true
-          use-only-tar-bz2: true
       - name: Cache date
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
@@ -203,7 +202,6 @@ jobs:
           miniforge-variant: Mambaforge
           show-channel-urls: true
           use-mamba: true
-          use-only-tar-bz2: true
       - name: Cache date
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
