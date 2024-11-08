@@ -66,6 +66,28 @@ def fixture_em():
     return pgw, vexp
 
 
+@pytest.fixture(name="pgw_qgrw")
+def fixture_qgrw():
+    """Fixture for NcHIPertQG."""
+    qgrw = Nc.HICosmoQGRW.new()
+    qgrw["H0"] = 70.0
+    qgrw["Omegar"] = 1.0e-5
+    qgrw["Omegaw"] = 1.0 - 1.0e-5
+    qgrw["w"] = 1.0e-5
+    qgrw["xb"] = 1.0e30
+
+    pgw = Nc.HIPertGW.new()
+    pgw.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    pgw.set_k(1.0)
+    pgw.set_ti(-qgrw.abs_alpha(1.0e-24))
+    pgw.set_tf(1.0)
+
+    pgw.set_vacuum_max_time(-1.0e1)
+    pgw.set_vacuum_reltol(1.0e-8)
+
+    return pgw, qgrw
+
+
 def test_hipert_gw_vexp(pgw_vexp):
     """Test basic functionality of NcHIPertAdiab."""
     pgw, vexp = pgw_vexp
@@ -205,3 +227,144 @@ def test_interface_eval_vexp(pgw_vexp):
         assert np.isfinite(Nc.HIPertIGW.eval_xi(vexp, tau, 1.0))
         assert np.isfinite(Nc.HIPertIGW.eval_nu(vexp, tau, 1.0))
         assert np.isfinite(Nc.HIPertIGW.eval_x(vexp, tau))
+
+
+def test_hipert_gw_qgrw(pgw_qgrw):
+    """Test basic functionality of NcHIPertAdiab."""
+    pgw, qgrw = pgw_qgrw
+
+    assert_allclose(pgw.get_k(), 1.0)
+    assert_allclose(pgw.get_ti(), -qgrw.abs_alpha(1.0e-24))
+    assert_allclose(pgw.get_tf(), 1.0)
+
+    pgw.set_reltol(1.0e-6)
+    pgw.set_abstol(1.0e-7)
+
+    assert_allclose(pgw.get_reltol(), 1.0e-6)
+    assert_allclose(pgw.get_abstol(), 1.0e-7)
+
+    pgw.set_adiab_threshold(1.0e-3)
+    pgw.set_prop_threshold(1.0e-3)
+
+    assert_allclose(pgw.get_adiab_threshold(), 1.0e-3)
+    assert_allclose(pgw.get_prop_threshold(), 1.0e-3)
+
+    pgw.set_save_evol(True)
+    assert pgw.get_save_evol()
+
+    pgw.set_save_evol(False)
+    assert not pgw.get_save_evol()
+
+    pgw.set_initial_condition_type(Ncm.CSQ1DInitialStateType.AD_HOC)
+    assert pgw.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.AD_HOC
+
+    pgw.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC2)
+    assert pgw.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.ADIABATIC2
+
+    pgw.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    assert pgw.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.ADIABATIC4
+
+    pgw.set_initial_condition_type(Ncm.CSQ1DInitialStateType.NONADIABATIC2)
+    assert pgw.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.NONADIABATIC2
+
+
+def test_initial_conditions_time_qgrw(pgw_qgrw):
+    """Test initial conditions of NcHIPertAdiab."""
+    pgw, qgrw = pgw_qgrw
+
+    limit_found, t_adiab = pgw.find_adiab_time_limit(
+        qgrw, -qgrw.abs_alpha(1.0e-24), pgw.get_vacuum_max_time(), 1.0e-6
+    )
+
+    assert limit_found
+    assert t_adiab >= pgw.get_ti()
+    assert t_adiab <= pgw.get_tf()
+
+    t_min, F1_min, t_lb, t_ub = pgw.find_adiab_max(
+        qgrw, -qgrw.abs_alpha(1.0e-24), pgw.get_vacuum_max_time(), 1.0e-1
+    )
+
+    assert_allclose(F1_min, pgw.eval_F1(qgrw, t_min))
+    assert math.fabs(F1_min - pgw.eval_F1(qgrw, t_lb)) <= 1.0e-1
+    assert math.fabs(F1_min - pgw.eval_F1(qgrw, t_ub)) <= 1.0e-1
+
+
+def test_initial_conditions_adiabatic_qgrw(pgw_qgrw):
+    """Test initial conditions of NcHIPertAdiab."""
+    pgw, qgrw = pgw_qgrw
+
+    state = Ncm.CSQ1DState.new()
+
+    for prec in np.geomspace(1.0e-14, 1.0e-6, 10):
+        limit_found, t_adiab = pgw.find_adiab_time_limit(
+            qgrw, -qgrw.abs_alpha(1.0e-24), pgw.get_vacuum_max_time(), prec
+        )
+
+        assert limit_found
+
+        # Getting the adiabatic solution
+        state, _alpha_reltol, _dgamma_reltol = pgw.compute_adiab(qgrw, t_adiab, state)
+        pgw.change_frame(qgrw, state, Ncm.CSQ1DFrame.ORIG)
+        phi_vec, Pphi_vec = state.get_phi_Pphi()
+
+        phi = phi_vec[0] + 1.0j * phi_vec[1]
+        Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
+
+        # Compare with analytical solution
+        assert np.isfinite(phi)
+        assert np.isfinite(Pphi)
+
+
+def test_evolution_qgrw(pgw_qgrw):
+    """Test initial conditions of NcHIPertAdiab."""
+    pgw, qgrw = pgw_qgrw
+
+    state = Ncm.CSQ1DState.new()
+
+    pgw.set_tf(1.0)
+    pgw.prepare(qgrw)
+
+    t_a, _smaller_abst = pgw.get_time_array()
+
+    for t in t_a:
+        state = pgw.eval_at(qgrw, t, state)
+        phi_vec, Pphi_vec = state.get_phi_Pphi()
+
+        phi = phi_vec[0] + 1.0j * phi_vec[1]
+        Pphi = Pphi_vec[0] + 1.0j * Pphi_vec[1]
+
+        # Compare with analytical solution
+        assert np.isfinite(abs(phi))
+        assert np.isfinite(abs(Pphi))
+
+        J11, J12, J22 = state.get_J()
+
+        assert np.isfinite(J11)
+        assert np.isfinite(J22)
+        assert np.isfinite(J12)
+
+
+def test_evolution_qgrw_duplicate(pgw_qgrw):
+    """Test initial conditions of NcHIPertAdiab."""
+    pgw, qgrw = pgw_qgrw
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    pgw_dup = ser.dup_obj(pgw)
+    qgrw_dup = ser.dup_obj(qgrw)
+
+    test_evolution_qgrw((pgw_dup, qgrw_dup))
+
+
+def test_interface_eval_qgrw(pgw_qgrw):
+    """Test interface evaluation of NcHIPertAdiab."""
+    _, qgrw = pgw_qgrw
+
+    tau_a = np.linspace(-qgrw.abs_alpha(1.0e-24), 1.0, 1000)
+
+    assert np.isfinite(Nc.HIPertIGW.eval_unit(qgrw))
+    for tau in tau_a:
+        assert np.isfinite(Nc.HIPertIGW.eval_F1(qgrw, tau, 1.0))
+        assert np.isfinite(Nc.HIPertIGW.eval_m(qgrw, tau, 1.0))
+        assert np.isfinite(Nc.HIPertIGW.eval_xi(qgrw, tau, 1.0))
+        assert np.isfinite(Nc.HIPertIGW.eval_nu(qgrw, tau, 1.0))
+        assert np.isfinite(Nc.HIPertIGW.eval_x(qgrw, tau))

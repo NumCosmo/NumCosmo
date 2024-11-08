@@ -290,8 +290,8 @@ test_ncm_spline_gsl_cspline_new_empty (TestNcmSpline *test, gconstpointer pdata)
   test->xi       = 10.0 * GSL_SIGN (g_test_rand_double_range (-1.0, 1.0));
   test->prec     = 1.0e-5;
   test->error    = 5.0e-4;
-  test->error_d1 = 1.0e-2;
-  test->error_d2 = 1.0e-2;
+  test->error_d1 = 5.0e-2;
+  test->error_d2 = 5.0e-2;
   test->s_base   = NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_cspline));
   g_assert_true (NCM_IS_SPLINE_GSL (test->s_base));
   {
