@@ -2303,7 +2303,7 @@ ncm_cfg_set_fftw_default_from_env (guint fallback_flag, const gdouble fallback_t
       ncm_util_set_or_call_error (error,
                                   NCM_CFG_ERROR,
                                   NCM_CFG_ERROR_INVALID_FFTW_TIMELIMIT,
-                                  "Invalid FFTW planner timelimit `%s'", fftw_timelimit_env);
+                                  "Invalid FFTW planner timelimit '%s'", fftw_timelimit_env);
 
       return;
     }
@@ -2356,8 +2356,8 @@ ncm_cfg_get_fftw_default_flag_str (void)
     case FFTW_EXHAUSTIVE:
       flag_str = "exhaustive";
       break;
-    default:
-      g_assert_not_reached ();
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
   }
 
   return flag_str;

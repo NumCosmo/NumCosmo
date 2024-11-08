@@ -98,3 +98,14 @@ def test_set_fftw_from_env(flag_string: str, timelimit: float) -> None:
     Ncm.cfg_set_fftw_default_from_env(0, timelimit + 10.0)
     assert Ncm.cfg_get_fftw_default_flag_str() == flag_string
     assert_allclose(Ncm.cfg_get_fftw_timelimit(), timelimit)
+
+
+def test_set_fftw_from_env_invalid_timelimit_str(
+    flag_string: str, timelimit: float
+) -> None:
+    """Test setting FFTW flag from environment variable with invalid timelimit."""
+    os.environ["NCM_FFTW_PLANNER"] = flag_string
+    os.environ["NCM_FFTW_PLANNER_TIMELIMIT"] = "invalid"
+
+    with pytest.raises(GLib.Error, match="Invalid FFTW planner timelimit `invalid'"):
+        Ncm.cfg_set_fftw_default_from_env(0, timelimit)
