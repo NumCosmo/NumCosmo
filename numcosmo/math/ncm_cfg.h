@@ -121,6 +121,7 @@ GVariant *ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype);
 void ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout, GError **error);
 void ncm_cfg_set_fftw_default_flag_str (const gchar *flag_str, const gdouble timeout, GError **error);
 void ncm_cfg_set_fftw_default_from_env (guint fallback_flag, const gdouble fallback_timeout, GError **error);
+void ncm_cfg_set_fftw_default_from_env_str (const gchar *fallback_flag_str, const gdouble fallback_timeout, GError **error);
 guint ncm_cfg_get_fftw_default_flag (void);
 const gchar *ncm_cfg_get_fftw_default_flag_str (void);
 gdouble ncm_cfg_get_fftw_timelimit (void);

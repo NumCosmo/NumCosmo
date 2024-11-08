@@ -489,7 +489,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
 #ifdef HAVE_FFTW3
 
-  ncm_cfg_set_fftw_default_from_env (FFTW_ESTIMATE, 60.0, NULL);
+  ncm_cfg_set_fftw_default_from_env_str (NUMCOSMO_FFTW_PLAN, -1.0, NULL);
 
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
@@ -2315,6 +2315,48 @@ ncm_cfg_set_fftw_default_from_env (guint fallback_flag, const gdouble fallback_t
     ncm_cfg_set_fftw_default_flag_str (fftw_planner_env, timeout, error);
   else
     ncm_cfg_set_fftw_default_flag (fallback_flag, timeout, error);
+}
+
+/**
+ * ncm_cfg_set_fftw_default_from_env_str:
+ * @fallback_flag_str: a FFTW library flag string
+ * @fallback_timeout: planner time out in seconds
+ * @error: a GError
+ *
+ * Sets the default FFTW flag and planner time out from the environment variables
+ * NCM_FFTW_PLANNER and NCM_FFTW_PLANNER_TIMELIMIT. If the environment variables
+ * are not set, it uses the @fallback_flag_str and @fallback_timeout.
+ *
+ */
+void
+ncm_cfg_set_fftw_default_from_env_str (const gchar *fallback_flag_str, const gdouble fallback_timeout, GError **error)
+{
+  const gchar *fftw_planner_env   = g_getenv ("NCM_FFTW_PLANNER");
+  const gchar *fftw_timelimit_env = g_getenv ("NCM_FFTW_PLANNER_TIMELIMIT");
+  gdouble timeout                 = fallback_timeout;
+
+  if (fftw_timelimit_env != NULL)
+  {
+    gchar *endptr;
+    gdouble timelimit = g_ascii_strtod (fftw_timelimit_env, &endptr);
+
+    if (endptr == fftw_timelimit_env)
+    {
+      ncm_util_set_or_call_error (error,
+                                  NCM_CFG_ERROR,
+                                  NCM_CFG_ERROR_INVALID_FFTW_TIMELIMIT,
+                                  "Invalid FFTW planner timelimit '%s'", fftw_timelimit_env);
+
+      return;
+    }
+
+    timeout = timelimit;
+  }
+
+  if (fftw_planner_env != NULL)
+    ncm_cfg_set_fftw_default_flag_str (fftw_planner_env, timeout, error);
+  else
+    ncm_cfg_set_fftw_default_flag_str (fallback_flag_str, timeout, error);
 }
 
 /**
