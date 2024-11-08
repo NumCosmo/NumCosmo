@@ -215,23 +215,14 @@ def create_cosmo_for_cmb(
     return cosmo
 
 
-def create_mfunc_array_for_cmb(cbe: Nc.CBE) -> Ncm.ObjArray:
+def create_mfunc_array_for_cmb(
+    dist: Nc.Distance, psf: Ncm.PowspecFilter
+) -> Ncm.ObjArray:
     """Create a list of extra functions for CMB experiments."""
     mfunc_oa = Ncm.ObjArray.new()
 
-    psml = Nc.PowspecMLCBE.new_full(cbe=cbe)
-    psml.set_kmin(1.0e-5)
-    psml.set_kmax(1.0e1)
-    psml.require_zi(0.0)
-    psml.require_zf(1.0)
-
-    psf_cbe = Ncm.PowspecFilter.new(psml, Ncm.PowspecFilterType.TOPHAT)
-    psf_cbe.set_best_lnr0()
-
-    mfunc_sigma8 = Ncm.MSetFuncList.new("NcHICosmo:sigma8", psf_cbe)
+    mfunc_sigma8 = Ncm.MSetFuncList.new("NcHICosmo:sigma8", psf)
     mfunc_oa.add(mfunc_sigma8)
-
-    dist = Nc.Distance.new(10.0)
 
     mfunc_r_zd = Ncm.MSetFuncList.new("NcDistance:r_zd_Mpc", dist)
     mfunc_oa.add(mfunc_r_zd)
@@ -288,9 +279,24 @@ def generate_planck18_tt(
     mset = Ncm.MSet.new_array([planck_model, cosmo])
     mset.prepare_fparam_map()
 
+    # Distance
+    dist = Nc.Distance.new(10.0)
+
+    # Linear matter power spectrum
+    cbe = cbe_boltzmann.peek_cbe()
+    psml = Nc.PowspecMLCBE.new_full(cbe=cbe)
+    psml.set_kmin(1.0e-5)
+    psml.set_kmax(1.0e1)
+    psml.require_zi(0.0)
+    psml.require_zf(1.0)
+
+    # Linear matter power spectrum filter
+    psf = Ncm.PowspecFilter.new(psml, Ncm.PowspecFilterType.TOPHAT)
+    psf.set_best_lnr0()
+
     # Extra functions
 
-    mfunc_oa = create_mfunc_array_for_cmb(cbe_boltzmann.peek_cbe())
+    mfunc_oa = create_mfunc_array_for_cmb(dist, psf)
 
     # Save experiment
 
@@ -298,6 +304,9 @@ def generate_planck18_tt(
 
     experiment.set("likelihood", likelihood)
     experiment.set("model-set", mset)
+    experiment.set("distance", dist)
+    experiment.set("ps-ml", psml)
+    experiment.set("ps-ml-filter", psf)
 
     return experiment, mfunc_oa
 
@@ -350,9 +359,24 @@ def generate_planck18_ttteee(
     mset = Ncm.MSet.new_array([planck_model, cosmo])
     mset.prepare_fparam_map()
 
+    # Distance
+    dist = Nc.Distance.new(10.0)
+
+    # Linear matter power spectrum
+    cbe = cbe_boltzmann.peek_cbe()
+    psml = Nc.PowspecMLCBE.new_full(cbe=cbe)
+    psml.set_kmin(1.0e-5)
+    psml.set_kmax(1.0e1)
+    psml.require_zi(0.0)
+    psml.require_zf(1.0)
+
+    # Linear matter power spectrum filter
+    psf = Ncm.PowspecFilter.new(psml, Ncm.PowspecFilterType.TOPHAT)
+    psf.set_best_lnr0()
+
     # Extra functions
 
-    mfunc_oa = create_mfunc_array_for_cmb(cbe_boltzmann.peek_cbe())
+    mfunc_oa = create_mfunc_array_for_cmb(dist, psf)
 
     # Save experiment
 
@@ -360,5 +384,8 @@ def generate_planck18_ttteee(
 
     experiment.set("likelihood", likelihood)
     experiment.set("model-set", mset)
+    experiment.set("distance", dist)
+    experiment.set("ps-ml", psml)
+    experiment.set("ps-ml-filter", psf)
 
     return experiment, mfunc_oa

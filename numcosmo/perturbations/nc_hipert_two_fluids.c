@@ -1520,23 +1520,30 @@ nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble a
 
 /**
  * nc_hipert_two_fluids_evolve_array:
- * @ptf: a #NcHIPertTwoFluids.
- * @cosmo: a #NcHICosmo.
- * @alphaf: the final log-redshift time.
+ * @ptf: a #NcHIPertTwoFluids
+ * @cosmo: a #NcHICosmo
+ * @alphaf: the final log-redshift time
+ * @step_reltol: the step size relative tolerance
+ * @step_abstol: the step size absolute tolerance
  *
- * Evolve the system until @alphaf and store the results in an array.
+ * Evolve the system until @alphaf and store the results in an array. Only steps with
+ * difference satisfying the relative and absolute tolerances are stored.
  *
  * Returns: (transfer full): a #NcmMatrix
  */
 NcmMatrix *
-nc_hipert_two_fluids_evolve_array (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphaf)
+nc_hipert_two_fluids_evolve_array (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphaf, gdouble step_reltol, gdouble step_abstol)
 {
   NcHIPertTwoFluidsPrivate * const self = ptf->priv;
   NcHIPert *pert                        = NC_HIPERT (ptf);
   NcHIPertTwoFluidsArg *arg             = self->arg;
   gdouble alpha_i                       = 0.0;
   GArray *array                         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  gdouble last_step                     = pert->priv->alpha0;
   gint flag;
+
+  g_assert_cmpfloat (step_reltol, >, GSL_DBL_EPSILON);
+  g_assert_cmpfloat (step_abstol, >=, 0.0);
 
   arg->cosmo = cosmo;
   arg->ptf   = ptf;
@@ -1561,8 +1568,12 @@ nc_hipert_two_fluids_evolve_array (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdo
 
       pert->priv->alpha0 = alpha_i;
 
-      g_array_append_val (array, alpha_i);
-      g_array_append_vals (array, NV_DATA_S (pert->priv->y), NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+      if (fabs (alpha_i - last_step) > step_reltol * fabs (last_step) + step_abstol)
+      {
+        g_array_append_val (array, alpha_i);
+        g_array_append_vals (array, NV_DATA_S (pert->priv->y), NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+        last_step = alpha_i;
+      }
     }
   }
   else
@@ -1583,8 +1594,12 @@ nc_hipert_two_fluids_evolve_array (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdo
 
       pert->priv->alpha0 = alpha_i;
 
-      g_array_append_val (array, alpha_i);
-      g_array_append_vals (array, NV_DATA_S (pert->priv->y), NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+      if (fabs (alpha_i - last_step) > step_reltol * fabs (last_step) + step_abstol)
+      {
+        g_array_append_val (array, alpha_i);
+        g_array_append_vals (array, NV_DATA_S (pert->priv->y), NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+        last_step = alpha_i;
+      }
     }
   }
 

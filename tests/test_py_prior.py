@@ -31,6 +31,7 @@ from numpy.testing import assert_allclose
 import pytest
 
 from numcosmo_py import Ncm, GLib
+from numcosmo_py.cosmology import Cosmology
 
 Ncm.cfg_init()
 
@@ -326,3 +327,26 @@ def test_py_prior_flat_param_new_name_invalid() -> None:
         _ = Ncm.PriorFlatParam.new_name(
             name="ncmModelMVND:23:mu_0", x_low=-1.0, x_upp=1.0, scale=1.0
         )
+
+
+@pytest.mark.parametrize("function_name", ["NcHICosmo:sigma8", "NcHICosmo:S8"])
+def test_py_prior_mset_flist_psf(function_name):
+    """Test NumCosmo priors on MSetFuncList."""
+    cosmology = Cosmology.default()
+    func = Ncm.MSetFuncList.new(function_name, cosmology.psf)
+    assert isinstance(func, Ncm.MSetFuncList)
+    assert isinstance(func, Ncm.MSetFunc)
+
+    assert np.isfinite(func.eval0(cosmology.mset))
+
+    mean = 0.8
+    sd = 1.0
+    var = 0.0
+
+    prior = Ncm.PriorGaussFunc.new(func, mean, sd, var)
+    assert isinstance(prior, Ncm.PriorGaussFunc)
+    assert isinstance(prior, Ncm.PriorGauss)
+    assert isinstance(prior, Ncm.Prior)
+
+    prior_val = (func.eval0(cosmology.mset) - mean) / sd
+    assert prior.eval0(cosmology.mset) == pytest.approx(prior_val, abs=1.0e-6)

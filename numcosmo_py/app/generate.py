@@ -81,6 +81,10 @@ class GeneratePlanck:
         Optional[SNIaID], typer.Option(help="Include SNIa data.", show_default=True)
     ] = None
 
+    include_des_y3_S8_prior: Annotated[
+        bool, typer.Option(help="Include DES Year 3 S8 prior.", show_default=True)
+    ] = False
+
     def __post_init__(self) -> None:
         """Generate Planck 2018 TT baseline experiment."""
         Ncm.cfg_init()
@@ -117,10 +121,18 @@ class GeneratePlanck:
         set_mset_parameters(mset, self.data_type, self.prim_model)
 
         if self.include_snia is not None:
-            dist = Nc.Distance.new(10.0)
+            dist = exp.get("distance")
+            assert isinstance(dist, Nc.Distance)
             add_snia_likelihood(dataset, mset, dist, self.include_snia)
             cosmo = mset.peek(Nc.HICosmo.id())
             cosmo.set_property("w_fit", True)
+
+        if self.include_des_y3_S8_prior:
+            psf = exp.get("ps-ml-filter")
+            assert isinstance(psf, Ncm.PowspecFilter)
+            func = Ncm.MSetFuncList.new("NcHICosmo:S8", psf)
+            prior = Ncm.PriorGaussFunc.new(func, 0.775, 0.025, 0.0)
+            likelihood.priors_add(prior)
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
