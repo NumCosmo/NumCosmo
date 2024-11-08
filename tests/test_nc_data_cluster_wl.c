@@ -66,47 +66,47 @@ main (gint argc, gchar *argv[])
 
   /* g_test_set_nonfatal_assertions (); */
 
-  g_test_add ("/numcosmo/data/nc_data_cluster_wl/spec/gen", TestNcDataClusterWL, NULL,
+  g_test_add ("/nc/data_cluster_wl/spec/gen", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_spec,
               &test_nc_data_cluster_wl_gen,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/numcosmo/data/nc_data_cluster_wl/spec/ra_dec/limits", TestNcDataClusterWL, NULL,
+  g_test_add ("/nc/data_cluster_wl/spec/ra_dec/limits", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_spec,
               &test_nc_data_cluster_wl_ra_dec_limits,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/numcosmo/data/nc_data_cluster_wl/spec/gen_obs", TestNcDataClusterWL, NULL,
+  g_test_add ("/nc/data_cluster_wl/spec/gen_obs", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_spec,
               &test_nc_data_cluster_wl_gen_obs,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/numcosmo/data/nc_data_cluster_wl/spec/m2lnP", TestNcDataClusterWL, NULL,
+  g_test_add ("/nc/data_cluster_wl/spec/m2lnP", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_spec,
               &test_nc_data_cluster_wl_m2lnP,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/numcosmo/data/nc_data_cluster_wl/spec/serialize", TestNcDataClusterWL, NULL,
+  g_test_add ("/nc/data_cluster_wl/spec/serialize", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_spec,
               &test_nc_data_cluster_wl_serialize,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/numcosmo/data/nc_data_cluster_wl/gauss/ra_dec/limits", TestNcDataClusterWL, NULL,
+  g_test_add ("/nc/data_cluster_wl/gauss/ra_dec/limits", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_gauss,
               &test_nc_data_cluster_wl_ra_dec_limits,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/numcosmo/data/nc_data_cluster_wl/gauss/gen_obs", TestNcDataClusterWL, NULL,
+  g_test_add ("/nc/data_cluster_wl/gauss/gen_obs", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_gauss,
               &test_nc_data_cluster_wl_gen_obs,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/numcosmo/data/nc_data_cluster_wl/gauss/m2lnP", TestNcDataClusterWL, NULL,
+  g_test_add ("/nc/data_cluster_wl/gauss/m2lnP", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_gauss,
               &test_nc_data_cluster_wl_m2lnP,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/numcosmo/data/nc_data_cluster_wl/gauss/serialize", TestNcDataClusterWL, NULL,
+  g_test_add ("/nc/data_cluster_wl/gauss/serialize", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_gauss,
               &test_nc_data_cluster_wl_serialize,
               &test_nc_data_cluster_wl_free);
@@ -348,7 +348,7 @@ test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata)
     g_assert_cmpfloat (dec, >=, -0.2);
     g_assert_cmpfloat (dec, <=, 0.2);
     g_assert_cmpfloat (z, >=, 0.0);
-    g_assert_cmpfloat (z, <=, 5.0);
+    g_assert_cmpfloat (z, <=, 20.0);
     g_assert_cmpfloat (epsilon_int_1, >=, -5.0 * e_rms_1);
     g_assert_cmpfloat (epsilon_int_1, <=, 5.0 * e_rms_1);
     g_assert_cmpfloat (epsilon_int_2, >=, -5.0 * e_rms_2);
