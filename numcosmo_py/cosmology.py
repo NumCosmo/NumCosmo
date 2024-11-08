@@ -52,7 +52,29 @@ class Cosmology:
         self.dist.compute_inv_comoving(compute_inv_comoving)
         self.recomb = Nc.RecombSeager()
 
+        self._mset = Ncm.MSet.new_array([cosmo])
+
         self.prepare()
+
+    # Here we set a constructor that will be used to create a default cosmology
+    @classmethod
+    def default(
+        cls,
+        dist_max_z: float = 10.0,
+        halofit_max_z: float = 5.0,
+        halofit_reltol: float = 1.0e-7,
+    ) -> "Cosmology":
+        """Create a default cosmology."""
+        cosmo = Nc.HICosmoDEXcdm()
+        cosmo.omega_x2omega_k()
+        cosmo["Omegak"] = 0.0
+        cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
+        cosmo.add_submodel(Nc.HIReionCamb.new())
+        dist = Nc.Distance.new(dist_max_z)
+        ps_ml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())
+        ps_mnl = Nc.PowspecMNLHaloFit.new(ps_ml, halofit_max_z, halofit_reltol)
+        psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)
+        return cls(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mnl, psf=psf)
 
     @property
     def ps_ml(self) -> Nc.PowspecML:
@@ -75,6 +97,11 @@ class Cosmology:
             raise ValueError("Top-hat power spectrum filter not set.")
         return self._psf_tophat
 
+    @property
+    def mset(self) -> Ncm.MSet:
+        """Return the NumCosmo model set."""
+        return self._mset
+
     def prepare(self) -> None:
         """Prepare the cosmology for calculations."""
         self.dist.prepare_if_needed(self.cosmo)
@@ -83,3 +110,5 @@ class Cosmology:
             self._ps_ml.prepare_if_needed(self.cosmo)
         if self._ps_mnl is not None:
             self._ps_mnl.prepare_if_needed(self.cosmo)
+        if self._psf is not None:
+            self._psf.prepare_if_needed(self.cosmo)
