@@ -131,12 +131,14 @@ jobs:
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
       - name: Cache Conda env
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.CONDA }}/envs
-          key: miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ matrix.mpi }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
+        uses: actions/cache@v4
         env:
-          CACHE_NUMBER: 0
+          CACHE_NUMBER: 1
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.numcosmo
+          key: miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ matrix.mpi }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
         id: cache
       - name: Update environment
         run: |
@@ -204,12 +206,14 @@ jobs:
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
       - name: Cache Conda env
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.CONDA }}/envs
-          key: coverage-miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
+        uses: actions/cache@v4
         env:
-          CACHE_NUMBER: 0
+          CACHE_NUMBER: 1
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.numcosmo
+          key: coverage-miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
         id: cache
       - name: Update environment
         run: |
