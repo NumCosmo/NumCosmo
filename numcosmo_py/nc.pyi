@@ -9172,7 +9172,7 @@ class HICosmoQConstClass(GObject.GPointer):
 
     parent_class: HICosmoClass = ...
 
-class HICosmoQGRW(HICosmo, HIPertITwoFluids):
+class HICosmoQGRW(HICosmo, HIPertIGW, HIPertITwoFluids):
     r"""
     :Constructors:
 
