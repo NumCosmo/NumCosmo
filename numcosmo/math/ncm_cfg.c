@@ -491,18 +491,26 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
     const gchar *env_flags     = g_getenv ("NC_FFTW_DEFAULT_FLAGS");
     const gchar *env_timelimit = g_getenv ("NC_FFTW_TIMELIMIT");
 
+#ifdef NUMCOSMO_FFTW_PLAN
+    const gchar *flags = env_flags == NULL ? NUMCOSMO_FFTW_PLAN : env_flags;
+
+#else
+    const gchar *flags = env_flags;
+#endif
+
+
     if (env_flags != NULL)
     {
-      if (g_ascii_strcasecmp (env_flags, "ESTIMATE") == 0)
+      if (g_ascii_strcasecmp (flags, "ESTIMATE") == 0)
         fftw_default_flags = FFTW_ESTIMATE;
-      else if (g_ascii_strcasecmp (env_flags, "MEASURE") == 0)
+      else if (g_ascii_strcasecmp (flags, "MEASURE") == 0)
         fftw_default_flags = FFTW_MEASURE;
-      else if (g_ascii_strcasecmp (env_flags, "PATIENT") == 0)
+      else if (g_ascii_strcasecmp (flags, "PATIENT") == 0)
         fftw_default_flags = FFTW_PATIENT;
-      else if (g_ascii_strcasecmp (env_flags, "EXHAUSTIVE") == 0)
+      else if (g_ascii_strcasecmp (flags, "EXHAUSTIVE") == 0)
         fftw_default_flags = FFTW_EXHAUSTIVE;
       else
-        g_warning ("Invalid value for NC_FFTW_DEFAULT_FLAGS: %s", env_flags);
+        g_warning ("Invalid value for NC_FFTW_DEFAULT_FLAGS: %s", flags);
     }
 
     if (env_timelimit != NULL)
