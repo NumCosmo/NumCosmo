@@ -485,6 +485,33 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
 #ifdef HAVE_FFTW3
 
+  {
+    guint fftw_default_flags   = FFTW_ESTIMATE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
+    gdouble fftw_timelimit     = 60.0;
+    const gchar *env_flags     = g_getenv ("NC_FFTW_DEFAULT_FLAGS");
+    const gchar *env_timelimit = g_getenv ("NC_FFTW_TIMELIMIT");
+
+    if (env_flags != NULL)
+    {
+      if (g_ascii_strcasecmp (env_flags, "ESTIMATE") == 0)
+        fftw_default_flags = FFTW_ESTIMATE;
+      else if (g_ascii_strcasecmp (env_flags, "MEASURE") == 0)
+        fftw_default_flags = FFTW_MEASURE;
+      else if (g_ascii_strcasecmp (env_flags, "PATIENT") == 0)
+        fftw_default_flags = FFTW_PATIENT;
+      else if (g_ascii_strcasecmp (env_flags, "EXHAUSTIVE") == 0)
+        fftw_default_flags = FFTW_EXHAUSTIVE;
+      else
+        g_warning ("Invalid value for NC_FFTW_DEFAULT_FLAGS: %s", env_flags);
+    }
+
+    if (env_timelimit != NULL)
+      fftw_timelimit = g_ascii_strtod (env_timelimit, NULL);
+
+
+    ncm_cfg_set_fftw_default_flag (fftw_default_flags, fftw_timelimit);
+  }
+
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
 
