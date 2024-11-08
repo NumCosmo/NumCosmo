@@ -486,10 +486,10 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 #ifdef HAVE_FFTW3
 
   {
-    guint fftw_default_flags   = FFTW_ESTIMATE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
-    gdouble fftw_timelimit     = 60.0;
-    const gchar *env_flags     = g_getenv ("NC_FFTW_DEFAULT_FLAGS");
-    const gchar *env_timelimit = g_getenv ("NC_FFTW_TIMELIMIT");
+    guint local_fftw_default_flags = FFTW_ESTIMATE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
+    gdouble fftw_timelimit         = 60.0;
+    const gchar *env_flags         = g_getenv ("NC_FFTW_DEFAULT_FLAGS");
+    const gchar *env_timelimit     = g_getenv ("NC_FFTW_TIMELIMIT");
 
 #ifdef NUMCOSMO_FFTW_PLAN
     const gchar *flags = env_flags == NULL ? NUMCOSMO_FFTW_PLAN : env_flags;
@@ -499,16 +499,16 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 #endif
 
 
-    if (env_flags != NULL)
+    if (flags != NULL)
     {
       if (g_ascii_strcasecmp (flags, "ESTIMATE") == 0)
-        fftw_default_flags = FFTW_ESTIMATE;
+        local_fftw_default_flags = FFTW_ESTIMATE;
       else if (g_ascii_strcasecmp (flags, "MEASURE") == 0)
-        fftw_default_flags = FFTW_MEASURE;
+        local_fftw_default_flags = FFTW_MEASURE;
       else if (g_ascii_strcasecmp (flags, "PATIENT") == 0)
-        fftw_default_flags = FFTW_PATIENT;
+        local_fftw_default_flags = FFTW_PATIENT;
       else if (g_ascii_strcasecmp (flags, "EXHAUSTIVE") == 0)
-        fftw_default_flags = FFTW_EXHAUSTIVE;
+        local_fftw_default_flags = FFTW_EXHAUSTIVE;
       else
         g_warning ("Invalid value for NC_FFTW_DEFAULT_FLAGS: %s", flags);
     }
@@ -516,8 +516,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
     if (env_timelimit != NULL)
       fftw_timelimit = g_ascii_strtod (env_timelimit, NULL);
 
-
-    ncm_cfg_set_fftw_default_flag (fftw_default_flags, fftw_timelimit);
+    ncm_cfg_set_fftw_default_flag (local_fftw_default_flags, fftw_timelimit);
   }
 
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
@@ -2226,9 +2225,9 @@ void
 ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout)
 {
   fftw_default_flags = flag;
-  fftw_set_timelimit (10.0);
+  fftw_set_timelimit (timeout);
 #ifdef HAVE_FFTW3F
-  fftwf_set_timelimit (10.0);
+  fftwf_set_timelimit (timeout);
 #endif /* HAVE_FFTW3F */
 }
 
