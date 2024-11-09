@@ -120,9 +120,6 @@ _nc_halo_mass_summary_get_property (GObject *object, guint prop_id, GValue *valu
 static void
 _nc_halo_mass_summary_dispose (GObject *object)
 {
-  NcHaloMassSummary *hms                = NC_HALO_MASS_SUMMARY (object);
-  NcHaloMassSummaryPrivate * const self = nc_halo_mass_summary_get_instance_private (hms);
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_halo_mass_summary_parent_class)->dispose (object);
 }

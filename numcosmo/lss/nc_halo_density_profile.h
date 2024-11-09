@@ -30,6 +30,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/lss/nc_halo_mass_summary.h>
 
 G_BEGIN_DECLS
 
@@ -64,6 +65,7 @@ gdouble nc_halo_density_profile_get_lnXi (NcHaloDensityProfile *dp);
 gdouble nc_halo_density_profile_get_lnXf (NcHaloDensityProfile *dp);
 
 void nc_halo_density_profile_get_phys_limts (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z, gdouble *Ri, gdouble *Rf);
+NcHaloMassSummary* nc_halo_density_profile_peek_mass_summary (NcHaloDensityProfile *dp);
 
 gdouble nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
 gdouble nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x);

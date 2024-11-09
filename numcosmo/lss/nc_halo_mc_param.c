@@ -77,8 +77,6 @@ nc_halo_mc_param_init (NcHaloMCParam *hmcp)
 static void
 _nc_halo_mc_param_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHaloMCParam *hmcp = NC_HALO_MC_PARAM (object);
-
   g_return_if_fail (NC_IS_HALO_MC_PARAM (object));
 
   switch (prop_id)
@@ -92,8 +90,6 @@ _nc_halo_mc_param_set_property (GObject *object, guint prop_id, const GValue *va
 static void
 _nc_halo_mc_param_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHaloMCParam *hmcp = NC_HALO_MC_PARAM (object);
-
   g_return_if_fail (NC_IS_HALO_MC_PARAM (object));
 
   switch (prop_id)
