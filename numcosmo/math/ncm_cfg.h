@@ -42,6 +42,27 @@
 
 G_BEGIN_DECLS
 
+GQuark ncm_cfg_error_quark (void);
+
+#define NCM_CFG_ERROR (ncm_cfg_error_quark ())
+
+
+/**
+ * NcmCfgError:
+ * @NCM_CFG_ERROR_INVALID_FFTW_FLAG: Invalid FFTW flag.
+ * @NCM_CFG_ERROR_INVALID_FFTW_FLAG_STRING: Invalid FFTW flag string.
+ * @NCM_CFG_ERROR_INVALID_FFTW_TIMELIMIT: Invalid FFTW planner timelimit.
+ *
+ * Error codes for the ncm_cfg namespace.
+ *
+ */
+typedef enum _NcmCfgError
+{
+  NCM_CFG_ERROR_INVALID_FFTW_FLAG,
+  NCM_CFG_ERROR_INVALID_FFTW_FLAG_STRING,
+  NCM_CFG_ERROR_INVALID_FFTW_TIMELIMIT,
+} NcmCfgError;
+
 typedef void (*NcmCfgLoggerFunc) (const gchar *msg);
 
 void ncm_cfg_init (void);
@@ -97,9 +118,13 @@ gchar *ncm_cfg_command_line (gchar *argv[], gint argc);
 void ncm_cfg_array_set_variant (GArray *a, GVariant *var);
 GVariant *ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype);
 
-void ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout);
-
-extern guint fftw_default_flags;
+void ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout, GError **error);
+void ncm_cfg_set_fftw_default_flag_str (const gchar *flag_str, const gdouble timeout, GError **error);
+void ncm_cfg_set_fftw_default_from_env (guint fallback_flag, const gdouble fallback_timeout, GError **error);
+void ncm_cfg_set_fftw_default_from_env_str (const gchar *fallback_flag_str, const gdouble fallback_timeout, GError **error);
+guint ncm_cfg_get_fftw_default_flag (void);
+const gchar *ncm_cfg_get_fftw_default_flag_str (void);
+gdouble ncm_cfg_get_fftw_timelimit (void);
 
 /* Macros */
 
