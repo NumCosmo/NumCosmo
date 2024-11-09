@@ -139,6 +139,17 @@ option(
        description: 'Enable MPI support',
 )
 
+#######################################################################################
+# FFTW
+#######################################################################################
+
+option(
+       'fftw-planner',
+       type: 'combo',
+       choices: ['exhaustive', 'patient', 'measure', 'estimate'],
+       value: 'measure',
+       description: 'FFTW planner flag',
+)
 
 #######################################################################################
 # pytest tap plugin

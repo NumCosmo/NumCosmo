@@ -119,6 +119,7 @@
 #include "lss/nc_transfer_func_bbks.h"
 #include "lss/nc_transfer_func_eh.h"
 #include "lss/nc_transfer_func_camb.h"
+#include "lss/nc_halo_position.h"
 #include "lss/nc_halo_density_profile.h"
 #include "lss/nc_halo_density_profile_nfw.h"
 #include "lss/nc_halo_density_profile_einasto.h"
@@ -161,12 +162,14 @@
 #include "lss/nc_reduced_shear_cluster_mass.h"
 #include "lss/nc_reduced_shear_calib.h"
 #include "lss/nc_reduced_shear_calib_wtg.h"
+#include "galaxy/nc_galaxy_wl_obs.h"
 #include "galaxy/nc_galaxy_sd_position.h"
 #include "galaxy/nc_galaxy_sd_position_flat.h"
-#include "galaxy/nc_galaxy_sd_position_lsst_srd.h"
-#include "galaxy/nc_galaxy_sd_z_proxy.h"
-#include "galaxy/nc_galaxy_sd_z_proxy_gauss.h"
-#include "galaxy/nc_galaxy_sd_z_proxy_dirac.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift_spec.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift_gauss.h"
+#include "galaxy/nc_galaxy_sd_true_redshift.h"
+#include "galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h"
 #include "galaxy/nc_galaxy_sd_shape.h"
 #include "galaxy/nc_galaxy_sd_shape_gauss.h"
 #include "nc_distance.h"
@@ -484,6 +487,41 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
 #ifdef HAVE_FFTW3
 
+  {
+    guint fftw_default_flags   = FFTW_ESTIMATE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
+    gdouble fftw_timelimit     = 60.0;
+    const gchar *env_flags     = g_getenv ("NC_FFTW_DEFAULT_FLAGS");
+    const gchar *env_timelimit = g_getenv ("NC_FFTW_TIMELIMIT");
+
+#ifdef NUMCOSMO_FFTW_PLAN
+    const gchar *flags = env_flags == NULL ? NUMCOSMO_FFTW_PLAN : env_flags;
+
+#else
+    const gchar *flags = env_flags;
+#endif
+
+
+    if (env_flags != NULL)
+    {
+      if (g_ascii_strcasecmp (flags, "ESTIMATE") == 0)
+        fftw_default_flags = FFTW_ESTIMATE;
+      else if (g_ascii_strcasecmp (flags, "MEASURE") == 0)
+        fftw_default_flags = FFTW_MEASURE;
+      else if (g_ascii_strcasecmp (flags, "PATIENT") == 0)
+        fftw_default_flags = FFTW_PATIENT;
+      else if (g_ascii_strcasecmp (flags, "EXHAUSTIVE") == 0)
+        fftw_default_flags = FFTW_EXHAUSTIVE;
+      else
+        g_warning ("Invalid value for NC_FFTW_DEFAULT_FLAGS: %s", flags);
+    }
+
+    if (env_timelimit != NULL)
+      fftw_timelimit = g_ascii_strtod (env_timelimit, NULL);
+
+
+    ncm_cfg_set_fftw_default_flag (fftw_default_flags, fftw_timelimit);
+  }
+
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
 
@@ -645,6 +683,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_CAMB);
 
+  ncm_cfg_register_obj (NC_TYPE_HALO_POSITION);
+
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_NFW);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_EINASTO);
@@ -702,14 +742,16 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB);
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB_WTG);
 
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_OBS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_FLAT);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_LSST_SRD);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_SPEC);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY_GAUSS);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_Z_PROXY_DIRAC);
 
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 

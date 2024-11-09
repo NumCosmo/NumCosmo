@@ -2074,12 +2074,22 @@ _NC_HICOSMO_FUNC0_TO_FLIST (as_drag)
 _NC_HICOSMO_FUNC0_TO_FLIST (xb)
 
 static void
-_nc_hicosmo_flist_sigma8 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res) \
-  {
+_nc_hicosmo_flist_sigma8 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
 
   res[0] = nc_hicosmo_sigma8 (cosmo, NCM_POWSPEC_FILTER (ncm_mset_func_list_peek_obj (flist)));
-  }
+}
+
+static void
+_nc_hicosmo_flist_S8 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  NcHICosmo *cosmo       = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+  const gdouble sigma8   = nc_hicosmo_sigma8 (cosmo, NCM_POWSPEC_FILTER (ncm_mset_func_list_peek_obj (flist)));
+
+  res[0] = sigma8 * sqrt (Omega_m0 / 0.3);
+}
 
 #define _NC_HICOSMO_FUNC1_TO_FLIST(fname)                                                                                   \
         static void _nc_hicosmo_flist_ ## fname (NcmMSetFuncList * flist, NcmMSet * mset, const gdouble * x, gdouble * res) \
@@ -2161,6 +2171,7 @@ _nc_hicosmo_register_functions (void)
   ncm_mset_func_list_register ("xb",           "x_b",                        "NcHICosmo", "Bounce scale",                              G_TYPE_NONE, _nc_hicosmo_flist_xb,           0, 1);
 
   ncm_mset_func_list_register ("sigma8",       "\\sigma_8",                  "NcHICosmo", "sigma8",                                    NCM_TYPE_POWSPEC_FILTER, _nc_hicosmo_flist_sigma8,  0, 1);
+  ncm_mset_func_list_register ("S8",           "S_8",                        "NcHICosmo", "S8",                                        NCM_TYPE_POWSPEC_FILTER, _nc_hicosmo_flist_S8,      0, 1);
 
   ncm_mset_func_list_register ("E2Omega_b",    "E^2\\Omega_b",               "NcHICosmo", "Baryons density",                           G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_b,     1, 1);
   ncm_mset_func_list_register ("E2Omega_c",    "E^2\\Omega_c",               "NcHICosmo", "CDM density",                               G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_c,     1, 1);

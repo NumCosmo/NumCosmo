@@ -115,7 +115,6 @@ _ncm_spline_cubic_d2_reset (NcmSpline *s)
   /* Chain up : start */
   NCM_SPLINE_CLASS (ncm_spline_cubic_d2_parent_class)->reset (s);
   {
-    NcmSplineCubic *sc     = NCM_SPLINE_CUBIC (s);
     NcmSplineCubicD2 *scd2 = NCM_SPLINE_CUBIC_D2 (s);
     const guint sc_len     = ncm_spline_get_len (s);
 

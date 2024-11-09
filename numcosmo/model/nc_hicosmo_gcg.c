@@ -949,7 +949,6 @@ nc_hicosmo_gcg_reparam_cmb_finalize (GObject *object)
 
 static gboolean _nc_hicosmo_gcg_reparam_cmb_old2new (NcmReparam *reparam, NcmModel *model);
 static gboolean _nc_hicosmo_gcg_reparam_cmb_new2old (NcmReparam *reparam, NcmModel *model);
-static gboolean _nc_hicosmo_gcg_reparam_cmb_jac (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *jac);
 
 static void
 nc_hicosmo_gcg_reparam_cmb_class_init (NcHICosmoGCGReparamCMBClass *klass)
@@ -1068,7 +1067,6 @@ nc_hicosmo_gcg_reparam_ok_finalize (GObject *object)
 
 static gboolean _nc_hicosmo_gcg_reparam_ok_old2new (NcmReparam *reparam, NcmModel *model);
 static gboolean _nc_hicosmo_gcg_reparam_ok_new2old (NcmReparam *reparam, NcmModel *model);
-static gboolean _nc_hicosmo_gcg_reparam_ok_jac (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *jac);
 
 static void
 nc_hicosmo_gcg_reparam_ok_class_init (NcHICosmoGCGReparamOkClass *klass)

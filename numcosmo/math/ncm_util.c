@@ -40,6 +40,7 @@
 
 #include "math/ncm_util.h"
 #include "math/ncm_memory_pool.h"
+#include "numcosmo/nc_hicosmo.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_legendre.h>
@@ -753,6 +754,17 @@ ncm_complex_clear (NcmComplex **c)
  */
 
 /**
+ * ncm_util_projected_radius:
+ * @theta: a gdouble in radians
+ * @d: a gdouble in Mpc
+ *
+ * Converts the the angular separation `$\theta$' of a galaxy
+ * at redshift `$z$' to the projected physical distance in Mpc.
+ *
+ * Returns: the physical distance in Mpc.
+ */
+
+/**
  * ncm_util_cvode_check_flag:
  * @flagvalue: pointer to flag value
  * @funcname: cvode function name
@@ -1047,7 +1059,7 @@ ncm_util_sleep_ms (gint milliseconds)
 /**
  * ncm_util_set_or_call_error:
  * @error: a #GError or NULL
- * @domain: an error domain #GQuark
+ * @domain: an error domain GQuark
  * @code: an error code
  * @format: a printf format string
  * @...: arguments for @format
@@ -1096,7 +1108,7 @@ ncm_util_set_or_call_error (GError **error, GQuark domain, gint code, const gcha
  * Forwards the error from @local_error, adding a prefix message formatted with @format
  * and its arguments, if @local_error is not NULL. If @local_error is NULL, the function
  * does nothing. If @error is not NULL, the function forwards @local_error to @error. If
- * @error is NULL, the function calls g_error() with @local_error.
+ * @error is NULL, the function calls g_error with @local_error.
  *
  */
 void

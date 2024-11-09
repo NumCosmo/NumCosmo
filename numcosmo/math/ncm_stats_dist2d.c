@@ -56,8 +56,6 @@ ncm_stats_dist2d_init (NcmStatsDist2d *sd2)
 static void
 _ncm_stats_dist2d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmStatsDist2d *sd2 = NCM_STATS_DIST2D (object);
-
   g_return_if_fail (NCM_IS_STATS_DIST2D (object));
 
   switch (prop_id)

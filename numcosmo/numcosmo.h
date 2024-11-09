@@ -109,6 +109,7 @@
 #include <numcosmo/lss/nc_transfer_func_eh.h>
 #include <numcosmo/lss/nc_transfer_func_camb.h>
 #include <numcosmo/lss/nc_growth_func.h>
+#include <numcosmo/lss/nc_halo_position.h>
 #include <numcosmo/lss/nc_halo_density_profile.h>
 #include <numcosmo/lss/nc_halo_density_profile_nfw.h>
 #include <numcosmo/lss/nc_halo_density_profile_einasto.h>
@@ -155,12 +156,14 @@
 #include <numcosmo/lss/nc_galaxy_selfunc.h>
 
 /* Galaxy / Galaxy sample distributions */
+#include <numcosmo/galaxy/nc_galaxy_wl_obs.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_position.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_position_flat.h>
-#include <numcosmo/galaxy/nc_galaxy_sd_position_lsst_srd.h>
-#include <numcosmo/galaxy/nc_galaxy_sd_z_proxy.h>
-#include <numcosmo/galaxy/nc_galaxy_sd_z_proxy_gauss.h>
-#include <numcosmo/galaxy/nc_galaxy_sd_z_proxy_dirac.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift_spec.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift_gauss.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_true_redshift.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape_gauss.h>
 
