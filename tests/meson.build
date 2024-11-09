@@ -329,6 +329,10 @@ endif
 
 python_tests = [
     {
+        'name': 'py_cfg',
+        'source': 'test_py_cfg.py',
+    },
+    {
         'name': 'py_cluster_abundance_sampling',
         'source': 'test_py_cluster_abundance_sampling.py',
     },

@@ -1930,6 +1930,7 @@ _ncm_sphere_map_prepare_fft (NcmSphereMap *smap)
 {
 #ifdef HAVE_FFTW3
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
+  guint fftw_default_flags         = ncm_cfg_get_fftw_default_flag ();
 
   if (self->fft_plan_r2c->len == 0)
   {
