@@ -1,7 +1,7 @@
 project(
   'numcosmo',
   ['c', 'fortran'],
-  version: '0.21.2',
+  version: '0.22.0',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.2.0',
   default_options: [
@@ -33,7 +33,8 @@ foreach std : ['legacy', 'f77', 'f90', 'f95', 'f2003', 'f2008', 'f2018']
   endif
 endforeach
 
-global_warn_suppress = ['-Wno-unused', '-Wno-pedantic', '-Wno-unused-parameter']
+# global_warn_suppress = ['-Wno-unused', '-Wno-pedantic', '-Wno-unused-parameter']
+global_warn_suppress = ['-Wno-unused-parameter']
 
 foreach warn : global_warn_suppress
   if cc.has_argument(warn)
@@ -191,8 +192,7 @@ numcosmo_build_shared_only = numcosmo_build_shared and not numcosmo_build_static
 if (
   numcosmo_build_shared
   and numcosmo_build_static
-  and (host_system == 'windows'
-  or host_system == 'cygwin')
+  and (host_system == 'windows' or host_system == 'cygwin')
 )
   error(
     'On Windows default_library must be "shared" or "static" but not "both"',
@@ -380,29 +380,13 @@ message('Checking for MPI')
 
 if get_option('mpi').auto() or get_option('mpi').enabled()
 
-  mpi_c_dep = dependency(
-    'mpi',
-    language: 'c',
-    required: false,
-  )
+  # Meson has a bug that prevents it from getting the correct MPICH-MPI dependency
+  # when detected the required option is set to false. We need to check for MPICH
+  # first and then for the generic MPI dependency.
+  mpi_c_dep = dependency('mpich', required: false)
 
-  mpi_fortran_dep = dependency(
-    'mpi',
-    language: 'fortran',
-    required: false,
-  )
-
-  # MPICH is not found by the mpi dependency, so we need to check for it manually
   if (not mpi_c_dep.found())
-    mpi_c_dep = dependency('mpich', required: false)
-  endif
-
-  # MPICH is not found by the mpi dependency, so we need to check for it manually
-  if (not mpi_fortran_dep.found())
-    mpi_fortran_dep = dependency('mpichf90', required: false)
-    if mpi_fortran_dep.found()
-      numcosmo_conf.set('HAVE_MPIF90', true)
-    endif
+    mpi_c_dep = dependency('mpi', language: 'c', required: false)
   endif
 
   if get_option('mpi').enabled() and not mpi_c_dep.found()
@@ -413,7 +397,6 @@ if get_option('mpi').auto() or get_option('mpi').enabled()
   endif
 else
   mpi_c_dep = not_found
-  mpi_fortran_dep = not_found
 endif
 
 if mpi_c_dep.found()
@@ -550,6 +533,10 @@ if fftw3f_dep.found()
   numcosmo_conf.set('HAVE_FFTW3F', true)
 endif
 
+if fftw3_dep.found() or fftw3f_dep.found()
+  numcosmo_conf.set_quoted('NUMCOSMO_FFTW_PLAN', get_option('fftw-planner'))
+endif
+
 #######################################################################################
 # Checking for cfitsio (optional):
 #######################################################################################
@@ -585,6 +572,12 @@ endif
 
 numcosmo_conf.set('HAVE_LIBCUBA', 1)
 numcosmo_conf.set('HAVE_LIBCUBA_4_0', 1)
+
+#######################################################################################
+# Using internal sundials:
+#######################################################################################
+
+numcosmo_conf.set('HAVE_SUNDIALS_ARKODE', 1)
 
 #######################################################################################
 # Checking for NLopt (optional):
@@ -820,12 +813,10 @@ if get_option('numcosmo_py')
   if python_pip.found()
     pip_cmd = [
       python.full_path(),
-      '-m',
-      'pip',
+      '-m', 'pip',
       'install',
       numcosmo_source_dir,
-      '-t',
-      python.get_install_dir(),
+      '-t', python.get_install_dir(),
       '--no-dependencies',
     ]
     meson.add_install_script(pip_cmd, skip_if_destdir: true)
@@ -924,4 +915,3 @@ dependencies_summary = {
 }
 
 summary(dependencies_summary, section: 'Dependencies')
-

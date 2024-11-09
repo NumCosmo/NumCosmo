@@ -84,6 +84,51 @@ GType ncm_mset_pindex_get_type (void) G_GNUC_CONST;
 
 void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc, gboolean can_stack, NcmModelID main_model_id);
 
+/* Error domain for the NcmMSet class */
+
+/**
+ * NcmMSetError:
+ * @NCM_MSET_ERROR_NAMESPACE_NOT_FOUND: The namespace was not found.
+ * @NCM_MSET_ERROR_NAMESPACE_INVALID: The namespace is invalid.
+ * @NCM_MSET_ERROR_FULLNAME_INVALID: The fullname is invalid.
+ * @NCM_MSET_ERROR_FULLNAME_NOT_FOUND: The fullname was not found.
+ * @NCM_MSET_ERROR_MAIN_MODEL_NOT_FOUND: The main model was not found.
+ * @NCM_MSET_ERROR_SUBMODEL: Submodels cannot be added directly to the #NcmMSet.
+ * @NCM_MSET_ERROR_MODEL_NOT_STACKABLE: The model is not stackable.
+ * @NCM_MSET_ERROR_MODEL_NOT_SET: The model is not set.
+ * @NCM_MSET_ERROR_MODEL_ALREADY_SET: The model is already set.
+ * @NCM_MSET_ERROR_MODEL_PROPERTY_NOT_FOUND: The model property was not found.
+ * @NCM_MSET_ERROR_MODEL_INVALID_ID: The model id is invalid.
+ * @NCM_MSET_ERROR_MODEL_ID_MISMATCH: The model id mismatch.
+ * @NCM_MSET_ERROR_KEY_FILE_INVALID: The key file is invalid.
+ * @NCM_MSET_ERROR_PARAM_NAME_AMBIGUOUS: The parameter name is ambiguous.
+ *
+ *
+ * Error codes returned by the #NcmMSet class.
+ *
+ */
+typedef enum _NcmMSetError
+{
+  NCM_MSET_ERROR_NAMESPACE_NOT_FOUND,
+  NCM_MSET_ERROR_NAMESPACE_INVALID,
+  NCM_MSET_ERROR_FULLNAME_INVALID,
+  NCM_MSET_ERROR_FULLNAME_NOT_FOUND,
+  NCM_MSET_ERROR_MAIN_MODEL_NOT_FOUND,
+  NCM_MSET_ERROR_SUBMODEL,
+  NCM_MSET_ERROR_MODEL_NOT_STACKABLE,
+  NCM_MSET_ERROR_MODEL_NOT_SET,
+  NCM_MSET_ERROR_MODEL_ALREADY_SET,
+  NCM_MSET_ERROR_MODEL_PROPERTY_NOT_FOUND,
+  NCM_MSET_ERROR_MODEL_INVALID_ID,
+  NCM_MSET_ERROR_MODEL_ID_MISMATCH,
+  NCM_MSET_ERROR_KEY_FILE_INVALID,
+  NCM_MSET_ERROR_PARAM_NAME_AMBIGUOUS,
+} NcmMSetError;
+
+GQuark ncm_mset_error_quark (void);
+
+#define NCM_MSET_ERROR (ncm_mset_error_quark ())
+
 /**
  * NCM_MSET_MODEL_MAIN: (skip)
  *
@@ -138,29 +183,31 @@ NcmMSetPIndex *ncm_mset_pindex_new (NcmModelID mid, guint pid);
 NcmMSetPIndex *ncm_mset_pindex_dup (NcmMSetPIndex *pi);
 void ncm_mset_pindex_free (NcmMSetPIndex *pi);
 
-gboolean ncm_mset_split_full_name (const gchar *fullname, gchar **model_ns, guint *stackpos_id, gchar **pname);
+gboolean ncm_mset_split_full_name (const gchar *fullname, gchar **model_ns, guint *stackpos_id, gchar **pname, GError **error);
 
 NcmMSet *ncm_mset_empty_new (void);
-NcmMSet *ncm_mset_new (gpointer model0, ...) G_GNUC_NULL_TERMINATED;
-NcmMSet *ncm_mset_newv (gpointer model0, va_list ap);
-NcmMSet *ncm_mset_new_array (GPtrArray *model_array);
+NcmMSet *ncm_mset_new (gpointer model0, GError **error, ...) G_GNUC_NULL_TERMINATED;
+NcmMSet *ncm_mset_newv (gpointer model0, va_list ap, GError **error);
+NcmMSet *ncm_mset_new_array (GPtrArray *model_array, GError **error);
 NcmMSet *ncm_mset_ref (NcmMSet *mset);
 NcmMSet *ncm_mset_dup (NcmMSet *mset, NcmSerialize *ser);
-NcmMSet *ncm_mset_shallow_copy (NcmMSet *mset);
+NcmMSet *ncm_mset_shallow_copy (NcmMSet *mset, GError **error);
 
 void ncm_mset_free (NcmMSet *mset);
 void ncm_mset_clear (NcmMSet **mset);
 
 NcmModel *ncm_mset_peek (NcmMSet *mset, NcmModelID mid);
+NcmModel *ncm_mset_fetch (NcmMSet *mset, NcmModelID mid, GError **error);
 NcmModel *ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint stackpos_id);
 NcmModel *ncm_mset_get (NcmMSet *mset, NcmModelID mid);
 NcmModel *ncm_mset_peek_array_pos (NcmMSet *mset, guint i);
-NcmModel *ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name);
+NcmModel *ncm_mset_peek_by_name (NcmMSet *mset, const gchar *name, GError **error);
+NcmModel *ncm_mset_fetch_by_name (NcmMSet *mset, const gchar *name, GError **error);
 NcmModelID ncm_mset_get_mid_array_pos (NcmMSet *mset, guint i);
 void ncm_mset_remove (NcmMSet *mset, NcmModelID mid);
-void ncm_mset_set (NcmMSet *mset, NcmModel *model);
-void ncm_mset_push (NcmMSet *mset, NcmModel *model);
-void ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id);
+void ncm_mset_set (NcmMSet *mset, NcmModel *model, GError **error);
+void ncm_mset_push (NcmMSet *mset, NcmModel *model, GError **error);
+void ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id, GError **error);
 gboolean ncm_mset_exists (NcmMSet *mset, NcmModel *model);
 gboolean ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id);
 gboolean ncm_mset_is_subset (NcmMSet *mset, NcmMSet *sub_mset);
@@ -171,7 +218,7 @@ NcmModelID ncm_mset_get_id_by_ns (const gchar *ns);
 const gchar *ncm_mset_get_ns_by_id (NcmModelID id);
 GType ncm_mset_get_type_by_id (NcmModelID id);
 
-void ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_models);
+void ncm_mset_set_fmap (NcmMSet *mset, const gchar * const *fmap, gboolean update_models, GError **error);
 gchar **ncm_mset_get_fmap (NcmMSet *mset);
 void ncm_mset_prepare_fparam_map (NcmMSet *mset);
 gboolean ncm_mset_fparam_map_valid (NcmMSet *mset);
@@ -212,7 +259,7 @@ gdouble ncm_mset_param_get_scale (NcmMSet *mset, NcmModelID mid, guint pid);
 gdouble ncm_mset_param_get_lower_bound (NcmMSet *mset, NcmModelID mid, guint pid);
 gdouble ncm_mset_param_get_upper_bound (NcmMSet *mset, NcmModelID mid, guint pid);
 gdouble ncm_mset_param_get_abstol (NcmMSet *mset, NcmModelID mid, guint pid);
-NcmParamType ncm_mset_param_get_ftype (NcmMSet *mset, NcmModelID mid, guint pid);
+NcmParamType ncm_mset_param_get_ftype (NcmMSet *mset, NcmModelID mid, guint pid, GError **error);
 void ncm_mset_param_set_scale (NcmMSet *mset, NcmModelID mid, guint pid, gdouble scale);
 
 void ncm_mset_param_set_pi (NcmMSet *mset, NcmMSetPIndex *pi, const gdouble *x, guint n);
@@ -229,7 +276,7 @@ guint ncm_mset_fparams_len (NcmMSet *mset);
 const gchar *ncm_mset_fparam_name (NcmMSet *mset, guint n);
 const gchar *ncm_mset_fparam_symbol (NcmMSet *mset, guint n);
 const gchar *ncm_mset_fparam_full_name (NcmMSet *mset, guint n);
-NcmMSetPIndex *ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname);
+NcmMSetPIndex *ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname, GError **error);
 gdouble ncm_mset_fparam_get_scale (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_lower_bound (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n);
@@ -245,10 +292,14 @@ void ncm_mset_fparam_set (NcmMSet *mset, guint n, const gdouble x);
 
 const NcmMSetPIndex *ncm_mset_fparam_get_pi (NcmMSet *mset, guint n);
 gint ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid);
-const NcmMSetPIndex *ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name);
+const NcmMSetPIndex *ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name, GError **error);
 
-void ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean save_comment);
-NcmMSet *ncm_mset_load (const gchar *filename, NcmSerialize *ser);
+void ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean save_comment, GError **error);
+NcmMSet *ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error);
+
+/* pygobject dict */
+NcmModel *ncm_mset___getitem__ (NcmMSet *mset, GValue *model_id, GError **error);
+void ncm_mset___setitem__ (NcmMSet *mset, GValue *model_id, NcmModel *model, GError **error);
 
 G_END_DECLS
 

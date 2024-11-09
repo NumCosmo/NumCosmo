@@ -556,7 +556,7 @@ ncm_data_set_desc (NcmData *data, const gchar *desc)
  * @desc: description.
  *
  * Sets the @data description @desc without copying it, the @desc memory will
- * be freed (g_free()) when the object is freed.
+ * be freed (g_free) when the object is freed.
  *
  */
 void

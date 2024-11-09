@@ -144,7 +144,7 @@ test_nc_cbe_lcdm_new (TestNcCBE *test, gconstpointer pdata)
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
 
-  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "w", -1.0);
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "w", -1.0, NULL);
 
   test->cbe    = cbe;
   test->cosmo  = cosmo;
@@ -194,7 +194,7 @@ test_nc_cbe_xcdm_new (TestNcCBE *test, gconstpointer pdata)
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
 
-  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "w", -1.1);
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "w", -1.1, NULL);
 
   test->cbe    = cbe;
   test->cosmo  = cosmo;
@@ -285,7 +285,7 @@ test_nc_cbe_flat_lcdm_new (TestNcCBE *test, gconstpointer pdata)
   g_assert_true (NC_IS_HIREION (reion));
   g_assert_true (NC_IS_HIPRIM  (prim));
 
-  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
   ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.0);
 
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
@@ -314,7 +314,7 @@ test_nc_cbe_flat_xcdm_new (TestNcCBE *test, gconstpointer pdata)
   g_assert_true (NC_IS_HIREION (reion));
   g_assert_true (NC_IS_HIPRIM  (prim));
 
-  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
   ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.0);
 
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
@@ -343,7 +343,7 @@ test_nc_cbe_flat_mnu_lcdm_new (TestNcCBE *test, gconstpointer pdata)
   g_assert_true (NC_IS_HIREION (reion));
   g_assert_true (NC_IS_HIPRIM  (prim));
 
-  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
   ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.0);
 
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
@@ -372,7 +372,7 @@ test_nc_cbe_flat_mnu_xcdm_new (TestNcCBE *test, gconstpointer pdata)
   g_assert_true (NC_IS_HIREION (reion));
   g_assert_true (NC_IS_HIPRIM  (prim));
 
-  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
   ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.0);
 
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));

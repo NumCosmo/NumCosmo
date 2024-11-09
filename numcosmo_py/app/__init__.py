@@ -32,8 +32,15 @@ from . import from_cosmosis
 from .run_fit import RunFit, RunTest
 from .fisher import ComputeTheoryVector, RunFisher, RunFisherBias
 from .esmcmc import RunMCMC
-from .catalog import AnalyzeMCMC, CalibrateCatalog, PlotCorner
-from .generate import GeneratePlanck, GenerateJpasForecast
+from .catalog import (
+    AnalyzeMCMC,
+    CalibrateCatalog,
+    PlotCorner,
+    VisualHW,
+    ParameterEvolution,
+    GetBestFit,
+)
+from .generate import GeneratePlanck, GenerateJpasForecast, GenerateClusterWL
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
 app_run = typer.Typer(no_args_is_help=True, help="Run different statistical analyses.")
@@ -113,6 +120,24 @@ CAT_PLOT_CORNER_CMD: CMDArg = {
     "help": "Plots the corner plot for a given catalog.",
 }
 
+CAT_VISUAL_HW_CMD: CMDArg = {
+    "name": "visual-hw",
+    "no_args_is_help": True,
+    "help": "Visualizes the Heidelberger and Welch convergence test.",
+}
+
+CAT_PARAM_EVOLUTION_CMD: CMDArg = {
+    "name": "param-evolution",
+    "no_args_is_help": True,
+    "help": "Plots the parameter evolution for a given catalog.",
+}
+
+CAT_GET_BEST_FIT_CMD: CMDArg = {
+    "name": "get-best-fit",
+    "no_args_is_help": True,
+    "help": "Get the best fit from a given catalog.",
+}
+
 GEN_PLANCK_CMD: CMDArg = {
     "name": "planck18",
     "no_args_is_help": True,
@@ -123,6 +148,12 @@ GEN_JPAS_FORECAST_CMD: CMDArg = {
     "name": "jpas-forecast",
     "no_args_is_help": True,
     "help": "Generate JPAS 2024 forecast experiments.",
+}
+
+GEN_CLUSTER_WL_CMD: CMDArg = {
+    "name": "cluster-wl",
+    "no_args_is_help": True,
+    "help": "Generate cluster weak lensing experiments.",
 }
 
 # ------------------------------------------------------------------------------
@@ -147,7 +178,11 @@ app_run_mcmc.command(**RUN_MCMC_APES_CMD)(RunMCMC)
 app_cat.command(**CAT_ANALYZE_CMD)(AnalyzeMCMC)
 app_cat.command(**CAT_CALIBRATE_CMD)(CalibrateCatalog)
 app_cat.command(**CAT_PLOT_CORNER_CMD)(PlotCorner)
+app_cat.command(**CAT_VISUAL_HW_CMD)(VisualHW)
+app_cat.command(**CAT_PARAM_EVOLUTION_CMD)(ParameterEvolution)
+app_cat.command(**CAT_GET_BEST_FIT_CMD)(GetBestFit)
 # ------------------------------------------------------------------------------
 # Installing experiment generation subcommands
 app_generate.command(**GEN_PLANCK_CMD)(GeneratePlanck)
 app_generate.command(**GEN_JPAS_FORECAST_CMD)(GenerateJpasForecast)
+app_generate.command(**GEN_CLUSTER_WL_CMD)(GenerateClusterWL)

@@ -68,7 +68,7 @@ NCM_INLINE gdouble ncm_c_radian_0_2pi (const gdouble r) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_sign_sin (const gdouble r) G_GNUC_CONST;
 
 /*******************************************************************************
- * START: 2018 CODATA recommended values (see end of file)
+ * START: 2022 CODATA recommended values (see constants.txt)
  *******************************************************************************/
 
 NCM_INLINE gdouble ncm_c_c (void) G_GNUC_CONST;
@@ -120,7 +120,7 @@ NCM_INLINE gdouble ncm_c_H_reduced_energy (void) G_GNUC_CONST;
 NCM_INLINE gdouble ncm_c_H_bind (const gdouble n, const gdouble j) G_GNUC_CONST;
 
 /*******************************************************************************
- * END: 2018 CODATA recommended values
+ * END: 2022 CODATA recommended values
  *******************************************************************************/
 
 /*******************************************************************************
@@ -493,7 +493,7 @@ ncm_c_sign_sin (const gdouble r)
 }
 
 /*******************************************************************************
- * START: 2018 CODATA recommended values (see constants.txt)
+ * START: 2022 CODATA recommended values (see constants.txt)
  *******************************************************************************/
 
 NCM_INLINE gdouble
@@ -517,7 +517,7 @@ ncm_c_hbar (void)
 NCM_INLINE gdouble
 ncm_c_fine_struct (void)
 {
-  return 7.2973525693e-3;
+  return 7.2973525643e-3;
 }
 
 NCM_INLINE gdouble
@@ -541,7 +541,7 @@ ncm_c_planck_length (void)
 NCM_INLINE gdouble
 ncm_c_thomson_cs (void)
 {
-  return 0.66524587321e-28;
+  return 6.6524587051e-29;
 }
 
 NCM_INLINE gdouble
@@ -553,55 +553,55 @@ ncm_c_stefan_boltzmann (void)
 NCM_INLINE gdouble
 ncm_c_magnetic_constant (void)
 {
-  return 1.25663706212e-6;
+  return 1.25663706127e-6;
 }
 
 NCM_INLINE gdouble
 ncm_c_mass_atomic (void)
 {
-  return 1.66053906660e-27;
+  return 1.66053906892e-27;
 }
 
 NCM_INLINE gdouble
 ncm_c_mass_e (void)
 {
-  return 9.1093837015e-31;
+  return 9.1093837139e-31;
 }
 
 NCM_INLINE gdouble
 ncm_c_mass_p (void)
 {
-  return 1.67262192369e-27;
+  return 1.67262192595e-27;
 }
 
 NCM_INLINE gdouble
 ncm_c_mass_n (void)
 {
-  return 1.67492749804e-27;
+  return 1.67492750056e-27;
 }
 
 NCM_INLINE gdouble
 ncm_c_mass_ratio_alpha_p (void)
 {
-  return 3.97259969009;
+  return 3.972599690252;
 }
 
 NCM_INLINE gdouble
 ncm_c_mass_ratio_e_p (void)
 {
-  return 5.44617021487e-4;
+  return 5.446170214889e-4;
 }
 
 NCM_INLINE gdouble
 ncm_c_Rinf (void)
 {
-  return 10973731.568160;
+  return 10973731.568157;
 }
 
 NCM_INLINE gdouble
 ncm_c_Ry (void)
 {
-  return 2.1798723611035e-18;
+  return 2.1798723611030e-18;
 }
 
 NCM_INLINE gdouble
@@ -765,11 +765,11 @@ ncm_c_H_bind (const gdouble n, const gdouble j)
 }
 
 /*******************************************************************************
- * END: 2018 CODATA recommended values
+ * END: 2022 CODATA recommended values
  *******************************************************************************/
 
 /*******************************************************************************
- * START: IUPAC related constants
+ * START: 2021 IUPAC related constants
  *******************************************************************************/
 
 NCM_INLINE gdouble
@@ -877,7 +877,7 @@ ncm_c_mass_ratio_4He_1H (void)
 }
 
 /*******************************************************************************
- * END: IUPAC related constants
+ * END: 2021 IUPAC related constants
  *******************************************************************************/
 
 /*******************************************************************************
@@ -1222,37 +1222,37 @@ ncm_c_HeI_ion_E_2p_3Pmean (void)
 NCM_INLINE gdouble
 ncm_c_HeI_Lyman_wn_2s_1S0 (void)
 {
-  return 1.66277440141e7;
+  return 1.66277437635e7;
 }
 
 NCM_INLINE gdouble
 ncm_c_HeI_Lyman_wn_2s_3S1 (void)
 {
-  return 1.598559743297e7;
+  return 1.59855971776e7;
 }
 
 NCM_INLINE gdouble
 ncm_c_HeI_Lyman_wn_2p_1P1 (void)
 {
-  return 1.71134896946e7;
+  return 1.71134894441e7;
 }
 
 NCM_INLINE gdouble
 ncm_c_HeI_Lyman_wn_2p_3P0 (void)
 {
-  return 1.690878308131e7;
+  return 1.6908782825101e7;
 }
 
 NCM_INLINE gdouble
 ncm_c_HeI_Lyman_wn_2p_3P1 (void)
 {
-  return 1.690868428979e7;
+  return 1.6908684033581e7;
 }
 
 NCM_INLINE gdouble
 ncm_c_HeI_Lyman_wn_2p_3P2 (void)
 {
-  return 1.690867664725e7;
+  return 1.6908676391031e7;
 }
 
 NCM_INLINE gdouble
@@ -1450,7 +1450,7 @@ ncm_c_HeI_Balmer_E_kb_2p_3Pmean_2s_3S1 (void)
 NCM_INLINE gdouble
 ncm_c_HeII_ion_wn_1s_2S0_5 (void)
 {
-  return 4.389088785e7;
+  return 4.38908878840e7;
 }
 
 /* Ionization energy: E */
@@ -1572,7 +1572,7 @@ ncm_c_crit_number_density_n (void)
 NCM_INLINE gdouble
 ncm_c_blackbody_energy_density (void)
 {
-  return 4.0 * (gsl_pow_2 (ncm_c_pi ()) * gsl_pow_4 (ncm_c_kb ()) / (60.0 * gsl_pow_3 (ncm_c_h () / (2.0 * ncm_c_pi ())) * gsl_pow_2 (ncm_c_c ()))) / ncm_c_c ();
+  return 4.0 * ncm_c_stefan_boltzmann () / ncm_c_c ();
 }
 
 NCM_INLINE gdouble

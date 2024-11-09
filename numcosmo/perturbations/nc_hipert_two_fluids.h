@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -70,14 +70,14 @@ struct _NcHIPertTwoFluids
  * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE2MAIN: FIXME
  * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE1SUB: FIXME
  * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE2SUB: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  */
 typedef enum /*< enum,underscore_name=NC_HIPERT_TWO_FLUIDS_CROSS  >*/
 {
   NC_HIPERT_TWO_FLUIDS_CROSS_MODE1MAIN = 0,
-  NC_HIPERT_TWO_FLUIDS_CROSS_MODE2MAIN ,
+  NC_HIPERT_TWO_FLUIDS_CROSS_MODE2MAIN,
   NC_HIPERT_TWO_FLUIDS_CROSS_MODE1SUB,
   NC_HIPERT_TWO_FLUIDS_CROSS_MODE2SUB,
 } NcHIPertTwoFluidsCross;
@@ -100,6 +100,7 @@ void nc_hipert_two_fluids_to_zeta_s (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, g
 
 void nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphaf);
 NcmVector *nc_hipert_two_fluids_peek_state (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble *alpha);
+NcmMatrix *nc_hipert_two_fluids_evolve_array (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphaf, gdouble step_reltol, gdouble step_abstol);
 
 void nc_hipert_two_fluids_set_init_cond_mode1sub (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, NcmVector *init_cond);
 void nc_hipert_two_fluids_evolve_mode1sub (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphaf);
@@ -108,10 +109,13 @@ gdouble nc_hipert_two_fluids_get_state_mod (NcHIPertTwoFluids *ptf);
 
 gdouble nc_hipert_two_fluids_get_cross_time (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, NcHIPertTwoFluidsCross cross, gdouble alpha_i, gdouble prec);
 
-#define NC_HIPERT_TWO_FLUIDS_A2Q(Ai) (cimag (Ai)) 
-#define NC_HIPERT_TWO_FLUIDS_A2P(Ai) (creal (Ai)) 
-#define NC_HIPERT_TWO_FLUIDS_QP2A(Q,P) ((P) + I * (Q))
+NcmSpline *nc_hipert_two_fluids_compute_zeta_spectrum (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, guint mode, gdouble alpha_i, gdouble alpha, gdouble ki, gdouble kf, guint nnodes);
+
+#define NC_HIPERT_TWO_FLUIDS_A2Q(Ai) (cimag (Ai))
+#define NC_HIPERT_TWO_FLUIDS_A2P(Ai) (creal (Ai))
+#define NC_HIPERT_TWO_FLUIDS_QP2A(Q, P) ((P) + I * (Q))
 
 G_END_DECLS
 
 #endif /* _NC_HIPERT_TWO_FLUIDS_H_ */
+

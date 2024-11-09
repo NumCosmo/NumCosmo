@@ -4,10 +4,17 @@
  *  Mon Jul 27 16:10:25 2020
  *  Copyright  2020  Mariana Penna Lima
  *  <pennalima@gmail.com>
+ *  Tue Jun 15 16:24:17 2023
+ *  Copyright  2023  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
+ *  Copyright  2024  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_data_cluster_wl.h
  * Copyright (C) 2020 Mariana Penna Lima <pennalima@gmail.com>
+ * Copyright (C) 2023 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
+ * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -30,58 +37,32 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_distance.h>
-#include <numcosmo/lss/nc_galaxy_wl.h>
-#include <numcosmo/math/ncm_data.h>
+#include <numcosmo/galaxy/nc_galaxy_wl_obs.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_position.h>
+#include <numcosmo/lss/nc_halo_position.h>
+#include <numcosmo/lss/nc_halo_density_profile.h>
+#include <numcosmo/lss/nc_wl_surface_mass_density.h>
+
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_DATA_CLUSTER_WL             (nc_data_cluster_wl_get_type ())
-#define NC_DATA_CLUSTER_WL(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_CLUSTER_WL, NcDataClusterWL))
-#define NC_DATA_CLUSTER_WL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_CLUSTER_WL, NcDataClusterWLClass))
-#define NC_IS_DATA_CLUSTER_WL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_DATA_CLUSTER_WL))
-#define NC_IS_DATA_CLUSTER_WL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_CLUSTER_WL))
-#define NC_DATA_CLUSTER_WL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_CLUSTER_WL, NcDataClusterWLClass))
+#define NC_TYPE_DATA_CLUSTER_WL (nc_data_cluster_wl_get_type ())
 
-typedef struct _NcDataClusterWLClass NcDataClusterWLClass;
-typedef struct _NcDataClusterWL NcDataClusterWL;
+G_DECLARE_FINAL_TYPE (NcDataClusterWL, nc_data_cluster_wl, NC, DATA_CLUSTER_WL, NcmData);
+
 typedef struct _NcDataClusterWLPrivate NcDataClusterWLPrivate;
 
-struct _NcDataClusterWLClass
-{
-  /*< private >*/
-  NcmDataClass parent_class;
-};
-
-/**
- * NcDataClusterWLObs:
- * @NC_DATA_CLUSTER_WL_ZCLUSTER: cluster redshift
- * @NC_DATA_CLUSTER_WL_GOBS: measured reduced shear
- * @NC_DATA_CLUSTER_WL_PZ: redshift distribution (photometric)
- *
- */
-typedef enum _NcDataClusterWLObs
-{
-  NC_DATA_CLUSTER_WL_ZCLUSTER = 0,
-  NC_DATA_CLUSTER_WL_GOBS,
-  NC_DATA_CLUSTER_WL_PZ,
-  /* < private > */
-  NC_DATA_CLUSTER_WL_LEN, /*< skip >*/
-} NcDataClusterWLObs;
-
-struct _NcDataClusterWL
-{
-  /*< private >*/
-  NcmData parent_instance;
-  NcDataClusterWLPrivate *priv;
-};
-
-GType nc_data_cluster_wl_get_type (void) G_GNUC_CONST;
-
 NcDataClusterWL *nc_data_cluster_wl_new (void);
-NcDataClusterWL *nc_data_cluster_wl_new_from_file (const gchar *filename);
 NcDataClusterWL *nc_data_cluster_wl_ref (NcDataClusterWL *dcwl);
+
 void nc_data_cluster_wl_free (NcDataClusterWL *dcwl);
 void nc_data_cluster_wl_clear (NcDataClusterWL **dcwl);
+void nc_data_cluster_wl_set_prec (NcDataClusterWL *dcwl, gdouble prec);
+void nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs);
+void nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gdouble r_max);
+NcGalaxyWLObs *nc_data_cluster_wl_peek_obs (NcDataClusterWL *dcwl);
 
 G_END_DECLS
 

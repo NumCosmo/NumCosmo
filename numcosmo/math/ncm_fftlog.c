@@ -831,6 +831,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
 
   if ((n_new != self->N) || (n_new + 2 * (gint) self->pad != self->Nf))
   {
+    guint fftw_default_flags = ncm_cfg_get_fftw_default_flag ();
     gint i;
 
     self->N    = n_new;

@@ -152,8 +152,8 @@ struct _NcHICosmoDE
 GType nc_hicosmo_de_get_type (void) G_GNUC_CONST;
 
 void nc_hicosmo_de_set_wmap5_params (NcHICosmoDE *cosmo_de);
-void nc_hicosmo_de_omega_x2omega_k (NcHICosmoDE *cosmo_de);
-void nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de);
+void nc_hicosmo_de_omega_x2omega_k (NcHICosmoDE *cosmo_de, GError **error);
+void nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de, GError **error);
 void nc_hicosmo_de_new_add_bbn (NcmLikelihood *lh);
 
 void nc_hicosmo_de_set_E2Omega_de_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);

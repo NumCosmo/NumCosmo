@@ -453,12 +453,13 @@ static void
 _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
 {
 #ifdef HAVE_FFTW3
-  const guint nbins     = exp2 (14.0 /*ceil (log2 (epdf1d->obs->len * 10))*/);
-  const gdouble delta_l = (epdf1d->max - epdf1d->min) * 2.0;
-  const gdouble deltax  = delta_l / nbins;
-  const gdouble xm      = (epdf1d->max + epdf1d->min) * 0.5;
-  const gdouble lb      = xm - delta_l * 0.5;
-  gdouble xc            = lb + deltax;
+  const guint nbins        = exp2 (14.0 /*ceil (log2 (epdf1d->obs->len * 10))*/);
+  const gdouble delta_l    = (epdf1d->max - epdf1d->min) * 2.0;
+  const gdouble deltax     = delta_l / nbins;
+  const gdouble xm         = (epdf1d->max + epdf1d->min) * 0.5;
+  const gdouble lb         = xm - delta_l * 0.5;
+  gdouble xc               = lb + deltax;
+  guint fftw_default_flags = ncm_cfg_get_fftw_default_flag ();
   guint i, j;
 
   if (epdf1d->fftsize != nbins)

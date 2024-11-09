@@ -347,7 +347,6 @@ test_ncm_object_with_tuples_new (TestNcmObjectWithTuples *test, gconstpointer pd
   const gdouble elem2 = g_test_rand_double ();
   const gdouble elem3 = g_test_rand_double ();
   const gdouble elem4 = g_test_rand_double ();
-  const gdouble elem5 = g_test_rand_double ();
   NcmDTuple2 *dt2     = ncm_dtuple2_new (elem0, elem1);
   NcmDTuple3 *dt3     = ncm_dtuple3_new (elem2, elem3, elem4);
 

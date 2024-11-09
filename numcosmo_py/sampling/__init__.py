@@ -23,7 +23,7 @@
 
 """Sampling module for numcosmo."""
 
-from typing import Optional, Union, Type
+from typing import Optional, Union, Type, IO
 from enum import Enum
 
 from rich.console import Console
@@ -83,7 +83,6 @@ def get_algorithms(
     ]
 ]:
     """Get algorithms for a given runner."""
-
     if runner == FitRunner.NLOPT:
         return Ncm.FitNloptAlgorithm
     if runner == FitRunner.LEVMAR:
@@ -99,7 +98,6 @@ def get_algorithms(
 
 def check_runner_algorithm(runner: FitRunner, algorithm: Optional[str]):
     """Check if algorithm is valid."""
-
     if algorithm is not None:
         algorithms = get_algorithms(runner)
         if algorithms is None:
@@ -123,7 +121,7 @@ class NcmHighlighter(RegexHighlighter):
     ]
 
 
-def set_ncm_console() -> Console:
+def set_ncm_console(file: Optional[IO[str]]) -> Console:
     """Set console for Ncm.Fit."""
     theme = Theme(
         {
@@ -135,7 +133,9 @@ def set_ncm_console() -> Console:
             "Ncm.percentage": "bold magenta",
         }
     )
-    console = Console(highlighter=NcmHighlighter(), theme=theme)
+    console = Console(
+        highlighter=NcmHighlighter(), theme=theme, soft_wrap=True, file=file
+    )
 
     Ncm.cfg_set_log_handler(lambda msg: console.print(msg, end=""))
 
@@ -155,9 +155,10 @@ class FitSpeedColumn(ProgressColumn):
 
 
 class NcmFitLogger:
-    """Class implementing logging functions for Ncm.Fit"""
+    """Class implementing logging functions for Ncm.Fit."""
 
     def __init__(self, console: Optional[Console]) -> None:
+        """Initialize NcmFitLogger."""
         self.console = console if console is not None else Console()
         self.progress = Progress(
             TextColumn("# [progress.description]{task.description}: "),
@@ -189,14 +190,14 @@ class NcmFitLogger:
             self.progress.update(self.task, completed=n)
 
     def start_update(self, _fit: Ncm.Fit, start_message: str):
-        """Starting updates."""
+        """Start updates."""
         self.task = self.progress.add_task(start_message)
         self.progress.start()
         self.progress.start_task(self.task)
         self.progress.update(self.task, completed=0, total=10)
 
     def end_update(self, _fit: Ncm.Fit, _end_message: str):
-        """Ending updates"""
+        """End updates."""
         assert self.task is not None
 
         self.progress.stop_task(self.task)

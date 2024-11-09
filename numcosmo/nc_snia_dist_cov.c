@@ -444,9 +444,9 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
  * nc_snia_dist_cov_ref:
  * @dcov: a #NcSNIADistCov
  *
- * FIXME
+ * Increases the reference count of @dcov.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): the same @dcov.
  */
 NcSNIADistCov *
 nc_snia_dist_cov_ref (NcSNIADistCov *dcov)
@@ -458,7 +458,8 @@ nc_snia_dist_cov_ref (NcSNIADistCov *dcov)
  * nc_snia_dist_cov_free:
  * @dcov: a #NcSNIADistCov
  *
- * FIXME
+ * Decreases the reference count of @dcov. If the reference count reaches 0, the object
+ * is freed.
  *
  */
 void
@@ -471,7 +472,8 @@ nc_snia_dist_cov_free (NcSNIADistCov *dcov)
  * nc_snia_dist_cov_clear:
  * @dcov: a #NcSNIADistCov
  *
- * FIXME
+ * If *@dcov is not %NULL, decreases the reference count of @dcov and sets *@dcov to
+ * %NULL.
  *
  */
 void
@@ -483,9 +485,9 @@ nc_snia_dist_cov_clear (NcSNIADistCov **dcov)
 /**
  * nc_snia_dist_cov_set_empty_fac:
  * @dcov: a #NcSNIADistCov
- * @enable: FIXME
+ * @enable: a #gboolean
  *
- * FIXME
+ * Sets the empty universe approximation factor to @enable.
  *
  */
 void
@@ -516,7 +518,7 @@ nc_snia_dist_cov_set_dist (NcSNIADistCov *dcov, NcDistance *dist)
  * @dcov: a #NcSNIADistCov
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Prepares the distance calculation using the cosmological model from @mset.
  *
  */
 void
@@ -532,7 +534,7 @@ nc_snia_dist_cov_prepare (NcSNIADistCov *dcov, NcmMSet *mset)
  * @dcov: a #NcSNIADistCov
  * @mset: a #NcmMSet
  *
- * FIXME
+ * Prepares the distance calculation using the cosmological model from @mset if needed.
  *
  */
 void
@@ -560,7 +562,9 @@ _nc_snia_dist_cov_calc_empty_fac (NcSNIADistCov *dcov, gdouble z_cmb)
  * @snia_cov: a #NcDataSNIACov
  * @cov: a #NcmMatrix
  *
- * FIXME
+ * Computes the covariance matrix for the SN Ia distance estimates.
+ * If the covariance matrix is already computed and the parameters are the same,
+ * the function returns %FALSE.
  *
  * Returns: whether the covariance was computed.
  */
@@ -669,7 +673,7 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
  * @snia_cov: a #NcDataSNIACov
  * @y: a #NcmVector
  *
- * FIXME
+ * Computes the mean of the SN Ia distance estimates.
  *
  */
 void
@@ -746,7 +750,8 @@ nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *sni
  * @snia_cov: a #NcDataSNIACov
  * @y: a #NcmVector
  *
- * FIXME
+ * Computes the mean of the SN Ia distance estimates for the second version of the
+ * model.
  *
  */
 void
@@ -955,7 +960,7 @@ nc_snia_dist_cov_extra_var (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, guint 
  * @alpha: (out caller-allocates): value of alpha
  * @beta: (out caller-allocates): value of beta
  *
- * FIXME
+ * Returns the values of $\alpha$ and $\beta$.
  *
  */
 void

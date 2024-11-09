@@ -106,11 +106,12 @@
 #include "model/nc_hicosmo_Vexp.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
 #include "model/nc_hicosmo_de_reparam_cmb.h"
-#include "model/nc_hiprim_power_law.h"
 #include "model/nc_hiprim_atan.h"
-#include "model/nc_hiprim_expc.h"
 #include "model/nc_hiprim_bpl.h"
+#include "model/nc_hiprim_expc.h"
+#include "model/nc_hiprim_power_law.h"
 #include "model/nc_hiprim_sbpl.h"
+#include "model/nc_hiprim_two_fluids.h"
 #include "lss/nc_window_tophat.h"
 #include "lss/nc_window_gaussian.h"
 #include "lss/nc_growth_func.h"
@@ -118,6 +119,7 @@
 #include "lss/nc_transfer_func_bbks.h"
 #include "lss/nc_transfer_func_eh.h"
 #include "lss/nc_transfer_func_camb.h"
+#include "lss/nc_halo_position.h"
 #include "lss/nc_halo_density_profile.h"
 #include "lss/nc_halo_density_profile_nfw.h"
 #include "lss/nc_halo_density_profile_einasto.h"
@@ -134,14 +136,6 @@
 #include "lss/nc_multiplicity_func_bocquet.h"
 #include "lss/nc_multiplicity_func_watson.h"
 #include "lss/nc_halo_mass_function.h"
-#include "lss/nc_galaxy_acf.h"
-#include "lss/nc_galaxy_redshift_spec.h"
-#include "lss/nc_galaxy_redshift_spline.h"
-#include "lss/nc_galaxy_redshift_gauss.h"
-#include "lss/nc_galaxy_wl.h"
-#include "lss/nc_galaxy_wl_ellipticity_gauss.h"
-#include "lss/nc_galaxy_wl_ellipticity_kde.h"
-#include "lss/nc_galaxy_wl_ellipticity_binned.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_mass_nodist.h"
@@ -166,6 +160,16 @@
 #include "lss/nc_reduced_shear_cluster_mass.h"
 #include "lss/nc_reduced_shear_calib.h"
 #include "lss/nc_reduced_shear_calib_wtg.h"
+#include "galaxy/nc_galaxy_wl_obs.h"
+#include "galaxy/nc_galaxy_sd_position.h"
+#include "galaxy/nc_galaxy_sd_position_flat.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift_spec.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift_gauss.h"
+#include "galaxy/nc_galaxy_sd_true_redshift.h"
+#include "galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h"
+#include "galaxy/nc_galaxy_sd_shape.h"
+#include "galaxy/nc_galaxy_sd_shape_gauss.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_cbe.h"
@@ -197,7 +201,6 @@
 #include "data/nc_data_cluster_ncount.h"
 #include "data/nc_data_cluster_ncounts_gauss.h"
 #include "data/nc_data_cluster_wl.h"
-#include "data/nc_data_reduced_shear_cluster_mass.h"
 #include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
 #include "data/nc_data_hubble.h"
@@ -210,6 +213,7 @@
 #include "xcor/nc_xcor_limber_kernel_gal.h"
 #include "xcor/nc_xcor_limber_kernel_CMB_lensing.h"
 #include "xcor/nc_xcor_limber_kernel_weak_lensing.h"
+#include "xcor/nc_xcor_limber_kernel_tSZ.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <stdlib.h>
@@ -235,6 +239,10 @@
 #include <execinfo.h>
 #endif /* HAVE_EXECINFO_H */
 #endif /* NUMCOSMO_GIR_SCAN */
+
+/* *INDENT-OFF* */
+G_DEFINE_QUARK (ncm-cfg-error, ncm_cfg_error) 
+/* *INDENT-ON* */
 
 static gchar *numcosmo_path         = NULL;
 static gboolean numcosmo_init       = FALSE;
@@ -481,6 +489,44 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
 #ifdef HAVE_FFTW3
 
+<<<<<<< HEAD
+  {
+    guint local_fftw_default_flags = FFTW_ESTIMATE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
+    gdouble fftw_timelimit         = 60.0;
+    const gchar *env_flags         = g_getenv ("NC_FFTW_DEFAULT_FLAGS");
+    const gchar *env_timelimit     = g_getenv ("NC_FFTW_TIMELIMIT");
+
+#ifdef NUMCOSMO_FFTW_PLAN
+    const gchar *flags = env_flags == NULL ? NUMCOSMO_FFTW_PLAN : env_flags;
+
+#else
+    const gchar *flags = env_flags;
+#endif
+
+
+    if (flags != NULL)
+    {
+      if (g_ascii_strcasecmp (flags, "ESTIMATE") == 0)
+        local_fftw_default_flags = FFTW_ESTIMATE;
+      else if (g_ascii_strcasecmp (flags, "MEASURE") == 0)
+        local_fftw_default_flags = FFTW_MEASURE;
+      else if (g_ascii_strcasecmp (flags, "PATIENT") == 0)
+        local_fftw_default_flags = FFTW_PATIENT;
+      else if (g_ascii_strcasecmp (flags, "EXHAUSTIVE") == 0)
+        local_fftw_default_flags = FFTW_EXHAUSTIVE;
+      else
+        g_warning ("Invalid value for NC_FFTW_DEFAULT_FLAGS: %s", flags);
+    }
+
+    if (env_timelimit != NULL)
+      fftw_timelimit = g_ascii_strtod (env_timelimit, NULL);
+
+    ncm_cfg_set_fftw_default_flag (local_fftw_default_flags, fftw_timelimit);
+  }
+=======
+  ncm_cfg_set_fftw_default_from_env_str (NUMCOSMO_FFTW_PLAN, -1.0, NULL);
+>>>>>>> 533d4d5c676e0544efb9dcf236a29ccef6283a6e
+
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
 
@@ -622,11 +668,12 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_OK);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_CMB);
 
-  ncm_cfg_register_obj (NC_TYPE_HIPRIM_POWER_LAW);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_ATAN);
-  ncm_cfg_register_obj (NC_TYPE_HIPRIM_EXPC);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_BPL);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_EXPC);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_POWER_LAW);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_SBPL);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_TWO_FLUIDS);
 
   ncm_cfg_register_obj (NC_TYPE_CBE_PRECISION);
 
@@ -640,6 +687,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_BBKS);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_CAMB);
+
+  ncm_cfg_register_obj (NC_TYPE_HALO_POSITION);
 
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE);
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_NFW);
@@ -661,14 +710,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);
 
   ncm_cfg_register_obj (NC_TYPE_GALAXY_ACF);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPEC);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_SPLINE);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_GAUSS);
-
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_GAUSS);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_KDE);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_ELLIPTICITY_BINNED);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
@@ -702,6 +743,17 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB);
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB_WTG);
+
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_OBS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_FLAT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_SPEC);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS);
 
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
@@ -746,7 +798,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNT);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS);
-  ncm_cfg_register_obj (NC_TYPE_DATA_REDUCED_SHEAR_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);
 
@@ -756,6 +807,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_GAL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_TSZ);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
@@ -2118,7 +2170,7 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
 
 /**
  * ncm_cfg_array_set_variant: (skip)
- * @a: a #GArray.
+ * @a: a GArray.
  * @var: a variant of array type.
  *
  * Transfers the data from @var to @a.
@@ -2137,7 +2189,7 @@ ncm_cfg_array_set_variant (GArray *a, GVariant *var)
 
 /**
  * ncm_cfg_array_to_variant: (skip)
- * @a: a #GArray.
+ * @a: a GArray.
  * @etype: element type.
  *
  * Creates a variant of array type from @a.
@@ -2162,15 +2214,16 @@ ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
   return g_variant_ref_sink (vvar);
 }
 
-gdouble fftw_default_timeout = 60.0;
-
 #ifdef HAVE_FFTW3
-guint fftw_default_flags = FFTW_MEASURE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
+
+static guint __fftw_default_flags = FFTW_MEASURE;
+static gdouble __fftw_timelimit   = 60.0;
 
 /**
  * ncm_cfg_set_fftw_default_flag:
  * @flag: a FFTW library flag
  * @timeout: planner time out in seconds
+ * @error: a GError
  *
  * Sets the default FFTW flag (FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
  * to be used when building plans. The variable @timeout sets the maximum time spended on
@@ -2178,13 +2231,231 @@ guint fftw_default_flags = FFTW_MEASURE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PA
  *
  */
 void
-ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout)
+ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout, GError **error)
 {
+<<<<<<< HEAD
   fftw_default_flags = flag;
-  fftw_set_timelimit (10.0);
+=======
+  switch (flag)
+  {
+    case FFTW_ESTIMATE:
+    case FFTW_MEASURE:
+    case FFTW_PATIENT:
+    case FFTW_EXHAUSTIVE:
+      break;
+
+    default:
+      ncm_util_set_or_call_error (error,
+                                  NCM_CFG_ERROR,
+                                  NCM_CFG_ERROR_INVALID_FFTW_FLAG,
+                                  "Invalid FFTW flag '%d'", flag);
+
+      return;
+  }
+
+  __fftw_default_flags = flag;
+  __fftw_timelimit     = timeout;
+
+>>>>>>> 533d4d5c676e0544efb9dcf236a29ccef6283a6e
+  fftw_set_timelimit (timeout);
 #ifdef HAVE_FFTW3F
-  fftwf_set_timelimit (10.0);
+  fftwf_set_timelimit (timeout);
 #endif /* HAVE_FFTW3F */
+}
+
+/**
+ * ncm_cfg_set_fftw_default_flag_str:
+ * @flag_str: a FFTW library flag
+ * @timeout: planner time out in seconds
+ * @error: a GError
+ *
+ * Sets the default FFTW flag (FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
+ * to be used when building plans. The variable @timeout sets the maximum time spended on
+ * planners. The argument @flag_str is a string representation of the flag:
+ *
+ * - "estimate": FFTW_ESTIMATE
+ * - "measure": FFTW_MEASURE
+ * - "patient": FFTW_PATIENT
+ * - "exhaustive": FFTW_EXHAUSTIVE
+ *
+ * This function is case insensitive.
+ *
+ */
+void
+ncm_cfg_set_fftw_default_flag_str (const gchar *flag_str, const gdouble timeout, GError **error)
+{
+  guint flag = 0;
+
+  if (g_ascii_strcasecmp (flag_str, "estimate") == 0)
+  {
+    flag = FFTW_ESTIMATE;
+  }
+  else if (g_ascii_strcasecmp (flag_str, "measure") == 0)
+  {
+    flag = FFTW_MEASURE;
+  }
+  else if (g_ascii_strcasecmp (flag_str, "patient") == 0)
+  {
+    flag = FFTW_PATIENT;
+  }
+  else if (g_ascii_strcasecmp (flag_str, "exhaustive") == 0)
+  {
+    flag = FFTW_EXHAUSTIVE;
+  }
+  else
+  {
+    ncm_util_set_or_call_error (error,
+                                NCM_CFG_ERROR,
+                                NCM_CFG_ERROR_INVALID_FFTW_FLAG_STRING,
+                                "Invalid FFTW flag string '%s'", flag_str);
+
+    return;
+  }
+
+  ncm_cfg_set_fftw_default_flag (flag, timeout, error);
+}
+
+/**
+ * ncm_cfg_set_fftw_default_from_env:
+ * @fallback_flag: a FFTW library flag
+ * @fallback_timeout: planner time out in seconds
+ * @error: a GError
+ *
+ * Sets the default FFTW flag and planner time out from the environment variables
+ * NCM_FFTW_PLANNER and NCM_FFTW_PLANNER_TIMELIMIT. If the environment variables
+ * are not set, it uses the @fallback_flag and @fallback_timeout.
+ *
+ */
+void
+ncm_cfg_set_fftw_default_from_env (guint fallback_flag, const gdouble fallback_timeout, GError **error)
+{
+  const gchar *fftw_planner_env   = g_getenv ("NCM_FFTW_PLANNER");
+  const gchar *fftw_timelimit_env = g_getenv ("NCM_FFTW_PLANNER_TIMELIMIT");
+  gdouble timeout                 = fallback_timeout;
+
+  if (fftw_timelimit_env != NULL)
+  {
+    gchar *endptr;
+    gdouble timelimit = g_ascii_strtod (fftw_timelimit_env, &endptr);
+
+    if (endptr == fftw_timelimit_env)
+    {
+      ncm_util_set_or_call_error (error,
+                                  NCM_CFG_ERROR,
+                                  NCM_CFG_ERROR_INVALID_FFTW_TIMELIMIT,
+                                  "Invalid FFTW planner timelimit '%s'", fftw_timelimit_env);
+
+      return;
+    }
+
+    timeout = timelimit;
+  }
+
+  if (fftw_planner_env != NULL)
+    ncm_cfg_set_fftw_default_flag_str (fftw_planner_env, timeout, error);
+  else
+    ncm_cfg_set_fftw_default_flag (fallback_flag, timeout, error);
+}
+
+/**
+ * ncm_cfg_set_fftw_default_from_env_str:
+ * @fallback_flag_str: a FFTW library flag string
+ * @fallback_timeout: planner time out in seconds
+ * @error: a GError
+ *
+ * Sets the default FFTW flag and planner time out from the environment variables
+ * NCM_FFTW_PLANNER and NCM_FFTW_PLANNER_TIMELIMIT. If the environment variables
+ * are not set, it uses the @fallback_flag_str and @fallback_timeout.
+ *
+ */
+void
+ncm_cfg_set_fftw_default_from_env_str (const gchar *fallback_flag_str, const gdouble fallback_timeout, GError **error)
+{
+  const gchar *fftw_planner_env   = g_getenv ("NCM_FFTW_PLANNER");
+  const gchar *fftw_timelimit_env = g_getenv ("NCM_FFTW_PLANNER_TIMELIMIT");
+  gdouble timeout                 = fallback_timeout;
+
+  if (fftw_timelimit_env != NULL)
+  {
+    gchar *endptr;
+    gdouble timelimit = g_ascii_strtod (fftw_timelimit_env, &endptr);
+
+    if (endptr == fftw_timelimit_env)
+    {
+      ncm_util_set_or_call_error (error,
+                                  NCM_CFG_ERROR,
+                                  NCM_CFG_ERROR_INVALID_FFTW_TIMELIMIT,
+                                  "Invalid FFTW planner timelimit '%s'", fftw_timelimit_env);
+
+      return;
+    }
+
+    timeout = timelimit;
+  }
+
+  if (fftw_planner_env != NULL)
+    ncm_cfg_set_fftw_default_flag_str (fftw_planner_env, timeout, error);
+  else
+    ncm_cfg_set_fftw_default_flag_str (fallback_flag_str, timeout, error);
+}
+
+/**
+ * ncm_cfg_get_fftw_default_flag:
+ *
+ * Gets the default FFTW flag.
+ *
+ * Returns: the default FFTW flag.
+ */
+guint
+ncm_cfg_get_fftw_default_flag (void)
+{
+  return __fftw_default_flags;
+}
+
+/**
+ * ncm_cfg_get_fftw_default_flag_str:
+ *
+ * Gets the default FFTW flag as a string.
+ *
+ * Returns: (transfer none): the default FFTW flag as a string.
+ */
+const gchar *
+ncm_cfg_get_fftw_default_flag_str (void)
+{
+  const gchar *flag_str = NULL;
+
+  switch (__fftw_default_flags)
+  {
+    case FFTW_ESTIMATE:
+      flag_str = "estimate";
+      break;
+    case FFTW_MEASURE:
+      flag_str = "measure";
+      break;
+    case FFTW_PATIENT:
+      flag_str = "patient";
+      break;
+    case FFTW_EXHAUSTIVE:
+      flag_str = "exhaustive";
+      break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+  }
+
+  return flag_str;
+}
+
+/**
+ * ncm_cfg_get_fftw_timelimit:
+ *
+ * Gets the planner time out in seconds. A negative value means no time out.
+ *
+ * Returns: the planner time out in seconds.
+ */
+gdouble
+ncm_cfg_get_fftw_timelimit (void)
+{
+  return __fftw_timelimit;
 }
 
 #else

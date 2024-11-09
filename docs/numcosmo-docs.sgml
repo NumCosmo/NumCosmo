@@ -11,6 +11,7 @@
     <title>NumCosmo Overview</title>
     <xi:include href="introduction.xml"/>
     <xi:include href="refs.xml"/>
+    <xi:include href="glib_doc.xml"/>
     <xi:include href="xml/build_cfg.xml"/>
   </chapter>
 
@@ -204,6 +205,7 @@
     <xi:include href="xml/nc_hicosmo_lcdm.xml"/>
     <xi:include href="xml/nc_hicosmo_gcg.xml"/>
     <xi:include href="xml/nc_hicosmo_idem2.xml"/>
+    <xi:include href="xml/nc_hicosmo_qgw.xml"/>
     <xi:include href="xml/nc_de_cont.xml"/>
     <section>
       <title>Darkenergy</title>
@@ -239,6 +241,7 @@
       <xi:include href="xml/nc_hiprim_expc.xml"/>
       <xi:include href="xml/nc_hiprim_bpl.xml"/>
       <xi:include href="xml/nc_hiprim_sbpl.xml"/>
+      <xi:include href="xml/nc_hiprim_two_fluids.xml"/>
     </section>
   </chapter>
 
@@ -329,12 +332,13 @@
       <xi:include href="xml/nc_powspec_mnl_halofit.xml"/>
     </section>
     <section>
-      <title> Density Profile</title>
+      <title>Cluster Halo</title>
       <xi:include href="xml/nc_halo_density_profile.xml"/>
       <xi:include href="xml/nc_halo_density_profile_nfw.xml"/>
       <xi:include href="xml/nc_halo_density_profile_einasto.xml"/>
       <xi:include href="xml/nc_halo_density_profile_dk14.xml"/>
       <xi:include href="xml/nc_halo_density_profile_hernquist.xml"/>
+      <xi:include href="xml/nc_halo_position.xml"/>
     </section>
     <section>
       <title>Multiplicity Function</title>
@@ -382,32 +386,34 @@
       <xi:include href="xml/nc_xcor.xml"/>
       <xi:include href="xml/nc_xcor_AB.xml"/>
       <xi:include href="xml/nc_xcor_limber_kernel.xml"/>
-      <xi:include href="xml/nc_xcor_limber_kernel_gal.xml"/>
+      <xi:include href="xml/nc_xcor_limber_kernel_cmb_isw.xml"/>
       <xi:include href="xml/nc_xcor_limber_kernel_CMB_lensing.xml"/>
+      <xi:include href="xml/nc_xcor_limber_kernel_gal.xml"/>
+      <xi:include href="xml/nc_xcor_limber_kernel_tSZ.xml"/>
       <xi:include href="xml/nc_xcor_limber_kernel_weak_lensing.xml"/>
     </section>
     <xi:include href="xml/nc_cluster_abundance.xml"/>
     <xi:include href="xml/nc_cluster_pseudo_counts.xml"/>
     <xi:include href="xml/nc_cor_cluster_cmb_lens_limber.xml"/>
     <section>
-      <title>Galaxy Redshift</title>
-      <xi:include href="xml/nc_galaxy_redshift.xml"/>
-      <xi:include href="xml/nc_galaxy_redshift_spec.xml"/>
-      <xi:include href="xml/nc_galaxy_redshift_spline.xml"/>
-      <xi:include href="xml/nc_galaxy_redshift_gauss.xml"/>
-    </section>	
+      <title>Galaxy Distribution</title>
+      <xi:include href="xml/nc_galaxy_sd_obs_redshift.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_obs_redshift_gauss.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_obs_redshift_spec.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_position.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_position_flat.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_shape.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_shape_gauss.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_true_redshift.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_true_redshift_lsst_srd.xml"/>
+    </section>
     <section>
       <title>Weak Lensing</title>
       <xi:include href="xml/nc_wl_surface_mass_density.xml"/>
       <xi:include href="xml/nc_reduced_shear_cluster_mass.xml"/>
       <xi:include href="xml/nc_reduced_shear_calib.xml"/>
       <xi:include href="xml/nc_reduced_shear_calib_wtg.xml"/>
-      <xi:include href="xml/nc_galaxy_wl.xml"/>
-      <xi:include href="xml/nc_galaxy_wl_dist.xml"/>
-      <xi:include href="xml/nc_galaxy_wl_ellipticity_gauss.xml"/>
-      <xi:include href="xml/nc_galaxy_wl_ellipticity_kde.xml"/>
-      <xi:include href="xml/nc_galaxy_wl_ellipticity_binned.xml"/>
-      <xi:include href="xml/nc_galaxy_wl_proj.xml"/>
+      <xi:include href="xml/nc_galaxy_wl_obs.xml"/>
     </section>
     <section>
       <title>Galaxy ACF</title>
@@ -439,7 +445,6 @@
     <xi:include href="xml/nc_data_cluster_ncounts_gauss.xml"/>
     <xi:include href="xml/nc_data_cluster_pseudo_counts.xml"/>
     <xi:include href="xml/nc_data_cluster_wl.xml"/>
-    <xi:include href="xml/nc_data_reduced_shear_cluster_mass.xml"/>
     <xi:include href="xml/nc_data_planck_lkl.xml"/>
     <xi:include href="xml/nc_data_xcor.xml"/>
     <section>

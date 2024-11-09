@@ -386,10 +386,6 @@ nc_data_cluster_ncounts_gauss_free (NcDataClusterNCountsGauss *ncounts_gauss)
 static void
 _nc_data_cluster_ncounts_gauss_set_size (NcmDataGaussCov *gauss_cov, guint np)
 {
-  NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (gauss_cov);
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
-  const guint cnp                               = ncm_data_gauss_cov_get_size (gauss_cov);
-
   /* Chain up : end */
   NCM_DATA_GAUSS_COV_CLASS (nc_data_cluster_ncounts_gauss_parent_class)->set_size (gauss_cov, np);
 }
@@ -645,7 +641,7 @@ nc_data_cluster_ncounts_gauss_set_lnM_obs_params (NcDataClusterNCountsGauss *nco
  * @ncounts_gauss: a #NcDataClusterNCountsGauss
  * @on: Whether the data has super sample covariance.
  *
- * Sets array of #Set if the data has super sample covariance.
+ * Sets array of Set if the data has super sample covariance.
  *
  */
 void
@@ -696,7 +692,7 @@ nc_data_cluster_ncounts_gauss_set_resample_s_matrix (NcDataClusterNCountsGauss *
  * @ncounts_gauss: a #NcDataClusterNCountsGauss
  * @on: Whether the covariance matrix is fixed or not.
  *
- * Sets array of #Set if the data covariance matrix is fixed.
+ * Sets array of Set if the data covariance matrix is fixed.
  *
  */
 

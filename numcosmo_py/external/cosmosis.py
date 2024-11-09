@@ -64,8 +64,7 @@ class NonLinearMatterPowerSpectrum(str, Enum):
 
 
 def convert_parameter(p: Parameter, required_parameters: List[str]) -> Ncm.SParam:
-    """Converts a Cosmosis parameter to a NumCosmo parameter."""
-
+    """Convert a Cosmosis parameter to a NumCosmo parameter."""
     matched_name = next(
         (
             parameter_name
@@ -114,8 +113,9 @@ def convert_single_model(
     model_name: str,
     parameters: List[Parameter],
 ) -> Tuple[Ncm.ModelBuilder, Ncm.Model]:
-    """Converts a single sampling parameters section from a Cosmosis ini file
-    to a NumCosmo model.
+    """Convert a single sampling parameters section.
+
+    Convert from a Cosmosis ini file to a NumCosmo model.
 
     Args:
         sampling_parameters_section (str): The name of the sampling parameters
@@ -126,7 +126,6 @@ def convert_single_model(
         Tuple[Ncm.ModelBuilder, Ncm.Model]: A tuple containing the model builder and
         the model.
     """
-
     model_builder = Ncm.ModelBuilder.new(
         Ncm.Model,
         model_name,
@@ -155,9 +154,10 @@ def convert_models(
     model_builders: Ncm.ObjDictStr,
     mset: Ncm.MSet,
 ) -> None:
-    """Converts a list of sampling parameters sections from a Cosmosis ini file
-    to NumCosmo models."""
+    """Convert a list of sampling parameters sections.
 
+    Convert from a Cosmosis ini file to NumCosmo models.
+    """
     assert len(sampling_parameters_sections) == len(model_names_list)
     for model_name, sampling_parameters_section in zip(
         model_names_list, sampling_parameters_sections
@@ -183,8 +183,9 @@ def convert_single_likelihood(
     mset: Ncm.MSet,
     likelihood: Ncm.Likelihood,
 ) -> None:
-    """Converts a single likelihood from a Cosmosis ini file to a NumCosmo
-    likelihood.
+    """Convert a single likelihood.
+
+    Convert from a Cosmosis ini file to a NumCosmo likelihood.
 
     Args:
         ini (Inifile): The Cosmosis ini file.
@@ -254,8 +255,12 @@ def convert_single_likelihood(
     likelihood.peek_dataset().append_data(firecrown_data)
 
     firecrown_likelihood = numcosmo_factory.get_firecrown_likelihood()
+    firecrown_tools = numcosmo_factory.data.tools
     required_parameters = list(
-        firecrown_likelihood.required_parameters().get_params_names()
+        (
+            firecrown_likelihood.required_parameters()
+            + firecrown_tools.required_parameters()
+        ).get_params_names()
     )
 
     # Converts the sampling parameters sections to NumCosmo models.
@@ -287,9 +292,10 @@ def create_numcosmo_mapping(
     require_nonlinear_pk: bool = False,
     reltol: float = 1.0e-4,
 ) -> MappingNumCosmo:
-    """Creates a NumCosmo mapping to be used in the likelihoods.
-    converted from Cosmosis."""
+    """Create a NumCosmo mapping.
 
+    Mapping to be used in the likelihoods converted from Cosmosis.
+    """
     ps_ml = None
     ps_mnl = None
     dist = Nc.Distance.new(distance_max_z)
@@ -348,9 +354,11 @@ def convert_cosmology(
     params_datablock: DataBlock,
     parameter_dict: Dict[Tuple[str, str], Parameter],
 ) -> Nc.HICosmo:
-    """Converts the cosmology objects described in a Cosmosis ini file to a NumCosmo
-    cosmology."""
+    """Convert the cosmology objects.
 
+    The function converts the cosmological parameters described in a Cosmosis ini file
+    to a NumCosmo cosmology.
+    """
     COSMOLOGY_SECTION = "cosmological_parameters"
     params_dict: Dict[str, float] = {}
 
@@ -408,13 +416,14 @@ def convert_likelihoods(
     mapping: Optional[MappingNumCosmo] = None,
     mute_cosmosis: bool = False,
 ) -> Tuple[Ncm.ObjDictStr, Ncm.MSet, Ncm.Likelihood]:
-    """Converts the likelihoods from a Cosmosis ini file to NumCosmo
+    """Convert the likelihoods.
+
+    The function converts the likelihoods from a Cosmosis ini file to NumCosmo
     likelihoods.
 
     Args:
         inifile (Path): Path to the Cosmosis ini file.
     """
-
     # Loads the ini file.
     ini = Inifile(inifile)
     if mute_cosmosis:

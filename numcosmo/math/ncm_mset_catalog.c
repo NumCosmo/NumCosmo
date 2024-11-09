@@ -328,7 +328,7 @@ _ncm_mset_catalog_constructed (GObject *object)
       {
         NcmSerialize *ser = ncm_serialize_global ();
 
-        self->mset = ncm_mset_load (self->mset_file, ser);
+        self->mset = ncm_mset_load (self->mset_file, ser, NULL);
         ncm_serialize_free (ser);
       }
 
@@ -529,7 +529,7 @@ _ncm_mset_catalog_dispose (GObject *object)
   {
     NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
 
-    ncm_mset_save (self->mset, ser, self->mset_file, TRUE);
+    ncm_mset_save (self->mset, ser, self->mset_file, TRUE, NULL);
     ncm_serialize_free (ser);
   }
 
@@ -1304,7 +1304,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
         }
         else
         {
-          NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (self->mset, d_colname);
+          NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (self->mset, d_colname, NULL);
 
           if (pi == NULL)
           {
@@ -1312,7 +1312,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
           }
           else
           {
-            NcmParamType ftype = ncm_mset_param_get_ftype (self->mset, pi->mid, pi->pid);
+            NcmParamType ftype = ncm_mset_param_get_ftype (self->mset, pi->mid, pi->pid, NULL);
 
             if (ftype != NCM_PARAM_TYPE_FREE)
             {
@@ -1395,7 +1395,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 
       for (i = 0; i < remap_remove->len; i++)
       {
-        NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (self->mset, g_ptr_array_index (remap_remove, i));
+        NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (self->mset, g_ptr_array_index (remap_remove, i), NULL);
 
         if (pi == NULL)
         {
@@ -1526,7 +1526,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
   {
     NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
 
-    ncm_mset_save (self->mset, ser, self->mset_file, TRUE);
+    ncm_mset_save (self->mset, ser, self->mset_file, TRUE, NULL);
     ncm_serialize_free (ser);
   }
 }
@@ -2598,7 +2598,7 @@ gboolean
 ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, guint *col_index)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-  const NcmMSetPIndex *pi     = ncm_mset_fparam_get_pi_by_name (self->mset, name);
+  const NcmMSetPIndex *pi     = ncm_mset_fparam_get_pi_by_name (self->mset, name, NULL);
 
   if (pi == NULL)
   {
@@ -2766,7 +2766,7 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
 
   if (self->nchains > 1)
   {
-    if ((self->cur_id + 1) % self->nchains + 1 == self->nchains)
+    if ((self->cur_id + 1) % self->nchains == 0)
     {
       NcmVector *e_mean = ncm_stats_vec_peek_mean (self->e_stats);
       const guint len   = ncm_vector_len (e_mean);
@@ -2777,6 +2777,8 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
       {
         ncm_vector_set (e_var, i, ncm_stats_vec_get_var (self->e_stats, i));
       }
+
+      g_assert_cmpuint (ncm_stats_vec_nitens (self->e_stats), ==, self->nchains);
 
       ncm_stats_vec_append (self->e_mean_stats, e_mean, TRUE);
       g_ptr_array_add (self->e_var_array, e_var);
@@ -3573,7 +3575,7 @@ _ncm_mset_catalog_get_post_lnnorm_hyperbox (NcmMSetCatalog *mcat, gboolean use_b
   {
     NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new (fparams_len);
     NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (fparams_len);
-    NcmMSet *mset_mvnd             = ncm_mset_new (model_mvnd, NULL);
+    NcmMSet *mset_mvnd             = ncm_mset_new (model_mvnd, NULL, NULL);
 
     ncm_data_gauss_cov_mvnd_set_cov_mean (data_mvnd, mean, cov);
 
@@ -4821,7 +4823,7 @@ ncm_mset_catalog_calc_param_distrib (NcmMSetCatalog *mcat, const NcmMSetPIndex *
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
   guint fpi                   = ncm_mset_fparam_get_fpi (self->mset, pi->mid, pi->pid);
 
-  g_assert (ncm_mset_param_get_ftype (self->mset, pi->mid, pi->pid) == NCM_PARAM_TYPE_FREE);
+  g_assert (ncm_mset_param_get_ftype (self->mset, pi->mid, pi->pid, NULL) == NCM_PARAM_TYPE_FREE);
 
   return _ncm_mset_catalog_calc_distrib (mcat, fpi + self->nadd_vals, mtype);
 }
@@ -4861,6 +4863,7 @@ _ncm_mset_catalog_calc_ensemble_evol (NcmMSetCatalog *mcat, guint vi, guint nste
   NcmVector *pv               = ncm_vector_new (nsteps);
   const gdouble pmin          = ncm_vector_get (self->params_min, vi);
   const gdouble pmax          = ncm_vector_get (self->params_max, vi);
+  const guint div             = max_t > 100 ? max_t / 100 : 1;
 
   guint i, t;
 
@@ -4910,14 +4913,13 @@ _ncm_mset_catalog_calc_ensemble_evol (NcmMSetCatalog *mcat, guint vi, guint nste
 
     ncm_stats_dist1d_epdf_reset (epdf1d);
 
-    if (t % (max_t / 100) == 0)
-      if (mtype > NCM_FIT_RUN_MSGS_NONE)
-        ncm_message ("=");
+    if ((mtype > NCM_FIT_RUN_MSGS_NONE) && (t % div == 0))
+      ncm_message ("=");
   }
 
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
   {
-    if (t % (max_t / 100) != 0)
+    if (t % div != 0)
       ncm_message ("=");
 
     ncm_message ("|\n");
@@ -4953,7 +4955,7 @@ ncm_mset_catalog_calc_param_ensemble_evol (NcmMSetCatalog *mcat, const NcmMSetPI
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
   guint fpi                   = ncm_mset_fparam_get_fpi (self->mset, pi->mid, pi->pid);
 
-  g_assert (ncm_mset_param_get_ftype (self->mset, pi->mid, pi->pid) == NCM_PARAM_TYPE_FREE);
+  g_assert (ncm_mset_param_get_ftype (self->mset, pi->mid, pi->pid, NULL) == NCM_PARAM_TYPE_FREE);
 
   _ncm_mset_catalog_calc_ensemble_evol (mcat, fpi + self->nadd_vals, nsteps, mtype, pval, t_evol);
 }

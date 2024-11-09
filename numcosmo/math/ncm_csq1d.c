@@ -1622,8 +1622,7 @@ _ncm_csq1d_prepare_integrator_Um (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws)
 static gint
 _ncm_csq1d_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) f_data;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
+  NcmCSQ1DWS *ws = (NcmCSQ1DWS *) f_data;
 
   const gdouble alpha  = NV_Ith_S (y, 0);
   const gdouble dgamma = NV_Ith_S (y, 1);
@@ -1642,12 +1641,9 @@ _ncm_csq1d_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 static gint
 _ncm_csq1d_f_Up (realtype t, N_Vector y_Up, N_Vector ydot, gpointer f_data)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) f_data;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-
-  const gdouble chi = NV_Ith_S (y_Up, 0);
-  const gdouble Up  = NV_Ith_S (y_Up, 1);
-
+  NcmCSQ1DWS *ws          = (NcmCSQ1DWS *) f_data;
+  const gdouble chi       = NV_Ith_S (y_Up, 0);
+  const gdouble Up        = NV_Ith_S (y_Up, 1);
   const gdouble m         = ncm_csq1d_eval_m (ws->csq1d, ws->model, t);
   const gdouble nu2       = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t);
   const gdouble exp_Up    = exp (Up);
@@ -1662,12 +1658,9 @@ _ncm_csq1d_f_Up (realtype t, N_Vector y_Up, N_Vector ydot, gpointer f_data)
 static gint
 _ncm_csq1d_f_Um (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) f_data;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-
-  const gdouble chi = NV_Ith_S (y, 0);
-  const gdouble Um  = NV_Ith_S (y, 1);
-
+  NcmCSQ1DWS *ws          = (NcmCSQ1DWS *) f_data;
+  const gdouble chi       = NV_Ith_S (y, 0);
+  const gdouble Um        = NV_Ith_S (y, 1);
   const gdouble m         = ncm_csq1d_eval_m (ws->csq1d, ws->model, t);
   const gdouble nu2       = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t);
   const gdouble exp_Um    = exp (Um);
@@ -1682,14 +1675,11 @@ _ncm_csq1d_f_Um (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 static gint
 _ncm_csq1d_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) jac_data;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-
+  NcmCSQ1DWS *ws       = (NcmCSQ1DWS *) jac_data;
   const gdouble alpha  = NV_Ith_S (y, 0);
   const gdouble dgamma = NV_Ith_S (y, 1);
-
-  const gdouble nu    = ncm_csq1d_eval_nu (ws->csq1d, ws->model, t);
-  const gdouble twonu = 2.0 * nu;
+  const gdouble nu     = ncm_csq1d_eval_nu (ws->csq1d, ws->model, t);
+  const gdouble twonu  = 2.0 * nu;
 
   /* - twonu * sinh (dgamma); */
   SM_ELEMENT_D (J, 0, 0) = 0.0;
@@ -1706,12 +1696,9 @@ _ncm_csq1d_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_dat
 static gint
 _ncm_csq1d_J_Up (realtype t, N_Vector y_Up, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) jac_data;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-
-  const gdouble chi = NV_Ith_S (y_Up, 0);
-  const gdouble Up  = NV_Ith_S (y_Up, 1);
-
+  NcmCSQ1DWS *ws          = (NcmCSQ1DWS *) jac_data;
+  const gdouble chi       = NV_Ith_S (y_Up, 0);
+  const gdouble Up        = NV_Ith_S (y_Up, 1);
   const gdouble nu2       = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t);
   const gdouble m         = ncm_csq1d_eval_m (ws->csq1d, ws->model, t);
   const gdouble exp_Up    = exp (Up);
@@ -1731,12 +1718,9 @@ _ncm_csq1d_J_Up (realtype t, N_Vector y_Up, N_Vector fy, SUNMatrix J, gpointer j
 static gint
 _ncm_csq1d_J_Um (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) jac_data;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-
-  const gdouble chi = NV_Ith_S (y, 0);
-  const gdouble Um  = NV_Ith_S (y, 1);
-
+  NcmCSQ1DWS *ws          = (NcmCSQ1DWS *) jac_data;
+  const gdouble chi       = NV_Ith_S (y, 0);
+  const gdouble Um        = NV_Ith_S (y, 1);
   const gdouble m         = ncm_csq1d_eval_m (ws->csq1d, ws->model, t);
   const gdouble nu2       = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t);
   const gdouble exp_Um    = exp (Um);
@@ -1922,7 +1906,7 @@ _ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, GArray *as
   while (TRUE)
   {
     gdouble asinh_t;
-    gdouble chim, chi, dgamma, gamma, Up, xi, m, exp_Up, chim_t;
+    gdouble chi, dgamma, gamma, Up, xi;
     gboolean is_finished = FALSE;
 
     flag = CVode (self->cvode_Up, self->tf, self->y_Up, &self->t, CV_ONE_STEP);
@@ -1930,14 +1914,10 @@ _ncm_csq1d_evol_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, NcmModel *model, GArray *as
 
     asinh_t = asinh (self->t);
     xi      = ncm_csq1d_eval_xi (csq1d, model, self->t);
-    m       = ncm_csq1d_eval_m (csq1d, model, self->t);
     chi     = NV_Ith_S (self->y_Up, 0);
     Up      = NV_Ith_S (self->y_Up, 1);
-    chim    = m * chi;
     gamma   = Up - 0.5 * log1p (chi * chi);
     dgamma  = gamma - xi;
-    exp_Up  = exp (Up);
-    chim_t  = chim / self->t;
 
     if (PRINT_EVOL)
     {
@@ -2253,7 +2233,7 @@ _ncm_csq1d_prepare_adiab (NcmCSQ1D *csq1d, NcmModel *model)
   else
   {
     NcmCSQ1DState state;
-    gdouble zeta_k_tau, alpha_reltol, dgamma_reltol;
+    gdouble alpha_reltol, dgamma_reltol;
 
     /* If the final time is greater than the vacuum time, we need to compute the numerical solution
      * from the vacuum time to the final time. Otherwise, we just need to compute the adiabatic
@@ -2478,9 +2458,8 @@ ncm_csq1d_find_adiab_time_limit (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, g
 static gdouble
 _ncm_csq1d_F1_func (const gdouble t, gpointer user_data)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) user_data;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-  const gdouble F1             = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, t);
+  NcmCSQ1DWS *ws   = (NcmCSQ1DWS *) user_data;
+  const gdouble F1 = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, t);
 
   return F1;
 }
@@ -2488,9 +2467,8 @@ _ncm_csq1d_F1_func (const gdouble t, gpointer user_data)
 static gdouble
 _ncm_csq1d_F2_func (const gdouble t, gpointer user_data)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) user_data;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-  const gdouble F2             = ncm_csq1d_eval_F2 (ws->csq1d, ws->model, t);
+  NcmCSQ1DWS *ws   = (NcmCSQ1DWS *) user_data;
+  const gdouble F2 = ncm_csq1d_eval_F2 (ws->csq1d, ws->model, t);
 
   return F2;
 }
@@ -2498,9 +2476,8 @@ _ncm_csq1d_F2_func (const gdouble t, gpointer user_data)
 static gdouble
 _ncm_csq1d_lnnu_func (const gdouble t, gpointer user_data)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) user_data;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-  const gdouble nu             = ncm_csq1d_eval_nu (ws->csq1d, ws->model, t);
+  NcmCSQ1DWS *ws   = (NcmCSQ1DWS *) user_data;
+  const gdouble nu = ncm_csq1d_eval_nu (ws->csq1d, ws->model, t);
 
   return log (nu);
 }
@@ -2519,7 +2496,11 @@ static gdouble _ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data);
  * @t_Bl: (out): the value of $t_{B,\mathrm{lower}}$
  * @t_Bu: (out): the value of $t_{B,\mathrm{upper}}$
  *
- * Computes the time $t_\mathrm{min}$ that minimizes $F_1(t)$.
+ * Computes the time $t_\mathrm{min}$ that minimizes $F_1(t)$. Also computes the border
+ * values $t_{B,\mathrm{lower}}$ and $t_{B,\mathrm{upper}}$ such that
+ * $|F_1(t_{B,\mathrm{lower}}) - F_1(t_\mathrm{min})| = \epsilon$ for
+ * $t_{B,\mathrm{lower}} < t_\mathrm{min}$ and $|F_1(t_{B,\mathrm{upper}}) -
+ * F_1(t_\mathrm{min})| = \epsilon$ for $t_{B,\mathrm{upper}} > t_\mathrm{min}$.
  *
  * Returns: the time $t_\mathrm{min}$.
  */
@@ -2668,9 +2649,8 @@ ncm_csq1d_find_adiab_max (NcmCSQ1D *csq1d, NcmModel *model, gdouble t0, gdouble 
 static gdouble
 _ncm_csq1d_abs_F1_asinht (gdouble at, gpointer user_data)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) user_data;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-  const gdouble F1             = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, sinh (at));
+  NcmCSQ1DWS *ws   = (NcmCSQ1DWS *) user_data;
+  const gdouble F1 = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, sinh (at));
 
   return fabs (F1);
 }
@@ -2678,9 +2658,8 @@ _ncm_csq1d_abs_F1_asinht (gdouble at, gpointer user_data)
 static gdouble
 _ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) user_data;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-  const gdouble F1             = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, sinh (at));
+  NcmCSQ1DWS *ws   = (NcmCSQ1DWS *) user_data;
+  const gdouble F1 = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, sinh (at));
 
   return fabs ((F1 - ws->F1_min) / ws->reltol) - 1.0;
 }
@@ -2688,9 +2667,8 @@ _ncm_csq1d_ln_abs_F1_eps_asinht (gdouble at, gpointer user_data)
 static void
 _ncm_csq1d_compute_adiab2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state, gdouble *alpha_reltol, gdouble *dgamma_reltol)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble F1             = ncm_csq1d_eval_F1 (csq1d, model, t);
-  const gdouble F2             = ncm_csq1d_eval_F2 (csq1d, model, t);
+  const gdouble F1 = ncm_csq1d_eval_F1 (csq1d, model, t);
+  const gdouble F2 = ncm_csq1d_eval_F2 (csq1d, model, t);
 
   state->frame = NCM_CSQ1D_FRAME_ADIAB1;
   state->t     = t;
@@ -2831,9 +2809,8 @@ ncm_csq1d_compute_adiab_frame (NcmCSQ1D *csq1d, NcmModel *model, const NcmCSQ1DF
 static void
 _ncm_csq1d_eval_adiab2_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, gdouble *alpha, gdouble *dgamma, gdouble *alpha_reltol, gdouble *dgamma_reltol)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble F1             = ncm_csq1d_eval_F1 (csq1d, model, t);
-  const gdouble F2             = ncm_csq1d_eval_F2 (csq1d, model, t);
+  const gdouble F1 = ncm_csq1d_eval_F1 (csq1d, model, t);
+  const gdouble F2 = ncm_csq1d_eval_F2 (csq1d, model, t);
 
   alpha[0]  = +F1;
   dgamma[0] = -F2;
@@ -2905,9 +2882,8 @@ _ncm_csq1d_eval_adiab_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdoubl
 static void
 _ncm_csq1d_compute_nonadiab (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble p1             = ncm_csq1d_eval_int_qmnu2 (csq1d, model, t);
-  const gdouble r1             = 0.5 * ncm_csq1d_eval_int_mnu2 (csq1d, model, t);
+  const gdouble p1 = ncm_csq1d_eval_int_qmnu2 (csq1d, model, t);
+  const gdouble r1 = 0.5 * ncm_csq1d_eval_int_mnu2 (csq1d, model, t);
 
   ncm_csq1d_state_set_up (state, NCM_CSQ1D_FRAME_NONADIAB1, t, +2.0 * r1, -2.0 * p1);
 }
@@ -3073,9 +3049,8 @@ _ncm_csq1d_ct_g0g1 (const gdouble alpha, const gdouble gamma, const gdouble p, g
 static void
 _ncm_csq1d_change_adiab1_to_orig (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble t              = state->t;
-  const gdouble xi             = ncm_csq1d_eval_xi (csq1d, model, t);
+  const gdouble t  = state->t;
+  const gdouble xi = ncm_csq1d_eval_xi (csq1d, model, t);
 
   ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_ORIG, t, state->alpha, state->gamma + xi);
 }
@@ -3083,9 +3058,8 @@ _ncm_csq1d_change_adiab1_to_orig (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DStat
 static void
 _ncm_csq1d_change_orig_to_adiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble t              = state->t;
-  const gdouble xi             = ncm_csq1d_eval_xi (csq1d, model, t);
+  const gdouble t  = state->t;
+  const gdouble xi = ncm_csq1d_eval_xi (csq1d, model, t);
 
   ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_ADIAB1, t, state->alpha, state->gamma - xi);
 }
@@ -3093,12 +3067,11 @@ _ncm_csq1d_change_orig_to_adiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DStat
 static void
 _ncm_csq1d_change_adiab2_to_adiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble t              = state->t;
-  const gdouble F1             = ncm_csq1d_eval_F1 (csq1d, model, t);
-  const gdouble xi1            = atanh (-F1);
-  gdouble alphap               = 0.0;
-  gdouble gammap               = 0.0;
+  const gdouble t   = state->t;
+  const gdouble F1  = ncm_csq1d_eval_F1 (csq1d, model, t);
+  const gdouble xi1 = atanh (-F1);
+  gdouble alphap    = 0.0;
+  gdouble gammap    = 0.0;
 
   if (fabs (F1) >= 1.0)
     g_error ("ncm_csq1d_change_adiab2_to_adiab1: |F1| >= 1 at t = % 22.15e", t);
@@ -3110,12 +3083,11 @@ _ncm_csq1d_change_adiab2_to_adiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DSt
 static void
 _ncm_csq1d_change_adiab1_to_adiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble t              = state->t;
-  const gdouble F1             = ncm_csq1d_eval_F1 (csq1d, model, t);
-  const gdouble xi1            = atanh (-F1);
-  gdouble alphap               = 0.0;
-  gdouble gammap               = 0.0;
+  const gdouble t   = state->t;
+  const gdouble F1  = ncm_csq1d_eval_F1 (csq1d, model, t);
+  const gdouble xi1 = atanh (-F1);
+  gdouble alphap    = 0.0;
+  gdouble gammap    = 0.0;
 
   if (fabs (F1) >= 1.0)
     g_error ("ncm_csq1d_change_adiab1_to_adiab2: |F1| >= 1 at t = % 22.15e", t);
@@ -3127,11 +3099,10 @@ _ncm_csq1d_change_adiab1_to_adiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DSt
 static void
 _ncm_csq1d_change_nonadiab1_to_orig (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble t              = state->t;
-  const gdouble int_1_m        = ncm_csq1d_eval_int_1_m (csq1d, model, t);
-  const gdouble q0             = int_1_m;
-  const gdouble q1             = ncm_csq1d_eval_int_q2mnu2 (csq1d, model, t);
+  const gdouble t       = state->t;
+  const gdouble int_1_m = ncm_csq1d_eval_int_1_m (csq1d, model, t);
+  const gdouble q0      = int_1_m;
+  const gdouble q1      = ncm_csq1d_eval_int_q2mnu2 (csq1d, model, t);
   gdouble chi, Up;
 
   ncm_csq1d_state_get_up (state, &chi, &Up);
@@ -3141,11 +3112,10 @@ _ncm_csq1d_change_nonadiab1_to_orig (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DS
 static void
 _ncm_csq1d_change_orig_to_nonadiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble t              = state->t;
-  const gdouble int_1_m        = ncm_csq1d_eval_int_1_m (csq1d, model, t);
-  const gdouble q0             = int_1_m;
-  const gdouble q1             = ncm_csq1d_eval_int_q2mnu2 (csq1d, model, t);
+  const gdouble t       = state->t;
+  const gdouble int_1_m = ncm_csq1d_eval_int_1_m (csq1d, model, t);
+  const gdouble q0      = int_1_m;
+  const gdouble q1      = ncm_csq1d_eval_int_q2mnu2 (csq1d, model, t);
   gdouble chi, Up;
 
   ncm_csq1d_state_get_up (state, &chi, &Up);
@@ -3155,8 +3125,7 @@ _ncm_csq1d_change_orig_to_nonadiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DS
 static void
 _ncm_csq1d_change_nonadiab1_to_nonadiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble t              = state->t;
+  const gdouble t = state->t;
 
   /* p1 g1 */
   {
@@ -3186,8 +3155,7 @@ _ncm_csq1d_change_nonadiab1_to_nonadiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmC
 static void
 _ncm_csq1d_change_nonadiab2_to_nonadiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-  const gdouble t              = state->t;
+  const gdouble t = state->t;
 
   /* r1 g2 */
   {
@@ -3217,8 +3185,6 @@ _ncm_csq1d_change_nonadiab2_to_nonadiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmC
 static void
 _ncm_csq1d_change_frame_to_orig (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-
   switch (state->frame)
   {
     case NCM_CSQ1D_FRAME_ORIG:
@@ -3246,8 +3212,6 @@ _ncm_csq1d_change_frame_to_orig (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState
 static void
 _ncm_csq1d_change_frame_to_adiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-
   switch (state->frame)
   {
     case NCM_CSQ1D_FRAME_ORIG:
@@ -3276,8 +3240,6 @@ _ncm_csq1d_change_frame_to_adiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DSta
 static void
 _ncm_csq1d_change_frame_to_adiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-
   switch (state->frame)
   {
     case NCM_CSQ1D_FRAME_ORIG:
@@ -3309,8 +3271,6 @@ _ncm_csq1d_change_frame_to_adiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DSta
 static void
 _ncm_csq1d_change_frame_to_nonadiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-
   switch (state->frame)
   {
     case NCM_CSQ1D_FRAME_ORIG:
@@ -3339,8 +3299,6 @@ _ncm_csq1d_change_frame_to_nonadiab1 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1D
 static void
 _ncm_csq1d_change_frame_to_nonadiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-
   switch (state->frame)
   {
     case NCM_CSQ1D_FRAME_ORIG:
@@ -3385,8 +3343,6 @@ _ncm_csq1d_change_frame_to_nonadiab2 (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1D
 NcmCSQ1DState *
 ncm_csq1d_change_frame (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state, NcmCSQ1DFrame frame)
 {
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
-
   switch (frame)
   {
     case NCM_CSQ1D_FRAME_ORIG:
@@ -3483,14 +3439,11 @@ _ncm_csq1d_root_Prop (realtype t, N_Vector y, realtype *gout, gpointer f_data)
 static gint
 _ncm_csq1d_f_Prop (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) f_data;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-
-  const gdouble a = NV_Ith_S (y, 0);
-  const gdouble b = NV_Ith_S (y, 1);
-  const gdouble c = NV_Ith_S (y, 2);
-  const gdouble h = NV_Ith_S (y, 3);
-
+  NcmCSQ1DWS *ws        = (NcmCSQ1DWS *) f_data;
+  const gdouble a       = NV_Ith_S (y, 0);
+  const gdouble b       = NV_Ith_S (y, 1);
+  const gdouble c       = NV_Ith_S (y, 2);
+  const gdouble h       = NV_Ith_S (y, 3);
   const gdouble m       = ncm_csq1d_eval_m (ws->csq1d, ws->model, t);
   const gdouble nu2     = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t);
   const gdouble mnu2    = m * nu2;
@@ -3520,9 +3473,7 @@ _ncm_csq1d_f_Prop (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 static gint
 _ncm_csq1d_J_Prop (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) jac_data;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-
+  NcmCSQ1DWS *ws        = (NcmCSQ1DWS *) jac_data;
   const gdouble m       = ncm_csq1d_eval_m (ws->csq1d, ws->model, t);
   const gdouble nu2     = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t);
   const gdouble mnu2    = m * nu2;
@@ -3697,9 +3648,7 @@ ncm_csq1d_prepare_prop (NcmCSQ1D *csq1d, NcmModel *model, const gdouble ti, cons
 static gdouble
 _ncm_csq1d_prepare_prop_mnu2 (gdouble t, gpointer params)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) params;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-
+  NcmCSQ1DWS *ws    = (NcmCSQ1DWS *) params;
   const gdouble m   = ncm_csq1d_eval_m (ws->csq1d, ws->model, t);
   const gdouble nu2 = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t);
 
@@ -3709,9 +3658,7 @@ _ncm_csq1d_prepare_prop_mnu2 (gdouble t, gpointer params)
 static gdouble
 _ncm_csq1d_prepare_prop_qmnu2 (gdouble t, gpointer params)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) params;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-
+  NcmCSQ1DWS *ws     = (NcmCSQ1DWS *) params;
   const gdouble m    = ncm_csq1d_eval_m (ws->csq1d, ws->model, t);
   const gdouble nu2  = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t);
   const gdouble mnu2 = m * nu2;
@@ -3732,9 +3679,7 @@ _ncm_csq1d_prepare_prop_qmnu2 (gdouble t, gpointer params)
 static gdouble
 _ncm_csq1d_prepare_prop_q2mnu2 (gdouble t, gpointer params)
 {
-  NcmCSQ1DWS *ws               = (NcmCSQ1DWS *) params;
-  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (ws->csq1d);
-
+  NcmCSQ1DWS *ws     = (NcmCSQ1DWS *) params;
   const gdouble m    = ncm_csq1d_eval_m (ws->csq1d, ws->model, t);
   const gdouble nu2  = ncm_csq1d_eval_nu2 (ws->csq1d, ws->model, t);
   const gdouble mnu2 = m * nu2;
@@ -3894,6 +3839,7 @@ _ncm_csq1d_evolve_prop_vector (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *
  * @initial_state: initial state
  * @frame: frame
  * @t: time $t$
+ * @state: a #NcmCSQ1DState to store the result
  *
  * Uses the propagator to evolve the state vector @initial_state to time $t$ and
  * at frame @frame.

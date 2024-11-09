@@ -61,6 +61,8 @@ static gchar *_nc_data_planck_lkl_files[NC_DATA_PLANCK_LKL_TYPE_LENGTH] = {
   "baseline/plc_3.0/hi_l/plik/plik_rd12_HM_v22b_TTTEEE.clik",
   "baseline/plc_3.0/hi_l/plik_lite/plik_lite_v22_TT.clik",
   "baseline/plc_3.0/hi_l/plik_lite/plik_lite_v22_TTTEEE.clik",
+  "baseline/plc_3.0/lensing/smicadx12_Dec5_ftl_mv2_ndclpp_p_teb_consext8.clik_lensing",
+  "baseline/plc_3.0/lensing/smicadx12_Dec5_ftl_mv2_ndclpp_p_teb_consext8_CMBmarged.clik_lensing",
 };
 
 struct _NcDataPlanckLKL
@@ -112,14 +114,14 @@ static void _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar
 #define CLIK_OBJ(obj) ((clik_object *) (obj))
 #define CLIK_LENS_OBJ(obj) ((clik_lensing_object *) (obj))
 
-#define CLIK_CHECK_ERROR(str, err) \
-        G_STMT_START { \
-          if (isError (err)) \
-          { \
-            gchar error_msg[4096]; \
-            stringError (error_msg, (err)); \
+#define CLIK_CHECK_ERROR(str, err)                 \
+        G_STMT_START {                             \
+          if (isError (err))                       \
+          {                                        \
+            gchar error_msg[4096];                 \
+            stringError (error_msg, (err));        \
             g_error ("%s: %s.", (str), error_msg); \
-          } \
+          }                                        \
         } G_STMT_END
 
 static void
@@ -412,7 +414,7 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       for (i = 0; i < clik->nparams; i++)
       {
         guint pi        = 0;
-        gboolean pfound = ncm_model_param_index_from_name (NCM_MODEL (pfi), clik->pnames[i], &pi);
+        gboolean pfound = ncm_model_param_index_from_name (NCM_MODEL (pfi), clik->pnames[i], &pi, NULL);
 
         if (!pfound)
         {
@@ -485,7 +487,7 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
       ncm_mset_pretty_log (mset);
       ncm_vector_log_vals (clik->data_params, "cl and vals: ", "% 22.15g", TRUE);
-      ncm_mset_save (mset, ser, "debug.mset", TRUE);
+      ncm_mset_save (mset, ser, "debug.mset", TRUE, NULL);
       g_error ("_nc_data_planck_lkl_m2lnL_val: non-finite Cls or parameters.");
     }
 
@@ -742,7 +744,8 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
           CLIK_CHECK_ERROR ("_nc_data_planck_lkl_m2lnL_val[clik_compute]", err);
         }
 
-        ncm_assert_cmpdouble_e (check_m2lnL, ==, plik->check_m2lnL, 1.0e-4, 0.0);
+        if (check_value != 0.0)
+          ncm_assert_cmpdouble_e (check_m2lnL, ==, plik->check_m2lnL, 1.0e-4, 0.0);
       }
 
       g_free (chkp);
@@ -945,19 +948,6 @@ nc_data_planck_lkl_set_hipert_boltzmann (NcDataPlanckLKL *plik, NcHIPertBoltzman
   }
 }
 
-static void
-_nc_data_planck_lkl_copy_prog (goffset current_num_bytes, goffset total_num_bytes, gpointer user_data)
-{
-  gint *old_prog = (gint *) user_data;
-  gint prog      = (100 * current_num_bytes) / total_num_bytes;
-
-  if (prog > *old_prog)
-  {
-    ncm_message ("# % 3d%%\r", prog);
-    *old_prog = prog;
-  }
-}
-
 /**
  * nc_data_planck_lkl_download_baseline:
  * @dir: a directory
@@ -976,7 +966,6 @@ nc_data_planck_lkl_download_baseline (const gchar *dir)
   const gchar *url_str = "https://github.com/NumCosmo/NumCosmo/releases/download/datafile-release-v1.0.0/COM_Likelihood_Data-baseline_R3.00.tar.gz";
   gchar *full_filename = g_build_filename (dir, file, NULL);
   GError *error        = NULL;
-  gint prog            = 0;
 
   ncm_message ("# Downloading file [%s]...\n", file);
 

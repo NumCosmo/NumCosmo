@@ -85,8 +85,7 @@ ncm_prior_gauss_init (NcmPriorGauss *pg)
 static void
 _ncm_prior_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmPriorGauss *pg                 = NCM_PRIOR_GAUSS (object);
-  NcmPriorGaussPrivate * const self = ncm_prior_gauss_get_instance_private (pg);
+  NcmPriorGauss *pg = NCM_PRIOR_GAUSS (object);
 
   g_return_if_fail (NCM_IS_PRIOR_GAUSS (object));
 
@@ -110,9 +109,7 @@ _ncm_prior_gauss_set_property (GObject *object, guint prop_id, const GValue *val
 static void
 _ncm_prior_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcmPriorGauss *pg                 = NCM_PRIOR_GAUSS (object);
-  NcmPriorGaussPrivate * const self = ncm_prior_gauss_get_instance_private (pg);
-
+  NcmPriorGauss *pg = NCM_PRIOR_GAUSS (object);
 
   g_return_if_fail (NCM_IS_PRIOR_GAUSS (object));
 

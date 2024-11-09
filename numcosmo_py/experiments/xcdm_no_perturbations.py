@@ -21,8 +21,10 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-""" Experiments the XCDM model using likelihoods that do not
-depend on perturbations. """
+"""XCDM model no perturbations experiment.
+
+Experiments using the XCDM model and likelihoods that do not depend on perturbations.
+"""
 
 import os
 from typing import Optional
@@ -39,9 +41,9 @@ from numcosmo_py.datasets.no_perturbations import (
     SNIaID,
     BAOID,
     HID,
-    gen_snia_likelihood,
-    gen_bao_likelihood,
-    gen_h_likelihood,
+    add_snia_likelihood,
+    add_bao_likelihood,
+    add_h_likelihood,
 )
 
 
@@ -114,21 +116,20 @@ def run_xcdm_nopert_mcmc(
     bao_id: Optional[BAOID] = BAOID.ALL_COMBINED_JAN_2023,
     h_id: Optional[HID] = HID.ALL_COMBINED_JAN_2023,
 ) -> str:
-    """Runs the XCDM model with no perturbations MCMC."""
-
+    """Run the XCDM model with no perturbations MCMC."""
     mset = create_mset(use_neutrino, flat)
     dset = Ncm.Dataset.new()
 
     dist = Nc.Distance(zf=z_f)
 
     if snia_id is not None:
-        gen_snia_likelihood(dset, mset, dist, snia_id)
+        add_snia_likelihood(dset, mset, dist, snia_id)
 
     if bao_id is not None:
-        gen_bao_likelihood(dset, mset, dist, bao_id)
+        add_bao_likelihood(dset, mset, dist, bao_id)
 
     if h_id is not None:
-        gen_h_likelihood(dset, mset, h_id)
+        add_h_likelihood(dset, mset, h_id)
 
     mset.prepare_fparam_map()
     likelihood = Ncm.Likelihood.new(dset)

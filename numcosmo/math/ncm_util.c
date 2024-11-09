@@ -40,6 +40,7 @@
 
 #include "math/ncm_util.h"
 #include "math/ncm_memory_pool.h"
+#include "numcosmo/nc_hicosmo.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_legendre.h>
@@ -753,6 +754,17 @@ ncm_complex_clear (NcmComplex **c)
  */
 
 /**
+ * ncm_util_projected_radius:
+ * @theta: a gdouble in radians
+ * @d: a gdouble in Mpc
+ *
+ * Converts the the angular separation `$\theta$' of a galaxy
+ * at redshift `$z$' to the projected physical distance in Mpc.
+ *
+ * Returns: the physical distance in Mpc.
+ */
+
+/**
  * ncm_util_cvode_check_flag:
  * @flagvalue: pointer to flag value
  * @funcname: cvode function name
@@ -1042,5 +1054,83 @@ ncm_util_sleep_ms (gint milliseconds)
 
   usleep ((milliseconds % 1000) * 1000);
 #endif
+}
+
+/**
+ * ncm_util_set_or_call_error:
+ * @error: a #GError or NULL
+ * @domain: an error domain GQuark
+ * @code: an error code
+ * @format: a printf format string
+ * @...: arguments for @format
+ *
+ * If @error is not NULL, it sets the error message, otherwise it calls g_error.
+ * The error message is formatted using @format and the arguments.
+ *
+ * If @error is not NULL and it already contains an error, it is considered a
+ * programming error and g_error is called.
+ */
+void
+ncm_util_set_or_call_error (GError **error, GQuark domain, gint code, const gchar *format, ...)
+{
+  va_list ap;
+  gchar *message;
+
+  va_start (ap, format);
+  message = g_strdup_vprintf (format, ap);
+  va_end (ap);
+
+  if (error != NULL)
+  {
+    if (*error != NULL)
+      g_error ("ncm_util_set_or_call_error: error piling up: (%s) over (%s)",
+               message,
+               (*error)->message
+              );
+
+    g_set_error (error, domain, code, "%s", message);
+  }
+  else
+  {
+    g_error ("%s", message);
+  }
+
+  g_free (message);
+}
+
+/**
+ * ncm_util_forward_or_call_error:
+ * @error: a #GError or NULL
+ * @local_error: a #GError or NULL
+ * @format: a printf format string
+ * @...: arguments for @format
+ *
+ * Forwards the error from @local_error, adding a prefix message formatted with @format
+ * and its arguments, if @local_error is not NULL. If @local_error is NULL, the function
+ * does nothing. If @error is not NULL, the function forwards @local_error to @error. If
+ * @error is NULL, the function calls g_error with @local_error.
+ *
+ */
+void
+ncm_util_forward_or_call_error (GError **error, GError *local_error, const gchar *format, ...)
+{
+  va_list ap;
+  gchar *message;
+
+  /* No error to forward */
+  if (local_error == NULL)
+    return;
+
+  va_start (ap, format);
+  message = g_strdup_vprintf (format, ap);
+  va_end (ap);
+
+
+  if (error != NULL)
+    g_propagate_prefixed_error (error, local_error, "%s: ", message);
+  else
+    g_error ("%s: %s", message, local_error->message);
+
+  g_free (message);
 }
 

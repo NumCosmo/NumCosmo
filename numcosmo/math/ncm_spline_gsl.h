@@ -67,6 +67,9 @@ void ncm_spline_gsl_set_type (NcmSplineGsl *sg, const gsl_interp_type *type);
 void ncm_spline_gsl_set_type_by_id (NcmSplineGsl *sg, NcmSplineGslType type_id);
 void ncm_spline_gsl_set_type_by_name (NcmSplineGsl *sg, const gchar *type_name);
 
+NcmSplineGslType ncm_spline_gsl_get_type_id (NcmSplineGsl *sg);
+const gsl_interp_type *ncm_spline_gsl_get_gsl_type (NcmSplineGsl *sg);
+
 G_END_DECLS
 
 #endif /* _NCM_SPLINE_GSL_H_ */

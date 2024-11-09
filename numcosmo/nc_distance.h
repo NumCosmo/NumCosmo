@@ -88,6 +88,7 @@ struct _NcDistance
   gdouble RH_Mpc;
   gboolean use_cache;
   gboolean cpu_inv_comoving;
+  gdouble max_comoving;
   NcRecomb *recomb;
   NcDistanceComovingMethod cmethod;
 };
@@ -152,6 +153,9 @@ gdouble nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, const gd
 gdouble nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_angular_diameter (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_dmodulus (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
+gdouble nc_distance_comoving_volume_element (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_sigma_critical (NcDistance *dist, NcHICosmo *cosmo, const gdouble zs, const gdouble zl);
+gdouble nc_distance_sigma_critical_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble zl);
 gdouble nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, const gdouble z_he, const gdouble z_cmb);
 gdouble nc_distance_dmodulus_hef (NcDistance *dist, NcHICosmo *cosmo, const gdouble z_he, const gdouble z_cmb);
 gdouble nc_distance_shift_parameter (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
@@ -166,6 +170,7 @@ gdouble nc_distance_Dt_r (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_comoving_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_transverse_z_to_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 
+gdouble nc_distance_comoving_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2);
 gdouble nc_distance_transverse_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2);
 gdouble nc_distance_angular_diameter_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2);
 

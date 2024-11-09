@@ -879,7 +879,7 @@ _nc_hicosmo_de_valid (NcmModel *model)
     gdouble z_max         = 4.0;
     gint i;
 
-    for (i = 0; i <= 40; i++)
+    for (i = 0; i <= 120; i++)
     {
       const gdouble z  = 0.05 * i;
       const gdouble E2 = _nc_hicosmo_de_E2 (NC_HICOSMO (model), z);
@@ -907,19 +907,22 @@ _nc_hicosmo_de_valid (NcmModel *model)
       F.function = &min_E2;
       F.params   = model;
 
-      ret = gsl_min_fminimizer_set (cosmo_de->priv->min, &F, z_min, 0.0, z_max);
-
-      if (ret == GSL_SUCCESS)
+      if (z_min > 0.0)
       {
-        do {
-          iter++;
-          status = gsl_min_fminimizer_iterate (cosmo_de->priv->min);
-          z_min  = gsl_min_fminimizer_x_minimum (cosmo_de->priv->min);
-          a      = gsl_min_fminimizer_x_lower (cosmo_de->priv->min);
-          b      = gsl_min_fminimizer_x_upper (cosmo_de->priv->min);
+        ret = gsl_min_fminimizer_set (cosmo_de->priv->min, &F, z_min, 0.0, z_max);
 
-          status = gsl_min_test_interval (a, b, 0.01, 0.0);
-        } while (status == GSL_CONTINUE && iter < max_iter);
+        if (ret == GSL_SUCCESS)
+        {
+          do {
+            iter++;
+            status = gsl_min_fminimizer_iterate (cosmo_de->priv->min);
+            z_min  = gsl_min_fminimizer_x_minimum (cosmo_de->priv->min);
+            a      = gsl_min_fminimizer_x_lower (cosmo_de->priv->min);
+            b      = gsl_min_fminimizer_x_upper (cosmo_de->priv->min);
+
+            status = gsl_min_test_interval (a, b, 0.01, 0.0);
+          } while (status == GSL_CONTINUE && iter < max_iter);
+        }
       }
 
       {
@@ -951,39 +954,56 @@ nc_hicosmo_de_set_wmap5_params (NcHICosmoDE *cosmo_de)
 /**
  * nc_hicosmo_de_omega_x2omega_k:
  * @cosmo_de: a #NcHICosmoDE
+ * @error: a #GError
  *
- * FIXME
+ * Set the reparametrization of the dark energy density to the curvature density.
  *
  */
 void
-nc_hicosmo_de_omega_x2omega_k (NcHICosmoDE *cosmo_de)
+nc_hicosmo_de_omega_x2omega_k (NcHICosmoDE *cosmo_de, GError **error)
 {
-  NcHICosmoDEReparamOk *de_reparam_ok = nc_hicosmo_de_reparam_ok_new (ncm_model_len (NCM_MODEL (cosmo_de)));
+  g_return_if_fail (error == NULL || *error == NULL);
+  {
+    NcHICosmoDEReparamOk *de_reparam_ok = nc_hicosmo_de_reparam_ok_new (ncm_model_len (NCM_MODEL (cosmo_de)));
 
-  ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (de_reparam_ok));
+    ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (de_reparam_ok), error);
 
-  ncm_reparam_free (NCM_REPARAM (de_reparam_ok));
+    /* This looks unnecessary, but it is not. */
+    if (error && *error)
+    {
+      ncm_reparam_free (NCM_REPARAM (de_reparam_ok));
 
-  return;
+      return;
+    }
+
+
+    ncm_reparam_free (NCM_REPARAM (de_reparam_ok));
+
+    return;
+  }
 }
 
 /**
  * nc_hicosmo_de_cmb_params:
  * @cosmo_de: a #NcHICosmoDE
+ * @error: a #GError
  *
- * FIXME
+ * Set the reparametrization of the dark energy density to the curvature density.
  *
  */
 void
-nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de)
+nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de, GError **error)
 {
-  NcHICosmoDEReparamCMB *de_reparam_cmb = nc_hicosmo_de_reparam_cmb_new (ncm_model_len (NCM_MODEL (cosmo_de)));
+  g_return_if_fail (error == NULL || *error == NULL);
+  {
+    NcHICosmoDEReparamCMB *de_reparam_cmb = nc_hicosmo_de_reparam_cmb_new (ncm_model_len (NCM_MODEL (cosmo_de)));
 
-  ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (de_reparam_cmb));
+    ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (de_reparam_cmb), error);
 
-  ncm_reparam_free (NCM_REPARAM (de_reparam_cmb));
+    ncm_reparam_free (NCM_REPARAM (de_reparam_cmb));
 
-  return;
+    return;
+  }
 }
 
 /**

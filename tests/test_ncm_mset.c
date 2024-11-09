@@ -135,8 +135,8 @@ test_ncm_mset_new (TestNcmMSet *test, gconstpointer pdata)
     NcHICosmoLCDM *cosmo = nc_hicosmo_lcdm_new ();
     gboolean f           = FALSE;
 
-    ncm_mset_set (test->mset, NCM_MODEL (cosmo));
-    ncm_mset_set (test->mset, NCM_MODEL (cosmo));
+    ncm_mset_set (test->mset, NCM_MODEL (cosmo), NULL);
+    ncm_mset_set (test->mset, NCM_MODEL (cosmo), NULL);
 
     g_ptr_array_add (test->ma, cosmo);
     g_array_append_val (test->ma_destroyed, f);
@@ -149,12 +149,13 @@ test_ncm_mset_new (TestNcmMSet *test, gconstpointer pdata)
     NcSNIADistCov *snia = nc_snia_dist_cov_new (dist, 4);
     gboolean f          = FALSE;
 
-    ncm_mset_set (test->mset, NCM_MODEL (snia));
+    ncm_mset_set (test->mset, NCM_MODEL (snia), NULL);
 
     g_ptr_array_add (test->ma, snia);
     g_array_append_val (test->ma_destroyed, f);
 
     nc_snia_dist_cov_free (snia);
+    nc_distance_free (dist);
   }
 }
 
@@ -206,7 +207,7 @@ test_ncm_mset_setpeek (TestNcmMSet *test, gconstpointer pdata)
   g_assert_true (mass != NULL);
   g_assert_true (NC_IS_CLUSTER_MASS (mass));
 
-  ncm_mset_set (test->mset, NCM_MODEL (mass));
+  ncm_mset_set (test->mset, NCM_MODEL (mass), NULL);
 
   g_ptr_array_add (test->ma, mass);
   g_array_append_val (test->ma_destroyed, f);
@@ -225,7 +226,7 @@ test_ncm_mset_setpospeek (TestNcmMSet *test, gconstpointer pdata)
   g_assert_true (mass != NULL);
   g_assert_true (NC_IS_CLUSTER_MASS (mass));
 
-  ncm_mset_set_pos (test->mset, NCM_MODEL (mass), 5);
+  ncm_mset_set_pos (test->mset, NCM_MODEL (mass), 5, NULL);
 
   g_ptr_array_add (test->ma, mass);
   g_array_append_val (test->ma_destroyed, f);
@@ -244,8 +245,8 @@ test_ncm_mset_pushpeek (TestNcmMSet *test, gconstpointer pdata)
   g_assert_true (mass != NULL);
   g_assert_true (NC_IS_CLUSTER_MASS (mass));
 
-  ncm_mset_push (test->mset, NCM_MODEL (mass));
-  ncm_mset_push (test->mset, NCM_MODEL (mass));
+  ncm_mset_push (test->mset, NCM_MODEL (mass), NULL);
+  ncm_mset_push (test->mset, NCM_MODEL (mass), NULL);
   g_ptr_array_add (test->ma, mass);
   g_array_append_val (test->ma_destroyed, f);
 
@@ -267,14 +268,14 @@ test_ncm_mset_fparams (TestNcmMSet *test, gconstpointer pdata)
   g_assert_true (benson != NULL);
   g_assert_true (NC_IS_CLUSTER_MASS (benson));
 
-  ncm_mset_set_pos (test->mset, NCM_MODEL (mass), 10);
+  ncm_mset_set_pos (test->mset, NCM_MODEL (mass), 10, NULL);
 
-  ncm_mset_push (test->mset, NCM_MODEL (benson));
-  ncm_mset_push (test->mset, NCM_MODEL (benson));
-  ncm_mset_push (test->mset, NCM_MODEL (mass));
-  ncm_mset_push (test->mset, NCM_MODEL (benson));
+  ncm_mset_push (test->mset, NCM_MODEL (benson), NULL);
+  ncm_mset_push (test->mset, NCM_MODEL (benson), NULL);
+  ncm_mset_push (test->mset, NCM_MODEL (mass), NULL);
+  ncm_mset_push (test->mset, NCM_MODEL (benson), NULL);
 
-  ncm_mset_set_pos (test->mset, NCM_MODEL (mass), 1);
+  ncm_mset_set_pos (test->mset, NCM_MODEL (mass), 1, NULL);
 
   g_ptr_array_add (test->ma, mass);
   g_array_append_val (test->ma_destroyed, f);
@@ -287,15 +288,15 @@ test_ncm_mset_fparams (TestNcmMSet *test, gconstpointer pdata)
 
   g_assert_cmpuint (ncm_mset_total_len (test->mset), ==, ncm_mset_fparam_len (test->mset));
 
-  ncm_mset_push (test->mset, NCM_MODEL (mass));
+  ncm_mset_push (test->mset, NCM_MODEL (mass), NULL);
   g_assert_cmpuint (ncm_mset_total_len (test->mset), ==, ncm_mset_fparam_len (test->mset));
 
   ncm_mset_param_set_ftype (test->mset, NCM_MSET_MID (nc_cluster_mass_id (), 1), 0, NCM_PARAM_TYPE_FIXED);
 
-  g_assert_cmpint (ncm_mset_param_get_ftype (test->mset, NCM_MSET_MID (nc_cluster_mass_id (), 1), 0), ==, NCM_PARAM_TYPE_FIXED);
-  g_assert_cmpint (ncm_mset_param_get_ftype (test->mset, NCM_MSET_MID (nc_cluster_mass_id (), 2), 0), ==, NCM_PARAM_TYPE_FIXED);
-  g_assert_cmpint (ncm_mset_param_get_ftype (test->mset, NCM_MSET_MID (nc_cluster_mass_id (), 4), 0), ==, NCM_PARAM_TYPE_FIXED);
-  g_assert_cmpint (ncm_mset_param_get_ftype (test->mset, NCM_MSET_MID (nc_cluster_mass_id (), 10), 0), ==, NCM_PARAM_TYPE_FIXED);
+  g_assert_cmpint (ncm_mset_param_get_ftype (test->mset, NCM_MSET_MID (nc_cluster_mass_id (), 1), 0, NULL), ==, NCM_PARAM_TYPE_FIXED);
+  g_assert_cmpint (ncm_mset_param_get_ftype (test->mset, NCM_MSET_MID (nc_cluster_mass_id (), 2), 0, NULL), ==, NCM_PARAM_TYPE_FIXED);
+  g_assert_cmpint (ncm_mset_param_get_ftype (test->mset, NCM_MSET_MID (nc_cluster_mass_id (), 4), 0, NULL), ==, NCM_PARAM_TYPE_FIXED);
+  g_assert_cmpint (ncm_mset_param_get_ftype (test->mset, NCM_MSET_MID (nc_cluster_mass_id (), 10), 0, NULL), ==, NCM_PARAM_TYPE_FIXED);
 
   g_assert_cmpuint (ncm_mset_total_len (test->mset), ==, ncm_mset_fparam_len (test->mset) + 1);
 
@@ -358,8 +359,8 @@ test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata)
   g_assert_true (mass != NULL);
   g_assert_true (NC_IS_CLUSTER_MASS (mass));
 
-  ncm_mset_push (test->mset, NCM_MODEL (mass));
-  ncm_mset_push (test->mset, NCM_MODEL (mass));
+  ncm_mset_push (test->mset, NCM_MODEL (mass), NULL);
+  ncm_mset_push (test->mset, NCM_MODEL (mass), NULL);
   g_ptr_array_add (test->ma, mass);
   g_array_append_val (test->ma_destroyed, f);
 
@@ -415,14 +416,14 @@ test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata)
       }
     }
 
-    ncm_mset_push (test->mset, NCM_MODEL (mass));
+    ncm_mset_push (test->mset, NCM_MODEL (mass), NULL);
     g_assert_true (!ncm_mset_cmp (test->mset, mset_dup, FALSE));
     g_assert_true (!ncm_mset_cmp (test->mset, mset_dup, TRUE));
 
     /*g_ptr_array_add (test->ma, benson);*/
     /*g_array_append_val (test->ma_destroyed, f);*/
 
-    ncm_mset_push (mset_dup, NCM_MODEL (benson));
+    ncm_mset_push (mset_dup, NCM_MODEL (benson), NULL);
     g_assert_true (ncm_mset_cmp (test->mset, mset_dup, FALSE));
     g_assert_true (!ncm_mset_cmp (test->mset, mset_dup, TRUE));
 
@@ -463,13 +464,13 @@ test_ncm_mset_shallow_copy (TestNcmMSet *test, gconstpointer pdata)
   g_assert_true (mass != NULL);
   g_assert_true (NC_IS_CLUSTER_MASS (mass));
 
-  ncm_mset_push (test->mset, NCM_MODEL (mass));
-  ncm_mset_push (test->mset, NCM_MODEL (mass));
+  ncm_mset_push (test->mset, NCM_MODEL (mass), NULL);
+  ncm_mset_push (test->mset, NCM_MODEL (mass), NULL);
   g_ptr_array_add (test->ma, mass);
   g_array_append_val (test->ma_destroyed, f);
 
   {
-    NcmMSet *mset_dup = ncm_mset_shallow_copy (test->mset);
+    NcmMSet *mset_dup = ncm_mset_shallow_copy (test->mset, NULL);
 
     g_assert_true (ncm_mset_cmp (test->mset, mset_dup, FALSE));
     g_assert_true (ncm_mset_cmp (test->mset, mset_dup, TRUE));
@@ -520,9 +521,9 @@ test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata)
   g_assert_true (benson != NULL);
   g_assert_true (NC_IS_CLUSTER_MASS (benson));
 
-  ncm_mset_push (test->mset, NCM_MODEL (mass));
-  ncm_mset_push (test->mset, NCM_MODEL (mass));
-  ncm_mset_push (test->mset, NCM_MODEL (benson));
+  ncm_mset_push (test->mset, NCM_MODEL (mass), NULL);
+  ncm_mset_push (test->mset, NCM_MODEL (mass), NULL);
+  ncm_mset_push (test->mset, NCM_MODEL (benson), NULL);
 
   g_ptr_array_add (test->ma, mass);
   g_array_append_val (test->ma_destroyed, f);
@@ -534,10 +535,10 @@ test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata)
     NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
     gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_mset_saved_XXXXXX", NULL);
     gchar *filename   = g_strdup_printf ("%s/test_ncm_mset_saved.mset", tmp_dir);
+    NcmMSet *mset_dup = NULL;
 
-    ncm_mset_save (test->mset, ser, filename, TRUE);
-
-    NcmMSet *mset_dup = ncm_mset_load (filename, ser);
+    ncm_mset_save (test->mset, ser, filename, TRUE, NULL);
+    mset_dup = ncm_mset_load (filename, ser, NULL);
 
     g_assert_true (ncm_mset_cmp (test->mset, mset_dup, FALSE));
     g_assert_true (ncm_mset_cmp (test->mset, mset_dup, TRUE));
@@ -560,14 +561,14 @@ test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata)
       }
     }
 
-    ncm_mset_push (test->mset, NCM_MODEL (mass));
+    ncm_mset_push (test->mset, NCM_MODEL (mass), NULL);
     g_assert_true (!ncm_mset_cmp (test->mset, mset_dup, FALSE));
     g_assert_true (!ncm_mset_cmp (test->mset, mset_dup, TRUE));
 
     /*g_ptr_array_add (test->ma, benson);*/
     /*g_array_append_val (test->ma_destroyed, f);*/
 
-    ncm_mset_push (mset_dup, NCM_MODEL (benson));
+    ncm_mset_push (mset_dup, NCM_MODEL (benson), NULL);
     g_assert_true (ncm_mset_cmp (test->mset, mset_dup, FALSE));
     g_assert_true (!ncm_mset_cmp (test->mset, mset_dup, TRUE));
 
@@ -619,7 +620,7 @@ test_ncm_mset_invalid_stack (TestNcmMSet *test, gconstpointer pdata)
 {
   NcHICosmoLCDM *cosmo = nc_hicosmo_lcdm_new ();
 
-  ncm_mset_push (test->mset, NCM_MODEL (cosmo));
+  ncm_mset_push (test->mset, NCM_MODEL (cosmo), NULL);
 
   nc_hicosmo_free (NC_HICOSMO (cosmo));
 }

@@ -8,14 +8,15 @@ Original code in https://github.com/brunzema/truncated-mvn-sampler
 import math
 import numpy as np
 
-from scipy import special, optimize, stats
+from scipy import special, optimize
 
 
 EPS = 10e-15
 
 
 class TruncatedMVN:
-    r"""
+    r"""Truncated Multivariate Normal Distribution.
+
     Create a normal distribution :math:`X  \sim N ({\mu}, {\Sigma})` subject to linear
     inequality constraints :math:`lb < X < ub` and sample from it using minimax
     tilting. Based on the MATLAB implemention by the authors (reference below).
@@ -59,6 +60,7 @@ class TruncatedMVN:
     """
 
     def __init__(self, mu, cov, lb, ub, seed=None):
+        """Initialize the TruncatedMVN class."""
         self.dim = len(mu)
         if not cov.shape[0] == cov.shape[1]:
             raise RuntimeError("Covariance matrix must be of shape DxD!")
@@ -148,9 +150,7 @@ class TruncatedMVN:
 
     def compute_factors(self):
         """Compute the factors for the sampling."""
-
         # compute permutated Cholesky factor and solve optimization
-
         # Cholesky decomposition of matrix with permuation
         self.unscaled_L, self.perm = self.colperm()
         D = np.diag(self.unscaled_L)
@@ -201,9 +201,11 @@ class TruncatedMVN:
         self.psistar = None
 
     def mvnrnd(self, n, mu):
-        """Generate n samples from the exponentially tilted sequential importance
-        sampling pdf."""
+        """Generate n samples.
 
+        Generate n samples from the exponentially tilted sequential importance
+        sampling pdf.
+        """
         # generates the proposals from the exponentially tilted sequential
         # importance sampling pdf
         # output:     logpr, log-likelihood of sample
@@ -224,7 +226,8 @@ class TruncatedMVN:
         return logpr, Z
 
     def trandn(self, lb, ub):
-        r"""
+        r"""Sample generator for the truncated standard normal distribution.
+
         Sample generator for the truncated standard multivariate normal distribution
         :math:`X \sim N(0,I)` s.t.
         :math:`lb<X<ub`.
@@ -272,7 +275,7 @@ class TruncatedMVN:
         return x
 
     def tn(self, lb, ub, tol=2):
-        """Samples a column vector."""
+        """Sample a column vector."""
         # samples a column vector of length=len(lb)=len(ub) from the standard
         # multivariate normal distribution truncated over the region [lb,ub], where
         # -a<lb<ub<a for some 'a' and lb and ub are column vectors
@@ -303,7 +306,7 @@ class TruncatedMVN:
         return x
 
     def trnd(self, lb, ub):
-        """Uses acceptance rejection to simulate from truncated normal."""
+        """Use acceptance rejection to simulate from truncated normal."""
         # uses acceptance rejection to simulate from truncated normal
         x = self.random_state.randn(len(lb))  # sample normal
         test = (x < lb) | (x > ub)
@@ -320,7 +323,7 @@ class TruncatedMVN:
         return x
 
     def ntail(self, lb, ub):
-        """Samples a column vector."""
+        """Sample a column vector."""
         # samples a column vector of length=len(lb)=len(ub) from the standard
         # multivariate normal distribution truncated over the region [lb,ub], where
         # lb>0 and lb and ub are column vectors
@@ -346,7 +349,7 @@ class TruncatedMVN:
         return np.sqrt(2 * x)  # this Rayleigh transform can be delayed till the end
 
     def psy(self, x, mu):
-        """Implements psi(x,mu)."""
+        """Implement psi(x,mu)."""
         # implements psi(x,mu); assumes scaled 'L' without diagonal
         x = np.append(x, [0.0])
         mu = np.append(mu, [0.0])
@@ -357,7 +360,7 @@ class TruncatedMVN:
         return p
 
     def get_gradient_function(self):
-        """Returns a function to compute the gradient of psi(x)."""
+        """Return a function to compute the gradient of psi(x)."""
         # wrapper to avoid dependancy on self
 
         def gradpsi(y, L, l0, u):
@@ -402,7 +405,7 @@ class TruncatedMVN:
         return gradpsi
 
     def colperm(self):
-        """Computes the optimal column permutation for the Cholesky factorization."""
+        """Compute the optimal column permutation for the Cholesky factorization."""
         perm = np.arange(self.dim)
         L = np.zeros_like(self.cov)
         z = np.zeros_like(self.orig_mu)
@@ -455,8 +458,7 @@ class TruncatedMVN:
 
 
 def lnNormalProb(a, b):
-    """Computes ln(P(a<Z<b)) where Z~N(0,1) very accurately for any 'a', 'b'"""
-
+    """Compute ln(P(a<Z<b)) where Z~N(0,1) very accurately for any 'a', 'b'."""
     # computes ln(P(a<Z<b)) where Z~N(0,1) very accurately for any 'a', 'b'
     p = np.zeros_like(a)
     # case b>a>0
@@ -483,61 +485,10 @@ def lnNormalProb(a, b):
 
 
 def lnPhi(x):
-    """Computes logarithm of  tail of Z~N(0,1) mitigating numerical roundoff errors"""
-    # computes logarithm of  tail of Z~N(0,1) mitigating numerical roundoff errors
+    """Compute logarithm of tail of Z~N(0,1) mitigating numerical roundoff errors."""
     # pylint: disable=no-member
     out = (
         -0.5 * x**2 - np.log(2) + np.log(special.erfcx(x / np.sqrt(2)) + EPS)
     )  # divide by zeros error -> add eps
     # pylint: enable=no-member
     return out
-
-
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-
-    d_test = 50
-    # random mu and cov
-    mu_test = np.random.rand(d_test)
-    cov_test = 0.5 - np.random.rand(d_test**2).reshape((d_test, d_test))
-    cov_test = np.triu(cov_test)
-    cov_test += cov_test.T - np.diag(cov_test.diagonal())
-    cov_test = np.dot(cov_test, cov_test)
-
-    # constraints
-    lb_test = np.zeros_like(mu_test) - 1.0
-    ub_test = np.ones_like(mu_test) * np.inf
-
-    # create truncated normal and sample from it
-    n_samples_test = 100000
-    samples_test = TruncatedMVN(mu_test, cov_test, lb_test, ub_test).sample(
-        n_samples_test
-    )
-
-    idx_test = 1
-    fig, ax1 = plt.subplots()
-
-    ax2 = ax1.twinx()
-    x_test = np.linspace(-2, 4, 100)
-    ax1.plot(
-        x_test,
-        stats.norm.pdf(x_test, mu_test[idx_test], cov_test[idx_test, idx_test]),
-        "b--",
-        label="Normal Distribution",
-    )
-    ax1.set_ylim(bottom=0)
-    ax2.hist(
-        samples_test[idx_test, :],
-        100,
-        color="k",
-        histtype="step",
-        label=f"Truncated Normal Distribution, lb={lb_test[0]}, ub={ub_test[0]}",
-    )
-    ax1.set_xlim([-2, 4])
-    ax1.set_yticks([])
-    ax2.set_yticks([])
-    fig.legend(loc=9, frameon=False)
-    plt.show()
-    plt.close()
-
-    print("Done!")

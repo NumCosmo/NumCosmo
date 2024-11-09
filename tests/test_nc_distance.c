@@ -48,6 +48,7 @@ void test_nc_distance_DA_r (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_Dt_r (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_comoving_z_to_infinity (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_transverse_z_to_infinity (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_comoving_z1_z2 (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_free (TestNcDistance *test, gconstpointer pdata);
 
 gint
@@ -89,6 +90,10 @@ main (gint argc, gchar *argv[])
               &test_nc_distance_new,
               &test_nc_distance_transverse_z_to_infinity,
               &test_nc_distance_free);
+  g_test_add ("/nc/distance/comoving_z1_z2", TestNcDistance, NULL,
+              &test_nc_distance_new,
+              &test_nc_distance_comoving_z1_z2,
+              &test_nc_distance_free);
 
   g_test_run ();
 }
@@ -121,8 +126,8 @@ test_nc_distance_new (TestNcDistance *test, gconstpointer pdata)
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.7245);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_B,   0.045);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
-  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo));
-  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.0);
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo), NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 0.0, NULL);
 
   nc_distance_prepare (dist, cosmo);
 }
@@ -170,36 +175,6 @@ test_nc_distance_angular_diameter (TestNcDistance *test, gconstpointer pdata)
   ncm_assert_cmpdouble_e (d1, ==, 0.293975916388, 1.0e-5, 0.0);
   ncm_assert_cmpdouble_e (d2, ==, 0.388696625296, 1.0e-5, 0.0);
   ncm_assert_cmpdouble_e (d3, ==, 0.302493044478, 1.0e-5, 0.0);
-}
-
-void
-test_nc_distance_comoving_z_to_infinity (TestNcDistance *test, gconstpointer pdata)
-{
-  NcHICosmo *cosmo = test->cosmo;
-  NcDistance *dist = test->dist;
-
-  gdouble d1 = nc_distance_comoving_z_to_infinity (dist, cosmo, test->z1);
-  gdouble d2 = nc_distance_comoving_z_to_infinity (dist, cosmo, test->z2);
-  gdouble d3 = nc_distance_comoving_z_to_infinity (dist, cosmo, test->z3);
-
-  ncm_assert_cmpdouble_e (d1, ==, 2.80328046107, 1.0e-5, 0.0);
-  ncm_assert_cmpdouble_e (d2, ==, 1.88380614789, 1.0e-5, 0.0);
-  ncm_assert_cmpdouble_e (d3, ==, 1.42928606871, 1.0e-5, 0.0);
-}
-
-void
-test_nc_distance_transverse_z_to_infinity (TestNcDistance *test, gconstpointer pdata)
-{
-  NcHICosmo *cosmo = test->cosmo;
-  NcDistance *dist = test->dist;
-
-  gdouble d1 = nc_distance_transverse_z_to_infinity (dist, cosmo, test->z1);
-  gdouble d2 = nc_distance_transverse_z_to_infinity (dist, cosmo, test->z2);
-  gdouble d3 = nc_distance_transverse_z_to_infinity (dist, cosmo, test->z3);
-
-  ncm_assert_cmpdouble_e (d1, ==, 2.80328046107, 1.0e-5, 0.0);
-  ncm_assert_cmpdouble_e (d2, ==, 1.88380614789, 1.0e-5, 0.0);
-  ncm_assert_cmpdouble_e (d3, ==, 1.42928606871, 1.0e-5, 0.0);
 }
 
 void
@@ -253,6 +228,64 @@ test_nc_distance_Dt_r (TestNcDistance *test, gconstpointer pdata)
     const gdouble Dt   = nc_distance_transverse (dist, cosmo, z);
 
     ncm_assert_cmpdouble_e (Dt / r_zd, ==, Dt_r, 1.0e-15, 0.0);
+  }
+}
+
+void
+test_nc_distance_comoving_z_to_infinity (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo = test->cosmo;
+  NcDistance *dist = test->dist;
+
+  gdouble d1 = nc_distance_comoving_z_to_infinity (dist, cosmo, test->z1);
+  gdouble d2 = nc_distance_comoving_z_to_infinity (dist, cosmo, test->z2);
+  gdouble d3 = nc_distance_comoving_z_to_infinity (dist, cosmo, test->z3);
+
+  ncm_assert_cmpdouble_e (d1, ==, 2.80328046107, 1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (d2, ==, 1.88380614789, 1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (d3, ==, 1.42928606871, 1.0e-5, 0.0);
+}
+
+void
+test_nc_distance_transverse_z_to_infinity (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo = test->cosmo;
+  NcDistance *dist = test->dist;
+
+  gdouble d1 = nc_distance_transverse_z_to_infinity (dist, cosmo, test->z1);
+  gdouble d2 = nc_distance_transverse_z_to_infinity (dist, cosmo, test->z2);
+  gdouble d3 = nc_distance_transverse_z_to_infinity (dist, cosmo, test->z3);
+
+  ncm_assert_cmpdouble_e (d1, ==, 2.80328046107, 1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (d2, ==, 1.88380614789, 1.0e-5, 0.0);
+  ncm_assert_cmpdouble_e (d3, ==, 1.42928606871, 1.0e-5, 0.0);
+}
+
+void
+test_nc_distance_comoving_z1_z2 (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo = test->cosmo;
+  NcDistance *dist = test->dist;
+  gdouble d1       = nc_distance_comoving (dist, cosmo, test->z1);
+  gdouble d2       = nc_distance_comoving (dist, cosmo, test->z2);
+  gdouble d3       = nc_distance_comoving (dist, cosmo, test->z3);
+  gdouble d12      = nc_distance_comoving_z1_z2 (dist, cosmo, test->z1, test->z2);
+  gdouble d13      = nc_distance_comoving_z1_z2 (dist, cosmo, test->z1, test->z3);
+  gdouble d23      = nc_distance_comoving_z1_z2 (dist, cosmo, test->z2, test->z3);
+
+  ncm_assert_cmpdouble_e (d12, ==, d2 - d1, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (d13, ==, d3 - d1, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (d23, ==, d3 - d2, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (d13, ==, d12 + d23, 1.0e-15, 0.0);
+
+  {
+    const gdouble delta = 1.0e-5;
+    gdouble d1pdelta    = nc_distance_comoving (dist, cosmo, test->z1 + delta);
+    gdouble d11pdelta   = nc_distance_comoving_z1_z2 (dist, cosmo, test->z1, test->z1 + delta);
+
+    g_assert_cmpfloat (d1pdelta, >, d1);
+    ncm_assert_cmpdouble_e (d1pdelta, ==, d1 + 1.0 / nc_hicosmo_E (cosmo, test->z1) * delta, 1.0e-10, 0.0);
+    ncm_assert_cmpdouble_e (d11pdelta, ==, 1.0 / nc_hicosmo_E (cosmo, test->z1) * delta, 1.0e-5, 0.0);
   }
 }
 

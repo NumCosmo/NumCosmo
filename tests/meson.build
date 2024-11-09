@@ -1,4 +1,3 @@
-
 c_tests = [
     {
         'name': 'ncm_cfg',
@@ -140,6 +139,14 @@ c_tests = [
         'timeout': 0,
     },
     {
+        'name': 'ncm_util',
+        'sources': ['test_ncm_util.c'],
+    },
+    {
+        'name': 'ncm_quaternion',
+        'sources': ['test_ncm_quaternion.c'],
+    },
+    {
         'name': 'nc_halo_bias',
         'sources': ['test_nc_halo_bias.c'],
     },
@@ -205,6 +212,10 @@ c_tests = [
         'sources': ['test_nc_halo_density_profile.c'],
     },
     {
+        'name': 'nc_halo_position',
+        'sources': ['test_nc_halo_position.c'],
+    },
+    {
         'name': 'nc_wl_surface_mass_density',
         'sources': ['test_nc_wl_surface_mass_density.c'],
     },
@@ -218,13 +229,28 @@ c_tests = [
         'sources': ['test_nc_distance.c'],
     },
     {
-        'name': 'nc_galaxy_wl_ellipticity_kde',
-        'sources': ['test_nc_galaxy_wl_ellipticity_kde.c'],
-        'timeout': 0,
+        'name': 'nc_data_cluster_wl',
+        'sources': ['test_nc_data_cluster_wl.c'],
     },
     {
-        'name': 'nc_galaxy_wl_ellipticity_binned',
-        'sources': ['test_nc_galaxy_wl_ellipticity_binned.c'],
+        'name': 'nc_galaxy_wl_obs',
+        'sources': ['test_nc_galaxy_wl_obs.c'],
+    },
+    {
+        'name': 'nc_galaxy_sd_position',
+        'sources': ['test_nc_galaxy_sd_position.c'],
+    },
+    {
+        'name': 'nc_galaxy_sd_true_redshift',
+        'sources': ['test_nc_galaxy_sd_true_redshift.c'],
+    },
+    {
+        'name': 'nc_galaxy_sd_obs_redshift',
+        'sources': ['test_nc_galaxy_sd_obs_redshift.c'],
+    },
+    {
+        'name': 'nc_galaxy_sd_shape',
+        'sources': ['test_nc_galaxy_sd_shape.c'],
     },
 ]
 tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
@@ -234,7 +260,7 @@ foreach c_test : c_tests
         c_test['name'],
         c_test['sources'],
         c_args: tests_c_args,
-        dependencies: [libnumcosmo_dep],
+        dependencies: [libnumcosmo_dep, gsl_dep],
         include_directories: [configinc, numcosmoinc],
     )
     if c_test.has_key('timeout')
@@ -281,8 +307,7 @@ if mpi_c_dep.found()
 
             mpiexec_args = (
                 [
-                    '-n',
-                    '2',
+                    '-n', '2',
                     executable_test.full_path(),
                 ]
             )
@@ -304,12 +329,28 @@ endif
 
 python_tests = [
     {
+        'name': 'py_cfg',
+        'source': 'test_py_cfg.py',
+    },
+    {
         'name': 'py_cluster_abundance_sampling',
         'source': 'test_py_cluster_abundance_sampling.py',
     },
     {
+        'name': 'py_hicosmo',
+        'source': 'test_py_hicosmo.py',
+    },
+    {
         'name': 'py_hicosmo_Vexp',
         'source': 'test_py_hicosmo_Vexp.py',
+    },
+    {
+        'name': 'py_hireion',
+        'source': 'test_py_hireion.py',
+    },
+    {
+        'name': 'py_hiprim_two_fluids',
+        'source': 'test_py_hiprim_two_fluids.py',
     },
     {
         'name': 'py_hipert_em',
@@ -318,6 +359,10 @@ python_tests = [
     {
         'name': 'py_hipert_gw',
         'source': 'test_py_hipert_gw.py',
+    },
+    {
+        'name': 'py_hipert_two_fluids',
+        'source': 'test_py_hipert_two_fluids.py',
     },
     {
         'name': 'py_de_cont',
@@ -390,6 +435,10 @@ python_tests = [
     {
         'name': 'py_obj_array',
         'source': 'test_py_obj_array.py',
+    },
+    {
+        'name': 'py_model',
+        'source': 'test_py_model.py',
     },
     {
         'name': 'py_mset',
@@ -483,8 +532,19 @@ python_pyccl = python_module.find_installation(
 if python_pyccl.found()
     python_tests += [
         {
+            'name': 'py_background_ccl',
+            'source': 'test_py_background_ccl.py',
+            'timeout': 0,
+        },
+        {
             'name': 'py_powspec',
             'source': 'test_py_powspec.py',
+            'timeout': 0,
+        },
+        {
+            'name': 'py_xcor',
+            'source': 'test_py_xcor.py',
+            'timeout': 0,
         },
     ]
 endif
@@ -522,8 +582,7 @@ if enable_gir
     if py_tap.found() and get_option('pytest_tap')
         r = run_command(
             python,
-            '-c',
-            'import importlib.metadata; import sys; sys.stdout.write(importlib.metadata.version("pytest-tap"))',
+            '-c', 'import importlib.metadata; import sys; sys.stdout.write(importlib.metadata.version("pytest-tap"))',
             check: true,
         )
         message('pytest-tap version: @0@'.format(r.stdout().strip()))
@@ -536,7 +595,6 @@ if enable_gir
         pytest_protocol = 'tap'
     endif
 
-
     foreach python_test : python_tests
         if python_test.has_key('timeout')
             timeout = python_test['timeout']
@@ -547,7 +605,8 @@ if enable_gir
         test(
             python_test['name'],
             python,
-            args: pytest_args + join_paths(
+            args: pytest_args
+            + join_paths(
                 meson.current_source_dir(),
                 python_test['source'],
             ),
@@ -563,10 +622,10 @@ if enable_gir
         if mpiexec.found()
             mpiexec_args = (
                 [
-                    '-n',
-                    '2',
+                    '-n', '2',
                     python.full_path(),
-                ] + pytest_args
+                ]
+                + pytest_args
             )
             foreach python_test : python_tests
                 if python_test.has_key('mpi') and python_test['mpi']
@@ -578,7 +637,8 @@ if enable_gir
                     test(
                         'mpiexec_' + python_test['name'],
                         mpiexec,
-                        args: mpiexec_args + join_paths(
+                        args: mpiexec_args
+                        + join_paths(
                             meson.current_source_dir(),
                             python_test['source'],
                         ),

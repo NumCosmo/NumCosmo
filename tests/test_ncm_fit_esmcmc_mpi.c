@@ -103,7 +103,7 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
   NcmModelMVND *model_mvnd            = ncm_model_mvnd_new (dim);
   NcmDataset *dset                    = ncm_dataset_new_list (data_mvnd, NULL);
   NcmLikelihood *lh                   = ncm_likelihood_new (dset);
-  NcmMSet *mset                       = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
+  NcmMSet *mset                       = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
   NcmMSetTransKernGauss *init_sampler = ncm_mset_trans_kern_gauss_new (0);
 
   NcmFitESMCMCWalkerAPES *apes;
@@ -219,7 +219,7 @@ test_ncm_fit_esmcmc_new_stretch (TestNcmFitESMCMC *test, gconstpointer pdata)
   NcmModelMVND *model_mvnd            = ncm_model_mvnd_new (dim);
   NcmDataset *dset                    = ncm_dataset_new_list (data_mvnd, NULL);
   NcmLikelihood *lh                   = ncm_likelihood_new (dset);
-  NcmMSet *mset                       = ncm_mset_new (NCM_MODEL (model_mvnd), NULL);
+  NcmMSet *mset                       = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
   NcmMSetTransKernGauss *init_sampler = ncm_mset_trans_kern_gauss_new (0);
 
   NcmFitESMCMCWalkerStretch *stretch;
