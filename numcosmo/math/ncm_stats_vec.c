@@ -982,7 +982,8 @@ static void
 _ncm_stats_vec_get_autocorr_alloc (NcmStatsVec *svec, guint size)
 {
 #ifdef HAVE_FFTW3
-  const guint effsize = ncm_util_fact_size (2 * size);
+  const guint effsize      = ncm_util_fact_size (2 * size);
+  guint fftw_default_flags = ncm_cfg_get_fftw_default_flag ();
 
   if (svec->tmp == NULL)
     svec->tmp = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
