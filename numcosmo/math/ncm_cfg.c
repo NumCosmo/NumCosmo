@@ -2428,3 +2428,72 @@ guint fftw_default_flags = 0;
 
 #endif /* HAVE_FFTW3 */
 
+/**
+ * ncm_cfg_get_version:
+ * @major: (out): the major version
+ * @minor: (out): the minor version
+ * @micro: (out): the micro version
+ *
+ * Gets the version of the library.
+ *
+ * Returns: the version in the format major * 10000 + minor * 100 + micro.
+ */
+guint
+ncm_cfg_get_version (guint *major, guint *minor, guint *micro)
+{
+  if (major != NULL)
+    *major = NUMCOSMO_MAJOR_VERSION;
+
+  if (minor != NULL)
+    *minor = NUMCOSMO_MINOR_VERSION;
+
+  if (micro != NULL)
+    *micro = NUMCOSMO_MICRO_VERSION;
+
+  return NUMCOSMO_VERSION_NUMBER;
+}
+
+/**
+ * ncm_cfg_get_version_string:
+ *
+ * Gets the version of the library as a string.
+ *
+ * Returns: (transfer full): the version of the library as a string.
+ */
+gchar *
+ncm_cfg_get_version_string (void)
+{
+  return g_strdup_printf ("%d.%d.%d", NUMCOSMO_MAJOR_VERSION, NUMCOSMO_MINOR_VERSION, NUMCOSMO_MICRO_VERSION);
+}
+
+/**
+ * ncm_cfg_version_check:
+ * @major: major version
+ * @minor: minor version
+ * @micro: micro version
+ *
+ * Checks if the library version is greater or equal to @major, @minor and @micro.
+ *
+ */
+gboolean
+ncm_cfg_version_check (guint major, guint minor, guint micro)
+{
+  /* We can remove the casing once MAJOR is larger than 0 */
+  return ((gint) NUMCOSMO_MAJOR_VERSION > (gint) major) ||
+         ((NUMCOSMO_MAJOR_VERSION == major) && (NUMCOSMO_MINOR_VERSION > minor)) ||
+         ((NUMCOSMO_MAJOR_VERSION == major) && (NUMCOSMO_MINOR_VERSION == minor) && (NUMCOSMO_MICRO_VERSION >= micro));
+}
+
+/**
+ * ncm_cfg_get_commit_hash:
+ *
+ * Gets the commit hash of the library.
+ *
+ * Returns: (transfer none): the commit hash of the library.
+ */
+const gchar *
+ncm_cfg_get_commit_hash (void)
+{
+  return NUMCOSMO_GIT_COMMIT;
+}
+
