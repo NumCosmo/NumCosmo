@@ -126,6 +126,11 @@ guint ncm_cfg_get_fftw_default_flag (void);
 const gchar *ncm_cfg_get_fftw_default_flag_str (void);
 gdouble ncm_cfg_get_fftw_timelimit (void);
 
+guint ncm_cfg_get_version (guint *major, guint *minor, guint *micro);
+gchar *ncm_cfg_get_version_string (void);
+gboolean ncm_cfg_version_check (guint major, guint minor, guint micro);
+const gchar *ncm_cfg_get_commit_hash (void);
+
 /* Macros */
 
 #define NCM_CFG_DATA_DIR_ENV "NUMCOSMO_DATA_DIR"

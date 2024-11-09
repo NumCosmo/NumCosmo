@@ -47,7 +47,7 @@ jobs:
         ./example_simple
         ./example_ca
     - name: Check NumCosmo
-      run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
+      run: meson test -C build --num-processes=6 || (cat build/meson-logs/testlog.txt && exit 1)
     - name: Create a NumCosmo tarball
       run: meson dist -C build --no-tests
     - name: Upload a Build Artifact
@@ -100,7 +100,7 @@ jobs:
         python3 example_simple.py
         python3 example_cbe.py
     - name: Check NumCosmo
-      run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
+      run: meson test -C build --num-processes=6 || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge:
     name: (${{ matrix.os }}, py${{ matrix.python-version }}, ${{ matrix.mpi }}, Miniforge)
@@ -179,7 +179,7 @@ jobs:
       #  run: |
       #    pylint --rcfile .pylintrc numcosmo_py
       - name: Check NumCosmo
-        run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
+        run: meson test -C build --num-processes=6 || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge-coverage:
     name: Coverage (${{ matrix.os }}, py${{ matrix.python-version }}, openmpi, Miniforge)
@@ -235,7 +235,7 @@ jobs:
         # Third run to merge the coverage base and the coverage for the tests
         run: |
           lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
-          meson test -C build --timeout-multiplier 0 || (cat build/meson-logs/testlog.txt && exit 1)
+          meson test -C build --timeout-multiplier 0 --num-processes=6 || (cat build/meson-logs/testlog.txt && exit 1)
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
           lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/class/*' '*/levmar/*' '*/libcuba/*' '*/plc/*' '*/sundials/*' '*/toeplitz/*' '*/tools/*' --output-file numcosmo-coverage.info
