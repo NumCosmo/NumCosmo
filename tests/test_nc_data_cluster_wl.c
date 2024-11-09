@@ -213,16 +213,17 @@ test_nc_data_cluster_wl_fit (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   NcmRNG *rng                 = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
+  NcHaloMassSummary *hms      = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
   NcDistance *dist            = nc_distance_new (100.0);
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
   const guint ngals           = 200;
   NcmMatrix *gal_obs          = NULL;
 
-  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, 4.0);
-  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, 14.0);
+  ncm_model_param_set_ftype (NCM_MODEL (hms), NC_HALO_MC_PARAM_C_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set_ftype (NCM_MODEL (hms), NC_HALO_MC_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set (NCM_MODEL (hms), NC_HALO_MC_PARAM_C_DELTA, 4.0);
+  ncm_model_param_set (NCM_MODEL (hms), NC_HALO_MC_PARAM_LOG10M_DELTA, 14.0);
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
 
@@ -238,14 +239,14 @@ test_nc_data_cluster_wl_fit (TestNcDataClusterWL *test, gconstpointer pdata)
       NcmMSet *mset             = ncm_mset_new (cosmo, NULL, dp, smd, NULL);
       NcmFit *fit               = ncm_fit_factory (NCM_FIT_TYPE_NLOPT, "ln-neldermead", likelihood, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
 
-      ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-3, 0.0, NULL, NULL);
+      ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_FULL, 1.0e-3, 0.0, NULL, NULL);
       ncm_fit_obs_fisher (fit);
 
       {
-        const gdouble c_bf = ncm_model_param_get (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA);
-        const gdouble m_bf = ncm_model_param_get (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA);
-        const gdouble c_sd = ncm_fit_covar_sd (fit, nc_halo_density_profile_id (), NC_HALO_DENSITY_PROFILE_C_DELTA);
-        const gdouble m_sd = ncm_fit_covar_sd (fit, nc_halo_density_profile_id (), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA);
+        const gdouble c_bf = ncm_model_param_get (NCM_MODEL (dp), NC_HALO_MC_PARAM_C_DELTA);
+        const gdouble m_bf = ncm_model_param_get (NCM_MODEL (dp), NC_HALO_MC_PARAM_LOG10M_DELTA);
+        const gdouble c_sd = ncm_fit_covar_sd (fit, nc_halo_density_profile_id (), NC_HALO_MC_PARAM_C_DELTA);
+        const gdouble m_sd = ncm_fit_covar_sd (fit, nc_halo_density_profile_id (), NC_HALO_MC_PARAM_LOG10M_DELTA);
 
         g_assert_cmpfloat (c_bf, <, 4.0 + 5.0 * c_sd);
         g_assert_cmpfloat (c_bf, >, 4.0 - 5.0 * c_sd);
@@ -263,6 +264,7 @@ test_nc_data_cluster_wl_fit (TestNcDataClusterWL *test, gconstpointer pdata)
 
   ncm_rng_free (rng);
   nc_hicosmo_free (cosmo);
+  nc_halo_mass_summary_free (hms);
   nc_halo_density_profile_free (dp);
   nc_distance_free (dist);
   nc_wl_surface_mass_density_free (smd);
@@ -273,7 +275,8 @@ test_nc_data_cluster_wl_kde_cmp (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   NcmRNG *rng                 = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
+  NcHaloMassSummary *hms      = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
   NcDistance *dist            = nc_distance_new (100.0);
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
   const guint ngals           = 1000;
@@ -286,10 +289,10 @@ test_nc_data_cluster_wl_kde_cmp (TestNcDataClusterWL *test, gconstpointer pdata)
 
   ncm_stats_vec_enable_quantile (m2lnP_stats, 0.5);
 
-  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, 4.0);
-  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, 14.0);
+  ncm_model_param_set_ftype (NCM_MODEL (hms), NC_HALO_MC_PARAM_C_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set_ftype (NCM_MODEL (hms), NC_HALO_MC_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_MC_PARAM_C_DELTA, 4.0);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_MC_PARAM_LOG10M_DELTA, 14.0);
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
 
@@ -337,6 +340,7 @@ test_nc_data_cluster_wl_kde_cmp (TestNcDataClusterWL *test, gconstpointer pdata)
   ncm_vector_free (m2lnP_kde_gal);
   ncm_rng_free (rng);
   nc_hicosmo_free (cosmo);
+  nc_halo_mass_summary_free (hms);
   nc_halo_density_profile_free (dp);
   nc_distance_free (dist);
   nc_wl_surface_mass_density_free (smd);
@@ -385,7 +389,8 @@ test_nc_data_cluster_wl_serialize (TestNcDataClusterWL *test, gconstpointer pdat
 {
   NcmRNG *rng                  = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcHICosmo *cosmo             = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcHaloDensityProfile *dp     = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
+  NcHaloMassSummary *hms       = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp     = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
   NcDistance *dist             = nc_distance_new (100.0);
   NcWLSurfaceMassDensity *smd  = nc_wl_surface_mass_density_new (dist);
   const guint ngals            = 200;
@@ -399,10 +404,10 @@ test_nc_data_cluster_wl_serialize (TestNcDataClusterWL *test, gconstpointer pdat
   NcDataClusterWL *sd_dup;
   guint i;
 
-  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, 4.0);
-  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, 14.0);
+  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_MC_PARAM_C_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_MC_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_MC_PARAM_C_DELTA, 4.0);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_MC_PARAM_LOG10M_DELTA, 14.0);
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
 
@@ -443,6 +448,7 @@ test_nc_data_cluster_wl_serialize (TestNcDataClusterWL *test, gconstpointer pdat
   nc_data_cluster_wl_free (sd_dup);
   ncm_rng_free (rng);
   nc_hicosmo_free (cosmo);
+  nc_halo_mass_summary_free (hms);
   nc_halo_density_profile_free (dp);
   nc_distance_free (dist);
   nc_wl_surface_mass_density_free (smd);
@@ -467,15 +473,16 @@ test_nc_data_cluster_wl_peek_kde (TestNcDataClusterWL *test, gconstpointer pdata
 {
   NcDataClusterWL *dcwl       = test->dcwl;
   NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
+  NcHaloMassSummary *hms      = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
   NcDistance *dist            = nc_distance_new (100.0);
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
   NcmStatsDist *kde;
 
-  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, 4.0);
-  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, 14.0);
+  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_MC_PARAM_C_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_MC_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_MC_PARAM_C_DELTA, 4.0);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_MC_PARAM_LOG10M_DELTA, 14.0);
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
   nc_data_cluster_wl_set_use_kde (dcwl, TRUE);
@@ -487,6 +494,7 @@ test_nc_data_cluster_wl_peek_kde (TestNcDataClusterWL *test, gconstpointer pdata
   g_assert_true (NCM_IS_STATS_DIST (kde));
 
   nc_hicosmo_free (cosmo);
+  nc_halo_mass_summary_free (hms);
   nc_halo_density_profile_free (dp);
   nc_distance_free (dist);
   nc_wl_surface_mass_density_free (smd);
@@ -510,16 +518,17 @@ test_nc_data_cluster_wl_prepare_kde (TestNcDataClusterWL *test, gconstpointer pd
 {
   NcDataClusterWL *dcwl       = test->dcwl;
   NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
+  NcHaloMassSummary *hms      = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
   NcDistance *dist            = nc_distance_new (100.0);
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
   NcmMatrix *obs              = ncm_matrix_new (1, 4);
   gdouble cut_fraction;
 
-  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, 4.0);
-  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, 14.0);
+  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_MC_PARAM_C_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_MC_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_MC_PARAM_C_DELTA, 4.0);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_MC_PARAM_LOG10M_DELTA, 14.0);
 
   ncm_matrix_set (obs, 0, 0, 0.0);
   ncm_matrix_set (obs, 0, 1, 0.0);
@@ -548,7 +557,8 @@ test_nc_data_cluster_wl_val_kde (TestNcDataClusterWL *test, gconstpointer pdata)
   NcDataClusterWL *dcwl_int   = test->dcwl;
   NcDataClusterWL *dcwl_kde   = nc_data_cluster_wl_ref (dcwl_int);
   NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
+  NcHaloMassSummary *hms      = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
   NcDistance *dist            = nc_distance_new (100.0);
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
   NcmMSet *mset               = ncm_mset_new (cosmo, NULL, dp, smd, NULL);
@@ -558,10 +568,10 @@ test_nc_data_cluster_wl_val_kde (TestNcDataClusterWL *test, gconstpointer pdata)
   NcmStatsDist *kde;
   guint i;
 
-  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_C_DELTA, 4.0);
-  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, 14.0);
+  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_MC_PARAM_C_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set_ftype (NCM_MODEL (dp), NC_HALO_MC_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_MC_PARAM_C_DELTA, 4.0);
+  ncm_model_param_set (NCM_MODEL (dp), NC_HALO_MC_PARAM_LOG10M_DELTA, 14.0);
 
   nc_wl_surface_mass_density_prepare (smd, cosmo);
   nc_data_cluster_wl_set_use_kde (dcwl_kde, TRUE);
@@ -585,6 +595,7 @@ test_nc_data_cluster_wl_val_kde (TestNcDataClusterWL *test, gconstpointer pdata)
 
   nc_data_cluster_wl_free (dcwl_kde);
   nc_hicosmo_free (cosmo);
+  nc_halo_mass_summary_free (hms);
   nc_halo_density_profile_free (dp);
   nc_distance_free (dist);
   nc_wl_surface_mass_density_free (smd);

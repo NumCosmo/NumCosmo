@@ -30,35 +30,16 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/lss/nc_halo_density_profile.h>
+#include <numcosmo/lss/nc_halo_mass_summary.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_HALO_DENSITY_PROFILE_NFW             (nc_halo_density_profile_nfw_get_type ())
-#define NC_HALO_DENSITY_PROFILE_NFW(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HALO_DENSITY_PROFILE_NFW, NcHaloDensityProfileNFW))
-#define NC_HALO_DENSITY_PROFILE_NFW_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HALO_DENSITY_PROFILE_NFW, NcHaloDensityProfileNFWClass))
-#define NC_IS_HALO_DENSITY_PROFILE_NFW(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HALO_DENSITY_PROFILE_NFW))
-#define NC_IS_HALO_DENSITY_PROFILE_NFW_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HALO_DENSITY_PROFILE_NFW))
-#define NC_HALO_DENSITY_PROFILE_NFW_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HALO_DENSITY_PROFILE_NFW, NcHaloDensityProfileNFWClass))
+#define NC_TYPE_HALO_DENSITY_PROFILE_NFW (nc_halo_density_profile_nfw_get_type ())
 
-typedef struct _NcHaloDensityProfileNFWClass NcHaloDensityProfileNFWClass;
-typedef struct _NcHaloDensityProfileNFW NcHaloDensityProfileNFW;
-
-struct _NcHaloDensityProfileNFWClass
-{
-  /*< private > */
-  NcHaloDensityProfileClass parent_class;
-};
-
-struct _NcHaloDensityProfileNFW
-{
-  /*< private > */
-  NcHaloDensityProfile parent_instance;
-};
-
-GType nc_halo_density_profile_nfw_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcHaloDensityProfileNFW, nc_halo_density_profile_nfw, NC, HALO_DENSITY_PROFILE_NFW, NcHaloDensityProfile)
 
 void nc_halo_density_profile_nfw_class_set_ni (gboolean num);
-NcHaloDensityProfileNFW *nc_halo_density_profile_nfw_new (const NcHaloDensityProfileMassDef mdef, const gdouble Delta);
+NcHaloDensityProfileNFW *nc_halo_density_profile_nfw_new (NcHaloMassSummary *hms);
 
 G_END_DECLS
 
