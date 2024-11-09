@@ -23,7 +23,7 @@ jobs:
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
-      run: meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dgtkdoc=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+      run: meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate -Dgtkdoc=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: meson compile -C build
     - name: Checking indentation
@@ -89,7 +89,7 @@ jobs:
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
       run: |
-        meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dmpi=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+        meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate -Dmpi=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: |
         meson compile -C build
@@ -131,12 +131,14 @@ jobs:
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
       - name: Cache Conda env
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.CONDA }}/envs
-          key: miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ matrix.mpi }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
+        uses: actions/cache@v4
         env:
           CACHE_NUMBER: 0
+        with:
+          path: |
+            ${{ env.CONDA }}/envs
+            ~/.numcosmo
+          key: miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ matrix.mpi }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
         id: cache
       - name: Update environment
         run: |
@@ -150,7 +152,7 @@ jobs:
           [[ -e $GCC_AR ]] && AR=$GCC_AR
           [[ -e $GCC_NM ]] && NM=$GCC_NM
           [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
-          meson setup build -Dbuildtype=release -Dnumcosmo_py=true --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
+          meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
         run: |
           meson compile -C build
@@ -204,12 +206,14 @@ jobs:
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
       - name: Cache Conda env
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.CONDA }}/envs
-          key: coverage-miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
+        uses: actions/cache@v4
         env:
           CACHE_NUMBER: 0
+        with:
+          path: |
+            ${{ env.CONDA }}/envs
+            ~/.numcosmo
+          key: coverage-miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
         id: cache
       - name: Update environment
         run: |
@@ -221,7 +225,7 @@ jobs:
           [[ -e $GCC_AR ]] && AR=$GCC_AR
           [[ -e $GCC_NM ]] && NM=$GCC_NM
           [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
-          meson setup build -Dbuildtype=debug -Db_coverage=true -Db_lto=false -Dnumcosmo_py=true --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
+          meson setup build -Dbuildtype=debug -Db_coverage=true -Db_lto=false -Dnumcosmo_py=true -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
         run: |
           meson compile -C build

@@ -533,6 +533,10 @@ if fftw3f_dep.found()
   numcosmo_conf.set('HAVE_FFTW3F', true)
 endif
 
+if fftw3_dep.found() or fftw3f_dep.found()
+  numcosmo_conf.set_quoted('NUMCOSMO_FFTW_PLAN', get_option('fftw-planner'))
+endif
+
 #######################################################################################
 # Checking for cfitsio (optional):
 #######################################################################################
