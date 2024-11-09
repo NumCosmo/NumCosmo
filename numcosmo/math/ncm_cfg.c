@@ -490,7 +490,43 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
 #ifdef HAVE_FFTW3
 
+<<<<<<< HEAD
+  {
+    guint local_fftw_default_flags = FFTW_ESTIMATE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
+    gdouble fftw_timelimit         = 60.0;
+    const gchar *env_flags         = g_getenv ("NC_FFTW_DEFAULT_FLAGS");
+    const gchar *env_timelimit     = g_getenv ("NC_FFTW_TIMELIMIT");
+
+#ifdef NUMCOSMO_FFTW_PLAN
+    const gchar *flags = env_flags == NULL ? NUMCOSMO_FFTW_PLAN : env_flags;
+
+#else
+    const gchar *flags = env_flags;
+#endif
+
+
+    if (flags != NULL)
+    {
+      if (g_ascii_strcasecmp (flags, "ESTIMATE") == 0)
+        local_fftw_default_flags = FFTW_ESTIMATE;
+      else if (g_ascii_strcasecmp (flags, "MEASURE") == 0)
+        local_fftw_default_flags = FFTW_MEASURE;
+      else if (g_ascii_strcasecmp (flags, "PATIENT") == 0)
+        local_fftw_default_flags = FFTW_PATIENT;
+      else if (g_ascii_strcasecmp (flags, "EXHAUSTIVE") == 0)
+        local_fftw_default_flags = FFTW_EXHAUSTIVE;
+      else
+        g_warning ("Invalid value for NC_FFTW_DEFAULT_FLAGS: %s", flags);
+    }
+
+    if (env_timelimit != NULL)
+      fftw_timelimit = g_ascii_strtod (env_timelimit, NULL);
+
+    ncm_cfg_set_fftw_default_flag (local_fftw_default_flags, fftw_timelimit);
+  }
+=======
   ncm_cfg_set_fftw_default_from_env_str (NUMCOSMO_FFTW_PLAN, -1.0, NULL);
+>>>>>>> 533d4d5c676e0544efb9dcf236a29ccef6283a6e
 
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
@@ -2199,6 +2235,9 @@ static gdouble __fftw_timelimit   = 60.0;
 void
 ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout, GError **error)
 {
+<<<<<<< HEAD
+  fftw_default_flags = flag;
+=======
   switch (flag)
   {
     case FFTW_ESTIMATE:
@@ -2219,6 +2258,7 @@ ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout, GError **error
   __fftw_default_flags = flag;
   __fftw_timelimit     = timeout;
 
+>>>>>>> 533d4d5c676e0544efb9dcf236a29ccef6283a6e
   fftw_set_timelimit (timeout);
 #ifdef HAVE_FFTW3F
   fftwf_set_timelimit (timeout);
