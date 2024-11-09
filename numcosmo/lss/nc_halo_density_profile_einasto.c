@@ -223,14 +223,17 @@ _nc_halo_density_profile_einasto_eval_dl_spher_mass (NcHaloDensityProfile *dp, c
 NcHaloDensityProfileEinasto *
 nc_halo_density_profile_einasto_new (NcHaloMassSummary *hms)
 {
-  NcmObjArray *submodels = g_ptr_array_new ();
+  NcmObjArray *submodels = ncm_obj_array_new ();
 
   ncm_obj_array_add (submodels, G_OBJECT (hms));
+  {
+    NcHaloDensityProfileEinasto *dp_einasto = g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_EINASTO,
+                                                            "submodel-array", submodels,
+                                                            NULL);
 
-  NcHaloDensityProfileEinasto *dp_einasto = g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_EINASTO,
-                                                          "submodel-array", submodels,
-                                                          NULL);
+    ncm_obj_array_unref (submodels);
 
-  return dp_einasto;
+    return dp_einasto;
+  }
 }
 

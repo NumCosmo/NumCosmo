@@ -278,6 +278,7 @@ _nc_halo_density_profile_dispose (GObject *object)
 
   ncm_spline_clear (&self->dl_2d_density_s);
   ncm_spline_clear (&self->dl_cyl_mass_s);
+  ncm_model_ctrl_clear (&self->hms_ctrl);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_halo_density_profile_parent_class)->dispose (object);
@@ -414,7 +415,7 @@ static void
 _nc_halo_density_profile_hms_is_update (NcHaloDensityProfile *dp)
 {
   NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
-  gboolean hms_updated                     = ncm_model_ctrl_update (self->hms_ctrl, NCM_MODEL (dp));
+  gboolean hms_updated                     = ncm_model_ctrl_update (self->hms_ctrl, NCM_MODEL (self->hms));
 
   if (hms_updated)
     ncm_model_state_mark_outdated (NCM_MODEL (dp));
