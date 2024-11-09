@@ -241,6 +241,10 @@
 #endif /* HAVE_EXECINFO_H */
 #endif /* NUMCOSMO_GIR_SCAN */
 
+/* *INDENT-OFF* */
+G_DEFINE_QUARK (ncm-cfg-error, ncm_cfg_error) 
+/* *INDENT-ON* */
+
 static gchar *numcosmo_path         = NULL;
 static gboolean numcosmo_init       = FALSE;
 static FILE *_log_stream            = NULL;
@@ -485,6 +489,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
     return;
 
 #ifdef HAVE_FFTW3
+
+  ncm_cfg_set_fftw_default_from_env_str (NUMCOSMO_FFTW_PLAN, -1.0, NULL);
 
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
@@ -2174,15 +2180,16 @@ ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
   return g_variant_ref_sink (vvar);
 }
 
-gdouble fftw_default_timeout = 60.0;
-
 #ifdef HAVE_FFTW3
-guint fftw_default_flags = FFTW_MEASURE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
+
+static guint __fftw_default_flags = FFTW_MEASURE;
+static gdouble __fftw_timelimit   = 60.0;
 
 /**
  * ncm_cfg_set_fftw_default_flag:
  * @flag: a FFTW library flag
  * @timeout: planner time out in seconds
+ * @error: a GError
  *
  * Sets the default FFTW flag (FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
  * to be used when building plans. The variable @timeout sets the maximum time spended on
@@ -2190,13 +2197,227 @@ guint fftw_default_flags = FFTW_MEASURE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PA
  *
  */
 void
-ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout)
+ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout, GError **error)
 {
-  fftw_default_flags = flag;
-  fftw_set_timelimit (10.0);
+  switch (flag)
+  {
+    case FFTW_ESTIMATE:
+    case FFTW_MEASURE:
+    case FFTW_PATIENT:
+    case FFTW_EXHAUSTIVE:
+      break;
+
+    default:
+      ncm_util_set_or_call_error (error,
+                                  NCM_CFG_ERROR,
+                                  NCM_CFG_ERROR_INVALID_FFTW_FLAG,
+                                  "Invalid FFTW flag '%d'", flag);
+
+      return;
+  }
+
+  __fftw_default_flags = flag;
+  __fftw_timelimit     = timeout;
+
+  fftw_set_timelimit (timeout);
 #ifdef HAVE_FFTW3F
-  fftwf_set_timelimit (10.0);
+  fftwf_set_timelimit (timeout);
 #endif /* HAVE_FFTW3F */
+}
+
+/**
+ * ncm_cfg_set_fftw_default_flag_str:
+ * @flag_str: a FFTW library flag
+ * @timeout: planner time out in seconds
+ * @error: a GError
+ *
+ * Sets the default FFTW flag (FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
+ * to be used when building plans. The variable @timeout sets the maximum time spended on
+ * planners. The argument @flag_str is a string representation of the flag:
+ *
+ * - "estimate": FFTW_ESTIMATE
+ * - "measure": FFTW_MEASURE
+ * - "patient": FFTW_PATIENT
+ * - "exhaustive": FFTW_EXHAUSTIVE
+ *
+ * This function is case insensitive.
+ *
+ */
+void
+ncm_cfg_set_fftw_default_flag_str (const gchar *flag_str, const gdouble timeout, GError **error)
+{
+  guint flag = 0;
+
+  if (g_ascii_strcasecmp (flag_str, "estimate") == 0)
+  {
+    flag = FFTW_ESTIMATE;
+  }
+  else if (g_ascii_strcasecmp (flag_str, "measure") == 0)
+  {
+    flag = FFTW_MEASURE;
+  }
+  else if (g_ascii_strcasecmp (flag_str, "patient") == 0)
+  {
+    flag = FFTW_PATIENT;
+  }
+  else if (g_ascii_strcasecmp (flag_str, "exhaustive") == 0)
+  {
+    flag = FFTW_EXHAUSTIVE;
+  }
+  else
+  {
+    ncm_util_set_or_call_error (error,
+                                NCM_CFG_ERROR,
+                                NCM_CFG_ERROR_INVALID_FFTW_FLAG_STRING,
+                                "Invalid FFTW flag string '%s'", flag_str);
+
+    return;
+  }
+
+  ncm_cfg_set_fftw_default_flag (flag, timeout, error);
+}
+
+/**
+ * ncm_cfg_set_fftw_default_from_env:
+ * @fallback_flag: a FFTW library flag
+ * @fallback_timeout: planner time out in seconds
+ * @error: a GError
+ *
+ * Sets the default FFTW flag and planner time out from the environment variables
+ * NCM_FFTW_PLANNER and NCM_FFTW_PLANNER_TIMELIMIT. If the environment variables
+ * are not set, it uses the @fallback_flag and @fallback_timeout.
+ *
+ */
+void
+ncm_cfg_set_fftw_default_from_env (guint fallback_flag, const gdouble fallback_timeout, GError **error)
+{
+  const gchar *fftw_planner_env   = g_getenv ("NCM_FFTW_PLANNER");
+  const gchar *fftw_timelimit_env = g_getenv ("NCM_FFTW_PLANNER_TIMELIMIT");
+  gdouble timeout                 = fallback_timeout;
+
+  if (fftw_timelimit_env != NULL)
+  {
+    gchar *endptr;
+    gdouble timelimit = g_ascii_strtod (fftw_timelimit_env, &endptr);
+
+    if (endptr == fftw_timelimit_env)
+    {
+      ncm_util_set_or_call_error (error,
+                                  NCM_CFG_ERROR,
+                                  NCM_CFG_ERROR_INVALID_FFTW_TIMELIMIT,
+                                  "Invalid FFTW planner timelimit '%s'", fftw_timelimit_env);
+
+      return;
+    }
+
+    timeout = timelimit;
+  }
+
+  if (fftw_planner_env != NULL)
+    ncm_cfg_set_fftw_default_flag_str (fftw_planner_env, timeout, error);
+  else
+    ncm_cfg_set_fftw_default_flag (fallback_flag, timeout, error);
+}
+
+/**
+ * ncm_cfg_set_fftw_default_from_env_str:
+ * @fallback_flag_str: a FFTW library flag string
+ * @fallback_timeout: planner time out in seconds
+ * @error: a GError
+ *
+ * Sets the default FFTW flag and planner time out from the environment variables
+ * NCM_FFTW_PLANNER and NCM_FFTW_PLANNER_TIMELIMIT. If the environment variables
+ * are not set, it uses the @fallback_flag_str and @fallback_timeout.
+ *
+ */
+void
+ncm_cfg_set_fftw_default_from_env_str (const gchar *fallback_flag_str, const gdouble fallback_timeout, GError **error)
+{
+  const gchar *fftw_planner_env   = g_getenv ("NCM_FFTW_PLANNER");
+  const gchar *fftw_timelimit_env = g_getenv ("NCM_FFTW_PLANNER_TIMELIMIT");
+  gdouble timeout                 = fallback_timeout;
+
+  if (fftw_timelimit_env != NULL)
+  {
+    gchar *endptr;
+    gdouble timelimit = g_ascii_strtod (fftw_timelimit_env, &endptr);
+
+    if (endptr == fftw_timelimit_env)
+    {
+      ncm_util_set_or_call_error (error,
+                                  NCM_CFG_ERROR,
+                                  NCM_CFG_ERROR_INVALID_FFTW_TIMELIMIT,
+                                  "Invalid FFTW planner timelimit '%s'", fftw_timelimit_env);
+
+      return;
+    }
+
+    timeout = timelimit;
+  }
+
+  if (fftw_planner_env != NULL)
+    ncm_cfg_set_fftw_default_flag_str (fftw_planner_env, timeout, error);
+  else
+    ncm_cfg_set_fftw_default_flag_str (fallback_flag_str, timeout, error);
+}
+
+/**
+ * ncm_cfg_get_fftw_default_flag:
+ *
+ * Gets the default FFTW flag.
+ *
+ * Returns: the default FFTW flag.
+ */
+guint
+ncm_cfg_get_fftw_default_flag (void)
+{
+  return __fftw_default_flags;
+}
+
+/**
+ * ncm_cfg_get_fftw_default_flag_str:
+ *
+ * Gets the default FFTW flag as a string.
+ *
+ * Returns: (transfer none): the default FFTW flag as a string.
+ */
+const gchar *
+ncm_cfg_get_fftw_default_flag_str (void)
+{
+  const gchar *flag_str = NULL;
+
+  switch (__fftw_default_flags)
+  {
+    case FFTW_ESTIMATE:
+      flag_str = "estimate";
+      break;
+    case FFTW_MEASURE:
+      flag_str = "measure";
+      break;
+    case FFTW_PATIENT:
+      flag_str = "patient";
+      break;
+    case FFTW_EXHAUSTIVE:
+      flag_str = "exhaustive";
+      break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+  }
+
+  return flag_str;
+}
+
+/**
+ * ncm_cfg_get_fftw_timelimit:
+ *
+ * Gets the planner time out in seconds. A negative value means no time out.
+ *
+ * Returns: the planner time out in seconds.
+ */
+gdouble
+ncm_cfg_get_fftw_timelimit (void)
+{
+  return __fftw_timelimit;
 }
 
 #else
