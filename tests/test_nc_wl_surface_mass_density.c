@@ -242,7 +242,6 @@ void
 test_nc_wl_surface_mass_density_sigma (TestNcWLSurfaceMassDensity *test, gconstpointer pdata)
 {
   NcHICosmo *cosmo            = test->cosmo;
-  NcHaloMassSummary *hms      = test->hms;
   NcHaloDensityProfile *dp    = test->dp;
   NcWLSurfaceMassDensity *smd = test->smd;
 
