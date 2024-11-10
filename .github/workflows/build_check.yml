@@ -124,7 +124,7 @@ jobs:
           auto-update-conda: true
           activate-environment: numcosmo_developer
           python-version: ${{ matrix.python-version }}
-          miniforge-variant: Mambaforge
+          mamba-version: "*"
           show-channel-urls: true
           use-mamba: true
       - name: Cache date
@@ -199,7 +199,7 @@ jobs:
           auto-update-conda: true
           activate-environment: numcosmo_developer
           python-version: ${{ matrix.python-version }}
-          miniforge-variant: Mambaforge
+          mamba-version: "*"
           show-channel-urls: true
           use-mamba: true
       - name: Cache date
