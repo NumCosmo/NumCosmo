@@ -89,9 +89,9 @@ _nc_halo_mass_summary_set_property (GObject *object, guint prop_id, const GValue
     case PROP_DELTA:
       self->Delta = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -111,9 +111,9 @@ _nc_halo_mass_summary_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_DELTA:
       g_value_set_double (value, self->Delta);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -318,12 +318,12 @@ nc_halo_mass_summary_Delta (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdou
 
       break;
     }
-    default:
-      g_assert_not_reached ();
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
-      return 0.0;
+      return 0.0; /* LCOV_EXCL_LINE */
 
-      break;
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -355,12 +355,12 @@ nc_halo_mass_summary_rho_bg (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdo
       return ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * nc_hicosmo_E2 (cosmo, z);
 
       break;
-    default:
-      g_assert_not_reached ();
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
-      return 0.0;
+      return 0.0; /* LCOV_EXCL_LINE */
 
-      break;
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -400,12 +400,12 @@ nc_halo_mass_summary_Delta_rho_bg (NcHaloMassSummary *hms, NcHICosmo *cosmo, con
 
       break;
     }
-    default:
-      g_assert_not_reached ();
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
-      return 0.0;
+      return 0.0; /* LCOV_EXCL_LINE */
 
-      break;
+      break; /* LCOV_EXCL_LINE */
   }
 }
 

@@ -365,6 +365,10 @@ python_tests = [
         'source': 'test_py_hipert_two_fluids.py',
     },
     {
+        'name': 'py_halo_mass_summary',
+        'source': 'test_py_halo_mass_summary.py',
+    },
+    {
         'name': 'py_de_cont',
         'source': 'test_py_de_cont.py',
     },
