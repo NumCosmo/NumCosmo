@@ -124,9 +124,11 @@ jobs:
           auto-update-conda: true
           activate-environment: numcosmo_developer
           python-version: ${{ matrix.python-version }}
-          miniforge-variant: Mambaforge
+          mamba-version: "*"
           show-channel-urls: true
           use-mamba: true
+          conda-remove-defaults: true
+          miniforge-version: latest
       - name: Cache date
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
@@ -199,9 +201,11 @@ jobs:
           auto-update-conda: true
           activate-environment: numcosmo_developer
           python-version: ${{ matrix.python-version }}
-          miniforge-variant: Mambaforge
+          mamba-version: "*"
           show-channel-urls: true
           use-mamba: true
+          conda-remove-defaults: true
+          miniforge-version: latest
       - name: Cache date
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
