@@ -127,6 +127,7 @@ jobs:
           mamba-version: "*"
           show-channel-urls: true
           use-mamba: true
+          conda-remove-defaults: true
       - name: Cache date
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
@@ -202,6 +203,7 @@ jobs:
           mamba-version: "*"
           show-channel-urls: true
           use-mamba: true
+          conda-remove-defaults: true
       - name: Cache date
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
