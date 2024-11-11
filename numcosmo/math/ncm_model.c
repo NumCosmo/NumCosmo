@@ -487,7 +487,7 @@ ncm_model_class_init (NcmModelClass *klass)
                                                        NULL,
                                                        "NcmModel array of submodels",
                                                        NCM_TYPE_OBJ_ARRAY,
-                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   klass->add_submodel = &_ncm_model_add_submodel;
 }
 
