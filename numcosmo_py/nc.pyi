@@ -82,7 +82,6 @@ GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_LOW: float = 0.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_ALPHA: float = 0.68
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_BETA: float = 2.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_Z0: float = 0.11
-HALO_DENSITY_PROFILE_DEFAULT_C_DELTA: float = 4.0
 HALO_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HALO_DENSITY_PROFILE_DK14_DEFAULT_BETA: float = 4.0
 HALO_DENSITY_PROFILE_DK14_DEFAULT_PARAMS_ABSTOL: float = 0.0
@@ -90,6 +89,9 @@ HALO_DENSITY_PROFILE_DK14_DEFAULT_RT: float = 1.0
 HALO_DENSITY_PROFILE_EINASTO_DEFAULT_ALPHA: float = 0.25
 HALO_DENSITY_PROFILE_EINASTO_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HALO_DENSITY_PROFILE_EINASTO_LOCAL_SPARAM_LEN: int = 1
+HALO_MC_PARAM_DEFAULT_C_DELTA: float = 4.0
+HALO_MC_PARAM_DEFAULT_PARAMS_ABSTOL: float = 0.0
+HALO_MC_PARAM_LOCAL_SPARAM_LEN: int = 2
 HALO_POSITION_DEFAULT_DEC: float = 0.0
 HALO_POSITION_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HALO_POSITION_DEFAULT_RA: float = 0.0
@@ -13784,24 +13786,12 @@ class HaloDensityProfile(NumCosmoMath.Model):
     Object NcHaloDensityProfile
 
     Properties from NcHaloDensityProfile:
-      mass-def -> NcHaloDensityProfileMassDef: mass-def
-        Mass definition
-      Delta -> gdouble: Delta
-        Overdensity constant
       reltol -> gdouble: reltol
         Relative tolerance
       lnXi -> gdouble: lnXi
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
-      cDelta -> gdouble: cDelta
-        c_{\Delta}
-      log10MDelta -> gdouble: log10MDelta
-        \log_{10}(M_{\Delta})
-      cDelta-fit -> gboolean: cDelta-fit
-        c_{\Delta}:fit
-      log10MDelta-fit -> gboolean: log10MDelta-fit
-        \log_{10}(M_{\Delta}):fit
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -13828,14 +13818,8 @@ class HaloDensityProfile(NumCosmoMath.Model):
     """
 
     class Props:
-        Delta: float
-        cDelta: float
-        cDelta_fit: bool
         lnXf: float
         lnXi: float
-        log10MDelta: float
-        log10MDelta_fit: bool
-        mass_def: HaloDensityProfileMassDef
         reltol: float
         implementation: int
         name: str
@@ -13849,24 +13833,15 @@ class HaloDensityProfile(NumCosmoMath.Model):
 
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
-    priv: HaloDensityProfilePrivate = ...
     def __init__(
         self,
-        Delta: float = ...,
-        cDelta: float = ...,
-        cDelta_fit: bool = ...,
         lnXf: float = ...,
         lnXi: float = ...,
-        log10MDelta: float = ...,
-        log10MDelta_fit: bool = ...,
-        mass_def: HaloDensityProfileMassDef = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
-    def Delta(self, cosmo: HICosmo, z: float) -> float: ...
-    def Delta_rho_bg(self, cosmo: HICosmo, z: float) -> float: ...
     @staticmethod
     def clear(dp: HaloDensityProfile) -> None: ...
     def do_eval_dl_2d_density(self, X: float) -> float: ...
@@ -13900,10 +13875,10 @@ class HaloDensityProfile(NumCosmoMath.Model):
     def get_reltol(self) -> float: ...
     @staticmethod
     def id() -> int: ...
+    def peek_mass_summary(self) -> HaloMassSummary: ...
     def r_s(self, cosmo: HICosmo, z: float) -> float: ...
     def r_s_rho_s(self, cosmo: HICosmo, z: float) -> Tuple[float, float]: ...
     def ref(self) -> HaloDensityProfile: ...
-    def rho_bg(self, cosmo: HICosmo, z: float) -> float: ...
     def rho_s(self, cosmo: HICosmo, z: float) -> float: ...
     def set_lnXf(self, lnXf: float) -> None: ...
     def set_lnXi(self, lnXi: float) -> None: ...
@@ -13948,24 +13923,12 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         \beta:fit
 
     Properties from NcHaloDensityProfile:
-      mass-def -> NcHaloDensityProfileMassDef: mass-def
-        Mass definition
-      Delta -> gdouble: Delta
-        Overdensity constant
       reltol -> gdouble: reltol
         Relative tolerance
       lnXi -> gdouble: lnXi
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
-      cDelta -> gdouble: cDelta
-        c_{\Delta}
-      log10MDelta -> gdouble: log10MDelta
-        \log_{10}(M_{\Delta})
-      cDelta-fit -> gboolean: cDelta-fit
-        c_{\Delta}:fit
-      log10MDelta-fit -> gboolean: log10MDelta-fit
-        \log_{10}(M_{\Delta}):fit
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -13997,13 +13960,8 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         beta_fit: bool
         rt: float
         rt_fit: bool
-        cDelta: float
-        cDelta_fit: bool
         lnXf: float
         lnXi: float
-        log10MDelta: float
-        log10MDelta_fit: bool
-        mass_def: HaloDensityProfileMassDef
         reltol: float
         implementation: int
         name: str
@@ -14026,13 +13984,8 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         beta_fit: bool = ...,
         rt: float = ...,
         rt_fit: bool = ...,
-        cDelta: float = ...,
-        cDelta_fit: bool = ...,
         lnXf: float = ...,
         lnXi: float = ...,
-        log10MDelta: float = ...,
-        log10MDelta_fit: bool = ...,
-        mass_def: HaloDensityProfileMassDef = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -14059,7 +14012,7 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
     ::
 
         HaloDensityProfileEinasto(**properties)
-        new(mdef:NumCosmo.HaloDensityProfileMassDef, Delta:float) -> NumCosmo.HaloDensityProfileEinasto
+        new(hms:NumCosmo.HaloMassSummary) -> NumCosmo.HaloDensityProfileEinasto
 
     Object NcHaloDensityProfileEinasto
 
@@ -14070,24 +14023,12 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         \alpha:fit
 
     Properties from NcHaloDensityProfile:
-      mass-def -> NcHaloDensityProfileMassDef: mass-def
-        Mass definition
-      Delta -> gdouble: Delta
-        Overdensity constant
       reltol -> gdouble: reltol
         Relative tolerance
       lnXi -> gdouble: lnXi
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
-      cDelta -> gdouble: cDelta
-        c_{\Delta}
-      log10MDelta -> gdouble: log10MDelta
-        \log_{10}(M_{\Delta})
-      cDelta-fit -> gboolean: cDelta-fit
-        c_{\Delta}:fit
-      log10MDelta-fit -> gboolean: log10MDelta-fit
-        \log_{10}(M_{\Delta}):fit
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -14116,14 +14057,8 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
     class Props:
         alpha: float
         alpha_fit: bool
-        Delta: float
-        cDelta: float
-        cDelta_fit: bool
         lnXf: float
         lnXi: float
-        log10MDelta: float
-        log10MDelta_fit: bool
-        mass_def: HaloDensityProfileMassDef
         reltol: float
         implementation: int
         name: str
@@ -14136,28 +14071,19 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         vector_params_len: int
 
     props: Props = ...
-    parent_instance: HaloDensityProfile = ...
     def __init__(
         self,
         alpha: float = ...,
         alpha_fit: bool = ...,
-        Delta: float = ...,
-        cDelta: float = ...,
-        cDelta_fit: bool = ...,
         lnXf: float = ...,
         lnXi: float = ...,
-        log10MDelta: float = ...,
-        log10MDelta_fit: bool = ...,
-        mass_def: HaloDensityProfileMassDef = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
-    def new(
-        cls, mdef: HaloDensityProfileMassDef, Delta: float
-    ) -> HaloDensityProfileEinasto: ...
+    def new(cls, hms: HaloMassSummary) -> HaloDensityProfileEinasto: ...
 
 class HaloDensityProfileEinastoClass(GObject.GPointer):
     r"""
@@ -14177,29 +14103,17 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
     ::
 
         HaloDensityProfileHernquist(**properties)
-        new(mdef:NumCosmo.HaloDensityProfileMassDef, Delta:float) -> NumCosmo.HaloDensityProfileHernquist
+        new(hms:NumCosmo.HaloMassSummary) -> NumCosmo.HaloDensityProfileHernquist
 
     Object NcHaloDensityProfileHernquist
 
     Properties from NcHaloDensityProfile:
-      mass-def -> NcHaloDensityProfileMassDef: mass-def
-        Mass definition
-      Delta -> gdouble: Delta
-        Overdensity constant
       reltol -> gdouble: reltol
         Relative tolerance
       lnXi -> gdouble: lnXi
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
-      cDelta -> gdouble: cDelta
-        c_{\Delta}
-      log10MDelta -> gdouble: log10MDelta
-        \log_{10}(M_{\Delta})
-      cDelta-fit -> gboolean: cDelta-fit
-        c_{\Delta}:fit
-      log10MDelta-fit -> gboolean: log10MDelta-fit
-        \log_{10}(M_{\Delta}):fit
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -14226,14 +14140,8 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
     """
 
     class Props:
-        Delta: float
-        cDelta: float
-        cDelta_fit: bool
         lnXf: float
         lnXi: float
-        log10MDelta: float
-        log10MDelta_fit: bool
-        mass_def: HaloDensityProfileMassDef
         reltol: float
         implementation: int
         name: str
@@ -14246,26 +14154,17 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
         vector_params_len: int
 
     props: Props = ...
-    parent_instance: HaloDensityProfile = ...
     def __init__(
         self,
-        Delta: float = ...,
-        cDelta: float = ...,
-        cDelta_fit: bool = ...,
         lnXf: float = ...,
         lnXi: float = ...,
-        log10MDelta: float = ...,
-        log10MDelta_fit: bool = ...,
-        mass_def: HaloDensityProfileMassDef = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
-    def new(
-        cls, mdef: HaloDensityProfileMassDef, Delta: float
-    ) -> HaloDensityProfileHernquist: ...
+    def new(cls, hms: HaloMassSummary) -> HaloDensityProfileHernquist: ...
 
 class HaloDensityProfileHernquistClass(GObject.GPointer):
     r"""
@@ -14285,29 +14184,17 @@ class HaloDensityProfileNFW(HaloDensityProfile):
     ::
 
         HaloDensityProfileNFW(**properties)
-        new(mdef:NumCosmo.HaloDensityProfileMassDef, Delta:float) -> NumCosmo.HaloDensityProfileNFW
+        new(hms:NumCosmo.HaloMassSummary) -> NumCosmo.HaloDensityProfileNFW
 
     Object NcHaloDensityProfileNFW
 
     Properties from NcHaloDensityProfile:
-      mass-def -> NcHaloDensityProfileMassDef: mass-def
-        Mass definition
-      Delta -> gdouble: Delta
-        Overdensity constant
       reltol -> gdouble: reltol
         Relative tolerance
       lnXi -> gdouble: lnXi
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
-      cDelta -> gdouble: cDelta
-        c_{\Delta}
-      log10MDelta -> gdouble: log10MDelta
-        \log_{10}(M_{\Delta})
-      cDelta-fit -> gboolean: cDelta-fit
-        c_{\Delta}:fit
-      log10MDelta-fit -> gboolean: log10MDelta-fit
-        \log_{10}(M_{\Delta}):fit
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -14334,14 +14221,8 @@ class HaloDensityProfileNFW(HaloDensityProfile):
     """
 
     class Props:
-        Delta: float
-        cDelta: float
-        cDelta_fit: bool
         lnXf: float
         lnXi: float
-        log10MDelta: float
-        log10MDelta_fit: bool
-        mass_def: HaloDensityProfileMassDef
         reltol: float
         implementation: int
         name: str
@@ -14354,26 +14235,17 @@ class HaloDensityProfileNFW(HaloDensityProfile):
         vector_params_len: int
 
     props: Props = ...
-    parent_instance: HaloDensityProfile = ...
     def __init__(
         self,
-        Delta: float = ...,
-        cDelta: float = ...,
-        cDelta_fit: bool = ...,
         lnXf: float = ...,
         lnXi: float = ...,
-        log10MDelta: float = ...,
-        log10MDelta_fit: bool = ...,
-        mass_def: HaloDensityProfileMassDef = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ): ...
     @classmethod
-    def new(
-        cls, mdef: HaloDensityProfileMassDef, Delta: float
-    ) -> HaloDensityProfileNFW: ...
+    def new(cls, hms: HaloMassSummary) -> HaloDensityProfileNFW: ...
     @staticmethod
     def set_ni(num: bool) -> None: ...
 
@@ -14390,7 +14262,104 @@ class HaloDensityProfileNFWClass(GObject.GPointer):
     @staticmethod
     def set_ni(num: bool) -> None: ...
 
-class HaloDensityProfilePrivate(GObject.GPointer): ...
+class HaloMCParam(HaloMassSummary):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloMCParam(**properties)
+        new(mdef:NumCosmo.HaloMassSummaryMassDef, Delta:float) -> NumCosmo.HaloMCParam
+
+    Object NcHaloMCParam
+
+    Properties from NcHaloMCParam:
+      cDelta -> gdouble: cDelta
+        c_{\Delta}
+      log10MDelta -> gdouble: log10MDelta
+        \log_{10}(M_{\Delta})
+      cDelta-fit -> gboolean: cDelta-fit
+        c_{\Delta}:fit
+      log10MDelta-fit -> gboolean: log10MDelta-fit
+        \log_{10}(M_{\Delta}):fit
+
+    Properties from NcHaloMassSummary:
+      mass-def -> NcHaloMassSummaryMassDef: mass-def
+        Mass definition
+      Delta -> gdouble: Delta
+        Overdensity constant
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        cDelta: float
+        cDelta_fit: bool
+        log10MDelta: float
+        log10MDelta_fit: bool
+        Delta: float
+        mass_def: HaloMassSummaryMassDef
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        cDelta: float = ...,
+        cDelta_fit: bool = ...,
+        log10MDelta: float = ...,
+        log10MDelta_fit: bool = ...,
+        Delta: float = ...,
+        mass_def: HaloMassSummaryMassDef = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
+    @staticmethod
+    def clear(hmcp: HaloMCParam) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls, mdef: HaloMassSummaryMassDef, Delta: float) -> HaloMCParam: ...
+    def ref(self) -> HaloMCParam: ...
+
+class HaloMCParamClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloMCParamClass()
+    """
+
+    parent_class: HaloMassSummaryClass = ...
 
 class HaloMassFunction(GObject.Object):
     r"""
@@ -14510,6 +14479,99 @@ class HaloMassFunctionClass(GObject.GPointer):
     parent_class: GObject.ObjectClass = ...
 
 class HaloMassFunctionPrivate(GObject.GPointer): ...
+
+class HaloMassSummary(NumCosmoMath.Model):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloMassSummary(**properties)
+
+    Object NcHaloMassSummary
+
+    Properties from NcHaloMassSummary:
+      mass-def -> NcHaloMassSummaryMassDef: mass-def
+        Mass definition
+      Delta -> gdouble: Delta
+        Overdensity constant
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        Delta: float
+        mass_def: HaloMassSummaryMassDef
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: NumCosmoMath.Model = ...
+    def __init__(
+        self,
+        Delta: float = ...,
+        mass_def: HaloMassSummaryMassDef = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ): ...
+    def Delta(self, cosmo: HICosmo, z: float) -> float: ...
+    def Delta_rho_bg(self, cosmo: HICosmo, z: float) -> float: ...
+    @staticmethod
+    def clear(hms: HaloMassSummary) -> None: ...
+    def concentration(self) -> float: ...
+    def do_concentration(self) -> float: ...
+    def do_mass(self) -> float: ...
+    def free(self) -> None: ...
+    def get_Delta(self) -> float: ...
+    @staticmethod
+    def id() -> int: ...
+    def mass(self) -> float: ...
+    def ref(self) -> HaloMassSummary: ...
+    def rho_bg(self, cosmo: HICosmo, z: float) -> float: ...
+    def set_Delta(self, Delta: float) -> None: ...
+
+class HaloMassSummaryClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloMassSummaryClass()
+    """
+
+    parent_class: NumCosmoMath.ModelClass = ...
+    mass: Callable[[HaloMassSummary], float] = ...
+    concentration: Callable[[HaloMassSummary], float] = ...
+    padding: list[None] = ...
 
 class HaloPosition(NumCosmoMath.Model):
     r"""
@@ -19753,19 +19815,19 @@ class HaloDensityProfileDK14Params(GObject.GEnum):
 class HaloDensityProfileEinastoParams(GObject.GEnum):
     ALPHA: HaloDensityProfileEinastoParams = ...
 
-class HaloDensityProfileMassDef(GObject.GEnum):
-    CRITICAL: HaloDensityProfileMassDef = ...
-    MEAN: HaloDensityProfileMassDef = ...
-    VIRIAL: HaloDensityProfileMassDef = ...
-
-class HaloDensityProfileSParams(GObject.GEnum):
-    C_DELTA: HaloDensityProfileSParams = ...
-    LOG10M_DELTA: HaloDensityProfileSParams = ...
+class HaloMassConcentrationParamSParams(GObject.GEnum):
+    C_DELTA: HaloMassConcentrationParamSParams = ...
+    LOG10M_DELTA: HaloMassConcentrationParamSParams = ...
 
 class HaloMassFunctionSplineOptimize(GObject.GEnum):
     LNM: HaloMassFunctionSplineOptimize = ...
     NONE: HaloMassFunctionSplineOptimize = ...
     Z: HaloMassFunctionSplineOptimize = ...
+
+class HaloMassSummaryMassDef(GObject.GEnum):
+    CRITICAL: HaloMassSummaryMassDef = ...
+    MEAN: HaloMassSummaryMassDef = ...
+    VIRIAL: HaloMassSummaryMassDef = ...
 
 class HaloPositionSParams(GObject.GEnum):
     DEC: HaloPositionSParams = ...

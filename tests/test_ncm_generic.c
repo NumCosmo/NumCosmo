@@ -69,6 +69,8 @@ void test_nc_hipert_em_basic (void);
 void test_nc_hipert_gw_basic (void);
 void test_nc_hipert_two_fluids_basic (void);
 void test_nc_hiprim_two_fluids_basic (void);
+void test_nc_halo_mass_summary_basic (void);
+void test_nc_halo_mc_param_basic (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -112,6 +114,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/hipert/gw/basic", test_nc_hipert_gw_basic);
   g_test_add_func ("/nc/hipert/two_fluids/basic", test_nc_hipert_two_fluids_basic);
   g_test_add_func ("/nc/hiprim/two_fluids/basic", test_nc_hiprim_two_fluids_basic);
+
+  g_test_add_func ("/nc/halo_mass_summary/basic", test_nc_halo_mass_summary_basic);
+  g_test_add_func ("/nc/halo_mc_param/basic", test_nc_halo_mc_param_basic);
 
   g_test_run ();
 }
@@ -736,5 +741,41 @@ test_nc_hiprim_two_fluids_basic (void)
   g_assert_true (NC_IS_HIPRIM_TWO_FLUIDS (tf));
 
   NCM_TEST_FREE (nc_hiprim_two_fluids_free, tf);
+}
+
+void
+test_nc_halo_mass_summary_basic (void)
+{
+  NcHaloMassSummary *hms = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0));
+  NcHaloMassSummary *hms2;
+
+  g_assert_true (hms != NULL);
+  g_assert_true (NC_IS_HALO_MASS_SUMMARY (hms));
+
+  hms2 = nc_halo_mass_summary_ref (hms);
+  nc_halo_mass_summary_clear (&hms2);
+  g_assert_true (hms2 == NULL);
+
+  g_assert_true (NC_IS_HALO_MASS_SUMMARY (hms));
+
+  NCM_TEST_FREE (nc_halo_mass_summary_free, hms);
+}
+
+void
+test_nc_halo_mc_param_basic (void)
+{
+  NcHaloMCParam *hmp = nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0);
+  NcHaloMCParam *hmp2;
+
+  g_assert_true (hmp != NULL);
+  g_assert_true (NC_IS_HALO_MC_PARAM (hmp));
+
+  hmp2 = nc_halo_mc_param_ref (hmp);
+  nc_halo_mc_param_clear (&hmp2);
+  g_assert_true (hmp2 == NULL);
+
+  g_assert_true (NC_IS_HALO_MC_PARAM (hmp));
+
+  NCM_TEST_FREE (nc_halo_mc_param_free, hmp);
 }
 
