@@ -75,32 +75,6 @@ nc_halo_mc_param_init (NcHaloMCParam *hmcp)
 }
 
 static void
-_nc_halo_mc_param_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  g_return_if_fail (NC_IS_HALO_MC_PARAM (object));
-
-  switch (prop_id)
-  {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
-  }
-}
-
-static void
-_nc_halo_mc_param_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  g_return_if_fail (NC_IS_HALO_MC_PARAM (object));
-
-  switch (prop_id)
-  {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
-  }
-}
-
-static void
 _nc_halo_mc_param_dispose (GObject *object)
 {
   /* Chain up : end */
@@ -123,10 +97,8 @@ nc_halo_mc_param_class_init (NcHaloMCParamClass *klass)
   NcHaloMassSummaryClass *hms_class = NC_HALO_MASS_SUMMARY_CLASS (klass);
   NcmModelClass *model_class        = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property = &_nc_halo_mc_param_set_property;
-  model_class->get_property = &_nc_halo_mc_param_get_property;
-  object_class->dispose     = &_nc_halo_mc_param_dispose;
-  object_class->finalize    = &_nc_halo_mc_param_finalize;
+  object_class->dispose  = &_nc_halo_mc_param_dispose;
+  object_class->finalize = &_nc_halo_mc_param_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Mass and concentration as parameters", "MC_PARAM");
   ncm_model_class_add_params (model_class, NC_HALO_MC_PARAM_LOCAL_SPARAM_LEN, 0, PROP_LEN);

@@ -696,7 +696,7 @@ test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata)
 
     F.function = &F_linear;
     F.params   = d;
-    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, test->nknots, test->prec);
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, 0, test->prec);
 
     for (i = 0; i < 2 * test->nknots; i++)
     {
@@ -715,7 +715,7 @@ test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata)
 
     F.function = &F_cubic;
     F.params   = d;
-    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, test->nknots, test->prec);
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, 0, test->prec);
 
     for (i = 0; i < 2 * test->nknots; i++)
     {
@@ -734,7 +734,7 @@ test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata)
 
     F.function = &F_sin_poly;
     F.params   = d;
-    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * ((test->nknots) / 100.0 - 1)) * _TEST_EPSILON, test->nknots, test->prec);
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * ((test->nknots) / 100.0 - 1)) * _TEST_EPSILON, 0, test->prec);
 
     for (i = 0; i < 2 * test->nknots; i++)
     {
@@ -769,7 +769,7 @@ test_ncm_spline_eval_deriv (TestNcmSpline *test, gconstpointer pdata)
     F.params         = d;
     F_deriv.function = &F_linear_deriv;
     F_deriv.params   = d;
-    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, test->nknots, test->prec);
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, 0, test->prec);
 
     for (i = 0; i < 2 * test->nknots; i++)
     {
@@ -791,7 +791,7 @@ test_ncm_spline_eval_deriv (TestNcmSpline *test, gconstpointer pdata)
     F.params         = d;
     F_deriv.function = &F_cubic_deriv;
     F_deriv.params   = d;
-    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, test->nknots, test->prec);
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, 0, test->prec);
 
     for (i = 0; i < 2 * test->nknots; i++)
     {
@@ -813,7 +813,7 @@ test_ncm_spline_eval_deriv (TestNcmSpline *test, gconstpointer pdata)
     F.params         = d;
     F_deriv.function = &F_sin_poly_deriv;
     F_deriv.params   = d;
-    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots / 100.0 - 1)) * _TEST_EPSILON, test->nknots, test->prec);
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots / 100.0 - 1)) * _TEST_EPSILON, 0, test->prec);
 
     for (i = 0; i < 2 * test->nknots; i++)
     {
@@ -849,7 +849,7 @@ test_ncm_spline_eval_deriv2 (TestNcmSpline *test, gconstpointer pdata)
     F.params          = d;
     F_deriv2.function = &F_linear_deriv2;
     F_deriv2.params   = d;
-    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, test->nknots, test->prec);
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, 0, test->prec);
 
     for (i = 0; i < 2 * test->nknots; i++)
     {
@@ -871,7 +871,7 @@ test_ncm_spline_eval_deriv2 (TestNcmSpline *test, gconstpointer pdata)
     F.params          = d;
     F_deriv2.function = &F_cubic_deriv2;
     F_deriv2.params   = d;
-    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, test->nknots, test->prec);
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, 0, test->prec);
 
     for (i = 0; i < 2 * test->nknots; i++)
     {
@@ -893,7 +893,7 @@ test_ncm_spline_eval_deriv2 (TestNcmSpline *test, gconstpointer pdata)
     F.params          = d;
     F_deriv2.function = &F_sin_poly_deriv2;
     F_deriv2.params   = d;
-    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots / 500.0 - 1)) * _TEST_EPSILON, test->nknots, test->prec);
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots / 500.0 - 1)) * _TEST_EPSILON, 0, test->prec);
 
     for (i = 0; i < 2 * test->nknots; i++)
     {
@@ -928,7 +928,7 @@ test_ncm_spline_eval_int (TestNcmSpline *test, gconstpointer pdata)
     F.params       = d;
     F_int.function = &F_linear_int_0x;
     F_int.params   = d;
-    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, test->nknots, test->prec);
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, 0, test->prec);
 
     for (i = 0; i < 2 * test->nknots; i++)
     {
@@ -950,7 +950,7 @@ test_ncm_spline_eval_int (TestNcmSpline *test, gconstpointer pdata)
     F.params       = d;
     F_int.function = &F_cubic_int_0x;
     F_int.params   = d;
-    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, test->nknots, test->prec);
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, 0, test->prec);
 
     for (i = 0; i < 2 * test->nknots; i++)
     {

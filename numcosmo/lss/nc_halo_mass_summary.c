@@ -309,21 +309,16 @@ nc_halo_mass_summary_Delta (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdou
 
       return self->Delta;
 
-      break;
     case NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL:
     {
       const gdouble x = nc_hicosmo_E2Omega_m (cosmo, z) / nc_hicosmo_E2 (cosmo, z) - 1.0;
 
       return _VIRIAL_DELTA (x);
-
-      break;
     }
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
       return 0.0; /* LCOV_EXCL_LINE */
-
-      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -348,19 +343,15 @@ nc_halo_mass_summary_rho_bg (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdo
 
       return ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * nc_hicosmo_E2Omega_m (cosmo, z);
 
-      break;
     case NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL:
     case NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL:
 
       return ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * nc_hicosmo_E2 (cosmo, z);
 
-      break;
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
       return 0.0; /* LCOV_EXCL_LINE */
-
-      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -385,27 +376,21 @@ nc_halo_mass_summary_Delta_rho_bg (NcHaloMassSummary *hms, NcHICosmo *cosmo, con
 
       return self->Delta * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * nc_hicosmo_E2Omega_m (cosmo, z);
 
-      break;
     case NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL:
 
       return self->Delta * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * nc_hicosmo_E2 (cosmo, z);
 
-      break;
     case NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL:
     {
       const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
       const gdouble x  = nc_hicosmo_E2Omega_m (cosmo, z) / E2 - 1.0;
 
       return _VIRIAL_DELTA (x) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * E2;
-
-      break;
     }
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
       return 0.0; /* LCOV_EXCL_LINE */
-
-      break; /* LCOV_EXCL_LINE */
   }
 }
 
