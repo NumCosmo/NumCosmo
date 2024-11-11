@@ -91,7 +91,7 @@ class ClusterModel:
     def __init__(
         self,
         *,
-        mass_def: Nc.HaloDensityProfileMassDef = Nc.HaloDensityProfileMassDef.CRITICAL,
+        mass_def: Nc.HaloMassSummaryMassDef = Nc.HaloMassSummaryMassDef.CRITICAL,
         delta: float = 200.0,
         profile_type: HaloProfileType = HaloProfileType.NFW,
         position: HaloPositionData = HaloPositionData(ra=12.34, dec=-55.123, z=0.2),
@@ -106,14 +106,18 @@ class ClusterModel:
         self.mass_def = mass_def
         self.mass_delta = delta
         self.profile_type = profile_type
+
+        halo_mass_summary = Nc.HaloMCParam.new(mass_def, delta)
         match profile_type:
             case HaloProfileType.NFW:
-                self.density_profile = Nc.HaloDensityProfileNFW.new(mass_def, delta)
+                self.density_profile = Nc.HaloDensityProfileNFW.new(halo_mass_summary)
             case HaloProfileType.EINASTO:
-                self.density_profile = Nc.HaloDensityProfileEinasto.new(mass_def, delta)
+                self.density_profile = Nc.HaloDensityProfileEinasto.new(
+                    halo_mass_summary
+                )
             case HaloProfileType.HERNQUIST:
                 self.density_profile = Nc.HaloDensityProfileHernquist.new(
-                    mass_def, delta
+                    halo_mass_summary
                 )
             case _:
                 raise ValueError(f"Invalid halo profile type: {profile_type}")
