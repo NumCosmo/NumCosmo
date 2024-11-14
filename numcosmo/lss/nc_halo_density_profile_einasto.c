@@ -67,11 +67,21 @@
 #include <gsl/gsl_sf_gamma.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcHaloDensityProfileEinasto, nc_halo_density_profile_einasto, NC_TYPE_HALO_DENSITY_PROFILE)
+typedef struct _NcHaloDensityProfileEinastoPrivate
+{
+  NcHaloMassSummary *hms;
+} NcHaloDensityProfileEinastoPrivate;
+
+struct _NcHaloDensityProfileEinasto
+{
+  NcHaloDensityProfile parent_instance;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcHaloDensityProfileEinasto, nc_halo_density_profile_einasto, NC_TYPE_HALO_DENSITY_PROFILE);
 
 #define VECTOR  (NCM_MODEL (dp))
-#define M_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_M_DELTA))
-#define C_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA))
+/*#define M_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_M_DELTA)) */
+/*#define C_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA)) */
 #define ALPHA   (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA))
 
 enum
@@ -83,6 +93,9 @@ enum
 static void
 nc_halo_density_profile_einasto_init (NcHaloDensityProfileEinasto *dpe)
 {
+  NcHaloDensityProfileEinastoPrivate * const self = nc_halo_density_profile_einasto_get_instance_private (dpe);
+
+  self->hms = NULL;
 }
 
 static void
@@ -120,6 +133,8 @@ nc_halo_density_profile_einasto_finalize (GObject *object)
   G_OBJECT_CLASS (nc_halo_density_profile_einasto_parent_class)->finalize (object);
 }
 
+static void _nc_halo_density_profile_einasto_add_submodel (NcmModel *model, NcmModel *submodel);
+
 static gdouble _nc_halo_density_profile_einasto_eval_dl_density (NcHaloDensityProfile *dp, const gdouble X);
 static gdouble _nc_halo_density_profile_einasto_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble X);
 
@@ -151,8 +166,30 @@ nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *kl
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
+  model_class->add_submodel = &_nc_halo_density_profile_einasto_add_submodel;
+
+
   dp_class->eval_dl_density    = &_nc_halo_density_profile_einasto_eval_dl_density;
   dp_class->eval_dl_spher_mass = &_nc_halo_density_profile_einasto_eval_dl_spher_mass;
+}
+
+static void
+_nc_halo_density_profile_einasto_add_submodel (NcmModel *model, NcmModel *submodel)
+{
+  /* Chain up : start */
+  NCM_MODEL_CLASS (nc_halo_density_profile_einasto_parent_class)->add_submodel (model, submodel);
+  {
+    NcHaloDensityProfileEinasto *dpe                = NC_HALO_DENSITY_PROFILE_EINASTO (model);
+    NcHaloDensityProfileEinastoPrivate * const self = nc_halo_density_profile_einasto_get_instance_private (dpe);
+
+    if (ncm_model_id (submodel) == nc_halo_mass_summary_id ())
+    {
+      if (self->hms != NULL)
+        g_error ("Halo mass summary was already defined in `%s' class.", G_OBJECT_CLASS_NAME (dpe));
+
+      self->hms = NC_HALO_MASS_SUMMARY (submodel);
+    }
+  }
 }
 
 static gdouble
@@ -164,30 +201,39 @@ _nc_halo_density_profile_einasto_eval_dl_density (NcHaloDensityProfile *dp, cons
 static gdouble
 _nc_halo_density_profile_einasto_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x)
 {
-  const gdouble gamma_3_alpha = gsl_sf_gamma (3.0 / ALPHA);
-  const gdouble arg_2         = 2.0 * pow (C_DELTA, ALPHA) / ALPHA;
-  const gdouble gamma_inc_P   = gsl_sf_gamma_inc_P (3.0 / ALPHA, arg_2);
+  NcHaloDensityProfileEinasto *dpe                = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
+  NcHaloDensityProfileEinastoPrivate * const self = nc_halo_density_profile_einasto_get_instance_private (dpe);
+  const gdouble cDelta                            = nc_halo_mass_summary_concentration (self->hms);
+  const gdouble gamma_3_alpha                     = gsl_sf_gamma (3.0 / ALPHA);
+  const gdouble arg_2                             = 2.0 * pow (cDelta, ALPHA) / ALPHA;
+  const gdouble gamma_inc_P                       = gsl_sf_gamma_inc_P (3.0 / ALPHA, arg_2);
 
   return (pow (ALPHA / 2.0, 3.0 / ALPHA) * exp (2.0 / ALPHA) / ALPHA * gamma_3_alpha * gamma_inc_P);
 }
 
 /**
  * nc_halo_density_profile_einasto_new:
- * @mdef: a #NcHaloDensityProfileMassDef
- * @Delta: cluster threshold mass definition $\Delta$
+ * @hms: a #NcHaloMassSummary
  *
  * This function returns the #NcHaloDensityProfileEinasto implementation of
- * #NcHaloDensityProfile setting #NcHaloDensityProfile:mass-def to @mdef
- * and #NcHaloDensityProfile:Delta to @Delta.
+ * #NcHaloDensityProfile given #NcHaloMassSummary.
  *
  * Returns: a new instance of #NcHaloDensityProfileEinasto.
  */
 NcHaloDensityProfileEinasto *
-nc_halo_density_profile_einasto_new (const NcHaloDensityProfileMassDef mdef, const gdouble Delta)
+nc_halo_density_profile_einasto_new (NcHaloMassSummary *hms)
 {
-  return g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_EINASTO,
-                       "mass-def", mdef,
-                       "Delta",    Delta,
-                       NULL);
+  NcmObjArray *submodels = ncm_obj_array_new ();
+
+  ncm_obj_array_add (submodels, G_OBJECT (hms));
+  {
+    NcHaloDensityProfileEinasto *dp_einasto = g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_EINASTO,
+                                                            "submodel-array", submodels,
+                                                            NULL);
+
+    ncm_obj_array_unref (submodels);
+
+    return dp_einasto;
+  }
 }
 

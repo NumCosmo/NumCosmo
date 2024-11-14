@@ -75,6 +75,7 @@ ncm_spline_init (NcmSpline *s)
   self->yv    = NULL;
   self->empty = TRUE;
   self->acc   = NULL;
+  self->init  = FALSE;
 }
 
 static void
