@@ -72,6 +72,14 @@ class FitGradType(GEnum):
     NUMDIFF_ACCURATE = Ncm.FitGradType.NUMDIFF_ACCURATE
 
 
+class FitMCResampleType(GEnum):
+    """Fit MC resample type for Ncm.Fit."""
+
+    FROM_MODEL = Ncm.FitMCResampleType.FROM_MODEL
+    BOOTSTRAP_NOMIX = Ncm.FitMCResampleType.BOOTSTRAP_NOMIX
+    BOOTSTRAP_MIX = Ncm.FitMCResampleType.BOOTSTRAP_MIX
+
+
 def get_algorithms(
     runner: FitRunner,
 ) -> Optional[

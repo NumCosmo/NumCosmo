@@ -33,6 +33,7 @@ from .loading import LoadExperiment
 from ..sampling import (
     check_runner_algorithm,
     FitGradType,
+    FitMCResampleType,
     FitRunMessages,
     FitRunner,
     NcmFitLogger,
@@ -140,6 +141,59 @@ class RunFit(RunCommonOptions):
 
         if self.output is not None:
             self.output_dict.add("model-set", self.fit.peek_mset())
+
+        self.end_experiment()
+
+
+@dataclasses.dataclass(kw_only=True)
+class RunMC(RunCommonOptions):
+    """Computes the Monte Carlo Analysis."""
+
+    run_type: Annotated[
+        FitMCResampleType,
+        typer.Option(
+            help="Resampling type for the fit.",
+        ),
+    ] = FitMCResampleType.FROM_MODEL
+
+    run_messages: Annotated[
+        FitRunMessages,
+        typer.Option(
+            help="Verbosity level for the fit.",
+        ),
+    ] = FitRunMessages.SIMPLE
+
+    nthreads: Annotated[
+        int,
+        typer.Option(
+            help="Number of threads to use for the fit.",
+        ),
+    ] = 1
+
+    nmc: Annotated[
+        int,
+        typer.Option(
+            help="Number of Monte Carlo samples to generate.",
+        ),
+    ] = 100
+
+    def __post_init__(self) -> None:
+        """Compute Monte Carlo Analysis."""
+        super().__post_init__()
+
+        mc = Ncm.FitMC.new(
+            fit=self.fit, rtype=self.run_type.genum, mtype=self.run_messages.genum
+        )
+
+        if self.output is None:
+            raise RuntimeError("Output file is required for MC analysis.")
+
+        mc.set_nthreads(self.nthreads)
+        mc.set_data_file(self.output.with_suffix(".mc.fits").absolute().as_posix())
+
+        mc.start_run()
+        mc.run(self.nmc)
+        mc.end_run()
 
         self.end_experiment()
 
