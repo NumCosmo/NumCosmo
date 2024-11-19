@@ -41,6 +41,7 @@
 #include "math/ncm_prior_gauss_func.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 struct _NcHICosmoIDEM2Private
 {
@@ -858,35 +859,50 @@ _nc_hicosmo_idem2_E2Press_mnu (NcHICosmo *cosmo, const gdouble z)
 /**
  * nc_hicosmo_idem2_omega_x2omega_k:
  * @cosmo_idem2: a #NcHICosmoIDEM2
+ * @error: a #GError
  *
- * FIXME
+ * Set the reparametrization of the dark energy model to the curvature density
+ * parameter.
  *
  */
 void
-nc_hicosmo_idem2_omega_x2omega_k (NcHICosmoIDEM2 *cosmo_de)
+nc_hicosmo_idem2_omega_x2omega_k (NcHICosmoIDEM2 *cosmo_de, GError **error)
 {
-  NcHICosmoIDEM2ReparamOk *idem2_reparam_ok = nc_hicosmo_idem2_reparam_ok_new (ncm_model_len (NCM_MODEL (cosmo_de)));
+  g_return_if_fail (error == NULL || *error == NULL);
+  {
+    NcHICosmoIDEM2ReparamOk *idem2_reparam_ok = nc_hicosmo_idem2_reparam_ok_new (ncm_model_len (NCM_MODEL (cosmo_de)));
 
-  ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (idem2_reparam_ok));
+    ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (idem2_reparam_ok), error);
+    NCM_UTIL_ON_ERROR_RETURN (error, ncm_reparam_free (NCM_REPARAM (idem2_reparam_ok)), );
 
-  return;
+    ncm_reparam_free (NCM_REPARAM (idem2_reparam_ok));
+
+    return;
+  }
 }
 
 /**
  * nc_hicosmo_idem2_cmb_params:
  * @cosmo_idem2: a #NcHICosmoIDEM2
+ * @error: a #GError
  *
- * FIXME
+ * Set the reparametrization of the dark energy model to the CMB parameters.
  *
  */
 void
-nc_hicosmo_idem2_cmb_params (NcHICosmoIDEM2 *cosmo_de)
+nc_hicosmo_idem2_cmb_params (NcHICosmoIDEM2 *cosmo_de, GError **error)
 {
-  NcHICosmoIDEM2ReparamCMB *idem2_reparam_cmb = nc_hicosmo_idem2_reparam_cmb_new (ncm_model_len (NCM_MODEL (cosmo_de)));
+  g_return_if_fail (error == NULL || *error == NULL);
+  {
+    NcHICosmoIDEM2ReparamCMB *idem2_reparam_cmb = nc_hicosmo_idem2_reparam_cmb_new (ncm_model_len (NCM_MODEL (cosmo_de)));
 
-  ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (idem2_reparam_cmb));
+    ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (idem2_reparam_cmb), error);
+    NCM_UTIL_ON_ERROR_RETURN (error, ncm_reparam_free (NCM_REPARAM (idem2_reparam_cmb)), );
 
-  return;
+    ncm_reparam_free (NCM_REPARAM (idem2_reparam_cmb));
+
+    return;
+  }
 }
 
 /***********************************************************************/
@@ -933,7 +949,6 @@ nc_hicosmo_idem2_reparam_cmb_finalize (GObject *object)
 
 static gboolean _nc_hicosmo_idem2_reparam_cmb_old2new (NcmReparam *reparam, NcmModel *model);
 static gboolean _nc_hicosmo_idem2_reparam_cmb_new2old (NcmReparam *reparam, NcmModel *model);
-static gboolean _nc_hicosmo_idem2_reparam_cmb_jac (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *jac);
 
 static void
 nc_hicosmo_idem2_reparam_cmb_class_init (NcHICosmoIDEM2ReparamCMBClass *klass)
@@ -1052,7 +1067,6 @@ nc_hicosmo_idem2_reparam_ok_finalize (GObject *object)
 
 static gboolean _nc_hicosmo_idem2_reparam_ok_old2new (NcmReparam *reparam, NcmModel *model);
 static gboolean _nc_hicosmo_idem2_reparam_ok_new2old (NcmReparam *reparam, NcmModel *model);
-static gboolean _nc_hicosmo_idem2_reparam_ok_jac (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *jac);
 
 static void
 nc_hicosmo_idem2_reparam_ok_class_init (NcHICosmoIDEM2ReparamOkClass *klass)

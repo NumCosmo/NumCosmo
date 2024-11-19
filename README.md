@@ -2,7 +2,7 @@
 
 NumCosmo is a powerful numerical cosmology library designed to facilitate calculations of cosmological observables and analysis of statistical models. It provides a comprehensive set of tools that empower researchers and developers in the field of cosmology and astrophysics.
 
-[![Build Status](https://github.com/NumCosmo/NumCosmo/workflows/Build%20and%20Check/badge.svg)](https://github.com/NumCosmo/NumCosmo/actions) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![Coverage Status](https://coveralls.io/repos/github/NumCosmo/NumCosmo/badge.svg?branch=master)](https://coveralls.io/github/NumCosmo/NumCosmo?branch=master) [![codecov](https://codecov.io/gh/NumCosmo/NumCosmo/graph/badge.svg?token=FZ3PX0PKWG)](https://codecov.io/gh/NumCosmo/NumCosmo)
+[![Build Status](https://github.com/NumCosmo/NumCosmo/workflows/Build%20and%20Check/badge.svg)](https://github.com/NumCosmo/NumCosmo/actions) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![codecov](https://codecov.io/gh/NumCosmo/NumCosmo/graph/badge.svg?token=FZ3PX0PKWG)](https://codecov.io/gh/NumCosmo/NumCosmo)
 
 Visit [NumCosmo's website](https://numcosmo.github.io) for more information.
 

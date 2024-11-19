@@ -794,10 +794,8 @@ void
 test_ncm_fftlog_eval_smooth_padding (TestNcmFftlog *test, gconstpointer pdata)
 {
   NcmFftlog *fftlog = test->fftlog;
-  guint nerr        = 0;
-  gdouble reltol    = 1.0e-1;
   NcmVector *lnr;
-  guint i, len;
+  guint len;
 
   ncm_fftlog_set_smooth_padding_scale (fftlog, 1.0e-4);
   ncm_fftlog_use_smooth_padding (fftlog, TRUE);

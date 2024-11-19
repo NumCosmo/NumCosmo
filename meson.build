@@ -33,7 +33,8 @@ foreach std : ['legacy', 'f77', 'f90', 'f95', 'f2003', 'f2008', 'f2018']
   endif
 endforeach
 
-global_warn_suppress = ['-Wno-unused', '-Wno-pedantic', '-Wno-unused-parameter']
+# global_warn_suppress = ['-Wno-unused', '-Wno-pedantic', '-Wno-unused-parameter']
+global_warn_suppress = ['-Wno-unused-parameter']
 
 foreach warn : global_warn_suppress
   if cc.has_argument(warn)
@@ -142,6 +143,10 @@ numcosmo_conf_prefix = ''
 numcosmo_conf.set('NUMCOSMO_MAJOR_VERSION', major_version)
 numcosmo_conf.set('NUMCOSMO_MINOR_VERSION', minor_version)
 numcosmo_conf.set('NUMCOSMO_MICRO_VERSION', micro_version)
+numcosmo_conf.set(
+  'NUMCOSMO_VERSION_NUMBER',
+  major_version * 10000 + minor_version * 100 + micro_version,
+)
 numcosmo_conf.set('NUMCOSMO_INTERFACE_AGE', interface_age)
 numcosmo_conf.set('NUMCOSMO_BINARY_AGE', binary_age)
 numcosmo_conf.set_quoted(
@@ -158,6 +163,15 @@ numcosmo_conf.set_quoted('PACKAGE_URL', 'https://github.com/NumCosmo/NumCosmo')
 numcosmo_conf.set_quoted('PACKAGE_VERSION', meson.project_version())
 numcosmo_conf.set_quoted('PACKAGE_DATA_DIR', numcosmo_pkgdatadir)
 numcosmo_conf.set_quoted('PACKAGE_SOURCE_DIR', numcosmo_source_dir)
+
+git_bin = find_program('git', required: false)
+
+if git_bin.found()
+  git_commit_short = run_command(git_bin, ['rev-parse', '--short', 'HEAD'], check: true).stdout().strip()
+  numcosmo_conf.set_quoted('NUMCOSMO_GIT_COMMIT', git_commit_short)
+else
+  numcosmo_conf.set_quoted('NUMCOSMO_GIT_COMMIT', 'unknown')
+endif
 
 numcosmo_build_cfg.set('NUMCOSMO_MAJOR_VERSION', major_version)
 numcosmo_build_cfg.set('NUMCOSMO_MINOR_VERSION', minor_version)
@@ -379,29 +393,13 @@ message('Checking for MPI')
 
 if get_option('mpi').auto() or get_option('mpi').enabled()
 
-  mpi_c_dep = dependency(
-    'mpi',
-    language: 'c',
-    required: false,
-  )
+  # Meson has a bug that prevents it from getting the correct MPICH-MPI dependency
+  # when detected the required option is set to false. We need to check for MPICH
+  # first and then for the generic MPI dependency.
+  mpi_c_dep = dependency('mpich', required: false)
 
-  mpi_fortran_dep = dependency(
-    'mpi',
-    language: 'fortran',
-    required: false,
-  )
-
-  # MPICH is not found by the mpi dependency, so we need to check for it manually
   if (not mpi_c_dep.found())
-    mpi_c_dep = dependency('mpich', required: false)
-  endif
-
-  # MPICH is not found by the mpi dependency, so we need to check for it manually
-  if (not mpi_fortran_dep.found())
-    mpi_fortran_dep = dependency('mpichf90', required: false)
-    if mpi_fortran_dep.found()
-      numcosmo_conf.set('HAVE_MPIF90', true)
-    endif
+    mpi_c_dep = dependency('mpi', language: 'c', required: false)
   endif
 
   if get_option('mpi').enabled() and not mpi_c_dep.found()
@@ -412,7 +410,6 @@ if get_option('mpi').auto() or get_option('mpi').enabled()
   endif
 else
   mpi_c_dep = not_found
-  mpi_fortran_dep = not_found
 endif
 
 if mpi_c_dep.found()
@@ -547,6 +544,10 @@ endif
 
 if fftw3f_dep.found()
   numcosmo_conf.set('HAVE_FFTW3F', true)
+endif
+
+if fftw3_dep.found() or fftw3f_dep.found()
+  numcosmo_conf.set_quoted('NUMCOSMO_FFTW_PLAN', get_option('fftw-planner'))
 endif
 
 #######################################################################################

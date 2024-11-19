@@ -38,6 +38,14 @@ Generic array implementation.
 <title>GPtrArray</title>
 Pointer array.
 </refsect1>
+<refsect1 id="GHashTable">
+<title>GHashTable</title>
+Hash table.
+</refsect1>
+<refsect1 id="GQuark">
+<title>GQuark</title>
+Quark.
+</refsect1>
 <refsect1 id="GVariant">
 <title>GVariant</title>
 Variant type.

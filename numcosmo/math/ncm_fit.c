@@ -559,7 +559,6 @@ static void
 _ncm_fit_end_update (NcmFit *fit, const gchar *start_msg)
 {
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
-  const guint niter          = ncm_fit_state_get_niter (self->fstate);
 
   self->writer (fit, "\n");
 }
@@ -736,7 +735,7 @@ ncm_fit_set_sub_fit (NcmFit *fit, NcmFit *sub_fit)
     {
       const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi (sub_self->mset, i);
 
-      if (ncm_mset_param_get_ftype (self->mset, pi->mid, pi->pid) != NCM_PARAM_TYPE_FIXED)
+      if (ncm_mset_param_get_ftype (self->mset, pi->mid, pi->pid, NULL) != NCM_PARAM_TYPE_FIXED)
         g_error ("ncm_fit_set_sub_fit: parameter [%d %u] (%s) is free in both fit and sub_fit.",
                  pi->mid, pi->pid, ncm_mset_param_name (self->mset, pi->mid, pi->pid));
     }
@@ -1687,7 +1686,7 @@ ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, con
         ncm_mset_param_set_mset (mset_out, self->mset);
 
       if (save_progress)
-        ncm_mset_save (mset_out, ser, mset_file, TRUE);
+        ncm_mset_save (mset_out, ser, mset_file, TRUE, NULL);
 
       if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
       {
