@@ -37,6 +37,7 @@ dependencies:
   - pygobject
   - pylint
   - pytest
+  - pytest-cov
   - python >= 3.10
   - rich
   - scipy
