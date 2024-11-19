@@ -2612,6 +2612,8 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
   {
     guint i;
     const gboolean has_param = ncm_model_param_index_from_name (model, param, &i, error);
+    GHashTableIter iter;
+    gpointer key, value;
 
     if (!has_param)
     {
@@ -2621,12 +2623,15 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
 
       return;
     }
-    else
-    {
-      if (g_hash_table_lookup (desc, "scale"))
-      {
-        GValue *value = g_hash_table_lookup (desc, "scale");
 
+    g_hash_table_iter_init (&iter, desc);
+
+    while (g_hash_table_iter_next (&iter, &key, &value))
+    {
+      const gchar *k = key;
+
+      if (g_strcmp0 (k, "scale") == 0)
+      {
         if (!G_VALUE_HOLDS_DOUBLE (value))
         {
           ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
@@ -2636,12 +2641,11 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
         }
 
         ncm_model_param_set_scale (model, i, g_value_get_double (value));
+        continue;
       }
 
-      if (g_hash_table_lookup (desc, "lower-bound"))
+      if (g_strcmp0 (k, "lower-bound") == 0)
       {
-        GValue *value = g_hash_table_lookup (desc, "lower-bound");
-
         if (!G_VALUE_HOLDS_DOUBLE (value))
         {
           ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
@@ -2651,12 +2655,11 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
         }
 
         ncm_model_param_set_lower_bound (model, i, g_value_get_double (value));
+        continue;
       }
 
-      if (g_hash_table_lookup (desc, "upper-bound"))
+      if (g_strcmp0 (k, "upper-bound") == 0)
       {
-        GValue *value = g_hash_table_lookup (desc, "upper-bound");
-
         if (!G_VALUE_HOLDS_DOUBLE (value))
         {
           ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
@@ -2666,12 +2669,11 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
         }
 
         ncm_model_param_set_upper_bound (model, i, g_value_get_double (value));
+        continue;
       }
 
-      if (g_hash_table_lookup (desc, "abstol"))
+      if (g_strcmp0 (k, "abstol") == 0)
       {
-        GValue *value = g_hash_table_lookup (desc, "abstol");
-
         if (!G_VALUE_HOLDS_DOUBLE (value))
         {
           ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
@@ -2681,12 +2683,11 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
         }
 
         ncm_model_param_set_abstol (model, i, g_value_get_double (value));
+        continue;
       }
 
-      if (g_hash_table_lookup (desc, "fit"))
+      if (g_strcmp0 (k, "fit") == 0)
       {
-        GValue *value = g_hash_table_lookup (desc, "fit");
-
         if (!G_VALUE_HOLDS_BOOLEAN (value))
         {
           ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
@@ -2696,12 +2697,11 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
         }
 
         ncm_model_param_set_ftype (model, i, g_value_get_boolean (value) ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
+        continue;
       }
 
-      if (g_hash_table_lookup (desc, "value"))
+      if (g_strcmp0 (k, "value") == 0)
       {
-        GValue *value = g_hash_table_lookup (desc, "value");
-
         if (!G_VALUE_HOLDS_DOUBLE (value))
         {
           ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_TYPE,
@@ -2711,9 +2711,11 @@ ncm_model_param_set_desc (NcmModel *model, gchar *param, GHashTable *desc, GErro
         }
 
         ncm_model_param_set (model, i, g_value_get_double (value));
+        continue;
       }
 
-      return;
+      ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_INVALID_KEY,
+                                  "ncm_model_param_set_desc: invalid key `%s'.", k);
     }
   }
 }
