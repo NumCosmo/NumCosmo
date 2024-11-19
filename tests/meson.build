@@ -23,6 +23,7 @@ c_tests = [
         'name': 'ncm_fftlog',
         'sources': ['test_ncm_fftlog.c'],
         'timeout': 0,
+        'priority': 10,
     },
     {
         'name': 'ncm_vector',
@@ -44,6 +45,7 @@ c_tests = [
         'name': 'ncm_stats_dist',
         'sources': ['test_ncm_stats_dist.c'],
         'timeout': 0,
+        'priority': 10,
     },
     {
         'name': 'ncm_stats_dist_kernel',
@@ -93,6 +95,7 @@ c_tests = [
         'name': 'ncm_mset_catalog',
         'sources': ['test_ncm_mset_catalog.c'],
         'timeout': 0,
+        'priority': 10,
     },
     {
         'name': 'ncm_obj_array',
@@ -124,6 +127,7 @@ c_tests = [
         'name': 'ncm_fit_esmcmc',
         'sources': ['test_ncm_fit_esmcmc.c'],
         'timeout': 0,
+        'priority': 10,
     },
     {
         'name': 'ncm_func_eval',
@@ -268,6 +272,11 @@ foreach c_test : c_tests
     else
         timeout = 60
     endif
+    if c_test.has_key('priority')
+        priority = c_test['priority']
+    else
+        priority = 0
+    endif
     test(
         c_test['name'],
         executable_test,
@@ -277,6 +286,7 @@ foreach c_test : c_tests
             'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
         ],
         protocol: 'tap',
+        priority: priority,
     )
 endforeach
 
