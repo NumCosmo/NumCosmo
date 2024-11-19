@@ -581,11 +581,13 @@ if enable_gir
 
     pytest_args = ['-m', 'pytest']
     pytest_protocol = 'exitcode'
+    pytest_is_parallel = true
 
     if get_option('b_coverage')
         pytest_args += ['--cov', 'numcosmo_py']
         pytest_args += ['--cov-report', 'xml']
         pytest_args += ['--cov-append']
+        pytest_is_parallel = false
     endif
 
     py_tap = python_module.find_installation(
@@ -627,6 +629,7 @@ if enable_gir
             depends: [numcosmo_gir, numcosmo_math_gir],
             env: env,
             protocol: pytest_protocol,
+            is_parallel: pytest_is_parallel,
             timeout: timeout,
         )
     endforeach
