@@ -29,7 +29,8 @@ import typer
 
 from .from_cosmosis import COSMOSIS
 from . import from_cosmosis
-from .run_fit import RunFit, RunTest, RunMC
+from .run_fit import RunFit, RunTest
+from .run_mc import RunMC
 from .fisher import ComputeTheoryVector, RunFisher, RunFisherBias
 from .esmcmc import RunMCMC
 from .catalog import (
