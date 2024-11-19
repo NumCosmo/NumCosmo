@@ -248,7 +248,7 @@ jobs:
         with:
           disable_search: true
           fail_ci_if_error: true
-          files: ./numcosmo-coverage.info,./coverage.xml
+          files: ./numcosmo-coverage.info,./build/coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
       #- name: Generate coverage
