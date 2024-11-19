@@ -13,12 +13,19 @@ from bdata import BinningData
 
 #-------------------------------------------------------------------------------------------------#
 #FittingModel
+
+# data: data to calculate the fitted model;
+# b_z: length of redshift bin;
+# b_m: length of mass bin.
+
 #-------------------------------------------------------------------------------------------------#
 
 class FittingModel:
     
     def __init__(self, data_set, b_z, b_m):
         self.data_set = data_set
+        self.b_z = b_z
+        self.b_m = b_m
 
 
         
@@ -46,39 +53,51 @@ class FittingModel:
 #----- Fitting the models -----------------------------------------------------------------------#
 
 # mod: model name ('ext_ln1pz' or 'ext_z' or 'ascaso');
-# dt: data to calculate the fitted model;
-# b_z: length of redshift bin;
-# b_m: length of mass bin.
+# training: If training = True the fitting is calculated using training data.
 
+    def model_fit(self, mod, training):
+       
+#     #training_data
+#         if training == True: 
+#             X = pd.DataFrame({'mass': list(self.data_set["mass"]), 'redshift': list(self.data_set["redshift"])})
+#             y = pd.DataFrame({'richness': list(self.data_set["richness"])})
+#             data_train, data_test = self.cvdata(X, y)
+            
+#             bd = BinningData(data_test) # To calculate the fitted model
 
-    def model_fit(self, mod, dt, b_z, b_m):
-        
+#         else:
+#             data_train = self.data_set
+            
+#             bd = BinningData(data_train) # To calculate the fitted model
+            
+
     #data_set
-        rmdata = create_richness_mass_calib(self.data_set, mass_col_name = 'mass', redshift_col_name = 'redshift' )
+        rmdata = create_richness_mass_calib(data_train, mass_col_name = 'mass', redshift_col_name = 'redshift' )
         
         fixed_parameters = [] 
+    
     
     #Swicth
         match mod:
             case "ext_ln1pz":
                 model = Nc.ClusterMassLnrichExt(use_ln1pz = True)
-                fixed_parameters = [13, 14, 15] #fixing cut parameters
+                fixed_parameters = ['A0','cut', 'cutM1', 'cutZ1'] #fixing cut parameters
                 # model.param_set_by_name("muZ2", 0) #Set cut parameter value
 
             
             case "ext_z":
                 model = Nc.ClusterMassLnrichExt(use_ln1pz = False)
-                fixed_parameters = [13, 14, 15] #fixing cut parameters
+                fixed_parameters = ['A0' ,'cut', 'cutM1', 'cutZ1'] #fixing cut parameters
             
             case "ascaso":
                 model = Nc.ClusterMassAscaso()
-                fixed_parameters = [6] #fixing cut parameter
+                fixed_parameters = ['cut'] #fixing cut parameter
                 # model.param_set_by_name("sigmap2", 0) #Set cut parameter value 
                 # model.param_set_by_name("mup2", 0) #Set cut parameter value 
 
 
     #Model
-        model.param_set_by_name("cut", 1e15) #Set cut parameter value 
+        model.param_set_by_name("cut", 1e2) #Set cut parameter value 
         mset = Ncm.MSet()
         mset.set(model)
         rmdata.m2lnL_val(mset)  
@@ -93,7 +112,8 @@ class FittingModel:
   
     #All parameters free except cut parameters:
         for par in fixed_parameters:
-            mset.param_set_ftype(7000, par, Ncm.ParamType.FIXED)
+             mset["NcClusterMass"].param_set_desc(par, {"fit": False})
+             # mset.param_set_ftype(7000, par, Ncm.ParamType.FIXED)
     
         mset.prepare_fparam_map()
     
@@ -104,21 +124,25 @@ class FittingModel:
         fit.log_info()
     
     
+    
     # Here we calculate the fitted model using mean data of bins:
         #Binning data
-        bd = BinningData(dt)
-        bin_f= bd.get_mean_bd(b_z, b_m)
+        bin_f= bd.get_mean_bd(self.b_z, self.b_m)
        
         halos_mean = bin_f[0]
         lnM_mean = np.log(halos_mean["mass"])
         z_mean = halos_mean["redshift"]
     
+        
+        
         # Mean and std of data_set z mean and lnM mean
         lnR_mean_model = np.array([model.get_mean_richness(lnM_mean[i], z_mean[i]) for i in range(len(halos_mean))])
         
         lnR_std_model = np.array( [model.get_std_richness(lnM_mean[i], z_mean[i]) for i in range(len(halos_mean))])
     
+        
         return lnR_mean_model, lnR_std_model, model
+        
     
 
    
