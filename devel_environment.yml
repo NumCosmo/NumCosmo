@@ -6,6 +6,7 @@ dependencies:
   - black
   - c-compiler
   - cfitsio
+  - coverage
   - fftw
   - flake8
   - fortran-compiler
