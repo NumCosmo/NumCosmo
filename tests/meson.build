@@ -582,6 +582,12 @@ if enable_gir
     pytest_args = ['-m', 'pytest']
     pytest_protocol = 'exitcode'
 
+    if get_option('b_coverage')
+        pytest_args += ['--cov', 'numcosmo_py']
+        pytest_args += ['--cov-report', 'xml']
+        pytest_args += ['--cov-append']
+    endif
+
     py_tap = python_module.find_installation(
         'python3',
         modules: ['pytest_tap'],
