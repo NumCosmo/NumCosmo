@@ -57,18 +57,18 @@ class FittingModel:
 
     def model_fit(self, mod, training):
        
-#     #training_data
-#         if training == True: 
-#             X = pd.DataFrame({'mass': list(self.data_set["mass"]), 'redshift': list(self.data_set["redshift"])})
-#             y = pd.DataFrame({'richness': list(self.data_set["richness"])})
-#             data_train, data_test = self.cvdata(X, y)
+     #training_data
+        if training == True: 
+            X = pd.DataFrame({'mass': list(self.data_set["mass"]), 'redshift': list(self.data_set["redshift"])})
+            y = pd.DataFrame({'richness': list(self.data_set["richness"])})
+            data_train, data_test = self.cvdata(X, y)
             
-#             bd = BinningData(data_test) # To calculate the fitted model
+            bd = BinningData(data_test) # To calculate the fitted model
 
-#         else:
-#             data_train = self.data_set
+        else:
+            data_train = self.data_set
             
-#             bd = BinningData(data_train) # To calculate the fitted model
+            bd = BinningData(data_train) # To calculate the fitted model
             
 
     #data_set
@@ -132,6 +132,8 @@ class FittingModel:
         halos_mean = bin_f[0]
         lnM_mean = np.log(halos_mean["mass"])
         z_mean = halos_mean["redshift"]
+        
+        std_mean = bin_f[4]
     
         
         
@@ -141,7 +143,7 @@ class FittingModel:
         lnR_std_model = np.array( [model.get_std_richness(lnM_mean[i], z_mean[i]) for i in range(len(halos_mean))])
     
         
-        return lnR_mean_model, lnR_std_model, model
+        return lnR_mean_model, lnR_std_model, model, halos_mean, std_mean 
         
     
 
