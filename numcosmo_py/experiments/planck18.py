@@ -23,6 +23,7 @@
 
 """Factory functions to generate Planck18 likelihood and models."""
 
+from typing import TypedDict, Any, cast
 from enum import Enum
 
 import numpy as np
@@ -37,138 +38,160 @@ class Planck18Types(str, Enum):
     TTTEEE = "TTTEEE"
 
 
-class Planck18HIPrimModel(str, Enum):
+class HIPrimModel(str, Enum):
     """Planck 18 primordial model."""
 
     POWER_LAW = "power-law"
     TWO_FLUIDS = "two-fluids"
 
 
-EXP_PARAMETERS: dict[tuple[str, str], dict[str, float]] = {
-    (Planck18Types.TT, Planck18HIPrimModel.POWER_LAW): {
-        "NcHICosmo:H0": 66.86,
-        "NcHICosmo:omegac": 0.12068,
-        "NcHICosmo:omegab": 0.022126,
-        "NcHIPrim:ln10e10ASA": 3.0413,
-        "NcHIPrim:n_SA": 0.9635,
-        "NcHIReion:z_re": 7.54,
-        "NcPlanckFI:A_cib_217": 48.5,
-        "NcPlanckFI:xi_sz_cib": 0.32,
-        "NcPlanckFI:A_sz": 7.03,
-        "NcPlanckFI:ps_A_100_100": 254.9,
-        "NcPlanckFI:ps_A_143_143": 49.8,
-        "NcPlanckFI:ps_A_143_217": 47.3,
-        "NcPlanckFI:ps_A_217_217": 119.9,
-        "NcPlanckFI:ksz_norm": 0.00,
-        "NcPlanckFI:gal545_A_100": 8.86,
-        "NcPlanckFI:gal545_A_143": 10.80,
-        "NcPlanckFI:gal545_A_143_217": 19.43,
-        "NcPlanckFI:gal545_A_217": 94.8,
-        "NcPlanckFI:calib_100T": 0.99965,
-        "NcPlanckFI:calib_217T": 0.99825,
-        "NcPlanckFI:A_planck": 1.00046,
+class ParameterDesc(TypedDict, total=False):
+    """Parameter description."""
+
+    name: str
+    symbol: str
+    scale: float
+    lower_bound: float
+    upper_bound: float
+    abstol: float
+    fit: bool
+    value: float
+
+
+EXP_PARAMETERS: dict[tuple[str, str], dict[str, ParameterDesc]] = {
+    (Planck18Types.TT, HIPrimModel.POWER_LAW): {
+        "NcHICosmo:H0": ParameterDesc(value=66.86),
+        "NcHICosmo:omegac": ParameterDesc(value=0.12068),
+        "NcHICosmo:omegab": ParameterDesc(value=0.022126),
+        "NcHICosmo:Omegak": ParameterDesc(value=0.0),
+        "NcHICosmo:w": ParameterDesc(value=-1.0),
+        "NcHIPrim:ln10e10ASA": ParameterDesc(value=3.0413),
+        "NcHIPrim:n_SA": ParameterDesc(value=0.9635),
+        "NcHIReion:z_re": ParameterDesc(value=7.54),
+        "NcPlanckFI:A_cib_217": ParameterDesc(value=48.5),
+        "NcPlanckFI:xi_sz_cib": ParameterDesc(value=0.32),
+        "NcPlanckFI:A_sz": ParameterDesc(value=7.03),
+        "NcPlanckFI:ps_A_100_100": ParameterDesc(value=254.9),
+        "NcPlanckFI:ps_A_143_143": ParameterDesc(value=49.8),
+        "NcPlanckFI:ps_A_143_217": ParameterDesc(value=47.3),
+        "NcPlanckFI:ps_A_217_217": ParameterDesc(value=119.9),
+        "NcPlanckFI:ksz_norm": ParameterDesc(value=0.00),
+        "NcPlanckFI:gal545_A_100": ParameterDesc(value=8.86),
+        "NcPlanckFI:gal545_A_143": ParameterDesc(value=10.80),
+        "NcPlanckFI:gal545_A_143_217": ParameterDesc(value=19.43),
+        "NcPlanckFI:gal545_A_217": ParameterDesc(value=94.8),
+        "NcPlanckFI:calib_100T": ParameterDesc(value=0.99965),
+        "NcPlanckFI:calib_217T": ParameterDesc(value=0.99825),
+        "NcPlanckFI:A_planck": ParameterDesc(value=1.00046),
     },
-    (Planck18Types.TTTEEE, Planck18HIPrimModel.POWER_LAW): {
-        "NcHICosmo:H0": 67.32,
-        "NcHICosmo:omegac": 0.12010,
-        "NcHICosmo:omegab": 0.022377,
-        "NcHIPrim:ln10e10ASA": 3.0447,
-        "NcHIPrim:n_SA": 0.96589,
-        "NcHIReion:z_re": 7.68,
-        "NcPlanckFI:A_cib_217": 47.2,
-        "NcPlanckFI:xi_sz_cib": 0.42,
-        "NcPlanckFI:A_sz": 7.23,
-        "NcPlanckFI:ps_A_100_100": 250.5,
-        "NcPlanckFI:ps_A_143_143": 47.4,
-        "NcPlanckFI:ps_A_143_217": 47.3,
-        "NcPlanckFI:ps_A_217_217": 119.8,
-        "NcPlanckFI:ksz_norm": 0.01,
-        "NcPlanckFI:gal545_A_100": 8.86,
-        "NcPlanckFI:gal545_A_143": 11.10,
-        "NcPlanckFI:gal545_A_143_217": 19.83,
-        "NcPlanckFI:gal545_A_217": 95.1,
-        "NcPlanckFI:calib_100T": 0.99969,
-        "NcPlanckFI:calib_217T": 0.99816,
-        "NcPlanckFI:A_planck": 1.00061,
-        "NcPlanckFI:galf_TE_A_100": 0.1142,
-        "NcPlanckFI:galf_TE_A_100_143": 0.1345,
-        "NcPlanckFI:galf_TE_A_100_217": 0.482,
-        "NcPlanckFI:galf_TE_A_143": 0.224,
-        "NcPlanckFI:galf_TE_A_143_217": 0.664,
-        "NcPlanckFI:galf_TE_A_217": 2.081,
+    (Planck18Types.TTTEEE, HIPrimModel.POWER_LAW): {
+        "NcHICosmo:H0": ParameterDesc(value=67.32),
+        "NcHICosmo:omegac": ParameterDesc(value=0.12010),
+        "NcHICosmo:omegab": ParameterDesc(value=0.022377),
+        "NcHICosmo:Omegak": ParameterDesc(value=0.0),
+        "NcHICosmo:w": ParameterDesc(value=-1.0),
+        "NcHIPrim:ln10e10ASA": ParameterDesc(value=3.0447),
+        "NcHIPrim:n_SA": ParameterDesc(value=0.96589),
+        "NcHIReion:z_re": ParameterDesc(value=7.68),
+        "NcPlanckFI:A_cib_217": ParameterDesc(value=47.2),
+        "NcPlanckFI:xi_sz_cib": ParameterDesc(value=0.42),
+        "NcPlanckFI:A_sz": ParameterDesc(value=7.23),
+        "NcPlanckFI:ps_A_100_100": ParameterDesc(value=250.5),
+        "NcPlanckFI:ps_A_143_143": ParameterDesc(value=47.4),
+        "NcPlanckFI:ps_A_143_217": ParameterDesc(value=47.3),
+        "NcPlanckFI:ps_A_217_217": ParameterDesc(value=119.8),
+        "NcPlanckFI:ksz_norm": ParameterDesc(value=0.01),
+        "NcPlanckFI:gal545_A_100": ParameterDesc(value=8.86),
+        "NcPlanckFI:gal545_A_143": ParameterDesc(value=11.10),
+        "NcPlanckFI:gal545_A_143_217": ParameterDesc(value=19.83),
+        "NcPlanckFI:gal545_A_217": ParameterDesc(value=95.1),
+        "NcPlanckFI:calib_100T": ParameterDesc(value=0.99969),
+        "NcPlanckFI:calib_217T": ParameterDesc(value=0.99816),
+        "NcPlanckFI:A_planck": ParameterDesc(value=1.00061),
+        "NcPlanckFI:galf_TE_A_100": ParameterDesc(value=0.1142),
+        "NcPlanckFI:galf_TE_A_100_143": ParameterDesc(value=0.1345),
+        "NcPlanckFI:galf_TE_A_100_217": ParameterDesc(value=0.482),
+        "NcPlanckFI:galf_TE_A_143": ParameterDesc(value=0.224),
+        "NcPlanckFI:galf_TE_A_143_217": ParameterDesc(value=0.664),
+        "NcPlanckFI:galf_TE_A_217": ParameterDesc(value=2.081),
     },
-    (Planck18Types.TT, Planck18HIPrimModel.TWO_FLUIDS): {
-        "NcHICosmo:H0": 66.86,
-        "NcHICosmo:omegac": 0.12068,
-        "NcHICosmo:omegab": 0.022126,
-        "NcHIPrim:ln10e10ASA": 3.0413,
-        "NcHIPrim:lnk0": -6.0,
-        "NcHIPrim:lnw": np.log(1.0e-4),
-        "NcHIReion:z_re": 7.54,
-        "NcPlanckFI:A_cib_217": 48.5,
-        "NcPlanckFI:xi_sz_cib": 0.32,
-        "NcPlanckFI:A_sz": 7.03,
-        "NcPlanckFI:ps_A_100_100": 254.9,
-        "NcPlanckFI:ps_A_143_143": 49.8,
-        "NcPlanckFI:ps_A_143_217": 47.3,
-        "NcPlanckFI:ps_A_217_217": 119.9,
-        "NcPlanckFI:ksz_norm": 0.00,
-        "NcPlanckFI:gal545_A_100": 8.86,
-        "NcPlanckFI:gal545_A_143": 10.80,
-        "NcPlanckFI:gal545_A_143_217": 19.43,
-        "NcPlanckFI:gal545_A_217": 94.8,
-        "NcPlanckFI:calib_100T": 0.99965,
-        "NcPlanckFI:calib_217T": 0.99825,
-        "NcPlanckFI:A_planck": 1.00046,
+    (Planck18Types.TT, HIPrimModel.TWO_FLUIDS): {
+        "NcHICosmo:H0": ParameterDesc(value=66.86),
+        "NcHICosmo:omegac": ParameterDesc(value=0.12068),
+        "NcHICosmo:omegab": ParameterDesc(value=0.022126),
+        "NcHICosmo:Omegak": ParameterDesc(value=0.0),
+        "NcHICosmo:w": ParameterDesc(value=-1.0),
+        "NcHIPrim:ln10e10ASA": ParameterDesc(value=3.0413),
+        "NcHIPrim:lnk0": ParameterDesc(value=-6.0),
+        "NcHIPrim:lnw": ParameterDesc(value=np.log(1.0e-4)),
+        "NcHIReion:z_re": ParameterDesc(value=7.54),
+        "NcPlanckFI:A_cib_217": ParameterDesc(value=48.5),
+        "NcPlanckFI:xi_sz_cib": ParameterDesc(value=0.32),
+        "NcPlanckFI:A_sz": ParameterDesc(value=7.03),
+        "NcPlanckFI:ps_A_100_100": ParameterDesc(value=254.9),
+        "NcPlanckFI:ps_A_143_143": ParameterDesc(value=49.8),
+        "NcPlanckFI:ps_A_143_217": ParameterDesc(value=47.3),
+        "NcPlanckFI:ps_A_217_217": ParameterDesc(value=119.9),
+        "NcPlanckFI:ksz_norm": ParameterDesc(value=0.00),
+        "NcPlanckFI:gal545_A_100": ParameterDesc(value=8.86),
+        "NcPlanckFI:gal545_A_143": ParameterDesc(value=10.80),
+        "NcPlanckFI:gal545_A_143_217": ParameterDesc(value=19.43),
+        "NcPlanckFI:gal545_A_217": ParameterDesc(value=94.8),
+        "NcPlanckFI:calib_100T": ParameterDesc(value=0.99965),
+        "NcPlanckFI:calib_217T": ParameterDesc(value=0.99825),
+        "NcPlanckFI:A_planck": ParameterDesc(value=1.00046),
     },
-    (Planck18Types.TTTEEE, Planck18HIPrimModel.TWO_FLUIDS): {
-        "NcHICosmo:H0": 67.32,
-        "NcHICosmo:omegac": 0.12010,
-        "NcHICosmo:omegab": 0.022377,
-        "NcHIPrim:ln10e10ASA": 3.0447,
-        "NcHIPrim:lnk0": -6.0,
-        "NcHIPrim:lnw": np.log(1.0e-4),
-        "NcHIReion:z_re": 7.68,
-        "NcPlanckFI:A_cib_217": 47.2,
-        "NcPlanckFI:xi_sz_cib": 0.42,
-        "NcPlanckFI:A_sz": 7.23,
-        "NcPlanckFI:ps_A_100_100": 250.5,
-        "NcPlanckFI:ps_A_143_143": 47.4,
-        "NcPlanckFI:ps_A_143_217": 47.3,
-        "NcPlanckFI:ps_A_217_217": 119.8,
-        "NcPlanckFI:ksz_norm": 0.01,
-        "NcPlanckFI:gal545_A_100": 8.86,
-        "NcPlanckFI:gal545_A_143": 11.10,
-        "NcPlanckFI:gal545_A_143_217": 19.83,
-        "NcPlanckFI:gal545_A_217": 95.1,
-        "NcPlanckFI:calib_100T": 0.99969,
-        "NcPlanckFI:calib_217T": 0.99816,
-        "NcPlanckFI:A_planck": 1.00061,
-        "NcPlanckFI:galf_TE_A_100": 0.1142,
-        "NcPlanckFI:galf_TE_A_100_143": 0.1345,
-        "NcPlanckFI:galf_TE_A_100_217": 0.482,
-        "NcPlanckFI:galf_TE_A_143": 0.224,
-        "NcPlanckFI:galf_TE_A_143_217": 0.664,
-        "NcPlanckFI:galf_TE_A_217": 2.081,
+    (Planck18Types.TTTEEE, HIPrimModel.TWO_FLUIDS): {
+        "NcHICosmo:H0": ParameterDesc(value=67.32),
+        "NcHICosmo:omegac": ParameterDesc(value=0.12010),
+        "NcHICosmo:omegab": ParameterDesc(value=0.022377),
+        "NcHICosmo:Omegak": ParameterDesc(value=0.0),
+        "NcHICosmo:w": ParameterDesc(value=-1.0),
+        "NcHIPrim:ln10e10ASA": ParameterDesc(value=3.0447),
+        "NcHIPrim:lnk0": ParameterDesc(value=-6.0),
+        "NcHIPrim:lnw": ParameterDesc(value=np.log(1.0e-4)),
+        "NcHIReion:z_re": ParameterDesc(value=7.68),
+        "NcPlanckFI:A_cib_217": ParameterDesc(value=47.2),
+        "NcPlanckFI:xi_sz_cib": ParameterDesc(value=0.42),
+        "NcPlanckFI:A_sz": ParameterDesc(value=7.23),
+        "NcPlanckFI:ps_A_100_100": ParameterDesc(value=250.5),
+        "NcPlanckFI:ps_A_143_143": ParameterDesc(value=47.4),
+        "NcPlanckFI:ps_A_143_217": ParameterDesc(value=47.3),
+        "NcPlanckFI:ps_A_217_217": ParameterDesc(value=119.8),
+        "NcPlanckFI:ksz_norm": ParameterDesc(value=0.01),
+        "NcPlanckFI:gal545_A_100": ParameterDesc(value=8.86),
+        "NcPlanckFI:gal545_A_143": ParameterDesc(value=11.10),
+        "NcPlanckFI:gal545_A_143_217": ParameterDesc(value=19.83),
+        "NcPlanckFI:gal545_A_217": ParameterDesc(value=95.1),
+        "NcPlanckFI:calib_100T": ParameterDesc(value=0.99969),
+        "NcPlanckFI:calib_217T": ParameterDesc(value=0.99816),
+        "NcPlanckFI:A_planck": ParameterDesc(value=1.00061),
+        "NcPlanckFI:galf_TE_A_100": ParameterDesc(value=0.1142),
+        "NcPlanckFI:galf_TE_A_100_143": ParameterDesc(value=0.1345),
+        "NcPlanckFI:galf_TE_A_100_217": ParameterDesc(value=0.482),
+        "NcPlanckFI:galf_TE_A_143": ParameterDesc(value=0.224),
+        "NcPlanckFI:galf_TE_A_143_217": ParameterDesc(value=0.664),
+        "NcPlanckFI:galf_TE_A_217": ParameterDesc(value=2.081),
     },
 }
 
 
 def set_mset_parameters(
-    mset: Ncm.MSet, exp_type: Planck18Types, prim_model: Planck18HIPrimModel
+    mset: Ncm.MSet, exp_type: Planck18Types, prim_model: HIPrimModel
 ):
     """Set the experiment parameters."""
     for param, value in EXP_PARAMETERS[(exp_type, prim_model)].items():
         pi = mset.fparam_get_pi_by_name(param)
         if pi is None:
             raise ValueError(f"Invalid parameter: {param}")
+        model, name = param.split(":")
 
-        mset.param_set(pi.mid, pi.pid, value)
+        mset[model].param_set_desc(name, cast(dict[str, Any], value))
 
 
 def create_cosmo_for_cmb(
     massive_nu: bool = False,
-    prim_model: Planck18HIPrimModel = Planck18HIPrimModel.POWER_LAW,
+    prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
 ) -> Nc.HICosmo:
     """Create a cosmology for CMB experiments."""
     if massive_nu:
@@ -178,36 +201,35 @@ def create_cosmo_for_cmb(
 
     cosmo.params_set_default_ftype()
     cosmo.cmb_params()
-    cosmo.param_set_by_name("H0", 70.0)
-    cosmo.param_set_by_name("omegab", 0.022)
-    cosmo.param_set_by_name("omegac", 0.12)
+    cosmo["H0"] = 70.0
+    cosmo["omegab"] = 0.022
+    cosmo["omegac"] = 0.12
 
     if massive_nu:
-        cosmo.orig_param_set(Nc.HICosmoDESParams.ENNU, 2.0328)
-        param_id = cosmo.vparam_index(Nc.HICosmoDEVParams.M, 0)
-        cosmo.param_set_ftype(param_id, Ncm.ParamType.FREE)
+        cosmo["ENnu"] = 2.0328
+        cosmo["massnu_0"] = 0.0
+        cosmo.param_set_desc("massnu_0", {"fit": True})
 
-    cosmo.set_property("H0_fit", True)
-    cosmo.set_property("Omegac_fit", True)
-    cosmo.set_property("Omegab_fit", True)
-    cosmo.set_property("w_fit", False)
-    cosmo.param_set_by_name("Omegak", 0.00)
-    cosmo.set_property("Omegax_fit", False)
+    cosmo.param_set_desc("H0", {"fit": True})
+    cosmo.param_set_desc("omegac", {"fit": True})
+    cosmo.param_set_desc("omegab", {"fit": True})
+    cosmo.param_set_desc("Omegak", {"fit": False})
+    cosmo.param_set_desc("w", {"fit": False})
 
-    if prim_model == Planck18HIPrimModel.POWER_LAW:
+    if prim_model == HIPrimModel.POWER_LAW:
         prim = Nc.HIPrimPowerLaw.new()
-        prim.set_property("ln10e10ASA_fit", True)
-        prim.set_property("n_SA_fit", True)
-    elif prim_model == Planck18HIPrimModel.TWO_FLUIDS:
+        prim.param_set_desc("ln10e10ASA", {"fit": True})
+        prim.param_set_desc("n_SA", {"fit": True})
+    elif prim_model == HIPrimModel.TWO_FLUIDS:
         prim = Nc.HIPrimTwoFluids(use_default_calib=True)
-        prim.set_property("ln10e10ASA_fit", True)
-        prim.set_property("lnk0_fit", True)
-        prim.set_property("lnw_fit", True)
+        prim.param_set_desc("ln10e10ASA", {"fit": True})
+        prim.param_set_desc("lnk0", {"fit": True})
+        prim.param_set_desc("lnw", {"fit": True})
     else:
         raise ValueError(f"Invalid primordial model: {prim_model}")
 
     reion = Nc.HIReionCamb.new()
-    reion.set_property("z_re_fit", True)
+    reion.param_set_desc("z_re", {"fit": True})
 
     cosmo.add_submodel(prim)
     cosmo.add_submodel(reion)
@@ -238,13 +260,13 @@ def create_mfunc_array_for_cmb(
 
 def generate_planck18_tt(
     massive_nu: bool = False,
-    prim_model: Planck18HIPrimModel = Planck18HIPrimModel.POWER_LAW,
+    prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
     use_lensing_likelihood: bool = False,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Generate Planck 2018 TT baseline experiment dictionary."""
     # Likelihood
     cbe_boltzmann = Nc.HIPertBoltzmannCBE.new()
-    if prim_model == Planck18HIPrimModel.TWO_FLUIDS:
+    if prim_model == HIPrimModel.TWO_FLUIDS:
         cbe = cbe_boltzmann.peek_cbe()
         cbe_prec = cbe.peek_precision()
         # Increase the precision for the two-fluids model
@@ -313,13 +335,13 @@ def generate_planck18_tt(
 
 def generate_planck18_ttteee(
     massive_nu: bool = False,
-    prim_model: Planck18HIPrimModel = Planck18HIPrimModel.POWER_LAW,
+    prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
     use_lensing_likelihood: bool = False,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Generate Planck 2018 TT baseline experiment dictionary."""
     # Likelihood
     cbe_boltzmann = Nc.HIPertBoltzmannCBE.new()
-    if prim_model == Planck18HIPrimModel.TWO_FLUIDS:
+    if prim_model == HIPrimModel.TWO_FLUIDS:
         cbe = cbe_boltzmann.peek_cbe()
         cbe_prec = cbe.peek_precision()
         # Increase the precision for the two-fluids model

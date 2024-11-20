@@ -33,7 +33,7 @@ import typer
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.experiments.planck18 import (
     Planck18Types,
-    Planck18HIPrimModel,
+    HIPrimModel,
     generate_planck18_tt,
     generate_planck18_ttteee,
     set_mset_parameters,
@@ -65,9 +65,9 @@ class GeneratePlanck:
     ] = Planck18Types.TT
 
     prim_model: Annotated[
-        Planck18HIPrimModel,
+        HIPrimModel,
         typer.Option(help="Primordial model to use.", show_default=True),
-    ] = Planck18HIPrimModel.POWER_LAW
+    ] = HIPrimModel.POWER_LAW
 
     massive_nu: Annotated[
         bool, typer.Option(help="Use massive neutrinos.", show_default=True)
