@@ -45,10 +45,10 @@ G_DECLARE_FINAL_TYPE (NcmSphereMap, ncm_sphere_map, NCM, SPHERE_MAP, GObject)
 
 /**
  * NcmSphereMapOrder:
- * @NCM_SPHERE_MAP_ORDER_NEST: FIXME
- * @NCM_SPHERE_MAP_ORDER_RING: FIXME
+ * @NCM_SPHERE_MAP_ORDER_NEST: Nest ordering
+ * @NCM_SPHERE_MAP_ORDER_RING: Ring ordering
  *
- * FIXME
+ * Sphere map pixel ordering.
  *
  */
 typedef enum _NcmSphereMapOrder
@@ -61,11 +61,11 @@ typedef enum _NcmSphereMapOrder
 
 /**
  * NcmSphereMapCoordSys:
- * @NCM_SPHERE_MAP_COORD_SYS_GALACTIC: FIXME
- * @NCM_SPHERE_MAP_COORD_SYS_ECLIPTIC: FIXME
- * @NCM_SPHERE_MAP_COORD_SYS_CELESTIAL: FIXME
+ * @NCM_SPHERE_MAP_COORD_SYS_GALACTIC: Galactic coordinate system
+ * @NCM_SPHERE_MAP_COORD_SYS_ECLIPTIC: Ecliptic coordinate system
+ * @NCM_SPHERE_MAP_COORD_SYS_CELESTIAL: Celestial coordinate system
  *
- * FIXME
+ * Sphere map coordinate system.
  *
  */
 typedef enum _NcmSphereMapCoordSys
@@ -147,7 +147,7 @@ NcmSpline *ncm_sphere_map_calc_Ctheta (NcmSphereMap *smap, const gdouble reltol)
 #define NCM_SPHERE_MAP_INT_TO_XY(i, x, y)         \
         G_STMT_START {                            \
           gint shift = 0, shifted = i;            \
-          x = y = 0;                              \
+          x          = y = 0;                     \
           do {                                    \
             x |= ((shifted & 1) << shift);        \
             y |= (((shifted & 2) >> 1) << shift); \
