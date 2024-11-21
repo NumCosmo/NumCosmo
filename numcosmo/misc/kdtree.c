@@ -53,9 +53,9 @@ D (struct kdtree *tree, long index, int r)
 }
 
 static inline int
-knn_search_on (struct kdtree *tree, rb_knn_list_table_t *table, double *knn_distance, int k, double value, double target)
+knn_search_skip (struct kdtree *tree, rb_knn_list_table_t *table, double *knn_distance, int k, double value, double target)
 {
-  return table->rb_knn_list_count < k || square (target - value) < *knn_distance;
+  return (table->rb_knn_list_count >= k) && (square (target - value) > *knn_distance);
 }
 
 static inline void
@@ -240,7 +240,7 @@ kdnode_dump (struct kdnode *node, int dim)
 
   if (node->coord != NULL)
   {
-    printf ("(");
+    printf ("[%2ld](", node->coord_index);
 
     for (i = 0; i < dim; i++)
     {
@@ -337,14 +337,10 @@ kdtree_search_recursive (struct kdtree *tree, struct kdnode *node, rb_knn_list_t
       min_dist2_l = min_dist2_new;
     }
 
-    if (!knn_search_on (tree, table, knn_distance, k, node->coord[r], target[r]))
-      return;
-
     /* Testing if the branch can be prunned. */
     if (table->rb_knn_list_count >= k)
       if (min_dist2 > *knn_distance)
         return;
-
 
     if (*pickup)
     {
@@ -354,8 +350,6 @@ kdtree_search_recursive (struct kdtree *tree, struct kdnode *node, rb_knn_list_t
     }
     else
     {
-      /*printf ("Else!\n"); */
-
       if (is_leaf (node))
       {
         *pickup = 1;
