@@ -48,13 +48,14 @@ NcmSphereNN *ncm_sphere_nn_ref (NcmSphereNN *snn);
 void ncm_sphere_nn_free (NcmSphereNN *snn);
 void ncm_sphere_nn_clear (NcmSphereNN **snn);
 
-void ncm_sphere_nn_insert (NcmSphereNN *snn, const gdouble theta, const gdouble phi);
-void ncm_sphere_nn_get (NcmSphereNN *snn, const gint64 i, gdouble *theta, gdouble *phi);
+void ncm_sphere_nn_insert (NcmSphereNN *snn, const gdouble r, const gdouble theta, const gdouble phi);
+void ncm_sphere_nn_insert_array (NcmSphereNN *snn, GArray *r, GArray *theta, GArray *phi);
+void ncm_sphere_nn_get (NcmSphereNN *snn, const gint64 i, gdouble *r, gdouble *theta, gdouble *phi);
 gint64 ncm_sphere_nn_get_n (NcmSphereNN *snn);
 
 void ncm_sphere_nn_rebuild (NcmSphereNN *snn);
-GArray *ncm_sphere_nn_knn_search (NcmSphereNN *snn, const gdouble theta, const gdouble phi, const gint64 k);
-void ncm_sphere_nn_knn_search_distances (NcmSphereNN *snn, const gdouble theta, const gdouble phi, const gint64 k, GArray **distances, GArray **indices);
+GArray *ncm_sphere_nn_knn_search (NcmSphereNN *snn, const gdouble r, const gdouble theta, const gdouble phi, const gint64 k);
+void ncm_sphere_nn_knn_search_distances (NcmSphereNN *snn, const gdouble r, const gdouble theta, const gdouble phi, const gint64 k, GArray **distances, GArray **indices);
 
 G_END_DECLS
 

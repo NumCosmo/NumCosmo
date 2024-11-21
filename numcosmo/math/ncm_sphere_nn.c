@@ -209,6 +209,7 @@ ncm_sphere_nn_clear (NcmSphereNN **snn)
 /**
  * ncm_sphere_nn_insert:
  * @snn: a #NcmSphereNN
+ * @r: the object radius
  * @theta: the object theta
  * @phi: the object phi
  *
@@ -216,18 +217,58 @@ ncm_sphere_nn_clear (NcmSphereNN **snn)
  *
  */
 void
-ncm_sphere_nn_insert (NcmSphereNN *snn, const gdouble theta, const gdouble phi)
+ncm_sphere_nn_insert (NcmSphereNN *snn, const gdouble r, const gdouble theta, const gdouble phi)
 {
   NcmSphereNNPrivate * const self = ncm_sphere_nn_get_instance_private (snn);
-  gdouble coord[3]                = { sin (theta) * cos (phi), sin (theta) * sin (phi), cos (theta) };
+  gdouble coord[3]                = { r * sin (theta) * cos (phi), r * sin (theta) * sin (phi), r * cos (theta) };
 
   kdtree_insert (self->tree, coord);
+}
+
+/**
+ * ncm_sphere_nn_insert_array:
+ * @snn: a #NcmSphereNN
+ * @r: (element-type gdouble): the object radius
+ * @theta: (element-type gdouble): the object theta
+ * @phi: (element-type gdouble): the object phi
+ *
+ * Inserts an array of objects in @snn.
+ *
+ */
+void
+ncm_sphere_nn_insert_array (NcmSphereNN *snn, GArray *r, GArray *theta, GArray *phi)
+{
+  NcmSphereNNPrivate * const self = ncm_sphere_nn_get_instance_private (snn);
+  gdouble coord[3];
+  guint i;
+
+  g_return_if_fail (theta->len == phi->len);
+  g_return_if_fail (theta->len == r->len);
+  g_assert_cmpuint (g_array_get_element_size (r), ==, sizeof (gdouble));
+  g_assert_cmpuint (g_array_get_element_size (theta), ==, sizeof (gdouble));
+  g_assert_cmpuint (g_array_get_element_size (phi), ==, sizeof (gdouble));
+
+  for (i = 0; i < theta->len; i++)
+  {
+    const gdouble r_i = g_array_index (r, gdouble, i);
+    gdouble sin_theta, cos_theta, sin_phi, cos_phi;
+
+    sincos (g_array_index (theta, gdouble, i), &sin_theta, &cos_theta);
+    sincos (g_array_index (phi, gdouble, i), &sin_phi, &cos_phi);
+
+    coord[0] = r_i * sin_theta * cos_phi;
+    coord[1] = r_i * sin_theta * sin_phi;
+    coord[2] = r_i * cos_theta;
+
+    kdtree_insert (self->tree, coord);
+  }
 }
 
 /**
  * ncm_sphere_nn_get:
  * @snn: a #NcmSphereNN
  * @i: the object index
+ * @r: (out): the object radius
  * @theta: (out): the object theta
  * @phi: (out): the object phi
  *
@@ -235,12 +276,13 @@ ncm_sphere_nn_insert (NcmSphereNN *snn, const gdouble theta, const gdouble phi)
  *
  */
 void
-ncm_sphere_nn_get (NcmSphereNN *snn, const gint64 i, gdouble *theta, gdouble *phi)
+ncm_sphere_nn_get (NcmSphereNN *snn, const gint64 i, gdouble *r, gdouble *theta, gdouble *phi)
 {
   NcmSphereNNPrivate * const self = ncm_sphere_nn_get_instance_private (snn);
   gdouble *coord                  = self->tree->coord_table[i];
 
-  *theta = acos (coord[2]);
+  *r     = sqrt (coord[0] * coord[0] + coord[1] * coord[1] + coord[2] * coord[2]);
+  *theta = acos (coord[2] / *r);
   *phi   = atan2 (coord[1], coord[0]);
 }
 
@@ -276,6 +318,7 @@ ncm_sphere_nn_rebuild (NcmSphereNN *snn)
 /**
  * ncm_sphere_nn_knn_search:
  * @snn: a #NcmSphereNN
+ * @r: the target radius
  * @theta: the target theta
  * @phi: the target phi
  * @k: the number of nearest neighbors
@@ -283,10 +326,10 @@ ncm_sphere_nn_rebuild (NcmSphereNN *snn)
  * Returns: (transfer full) (element-type glong): a #GArray with the @k nearest neighbors.
  */
 GArray *
-ncm_sphere_nn_knn_search (NcmSphereNN *snn, const gdouble theta, const gdouble phi, const gint64 k)
+ncm_sphere_nn_knn_search (NcmSphereNN *snn, const gdouble r, const gdouble theta, const gdouble phi, const gint64 k)
 {
   NcmSphereNNPrivate * const self = ncm_sphere_nn_get_instance_private (snn);
-  gdouble coord[3]                = { sin (theta) * cos (phi), sin (theta) * sin (phi), cos (theta) };
+  gdouble coord[3]                = { r * sin (theta) * cos (phi), r * sin (theta) * sin (phi), r * cos (theta) };
   rb_knn_list_table_t *table      = kdtree_knn_search (self->tree, coord, k);
   GArray *indices                 = g_array_sized_new (FALSE, FALSE, sizeof (glong), k);
   rb_knn_list_traverser_t trav;
@@ -307,6 +350,7 @@ ncm_sphere_nn_knn_search (NcmSphereNN *snn, const gdouble theta, const gdouble p
 /**
  * ncm_sphere_nn_knn_search_distances:
  * @snn: a #NcmSphereNN
+ * @r: the target radius
  * @theta: the target theta
  * @phi: the target phi
  * @k: the number of nearest neighbors
@@ -319,10 +363,10 @@ ncm_sphere_nn_knn_search (NcmSphereNN *snn, const gdouble theta, const gdouble p
  *
  */
 void
-ncm_sphere_nn_knn_search_distances (NcmSphereNN *snn, const gdouble theta, const gdouble phi, const gint64 k, GArray **distances, GArray **indices)
+ncm_sphere_nn_knn_search_distances (NcmSphereNN *snn, const gdouble r, const gdouble theta, const gdouble phi, const gint64 k, GArray **distances, GArray **indices)
 {
   NcmSphereNNPrivate * const self = ncm_sphere_nn_get_instance_private (snn);
-  gdouble coord[3]                = { sin (theta) * cos (phi), sin (theta) * sin (phi), cos (theta) };
+  gdouble coord[3]                = { r * sin (theta) * cos (phi), r * sin (theta) * sin (phi), r * cos (theta) };
   rb_knn_list_table_t *table      = kdtree_knn_search (self->tree, coord, k);
   rb_knn_list_traverser_t trav;
   knn_list_t *p;

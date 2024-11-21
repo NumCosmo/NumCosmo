@@ -45,130 +45,155 @@ def fixture_knn(request):
     return request.param
 
 
+PREC = 1.0e-9
+
+
 def test_setget(snn):
     """Test set and get methods."""
+    r_a = np.random.uniform(0.1, 5.0, 1000)
     cos_theta_a = np.random.uniform(-1.0, 1.0, 1000)
     phi_a = np.random.uniform(-np.pi, np.pi, 1000)
     theta_a = np.acos(cos_theta_a)
 
-    for theta, phi in zip(theta_a, phi_a):
-        snn.insert(theta, phi)
+    for r, theta, phi in zip(r_a, theta_a, phi_a):
+        snn.insert(r, theta, phi)
 
-    for i, angles in enumerate(zip(theta_a, phi_a)):
-        assert_allclose(snn.get(i), angles, atol=0.0, rtol=1e-13)
+    for i, coord in enumerate(zip(r_a, theta_a, phi_a)):
+        assert_allclose(snn.get(i), coord, atol=0.0, rtol=PREC)
+
+
+def test_insert_array(snn):
+    """Test set_array method."""
+    r_a = np.random.uniform(0.1, 5.0, 1000)
+    cos_theta_a = np.random.uniform(-1.0, 1.0, 1000)
+    phi_a = np.random.uniform(-np.pi, np.pi, 1000)
+    theta_a = np.acos(cos_theta_a)
+
+    snn.insert_array(r_a, theta_a, phi_a)
+
+    for i, coord in enumerate(zip(r_a, theta_a, phi_a)):
+        assert_allclose(snn.get(i), coord, atol=0.0, rtol=PREC)
 
 
 def test_rebuild(snn):
     """Test rebuild method."""
+    r_a = np.random.uniform(0.1, 5.0, 1000)
     cos_theta_a = np.random.uniform(-1.0, 1.0, 1000)
     phi_a = np.random.uniform(-np.pi, np.pi, 1000)
     theta_a = np.acos(cos_theta_a)
 
-    for theta, phi in zip(theta_a, phi_a):
-        snn.insert(theta, phi)
+    for r, theta, phi in zip(r_a, theta_a, phi_a):
+        snn.insert(r, theta, phi)
 
     assert snn.get_n() == 1000
 
     snn.rebuild()
 
-    for i, angles in enumerate(zip(theta_a, phi_a)):
-        assert_allclose(snn.get(i), angles, atol=0.0, rtol=1e-13)
+    for i, coord in enumerate(zip(r_a, theta_a, phi_a)):
+        assert_allclose(snn.get(i), coord, atol=0.0, rtol=PREC)
 
+    new_r_a = np.random.uniform(0.1, 5.0, 1000)
     new_cos_theta_a = np.random.uniform(-1.0, 1.0, 1000)
     new_phi_a = np.random.uniform(-np.pi, np.pi, 1000)
     new_theta_a = np.acos(new_cos_theta_a)
 
-    for theta, phi in zip(new_theta_a, new_phi_a):
-        snn.insert(theta, phi)
+    for r, theta, phi in zip(new_r_a, new_theta_a, new_phi_a):
+        snn.insert(r, theta, phi)
 
     assert snn.get_n() == 2000
 
+    r_a = np.concatenate((r_a, new_r_a))
     cos_theta_a = np.concatenate((cos_theta_a, new_cos_theta_a))
     phi_a = np.concatenate((phi_a, new_phi_a))
     theta_a = np.concatenate((theta_a, new_theta_a))
 
     snn.rebuild()
 
-    for i, angles in enumerate(zip(theta_a, phi_a)):
-        assert_allclose(snn.get(i), angles, atol=0.0, rtol=1e-13)
+    for i, coord in enumerate(zip(r_a, theta_a, phi_a)):
+        assert_allclose(snn.get(i), coord, atol=0.0, rtol=PREC)
 
 
 def test_knn_search_1(snn):
     """Test knn_search method."""
+    r_a = np.random.uniform(0.1, 5.0, 1000)
     cos_theta_a = np.random.uniform(-1.0, 1.0, 1000)
     phi_a = np.random.uniform(-np.pi, np.pi, 1000)
     theta_a = np.acos(cos_theta_a)
 
-    for theta, phi in zip(theta_a, phi_a):
-        snn.insert(theta, phi)
+    for r, theta, phi in zip(r_a, theta_a, phi_a):
+        snn.insert(r, theta, phi)
 
     snn.rebuild()
 
-    for i, (theta, phi) in enumerate(zip(theta_a, phi_a)):
-        idx = snn.knn_search(theta, phi, 1)
+    for i, (r, theta, phi) in enumerate(zip(r_a, theta_a, phi_a)):
+        idx = snn.knn_search(r, theta, phi, 1)
         assert len(idx) == 1
         assert idx.pop() == i
 
+    new_r_a = np.random.uniform(0.1, 5.0, 1000)
     new_cos_theta_a = np.random.uniform(-1.0, 1.0, 1000)
     new_phi_a = np.random.uniform(-np.pi, np.pi, 1000)
     new_theta_a = np.acos(new_cos_theta_a)
 
-    for theta, phi in zip(new_theta_a, new_phi_a):
-        snn.insert(theta, phi)
+    for r, theta, phi in zip(new_r_a, new_theta_a, new_phi_a):
+        snn.insert(r, theta, phi)
 
     snn.rebuild()
 
-    for i, (theta, phi) in enumerate(zip(new_theta_a, new_phi_a)):
-        idx = snn.knn_search(theta, phi, 1)
+    for i, (r, theta, phi) in enumerate(zip(new_r_a, new_theta_a, new_phi_a)):
+        idx = snn.knn_search(r, theta, phi, 1)
         assert len(idx) == 1
         assert idx.pop() == i + 1000
 
 
 def test_knn_search_k(snn, knn):
     """Test knn_search method."""
+    r_a = np.random.uniform(0.1, 5.0, 1000)
     cos_theta_a = np.random.uniform(-1.0, 1.0, 1000)
     phi_a = np.random.uniform(-np.pi, np.pi, 1000)
     theta_a = np.acos(cos_theta_a)
 
-    for theta, phi in zip(theta_a, phi_a):
-        snn.insert(theta, phi)
+    for r, theta, phi in zip(r_a, theta_a, phi_a):
+        snn.insert(r, theta, phi)
 
     snn.rebuild()
 
-    for i, (theta, phi) in enumerate(zip(theta_a, phi_a)):
-        idx = snn.knn_search(theta, phi, knn)
+    for i, (r, theta, phi) in enumerate(zip(r_a, theta_a, phi_a)):
+        idx = snn.knn_search(r, theta, phi, knn)
         assert len(idx) == knn
         assert i in idx
 
+    new_r_a = np.random.uniform(0.1, 5.0, 1000)
     new_cos_theta_a = np.random.uniform(-1.0, 1.0, 1000)
     new_phi_a = np.random.uniform(-np.pi, np.pi, 1000)
     new_theta_a = np.acos(new_cos_theta_a)
 
-    for theta, phi in zip(new_theta_a, new_phi_a):
-        snn.insert(theta, phi)
+    for r, theta, phi in zip(new_r_a, new_theta_a, new_phi_a):
+        snn.insert(r, theta, phi)
 
     snn.rebuild()
 
-    for i, (theta, phi) in enumerate(zip(new_theta_a, new_phi_a)):
-        idx = snn.knn_search(theta, phi, knn)
+    for i, (r, theta, phi) in enumerate(zip(new_r_a, new_theta_a, new_phi_a)):
+        idx = snn.knn_search(r, theta, phi, knn)
         assert len(idx) == knn
         assert i + 1000 in idx
 
 
 def test_knn_search_vs_search_distances(snn, knn):
     """Test knn_search method."""
+    r_a = np.random.uniform(0.1, 5.0, 1000)
     cos_theta_a = np.random.uniform(-1.0, 1.0, 1000)
     phi_a = np.random.uniform(-np.pi, np.pi, 1000)
     theta_a = np.acos(cos_theta_a)
 
-    for theta, phi in zip(theta_a, phi_a):
-        snn.insert(theta, phi)
+    for r, theta, phi in zip(r_a, theta_a, phi_a):
+        snn.insert(r, theta, phi)
 
     snn.rebuild()
 
-    for theta, phi in zip(theta_a, phi_a):
-        idx = snn.knn_search(theta, phi, knn)
-        dist, idx2 = snn.knn_search_distances(theta, phi, knn)
+    for r, theta, phi in zip(r_a, theta_a, phi_a):
+        idx = snn.knn_search(r, theta, phi, knn)
+        dist, idx2 = snn.knn_search_distances(r, theta, phi, knn)
         assert len(idx) == len(idx2)
         assert len(dist) == len(idx2)
         assert idx == idx2
@@ -176,73 +201,76 @@ def test_knn_search_vs_search_distances(snn, knn):
 
 def test_knn_search_distances(snn, knn):
     """Test knn_search_distances method."""
+    r_a = np.random.uniform(0.1, 5.0, 1000)
     cos_theta_a = np.random.uniform(-1.0, 1.0, 1000)
     phi_a = np.random.uniform(-np.pi, np.pi, 1000)
     theta_a = np.acos(cos_theta_a)
 
-    for theta, phi in zip(theta_a, phi_a):
-        snn.insert(theta, phi)
+    for r, theta, phi in zip(r_a, theta_a, phi_a):
+        snn.insert(r, theta, phi)
 
     snn.rebuild()
 
-    for i, (theta, phi) in enumerate(zip(theta_a, phi_a)):
-        dist, idx = snn.knn_search_distances(theta, phi, knn)
+    for i, (r, theta, phi) in enumerate(zip(r_a, theta_a, phi_a)):
+        dist, idx = snn.knn_search_distances(r, theta, phi, knn)
         assert len(dist) == knn
         assert len(idx) == knn
         assert i in idx
         for d, j in zip(dist, idx):
             # Euclidean distance between j and theta, phi using spherical coordinates]
-            x = np.sin(theta) * np.cos(phi)
-            y = np.sin(theta) * np.sin(phi)
-            z = np.cos(theta)
-            x_j = np.sin(theta_a[j]) * np.cos(phi_a[j])
-            y_j = np.sin(theta_a[j]) * np.sin(phi_a[j])
-            z_j = np.cos(theta_a[j])
+            x = r * np.sin(theta) * np.cos(phi)
+            y = r * np.sin(theta) * np.sin(phi)
+            z = r * np.cos(theta)
+            x_j = r_a[j] * np.sin(theta_a[j]) * np.cos(phi_a[j])
+            y_j = r_a[j] * np.sin(theta_a[j]) * np.sin(phi_a[j])
+            z_j = r_a[j] * np.cos(theta_a[j])
 
             assert_allclose(
                 d,
                 (x - x_j) ** 2 + (y - y_j) ** 2 + (z - z_j) ** 2,
                 atol=0.0,
-                rtol=1e-13,
+                rtol=PREC,
             )
 
+    new_r_a = np.random.uniform(0.1, 5.0, 1000)
     new_cos_theta_a = np.random.uniform(-1.0, 1.0, 1000)
     new_phi_a = np.random.uniform(-np.pi, np.pi, 1000)
     new_theta_a = np.acos(new_cos_theta_a)
 
-    for theta, phi in zip(new_theta_a, new_phi_a):
-        snn.insert(theta, phi)
+    for r, theta, phi in zip(new_r_a, new_theta_a, new_phi_a):
+        snn.insert(r, theta, phi)
 
     snn.rebuild()
 
+    r_a = np.concatenate((r_a, new_r_a))
     cos_theta_a = np.concatenate((cos_theta_a, new_cos_theta_a))
     phi_a = np.concatenate((phi_a, new_phi_a))
     theta_a = np.concatenate((theta_a, new_theta_a))
 
-    for i, (theta, phi) in enumerate(zip(new_theta_a, new_phi_a)):
-        dist, idx = snn.knn_search_distances(theta, phi, knn)
+    for i, (r, theta, phi) in enumerate(zip(new_r_a, new_theta_a, new_phi_a)):
+        dist, idx = snn.knn_search_distances(r, theta, phi, knn)
         assert len(dist) == knn
         assert len(idx) == knn
         assert i + 1000 in idx
         for d, j in zip(dist, idx):
             # Euclidean distance between j and theta, phi using spherical coordinates]
-            x = np.sin(theta) * np.cos(phi)
-            y = np.sin(theta) * np.sin(phi)
-            z = np.cos(theta)
-            x_j = np.sin(theta_a[j]) * np.cos(phi_a[j])
-            y_j = np.sin(theta_a[j]) * np.sin(phi_a[j])
-            z_j = np.cos(theta_a[j])
-
+            x = r * np.sin(theta) * np.cos(phi)
+            y = r * np.sin(theta) * np.sin(phi)
+            z = r * np.cos(theta)
+            x_j = r_a[j] * np.sin(theta_a[j]) * np.cos(phi_a[j])
+            y_j = r_a[j] * np.sin(theta_a[j]) * np.sin(phi_a[j])
+            z_j = r_a[j] * np.cos(theta_a[j])
             assert_allclose(
                 d,
                 (x - x_j) ** 2 + (y - y_j) ** 2 + (z - z_j) ** 2,
                 atol=0.0,
-                rtol=1e-13,
+                rtol=PREC,
             )
 
 
 def test_knn_search_distances_correct(snn, knn):
     """Test knn_search_distances method."""
+    r_a = np.random.uniform(0.1, 5.0, 2000)
     cos_theta_a = np.random.uniform(-1.0, 1.0, 2000)
     phi_a = np.random.uniform(-np.pi, np.pi, 2000)
     theta_a = np.acos(cos_theta_a)
@@ -251,25 +279,26 @@ def test_knn_search_distances_correct(snn, knn):
     sin_phi_a = np.sin(phi_a)
     knn = 15
 
-    x_a = sin_theta_a * cos_phi_a
-    y_a = sin_theta_a * sin_phi_a
-    z_a = cos_theta_a
+    x_a = r_a * sin_theta_a * cos_phi_a
+    y_a = r_a * sin_theta_a * sin_phi_a
+    z_a = r_a * cos_theta_a
 
-    for theta, phi in zip(theta_a, phi_a):
-        snn.insert(theta, phi)
+    for r, theta, phi in zip(r_a, theta_a, phi_a):
+        snn.insert(r, theta, phi)
 
     snn.rebuild()
 
-    for i, (theta, phi) in enumerate(zip(theta_a, phi_a)):
+    for i, (r, theta, phi) in enumerate(zip(r_a, theta_a, phi_a)):
         d2_array = (x_a[i] - x_a) ** 2 + (y_a[i] - y_a) ** 2 + (z_a[i] - z_a) ** 2
         idx = np.argsort(d2_array)[:knn]
-        dist, idx2 = snn.knn_search_distances(theta, phi, knn)
+        dist, idx2 = snn.knn_search_distances(r, theta, phi, knn)
         assert_allclose(dist, d2_array[idx], atol=0.0, rtol=1e-11)
         assert set(idx) == set(idx2)
 
 
 def test_knn_search_distances_correct_rng(snn, knn):
     """Test knn_search_distances method."""
+    r_a = np.random.uniform(0.1, 5.0, 2000)
     cos_theta_a = np.random.uniform(-1.0, 1.0, 2000)
     phi_a = np.random.uniform(-np.pi, np.pi, 2000)
     theta_a = np.acos(cos_theta_a)
@@ -278,23 +307,24 @@ def test_knn_search_distances_correct_rng(snn, knn):
     sin_phi_a = np.sin(phi_a)
     knn = 15
 
-    x_a = sin_theta_a * cos_phi_a
-    y_a = sin_theta_a * sin_phi_a
-    z_a = cos_theta_a
+    x_a = r_a * sin_theta_a * cos_phi_a
+    y_a = r_a * sin_theta_a * sin_phi_a
+    z_a = r_a * cos_theta_a
 
-    for theta, phi in zip(theta_a, phi_a):
-        snn.insert(theta, phi)
+    for r, theta, phi in zip(r_a, theta_a, phi_a):
+        snn.insert(r, theta, phi)
 
     snn.rebuild()
 
     for _ in range(100):
+        r = np.random.uniform(0.1, 5.0)
         theta = np.random.uniform(0.0, np.pi)
         phi = np.random.uniform(-np.pi, np.pi)
-        x = np.sin(theta) * np.cos(phi)
-        y = np.sin(theta) * np.sin(phi)
-        z = np.cos(theta)
+        x = r * np.sin(theta) * np.cos(phi)
+        y = r * np.sin(theta) * np.sin(phi)
+        z = r * np.cos(theta)
         d2_array = (x - x_a) ** 2 + (y - y_a) ** 2 + (z - z_a) ** 2
         idx = np.argsort(d2_array)[:knn]
-        dist, idx2 = snn.knn_search_distances(theta, phi, knn)
+        dist, idx2 = snn.knn_search_distances(r, theta, phi, knn)
         assert_allclose(dist, d2_array[idx], atol=0.0, rtol=1e-11)
         assert set(idx) == set(idx2)
