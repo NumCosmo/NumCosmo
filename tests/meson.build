@@ -389,6 +389,10 @@ python_tests = [
         'source': 'test_py_spline_cubic_d2.py',
     },
     {
+        'name': 'py_sphere_nn',
+        'source': 'test_py_sphere_nn.py',
+    },
+    {
         'name': 'py_sanity',
         'source': 'test_py_sanity.py',
     },
