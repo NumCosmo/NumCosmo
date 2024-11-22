@@ -9643,20 +9643,13 @@ class SphereNN(GObject.Object):
 
     Object NcmSphereNN
 
-    Properties from NcmSphereNN:
-      nobjs -> gint64: nobjs
-        number of objects
-
     Signals from GObject:
       notify (GParam)
     """
 
-    class Props:
-        nobjs: int
-
-    props: Props = ...
     @staticmethod
     def clear(snn: SphereNN) -> None: ...
+    def dump_tree(self) -> None: ...
     def free(self) -> None: ...
     def get(self, i: int) -> Tuple[float, float, float]: ...
     def get_n(self) -> int: ...

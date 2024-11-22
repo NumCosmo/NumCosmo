@@ -77,38 +77,6 @@ ncm_sphere_nn_init (NcmSphereNN *snn)
 }
 
 static void
-_ncm_sphere_nn_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  g_return_if_fail (NCM_IS_SPHERE_NN (object));
-
-  switch (prop_id)
-  {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
-  }
-}
-
-static void
-_ncm_sphere_nn_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcmSphereNN *snn                = NCM_SPHERE_NN (object);
-  NcmSphereNNPrivate * const self = ncm_sphere_nn_get_instance_private (snn);
-
-  g_return_if_fail (NCM_IS_SPHERE_NN (object));
-
-  switch (prop_id)
-  {
-    case PROP_NOBJS:
-      g_value_set_int64 (value, self->tree->count);
-      break;
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
-  }
-}
-
-static void
 _ncm_sphere_nn_dispose (GObject *object)
 {
   /* Chain up : end */
@@ -132,18 +100,8 @@ ncm_sphere_nn_class_init (NcmSphereNNClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  object_class->set_property = &_ncm_sphere_nn_set_property;
-  object_class->get_property = &_ncm_sphere_nn_get_property;
-  object_class->dispose      = &_ncm_sphere_nn_dispose;
-  object_class->finalize     = &_ncm_sphere_nn_finalize;
-
-  g_object_class_install_property (object_class,
-                                   PROP_NOBJS,
-                                   g_param_spec_int64 ("nobjs",
-                                                       NULL,
-                                                       "number of objects",
-                                                       0, G_MAXINT64, 0,
-                                                       G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  object_class->dispose  = &_ncm_sphere_nn_dispose;
+  object_class->finalize = &_ncm_sphere_nn_finalize;
 }
 
 /**
@@ -382,5 +340,21 @@ ncm_sphere_nn_knn_search_distances (NcmSphereNN *snn, const gdouble r, const gdo
   } while ((p = rb_knn_list_t_next (&trav)) != NULL);
 
   rb_knn_list_destroy (table);
+}
+
+/**
+ * ncm_sphere_nn_dump_tree:
+ * @snn: a #NcmSphereNN
+ *
+ * Print to the standard output the tree structure of @snn.
+ *
+ */
+void
+ncm_sphere_nn_dump_tree (NcmSphereNN *snn)
+{
+  NcmSphereNNPrivate * const self = ncm_sphere_nn_get_instance_private (snn);
+
+  kdtree_dump (self->tree);
+  fflush (stdout);
 }
 

@@ -328,3 +328,21 @@ def test_knn_search_distances_correct_rng(snn, knn):
         dist, idx2 = snn.knn_search_distances(r, theta, phi, knn)
         assert_allclose(dist, d2_array[idx], atol=0.0, rtol=1e-11)
         assert set(idx) == set(idx2)
+
+
+def test_dump(snn, capfd):
+    """Test dump method."""
+    r_a = np.random.uniform(0.1, 5.0, 1000)
+    cos_theta_a = np.random.uniform(-1.0, 1.0, 1000)
+    phi_a = np.random.uniform(-np.pi, np.pi, 1000)
+    theta_a = np.acos(cos_theta_a)
+
+    for r, theta, phi in zip(r_a, theta_a, phi_a):
+        snn.insert(r, theta, phi)
+
+    snn.rebuild()
+
+    snn.dump_tree()
+
+    out, _ = capfd.readouterr()
+    assert "+-------" in out
