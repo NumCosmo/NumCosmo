@@ -32,7 +32,7 @@ from typer.testing import CliRunner
 
 from numcosmo_py import Ncm
 from numcosmo_py.app import app
-from numcosmo_py.app.esmcmc import IniSampler, Parallezation
+from numcosmo_py.app.esmcmc import IniSampler, Parallelization
 from numcosmo_py.app.generate import Planck18Types
 from numcosmo_py.interpolation.stats_dist import CrossValidationMethod
 from numcosmo_py.sampling import FitRunner, FitGradType, FitRunMessages, FisherType
@@ -427,7 +427,7 @@ def test_run_mcmc_apes_threads(simple_experiment):
             "apes",
             filename.as_posix(),
             "--parallel",
-            Parallezation.THREADS.value,
+            Parallelization.THREADS.value,
         ],
     )
 
