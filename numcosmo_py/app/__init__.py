@@ -30,6 +30,7 @@ import typer
 from .from_cosmosis import COSMOSIS
 from . import from_cosmosis
 from .run_fit import RunFit, RunTest
+from .run_mc import RunMC
 from .fisher import ComputeTheoryVector, RunFisher, RunFisherBias
 from .esmcmc import RunMCMC
 from .catalog import (
@@ -72,6 +73,12 @@ RUN_FIT_CMD: CMDArg = {
     "help": "Computes the best fit of the model to the data.",
 }
 
+RUN_MC_CMD: CMDArg = {
+    "name": "mc",
+    "no_args_is_help": True,
+    "help": "Computes the Monte Carlo of the model to the data.",
+}
+
 RUN_TEST_CMD: CMDArg = {
     "name": "test",
     "no_args_is_help": True,
@@ -81,7 +88,7 @@ RUN_TEST_CMD: CMDArg = {
 RUN_THEORY_VECTOR_CMD: CMDArg = {
     "name": "theory-vector",
     "no_args_is_help": True,
-    "help": "Computes theory vectory for a given experiment.",
+    "help": "Computes theory vector for a given experiment.",
 }
 
 RUN_FISHER_CMD: CMDArg = {
@@ -164,6 +171,7 @@ if COSMOSIS:
 # ------------------------------------------------------------------------------
 # Installing fitting related subcommands
 app_run.command(**RUN_FIT_CMD)(RunFit)
+app_run.command(**RUN_MC_CMD)(RunMC)
 app_run.command(**RUN_TEST_CMD)(RunTest)
 # ------------------------------------------------------------------------------
 # Installing Fisher related subcommands

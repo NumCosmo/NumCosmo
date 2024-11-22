@@ -498,3 +498,18 @@ def test_model_set_desc_invalid_upper_bound() -> None:
         ),
     ):
         rosenbrock.param_set_desc("x1", {"upper-bound": "Not a float"})
+
+
+def test_model_set_desc_invalid_key() -> None:
+    """Test the Ncm.Model.param_set_desc() method."""
+    rosenbrock = Ncm.ModelRosenbrock.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-model-error: ncm_model_param_set_desc: invalid key `cow'. "
+            rf"\({int(Ncm.ModelError.PARAM_INVALID_KEY)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        rosenbrock.param_set_desc("x1", {"cow": 1.0})
