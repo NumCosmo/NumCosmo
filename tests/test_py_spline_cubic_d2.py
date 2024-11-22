@@ -34,47 +34,47 @@ Ncm.cfg_init()
 
 
 def f_x2(x: float) -> float:
-    """Function x^2."""
+    """Compute x^2."""
     return x**2
 
 
 def df_x2(x: float) -> float:
-    """Derivative of function x^2."""
+    """Compute the derivative of function x^2."""
     return 2.0 * x
 
 
 def d2f_x2(_: float) -> float:
-    """Second derivative of function x^2."""
+    """Compute the second derivative of function x^2."""
     return 2.0
 
 
 def f_x3(x: float) -> float:
-    """Function x^3."""
+    """Compute x^3."""
     return x**3
 
 
 def df_x3(x: float) -> float:
-    """Derivative of function x^3."""
+    """Compute the derivative of function x^3."""
     return 3.0 * x**2
 
 
 def d2f_x3(x: float) -> float:
-    """Second derivative of function x^3."""
+    """Compute the second derivative of function x^3."""
     return 6.0 * x
 
 
 def f_cos(x: float) -> float:
-    """Function cos(x)."""
+    """Compute cos(x)."""
     return math.cos(x)
 
 
 def df_cos(x: float) -> float:
-    """Derivative of function cos(x)."""
+    """Compute the derivative of function cos(x)."""
     return -math.sin(x)
 
 
 def d2f_cos(x: float) -> float:
-    """Second derivative of function cos(x)."""
+    """Compute the second derivative of function cos(x)."""
     return -math.cos(x)
 
 
@@ -88,7 +88,6 @@ def d2f_cos(x: float) -> float:
 )
 def test_func_x2(f, df, d2f, interp_nknots, tol) -> None:
     """Test the numcosmo library to calculate derivatives of functions."""
-
     interp_knots = np.linspace(0.0, 4.0, interp_nknots)
 
     s = Ncm.SplineCubicD2.new(

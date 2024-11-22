@@ -46,7 +46,7 @@ class IniSampler(str, Enum):
     FROM_CATALOG = "from-catalog"
 
 
-class Parallezation(str, Enum):
+class Parallelization(str, Enum):
     """Parallel sampler to use for the MCMC."""
 
     NONE = "none"
@@ -119,14 +119,14 @@ class RunMCMC(RunCommonOptions):
     ] = True
 
     parallel: Annotated[
-        Parallezation,
+        Parallelization,
         typer.Option(
             help=(
                 "Parallelization to use. Python likelihoods are not compatible with "
                 "multi-threading."
             ),
         ),
-    ] = Parallezation.NONE
+    ] = Parallelization.NONE
 
     nthreads: Annotated[
         int,
@@ -281,9 +281,9 @@ class RunMCMC(RunCommonOptions):
         apes_walker.set_method(self.interpolation_method.genum)
         apes_walker.set_k_type(self.interpolation_kernel.genum)
 
-        if self.parallel == Parallezation.THREADS.value:
+        if self.parallel == Parallelization.THREADS.value:
             apes_walker.set_use_threads(True)
-        elif self.parallel == Parallezation.MPI.value:
+        elif self.parallel == Parallelization.MPI.value:
             if Ncm.cfg_mpi_nslaves() == 0:
                 raise RuntimeError(
                     "MPI parallelization requested but MPI is not initialized."
@@ -312,7 +312,7 @@ class RunMCMC(RunCommonOptions):
                 self.run_messages.genum,
             )
 
-        if self.parallel == Parallezation.THREADS.value:
+        if self.parallel == Parallelization.THREADS.value:
             esmcmc.set_nthreads(self.nthreads)
 
         if self.output is not None:
