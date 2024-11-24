@@ -4,6 +4,10 @@ CHANGELOG
 [Current]
 
 [v0.23.0]
+ * Better handling of git hash.
+
+ * Updated changelog.
+
  * V0.23.0 (#187)
 
      * Updating version number.
@@ -4951,6 +4955,8 @@ CHANGELOG
 
 
 []
+ * Better handling of git hash.
+ * Updated changelog.
  * V0.23.0 (#187)
  * Notebook to generate the plots for the notaknot paper (cosmology sess… (#169)
  * Add NcmSphereNN for finding nearest neighbors within a spherical shell. (#186)
