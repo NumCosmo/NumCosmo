@@ -194,3 +194,29 @@ def test_halo_density_profile_rho_s(
         assert rho_s0 > 0.0
         assert_allclose(rho_s, rho_s0)
         assert_allclose(rho_s, mass / (4.0 * np.pi * dl_mass * r_s**3.0))
+
+
+def test_halo_density_profile_get_numint_splines(
+    halo_density_profile: Nc.HaloDensityProfile,
+):
+    """Test HaloDensityProfile get numint splines."""
+    x_array = np.geomspace(1.0e-2, 1.0e1, 100)
+
+    twod_density, cyl_mass = halo_density_profile.get_numint_splines()
+
+    assert isinstance(twod_density, Ncm.Spline)
+    assert isinstance(cyl_mass, Ncm.Spline)
+
+    twod_density_array = np.exp([twod_density.eval(np.log(x)) for x in x_array])
+    cyl_mass_array = np.exp([cyl_mass.eval(np.log(x)) for x in x_array])
+
+    twod_density_array_cmp = np.array(
+        [halo_density_profile.eval_numint_dl_2d_density(x) for x in x_array]
+    )
+
+    cyl_mass_array_cmp = np.array(
+        [halo_density_profile.eval_numint_dl_cyl_mass(x) for x in x_array]
+    )
+
+    assert_allclose(twod_density_array, twod_density_array_cmp)
+    assert_allclose(cyl_mass_array, cyl_mass_array_cmp)
