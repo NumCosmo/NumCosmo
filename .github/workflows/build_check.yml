@@ -79,6 +79,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Runtime workaround for brew pkg-config -> pkgconf
+      run: |
+        brew update
+        brew upgrade
+        brew install pkgconf    
     - name: Brew install pre-requisites
       run: |
         brew install python3 gobject-introspection pygobject3 numpy meson ninja gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran gtk-doc glib openblas
