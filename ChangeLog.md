@@ -3,7 +3,271 @@ CHANGELOG
 
 [Current]
 
+[v0.23.0]
+ * V0.23.0 (#187)
+
+     * Updating version number.
+     * Fixing documentation glitches.
+ * Notebook to generate the plots for the notaknot paper (cosmology sess… (#169)
+
+     * Notebook to generate the plots for the notaknot paper (cosmology
+     session).
+     * Created functions to get the spline's information (size, number of knots)
+     of the halo density profile object.
+     * Cleaning notebooks.
+     * Updated private access.
+     * Updated stubs.
+     * Adding tests for new method.
+     * Testing workaround for brew pkgconf.
+     * Trying uninstalling pkg-config.
+     * Another way to remove old pkg-config.
+     
+     ---------
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Add NcmSphereNN for finding nearest neighbors within a spherical shell. (#186)
+
+     * Add NcmSphereNN for finding nearest neighbors within a spherical shell.
+     * Uncrustify.
+     * Adding support for different radius.
+     * Adding missing test for dump.
+     * Removed unused properties.
+ * Raising error for unknown key in param_set_desc. (#184)
+
+
+ * Adding support for MC analysis. (#183)
+
+     * Adding support for MC analysis.
+     * Reorganizing python modules.
+ * Mass and concentration summary  (#180)
+
+     * First draft for Halo Summary.
+     * Updates for all dependent objects.
+     * Fixing model update.
+     * Fixing tests.
+     * Updated stubs.
+     * Removed unused variable.
+     * Fixing leak in constructors.
+     * Updating python code.
+     * Tests for NcHaloMassSummary.
+     * Better calibration for test_ncm_spline.
+     * Removed untestable lines.
+     * More testing for halo_density_profile.
+     
+     ---------
+      Co-authored-by: Mariana Penna Lima <pennalima@gmail.com>
+ * Configuring conda-incubator/setup-miniconda@v3.
+
+ * Updating conda-incubator/setup-miniconda@v3 usage.
+
+ * Updated conda-incubator/setup-miniconda@v3 use.
+
+ * Adding support for version checks in numcosmo. (#179)
+
+
+ * Testing more parallel tests.
+
+ * Fix leftover merge lines.
+
+ * Fftw config (#178)
+
+     * Improving fftw planner control.
+     * Testing ncm_cfg fftw flags manipulation.
+     * Adding missing tests.
+     * Fixed exception string match.
+     * More functions to control fftw planner.
+     * Connecting meson option to fftw planner.
+ * Improving fftw planner control.
+
+ * Configuring fftw-planner during build.
+
+ * Using FFTW_ESTIMATE by default. Added NC_FFTW_DEFAULT_FLAGS and
+     NC_FFTW_TIMELIMIT environment variables.
+
+ * Forcing cache update.
+
+ * Removing use-only-tar-bz2: true.
+
+ * Adding use-only-tar-bz2: true to miniforge action.
+
+ * Updated GHA workflow.
+
+ * Removed old coveralls badge.
+
+ * Twofluids update (#177)
+
+     * Updates to TwoFluids model.
+     * More tests for TwoFluids model.
+     * Calibrating tests.
+     * New S8 MSetFunc.
+     * New S8 Gaussian prior.
+     * Updated stubs.
+ * Updating tests use of Vexp, fixing documentation bugs. (#176)
+
+     * Updating tests use of Vexp.
+     * Fixing documentation bugs.
+ * Magnetic vexp (#175)
+
+     * Re-parametrized magneto model.
+     * Renamed and removed hardcoded paths.
+     
+     ---------
+      Co-authored-by: EFrion <frion.emmanuel@hotmail.fr>
+ * New nc_galaxy_wl_obs object  (#167)
+
+     * Redesign of the whole cluster weak lensing analysis.
+     * New unit testing for all new objects.
+     * New generate command for the numcosmo app.
+     
+     ---------
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Updating to actions/upload-artifact@v4.
+
+ * Restricting setuptools version to avoid gobject-instrospection problems.
+
+ * Improving model interface and error handling (#174)
+
+     * Adapting calls to methods with GError support.
+     * Adding support for GError handling to methods.
+     * Helper function to set GError or call g_error.
+     * Bug: the same reparam passed twice would free.
+     * Added GError support for methods.
+     * New helper functions for GError handling.
+     * Adding tests for exception raising from C.
+     * Updating stubs.
+     * Removed testing of first derivative when using linear interpolation.
+     * Minimal tests for ncm_mset_save/load.
+     * Adding missing tests for priors.
+     * Improved interface for model.
+     * Improved interface for mset.
+ * Updated documentation of ncm_m_mass_solar. CODATA 2022.
+
+ * Updated to latest CODATA, NIST and IAU (and others) constants. (#171)
+
+     * Updated to latest CODATA, NIST and IAU (and others) constants.
+     
+     * Updated compiler versions.
+     
+     * Updated tests.
+     
+     * Updated documentation and cross-checked the CODATA, IUPAC and NIST
+     values.
+     
+     * Fixed identation.
+     
+     ---------
+      Co-authored-by: Mariana Penna Lima <pennalima@gmail.com>
+ * Xcor cmp (#85)
+
+     * The first version of tSZ kernel is working.
+     * Fixed kernel for tSZ.
+     * Added tests for tSZ.
+     
+     ---------
+      Co-authored-by: Arthur de Souza Molina <arthur.souza.molina@gmail.com>
+ 
+     Co-authored-by: Mariana Penna Lima <pennalima@gmail.com>
+ * Xcor CCL comparisons (#168)
+
+     * Adding the dndz notebook.
+     * Adding the file with binned gaussians as dndz.
+     * Adding notebooks already running the latest versions of CCL and NumCosmo.
+     
+     * Cleaning the notebooks outputs.
+     * Updated and cleaned CCL/XCor notebooks.
+     * Updated CCL precision to avoid roundoff errors.
+     * Updated cmb lensing to compute correctly in curved cosmologies.
+     * Cleaning notebooks.
+     
+     ---------
+      Co-authored-by: Luigi Lucas de Carvalho Silva <luigi.lcsilva@gmail.com>
+ * Implemented Integrated Sachs-Wolfe kernel. (#166)
+
+     * Implemented Integrated Sachs-Wolfe kernel.
+     * Implemented the derivative of the growth function with respect to
+     redshift.
+     * Cleaning notebooks.
+     * Uncrustify.
+     * Fixing new object nc_xcor_limber_kernel_cmb_isw.
+     * Encapsulating xcor objects.
+     * New tests for xcor.
+     * Made tests a package to allow relative imports.
+     * Organized fixtures in a different file.
+     * Using Stefan-Boltzmann constant.
+     * Adding guard when eval inverse distance.
+     * Fixed limits determination.
+     * Setting more updated constants to CCL.
+     * More high precision parameters.
+     * New tests comparing with CCL.
+     * Fix l dependent factor.
+     * Fixed upper redshift for integration.
+     * Removed time limit for some tests.
+     * Fixed docstrings.
+     * Fixing import.
+     * Fixed power-spectrum derivative.
+     * More tests for kernels.
+     * Ignoring untestable lines.
+     * Updated pylint python version to 3.10.
+     * Added method to NcDistance to compute distance from z1 to z2 without
+     cancellation.
+     * New Cosmology python class to hold NumCosmo's cosmology and computation
+     tools.
+     * Renamed fixture files and reorganizing fixtures.
+     * More fixtures.
+     * Adding types and using Cosmology to hold NumCosmo outputs.
+     * Improving weak-lensing kernel computation.
+     * Tests with reorganized fixtures.
+     * Computing the weak-lensing kernel in a efficient way.
+     * Adding tests for weak-lensing kernel.
+     * Adding tests for galaxy counts kernel.
+     * Reorganized all fixture and tests. 
+     * Improved magnification bias computation.
+     * Testing different bias interpolations.
+     * Fixed bug in gsl spline serialization.
+     * Testing comoving distance small difference.
+     * Testing GSL set/get type features.
+     * Testing galaxy kernel methods.
+     * Testing CLASS powspec derivative.
+     * Removed old untested alternative integration methods in xcor.
+     
+     ---------
+      Co-authored-by: Mariana Penna Lima <pennalima@gmail.com>
+ * Galaxy WL reformulation (#93)
+
+     * New NcGalaxyWL object and related prototypes (nc_galaxy_sd_position,
+     nc_galaxy_sd_z_proxy, nc_galaxy_sd_shape, etc.)
+     * Changed naming scheme from GSD to GalaxySD
+     * Fixed typos, documentation, and copyright notices
+     * Added new observation matrix property and related methods (eval_m2lnP,
+     nc_galaxy_wl_likelihood_prepare, etc.)
+     * Registered new objects and prototypes (nc_galaxy_sd_position_flat,
+     nc_galaxy_sd_z_proxy_gauss, nc_galaxy_sd_shape_gauss, etc.)
+     * Added unit tests for new objects and prototypes
+     * Improved galaxy weak lensing likelihood implementation
+     * Optimized Monte Carlo integration and sampling methods
+     * Added support for integration to nc_galaxy_sd objects and
+     nc_data_cluster_wl
+     * Refactored Galaxy objects to simplify properties
+     * Added leave-one-out cross validation method
+     * Enabled integral parallelization
+     * Added normalization factors and new parameters (z_cluster, true_z_min)
+     * Fixed bugs in integration and KDE evaluation methods
+     * Added tests for integration and KDE comparison
+     * Updated weak lensing cluster mass fitting interface
+     * Refactored and cleaned up code
+     
+     ---------
+      Co-authored-by: Caio Lima de Oliveira <caiolimadeoliveira@proton.me>
+ 
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Magnetic Fields in Vexp cosmology (#153)
+
+     * Added spectrum computation to NcHIPertEM and updated notebook.
+     * New notebook for vexp_bounce_adiabatic.
+     * Updates on vexp_bounce_adiabatic.
+
 [v0.22.0]
+ * New version v0.22.0
+
  * Mix experiments options (#164)
 
      * Fixing doc-strings.
@@ -134,7 +398,8 @@ CHANGELOG
      * Updating primordial_perturbations/magnetic_dust_bounce.ipynb.
      
      ---------
-      Co-authored-by: EFrion <frion.emmanuel@hotmail.fr> Co-authored-by:
+      Co-authored-by: EFrion <frion.emmanuel@hotmail.fr>
+ Co-authored-by:
      Eduardo Barroso <eduardojsbarroso@gmail.com>
  * Adding Bayesian evidence support for numcosmo app. (#152)
 
@@ -805,7 +1070,8 @@ CHANGELOG
      * Fixed copyright notices
      
      ---------
-      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br> 
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ 
      Co-authored-by: Caio Lima de Oliveira <caiolimadeoliveira@proton.me>
  * Added check to see if the python interface is available.
 
@@ -914,7 +1180,8 @@ CHANGELOG
      * Updated plcl script.
      
      ---------
-      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com> Co-authored-by:
+      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com>
+ Co-authored-by:
      Mariana Penna Lima <pennalima@gmail.com>
  * Halo bias tests (#73)
 
@@ -952,8 +1219,10 @@ CHANGELOG
      * Bias as function of mass
      * Added minimal documentation to bias objects.
      * Finished Documentations
-      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br> 
-     Co-authored-by: Eduardo Barroso <eduardojsbarroso@gmail.com> 
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ 
+     Co-authored-by: Eduardo Barroso <eduardojsbarroso@gmail.com>
+ 
      Co-authored-by: root <root@eduardo>
  * Added interface to generate models using an array of NcmSParams
 
@@ -1071,7 +1340,8 @@ CHANGELOG
      * missing files
      
      * multiplicity_watson_install
-      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com> Co-authored-by:
+      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com>
+ Co-authored-by:
      Henrique Lettieri <henrique.cnl@hotmail.com>
  * Removed ckern algo.
 
@@ -4681,6 +4951,43 @@ CHANGELOG
 
 
 []
+ * V0.23.0 (#187)
+ * Notebook to generate the plots for the notaknot paper (cosmology sess… (#169)
+ * Add NcmSphereNN for finding nearest neighbors within a spherical shell. (#186)
+ * Raising error for unknown key in param_set_desc. (#184)
+ * Adding support for MC analysis. (#183)
+ * Mass and concentration summary  (#180)
+ * Configuring conda-incubator/setup-miniconda@v3.
+ * Updating conda-incubator/setup-miniconda@v3 usage.
+ * Updated conda-incubator/setup-miniconda@v3 use.
+ * Adding support for version checks in numcosmo. (#179)
+ * Testing more parallel tests.
+ * Fix leftover merge lines.
+ * Fftw config (#178)
+ * Improving fftw planner control.
+ * Configuring fftw-planner during build.
+ * Using FFTW_ESTIMATE by default. Added NC_FFTW_DEFAULT_FLAGS and
+     NC_FFTW_TIMELIMIT environment variables.
+ * Forcing cache update.
+ * Removing use-only-tar-bz2: true.
+ * Adding use-only-tar-bz2: true to miniforge action.
+ * Updated GHA workflow.
+ * Removed old coveralls badge.
+ * Twofluids update (#177)
+ * Updating tests use of Vexp, fixing documentation bugs. (#176)
+ * Magnetic vexp (#175)
+ * New nc_galaxy_wl_obs object  (#167)
+ * Updating to actions/upload-artifact@v4.
+ * Restricting setuptools version to avoid gobject-instrospection problems.
+ * Improving model interface and error handling (#174)
+ * Updated documentation of ncm_m_mass_solar. CODATA 2022.
+ * Updated to latest CODATA, NIST and IAU (and others) constants. (#171)
+ * Xcor cmp (#85)
+ * Xcor CCL comparisons (#168)
+ * Implemented Integrated Sachs-Wolfe kernel. (#166)
+ * Galaxy WL reformulation (#93)
+ * Magnetic Fields in Vexp cosmology (#153)
+ * New version v0.22.0
  * Mix experiments options (#164)
  * CCL background power (#162)
  * Two Fluids primordial model (#160)
