@@ -36,7 +36,7 @@ from numcosmo_py.experiments.planck18 import (
     HIPrimModel,
     generate_planck18_tt,
     generate_planck18_ttteee,
-    set_mset_parameters,
+    mset_set_parameters,
 )
 from numcosmo_py.experiments.jpas_forecast24 import (
     ClusterRedshiftType,
@@ -118,7 +118,7 @@ class GeneratePlanck:
         dataset = likelihood.peek_dataset()
         assert isinstance(dataset, Ncm.Dataset)
 
-        set_mset_parameters(mset, self.data_type, self.prim_model)
+        mset_set_parameters(mset, self.data_type, self.prim_model)
 
         if self.include_snia is not None:
             dist = exp.get("distance")

@@ -23,7 +23,29 @@
 
 """NumCosmo cosmology class."""
 
+from typing import TypedDict
+from enum import Enum
 from . import Ncm, Nc
+
+
+class ParameterDesc(TypedDict, total=False):
+    """Parameter description."""
+
+    name: str
+    symbol: str
+    scale: float
+    lower_bound: float
+    upper_bound: float
+    abstol: float
+    fit: bool
+    value: float
+
+
+class HIPrimModel(str, Enum):
+    """Planck 18 primordial model."""
+
+    POWER_LAW = "power-law"
+    TWO_FLUIDS = "two-fluids"
 
 
 class Cosmology:
@@ -112,3 +134,51 @@ class Cosmology:
             self._ps_mnl.prepare_if_needed(self.cosmo)
         if self._psf is not None:
             self._psf.prepare_if_needed(self.cosmo)
+
+
+def create_cosmo(
+    massive_nu: bool = False,
+    prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
+) -> Nc.HICosmo:
+    """Create a cosmology for CMB experiments."""
+    if massive_nu:
+        cosmo = Nc.HICosmoDEXcdm(massnu_length=1)
+    else:
+        cosmo = Nc.HICosmoDEXcdm()
+
+    cosmo.params_set_default_ftype()
+    cosmo.cmb_params()
+    cosmo["H0"] = 70.0
+    cosmo["omegab"] = 0.022
+    cosmo["omegac"] = 0.12
+
+    if massive_nu:
+        cosmo["ENnu"] = 2.0328
+        cosmo["massnu_0"] = 0.06
+        cosmo.param_set_desc("massnu_0", {"fit": True})
+
+    cosmo.param_set_desc("H0", {"fit": True})
+    cosmo.param_set_desc("omegac", {"fit": True})
+    cosmo.param_set_desc("omegab", {"fit": True})
+    cosmo.param_set_desc("Omegak", {"fit": False})
+    cosmo.param_set_desc("w", {"fit": False})
+
+    if prim_model == HIPrimModel.POWER_LAW:
+        prim = Nc.HIPrimPowerLaw.new()
+        prim.param_set_desc("ln10e10ASA", {"fit": True})
+        prim.param_set_desc("n_SA", {"fit": True})
+    elif prim_model == HIPrimModel.TWO_FLUIDS:
+        prim = Nc.HIPrimTwoFluids(use_default_calib=True)
+        prim.param_set_desc("ln10e10ASA", {"fit": True})
+        prim.param_set_desc("lnk0", {"fit": True})
+        prim.param_set_desc("lnw", {"fit": True})
+    else:
+        raise ValueError(f"Invalid primordial model: {prim_model}")
+
+    reion = Nc.HIReionCamb.new()
+    reion.param_set_desc("z_re", {"fit": True})
+
+    cosmo.add_submodel(prim)
+    cosmo.add_submodel(reion)
+
+    return cosmo

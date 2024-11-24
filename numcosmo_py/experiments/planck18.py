@@ -23,12 +23,13 @@
 
 """Factory functions to generate Planck18 likelihood and models."""
 
-from typing import TypedDict, Any, cast
+from typing import Any, cast
 from enum import Enum
 
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.cosmology import HIPrimModel, create_cosmo, ParameterDesc
 
 
 class Planck18Types(str, Enum):
@@ -36,26 +37,6 @@ class Planck18Types(str, Enum):
 
     TT = "TT"
     TTTEEE = "TTTEEE"
-
-
-class HIPrimModel(str, Enum):
-    """Planck 18 primordial model."""
-
-    POWER_LAW = "power-law"
-    TWO_FLUIDS = "two-fluids"
-
-
-class ParameterDesc(TypedDict, total=False):
-    """Parameter description."""
-
-    name: str
-    symbol: str
-    scale: float
-    lower_bound: float
-    upper_bound: float
-    abstol: float
-    fit: bool
-    value: float
 
 
 EXP_PARAMETERS: dict[tuple[str, str], dict[str, ParameterDesc]] = {
@@ -176,7 +157,7 @@ EXP_PARAMETERS: dict[tuple[str, str], dict[str, ParameterDesc]] = {
 }
 
 
-def set_mset_parameters(
+def mset_set_parameters(
     mset: Ncm.MSet, exp_type: Planck18Types, prim_model: HIPrimModel
 ):
     """Set the experiment parameters."""
@@ -187,54 +168,6 @@ def set_mset_parameters(
         model, name = param.split(":")
 
         mset[model].param_set_desc(name, cast(dict[str, Any], value))
-
-
-def create_cosmo_for_cmb(
-    massive_nu: bool = False,
-    prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
-) -> Nc.HICosmo:
-    """Create a cosmology for CMB experiments."""
-    if massive_nu:
-        cosmo = Nc.HICosmoDEXcdm(massnu_length=1)
-    else:
-        cosmo = Nc.HICosmoDEXcdm()
-
-    cosmo.params_set_default_ftype()
-    cosmo.cmb_params()
-    cosmo["H0"] = 70.0
-    cosmo["omegab"] = 0.022
-    cosmo["omegac"] = 0.12
-
-    if massive_nu:
-        cosmo["ENnu"] = 2.0328
-        cosmo["massnu_0"] = 0.0
-        cosmo.param_set_desc("massnu_0", {"fit": True})
-
-    cosmo.param_set_desc("H0", {"fit": True})
-    cosmo.param_set_desc("omegac", {"fit": True})
-    cosmo.param_set_desc("omegab", {"fit": True})
-    cosmo.param_set_desc("Omegak", {"fit": False})
-    cosmo.param_set_desc("w", {"fit": False})
-
-    if prim_model == HIPrimModel.POWER_LAW:
-        prim = Nc.HIPrimPowerLaw.new()
-        prim.param_set_desc("ln10e10ASA", {"fit": True})
-        prim.param_set_desc("n_SA", {"fit": True})
-    elif prim_model == HIPrimModel.TWO_FLUIDS:
-        prim = Nc.HIPrimTwoFluids(use_default_calib=True)
-        prim.param_set_desc("ln10e10ASA", {"fit": True})
-        prim.param_set_desc("lnk0", {"fit": True})
-        prim.param_set_desc("lnw", {"fit": True})
-    else:
-        raise ValueError(f"Invalid primordial model: {prim_model}")
-
-    reion = Nc.HIReionCamb.new()
-    reion.param_set_desc("z_re", {"fit": True})
-
-    cosmo.add_submodel(prim)
-    cosmo.add_submodel(reion)
-
-    return cosmo
 
 
 def create_mfunc_array_for_cmb(
@@ -296,7 +229,7 @@ def generate_planck18_tt(
     planck_model = Nc.PlanckFICorTT()
     planck_model.params_set_default_ftype()
 
-    cosmo = create_cosmo_for_cmb(massive_nu=massive_nu, prim_model=prim_model)
+    cosmo = create_cosmo(massive_nu=massive_nu, prim_model=prim_model)
 
     mset = Ncm.MSet.new_array([planck_model, cosmo])
     mset.prepare_fparam_map()
@@ -376,7 +309,7 @@ def generate_planck18_ttteee(
     planck_model = Nc.PlanckFICorTTTEEE()
     planck_model.params_set_default_ftype()
 
-    cosmo = create_cosmo_for_cmb(massive_nu=massive_nu, prim_model=prim_model)
+    cosmo = create_cosmo(massive_nu=massive_nu, prim_model=prim_model)
 
     mset = Ncm.MSet.new_array([planck_model, cosmo])
     mset.prepare_fparam_map()
