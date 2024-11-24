@@ -167,8 +167,12 @@ numcosmo_conf.set_quoted('PACKAGE_SOURCE_DIR', numcosmo_source_dir)
 git_bin = find_program('git', required: false)
 
 if git_bin.found()
-  git_commit_short = run_command(git_bin, ['rev-parse', '--short', 'HEAD'], check: true).stdout().strip()
-  numcosmo_conf.set_quoted('NUMCOSMO_GIT_COMMIT', git_commit_short)
+  r = run_command(git_bin, ['rev-parse', '--short', 'HEAD'], check: false)
+  if r.returncode() == 0
+    numcosmo_conf.set_quoted('NUMCOSMO_GIT_COMMIT', r.stdout().strip())
+  else
+    numcosmo_conf.set_quoted('NUMCOSMO_GIT_COMMIT', 'unknown')
+  endif
 else
   numcosmo_conf.set_quoted('NUMCOSMO_GIT_COMMIT', 'unknown')
 endif
