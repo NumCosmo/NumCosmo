@@ -1235,3 +1235,25 @@ nc_halo_density_profile_eval_numint_dl_cyl_mass (NcHaloDensityProfile *dp, const
   return exp (ncm_spline_eval (self->dl_cyl_mass_s, log (X)));
 }
 
+/**
+ * nc_halo_density_profile_get_numint_splines:
+ * @dp: a #NcHaloDensityProfile
+ * @twod_density: (out) (transfer full): size of the dl_2d_density_s spline
+ * @cyl_mass: (out) (transfer full): size of the dl_cyl_mass_s spline
+ *
+ * This function provides the splines computed in this object, #NcHaloDensityProfile:
+ * dl_2d_density_s and dl_cyl_mass_s.
+ *
+ */
+void
+nc_halo_density_profile_get_numint_splines (NcHaloDensityProfile *dp, NcmSpline **twod_density, NcmSpline **cyl_mass)
+{
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
+
+  _nc_halo_density_profile_prepare_dl_cyl_mass (dp);
+  _nc_halo_density_profile_prepare_dl_2d_density (dp);
+
+  *twod_density = ncm_spline_ref (self->dl_2d_density_s);
+  *cyl_mass     = ncm_spline_ref (self->dl_cyl_mass_s);
+}
+
