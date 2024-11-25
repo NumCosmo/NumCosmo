@@ -255,6 +255,7 @@ _nc_data_cluster_wl_constructed (GObject *object)
   }
 }
 
+static void _nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 static void _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static guint _nc_data_cluster_wl_get_len (NcmData *data);
 static void _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset);
@@ -341,6 +342,7 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  data_class->resample   = &_nc_data_cluster_wl_resample;
   data_class->m2lnL_val  = &_nc_data_cluster_wl_m2lnL_val;
   data_class->get_length = &_nc_data_cluster_wl_get_len;
   data_class->prepare    = &_nc_data_cluster_wl_prepare;
@@ -441,6 +443,31 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
   nc_galaxy_sd_obs_redshift_integrand_free (integrand_redshift);
 
   return result;
+}
+
+static void
+_nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
+{
+  NcDataClusterWL *dcwl                  = NC_DATA_CLUSTER_WL (data);
+  NcDataClusterWLPrivate * const self    = nc_data_cluster_wl_get_instance_private (dcwl);
+  NcGalaxySDShape *galaxy_shape          = NC_GALAXY_SD_SHAPE (ncm_mset_peek (mset, nc_galaxy_sd_shape_id ()));
+  NcGalaxySDObsRedshift *galaxy_redshift = NC_GALAXY_SD_OBS_REDSHIFT (ncm_mset_peek (mset, nc_galaxy_sd_obs_redshift_id ()));
+  NcGalaxySDPosition *galaxy_position    = NC_GALAXY_SD_POSITION (ncm_mset_peek (mset, nc_galaxy_sd_position_id ()));
+  guint gal_i;
+
+
+  for (gal_i = 0; gal_i < self->len; gal_i++)
+  {
+    NcGalaxySDShapeData *data         = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+    NcGalaxySDPositionData *p_data    = data->sdpos_data;
+    NcGalaxySDObsRedshiftData *z_data = p_data->sdz_data;
+
+    nc_galaxy_sd_obs_redshift_gen (galaxy_redshift, z_data, rng);
+    nc_galaxy_sd_position_gen (galaxy_position, p_data, rng);
+    nc_galaxy_sd_shape_gen (galaxy_shape, mset, data, rng);
+
+    nc_galaxy_sd_shape_data_write_row (data, self->obs, gal_i);
+  }
 }
 
 static gdouble

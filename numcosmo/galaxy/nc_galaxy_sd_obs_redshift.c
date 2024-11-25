@@ -318,6 +318,22 @@ nc_galaxy_sd_obs_redshift_clear (NcGalaxySDObsRedshift **gsdor)
 }
 
 /**
+ * nc_galaxy_sd_obs_redshift_gen:
+ * @gsdor: a #NcGalaxySDObsRedshift
+ * @data: a #NcGalaxySDObsRedshiftData
+ * @rng: a #NcmRNG
+ *
+ * Generates a new galaxy redshift data. The #NcGalaxySDObsRedshiftData object @data must be
+ * initialized before calling this method.
+ *
+ */
+void
+nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng)
+{
+  NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->gen (gsdor, data, rng);
+}
+
+/**
  * nc_galaxy_sd_obs_redshift_integ:
  * @gsdor: a #NcGalaxySDObsRedshift
  *
