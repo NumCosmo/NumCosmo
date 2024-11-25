@@ -179,22 +179,22 @@ class GenerateJpasForecast:
         typer.Option(
             help=(
                 "Model for "
-                "resample.(NcHICosmo:Omegac,NcHICosmo:w,NcHIPrim:ln10e10ASA)"
+                "resample.(NcHICosmo:Omegac,NcHICosmo:w,NcHICosmo:sigma8)"
             ),
             show_default=True,
         ),
-    ] = (0.2612, -1.0, 3.027)
+    ] = (0.2612, -1.0,  0.8159)
 
     fitting_model: Annotated[
         tuple[float, float, float],
         typer.Option(
             help=(
                 "Model for fitting. "
-                "(NcHICosmo:Omegac,NcHICosmo:w,NcHIPrim:ln10e10ASA)"
+                "(NcHICosmo:Omegac,NcHICosmo:w,NcHICosmo:sigma8)"
             ),
             show_default=True,
         ),
-    ] = (0.2612, -1.0, 3.027)
+    ] = (0.2612, -1.0, 0.8159)
 
     use_fixed_cov: Annotated[
         bool, typer.Option(help="Use fixed covariance matrix.", show_default=True)

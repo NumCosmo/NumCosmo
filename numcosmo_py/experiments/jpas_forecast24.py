@@ -351,10 +351,27 @@ def create_cluster_redshift(
 def _set_mset_params(mset: Ncm.MSet, params: tuple[float, float, float]) -> None:
     """Set the parameters for the mass model."""
     param_names = ["NcHICosmo:Omegac", "NcHICosmo:w", "NcHIPrim:ln10e10ASA"]
+    
+    tf = Nc.TransferFuncEH()
+    psml = Nc.PowspecMLTransfer.new(tf)
+    psml.require_kmin(1.0e-6)
+    psml.require_kmax(1.0e3)
+    
     for i, param_name in enumerate(param_names):
         pi = mset.fparam_get_pi_by_name(param_name)
-        mset.param_set(pi.mid, pi.pid, params[i])
-
+        
+        
+        
+        if i ==2:
+            
+            cosmo = mset.peek(mset.get_id_by_ns("NcHICosmo"))
+            A_s = np.exp(mset.param_get(pi.mid, pi.pid)) * 1.0e-10
+            
+            fact = (params[2] / psml.sigma_tophat_R(cosmo, 1.0e-7, 0.0, 8.0 / 0.6774)) ** 2
+            mset.param_set(pi.mid, pi.pid,  np.log(1.0e10 * A_s * fact))
+        else:
+            mset.param_set(pi.mid, pi.pid, params[i])
+        
 
 def generate_jpas_forecast_2024(
     area: float = 2959.1,
@@ -367,8 +384,8 @@ def generate_jpas_forecast_2024(
     lnMnknots: int = 2,
     cluster_mass_type: ClusterMassType = ClusterMassType.NODIST,
     use_fixed_cov: bool = False,
-    fitting_model: tuple[float, float, float] = (0.2612, -1.0, 3.027),
-    resample_model: tuple[float, float, float] = (0.2612, -1.0, 3.027),
+    fitting_model: tuple[float, float, float] = (0.2612, -1.0, 0.8159),
+    resample_model: tuple[float, float, float] = (0.2612, -1.0, 0.8159),
     resample_seed: int = 1234,
     fitting_Sij_type: JpasSSCType = JpasSSCType.FULLSKY,
     resample_Sij_type: JpasSSCType = JpasSSCType.NO_SSC,
