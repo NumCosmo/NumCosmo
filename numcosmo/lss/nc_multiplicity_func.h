@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -49,11 +49,11 @@ typedef struct _NcMultiplicityFuncPrivate NcMultiplicityFuncPrivate;
  * @NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN: halo mass defined in terms of the mean density $\rho_\mathrm{bg} = \rho_m(z)$
  * @NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL: halo mass defined in terms of the critical density $\rho_\mathrm{bg} = \rho_\mathrm{crit}(z)$
  * @NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL: halo mass defined in terms of virial overdensity times the critical density $\rho_\mathrm{bg} = \rho_\mathrm{crit
- * @NC_MULTIPLICITY_FUNC_MASS_DEF_FOF: friends of friends 
+ * @NC_MULTIPLICITY_FUNC_MASS_DEF_FOF: friends of friends
  *
  * Spherical overdensity halo mass: $$M_\Delta = \frac{4\pi}{3} \Delta \rho_\mathrm{bg} r_\Delta^3,$$
  * where $\rho_\mathrm{bg}$ is the background density of the universe at redshift z, $\rho_\mathrm{bg} (z)$.
- * For @NC_HALO_DENSITY_PROFILE_MASS_DEF_VIRIAL, the parameter #NcHaloDensityProfile:log10MDelta is ignored and
+ * For @NC_HALO_DENSITY_PROFILE_MASS_DEF_VIRIAL the virial overdensity is defined as:
  * \begin{equation}\label{def:DVir}
  * \Delta_\mathrm{Vir} = 18 \pi^2 + 82 x - 39 x^2, \quad x \equiv \Omega_m(z) - 1.
  * \end{equation}
@@ -110,3 +110,4 @@ gdouble nc_multiplicity_func_correction_factor (NcMultiplicityFunc *mulf, NcHICo
 G_END_DECLS
 
 #endif /* _NC_MULTIPLICITY_FUNC_H_ */
+

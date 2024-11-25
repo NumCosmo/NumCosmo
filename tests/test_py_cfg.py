@@ -136,7 +136,7 @@ def test_get_version() -> None:
     """Test getting the version string."""
     version = Ncm.cfg_get_version()
     # This functions returns (10000 * major + 100 * minor + micro, major, minor, micro)
-    assert version == (2200, 0, 22, 0)
+    assert version == (2300, 0, 23, 0)
 
 
 def test_get_git_hash() -> None:
@@ -148,7 +148,7 @@ def test_get_git_hash() -> None:
 def test_get_version_string() -> None:
     """Test getting the version string."""
     version = Ncm.cfg_get_version_string()
-    assert version == "0.22.0"
+    assert version == "0.23.0"
 
 
 def test_check_version() -> None:
