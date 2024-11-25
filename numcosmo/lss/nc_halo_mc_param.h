@@ -48,13 +48,13 @@ G_DECLARE_FINAL_TYPE (NcHaloMCParam, nc_halo_mc_param, NC, HALO_MC_PARAM, NcHalo
  * Both mass and concentration are parameters.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HALO_MASS_CONCENTRATION_PARAM_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HALO_MC_PARAM_SPARAMS >*/
 {
   NC_HALO_MC_PARAM_C_DELTA,
   NC_HALO_MC_PARAM_LOG10M_DELTA,
   /* < private > */
   NC_HALO_MC_PARAM_SPARAM_LEN, /*< skip >*/
-} NcHaloMassConcentrationParamSParams;
+} NcHaloMCParamSParams;
 
 #define NC_HALO_MC_PARAM_LOCAL_SPARAM_LEN (NC_HALO_MC_PARAM_SPARAM_LEN - 0)
 
