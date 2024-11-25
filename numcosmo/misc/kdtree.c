@@ -53,9 +53,9 @@ D (struct kdtree *tree, long index, int r)
 }
 
 static inline int
-knn_search_on (struct kdtree *tree, rb_knn_list_table_t *table, double *knn_distance, int k, double value, double target)
+knn_search_skip (struct kdtree *tree, rb_knn_list_table_t *table, double *knn_distance, int k, double value, double target)
 {
-  return table->rb_knn_list_count < k || square (target - value) < *knn_distance;
+  return (table->rb_knn_list_count >= k) && (square (target - value) > *knn_distance);
 }
 
 static inline void
@@ -183,11 +183,10 @@ static struct kdnode *
 
 kdnode_alloc (double *coord, long index, int r)
 {
-  struct kdnode *node = malloc (sizeof (*node));
+  struct kdnode *node = g_slice_new0 (struct kdnode);
 
   if (node != NULL)
   {
-    memset (node, 0, sizeof (*node));
     node->coord       = coord;
     node->coord_index = index;
     node->r           = r;
@@ -199,7 +198,7 @@ kdnode_alloc (double *coord, long index, int r)
 static void
 kdnode_free (struct kdnode *node)
 {
-  free (node);
+  g_slice_free (struct kdnode, node);
 }
 
 static int
@@ -240,7 +239,7 @@ kdnode_dump (struct kdnode *node, int dim)
 
   if (node->coord != NULL)
   {
-    printf ("(");
+    printf ("[%2ld](", node->coord_index);
 
     for (i = 0; i < dim; i++)
     {
@@ -337,14 +336,10 @@ kdtree_search_recursive (struct kdtree *tree, struct kdnode *node, rb_knn_list_t
       min_dist2_l = min_dist2_new;
     }
 
-    if (!knn_search_on (tree, table, knn_distance, k, node->coord[r], target[r]))
-      return;
-
     /* Testing if the branch can be prunned. */
     if (table->rb_knn_list_count >= k)
       if (min_dist2 > *knn_distance)
         return;
-
 
     if (*pickup)
     {
@@ -354,8 +349,6 @@ kdtree_search_recursive (struct kdtree *tree, struct kdnode *node, rb_knn_list_t
     }
     else
     {
-      /*printf ("Else!\n"); */
-
       if (is_leaf (node))
       {
         *pickup = 1;
@@ -490,9 +483,12 @@ kdtree_build (struct kdtree *tree)
   kdnode_build (tree, &tree->root, 0, 0, tree->count - 1);
 }
 
+static void kdnode_destroy (kdnode_t **node_ptr);
+
 void
 kdtree_rebuild (struct kdtree *tree)
 {
+  kdnode_destroy (&tree->root);
   coord_index_reset (tree);
   kdtree_build (tree);
 }
@@ -520,20 +516,24 @@ kdtree_init (int dim)
 }
 
 static void
-kdnode_destroy (struct kdnode *node)
+kdnode_destroy (kdnode_t **node_ptr)
 {
+  struct kdnode *node = *node_ptr;
+
   if (node == NULL)
     return;
 
-  kdnode_destroy (node->left);
-  kdnode_destroy (node->right);
+  kdnode_destroy (&node->left);
+  kdnode_destroy (&node->right);
+
   kdnode_free (node);
+  *node_ptr = NULL;
 }
 
 void
 kdtree_destroy (struct kdtree *tree)
 {
-  kdnode_destroy (tree->root);
+  kdnode_destroy (&tree->root);
   free (tree->coords);
   free (tree->coord_table);
   free (tree->coord_indexes);

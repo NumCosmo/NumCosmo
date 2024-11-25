@@ -9632,6 +9632,51 @@ class SphereMapClass(GObject.GPointer):
 
     parent_class: GObject.ObjectClass = ...
 
+class SphereNN(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SphereNN(**properties)
+        new() -> NumCosmoMath.SphereNN
+
+    Object NcmSphereNN
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    @staticmethod
+    def clear(snn: SphereNN) -> None: ...
+    def dump_tree(self) -> None: ...
+    def free(self) -> None: ...
+    def get(self, i: int) -> Tuple[float, float, float]: ...
+    def get_n(self) -> int: ...
+    def insert(self, r: float, theta: float, phi: float) -> None: ...
+    def insert_array(
+        self, r: Sequence[float], theta: Sequence[float], phi: Sequence[float]
+    ) -> None: ...
+    def knn_search(self, r: float, theta: float, phi: float, k: int) -> list[int]: ...
+    def knn_search_distances(
+        self, r: float, theta: float, phi: float, k: int
+    ) -> Tuple[list[float], list[int]]: ...
+    @classmethod
+    def new(cls) -> SphereNN: ...
+    def rebuild(self) -> None: ...
+    def ref(self) -> SphereNN: ...
+
+class SphereNNClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SphereNNClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
 class Spline(GObject.Object):
     r"""
     :Constructors:
