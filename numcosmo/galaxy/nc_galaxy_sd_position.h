@@ -108,6 +108,8 @@ gboolean nc_galaxy_sd_position_set_ra_lim (NcGalaxySDPosition *gsdp, const gdoub
 gboolean nc_galaxy_sd_position_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
 gboolean nc_galaxy_sd_position_set_dec_lim (NcGalaxySDPosition *gsdp, const gdouble dec_min, const gdouble dec_max);
 gboolean nc_galaxy_sd_position_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
+
+void nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcGalaxySDPositionData *data, NcmRNG *rng);
 NcGalaxySDPositionIntegrand *nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp);
 
 NcGalaxySDPositionData *nc_galaxy_sd_position_data_new (NcGalaxySDPosition *gsdp, NcGalaxySDObsRedshiftData *sdz_data);
