@@ -177,7 +177,13 @@ nc_galaxy_sd_shape_gauss_class_init (NcGalaxySDShapeGaussClass *klass)
    * The intrinsic shape dispersion.
    *
    */
-  ncm_model_class_set_sparam (model_class, NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA_INT, "\\e-rms", "e-rms", 0.0, 1.0, 1.0e-1, NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_PARAMS_ABSTOL, NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA_INT, NCM_PARAM_TYPE_FIXED);
+  ncm_model_class_set_sparam (model_class,
+                              NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA_INT,
+                              "\\epsilon_\\mathrm{rms}",
+                              "e-rms", 0.0, 1.0, 1.0e-1,
+                              NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_PARAMS_ABSTOL,
+                              NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA_INT,
+                              NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_check_params_info (model_class);
 
