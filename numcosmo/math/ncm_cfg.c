@@ -168,6 +168,7 @@
 #include "galaxy/nc_galaxy_sd_obs_redshift.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift_spec.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift_gauss.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift_pz.h"
 #include "galaxy/nc_galaxy_sd_true_redshift.h"
 #include "galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h"
 #include "galaxy/nc_galaxy_sd_shape.h"
@@ -719,6 +720,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_SPEC);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_PZ);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE);
