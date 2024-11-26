@@ -96,6 +96,7 @@ NcGalaxySDObsRedshift *nc_galaxy_sd_obs_redshift_ref (NcGalaxySDObsRedshift *gsd
 void nc_galaxy_sd_obs_redshift_free (NcGalaxySDObsRedshift *gsdor);
 void nc_galaxy_sd_obs_redshift_clear (NcGalaxySDObsRedshift **gsdor);
 
+void nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 NcGalaxySDObsRedshiftIntegrand *nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor);
 NcGalaxySDObsRedshiftData *nc_galaxy_sd_obs_redshift_data_new (NcGalaxySDObsRedshift *gsdor);
 

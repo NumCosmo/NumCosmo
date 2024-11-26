@@ -107,6 +107,7 @@ NcGalaxySDShape *nc_galaxy_sd_shape_ref (NcGalaxySDShape *gsds);
 void nc_galaxy_sd_shape_free (NcGalaxySDShape *gsds);
 void nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds);
 
+void nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng);
 NcGalaxySDShapeIntegrand *nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds);
 gboolean nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
 
