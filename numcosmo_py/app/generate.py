@@ -402,7 +402,7 @@ class GenerateClusterWL:
             help="Parameter to fit.",
             show_default=True,
             default_factory=lambda: [
-                "NcHaloDensityProfile:log10MDelta",
+                "NcHaloMassSummary:log10MDelta",
                 "NcHaloPosition:ra",
                 "NcHaloPosition:dec",
             ],

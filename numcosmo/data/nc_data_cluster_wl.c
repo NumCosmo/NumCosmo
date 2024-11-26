@@ -255,6 +255,7 @@ _nc_data_cluster_wl_constructed (GObject *object)
   }
 }
 
+static void _nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 static void _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static guint _nc_data_cluster_wl_get_len (NcmData *data);
 static void _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset);
@@ -341,6 +342,8 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  data_class->bootstrap  = TRUE;
+  data_class->resample   = &_nc_data_cluster_wl_resample;
   data_class->m2lnL_val  = &_nc_data_cluster_wl_m2lnL_val;
   data_class->get_length = &_nc_data_cluster_wl_get_len;
   data_class->prepare    = &_nc_data_cluster_wl_prepare;
@@ -391,6 +394,7 @@ nc_data_cluster_wl_int_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
 static gdouble
 _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
+  NcmData *data                                      = NCM_DATA (dcwl);
   NcDataClusterWLPrivate * const self                = nc_data_cluster_wl_get_instance_private (dcwl);
   NcDataClusterWLInt *likelihood_integral            = g_object_new (nc_data_cluster_wl_integ_get_type (), NULL);
   NcmIntegralND *lh_int                              = NCM_INTEGRAL_ND (likelihood_integral);
@@ -398,7 +402,6 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
   NcGalaxySDPositionIntegrand *integrand_position    = nc_galaxy_sd_position_integ (self->galaxy_position);
   NcGalaxySDShapeIntegrand *integrand_shape          = nc_galaxy_sd_shape_integ (self->galaxy_shape);
   gdouble result                                     = 0;
-  guint gal_i;
 
   ncm_vector_fast_set (self->zpi, 0, 0.0);
   ncm_vector_fast_set (self->zpf, 0, 10.0);
@@ -418,21 +421,50 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
 
-  for (gal_i = 0; gal_i < self->len; gal_i++)
+  if (!ncm_data_bootstrap_enabled (data))
   {
-    NcGalaxySDShapeData *data = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
-    gdouble m2lnP_gal_i;
+    guint gal_i;
 
-    likelihood_integral->data.data = data;
+    for (gal_i = 0; gal_i < self->len; gal_i++)
+    {
+      NcGalaxySDShapeData *data = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+      gdouble m2lnP_gal_i;
 
-    ncm_integral_nd_eval (lh_int, self->zpi, self->zpf, self->res, self->err);
+      likelihood_integral->data.data = data;
 
-    m2lnP_gal_i = -2.0 * log (ncm_vector_fast_get (self->res, 0));
+      ncm_integral_nd_eval (lh_int, self->zpi, self->zpf, self->res, self->err);
 
-    if (m2lnP_gal != NULL)
-      ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
+      m2lnP_gal_i = -2.0 * log (ncm_vector_fast_get (self->res, 0));
 
-    result += m2lnP_gal_i;
+      if (m2lnP_gal != NULL)
+        ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
+
+      result += m2lnP_gal_i;
+    }
+  }
+  else
+  {
+    NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
+    const guint bsize    = ncm_bootstrap_get_bsize (bstrap);
+    guint i;
+
+    for (i = 0; i < bsize; i++)
+    {
+      guint gal_i               = ncm_bootstrap_get (bstrap, i);
+      NcGalaxySDShapeData *data = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+      gdouble m2lnP_gal_i;
+
+      likelihood_integral->data.data = data;
+
+      ncm_integral_nd_eval (lh_int, self->zpi, self->zpf, self->res, self->err);
+
+      m2lnP_gal_i = -2.0 * log (ncm_vector_fast_get (self->res, 0));
+
+      if (m2lnP_gal != NULL)
+        ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
+
+      result += m2lnP_gal_i;
+    }
   }
 
   ncm_integral_nd_clear (&lh_int);
@@ -443,15 +475,40 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
   return result;
 }
 
+static void
+_nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
+{
+  NcDataClusterWL *dcwl                  = NC_DATA_CLUSTER_WL (data);
+  NcDataClusterWLPrivate * const self    = nc_data_cluster_wl_get_instance_private (dcwl);
+  NcGalaxySDShape *galaxy_shape          = NC_GALAXY_SD_SHAPE (ncm_mset_peek (mset, nc_galaxy_sd_shape_id ()));
+  NcGalaxySDObsRedshift *galaxy_redshift = NC_GALAXY_SD_OBS_REDSHIFT (ncm_mset_peek (mset, nc_galaxy_sd_obs_redshift_id ()));
+  NcGalaxySDPosition *galaxy_position    = NC_GALAXY_SD_POSITION (ncm_mset_peek (mset, nc_galaxy_sd_position_id ()));
+  guint gal_i;
+
+
+  for (gal_i = 0; gal_i < self->len; gal_i++)
+  {
+    NcGalaxySDShapeData *data         = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+    NcGalaxySDPositionData *p_data    = data->sdpos_data;
+    NcGalaxySDObsRedshiftData *z_data = p_data->sdz_data;
+
+    nc_galaxy_sd_obs_redshift_gen (galaxy_redshift, z_data, rng);
+    nc_galaxy_sd_position_gen (galaxy_position, p_data, rng);
+    nc_galaxy_sd_shape_gen (galaxy_shape, mset, data, rng);
+
+    nc_galaxy_sd_shape_data_write_row (data, self->obs, gal_i);
+  }
+}
+
 static gdouble
 _nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
+  NcmData *data                                      = NCM_DATA (dcwl);
   NcDataClusterWLPrivate * const self                = nc_data_cluster_wl_get_instance_private (dcwl);
   NcGalaxySDObsRedshiftIntegrand *integrand_redshift = nc_galaxy_sd_obs_redshift_integ (self->galaxy_redshift);
   NcGalaxySDPositionIntegrand *integrand_position    = nc_galaxy_sd_position_integ (self->galaxy_position);
   NcGalaxySDShapeIntegrand *integrand_shape          = nc_galaxy_sd_shape_integ (self->galaxy_shape);
   gdouble result                                     = 0;
-  guint gal_i;
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
@@ -460,16 +517,40 @@ _nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector 
   nc_galaxy_sd_position_integrand_prepare (integrand_position, mset);
   nc_galaxy_sd_shape_integrand_prepare (integrand_shape, mset);
 
-  for (gal_i = 0; gal_i < self->len; gal_i++)
+  if (!ncm_data_bootstrap_enabled (data))
   {
-    NcGalaxySDShapeData *data = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
-    const gdouble z           = data->sdpos_data->sdz_data->z;
-    const gdouble int_z       = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, data->sdpos_data->sdz_data);
-    const gdouble int_pos     = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data);
-    const gdouble int_shape   = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
-    const gdouble m2lnP_gal_i = -2.0 * log (int_z * int_pos * int_shape);
+    guint gal_i;
 
-    result += m2lnP_gal_i;
+    for (gal_i = 0; gal_i < self->len; gal_i++)
+    {
+      NcGalaxySDShapeData *data = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+      const gdouble z           = data->sdpos_data->sdz_data->z;
+      const gdouble int_z       = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, data->sdpos_data->sdz_data);
+      const gdouble int_pos     = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data);
+      const gdouble int_shape   = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
+      const gdouble m2lnP_gal_i = -2.0 * log (int_z * int_pos * int_shape);
+
+      result += m2lnP_gal_i;
+    }
+  }
+  else
+  {
+    NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
+    const guint bsize    = ncm_bootstrap_get_bsize (bstrap);
+    guint i;
+
+    for (i = 0; i < bsize; i++)
+    {
+      guint gal_i               = ncm_bootstrap_get (bstrap, i);
+      NcGalaxySDShapeData *data = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+      const gdouble z           = data->sdpos_data->sdz_data->z;
+      const gdouble int_z       = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, data->sdpos_data->sdz_data);
+      const gdouble int_pos     = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data);
+      const gdouble int_shape   = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
+      const gdouble m2lnP_gal_i = -2.0 * log (int_z * int_pos * int_shape);
+
+      result += m2lnP_gal_i;
+    }
   }
 
   nc_galaxy_sd_shape_integrand_free (integrand_shape);
