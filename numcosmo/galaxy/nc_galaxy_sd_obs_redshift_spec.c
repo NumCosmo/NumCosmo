@@ -45,7 +45,6 @@
 #include "galaxy/nc_galaxy_sd_obs_redshift.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift_spec.h"
 #include "galaxy/nc_galaxy_sd_true_redshift.h"
-#include "math/ncm_vector.h"
 #include "math/ncm_rng.h"
 
 typedef struct _NcGalaxySDObsRedshiftSpecPrivate
@@ -84,9 +83,6 @@ nc_galaxy_sd_obs_redshift_spec_init (NcGalaxySDObsRedshiftSpec *gsdorspec)
 static void
 _nc_galaxy_sd_obs_redshift_spec_dispose (GObject *object)
 {
-  /* NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (object); */
-  /* NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec); */
-
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_sd_obs_redshift_spec_parent_class)->dispose (object);
 }
