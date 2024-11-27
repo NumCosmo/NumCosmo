@@ -132,7 +132,7 @@ _integ_data_free (gpointer idata)
 static gdouble
 _nc_galaxy_sd_obs_redshift_pz_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDObsRedshiftData *data)
 {
-  NcGalaxySDObsRedshiftPzData * const ldata   = (NcGalaxySDObsRedshiftPzData *) data->ldata;
+  NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
 
   return ncm_spline_eval (ldata->pz, z);
 }
@@ -253,5 +253,38 @@ void
 nc_galaxy_sd_obs_redshift_pz_clear (NcGalaxySDObsRedshiftPz **gsdorpz)
 {
   g_clear_object (gsdorpz);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_pz_data_set:
+ * @gsdorpz: a #NcGalaxySDObsRedshiftPz
+ * @data: a #NcGalaxySDObsRedshiftPzData
+ * @spline: a #NcmSpline
+ *
+ * Sets the data of the photometric redshift observations.
+ *
+ */
+void
+nc_galaxy_sd_obs_redshift_pz_data_set (NcGalaxySDObsRedshiftPz *gsdorpz, NcGalaxySDObsRedshiftData *data, NcmSpline *spline)
+{
+  NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
+
+  ldata->pz = spline;
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_pz_data_get:
+ * @gsdorpz: a #NcGalaxySDObsRedshiftPz
+ * @data: a #NcGalaxySDObsRedshiftPzData
+ *
+ * Gets the data of the photometric redshift observations.
+ *
+ */
+void
+nc_galaxy_sd_obs_redshift_pz_data_get (NcGalaxySDObsRedshiftPz *gsdorpz, NcGalaxySDObsRedshiftData *data, NcmSpline **spline)
+{
+  NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
+
+  *spline = ldata->pz;
 }
 
