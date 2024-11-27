@@ -164,7 +164,7 @@ nc_halo_position_class_init (NcHaloPositionClass *klass)
    * The right ascension of the halo position.
    *
    */
-  ncm_model_class_set_sparam (model_class, NC_HALO_POSITION_RA, "ra", "ra", -180.0, 180.0, 1.0e-2, NC_HALO_POSITION_DEFAULT_PARAMS_ABSTOL, NC_HALO_POSITION_DEFAULT_RA, NCM_PARAM_TYPE_FIXED);
+  ncm_model_class_set_sparam (model_class, NC_HALO_POSITION_RA, "\\mathrm{RA}", "ra", -180.0, 180.0, 1.0e-2, NC_HALO_POSITION_DEFAULT_PARAMS_ABSTOL, NC_HALO_POSITION_DEFAULT_RA, NCM_PARAM_TYPE_FIXED);
 
   /**
    * NcHaloPosition:dec:
@@ -172,7 +172,7 @@ nc_halo_position_class_init (NcHaloPositionClass *klass)
    * The declination of the halo position.
    *
    */
-  ncm_model_class_set_sparam (model_class, NC_HALO_POSITION_DEC, "dec", "dec", -90.0, 90.0, 1.0e-2, NC_HALO_POSITION_DEFAULT_PARAMS_ABSTOL, NC_HALO_POSITION_DEFAULT_DEC, NCM_PARAM_TYPE_FIXED);
+  ncm_model_class_set_sparam (model_class, NC_HALO_POSITION_DEC, "\\mathrm{Dec}", "dec", -90.0, 90.0, 1.0e-2, NC_HALO_POSITION_DEFAULT_PARAMS_ABSTOL, NC_HALO_POSITION_DEFAULT_DEC, NCM_PARAM_TYPE_FIXED);
 
   /**
    * NcHaloPosition:z:
