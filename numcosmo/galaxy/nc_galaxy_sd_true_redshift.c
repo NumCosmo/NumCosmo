@@ -243,10 +243,10 @@ nc_galaxy_sd_true_redshift_clear (NcGalaxySDTrueRedshift **gsdtr)
  * Sets the redshift limits of the galaxy sample redshift distribution.
  *
  */
-gboolean
+void
 nc_galaxy_sd_true_redshift_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max)
 {
-  return NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->set_lim (gsdtr, z_min, z_max);
+  NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->set_lim (gsdtr, z_min, z_max);
 }
 
 /**
@@ -258,10 +258,10 @@ nc_galaxy_sd_true_redshift_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble
  * Gets the redshift limits of the galaxy sample redshift distribution.
  *
  */
-gboolean
+void
 nc_galaxy_sd_true_redshift_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max)
 {
-  return NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->get_lim (gsdtr, z_min, z_max);
+  NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->get_lim (gsdtr, z_min, z_max);
 }
 
 /**

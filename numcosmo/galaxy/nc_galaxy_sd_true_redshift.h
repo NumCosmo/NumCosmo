@@ -51,8 +51,8 @@ struct _NcGalaxySDTrueRedshiftClass
 
   gdouble (*gen) (NcGalaxySDTrueRedshift *gsdtr, NcmRNG *rng);
   gdouble (*integ) (NcGalaxySDTrueRedshift *gsdtr, gdouble z);
-  gboolean (*set_lim) (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max);
-  gboolean (*get_lim) (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max);
+  void (*set_lim) (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max);
+  void (*get_lim) (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[14];
