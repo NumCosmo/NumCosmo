@@ -217,6 +217,8 @@ test_nc_galaxy_sd_obs_redshift_pz_new (TestNcGalaxySDObsRedshift *test, gconstpo
   test->mset  = ncm_mset_empty_new ();
 
   g_assert_true (NC_IS_GALAXY_SD_OBS_REDSHIFT_PZ (gsdorpz));
+
+  nc_galaxy_sd_true_redshift_free (gsdtr);
 }
 
 static void
@@ -401,7 +403,12 @@ test_nc_galaxy_sd_obs_redshift_pz_gen (TestNcGalaxySDObsRedshift *test, gconstpo
 
       g_assert_cmpfloat_with_epsilon (pz_f, f, 1.0e-5);
     }
+
+    ncm_spline_free (pz);
   }
+
+  nc_galaxy_sd_obs_redshift_data_unref (data);
+  ncm_rng_free (rng);
 }
 
 static void
@@ -475,10 +482,11 @@ test_nc_galaxy_sd_obs_redshift_pz_integ (TestNcGalaxySDObsRedshift *test, gconst
   NcmMSet *mset                             = ncm_mset_empty_new ();
   const guint nruns                         = 10000;
   const guint npoints                       = 1000;
-  NcmVector *xx                             = ncm_vector_new (npoints);
-  NcmVector *xy                             = ncm_vector_new (npoints);
+  NcmVector *xv                             = ncm_vector_new (npoints);
+  NcmVector *yv                             = ncm_vector_new (npoints);
   gdouble z_min                             = 0.0;
   gdouble z_max                             = 5.0;
+  NcmSpline *pz;
   guint i;
   guint j;
 
@@ -487,14 +495,13 @@ test_nc_galaxy_sd_obs_redshift_pz_integ (TestNcGalaxySDObsRedshift *test, gconst
     const gdouble z = z_min + (z_max - z_min) * j / (npoints - 1);
     const gdouble f = z * z;
 
-    ncm_vector_set (xx, j, z);
-    ncm_vector_set (xy, j, f);
+    ncm_vector_set (xv, j, z);
+    ncm_vector_set (yv, j, f);
   }
 
-  NcmSpline *pz = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xx, xy, TRUE));
+  pz = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
 
   nc_galaxy_sd_obs_redshift_pz_data_set (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->gsdor), data, pz);
-
   nc_galaxy_sd_obs_redshift_integrand_prepare (integrand, mset);
 
   for (i = 0; i < nruns; i++)
@@ -508,10 +515,11 @@ test_nc_galaxy_sd_obs_redshift_pz_integ (TestNcGalaxySDObsRedshift *test, gconst
 
   nc_galaxy_sd_obs_redshift_data_unref (data);
   nc_galaxy_sd_obs_redshift_integrand_free (integrand);
+  ncm_spline_clear (&pz);
   ncm_mset_free (mset);
   ncm_rng_clear (&rng);
-  ncm_vector_clear (&xx);
-  ncm_vector_clear (&xy);
+  ncm_vector_clear (&xv);
+  ncm_vector_clear (&yv);
 }
 
 static void
@@ -591,18 +599,18 @@ test_nc_galaxy_sd_obs_redshift_pz_data_setget (TestNcGalaxySDObsRedshift *test, 
 
   for (i = 0; i < ntests; i++)
   {
-    NcmVector *xx = ncm_vector_new (npoints);
-    NcmVector *yy = ncm_vector_new (npoints);
+    NcmVector *xv = ncm_vector_new (npoints);
+    NcmVector *yv = ncm_vector_new (npoints);
     NcmSpline *pz;
     NcmSpline *pz_out;
 
     for (j = 0; j < npoints; j++)
     {
-      ncm_vector_set (xx, j, (gdouble) j);
-      ncm_vector_set (yy, j, (gdouble) j * j);
+      ncm_vector_set (xv, j, (gdouble) j);
+      ncm_vector_set (yv, j, (gdouble) j * j);
     }
 
-    pz = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xx, yy, TRUE));
+    pz = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
 
     nc_galaxy_sd_obs_redshift_pz_data_set (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->gsdor), data, pz);
     nc_galaxy_sd_obs_redshift_pz_data_get (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->gsdor), data, &pz_out);
@@ -618,9 +626,10 @@ test_nc_galaxy_sd_obs_redshift_pz_data_setget (TestNcGalaxySDObsRedshift *test, 
       g_assert_cmpfloat_with_epsilon (y, y_out, 1e-10);
     }
 
-    ncm_vector_clear (&xx);
-    ncm_vector_clear (&yy);
+    ncm_vector_clear (&xv);
+    ncm_vector_clear (&yv);
     ncm_spline_clear (&pz);
+    ncm_spline_clear (&pz_out);
   }
 
   nc_galaxy_sd_obs_redshift_data_unref (data);
