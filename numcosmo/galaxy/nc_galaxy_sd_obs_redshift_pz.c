@@ -318,7 +318,7 @@ nc_galaxy_sd_obs_redshift_pz_clear (NcGalaxySDObsRedshiftPz **gsdorpz)
  * @data: a #NcGalaxySDObsRedshiftData
  * @rng: a #NcmRNG
  *
- * Sets the required columns for the data an generates a redshift observation.
+ * Sets the required columns for the data and generates a redshift observation.
  */
 void
 nc_galaxy_sd_obs_redshift_pz_gen (NcGalaxySDObsRedshiftPz *gsdorpz, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, NcmRNG *rng)
