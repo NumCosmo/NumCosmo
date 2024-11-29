@@ -629,7 +629,6 @@ test_nc_galaxy_sd_obs_redshift_pz_data_setget (TestNcGalaxySDObsRedshift *test, 
     ncm_vector_clear (&xv);
     ncm_vector_clear (&yv);
     ncm_spline_clear (&pz);
-    ncm_spline_clear (&pz_out);
   }
 
   nc_galaxy_sd_obs_redshift_data_unref (data);
