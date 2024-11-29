@@ -197,6 +197,9 @@ _nc_galaxy_sd_obs_redshift_pz_integ (NcGalaxySDObsRedshift *gsdor)
 static void
 _nc_galaxy_sd_obs_redshift_pz_ldata_free (gpointer ldata)
 {
+  NcGalaxySDObsRedshiftPzData *data = (NcGalaxySDObsRedshiftPzData *) ldata;
+
+  ncm_spline_free (data->pz);
   g_free (ldata);
 }
 
@@ -205,7 +208,7 @@ _nc_galaxy_sd_obs_redshift_pz_ldata_read_row (NcGalaxySDObsRedshiftData *data, N
 {
   NcGalaxySDObsRedshiftPzData *ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
 
-  ldata->pz = nc_galaxy_wl_obs_peek_pz (obs, i);
+  ldata->pz = ncm_spline_ref (nc_galaxy_wl_obs_peek_pz (obs, i));
 }
 
 static void
