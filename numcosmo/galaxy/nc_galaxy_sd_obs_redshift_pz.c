@@ -349,6 +349,7 @@ nc_galaxy_sd_obs_redshift_pz_data_set (NcGalaxySDObsRedshiftPz *gsdorpz, NcGalax
  * nc_galaxy_sd_obs_redshift_pz_data_get:
  * @gsdorpz: a #NcGalaxySDObsRedshiftPz
  * @data: a #NcGalaxySDObsRedshiftPzData
+ * @spline: (out): a #NcmSpline
  *
  * Gets the data of the photometric redshift observations.
  *
