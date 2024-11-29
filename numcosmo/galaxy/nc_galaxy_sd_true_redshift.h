@@ -65,8 +65,8 @@ NcGalaxySDTrueRedshift *nc_galaxy_sd_true_redshift_ref (NcGalaxySDTrueRedshift *
 void nc_galaxy_sd_true_redshift_free (NcGalaxySDTrueRedshift *gsdtr);
 void nc_galaxy_sd_true_redshift_clear (NcGalaxySDTrueRedshift **gsdtr);
 
-gboolean nc_galaxy_sd_true_redshift_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max);
-gboolean nc_galaxy_sd_true_redshift_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max);
+void nc_galaxy_sd_true_redshift_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max);
+void nc_galaxy_sd_true_redshift_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max);
 
 gdouble nc_galaxy_sd_true_redshift_gen (NcGalaxySDTrueRedshift *gsdtr, NcmRNG *rng);
 gdouble nc_galaxy_sd_true_redshift_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z);

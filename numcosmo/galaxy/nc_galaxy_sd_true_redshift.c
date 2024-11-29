@@ -143,20 +143,16 @@ _nc_galaxy_sd_true_redshift_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
   return 0.0;
 }
 
-static gboolean
+static void
 _nc_galaxy_sd_true_redshift_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max)
 {
   g_error ("_nc_galaxy_sd_true_redshift_set_lim: not implemented");
-
-  return FALSE;
 }
 
-static gboolean
+static void
 _nc_galaxy_sd_true_redshift_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max)
 {
   g_error ("_nc_galaxy_sd_true_redshift_get_lim: not implemented");
-
-  return FALSE;
 }
 
 /* LCOV_EXCL_STOP */
