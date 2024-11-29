@@ -403,6 +403,7 @@
       <xi:include href="xml/nc_galaxy_sd_obs_redshift.xml"/>
       <xi:include href="xml/nc_galaxy_sd_obs_redshift_gauss.xml"/>
       <xi:include href="xml/nc_galaxy_sd_obs_redshift_spec.xml"/>
+      <xi:include href="xml/nc_galaxy_sd_obs_redshift_pz.xml"/>
       <xi:include href="xml/nc_galaxy_sd_position.xml"/>
       <xi:include href="xml/nc_galaxy_sd_position_flat.xml"/>
       <xi:include href="xml/nc_galaxy_sd_shape.xml"/>
