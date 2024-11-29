@@ -49,9 +49,7 @@
 
 #include "galaxy/nc_galaxy_sd_shape.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift.h"
-#include "galaxy/nc_galaxy_sd_obs_redshift_gauss.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift_spec.h"
-#include "galaxy/nc_galaxy_sd_obs_redshift_pz.h"
 #include "galaxy/nc_galaxy_sd_position.h"
 #include "math/ncm_integral_nd.h"
 #include <math.h>
