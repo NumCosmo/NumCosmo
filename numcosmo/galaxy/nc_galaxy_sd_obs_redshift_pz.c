@@ -63,6 +63,7 @@ typedef struct _NcGalaxySDObsRedshiftPzData
 enum
 {
   PROP_0,
+  PROP_SDZ,
   PROP_LEN,
 };
 
