@@ -63,6 +63,7 @@ static void test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift 
 static void test_nc_galaxy_sd_obs_redshift_gauss_integ (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_obs_redshift_gauss_required_columns (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
 
+static void test_nc_galaxy_sd_obs_redshift_pz_gen (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_obs_redshift_pz_integ (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_obs_redshift_pz_required_columns (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
 
@@ -141,6 +142,11 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_sd_obs_redshift_model_id,
               &test_nc_galaxy_sd_obs_redshift_free);
 
+  g_test_add ("/nc/galaxy_sd_obs_redshift/pz/gen", TestNcGalaxySDObsRedshift, NULL,
+              &test_nc_galaxy_sd_obs_redshift_pz_new,
+              &test_nc_galaxy_sd_obs_redshift_pz_gen,
+              &test_nc_galaxy_sd_obs_redshift_free);
+
   g_test_add ("/nc/galaxy_sd_obs_redshift/pz/integ", TestNcGalaxySDObsRedshift, NULL,
               &test_nc_galaxy_sd_obs_redshift_pz_new,
               &test_nc_galaxy_sd_obs_redshift_pz_integ,
@@ -202,7 +208,8 @@ test_nc_galaxy_sd_obs_redshift_pz_new (TestNcGalaxySDObsRedshift *test, gconstpo
 {
   const gdouble z_min              = 0.0;
   const gdouble z_max              = 1100.0;
-  NcGalaxySDObsRedshiftPz *gsdorpz = nc_galaxy_sd_obs_redshift_pz_new ();
+  NcGalaxySDTrueRedshift *gsdtr    = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
+  NcGalaxySDObsRedshiftPz *gsdorpz = nc_galaxy_sd_obs_redshift_pz_new (gsdtr);
 
   test->gsdor = NC_GALAXY_SD_OBS_REDSHIFT (gsdorpz);
   test->z_min = z_min;
@@ -362,6 +369,39 @@ test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift *test, gcons
 
   nc_galaxy_sd_obs_redshift_data_unref (data);
   ncm_rng_free (rng);
+}
+
+static void
+test_nc_galaxy_sd_obs_redshift_pz_gen (TestNcGalaxySDObsRedshift *test, gconstpointer pdata)
+{
+  NcmRNG *rng                     = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcGalaxySDObsRedshiftData *data = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
+  const guint ndata               = 100;
+  const guint npoints             = 1000;
+  gdouble z_avg;
+  gdouble z_sd;
+  guint i;
+
+  for (i = 0; i < ndata; i++)
+  {
+    NcmSpline *pz;
+    guint j;
+
+    nc_galaxy_sd_obs_redshift_pz_gen (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->gsdor), test->mset, data, rng);
+    nc_galaxy_sd_obs_redshift_pz_data_get (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->gsdor), data, &pz);
+
+    z_avg = data->z;
+    z_sd  = 0.05 * (1.0 + z_avg);
+
+    for (j = 0; j < npoints; j++)
+    {
+      const gdouble z    = g_test_rand_double_range (test->z_min, test->z_max);
+      const gdouble pz_f = ncm_spline_eval (pz, z);
+      const gdouble f    = exp (-0.5 * gsl_pow_2 ((z - z_avg) / z_sd)) / (sqrt (2.0 * M_PI) * z_sd);
+
+      g_assert_cmpfloat_with_epsilon (pz_f, f, 1.0e-5);
+    }
+  }
 }
 
 static void

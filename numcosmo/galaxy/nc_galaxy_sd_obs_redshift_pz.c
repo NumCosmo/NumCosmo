@@ -41,10 +41,13 @@
 
 #include "galaxy/nc_galaxy_sd_obs_redshift.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift_pz.h"
+#include "galaxy/nc_galaxy_sd_true_redshift.h"
+#include "math/ncm_spline.h"
+#include "math/ncm_spline_cubic_notaknot.h"
 
 typedef struct _NcGalaxySDObsRedshiftPzPrivate
 {
-  gint placeholder;
+  NcGalaxySDTrueRedshift *sdz;
 } NcGalaxySDObsRedshiftPzPrivate;
 
 struct _NcGalaxySDObsRedshiftPz
@@ -68,7 +71,9 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDObsRedshiftPz, nc_galaxy_sd_obs_redshift_p
 static void
 nc_galaxy_sd_obs_redshift_pz_init (NcGalaxySDObsRedshiftPz *gsdorpz)
 {
-  /* Nothing to do */
+  NcGalaxySDObsRedshiftPzPrivate * const self = nc_galaxy_sd_obs_redshift_pz_get_instance_private (gsdorpz);
+
+  self->sdz = NULL;
 }
 
 static void
@@ -85,6 +90,7 @@ nc_galaxy_sd_obs_redshift_pz_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_sd_obs_redshift_pz_parent_class)->finalize (object);
 }
 
+static void _nc_galaxy_sd_obs_redshift_pz_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_pz_integ (NcGalaxySDObsRedshift *gsdor);
 static void _nc_galaxy_sd_obs_redshift_pz_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static void _nc_galaxy_sd_obs_redshift_pz_add_submodel (NcmModel *model, NcmModel *submodel);
@@ -103,9 +109,44 @@ nc_galaxy_sd_obs_redshift_pz_class_init (NcGalaxySDObsRedshiftPzClass *klass)
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
   ncm_model_class_check_params_info (model_class);
 
+  gsdor_class->gen          = &_nc_galaxy_sd_obs_redshift_pz_gen;
   gsdor_class->integ        = &_nc_galaxy_sd_obs_redshift_pz_integ;
   gsdor_class->data_init    = &_nc_galaxy_sd_obs_redshift_pz_data_init;
   model_class->add_submodel = &_nc_galaxy_sd_obs_redshift_pz_add_submodel;
+}
+
+static void
+_nc_galaxy_sd_obs_redshift_pz_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng)
+{
+  NcGalaxySDObsRedshiftPz *gsdorpz            = NC_GALAXY_SD_OBS_REDSHIFT_PZ (gsdor);
+  NcGalaxySDObsRedshiftPzPrivate * const self = nc_galaxy_sd_obs_redshift_pz_get_instance_private (gsdorpz);
+  NcGalaxySDObsRedshiftPzData * const ldata   = (NcGalaxySDObsRedshiftPzData *) data->ldata;
+  guint npoints                               = 10000;
+  NcmVector *xv                               = ncm_vector_new (npoints);
+  NcmVector *yv                               = ncm_vector_new (npoints);
+  gdouble z_min                               = 0.0;
+  gdouble z_max                               = 0.0;
+  gdouble sigma                               = 0.05;
+  gdouble z;
+  guint i;
+
+  if (!nc_galaxy_sd_true_redshift_get_lim (self->sdz, &z_min, &z_max))
+    g_error ("Failed to get redshift limits.");
+
+  z     = nc_galaxy_sd_true_redshift_gen (self->sdz, rng);
+  sigma = (1.0 + z) * sigma;
+
+  for (i = 0; i < npoints; i++)
+  {
+    gdouble x = z_min + (z_max - z_min) * i / (npoints - 1);
+    gdouble y = exp (-0.5 * gsl_pow_2 ((x - z) / sigma)) / (sqrt (2.0 * M_PI) * sigma);
+
+    ncm_vector_set (xv, i, x);
+    ncm_vector_set (yv, i, y);
+  }
+
+  data->z   = z;
+  ldata->pz = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
 }
 
 struct _IntegData
@@ -196,7 +237,17 @@ _nc_galaxy_sd_obs_redshift_pz_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxyS
 static void
 _nc_galaxy_sd_obs_redshift_pz_add_submodel (NcmModel *model, NcmModel *submodel)
 {
-  /* Nothing to do */
+  /* Chain up: start */
+  NCM_MODEL_CLASS (nc_galaxy_sd_obs_redshift_pz_parent_class)->add_submodel (model, submodel);
+  {
+    NcGalaxySDObsRedshiftPz *gsdorpz            = NC_GALAXY_SD_OBS_REDSHIFT_PZ (model);
+    NcGalaxySDObsRedshiftPzPrivate * const self = nc_galaxy_sd_obs_redshift_pz_get_instance_private (gsdorpz);
+
+    g_assert (ncm_model_is_submodel (submodel));
+    g_assert (NC_IS_GALAXY_SD_TRUE_REDSHIFT (submodel));
+
+    self->sdz = NC_GALAXY_SD_TRUE_REDSHIFT (submodel);
+  }
 }
 
 /**
@@ -207,9 +258,11 @@ _nc_galaxy_sd_obs_redshift_pz_add_submodel (NcmModel *model, NcmModel *submodel)
  * Returns: (transfer full): a new #NcGalaxySDObsRedshiftPz object.
  */
 NcGalaxySDObsRedshiftPz *
-nc_galaxy_sd_obs_redshift_pz_new ()
+nc_galaxy_sd_obs_redshift_pz_new (NcGalaxySDTrueRedshift *sdz)
 {
   NcGalaxySDObsRedshiftPz *gsdorpz = g_object_new (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_PZ, NULL);
+
+  ncm_model_add_submodel (NCM_MODEL (gsdorpz), NCM_MODEL (sdz));
 
   return gsdorpz;
 }
@@ -253,6 +306,23 @@ void
 nc_galaxy_sd_obs_redshift_pz_clear (NcGalaxySDObsRedshiftPz **gsdorpz)
 {
   g_clear_object (gsdorpz);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_pz_gen:
+ * @gsdorpz: a #NcGalaxySDObsRedshiftPz
+ * @mset: a #NcmMSet
+ * @data: a #NcGalaxySDObsRedshiftData
+ * @rng: a #NcmRNG
+ *
+ * Sets the required columns for the data an generates a redshift observation.
+ */
+void
+nc_galaxy_sd_obs_redshift_pz_gen (NcGalaxySDObsRedshiftPz *gsdorpz, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, NcmRNG *rng)
+{
+  NcGalaxySDObsRedshiftClass *klass = NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdorpz);
+
+  klass->gen (NC_GALAXY_SD_OBS_REDSHIFT (gsdorpz), data, rng);
 }
 
 /**
