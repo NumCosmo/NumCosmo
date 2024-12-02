@@ -41,14 +41,10 @@
  * # Parametrization
  *
  * The two parameters $\rho_s$ and $r_s$ are described by the fundamental
- * parametrization in terms of $M_\Delta$ (#NcHaloDensityProfile:log10MDelta)
- * and the concentration $c_\Delta$ (#NcHaloDensityProfile:cDelta) given a mass
- * defined by $\Delta$ (#NcHaloDensityProfile:Delta) and a background density
- * $\rho_\mathrm{bg}$ (#NcHaloDensityProfile:mass-def). Strictly speaking,
- * the object has two unmutable properties #NcHaloDensityProfile:Delta
- * and #NcHaloDensityProfile:mass-def that defines the value of $\Delta$ and the
- * background density $\rho_\mathrm{bg}$. Once these properties are defined,
- * one can compute $(r_s,\;\rho_s)$ from $(M_\Delta,\; c_\Delta)$.
+ * parametrization in terms of $M_\Delta$ and the concentration $c_\Delta$ given a mass
+ * defined by $\Delta$ and a background density $\rho_\mathrm{bg}$. These quantities are
+ * provided by the halo mass summary object, which is passed to the profile object at
+ * construction time.
  *
  * ## Computing $r_s$
  *
@@ -1233,5 +1229,27 @@ nc_halo_density_profile_eval_numint_dl_cyl_mass (NcHaloDensityProfile *dp, const
   _nc_halo_density_profile_prepare_dl_cyl_mass (dp);
 
   return exp (ncm_spline_eval (self->dl_cyl_mass_s, log (X)));
+}
+
+/**
+ * nc_halo_density_profile_get_numint_splines:
+ * @dp: a #NcHaloDensityProfile
+ * @twod_density: (out) (transfer full): size of the dl_2d_density_s spline
+ * @cyl_mass: (out) (transfer full): size of the dl_cyl_mass_s spline
+ *
+ * This function provides the splines computed in this object, #NcHaloDensityProfile:
+ * dl_2d_density_s and dl_cyl_mass_s.
+ *
+ */
+void
+nc_halo_density_profile_get_numint_splines (NcHaloDensityProfile *dp, NcmSpline **twod_density, NcmSpline **cyl_mass)
+{
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
+
+  _nc_halo_density_profile_prepare_dl_cyl_mass (dp);
+  _nc_halo_density_profile_prepare_dl_2d_density (dp);
+
+  *twod_density = ncm_spline_ref (self->dl_2d_density_s);
+  *cyl_mass     = ncm_spline_ref (self->dl_cyl_mass_s);
 }
 

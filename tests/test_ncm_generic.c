@@ -40,6 +40,7 @@ void test_ncm_data_gaussmix2d_basic (void);
 void test_ncm_data_rosenbrock_basic (void);
 void test_ncm_dataset_basic (void);
 void test_ncm_fftlog_basic (void);
+void test_ncm_sphere_nn (void);
 void test_ncm_mpi_job_basic (void);
 void test_ncm_mpi_job_test_basic (void);
 void test_ncm_mpi_job_fit_basic (void);
@@ -87,6 +88,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/data_rosenbrock/basic", test_ncm_data_rosenbrock_basic);
   g_test_add_func ("/ncm/dataset/basic", test_ncm_dataset_basic);
   g_test_add_func ("/ncm/fftlog/basic", test_ncm_fftlog_basic);
+  g_test_add_func ("/ncm/sphere/nn", test_ncm_sphere_nn);
   g_test_add_func ("/ncm/mpi_job/basic", test_ncm_mpi_job_basic);
   g_test_add_func ("/ncm/mpi_job_test/basic", test_ncm_mpi_job_test_basic);
   g_test_add_func ("/ncm/mpi_job_fit/basic", test_ncm_mpi_job_fit_basic);
@@ -227,6 +229,24 @@ test_ncm_fftlog_basic (void)
   g_assert_true (NCM_IS_FFTLOG (fftlog));
 
   NCM_TEST_FREE (ncm_fftlog_free, fftlog);
+}
+
+void
+test_ncm_sphere_nn (void)
+{
+  NcmSphereNN *snn = ncm_sphere_nn_new ();
+  NcmSphereNN *snn2;
+
+  g_assert_true (snn != NULL);
+  g_assert_true (NCM_IS_SPHERE_NN (snn));
+
+  snn2 = ncm_sphere_nn_ref (snn);
+  ncm_sphere_nn_clear (&snn2);
+  g_assert_true (snn2 == NULL);
+
+  g_assert_true (NCM_IS_SPHERE_NN (snn));
+
+  NCM_TEST_FREE (ncm_sphere_nn_free, snn);
 }
 
 void
