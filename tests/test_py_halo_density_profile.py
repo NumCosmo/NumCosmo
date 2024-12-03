@@ -58,7 +58,7 @@ def fixture_Delta(request) -> float:
     return request.param
 
 
-@pytest.fixture(name="halo_mass_summary", params=[Nc.HaloMCParam])
+@pytest.fixture(name="halo_mass_summary", params=[Nc.HaloCMParam])
 def fixture_halo_mass_summary(
     request, mass_def: Nc.HaloMassSummaryMassDef, Delta: float
 ) -> Nc.HaloMassSummary:
@@ -186,8 +186,8 @@ def test_halo_density_profile_rho_s(
         rho_s = halo_density_profile.rho_s(cosmo, z)
         r_s, rho_s0 = halo_density_profile.r_s_rho_s(cosmo, z)
         mass = halo_density_profile.eval_spher_mass(cosmo, z)
-        cDelta = halo_mass_summary.concentration()
-        dl_mass = halo_density_profile.eval_dl_spher_mass(cDelta)
+        cDelta = halo_mass_summary.concentration(cosmo)
+        dl_mass = halo_density_profile.eval_dl_spher_mass(cosmo, cDelta)
 
         assert rho_s > 0.0
         assert r_s > 0.0
