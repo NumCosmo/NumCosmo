@@ -47,6 +47,7 @@
 
 typedef struct _NcGalaxySDObsRedshiftPzPrivate
 {
+  gint placeholder;
 } NcGalaxySDObsRedshiftPzPrivate;
 
 struct _NcGalaxySDObsRedshiftPz
@@ -57,6 +58,7 @@ struct _NcGalaxySDObsRedshiftPz
 typedef struct _NcGalaxySDObsRedshiftPzData
 {
   NcmSpline *pz;
+  NcmStatsDist1d *dist;
 } NcGalaxySDObsRedshiftPzData;
 
 enum
@@ -114,19 +116,8 @@ static void
 _nc_galaxy_sd_obs_redshift_pz_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng)
 {
   NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
-  NcmVector *xv                             = ncm_spline_get_xv (ldata->pz);
-  NcmVector *yv                             = ncm_spline_get_yv (ldata->pz);
-  NcmVector *m2lnyv                         = ncm_vector_new (ncm_vector_len (yv));
-  NcmSpline *m2lnp;
-  NcmStatsDist1d *dist;
-  guint i;
 
-  for (i = 0; i < ncm_vector_len (yv); i++)
-    ncm_vector_set (m2lnyv, i, -2.0 * log (ncm_vector_get (yv, i)));
-
-  m2lnp   = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, m2lnyv, TRUE));
-  dist    = NCM_STATS_DIST1D (ncm_stats_dist1d_spline_new (m2lnp));
-  data->z = ncm_stats_dist1d_gen (dist, rng);
+  data->z = ncm_stats_dist1d_gen (ldata->dist, rng);
 }
 
 struct _IntegData
@@ -179,7 +170,8 @@ _nc_galaxy_sd_obs_redshift_pz_ldata_free (gpointer ldata)
 {
   NcGalaxySDObsRedshiftPzData *data = (NcGalaxySDObsRedshiftPzData *) ldata;
 
-  ncm_spline_free (data->pz);
+  ncm_spline_clear (&data->pz);
+  ncm_stats_dist1d_clear (&data->dist);
   g_free (ldata);
 }
 
@@ -187,8 +179,32 @@ static void
 _nc_galaxy_sd_obs_redshift_pz_ldata_read_row (NcGalaxySDObsRedshiftData *data, NcGalaxyWLObs *obs, const guint i)
 {
   NcGalaxySDObsRedshiftPzData *ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
+  NcmSpline *pz                      = ncm_spline_ref (nc_galaxy_wl_obs_peek_pz (obs, i));
+  NcmVector *xv                      = ncm_spline_get_xv (pz);
+  NcmVector *yv                      = ncm_spline_get_yv (pz);
+  NcmVector *m2lnyv                  = ncm_vector_new (ncm_vector_len (yv));
+  NcmSpline *m2lnp;
+  NcmStatsDist1d *dist;
+  guint j;
 
-  ldata->pz = ncm_spline_ref (nc_galaxy_wl_obs_peek_pz (obs, i));
+  ncm_spline_free (ldata->pz);
+  ncm_stats_dist1d_clear (&ldata->dist);
+
+  for (j = 0; j < ncm_vector_len (yv); j++)
+  {
+    gdouble y = -2.0 * log (ncm_vector_get (yv, j) + 1.0e-100);
+
+    ncm_vector_set (m2lnyv, j, y);
+  }
+
+  m2lnp = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, m2lnyv, TRUE));
+  dist  = NCM_STATS_DIST1D (ncm_stats_dist1d_spline_new (m2lnp));
+
+  g_object_set (G_OBJECT (dist), "abstol", 1.0e-100, NULL);
+  ncm_stats_dist1d_prepare (dist);
+
+  ldata->pz   = pz;
+  ldata->dist = dist;
 }
 
 static void
@@ -303,8 +319,31 @@ void
 nc_galaxy_sd_obs_redshift_pz_data_set (NcGalaxySDObsRedshiftPz *gsdorpz, NcGalaxySDObsRedshiftData *data, NcmSpline *spline)
 {
   NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
+  NcmVector *xv                             = ncm_spline_get_xv (spline);
+  NcmVector *yv                             = ncm_spline_get_yv (spline);
+  NcmVector *m2lnyv                         = ncm_vector_new (ncm_vector_len (yv));
+  NcmSpline *m2lnp;
+  NcmStatsDist1d *dist;
+  guint j;
 
-  ldata->pz = spline;
+  ncm_spline_clear (&ldata->pz);
+  ncm_stats_dist1d_clear (&ldata->dist);
+
+  for (j = 0; j < ncm_vector_len (yv); j++)
+  {
+    gdouble y = -2.0 * log (ncm_vector_get (yv, j) + 1.0e-100);
+
+    ncm_vector_set (m2lnyv, j, y);
+  }
+
+  m2lnp = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, m2lnyv, TRUE));
+  dist  = NCM_STATS_DIST1D (ncm_stats_dist1d_spline_new (m2lnp));
+
+  g_object_set (G_OBJECT (dist), "abstol", 1.0e-100, NULL);
+  ncm_stats_dist1d_prepare (dist);
+
+  ldata->pz   = ncm_spline_ref (spline);
+  ldata->dist = dist;
 }
 
 /**
