@@ -88,7 +88,7 @@ _nc_halo_mc_param_finalize (GObject *object)
 }
 
 static gdouble _nc_halo_mc_param_mass (NcHaloMassSummary *hms);
-static gdouble _nc_halo_mc_param_concentration (NcHaloMassSummary *hms);
+static gdouble _nc_halo_mc_param_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo);
 
 static void
 nc_halo_mc_param_class_init (NcHaloMCParamClass *klass)
@@ -159,7 +159,7 @@ _nc_halo_mc_param_mass (NcHaloMassSummary *hms)
 }
 
 static gdouble
-_nc_halo_mc_param_concentration (NcHaloMassSummary *hms)
+_nc_halo_mc_param_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo)
 {
   NcHaloMCParam *hmcp = NC_HALO_MC_PARAM (hms);
 
@@ -216,7 +216,7 @@ nc_halo_mc_param_free (NcHaloMCParam *hmcp)
 }
 
 /**
- * nc_hallo_mc_param_clear:
+ * nc_halo_mc_param_clear:
  * @hmcp: a #NcHaloMCParam
  *
  * Decrease the reference count of @hmcp by one, and sets the pointer *@hmcp to
