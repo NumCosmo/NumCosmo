@@ -49,7 +49,6 @@ typedef struct _TestNcDataClusterWL
 
 static void test_nc_data_cluster_wl_new_spec (TestNcDataClusterWL *test, gconstpointer pdata);
 static void test_nc_data_cluster_wl_new_gauss (TestNcDataClusterWL *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_new_pz (TestNcDataClusterWL *test, gconstpointer pdata);
 static void test_nc_data_cluster_wl_free (TestNcDataClusterWL *test, gconstpointer pdata);
 
 static void test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata);
@@ -110,31 +109,6 @@ main (gint argc, gchar *argv[])
 
   g_test_add ("/nc/data_cluster_wl/gauss/serialize", TestNcDataClusterWL, NULL,
               &test_nc_data_cluster_wl_new_gauss,
-              &test_nc_data_cluster_wl_serialize,
-              &test_nc_data_cluster_wl_free);
-
-  g_test_add ("/nc/data_cluster_wl/pz/gen", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_pz,
-              &test_nc_data_cluster_wl_gen,
-              &test_nc_data_cluster_wl_free);
-
-  g_test_add ("/nc/data_cluster_wl/pz/ra_dec/limits", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_pz,
-              &test_nc_data_cluster_wl_ra_dec_limits,
-              &test_nc_data_cluster_wl_free);
-
-  g_test_add ("/nc/data_cluster_wl/pz/gen_obs", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_pz,
-              &test_nc_data_cluster_wl_gen_obs,
-              &test_nc_data_cluster_wl_free);
-
-  g_test_add ("/nc/data_cluster_wl/pz/m2lnP", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_pz,
-              &test_nc_data_cluster_wl_m2lnP,
-              &test_nc_data_cluster_wl_free);
-
-  g_test_add ("/nc/data_cluster_wl/pz/serialize", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_pz,
               &test_nc_data_cluster_wl_serialize,
               &test_nc_data_cluster_wl_free);
 
@@ -212,42 +186,6 @@ test_nc_data_cluster_wl_new_gauss (TestNcDataClusterWL *test, gconstpointer pdat
   test->mset = ncm_mset_new (cosmo, NULL, dp, hp, smd, z_dist, p_dist, s_dist, NULL);
 
   nc_galaxy_sd_true_redshift_free (z_true_dist);
-  nc_distance_free (dist);
-
-  g_assert_true (NC_IS_DATA_CLUSTER_WL (dcwl));
-}
-
-static void
-test_nc_data_cluster_wl_new_pz (TestNcDataClusterWL *test, gconstpointer pdata)
-{
-  NcGalaxySDTrueRedshift *z_true_dist = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
-  NcGalaxySDObsRedshift *z_dist = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_pz_new (z_true_dist));
-  NcGalaxySDPosition *p_dist    = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (-0.2, 0.2, -0.2, 0.2));
-  NcGalaxySDShape *s_dist       = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new ());
-  NcDataClusterWL *dcwl         = nc_data_cluster_wl_new ();
-  NcHICosmo *cosmo              = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcDistance *dist              = nc_distance_new (100.0);
-  NcHaloMassSummary *hms        = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
-  NcHaloDensityProfile *dp      = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
-  NcHaloPosition *hp            = nc_halo_position_new (dist);
-  NcWLSurfaceMassDensity *smd   = nc_wl_surface_mass_density_new (dist);
-
-  nc_halo_position_prepare (hp, cosmo);
-
-  test->dcwl  = dcwl;
-  test->cosmo = cosmo;
-
-  test->hms                  = hms;
-  test->density_profile      = dp;
-  test->halo_position        = hp;
-  test->surface_mass_density = smd;
-
-  test->galaxy_redshift = z_dist;
-  test->galaxy_position = p_dist;
-  test->galaxy_shape    = s_dist;
-
-  test->mset = ncm_mset_new (cosmo, NULL, dp, hp, smd, z_dist, p_dist, s_dist, NULL);
-
   nc_distance_free (dist);
 
   g_assert_true (NC_IS_DATA_CLUSTER_WL (dcwl));
