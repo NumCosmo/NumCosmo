@@ -120,7 +120,7 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/nc/halo_mass_summary/basic", test_nc_halo_mass_summary_basic);
   g_test_add_func ("/nc/halo_cm_param/basic", test_nc_halo_cm_param_basic);
-  g_test_add_func ("/nc/halo_cm_param/basic", test_nc_halo_cm_klypin11_basic);
+  g_test_add_func ("/nc/halo_cm_klypin11/basic", test_nc_halo_cm_klypin11_basic);
 
 
   g_test_run ();
