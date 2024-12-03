@@ -126,7 +126,7 @@
 #include "lss/nc_halo_density_profile_dk14.h"
 #include "lss/nc_halo_density_profile_hernquist.h"
 #include "lss/nc_halo_mass_summary.h"
-#include "lss/nc_halo_mc_param.h"
+#include "lss/nc_halo_cm_param.h"
 #include "lss/nc_halo_cm_klypin11.h"
 #include "lss/nc_multiplicity_func.h"
 #include "lss/nc_multiplicity_func_st.h"
@@ -664,7 +664,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST);
 
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_SUMMARY);
-  ncm_cfg_register_obj (NC_TYPE_HALO_MC_PARAM);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_PARAM);
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_KLYPIN11);
 
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC);

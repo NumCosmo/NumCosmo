@@ -56,7 +56,7 @@ def fixture_Delta(request) -> float:
     return request.param
 
 
-@pytest.fixture(name="halo_mass_summary", params=[Nc.HaloMCParam])
+@pytest.fixture(name="halo_mass_summary", params=[Nc.HaloCMParam])
 def fixture_halo_mass_summary(
     request, mass_def: Nc.HaloMassSummaryMassDef, Delta: float
 ) -> Nc.HaloMassSummary:
@@ -96,7 +96,7 @@ def test_halo_mass_summary_basic(
 def test_halo_mass_summary_mass(halo_mass_summary: Nc.HaloMassSummary):
     """Test HaloMassSummary mass."""
     match halo_mass_summary:
-        case Nc.HaloMCParam():
+        case Nc.HaloCMParam():
             log10MDelta = halo_mass_summary["log10MDelta"]
             mass = 10.0**log10MDelta
         case Nc.HaloCMKlypin11():
@@ -113,7 +113,7 @@ def test_halo_mass_summary_concentration(
 ):
     """Test HaloMassSummary concentration."""
     match halo_mass_summary:
-        case Nc.HaloMCParam():
+        case Nc.HaloCMParam():
             cDelta = halo_mass_summary["cDelta"]
         case Nc.HaloCMKlypin11():
             cDelta = halo_mass_summary.concentration(cosmo)
