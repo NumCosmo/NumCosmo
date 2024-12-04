@@ -187,7 +187,7 @@ _nc_galaxy_sd_obs_redshift_pz_ldata_read_row (NcGalaxySDObsRedshiftData *data, N
   NcmStatsDist1d *dist;
   guint j;
 
-  ncm_spline_free (ldata->pz);
+  ncm_spline_clear (&ldata->pz);
   ncm_stats_dist1d_clear (&ldata->dist);
 
   for (j = 0; j < ncm_vector_len (yv); j++)
