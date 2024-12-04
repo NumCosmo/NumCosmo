@@ -56,15 +56,11 @@ def fixture_Delta(request) -> float:
     return request.param
 
 
-@pytest.fixture(name="halo_mass_summary", params=[Nc.HaloCMParam])
-def fixture_halo_mass_summary(
-    request, mass_def: Nc.HaloMassSummaryMassDef, Delta: float
-) -> Nc.HaloMassSummary:
-    """Fixture for HaloMassSummary."""
-    return request.param(mass_def=mass_def, Delta=Delta)
-
-
-@pytest.fixture(name="halo_mass_summary", params=[Nc.HaloCMKlypin11])
+@pytest.fixture(
+    name="halo_mass_summary",
+    params=[Nc.HaloCMParam, Nc.HaloCMKlypin11],
+    ids=["param", "klypin11"],
+)
 def fixture_halo_mass_summary(
     request, mass_def: Nc.HaloMassSummaryMassDef, Delta: float
 ) -> Nc.HaloMassSummary:
@@ -121,3 +117,21 @@ def test_halo_mass_summary_concentration(
             raise ValueError("Invalid HaloMassSummary type")
 
     assert_allclose(halo_mass_summary.concentration(cosmo), cDelta, rtol=1e-5)
+
+
+def test_halo_mass_summary_klypin11(
+    halo_mass_summary: Nc.HaloMassSummary, cosmo: Nc.HICosmo
+):
+    """Test HaloMassSummary klypin11."""
+    match halo_mass_summary:
+        case Nc.HaloCMParam():
+            return
+        case Nc.HaloCMKlypin11():
+            halo_mass_summary["log10MDelta"] = 12.5
+            cDelta1 = halo_mass_summary.concentration(cosmo)
+            halo_mass_summary["log10MDelta"] = 13.5
+            cDelta2 = halo_mass_summary.concentration(cosmo)
+        case _:
+            raise ValueError("Invalid HaloMassSummary type")
+
+    assert cDelta1 > cDelta2
