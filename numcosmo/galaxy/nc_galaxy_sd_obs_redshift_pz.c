@@ -319,8 +319,8 @@ void
 nc_galaxy_sd_obs_redshift_pz_data_set (NcGalaxySDObsRedshiftPz *gsdorpz, NcGalaxySDObsRedshiftData *data, NcmSpline *spline)
 {
   NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
-  NcmVector *xv                             = ncm_spline_get_xv (spline);
-  NcmVector *yv                             = ncm_spline_get_yv (spline);
+  NcmVector *xv                             = ncm_spline_peek_xv (spline);
+  NcmVector *yv                             = ncm_spline_peek_yv (spline);
   NcmVector *m2lnyv                         = ncm_vector_new (ncm_vector_len (yv));
   NcmSpline *m2lnp;
   NcmStatsDist1d *dist;
@@ -338,6 +338,8 @@ nc_galaxy_sd_obs_redshift_pz_data_set (NcGalaxySDObsRedshiftPz *gsdorpz, NcGalax
 
   m2lnp = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, m2lnyv, TRUE));
   dist  = NCM_STATS_DIST1D (ncm_stats_dist1d_spline_new (m2lnp));
+  ncm_spline_clear (&m2lnp);
+  ncm_vector_clear (&m2lnyv);
 
   g_object_set (G_OBJECT (dist), "abstol", 1.0e-100, NULL);
   ncm_stats_dist1d_prepare (dist);
