@@ -138,10 +138,14 @@ class FittingModel:
         
         
         # Mean and std of data_set z mean and lnM mean
+#         lnR_mean_model = np.array([model.get_mean_richness(np.log(self.data_set["mass"][i]), self.data_set["redshift"][i]) for i in range(len(self.data_set["mass"]))])
+        
+#         lnR_std_model = np.array( [model.get_std_richness(np.log(self.data_set["mass"][i]), self.data_set["redshift"][i]) for i in range(len(self.data_set["mass"]))])
+        
+        # Mean and std of data_set z mean and lnM mean
         lnR_mean_model = np.array([model.get_mean_richness(lnM_mean[i], z_mean[i]) for i in range(len(halos_mean))])
         
         lnR_std_model = np.array( [model.get_std_richness(lnM_mean[i], z_mean[i]) for i in range(len(halos_mean))])
-    
         
         return lnR_mean_model, lnR_std_model, model, halos_mean, std_mean 
         
