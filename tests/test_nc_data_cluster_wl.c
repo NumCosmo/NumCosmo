@@ -221,7 +221,7 @@ test_nc_data_cluster_wl_new_pz (TestNcDataClusterWL *test, gconstpointer pdata)
   NcDataClusterWL *dcwl               = nc_data_cluster_wl_new ();
   NcHICosmo *cosmo                    = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcDistance *dist                    = nc_distance_new (100.0);
-  NcHaloMassSummary *hms              = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloMassSummary *hms              = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
   NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
   NcHaloPosition *hp                  = nc_halo_position_new (dist);
   NcWLSurfaceMassDensity *smd         = nc_wl_surface_mass_density_new (dist);
