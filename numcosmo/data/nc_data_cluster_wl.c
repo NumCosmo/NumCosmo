@@ -491,6 +491,7 @@ _nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     NcGalaxySDPositionData *p_data    = data->sdpos_data;
     NcGalaxySDObsRedshiftData *z_data = p_data->sdz_data;
 
+    nc_galaxy_sd_obs_redshift_prepare (galaxy_redshift, z_data);
     nc_galaxy_sd_obs_redshift_gen (galaxy_redshift, z_data, rng);
     nc_galaxy_sd_position_gen (galaxy_position, p_data, rng);
     nc_galaxy_sd_shape_gen (galaxy_shape, mset, data, rng);

@@ -44,6 +44,7 @@ void nc_galaxy_sd_obs_redshift_pz_free (NcGalaxySDObsRedshiftPz *gsdorpz);
 void nc_galaxy_sd_obs_redshift_pz_clear (NcGalaxySDObsRedshiftPz **gsdorpz);
 
 void nc_galaxy_sd_obs_redshift_pz_gen (NcGalaxySDObsRedshiftPz *gsdorpz, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
+void nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshiftPz *gsdorpz, NcGalaxySDObsRedshiftData *data);
 
 void nc_galaxy_sd_obs_redshift_pz_data_set (NcGalaxySDObsRedshiftPz *gsdorpz, NcGalaxySDObsRedshiftData *data, NcmSpline *spline);
 void nc_galaxy_sd_obs_redshift_pz_data_get (NcGalaxySDObsRedshiftPz *gsdorpz, NcGalaxySDObsRedshiftData *data, NcmSpline **spline);

@@ -95,6 +95,7 @@ nc_galaxy_sd_obs_redshift_spec_finalize (GObject *object)
 }
 
 static void _nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
+static void _nc_galaxy_sd_obs_redshift_spec_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_spec_integ (NcGalaxySDObsRedshift *gsdor);
 static void _nc_galaxy_sd_obs_redshift_spec_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static void _nc_galaxy_sd_obs_redshift_spec_add_submodel (NcmModel *model, NcmModel *submodel);
@@ -114,6 +115,7 @@ nc_galaxy_sd_obs_redshift_spec_class_init (NcGalaxySDObsRedshiftSpecClass *klass
   ncm_model_class_check_params_info (model_class);
 
   gsdor_class->gen          = &_nc_galaxy_sd_obs_redshift_spec_gen;
+  gsdor_class->prepare      = &_nc_galaxy_sd_obs_redshift_spec_prepare;
   gsdor_class->integ        = &_nc_galaxy_sd_obs_redshift_spec_integ;
   gsdor_class->data_init    = &_nc_galaxy_sd_obs_redshift_spec_data_init;
   model_class->add_submodel = &_nc_galaxy_sd_obs_redshift_spec_add_submodel;
@@ -127,6 +129,13 @@ _nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObs
 
   data->z = nc_galaxy_sd_true_redshift_gen (self->sdz, rng);
 }
+
+static void
+_nc_galaxy_sd_obs_redshift_spec_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data)
+{
+  /* Nothing to do */
+}
+
 
 struct _IntegData
 {

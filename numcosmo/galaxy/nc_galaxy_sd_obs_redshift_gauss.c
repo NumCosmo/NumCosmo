@@ -96,6 +96,7 @@ nc_galaxy_sd_obs_redshift_gauss_finalize (GObject *object)
 }
 
 static void _nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
+static void _nc_galaxy_sd_obs_redshift_gauss_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_gauss_integ (NcGalaxySDObsRedshift *gsdor);
 static void _nc_galaxy_sd_obs_redshift_gauss_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static void _nc_galaxy_sd_obs_redshift_gauss_add_submodel (NcmModel *model, NcmModel *submodel);
@@ -116,6 +117,7 @@ nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *kla
   ncm_model_class_check_params_info (model_class);
 
   gsdor_class->gen          = &_nc_galaxy_sd_obs_redshift_gauss_gen;
+  gsdor_class->prepare      = &_nc_galaxy_sd_obs_redshift_gauss_prepare;
   gsdor_class->integ        = &_nc_galaxy_sd_obs_redshift_gauss_integ;
   gsdor_class->data_init    = &_nc_galaxy_sd_obs_redshift_gauss_data_init;
   model_class->add_submodel = &_nc_galaxy_sd_obs_redshift_gauss_add_submodel;
@@ -151,6 +153,13 @@ _nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDOb
     ldata->zp = zp;
   }
 }
+
+static void
+_nc_galaxy_sd_obs_redshift_gauss_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data)
+{
+  /* Nothing to do */
+}
+
 
 struct _IntegData
 {

@@ -119,6 +119,12 @@ _nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedsh
   g_error ("_nc_galaxy_sd_obs_redshift_gen: method not implemented");
 }
 
+static void
+_nc_galaxy_sd_obs_redshift_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data)
+{
+  g_error ("_nc_galaxy_sd_obs_redshift_prepare: method not implemented");
+}
+
 static NcGalaxySDObsRedshiftIntegrand *
 _nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor)
 {
@@ -151,6 +157,7 @@ nc_galaxy_sd_obs_redshift_class_init (NcGalaxySDObsRedshiftClass *klass)
   ncm_model_class_check_params_info (model_class);
 
   klass->gen       = &_nc_galaxy_sd_obs_redshift_gen;
+  klass->prepare   = &_nc_galaxy_sd_obs_redshift_prepare;
   klass->integ     = &_nc_galaxy_sd_obs_redshift_integ;
   klass->data_init = &_nc_galaxy_sd_obs_redshift_data_init;
 }
@@ -332,6 +339,21 @@ nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshi
 {
   NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->gen (gsdor, data, rng);
 }
+
+/**
+ * nc_galaxy_sd_obs_redshift_prepare:
+ * @gsdor: a #NcGalaxySDObsRedshift
+ * @data: a #NcGalaxySDObsRedshiftData
+ *
+ * Prepares the galaxy redshift data for generation.
+ *
+ */
+void
+nc_galaxy_sd_obs_redshift_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data)
+{
+  NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->prepare (gsdor, data);
+}
+
 
 /**
  * nc_galaxy_sd_obs_redshift_integ:
