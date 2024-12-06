@@ -276,10 +276,7 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
   GList *columns                    = nc_galaxy_sd_shape_data_required_columns (s_data);
   GList *l                          = columns;
   GStrvBuilder *builder             = g_strv_builder_new ();
-  gdouble z_min                     = 0.0;
-  gdouble z_max                     = 10.0;
-  guint nrows                       = 100;
-  guint npoints                     = 100;
+  guint nrows                       = 1000;
   NcGalaxyWLObs *obs;
   GStrv columns_strv;
   guint i;
@@ -316,32 +313,47 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
   }
   else if (NC_IS_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift))
   {
+    guint nrows   = 100;
+    guint npoints = 1000;
+    gdouble z_min = 0.01;
+    gdouble z_max = 10.0;
+    gdouble z_avg;
+    gdouble z_sd;
+
+    obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, nrows, columns_strv);
+
     for (i = 0; i < nrows; i++)
     {
-      NcmVector *z  = ncm_vector_new (npoints);
-      NcmVector *pz = ncm_vector_new (npoints);
-      gdouble z_avg = g_test_rand_double_range (z_min + 2.0, z_max - 2.0);
-      gdouble z_sd  = 0.1 * (1.0 + z_avg);
-      NcmSpline *pz_spline;
+      NcmVector *xv = ncm_vector_new (npoints);
+      NcmVector *yv = ncm_vector_new (npoints);
+      NcmSpline *pz;
       guint j;
+
+      z_avg = g_test_rand_double_range (z_min, z_max);
+      z_sd  = 0.03 * (1.0 + z_avg);
 
       for (j = 0; j < npoints; j++)
       {
-        gdouble z_val  = z_min + (z_max - z_min) * (gdouble) j / ((gdouble) npoints - 1.0);
-        gdouble pz_val = exp (-0.5 * gsl_pow_2 ((z_val - z_avg) / z_sd)) / (sqrt (2.0 * M_PI) * z_sd);
+        gdouble x = z_avg - 5.0 * z_sd + 10.0 * z_sd * j / ((gdouble) npoints - 1.0);
+        gdouble y = exp (-0.5 * gsl_pow_2 ((x - z_avg) / z_sd)) / (sqrt (2.0 * M_PI) * z_sd);
 
-        ncm_vector_set (z, j, z_val);
-        ncm_vector_set (pz, j, pz_val);
+        ncm_vector_fast_set (xv, j, x);
+        ncm_vector_fast_set (yv, j, y);
       }
 
-      pz_spline = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (z, pz, TRUE));
+      pz = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
 
-      nc_galaxy_sd_obs_redshift_pz_data_set (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift), z_data, pz_spline);
+      nc_galaxy_sd_obs_redshift_pz_data_set (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift), z_data, pz);
+      nc_galaxy_sd_obs_redshift_pz_prepare (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift), z_data);
 
       nc_galaxy_sd_obs_redshift_pz_gen (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift), test->mset, z_data, rng);
       nc_galaxy_sd_position_flat_gen (NC_GALAXY_SD_POSITION_FLAT (test->galaxy_position), test->mset, p_data, rng);
       nc_galaxy_sd_shape_gauss_gen (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), test->mset, s_data, 0.1, 0.1, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, rng);
       nc_galaxy_sd_shape_data_write_row (s_data, obs, i);
+
+      ncm_vector_free (xv);
+      ncm_vector_free (yv);
+      ncm_spline_free (pz);
     }
   }
   else
@@ -356,7 +368,7 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
   nc_galaxy_sd_obs_redshift_data_unref (z_data);
   nc_galaxy_sd_position_data_unref (p_data);
   nc_galaxy_sd_shape_data_unref (s_data);
-  nc_galaxy_wl_obs_clear (&obs);
+  nc_galaxy_wl_obs_free (obs);
   ncm_rng_free (rng);
   g_strv_builder_unref (builder);
 }

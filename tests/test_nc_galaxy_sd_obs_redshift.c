@@ -206,8 +206,8 @@ test_nc_galaxy_sd_obs_redshift_gauss_new (TestNcGalaxySDObsRedshift *test, gcons
 static void
 test_nc_galaxy_sd_obs_redshift_pz_new (TestNcGalaxySDObsRedshift *test, gconstpointer pdata)
 {
-  const gdouble z_min              = 0.2;
-  const gdouble z_max              = 4.0;
+  const gdouble z_min              = 0.01;
+  const gdouble z_max              = 10.0;
   NcGalaxySDObsRedshiftPz *gsdorpz = nc_galaxy_sd_obs_redshift_pz_new ();
 
   test->gsdor = NC_GALAXY_SD_OBS_REDSHIFT (gsdorpz);
@@ -406,6 +406,7 @@ test_nc_galaxy_sd_obs_redshift_pz_gen (TestNcGalaxySDObsRedshift *test, gconstpo
     pz = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
 
     nc_galaxy_sd_obs_redshift_pz_data_set (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->gsdor), data, pz);
+    nc_galaxy_sd_obs_redshift_pz_prepare (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->gsdor), data);
 
     for (k = 0; k < ndata; k++)
     {
@@ -417,10 +418,10 @@ test_nc_galaxy_sd_obs_redshift_pz_gen (TestNcGalaxySDObsRedshift *test, gconstpo
     g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), <, z_avg + 6.0 * z_sd / sqrt (npoints));
     g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), >, z_avg - 6.0 * z_sd / sqrt (npoints));
 
-    ncm_stats_vec_clear (&pos_sample);
-    ncm_vector_clear (&xv);
-    ncm_vector_clear (&yv);
-    ncm_spline_clear (&pz);
+    ncm_stats_vec_free (pos_sample);
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
+    ncm_spline_free (pz);
   }
 
   nc_galaxy_sd_obs_redshift_data_unref (data);
