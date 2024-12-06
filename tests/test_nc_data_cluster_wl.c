@@ -333,7 +333,12 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
 
       for (j = 0; j < npoints; j++)
       {
-        gdouble x = z_avg - 5.0 * z_sd + 10.0 * z_sd * j / ((gdouble) npoints - 1.0);
+        gdouble x_min = z_avg - 5.0 * z_sd;
+
+        if (x_min < z_min)
+          x_min = z_min;
+
+        gdouble x = x_min + 10.0 * z_sd * j / ((gdouble) npoints - 1.0);
         gdouble y = exp (-0.5 * gsl_pow_2 ((x - z_avg) / z_sd)) / (sqrt (2.0 * M_PI) * z_sd);
 
         ncm_vector_fast_set (xv, j, x);
