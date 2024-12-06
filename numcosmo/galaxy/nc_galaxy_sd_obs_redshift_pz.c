@@ -91,6 +91,7 @@ nc_galaxy_sd_obs_redshift_pz_finalize (GObject *object)
 
 static void _nc_galaxy_sd_obs_redshift_pz_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static void _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
+static void _nc_galaxy_sd_obs_redshift_pz_get_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
 static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_pz_integ (NcGalaxySDObsRedshift *gsdor);
 static void _nc_galaxy_sd_obs_redshift_pz_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 
@@ -110,6 +111,7 @@ nc_galaxy_sd_obs_redshift_pz_class_init (NcGalaxySDObsRedshiftPzClass *klass)
 
   gsdor_class->gen       = &_nc_galaxy_sd_obs_redshift_pz_gen;
   gsdor_class->prepare   = &_nc_galaxy_sd_obs_redshift_pz_prepare;
+  gsdor_class->get_lim   = &_nc_galaxy_sd_obs_redshift_pz_get_lim;
   gsdor_class->integ     = &_nc_galaxy_sd_obs_redshift_pz_integ;
   gsdor_class->data_init = &_nc_galaxy_sd_obs_redshift_pz_data_init;
 }
@@ -156,6 +158,15 @@ _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDO
   ncm_vector_free (m2lnyv);
 }
 
+static void
+_nc_galaxy_sd_obs_redshift_pz_get_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
+{
+  NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
+  NcmVector *xv                             = ncm_spline_peek_xv (ldata->pz);
+
+  *z_min = ncm_vector_fast_get (xv, 0);
+  *z_max = ncm_vector_fast_get (xv, ncm_vector_len (xv) - 1);
+}
 
 struct _IntegData
 {
@@ -336,7 +347,6 @@ nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshiftPz *gsdorpz, NcGalaxy
   klass->prepare (NC_GALAXY_SD_OBS_REDSHIFT (gsdorpz), data);
 }
 
-
 /**
  * nc_galaxy_sd_obs_redshift_pz_data_set:
  * @gsdorpz: a #NcGalaxySDObsRedshiftPz
@@ -350,12 +360,6 @@ void
 nc_galaxy_sd_obs_redshift_pz_data_set (NcGalaxySDObsRedshiftPz *gsdorpz, NcGalaxySDObsRedshiftData *data, NcmSpline *spline)
 {
   NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
-  NcmVector *xv                             = ncm_spline_peek_xv (spline);
-  NcmVector *yv                             = ncm_spline_peek_yv (spline);
-  NcmVector *m2lnyv                         = ncm_vector_new (ncm_vector_len (yv));
-  NcmSpline *m2lnp;
-  NcmStatsDist1d *dist;
-  guint j;
 
   ncm_spline_clear (&ldata->pz);
 
