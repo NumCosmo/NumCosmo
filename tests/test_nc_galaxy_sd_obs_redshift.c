@@ -655,8 +655,8 @@ test_nc_galaxy_sd_obs_redshift_pz_lim (TestNcGalaxySDObsRedshift *test, gconstpo
 
   nc_galaxy_sd_obs_redshift_get_lim (test->gsdor, data, &z_min, &z_max);
 
-  g_assert_cmpfloat (z_min, ==, z_avg - 5 * z_sd);
-  g_assert_cmpfloat (z_max, ==, z_avg + 5 * z_sd);
+  g_assert_cmpfloat_with_epsilon (z_min, z_avg - 5 * z_sd, 1e-10);
+  g_assert_cmpfloat_with_epsilon (z_max, z_avg + 5 * z_sd, 1e-10);
 
   nc_galaxy_sd_obs_redshift_data_unref (data);
 }
