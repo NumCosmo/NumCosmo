@@ -128,34 +128,36 @@ static void
 _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data)
 {
   NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
-  NcmVector *xv                             = ncm_spline_peek_xv (ldata->pz);
-  NcmVector *yv                             = ncm_spline_peek_yv (ldata->pz);
-  NcmVector *m2lnyv                         = ncm_vector_new (ncm_vector_len (yv));
-  NcmSpline *m2lnp;
-  NcmStatsDist1d *dist;
-  guint j;
 
-  ncm_stats_dist1d_clear (&ldata->dist);
-
-  for (j = 0; j < ncm_vector_len (yv); j++)
+  if (ldata->dist != NULL || TRUE)
   {
-    gdouble y = -2.0 * log (ncm_vector_fast_get (yv, j) + 1.0e-100);
+    NcmVector *xv                             = ncm_spline_peek_xv (ldata->pz);
+    NcmVector *yv                             = ncm_spline_peek_yv (ldata->pz);
+    NcmVector *m2lnyv                         = ncm_vector_new (ncm_vector_len (yv));
+    NcmSpline *m2lnp;
+    NcmStatsDist1d *dist;
+    guint j;
 
-    ncm_vector_set (m2lnyv, j, y);
+    for (j = 0; j < ncm_vector_len (yv); j++)
+    {
+      gdouble y = -2.0 * log (ncm_vector_fast_get (yv, j) + 1.0e-100);
+
+      ncm_vector_set (m2lnyv, j, y);
+    }
+
+    m2lnp = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, m2lnyv, TRUE));
+    dist  = NCM_STATS_DIST1D (ncm_stats_dist1d_spline_new (m2lnp));
+
+    g_object_set (G_OBJECT (dist), "abstol", 1.0e-100, NULL);
+    ncm_stats_dist1d_set_xi (dist, ncm_vector_fast_get (xv, 0));
+    ncm_stats_dist1d_set_xf (dist, ncm_vector_fast_get (xv, ncm_vector_len (xv) - 1));
+    ncm_stats_dist1d_prepare (dist);
+
+    ldata->dist = dist;
+
+    ncm_spline_free (m2lnp);
+    ncm_vector_free (m2lnyv);
   }
-
-  m2lnp = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, m2lnyv, TRUE));
-  dist  = NCM_STATS_DIST1D (ncm_stats_dist1d_spline_new (m2lnp));
-
-  g_object_set (G_OBJECT (dist), "abstol", 1.0e-100, NULL);
-  ncm_stats_dist1d_set_xi (dist, ncm_vector_fast_get (xv, 0));
-  ncm_stats_dist1d_set_xf (dist, ncm_vector_fast_get (xv, ncm_vector_len (xv) - 1));
-  ncm_stats_dist1d_prepare (dist);
-
-  ldata->dist = dist;
-
-  ncm_spline_free (m2lnp);
-  ncm_vector_free (m2lnyv);
 }
 
 static void
