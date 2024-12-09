@@ -86,7 +86,7 @@ _nc_halo_cm_duffy08_finalize (GObject *object)
 }
 
 static gdouble _nc_halo_cm_duffy08_mass (NcHaloMassSummary *hms);
-static gdouble _nc_halo_cm_duffy08_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo);
+static gdouble _nc_halo_cm_duffy08_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z);
 
 static void
 nc_halo_cm_duffy08_class_init (NcHaloCMDuffy08Class *klass)
@@ -133,7 +133,7 @@ nc_halo_cm_duffy08_class_init (NcHaloCMDuffy08Class *klass)
 static gdouble
 _nc_halo_cm_duffy08_mass (NcHaloMassSummary *hms)
 {
-  NcHaloCMduffy08 *hcmd = NC_HALO_CM_DUFFY08 (hms);
+  NcHaloCMDuffy08 *hcmd = NC_HALO_CM_DUFFY08 (hms);
 
   return exp10 (LOG10M_DELTA);
 }
@@ -142,37 +142,36 @@ static gdouble
 _nc_halo_cm_duffy08_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
   NcHaloCMDuffy08 *hcmd = NC_HALO_CM_DUFFY08 (hms);
-  gdouble mass           = _nc_halo_cm_duffy08_mass (hms);
-  gdouble h              = nc_hicosmo_h (cosmo);
+  gdouble mass          = _nc_halo_cm_duffy08_mass (hms);
+  gdouble h             = nc_hicosmo_h (cosmo);
+  NcHaloMassSummaryMassDef mdef;
+  gdouble Delta         = nc_halo_mass_summary_Delta (hms, cosmo, z);
 
-  switch (hcmd->mdef){
-
+  switch (mdef)
+  {
     case NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN:
   
-      switch(hcmd->Delta)
-      {
-        case 200.0:
+      if (Delta == 200.0){
 
-          return 10.14 * pow (mass * h / 2.0e12, -0.081) * pow (1.0 + z, -1.01);
+        return 10.14 * pow (mass * h / 2.0e12, -0.081) * pow (1.0 + z, -1.01);
 
-        default:
+      }
 
-          g_assert_not_reached();
-          return 0.0; 
+      else {
+        g_assert_not_reached();
+        return 0.0; 
       }
 
     case NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL:
 
-      switch(hcmd->Delta)
-      {
-        case 200.0:
+      if (Delta == 200.0){
 
-          return 5.71 * pow (mass * h / 2.0e12, -0.084) * pow (1.0 + z, -0.47);
+        return 5.71 * pow (mass * h / 2.0e12, -0.084) * pow (1.0 + z, -0.47);
+      }
 
-        default:
-
-          g_assert_not_reached();
-          return 0.0;    
+      else{
+        g_assert_not_reached();
+        return 0.0;    
       } 
 
     case NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL:
