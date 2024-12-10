@@ -1,6 +1,8 @@
 import numpy as np
 from astropy.io import fits
+from astropy.table import Table
 from numcosmo_py import Ncm, Nc
+import pandas as pd
 
 import timeit
 import tqdm
@@ -42,7 +44,7 @@ class NcSkyMatching:
                     for hdu in hdul:
                         if isinstance(hdu, (fits.BinTableHDU, fits.TableHDU)):
                             print(hdu.columns)
-                            return hdu.data[self.cat1_coordinates['RA']], hdu.data[self.cat1_coordinates["DEC"]], hdu.data[self.cat1_coordinates["z"]]
+                            return  hdu.data[self.cat1_coordinates['RA']], hdu.data[self.cat1_coordinates["DEC"]], hdu.data[self.cat1_coordinates["z"]]
                 
             case 2:
                 with fits.open(self.cat2) as hdul:
@@ -52,11 +54,26 @@ class NcSkyMatching:
                             return hdu.data[self.cat2_coordinates['RA']], hdu.data[self.cat2_coordinates["DEC"]], hdu.data[self.cat2_coordinates["z"]]
 
 
-    def process_halos(self):
+    def process_halos(self, cosmo, matching_distance, n_nearest_neighbours, match_file):
         """Process halos."""
+        matched = {'ID':[],'RA':[], 'DEC':[] , 'z':[],  'ID_matched': [],  'RA_matched': [], 'DEC_matched': [], 'z_matched':[], "distances Mpc":[]}
+        if self.cat1_properties != None:
+                for prop in self.cat1_properties:
+                    matched[prop] = []
+                    
+        if self.cat2_properties != None:
+                for prop in self.cat2_properties:
+                    matched[prop] = []
+        
         file1 = self.cat1
         file2 = self.cat2
-
+        
+        hdul = fits.open(file1)
+        hdu = hdul[1].data
+        
+        hdul2 = fits.open(file2)
+        hdu2 = hdul2[1].data
+        
         # Print columns for each file
         ra1, dec1, z1 = self.print_fits_columns(1)
         ra2, dec2, z2 = self.print_fits_columns(2)
@@ -68,7 +85,6 @@ class NcSkyMatching:
         # phi1 = phi1[:1000000]
 
         snn = Ncm.SphereNN()
-        cosmo = Nc.HICosmoDEXcdm()
         dist = Nc.Distance.new(3.0)
         dist.prepare(cosmo)
 
@@ -85,26 +101,62 @@ class NcSkyMatching:
 
         for i, (theta, phi, z) in tqdm.tqdm(
             enumerate(zip(theta2, phi2, z2)), total=len(theta2)
-        ):
-            r = dist.comoving(cosmo, z)
-            indices = np.array(snn.knn_search(r, theta, phi, 100))
-            # suborder = np.argsort(np.abs(z1[indices] - z))
-            # indices = indices[suborder]
+        ):  
+            r = dist.comoving(cosmo, z) 
+            distances, indices = np.array(snn.knn_search_distances(r, theta, phi, n_nearest_neighbours))
+            distances = np.sqrt(distances) * cosmo.RH_Mpc()
+            
+            matched['RA'].append(hdu2[self.cat2_coordinates['RA']][i])
+            matched['DEC'].append(hdu2[self.cat2_coordinates['DEC']][i])
+            matched['z'].append(hdu2[self.cat2_coordinates['z']][i])
+            matched['ID'].append(i)
+            
+            if self.cat2_properties != None:
+                for prop in self.cat2_properties:
+                    matched[prop].append(hdu2[self.cat2_properties.get(prop)][i])
+            
+            distances_matched = []
+            ID_matched        = []
+            RA_matched        = []
+            DEC_matched       = []
+            z_matched         = []
+            new_prop          = []
+            for index in range(len(indices)):
+                if distances[index] <= matching_distance:
+                    
+                    RA_matched.append(hdu[self.cat1_coordinates['RA']][int(indices[index])])
+                    DEC_matched.append(hdu[self.cat1_coordinates['DEC']][int(indices[index])])
+                    z_matched.append(hdu[self.cat1_coordinates['z']][int(indices[index])])
+                    distances_matched.append(distances[index])
+                    ID_matched.append(indices[index])
+                    
+                    
+                    if self.cat1_properties != None:
+                        for prop in self.cat1_properties:
+                            new_prop.append(hdu[self.cat1_properties.get(prop)][int(indices[index])])
+    
+            
+            
+            if self.cat1_properties != None:
+                for prop in self.cat1_properties:
+                    matched[prop].append(new_prop)
+            
+            
+            #indices = indices[indices[0] < 1e-8]
+            #suborder = np.argsort(np.abs(z1[indices] - z))
+            #indices = indices[suborder]
+            matched['ID_matched'].append(ID_matched)
+            matched['distances Mpc'].append(distances_matched)
+            matched['RA_matched'].append(RA_matched)
+            matched['DEC_matched'].append(DEC_matched)
+            matched['z_matched'].append(z_matched)
+            
+            
+        #matched_df = pd.DataFrame(matched)
+        table = Table(matched)
+        table.write(match_file)
+        return matched
 
-            continue
-            for index in indices:
-                sepa_angle = np.acos(
-                    np.cos(theta) * np.cos(theta1[index])
-                    + np.sin(theta) * np.sin(theta1[index]) * np.cos(phi - phi1[index])
-                )
-                print(
-                    f"Iteration {i}: "
-                    f"theta = {theta: .2f}, phi = {phi: .2f}, "
-                    f"diff_theta = {theta1[index] - theta: .2e}, "
-                    f"diff_phi = {phi1[index] - phi: .2e}, "
-                    f"sepa_angle = {sepa_angle:.2e}, "
-                    f"z = {z:.4f}, z_halo = {z1[index]:.4f}"
-                )
 
 
 if __name__ == "__main__":
