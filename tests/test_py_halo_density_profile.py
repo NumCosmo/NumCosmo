@@ -9,12 +9,12 @@
 # test_py_halo_density_profile.py
 # Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
-# numreion is free software: you can redistribute it and/or modify it
+# numcosmo is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
 # Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# numreion is distributed in the hope that it will be useful, but
+# numcosmo is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Tests on NcHICosmoidem2 reionlogical model."""
+"""Tests on NcHaloDensityProfile model."""
 
 from itertools import product
 import pytest
@@ -58,7 +58,7 @@ def fixture_Delta(request) -> float:
     return request.param
 
 
-@pytest.fixture(name="halo_mass_summary", params=[Nc.HaloMCParam])
+@pytest.fixture(name="halo_mass_summary", params=[Nc.HaloCMParam])
 def fixture_halo_mass_summary(
     request, mass_def: Nc.HaloMassSummaryMassDef, Delta: float
 ) -> Nc.HaloMassSummary:
@@ -186,8 +186,8 @@ def test_halo_density_profile_rho_s(
         rho_s = halo_density_profile.rho_s(cosmo, z)
         r_s, rho_s0 = halo_density_profile.r_s_rho_s(cosmo, z)
         mass = halo_density_profile.eval_spher_mass(cosmo, z)
-        cDelta = halo_mass_summary.concentration()
-        dl_mass = halo_density_profile.eval_dl_spher_mass(cDelta)
+        cDelta = halo_mass_summary.concentration(cosmo)
+        dl_mass = halo_density_profile.eval_dl_spher_mass(cosmo, cDelta)
 
         assert rho_s > 0.0
         assert r_s > 0.0
