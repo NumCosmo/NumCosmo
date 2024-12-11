@@ -127,7 +127,7 @@ test_nc_data_cluster_wl_new_spec (TestNcDataClusterWL *test, gconstpointer pdata
   NcDataClusterWL *dcwl               = nc_data_cluster_wl_new ();
   NcHICosmo *cosmo                    = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcDistance *dist                    = nc_distance_new (100.0);
-  NcHaloMassSummary *hms              = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloMassSummary *hms              = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
   NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
   NcHaloPosition *hp                  = nc_halo_position_new (dist);
   NcWLSurfaceMassDensity *smd         = nc_wl_surface_mass_density_new (dist);
@@ -164,7 +164,7 @@ test_nc_data_cluster_wl_new_gauss (TestNcDataClusterWL *test, gconstpointer pdat
   NcDataClusterWL *dcwl               = nc_data_cluster_wl_new ();
   NcHICosmo *cosmo                    = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcDistance *dist                    = nc_distance_new (100.0);
-  NcHaloMassSummary *hms              = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloMassSummary *hms              = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
   NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
   NcHaloPosition *hp                  = nc_halo_position_new (dist);
   NcWLSurfaceMassDensity *smd         = nc_wl_surface_mass_density_new (dist);
@@ -402,7 +402,7 @@ test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
     ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
     g_assert (gsl_finite (m2lnL_a));
 
-    ncm_mset_param_set (test->mset, nc_halo_mass_summary_id (), NC_HALO_MC_PARAM_LOG10M_DELTA, log10 (2.123e14));
+    ncm_mset_param_set (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, log10 (2.123e14));
 
     ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
     g_assert (gsl_finite (m2lnL_a));
@@ -446,16 +446,16 @@ test_nc_data_cluster_wl_serialize (TestNcDataClusterWL *test, gconstpointer pdat
 
     ncm_assert_cmpdouble (m2lnL, ==, m2lnL_dup);
 
-    ncm_mset_param_set (test->mset, nc_halo_mass_summary_id (), NC_HALO_MC_PARAM_LOG10M_DELTA, log10 (2.123e14));
-    ncm_mset_param_set (mset_dup, nc_halo_mass_summary_id (), NC_HALO_MC_PARAM_LOG10M_DELTA, log10 (2.123e14));
+    ncm_mset_param_set (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, log10 (2.123e14));
+    ncm_mset_param_set (mset_dup, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, log10 (2.123e14));
 
     ncm_data_m2lnL_val (dcwl_dup, mset_dup, &m2lnL);
     ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_dup);
 
     ncm_assert_cmpdouble (m2lnL, ==, m2lnL_dup);
 
-    ncm_mset_param_set (test->mset, nc_halo_mass_summary_id (), NC_HALO_MC_PARAM_LOG10M_DELTA, log10 (1.123e14));
-    ncm_mset_param_set (mset_dup, nc_halo_mass_summary_id (), NC_HALO_MC_PARAM_LOG10M_DELTA, log10 (1.123e14));
+    ncm_mset_param_set (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, log10 (1.123e14));
+    ncm_mset_param_set (mset_dup, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, log10 (1.123e14));
 
     ncm_data_m2lnL_val (dcwl_dup, test->mset, &m2lnL);
     ncm_data_m2lnL_val (NCM_DATA (test->dcwl), mset_dup, &m2lnL_dup);

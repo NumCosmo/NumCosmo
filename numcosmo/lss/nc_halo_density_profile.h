@@ -44,7 +44,7 @@ struct _NcHaloDensityProfileClass
   NcmModelClass parent_class;
 
   gdouble (*eval_dl_density) (NcHaloDensityProfile *dp, const gdouble x);
-  gdouble (*eval_dl_spher_mass) (NcHaloDensityProfile *dp, const gdouble x);
+  gdouble (*eval_dl_spher_mass) (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x);
   gdouble (*eval_dl_2d_density) (NcHaloDensityProfile *dp, const gdouble X);
   gdouble (*eval_dl_cyl_mass) (NcHaloDensityProfile *dp, const gdouble X);
 };
@@ -68,7 +68,7 @@ void nc_halo_density_profile_get_phys_limts (NcHaloDensityProfile *dp, NcHICosmo
 NcHaloMassSummary* nc_halo_density_profile_peek_mass_summary (NcHaloDensityProfile *dp);
 
 gdouble nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
-gdouble nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x);
+gdouble nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x);
 gdouble nc_halo_density_profile_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
 gdouble nc_halo_density_profile_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X);
 
@@ -85,7 +85,7 @@ GArray *nc_halo_density_profile_eval_density_array (NcHaloDensityProfile *dp, Nc
 GArray *nc_halo_density_profile_eval_2d_density_array (NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble z);
 GArray *nc_halo_density_profile_eval_cyl_mass_array (NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble z);
 
-gdouble nc_halo_density_profile_eval_numint_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x);
+gdouble nc_halo_density_profile_eval_numint_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x);
 gdouble nc_halo_density_profile_eval_numint_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
 gdouble nc_halo_density_profile_eval_numint_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X);
 
