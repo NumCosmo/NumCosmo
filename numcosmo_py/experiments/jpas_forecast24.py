@@ -31,6 +31,7 @@ from enum import Enum
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import npa_to_seq
 from numcosmo_py.external.pyssc import pyssc as PySSC
 
 
@@ -351,27 +352,27 @@ def create_cluster_redshift(
 def _set_mset_params(mset: Ncm.MSet, params: tuple[float, float, float]) -> None:
     """Set the parameters for the mass model."""
     param_names = ["NcHICosmo:Omegac", "NcHICosmo:w", "NcHIPrim:ln10e10ASA"]
-    
+
     tf = Nc.TransferFuncEH()
     psml = Nc.PowspecMLTransfer.new(tf)
     psml.require_kmin(1.0e-6)
     psml.require_kmax(1.0e3)
-    
+
     for i, param_name in enumerate(param_names):
         pi = mset.fparam_get_pi_by_name(param_name)
-        
-        
-        
-        if i ==2:
-            
+
+        if i == 2:
+
             cosmo = mset.peek(mset.get_id_by_ns("NcHICosmo"))
             A_s = np.exp(mset.param_get(pi.mid, pi.pid)) * 1.0e-10
-            
-            fact = (params[2] / psml.sigma_tophat_R(cosmo, 1.0e-7, 0.0, 8.0 / 0.6774)) ** 2
-            mset.param_set(pi.mid, pi.pid,  np.log(1.0e10 * A_s * fact))
+
+            fact = (
+                params[2] / psml.sigma_tophat_R(cosmo, 1.0e-7, 0.0, 8.0 / 0.6774)
+            ) ** 2
+            mset.param_set(pi.mid, pi.pid, np.log(1.0e10 * A_s * fact))
         else:
             mset.param_set(pi.mid, pi.pid, params[i])
-        
+
 
 def generate_jpas_forecast_2024(
     area: float = 2959.1,
@@ -438,8 +439,8 @@ def generate_jpas_forecast_2024(
     )
     lnM_bins_knots = create_lnM_bins(lnM_min=lnM_min, lnM_max=lnM_max, nknots=lnMnknots)
 
-    z_bins_vec = Ncm.Vector.new_array(z_bins_knots.tolist())
-    lnM_bins_vec = Ncm.Vector.new_array(lnM_bins_knots.tolist())
+    z_bins_vec = Ncm.Vector.new_array(npa_to_seq(z_bins_knots))
+    lnM_bins_vec = Ncm.Vector.new_array(npa_to_seq(lnM_bins_knots))
 
     #   NCountsGauss
 
