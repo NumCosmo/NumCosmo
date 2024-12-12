@@ -2109,7 +2109,7 @@ _ncm_spline_func_test_gsl_eval_exp_sinc (gdouble x, gpointer p)
   const gdouble alpha = ncm_vector_fast_get (v, 0);
   const gdouble beta  = ncm_vector_fast_get (v, 1);
 
-  return 0.5 * exp (alpha * x) + gsl_pow_2 (gsl_sf_sinc (beta * x));
+  return 0.5 * exp (alpha * x) + gsl_pow_2 (gsl_sf_sinc (beta * x / M_PI));
 }
 
 static gdouble
