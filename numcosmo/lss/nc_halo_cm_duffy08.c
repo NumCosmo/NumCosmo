@@ -54,6 +54,8 @@ typedef struct _NcHaloCMDuffy08Private
 struct _NcHaloCMDuffy08
 {
   NcHaloMassSummary parent_instance;
+  NcHaloMassSummaryMassDef mdef;
+  gdouble z;
 };
 
 enum
@@ -144,10 +146,10 @@ _nc_halo_cm_duffy08_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdo
   NcHaloCMDuffy08 *hcmd = NC_HALO_CM_DUFFY08 (hms);
   gdouble mass          = _nc_halo_cm_duffy08_mass (hms);
   gdouble h             = nc_hicosmo_h (cosmo);
-  NcHaloMassSummaryMassDef mdef;
   gdouble Delta         = nc_halo_mass_summary_Delta (hms, cosmo, z);
+  hcmd->mdef            = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
 
-  switch (mdef)
+  switch (hcmd->mdef)
   {
     case NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN:
   
