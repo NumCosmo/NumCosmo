@@ -1,14 +1,14 @@
-/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_halo_cm_klypin11.c
  *
  *  Thu Nov 28 20:52:31 2024
- *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br>
+ *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>,
+ *  Copyright  2024  Thais Mikami Ornellas <thais.ornellas@uel.br>
  ****************************************************************************/
 /*
  * nc_halo_cm_klypin11.c
- * Copyright (C) 2024 Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br>
+ * Copyright (C) 2024 Mariana Penna-Lima <pennalima@unb.br>,
+ * Copyright (C) 2024 Thais Mikami Ornellas <thais.ornellas@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -141,9 +141,8 @@ _nc_halo_cm_klypin11_mass (NcHaloMassSummary *hms)
 static gdouble
 _nc_halo_cm_klypin11_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo)
 {
-  NcHaloCMKlypin11 *hcmk = NC_HALO_CM_KLYPIN11 (hms);
-  gdouble mass           = _nc_halo_cm_klypin11_mass (hms);
-  gdouble h              = nc_hicosmo_h (cosmo);
+  gdouble mass = _nc_halo_cm_klypin11_mass (hms);
+  gdouble h    = nc_hicosmo_h (cosmo);
 
   return 9.6 * pow (mass * h / 1.0e12, -0.075);
 }
