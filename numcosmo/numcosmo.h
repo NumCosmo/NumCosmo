@@ -119,6 +119,7 @@
 #include <numcosmo/lss/nc_halo_cm_param.h>
 #include <numcosmo/lss/nc_halo_cm_duffy08.h>
 #include <numcosmo/lss/nc_halo_cm_klypin11.h>
+#include <numcosmo/lss/nc_halo_cm_dutton14.h>
 #include <numcosmo/lss/nc_galaxy_acf.h>
 #include <numcosmo/lss/nc_multiplicity_func.h>
 #include <numcosmo/lss/nc_multiplicity_func_ps.h>
