@@ -34,10 +34,6 @@
 #include <numcosmo/lss/nc_growth_func.h>
 #include <numcosmo/math/ncm_powspec_filter.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
-#include <numcosmo/lss/nc_multiplicity_func_watson.h>
-#include <numcosmo/lss/nc_transfer_func_eh.h>
-#include <numcosmo/nc_powspec_ml_transfer.h>
-#include <numcosmo/nc_distance.h>
 
 
 G_BEGIN_DECLS
