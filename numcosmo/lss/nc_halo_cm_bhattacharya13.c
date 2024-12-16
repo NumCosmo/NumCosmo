@@ -55,6 +55,9 @@ struct _NcHaloCMBhattacharya13
 {
   NcHaloMassSummary parent_instance;
   NcHaloMassSummaryMassDef mdef;
+  NcHaloMassFunction *mfp;
+  NcmPowspecFilter *psf;
+  NcGrowthFunc *gf;
   gdouble z;
 };
 
@@ -144,20 +147,15 @@ static gdouble
 _nc_halo_cm_bhattacharya13_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
 
-  NcHaloCMBhattacharya13 *hcmb = NC_HALO_CM_BHATTACHARYA13 (hms);
+  NcHaloCMBhattacharya13 *hcmb   = NC_HALO_CM_BHATTACHARYA13 (hms);
   gdouble mass                   = _nc_halo_cm_bhattacharya13_mass (hms);
-  gdouble Delta                  = nc_halo_mass_summary_Delta (hms, cosmo, z);
-  NcGrowthFunc *gf               = nc_growth_func_new ();
-  NcmPowspec *powspec;
-  NcMultiplicityFunc *mulf;
-  NcmPowspecFilter *psf          = ncm_powspec_filter_new (powspec, NCM_POWSPEC_FILTER_TYPE_TOPHAT);
-  NcDistance *dist               = nc_distance_new (15.0);
-  NcHaloMassFunction *mfp        = nc_halo_mass_function_new (dist, psf, mulf);
+  gdouble Delta                  = nc_halo_mass_summary_Delta (hms, cosmo, z); 
   gdouble lnM                    = log(mass);
-  gdouble R                      = exp(nc_halo_mass_function_lnM_to_lnR (mfp, cosmo, lnM));
-  gdouble D                      = nc_growth_func_eval (gf, cosmo, z);
-  gdouble sigma                  = ncm_powspec_filter_eval_sigma (psf, z, R);
-  gdouble nu                     = 1.68647 / sigma;
+  gdouble R                      = exp(nc_halo_mass_function_lnM_to_lnR (hcmb->mfp, cosmo, lnM));
+  gdouble D                      = nc_growth_func_eval (hcmb->gf, cosmo, z);
+  gdouble sigma                  = ncm_powspec_filter_eval_sigma (hcmb->psf, z, R);
+  gdouble nu                     = 1.686 / sigma;
+
   hcmb->mdef                     = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
 
   switch (hcmb->mdef)
