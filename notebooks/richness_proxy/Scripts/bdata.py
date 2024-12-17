@@ -63,11 +63,13 @@ class BinningData:
                     else:
                         #-------------------------------------------------
                         if len(halos_bin_z[i][cut]) < 6:                    # To calculate percentage of bins with 
-                            lenbins.append(len(halos_bin_z[i][cut]))  # < 6 elements.
+                            lenbins.append(len(halos_bin_z[i][cut]))        # < 6 elements.
+                            
                         else:
                             pass
                         # #-------------------------------------------------
-                        halos_bin_mz.append(halos_bin_z[i][cut])
+                        
+                        halos_bin_mz.append(halos_bin_z[i][cut])    
                     #label.append(f"{min(halos_bin_z[i]['redshift_true']):.3f} < z < {max(halos_bin_z[i]['redshift_true']):.3f}\n{lnM_0:.3f} < lnM < {lnM_1:.3f}")                 
                     
                     lnM_0 = lnM_0 + D_M
