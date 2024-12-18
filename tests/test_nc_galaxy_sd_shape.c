@@ -115,7 +115,7 @@ test_nc_galaxy_sd_shape_gauss_new (TestNcGalaxySDShapeGauss *test, gconstpointer
 
   NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcDistance *dist            = nc_distance_new (100.0);
-  NcHaloMassSummary *hms      = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloMassSummary *hms      = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
   NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
   NcHaloPosition *hp          = nc_halo_position_new (dist);
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
