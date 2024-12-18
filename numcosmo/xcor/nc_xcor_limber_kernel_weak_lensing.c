@@ -30,7 +30,7 @@
  *
  * The kernel is given by
  * \begin{equation}
- *    W^{\kappa_{\mathrm{gal}}} = \frac{3}{2} \frac{\Omega_m H_0^2}{c} \frac{(1+z)}{H(z)} \chi(z) \int dz^\prime \frac{dn}{dz^\prime} \frac{\chi(^\prime) - \chi(z)}{\chi(^\prime)}
+ *    W^{\kappa_{\mathrm{gal}}} = \frac{3}{2} \frac{\Omega_m H_0^2}{c} \frac{(1+z)}{H(z)} \chi(z) \int dz^\prime \frac{dn}{dz^\prime} \frac{\chi(z^\prime) - \chi(z)}{\chi(z^\prime)}
  * \end{equation}
  *
  * where $\frac{dn}{dz}$ is the redshift distribution of galaxies.
