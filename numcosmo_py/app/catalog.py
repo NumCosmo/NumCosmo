@@ -872,7 +872,9 @@ class GetBestFit(LoadCatalog):
         """Get best-fit parameters."""
         super().__post_init__()
 
-        best_fit = np.array(self.mcat.get_bestfit_row().dup_array())[self.nadd_vals :]
+        best_fit = np.array(self.mcat.get_bestfit_row().dup_array(), dtype=np.float64)[
+            self.nadd_vals :
+        ]
         self.mset.fparams_set_array(npa_to_seq(best_fit))
 
         if self.output is None:
