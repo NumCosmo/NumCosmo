@@ -29,6 +29,7 @@ import pytest
 import numpy as np
 
 from numcosmo_py import Ncm
+from numcosmo_py.helper import npa_to_seq
 
 Ncm.cfg_init()
 
@@ -88,10 +89,10 @@ def d2f_cos(x: float) -> float:
 )
 def test_func_x2(f, df, d2f, interp_nknots, tol) -> None:
     """Test the numcosmo library to calculate derivatives of functions."""
-    interp_knots = np.linspace(0.0, 4.0, interp_nknots)
+    interp_knots = np.linspace(0.0, 4.0, interp_nknots, dtype=np.float64)
 
     s = Ncm.SplineCubicD2.new(
-        Ncm.Vector.new_array(interp_knots.tolist()),
+        Ncm.Vector.new_array(npa_to_seq(interp_knots)),
         Ncm.Vector.new_array([f(x) for x in interp_knots]),
         Ncm.Vector.new_array([d2f(x) for x in interp_knots]),
         True,

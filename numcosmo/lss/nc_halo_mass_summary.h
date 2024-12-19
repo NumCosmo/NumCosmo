@@ -46,7 +46,7 @@ struct _NcHaloMassSummaryClass
   NcmModelClass parent_class;
 
   gdouble (*mass) (NcHaloMassSummary *hms);
-  gdouble (*concentration) (NcHaloMassSummary *hms);
+  gdouble (*concentration) (NcHaloMassSummary *hms, NcHICosmo *cosmo);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[15];
@@ -60,7 +60,7 @@ struct _NcHaloMassSummaryClass
  *
  * Spherical overdensity halo mass: $$M_\Delta = \frac{4\pi}{3} \Delta \rho_\mathrm{bg} r_\Delta^3,$$
  * where $\rho_\mathrm{bg}$ is the background density of the universe at redshift z, $\rho_\mathrm{bg} (z)$.
- * For @NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL, the parameter #NcHaloMassSummary:log10MDelta is ignored and
+ * For @NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL the virial overdensity is defined as:
  * \begin{equation}\label{def:DVir}
  * \Delta_\mathrm{Vir} = 18 \pi^2 + 82 x - 39 x^2, \quad x \equiv \Omega_m(z) - 1.
  * \end{equation}
@@ -87,7 +87,7 @@ void nc_halo_mass_summary_set_Delta (NcHaloMassSummary *hms, const gdouble Delta
 gdouble nc_halo_mass_summary_get_Delta (NcHaloMassSummary *hms);
 
 gdouble nc_halo_mass_summary_mass (NcHaloMassSummary *hms);
-gdouble nc_halo_mass_summary_concentration (NcHaloMassSummary *hms);
+gdouble nc_halo_mass_summary_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo);
 
 gdouble nc_halo_mass_summary_Delta (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_halo_mass_summary_rho_bg (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z);

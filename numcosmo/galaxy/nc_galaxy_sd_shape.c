@@ -353,6 +353,23 @@ nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds)
 }
 
 /**
+ * nc_galaxy_sd_shape_gen: (virtual gen)
+ * @gsds: a #NcGalaxySDShape
+ * @mset: a #NcmMSet
+ * @data: a #NcGalaxySDShapeData
+ * @rng: a #NcmRNG
+ *
+ * Generates a new galaxy shape. The #NcGalaxySDShapeData object @data must be
+ * initialized before calling this method.
+ *
+ */
+void
+nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng)
+{
+  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->gen (gsds, mset, data, rng);
+}
+
+/**
  * nc_galaxy_sd_shape_integ: (virtual integ)
  * @gsds: a #NcGalaxySDShape
  *

@@ -514,6 +514,22 @@ nc_galaxy_sd_position_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, g
 }
 
 /**
+ * nc_galaxy_sd_position_gen: (virtual gen)
+ * @gsdp: a #NcGalaxySDPosition
+ * @data: a #NcGalaxySDPositionData
+ * @rng: a #NcmRNG
+ *
+ * Generates a new galaxy position. The #NcGalaxySDPositionData object @data must be
+ * initialized before calling this method.
+ *
+ */
+void
+nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcGalaxySDPositionData *data, NcmRNG *rng)
+{
+  NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->gen (gsdp, data, rng);
+}
+
+/**
  * nc_galaxy_sd_position_integ: (virtual integ)
  * @gsdp: a #NcGalaxySDPosition
  *
