@@ -173,9 +173,9 @@ class NcSkyMatching:
             matched["z"].append(self.query_data[self.query_coordinates["z"]][i])
             matched["ID"].append(i)
 
-            if self.match_properties is not None:
-                for prop in self.match_properties:
-                    matched[prop].append(self.match_data[prop][i])
+            if self.query_properties is not None:
+                for prop in self.query_properties:
+                    matched[prop].append(self.query_data[prop][i])
 
             # Select only the halos that are within the matching distance
             matching_dist_indices = distances < matching_distance
@@ -186,9 +186,9 @@ class NcSkyMatching:
             RA_matched = self.match_data[self.match_coordinates["RA"]][indices]
             DEC_matched = self.match_data[self.match_coordinates["DEC"]][indices]
             z_matched = self.match_data[self.match_coordinates["z"]][indices]
-            if self.query_properties is not None:
-                for prop in self.query_properties:
-                    matched[prop].append(self.query_data[prop][i])
+            if self.match_properties is not None:
+                for prop in self.match_properties:
+                    matched[prop].append(self.match_data[prop][indices])
 
             matched["ID_matched"].append(indices)
             matched["distances Mpc"].append(distances_matched)
@@ -260,9 +260,9 @@ class NcSkyMatching:
             matched["DEC"].append(self.query_data[self.query_coordinates["DEC"]][i])
             matched["ID"].append(i)
 
-            if self.match_properties is not None:
-                for prop in self.match_properties:
-                    matched[prop].append(self.match_data[prop][i])
+            if self.query_properties is not None:
+                for prop in self.query_properties:
+                    matched[prop].append(self.query_data[prop][i])
 
             matching_distances_indices = distances < matching_distance
             indices = indices[matching_distances_indices]
@@ -277,8 +277,8 @@ class NcSkyMatching:
                 self.match_data[self.match_coordinates["DEC"]][indices]
             )
 
-            if self.query_properties is not None:
-                for prop in self.query_properties:
-                    matched[prop].append(self.query_data[prop][i])
+            if self.match_properties is not None:
+                for prop in self.match_properties:
+                    matched[prop].append(self.match_data[prop][indices])
 
         return Table(matched)
