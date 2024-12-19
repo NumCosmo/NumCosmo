@@ -107,7 +107,7 @@ class ClusterModel:
         self.mass_delta = delta
         self.profile_type = profile_type
 
-        halo_mass_summary = Nc.HaloMCParam.new(mass_def, delta)
+        halo_mass_summary = Nc.HaloCMParam.new(mass_def, delta)
         match profile_type:
             case HaloProfileType.NFW:
                 self.density_profile = Nc.HaloDensityProfileNFW.new(halo_mass_summary)
@@ -185,7 +185,8 @@ class GalaxyDistributionModel:
         )
         self.n_galaxies = int(galaxies.density * frac * self.sky_area)
         print(
-            f"Number of galaxies: {self.n_galaxies} = {galaxies.density} * {frac} * {self.sky_area}"
+            f"Number of galaxies: {self.n_galaxies} = "
+            f"{galaxies.density} * {frac} * {self.sky_area}"
         )
 
         match z_dist:

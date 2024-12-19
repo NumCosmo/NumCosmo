@@ -42,7 +42,6 @@ Ncm.cfg_init()
 
 def test_ps() -> None:
     """Example testing powerspectra."""
-
     #
     #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm
     #
@@ -106,7 +105,7 @@ def test_ps() -> None:
     ps_eh.prepare(cosmo)
     ps_cbe.prepare(cosmo)
 
-    for z in np.arange(z_min, z_max, (z_max - z_min) * zdiv):
+    for z in np.arange(z_min, z_max, (z_max - z_min) * zdiv, dtype=float):
         k_a = []
         Pk_eh_a = []
         Pk_cbe_a = []
@@ -188,11 +187,11 @@ def test_ps() -> None:
     lnRmax = math.log(psf_cbe.get_r_max())
 
     # Variance of the matter density contrast
-    for z in np.arange(z_min, z_max, (z_max - z_min) * zdiv):
+    for z in np.arange(z_min, z_max, (z_max - z_min) * zdiv, dtype=float):
         Rh_a = []
         sigma_eh_a = []
         sigma_cbe_a = []
-        for lnR in np.arange(lnRmin, lnRmax, (lnRmax - lnRmin) / nR):
+        for lnR in np.arange(lnRmin, lnRmax, (lnRmax - lnRmin) / nR, dtype=float):
             R = math.exp(lnR)
             Rh = R * cosmo.h()
 
@@ -212,7 +211,8 @@ def test_ps() -> None:
     plt.savefig("ps_var_cbe_eh.svg")
     plt.clf()
 
-    # Derivative of the variance of the matter density contrast with respect to the scale R
+    # Derivative of the variance of the matter density contrast with respect to the
+    # scale R
     for z in np.arange(z_min, z_max, (z_max - z_min) * zdiv):
         Rh_a = []
         dvar_eh_a = []
