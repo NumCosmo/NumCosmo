@@ -45,4 +45,5 @@ dependencies:
   - setuptools < 74
   - tqdm
   - typer
+  - zlib
 name: numcosmo_developer

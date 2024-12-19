@@ -148,6 +148,7 @@ jobs:
           mamba env update -q -v -n numcosmo_developer -f devel_environment.yml
           mamba remove -q -v -n numcosmo_developer openmpi
           mamba install -q -v -n numcosmo_developer ${{ matrix.mpi }}
+          mamba install -q -v -n numcosmo_developer libfabric-devel
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Setting up NumCosmo
         run: |
