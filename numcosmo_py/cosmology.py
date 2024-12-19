@@ -102,25 +102,36 @@ class Cosmology:
         psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)
         return cls(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mnl, psf=psf)
 
+    @classmethod
+    def default_minimal(cls, dist_max_z: float = 10.0) -> "Cosmology":
+        """Create a minimal default cosmology."""
+        cosmo = Nc.HICosmoDEXcdm()
+        cosmo.omega_x2omega_k()
+        cosmo["Omegak"] = 0.0
+        cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
+        cosmo.add_submodel(Nc.HIReionCamb.new())
+        dist = Nc.Distance.new(dist_max_z)
+        return cls(cosmo=cosmo, dist=dist)
+
     @property
     def ps_ml(self) -> Nc.PowspecML:
         """Return the linear matter power spectrum."""
         if self._ps_ml is None:
-            raise ValueError("Linear matter power spectrum not set.")
+            raise AttributeError("Linear matter power spectrum not set.")
         return self._ps_ml
 
     @property
     def ps_mnl(self) -> Nc.PowspecMNL:
         """Return the non-linear matter power spectrum."""
         if self._ps_mnl is None:
-            raise ValueError("Non-linear matter power spectrum not set.")
+            raise AttributeError("Non-linear matter power spectrum not set.")
         return self._ps_mnl
 
     @property
     def psf(self) -> Ncm.PowspecFilter:
         """Return the power spectrum filter."""
         if self._psf is None:
-            raise ValueError("Power spectrum filter not set.")
+            raise AttributeError("Power spectrum filter not set.")
         return self._psf
 
     @property

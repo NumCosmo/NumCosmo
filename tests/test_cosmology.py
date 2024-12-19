@@ -33,11 +33,18 @@ from numcosmo_py.cosmology import Cosmology, create_cosmo, HIPrimModel
 Ncm.cfg_init()
 
 
-@pytest.fixture(name="cosmo")
+@pytest.fixture(name="cosmology")
 def fixture_cosmo() -> Cosmology:
     """Fixture for the Cosmology class."""
-    cosmo = Cosmology.default()
-    return cosmo
+    cosmology = Cosmology.default()
+    return cosmology
+
+
+@pytest.fixture(name="cosmology_minimal")
+def fixture_cosmo_minimal() -> Cosmology:
+    """Fixture for the Cosmology class with minimal objects."""
+    cosmology = Cosmology.default_minimal()
+    return cosmology
 
 
 @pytest.fixture(
@@ -64,18 +71,18 @@ def fixture_prim_model_cls(request) -> tuple[HIPrimModel, type[Nc.HIPrim]]:
     return request.param
 
 
-def test_cosmology_default(cosmo: Cosmology):
+def test_cosmology_default(cosmology: Cosmology):
     """Test the default cosmology creation."""
-    assert isinstance(cosmo, Cosmology)
-    assert cosmo.cosmo["Omegak"] == 0.0
+    assert isinstance(cosmology, Cosmology)
+    assert cosmology.cosmo["Omegak"] == 0.0
 
 
-def test_cosmology_properties(cosmo: Cosmology):
+def test_cosmology_properties(cosmology: Cosmology):
     """Test the properties of the Cosmology class."""
-    assert isinstance(cosmo.ps_ml, Nc.PowspecML)
-    assert isinstance(cosmo.ps_mnl, Nc.PowspecMNL)
-    assert isinstance(cosmo.psf, Ncm.PowspecFilter)
-    assert isinstance(cosmo.mset, Ncm.MSet)
+    assert isinstance(cosmology.ps_ml, Nc.PowspecML)
+    assert isinstance(cosmology.ps_mnl, Nc.PowspecMNL)
+    assert isinstance(cosmology.psf, Ncm.PowspecFilter)
+    assert isinstance(cosmology.mset, Ncm.MSet)
 
 
 def test_create_cosmo():
@@ -95,6 +102,12 @@ def test_create_cosmo_massive_nu():
     assert cosmo["massnu_0"] == 0.06
 
 
+def test_create_cosmo_invalid_prim():
+    """Test the create_cosmo function with invalid primordial model."""
+    with pytest.raises(ValueError, match="Invalid primordial model"):
+        _ = create_cosmo(prim_model="invalid")
+
+
 def test_create_cosmo_prim_model_power_law(prim_model_cls):
     """Test the create_cosmo function with power-law primordial model."""
     prim_model, prim_cls = prim_model_cls
@@ -104,3 +117,23 @@ def test_create_cosmo_prim_model_power_law(prim_model_cls):
     assert isinstance(
         cosmo_power_law.peek_submodel_by_mid(Nc.HIPrimPowerLaw.id()), prim_cls
     )
+
+
+def test_cosmology_missing_ps_ml(cosmology_minimal: Cosmology):
+    """Test the Cosmology class with missing ps_ml."""
+    with pytest.raises(AttributeError, match="Linear matter power spectrum not set."):
+        _ = cosmology_minimal.ps_ml
+
+
+def test_cosmology_missing_ps_mnl(cosmology_minimal: Cosmology):
+    """Test the Cosmology class with missing ps_mnl."""
+    with pytest.raises(
+        AttributeError, match="Non-linear matter power spectrum not set."
+    ):
+        _ = cosmology_minimal.ps_mnl
+
+
+def test_cosmology_missing_psf(cosmology_minimal: Cosmology):
+    """Test the Cosmology class with missing psf."""
+    with pytest.raises(AttributeError, match="Power spectrum filter not set."):
+        _ = cosmology_minimal.psf
