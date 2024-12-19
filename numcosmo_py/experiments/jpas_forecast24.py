@@ -27,6 +27,7 @@ This module provides factory functions to create the J-Pas 2024 forecast
 experiment dictionary and the extra functions for the forecast.
 """
 
+from typing import cast
 from enum import Enum
 import numpy as np
 
@@ -196,27 +197,27 @@ def create_cosmo() -> Nc.HICosmo:
 
     cosmo.params_set_default_ftype()
     cosmo.omega_x2omega_k()
-    cosmo.param_set_by_name("H0", 67.81)
-    cosmo.param_set_by_name("Omegab", 0.0486)
-    cosmo.param_set_by_name("Omegac", 0.2612)
-    cosmo.param_set_by_name("w", -1.0)
+    cosmo["H0"] = 67.81
+    cosmo["Omegab"] = 0.0486
+    cosmo["Omegac"] = 0.2612
+    cosmo["w"] = -1.0
+    cosmo["Omegak"] = 0.00
 
-    cosmo.set_property("H0_fit", False)
-    cosmo.set_property("Omegac_fit", True)
-    cosmo.set_property("Omegab_fit", False)
-    cosmo.set_property("w_fit", True)
-    cosmo.param_set_by_name("Omegak", 0.00)
-    cosmo.set_property("Omegax_fit", False)
+    cosmo.param_set_desc("H0", {"fit": False})
+    cosmo.param_set_desc("Omegac", {"fit": True})
+    cosmo.param_set_desc("Omegab", {"fit": False})
+    cosmo.param_set_desc("w", {"fit": True})
+    cosmo.param_set_desc("Omegak", {"fit": False})
 
     prim = Nc.HIPrimPowerLaw.new()
-    prim.param_set_by_name("ln10e10ASA", 3.02745)
-    prim.param_set_by_name("n_SA", 0.9660)
+    prim["ln10e10ASA"] = 3.02745
+    prim["n_SA"] = 0.9660
 
-    prim.set_property("ln10e10ASA_fit", True)
-    prim.set_property("n_SA_fit", False)
+    prim.param_set_desc("ln10e10ASA", {"fit": True})
+    prim.param_set_desc("n_SA", {"fit": False})
 
     reion = Nc.HIReionCamb.new()
-    reion.set_property("z_re_fit", False)
+    reion.param_set_desc("z_re", {"fit": False})
 
     cosmo.add_submodel(prim)
     cosmo.add_submodel(reion)
@@ -317,14 +318,12 @@ def create_cluster_mass(
         cluster_m = Nc.ClusterMassAscaso(
             lnRichness_min=0.0, lnRichness_max=np.log(10) * 2.5, z0=0
         )
-        cluster_m.param_set_by_name("mup0", 3.207)
-        cluster_m.param_set_by_name("mup1", 0.993)
-        cluster_m.param_set_by_name("mup2", 0)
-        cluster_m.param_set_by_name("sigmap0", 0.456)
-        cluster_m.param_set_by_name(
-            "sigmap1", -0.169
-        )  # valor do murata e 0 valor do SRD
-        cluster_m.param_set_by_name("sigmap2", 0)
+        cluster_m["mup0"] = 3.207
+        cluster_m["mup1"] = 0.993
+        cluster_m["mup2"] = 0
+        cluster_m["sigmap0"] = 0.456
+        cluster_m["sigmap1"] = -0.169  # valor do murata e 0 valor do SRD
+        cluster_m["sigmap2"] = 0
         # [2.996 , 5.393 , 5]
     else:
         raise ValueError(f"Invalid cluster mass type: {cluster_mass_type}")
@@ -340,8 +339,8 @@ def create_cluster_redshift(
         cluster_z = Nc.ClusterRedshiftNodist(z_min=0.0, z_max=2.0)
     elif cluster_redshift_type == ClusterRedshiftType.GAUSS:
         cluster_z = Nc.ClusterPhotozGaussGlobal(pz_min=0.0, pz_max=1.0)
-        cluster_z.param_set_by_name("z-bias", 0)
-        cluster_z.param_set_by_name("sigma0", 0.1)  # year1 0.003 year10
+        cluster_z["z-bias"] = 0
+        cluster_z["sigma0"] = 0.1  # year1 0.003 year10
 
     else:
         raise ValueError(f"Invalid cluster redshift type: {cluster_redshift_type}")
@@ -351,27 +350,20 @@ def create_cluster_redshift(
 
 def _set_mset_params(mset: Ncm.MSet, params: tuple[float, float, float]) -> None:
     """Set the parameters for the mass model."""
-    param_names = ["NcHICosmo:Omegac", "NcHICosmo:w", "NcHIPrim:ln10e10ASA"]
-
     tf = Nc.TransferFuncEH()
     psml = Nc.PowspecMLTransfer.new(tf)
     psml.require_kmin(1.0e-6)
     psml.require_kmax(1.0e3)
+    Omegac, w, sigma8 = params
 
-    for i, param_name in enumerate(param_names):
-        pi = mset.fparam_get_pi_by_name(param_name)
+    cosmo: Nc.HICosmo = cast(Nc.HICosmo, mset["NcHICosmo"])
+    prim: Nc.HIPrim = cast(Nc.HIPrim, mset["NcHIPrim"])
+    mset["NcHICosmo"]["Omegac"] = Omegac
+    mset["NcHICosmo"]["w"] = w
 
-        if i == 2:
-
-            cosmo = mset.peek(mset.get_id_by_ns("NcHICosmo"))
-            A_s = np.exp(mset.param_get(pi.mid, pi.pid)) * 1.0e-10
-
-            fact = (
-                params[2] / psml.sigma_tophat_R(cosmo, 1.0e-7, 0.0, 8.0 / 0.6774)
-            ) ** 2
-            mset.param_set(pi.mid, pi.pid, np.log(1.0e10 * A_s * fact))
-        else:
-            mset.param_set(pi.mid, pi.pid, params[i])
+    A_s = np.exp(prim["ln10e10ASA"]) * 1.0e-10
+    fact = (sigma8 / psml.sigma_tophat_R(cosmo, 1.0e-7, 0.0, 8.0 / cosmo.h())) ** 2
+    prim["ln10e10ASA"] = np.log(1.0e10 * A_s * fact)
 
 
 def generate_jpas_forecast_2024(
