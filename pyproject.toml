@@ -62,3 +62,6 @@ numcosmo_py = ["*.pyi", "py.typed"]
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[tool.coverage.run]
+omit = ["*/external/*"]

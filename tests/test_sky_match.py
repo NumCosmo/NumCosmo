@@ -33,7 +33,7 @@ from astropy.table import Table
 from astropy.io import fits
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.sky_match import NcSkyMatching
+from numcosmo_py.sky_match import SkyMatch
 
 Ncm.cfg_init()
 
@@ -143,7 +143,7 @@ def fixture_setup_catalogs_fits_containing_image(tmp_path) -> tuple[Path, Path]:
 def test_load_fits_data(setup_catalogs):
     """Test the load_fits_data function."""
     query_catalog_path, match_catalog_path = setup_catalogs
-    matching = NcSkyMatching(
+    matching = SkyMatch(
         query_catalog_path=query_catalog_path,
         query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
         match_catalog_path=match_catalog_path,
@@ -160,7 +160,7 @@ def test_load_fits_data_wrong_query_map(setup_catalogs):
     """Test the load_fits_data function with wrong query map."""
     query_catalog_path, match_catalog_path = setup_catalogs
     with pytest.raises(ValueError, match="RA and DEC coordinates mapped by.*"):
-        _ = NcSkyMatching(
+        _ = SkyMatch(
             query_catalog_path=query_catalog_path,
             query_coordinates={
                 "RA": "RA_bob",
@@ -177,7 +177,7 @@ def test_load_fits_data_wrong_match_map(setup_catalogs):
     """Test the load_fits_data function with wrong match map."""
     query_catalog_path, match_catalog_path = setup_catalogs
     with pytest.raises(ValueError, match="RA and DEC coordinates mapped by.*"):
-        _ = NcSkyMatching(
+        _ = SkyMatch(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
             match_catalog_path=match_catalog_path,
@@ -194,7 +194,7 @@ def test_load_fits_data_nonexistent(setup_catalogs_nonexistent):
     """Test the load_fits_data function with nonexistent catalog."""
     query_catalog_path, match_catalog_path = setup_catalogs_nonexistent
     with pytest.raises(FileNotFoundError):
-        _ = NcSkyMatching(
+        _ = SkyMatch(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
             match_catalog_path=match_catalog_path,
@@ -208,7 +208,7 @@ def test_load_fits_data_fits_containing_image(setup_catalogs_fits_containing_ima
     with pytest.raises(
         ValueError, match="No FITS table found in the provided catalog."
     ):
-        _ = NcSkyMatching(
+        _ = SkyMatch(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
             match_catalog_path=match_catalog_path,
@@ -216,10 +216,184 @@ def test_load_fits_data_fits_containing_image(setup_catalogs_fits_containing_ima
         )
 
 
+def test_load_fits_data_missing_RA_query(setup_catalogs):
+    """Test the load_fits_data function with missing RA_query column."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(ValueError, match="RA and DEC coordinates must be provided."):
+        _ = SkyMatch(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={"DEC": "DEC_query", "z": "z_query"},
+            match_catalog_path=match_catalog_path,
+            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+        )
+
+
+def test_load_fits_data_missing_DEC_query(setup_catalogs):
+    """Test the load_fits_data function with missing DEC_query column."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(ValueError, match="RA and DEC coordinates must be provided."):
+        _ = SkyMatch(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={"RA": "RA_query", "z": "z_query"},
+            match_catalog_path=match_catalog_path,
+            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+        )
+
+
+def test_load_fits_data_missing_RA_match(setup_catalogs):
+    """Test the load_fits_data function with missing RA_match column."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(ValueError, match="RA and DEC coordinates must be provided."):
+        _ = SkyMatch(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+            match_catalog_path=match_catalog_path,
+            match_coordinates={"DEC": "DEC_match", "z": "z_match"},
+        )
+
+
+def test_load_fits_data_missing_DEC_match(setup_catalogs):
+    """Test the load_fits_data function with missing DEC_match column."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(ValueError, match="RA and DEC coordinates must be provided."):
+        _ = SkyMatch(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+            match_catalog_path=match_catalog_path,
+            match_coordinates={"RA": "RA_match", "z": "z_match"},
+        )
+
+
+def test_load_fits_data_wrong_RA_query(setup_catalogs):
+    """Test the load_fits_data function with wrong RA_query column."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(
+        ValueError,
+        match=(
+            "RA and DEC coordinates mapped by .* "
+            "not found in the provided catalog .*"
+        ),
+    ):
+        _ = SkyMatch(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={
+                "RA": "RA_query_wrong",
+                "DEC": "DEC_query",
+                "z": "z_query",
+            },
+            match_catalog_path=match_catalog_path,
+            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+        )
+
+
+def test_load_fits_data_wrong_DEC_query(setup_catalogs):
+    """Test the load_fits_data function with wrong DEC_query column."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(
+        ValueError,
+        match=(
+            "RA and DEC coordinates mapped by .* "
+            "not found in the provided catalog .*"
+        ),
+    ):
+        _ = SkyMatch(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={
+                "RA": "RA_query",
+                "DEC": "DEC_query_wrong",
+                "z": "z_query",
+            },
+            match_catalog_path=match_catalog_path,
+            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+        )
+
+
+def test_load_fits_data_wrong_RA_match(setup_catalogs):
+    """Test the load_fits_data function with wrong RA_match column."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(
+        ValueError,
+        match=(
+            "RA and DEC coordinates mapped by .* "
+            "not found in the provided catalog .*"
+        ),
+    ):
+        _ = SkyMatch(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+            match_catalog_path=match_catalog_path,
+            match_coordinates={
+                "RA": "RA_match_wrong",
+                "DEC": "DEC_match",
+                "z": "z_match",
+            },
+        )
+
+
+def test_load_fits_data_wrong_DEC_match(setup_catalogs):
+    """Test the load_fits_data function with wrong DEC_match column."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(
+        ValueError,
+        match=(
+            "RA and DEC coordinates mapped by .* "
+            "not found in the provided catalog .*"
+        ),
+    ):
+        _ = SkyMatch(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+            match_catalog_path=match_catalog_path,
+            match_coordinates={
+                "RA": "RA_match",
+                "DEC": "DEC_match_wrong",
+                "z": "z_match",
+            },
+        )
+
+
+def test_load_fits_data_wrong_z_query(setup_catalogs):
+    """Test the load_fits_data function with wrong z_query column."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(
+        ValueError,
+        match="Redshift coordinate mapped by .* not found in the provided catalog .*",
+    ):
+        _ = SkyMatch(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={
+                "RA": "RA_query",
+                "DEC": "DEC_query",
+                "z": "z_query_wrong",
+            },
+            match_catalog_path=match_catalog_path,
+            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+        )
+
+
+def test_load_fits_data_wrong_z_match(setup_catalogs):
+    """Test the load_fits_data function with wrong z_match column."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(
+        ValueError,
+        match="Redshift coordinate mapped by .* not found in the provided catalog .*",
+    ):
+        _ = SkyMatch(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+            match_catalog_path=match_catalog_path,
+            match_coordinates={
+                "RA": "RA_match",
+                "DEC": "DEC_match",
+                "z": "z_match_wrong",
+            },
+        )
+
+
 def test_match_2d(setup_catalogs):
     """Test the match_2d function."""
     query_catalog_path, match_catalog_path = setup_catalogs
-    matching = NcSkyMatching(
+    matching = SkyMatch(
         query_catalog_path=query_catalog_path,
         query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
         match_catalog_path=match_catalog_path,
@@ -275,7 +449,7 @@ def test_match_2d(setup_catalogs):
 def test_match_3d(cosmo, setup_catalogs):
     """Test the match_3d function."""
     query_catalog_path, match_catalog_path = setup_catalogs
-    matching = NcSkyMatching(
+    matching = SkyMatch(
         query_catalog_path=query_catalog_path,
         query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
         match_catalog_path=match_catalog_path,
@@ -351,7 +525,7 @@ def test_match_3d(cosmo, setup_catalogs):
 def test_match_2d_extra_columns(setup_catalogs_extra_columns):
     """Test the match_2d function with extra columns."""
     query_catalog_path, match_catalog_path = setup_catalogs_extra_columns
-    matching = NcSkyMatching(
+    matching = SkyMatch(
         query_catalog_path=query_catalog_path,
         query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
         match_catalog_path=match_catalog_path,
@@ -415,7 +589,7 @@ def test_match_2d_extra_columns(setup_catalogs_extra_columns):
 def test_match_3d_extra_columns(cosmo, setup_catalogs_extra_columns):
     """Test the match_3d function with extra columns."""
     query_catalog_path, match_catalog_path = setup_catalogs_extra_columns
-    matching = NcSkyMatching(
+    matching = SkyMatch(
         query_catalog_path=query_catalog_path,
         query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
         match_catalog_path=match_catalog_path,
@@ -494,3 +668,87 @@ def test_match_3d_extra_columns(cosmo, setup_catalogs_extra_columns):
                 + (x3_match - x3_query) ** 2
             )
             assert_allclose(euclidean_distance, distance, atol=ATOL)
+
+
+def test_match_3d_missing_z_query(cosmo, setup_catalogs):
+    """Test the match_3d function with missing z_query column."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(
+        ValueError,
+        match=(
+            "To perform a 3D matching, the redshift "
+            "must be provided for both catalogs."
+        ),
+    ):
+        matching = SkyMatch(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={"RA": "RA_query", "DEC": "DEC_query"},
+            match_catalog_path=match_catalog_path,
+            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+        )
+        _ = matching.match_3d(
+            cosmo,
+            matching_distance=cosmo.RH_Mpc(),
+            n_nearest_neighbours=10,
+            verbose=False,
+        )
+
+
+def test_match_3d_missing_z_match(cosmo, setup_catalogs):
+    """Test the match_3d function with missing z_match column."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(
+        ValueError,
+        match=(
+            "To perform a 3D matching, the redshift "
+            "must be provided for both catalogs."
+        ),
+    ):
+        matching = SkyMatch(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+            match_catalog_path=match_catalog_path,
+            match_coordinates={"RA": "RA_match", "DEC": "DEC_match"},
+        )
+        _ = matching.match_3d(
+            cosmo,
+            matching_distance=cosmo.RH_Mpc(),
+            n_nearest_neighbours=10,
+            verbose=False,
+        )
+
+
+def test_match_2d_invalid_matching_distance_lt0(setup_catalogs):
+    """Test the match_2d function with invalid matching_distance."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(
+        ValueError,
+        match="The matching distance must be between 0 and pi.",
+    ):
+        matching = SkyMatch(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+            match_catalog_path=match_catalog_path,
+            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+        )
+        _ = matching.match_2d(
+            matching_distance=-1.0, n_nearest_neighbours=10, verbose=False
+        )
+
+
+def test_match_2d_invalid_matching_distance_gt_pi(setup_catalogs):
+    """Test the match_2d function with invalid matching_distance."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(
+        ValueError,
+        match="The matching distance must be between 0 and pi.",
+    ):
+        matching = SkyMatch(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+            match_catalog_path=match_catalog_path,
+            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+        )
+        _ = matching.match_2d(
+            matching_distance=np.pi + 1.0, n_nearest_neighbours=10, verbose=False
+        )
