@@ -27,6 +27,7 @@
 from numpy.testing import assert_allclose
 import numpy as np
 from numcosmo_py import Ncm
+from numcosmo_py.helper import npa_to_seq
 from numcosmo_py.ncm import MSet
 
 Ncm.cfg_init()
@@ -36,20 +37,18 @@ class DataGaussDiagTest(Ncm.DataGaussDiag):
     """Test class for NcmDataGaussDiag."""
 
     def __init__(self, n_points: int = 200):
-        """Constructor for DataGaussTest."""
+        """Construct a DataGaussTest."""
+        mean_array = np.linspace(-1.0, 1.0, n_points, dtype=np.float64)
+        sigma_array = np.linspace(1.0e-1, 2.0e-1, n_points, dtype=np.float64)
 
-        mean_array = np.linspace(-1.0, 1.0, n_points)
-        sigma_array = np.linspace(1.0e-1, 2.0e-1, n_points)
-
-        mean = Ncm.Vector.new_array(mean_array.tolist())
-        sigma = Ncm.Vector.new_array(sigma_array.tolist())
+        mean = Ncm.Vector.new_array(npa_to_seq(mean_array))
+        sigma = Ncm.Vector.new_array(npa_to_seq(sigma_array))
         super().__init__(n_points=n_points, sigma=sigma, mean=mean, init=True)
 
     def do_mean_func(  # pylint: disable=arguments-differ
         self, mset: Ncm.MSet, vp: Ncm.Vector
     ) -> None:
         """Do mean function."""
-
         mvnd = mset.peek(Ncm.ModelMVND.id())
         assert mvnd is not None
         assert mvnd.vparam_len(0) == 2
@@ -57,7 +56,7 @@ class DataGaussDiagTest(Ncm.DataGaussDiag):
         a = mvnd.orig_vparam_get(0, 0)
         b = mvnd.orig_vparam_get(0, 1)
 
-        vp.set_array(np.linspace(a, b, self.get_size()).tolist())
+        vp.set_array(npa_to_seq(np.linspace(a, b, self.get_size(), dtype=np.float64)))
 
 
 class DataGaussDiagTestUpdateSigma(DataGaussDiagTest):
@@ -75,7 +74,6 @@ class DataGaussDiagTestUpdateSigma(DataGaussDiagTest):
 
 def test_data_gauss_diag_set_get_size():
     """Test NcmDataGaussDiag."""
-
     n_points = 200
 
     data_dist = DataGaussDiagTest(n_points=n_points)
@@ -92,7 +90,6 @@ def test_data_gauss_diag_set_get_size():
 
 def test_data_gauss_diag_get_inv_cov():
     """Test NcmDataGaussDiag."""
-
     n_points = 200
     data_dist = DataGaussDiagTest(n_points=n_points)
 
@@ -103,7 +100,6 @@ def test_data_gauss_diag_get_inv_cov():
 
 def test_data_gauss_diag_resample():
     """Test NcmDataGaussDiag."""
-
     n_points = 20
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
@@ -140,7 +136,6 @@ def test_data_gauss_diag_resample():
 
 def test_data_gauss_diag_bootstrap():
     """Test NcmDataDist2D."""
-
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
     sv = Ncm.StatsVec.new(1, Ncm.StatsVecType.VAR, False)
@@ -174,7 +169,6 @@ def test_data_gauss_diag_bootstrap():
 
 def test_data_gauss_diag_bootstrap_set():
     """Test NcmDataDist2D."""
-
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
     sv = Ncm.StatsVec.new(1, Ncm.StatsVecType.VAR, False)
@@ -208,7 +202,6 @@ def test_data_gauss_diag_bootstrap_set():
 
 def test_data_gauss_diag_bootstrap_twice():
     """Test NcmDataDist2D."""
-
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
     sv = Ncm.StatsVec.new(1, Ncm.StatsVecType.VAR, False)
@@ -243,7 +236,6 @@ def test_data_gauss_diag_bootstrap_twice():
 
 def test_data_gauss_diag_bootstrap_wmean():
     """Test NcmDataDist2D."""
-
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
     sv = Ncm.StatsVec.new(1, Ncm.StatsVecType.VAR, False)
@@ -278,7 +270,6 @@ def test_data_gauss_diag_bootstrap_wmean():
 
 def test_data_gauss_diag_serialize():
     """Test NcmDataGaussDiag."""
-
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
 
@@ -303,7 +294,6 @@ def test_data_gauss_diag_serialize():
 
 def test_data_gauss_diag_serialize_bootstrap():
     """Test NcmDataGaussDiag."""
-
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
 
@@ -329,7 +319,6 @@ def test_data_gauss_diag_serialize_bootstrap():
 
 def test_data_gauss_diag_update_cov_resample():
     """Test NcmDataGaussDiag."""
-
     n_points = 20
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
@@ -366,7 +355,6 @@ def test_data_gauss_diag_update_cov_resample():
 
 def test_data_gauss_diag_fisher():
     """Test NcmDataGaussDiag fisher matrix."""
-
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -390,7 +378,6 @@ def test_data_gauss_diag_fisher():
 
 def test_data_gauss_diag_fisher_bias():
     """Test NcmDataGaussDiag fisher matrix."""
-
     true_theta = [1.0, 2.0]
     theta_shift = [0.1, -0.02]
 
@@ -422,7 +409,6 @@ def test_data_gauss_diag_fisher_bias():
 
 def test_data_gauss_diag_resample_wmean():
     """Test NcmDataGaussDiag."""
-
     n_points = 20
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
