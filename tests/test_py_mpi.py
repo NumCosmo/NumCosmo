@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Unit tests for NumCosmo MPI objects. """
+"""Unit tests for NumCosmo MPI objects."""
 
 import sys
 from numpy.testing import assert_allclose
@@ -34,8 +34,7 @@ sys.argv = Ncm.cfg_init_full(sys.argv)
 
 
 def test_mpi_job_fit_run_array() -> None:
-    """Testing MPI fit using run_array."""
-
+    """Test MPI fit using run_array."""
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -79,8 +78,7 @@ def test_mpi_job_fit_run_array() -> None:
 
 
 def test_mpi_job_fit_funcs_run_array() -> None:
-    """Testing MPI fit using run_array."""
-
+    """Test MPI fit using run_array."""
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -126,8 +124,7 @@ def test_mpi_job_fit_funcs_run_array() -> None:
 
 
 def test_mpi_job_fit_run_array_async() -> None:
-    """Testing MPI fit using run_array_async."""
-
+    """Test MPI fit using run_array_async."""
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -171,8 +168,7 @@ def test_mpi_job_fit_run_array_async() -> None:
 
 
 def test_mpi_job_fit_funcs_run_array_async() -> None:
-    """Testing MPI fit using run_array_async."""
-
+    """Test MPI fit using run_array_async."""
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -218,8 +214,7 @@ def test_mpi_job_fit_funcs_run_array_async() -> None:
 
 
 def test_mpi_job_test_run_array() -> None:
-    """Testing MPI job test using run_array."""
-
+    """Test MPI job test using run_array."""
     rng = Ncm.RNG.new(None)
     rng.set_random_seed(True)
 
@@ -231,7 +226,7 @@ def test_mpi_job_test_run_array() -> None:
 
     a = []
     b = []
-    for t in np.arange(12.0):
+    for t in np.arange(12.0, dtype=float):
         a.append(Ncm.Vector.new_array([t]))
         b.append(Ncm.Vector.new(1))
 
@@ -243,8 +238,7 @@ def test_mpi_job_test_run_array() -> None:
 
 
 def test_mpi_job_test_run_array_async() -> None:
-    """Testing MPI job test using run_array_async."""
-
+    """Test MPI job test using run_array_async."""
     rng = Ncm.RNG.new(None)
     rng.set_random_seed(True)
 
@@ -256,7 +250,7 @@ def test_mpi_job_test_run_array_async() -> None:
 
     a = []
     b = []
-    for t in np.arange(12.0):
+    for t in np.arange(12.0, dtype=float):
         a.append(Ncm.Vector.new_array([t]))
         b.append(Ncm.Vector.new(1))
 
@@ -268,8 +262,7 @@ def test_mpi_job_test_run_array_async() -> None:
 
 
 def test_mpi_job_feval_run_array() -> None:
-    """Testing MPI job feval using run_array."""
-
+    """Test MPI job feval using run_array."""
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -312,8 +305,7 @@ def test_mpi_job_feval_run_array() -> None:
 
 
 def test_mpi_job_feval_funcs_run_array() -> None:
-    """Testing MPI job feval using run_array."""
-
+    """Test MPI job feval using run_array."""
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -359,8 +351,7 @@ def test_mpi_job_feval_funcs_run_array() -> None:
 
 
 def test_mpi_job_feval_run_array_async() -> None:
-    """Testing MPI job feval using run_array_async."""
-
+    """Test MPI job feval using run_array_async."""
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -403,8 +394,7 @@ def test_mpi_job_feval_run_array_async() -> None:
 
 
 def test_mpi_job_feval_funcs_run_array_async() -> None:
-    """Testing MPI job feval using run_array_async."""
-
+    """Test MPI job feval using run_array_async."""
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -450,8 +440,7 @@ def test_mpi_job_feval_funcs_run_array_async() -> None:
 
 
 def test_mpi_job_mcmc_run_array():
-    """Testing MPI job mcmc using run_array."""
-
+    """Test MPI job mcmc using run_array."""
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -492,11 +481,11 @@ def test_mpi_job_mcmc_run_array():
     for param, m2lnL in zip(param_a, m2lnL_a):
         assert_allclose(
             m2lnL.get(0),
-            1.0
-            if param.get(6) < 0.0
-            else 1.0
-            if param.get(6) < np.exp(param.get(5))
-            else 0.0,
+            (
+                1.0
+                if param.get(6) < 0.0
+                else 1.0 if param.get(6) < np.exp(param.get(5)) else 0.0
+            ),
         )
         assert_allclose(m2lnL.get(1), param.get(4))
 
@@ -504,8 +493,7 @@ def test_mpi_job_mcmc_run_array():
 
 
 def test_mpi_job_mcmc_funcs_run_array():
-    """Testing MPI job mcmc using run_array."""
-
+    """Test MPI job mcmc using run_array."""
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -557,8 +545,7 @@ def test_mpi_job_mcmc_funcs_run_array():
 
 
 def test_mpi_job_mcmc_run_array_async():
-    """Testing MPI job mcmc using run_array."""
-
+    """Test MPI job mcmc using run_array."""
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -599,11 +586,11 @@ def test_mpi_job_mcmc_run_array_async():
     for param, m2lnL in zip(param_a, m2lnL_a):
         assert_allclose(
             m2lnL.get(0),
-            1.0
-            if param.get(6) < 0.0
-            else 1.0
-            if param.get(6) < np.exp(param.get(5))
-            else 0.0,
+            (
+                1.0
+                if param.get(6) < 0.0
+                else 1.0 if param.get(6) < np.exp(param.get(5)) else 0.0
+            ),
         )
         assert_allclose(m2lnL.get(1), param.get(4))
 
@@ -611,8 +598,7 @@ def test_mpi_job_mcmc_run_array_async():
 
 
 def test_mpi_job_mcmc_funcs_run_array_async():
-    """Testing MPI job mcmc using run_array."""
-
+    """Test MPI job mcmc using run_array."""
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(4)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)

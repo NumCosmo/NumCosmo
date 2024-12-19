@@ -37,7 +37,7 @@ from numcosmo_py.sampling.esmcmc import (
     InterpolationKernel,
 )
 
-from numcosmo_py.datasets.no_perturbations import (
+from numcosmo_py.datasets.hicosmo import (
     SNIaID,
     BAOID,
     HID,

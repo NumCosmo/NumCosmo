@@ -30,6 +30,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 from numcosmo_py import Ncm
+from numcosmo_py.helper import npa_to_seq
 
 Ncm.cfg_init()
 
@@ -42,7 +43,7 @@ def _f(z, k):
 def fixture_Pk2d() -> Ncm.Spline2d:
     """Fixture for k array."""
     ka = np.geomspace(1.0e-5, 1.0e1, 1000)
-    za = np.linspace(0.0, 1.0, 50)
+    za = np.linspace(0.0, 1.0, 50, dtype=np.float64)
 
     za_v, ka_v = np.meshgrid(za, ka)
 
@@ -50,7 +51,7 @@ def fixture_Pk2d() -> Ncm.Spline2d:
 
     Pk2d = Ncm.Spline2dBicubic(
         spline=Ncm.SplineCubicNotaknot.new(),
-        x_vector=Ncm.Vector.new_array(za.tolist()),
+        x_vector=Ncm.Vector.new_array(npa_to_seq(za)),
         y_vector=Ncm.Vector.new_array(np.log(ka).tolist()),
         z_matrix=Ncm.Matrix.new_array(Pk.flatten().tolist(), len(za)),
     )
@@ -104,7 +105,7 @@ def test_eval_vec(Pk2d: Ncm.Spline2d) -> None:
     za = s2d.peek_xv().dup_array()
     ka = np.exp(s2d.peek_yv().dup_array())
 
-    kv = Ncm.Vector.new_array(ka.tolist())
+    kv = Ncm.Vector.new_array(npa_to_seq(ka))
     Pkv = kv.dup()
 
     def _evec(z):

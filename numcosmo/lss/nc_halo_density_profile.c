@@ -41,14 +41,10 @@
  * # Parametrization
  *
  * The two parameters $\rho_s$ and $r_s$ are described by the fundamental
- * parametrization in terms of $M_\Delta$ (#NcHaloDensityProfile:log10MDelta)
- * and the concentration $c_\Delta$ (#NcHaloDensityProfile:cDelta) given a mass
- * defined by $\Delta$ (#NcHaloDensityProfile:Delta) and a background density
- * $\rho_\mathrm{bg}$ (#NcHaloDensityProfile:mass-def). Strictly speaking,
- * the object has two unmutable properties #NcHaloDensityProfile:Delta
- * and #NcHaloDensityProfile:mass-def that defines the value of $\Delta$ and the
- * background density $\rho_\mathrm{bg}$. Once these properties are defined,
- * one can compute $(r_s,\;\rho_s)$ from $(M_\Delta,\; c_\Delta)$.
+ * parametrization in terms of $M_\Delta$ and the concentration $c_\Delta$ given a mass
+ * defined by $\Delta$ and a background density $\rho_\mathrm{bg}$. These quantities are
+ * provided by the halo mass summary object, which is passed to the profile object at
+ * construction time.
  *
  * ## Computing $r_s$
  *
@@ -169,12 +165,13 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_ode_spline.h"
 #include "math/ncm_memory_pool.h"
+#include "lss/nc_halo_mass_summary.h"
 
-struct _NcHaloDensityProfilePrivate
+typedef struct _NcHaloDensityProfilePrivate
 {
-  NcHaloDensityProfileMassDef mdef;
+  NcHaloMassSummary *hms;
+  NcmModelCtrl *hms_ctrl;
   gdouble z;
-  gdouble Delta;
   gdouble reltol;
   gdouble lnXi;
   gdouble lnXf;
@@ -183,13 +180,11 @@ struct _NcHaloDensityProfilePrivate
   NcmSpline *dl_cyl_mass_s;
   gdouble rho_s0;
   gdouble r_s0;
-};
+} NcHaloDensityProfilePrivate;
 
 enum
 {
   PROP_0,
-  PROP_MDEF,
-  PROP_DELTA,
   PROP_RELTOL,
   PROP_LNXI,
   PROP_LNXF,
@@ -199,18 +194,18 @@ enum
 G_DEFINE_TYPE_WITH_PRIVATE (NcHaloDensityProfile, nc_halo_density_profile, NCM_TYPE_MODEL)
 
 #define VECTOR       (NCM_MODEL (dp))
-#define LOG10M_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_LOG10M_DELTA))
-#define C_DELTA      (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA))
+/*#define LOG10M_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_LOG10M_DELTA)) */
+/*#define C_DELTA      (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA)) */
 
 static void
 nc_halo_density_profile_init (NcHaloDensityProfile *dp)
 {
-  NcHaloDensityProfilePrivate * const self = dp->priv = nc_halo_density_profile_get_instance_private (dp);
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
   NcmSpline *s                             = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
-  self->mdef            = NC_HALO_DENSITY_PROFILE_MASS_DEF_LEN;
+  self->hms             = NULL;
+  self->hms_ctrl        = ncm_model_ctrl_new (NULL);
   self->z               = 0.0;
-  self->Delta           = 0.0;
   self->reltol          = 0.0;
   self->lnXi            = 0.0;
   self->lnXf            = 0.0;
@@ -226,19 +221,12 @@ nc_halo_density_profile_init (NcHaloDensityProfile *dp)
 static void
 _nc_halo_density_profile_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHaloDensityProfile *dp                 = NC_HALO_DENSITY_PROFILE (object);
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (object);
 
   g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE (object));
 
   switch (prop_id)
   {
-    case PROP_MDEF:
-      self->mdef = g_value_get_enum (value);
-      break;
-    case PROP_DELTA:
-      self->Delta = g_value_get_double (value);
-      break;
     case PROP_RELTOL:
       nc_halo_density_profile_set_reltol (dp, g_value_get_double (value));
       break;
@@ -257,19 +245,12 @@ _nc_halo_density_profile_set_property (GObject *object, guint prop_id, const GVa
 static void
 _nc_halo_density_profile_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHaloDensityProfile *dp                 = NC_HALO_DENSITY_PROFILE (object);
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (object);
 
   g_return_if_fail (NC_IS_HALO_DENSITY_PROFILE (object));
 
   switch (prop_id)
   {
-    case PROP_MDEF:
-      g_value_set_enum (value, self->mdef);
-      break;
-    case PROP_DELTA:
-      g_value_set_double (value, self->Delta);
-      break;
     case PROP_RELTOL:
       g_value_set_double (value, nc_halo_density_profile_get_reltol (dp));
       break;
@@ -289,10 +270,11 @@ static void
 _nc_halo_density_profile_dispose (GObject *object)
 {
   NcHaloDensityProfile *dp                 = NC_HALO_DENSITY_PROFILE (object);
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
   ncm_spline_clear (&self->dl_2d_density_s);
   ncm_spline_clear (&self->dl_cyl_mass_s);
+  ncm_model_ctrl_clear (&self->hms_ctrl);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_halo_density_profile_parent_class)->dispose (object);
@@ -307,10 +289,12 @@ _nc_halo_density_profile_finalize (GObject *object)
 
 NCM_MSET_MODEL_REGISTER_ID (nc_halo_density_profile, NC_TYPE_HALO_DENSITY_PROFILE);
 
+static void _nc_halo_density_profile_add_submodel (NcmModel *model, NcmModel *submodel);
+
 static gdouble _nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
 
-static void _nc_halo_density_profile_prepare_ctes (NcHaloDensityProfile *dp);
-static void _nc_halo_density_profile_prepare_dl_spher_mass (NcHaloDensityProfile *dp);
+static void _nc_halo_density_profile_prepare_ctes (NcHaloDensityProfile *dp, NcHICosmo *cosmo);
+static void _nc_halo_density_profile_prepare_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo);
 static void _nc_halo_density_profile_prepare_dl_2d_density (NcHaloDensityProfile *dp);
 static void _nc_halo_density_profile_prepare_dl_cyl_mass (NcHaloDensityProfile *dp);
 
@@ -333,78 +317,7 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
                               NCM_MSET_MODEL_MAIN);
 
   ncm_model_class_set_name_nick (model_class, "Matter Density Profile", "DensityProfile");
-  ncm_model_class_add_params (model_class, NC_HALO_DENSITY_PROFILE_SPARAM_LEN, 0, PROP_SIZE);
-
-  /**
-   * NcHaloDensityProfile:cDelta:
-   *
-   * Concentration parameter, $c_\Delta$, see Eq \eqref{def:cDelta}.
-   *
-   */
-  /**
-   * NcHaloDensityProfile:cDelta-fit:
-   *
-   * Boolean property that controls whether the parameter
-   * #NcHaloDensityProfile:cDelta should be included in
-   * a statistical analysis.
-   *
-   */
-  ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_C_DELTA, "c_{\\Delta}", "cDelta",
-                              1.0e-1,  30.0, 1.0e-1,
-                              NC_HALO_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_DEFAULT_C_DELTA,
-                              NCM_PARAM_TYPE_FIXED);
-
-  /**
-   * NcHaloDensityProfile:log10MDelta:
-   *
-   * Logarithm base 10 of the cluster mass $M_\Delta$ in units of solar masses $M_\odot$
-   * (ncm_c_mass_solar()) within $r_\Delta$, where $\Delta$ is
-   * the over-density, see Eq. \eqref{eq:mrr}.
-   *
-   */
-  /**
-   * NcHaloDensityProfile:log10MDelta-fit:
-   *
-   * Boolean property that controls whether the parameter
-   * #NcHaloDensityProfile:log10MDelta should be included in
-   * a statistical analysis.
-   *
-   */
-  ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_LOG10M_DELTA, "\\log_{10}(M_{\\Delta})", "log10MDelta",
-                              10.0,  17.0, 0.5,
-                              NC_HALO_DENSITY_PROFILE_DEFAULT_PARAMS_ABSTOL, NC_HALO_DENSITY_PROFILE_DEFAULT_LOG10M_DELTA,
-                              NCM_PARAM_TYPE_FIXED);
-
-  /**
-   * NcHaloDensityProfile:mass-def:
-   *
-   * Background density $\rho_\mathrm{bg}$ used in the mass definition \eqref{eq:mrr}.
-   * See the enumerator #NcHaloDensityProfileMassDef for more details about the
-   * background density definition.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_MDEF,
-                                   g_param_spec_enum ("mass-def",
-                                                      NULL,
-                                                      "Mass definition",
-                                                      NC_TYPE_HALO_DENSITY_PROFILE_MASS_DEF, NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcHaloDensityProfile:Delta:
-   *
-   * Constant that indicates the overdensity with respect to the background density $\rho_\mathrm{bg}$.
-   * See #NcHaloDensityProfile:mass-def.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_DELTA,
-                                   g_param_spec_double ("Delta",
-                                                        NULL,
-                                                        "Overdensity constant",
-                                                        100.0, 3200.0, 200.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
 
   /**
    * NcHaloDensityProfile:reltol:
@@ -450,10 +363,32 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
                                                         -G_MAXDOUBLE, +G_MAXDOUBLE, log (1.0e+4),
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+
+  model_class->add_submodel = &_nc_halo_density_profile_add_submodel;
+
   klass->eval_dl_density    = &_nc_halo_density_profile_eval_dl_density;
   klass->eval_dl_spher_mass = &nc_halo_density_profile_eval_numint_dl_spher_mass;
   klass->eval_dl_2d_density = &nc_halo_density_profile_eval_numint_dl_2d_density;
   klass->eval_dl_cyl_mass   = &nc_halo_density_profile_eval_numint_dl_cyl_mass;
+}
+
+static void
+_nc_halo_density_profile_add_submodel (NcmModel *model, NcmModel *submodel)
+{
+  /* Chain up : start */
+  NCM_MODEL_CLASS (nc_halo_density_profile_parent_class)->add_submodel (model, submodel);
+  {
+    NcHaloDensityProfile *dp                 = NC_HALO_DENSITY_PROFILE (model);
+    NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
+
+    if (ncm_model_id (submodel) == nc_halo_mass_summary_id ())
+    {
+      if (self->hms != NULL)
+        g_error ("Halo mass summary was already defined in `%s' class.", G_OBJECT_CLASS_NAME (dp));
+
+      self->hms = NC_HALO_MASS_SUMMARY (submodel);
+    }
+  }
 }
 
 static gdouble
@@ -473,16 +408,28 @@ enum
 };
 
 static void
-_nc_halo_density_profile_prepare_ctes (NcHaloDensityProfile *dp)
+_nc_halo_density_profile_hms_is_update (NcHaloDensityProfile *dp)
 {
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
+  gboolean hms_updated                     = ncm_model_ctrl_update (self->hms_ctrl, NCM_MODEL (self->hms));
+
+  if (hms_updated)
+    ncm_model_state_mark_outdated (NCM_MODEL (dp));
+}
+
+static void
+_nc_halo_density_profile_prepare_ctes (NcHaloDensityProfile *dp, NcHICosmo *cosmo)
+{
+  _nc_halo_density_profile_hms_is_update (dp);
+  
   if (!ncm_model_lstate_is_update (NCM_MODEL (dp), PREPARE_CTES))
   {
-    NcHaloDensityProfilePrivate * const self = dp->priv;
-    const gdouble cDelta                     = C_DELTA;
-    const gdouble MDelta                     = exp10 (LOG10M_DELTA);
+    NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
+    const gdouble cDelta                     = nc_halo_mass_summary_concentration (self->hms, cosmo);
+    const gdouble MDelta                     = nc_halo_mass_summary_mass (self->hms);
 
     self->r_s0   = cbrt (3.0 * MDelta / (4.0 * ncm_c_pi ())) / cDelta;
-    self->rho_s0 = gsl_pow_3 (cDelta) / (3.0 * nc_halo_density_profile_eval_dl_spher_mass (dp, cDelta));
+    self->rho_s0 = gsl_pow_3 (cDelta) / (3.0 * nc_halo_density_profile_eval_dl_spher_mass (dp, cosmo, cDelta));
 
     ncm_model_lstate_set_update (NCM_MODEL (dp), PREPARE_CTES);
   }
@@ -497,20 +444,23 @@ _nc_halo_density_profile_prepare_dl_spher_mass_int (gdouble x, gpointer userdata
 }
 
 static void
-_nc_halo_density_profile_prepare_dl_spher_mass (NcHaloDensityProfile *dp)
+_nc_halo_density_profile_prepare_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo)
 {
+  _nc_halo_density_profile_hms_is_update (dp);
+
   if (!ncm_model_lstate_is_update (NCM_MODEL (dp), PREPARE_DL_SPHER_MASS))
   {
-    NcHaloDensityProfilePrivate * const self = dp->priv;
+    NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
     gsl_integration_workspace **w            = ncm_integral_get_workspace ();
+    const gdouble cDelta                     = nc_halo_mass_summary_concentration (self->hms, cosmo);
+    gint key                                 = 6;
     gsl_function F;
     gdouble err;
-    gint key = 6;
 
     F.function = &_nc_halo_density_profile_prepare_dl_spher_mass_int;
     F.params   = dp;
 
-    gsl_integration_qag (&F, 0.0, C_DELTA, 0.0, self->reltol, NCM_INTEGRAL_PARTITION, key, *w, &self->dl_spher_mass, &err);
+    gsl_integration_qag (&F, 0.0, cDelta, 0.0, self->reltol, NCM_INTEGRAL_PARTITION, key, *w, &self->dl_spher_mass, &err);
 
     ncm_memory_pool_return (w);
     ncm_model_lstate_set_update (NCM_MODEL (dp), PREPARE_DL_SPHER_MASS);
@@ -539,7 +489,7 @@ static gdouble
 _nc_halo_density_profile_prepare_dl_2d_density_X (gdouble lnX, gpointer userdata)
 {
   NcHaloDensityProfile2D *dp2D             = (NcHaloDensityProfile2D *) userdata;
-  NcHaloDensityProfilePrivate * const self = dp2D->dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp2D->dp);
   gdouble err, dl_2d_density_dX, dl_2d_density_X, lnx0, lnx1;
   const gdouble dlnx = 2.0 * M_LN10;
   gdouble abstol     = 0.0;
@@ -567,9 +517,11 @@ _nc_halo_density_profile_prepare_dl_2d_density_X (gdouble lnX, gpointer userdata
 static void
 _nc_halo_density_profile_prepare_dl_2d_density (NcHaloDensityProfile *dp)
 {
+  _nc_halo_density_profile_hms_is_update (dp);
+
   if (!ncm_model_lstate_is_update (NCM_MODEL (dp), PREPARE_DL_2D_DENSITY))
   {
-    NcHaloDensityProfilePrivate * const self = dp->priv;
+    NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
     gsl_integration_workspace **w            = ncm_integral_get_workspace ();
     NcHaloDensityProfile2D dp2d;
     gsl_function F1, F2;
@@ -616,7 +568,7 @@ static gdouble
 _nc_halo_density_profile_prepare_dl_cyl_mass_X (gdouble lnX, gpointer userdata)
 {
   NcHaloDensityProfile2D *dp2D             = (NcHaloDensityProfile2D *) userdata;
-  NcHaloDensityProfilePrivate * const self = dp2D->dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp2D->dp);
 
   gdouble dl_cyl_mass_X = 0.0;
   gdouble err, dl_cyl_mass_X_i, X3;
@@ -650,9 +602,11 @@ _nc_halo_density_profile_prepare_dl_cyl_mass_X (gdouble lnX, gpointer userdata)
 static void
 _nc_halo_density_profile_prepare_dl_cyl_mass (NcHaloDensityProfile *dp)
 {
+  _nc_halo_density_profile_hms_is_update (dp);
+
   if (!ncm_model_lstate_is_update (NCM_MODEL (dp), PREPARE_DL_CYL_MASS))
   {
-    NcHaloDensityProfilePrivate * const self = dp->priv;
+    NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
     gsl_integration_workspace **w            = ncm_integral_get_workspace ();
     NcHaloDensityProfile2D dp2d;
     gsl_function F1, F12, F2;
@@ -732,7 +686,7 @@ nc_halo_density_profile_clear (NcHaloDensityProfile **dp)
 void
 nc_halo_density_profile_set_reltol (NcHaloDensityProfile *dp, const gdouble reltol)
 {
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
   g_assert_cmpfloat (reltol, >, GSL_DBL_EPSILON);
   g_assert_cmpfloat (reltol, <, 1.0);
@@ -752,7 +706,7 @@ nc_halo_density_profile_set_reltol (NcHaloDensityProfile *dp, const gdouble relt
 void
 nc_halo_density_profile_set_lnXi (NcHaloDensityProfile *dp, const gdouble lnXi)
 {
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
   self->lnXi = lnXi;
   ncm_model_state_mark_outdated (NCM_MODEL (dp));
@@ -769,7 +723,7 @@ nc_halo_density_profile_set_lnXi (NcHaloDensityProfile *dp, const gdouble lnXi)
 void
 nc_halo_density_profile_set_lnXf (NcHaloDensityProfile *dp, const gdouble lnXf)
 {
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
   self->lnXf = lnXf;
   ncm_model_state_mark_outdated (NCM_MODEL (dp));
@@ -786,7 +740,7 @@ nc_halo_density_profile_set_lnXf (NcHaloDensityProfile *dp, const gdouble lnXf)
 gdouble
 nc_halo_density_profile_get_reltol (NcHaloDensityProfile *dp)
 {
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
   return self->reltol;
 }
@@ -802,7 +756,7 @@ nc_halo_density_profile_get_reltol (NcHaloDensityProfile *dp)
 gdouble
 nc_halo_density_profile_get_lnXi (NcHaloDensityProfile *dp)
 {
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
   return self->lnXi;
 }
@@ -818,7 +772,7 @@ nc_halo_density_profile_get_lnXi (NcHaloDensityProfile *dp)
 gdouble
 nc_halo_density_profile_get_lnXf (NcHaloDensityProfile *dp)
 {
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
   return self->lnXf;
 }
@@ -841,11 +795,27 @@ nc_halo_density_profile_get_lnXf (NcHaloDensityProfile *dp)
 void
 nc_halo_density_profile_get_phys_limts (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z, gdouble *Ri, gdouble *Rf)
 {
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
   const gdouble r_s                        = nc_halo_density_profile_r_s (dp, cosmo, z);
 
   Ri[0] = exp (self->lnXi) * r_s;
   Rf[0] = exp (self->lnXf) * r_s;
+}
+
+/**
+ * nc_halo_density_profile_peek_mass_summary:
+ * @dp: a #NcHaloDensityProfile
+ *
+ * Peeks the #NcHaloMassSummary submodel.
+ *
+ * Returns: (transfer none): the #NcHaloMassSummary submodel.
+ */
+NcHaloMassSummary *
+nc_halo_density_profile_peek_mass_summary (NcHaloDensityProfile *dp)
+{
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
+
+  return self->hms;
 }
 
 /**
@@ -867,6 +837,7 @@ nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble
 /**
  * nc_halo_density_profile_eval_dl_spher_mass: (virtual eval_dl_spher_mass)
  * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
  * @x: dimensionless radius $x = r / r_s$
  *
  * This function computes the 2d projection of the dimensionless density
@@ -875,9 +846,12 @@ nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble
  * Returns: the value of the integral $I_{x^2\hat\rho}(x)$.
  */
 gdouble
-nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x)
+nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x)
 {
-  return NC_HALO_DENSITY_PROFILE_GET_CLASS (dp)->eval_dl_spher_mass (dp, C_DELTA);
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
+  gdouble concentration                    = nc_halo_mass_summary_concentration (self->hms, cosmo);
+
+  return NC_HALO_DENSITY_PROFILE_GET_CLASS (dp)->eval_dl_spher_mass (dp, cosmo, concentration);
 }
 
 /**
@@ -912,134 +886,6 @@ nc_halo_density_profile_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdoubl
   return NC_HALO_DENSITY_PROFILE_GET_CLASS (dp)->eval_dl_cyl_mass (dp, X);
 }
 
-#define _VIRIAL_DELTA(x) (18.0 * M_PI * M_PI + 82.0 * (x) - 39.0 * (x) * (x))
-
-/**
- * nc_halo_density_profile_Delta:
- * @dp: a #NcHaloDensityProfile
- * @cosmo: a #NcHICosmo
- * @z: redshift $z$
- *
- * This function computes the overdensity with respect to the mass density $\Delta$.
- *
- * The virial overdensity in units of the critical density.
- * Following Colossus code (Diemer 2018) INCLUIR REF!
- * This function uses the fitting formula of Bryan & Norman 1998 INCLUIR REF!
- *
- * Returns: the value of $\Delta$.
- */
-gdouble
-nc_halo_density_profile_Delta (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z)
-{
-  NcHaloDensityProfilePrivate * const self = dp->priv;
-
-  switch (self->mdef)
-  {
-    case NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN:
-    case NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL:
-
-      return self->Delta;
-
-      break;
-    case NC_HALO_DENSITY_PROFILE_MASS_DEF_VIRIAL:
-    {
-      const gdouble x = nc_hicosmo_E2Omega_m (cosmo, z) / nc_hicosmo_E2 (cosmo, z) - 1.0;
-
-      return _VIRIAL_DELTA (x);
-
-      break;
-    }
-    default:
-      g_assert_not_reached ();
-
-      return 0.0;
-
-      break;
-  }
-}
-
-/**
- * nc_halo_density_profile_rho_bg:
- * @dp: a #NcHaloDensityProfile
- * @cosmo: a #NcHICosmo
- * @z: redshift $z$
- *
- * This function computes the background mass density $\rho_\mathrm{bg}$ in $M_\odot\mathrm{Mpc}^{-3}$.
- *
- * Returns: the value of $\rho_\mathrm{bg}\;\left[M_\odot\mathrm{Mpc}^{-3}\right]$.
- */
-gdouble
-nc_halo_density_profile_rho_bg (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z)
-{
-  NcHaloDensityProfilePrivate * const self = dp->priv;
-
-  switch (self->mdef)
-  {
-    case NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN:
-
-      return ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * nc_hicosmo_E2Omega_m (cosmo, z);
-
-      break;
-    case NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL:
-    case NC_HALO_DENSITY_PROFILE_MASS_DEF_VIRIAL:
-
-      return ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * nc_hicosmo_E2 (cosmo, z);
-
-      break;
-    default:
-      g_assert_not_reached ();
-
-      return 0.0;
-
-      break;
-  }
-}
-
-/**
- * nc_halo_density_profile_Delta_rho_bg:
- * @dp: a #NcHaloDensityProfile
- * @cosmo: a #NcHICosmo
- * @z: redshift $z$
- *
- * This function computes the mass density threshold $\Delta\,\rho_bg$ in $M_\odot\mathrm{Mpc}^{-3}$.
- *
- * Returns: the value of $\Delta\,\rho_bg\;\left[M_\odot\mathrm{Mpc}^{-3}\right]$.
- */
-gdouble
-nc_halo_density_profile_Delta_rho_bg (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z)
-{
-  NcHaloDensityProfilePrivate * const self = dp->priv;
-
-  switch (self->mdef)
-  {
-    case NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN:
-
-      return self->Delta * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * nc_hicosmo_E2Omega_m (cosmo, z);
-
-      break;
-    case NC_HALO_DENSITY_PROFILE_MASS_DEF_CRITICAL:
-
-      return self->Delta * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * nc_hicosmo_E2 (cosmo, z);
-
-      break;
-    case NC_HALO_DENSITY_PROFILE_MASS_DEF_VIRIAL:
-    {
-      const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
-      const gdouble x  = nc_hicosmo_E2Omega_m (cosmo, z) / E2 - 1.0;
-
-      return _VIRIAL_DELTA (x) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo) * E2;
-
-      break;
-    }
-    default:
-      g_assert_not_reached ();
-
-      return 0.0;
-
-      break;
-  }
-}
-
 /**
  * nc_halo_density_profile_rho_s:
  * @dp: a #NcHaloDensityProfile
@@ -1054,11 +900,11 @@ nc_halo_density_profile_Delta_rho_bg (NcHaloDensityProfile *dp, NcHICosmo *cosmo
 gdouble
 nc_halo_density_profile_rho_s (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z)
 {
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
-  _nc_halo_density_profile_prepare_ctes (dp);
+  _nc_halo_density_profile_prepare_ctes (dp, cosmo);
 
-  return self->rho_s0 * nc_halo_density_profile_Delta_rho_bg (dp, cosmo, z);
+  return self->rho_s0 * nc_halo_mass_summary_Delta_rho_bg (self->hms, cosmo, z);
 }
 
 /**
@@ -1075,11 +921,11 @@ nc_halo_density_profile_rho_s (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const
 gdouble
 nc_halo_density_profile_r_s (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z)
 {
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
-  _nc_halo_density_profile_prepare_ctes (dp);
+  _nc_halo_density_profile_prepare_ctes (dp, cosmo);
 
-  return self->r_s0 / cbrt (nc_halo_density_profile_Delta_rho_bg (dp, cosmo, z));
+  return self->r_s0 / cbrt (nc_halo_mass_summary_Delta_rho_bg (self->hms, cosmo, z));
 }
 
 /**
@@ -1097,10 +943,10 @@ nc_halo_density_profile_r_s (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const g
 void
 nc_halo_density_profile_r_s_rho_s (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z, gdouble *r_s, gdouble *rho_s)
 {
-  NcHaloDensityProfilePrivate * const self = dp->priv;
-  const gdouble Delta_rho_bg               = nc_halo_density_profile_Delta_rho_bg (dp, cosmo, z);
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
+  const gdouble Delta_rho_bg               = nc_halo_mass_summary_Delta_rho_bg (self->hms, cosmo, z);
 
-  _nc_halo_density_profile_prepare_ctes (dp);
+  _nc_halo_density_profile_prepare_ctes (dp, cosmo);
 
   r_s[0]   = self->r_s0 / cbrt (Delta_rho_bg);
   rho_s[0] = self->rho_s0 * Delta_rho_bg;
@@ -1141,13 +987,15 @@ nc_halo_density_profile_eval_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo
 gdouble
 nc_halo_density_profile_eval_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z)
 {
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
+  gdouble concentration                    = nc_halo_mass_summary_concentration (self->hms, cosmo);
   gdouble r_s, rho_s, sVol;
 
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, z, &r_s, &rho_s);
 
   sVol = 4.0 * ncm_c_pi () * gsl_pow_3 (r_s) * rho_s;
 
-  return sVol * nc_halo_density_profile_eval_dl_spher_mass (dp, C_DELTA);
+  return sVol * nc_halo_density_profile_eval_dl_spher_mass (dp, cosmo, concentration);
 }
 
 /**
@@ -1321,6 +1169,7 @@ nc_halo_density_profile_eval_cyl_mass_array (NcHaloDensityProfile *dp, NcHICosmo
 /**
  * nc_halo_density_profile_eval_numint_dl_spher_mass:
  * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
  * @x: dimensionless radius $x = r / r_s$
  *
  * This function computes the 2d projection of the dimensionless density
@@ -1331,11 +1180,11 @@ nc_halo_density_profile_eval_cyl_mass_array (NcHaloDensityProfile *dp, NcHICosmo
  * Returns: the value of the integral $I_{x^2\hat\rho}(c_\Delta)$.
  */
 gdouble
-nc_halo_density_profile_eval_numint_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x)
+nc_halo_density_profile_eval_numint_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x)
 {
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
-  _nc_halo_density_profile_prepare_dl_spher_mass (dp);
+  _nc_halo_density_profile_prepare_dl_spher_mass (dp, cosmo);
 
   return self->dl_spher_mass;
 }
@@ -1355,7 +1204,7 @@ nc_halo_density_profile_eval_numint_dl_spher_mass (NcHaloDensityProfile *dp, con
 gdouble
 nc_halo_density_profile_eval_numint_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X)
 {
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
   _nc_halo_density_profile_prepare_dl_2d_density (dp);
 
@@ -1377,10 +1226,32 @@ nc_halo_density_profile_eval_numint_dl_2d_density (NcHaloDensityProfile *dp, con
 gdouble
 nc_halo_density_profile_eval_numint_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X)
 {
-  NcHaloDensityProfilePrivate * const self = dp->priv;
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
   _nc_halo_density_profile_prepare_dl_cyl_mass (dp);
 
   return exp (ncm_spline_eval (self->dl_cyl_mass_s, log (X)));
+}
+
+/**
+ * nc_halo_density_profile_get_numint_splines:
+ * @dp: a #NcHaloDensityProfile
+ * @twod_density: (out) (transfer full): size of the dl_2d_density_s spline
+ * @cyl_mass: (out) (transfer full): size of the dl_cyl_mass_s spline
+ *
+ * This function provides the splines computed in this object, #NcHaloDensityProfile:
+ * dl_2d_density_s and dl_cyl_mass_s.
+ *
+ */
+void
+nc_halo_density_profile_get_numint_splines (NcHaloDensityProfile *dp, NcmSpline **twod_density, NcmSpline **cyl_mass)
+{
+  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
+
+  _nc_halo_density_profile_prepare_dl_cyl_mass (dp);
+  _nc_halo_density_profile_prepare_dl_2d_density (dp);
+
+  *twod_density = ncm_spline_ref (self->dl_2d_density_s);
+  *cyl_mass     = ncm_spline_ref (self->dl_cyl_mass_s);
 }
 

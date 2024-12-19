@@ -38,6 +38,7 @@
 typedef struct _TestNcGalaxySDShapeGauss
 {
   NcHICosmo *cosmo;
+  NcHaloMassSummary *hms;
   NcHaloDensityProfile *density_profile;
   NcHaloPosition *halo_position;
   NcWLSurfaceMassDensity *surface_mass_density;
@@ -114,7 +115,8 @@ test_nc_galaxy_sd_shape_gauss_new (TestNcGalaxySDShapeGauss *test, gconstpointer
 
   NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcDistance *dist            = nc_distance_new (100.0);
-  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (NC_HALO_DENSITY_PROFILE_MASS_DEF_MEAN, 200.0));
+  NcHaloMassSummary *hms      = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
   NcHaloPosition *hp          = nc_halo_position_new (dist);
   NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
 
@@ -122,6 +124,7 @@ test_nc_galaxy_sd_shape_gauss_new (TestNcGalaxySDShapeGauss *test, gconstpointer
 
   test->cosmo = cosmo;
 
+  test->hms                  = hms;
   test->density_profile      = dp;
   test->halo_position        = hp;
   test->surface_mass_density = smd;
@@ -144,6 +147,7 @@ test_nc_galaxy_sd_shape_free (TestNcGalaxySDShapeGauss *test, gconstpointer pdat
 {
   nc_hicosmo_clear (&test->cosmo);
   nc_halo_density_profile_clear (&test->density_profile);
+  nc_halo_mass_summary_clear (&test->hms);
   nc_halo_position_clear (&test->halo_position);
   nc_wl_surface_mass_density_clear (&test->surface_mass_density);
 

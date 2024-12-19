@@ -76,11 +76,21 @@
 #include <gsl/gsl_sf_expint.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcHaloDensityProfileNFW, nc_halo_density_profile_nfw, NC_TYPE_HALO_DENSITY_PROFILE)
+
+typedef struct _NcHaloDensityProfileNFWPrivate
+{
+  NcHaloMassSummary *hms;
+} NcHaloDensityProfileNFWPrivate;
+
+struct _NcHaloDensityProfileNFW
+{
+  /*< private > */
+  NcHaloDensityProfile parent_instance;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcHaloDensityProfileNFW, nc_halo_density_profile_nfw, NC_TYPE_HALO_DENSITY_PROFILE)
 
 #define VECTOR  (NCM_MODEL (dpnfw))
-#define M_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_M_DELTA))
-#define C_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA))
 
 enum
 {
@@ -91,6 +101,9 @@ enum
 static void
 nc_halo_density_profile_nfw_init (NcHaloDensityProfileNFW *dpnfw)
 {
+  NcHaloDensityProfileNFWPrivate * const self = nc_halo_density_profile_nfw_get_instance_private (dpnfw);
+
+  self->hms = NULL;
 }
 
 static void
@@ -128,8 +141,10 @@ _nc_halo_density_profile_nfw_finalize (GObject *object)
   G_OBJECT_CLASS (nc_halo_density_profile_nfw_parent_class)->finalize (object);
 }
 
+static void _nc_halo_density_profile_nfw_add_submodel (NcmModel *model, NcmModel *submodel);
+
 static gdouble _nc_halo_density_profile_nfw_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
-static gdouble _nc_halo_density_profile_nfw_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x);
+static gdouble _nc_halo_density_profile_nfw_eval_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x);
 static gdouble _nc_halo_density_profile_nfw_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
 static gdouble _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X);
 
@@ -150,10 +165,31 @@ nc_halo_density_profile_nfw_class_init (NcHaloDensityProfileNFWClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
+  model_class->add_submodel = &_nc_halo_density_profile_nfw_add_submodel;
+
   dp_class->eval_dl_density    = &_nc_halo_density_profile_nfw_eval_dl_density;
   dp_class->eval_dl_spher_mass = &_nc_halo_density_profile_nfw_eval_dl_spher_mass;
   dp_class->eval_dl_2d_density = &_nc_halo_density_profile_nfw_eval_dl_2d_density;
   dp_class->eval_dl_cyl_mass   = &_nc_halo_density_profile_nfw_eval_dl_cyl_mass;
+}
+
+static void
+_nc_halo_density_profile_nfw_add_submodel (NcmModel *model, NcmModel *submodel)
+{
+  /* Chain up : start */
+  NCM_MODEL_CLASS (nc_halo_density_profile_nfw_parent_class)->add_submodel (model, submodel);
+  {
+    NcHaloDensityProfileNFW *dpnfw              = NC_HALO_DENSITY_PROFILE_NFW (model);
+    NcHaloDensityProfileNFWPrivate * const self = nc_halo_density_profile_nfw_get_instance_private (dpnfw);
+
+    if (ncm_model_id (submodel) == nc_halo_mass_summary_id ())
+    {
+      if (self->hms != NULL)
+        g_error ("Halo mass summary was already defined in `%s' class.", G_OBJECT_CLASS_NAME (dpnfw));
+
+      self->hms = NC_HALO_MASS_SUMMARY (submodel);
+    }
+  }
 }
 
 static gdouble
@@ -163,7 +199,7 @@ _nc_halo_density_profile_nfw_eval_dl_density (NcHaloDensityProfile *dp, const gd
 }
 
 static gdouble
-_nc_halo_density_profile_nfw_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x)
+_nc_halo_density_profile_nfw_eval_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x)
 {
   return log1p (x) - x / (1.0 + x);
 }
@@ -292,23 +328,27 @@ nc_halo_density_profile_nfw_class_set_ni (gboolean num)
 
 /**
  * nc_halo_density_profile_nfw_new:
- * @mdef: a #NcHaloDensityProfileMassDef
- * @Delta: cluster threshold mass definition $\Delta$
+ * @hms: a #NcHaloMassSummary
  *
  * This function returns the #NcHaloDensityProfileNFW implementation of
- * #NcHaloDensityProfile setting #NcHaloDensityProfile:mass-def to @mdef
- * and #NcHaloDensityProfile:Delta to @Delta.
+ * #NcHaloDensityProfile given a #NcHaloMassSummary.
  *
  * Returns: a new instance of #NcHaloDensityProfileNFW.
  */
 NcHaloDensityProfileNFW *
-nc_halo_density_profile_nfw_new (const NcHaloDensityProfileMassDef mdef, const gdouble Delta)
+nc_halo_density_profile_nfw_new (NcHaloMassSummary *hms)
 {
-  NcHaloDensityProfileNFW *dp_nfw = g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_NFW,
-                                                  "mass-def", mdef,
-                                                  "Delta",    Delta,
-                                                  NULL);
+  NcmObjArray *submodels = ncm_obj_array_new ();
 
-  return dp_nfw;
+  ncm_obj_array_add (submodels, G_OBJECT (hms));
+  {
+    NcHaloDensityProfileNFW *dp_nfw = g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_NFW,
+                                                    "submodel-array", submodels,
+                                                    NULL);
+
+    ncm_obj_array_unref (submodels);
+
+    return dp_nfw;
+  }
 }
 

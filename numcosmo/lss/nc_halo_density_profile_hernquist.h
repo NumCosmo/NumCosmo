@@ -30,34 +30,15 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/lss/nc_halo_density_profile.h>
+#include <numcosmo/lss/nc_halo_mass_summary.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST             (nc_halo_density_profile_hernquist_get_type ())
-#define NC_HALO_DENSITY_PROFILE_HERNQUIST(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST, NcHaloDensityProfileHernquist))
-#define NC_HALO_DENSITY_PROFILE_HERNQUIST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST, NcHaloDensityProfileHernquistClass))
-#define NC_IS_HALO_DENSITY_PROFILE_HERNQUIST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST))
-#define NC_IS_HALO_DENSITY_PROFILE_HERNQUIST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST))
-#define NC_HALO_DENSITY_PROFILE_HERNQUIST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST, NcHaloDensityProfileHernquistClass))
+#define NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST (nc_halo_density_profile_hernquist_get_type ())
 
-typedef struct _NcHaloDensityProfileHernquistClass NcHaloDensityProfileHernquistClass;
-typedef struct _NcHaloDensityProfileHernquist NcHaloDensityProfileHernquist;
+G_DECLARE_FINAL_TYPE (NcHaloDensityProfileHernquist, nc_halo_density_profile_hernquist, NC, HALO_DENSITY_PROFILE_HERNQUIST, NcHaloDensityProfile)
 
-struct _NcHaloDensityProfileHernquistClass
-{
-  /*< private > */
-  NcHaloDensityProfileClass parent_class;
-};
-
-struct _NcHaloDensityProfileHernquist
-{
-  /*< private > */
-  NcHaloDensityProfile parent_instance;
-};
-
-GType nc_halo_density_profile_hernquist_get_type (void) G_GNUC_CONST;
-
-NcHaloDensityProfileHernquist *nc_halo_density_profile_hernquist_new (const NcHaloDensityProfileMassDef mdef, const gdouble Delta);
+NcHaloDensityProfileHernquist *nc_halo_density_profile_hernquist_new (NcHaloMassSummary * hms);
 
 G_END_DECLS
 

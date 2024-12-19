@@ -1,7 +1,7 @@
 project(
   'numcosmo',
   ['c', 'fortran'],
-  version: '0.22.0',
+  version: '0.23.0',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.2.0',
   default_options: [
@@ -143,6 +143,10 @@ numcosmo_conf_prefix = ''
 numcosmo_conf.set('NUMCOSMO_MAJOR_VERSION', major_version)
 numcosmo_conf.set('NUMCOSMO_MINOR_VERSION', minor_version)
 numcosmo_conf.set('NUMCOSMO_MICRO_VERSION', micro_version)
+numcosmo_conf.set(
+  'NUMCOSMO_VERSION_NUMBER',
+  major_version * 10000 + minor_version * 100 + micro_version,
+)
 numcosmo_conf.set('NUMCOSMO_INTERFACE_AGE', interface_age)
 numcosmo_conf.set('NUMCOSMO_BINARY_AGE', binary_age)
 numcosmo_conf.set_quoted(
@@ -159,6 +163,19 @@ numcosmo_conf.set_quoted('PACKAGE_URL', 'https://github.com/NumCosmo/NumCosmo')
 numcosmo_conf.set_quoted('PACKAGE_VERSION', meson.project_version())
 numcosmo_conf.set_quoted('PACKAGE_DATA_DIR', numcosmo_pkgdatadir)
 numcosmo_conf.set_quoted('PACKAGE_SOURCE_DIR', numcosmo_source_dir)
+
+git_bin = find_program('git', required: false)
+
+if git_bin.found()
+  r = run_command(git_bin, ['rev-parse', '--short', 'HEAD'], check: false)
+  if r.returncode() == 0
+    numcosmo_conf.set_quoted('NUMCOSMO_GIT_COMMIT', r.stdout().strip())
+  else
+    numcosmo_conf.set_quoted('NUMCOSMO_GIT_COMMIT', 'unknown')
+  endif
+else
+  numcosmo_conf.set_quoted('NUMCOSMO_GIT_COMMIT', 'unknown')
+endif
 
 numcosmo_build_cfg.set('NUMCOSMO_MAJOR_VERSION', major_version)
 numcosmo_build_cfg.set('NUMCOSMO_MINOR_VERSION', minor_version)

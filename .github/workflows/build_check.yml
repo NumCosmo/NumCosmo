@@ -47,7 +47,7 @@ jobs:
         ./example_simple
         ./example_ca
     - name: Check NumCosmo
-      run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
+      run: meson test -C build --num-processes=6 || (cat build/meson-logs/testlog.txt && exit 1)
     - name: Create a NumCosmo tarball
       run: meson dist -C build --no-tests
     - name: Upload a Build Artifact
@@ -81,6 +81,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Brew install pre-requisites
       run: |
+        brew uninstall --ignore-dependencies --force pkg-config@0.29.2
         brew install python3 gobject-introspection pygobject3 numpy meson ninja gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran gtk-doc glib openblas
     - name: Pip install pre-requisites
       run: |
@@ -100,7 +101,7 @@ jobs:
         python3 example_simple.py
         python3 example_cbe.py
     - name: Check NumCosmo
-      run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
+      run: meson test -C build --num-processes=6 || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge:
     name: (${{ matrix.os }}, py${{ matrix.python-version }}, ${{ matrix.mpi }}, Miniforge)
@@ -124,9 +125,11 @@ jobs:
           auto-update-conda: true
           activate-environment: numcosmo_developer
           python-version: ${{ matrix.python-version }}
-          miniforge-variant: Mambaforge
+          mamba-version: "*"
           show-channel-urls: true
           use-mamba: true
+          conda-remove-defaults: true
+          miniforge-version: latest
       - name: Cache date
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
@@ -145,6 +148,7 @@ jobs:
           mamba env update -q -v -n numcosmo_developer -f devel_environment.yml
           mamba remove -q -v -n numcosmo_developer openmpi
           mamba install -q -v -n numcosmo_developer ${{ matrix.mpi }}
+          mamba install -q -v -n numcosmo_developer libfabric-devel
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Setting up NumCosmo
         run: |
@@ -179,7 +183,7 @@ jobs:
       #  run: |
       #    pylint --rcfile .pylintrc numcosmo_py
       - name: Check NumCosmo
-        run: meson test -C build || (cat build/meson-logs/testlog.txt && exit 1)
+        run: meson test -C build --num-processes=6 || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge-coverage:
     name: Coverage (${{ matrix.os }}, py${{ matrix.python-version }}, openmpi, Miniforge)
@@ -199,9 +203,11 @@ jobs:
           auto-update-conda: true
           activate-environment: numcosmo_developer
           python-version: ${{ matrix.python-version }}
-          miniforge-variant: Mambaforge
+          mamba-version: "*"
           show-channel-urls: true
           use-mamba: true
+          conda-remove-defaults: true
+          miniforge-version: latest
       - name: Cache date
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
@@ -235,7 +241,7 @@ jobs:
         # Third run to merge the coverage base and the coverage for the tests
         run: |
           lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
-          meson test -C build --timeout-multiplier 0 || (cat build/meson-logs/testlog.txt && exit 1)
+          meson test -C build --timeout-multiplier 0 --num-processes=6 || (cat build/meson-logs/testlog.txt && exit 1)
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
           lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/class/*' '*/levmar/*' '*/libcuba/*' '*/plc/*' '*/sundials/*' '*/toeplitz/*' '*/tools/*' --output-file numcosmo-coverage.info
@@ -244,7 +250,7 @@ jobs:
         with:
           disable_search: true
           fail_ci_if_error: true
-          files: ./numcosmo-coverage.info
+          files: ./numcosmo-coverage.info,./build/coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
       #- name: Generate coverage

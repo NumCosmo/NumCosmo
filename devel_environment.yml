@@ -6,6 +6,7 @@ dependencies:
   - black
   - c-compiler
   - cfitsio
+  - coverage
   - fftw
   - flake8
   - fortran-compiler
@@ -37,10 +38,12 @@ dependencies:
   - pygobject
   - pylint
   - pytest
+  - pytest-cov
   - python >= 3.10
   - rich
   - scipy
   - setuptools < 74
   - tqdm
   - typer
+  - zlib
 name: numcosmo_developer

@@ -76,11 +76,20 @@
 #include <gsl/gsl_sf_expint.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_TYPE (NcHaloDensityProfileHernquist, nc_halo_density_profile_hernquist, NC_TYPE_HALO_DENSITY_PROFILE)
+typedef struct _NcHaloDensityProfileHernquistPrivate
+{
+  NcHaloMassSummary *hms;
+} NcHaloDensityProfileHernquistPrivate;
+
+struct _NcHaloDensityProfileHernquist
+{
+  /*< private > */
+  NcHaloDensityProfile parent_instance;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcHaloDensityProfileHernquist, nc_halo_density_profile_hernquist, NC_TYPE_HALO_DENSITY_PROFILE)
 
 #define VECTOR  (NCM_MODEL (dph))
-#define M_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_M_DELTA))
-#define C_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA))
 
 enum
 {
@@ -91,6 +100,9 @@ enum
 static void
 nc_halo_density_profile_hernquist_init (NcHaloDensityProfileHernquist *dph)
 {
+  NcHaloDensityProfileHernquistPrivate * const self = nc_halo_density_profile_hernquist_get_instance_private (dph);
+
+  self->hms = NULL;
 }
 
 static void
@@ -128,8 +140,9 @@ _nc_halo_density_profile_hernquist_finalize (GObject *object)
   G_OBJECT_CLASS (nc_halo_density_profile_hernquist_parent_class)->finalize (object);
 }
 
+static void _nc_halo_density_profile_hernquist_add_submodel (NcmModel *model, NcmModel *submodel);
 static gdouble _nc_halo_density_profile_hernquist_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
-static gdouble _nc_halo_density_profile_hernquist_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x);
+static gdouble _nc_halo_density_profile_hernquist_eval_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x);
 static gdouble _nc_halo_density_profile_hernquist_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
 static gdouble _nc_halo_density_profile_hernquist_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X);
 
@@ -150,10 +163,31 @@ nc_halo_density_profile_hernquist_class_init (NcHaloDensityProfileHernquistClass
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
+  model_class->add_submodel = &_nc_halo_density_profile_hernquist_add_submodel;
+
   dp_class->eval_dl_density    = &_nc_halo_density_profile_hernquist_eval_dl_density;
   dp_class->eval_dl_spher_mass = &_nc_halo_density_profile_hernquist_eval_dl_spher_mass;
   dp_class->eval_dl_2d_density = &_nc_halo_density_profile_hernquist_eval_dl_2d_density;
   dp_class->eval_dl_cyl_mass   = &_nc_halo_density_profile_hernquist_eval_dl_cyl_mass;
+}
+
+static void
+_nc_halo_density_profile_hernquist_add_submodel (NcmModel *model, NcmModel *submodel)
+{
+  /* Chain up : start */
+  NCM_MODEL_CLASS (nc_halo_density_profile_hernquist_parent_class)->add_submodel (model, submodel);
+  {
+    NcHaloDensityProfileHernquist *dph                = NC_HALO_DENSITY_PROFILE_HERNQUIST (model);
+    NcHaloDensityProfileHernquistPrivate * const self = nc_halo_density_profile_hernquist_get_instance_private (dph);
+
+    if (ncm_model_id (submodel) == nc_halo_mass_summary_id ())
+    {
+      if (self->hms != NULL)
+        g_error ("Halo mass summary was already defined in `%s' class.", G_OBJECT_CLASS_NAME (dph));
+
+      self->hms = NC_HALO_MASS_SUMMARY (submodel);
+    }
+  }
 }
 
 static gdouble
@@ -163,7 +197,7 @@ _nc_halo_density_profile_hernquist_eval_dl_density (NcHaloDensityProfile *dp, co
 }
 
 static gdouble
-_nc_halo_density_profile_hernquist_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x)
+_nc_halo_density_profile_hernquist_eval_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x)
 {
   return gsl_pow_2 (x) / (2.0 * gsl_pow_2 (1.0 + x));
 }
@@ -237,23 +271,28 @@ _nc_halo_density_profile_hernquist_eval_dl_cyl_mass (NcHaloDensityProfile *dp, c
 
 /**
  * nc_halo_density_profile_hernquist_new:
- * @mdef: a #NcHaloDensityProfileMassDef
- * @Delta: cluster threshold mass definition $\Delta$
+ * @hms: a #NcHaloMassSummary
  *
  * This function returns the #NcHaloDensityProfileHernquist implementation of
- * #NcHaloDensityProfile setting #NcHaloDensityProfile:mass-def to @mdef
- * and #NcHaloDensityProfile:Delta to @Delta.
+ * #NcHaloDensityProfile given #NcHaloMassSummary.
  *
  * Returns: a new instance of #NcHaloDensityProfileHernquist.
  */
 NcHaloDensityProfileHernquist *
-nc_halo_density_profile_hernquist_new (const NcHaloDensityProfileMassDef mdef, const gdouble Delta)
+nc_halo_density_profile_hernquist_new (NcHaloMassSummary *hms)
 {
-  NcHaloDensityProfileHernquist *dph = g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST,
-                                                     "mass-def", mdef,
-                                                     "Delta",    Delta,
-                                                     NULL);
+  NcmObjArray *submodels = ncm_obj_array_new ();
 
-  return dph;
+  ncm_obj_array_add (submodels, G_OBJECT (hms));
+
+  {
+    NcHaloDensityProfileHernquist *dph = g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST,
+                                                       "submodel-array", submodels,
+                                                       NULL);
+
+    ncm_obj_array_unref (submodels);
+
+    return dph;
+  }
 }
 

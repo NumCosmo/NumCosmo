@@ -130,3 +130,49 @@ def test_set_fftw_from_env_str_invalid_timelimit_str(
 
     with pytest.raises(GLib.Error, match="Invalid FFTW planner timelimit 'invalid'"):
         Ncm.cfg_set_fftw_default_from_env_str("estimate", timelimit)
+
+
+def test_get_version() -> None:
+    """Test getting the version string."""
+    version = Ncm.cfg_get_version()
+    # This functions returns (10000 * major + 100 * minor + micro, major, minor, micro)
+    assert version == (2300, 0, 23, 0)
+
+
+def test_get_git_hash() -> None:
+    """Test getting the git hash."""
+    git_hash = Ncm.cfg_get_commit_hash()
+    assert len(git_hash) > 0
+
+
+def test_get_version_string() -> None:
+    """Test getting the version string."""
+    version = Ncm.cfg_get_version_string()
+    assert version == "0.23.0"
+
+
+def test_check_version() -> None:
+    """Test checking the version."""
+    version = Ncm.cfg_get_version()
+
+    assert Ncm.cfg_version_check(version[1], version[2], version[3])
+    # Check for a version that is not the current one, taking care of the
+    # possibility of major, macro or micro version being zero.
+    assert not Ncm.cfg_version_check(version[1] + 1, version[2], version[3])
+    assert not Ncm.cfg_version_check(version[1], version[2] + 1, version[3])
+    assert not Ncm.cfg_version_check(version[1], version[2], version[3] + 1)
+    assert not Ncm.cfg_version_check(version[1] + 1, version[2] + 1, version[3] + 1)
+    assert not Ncm.cfg_version_check(version[1] + 1, version[2], version[3] + 1)
+    assert not Ncm.cfg_version_check(version[1], version[2] + 1, version[3] + 1)
+    assert not Ncm.cfg_version_check(version[1] + 1, version[2] + 1, version[3])
+
+    # Now prior versions
+    if version[1] > 0:
+        assert Ncm.cfg_version_check(version[1] - 1, version[2], version[3])
+        assert Ncm.cfg_version_check(version[1] - 1, version[2] + 1, version[3])
+        assert Ncm.cfg_version_check(version[1] - 1, version[2], version[3] + 1)
+    if version[2] > 0:
+        assert Ncm.cfg_version_check(version[1], version[2] - 1, version[3])
+        assert Ncm.cfg_version_check(version[1], version[2] - 1, version[3] + 1)
+    if version[3] > 0:
+        assert Ncm.cfg_version_check(version[1], version[2], version[3] - 1)
