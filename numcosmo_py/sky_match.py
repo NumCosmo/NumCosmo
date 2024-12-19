@@ -61,7 +61,7 @@ def _load_fits_data(catalog: Path) -> fits.FITS_rec:
     return hdu1_data
 
 
-class NcSkyMatching:
+class SkyMatch:
     """Class to match objects in the sky halo-halo, cluster-halo, cluster-cluster."""
 
     def __init__(
