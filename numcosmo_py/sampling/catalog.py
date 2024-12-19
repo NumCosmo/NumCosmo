@@ -30,6 +30,7 @@ import numpy.typing as npt
 from getdist import MCSamples
 
 from numcosmo_py import Ncm
+from numcosmo_py.helper import npa_to_seq
 from .model import build_mset
 from ..plotting.getdist import mcat_to_mcsamples
 
@@ -80,7 +81,7 @@ class Catalog:
             if sample.shape[0] != ncols:
                 raise ValueError("sample shape does not match catalog")
 
-            self._catalog.add_from_vector(Ncm.Vector.new_array(sample.tolist()))
+            self._catalog.add_from_vector(Ncm.Vector.new_array(npa_to_seq(sample)))
 
         elif len(sample.shape) == 2:
             if sample.shape[1] != ncols:

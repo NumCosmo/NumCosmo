@@ -30,6 +30,7 @@ from numpy.testing import assert_allclose
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import npa_to_seq
 
 Ncm.cfg_init()
 
@@ -95,8 +96,8 @@ def test_halo_density_profile_basic(
     halo_mass_summary: Nc.HaloMassSummary,
 ):
     """Test HaloDensityProfile basic properties."""
-    R_array = np.geomspace(1e-2, 1e2, 100)
-    z_array = np.linspace(0.0, 1.0, 100)
+    R_array = np.geomspace(1e-2, 1e2, 100, dtype=np.float64)
+    z_array = np.linspace(0.0, 1.0, 100, dtype=np.float64)
     assert isinstance(halo_density_profile, Nc.HaloDensityProfile)
     assert halo_density_profile.peek_mass_summary() == halo_mass_summary
     for R, z in product(R_array, z_array):
@@ -114,10 +115,12 @@ def test_halo_density_profile_2d_density_vectorized(
     cosmo: Nc.HICosmo,
 ):
     """Test HaloDensityProfile 2D density vectorized."""
-    R_array = np.geomspace(1e-2, 1e2, 100)
-    z_array = np.linspace(0.0, 1.0, 100)
+    R_array = np.geomspace(1e-2, 1e2, 100, dtype=np.float64)
+    z_array = np.linspace(0.0, 1.0, 100, dtype=np.float64)
     twod_density_array = [
-        halo_density_profile.eval_2d_density_array(cosmo, R_array.tolist(), 1.0, 1.0, z)
+        halo_density_profile.eval_2d_density_array(
+            cosmo, npa_to_seq(R_array), 1.0, 1.0, z
+        )
         for z in z_array
     ]
     twod_density_ind = []
@@ -132,10 +135,12 @@ def test_halo_density_profile_cyl_mass_vectorized(
     cosmo: Nc.HICosmo,
 ):
     """Test HaloDensityProfile cylindrical mass vectorized."""
-    R_array = np.geomspace(1e-2, 1e2, 100)
-    z_array = np.linspace(0.0, 1.0, 100)
+    R_array = np.geomspace(1e-2, 1e2, 100, dtype=np.float64)
+    z_array = np.linspace(0.0, 1.0, 100, dtype=np.float64)
     cyl_mass_array = [
-        halo_density_profile.eval_cyl_mass_array(cosmo, R_array.tolist(), 1.0, 1.0, z)
+        halo_density_profile.eval_cyl_mass_array(
+            cosmo, npa_to_seq(R_array), 1.0, 1.0, z
+        )
         for z in z_array
     ]
     cyl_mass_ind = []
@@ -150,10 +155,10 @@ def test_halo_density_profile_density_vectorized(
     cosmo: Nc.HICosmo,
 ):
     """Test HaloDensityProfile density vectorized."""
-    R_array = np.geomspace(1e-2, 1e2, 100)
-    z_array = np.linspace(0.0, 1.0, 100)
+    R_array = np.geomspace(1e-2, 1e2, 100, dtype=np.float64)
+    z_array = np.linspace(0.0, 1.0, 100, dtype=np.float64)
     density_array = [
-        halo_density_profile.eval_density_array(cosmo, R_array.tolist(), 1.0, 1.0, z)
+        halo_density_profile.eval_density_array(cosmo, npa_to_seq(R_array), 1.0, 1.0, z)
         for z in z_array
     ]
     density_ind = []
