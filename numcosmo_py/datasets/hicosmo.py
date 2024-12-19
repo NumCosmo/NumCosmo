@@ -1,11 +1,11 @@
 #
-# no_perturbations.py
+# hicosmo.py
 #
 # Sun Mar 5 11:35:00 2023
 # Copyright  2023  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# no_perturbations.py
+# hicosmo.py
 # Copyright (C) 2023 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
@@ -22,10 +22,10 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-"""Factory functions to generate background cosmology likelihoods.
+"""Factory functions to create background cosmology likelihoods.
 
-This module contains factory functions to generate likelihoods for
-cosmology observables that do not involve perturbations.
+This module contains factory functions to create likelihoods for cosmology observables
+that do not involve perturbations.
 """
 
 from enum import Enum
