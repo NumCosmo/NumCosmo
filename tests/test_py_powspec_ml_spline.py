@@ -28,8 +28,10 @@ import pytest
 
 import numpy as np
 from numpy.testing import assert_allclose
+import numpy.typing as npt
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import npa_to_seq
 
 Ncm.cfg_init()
 
@@ -37,11 +39,13 @@ Ncm.cfg_init()
 @pytest.fixture(name="Pk")
 def fixture_Pk() -> Ncm.Spline:
     """Fixture for k array."""
-    ka = np.geomspace(1.0e-5, 1.0e1, 1000)
-    Pk = 1.0e-9 * (ka / 0.05) ** (0.96 - 1.0)
+    ka = np.geomspace(1.0e-5, 1.0e1, 1000, dtype=np.float64)
+    Pk: npt.NDArray[np.float64] = np.array(
+        1.0e-9 * (ka / 0.05) ** (0.96 - 1.0), dtype=np.float64
+    )
 
     Pk_spline = Ncm.SplineCubicNotaknot.new()
-    Pk_spline.set_array(ka.tolist(), Pk.tolist(), True)
+    Pk_spline.set_array(npa_to_seq(ka), npa_to_seq(Pk), True)
 
     return Pk_spline
 
@@ -165,7 +169,6 @@ def test_get_knots(Pk: Ncm.Spline) -> None:
 
 def test_serialization(Pk: Ncm.Spline) -> None:
     """Test the serialization of the power spectrum."""
-
     ps = Nc.PowspecMLSpline.new(Pk)
     assert ps is not None
 

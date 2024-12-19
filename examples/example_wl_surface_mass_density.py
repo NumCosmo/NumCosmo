@@ -56,7 +56,7 @@ def test_wl_surface_mass_density() -> None:
     #
     # New matter density profile
     #
-    hms = Nc.HaloMCParam.new(Nc.HaloMassSummaryMassDef.CRITICAL, 200)
+    hms = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.CRITICAL, 200)
     nfw = Nc.HaloDensityProfileNFW.new(hms)
     # Setting 4 as Douglas. In LCDM c = 5 corresponds to cluster masses.
     # (see Lokas and G. Mamon, astro-ph/0002395)

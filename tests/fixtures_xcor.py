@@ -28,11 +28,13 @@ from itertools import product
 import pytest
 
 import numpy as np
+import numpy.typing as npt
 
 import pyccl
 
 import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import npa_to_seq
 from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_ccl_cosmo_eh_linear,
     fixture_nc_cosmo_eh_linear,
@@ -112,12 +114,12 @@ def fixture_nc_tsz() -> Nc.XcorLimberKerneltSZ:
     return nc_tsz
 
 
-GAL_Z_CENTERS = np.linspace(0.3, 1.2, 2)
-GAL_Z_SIGMA = 0.02
-GAL_MAG_BIAS = [0.0, 1.345]
-GAL_BIAS = [0.0, 3.13]
-GAL_BIAS_NKNOTS = [1, 2, 4]
-GAL_PARAMS = [
+GAL_Z_CENTERS: npt.NDArray[np.float64] = np.linspace(0.3, 1.2, 2, dtype=np.float64)
+GAL_Z_SIGMA: float = 0.02
+GAL_MAG_BIAS: list[float] = [0.0, 1.345]
+GAL_BIAS: list[float] = [0.0, 3.13]
+GAL_BIAS_NKNOTS: list[int] = [1, 2, 4]
+GAL_PARAMS: list[tuple[float, float, float, int]] = [
     (mu, mbias, bias, bias_nknots)
     for mu, mbias, bias, bias_nknots in product(
         GAL_Z_CENTERS, GAL_MAG_BIAS, GAL_BIAS, GAL_BIAS_NKNOTS
@@ -142,10 +144,10 @@ def fixture_nc_gal(
     """Fixture for NumCosmo galaxy tracer."""
     mu, mbias, bias, bias_nknots = request.param
     sigma = GAL_Z_SIGMA
-    z_a = np.linspace(0.0, 2.0, 20_000)
+    z_a: npt.NDArray[np.float64] = np.linspace(0.0, 2.0, 20_000, dtype=np.float64)
     nz_a = np.exp(-((z_a - mu) ** 2) / sigma**2 / 2.0) / np.sqrt(2.0 * np.pi * sigma**2)
 
-    z_v = Ncm.Vector.new_array(z_a.tolist())
+    z_v = Ncm.Vector.new_array(npa_to_seq(z_a))
     nz_v = Ncm.Vector.new_array(nz_a.tolist())
     dndz = Ncm.SplineCubicNotaknot.new_full(z_v, nz_v, True)
 
@@ -194,10 +196,10 @@ def fixture_nc_weak_lensing(
     """Fixture for NumCosmo weak lensing tracer."""
     mu = request.param
     sigma = SRC_GAL_Z_SIGMA
-    z_a = np.linspace(0.0, 2.0, 20_000)
+    z_a = np.linspace(0.0, 2.0, 20_000, dtype=np.float64)
     nz_a = np.exp(-((z_a - mu) ** 2) / sigma**2 / 2.0) / np.sqrt(2.0 * np.pi * sigma**2)
 
-    z_v = Ncm.Vector.new_array(z_a.tolist())
+    z_v = Ncm.Vector.new_array(npa_to_seq(z_a))
     nz_v = Ncm.Vector.new_array(nz_a.tolist())
     dndz = Ncm.SplineCubicNotaknot.new_full(z_v, nz_v, True)
 
