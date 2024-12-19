@@ -24,10 +24,24 @@ class Coordinates(TypedDict, total=False):
     z: str
 
 
-def _check_coordinates(coordinates: Coordinates) -> None:
+def _check_coordinates(table: fits.FITS_rec, coordinates: Coordinates) -> None:
     """Check if the coordinates are provided."""
-    if "RA" not in coordinates or "DEC" not in coordinates:
+    if ("RA" not in coordinates) or ("DEC" not in coordinates):
         raise ValueError("RA and DEC coordinates must be provided.")
+
+    if (coordinates["RA"] not in table.names) or (
+        coordinates["DEC"] not in table.names
+    ):
+        raise ValueError(
+            f"RA and DEC coordinates mapped by {coordinates} "
+            f"not found in the provided catalog {table.names}."
+        )
+
+    if "z" in coordinates and coordinates["z"] not in table.names:
+        raise ValueError(
+            f"Redshift coordinate mapped by {coordinates} "
+            f"not found in the provided catalog {table.names}."
+        )
 
 
 def _load_fits_data(catalog: Path) -> fits.FITS_rec:
@@ -38,7 +52,7 @@ def _load_fits_data(catalog: Path) -> fits.FITS_rec:
     hdul1 = fits.open(catalog.as_posix())
     hdu1_data: fits.FITS_rec | None = None
     for hdu in hdul1:
-        if isinstance(hdu, fits.TableHDU):
+        if isinstance(hdu, (fits.TableHDU, fits.BinTableHDU)):
             hdu1_data = hdu.data
             break
     if hdu1_data is None:
@@ -60,11 +74,11 @@ class NcSkyMatching:
         match_properties: list[str] | None = None,
     ):
         """Initialize the class."""
-        self.query_catalog_path = query_catalog_path
-        self.match_catalog_path = match_catalog_path
+        self.query_data = _load_fits_data(query_catalog_path)
+        self.match_data = _load_fits_data(match_catalog_path)
 
-        _check_coordinates(query_coordinates)
-        _check_coordinates(match_coordinates)
+        _check_coordinates(self.query_data, query_coordinates)
+        _check_coordinates(self.match_data, match_coordinates)
 
         self.query_coordinates = query_coordinates
         self.match_coordinates = match_coordinates
@@ -120,20 +134,17 @@ class NcSkyMatching:
             for prop in self.match_properties:
                 matched[prop] = []
 
-        query_data = _load_fits_data(self.query_catalog_path)
-        match_data = _load_fits_data(self.match_catalog_path)
-
         # Print columns for each file
         theta_q, phi_q = self.ra_dec_to_theta_phi(
-            query_data[self.query_coordinates["RA"]],
-            query_data[self.query_coordinates["DEC"]],
+            self.query_data[self.query_coordinates["RA"]],
+            self.query_data[self.query_coordinates["DEC"]],
         )
-        z_q = query_data[self.query_coordinates["z"]]
+        z_q = self.query_data[self.query_coordinates["z"]]
         theta_m, phi_m = self.ra_dec_to_theta_phi(
-            match_data[self.match_coordinates["RA"]],
-            match_data[self.match_coordinates["DEC"]],
+            self.match_data[self.match_coordinates["RA"]],
+            self.match_data[self.match_coordinates["DEC"]],
         )
-        z_m = match_data[self.match_coordinates["z"]]
+        z_m = self.match_data[self.match_coordinates["z"]]
 
         snn = Ncm.SphereNN()
         dist = Nc.Distance.new(3.0)
@@ -151,34 +162,35 @@ class NcSkyMatching:
             tqdm.tqdm(loop_arg, total=len(z_q)) if verbose else loop_arg
         ):
             r = dist.comoving(cosmo, z)
-            distances_list, indices = snn.knn_search_distances(
+            distances_list, indices_list = snn.knn_search_distances(
                 r, theta, phi, n_nearest_neighbours
             )
             distances = np.sqrt(distances_list) * cosmo.RH_Mpc()
+            indices = np.array(indices_list)
 
-            matched["RA"].append(match_data[self.match_coordinates["RA"]][i])
-            matched["DEC"].append(match_data[self.match_coordinates["DEC"]][i])
-            matched["z"].append(match_data[self.match_coordinates["z"]][i])
+            matched["RA"].append(self.query_data[self.query_coordinates["RA"]][i])
+            matched["DEC"].append(self.query_data[self.query_coordinates["DEC"]][i])
+            matched["z"].append(self.query_data[self.query_coordinates["z"]][i])
             matched["ID"].append(i)
 
             if self.match_properties is not None:
                 for prop in self.match_properties:
-                    matched[prop].append(match_data[prop][i])
+                    matched[prop].append(self.match_data[prop][i])
 
             # Select only the halos that are within the matching distance
             matching_dist_indices = distances < matching_distance
+            indices = indices[matching_dist_indices]
             distances_matched = distances[matching_dist_indices]
-            ID_matched = indices[matching_dist_indices]
 
             # Get the matched halos properties
-            RA_matched = self.query_coordinates["RA"][ID_matched]
-            DEC_matched = self.query_coordinates["DEC"][ID_matched]
-            z_matched = self.query_coordinates["z"][ID_matched]
+            RA_matched = self.match_data[self.match_coordinates["RA"]][indices]
+            DEC_matched = self.match_data[self.match_coordinates["DEC"]][indices]
+            z_matched = self.match_data[self.match_coordinates["z"]][indices]
             if self.query_properties is not None:
                 for prop in self.query_properties:
-                    matched[prop].append(query_data[prop][ID_matched])
+                    matched[prop].append(self.query_data[prop][i])
 
-            matched["ID_matched"].append(ID_matched)
+            matched["ID_matched"].append(indices)
             matched["distances Mpc"].append(distances_matched)
             matched["RA_matched"].append(RA_matched)
             matched["DEC_matched"].append(DEC_matched)
@@ -213,45 +225,44 @@ class NcSkyMatching:
             for prop in self.match_properties:
                 matched[prop] = []
 
-        query_data = _load_fits_data(self.query_catalog_path)
-        match_data = _load_fits_data(self.match_catalog_path)
         if (matching_distance < 0) or (matching_distance > np.pi):
             raise ValueError("The matching distance must be between 0 and pi.")
 
         # Print columns for each file
         theta_q, phi_q = self.ra_dec_to_theta_phi(
-            query_data[self.query_coordinates["RA"]],
-            query_data[self.query_coordinates["DEC"]],
+            self.query_data[self.query_coordinates["RA"]],
+            self.query_data[self.query_coordinates["DEC"]],
         )
         theta_m, phi_m = self.ra_dec_to_theta_phi(
-            match_data[self.match_coordinates["RA"]],
-            match_data[self.match_coordinates["DEC"]],
+            self.match_data[self.match_coordinates["RA"]],
+            self.match_data[self.match_coordinates["DEC"]],
         )
         r_m = np.ones_like(theta_m)
 
         snn = Ncm.SphereNN()
-        snn.insert_array(r_m, phi_m, theta_m)
+        snn.insert_array(r_m, theta_m, phi_m)
         snn.rebuild()
 
         loop_arg = enumerate(zip(theta_q, phi_q))
         for i, (theta, phi) in (
             tqdm.tqdm(loop_arg, total=len(theta_q)) if verbose else loop_arg
         ):
-            distances_list, indices = snn.knn_search_distances(
+            distances_list, indices_list = snn.knn_search_distances(
                 1.0, theta, phi, n_nearest_neighbours
             )
 
             # Below we convert the euclidean distances between two points in the sphere
             # with radius 1 to the angular distances between the two points.
             distances = 2 * np.arcsin(np.sqrt(distances_list) / 2)
+            indices = np.array(indices_list)
 
-            matched["RA"].append(match_data[self.match_coordinates["RA"]][i])
-            matched["DEC"].append(match_data[self.match_coordinates["DEC"]][i])
+            matched["RA"].append(self.query_data[self.query_coordinates["RA"]][i])
+            matched["DEC"].append(self.query_data[self.query_coordinates["DEC"]][i])
             matched["ID"].append(i)
 
             if self.match_properties is not None:
                 for prop in self.match_properties:
-                    matched[prop].append(match_data[prop][i])
+                    matched[prop].append(self.match_data[prop][i])
 
             matching_distances_indices = distances < matching_distance
             indices = indices[matching_distances_indices]
@@ -260,14 +271,14 @@ class NcSkyMatching:
             matched["ID_matched"].append(indices)
             matched["distances"].append(distances)
             matched["RA_matched"].append(
-                match_data[self.match_coordinates["RA"]][indices]
+                self.match_data[self.match_coordinates["RA"]][indices]
             )
             matched["DEC_matched"].append(
-                match_data[self.match_coordinates["DEC"]][indices]
+                self.match_data[self.match_coordinates["DEC"]][indices]
             )
 
             if self.query_properties is not None:
                 for prop in self.query_properties:
-                    matched[prop].append(query_data[prop][indices])
+                    matched[prop].append(self.query_data[prop][i])
 
         return Table(matched)
