@@ -162,7 +162,7 @@ def mset_set_parameters(
 ):
     """Set the experiment parameters."""
     for param, value in EXP_PARAMETERS[(exp_type, prim_model)].items():
-        pi = mset.fparam_get_pi_by_name(param)
+        pi = mset.param_get_by_full_name(param)
         if pi is None:
             raise ValueError(f"Invalid parameter: {param}")
         model, name = param.split(":")

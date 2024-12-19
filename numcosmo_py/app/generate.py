@@ -117,7 +117,6 @@ class GeneratePlanck:
 
         dataset = likelihood.peek_dataset()
         assert isinstance(dataset, Ncm.Dataset)
-
         mset_set_parameters(mset, self.data_type, self.prim_model)
 
         if self.include_snia is not None:
