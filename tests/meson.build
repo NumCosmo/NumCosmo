@@ -486,6 +486,10 @@ python_tests = [
         'name': 'py_powspec_spline2d',
         'source': 'test_py_powspec_spline2d.py',
     },
+    {
+        'name': 'cosmology',
+        'source': 'test_cosmology.py',
+    },
 ]
 
 if mpi_c_dep.found()

@@ -44,7 +44,11 @@ class ParameterDesc(TypedDict, total=False):
 class HIPrimModel(str, Enum):
     """Planck 18 primordial model."""
 
+    ATAN = "atan"
+    BPL = "broken-power-law"
+    EXPC = "exponential-c"
     POWER_LAW = "power-law"
+    SBPL = "smooth-broken-power-law"
     TWO_FLUIDS = "two-fluids"
 
 
@@ -163,17 +167,26 @@ def create_cosmo(
     cosmo.param_set_desc("Omegak", {"fit": False})
     cosmo.param_set_desc("w", {"fit": False})
 
-    if prim_model == HIPrimModel.POWER_LAW:
-        prim = Nc.HIPrimPowerLaw.new()
-        prim.param_set_desc("ln10e10ASA", {"fit": True})
-        prim.param_set_desc("n_SA", {"fit": True})
-    elif prim_model == HIPrimModel.TWO_FLUIDS:
-        prim = Nc.HIPrimTwoFluids(use_default_calib=True)
-        prim.param_set_desc("ln10e10ASA", {"fit": True})
-        prim.param_set_desc("lnk0", {"fit": True})
-        prim.param_set_desc("lnw", {"fit": True})
-    else:
-        raise ValueError(f"Invalid primordial model: {prim_model}")
+    match prim_model:
+        case HIPrimModel.ATAN:
+            prim = Nc.HIPrimAtan.new()
+        case HIPrimModel.BPL:
+            prim = Nc.HIPrimBPL.new()
+        case HIPrimModel.EXPC:
+            prim = Nc.HIPrimExpc.new()
+        case HIPrimModel.POWER_LAW:
+            prim = Nc.HIPrimPowerLaw.new()
+            prim.param_set_desc("ln10e10ASA", {"fit": True})
+            prim.param_set_desc("n_SA", {"fit": True})
+        case HIPrimModel.SBPL:
+            prim = Nc.HIPrimSBPL.new()
+        case HIPrimModel.TWO_FLUIDS:
+            prim = Nc.HIPrimTwoFluids(use_default_calib=True)
+            prim.param_set_desc("ln10e10ASA", {"fit": True})
+            prim.param_set_desc("lnk0", {"fit": True})
+            prim.param_set_desc("lnw", {"fit": True})
+        case _:
+            raise ValueError(f"Invalid primordial model: {prim_model}")
 
     reion = Nc.HIReionCamb.new()
     reion.param_set_desc("z_re", {"fit": True})
