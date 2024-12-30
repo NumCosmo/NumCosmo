@@ -113,7 +113,7 @@ nc_halo_cm_klypin11_class_init (NcHaloCMKlypin11Class *klass)
    * NcHaloCMKlypin11:log10MDelta-fit:
    *
    * Boolean property that controls whether the parameter
-   * #NcHaloMCParam:log10MDelta should be included in
+   * NcHaloMCParam:log10MDelta should be included in
    * a statistical analysis.
    *
    */

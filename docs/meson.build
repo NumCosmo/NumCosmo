@@ -122,3 +122,5 @@ if build_gtk_doc
     endif
 
 endif
+
+subdir('reference')
