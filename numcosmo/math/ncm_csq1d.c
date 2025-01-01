@@ -26,10 +26,12 @@
  */
 
 /**
- * SECTION:ncm_csq1d
- * @title: NcmCSQ1D
- * @short_description: Abstract class for Harmonic Oscillator calculation through complex structure quantization.
+ * NcmCSQ1D:
  *
+ * Abstract class for Harmonic Oscillator calculation through complex structure
+ * quantization.
+ *
+ * ## Definitions
  *
  * The system:
  * \begin{align}

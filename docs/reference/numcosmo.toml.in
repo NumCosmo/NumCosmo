@@ -39,9 +39,10 @@ base_url = "https://github.com/NumCosmo/NumCosmo/blob/master/"
 content_files = [
 ]
 content_images = [
-  "../../images/numcosmo_logo.png",
+  "../images/numcosmo_logo.png",
 ]
 content_base_url = "https://github.com/NumCosmo/NumCosmo/blob/master/docs/reference/numcosmo/"
+urlmap_file = "urlmap_mathjax.js"
 
 [[object]]
 name = "DECLARE_INTERNAL_TYPE"
