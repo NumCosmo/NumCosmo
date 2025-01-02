@@ -18,4 +18,4 @@ build:
       - PATH="$HOME/opt/quarto-1.4.553/bin:$PATH" meson setup build -Ddocumentation=true -Db_lto=false 
       - meson compile -C build
       - mkdir --parents $READTHEDOCS_OUTPUT/html/
-      - mv docs/numcosmo-site/* $READTHEDOCS_OUTPUT/html/.
+      - mv build/docs/numcosmo-site/* $READTHEDOCS_OUTPUT/html/.
