@@ -18,12 +18,12 @@ jobs:
     - name: Install pre-requisites
       run: |
         sudo apt-get update
-        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev gtk-doc-tools libopenmpi-dev uncrustify
+        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev libopenmpi-dev uncrustify
         sudo pip install meson ninja pytest pytest-tap numpy --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
-      run: meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate -Dgtkdoc=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+      run: meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate -Ddocumentation=false --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
     - name: Building NumCosmo
       run: meson compile -C build
     - name: Checking indentation
@@ -82,7 +82,7 @@ jobs:
     - name: Brew install pre-requisites
       run: |
         brew uninstall --ignore-dependencies --force pkg-config@0.29.2
-        brew install python3 gobject-introspection pygobject3 numpy meson ninja gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran gtk-doc glib openblas
+        brew install python3 gobject-introspection pygobject3 numpy meson ninja gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran glib openblas
     - name: Pip install pre-requisites
       run: |
         python3 -m pip install pytest pytest-tap --break-system-packages
