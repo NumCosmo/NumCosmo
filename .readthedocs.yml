@@ -1,0 +1,17 @@
+version: 2
+
+conda:
+  environment: devel_environment.yml
+
+build:
+  os: ubuntu-22.04
+  tools:
+    # Because we are using python: mambaforge-latest, we will be using mamba
+    # instead of conda.
+    python: mambaforge-latest
+  jobs:
+    pre_build:
+      - echo $PATH
+      # Install firecrown so that we can use it when building the docs.
+      - wget https://github.com/quarto-dev/quarto-cli/releases/download/v1.4.553/quarto-1.4.553-linux-amd64.tar.gz && mkdir ~/opt && tar -C ~/opt -xvzf quarto-1.4.553-linux-amd64.tar.gz
+      - meson setup build -Ddocumentation=true -Db_lto=false
