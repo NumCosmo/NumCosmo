@@ -1,0 +1,112 @@
+---
+title: "NumCosmo"
+---
+# NumCosmo: The Numerical Cosmology Library
+
+Welcome to NumCosmo, a comprehensive toolkit designed to meet the diverse needs of modern cosmological research. Built with precision, efficiency, and modularity at its core, NumCosmo allows researchers to explore modern cosmology problems through a robust and versatile computational framework.
+
+## Core Objectives
+
+NumCosmo was developed with three foundational objectives:
+
+### 1. Efficiency and Accessibility
+
+At the heart of NumCosmo lies a commitment to performance and ease of use. Implemented in C, the library leverages the GObject system, which allows for automatic language bindings. This powerful feature means that classes implemented in C can be directly accessed and manipulated from higher-level languages like Python. Users can subclass, extend, and interface with NumCosmo components without writing extensive glue code, combining the speed of C with the accessibility of Python.
+
+This design choice ensures that researchers can rapidly prototype, test, and iterate on their models without sacrificing computational efficiency, making NumCosmo both a high-performance and user-friendly tool.
+
+### 2. Modularity and Flexibility
+
+NumCosmo’s architecture is designed around modularity, with each component structured around clear and well-defined interfaces. This modularity allows for seamless integration and interchangeability of components, enabling researchers to implement different cosmological models, physical assumptions, or computational techniques without altering the core framework.
+
+Each model and class within NumCosmo is developed with flexibility in mind, allowing for a broad range of applications, from simple cosmological calculations to complex simulations involving multiple interconnected components. The modular design also facilitates collaboration, as researchers can easily contribute new models or improvements that integrate smoothly with existing tools.
+
+### 3. Integrated Statistical Framework
+
+Recognizing the central role of statistical analysis in cosmology, NumCosmo includes a sophisticated and integrated statistical framework from the outset. The library features a special class of components known as models, which can be parameterized and directly linked to NumCosmo’s statistical tools. This integration allows researchers to configure and manipulate these models effortlessly, streamlining the process of performing statistical analyses.
+
+NumCosmo’s statistical framework supports a wide array of analysis techniques, including:
+
+- **Best-Fit Analysis**: Determining the set of model parameters that best fit the observational data.
+- **Fisher Matrix Analysis**: Estimating the precision of parameter measurements and assessing the sensitivity of experiments.
+- **Markov Chain Monte Carlo (MCMC)**: Exploring the parameter space using various MCMC algorithms to generate samples from the posterior distribution.
+- **Ensemble Sampler MCMC (ESMCMC)**: An advanced sampling technique designed to efficiently explore complex posterior distributions.
+- **Approximate Posterior Ensemble Sampler (APES)**: A unique sampler developed within NumCosmo that uses approximations of the posterior to propose the next sample point, proven to be highly efficient for challenging posteriors. Benchmark comparisons, accessible from the documentation, demonstrate APES’s superior performance against other samplers.
+- **MCMC Diagnostics**: Tools for assessing the convergence and efficiency of MCMC simulations.
+- **Likelihood Ratio Tests**: Statistical tests for comparing the goodness-of-fit of different models.
+
+Furthermore, NumCosmo’s framework is fully parallelized using both MPI (Message Passing Interface) and OpenMP (Open Multi-Processing), providing exceptional scalability and flexibility for large-scale computations.
+
+## Cosmological Components
+
+NumCosmo offers an extensive suite of cosmological components, covering a wide range of theoretical predictions and observational likelihoods. The library includes:
+
+### **Background Cosmology Models**
+- **Physical Models**: Standard cosmological models such as Lambda Cold Dark Matter ($\Lambda$CDM), including variations like wCDM (where the dark energy equation of state parameter varies) and more complex dark energy models.
+- **Reconstruction via Kinematic Models**: Methods for reconstructing the expansion history of the universe using observational data without assuming a specific cosmological model.
+
+### **Large-Scale Structure**
+- **Galaxy Distributions**: Modeling the distribution of galaxies in the universe, including redshift-space distortions and bias models.
+- **Weak Lensing**: Tools for studying the weak gravitational lensing of background galaxies by large-scale structures, including shear and convergence calculations.
+
+### **Galaxy Clusters**
+- **Cluster Number Counts**: Predictions for the abundance of galaxy clusters as a function of redshift and mass, based on cosmological parameters. Including many multiplicity functions and mass functions.
+- **Cluster Masses and Profiles**: Models for the mass distribution within galaxy clusters, including the Navarro-Frenk-White (NFW) profile and other parametrizations.
+- **Cluster Weak Lensing**: Analysis tools for studying the weak lensing signal produced by galaxy clusters, useful for constraining cluster masses and cosmological parameters.
+
+### **Supernovae Ia**
+- **Standard Candle Analysis**: Using Type Ia supernovae as standard candles to measure cosmological distances and infer the expansion history of the universe.
+
+### **Baryon Acoustic Oscillations (BAO)**
+- **Distance Measurements**: Tools for analyzing BAO signals in galaxy surveys to extract cosmological distance scales.
+
+### **Cosmic Chronometers**
+- **Hubble Parameter Measurements**: Methods for using cosmic chronometers (e.g., passively evolving galaxies) to measure the Hubble parameter at different redshifts.
+
+### **Cosmic Microwave Background (CMB)**
+- **Temperature and Polarization**: Analysis tools for the CMB, including integration with Planck likelihood code to extract cosmological parameters from temperature and polarization data.
+- **Boltzmann Computation**: Linear power spectrum calculations using Boltzmann solvers for studying the evolution of perturbations in the early universe.
+
+### **Nonlinear Matter Power Spectrum**
+- **Halofit**: Implementation of the Halofit model for computing the nonlinear matter power spectrum, essential for understanding the growth of structures in the universe.
+
+### **Cross-Correlations (XCor)**
+- **Generic Cross-Correlation Framework**: A flexible framework for computing cross-correlations between different cosmological observables, such as galaxy counts, weak lensing, and CMB lensing.
+
+### **Primordial Cosmology**
+- **Inflationary Models**: Tools for modeling and analyzing cosmological inflation, including predictions for primordial power spectra.
+- **Bouncing Models**: Frameworks for studying non-inflationary early-universe scenarios, such as bouncing cosmologies, which involve a contraction phase followed by expansion.
+
+## Generic Support Algorithms
+
+In addition to its cosmology-specific components, NumCosmo includes a variety of powerful generic support algorithms designed to enhance the flexibility and functionality of the library:
+
+### **Numerical Differentiation**
+- **Adaptive Numerical Differentiation**: High-precision algorithms for numerically differentiating functions, with adaptive step-size control for accuracy.
+
+### **Multidimensional Interpolation**
+- **n-Dimensional KDE Approximation**: Kernel density estimation in multiple dimensions, useful for reconstructing probability distributions from samples.
+- **n-Dimensional RBF Interpolation**: Radial basis function interpolation for smooth approximation of functions in multiple dimensions.
+
+### **Healpix Implementation**
+- **Spherical Pixelization**: Our custom implementation of Healpix, a framework for pixelizing the sphere, commonly used in CMB and large-scale structure analyses.
+
+### **Fourier Transforms**
+- **FFTLog**: A specialized algorithm for computing logarithmically spaced Fourier transforms, often used in cosmology for power spectrum analysis.
+
+### **Likelihood Ratio Test Border Computation**
+- **Statistical Test Support**: Tools for calculating the boundary of likelihood ratio tests, aiding in model comparison and hypothesis testing.
+
+## Integration with External Libraries
+
+To further extend its capabilities, NumCosmo integrates with several powerful external libraries:
+
+- **libcuba and cubature**: Libraries for high-dimensional numerical integration, essential for computing likelihoods and marginalizing over parameters.
+- **Sundials**: A suite of solvers for ordinary differential equations (ODEs), widely used in modeling the evolution of cosmological perturbations.
+- **nlopt**: A library for nonlinear optimization, used for parameter fitting and model calibration.
+- **fftw**: The Fastest Fourier Transform in the West, a highly efficient library for computing Fourier transforms, crucial for power spectrum and correlation function analysis.
+
+## Conclusion
+
+NumCosmo stands at the intersection of performance, flexibility, and comprehensive cosmological modeling. Whether you are conducting theoretical studies, analyzing large datasets, or developing new cosmological models, NumCosmo provides the tools you need to advance your research. We invite you to explore the extensive capabilities of the library and contribute to its ongoing development, helping to push the boundaries of our understanding of the universe.
+

@@ -3,7 +3,7 @@ project(
   ['c', 'fortran'],
   version: '0.23.0',
   license: 'GPL-3.0-or-later',
-  meson_version: '>= 1.2.0',
+  meson_version: '>= 1.3.0',
   default_options: [
     'buildtype=debugoptimized',
     'warning_level=2',

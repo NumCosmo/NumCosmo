@@ -10,8 +10,8 @@ if get_option('documentation') and not enable_gir
   error('API reference requires introspection.')
 endif
 
-numcosmo_math_expand_content_md_files = []
-numcosmo_expand_content_md_files = []
+numcosmo_math_expand_content_md_files = ['overview.md']
+numcosmo_expand_content_md_files = ['overview.md']
 
 if get_option('documentation')
   numcosmo_math_toml = configure_file(
@@ -29,7 +29,7 @@ if get_option('documentation')
     install_dir: docs_dir / 'numcosmo',
   )
 
-  custom_target(
+  numcosmo_math_doc = custom_target(
     'numcosmo-math-doc',
     input: [numcosmo_math_toml, numcosmo_math_gir[0]],
     output: 'numcosmo-math',
@@ -48,7 +48,7 @@ if get_option('documentation')
     install: true,
     install_dir: docs_dir,
   )
-  custom_target(
+  numcosmo_doc = custom_target(
     'numcosmo-doc',
     input: [numcosmo_toml, numcosmo_gir[0]],
     output: 'numcosmo',

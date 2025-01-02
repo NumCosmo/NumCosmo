@@ -1,126 +1,94 @@
-if build_gtk_doc
-
-    manual_head_xml = configure_file(
-        input: 'manual_head.xml.in',
-        output: 'manual_head.xml',
-        configuration: numcosmo_build_cfg,
-    )
-
-    ignore_h_files = [
-        'class',
-        'class/hyrec',
-        'class/include',
-        'class/source',
-        'class/tools',
-        'clencurt.h',
-        'common.c',
-        'config_extra.h',
-        'config.h',
-        'converged.h',
-        'cubature.h',
-        'Faddeeva.h',
-        'gsl_cqp.h',
-        'gsl_rstat.h',
-        'hcubature.c',
-        'initial_point.h',
-        'kdtree.c',
-        'kdtree.h',
-        'levmar',
-        'libcuba',
-        'libqp_gsmo.c',
-        'libqp_splx.c',
-        'libqp.h',
-        'nc_hipert_private.h',
-        'ncm_fit_nlopt_enum_meta.h',
-        'ncm_flapack.h',
-        'ncm_gsl_blas_types.h',
-        'ncm_sphere_map_block.c',
-        'ncm_stats_dist_kde_private.h',
-        'ncm_stats_dist_kernel_private.h',
-        'ncm_stats_dist_private.h',
-        'ncm_stats_dist_vkde_private.h',
-        'nnls.c',
-        'pcubature.c',
-        'plc',
-        'rb_knn_list.c',
-        'rb_knn_list.h',
-        'rcm.c',
-        'rcm.h',
-        'rquantile.c',
-        'stddecl.h',
-        'sundials',
-        'toeplitz',
-        'vwrapper.h',
-    ]
-
-    if not nlopt_dep.found()
-        ignore_h_files += ['ncm_fit_nlopt_enum.h', 'ncm_fit_nlopt.h']
-    endif
-    ignore_files_str = '@0@'.format(' '.join(ignore_h_files))
-
-    docfiles = gnome.gtkdoc(
-        'numcosmo',
-        mode: 'sgml',
-        main_sgml: 'numcosmo-docs.sgml',
-        gobject_typesfile: 'numcosmo.types',
-        dependencies: [libnumcosmo_dep],
-        content_files: [
-            'introduction.xml',
-            'refs.xml',
-            'glib_doc.xml',
-            manual_head_xml,
-            'references.xml',
-        ],
-        expand_content_files: [manual_head_xml],
-        src_dir: ['numcosmo'],
-        scan_args: [
-            '--rebuild-types',
-            '--rebuild-sections',
-            '--ignore-decorators=NCM_INLINE',
-        ],
-        mkdb_args: [
-            '--sgml-mode',
-            '--output-format=xml',
-            '--name-space=nc',
-            '--name-space=ncm',
-            '--ignore-files', ignore_files_str,
-        ],
-        html_assets: [
-            'container.css',
-            'images/spline_func_knots_evolution.png',
-            'images/vkde.png',
-            'images/kde.png',
-            'images/apes.png',
-        ],
-        install: true,
-        ignore_headers: ignore_h_files,
-        include_directories: [numcosmo_includedir],
-        check: false,
-    )
-
-    python_bf4 = python_module.find_installation(
-        'python3',
-        modules: ['bs4'],
-        required: false,
-    )
-
-    if not python_bf4.found()
-        message(
-            'WARNING: python3-bs4 not found, skipping adding mathjax to html docs',
-        )
-    else
-        addmathjax = find_program('addmathjax.py', required: true)
-        custom_target(
-            'numcosmo-doc-mathjax',
-            input: docfiles,
-            output: 'numcosmo-mathjax-update',
-            command: [addmathjax, '@OUTDIR@' / 'html'],
-            build_by_default: true,
-            build_always_stale: true,
-            depends: docfiles,
-        )
-    endif
-
-endif
+src_site_files = files(
+    '_functions.qmd',
+    'about.qmd',
+    'container.css',
+    'custom.scss',
+    'index.qmd',
+    'install.qmd',
+    'references.bib',
+)
 
 subdir('reference')
+fs = import('fs')
+
+quarto_conf = configuration_data()
+quarto_conf.set('version', meson.project_version())
+
+quarto_yml = configure_file(
+    input: '_quarto.yml.in',
+    output: '_quarto.yml',
+    configuration: quarto_conf,
+    install: false,
+)
+
+quarto = find_program('quarto', required: get_option('documentation'), native: true)
+
+if get_option('documentation')
+    site_files = []
+    foreach file : src_site_files
+        site_files += fs.copyfile(file)
+    endforeach
+
+    tutorials = custom_target(
+        'tutorials',
+        input: ['tutorials/c/curve_tutorial.qmd'],
+        output: ['tutorials'],
+        command: [
+            'cp',
+            '-r', meson.current_source_dir() + '/tutorials',
+            meson.current_build_dir(),
+        ],
+        install: false,
+        build_by_default: true,
+    )
+
+    examples = custom_target(
+        'examples',
+        input: ['examples/data_analysis/snia.qmd'],
+        output: ['examples'],
+        command: [
+            'cp',
+            '-r', meson.current_source_dir() + '/examples',
+            meson.current_build_dir(),
+        ],
+        install: false,
+        build_by_default: true,
+    )
+
+    images = custom_target(
+        'images',
+        input: ['images/numcosmo_logo.png'],
+        output: ['images'],
+        command: [
+            'cp',
+            '-r', meson.current_source_dir() + '/images',
+            meson.current_build_dir(),
+        ],
+        install: false,
+        build_by_default: true,
+    )
+
+    custom_target(
+        'numcosmo-site',
+        input: quarto_yml,
+        output: 'numcosmo-site',
+        command: [
+            quarto,
+            'render',
+            meson.current_build_dir(),
+            '--output-dir', 'numcosmo-site',
+        ],
+        build_by_default: true,
+        install: true,
+        install_dir: docs_dir,
+        depends: [
+            numcosmo_math_doc,
+            numcosmo_doc,
+            site_files,
+            tutorials,
+            examples,
+            images,
+        ],
+    )
+
+endif

@@ -35,7 +35,7 @@
  *
  * The system:
  * \begin{align}
- * q^\prime &= \frac{\Pi_q}{m},
+ * q^\prime &= \frac{\Pi_q}{m}, \\
  * \Pi_q^\prime &= m\nu^2q.
  * \end{align}
  *
