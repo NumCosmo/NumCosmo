@@ -13,7 +13,7 @@ build:
     - mamba env create --file devel_environment.yml
     - mamba install -n numcosmo_developer -y gi-docgen jupyter plotnine tabulate
     - wget https://github.com/quarto-dev/quarto-cli/releases/download/v1.4.553/quarto-1.4.553-linux-amd64.tar.gz && mkdir ~/opt && tar -C ~/opt -xvzf quarto-1.4.553-linux-amd64.tar.gz
-    - PATH="$HOME/opt/quarto-1.4.553/bin:$PATH" meson setup build -Ddocumentation=true -Db_lto=false 
+    - PATH="$HOME/opt/quarto-1.4.553/bin:$PATH" mamba run -n numcosmo_developer meson setup build -Ddocumentation=true -Db_lto=false 
     - mamba run -n numcosmo_developer meson compile -C build
     - mkdir --parents $READTHEDOCS_OUTPUT/html/
     - mv build/docs/numcosmo-site/* $READTHEDOCS_OUTPUT/html/.
