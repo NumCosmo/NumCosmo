@@ -24,10 +24,9 @@
  */
 
 /**
- * SECTION:nc_recomb
- * @title: NcRecomb
- * @short_description: Abstract class for cosmic recombination.
- * @include: numcosmo/nc_recomb.h
+ * NcRecomb:
+ *
+ * Abstract class for cosmic recombination.
  *
  * $
  *  \newcommand{\He}{\text{He}}

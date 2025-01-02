@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_curve
- * @title: NcCurve
- * @short_description: Abstract class for curves!
+ * NcCurve:
+ *
+ * Abstract class for curves
  *
  * NcCurve is the abstract class designed to include the functions
  * that any simple curve should implement, see NcCurveImpl.
@@ -297,7 +297,7 @@ nc_curve_class_init (NcCurveClass *klass)
    */
   ncm_model_class_check_params_info (model_class);
 
-  curve_class = &_nc_curve_f;
+  klass->f = &_nc_curve_f;
 }
 
 /*

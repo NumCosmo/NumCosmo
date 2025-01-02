@@ -1,8 +1,7 @@
 /**
- * SECTION:nc_object_name
- * @title: NcObjectName
- * @short_description: Object short description
- * @include: nc_object_name.h
+ * NcObjectName:
+ *
+ * Object short description
  *
  * Long description
  *

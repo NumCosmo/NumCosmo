@@ -26,11 +26,11 @@
  */
 
 /**
- * SECTION:nc_hiqg_1d
- * @title: NcHIQG1D
- * @short_description: Minisuperspace 1D quantum gravity models
+ * NcHIQG1D:
  *
- * FIXME
+ * Minisuperspace 1D quantum gravity models.
+ *
+ * This class implements the minisuperspace 1D quantum gravity models.
  *
  */
 
