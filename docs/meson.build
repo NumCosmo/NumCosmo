@@ -68,6 +68,27 @@ if get_option('documentation')
         build_by_default: true,
     )
 
+    env = environment()
+    env.prepend(
+        'GI_TYPELIB_PATH',
+        numcosmo_build_dir / 'numcosmo',
+    )
+
+    env.prepend(
+        'LD_LIBRARY_PATH',
+        numcosmo_build_dir / 'numcosmo',
+    )
+
+    env.prepend(
+        'DYLD_LIBRARY_PATH',
+        numcosmo_build_dir / 'numcosmo',
+    )
+
+    env.prepend(
+        'PYTHONPATH',
+        numcosmo_source_dir,
+    )
+
     custom_target(
         'numcosmo-site',
         input: quarto_yml,
@@ -79,6 +100,7 @@ if get_option('documentation')
             '--output-dir', 'numcosmo-site',
         ],
         build_by_default: true,
+        env: env,
         install: true,
         install_dir: docs_dir,
         depends: [
