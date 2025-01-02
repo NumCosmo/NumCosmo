@@ -25,14 +25,9 @@
  */
 
 /**
- * SECTION:nc_halo_cm_klypin11
- * @title: NcHaloCMKlypin11
- * @short_description: Class defining the Klypin et al. 2011 concentration-mass relation
- * @stability: Unstable
- *
+ * NcHaloCMKlypin11:
  *
  * Class defining the Klypin et al. 2011 concentration-mass relation.
- * FIXME include reference and equation
  *
  */
 

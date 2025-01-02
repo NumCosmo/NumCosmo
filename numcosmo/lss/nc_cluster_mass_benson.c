@@ -24,11 +24,10 @@
  */
 
 /**
- * SECTION:nc_cluster_mass_benson
- * @title: NcClusterMassBenson
- * @short_description: Sunyaev-Zel'dovich cluster mass distribution.
+ * NcClusterMassBenson:
  *
- * FIXME
+ * Sunyaev-Zel'dovich cluster mass distribution.
+ *
  */
 
 #ifdef HAVE_CONFIG_H

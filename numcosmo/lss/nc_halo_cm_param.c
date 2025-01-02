@@ -26,11 +26,9 @@
  */
 
 /**
- * SECTION:nc_halo_cm_param
- * @title: NcHaloCMParam
- * @short_description: Class defining mass and concentration as parameters
- * @stability: Unstable
+ * NcHaloCMParam:
  *
+ * Class defining mass and concentration as parameters
  *
  * Class defining the halo mass and concentration as parameters for the halo mass
  * density profile.

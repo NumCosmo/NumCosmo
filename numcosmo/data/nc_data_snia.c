@@ -23,11 +23,9 @@
  */
 
 /**
- * SECTION:nc_data_snia
- * @title: NcDataSNIAId
- * @short_description: Helper function for instantiating type Ia supernova data
+ * NcDataSNIAId:
  *
- * FIXME
+ * Helper function for instantiating type Ia supernova data.
  *
  */
 

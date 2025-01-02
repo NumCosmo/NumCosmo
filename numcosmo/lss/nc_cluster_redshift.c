@@ -23,11 +23,10 @@
  */
 
 /**
- * SECTION:nc_cluster_redshift
- * @title: NcClusterRedshift
- * @short_description: Abstract class for cluster redshift distributions.
+ * NcClusterRedshift:
  *
- * FIXME
+ * Abstract class for cluster redshift distributions.
+ *
  */
 
 #ifdef HAVE_CONFIG_H

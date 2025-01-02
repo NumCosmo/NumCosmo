@@ -24,11 +24,10 @@
  */
 
 /**
- * SECTION:nc_galaxy_acf
- * @title: NcGalaxyAcf
- * @short_description: Galaxy angular correlation function.
+ * NcGalaxyAcf:
  *
- * FIXME
+ * Galaxy angular correlation function.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
