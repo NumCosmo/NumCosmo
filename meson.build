@@ -460,6 +460,8 @@ endif
 # Also check for Vala, which is required for the Vala bindings.
 #######################################################################################
 message('Checking for GObject introspection')
+gobject_introspection_dep = dependency('gobject-introspection-1.0')
+girdir = gobject_introspection_dep.get_variable('girdir')
 
 gir_scanner = find_program(
   'g-ir-scanner',
