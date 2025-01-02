@@ -255,9 +255,6 @@ if not get_option('numcosmo_checks')
   message('Disabling GLib checks')
 endif
 
-gtkdoc_dep = dependency('gtk-doc', required: get_option('gtkdoc'))
-build_gtk_doc = gtkdoc_dep.found()
-
 add_project_arguments(numcosmo_debug_cflags, language: 'c')
 
 #######################################################################################
@@ -890,7 +887,7 @@ building_options = {
   'Fortran-Compiler': fc.get_id(),
   'Fortran-Compiler version': fc.version(),
   'Build tests': build_tests,
-  'Build documentation': build_gtk_doc,
+  'Build documentation': get_option('documentation'),
   'Build Python module': get_option('numcosmo_py'),
   'Build Vala library': have_vala,
   'Build GObject introspection': enable_gir,

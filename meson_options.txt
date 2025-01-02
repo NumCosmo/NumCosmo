@@ -48,13 +48,6 @@ option(
 )
 
 option(
-       'gtkdoc',
-       type: 'feature',
-       value: 'auto',
-       description: 'Build documentation with gtk-doc',
-)
-
-option(
        'documentation',
        type: 'boolean',
        value: false,
