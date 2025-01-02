@@ -12,7 +12,7 @@ build:
   jobs:
     pre_build:
       - echo $PATH
-      - mamba install -y gi-docgen
+      - mamba install -y gi-docgen nbformat
       # Install firecrown so that we can use it when building the docs.
       - wget https://github.com/quarto-dev/quarto-cli/releases/download/v1.4.553/quarto-1.4.553-linux-amd64.tar.gz && mkdir ~/opt && tar -C ~/opt -xvzf quarto-1.4.553-linux-amd64.tar.gz
       - PATH="$HOME/opt/quarto-1.4.553/bin:$PATH" meson setup build -Ddocumentation=true -Db_lto=false
