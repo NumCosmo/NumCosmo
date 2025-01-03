@@ -611,6 +611,11 @@ if enable_gir
     pytest_is_parallel = true
 
     if get_option('b_coverage')
+        python_module.find_installation(
+            'python3',
+            modules: ['pytest_cov'],
+            required: true,
+        )
         pytest_args += ['--cov', 'numcosmo_py']
         pytest_args += ['--cov-report', 'xml']
         pytest_args += ['--cov-append']

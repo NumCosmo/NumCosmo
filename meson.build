@@ -816,7 +816,7 @@ endif
 #######################################################################################
 
 python_module = import('python')
-python = python_module.find_installation('python3', modules: ['pytest', 'gi'])
+python = python_module.find_installation('python3', modules: ['pytest', 'pytest_lazy_fixtures', 'gi'])
 
 python_pip = python_module.find_installation(
   'python3',
