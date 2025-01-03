@@ -7,8 +7,27 @@ baseURLs = [
 ]
 
 window.MathJax = {
-    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
-    svg: { fontCache: 'global' }
+    options: {
+        skipHtmlTags: [
+            'script', 'noscript', 'style', 'textarea', 'pre',
+            'code', 'annotation', 'annotation-xml'
+        ],
+        includeHtmlTags: {
+            br: '\n', wbr: '', '#comment': ''
+        },
+    },
+    tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true,
+        processClass: 'mathjax_process',
+        ignoreClass: 'tex2jax_ignore|dno',
+        tags: 'ams',
+        errorColor: 'red'
+    },
+    svg: {
+        fontCache: 'global'
+    }
 };
 
 // Dynamically load MathJax
