@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            nc_hipert.c
  *
@@ -25,11 +26,9 @@
  */
 
 /**
- * SECTION:nc_hipert
- * @title: NcHIPert
- * @short_description: Abstract class for perturbation in homogeneous and isotropic cosmologies.
+ * NcHIPert:
  *
- * FIXME
+ * Base class for perturbation in homogeneous and isotropic cosmologies.
  *
  */
 
@@ -56,7 +55,8 @@
 
 #include "perturbations/nc_hipert_private.h"
 
-enum {
+enum
+{
   PROP_0,
   PROP_K,
   PROP_SYS_SIZE,
@@ -72,13 +72,14 @@ static void
 nc_hipert_init (NcHIPert *pert)
 {
   NcHIPertPrivate * const self = pert->priv = nc_hipert_get_instance_private (pert);
-  self->alpha0      = 0.0;
-  self->reltol      = 0.0;
-  self->k           = 0.0;
-  self->sys_size    = 0;
-  self->y           = NULL;
-  self->A           = NULL;
-  self->LS          = NULL;
+
+  self->alpha0   = 0.0;
+  self->reltol   = 0.0;
+  self->k        = 0.0;
+  self->sys_size = 0;
+  self->y        = NULL;
+  self->A        = NULL;
+  self->LS       = NULL;
 
   self->vec_abstol  = NULL;
   self->cvode       = CVodeCreate (CV_ADAMS);
@@ -89,8 +90,9 @@ nc_hipert_init (NcHIPert *pert)
 static void
 nc_hipert_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHIPert *pert = NC_HIPERT (object);
+  NcHIPert *pert               = NC_HIPERT (object);
   NcHIPertPrivate * const self = pert->priv;
+
   g_return_if_fail (NC_IS_HIPERT (object));
 
   switch (prop_id)
@@ -119,8 +121,9 @@ nc_hipert_set_property (GObject *object, guint prop_id, const GValue *value, GPa
 static void
 nc_hipert_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHIPert *pert = NC_HIPERT (object);
+  NcHIPert *pert               = NC_HIPERT (object);
   NcHIPertPrivate * const self = pert->priv;
+
   g_return_if_fail (NC_IS_HIPERT (object));
 
   switch (prop_id)
@@ -149,7 +152,7 @@ nc_hipert_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
 static void
 nc_hipert_finalize (GObject *object)
 {
-  NcHIPert *pert = NC_HIPERT (object);
+  NcHIPert *pert               = NC_HIPERT (object);
   NcHIPertPrivate * const self = pert->priv;
 
   if (self->cvode != NULL)
@@ -169,13 +172,13 @@ nc_hipert_finalize (GObject *object)
     N_VDestroy (self->vec_abstol);
     self->vec_abstol = NULL;
   }
-  
+
   if (self->A != NULL)
   {
     SUNMatDestroy (self->A);
     self->A = NULL;
   }
-  
+
   if (self->LS != NULL)
   {
     SUNLinSolFree (self->LS);
@@ -193,7 +196,7 @@ static void _nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol);
 static void
 nc_hipert_class_init (NcHIPertClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = &nc_hipert_set_property;
   object_class->get_property = &nc_hipert_get_property;
@@ -256,6 +259,7 @@ static void
 _nc_hipert_set_mode_k (NcHIPert *pert, gdouble k)
 {
   NcHIPertPrivate * const self = pert->priv;
+
   if (self->k != k)
   {
     self->k        = k;
@@ -275,6 +279,7 @@ static void
 _nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol)
 {
   NcHIPertPrivate * const self = pert->priv;
+
   if (self->reltol != reltol)
   {
     self->reltol   = reltol;
@@ -294,6 +299,7 @@ static void
 _nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
 {
   NcHIPertPrivate * const self = pert->priv;
+
   if (self->abstol != abstol)
   {
     self->abstol   = abstol;
@@ -309,10 +315,11 @@ _nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
  *
  * Returns: reltol
  */
-gdouble 
+gdouble
 nc_hipert_get_reltol (NcHIPert *pert)
 {
   NcHIPertPrivate * const self = pert->priv;
+
   return self->reltol;
 }
 
@@ -321,13 +328,14 @@ nc_hipert_get_reltol (NcHIPert *pert)
  * @pert: a #NcHIPert.
  *
  * Gets the value of the relative tolerance.
- * 
+ *
  * Returns: abstol
  */
-gdouble 
+gdouble
 nc_hipert_get_abstol (NcHIPert *pert)
 {
   NcHIPertPrivate * const self = pert->priv;
+
   return self->abstol;
 }
 
@@ -336,13 +344,14 @@ nc_hipert_get_abstol (NcHIPert *pert)
  * @pert: a #NcHIPert.
  *
  * Gets the value of the mode $k$.
- * 
+ *
  * Returns: $k$
  */
-gdouble 
+gdouble
 nc_hipert_get_mode_k (NcHIPert *pert)
 {
   NcHIPertPrivate * const self = pert->priv;
+
   return self->k;
 }
 
@@ -352,10 +361,11 @@ nc_hipert_get_mode_k (NcHIPert *pert)
  *
  * Returns: Whether the object is prepared.
  */
-gboolean 
+gboolean
 nc_hipert_prepared (NcHIPert *pert)
 {
   NcHIPertPrivate * const self = pert->priv;
+
   return self->prepared;
 }
 
@@ -363,14 +373,15 @@ nc_hipert_prepared (NcHIPert *pert)
  * nc_hipert_set_prepared:
  * @pert: a #NcHIPert
  * @prepared: a boolean
- * 
+ *
  * Sets the object to @prepared.
- * 
+ *
  */
-void 
+void
 nc_hipert_set_prepared (NcHIPert *pert, gboolean prepared)
 {
   NcHIPertPrivate * const self = pert->priv;
+
   self->prepared = prepared;
 }
 
@@ -386,6 +397,7 @@ void
 nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
 {
   NcHIPertPrivate * const self = pert->priv;
+
   if (self->sys_size != sys_size)
   {
     if (self->y != NULL)
@@ -393,6 +405,7 @@ nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
       N_VDestroy (self->y);
       self->y = NULL;
     }
+
     if (self->A != NULL)
     {
       SUNMatDestroy (self->A);
@@ -404,7 +417,7 @@ nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
       SUNLinSolFree (self->LS);
       self->LS = NULL;
     }
-    
+
     if (self->vec_abstol != NULL)
     {
       N_VDestroy (self->vec_abstol);
@@ -412,17 +425,19 @@ nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
     }
 
     self->sys_size = sys_size;
+
     if (self->sys_size > 0)
     {
       self->y          = N_VNew_Serial (sys_size);
       self->vec_abstol = N_VNew_Serial (sys_size);
 
-      self->A          = SUNDenseMatrix (sys_size, sys_size);
-      self->LS         = SUNDenseLinearSolver (self->y, self->A);
+      self->A  = SUNDenseMatrix (sys_size, sys_size);
+      self->LS = SUNDenseLinearSolver (self->y, self->A);
 
-      NCM_CVODE_CHECK ((gpointer)self->A, "SUNDenseMatrix", 0, );
-      NCM_CVODE_CHECK ((gpointer)self->LS, "SUNDenseLinearSolver", 0, );
+      NCM_CVODE_CHECK ((gpointer) self->A, "SUNDenseMatrix", 0, );
+      NCM_CVODE_CHECK ((gpointer) self->LS, "SUNDenseLinearSolver", 0, );
     }
+
     self->prepared = FALSE;
 
     nc_hipert_reset_solver (pert);
@@ -441,8 +456,9 @@ void
 nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
 {
   NcHIPertPrivate * const self = pert->priv;
-  guint a = stiff ? 1 : 0;
-  guint b = self->cvode_stiff ? 1 : 0;
+  guint a                      = stiff ? 1 : 0;
+  guint b                      = self->cvode_stiff ? 1 : 0;
+
   if (a != b)
   {
     if (self->cvode != NULL)
@@ -450,6 +466,7 @@ nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
       CVodeFree (&self->cvode);
       self->cvode = NULL;
     }
+
     self->cvode_stiff = stiff;
 
     if (stiff)
@@ -472,6 +489,7 @@ void
 nc_hipert_reset_solver (NcHIPert *pert)
 {
   NcHIPertPrivate * const self = pert->priv;
+
   if (self->cvode != NULL)
   {
     CVodeFree (&self->cvode);

@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_fit_mc
- * @title: NcmFitMC
- * @short_description: Monte Carlo analysis.
+ * NcmFitMC:
+ *
+ * Monte Carlo analysis.
  *
  * This object implements a Monte Carlo analysis. This object is initialized
  * with a #NcmFit object and a #NcmMSet object. The #NcmFit object is used to

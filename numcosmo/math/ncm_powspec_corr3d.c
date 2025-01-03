@@ -25,11 +25,9 @@
  */
 
 /**
- * SECTION:ncm_powspec_corr3d
- * @title: NcmPowspecCorr3d
- * @short_description: Class to compute filtered power spectrum
- * @stability: Stable
- * @include: numcosmo/math/ncm_powspec_corr3d.h
+ * NcmPowspecCorr3d:
+ *
+ * Class to compute the 3d spatial correlation function from the power spectrum.
  *
  * This class computes the 3d spatial correlation function $\xi(r, z)$ from the power spectrum
  * using the FFTLog approach (see #NcmFftlog and #NcmFftlogSBesselJ),

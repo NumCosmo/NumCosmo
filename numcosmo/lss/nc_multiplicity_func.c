@@ -25,9 +25,9 @@
  */
 
 /**
- * SECTION:nc_multiplicity_func
- * @title: NcMultiplicityFunc
- * @short_description: Dark matter halo multiplicity function.
+ * NcMultiplicityFunc:
+ *
+ * Dark matter halo multiplicity function.
  *
  * The  multiplicity function comprises information about the non-linear regime
  * of halo (structure) formation. The mass function can be written as
@@ -385,6 +385,7 @@ nc_multiplicity_func_get_matter_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cosm
       g_assert_not_reached ();
       break;
   }
+
   return 0.0;
 }
 

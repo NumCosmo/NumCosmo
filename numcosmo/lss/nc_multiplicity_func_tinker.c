@@ -24,11 +24,12 @@
  */
 
 /**
- * SECTION:nc_multiplicity_func_tinker
- * @title: NcMultiplicityFuncTinker
- * @short_description: Dark matter halo -- Tinker multiplicity function.
+ * NcMultiplicityFuncTinker:
  *
- * FIXME
+ * Dark matter halo -- Tinker multiplicity function.
+ *
+ * The Tinker multiplicity function is a parametric form for the mass function of
+ * dark matter halos.
  * Reference: arxiv:0803.2706
  */
 

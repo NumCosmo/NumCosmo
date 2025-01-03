@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_hiprim_two_fluids
- * @title: NcHIPrimTwoFluids
- * @short_description: Two Fluids implementation for primordial spectra.
+ * NcHIPrimTwoFluids:
+ *
+ * Two Fluids implementation for primordial spectra.
  *
  * Primordial adiabatic scalar power spectrum obtained from a two fluids model.
  *

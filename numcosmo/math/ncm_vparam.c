@@ -24,12 +24,12 @@
  */
 
 /**
- * SECTION:ncm_vparam
- * @title: NcmVParam
- * @short_description: Properties of a vector-like parameter.
+ * NcmVParam:
  *
- * This object comprises the necessary properties to define a vector parameter.
- * It is used by #NcmModel to store the description of the vector model parameters.
+ * Properties of a vector-like parameter.
+ *
+ * This object comprises the necessary properties to define a vector parameter. It is
+ * used by #NcmModel to store the description of the vector model parameters.
  *
  */
 

@@ -25,13 +25,20 @@
 
 
 /**
- * SECTION:ncm_dtuple
- * @title: NcmDTuple
- * @short_description: Fixed sized array of double values.
+ * NcmDTuple2:
+ * Fixed sized array of double values.
  *
- * In this module we define the #NcmDTuple2, #NcmDTuple3, which are fixed sized arrays
- * of double values.
+ * In this module we define the #NcmDTuple2 which are fixed sized arrays of double
+ * values.
  *
+ */
+
+/**
+ * NcmDTuple3:
+ * Fixed sized array of double values.
+ *
+ * In this module we define the #NcmDTuple3 which are fixed sized arrays of double
+ * values.
  */
 
 #ifdef HAVE_CONFIG_H

@@ -23,9 +23,9 @@
  */
 
 /**
- * SECTION:ncm_mpsf_trig_int
- * @title: NcmMpsfTrigInt
- * @short_description: Multiple precision sin integral implementation.
+ * NcmMpsfTrigInt:
+ *
+ * Multiple precision sin integral implementation.
  *
  * Implementation of multiple precision sine integral using the GNU MPFR library.
  * This implementation employs binary splitting to compute the integral utilizing
