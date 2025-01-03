@@ -26,7 +26,7 @@
  */
 
 /**
- * NcHIPertComp:
+ * NcHIPertBGVar:
  *
  * Perturbation background variables transport object.
  *

@@ -50,15 +50,6 @@
 #include "xcor/nc_xcor_limber_kernel.h"
 #include "xcor/nc_xcor.h"
 
-/**
- * NcXcorLimberKernel:
- *
- * A #NcXcorLimberKernel is an abstract object for the kernels of projected observables
- * used in cross-correlations.
- *
- */
-
-
 typedef struct _NcXcorLimberKernelPrivate
 {
   /*< private >*/

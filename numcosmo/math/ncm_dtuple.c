@@ -26,7 +26,9 @@
 
 /**
  * NcmDTuple2:
- * Fixed sized array of double values.
+ * @elements: (array fixed-size=2): The elements of the tuple.
+ *
+ * A 2-dimensional tuple of double precision floating point numbers.
  *
  * In this module we define the #NcmDTuple2 which are fixed sized arrays of double
  * values.
@@ -35,7 +37,9 @@
 
 /**
  * NcmDTuple3:
- * Fixed sized array of double values.
+ * @elements: (array fixed-size=3): The elements of the tuple.
+ *
+ * A 3-dimensional tuple of double precision floating point numbers.
  *
  * In this module we define the #NcmDTuple3 which are fixed sized arrays of double
  * values.

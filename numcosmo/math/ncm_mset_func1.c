@@ -24,7 +24,7 @@
  */
 
 /**
- * NcmMSetFunc:
+ * NcmMSetFunc1:
  *
  * Abstract class for arbitrary MSet functions - bindable version
  *
