@@ -272,3 +272,70 @@ def test_compare_mf_z0(
     nc_nm = m_arr * nc_mf
 
     assert_allclose(ccl_nm, nc_nm, rtol=1.0e-4)
+
+
+@pytest.mark.parametrize(
+    "massfuncs",
+    [
+        lf("massfunc_ps"),
+        lf("massfunc_st"),
+        lf("massfunc_jenkins"),
+        lf("massfunc_tinker08"),
+        lf("massfunc_tinker10"),
+    ],
+)
+def test_compare_mf_dup(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+    massfuncs: tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction],
+    mass_and_z_array: tuple[np.ndarray, np.ndarray],
+) -> None:
+    """Test comparison of mass functions."""
+    _, cosmo_nc = cosmologies
+    _, nc_hmf_orig = massfuncs
+    m_arr, z_arr = mass_and_z_array
+
+    nc_hmf_orig.set_eval_limits(
+        cosmo_nc.cosmo, np.log(1.0e11), np.log(1.0e16), 0.0, 2.0
+    )
+    nc_hmf_orig.prepare(cosmo_nc.cosmo)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    nc_hmf = ser.dup_obj(nc_hmf_orig)
+    assert isinstance(nc_hmf, Nc.HaloMassFunction)
+    nc_hmf.prepare(cosmo_nc.cosmo)
+
+    assert_allclose(nc_hmf.props.area, nc_hmf_orig.props.area, rtol=1.0e-14, atol=0.0)
+    assert_allclose(nc_hmf.props.lnMi, nc_hmf_orig.props.lnMi, rtol=1.0e-14, atol=0.0)
+    assert_allclose(nc_hmf.props.lnMf, nc_hmf_orig.props.lnMf, rtol=1.0e-14, atol=0.0)
+    assert_allclose(nc_hmf.props.zi, nc_hmf_orig.props.zi, rtol=1.0e-14, atol=0.0)
+    assert_allclose(nc_hmf.props.zf, nc_hmf_orig.props.zf, rtol=1.0e-14, atol=0.0)
+    assert_allclose(nc_hmf.props.prec, nc_hmf_orig.props.prec, rtol=1.0e-14, atol=0.0)
+    assert_allclose(nc_hmf.props.mf_lb, nc_hmf_orig.props.mf_lb, rtol=1.0e-14, atol=0.0)
+
+    mf = nc_hmf.peek_multiplicity_function()
+    mf_orig = nc_hmf_orig.peek_multiplicity_function()
+
+    assert_allclose(mf.props.Delta, mf_orig.props.Delta, rtol=1.0e-14, atol=0.0)
+    assert mf.props.mass_def == mf_orig.props.mass_def
+    assert isinstance(mf, type(mf_orig))
+    if isinstance(mf, Nc.MultiplicityFuncTinker):
+        assert isinstance(mf_orig, Nc.MultiplicityFuncTinker)
+        assert mf.props.linear_interp == mf_orig.props.linear_interp
+
+    for z in z_arr:
+        nc_mf_orig = np.array(
+            [
+                nc_hmf_orig.dn_dlnM(cosmo_nc.cosmo, logm, z) * np.log(10.0)
+                for logm in np.log(m_arr)
+            ]
+        )
+        nc_nm_orig = m_arr * nc_mf_orig
+        nc_mf = np.array(
+            [
+                nc_hmf.dn_dlnM(cosmo_nc.cosmo, logm, z) * np.log(10.0)
+                for logm in np.log(m_arr)
+            ]
+        )
+        nc_nm = m_arr * nc_mf
+
+        assert_allclose(nc_nm_orig, nc_nm, rtol=1.0e-14)
