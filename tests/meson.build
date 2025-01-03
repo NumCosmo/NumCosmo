@@ -572,6 +572,11 @@ if python_pyccl.found()
             'timeout': 0,
         },
         {
+            'name': 'py_massfunc',
+            'source': 'test_py_massfunc.py',
+            'timeout': 0,
+        },
+        {
             'name': 'py_xcor',
             'source': 'test_py_xcor.py',
             'timeout': 0,
