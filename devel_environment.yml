@@ -40,6 +40,7 @@ dependencies:
   - pylint
   - pytest
   - pytest-cov
+  - pytest-lazy-fixtures
   - python >= 3.10
   - rich
   - scipy
