@@ -289,35 +289,37 @@ _nc_multiplicity_func_bocquet_set_all (NcMultiplicityFuncBocquet *mb)
           self->cz = -0.045;
           break;
         case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
+        {
+          guint Delta = (guint) self->Delta;
 
-          if ((self->Delta != 200.0) && (self->Delta != 500.0))
+          switch (Delta)
           {
-            g_error ("NcMultiplicityFuncBocquet does not support Delta != 200 or 500 (mass def - critical density).");
+            case 200:
+              self->A0 = 0.202;
+              self->a0 = 2.21;
+              self->b0 = 2.00;
+              self->c0 = 1.57;
+              self->Az = 1.147;
+              self->az = 0.375;
+              self->bz = -1.074;
+              self->cz = -0.196;
+              break;
+            case 500:
+              self->A0 = 0.180;
+              self->a0 = 2.29;
+              self->b0 = 2.44;
+              self->c0 = 1.97;
+              self->Az = 1.088;
+              self->az = 0.150;
+              self->bz = -1.008;
+              self->cz = -0.322;
+              break;
+            default:
+              g_error ("NcMultiplicityFuncBocquet does not support Delta != 200 or 500 (mass def - critical density).");
+              break;
           }
-          else if (self->Delta == 200.0)
-          {
-            self->A0 = 0.202;
-            self->a0 = 2.21;
-            self->b0 = 2.00;
-            self->c0 = 1.57;
-            self->Az = 1.147;
-            self->az = 0.375;
-            self->bz = -1.074;
-            self->cz = -0.196;
-          }
-          else
-          {
-            self->A0 = 0.180;
-            self->a0 = 2.29;
-            self->b0 = 2.44;
-            self->c0 = 1.97;
-            self->Az = 1.088;
-            self->az = 0.150;
-            self->bz = -1.008;
-            self->cz = -0.322;
-          }
-
-          break;
+        }
+        break;
         case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:
         case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
           g_error ("NcMultiplicityFuncBocquet does not support virial or FOF mass def.");
@@ -372,34 +374,41 @@ _nc_multiplicity_func_bocquet_correction_factor (NcMultiplicityFunc *mulf, NcHIC
 {
   NcMultiplicityFuncBocquet *mt                 = NC_MULTIPLICITY_FUNC_BOCQUET (mulf);
   NcMultiplicityFuncBocquetPrivate * const self = mt->priv;
-  const gdouble Omega_m                         = nc_hicosmo_E2Omega_m (cosmo, z);
+  const gdouble Omega_m                         = nc_hicosmo_E2Omega_m (cosmo, z) / nc_hicosmo_E2 (cosmo, z);
+  guint Delta                                   = (guint) self->Delta;
 
-  if (self->Delta == 200.0)
+  switch (Delta)
   {
-    const gdouble gamma0      = 3.54e-2 + pow (Omega_m, 0.09);
-    const gdouble gamma1      = 4.56e-2 + 2.68e-2 / Omega_m;
-    const gdouble gamma2      = 0.721 + 3.50e-2 / Omega_m;
-    const gdouble gamma3      = 0.628 + 0.164 / Omega_m;
-    const gdouble delta0      = -1.67e-2 + 2.18e-2 * Omega_m;
-    const gdouble delta1      = 6.52e-3 - 6.86e-3 * Omega_m;
-    const gdouble gamma       = gamma0 + gamma1 * exp (-gsl_pow_2 ((gamma2 - z) / gamma3));
-    const gdouble delta       = delta0 + delta1 * z;
-    const gdouble M200c_M200m = gamma + delta * lnM;
+    case 200:
+    {
+      const gdouble gamma0      = 3.54e-2 + pow (Omega_m, 0.09);
+      const gdouble gamma1      = 4.56e-2 + 2.68e-2 / Omega_m;
+      const gdouble gamma2      = 0.721 + 3.50e-2 / Omega_m;
+      const gdouble gamma3      = 0.628 + 0.164 / Omega_m;
+      const gdouble delta0      = -1.67e-2 + 2.18e-2 * Omega_m;
+      const gdouble delta1      = 6.52e-3 - 6.86e-3 * Omega_m;
+      const gdouble gamma       = gamma0 + gamma1 * exp (-gsl_pow_2 ((gamma2 - z) / gamma3));
+      const gdouble delta       = delta0 + delta1 * z;
+      const gdouble M200c_M200m = gamma + delta * lnM;
 
-    return M200c_M200m;
-  }
-  else
-  {
-    g_assert (self->Delta == 500.0);
+      return M200c_M200m;
+    }
+    break;
+    case 500:
+    {
+      const gdouble alpha0      = 0.880 + 0.329 * Omega_m;
+      const gdouble alpha1      = 1.00 + 4.31e-2 / Omega_m;
+      const gdouble alpha2      = -0.365 + 0.254 / Omega_m;
+      const gdouble alpha       = alpha0 * (alpha1 * z + alpha2) / (z + alpha2);
+      const gdouble beta        = -1.7e-2 + 3.74e-3 * Omega_m;
+      const gdouble M500c_M200m = alpha + beta * lnM;
 
-    const gdouble alpha0      = 0.880 + 0.329 * Omega_m;
-    const gdouble alpha1      = 1.00 + 4.31e-2 / Omega_m;
-    const gdouble alpha2      = -0.365 + 0.254 / Omega_m;
-    const gdouble alpha       = alpha0 * (alpha1 * z + alpha2) / (z + alpha2);
-    const gdouble beta        = -1.7e-2 + 3.74e-3 * Omega_m;
-    const gdouble M500c_M200m = alpha + beta * lnM;
-
-    return M500c_M200m;
+      return M500c_M200m;
+    }
+    break;
+    default:
+      g_error ("NcMultiplicityFuncBocquet does not support Delta != 200 or 500 (mass def - critical density).");
+      break;
   }
 }
 

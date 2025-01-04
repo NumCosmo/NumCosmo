@@ -82,9 +82,9 @@ _nc_multiplicity_func_tinker_mean_normalized_set_property (GObject *object, guin
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -96,9 +96,9 @@ _nc_multiplicity_func_tinker_mean_normalized_get_property (GObject *object, guin
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -124,8 +124,6 @@ nc_multiplicity_func_tinker_mean_normalized_class_init (NcMultiplicityFuncTinker
   object_class->set_property = &_nc_multiplicity_func_tinker_mean_normalized_set_property;
   object_class->get_property = &_nc_multiplicity_func_tinker_mean_normalized_get_property;
   object_class->finalize     = &_nc_multiplicity_func_tinker_mean_normalized_finalize;
-
-
 
   parent_class->set_mdef  = &_nc_multiplicity_func_tinker_mean_normalized_set_mdef;
   parent_class->set_Delta = &_nc_multiplicity_func_tinker_mean_normalized_set_Delta;
@@ -180,9 +178,12 @@ _nc_multiplicity_func_tinker_mean_normalized_eval (NcMultiplicityFunc *mulf, NcH
   const gdouble nu = 1.686 / sigma;
   gdouble f_Tinker_mean_normalized;
 
-  NCM_UNUSED (cosmo);
-
-  if (self->Delta == 200.0)
+  /*
+   * We are using the redshift evolution of the parameters as given in the appendix of
+   * Tinker et al. 2010. In the paper they refer to the redshift evolution of the
+   * parameters for Delta=200. Here we are extending the redshift evolution to other
+   * Delta values.
+   */
   {
     const gdouble alpha_z = self->alpha;
     const gdouble beta_z  = self->beta * pow (1.0 + z, 0.2);
@@ -190,13 +191,8 @@ _nc_multiplicity_func_tinker_mean_normalized_eval (NcMultiplicityFunc *mulf, NcH
     const gdouble eta_z   = self->eta * pow (1.0 + z, 0.27);
     const gdouble gamma_z = self->gamma * pow (1.0 + z, -0.01);
 
-    f_Tinker_mean_normalized = alpha_z * (1.0 + pow (beta_z * nu, -2.0 * phi_z))
-                               * pow (nu, 2.0 * eta_z) * exp (-gamma_z * nu * nu / 2.0) * nu;
-  }
-  else
-  {
-    f_Tinker_mean_normalized = nu * self->alpha * (1.0 + pow (self->beta * nu, -2.0 * self->phi))
-                               * pow (nu, 2.0 * self->eta) * exp (-self->gamma * nu * nu / 2.0);
+    f_Tinker_mean_normalized = nu * alpha_z * (1.0 + pow (beta_z * nu, -2.0 * phi_z))
+                               * pow (nu, 2.0 * eta_z) * exp (-gamma_z * nu * nu / 2.0);
   }
 
   return f_Tinker_mean_normalized;
