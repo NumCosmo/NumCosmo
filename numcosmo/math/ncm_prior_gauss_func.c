@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_prior_gauss_func
- * @title: NcmPriorGaussFunc
- * @short_description: a gaussian prior on a parameter.
+ * NcmPriorGaussFunc:
+ *
+ * Gaussian prior on a parameter.
  *
  * This object is a subclass of #NcmPriorGauss, specializing in a Gaussian prior on a
  * derived quantity. The prior is characterized by a mean function, an optional

@@ -24,11 +24,12 @@
  */
 
 /**
- * SECTION:nc_data_cluster_pseudo_counts
- * @title: NcDataClusterPseudoCounts
- * @short_description: Galaxy clusters data -- pseudo number counts likelihood.
+ * NcDataClusterPseudoCounts:
  *
- * FIXME
+ * Galaxy clusters data -- pseudo number counts likelihood.
+ *
+ * This class is a subclass of #NcmData implementing the likelihood for galaxy clusters
+ * pseudo number counts.
  *
  */
 

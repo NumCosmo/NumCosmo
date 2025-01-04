@@ -23,14 +23,12 @@
  */
 
 /**
- * SECTION:ncm_integrate
- * @title: NcmIntegral
- * @short_description: Numerical integration helpers.
- * @stability: Stable
- * @include: numcosmo/math/ncm_integrate.h
+ * NcmIntegral:
  *
- * This module provides functions to perform numerical integration.
- * It uses GSL library to perform the integration.
+ * Numerical integration helpers.
+ *
+ * This module provides functions to perform numerical integration. It uses GSL library
+ * to perform the integration.
  *
  */
 

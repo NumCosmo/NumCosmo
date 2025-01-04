@@ -24,13 +24,13 @@
  */
 
 /**
- * SECTION:ncm_prior_gauss_param
- * @title: NcmPriorGaussParam
- * @short_description: a gaussian prior on a parameter
+ * NcmPriorGaussParam:
  *
- * This object is a subclass of #NcmPriorGauss, precisely designed for a Gaussian
- * prior on a parameter. The prior relies on a parameter ID and
- * user-specified mean and standard deviation parameters.
+ * Gaussian prior on a parameter.
+ *
+ * This object is a subclass of #NcmPriorGauss, precisely designed for a Gaussian prior
+ * on a parameter. The prior relies on a parameter ID and user-specified mean and
+ * standard deviation parameters.
  *
  * Users have flexibility in specifying the parameter in various ways:
  * - Using the pair NcmModelID and the parameter pid.

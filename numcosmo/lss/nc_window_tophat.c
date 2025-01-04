@@ -24,15 +24,13 @@
  */
 
 /**
- * SECTION:nc_window_tophat
- * @title: NcWindowTophat
- * @short_description: A top-hat window function.
- * @stability: Stable
- * @include: numcosmo/lss/nc_window_tophat.h
+ * NcWindowTophat:
+ *
+ * A top-hat window function.
  *
  * This object implements the #NcWindow class for a top-hat window function.
  *
- * The top-hat window function in the real space is defined as, 
+ * The top-hat window function in the real space is defined as,
  * \begin{equation*}
  *   W_{TH}(r, R) = \frac{3}{4\pi R^3}, \,\,\,\, \mathrm{for} \,\,\, r \leq R \,\, ,
  * \end{equation*}
@@ -41,7 +39,7 @@
  * where $\bar{\rho}(z)$ is the mean density of the universe at redshift $z$.
  *
  * When the function nc_window_eval_fourier() is applied,
- * it returns the top-hat window function in the Fourier space, 
+ * it returns the top-hat window function in the Fourier space,
  * \begin{equation*}
  *  W_{th}(k, R) = \frac{3}{(kR)^3} \left[ \sin (kR) - (kR)\cos (kR)\right] = \frac{3}{(kR)} j_1(kR),
  * \end{equation*}
@@ -86,12 +84,12 @@ static gdouble
 _nc_window_tophat_eval_fourier (const NcWindow *wp, const gdouble k, const gdouble R)
 {
   gdouble kR = k * R;
-  
+
   NCM_UNUSED (wp);
-  
+
   if (kR == 0.0)
     return 1.0;
-  
+
   return 3.0 * gsl_sf_bessel_j1 (kR) / kR;
 }
 
@@ -99,9 +97,9 @@ static gdouble
 _nc_window_tophat_deriv_fourier (const NcWindow *wp, const gdouble k, const gdouble R)
 {
   gdouble dWT = -3.0 * gsl_sf_bessel_j2 (k * R) / R;
-  
+
   NCM_UNUSED (wp);
-  
+
   return dWT;
 }
 
@@ -110,14 +108,14 @@ _nc_window_tophat_eval_realspace (const NcWindow *wp, const gdouble r, const gdo
 {
   gdouble WT_realspace;
   gdouble R3 = R * R * R;
-  
+
   NCM_UNUSED (wp);
-  
+
   if (r <= R)
     WT_realspace = 3.0 / (4.0 * M_PI * R3);
   else
     WT_realspace = 0.0;
-  
+
   return WT_realspace;
 }
 
@@ -139,12 +137,12 @@ nc_window_tophat_class_init (NcWindowTophatClass *klass)
 {
   GObjectClass *object_class  = G_OBJECT_CLASS (klass);
   NcWindowClass *parent_class = NC_WINDOW_CLASS (klass);
-  
+
   parent_class->volume        = NC_WINDOW_VOLUME_TOPHAT;
   parent_class->eval_fourier  = &_nc_window_tophat_eval_fourier;
   parent_class->deriv_fourier = &_nc_window_tophat_deriv_fourier;
   parent_class->eval_real     = &_nc_window_tophat_eval_realspace;
-  
+
   object_class->finalize = nc_window_tophat_finalize;
 }
 

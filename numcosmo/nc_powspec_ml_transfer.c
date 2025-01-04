@@ -24,19 +24,14 @@
  */
 
 /**
- * SECTION:nc_powspec_ml_transfer
- * @title: NcPowspecMLTransfer
- * @short_description: Class for linear matter power spectrum from a transfer function.
- * @stability: Stable
- * @include: numcosmo/nc_powspec_ml_transfer.h
+ * NcPowspecMLTransfer:
+ *
+ * Class for linear matter power spectrum from a transfer function.
  *
  * Provides a linear matter power spectrum as a function of mode $k$ and redshift $z$
- * using a transfer function $T(k)$ #NcTransferFunc and the growth function $D(z)$ #NcGrowthFunc,
- * $$P(k, z) = P_{\text{prim}} (k) T(k)^2 D(z)^2,$$ where $P_{\text{prim}} (k)$ is the primordial
- * power spectrum #NcHIPrim.
- *
- *
- *
+ * using a transfer function $T(k)$ #NcTransferFunc and the growth function $D(z)$
+ * #NcGrowthFunc, $$P(k, z) = P_{\text{prim}} (k) T(k)^2 D(z)^2,$$ where
+ * $P_{\text{prim}} (k)$ is the primordial power spectrum #NcHIPrim.
  */
 
 #ifdef HAVE_CONFIG_H

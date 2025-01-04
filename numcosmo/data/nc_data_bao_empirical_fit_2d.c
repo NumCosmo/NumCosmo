@@ -24,19 +24,19 @@
  */
 
 /**
- * SECTION:nc_data_bao_empirical_fit_2d
- * @title: NcDataBaoEmpiricalFit2d
- * @short_description: Baryon oscillation data -- $D_H / r_d$ and $D_t / r_d$ empirical likelihood.
+ * NcDataBaoEmpiricalFit2d:
  *
- * This object implements the BAO data when its likelihood function is provided,
- * e.g., [Bautista et al. (2017)][XBautista2017].
+ * Baryon oscillation data -- $D_H / r_d$ and $D_t / r_d$ empirical likelihood.
+ *
+ * This object implements the BAO data when its likelihood function is provided, e.g.,
+ * [Bautista et al. (2017)][XBautista2017].
  *
  * The data is stored in a #NcDataBaoEmpiricalFit2d object. The data is stored in a
- * #NcmDataDist2d base class object, which is a subclass of #NcmData.
- * The data represents the likelihood function of the transverse distance $D_t$ and the
- * Hubble distance $D_H$ at the redshift $z$ divided by the sound horizon at the
- * last scattering surface $r_s$. The likelihood function is provided as a
- * #NcmSpline2d object.
+ * #NcmDataDist2d base class object, which is a subclass of #NcmData. The data
+ * represents the likelihood function of the transverse distance $D_t$ and the Hubble
+ * distance $D_H$ at the redshift $z$ divided by the sound horizon at the last
+ * scattering surface $r_s$. The likelihood function is provided as a #NcmSpline2d
+ * object.
  *
  */
 

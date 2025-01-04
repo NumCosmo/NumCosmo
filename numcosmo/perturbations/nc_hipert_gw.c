@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_hipert_gw
- * @title: NcHIPertGW
- * @short_description: Perturbation object for gravitational wave mode.
+ * NcHIPertGW:
+ *
+ * Perturbation object for gravitational wave mode.
  *
  * This object provides the computation of the gravitational wave mode for the
  * cosmological perturbations. It solves the equation of motion for the gauge invariant

@@ -24,11 +24,11 @@
  */
 
 /**
- * SECTION:ncm_fit_esmcmc_walker_apes
- * @title: NcmFitESMCMCWalkerAPES
- * @short_description: Ensemble sampler Markov Chain Monte Carlo walker - apes move.
+ * NcmFitESMCMCWalkerAPES:
  *
- * Implementing apes move walker for #NcmFitESMCMC (affine invariant).
+ * Ensemble sampler Markov Chain Monte Carlo walker - apes move.
+ *
+ * Implementing apes move walker for #NcmFitESMCMC.
  *
  * This object implements the Approximate Posterior Ensemble Sample (APES) step proposal for a walker.
  * This proposal was developed by Sandro Dias Pinto Vitenti and implemented in this library. Below there is a description of the proposal.

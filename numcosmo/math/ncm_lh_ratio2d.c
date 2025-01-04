@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_lh_ratio2d
- * @title: NcmLHRatio2d
- * @short_description: Likelihood ratio object for bidimensional parameter analysis.
+ * NcmLHRatio2d:
+ *
+ * Likelihood ratio object for bidimensional parameter analysis.
  *
  * Class for likelihood ratio analysis of two parameters.
  *

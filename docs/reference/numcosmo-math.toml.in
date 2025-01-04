@@ -1,0 +1,56 @@
+[library]
+version = "@version@"
+browse_url = "https://github.com/NumCosmo/NumCosmo"
+repository_url = "https://github.com/NumCosmo/NumCosmo.git"
+website_url = "https://numcosmo.github.io/"
+docs_url = "https://numcosmo.github.io/"
+authors = "NumCosmo Developers"
+logo_url = "numcosmo_logo.png"
+license = "LGPL-2.1-or-later"
+description = "NumCosmo Math Library"
+dependencies = ["GObject-2.0", "Gio-2.0"]
+devhelp = true
+search_index = true
+
+  [dependencies."GObject-2.0"]
+  name = "GObject"
+  description = "The base type system library"
+  docs_url = "https://docs.gtk.org/gobject/"
+
+  [dependencies."Gio-2.0"]
+  name = "Gio"
+  description = "GObject Interfaces and Objects, Networking, IPC, and I/O"
+  docs_url = "https://docs.gtk.org/gio/"
+
+related = ["NumCosmo-1.0"]
+
+  [related."NumCosmo-1.0"]
+  name = "NumCosmo"
+  description = "NumCosmo Library"
+  docs_url = "../numcosmo/"
+
+[theme]
+name = "basic"
+show_index_summary = true
+show_class_hierarchy = true
+
+[source-location]
+base_url = "https://github.com/NumCosmo/NumCosmo/blob/master/"
+
+[extra]
+content_files = [
+  "overview.md",
+]
+content_images = [
+  "../images/numcosmo_logo.png",
+]
+content_base_url = "https://github.com/NumCosmo/NumCosmo/blob/master/docs/reference/numcosmo/"
+urlmap_file = "urlmap_mathjax.js"
+
+[[object]]
+name = "DECLARE_INTERNAL_TYPE"
+hidden = true
+
+[[object]]
+pattern = "KEY_*"
+check_ignore = true

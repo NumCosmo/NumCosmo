@@ -24,10 +24,9 @@
  */
 
 /**
- * SECTION:ncm_fit_esmcmc_walker_stretch
- * @title: NcmFitESMCMCWalkerStretch
- * @short_description: Ensemble sampler Markov Chain Monte Carlo walker - stretch move.
- * @stability: Stable
+ * NcmFitESMCMCWalkerStretch:
+ *
+ * Ensemble sampler Markov Chain Monte Carlo walker - stretch move.
  *
  * Implementing stretch move walker for #NcmFitESMCMC (affine invariant).
  *

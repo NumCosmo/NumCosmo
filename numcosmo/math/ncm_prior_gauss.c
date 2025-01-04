@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_prior_gauss
- * @title: NcmPriorGauss
- * @short_description: A gaussian prior for NcmLikelihood
+ * NcmPriorGauss:
+ *
+ * A gaussian prior for NcmLikelihood.
  *
  * This object is a subclass of #NcmPrior, serving as a base class for Gaussian priors
  * used by NcmLikelihood. These objects describe Gaussian prior distributions

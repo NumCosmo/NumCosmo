@@ -36,6 +36,7 @@ authors = [
 test = [
     "pytest",
     "pytest-tap",
+    "pytest-lazy-fixtures",
     "rich",
     "typer",
     "pyccl",

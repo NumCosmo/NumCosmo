@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_data_bao_dhr_dar
- * @title: NcDataBaoDHrDAr
- * @short_description: Baryon Oscillation Data -- $(D_H/r,\; D_A/r)$ data.
+ * NcDataBaoDHrDAr:
+ *
+ * Baryon Oscillation Data -- $(D_H/r,\; D_A/r)$ data.
  *
  * See: [Font-Ribera et al. (2014)][XFont-Ribera2014],
  * [Delubac et al. (2015)][XDelubac2015] and

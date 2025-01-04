@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:ncm_model_mvnd
- * @title: NcmModelMVND
- * @short_description: Multivariate Normal Distribution mean model.
+ * NcmModelMVND:
+ *
+ * Multivariate Normal Distribution mean model.
  *
  * Multivariate Normal distribution model of the mean.
  *

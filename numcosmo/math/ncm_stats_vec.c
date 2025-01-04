@@ -24,29 +24,28 @@
  */
 
 /**
- * SECTION:ncm_stats_vec
- * @title: NcmStatsVec
- * @short_description: An online statistics vector.
+ * NcmStatsVec:
  *
- * This object calculates some basic statistics (mean, variance and covariance)
- * of a set of random variables.
+ * An online statistics vector.
  *
- * The mean can be calculated online using the following formula:
- * $$\bar{x}_n = \bar{x}_{n-1} + (x_n - \bar{x}_{n-1})\frac{w_n}{W_n},$$
- * where $\bar{x}_n$ is the mean calculated using the first $n$ elements,
- * $x_n$ is the $n$-th element, $w_n$ the $n$-th weight and finally $W_n$
- * is the sum of the first $n$ weights.
+ * This object calculates some basic statistics (mean, variance and covariance) of a set
+ * of random variables.
  *
- * Using the expressions above we obtain the variance from as following:
- * $$M_n = M_{n-1} + (x_n - \bar{x}_{n-1})^2w_n\frac{W_{n-1}}{W_n},$$
- * where the variance of the first $n$ elements is
- * $$V_n = \frac{M_n}{W^\text{bias}_{n}}, \quad W^\text{bias}_{n} \equiv \frac{W_n^2 - \sum^n_iw_i^2}{W_n}.$$
- * In the formula above we defined the bias corrected weight $W^\text{bias}_{n}$.
+ * The mean can be calculated online using the following formula: $$\bar{x}_n =
+ * \bar{x}_{n-1} + (x_n - \bar{x}_{n-1})\frac{w_n}{W_n},$$ where $\bar{x}_n$ is the mean
+ * calculated using the first $n$ elements, $x_n$ is the $n$-th element, $w_n$ the
+ * $n$-th weight and finally $W_n$ is the sum of the first $n$ weights.
  *
- * Finally, the covariance is computed through the following expression:
- * $$N(x,y)_n = N(x,y)_{n-1} + (x_n - \bar{x}_n)(y_n - \bar{y}_{n-1})w_n,$$
- * where the covariance of two variables $x$, $y$ is given by
- * $$Cov(x,y)_n = \frac{N(x,y)_n}{W^\text{bias}_{n}}.$$
+ * Using the expressions above we obtain the variance from as following: $$M_n = M_{n-1}
+ * + (x_n - \bar{x}_{n-1})^2w_n\frac{W_{n-1}}{W_n},$$ where the variance of the first
+ * $n$ elements is $$V_n = \frac{M_n}{W^\text{bias}_{n}}, \quad W^\text{bias}_{n} \equiv
+ * \frac{W_n^2 - \sum^n_iw_i^2}{W_n}.$$ In the formula above we defined the bias
+ * corrected weight $W^\text{bias}_{n}$.
+ *
+ * Finally, the covariance is computed through the following expression: $$N(x,y)_n =
+ * N(x,y)_{n-1} + (x_n - \bar{x}_n)(y_n - \bar{y}_{n-1})w_n,$$ where the covariance of
+ * two variables $x$, $y$ is given by $$Cov(x,y)_n =
+ * \frac{N(x,y)_n}{W^\text{bias}_{n}}.$$
  *
  * # Using a NcmStatsVec. #
  * |[<!-- language="C" -->

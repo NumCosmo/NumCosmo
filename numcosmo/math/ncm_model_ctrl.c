@@ -23,14 +23,14 @@
  */
 
 /**
- * SECTION:ncm_model_ctrl
- * @title: NcmModelCtrl
- * @short_description: Control object for testing updates on model status.
+ * NcmModelCtrl:
  *
- * This object is employed to manage the status of a #NcmModel. It serves the purpose
- * of checking whether the model has been updated since the last call to
- * ncm_model_ctrl_update(). Calculation objects dependent on the model can utilize
- * this object to determine if updates are necessary.
+ * Control object for testing updates on model status.
+ *
+ * This object is employed to manage the status of a #NcmModel. It serves the purpose of
+ * checking whether the model has been updated since the last call to
+ * ncm_model_ctrl_update(). Calculation objects dependent on the model can utilize this
+ * object to determine if updates are necessary.
  *
  */
 

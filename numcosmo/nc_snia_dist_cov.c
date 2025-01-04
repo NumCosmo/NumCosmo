@@ -24,13 +24,13 @@
  */
 
 /**
- * SECTION:nc_snia_dist_cov
- * @title: NcSNIADistCov
- * @short_description: Supernovae distance covariance between distance estimates.
+ * NcSNIADistCov:
  *
- * This object implements the calculation necessary to make a statistical
- * analysis using data from [Conley et al. (2011)][XConley2011]
- * and [Sullivan et al. (2011)][XSullivan2011].
+ * Supernovae distance covariance between distance estimates.
+ *
+ * This object implements the calculation necessary to make a statistical analysis using
+ * data from [Conley et al. (2011)][XConley2011] and [Sullivan et al.
+ * (2011)][XSullivan2011].
  *
  * Is also supports [Betoule et al. (2014)][XBetoule2014].
  *
