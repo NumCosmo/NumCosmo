@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_lh_ratio1d
- * @title: NcmLHRatio1d
- * @short_description: Likelihood ratio for one dimensional parameter analysis.
+ * NcmLHRatio1d:
+ *
+ * Likelihood ratio for one dimensional parameter analysis.
  *
  * This object defines a likelihood ratio for one dimensional parameter analysis.
  *

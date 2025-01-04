@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:ncm_sf_spherical_harmonics
- * @title: NcmSFSphericalHarmonics
- * @short_description: Spherical Harmonics object
+ * NcmSFSphericalHarmonics:
+ *
+ * Spherical Harmonics object.
  *
  * Object to compute the spherical harmonics $\bar{Y}_l^m (x)$ and its derivatives
  * $\bar{Y}_{l+1}^m (x)$ and $\bar{Y}_{l+2}^m (x)$, where $x = \cos \theta$.

@@ -24,17 +24,18 @@
  */
 
 /**
- * SECTION:nc_data_bao_rdv
- * @title: NcDataBaoRDV
- * @short_description: Baryon Oscillation Data -- $r_s / D_V$ ratio.
+ * NcDataBaoRDV:
+ *
+ * Baryon Oscillation Data -- $r_s / D_V$ ratio.
  *
  * See [Percival et al. (2007)][XPercival2007].
  *
- * Kazin et al. (arXiv:1401.0358): our implementation of the inverse covariance matrix is given by
- * $$C^{-1}_{new} = \frac{1}{r_s^{\text{fid}}} C^{-1},$$
- * where $r_s^{\text{fid}} = 148.6$ and $C^{-1}$ is given in table 4. This modification is due the fact
- * that we are using $D_V(z)/r_s(z_d)$ instead of $D_V(z)* r_s^{\text{fid}}/r_s(z_d)$. Analogously, we implemented
- * $D_V(z) / r_s(z_d) = [1716.4, 2220.8, 2516.1] / 148.6 = [11.550, 14.945, 16.932]$.
+ * Kazin et al. (arXiv:1401.0358): our implementation of the inverse covariance matrix
+ * is given by $$C^{-1}_{new} = \frac{1}{r_s^{\text{fid}}} C^{-1},$$ where
+ * $r_s^{\text{fid}} = 148.6$ and $C^{-1}$ is given in table 4. This modification is due
+ * the fact that we are using $D_V(z)/r_s(z_d)$ instead of $D_V(z)*
+ * r_s^{\text{fid}}/r_s(z_d)$. Analogously, we implemented $D_V(z) / r_s(z_d) = [1716.4,
+ * 2220.8, 2516.1] / 148.6 = [11.550, 14.945, 16.932]$.
  *
  */
 

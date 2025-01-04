@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_xcor_limber_kernel_gal
- * @title: NcXcorLimberKernelGal
- * @short_description: implementation of #NcXcorLimberKernel for galaxy density
+ * NcXcorLimberKernelGal:
+ *
+ * Implementation of #NcXcorLimberKernel for galaxy density.
  *
  * The kernel is given by
  * \begin{equation}

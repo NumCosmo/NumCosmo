@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_fit_esmcmc_walker
- * @title: NcmFitESMCMCWalker
- * @short_description: Ensemble sampler Markov Chain Monte Carlo walker class.
+ * NcmFitESMCMCWalker:
+ *
+ * Ensemble sampler Markov Chain Monte Carlo walker class.
  *
  * Abstract class for implementing walkers for #NcmFitESMCMC.
  *

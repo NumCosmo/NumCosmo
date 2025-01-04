@@ -23,9 +23,9 @@
  */
 
 /**
- * SECTION:ncm_mpsf_sbessel
- * @title: NcmMpsfSBessel
- * @short_description: Multiple precision spherical bessel implementation.
+ * NcmMpsfSBessel:
+ *
+ * Multiple precision spherical bessel implementation.
  *
  * Implementation of multiple precision spherical Bessel functions using the GNU MPFR
  * library. This module utilizes binary splitting to compute the functions, employing

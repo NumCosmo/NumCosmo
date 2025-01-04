@@ -26,11 +26,10 @@
  */
 
 /**
- * SECTION:ncm_data_dist2d
- * @title: NcmDataDist2d
- * @short_description: Abstract class for two-variables distribution data.
+ * NcmDataDist2d:
  *
- * This object is designate to data that is described by a bivariate and arbitrary distribution.
+ * This object is designate to data that is described by a bivariate and arbitrary
+ * distribution.
  *
  */
 

@@ -27,13 +27,10 @@
  */
 
 /**
- * SECTION: nc_galaxy_sd_obs_redshift
- * @title: NcGalaxySDObsRedshift
- * @short_description: Class describing galaxy sample observed redshift distribution.
- * @stability: Unstable
+ * NcGalaxySDObsRedshift:
  *
+ * Class describing galaxy sample observed redshift distribution.
  *
- * This class describes galaxy sample observed redshift distribution.
  *
  */
 

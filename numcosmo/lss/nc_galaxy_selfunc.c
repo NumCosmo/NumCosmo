@@ -24,12 +24,9 @@
  */
 
 /**
- * SECTION:nc_galaxy_selfunc
- * @title: NcGalaxySelfunc
- * @short_description: Galaxy phenomelogical selection function.
- * @include: nc_galaxy_selfunc.h
+ * NcGalaxySelfunc:
  *
- * FIXME
+ * Galaxy phenomelogical selection function.
  *
  */
 

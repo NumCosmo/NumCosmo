@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_hiprim_power_law
- * @title: NcHIPrimPowerLaw
- * @short_description: Power law implementation for primordial spectra.
+ * NcHIPrimPowerLaw:
+ *
+ * Power law implementation for primordial spectra.
  *
  * Primordial adiabatic scalar power spectrum:
  * $$ \mathcal{P}_{SA}(k) = \mathcal{A}_\mathrm{s}\left(\frac{k}{k_\star}\right)^{n_s -1 }.$$
