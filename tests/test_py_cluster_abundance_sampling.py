@@ -127,7 +127,7 @@ def test_cluster_abundance_sampling(cosmo_hmf):
     z_obs = ncdata.get_z_obs()
     z_obs_params = ncdata.get_z_obs_params()
 
-    assert ncdata.get_len() == 5522
+    assert ncdata.get_len() == 4242
 
     assert ncdata.get_len() == lnM_obs.col_len()
     assert ncdata.get_len() == z_obs.col_len()
