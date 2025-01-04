@@ -40,7 +40,7 @@ from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams
 Ncm.cfg_init()
 
 
-@pytest.fixture(name="cosmologies")
+@pytest.fixture(name="cosmologies", scope="module")
 def fixture_cosmologies() -> tuple[pyccl.Cosmology, ncpy.Cosmology]:
     """Fixture for cosmologies."""
     _ = CCLParams()
