@@ -147,21 +147,21 @@ _nc_multiplicity_func_watson_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
 {
   NcMultiplicityFuncWatson *mwat               = NC_MULTIPLICITY_FUNC_WATSON (mulf);
   NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
-  const gdouble Omega_m                        = nc_hicosmo_E2Omega_m (cosmo, z);
+  const gdouble Omega_m                        = nc_hicosmo_E2Omega_m (cosmo, z) / nc_hicosmo_E2 (cosmo, z);
   const gdouble Delta_178                      = self->Delta / 178.0;
 
   gdouble A, alpha, beta, gamma;
   gdouble f_Watson;
 
 
-  if (z == 0)
+  if (z == 0.0)
   {
     A     = 0.194;
     alpha = 1.805;
     beta  = 2.267;
     gamma = 1.287;
   }
-  else if (z >= 6)
+  else if (z >= 6.0)
   {
     A     = 0.563;
     alpha = 3.810;

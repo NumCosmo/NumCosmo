@@ -164,6 +164,24 @@ def fixture_bocquet_mdef(
     return request.param
 
 
+WATSON_OPTS = [
+    ("matter", Nc.MultiplicityFuncMassDef.MEAN, 178),
+    ("matter", Nc.MultiplicityFuncMassDef.MEAN, 200),
+    ("matter", Nc.MultiplicityFuncMassDef.MEAN, 500),
+    ("matter", Nc.MultiplicityFuncMassDef.FOF, "fof"),
+]
+
+
+@pytest.fixture(
+    name="watson_mdef",
+    params=WATSON_OPTS,
+    ids=[f"{mdef}_{Delta}" for mdef, _, Delta in WATSON_OPTS],
+)
+def fixture_watson_mdef(request) -> tuple[str, Nc.MultiplicityFuncMassDef, int | str]:
+    """Fixture for mass functions and power spectra."""
+    return request.param
+
+
 @pytest.fixture(name="massfunc_ps")
 def fixture_massfunc_ps(
     cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology], hmd_fof: pyccl.halos.MassDef
@@ -257,6 +275,25 @@ def fixture_massfunc_bocquet(
     return ccl_hmf_bocquet, mf_bocquet
 
 
+@pytest.fixture(name="massfunc_watson")
+def fixture_massfunc_watson(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+    watson_mdef: tuple[str, Nc.MultiplicityFuncMassDef, int | str],
+) -> tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction]:
+    """Fixture for mass functions and power spectra."""
+    _, cosmo_nc = cosmologies
+    rho_type, nc_rho_type, Delta = watson_mdef
+    hmd = pyccl.halos.MassDef(Delta, rho_type)
+    ccl_hmf_watson = pyccl.halos.MassFuncWatson13(mass_def=hmd)
+    hmf_watson = Nc.MultiplicityFuncWatson.new()
+    hmf_watson.set_mdef(nc_rho_type)
+    if nc_rho_type != Nc.MultiplicityFuncMassDef.FOF:
+        hmf_watson.set_Delta(Delta)
+    mf_watson = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf, hmf_watson)
+
+    return ccl_hmf_watson, mf_watson
+
+
 @pytest.fixture(name="mass_and_z_array")
 def fixture_mass_and_z_array() -> tuple[np.ndarray, np.ndarray]:
     """Fixture for mass and redshift arrays."""
@@ -278,6 +315,7 @@ def fixture_mass_and_z_array() -> tuple[np.ndarray, np.ndarray]:
         lf("massfunc_tinker08"),
         lf("massfunc_tinker10"),
         lf("massfunc_bocquet"),
+        lf("massfunc_watson"),
     ],
 )
 def test_compare_mf(
