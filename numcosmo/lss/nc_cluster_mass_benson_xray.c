@@ -24,11 +24,9 @@
  */
 
 /**
- * SECTION:nc_cluster_mass_benson_xray
- * @title: NcClusterMassBensonXRay
- * @short_description: Sunyaev-Zel'dovich and x-ray cluster abundance mass distribution.
+ * NcClusterMassBensonXRay:
  *
- * FIXME
+ * Sunyaev-Zel'dovich and x-ray cluster abundance mass distribution.
  *
  */
 

@@ -24,14 +24,12 @@
  */
 
 /**
- * SECTION:ncm_integral_nd
- * @title: NcmIntegralND
- * @short_description: N-dimensional integration object.
- * @stability: Stable
- * @include: numcosmo/math/ncm_integral_nd.h
+ * NcmIntegralND:
  *
- * This object is used to perform n-dimensional integration of a function
- * using different methods.
+ * N-dimensional integration object.
+ *
+ * This object is used to perform n-dimensional integration of a function using
+ * different methods.
  *
  * The integration can be performed using the cubature library. The cubature
  * library is a library for adaptive multidimensional integration. The original

@@ -29,14 +29,12 @@
  */
 
 /**
- * SECTION:nc_galaxy_sd_true_redshift_lsst_srd
- * @title: NcGalaxySDTrueRedshiftLSSTSRD
- * @short_description: Class describing galaxy sample redshift distributions as in LSST-SRD.
- * @stability: Unstable
+ * NcGalaxySDTrueRedshiftLSSTSRD:
  *
+ * Class describing galaxy sample redshift distributions as in LSST-SRD.
  *
- * Class defining a galaxy sample redshift distribution as described in the LSST
- * Science Roadmap Document,
+ * Class defining a galaxy sample redshift distribution as described in the LSST Science
+ * Roadmap Document,
  *
  */
 

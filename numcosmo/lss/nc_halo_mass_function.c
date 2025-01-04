@@ -23,12 +23,11 @@
  */
 
 /**
- * SECTION:nc_halo_mass_function
- * @title: NcHaloMassFunction
- * @short_description: Clusters mass function.
+ * NcHaloMassFunction:
  *
- * Class that implements the mass function of clusters
- * dark matter halos.
+ * Clusters mass function.
+ *
+ * Class that implements the mass function of clusters dark matter halos.
  *
  */
 
@@ -606,6 +605,7 @@ gdouble
 nc_halo_mass_function_dv_dzdomega (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble z)
 {
   NcHaloMassFunctionPrivate * const self = mfp->priv;
+
   return nc_distance_comoving_volume_element (self->dist, cosmo, z);
 }
 
@@ -724,8 +724,8 @@ nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
 {
   NcHaloMassFunctionPrivate * const self = mfp->priv;
   guint i, j;
-  const gdouble RH                       = nc_hicosmo_RH_Mpc (cosmo);
-  const gdouble VH                       = gsl_pow_3 (RH);
+  const gdouble RH = nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble VH = gsl_pow_3 (RH);
 
   nc_distance_prepare_if_needed (self->dist, cosmo);
   ncm_powspec_filter_prepare_if_needed (self->psf, NCM_MODEL (cosmo));
@@ -835,8 +835,8 @@ static gdouble
 _encapsulated_z (gdouble z, gpointer p)
 {
   _encapsulated_function_args *args = (_encapsulated_function_args *) p;
-  const gdouble RH                       = nc_hicosmo_RH_Mpc (args->cosmo);
-  const gdouble VH                       = gsl_pow_3 (RH);
+  const gdouble RH                  = nc_hicosmo_RH_Mpc (args->cosmo);
+  const gdouble VH                  = gsl_pow_3 (RH);
 
   gdouble A = args->self->area_survey * VH *
               nc_distance_comoving_volume_element (args->self->dist, args->cosmo, z) *
@@ -863,8 +863,8 @@ _nc_halo_mass_function_generate_2Dspline_knots (NcHaloMassFunction *mfp, NcHICos
   NcHaloMassFunctionPrivate * const self = mfp->priv;
   gsl_function Fx, Fy;
   _encapsulated_function_args args;
-  const gdouble RH                       = nc_hicosmo_RH_Mpc (cosmo);
-  const gdouble VH                       = gsl_pow_3 (RH);
+  const gdouble RH = nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble VH = gsl_pow_3 (RH);
 
   g_assert (mfp->d2NdzdlnM == NULL);
   g_assert_cmpfloat (self->lnMi, <, self->lnMf);

@@ -125,12 +125,13 @@ def create_nc_obj(
         ps_mln.set_kmax(k_max)
         ps_mln.prepare(cosmo)
 
+    psf = None
     if ps_ml:
         psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)
         psf.set_best_lnr0()
 
     # pylint: enable=protected-access
-    return Cosmology(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mln)
+    return Cosmology(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mln, psf=psf)
 
 
 class CCLParams:

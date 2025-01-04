@@ -24,19 +24,16 @@
  */
 
 /**
- * SECTION:ncm_fit_mcbs
- * @title: NcmFitMCBS
- * @short_description: Monte Carlo and bootstrap analysis.
- * @include: numcosmo/math/ncm_fit_mcbs.h
- * @stability: Unstable
+ * NcmFitMCBS:
  *
- * This class implements the Monte Carlo and bootstrap analysis.
- * It performs a Monte Carlo analysis where for each sample of the
- * likelihood function, a bootstrap analysis is performed.
- * The results are stored in a #NcmMSetCatalog.
+ * Monte Carlo and bootstrap analysis.
  *
- * The main objective of this class is to provide a way to estimate
- * the accuracy of the bootstrap analysis.
+ * This class implements the Monte Carlo and bootstrap analysis. It performs a Monte
+ * Carlo analysis where for each sample of the likelihood function, a bootstrap analysis
+ * is performed. The results are stored in a #NcmMSetCatalog.
+ *
+ * The main objective of this class is to provide a way to estimate the accuracy of the
+ * bootstrap analysis.
  *
  */
 

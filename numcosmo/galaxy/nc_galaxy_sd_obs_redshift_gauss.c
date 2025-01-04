@@ -27,11 +27,7 @@
  */
 
 /**
- * SECTION:nc_galaxy_sd_obs_redshift_gauss
- * @title: NcGalaxySDObsRedshiftGauss
- * @short_description: Class describing photometric redshift observations with gaussian errors.
- * @stability: Unstable
- *
+ * NcGalaxySDObsRedshiftGauss:
  *
  * Class describing photometric redshift observations with gaussian errors.
  *

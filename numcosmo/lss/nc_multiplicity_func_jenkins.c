@@ -24,12 +24,13 @@
  */
 
 /**
- * SECTION:nc_multiplicity_func_jenkins
- * @title: NcMultiplicityFuncJenkins
- * @short_description: Dark matter halo -- Jenkins multiplicity function.
+ * NcMultiplicityFuncJenkins:
  *
- * Computes the multiplicity function of dark matter halos using the Jenkins et al. (2001) model.
- * Jenkins et al. (2001) [arXiv:astro-ph/0005260] is a parametrization of the Press-Schechter multiplicity function.
+ * Dark matter halo -- Jenkins multiplicity function.
+ *
+ * Computes the multiplicity function of dark matter halos using the Jenkins et al.
+ * (2001) model. Jenkins et al. (2001) [arXiv:astro-ph/0005260] is a parametrization of
+ * the Press-Schechter multiplicity function.
  *
  * Reference: astro-ph/0005260
  */

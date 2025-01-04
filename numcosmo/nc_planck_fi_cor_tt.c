@@ -24,14 +24,13 @@
  */
 
 /**
- * SECTION:nc_planck_fi_cor_tt
- * @title: NcPlanckFICorTT
- * @short_description: Planck Foreground and Instrument model for TT correlation maps
+ * NcPlanckFICorTT:
  *
- * FIXME
+ * Planck Foreground and Instrument model for TT correlation maps.
  *
- * If you use this object, cite [Planck 2015 results XI (2015)][XPlanckCollaboration2015a],
- * [Planck 2018 results V (2019)][XPlanckCollaboration2019] and related papers.
+ * If you use this object, cite [Planck 2015 results XI
+ * (2015)][XPlanckCollaboration2015a], [Planck 2018 results V
+ * (2019)][XPlanckCollaboration2019] and related papers.
  *
  */
 

@@ -23,9 +23,9 @@
  */
 
 /**
- * SECTION:ncm_func_eval
- * @title: NcmFuncEval
- * @short_description: A general purpose multi-threaded function evaluator.
+ * NcmFuncEval:
+ *
+ * A general purpose multi-threaded function evaluator.
  *
  * Thread pool based function evaluator. This module is used by the different
  * objects in NumCosmo that need to evaluate functions in parallel.

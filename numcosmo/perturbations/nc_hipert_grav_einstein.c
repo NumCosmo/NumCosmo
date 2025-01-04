@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            nc_hipert_grav_einstein.c
  *
@@ -14,22 +15,23 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
- * SECTION:nc_hipert_grav_einstein
- * @title: NcHIPertGravEinstein
- * @short_description: First order Einstein equations on a Friedmann background.
+ * NcHIPertGravEinstein:
  *
- * FIXME
+ * First order Einstein equations on a Friedmann background.
+ *
+ * This object provides the computation of the first order Einstein equations on a Friedmann
+ * background. It solves the equations of motion for the gauge invariant variables.
  *
  */
 
@@ -92,7 +94,6 @@ _nc_hipert_grav_einstein_get_property (GObject *object, guint prop_id, GValue *v
 static void
 _nc_hipert_grav_einstein_dispose (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_grav_einstein_parent_class)->dispose (object);
 }
@@ -100,7 +101,6 @@ _nc_hipert_grav_einstein_dispose (GObject *object)
 static void
 _nc_hipert_grav_einstein_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_grav_einstein_parent_class)->finalize (object);
 }
@@ -133,12 +133,12 @@ nc_hipert_grav_einstein_class_init (NcHIPertGravEinsteinClass *klass)
                                                      G_MININT, G_MAXINT, 0,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  nc_hipert_bg_var_class_register_id ("NcHIPertGravEinstein", 
-                                      "First order Einstein equations background variables", 
+  nc_hipert_bg_var_class_register_id ("NcHIPertGravEinstein",
+                                      "First order Einstein equations background variables",
                                       NULL,
                                       0);
 
-  
+
   grav_class->ndyn_var          = &_nc_hipert_grav_einstein_ndyn_var;
   grav_class->get_deps          = &_nc_hipert_grav_einstein_get_deps;
   grav_class->get_G_scalar_info = &_nc_hipert_grav_einstein_get_G_scalar_info;
@@ -147,12 +147,13 @@ nc_hipert_grav_einstein_class_init (NcHIPertGravEinsteinClass *klass)
 }
 
 #define LEN(a) (sizeof (a) / sizeof (*(a)))
-#define APPEND(a,b) (g_array_append_vals ((a), (b), LEN (b)))
+#define APPEND(a, b) (g_array_append_vals ((a), (b), LEN (b)))
 
-static guint 
+static guint
 _nc_hipert_grav_einstein_ndyn_var (NcHIPertGrav *grav)
 {
   guint ndyn_var = 0;
+
   switch (nc_hipert_grav_get_gauge (grav))
   {
     case NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS:
@@ -175,7 +176,7 @@ static GArray *
 _nc_hipert_grav_einstein_get_deps (NcHIPertGrav *grav, guint vindex)
 {
   GArray *deps = g_array_new (TRUE, TRUE, sizeof (gint));
-  
+
   switch (nc_hipert_grav_get_gauge (grav))
   {
     case NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS:
@@ -185,6 +186,7 @@ _nc_hipert_grav_einstein_get_deps (NcHIPertGrav *grav, guint vindex)
         case NC_HIPERT_GRAV_DYN_VAR (0):
         {
           NcHIPertGravSElem deps_a[] = {NC_HIPERT_GRAV_SELEM_DSIGMA, NC_HIPERT_GRAV_SELEM_RHOPPV};
+
           APPEND (deps, deps_a);
           break;
         }
@@ -192,6 +194,7 @@ _nc_hipert_grav_einstein_get_deps (NcHIPertGrav *grav, guint vindex)
           g_assert_not_reached ();
           break;
       }
+
       break;
     }
     case NC_HIPERT_GRAV_GAUGE_NEWTONIAN:
@@ -201,6 +204,7 @@ _nc_hipert_grav_einstein_get_deps (NcHIPertGrav *grav, guint vindex)
         case NC_HIPERT_GRAV_DYN_VAR (0):
         {
           NcHIPertGravSElem deps_a[] = {NC_HIPERT_GRAV_SELEM_PHI, NC_HIPERT_GRAV_SELEM_RHOPPV};
+
           APPEND (deps, deps_a);
           break;
         }
@@ -208,6 +212,7 @@ _nc_hipert_grav_einstein_get_deps (NcHIPertGrav *grav, guint vindex)
           g_assert_not_reached ();
           break;
       }
+
       break;
     }
     case NC_HIPERT_GRAV_GAUGE_CONST_CURV:
@@ -226,11 +231,11 @@ _nc_hipert_grav_einstein_get_deps (NcHIPertGrav *grav, guint vindex)
   return deps;
 }
 
-static NcHIPertGravInfo * 
+static NcHIPertGravInfo *
 _nc_hipert_grav_einstein_get_G_scalar_info (NcHIPertGrav *grav)
 {
   NcHIPertGravInfo *ginfo = nc_hipert_grav_info_new ();
-    
+
   switch (nc_hipert_grav_get_gauge (grav))
   {
     case NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS:
@@ -267,16 +272,14 @@ _nc_hipert_grav_einstein_get_G_scalar_info (NcHIPertGrav *grav)
   return ginfo;
 }
 
-static void 
+static void
 _nc_hipert_grav_einstein_get_G_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
-{ 
- 
+{
 }
 
-static void 
+static void
 _nc_hipert_grav_einstein_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
 {
-  
 }
 
 /**
@@ -316,7 +319,7 @@ nc_hipert_grav_einstein_ref (NcHIPertGravEinstein *gr)
  * Decreases the reference count of @gr.
  *
  */
-void 
+void
 nc_hipert_grav_einstein_free (NcHIPertGravEinstein *gr)
 {
   g_object_unref (gr);
@@ -329,8 +332,9 @@ nc_hipert_grav_einstein_free (NcHIPertGravEinstein *gr)
  * Decreases the reference count of *@gr and sets the pointer *@gr to NULL.
  *
  */
-void 
+void
 nc_hipert_grav_einstein_clear (NcHIPertGravEinstein **gr)
 {
   g_clear_object (gr);
 }
+

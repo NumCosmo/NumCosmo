@@ -24,16 +24,16 @@
  */
 
 /**
- * SECTION:ncm_fit_levmar
- * @title: NcmFitLevmar
- * @short_description: Best-fit finder -- Levenberg-Marquardt nonlinear least squares algorithm library.
+ * NcmFitLevmar:
+ *
+ * Best-fit finder -- Levenberg-Marquardt nonlinear least squares algorithm library.
  *
  * This object serves as an implementation of a best-fit finder utilizing the
  * Levenberg-Marquardt nonlinear least squares algorithm library. It is designed as a
  * subclass of #NcmFit and operates as a wrapper for the levmar library. It's important
  * to note that the NcmLevMar object can only be effectively employed when all #NcmData
- * within the #NcmDataset are of Gaussian type, and all priors defined in
- * #NcmLikelihood are of Gaussian type as well.
+ * within the #NcmDataset are of Gaussian type, and all priors defined in #NcmLikelihood
+ * are of Gaussian type as well.
  *
  * # Levenberg-Marquardt Algorithm:
  *

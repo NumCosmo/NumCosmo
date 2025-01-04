@@ -31,10 +31,9 @@
  */
 
 /**
- * SECTION:nc_data_cluster_wl
- * @title: NcDataClusterWL
- * @short_description: Cluster weak lensing likelihood.
- * @stability: Unstable
+ * NcDataClusterWL:
+ *
+ * Cluster weak lensing likelihood.
  *
  * This class implements the weak lensing likelihood for galaxy clusters.
  *

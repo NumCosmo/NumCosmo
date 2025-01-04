@@ -24,11 +24,9 @@
  */
 
 /**
- * SECTION:ncm_integral1d
- * @title: NcmIntegral1d
- * @short_description: One dimensional integration object.
- * @stability: Stable
- * @include: numcosmo/math/ncm_integral1d.h
+ * NcmIntegral1d:
+ *
+ * One dimensional integration object.
  *
  * This object is used to perform one dimensional integration.
  *

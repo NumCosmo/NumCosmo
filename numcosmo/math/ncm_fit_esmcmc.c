@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_fit_esmcmc
- * @title: NcmFitESMCMC
- * @short_description: Ensemble sampler Markov Chain Monte Carlo analysis.
+ * NcmFitESMCMC:
+ *
+ * Ensemble sampler Markov Chain Monte Carlo analysis.
  *
  * #NcmFitESMCMC is a class that implements the Ensemble sampler Markov Chain
  * Monte Carlo analysis. The object requires a #NcmFit object to be set before

@@ -27,11 +27,7 @@
  */
 
 /**
- * SECTION:nc_galaxy_sd_obs_redshift_spec
- * @title: NcGalaxySDObsRedshiftSpec
- * @short_description: Class describing spectroscopic redshift observations
- * @stability: Unstable
- *
+ * NcGalaxySDObsRedshiftSpec:
  *
  * Class describing spectroscopic redshift observations.
  *

@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_hoaa
- * @title: NcmHOAA
- * @short_description: Abstract class for Harmonic Oscillator calculation through AA variables.
+ * NcmHOAA:
+ *
+ * Abstract class for Harmonic Oscillator calculation through AA variables.
  *
  * This object represents a generic time dependent harmonic oscillator for the variables
  * $q$ and its momentum $p$. The Hamiltonian of the system is given by
