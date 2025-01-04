@@ -24,14 +24,12 @@
  */
 
 /**
- * SECTION:ncm_spline_cubic_d2
- * @title: NcmSplineCubicD2
- * @short_description: Cubic spline implementation given second derivatives.
- * @stability: Stable
- * @include: numcosmo/math/ncm_spline_cubic_d2.h
+ * NcmSplineCubicD2:
  *
- * This object implements the necessary functions to compute a cubic spline with
- * where the user provides the second derivatives of the function.
+ * Cubic spline implementation given second derivatives.
+ *
+ * This object implements the necessary functions to compute a cubic spline with where
+ * the user provides the second derivatives of the function.
  *
  */
 

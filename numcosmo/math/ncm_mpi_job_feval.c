@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:ncm_mpi_job_feval
- * @title: NcmMPIJobFEval
- * @short_description: MPI job object for evaluating fit steps
+ * NcmMPIJobFEval:
+ *
+ * MPI job object for evaluating fit steps.
  *
  * This object is a subclass of #NcmMPIJob and is designed to implement an MPI job
  * for evaluating fit steps. It is employed by #NcmFit to parallelize the evaluation

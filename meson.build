@@ -3,7 +3,7 @@ project(
   ['c', 'fortran'],
   version: '0.23.0',
   license: 'GPL-3.0-or-later',
-  meson_version: '>= 1.2.0',
+  meson_version: '>= 1.3.0',
   default_options: [
     'buildtype=debugoptimized',
     'warning_level=2',
@@ -255,9 +255,6 @@ if not get_option('numcosmo_checks')
   message('Disabling GLib checks')
 endif
 
-gtkdoc_dep = dependency('gtk-doc', required: get_option('gtkdoc'))
-build_gtk_doc = gtkdoc_dep.found()
-
 add_project_arguments(numcosmo_debug_cflags, language: 'c')
 
 #######################################################################################
@@ -463,6 +460,8 @@ endif
 # Also check for Vala, which is required for the Vala bindings.
 #######################################################################################
 message('Checking for GObject introspection')
+gobject_introspection_dep = dependency('gobject-introspection-1.0')
+girdir = gobject_introspection_dep.get_variable('girdir')
 
 gir_scanner = find_program(
   'g-ir-scanner',
@@ -817,7 +816,7 @@ endif
 #######################################################################################
 
 python_module = import('python')
-python = python_module.find_installation('python3', modules: ['pytest', 'gi'])
+python = python_module.find_installation('python3', modules: ['pytest', 'pytest_lazy_fixtures', 'gi'])
 
 python_pip = python_module.find_installation(
   'python3',
@@ -890,7 +889,7 @@ building_options = {
   'Fortran-Compiler': fc.get_id(),
   'Fortran-Compiler version': fc.version(),
   'Build tests': build_tests,
-  'Build documentation': build_gtk_doc,
+  'Build documentation': get_option('documentation'),
   'Build Python module': get_option('numcosmo_py'),
   'Build Vala library': have_vala,
   'Build GObject introspection': enable_gir,

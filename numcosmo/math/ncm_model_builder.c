@@ -24,12 +24,12 @@
  */
 
 /**
- * SECTION:ncm_model_builder
- * @title: NcmModelBuilder
- * @short_description: A #NcmModel builder
+ * NcmModelBuilder:
  *
- * This model can be used to create runtime NcmModels. It is particularly
- * useful to create models in binded languages, e.g., python.
+ * A #NcmModel builder.
+ *
+ * This model can be used to create runtime NcmModels. It is particularly useful to
+ * create models in binded languages, e.g., python.
  *
  */
 

@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_data_gauss_diag
- * @title: NcmDataGaussDiag
- * @short_description: Gaussian data -- diagonal covariance provided.
+ * NcmDataGaussDiag:
+ *
+ * Gaussian data -- diagonal covariance provided.
  *
  * Gaussian distribution which uses a diagonal covariance matrix as input.
  *

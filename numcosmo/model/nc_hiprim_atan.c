@@ -24,13 +24,12 @@
  */
 
 /**
- * SECTION:nc_hiprim_atan
- * @title: NcHIPrimAtan
- * @short_description: Arctangent modification of the power law primordial spectrum
+ * NcHIPrimAtan:
+ *
+ * Arctangent modification of the power law primordial spectrum.
  *
  * This object implement the arctangent modification of the power law primordial
- * spectrum inspired in the quantum equilibrium models.
- * See:
+ * spectrum inspired in the quantum equilibrium models. See:
  * - [Valentini (2010)][XValentini2010]
  * - [Colin (2015)][XColin2015]
  * - [Underwood (2015)][XUnderwood2015]

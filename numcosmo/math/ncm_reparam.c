@@ -23,9 +23,9 @@
  */
 
 /**
- * SECTION:ncm_reparam
- * @title: NcmReparam
- * @short_description: Abstract class for model reparametrization.
+ * NcmReparam:
+ *
+ * Abstract class for model reparametrization.
  *
  * #NcmReparam is an abstract class for model reparametrization.
  *

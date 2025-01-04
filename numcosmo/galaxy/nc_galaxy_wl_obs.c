@@ -27,12 +27,12 @@
  */
 
 /**
- * SECTION: nc_galaxy_wl_obs
- * @title: NcGalaxyWLObs
- * @short_description: Galaxy weak lensing observation data.
+ * NcGalaxyWLObs:
  *
- * A class to store galaxy weak lensing observation data and information
- * about its coordinate system.
+ * Galaxy weak lensing observation data.
+ *
+ * A class to store galaxy weak lensing observation data and information about its
+ * coordinate system.
  *
  */
 

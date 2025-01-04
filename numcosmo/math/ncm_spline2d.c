@@ -24,14 +24,12 @@
  */
 
 /**
- * SECTION:ncm_spline2d
- * @title: NcmSpline2d
- * @short_description: Abstract class for implementing bidimensional splines.
- * @stability: Stable
- * @include: numcosmo/math/ncm_spline2d.h
+ * NcmSpline2d:
  *
- * This class comprises all functions to provide a #NcmSpline2d, get its properties
- * and evaluate it given an interpolation method.
+ * Base class for implementing bidimensional splines.
+ *
+ * This class comprises all functions to provide a #NcmSpline2d, get its properties and
+ * evaluate it given an interpolation method.
  *
  */
 

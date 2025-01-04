@@ -24,12 +24,12 @@
  */
 
 /**
- * SECTION:ncm_mset_func1
- * @title: NcmMSetFunc
- * @short_description: Abstract class for arbitrary MSet functions - bindable version
+ * NcmMSetFunc1:
  *
- * This class is an abstract class for arbitrary MSet functions it behaves
- * exactly like #NcmMSetFunc but its virtual function is bindable.
+ * Abstract class for arbitrary MSet functions - bindable version
+ *
+ * This class is an abstract class for arbitrary MSet functions it behaves exactly like
+ * #NcmMSetFunc but its virtual function is bindable.
  *
  */
 

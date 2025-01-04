@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_hipert_wkb
- * @title: NcHIPertWKB
- * @short_description: WKB perturbation object.
+ * NcHIPertWKB:
+ *
+ * WKB perturbation object.
  *
  * Generic implementation of WKB analysis.
  *

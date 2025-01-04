@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:ncm_mpi_job_mcmc
- * @title: NcmMPIJobMCMC
- * @short_description: MPI job object for running MCMC steps
+ * NcmMPIJobMCMC:
+ *
+ * MPI job object for running MCMC steps.
  *
  * This object is a subclass of #NcmMPIJob, designed to implement an MPI job for
  * evaluating the posterior at the proposal points during an MCMC run. It is utilized

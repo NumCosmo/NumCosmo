@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:ncm_model_rosenbrock
- * @title: NcmModelRosenbrock
- * @short_description: Multivariate Normal Distribution mean model.
+ * NcmModelRosenbrock:
+ *
+ * Multivariate Normal Distribution mean model.
  *
  * Multivariate Normal distribution model of the mean.
  *

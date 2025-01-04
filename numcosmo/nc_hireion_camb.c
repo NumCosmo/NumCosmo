@@ -24,13 +24,13 @@
  */
 
 /**
- * SECTION:nc_hireion_camb
- * @title: NcHIReionCamb
- * @short_description: CAMB-like reionization object.
+ * NcHIReionCamb:
  *
- * This object implements the reionization as done in CAMB.
+ * CAMB-like reionization object.
  *
- * FIXME
+ * This object implements the reionization as done in CAMB. It is a simple
+ * model that allows to set the reionization redshifts and the width of the
+ * reionization windows.
  *
  */
 

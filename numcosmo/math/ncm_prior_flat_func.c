@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_prior_flat_func
- * @title: NcmPriorFlatFunc
- * @short_description: flat prior on a derived quantity.
+ * NcmPriorFlatFunc:
+ *
+ * Flat prior on a derived quantity.
  *
  * This object subclasses #NcmPriorFlat and defines a flat prior on a derived quantity.
  * The prior is characterized by a mean function, an optional function argument, and

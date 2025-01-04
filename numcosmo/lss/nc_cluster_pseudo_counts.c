@@ -24,11 +24,10 @@
  */
 
 /**
- * SECTION:nc_cluster_pseudo_counts
- * @title: NcClusterPseudoCounts
- * @short_description: FIXME
+ * NcClusterPseudoCounts:
  *
- * FIXME
+ * Model for the pseudo number counts of galaxy clusters.
+ *
  */
 
 #ifdef HAVE_CONFIG_H

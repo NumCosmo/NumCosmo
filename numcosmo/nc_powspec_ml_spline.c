@@ -24,14 +24,12 @@
  */
 
 /**
- * SECTION:nc_powspec_ml_spline
- * @title: NcPowspecMLSpline
- * @short_description: Class for linear matter power spectrum from a 1d-spline.
- * @stability: Stable
- * @include: numcosmo/nc_powspec_ml_spline.h
+ * NcPowspecMLSpline:
  *
- * Provides a linear matter power spectrum as a function of mode $k$ at a redshift
- * $z_0$ computing a spline, whose knots and the respective $P(k, z = z_0)$ values are
+ * Class for linear matter power spectrum from a 1d-spline.
+ *
+ * Provides a linear matter power spectrum as a function of mode $k$ at a redshift $z_0$
+ * computing a spline, whose knots and the respective $P(k, z = z_0)$ values are
  * provided in a file. The time evolution of the power spectrum is computed using the
  * growth function.
  *

@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_fit_gsl_ls
- * @title: NcmFitGSLLS
- * @short_description: Best-fit finder -- GSL least squares algorithms.
+ * NcmFitGSLLS:
+ *
+ * Best-fit finder -- GSL least squares algorithms.
  *
  * This object implements a best-fit finder using the GSL least squares
  * algorithms. It is a subclass of #NcmFit.

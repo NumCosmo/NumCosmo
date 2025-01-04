@@ -26,9 +26,7 @@
  */
 
 /**
- * SECTION:ncm_data_dist1d
- * @title: NcmDataDist1d
- * @short_description: Abstract class for one variable distribution data.
+ * NcmDataDist1d:
  *
  * This object is an abstract class for one variable distribution data.
  *

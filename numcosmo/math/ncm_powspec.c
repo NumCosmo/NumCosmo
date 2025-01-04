@@ -24,22 +24,20 @@
  */
 
 /**
- * SECTION:ncm_powspec
- * @title: NcmPowspec
- * @short_description: Abstrac class for power spectrum implementation.
- * @stability: Stable
- * @include: numcosmo/math/ncm_powspec.h
+ * NcmPowspec:
+ *
+ * Abstrac class for power spectrum implementation.
  *
  * This module comprises the set of functions to compute a power spectrum and
  * derived quantities.
  *
- * Given a field $\delta(\vec{x})$ at position $\vec{x}$, the power spectrum is
- * defined as the Fourier transform of the two-point correlation point, i.e.,
- * $$\xi(\vec{x} - \vec{x}^\prime) = \int \frac{d^3 k}{(2 \pi)^3} e^{i \vec{k}.(\vec{x} - \vec{x}^\prime)} P(k),$$
- * where $\langle \delta(\vec{k} - \vec{k}^\prime)\rangle = (2\pi)^3 \delta_D(\vec{k} - \vec{k}^\prime) P(k)$
- * and $\delta_D$ is the Dirac's delta function.
- * The standard output is the dimensional power spectrum, not the dimensionless one $\Delta(k)^2$,
- * $$P(k) \equiv \frac{2 \pi^2 \Delta(k)^2}{k^3}.$$
+ * Given a field $\delta(\vec{x})$ at position $\vec{x}$, the power spectrum is defined
+ * as the Fourier transform of the two-point correlation point, i.e., $$\xi(\vec{x} -
+ * \vec{x}^\prime) = \int \frac{d^3 k}{(2 \pi)^3} e^{i \vec{k}.(\vec{x} -
+ * \vec{x}^\prime)} P(k),$$ where $\langle \delta(\vec{k} - \vec{k}^\prime)\rangle =
+ * (2\pi)^3 \delta_D(\vec{k} - \vec{k}^\prime) P(k)$ and $\delta_D$ is the Dirac's delta
+ * function. The standard output is the dimensional power spectrum, not the
+ * dimensionless one $\Delta(k)^2$, $$P(k) \equiv \frac{2 \pi^2 \Delta(k)^2}{k^3}.$$
  *
  */
 
