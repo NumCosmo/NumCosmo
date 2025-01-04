@@ -288,6 +288,7 @@ def fixture_massfunc_watson(
     hmf_watson = Nc.MultiplicityFuncWatson.new()
     hmf_watson.set_mdef(nc_rho_type)
     if nc_rho_type != Nc.MultiplicityFuncMassDef.FOF:
+        assert isinstance(Delta, int)
         hmf_watson.set_Delta(Delta)
     mf_watson = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf, hmf_watson)
 
