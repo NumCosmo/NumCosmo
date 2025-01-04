@@ -8,32 +8,32 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2017 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
- * SECTION:nc_multiplicity_func_crocce
- * @title: NcMultiplicityFuncCrocce
- * @short_description: Dark matter halo -- Crocce multiplicity function.
+ * NcMultiplicityFuncCrocce:
  *
- * Dark matter halo multipliciticy function fitted for the MICE simulations. 
- * They used friends of friends algorithm, FoF(0.2). See reference arXiv:0907.0019.
- * 
+ * Dark matter halo -- Crocce multiplicity function.
+ *
+ * Dark matter halo multipliciticy function fitted for the MICE simulations. They used
+ * friends of friends algorithm, FoF(0.2). See reference arXiv:0907.0019.
+ *
  * $$f_{\textrm{MICE}} (\sigma, z) = A(z) \left[ \sigma^{-a(z)} + b(z) \right] e^{\left[ - \frac{c(z)}{\sigma^2}  \right]}$$,
- * where $A(z) = 0.58 (1+z)^{-0.13}$, $a(z) = 1.37(1+z)^{-0.15}$, $b(z) = 0.3(1+z)^{-0.084}$, 
- * and $c(z) = 1.036(1+z)^{-0.024}$. 
+ * where $A(z) = 0.58 (1+z)^{-0.13}$, $a(z) = 1.37(1+z)^{-0.15}$, $b(z) = 0.3(1+z)^{-0.084}$,
+ * and $c(z) = 1.036(1+z)^{-0.024}$.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -61,11 +61,11 @@ nc_multiplicity_func_crocce_init (NcMultiplicityFuncCrocce *mc)
 {
   NcMultiplicityFuncCroccePrivate * const self = mc->priv = nc_multiplicity_func_crocce_get_instance_private (mc);
 
-  self->mdef    = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
+  self->mdef = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
 }
 
 static void
-_nc_multiplicity_func_crocce_set_property (GObject * object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_multiplicity_func_crocce_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   /* NcMultiplicityFuncCrocce *mc = NC_MULTIPLICITY_FUNC_CROCCE (mulf); */
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_CROCCE (object));
@@ -79,7 +79,7 @@ _nc_multiplicity_func_crocce_set_property (GObject * object, guint prop_id, cons
 }
 
 static void
-_nc_multiplicity_func_crocce_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec)
+_nc_multiplicity_func_crocce_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   /* NcMultiplicityFuncCrocce *mc = NC_MULTIPLICITY_FUNC_CROCCE (mulf); */
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_CROCCE (object));
@@ -95,20 +95,19 @@ _nc_multiplicity_func_crocce_get_property (GObject * object, guint prop_id, GVal
 static void
 _nc_multiplicity_func_crocce_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_multiplicity_func_crocce_parent_class)->finalize (object);
 }
 
-static void _nc_multiplicity_func_crocce_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef); 
+static void _nc_multiplicity_func_crocce_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_crocce_get_mdef (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_crocce_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
 nc_multiplicity_func_crocce_class_init (NcMultiplicityFuncCrocceClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcMultiplicityFuncClass* parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
+  NcMultiplicityFuncClass *parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
 
   object_class->set_property = &_nc_multiplicity_func_crocce_set_property;
   object_class->get_property = &_nc_multiplicity_func_crocce_get_property;
@@ -119,10 +118,10 @@ nc_multiplicity_func_crocce_class_init (NcMultiplicityFuncCrocceClass *klass)
   parent_class->eval     = &_nc_multiplicity_func_crocce_eval;
 }
 
-static void 
+static void
 _nc_multiplicity_func_crocce_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
-  NcMultiplicityFuncCrocce *mc = NC_MULTIPLICITY_FUNC_CROCCE (mulf);
+  NcMultiplicityFuncCrocce *mc                 = NC_MULTIPLICITY_FUNC_CROCCE (mulf);
   NcMultiplicityFuncCroccePrivate * const self = mc->priv;
 
   switch (mdef)
@@ -147,35 +146,35 @@ _nc_multiplicity_func_crocce_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityF
   self->mdef = mdef;
 }
 
-static NcMultiplicityFuncMassDef 
+static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_crocce_get_mdef (NcMultiplicityFunc *mulf)
 {
-  NcMultiplicityFuncCrocce *mc = NC_MULTIPLICITY_FUNC_CROCCE (mulf);
+  NcMultiplicityFuncCrocce *mc                 = NC_MULTIPLICITY_FUNC_CROCCE (mulf);
   NcMultiplicityFuncCroccePrivate * const self = mc->priv;
 
   return self->mdef;
 }
 
 static gdouble
-_nc_multiplicity_func_crocce_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   
+_nc_multiplicity_func_crocce_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   /* NcMultiplicityFuncCrocce *mc = NC_MULTIPLICITY_FUNC_CROCCE (mulf); */
-  
-  const gdouble A = 0.58 * pow (1.0 + z, -0.13);
-  const gdouble a = 1.37 * pow (1.0 + z, -0.15);
-  const gdouble b = 0.3 * pow (1.0 + z, -0.084);
-  const gdouble c = 1.036 * pow (1.0 + z, -0.024);    
-  const gdouble f_crocce = A * (pow (sigma, -a) + b) * exp (- c / (sigma * sigma));     
+
+  const gdouble A        = 0.58 * pow (1.0 + z, -0.13);
+  const gdouble a        = 1.37 * pow (1.0 + z, -0.15);
+  const gdouble b        = 0.3 * pow (1.0 + z, -0.084);
+  const gdouble c        = 1.036 * pow (1.0 + z, -0.024);
+  const gdouble f_crocce = A * (pow (sigma, -a) + b) * exp (-c / (sigma * sigma));
 
   NCM_UNUSED (mulf);
   NCM_UNUSED (cosmo);
-  
+
   return f_crocce;
 }
 
 /**
  * nc_multiplicity_func_crocce_new:
- *   
+ *
  * FIXME
  *
  * Returns: A new #NcMultiplicityFuncCrocce.

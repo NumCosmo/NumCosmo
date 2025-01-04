@@ -23,11 +23,12 @@
  */
 
 /**
- * SECTION:nc_hicosmo_qspline
- * @title: NcHICosmoQSpline
- * @short_description: Kinetic model -- Spline deceleration function
+ * NcHICosmoQSpline:
  *
- * FIXME
+ * Kinetic model -- Spline deceleration function.
+ *
+ * This object implements a kinetic model for the deceleration function using a spline.
+ * It is a subclass of #NcHICosmo.
  *
  */
 

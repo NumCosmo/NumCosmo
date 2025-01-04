@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:ncm_mpi_job_fit
- * @title: NcmMPIJobFit
- * @short_description: MPI job object for running #NcmFit
+ * NcmMPIJobFit:
+ *
+ * MPI job object for running #NcmFit.
  *
  * This object is a subclass of #NcmMPIJob, tailored for computing best fits starting
  * at various points in the parameter space. It is employed by #NcmFit to parallelize

@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_cbe
- * @title: NcCBE
- * @short_description: CLASS (Cosmic Linear Anisotropy Solving System) backend
+ * NcCBE:
+ *
+ * CLASS (Cosmic Linear Anisotropy Solving System) backend.
  *
  * This object provides an interface for the CLASS code.
  *

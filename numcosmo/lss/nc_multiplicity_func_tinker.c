@@ -24,11 +24,12 @@
  */
 
 /**
- * SECTION:nc_multiplicity_func_tinker
- * @title: NcMultiplicityFuncTinker
- * @short_description: Dark matter halo -- Tinker multiplicity function.
+ * NcMultiplicityFuncTinker:
  *
- * FIXME
+ * Dark matter halo -- Tinker multiplicity function.
+ *
+ * The Tinker multiplicity function is a parametric form for the mass function of
+ * dark matter halos.
  * Reference: arxiv:0803.2706
  */
 
@@ -54,11 +55,13 @@ struct _NcMultiplicityFuncTinkerPrivate
   NcmSpline *a_s;
   NcmSpline *b_s;
   NcmSpline *c_s;
+  gboolean linear_interp;
 };
 
 enum
 {
   PROP_0,
+  PROP_LINEAR_INTERP,
   PROP_SIZE,
 };
 
@@ -110,6 +113,9 @@ _nc_multiplicity_func_tinker_set_property (GObject *object, guint prop_id, const
 
   switch (prop_id)
   {
+    case PROP_LINEAR_INTERP:
+      nc_multiplicity_func_tinker_set_linear_interp (NC_MULTIPLICITY_FUNC_TINKER (object), g_value_get_boolean (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -119,11 +125,16 @@ _nc_multiplicity_func_tinker_set_property (GObject *object, guint prop_id, const
 static void
 _nc_multiplicity_func_tinker_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
+  NcMultiplicityFuncTinker *mt                 = NC_MULTIPLICITY_FUNC_TINKER (object);
+  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER (object));
-  /* NcMultiplicityFuncTinkerPrivate * const self = mt->priv;*/
 
   switch (prop_id)
   {
+    case PROP_LINEAR_INTERP:
+      g_value_set_boolean (value, self->linear_interp);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -169,6 +180,13 @@ nc_multiplicity_func_tinker_class_init (NcMultiplicityFuncTinkerClass *klass)
   object_class->dispose      = &_nc_multiplicity_func_tinker_dispose;
   object_class->finalize     = &_nc_multiplicity_func_tinker_finalize;
 
+  g_object_class_install_property (object_class,
+                                   PROP_LINEAR_INTERP,
+                                   g_param_spec_boolean ("linear-interp",
+                                                         NULL,
+                                                         "Use linear interpolation",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   parent_class->set_mdef  = &_nc_multiplicity_func_tinker_set_mdef;
   parent_class->set_Delta = &_nc_multiplicity_func_tinker_set_Delta;
@@ -472,5 +490,7 @@ nc_multiplicity_func_tinker_set_linear_interp (NcMultiplicityFuncTinker *mt, gbo
 
   if (self->Delta > 0.0)
     _nc_multiplicity_func_tinker_set_Delta (mulf, Delta);
+
+  self->linear_interp = lin_interp;
 }
 

@@ -23,11 +23,12 @@
  */
 
 /**
- * SECTION:nc_hicosmo_de_cpl
- * @title: NcHICosmoDECpl
- * @short_description: Dark Energy -- Chevallier–Polarski–Linder equation of state
+ * NcHICosmoDECpl:
  *
- * See [Chevallier (2001)][XChevallier2001] and [Linder (2003)][XLinder2003]: $ w(z) = w_0 + w_1 \frac{z}{1.0 + z}$.
+ * Dark Energy -- Chevallier–Polarski–Linder equation of state.
+ *
+ * See [Chevallier (2001)][XChevallier2001] and [Linder (2003)][XLinder2003]: $ w(z) =
+ * w_0 + w_1 \frac{z}{1.0 + z}$.
  *
  */
 

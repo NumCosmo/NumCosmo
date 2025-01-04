@@ -23,14 +23,12 @@
  */
 
 /**
- * SECTION:ncm_spline
- * @title: NcmSpline
- * @short_description: Abstract class for implementing splines.
- * @stability: Stable
- * @include: numcosmo/math/ncm_spline.h
+ * NcmSpline:
  *
- * This class comprises all functions to provide a #NcmSpline, together with
- * all necessary methods.
+ * Base class for implementing splines.
+ *
+ * This class comprises all functions to provide a #NcmSpline, together with all
+ * necessary methods.
  *
  */
 

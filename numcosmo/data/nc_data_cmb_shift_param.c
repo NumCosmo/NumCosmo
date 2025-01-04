@@ -24,14 +24,12 @@
  */
 
 /**
- * SECTION:nc_data_cmb_shift_param
- * @title: NcDataCMBShiftParam
- * @short_description: Cosmic microwave background data -- shift parameter.
- * @stability: Stable
- * @include: numcosmo/data/nc_data_cmb_shift_param.h
+ * NcDataCMBShiftParam:
  *
- * This object creates a CMB shift parameter $R$ data (#NcmData).
- * See #NcDataCMBId and #nc_distance_shift_parameter for more informations.
+ * Cosmic microwave background data -- shift parameter.
+ *
+ * This object creates a CMB shift parameter $R$ data (#NcmData). See #NcDataCMBId and
+ * #nc_distance_shift_parameter for more informations.
  */
 
 #ifdef HAVE_CONFIG_H

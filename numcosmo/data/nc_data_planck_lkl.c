@@ -24,12 +24,12 @@
  */
 
 /**
- * SECTION:nc_data_planck_lkl
- * @title: NcDataPlanckLKL
- * @short_description: Planck Likelihood interface.
+ * NcDataPlanckLKL:
  *
- * Interface to Planck likelihoods from the Planck Legacy Archive.
- * This class is a wrapper to the Planck likelihoods code from the Planck Legacy Archive.
+ * Planck Likelihood interface.
+ *
+ * Interface to Planck likelihoods from the Planck Legacy Archive. This class is a
+ * wrapper to the Planck likelihoods code from the Planck Legacy Archive.
  *
  */
 

@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_mset_func
- * @title: NcmMSetFunc
- * @short_description: Abstract class for arbitrary MSet functions.
+ * NcmMSetFunc:
+ *
+ * Abstract class for arbitrary MSet functions.
  *
  * This abstract class provides a framework for functions that operate on any model
  * in a #NcmMSet and additional extra variables. It establishes methods to

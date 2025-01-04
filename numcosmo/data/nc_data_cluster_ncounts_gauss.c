@@ -24,12 +24,12 @@
  */
 
 /**
- * SECTION:nc_data_cluster_ncounts_gauss
- * @title: NcDataClusterNCountsGauss
- * @short_description: Cluster number count data gaussian likelihood.
+ * NcDataClusterNCountsGauss:
  *
- * #NcDataClusterNCountsGauss is a #NcmDataGaussCov that implements the
- * gaussian likelihood for the cluster number count data.
+ * Cluster number count data gaussian likelihood.
+ *
+ * #NcDataClusterNCountsGauss is a #NcmDataGaussCov that implements the gaussian
+ * likelihood for the cluster number count data.
  *
  */
 

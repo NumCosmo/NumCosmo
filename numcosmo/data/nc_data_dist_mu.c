@@ -8,27 +8,27 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
- * SECTION:nc_data_dist_mu
- * @title: NcDataDistMu
- * @short_description: Distance modulus data.
+ * NcDataDistMu:
  *
- * FIXME
+ * Likelihod object for distance modulus data.
+ *
+ * This class implements the likelihood for distance modulus data.
  *
  */
 
@@ -70,6 +70,7 @@ static void
 nc_data_dist_mu_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataDistMu *dist_mu = NC_DATA_DIST_MU (object);
+
   g_return_if_fail (NC_IS_DATA_DIST_MU (object));
 
   switch (prop_id)
@@ -90,6 +91,7 @@ static void
 nc_data_dist_mu_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataDistMu *dist_mu = NC_DATA_DIST_MU (object);
+
   g_return_if_fail (NC_IS_DATA_DIST_MU (object));
 
   switch (prop_id)
@@ -113,7 +115,7 @@ nc_data_dist_mu_dispose (GObject *object)
 
   ncm_vector_clear (&dist_mu->x);
   nc_distance_clear (&dist_mu->dist);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_dist_mu_parent_class)->dispose (object);
 }
@@ -121,7 +123,6 @@ nc_data_dist_mu_dispose (GObject *object)
 static void
 nc_data_dist_mu_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_dist_mu_parent_class)->finalize (object);
 }
@@ -133,9 +134,9 @@ static void _nc_data_dist_mu_set_size (NcmDataGaussDiag *diag, guint np);
 static void
 nc_data_dist_mu_class_init (NcDataDistMuClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
-  NcmDataGaussDiagClass* diag_class = NCM_DATA_GAUSS_DIAG_CLASS (klass);
+  GObjectClass *object_class        = G_OBJECT_CLASS (klass);
+  NcmDataClass *data_class          = NCM_DATA_CLASS (klass);
+  NcmDataGaussDiagClass *diag_class = NCM_DATA_GAUSS_DIAG_CLASS (klass);
 
   object_class->constructed  = &_nc_data_dist_mu_constructed;
   object_class->set_property = &nc_data_dist_mu_set_property;
@@ -157,7 +158,7 @@ nc_data_dist_mu_class_init (NcDataDistMuClass *klass)
                                                         "Data redshift",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
 
   data_class->prepare   = &_nc_data_dist_mu_prepare;
   diag_class->mean_func = &_nc_data_dist_mu_mean_func;
@@ -168,11 +169,12 @@ static void
 _nc_data_dist_mu_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataDistMu *dist_mu = NC_DATA_DIST_MU (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
   nc_distance_prepare_if_needed (dist_mu->dist, cosmo);
 }
 
-static void 
+static void
 _nc_data_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataDistMu *dist_mu = NC_DATA_DIST_MU (diag);
@@ -185,11 +187,12 @@ _nc_data_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp
   {
     const gdouble z   = ncm_vector_get (dist_mu->x, i);
     const gdouble dmu = nc_distance_dmodulus (dist_mu->dist, cosmo, z);
+
     ncm_vector_set (vp, i, dmu + f_lnRH);
   }
 }
 
-static void 
+static void
 _nc_data_dist_mu_set_size (NcmDataGaussDiag *diag, guint np)
 {
   NcDataDistMu *dist_mu = NC_DATA_DIST_MU (diag);
@@ -200,7 +203,7 @@ _nc_data_dist_mu_set_size (NcmDataGaussDiag *diag, guint np)
 
   if ((np != 0) && (np != cnp))
     dist_mu->x = ncm_vector_new (np);
-  
+
   /* Chain up : end */
   NCM_DATA_GAUSS_DIAG_CLASS (nc_data_dist_mu_parent_class)->set_size (diag, np);
 }
@@ -220,21 +223,23 @@ nc_data_dist_mu_new_empty (NcDistance *dist)
                                         "dist", dist,
                                         "w-mean", TRUE,
                                         NULL);
+
   return dist_mu;
 }
 
 /**
  * nc_data_dist_mu_new_from_file:
  * @filename: file containing a serialized #NcDataDistMu
- * 
+ *
  * Creates a new #NcDataDistMu from @filename.
- * 
+ *
  * Returns: (transfer full): the newly created #NcDataDistMu.
  */
 NcDataDistMu *
 nc_data_dist_mu_new_from_file (const gchar *filename)
 {
   NcDataDistMu *dist_mu = NC_DATA_DIST_MU (ncm_serialize_global_from_file (filename));
+
   g_assert (NC_IS_DATA_DIST_MU (dist_mu));
 
   return dist_mu;
@@ -303,13 +308,14 @@ nc_data_dist_mu_new_from_id (NcDistance *dist, NcDataSNIAId id)
  * nc_data_dist_mu_set_dist:
  * @dist_mu: a #NcDataDistMu
  * @dist: a #NcDistance
- * 
+ *
  * Sets the distance object.
- * 
+ *
  */
-void 
+void
 nc_data_dist_mu_set_dist (NcDataDistMu *dist_mu, NcDistance *dist)
 {
   nc_distance_clear (&dist_mu->dist);
   dist_mu->dist = nc_distance_ref (dist);
 }
+

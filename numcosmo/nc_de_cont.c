@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:nc_de_cont
- * @title: NcDECont
- * @short_description: Dark energy contraction perturbations model
+ * NcDECont:
+ *
+ * Dark energy contraction perturbations model.
  *
  * This object provides the computation of cosmological perturbations in
  * a contracting universe with dark energy. It solves the equation of motion

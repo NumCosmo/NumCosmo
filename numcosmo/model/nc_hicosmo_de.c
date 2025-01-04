@@ -23,11 +23,12 @@
  */
 
 /**
- * SECTION:nc_hicosmo_de
- * @title: NcHICosmoDE
- * @short_description: Abstract class for implementing dark energy models
+ * NcHICosmoDE:
  *
- * NcHICosmoDE is an abstract class for implementing dark energy models.
+ * Base class for implementing dark energy models.
+ *
+ * This object defines the functions for implementing dark energy models.
+ * It is a subclass of #NcHICosmo.
  *
  */
 
