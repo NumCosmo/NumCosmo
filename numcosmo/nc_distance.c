@@ -24,11 +24,9 @@
  */
 
 /**
- * SECTION:nc_distance
- * @title: NcDistance
- * @short_description: Cosmological distance and time related quantities.
- * @stability: Stable
- * @include: numcosmo/nc_distance.h
+ * NcDistance:
+ *
+ * Cosmological distance and time related quantities.
  *
  * This object implements several distances used in cosmology, here we have
  * the following definitions.

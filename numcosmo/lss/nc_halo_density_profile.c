@@ -24,18 +24,17 @@
  */
 
 /**
- * SECTION:nc_halo_density_profile
- * @title: NcHaloDensityProfile
- * @short_description: Abstract class for density profile functions.
+ * NcHaloDensityProfile:
  *
- * This abstract class describes the radial matter density profile in real
- * space. Each implementation must provide, at least, the
- * dimensionless 3D density:
+ * Abstract class for density profile functions.
+ *
+ * This abstract class describes the radial matter density profile in real space. Each
+ * implementation must provide, at least, the dimensionless 3D density:
  * \begin{equation}\label{def:dlrho}
  * \hat\rho(x) \equiv \frac{\rho(x r_s)}{\rho_s}, \quad \rho(r) = \rho_s \hat\rho\left(\frac{r}{r_s}\right),
  * \end{equation}
- * where $\rho(r)$ is the actual density profile, $\rho_s$ is the profile scale
- * and $r_s$ the scale radius. This function corresponds to the virtual function
+ * where $\rho(r)$ is the actual density profile, $\rho_s$ is the profile scale and
+ * $r_s$ the scale radius. This function corresponds to the virtual function
  * nc_halo_density_profile_eval_dl_density().
  *
  * # Parametrization
@@ -421,7 +420,7 @@ static void
 _nc_halo_density_profile_prepare_ctes (NcHaloDensityProfile *dp, NcHICosmo *cosmo)
 {
   _nc_halo_density_profile_hms_is_update (dp);
-  
+
   if (!ncm_model_lstate_is_update (NCM_MODEL (dp), PREPARE_CTES))
   {
     NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);

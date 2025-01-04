@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_data_gauss_cov
- * @title: NcmDataGaussCov
- * @short_description: Gaussian data -- covariance provided.
+ * NcmDataGaussCov:
+ *
+ * Gaussian data -- covariance provided.
  *
  * Generic gaussian distribution which uses the covariance matrix as input.
  *

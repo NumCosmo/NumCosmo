@@ -23,9 +23,9 @@
  */
 
 /**
- * SECTION:nc_hicosmo_de_jbp
- * @title: NcHICosmoDEJbp
- * @short_description: Dark Energy -- Jassal-Bagla-Padmanabhan equation of state
+ * NcHICosmoDEJbp:
+ *
+ * Dark Energy -- Jassal-Bagla-Padmanabhan equation of state.
  *
  * See [Jassal et al. (2005)][XJassal2005]: $w(z) = w_0 + w_1 \frac{z}{(1.0 + z)^2}$.
  *

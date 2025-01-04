@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            nc_hipert_bg_var.c
  *
@@ -14,22 +15,23 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
- * SECTION:nc_hipert_bg_var
- * @title: NcHIPertComp
- * @short_description: Perturbation background variables transport object
+ * NcHIPertBGVar:
  *
- * FIXME
+ * Perturbation background variables transport object.
+ *
+ * This object is a subclass of #NcHIPert, serving as a base class for
+ * perturbation background variables transport objects used by NcHIPertComp.
  *
  */
 
@@ -66,7 +68,7 @@ nc_hipert_bg_var_init (NcHIPertBGVar *bg_var)
   bg_var->cstructs = g_ptr_array_new ();
 
   bg_var->priv->zf = 0.0;
-  
+
   g_ptr_array_set_size (bg_var->cstructs, nc_hipert_bg_var_len (bg_var));
   g_ptr_array_set_free_func (bg_var->cstructs, g_free);
 
@@ -84,6 +86,7 @@ static void
 _nc_hipert_bg_var_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHIPertBGVar *bg_var = NC_HIPERT_BG_VAR (object);
+
   g_return_if_fail (NC_IS_HIPERT_BG_VAR (object));
 
   switch (prop_id)
@@ -110,6 +113,7 @@ static void
 _nc_hipert_bg_var_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHIPertBGVar *bg_var = NC_HIPERT_BG_VAR (object);
+
   g_return_if_fail (NC_IS_HIPERT_BG_VAR (object));
 
   switch (prop_id)
@@ -136,7 +140,7 @@ static void
 _nc_hipert_bg_var_dispose (GObject *object)
 {
   NcHIPertBGVar *bg_var = NC_HIPERT_BG_VAR (object);
-  
+
   g_clear_pointer (&bg_var->cstructs, g_ptr_array_unref);
 
   nc_distance_clear (&bg_var->dist);
@@ -150,7 +154,6 @@ _nc_hipert_bg_var_dispose (GObject *object)
 static void
 _nc_hipert_bg_var_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_bg_var_parent_class)->finalize (object);
 }
@@ -158,7 +161,7 @@ _nc_hipert_bg_var_finalize (GObject *object)
 static void
 nc_hipert_bg_var_class_init (NcHIPertBGVarClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = &_nc_hipert_bg_var_set_property;
   object_class->get_property = &_nc_hipert_bg_var_get_property;
@@ -222,7 +225,7 @@ nc_hipert_bg_var_class_register_id (const gchar *ns, const gchar *desc, const gc
   id = bg_var_class->bg_var_id_len;
 
   bg_var_class->bg_var_id_len++;
-  
+
   g_array_set_size (bg_var_class->bg_var_desc_array, bg_var_class->bg_var_id_len);
 
   bg_var_desc       = &g_array_index (bg_var_class->bg_var_desc_array, NcHIPertBGVarDesc, id);
@@ -230,6 +233,7 @@ nc_hipert_bg_var_class_register_id (const gchar *ns, const gchar *desc, const gc
 
   if (ns == NULL)
     g_error ("Cannot register background variables without a namespace.");
+
   if (desc == NULL)
     g_error ("Cannot register background variables without a description.");
 
@@ -249,7 +253,7 @@ nc_hipert_bg_var_class_register_id (const gchar *ns, const gchar *desc, const gc
 
   G_UNLOCK (last_bg_var_id);
   g_type_class_unref (bg_var_class);
-  
+
   return;
 }
 
@@ -258,16 +262,16 @@ nc_hipert_bg_var_class_register_id (const gchar *ns, const gchar *desc, const gc
  * @gt: a #GType
  *
  * Gets the id associated with the GType @gt.
- * 
+ *
  * Returns: the id of @gt.
  */
-NcHIPertBGVarID 
+NcHIPertBGVarID
 nc_hipert_bg_var_class_get_id_by_gtype (GType gt)
 {
   NcHIPertBGVarClass *bg_var_class = g_type_class_ref (NC_TYPE_HIPERT_BG_VAR);
-  gpointer id_ptr = NULL;
-  gboolean has_it = FALSE;
-  
+  gpointer id_ptr                  = NULL;
+  gboolean has_it                  = FALSE;
+
   G_LOCK (last_bg_var_id);
 
   has_it = g_hash_table_lookup_extended (bg_var_class->ns_table, g_type_name (gt), NULL, &id_ptr);
@@ -275,6 +279,7 @@ nc_hipert_bg_var_class_get_id_by_gtype (GType gt)
   G_UNLOCK (last_bg_var_id);
 
   g_type_class_unref (bg_var_class);
+
   return has_it ? GPOINTER_TO_INT (id_ptr) : -1;
 }
 
@@ -283,16 +288,16 @@ nc_hipert_bg_var_class_get_id_by_gtype (GType gt)
  * @ns: an object namespace
  *
  * Gets the id associated with the namespace @ns.
- * 
+ *
  * Returns: the id of @ns.
  */
-NcHIPertBGVarID 
+NcHIPertBGVarID
 nc_hipert_bg_var_class_get_id_by_ns (const gchar *ns)
 {
   NcHIPertBGVarClass *bg_var_class = g_type_class_ref (NC_TYPE_HIPERT_BG_VAR);
-  gpointer id_ptr = NULL;
-  gboolean has_it = FALSE;
-  
+  gpointer id_ptr                  = NULL;
+  gboolean has_it                  = FALSE;
+
   G_LOCK (last_bg_var_id);
 
   has_it = g_hash_table_lookup_extended (bg_var_class->ns_table, ns, NULL, &id_ptr);
@@ -300,39 +305,40 @@ nc_hipert_bg_var_class_get_id_by_ns (const gchar *ns)
   G_UNLOCK (last_bg_var_id);
 
   g_type_class_unref (bg_var_class);
+
   return has_it ? GPOINTER_TO_INT (id_ptr) : -1;
 }
 
 /**
  * nc_hipert_bg_var_ydy_new:
- * 
+ *
  * Creates a new #NcHIPertBGVarYDY with all
  * entries set to zero.
- * 
+ *
  * Returns: (transfer full): a new #NcHIPertBGVarYDY.
  */
 /**
  * nc_hipert_bg_var_ydy_dup:
  * @ydy: a #NcHIPertBGVarYDY
- * 
+ *
  * Duplicates @ydy.
- * 
+ *
  * Returns: (transfer full): a copy of @ydy.
  */
 /**
  * nc_hipert_bg_var_ydy_free:
  * @ydy: a #NcHIPertBGVarYDY
- * 
+ *
  * Frees @ydy.
- * 
+ *
  */
 /**
  * nc_hipert_bg_var_ydy_get_y_i:
  * @ydy: a #NcHIPertBGVarYDY
  * @i: variable index
- * 
+ *
  * Gets the @i-th variable.
- * 
+ *
  * Returns: the value of the @i-th variable.
  */
 /**
@@ -340,24 +346,24 @@ nc_hipert_bg_var_class_get_id_by_ns (const gchar *ns)
  * @ydy: a #NcHIPertBGVarYDY
  * @i: variable index
  * @dy_i: the value of the @i-th variable derivative
- * 
+ *
  * Sets the @i-th variable derivative to @dy_i.
  */
 /**
  * nc_hipert_bg_var_ydy_get_dy_i:
  * @ydy: a #NcHIPertBGVarYDY
  * @i: variable index
- * 
+ *
  * Gets the @i-th variable derivative.
- * 
+ *
  * Returns: the value of the @i-th variable derivative.
  */
 
 /**
  * nc_hipert_bg_var_new:
- * 
+ *
  * Creates a new #NcHIPertBGVar.
- * 
+ *
  * Returns: (transfer full): the newly instantiated #NcHIPertBGVar.
  */
 NcHIPertBGVar *
@@ -390,7 +396,7 @@ nc_hipert_bg_var_ref (NcHIPertBGVar *bg_var)
  * Decreases the reference count of @bg_var.
  *
  */
-void 
+void
 nc_hipert_bg_var_free (NcHIPertBGVar *bg_var)
 {
   g_object_unref (bg_var);
@@ -403,7 +409,7 @@ nc_hipert_bg_var_free (NcHIPertBGVar *bg_var)
  * Decreases the reference count of *@bg_var and sets the pointer *@bg_var to NULL.
  *
  */
-void 
+void
 nc_hipert_bg_var_clear (NcHIPertBGVar **bg_var)
 {
   g_clear_object (bg_var);
@@ -417,13 +423,13 @@ nc_hipert_bg_var_clear (NcHIPertBGVar **bg_var)
  * Prepares all computation objects inside @bg_var.
  *
  */
-void 
+void
 nc_hipert_bg_var_prepare (NcHIPertBGVar *bg_var, NcHICosmo *cosmo)
 {
   NcDistance *dist = nc_hipert_bg_var_peek_dist (bg_var);
   NcRecomb *recomb = nc_hipert_bg_var_peek_recomb (bg_var);
   NcScalefactor *a = nc_hipert_bg_var_peek_scalefactor (bg_var);
-  
+
   if (dist != NULL)
     nc_distance_prepare (dist, cosmo);
 
@@ -442,13 +448,13 @@ nc_hipert_bg_var_prepare (NcHIPertBGVar *bg_var, NcHICosmo *cosmo)
  * Prepares all computation objects inside @bg_var if necessary.
  *
  */
-void 
+void
 nc_hipert_bg_var_prepare_if_needed (NcHIPertBGVar *bg_var, NcHICosmo *cosmo)
 {
   NcDistance *dist = nc_hipert_bg_var_peek_dist (bg_var);
   NcRecomb *recomb = nc_hipert_bg_var_peek_recomb (bg_var);
   NcScalefactor *a = nc_hipert_bg_var_peek_scalefactor (bg_var);
-  
+
   if (dist != NULL)
     nc_distance_prepare_if_needed (dist, cosmo);
 
@@ -463,72 +469,72 @@ nc_hipert_bg_var_prepare_if_needed (NcHIPertBGVar *bg_var, NcHICosmo *cosmo)
  * nc_hipert_bg_var_set_dist:
  * @bg_var: a #NcHIPertBGVar
  * @dist: a #NcDistance
- * 
+ *
  * Sets the #NcDistance object.
- * 
+ *
  */
 /**
  * nc_hipert_bg_var_set_recomb:
  * @bg_var: a #NcHIPertBGVar
  * @recomb: a #NcRecomb
- * 
+ *
  * Sets the #NcRecomb object.
- * 
+ *
  */
 /**
  * nc_hipert_bg_var_set_scalefactor:
  * @bg_var: a #NcHIPertBGVar
  * @a: a #NcScalefactor
- * 
+ *
  * Sets the #NcScalefactor object.
- * 
+ *
  */
 /**
  * nc_hipert_bg_var_get_dist:
  * @bg_var: a #NcHIPertBGVar
- * 
+ *
  * Gets the #NcDistance object.
- * 
+ *
  * Returns: (transfer full) (nullable): the #NcDistance object used by @bg_var.
  */
 /**
  * nc_hipert_bg_var_get_recomb:
  * @bg_var: a #NcHIPertBGVar
- * 
+ *
  * Gets the #NcRecomb object.
- * 
+ *
  * Returns: (transfer full) (nullable): the #NcRecomb object used by @bg_var.
  */
 /**
  * nc_hipert_bg_var_get_scalefactor:
  * @bg_var: a #NcHIPertBGVar
- * 
+ *
  * Gets the #NcScalefactor object.
- * 
+ *
  * Returns: (transfer full) (nullable): the #NcScalefactor object used by @bg_var.
  */
 /**
  * nc_hipert_bg_var_peek_dist:
  * @bg_var: a #NcHIPertBGVar
- * 
+ *
  * Peeks the #NcDistance object.
- * 
+ *
  * Returns: (transfer none) (nullable): the #NcDistance object used by @bg_var.
  */
 /**
  * nc_hipert_bg_var_peek_recomb:
  * @bg_var: a #NcHIPertBGVar
- * 
+ *
  * Peeks the #NcRecomb object.
- * 
+ *
  * Returns: (transfer none) (nullable): the #NcRecomb object used by @bg_var.
  */
 /**
  * nc_hipert_bg_var_peek_scalefactor:
  * @bg_var: a #NcHIPertBGVar
- * 
+ *
  * Peeks the #NcScalefactor object.
- * 
+ *
  * Returns: (transfer none) (nullable): the #NcScalefactor object used by @bg_var.
  */
 
@@ -536,14 +542,15 @@ nc_hipert_bg_var_prepare_if_needed (NcHIPertBGVar *bg_var, NcHICosmo *cosmo)
  * nc_hipert_bg_var_set_zf:
  * @bg_var: a #NcHIPertBGVar
  * @zf: the maximum redshift where calculations take place $z_f$
- * 
+ *
  * Requires the maximum redshift for computations to be @zf.
- * 
+ *
  */
-void 
+void
 nc_hipert_bg_var_set_zf (NcHIPertBGVar *bg_var, const gdouble zf)
 {
   g_assert_cmpfloat (zf, >, 0.0);
+
   if (zf != bg_var->priv->zf)
   {
     NcDistance *dist = nc_hipert_bg_var_peek_dist (bg_var);
@@ -566,10 +573,10 @@ nc_hipert_bg_var_set_zf (NcHIPertBGVar *bg_var, const gdouble zf)
 /**
  * nc_hipert_bg_var_get_zf:
  * @bg_var: a #NcHIPertBGVar
- * 
+ *
  * Returns: the maximum redshift for computations @zf.
  */
-gdouble 
+gdouble
 nc_hipert_bg_var_get_zf (NcHIPertBGVar *bg_var)
 {
   return bg_var->priv->zf;
@@ -581,7 +588,7 @@ nc_hipert_bg_var_get_zf (NcHIPertBGVar *bg_var)
  *
  * Returns: the number of possible components installed.
  */
-guint 
+guint
 nc_hipert_bg_var_len (NcHIPertBGVar *bg_var)
 {
   return NC_HIPERT_BG_VAR_GET_CLASS (bg_var)->bg_var_desc_array->len;
@@ -594,16 +601,18 @@ nc_hipert_bg_var_len (NcHIPertBGVar *bg_var)
  *
  * Returns: the number of possible components installed.
  */
-guint 
+guint
 nc_hipert_bg_var_cstruct_len (NcHIPertBGVar *bg_var, NcHIPertBGVarID id)
 {
   const guint len = nc_hipert_bg_var_len (bg_var);
+
   g_assert_cmpuint (id, <, len);
 
   {
     NcHIPertBGVarDesc *desc = &g_array_index (NC_HIPERT_BG_VAR_GET_CLASS (bg_var)->bg_var_desc_array,
                                               NcHIPertBGVarDesc,
                                               id);
+
     return desc->cstruct_size;
   }
 }
@@ -635,7 +644,7 @@ _nc_hipert_bg_var_activate_id (NcHIPertBGVar *bg_var, NcHIPertBGVarID id)
 void
 nc_hipert_bg_var_activate_id (NcHIPertBGVar *bg_var, ...)
 {
-  NcHIPertBGVarID id; 
+  NcHIPertBGVarID id;
   va_list ap;
 
   va_start (ap, bg_var);
@@ -644,7 +653,7 @@ nc_hipert_bg_var_activate_id (NcHIPertBGVar *bg_var, ...)
   {
     _nc_hipert_bg_var_activate_id (bg_var, id);
   }
-  
+
   va_end (ap);
 }
 
@@ -669,3 +678,4 @@ nc_hipert_bg_var_activate_id_array (NcHIPertBGVar *bg_var, GArray *ids)
     _nc_hipert_bg_var_activate_id (bg_var, id);
   }
 }
+

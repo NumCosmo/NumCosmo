@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_hireion
- * @title: NcHIReion
- * @short_description: Abstract class for implementing homogeneous and isotropic reionization models.
+ * NcHIReion:
+ *
+ * Abstract class for implementing homogeneous and isotropic reionization models.
  *
  * $
  *  \newcommand{\He}{\text{He}}
@@ -40,8 +40,6 @@
  * $
  *
  * See [NcRecomb][NcRecomb.description] for symbol definitions.
- *
- * FIXME
  *
  */
 

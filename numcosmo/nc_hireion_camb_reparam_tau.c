@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_hireion_camb_reparam_tau
- * @title: NcHIReionCambReparamTau
- * @short_description: CAMB reionization reparametrization $z_\mathrm{reion} \to \tau_\mathrm{reion}$.
+ * NcHIReionCambReparamTau:
+ *
+ * CAMB reionization reparametrization $z_\mathrm{reion} \to \tau_\mathrm{reion}$.
  *
  * Object implementing a reparametrization for CAMB reionization. It changes
  * $z_\mathrm{reion} \to \tau_\mathrm{reion}$.

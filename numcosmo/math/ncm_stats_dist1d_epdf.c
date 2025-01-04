@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_stats_dist1d_epdf
- * @title: NcmStatsDist1dEPDF
- * @short_description: One dimensional probability distribution based on an EPDF
+ * NcmStatsDist1dEPDF:
+ *
+ * One dimensional probability distribution based on an EPDF.
  *
  * Reconstruction of an arbitrary one dimensional probability distribution based on a
  * Empirical Probability Distribution Function (EPDF).

@@ -39,20 +39,7 @@ G_BEGIN_DECLS
 GType ncm_dtuple2_get_type (void) G_GNUC_CONST;
 GType ncm_dtuple3_get_type (void) G_GNUC_CONST;
 
-/**
- * NcmDTuple2:
- * @elements: (array fixed-size=2): The elements of the tuple.
- *
- * A 2-dimensional tuple of double precision floating point numbers.
- */
 typedef struct _NcmDTuple2 NcmDTuple2;
-
-/**
- * NcmDTuple3:
- * @elements: (array fixed-size=3): The elements of the tuple.
- *
- * A 3-dimensional tuple of double precision floating point numbers.
- */
 typedef struct _NcmDTuple3 NcmDTuple3;
 
 struct _NcmDTuple2

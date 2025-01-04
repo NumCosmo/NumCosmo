@@ -24,10 +24,9 @@
  */
 
 /**
- * SECTION:ncm_fit_esmcmc_walker_walk
- * @title: NcmFitESMCMCWalkerWalk
- * @short_description: Ensemble sampler Markov Chain Monte Carlo walker - walk move.
- * @stability: Unstable
+ * NcmFitESMCMCWalkerWalk:
+ *
+ * Ensemble sampler Markov Chain Monte Carlo walker - walk move.
  *
  * Implementing walk move walker for #NcmFitESMCMC (affine invariant).
  *

@@ -24,11 +24,9 @@
  */
 
 /**
- * SECTION:nc_transfer_func
- * @title: NcTransferFunc
- * @short_description: Abstrac class for perturbation transfer function.
- * @stability: Stable
- * @include: numcosmo/lss/nc_transfer_func.h
+ * NcTransferFunc:
+ *
+ * Abstrac class for perturbation transfer function.
  *
  * This module comprises the set of functions to compute the transfer function and
  * derived quantities. The applied $k$ unit is $[\mathrm{Mpc}^{-1}]$.

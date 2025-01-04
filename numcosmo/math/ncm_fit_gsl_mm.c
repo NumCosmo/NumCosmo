@@ -24,12 +24,12 @@
  */
 
 /**
- * SECTION:ncm_fit_gsl_mm
- * @title: NcmFitGSLMM
- * @short_description: Best-fit finder -- GSL non-linear minimization algorithms.
+ * NcmFitGSLMM:
  *
- * This object implements a best-fit finder using the GSL non-linear
- * minimization algorithms. It is a subclass of #NcmFit.
+ * Best-fit finder -- GSL non-linear minimization algorithms.
+ *
+ * This object implements a best-fit finder using the GSL non-linear minimization
+ * algorithms. It is a subclass of #NcmFit.
  *
  */
 

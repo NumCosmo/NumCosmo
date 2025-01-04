@@ -23,11 +23,11 @@
  */
 
 /**
- * SECTION:nc_hicosmo_gcg
- * @title: NcHICosmoGCG
- * @short_description: Generalized Chaplygin Gas
+ * NcHICosmoGCG:
  *
- * FIXME
+ * Generalized Chaplygin Gas.
+ *
+ * This object defines the functions for the Generalized Chaplygin Gas model.
  *
  */
 

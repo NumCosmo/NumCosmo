@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_xcor_limber_kernel_cmb_isw
- * @title: NcXcorLimberKernelCMBISW
- * @short_description: implementation of #NcXcorLimberKernel for integrated Sachs-Wolfe (ISW)
+ * NcXcorLimberKernelCMBISW:
+ *
+ * Implementation of #NcXcorLimberKernel for integrated Sachs-Wolfe (ISW).
  *
  * The kernel is given by
  * \begin{equation}

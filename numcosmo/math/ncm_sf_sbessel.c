@@ -23,9 +23,9 @@
  */
 
 /**
- * SECTION:ncm_sf_sbessel
- * @title: NcmSFSBessel
- * @short_description: Double precision spherical bessel implementation.
+ * NcmSFSBessel:
+ *
+ * Double precision spherical bessel implementation.
  *
  * Implementation of double precision spherical Bessel functions. This module leverages
  * the multiple precision spherical Bessel functions implementation for precise

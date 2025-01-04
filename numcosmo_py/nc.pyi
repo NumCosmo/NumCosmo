@@ -1773,8 +1773,8 @@ class ClusterMass(NumCosmoMath.Model):
     @staticmethod
     def log_all_models() -> None: ...
     def n_limits(self, cosmo: HICosmo) -> typing.Tuple[float, float]: ...
-    def obs_len(self) -> int: ...
-    def obs_params_len(self) -> int: ...
+    def obs_len(*args, **kwargs): ...  # FIXME Function
+    def obs_params_len(*args, **kwargs): ...  # FIXME Function
     def p(
         self,
         cosmo: HICosmo,
@@ -3229,8 +3229,8 @@ class ClusterRedshift(NumCosmoMath.Model):
     @staticmethod
     def log_all_models() -> None: ...
     def n_limits(self, cosmo: HICosmo) -> typing.Tuple[float, float]: ...
-    def obs_len(self) -> int: ...
-    def obs_params_len(self) -> int: ...
+    def obs_len(*args, **kwargs): ...  # FIXME Function
+    def obs_params_len(*args, **kwargs): ...  # FIXME Function
     def p(
         self,
         cosmo: HICosmo,
@@ -14693,8 +14693,7 @@ class HaloDensityProfileNFW(HaloDensityProfile):
     ) -> None: ...
     @classmethod
     def new(cls, hms: HaloMassSummary) -> HaloDensityProfileNFW: ...
-    @staticmethod
-    def set_ni(num: bool) -> None: ...
+    def set_ni(*args, **kwargs): ...  # FIXME Function
 
 class HaloDensityProfileNFWClass(GObject.GPointer):
     r"""
@@ -15432,6 +15431,10 @@ class MultiplicityFuncTinker(MultiplicityFunc):
 
     Object NcMultiplicityFuncTinker
 
+    Properties from NcMultiplicityFuncTinker:
+      linear-interp -> gboolean: linear-interp
+        Use linear interpolation
+
     Properties from NcMultiplicityFunc:
       mass-def -> NcMultiplicityFuncMassDef: mass-def
         Mass definition
@@ -15443,6 +15446,7 @@ class MultiplicityFuncTinker(MultiplicityFunc):
     """
 
     class Props:
+        linear_interp: bool
         Delta: float
         mass_def: MultiplicityFuncMassDef
 
@@ -15450,7 +15454,10 @@ class MultiplicityFuncTinker(MultiplicityFunc):
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncTinkerPrivate = ...
     def __init__(
-        self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...
+        self,
+        linear_interp: bool = ...,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
     ) -> None: ...
     @staticmethod
     def clear(mt: MultiplicityFuncTinker) -> None: ...

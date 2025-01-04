@@ -24,11 +24,12 @@
  */
 
 /**
- * SECTION:nc_hiprim_bpl
- * @title: NcHIPrimBPL
- * @short_description: Broken power law modification of the power law primordial spectrum
+ * NcHIPrimBPL:
  *
- * FIXME
+ * Broken power law modification of the power law primordial spectrum.
+ *
+ * This object is a subclass of #NcHIPrim, implementing a broken power law
+ * modification of the power law primordial spectrum.
  *
  */
 

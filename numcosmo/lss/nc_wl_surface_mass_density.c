@@ -23,9 +23,9 @@
  */
 
 /**
- * SECTION:nc_wl_surface_mass_density
- * @title: NcWLSurfaceMassDensity
- * @short_description: Weak lensing surface mass density
+ * NcWLSurfaceMassDensity:
+ *
+ * Weak lensing surface mass density.
  *
  * This object implements the projected surface mass density and related quantities, such as the convergence and tangential shear.
  *

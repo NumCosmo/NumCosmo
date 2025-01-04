@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_fit_state
- * @title: NcmFitState
- * @short_description: State of a NcmFit object.
+ * NcmFitState:
+ *
+ * State of a NcmFit object.
  *
  * Object that stores the state of a NcmFit object.
  *

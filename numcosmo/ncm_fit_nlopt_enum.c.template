@@ -8,12 +8,6 @@
 #include <nlopt.h>
 #endif /* HAVE_NLOPT */
 
-/**
- * SECTION:ncm_fit_nlopt_enum
- * @title: NcmFitNLOptEnum
- * @short_description: Automaticaly imported enum from NLOpt library.
- *
- */
 /*** END file-header ***/
 
 /*** BEGIN file-production ***/
