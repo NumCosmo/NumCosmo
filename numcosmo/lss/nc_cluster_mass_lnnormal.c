@@ -24,11 +24,10 @@
  */
 
 /**
- * SECTION:nc_cluster_mass_lnnormal
- * @title: NcClusterMassLnnormal
- * @short_description: Cluster mass ln-normal distribution.
+ * NcClusterMassLnnormal:
  *
- * FIXME
+ * Cluster mass ln-normal distribution.
+ *
  */
 
 #ifdef HAVE_CONFIG_H

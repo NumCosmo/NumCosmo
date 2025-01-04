@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_stats_dist1d
- * @title: NcmStatsDist1d
- * @short_description: Abstract class for implementing one dimensional probability distributions
+ * NcmStatsDist1d:
+ *
+ * Base class for implementing one dimensional probability distributions.
  *
  * Abstract class to reconstruct an arbitrary one dimensional probability distribution.
  *

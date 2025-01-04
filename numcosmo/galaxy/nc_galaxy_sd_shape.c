@@ -29,14 +29,12 @@
  */
 
 /**
- * SECTION: nc_galaxy_sd_shape
- * @title: NcGalaxySDShape
- * @short_description: Class describing galaxy sample shape distribution.
- * @stability: Unstable
+ * NcGalaxySDShape:
  *
+ * Class describing galaxy sample shape distribution.
  *
- * This class describes a galaxy sample shape distribution.
- * It is composed by a distribution $P(s)$.
+ * This class describes a galaxy sample shape distribution. It is composed by a
+ * distribution $P(s)$.
  *
  */
 

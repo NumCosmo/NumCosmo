@@ -27,13 +27,12 @@
  */
 
 /**
- * SECTION:ncm_spline_rbf
- * @title: NcmSplineRBF
- * @short_description: Radial Basis Function implementation of spline class.
- * @stability: Unstable
- * @include: numcosmo/math/ncm_spline_rbf.h
+ * NcmSplineRBF:
  *
- * This object implements #NcmSpline, using [Radial Basis Function (RBF)](https://en.wikipedia.org/wiki/Radial_basis_function) methods.
+ * Radial Basis Function implementation of spline class.
+ *
+ * This object implements #NcmSpline, using [Radial Basis Function
+ * (RBF)](https://en.wikipedia.org/wiki/Radial_basis_function) methods.
  *
  */
 

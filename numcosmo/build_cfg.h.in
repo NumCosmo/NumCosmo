@@ -28,16 +28,6 @@
 #ifndef _NCM_BUILD_CFG_H_
 #define _NCM_BUILD_CFG_H_
 
-/**
- * SECTION:build_cfg
- * @title: NumCosmo building configuration
- * @short_description: Macros describing the current building configuration
- *
- * This section shows the macros controling which prerequisite/option was
- * used when compiling NumCosmo.
- *
- */
-
 @have_nlopt_support@
 @have_mpi_support@
 

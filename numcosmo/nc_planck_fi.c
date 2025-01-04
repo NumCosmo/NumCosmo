@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_planck_fi
- * @title: NcPlanckFI
- * @short_description: Abstract class for Planck Foreground and Instrument models.
+ * NcPlanckFI:
+ *
+ * Abstract class for Planck Foreground and Instrument models.
  *
  * NcPlanclFI is the abstract class designed describe a generic
  * model for Planck foreground and instruments.

@@ -24,14 +24,12 @@
  */
 
 /**
- * SECTION:ncm_vector
- * @title: NcmVector
- * @short_description: Vector object representing arrays of doubles.
- * @stability: Stable
- * @include: numcosmo/math/ncm_vector.h
+ * NcmVector:
  *
- * This object defines the functions for allocating and accessing vectors.
- * Also includes several vector operations.
+ * Vector object representing arrays of doubles.
+ *
+ * This object defines the functions for allocating and accessing vectors. Also includes
+ * several vector operations.
  *
  */
 

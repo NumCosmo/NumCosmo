@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_fit
- * @title: NcmFit
- * @short_description: Abstract class for implementing fitting methods.
+ * NcmFit:
+ *
+ * Abstract class for implementing fitting methods.
  *
  * This object implements a abstract class for implementing fitting methods.
  *

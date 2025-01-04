@@ -24,11 +24,10 @@
  */
 
 /**
- * SECTION:nc_cluster_mass_ascaso
- * @title: NcClusterMassAscaso
- * @short_description: FIXME
+ * NcClusterMassAscaso:
  *
- * FIXME
+ * Cluster mass distribution model based on Ascaso et al.
+ *
  */
 
 #ifdef HAVE_CONFIG_H

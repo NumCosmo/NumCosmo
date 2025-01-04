@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_prior
- * @title: NcmPrior
- * @short_description: Base class for prior distributions.
+ * NcmPrior:
+ *
+ * Base class for prior distributions.
  *
  * This object defines a base class for priors used by NcmLikelihood. These objects
  * describe various prior distributions applicable to parameters or any derived

@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_mset_trans_kern_gauss
- * @title: NcmMSetTransKernGauss
- * @short_description: A multivariate gaussian sampler.
+ * NcmMSetTransKernGauss:
+ *
+ * A multivariate gaussian sampler.
  *
  * This object subclasses NcmMSetTransKern and implements a multivariate gaussian
  * sampler.

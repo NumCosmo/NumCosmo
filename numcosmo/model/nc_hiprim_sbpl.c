@@ -24,11 +24,12 @@
  */
 
 /**
- * SECTION:nc_hiprim_sbpl
- * @title: NcHIPrimSBPL
- * @short_description: Smooth Broken power law modification of the power law primordial spectrum
+ * NcHIPrimSBPL:
  *
- * FIXME
+ * Smooth Broken power law modification of the power law primordial spectrum.
+ *
+ * This object defines the Smooth Broken power law modification of the power law
+ * primordial spectrum.
  *
  */
 

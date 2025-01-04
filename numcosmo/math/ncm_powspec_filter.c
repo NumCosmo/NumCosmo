@@ -40,11 +40,9 @@
  */
 
 /**
- * SECTION:ncm_powspec_filter
- * @title: NcmPowspecFilter
- * @short_description: Class to compute filtered power spectrum
- * @stability: Stable
- * @include: numcosmo/math/ncm_powspec_filter.h
+ * NcmPowspecFilter:
+ *
+ * Class to compute filtered power spectrum.
  *
  * This class computes the filtered power spectrum, $\sigma^2(k, r)$, and its derivatives with respect to $\ln r$
  * (#ncm_powspec_filter_eval_dnvar_dlnrn()) using the FFTLog approach (see #NcmFftlog),

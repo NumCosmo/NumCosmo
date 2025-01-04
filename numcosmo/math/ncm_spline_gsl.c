@@ -23,14 +23,12 @@
  */
 
 /**
- * SECTION:ncm_spline_gsl
- * @title: NcmSplineGsl
- * @short_description: GSL spline object wrapper.
- * @stability: Stable
- * @include: numcosmo/math/ncm_spline_gsl.h
+ * NcmSplineGsl:
  *
- * This object comprises the proper functions to use the [GNU Scientific
- * Library (GSL)](https://www.gnu.org/software/gsl/) spline functions and interpolation methods.
+ * GSL spline object wrapper.
+ *
+ * This object comprises the proper functions to use the [GNU Scientific Library
+ * (GSL)](https://www.gnu.org/software/gsl/) spline functions and interpolation methods.
  *
  */
 

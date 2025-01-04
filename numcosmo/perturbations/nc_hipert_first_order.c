@@ -24,11 +24,13 @@
  */
 
 /**
- * SECTION:nc_hipert_first_order
- * @title: NcHIPertFirstOrder
- * @short_description: Base object for implementing first order perturbation in a Friedmann background.
+ * NcHIPertFirstOrder:
  *
- * FIXME
+ * Base class for implementing first order perturbation in a Friedmann background.
+ *
+ * This object is a subclass of #NcHIPertBoltzmann and is designed to implement the
+ * first order perturbation in a Friedmann background. It is employed by #NcHIPert and
+ * is responsible for computing the first order perturbation in a Friedmann background.
  *
  */
 

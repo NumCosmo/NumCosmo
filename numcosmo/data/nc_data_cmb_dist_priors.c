@@ -24,14 +24,12 @@
  */
 
 /**
- * SECTION:nc_data_cmb_dist_priors
- * @title: NcDataCMBDistPriors
- * @short_description: Cosmic microwave background data -- distance priors.
- * @stability: Stable
- * @include: numcosmo/data/nc_data_cmb_dist_priors.h
+ * NcDataCMBDistPriors:
  *
- * This object creates a CMB distance priors data (#NcmData).
- * See #NcDataCMBId for more informations.
+ * Cosmic microwave background data -- distance priors.
+ *
+ * This object creates a CMB distance priors data (#NcmData). See #NcDataCMBId for more
+ * informations.
  *
  */
 

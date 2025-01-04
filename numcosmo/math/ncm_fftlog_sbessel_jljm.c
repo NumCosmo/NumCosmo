@@ -25,15 +25,14 @@
  */
 
 /**
- * SECTION:ncm_fftlog_sbessel_jljm
- * @title: NcmFftlogSBesselJLJM
- * @short_description: Logarithm fast fourier transform for the base kernel for angular projections.
+ * NcmFftlogSBesselJLJM:
  *
- * This object computes the function (see #NcmFftlog)
- * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L}} K(t) dt,$$
- * where the kernel are the product of spherical bessel function of
- * the first kind $K(t) = t^q j_{\ell}(t r) j_{\ell+\delta\ell}(t / r)$,
- * where $\delta\ell = m - l$.
+ * Logarithm fast fourier transform for the base kernel for angular projections.
+ *
+ * This object computes the function (see #NcmFftlog) $$Y_n = \int_0^\infty
+ * t^{\frac{2\pi i n}{L}} K(t) dt,$$ where the kernel are the product of spherical
+ * bessel function of the first kind $K(t) = t^q j_{\ell}(t r) j_{\ell+\delta\ell}(t /
+ * r)$, where $\delta\ell = m - l$.
  *
  */
 

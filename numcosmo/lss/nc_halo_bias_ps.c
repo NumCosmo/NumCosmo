@@ -24,15 +24,14 @@
  */
 
 /**
- * SECTION:nc_halo_bias_ps
- * @title: NcHaloBiasPS
- * @short_description: Press-Schechter halo bias function type.
+ * NcHaloBiasPS:
  *
- * Object implementation to compute the halo bias function given
- * the Press-Schechter mass function. A description of the mechanism
- * is given below. Check nc_halo_bias.c for a description
- * of halo biases and nc_multiplicity_func_ps.c for the Press-Schechter
- * mass function.
+ * Press-Schechter halo bias function type.
+ *
+ * Object implementation to compute the halo bias function given the Press-Schechter
+ * mass function. A description of the mechanism is given below. Check nc_halo_bias.c
+ * for a description of halo biases and nc_multiplicity_func_ps.c for the
+ * Press-Schechter mass function.
  *
  * By performing a perturbative expansion around $\delta_b$ in
  * the Press-Schechter mass function, the bias function is deduced
@@ -40,7 +39,7 @@
  * \begin{align}
  * b(\nu) &= 1 + \frac{\nu^2 - 1}{\delta_c}
  * , \end{align}
- * where $b(\nu)$ is the Press-Schechter bias, $\delta_c$ is the 
+ * where $b(\nu)$ is the Press-Schechter bias, $\delta_c$ is the
  * critical threshold and $\nu = \frac{\delta_c}{\sigma}$. Also,
  * sigma is the variance of the gaussian random field $\delta_b$,
  * which can be computed with the density contrast power spectrum.

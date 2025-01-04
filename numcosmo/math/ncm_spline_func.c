@@ -24,12 +24,9 @@
  */
 
 /**
- * SECTION:ncm_spline_func
- * @title: NcmSplineFunc
- * @short_description: Automatic generation of the knots for a spline.
- * @stability: Stable
- * @include: numcosmo/math/ncm_spline_func.h
+ * NcmSplineFunc:
  *
+ * Automatic generation of the knots for a spline.
  *
  * This function implements 4 different methods to automatically determine
  * the #NcmVector of knots, $\mathbf{x}$, of a #NcmSpline given a relative error between the function $f$

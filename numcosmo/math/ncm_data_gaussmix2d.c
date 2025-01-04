@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:ncm_data_gaussmix2d
- * @title: NcmDataGaussMix2D
- * @short_description: Gaussian Mixture 2d distribution.
+ * NcmDataGaussMix2D:
+ *
+ * Gaussian Mixture 2d distribution.
  *
  * Data object describing a Gaussian Mixture 2d distribution.
  *
