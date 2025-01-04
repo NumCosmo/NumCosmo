@@ -70,9 +70,9 @@ _nc_multiplicity_func_warren_set_property (GObject *object, guint prop_id, const
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -84,9 +84,9 @@ _nc_multiplicity_func_warren_get_property (GObject *object, guint prop_id, GValu
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -164,10 +164,6 @@ _nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, g
    *  NcMultiplicityFuncWarrenPrivate * const self = mw->priv; */
 
   gdouble f_Warren = 0.7234 * (pow (sigma, -1.625) + 0.2538) * exp (-1.1982 / (sigma * sigma));
-
-  NCM_UNUSED (mulf);
-  NCM_UNUSED (cosmo);
-  NCM_UNUSED (z);
 
   return f_Warren;
 }

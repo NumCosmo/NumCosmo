@@ -69,7 +69,7 @@ _nc_data_hubble_bao_constructed (GObject *object)
 }
 
 static void
-nc_data_hubble_bao_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_data_hubble_bao_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataHubbleBao *hubble_bao = NC_DATA_HUBBLE_BAO (object);
 
@@ -92,7 +92,7 @@ nc_data_hubble_bao_set_property (GObject *object, guint prop_id, const GValue *v
 }
 
 static void
-nc_data_hubble_bao_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_data_hubble_bao_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataHubbleBao *hubble_bao = NC_DATA_HUBBLE_BAO (object);
 
@@ -113,7 +113,7 @@ nc_data_hubble_bao_get_property (GObject *object, guint prop_id, GValue *value, 
 }
 
 static void
-nc_data_hubble_bao_dispose (GObject *object)
+_nc_data_hubble_bao_dispose (GObject *object)
 {
   NcDataHubbleBao *hubble_bao = NC_DATA_HUBBLE_BAO (object);
 
@@ -125,7 +125,7 @@ nc_data_hubble_bao_dispose (GObject *object)
 }
 
 static void
-nc_data_hubble_bao_finalize (GObject *object)
+_nc_data_hubble_bao_finalize (GObject *object)
 {
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_hubble_bao_parent_class)->finalize (object);
@@ -143,10 +143,10 @@ nc_data_hubble_bao_class_init (NcDataHubbleBaoClass *klass)
   NcmDataGaussDiagClass *diag_class = NCM_DATA_GAUSS_DIAG_CLASS (klass);
 
   object_class->constructed  = &_nc_data_hubble_bao_constructed;
-  object_class->set_property = &nc_data_hubble_bao_set_property;
-  object_class->get_property = &nc_data_hubble_bao_get_property;
-  object_class->dispose      = &nc_data_hubble_bao_dispose;
-  object_class->finalize     = &nc_data_hubble_bao_finalize;
+  object_class->set_property = &_nc_data_hubble_bao_set_property;
+  object_class->get_property = &_nc_data_hubble_bao_get_property;
+  object_class->dispose      = &_nc_data_hubble_bao_dispose;
+  object_class->finalize     = &_nc_data_hubble_bao_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_DIST,

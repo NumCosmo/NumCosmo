@@ -307,18 +307,23 @@ def fixture_mass_and_z_array() -> tuple[np.ndarray, np.ndarray]:
     return m_arr, z_arr
 
 
-@pytest.mark.parametrize(
-    "massfuncs",
-    [
-        lf("massfunc_ps"),
-        lf("massfunc_st"),
-        lf("massfunc_jenkins"),
-        lf("massfunc_tinker08"),
-        lf("massfunc_tinker10"),
-        lf("massfunc_bocquet"),
-        lf("massfunc_watson"),
-    ],
-)
+def parametrized_massfunc_tests():
+    """Parametrized mass function tests."""
+    return pytest.mark.parametrize(
+        "massfuncs",
+        [
+            lf("massfunc_ps"),
+            lf("massfunc_st"),
+            lf("massfunc_jenkins"),
+            lf("massfunc_tinker08"),
+            lf("massfunc_tinker10"),
+            lf("massfunc_bocquet"),
+            lf("massfunc_watson"),
+        ],
+    )
+
+
+@parametrized_massfunc_tests()
 def test_compare_mf(
     cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
     massfuncs: tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction],
@@ -347,16 +352,7 @@ def test_compare_mf(
         assert_allclose(ccl_nm, nc_nm, rtol=1.0e-2)
 
 
-@pytest.mark.parametrize(
-    "massfuncs",
-    [
-        lf("massfunc_ps"),
-        lf("massfunc_st"),
-        lf("massfunc_jenkins"),
-        lf("massfunc_tinker08"),
-        lf("massfunc_tinker10"),
-    ],
-)
+@parametrized_massfunc_tests()
 def test_compare_mf_z0(
     cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
     massfuncs: tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction],
@@ -385,16 +381,7 @@ def test_compare_mf_z0(
     assert_allclose(ccl_nm, nc_nm, rtol=1.0e-4)
 
 
-@pytest.mark.parametrize(
-    "massfuncs",
-    [
-        lf("massfunc_ps"),
-        lf("massfunc_st"),
-        lf("massfunc_jenkins"),
-        lf("massfunc_tinker08"),
-        lf("massfunc_tinker10"),
-    ],
-)
+@parametrized_massfunc_tests()
 def test_compare_mf_dup(
     cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
     massfuncs: tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction],
