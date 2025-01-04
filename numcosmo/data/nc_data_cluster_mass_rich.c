@@ -24,14 +24,13 @@
  */
 
 /**
- * SECTION:nc_data_cluster_mass_rich
- * @title: NcDataClusterMassRich
- * @short_description: Cluster mass richness data object
- * @stability: Stable
+ * NcDataClusterMassRich:
+ *
+ * Cluster mass richness data object.
  *
  * #NcDataClusterMassRich is a data object that contains the information about a cluster
- * mass richness data. Its main purpose is to be used as a data object for
- * fitting mass richness proxy models.
+ * mass richness data. Its main purpose is to be used as a data object for fitting mass
+ * richness proxy models.
  *
  */
 
