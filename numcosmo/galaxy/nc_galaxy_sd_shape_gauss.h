@@ -53,10 +53,13 @@ G_DECLARE_FINAL_TYPE (NcGalaxySDShapeGauss, nc_galaxy_sd_shape_gauss, NC, GALAXY
  */
 typedef enum /*< enum,underscore_name=NC_GALAXY_SD_SHAPE_GAUSS_PARAMS >*/
 {
+  NC_GALAXY_SD_SHAPE_GAUSS_SIGMA_INT = 0,
   /* < private > */
   NC_GALAXY_SD_SHAPE_GAUSS_SPARAM_LEN, /*< skip >*/
 } NcGalaxySDShapeGaussParams;
 
+#define NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA_INT   (0.3)
+#define NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_PARAMS_ABSTOL (0.0)
 
 NcGalaxySDShapeGauss *nc_galaxy_sd_shape_gauss_new ();
 NcGalaxySDShapeGauss *nc_galaxy_sd_shape_gauss_ref (NcGalaxySDShapeGauss *gsdsgauss);
@@ -71,8 +74,8 @@ void nc_galaxy_sd_shape_gauss_data_get (NcGalaxySDShapeGauss *gsdsgauss, NcGalax
 
 #define NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_1 "epsilon_obs_1"
 #define NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_2 "epsilon_obs_2"
-#define NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_INT "sigma_int"
-#define NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS "sigma_obs"
+#define NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_1 "sigma_obs_1"
+#define NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_2 "sigma_obs_2"
 
 G_END_DECLS
 
