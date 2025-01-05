@@ -15227,6 +15227,79 @@ class MultiplicityFuncCrocceClass(GObject.GPointer):
 
 class MultiplicityFuncCroccePrivate(GObject.GPointer): ...
 
+class MultiplicityFuncDespali(MultiplicityFunc):
+    r"""
+    :Constructors:
+
+    ::
+
+        MultiplicityFuncDespali(**properties)
+        new() -> NumCosmo.MultiplicityFuncDespali
+        new_full(mdef:NumCosmo.MultiplicityFuncMassDef, Delta:float) -> NumCosmo.MultiplicityFuncDespali
+
+    Object NcMultiplicityFuncDespali
+
+    Properties from NcMultiplicityFuncDespali:
+      E0 -> gboolean: E0
+        Whether the halo finder uses elliptical overdensity
+      CMF -> gboolean: CMF
+        Whether the use of the cluster mass function
+
+    Properties from NcMultiplicityFunc:
+      mass-def -> NcMultiplicityFuncMassDef: mass-def
+        Mass definition
+      Delta -> gdouble: Delta
+        Delta
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        CMF: bool
+        E0: bool
+        Delta: float
+        mass_def: MultiplicityFuncMassDef
+
+    props: Props = ...
+    parent_instance: MultiplicityFunc = ...
+    def __init__(
+        self,
+        CMF: bool = ...,
+        E0: bool = ...,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(md: MultiplicityFuncDespali) -> None: ...
+    def delta_c(self, cosmo: HICosmo, z: float) -> float: ...
+    def delta_vir(self, cosmo: HICosmo, z: float) -> float: ...
+    def free(self) -> None: ...
+    def get_cmf(self) -> bool: ...
+    def get_eo(self) -> bool: ...
+    @classmethod
+    def new(cls) -> MultiplicityFuncDespali: ...
+    @classmethod
+    def new_full(
+        cls, mdef: MultiplicityFuncMassDef, Delta: float
+    ) -> MultiplicityFuncDespali: ...
+    def ref(self) -> MultiplicityFuncDespali: ...
+    def set_cmf(self, on: bool) -> None: ...
+    def set_eo(self, on: bool) -> None: ...
+
+class MultiplicityFuncDespaliClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        MultiplicityFuncDespaliClass()
+    """
+
+    parent_class: MultiplicityFuncClass = ...
+
+class MultiplicityFuncDespaliPrivate(GObject.GPointer): ...
+
 class MultiplicityFuncJenkins(MultiplicityFunc):
     r"""
     :Constructors:

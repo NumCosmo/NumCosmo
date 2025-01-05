@@ -182,6 +182,43 @@ def fixture_watson_mdef(request) -> tuple[str, Nc.MultiplicityFuncMassDef, int |
     return request.param
 
 
+DESPALI_DELTAS = [200, 300, 400, 500, 600]
+DESPALI_OPT = (
+    [
+        ("matter", Nc.MultiplicityFuncMassDef.MEAN, True, Delta)
+        for Delta in DESPALI_DELTAS
+    ]
+    + [
+        ("matter", Nc.MultiplicityFuncMassDef.MEAN, False, Delta)
+        for Delta in DESPALI_DELTAS
+    ]
+    + [
+        ("critical", Nc.MultiplicityFuncMassDef.CRITICAL, True, Delta)
+        for Delta in DESPALI_DELTAS
+    ]
+    + [
+        ("critical", Nc.MultiplicityFuncMassDef.CRITICAL, False, Delta)
+        for Delta in DESPALI_DELTAS
+    ]
+    + [
+        ("critical", Nc.MultiplicityFuncMassDef.VIRIAL, True, "vir"),
+        ("critical", Nc.MultiplicityFuncMassDef.VIRIAL, False, "vir"),
+    ]
+)
+
+
+@pytest.fixture(
+    name="despali_mdef",
+    params=DESPALI_OPT,
+    ids=[f"{mdef}_Ellip_{ellip}_{Delta}" for mdef, _, ellip, Delta in DESPALI_OPT],
+)
+def fixture_despali_mdef(
+    request,
+) -> tuple[str, Nc.MultiplicityFuncMassDef, bool, int | str]:
+    """Fixture for mass functions and power spectra."""
+    return request.param
+
+
 @pytest.fixture(name="massfunc_ps")
 def fixture_massfunc_ps(
     cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology], hmd_fof: pyccl.halos.MassDef
@@ -295,6 +332,27 @@ def fixture_massfunc_watson(
     return ccl_hmf_watson, mf_watson
 
 
+@pytest.fixture(name="massfunc_despali")
+def fixture_massfunc_despali(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+    despali_mdef: tuple[str, Nc.MultiplicityFuncMassDef, bool, int | str],
+) -> tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction]:
+    """Fixture for mass functions and power spectra."""
+    _, cosmo_nc = cosmologies
+    rho_type, nc_rho_type, ellip, Delta = despali_mdef
+    hmd = pyccl.halos.MassDef(Delta, rho_type)
+    ccl_hmf_despali = pyccl.halos.MassFuncDespali16(ellipsoidal=ellip, mass_def=hmd)
+    hmf_despali = Nc.MultiplicityFuncDespali.new()
+    hmf_despali.set_mdef(nc_rho_type)
+    hmf_despali.set_eo(ellip)
+    if nc_rho_type != Nc.MultiplicityFuncMassDef.VIRIAL:
+        assert isinstance(Delta, int)
+        hmf_despali.set_Delta(Delta)
+    mf_despali = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf, hmf_despali)
+
+    return ccl_hmf_despali, mf_despali
+
+
 @pytest.fixture(name="mass_and_z_array")
 def fixture_mass_and_z_array() -> tuple[np.ndarray, np.ndarray]:
     """Fixture for mass and redshift arrays."""
@@ -319,6 +377,7 @@ def parametrized_massfunc_tests():
             lf("massfunc_tinker10"),
             lf("massfunc_bocquet"),
             lf("massfunc_watson"),
+            lf("massfunc_despali"),
         ],
     )
 
