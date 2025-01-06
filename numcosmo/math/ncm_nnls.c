@@ -26,12 +26,11 @@
  */
 
 /**
- * SECTION:ncm_nnls
- * @title: NcmNNLS
- * @short_description: Non-negative linear least-squares
+ * NcmNNLS:
  *
- * NcmNNLS is a class that implements the non-negative linear least-squares
- * algorithm.
+ * Non-negative linear least-squares.
+ *
+ * NcmNNLS is a class that implements the non-negative linear least-squares algorithm.
  *
  */
 

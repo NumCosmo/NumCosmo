@@ -24,16 +24,15 @@
  */
 
 /**
- * SECTION:nc_data_bao_dvdv
- * @title: NcDataBaoDVDV
- * @short_description: Baryon oscillation data -- $D_V / D_V$ ratio.
+ * NcDataBaoDVDV:
+ *
+ * Baryon oscillation data -- $D_V / D_V$ ratio.
  *
  * See [Percival et al. (2007)][XPercival2007].
  *
  * The data is stored in a #NcDataBaoDVDV object. The data is stored in a
- * #NcmDataGaussDiag base class object, which is a subclass of #NcmData.
- * The data represents the mean values of the volume mean $D_V$ at the redshift
- * $z$.
+ * #NcmDataGaussDiag base class object, which is a subclass of #NcmData. The data
+ * represents the mean values of the volume mean $D_V$ at the redshift $z$.
  *
  */
 

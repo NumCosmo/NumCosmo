@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_abc
- * @title: NcmABC
- * @short_description: Abstract class for Approximate Bayesian Computation (ABC).
+ * NcmABC:
+ *
+ * Abstract class for Approximate Bayesian Computation (ABC).
  *
  * Base class for Approximate Bayesian Computation (ABC) methods.
  *

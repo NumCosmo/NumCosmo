@@ -23,15 +23,15 @@
  */
 
 /**
- * SECTION:nc_hicosmo_qconst
- * @title: NcHICosmoQConst
- * @short_description:  Kinetic model -- Constant deceleration function
+ * NcHICosmoQConst:
  *
- * The deceleration function is defined as a constant, $q(z) = q_0$.
- * The comoving distance in units of the Hubble radius today is
+ * Kinetic model -- Constant deceleration function.
  *
- * $$D_c(z) = CD + \frac{(1+ z_1)^{-q_0}}{q_0} \left[ 1 - \left( \frac{1+z}{1+z_1} \right)^{-q_0} \right],$$
- * where  CD is the comoving distance from 0 to $z_1$.
+ * The deceleration function is defined as a constant, $q(z) = q_0$. The comoving
+ * distance in units of the Hubble radius today is
+ *
+ * $$D_c(z) = CD + \frac{(1+ z_1)^{-q_0}}{q_0} \left[ 1 - \left( \frac{1+z}{1+z_1}
+ * \right)^{-q_0} \right],$$ where  CD is the comoving distance from 0 to $z_1$.
  */
 
 #ifdef HAVE_CONFIG_H

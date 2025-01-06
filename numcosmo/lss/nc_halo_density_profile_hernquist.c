@@ -24,11 +24,12 @@
  */
 
 /**
- * SECTION:nc_halo_density_profile_hernquist
- * @title: NcHaloDensityProfileHernquist
- * @short_description: Density profile of Hernquist type.
+ * NcHaloDensityProfileHernquist:
  *
- * This object implements the #NcHaloDensityProfile class for a Hernquist density profile.
+ * Density profile of Hernquist type.
+ *
+ * This object implements the #NcHaloDensityProfile class for a Hernquist density
+ * profile.
  *
  * As described #NcHaloDensityProfile, we just need to implement the dimensionless 3D density $\hat{\rho}(x)$
  * [which refers to the virtual function nc_halo_density_profile_eval_dl_density()].
@@ -142,7 +143,7 @@ _nc_halo_density_profile_hernquist_finalize (GObject *object)
 
 static void _nc_halo_density_profile_hernquist_add_submodel (NcmModel *model, NcmModel *submodel);
 static gdouble _nc_halo_density_profile_hernquist_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
-static gdouble _nc_halo_density_profile_hernquist_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x);
+static gdouble _nc_halo_density_profile_hernquist_eval_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x);
 static gdouble _nc_halo_density_profile_hernquist_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
 static gdouble _nc_halo_density_profile_hernquist_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X);
 
@@ -197,7 +198,7 @@ _nc_halo_density_profile_hernquist_eval_dl_density (NcHaloDensityProfile *dp, co
 }
 
 static gdouble
-_nc_halo_density_profile_hernquist_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x)
+_nc_halo_density_profile_hernquist_eval_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x)
 {
   return gsl_pow_2 (x) / (2.0 * gsl_pow_2 (1.0 + x));
 }

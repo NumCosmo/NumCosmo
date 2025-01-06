@@ -24,11 +24,9 @@
  */
 
 /**
- * SECTION:nc_transfer_func_bbks
- * @title: NcTransferFuncBBKS
- * @short_description: Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function.
- * @stability: Stable
- * @include: numcosmo/lss/nc_transfer_func_bbks.h
+ * NcTransferFuncBBKS:
+ *
+ * Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function.
  *
  * This objects implements the Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function.
  * See appendix G from [Bardeen et al. (1986)][XBardeen1986a] [[ads](https://ui.adsabs.harvard.edu/abs/1986ApJ...304...15B/abstract)].
@@ -84,7 +82,7 @@ static void
 nc_transfer_func_bbks_init (NcTransferFuncBBKS *tf_bbks)
 {
   NcTransferFuncBBKSPrivate * const self = tf_bbks->priv = nc_transfer_func_bbks_get_instance_private (tf_bbks);
-  
+
   self->c1    = 0.0;
   self->c2    = 0.0;
   self->c3    = 0.0;
@@ -97,9 +95,9 @@ static void
 _nc_transfer_func_bbks_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcTransferFuncBBKS *tf_bbks = NC_TRANSFER_FUNC_BBKS (object);
-  
+
   g_return_if_fail (NC_IS_TRANSFER_FUNC_BBKS (object));
-  
+
   switch (prop_id)
   {
     case PROP_TYPE:
@@ -116,9 +114,9 @@ _nc_transfer_func_bbks_get_property (GObject *object, guint prop_id, GValue *val
 {
   NcTransferFuncBBKS *tf_bbks            = NC_TRANSFER_FUNC_BBKS (object);
   NcTransferFuncBBKSPrivate * const self = tf_bbks->priv;
-  
+
   g_return_if_fail (NC_IS_TRANSFER_FUNC_BBKS (object));
-  
+
   switch (prop_id)
   {
     case PROP_TYPE:
@@ -145,11 +143,11 @@ nc_transfer_func_bbks_class_init (NcTransferFuncBBKSClass *klass)
 {
   GObjectClass *object_class        = G_OBJECT_CLASS (klass);
   NcTransferFuncClass *parent_class = NC_TRANSFER_FUNC_CLASS (klass);
-  
+
   object_class->set_property = &_nc_transfer_func_bbks_set_property;
   object_class->get_property = &_nc_transfer_func_bbks_get_property;
   object_class->finalize     = &_nc_transfer_func_bbks_finalize;
-  
+
   /**
    * NcTransferFuncBBKS:type:
    *
@@ -171,7 +169,7 @@ nc_transfer_func_bbks_class_init (NcTransferFuncBBKSClass *klass)
                                                       "BBKS variant type",
                                                       NC_TYPE_TRANSFER_FUNC_BBKS_TYPE, NC_TRANSFER_FUNC_BBKS_TYPE_NOBARYONS,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   parent_class->prepare = &_nc_transfer_func_bbks_prepare;
   parent_class->calc    = &_nc_transfer_func_bbks_calc;
 }
@@ -194,7 +192,7 @@ _nc_transfer_func_bbks_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
   NcTransferFuncBBKS *tf_bbks            = NC_TRANSFER_FUNC_BBKS (tf);
   NcTransferFuncBBKSPrivate * const self = tf_bbks->priv;
-  
+
   const gdouble T_0 = nc_hicosmo_T_gamma0 (cosmo);
   const gdouble c1  = 3.89;
   const gdouble c2  = gsl_pow_2 (16.1);
@@ -206,13 +204,13 @@ _nc_transfer_func_bbks_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
   const gdouble Ob  = nc_hicosmo_Omega_b0 (cosmo);
   const gdouble Om  = nc_hicosmo_Omega_m0 (cosmo);
   const gdouble wm  = Om * h2;
-  
+
   self->c1 = c1;
   self->c2 = c2;
   self->c3 = c3;
   self->c4 = c4;
   self->h  = h;
-  
+
   switch (self->type)
   {
     case NC_TRANSFER_FUNC_BBKS_TYPE_NOBARYONS:
@@ -228,7 +226,7 @@ _nc_transfer_func_bbks_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
       g_assert_not_reached ();
       break;
   }
-  
+
   if (c5 == 0.0)
     g_warning ("_nc_transfer_func_bbks_prepare: no radiation universe, BBKS is not defined transfer function will be exaclty = 1.");
 }
@@ -238,14 +236,14 @@ _nc_transfer_func_bbks_calc (NcTransferFunc *tf, gdouble kh)
 {
   NcTransferFuncBBKS *tf_bbks            = NC_TRANSFER_FUNC_BBKS (tf);
   NcTransferFuncBBKSPrivate * const self = tf_bbks->priv;
-  
+
   const gdouble k  = kh * self->h;
   const gdouble q  = k * self->c5_wm;
   const gdouble q1 = 2.34 * q;
   const gdouble q2 = q * q;
   const gdouble q3 = q2 * q;
   const gdouble q4 = q3 * q;
-  
+
   return (q1 == 0.0 ? 1.0 : (log1p (q1) / q1)) * pow (1.0 + self->c1 * q + self->c2 * q2 + self->c3 * q3 + self->c4 * q4, -1.0 / 4.0);
 }
 
@@ -261,7 +259,7 @@ void
 nc_transfer_func_bbks_set_type (NcTransferFuncBBKS *tf_bbks, NcTransferFuncBBKSType bbks_type)
 {
   NcTransferFuncBBKSPrivate * const self = tf_bbks->priv;
-  
+
   self->type = bbks_type;
 }
 

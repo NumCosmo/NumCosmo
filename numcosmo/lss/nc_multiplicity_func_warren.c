@@ -8,28 +8,28 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
- * SECTION:nc_multiplicity_func_warren
- * @title: NcMultiplicityFuncWarren
- * @short_description: Dark matter halo -- Warren multiplicity function.
+ * NcMultiplicityFuncWarren:
  *
- * FIXME
- * Reference: astro-ph/0506395 
+ * Dark matter halo -- Warren multiplicity function.
+ *
+ * Multiplicity function for dark matter halos according to Warren et al. (2006).
+ * Reference: astro-ph/0506395
  */
 
 #ifdef HAVE_CONFIG_H
@@ -58,7 +58,7 @@ nc_multiplicity_func_warren_init (NcMultiplicityFuncWarren *mw)
 {
   NcMultiplicityFuncWarrenPrivate * const self = mw->priv = nc_multiplicity_func_warren_get_instance_private (mw);
 
-  self->mdef    = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
+  self->mdef  = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
   self->Delta = 0.0;
 }
 
@@ -70,61 +70,60 @@ _nc_multiplicity_func_warren_set_property (GObject *object, guint prop_id, const
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
 static void
-_nc_multiplicity_func_warren_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec)
+_nc_multiplicity_func_warren_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   /*NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (object); */
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_WARREN (object));
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
 static void
 _nc_multiplicity_func_warren_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_multiplicity_func_warren_parent_class)->finalize (object);
 }
 
 static void _nc_multiplicity_func_warren_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
-static void _nc_multiplicity_func_warren_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta); 
+static void _nc_multiplicity_func_warren_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_warren_get_mdef (NcMultiplicityFunc *mulf);
-static gdouble _nc_multiplicity_func_warren_get_Delta (NcMultiplicityFunc *mulf); 
+static gdouble _nc_multiplicity_func_warren_get_Delta (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
 nc_multiplicity_func_warren_class_init (NcMultiplicityFuncWarrenClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcMultiplicityFuncClass* parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
+  NcMultiplicityFuncClass *parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
 
   object_class->set_property = &_nc_multiplicity_func_warren_set_property;
   object_class->get_property = &_nc_multiplicity_func_warren_get_property;
   object_class->finalize     = &_nc_multiplicity_func_warren_finalize;
-  
-  parent_class->set_mdef = &_nc_multiplicity_func_warren_set_mdef;
+
+  parent_class->set_mdef  = &_nc_multiplicity_func_warren_set_mdef;
   parent_class->set_Delta = &_nc_multiplicity_func_warren_set_Delta;
-  parent_class->get_mdef = &_nc_multiplicity_func_warren_get_mdef;
+  parent_class->get_mdef  = &_nc_multiplicity_func_warren_get_mdef;
   parent_class->get_Delta = &_nc_multiplicity_func_warren_get_Delta;
-  parent_class->eval     = &_nc_multiplicity_func_warren_eval;
+  parent_class->eval      = &_nc_multiplicity_func_warren_eval;
 }
 
-static void 
+static void
 _nc_multiplicity_func_warren_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
-  NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (mulf);
+  NcMultiplicityFuncWarren *mw                 = NC_MULTIPLICITY_FUNC_WARREN (mulf);
   NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
 
   switch (mdef)
@@ -149,33 +148,29 @@ _nc_multiplicity_func_warren_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityF
   self->mdef = mdef;
 }
 
-static NcMultiplicityFuncMassDef 
+static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_warren_get_mdef (NcMultiplicityFunc *mulf)
 {
-  NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (mulf);
+  NcMultiplicityFuncWarren *mw                 = NC_MULTIPLICITY_FUNC_WARREN (mulf);
   NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
 
   return self->mdef;
 }
 
 static gdouble
-_nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $f(\sigma)$ Warren: astro-ph/0506395 */
+_nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $f(\sigma)$ Warren: astro-ph/0506395 */
 {
   /* NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (mulf);
-  NcMultiplicityFuncWarrenPrivate * const self = mw->priv; */
-  
-  gdouble f_Warren = 0.7234 * (pow(sigma, - 1.625) + 0.2538) * exp(-1.1982 / (sigma * sigma) );
+   *  NcMultiplicityFuncWarrenPrivate * const self = mw->priv; */
 
-  NCM_UNUSED (mulf);
-  NCM_UNUSED (cosmo);
-  NCM_UNUSED (z);
+  gdouble f_Warren = 0.7234 * (pow (sigma, -1.625) + 0.2538) * exp (-1.1982 / (sigma * sigma));
 
   return f_Warren;
 }
 
 /**
  * nc_multiplicity_func_warren_new:
- *   
+ *
  * FIXME
  *
  * Returns: A new #NcMultiplicityFuncWarren.
@@ -230,7 +225,6 @@ nc_multiplicity_func_warren_clear (NcMultiplicityFuncWarren **mw)
   g_clear_object (mw);
 }
 
-
 /**
  * nc_multiplicity_func_warren_set_Delta:
  * @mt: a #NcMultiplicityFuncWarren.
@@ -255,6 +249,7 @@ gdouble
 _nc_multiplicity_func_warren_get_Delta (NcMultiplicityFunc *mulf)
 {
   g_error ("NcMultiplicityFuncMassPS does not need a Delta");
-  
+
   return 0.0;
 }
+

@@ -24,13 +24,13 @@
  */
 
 /**
- * SECTION:nc_hipert_two_fluids
- * @title: NcHIPertTwoFluids
- * @short_description: Perturbation object for a two fluids system.
+ * NcHIPertTwoFluids:
+ *
+ * Perturbation object for a two fluids system.
  *
  * This object provides the computation of the two fluid system of cosmological
- * perturbations. This problem is decribed by two fluids with energy density and pressure
- * given respectively by $\bar{\rho}_i$ and $\bar{p}_i$ for $i = 1,2$.
+ * perturbations. This problem is decribed by two fluids with energy density and
+ * pressure given respectively by $\bar{\rho}_i$ and $\bar{p}_i$ for $i = 1,2$.
  *
  * The system is written in terms of the gauge invariant variable
  * $$\zeta \equiv \Psi - \frac{2\bar{K}}{\kappa(\bar{\rho} + \bar{p})} + E\mathcal{V},$$

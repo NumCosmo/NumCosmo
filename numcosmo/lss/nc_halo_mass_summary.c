@@ -26,13 +26,12 @@
  */
 
 /**
- * SECTION: nc_halo_mass_summary
- * @title: NcHaloMassSummary
- * @short_description: Class describing halo mass summary
- * @stability:
+ * NcHaloMassSummary:
  *
- * This class describes a halo mass summary, i.e. the mass definition
- * of a halo, mass-concentration relationship, etc.
+ * Class describing halo mass summary.
+ *
+ * This class describes a halo mass summary, i.e. the mass definition of a halo,
+ * mass-concentration relationship, etc.
  *
  */
 
@@ -140,7 +139,7 @@ _nc_halo_mass_summary_mass (NcHaloMassSummary *hms)
 }
 
 static gdouble
-_nc_halo_mass_summary_concentration (NcHaloMassSummary *hms)
+_nc_halo_mass_summary_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo)
 {
   g_error ("_nc_halo_mass_summary_concentration: method not implemented.");
 
@@ -267,6 +266,7 @@ nc_halo_mass_summary_mass (NcHaloMassSummary *hms)
 /**
  * nc_halo_mass_summary_concentration: (virtual concentration)
  * @hms: a #NcHaloMassSummary
+ * @cosmo: a #NcHICosmo
  *
  * Computes the concentration.
  * The specific implementation is provided by the child classes.
@@ -275,9 +275,9 @@ nc_halo_mass_summary_mass (NcHaloMassSummary *hms)
  * Returns: the concentration.
  */
 gdouble
-nc_halo_mass_summary_concentration (NcHaloMassSummary *hms)
+nc_halo_mass_summary_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo)
 {
-  return NC_HALO_MASS_SUMMARY_GET_CLASS (hms)->concentration (hms);
+  return NC_HALO_MASS_SUMMARY_GET_CLASS (hms)->concentration (hms, cosmo);
 }
 
 #define _VIRIAL_DELTA(x) (18.0 * M_PI * M_PI + 82.0 * (x) - 39.0 * (x) * (x))

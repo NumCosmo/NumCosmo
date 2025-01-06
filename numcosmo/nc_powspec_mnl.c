@@ -24,14 +24,12 @@
  */
 
 /**
- * SECTION:nc_powspec_mnl
- * @title: NcPowspecMNL
- * @short_description: Abstrac class for non-linear matter power spectrum implementation.
- * @stability: Stable
- * @include: numcosmo/nc_powspec_mnl.h
+ * NcPowspecMNL:
  *
- * This module comprises the set of functions to compute a power spectrum and
- * derived quantities.
+ * Abstrac class for non-linear matter power spectrum implementation.
+ *
+ * This module comprises the set of functions to compute a power spectrum and derived
+ * quantities.
  *
  */
 

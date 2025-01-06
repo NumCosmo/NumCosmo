@@ -24,19 +24,17 @@
  */
 
 /**
- * SECTION:nc_powspec_ml
- * @title: NcPowspecML
- * @short_description: Abstract class for linear matter power spectrum implementation.
- * @stability: Stable
- * @include: numcosmo/nc_powspec_ml.h
+ * NcPowspecML:
  *
- * This module comprises the set of functions to compute the linear matter power spectrum and
- * derived quantities.
+ * Abstract class for linear matter power spectrum implementation.
  *
- * Following the description presented in #NcmPowspec, in this case we have that the field $\delta(\vec{x})$
- * represents the matter density fluctuations, i.e.,
- * $$\delta(\vec{x}) = \frac{\rho(\vec{x}) - \bar{\rho}}{\bar{\rho}},$$
- * where $\rho$ is the cold matter density field and $\bar{\rho}$ its mean.
+ * This module comprises the set of functions to compute the linear matter power
+ * spectrum and derived quantities.
+ *
+ * Following the description presented in #NcmPowspec, in this case we have that the
+ * field $\delta(\vec{x})$ represents the matter density fluctuations, i.e.,
+ * $$\delta(\vec{x}) = \frac{\rho(\vec{x}) - \bar{\rho}}{\bar{\rho}},$$ where $\rho$ is
+ * the cold matter density field and $\bar{\rho}$ its mean.
  *
  */
 

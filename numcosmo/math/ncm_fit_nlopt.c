@@ -24,12 +24,11 @@
  */
 
 /**
- * SECTION:ncm_fit_nlopt
- * @title: NLopt Interface Object
- * @short_description: Interface for NLopt optmization library
+ * NcmFitNLOpt:
  *
- * A subclass of #NcmFit that uses the NLopt library to perform the
- * optimization.
+ * Interface for NLopt optmization library.
+ *
+ * A subclass of #NcmFit that uses the NLopt library to perform the optimization.
  *
  */
 

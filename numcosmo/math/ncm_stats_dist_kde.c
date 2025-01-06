@@ -26,18 +26,21 @@
  */
 
 /**
- * SECTION:ncm_stats_dist_kde
- * @title: NcmStatsDistKDE
- * @short_description: Abstract class for implementing N-dimensional probability distributions with a fixed density estimator kernel.
+ * NcmStatsDistKDE:
+ *
+ * Base class for implementing N-dimensional probability distributions with a fixed
+ * density estimator kernel.
  *
  * Abstract object to reconstruct an arbitrary N-dimensional probability distribution.
  * This object provides the complementary tools to perform a radial basis interpolation
  * in a multidimensional function using the #NcmStatsDist class.
  *
- * This object sets the kernel $\phi$ to be used in the radial basis interpolation. This object also implements some
- * calculations needed in the #NcmStatsDist class, such as the covariance matrix of the whole sample and its Cholesky decomposition,
- * the preparation of the interpolation matrix $IM$, the kernel normalization factor, and given a sample vector $\vec{x}$, the distribution
- * evaluated in these points. Some of these calculations are explained below.
+ * This object sets the kernel $\phi$ to be used in the radial basis interpolation. This
+ * object also implements some calculations needed in the #NcmStatsDist class, such as
+ * the covariance matrix of the whole sample and its Cholesky decomposition, the
+ * preparation of the interpolation matrix $IM$, the kernel normalization factor, and
+ * given a sample vector $\vec{x}$, the distribution evaluated in these points. Some of
+ * these calculations are explained below.
  *
  * The #NcmStatsDistKDE class uses one covariance matrix for all the sample points. So, given $n$ points, there is only
  * one covariance matrix $\Sigma$ that is used for all the $i$-th kernels $\phi(|x-x_i|, \Sigma)$. After the covariance

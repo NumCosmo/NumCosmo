@@ -25,11 +25,10 @@
  */
 
 /**
- * SECTION:nc_cluster_mass_nodist
- * @title: NcClusterMassNodist
- * @short_description: Cluster mass real mass distribution.
+ * NcClusterMassNodist:
  *
- * FIXME
+ * Cluster mass real mass distribution.
+ *
  */
 
 #ifdef HAVE_CONFIG_H

@@ -33,10 +33,10 @@ import typer
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.experiments.planck18 import (
     Planck18Types,
-    Planck18HIPrimModel,
+    HIPrimModel,
     generate_planck18_tt,
     generate_planck18_ttteee,
-    set_mset_parameters,
+    mset_set_parameters,
 )
 from numcosmo_py.experiments.jpas_forecast24 import (
     ClusterRedshiftType,
@@ -65,9 +65,9 @@ class GeneratePlanck:
     ] = Planck18Types.TT
 
     prim_model: Annotated[
-        Planck18HIPrimModel,
+        HIPrimModel,
         typer.Option(help="Primordial model to use.", show_default=True),
-    ] = Planck18HIPrimModel.POWER_LAW
+    ] = HIPrimModel.POWER_LAW
 
     massive_nu: Annotated[
         bool, typer.Option(help="Use massive neutrinos.", show_default=True)
@@ -117,8 +117,7 @@ class GeneratePlanck:
 
         dataset = likelihood.peek_dataset()
         assert isinstance(dataset, Ncm.Dataset)
-
-        set_mset_parameters(mset, self.data_type, self.prim_model)
+        mset_set_parameters(mset, self.data_type, self.prim_model)
 
         if self.include_snia is not None:
             dist = exp.get("distance")
@@ -178,20 +177,32 @@ class GenerateJpasForecast:
         tuple[float, float, float],
         typer.Option(
             help=(
+<<<<<<< HEAD
                 "Model for "
                 "resample.(NcHICosmo:Omegac,NcHICosmo:w,NcHICosmo:sigma8)"
             ),
             show_default=True,
         ),
     ] = (0.2612, -1.0,  0.8159)
+=======
+                "Model for resample. (NcHICosmo:Omegac,NcHICosmo:w,NcHICosmo:sigma8)"
+            ),
+            show_default=True,
+        ),
+    ] = (0.2612, -1.0, 0.8159)
+>>>>>>> 2de4259916cf3226ca3cc5cf0d35e0962ac87ac5
 
     fitting_model: Annotated[
         tuple[float, float, float],
         typer.Option(
+<<<<<<< HEAD
             help=(
                 "Model for fitting. "
                 "(NcHICosmo:Omegac,NcHICosmo:w,NcHICosmo:sigma8)"
             ),
+=======
+            help="Model for fitting. (NcHICosmo:Omegac,NcHICosmo:w,NcHICosmo:sigma8)",
+>>>>>>> 2de4259916cf3226ca3cc5cf0d35e0962ac87ac5
             show_default=True,
         ),
     ] = (0.2612, -1.0, 0.8159)

@@ -25,12 +25,12 @@
  */
 
 /**
- * SECTION:ncm_cfg
- * @title: NcmCfg
- * @short_description: Library configuration and helper functions.
+ * NcmCfg:
  *
- * These functions are used to configure the library, including helper
- * functions related to the library configuration.
+ * Library configuration and helper functions.
+ *
+ * These functions are used to configure the library, including helper functions related
+ * to the library configuration.
  *
  */
 
@@ -126,7 +126,8 @@
 #include "lss/nc_halo_density_profile_dk14.h"
 #include "lss/nc_halo_density_profile_hernquist.h"
 #include "lss/nc_halo_mass_summary.h"
-#include "lss/nc_halo_mc_param.h"
+#include "lss/nc_halo_cm_param.h"
+#include "lss/nc_halo_cm_klypin11.h"
 #include "lss/nc_multiplicity_func.h"
 #include "lss/nc_multiplicity_func_st.h"
 #include "lss/nc_multiplicity_func_ps.h"
@@ -136,6 +137,7 @@
 #include "lss/nc_multiplicity_func_tinker_mean_normalized.h"
 #include "lss/nc_multiplicity_func_crocce.h"
 #include "lss/nc_multiplicity_func_bocquet.h"
+#include "lss/nc_multiplicity_func_despali.h"
 #include "lss/nc_multiplicity_func_watson.h"
 #include "lss/nc_halo_mass_function.h"
 #include "lss/nc_galaxy_acf.h"
@@ -663,7 +665,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HALO_DENSITY_PROFILE_HERNQUIST);
 
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_SUMMARY);
-  ncm_cfg_register_obj (NC_TYPE_HALO_MC_PARAM);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_PARAM);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_KLYPIN11);
 
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_PS);
@@ -674,6 +677,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_CROCCE);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_BOCQUET);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_DESPALI);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_WATSON);
 
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);

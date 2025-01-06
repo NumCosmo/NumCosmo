@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_cbe_precision
- * @title: NcCBEPrecision
- * @short_description: CLASS (Cosmic Linear Anisotropy Solving System) backend for perturbations
+ * NcCBEPrecision:
+ *
+ * CLASS (Cosmic Linear Anisotropy Solving System) backend for perturbations.
  *
  * This object provides a front-end for CLASS precision structure.
  *

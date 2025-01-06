@@ -25,9 +25,9 @@
 
 
 /**
- * SECTION:nc_xcor_limber_kernel
- * @title: NcXcorLimberKernel
- * @short_description: Abstract object for the kernels of projected observables used in cross-correlations.
+ * NcXcorLimberKernel:
+ *
+ * Base object for the kernels of projected observables used in cross-correlations.
  *
  * The projected field and its kernel are linked by
  * \begin{equation}
@@ -49,15 +49,6 @@
 #include "math/ncm_serialize.h"
 #include "xcor/nc_xcor_limber_kernel.h"
 #include "xcor/nc_xcor.h"
-
-/**
- * NcXcorLimberKernel:
- *
- * A #NcXcorLimberKernel is an abstract object for the kernels of projected observables
- * used in cross-correlations.
- *
- */
-
 
 typedef struct _NcXcorLimberKernelPrivate
 {

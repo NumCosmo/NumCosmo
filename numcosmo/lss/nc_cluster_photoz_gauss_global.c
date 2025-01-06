@@ -23,11 +23,10 @@
  */
 
 /**
- * SECTION:nc_cluster_photoz_gauss_global
- * @title: NcClusterPhotozGaussGlobal
- * @short_description: Global gaussian photometric distribution for clusters.
+ * NcClusterPhotozGaussGlobal:
  *
- * FIXME
+ * Global gaussian photometric distribution for clusters.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
