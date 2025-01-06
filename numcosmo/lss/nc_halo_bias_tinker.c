@@ -66,7 +66,7 @@ enum
   PROP_SIZE
 };
 
-static gdouble _nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
+static gdouble _nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
 nc_halo_bias_tinker_init (NcHaloBiasTinker *biasf_tinker)
@@ -136,7 +136,6 @@ _nc_halo_bias_tinker_get_property (GObject *object, guint prop_id, GValue *value
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
-    
 }
 
 static void
@@ -245,7 +244,7 @@ nc_halo_bias_tinker_new_full (NcHaloMassFunction *mfp, gdouble delta_c, gdouble 
 }
 
 static gdouble
-_nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
+_nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   NcHaloBiasTinker *bias_tinker = NC_HALO_BIAS_TINKER (biasf);
   NcMultiplicityFunc *mulf      = nc_halo_mass_function_peek_multiplicity_function (biasf->mfp);

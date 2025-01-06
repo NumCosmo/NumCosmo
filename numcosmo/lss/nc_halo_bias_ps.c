@@ -115,7 +115,7 @@ _nc_halo_bias_ps_get_property (GObject *object, guint prop_id, GValue *value, GP
   }
 }
 
-static gdouble _nc_halo_bias_ps_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
+static gdouble _nc_halo_bias_ps_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
 nc_halo_bias_ps_class_init (NcHaloBiasPSClass *klass)
@@ -144,7 +144,7 @@ nc_halo_bias_ps_class_init (NcHaloBiasPSClass *klass)
 }
 
 static gdouble
-_nc_halo_bias_ps_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
+_nc_halo_bias_ps_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   NcHaloBiasPS *bias_ps = NC_HALO_BIAS_PS (biasf);
   gdouble x             = bias_ps->delta_c / sigma; /* \delta_c \sigma^{-1} */
