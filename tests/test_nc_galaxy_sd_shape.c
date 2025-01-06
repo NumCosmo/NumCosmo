@@ -267,7 +267,7 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test, gconstpoint
   GPtrArray *data_array               = g_ptr_array_new ();
   const gdouble sigma_obs             = 0.03;
   const gdouble sigma_int             = ncm_model_orig_param_get (NCM_MODEL (test->galaxy_shape), NC_GALAXY_SD_SHAPE_GAUSS_SIGMA_INT);
-  const guint ntest                   = 10000;
+  const guint ntest                   = 40000;
   guint i;
 
   g_ptr_array_add (data_array, s_data);
