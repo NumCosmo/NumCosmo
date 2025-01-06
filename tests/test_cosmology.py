@@ -135,5 +135,5 @@ def test_cosmology_missing_ps_mnl(cosmology_minimal: Cosmology):
 
 def test_cosmology_missing_psf(cosmology_minimal: Cosmology):
     """Test the Cosmology class with missing psf."""
-    with pytest.raises(AttributeError, match="Power spectrum filter not set."):
+    with pytest.raises(AttributeError, match="Top-hat power spectrum filter not set."):
         _ = cosmology_minimal.psf_tophat
