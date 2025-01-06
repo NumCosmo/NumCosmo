@@ -154,7 +154,7 @@ class NcSkyMatching:
             
         #matched_df = pd.DataFrame(matched)
         table = Table(matched)
-        table.write(match_file)
+        #table.write(match_file)
         return matched
 
 
