@@ -25,9 +25,9 @@
  */
 
 /**
- * SECTION:nc_multiplicity_func
- * @title: NcMultiplicityFunc
- * @short_description: Dark matter halo multiplicity function.
+ * NcMultiplicityFunc:
+ *
+ * Dark matter halo multiplicity function.
  *
  * The  multiplicity function comprises information about the non-linear regime
  * of halo (structure) formation. The mass function can be written as
@@ -154,16 +154,10 @@ _nc_multiplicity_func_get_Delta (NcMultiplicityFunc *mulf)
   return -1;
 }
 
-static gdouble
-_nc_multiplicity_func_get_matter_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble z)
-{
-  g_error ("method get_matter_Delta not implemented by %s.", G_OBJECT_TYPE_NAME (mulf));
-
-  return -1;
-}
+static gdouble _nc_multiplicity_func_get_matter_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble z);
 
 static gdouble
-_nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
+_nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   g_error ("method eval not implemented by %s.", G_OBJECT_TYPE_NAME (mulf));
 
@@ -231,6 +225,42 @@ nc_multiplicity_func_class_init (NcMultiplicityFuncClass *klass)
   klass->eval                  = &_nc_multiplicity_func_eval;
   klass->has_correction_factor = &_nc_multiplicity_func_has_correction_factor;
   klass->correction_factor     = &_nc_multiplicity_func_correction_factor;
+}
+
+static gdouble
+_nc_multiplicity_func_get_matter_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble z)
+{
+  NcMultiplicityFuncMassDef mdef = nc_multiplicity_func_get_mdef (mulf);
+
+  switch (mdef)
+  {
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
+
+      return nc_multiplicity_func_get_Delta (mulf);
+
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
+    {
+      const gdouble E2      = nc_hicosmo_E2 (cosmo, z);
+      const gdouble Omega_m = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
+      const gdouble Delta_z = nc_multiplicity_func_get_Delta (mulf) / Omega_m;
+
+      return Delta_z;
+
+      break;
+    }
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:
+      g_error ("NcMultiplicityFuncMassDefVirial does not support Delta def");
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
+      g_error ("NcMultiplicityFuncMassDefFof does not support Delta def");
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  return 0.0;
 }
 
 static gboolean
@@ -352,40 +382,10 @@ nc_multiplicity_func_get_Delta (NcMultiplicityFunc *mulf)
  *
  * Returns: Delta.
  */
-
 gdouble
 nc_multiplicity_func_get_matter_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble z)
 {
-  NcMultiplicityFuncMassDef mdef = nc_multiplicity_func_get_mdef (mulf);
-
-  switch (mdef)
-  {
-    case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
-
-      return nc_multiplicity_func_get_Delta (mulf);
-
-      break;
-    case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
-    {
-      const gdouble E2      = nc_hicosmo_E2 (cosmo, z);
-      const gdouble Omega_m = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
-      const gdouble Delta_z = nc_multiplicity_func_get_Delta (mulf) / Omega_m;
-
-      return Delta_z;
-
-      break;
-    }
-    case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:
-      g_error ("NcMultiplicityFuncMassDefVirial does not support Delta def");
-      break;
-    case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
-      g_error ("NcMultiplicityFuncMassDefFof does not support Delta def");
-      break;
-    default:
-      g_assert_not_reached ();
-      break;
-  }
-  return 0.0;
+  return NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->get_matter_Delta (mulf, cosmo, z);
 }
 
 /**
@@ -400,9 +400,9 @@ nc_multiplicity_func_get_matter_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cosm
  * Returns: FIXME
  */
 gdouble
-nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
+nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
-  return NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->eval (mulf, cosmo, sigma, z, lnM);
+  return NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->eval (mulf, cosmo, sigma, z);
 }
 
 /**

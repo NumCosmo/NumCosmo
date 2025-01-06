@@ -40,7 +40,7 @@
  * \begin{align}
  * b(\nu) &= 1 + \frac{\nu^2 - 1}{\delta_c}
  * , \end{align}
- * where $b(\nu)$ is the Press-Schechter bias, $\delta_c$ is the 
+ * where $b(\nu)$ is the Press-Schechter bias, $\delta_c$ is the
  * critical threshold and $\nu = \frac{\delta_c}{\sigma}$. Also,
  * sigma is the variance of the gaussian random field $\delta_b$,
  * which can be computed with the density contrast power spectrum.
@@ -116,7 +116,7 @@ _nc_halo_bias_ps_get_property (GObject *object, guint prop_id, GValue *value, GP
   }
 }
 
-static gdouble _nc_halo_bias_ps_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_halo_bias_ps_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
 static void
 nc_halo_bias_ps_class_init (NcHaloBiasPSClass *klass)
@@ -145,7 +145,7 @@ nc_halo_bias_ps_class_init (NcHaloBiasPSClass *klass)
 }
 
 static gdouble
-_nc_halo_bias_ps_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_halo_bias_ps_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
 {
   NcHaloBiasPS *bias_ps = NC_HALO_BIAS_PS (biasf);
   gdouble x             = bias_ps->delta_c / sigma; /* \delta_c \sigma^{-1} */
