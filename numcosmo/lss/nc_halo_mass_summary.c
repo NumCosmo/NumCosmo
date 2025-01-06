@@ -140,7 +140,7 @@ _nc_halo_mass_summary_mass (NcHaloMassSummary *hms)
 }
 
 static gdouble
-_nc_halo_mass_summary_concentration (NcHaloMassSummary *hms)
+_nc_halo_mass_summary_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo)
 {
   g_error ("_nc_halo_mass_summary_concentration: method not implemented.");
 
@@ -167,7 +167,6 @@ nc_halo_mass_summary_class_init (NcHaloMassSummaryClass *klass)
   ncm_model_class_add_params (model_class, 0, 0, 1);
 
   ncm_mset_model_register_id (model_class, "NcHaloMassSummary", "Halo mass summary.", NULL, TRUE, nc_halo_density_profile_id ());
-  ncm_model_class_set_name_nick (model_class, "Halo mass summary", "HaloMassSummary");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
 
   ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
@@ -268,6 +267,7 @@ nc_halo_mass_summary_mass (NcHaloMassSummary *hms)
 /**
  * nc_halo_mass_summary_concentration: (virtual concentration)
  * @hms: a #NcHaloMassSummary
+ * @cosmo: a #NcHICosmo
  *
  * Computes the concentration.
  * The specific implementation is provided by the child classes.
@@ -276,9 +276,9 @@ nc_halo_mass_summary_mass (NcHaloMassSummary *hms)
  * Returns: the concentration.
  */
 gdouble
-nc_halo_mass_summary_concentration (NcHaloMassSummary *hms)
+nc_halo_mass_summary_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo)
 {
-  return NC_HALO_MASS_SUMMARY_GET_CLASS (hms)->concentration (hms);
+  return NC_HALO_MASS_SUMMARY_GET_CLASS (hms)->concentration (hms, cosmo);
 }
 
 #define _VIRIAL_DELTA(x) (18.0 * M_PI * M_PI + 82.0 * (x) - 39.0 * (x) * (x))

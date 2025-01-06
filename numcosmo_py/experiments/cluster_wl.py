@@ -107,7 +107,7 @@ class ClusterModel:
         self.mass_delta = delta
         self.profile_type = profile_type
 
-        halo_mass_summary = Nc.HaloMCParam.new(mass_def, delta)
+        halo_mass_summary = Nc.HaloCMParam.new(mass_def, delta)
         match profile_type:
             case HaloProfileType.NFW:
                 self.density_profile = Nc.HaloDensityProfileNFW.new(halo_mass_summary)
@@ -122,6 +122,7 @@ class ClusterModel:
             case _:
                 raise ValueError(f"Invalid halo profile type: {profile_type}")
 
+        self.halo_mass_summary = halo_mass_summary
         self.surface_mass_density = Nc.WLSurfaceMassDensity.new(dist)
         self.halo_position = Nc.HaloPosition.new(dist)
 
@@ -129,8 +130,8 @@ class ClusterModel:
         self.halo_position["dec"] = position.dec
         self.halo_position["z"] = position.z
 
-        self.density_profile["cDelta"] = cluster_c
-        self.density_profile["log10MDelta"] = np.log10(cluster_mass)
+        self.halo_mass_summary["cDelta"] = cluster_c
+        self.halo_mass_summary["log10MDelta"] = np.log10(cluster_mass)
 
     @property
     def position_data(self) -> HaloPositionData:
@@ -144,12 +145,12 @@ class ClusterModel:
     @property
     def mass(self) -> float:
         """Return the cluster mass."""
-        return 10.0 ** self.density_profile["log10MDelta"]
+        return 10.0 ** self.halo_mass_summary["log10MDelta"]
 
     @property
     def concentration(self) -> float:
         """Return the cluster concentration."""
-        return self.density_profile["cDelta"]
+        return self.halo_mass_summary["cDelta"]
 
     def prepare(self, cosmo: Nc.HICosmo) -> None:
         """Prepare the cluster model."""
@@ -184,7 +185,8 @@ class GalaxyDistributionModel:
         )
         self.n_galaxies = int(galaxies.density * frac * self.sky_area)
         print(
-            f"Number of galaxies: {self.n_galaxies} = {galaxies.density} * {frac} * {self.sky_area}"
+            f"Number of galaxies: {self.n_galaxies} = "
+            f"{galaxies.density} * {frac} * {self.sky_area}"
         )
 
         match z_dist:
@@ -354,7 +356,7 @@ def generate_lsst_cluster_wl(
     cluster.halo_position.param_set_desc(
         "dec", {"lower-bound": dec_min, "upper-bound": dec_max}
     )
-    cluster.density_profile.param_set_desc(
+    cluster.halo_mass_summary.param_set_desc(
         "log10MDelta",
         {
             "lower-bound": float(np.log10(cluster_mass_min)),
@@ -404,7 +406,8 @@ def generate_lsst_cluster_wl(
         table.add_row("z max", f"{galaxy_distribution.z_max}")
         table.add_row("Density", f"{galaxy_distribution.density}")
         table.add_row("z Distribution", f"{z_dist}")
-        table.add_row("z Sigma", f"{sigma_z}")
+        if z_dist != GalaxyZDist.SPEC:
+            table.add_row("z Sigma", f"{sigma_z}")
         table.add_row("Shape Distribution", f"{shape_dist}")
         table.add_row("Shape e_rms", f"{galaxy_shape_e_rms}")
         table.add_row("Shape e_sigma", f"{galaxy_shape_e_sigma}")

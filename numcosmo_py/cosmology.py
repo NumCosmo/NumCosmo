@@ -23,7 +23,33 @@
 
 """NumCosmo cosmology class."""
 
+from typing import TypedDict
+from enum import Enum
 from . import Ncm, Nc
+
+
+class ParameterDesc(TypedDict, total=False):
+    """Parameter description."""
+
+    name: str
+    symbol: str
+    scale: float
+    lower_bound: float
+    upper_bound: float
+    abstol: float
+    fit: bool
+    value: float
+
+
+class HIPrimModel(str, Enum):
+    """Planck 18 primordial model."""
+
+    ATAN = "atan"
+    BPL = "broken-power-law"
+    EXPC = "exponential-c"
+    POWER_LAW = "power-law"
+    SBPL = "smooth-broken-power-law"
+    TWO_FLUIDS = "two-fluids"
 
 
 class Cosmology:
@@ -76,25 +102,36 @@ class Cosmology:
         psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)
         return cls(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mnl, psf=psf)
 
+    @classmethod
+    def default_minimal(cls, dist_max_z: float = 10.0) -> "Cosmology":
+        """Create a minimal default cosmology."""
+        cosmo = Nc.HICosmoDEXcdm()
+        cosmo.omega_x2omega_k()
+        cosmo["Omegak"] = 0.0
+        cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
+        cosmo.add_submodel(Nc.HIReionCamb.new())
+        dist = Nc.Distance.new(dist_max_z)
+        return cls(cosmo=cosmo, dist=dist)
+
     @property
     def ps_ml(self) -> Nc.PowspecML:
         """Return the linear matter power spectrum."""
         if self._ps_ml is None:
-            raise ValueError("Linear matter power spectrum not set.")
+            raise AttributeError("Linear matter power spectrum not set.")
         return self._ps_ml
 
     @property
     def ps_mnl(self) -> Nc.PowspecMNL:
         """Return the non-linear matter power spectrum."""
         if self._ps_mnl is None:
-            raise ValueError("Non-linear matter power spectrum not set.")
+            raise AttributeError("Non-linear matter power spectrum not set.")
         return self._ps_mnl
 
     @property
     def psf_tophat(self) -> Ncm.PowspecFilter:
         """Return the top-hat power spectrum filter."""
         if self._psf_tophat is None:
-            raise ValueError("Top-hat power spectrum filter not set.")
+            raise AttributeError("Top-hat power spectrum filter not set.")
         return self._psf_tophat
 
     @property
@@ -112,3 +149,60 @@ class Cosmology:
             self._ps_mnl.prepare_if_needed(self.cosmo)
         if self._psf is not None:
             self._psf.prepare_if_needed(self.cosmo)
+
+
+def create_cosmo(
+    massive_nu: bool = False,
+    prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
+) -> Nc.HICosmo:
+    """Create a cosmology for CMB experiments."""
+    if massive_nu:
+        cosmo = Nc.HICosmoDEXcdm(massnu_length=1)
+    else:
+        cosmo = Nc.HICosmoDEXcdm()
+
+    cosmo.params_set_default_ftype()
+    cosmo.cmb_params()
+    cosmo["H0"] = 70.0
+    cosmo["omegab"] = 0.022
+    cosmo["omegac"] = 0.12
+
+    if massive_nu:
+        cosmo["ENnu"] = 2.0328
+        cosmo["massnu_0"] = 0.06
+        cosmo.param_set_desc("massnu_0", {"fit": True})
+
+    cosmo.param_set_desc("H0", {"fit": True})
+    cosmo.param_set_desc("omegac", {"fit": True})
+    cosmo.param_set_desc("omegab", {"fit": True})
+    cosmo.param_set_desc("Omegak", {"fit": False})
+    cosmo.param_set_desc("w", {"fit": False})
+
+    match prim_model:
+        case HIPrimModel.ATAN:
+            prim = Nc.HIPrimAtan.new()
+        case HIPrimModel.BPL:
+            prim = Nc.HIPrimBPL.new()
+        case HIPrimModel.EXPC:
+            prim = Nc.HIPrimExpc.new()
+        case HIPrimModel.POWER_LAW:
+            prim = Nc.HIPrimPowerLaw.new()
+            prim.param_set_desc("ln10e10ASA", {"fit": True})
+            prim.param_set_desc("n_SA", {"fit": True})
+        case HIPrimModel.SBPL:
+            prim = Nc.HIPrimSBPL.new()
+        case HIPrimModel.TWO_FLUIDS:
+            prim = Nc.HIPrimTwoFluids(use_default_calib=True)
+            prim.param_set_desc("ln10e10ASA", {"fit": True})
+            prim.param_set_desc("lnk0", {"fit": True})
+            prim.param_set_desc("lnw", {"fit": True})
+        case _:
+            raise ValueError(f"Invalid primordial model: {prim_model}")
+
+    reion = Nc.HIReionCamb.new()
+    reion.param_set_desc("z_re", {"fit": True})
+
+    cosmo.add_submodel(prim)
+    cosmo.add_submodel(reion)
+
+    return cosmo

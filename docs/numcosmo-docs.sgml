@@ -191,6 +191,7 @@
     <section>
       <title>Spherical maps and Healpix</title>
       <xi:include href="xml/ncm_sphere_map.xml"/>
+      <xi:include href="xml/ncm_sphere_nn.xml"/>
     </section>   
     <section>
       <title>GObject introspection compatibility</title>
@@ -338,6 +339,8 @@
       <xi:include href="xml/nc_halo_density_profile_einasto.xml"/>
       <xi:include href="xml/nc_halo_density_profile_dk14.xml"/>
       <xi:include href="xml/nc_halo_density_profile_hernquist.xml"/>
+      <xi:include href="xml/nc_halo_mass_summary.xml"/>
+      <xi:include href="xml/nc_halo_cm_param.xml"/>
       <xi:include href="xml/nc_halo_position.xml"/>
     </section>
     <section>

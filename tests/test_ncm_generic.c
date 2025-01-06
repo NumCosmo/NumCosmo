@@ -1,12 +1,12 @@
 /***************************************************************************
- *            test_ncm_diff.c
+ *            test_ncm_generic.c
  *
  *  Wed July 26 12:04:44 2017
  *  Copyright  2017  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
  ****************************************************************************/
 /*
- * test_ncm_diff.c
+ * test_ncm_generic.c
  *
  * Copyright (C) 2017 - Sandro Dias Pinto Vitenti
  *
@@ -40,6 +40,7 @@ void test_ncm_data_gaussmix2d_basic (void);
 void test_ncm_data_rosenbrock_basic (void);
 void test_ncm_dataset_basic (void);
 void test_ncm_fftlog_basic (void);
+void test_ncm_sphere_nn (void);
 void test_ncm_mpi_job_basic (void);
 void test_ncm_mpi_job_test_basic (void);
 void test_ncm_mpi_job_fit_basic (void);
@@ -70,7 +71,8 @@ void test_nc_hipert_gw_basic (void);
 void test_nc_hipert_two_fluids_basic (void);
 void test_nc_hiprim_two_fluids_basic (void);
 void test_nc_halo_mass_summary_basic (void);
-void test_nc_halo_mc_param_basic (void);
+void test_nc_halo_cm_param_basic (void);
+void test_nc_halo_cm_klypin11_basic (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -87,6 +89,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/data_rosenbrock/basic", test_ncm_data_rosenbrock_basic);
   g_test_add_func ("/ncm/dataset/basic", test_ncm_dataset_basic);
   g_test_add_func ("/ncm/fftlog/basic", test_ncm_fftlog_basic);
+  g_test_add_func ("/ncm/sphere/nn", test_ncm_sphere_nn);
   g_test_add_func ("/ncm/mpi_job/basic", test_ncm_mpi_job_basic);
   g_test_add_func ("/ncm/mpi_job_test/basic", test_ncm_mpi_job_test_basic);
   g_test_add_func ("/ncm/mpi_job_fit/basic", test_ncm_mpi_job_fit_basic);
@@ -116,7 +119,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/hiprim/two_fluids/basic", test_nc_hiprim_two_fluids_basic);
 
   g_test_add_func ("/nc/halo_mass_summary/basic", test_nc_halo_mass_summary_basic);
-  g_test_add_func ("/nc/halo_mc_param/basic", test_nc_halo_mc_param_basic);
+  g_test_add_func ("/nc/halo_cm_param/basic", test_nc_halo_cm_param_basic);
+  g_test_add_func ("/nc/halo_cm_klypin11/basic", test_nc_halo_cm_klypin11_basic);
+
 
   g_test_run ();
 }
@@ -227,6 +232,24 @@ test_ncm_fftlog_basic (void)
   g_assert_true (NCM_IS_FFTLOG (fftlog));
 
   NCM_TEST_FREE (ncm_fftlog_free, fftlog);
+}
+
+void
+test_ncm_sphere_nn (void)
+{
+  NcmSphereNN *snn = ncm_sphere_nn_new ();
+  NcmSphereNN *snn2;
+
+  g_assert_true (snn != NULL);
+  g_assert_true (NCM_IS_SPHERE_NN (snn));
+
+  snn2 = ncm_sphere_nn_ref (snn);
+  ncm_sphere_nn_clear (&snn2);
+  g_assert_true (snn2 == NULL);
+
+  g_assert_true (NCM_IS_SPHERE_NN (snn));
+
+  NCM_TEST_FREE (ncm_sphere_nn_free, snn);
 }
 
 void
@@ -746,7 +769,7 @@ test_nc_hiprim_two_fluids_basic (void)
 void
 test_nc_halo_mass_summary_basic (void)
 {
-  NcHaloMassSummary *hms = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0));
+  NcHaloMassSummary *hms = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0));
   NcHaloMassSummary *hms2;
 
   g_assert_true (hms != NULL);
@@ -762,20 +785,38 @@ test_nc_halo_mass_summary_basic (void)
 }
 
 void
-test_nc_halo_mc_param_basic (void)
+test_nc_halo_cm_param_basic (void)
 {
-  NcHaloMCParam *hmp = nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0);
-  NcHaloMCParam *hmp2;
+  NcHaloCMParam *hmp = nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0);
+  NcHaloCMParam *hmp2;
 
   g_assert_true (hmp != NULL);
-  g_assert_true (NC_IS_HALO_MC_PARAM (hmp));
+  g_assert_true (NC_IS_HALO_CM_PARAM (hmp));
 
-  hmp2 = nc_halo_mc_param_ref (hmp);
-  nc_halo_mc_param_clear (&hmp2);
+  hmp2 = nc_halo_cm_param_ref (hmp);
+  nc_halo_cm_param_clear (&hmp2);
   g_assert_true (hmp2 == NULL);
 
-  g_assert_true (NC_IS_HALO_MC_PARAM (hmp));
+  g_assert_true (NC_IS_HALO_CM_PARAM (hmp));
 
-  NCM_TEST_FREE (nc_halo_mc_param_free, hmp);
+  NCM_TEST_FREE (nc_halo_cm_param_free, hmp);
+}
+
+void
+test_nc_halo_cm_klypin11_basic (void)
+{
+  NcHaloCMKlypin11 *hcmk = nc_halo_cm_klypin11_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0);
+  NcHaloCMKlypin11 *hcmk2;
+
+  g_assert_true (hcmk != NULL);
+  g_assert_true (NC_IS_HALO_CM_KLYPIN11 (hcmk));
+
+  hcmk2 = nc_halo_cm_klypin11_ref (hcmk);
+  nc_halo_cm_klypin11_clear (&hcmk2);
+  g_assert_true (hcmk2 == NULL);
+
+  g_assert_true (NC_IS_HALO_CM_KLYPIN11 (hcmk));
+
+  NCM_TEST_FREE (nc_halo_cm_klypin11_free, hcmk);
 }
 

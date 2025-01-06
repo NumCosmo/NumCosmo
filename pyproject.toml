@@ -1,6 +1,6 @@
 [project]
 name = 'numcosmo_py'
-version = '0.22.0'
+version = '0.23.0'
 description = 'NumCosmo is a free software C library for cosmology calculations'
 readme = 'README.md'
 classifiers = [
@@ -62,3 +62,6 @@ numcosmo_py = ["*.pyi", "py.typed"]
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[tool.coverage.run]
+omit = ["*/external/*"]

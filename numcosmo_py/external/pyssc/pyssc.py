@@ -142,7 +142,7 @@ def Sij_fullsky(
     Inorm = np.zeros(nbins)
     for i1 in range(nbins):
         integrand = dX_dz * kernels[i1, :] ** order
-        Inorm[i1] = integrate.simps(integrand, z_arr)
+        Inorm[i1] = integrate.simpson(y=integrand, x=z_arr)
 
     # Compute U(i,k), numerator of Sij (integral of kernels**2 * matter )
     keq = 0.02 / h  # Equality matter radiation in 1/Mpc (more or less)
@@ -162,7 +162,7 @@ def Sij_fullsky(
         for ik in range(nk):
             kr = kk[ik] * comov_dist
             integrand = dX_dz * kernels[ibin, :] ** order * growth * np.sin(kr) / kr
-            Uarr[ibin, ik] = integrate.simps(integrand, z_arr)
+            Uarr[ibin, ik] = integrate.simpson(y=integrand, x=z_arr)
     # Compute Sij finally
     Cl_zero = np.zeros((nbins, nbins))
     # For i<=j
@@ -171,10 +171,10 @@ def Sij_fullsky(
         for jbin in range(ibin, nbins):
             U2 = Uarr[jbin, :] / Inorm[jbin]
             integrand = kk**2 * Pk * U1 * U2
-            # Cl_zero[ibin,jbin] = 2/pi * integrate.simps(integrand,kk)
+            # Cl_zero[ibin,jbin] = 2/pi * integrate.simpson(integrand,kk)
             # linear integration
-            Cl_zero[ibin, jbin] = (2 / pi) * integrate.simps(
-                integrand * kk, logk
+            Cl_zero[ibin, jbin] = (2 / pi) * integrate.simpson(
+                y=integrand * kk, x=logk
             )  # log integration
     # Fill by symmetry
     for ibin in range(nbins):
@@ -252,7 +252,7 @@ def Sij_alt_fullsky(
     Inorm = np.zeros(nbins)
     for i1 in range(nbins):
         integrand = dX_dz * kernels[i1, :] ** order
-        Inorm[i1] = integrate.simps(integrand, z_arr)
+        Inorm[i1] = integrate.simpson(y=integrand, x=z_arr)
 
     # Compute Sij finally
     prefactor = sigma2 * (dX_dz * dX_dz[:, None])
@@ -263,8 +263,8 @@ def Sij_alt_fullsky(
             integrand = prefactor * (
                 kernels[i1, :] ** order * kernels[i2, :, None] ** order
             )
-            Sij_array[i1, i2] = integrate.simps(
-                integrate.simps(integrand, z_arr), z_arr
+            Sij_array[i1, i2] = integrate.simpson(
+                y=integrate.simpson(y=integrand, x=z_arr), x=z_arr
             ) / (Inorm[i1] * Inorm[i2])
     # Fill by symmetry
     for i1 in range(nbins):
@@ -321,7 +321,7 @@ def Sij_psky(
     Inorm = np.zeros(nbins)
     for i1 in range(nbins):
         integrand = dX_dz * kernels[i1, :] ** order
-        Inorm[i1] = integrate.simps(integrand, z_arr)
+        Inorm[i1] = integrate.simpson(y=integrand, x=z_arr)
 
     # Full sky computation for debugging
     if debug:
@@ -347,7 +347,7 @@ def Sij_psky(
             for ik in range(nk):
                 kr = kk[ik] * comov_dist
                 integrand = dX_dz * kernels[ibin, :] ** order * growth * np.sin(kr) / kr
-                Uarr[ibin, ik] = integrate.simps(integrand, z_arr)
+                Uarr[ibin, ik] = integrate.simpson(y=integrand, x=z_arr)
         Cl_zero = np.zeros((nbins, nbins))
         # For i<=j
         for ibin in range(nbins):
@@ -355,10 +355,10 @@ def Sij_psky(
             for jbin in range(ibin, nbins):
                 U2 = Uarr[jbin, :] / Inorm[jbin]
                 integrand = kk**2 * Pk * U1 * U2
-                # Cl_zero[ibin,jbin] = 2/pi * integrate.simps(integrand,kk)
+                # Cl_zero[ibin,jbin] = 2/pi * integrate.simpson(integrand,kk)
                 # linear integration
                 Cl_zero[ibin, jbin] = (
-                    2 / pi * integrate.simps(integrand * kk, logk)
+                    2 / pi * integrate.simpson(y=integrand * kk, x=logk)
                 )  # log integration
         # Fill by symmetry
         for ibin in range(nbins):
@@ -391,7 +391,7 @@ def Sij_psky(
             bessel_jl = jn(ll, kr)
             for ibin in range(nbins):
                 integrand = dX_dz * kernels[ibin, :] ** order * growth * bessel_jl
-                Uarr[ibin, ik, ll] = integrate.simps(integrand, z_arr)
+                Uarr[ibin, ik, ll] = integrate.simpson(y=integrand, x=z_arr)
 
     # Compute Cl(X,Y) = 2/pi \int kk^2 dkk P(kk) U(i;kk,ell)/
     # I_\mathrm{norm}(i) U(j;kk,ell)/I_\mathrm{norm}(j)
@@ -403,10 +403,10 @@ def Sij_psky(
             for jbin in range(ibin, nbins):
                 U2 = Uarr[jbin, :, ll] / Inorm[jbin]
                 integrand = kk**2 * Pk * U1 * U2
-                # Cl_XY[ibin,jbin,ll] = 2/pi * integrate.simps(integrand,kk)
+                # Cl_XY[ibin,jbin,ll] = 2/pi * integrate.simpson(integrand,kk)
                 # linear integration
                 Cl_XY[ibin, jbin, ll] = (
-                    2 / pi * integrate.simps(integrand * kk, logk)
+                    2 / pi * integrate.simpson(y=integrand * kk, x=logk)
                 )  # log integration
         # Fill by symmetry
         for ibin in range(nbins):
@@ -542,7 +542,7 @@ def Sij_flatsky(
             )
 
             Sij_array[ibin, jbin] = (
-                integrate.simps(integrate.simps(dSij, kpar_arr), kperp_arr)
+                integrate.simpson(y=integrate.simpson(y=dSij, x=kpar_arr), x=kperp_arr)
                 / 2.0
                 / np.pi**2
             )
