@@ -125,6 +125,7 @@ def create_nc_obj(
         ps_mln.set_kmax(k_max)
         ps_mln.prepare(cosmo)
 
+    psf = None
     if ps_ml:
         psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)
         psf.set_best_lnr0()

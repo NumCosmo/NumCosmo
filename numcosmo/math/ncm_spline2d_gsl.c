@@ -24,14 +24,13 @@
  */
 
 /**
- * SECTION:ncm_spline2d_gsl
- * @title: NcmSpline2dGsl
- * @short_description: Implements spline from spline method using The GNU Scientific Library (GSL) as base splines.
- * @stability: Stable
- * @include: numcosmo/math/ncm_spline2d_gsl.h
+ * NcmSpline2dGsl:
  *
- * This object implements bidimensional splines with the method
- * given by the #NcmSplineGsl class.
+ * Implements spline from spline method using The GNU Scientific Library (GSL) as base
+ * splines.
+ *
+ * This object implements bidimensional splines with the method given by the
+ * #NcmSplineGsl class.
  *
  *
  */

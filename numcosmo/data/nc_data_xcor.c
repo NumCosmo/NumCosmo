@@ -24,13 +24,17 @@
  */
 
 /**
- * SECTION:nc_data_xcor
- * @title: NcDataXcor
- * @short_description: cross-correlation data object.
+ * NcDataXcor:
  *
- * This object implements the gaussian likelihood described in \cite{2017arXiv170604583D} for the joint analysis of an abitrary number of cosmic probes with their auto- and cross-angular pseudo power spectra. The covariance of the pseudo spectra implemented here is
- * \begin{align}
- * \mathrm{Cov}\left( \tilde{C}_{\ell}^{AB}, \tilde{C}_{\ell'}^{CD} \right) = & \sqrt{ D_{\ell}^{AD} D_{\ell'}^{AD} D_{\ell}^{BC} D_{\ell'}^{BC}} \mathbfss{X_1}_{\ell \ell'}^{ABCD}\nonumber \\
+ * Cross-correlation data object.
+ *
+ * This object implements the gaussian likelihood described in
+ * \cite{2017arXiv170604583D} for the joint analysis of an abitrary number of cosmic
+ * probes with their auto- and cross-angular pseudo power spectra. The covariance of the
+ * pseudo spectra implemented here is \begin{align} \mathrm{Cov}\left(
+ * \tilde{C}_{\ell}^{AB}, \tilde{C}_{\ell'}^{CD} \right) = & \sqrt{ D_{\ell}^{AD}
+ * D_{\ell'}^{AD} D_{\ell}^{BC} D_{\ell'}^{BC}} \mathbfss{X_1}_{\ell
+ * \ell'}^{ABCD}\nonumber \\
  * &+ \sqrt{ D_{\ell}^{AC} D_{\ell'}^{AC} D_{\ell}^{BD} D_{\ell'}^{BD}} \mathbfss{X_2}_{\ell \ell'}^{ABCD}
  * \end{align}
  * with

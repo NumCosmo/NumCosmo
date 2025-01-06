@@ -24,15 +24,14 @@
  */
 
 /**
- * SECTION:nc_halo_bias_tinker
- * @title: NcHaloBiasTinker
- * @short_description: Tinker halo bias function type.
+ * NcHaloBiasTinker:
  *
- * Object implementation to compute the halo bias function given
- * the Tinker mass function. A description of the mechanism
- * is given below. Check nc_halo_bias.c for a description
- * of halo biases and nc_multiplicity_func_tinker.c for the Tinker
- * mass function.
+ * Tinker halo bias function type.
+ *
+ * Object implementation to compute the halo bias function given the Tinker mass
+ * function. A description of the mechanism is given below. Check nc_halo_bias.c for a
+ * description of halo biases and nc_multiplicity_func_tinker.c for the Tinker mass
+ * function.
  *
  * The Tinker bias was obtained empirically and is given by
  * \begin{align}

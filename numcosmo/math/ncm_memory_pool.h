@@ -36,11 +36,6 @@ typedef gpointer (*NcmMemoryPoolAlloc) (gpointer userdata);
 
 typedef struct _NcmMemoryPool NcmMemoryPool;
 
-/**
- * NcmMemoryPool:
- *
- * FIXME
- */
 struct _NcmMemoryPool
 {
   /*< private >*/

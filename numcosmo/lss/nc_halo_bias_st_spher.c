@@ -24,15 +24,14 @@
  */
 
 /**
- * SECTION:nc_halo_bias_st_spher
- * @title: NcHaloBiasSTSpher
- * @short_description: Sheth-Tormen spherical halo bias function type.
+ * NcHaloBiasSTSpher:
  *
- * Object implementation to compute the halo bias function given
- * the Sheth-Tormen mass function for spherical collapse. A description
- * of the function is given below. Check nc_halo_bias.c for a description
- * of halo biases and nc_multiplicity_func_st.c for the Sheth-Tormen
- * mass function.
+ * Sheth-Tormen spherical halo bias function type.
+ *
+ * Object implementation to compute the halo bias function given the Sheth-Tormen mass
+ * function for spherical collapse. A description of the function is given below. Check
+ * nc_halo_bias.c for a description of halo biases and nc_multiplicity_func_st.c for the
+ * Sheth-Tormen mass function.
  *
  * The Sheth-Tormen bias can be obtained in the same way as the Press-Schechter bias
  * by performing a perturbative expansion in the mass function around the background
@@ -322,3 +321,4 @@ nc_halo_bias_st_spher_get_p (const NcHaloBiasSTSpher *biasf_st_spher)
 }
 
 /* _NC_BIAS_FUNCTION_ST_SPHER_DATASET_9901122 = {1.686, 0.75, 0.3}; */
+

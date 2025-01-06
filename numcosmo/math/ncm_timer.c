@@ -25,18 +25,14 @@
  */
 
 /**
- * SECTION:ncm_timer
- * @title: NcmTimer
- * @short_description: A timer with ETA support.
- * @stability: Stable
- * @include: numcosmo/math/ncm_timer.h
+ * NcmTimer:
  *
+ * A timer with ETA support.
  *
- * This object has several functions to track time,
- * with the availability to be devided in several tasks.
- * Also it provides two different formats:
- * the default is time in seconds but also have date plus time.
- * All with estimated time of accomplishment (ETA) support.
+ * This object has several functions to track time, with the availability to be devided
+ * in several tasks. Also it provides two different formats: the default is time in
+ * seconds but also have date plus time. All with estimated time of accomplishment (ETA)
+ * support.
  *
  */
 

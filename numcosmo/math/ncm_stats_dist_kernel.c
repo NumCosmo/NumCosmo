@@ -26,11 +26,10 @@
  */
 
 /**
- * SECTION:ncm_stats_dist_kernel
- * @title: NcmStatsDistKernel
- * @short_description: An N-dimensional kernel used to compute the kernel density estimation function (KDE) in the #NcmStatsDist class.
+ * NcmStatsDistKernel:
  *
- * An N-dimensional kernel used to compute the kernel density estimation function (KDE) in the #NcmStatsDist class.
+ * An N-dimensional kernel used to compute the kernel density estimation function (KDE)
+ * in the #NcmStatsDist class.
  *
  * This class provides the tools to generate a kernel function to be used in a kernel
  * density estimation method. Below is a quick review of the kernel density estimation method

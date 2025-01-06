@@ -24,11 +24,13 @@
  */
 
 /**
- * SECTION:nc_hipert_boltzmann
- * @title: NcHIPertBoltzmann
- * @short_description: Abstract class for perturbative Boltzmann hierarchy.
+ * NcHIPertBoltzmann:
  *
- * FIXME
+ * Base class for perturbative Boltzmann hierarchy.
+ *
+ * This object defines the functions for solving the Boltzmann hierarchy. It is
+ * a base class for the perturbative Boltzmann hierarchy, which is used to
+ * compute the evolution of the perturbations in the early universe.
  *
  */
 
@@ -90,28 +92,29 @@ nc_hipert_boltzmann_init (NcHIPertBoltzmann *pb)
   pb->lambda_rec_10m2_max[0] = 0.0;
   pb->lambda                 = 0.0;
 
-  pb->target_Cls             = 0;
-  pb->use_lensed_Cls         = FALSE;
-  pb->use_tensor             = FALSE;
-  pb->calc_transfer          = FALSE;
+  pb->target_Cls     = 0;
+  pb->use_lensed_Cls = FALSE;
+  pb->use_tensor     = FALSE;
+  pb->calc_transfer  = FALSE;
 
-	pb->PHIPHI_lmax            = 0;
-  pb->TT_lmax                = 0;
-  pb->EE_lmax                = 0;
-  pb->BB_lmax                = 0;
-  pb->TE_lmax                = 0;
-  pb->TB_lmax                = 0;
-  pb->EB_lmax                = 0;
-  pb->tight_coupling         = FALSE;
+  pb->PHIPHI_lmax    = 0;
+  pb->TT_lmax        = 0;
+  pb->EE_lmax        = 0;
+  pb->BB_lmax        = 0;
+  pb->TE_lmax        = 0;
+  pb->TB_lmax        = 0;
+  pb->EB_lmax        = 0;
+  pb->tight_coupling = FALSE;
 
-  pb->ctrl_cosmo             = ncm_model_ctrl_new (NULL);
-  pb->ctrl_prim              = ncm_model_ctrl_new (NULL);
+  pb->ctrl_cosmo = ncm_model_ctrl_new (NULL);
+  pb->ctrl_prim  = ncm_model_ctrl_new (NULL);
 }
 
 static void
 _nc_hipert_boltzmann_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHIPertBoltzmann *pb = NC_HIPERT_BOLTZMANN (object);
+
   g_return_if_fail (NC_IS_HIPERT_BOLTZMANN (object));
 
   switch (prop_id)
@@ -162,6 +165,7 @@ static void
 _nc_hipert_boltzmann_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHIPertBoltzmann *pb = NC_HIPERT_BOLTZMANN (object);
+
   g_return_if_fail (NC_IS_HIPERT_BOLTZMANN (object));
 
   switch (prop_id)
@@ -227,7 +231,6 @@ _nc_hipert_boltzmann_dispose (GObject *object)
 static void
 _nc_hipert_boltzmann_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_boltzmann_parent_class)->finalize (object);
 }
@@ -241,7 +244,7 @@ static void _nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHIC
 static void
 nc_hipert_boltzmann_class_init (NcHIPertBoltzmannClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = &_nc_hipert_boltzmann_set_property;
   object_class->get_property = &_nc_hipert_boltzmann_get_property;
@@ -334,9 +337,9 @@ nc_hipert_boltzmann_class_init (NcHIPertBoltzmannClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 
-  NC_HIPERT_CLASS (klass)->set_mode_k        = &_nc_hipert_boltzmann_set_mode_k;
-  NC_HIPERT_CLASS (klass)->set_abstol        = &_nc_hipert_boltzmann_set_abstol;
-  NC_HIPERT_CLASS (klass)->set_reltol        = &_nc_hipert_boltzmann_set_reltol;
+  NC_HIPERT_CLASS (klass)->set_mode_k                  = &_nc_hipert_boltzmann_set_mode_k;
+  NC_HIPERT_CLASS (klass)->set_abstol                  = &_nc_hipert_boltzmann_set_abstol;
+  NC_HIPERT_CLASS (klass)->set_reltol                  = &_nc_hipert_boltzmann_set_reltol;
   NC_HIPERT_BOLTZMANN_CLASS (klass)->prepare           = &_nc_hipert_boltzmann_prepare;
   NC_HIPERT_BOLTZMANN_CLASS (klass)->prepare_if_needed = &_nc_hipert_boltzmann_prepare_if_needed;
   NC_HIPERT_BOLTZMANN_CLASS (klass)->get_PHIPHI_Cls    = NULL;
@@ -355,6 +358,7 @@ _nc_hipert_boltzmann_set_mode_k (NcHIPert *pert, gdouble k)
   /* Chain up : start */
   {
     NcHIPertBoltzmann *pb = NC_HIPERT_BOLTZMANN (pert);
+
     ncm_model_ctrl_force_update (pb->ctrl_cosmo);
   }
 }
@@ -366,6 +370,7 @@ _nc_hipert_boltzmann_set_abstol (NcHIPert *pert, gdouble abstol)
   /* Chain up : start */
   {
     NcHIPertBoltzmann *pb = NC_HIPERT_BOLTZMANN (pert);
+
     ncm_model_ctrl_force_update (pb->ctrl_cosmo);
   }
 }
@@ -377,6 +382,7 @@ _nc_hipert_boltzmann_set_reltol (NcHIPert *pert, gdouble reltol)
   /* Chain up : start */
   {
     NcHIPertBoltzmann *pb = NC_HIPERT_BOLTZMANN (pert);
+
     ncm_model_ctrl_force_update (pb->ctrl_cosmo);
   }
 }
@@ -701,7 +707,12 @@ nc_hipert_boltzmann_set_EB_lmax (NcHIPertBoltzmann *pb, guint lmax)
  *
  * Returns: FIXME
  */
-guint nc_hipert_boltzmann_get_PHIPHI_lmax (NcHIPertBoltzmann *pb) { return pb->PHIPHI_lmax; }
+guint
+nc_hipert_boltzmann_get_PHIPHI_lmax (NcHIPertBoltzmann *pb)
+{
+  return pb->PHIPHI_lmax;
+}
+
 /**
  * nc_hipert_boltzmann_get_TT_lmax:
  * @pb: a #NcHIPertBoltzmann.
@@ -710,7 +721,12 @@ guint nc_hipert_boltzmann_get_PHIPHI_lmax (NcHIPertBoltzmann *pb) { return pb->P
  *
  * Returns: FIXME
  */
-guint nc_hipert_boltzmann_get_TT_lmax (NcHIPertBoltzmann *pb) { return pb->TT_lmax; }
+guint
+nc_hipert_boltzmann_get_TT_lmax (NcHIPertBoltzmann *pb)
+{
+  return pb->TT_lmax;
+}
+
 /**
  * nc_hipert_boltzmann_get_EE_lmax:
  * @pb: a #NcHIPertBoltzmann.
@@ -719,7 +735,12 @@ guint nc_hipert_boltzmann_get_TT_lmax (NcHIPertBoltzmann *pb) { return pb->TT_lm
  *
  * Returns: FIXME
  */
-guint nc_hipert_boltzmann_get_EE_lmax (NcHIPertBoltzmann *pb) { return pb->EE_lmax; }
+guint
+nc_hipert_boltzmann_get_EE_lmax (NcHIPertBoltzmann *pb)
+{
+  return pb->EE_lmax;
+}
+
 /**
  * nc_hipert_boltzmann_get_BB_lmax:
  * @pb: a #NcHIPertBoltzmann.
@@ -728,7 +749,12 @@ guint nc_hipert_boltzmann_get_EE_lmax (NcHIPertBoltzmann *pb) { return pb->EE_lm
  *
  * Returns: FIXME
  */
-guint nc_hipert_boltzmann_get_BB_lmax (NcHIPertBoltzmann *pb) { return pb->BB_lmax; }
+guint
+nc_hipert_boltzmann_get_BB_lmax (NcHIPertBoltzmann *pb)
+{
+  return pb->BB_lmax;
+}
+
 /**
  * nc_hipert_boltzmann_get_TE_lmax:
  * @pb: a #NcHIPertBoltzmann.
@@ -737,7 +763,12 @@ guint nc_hipert_boltzmann_get_BB_lmax (NcHIPertBoltzmann *pb) { return pb->BB_lm
  *
  * Returns: FIXME
  */
-guint nc_hipert_boltzmann_get_TE_lmax (NcHIPertBoltzmann *pb) { return pb->TE_lmax; }
+guint
+nc_hipert_boltzmann_get_TE_lmax (NcHIPertBoltzmann *pb)
+{
+  return pb->TE_lmax;
+}
+
 /**
  * nc_hipert_boltzmann_get_TB_lmax:
  * @pb: a #NcHIPertBoltzmann.
@@ -746,7 +777,12 @@ guint nc_hipert_boltzmann_get_TE_lmax (NcHIPertBoltzmann *pb) { return pb->TE_lm
  *
  * Returns: FIXME
  */
-guint nc_hipert_boltzmann_get_TB_lmax (NcHIPertBoltzmann *pb) { return pb->TB_lmax; }
+guint
+nc_hipert_boltzmann_get_TB_lmax (NcHIPertBoltzmann *pb)
+{
+  return pb->TB_lmax;
+}
+
 /**
  * nc_hipert_boltzmann_get_EB_lmax:
  * @pb: a #NcHIPertBoltzmann.
@@ -755,7 +791,11 @@ guint nc_hipert_boltzmann_get_TB_lmax (NcHIPertBoltzmann *pb) { return pb->TB_lm
  *
  * Returns: FIXME
  */
-guint nc_hipert_boltzmann_get_EB_lmax (NcHIPertBoltzmann *pb) { return pb->EB_lmax; }
+guint
+nc_hipert_boltzmann_get_EB_lmax (NcHIPertBoltzmann *pb)
+{
+  return pb->EB_lmax;
+}
 
 /**
  * nc_hipert_boltzmann_set_recomb:
@@ -771,7 +811,7 @@ nc_hipert_boltzmann_set_recomb (NcHIPertBoltzmann *pb, NcRecomb *recomb)
   if (pb->recomb != recomb)
   {
     nc_recomb_clear (&pb->recomb);
-    pb->recomb = nc_recomb_ref (recomb);
+    pb->recomb                     = nc_recomb_ref (recomb);
     NC_HIPERT (pb)->priv->prepared = FALSE;
     ncm_model_ctrl_force_update (pb->ctrl_cosmo);
   }
@@ -817,11 +857,13 @@ void
 nc_hipert_boltzmann_get_PHIPHI_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 {
   guint lmax = ncm_vector_len (Cls);
+
   g_assert_cmpuint (lmax, >, 1);
   lmax--;
 
   if (!(pb->target_Cls & NC_DATA_CMB_TYPE_PHIPHI))
     g_error ("nc_hipert_boltzmann_get_PHIPHI_Cls: PHIPHI was not calculated, include it on the targets.");
+
   if (lmax > pb->PHIPHI_lmax)
     g_error ("nc_hipert_boltzmann_get_PHIPHI_Cls: PHIPHI was calculated up to ell = %u, but ell = %u was requested.",
              pb->PHIPHI_lmax, lmax);
@@ -841,11 +883,13 @@ void
 nc_hipert_boltzmann_get_TT_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 {
   guint lmax = ncm_vector_len (Cls);
+
   g_assert_cmpuint (lmax, >, 1);
   lmax--;
 
   if (!(pb->target_Cls & NC_DATA_CMB_TYPE_TT))
     g_error ("nc_hipert_boltzmann_get_TT_Cls: TT was not calculated, include it on the targets.");
+
   if (lmax > pb->TT_lmax)
     g_error ("nc_hipert_boltzmann_get_TT_Cls: TT was calculated up to ell = %u, but ell = %u was requested.",
              pb->TT_lmax, lmax);
@@ -865,11 +909,13 @@ void
 nc_hipert_boltzmann_get_EE_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 {
   guint lmax = ncm_vector_len (Cls);
+
   g_assert_cmpuint (lmax, >, 1);
   lmax--;
 
   if (!(pb->target_Cls & NC_DATA_CMB_TYPE_EE))
     g_error ("nc_hipert_boltzmann_get_EE_Cls: EE was not calculated, include it on the targets.");
+
   if (lmax > pb->EE_lmax)
     g_error ("nc_hipert_boltzmann_get_EE_Cls: EE was calculated up to ell = %u, but ell = %u was requested.",
              pb->EE_lmax, lmax);
@@ -889,11 +935,13 @@ void
 nc_hipert_boltzmann_get_BB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 {
   guint lmax = ncm_vector_len (Cls);
+
   g_assert_cmpuint (lmax, >, 1);
   lmax--;
 
   if (!(pb->target_Cls & NC_DATA_CMB_TYPE_BB))
     g_error ("nc_hipert_boltzmann_get_BB_Cls: BB was not calculated, include it on the targets.");
+
   if (lmax > pb->BB_lmax)
     g_error ("nc_hipert_boltzmann_get_BB_Cls: BB was calculated up to ell = %u, but ell = %u was requested.",
              pb->BB_lmax, lmax);
@@ -913,11 +961,13 @@ void
 nc_hipert_boltzmann_get_TE_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 {
   guint lmax = ncm_vector_len (Cls);
+
   g_assert_cmpuint (lmax, >, 1);
   lmax--;
 
   if (!(pb->target_Cls & NC_DATA_CMB_TYPE_TE))
     g_error ("nc_hipert_boltzmann_get_TE_Cls: TE was not calculated, include it on the targets.");
+
   if (lmax > pb->TE_lmax)
     g_error ("nc_hipert_boltzmann_get_TE_Cls: TE was calculated up to ell = %u, but ell = %u was requested.",
              pb->TE_lmax, lmax);
@@ -937,11 +987,13 @@ void
 nc_hipert_boltzmann_get_TB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 {
   guint lmax = ncm_vector_len (Cls);
+
   g_assert_cmpuint (lmax, >, 1);
   lmax--;
 
   if (!(pb->target_Cls & NC_DATA_CMB_TYPE_TB))
     g_error ("nc_hipert_boltzmann_get_TB_Cls: TB was not calculated, include it on the targets.");
+
   if (lmax > pb->TB_lmax)
     g_error ("nc_hipert_boltzmann_get_TB_Cls: TB was calculated up to ell = %u, but ell = %u was requested.",
              pb->TB_lmax, lmax);
@@ -961,14 +1013,17 @@ void
 nc_hipert_boltzmann_get_EB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 {
   guint lmax = ncm_vector_len (Cls);
+
   g_assert_cmpuint (lmax, >, 1);
   lmax--;
 
   if (!(pb->target_Cls & NC_DATA_CMB_TYPE_EB))
     g_error ("nc_hipert_boltzmann_get_EB_Cls: EB was not calculated, include it on the targets.");
+
   if (lmax > pb->EB_lmax)
     g_error ("nc_hipert_boltzmann_get_EB_Cls: EB was calculated up to ell = %u, but ell = %u was requested.",
              pb->EB_lmax, lmax);
 
   NC_HIPERT_BOLTZMANN_GET_CLASS (pb)->get_EB_Cls (pb, Cls);
 }
+

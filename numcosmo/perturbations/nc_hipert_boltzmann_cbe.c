@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_hipert_boltzmann_cbe
- * @title: NcHIPertBoltzmannCBE
- * @short_description: CLASS (Cosmic Linear Anisotropy Solving System) backend for perturbations
+ * NcHIPertBoltzmannCBE:
+ *
+ * CLASS (Cosmic Linear Anisotropy Solving System) backend for perturbations.
  *
  * If you use this object please cite: [Blas (2011) CLASS II][XBlas2011],
  * see also:
@@ -331,18 +331,18 @@ _nc_hipert_boltzmann_cbe_prepare (NcHIPertBoltzmann *pb, NcHICosmo *cosmo)
   guint EB_lmax     = nc_hipert_boltzmann_get_EB_lmax (pb);
   guint scalar_lmax = 0;
 
-#define _CHECK_VEC(name) \
-        G_STMT_START { \
-          if (boltzmann_cbe->name ## _Cls != NULL) \
-          { \
+#define _CHECK_VEC(name)                                                           \
+        G_STMT_START {                                                             \
+          if (boltzmann_cbe->name ## _Cls != NULL)                                 \
+          {                                                                        \
             if (ncm_vector_len (boltzmann_cbe->name ## _Cls) != name ## _lmax + 1) \
-            { \
-              ncm_vector_clear (&boltzmann_cbe->name ## _Cls); \
-              boltzmann_cbe->name ## _Cls = ncm_vector_new (name ## _lmax + 1); \
-            } \
-          } \
-          else \
-          boltzmann_cbe->name ## _Cls = ncm_vector_new (name ## _lmax + 1); \
+            {                                                                      \
+              ncm_vector_clear (&boltzmann_cbe->name ## _Cls);                     \
+              boltzmann_cbe->name ## _Cls = ncm_vector_new (name ## _lmax + 1);    \
+            }                                                                      \
+          }                                                                        \
+          else                                                                     \
+          boltzmann_cbe->name ## _Cls = ncm_vector_new (name ## _lmax + 1);        \
         } G_STMT_END
 
   _CHECK_VEC (PHIPHI);

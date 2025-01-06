@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:ncm_data_funnel
- * @title: NcmDataFunnel
- * @short_description: Funnel distribution.
+ * NcmDataFunnel:
+ *
+ * Funnel distribution.
  *
  * This object implements a funnel distribution.
  *

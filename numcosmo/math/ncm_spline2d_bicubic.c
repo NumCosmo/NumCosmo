@@ -23,11 +23,9 @@
  */
 
 /**
- * SECTION:ncm_spline2d_bicubic
- * @title: NcmSpline2dBicubic
- * @short_description: Bidimensional bicubic spline
- * @stability: Stable
- * @include: numcosmo/math/ncm_spline2d_bicubic.h
+ * NcmSpline2dBicubic:
+ *
+ * Bidimensional bicubic spline.
  *
  * This class implements the functions which use a bicubic interpolation method.
  *

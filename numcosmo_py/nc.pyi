@@ -1671,8 +1671,8 @@ class ClusterMass(NumCosmoMath.Model):
     @staticmethod
     def log_all_models() -> None: ...
     def n_limits(self, cosmo: HICosmo) -> typing.Tuple[float, float]: ...
-    def obs_len(self) -> int: ...
-    def obs_params_len(self) -> int: ...
+    def obs_len(*args, **kwargs): ...  # FIXME Function
+    def obs_params_len(*args, **kwargs): ...  # FIXME Function
     def p(
         self,
         cosmo: HICosmo,
@@ -3127,8 +3127,8 @@ class ClusterRedshift(NumCosmoMath.Model):
     @staticmethod
     def log_all_models() -> None: ...
     def n_limits(self, cosmo: HICosmo) -> typing.Tuple[float, float]: ...
-    def obs_len(self) -> int: ...
-    def obs_params_len(self) -> int: ...
+    def obs_len(*args, **kwargs): ...  # FIXME Function
+    def obs_params_len(*args, **kwargs): ...  # FIXME Function
     def p(
         self,
         cosmo: HICosmo,
@@ -14512,8 +14512,7 @@ class HaloDensityProfileNFW(HaloDensityProfile):
     ) -> None: ...
     @classmethod
     def new(cls, hms: HaloMassSummary) -> HaloDensityProfileNFW: ...
-    @staticmethod
-    def set_ni(num: bool) -> None: ...
+    def set_ni(*args, **kwargs): ...  # FIXME Function
 
 class HaloDensityProfileNFWClass(GObject.GPointer):
     r"""
@@ -15047,6 +15046,79 @@ class MultiplicityFuncCrocceClass(GObject.GPointer):
 
 class MultiplicityFuncCroccePrivate(GObject.GPointer): ...
 
+class MultiplicityFuncDespali(MultiplicityFunc):
+    r"""
+    :Constructors:
+
+    ::
+
+        MultiplicityFuncDespali(**properties)
+        new() -> NumCosmo.MultiplicityFuncDespali
+        new_full(mdef:NumCosmo.MultiplicityFuncMassDef, Delta:float) -> NumCosmo.MultiplicityFuncDespali
+
+    Object NcMultiplicityFuncDespali
+
+    Properties from NcMultiplicityFuncDespali:
+      E0 -> gboolean: E0
+        Whether the halo finder uses elliptical overdensity
+      CMF -> gboolean: CMF
+        Whether the use of the cluster mass function
+
+    Properties from NcMultiplicityFunc:
+      mass-def -> NcMultiplicityFuncMassDef: mass-def
+        Mass definition
+      Delta -> gdouble: Delta
+        Delta
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        CMF: bool
+        E0: bool
+        Delta: float
+        mass_def: MultiplicityFuncMassDef
+
+    props: Props = ...
+    parent_instance: MultiplicityFunc = ...
+    def __init__(
+        self,
+        CMF: bool = ...,
+        E0: bool = ...,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(md: MultiplicityFuncDespali) -> None: ...
+    def delta_c(self, cosmo: HICosmo, z: float) -> float: ...
+    def delta_vir(self, cosmo: HICosmo, z: float) -> float: ...
+    def free(self) -> None: ...
+    def get_cmf(self) -> bool: ...
+    def get_eo(self) -> bool: ...
+    @classmethod
+    def new(cls) -> MultiplicityFuncDespali: ...
+    @classmethod
+    def new_full(
+        cls, mdef: MultiplicityFuncMassDef, Delta: float
+    ) -> MultiplicityFuncDespali: ...
+    def ref(self) -> MultiplicityFuncDespali: ...
+    def set_cmf(self, on: bool) -> None: ...
+    def set_eo(self, on: bool) -> None: ...
+
+class MultiplicityFuncDespaliClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        MultiplicityFuncDespaliClass()
+    """
+
+    parent_class: MultiplicityFuncClass = ...
+
+class MultiplicityFuncDespaliPrivate(GObject.GPointer): ...
+
 class MultiplicityFuncJenkins(MultiplicityFunc):
     r"""
     :Constructors:
@@ -15251,6 +15323,10 @@ class MultiplicityFuncTinker(MultiplicityFunc):
 
     Object NcMultiplicityFuncTinker
 
+    Properties from NcMultiplicityFuncTinker:
+      linear-interp -> gboolean: linear-interp
+        Use linear interpolation
+
     Properties from NcMultiplicityFunc:
       mass-def -> NcMultiplicityFuncMassDef: mass-def
         Mass definition
@@ -15262,6 +15338,7 @@ class MultiplicityFuncTinker(MultiplicityFunc):
     """
 
     class Props:
+        linear_interp: bool
         Delta: float
         mass_def: MultiplicityFuncMassDef
 
@@ -15269,7 +15346,10 @@ class MultiplicityFuncTinker(MultiplicityFunc):
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncTinkerPrivate = ...
     def __init__(
-        self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...
+        self,
+        linear_interp: bool = ...,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
     ) -> None: ...
     @staticmethod
     def clear(mt: MultiplicityFuncTinker) -> None: ...

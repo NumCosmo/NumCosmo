@@ -34,11 +34,10 @@
  */
 
 /**
- * SECTION:ncm_fftlog_tophatwin2
- * @title: NcmFftlogTophatwin2
- * @short_description: Logarithm fast fourier transform for a kernel given by the square of the spherical Bessel function of order one.
- * @stability: Stable
- * @include: numcosmo/math/ncm_fftlog_tophatwin2.h
+ * NcmFftlogTophatwin2:
+ *
+ * Logarithm fast fourier transform for a kernel given by the square of the spherical
+ * Bessel function of order one.
  *
  *
  * This object computes the function (see #NcmFftlog)

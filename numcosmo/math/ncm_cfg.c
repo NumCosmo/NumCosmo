@@ -25,12 +25,12 @@
  */
 
 /**
- * SECTION:ncm_cfg
- * @title: NcmCfg
- * @short_description: Library configuration and helper functions.
+ * NcmCfg:
  *
- * These functions are used to configure the library, including helper
- * functions related to the library configuration.
+ * Library configuration and helper functions.
+ *
+ * These functions are used to configure the library, including helper functions related
+ * to the library configuration.
  *
  */
 

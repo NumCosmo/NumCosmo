@@ -24,13 +24,12 @@
  */
 
 /**
- * SECTION:nc_halo_density_profile_dk14
- * @title: NcHaloDensityProfileDK14
- * @short_description: Density profile of Diemer \& Kravtsov type.
+ * NcHaloDensityProfileDK14:
  *
- * This object implements the #NcHaloDensityProfile class for a Diemer \& Kravtsov (DK14) density profile.
+ * Density profile of Diemer \& Kravtsov type.
  *
- * The DK14 profile is defined as ... Implementation incomplete! FIXME
+ * This object implements the #NcHaloDensityProfile class for a Diemer \& Kravtsov
+ * (DK14) density profile.
  *
  */
 

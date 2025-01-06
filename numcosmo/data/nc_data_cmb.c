@@ -24,21 +24,17 @@
  */
 
 /**
- * SECTION:nc_data_cmb
- * @title: NcDataCMB
- * @short_description: Helper function for instantiating CMB data
- * @stability: Stable
- * @include: numcosmo/data/nc_data_cmb.h
+ * NcDataCMB:
  *
- *
- * This function is an interface to all available CMB related data. 
+ * This function is an interface to all available CMB related data.
  *
  * The #NcDataCMBDataType is not available yet.
  *
- * The #NcDataCMBId contains the so-called distance priors: 
+ * The #NcDataCMBId contains the so-called distance priors:
  *
  * - Shift parameter $R$: #NcDataCMBShiftParam (see also #nc_distance_shift_parameter).
- * - Location of the first acoustic peak $l_A$ (see [Hinshaw et al. (2012)][XHinshaw2013a] section 4.6.1 [[arXiv](https://arxiv.org/abs/1212.5226)]). 
+ * - Location of the first acoustic peak $l_A$ (see [Hinshaw et al.
+ *   (2012)][XHinshaw2013a] section 4.6.1 [[arXiv](https://arxiv.org/abs/1212.5226)]).
  *
  */
 
@@ -71,9 +67,9 @@ nc_data_cmb_create (NcDistance *dist, NcDataCMBId id)
     case NC_DATA_CMB_SHIFT_PARAM_WMAP7:
     {
       NcDataCMBShiftParam *cmb_shift_param = nc_data_cmb_shift_param_new_from_id (dist, id);
-      
+
       return NCM_DATA (cmb_shift_param);
-      
+
       break;
     }
     case NC_DATA_CMB_DIST_PRIORS_WMAP5:
@@ -81,9 +77,9 @@ nc_data_cmb_create (NcDistance *dist, NcDataCMBId id)
     case NC_DATA_CMB_DIST_PRIORS_WMAP9:
     {
       NcDataCMBDistPriors *cmb_dist_prior = nc_data_cmb_dist_priors_new_from_id (dist, id);
-      
+
       return NCM_DATA (cmb_dist_prior);
-      
+
       break;
     }
     default:

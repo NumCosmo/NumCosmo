@@ -23,15 +23,13 @@
  */
 
 /**
- * SECTION:ncm_function_cache
- * @title: NcmFunctionCache
- * @short_description: A generic cache for functions values
- * @stability: Stable
- * @include: numcosmo/math/ncm_function_cache.h
+ * NcmFunctionCache:
  *
- * A simple cache that saves function values at different argument values.
- * It can be used to find an already computed value or the value of the
- * function closest to an already computed point.
+ * A generic cache for functions values.
+ *
+ * A simple cache that saves function values at different argument values. It can be
+ * used to find an already computed value or the value of the function closest to an
+ * already computed point.
  *
  */
 

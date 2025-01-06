@@ -24,12 +24,12 @@
  */
 
 /**
- * SECTION:nc_hicosmo_qgw
- * @title: NcHICosmoQGW
- * @short_description: $w$-fluid model with a quantum generated bounce phase model.
+ * NcHICosmoQGW:
  *
- * The NcHICosmoQGW class implements the $w$-fluid model with a quantum generated
- * bounce phase model.
+ * The $w$-fluid model with a quantum generated bounce phase model.
+ *
+ * The NcHICosmoQGW class implements the $w$-fluid model with a quantum generated bounce
+ * phase model.
  *
  */
 

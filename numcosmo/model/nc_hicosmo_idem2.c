@@ -23,11 +23,11 @@
  */
 
 /**
- * SECTION:nc_hicosmo_idem2
- * @title: NcHICosmoIDEM2
- * @short_description: Interacting Dark Energy Model
+ * NcHICosmoIDEM2:
  *
- * FIXME
+ * Interacting Dark Energy Model.
+ *
+ * This object defines the functions for the interacting dark energy model.
  *
  */
 

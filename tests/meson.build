@@ -572,6 +572,11 @@ if python_pyccl.found()
             'timeout': 0,
         },
         {
+            'name': 'py_massfunc',
+            'source': 'test_py_massfunc.py',
+            'timeout': 0,
+        },
+        {
             'name': 'py_xcor',
             'source': 'test_py_xcor.py',
             'timeout': 0,
@@ -606,6 +611,11 @@ if enable_gir
     pytest_is_parallel = true
 
     if get_option('b_coverage')
+        python_module.find_installation(
+            'python3',
+            modules: ['pytest_cov'],
+            required: true,
+        )
         pytest_args += ['--cov', 'numcosmo_py']
         pytest_args += ['--cov-report', 'xml']
         pytest_args += ['--cov-append']

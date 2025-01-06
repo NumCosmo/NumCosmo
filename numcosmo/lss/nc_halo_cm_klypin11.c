@@ -25,14 +25,9 @@
  */
 
 /**
- * SECTION:nc_halo_cm_klypin11
- * @title: NcHaloCMKlypin11
- * @short_description: Class defining the Klypin et al. 2011 concentration-mass relation
- * @stability: Unstable
- *
+ * NcHaloCMKlypin11:
  *
  * Class defining the Klypin et al. 2011 concentration-mass relation.
- * FIXME include reference and equation
  *
  */
 
@@ -113,7 +108,7 @@ nc_halo_cm_klypin11_class_init (NcHaloCMKlypin11Class *klass)
    * NcHaloCMKlypin11:log10MDelta-fit:
    *
    * Boolean property that controls whether the parameter
-   * #NcHaloMCParam:log10MDelta should be included in
+   * NcHaloMCParam:log10MDelta should be included in
    * a statistical analysis.
    *
    */

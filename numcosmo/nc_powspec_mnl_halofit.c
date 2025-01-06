@@ -24,16 +24,15 @@
  */
 
 /**
- * SECTION:nc_powspec_mnl_halofit
- * @title: NcPowspecMNLHaloFit
- * @short_description: nonlinear matter power spectrum from Halofit model.
- * @stability: Stable
- * @include: numcosmo/nc_powspec_mnl_halofit.h
+ * NcPowspecMNLHaloFit:
  *
- * Provides the nonlinear matter power spectrum using Halofit model [Smith et al (2003)][XSmith2003]
- * and [Takahashi et al. (2012)][XTakahashi2012].
+ * Nonlinear matter power spectrum from Halofit model.
  *
- * For PKEqual see [Casarini et al. (2009)][XCasarini2009] and [Casarini et al. (2016)][XCasarini2016].
+ * Provides the nonlinear matter power spectrum using Halofit model [Smith et al
+ * (2003)][XSmith2003] and [Takahashi et al. (2012)][XTakahashi2012].
+ *
+ * For PKEqual see [Casarini et al. (2009)][XCasarini2009] and [Casarini et al.
+ * (2016)][XCasarini2016].
  *
  */
 

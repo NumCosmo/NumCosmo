@@ -23,9 +23,9 @@
  */
 
 /**
- * SECTION:ncm_quaternion
- * @title: NcmQuaternion
- * @short_description: Quaternions algebra, three-vectors and mapping to matrix.
+ * NcmQuaternion:
+ *
+ * Quaternions algebra, three-vectors and mapping to matrix.
  *
  * A quaternion is a four-dimensional vector that can be used to represent rotations in
  * three-dimensional space. The three-dimensional space is represented by the

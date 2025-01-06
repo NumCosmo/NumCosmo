@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            nc_hipert_comp_pb.c
  *
@@ -14,22 +15,25 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
- * SECTION:nc_hipert_comp_pb
- * @title: NcHIPertCompPB
- * @short_description: Photon-Baryon plasma compoment
+ * NcHIPertCompPB:
  *
- * FIXME
+ * Photon-Baryon plasma compoment.
+ *
+ * This object is a subclass of #NcHIPertComp and is designed to implement the
+ * photon-baryon plasma component of the perturbations. It is employed by
+ * #NcHIPert and is responsible for computing the perturbations of the photon-baryon
+ * plasma component.
  *
  */
 
@@ -65,6 +69,7 @@ static void
 _nc_hipert_comp_pb_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHIPertCompPB *pb = NC_HIPERT_COMP_PB (object);
+
   g_return_if_fail (NC_IS_HIPERT_COMP_PB (object));
 
   switch (prop_id)
@@ -82,6 +87,7 @@ static void
 _nc_hipert_comp_pb_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHIPertCompPB *pb = NC_HIPERT_COMP_PB (object);
+
   g_return_if_fail (NC_IS_HIPERT_COMP_PB (object));
 
   switch (prop_id)
@@ -98,7 +104,6 @@ _nc_hipert_comp_pb_get_property (GObject *object, guint prop_id, GValue *value, 
 static void
 _nc_hipert_comp_pb_dispose (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_comp_pb_parent_class)->dispose (object);
 }
@@ -106,7 +111,6 @@ _nc_hipert_comp_pb_dispose (GObject *object)
 static void
 _nc_hipert_comp_pb_finalize (GObject *object)
 {
-  
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_comp_pb_parent_class)->finalize (object);
 }
@@ -133,13 +137,13 @@ nc_hipert_comp_pb_class_init (NcHIPertCompPBClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_LMAX,
                                    g_param_spec_uint ("l-max",
-                                                     NULL,
-                                                     "l_max",
-                                                     4, G_MAXUINT, 12,
-                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                      NULL,
+                                                      "l_max",
+                                                      4, G_MAXUINT, 12,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  nc_hipert_bg_var_class_register_id ("NcHIPertCompPB", 
-                                      "First order Photon-Baryons background variables", 
+  nc_hipert_bg_var_class_register_id ("NcHIPertCompPB",
+                                      "First order Photon-Baryons background variables",
                                       NULL,
                                       0);
 
@@ -150,21 +154,22 @@ nc_hipert_comp_pb_class_init (NcHIPertCompPBClass *klass)
   comp_class->get_dy_scalar     = &_nc_hipert_comp_pb_get_dy_scalar;
 }
 
-static guint 
+static guint
 _nc_hipert_comp_pb_ndyn_var (NcHIPertComp *comp)
 {
   NcHIPertCompPB *pb = NC_HIPERT_COMP_PB (comp);
+
   return (pb->priv->lmax + 1) + 2;
 }
 
 #define LEN(a) (sizeof (a) / sizeof (*a))
-#define APPEND(a,b) (g_array_append_vals ((a), (b), LEN (b)))
+#define APPEND(a, b) (g_array_append_vals ((a), (b), LEN (b)))
 
 static GArray *
 _nc_hipert_comp_pb_get_deps (NcHIPertComp *comp, guint vindex)
 {
   NcHIPertCompPB *pb = NC_HIPERT_COMP_PB (comp);
-  GArray *deps = g_array_new (TRUE, TRUE, sizeof (gint));
+  GArray *deps       = g_array_new (TRUE, TRUE, sizeof (gint));
 
   switch (vindex)
   {
@@ -172,8 +177,9 @@ _nc_hipert_comp_pb_get_deps (NcHIPertComp *comp, guint vindex)
     {
       gint deps_a[] = {
         NC_HIPERT_COMP_PB_VAR_V_B,
-        NC_HIPERT_GRAV_SELEM_DOTPSI, 
-        NC_HIPERT_GRAV_SELEM_DSIGMA};
+        NC_HIPERT_GRAV_SELEM_DOTPSI,
+        NC_HIPERT_GRAV_SELEM_DSIGMA
+      };
 
       APPEND (deps, deps_a);
       break;
@@ -183,7 +189,8 @@ _nc_hipert_comp_pb_get_deps (NcHIPertComp *comp, guint vindex)
       gint deps_a[] = {
         NC_HIPERT_COMP_PB_VAR_DELTA_B,
         NC_HIPERT_COMP_PB_VAR_V_G,
-        NC_HIPERT_GRAV_SELEM_PHI};
+        NC_HIPERT_GRAV_SELEM_PHI
+      };
 
       APPEND (deps, deps_a);
       break;
@@ -191,9 +198,10 @@ _nc_hipert_comp_pb_get_deps (NcHIPertComp *comp, guint vindex)
     case NC_HIPERT_COMP_PB_VAR_DELTA_G:
     {
       gint deps_a[] = {
-        NC_HIPERT_COMP_PB_VAR_V_G, 
-        NC_HIPERT_GRAV_SELEM_DOTPSI, 
-        NC_HIPERT_GRAV_SELEM_DSIGMA};
+        NC_HIPERT_COMP_PB_VAR_V_G,
+        NC_HIPERT_GRAV_SELEM_DOTPSI,
+        NC_HIPERT_GRAV_SELEM_DSIGMA
+      };
 
       APPEND (deps, deps_a);
       break;
@@ -201,58 +209,62 @@ _nc_hipert_comp_pb_get_deps (NcHIPertComp *comp, guint vindex)
     case NC_HIPERT_COMP_PB_VAR_V_G:
     {
       gint deps_a[] = {
-        NC_HIPERT_COMP_PB_VAR_DELTA_G, 
-        NC_HIPERT_COMP_PB_VAR_THETA_G, 
-        NC_HIPERT_COMP_PB_VAR_V_B, 
-        NC_HIPERT_GRAV_SELEM_PHI};
-      
+        NC_HIPERT_COMP_PB_VAR_DELTA_G,
+        NC_HIPERT_COMP_PB_VAR_THETA_G,
+        NC_HIPERT_COMP_PB_VAR_V_B,
+        NC_HIPERT_GRAV_SELEM_PHI
+      };
+
       APPEND (deps, deps_a);
       break;
     }
     case NC_HIPERT_COMP_PB_VAR_F_G3:
     {
-      gint deps_a[] = { 
+      gint deps_a[] = {
         NC_HIPERT_COMP_PB_VAR_THETA_G,
         NC_HIPERT_COMP_PB_VAR_F_G (4)
-        };
-      
+      };
+
       APPEND (deps, deps_a);
       break;
     }
-    
+
     default:
     {
       if (vindex < NC_HIPERT_COMP_PB_VAR_F_G (pb->priv->lmax))
       {
-        gint deps_a[] = { 
+        gint deps_a[] = {
           vindex - 1,
           vindex + 1
-          };
+        };
 
         APPEND (deps, deps_a);
       }
       else if (vindex == NC_HIPERT_COMP_PB_VAR_F_G (pb->priv->lmax))
       {
-        gint deps_a[] = { 
+        gint deps_a[] = {
           vindex - 1,
-          };
+        };
 
         APPEND (deps, deps_a);
       }
       else
+      {
         g_assert_not_reached ();
+      }
+
       break;
     }
   }
-  
+
   return deps;
 }
 
-static NcHIPertGravTScalarInfo * 
+static NcHIPertGravTScalarInfo *
 _nc_hipert_comp_pb_get_T_scalar_info (NcHIPertComp *comp)
 {
   NcHIPertGravTScalarInfo *Tsinfo = nc_hipert_grav_T_scalar_info_new ();
-  
+
   gint drho_deps_a[]   = {NC_HIPERT_COMP_PB_VAR_DELTA_B, NC_HIPERT_COMP_PB_VAR_DELTA_G};
   gint rhoppv_deps_a[] = {NC_HIPERT_COMP_PB_VAR_V_B, NC_HIPERT_COMP_PB_VAR_V_G};
   gint dPi_deps_a[]    = {NC_HIPERT_COMP_PB_VAR_THETA_G};
@@ -264,18 +276,16 @@ _nc_hipert_comp_pb_get_T_scalar_info (NcHIPertComp *comp)
   return Tsinfo;
 }
 
-static void 
+static void
 _nc_hipert_comp_pb_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar)
-{ 
-//  const gdouble delta_b = nc_hipert_bg_var_ydy_get_y_i (ydy, NC_HIPERT_COMP_PB_VAR_DELTA_B);
-//  const gdouble delta_g = nc_hipert_bg_var_ydy_get_y_i (ydy, NC_HIPERT_COMP_PB_VAR_DELTA_G);
-  
+{
+/*  const gdouble delta_b = nc_hipert_bg_var_ydy_get_y_i (ydy, NC_HIPERT_COMP_PB_VAR_DELTA_B); */
+/*  const gdouble delta_g = nc_hipert_bg_var_ydy_get_y_i (ydy, NC_HIPERT_COMP_PB_VAR_DELTA_G); */
 }
 
-static void 
+static void
 _nc_hipert_comp_pb_get_dy_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
-{ 
-
+{
 }
 
 #undef APPEND
@@ -317,7 +327,7 @@ nc_hipert_comp_pb_ref (NcHIPertCompPB *pb)
  * Decreases the reference count of @pb.
  *
  */
-void 
+void
 nc_hipert_comp_pb_free (NcHIPertCompPB *pb)
 {
   g_object_unref (pb);
@@ -330,7 +340,7 @@ nc_hipert_comp_pb_free (NcHIPertCompPB *pb)
  * Decreases the reference count of *@pb and sets the pointer *@pb to NULL.
  *
  */
-void 
+void
 nc_hipert_comp_pb_clear (NcHIPertCompPB **pb)
 {
   g_clear_object (pb);
@@ -344,13 +354,11 @@ nc_hipert_comp_pb_clear (NcHIPertCompPB **pb)
  * Sets the maximum momentum of the photon distribution to $\ell_\mathrm{max}=$@lmax.
  *
  */
-void 
+void
 nc_hipert_comp_pb_set_lmax (NcHIPertCompPB *pb, guint lmax)
 {
   if (pb->priv->lmax != lmax)
-  {
     pb->priv->lmax = lmax;
-  }
 }
 
 /**
@@ -359,8 +367,9 @@ nc_hipert_comp_pb_set_lmax (NcHIPertCompPB *pb, guint lmax)
  *
  * Returns: the maximum momentum of the photon distribution to $\ell_\mathrm{max}$.
  */
-guint 
+guint
 nc_hipert_comp_pb_get_lmax (NcHIPertCompPB *pb)
 {
   return pb->priv->lmax;
 }
+
