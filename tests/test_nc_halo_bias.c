@@ -209,10 +209,10 @@ test_nc_halo_bias_eval (TestNcHaloBias *test, gconstpointer pdata)
 {
   gdouble eval_ps, eval_bste, eval_bsts, eval_bt;
 
-  eval_ps   = nc_halo_bias_eval (NC_HALO_BIAS (test->ps), test->cosmo, 0.0, test->z , test->lnM);
-  eval_bste = nc_halo_bias_eval (NC_HALO_BIAS (test->bste), test->cosmo, 5.0, test->z , test->lnM);
-  eval_bsts = nc_halo_bias_eval (NC_HALO_BIAS (test->bsts), test->cosmo, GSL_POSINF, test->z , test->lnM);
-  eval_bt   = nc_halo_bias_eval (NC_HALO_BIAS (test->bt), test->cosmo, GSL_POSINF, test->z , test->lnM);
+  eval_ps   = nc_halo_bias_eval (NC_HALO_BIAS (test->ps), test->cosmo, 0.0, test->z);
+  eval_bste = nc_halo_bias_eval (NC_HALO_BIAS (test->bste), test->cosmo, 5.0, test->z);
+  eval_bsts = nc_halo_bias_eval (NC_HALO_BIAS (test->bsts), test->cosmo, GSL_POSINF, test->z);
+  eval_bt   = nc_halo_bias_eval (NC_HALO_BIAS (test->bt), test->cosmo, GSL_POSINF, test->z);
 
   g_assert_cmpfloat (eval_ps, ==, GSL_POSINF);
   g_assert_cmpfloat (eval_bt, ==, 1.0);
@@ -234,7 +234,7 @@ test_nc_halo_bias_integrand (TestNcHaloBias *test, gconstpointer pdata)
   gdouble bias_integrand = nc_halo_bias_integrand (NC_HALO_BIAS (test->ps), test->cosmo, lnM, test->z);
   gdouble d2n_dzdlnM     = nc_halo_mass_function_d2n_dzdlnM (test->mfp, test->cosmo, lnM, test->z);
   gdouble sigma          = nc_halo_mass_function_sigma_lnM (test->mfp, test->cosmo, lnM, test->z);
-  gdouble bias           = nc_halo_bias_eval (NC_HALO_BIAS (test->ps), test->cosmo, sigma, test->z, test->lnM);
+  gdouble bias           = nc_halo_bias_eval (NC_HALO_BIAS (test->ps), test->cosmo, sigma, test->z);
 
 
   g_assert_cmpfloat (d2n_dzdlnM * bias, ==, bias_integrand);
