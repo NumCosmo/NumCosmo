@@ -129,11 +129,11 @@ _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDO
 {
   NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
 
-  if (ldata->dist != NULL || TRUE)
+  if (ldata->dist == NULL)
   {
-    NcmVector *xv                             = ncm_spline_peek_xv (ldata->pz);
-    NcmVector *yv                             = ncm_spline_peek_yv (ldata->pz);
-    NcmVector *m2lnyv                         = ncm_vector_new (ncm_vector_len (yv));
+    NcmVector *xv     = ncm_spline_peek_xv (ldata->pz);
+    NcmVector *yv     = ncm_spline_peek_yv (ldata->pz);
+    NcmVector *m2lnyv = ncm_vector_new (ncm_vector_len (yv));
     NcmSpline *m2lnp;
     NcmStatsDist1d *dist;
     guint j;
@@ -152,6 +152,7 @@ _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDO
     ncm_stats_dist1d_set_xi (dist, ncm_vector_fast_get (xv, 0));
     ncm_stats_dist1d_set_xf (dist, ncm_vector_fast_get (xv, ncm_vector_len (xv) - 1));
     ncm_stats_dist1d_prepare (dist);
+    ncm_stats_dist1d_clear (&ldata->dist);
 
     ldata->dist = dist;
 
