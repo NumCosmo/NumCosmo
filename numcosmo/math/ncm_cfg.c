@@ -730,6 +730,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS_HSC);
 
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
