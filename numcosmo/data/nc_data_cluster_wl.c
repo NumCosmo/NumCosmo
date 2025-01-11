@@ -390,6 +390,19 @@ nc_data_cluster_wl_int_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
 }
 
 static gdouble
+_nc_data_cluster_wl_eval_m2lnP_weight (NcDataClusterWL *dcwl, const gdouble m2lnP, const gdouble r)
+{
+  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
+  const gdouble lnP                   = -0.5 * m2lnP;
+  const gdouble dx                    = 20.0 * (r - self->r_min);
+
+  if (dx > 0.0)
+    return -2.0 * (log ((exp (-dx - lnP) + 1.0) / (1.0 + exp (-dx))) + lnP);
+  else
+    return -2.0 * (log ((1.0 + exp (dx + lnP)) / (1.0 + exp (dx))));
+}
+
+static gdouble
 _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
   NcmData *data                                      = NCM_DATA (dcwl);
@@ -425,6 +438,7 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
       NcGalaxySDShapeData *data         = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
       NcGalaxySDPositionData *p_data    = data->sdpos_data;
       NcGalaxySDObsRedshiftData *z_data = p_data->sdz_data;
+      const gdouble r                   = nc_galaxy_sd_shape_data_get_radius (p_data);
       gdouble m2lnP_gal_i;
       gdouble zpi;
       gdouble zpf;
@@ -443,7 +457,7 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
       if (m2lnP_gal != NULL)
         ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
 
-      result += m2lnP_gal_i;
+      result += _nc_data_cluster_wl_eval_m2lnP_weight (dcwl, m2lnP_gal_i, r);
     }
   }
   else
@@ -454,8 +468,10 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
 
     for (i = 0; i < bsize; i++)
     {
-      guint gal_i               = ncm_bootstrap_get (bstrap, i);
-      NcGalaxySDShapeData *data = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+      guint gal_i                    = ncm_bootstrap_get (bstrap, i);
+      NcGalaxySDShapeData *data      = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+      NcGalaxySDPositionData *p_data = data->sdpos_data;
+      const gdouble r                = nc_galaxy_sd_shape_data_get_radius (p_data);
       gdouble m2lnP_gal_i;
 
       likelihood_integral->data.data = data;
@@ -467,7 +483,7 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
       if (m2lnP_gal != NULL)
         ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
 
-      result += m2lnP_gal_i;
+      result += _nc_data_cluster_wl_eval_m2lnP_weight (dcwl, m2lnP_gal_i, r);
     }
   }
 
@@ -534,8 +550,9 @@ _nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector 
       const gdouble int_pos     = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data);
       const gdouble int_shape   = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
       const gdouble m2lnP_gal_i = -2.0 * log (int_z * int_pos * int_shape);
+      const gdouble r           = nc_galaxy_sd_shape_data_get_radius (data->sdpos_data);
 
-      result += m2lnP_gal_i;
+      result += _nc_data_cluster_wl_eval_m2lnP_weight (dcwl, m2lnP_gal_i, r);
     }
   }
   else
@@ -553,8 +570,9 @@ _nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector 
       const gdouble int_pos     = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data);
       const gdouble int_shape   = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
       const gdouble m2lnP_gal_i = -2.0 * log (int_z * int_pos * int_shape);
+      const gdouble r           = nc_galaxy_sd_shape_data_get_radius (data->sdpos_data);
 
-      result += m2lnP_gal_i;
+      result += _nc_data_cluster_wl_eval_m2lnP_weight (dcwl, m2lnP_gal_i, r);
     }
   }
 

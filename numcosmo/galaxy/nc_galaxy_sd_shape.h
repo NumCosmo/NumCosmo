@@ -88,6 +88,7 @@ struct _NcGalaxySDShapeData
   void (*ldata_read_row) (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
   void (*ldata_write_row) (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
   void (*ldata_required_columns) (NcGalaxySDShapeData *data, GList *columns);
+  gdouble (*ldata_get_radius) (NcGalaxySDShapeData *data);
   gatomicrefcount ref_count;
 };
 
@@ -101,6 +102,7 @@ void nc_galaxy_sd_shape_data_unref (NcGalaxySDShapeData *data);
 void nc_galaxy_sd_shape_data_read_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
 void nc_galaxy_sd_shape_data_write_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
 GList *nc_galaxy_sd_shape_data_required_columns (NcGalaxySDShapeData *data);
+gdouble nc_galaxy_sd_shape_data_get_radius (NcGalaxySDShapeData *data);
 
 NcGalaxySDShape *nc_galaxy_sd_shape_ref (NcGalaxySDShape *gsds);
 
