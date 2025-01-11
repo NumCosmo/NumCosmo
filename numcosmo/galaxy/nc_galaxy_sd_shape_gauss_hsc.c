@@ -168,7 +168,7 @@ nc_galaxy_sd_shape_gauss_hsc_class_init (NcGalaxySDShapeGaussHSCClass *klass)
   object_class->finalize    = &_nc_galaxy_sd_shape_gauss_hsc_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Gaussian galaxy shape distribution for HSC data", "Gaussian shape for HSC data");
-  ncm_model_class_add_params (model_class, NC_GALAXY_SD_SHAPE_GAUSS_HSC_SPARAM_LEN, 0, PROP_LEN);
+  ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
   ncm_model_class_check_params_info (model_class);
 
   sd_position_class->gen                = &_nc_galaxy_sd_shape_gauss_hsc_gen;

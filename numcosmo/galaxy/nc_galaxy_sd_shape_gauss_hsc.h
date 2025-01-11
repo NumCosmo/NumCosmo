@@ -44,19 +44,6 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcGalaxySDShapeGaussHSC, nc_galaxy_sd_shape_gauss_hsc, NC, GALAXY_SD_SHAPE_GAUSS_HSC, NcGalaxySDShape)
 
-/**
- * NcGalaxySDShapeGaussHSCParams:
- *
- * Gaussian galaxy shape distribution model parameters.
- *
- */
-typedef enum /*< enum,underscore_name=NC_GALAXY_SD_SHAPE_GAUSS_HSC_PARAMS >*/
-{
-  /* < private > */
-  NC_GALAXY_SD_SHAPE_GAUSS_HSC_SPARAM_LEN, /*< skip >*/
-} NcGalaxySDShapeGaussHSCParams;
-
-
 NcGalaxySDShapeGaussHSC *nc_galaxy_sd_shape_gauss_hsc_new ();
 NcGalaxySDShapeGaussHSC *nc_galaxy_sd_shape_gauss_hsc_ref (NcGalaxySDShapeGaussHSC *gsdshsc);
 
