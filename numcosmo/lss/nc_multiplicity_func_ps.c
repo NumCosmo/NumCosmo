@@ -24,11 +24,13 @@
  */
 
 /**
- * SECTION:nc_multiplicity_func_ps
- * @title: NcMultiplicityFuncPS
- * @short_description: Dark matter halo -- Press-Schechter multiplicity function.
+ * NcMultiplicityFuncPS:
  *
- * FIXME
+ * Dark matter halo -- Press-Schechter multiplicity function.
+ *
+ * Computes the multiplicity function of dark matter halos using the Press-Schechter
+ * (1974) model.
+ *
  */
 
 #ifdef HAVE_CONFIG_H

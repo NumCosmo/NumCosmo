@@ -2,7 +2,7 @@
 # See http://ltp.sourceforge.net/coverage/lcov/lcovrc.5.php
 
 # Always enable branch coverage
-lcov_branch_coverage = 0
+branch_coverage = 0
 
 # Exclude precondition assertions, as we can never reasonably get full branch
 # coverage of them, as they should never normally fail.

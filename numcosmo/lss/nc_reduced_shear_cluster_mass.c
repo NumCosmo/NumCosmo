@@ -24,11 +24,9 @@
  */
 
 /**
- * SECTION:nc_reduced_shear_cluster_mass
- * @title: NcReducedShearClusterMass
- * @short_description: FIXME cluster mass estimation via reduced shear
+ * NcReducedShearClusterMass:
  *
- * FIXME
+ * Cluster mass estimation via reduced shear observable.
  *
  */
 

@@ -24,14 +24,12 @@
  */
 
 /**
- * SECTION:ncm_ode_spline
- * @title: NcmOdeSpline
- * @short_description: Automatic generation of splines from ODE solvers.
- * @stability: Stable
- * @include: numcosmo/math/ncm_ode_spline.h
+ * NcmOdeSpline:
  *
- * This class defines an object that integrates an ODE and generates a spline
- * from the solution.
+ * Automatic generation of splines from ODE solvers.
+ *
+ * This class defines an object that integrates an ODE and generates a spline from the
+ * solution.
  *
  */
 

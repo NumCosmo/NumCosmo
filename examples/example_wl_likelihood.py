@@ -59,7 +59,7 @@ def test_wl_likelihood() -> None:
     cosmo = Nc.HICosmoDEXcdm()
     cosmo.omega_x2omega_k()
 
-    halo_mass_summary = Nc.HaloMCParam.new(Nc.HaloMassSummaryMassDef.CRITICAL, 200.0)
+    halo_mass_summary = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.CRITICAL, 200.0)
     density_profile = Nc.HaloDensityProfileNFW.new(halo_mass_summary)
     surface_mass_density = Nc.WLSurfaceMassDensity.new(dist)
     halo_position = Nc.HaloPosition.new(dist)

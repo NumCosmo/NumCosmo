@@ -24,14 +24,13 @@
  */
 
 /**
- * SECTION:nc_transfer_func_eh
- * @title: NcTransferFuncEH
- * @short_description: Eisenstein-Hu fitting function for the transfer function.
- * @stability: Stable
- * @include: numcosmo/lss/nc_transfer_func_eh.h
+ * NcTransferFuncEH:
+ *
+ * Eisenstein-Hu fitting function for the transfer function.
  *
  * This objects implements the Eisenstein-Hu fitting function for the transfer function.
- * See [Eisenstein and Hu (1998)][XEisenstein1998] [[arXiv](https://arxiv.org/abs/astro-ph/9709112)] for more details.
+ * See [Eisenstein and Hu (1998)][XEisenstein1998]
+ * [[arXiv](https://arxiv.org/abs/astro-ph/9709112)] for more details.
  *
  * The transfer function is divided into a sum of two picies,
  * \begin{equation*}
@@ -120,7 +119,7 @@ static void
 nc_transfer_func_eh_init (NcTransferFuncEH *tf_eh)
 {
   NcTransferFuncEHPrivate * const self = tf_eh->priv = nc_transfer_func_eh_get_instance_private (tf_eh);
-  
+
   self->h        = 0.0;
   self->s        = 0.0;
   self->keq_1341 = 0.0;
@@ -140,9 +139,9 @@ static void
 _nc_transfer_func_eh_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcTransferFuncEH *tf_eh = NC_TRANSFER_FUNC_EH (object);
-  
+
   g_return_if_fail (NC_IS_TRANSFER_FUNC_EH (object));
-  
+
   switch (prop_id)
   {
     case PROP_CCL_COMP:
@@ -159,9 +158,9 @@ _nc_transfer_func_eh_get_property (GObject *object, guint prop_id, GValue *value
 {
   NcTransferFuncEH *tf_eh              = NC_TRANSFER_FUNC_EH (object);
   NcTransferFuncEHPrivate * const self = tf_eh->priv;
-  
+
   g_return_if_fail (NC_IS_TRANSFER_FUNC_EH (object));
-  
+
   switch (prop_id)
   {
     case PROP_CCL_COMP:
@@ -188,11 +187,11 @@ nc_transfer_func_eh_class_init (NcTransferFuncEHClass *klass)
 {
   GObjectClass *object_class        = G_OBJECT_CLASS (klass);
   NcTransferFuncClass *parent_class = NC_TRANSFER_FUNC_CLASS (klass);
-  
+
   object_class->set_property = &_nc_transfer_func_eh_set_property;
   object_class->get_property = &_nc_transfer_func_eh_get_property;
   object_class->finalize     = &_nc_transfer_func_eh_finalize;
-  
+
   /**
    * NcTransferFuncEH:CCL-comp:
    *
@@ -206,7 +205,7 @@ nc_transfer_func_eh_class_init (NcTransferFuncEHClass *klass)
                                                          "Whether to use CCL compatible mode",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   parent_class->prepare = &_nc_transfer_func_eh_prepare;
   parent_class->calc    = &_nc_transfer_func_eh_calc;
 }
@@ -216,7 +215,7 @@ _nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
   NcTransferFuncEH *tf_eh              = NC_TRANSFER_FUNC_EH (tf);
   NcTransferFuncEHPrivate * const self = tf_eh->priv;
-  
+
   const gdouble T_0   = nc_hicosmo_T_gamma0 (cosmo);
   const gdouble c1    = sqrt (6.0);
   const gdouble c2    = T_0 / 2.7; /* \theta = 2.725/2.7 where 2.725 is the CMB temperature */
@@ -227,7 +226,7 @@ _nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
   const gdouble wc    = nc_hicosmo_Omega_c0 (cosmo) * h2;
   const gdouble wb_wm = wb / wm; /* \frac{\Omega_{b0}}{\Omega_{m0}} */
   const gdouble wc_wm = wc / wm; /* \frac{\Omega_{c0}}{\Omega_{m0}} */
-  
+
   const gdouble a1      = pow (46.9 * wm, 0.670) * (1.0 + pow (32.1 * wm, -0.532));
   const gdouble a2      = pow (12.0 * wm, 0.424) * (1.0 + pow (45.0 * wm, -0.582));
   const gdouble b1      = 0.313 * pow (wm, -0.419) * (1.0 + 0.607 * pow (wm, 0.674));
@@ -237,20 +236,20 @@ _nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
   const gdouble wm_pow  = pow (wm, 0.435);
   const gdouble wm_pow3 = wm_pow * wm_pow * wm_pow;
   const gdouble b_node3 = 594.823321  * wm_pow3; /* b_node3 =  {\beta_node}^3  8.41^3 = 594.823321  */
-  
+
   const gdouble c2_2     = c2 * c2;
   const gdouble keq      = 7.46e-2 * wm / c2_2; /* unit: [Mpc^{-1}] */
   const gdouble keq_1341 = keq * 13.41;
   const gdouble ksilk    = 1.6 * pow (wb, 0.52) * pow (wm, 0.73) * (1.0 + pow (10.4 * wm, -0.95)); /* unit: [Mpc^{-1}] */
-  
+
   const gdouble c2_4 = c2_2 * c2_2;
   const gdouble zeq  = 2.5e4 * wm / c2_4;
   const gdouble zd   = 1291.0 * (pow (wm, 0.251) / (1.0 + 0.659 * pow (wm, 0.828))) * (1.0 + b1 * pow (wb, b2));
-  
+
   const gdouble c3  = 31.5e3 * wb / c2_4;
   const gdouble Rd  = self->CCL_comp ? c3 / (1.0 + zd) : c3 / zd; /* Rd is the ratio of the baryon to photon momentum density at redshift zd */
   const gdouble Req = 1.26 * wb_wm;                               /* Req = c3/zeq = 1.26 * wb/wm */
-  
+
   const gdouble sqrt_Req = sqrt (Req);
   const gdouble s        = (2.0 * c1 / (3.0 * keq * sqrt_Req)) * log ((sqrt (1.0 + Rd) + sqrt (Rd + Req)) / (1.0 + sqrt_Req)); /* Sound horizon */
   const gdouble y        = self->CCL_comp ? (0.0 + zeq) / (1.0 + zd) : (1.0 + zeq) / (1.0 + zd);
@@ -262,7 +261,7 @@ _nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
   const gdouble ac       = pow (a1, -wb_wm) * pow (a2, -wb_wm3); /* \alpha_c */
   const gdouble ac_142   = 14.2 / ac;
   const gdouble bc       = 1.0 / (1.0 + b3 * (pow (wc_wm, b4) - 1.0)); /* \beta_c */
-  
+
   self->h        = h;
   self->s        = s;
   self->keq_1341 = keq_1341;
@@ -275,7 +274,7 @@ _nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
   self->ac_142   = ac_142;
   self->wb_wm    = wb_wm;
   self->wc_wm    = wc_wm;
-  
+
 /*  printf("(14.2/ac) = %g, s = %g, bc = %g, (keq * 13.41) = %g\n", EH->ac_142, EH->s, EH->bc, EH->keq_1341); */
 }
 
@@ -284,13 +283,13 @@ _nc_transfer_func_eh_calc (NcTransferFunc *tf, gdouble kh)
 {
   NcTransferFuncEH *tf_eh              = NC_TRANSFER_FUNC_EH (tf);
   NcTransferFuncEHPrivate * const self = tf_eh->priv;
-  
+
   const gdouble k   = kh * self->h;
   const gdouble ks  = k * self->s;
   const gdouble ks2 = ks * ks;
   const gdouble ks3 = ks2 * ks;
   const gdouble ks4 = ks3 * ks;
-  
+
   const gdouble q        = k / (self->keq_1341);
   const gdouble q2       = q * q;
   const gdouble c4       = log (M_E + 1.8 * q);
@@ -309,7 +308,7 @@ _nc_transfer_func_eh_calc (NcTransferFunc *tf, gdouble kh)
   const gdouble C_ac     = self->ac_142 + 386.0 / (1.0 + 69.9 * q_1_08);
   const gdouble To2      = c6 / (c6 + C_ac * q2);
   const gdouble Tc       = f * To1 + (1.0 - f) * To2;
-  
+
   return self->wb_wm * Tb + self->wc_wm * Tc;
 }
 
@@ -338,7 +337,7 @@ void
 nc_transfer_func_eh_set_CCL_comp (NcTransferFuncEH *tf_eh, gboolean CCL_comp)
 {
   NcTransferFuncEHPrivate * const self = tf_eh->priv;
-  
+
   self->CCL_comp = CCL_comp;
 }
 

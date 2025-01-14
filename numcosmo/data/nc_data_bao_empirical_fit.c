@@ -24,15 +24,15 @@
  */
 
 /**
- * SECTION:nc_data_bao_empirical_fit
- * @title: NcDataBaoEmpiricalFit
- * @short_description: Baryon oscillation data -- $D_V / r_s$ empirical likelihood.
+ * NcDataBaoEmpiricalFit:
  *
- * This object implements the BAO data when its likelihood function is provided,
- * e.g., [Ross et al. (2015)][XRoss2015].
+ * Baryon oscillation data -- $D_V / r_s$ empirical likelihood.
  *
- * The data is stored in a #NcmSpline object, which is used to calculate the
- * likelihood function. The spline must be provided in the constructor.
+ * This object implements the BAO data when its likelihood function is provided, e.g.,
+ * [Ross et al. (2015)][XRoss2015].
+ *
+ * The data is stored in a #NcmSpline object, which is used to calculate the likelihood
+ * function. The spline must be provided in the constructor.
  *
  *
  */

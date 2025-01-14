@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_data_bao
- * @title: NcDataBao
- * @short_description: Helper functions for instantiating BAO data
+ * NcDataBao:
+ *
+ * Helper functions for instantiating BAO data.
  *
  * A set of factory functions to instantiate BAO data.
  *

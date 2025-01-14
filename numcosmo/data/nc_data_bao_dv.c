@@ -24,16 +24,15 @@
  */
 
 /**
- * SECTION:nc_data_bao_dv
- * @title: NcDataBaoDV
- * @short_description: Baryon oscillation data -- volume mean $D_V$.
+ * NcDataBaoDV:
+ *
+ * Baryon oscillation data -- volume mean $D_V$.
  *
  * See [Eisenstein et al. (2005)][XEisenstein2005].
  *
  * The data is stored in a #NcDataBaoDV object. The data is stored in a
- * #NcmDataGaussDiag base class object, which is a subclass of #NcmData.
- * The data represents the mean values of the volume mean $D_V$ at the redshift
- * $z$.
+ * #NcmDataGaussDiag base class object, which is a subclass of #NcmData. The data
+ * represents the mean values of the volume mean $D_V$ at the redshift $z$.
  *
  */
 

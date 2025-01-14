@@ -24,13 +24,13 @@
  */
 
 /**
- * SECTION:nc_hipert_em
- * @title: NcHIPertEM
- * @short_description: Perturbation object for electromagnetic mode.
+ * NcHIPertEM:
  *
- * This object provides the computation of the electromagnetic wave mode for the cosmological
- * perturbations. It solves the equation of motion for the (cosmological) gauge invariant
- * variable $A$.
+ * Perturbation object for electromagnetic mode.
+ *
+ * This object provides the computation of the electromagnetic wave mode for the
+ * cosmological perturbations. It solves the equation of motion for the (cosmological)
+ * gauge invariant variable $A$.
  *
  */
 

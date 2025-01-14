@@ -33,6 +33,7 @@ import pyccl
 
 import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import npa_to_seq
 from numcosmo_py.ccl.nc_ccl import create_nc_obj
 
 from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
@@ -59,7 +60,7 @@ def _test_powspec_transfer_any(
     cosmo = nc_cosmo_eh_linear.cosmo
     ps_ml = nc_cosmo_eh_linear.ps_ml
 
-    k_vec = Ncm.Vector.new_array(k_a.tolist())
+    k_vec = Ncm.Vector.new_array(npa_to_seq(k_a))
     Pk_vec = Ncm.Vector.new(k_vec.len())
 
     for z in z_a:
@@ -118,7 +119,7 @@ def test_powspec_halofit(
     else:
         reltol_target = 5.0e-2
 
-    k_vec = Ncm.Vector.new_array(k_a.tolist())
+    k_vec = Ncm.Vector.new_array(npa_to_seq(k_a))
     Pk_vec = Ncm.Vector.new(k_vec.len())
 
     for z in z_a:
@@ -156,7 +157,7 @@ def test_powspec_halofit_linear_universe(
     cosmo = nc_cosmo.cosmo
     ps_mnl = nc_cosmo.ps_mnl
 
-    k_vec = Ncm.Vector.new_array(k_a.tolist())
+    k_vec = Ncm.Vector.new_array(npa_to_seq(k_a))
     Pk_vec = Ncm.Vector.new(k_vec.len())
 
     step = 10

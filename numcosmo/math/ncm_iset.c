@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:ncm_iset
- * @title: NcmISet
- * @short_description: Index set object
+ * NcmISet:
+ *
+ * Index set object.
  *
  * #NcmISet is an object that stores a set of indexes. It is used to store the indexes
  * of the components of a vector or matrix that are being used in a calculation.

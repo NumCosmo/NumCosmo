@@ -24,11 +24,9 @@
  */
 
 /**
- * SECTION:ncm_integral1d_ptr
- * @title: NcmIntegral1dPtr
- * @short_description: Function pointer one dimensional integration object.
- * @stability: Stable
- * @include: numcosmo/math/ncm_integral1d_ptr.h
+ * NcmIntegral1dPtr:
+ *
+ * Function pointer one dimensional integration object.
  *
  * This object facilitates one-dimensional integration by employing a function pointer
  * to evaluate the integrand. It's worth mentioning that this object is not well suited

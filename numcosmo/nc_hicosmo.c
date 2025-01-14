@@ -23,18 +23,12 @@
  */
 
 /**
- * SECTION:nc_hicosmo
- * @title: NcHICosmo
- * @short_description: Abstract class for implementing homogeneous and isotropic cosmological models
- *
- * FIXME
- *
- */
-
-/**
  * NcHICosmo:
  *
- * `NcHICosmo` is the base class for all Homogeneous and Isotropic Cosmological models.
+ * Abstract class for implementing homogeneous and isotropic cosmological models.
+ *
+ * This object provides an interface for homogeneous and isotropic cosmological models.
+ *
  */
 
 #ifdef HAVE_CONFIG_H

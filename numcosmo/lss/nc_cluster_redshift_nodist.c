@@ -24,11 +24,10 @@
  */
 
 /**
- * SECTION:nc_cluster_redshift_nodist
- * @title: NcClusterRedshiftNodist
- * @short_description: Cluster abundance redshift real redshift distribution.
+ * NcClusterRedshiftNodist:
  *
- * FIXME
+ * Cluster abundance redshift real redshift distribution.
+ *
  */
 
 #ifdef HAVE_CONFIG_H

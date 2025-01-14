@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:ncm_data_rosenbrock
- * @title: NcmDataRosenbrock
- * @short_description: Rosenbrock distribution.
+ * NcmDataRosenbrock:
+ *
+ * Rosenbrock distribution.
  *
  * Data object describing the Rosenbrock distribution.
  *

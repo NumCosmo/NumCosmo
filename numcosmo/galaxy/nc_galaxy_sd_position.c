@@ -29,11 +29,9 @@
  */
 
 /**
- * SECTION: nc_galaxy_sd_position
- * @title: NcGalaxySDPosition
- * @short_description: Class describing galaxy sample position distributions.
- * @stability: Unstable
+ * NcGalaxySDPosition:
  *
+ * Class describing galaxy sample position distributions.
  *
  * This class describes a galaxy sample position distributions.
  *

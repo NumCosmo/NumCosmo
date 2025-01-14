@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:ncm_model_funnel
- * @title: NcmModelFunnel
- * @short_description: Multivariate Normal Distribution mean model.
+ * NcmModelFunnel:
+ *
+ * Multivariate Normal Distribution mean model.
  *
  * Multivariate Normal distribution model of the mean.
  *

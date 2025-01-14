@@ -23,11 +23,12 @@
  */
 
 /**
- * SECTION:nc_cluster_abundance
- * @title: NcClusterAbundance
- * @short_description: Cluster abundance distribution
+ * NcClusterAbundance:
  *
- * FIXME
+ * Cluster abundance distribution
+ *
+ * This class is used to store the cluster abundance distribution and its
+ * properties.
  */
 
 #ifdef HAVE_CONFIG_H

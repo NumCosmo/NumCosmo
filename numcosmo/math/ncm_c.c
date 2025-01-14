@@ -27,11 +27,9 @@
  */
 
 /**
- * SECTION:ncm_c
- * @title: NcmC
- * @short_description: Numerical and physical constants.
- * @stability: Stable
- * @include: numcosmo/math/ncm_c.h
+ * NcmC:
+ *
+ * Numerical and physical constants.
  *
  * Mathematical and physical constants and constants manipulation functions.
  *

@@ -24,15 +24,12 @@
  */
 
 /**
- * SECTION:ncm_spline_cubic
- * @title: NcmSplineCubic
- * @short_description: Abstract class for implementing cubic splines.
- * @stability: Stable
- * @include: numcosmo/math/ncm_spline_cubic.h
+ * NcmSplineCubic:
  *
+ * Base class for implementing cubic splines.
  *
- * This class implements the functions which use a polynomial interpolation
- * method of third degree.
+ * This class implements the functions which use a polynomial interpolation method of
+ * third degree.
  *
  */
 
