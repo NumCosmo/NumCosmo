@@ -1,4 +1,5 @@
 from numcosmo_py import Ncm, Nc, GObject
+Ncm.cfg_init()
 import numpy as np
 import pandas as pd
 from astropy.table import Table

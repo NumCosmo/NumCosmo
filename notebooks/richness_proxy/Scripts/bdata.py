@@ -1,9 +1,11 @@
 from numcosmo_py import Ncm, Nc, GObject
+Ncm.cfg_init()
 import numpy as np
 from astropy.table import Table
 
+
 #-------------------------------------------------------------------------------------------------#
-#BinningData
+#BinningData: Class
 #-------------------------------------------------------------------------------------------------#
 
 class BinningData:
@@ -70,6 +72,8 @@ class BinningData:
                         # #-------------------------------------------------
                         
                         halos_bin_mz.append(halos_bin_z[i][cut])    
+                    
+                    
                     #label.append(f"{min(halos_bin_z[i]['redshift_true']):.3f} < z < {max(halos_bin_z[i]['redshift_true']):.3f}\n{lnM_0:.3f} < lnM < {lnM_1:.3f}")                 
                     
                     lnM_0 = lnM_0 + D_M
