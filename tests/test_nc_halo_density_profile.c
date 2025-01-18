@@ -289,7 +289,6 @@ void
 test_nc_halo_density_profile_eval_dl_spher_mass (TestNcHaloDensityProfile *test, gconstpointer pdata)
 {
   NcHaloDensityProfile *dp = test->dp;
-  NcHICosmo *cosmo         = test->cosmo;
   gint np                  = 10;
   gint i;
 
@@ -297,8 +296,11 @@ test_nc_halo_density_profile_eval_dl_spher_mass (TestNcHaloDensityProfile *test,
     for (i = 0; i < test->ntests; i++)
     {
       const gdouble X       = pow (10.0, g_test_rand_double_range (-3.0, 3.0));
-      const gdouble ISigma  = nc_halo_density_profile_eval_dl_spher_mass (dp, cosmo, X);
-      const gdouble NISigma = nc_halo_density_profile_eval_numint_dl_spher_mass (dp, cosmo, X);
+      const gdouble NISigma = nc_halo_density_profile_eval_numint_dl_spher_mass (dp, X);
+      const gdouble ISigma  = nc_halo_density_profile_eval_dl_spher_mass (dp, X);
+
+      printf ("X = %g, ISigma = %g, NISigma = %g\n", X, ISigma, NISigma);
+      fflush (stdout);
 
       ncm_assert_cmpdouble_e (ISigma, ==, NISigma, nc_halo_density_profile_get_reltol (dp) * 1.0e1, 0.0);
     }

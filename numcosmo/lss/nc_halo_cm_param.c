@@ -88,7 +88,7 @@ _nc_halo_cm_param_finalize (GObject *object)
 }
 
 static gdouble _nc_halo_cm_param_mass (NcHaloMassSummary *hms);
-static gdouble _nc_halo_cm_param_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo);
+static gdouble _nc_halo_cm_param_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z);
 
 static void
 nc_halo_cm_param_class_init (NcHaloCMParamClass *klass)
@@ -159,7 +159,7 @@ _nc_halo_cm_param_mass (NcHaloMassSummary *hms)
 }
 
 static gdouble
-_nc_halo_cm_param_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo)
+_nc_halo_cm_param_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z)
 {
   NcHaloCMParam *hcmp = NC_HALO_CM_PARAM (hms);
 

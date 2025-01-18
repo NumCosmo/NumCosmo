@@ -4,7 +4,7 @@
  *            nc_halo_cm_duffy08.c
  *
  *  Thu Dec 05 09:42:15 2024
- *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br> 
+ *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br>
  ****************************************************************************/
 /*
  * nc_halo_cm_duffy08.c
@@ -147,37 +147,19 @@ _nc_halo_cm_duffy08_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdo
   gdouble mass          = _nc_halo_cm_duffy08_mass (hms);
   gdouble h             = nc_hicosmo_h (cosmo);
   gdouble Delta         = nc_halo_mass_summary_Delta (hms, cosmo, z);
-  hcmd->mdef            = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
+
+  if ((hcmd->mdef != NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL) || (Delta != 200.0))
+    g_error ("Duffy08 concentration: mdef must be NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL or Delta must be 200.0 (mean and critical)");
 
   switch (hcmd->mdef)
   {
     case NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN:
-  
-      if (Delta == 200.0){
-
-        return 10.14 * pow (mass * h / 2.0e12, -0.081) * pow (1.0 + z, -1.01);
-
-      }
-
-      else {
-        g_assert_not_reached();
-        return 0.0; 
-      }
+      return 10.14 * pow (mass * h / 2.0e12, -0.081) * pow (1.0 + z, -1.01);
 
     case NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL:
-
-      if (Delta == 200.0){
-
-        return 5.71 * pow (mass * h / 2.0e12, -0.084) * pow (1.0 + z, -0.47);
-      }
-
-      else{
-        g_assert_not_reached();
-        return 0.0;    
-      } 
+      return 5.71 * pow (mass * h / 2.0e12, -0.084) * pow (1.0 + z, -0.47);
 
     case NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL:
-
       return 7.85 * pow (mass * h / 2.0e12, -0.081) * pow (1.0 + z, -0.71);
 
     default:                   /* LCOV_EXCL_LINE */
@@ -185,7 +167,6 @@ _nc_halo_cm_duffy08_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdo
 
       return 0.0; /* LCOV_EXCL_LINE */
   }
-
 }
 
 /**
@@ -203,9 +184,9 @@ NcHaloCMDuffy08 *
 nc_halo_cm_duffy08_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta)
 {
   NcHaloCMDuffy08 *hcmd = g_object_new (NC_TYPE_HALO_CM_DUFFY08,
-                                         "mass-def", mdef,
-                                         "Delta",    Delta,
-                                         NULL);
+                                        "mass-def", mdef,
+                                        "Delta",    Delta,
+                                        NULL);
 
   return hcmd;
 }

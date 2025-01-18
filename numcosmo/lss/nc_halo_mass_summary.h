@@ -46,7 +46,7 @@ struct _NcHaloMassSummaryClass
   NcmModelClass parent_class;
 
   gdouble (*mass) (NcHaloMassSummary *hms);
-  gdouble (*concentration) (NcHaloMassSummary *hms, NcHICosmo *cosmo);
+  gdouble (*concentration) (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[15];
@@ -87,7 +87,7 @@ void nc_halo_mass_summary_set_Delta (NcHaloMassSummary *hms, const gdouble Delta
 gdouble nc_halo_mass_summary_get_Delta (NcHaloMassSummary *hms);
 
 gdouble nc_halo_mass_summary_mass (NcHaloMassSummary *hms);
-gdouble nc_halo_mass_summary_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo);
+gdouble nc_halo_mass_summary_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z);
 
 gdouble nc_halo_mass_summary_Delta (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_halo_mass_summary_rho_bg (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z);
