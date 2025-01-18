@@ -16,12 +16,17 @@ compute comoving distances for a range of redshifts.
 
 Before running this example, make sure the `numcosmo_py`[^numcosmo_py] package is installed in your
 environment. If it is not already installed, follow the [installation instructions in
-the NumCosmo documentation](https://numcosmo.readthedocs.io/en/latest/install.html).
+the NumCosmo documentation](https://numcosmo.readthedocs.io/en/latest/install.html). In
+addition, we are using `numpy` and `matplotlib` for data manipulation and plotting.
+If you are using the 
+[conda installation](https://numcosmo.readthedocs.io/en/latest/install.html#mambaforge-development-environment), 
+these packages are already installed.
 
-### Import and Initialize
+## Import and Initialize
 
 First, import the required modules and initialize the NumCosmo library. We also import
-`numpy` and `matplotlib` for data manipulation and plotting.
+`numpy` and `matplotlib`. The `Nc` and `Ncm` modules provide the core functionality of 
+the NumCosmo library. The call to `Ncm.cfg_init()` initializes the library objects.
 
 ```{python}
 import numpy as np
@@ -33,7 +38,7 @@ from numcosmo_py import Nc, Ncm
 Ncm.cfg_init()
 ```
 
-### Set Up the Cosmological Model
+## Set Up the Cosmological Model
 
 Create a homogeneous and isotropic cosmological model (`NcHICosmoDEXcdm`) with one
 massive neutrino, and apply a reparameterization suitable for CMB-based parameters.
@@ -46,7 +51,7 @@ cosmo = Nc.HICosmoDEXcdm(massnu_length=1)
 cosmo.set_reparam(Nc.HICosmoDEReparamCMB.new(cosmo.len()))
 ```
 
-### Configure the Distance Calculator
+## Configure the Distance Calculator
 
 Create a `Distance` object optimized for redshift calculations up to 2.0.
 
@@ -55,23 +60,25 @@ Create a `Distance` object optimized for redshift calculations up to 2.0.
 dist = Nc.Distance.new(2.0)
 ```
 
-### Set Cosmological Parameters
+## Set Cosmological Parameters
 
-Assign values to the cosmological model parameters. These can be set using either the
-original parameterization or object-oriented style.
+Assign values to the cosmological model parameters. The dictionary-based approach is
+used below. This approach always uses the current parameterization. 
 
 ```{python}
 # Set parameters using original parameterization
-cosmo.orig_param_set(Nc.HICosmoDESParams.H0, 70.00)
-cosmo.orig_param_set(Nc.HICosmoDESParams.OMEGA_C, 0.25)
-cosmo.orig_param_set(Nc.HICosmoDESParams.OMEGA_X, 0.70)
-cosmo.orig_param_set(Nc.HICosmoDESParams.T_GAMMA0, 2.72)
-cosmo.orig_param_set(Nc.HICosmoDESParams.OMEGA_B, 0.05)
-cosmo.orig_param_set(Nc.HICosmoDEXCDMSParams.W, -1.10)
-cosmo.orig_vparam_set(Nc.HICosmoDEVParams.M, 0, 0.06)
+h = 0.70
+cosmo["H0"] = 100.0 * h
+cosmo["omegac"] = 0.25 * h**2
+cosmo["omegab"] = 0.05 * h**2
+cosmo["Omegak"] = 0.0
+cosmo["Tgamma0"] = 2.72
+cosmo["w"] = -1.10
+cosmo["massnu_0"] = 0.06
 ```
 
-Alternatively, you can use the object-oriented approach:
+Alternatively, you can use the property-based approach to set the parameters.
+However, this approach always refers to the original parameterization.
 
 ```{python}
 # Set parameters using object-oriented style
@@ -83,23 +90,28 @@ cosmo.props.Tgamma0 = 2.72
 cosmo.props.w = -1.10
 
 # Set neutrino mass vector
-cosmo.props.massnu = Ncm.Vector.new_array([0.06])
+massnu = Ncm.Vector.new_array([0.06])
+cosmo.props.massnu = massnu
 ```
 
 ### Log and Prepare the Model
 
-Log the parameter values and prepare the distance calculator for use.
+Log the parameter values and prepare the distance calculator for use. The calculator 
+objects like `Distance` must be prepared before use.
 
 ```{python}
 # Log all parameters
 print("# Model parameters: ")
-cosmo.params_log_all()
+params = cosmo.param_names()
+
+for param in params:
+    print(f"{param} = {cosmo[param]}")
 
 # Prepare the distance calculations
 dist.prepare(cosmo)
 ```
 
-### Compute and Display Distances
+## Compute and Display Distances
 
 Calculate and display comoving distances for a range of redshifts.
 
@@ -126,6 +138,10 @@ for z, Dc, dc in zip(z_array, Dc_array, dc_array):
 You can plot the results using a plotting library such as `matplotlib`.
 
 ```{python}
+# | label: fig:simple-comoving-distance
+# | fig-cap: Comoving distance vs. redshift.
+# | fig-cap-location: margin
+# | fig-width: 100%
 # | code-fold: true
 plt.plot(z_array, dc_array)
 plt.xlabel("Redshift")
@@ -135,16 +151,3 @@ plt.grid()
 plt.show()
 ```
 
-### Running the Script
-
-To execute the example, ensure all prerequisites are met and run the script in your
-Python environment.
-
-## Output Explanation
-
-The script computes and prints the following for a range of redshifts:
-
--   **Comoving distance** in units of ( $c/H_0$ )
--   **Comoving distance** in mega-parsecs (Mpc)
-
-The results include key cosmological model parameters used for the calculations.
