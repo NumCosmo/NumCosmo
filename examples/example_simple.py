@@ -35,7 +35,6 @@ Ncm.cfg_init()
 
 def test_distances() -> None:
     """Example computing cosmological distances."""
-
     #
     #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm
     #  with one massive neutrino.

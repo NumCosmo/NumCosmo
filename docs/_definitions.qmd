@@ -1,0 +1,4 @@
+[^numcosmo_py]: **NumCosmo** is a C library for cosmology and astrophysics that uses **GObject-Introspection** to provide bindings for various programming languages. To 
+improve the user interface, we provide a Python package, `numcosmo_py`. This package 
+imports all NumCosmo bindings and includes additional helper functions to simplify 
+library usage.
