@@ -1,0 +1,150 @@
+---
+title: "Simple Cosmological Distances Example"
+author: "Sandro Dias Pinto Vitenti"
+date: "2023-05-22"
+---
+
+{{< include ../../_definitions.qmd >}}
+
+## Introduction
+
+This example demonstrates how to compute cosmological distances using the `numcosmo`
+library. In this example, we initialize the library, configure a cosmological model, and
+compute comoving distances for a range of redshifts.
+
+## Prerequisites
+
+Before running this example, make sure the `numcosmo_py`[^numcosmo_py] package is installed in your
+environment. If it is not already installed, follow the [installation instructions in
+the NumCosmo documentation](https://numcosmo.readthedocs.io/en/latest/install.html).
+
+### Import and Initialize
+
+First, import the required modules and initialize the NumCosmo library. We also import
+`numpy` and `matplotlib` for data manipulation and plotting.
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+from numcosmo_py import Nc, Ncm
+
+# Initialize the library objects
+Ncm.cfg_init()
+```
+
+### Set Up the Cosmological Model
+
+Create a homogeneous and isotropic cosmological model (`NcHICosmoDEXcdm`) with one
+massive neutrino, and apply a reparameterization suitable for CMB-based parameters.
+
+```{python}
+# Initialize a cosmological model
+cosmo = Nc.HICosmoDEXcdm(massnu_length=1)
+
+# Set reparameterization
+cosmo.set_reparam(Nc.HICosmoDEReparamCMB.new(cosmo.len()))
+```
+
+### Configure the Distance Calculator
+
+Create a `Distance` object optimized for redshift calculations up to 2.0.
+
+```{python}
+# Initialize the distance calculator
+dist = Nc.Distance.new(2.0)
+```
+
+### Set Cosmological Parameters
+
+Assign values to the cosmological model parameters. These can be set using either the
+original parameterization or object-oriented style.
+
+```{python}
+# Set parameters using original parameterization
+cosmo.orig_param_set(Nc.HICosmoDESParams.H0, 70.00)
+cosmo.orig_param_set(Nc.HICosmoDESParams.OMEGA_C, 0.25)
+cosmo.orig_param_set(Nc.HICosmoDESParams.OMEGA_X, 0.70)
+cosmo.orig_param_set(Nc.HICosmoDESParams.T_GAMMA0, 2.72)
+cosmo.orig_param_set(Nc.HICosmoDESParams.OMEGA_B, 0.05)
+cosmo.orig_param_set(Nc.HICosmoDEXCDMSParams.W, -1.10)
+cosmo.orig_vparam_set(Nc.HICosmoDEVParams.M, 0, 0.06)
+```
+
+Alternatively, you can use the object-oriented approach:
+
+```{python}
+# Set parameters using object-oriented style
+cosmo.props.H0 = 70.00
+cosmo.props.Omegab = 0.04
+cosmo.props.Omegac = 0.25
+cosmo.props.Omegax = 0.70
+cosmo.props.Tgamma0 = 2.72
+cosmo.props.w = -1.10
+
+# Set neutrino mass vector
+cosmo.props.massnu = Ncm.Vector.new_array([0.06])
+```
+
+### Log and Prepare the Model
+
+Log the parameter values and prepare the distance calculator for use.
+
+```{python}
+# Log all parameters
+print("# Model parameters: ")
+cosmo.params_log_all()
+
+# Prepare the distance calculations
+dist.prepare(cosmo)
+```
+
+### Compute and Display Distances
+
+Calculate and display comoving distances for a range of redshifts.
+
+```{python}
+# Number of redshift steps
+N = 20
+
+# Comoving distance scaling factor
+RH_Mpc = cosmo.RH_Mpc()
+
+# Compute distances
+z_array = np.linspace(0.0, 1.0, N)
+Dc_array = np.array([dist.comoving(cosmo, z) for z in z_array])
+dc_array = RH_Mpc * Dc_array / (1.0 + z_array)
+
+# Print distances for redshift values
+print("Redshift | Comoving Distance [c/H0] | Comoving Distance [Mpc]")
+for z, Dc, dc in zip(z_array, Dc_array, dc_array):
+    print(f"{z:10.8f} {Dc:22.15g} {dc:22.15g}")
+```
+
+### Plot the Results
+
+You can plot the results using a plotting library such as `matplotlib`.
+
+```{python}
+# | code-fold: true
+plt.plot(z_array, dc_array)
+plt.xlabel("Redshift")
+plt.ylabel("Comoving Distance [Mpc]")
+plt.title("Comoving Distance vs. Redshift")
+plt.grid()
+plt.show()
+```
+
+### Running the Script
+
+To execute the example, ensure all prerequisites are met and run the script in your
+Python environment.
+
+## Output Explanation
+
+The script computes and prints the following for a range of redshifts:
+
+-   **Comoving distance** in units of ( $c/H_0$ )
+-   **Comoving distance** in mega-parsecs (Mpc)
+
+The results include key cosmological model parameters used for the calculations.
