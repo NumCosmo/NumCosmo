@@ -6,7 +6,6 @@ Optimized/
 Profiling/
 numcosmo_py.egg-info/
 .vscode
-genchangelog.sh
 examples/*.png
 examples/*.pdf
 examples/*.dat

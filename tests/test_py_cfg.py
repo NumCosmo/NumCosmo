@@ -34,7 +34,7 @@ Ncm.cfg_init()
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 24
-VERSION_MICRO = 0
+VERSION_MICRO = 1
 
 
 @pytest.fixture(
