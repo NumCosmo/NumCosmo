@@ -131,7 +131,7 @@ def create_nc_obj(
         psf.set_best_lnr0()
 
     # pylint: enable=protected-access
-    return Cosmology(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mln, psf=psf)
+    return Cosmology(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mln, psf_tophat=psf)
 
 
 class CCLParams:
