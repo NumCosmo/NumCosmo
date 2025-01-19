@@ -1,4 +1,5 @@
 src_site_examples_intro_files = files(
+    'recombination.qmd',
     'simple.qmd',
 )
 

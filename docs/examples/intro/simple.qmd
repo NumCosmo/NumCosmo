@@ -4,7 +4,7 @@ author: "Sandro Dias Pinto Vitenti"
 date: "2023-05-22"
 ---
 
-{{< include ../../_definitions.qmd >}}
+{{< include /_definitions.qmd >}}
 
 ## Introduction
 
@@ -17,19 +17,20 @@ compute comoving distances for a range of redshifts.
 Before running this example, make sure the `numcosmo_py`[^numcosmo_py] package is installed in your
 environment. If it is not already installed, follow the [installation instructions in
 the NumCosmo documentation](https://numcosmo.readthedocs.io/en/latest/install.html). In
-addition, we are using `numpy` and `matplotlib` for data manipulation and plotting.
-If you are using the 
+addition, we are using `numpy`, `matplotlib` and `pandas` for data manipulation and
+plotting. If you are using the 
 [conda installation](https://numcosmo.readthedocs.io/en/latest/install.html#mambaforge-development-environment), 
 these packages are already installed.
 
 ## Import and Initialize
 
 First, import the required modules and initialize the NumCosmo library. We also import
-`numpy` and `matplotlib`. The `Nc` and `Ncm` modules provide the core functionality of 
+`numpy`, `matplotlib` and `pandas`. The `Nc` and `Ncm` modules provide the core functionality of 
 the NumCosmo library. The call to `Ncm.cfg_init()` initializes the library objects.
 
 ```{python}
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 from numcosmo_py import Nc, Ncm
@@ -127,10 +128,15 @@ z_array = np.linspace(0.0, 1.0, N)
 Dc_array = np.array([dist.comoving(cosmo, z) for z in z_array])
 dc_array = RH_Mpc * Dc_array / (1.0 + z_array)
 
-# Print distances for redshift values
-print("Redshift | Comoving Distance [c/H0] | Comoving Distance [Mpc]")
-for z, Dc, dc in zip(z_array, Dc_array, dc_array):
-    print(f"{z:10.8f} {Dc:22.15g} {dc:22.15g}")
+# Putting everything in a pandas DataFrame
+
+pd.DataFrame(
+    {
+        "Redshift": z_array,
+        "Comoving Distance [c/H0]": Dc_array,
+        "Comoving Distance [Mpc]": dc_array,
+    }
+)
 ```
 
 ### Plot the Results

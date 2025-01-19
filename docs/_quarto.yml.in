@@ -12,6 +12,7 @@ project:
     - tutorials/python/cluster_wl_simul.qmd
     - examples/data_analysis/snia.qmd
     - examples/intro/simple.qmd
+    - examples/intro/recombination.qmd
 
 website:
   title: "The Numerical Cosmology Library"
@@ -55,6 +56,8 @@ website:
               contents:
               - href: examples/intro/simple.qmd
                 text: "Simple Example"
+              - href: examples/intro/recombination.qmd
+                text: "Recombination Evolution"
             - section: "Data Analysis"
               contents:
               - href: examples/data_analysis/snia.qmd
