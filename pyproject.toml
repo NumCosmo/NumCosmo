@@ -1,6 +1,6 @@
 [project]
 name = 'numcosmo_py'
-version = '0.23.0'
+version = '0.24.0'
 description = 'NumCosmo is a free software C library for cosmology calculations'
 readme = 'README.md'
 classifiers = [
