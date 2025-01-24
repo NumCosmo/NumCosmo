@@ -39,7 +39,6 @@ Ncm.cfg_init()
 
 def test_hiprim_tensor_modes() -> None:
     """Example testing tensor modes in primordial models."""
-
     #
     # Script parameters
     #

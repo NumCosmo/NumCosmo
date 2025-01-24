@@ -1,4 +1,5 @@
 src_site_examples_intro_files = files(
+    'hiprim.qmd',
     'recombination.qmd',
     'simple.qmd',
 )

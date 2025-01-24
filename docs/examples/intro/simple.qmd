@@ -144,7 +144,7 @@ pd.DataFrame(
 You can plot the results using a plotting library such as `matplotlib`.
 
 ```{python}
-# | label: fig:simple-comoving-distance
+# | label: fig-simple-comoving-distance
 # | fig-cap: Comoving distance vs. redshift.
 # | fig-cap-location: margin
 # | fig-width: 100%
