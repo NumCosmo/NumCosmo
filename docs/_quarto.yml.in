@@ -12,6 +12,7 @@ project:
     - tutorials/python/cluster_wl_simul.qmd
     - examples/data_analysis/snia.qmd
     - examples/intro/hiprim.qmd
+    - examples/intro/hiprim_tensor.qmd
     - examples/intro/recombination.qmd
     - examples/intro/simple.qmd
 
@@ -58,9 +59,11 @@ website:
               - href: examples/intro/simple.qmd
                 text: "Simple Example"
               - href: examples/intro/recombination.qmd
-                text: "Recombination Evolution"
+                text: "Recombination"
               - href: examples/intro/hiprim.qmd
-                text: "Primordial Power Spectrum"
+                text: "Primordial Modeling"
+              - href: examples/intro/hiprim_tensor.qmd
+                text: "Primordial Tensor Contribution"
             - section: "Data Analysis"
               contents:
               - href: examples/data_analysis/snia.qmd

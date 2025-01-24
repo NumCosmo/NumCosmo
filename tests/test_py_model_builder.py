@@ -95,7 +95,6 @@ def test_create_with_vector() -> None:
 
 def test_serialization() -> None:
     """Test model builder serialization."""
-
     mb = Ncm.ModelBuilder.new(Ncm.Model, "MyNewModel3", "This is my new model")
     assert mb is not None
     assert isinstance(mb, Ncm.ModelBuilder)
@@ -161,7 +160,6 @@ def test_get_many_sparams() -> None:
 
 def test_set_many_sparams() -> None:
     """Test many sparams."""
-
     obj_array = Ncm.ObjArray.new()
     assert obj_array is not None
 
