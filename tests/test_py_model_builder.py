@@ -29,6 +29,7 @@ from typing import cast
 
 from numpy.testing import assert_allclose
 from numcosmo_py import Ncm, GObject
+from numcosmo_py.helper import register_model_class
 
 
 def test_create_with_scalar() -> None:
@@ -48,6 +49,23 @@ def test_create_with_scalar() -> None:
     assert isinstance(model, Ncm.Model)
     assert model.name() == "MyNewModel"
     assert isinstance(model, MyNewModel.pytype)
+
+
+def test_register_model_class() -> None:
+    """Test create simple model."""
+    mb = Ncm.ModelBuilder.new(Ncm.Model, "MyNewModelRMC", "This is my new model")
+    assert mb is not None
+    assert isinstance(mb, Ncm.ModelBuilder)
+
+    mb.add_sparam("p_1", "param1", 0.0, 1.0, 0.01, 0.0, 0.5, Ncm.ParamType.FREE)
+
+    NewModel = register_model_class(mb)
+    model = NewModel()
+
+    assert model is not None
+    assert isinstance(model, Ncm.Model)
+    assert model.name() == "MyNewModelRMC"
+    assert isinstance(model, NewModel)
 
 
 def test_create_with_vector() -> None:
