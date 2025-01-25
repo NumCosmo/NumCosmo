@@ -1,6 +1,7 @@
 src_site_examples_intro_files = files(
     'hiprim.qmd',
     'hiprim_tensor.qmd',
+    'power_spectrum.qmd',
     'recombination.qmd',
     'simple.qmd',
 )

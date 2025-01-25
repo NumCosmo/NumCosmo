@@ -13,6 +13,7 @@ project:
     - examples/data_analysis/snia.qmd
     - examples/intro/hiprim.qmd
     - examples/intro/hiprim_tensor.qmd
+    - examples/intro/power_spectrum.qmd
     - examples/intro/recombination.qmd
     - examples/intro/simple.qmd
 
@@ -64,6 +65,8 @@ website:
                 text: "Primordial Modeling"
               - href: examples/intro/hiprim_tensor.qmd
                 text: "Primordial Tensor Contribution"
+              - href: examples/intro/power_spectrum.qmd
+                text: "Matter Power Spectrum"
             - section: "Data Analysis"
               contents:
               - href: examples/data_analysis/snia.qmd
