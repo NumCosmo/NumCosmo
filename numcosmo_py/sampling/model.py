@@ -53,7 +53,6 @@ del MODEL_BUILDER
 
 def build_mset(ndim: int) -> Ncm.MSet:
     """Build a new MSet object."""
-
     if ndim < 1:
         raise ValueError("ndim must be >= 1")
 
@@ -69,7 +68,6 @@ def build_mset(ndim: int) -> Ncm.MSet:
 
 def get_generic_model(mset: Ncm.MSet) -> Ncm.Model:
     """Get the generic model from an MSet object."""
-
     mid = mset.get_id_by_ns(GENERIC_MODEL_NAME)
     model = mset.peek(mid)
 
