@@ -23,7 +23,7 @@ concepts and basic Python programming.
 ## Prerequisites
 
 Before running this example, make sure the `numcosmo_py`[^numcosmo_py] package is
-installed in your environment. This example was tested with `numcosmo` version 1.0.0. If
+installed in your environment. If
 it is not already installed, follow the [installation instructions in the NumCosmo documentation](https://numcosmo.readthedocs.io/en/latest/install.html). In addition, we
 are using `numpy` and `matplotlib` for data manipulation and plotting. If you are using
 the [conda installation](https://numcosmo.readthedocs.io/en/latest/install.html#mambaforge-development-environment),

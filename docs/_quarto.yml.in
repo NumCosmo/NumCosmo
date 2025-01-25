@@ -11,6 +11,7 @@ project:
     - tutorials/c/curve_tutorial.qmd
     - tutorials/python/cluster_wl_simul.qmd
     - examples/data_analysis/snia.qmd
+    - examples/intro/epdf.qmd
     - examples/intro/hiprim.qmd
     - examples/intro/hiprim_tensor.qmd
     - examples/intro/power_spectrum.qmd
@@ -57,6 +58,8 @@ website:
           contents:
             - section: "Introduction"
               contents:
+              - href: examples/intro/epdf.qmd
+                text: "Empirical PDF"
               - href: examples/intro/simple.qmd
                 text: "Simple Example"
               - href: examples/intro/recombination.qmd
