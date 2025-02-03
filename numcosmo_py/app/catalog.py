@@ -47,8 +47,8 @@ from ..interpolation.stats_dist import (
     InterpolationMethod,
 )
 from ..plotting.tools import set_rc_params_article, confidence_ellipse
-from ..plotting.getdist import mcat_to_mcsamples
 from .loading import LoadCatalog
+from ..plotting import mcat_to_catalog_data
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -631,13 +631,15 @@ class PlotCorner(LoadCatalog):
         ),
     ] = 0
 
-    mcsample_only: Annotated[
+    auto_thin: Annotated[
         bool,
         typer.Option(
-            help="Generate only the MCSample object.",
-            hidden=True,
+            help=(
+                "Automatically thin the data using the estimate of "
+                "the autocorrelation time."
+            ),
         ),
-    ] = False
+    ] = True
 
     extra_experiment: Annotated[
         Optional[list[Path]],
@@ -663,17 +665,8 @@ class PlotCorner(LoadCatalog):
     def __post_init__(self) -> None:
         """Corner plot of the catalog."""
         super().__post_init__()
-
-        mcat = self.mcat
         if self.plot_name is None:
-            self.plot_name = str(self.mcmc_file)
-        mcsample, _, _ = mcat_to_mcsamples(mcat, self.plot_name, indices=self.indices)
-        self.mcsample = mcsample
-
-        if self.mcsample_only:
-            self.end_experiment()
-            return
-
+            self.plot_name = self.mcmc_file.stem
         if self.extra_experiment is None:
             self.extra_experiment = []
         if self.extra_mcmc_file is None:
@@ -690,22 +683,47 @@ class PlotCorner(LoadCatalog):
                 "Extra experiments and burn-ins must have the same length."
             )
 
+        return self.plot_getdist()
+
+    def plot_getdist(self) -> None:
+        """Corner plot of the catalog using getdist."""
+        mcat = self.mcat
+        assert self.plot_name is not None
+
+        thin = 1
+        if self.auto_thin:
+            mcat.estimate_autocorrelation_tau(False)
+            thin = int(np.ceil(mcat.peek_autocorrelation_tau().get_max()))
+
+        cd = mcat_to_catalog_data(mcat, self.plot_name, indices=self.indices, thin=thin)
+        mcsample = cd.to_mcsamples(collapse=True)
+
+        assert self.extra_experiment is not None
+        assert self.extra_mcmc_file is not None
+        assert self.extra_burnin is not None
+
         mcsamples = [mcsample]
         for extra_experiment, extra_mcmc_file, extra_burnin in zip(
             self.extra_experiment, self.extra_mcmc_file, self.extra_burnin
         ):
-            extra_exp = dataclasses.replace(
-                self,
+            extra_exp = LoadCatalog(
                 experiment=extra_experiment,
                 mcmc_file=extra_mcmc_file,
                 burnin=extra_burnin,
-                log_file=None,
-                mcsample_only=True,
-                plot_name=None,
-                output=None,
-                product_file=False,
+                include=self.include,
+                exclude=self.exclude,
             )
-            mcsamples.append(extra_exp.mcsample)
+            if self.auto_thin:
+                extra_exp.mcat.estimate_autocorrelation_tau(False)
+                thin = int(np.ceil(extra_exp.mcat.peek_autocorrelation_tau().get_max()))
+            mcsamples.append(
+                mcat_to_catalog_data(
+                    extra_exp.mcat,
+                    extra_experiment.stem,
+                    thin=thin,
+                    indices=extra_exp.indices,
+                ).to_mcsamples(collapse=True)
+            )
 
         self.plot_mcsamples(mcsamples)
 
@@ -721,7 +739,11 @@ class PlotCorner(LoadCatalog):
         if self.mark_bestfit:
             bf = np.array(mcat.get_bestfit_row().dup_array())[1:]
         g.triangle_plot(
-            mcsamples, shaded=True, markers=bf, title_limit=self.title_limit
+            mcsamples,
+            shaded=False,
+            filled=True,
+            markers=bf,
+            title_limit=self.title_limit,
         )
 
         def _set_rasterized(element):
