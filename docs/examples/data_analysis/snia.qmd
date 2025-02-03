@@ -27,7 +27,7 @@ import getdist
 from getdist import plots
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.plotting.getdist import mcat_to_mcsamples
+from numcosmo_py.plotting import mcat_to_catalog_data
 
 # Initialize the library
 Ncm.cfg_init()
@@ -204,8 +204,8 @@ Finally, we can extract the MCMC samples and visualize the results.
 mcat = esmcmc.peek_catalog()
 mcat.trim(2, 1)
 
-mcsamples, _, _ = mcat_to_mcsamples(mcat, name="XCDM Supernova Ia Analysis")
+cd = mcat_to_catalog_data(mcat, name="XCDM Supernova Ia Analysis")
 
 g = plots.get_subplot_plotter()
-g.triangle_plot(mcsamples, shaded=True)
+g.triangle_plot(cd.to_mcsamples(), shaded=False, filled=True)
 ```
