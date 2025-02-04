@@ -659,6 +659,13 @@ class PlotCorner(LoadCatalog):
         ),
     ] = None
 
+    show: Annotated[
+        bool,
+        typer.Option(
+            help="Show the figure.",
+        ),
+    ] = True
+
     def __post_init__(self) -> None:
         """Corner plot of the catalog."""
         super().__post_init__()
@@ -718,7 +725,8 @@ class PlotCorner(LoadCatalog):
             filename = self.output.with_suffix(".corner.pdf").absolute().as_posix()
             fig.savefig(filename, bbox_inches="tight", dpi=300)
 
-        plt.show()
+        if self.show:
+            plt.show()
 
         self.end_experiment()
 
