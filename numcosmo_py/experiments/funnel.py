@@ -21,8 +21,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Example of using the Rosenbrock function to test the MCMC sampler.
-"""
+"""Example of using the Rosenbrock function to test the MCMC sampler."""
 
 from pathlib import Path
 from typing import Optional

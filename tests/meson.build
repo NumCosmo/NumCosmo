@@ -584,6 +584,22 @@ if python_pyccl.found()
     ]
 endif
 
+python_getdist = python_module.find_installation(
+    'python3',
+    modules: ['getdist'],
+    required: false,
+)
+
+if python_getdist.found()
+    python_tests += [
+        {
+            'name': 'plotting',
+            'source': 'test_plotting.py',
+            'timeout': 0,
+        },
+    ]
+endif
+
 if enable_gir
     env = environment()
     env.prepend(

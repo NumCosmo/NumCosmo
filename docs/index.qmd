@@ -5,6 +5,10 @@ title: "NumCosmo"
 
 Welcome to NumCosmo, a comprehensive toolkit designed to meet the diverse needs of modern cosmological research. Built with precision, efficiency, and modularity at its core, NumCosmo allows researchers to explore modern cosmology problems through a robust and versatile computational framework.
 
+**Current version**: {{< meta version >}}
+
+[![Build Status](https://github.com/NumCosmo/NumCosmo/workflows/Build%20and%20Check/badge.svg)](https://github.com/NumCosmo/NumCosmo/actions) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![codecov](https://codecov.io/gh/NumCosmo/NumCosmo/graph/badge.svg?token=FZ3PX0PKWG)](https://codecov.io/gh/NumCosmo/NumCosmo)
+
 ## Core Objectives
 
 NumCosmo was developed with three foundational objectives:
