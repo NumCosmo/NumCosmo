@@ -32,9 +32,12 @@ from numpy.testing import assert_allclose
 from getdist import MCSamples
 
 from numcosmo_py import Ncm
-from numcosmo_py.plotting import mcat_to_catalog_data, CatalogData
+from numcosmo_py.plotting import mcat_to_catalog_data, plot_mcsamples, CatalogData
 
 Ncm.cfg_init()
+
+NCHAINS = 37
+NSTEPS = 100
 
 
 @pytest.fixture(name="mcat", params=[False, True], ids=["unweighted", "weighted"])
@@ -44,7 +47,7 @@ def fixture_mcat(request):
     mset = Ncm.MSet.new_array([model])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
     mset.prepare_fparam_map()
-    nchains = 34
+    nchains = NCHAINS
 
     mcat = Ncm.MSetCatalog(
         mset=mset,
@@ -56,7 +59,7 @@ def fixture_mcat(request):
         weighted=request.param,
     )
 
-    nsamples = 100 * nchains
+    nsamples = NSTEPS * nchains
     samples = np.random.rand(nsamples, 10) - 10.0
     add_vals = np.random.rand(nsamples, 3)
     for sample, add_val in zip(samples, add_vals):
@@ -108,13 +111,20 @@ def test_catalog_data_to_mcsamples(mcat):
     assert mcsample.numrows == cd.rows.shape[0]
     assert mcsample.n == cd.rows.shape[1]
     for i, offset in enumerate(mcsample.chain_offsets):
-        assert offset == i * 100
+        assert offset == i * NSTEPS
         if offset >= cd.rows.shape[0]:
             continue
         # We save it interweaved and MCSamples gets all chains and stacks them
         assert_allclose(
-            mcsample.samples[offset : offset + 100, :], cd.rows[i :: cd.nchains, :]
+            mcsample.samples[offset : offset + NSTEPS, :], cd.rows[i :: cd.nchains, :]
         )
+
+
+def test_catalog_data_to_mcsamples_plot(mcat):
+    """Test log_current_stats()."""
+    cd = mcat_to_catalog_data(mcat, "test")
+    fig = plot_mcsamples([cd.to_mcsamples()])
+    assert fig is not None
 
 
 def test_catalog_data_bad_burnin(mcat):
@@ -122,8 +132,8 @@ def test_catalog_data_bad_burnin(mcat):
     with pytest.warns(
         UserWarning,
         match=re.escape(
-            "Burnin (13) is not a multiple of nchains (34). "
-            "Burnin will be rounded down."
+            f"Burnin (13) is not a multiple of nchains ({NCHAINS}). "
+            f"Burnin will be rounded down."
         ),
     ):
         _ = mcat_to_catalog_data(mcat, "test", burnin=13)
@@ -132,7 +142,7 @@ def test_catalog_data_bad_burnin(mcat):
 def test_catalog_data_too_many_burnin(mcat):
     """Test the corret warning."""
     with pytest.raises(ValueError, match="Burnin is greater than the number of steps."):
-        _ = mcat_to_catalog_data(mcat, "test", burnin=34 * 10000)
+        _ = mcat_to_catalog_data(mcat, "test", burnin=NCHAINS * (NSTEPS + 1))
 
 
 def test_catalog_data_with_indices(mcat):
