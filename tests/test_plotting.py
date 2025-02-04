@@ -25,6 +25,7 @@
 
 """Tests for the plotting module."""
 
+import re
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -36,8 +37,8 @@ from numcosmo_py.plotting import mcat_to_catalog_data, CatalogData
 Ncm.cfg_init()
 
 
-@pytest.fixture(name="mcat")
-def fixture_mcat():
+@pytest.fixture(name="mcat", params=[False, True], ids=["unweighted", "weighted"])
+def fixture_mcat(request):
     """Return a cosmology object."""
     model = Ncm.ModelMVND.new(dim=10)
     mset = Ncm.MSet.new_array([model])
@@ -52,6 +53,7 @@ def fixture_mcat():
         nadd_val_symbols=["c", "d"],
         nchains=nchains,
         m2lnp_var=0,
+        weighted=request.param,
     )
 
     nsamples = 100 * nchains
@@ -77,20 +79,23 @@ def test_mcat_catalog_data(mcat):
     assert cd.rows.shape[0] == mcat.len()
 
     m2lnp_index = mcat.get_m2lnp_var()
+    excluded_indices = [m2lnp_index]
+    if mcat.weighted():
+        excluded_indices.append(mcat.nadd_vals() - 1)
 
     # Check that the parameters are correct, the posterior column is excluded
     assert cd.params_names == [
-        mcat.col_name(i) for i in range(mcat.ncols()) if i != m2lnp_index
+        mcat.col_name(i) for i in range(mcat.ncols()) if i not in excluded_indices
     ]
     assert cd.params_symbols == [
-        mcat.col_symb(i) for i in range(mcat.ncols()) if i != m2lnp_index
+        mcat.col_symb(i) for i in range(mcat.ncols()) if i not in excluded_indices
     ]
 
     rows = np.array([mcat.peek_row(i).dup_array() for i in range(mcat.len())])
 
     # Check that the posterior is correct (should be -\ln p)
     assert_allclose(cd.posterior, 0.5 * rows[:, m2lnp_index])
-    assert_allclose(cd.rows, np.delete(rows, m2lnp_index, axis=1))
+    assert_allclose(cd.rows, np.delete(rows, excluded_indices, axis=1))
 
 
 def test_catalog_data_to_mcsamples(mcat):
@@ -110,6 +115,57 @@ def test_catalog_data_to_mcsamples(mcat):
         assert_allclose(
             mcsample.samples[offset : offset + 100, :], cd.rows[i :: cd.nchains, :]
         )
+
+
+def test_catalog_data_bad_burnin(mcat):
+    """Test the corret warning."""
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "Burnin (13) is not a multiple of nchains (34). "
+            "Burnin will be rounded down."
+        ),
+    ):
+        _ = mcat_to_catalog_data(mcat, "test", burnin=13)
+
+
+def test_catalog_data_too_many_burnin(mcat):
+    """Test the corret warning."""
+    with pytest.raises(ValueError, match="Burnin is greater than the number of steps."):
+        _ = mcat_to_catalog_data(mcat, "test", burnin=34 * 10000)
+
+
+def test_catalog_data_with_indices(mcat):
+    """Test log_current_stats()."""
+    indices = np.array([4, 6, 8])
+    cd = mcat_to_catalog_data(mcat, "test", indices=indices)
+    assert cd is not None
+    assert isinstance(cd, CatalogData)
+    assert cd.rows.shape[1] == 3
+
+    # Check that the parameters are correct, the posterior column is excluded
+    assert cd.params_names == [
+        mcat.col_name(i) for i in range(mcat.ncols()) if i in indices
+    ]
+    assert cd.params_symbols == [
+        mcat.col_symb(i) for i in range(mcat.ncols()) if i in indices
+    ]
+    rows = np.array(
+        [np.array(mcat.peek_row(i).dup_array())[indices] for i in range(mcat.len())]
+    )
+    assert_allclose(cd.rows, rows)
+
+
+def test_catalog_data_to_mcsamples_collapse(mcat):
+    """Test log_current_stats()."""
+    cd = mcat_to_catalog_data(mcat, "test")
+    mcsample = cd.to_mcsamples(collapse=True)
+    assert mcsample is not None
+    assert isinstance(mcsample, MCSamples)
+
+    assert mcsample.numrows == cd.rows.shape[0]
+    assert mcsample.n == cd.rows.shape[1]
+    assert_allclose(mcsample.samples, cd.rows)
 
 
 def test_asinh_transform(mcat):

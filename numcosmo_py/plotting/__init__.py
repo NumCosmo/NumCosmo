@@ -51,9 +51,7 @@ class CatalogData:
         Checks that the data is valid.
         """
         assert len(self.rows) == len(self.posterior)
-        if self.weights is not None:
-            assert len(self.rows) == len(self.weights)
-
+        assert self.weights is None or (len(self.rows) == len(self.weights))
         assert len(self.params_names) == len(self.params_symbols)
         assert len(self.params_names) == self.rows.shape[1]
 
@@ -114,12 +112,12 @@ def mcat_to_catalog_data(
 
     if burnin % nchains != 0:
         warnings.warn(
-            f"burnin ({burnin}) is not a multiple of nchains ({nchains}). "
-            f"burnin will be rounded down."
+            f"Burnin ({burnin}) is not a multiple of nchains ({nchains}). "
+            f"Burnin will be rounded down."
         )
     burnin_steps = burnin // nchains
     if burnin_steps >= max_time:
-        raise ValueError("burnin is greater than the number of steps.")
+        raise ValueError("Burnin is greater than the number of steps.")
 
     assert thin >= 1
     # We are thinning by thin, but in such a way that the last sample is included in the
@@ -148,9 +146,8 @@ def mcat_to_catalog_data(
     # Get the weights column
     weights = None
     if mcat.weighted():
-        # Original index is nadd_vals - 1,
-        # but since we removed m2lnL it is now nadd_vals - 2
-        weight_index = mcat.nadd_vals() - 2
+        # weight_index is nadd_vals - 1,
+        weight_index = mcat.nadd_vals() - 1
         assert weight_index >= 0
         weights = rows[:, weight_index]
         indices_array = indices_array[indices_array != weight_index]
