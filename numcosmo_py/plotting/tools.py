@@ -23,6 +23,7 @@
 
 """NumCosmo's plotting tools."""
 
+import shutil
 import math
 import numpy as np
 import numpy.typing as npt
@@ -85,19 +86,19 @@ def add_ellipse_from_ellipticity(
     edgecolor: str = "black",
     facecolor: str = "none",
 ) -> None:
-    """Add an ellipse to a plot based on the ellipticity.
+    r"""Add an ellipse to a plot based on the ellipticity.
 
     The ellipticity is given by the e1 and e2 components of the ellipticity vector. The
     semi-major and semi-minor axes are calculated from the ellipticity and the angle of
     the ellipse is calculated from the ellipticity components. The equation for the
     angle is given by:
     $$
-    \\theta = 0.5 \\arctan2(e2, e1),$$ $$q = \\frac{1 - \\epsilon}{1 + \\epsilon},
+    \theta = 0.5 \arctan2(e2, e1),$$ $$q = \frac{1 - \epsilon}{1 + \epsilon},
     $$
     where $q$ is the axis ratio, $a$ is the semi-major axis, and $b$ is the semi-minor
     axis. The area of the ellipse is given by:
     $$
-    A = \\pi a b.
+    A = \pi a b.
     $$
 
     :param ax: The axes to add the ellipse to.
@@ -153,7 +154,9 @@ def latex_float(value: float):
     return float_str
 
 
-def set_rc_params_article(column_width: float = 246.0, ncol: int = 2, nrows: int = 1):
+def set_rc_params_article(
+    column_width: float = 246.0, ncol: int = 2, nrows: int = 1
+) -> None:
     """Set matplotlib rcParams for a LaTeX article."""
     fig_width_pt = column_width * ncol  # \showthe\columnwidth
     inches_per_pt = 1.0 / 72.27  # Convert pt to inch
@@ -161,6 +164,7 @@ def set_rc_params_article(column_width: float = 246.0, ncol: int = 2, nrows: int
     fig_width = fig_width_pt * inches_per_pt  # width in inches
     fig_height = fig_width * golden_mean  # height in inches
     fig_size = [fig_width, fig_height * nrows]
+    use_tex = True if shutil.which("latex") else False
 
     params = {
         "axes.labelsize": 8,
@@ -168,7 +172,7 @@ def set_rc_params_article(column_width: float = 246.0, ncol: int = 2, nrows: int
         "legend.fontsize": 8,
         "xtick.labelsize": 8,
         "ytick.labelsize": 8,
-        "text.usetex": True,
+        "text.usetex": use_tex,
         "figure.figsize": fig_size,
     }
 
