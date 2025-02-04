@@ -57,8 +57,8 @@ def fixture_mcat(request):
     )
 
     nsamples = 100 * nchains
-    samples = np.random.rand(nsamples, 10)
-    add_vals = np.random.rand(nsamples, 2) + 10.0
+    samples = np.random.rand(nsamples, 10) - 10.0
+    add_vals = np.random.rand(nsamples, 3)
     for sample, add_val in zip(samples, add_vals):
         v = Ncm.Vector.new_array(sample)
         mset.param_set_vector(v)
