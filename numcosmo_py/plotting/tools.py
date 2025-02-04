@@ -164,7 +164,7 @@ def set_rc_params_article(
     fig_width = fig_width_pt * inches_per_pt  # width in inches
     fig_height = fig_width * golden_mean  # height in inches
     fig_size = [fig_width, fig_height * nrows]
-    use_tex = True if shutil.which("latex") else False
+    use_tex = bool(shutil.which("latex"))
 
     params = {
         "axes.labelsize": 8,
