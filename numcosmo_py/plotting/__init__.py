@@ -28,9 +28,14 @@ import dataclasses
 
 import numpy as np
 import numpy.typing as npt
-from getdist import MCSamples
+import getdist
+import getdist.plots
+import matplotlib.figure
+import matplotlib.artist
+import matplotlib.pyplot as plt
 
 from numcosmo_py import Ncm
+from .tools import set_rc_params_article
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
@@ -42,6 +47,7 @@ class CatalogData:
     posterior: np.ndarray
     weights: np.ndarray | None
     rows: np.ndarray
+    bestfit: np.ndarray | None
     params_names: list[str]
     params_symbols: list[str]
 
@@ -54,6 +60,7 @@ class CatalogData:
         assert self.weights is None or (len(self.rows) == len(self.weights))
         assert len(self.params_names) == len(self.params_symbols)
         assert len(self.params_names) == self.rows.shape[1]
+        assert self.bestfit is None or (len(self.bestfit) == self.rows.shape[1])
 
     def asinh_transform(self, indices: npt.NDArray[np.int64]) -> None:
         """Apply an asinh transformation to the catalog data."""
@@ -67,13 +74,13 @@ class CatalogData:
             )
             self.params_names[i] = f"asinh_{self.params_names[i]}"
 
-    def to_mcsamples(self, collapse: bool = False) -> MCSamples:
+    def to_mcsamples(self, collapse: bool = False) -> getdist.MCSamples:
         """Convert the catalog data to a getdist.MCSamples object.
 
         :param collapse: If True, collapse the samples into a single chain.
         """
         if collapse:
-            return MCSamples(
+            return getdist.MCSamples(
                 samples=self.rows,
                 loglikes=self.posterior,
                 names=self.params_names,
@@ -85,7 +92,7 @@ class CatalogData:
         assert self.rows.shape[0] % self.nchains == 0
         ncols = self.rows.shape[1]
 
-        return MCSamples(
+        return getdist.MCSamples(
             samples=self.rows.reshape(-1, self.nchains, ncols).transpose(1, 0, 2),
             loglikes=self.posterior.reshape(-1, self.nchains).T,
             names=self.params_names,
@@ -156,12 +163,50 @@ def mcat_to_catalog_data(
     param_symbols: list[str] = list(mcat.col_symb(i) for i in indices_array)
     param_names: list[str] = list(mcat.col_name(i) for i in indices_array)
 
+    bestfit = np.array(mcat.get_bestfit_row().dup_array())[indices_array]
+
     return CatalogData(
         name=name,
         nchains=nchains,
         posterior=posterior,
         weights=weights,
         rows=rows,
+        bestfit=bestfit,
         params_names=param_names,
         params_symbols=param_symbols,
     )
+
+
+def _set_rasterized(element: matplotlib.artist.Artist):
+    """Set rasterized to True for all elements in the figure."""
+    if hasattr(element, "set_rasterized"):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            element.set_rasterized(True)
+    if hasattr(element, "get_children"):
+        for child in element.get_children():
+            _set_rasterized(child)
+
+
+def plot_mcsamples(
+    mcsamples: list[getdist.MCSamples],
+    markers: npt.NDArray[np.float64] | None = None,
+    title_limit: int | None = None,
+) -> matplotlib.figure.Figure:
+    """Plot MCSamples using Matplotlib's object-oriented interface."""
+    set_rc_params_article(ncol=2)
+    g = getdist.plots.get_subplot_plotter(
+        width_inch=plt.rcParams["figure.figsize"][0], rc_sizes=True
+    )
+    g.settings.linewidth = 0.01
+    g.triangle_plot(
+        mcsamples,
+        shaded=False,
+        filled=True,
+        markers=markers,
+        title_limit=title_limit,
+    )
+
+    _set_rasterized(g.fig)
+
+    return g.fig
