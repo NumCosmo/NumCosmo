@@ -1,4 +1,9 @@
 src_site_examples_intro_files = files(
+    'epdf.qmd',
+    'hiprim.qmd',
+    'hiprim_tensor.qmd',
+    'power_spectrum.qmd',
+    'recombination.qmd',
     'simple.qmd',
 )
 
