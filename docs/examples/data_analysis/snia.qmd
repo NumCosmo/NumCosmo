@@ -2,14 +2,22 @@
 title: "Supernova Type Ia Analysis"
 ---
 
-{{< include /_functions.qmd >}}
+{{< include /_functions.qmd >}} 
 
-In this example, we demonstrate how to use NumCosmo to compute cosmological observables and fit a model to data.
+{{< include /_definitions.qmd >}}
+
+## Introduction
+
+In this example, we demonstrate how to use NumCosmo to compute cosmological observables
+and fit a model to data. We use the `numcosmo_py`[^numcosmo_py] package to simplify
+the library usage and `plotnine` for data visualization.
 
 ## Computational Cosmology
 
-NumCosmo provides tools for calculating cosmological observables with precision. 
-For example, the comoving distance in an XCDM cosmology up to a redshift of $z = 3.0$ can be computed with a few lines of code using the parameters $\Omega_{c0} = 0.25$, $\Omega_{b0} = 0.05$, and $w$ varying from $-1.5$ to $-0.5$.
+NumCosmo provides tools for calculating cosmological observables with precision. For
+example, the comoving distance in an XCDM cosmology up to a redshift of $z = 3.0$ can be
+computed with a few lines of code using the parameters $\Omega_{c0} = 0.25$,
+$\Omega_{b0} = 0.05$, and $w$ varying from $-1.5$ to $-0.5$.
 
 ```{python}
 import numpy as np
@@ -19,7 +27,7 @@ import getdist
 from getdist import plots
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.plotting.getdist import mcat_to_mcsamples
+from numcosmo_py.plotting import mcat_to_catalog_data
 
 # Initialize the library
 Ncm.cfg_init()
@@ -27,12 +35,12 @@ Ncm.cfg_init()
 cosmo = Nc.HICosmoDEXcdm()
 dist = Nc.Distance()
 
-cosmo.param_set_by_name("Omegac", 0.25)
-cosmo.param_set_by_name("Omegab", 0.05)
+cosmo["Omegac"] = 0.25
+cosmo["Omegab"] = 0.05
 
 dist_pd_a = []
 for w in np.linspace(-1.5, -0.5, 5):
-    cosmo.param_set_by_name("w", w)
+    cosmo["w"] = w
     dist.prepare(cosmo)
     RH_Mpc = cosmo.RH_Mpc()
 
@@ -44,7 +52,9 @@ for w in np.linspace(-1.5, -0.5, 5):
 dist_pd = pd.concat(dist_pd_a)
 ```
 
-The code above computes the comoving distance for an XCDM cosmology with different values of the equation of state parameter $w$.
+The code above computes the comoving distance for an XCDM cosmology with different
+values of the equation of state parameter $w$.
+
 ```{python}
 # | label: fig-comoving-distance
 # | fig-cap: Comoving distance for XCDM cosmology up to redshift $z = 3.0$.
@@ -62,9 +72,12 @@ The code above computes the comoving distance for an XCDM cosmology with differe
 
 ### The Modeling
 
-NumCosmo's computational objects are designed for direct use in statistical analyses. 
-In the example above, the `HICosmoDEXcdm` class defines the cosmological model, which is a subclass of the `HICosmo` class representing a homogeneous isotropic cosmology. 
-The model's parameters can be accessed and managed within a model set, using the `MSet` class, which serves as the main container for all models in a given analysis.
+NumCosmo's computational objects are designed for direct use in statistical analyses. In
+the example above, the `HICosmoDEXcdm` class defines the cosmological model, which is a
+subclass of the `HICosmo` class representing a homogeneous isotropic cosmology. The
+model's parameters can be accessed and managed within a model set, using the `MSet`
+class, which serves as the main container for all models in a given analysis.
+
 ```{python}
 mset = Ncm.MSet.new_array([cosmo])
 mset.pretty_log()
@@ -72,8 +85,10 @@ mset.pretty_log()
 
 ## Fitting Model to Data
 
-Once models are defined and the free parameters are set, they can be analyzed using a variety of statistical methods.
-For example, the best-fit parameters for a given model can be found by maximizing the likelihood function.
+Once models are defined and the free parameters are set, they can be analyzed using a
+variety of statistical methods. For example, the best-fit parameters for a given model
+can be found by maximizing the likelihood function.
+
 ```{python}
 # | code-fold: true
 
@@ -95,8 +110,10 @@ fit.fisher()
 fit.log_covar()
 ```
 
-The code above fits the XCDM model to the Union2.1 dataset, which contains supernova type Ia data.
-It computes the best-fit parameters for the model and the covariance matrix of the parameters using the Fisher matrix.
+The code above fits the XCDM model to the Union2.1 dataset, which contains supernova
+type Ia data. It computes the best-fit parameters for the model and the covariance
+matrix of the parameters using the Fisher matrix.
+
 ```{python}
 
 lhr2d = Ncm.LHRatio2d.new(
@@ -136,7 +153,10 @@ for i, sigma in enumerate(
 
 regions_pd = pd.concat(regions_pd_list)
 ```
-The code above computes the confidence regions for the best-fit parameters using the Fisher matrix.
+
+The code above computes the confidence regions for the best-fit parameters using the
+Fisher matrix.
+
 ```{python}
 # | label: fig-fit-results
 # | fig-cap: Best-fit parameters and confidence regions for the XCDM model.
@@ -153,11 +173,11 @@ The code above computes the confidence regions for the best-fit parameters using
 )
 ```
 
-
 ## Running a MCMC Analysis
 
-NumCosmo also provides tools for running Markov Chain Monte Carlo (MCMC) analyses.
-The code below runs an MCMC analysis using the `APES` algorithm.
+NumCosmo also provides tools for running Markov Chain Monte Carlo (MCMC) analyses. The
+code below runs an MCMC analysis using the `APES` algorithm.
+
 ```{python}
 init_sampler = Ncm.MSetTransKernGauss.new(0)
 init_sampler.set_mset(mset)
@@ -184,8 +204,8 @@ Finally, we can extract the MCMC samples and visualize the results.
 mcat = esmcmc.peek_catalog()
 mcat.trim(2, 1)
 
-mcsamples, _, _ = mcat_to_mcsamples(mcat, name="XCDM Supernova Ia Analysis")
+cd = mcat_to_catalog_data(mcat, name="XCDM Supernova Ia Analysis")
 
 g = plots.get_subplot_plotter()
-g.triangle_plot(mcsamples, shaded=True)
+g.triangle_plot(cd.to_mcsamples(), shaded=False, filled=True)
 ```

@@ -11,6 +11,12 @@ project:
     - tutorials/c/curve_tutorial.qmd
     - tutorials/python/cluster_wl_simul.qmd
     - examples/data_analysis/snia.qmd
+    - examples/intro/epdf.qmd
+    - examples/intro/hiprim.qmd
+    - examples/intro/hiprim_tensor.qmd
+    - examples/intro/power_spectrum.qmd
+    - examples/intro/recombination.qmd
+    - examples/intro/simple.qmd
 
 website:
   title: "The Numerical Cosmology Library"
@@ -50,6 +56,20 @@ website:
                 text: "Cluster WL Simulation"
         - section: "Examples"
           contents:
+            - section: "Introduction"
+              contents:
+              - href: examples/intro/epdf.qmd
+                text: "Empirical PDF"
+              - href: examples/intro/simple.qmd
+                text: "Simple Example"
+              - href: examples/intro/recombination.qmd
+                text: "Recombination"
+              - href: examples/intro/hiprim.qmd
+                text: "Primordial Modeling"
+              - href: examples/intro/hiprim_tensor.qmd
+                text: "Primordial Tensor Contribution"
+              - href: examples/intro/power_spectrum.qmd
+                text: "Matter Power Spectrum"
             - section: "Data Analysis"
               contents:
               - href: examples/data_analysis/snia.qmd
