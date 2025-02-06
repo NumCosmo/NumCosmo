@@ -183,6 +183,7 @@ static void _nc_cluster_mass_lnrich_ext_p_limits (NcClusterMass *clusterm,  NcHI
 static void _nc_cluster_mass_lnrich_ext_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 static void _nc_cluster_mass_lnrich_ext_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
 static gdouble _nc_cluster_mass_lnrich_ext_volume (NcClusterMass *clusterm);
+static void _nc_cluster_mass_lnrich_ext_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res);
 
 static void
 nc_cluster_mass_lnrich_ext_class_init (NcClusterMassLnrichExtClass *klass)
@@ -455,7 +456,7 @@ nc_cluster_mass_lnrich_ext_class_init (NcClusterMassLnrichExtClass *klass)
   parent_class->P_bin_limits    = &_nc_cluster_mass_lnrich_ext_p_bin_limits;
   parent_class->N_limits        = &_nc_cluster_mass_lnrich_ext_n_limits;
   parent_class->volume          = &_nc_cluster_mass_lnrich_ext_volume;
-  parent_class->P_vec_z_lnMobs  = NULL;
+  parent_class->P_vec_z_lnMobs  = &_nc_cluster_mass_lnrich_ext_p_vec_z_lnMobs;
   parent_class->_obs_len        = 1;
   parent_class->_obs_params_len = 0;
 
@@ -591,6 +592,61 @@ _nc_cluster_mass_lnrich_ext_volume (NcClusterMass *clusterm)
   return (self->lnR_max - self->lnR_min);
 }
 
+static void
+_nc_cluster_mass_lnrich_ext_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res)
+{
+  NcClusterMassLnrichExt *lnrich_ext             = NC_CLUSTER_MASS_LNRICH_EXT (clusterm);
+  NcClusterMassLnrichExtPrivate * const self = lnrich_ext->priv;
+
+  const gdouble *lnM_obs_ptr = ncm_matrix_const_data (lnM_obs);
+  const gdouble *z_ptr       = ncm_vector_const_data (z);
+  const guint tda            = ncm_matrix_tda (lnM_obs);
+  const guint sz             = ncm_vector_stride (z);
+  const guint len            = ncm_vector_len (z);
+  const gdouble DlnM         = lnM - self->lnM0;
+  const gdouble sqrt_2pi     = ncm_c_sqrt_2pi ();
+  const gdouble lnR_pre      = MU + (MU_M1 * DlnM) + (MU_M2 * DlnM * DlnM);
+  const gdouble sigma_pre    = SIGMA_0 + (SIGMA_M1 * DlnM) +  (SIGMA_M2 * DlnM * DlnM);
+  const gdouble mu_z1        = MU_Z1;
+  const gdouble mu_z2        = MU_Z2;
+  const gdouble mu_mz        = MU_MZ * DlnM;
+  const gdouble sigma_z1     = SIGMA_Z1;
+  const gdouble sigma_z2     = SIGMA_Z2;
+  const gdouble sigma_mz     = SIGMA_MZ * DlnM;
+  gdouble *res_ptr           = &g_array_index (res, gdouble, 0);
+  guint i;
+ 
+  if ((tda == 1) && (sz == 1))
+  {
+    for (i = 0; i < len; i++)
+    {
+      // const gdouble Dln1pz = log1p (z_ptr[i]) - self->ln1pz0;
+      const gdouble Vz     = self->use_ln1pz ? log1p (z_ptr[i]) - self->ln1pz0 : z_ptr[i] / self->z0;
+      const gdouble lnR    = lnR_pre + mu_z1 * Vz + mu_z2 * Vz * Vz + mu_mz * Vz;
+      const gdouble sigma  = sigma_pre + sigma_z1 * Vz + sigma_z2 * Vz * Vz + sigma_mz * Vz;
+
+      const gdouble x = (lnM_obs_ptr[i] - lnR) / sigma;
+
+      res_ptr[i] = exp (-0.5 * x * x) / (sqrt_2pi * sigma);
+    }
+  }
+  else
+  {
+    for (i = 0; i < len; i++)
+    {
+      // const gdouble Dln1pz = log1p (z_ptr[i * sz]) - self->ln1pz0;
+      const gdouble Vz     = self->use_ln1pz ? log1p (z_ptr[i]) - self->ln1pz0 : z_ptr[i] / self->z0;
+      const gdouble lnR    = lnR_pre + mu_z1 * Vz + mu_z2 * Vz * Vz + mu_mz * Vz;
+      const gdouble sigma  = sigma_pre + sigma_z1 * Vz + sigma_z2 * Vz * Vz + sigma_mz * Vz;
+
+      const gdouble x = (lnM_obs_ptr[i * tda] - lnR) / sigma;
+
+      res_ptr[i] = exp (-0.5 * x * x) / (sqrt_2pi * sigma);
+    }
+  }
+}
+
+
 /**
  * nc_cluster_mass_lnrich_ext_get_mean_richness:
  * @lnrich_ext: a #NcClusterMassLnrichExt
@@ -626,7 +682,7 @@ nc_cluster_mass_lnrich_ext_get_std_richness (NcClusterMassLnrichExt *lnrich_ext,
   const gdouble DlnM                         = lnM - self->lnM0;
   const gdouble Vz                           = self->use_ln1pz ? log1p (z) - self->ln1pz0 : z / self->z0;
 
-  return A0 + exp (-(SIGMA_0 + (SIGMA_M1 * DlnM) + (SIGMA_Z1 * Vz) + (SIGMA_M2 * DlnM * DlnM) + (SIGMA_Z2 * Vz * Vz) + (SIGMA_MZ * DlnM * Vz)));
+  return SIGMA_0 + (SIGMA_M1 * DlnM) + (SIGMA_Z1 * Vz) + (SIGMA_M2 * DlnM * DlnM) + (SIGMA_Z2 * Vz * Vz) + (SIGMA_MZ * DlnM * Vz);
 }
 
 /**

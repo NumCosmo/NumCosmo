@@ -10,7 +10,8 @@ from richness_mass_calib import create_richness_mass_calib
 
 import sys
 sys.path.insert(0, "/global/homes/c/cinlima/NumCosmo/notebooks/richness_proxy/Scripts")
-from bdata import BinningData
+
+from bdata import DataB
 
 #-------------------------------------------------------------------------------------------------#
 #FittingModel
@@ -64,12 +65,12 @@ class FittingModel:
             y = pd.DataFrame({'richness': list(self.data_set["richness"])})
             data_train, data_test = self.cvdata(X, y)
             
-            bd = BinningData(data_test) # To calculate the fitted model
+            bd = DataB(data_test, self.b_z, self.b_m) # To calculate the fitted model
 
         else:
             data_train = self.data_set
             
-            bd = BinningData(data_train) # To calculate the fitted model
+            bd = DataB(data_train, self.b_z, self.b_m) # To calculate the fitted model
             
 
     #data_set
@@ -128,13 +129,12 @@ class FittingModel:
     
     # Here we calculate the fitted model using mean data of bins:
         #Binning data
-        bin_f= bd.get_mean_bd(self.b_z, self.b_m)
-       
-        halos_mean = bin_f[0]
-        lnM_mean = np.log(halos_mean["mass"])
-        z_mean = halos_mean["redshift"]
+        bins_mean = bd.get_bins_mean()
+        lnM_mean = np.log(bins_mean["mass"])
+        z_mean = bins_mean["redshift"]
         
-        std_mean = bin_f[4]
+        bins_std = bd.get_bins_std()
+
     
         
         
@@ -144,11 +144,11 @@ class FittingModel:
 #         lnR_std_model = np.array( [model.get_std_richness(np.log(self.data_set["mass"][i]), self.data_set["redshift"][i]) for i in range(len(self.data_set["mass"]))])
         
         # Mean and std of data_set z mean and lnM mean
-        lnR_mean_model = np.array([model.get_mean_richness(lnM_mean[i], z_mean[i]) for i in range(len(halos_mean))])
+        lnR_mean_model = np.array([model.get_mean_richness(lnM_mean[i], z_mean[i]) for i in range(len(bins_mean))])
         
-        lnR_std_model = np.array( [model.get_std_richness(lnM_mean[i], z_mean[i]) for i in range(len(halos_mean))])
+        lnR_std_model = np.array( [model.get_std_richness(lnM_mean[i], z_mean[i]) for i in range(len(bins_mean))])
         
-        return lnR_mean_model, lnR_std_model, model, halos_mean, std_mean 
+        return lnR_mean_model, lnR_std_model, model, bins_mean, bins_std 
         
     
 

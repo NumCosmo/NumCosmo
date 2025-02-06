@@ -5,126 +5,112 @@ from astropy.table import Table
 
 
 #-------------------------------------------------------------------------------------------------#
-#BinningData: Class
+#DataB: Class
 #-------------------------------------------------------------------------------------------------#
 
-class BinningData:
-    def __init__(self, data_set):
+class DataB:
+    def __init__(self, data_set, z_bin_length, m_bin_length):
         self.data_set = data_set
+        self.zl = z_bin_length
+        self.ml = m_bin_length
+        self.mz_bins = self.get_mz_bins()
 
+
+        
 #-------------------------------------------------------------------------------------------------#
-# data_binning(D_Z, D_M)
-#
-# D_Z: Length of redshift bin; 
-# D_M: Length of mass bin.
-#
-# We make cuts in redshift (z) data with length D_Z and put this bins in halos_bin_z. Then, we get each z bin and cut in lnM bins with length D_M. The bins are put in halos_bin_mz.
+# get_mz_bins()
 #
 # Returns: 
 # halos_bin_mz : The bins of the data;
-#-------------------------------------------------------------------------------------------------#    
+#-------------------------------------------------------------------------------------------------# 
+    
+    def get_mz_bins(self):
 
-    def data_binning(self, D_Z, D_M):
-            
-            #Data to slice
-            z_data = self.data_set["redshift"]
-            lnm_data = np.log(self.data_set["mass"])
-            
-            # Number of bins
-            z_bins = int( ( (max(z_data) - min (z_data)) // D_Z )  + 1)
-            m_bins = int( ( (max(lnm_data) - min (lnm_data)) // D_M ) + 1)
-            
-            
-            #REDSHIFT CUTS
-            z_0 = 0.0
-            z_1 = D_Z
-            halos_bin_z =[]
-            
-            for i in range(z_bins):
-                cut_z = np.logical_and(z_data > z_0, z_data < z_1)
-                halos_bin_z.append(self.data_set[cut_z])
-                z_0 = z_0 + D_Z
-                z_1 = z_1 + D_Z
+            #To extract data
+            z_data, lnm_data = self.data_set["redshift"], np.log(self.data_set["mass"])
 
+            #Number of bins
+            z_bins = int((max(z_data) - min(z_data)) // self.zl) + 1
+            m_bins = int((max(lnm_data) - min(lnm_data)) // self.ml) + 1
             
-            # MASS CUTS
-            #label = []
             halos_bin_mz = []
-            lenbins = []
+            
             for i in range(z_bins):
-
-                lnM_0 = min(lnm_data)
-                lnM_1 = min(lnm_data) + D_M
+                cut_z = (z_data > i * self.zl) & (z_data < (i + 1) * self.zl)
+                halos_z = self.data_set[cut_z]
                 
                 for j in range(m_bins):
-
-                    cut = np.logical_and (np.log(halos_bin_z[i]["mass"]) > lnM_0, np.log(halos_bin_z[i]["mass"]) < lnM_1)
-                    if len(halos_bin_z[i][cut]) < 2: # cut off bins with 0 or 1 elements.
-                        pass
+                    lnM_0, lnM_1 = min(lnm_data) + j * self.ml, min(lnm_data) + (j + 1) * self.ml
+                    cut_m = (np.log(halos_z["mass"]) > lnM_0) & (np.log(halos_z["mass"]) < lnM_1)
+                    bin_subset = halos_z[cut_m]
                     
-                    else:
-                        #-------------------------------------------------
-                        if len(halos_bin_z[i][cut]) < 6:                    # To calculate percentage of bins with 
-                            lenbins.append(len(halos_bin_z[i][cut]))        # < 6 elements.
-                            
-                        else:
-                            pass
-                        # #-------------------------------------------------
-                        
-                        halos_bin_mz.append(halos_bin_z[i][cut])    
-                    
-                    
-                    #label.append(f"{min(halos_bin_z[i]['redshift_true']):.3f} < z < {max(halos_bin_z[i]['redshift_true']):.3f}\n{lnM_0:.3f} < lnM < {lnM_1:.3f}")                 
-                    
-                    lnM_0 = lnM_0 + D_M
-                    lnM_1 = lnM_1 + D_M
+                    if len(bin_subset) > 1:
+                        halos_bin_mz.append(bin_subset)
             
-            #n_perc_bin = ( len(lenbins) / len(halos_bin_mz) ) * 100   # Percentage of bins with < 6 elements.
-            #print(f'{n_perc_bin}% of bins contains < 6 elements')
-            
-            return halos_bin_mz 
-
+            return halos_bin_mz
+        
 
 #-------------------------------------------------------------------------------------------------#
-# get_mean_bd(D_Z, D_M)
-#
-# D_Z: Length of redshift bin; 
-# D_M: Length of mass bin.
-#
-# For each bin in halos_bin_mz is calculated the avarage of lnR , z, and lnM, and the results are put in halos_mean.
+# get_lnM_binned()
 #
 # Returns: 
-# halos_mean : average of lnR, lnM and z values in each bin;
-# lnM_binned, z_binned, lnR_binned: lnM, z and lnR values in each bin;
-# lnR_std: Std of lnR in each bin.
+# Average of lnM values in each bin.
 #-------------------------------------------------------------------------------------------------#    
    
-    def get_mean_bd(self, D_Z,  D_M):
+    def get_lnM_binned(self):
+
+        return [np.log(binned_data["mass"]) for binned_data in self.mz_bins]
+                       
+#-------------------------------------------------------------------------------------------------#
+# get_z_binned()
+#
+# Returns: 
+# Average of z values in each bin.
+#-------------------------------------------------------------------------------------------------#    
+    
+    def get_z_binned(self):
+
+        return [binned_data["redshift"] for binned_data in self.mz_bins]
+
+#-------------------------------------------------------------------------------------------------#
+# get_lnR_binned()
+#
+# Returns: 
+# Average of lnR values in each bin.
+#-------------------------------------------------------------------------------------------------#    
+    
+    def get_lnR_binned(self):
+
+        return [np.log(binned_data["richness"]) for binned_data in self.mz_bins]
+    
+#-------------------------------------------------------------------------------------------------#
+# get_bins_std()
+#
+# Returns: 
+# Std of lnR values in each bin.
+#-------------------------------------------------------------------------------------------------#    
+
+    def get_bins_std(self):
         
-        lnM_binned, z_binned, lnR_binned = [], [], [] 
-        binned_halos = self.data_binning(D_Z,  D_M)
+        return np.array( [np.std(lnrbin) for lnrbin in self.get_lnR_binned()] )
 
-        for i in range(len(binned_halos)):
-
-            halos = binned_halos[i]
-            
-            # lnR, lnM and z values in each bin 
-            lnM_binned.append(np.log(halos["mass"]))
-            z_binned.append(halos["redshift"])
-            lnR_binned.append(np.log(halos["richness"]))   
+#-------------------------------------------------------------------------------------------------#
+# get_bins_std()
+#
+# Returns: 
+# Std of lnR values in each bin.
+#-------------------------------------------------------------------------------------------------#        
+  
+    def get_bins_mean(self):
+                
+        # lnR mean, lnM mean and z mean values in each bin:
+        richness_mean = [np.mean(binned_data["richness"]) for binned_data in self.mz_bins if len(binned_data) > 0]
         
-        # Average of lnR, lnM and z values in each bin:
-        lnR_mean = [np.mean(l) for l in lnR_binned if len(l) > 0]
-        lnM_mean = [np.mean(l) for l in lnM_binned if len(l) > 0]
-        z_mean = [np.mean(k) for k in z_binned if len(k) > 0] 
+        mass_mean = [np.mean(binned_data["mass"]) for binned_data in self.mz_bins if len(binned_data) > 0]
         
-        # Std of lnR in each bin
-        lnR_std = np.array([np.sqrt( np.var(l)) for l in lnR_binned])
-
-        halos_mean = Table([np.exp(np.array(lnR_mean)), np.exp(np.array(lnM_mean)), z_mean],
-                   names=('richness', 'mass', 'redshift'))
-
-        return halos_mean, lnM_binned, z_binned, lnR_binned, lnR_std
+        z_mean = [np.mean(binned_data["redshift"]) for binned_data in self.mz_bins if len(binned_data) > 0]
+        
+        return Table([richness_mean, mass_mean, z_mean], names=('richness', 'mass', 'redshift'))
 
 
 
