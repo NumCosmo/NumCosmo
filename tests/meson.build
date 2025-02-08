@@ -577,6 +577,11 @@ if python_pyccl.found()
             'timeout': 0,
         },
         {
+            'name': 'py_concentration_mass_relations',
+            'source': 'test_py_concentration_mass_relations.py',
+            'timeout': 0,
+        },
+        {
             'name': 'py_xcor',
             'source': 'test_py_xcor.py',
             'timeout': 0,
