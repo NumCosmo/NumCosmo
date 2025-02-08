@@ -207,13 +207,19 @@ def test_halo_density_profile_get_numint_splines(
     """Test HaloDensityProfile get numint splines."""
     x_array = np.geomspace(1.0e-2, 1.0e1, 100)
 
-    twod_density, cyl_mass, _ = halo_density_profile.get_numint_splines()
+    spher_mass, twod_density, cyl_mass = halo_density_profile.get_numint_splines()
 
+    assert isinstance(spher_mass, Ncm.Spline)
     assert isinstance(twod_density, Ncm.Spline)
     assert isinstance(cyl_mass, Ncm.Spline)
 
+    spher_mass_array = np.array([spher_mass.eval(x) for x in x_array])
     twod_density_array = np.exp([twod_density.eval(np.log(x)) for x in x_array])
     cyl_mass_array = np.exp([cyl_mass.eval(np.log(x)) for x in x_array])
+
+    spher_mass_array_cmp = np.array(
+        [halo_density_profile.eval_numint_dl_spher_mass(x) for x in x_array]
+    )
 
     twod_density_array_cmp = np.array(
         [halo_density_profile.eval_numint_dl_2d_density(x) for x in x_array]
@@ -223,5 +229,6 @@ def test_halo_density_profile_get_numint_splines(
         [halo_density_profile.eval_numint_dl_cyl_mass(x) for x in x_array]
     )
 
+    assert_allclose(spher_mass_array, spher_mass_array_cmp)
     assert_allclose(twod_density_array, twod_density_array_cmp)
     assert_allclose(cyl_mass_array, cyl_mass_array_cmp)
