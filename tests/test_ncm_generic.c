@@ -825,18 +825,18 @@ test_nc_halo_cm_klypin11_basic (void)
 void
 test_nc_halo_cm_duffy08_basic (void)
 {
-  NcHaloCMDuffy08 *hcmd = nc_halo_cm_duffy_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0);
+  NcHaloCMDuffy08 *hcmd = nc_halo_cm_duffy08_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0);
   NcHaloCMDuffy08 *hcmd2;
 
   g_assert_true (hcmd != NULL);
-  g_assert_true (NC_IS_HALO_CM_DUFFY (hcmd));
+  g_assert_true (NC_IS_HALO_CM_DUFFY08 (hcmd));
 
-  hcmd2 = nc_halo_cm_duffy_ref (hcmd);
-  nc_halo_cm_duffy_clear (&hcmd2);
+  hcmd2 = nc_halo_cm_duffy08_ref (hcmd);
+  nc_halo_cm_duffy08_clear (&hcmd2);
   g_assert_true (hcmd2 == NULL);
 
-  g_assert_true (NC_IS_HALO_CM_DUFFY (hcmd));
+  g_assert_true (NC_IS_HALO_CM_DUFFY08 (hcmd));
 
-  NCM_TEST_FREE (nc_halo_cm_duffy_free, hcmd);
+  NCM_TEST_FREE (nc_halo_cm_duffy08_free, hcmd);
 }
 
