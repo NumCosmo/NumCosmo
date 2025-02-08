@@ -118,6 +118,7 @@
 #include <numcosmo/lss/nc_halo_density_profile_hernquist.h>
 #include <numcosmo/lss/nc_halo_mass_summary.h>
 #include <numcosmo/lss/nc_halo_cm_param.h>
+#include <numcosmo/lss/nc_halo_cm_duffy08.h>
 #include <numcosmo/lss/nc_halo_cm_klypin11.h>
 #include <numcosmo/lss/nc_galaxy_acf.h>
 #include <numcosmo/lss/nc_multiplicity_func.h>
