@@ -24,11 +24,12 @@
  */
 
 /**
- * SECTION:nc_halo_density_profile_einasto
- * @title: NcHaloDensityProfileEinasto
- * @short_description: Density profile of Einasto type.
+ * NcHaloDensityProfileEinasto:
  *
- * This object implements the #NcHaloDensityProfile class for the Einasto density profile.
+ * Density profile of Einasto type.
+ *
+ * This object implements the #NcHaloDensityProfile class for the Einasto density
+ * profile.
  *
  * As described #NcHaloDensityProfile, we just need to implement the dimensionless 3D density $\hat{\rho}(x)$
  * [which refers to the virtual function nc_halo_density_profile_eval_dl_density()].

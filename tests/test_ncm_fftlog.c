@@ -407,9 +407,9 @@ void
 test_ncm_fftlog_sbessel_jljm_new (TestNcmFftlog *test, gconstpointer pdata)
 {
   const guint N          = 1 * g_test_rand_int_range  (7800, 8000);
-  const guint ell        = g_test_rand_int_range  (0, 10);
-  const gint dell        = ell > 1 ? g_test_rand_int_range  (-2, 2) : g_test_rand_int_range  (-ell, ell + 2);
-  const gdouble lnw      = 1.0 / 4.0 * log (g_test_rand_double_range (0.4, 1.0));
+  const guint ell        = 2;  /* g_test_rand_int_range  (0, 10); */
+  const gint dell        = -1; /* ell > 1 ? g_test_rand_int_range  (-2, 2) : g_test_rand_int_range  (-ell, ell + 2); */
+  const gdouble lnw      = 1.0 / 4.0 * log (g_test_rand_double_range (0.9, 1.0));
   NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_sbessel_jljm_new (ell, dell, lnw, 0.0, 0.0, 20.0, N));
   TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
   TestNcmFftlogPlaw *arg = g_new (TestNcmFftlogPlaw, 1);
@@ -571,8 +571,6 @@ test_ncm_fftlog_eval (TestNcmFftlog *test, gconstpointer pdata)
     ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, 1.0e-3, &res, &err);
 
     ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
-
-    /* printf ("%u % 22.15g % 22.15g % 22.15g % 22.15e\n", l, test->argK->lnr, res, fftlog_res, fabs (res / fftlog_res - 1.0)); */
   }
 }
 

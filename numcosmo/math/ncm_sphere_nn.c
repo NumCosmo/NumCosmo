@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_sphere_nn
- * @title: NcmSphereNN
- * @short_description: An re-implementation of Healpix.
+ * NcmSphereNN:
+ *
+ * An re-implementation of Healpix.
  *
  * NN pixalization/manipulation algorithms, Ylm decomposition.
  *

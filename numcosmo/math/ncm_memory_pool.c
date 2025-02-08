@@ -23,14 +23,13 @@
  */
 
 /**
- * SECTION:ncm_memory_pool
- * @title: NcmMemoryPool
- * @short_description: Generic memory pool.
+ * NcmMemoryPool:
  *
- * #NcmMemoryPool is a generic memory pool, it alloc memory using
- * a user defined function and save it for future use, the memory must
- * be returned to the pool using #ncm_memory_pool_return.
- * These functions are thread safe.
+ * Generic memory pool.
+ *
+ * #NcmMemoryPool is a generic memory pool, it alloc memory using a user defined
+ * function and save it for future use, the memory must be returned to the pool using
+ * #ncm_memory_pool_return. These functions are thread safe.
  *
  */
 

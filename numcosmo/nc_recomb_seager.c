@@ -26,19 +26,17 @@
  */
 
 /**
- * SECTION:nc_recomb_seager
- * @title: NcRecombSeager
- * @short_description: Cosmic recombination implementing Seager (1999).
- * @include: numcosmo/nc_recomb_seager.h
+ * NcRecombSeager:
  *
- * Cosmic recobination as initally describe in [Seager (1999)][XSeager1999]
- * and [Seager (2000)][XSeager2000]. The code includes now all modifications
- * as in [recfast 1.5.2](http://www.astro.ubc.ca/people/scott/recfast.html),
- * which includes the modifications discussed in [Wong (2008)][XWong2008].
- * Nonetheless, we do not include the modification for the matter temperature
- * evolution as describe in [Scott (2009)][XScott2009]. Since we use a more
- * robust integration method such modification for the temperature evolution
- * is simply unnecessary.
+ * Cosmic recombination implementing Seager (1999).
+ *
+ * Cosmic recobination as initally describe in [Seager (1999)][XSeager1999] and [Seager
+ * (2000)][XSeager2000]. The code includes now all modifications as in [recfast
+ * 1.5.2](http://www.astro.ubc.ca/people/scott/recfast.html), which includes the
+ * modifications discussed in [Wong (2008)][XWong2008]. Nonetheless, we do not include
+ * the modification for the matter temperature evolution as describe in [Scott
+ * (2009)][XScott2009]. Since we use a more robust integration method such modification
+ * for the temperature evolution is simply unnecessary.
  *
  * See [NcRecomb][NcRecomb.description] for symbol definitions.
  *

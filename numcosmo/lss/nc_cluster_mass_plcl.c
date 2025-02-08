@@ -24,13 +24,13 @@
  */
 
 /**
- * SECTION:nc_cluster_mass_plcl
- * @title: NcClusterMassPlCL
- * @short_description: Planck-CLASH Cluster Mass Distribution
+ * NcClusterMassPlCL:
  *
- * FIXME Planck-CLASH Cluster Mass Distribution (SZ - Lensing).
+ * Planck-CLASH Cluster Mass Distribution.
  *
- * Do not use this object to perform cluster abundance analyses. For now, it is suitable just for cluster pseudo counts.
+ * Planck-CLASH Cluster Mass Distribution (SZ - Lensing). Do not use this object to
+ * perform cluster abundance analyses. For now, it is suitable just for cluster pseudo
+ * counts.
  */
 
 #ifdef HAVE_CONFIG_H

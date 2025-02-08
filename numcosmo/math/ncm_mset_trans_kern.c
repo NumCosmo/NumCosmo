@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_mset_trans_kern
- * @title: NcmMSetTransKern
- * @short_description: Abstract Class for a transition kernel and prior.
+ * NcmMSetTransKern:
+ *
+ * Abstract Class for a transition kernel and prior.
  *
  * This object defines the abstract class for a transition kernel and prior. It serves
  * as the base class for all transition kernels and priors, with two main purposes:

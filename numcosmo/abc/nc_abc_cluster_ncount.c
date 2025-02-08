@@ -24,11 +24,13 @@
  */
 
 /**
- * SECTION:nc_abc_cluster_ncount
- * @title: NcABCClusterNCount
- * @short_description: Object implementing Approximate Bayesian Computation (ABC) for cluster number counts.
+ * NcABCClusterNCount:
  *
- * FIXME
+ * Object implementing Approximate Bayesian Computation (ABC) for cluster number counts.
+ *
+ * This object implements the ABC method for cluster number counts. It uses a Gaussian
+ * Radial Basis Function (RBF) kernel to estimate the likelihood of the data given the
+ * model parameters.
  *
  */
 

@@ -33,6 +33,7 @@ from typing import Optional, Tuple
 import numpy as np
 
 from numcosmo_py import Ncm
+from numcosmo_py.helper import npa_to_seq
 from numcosmo_py.sampling.esmcmc import (
     create_esmcmc,
     WalkerTypes,
@@ -111,7 +112,7 @@ def sample_with_tmvn(
     for s in np.transpose(tmvn_sampler.sample(ssize)):
         dgc.peek_mean().set_array(s)
         st = np.concatenate(([dgc.m2lnL_val(mset)], s))
-        sv.append(Ncm.Vector.new_array(st.tolist()), True)
+        sv.append(Ncm.Vector.new_array(npa_to_seq(st)), True)
 
     filename = f"gauss_constraint_{dim}d_tmvn_samples.dat"
     with open(filename, "w", encoding="utf-8") as f:

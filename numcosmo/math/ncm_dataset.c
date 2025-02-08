@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_dataset
- * @title: NcmDataset
- * @short_description: A set of NcmData objects
+ * NcmDataset:
+ *
+ * A set of NcmData objects.
  *
  * The purpose of this class is to define a collection of #NcmData objects. These
  * objects serve as containers for #NcmData intended for use within the NumCosmo

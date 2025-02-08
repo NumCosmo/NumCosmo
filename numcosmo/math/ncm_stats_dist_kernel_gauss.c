@@ -26,10 +26,10 @@
  */
 
 /**
- * SECTION:ncm_stats_dist_kernel_gauss
- * @title: NcmStatsDistKernelGauss
- * @short_description: An N-dimensional Gaussian kernel used to compute the kernel density estimation function (KDE) in the #NcmStatsDist class.
- * An N-dimensional Gaussian kernel used to compute the kernel density estimation function (KDE) in the #NcmStatsDist class.
+ * NcmStatsDistKernelGauss:
+ *
+ * An N-dimensional Gaussian kernel used to compute the kernel density estimation
+ * function (KDE) in the #NcmStatsDist class.
  *
  * This object defines a multivariate Gaussian kernel to be used in the #NcmStatsDistKernel class. Also, this object implements
  * the virtual methods of the #NcmStatsDistKernel class. For more information, check the documentation of #NcmStatsDistKernel.

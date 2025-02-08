@@ -23,14 +23,12 @@
  */
 
 /**
- * SECTION:ncm_spline2d_spline
- * @title: NcmSpline2dSpline
- * @short_description: Implements bidimensional splines from splines method.
- * @stability: Stable
- * @include: numcosmo/math/ncm_spline2d_spline.h
+ * NcmSpline2dSpline:
  *
- * This object implements bidimensional splines with the method
- * given by the #NcmSpline class, e.g. #NcmSplineCubicNotaknot.
+ * Implements bidimensional splines from splines method.
+ *
+ * This object implements bidimensional splines with the method given by the #NcmSpline
+ * class, e.g. #NcmSplineCubicNotaknot.
  *
  */
 

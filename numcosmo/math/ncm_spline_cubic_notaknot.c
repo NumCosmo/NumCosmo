@@ -24,11 +24,9 @@
  */
 
 /**
- * SECTION:ncm_spline_cubic_notaknot
- * @title: NcmSplineCubicNotaknot
- * @short_description: Cubic spline implementation with 'not a knot' boundary conditions.
- * @stability: Stable
- * @include: numcosmo/math/ncm_spline_cubic_notaknot.h
+ * NcmSplineCubicNotaknot:
+ *
+ * Cubic spline implementation with 'not a knot' boundary conditions.
  *
  * This object implements the necessary functions to compute a cubic spline with
  * boundary conditions obtained with the 'not a knot' method.

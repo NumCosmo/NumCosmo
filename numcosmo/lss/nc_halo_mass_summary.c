@@ -26,13 +26,12 @@
  */
 
 /**
- * SECTION: nc_halo_mass_summary
- * @title: NcHaloMassSummary
- * @short_description: Class describing halo mass summary
- * @stability:
+ * NcHaloMassSummary:
  *
- * This class describes a halo mass summary, i.e. the mass definition
- * of a halo, mass-concentration relationship, etc.
+ * Class describing halo mass summary.
+ *
+ * This class describes a halo mass summary, i.e. the mass definition of a halo,
+ * mass-concentration relationship, etc.
  *
  */
 

@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:nc_hicosmo_de_wspline
- * @title: NcHICosmoDEWSpline
- * @short_description: Dark Energy -- spline equation of state
+ * NcHICosmoDEWSpline:
+ *
+ * Dark Energy -- spline equation of state.
  *
  * Dark Energy equation of state: $w(\alpha)$ approximated by a cubic spline.
  *

@@ -23,9 +23,9 @@
  */
 
 /**
- * SECTION:ncm_lapack
- * @title: NcmLapack
- * @short_description: Encapsulated LAPACK functions.
+ * NcmLapack:
+ *
+ * Encapsulated LAPACK functions.
  *
  * This object is dedicated to encapsulate functions from <ulink url="http://www.netlib.org/lapack/">LAPACK</ulink> choosing the most suitable backend.
  *

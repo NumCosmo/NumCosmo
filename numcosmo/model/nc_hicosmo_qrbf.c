@@ -28,11 +28,12 @@
 
 
 /**
- * SECTION:nc_hicosmo_qrbf
- * @title: NcHICosmoQRBF
- * @short_description: Kinetic model -- Spline deceleration function
+ * NcHICosmoQRBF:
  *
- * FIXME
+ * Kinetic model -- Radial basis function deceleration function.
+ *
+ * This object implements a kinetic model based on a radial basis function (RBF)
+ * deceleration function. It is a subclass of #NcHICosmo.
  *
  */
 
