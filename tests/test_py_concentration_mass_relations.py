@@ -113,20 +113,17 @@ DUFFY08_OPTS = [
     params=DUFFY08_OPTS,
     ids=[f"{mdef}_{Delta}" for mdef, _, Delta in DUFFY08_OPTS],
 )
-def fixture_duffy08_mdef(request) -> tuple[str, Nc.HaloMassSummaryMassDef, int | str]:
+def fixture_duffy08_mdef(request) -> tuple[str, Nc.HaloMassSummaryMassDef, int]:
     """Fixture for mass definition of concentration-mass relations."""
     return request.param
 
 
 @pytest.fixture(name="cmr_duffy08")
 def fixture_cmr_duffy08(
-    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
-    duffy08_mdef: tuple[str, Nc.HaloMassSummaryMassDef, int | str],
+    duffy08_mdef: tuple[str, Nc.HaloMassSummaryMassDef, int],
 ) -> tuple[pyccl.halos.ConcentrationDuffy08, Nc.HaloMassSummary]:
     """Fixture for Duffy08 concentration-mass relation."""
-    _, cosmo_nc = cosmologies
     rho_type, nc_rho_type, Delta = duffy08_mdef
-    print(Delta, rho_type, nc_rho_type)
     hmd = pyccl.halos.MassDef(Delta, rho_type)
     ccl_cmr_Duffy08 = pyccl.halos.ConcentrationDuffy08(mass_def=hmd)
     cmr_Duffy08 = Nc.HaloCMDuffy08.new(nc_rho_type, Delta)
@@ -135,11 +132,10 @@ def fixture_cmr_duffy08(
 
 
 @pytest.fixture(name="cmr_duffy08_vir")
-def fixture_cmr_duffy08_vir(
-    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
-) -> tuple[pyccl.halos.ConcentrationDuffy08, Nc.HaloMassSummary]:
+def fixture_cmr_duffy08_vir() -> (
+    tuple[pyccl.halos.ConcentrationDuffy08, Nc.HaloMassSummary]
+):
     """Fixture for Duffy08 concentration-mass relation for Virial mass definition."""
-    _, cosmo_nc = cosmologies
     hmd = pyccl.halos.MassDef("vir", "critical")
     ccl_cmr_Duffy08_vir = pyccl.halos.ConcentrationDuffy08(mass_def=hmd)
     cmr_Duffy08_vir = Nc.HaloCMDuffy08.new(Nc.HaloMassSummaryMassDef.VIRIAL, 200)
@@ -148,11 +144,10 @@ def fixture_cmr_duffy08_vir(
 
 
 @pytest.fixture(name="cmr_klypin11")
-def fixture_cmr_klypin11(
-    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
-) -> tuple[pyccl.halos.ConcentrationKlypin11, Nc.HaloMassSummary]:
+def fixture_cmr_klypin11() -> (
+    tuple[pyccl.halos.ConcentrationKlypin11, Nc.HaloMassSummary]
+):
     """Fixture for Klypin11 concentration-mass relation."""
-    _, cosmo_nc = cosmologies
     hmd = pyccl.halos.MassDef("vir", "critical")  # pyccl.halos.MassDef(Delta, rho_type)
     ccl_cmr_Klypin11 = pyccl.halos.ConcentrationKlypin11(mass_def=hmd)
     cmr_Klypin11 = Nc.HaloCMKlypin11.new(Nc.HaloMassSummaryMassDef.VIRIAL, 200)

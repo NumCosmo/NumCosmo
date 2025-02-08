@@ -214,8 +214,6 @@ _test_nc_halo_density_profile_einasto_rng (TestNcHaloDensityProfile *test)
   ncm_model_param_set_by_name (model2, "cDelta", cDelta, NULL);
   ncm_model_param_set_by_name (model, "alpha", alpha, NULL);
 
-  /*printf ("% 22.15g % 22.15g % 22.15g\n", log10MDelta, cDelta, alpha);*/
-
   return TRUE;
 }
 
@@ -298,9 +296,6 @@ test_nc_halo_density_profile_eval_dl_spher_mass (TestNcHaloDensityProfile *test,
       const gdouble X       = pow (10.0, g_test_rand_double_range (-3.0, 3.0));
       const gdouble NISigma = nc_halo_density_profile_eval_numint_dl_spher_mass (dp, X);
       const gdouble ISigma  = nc_halo_density_profile_eval_dl_spher_mass (dp, X);
-
-      printf ("X = %g, ISigma = %g, NISigma = %g\n", X, ISigma, NISigma);
-      fflush (stdout);
 
       ncm_assert_cmpdouble_e (ISigma, ==, NISigma, nc_halo_density_profile_get_reltol (dp) * 1.0e1, 0.0);
     }

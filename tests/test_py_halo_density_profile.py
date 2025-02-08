@@ -104,7 +104,7 @@ def test_halo_density_profile_basic(
         assert halo_density_profile.eval_2d_density(cosmo, R, z) > 0.0
         assert halo_density_profile.eval_cyl_mass(cosmo, R, z) > 0.0
         assert halo_density_profile.eval_density(cosmo, R, z) > 0.0
-        assert halo_density_profile.eval_spher_mass(cosmo, z) > 0.0
+        assert halo_density_profile.eval_spher_mass_delta(cosmo, z) > 0.0
         assert halo_density_profile.eval_dl_2d_density(R) > 0.0
         assert halo_density_profile.eval_dl_cyl_mass(R) > 0.0
         assert halo_density_profile.eval_dl_density(R) > 0.0
@@ -190,9 +190,9 @@ def test_halo_density_profile_rho_s(
     for z in z_array:
         rho_s = halo_density_profile.rho_s(cosmo, z)
         r_s, rho_s0 = halo_density_profile.r_s_rho_s(cosmo, z)
-        mass = halo_density_profile.eval_spher_mass(cosmo, z)
-        cDelta = halo_mass_summary.concentration(cosmo)
-        dl_mass = halo_density_profile.eval_dl_spher_mass(cosmo, cDelta)
+        mass = halo_density_profile.eval_spher_mass_delta(cosmo, z)
+        cDelta = halo_mass_summary.concentration(cosmo, z)
+        dl_mass = halo_density_profile.eval_dl_spher_mass(cDelta)
 
         assert rho_s > 0.0
         assert r_s > 0.0
@@ -207,7 +207,7 @@ def test_halo_density_profile_get_numint_splines(
     """Test HaloDensityProfile get numint splines."""
     x_array = np.geomspace(1.0e-2, 1.0e1, 100)
 
-    twod_density, cyl_mass = halo_density_profile.get_numint_splines()
+    twod_density, cyl_mass, _ = halo_density_profile.get_numint_splines()
 
     assert isinstance(twod_density, Ncm.Spline)
     assert isinstance(cyl_mass, Ncm.Spline)
