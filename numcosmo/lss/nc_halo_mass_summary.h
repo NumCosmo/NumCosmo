@@ -40,18 +40,6 @@ G_BEGIN_DECLS
 
 G_DECLARE_DERIVABLE_TYPE (NcHaloMassSummary, nc_halo_mass_summary, NC, HALO_MASS_SUMMARY, NcmModel)
 
-struct _NcHaloMassSummaryClass
-{
-  /*< private >*/
-  NcmModelClass parent_class;
-
-  gdouble (*mass) (NcHaloMassSummary *hms);
-  gdouble (*concentration) (NcHaloMassSummary *hms, NcHICosmo *cosmo);
-
-  /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[15];
-};
-
 /**
  * NcHaloMassSummaryMassDef:
  * @NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN: halo mass defined in terms of the mean density $\rho_\mathrm{bg} = \rho_m(z)$
@@ -75,6 +63,19 @@ typedef enum _NcHaloMassSummaryMassDef
   NC_HALO_MASS_SUMMARY_MASS_DEF_LEN, /*< skip >*/
 } NcHaloMassSummaryMassDef;
 
+struct _NcHaloMassSummaryClass
+{
+  /*< private >*/
+  NcmModelClass parent_class;
+
+  gdouble (*mass) (NcHaloMassSummary *hms);
+  gdouble (*concentration) (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z);
+  void (*set_Delta) (NcHaloMassSummary *hms, const gdouble Delta);
+  void (*set_mdef) (NcHaloMassSummary *hms, const NcHaloMassSummaryMassDef mdef);
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[14];
+};
 
 NCM_MSET_MODEL_DECLARE_ID (nc_halo_mass_summary);
 
@@ -83,11 +84,11 @@ NcHaloMassSummary *nc_halo_mass_summary_ref (NcHaloMassSummary *hms);
 void nc_halo_mass_summary_free (NcHaloMassSummary *hms);
 void nc_halo_mass_summary_clear (NcHaloMassSummary **hms);
 
-void nc_halo_mass_summary_set_Delta (NcHaloMassSummary *hms, const gdouble Delta);
 gdouble nc_halo_mass_summary_get_Delta (NcHaloMassSummary *hms);
+NcHaloMassSummaryMassDef nc_halo_mass_summary_get_mdef (NcHaloMassSummary *hms);
 
 gdouble nc_halo_mass_summary_mass (NcHaloMassSummary *hms);
-gdouble nc_halo_mass_summary_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo);
+gdouble nc_halo_mass_summary_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z);
 
 gdouble nc_halo_mass_summary_Delta (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_halo_mass_summary_rho_bg (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z);
