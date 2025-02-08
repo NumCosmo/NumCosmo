@@ -105,9 +105,36 @@ def test_halo_density_profile_basic(
         assert halo_density_profile.eval_cyl_mass(cosmo, R, z) > 0.0
         assert halo_density_profile.eval_density(cosmo, R, z) > 0.0
         assert halo_density_profile.eval_spher_mass_delta(cosmo, z) > 0.0
+        assert halo_density_profile.eval_spher_mass(cosmo, R, z) > 0.0
         assert halo_density_profile.eval_dl_2d_density(R) > 0.0
         assert halo_density_profile.eval_dl_cyl_mass(R) > 0.0
         assert halo_density_profile.eval_dl_density(R) > 0.0
+
+
+def test_halo_density_profile_spher_mass(
+    halo_density_profile: Nc.HaloDensityProfile,
+    cosmo: Nc.HICosmo,
+):
+    """Test HaloDensityProfile spherical mass vectorized."""
+    R_array = np.geomspace(1e-2, 1e2, 100, dtype=np.float64)
+    z_array = np.linspace(0.0, 1.0, 100, dtype=np.float64)
+
+    r_s_rho_s_array = np.array(
+        [halo_density_profile.r_s_rho_s(cosmo, z) for z in z_array]
+    )
+
+    x_array = R_array / r_s_rho_s_array[:, 0]
+    sVol_array = 4.0 * np.pi * r_s_rho_s_array[:, 0] ** 3.0 * r_s_rho_s_array[:, 1]
+    dl_sphere_mass_array = np.array(
+        [halo_density_profile.eval_dl_spher_mass(x) for x in x_array]
+    )
+    calc_sphere_mass_array = dl_sphere_mass_array * sVol_array
+    spher_mass_array = [
+        halo_density_profile.eval_spher_mass(cosmo, R, z)
+        for z, R in zip(z_array, R_array)
+    ]
+
+    assert_allclose(calc_sphere_mass_array, spher_mass_array)
 
 
 def test_halo_density_profile_2d_density_vectorized(

@@ -73,6 +73,7 @@ void test_nc_hiprim_two_fluids_basic (void);
 void test_nc_halo_mass_summary_basic (void);
 void test_nc_halo_cm_param_basic (void);
 void test_nc_halo_cm_klypin11_basic (void);
+void test_nc_halo_cm_duffy08_basic (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -121,6 +122,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/halo_mass_summary/basic", test_nc_halo_mass_summary_basic);
   g_test_add_func ("/nc/halo_cm_param/basic", test_nc_halo_cm_param_basic);
   g_test_add_func ("/nc/halo_cm_klypin11/basic", test_nc_halo_cm_klypin11_basic);
+  g_test_add_func ("/nc/halo_cm_duffy08/basic", test_nc_halo_cm_duffy08_basic);
 
 
   g_test_run ();
@@ -818,5 +820,23 @@ test_nc_halo_cm_klypin11_basic (void)
   g_assert_true (NC_IS_HALO_CM_KLYPIN11 (hcmk));
 
   NCM_TEST_FREE (nc_halo_cm_klypin11_free, hcmk);
+}
+
+void
+test_nc_halo_cm_duffy08_basic (void)
+{
+  NcHaloCMDuffy08 *hcmd = nc_halo_cm_duffy_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0);
+  NcHaloCMDuffy08 *hcmd2;
+
+  g_assert_true (hcmd != NULL);
+  g_assert_true (NC_IS_HALO_CM_DUFFY (hcmd));
+
+  hcmd2 = nc_halo_cm_duffy_ref (hcmd);
+  nc_halo_cm_duffy_clear (&hcmd2);
+  g_assert_true (hcmd2 == NULL);
+
+  g_assert_true (NC_IS_HALO_CM_DUFFY (hcmd));
+
+  NCM_TEST_FREE (nc_halo_cm_duffy_free, hcmd);
 }
 
