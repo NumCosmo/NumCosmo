@@ -140,7 +140,7 @@ _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDO
 
     for (j = 0; j < ncm_vector_len (yv); j++)
     {
-      gdouble y = -2.0 * log (ncm_vector_fast_get (yv, j) + 1.0e-100);
+      gdouble y = -2.0 * log (ncm_vector_fast_get (yv, j) + 1.0e-5);
 
       ncm_vector_set (m2lnyv, j, y);
     }
