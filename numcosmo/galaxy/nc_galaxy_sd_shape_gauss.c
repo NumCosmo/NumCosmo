@@ -479,6 +479,14 @@ _nc_galaxy_sd_shape_gauss_ldata_required_columns (NcGalaxySDShapeData *data, GLi
   columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_2));
 }
 
+static gdouble
+_nc_galaxy_sd_shape_gauss_get_radius (NcGalaxySDShapeData *data)
+{
+  NcGalaxySDShapeGaussData *ldata = (NcGalaxySDShapeGaussData *) data->ldata;
+
+  return ldata->radius;
+}
+
 static void
 _nc_galaxy_sd_shape_gauss_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data)
 {
@@ -490,6 +498,7 @@ _nc_galaxy_sd_shape_gauss_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionDa
   data->ldata_read_row         = &_nc_galaxy_sd_shape_gauss_ldata_read_row;
   data->ldata_write_row        = &_nc_galaxy_sd_shape_gauss_ldata_write_row;
   data->ldata_required_columns = &_nc_galaxy_sd_shape_gauss_ldata_required_columns;
+  data->ldata_get_radius       = &_nc_galaxy_sd_shape_gauss_get_radius;
 }
 
 /**
