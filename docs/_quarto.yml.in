@@ -17,6 +17,7 @@ project:
     - examples/intro/power_spectrum.qmd
     - examples/intro/recombination.qmd
     - examples/intro/simple.qmd
+    - benchmarks/ccl_background.qmd
 
 website:
   title: "The Numerical Cosmology Library"
@@ -74,6 +75,10 @@ website:
               contents:
               - href: examples/data_analysis/snia.qmd
                 text: "SN Ia Fitting"
+        - section: "Benchmarks"
+          contents:
+            - href: benchmarks/ccl_background.qmd
+              text: "CCL Background"
 
 resources:
   - reference/**

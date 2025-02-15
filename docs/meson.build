@@ -15,6 +15,7 @@ subdir('reference')
 subdir('images')
 subdir('tutorials')
 subdir('examples')
+subdir('benchmarks')
 
 quarto_conf = configuration_data()
 quarto_conf.set('version', meson.project_version())
