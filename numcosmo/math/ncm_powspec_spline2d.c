@@ -24,11 +24,9 @@
  */
 
 /**
- * SECTION:ncm_powspec_spline2d
- * @title: NcmPowspecSpline2d
- * @short_description: Power spectrum implementation using a 2D spline
- * @stability: Stable
- * @include: numcosmo/math/ncm_powspec_spline2d.h
+ * NcmPowspecSpline2d:
+ *
+ * Power spectrum implementation using a 2D spline.
  *
  * #NcmPowspecSpline2d is a power spectrum implementation using a 2D spline.
  *

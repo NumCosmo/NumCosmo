@@ -24,13 +24,11 @@
  */
 
 /**
- * SECTION:nc_recomb_cbe
- * @title: NcRecombCBE
- * @short_description: Cosmic recombination by Class.
- * @include: numcosmo/nc_recomb_cbe.h
+ * NcRecombCBE:
  *
- * Cosmic recobination as implemeted by Class.
- * For more details see: #NcCBE.
+ * Cosmic recombination by Class.
+ *
+ * Cosmic recobination as implemeted by Class. For more details see: #NcCBE.
  *
  */
 

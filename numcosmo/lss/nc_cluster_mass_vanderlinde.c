@@ -24,11 +24,10 @@
  */
 
 /**
- * SECTION:nc_cluster_mass_vanderlinde
- * @title: NcClusterMassVanderlinde
- * @short_description: Sunyaev-Zel'dovich cluster mass distribution.
+ * NcClusterMassVanderlinde:
  *
- * FIXME
+ * Sunyaev-Zel'dovich cluster mass distribution.
+ *
  */
 
 #ifdef HAVE_CONFIG_H

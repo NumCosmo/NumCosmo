@@ -605,6 +605,38 @@ def test_run_mcmc_apes_analyze(simple_experiment):
         raise result.exception
 
 
+def test_run_mcmc_apes_plot_corner(simple_experiment):
+    """Run a MCMC analysis using APES."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+
+    assert output.absolute().with_suffix(".mcmc.fits").exists()
+    if result.exit_code != 0:
+        raise result.exception
+
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "plot-corner",
+            filename.as_posix(),
+            output.absolute().with_suffix(".mcmc.fits").as_posix(),
+            "--no-show",
+            "--output",
+            output.absolute(),
+        ],
+    )
+
+    assert output.absolute().with_suffix(".corner.pdf").exists()
+
+    if result.exit_code != 0:
+        raise result.exception
+
+
 def test_run_mcmc_apes_analyze_evidence(simple_experiment):
     """Run a MCMC analysis using APES."""
     filename, _ = simple_experiment

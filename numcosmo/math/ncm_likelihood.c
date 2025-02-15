@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_likelihood
- * @title: NcmLikelihood
- * @short_description: Likelihood combining a NcmDataset and priors.
+ * NcmLikelihood:
+ *
+ * Likelihood combining a NcmDataset and priors.
  *
  * Class combining a #NcmDataset and priors. It represents the posterior distribution
  * of the parameters of a model given the data and the priors. For historical reasons

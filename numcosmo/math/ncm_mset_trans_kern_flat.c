@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_mset_trans_kern_flat
- * @title: NcmMSetTransKernFlat
- * @short_description: Multivariate flat sampler
+ * NcmMSetTransKernFlat:
+ *
+ * Multivariate flat sampler.
  *
  * This object subclasses NcmMSetTransKern and implements a multivariate flat sampler.
  *

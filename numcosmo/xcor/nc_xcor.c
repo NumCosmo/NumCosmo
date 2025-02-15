@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_xcor
- * @title: Cross-correlations
- * @short_description: Angular auto- and cross-spectra.
+ * NcXCor:
+ *
+ * Angular auto- and cross-spectra.
  *
  * The angular power spectrum between observables $A$ and $B$ with kernels $W^A$ and $W^B$ is
  * \begin{equation}

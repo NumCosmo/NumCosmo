@@ -26,19 +26,19 @@
  */
 
 /**
- * SECTION:ncm_stats_dist
- * @title: NcmStatsDist
- * @short_description: Abstract class for implementing N-dimensional probability distributions.
+ * NcmStatsDist:
+ *
+ * Base class for implementing N-dimensional probability distributions.
  *
  * Abstract class to reconstruct an arbitrary N-dimensional probability distribution.
- * This class provides the tools to perform a radial basis interpolation
- * in a multidimensional function using a radial basis function and then
- * generates a new sample using the interpolation function as the kernel.
- * This method generates a sample that is distributed by the original distribution,
- * but in a more simple way since the used kernels are easier to sample from.
- * For more information about radial basis interpolation,
- * check [[Radial Basis Function Interpolation, Wilna du Toit](https://core.ac.uk/download/pdf/37320748.pdf)].
- * A brief description of the radial basis interpolation method can be found below.
+ * This class provides the tools to perform a radial basis interpolation in a
+ * multidimensional function using a radial basis function and then generates a new
+ * sample using the interpolation function as the kernel. This method generates a sample
+ * that is distributed by the original distribution, but in a more simple way since the
+ * used kernels are easier to sample from. For more information about radial basis
+ * interpolation, check [[Radial Basis Function Interpolation, Wilna du
+ * Toit](https://core.ac.uk/download/pdf/37320748.pdf)]. A brief description of the
+ * radial basis interpolation method can be found below.
  *
  * Given a d-simensional function $g(x): \mathbf{R}^d \rightarrow \mathbf{R}$, a radial basis
  * function $\phi(x, \Sigma)$ is used such that

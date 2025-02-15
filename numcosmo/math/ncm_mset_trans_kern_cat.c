@@ -25,9 +25,9 @@
 
 
 /**
- * SECTION:ncm_mset_trans_kern_cat
- * @title: NcmMSetTransKernCat
- * @short_description: Catalog sampler
+ * NcmMSetTransKernCat:
+ *
+ * Catalog sampler.
  *
  * This object subclasses NcmMSetTransKern and implements a catalog sampler.
  *

@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_data_poisson
- * @title: NcmDataPoisson
- * @short_description: Abstract class for implementing poisson distributed data.
+ * NcmDataPoisson:
+ *
+ * Abstract class for implementing poisson distributed data.
  *
  * Class for implementing Poisson distributed data.
  *

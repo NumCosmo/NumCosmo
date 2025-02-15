@@ -24,11 +24,9 @@
  */
 
 /**
- * SECTION:ncm_spline_func_test
- * @title: NcmSplineFuncTest
- * @short_description: test suite to analyze the NcmSplineFunc's knots distribution.
- * @stability: Unstable
- * @include: numcosmo/math/ncm_spline_func_test.h
+ * NcmSplineFuncTest:
+ *
+ * Test suite to analyze the NcmSplineFunc's knots distribution.
  *
  * This module is intended to be a test suite for the [NcmSplineFunc](numcosmo-NcmSplineFunc.html) object.
  * It performs a brute force approach to check if the required tolerance (#NcmSplineFuncTest:rel-error and #NcmSplineFuncTest:scale)
@@ -483,6 +481,7 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_stats_vec.h"
 #include <gsl/gsl_sort_vector.h>
+#include <gsl/gsl_sf_trig.h>
 #include "ncm_enum_types.h"
 #include "math/ncm_cfg.h"
 
@@ -501,9 +500,13 @@ typedef struct _NcmSplineFuncTestPrivate
   NcmVector *ygrid_lin;
   NcmVector *diff_ncm;
   NcmVector *diff_lin;
+  NcmVector *diff_ncm_th;
+  NcmVector *diff_lin_th;
 
   gdouble rel_error;
   gdouble scale;
+  guint refine;
+  gdouble refine_ns;
 
   guint npar;
   NcmVector *x_spl;
@@ -543,6 +546,8 @@ enum
   PROP_XF,
   PROP_REL_ERROR,
   PROP_SCALE,
+  PROP_REFINE,
+  PROP_REFINE_NS,
   PROP_SIZE,
 };
 
@@ -562,18 +567,22 @@ ncm_spline_func_test_init (NcmSplineFuncTest *sft)
   self->pdftype = 0;
   self->ftype   = 0;
 
-  self->ngrid      = 0;
-  self->xi         = 0.0;
-  self->xf         = 0.0;
-  self->xgrid      = NULL;
-  self->ygrid_true = NULL;
-  self->ygrid_ncm  = NULL;
-  self->ygrid_lin  = NULL;
-  self->diff_ncm   = NULL;
-  self->diff_lin   = NULL;
+  self->ngrid       = 0;
+  self->xi          = 0.0;
+  self->xf          = 0.0;
+  self->xgrid       = NULL;
+  self->ygrid_true  = NULL;
+  self->ygrid_ncm   = NULL;
+  self->ygrid_lin   = NULL;
+  self->diff_ncm    = NULL;
+  self->diff_lin    = NULL;
+  self->diff_ncm_th = NULL;
+  self->diff_lin_th = NULL;
 
   self->rel_error = 0.0;
   self->scale     = 0.0;
+  self->refine    = 0;
+  self->refine_ns = 0.0;
 
   self->npar         = 0;
   self->x_spl        = NULL;
@@ -587,8 +596,8 @@ ncm_spline_func_test_init (NcmSplineFuncTest *sft)
   self->ncm_out       = 0;
   self->lin_out       = 0;
   self->out_threshold = 0.0;
-  self->stats_grid    = ncm_stats_vec_new (2, NCM_STATS_VEC_VAR, FALSE);
-  self->stats_mc      = ncm_stats_vec_new (9, NCM_STATS_VEC_VAR, FALSE);
+  self->stats_grid    = ncm_stats_vec_new (4, NCM_STATS_VEC_VAR, FALSE);
+  self->stats_mc      = ncm_stats_vec_new (11, NCM_STATS_VEC_VAR, FALSE);
 
   self->len = 0;
   self->ncm = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
@@ -636,6 +645,12 @@ _ncm_spline_func_test_set_property (GObject *object, guint prop_id, const GValue
     case PROP_SCALE:
       ncm_spline_func_test_set_scale (sft, g_value_get_double (value));
       break;
+    case PROP_REFINE:
+      ncm_spline_func_test_set_refine (sft, g_value_get_uint (value));
+      break;
+    case PROP_REFINE_NS:
+      ncm_spline_func_test_set_refine_ns (sft, g_value_get_double (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -676,6 +691,12 @@ _ncm_spline_func_test_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_SCALE:
       g_value_set_double (value, ncm_spline_func_test_get_scale (sft));
       break;
+    case PROP_REFINE:
+      g_value_set_uint (value, ncm_spline_func_test_get_refine (sft));
+      break;
+    case PROP_REFINE_NS:
+      g_value_set_double (value, ncm_spline_func_test_get_refine_ns (sft));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -694,6 +715,8 @@ _ncm_spline_func_test_dispose (GObject *object)
   ncm_vector_clear (&self->ygrid_lin);
   ncm_vector_clear (&self->diff_ncm);
   ncm_vector_clear (&self->diff_lin);
+  ncm_vector_clear (&self->diff_ncm_th);
+  ncm_vector_clear (&self->diff_lin_th);
 
   ncm_vector_clear (&self->x_spl);
   ncm_vector_clear (&self->params);
@@ -860,6 +883,34 @@ ncm_spline_func_test_class_init (NcmSplineFuncTestClass *klass)
                                                         NULL,
                                                         "Scale",
                                                         0.0, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+/**
+ * NcmSplineFuncTest:refine:
+ * The number of times to refine the grid.
+ *
+ */
+  g_object_class_install_property (object_class,
+                                   PROP_REFINE,
+                                   g_param_spec_uint ("refine",
+                                                      NULL,
+                                                      "Number of refinements",
+                                                      0, G_MAXUINT32, 1,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmSplineFuncTest:refine-ns:
+   *
+   * The number of standard deviations necessary to mark an interval to be refined in
+   * the grid.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_REFINE_NS,
+                                   g_param_spec_double ("refine-ns",
+                                                        NULL,
+                                                        "Number of refinements",
+                                                        0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -1116,6 +1167,67 @@ ncm_spline_func_test_set_scale (NcmSplineFuncTest *sft, const gdouble scale)
 }
 
 /**
+ * ncm_spline_func_test_set_refine:
+ * @sft: a #NcmSplineFuncTest
+ * @refine: number of refinements
+ *
+ * Sets the number of times to refine the grid.
+ *
+ */
+void
+ncm_spline_func_test_set_refine (NcmSplineFuncTest *sft, const guint refine)
+{
+  NcmSplineFuncTestPrivate * const self = ncm_spline_func_test_get_instance_private (sft);
+
+  self->refine = refine;
+}
+
+/**
+ * ncm_spline_func_test_get_refine:
+ * @sft: a #NcmSplineFuncTest
+ *
+ * Returns: the number of refinements.
+ */
+guint
+ncm_spline_func_test_get_refine (NcmSplineFuncTest *sft)
+{
+  NcmSplineFuncTestPrivate * const self = ncm_spline_func_test_get_instance_private (sft);
+
+  return self->refine;
+}
+
+/**
+ * ncm_spline_func_test_set_refine_ns:
+ * @sft: a #NcmSplineFuncTest
+ * @refine_ns: number of standard deviations necessary to mark an interval to be refined in the grid
+ *
+ * Sets the number of standard deviations necessary to mark an interval to be refined in
+ * the grid.
+ *
+ */
+void
+ncm_spline_func_test_set_refine_ns (NcmSplineFuncTest *sft, const gdouble refine_ns)
+{
+  NcmSplineFuncTestPrivate * const self = ncm_spline_func_test_get_instance_private (sft);
+
+  self->refine_ns = refine_ns;
+}
+
+/**
+ * ncm_spline_func_test_get_refine_ns:
+ * @sft: a #NcmSplineFuncTest
+ *
+ * Returns: the number of standard deviations necessary to mark an interval to be refined in the grid.
+ */
+gdouble
+ncm_spline_func_test_get_refine_ns (NcmSplineFuncTest *sft)
+{
+  NcmSplineFuncTestPrivate * const self = ncm_spline_func_test_get_instance_private (sft);
+
+  return self->refine_ns;
+}
+
+/**
  * ncm_spline_func_test_set_out_threshold:
  * @sft: a #NcmSplineFuncTest
  * @out_threshold: threshold of outliers in a grid (\%)
@@ -1325,7 +1437,9 @@ static void _ncm_spline_func_test_prepare_to_loop (NcmSplineFuncTestPrivate *sel
 static void _ncm_spline_func_test_save_interpolated_points (NcmSplineFuncTestPrivate *self, gchar *fname);
 
 static gdouble _ncm_spline_func_test_gsl_eval_cos (gdouble x, gpointer p);
+static gdouble _ncm_spline_func_test_gsl_eval_exp_sinc (gdouble x, gpointer p);
 static gdouble _ncm_spline_func_test_gsl_eval_spl (gdouble x, gpointer p);
+static gdouble _ncm_spline_func_test_gsl_eval_spl_pos (gdouble x, gpointer p);
 
 /**
  * ncm_spline_func_test_prepare:
@@ -1347,9 +1461,11 @@ ncm_spline_func_test_prepare (NcmSplineFuncTest *sft, NcmSplineFuncType ftype, N
   self->params  = ncm_vector_new (self->npar);
   self->x_spl   = ncm_vector_new (self->npar);
 
-
   if (self->type == NCM_SPLINE_FUNC_TEST_TYPE_COSINE)
     g_assert (GSL_IS_EVEN (self->npar));
+
+  if (self->type == NCM_SPLINE_FUNC_TEST_TYPE_EXP_SINC)
+    g_assert_cmpuint (self->npar, ==, 2);
 
   _ncm_spline_func_test_set_grid (self);
 
@@ -1363,8 +1479,16 @@ ncm_spline_func_test_prepare (NcmSplineFuncTest *sft, NcmSplineFuncType ftype, N
       self->F.function = &_ncm_spline_func_test_gsl_eval_spl;
       self->F.params   = ncm_spline_gsl_new (gsl_interp_polynomial);
       break;
+    case NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL_POS:
+      self->F.function = &_ncm_spline_func_test_gsl_eval_spl_pos;
+      self->F.params   = self->params;
+      break;
     case NCM_SPLINE_FUNC_TEST_TYPE_COSINE:
       self->F.function = &_ncm_spline_func_test_gsl_eval_cos;
+      self->F.params   = self->params;
+      break;
+    case NCM_SPLINE_FUNC_TEST_TYPE_EXP_SINC:
+      self->F.function = &_ncm_spline_func_test_gsl_eval_exp_sinc;
       self->F.params   = self->params;
       break;
     case NCM_SPLINE_FUNC_TEST_TYPE_RBF:
@@ -1423,14 +1547,18 @@ ncm_spline_func_test_set_one_grid_stats (NcmSplineFuncTest *sft)
     if (fabs (diff_lin) > threshold)
       self->lin_out++;
 
-    ncm_vector_fast_set (self->ygrid_true, i, ytrue);
-    ncm_vector_fast_set (self->ygrid_ncm,  i, yncm);
-    ncm_vector_fast_set (self->ygrid_lin,  i, ylin);
-    ncm_vector_fast_set (self->diff_ncm,   i, diff_ncm);
-    ncm_vector_fast_set (self->diff_lin,   i, diff_lin);
+    ncm_vector_fast_set (self->ygrid_true,  i, ytrue);
+    ncm_vector_fast_set (self->ygrid_ncm,   i, yncm);
+    ncm_vector_fast_set (self->ygrid_lin,   i, ylin);
+    ncm_vector_fast_set (self->diff_ncm,    i, diff_ncm);
+    ncm_vector_fast_set (self->diff_lin,    i, diff_lin);
+    ncm_vector_fast_set (self->diff_ncm_th, i, fabs (diff_ncm / threshold));
+    ncm_vector_fast_set (self->diff_lin_th, i, fabs (diff_lin / threshold));
 
     ncm_stats_vec_set (self->stats_grid, 0, diff_ncm);
     ncm_stats_vec_set (self->stats_grid, 1, diff_lin);
+    ncm_stats_vec_set (self->stats_grid, 2, fabs (diff_ncm / threshold));
+    ncm_stats_vec_set (self->stats_grid, 3, fabs (diff_lin / threshold));
 
     ncm_stats_vec_update (self->stats_grid);
   }
@@ -1466,6 +1594,7 @@ ncm_spline_func_test_monte_carlo (NcmSplineFuncTest *sft, guint nsim)
 
   do {
     gdouble ncm_min, ncm_max, lin_min, lin_max, ncm_out, lin_out;
+    gdouble ncm_min_th, ncm_max_th, lin_min_th, lin_max_th;
 
     ncm_spline_func_test_set_one_grid_stats (sft);
 
@@ -1500,6 +1629,8 @@ ncm_spline_func_test_monte_carlo (NcmSplineFuncTest *sft, guint nsim)
 
     ncm_vector_get_absminmax (self->diff_ncm, &ncm_min, &ncm_max);
     ncm_vector_get_absminmax (self->diff_lin, &lin_min, &lin_max);
+    ncm_vector_get_absminmax (self->diff_ncm_th, &ncm_min_th, &ncm_max_th);
+    ncm_vector_get_absminmax (self->diff_lin_th, &lin_min_th, &lin_max_th);
 
     ncm_stats_vec_set (self->stats_mc, 0, (1.0 * self->len));
     ncm_stats_vec_set (self->stats_mc, 1, ncm_out);
@@ -1510,6 +1641,8 @@ ncm_spline_func_test_monte_carlo (NcmSplineFuncTest *sft, guint nsim)
     ncm_stats_vec_set (self->stats_mc, 6, ncm_stats_vec_get_sd (self->stats_grid, 1));
     ncm_stats_vec_set (self->stats_mc, 7, ncm_max);
     ncm_stats_vec_set (self->stats_mc, 8, lin_max);
+    ncm_stats_vec_set (self->stats_mc, 9, ncm_max_th);
+    ncm_stats_vec_set (self->stats_mc, 10, lin_max_th);
 
     ncm_stats_vec_update (self->stats_mc);
 
@@ -1556,6 +1689,7 @@ ncm_spline_func_test_monte_carlo_and_save_to_txt (NcmSplineFuncTest *sft, guint 
 
   do {
     gdouble ncm_min, ncm_max, lin_min, lin_max, ncm_out, lin_out;
+    gdouble ncm_min_th, ncm_max_th, lin_min_th, lin_max_th;
 
     ncm_spline_func_test_set_one_grid_stats (sft);
 
@@ -1590,16 +1724,24 @@ ncm_spline_func_test_monte_carlo_and_save_to_txt (NcmSplineFuncTest *sft, guint 
 
     ncm_vector_get_absminmax (self->diff_ncm, &ncm_min, &ncm_max);
     ncm_vector_get_absminmax (self->diff_lin, &lin_min, &lin_max);
+    ncm_vector_get_absminmax (self->diff_ncm_th, &ncm_min_th, &ncm_max_th);
+    ncm_vector_get_absminmax (self->diff_lin_th, &lin_min_th, &lin_max_th);
 
-    fprintf (fout, "%6u  %7.3e  %7.3e  %22.15e  %22.15e  %22.15e  %22.15e  %22.15e  %22.15e\n",
+    fprintf (fout, "%6u  %7.3e  %7.3e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
              self->len,
              (100.0 * self->ncm_out) / (1.0 * self->ngrid),
              (100.0 * self->lin_out) / (1.0 * self->ngrid),
              ncm_stats_vec_get_mean (self->stats_grid, 0),
              ncm_stats_vec_get_mean (self->stats_grid, 1),
+             ncm_stats_vec_get_mean (self->stats_grid, 2),
+             ncm_stats_vec_get_mean (self->stats_grid, 3),
              ncm_stats_vec_get_sd (self->stats_grid, 0),
              ncm_stats_vec_get_sd (self->stats_grid, 1),
-             ncm_max, lin_max);
+             ncm_stats_vec_get_sd (self->stats_grid, 2),
+             ncm_stats_vec_get_sd (self->stats_grid, 3),
+             ncm_max, lin_max,
+             ncm_max_th,
+             lin_max_th);
 
     ncm_stats_vec_set (self->stats_mc, 0, (1.0 * self->len));
     ncm_stats_vec_set (self->stats_mc, 1, ncm_out);
@@ -1610,6 +1752,8 @@ ncm_spline_func_test_monte_carlo_and_save_to_txt (NcmSplineFuncTest *sft, guint 
     ncm_stats_vec_set (self->stats_mc, 6, ncm_stats_vec_get_sd (self->stats_grid, 1));
     ncm_stats_vec_set (self->stats_mc, 7, ncm_max);
     ncm_stats_vec_set (self->stats_mc, 8, lin_max);
+    ncm_stats_vec_set (self->stats_mc, 9, ncm_max_th);
+    ncm_stats_vec_set (self->stats_mc, 10, lin_max_th);
 
     ncm_stats_vec_update (self->stats_mc);
 
@@ -1639,24 +1783,29 @@ ncm_spline_func_test_log_vals_one_grid_stats (NcmSplineFuncTest *sft)
   NcmSplineFuncTestPrivate *self = ncm_spline_func_test_get_instance_private (sft);
 
   gdouble ncm_min, ncm_max, lin_min, lin_max;
+  gdouble ncm_min_th, ncm_max_th, lin_min_th, lin_max_th;
 
   ncm_vector_get_absminmax (self->diff_ncm, &ncm_min, &ncm_max);
   ncm_vector_get_absminmax (self->diff_lin, &lin_min, &lin_max);
+  ncm_vector_get_absminmax (self->diff_ncm_th, &ncm_min_th, &ncm_max_th);
+  ncm_vector_get_absminmax (self->diff_lin_th, &lin_min_th, &lin_max_th);
 
   printf ("\n##### Grid statistics  #####\n\n");
 
   printf (" * NcmSplineFunc number of knots = %u\n\n", self->len);
 
-  printf (" * (ncm) diff. = %8.3e +/- %8.3e (abs. max. diff. = %8.3e) | outliers = %5.2f %%\n",
+  printf (" * (ncm) diff. = %8.3e +/- %8.3e (abs. max. diff. = %8.3e) | (abs. max. diff. / threshold) = %8.3e | outliers = %5.6f %%\n",
           ncm_stats_vec_get_mean (self->stats_grid, 0),
           ncm_stats_vec_get_sd (self->stats_grid, 0),
           ncm_max,
+          ncm_max_th,
           (100. * self->ncm_out) / (1. * self->ngrid));
 
-  printf (" * (lin) diff. = %8.3e +/- %8.3e (abs. max. diff. = %8.3e) | outliers = %5.2f %%\n\n",
+  printf (" * (lin) diff. = %8.3e +/- %8.3e (abs. max. diff. = %8.3e) | (abs. max. diff. / threshold) = %8.3e  | outliers = %5.6f %%\n\n",
           ncm_stats_vec_get_mean (self->stats_grid, 1),
           ncm_stats_vec_get_sd (self->stats_grid, 1),
           lin_max,
+          lin_max_th,
           (100. * self->lin_out) / (1. * self->ngrid));
 }
 
@@ -1741,6 +1890,7 @@ ncm_spline_func_test_save_knots_to_txt (NcmSplineFuncTest *sft, gchar *fname)
 /**
  * ncm_spline_func_test_log_vals_mc_stats:
  * @sft: a #NcmSplineFuncTest
+ * @output: (nullable): file name to save the Monte Carlo statistics
  *
  * Prints the Monte Carlo statistics.
  *
@@ -1753,25 +1903,38 @@ ncm_spline_func_test_save_knots_to_txt (NcmSplineFuncTest *sft, gchar *fname)
  * </note>
  */
 void
-ncm_spline_func_test_log_vals_mc_stats (NcmSplineFuncTest *sft)
+ncm_spline_func_test_log_vals_mc_stats (NcmSplineFuncTest *sft, const gchar *output)
 {
   NcmSplineFuncTestPrivate * const self = ncm_spline_func_test_get_instance_private (sft);
+  FILE *fout                            = NULL;
 
-  printf ("\n####  Monte Carlo statistics for %u simulations  ####\n\n", self->nsim);
-  printf ("   * NcmSplineFunc number of knots: %8.2f +/- %8.2f\n", ncm_stats_vec_get_mean (self->stats_mc, 0), ncm_stats_vec_get_sd (self->stats_mc, 0));
-  printf ("\n");
-  printf ("   * Ncm clean grid (%%): %5.2f\n", 100.0 * self->ncm_good / (1.0 * self->nsim));
-  printf ("   * Lin clean grid (%%): %5.2f\n", 100.0 * self->lin_good / (1.0 * self->nsim));
-  printf ("\n");
-  printf ("   * Ncm outliers (%%): %5.2f +/- %5.2f\n", ncm_stats_vec_get_mean (self->stats_mc, 1), ncm_stats_vec_get_sd (self->stats_mc, 1));
-  printf ("   * Lin outliers (%%): %5.2f +/- %5.2f\n", ncm_stats_vec_get_mean (self->stats_mc, 2), ncm_stats_vec_get_sd (self->stats_mc, 2));
-  printf ("\n");
-  printf ("   * Ncm diff. : %7.3e +/- %7.3e\n", ncm_stats_vec_get_mean (self->stats_mc, 3), ncm_stats_vec_get_mean (self->stats_mc, 5));
-  printf ("   * Lin diff. : %7.3e +/- %7.3e\n", ncm_stats_vec_get_mean (self->stats_mc, 4), ncm_stats_vec_get_mean (self->stats_mc, 6));
-  printf ("\n");
-  printf ("   * Ncm abs. max. diff. : %7.3e +/- %7.3e\n", ncm_stats_vec_get_mean (self->stats_mc, 7), ncm_stats_vec_get_sd (self->stats_mc, 7));
-  printf ("   * Lin abs. max. diff. : %7.3e +/- %7.3e\n", ncm_stats_vec_get_mean (self->stats_mc, 8), ncm_stats_vec_get_sd (self->stats_mc, 8));
-  printf ("\n");
+  if (output == NULL)
+    fout = stdout;
+  else
+    fout = fopen (output, "w");
+
+  fprintf (fout, "\n####  Monte Carlo statistics for %u simulations  ####\n\n", self->nsim);
+  fprintf (fout, "   * NcmSplineFunc number of knots: %8.2f +/- %8.2f\n", ncm_stats_vec_get_mean (self->stats_mc, 0), ncm_stats_vec_get_sd (self->stats_mc, 0));
+  fprintf (fout, "\n");
+  fprintf (fout, "   * Ncm clean grid (%%): %5.6f\n", 100.0 * self->ncm_good / (1.0 * self->nsim));
+  fprintf (fout, "   * Lin clean grid (%%): %5.6f\n", 100.0 * self->lin_good / (1.0 * self->nsim));
+  fprintf (fout, "\n");
+  fprintf (fout, "   * Ncm outliers (%%): %5.6f +/- %5.6f\n", ncm_stats_vec_get_mean (self->stats_mc, 1), ncm_stats_vec_get_sd (self->stats_mc, 1));
+  fprintf (fout, "   * Lin outliers (%%): %5.6f +/- %5.6f\n", ncm_stats_vec_get_mean (self->stats_mc, 2), ncm_stats_vec_get_sd (self->stats_mc, 2));
+  fprintf (fout, "\n");
+  fprintf (fout, "   * Ncm diff. : %7.3e +/- %7.3e\n", ncm_stats_vec_get_mean (self->stats_mc, 3), ncm_stats_vec_get_mean (self->stats_mc, 5));
+  fprintf (fout, "   * Lin diff. : %7.3e +/- %7.3e\n", ncm_stats_vec_get_mean (self->stats_mc, 4), ncm_stats_vec_get_mean (self->stats_mc, 6));
+  fprintf (fout, "\n");
+  fprintf (fout, "   * Ncm abs. max. diff. : %7.3e +/- %7.3e\n", ncm_stats_vec_get_mean (self->stats_mc, 7), ncm_stats_vec_get_sd (self->stats_mc, 7));
+  fprintf (fout, "   * Lin abs. max. diff. : %7.3e +/- %7.3e\n", ncm_stats_vec_get_mean (self->stats_mc, 8), ncm_stats_vec_get_sd (self->stats_mc, 8));
+  fprintf (fout, "\n");
+  fprintf (fout, "   * Ncm abs. max. diff. threshold : %7.3e +/- %7.3e\n", ncm_stats_vec_get_mean (self->stats_mc, 9), ncm_stats_vec_get_sd (self->stats_mc, 9));
+  fprintf (fout, "   * Lin abs. max. diff. threshold : %7.3e +/- %7.3e\n", ncm_stats_vec_get_mean (self->stats_mc, 10), ncm_stats_vec_get_sd (self->stats_mc, 10));
+  fprintf (fout, "\n");
+  fflush (fout);
+
+  if (output != NULL)
+    fclose (fout);
 }
 
 static void
@@ -1833,14 +1996,17 @@ _ncm_spline_func_test_set_grid (NcmSplineFuncTestPrivate *self)
   ncm_vector_clear (&self->ygrid_lin);
   ncm_vector_clear (&self->diff_ncm);
   ncm_vector_clear (&self->diff_lin);
+  ncm_vector_clear (&self->diff_ncm_th);
+  ncm_vector_clear (&self->diff_lin_th);
 
-  self->xgrid      = ncm_vector_new (self->ngrid);
-  self->ygrid_true = ncm_vector_new (self->ngrid);
-  self->ygrid_ncm  = ncm_vector_new (self->ngrid);
-  self->ygrid_lin  = ncm_vector_new (self->ngrid);
-  self->diff_ncm   = ncm_vector_new (self->ngrid);
-  self->diff_lin   = ncm_vector_new (self->ngrid);
-
+  self->xgrid       = ncm_vector_new (self->ngrid);
+  self->ygrid_true  = ncm_vector_new (self->ngrid);
+  self->ygrid_ncm   = ncm_vector_new (self->ngrid);
+  self->ygrid_lin   = ncm_vector_new (self->ngrid);
+  self->diff_ncm    = ncm_vector_new (self->ngrid);
+  self->diff_lin    = ncm_vector_new (self->ngrid);
+  self->diff_ncm_th = ncm_vector_new (self->ngrid);
+  self->diff_lin_th = ncm_vector_new (self->ngrid);
 
   for (i = 0; i < self->ngrid; i++)
     ncm_vector_fast_set (self->xgrid, i, (dx * i + self->xi));
@@ -1935,9 +2101,33 @@ _ncm_spline_func_test_gsl_eval_cos (gdouble x, gpointer p)
 }
 
 static gdouble
+_ncm_spline_func_test_gsl_eval_exp_sinc (gdouble x, gpointer p)
+{
+  NcmVector *v        = NCM_VECTOR (p);
+  const gdouble alpha = ncm_vector_fast_get (v, 0);
+  const gdouble beta  = ncm_vector_fast_get (v, 1);
+
+  return 0.5 * exp (alpha * x) + gsl_pow_2 (gsl_sf_sinc (beta * x / M_PI));
+}
+
+static gdouble
 _ncm_spline_func_test_gsl_eval_spl (gdouble x, gpointer p)
 {
   return ncm_spline_eval (NCM_SPLINE (p), x);
+}
+
+static gdouble
+_ncm_spline_func_test_gsl_eval_spl_pos (gdouble x, gpointer p)
+{
+  NcmVector *params = NCM_VECTOR (p);
+  gdouble res       = 0.0;
+  guint len         = ncm_vector_len (params);
+  guint i;
+
+  for (i = 0; i < len; i++)
+    res = (res + ncm_vector_fast_get (params, len - 1 - i)) * x;
+
+  return res;
 }
 
 static void
@@ -1965,9 +2155,11 @@ _ncm_spline_func_test_prepare_spl (NcmSplineFuncTestPrivate *self)
     _ncm_spline_func_test_drawn_params (self);
   }
 
-  ncm_spline_set (NCM_SPLINE (self->F.params), self->x_spl, self->params, FALSE);
-
-  ncm_spline_prepare (NCM_SPLINE (self->F.params));
+  if (self->type == NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL)
+  {
+    ncm_spline_set (NCM_SPLINE (self->F.params), self->x_spl, self->params, FALSE);
+    ncm_spline_prepare (NCM_SPLINE (self->F.params));
+  }
 }
 
 static void
@@ -1976,9 +2168,13 @@ _ncm_spline_func_test_prepare_to_loop (NcmSplineFuncTestPrivate *self)
   switch (self->type)
   {
     case NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL:
+    case NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL_POS:
       _ncm_spline_func_test_prepare_spl (self);
       break;
     case NCM_SPLINE_FUNC_TEST_TYPE_COSINE:
+      _ncm_spline_func_test_drawn_params (self);
+      break;
+    case NCM_SPLINE_FUNC_TEST_TYPE_EXP_SINC:
       _ncm_spline_func_test_drawn_params (self);
       break;
     case NCM_SPLINE_FUNC_TEST_TYPE_RBF:
@@ -1995,7 +2191,7 @@ _ncm_spline_func_test_prepare_to_loop (NcmSplineFuncTestPrivate *self)
   if (self->F_prepare != NULL)
     self->F_prepare (self->F.params);
 
-  ncm_spline_set_func_scale (self->ncm, self->ftype, &self->F, self->xi, self->xf, 0, self->rel_error, self->scale, 10000, 1.0);
+  ncm_spline_set_func_scale (self->ncm, self->ftype, &self->F, self->xi, self->xf, 0, self->rel_error, self->scale, self->refine, self->refine_ns);
 
   self->len = ncm_spline_get_len (self->ncm);
 

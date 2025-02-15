@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            nc_hipert_comp.c
  *
@@ -14,22 +15,23 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
- * SECTION:nc_hipert_comp
- * @title: NcHIPertComp
- * @short_description: Abstract class describing a general perturbation component.
+ * NcHIPertComp:
  *
- * FIXME
+ * Base class describing a general perturbation component.
+ *
+ * This object is a base class for perturbation components. It is employed by
+ * #NcHIPert and is responsible for computing the perturbations of a given component.
  *
  */
 
@@ -67,6 +69,7 @@ static void
 _nc_hipert_comp_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHIPertComp *comp = NC_HIPERT_COMP (object);
+
   g_return_if_fail (NC_IS_HIPERT_COMP (object));
 
   switch (prop_id)
@@ -84,6 +87,7 @@ static void
 _nc_hipert_comp_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHIPertComp *comp = NC_HIPERT_COMP (object);
+
   g_return_if_fail (NC_IS_HIPERT_COMP (object));
 
   switch (prop_id)
@@ -100,7 +104,6 @@ _nc_hipert_comp_get_property (GObject *object, guint prop_id, GValue *value, GPa
 static void
 _nc_hipert_comp_dispose (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_comp_parent_class)->dispose (object);
 }
@@ -108,7 +111,6 @@ _nc_hipert_comp_dispose (GObject *object)
 static void
 _nc_hipert_comp_finalize (GObject *object)
 {
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_comp_parent_class)->finalize (object);
 }
@@ -130,7 +132,7 @@ static void _nc_hipert_comp_get_dy_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg
 static void
 nc_hipert_comp_class_init (NcHIPertCompClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->set_property = &_nc_hipert_comp_set_property;
   object_class->get_property = &_nc_hipert_comp_get_property;
@@ -145,7 +147,7 @@ nc_hipert_comp_class_init (NcHIPertCompClass *klass)
                                                       NC_TYPE_HIPERT_GRAV_GAUGE,
                                                       NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   klass->ndyn_var          = &_nc_hipert_comp_ndyn_var;
   klass->get_deps          = &_nc_hipert_comp_get_deps;
   klass->set_gauge         = &_nc_hipert_comp_set_gauge;
@@ -157,28 +159,65 @@ nc_hipert_comp_class_init (NcHIPertCompClass *klass)
   klass->get_dy_scalar     = &_nc_hipert_comp_get_dy_scalar;
 }
 
-static guint _nc_hipert_comp_ndyn_var (NcHIPertComp *comp) { g_error ("_nc_hipert_comp_ndyn_var: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp)); return 0; }
-static GArray *_nc_hipert_comp_get_deps (NcHIPertComp *comp, guint vindex) { g_error ("_nc_hipert_comp_get_deps: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp)); return NULL; }
+static guint
+_nc_hipert_comp_ndyn_var (NcHIPertComp *comp)
+{
+  g_error ("_nc_hipert_comp_ndyn_var: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp));
 
-static void 
+  return 0;
+}
+
+static GArray *
+_nc_hipert_comp_get_deps (NcHIPertComp *comp, guint vindex)
+{
+  g_error ("_nc_hipert_comp_get_deps: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp));
+
+  return NULL;
+}
+
+static void
 _nc_hipert_comp_set_gauge (NcHIPertComp *comp, NcHIPertGravGauge gauge)
 {
   comp->priv->gauge = gauge;
 }
 
-static NcHIPertGravGauge 
+static NcHIPertGravGauge
 _nc_hipert_comp_get_gauge (NcHIPertComp *comp)
 {
   return comp->priv->gauge;
 }
 
-static NcHIPertGravTScalarInfo *_nc_hipert_comp_get_T_scalar_info (NcHIPertComp *comp)                                                                                    { g_error ("_nc_hipert_comp_get_T_scalar_info: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp)); return NULL; }
+static NcHIPertGravTScalarInfo *
+_nc_hipert_comp_get_T_scalar_info (NcHIPertComp *comp)
+{
+  g_error ("_nc_hipert_comp_get_T_scalar_info: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp));
 
-static void _nc_hipert_comp_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar)                                { g_error ("_nc_hipert_comp_get_T_scalar: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp)); }
-static void _nc_hipert_comp_get_T_vector (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTVector *T_vector)                                { g_error ("_nc_hipert_comp_get_T_vector: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp)); }
-static void _nc_hipert_comp_get_T_tensor (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTTensor *T_tensor)                                { g_error ("_nc_hipert_comp_get_T_tensor: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp)); }
+  return NULL;
+}
 
-static void _nc_hipert_comp_get_dy_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar) { g_error ("_nc_hipert_comp_get_dy_scalar: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp)); }
+static void
+_nc_hipert_comp_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar)
+{
+  g_error ("_nc_hipert_comp_get_T_scalar: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp));
+}
+
+static void
+_nc_hipert_comp_get_T_vector (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTVector *T_vector)
+{
+  g_error ("_nc_hipert_comp_get_T_vector: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp));
+}
+
+static void
+_nc_hipert_comp_get_T_tensor (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTTensor *T_tensor)
+{
+  g_error ("_nc_hipert_comp_get_T_tensor: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp));
+}
+
+static void
+_nc_hipert_comp_get_dy_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
+{
+  g_error ("_nc_hipert_comp_get_dy_scalar: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp));
+}
 
 /**
  * nc_hipert_comp_ref:
@@ -201,7 +240,7 @@ nc_hipert_comp_ref (NcHIPertComp *comp)
  * Decreases the reference count of @comp.
  *
  */
-void 
+void
 nc_hipert_comp_free (NcHIPertComp *comp)
 {
   g_object_unref (comp);
@@ -214,7 +253,7 @@ nc_hipert_comp_free (NcHIPertComp *comp)
  * Decreases the reference count of *@comp and sets the pointer *@comp to NULL.
  *
  */
-void 
+void
 nc_hipert_comp_clear (NcHIPertComp **comp)
 {
   g_clear_object (comp);
@@ -233,7 +272,7 @@ nc_hipert_comp_clear (NcHIPertComp **comp)
  *
  * Returns: the number of dynamical components in @comp.
  */
-guint 
+guint
 nc_hipert_comp_ndyn_var (NcHIPertComp *comp)
 {
   return NC_HIPERT_COMP_GET_CLASS (comp)->ndyn_var (comp);
@@ -256,12 +295,12 @@ nc_hipert_comp_get_deps (NcHIPertComp *comp, guint vindex)
  * nc_hipert_comp_set_gauge: (virtual set_gauge)
  * @comp: a #NcHIPertComp
  * @gauge: a #NcHIPertGravGauge
- * 
+ *
  * Sets the gauge #NcHIPertGravGauge that the component @comp
  * should use.
- * 
+ *
  */
-void 
+void
 nc_hipert_comp_set_gauge (NcHIPertComp *comp, NcHIPertGravGauge gauge)
 {
   NC_HIPERT_COMP_GET_CLASS (comp)->set_gauge (comp, gauge);
@@ -270,12 +309,12 @@ nc_hipert_comp_set_gauge (NcHIPertComp *comp, NcHIPertGravGauge gauge)
 /**
  * nc_hipert_comp_get_gauge: (virtual get_gauge)
  * @comp: a #NcHIPertComp
- * 
+ *
  * Gets the gauge #NcHIPertGravGauge used by the component @comp.
- * 
+ *
  * Returns: current gauge of @comp.
  */
-NcHIPertGravGauge 
+NcHIPertGravGauge
 nc_hipert_comp_get_gauge (NcHIPertComp *comp)
 {
   return NC_HIPERT_COMP_GET_CLASS (comp)->get_gauge (comp);
@@ -284,9 +323,9 @@ nc_hipert_comp_get_gauge (NcHIPertComp *comp)
 /**
  * nc_hipert_comp_get_Tscalar_coupling: (virtual get_T_scalar_info)
  * @comp: a #NcHIPertComp
- * 
+ *
  * Provides all information about the scalar energy momentum tensor.
- * 
+ *
  * Returns: a #NcHIPertGravTScalarInfo.
  */
 NcHIPertGravTScalarInfo *
@@ -301,10 +340,10 @@ nc_hipert_comp_get_T_scalar_info (NcHIPertComp *comp)
  * @bg_var: a #NcHIPertBGVar
  * @ydy: a #NcHIPertBGVarYDY
  * @T_scalar: a #NcHIPertGravTScalar
- * 
- * Calculates the current value of the energy momentum tensor 
+ *
+ * Calculates the current value of the energy momentum tensor
  * and stores it in @T_scalar.
- * 
+ *
  */
 /**
  * nc_hipert_comp_get_dy_scalar: (virtual get_dy_scalar)
@@ -313,7 +352,8 @@ nc_hipert_comp_get_T_scalar_info (NcHIPertComp *comp)
  * @ydy: a #NcHIPertBGVarYDY
  * @T_scalar: a #NcHIPertGravTScalar
  * @G_scalar: a #NcHIPertGravScalar
- * 
+ *
  * Calculates the time derivative of the dynamical variables.
- * 
+ *
  */
+

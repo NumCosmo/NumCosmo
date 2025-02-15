@@ -24,12 +24,12 @@
  */
 
 /**
- * SECTION:ncm_serialize
- * @title: NcmSerialize
- * @short_description: Serialization, deserialization and duplication object.
+ * NcmSerialize:
  *
- * This object provides serialization, deserialization and duplication of objects.
- * The serialization process is based on the GObject object system.
+ * Serialization, deserialization and duplication object.
+ *
+ * This object provides serialization, deserialization and duplication of objects. The
+ * serialization process is based on the GObject object system.
  *
  * Serialization is the process of converting an object into a stream of bytes to store the object
  * or transmit it to memory, a database, or a file. Its main purpose is to save the state of an object

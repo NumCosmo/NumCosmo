@@ -24,11 +24,12 @@
  */
 
 /**
- * SECTION:nc_transfer_func_camb
- * @title: NcTransferFuncCAMB
- * @short_description: Transfer function using CAMB as backend.
+ * NcTransferFuncCAMB:
  *
- * FIXME
+ * Transfer function using CAMB as backend.
+ *
+ * This objects implements the transfer function using CAMB as backend.
+ *
  */
 
 #ifdef HAVE_CONFIG_H

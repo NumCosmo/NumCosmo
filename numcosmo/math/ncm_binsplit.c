@@ -23,14 +23,12 @@
  */
 
 /**
- * SECTION:ncm_binsplit
- * @title: NcmBinSplit
- * @short_description: Binnary splitting algorithms used to evaluate sums fast and with arbitrary precision.
- * @stability: Stable
- * @include: numcosmo/math/ncm_binsplit.h
+ * NcmBinSplit:
  *
- * This object implements a binary splitting algorithm to evaluate sums
- * with arbitrary precision.
+ * Binnary splitting algorithms used to evaluate sums fast and with arbitrary precision.
+ *
+ * This object implements a binary splitting algorithm to evaluate sums with arbitrary
+ * precision.
  *
  */
 

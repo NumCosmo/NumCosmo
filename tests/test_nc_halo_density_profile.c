@@ -128,12 +128,12 @@ test_nc_halo_density_profile_nfw_new (TestNcHaloDensityProfile *test, gconstpoin
 {
   NcHICosmo *cosmo         = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcDistance *dist         = nc_distance_new (3.0);
-  NcHaloMassSummary *hms   = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0));
+  NcHaloMassSummary *hms   = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0));
   NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
 
   g_assert_true (dp != NULL);
 
-  g_assert_true (NC_IS_HALO_MC_PARAM (hms));
+  g_assert_true (NC_IS_HALO_CM_PARAM (hms));
   g_assert_true (NC_IS_HALO_DENSITY_PROFILE_NFW (dp));
 
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,       70.0);
@@ -167,12 +167,12 @@ test_nc_halo_density_profile_hernquist_new (TestNcHaloDensityProfile *test, gcon
 {
   NcHICosmo *cosmo         = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcDistance *dist         = nc_distance_new (3.0);
-  NcHaloMassSummary *hms   = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0));
+  NcHaloMassSummary *hms   = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0));
   NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_hernquist_new (hms));
 
   g_assert_true (dp != NULL);
 
-  g_assert_true (NC_IS_HALO_MC_PARAM (hms));
+  g_assert_true (NC_IS_HALO_CM_PARAM (hms));
   g_assert_true (NC_IS_HALO_DENSITY_PROFILE_HERNQUIST (dp));
 
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,       70.0);
@@ -206,15 +206,13 @@ _test_nc_halo_density_profile_einasto_rng (TestNcHaloDensityProfile *test)
 {
   NcmModel *model           = NCM_MODEL (test->dp);
   NcmModel *model2          = NCM_MODEL (test->hms);
-  const gdouble log10MDelta = g_test_rand_double_range (ncm_model_param_get_lower_bound (model2, NC_HALO_MC_PARAM_LOG10M_DELTA),  ncm_model_param_get_upper_bound (model2, NC_HALO_MC_PARAM_LOG10M_DELTA));
-  const gdouble cDelta      = g_test_rand_double_range (ncm_model_param_get_lower_bound (model2, NC_HALO_MC_PARAM_C_DELTA),       ncm_model_param_get_upper_bound (model2, NC_HALO_MC_PARAM_C_DELTA));
+  const gdouble log10MDelta = g_test_rand_double_range (ncm_model_param_get_lower_bound (model2, NC_HALO_CM_PARAM_LOG10M_DELTA),  ncm_model_param_get_upper_bound (model2, NC_HALO_CM_PARAM_LOG10M_DELTA));
+  const gdouble cDelta      = g_test_rand_double_range (ncm_model_param_get_lower_bound (model2, NC_HALO_CM_PARAM_C_DELTA),       ncm_model_param_get_upper_bound (model2, NC_HALO_CM_PARAM_C_DELTA));
   const gdouble alpha       = g_test_rand_double_range (ncm_model_param_get_lower_bound (model, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA), ncm_model_param_get_upper_bound (model, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA));
 
   ncm_model_param_set_by_name (model2, "log10MDelta", log10MDelta, NULL);
   ncm_model_param_set_by_name (model2, "cDelta", cDelta, NULL);
   ncm_model_param_set_by_name (model, "alpha", alpha, NULL);
-
-  /*printf ("% 22.15g % 22.15g % 22.15g\n", log10MDelta, cDelta, alpha);*/
 
   return TRUE;
 }
@@ -224,12 +222,12 @@ test_nc_halo_density_profile_einasto_new (TestNcHaloDensityProfile *test, gconst
 {
   NcHICosmo *cosmo         = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcDistance *dist         = nc_distance_new (3.0);
-  NcHaloMassSummary *hms   = NC_HALO_MASS_SUMMARY (nc_halo_mc_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0));
+  NcHaloMassSummary *hms   = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0));
   NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_einasto_new (hms));
 
   g_assert_true (dp != NULL);
 
-  g_assert_true (NC_IS_HALO_MC_PARAM (hms));
+  g_assert_true (NC_IS_HALO_CM_PARAM (hms));
   g_assert_true (NC_IS_HALO_DENSITY_PROFILE_EINASTO (dp));
 
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,       70.0);
@@ -296,8 +294,8 @@ test_nc_halo_density_profile_eval_dl_spher_mass (TestNcHaloDensityProfile *test,
     for (i = 0; i < test->ntests; i++)
     {
       const gdouble X       = pow (10.0, g_test_rand_double_range (-3.0, 3.0));
-      const gdouble ISigma  = nc_halo_density_profile_eval_dl_spher_mass (dp, X);
       const gdouble NISigma = nc_halo_density_profile_eval_numint_dl_spher_mass (dp, X);
+      const gdouble ISigma  = nc_halo_density_profile_eval_dl_spher_mass (dp, X);
 
       ncm_assert_cmpdouble_e (ISigma, ==, NISigma, nc_halo_density_profile_get_reltol (dp) * 1.0e1, 0.0);
     }

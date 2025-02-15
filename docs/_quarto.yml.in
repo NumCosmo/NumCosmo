@@ -1,0 +1,96 @@
+project:
+  type: website
+  output-dir: docs
+  render:
+    - index.qmd
+    - about.qmd
+    - install.qmd
+    - numcosmo-math-api.qmd
+    - numcosmo-api.qmd
+    - tutorials/c/gobject.qmd
+    - tutorials/c/curve_tutorial.qmd
+    - tutorials/python/cluster_wl_simul.qmd
+    - examples/data_analysis/snia.qmd
+    - examples/intro/epdf.qmd
+    - examples/intro/hiprim.qmd
+    - examples/intro/hiprim_tensor.qmd
+    - examples/intro/power_spectrum.qmd
+    - examples/intro/recombination.qmd
+    - examples/intro/simple.qmd
+
+website:
+  title: "The Numerical Cosmology Library"
+  favicon: images/favicon_numcosmo.png
+  navbar:
+    search: true
+    tools:
+      - icon: github
+        menu:
+          - text: "Source Code"
+            href: https://github.com/NumCosmo/NumCosmo
+          - text: "Issues"
+            href: https://github.com/NumCosmo/NumCosmo/issues
+    left:
+      - about.qmd
+      - install.qmd
+      - text: "NumCosmoMath"
+        href: reference/numcosmo-math/index.html
+      - text: "NumCosmo"
+        href: reference/numcosmo/index.html
+  sidebar:
+      style: "docked"
+      logo: images/numcosmo_logo.png
+      collapse-level: 2
+      contents:
+        - section: "Programming Tutorials"
+          contents:
+            - section: "C Tutorials"
+              contents:                
+              - href: tutorials/c/gobject.qmd
+                text: "GObject Tutorial"
+              - href: tutorials/c/curve_tutorial.qmd
+                text: "Model Fit Tutorial"
+            - section: "Python Tutorials"
+              contents:
+              - href: tutorials/python/cluster_wl_simul.qmd
+                text: "Cluster WL Simulation"
+        - section: "Examples"
+          contents:
+            - section: "Introduction"
+              contents:
+              - href: examples/intro/epdf.qmd
+                text: "Empirical PDF"
+              - href: examples/intro/simple.qmd
+                text: "Simple Example"
+              - href: examples/intro/recombination.qmd
+                text: "Recombination"
+              - href: examples/intro/hiprim.qmd
+                text: "Primordial Modeling"
+              - href: examples/intro/hiprim_tensor.qmd
+                text: "Primordial Tensor Contribution"
+              - href: examples/intro/power_spectrum.qmd
+                text: "Matter Power Spectrum"
+            - section: "Data Analysis"
+              contents:
+              - href: examples/data_analysis/snia.qmd
+                text: "SN Ia Fitting"
+
+resources:
+  - reference/**
+
+bibliography: references.bib
+
+format:
+  html:
+    theme: [serif, custom.scss]
+    toc: true
+    code-overflow: wrap
+    grid:
+      body-width: 1200px
+
+reference-location: margin
+citation-location: margin
+authors:
+  - NumCosmo developers
+jupyter: python3
+version: @version@

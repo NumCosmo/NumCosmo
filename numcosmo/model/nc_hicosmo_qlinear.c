@@ -23,14 +23,15 @@
  */
 
 /**
- * SECTION:nc_hicosmo_qlinear
- * @title: NcHICosmoQLinear
- * @short_description: Kinetic model -- Linear deceleration function
+ * NcHICosmoQLinear:
  *
- * The deceleration function is defined as a linear function, $q(z) = q_0 + q_1 (z - z_1)$.
- * The comoving distance in units of the Hubble radius today is
+ * Kinetic model -- Linear deceleration function.
  *
- * $$D_c(z) =  \frac{1}{E} \int_{z_1}^{z} e^{q_1(z_1 - z^\prime)} \left(\frac{1+z^\prime}{1+z_1}\right)^{(1+z_1)q_1 - q_0 -1} \mathrm{d}z^\prime,$$
+ * The deceleration function is defined as a linear function, $q(z) = q_0 + q_1 (z -
+ * z_1)$. The comoving distance in units of the Hubble radius today is
+ *
+ * $$D_c(z) =  \frac{1}{E} \int_{z_1}^{z} e^{q_1(z_1 - z^\prime)}
+ * \left(\frac{1+z^\prime}{1+z_1}\right)^{(1+z_1)q_1 - q_0 -1} \mathrm{d}z^\prime,$$
  * where E is the normalized Hubble function at $z_1$.
  *
  */

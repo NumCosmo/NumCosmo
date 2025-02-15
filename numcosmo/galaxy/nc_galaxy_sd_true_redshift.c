@@ -29,11 +29,9 @@
  */
 
 /**
- * SECTION: nc_galaxy_sd_true_redshift
- * @title: NcGalaxySDTrueRedshift
- * @short_description: Class describing galaxy sample redshift distributions.
- * @stability: Unstable
+ * NcGalaxySDTrueRedshift:
  *
+ * Class describing galaxy sample redshift distributions.
  *
  * This class describes a galaxy sample redshift distributions.
  *

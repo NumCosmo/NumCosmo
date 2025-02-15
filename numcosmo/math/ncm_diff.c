@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_diff
- * @title: NcmDiff
- * @short_description: Numerical differentiation object
+ * NcmDiff:
+ *
+ * Numerical differentiation object.
  *
  * Class to perform numerical differentiation.
  *

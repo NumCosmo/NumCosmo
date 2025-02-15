@@ -24,14 +24,14 @@
  */
 
 /**
- * SECTION:ncm_prior_flat_param
- * @title: NcmPriorFlatParam
- * @short_description: a flat prior on a sampling parameter.
+ * NcmPriorFlatParam:
+ *
+ * Flat prior on a sampling parameter.
  *
  * This object is a subclass of #NcmPriorFlat, tailored for defining a flat prior on a
- * sampling parameter. The prior is uniquely identified by the sampling parameter ID
- * and is characterized by user-specified lower and upper limits, along with the scale
- * of the prior.
+ * sampling parameter. The prior is uniquely identified by the sampling parameter ID and
+ * is characterized by user-specified lower and upper limits, along with the scale of
+ * the prior.
  *
  * Users enjoy the flexibility to specify the parameter in various ways:
  * - Using the pair NcmModelID and the parameter pid.

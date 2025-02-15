@@ -26,13 +26,12 @@
  */
 
 /**
- * SECTION: nc_halo_mass_summary
- * @title: NcHaloMassSummary
- * @short_description: Class describing halo mass summary
- * @stability:
+ * NcHaloMassSummary:
  *
- * This class describes a halo mass summary, i.e. the mass definition
- * of a halo, mass-concentration relationship, etc.
+ * Class describing halo mass summary.
+ *
+ * This class describes a halo mass summary, i.e. the mass definition of a halo,
+ * mass-concentration relationship, etc.
  *
  */
 
@@ -73,21 +72,23 @@ nc_halo_mass_summary_init (NcHaloMassSummary *hms)
   self->Delta = 0.0;
 }
 
+static void _nc_halo_mass_summary_set_Delta (NcHaloMassSummary *hms, const gdouble Delta);
+static void _nc_halo_mass_summary_set_mdef (NcHaloMassSummary *hms, const NcHaloMassSummaryMassDef mdef);
+
 static void
 _nc_halo_mass_summary_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHaloMassSummary *hms                = NC_HALO_MASS_SUMMARY (object);
-  NcHaloMassSummaryPrivate * const self = nc_halo_mass_summary_get_instance_private (hms);
+  NcHaloMassSummary *hms = NC_HALO_MASS_SUMMARY (object);
 
   g_return_if_fail (NC_IS_HALO_MASS_SUMMARY (object));
 
   switch (prop_id)
   {
     case PROP_MDEF:
-      self->mdef = g_value_get_enum (value);
+      _nc_halo_mass_summary_set_mdef (hms, g_value_get_enum (value));
       break;
     case PROP_DELTA:
-      self->Delta = g_value_get_double (value);
+      _nc_halo_mass_summary_set_Delta (hms, g_value_get_double (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -98,18 +99,17 @@ _nc_halo_mass_summary_set_property (GObject *object, guint prop_id, const GValue
 static void
 _nc_halo_mass_summary_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHaloMassSummary *hms                = NC_HALO_MASS_SUMMARY (object);
-  NcHaloMassSummaryPrivate * const self = nc_halo_mass_summary_get_instance_private (hms);
+  NcHaloMassSummary *hms = NC_HALO_MASS_SUMMARY (object);
 
   g_return_if_fail (NC_IS_HALO_MASS_SUMMARY (object));
 
   switch (prop_id)
   {
     case PROP_MDEF:
-      g_value_set_enum (value, self->mdef);
+      g_value_set_enum (value, nc_halo_mass_summary_get_mdef (hms));
       break;
     case PROP_DELTA:
-      g_value_set_double (value, self->Delta);
+      g_value_set_double (value, nc_halo_mass_summary_get_Delta (hms));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -140,7 +140,7 @@ _nc_halo_mass_summary_mass (NcHaloMassSummary *hms)
 }
 
 static gdouble
-_nc_halo_mass_summary_concentration (NcHaloMassSummary *hms)
+_nc_halo_mass_summary_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z)
 {
   g_error ("_nc_halo_mass_summary_concentration: method not implemented.");
 
@@ -156,7 +156,6 @@ nc_halo_mass_summary_class_init (NcHaloMassSummaryClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-
 
   model_class->set_property = &_nc_halo_mass_summary_set_property;
   model_class->get_property = &_nc_halo_mass_summary_get_property;
@@ -204,6 +203,30 @@ nc_halo_mass_summary_class_init (NcHaloMassSummaryClass *klass)
 
   klass->mass          = &_nc_halo_mass_summary_mass;
   klass->concentration = &_nc_halo_mass_summary_concentration;
+  klass->set_Delta     = NULL;
+  klass->set_mdef      = NULL;
+}
+
+static void
+_nc_halo_mass_summary_set_Delta (NcHaloMassSummary *hms, const gdouble Delta)
+{
+  NcHaloMassSummaryPrivate * const self = nc_halo_mass_summary_get_instance_private (hms);
+
+  self->Delta = Delta;
+
+  if (NC_HALO_MASS_SUMMARY_GET_CLASS (hms)->set_Delta)
+    NC_HALO_MASS_SUMMARY_GET_CLASS (hms)->set_Delta (hms, Delta);
+}
+
+static void
+_nc_halo_mass_summary_set_mdef (NcHaloMassSummary *hms, const NcHaloMassSummaryMassDef mdef)
+{
+  NcHaloMassSummaryPrivate * const self = nc_halo_mass_summary_get_instance_private (hms);
+
+  self->mdef = mdef;
+
+  if (NC_HALO_MASS_SUMMARY_GET_CLASS (hms)->set_mdef)
+    NC_HALO_MASS_SUMMARY_GET_CLASS (hms)->set_mdef (hms, mdef);
 }
 
 /**
@@ -248,6 +271,38 @@ nc_halo_mass_summary_clear (NcHaloMassSummary **hms)
 }
 
 /**
+ * nc_halo_mass_summary_get_Delta:
+ * @hms: a #NcHaloMassSummary
+ *
+ * Gets the overdensity constant.
+ *
+ * Returns: the overdensity constant.
+ */
+gdouble
+nc_halo_mass_summary_get_Delta (NcHaloMassSummary *hms)
+{
+  NcHaloMassSummaryPrivate * const self = nc_halo_mass_summary_get_instance_private (hms);
+
+  return self->Delta;
+}
+
+/**
+ * nc_halo_mass_summary_get_mdef:
+ * @hms: a #NcHaloMassSummary
+ *
+ * Gets the mass definition.
+ *
+ * Returns: the mass definition.
+ */
+NcHaloMassSummaryMassDef
+nc_halo_mass_summary_get_mdef (NcHaloMassSummary *hms)
+{
+  NcHaloMassSummaryPrivate * const self = nc_halo_mass_summary_get_instance_private (hms);
+
+  return self->mdef;
+}
+
+/**
  * nc_halo_mass_summary_mass: (virtual mass)
  * @hms: a #NcHaloMassSummary
  *
@@ -267,6 +322,8 @@ nc_halo_mass_summary_mass (NcHaloMassSummary *hms)
 /**
  * nc_halo_mass_summary_concentration: (virtual concentration)
  * @hms: a #NcHaloMassSummary
+ * @cosmo: a #NcHICosmo
+ * @z: redshift
  *
  * Computes the concentration.
  * The specific implementation is provided by the child classes.
@@ -275,9 +332,9 @@ nc_halo_mass_summary_mass (NcHaloMassSummary *hms)
  * Returns: the concentration.
  */
 gdouble
-nc_halo_mass_summary_concentration (NcHaloMassSummary *hms)
+nc_halo_mass_summary_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z)
 {
-  return NC_HALO_MASS_SUMMARY_GET_CLASS (hms)->concentration (hms);
+  return NC_HALO_MASS_SUMMARY_GET_CLASS (hms)->concentration (hms, cosmo, z);
 }
 
 #define _VIRIAL_DELTA(x) (18.0 * M_PI * M_PI + 82.0 * (x) - 39.0 * (x) * (x))

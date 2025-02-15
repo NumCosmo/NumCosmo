@@ -9,12 +9,12 @@
 # test_py_halo_mass_summary.py
 # Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
-# numreion is free software: you can redistribute it and/or modify it
+# numcosmo is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
 # Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# numreion is distributed in the hope that it will be useful, but
+# numcosmo is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Tests on NcHICosmoidem2 reionlogical model."""
+"""Tests on NcHaloMassSummary model."""
 
 import pytest
 from numpy.testing import assert_allclose
@@ -56,7 +56,11 @@ def fixture_Delta(request) -> float:
     return request.param
 
 
-@pytest.fixture(name="halo_mass_summary", params=[Nc.HaloMCParam])
+@pytest.fixture(
+    name="halo_mass_summary",
+    params=[Nc.HaloCMParam, Nc.HaloCMKlypin11],
+    ids=["param", "klypin11"],
+)
 def fixture_halo_mass_summary(
     request, mass_def: Nc.HaloMassSummaryMassDef, Delta: float
 ) -> Nc.HaloMassSummary:
@@ -75,7 +79,7 @@ def test_halo_mass_summary_basic(
 ):
     """Test HaloMassSummary basic properties."""
     assert isinstance(halo_mass_summary, Nc.HaloMassSummary)
-    assert halo_mass_summary.concentration() > 0.0
+    assert halo_mass_summary.concentration(cosmo, 0.0) > 0.0
     assert halo_mass_summary.mass() > 0.0
     assert halo_mass_summary.Delta(cosmo, 0.0) > 0.0
     assert halo_mass_summary.Delta(cosmo, 1.0) > 0.0
@@ -88,7 +92,10 @@ def test_halo_mass_summary_basic(
 def test_halo_mass_summary_mass(halo_mass_summary: Nc.HaloMassSummary):
     """Test HaloMassSummary mass."""
     match halo_mass_summary:
-        case Nc.HaloMCParam():
+        case Nc.HaloCMParam():
+            log10MDelta = halo_mass_summary["log10MDelta"]
+            mass = 10.0**log10MDelta
+        case Nc.HaloCMKlypin11():
             log10MDelta = halo_mass_summary["log10MDelta"]
             mass = 10.0**log10MDelta
         case _:
@@ -97,12 +104,34 @@ def test_halo_mass_summary_mass(halo_mass_summary: Nc.HaloMassSummary):
     assert_allclose(halo_mass_summary.mass(), mass, rtol=1e-5)
 
 
-def test_halo_mass_summary_concentration(halo_mass_summary: Nc.HaloMassSummary):
+def test_halo_mass_summary_concentration(
+    halo_mass_summary: Nc.HaloMassSummary, cosmo: Nc.HICosmo
+):
     """Test HaloMassSummary concentration."""
     match halo_mass_summary:
-        case Nc.HaloMCParam():
+        case Nc.HaloCMParam():
             cDelta = halo_mass_summary["cDelta"]
+        case Nc.HaloCMKlypin11():
+            cDelta = halo_mass_summary.concentration(cosmo, 0.0)
         case _:
             raise ValueError("Invalid HaloMassSummary type")
 
-    assert_allclose(halo_mass_summary.concentration(), cDelta, rtol=1e-5)
+    assert_allclose(halo_mass_summary.concentration(cosmo, 0.0), cDelta, rtol=1e-5)
+
+
+def test_halo_mass_summary_klypin11(
+    halo_mass_summary: Nc.HaloMassSummary, cosmo: Nc.HICosmo
+):
+    """Test HaloMassSummary klypin11."""
+    match halo_mass_summary:
+        case Nc.HaloCMParam():
+            return
+        case Nc.HaloCMKlypin11():
+            halo_mass_summary["log10MDelta"] = 12.5
+            cDelta1 = halo_mass_summary.concentration(cosmo, 0.0)
+            halo_mass_summary["log10MDelta"] = 13.5
+            cDelta2 = halo_mass_summary.concentration(cosmo, 0.0)
+        case _:
+            raise ValueError("Invalid HaloMassSummary type")
+
+    assert cDelta1 > cDelta2

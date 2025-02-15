@@ -23,11 +23,13 @@
  */
 
 /**
- * SECTION:nc_hicosmo_lcdm
- * @title: NcHICosmoLCDM
- * @short_description: $\Lambda$CDM model
+ * NcHICosmoLCDM:
  *
- * FIXME
+ * $\Lambda$CDM model.
+ *
+ * This object defines the $\Lambda$CDM model. It is a subclass of #NcHICosmo and
+ * provides the implementation of the normalized Hubble function and its derivatives
+ * for the $\Lambda$CDM model.
  *
  */
 
