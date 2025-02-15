@@ -256,13 +256,11 @@ class GenerateJpasForecast:
             min=0,
         ),
     ] = 2959.1
-    
+
     resample_seed: Annotated[
         int,
         typer.Option(
-            help=(
-                "Seed used to generate experiment."
-            ),
+            help=("Seed used to generate experiment."),
             show_default=True,
             min=0,
         ),

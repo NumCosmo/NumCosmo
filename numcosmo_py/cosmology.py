@@ -100,7 +100,7 @@ class Cosmology:
         ps_ml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())
         ps_mnl = Nc.PowspecMNLHaloFit.new(ps_ml, halofit_max_z, halofit_reltol)
         psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)
-        return cls(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mnl, psf=psf)
+        return cls(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mnl, psf_tophat=psf)
 
     @classmethod
     def default_minimal(cls, dist_max_z: float = 10.0) -> "Cosmology":
@@ -147,8 +147,8 @@ class Cosmology:
             self._ps_ml.prepare_if_needed(self.cosmo)
         if self._ps_mnl is not None:
             self._ps_mnl.prepare_if_needed(self.cosmo)
-        if self._psf is not None:
-            self._psf.prepare_if_needed(self.cosmo)
+        if self._psf_tophat is not None:
+            self._psf_tophat.prepare_if_needed(self.cosmo)
 
 
 def create_cosmo(

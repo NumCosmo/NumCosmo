@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:nc_reduced_shear_calib_wtg
- * @title: NcReducedShearCalibWtg
- * @short_description: Reduced Shear Calibration
+ * NcReducedShearCalibWtg:
+ *
+ * Reduced Shear Calibration.
  *
  * Abstract model for the reduced shear calibration.
  *

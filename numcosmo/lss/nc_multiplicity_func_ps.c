@@ -24,11 +24,13 @@
  */
 
 /**
- * SECTION:nc_multiplicity_func_ps
- * @title: NcMultiplicityFuncPS
- * @short_description: Dark matter halo -- Press-Schechter multiplicity function.
+ * NcMultiplicityFuncPS:
  *
- * FIXME
+ * Dark matter halo -- Press-Schechter multiplicity function.
+ *
+ * Computes the multiplicity function of dark matter halos using the Press-Schechter
+ * (1974) model.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -111,7 +113,7 @@ static void _nc_multiplicity_func_ps_set_mdef (NcMultiplicityFunc *mulf, NcMulti
 static void _nc_multiplicity_func_ps_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_ps_get_mdef (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_ps_get_Delta (NcMultiplicityFunc *mulf);
-static gdouble _nc_multiplicity_func_ps_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
+static gdouble _nc_multiplicity_func_ps_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
 nc_multiplicity_func_ps_class_init (NcMultiplicityFuncPSClass *klass)
@@ -199,7 +201,7 @@ _nc_multiplicity_func_ps_get_Delta (NcMultiplicityFunc *mulf)
 }
 
 static gdouble
-_nc_multiplicity_func_ps_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM) /* f(\sigma) - Press \& Schechter (PS) */
+_nc_multiplicity_func_ps_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* f(\sigma) - Press \& Schechter (PS) */
 {
   NcMultiplicityFuncPS *mps                = NC_MULTIPLICITY_FUNC_PS (mulf);
   NcMultiplicityFuncPSPrivate * const self = mps->priv;

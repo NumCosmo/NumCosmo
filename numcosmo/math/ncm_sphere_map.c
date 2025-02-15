@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_sphere_map
- * @title: NcmSphereMap
- * @short_description: An re-implementation of Healpix.
+ * NcmSphereMap:
+ *
+ * An re-implementation of Healpix.
  *
  * Map pixalization/manipulation algorithms, Ylm decomposition.
  *

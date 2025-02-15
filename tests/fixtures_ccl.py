@@ -57,6 +57,7 @@ def fixture_z_high_a():
     name="ccl_cosmo_eh_linear",
     params=product([False, True], range(2)),
     ids=lambda x: f"high_prec={x[0]},index={x[1]}",
+    scope="module",
 )
 def fixture_ccl_cosmo_eh_linear(request) -> pyccl.Cosmology:
     """Fixture for CCL Cosmology."""
@@ -104,6 +105,7 @@ def fixture_ccl_cosmo_eh_linear(request) -> pyccl.Cosmology:
     name="ccl_cosmo_eh_halofit",
     params=product([False], range(2)),
     ids=lambda x: f"high_prec={x[0]}, index={x[1]}",
+    scope="module",
 )
 def fixture_ccl_cosmo_eh_halofit(request) -> pyccl.Cosmology:
     """Fixture for CCL Cosmology."""
@@ -146,13 +148,13 @@ def fixture_ccl_cosmo_eh_halofit(request) -> pyccl.Cosmology:
     return ccl_cosmo
 
 
-@pytest.fixture(name="nc_cosmo_eh_linear")
+@pytest.fixture(name="nc_cosmo_eh_linear", scope="module")
 def fixture_nc_cosmo_eh_linear(ccl_cosmo_eh_linear) -> Cosmology:
     """Fixture for CCL and NumCosmo Cosmology."""
     return create_nc_obj(ccl_cosmo_eh_linear, dist_z_max=2000.0)
 
 
-@pytest.fixture(name="nc_cosmo_eh_halofit")
+@pytest.fixture(name="nc_cosmo_eh_halofit", scope="module")
 def fixture_nc_cosmo_eh_halofit(ccl_cosmo_eh_halofit) -> Cosmology:
     """Fixture for CCL and NumCosmo Cosmology."""
     return create_nc_obj(ccl_cosmo_eh_halofit, dist_z_max=2000.0)

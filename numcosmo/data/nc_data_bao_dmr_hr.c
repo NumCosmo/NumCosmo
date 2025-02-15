@@ -24,18 +24,17 @@
  */
 
 /**
- * SECTION:nc_data_bao_dmr_hr
- * @title: NcDataBaoDMrHr
- * @short_description: Baryon Oscillation Data -- $(D_M/r,\; H/r)$ data.
+ * NcDataBaoDMrHr:
  *
- * See: [Ross et al. (2016)][XRoss2016] and
- * [Alam et al. (2016)][XAlam2016].
+ * Baryon Oscillation Data -- $(D_M/r,\; H/r)$ data.
+ *
+ * See: [Ross et al. (2016)][XRoss2016] and [Alam et al. (2016)][XAlam2016].
  *
  * The data is stored in a #NcDataBaoDMrHr object. The data is stored in a
- * #NcmDataGaussCov base class object, which is a subclass of #NcmData.
- * The data represents the mean values of the transverse distance $D_M$ and the
- * Hubble parameter $H$ at the redshift $z$ divided by the sound horizon at the
- * last scattering surface $r_s$.
+ * #NcmDataGaussCov base class object, which is a subclass of #NcmData. The data
+ * represents the mean values of the transverse distance $D_M$ and the Hubble parameter
+ * $H$ at the redshift $z$ divided by the sound horizon at the last scattering surface
+ * $r_s$.
  *
  */
 

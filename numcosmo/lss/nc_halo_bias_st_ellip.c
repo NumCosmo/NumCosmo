@@ -24,10 +24,10 @@
  */
 
 /**
- * SECTION:nc_halo_bias_st_ellip
- * @title: NcHaloBiasSTEllip
- * @short_description: Sheth-Tormen elliptical halo bias function type.
- * 
+ * NcHaloBiasSTEllip:
+ *
+ * Sheth-Tormen elliptical halo bias function type.
+ *
  * Object implementation to compute the halo bias function given
  * the Sheth-Tormen mass function for elliptical collapse. A description
  * of the function is given below. Check nc_halo_bias.c for a description
@@ -35,7 +35,7 @@
  * mass function.
  *
  * The Sheth-Tormen bias can be obtained by considering an approximation where
- * the fluctuations around the background density contrats are described 
+ * the fluctuations around the background density contrats are described
  * by a constant barrier that depends on the collapse. For an elliptical collapse,
  * the bias is given by
  * \begin{align}
@@ -44,7 +44,7 @@
  * where $b(\nu)$ is the bias, $\delta_c$ is the critical threshold,
  * $\nu = \frac{\delta_c}{\sigma}$ and $(a, b, c)$ are free parameters
  * of the mass function that dictates the shape of the barrier.
- *  
+ *
  * The user must provide input the values: @NcHaloMassFunction, @delta_c, @a, @p - nc_halo_bias_st_spher_new_full().
  *
  */
@@ -139,7 +139,7 @@ _nc_halo_bias_st_ellip_get_property (GObject *object, guint prop_id, GValue *val
   }
 }
 
-static gdouble _nc_halo_bias_st_ellip_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
+static gdouble _nc_halo_bias_st_ellip_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
 nc_halo_bias_st_ellip_class_init (NcHaloBiasSTEllipClass *klass)
@@ -207,7 +207,7 @@ nc_halo_bias_st_ellip_class_init (NcHaloBiasSTEllipClass *klass)
 }
 
 static gdouble
-_nc_halo_bias_st_ellip_eval (NcHaloBias *biasf,  NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
+_nc_halo_bias_st_ellip_eval (NcHaloBias *biasf,  NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   NcHaloBiasSTEllip *bias_st_ellip = NC_HALO_BIAS_ST_ELLIP (biasf);
   const gdouble a                  = bias_st_ellip->a;

@@ -29,14 +29,12 @@
  */
 
 /**
- * SECTION:nc_galaxy_sd_position_flat
- * @title: NcGalaxySDPositionFlat
- * @short_description: Class describing galaxy sample position distributions with flat distribution
- * @stability: Unstable
+ * NcGalaxySDPositionFlat:
  *
+ * Class describing galaxy sample position distributions with flat distribution.
  *
- * Class defining a galaxy sample position distribution with flat
- * probability distribution $P(\text{ra})P(\text{dec})$.
+ * Class defining a galaxy sample position distribution with flat probability
+ * distribution $P(\text{ra})P(\text{dec})$.
  *
  */
 

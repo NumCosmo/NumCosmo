@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_prior_flat
- * @title: NcmPriorFlat
- * @short_description: Base class for flat prior distributions.
+ * NcmPriorFlat:
+ *
+ * Base class for flat prior distributions.
  *
  * This object subclasses #NcmPrior and defines a base class for flat priors used by
  * NcmLikelihood. These objects describe flat prior distributions applicable to

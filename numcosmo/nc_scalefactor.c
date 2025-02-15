@@ -23,15 +23,15 @@
  */
 
 /**
- * SECTION:nc_scalefactor
- * @title: NcScalefactor
- * @short_description: Scale factor as a function of the conformal time.
+ * NcScalefactor:
  *
- * Integrates the first order Friedmann equation,
- * $$E^2 = \frac{\rho}{\rho_{\mathrm{crit}0}} + \Omega_{k0} x^2.$$ Where
- * ${\mathrm{crit}0}$ is the critical density today [nc_hicosmo_crit_density()],
- * $E = H / H_0$ is the dimensionless Hubble function [nc_hicosmo_E()]
- * and $\Omega_{k0}$ is the curvature parameter today [nc_hicosmo_Omega_k0()].
+ * Scale factor as a function of the conformal time.
+ *
+ * Integrates the first order Friedmann equation, $$E^2 =
+ * \frac{\rho}{\rho_{\mathrm{crit}0}} + \Omega_{k0} x^2.$$ Where ${\mathrm{crit}0}$ is
+ * the critical density today [nc_hicosmo_crit_density()], $E = H / H_0$ is the
+ * dimensionless Hubble function [nc_hicosmo_E()] and $\Omega_{k0}$ is the curvature
+ * parameter today [nc_hicosmo_Omega_k0()].
  *
  *
  *

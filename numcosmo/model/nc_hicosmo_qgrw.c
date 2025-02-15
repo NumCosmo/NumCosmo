@@ -24,10 +24,9 @@
  */
 
 /**
- * SECTION:nc_hicosmo_qgrw
- * @title: NcHICosmoQGRW
- * @short_description: Radiation plus $w$-fluid model with a quantum generated bounce
- * phase model.
+ * NcHICosmoQGRW:
+ *
+ * Radiation plus $w$-fluid model with a quantum generated bounce phase model.
  *
  * In this model the adiabatic mode $\zeta$ has its mass, speed of sound square $c_s^2$
  * and frequency square $\nu_\zeta^2$ given by \begin{align} m_\zeta &= 3

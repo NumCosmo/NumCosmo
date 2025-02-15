@@ -24,12 +24,13 @@
  */
 
 /**
- * SECTION:nc_multiplicity_func_jenkins
- * @title: NcMultiplicityFuncJenkins
- * @short_description: Dark matter halo -- Jenkins multiplicity function.
+ * NcMultiplicityFuncJenkins:
  *
- * Computes the multiplicity function of dark matter halos using the Jenkins et al. (2001) model.
- * Jenkins et al. (2001) [arXiv:astro-ph/0005260] is a parametrization of the Press-Schechter multiplicity function.
+ * Dark matter halo -- Jenkins multiplicity function.
+ *
+ * Computes the multiplicity function of dark matter halos using the Jenkins et al.
+ * (2001) model. Jenkins et al. (2001) [arXiv:astro-ph/0005260] is a parametrization of
+ * the Press-Schechter multiplicity function.
  *
  * Reference: astro-ph/0005260
  */
@@ -102,7 +103,7 @@ static void _nc_multiplicity_func_jenkins_set_mdef (NcMultiplicityFunc *mulf, Nc
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_jenkins_get_mdef (NcMultiplicityFunc *mulf);
 static void _nc_multiplicity_func_jenkins_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
 static double _nc_multiplicity_func_jenkins_get_Delta (NcMultiplicityFunc *mulf);
-static gdouble _nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
+static gdouble _nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 /* _NC_MULTIPLICITY_FUNCTION_JENKINS_DATASET_FOF_0005260 = {0.315, 0.0, 0.61, 0.0, 3.8, 0.0}; */
 
@@ -179,7 +180,7 @@ _nc_multiplicity_func_jenkins_get_Delta (NcMultiplicityFunc *mulf)
 }
 
 static gdouble
-_nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
+_nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   /* NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
    *  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv; */

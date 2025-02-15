@@ -1,6 +1,6 @@
 [project]
 name = 'numcosmo_py'
-version = '0.23.0'
+version = '0.24.1'
 description = 'NumCosmo is a free software C library for cosmology calculations'
 readme = 'README.md'
 classifiers = [
@@ -36,6 +36,7 @@ authors = [
 test = [
     "pytest",
     "pytest-tap",
+    "pytest-lazy-fixtures",
     "rich",
     "typer",
     "pyccl",

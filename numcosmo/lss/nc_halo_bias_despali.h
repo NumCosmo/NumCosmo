@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcHaloBiasDespaliClass NcHaloBiasDespaliClass;
 typedef struct _NcHaloBiasDespali NcHaloBiasDespali;
+
 struct _NcHaloBiasDespaliClass
 {
   /*< private >*/
@@ -59,15 +60,15 @@ struct _NcHaloBiasDespali
 GType nc_halo_bias_despali_get_type (void) G_GNUC_CONST;
 
 NcHaloBiasDespali *nc_halo_bias_despali_new (NcHaloMassFunction *mfp);
-NcHaloBiasDespali *nc_halo_bias_despali_new_full (NcHaloMassFunction *mfp, gboolean EO, gboolean CMF);
+NcHaloBiasDespali *nc_halo_bias_despali_new_full (NcHaloMassFunction *mfp, gboolean eo, gboolean cmf);
 NcHaloBiasDespali *nc_halo_bias_despali_ref (NcHaloBiasDespali *biasf_despali);
 
 void nc_halo_bias_despali_free (NcHaloBiasDespali *biasf_despali);
 void nc_halo_bias_despali_clear (NcHaloBiasDespali **biasf_despali);
 
-gdouble nc_halo_bias_despali_delta_c (NcHaloBiasDespali *biasf_despali , NcHICosmo *cosmo ,gdouble z);
+gdouble nc_halo_bias_despali_delta_c (NcHaloBiasDespali *biasf_despali, NcHICosmo *cosmo, gdouble z);
 
-gdouble nc_halo_bias_despali_delta_vir (NcHaloBiasDespali *biasf_despali , NcHICosmo *cosmo ,gdouble z);
+gdouble nc_halo_bias_despali_delta_vir (NcHaloBiasDespali *biasf_despali, NcHICosmo *cosmo, gdouble z);
 void nc_halo_bias_despali_set_eo (NcHaloBiasDespali *biasf_despali, gboolean on);
 gboolean nc_halo_bias_despali_get_eo (NcHaloBiasDespali *biasf_despali);
 void nc_halo_bias_despali_set_cmf (NcHaloBiasDespali *biasf_despali, gboolean on);
@@ -76,3 +77,4 @@ gboolean nc_halo_bias_despali_get_cmf (NcHaloBiasDespali *biasf_despali);
 G_END_DECLS
 
 #endif /* _NC_HALO_BIAS_DESPALI_H_ */
+

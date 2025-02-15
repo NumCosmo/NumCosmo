@@ -24,28 +24,26 @@
  */
 
 /**
- * SECTION:nc_halo_bias
- * @title: NcHaloBias
- * @short_description: Abstract class for halo bias function type.
+ * NcHaloBias:
  *
- * Abstract object to compute the halo bias function given
- * a mass function. The bias function is given by the
- * eval function, which should be implemented by the child
- * objects of the #NcHaloBias class. Below there is a quick
- * review about dark matter halo bias.
+ * Abstract class for halo bias function type.
  *
- * Dark Matter Halos are tracers of the Large Scale Structure (LSS)
- * of the universe. On sufficient large scales, the correlations
- * are weak and these objects are expected to be well described by
- * perturbation theory. Given the background matter distribution, 
- * $\rho$, one can assume that the mass distribution in the universe
- * is given by a small perturbation around this value. In this context, 
- * we define the density contrast $\delta$ as 
- * 
+ * Abstract object to compute the halo bias function given a mass function. The bias
+ * function is given by the eval function, which should be implemented by the child
+ * objects of the #NcHaloBias class. Below there is a quick review about dark matter
+ * halo bias.
+ *
+ * Dark Matter Halos are tracers of the Large Scale Structure (LSS) of the universe. On
+ * sufficient large scales, the correlations are weak and these objects are expected to
+ * be well described by perturbation theory. Given the background matter distribution,
+ * $\rho$, one can assume that the mass distribution in the universe is given by a small
+ * perturbation around this value. In this context, we define the density contrast
+ * $\delta$ as
+ *
  * \begin{align}
  * \delta_b &= \frac{\delta \rho}{\rho}
- * ,\end{align}  
- * which represents this perturbation around the background quantity. 
+ * ,\end{align}
+ * which represents this perturbation around the background quantity.
  *
  * The halos are formed when the density contrast passes a certain
  * critical limit, that is, $\delta_b > \delta_c$. Even though
@@ -56,7 +54,7 @@
  * in the observed halos distributions.
  *
  * These bias parameters are linear corrections to the density contrast
- * field, such that 
+ * field, such that
  * \begin{align}
  * \delta &= [1 + b(z, M)] \delta_b
  * ,\end{align}
@@ -66,7 +64,7 @@
  * for their definitions.
  *
  * Since this is an abstract class implementation, there is no initialization
- * function of the object.  
+ * function of the object.
  *
  */
 
@@ -188,9 +186,9 @@ nc_halo_bias_class_init (NcHaloBiasClass *klass)
  * Returns: a double, the halo bias.
  */
 gdouble
-nc_halo_bias_eval (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
+nc_halo_bias_eval (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
-  return NC_HALO_BIAS_GET_CLASS (bias)->eval (bias, cosmo, sigma, z, lnM);
+  return NC_HALO_BIAS_GET_CLASS (bias)->eval (bias, cosmo, sigma, z);
 }
 
 /**
@@ -241,7 +239,8 @@ nc_halo_bias_integrand (NcHaloBias *mbiasf, NcHICosmo *cosmo, gdouble lnM, gdoub
 {
   const gdouble d2n_dzdlnM = nc_halo_mass_function_d2n_dzdlnM (mbiasf->mfp, cosmo, lnM, z);
   const gdouble sigma      = nc_halo_mass_function_sigma_lnM (mbiasf->mfp, cosmo, lnM, z);
-  const gdouble bias       = nc_halo_bias_eval (mbiasf, cosmo, sigma, z, lnM);
+  const gdouble bias       = nc_halo_bias_eval (mbiasf, cosmo, sigma, z);
 
   return d2n_dzdlnM * bias;
 }
+

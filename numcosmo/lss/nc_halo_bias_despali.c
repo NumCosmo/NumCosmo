@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_halo_bias_despali
- * @title: NcHaloBiasDespali
- * @short_description: Despali halo bias function type.
+ * NcHaloBiasDespali:
+ *
+ * Despali halo bias function type.
  *
  * Object implementation to compute the halo bias function given
  * the Despali mass function. A description of the mechanism
@@ -56,7 +56,7 @@
 #include "math/ncm_util.h"
 
 G_DEFINE_TYPE (NcHaloBiasDespali, nc_halo_bias_despali, NC_TYPE_HALO_BIAS)
-       
+
 enum
 {
   PROP_0,
@@ -65,26 +65,24 @@ enum
   PROP_SIZE
 };
 
-static gdouble _nc_halo_bias_despali_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
-static gdouble _nc_halo_bias_despali_virial_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
-static gdouble _nc_halo_bias_despali_mean_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
-static gdouble _nc_halo_bias_despali_crit_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
+static gdouble _nc_halo_bias_despali_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_halo_bias_despali_virial_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_halo_bias_despali_mean_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_halo_bias_despali_crit_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 
 static void
 nc_halo_bias_despali_init (NcHaloBiasDespali *biasf_despali)
 {
-    
-  biasf_despali->eo    = FALSE;
-  biasf_despali->cmf   = FALSE;
+  biasf_despali->eo  = FALSE;
+  biasf_despali->cmf = FALSE;
 }
+
 static void
 _nc_halo_bias_despali_finalize (GObject *object)
 {
   /* Chain up : end */
   G_OBJECT_CLASS (nc_halo_bias_despali_parent_class)->finalize (object);
 }
-
-
 
 static void
 _nc_halo_bias_despali_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -101,7 +99,7 @@ _nc_halo_bias_despali_set_property (GObject *object, guint prop_id, const GValue
     case PROP_CMF:
       nc_halo_bias_despali_set_cmf (biasf_despali, g_value_get_boolean (value));
       break;
-      default:
+    default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
@@ -114,7 +112,7 @@ _nc_halo_bias_despali_get_property (GObject *object, guint prop_id, GValue *valu
 
   g_return_if_fail (NC_IS_HALO_BIAS_DESPALI (object));
 
-   switch (prop_id)
+  switch (prop_id)
   {
     case PROP_EO:
       g_value_set_boolean (value, biasf_despali->eo);
@@ -134,8 +132,6 @@ nc_halo_bias_despali_class_init (NcHaloBiasDespaliClass *klass)
   GObjectClass *object_class    = G_OBJECT_CLASS (klass);
   NcHaloBiasClass *parent_class = NC_HALO_BIAS_CLASS (klass);
 
-  parent_class->eval = &_nc_halo_bias_despali_eval;
-
   object_class->finalize     = _nc_halo_bias_despali_finalize;
   object_class->set_property = _nc_halo_bias_despali_set_property;
   object_class->get_property = _nc_halo_bias_despali_get_property;
@@ -147,18 +143,17 @@ nc_halo_bias_despali_class_init (NcHaloBiasDespaliClass *klass)
                                                          "Whether the halo finder uses eliptical overdensity",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-    
-  
-    g_object_class_install_property (object_class,
+
+
+  g_object_class_install_property (object_class,
                                    PROP_CMF,
                                    g_param_spec_boolean ("cmf",
                                                          NULL,
                                                          "Whether the use of the cluster mass function",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-    
 
- 
+  parent_class->eval = &_nc_halo_bias_despali_eval;
 }
 
 /**
@@ -180,8 +175,8 @@ nc_halo_bias_despali_new (NcHaloMassFunction *mfp)
 /**
  * nc_halo_bias_despali_new_full:
  * @mfp: a #NcHaloMassFunction
- * @eo: Empirical parameter for Despali bias function.
- * @cmf: Empirical parameter for Despali bias function.
+ * @eo: Empirical parameter for Despali bias function
+ * @cmf: Empirical parameter for Despali bias function
  *
  * Creates a new #NcHaloBiasDespali object with the input parameters.
  *
@@ -197,26 +192,68 @@ nc_halo_bias_despali_new_full (NcHaloMassFunction *mfp, gboolean eo, gboolean cm
                        NULL);
 }
 
-static gdouble
-_nc_halo_bias_despali_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
+/**
+ * nc_halo_bias_despali_ref:
+ * @biasf_despali: a #NcHaloBiasDespali
+ *
+ * Increases the reference count of the object.
+ *
+ * Returns: (transfer full): The object itself.
+ */
+NcHaloBiasDespali *
+nc_halo_bias_despali_ref (NcHaloBiasDespali *biasf_despali)
 {
-  NcHaloBiasDespali *biasf_despali = NC_HALO_BIAS_DESPALI (biasf);
-    
-  NcMultiplicityFunc *mulf        = nc_halo_mass_function_peek_multiplicity_function (biasf->mfp);
+  return NC_HALO_BIAS_DESPALI (g_object_ref (biasf_despali));
+}
+
+/**
+ * nc_halo_bias_despali_free:
+ * @biasf_despali: a #NcHaloBiasDespali
+ *
+ * Decreases the reference count of the object. If the reference count
+ * reaches zero, the object is destroyed.
+ *
+ */
+void
+nc_halo_bias_despali_free (NcHaloBiasDespali *biasf_despali)
+{
+  g_object_unref (biasf_despali);
+}
+
+/**
+ * nc_halo_bias_despali_clear:
+ * @biasf_despali: a #NcHaloBiasDespali
+ *
+ * If *@biasf_despali is not %NULL, decreases the reference count of the object and sets
+ * *@biasf_despali to %NULL. If the reference count reaches zero, the object is
+ * destroyed.
+ *
+ */
+void
+nc_halo_bias_despali_clear (NcHaloBiasDespali **biasf_despali)
+{
+  g_clear_object (biasf_despali);
+}
+
+static gdouble
+_nc_halo_bias_despali_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+{
+  /* NcHaloBiasDespali *biasf_despali = NC_HALO_BIAS_DESPALI (biasf); */
+  NcMultiplicityFunc *mulf       = nc_halo_mass_function_peek_multiplicity_function (biasf->mfp);
   NcMultiplicityFuncMassDef mdef = nc_multiplicity_func_get_mdef (mulf);
-    
+
   gdouble eval = 0.0;
 
   switch (mdef)
   {
     case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
-    eval = _nc_halo_bias_despali_mean_eval (biasf, cosmo, sigma, z, lnM);;
+      eval = _nc_halo_bias_despali_mean_eval (biasf, cosmo, sigma, z);
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
-    eval = _nc_halo_bias_despali_crit_eval (biasf, cosmo, sigma, z, lnM);;
+      eval = _nc_halo_bias_despali_crit_eval (biasf, cosmo, sigma, z);
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:
-    eval = _nc_halo_bias_despali_virial_eval (biasf, cosmo, sigma, z, lnM);
+      eval = _nc_halo_bias_despali_virial_eval (biasf, cosmo, sigma, z);
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
       g_error ("NcHaloBiasDespali does not support fof mass def");
@@ -224,201 +261,201 @@ _nc_halo_bias_despali_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, 
     default:
       g_assert_not_reached ();
       break;
-}
-    return eval;
-}
+  }
 
+  return eval;
+}
 
 static gdouble
-_nc_halo_bias_despali_virial_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
+_nc_halo_bias_despali_virial_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
-NcHaloBiasDespali *biasf_despali = NC_HALO_BIAS_DESPALI (biasf);
-gdouble bias_Despali_virial = 0;
+  NcHaloBiasDespali *biasf_despali = NC_HALO_BIAS_DESPALI (biasf);
+  gdouble bias_Despali_virial      = 0;
 
 
-  const gdouble delta_c = nc_halo_bias_despali_delta_c(biasf_despali , cosmo  , z);
-  const gdouble nu = pow(delta_c / sigma , 2.0);
+  const gdouble delta_c = nc_halo_bias_despali_delta_c (biasf_despali, cosmo, z);
+  const gdouble nu      = pow (delta_c / sigma, 2.0);
+
   if (biasf_despali->eo)
   {
-  const gdouble A                = 0.3953;
-  const gdouble a                = 0.7057;
-  const gdouble p                = 0.2206;
-  const gdouble nu_prime         = a * nu;
+    /* const gdouble A        = 0.3953; */
+    const gdouble a        = 0.7057;
+    const gdouble p        = 0.2206;
+    const gdouble nu_prime = a * nu;
 
-  bias_Despali_virial = 1 + nu_prime/(2 * delta_c) + p/(delta_c * (pow(nu_prime  ,p) + 1)) - 3/(2 * delta_c);
+    bias_Despali_virial = 1 + nu_prime / (2 * delta_c) + p / (delta_c * (pow (nu_prime, p) + 1)) - 3 / (2 * delta_c);
   }
-
   else
   {
-      if(biasf_despali->cmf)
-      {
-      const gdouble A                = 0.8199;
-      const gdouble a                = 0.3141;
-      const gdouble p                = 0.0;
-      const gdouble nu_prime         = a * nu;
-      bias_Despali_virial = 1 + nu_prime/(2 * delta_c) + p/(delta_c * (pow(nu_prime  ,p) + 1)) - 3/(2 * delta_c);
-      }
-      else
-      {
-      const gdouble A                = 0.3295;
-      const gdouble a                = 0.7689;
-      const gdouble p                = 0.2536;
-      const gdouble nu_prime         = a * nu;
-      bias_Despali_virial = 1 + nu_prime/(2 * delta_c) + p/(delta_c * (pow(nu_prime  ,p) + 1)) - 3/(2 * delta_c);
-      }
-  
+    if (biasf_despali->cmf)
+    {
+      /* const gdouble A        = 0.8199; */
+      const gdouble a        = 0.3141;
+      const gdouble p        = 0.0;
+      const gdouble nu_prime = a * nu;
+
+      bias_Despali_virial = 1 + nu_prime / (2 * delta_c) + p / (delta_c * (pow (nu_prime, p) + 1)) - 3 / (2 * delta_c);
+    }
+    else
+    {
+      /* const gdouble A        = 0.3295; */
+      const gdouble a        = 0.7689;
+      const gdouble p        = 0.2536;
+      const gdouble nu_prime = a * nu;
+
+      bias_Despali_virial = 1 + nu_prime / (2 * delta_c) + p / (delta_c * (pow (nu_prime, p) + 1)) - 3 / (2 * delta_c);
+    }
   }
+
   return bias_Despali_virial;
 }
 
-
 static gdouble
-_nc_halo_bias_despali_mean_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM) 
+_nc_halo_bias_despali_mean_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   NcHaloBiasDespali *biasf_despali = NC_HALO_BIAS_DESPALI (biasf);
-  NcMultiplicityFunc *mulf      = nc_halo_mass_function_peek_multiplicity_function (biasf->mfp);
-  
-  
+  NcMultiplicityFunc *mulf         = nc_halo_mass_function_peek_multiplicity_function (biasf->mfp);
+
+
   gdouble bias_Despali_mean = 0;
-  const gdouble delta_c = nc_halo_bias_despali_delta_c(biasf_despali , cosmo  , z);
-  const gdouble nu = pow(delta_c / sigma , 2.0);
-  const gdouble delta_vir        = nc_halo_bias_despali_delta_vir(biasf_despali , cosmo , z);
-  const gdouble Delta            = nc_multiplicity_func_get_Delta (mulf);
-  const gdouble Omega_m          = nc_hicosmo_E2Omega_m (cosmo, z);
+  const gdouble delta_c     = nc_halo_bias_despali_delta_c (biasf_despali, cosmo, z);
+  const gdouble nu          = pow (delta_c / sigma, 2.0);
+  const gdouble delta_vir   = nc_halo_bias_despali_delta_vir (biasf_despali, cosmo, z);
+  const gdouble Delta       = nc_multiplicity_func_get_Delta (mulf);
+  const gdouble Omega_m     = nc_hicosmo_E2Omega_m (cosmo, z);
 
   if (biasf_despali->eo)
   {
-  const gdouble A0               = 0.3953;
-  const gdouble A1               = -0.1768;
+    /* const gdouble A0 = 0.3953; */
+    /* const gdouble A1 = -0.1768; */
 
-  const gdouble a0               = 0.7057;
-  const gdouble a1               = 0.2125;
-  const gdouble a2               = 0.3268;
+    const gdouble a0 = 0.7057;
+    const gdouble a1 = 0.2125;
+    const gdouble a2 = 0.3268;
 
-  const gdouble p0               = 0.2206;
-  const gdouble p1               = 0.1937;
-  const gdouble p2               = -0.04570;
+    const gdouble p0 = 0.2206;
+    const gdouble p1 = 0.1937;
+    const gdouble p2 = -0.04570;
 
-  const gdouble x                = log10(Delta * Omega_m/delta_vir);
-  const gdouble A                = A0 + A1 * x;
-  const gdouble a                = a0 + a1 * x + a2 * x * x;
-  const gdouble p                = p0 + p1 * x + p2 * x * x;
+    const gdouble x = log10 (Delta * Omega_m / delta_vir);
+    /* const gdouble A = A0 + A1 * x; */
+    const gdouble a = a0 + a1 * x + a2 * x * x;
+    const gdouble p = p0 + p1 * x + p2 * x * x;
 
-  const gdouble nu_prime         = a * nu;
-  bias_Despali_mean = 1 + nu_prime/(2 * delta_c) + p/(delta_c * (pow(nu_prime  ,p) + 1)) - 3/(2 * delta_c);
+    const gdouble nu_prime = a * nu;
+
+    bias_Despali_mean = 1 + nu_prime / (2 * delta_c) + p / (delta_c * (pow (nu_prime, p) + 1)) - 3 / (2 * delta_c);
   }
-
   else
   {
-  const gdouble A0               = 0.3292;
-  const gdouble A1               = -0.1362;
+    /* const gdouble A0 = 0.3292; */
+    /* const gdouble A1 = -0.1362; */
 
-  const gdouble a0               = 0.7665;
-  const gdouble a1               = 0.2263;
-  const gdouble a2               = 0.4332;
+    const gdouble a0 = 0.7665;
+    const gdouble a1 = 0.2263;
+    const gdouble a2 = 0.4332;
 
-  const gdouble p0               = 0.2488;
-  const gdouble p1               = 0.2554;
-  const gdouble p2               = -0.1151;
+    const gdouble p0 = 0.2488;
+    const gdouble p1 = 0.2554;
+    const gdouble p2 = -0.1151;
 
-  const gdouble x                = log10(Delta * Omega_m/delta_vir);
-  const gdouble A                = A0 + A1 * x;
-  const gdouble a                = a0 + a1 * x + a2 * x * x;
-  const gdouble p                = p0 + p1 * x + p2 * x * x;
+    const gdouble x = log10 (Delta * Omega_m / delta_vir);
+    /* const gdouble A = A0 + A1 * x; */
+    const gdouble a = a0 + a1 * x + a2 * x * x;
+    const gdouble p = p0 + p1 * x + p2 * x * x;
 
-  const gdouble nu_prime         = a * nu;
-  bias_Despali_mean = 1 + nu_prime/(2 * delta_c) + p/(delta_c * (pow(nu_prime  ,p) + 1)) - 3/(2 * delta_c);
+    const gdouble nu_prime = a * nu;
+
+    bias_Despali_mean = 1 + nu_prime / (2 * delta_c) + p / (delta_c * (pow (nu_prime, p) + 1)) - 3 / (2 * delta_c);
   }
-    return bias_Despali_mean;
+
+  return bias_Despali_mean;
 }
 
-
 static gdouble
-_nc_halo_bias_despali_crit_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM) 
+_nc_halo_bias_despali_crit_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
-
   NcHaloBiasDespali *biasf_despali = NC_HALO_BIAS_DESPALI (biasf);
-  NcMultiplicityFunc *mulf      = nc_halo_mass_function_peek_multiplicity_function (biasf->mfp);
-  
+  NcMultiplicityFunc *mulf         = nc_halo_mass_function_peek_multiplicity_function (biasf->mfp);
+
   gdouble bias_Despali_crit = 0;
-  const gdouble delta_c = nc_halo_bias_despali_delta_c(biasf_despali , cosmo  , z);
-  const gdouble nu = pow(delta_c / sigma , 2.0);
-  const gdouble delta_vir        = nc_halo_bias_despali_delta_vir(biasf_despali , cosmo , z);
-  const gdouble Delta            = nc_multiplicity_func_get_Delta (mulf);
+  const gdouble delta_c     = nc_halo_bias_despali_delta_c (biasf_despali, cosmo, z);
+  const gdouble nu          = pow (delta_c / sigma, 2.0);
+  const gdouble delta_vir   = nc_halo_bias_despali_delta_vir (biasf_despali, cosmo, z);
+  const gdouble Delta       = nc_multiplicity_func_get_Delta (mulf);
 
   if (biasf_despali->eo)
   {
-  const gdouble A0               = 0.3953;
-  const gdouble A1               = -0.1768;
+    /* const gdouble A0 = 0.3953; */
+    /* const gdouble A1 = -0.1768; */
 
-  const gdouble a0               = 0.7057;
-  const gdouble a1               = 0.2125;
-  const gdouble a2               = 0.3268;
+    const gdouble a0 = 0.7057;
+    const gdouble a1 = 0.2125;
+    const gdouble a2 = 0.3268;
 
-  const gdouble p0               = 0.2206;
-  const gdouble p1               = 0.1937;
-  const gdouble p2               = -0.04570;
+    const gdouble p0 = 0.2206;
+    const gdouble p1 = 0.1937;
+    const gdouble p2 = -0.04570;
 
-  const gdouble x                = log10(Delta/delta_vir);
-  const gdouble A                = A0 + A1 * x;
-  const gdouble a                = a0 + a1 * x + a2 * x * x;
-  const gdouble p                = p0 + p1 * x + p2 * x * x;
+    const gdouble x = log10 (Delta / delta_vir);
+    /* const gdouble A = A0 + A1 * x; */
+    const gdouble a = a0 + a1 * x + a2 * x * x;
+    const gdouble p = p0 + p1 * x + p2 * x * x;
 
-  const gdouble nu_prime         = a * nu;
-  bias_Despali_crit = 1 + nu_prime/(2 * delta_c) + p/(delta_c * (pow(nu_prime  ,p) + 1)) - 3/(2 * delta_c);
+    const gdouble nu_prime = a * nu;
+
+    bias_Despali_crit = 1 + nu_prime / (2 * delta_c) + p / (delta_c * (pow (nu_prime, p) + 1)) - 3 / (2 * delta_c);
   }
-
   else
   {
-  const gdouble A0               = 0.3292;
-  const gdouble A1               = -0.1362;
+    /* const gdouble A0 = 0.3292; */
+    /* const gdouble A1 = -0.1362; */
 
-  const gdouble a0               = 0.7665;
-  const gdouble a1               = 0.2263;
-  const gdouble a2               = 0.4332;
+    const gdouble a0 = 0.7665;
+    const gdouble a1 = 0.2263;
+    const gdouble a2 = 0.4332;
 
-  const gdouble p0               = 0.2488;
-  const gdouble p1               = 0.2554;
-  const gdouble p2               = -0.1151;
+    const gdouble p0 = 0.2488;
+    const gdouble p1 = 0.2554;
+    const gdouble p2 = -0.1151;
 
-  const gdouble x                = log10(Delta/delta_vir);
-  const gdouble A                = A0 + A1 * x;
-  const gdouble a                = a0 + a1 * x + a2 * x * x;
-  const gdouble p                = p0 + p1 * x + p2 * x * x;
+    const gdouble x = log10 (Delta / delta_vir);
+    /* const gdouble A = A0 + A1 * x; */
+    const gdouble a = a0 + a1 * x + a2 * x * x;
+    const gdouble p = p0 + p1 * x + p2 * x * x;
 
-  const gdouble nu_prime         = a * nu;
-  bias_Despali_crit = 1 + nu_prime/(2 * delta_c) + p/(delta_c * (pow(nu_prime  ,p) + 1)) - 3/(2 * delta_c);
+    const gdouble nu_prime = a * nu;
+
+    bias_Despali_crit = 1 + nu_prime / (2 * delta_c) + p / (delta_c * (pow (nu_prime, p) + 1)) - 3 / (2 * delta_c);
   }
-    return bias_Despali_crit;
+
+  return bias_Despali_crit;
 }
 
 /* _NC_BIAS_FUNCTION_DESPALI_DATASET_1001_3162_DELTA = {1.686, 0.183, 1.5, 2.4, 200.0}; */
 
-
-
-
 /**
  * nc_halo_bias_despali_delta_c:
- * @md: a #NcHaloBiasDespali.
+ * @biasf_despali: a #NcHaloBiasDespali.
  * @cosmo: a #NcHICosmo
  * @z: a @gdouble
  *
- * Calculates the critical density using Kitayama & Suto 1996 interpolation(https://arxiv.org/pdf/astro-ph/9604141)
+ * Calculates the critical density using Kitayama & Suto 1996 interpolation
+ * (https://arxiv.org/pdf/astro-ph/9604141).
  *
  */
 gdouble
-nc_halo_bias_despali_delta_c (NcHaloBiasDespali *biasf_despali , NcHICosmo *cosmo ,gdouble z)
+nc_halo_bias_despali_delta_c (NcHaloBiasDespali *biasf_despali, NcHICosmo *cosmo, gdouble z)
 {
+  const gdouble E2      = nc_hicosmo_E2 (cosmo, z);
+  const gdouble Omega_m = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
 
-  const gdouble E2                             = nc_hicosmo_E2 (cosmo, z);
-  const gdouble Omega_m                        = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
-  return 3.0/20.0 * pow(12.0 * M_PI , 2.0/3.0) * (1 + 0.012299 * log10(Omega_m));
-
+  return 3.0 / 20.0 * pow (12.0 * M_PI, 2.0 / 3.0) * (1 + 0.012299 * log10 (Omega_m));
 }
 
 /**
  * nc_halo_bias_despali_delta_vir:
- * @md: a #NcHaloBiasDespali.
+ * @biasf_despali: a #NcHaloBiasDespali.
  * @cosmo: a #NcHICosmo
  * @z: a @gdouble
  *
@@ -426,30 +463,22 @@ nc_halo_bias_despali_delta_c (NcHaloBiasDespali *biasf_despali , NcHICosmo *cosm
  *
  */
 gdouble
-nc_halo_bias_despali_delta_vir (NcHaloBiasDespali *biasf_despali , NcHICosmo *cosmo ,gdouble z)
+nc_halo_bias_despali_delta_vir (NcHaloBiasDespali *biasf_despali, NcHICosmo *cosmo, gdouble z)
 {
+  const gdouble E2      = nc_hicosmo_E2 (cosmo, z);
+  const gdouble Omega_m = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
+  const gdouble x       = Omega_m - 1.0;
 
-  const gdouble E2                             = nc_hicosmo_E2 (cosmo, z);
-  const gdouble Omega_m                        = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
-  const gdouble x                              = Omega_m - 1.0;
-
-  if (nc_hicosmo_Omega_k0(cosmo) == 0)
-  {
-    return 18.0 * pow(M_PI , 2.0) + 82.0 * x - 39.0 * x * x;
-  }
+  if (nc_hicosmo_Omega_k0 (cosmo) == 0)
+    return 18.0 * pow (M_PI, 2.0) + 82.0 * x - 39.0 * x * x;
 
   else
-  {
-    g_error("Interpolation does not work in this regime.");
-  }
-  
-
+    g_error ("Interpolation does not work in this regime.");
 }
-
 
 /**
  * nc_halo_bias_despali_set_eo:
- * @md: a #NcHaloBiasDespali
+ * @biasf_despali: a #NcHaloBiasDespali
  * @on: Whether the halo finder uses eliptical overdensidy.
  *
  * Sets array of #Set if halo finder uses eliptical overdensidy.
@@ -458,29 +487,26 @@ nc_halo_bias_despali_delta_vir (NcHaloBiasDespali *biasf_despali , NcHICosmo *co
 void
 nc_halo_bias_despali_set_eo (NcHaloBiasDespali *biasf_despali, gboolean on)
 {
-  
-
   biasf_despali->eo = on;
 }
 
 /**
  * nc_halo_bias_despali_get_eo:
- * @md: a #NcHaloBiasDespali
+ * @biasf_despali: a #NcHaloBiasDespali
  *
  * Gets if the eo option is on.
  *
- *Returns: TRUE or FALSE.
+ * Returns: TRUE or FALSE.
  */
 gboolean
 nc_halo_bias_despali_get_eo (NcHaloBiasDespali *biasf_despali)
 {
-
   return biasf_despali->eo;
 }
 
 /**
  * nc_halo_bias_despali_set_cmf:
- * @md: a #NcHaloBiasDespali
+ * @biasf_despali: a #NcHaloBiasDespali
  * @on: Whether the we use cluster mass function.
  *
  * Sets array of #Set if  uses eliptical  mass function.
@@ -489,23 +515,20 @@ nc_halo_bias_despali_get_eo (NcHaloBiasDespali *biasf_despali)
 void
 nc_halo_bias_despali_set_cmf (NcHaloBiasDespali *biasf_despali, gboolean on)
 {
-  
-
   biasf_despali->cmf = on;
 }
 
 /**
  * nc_halo_bias_despali_get_cmf:
- * @md: a #NcHaloBiasDespali
+ * @biasf_despali: a #NcHaloBiasDespali
  *
  * Gets if the cmf option is on.
  *
- *Returns: TRUE or FALSE.
+ * Returns: TRUE or FALSE.
  */
 gboolean
 nc_halo_bias_despali_get_cmf (NcHaloBiasDespali *biasf_despali)
 {
-
   return biasf_despali->cmf;
 }
 

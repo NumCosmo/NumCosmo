@@ -24,11 +24,13 @@
  */
 
 /**
- * SECTION:nc_hiprim_expc
- * @title: NcHIPrimExpc
- * @short_description: Exponential cutoff modification of the power law primordial spectrum
+ * NcHIPrimExpc:
  *
- * FIXME
+ * Exponential cutoff modification of the power law primordial spectrum.
+ *
+ * This object is a subclass of #NcHIPrim and is designed to implement the exponential
+ * cutoff modification of the power law primordial spectrum. It is employed by #NcHICosmo
+ * to provide the primordial power spectrum for the cosmological model.
  *
  */
 

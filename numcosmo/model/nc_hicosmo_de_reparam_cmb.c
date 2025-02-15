@@ -24,12 +24,13 @@
  */
 
 /**
- * SECTION:nc_hicosmo_de_reparam_cmb
- * @title: NcHICosmoDEReparamCMB
- * @short_description: Dark Energy -- CMB reparametrization
+ * NcHICosmoDEReparamCMB:
+ *
+ * Dark Energy -- CMB reparametrization.
  *
  * Object implementing a reparametrization for darkenergy models. It changes
- * $\Omega_{x0} \to \Omega_{k0}$, $\Omega_{c0} \to \omega_{c0}$ and $\Omega_{b0} \to \omega_{b0}$.
+ * $\Omega_{x0} \to \Omega_{k0}$, $\Omega_{c0} \to \omega_{c0}$ and $\Omega_{b0} \to
+ * \omega_{b0}$.
  *
  */
 

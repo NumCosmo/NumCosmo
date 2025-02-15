@@ -24,20 +24,20 @@
  */
 
 /**
- * SECTION:nc_window
- * @title: NcWindow
- * @short_description: Abstract class for window functions.
- * @stability: Stable
- * @include: numcosmo/lss/nc_window.h
+ * NcWindow:
  *
- * This module comprises the set of functions to compute the window function in both real
- * and Fourier spaces as well as its derivative with respect to the scale $R$ in Fourier space.
+ * Abstract class for window functions.
  *
- * In order to study the statistical properties of the density fluctuation field at a certain
- * scale $R$, we use the window function. As an example, to compute the variance of the density
- * contrast at scale $R$, we convolve the window function in the Fourier space with the power spectrum.
+ * This module comprises the set of functions to compute the window function in both
+ * real and Fourier spaces as well as its derivative with respect to the scale $R$ in
+ * Fourier space.
  *
- * Seee also: #NcmFftlogTophatwin2 an #NcmFftlogGausswin2.
+ * In order to study the statistical properties of the density fluctuation field at a
+ * certain scale $R$, we use the window function. As an example, to compute the variance
+ * of the density contrast at scale $R$, we convolve the window function in the Fourier
+ * space with the power spectrum.
+ *
+ * See also: #NcmFftlogTophatwin2 an #NcmFftlogGausswin2.
  *
  */
 

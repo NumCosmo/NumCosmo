@@ -27,12 +27,9 @@
  */
 
 /**
- * SECTION:nc_growth_func
- * @title: NcGrowthFunc
- * @short_description: Growth function of linear perturbations.
- * @stability: Stable
- * @include: numcosmo/lss/nc_growth_func.h
+ * NcGrowthFunc:
  *
+ * Growth function of linear perturbations.
  *
  * This object implements the integration of second order differential equation (ODE)
  * for the matter (baryons + cold dark matter: $\Omega_m$, see nc_hicosmo_E2Omega_m()

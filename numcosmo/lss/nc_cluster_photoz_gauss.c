@@ -23,11 +23,10 @@
  */
 
 /**
- * SECTION:nc_cluster_photoz_gauss
- * @title: NcClusterPhotozGauss
- * @short_description: Individual gaussian photometric distribution for clusters.
+ * NcClusterPhotozGauss:
  *
- * FIXME
+ * Individual gaussian photometric distribution for clusters.
+ *
  */
 
 #ifdef HAVE_CONFIG_H

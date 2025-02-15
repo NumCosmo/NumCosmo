@@ -22,15 +22,6 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:nc_data_snia
- * @title: NcDataSNIAId
- * @short_description: Helper function for instantiating type Ia supernova data
- *
- * FIXME
- *
- */
-
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */

@@ -1,6 +1,7 @@
 ---
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   - astropy
   - black
@@ -30,6 +31,7 @@ dependencies:
   - numpy >= 1.23.0
   - openblas=*=*openmp*
   - openmpi
+  - pandas
   - pip
   - pip:
       - pygobject-stubs
@@ -39,6 +41,7 @@ dependencies:
   - pylint
   - pytest
   - pytest-cov
+  - pytest-lazy-fixtures
   - python >= 3.10
   - rich
   - scipy

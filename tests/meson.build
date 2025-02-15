@@ -572,8 +572,34 @@ if python_pyccl.found()
             'timeout': 0,
         },
         {
+            'name': 'py_massfunc',
+            'source': 'test_py_massfunc.py',
+            'timeout': 0,
+        },
+        {
+            'name': 'py_concentration_mass_relations',
+            'source': 'test_py_concentration_mass_relations.py',
+            'timeout': 0,
+        },
+        {
             'name': 'py_xcor',
             'source': 'test_py_xcor.py',
+            'timeout': 0,
+        },
+    ]
+endif
+
+python_getdist = python_module.find_installation(
+    'python3',
+    modules: ['getdist'],
+    required: false,
+)
+
+if python_getdist.found()
+    python_tests += [
+        {
+            'name': 'plotting',
+            'source': 'test_plotting.py',
             'timeout': 0,
         },
     ]
@@ -606,6 +632,11 @@ if enable_gir
     pytest_is_parallel = true
 
     if get_option('b_coverage')
+        python_module.find_installation(
+            'python3',
+            modules: ['pytest_cov'],
+            required: true,
+        )
         pytest_args += ['--cov', 'numcosmo_py']
         pytest_args += ['--cov-report', 'xml']
         pytest_args += ['--cov-append']

@@ -84,6 +84,8 @@ GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_LOW: float = 0.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_ALPHA: float = 0.68
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_BETA: float = 2.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_Z0: float = 0.11
+HALO_CM_DUFFY08_DEFAULT_PARAMS_ABSTOL: float = 0.0
+HALO_CM_DUFFY08_LOCAL_SPARAM_LEN: int = 1
 HALO_CM_KLYPIN11_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HALO_CM_KLYPIN11_LOCAL_SPARAM_LEN: int = 1
 HALO_CM_PARAM_DEFAULT_C_DELTA: float = 4.0
@@ -1671,8 +1673,8 @@ class ClusterMass(NumCosmoMath.Model):
     @staticmethod
     def log_all_models() -> None: ...
     def n_limits(self, cosmo: HICosmo) -> typing.Tuple[float, float]: ...
-    def obs_len(self) -> int: ...
-    def obs_params_len(self) -> int: ...
+    def obs_len(*args, **kwargs): ...  # FIXME Function
+    def obs_params_len(*args, **kwargs): ...  # FIXME Function
     def p(
         self,
         cosmo: HICosmo,
@@ -3127,8 +3129,8 @@ class ClusterRedshift(NumCosmoMath.Model):
     @staticmethod
     def log_all_models() -> None: ...
     def n_limits(self, cosmo: HICosmo) -> typing.Tuple[float, float]: ...
-    def obs_len(self) -> int: ...
-    def obs_params_len(self) -> int: ...
+    def obs_len(*args, **kwargs): ...  # FIXME Function
+    def obs_params_len(*args, **kwargs): ...  # FIXME Function
     def p(
         self,
         cosmo: HICosmo,
@@ -13829,6 +13831,97 @@ class HaloBiasTinkerClass(GObject.GPointer):
 
     parent_class: HaloBiasClass = ...
 
+class HaloCMDuffy08(HaloMassSummary):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCMDuffy08(**properties)
+        new(mdef:NumCosmo.HaloMassSummaryMassDef, Delta:float) -> NumCosmo.HaloCMDuffy08
+
+    Object NcHaloCMDuffy08
+
+    Properties from NcHaloCMDuffy08:
+      log10MDelta -> gdouble: log10MDelta
+        \log_{10}(M_{\Delta})
+      log10MDelta-fit -> gboolean: log10MDelta-fit
+        \log_{10}(M_{\Delta}):fit
+
+    Properties from NcHaloMassSummary:
+      mass-def -> NcHaloMassSummaryMassDef: mass-def
+        Mass definition
+      Delta -> gdouble: Delta
+        Overdensity constant
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        log10MDelta: float
+        log10MDelta_fit: bool
+        Delta: float
+        mass_def: HaloMassSummaryMassDef
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        log10MDelta: float = ...,
+        log10MDelta_fit: bool = ...,
+        Delta: float = ...,
+        mass_def: HaloMassSummaryMassDef = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(hcmd: HaloCMDuffy08) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls, mdef: HaloMassSummaryMassDef, Delta: float) -> HaloCMDuffy08: ...
+    def ref(self) -> HaloCMDuffy08: ...
+
+class HaloCMDuffy08Class(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCMDuffy08Class()
+    """
+
+    parent_class: HaloMassSummaryClass = ...
+
 class HaloCMKlypin11(HaloMassSummary):
     r"""
     :Constructors:
@@ -14091,7 +14184,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
     def do_eval_dl_2d_density(self, X: float) -> float: ...
     def do_eval_dl_cyl_mass(self, X: float) -> float: ...
     def do_eval_dl_density(self, x: float) -> float: ...
-    def do_eval_dl_spher_mass(self, cosmo: HICosmo, x: float) -> float: ...
+    def do_eval_dl_spher_mass(self, x: float) -> float: ...
     def eval_2d_density(self, cosmo: HICosmo, R: float, z: float) -> float: ...
     def eval_2d_density_array(
         self,
@@ -14122,17 +14215,20 @@ class HaloDensityProfile(NumCosmoMath.Model):
     def eval_dl_2d_density(self, X: float) -> float: ...
     def eval_dl_cyl_mass(self, X: float) -> float: ...
     def eval_dl_density(self, x: float) -> float: ...
-    def eval_dl_spher_mass(self, cosmo: HICosmo, x: float) -> float: ...
+    def eval_dl_spher_mass(self, x: float) -> float: ...
     def eval_numint_dl_2d_density(self, X: float) -> float: ...
     def eval_numint_dl_cyl_mass(self, X: float) -> float: ...
-    def eval_numint_dl_spher_mass(self, cosmo: HICosmo, x: float) -> float: ...
-    def eval_spher_mass(self, cosmo: HICosmo, z: float) -> float: ...
+    def eval_numint_dl_spher_mass(self, X: float) -> float: ...
+    def eval_spher_mass(self, cosmo: HICosmo, r: float, z: float) -> float: ...
+    def eval_spher_mass_delta(self, cosmo: HICosmo, z: float) -> float: ...
     def free(self) -> None: ...
     def get_lnXf(self) -> float: ...
     def get_lnXi(self) -> float: ...
     def get_numint_splines(
         self,
-    ) -> typing.Tuple[NumCosmoMath.Spline, NumCosmoMath.Spline]: ...
+    ) -> typing.Tuple[
+        NumCosmoMath.Spline, NumCosmoMath.Spline, NumCosmoMath.Spline
+    ]: ...
     def get_phys_limts(
         self, cosmo: HICosmo, z: float
     ) -> typing.Tuple[float, float]: ...
@@ -14159,9 +14255,7 @@ class HaloDensityProfileClass(GObject.GPointer):
 
     parent_class: NumCosmoMath.ModelClass = ...
     eval_dl_density: typing.Callable[[HaloDensityProfile, float], float] = ...
-    eval_dl_spher_mass: typing.Callable[[HaloDensityProfile, HICosmo, float], float] = (
-        ...
-    )
+    eval_dl_spher_mass: typing.Callable[[HaloDensityProfile, float], float] = ...
     eval_dl_2d_density: typing.Callable[[HaloDensityProfile, float], float] = ...
     eval_dl_cyl_mass: typing.Callable[[HaloDensityProfile, float], float] = ...
 
@@ -14512,8 +14606,7 @@ class HaloDensityProfileNFW(HaloDensityProfile):
     ) -> None: ...
     @classmethod
     def new(cls, hms: HaloMassSummary) -> HaloDensityProfileNFW: ...
-    @staticmethod
-    def set_ni(num: bool) -> None: ...
+    def set_ni(*args, **kwargs): ...  # FIXME Function
 
 class HaloDensityProfileNFWClass(GObject.GPointer):
     r"""
@@ -14714,17 +14807,19 @@ class HaloMassSummary(NumCosmoMath.Model):
     def Delta_rho_bg(self, cosmo: HICosmo, z: float) -> float: ...
     @staticmethod
     def clear(hms: HaloMassSummary) -> None: ...
-    def concentration(self, cosmo: HICosmo) -> float: ...
-    def do_concentration(self, cosmo: HICosmo) -> float: ...
+    def concentration(self, cosmo: HICosmo, z: float) -> float: ...
+    def do_concentration(self, cosmo: HICosmo, z: float) -> float: ...
     def do_mass(self) -> float: ...
+    def do_set_Delta(self, Delta: float) -> None: ...
+    def do_set_mdef(self, mdef: HaloMassSummaryMassDef) -> None: ...
     def free(self) -> None: ...
     def get_Delta(self) -> float: ...
+    def get_mdef(self) -> HaloMassSummaryMassDef: ...
     @staticmethod
     def id() -> int: ...
     def mass(self) -> float: ...
     def ref(self) -> HaloMassSummary: ...
     def rho_bg(self, cosmo: HICosmo, z: float) -> float: ...
-    def set_Delta(self, Delta: float) -> None: ...
 
 class HaloMassSummaryClass(GObject.GPointer):
     r"""
@@ -14737,7 +14832,9 @@ class HaloMassSummaryClass(GObject.GPointer):
 
     parent_class: NumCosmoMath.ModelClass = ...
     mass: typing.Callable[[HaloMassSummary], float] = ...
-    concentration: typing.Callable[[HaloMassSummary, HICosmo], float] = ...
+    concentration: typing.Callable[[HaloMassSummary, HICosmo, float], float] = ...
+    set_Delta: typing.Callable[[HaloMassSummary, float], None] = ...
+    set_mdef: typing.Callable[[HaloMassSummary, HaloMassSummaryMassDef], None] = ...
     padding: list[None] = ...
 
 class HaloPosition(NumCosmoMath.Model):
@@ -15047,6 +15144,79 @@ class MultiplicityFuncCrocceClass(GObject.GPointer):
 
 class MultiplicityFuncCroccePrivate(GObject.GPointer): ...
 
+class MultiplicityFuncDespali(MultiplicityFunc):
+    r"""
+    :Constructors:
+
+    ::
+
+        MultiplicityFuncDespali(**properties)
+        new() -> NumCosmo.MultiplicityFuncDespali
+        new_full(mdef:NumCosmo.MultiplicityFuncMassDef, Delta:float) -> NumCosmo.MultiplicityFuncDespali
+
+    Object NcMultiplicityFuncDespali
+
+    Properties from NcMultiplicityFuncDespali:
+      E0 -> gboolean: E0
+        Whether the halo finder uses elliptical overdensity
+      CMF -> gboolean: CMF
+        Whether the use of the cluster mass function
+
+    Properties from NcMultiplicityFunc:
+      mass-def -> NcMultiplicityFuncMassDef: mass-def
+        Mass definition
+      Delta -> gdouble: Delta
+        Delta
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        CMF: bool
+        E0: bool
+        Delta: float
+        mass_def: MultiplicityFuncMassDef
+
+    props: Props = ...
+    parent_instance: MultiplicityFunc = ...
+    def __init__(
+        self,
+        CMF: bool = ...,
+        E0: bool = ...,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(md: MultiplicityFuncDespali) -> None: ...
+    def delta_c(self, cosmo: HICosmo, z: float) -> float: ...
+    def delta_vir(self, cosmo: HICosmo, z: float) -> float: ...
+    def free(self) -> None: ...
+    def get_cmf(self) -> bool: ...
+    def get_eo(self) -> bool: ...
+    @classmethod
+    def new(cls) -> MultiplicityFuncDespali: ...
+    @classmethod
+    def new_full(
+        cls, mdef: MultiplicityFuncMassDef, Delta: float
+    ) -> MultiplicityFuncDespali: ...
+    def ref(self) -> MultiplicityFuncDespali: ...
+    def set_cmf(self, on: bool) -> None: ...
+    def set_eo(self, on: bool) -> None: ...
+
+class MultiplicityFuncDespaliClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        MultiplicityFuncDespaliClass()
+    """
+
+    parent_class: MultiplicityFuncClass = ...
+
+class MultiplicityFuncDespaliPrivate(GObject.GPointer): ...
+
 class MultiplicityFuncJenkins(MultiplicityFunc):
     r"""
     :Constructors:
@@ -15251,6 +15421,10 @@ class MultiplicityFuncTinker(MultiplicityFunc):
 
     Object NcMultiplicityFuncTinker
 
+    Properties from NcMultiplicityFuncTinker:
+      linear-interp -> gboolean: linear-interp
+        Use linear interpolation
+
     Properties from NcMultiplicityFunc:
       mass-def -> NcMultiplicityFuncMassDef: mass-def
         Mass definition
@@ -15262,6 +15436,7 @@ class MultiplicityFuncTinker(MultiplicityFunc):
     """
 
     class Props:
+        linear_interp: bool
         Delta: float
         mass_def: MultiplicityFuncMassDef
 
@@ -15269,7 +15444,10 @@ class MultiplicityFuncTinker(MultiplicityFunc):
     parent_instance: MultiplicityFunc = ...
     priv: MultiplicityFuncTinkerPrivate = ...
     def __init__(
-        self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...
+        self,
+        linear_interp: bool = ...,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
     ) -> None: ...
     @staticmethod
     def clear(mt: MultiplicityFuncTinker) -> None: ...
@@ -19985,6 +20163,9 @@ class HIPrimTwoFluidsSParams(GObject.GEnum):
 class HIReionCambSParams(GObject.GEnum):
     HEIII_Z: HIReionCambSParams = ...
     HII_HEII_Z: HIReionCambSParams = ...
+
+class HaloCMDuffy08SParams(GObject.GEnum):
+    DELTA: HaloCMDuffy08SParams = ...
 
 class HaloCMKlypin11SParams(GObject.GEnum):
     DELTA: HaloCMKlypin11SParams = ...
