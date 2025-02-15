@@ -74,8 +74,11 @@ class SkyMatch:
         match_properties: list[str] | None = None,
     ):
         """Initialize the class."""
-        self.query_data = _load_fits_data(query_catalog_path)
-        self.match_data = _load_fits_data(match_catalog_path)
+        self.query_catalog_path = query_catalog_path
+        self.match_catalog_path = match_catalog_path
+        
+        self.query_data = _load_fits_data(self.query_catalog_path)
+        self.match_data = _load_fits_data(self.match_catalog_path)
 
         _check_coordinates(self.query_data, query_coordinates)
         _check_coordinates(self.match_data, match_coordinates)
@@ -102,19 +105,18 @@ class SkyMatch:
         matching_distance: float,
         n_nearest_neighbours: int,
         verbose: bool = True,
+        selection_criteria: str= 'distances',
     ) -> Table:
         """Match objects in the sky.
 
-        The function matches objects in the sky using the provided matching distance and
-        number of nearest neighbours. It considers the tridimensional space to match the
-        objects computing the cosmological distances between the objects.
+        The function matches objects in the sky using the provided matching distance.
         """
         if ("z" not in self.match_coordinates) or ("z" not in self.query_coordinates):
             raise ValueError(
-                "To perform a 3D matching, "
+                "To perform a  matching, "
                 "the redshift must be provided for both catalogs."
             )
-
+        
         matched: dict[Any, Any] = {
             "ID": [],
             "RA": [],
@@ -124,15 +126,29 @@ class SkyMatch:
             "RA_matched": [],
             "DEC_matched": [],
             "z_matched": [],
-            "distances Mpc": [],
+            "distances": [],
         }
+        best_matched: dict[Any, Any] = {
+            "ID": [],
+            "RA": [],
+            "DEC": [],
+            "z": [],
+            "ID_matched": [],
+            "RA_matched": [],
+            "DEC_matched": [],
+            "z_matched": [],
+            "distances": [],
+        }
+        matches = 0
         if self.query_properties is not None:
             for prop in self.query_properties:
-                matched[prop] = []
+                matched[self.query_properties.get(prop)] = []
+                best_matched[self.query_properties.get(prop)] = []
 
         if self.match_properties is not None:
             for prop in self.match_properties:
-                matched[prop] = []
+                matched[self.match_properties.get(prop)] = []
+                best_matched[self.match_properties.get(prop)] = []
 
         # Print columns for each file
         theta_q, phi_q = self.ra_dec_to_theta_phi(
@@ -145,85 +161,195 @@ class SkyMatch:
             self.match_data[self.match_coordinates["DEC"]],
         )
         z_m = self.match_data[self.match_coordinates["z"]]
+        
+        
 
         snn = Ncm.SphereNN()
         dist = Nc.Distance.new(3.0)
         dist.prepare(cosmo)
+        RH_Mpc = cosmo.RH_Mpc()
 
         r_m = np.array(
-            [dist.comoving(cosmo, z) for z in z_m],
+            [dist.angular_diameter(cosmo, z)for z in z_m],
             dtype=np.float64,
         )
-        snn.insert_array(npa_to_seq(r_m), theta_m, phi_m)
+        
+        snn.insert_array(r_m, theta_m, phi_m)
         snn.rebuild()
-
+        
         loop_arg = enumerate(zip(theta_q, phi_q, z_q))
         for i, (theta, phi, z) in (
-            tqdm.tqdm(loop_arg, total=len(z_q)) if verbose else loop_arg
-        ):
-            r = dist.comoving(cosmo, z)
+            tqdm.tqdm(loop_arg, total=len(theta_q)) if verbose else loop_arg
+        ):      
+            r = dist.angular_diameter(cosmo, z)
+            
             distances_list, indices_list = snn.knn_search_distances(
                 r, theta, phi, n_nearest_neighbours
             )
-            distances = np.sqrt(distances_list) * cosmo.RH_Mpc()
+            
+            
             indices = np.array(indices_list)
-
             matched["RA"].append(self.query_data[self.query_coordinates["RA"]][i])
             matched["DEC"].append(self.query_data[self.query_coordinates["DEC"]][i])
             matched["z"].append(self.query_data[self.query_coordinates["z"]][i])
             matched["ID"].append(i)
 
+            best_matched["RA"].append(self.query_data[self.query_coordinates["RA"]][i])
+            best_matched["DEC"].append(self.query_data[self.query_coordinates["DEC"]][i])
+            best_matched["z"].append(self.query_data[self.query_coordinates["z"]][i])
+            best_matched["ID"].append(i)
+            
             if self.query_properties is not None:
                 for prop in self.query_properties:
-                    matched[prop].append(self.query_data[prop][i])
+                    matched[self.query_properties.get(prop)].append(self.query_data[prop][i])
+                    best_matched[self.query_properties.get(prop)].append(self.query_data[prop][i])
 
-            # Select only the halos that are within the matching distance
-            matching_dist_indices = distances < matching_distance
-            indices = indices[matching_dist_indices]
-            distances_matched = distances[matching_dist_indices]
+            # Below we convert the euclidean distances between two points in the sphere
+            # with radius 1 to the angular distances between the two points.
+            
+            distances = np.sqrt(distances_list)  * RH_Mpc
+            matching_distances_indices = distances <= matching_distance
+            
 
-            # Get the matched halos properties
-            RA_matched = self.match_data[self.match_coordinates["RA"]][indices]
-            DEC_matched = self.match_data[self.match_coordinates["DEC"]][indices]
-            z_matched = self.match_data[self.match_coordinates["z"]][indices]
+            indices = indices[matching_distances_indices]
+            distances = distances[matching_distances_indices]
+            
+            matched["ID_matched"].append(indices)
+            matched["distances"].append(distances)
+            matched["RA_matched"].append(
+                self.match_data[self.match_coordinates["RA"]][indices]
+            )
+            matched["DEC_matched"].append(
+                self.match_data[self.match_coordinates["DEC"]][indices]
+            )
+            matched["z_matched"].append(self.match_data[self.match_coordinates["z"]][indices])
+            
+            
+            
+            
             if self.match_properties is not None:
                 for prop in self.match_properties:
-                    matched[prop].append(self.match_data[prop][indices])
+                    matched[self.match_properties.get(prop)].append(self.match_data[prop][indices])
 
-            matched["ID_matched"].append(indices)
-            matched["distances Mpc"].append(distances_matched)
-            matched["RA_matched"].append(RA_matched)
-            matched["DEC_matched"].append(DEC_matched)
-            matched["z_matched"].append(z_matched)
+            if len(indices) > 0:
+                matches +=1
+                match selection_criteria:
+                    case  "distances":
+                        min_distances = min(distances)
+                        index = np.where(distances==min_distances)[0][0]
+                    case  "redshift_proximity":
+                        redshift_proximity = abs(matched['z'][i] - self.match_data[self.match_coordinates["z"]][indices])
+                        min_redshift_proximity = min(redshift_proximity)
+                        index = np.where(redshift_proximity==min_redshift_proximity)[0][0]
+                    case "more_massive":
+                        
+                        if 'mass1' not in self.match_properties.values() and 'mass2' not in self.match_properties.values():
+                            raise Exception("match_properties must have a mass1 or mass2 column to use this criteria")
+                        else:
+                            masses = list(filter(lambda key: self.match_properties[key] == 'mass1' or self.match_properties[key] == 'mass2' , self.match_properties))[0]
+                            
+                            max_mass = max(self.match_data[masses][indices])
+                            index = np.where(self.match_data[masses][indices]==max_mass)[0][0]
+                    
+                    case _ :
+                        raise Exception("selection_criteria must be eihter distances , redshift_proximity or more_massive. Was given %s" % (selection_criteria))
+                   
+                        
+                best_matched["ID_matched"].append(indices[index])
+                best_matched["distances"].append(distances[index])
+                best_matched["RA_matched"].append(
+                    self.match_data[self.match_coordinates["RA"]][indices[index]]
+                )
+                best_matched["DEC_matched"].append(
+                    self.match_data[self.match_coordinates["DEC"]][indices[index]]
+                )
+                best_matched["z_matched"].append(self.match_data[self.match_coordinates["z"]][indices[index]])
+        
+                if self.match_properties is not None:
+                    for prop in self.match_properties:
+                        best_matched[self.match_properties.get(prop)].append(self.match_data[prop][indices[index]])
+                        
+            else:
+                best_matched["ID_matched"].append(indices)
+                best_matched["distances"].append(distances)
+                best_matched["RA_matched"].append(
+                    self.match_data[self.match_coordinates["RA"]][indices]
+                )
+                best_matched["DEC_matched"].append(
+                    self.match_data[self.match_coordinates["DEC"]][indices]
+                )
+                best_matched["z_matched"].append(self.match_data[self.match_coordinates["z"]][indices])
+                if self.match_properties is not None:
+                    for prop in self.match_properties:
+                        best_matched[self.match_properties.get(prop)].append(self.match_data[prop][indices])
 
-        return Table(matched)
+        print("""
+        Number of objects matching: %s
+        Number of objects in the target catalog: %s
+        Number of unmatched objects: %s
+        Number of matched objects: %s
+        """ 
+          % (len(best_matched["ID"]) ,  len(r_m) , len(best_matched["ID"])-matches , matches))
+
+        
+        return Table(matched) , Table(best_matched)
 
     def match_2d(
         self,
+        cosmo: Nc.HICosmo,
         matching_distance: float,
         n_nearest_neighbours: int,
         verbose: bool = True,
+        match_dist_3d: bool = False,
+        delta_z: float = 0.1,
+        n_delta_z: int = 1,
+        selection_criteria: str= 'distances',
+        use_zerr_match: bool = False,
+        use_zerr_query: bool = False,
+        which_radius: str = "query_radius"
     ) -> Table:
         """Match objects in the sky.
 
         The function matches objects in the sky using the provided matching distance.
         """
+        if ("z" not in self.match_coordinates) or ("z" not in self.query_coordinates):
+            raise ValueError(
+                "To perform a  matching, "
+                "the redshift must be provided for both catalogs."
+            )
+        
         matched: dict[Any, Any] = {
             "ID": [],
             "RA": [],
             "DEC": [],
+            "z": [],
             "ID_matched": [],
             "RA_matched": [],
             "DEC_matched": [],
+            "z_matched": [],
             "distances": [],
         }
+        best_matched: dict[Any, Any] = {
+            "ID": [],
+            "RA": [],
+            "DEC": [],
+            "z": [],
+            "ID_matched": [],
+            "RA_matched": [],
+            "DEC_matched": [],
+            "z_matched": [],
+            "distances": [],
+        }
+        matches = 0
         if self.query_properties is not None:
             for prop in self.query_properties:
-                matched[prop] = []
+                matched[self.query_properties.get(prop)] = []
+                best_matched[self.query_properties.get(prop)] = []
 
         if self.match_properties is not None:
             for prop in self.match_properties:
-                matched[prop] = []
+                matched[self.match_properties.get(prop)] = []
+                best_matched[self.match_properties.get(prop)] = []
 
         if (matching_distance < 0) or (matching_distance > np.pi):
             raise ValueError("The matching distance must be between 0 and pi.")
@@ -233,41 +359,84 @@ class SkyMatch:
             self.query_data[self.query_coordinates["RA"]],
             self.query_data[self.query_coordinates["DEC"]],
         )
+        z_q = self.query_data[self.query_coordinates["z"]]
         theta_m, phi_m = self.ra_dec_to_theta_phi(
             self.match_data[self.match_coordinates["RA"]],
             self.match_data[self.match_coordinates["DEC"]],
         )
-        r_m = np.ones_like(theta_m)
+        
+        r_m_ones = np.ones_like(theta_m)
+        
 
         snn = Ncm.SphereNN()
-        snn.insert_array(r_m, theta_m, phi_m)
+        dist = Nc.Distance.new(3.0)
+        dist.prepare(cosmo)
+        RH_Mpc = cosmo.RH_Mpc()
+        
+        snn.insert_array(r_m_ones, theta_m, phi_m)
         snn.rebuild()
-
-        loop_arg = enumerate(zip(theta_q, phi_q))
-        for i, (theta, phi) in (
+        
+        loop_arg = enumerate(zip(theta_q, phi_q, z_q))
+        for i, (theta, phi, z) in (
             tqdm.tqdm(loop_arg, total=len(theta_q)) if verbose else loop_arg
-        ):
+        ):      
+            
             distances_list, indices_list = snn.knn_search_distances(
                 1.0, theta, phi, n_nearest_neighbours
             )
+            
+            
+            indices = np.array(indices_list)
+            matched["RA"].append(self.query_data[self.query_coordinates["RA"]][i])
+            matched["DEC"].append(self.query_data[self.query_coordinates["DEC"]][i])
+            matched["z"].append(self.query_data[self.query_coordinates["z"]][i])
+            matched["ID"].append(i)
+
+            best_matched["RA"].append(self.query_data[self.query_coordinates["RA"]][i])
+            best_matched["DEC"].append(self.query_data[self.query_coordinates["DEC"]][i])
+            best_matched["z"].append(self.query_data[self.query_coordinates["z"]][i])
+            best_matched["ID"].append(i)
+            
+            if self.query_properties is not None:
+                for prop in self.query_properties:
+                    matched[self.query_properties.get(prop)].append(self.query_data[prop][i])
+                    best_matched[self.query_properties.get(prop)].append(self.query_data[prop][i])
 
             # Below we convert the euclidean distances between two points in the sphere
             # with radius 1 to the angular distances between the two points.
-            distances = 2 * np.arcsin(np.sqrt(distances_list) / 2)
-            indices = np.array(indices_list)
+            
+            if match_dist_3d:
+                match which_radius:
+                    case "query_radius":
+                        r = dist.angular_diameter(cosmo, z) * RH_Mpc
+                        distances = r * np.sqrt(distances_list)
+                    case "match_radius":
+                        distances = np.array([RH_Mpc * dist.angular_diameter(cosmo, self.match_data[self.match_coordinates["z"]][indices[i]]) * np.sqrt(distances_list[i]) for i in range(len(indices))], dtype=np.float64)
+                    case "max_radius":
+                        r = dist.angular_diameter(cosmo, z) * RH_Mpc
+                        distances = np.array([max(RH_Mpc * dist.angular_diameter(cosmo, self.match_data[self.match_coordinates["z"]][indices[i]]) * np.sqrt(distances_list[i]), r* np.sqrt(distances_list[i])) for i in range(len(indices))], dtype=np.float64)
+                    case "min_radius":
+                        r = dist.angular_diameter(cosmo, z) * RH_Mpc
+                        distances = np.array([min(RH_Mpc * dist.angular_diameter(cosmo, self.match_data[self.match_coordinates["z"]][indices[i]]) * np.sqrt(distances_list[i]), r* np.sqrt(distances_list[i])) for i in range(len(indices))], dtype=np.float64)
+                    case _ :
+                        raise Exception("which_radius must be eihter query_radius , match_radius , max_radius or min_radius. Was given %s" % (which_radius))
+                    
+                
+                
+            else:
+                distances = 2 * np.arcsin(np.sqrt(distances_list) / 2)
+            
+            matching_distances_indices = distances <= matching_distance
+            
+            z_match_min , z_match_max =  self.z_interval(use_zerr_match , self.match_data[self.match_coordinates["z"]][indices], delta_z , n_delta_z , z_err = self.match_data[list(filter(lambda key: self.match_properties[key] == 'z_err1' or self.match_properties[key] =='z_err2' , self.match_properties))[0]][indices] if use_zerr_match==True else 0.0)
+            z_query_min , z_query_max =  self.z_interval(use_zerr_query , matched["z"][i], delta_z , n_delta_z , z_err =  matched[self.query_properties[list(filter(lambda key: self.query_properties[key] == 'z_err1' or self.query_properties[key] =='z_err2' , self.query_properties))[0]]][i] if use_zerr_query==True else 0.0)
+            
+            z_matching_min = z_match_max >= z_query_min
+            z_matching_max = z_match_min <= z_query_max
 
-            matched["RA"].append(self.query_data[self.query_coordinates["RA"]][i])
-            matched["DEC"].append(self.query_data[self.query_coordinates["DEC"]][i])
-            matched["ID"].append(i)
-
-            if self.query_properties is not None:
-                for prop in self.query_properties:
-                    matched[prop].append(self.query_data[prop][i])
-
-            matching_distances_indices = distances < matching_distance
-            indices = indices[matching_distances_indices]
-            distances = distances[matching_distances_indices]
-
+            indices = indices[z_matching_min & z_matching_max & matching_distances_indices]
+            distances = distances[z_matching_min & z_matching_max & matching_distances_indices]
+            
             matched["ID_matched"].append(indices)
             matched["distances"].append(distances)
             matched["RA_matched"].append(
@@ -276,9 +445,165 @@ class SkyMatch:
             matched["DEC_matched"].append(
                 self.match_data[self.match_coordinates["DEC"]][indices]
             )
-
+            matched["z_matched"].append(self.match_data[self.match_coordinates["z"]][indices])
+            
+            
+            
+            
             if self.match_properties is not None:
                 for prop in self.match_properties:
-                    matched[prop].append(self.match_data[prop][indices])
+                    matched[self.match_properties.get(prop)].append(self.match_data[prop][indices])
 
-        return Table(matched)
+            if len(indices) > 0:
+                matches +=1
+                match selection_criteria:
+                    case  "distances":
+                        min_distances = min(distances)
+                        index = np.where(distances==min_distances)[0][0]
+                    case  "redshift_proximity":
+                        redshift_proximity = abs(matched['z'][i] - self.match_data[self.match_coordinates["z"]][indices])
+                        min_redshift_proximity = min(redshift_proximity)
+                        index = np.where(redshift_proximity==min_redshift_proximity)[0][0]
+                    case "more_massive":
+                        
+                        if 'mass1' not in self.match_properties.values() and 'mass2' not in self.match_properties.values():
+                            raise Exception("match_properties must have a mass1 or mass2 column to use this criteria")
+                        else:
+                            masses = list(filter(lambda key: self.match_properties[key] == 'mass1' or self.match_properties[key] == 'mass2' , self.match_properties))[0]
+                            
+                            max_mass = max(self.match_data[masses][indices])
+                            index = np.where(self.match_data[masses][indices]==max_mass)[0][0]
+                    
+                    case _ :
+                        raise Exception("selection_criteria must be eihter distances , redshift_proximity or more_massive. Was given %s" % (selection_criteria))
+                   
+                        
+                best_matched["ID_matched"].append(indices[index])
+                best_matched["distances"].append(distances[index])
+                best_matched["RA_matched"].append(
+                    self.match_data[self.match_coordinates["RA"]][indices[index]]
+                )
+                best_matched["DEC_matched"].append(
+                    self.match_data[self.match_coordinates["DEC"]][indices[index]]
+                )
+                best_matched["z_matched"].append(self.match_data[self.match_coordinates["z"]][indices[index]])
+        
+                if self.match_properties is not None:
+                    for prop in self.match_properties:
+                        best_matched[self.match_properties.get(prop)].append(self.match_data[prop][indices[index]])
+                        
+            else:
+                best_matched["ID_matched"].append(indices)
+                best_matched["distances"].append(distances)
+                best_matched["RA_matched"].append(
+                    self.match_data[self.match_coordinates["RA"]][indices]
+                )
+                best_matched["DEC_matched"].append(
+                    self.match_data[self.match_coordinates["DEC"]][indices]
+                )
+                best_matched["z_matched"].append(self.match_data[self.match_coordinates["z"]][indices])
+                if self.match_properties is not None:
+                    for prop in self.match_properties:
+                        best_matched[self.match_properties.get(prop)].append(self.match_data[prop][indices])
+
+        print("""
+        Number of objects matching: %s
+        Number of objects in the target catalog: %s
+        Number of unmatched objects: %s
+        Number of matched objects: %s
+        """ 
+          % (len(best_matched["ID"]) ,  len(r_m_ones) , len(best_matched["ID"])-matches , matches))
+
+        
+        return Table(matched) , Table(best_matched)
+    
+    def cross_match_2d(self,
+        cosmo: Nc.HICosmo,
+        matching_distance1: float,
+        matching_distance2: float,
+        n_nearest_neighbours1: int,
+        n_nearest_neighbours2: int,
+        verbose: bool = True,
+        match_dist_3d: bool = False,
+        delta_z1: float = 0.1,
+        delta_z2: float = 0.1,
+        n_delta_z1: int = 1,
+        n_delta_z2: int = 1,
+        selection_criteria1: str= 'distances',
+        selection_criteria2: str= 'distances',
+        use_zerr1: bool = False,
+        use_zerr2: bool = False,
+        which_radius1: str = "query_radius",
+        which_radius2: str = "query_radius",
+    ) -> Table:
+
+        cat2 = SkyMatch(query_catalog_path=self.match_catalog_path, query_coordinates=self.match_coordinates, match_catalog_path=self.query_catalog_path, match_coordinates=self.query_coordinates, query_properties=self.match_properties, match_properties=self.query_properties)
+        
+        mult_cat1, best_cat1 = self.match_2d(cosmo=cosmo  ,matching_distance=matching_distance1 ,n_nearest_neighbours=n_nearest_neighbours1 ,match_dist_3d=match_dist_3d , delta_z=delta_z1 ,n_delta_z=n_delta_z1,selection_criteria=selection_criteria1 ,  use_zerr_query=use_zerr1 , use_zerr_match=use_zerr2 , which_radius=which_radius1)
+
+        mult_cat2, best_cat2 = cat2.match_2d(cosmo=cosmo  ,matching_distance=matching_distance2 ,n_nearest_neighbours=n_nearest_neighbours2 ,match_dist_3d=match_dist_3d , delta_z=delta_z2 ,n_delta_z=n_delta_z2,selection_criteria=selection_criteria2  , use_zerr_query=use_zerr2, use_zerr_match=use_zerr1, which_radius=which_radius2)
+
+        cross = Table(names=(best_cat1.columns) , dtype=tuple([best_cat1.columns[i].dtype for i in range(len(best_cat1.columns))]))
+
+        for i in tqdm.tqdm(range(len(best_cat1['ID']))):
+            if type(best_cat1['ID_matched'][i]) != np.ndarray:
+                if best_cat1['ID'][i] == best_cat2[best_cat2['ID'] == best_cat1['ID_matched'][i]]['ID_matched']:
+                    cross.add_row(best_cat1[i])
+                    
+
+        print("""
+        Number of cross matched objects: %s
+        """ 
+          % (len(cross["ID"])))
+
+        return mult_cat1 , mult_cat2 , best_cat1 , best_cat2 , cross
+
+    def cross_match_3d(self,
+        cosmo: Nc.HICosmo,
+        matching_distance1: float,
+        matching_distance2: float,
+        n_nearest_neighbours1: int,
+        n_nearest_neighbours2: int,
+        verbose: bool = True,
+        selection_criteria1: str= 'distances',
+        selection_criteria2: str= 'distances',
+    ) -> Table:
+
+        cat2 = SkyMatch(query_catalog_path=self.match_catalog_path, query_coordinates=self.match_coordinates, match_catalog_path=self.query_catalog_path, match_coordinates=self.query_coordinates, query_properties=self.match_properties, match_properties=self.query_properties)
+        
+        mult_cat1, best_cat1 = self.match_3d(cosmo=cosmo  ,matching_distance=matching_distance1 ,n_nearest_neighbours=n_nearest_neighbours1 ,selection_criteria=selection_criteria1)
+
+        mult_cat2, best_cat2 = cat2.match_3d(cosmo=cosmo  ,matching_distance=matching_distance2 ,n_nearest_neighbours=n_nearest_neighbours2, selection_criteria=selection_criteria2)
+
+        cross = Table(names=(best_cat1.columns) , dtype=tuple([best_cat1.columns[i].dtype for i in range(len(best_cat1.columns))]))
+
+        for i in tqdm.tqdm(range(len(best_cat1['ID']))):
+            if type(best_cat1['ID_matched'][i]) != np.ndarray:
+                if best_cat1['ID'][i] == best_cat2[best_cat2['ID'] == best_cat1['ID_matched'][i]]['ID_matched']:
+                    cross.add_row(best_cat1[i])
+                    
+
+        print("""
+        Number of cross matched objects: %s
+        """ 
+          % (len(cross["ID"])))
+
+        return mult_cat1 , mult_cat2 , best_cat1 , best_cat2 , cross
+
+    def z_interval(self, 
+        use_zerr: bool =False,
+        z: float = 0.0,
+        delta_z: float = 0.0,
+        n_delta_z: int = 0.0,
+        z_err: float = 0.0,
+        ) -> float:
+        
+        if use_zerr == True:
+            z_min = z - n_delta_z * z_err
+            z_max = z + n_delta_z * z_err
+
+        else:
+            z_min = z - delta_z * n_delta_z * (1.0 + z)
+            z_max = z + delta_z * n_delta_z * (1.0 + z)
+
+        return z_min , z_max
