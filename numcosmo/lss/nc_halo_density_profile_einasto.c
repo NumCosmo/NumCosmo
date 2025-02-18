@@ -137,7 +137,7 @@ nc_halo_density_profile_einasto_finalize (GObject *object)
 static void _nc_halo_density_profile_einasto_add_submodel (NcmModel *model, NcmModel *submodel);
 
 static gdouble _nc_halo_density_profile_einasto_eval_dl_density (NcHaloDensityProfile *dp, const gdouble X);
-static gdouble _nc_halo_density_profile_einasto_eval_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble X);
+static gdouble _nc_halo_density_profile_einasto_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble X);
 
 static void
 nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *klass)
@@ -200,13 +200,12 @@ _nc_halo_density_profile_einasto_eval_dl_density (NcHaloDensityProfile *dp, cons
 }
 
 static gdouble
-_nc_halo_density_profile_einasto_eval_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x)
+_nc_halo_density_profile_einasto_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x)
 {
-  NcHaloDensityProfileEinasto *dpe                = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
-  NcHaloDensityProfileEinastoPrivate * const self = nc_halo_density_profile_einasto_get_instance_private (dpe);
-  const gdouble cDelta                            = nc_halo_mass_summary_concentration (self->hms, cosmo);
+  //NcHaloDensityProfileEinasto *dpe                = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
+  //NcHaloDensityProfileEinastoPrivate * const self = nc_halo_density_profile_einasto_get_instance_private (dpe);
   const gdouble gamma_3_alpha                     = gsl_sf_gamma (3.0 / ALPHA);
-  const gdouble arg_2                             = 2.0 * pow (cDelta, ALPHA) / ALPHA;
+  const gdouble arg_2                             = 2.0 * pow (x, ALPHA) / ALPHA;
   const gdouble gamma_inc_P                       = gsl_sf_gamma_inc_P (3.0 / ALPHA, arg_2);
 
   return (pow (ALPHA / 2.0, 3.0 / ALPHA) * exp (2.0 / ALPHA) / ALPHA * gamma_3_alpha * gamma_inc_P);
