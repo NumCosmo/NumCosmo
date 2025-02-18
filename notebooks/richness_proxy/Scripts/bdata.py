@@ -104,7 +104,7 @@ class DataB:
     def get_bins_mean(self):
                 
         # lnR mean, lnM mean and z mean values in each bin:
-        richness_mean = [np.mean(binned_data["richness"]) for binned_data in self.mz_bins if len(binned_data) > 0]
+        richness_mean = [np.average(binned_data["richness"], weights = binned_data["richness_err"] ) for binned_data in self.mz_bins if len(binned_data) > 0]
         
         mass_mean = [np.mean(binned_data["mass"]) for binned_data in self.mz_bins if len(binned_data) > 0]
         
