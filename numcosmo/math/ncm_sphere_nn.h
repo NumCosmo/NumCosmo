@@ -56,6 +56,7 @@ gint64 ncm_sphere_nn_get_n (NcmSphereNN *snn);
 void ncm_sphere_nn_rebuild (NcmSphereNN *snn);
 GArray *ncm_sphere_nn_knn_search (NcmSphereNN *snn, const gdouble r, const gdouble theta, const gdouble phi, const gint64 k);
 void ncm_sphere_nn_knn_search_distances (NcmSphereNN *snn, const gdouble r, const gdouble theta, const gdouble phi, const gint64 k, GArray **distances, GArray **indices);
+void ncm_sphere_nn_knn_search_distances_batch (NcmSphereNN *snn, GArray *r, GArray *theta, GArray *phi, const gint64 k, GArray **distances, GArray **indices);
 void ncm_sphere_nn_dump_tree (NcmSphereNN *snn);
 
 G_END_DECLS
