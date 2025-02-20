@@ -173,6 +173,15 @@ gdouble nc_distance_transverse_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const 
 gdouble nc_distance_angular_diameter_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, const gdouble z1, const gdouble z2);
 
 /***************************************************************************
+ * Vectorized 'distances'
+ ****************************************************************************/
+
+GArray *nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z);
+GArray *nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z);
+GArray *nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z);
+GArray *nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z);
+
+/***************************************************************************
  * Inverse 'distances'
  ****************************************************************************/
 gdouble nc_distance_inv_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble xi);
