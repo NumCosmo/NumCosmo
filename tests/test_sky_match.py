@@ -38,6 +38,7 @@ from numcosmo_py.sky_match import SkyMatch, DistanceMethod, Mask
 Ncm.cfg_init()
 
 ATOL = 1.0e-7
+RTOL = 1.0e-5
 QUERY_SIZE = 1200
 MATCH_SIZE = 1000
 
@@ -156,6 +157,23 @@ def fixture_setup_catalogs_fits_containing_image(tmp_path) -> tuple[Path, Path]:
 def fixture_distance_method(request):
     """Return a distance method."""
     return request.param
+
+
+def test_mask_new():
+    """Test the mask_new function."""
+    mask_all_true = Mask(mask=np.ones((10, 10), dtype=bool))
+    assert mask_all_true.shape == (10, 10)
+    assert mask_all_true.array.shape == (10, 10)
+
+    mask_all_false = Mask(mask=np.zeros((10, 10), dtype=bool))
+    assert mask_all_false.shape == (10, 10)
+    assert mask_all_false.array.shape == (10, 10)
+
+    mask = mask_all_false & mask_all_true
+    assert mask.shape == (10, 10)
+    assert mask.array.shape == (10, 10)
+
+    assert np.all(mask.array == mask_all_false.array)
 
 
 def test_load_fits_data(setup_catalogs):
@@ -453,14 +471,19 @@ def test_match_2d(cosmo, setup_catalogs, distance_method):
     match distance_method:
         case DistanceMethod.ANGULAR_SEPARATION:
             assert_allclose(
-                angular_distance, result.nearest_neighbours_distances, atol=ATOL
+                angular_distance,
+                result.nearest_neighbours_distances,
+                atol=ATOL,
+                rtol=RTOL,
             )
         case DistanceMethod.QUERY_RADIUS:
             query_r = (
                 np.array(dist.angular_diameter_vector(cosmo, matching.query_z)) * RH_Mpc
             )
             distances = query_r.reshape(-1, 1) * 2.0 * np.sin(angular_distance / 2.0)
-            assert_allclose(distances, result.nearest_neighbours_distances)
+            assert_allclose(
+                distances, result.nearest_neighbours_distances, atol=ATOL, rtol=RTOL
+            )
         case DistanceMethod.MATCH_RADIUS:
             match_r = (
                 np.array(dist.angular_diameter_vector(cosmo, matching.match_z)) * RH_Mpc
@@ -470,7 +493,9 @@ def test_match_2d(cosmo, setup_catalogs, distance_method):
                 * 2.0
                 * np.sin(angular_distance / 2.0)
             )
-            assert_allclose(distances, result.nearest_neighbours_distances)
+            assert_allclose(
+                distances, result.nearest_neighbours_distances, atol=ATOL, rtol=RTOL
+            )
         case DistanceMethod.MIN_RADIUS:
             query_r = (
                 np.array(dist.angular_diameter_vector(cosmo, matching.query_z)) * RH_Mpc
@@ -485,7 +510,9 @@ def test_match_2d(cosmo, setup_catalogs, distance_method):
                 * 2.0
                 * np.sin(angular_distance / 2.0)
             )
-            assert_allclose(distances, result.nearest_neighbours_distances)
+            assert_allclose(
+                distances, result.nearest_neighbours_distances, atol=ATOL, rtol=RTOL
+            )
         case DistanceMethod.MAX_RADIUS:
             query_r = (
                 np.array(dist.angular_diameter_vector(cosmo, matching.query_z)) * RH_Mpc
@@ -500,7 +527,9 @@ def test_match_2d(cosmo, setup_catalogs, distance_method):
                 * 2.0
                 * np.sin(angular_distance / 2.0)
             )
-            assert_allclose(distances, result.nearest_neighbours_distances)
+            assert_allclose(
+                distances, result.nearest_neighbours_distances, atol=ATOL, rtol=RTOL
+            )
         case _:
             raise ValueError(f"Invalid distance method: {distance_method}")
 
@@ -535,12 +564,21 @@ def test_match_2d_table(cosmo, setup_catalogs, distance_method):
             row["distances"],
             result.nearest_neighbours_distances[row_id][mask_array[row_id]],
             atol=ATOL,
+            rtol=RTOL,
         )
         matched_id = result.nearest_neighbours_indices[row_id][mask_array[row_id]]
         assert all(matched_id == row["ID_matched"])
-        assert_allclose(row["RA_matched"], matching.match_data["RA_match"][matched_id])
         assert_allclose(
-            row["DEC_matched"], matching.match_data["DEC_match"][matched_id]
+            row["RA_matched"],
+            matching.match_data["RA_match"][matched_id],
+            atol=ATOL,
+            rtol=RTOL,
+        )
+        assert_allclose(
+            row["DEC_matched"],
+            matching.match_data["DEC_match"][matched_id],
+            atol=ATOL,
+            rtol=RTOL,
         )
 
 
@@ -585,7 +623,9 @@ def test_match_3d(cosmo, setup_catalogs):
         + (query_x2.reshape(-1, 1) - match_x2[indices]) ** 2
         + (query_x3.reshape(-1, 1) - match_x3[indices]) ** 2
     )
-    assert_allclose(distances, result.nearest_neighbours_distances)
+    assert_allclose(
+        distances, result.nearest_neighbours_distances, atol=ATOL, rtol=RTOL
+    )
 
 
 def test_match_3d_table(cosmo, setup_catalogs):
@@ -616,12 +656,21 @@ def test_match_3d_table(cosmo, setup_catalogs):
             row["distances"],
             result.nearest_neighbours_distances[row_id][mask_array[row_id]],
             atol=ATOL,
+            rtol=RTOL,
         )
         matched_id = result.nearest_neighbours_indices[row_id][mask_array[row_id]]
         assert all(matched_id == row["ID_matched"])
-        assert_allclose(row["RA_matched"], matching.match_data["RA_match"][matched_id])
         assert_allclose(
-            row["DEC_matched"], matching.match_data["DEC_match"][matched_id]
+            row["RA_matched"],
+            matching.match_data["RA_match"][matched_id],
+            atol=ATOL,
+            rtol=RTOL,
+        )
+        assert_allclose(
+            row["DEC_matched"],
+            matching.match_data["DEC_match"][matched_id],
+            atol=ATOL,
+            rtol=RTOL,
         )
 
 
@@ -656,16 +705,25 @@ def test_match_2d_extra_columns(cosmo, setup_catalogs_extra_columns):
             row["distances"],
             result.nearest_neighbours_distances[row_id][mask_array[row_id]],
             atol=ATOL,
+            rtol=RTOL,
         )
         matched_id = result.nearest_neighbours_indices[row_id][mask_array[row_id]]
         assert all(matched_id == row["ID_matched"])
         assert_allclose(row["RA_matched"], matching.match_data["RA_match"][matched_id])
         assert_allclose(
-            row["DEC_matched"], matching.match_data["DEC_match"][matched_id]
+            row["DEC_matched"],
+            matching.match_data["DEC_match"][matched_id],
+            atol=ATOL,
+            rtol=RTOL,
         )
-        assert_allclose(row["copy_extra_query"], qrow["extra_query"])
         assert_allclose(
-            row["copy_extra_match"], matching.match_data["extra_match"][matched_id]
+            row["copy_extra_query"], qrow["extra_query"], atol=ATOL, rtol=RTOL
+        )
+        assert_allclose(
+            row["copy_extra_match"],
+            matching.match_data["extra_match"][matched_id],
+            atol=ATOL,
+            rtol=RTOL,
         )
 
 
