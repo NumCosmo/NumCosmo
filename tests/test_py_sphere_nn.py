@@ -75,6 +75,19 @@ def test_insert_array(snn):
         assert_allclose(snn.get(i), coord, atol=0.0, rtol=PREC)
 
 
+def test_insert_array_large(snn):
+    """Test set_array method."""
+    r_a = np.random.uniform(0.1, 5.0, 70_000)
+    cos_theta_a = np.random.uniform(-1.0, 1.0, 70_000)
+    phi_a = np.random.uniform(-np.pi, np.pi, 70_000)
+    theta_a = np.acos(cos_theta_a)
+
+    snn.insert_array(r_a, theta_a, phi_a)
+
+    for i, coord in enumerate(zip(r_a, theta_a, phi_a)):
+        assert_allclose(snn.get(i), coord, atol=0.0, rtol=PREC)
+
+
 def test_rebuild(snn):
     """Test rebuild method."""
     r_a = np.random.uniform(0.1, 5.0, 1000)
