@@ -33,11 +33,13 @@ from astropy.table import Table
 from astropy.io import fits
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.sky_match import SkyMatch
+from numcosmo_py.sky_match import SkyMatch, DistanceMethod, Mask
 
 Ncm.cfg_init()
 
 ATOL = 1.0e-7
+QUERY_SIZE = 1200
+MATCH_SIZE = 1000
 
 
 @pytest.fixture(name="cosmo")
@@ -56,23 +58,27 @@ def fixture_setup_catalogs(tmp_path) -> tuple[Path, Path]:
     RA_max = 30.0
     DEC_min = -30.0
     DEC_max = -10.0
-    # Create dummy data for query catalog (1000 objects)
+    # Create dummy data for query catalog (QUERY_SIZE objects)
     query_data = Table(
         {
-            "RA_query": [np.random.uniform(RA_min, RA_max) for _ in range(1000)],
-            "DEC_query": [np.random.uniform(DEC_min, DEC_max) for _ in range(1000)],
-            "z_query": [np.random.uniform(0.9, 1.0) for _ in range(1000)],
-            "ID_query": range(1000),
+            "RA_query": [np.random.uniform(RA_min, RA_max) for _ in range(QUERY_SIZE)],
+            "DEC_query": [
+                np.random.uniform(DEC_min, DEC_max) for _ in range(QUERY_SIZE)
+            ],
+            "z_query": [np.random.uniform(0.9, 1.0) for _ in range(QUERY_SIZE)],
+            "ID_query": range(QUERY_SIZE),
         }
     )
     query_data.write(query_catalog_path, format="fits")
-    # Create dummy data for match catalog (1000 objects)
+    # Create dummy data for match catalog (MATCH_SIZE objects)
     match_data = Table(
         {
-            "RA_match": [np.random.uniform(RA_min, RA_max) for _ in range(1000)],
-            "DEC_match": [np.random.uniform(DEC_min, DEC_max) for _ in range(1000)],
-            "z_match": [np.random.uniform(0.9, 1.0) for _ in range(1000)],
-            "ID_match": range(1000),
+            "RA_match": [np.random.uniform(RA_min, RA_max) for _ in range(MATCH_SIZE)],
+            "DEC_match": [
+                np.random.uniform(DEC_min, DEC_max) for _ in range(MATCH_SIZE)
+            ],
+            "z_match": [np.random.uniform(0.9, 1.0) for _ in range(MATCH_SIZE)],
+            "ID_match": range(MATCH_SIZE),
         }
     )
     match_data.write(match_catalog_path, format="fits")
@@ -90,25 +96,29 @@ def fixture_setup_catalogs_extra_columns(tmp_path) -> tuple[Path, Path]:
     RA_max = 30.0
     DEC_min = -30.0
     DEC_max = -10.0
-    # Create dummy data for query catalog (1000 objects)
+    # Create dummy data for query catalog (QUERY_SIZE objects)
     query_data = Table(
         {
-            "RA_query": [np.random.uniform(RA_min, RA_max) for _ in range(1000)],
-            "DEC_query": [np.random.uniform(DEC_min, DEC_max) for _ in range(1000)],
-            "z_query": [np.random.uniform(0.9, 1.0) for _ in range(1000)],
-            "ID_query": range(1000),
-            "extra_query": [np.random.uniform(0.0, 1.0) for _ in range(1000)],
+            "RA_query": [np.random.uniform(RA_min, RA_max) for _ in range(QUERY_SIZE)],
+            "DEC_query": [
+                np.random.uniform(DEC_min, DEC_max) for _ in range(QUERY_SIZE)
+            ],
+            "z_query": [np.random.uniform(0.9, 1.0) for _ in range(QUERY_SIZE)],
+            "ID_query": range(QUERY_SIZE),
+            "extra_query": [np.random.uniform(0.0, 1.0) for _ in range(QUERY_SIZE)],
         }
     )
     query_data.write(query_catalog_path, format="fits")
-    # Create dummy data for match catalog (1000 objects)
+    # Create dummy data for match catalog (MATCH_SIZE objects)
     match_data = Table(
         {
-            "RA_match": [np.random.uniform(RA_min, RA_max) for _ in range(1000)],
-            "DEC_match": [np.random.uniform(DEC_min, DEC_max) for _ in range(1000)],
-            "z_match": [np.random.uniform(0.9, 1.0) for _ in range(1000)],
-            "ID_match": range(1000),
-            "extra_match": [np.random.uniform(0.0, 1.0) for _ in range(1000)],
+            "RA_match": [np.random.uniform(RA_min, RA_max) for _ in range(MATCH_SIZE)],
+            "DEC_match": [
+                np.random.uniform(DEC_min, DEC_max) for _ in range(MATCH_SIZE)
+            ],
+            "z_match": [np.random.uniform(0.9, 1.0) for _ in range(MATCH_SIZE)],
+            "ID_match": range(MATCH_SIZE),
+            "extra_match": [np.random.uniform(0.0, 1.0) for _ in range(MATCH_SIZE)],
         }
     )
     match_data.write(match_catalog_path, format="fits")
@@ -140,10 +150,16 @@ def fixture_setup_catalogs_fits_containing_image(tmp_path) -> tuple[Path, Path]:
     return query_catalog_path, match_catalog_path
 
 
+@pytest.fixture(name="distance_method", params=list(DistanceMethod))
+def fixture_distance_method(request):
+    """Return a distance method."""
+    return request.param
+
+
 def test_load_fits_data(setup_catalogs):
     """Test the load_fits_data function."""
     query_catalog_path, match_catalog_path = setup_catalogs
-    matching = SkyMatch(
+    matching = SkyMatch.new_from_fits(
         query_catalog_path=query_catalog_path,
         query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
         match_catalog_path=match_catalog_path,
@@ -152,15 +168,15 @@ def test_load_fits_data(setup_catalogs):
     assert matching is not None
     assert matching.query_data is not None
     assert matching.match_data is not None
-    assert len(matching.query_data) == 1000
-    assert len(matching.match_data) == 1000
+    assert len(matching.query_data) == QUERY_SIZE
+    assert len(matching.match_data) == MATCH_SIZE
 
 
 def test_load_fits_data_wrong_query_map(setup_catalogs):
     """Test the load_fits_data function with wrong query map."""
     query_catalog_path, match_catalog_path = setup_catalogs
     with pytest.raises(ValueError, match="RA and DEC coordinates mapped by.*"):
-        _ = SkyMatch(
+        _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={
                 "RA": "RA_bob",
@@ -177,7 +193,7 @@ def test_load_fits_data_wrong_match_map(setup_catalogs):
     """Test the load_fits_data function with wrong match map."""
     query_catalog_path, match_catalog_path = setup_catalogs
     with pytest.raises(ValueError, match="RA and DEC coordinates mapped by.*"):
-        _ = SkyMatch(
+        _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
             match_catalog_path=match_catalog_path,
@@ -194,7 +210,7 @@ def test_load_fits_data_nonexistent(setup_catalogs_nonexistent):
     """Test the load_fits_data function with nonexistent catalog."""
     query_catalog_path, match_catalog_path = setup_catalogs_nonexistent
     with pytest.raises(FileNotFoundError):
-        _ = SkyMatch(
+        _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
             match_catalog_path=match_catalog_path,
@@ -208,7 +224,7 @@ def test_load_fits_data_fits_containing_image(setup_catalogs_fits_containing_ima
     with pytest.raises(
         ValueError, match="No FITS table found in the provided catalog."
     ):
-        _ = SkyMatch(
+        _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
             match_catalog_path=match_catalog_path,
@@ -220,7 +236,7 @@ def test_load_fits_data_missing_RA_query(setup_catalogs):
     """Test the load_fits_data function with missing RA_query column."""
     query_catalog_path, match_catalog_path = setup_catalogs
     with pytest.raises(ValueError, match="RA and DEC coordinates must be provided."):
-        _ = SkyMatch(
+        _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={"DEC": "DEC_query", "z": "z_query"},
             match_catalog_path=match_catalog_path,
@@ -232,7 +248,7 @@ def test_load_fits_data_missing_DEC_query(setup_catalogs):
     """Test the load_fits_data function with missing DEC_query column."""
     query_catalog_path, match_catalog_path = setup_catalogs
     with pytest.raises(ValueError, match="RA and DEC coordinates must be provided."):
-        _ = SkyMatch(
+        _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "z": "z_query"},
             match_catalog_path=match_catalog_path,
@@ -244,7 +260,7 @@ def test_load_fits_data_missing_RA_match(setup_catalogs):
     """Test the load_fits_data function with missing RA_match column."""
     query_catalog_path, match_catalog_path = setup_catalogs
     with pytest.raises(ValueError, match="RA and DEC coordinates must be provided."):
-        _ = SkyMatch(
+        _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
             match_catalog_path=match_catalog_path,
@@ -256,7 +272,7 @@ def test_load_fits_data_missing_DEC_match(setup_catalogs):
     """Test the load_fits_data function with missing DEC_match column."""
     query_catalog_path, match_catalog_path = setup_catalogs
     with pytest.raises(ValueError, match="RA and DEC coordinates must be provided."):
-        _ = SkyMatch(
+        _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
             match_catalog_path=match_catalog_path,
@@ -274,7 +290,7 @@ def test_load_fits_data_wrong_RA_query(setup_catalogs):
             "not found in the provided catalog .*"
         ),
     ):
-        _ = SkyMatch(
+        _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={
                 "RA": "RA_query_wrong",
@@ -296,7 +312,7 @@ def test_load_fits_data_wrong_DEC_query(setup_catalogs):
             "not found in the provided catalog .*"
         ),
     ):
-        _ = SkyMatch(
+        _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={
                 "RA": "RA_query",
@@ -318,7 +334,7 @@ def test_load_fits_data_wrong_RA_match(setup_catalogs):
             "not found in the provided catalog .*"
         ),
     ):
-        _ = SkyMatch(
+        _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
             match_catalog_path=match_catalog_path,
@@ -340,7 +356,7 @@ def test_load_fits_data_wrong_DEC_match(setup_catalogs):
             "not found in the provided catalog .*"
         ),
     ):
-        _ = SkyMatch(
+        _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
             match_catalog_path=match_catalog_path,
@@ -359,7 +375,7 @@ def test_load_fits_data_wrong_z_query(setup_catalogs):
         ValueError,
         match="Redshift coordinate mapped by .* not found in the provided catalog .*",
     ):
-        _ = SkyMatch(
+        _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={
                 "RA": "RA_query",
@@ -378,7 +394,7 @@ def test_load_fits_data_wrong_z_match(setup_catalogs):
         ValueError,
         match="Redshift coordinate mapped by .* not found in the provided catalog .*",
     ):
-        _ = SkyMatch(
+        _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
             match_catalog_path=match_catalog_path,
@@ -390,284 +406,265 @@ def test_load_fits_data_wrong_z_match(setup_catalogs):
         )
 
 
-def test_match_2d(setup_catalogs):
+def test_match_2d(cosmo, setup_catalogs, distance_method):
     """Test the match_2d function."""
     query_catalog_path, match_catalog_path = setup_catalogs
-    matching = SkyMatch(
+    matching = SkyMatch.new_from_fits(
         query_catalog_path=query_catalog_path,
         query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
         match_catalog_path=match_catalog_path,
         match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
     )
-    mt = matching.match_2d(
-        matching_distance=np.pi / 2.0, n_nearest_neighbours=10, verbose=False
+    result = matching.match_2d(
+        cosmo,
+        n_nearest_neighbours=10,
+        distance_method=distance_method,
     )
-    assert mt is not None
+    assert result is not None
 
-    for key in [
-        "RA",
-        "DEC",
-        "ID",
-        "RA_matched",
-        "DEC_matched",
-        "ID_matched",
-    ]:
-        assert key in mt.keys()
+    dist = Nc.Distance(zf=10.0)
+    dist.prepare(cosmo)
+    RH_Mpc = cosmo.RH_Mpc()
 
-    for row in mt:
+    match_ra = matching.match_ra
+    match_dec = matching.match_dec
+    match_theta = np.pi / 2.0 - np.radians(match_dec)
+    match_phi = np.radians(match_ra)
+
+    query_ra = matching.query_ra
+    query_dec = matching.query_dec
+    query_theta = np.pi / 2.0 - np.radians(query_dec)
+    query_phi = np.radians(query_ra)
+
+    match_theta_2d = match_theta[result.nearest_neighbours_indices]
+    match_phi_2d = match_phi[result.nearest_neighbours_indices]
+
+    query_theta_2d = np.repeat(query_theta, 10).reshape(-1, 10)
+    query_phi_2d = np.repeat(query_phi, 10).reshape(-1, 10)
+
+    angular_distance = np.arccos(
+        np.sin(query_theta_2d)
+        * np.sin(match_theta_2d)
+        * np.cos(query_phi_2d - match_phi_2d)
+        + np.cos(query_theta_2d) * np.cos(match_theta_2d)
+    )
+    match distance_method:
+        case DistanceMethod.ANGULAR_SEPARATION:
+            assert_allclose(
+                angular_distance, result.nearest_neighbours_distances, atol=ATOL
+            )
+        case DistanceMethod.QUERY_RADIUS:
+            query_r = (
+                np.array(dist.angular_diameter_vector(cosmo, matching.query_z)) * RH_Mpc
+            )
+            distances = query_r.reshape(-1, 1) * 2.0 * np.sin(angular_distance / 2.0)
+            assert_allclose(distances, result.nearest_neighbours_distances)
+        case DistanceMethod.MATCH_RADIUS:
+            match_r = (
+                np.array(dist.angular_diameter_vector(cosmo, matching.match_z)) * RH_Mpc
+            )
+            distances = (
+                match_r[result.nearest_neighbours_indices]
+                * 2.0
+                * np.sin(angular_distance / 2.0)
+            )
+            assert_allclose(distances, result.nearest_neighbours_distances)
+        case DistanceMethod.MIN_RADIUS:
+            query_r = (
+                np.array(dist.angular_diameter_vector(cosmo, matching.query_z)) * RH_Mpc
+            )
+            match_r = (
+                np.array(dist.angular_diameter_vector(cosmo, matching.match_z)) * RH_Mpc
+            )
+            distances = (
+                np.minimum(
+                    query_r.reshape(-1, 1), match_r[result.nearest_neighbours_indices]
+                )
+                * 2.0
+                * np.sin(angular_distance / 2.0)
+            )
+            assert_allclose(distances, result.nearest_neighbours_distances)
+        case DistanceMethod.MAX_RADIUS:
+            query_r = (
+                np.array(dist.angular_diameter_vector(cosmo, matching.query_z)) * RH_Mpc
+            )
+            match_r = (
+                np.array(dist.angular_diameter_vector(cosmo, matching.match_z)) * RH_Mpc
+            )
+            distances = (
+                np.maximum(
+                    query_r.reshape(-1, 1), match_r[result.nearest_neighbours_indices]
+                )
+                * 2.0
+                * np.sin(angular_distance / 2.0)
+            )
+            assert_allclose(distances, result.nearest_neighbours_distances)
+        case _:
+            raise ValueError(f"Invalid distance method: {distance_method}")
+
+
+def test_match_2d_table(cosmo, setup_catalogs, distance_method):
+    """Test the match_2d function."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    matching = SkyMatch.new_from_fits(
+        query_catalog_path=query_catalog_path,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        match_catalog_path=match_catalog_path,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+    )
+    result = matching.match_2d(
+        cosmo, n_nearest_neighbours=10, distance_method=distance_method
+    )
+    assert result is not None
+
+    mask_array = np.random.choice(
+        [True, False], size=10 * len(matching.query_ra)
+    ).reshape(-1, 10)
+    table = result.to_table_complete(mask=Mask(mask_array))
+
+    for row in table:
         row_id = row["ID"]
         qrow = matching.query_data[row_id]
         RA_query = qrow["RA_query"]
         DEC_query = qrow["DEC_query"]
         assert RA_query == row["RA"]
         assert DEC_query == row["DEC"]
-        for i, (matched_id, distance) in enumerate(
-            zip(row["ID_matched"], row["distances"])
-        ):
-            RA_match = matching.match_data[matched_id]["RA_match"]
-            DEC_match = matching.match_data[matched_id]["DEC_match"]
-            assert RA_match == row["RA_matched"][i]
-            assert DEC_match == row["DEC_matched"][i]
-            # Convert to theta, phi
-            theta_match = np.pi / 2.0 - np.radians(DEC_match)
-            phi_match = np.radians(RA_match)
-            theta_query = np.pi / 2.0 - np.radians(DEC_query)
-            phi_query = np.radians(RA_query)
-            # Calculate angular distance
-            # v = (sin(theta)cos(phi), sin(theta)sin(phi), cos(theta))
-            # angular_distance = arccos(v1.v2)
-            angular_distance = np.arccos(
-                np.sin(theta_query)
-                * np.sin(theta_match)
-                * np.cos(phi_query - phi_match)
-                + np.cos(theta_query) * np.cos(theta_match)
-            )
-            assert angular_distance <= np.pi
-            assert_allclose(angular_distance, distance, atol=ATOL)
+        assert_allclose(
+            row["distances"],
+            result.nearest_neighbours_distances[row_id][mask_array[row_id]],
+            atol=ATOL,
+        )
+        matched_id = result.nearest_neighbours_indices[row_id][mask_array[row_id]]
+        assert all(matched_id == row["ID_matched"])
+        assert_allclose(row["RA_matched"], matching.match_data["RA_match"][matched_id])
+        assert_allclose(
+            row["DEC_matched"], matching.match_data["DEC_match"][matched_id]
+        )
 
 
 def test_match_3d(cosmo, setup_catalogs):
     """Test the match_3d function."""
     query_catalog_path, match_catalog_path = setup_catalogs
-    matching = SkyMatch(
+    matching = SkyMatch.new_from_fits(
         query_catalog_path=query_catalog_path,
         query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
         match_catalog_path=match_catalog_path,
         match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
     )
-    mt = matching.match_3d(
-        cosmo, matching_distance=cosmo.RH_Mpc(), n_nearest_neighbours=10, verbose=False
-    )
-    assert mt is not None
+    result = matching.match_3d(cosmo, n_nearest_neighbours=10)
+    assert result is not None
     dist = Nc.Distance(zf=10.0)
     dist.prepare(cosmo)
+    RH_Mpc = cosmo.RH_Mpc()
 
-    for key in [
-        "RA",
-        "DEC",
-        "z",
-        "ID",
-        "RA_matched",
-        "DEC_matched",
-        "z_matched",
-        "ID_matched",
-    ]:
-        assert key in mt.keys()
+    match_ra = matching.match_ra
+    match_dec = matching.match_dec
+    match_theta = np.pi / 2.0 - np.radians(match_dec)
+    match_phi = np.radians(match_ra)
+    match_r = np.array(dist.angular_diameter_vector(cosmo, matching.match_z)) * RH_Mpc
 
-    for row in mt:
+    query_ra = matching.query_ra
+    query_dec = matching.query_dec
+    query_theta = np.pi / 2.0 - np.radians(query_dec)
+    query_phi = np.radians(query_ra)
+    query_r = np.array(dist.angular_diameter_vector(cosmo, matching.query_z)) * RH_Mpc
+
+    query_x1 = query_r * np.sin(query_theta) * np.cos(query_phi)
+    query_x2 = query_r * np.sin(query_theta) * np.sin(query_phi)
+    query_x3 = query_r * np.cos(query_theta)
+
+    match_x1 = match_r * np.sin(match_theta) * np.cos(match_phi)
+    match_x2 = match_r * np.sin(match_theta) * np.sin(match_phi)
+    match_x3 = match_r * np.cos(match_theta)
+
+    indices = result.nearest_neighbours_indices
+    distances = np.sqrt(
+        (query_x1.reshape(-1, 1) - match_x1[indices]) ** 2
+        + (query_x2.reshape(-1, 1) - match_x2[indices]) ** 2
+        + (query_x3.reshape(-1, 1) - match_x3[indices]) ** 2
+    )
+    assert_allclose(distances, result.nearest_neighbours_distances)
+
+
+def test_match_3d_table(cosmo, setup_catalogs):
+    """Test the match_3d function."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    matching = SkyMatch.new_from_fits(
+        query_catalog_path=query_catalog_path,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        match_catalog_path=match_catalog_path,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+    )
+    result = matching.match_3d(cosmo, n_nearest_neighbours=10)
+    assert result is not None
+
+    mask_array = np.random.choice(
+        [True, False], size=10 * len(matching.query_ra)
+    ).reshape(-1, 10)
+    table = result.to_table_complete(mask=Mask(mask_array))
+
+    for row in table:
         row_id = row["ID"]
         qrow = matching.query_data[row_id]
         RA_query = qrow["RA_query"]
         DEC_query = qrow["DEC_query"]
-        z_query = qrow["z_query"]
         assert RA_query == row["RA"]
         assert DEC_query == row["DEC"]
-        assert z_query == row["z"]
-        for i, (matched_id, distance) in enumerate(
-            zip(row["ID_matched"], row["distances Mpc"])
-        ):
-            RA_match = matching.match_data[matched_id]["RA_match"]
-            DEC_match = matching.match_data[matched_id]["DEC_match"]
-            z_match = matching.match_data[matched_id]["z_match"]
-            assert RA_match == row["RA_matched"][i]
-            assert DEC_match == row["DEC_matched"][i]
-            assert z_match == row["z_matched"][i]
-            # Convert to theta, phi
-            theta_match = np.pi / 2.0 - np.radians(DEC_match)
-            phi_match = np.radians(RA_match)
-            theta_query = np.pi / 2.0 - np.radians(DEC_query)
-            phi_query = np.radians(RA_query)
-            # Calculate angular distance
-            # v_query = r(sin(theta)cos(phi), sin(theta)sin(phi), cos(theta))
-            # v_match = r(sin(theta)cos(phi), sin(theta)sin(phi), cos(theta))
-            # Euclidean distance = sqrt((x2-x1)^2 + (y2-y1)^2 + (z2-z1)^2)
-            # Calculate euclidean distance
-            distance_query = dist.comoving(cosmo, z_query) * cosmo.RH_Mpc()
-            distance_match = dist.comoving(cosmo, z_match) * cosmo.RH_Mpc()
-            x1_query, x2_query, x3_query = (
-                distance_query * np.sin(theta_query) * np.cos(phi_query),
-                distance_query * np.sin(theta_query) * np.sin(phi_query),
-                distance_query * np.cos(theta_query),
-            )
-            x1_match, x2_match, x3_match = (
-                distance_match * np.sin(theta_match) * np.cos(phi_match),
-                distance_match * np.sin(theta_match) * np.sin(phi_match),
-                distance_match * np.cos(theta_match),
-            )
-            euclidean_distance = np.sqrt(
-                (x1_match - x1_query) ** 2
-                + (x2_match - x2_query) ** 2
-                + (x3_match - x3_query) ** 2
-            )
-            assert_allclose(euclidean_distance, distance, atol=ATOL)
+        assert_allclose(
+            row["distances"],
+            result.nearest_neighbours_distances[row_id][mask_array[row_id]],
+            atol=ATOL,
+        )
+        matched_id = result.nearest_neighbours_indices[row_id][mask_array[row_id]]
+        assert all(matched_id == row["ID_matched"])
+        assert_allclose(row["RA_matched"], matching.match_data["RA_match"][matched_id])
+        assert_allclose(
+            row["DEC_matched"], matching.match_data["DEC_match"][matched_id]
+        )
 
 
-def test_match_2d_extra_columns(setup_catalogs_extra_columns):
+def test_match_2d_extra_columns(cosmo, setup_catalogs_extra_columns):
     """Test the match_2d function with extra columns."""
     query_catalog_path, match_catalog_path = setup_catalogs_extra_columns
-    matching = SkyMatch(
+    matching = SkyMatch.new_from_fits(
         query_catalog_path=query_catalog_path,
         query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
         match_catalog_path=match_catalog_path,
         match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
-        query_properties=["extra_query"],
-        match_properties=["extra_match"],
     )
-    mt = matching.match_2d(
-        matching_distance=np.pi / 2.0, n_nearest_neighbours=10, verbose=False
+    result = matching.match_2d(cosmo, n_nearest_neighbours=10)
+    assert result is not None
+    mask_array = np.random.choice(
+        [True, False], size=10 * len(matching.query_ra)
+    ).reshape(-1, 10)
+    table = result.to_table_complete(
+        mask=Mask(mask_array),
+        query_properties={"extra_query": "copy_extra_query"},
+        match_properties={"extra_match": "copy_extra_match"},
     )
-    assert mt is not None
 
-    for key in [
-        "RA",
-        "DEC",
-        "ID",
-        "RA_matched",
-        "DEC_matched",
-        "ID_matched",
-        "extra_query",
-        "extra_match",
-    ]:
-        assert key in mt.keys()
-
-    for row in mt:
+    for row in table:
         row_id = row["ID"]
         qrow = matching.query_data[row_id]
         RA_query = qrow["RA_query"]
         DEC_query = qrow["DEC_query"]
         assert RA_query == row["RA"]
         assert DEC_query == row["DEC"]
-        assert qrow["extra_query"] == row["extra_query"]
-        for i, (matched_id, distance) in enumerate(
-            zip(row["ID_matched"], row["distances"])
-        ):
-            RA_match = matching.match_data[matched_id]["RA_match"]
-            DEC_match = matching.match_data[matched_id]["DEC_match"]
-            assert RA_match == row["RA_matched"][i]
-            assert DEC_match == row["DEC_matched"][i]
-            assert (
-                matching.match_data[matched_id]["extra_match"] == row["extra_match"][i]
-            )
-            # Convert to theta, phi
-            theta_match = np.pi / 2.0 - np.radians(DEC_match)
-            phi_match = np.radians(RA_match)
-            theta_query = np.pi / 2.0 - np.radians(DEC_query)
-            phi_query = np.radians(RA_query)
-            # Calculate angular distance
-            # v = (sin(theta)cos(phi), sin(theta)sin(phi), cos(theta))
-            # angular_distance = arccos(v1.v2)
-            angular_distance = np.arccos(
-                np.sin(theta_query)
-                * np.sin(theta_match)
-                * np.cos(phi_query - phi_match)
-                + np.cos(theta_query) * np.cos(theta_match)
-            )
-            assert angular_distance <= np.pi
-            assert_allclose(angular_distance, distance, atol=ATOL)
-
-
-def test_match_3d_extra_columns(cosmo, setup_catalogs_extra_columns):
-    """Test the match_3d function with extra columns."""
-    query_catalog_path, match_catalog_path = setup_catalogs_extra_columns
-    matching = SkyMatch(
-        query_catalog_path=query_catalog_path,
-        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
-        match_catalog_path=match_catalog_path,
-        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
-        query_properties=["extra_query"],
-        match_properties=["extra_match"],
-    )
-    mt = matching.match_3d(
-        cosmo, matching_distance=cosmo.RH_Mpc(), n_nearest_neighbours=10, verbose=False
-    )
-    assert mt is not None
-    dist = Nc.Distance(zf=10.0)
-    dist.prepare(cosmo)
-
-    for key in [
-        "RA",
-        "DEC",
-        "z",
-        "ID",
-        "RA_matched",
-        "DEC_matched",
-        "z_matched",
-        "ID_matched",
-        "extra_query",
-        "extra_match",
-    ]:
-        assert key in mt.keys()
-
-    for row in mt:
-        row_id = row["ID"]
-        qrow = matching.query_data[row_id]
-        RA_query = qrow["RA_query"]
-        DEC_query = qrow["DEC_query"]
-        z_query = qrow["z_query"]
-        assert RA_query == row["RA"]
-        assert DEC_query == row["DEC"]
-        assert z_query == row["z"]
-        assert qrow["extra_query"] == row["extra_query"]
-        for i, (matched_id, distance) in enumerate(
-            zip(row["ID_matched"], row["distances Mpc"])
-        ):
-            RA_match = matching.match_data[matched_id]["RA_match"]
-            DEC_match = matching.match_data[matched_id]["DEC_match"]
-            z_match = matching.match_data[matched_id]["z_match"]
-            assert RA_match == row["RA_matched"][i]
-            assert DEC_match == row["DEC_matched"][i]
-            assert z_match == row["z_matched"][i]
-            assert (
-                matching.match_data[matched_id]["extra_match"] == row["extra_match"][i]
-            )
-            # Convert to theta, phi
-            theta_match = np.pi / 2.0 - np.radians(DEC_match)
-            phi_match = np.radians(RA_match)
-            theta_query = np.pi / 2.0 - np.radians(DEC_query)
-            phi_query = np.radians(RA_query)
-            # Calculate angular distance
-            # v_query = r(sin(theta)cos(phi), sin(theta)sin(phi), cos(theta))
-            # v_match = r(sin(theta)cos(phi), sin(theta)sin(phi), cos(theta))
-            # Euclidean distance = sqrt((x2-x1)^2 + (y2-y1)^2 + (z2-z1)^2)
-            # Calculate euclidean distance
-            distance_query = dist.comoving(cosmo, z_query) * cosmo.RH_Mpc()
-            distance_match = dist.comoving(cosmo, z_match) * cosmo.RH_Mpc()
-            x1_query, x2_query, x3_query = (
-                distance_query * np.sin(theta_query) * np.cos(phi_query),
-                distance_query * np.sin(theta_query) * np.sin(phi_query),
-                distance_query * np.cos(theta_query),
-            )
-            x1_match, x2_match, x3_match = (
-                distance_match * np.sin(theta_match) * np.cos(phi_match),
-                distance_match * np.sin(theta_match) * np.sin(phi_match),
-                distance_match * np.cos(theta_match),
-            )
-            euclidean_distance = np.sqrt(
-                (x1_match - x1_query) ** 2
-                + (x2_match - x2_query) ** 2
-                + (x3_match - x3_query) ** 2
-            )
-            assert_allclose(euclidean_distance, distance, atol=ATOL)
+        assert_allclose(
+            row["distances"],
+            result.nearest_neighbours_distances[row_id][mask_array[row_id]],
+            atol=ATOL,
+        )
+        matched_id = result.nearest_neighbours_indices[row_id][mask_array[row_id]]
+        assert all(matched_id == row["ID_matched"])
+        assert_allclose(row["RA_matched"], matching.match_data["RA_match"][matched_id])
+        assert_allclose(
+            row["DEC_matched"], matching.match_data["DEC_match"][matched_id]
+        )
+        assert_allclose(row["copy_extra_query"], qrow["extra_query"])
+        assert_allclose(
+            row["copy_extra_match"], matching.match_data["extra_match"][matched_id]
+        )
 
 
 def test_match_3d_missing_z_query(cosmo, setup_catalogs):
@@ -680,18 +677,13 @@ def test_match_3d_missing_z_query(cosmo, setup_catalogs):
             "must be provided for both catalogs."
         ),
     ):
-        matching = SkyMatch(
+        matching = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "DEC": "DEC_query"},
             match_catalog_path=match_catalog_path,
             match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
         )
-        _ = matching.match_3d(
-            cosmo,
-            matching_distance=cosmo.RH_Mpc(),
-            n_nearest_neighbours=10,
-            verbose=False,
-        )
+        _ = matching.match_3d(cosmo, n_nearest_neighbours=10)
 
 
 def test_match_3d_missing_z_match(cosmo, setup_catalogs):
@@ -704,51 +696,10 @@ def test_match_3d_missing_z_match(cosmo, setup_catalogs):
             "must be provided for both catalogs."
         ),
     ):
-        matching = SkyMatch(
+        matching = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
             match_catalog_path=match_catalog_path,
             match_coordinates={"RA": "RA_match", "DEC": "DEC_match"},
         )
-        _ = matching.match_3d(
-            cosmo,
-            matching_distance=cosmo.RH_Mpc(),
-            n_nearest_neighbours=10,
-            verbose=False,
-        )
-
-
-def test_match_2d_invalid_matching_distance_lt0(setup_catalogs):
-    """Test the match_2d function with invalid matching_distance."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    with pytest.raises(
-        ValueError,
-        match="The matching distance must be between 0 and pi.",
-    ):
-        matching = SkyMatch(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
-            match_catalog_path=match_catalog_path,
-            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
-        )
-        _ = matching.match_2d(
-            matching_distance=-1.0, n_nearest_neighbours=10, verbose=False
-        )
-
-
-def test_match_2d_invalid_matching_distance_gt_pi(setup_catalogs):
-    """Test the match_2d function with invalid matching_distance."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    with pytest.raises(
-        ValueError,
-        match="The matching distance must be between 0 and pi.",
-    ):
-        matching = SkyMatch(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
-            match_catalog_path=match_catalog_path,
-            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
-        )
-        _ = matching.match_2d(
-            matching_distance=np.pi + 1.0, n_nearest_neighbours=10, verbose=False
-        )
+        _ = matching.match_3d(cosmo, n_nearest_neighbours=10)
