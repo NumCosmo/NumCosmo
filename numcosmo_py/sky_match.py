@@ -5,6 +5,7 @@ Module to match objects in the sky halo-halo, cluster-halo, cluster-cluster.
 
 from __future__ import annotations
 import dataclasses
+from typing_extensions import assert_never
 from typing import TypedDict, cast
 from pathlib import Path
 from enum import Enum, auto
@@ -124,6 +125,11 @@ class BestCandidates:
     def query_indices(self) -> npt.NDArray[np.int64]:
         """Query indices."""
         return np.arange(len(self.query_filter))[self.query_filter]
+
+    @property
+    def query_match_dict(self) -> dict[int, int]:
+        """Query match dictionary."""
+        return dict(zip(self.query_indices, self.indices))
 
     def get_cross_match_indices(self, inverse_best: BestCandidates) -> dict[int, int]:
         """Get the cross match indices."""
@@ -340,10 +346,9 @@ class SkyMatchResult:
                 best_candidates_indices = [
                     nni[np.argmax(match_more_massive[nni])] for nni in filtered_indices
                 ]
-            case _:
-                raise ValueError(
-                    "The selection_criteria must be a SelectionCriteria enum value."
-                )
+            case _ as unreachable:
+                assert_never(unreachable)
+
         return BestCandidates(
             query_filter=query_filter,
             indices=np.array(best_candidates_indices, dtype=np.int64),
@@ -690,9 +695,7 @@ class SkyMatch:
                     np.ndarray[tuple[int, int], np.dtype[np.float64]],
                     np.maximum(query_distances, match_distances),
                 )
-            case _:
-                raise ValueError(
-                    "The distance method must be a DistanceMethod enum value."
-                )
+            case _ as unreachable:
+                assert_never(unreachable)
 
         return SkyMatchResult(self, indices, distances)

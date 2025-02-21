@@ -1040,3 +1040,94 @@ def test_match_2d_best_more_massive(cosmo, setup_catalogs, distance_method):
         idx = result.nearest_neighbours_indices[query_index][mask.array[query_index]]
         best_z_index = idx[np.argmax(match_ra[idx])]
         assert best_z_index == best.indices[i]
+
+
+def test_match_2d_best_distance_table(cosmo, setup_catalogs, distance_method):
+    """Test the match_2d function."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    matching = SkyMatch.new_from_fits(
+        query_catalog_path=query_catalog_path,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        match_catalog_path=match_catalog_path,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+    )
+    result = matching.match_2d(
+        cosmo, n_nearest_neighbours=10, distance_method=distance_method
+    )
+    assert result is not None
+
+    mask = result.filter_mask_by_distance(20.0)
+    best = result.select_best(selection_criteria=SelectionCriteria.DISTANCES, mask=mask)
+    assert best is not None
+
+    table = result.to_table_best(best)
+    assert len(table) == len(best.query_indices)
+
+    for i, query_index in enumerate(best.query_indices):
+        assert table["RA"][i] == result.sky_match.query_ra[query_index]
+        assert table["DEC"][i] == result.sky_match.query_dec[query_index]
+        assert table["z"][i] == result.sky_match.query_z[query_index]
+        assert table["RA_matched"][i] == result.sky_match.match_ra[best.indices[i]]
+        assert table["DEC_matched"][i] == result.sky_match.match_dec[best.indices[i]]
+        assert table["z_matched"][i] == result.sky_match.match_z[best.indices[i]]
+
+    table = result.to_table_best(
+        best,
+        query_properties={"ID_query": "ID_query_copy"},
+        match_properties={"ID_match": "ID_match_copy"},
+    )
+    assert len(table) == len(best.query_indices)
+
+    for i, query_index in enumerate(best.query_indices):
+        assert table["RA"][i] == result.sky_match.query_ra[query_index]
+        assert table["DEC"][i] == result.sky_match.query_dec[query_index]
+        assert table["z"][i] == result.sky_match.query_z[query_index]
+        assert table["RA_matched"][i] == result.sky_match.match_ra[best.indices[i]]
+        assert table["DEC_matched"][i] == result.sky_match.match_dec[best.indices[i]]
+        assert table["z_matched"][i] == result.sky_match.match_z[best.indices[i]]
+        assert (
+            table["ID_query_copy"][i]
+            == result.sky_match.query_data["ID_query"][query_index]
+        )
+        assert (
+            table["ID_match_copy"][i]
+            == result.sky_match.match_data["ID_match"][best.indices[i]]
+        )
+
+
+def test_match_2d_best_cross(cosmo, setup_catalogs, distance_method):
+    """Test the match_2d function."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    matching = SkyMatch.new_from_fits(
+        query_catalog_path=query_catalog_path,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        match_catalog_path=match_catalog_path,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+    )
+    result = matching.match_2d(
+        cosmo, n_nearest_neighbours=10, distance_method=distance_method
+    )
+    assert result is not None
+
+    mask = result.filter_mask_by_distance(20.0)
+    best = result.select_best(selection_criteria=SelectionCriteria.DISTANCES, mask=mask)
+
+    inverted_matching = matching.invert_query_match()
+    inverted_result = inverted_matching.match_2d(
+        cosmo, n_nearest_neighbours=10, distance_method=distance_method
+    )
+    assert inverted_result is not None
+
+    inverted_mask = inverted_result.filter_mask_by_distance(20.0)
+    inverted_best = inverted_result.select_best(
+        selection_criteria=SelectionCriteria.DISTANCES, mask=inverted_mask
+    )
+
+    cross = best.get_cross_match_indices(inverted_best)
+
+    best_dict = best.query_match_dict
+    inversed_best_dict = inverted_best.query_match_dict
+
+    for query_i, match_i in cross.items():
+        assert best_dict[query_i] == match_i
+        assert inversed_best_dict[match_i] == query_i
