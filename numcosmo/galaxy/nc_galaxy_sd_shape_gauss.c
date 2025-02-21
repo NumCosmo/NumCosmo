@@ -262,7 +262,7 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDS
   e1_int = creal (e_s);
   e2_int = cimag (e_s);
 
-  if (data->coord == NC_GALAXY_WL_OBS_COORD_CELESTIAL)
+  if (data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
   {
     e2     = -e2;
     e2_int = -e2_int;
