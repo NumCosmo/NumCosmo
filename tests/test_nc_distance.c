@@ -569,24 +569,28 @@ test_nc_distance_comoving_vector (TestNcDistance *test, gconstpointer pdata)
 
   for (i = 0; i < test->ntests; i++)
   {
-    gdouble zi = g_test_rand_double_range (1.0e-1, 3.0);
+    gdouble zi = g_test_rand_double_range (1.0e-1, 8.0);
 
     g_array_append_val (z, zi);
   }
 
-  d = nc_distance_comoving_vector (dist, cosmo, z);
-
-  for (i = 0; i < z->len; i++)
+  for (dist->use_cache = 0; dist->use_cache < 2; dist->use_cache++)
   {
-    gdouble zi = g_array_index (z, gdouble, i);
-    gdouble di = g_array_index (d, gdouble, i);
-    gdouble dc = nc_distance_comoving (dist, cosmo, zi);
+    d = nc_distance_comoving_vector (dist, cosmo, z);
 
-    ncm_assert_cmpdouble_e (di, ==, dc, 1.0e-15, 0.0);
+    for (i = 0; i < z->len; i++)
+    {
+      gdouble zi = g_array_index (z, gdouble, i);
+      gdouble di = g_array_index (d, gdouble, i);
+      gdouble dc = nc_distance_comoving (dist, cosmo, zi);
+
+      ncm_assert_cmpdouble_e (di, ==, dc, 1.0e-15, 0.0);
+    }
+
+    g_array_unref (d);
   }
 
   g_array_unref (z);
-  g_array_unref (d);
 }
 
 void
@@ -600,24 +604,28 @@ test_nc_distance_transverse_vector (TestNcDistance *test, gconstpointer pdata)
 
   for (i = 0; i < test->ntests; i++)
   {
-    gdouble zi = g_test_rand_double_range (1.0e-1, 3.0);
+    gdouble zi = g_test_rand_double_range (1.0e-1, 8.0);
 
     g_array_append_val (z, zi);
   }
 
-  d = nc_distance_transverse_vector (dist, cosmo, z);
-
-  for (i = 0; i < z->len; i++)
+  for (dist->use_cache = 0; dist->use_cache < 2; dist->use_cache++)
   {
-    gdouble zi = g_array_index (z, gdouble, i);
-    gdouble di = g_array_index (d, gdouble, i);
-    gdouble dc = nc_distance_transverse (dist, cosmo, zi);
+    d = nc_distance_transverse_vector (dist, cosmo, z);
 
-    ncm_assert_cmpdouble_e (di, ==, dc, 1.0e-15, 0.0);
+    for (i = 0; i < z->len; i++)
+    {
+      gdouble zi = g_array_index (z, gdouble, i);
+      gdouble di = g_array_index (d, gdouble, i);
+      gdouble dc = nc_distance_transverse (dist, cosmo, zi);
+
+      ncm_assert_cmpdouble_e (di, ==, dc, 1.0e-15, 0.0);
+    }
+
+    g_array_unref (d);
   }
 
   g_array_unref (z);
-  g_array_unref (d);
 }
 
 void
@@ -631,24 +639,28 @@ test_nc_distance_luminosity_vector (TestNcDistance *test, gconstpointer pdata)
 
   for (i = 0; i < test->ntests; i++)
   {
-    gdouble zi = g_test_rand_double_range (1.0e-1, 3.0);
+    gdouble zi = g_test_rand_double_range (1.0e-1, 8.0);
 
     g_array_append_val (z, zi);
   }
 
-  d = nc_distance_luminosity_vector (dist, cosmo, z);
-
-  for (i = 0; i < z->len; i++)
+  for (dist->use_cache = 0; dist->use_cache < 2; dist->use_cache++)
   {
-    gdouble zi = g_array_index (z, gdouble, i);
-    gdouble di = g_array_index (d, gdouble, i);
-    gdouble dc = nc_distance_luminosity (dist, cosmo, zi);
+    d = nc_distance_luminosity_vector (dist, cosmo, z);
 
-    ncm_assert_cmpdouble_e (di, ==, dc, 1.0e-15, 0.0);
+    for (i = 0; i < z->len; i++)
+    {
+      gdouble zi = g_array_index (z, gdouble, i);
+      gdouble di = g_array_index (d, gdouble, i);
+      gdouble dc = nc_distance_luminosity (dist, cosmo, zi);
+
+      ncm_assert_cmpdouble_e (di, ==, dc, 1.0e-15, 0.0);
+    }
+
+    g_array_unref (d);
   }
 
   g_array_unref (z);
-  g_array_unref (d);
 }
 
 void
@@ -662,24 +674,28 @@ test_nc_distance_angular_diameter_vector (TestNcDistance *test, gconstpointer pd
 
   for (i = 0; i < test->ntests; i++)
   {
-    gdouble zi = g_test_rand_double_range (1.0e-1, 3.0);
+    gdouble zi = g_test_rand_double_range (1.0e-1, 8.0);
 
     g_array_append_val (z, zi);
   }
 
-  d = nc_distance_angular_diameter_vector (dist, cosmo, z);
-
-  for (i = 0; i < z->len; i++)
+  for (dist->use_cache = 0; dist->use_cache < 2; dist->use_cache++)
   {
-    gdouble zi = g_array_index (z, gdouble, i);
-    gdouble di = g_array_index (d, gdouble, i);
-    gdouble dc = nc_distance_angular_diameter (dist, cosmo, zi);
+    d = nc_distance_angular_diameter_vector (dist, cosmo, z);
 
-    ncm_assert_cmpdouble_e (di, ==, dc, 1.0e-15, 0.0);
+    for (i = 0; i < z->len; i++)
+    {
+      gdouble zi = g_array_index (z, gdouble, i);
+      gdouble di = g_array_index (d, gdouble, i);
+      gdouble dc = nc_distance_angular_diameter (dist, cosmo, zi);
+
+      ncm_assert_cmpdouble_e (di, ==, dc, 1.0e-15, 0.0);
+    }
+
+    g_array_unref (d);
   }
 
   g_array_unref (z);
-  g_array_unref (d);
 }
 
 static gdouble
