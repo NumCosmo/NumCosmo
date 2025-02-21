@@ -66,6 +66,7 @@ def fixture_setup_catalogs(tmp_path) -> tuple[Path, Path]:
                 np.random.uniform(DEC_min, DEC_max) for _ in range(QUERY_SIZE)
             ],
             "z_query": [np.random.uniform(0.9, 1.0) for _ in range(QUERY_SIZE)],
+            "z_err": [np.random.uniform(0.01, 0.02) for _ in range(QUERY_SIZE)],
             "ID_query": range(QUERY_SIZE),
         }
     )
@@ -78,6 +79,7 @@ def fixture_setup_catalogs(tmp_path) -> tuple[Path, Path]:
                 np.random.uniform(DEC_min, DEC_max) for _ in range(MATCH_SIZE)
             ],
             "z_match": [np.random.uniform(0.9, 1.0) for _ in range(MATCH_SIZE)],
+            "z_err": [np.random.uniform(0.01, 0.02) for _ in range(MATCH_SIZE)],
             "ID_match": range(MATCH_SIZE),
         }
     )
@@ -703,3 +705,192 @@ def test_match_3d_missing_z_match(cosmo, setup_catalogs):
             match_coordinates={"RA": "RA_match", "DEC": "DEC_match"},
         )
         _ = matching.match_3d(cosmo, n_nearest_neighbours=10)
+
+
+def test_match_3d_filter_distance(cosmo, setup_catalogs):
+    """Test the match_3d function with filter."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    matching = SkyMatch.new_from_fits(
+        query_catalog_path=query_catalog_path,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        match_catalog_path=match_catalog_path,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+    )
+    result = matching.match_3d(cosmo, n_nearest_neighbours=10)
+    assert result is not None
+    min_distance = 20.0
+
+    mask = result.filter_mask_by_distance(min_distance)
+    table = result.to_table_complete(mask=mask)
+    assert len(table) == QUERY_SIZE
+
+    for row in table:
+        assert all(row["distances"] < min_distance)
+
+    table_inverted = result.to_table_complete(mask=~mask)
+    assert len(table_inverted) == QUERY_SIZE
+
+    for row in table_inverted:
+        assert all(row["distances"] >= min_distance)
+
+
+@pytest.mark.parametrize(
+    ["sigma0", "nsigma"], [(0.01, 0.734), (0.02, 0.4), (0.007, 1.5)]
+)
+def test_match_3d_filter_z(cosmo, setup_catalogs, sigma0, nsigma):
+    """Test the match_3d function with filter."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    matching = SkyMatch.new_from_fits(
+        query_catalog_path=query_catalog_path,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        match_catalog_path=match_catalog_path,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+    )
+    result = matching.match_3d(cosmo, n_nearest_neighbours=10)
+    assert result is not None
+
+    mask = result.filter_mask_by_redshift_proximity(sigma0, nsigma)
+    table = result.to_table_complete(mask=mask)
+    assert len(table) == QUERY_SIZE
+
+    for row in table:
+        match_sigma_z = nsigma * sigma0 * (1.0 + row["z_matched"])
+        query_sigma_z = nsigma * sigma0 * (1.0 + row["z"])
+        max_z_dist = match_sigma_z + query_sigma_z
+        assert all(np.abs(row["z_matched"] - row["z"]) < max_z_dist)
+
+    table_inverted = result.to_table_complete(mask=~mask)
+    assert len(table_inverted) == QUERY_SIZE
+
+    for row in table_inverted:
+        match_sigma_z = nsigma * sigma0 * (1.0 + row["z_matched"])
+        query_sigma_z = nsigma * sigma0 * (1.0 + row["z"])
+        max_z_dist = match_sigma_z + query_sigma_z
+        assert all(np.abs(row["z_matched"] - row["z"]) >= max_z_dist)
+
+
+@pytest.mark.parametrize(
+    ["sigma0", "nsigma"], [(0.01, 0.734), (0.02, 0.4), (0.007, 1.5)]
+)
+def test_match_3d_filter_z_match_z_err(cosmo, setup_catalogs, sigma0, nsigma):
+    """Test the match_3d function with filter."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    matching = SkyMatch.new_from_fits(
+        query_catalog_path=query_catalog_path,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        match_catalog_path=match_catalog_path,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+    )
+    result = matching.match_3d(cosmo, n_nearest_neighbours=10)
+    assert result is not None
+
+    mask = result.filter_mask_by_redshift_proximity(
+        sigma0, nsigma, match_sigma_z_column="z_err"
+    )
+    table = result.to_table_complete(
+        mask=mask, match_properties={"z_err": "match_z_err"}
+    )
+    assert len(table) == QUERY_SIZE
+
+    for row in table:
+        match_sigma_z = nsigma * row["match_z_err"]
+        query_sigma_z = nsigma * sigma0 * (1.0 + row["z"])
+        max_z_dist = match_sigma_z + query_sigma_z
+        assert all(np.abs(row["z_matched"] - row["z"]) < max_z_dist)
+
+    table_inverted = result.to_table_complete(
+        mask=~mask, match_properties={"z_err": "match_z_err"}
+    )
+    assert len(table_inverted) == QUERY_SIZE
+
+    for row in table_inverted:
+        match_sigma_z = nsigma * row["match_z_err"]
+        query_sigma_z = nsigma * sigma0 * (1.0 + row["z"])
+        max_z_dist = match_sigma_z + query_sigma_z
+        assert all(np.abs(row["z_matched"] - row["z"]) >= max_z_dist)
+
+
+@pytest.mark.parametrize(
+    ["sigma0", "nsigma"], [(0.01, 0.734), (0.02, 0.4), (0.007, 1.5)]
+)
+def test_match_3d_filter_z_query_z_err(cosmo, setup_catalogs, sigma0, nsigma):
+    """Test the match_3d function with filter."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    matching = SkyMatch.new_from_fits(
+        query_catalog_path=query_catalog_path,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        match_catalog_path=match_catalog_path,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+    )
+    result = matching.match_3d(cosmo, n_nearest_neighbours=10)
+    assert result is not None
+
+    mask = result.filter_mask_by_redshift_proximity(
+        sigma0, nsigma, query_sigma_z_column="z_err"
+    )
+    table = result.to_table_complete(
+        mask=mask, query_properties={"z_err": "query_z_err"}
+    )
+    assert len(table) == QUERY_SIZE
+
+    for row in table:
+        match_sigma_z = nsigma * sigma0 * (1.0 + row["z_matched"])
+        query_sigma_z = nsigma * row["query_z_err"]
+        max_z_dist = match_sigma_z + query_sigma_z
+        assert all(np.abs(row["z_matched"] - row["z"]) < max_z_dist)
+
+    table_inverted = result.to_table_complete(
+        mask=~mask, query_properties={"z_err": "query_z_err"}
+    )
+    assert len(table_inverted) == QUERY_SIZE
+
+    for row in table_inverted:
+        match_sigma_z = nsigma * sigma0 * (1.0 + row["z_matched"])
+        query_sigma_z = nsigma * row["query_z_err"]
+        max_z_dist = match_sigma_z + query_sigma_z
+        assert all(np.abs(row["z_matched"] - row["z"]) >= max_z_dist)
+
+
+@pytest.mark.parametrize(
+    ["sigma0", "nsigma"], [(0.01, 0.734), (0.02, 0.4), (0.007, 1.5)]
+)
+def test_match_3d_filter_z_both_z_err(cosmo, setup_catalogs, sigma0, nsigma):
+    """Test the match_3d function with filter."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    matching = SkyMatch.new_from_fits(
+        query_catalog_path=query_catalog_path,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        match_catalog_path=match_catalog_path,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+    )
+    result = matching.match_3d(cosmo, n_nearest_neighbours=10)
+    assert result is not None
+
+    mask = result.filter_mask_by_redshift_proximity(
+        sigma0, nsigma, query_sigma_z_column="z_err", match_sigma_z_column="z_err"
+    )
+    table = result.to_table_complete(
+        mask=mask,
+        query_properties={"z_err": "query_z_err"},
+        match_properties={"z_err": "match_z_err"},
+    )
+    assert len(table) == QUERY_SIZE
+
+    for row in table:
+        match_sigma_z = nsigma * row["match_z_err"]
+        query_sigma_z = nsigma * row["query_z_err"]
+        max_z_dist = match_sigma_z + query_sigma_z
+        assert all(np.abs(row["z_matched"] - row["z"]) < max_z_dist)
+
+    table_inverted = result.to_table_complete(
+        mask=~mask,
+        query_properties={"z_err": "query_z_err"},
+        match_properties={"z_err": "match_z_err"},
+    )
+    assert len(table_inverted) == QUERY_SIZE
+
+    for row in table_inverted:
+        match_sigma_z = nsigma * row["match_z_err"]
+        query_sigma_z = nsigma * row["query_z_err"]
+        max_z_dist = match_sigma_z + query_sigma_z
+        assert all(np.abs(row["z_matched"] - row["z"]) >= max_z_dist)

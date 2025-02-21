@@ -87,6 +87,10 @@ class Mask:
         assert self.mask.shape == other.mask.shape
         return Mask(mask=self.mask & other.mask)
 
+    def __invert__(self) -> Mask:
+        """Logical not of the mask."""
+        return Mask(mask=~self.mask)
+
     @property
     def shape(self) -> tuple[int, ...]:
         """Shape of the mask."""
@@ -235,15 +239,13 @@ class SkyMatchResult:
 
         :param delta_z: Maximum delta_z to consider a match.
         """
-        if (
-            query_sigma_z_column is not None
-            and query_sigma_z_column not in self.sky_match.query_data
+        if query_sigma_z_column is not None and (
+            query_sigma_z_column not in self.sky_match.query_data.names
         ):
             raise ValueError(f"Column {query_sigma_z_column} not found in query data.")
 
-        if (
-            match_sigma_z_column is not None
-            and match_sigma_z_column not in self.sky_match.match_data
+        if match_sigma_z_column is not None and (
+            match_sigma_z_column not in self.sky_match.match_data.names
         ):
             raise ValueError(f"Column {match_sigma_z_column} not found in match data.")
 
