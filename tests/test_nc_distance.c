@@ -143,10 +143,6 @@ main (gint argc, gchar *argv[])
               &test_nc_distance_transverse_vector,
               &test_nc_distance_free);
 
-  /*
-   * Testing vector implementations.
-   */
-
   g_test_add ("/nc/distance/flat/luminosity_vector", TestNcDistance, NULL,
               &test_nc_distance_new,
               &test_nc_distance_luminosity_vector,
@@ -158,6 +154,19 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/distance/hyperbolic/luminosity_vector", TestNcDistance, NULL,
               &test_nc_distance_new_hyperbolic,
               &test_nc_distance_luminosity_vector,
+              &test_nc_distance_free);
+
+  g_test_add ("/nc/distance/flat/angular_diameter_vector", TestNcDistance, NULL,
+              &test_nc_distance_new,
+              &test_nc_distance_angular_diameter_vector,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/spherical/angular_diameter_vector", TestNcDistance, NULL,
+              &test_nc_distance_new_spherical,
+              &test_nc_distance_angular_diameter_vector,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/hyperbolic/angular_diameter_vector", TestNcDistance, NULL,
+              &test_nc_distance_new_hyperbolic,
+              &test_nc_distance_angular_diameter_vector,
               &test_nc_distance_free);
 
   /*
