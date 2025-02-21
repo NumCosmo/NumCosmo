@@ -33,7 +33,7 @@ from astropy.table import Table
 from astropy.io import fits
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.sky_match import SkyMatch, DistanceMethod, Mask
+from numcosmo_py.sky_match import SkyMatch, DistanceMethod, Mask, SelectionCriteria
 
 Ncm.cfg_init()
 
@@ -159,7 +159,7 @@ def fixture_distance_method(request):
     return request.param
 
 
-def test_mask_new():
+def test_mask() -> None:
     """Test the mask_new function."""
     mask_all_true = Mask(mask=np.ones((10, 10), dtype=bool))
     assert mask_all_true.shape == (10, 10)
@@ -174,6 +174,9 @@ def test_mask_new():
     assert mask.array.shape == (10, 10)
 
     assert np.all(mask.array == mask_all_false.array)
+
+    assert np.all(mask_all_true & mask_all_true == mask_all_true)
+    assert np.all(~mask_all_false == mask_all_true)
 
 
 def test_load_fits_data(setup_catalogs):
@@ -952,3 +955,88 @@ def test_match_3d_filter_z_both_z_err(cosmo, setup_catalogs, sigma0, nsigma):
         query_sigma_z = nsigma * row["query_z_err"]
         max_z_dist = match_sigma_z + query_sigma_z
         assert all(np.abs(row["z_matched"] - row["z"]) >= max_z_dist)
+
+
+def test_match_2d_best_distance(cosmo, setup_catalogs, distance_method):
+    """Test the match_2d function."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    matching = SkyMatch.new_from_fits(
+        query_catalog_path=query_catalog_path,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        match_catalog_path=match_catalog_path,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+    )
+    result = matching.match_2d(
+        cosmo, n_nearest_neighbours=10, distance_method=distance_method
+    )
+    assert result is not None
+
+    mask = result.filter_mask_by_distance(20.0)
+    best = result.select_best(selection_criteria=SelectionCriteria.DISTANCES, mask=mask)
+    assert best is not None
+
+    for i, query_index in enumerate(best.query_indices):
+        best_index_row = np.argmin(result.nearest_neighbours_distances[query_index])
+        assert (
+            result.nearest_neighbours_indices[query_index][best_index_row]
+            == best.indices[i]
+        )
+
+
+def test_match_2d_best_redshift(cosmo, setup_catalogs, distance_method):
+    """Test the match_2d function."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    matching = SkyMatch.new_from_fits(
+        query_catalog_path=query_catalog_path,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        match_catalog_path=match_catalog_path,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+    )
+    result = matching.match_2d(
+        cosmo, n_nearest_neighbours=10, distance_method=distance_method
+    )
+    assert result is not None
+
+    mask = result.filter_mask_by_distance(20.0)
+    best = result.select_best(
+        selection_criteria=SelectionCriteria.REDSHIFT_PROXIMITY, mask=mask
+    )
+    assert best is not None
+
+    match_z = result.sky_match.match_z
+    query_z = result.sky_match.query_z
+
+    for i, query_index in enumerate(best.query_indices):
+        idx = result.nearest_neighbours_indices[query_index][mask.array[query_index]]
+        best_z_index = idx[np.argmin(np.abs(match_z[idx] - query_z[query_index]))]
+        assert best_z_index == best.indices[i]
+
+
+def test_match_2d_best_more_massive(cosmo, setup_catalogs, distance_method):
+    """Test the match_2d function."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    matching = SkyMatch.new_from_fits(
+        query_catalog_path=query_catalog_path,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        match_catalog_path=match_catalog_path,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+    )
+    result = matching.match_2d(
+        cosmo, n_nearest_neighbours=10, distance_method=distance_method
+    )
+    assert result is not None
+
+    mask = result.filter_mask_by_distance(20.0)
+    best = result.select_best(
+        selection_criteria=SelectionCriteria.MORE_MASSIVE,
+        mask=mask,
+        more_massive_column="RA_match",
+    )
+    assert best is not None
+
+    match_ra = result.sky_match.match_ra
+
+    for i, query_index in enumerate(best.query_indices):
+        idx = result.nearest_neighbours_indices[query_index][mask.array[query_index]]
+        best_z_index = idx[np.argmax(match_ra[idx])]
+        assert best_z_index == best.indices[i]

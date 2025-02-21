@@ -120,6 +120,11 @@ class BestCandidates:
         assert len(self.indices.shape) == 1
         assert np.sum(self.query_filter) == len(self.indices)
 
+    @property
+    def query_indices(self) -> npt.NDArray[np.int64]:
+        """Query indices."""
+        return np.arange(len(self.query_filter))[self.query_filter]
+
     def get_cross_match_indices(self, inverse_best: BestCandidates) -> dict[int, int]:
         """Get the cross match indices."""
         query_indices = np.arange(len(self.query_filter))[self.query_filter]
@@ -293,7 +298,7 @@ class SkyMatchResult:
         """
         if selection_criteria == SelectionCriteria.MORE_MASSIVE:
             if more_massive_column is None or (
-                more_massive_column not in self.sky_match.match_data
+                more_massive_column not in self.sky_match.match_data.names
             ):
                 raise ValueError(
                     f"A more_massive_column ({more_massive_column}) must "
