@@ -226,7 +226,7 @@ We are going to use the `clusters` and `halos` objects as the *query* and *match
 sm = SkyMatch(clusters, cluster_coords, halos, halo_coords)
 ```
 
-### 3D Matching
+## 3D Matching
 
 When both catalogs contain spectral redshift information, one can use the `match_3d` method to perform a 3D matching.
 Note that the `match_3d` method is cosmologically dependent.
@@ -504,4 +504,20 @@ ax.set_ylabel("Dec")
 plt.show()
 ```
 
+## 2D Sky Match  
+
+The `SkyMatch2D` class functions similarly to the `SkyMatch` class but performs a 2D match instead of a 3D one.  
+In practice, it matches clusters to halos within the same plane of the sky, which is particularly useful when redshift measurement errors are significant.  
+
+In a 2D match, the angular separation between clusters and halos is first computed and then converted to a physical distance. 
+This conversion can be performed using different reference redshifts: the cluster redshift, the halo redshift, or the minimum/maximum of the two. 
+The choice is controlled by the `distance_method` parameter, which accepts the following options:  
+
+- `DistanceMethod.ANGULAR_SEPARATION` (computes only the angular separation)  
+- `DistanceMethod.QUERY_RADIUS` (uses the cluster redshift)  
+- `DistanceMethod.MATCH_RADIUS` (uses the halo redshift)  
+- `DistanceMethod.MIN_RADIUS` (uses the minimum redshift)  
+- `DistanceMethod.MAX_RADIUS` (uses the maximum redshift)  
+
+The 2D matching process is executed using the `match_2d` method.
 
