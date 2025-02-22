@@ -584,6 +584,36 @@ def test_match_2d_table(cosmo, setup_catalogs, distance_method):
             atol=ATOL,
             rtol=RTOL,
         )
+    # No mask
+    table = result.to_table_complete()
+
+    for row in table:
+        row_id = row["ID"]
+        qrow = matching.query_data[row_id]
+        RA_query = qrow["RA_query"]
+        DEC_query = qrow["DEC_query"]
+        assert RA_query == row["RA"]
+        assert DEC_query == row["DEC"]
+        assert_allclose(
+            row["distances"],
+            result.nearest_neighbours_distances[row_id],
+            atol=ATOL,
+            rtol=RTOL,
+        )
+        matched_id = result.nearest_neighbours_indices[row_id]
+        assert all(matched_id == row["ID_matched"])
+        assert_allclose(
+            row["RA_matched"],
+            matching.match_data["RA_match"][matched_id],
+            atol=ATOL,
+            rtol=RTOL,
+        )
+        assert_allclose(
+            row["DEC_matched"],
+            matching.match_data["DEC_match"][matched_id],
+            atol=ATOL,
+            rtol=RTOL,
+        )
 
 
 def test_match_3d(cosmo, setup_catalogs):
@@ -1032,6 +1062,17 @@ def test_match_2d_best_distance(cosmo, setup_catalogs, distance_method):
 
     mask = result.filter_mask_by_distance(20.0)
     best = result.select_best(selection_criteria=SelectionCriteria.DISTANCES, mask=mask)
+    assert best is not None
+
+    for i, query_index in enumerate(best.query_indices):
+        best_index_row = np.argmin(result.nearest_neighbours_distances[query_index])
+        assert (
+            result.nearest_neighbours_indices[query_index][best_index_row]
+            == best.indices[i]
+        )
+
+    # Best no mask
+    best = result.select_best(selection_criteria=SelectionCriteria.DISTANCES)
     assert best is not None
 
     for i, query_index in enumerate(best.query_indices):
