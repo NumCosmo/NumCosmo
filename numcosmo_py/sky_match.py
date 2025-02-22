@@ -5,14 +5,13 @@ Module to match objects in the sky halo-halo, cluster-halo, cluster-cluster.
 
 from __future__ import annotations
 import dataclasses
-from typing_extensions import assert_never
 from typing import TypedDict, cast
 from pathlib import Path
 from enum import Enum, auto
+from typing_extensions import assert_never
 import numpy as np
 import numpy.typing as npt
 
-from astropy.io import fits
 from astropy.table import Table
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.helper import npa_to_seq
@@ -23,7 +22,8 @@ Ncm.cfg_init()
 class Coordinates(TypedDict, total=False):
     """Coordinates mapping.
 
-    Dictionary to map the coordinates to the name of the columns in the FITS file.
+    Dictionary to map the coordinates to the name of the columns in the
+    astropy.table.Table.
 
     :param RA: Right Ascension.
     :param DEC: Declination.
@@ -147,7 +147,7 @@ class BestCandidates:
         return cross
 
 
-def _check_coordinates(table: fits.FITS_rec, coordinates: Coordinates) -> None:
+def _check_coordinates(table: Table, coordinates: Coordinates) -> None:
     """Check if the coordinates are provided.
 
     :param table: fits table to be used with the coordinates.
@@ -158,22 +158,22 @@ def _check_coordinates(table: fits.FITS_rec, coordinates: Coordinates) -> None:
     if ("RA" not in coordinates) or ("DEC" not in coordinates):
         raise ValueError("RA and DEC coordinates must be provided.")
 
-    if (coordinates["RA"] not in table.names) or (
-        coordinates["DEC"] not in table.names
+    if (coordinates["RA"] not in table.columns) or (
+        coordinates["DEC"] not in table.columns
     ):
         raise ValueError(
             f"RA and DEC coordinates mapped by {coordinates} "
-            f"not found in the provided catalog {table.names}."
+            f"not found in the provided catalog {table.columns}."
         )
 
-    if "z" in coordinates and coordinates["z"] not in table.names:
+    if "z" in coordinates and coordinates["z"] not in table.columns:
         raise ValueError(
             f"Redshift coordinate mapped by {coordinates} "
-            f"not found in the provided catalog {table.names}."
+            f"not found in the provided catalog {table.columns}."
         )
 
 
-def _load_fits_data(catalog: Path) -> fits.FITS_rec:
+def _load_fits_data(catalog: Path) -> Table:
     """Load FITS data from the provided catalog path.
 
     The function returns the first FITS table found in the provided catalog.
@@ -181,16 +181,7 @@ def _load_fits_data(catalog: Path) -> fits.FITS_rec:
     :param Path catalog: Path of the catalog to load.
     :return: data from the fits catalog.
     """
-    hdul1 = fits.open(catalog.as_posix())
-    hdu1_data: fits.FITS_rec | None = None
-    for hdu in hdul1:
-        if isinstance(hdu, (fits.TableHDU, fits.BinTableHDU)):
-            hdu1_data = hdu.data
-            break
-    if hdu1_data is None:
-        raise ValueError("No FITS table found in the provided catalog.")
-
-    return hdu1_data
+    return Table.read(catalog.as_posix(), format="fits")
 
 
 class SkyMatchResult:
@@ -251,12 +242,12 @@ class SkyMatchResult:
         :param delta_z: Maximum delta_z to consider a match.
         """
         if query_sigma_z_column is not None and (
-            query_sigma_z_column not in self.sky_match.query_data.names
+            query_sigma_z_column not in self.sky_match.query_data.columns
         ):
             raise ValueError(f"Column {query_sigma_z_column} not found in query data.")
 
         if match_sigma_z_column is not None and (
-            match_sigma_z_column not in self.sky_match.match_data.names
+            match_sigma_z_column not in self.sky_match.match_data.columns
         ):
             raise ValueError(f"Column {match_sigma_z_column} not found in match data.")
 
@@ -304,7 +295,7 @@ class SkyMatchResult:
         """
         if selection_criteria == SelectionCriteria.MORE_MASSIVE:
             if more_massive_column is None or (
-                more_massive_column not in self.sky_match.match_data.names
+                more_massive_column not in self.sky_match.match_data.columns
             ):
                 raise ValueError(
                     f"A more_massive_column ({more_massive_column}) must "
@@ -457,12 +448,12 @@ class SkyMatch:
 
     def __init__(
         self,
-        query_data: fits.FITS_rec,
+        query_data: Table,
         query_coordinates: Coordinates,
-        match_data: fits.FITS_rec,
+        match_data: Table,
         match_coordinates: Coordinates,
     ) -> None:
-        """Create a new SkyMatch object from FITS data."""
+        """Create a new SkyMatch object from an astropy.table.Table."""
         self.query_data = query_data
         self.match_data = match_data
         _check_coordinates(self.query_data, query_coordinates)

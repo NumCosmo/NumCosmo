@@ -245,9 +245,7 @@ def test_load_fits_data_nonexistent(setup_catalogs_nonexistent):
 def test_load_fits_data_fits_containing_image(setup_catalogs_fits_containing_image):
     """Test the load_fits_data function with FITS containing image."""
     query_catalog_path, match_catalog_path = setup_catalogs_fits_containing_image
-    with pytest.raises(
-        ValueError, match="No FITS table found in the provided catalog."
-    ):
+    with pytest.raises(ValueError, match="No table found"):
         _ = SkyMatch.new_from_fits(
             query_catalog_path=query_catalog_path,
             query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
