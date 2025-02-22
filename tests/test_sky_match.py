@@ -750,6 +750,24 @@ def test_match_3d_missing_z_query(cosmo, setup_catalogs):
         _ = matching.match_3d(cosmo, n_nearest_neighbours=10)
 
 
+def test_match_2d_missing_z_query(cosmo, setup_catalogs):
+    """Test the match_3d function with missing z_query column."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(
+        ValueError,
+        match=(
+            "To perform a matching, the redshift must be provided for both catalogs."
+        ),
+    ):
+        matching = SkyMatch.new_from_fits(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={"RA": "RA_query", "DEC": "DEC_query"},
+            match_catalog_path=match_catalog_path,
+            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+        )
+        _ = matching.match_2d(cosmo, n_nearest_neighbours=10)
+
+
 def test_match_3d_missing_z_match(cosmo, setup_catalogs):
     """Test the match_3d function with missing z_match column."""
     query_catalog_path, match_catalog_path = setup_catalogs
@@ -767,6 +785,24 @@ def test_match_3d_missing_z_match(cosmo, setup_catalogs):
             match_coordinates={"RA": "RA_match", "DEC": "DEC_match"},
         )
         _ = matching.match_3d(cosmo, n_nearest_neighbours=10)
+
+
+def test_match_2d_missing_z_match(cosmo, setup_catalogs):
+    """Test the match_3d function with missing z_match column."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    with pytest.raises(
+        ValueError,
+        match=(
+            "To perform a matching, the redshift must be provided for both catalogs."
+        ),
+    ):
+        matching = SkyMatch.new_from_fits(
+            query_catalog_path=query_catalog_path,
+            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+            match_catalog_path=match_catalog_path,
+            match_coordinates={"RA": "RA_match", "DEC": "DEC_match"},
+        )
+        _ = matching.match_2d(cosmo, n_nearest_neighbours=10)
 
 
 def test_match_3d_filter_distance(cosmo, setup_catalogs):

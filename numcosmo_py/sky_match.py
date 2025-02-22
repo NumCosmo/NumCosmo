@@ -346,7 +346,7 @@ class SkyMatchResult:
                 best_candidates_indices = [
                     nni[np.argmax(match_more_massive[nni])] for nni in filtered_indices
                 ]
-            case _ as unreachable:
+            case _ as unreachable:  # pragma: no cover
                 assert_never(unreachable)
 
         return BestCandidates(
@@ -607,7 +607,7 @@ class SkyMatch:
         """
         if ("z" not in self.match_coordinates) or ("z" not in self.query_coordinates):
             raise ValueError(
-                "To perform a  matching, "
+                "To perform a matching, "
                 "the redshift must be provided for both catalogs."
             )
 
@@ -695,7 +695,7 @@ class SkyMatch:
                     np.ndarray[tuple[int, int], np.dtype[np.float64]],
                     np.maximum(query_distances, match_distances),
                 )
-            case _ as unreachable:
+            case _ as unreachable:  # pragma: no cover
                 assert_never(unreachable)
 
         return SkyMatchResult(self, indices, distances)
