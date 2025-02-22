@@ -26,6 +26,7 @@
 """Tests for the sky_match module."""
 
 from pathlib import Path
+import re
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -830,6 +831,28 @@ def test_match_3d_filter_z(cosmo, setup_catalogs, sigma0, nsigma):
         assert all(np.abs(row["z_matched"] - row["z"]) >= max_z_dist)
 
 
+def test_match_3d_filter_z_wrong_column_name(cosmo, setup_catalogs):
+    """Test the match_3d function with filter."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    matching = SkyMatch.new_from_fits(
+        query_catalog_path=query_catalog_path,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        match_catalog_path=match_catalog_path,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+    )
+    result = matching.match_3d(cosmo, n_nearest_neighbours=10)
+    assert result is not None
+
+    with pytest.raises(ValueError, match="Column kawabunga not found in match data."):
+        _ = result.filter_mask_by_redshift_proximity(
+            0.1, 1.0, match_sigma_z_column="kawabunga"
+        )
+    with pytest.raises(ValueError, match="Column kawabunga not found in query data."):
+        _ = result.filter_mask_by_redshift_proximity(
+            0.1, 1.0, query_sigma_z_column="kawabunga"
+        )
+
+
 @pytest.mark.parametrize(
     ["sigma0", "nsigma"], [(0.01, 0.734), (0.02, 0.4), (0.007, 1.5)]
 )
@@ -1040,6 +1063,33 @@ def test_match_2d_best_more_massive(cosmo, setup_catalogs, distance_method):
         idx = result.nearest_neighbours_indices[query_index][mask.array[query_index]]
         best_z_index = idx[np.argmax(match_ra[idx])]
         assert best_z_index == best.indices[i]
+
+
+def test_match_2d_best_more_massive_wrong_column(cosmo, setup_catalogs):
+    """Test the match_2d function."""
+    query_catalog_path, match_catalog_path = setup_catalogs
+    matching = SkyMatch.new_from_fits(
+        query_catalog_path=query_catalog_path,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        match_catalog_path=match_catalog_path,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+    )
+    result = matching.match_2d(cosmo, n_nearest_neighbours=10)
+    assert result is not None
+
+    mask = result.filter_mask_by_distance(20.0)
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "A more_massive_column (Not_a_column) must be "
+            "provided and present in the match data."
+        ),
+    ):
+        _ = result.select_best(
+            selection_criteria=SelectionCriteria.MORE_MASSIVE,
+            mask=mask,
+            more_massive_column="Not_a_column",
+        )
 
 
 def test_match_2d_best_distance_table(cosmo, setup_catalogs, distance_method):
