@@ -43,7 +43,10 @@ typedef struct _TestNcDistance
 void test_nc_distance_new (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_new_spherical (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_new_hyperbolic (TestNcDistance *test, gconstpointer pdata);
+
 void test_nc_distance_new_qconst (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_new_qconst_spherical (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_new_qconst_hyperbolic (TestNcDistance *test, gconstpointer pdata);
 
 void test_nc_distance_new_no_lambda (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_new_no_lambda_spherical (TestNcDistance *test, gconstpointer pdata);
@@ -130,8 +133,17 @@ main (gint argc, gchar *argv[])
               &test_nc_distance_new_hyperbolic,
               &test_nc_distance_comoving_vector,
               &test_nc_distance_free);
-  g_test_add ("/nc/distance/qconst/comoving_vector", TestNcDistance, NULL,
+
+  g_test_add ("/nc/distance/qconst/flat/comoving_vector", TestNcDistance, NULL,
               &test_nc_distance_new_qconst,
+              &test_nc_distance_comoving_vector,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/qconst/spherical/comoving_vector", TestNcDistance, NULL,
+              &test_nc_distance_new_qconst_spherical,
+              &test_nc_distance_comoving_vector,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/qconst/hyperbolic/comoving_vector", TestNcDistance, NULL,
+              &test_nc_distance_new_qconst_hyperbolic,
               &test_nc_distance_comoving_vector,
               &test_nc_distance_free);
 
@@ -147,8 +159,17 @@ main (gint argc, gchar *argv[])
               &test_nc_distance_new_hyperbolic,
               &test_nc_distance_transverse_vector,
               &test_nc_distance_free);
-  g_test_add ("/nc/distance/qconst/transverse_vector", TestNcDistance, NULL,
+
+  g_test_add ("/nc/distance/qconst/flat/transverse_vector", TestNcDistance, NULL,
               &test_nc_distance_new_qconst,
+              &test_nc_distance_transverse_vector,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/qconst/spherical/transverse_vector", TestNcDistance, NULL,
+              &test_nc_distance_new_qconst_spherical,
+              &test_nc_distance_transverse_vector,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/qconst/hyperbolic/transverse_vector", TestNcDistance, NULL,
+              &test_nc_distance_new_qconst_hyperbolic,
               &test_nc_distance_transverse_vector,
               &test_nc_distance_free);
 
@@ -164,8 +185,17 @@ main (gint argc, gchar *argv[])
               &test_nc_distance_new_hyperbolic,
               &test_nc_distance_luminosity_vector,
               &test_nc_distance_free);
-  g_test_add ("/nc/distance/qconst/luminosity_vector", TestNcDistance, NULL,
+
+  g_test_add ("/nc/distance/qconst/flat/luminosity_vector", TestNcDistance, NULL,
               &test_nc_distance_new_qconst,
+              &test_nc_distance_luminosity_vector,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/qconst/spherical/luminosity_vector", TestNcDistance, NULL,
+              &test_nc_distance_new_qconst_spherical,
+              &test_nc_distance_luminosity_vector,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/qconst/hyperbolic/luminosity_vector", TestNcDistance, NULL,
+              &test_nc_distance_new_qconst_hyperbolic,
               &test_nc_distance_luminosity_vector,
               &test_nc_distance_free);
 
@@ -181,8 +211,17 @@ main (gint argc, gchar *argv[])
               &test_nc_distance_new_hyperbolic,
               &test_nc_distance_angular_diameter_vector,
               &test_nc_distance_free);
-  g_test_add ("/nc/distance/qconst/angular_diameter_vector", TestNcDistance, NULL,
+
+  g_test_add ("/nc/distance/qconst/flat/angular_diameter_vector", TestNcDistance, NULL,
               &test_nc_distance_new_qconst,
+              &test_nc_distance_angular_diameter_vector,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/qconst/spherical/angular_diameter_vector", TestNcDistance, NULL,
+              &test_nc_distance_new_qconst_spherical,
+              &test_nc_distance_angular_diameter_vector,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/qconst/hyperbolic/angular_diameter_vector", TestNcDistance, NULL,
+              &test_nc_distance_new_qconst_hyperbolic,
               &test_nc_distance_angular_diameter_vector,
               &test_nc_distance_free);
 
@@ -349,6 +388,48 @@ test_nc_distance_new_qconst (TestNcDistance *test, gconstpointer pdata)
   test->z2     = 2.5;
   test->z3     = 5.0;
   test->ntests = 10000;
+
+  nc_distance_prepare (dist, cosmo);
+}
+
+void
+test_nc_distance_new_qconst_spherical (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_qconst_new ());
+  NcDistance *dist = nc_distance_new (6.0);
+
+  g_assert_true (dist != NULL);
+  g_assert_true (NC_IS_DISTANCE (dist));
+
+  test->cosmo  = cosmo;
+  test->dist   = dist;
+  test->z1     = 0.5;
+  test->z2     = 2.5;
+  test->z3     = 5.0;
+  test->ntests = 10000;
+
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_QCONST_DEFAULT_OMEGA_T, 1.1);
+
+  nc_distance_prepare (dist, cosmo);
+}
+
+void
+test_nc_distance_new_qconst_hyperbolic (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_qconst_new ());
+  NcDistance *dist = nc_distance_new (6.0);
+
+  g_assert_true (dist != NULL);
+  g_assert_true (NC_IS_DISTANCE (dist));
+
+  test->cosmo  = cosmo;
+  test->dist   = dist;
+  test->z1     = 0.5;
+  test->z2     = 2.5;
+  test->z3     = 5.0;
+  test->ntests = 10000;
+
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_QCONST_DEFAULT_OMEGA_T, 0.9);
 
   nc_distance_prepare (dist, cosmo);
 }

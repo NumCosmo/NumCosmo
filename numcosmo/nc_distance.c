@@ -547,7 +547,7 @@ nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
     }
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
-      break;
+      break;                   /* LCOV_EXCL_LINE */
   }
 
   return GSL_NAN;
@@ -602,7 +602,7 @@ _nc_distance_sinn (const gdouble r, const gdouble Omega_k0)
 
       return 0.0; /* LCOV_EXCL_LINE */
 
-      break;
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -728,7 +728,7 @@ nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 
       return 0.0; /* LCOV_EXCL_LINE */
 
-      break;
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -1741,7 +1741,7 @@ nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z
 
       return NULL; /* LCOV_EXCL_LINE */
 
-      break;
+      break; /* LCOV_EXCL_LINE */
   }
 
   return res;
@@ -1907,6 +1907,8 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
       return NULL; /* LCOV_EXCL_LINE */
+
+      break; /* LCOV_EXCL_LINE */
   }
 
   return res;
@@ -2075,6 +2077,8 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
       return NULL; /* LCOV_EXCL_LINE */
+
+      break; /* LCOV_EXCL_LINE */
   }
 
   return res;
@@ -2243,6 +2247,8 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const G
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
       return NULL; /* LCOV_EXCL_LINE */
+
+      break; /* LCOV_EXCL_LINE */
   }
 
   return res;
