@@ -823,7 +823,8 @@ HTML(
 )
 ```
 
-In summary, we have successfully matched the clusters with the halos, noting that our artificially produced dataset was not perfect, and there are some incorrect matches.
+In summary, we have successfully matched the clusters with the halos, keeping in mind that the artificial dataset was intentionally generated with increased errors to enhance visibility. 
+As a result, some incorrect or suboptimal matches were expected.
 
 ## Summary
 
