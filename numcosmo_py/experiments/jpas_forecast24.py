@@ -349,7 +349,11 @@ def create_cluster_redshift(
 
 
 def _set_mset_params(mset: Ncm.MSet, params: tuple[float, float, float]) -> None:
-    """Set the parameters for the mass model."""
+    """Set the parameters for the cosmology model.
+
+    :param mset: The mass model set.
+    :param params: The parameters for the cosmology model, (Omegac, w, sigma8).
+    """
     tf = Nc.TransferFuncEH()
     psml = Nc.PowspecMLTransfer.new(tf)
     psml.require_kmin(1.0e-6)
