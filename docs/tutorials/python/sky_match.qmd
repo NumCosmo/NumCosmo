@@ -38,7 +38,14 @@ import pandas as pd
 from IPython.display import HTML
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.sky_match import SkyMatch, Coordinates, SkyMatchResult, BestCandidates
+from numcosmo_py.sky_match import (
+    BestCandidates,
+    Coordinates,
+    DistanceMethod,
+    SelectionCriteria,
+    SkyMatch,
+    SkyMatchResult,
+)
 
 Ncm.cfg_init()
 
@@ -57,14 +64,17 @@ cosmo["H0"] = H0
 cosmo["w"] = -1.0
 
 dist = Nc.Distance.new(100.0)
+dist.compute_inv_comoving(True)
 dist.prepare(cosmo)
 
 ```
 
 ## Generating Mock Data  
 
-Next, we generate mock data for galaxy clusters and halos.  
-We use a simple random distribution to generate positions, redshifts, and masses for both clusters and halos.  
+To illustrate the matching process, we generate simulated mock data for galaxy clusters and halos.  
+While these configurations do not represent typical observational distributions, they are chosen to ensure the figures remain clear and readable.  
+
+We use a simple random distribution to assign positions, redshifts, and masses to both clusters and halos:  
 
 - **Positions**:  
   - Defined by right ascension (RA) and declination (Dec) in degrees.  
@@ -76,19 +86,27 @@ We use a simple random distribution to generate positions, redshifts, and masses
 
 - **Masses**:  
   - Sampled uniformly in $\log_{10} M_{\odot}$ within the range $[13, 15]$.
+  - The additional 100 halos are sampled uniformly in $\log_{10} M_{\odot}$ within the range $[10, 13]$.
 
-For the cluster data, we generate 100 positions, redshifts, and masses.  
-For the halo data, we generate 120 positions, redshifts, and masses.  
+To demonstrate the matching process, we generate:  
+
+- **100 galaxy clusters**, each with assigned positions, redshifts, and masses.  
+- **200 halos**, with two different placement strategies:  
+  1. **First 100 halos** are placed within 5 Mpc of a cluster's position (in each dimension), simulating a correlated distribution.  
+  2. **Remaining 100 halos** are distributed randomly to provide a broader test case.  
+
+This setup ensures that some halos are closely associated with clusters, while others are randomly placed to create a more comprehensive matching scenario.  
 
 ```{python}
 # Constants
 CLUSTER_LENGTH = 100
-HALO_LENGTH = 120
+HALO_LENGTH = 200
 
 RA_MIN, RA_MAX = -10.0, 10.0
 DEC_MIN, DEC_MAX = -10.0, 10.0
 Z_MIN, Z_MAX = 0.2, 0.5
 LOGM_MIN, LOGM_MAX = 13.0, 15.0  # Mass in log10 solar masses
+LOGM_ADD_HALO_MIN, LOGM_ADD_HALO_MAX = 10.0, 13.0
 
 # Generate cluster positions, redshifts, and masses
 cluster_ra = np.random.uniform(RA_MIN, RA_MAX, CLUSTER_LENGTH)
@@ -98,15 +116,40 @@ cluster_sin_dec = np.random.uniform(
 cluster_dec = np.degrees(np.arcsin(cluster_sin_dec))
 cluster_z = np.random.uniform(Z_MIN, Z_MAX, CLUSTER_LENGTH)
 cluster_logm = np.random.uniform(LOGM_MIN, LOGM_MAX, CLUSTER_LENGTH)
+# Let's compute the cluster radii, and the 3D positions
+cluster_r = np.array(dist.comoving_vector(cosmo, cluster_z)) * cosmo.RH_Mpc()
+cluster_x1 = (
+    cluster_r * np.cos(np.radians(cluster_dec)) * np.cos(np.radians(cluster_ra))
+)
+cluster_x2 = (
+    cluster_r * np.cos(np.radians(cluster_dec)) * np.sin(np.radians(cluster_ra))
+)
+cluster_x3 = cluster_r * np.sin(np.radians(cluster_dec))
 
 # Generate halo positions, redshifts, and masses
-halo_ra = np.random.uniform(RA_MIN, RA_MAX, HALO_LENGTH)
-halo_sin_dec = np.random.uniform(
-    np.sin(np.radians(DEC_MIN)), np.sin(np.radians(DEC_MAX)), HALO_LENGTH
+# Lets first sample a halo < 5.0 Mpc from the cluster in each dimension
+D_DIM = 5.0
+
+halo_x1 = cluster_x1 + np.random.uniform(-D_DIM, D_DIM, CLUSTER_LENGTH)
+halo_x2 = cluster_x2 + np.random.uniform(-D_DIM, D_DIM, CLUSTER_LENGTH)
+halo_x3 = cluster_x3 + np.random.uniform(-D_DIM, D_DIM, CLUSTER_LENGTH)
+halo_ra = np.degrees(np.arctan2(halo_x2, halo_x1))
+halo_dec = np.degrees(np.arcsin(halo_x3 / cluster_r))
+halo_r = np.sqrt(halo_x1**2 + halo_x2**2 + halo_x3**2)
+halo_z = [dist.inv_comoving(cosmo, r / cosmo.RH_Mpc()) for r in halo_r]
+
+# Now for the halo masses we use the cluster's masses added a Gaussian noise
+halo_logm = cluster_logm + np.random.normal(0, 1.0, CLUSTER_LENGTH)
+
+# Finally we add 100 more halos randomly
+DELTA_OBJECTS = HALO_LENGTH - CLUSTER_LENGTH
+halo_ra = np.append(halo_ra, np.random.uniform(RA_MIN, RA_MAX, DELTA_OBJECTS))
+halo_dec = np.append(halo_dec, np.random.uniform(DEC_MIN, DEC_MAX, DELTA_OBJECTS))
+halo_z = np.append(halo_z, np.random.uniform(Z_MIN, Z_MAX, DELTA_OBJECTS))
+halo_logm = np.append(
+    halo_logm, np.random.uniform(LOGM_ADD_HALO_MIN, LOGM_ADD_HALO_MAX, DELTA_OBJECTS)
 )
-halo_dec = np.degrees(np.arcsin(halo_sin_dec))
-halo_z = np.random.uniform(Z_MIN, Z_MAX, HALO_LENGTH)
-halo_logm = np.random.uniform(LOGM_MIN, LOGM_MAX, HALO_LENGTH)
+
 ```
 
 ### Visualizing Cluster and Halo Distributions  
@@ -122,8 +165,9 @@ We plot the generated cluster and halo positions, with the dot sizes proportiona
 
 
 # Scale marker sizes with log mass
-def scale_marker_size(log_mass, base_size=10, scale_factor=30):
-    return base_size + scale_factor * (log_mass - LOGM_MIN)
+def scale_marker_size(log_mass, base_size=20, scale_factor=30):
+    arr = scale_factor * (log_mass - LOGM_MIN)
+    return base_size + np.where(arr < 0, 0, arr)
 
 
 cluster_sizes = scale_marker_size(cluster_logm)
@@ -198,6 +242,10 @@ The `Coordinates` objects map the column names in the tables to their respective
 You can view the generated clusters and halos by converting them to Pandas DataFrames:
 
 ```{python}
+# | label: tbl-cluster-halo
+# | fig-cap: The generated clusters and halos in the sky.
+# | fig-cap-location: margin
+# | fig-width: 100%
 # | code-fold: true
 
 
@@ -211,6 +259,10 @@ show_pandas(clusters.to_pandas())
 The generated clusters DataFrame:
 
 ```{python}
+# | label: tbl-clusters
+# | fig-cap: The generated clusters in the sky.
+# | fig-cap-location: margin
+# | fig-width: 100%
 # | code-fold: true
 show_pandas(halos.to_pandas())
 ```
@@ -241,6 +293,10 @@ The result is a `SkyMatchResult` object, which holds the matched indices, distan
 We can view the result by converting it to a table:
 
 ```{python}
+# | label: tbl-sky-match-3d
+# | fig-cap: The result of the 3D matching.
+# | fig-cap-location: margin
+# | fig-width: 100%
 # | code-fold: true
 
 
@@ -278,6 +334,10 @@ mask = result.filter_mask_by_distance(60.0)
 The resulting table can then be converted to a Pandas DataFrame:
 
 ```{python}
+# | label: tbl-sky-match-3d-filtered
+# | fig-cap: The filtered result of the 3D matching.
+# | fig-cap-location: margin
+# | fig-width: 100%
 # | code-fold: true
 
 show_pandas(convert_table_multi_column(result.to_table_complete(mask=mask)).to_pandas())
@@ -297,50 +357,56 @@ We can also visualize the filtered results, using the same plot characteristics 
 cluster_sizes = scale_marker_size(cluster_logm)
 halo_sizes = scale_marker_size(halo_logm)
 
-fig, ax = plt.subplots(figsize=(10, 8))
 
-# Scatter plot for clusters (fixed red color)
-ax.scatter(
-    cluster_ra,
-    cluster_dec,
-    c=cluster_z,
-    cmap="Reds",
-    s=cluster_sizes,
-    label="Clusters",
-    alpha=0.7,
-    vmin=0.0,
-)
+def plot_mask(mask):
+    fig, ax = plt.subplots(figsize=(10, 8))
 
-# Scatter plot for halos (color varies with z, from light to dark blue)
-halo_scatter = ax.scatter(
-    halo_ra,
-    halo_dec,
-    c=halo_z,
-    cmap="Blues",
-    s=halo_sizes,
-    label="Halos",
-    alpha=0.7,
-    vmin=0.0,
-)
+    # Scatter plot for clusters (fixed red color)
+    ax.scatter(
+        cluster_ra,
+        cluster_dec,
+        c=cluster_z,
+        cmap="Reds",
+        s=cluster_sizes,
+        label="Clusters",
+        alpha=0.7,
+        vmin=0.0,
+    )
 
-# Now we iterate over the filtered results plotting a line connecting the cluster to all matched halos
-for i, (idx, m) in enumerate(zip(result.nearest_neighbours_indices, mask.array)):
-    for halo_i in idx[m]:
-        ax.plot(
-            [cluster_ra[i], halo_ra[halo_i]],
-            [cluster_dec[i], halo_dec[halo_i]],
-            color="black",
-            alpha=0.5,
-        )
+    # Scatter plot for halos (color varies with z, from light to dark blue)
+    halo_scatter = ax.scatter(
+        halo_ra,
+        halo_dec,
+        c=halo_z,
+        cmap="Blues",
+        s=halo_sizes,
+        label="Halos",
+        alpha=0.7,
+        vmin=0.0,
+    )
 
-ax.legend()
+    # Now we iterate over the filtered results plotting a line connecting the cluster to all matched halos
+    for i, (idx, m) in enumerate(zip(result.nearest_neighbours_indices, mask.array)):
+        for halo_i in idx[m]:
+            ax.plot(
+                [cluster_ra[i], halo_ra[halo_i]],
+                [cluster_dec[i], halo_dec[halo_i]],
+                color="black",
+                alpha=0.5,
+            )
 
-# Colorbar to indicate redshift values
-color_bar = plt.colorbar(halo_scatter, ax=ax, label="Redshift (z)")
+    ax.legend()
 
-ax.set_xlabel("RA")
-ax.set_ylabel("Dec")
+    # Colorbar to indicate redshift values
+    color_bar = plt.colorbar(halo_scatter, ax=ax, label="Redshift (z)")
 
+    ax.set_xlabel("RA")
+    ax.set_ylabel("Dec")
+
+    return fig
+
+
+plot_mask(mask)
 plt.show()
 ```
 
@@ -361,6 +427,10 @@ The result is a `BestCandidates` object, which holds the indices of the best can
 We can view the result by converting it to a table:
 
 ```{python}
+# | label: tbl-sky-match-3d-best
+# | fig-cap: The best matched clusters
+# | fig-cap-location: margin
+# | fig-width: 100%
 # | code-fold: true
 
 show_pandas(convert_table_multi_column(result.to_table_best(best)).to_pandas())
@@ -376,52 +446,54 @@ We can also visualize the best matches, using the same plot characteristics as i
 # | code-fold: true
 # Plot the best matches
 
-cluster_sizes = scale_marker_size(cluster_logm)
-halo_sizes = scale_marker_size(halo_logm)
 
-fig, ax = plt.subplots(figsize=(10, 8))
+def plot_best(best):
+    fig, ax = plt.subplots(figsize=(10, 8))
 
-# Scatter plot for clusters (fixed red color)
-ax.scatter(
-    cluster_ra,
-    cluster_dec,
-    c=cluster_z,
-    cmap="Reds",
-    s=cluster_sizes,
-    label="Clusters",
-    alpha=0.7,
-    vmin=0.0,
-)
-
-# Scatter plot for halos (color varies with z, from light to dark blue)
-halo_scatter = ax.scatter(
-    halo_ra,
-    halo_dec,
-    c=halo_z,
-    cmap="Blues",
-    s=halo_sizes,
-    label="Halos",
-    alpha=0.7,
-    vmin=0.0,
-)
-
-# Now we iterate over the best matches plotting a line connecting the cluster to the best halos
-for cluster_i, halo_i in zip(best.query_indices, best.indices):
-    ax.plot(
-        [cluster_ra[cluster_i], halo_ra[halo_i]],
-        [cluster_dec[cluster_i], halo_dec[halo_i]],
-        color="black",
-        alpha=0.5,
+    # Scatter plot for clusters (fixed red color)
+    ax.scatter(
+        cluster_ra,
+        cluster_dec,
+        c=cluster_z,
+        cmap="Reds",
+        s=cluster_sizes,
+        label="Clusters",
+        alpha=0.7,
+        vmin=0.0,
     )
 
-ax.legend()
+    # Scatter plot for halos (color varies with z, from light to dark blue)
+    halo_scatter = ax.scatter(
+        halo_ra,
+        halo_dec,
+        c=halo_z,
+        cmap="Blues",
+        s=halo_sizes,
+        label="Halos",
+        alpha=0.7,
+        vmin=0.0,
+    )
 
-# Colorbar to indicate redshift values
-color_bar = plt.colorbar(halo_scatter, ax=ax, label="Redshift (z)")
+    # Now we iterate over the best matches plotting a line connecting the cluster to the best halos
+    for cluster_i, halo_i in zip(best.query_indices, best.indices):
+        ax.plot(
+            [cluster_ra[cluster_i], halo_ra[halo_i]],
+            [cluster_dec[cluster_i], halo_dec[halo_i]],
+            color="black",
+            alpha=0.5,
+        )
 
-ax.set_xlabel("RA")
-ax.set_ylabel("Dec")
+    ax.legend()
 
+    # Colorbar to indicate redshift values
+    color_bar = plt.colorbar(halo_scatter, ax=ax, label="Redshift (z)")
+
+    ax.set_xlabel("RA")
+    ax.set_ylabel("Dec")
+    return fig
+
+
+plot_best(best)
 plt.show()  
 ```
 
@@ -455,52 +527,54 @@ Finally, we plot the cross matches:
 # | code-fold: true
 # Plot the cross matches
 
-cluster_sizes = scale_marker_size(cluster_logm)
-halo_sizes = scale_marker_size(halo_logm)
 
-fig, ax = plt.subplots(figsize=(10, 8))
+def plot_cross(cross_match):
+    fig, ax = plt.subplots(figsize=(10, 8))
 
-# Scatter plot for clusters (fixed red color)
-ax.scatter(
-    cluster_ra,
-    cluster_dec,
-    c=cluster_z,
-    cmap="Reds",
-    s=cluster_sizes,
-    label="Clusters",
-    alpha=0.7,
-    vmin=0.0,
-)
-
-# Scatter plot for halos (color varies with z, from light to dark blue)
-halo_scatter = ax.scatter(
-    halo_ra,
-    halo_dec,
-    c=halo_z,
-    cmap="Blues",
-    s=halo_sizes,
-    label="Halos",
-    alpha=0.7,
-    vmin=0.0,
-)
-
-# Now we iterate over the cross matches plotting a line connecting the cluster to the best halos
-for cluster_i, halo_i in cross_match.items():
-    ax.plot(
-        [cluster_ra[cluster_i], halo_ra[halo_i]],
-        [cluster_dec[cluster_i], halo_dec[halo_i]],
-        color="black",
-        alpha=0.5,
+    # Scatter plot for clusters (fixed red color)
+    ax.scatter(
+        cluster_ra,
+        cluster_dec,
+        c=cluster_z,
+        cmap="Reds",
+        s=cluster_sizes,
+        label="Clusters",
+        alpha=0.7,
+        vmin=0.0,
     )
 
-ax.legend()
+    # Scatter plot for halos (color varies with z, from light to dark blue)
+    halo_scatter = ax.scatter(
+        halo_ra,
+        halo_dec,
+        c=halo_z,
+        cmap="Blues",
+        s=halo_sizes,
+        label="Halos",
+        alpha=0.7,
+        vmin=0.0,
+    )
 
-# Colorbar to indicate redshift values
-color_bar = plt.colorbar(halo_scatter, ax=ax, label="Redshift (z)")
+    # Now we iterate over the cross matches plotting a line connecting the cluster to the best halos
+    for cluster_i, halo_i in cross_match.items():
+        ax.plot(
+            [cluster_ra[cluster_i], halo_ra[halo_i]],
+            [cluster_dec[cluster_i], halo_dec[halo_i]],
+            color="black",
+            alpha=0.5,
+        )
 
-ax.set_xlabel("RA")
-ax.set_ylabel("Dec")
+    ax.legend()
 
+    # Colorbar to indicate redshift values
+    color_bar = plt.colorbar(halo_scatter, ax=ax, label="Redshift (z)")
+
+    ax.set_xlabel("RA")
+    ax.set_ylabel("Dec")
+    return fig
+
+
+plot_cross(cross_match)
 plt.show()
 ```
 
@@ -519,5 +593,250 @@ The choice is controlled by the `distance_method` parameter, which accepts the f
 - `DistanceMethod.MIN_RADIUS` (uses the minimum redshift)  
 - `DistanceMethod.MAX_RADIUS` (uses the maximum redshift)  
 
-The 2D matching process is executed using the `match_2d` method.
+The 2D matching process is performed using the `match_2d` method. Below is an example of how it works:  
+
+```{python}
+# Perform 2D matching  
+# Keeping the number of nearest neighbors to 6  
+result = sm.match_2d(
+    cosmo, n_nearest_neighbours=6, distance_method=DistanceMethod.QUERY_RADIUS
+)
+```  
+
+Here, `result` contains the distances between clusters and halos, computed using the cluster redshifts. 
+The table below shows these distances in mega-parsecs (Mpc):  
+
+```{python}
+# | label: tbl-sky-match-2d
+# | fig-cap: The distances between clusters and halos computed using the cluster redshifts.
+# | fig-cap-location: margin
+# | fig-width: 100%
+# | code-fold: true
+
+show_pandas(convert_table_multi_column(result.to_table_complete()).to_pandas())
+```  
+
+Since this method assumes both objects share the same redshift (equal to the cluster redshift), the computed distances are generally smaller than their 3D counterparts. 
+In 3D matching, the full spatial separation is considered, whereas in 2D matching, the calculated distance serves as a lower bound rather than the true three-dimensional separation. 
+See @tbl-sky-match-3d for comparison.
+
+If we had used halo redshifts instead, we would still obtain a lower bound on the distance, but this time computed assuming the halos' redshifts rather than the clusters'.
+
+### Filtering Results  
+
+To refine the matching process, we apply filters based on distance and redshift criteria.  
+
+Since the computed distances provide only a **lower bound**—meaning the actual 3D separations could be larger, we set a **distance threshold of 60 Mpc** to exclude pairs that are likely too far apart.  
+
+Additionally, we apply a **redshift filter**, retaining only pairs where the redshift difference is **below 0.02**, ensuring the matches remain within a physically relevant range.  
+
+```{python}
+# Apply a distance filter to retain only matches within 60 Mpc
+mask = result.filter_mask_by_distance(60.0)
+
+# Further refine by keeping only matches with redshift < 0.02
+mask = result.filter_mask_by_redshift_proximity(0.02, mask=mask)
+```
+
+These filters help isolate the most relevant cluster-halo associations for further analysis.  
+
+The filtered table is shown below:
+
+```{python}
+# | label: tbl-sky-match-2d-filtered
+# | fig-cap: Filtered distances between clusters and halos computed using cluster redshifts.
+# | fig-cap-location: margin
+# | fig-width: 100%
+# | code-fold: true
+
+show_pandas(convert_table_multi_column(result.to_table_complete(mask)).to_pandas())
+```
+
+The plot below illustrates the filtered results:
+
+```{python}
+# | label: fig-sky-match-2d-filtered
+# | fig-cap: The filtered distances between clusters and halos computed using the cluster redshifts.
+# | fig-cap-location: margin
+# | fig-width: 100%
+# | code-fold: true
+
+plot_mask(mask)
+plt.show()
+```
+
+The refined selection highlights **cluster-halo pairs that are both spatially and redshift-wise well-matched** within the relevant observational range.  
+
+### Best Match Selection  
+
+To further refine the associations, we use the `best_match` method to identify the **most suitable halo for each cluster**.  
+
+We specify the `selection_criteria` as **MORE_MASSIVE**, meaning we select the halo with the largest **halo_logM** value as the best match.  
+
+```{python}
+# Find the best match for each cluster
+best = result.select_best(
+    selection_criteria=SelectionCriteria.MORE_MASSIVE,
+    mask=mask,
+    more_massive_column="halo_logM",
+)
+```
+
+This results in a `BestCandidates` object containing the indices of the most likely halo match for each cluster. 
+The table below presents the selected best matches, along with the corresponding cluster and halo masses:
+
+```{python}
+# | label: tbl-sky-match-2d-best
+# | fig-cap: Best matches between clusters and halos computed using cluster redshifts.
+# | fig-cap-location: margin
+# | fig-width: 100%
+# | code-fold: true
+
+show_pandas(
+    convert_table_multi_column(
+        result.to_table_best(
+            best,
+            query_properties={"cluster_logM": "cluster_logM"},
+            match_properties={"halo_logM": "halo_logM"},
+        )
+    ).to_pandas()
+)
+```
+
+The plot below visualizes the best matches:
+
+```{python}
+# | label: fig-sky-match-2d-best
+# | fig-cap: Best matches between clusters and halos computed using cluster redshifts.
+# | fig-cap-location: margin
+# | fig-width: 100%
+# | code-fold: true
+
+plot_best(best)
+plt.show()
+
+```
+
+This final selection ensures that each cluster is associated with the **most massive halo** within the given constraints, optimizing the matching process.
+
+### Cross Matching  
+
+To improve the accuracy of our cluster-halo associations, we use the `cross_match` method to identify the **best match for each halo**.  
+Previously, in @tbl-sky-match-2d-best, we selected the best match for each cluster. 
+However, since we did not use actual distances, some incorrect matches may have been included.  
+By applying `cross_match` from the halo perspective, we refine the matching process.  
+
+```{python}
+# Find the best match for each halo
+
+cross = sm.invert_query_match()
+
+cross_result = cross.match_2d(cosmo, n_nearest_neighbours=6)
+
+cross_mask = cross_result.filter_mask_by_distance(60.0)
+cross_mask = cross_result.filter_mask_by_redshift_proximity(0.02, mask=cross_mask)
+
+cross_best = cross_result.select_best(
+    selection_criteria=SelectionCriteria.REDSHIFT_PROXIMITY, mask=cross_mask
+)
+
+cross_match = best.get_cross_match_indices(cross_best)
+```
+
+This results in a `BestCandidates` object containing the indices of the most probable cluster match for each halo.  
+The table below presents the selected best matches along with the corresponding cluster and halo masses:  
+
+```{python}
+# | label: tbl-sky-match-2d-cross
+# | fig-cap: Cross matches between clusters and halos computed using cluster redshifts.
+# | fig-cap-location: margin
+# | fig-width: 100%
+# | code-fold: true
+
+show_pandas(
+    convert_table_multi_column(
+        cross_result.to_table_best(
+            cross_best,
+            query_properties={"halo_logM": "halo_logM"},
+            match_properties={"cluster_logM": "cluster_logM"},
+        )
+    ).to_pandas()
+)
+```
+
+The following plot visualizes the cross matches:  
+
+```{python}
+# | label: fig-sky-match-2d-cross
+# | fig-cap: Cross matches between clusters and halos computed using cluster redshifts.
+# | fig-cap-location: margin
+# | fig-width: 100%
+# | code-fold: true
+
+plot_cross(cross_match)
+plt.show()
+```
+
+In the final step, we assess the **best match for each cluster** by inspecting the `cross_match` dictionary, which stores the indices of the best matches.  
+We then evaluate the total number of matches, as well as the proportion of correct and incorrect assignments.  
+
+```{python}
+# | label: tbl-sky-match-2d-match-full
+# | fig-cap: Match statistics between clusters and halos computed using cluster redshifts.
+# | fig-cap-location: margin
+# | fig-width: 100%
+# | code-fold: true
+
+# Convert dictionary to DataFrame for better visualization
+cross_match_df = pd.DataFrame(
+    list(cross_match.items()), columns=["Cluster ID", "Matched Halo ID"]
+)
+
+# Compute correctness
+wrong = cross_match_df["Cluster ID"] != cross_match_df["Matched Halo ID"]
+right = ~wrong  # Logical NOT for correct matches
+
+# Add correctness column
+cross_match_df["Correct Match"] = right
+
+cross_match_df
+```
+
+The match statistics are summarized below:  
+
+```{python}
+# | label: tbl-sky-match-2d-match-stats
+# | fig-cap: Match statistics between clusters and halos computed using cluster redshifts.
+# | fig-cap-location: margin
+# | fig-width: 100%
+# | code-fold: true
+
+# Display match statistics
+HTML(
+    pd.DataFrame(
+        {
+            "Total Matches": [len(cross_match)],
+            "Correct Matches": [right.sum()],
+            "Wrong Matches": [wrong.sum()],
+        }
+    ).to_html(index=False)
+)
+```
+
+In summary, we have successfully matched the clusters with the halos, noting that our artificially produced dataset was not perfect, and there are some incorrect matches.
+
+## Summary
+
+This tutorial demonstrated NumCosmo's `SkyMatch` class as a robust tool for cross-matching galaxy clusters with simulated dark matter halos. 
+Using mock datasets, 100 clusters and 200 halos (100 spatially correlated with clusters, 100 randomly distributed), we showcased two key methodologies:  
+- **`match_3d`**: Achieves precise associations using 3D positional and redshift data, ideal for spectroscopic surveys.  
+- **`match_2d`**: Relies on angular proximity, critical for photometric surveys or datasets with redshift uncertainties.  
+
+Cross-validation via `cross_match` and statistical analysis revealed that correlated halos (positioned near clusters) were reliably matched, while mismatches arose primarily from random halos or positional noise. 
+This underscores the importance of probabilistic matching (`match_2d`) and systematic validation in real-world scenarios, where overlapping structures and observational errors are common.  
+
+By quantifying completeness (successful cluster-halo matches) and purity (minimizing false associations), the `SkyMatch` framework enables rigorous evaluation of observational catalogs. 
+While simplified mock data omitted complexities like mass-observable scatter or projection effects, the workflow mirrors steps essential for cosmological analyses, such as calibrating selection functions for cluster abundance studies.  
+
+Tools like `SkyMatch` bridge simulations and observations, allowing to diagnose catalog reliability and refine strategies for upcoming surveys (e.g., LSST, Euclid), where accurate matching will be crucial for constraining dark energy and structure growth.  
 
