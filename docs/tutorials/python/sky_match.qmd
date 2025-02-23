@@ -67,6 +67,9 @@ dist = Nc.Distance.new(100.0)
 dist.compute_inv_comoving(True)
 dist.prepare(cosmo)
 
+# Lets fix the numpy seed to get reproducible results
+np.random.seed(74682)
+
 ```
 
 ## Generating Mock Data  
