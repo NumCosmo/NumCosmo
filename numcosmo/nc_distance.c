@@ -545,9 +545,9 @@ nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 
       break;
     }
-    default:
-      g_assert_not_reached ();
-      break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+      break;                   /* LCOV_EXCL_LINE */
   }
 
   return GSL_NAN;
@@ -597,12 +597,12 @@ _nc_distance_sinn (const gdouble r, const gdouble Omega_k0)
       return fabs (sin (sqrt_Omega_k0 * r) / sqrt_Omega_k0);
 
       break;
-    default:
-      g_assert_not_reached ();
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
-      return 0.0;
+      return 0.0; /* LCOV_EXCL_LINE */
 
-      break;
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -723,12 +723,12 @@ nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
 
       break;
     }
-    default:
-      g_assert_not_reached ();
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
-      return 0.0;
+      return 0.0; /* LCOV_EXCL_LINE */
 
-      break;
+      break; /* LCOV_EXCL_LINE */
   }
 }
 
@@ -1676,6 +1676,582 @@ nc_distance_conformal_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
     ncm_integral_locked_a_inf (&F, log1p (z), NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
 
   return result;
+}
+
+/***************************************************************************
+ * Vectorized 'distances'
+ ****************************************************************************/
+
+/**
+ * nc_distance_comoving_vector:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: (element-type gdouble): a vector of redshifts
+ *
+ * Compute the comoving distance $D_c(z)$ for each redshift in @z.
+ *
+ * Returns: (element-type gdouble) (transfer full): a vector with the comoving distances.
+ */
+GArray *
+nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+{
+  GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
+  guint i;
+
+  switch (dist->cmethod)
+  {
+    case NC_DISTANCE_COMOVING_METHOD_FROM_MODEL:
+
+      for (i = 0; i < z->len; i++)
+      {
+        const gdouble zi = g_array_index (z, gdouble, i);
+        const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
+
+        g_array_append_val (res, Di);
+      }
+
+      break;
+    case NC_DISTANCE_COMOVING_METHOD_INT_E:
+    {
+      NcmSpline *s = ncm_ode_spline_peek_spline (dist->comoving_distance_spline);
+      gdouble result, error;
+      gsl_function F;
+
+      F.function = &_comoving_distance_integral_argument;
+      F.params   = cosmo;
+
+      for (i = 0; i < z->len; i++)
+      {
+        const gdouble zi = g_array_index (z, gdouble, i);
+
+        if (zi <= dist->zf)
+          result = ncm_spline_eval (s, zi);
+        else if (dist->use_cache)
+          ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, zi, &result, &error);
+        else
+          ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+
+        g_array_append_val (res, result);
+      }
+
+      break;
+    }
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+
+      return NULL; /* LCOV_EXCL_LINE */
+
+      break; /* LCOV_EXCL_LINE */
+  }
+
+  return res;
+}
+
+/**
+ * nc_distance_transverse_vector:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: (element-type gdouble): a vector of redshifts
+ *
+ * Compute the transverse comoving distance $D_t(z)$ for each redshift in @z.
+ *
+ * Returns: (element-type gdouble) (transfer full): a vector with the transverse distances.
+ */
+GArray *
+nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+{
+  GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
+  const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
+  const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+  const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
+  guint i;
+
+  switch (dist->cmethod)
+  {
+    case NC_DISTANCE_COMOVING_METHOD_FROM_MODEL:
+
+      switch (k)
+      {
+        case 0:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
+
+            g_array_append_val (res, Di);
+          }
+
+          break;
+
+        case -1:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
+            const gdouble Dt = sinh (sqrt_Omega_k0 * Di) / sqrt_Omega_k0;
+
+            g_array_append_val (res, Dt);
+          }
+
+          break;
+
+        case 1:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
+            const gdouble Dt = sin (sqrt_Omega_k0 * Di) / sqrt_Omega_k0;
+
+            g_array_append_val (res, Dt);
+          }
+
+          break;
+      }
+
+      break;
+
+    case NC_DISTANCE_COMOVING_METHOD_INT_E:
+    {
+      NcmSpline *s = ncm_ode_spline_peek_spline (dist->comoving_distance_spline);
+      gdouble result, error;
+      gsl_function F;
+
+      F.function = &_comoving_distance_integral_argument;
+      F.params   = cosmo;
+
+      switch (k)
+      {
+        case 0:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+
+            if (zi <= dist->zf)
+            {
+              result = ncm_spline_eval (s, zi);
+            }
+            else
+            {
+              if (dist->use_cache)
+                ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, zi, &result, &error);
+              else
+                ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+            }
+
+            g_array_append_val (res, result);
+          }
+
+          break;
+
+        case -1:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            gdouble Dt;
+
+            if (zi <= dist->zf)
+            {
+              result = ncm_spline_eval (s, zi);
+            }
+            else
+            {
+              if (dist->use_cache)
+                ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, zi, &result, &error);
+              else
+                ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+            }
+
+            Dt = sinh (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
+
+            g_array_append_val (res, Dt);
+          }
+
+          break;
+
+        case 1:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            gdouble Dt;
+
+            if (zi <= dist->zf)
+            {
+              result = ncm_spline_eval (s, zi);
+            }
+            else
+            {
+              if (dist->use_cache)
+                ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, zi, &result, &error);
+              else
+                ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+            }
+
+            Dt = sin (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
+
+            g_array_append_val (res, Dt);
+          }
+
+          break;
+      }
+
+      break;
+    }
+
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+
+      return NULL; /* LCOV_EXCL_LINE */
+
+      break; /* LCOV_EXCL_LINE */
+  }
+
+  return res;
+}
+
+/**
+ * nc_distance_luminosity_vector:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: (element-type gdouble): a vector of redshifts
+ *
+ * Compute the luminosity distance $D_L(z)$ for each redshift in @z.
+ *
+ * Returns: (element-type gdouble) (transfer full): a vector with the luminosity distances.
+ */
+GArray *
+nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+{
+  GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
+  const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
+  const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+  const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
+  guint i;
+
+  switch (dist->cmethod)
+  {
+    case NC_DISTANCE_COMOVING_METHOD_FROM_MODEL:
+
+      switch (k)
+      {
+        case 0:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble Dl = (1.0 + zi) * nc_hicosmo_Dc (cosmo, zi);
+
+            g_array_append_val (res, Dl);
+          }
+
+          break;
+
+        case -1:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
+            const gdouble Dl = (1.0 + zi) * sinh (sqrt_Omega_k0 * Di) / sqrt_Omega_k0;
+
+            g_array_append_val (res, Dl);
+          }
+
+          break;
+
+        case 1:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
+            const gdouble Dl = (1.0 + zi) * sin (sqrt_Omega_k0 * Di) / sqrt_Omega_k0;
+
+            g_array_append_val (res, Dl);
+          }
+
+          break;
+      }
+
+      break;
+
+    case NC_DISTANCE_COMOVING_METHOD_INT_E:
+    {
+      NcmSpline *s = ncm_ode_spline_peek_spline (dist->comoving_distance_spline);
+      gdouble result, error;
+      gsl_function F;
+
+      F.function = &_comoving_distance_integral_argument;
+      F.params   = cosmo;
+
+      switch (k)
+      {
+        case 0:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            gdouble Dl;
+
+            if (zi <= dist->zf)
+            {
+              result = ncm_spline_eval (s, zi);
+            }
+            else
+            {
+              if (dist->use_cache)
+                ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, zi, &result, &error);
+              else
+                ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+            }
+
+            Dl = (1.0 + zi) * result;
+
+            g_array_append_val (res, Dl);
+          }
+
+          break;
+
+        case -1:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            gdouble Dl;
+
+            if (zi <= dist->zf)
+            {
+              result = ncm_spline_eval (s, zi);
+            }
+            else
+            {
+              if (dist->use_cache)
+                ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, zi, &result, &error);
+              else
+                ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+            }
+
+            Dl = (1.0 + zi) * sinh (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
+
+            g_array_append_val (res, Dl);
+          }
+
+          break;
+
+        case 1:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            gdouble Dl;
+
+            if (zi <= dist->zf)
+            {
+              result = ncm_spline_eval (s, zi);
+            }
+            else
+            {
+              if (dist->use_cache)
+                ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, zi, &result, &error);
+              else
+                ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+            }
+
+            Dl = (1.0 + zi) * sin (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
+
+            g_array_append_val (res, Dl);
+          }
+
+          break;
+      }
+
+      break;
+    }
+
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+
+      return NULL; /* LCOV_EXCL_LINE */
+
+      break; /* LCOV_EXCL_LINE */
+  }
+
+  return res;
+}
+
+/**
+ * nc_distance_angular_diameter_vector:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: (element-type gdouble): a vector of redshifts
+ *
+ * Compute the angular diameter distance $D_A(z)$ for each redshift in @z.
+ *
+ * Returns: (element-type gdouble) (transfer full): a vector with the angular diameter distances.
+ */
+GArray *
+nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+{
+  GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
+  const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
+  const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+  const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
+  guint i;
+
+  switch (dist->cmethod)
+  {
+    case NC_DISTANCE_COMOVING_METHOD_FROM_MODEL:
+
+      switch (k)
+      {
+        case 0:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble DA = nc_hicosmo_Dc (cosmo, zi) / (1.0 + zi);
+
+            g_array_append_val (res, DA);
+          }
+
+          break;
+
+        case -1:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
+            const gdouble DA = sinh (sqrt_Omega_k0 * Di) / sqrt_Omega_k0 / (1.0 + zi);
+
+            g_array_append_val (res, DA);
+          }
+
+          break;
+
+        case 1:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
+            const gdouble DA = sin (sqrt_Omega_k0 * Di) / sqrt_Omega_k0 / (1.0 + zi);
+
+            g_array_append_val (res, DA);
+          }
+
+          break;
+      }
+
+      break;
+
+    case NC_DISTANCE_COMOVING_METHOD_INT_E:
+    {
+      NcmSpline *s = ncm_ode_spline_peek_spline (dist->comoving_distance_spline);
+      gdouble result, error;
+      gsl_function F;
+
+      F.function = &_comoving_distance_integral_argument;
+      F.params   = cosmo;
+
+      switch (k)
+      {
+        case 0:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            gdouble DA;
+
+            if (zi <= dist->zf)
+            {
+              result = ncm_spline_eval (s, zi);
+            }
+            else
+            {
+              if (dist->use_cache)
+                ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, zi, &result, &error);
+              else
+                ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+            }
+
+            DA = result / (1.0 + zi);
+
+            g_array_append_val (res, DA);
+          }
+
+          break;
+
+        case -1:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            gdouble DA;
+
+            if (zi <= dist->zf)
+            {
+              result = ncm_spline_eval (s, zi);
+            }
+            else
+            {
+              if (dist->use_cache)
+                ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, zi, &result, &error);
+              else
+                ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+            }
+
+            DA = sinh (sqrt_Omega_k0 * result) / sqrt_Omega_k0 / (1.0 + zi);
+
+            g_array_append_val (res, DA);
+          }
+
+          break;
+
+        case 1:
+
+          for (i = 0; i < z->len; i++)
+          {
+            const gdouble zi = g_array_index (z, gdouble, i);
+            gdouble DA;
+
+            if (zi <= dist->zf)
+            {
+              result = ncm_spline_eval (s, zi);
+            }
+            else
+            {
+              if (dist->use_cache)
+                ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, zi, &result, &error);
+              else
+                ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+            }
+
+            DA = sin (sqrt_Omega_k0 * result) / sqrt_Omega_k0 / (1.0 + zi);
+
+            g_array_append_val (res, DA);
+          }
+
+          break;
+      }
+
+      break;
+    }
+
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+
+      return NULL; /* LCOV_EXCL_LINE */
+
+      break; /* LCOV_EXCL_LINE */
+  }
+
+  return res;
 }
 
 #define _NC_DISTANCE_FUNC0_TO_FLIST(fname)                                                                                   \
