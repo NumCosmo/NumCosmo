@@ -32,10 +32,12 @@ typedef struct kdtree
   double *coords;
   double **coord_table;
   long *coord_indexes;
+  long *coord_indexes_tmp;
   int dim;
 } kdtree_t;
 
 struct kdtree *kdtree_init (int dim);
+
 void kdtree_insert (struct kdtree *tree, double *coord);
 void kdtree_rebuild (struct kdtree *tree);
 void *kdtree_knn_search (struct kdtree *tree, double *coord, int k);
