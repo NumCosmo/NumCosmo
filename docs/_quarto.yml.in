@@ -10,6 +10,7 @@ project:
     - tutorials/c/gobject.qmd
     - tutorials/c/curve_tutorial.qmd
     - tutorials/python/cluster_wl_simul.qmd
+    - tutorials/python/sky_match.qmd
     - examples/data_analysis/snia.qmd
     - examples/intro/epdf.qmd
     - examples/intro/hiprim.qmd
@@ -54,6 +55,8 @@ website:
               contents:
               - href: tutorials/python/cluster_wl_simul.qmd
                 text: "Cluster WL Simulation"
+              - href: tutorials/python/sky_match.qmd
+                text: "Sky Match"
         - section: "Examples"
           contents:
             - section: "Introduction"

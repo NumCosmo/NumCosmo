@@ -186,7 +186,7 @@ class GenerateJpasForecast:
     fitting_model: Annotated[
         tuple[float, float, float],
         typer.Option(
-            help="Model for fitting. (NcHICosmo:Omegac,NcHICosmo:w,NcHICosmo:sigma8)",
+            help=("Model for fitting. (NcHICosmo:Omegac,NcHICosmo:w,NcHICosmo:sigma8)"),
             show_default=True,
         ),
     ] = (0.2612, -1.0, 0.8159)

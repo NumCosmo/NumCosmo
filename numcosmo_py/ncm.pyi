@@ -9790,6 +9790,13 @@ class SphereNN(GObject.Object):
     def knn_search_distances(
         self, r: float, theta: float, phi: float, k: int
     ) -> typing.Tuple[list[float], list[int]]: ...
+    def knn_search_distances_batch(
+        self,
+        r: typing.Sequence[float],
+        theta: typing.Sequence[float],
+        phi: typing.Sequence[float],
+        k: int,
+    ) -> typing.Tuple[list[float], list[int]]: ...
     @classmethod
     def new(cls) -> SphereNN: ...
     def rebuild(self) -> None: ...
