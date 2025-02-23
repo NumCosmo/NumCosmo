@@ -81,102 +81,41 @@ coord_table_reset (struct kdtree *tree)
 }
 
 static void
-insert_sort (struct kdtree *tree, long low, long high, int r)
+merge (struct kdtree *tree, long left, long mid, long right, int r)
 {
-  long i, j;
-  long *indexes = tree->coord_indexes;
+  long * restrict arr  = tree->coord_indexes;
+  long * restrict temp = tree->coord_indexes_tmp;
+  int i = left, j = mid + 1, k = left;
 
-  for (i = low + 1; i <= high; i++)
+  while (i <= mid && j <= right)
   {
-    long tmp_idx     = indexes[i];
-    double tmp_value = D (tree, indexes[i], r);
-
-    j = i - 1;
-
-    for ( ; j >= low && D (tree, indexes[j], r) > tmp_value; j--)
-    {
-      indexes[j + 1] = indexes[j];
-    }
-
-    indexes[j + 1] = tmp_idx;
+    if (D (tree, arr[i], r) <= D (tree, arr[j], r))
+      temp[k++] = arr[i++];
+    else
+      temp[k++] = arr[j++];
   }
+
+  while (i <= mid)
+    temp[k++] = arr[i++];
+
+  while (j <= right)
+    temp[k++] = arr[j++];
+
+  for (i = left; i <= right; i++)
+    arr[i] = temp[i];
 }
 
 static void
-quicksort (struct kdtree *tree, long low, long high, int r)
+merge_sort_recursive (struct kdtree *tree, long left, long right, int r)
 {
-  if (high - low <= 32)
+  if (left < right)
   {
-    insert_sort (tree, low, high, r);
+    long mid = left + (right - left) / 2;
 
-    /*bubble_sort(tree, low, high, r); */
-    return;
+    merge_sort_recursive (tree, left, mid, r);
+    merge_sort_recursive (tree, mid + 1, right, r);
+    merge (tree, left, mid, right, r);
   }
-
-  long *indexes = tree->coord_indexes;
-  /* median of 3 */
-  long mid = low + (high - low) / 2;
-
-  if (D (tree, indexes[low], r) > D (tree, indexes[mid], r))
-    swap (indexes + low, indexes + mid);
-
-  if (D (tree, indexes[low], r) > D (tree, indexes[high], r))
-    swap (indexes + low, indexes + high);
-
-  if (D (tree, indexes[high], r) > D (tree, indexes[mid], r))
-    swap (indexes + high, indexes + mid);
-
-
-  /* D(indexes[low]) <= D(indexes[high]) <= D(indexes[mid]) */
-  double pivot = D (tree, indexes[high], r);
-
-  /* 3-way partition
-   * +---------+-----------+---------+-------------+---------+
-   * |  pivot  |  <=pivot  |   ?     |  >=pivot    |  pivot  |
-   * +---------+-----------+---------+-------------+---------+
-   * low     lt             i       j               gt    high
-   */
-  long i  = low - 1;
-  long lt = i;
-  long j  = high;
-  long gt = j;
-
-  for ( ; ;)
-  {
-    while (D (tree, indexes[++i], r) < pivot)
-    {
-    }
-
-    while (D (tree, indexes[--j], r) > pivot && j > low)
-    {
-    }
-
-    if (i >= j)
-      break;
-
-    swap (indexes + i, indexes + j);
-
-    if (D (tree, indexes[i], r) == pivot)
-      swap (&indexes[++lt], &indexes[i]);
-
-    if (D (tree, indexes[j], r) == pivot)
-      swap (&indexes[--gt], &indexes[j]);
-  }
-
-  /* i == j or j + 1 == i */
-  swap (indexes + i, indexes + high);
-
-  /* Move equal elements to the middle of array */
-  long x, y;
-
-  for (x = low, j = i - 1; x <= lt && j > lt; x++, j--)
-    swap (indexes + x, indexes + j);
-
-  for (y = high, i = i + 1; y >= gt && i < gt; y--, i++)
-    swap (indexes + y, indexes + i);
-
-  quicksort (tree, low, j - lt + x - 1, r);
-  quicksort (tree, i + y - gt, high, r);
 }
 
 static struct kdnode *
@@ -224,10 +163,11 @@ coord_cmp (double *c1, double *c2, int dim)
 static void
 resize (struct kdtree *tree)
 {
-  tree->capacity     *= 2;
-  tree->coords        = realloc (tree->coords, tree->dim * sizeof (double) * tree->capacity);
-  tree->coord_table   = realloc (tree->coord_table, sizeof (double *) * tree->capacity);
-  tree->coord_indexes = realloc (tree->coord_indexes, sizeof (long) * tree->capacity);
+  tree->capacity         *= 2;
+  tree->coords            = realloc (tree->coords, tree->dim * sizeof (double) * tree->capacity);
+  tree->coord_table       = realloc (tree->coord_table, sizeof (double *) * tree->capacity);
+  tree->coord_indexes     = realloc (tree->coord_indexes, sizeof (long) * tree->capacity);
+  tree->coord_indexes_tmp = realloc (tree->coord_indexes_tmp, sizeof (long) * tree->capacity);
   coord_table_reset (tree);
   coord_index_reset (tree);
 }
@@ -279,7 +219,7 @@ knn_pickup (struct kdtree *tree, struct kdnode *node, rb_knn_list_table_t *table
 
     *knn_distance = MAX (*knn_distance, dist);
   }
-  else if (dist < *knn_distance)
+  else if (dist <= *knn_distance)
   {
     knn_list_t *log = g_slice_new (knn_list_t);
     rb_knn_list_traverser_t trav;
@@ -386,7 +326,6 @@ kdtree_knn_search (struct kdtree *tree, double *target, int k)
     double min_shift[tree->dim];
 
     memset (min_shift, 0, sizeof (double) * tree->dim);
-
     kdtree_search_recursive (tree, tree->root, table, &knn_distance, target, k, &pickup, min_shift, 0.0);
 
     return table;
@@ -464,7 +403,7 @@ kdnode_build (struct kdtree *tree, struct kdnode **nptr, int r, long low, long h
   else if (low < high)
   {
     /* Sort and fetch the median to build a balanced BST */
-    quicksort (tree, low, high, r);
+    merge_sort_recursive (tree, low, high, r);
 
     long median         = low + (high - low) / 2;
     long median_index   = tree->coord_indexes[median];
@@ -501,13 +440,14 @@ kdtree_init (int dim)
 
   if (tree != NULL)
   {
-    tree->root          = NULL;
-    tree->dim           = dim;
-    tree->count         = 0;
-    tree->capacity      = 65536;
-    tree->coords        = malloc (dim * sizeof (double) * tree->capacity);
-    tree->coord_table   = malloc (sizeof (double *) * tree->capacity);
-    tree->coord_indexes = malloc (sizeof (long) * tree->capacity);
+    tree->root              = NULL;
+    tree->dim               = dim;
+    tree->count             = 0;
+    tree->capacity          = 65536;
+    tree->coords            = malloc (dim * sizeof (double) * tree->capacity);
+    tree->coord_table       = malloc (sizeof (double *) * tree->capacity);
+    tree->coord_indexes     = malloc (sizeof (long) * tree->capacity);
+    tree->coord_indexes_tmp = malloc (sizeof (long) * tree->capacity);
     coord_index_reset (tree);
     coord_table_reset (tree);
   }
@@ -537,6 +477,7 @@ kdtree_destroy (struct kdtree *tree)
   free (tree->coords);
   free (tree->coord_table);
   free (tree->coord_indexes);
+  free (tree->coord_indexes_tmp);
   free (tree);
 }
 
