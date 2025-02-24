@@ -293,7 +293,7 @@ void
 test_nc_distance_new (TestNcDistance *test, gconstpointer pdata)
 {
   NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcDistance *dist = nc_distance_new (6.0);
+  NcDistance *dist = nc_distance_new (16.0);
 
   g_assert_true (dist != NULL);
   g_assert_true (NC_IS_DISTANCE (dist));

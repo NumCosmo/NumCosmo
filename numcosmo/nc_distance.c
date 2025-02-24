@@ -1698,6 +1698,8 @@ nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z
   GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
   guint i;
 
+  g_array_set_size (res, z->len);
+
   switch (dist->cmethod)
   {
     case NC_DISTANCE_COMOVING_METHOD_FROM_MODEL:
@@ -1707,7 +1709,7 @@ nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z
         const gdouble zi = g_array_index (z, gdouble, i);
         const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
 
-        g_array_append_val (res, Di);
+        g_array_index (res, gdouble, i) = Di;
       }
 
       break;
@@ -1731,7 +1733,7 @@ nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z
         else
           ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
 
-        g_array_append_val (res, result);
+        g_array_index (res, gdouble, i) = result;
       }
 
       break;
@@ -1766,6 +1768,8 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
   const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
   guint i;
 
+  g_array_set_size (res, z->len);
+
   switch (dist->cmethod)
   {
     case NC_DISTANCE_COMOVING_METHOD_FROM_MODEL:
@@ -1779,7 +1783,7 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
             const gdouble zi = g_array_index (z, gdouble, i);
             const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
 
-            g_array_append_val (res, Di);
+            g_array_index (res, gdouble, i) = Di;
           }
 
           break;
@@ -1792,7 +1796,7 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
             const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
             const gdouble Dt = sinh (sqrt_Omega_k0 * Di) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dt);
+            g_array_index (res, gdouble, i) = Dt;
           }
 
           break;
@@ -1805,7 +1809,7 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
             const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
             const gdouble Dt = sin (sqrt_Omega_k0 * Di) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dt);
+            g_array_index (res, gdouble, i) = Dt;
           }
 
           break;
@@ -1842,7 +1846,7 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
                 ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
             }
 
-            g_array_append_val (res, result);
+            g_array_index (res, gdouble, i) = result;
           }
 
           break;
@@ -1868,7 +1872,7 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
 
             Dt = sinh (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dt);
+            g_array_index (res, gdouble, i) = Dt;
           }
 
           break;
@@ -1894,7 +1898,7 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
 
             Dt = sin (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dt);
+            g_array_index (res, gdouble, i) = Dt;
           }
 
           break;
@@ -1933,6 +1937,8 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
   const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
   guint i;
 
+  g_array_set_size (res, z->len);
+
   switch (dist->cmethod)
   {
     case NC_DISTANCE_COMOVING_METHOD_FROM_MODEL:
@@ -1946,7 +1952,7 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
             const gdouble zi = g_array_index (z, gdouble, i);
             const gdouble Dl = (1.0 + zi) * nc_hicosmo_Dc (cosmo, zi);
 
-            g_array_append_val (res, Dl);
+            g_array_index (res, gdouble, i) = Dl;
           }
 
           break;
@@ -1959,7 +1965,7 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
             const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
             const gdouble Dl = (1.0 + zi) * sinh (sqrt_Omega_k0 * Di) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dl);
+            g_array_index (res, gdouble, i) = Dl;
           }
 
           break;
@@ -1972,7 +1978,7 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
             const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
             const gdouble Dl = (1.0 + zi) * sin (sqrt_Omega_k0 * Di) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dl);
+            g_array_index (res, gdouble, i) = Dl;
           }
 
           break;
@@ -2012,7 +2018,7 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
 
             Dl = (1.0 + zi) * result;
 
-            g_array_append_val (res, Dl);
+            g_array_index (res, gdouble, i) = Dl;
           }
 
           break;
@@ -2038,7 +2044,7 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
 
             Dl = (1.0 + zi) * sinh (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dl);
+            g_array_index (res, gdouble, i) = Dl;
           }
 
           break;
@@ -2064,7 +2070,7 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
 
             Dl = (1.0 + zi) * sin (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dl);
+            g_array_index (res, gdouble, i) = Dl;
           }
 
           break;
@@ -2103,6 +2109,8 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const G
   const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
   guint i;
 
+  g_array_set_size (res, z->len);
+
   switch (dist->cmethod)
   {
     case NC_DISTANCE_COMOVING_METHOD_FROM_MODEL:
@@ -2116,7 +2124,7 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const G
             const gdouble zi = g_array_index (z, gdouble, i);
             const gdouble DA = nc_hicosmo_Dc (cosmo, zi) / (1.0 + zi);
 
-            g_array_append_val (res, DA);
+            g_array_index (res, gdouble, i) = DA;
           }
 
           break;
@@ -2129,7 +2137,7 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const G
             const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
             const gdouble DA = sinh (sqrt_Omega_k0 * Di) / sqrt_Omega_k0 / (1.0 + zi);
 
-            g_array_append_val (res, DA);
+            g_array_index (res, gdouble, i) = DA;
           }
 
           break;
@@ -2142,7 +2150,7 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const G
             const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
             const gdouble DA = sin (sqrt_Omega_k0 * Di) / sqrt_Omega_k0 / (1.0 + zi);
 
-            g_array_append_val (res, DA);
+            g_array_index (res, gdouble, i) = DA;
           }
 
           break;
@@ -2182,7 +2190,7 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const G
 
             DA = result / (1.0 + zi);
 
-            g_array_append_val (res, DA);
+            g_array_index (res, gdouble, i) = DA;
           }
 
           break;
@@ -2208,7 +2216,7 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const G
 
             DA = sinh (sqrt_Omega_k0 * result) / sqrt_Omega_k0 / (1.0 + zi);
 
-            g_array_append_val (res, DA);
+            g_array_index (res, gdouble, i) = DA;
           }
 
           break;
@@ -2234,7 +2242,7 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const G
 
             DA = sin (sqrt_Omega_k0 * result) / sqrt_Omega_k0 / (1.0 + zi);
 
-            g_array_append_val (res, DA);
+            g_array_index (res, gdouble, i) = DA;
           }
 
           break;
