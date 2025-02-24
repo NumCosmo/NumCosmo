@@ -120,7 +120,7 @@ cluster_dec = np.degrees(np.arcsin(cluster_sin_dec))
 cluster_z = np.random.uniform(Z_MIN, Z_MAX, CLUSTER_LENGTH)
 cluster_logm = np.random.uniform(LOGM_MIN, LOGM_MAX, CLUSTER_LENGTH)
 # Let's compute the cluster radii, and the 3D positions
-cluster_r = np.array(dist.comoving_vector(cosmo, cluster_z)) * cosmo.RH_Mpc()
+cluster_r = np.array(dist.comoving_array(cosmo, cluster_z)) * cosmo.RH_Mpc()
 cluster_x1 = (
     cluster_r * np.cos(np.radians(cluster_dec)) * np.cos(np.radians(cluster_ra))
 )

@@ -1683,7 +1683,7 @@ nc_distance_conformal_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
  ****************************************************************************/
 
 /**
- * nc_distance_comoving_vector:
+ * nc_distance_comoving_array:
  * @dist: a #NcDistance
  * @cosmo: a #NcHICosmo
  * @z: (element-type gdouble): a vector of redshifts
@@ -1693,7 +1693,7 @@ nc_distance_conformal_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
  * Returns: (element-type gdouble) (transfer full): a vector with the comoving distances.
  */
 GArray *
-nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+nc_distance_comoving_array (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
 {
   GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
   guint i;
@@ -1750,7 +1750,7 @@ nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z
 }
 
 /**
- * nc_distance_transverse_vector:
+ * nc_distance_transverse_array:
  * @dist: a #NcDistance
  * @cosmo: a #NcHICosmo
  * @z: (element-type gdouble): a vector of redshifts
@@ -1760,7 +1760,7 @@ nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z
  * Returns: (element-type gdouble) (transfer full): a vector with the transverse distances.
  */
 GArray *
-nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+nc_distance_transverse_array (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
 {
   GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
   const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
@@ -1919,7 +1919,7 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
 }
 
 /**
- * nc_distance_luminosity_vector:
+ * nc_distance_luminosity_array:
  * @dist: a #NcDistance
  * @cosmo: a #NcHICosmo
  * @z: (element-type gdouble): a vector of redshifts
@@ -1929,7 +1929,7 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
  * Returns: (element-type gdouble) (transfer full): a vector with the luminosity distances.
  */
 GArray *
-nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+nc_distance_luminosity_array (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
 {
   GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
   const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
@@ -2091,7 +2091,7 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
 }
 
 /**
- * nc_distance_angular_diameter_vector:
+ * nc_distance_angular_diameter_array:
  * @dist: a #NcDistance
  * @cosmo: a #NcHICosmo
  * @z: (element-type gdouble): a vector of redshifts
@@ -2101,7 +2101,7 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
  * Returns: (element-type gdouble) (transfer full): a vector with the angular diameter distances.
  */
 GArray *
-nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+nc_distance_angular_diameter_array (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
 {
   GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
   const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
