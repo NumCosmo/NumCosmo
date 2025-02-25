@@ -70,6 +70,7 @@ struct _NcDataClusterWLPrivate
   gboolean constructed;
   gdouble r_min;
   gdouble r_max;
+  gdouble dr;
   gdouble prec;
   guint len;
   NcmModelCtrl *ctrl_redshift;
@@ -119,6 +120,7 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
   self->constructed   = FALSE;
   self->r_max         = 0.0;
   self->r_min         = 0.0;
+  self->dr            = 0.0;
   self->prec          = 1.0e-6;
   self->len           = 0;
   self->ctrl_redshift = ncm_model_ctrl_new (NULL);
@@ -151,14 +153,20 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
       self->r_min = g_value_get_double (value);
 
       if (self->constructed)
-        g_assert_cmpfloat (self->r_min, <, self->r_max);
+      {
+          g_assert_cmpfloat (self->r_min, <, self->r_max);
+        self->dr = self->r_max - self->r_min;
+      }
 
       break;
     case PROP_R_MAX:
       self->r_max = g_value_get_double (value);
 
       if (self->constructed)
+      {
         g_assert_cmpfloat (self->r_min, <, self->r_max);
+        self->dr = self->r_max - self->r_min;
+      }
 
       break;
     case PROP_PREC:
@@ -285,23 +293,23 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcDataClusterWL:theta-min:
+   * NcDataClusterWL:r-min:
    *
    * Minimum radius of the weak lensing observables.
    *
    */
   g_object_class_install_property (object_class,
                                    PROP_R_MIN,
-                                   g_param_spec_double ("theta-min",
+                                   g_param_spec_double ("r-min",
                                                         NULL,
                                                         "Minimum radius of the weak lensing observables",
                                                         0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcDataClusterWL:theta-max:
+   * NcDataClusterWL:r-max:
    *
-   * Maximum theta of the weak lensing observables.
+   * Maximum radius of the weak lensing observables.
    *
    */
   g_object_class_install_property (object_class,
@@ -309,7 +317,7 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                    g_param_spec_double ("r-max",
                                                         NULL,
                                                         "Maximum radius of the weak lensing observables",
-                                                        0.0, G_MAXDOUBLE, 10.0,
+                                                        0.0, G_MAXDOUBLE, 5.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -394,12 +402,16 @@ _nc_data_cluster_wl_eval_m2lnP_weight (NcDataClusterWL *dcwl, const gdouble m2ln
 {
   NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
   const gdouble lnP                   = -0.5 * m2lnP;
-  const gdouble dx                    = 20.0 * (r - self->r_min);
+  const gdouble dx1                   = 20.0 * self->dr;
+  const gdouble dx2                   = 20.0 * (r - self->r_min);
+  const gdouble dx3                   = 20.0 * (self->r_max - r);
 
-  if (dx > 0.0)
-    return -2.0 * (log ((exp (-dx - lnP) + 1.0) / (1.0 + exp (-dx))) + lnP);
+  if (r > self->r_min && r < self->r_max)
+    return m2lnP - log ((exp (-dx1 - 2.0 * lnP) + exp (-dx2 - lnP) + exp (-dx3 - lnP) + 1.0) / (exp (-dx1) + exp (-dx2) + exp (-dx3) + 1.0));
+  else if (r < self->r_min)
+    return -2.0 * (log ((1.0 + exp (dx2 + lnP)) / (1.0 + exp (dx2))));
   else
-    return -2.0 * (log ((1.0 + exp (dx + lnP)) / (1.0 + exp (dx))));
+    return -2.0 * (log ((1.0 + exp (dx3 + lnP)) / (1.0 + exp (dx3))));
 }
 
 static gdouble
@@ -778,6 +790,7 @@ nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gd
 
   self->r_min = r_min;
   self->r_max = r_max;
+  self->dr    = r_max - r_min;
 }
 
 /**
