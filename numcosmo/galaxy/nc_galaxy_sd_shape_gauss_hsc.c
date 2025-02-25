@@ -313,6 +313,9 @@ _nc_galaxy_sd_shape_gauss_hsc_integ_f (gpointer callback_data, const gdouble z, 
   complex double e_s                 = e_o;
   complex double g                   = 0.0;
 
+  if (data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
+    e_o = conj (e_o);
+
   if (z > z_cl)
   {
     gt = nc_wl_surface_mass_density_reduced_shear_optzs (int_data->surface_mass_density,
