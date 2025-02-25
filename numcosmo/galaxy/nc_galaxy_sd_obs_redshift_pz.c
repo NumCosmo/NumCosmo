@@ -179,10 +179,8 @@ static void
 _nc_galaxy_sd_obs_redshift_pz_get_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
 {
   NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
-  NcmVector *xv                             = ncm_spline_peek_xv (ldata->pz);
 
-  *z_min = ncm_vector_fast_get (xv, 0);
-  *z_max = ncm_vector_fast_get (xv, ncm_vector_len (xv) - 1);
+  ncm_spline_get_bounds (ldata->pz, z_min, z_max);
 }
 
 struct _IntegData
