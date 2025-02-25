@@ -274,6 +274,18 @@ nc_galaxy_sd_shape_data_required_columns (NcGalaxySDShapeData *data)
 }
 
 /**
+ * nc_galaxy_sd_shape_data_get_radius:
+ * @data: a #NcGalaxySDShapeData
+ *
+ * Returns: the radius of the galaxy shape data.
+ */
+gdouble
+nc_galaxy_sd_shape_data_get_radius (NcGalaxySDShapeData *data)
+{
+  return data->ldata_get_radius (data);
+}
+
+/**
  * nc_galaxy_sd_shape_integrand_new:
  * @func: (scope async) (closure callback_data): a #NcGalaxySDShapeIntegrandFunc
  * @callback_data_free: (scope async) (closure callback_data): a #NcGalaxySDShapeIntegrandFreeData
