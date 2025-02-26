@@ -246,9 +246,9 @@ You can view the generated clusters and halos by converting them to Pandas DataF
 
 ```{python}
 # | label: tbl-cluster-halo
-# | fig-cap: The generated clusters and halos in the sky.
-# | fig-cap-location: margin
-# | fig-width: 100%
+# | tbl-cap: The generated clusters and halos in the sky.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
 # | code-fold: true
 
 
@@ -263,9 +263,9 @@ The generated clusters DataFrame:
 
 ```{python}
 # | label: tbl-clusters
-# | fig-cap: The generated clusters in the sky.
-# | fig-cap-location: margin
-# | fig-width: 100%
+# | tbl-cap: The generated clusters in the sky.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
 # | code-fold: true
 show_pandas(halos.to_pandas())
 ```
@@ -297,9 +297,9 @@ We can view the result by converting it to a table:
 
 ```{python}
 # | label: tbl-sky-match-3d
-# | fig-cap: The result of the 3D matching.
-# | fig-cap-location: margin
-# | fig-width: 100%
+# | tbl-cap: The result of the 3D matching.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
 # | code-fold: true
 
 
@@ -338,9 +338,9 @@ The resulting table can then be converted to a Pandas DataFrame:
 
 ```{python}
 # | label: tbl-sky-match-3d-filtered
-# | fig-cap: The filtered result of the 3D matching.
-# | fig-cap-location: margin
-# | fig-width: 100%
+# | tbl-cap: The filtered result of the 3D matching.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
 # | code-fold: true
 
 show_pandas(convert_table_multi_column(result.to_table_complete(mask=mask)).to_pandas())
@@ -431,9 +431,9 @@ We can view the result by converting it to a table:
 
 ```{python}
 # | label: tbl-sky-match-3d-best
-# | fig-cap: The best matched clusters
-# | fig-cap-location: margin
-# | fig-width: 100%
+# | tbl-cap: The best matched clusters
+# | tbl-cap-location: margin
+# | tbl-width: 100%
 # | code-fold: true
 
 show_pandas(convert_table_multi_column(result.to_table_best(best)).to_pandas())
@@ -611,9 +611,9 @@ The table below shows these distances in mega-parsecs (Mpc):
 
 ```{python}
 # | label: tbl-sky-match-2d
-# | fig-cap: The distances between clusters and halos computed using the cluster redshifts.
-# | fig-cap-location: margin
-# | fig-width: 100%
+# | tbl-cap: The distances between clusters and halos computed using the cluster redshifts.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
 # | code-fold: true
 
 show_pandas(convert_table_multi_column(result.to_table_complete()).to_pandas())
@@ -647,9 +647,9 @@ The filtered table is shown below:
 
 ```{python}
 # | label: tbl-sky-match-2d-filtered
-# | fig-cap: Filtered distances between clusters and halos computed using cluster redshifts.
-# | fig-cap-location: margin
-# | fig-width: 100%
+# | tbl-cap: Filtered distances between clusters and halos computed using cluster redshifts.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
 # | code-fold: true
 
 show_pandas(convert_table_multi_column(result.to_table_complete(mask)).to_pandas())
@@ -690,9 +690,9 @@ The table below presents the selected best matches, along with the corresponding
 
 ```{python}
 # | label: tbl-sky-match-2d-best
-# | fig-cap: Best matches between clusters and halos computed using cluster redshifts.
-# | fig-cap-location: margin
-# | fig-width: 100%
+# | tbl-cap: Best matches between clusters and halos computed using cluster redshifts.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
 # | code-fold: true
 
 show_pandas(
@@ -751,9 +751,9 @@ The table below presents the selected best matches along with the corresponding 
 
 ```{python}
 # | label: tbl-sky-match-2d-cross
-# | fig-cap: Cross matches between clusters and halos computed using cluster redshifts.
-# | fig-cap-location: margin
-# | fig-width: 100%
+# | tbl-cap: Cross matches between clusters and halos computed using cluster redshifts.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
 # | code-fold: true
 
 show_pandas(
@@ -785,9 +785,9 @@ We then evaluate the total number of matches, as well as the proportion of corre
 
 ```{python}
 # | label: tbl-sky-match-2d-match-full
-# | fig-cap: Match statistics between clusters and halos computed using cluster redshifts.
-# | fig-cap-location: margin
-# | fig-width: 100%
+# | tbl-cap: Match statistics between clusters and halos computed using cluster redshifts.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
 # | code-fold: true
 
 # Convert dictionary to DataFrame for better visualization
@@ -809,9 +809,9 @@ The match statistics are summarized below:
 
 ```{python}
 # | label: tbl-sky-match-2d-match-stats
-# | fig-cap: Match statistics between clusters and halos computed using cluster redshifts.
-# | fig-cap-location: margin
-# | fig-width: 100%
+# | tbl-cap: Match statistics between clusters and halos computed using cluster redshifts.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
 # | code-fold: true
 
 # Display match statistics

@@ -2621,7 +2621,7 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, NcmVect
  * @dist: a #NcDistance
  * @cosmo: a #NcHICosmo
  * @z: a #NcmVector of redshifts
- * @DA: a #NcmVector to store the distance modulus distances
+ * @dmod: a #NcmVector to store the distance modulus distances
  *
  * Compute the angular diameter distance $D_A(z)$ for each redshift in @z.
  *

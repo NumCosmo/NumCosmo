@@ -865,6 +865,8 @@ ncm_spline_post_prepare (NcmSpline *s)
     g_array_index (self->bucket, gsize, i) = j;
   }
 
+  g_array_index (self->bucket, gsize, n_buckets) = self->len - 2;
+
   if (ncm_vector_stride (self->xv) == 1)
   {
     if (self->acc)
@@ -1065,7 +1067,6 @@ _ncm_spline_get_index_no_stride (const NcmSpline *s, const gdouble x)
   if (G_UNLIKELY (x > self->x_max))
     return self->last_poly;
 
-  if (TRUE)
   {
     const guint n_buckets = self->bucket->len - 1;
     guint i_bucket        = (guint) ((x - self->x_min) * self->one_over_dx);

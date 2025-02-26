@@ -136,9 +136,12 @@ def add_ellipse_from_ellipticity(
         ax.add_patch(ellipse)
 
 
-def latex_float(value: float):
+def latex_float(value: float, precision: int = 2, convert_g: bool = True) -> str:
     """Convert a float to a string with a fixed number of decimal places."""
-    float_str = f"{value:.2g}"
+    if convert_g:
+        float_str = f"{value:.{precision}g}"
+    else:
+        float_str = f"{value:.{precision}e}"
     if "e" in float_str:
         base, exponent = float_str.split("e")
         if math.isclose(float(base), 1.0):
@@ -154,8 +157,25 @@ def latex_float(value: float):
     return float_str
 
 
+def format_time(value: float) -> str:
+    """Format a time value in seconds with appropriate units."""
+    units = [
+        (1.0e-9, r"$\mu$s"),  # Microseconds
+        (1.0e-6, "ms"),  # Milliseconds
+        (1.0e-3, "s"),  # Seconds
+        (1.0, "s"),  # Keep in seconds for larger values
+    ]
+
+    # Choose the most appropriate unit
+    for factor, unit in units:
+        if value < factor * 1000:  # Keep within 3 significant digits
+            return f"{value / factor:.2f} {unit}"
+
+    return f"{value:.2f} s"  # Fallback (large values)
+
+
 def set_rc_params_article(
-    column_width: float = 246.0, ncol: int = 2, nrows: int = 1
+    column_width: float = 246.0, ncol: int = 2, nrows: int = 1, fontsize: int = 8
 ) -> None:
     """Set matplotlib rcParams for a LaTeX article."""
     fig_width_pt = column_width * ncol  # \showthe\columnwidth
@@ -167,11 +187,11 @@ def set_rc_params_article(
     use_tex = bool(shutil.which("latex"))
 
     params = {
-        "axes.labelsize": 8,
-        "font.size": 8,
-        "legend.fontsize": 8,
-        "xtick.labelsize": 8,
-        "ytick.labelsize": 8,
+        "axes.labelsize": fontsize,
+        "font.size": fontsize,
+        "legend.fontsize": fontsize,
+        "xtick.labelsize": fontsize,
+        "ytick.labelsize": fontsize,
         "text.usetex": use_tex,
         "figure.figsize": fig_size,
     }
