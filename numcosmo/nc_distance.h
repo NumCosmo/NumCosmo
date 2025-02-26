@@ -176,10 +176,17 @@ gdouble nc_distance_angular_diameter_z1_z2 (NcDistance *dist, NcHICosmo *cosmo, 
  * Vectorized 'distances'
  ****************************************************************************/
 
-GArray *nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z);
-GArray *nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z);
-GArray *nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z);
-GArray *nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z);
+GArray *nc_distance_comoving_array (NcDistance *dist, NcHICosmo *cosmo, const GArray *z);
+GArray *nc_distance_transverse_array (NcDistance *dist, NcHICosmo *cosmo, const GArray *z);
+GArray *nc_distance_luminosity_array (NcDistance *dist, NcHICosmo *cosmo, const GArray *z);
+GArray *nc_distance_angular_diameter_array (NcDistance *dist, NcHICosmo *cosmo, const GArray *z);
+GArray *nc_distance_dmodulus_array (NcDistance *dist, NcHICosmo *cosmo, const GArray *z);
+
+void nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, NcmVector *z, NcmVector *Dc);
+void nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, NcmVector *z, NcmVector *Dt);
+void nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, NcmVector *z, NcmVector *Dl);
+void nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, NcmVector *z, NcmVector *DA);
+void nc_distance_dmodulus_vector (NcDistance *dist, NcHICosmo *cosmo, NcmVector *z, NcmVector *dmod);
 
 /***************************************************************************
  * Inverse 'distances'

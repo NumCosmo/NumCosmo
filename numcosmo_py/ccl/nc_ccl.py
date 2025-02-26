@@ -48,26 +48,39 @@ pyccl.physical_constants.freeze()
 def create_nc_obj(
     ccl_cosmo: pyccl.Cosmology,
     prec: float = 1.0e-7,
+    *,
     dist_z_max: float = 15.0,
     ps_nln_z_max: float = 10.0,
     k_min: float = 1.0e-6,
     k_max: float = 1.0e3,
 ) -> Cosmology:
     """Create a NumCosmo object from a CCL cosmology."""
-    cosmo = Nc.HICosmoDECpl(massnu_length=0)
+    if isinstance(ccl_cosmo["m_nu"], (list, np.ndarray)):
+        massnu_length = len(ccl_cosmo["m_nu"])
+        m_nu = ccl_cosmo["m_nu"]
+    elif ccl_cosmo["m_nu"] > 0.0:
+        massnu_length = 1
+        m_nu = [ccl_cosmo["m_nu"]]
+    else:
+        massnu_length = 0
+        m_nu = []
+    cosmo = Nc.HICosmoDECpl(massnu_length=massnu_length)
     cosmo.omega_x2omega_k()
-    cosmo.param_set_by_name("H0", ccl_cosmo["h"] * 100)
-    cosmo.param_set_by_name("Omegak", ccl_cosmo["Omega_k"])
-    cosmo.param_set_by_name("w0", ccl_cosmo["w0"])
-    cosmo.param_set_by_name("w1", ccl_cosmo["wa"])
-    cosmo.param_set_by_name("Omegab", ccl_cosmo["Omega_b"])
-    cosmo.param_set_by_name("Omegac", ccl_cosmo["Omega_c"])
-    cosmo.param_set_by_name("ENnu", ccl_cosmo["Neff"])
-    cosmo.param_set_by_name("Tgamma0", ccl_cosmo["T_CMB"])
+    cosmo["H0"] = ccl_cosmo["h"] * 100.0
+    cosmo["Omegak"] = ccl_cosmo["Omega_k"]
+    cosmo["w0"] = ccl_cosmo["w0"]
+    cosmo["w1"] = ccl_cosmo["wa"]
+    cosmo["Omegab"] = ccl_cosmo["Omega_b"]
+    cosmo["Omegac"] = ccl_cosmo["Omega_c"]
+    cosmo["ENnu"] = ccl_cosmo["N_nu_rel"]
+    cosmo["Tgamma0"] = ccl_cosmo["T_CMB"]
+    for i, m in enumerate(m_nu):
+        cosmo[f"massnu_{i}"] = m
+        cosmo[f"Tnu_{i}"] = ccl_cosmo["T_ncdm"]
 
     # Creates the HI Primordial object
     hiprim = Nc.HIPrimPowerLaw.new()
-    hiprim.param_set_by_name("n_SA", ccl_cosmo["n_s"])
+    hiprim["n_SA"] = ccl_cosmo["n_s"]
 
     # Creates the HI Reionization object
     hireion = Nc.HIReionCamb.new()
@@ -77,15 +90,6 @@ def create_nc_obj(
 
     dist = Nc.Distance.new(dist_z_max)
     dist.prepare(cosmo)
-
-    # Checking if neutrinos are compatible
-    if isinstance(ccl_cosmo["m_nu"], (list, np.ndarray)):
-        for m_nu_i in ccl_cosmo["m_nu"]:
-            if m_nu_i != 0.0:
-                raise ValueError("Massive neutrinos are not supported")
-    else:
-        if ccl_cosmo["m_nu"] != 0:
-            raise ValueError("Massive neutrinos are not supported")
 
     # Creating the transfer/linear power spectrum
     tf = None  # pylint: disable=invalid-name

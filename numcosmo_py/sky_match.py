@@ -565,8 +565,8 @@ class SkyMatch:
         dist.prepare(cosmo)
         RH_Mpc = cosmo.RH_Mpc()
 
-        match_r = dist.angular_diameter_vector(cosmo, npa_to_seq(match_z))
-        query_r = dist.angular_diameter_vector(cosmo, npa_to_seq(query_z))
+        match_r = dist.angular_diameter_array(cosmo, npa_to_seq(match_z))
+        query_r = dist.angular_diameter_array(cosmo, npa_to_seq(query_z))
 
         snn.insert_array(match_r, match_theta, match_phi)
         snn.rebuild()
@@ -633,7 +633,7 @@ class SkyMatch:
                     -1, n_nearest_neighbours
                 )
                 query_r = np.array(
-                    dist.angular_diameter_vector(cosmo, npa_to_seq(self.query_z))
+                    dist.angular_diameter_array(cosmo, npa_to_seq(self.query_z))
                 )
                 # We multiply the distances by the angular diameter distance of the
                 # query object to rescale the distances to physical distances.
@@ -646,7 +646,7 @@ class SkyMatch:
                     -1, n_nearest_neighbours
                 )
                 match_r = np.array(
-                    dist.angular_diameter_vector(cosmo, npa_to_seq(self.match_z))
+                    dist.angular_diameter_array(cosmo, npa_to_seq(self.match_z))
                 )
                 # We multiply the distances by the angular diameter distance of the
                 # match object to rescale the distances to physical distances.
@@ -659,11 +659,11 @@ class SkyMatch:
                     -1, n_nearest_neighbours
                 )
                 query_r = np.array(
-                    dist.angular_diameter_vector(cosmo, npa_to_seq(self.query_z))
+                    dist.angular_diameter_array(cosmo, npa_to_seq(self.query_z))
                 )
                 query_distances = query_r.reshape(-1, 1) * distances
                 match_r = np.array(
-                    dist.angular_diameter_vector(cosmo, npa_to_seq(self.match_z))
+                    dist.angular_diameter_array(cosmo, npa_to_seq(self.match_z))
                 )
                 match_distances = match_r[indices] * distances
                 distances = cast(
@@ -675,11 +675,11 @@ class SkyMatch:
                     -1, n_nearest_neighbours
                 )
                 query_r = np.array(
-                    dist.angular_diameter_vector(cosmo, npa_to_seq(self.query_z))
+                    dist.angular_diameter_array(cosmo, npa_to_seq(self.query_z))
                 )
                 query_distances = query_r.reshape(-1, 1) * distances
                 match_r = np.array(
-                    dist.angular_diameter_vector(cosmo, npa_to_seq(self.match_z))
+                    dist.angular_diameter_array(cosmo, npa_to_seq(self.match_z))
                 )
                 match_distances = match_r[indices] * distances
                 distances = cast(

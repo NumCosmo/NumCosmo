@@ -1682,32 +1682,60 @@ nc_distance_conformal_time (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
  * Vectorized 'distances'
  ****************************************************************************/
 
-/**
- * nc_distance_comoving_vector:
- * @dist: a #NcDistance
- * @cosmo: a #NcHICosmo
- * @z: (element-type gdouble): a vector of redshifts
- *
- * Compute the comoving distance $D_c(z)$ for each redshift in @z.
- *
- * Returns: (element-type gdouble) (transfer full): a vector with the comoving distances.
- */
-GArray *
-nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+typedef gdouble (*_z_getter) (gconstpointer p, guint i);
+typedef void (*_dist_setter) (gpointer p, guint i, gdouble dist);
+
+static gdouble
+_z_getter_garray (gconstpointer p, guint i)
 {
-  GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
+  return g_array_index (((const GArray *) p), gdouble, i);
+}
+
+static void
+_dist_setter_garray (gpointer p, guint i, gdouble dist)
+{
+  g_array_index (((GArray *) p), gdouble, i) = dist;
+}
+
+static gdouble
+_z_getter_vector_no_stride (gconstpointer p, guint i)
+{
+  return ncm_vector_fast_get (p, i);
+}
+
+static void
+_dist_setter_vector_no_stride (gpointer p, guint i, gdouble dist)
+{
+  ncm_vector_fast_set (NCM_VECTOR (p), i, dist);
+}
+
+static gdouble
+_z_getter_vector (gconstpointer p, guint i)
+{
+  return ncm_vector_get (p, i);
+}
+
+static void
+_dist_setter_vector (gpointer p, guint i, gdouble dist)
+{
+  ncm_vector_set (NCM_VECTOR (p), i, dist);
+}
+
+static void
+_nc_distance_comoving_worker (NcDistance *dist, NcHICosmo *cosmo, _z_getter get_z, _dist_setter set_dist, const guint len, gconstpointer z, gpointer res)
+{
   guint i;
 
   switch (dist->cmethod)
   {
     case NC_DISTANCE_COMOVING_METHOD_FROM_MODEL:
 
-      for (i = 0; i < z->len; i++)
+      for (i = 0; i < len; i++)
       {
-        const gdouble zi = g_array_index (z, gdouble, i);
+        const gdouble zi = get_z (z, i);
         const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
 
-        g_array_append_val (res, Di);
+        set_dist (res, i, Di);
       }
 
       break;
@@ -1720,9 +1748,9 @@ nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z
       F.function = &_comoving_distance_integral_argument;
       F.params   = cosmo;
 
-      for (i = 0; i < z->len; i++)
+      for (i = 0; i < len; i++)
       {
-        const gdouble zi = g_array_index (z, gdouble, i);
+        const gdouble zi = get_z (z, i);
 
         if (zi <= dist->zf)
           result = ncm_spline_eval (s, zi);
@@ -1731,7 +1759,7 @@ nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z
         else
           ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
 
-        g_array_append_val (res, result);
+        set_dist (res, i, result);
       }
 
       break;
@@ -1739,28 +1767,13 @@ nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
-      return NULL; /* LCOV_EXCL_LINE */
-
       break; /* LCOV_EXCL_LINE */
   }
-
-  return res;
 }
 
-/**
- * nc_distance_transverse_vector:
- * @dist: a #NcDistance
- * @cosmo: a #NcHICosmo
- * @z: (element-type gdouble): a vector of redshifts
- *
- * Compute the transverse comoving distance $D_t(z)$ for each redshift in @z.
- *
- * Returns: (element-type gdouble) (transfer full): a vector with the transverse distances.
- */
-GArray *
-nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+static void
+_nc_distance_transverse_worker (NcDistance *dist, NcHICosmo *cosmo, _z_getter get_z, _dist_setter set_dist, const guint len, gconstpointer z, gpointer res)
 {
-  GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
   const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
   const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
   const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
@@ -1774,38 +1787,38 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
       {
         case 0:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
 
-            g_array_append_val (res, Di);
+            set_dist (res, i, Di);
           }
 
           break;
 
         case -1:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
             const gdouble Dt = sinh (sqrt_Omega_k0 * Di) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dt);
+            set_dist (res, i, Dt);
           }
 
           break;
 
         case 1:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
             const gdouble Dt = sin (sqrt_Omega_k0 * Di) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dt);
+            set_dist (res, i, Dt);
           }
 
           break;
@@ -1826,9 +1839,9 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
       {
         case 0:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
 
             if (zi <= dist->zf)
             {
@@ -1842,16 +1855,16 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
                 ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
             }
 
-            g_array_append_val (res, result);
+            set_dist (res, i, result);
           }
 
           break;
 
         case -1:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             gdouble Dt;
 
             if (zi <= dist->zf)
@@ -1868,16 +1881,16 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
 
             Dt = sinh (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dt);
+            set_dist (res, i, Dt);
           }
 
           break;
 
         case 1:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             gdouble Dt;
 
             if (zi <= dist->zf)
@@ -1894,7 +1907,7 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
 
             Dt = sin (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dt);
+            set_dist (res, i, Dt);
           }
 
           break;
@@ -1906,28 +1919,13 @@ nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
-      return NULL; /* LCOV_EXCL_LINE */
-
       break; /* LCOV_EXCL_LINE */
   }
-
-  return res;
 }
 
-/**
- * nc_distance_luminosity_vector:
- * @dist: a #NcDistance
- * @cosmo: a #NcHICosmo
- * @z: (element-type gdouble): a vector of redshifts
- *
- * Compute the luminosity distance $D_L(z)$ for each redshift in @z.
- *
- * Returns: (element-type gdouble) (transfer full): a vector with the luminosity distances.
- */
-GArray *
-nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+static void
+_nc_distance_luminosity_worker (NcDistance *dist, NcHICosmo *cosmo, _z_getter get_z, _dist_setter set_dist, const guint len, gconstpointer z, gpointer res)
 {
-  GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
   const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
   const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
   const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
@@ -1941,38 +1939,38 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
       {
         case 0:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             const gdouble Dl = (1.0 + zi) * nc_hicosmo_Dc (cosmo, zi);
 
-            g_array_append_val (res, Dl);
+            set_dist (res, i, Dl);
           }
 
           break;
 
         case -1:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
             const gdouble Dl = (1.0 + zi) * sinh (sqrt_Omega_k0 * Di) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dl);
+            set_dist (res, i, Dl);
           }
 
           break;
 
         case 1:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
             const gdouble Dl = (1.0 + zi) * sin (sqrt_Omega_k0 * Di) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dl);
+            set_dist (res, i, Dl);
           }
 
           break;
@@ -1993,9 +1991,9 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
       {
         case 0:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             gdouble Dl;
 
             if (zi <= dist->zf)
@@ -2012,16 +2010,16 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
 
             Dl = (1.0 + zi) * result;
 
-            g_array_append_val (res, Dl);
+            set_dist (res, i, Dl);
           }
 
           break;
 
         case -1:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             gdouble Dl;
 
             if (zi <= dist->zf)
@@ -2038,16 +2036,16 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
 
             Dl = (1.0 + zi) * sinh (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dl);
+            set_dist (res, i, Dl);
           }
 
           break;
 
         case 1:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             gdouble Dl;
 
             if (zi <= dist->zf)
@@ -2064,7 +2062,7 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
 
             Dl = (1.0 + zi) * sin (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
 
-            g_array_append_val (res, Dl);
+            set_dist (res, i, Dl);
           }
 
           break;
@@ -2076,28 +2074,13 @@ nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray 
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
-      return NULL; /* LCOV_EXCL_LINE */
-
       break; /* LCOV_EXCL_LINE */
   }
-
-  return res;
 }
 
-/**
- * nc_distance_angular_diameter_vector:
- * @dist: a #NcDistance
- * @cosmo: a #NcHICosmo
- * @z: (element-type gdouble): a vector of redshifts
- *
- * Compute the angular diameter distance $D_A(z)$ for each redshift in @z.
- *
- * Returns: (element-type gdouble) (transfer full): a vector with the angular diameter distances.
- */
-GArray *
-nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+static void
+_nc_distance_angular_diameter_worker (NcDistance *dist, NcHICosmo *cosmo, _z_getter get_z, _dist_setter set_dist, guint len, gconstpointer z, gpointer res)
 {
-  GArray *res                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
   const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
   const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
   const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
@@ -2111,38 +2094,38 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const G
       {
         case 0:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             const gdouble DA = nc_hicosmo_Dc (cosmo, zi) / (1.0 + zi);
 
-            g_array_append_val (res, DA);
+            set_dist (res, i, DA);
           }
 
           break;
 
         case -1:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
             const gdouble DA = sinh (sqrt_Omega_k0 * Di) / sqrt_Omega_k0 / (1.0 + zi);
 
-            g_array_append_val (res, DA);
+            set_dist (res, i, DA);
           }
 
           break;
 
         case 1:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             const gdouble Di = nc_hicosmo_Dc (cosmo, zi);
             const gdouble DA = sin (sqrt_Omega_k0 * Di) / sqrt_Omega_k0 / (1.0 + zi);
 
-            g_array_append_val (res, DA);
+            set_dist (res, i, DA);
           }
 
           break;
@@ -2163,9 +2146,9 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const G
       {
         case 0:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             gdouble DA;
 
             if (zi <= dist->zf)
@@ -2182,16 +2165,16 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const G
 
             DA = result / (1.0 + zi);
 
-            g_array_append_val (res, DA);
+            set_dist (res, i, DA);
           }
 
           break;
 
         case -1:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             gdouble DA;
 
             if (zi <= dist->zf)
@@ -2208,16 +2191,16 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const G
 
             DA = sinh (sqrt_Omega_k0 * result) / sqrt_Omega_k0 / (1.0 + zi);
 
-            g_array_append_val (res, DA);
+            set_dist (res, i, DA);
           }
 
           break;
 
         case 1:
 
-          for (i = 0; i < z->len; i++)
+          for (i = 0; i < len; i++)
           {
-            const gdouble zi = g_array_index (z, gdouble, i);
+            const gdouble zi = get_z (z, i);
             gdouble DA;
 
             if (zi <= dist->zf)
@@ -2234,7 +2217,7 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const G
 
             DA = sin (sqrt_Omega_k0 * result) / sqrt_Omega_k0 / (1.0 + zi);
 
-            g_array_append_val (res, DA);
+            set_dist (res, i, DA);
           }
 
           break;
@@ -2246,12 +2229,420 @@ nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, const G
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
-      return NULL; /* LCOV_EXCL_LINE */
+      break; /* LCOV_EXCL_LINE */
+  }
+}
+
+static void
+_nc_distance_dmodulus_worker (NcDistance *dist, NcHICosmo *cosmo, _z_getter get_z, _dist_setter set_dist, const guint len, gconstpointer z, gpointer res)
+{
+  const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
+  const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+  const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
+  guint i;
+
+  switch (dist->cmethod)
+  {
+    case NC_DISTANCE_COMOVING_METHOD_FROM_MODEL:
+
+      switch (k)
+      {
+        case 0:
+
+          for (i = 0; i < len; i++)
+          {
+            const gdouble zi  = get_z (z, i);
+            const gdouble Dl  = (1.0 + zi) * nc_hicosmo_Dc (cosmo, zi);
+            const gdouble dmu = (5.0 * log10 (Dl) + 25.0);
+
+            set_dist (res, i, dmu);
+          }
+
+          break;
+
+        case -1:
+
+          for (i = 0; i < len; i++)
+          {
+            const gdouble zi  = get_z (z, i);
+            const gdouble Di  = nc_hicosmo_Dc (cosmo, zi);
+            const gdouble Dl  = (1.0 + zi) * sinh (sqrt_Omega_k0 * Di) / sqrt_Omega_k0;
+            const gdouble dmu = (5.0 * log10 (Dl) + 25.0);
+
+            set_dist (res, i, dmu);
+          }
+
+          break;
+
+        case 1:
+
+          for (i = 0; i < len; i++)
+          {
+            const gdouble zi  = get_z (z, i);
+            const gdouble Di  = nc_hicosmo_Dc (cosmo, zi);
+            const gdouble Dl  = (1.0 + zi) * sin (sqrt_Omega_k0 * Di) / sqrt_Omega_k0;
+            const gdouble dmu = (5.0 * log10 (Dl) + 25.0);
+
+            set_dist (res, i, dmu);
+          }
+
+          break;
+      }
+
+      break;
+
+    case NC_DISTANCE_COMOVING_METHOD_INT_E:
+    {
+      NcmSpline *s = ncm_ode_spline_peek_spline (dist->comoving_distance_spline);
+      gdouble result, error;
+      gsl_function F;
+
+      F.function = &_comoving_distance_integral_argument;
+      F.params   = cosmo;
+
+      switch (k)
+      {
+        case 0:
+
+          for (i = 0; i < len; i++)
+          {
+            const gdouble zi = get_z (z, i);
+            gdouble Dl, dmu;
+
+            if (zi <= dist->zf)
+            {
+              result = ncm_spline_eval (s, zi);
+            }
+            else
+            {
+              if (dist->use_cache)
+                ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, zi, &result, &error);
+              else
+                ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+            }
+
+            Dl  = (1.0 + zi) * result;
+            dmu = (5.0 * log10 (Dl) + 25.0);
+
+            set_dist (res, i, dmu);
+          }
+
+          break;
+
+        case -1:
+
+          for (i = 0; i < len; i++)
+          {
+            const gdouble zi = get_z (z, i);
+            gdouble Dl, dmu;
+
+            if (zi <= dist->zf)
+            {
+              result = ncm_spline_eval (s, zi);
+            }
+            else
+            {
+              if (dist->use_cache)
+                ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, zi, &result, &error);
+              else
+                ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+            }
+
+            Dl  = (1.0 + zi) * sinh (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
+            dmu = (5.0 * log10 (Dl) + 25.0);
+
+            set_dist (res, i, dmu);
+          }
+
+          break;
+
+        case 1:
+
+          for (i = 0; i < len; i++)
+          {
+            const gdouble zi = get_z (z, i);
+            gdouble Dl, dmu;
+
+            if (zi <= dist->zf)
+            {
+              result = ncm_spline_eval (s, zi);
+            }
+            else
+            {
+              if (dist->use_cache)
+                ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, zi, &result, &error);
+              else
+                ncm_integral_locked_a_b (&F, 0.0, zi, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+            }
+
+            Dl  = (1.0 + zi) * sin (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
+            dmu = (5.0 * log10 (Dl) + 25.0);
+
+            set_dist (res, i, dmu);
+          }
+
+          break;
+      }
+
+      break;
+    }
+
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
       break; /* LCOV_EXCL_LINE */
   }
+}
+
+/**
+ * nc_distance_comoving_array:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: (element-type gdouble): a vector of redshifts
+ *
+ * Compute the comoving distance $D_c(z)$ for each redshift in @z.
+ *
+ * Returns: (element-type gdouble) (transfer full): a vector with the comoving distances.
+ */
+GArray *
+nc_distance_comoving_array (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+{
+  GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
+
+  g_array_set_size (res, z->len);
+  _nc_distance_comoving_worker (dist, cosmo, _z_getter_garray, _dist_setter_garray, z->len, z, res);
 
   return res;
+}
+
+/**
+ * nc_distance_transverse_array:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: (element-type gdouble): a vector of redshifts
+ *
+ * Compute the transverse comoving distance $D_t(z)$ for each redshift in @z.
+ *
+ * Returns: (element-type gdouble) (transfer full): a vector with the transverse distances.
+ */
+GArray *
+nc_distance_transverse_array (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+{
+  GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
+
+  g_array_set_size (res, z->len);
+
+  _nc_distance_transverse_worker (dist, cosmo, _z_getter_garray, _dist_setter_garray, z->len, z, res);
+
+  return res;
+}
+
+/**
+ * nc_distance_luminosity_array:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: (element-type gdouble): a vector of redshifts
+ *
+ * Compute the luminosity distance $D_L(z)$ for each redshift in @z.
+ *
+ * Returns: (element-type gdouble) (transfer full): a vector with the luminosity distances.
+ */
+GArray *
+nc_distance_luminosity_array (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+{
+  GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
+
+  g_array_set_size (res, z->len);
+  _nc_distance_luminosity_worker (dist, cosmo, _z_getter_garray, _dist_setter_garray, z->len, z, res);
+
+  return res;
+}
+
+/**
+ * nc_distance_angular_diameter_array:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: (element-type gdouble): a vector of redshifts
+ *
+ * Compute the angular diameter distance $D_A(z)$ for each redshift in @z.
+ *
+ * Returns: (element-type gdouble) (transfer full): a vector with the angular diameter distances.
+ */
+GArray *
+nc_distance_angular_diameter_array (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+{
+  GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
+
+  g_array_set_size (res, z->len);
+  _nc_distance_angular_diameter_worker (dist, cosmo, _z_getter_garray, _dist_setter_garray, z->len, z, res);
+
+  return res;
+}
+
+/**
+ * nc_distance_dmodulus_array:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: (element-type gdouble): a vector of redshifts
+ *
+ * Compute the distance modulus $\delta\mu(z)$ for each redshift in @z.
+ *
+ * Returns: (element-type gdouble) (transfer full): a vector with the distance modulus.
+ */
+GArray *
+nc_distance_dmodulus_array (NcDistance *dist, NcHICosmo *cosmo, const GArray *z)
+{
+  GArray *res = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), z->len);
+
+  g_array_set_size (res, z->len);
+  _nc_distance_dmodulus_worker (dist, cosmo, _z_getter_garray, _dist_setter_garray, z->len, z, res);
+
+  return res;
+}
+
+/**
+ * nc_distance_comoving_vector:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: a #NcmVector of redshifts
+ * @Dc: a #NcmVector to store the comoving distances
+ *
+ * Compute the comoving distance $D_c(z)$ for each redshift in @z.
+ *
+ */
+void
+nc_distance_comoving_vector (NcDistance *dist, NcHICosmo *cosmo, NcmVector *z, NcmVector *Dc)
+{
+  const guint len       = ncm_vector_len (z);
+  const guint z_stride  = ncm_vector_stride (z);
+  const guint Dc_stride = ncm_vector_stride (Dc);
+
+  g_assert_cmpuint (len, ==, ncm_vector_len (Dc));
+
+  if (G_LIKELY ((z_stride == 1) && (Dc_stride == 1)))
+    _nc_distance_comoving_worker (dist, cosmo, _z_getter_vector_no_stride, _dist_setter_vector_no_stride, len, z, Dc);
+  else if (z_stride == 1)
+    _nc_distance_comoving_worker (dist, cosmo, _z_getter_vector_no_stride, _dist_setter_vector, len, z, Dc);
+  else if (Dc_stride == 1)
+    _nc_distance_comoving_worker (dist, cosmo, _z_getter_vector, _dist_setter_vector_no_stride, len, z, Dc);
+  else
+    _nc_distance_comoving_worker (dist, cosmo, _z_getter_vector, _dist_setter_vector, len, z, Dc);
+}
+
+/**
+ * nc_distance_transverse_vector:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: a #NcmVector of redshifts
+ * @Dt: a #NcmVector to store the transverse distances
+ *
+ * Compute the transverse distance $D_t(z)$ for each redshift in @z.
+ *
+ */
+void
+nc_distance_transverse_vector (NcDistance *dist, NcHICosmo *cosmo, NcmVector *z, NcmVector *Dt)
+{
+  const guint len       = ncm_vector_len (z);
+  const guint z_stride  = ncm_vector_stride (z);
+  const guint Dt_stride = ncm_vector_stride (Dt);
+
+  g_assert_cmpuint (len, ==, ncm_vector_len (Dt));
+
+  if (G_LIKELY ((z_stride == 1) && (Dt_stride == 1)))
+    _nc_distance_transverse_worker (dist, cosmo, _z_getter_vector_no_stride, _dist_setter_vector_no_stride, len, z, Dt);
+  else if (z_stride == 1)
+    _nc_distance_transverse_worker (dist, cosmo, _z_getter_vector_no_stride, _dist_setter_vector, len, z, Dt);
+  else if (Dt_stride == 1)
+    _nc_distance_transverse_worker (dist, cosmo, _z_getter_vector, _dist_setter_vector_no_stride, len, z, Dt);
+  else
+    _nc_distance_transverse_worker (dist, cosmo, _z_getter_vector, _dist_setter_vector, len, z, Dt);
+}
+
+/**
+ * nc_distance_luminosity_vector:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: a #NcmVector of redshifts
+ * @Dl: a #NcmVector to store the luminosity distances
+ *
+ * Compute the luminosity distance $D_t(z)$ for each redshift in @z.
+ *
+ */
+void
+nc_distance_luminosity_vector (NcDistance *dist, NcHICosmo *cosmo, NcmVector *z, NcmVector *Dl)
+{
+  const guint len       = ncm_vector_len (z);
+  const guint z_stride  = ncm_vector_stride (z);
+  const guint Dl_stride = ncm_vector_stride (Dl);
+
+  g_assert_cmpuint (len, ==, ncm_vector_len (Dl));
+
+  if (G_LIKELY ((z_stride == 1) && (Dl_stride == 1)))
+    _nc_distance_luminosity_worker (dist, cosmo, _z_getter_vector_no_stride, _dist_setter_vector_no_stride, len, z, Dl);
+  else if (z_stride == 1)
+    _nc_distance_luminosity_worker (dist, cosmo, _z_getter_vector_no_stride, _dist_setter_vector, len, z, Dl);
+  else if (Dl_stride == 1)
+    _nc_distance_luminosity_worker (dist, cosmo, _z_getter_vector, _dist_setter_vector_no_stride, len, z, Dl);
+  else
+    _nc_distance_luminosity_worker (dist, cosmo, _z_getter_vector, _dist_setter_vector, len, z, Dl);
+}
+
+/**
+ * nc_distance_angular_diameter_vector:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: a #NcmVector of redshifts
+ * @DA: a #NcmVector to store the angular diameter distances
+ *
+ * Compute the angular diameter distance $D_A(z)$ for each redshift in @z.
+ *
+ */
+void
+nc_distance_angular_diameter_vector (NcDistance *dist, NcHICosmo *cosmo, NcmVector *z, NcmVector *DA)
+{
+  const guint len       = ncm_vector_len (z);
+  const guint z_stride  = ncm_vector_stride (z);
+  const guint DA_stride = ncm_vector_stride (DA);
+
+  g_assert_cmpuint (len, ==, ncm_vector_len (DA));
+
+  if (G_LIKELY ((z_stride == 1) && (DA_stride == 1)))
+    _nc_distance_angular_diameter_worker (dist, cosmo, _z_getter_vector_no_stride, _dist_setter_vector_no_stride, len, z, DA);
+  else if (z_stride == 1)
+    _nc_distance_angular_diameter_worker (dist, cosmo, _z_getter_vector_no_stride, _dist_setter_vector, len, z, DA);
+  else if (DA_stride == 1)
+    _nc_distance_angular_diameter_worker (dist, cosmo, _z_getter_vector, _dist_setter_vector_no_stride, len, z, DA);
+  else
+    _nc_distance_angular_diameter_worker (dist, cosmo, _z_getter_vector, _dist_setter_vector, len, z, DA);
+}
+
+/**
+ * nc_distance_dmodulus_vector:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: a #NcmVector of redshifts
+ * @dmod: a #NcmVector to store the distance modulus distances
+ *
+ * Compute the angular diameter distance $D_A(z)$ for each redshift in @z.
+ *
+ */
+void
+nc_distance_dmodulus_vector (NcDistance *dist, NcHICosmo *cosmo, NcmVector *z, NcmVector *dmod)
+{
+  const guint len         = ncm_vector_len (z);
+  const guint z_stride    = ncm_vector_stride (z);
+  const guint dmod_stride = ncm_vector_stride (dmod);
+
+  g_assert_cmpuint (len, ==, ncm_vector_len (dmod));
+
+  if (G_LIKELY ((z_stride == 1) && (dmod_stride == 1)))
+    _nc_distance_dmodulus_worker (dist, cosmo, _z_getter_vector_no_stride, _dist_setter_vector_no_stride, len, z, dmod);
+  else if (z_stride == 1)
+    _nc_distance_dmodulus_worker (dist, cosmo, _z_getter_vector_no_stride, _dist_setter_vector, len, z, dmod);
+  else if (dmod_stride == 1)
+    _nc_distance_dmodulus_worker (dist, cosmo, _z_getter_vector, _dist_setter_vector_no_stride, len, z, dmod);
+  else
+    _nc_distance_dmodulus_worker (dist, cosmo, _z_getter_vector, _dist_setter_vector, len, z, dmod);
 }
 
 #define _NC_DISTANCE_FUNC0_TO_FLIST(fname)                                                                                   \
