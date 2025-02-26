@@ -5,13 +5,8 @@ import pandas as pd
 from astropy.table import Table
 from sklearn.model_selection import train_test_split
 
-
 from richness_mass_calib import create_richness_mass_calib
 
-import sys
-sys.path.insert(0, "/global/homes/c/cinlima/NumCosmo/notebooks/richness_proxy/Scripts")
-
-from bdata import DataB
 
 #-------------------------------------------------------------------------------------------------#
 #FittingModel
@@ -24,19 +19,19 @@ from bdata import DataB
 
 class FittingModel:
     
-    def __init__(self, data_set, b_z, b_m):
+    def __init__(self, data_set):
         self.data_set = data_set
-        self.b_z = b_z
-        self.b_m = b_m
-
+       
 
         
-#----- Training and test sets --------------------------------------------------------------------#
-
+#----------------------------------------------------------------------------#
+# train_test_data(X, y)
+    
 # X: input data.
 # y: target data.
+#----------------------------------------------------------------------------#
 
-    def cvdata(self, X, y):
+    def train_test_data(self, X, y):
         
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.3, random_state=0)
@@ -52,26 +47,24 @@ class FittingModel:
 
     
 
-#----- Fitting the models -----------------------------------------------------------------------#
-
+#----------------------------------------------------------------------------#  
+# run_fit(mod, training)        
 # mod: model name ('ext_ln1pz' or 'ext_z' or 'ascaso');
 # training: If training = True the fitting is calculated using training data.
 
-    def model_fit(self, mod, training):
-       
-     #training_data
-        if training == True: 
-            X = pd.DataFrame({'mass': list(self.data_set["mass"]), 'redshift': list(self.data_set["redshift"])})
-            y = pd.DataFrame({'richness': list(self.data_set["richness"])})
-            data_train, data_test = self.cvdata(X, y)
-            
-            bd = DataB(data_test, self.b_z, self.b_m) # To calculate the fitted model
+#----------------------------------------------------------------------------#
 
-        else:
-            data_train = self.data_set
+    def run_fit(self, mod):
+       
+     # #training_data
+     #    if training == True: 
+     #        X = pd.DataFrame({'mass': list(self.data_set["mass"]), 'redshift': list(self.data_set["redshift"])})
+     #        y = pd.DataFrame({'richness': list(self.data_set["richness"])})
+     #        data_train, data_test = self.cvdata(X, y)
             
-            bd = DataB(data_train, self.b_z, self.b_m) # To calculate the fitted model
-            
+     #    else:
+        data_train = self.data_set
+                        
 
     #data_set
         rmdata = create_richness_mass_calib(data_train, mass_col_name = 'mass', redshift_col_name = 'redshift' )
@@ -124,32 +117,35 @@ class FittingModel:
         fit.log_info()
         fit.run_restart(Ncm.FitRunMsgs.SIMPLE, 1.0e-3, 0.0, None, None)
         fit.log_info()
-    
-    
-    
-    # Here we calculate the fitted model using mean data of bins:
-        #Binning data
-        bins_mean = bd.get_bins_mean()
-        lnM_mean = np.log(bins_mean["mass"])
-        z_mean = bins_mean["redshift"]
-        
-        bins_std = bd.get_bins_std()
+
+        return model
 
     
+   
+    
+#----------------------------------------------------------------------------#
+    
+#get_mean_model(model, lnM,  z):
+
+#----------------------------------------------------------------------------#        
+
+    def get_mean_model(self, model, lnM, z):
         
-        
-        # Mean and std of data_set z mean and lnM mean
-#         lnR_mean_model = np.array([model.get_mean_richness(np.log(self.data_set["mass"][i]), self.data_set["redshift"][i]) for i in range(len(self.data_set["mass"]))])
-        
-#         lnR_std_model = np.array( [model.get_std_richness(np.log(self.data_set["mass"][i]), self.data_set["redshift"][i]) for i in range(len(self.data_set["mass"]))])
-        
-        # Mean and std of data_set z mean and lnM mean
-        lnR_mean_model = np.array([model.get_mean_richness(lnM_mean[i], z_mean[i]) for i in range(len(bins_mean))])
-        
-        lnR_std_model = np.array( [model.get_std_richness(lnM_mean[i], z_mean[i]) for i in range(len(bins_mean))])
-        
-        return lnR_mean_model, lnR_std_model, model, bins_mean, bins_std 
-        
+        return np.array([model.get_mean_richness(lnM[i], z[i]) for i in range(len(lnM))])
+
+
+
+
+#----------------------------------------------------------------------------#
+    
+#get_std_model(model, lnM,  z):
+
+#----------------------------------------------------------------------------#        
+    def get_std_model(self, model, lnM, z):
+    
+        return np.array([model.get_std_richness(lnM[i], z[i]) for i in range(len(lnM))])
+            
+            
     
 
    
