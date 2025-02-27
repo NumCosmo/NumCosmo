@@ -23,7 +23,6 @@
 
 """NumCosmo and CCL comparison functions."""
 
-import math
 import numpy as np
 import pyccl
 
@@ -44,6 +43,20 @@ pyccl.physical_constants.RHO_CRITICAL = Ncm.C.crit_mass_density_h2_solar_mass_Mp
 pyccl.physical_constants.freeze()
 
 
+def _get_neutrino_masses(ccl_cosmo: pyccl.Cosmology) -> tuple[int, list[float]]:
+    """Get neutrino masses from CCL cosmology."""
+    if isinstance(ccl_cosmo["m_nu"], (list, np.ndarray)):
+        massnu_length = len(ccl_cosmo["m_nu"])
+        m_nu = list(ccl_cosmo["m_nu"])
+    elif ccl_cosmo["m_nu"] > 0.0:
+        massnu_length = 1
+        m_nu = [ccl_cosmo["m_nu"]]
+    else:
+        massnu_length = 0
+        m_nu = []
+    return massnu_length, m_nu
+
+
 # pylint:disable-next=too-many-arguments,too-many-locals
 def create_nc_obj(
     ccl_cosmo: pyccl.Cosmology,
@@ -55,15 +68,7 @@ def create_nc_obj(
     k_max: float = 1.0e3,
 ) -> Cosmology:
     """Create a NumCosmo object from a CCL cosmology."""
-    if isinstance(ccl_cosmo["m_nu"], (list, np.ndarray)):
-        massnu_length = len(ccl_cosmo["m_nu"])
-        m_nu = ccl_cosmo["m_nu"]
-    elif ccl_cosmo["m_nu"] > 0.0:
-        massnu_length = 1
-        m_nu = [ccl_cosmo["m_nu"]]
-    else:
-        massnu_length = 0
-        m_nu = []
+    massnu_length, m_nu = _get_neutrino_masses(ccl_cosmo)
     cosmo = Nc.HICosmoDECpl(massnu_length=massnu_length)
     cosmo.omega_x2omega_k()
     cosmo["H0"] = ccl_cosmo["h"] * 100.0
@@ -92,12 +97,12 @@ def create_nc_obj(
     dist.prepare(cosmo)
 
     # Creating the transfer/linear power spectrum
-    tf = None  # pylint: disable=invalid-name
+    tf = None
     ps_ml = None
 
     # pylint: disable=protected-access
     if ccl_cosmo._config_init_kwargs["transfer_function"] == "eisenstein_hu":
-        tf = Nc.TransferFuncEH.new()  # pylint: disable=invalid-name
+        tf = Nc.TransferFuncEH.new()
         tf.props.CCL_comp = True
 
         ps_ml = Nc.PowspecMLTransfer.new(tf)
@@ -107,27 +112,30 @@ def create_nc_obj(
             + ccl_cosmo._config_init_kwargs["transfer_function"]  # noqa: W503
             + "` not supported"  # noqa: W503
         )
+    # pylint: enable=protected-access
 
     ps_ml.set_kmin(k_min)
     ps_ml.set_kmax(k_max)
     ps_ml.prepare(cosmo)
 
-    if not math.isnan(ccl_cosmo["A_s"]):
-        hiprim.param_set_by_name("ln10e10ASA", math.log(1.0e10 * ccl_cosmo["A_s"]))
+    if not np.isnan(ccl_cosmo["A_s"]):
+        hiprim.param_set_by_name("ln10e10ASA", np.log(1.0e10 * ccl_cosmo["A_s"]))
     else:
-        A_s = math.exp(hiprim.param_get_by_name("ln10e10ASA")) * 1.0e-10
+        A_s = np.exp(hiprim.param_get_by_name("ln10e10ASA")) * 1.0e-10
         fact = (
             ccl_cosmo["sigma8"]
             / ps_ml.sigma_tophat_R(cosmo, prec, 0.0, 8.0 / cosmo.h())  # noqa: W503
         ) ** 2
-        hiprim.param_set_by_name("ln10e10ASA", math.log(1.0e10 * A_s * fact))
+        hiprim.param_set_by_name("ln10e10ASA", np.log(1.0e10 * A_s * fact))
 
     ps_mln = None
+    # pylint: disable=protected-access
     if ccl_cosmo._config_init_kwargs["matter_power_spectrum"] == "halofit":
         ps_mln = Nc.PowspecMNLHaloFit.new(ps_ml, ps_nln_z_max, prec)
         ps_mln.set_kmin(k_min)
         ps_mln.set_kmax(k_max)
         ps_mln.prepare(cosmo)
+    # pylint: enable=protected-access
 
     psf = None
     if ps_ml:
@@ -195,8 +203,8 @@ class CCLParams:
     @staticmethod
     def set_high_prec_params():
         """Set CCL parameters to high precision values."""
-        pyccl.gsl_params.INTEGRATION_EPSREL = 1.0e-13
-        pyccl.gsl_params.INTEGRATION_DISTANCE_EPSREL = 1.0e-13
+        pyccl.gsl_params.INTEGRATION_EPSREL = 1.0e-7
+        pyccl.gsl_params.INTEGRATION_DISTANCE_EPSREL = 1.0e-7
         pyccl.gsl_params.INTEGRATION_LIMBER_EPSREL = 1.0e-6
         pyccl.gsl_params.EPS_SCALEFAC_GROWTH = 1.0e-30
         pyccl.gsl_params.ODE_GROWTH_EPSREL = 1.0e-8
