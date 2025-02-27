@@ -140,7 +140,7 @@ def setup_models(
 
 
 parameters, models = setup_models(high_precision=False)
-z = np.linspace(0.1, 15.0, 10000)
+z = np.linspace(0.01, 15.0, 10000)
 
 ```
 
