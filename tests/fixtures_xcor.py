@@ -134,7 +134,7 @@ GAL_IDS = [
 SRC_GAL_Z_CENTERS = np.linspace(0.5, 1.6, 2)
 SRC_GAL_Z_SIGMA = 0.02
 SRC_GAL_Z_IDS = [f"z={z:.2f}" for z in SRC_GAL_Z_CENTERS]
-Z_A_LEN = 1000
+Z_A_LEN = 5000
 
 
 @pytest.fixture(name="nc_gal", params=GAL_PARAMS, ids=GAL_IDS)
@@ -145,7 +145,9 @@ def fixture_nc_gal(
     """Fixture for NumCosmo galaxy tracer."""
     mu, mbias, bias, bias_nknots = request.param
     sigma = GAL_Z_SIGMA
-    z_a: npt.NDArray[np.float64] = np.linspace(0.0, 2.0, Z_A_LEN, dtype=np.float64)
+    z_low = max(mu - 20.0 * sigma, 0.0)
+    z_high = mu + 20.0 * sigma
+    z_a: npt.NDArray[np.float64] = np.linspace(z_low, z_high, Z_A_LEN, dtype=np.float64)
     nz_a = np.exp(-((z_a - mu) ** 2) / sigma**2 / 2.0) / np.sqrt(2.0 * np.pi * sigma**2)
 
     z_v = Ncm.Vector.new_array(npa_to_seq(z_a))
@@ -196,7 +198,10 @@ def fixture_nc_weak_lensing(
     """Fixture for NumCosmo weak lensing tracer."""
     mu = request.param
     sigma = SRC_GAL_Z_SIGMA
-    z_a: npt.NDArray[np.float64] = np.linspace(0.0, 2.0, Z_A_LEN, dtype=np.float64)
+    z_low = mu - 10.0 * sigma
+    z_low = max(z_low, 0.0)
+    z_high = mu + 10.0 * sigma
+    z_a: npt.NDArray[np.float64] = np.linspace(z_low, z_high, Z_A_LEN, dtype=np.float64)
     nz_a = np.exp(-((z_a - mu) ** 2) / sigma**2 / 2.0) / np.sqrt(2.0 * np.pi * sigma**2)
 
     z_v = Ncm.Vector.new_array(npa_to_seq(z_a))
