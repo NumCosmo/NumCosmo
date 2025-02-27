@@ -175,7 +175,11 @@ def format_time(value: float) -> str:
 
 
 def set_rc_params_article(
-    column_width: float = 246.0, ncol: int = 2, nrows: int = 1, fontsize: int = 8
+    column_width: float = 246.0,
+    ncol: int = 2,
+    nrows: int = 1,
+    fontsize: int = 8,
+    use_tex: bool | None = None,
 ) -> None:
     """Set matplotlib rcParams for a LaTeX article."""
     fig_width_pt = column_width * ncol  # \showthe\columnwidth
@@ -184,7 +188,8 @@ def set_rc_params_article(
     fig_width = fig_width_pt * inches_per_pt  # width in inches
     fig_height = fig_width * golden_mean  # height in inches
     fig_size = [fig_width, fig_height * nrows]
-    use_tex = bool(shutil.which("latex"))
+    if use_tex is None:
+        use_tex = bool(shutil.which("latex"))
 
     params = {
         "axes.labelsize": fontsize,
