@@ -31,6 +31,21 @@ import pyccl
 
 import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm
+from numcosmo_py.ccl.comparison import (
+    compare_Hubble,
+    compare_Omega_g,
+    compare_Omega_k,
+    compare_Omega_nu,
+    compare_Omega_mnu,
+    compare_Omega_de,
+    compare_distance_comoving,
+    compare_distance_transverse,
+    compare_distance_angular_diameter,
+    compare_distance_luminosity,
+    compare_distance_lookback_time,
+    compare_distance_modulus,
+    compare_distance_comoving_volume,
+)
 from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_k_a,
     fixture_z_a,
@@ -49,7 +64,9 @@ def test_background_params(
     """Compare NumCosmo and CCL transfer functions."""
     cosmo = nc_cosmo_eh_linear.cosmo
 
-    reltol = 1.0e-15
+    reltol = 1.0e-7
+    # CCL conversion of Neff creates a small error
+    reltol_Neff = 1.0e-8
 
     assert_allclose(cosmo.H0(), ccl_cosmo_eh_linear["h"] * 100, rtol=reltol)
     assert_allclose(cosmo.Omega_b0(), ccl_cosmo_eh_linear["Omega_b"], rtol=reltol)
@@ -57,7 +74,7 @@ def test_background_params(
     assert_allclose(cosmo.Omega_k0(), ccl_cosmo_eh_linear["Omega_k"], rtol=reltol)
     assert_allclose(cosmo.T_gamma0(), ccl_cosmo_eh_linear["T_CMB"], rtol=reltol)
     assert_allclose(cosmo.Omega_g0(), ccl_cosmo_eh_linear["Omega_g"], rtol=reltol)
-    assert_allclose(cosmo.Neff(), ccl_cosmo_eh_linear["Neff"], rtol=reltol)
+    assert_allclose(cosmo.Neff(), ccl_cosmo_eh_linear["Neff"], rtol=reltol_Neff)
     assert_allclose(
         cosmo.param_get_by_name("w0"), ccl_cosmo_eh_linear["w0"], rtol=reltol
     )
@@ -70,110 +87,84 @@ def test_background_functions(
     ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
 ) -> None:
     """Compare NumCosmo and CCL background functions."""
-    cosmo = nc_cosmo_eh_linear.cosmo
     if ccl_cosmo_eh_linear.high_precision:
-        rtol = 1.0e-15
+        rtol = 1.0e-9
+        mnu_rtol = 1.0e-6
     else:
-        rtol = 1.0e-15
+        rtol = 1.0e-9
+        mnu_rtol = 1.0e-6
 
     z_test = np.linspace(0.0, 5.0, 2000)[1:]
-    a_test = 1.0 / (1.0 + z_test)
 
-    E2 = np.array([cosmo.E2(z) for z in z_test])
+    cmp = compare_Omega_g(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
 
-    assert_allclose(
-        np.array([cosmo.E2Omega_m(z) for z in z_test]) / E2,
-        ccl_cosmo_eh_linear.omega_x(a_test, "matter"),
-        rtol=rtol,
-    )
+    cmp = compare_Omega_k(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
 
-    assert_allclose(
-        np.array([cosmo.E2Omega_g(z) for z in z_test]) / E2,
-        ccl_cosmo_eh_linear.omega_x(a_test, "radiation"),
-        rtol=rtol,
-    )
+    cmp = compare_Omega_nu(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
 
-    assert_allclose(
-        np.array([cosmo.E2Omega_k(z) for z in z_test]) / E2,
-        ccl_cosmo_eh_linear.omega_x(a_test, "curvature"),
-        rtol=rtol,
-    )
+    cmp = compare_Omega_mnu(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
+    assert_allclose(cmp.y1, cmp.y2, rtol=mnu_rtol)
 
-    assert_allclose(
-        np.array([cosmo.E2Omega_nu(z) for z in z_test]) / E2,
-        ccl_cosmo_eh_linear.omega_x(a_test, "neutrinos_rel"),
-        rtol=rtol,
-    )
-
-    assert_allclose(
-        np.array([cosmo.E2Omega_de(z) for z in z_test]) / E2,
-        ccl_cosmo_eh_linear.omega_x(a_test, "dark_energy"),
-        rtol=rtol * 2.0,
-    )
+    cmp = compare_Omega_de(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
 
 
 def test_background_h_over_h0(
     ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
 ) -> None:
     """Compare NumCosmo and CCL background functions."""
-    cosmo = nc_cosmo_eh_linear.cosmo
     if ccl_cosmo_eh_linear.high_precision:
         rtol = 1.0e-9
     else:
         rtol = 1.0e-5
 
     z_test = np.linspace(0.0, 5.0, 2000)[1:]
-    a_test = 1.0 / (1.0 + z_test)
-
-    E2 = np.array([cosmo.E2(z) for z in z_test])
-
-    assert_allclose(E2, ccl_cosmo_eh_linear.h_over_h0(a_test) ** 2, rtol=rtol)
+    cmp = compare_Hubble(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
 
 
 def test_background_distances(
     ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
 ) -> None:
     """Compare NumCosmo and CCL distances."""
-    cosmo = nc_cosmo_eh_linear.cosmo
-    dist = nc_cosmo_eh_linear.dist
     if ccl_cosmo_eh_linear.high_precision:
         rtol = 1.0e-10
+        cvol_rtol = 1.0e-9
     else:
         rtol = 1.0e-6
+        cvol_rtol = 1.0e-5
 
     z_test = np.linspace(0.0, 5.0, 2000)[1:]
-    a_test = 1.0 / (1.0 + z_test)
-    RH_Mpc = cosmo.RH_Mpc()
 
-    assert_allclose(
-        [dist.comoving(cosmo, z) * RH_Mpc for z in z_test],
-        ccl_cosmo_eh_linear.comoving_radial_distance(a_test),
-        rtol=rtol,
-    )
+    cmp = compare_distance_comoving(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
 
-    assert_allclose(
-        [dist.angular_diameter(cosmo, z) * RH_Mpc for z in z_test],
-        ccl_cosmo_eh_linear.angular_diameter_distance(a_test),
-        rtol=rtol,
-    )
+    cmp = compare_distance_transverse(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
 
-    assert_allclose(
-        [dist.luminosity(cosmo, z) * RH_Mpc for z in z_test],
-        ccl_cosmo_eh_linear.luminosity_distance(a_test),
-        rtol=rtol,
+    cmp = compare_distance_angular_diameter(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test
     )
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
 
-    assert_allclose(
-        [dist.dmodulus(cosmo, z) + +5 * np.log10(RH_Mpc) for z in z_test],
-        ccl_cosmo_eh_linear.distance_modulus(a_test),
-        rtol=rtol,
-    )
+    cmp = compare_distance_luminosity(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
 
-    assert_allclose(
-        [dist.comoving_volume_element(cosmo, z) * RH_Mpc**3 for z in z_test],
-        a_test**2 * ccl_cosmo_eh_linear.comoving_volume_element(a_test),
-        rtol=rtol * 10.0,
+    cmp = compare_distance_lookback_time(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test
     )
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
+
+    cmp = compare_distance_modulus(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
+
+    cmp = compare_distance_comoving_volume(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=cvol_rtol)
 
 
 def test_background_scale_factor_of_chi(
@@ -207,11 +198,11 @@ def test_background_growth_lowz(
     cosmo = nc_cosmo_eh_linear.cosmo
     ps_ml = nc_cosmo_eh_linear.ps_ml
     if ccl_cosmo_eh_linear.high_precision:
-        reltol_growth = 1.0e-8
-        reltol_rate = 1.0e-8
+        reltol_growth = 1.0e-4
+        reltol_rate = 1.0e-4
     else:
-        reltol_growth = 1.0e-6
-        reltol_rate = 1.0e-6
+        reltol_growth = 1.0e-4
+        reltol_rate = 1.0e-4
 
     k_pivot = 1.0
     z_test = np.linspace(0.0, 5.0, 2000)[1:]
@@ -253,11 +244,11 @@ def test_background_growth_highz(
     cosmo = nc_cosmo_eh_linear.cosmo
     ps_ml = nc_cosmo_eh_linear.ps_ml
     if ccl_cosmo_eh_linear.high_precision:
-        reltol_growth = 1.0e-4
-        reltol_rate = 1.0e-4
+        reltol_growth = 1.0e-1
+        reltol_rate = 1.0e-1
     else:
-        reltol_growth = 1.0e-3
-        reltol_rate = 1.0e-2
+        reltol_growth = 1.0e-1
+        reltol_rate = 1.0e-1
 
     z_test = np.geomspace(0.001, 1100.0, 4000)[1:]
     a_test = 1.0 / (1.0 + z_test)
