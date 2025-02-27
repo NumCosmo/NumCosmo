@@ -230,6 +230,25 @@ def compare_Omega_g(
     )
 
 
+def compare_Omega_k(
+    ccl_cosmo: pyccl.Cosmology,
+    cosmology: ncc.Cosmology,
+    z: np.ndarray,
+    *,
+    model: str = "unnamed",
+):
+    """Compare Omega_k from CCL and NumCosmo."""
+    cosmo = cosmology.cosmo
+    a = 1.0 / (1.0 + z)
+
+    ccl_Ok = np.array(pyccl.omega_x(ccl_cosmo, a, "curvature"))
+    nc_Ok = np.array([cosmo.E2Omega_k(z_i) / cosmo.E2(z_i) for z_i in z])
+
+    return CompareFunc1d(
+        x=z, y1=ccl_Ok, y2=nc_Ok, model=model, x_symbol="z", y_symbol=r"\Omega_k"
+    )
+
+
 def compare_Omega_nu(
     ccl_cosmo: pyccl.Cosmology,
     cosmology: ncc.Cosmology,
@@ -270,6 +289,30 @@ def compare_Omega_mnu(
         model=model,
         x_symbol="z",
         y_symbol=r"\Omega_{m\nu}",
+    )
+
+
+def compare_Omega_de(
+    ccl_cosmo: pyccl.Cosmology,
+    cosmology: ncc.Cosmology,
+    z: np.ndarray,
+    *,
+    model: str = "unnamed",
+):
+    """Compare Omega_de from CCL and NumCosmo."""
+    cosmo = cosmology.cosmo
+    a = 1.0 / (1.0 + z)
+
+    ccl_Ode = np.array(pyccl.omega_x(ccl_cosmo, a, "dark_energy"))
+    nc_Ode = np.array([cosmo.E2Omega_de(z_i) / cosmo.E2(z_i) for z_i in z])
+
+    return CompareFunc1d(
+        x=z,
+        y1=ccl_Ode,
+        y2=nc_Ode,
+        model=model,
+        x_symbol="z",
+        y_symbol=r"\Omega_\mathrm{DE}",
     )
 
 
