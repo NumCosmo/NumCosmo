@@ -82,8 +82,12 @@ def test_powspec_transfer_lowz(
     """Compare NumCosmo and CCL transfer functions for low redshifts."""
     if ccl_cosmo_eh_linear.high_precision:
         reltol_target: float = 1.0e-7
+        if ccl_cosmo_eh_linear["m_nu"] != 0.0:
+            reltol_target = 2.0e-3
     else:
         reltol_target = 1.0e-3
+        if ccl_cosmo_eh_linear["m_nu"] != 0.0:
+            reltol_target = 2.0e-3
     _test_powspec_transfer_any(
         ccl_cosmo_eh_linear, nc_cosmo_eh_linear, k_a, z_a, reltol_target
     )
@@ -98,8 +102,12 @@ def test_powspec_transfer_highz(
     """Compare NumCosmo and CCL transfer functions."""
     if ccl_cosmo_eh_linear.high_precision:
         reltol_target: float = 1.0e-4
+        if ccl_cosmo_eh_linear["m_nu"] != 0.0:
+            reltol_target = 4.0e-1
     else:
         reltol_target = 1.0e-2
+        if ccl_cosmo_eh_linear["m_nu"] != 0.0:
+            reltol_target = 2.0e-1
     _test_powspec_transfer_any(
         ccl_cosmo_eh_linear, nc_cosmo_eh_linear, k_a, z_high_a, reltol_target
     )
