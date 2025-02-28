@@ -16,6 +16,6 @@ build:
     - wget https://github.com/quarto-dev/quarto-cli/releases/download/v1.7.6/quarto-1.7.6-linux-amd64.tar.gz && mkdir ~/opt && tar -C ~/opt -xvzf quarto-1.7.6-linux-amd64.tar.gz
     - PATH="$HOME/opt/quarto-1.7.6/bin:$PATH" mamba run -n numcosmo_developer meson setup build -Ddocumentation=true -Db_lto=false 
     - mamba run -n numcosmo_developer meson compile -C build
-    - PATH="$HOME/opt/quarto-1.7.6/bin:$PATH" cd build && quarto render docs --output-dir test-site
+    - $HOME/opt/quarto-1.7.6/bin/quarto render build/docs --output-dir test-site
     - mkdir --parents $READTHEDOCS_OUTPUT/html/
     - mv build/docs/numcosmo-site/* $READTHEDOCS_OUTPUT/html/.
