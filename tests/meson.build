@@ -577,8 +577,29 @@ if python_pyccl.found()
             'timeout': 0,
         },
         {
+            'name': 'py_concentration_mass_relations',
+            'source': 'test_py_concentration_mass_relations.py',
+            'timeout': 0,
+        },
+        {
             'name': 'py_xcor',
             'source': 'test_py_xcor.py',
+            'timeout': 0,
+        },
+    ]
+endif
+
+python_getdist = python_module.find_installation(
+    'python3',
+    modules: ['getdist'],
+    required: false,
+)
+
+if python_getdist.found()
+    python_tests += [
+        {
+            'name': 'plotting',
+            'source': 'test_plotting.py',
             'timeout': 0,
         },
     ]

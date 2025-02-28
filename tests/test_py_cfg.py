@@ -32,6 +32,10 @@ from numcosmo_py import Ncm, GLib
 
 Ncm.cfg_init()
 
+VERSION_MAJOR = 0
+VERSION_MINOR = 24
+VERSION_MICRO = 1
+
 
 @pytest.fixture(
     name="flag_string", params=["estimate", "measure", "patient", "exhaustive"]
@@ -136,7 +140,12 @@ def test_get_version() -> None:
     """Test getting the version string."""
     version = Ncm.cfg_get_version()
     # This functions returns (10000 * major + 100 * minor + micro, major, minor, micro)
-    assert version == (2300, 0, 23, 0)
+    assert version == (
+        10000 * VERSION_MAJOR + 100 * VERSION_MINOR + VERSION_MICRO,
+        VERSION_MAJOR,
+        VERSION_MINOR,
+        VERSION_MICRO,
+    )
 
 
 def test_get_git_hash() -> None:
@@ -148,7 +157,7 @@ def test_get_git_hash() -> None:
 def test_get_version_string() -> None:
     """Test getting the version string."""
     version = Ncm.cfg_get_version_string()
-    assert version == "0.23.0"
+    assert version == f"{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_MICRO}"
 
 
 def test_check_version() -> None:

@@ -3,7 +3,98 @@ CHANGELOG
 
 [Current]
 
+[v0.24.0]
+ * Bumping minor version.
+
+ * Improving docs (#199)
+
+     * Improving doc building.
+     * Improving simple example.
+ * Imported Despali Mass function from jpas-forecast. (#198)
+
+     * Imported Despali Mass function from jpas-forecast.
+     * Adding to numcosmo infra.
+ * Moving to a quarto generated documentation (#197)
+
+     * Updated documentation: migrated from `gtkdoc` to `gi-docgen`, reorganized
+     structure, and added ReadTheDocs configuration and dependencies.  
+     * Improved CI: added environment variables, dependencies, and optimized
+     builds for documentation and tests.  
+     * Enhanced tests: added mass function tests, fixed Omega_m calculation, and
+     optimized with reusable fixtures.  
+     * Bug fixes: resolved issues in Bocquet and Watson models, including Delta
+     type assertions.  
+     * Cleaned up: removed old site, leftovers, and improved notebook and code
+     organization.  
+
+ * Coverage python (#185)
+
+     * Test uploading python coverage data.
+     * Uploading coverage.xml.
+     * Adding pytest-cov to requirements.
+     * Fixing multiple files notation for codecov.
+     * Adding missing coverage package.
+     * Fixing coverage directory.
+     * Removing parallel testing when getting python coverage.
+     * Adding support for priority.
+     * Reorganizing python functions.
+     * Working on cosmology refactoring.
+     * Tweaking slow tests.
+     * Fixed fparam_get_pi_by_name => param_get_by_full_name.
+     * Calibrating tests.
+     * New tests for Cosmology class.
+     * Testing missing lines in Cosmology.
+     * Removing external python tools from coverage.
+     * Updated stubs.
+     * Adding missing tests for sky_match.
+     * Renamed class NcSkyMatching => SkyMatch.
+ * Matching algorithm (#191)
+
+     * first version of matching class
+     * Fixing mypy hints.
+     * Adding zlib on the dependency list.
+     * Reorganizing matching code.
+     * Renaming methods and moving module.
+     * Tests for sky_match.
+     * More tests.
+     * Installing libfabric-devel manually.
+     * Black.
+     * Updated numcosmo usage.
+     
+     ---------
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Update stubs (#195)
+
+     * Updating stubs.
+     
+     * Fixing unused variable and comments.
+ * Update spline func tests (#194)
+
+     * Updating tests for AutoKnots.
+     
+     * Fixing pi factor.
+ * Fix docs (#193)
+
+
+ * Mass concentration klypin11 (#192)
+
+     * Created Klypin et al. (2011) concentration-mass relation.
+     * Renamed object (nc_halo_cm_param).
+     * Update test_ncm_generic.c
+     * Fix test.
+     * Improved unit test - Klypin11.
+     
+     ---------
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Update weak lensing framework (#189)
+
+     * Fixed generated for cluster wl.
+     * Added resample support for nc_data_cluster_wl.
+     * Adding support for bootstrap in nc_data_cluster_wl.
+
 [v0.23.0]
+ * (Re)updating changelog.
+
  * Better handling of git hash.
 
  * Updated changelog.
@@ -167,8 +258,7 @@ CHANGELOG
      * Added tests for tSZ.
      
      ---------
-      Co-authored-by: Arthur de Souza Molina <arthur.souza.molina@gmail.com>
- 
+      Co-authored-by: Arthur de Souza Molina <arthur.souza.molina@gmail.com> 
      Co-authored-by: Mariana Penna Lima <pennalima@gmail.com>
  * Xcor CCL comparisons (#168)
 
@@ -260,8 +350,7 @@ CHANGELOG
      * Refactored and cleaned up code
      
      ---------
-      Co-authored-by: Caio Lima de Oliveira <caiolimadeoliveira@proton.me>
- 
+      Co-authored-by: Caio Lima de Oliveira <caiolimadeoliveira@proton.me> 
      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
  * Magnetic Fields in Vexp cosmology (#153)
 
@@ -402,8 +491,7 @@ CHANGELOG
      * Updating primordial_perturbations/magnetic_dust_bounce.ipynb.
      
      ---------
-      Co-authored-by: EFrion <frion.emmanuel@hotmail.fr>
- Co-authored-by:
+      Co-authored-by: EFrion <frion.emmanuel@hotmail.fr> Co-authored-by:
      Eduardo Barroso <eduardojsbarroso@gmail.com>
  * Adding Bayesian evidence support for numcosmo app. (#152)
 
@@ -1074,8 +1162,7 @@ CHANGELOG
      * Fixed copyright notices
      
      ---------
-      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
- 
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br> 
      Co-authored-by: Caio Lima de Oliveira <caiolimadeoliveira@proton.me>
  * Added check to see if the python interface is available.
 
@@ -1184,8 +1271,7 @@ CHANGELOG
      * Updated plcl script.
      
      ---------
-      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com>
- Co-authored-by:
+      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com> Co-authored-by:
      Mariana Penna Lima <pennalima@gmail.com>
  * Halo bias tests (#73)
 
@@ -1223,10 +1309,8 @@ CHANGELOG
      * Bias as function of mass
      * Added minimal documentation to bias objects.
      * Finished Documentations
-      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
- 
-     Co-authored-by: Eduardo Barroso <eduardojsbarroso@gmail.com>
- 
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br> 
+     Co-authored-by: Eduardo Barroso <eduardojsbarroso@gmail.com> 
      Co-authored-by: root <root@eduardo>
  * Added interface to generate models using an array of NcmSParams
 
@@ -1344,8 +1428,7 @@ CHANGELOG
      * missing files
      
      * multiplicity_watson_install
-      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com>
- Co-authored-by:
+      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com> Co-authored-by:
      Henrique Lettieri <henrique.cnl@hotmail.com>
  * Removed ckern algo.
 
@@ -4955,6 +5038,18 @@ CHANGELOG
 
 
 []
+ * Bumping minor version.
+ * Improving docs (#199)
+ * Imported Despali Mass function from jpas-forecast. (#198)
+ * Moving to a quarto generated documentation (#197)
+ * Coverage python (#185)
+ * Matching algorithm (#191)
+ * Update stubs (#195)
+ * Update spline func tests (#194)
+ * Fix docs (#193)
+ * Mass concentration klypin11 (#192)
+ * Update weak lensing framework (#189)
+ * (Re)updating changelog.
  * Better handling of git hash.
  * Updated changelog.
  * V0.23.0 (#187)

@@ -33,6 +33,12 @@ Or assuming you have conda-forge in your channels:
 conda install numcosmo
 ```
 
+**Current release info**
+
+| Name | Downloads | Version | Platforms |
+| --- | --- | --- | --- |
+| [![Conda Recipe](https://img.shields.io/badge/recipe-numcosmo-green.svg)](https://anaconda.org/conda-forge/numcosmo) | [![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/numcosmo.svg)](https://anaconda.org/conda-forge/numcosmo) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/numcosmo.svg)](https://anaconda.org/conda-forge/numcosmo) | [![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/numcosmo.svg)](https://anaconda.org/conda-forge/numcosmo) |
+
 # Development Environment
 
 ## MambaForge Development Environment

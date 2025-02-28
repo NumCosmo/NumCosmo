@@ -75,6 +75,19 @@ def test_insert_array(snn):
         assert_allclose(snn.get(i), coord, atol=0.0, rtol=PREC)
 
 
+def test_insert_array_large(snn):
+    """Test set_array method."""
+    r_a = np.random.uniform(0.1, 5.0, 70_000)
+    cos_theta_a = np.random.uniform(-1.0, 1.0, 70_000)
+    phi_a = np.random.uniform(-np.pi, np.pi, 70_000)
+    theta_a = np.acos(cos_theta_a)
+
+    snn.insert_array(r_a, theta_a, phi_a)
+
+    for i, coord in enumerate(zip(r_a, theta_a, phi_a)):
+        assert_allclose(snn.get(i), coord, atol=0.0, rtol=PREC)
+
+
 def test_rebuild(snn):
     """Test rebuild method."""
     r_a = np.random.uniform(0.1, 5.0, 1000)
@@ -296,6 +309,42 @@ def test_knn_search_distances_correct(snn, knn):
         assert set(idx) == set(idx2)
 
 
+def test_knn_search_distances_correct_repeat(snn, knn):
+    """Test knn_search_distances method."""
+    nsize, knn, nrepeat = 1000, 15, 500
+    r_a = np.random.uniform(0.1, 5.0, nsize)
+    cos_theta_a = np.random.uniform(-1.0, 1.0, nsize)
+    phi_a = np.random.uniform(-np.pi, np.pi, nsize)
+    theta_a = np.acos(cos_theta_a)
+    sin_theta_a = np.sin(theta_a)
+    cos_phi_a = np.cos(phi_a)
+    sin_phi_a = np.sin(phi_a)
+
+    r_a = np.concatenate((r_a, r_a[:nrepeat]))
+    cos_theta_a = np.concatenate((cos_theta_a, cos_theta_a[:nrepeat]))
+    phi_a = np.concatenate((phi_a, phi_a[:nrepeat]))
+    theta_a = np.concatenate((theta_a, theta_a[:nrepeat]))
+    sin_theta_a = np.sin(theta_a)
+    cos_phi_a = np.cos(phi_a)
+    sin_phi_a = np.sin(phi_a)
+
+    x_a = r_a * sin_theta_a * cos_phi_a
+    y_a = r_a * sin_theta_a * sin_phi_a
+    z_a = r_a * cos_theta_a
+
+    for r, theta, phi in zip(r_a, theta_a, phi_a):
+        snn.insert(r, theta, phi)
+    snn.rebuild()
+
+    for i, (r, theta, phi) in enumerate(zip(r_a, theta_a, phi_a)):
+        d2_array = (x_a[i] - x_a) ** 2 + (y_a[i] - y_a) ** 2 + (z_a[i] - z_a) ** 2
+        idx = np.argsort(d2_array)[:knn].tolist()
+        dist, idx2 = snn.knn_search_distances(r, theta, phi, knn)
+
+        assert_allclose(dist, d2_array[idx], atol=0.0, rtol=1e-11)
+        assert set(np.array(idx) % nsize) == set(np.array(idx2) % nsize)
+
+
 def test_knn_search_distances_correct_rng(snn, knn):
     """Test knn_search_distances method."""
     r_a = np.random.uniform(0.1, 5.0, 2000)
@@ -328,6 +377,35 @@ def test_knn_search_distances_correct_rng(snn, knn):
         dist, idx2 = snn.knn_search_distances(r, theta, phi, knn)
         assert_allclose(dist, d2_array[idx], atol=0.0, rtol=1e-11)
         assert set(idx) == set(idx2)
+
+
+def test_knn_search_distances_batch(snn, knn):
+    """Test knn_search_distances_batch method."""
+    r_a = np.random.uniform(0.1, 5.0, 2000)
+    cos_theta_a = np.random.uniform(-1.0, 1.0, 2000)
+    phi_a = np.random.uniform(-np.pi, np.pi, 2000)
+    theta_a = np.acos(cos_theta_a)
+
+    m_r_a = np.random.uniform(0.1, 5.0, 2000)
+    m_cos_theta_a = np.random.uniform(-1.0, 1.0, 2000)
+    m_phi_a = np.random.uniform(-np.pi, np.pi, 2000)
+    m_theta_a = np.acos(m_cos_theta_a)
+
+    knn = 15
+
+    for r, theta, phi in zip(r_a, theta_a, phi_a):
+        snn.insert(r, theta, phi)
+
+    snn.rebuild()
+
+    dist_list, idx_list = snn.knn_search_distances_batch(m_r_a, m_theta_a, m_phi_a, knn)
+    dist = np.array(dist_list).reshape(-1, knn)
+    idx = np.array(idx_list).reshape(-1, knn)
+
+    for m_r, m_theta, m_phi, m_dist, m_idx in zip(m_r_a, m_theta_a, m_phi_a, dist, idx):
+        dist2, idx2 = snn.knn_search_distances(m_r, m_theta, m_phi, knn)
+        assert_allclose(m_dist, dist2, atol=0.0, rtol=1e-11)
+        assert set(m_idx) == set(idx2)
 
 
 def test_dump(snn, capfd):
