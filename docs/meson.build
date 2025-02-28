@@ -67,7 +67,7 @@ if get_option('documentation')
             '--use-freezer',
             '--log', 'numcosmo-site.log',
             '--log-format', 'plain',
-            '--log-level', 'info',
+            '--log-level', 'debug',
         ],
         build_by_default: true,
         env: env,
