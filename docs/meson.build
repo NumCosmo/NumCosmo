@@ -64,6 +64,7 @@ if get_option('documentation')
             'render',
             meson.current_build_dir(),
             '--output-dir', 'numcosmo-site',
+            '--execute-debug',
             '--log', 'numcosmo-site.log',
             '--log-format', 'plain',
             '--log-level', 'info',
