@@ -136,7 +136,9 @@ class CompareFunc1d:
         if np.sum(self.abs_diff) > 0.0:
             axs[1].plot(self.x, self.abs_diff, lw=lw, color=color)
         axs[1].set_xscale(xscale)
-        axs[1].set_yscale(yscale)
+        axs[1].set_yscale("log")
+        axs[0].set_xscale(xscale)
+        axs[0].set_yscale(yscale)
         axs[0].legend(loc="best")
         axs[0].set_ylabel(self.y_label)
         axs[1].set_xlabel(self.x_label)

@@ -25,8 +25,8 @@
 """Unit tests for NumCosmo powwer-spectra."""
 
 from numpy.testing import assert_allclose
-
 import numpy as np
+import matplotlib.pyplot as plt
 import pyccl
 
 import numcosmo_py.cosmology as ncpy
@@ -50,7 +50,9 @@ from numcosmo_py.ccl.comparison import (
     compare_growth_factor,
     compare_growth_rate,
     compare_Sigma_crit,
+    CompareFunc1d,
 )
+from numcosmo_py.plotting.tools import latex_float
 from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_k_a,
     fixture_z_a,
@@ -61,6 +63,135 @@ from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
 )
 
 Ncm.cfg_init()
+
+
+def test_compare_1d() -> None:
+    """Test CompareFunc1d class."""
+    x = np.linspace(0.0, 2.0, 100, dtype=np.float64)
+    y1 = 0.4 + 0.6 * x**2
+    y2 = y1 + np.random.normal(0.0, 1.0e-6, y1.shape)
+    compare = CompareFunc1d(x, y1, y2)
+    assert compare.rel_diff_mean < 1.0e-5
+    assert compare.rel_diff_median < 1.0e-5
+    assert compare.rel_diff_max < 1.0e-5
+    assert compare.rel_diff_min < 1.0e-5
+    assert compare.rel_diff_std < 1.0e-5
+    assert np.all(compare.abs_diff < 1.0e-5)
+    assert compare.model == "unnamed"
+    assert compare.name1 == "1"
+    assert compare.name2 == "2"
+    assert compare.x_symbol == "x"
+    assert compare.y_symbol == "y"
+    assert compare.x_unit is None
+    assert compare.y_unit is None
+    assert compare.x_label == "$x$"
+    assert compare.y_label == "$y$"
+    assert compare.summary_row() == [
+        "unnamed",
+        "$y$",
+        f"${latex_float(compare.rel_diff_min)}$",
+        f"${latex_float(compare.rel_diff_max)}$",
+        f"${latex_float(compare.rel_diff_mean)}$",
+        f"${latex_float(compare.rel_diff_std)}$",
+    ]
+    assert CompareFunc1d.table_header() == [
+        "Model",
+        "Quantity",
+        "$\\Delta P_{\\text{min}}/P$",
+        "$\\Delta P_{\\text{max}}/P$",
+        "$\\overline{\\Delta P / P}$",
+        "$\\sigma_{\\Delta P / P}$",
+    ]
+
+
+def test_compare_1d_full() -> None:
+    """Test CompareFunc1d class."""
+    model = "Bob"
+    name1 = "Alice"
+    name2 = "Fred"
+    x_symbol = "x^x"
+    y_symbol = "y^y"
+    x_unit = "m"
+    y_unit = "kg"
+    x = np.linspace(0.0, 2.0, 100, dtype=np.float64)
+    y1 = 0.4 + 0.6 * x**2
+    y2 = y1 + np.random.normal(0.0, 1.0e-6, y1.shape)
+    compare = CompareFunc1d(
+        x,
+        y1,
+        y2,
+        model=model,
+        name1=name1,
+        name2=name2,
+        x_symbol=x_symbol,
+        y_symbol=y_symbol,
+        x_unit=x_unit,
+        y_unit=y_unit,
+    )
+    assert compare.model == model
+    assert compare.name1 == name1
+    assert compare.name2 == name2
+    assert compare.x_symbol == x_symbol
+    assert compare.y_symbol == y_symbol
+    assert compare.x_unit == x_unit
+    assert compare.y_unit == y_unit
+
+    assert compare.x_label == f"${x_symbol}$ [{x_unit}]"
+    assert compare.y_label == f"${y_symbol}$ [{y_unit}]"
+
+    for use_g in [True, False]:
+        for precision in [1, 2, 3, 4, 5]:
+            rel_diff_min_str = latex_float(
+                compare.rel_diff_min, convert_g=use_g, precision=precision
+            )
+            rel_diff_max_str = latex_float(
+                compare.rel_diff_max, convert_g=use_g, precision=precision
+            )
+            rel_diff_mean_str = latex_float(
+                compare.rel_diff_mean, convert_g=use_g, precision=precision
+            )
+            rel_diff_std_str = latex_float(
+                compare.rel_diff_std, convert_g=use_g, precision=precision
+            )
+            assert compare.summary_row(convert_g=use_g, precision=precision) == [
+                model,
+                f"${y_symbol}$ [{y_unit}]",
+                f"${rel_diff_min_str}$",
+                f"${rel_diff_max_str}$",
+                f"${rel_diff_mean_str}$",
+                f"${rel_diff_std_str}$",
+            ]
+
+
+def test_compare_1d_plot() -> None:
+    """Test CompareFunc1d class."""
+    x = np.linspace(0.0, 2.0, 100, dtype=np.float64)
+    y1 = 0.4 + 0.6 * x**2
+    y2 = y1 + np.random.normal(0.0, 1.0e-6, y1.shape)
+    compare = CompareFunc1d(x, y1, y2)
+    _, axs = plt.subplots(1, 2)
+    xscale = "log"
+    yscale = "linear"
+    color = "black"
+    lw = 1.2
+    compare.plot(axs, xscale=xscale, yscale=yscale, color=color, lw=lw)
+
+    # Check axis scales
+    assert axs[0].get_xscale() == xscale
+    assert axs[0].get_yscale() == yscale
+
+    assert axs[1].get_xscale() == xscale
+    assert axs[1].get_yscale() == "log"  # Always use log scale
+
+    # Check that a line was added
+    for i in range(2):
+        lines = axs[i].get_lines()
+        assert len(lines) > 0  # At least one line must be present
+
+        # Check properties of the first line
+        line = lines[0]
+        assert line.get_color() == color
+        assert line.get_linewidth() == lw
 
 
 def test_background_params(
