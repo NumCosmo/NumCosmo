@@ -160,9 +160,9 @@ def latex_float(value: float, precision: int = 2, convert_g: bool = True) -> str
 def format_time(value: float) -> str:
     """Format a time value in seconds with appropriate units."""
     units = [
-        (1.0e-9, r"$\mu$s"),  # Microseconds
-        (1.0e-6, "ms"),  # Milliseconds
-        (1.0e-3, "s"),  # Seconds
+        (1.0e-9, "ns"),  # Nanoseconds
+        (1.0e-6, r"$\mu$s"),  # Microseconds
+        (1.0e-3, "ms"),  # Milliseconds
         (1.0, "s"),  # Keep in seconds for larger values
     ]
 

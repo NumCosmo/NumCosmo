@@ -24,6 +24,7 @@
 
 """Unit tests for NumCosmo powwer-spectra."""
 
+import pytest
 from numpy.testing import assert_allclose
 import numpy as np
 import matplotlib.pyplot as plt
@@ -50,9 +51,10 @@ from numcosmo_py.ccl.comparison import (
     compare_growth_factor,
     compare_growth_rate,
     compare_Sigma_crit,
+    compute_times,
     CompareFunc1d,
 )
-from numcosmo_py.plotting.tools import latex_float
+from numcosmo_py.plotting.tools import latex_float, format_time
 from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_k_a,
     fixture_z_a,
@@ -63,6 +65,28 @@ from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
 )
 
 Ncm.cfg_init()
+
+
+def test_format_float() -> None:
+    """Test latex_float function."""
+    assert latex_float(0.1234) == "0.12"
+    assert latex_float(0.1234, convert_g=False) == "1.23 \\times 10^{-1}"
+    assert latex_float(1.234) == "1.2"
+    assert latex_float(12.34) == "12"
+    assert latex_float(12.34, convert_g=False) == "1.23 \\times 10^{1}"
+    assert latex_float(123.4) == "1.2 \\times 10^{2}"
+    assert latex_float(1234.0) == "1.2 \\times 10^{3}"
+    assert latex_float(1.0e5) == "10^{5}"
+
+
+def test_format_time() -> None:
+    """Test format_time function."""
+    assert format_time(1.2) == "1.20 s"
+    assert format_time(0.123) == "123.00 ms"
+    assert format_time(0.1234) == "123.40 ms"
+    assert format_time(1.234e-3) == "1.23 ms"
+    assert format_time(1.234e-6) == "1.23 $\\mu$s"
+    assert format_time(1.234e-9) == "1.23 ns"
 
 
 def test_compare_1d() -> None:
@@ -410,3 +434,18 @@ def test_background_Sigma_crit(
 
     cmp = compare_Sigma_crit(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test, zl=z_l)
     assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
+
+
+@pytest.mark.parametrize("repeat", [1, 5, 10])
+def test_compute_times(repeat):
+    """Test compute_times."""
+    mean, std = compute_times(lambda: np.sin(1.0), repeat=repeat, number=1000)
+
+    assert isinstance(mean, float)
+    assert mean > 0.0
+
+    assert isinstance(std, float)
+    if repeat == 1:
+        assert std == 0.0
+    else:
+        assert std > 0.0
