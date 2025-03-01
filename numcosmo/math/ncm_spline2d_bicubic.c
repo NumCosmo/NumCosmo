@@ -981,6 +981,8 @@ _ncm_spline2d_bicubic_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
 #undef _NCM_INTEGRAL_C
 #undef _NCM_INTEGRAL_D
 
+  ncm_spline_post_prepare (s2dbc->optimize_dx.s);
+
   return s2dbc->optimize_dx.s;
 }
 
@@ -1149,6 +1151,8 @@ _ncm_spline2d_bicubic_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
 #undef _NCM_INTEGRAL_B
 #undef _NCM_INTEGRAL_C
 #undef _NCM_INTEGRAL_D
+
+  ncm_spline_post_prepare (s2dbc->optimize_dy.s);
 
   return s2dbc->optimize_dy.s;
 }

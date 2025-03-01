@@ -480,7 +480,7 @@ def test_match_2d(cosmo, setup_catalogs, distance_method):
             )
         case DistanceMethod.QUERY_RADIUS:
             query_r = (
-                np.array(dist.angular_diameter_vector(cosmo, matching.query_z)) * RH_Mpc
+                np.array(dist.angular_diameter_array(cosmo, matching.query_z)) * RH_Mpc
             )
             distances = query_r.reshape(-1, 1) * 2.0 * np.sin(angular_distance / 2.0)
             assert_allclose(
@@ -488,7 +488,7 @@ def test_match_2d(cosmo, setup_catalogs, distance_method):
             )
         case DistanceMethod.MATCH_RADIUS:
             match_r = (
-                np.array(dist.angular_diameter_vector(cosmo, matching.match_z)) * RH_Mpc
+                np.array(dist.angular_diameter_array(cosmo, matching.match_z)) * RH_Mpc
             )
             distances = (
                 match_r[result.nearest_neighbours_indices]
@@ -500,10 +500,10 @@ def test_match_2d(cosmo, setup_catalogs, distance_method):
             )
         case DistanceMethod.MIN_RADIUS:
             query_r = (
-                np.array(dist.angular_diameter_vector(cosmo, matching.query_z)) * RH_Mpc
+                np.array(dist.angular_diameter_array(cosmo, matching.query_z)) * RH_Mpc
             )
             match_r = (
-                np.array(dist.angular_diameter_vector(cosmo, matching.match_z)) * RH_Mpc
+                np.array(dist.angular_diameter_array(cosmo, matching.match_z)) * RH_Mpc
             )
             distances = (
                 np.minimum(
@@ -517,10 +517,10 @@ def test_match_2d(cosmo, setup_catalogs, distance_method):
             )
         case DistanceMethod.MAX_RADIUS:
             query_r = (
-                np.array(dist.angular_diameter_vector(cosmo, matching.query_z)) * RH_Mpc
+                np.array(dist.angular_diameter_array(cosmo, matching.query_z)) * RH_Mpc
             )
             match_r = (
-                np.array(dist.angular_diameter_vector(cosmo, matching.match_z)) * RH_Mpc
+                np.array(dist.angular_diameter_array(cosmo, matching.match_z)) * RH_Mpc
             )
             distances = (
                 np.maximum(
@@ -633,13 +633,13 @@ def test_match_3d(cosmo, setup_catalogs):
     match_dec = matching.match_dec
     match_theta = np.pi / 2.0 - np.radians(match_dec)
     match_phi = np.radians(match_ra)
-    match_r = np.array(dist.angular_diameter_vector(cosmo, matching.match_z)) * RH_Mpc
+    match_r = np.array(dist.angular_diameter_array(cosmo, matching.match_z)) * RH_Mpc
 
     query_ra = matching.query_ra
     query_dec = matching.query_dec
     query_theta = np.pi / 2.0 - np.radians(query_dec)
     query_phi = np.radians(query_ra)
-    query_r = np.array(dist.angular_diameter_vector(cosmo, matching.query_z)) * RH_Mpc
+    query_r = np.array(dist.angular_diameter_array(cosmo, matching.query_z)) * RH_Mpc
 
     query_x1 = query_r * np.sin(query_theta) * np.cos(query_phi)
     query_x2 = query_r * np.sin(query_theta) * np.sin(query_phi)
