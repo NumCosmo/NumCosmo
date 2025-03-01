@@ -48,6 +48,7 @@ from numcosmo_py.sky_match import (
 )
 
 import getdist
+import getdist.plots
 
 Ncm.cfg_init()
 
