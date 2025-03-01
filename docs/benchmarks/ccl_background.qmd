@@ -231,7 +231,7 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 
 ```
 
-## Distance
+## Distances
 
 We define a function to compare cosmological distances calculated by the CCL and NumCosmo frameworks. 
 The function then evaluates and compares the cosmological distances implemented in both libraries. 
@@ -363,7 +363,7 @@ df = compute_distance_times(models[0]["CCL"], models[0]["NC"], z)
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
 ```
 
-## Growth Factor  
+## Growth Factor and Growth Rate
 
 The following function compares the growth factor and growth rate between the CCL and NumCosmo cosmologies.  
 
@@ -531,114 +531,15 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 
 ```
 
-### Summary
+## Summary  
 
-The table below show all estimated times and orders of the minimum and maximum relative differences for each function compared in this notebook. The CCL function for the unnormalized growth factor is not being compared, since NumCosmo does not have a specific function to compute it.
+In this notebook, we compared the cosmological results obtained using CCL and NumCosmo across several sections.  
 
-<table {style="border-style: solid;"}>
-  <tr>
-    <th>Function</th>
-    <th>Runtime CCL</th>
-    <th>Runtime NumCosmo</th>
-    <th>Min. Rel. Diff. Order</th>
-    <th>Max. Rel. Diff. Order</th>
-    <tr>
-  <tr>
-    <td>Norm. Hubble Function</td>
-    <td>(424 ± 11) μs</td>
-    <td>(6.49 ± 0.97) ms</td>
-    <td>1e-12</td>
-      <td>1e-05</td>
-  </tr>
-  <tr>
-      <td>Comoving Distance</td>
-      <td>(288 ± 3) μs</td>
-      <td>(6.72 ± 0.83) ms</td>
-      <td>1e-12</td>
-      <td>1e-08</td>
-  </tr>
-  <tr>
-      <td>Transverse Comoving Distance</td>
-      <td>(312 ± 2) μs</td>
-      <td>(7.58 ± 0.14) ms</td>
-      <td>1e-12</td>
-      <td>1e-08</td>
-  </tr>
-  <tr>
-      <td>Angular Diameter Distance</td>
-      <td>(605 ± 3) μs</td>
-      <td>(7.52 ± 0.03) ms</td>
-      <td>1e-12</td>
-      <td>1e-08</td>
-  </tr>
-  <tr>
-      <td>Luminosity Distance</td>
-      <td>(325 ± 2) μs</td>
-      <td>(7.58 ± 0.16) ms</td>
-      <td>1e-12</td>
-      <td>1e-08</td>
-  </tr>
-  <tr>
-      <td>Distance Modulus</td>
-      <td>(576 ± 6) μs</td>
-      <td>(9.29 ± 0.92) ms</td>
-      <td>1e-13</td>
-      <td>1e-08</td>
-  </tr>
-  <tr>
-      <td>Lookbacktime</td>
-      <td>(576 ± 6) μs</td>
-      <td>(9.29 ± 0.92) ms</td>
-      <td>1e-11</td>
-      <td>1e-07</td>
-  </tr>    
-  <tr>
-      <td>Comoving volume element</td>
-      <td>(576 ± 6) μs</td>
-      <td>(9.29 ± 0.92) ms</td>
-      <td>1e-11</td>
-      <td>1e-05</td>
-  </tr>    
-  <tr>
-      <td>Growth Factor</td>
-      <td>(300 ± 19) μs</td>
-      <td>(8.45 ± 0.11) ms</td>
-      <td>1e-13</td>
-      <td>1e-08</td>
-  </tr>
-  <tr>
-      <td>Growth Rate</td>
-      <td>(299 ± 2) μs</td>
-      <td>(16.7 ± 0.11) ms</td>
-      <td>1e-10</td>
-      <td>1e-08</td>
-  </tr>
-  <tr>
-    <td>Matter Density Parameter</td>
-    <td>(493 ± 7) μs</td>
-     <td>(12.3 ± 0.1) ms</td>
-     <td>1e-10</td>
-      <td>1e-08</td>
-  </tr>
-  <tr>
-    <td>Matter Density</td>
-    <td>(909 ± 3) μs</td>
-    <td>(10.8 ± 0.86) ms</td>
-    <td>1e-16</td>
-      <td>1e-15</td>
-  </tr>
-   <tr>
-      <td>Scale Factor</td>
-      <td>(36.8 ± 0.1) μs</td>
-      <td>(800 ± 8.45) μs</td>
-      <td>1e-13</td>
-      <td>1e-08</td>
-  </tr>
-  <tr>
-      <td>Sigma Critical</td>
-      <td>(1.150 ± 0.003) ms</td>
-      <td>(10.4 ± 0.81) ms</td>
-      <td>1e-09</td>
-      <td>1e-09</td>
-  </tr>
-</table>
+- **Cosmology Parameters**: We examined the differences in the parameters, noting how the definitions of $\Omega_m$ and the inclusion of massive neutrinos affect the results.  
+- **Distances**: We compared cosmological distances and found strong agreement between CCL and NumCosmo.
+  - **Time Comparison**: A detailed analysis of time measurements confirmed this consistency.
+- **Growth Factor and Growth Rate**: We highlighted the discrepancies in the growth factor and growth rate due to CCL's inclusion of the full neutrino energy density, which leads to increased deviations at higher redshifts.  
+- **Scale Factor**: The scale factor was also compared, showing similar trends across both methods.  
+- **Critical Surface Mass Density**: We assessed this observable and observed agreement.  
+
+Overall, the results demonstrate good agreement between the two methods, with the main differences arising from CCL's handling of neutrinos in the background model, particularly affecting growth-related observables at higher redshifts.
