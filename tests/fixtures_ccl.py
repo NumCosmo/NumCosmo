@@ -55,23 +55,19 @@ def fixture_z_high_a():
 
 @pytest.fixture(
     name="ccl_cosmo_eh_linear",
-    params=product([False, True], range(2)),
+    params=product([False, True], range(3)),
     ids=lambda x: f"high_prec={x[0]},index={x[1]}",
     scope="module",
 )
 def fixture_ccl_cosmo_eh_linear(request) -> pyccl.Cosmology:
     """Fixture for CCL Cosmology."""
-    Omega_c = 0.25
-    Omega_b = 0.05
-    Omega_k = 0.0
-    h = 0.7
-    n_s = 0.96
-    Neff = 0.0
-    sigma8 = 0.9
+    h, Omega_c, Omega_b, Omega_k, Neff = 0.7, 0.25, 0.05, 0.0, 3.046
+    sigma8, n_s = 0.9, 0.96
 
     Omega_v_vals = np.array([0.7, 0.65, 0.75])
     w0_vals = np.array([-1.0, -0.9, -1.1])
     wa_vals = np.array([0.0, 0.1, -0.1])
+    m_nu = [[0.0, 0.0, 0.0], [0.04, 0.0, 0.0], [0.02, 0.02, 0.0]]
 
     high_prec, index = request.param
 
@@ -92,6 +88,7 @@ def fixture_ccl_cosmo_eh_linear(request) -> pyccl.Cosmology:
         Omega_k=Omega_k,
         w0=w0_vals[index],
         wa=wa_vals[index],
+        m_nu=m_nu[index],
         transfer_function="eisenstein_hu",
         matter_power_spectrum="linear",
     )
@@ -103,7 +100,7 @@ def fixture_ccl_cosmo_eh_linear(request) -> pyccl.Cosmology:
 # CCL Halofit is too slow for high precision
 @pytest.fixture(
     name="ccl_cosmo_eh_halofit",
-    params=product([False], range(2)),
+    params=product([False], range(3)),
     ids=lambda x: f"high_prec={x[0]}, index={x[1]}",
     scope="module",
 )
@@ -114,12 +111,13 @@ def fixture_ccl_cosmo_eh_halofit(request) -> pyccl.Cosmology:
     Omega_k = 0.0
     h = 0.7
     n_s = 0.96
-    Neff = 0.0
+    Neff = 3.046
     sigma8_vals = [0.9, 0.7, 0.6]
 
     Omega_v = 0.7
     w0 = -1.0
     wa = 0.0
+    m_nu = [[0.0, 0.0, 0.0], [0.4, 0.0, 0.0], [0.2, 0.2, 0.0]]
 
     high_prec, index = request.param
 
@@ -140,6 +138,7 @@ def fixture_ccl_cosmo_eh_halofit(request) -> pyccl.Cosmology:
         Omega_k=Omega_k,
         w0=w0,
         wa=wa,
+        m_nu=m_nu[index],
         transfer_function="eisenstein_hu",
         matter_power_spectrum="halofit",
     )

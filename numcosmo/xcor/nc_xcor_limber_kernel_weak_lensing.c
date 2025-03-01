@@ -79,6 +79,10 @@ struct _NcXcorLimberKernelWeakLensing
 
   /* Redshift */
   NcmSpline *dn_dz;
+  gdouble dn_dz_zmin;
+  gdouble dn_dz_zmax;
+  gdouble dn_dz_min;
+  gdouble dn_dz_max;
 
   /* NcmSpline* bias_spline; */
   /* guint nknots; */
@@ -129,6 +133,10 @@ nc_xcor_limber_kernel_weak_lensing_init (NcXcorLimberKernelWeakLensing *xclkg)
   xclkg->ctrl_cosmo = ncm_model_ctrl_new (NULL);
 
   xclkg->dn_dz       = NULL;
+  xclkg->dn_dz_zmin  = 0.0;
+  xclkg->dn_dz_zmax  = 0.0;
+  xclkg->dn_dz_min   = 0.0;
+  xclkg->dn_dz_max   = 0.0;
   xclkg->dist        = NULL;
   xclkg->kernel_W_mz = NULL;
   xclkg->nbar        = 0.0;
@@ -137,6 +145,17 @@ nc_xcor_limber_kernel_weak_lensing_init (NcXcorLimberKernelWeakLensing *xclkg)
 
   NCM_CVODE_CHECK ((gpointer) xclkg->A, "SUNDenseMatrix", 0, );
   NCM_CVODE_CHECK ((gpointer) xclkg->LS, "SUNDenseLinearSolver", 0, );
+}
+
+static void
+_nc_xcor_limber_kernel_weak_lensing_take_dndz (NcXcorLimberKernelWeakLensing *xclkg, NcmSpline *dn_dz)
+{
+  NcmVector *z_vec      = ncm_spline_peek_xv (dn_dz);
+  const guint z_vec_len = ncm_vector_len (z_vec);
+
+  xclkg->dn_dz      = dn_dz;
+  xclkg->dn_dz_zmin = ncm_vector_get (z_vec, 0);
+  xclkg->dn_dz_zmax = ncm_vector_get (z_vec, z_vec_len - 1);
 }
 
 static void
@@ -149,7 +168,7 @@ _nc_xcor_limber_kernel_weak_lensing_set_property (GObject *object, guint prop_id
   switch (prop_id)
   {
     case PROP_DN_DZ:
-      xclkg->dn_dz = g_value_dup_object (value);
+      _nc_xcor_limber_kernel_weak_lensing_take_dndz (xclkg, g_value_dup_object (value));
       break;
     case PROP_NBAR:
       xclkg->nbar = g_value_get_double (value);
@@ -217,15 +236,18 @@ _nc_xcor_limber_kernel_weak_lensing_constructed (GObject *object)
 
     nc_xcor_limber_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
 
+    ncm_spline_prepare (xclkg->dn_dz);
     /* Normalize the redshift distribution */
-    ncm_spline_prepare (xclkg->dn_dz);
+    {
+      gdouble ngal  = ncm_spline_eval_integ (xclkg->dn_dz, xclkg->dn_dz_zmin, xclkg->dn_dz_zmax);
+      NcmVector *yv = ncm_spline_peek_yv (xclkg->dn_dz);
 
-    gdouble ngal  = ncm_spline_eval_integ (xclkg->dn_dz, zmin, zmax);
-    NcmVector *yv = ncm_spline_get_yv (xclkg->dn_dz);
+      ncm_vector_scale (yv, 1.0 / ngal);
+      ncm_spline_prepare (xclkg->dn_dz);
 
-    ncm_vector_scale (yv, 1.0 / ngal);
-    ncm_spline_prepare (xclkg->dn_dz);
-    ncm_vector_free (yv);
+      xclkg->dn_dz_min = ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmin);
+      xclkg->dn_dz_max = ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmax);
+    }
 
     /* Noise level */
     xclkg->noise = gsl_pow_2 (xclkg->intr_shear) / xclkg->nbar;
@@ -377,6 +399,20 @@ typedef struct _src_int_params
   const gdouble Omega_k0;
 } src_int_params;
 
+static gdouble
+_kernel_wl_W_U_eval_dndz (NcXcorLimberKernelWeakLensing *xclkg, gdouble z)
+{
+  const gdouble alpha = 1.0e-2;
+
+  if (z < xclkg->dn_dz_zmin)
+    return xclkg->dn_dz_min * exp (-gsl_pow_2 ((z - xclkg->dn_dz_zmin) / alpha));
+
+  if (z > xclkg->dn_dz_zmax)
+    return xclkg->dn_dz_max * exp (-gsl_pow_2 ((z - xclkg->dn_dz_zmax) / alpha));
+
+  return ncm_spline_eval (xclkg->dn_dz, z);
+}
+
 static gint
 _kernel_wl_W_U_f (realtype mz, N_Vector y, N_Vector ydot, gpointer f_data)
 {
@@ -385,7 +421,7 @@ _kernel_wl_W_U_f (realtype mz, N_Vector y, N_Vector ydot, gpointer f_data)
   NcDistance *dist   = ts->xclkg->dist;
   const gdouble z    = -mz;
   const gdouble E    = nc_hicosmo_E (cosmo, z);
-  const gdouble dndz = ncm_spline_eval (ts->xclkg->dn_dz, z);
+  const gdouble dndz = _kernel_wl_W_U_eval_dndz (ts->xclkg, z);
   const gdouble dt   = nc_distance_transverse (dist, cosmo, z);
 
   NV_Ith_S (ydot, 0) = -NV_Ith_S (y, 1) / E;
@@ -422,8 +458,6 @@ _nc_xcor_limber_kernel_weak_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo
 
   /* zmin should always be zero for lensing, so just checking for consistency */
   g_assert_cmpfloat (zmin, ==, 0.0);
-
-  ncm_spline_prepare (xclkg->dn_dz);
 
   /* Check if the spline includes the boundaries to avoid running into errors when computing */
   g_assert (gsl_finite (ncm_spline_eval (xclkg->dn_dz, zmin)));
