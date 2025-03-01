@@ -47,13 +47,20 @@ from numcosmo_py.sky_match import (
     SkyMatchResult,
 )
 
-import matplotlib
-from matplotlib.patches import Ellipse
-from matplotlib import transforms
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
-from matplotlib import cm
+try:
+    from numcosmo_py.plotting.tools import set_rc_params_article, format_time
+except Exception as e:
+    import sys
+    import traceback
 
+    print("Matplotlib import failed!")
+    print("Python version:", sys.version)
+    print(
+        "Matplotlib version:",
+        matplotlib.__version__ if "matplotlib" in sys.modules else "Not installed",
+    )
+    print("Full traceback:")
+    traceback.print_exc()
 
 Ncm.cfg_init()
 
