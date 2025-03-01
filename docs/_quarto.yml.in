@@ -44,6 +44,10 @@ website:
       logo: images/numcosmo_logo.png
       collapse-level: 2
       contents:
+        - section: "Benchmarks"
+          contents:
+            - href: benchmarks/ccl_background.qmd
+              text: "CCL Background"
         - section: "Programming Tutorials"
           contents:
             - section: "C Tutorials"
@@ -78,10 +82,6 @@ website:
               contents:
               - href: examples/data_analysis/snia.qmd
                 text: "SN Ia Fitting"
-        - section: "Benchmarks"
-          contents:
-            - href: benchmarks/ccl_background.qmd
-              text: "CCL Background"
 
 resources:
   - reference/**
