@@ -64,6 +64,7 @@ Scalar parameters are fixed across all models, while arrays define variations in
 First, we instantiate a CCL cosmology object using the predefined global parameters. 
 Next, using the `numcosmo_py` function `create_nc_obj`, we generate a NumCosmo cosmology object initialized with the same parameters as the CCL model. 
 Fixed scalars apply universally, while arrays ($\Omega_v$, $w_0$, $w_a$, $m_\nu$) represent different model configurations.
+Finally, in the `setup_models` function, one can enable high-precision computations in CCL, which increases accuracy at the cost of longer computation times. When this mode is activated, the overall agreement between CCL and NumCosmo improves significantly.
 
 ```{python}
 # | code-fold: true

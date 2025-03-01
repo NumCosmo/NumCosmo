@@ -45,15 +45,10 @@ pyccl.physical_constants.freeze()
 
 def _get_neutrino_masses(ccl_cosmo: pyccl.Cosmology) -> tuple[int, list[float]]:
     """Get neutrino masses from CCL cosmology."""
-    if isinstance(ccl_cosmo["m_nu"], (list, np.ndarray)):
-        massnu_length = len(ccl_cosmo["m_nu"])
-        m_nu = list(ccl_cosmo["m_nu"])
-    elif ccl_cosmo["m_nu"] > 0.0:
-        massnu_length = 1
-        m_nu = [ccl_cosmo["m_nu"]]
-    else:
-        massnu_length = 0
-        m_nu = []
+    assert isinstance(ccl_cosmo["m_nu"], (list, np.ndarray))
+    massnu_length = len(ccl_cosmo["m_nu"])
+    m_nu = list(ccl_cosmo["m_nu"])
+
     return massnu_length, m_nu
 
 
