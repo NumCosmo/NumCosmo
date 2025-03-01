@@ -47,7 +47,7 @@ from numcosmo_py.sky_match import (
     SkyMatchResult,
 )
 
-import numcosmo_py.plotting.tools
+import numcosmo_py.plotting
 
 Ncm.cfg_init()
 
