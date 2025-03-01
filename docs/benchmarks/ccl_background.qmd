@@ -9,6 +9,11 @@ format:
   html:
     tbl-cap-location: margin
     fig-cap-location: margin
+
+execute:
+  warning: true
+  error: true
+
 ---
 
 {{< include /_definitions.qmd >}}
