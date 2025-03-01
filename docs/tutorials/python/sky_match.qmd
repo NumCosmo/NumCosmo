@@ -47,9 +47,6 @@ from numcosmo_py.sky_match import (
     SkyMatchResult,
 )
 
-import getdist
-import getdist.plots
-
 Ncm.cfg_init()
 
 Omega_b = 0.05
