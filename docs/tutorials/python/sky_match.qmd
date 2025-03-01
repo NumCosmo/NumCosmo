@@ -46,6 +46,9 @@ from numcosmo_py.sky_match import (
     SkyMatch,
     SkyMatchResult,
 )
+from numcosmo_py.plotting.tools import set_rc_params_article, format_time
+import numcosmo_py.cosmology as ncc
+import numcosmo_py.ccl.comparison as nc_cmp
 
 Ncm.cfg_init()
 

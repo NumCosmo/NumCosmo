@@ -36,27 +36,9 @@ import pandas as pd
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams, dsigmaM_dlnM
 
-# from numcosmo_py.plotting.tools import set_rc_params_article, format_time
+from numcosmo_py.plotting.tools import set_rc_params_article, format_time
 import numcosmo_py.cosmology as ncc
 import numcosmo_py.ccl.comparison as nc_cmp
-
-
-def format_time(value: float) -> str:
-    """Format a time value in seconds with appropriate units."""
-    units = [
-        (1.0e-9, r"$\mu$s"),  # Microseconds
-        (1.0e-6, "ms"),  # Milliseconds
-        (1.0e-3, "s"),  # Seconds
-        (1.0, "s"),  # Keep in seconds for larger values
-    ]
-
-    # Choose the most appropriate unit
-    for factor, unit in units:
-        if value < factor * 1000:  # Keep within 3 significant digits
-            return f"{value / factor:.2f} {unit}"
-
-    return f"{value:.2f} s"  # Fallback (large values)
-
 
 ```
 
@@ -67,7 +49,7 @@ To begin, we configure NumCosmo and redirect its output to this notebook using t
 ```{python}
 Ncm.cfg_init()
 Ncm.cfg_set_log_handler(lambda msg: sys.stdout.write(msg) and sys.stdout.flush())
-# set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
+set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
 ```
 
 ### Initial Parameter Definitions
