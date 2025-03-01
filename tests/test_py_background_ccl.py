@@ -33,6 +33,7 @@ import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm
 from numcosmo_py.ccl.comparison import (
     compare_Hubble,
+    compare_Omega_m,
     compare_Omega_g,
     compare_Omega_k,
     compare_Omega_nu,
@@ -45,6 +46,10 @@ from numcosmo_py.ccl.comparison import (
     compare_distance_lookback_time,
     compare_distance_modulus,
     compare_distance_comoving_volume,
+    compare_scale_factor,
+    compare_growth_factor,
+    compare_growth_rate,
+    compare_Sigma_crit,
 )
 from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_k_a,
@@ -95,6 +100,9 @@ def test_background_functions(
         mnu_rtol = 1.0e-6
 
     z_test = np.linspace(0.0, 5.0, 2000)[1:]
+
+    cmp = compare_Omega_m(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
 
     cmp = compare_Omega_g(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
     assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
@@ -182,13 +190,14 @@ def test_background_scale_factor_of_chi(
 
     c_max = dist.comoving(cosmo, 15.0)
     comoving = np.geomspace(1.0e-4, c_max, 4000)[1:]
-    z_array = [dist.inv_comoving(cosmo, c) for c in comoving]
+    z_array = np.array([dist.inv_comoving(cosmo, c) for c in comoving])
+    a_array = 1.0 / (1.0 + z_array)
 
-    assert_allclose(
-        1.0 / (1.0 + np.array(z_array)),
-        ccl_cosmo_eh_linear.scale_factor_of_chi(comoving * RH_Mpc),
-        rtol=rtol,
+    cmp = compare_scale_factor(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, comoving * RH_Mpc
     )
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
+    assert_allclose(a_array, cmp.y1, rtol=rtol)
 
 
 def test_background_growth_lowz(
@@ -208,41 +217,38 @@ def test_background_growth_lowz(
     z_test = np.linspace(0.0, 5.0, 2000)[1:]
     a_test = 1.0 / (1.0 + z_test)
 
-    gf = ps_ml.peek_gf()
-    nc_D_a = np.array([gf.eval(cosmo, z) for z in z_test])
     nc_D2_a = np.array(
         [
             ps_ml.eval(cosmo, z, k_pivot) / ps_ml.eval(cosmo, 0.0, k_pivot)
             for z in z_test
         ]
     )
-    nc_dD_a = np.array([gf.eval_deriv(cosmo, z) for z in z_test])
     nc_dD2_a = np.array(
         [
             ps_ml.deriv_z(cosmo, z, k_pivot) / ps_ml.eval(cosmo, 0.0, k_pivot)
             for z in z_test
         ]
     )
-    nc_f_a = -(1.0 + z_test) * nc_dD_a / nc_D_a
 
-    assert_allclose(nc_D_a**2, nc_D2_a, rtol=1.0e-15, atol=0.0)
-    assert_allclose(nc_dD2_a / (2.0 * nc_D_a), nc_dD_a, rtol=1.0e-15, atol=0.0)
+    cmp_D = compare_growth_factor(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
+    cmp_f = compare_growth_rate(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
 
+    assert_allclose(cmp_D.y2**2, nc_D2_a, rtol=1.0e-15, atol=0.0)
     assert_allclose(
-        nc_D_a, ccl_cosmo_eh_linear.growth_factor(a_test), rtol=reltol_growth, atol=0.0
+        nc_dD2_a / (2.0 * cmp_D.y2),
+        -cmp_D.y2 * cmp_f.y2 * a_test,
+        rtol=1.0e-15,
+        atol=0.0,
     )
 
-    assert_allclose(
-        nc_f_a, ccl_cosmo_eh_linear.growth_rate(a_test), rtol=reltol_rate, atol=0.0
-    )
+    assert_allclose(cmp_D.y1, cmp_D.y2, rtol=reltol_growth, atol=0.0)
+    assert_allclose(cmp_f.y1, cmp_f.y2, rtol=reltol_rate, atol=0.0)
 
 
 def test_background_growth_highz(
     ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
 ) -> None:
     """Compare NumCosmo and CCL growth factor."""
-    cosmo = nc_cosmo_eh_linear.cosmo
-    ps_ml = nc_cosmo_eh_linear.ps_ml
     if ccl_cosmo_eh_linear.high_precision:
         reltol_growth = 1.0e-1
         reltol_rate = 1.0e-1
@@ -251,17 +257,25 @@ def test_background_growth_highz(
         reltol_rate = 1.0e-1
 
     z_test = np.geomspace(0.001, 1100.0, 4000)[1:]
-    a_test = 1.0 / (1.0 + z_test)
 
-    gf = ps_ml.peek_gf()
-    nc_D_a = np.array([gf.eval(cosmo, z) for z in z_test])
-    nc_f_a = (
-        -(1.0 + z_test) * np.array([gf.eval_deriv(cosmo, z) for z in z_test]) / nc_D_a
-    )
-    assert_allclose(
-        nc_D_a, ccl_cosmo_eh_linear.growth_factor(a_test), rtol=reltol_growth, atol=0.0
-    )
+    cmp = compare_growth_factor(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
+    assert_allclose(cmp.y1, cmp.y2, rtol=reltol_growth, atol=0.0)
 
-    assert_allclose(
-        nc_f_a, ccl_cosmo_eh_linear.growth_rate(a_test), rtol=reltol_rate, atol=0.0
-    )
+    cmp = compare_growth_rate(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test)
+    assert_allclose(cmp.y1, cmp.y2, rtol=reltol_rate, atol=0.0)
+
+
+def test_background_Sigma_crit(
+    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
+) -> None:
+    """Compare NumCosmo and CCL critical density."""
+    if ccl_cosmo_eh_linear.high_precision:
+        rtol = 1.0e-10
+    else:
+        rtol = 1.0e-7
+
+    z_test = np.linspace(1.0, 5.0, 2000)[1:]
+    z_l = 0.5
+
+    cmp = compare_Sigma_crit(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, z_test, zl=z_l)
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
