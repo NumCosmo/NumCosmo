@@ -246,6 +246,36 @@ def test_ccl_to_nc_no_neutrino() -> None:
     assert cosmology.cosmo.vparam_len(Nc.HICosmoDEVParams.MU) == 0
 
 
+def test_ccl_to_nc_A_s() -> None:
+    """Test CCL to NumCosmo conversion without neutrinos."""
+    ccl_cosmo = pyccl.Cosmology(
+        Omega_c=0.25,
+        Omega_b=0.05,
+        Neff=3.046,
+        h=0.7,
+        A_s=2.1e-9,
+        n_s=0.96,
+        Omega_k=0.0,
+        w0=-1.0,
+        wa=0.0,
+        m_nu=0.0,
+        transfer_function="eisenstein_hu",
+        matter_power_spectrum="linear",
+    )
+    cosmology = create_nc_obj(ccl_cosmo)
+    hiprim = cosmology.cosmo.peek_prim()
+
+    assert cosmology.cosmo.Omega_b0() == ccl_cosmo["Omega_b"]
+    assert cosmology.cosmo.Omega_c0() == ccl_cosmo["Omega_c"]
+    assert cosmology.cosmo.Omega_k0() == ccl_cosmo["Omega_k"]
+    assert cosmology.cosmo.Omega_mnu0() == 0.0
+    assert cosmology.cosmo.vparam_len(Nc.HICosmoDEVParams.MU) == 0
+
+    assert_allclose(
+        hiprim["ln10e10ASA"], np.log(1.0e10 * ccl_cosmo["A_s"]), atol=0.0, rtol=1.0e-13
+    )
+
+
 def test_ccl_to_nc_one_neutrino_scalar() -> None:
     """Test CCL to NumCosmo conversion without neutrinos."""
     ccl_cosmo = pyccl.Cosmology(
