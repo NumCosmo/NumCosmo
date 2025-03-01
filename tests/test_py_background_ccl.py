@@ -77,6 +77,8 @@ def test_format_float() -> None:
     assert latex_float(123.4) == "1.2 \\times 10^{2}"
     assert latex_float(1234.0) == "1.2 \\times 10^{3}"
     assert latex_float(1.0e5) == "10^{5}"
+    assert latex_float(1.0) == "1"
+    assert latex_float(2.0) == "2"
 
 
 def test_format_time() -> None:
