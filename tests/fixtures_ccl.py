@@ -62,12 +62,14 @@ def fixture_z_high_a():
 def fixture_ccl_cosmo_eh_linear(request) -> pyccl.Cosmology:
     """Fixture for CCL Cosmology."""
     h, Omega_c, Omega_b, Omega_k, Neff = 0.7, 0.25, 0.05, 0.0, 3.046
-    sigma8, n_s = 0.9, 0.96
+    n_s = 0.96
+    sigma8 = [0.9, 0.9, None]
+    As = [None, None, 2.1e-9]
 
     Omega_v_vals = np.array([0.7, 0.65, 0.75])
     w0_vals = np.array([-1.0, -0.9, -1.1])
     wa_vals = np.array([0.0, 0.1, -0.1])
-    m_nu = [[0.0, 0.0, 0.0], [0.04, 0.0, 0.0], [0.02, 0.02, 0.0]]
+    m_nu = [0.0, [0.04, 0.0, 0.0], [0.02, 0.02, 0.0]]
 
     high_prec, index = request.param
 
@@ -83,7 +85,8 @@ def fixture_ccl_cosmo_eh_linear(request) -> pyccl.Cosmology:
         Omega_b=Omega_b,
         Neff=Neff,
         h=h,
-        sigma8=sigma8,
+        sigma8=sigma8[index],
+        A_s=As[index],
         n_s=n_s,
         Omega_k=Omega_k,
         w0=w0_vals[index],
