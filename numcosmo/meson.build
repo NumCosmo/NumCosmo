@@ -19,7 +19,6 @@ subdir('class')
 subdir('plc')
 
 ncm_sources = files(
-    'math/ncm_abc.c',
     'math/ncm_binsplit.c',
     'math/ncm_bootstrap.c',
     'math/ncm_c.c',
@@ -60,7 +59,6 @@ ncm_sources = files(
     'math/ncm_fit_state.c',
     'math/ncm_func_eval.c',
     'math/ncm_function_cache.c',
-    'math/ncm_hoaa.c',
     'math/ncm_integral1d.c',
     'math/ncm_integral1d_ptr.c',
     'math/ncm_integral_nd.c',
@@ -154,7 +152,6 @@ ncm_sources = files(
 ncm_sources_nogi = files()
 
 ncm_headers = files(
-    'math/ncm_abc.h',
     'math/ncm_binsplit.h',
     'math/ncm_bootstrap.h',
     'math/ncm_c.h',
@@ -195,7 +192,6 @@ ncm_headers = files(
     'math/ncm_fit_state.h',
     'math/ncm_func_eval.h',
     'math/ncm_function_cache.h',
-    'math/ncm_hoaa.h',
     'math/ncm_integral1d.h',
     'math/ncm_integral1d_ptr.h',
     'math/ncm_integral_nd.h',
@@ -299,7 +295,6 @@ ncm_headers_internal = files(
 )
 
 nc_headers = files(
-    'abc/nc_abc_cluster_ncount.h',
     'data/nc_data_bao.h',
     'data/nc_data_bao_a.h',
     'data/nc_data_bao_dhr_dar.h',
@@ -465,7 +460,6 @@ nc_headers = files(
 )
 
 nc_sources = files(
-    'abc/nc_abc_cluster_ncount.c',
     'data/nc_data_bao.c',
     'data/nc_data_bao_a.c',
     'data/nc_data_bao_dhr_dar.c',

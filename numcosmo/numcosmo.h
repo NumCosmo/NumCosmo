@@ -196,9 +196,6 @@
 #include <numcosmo/data/nc_data_planck_lkl.h>
 #include <numcosmo/data/nc_data_xcor.h>
 
-/* ABC */
-#include <numcosmo/abc/nc_abc_cluster_ncount.h>
-
 /* Cross-correlations */
 #include <numcosmo/xcor/nc_xcor.h>
 #include <numcosmo/xcor/nc_xcor_AB.h>
