@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 import pyccl
 
 import numcosmo_py.cosmology as ncpy
-from numcosmo_py import Ncm
+from numcosmo_py import Ncm, Nc
 from numcosmo_py.ccl.comparison import (
     compare_Hubble,
     compare_Omega_m,
@@ -54,6 +54,7 @@ from numcosmo_py.ccl.comparison import (
     compute_times,
     CompareFunc1d,
 )
+from numcosmo_py.ccl.nc_ccl import create_nc_obj
 from numcosmo_py.plotting.tools import latex_float, format_time
 from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_k_a,
@@ -218,6 +219,92 @@ def test_compare_1d_plot() -> None:
         line = lines[0]
         assert line.get_color() == color
         assert line.get_linewidth() == lw
+
+
+def test_ccl_to_nc_no_neutrino() -> None:
+    """Test CCL to NumCosmo conversion without neutrinos."""
+    ccl_cosmo = pyccl.Cosmology(
+        Omega_c=0.25,
+        Omega_b=0.05,
+        Neff=3.046,
+        h=0.7,
+        sigma8=0.9,
+        n_s=0.96,
+        Omega_k=0.0,
+        w0=-1.0,
+        wa=0.0,
+        m_nu=0.0,
+        transfer_function="eisenstein_hu",
+        matter_power_spectrum="linear",
+    )
+    cosmology = create_nc_obj(ccl_cosmo)
+
+    assert cosmology.cosmo.Omega_b0() == ccl_cosmo["Omega_b"]
+    assert cosmology.cosmo.Omega_c0() == ccl_cosmo["Omega_c"]
+    assert cosmology.cosmo.Omega_k0() == ccl_cosmo["Omega_k"]
+    assert cosmology.cosmo.Omega_mnu0() == 0.0
+    assert cosmology.cosmo.vparam_len(Nc.HICosmoDEVParams.MU) == 0
+
+
+def test_ccl_to_nc_one_neutrino_scalar() -> None:
+    """Test CCL to NumCosmo conversion without neutrinos."""
+    ccl_cosmo = pyccl.Cosmology(
+        Omega_c=0.25,
+        Omega_b=0.05,
+        Neff=3.046,
+        h=0.7,
+        sigma8=0.9,
+        n_s=0.96,
+        Omega_k=0.0,
+        w0=-1.0,
+        wa=0.0,
+        m_nu=0.06,
+        transfer_function="eisenstein_hu",
+        matter_power_spectrum="linear",
+    )
+    cosmology = create_nc_obj(ccl_cosmo)
+
+    assert cosmology.cosmo.Omega_b0() == ccl_cosmo["Omega_b"]
+    assert cosmology.cosmo.Omega_c0() == ccl_cosmo["Omega_c"]
+    assert cosmology.cosmo.Omega_k0() == ccl_cosmo["Omega_k"]
+    assert_allclose(
+        cosmology.cosmo.Omega_mnu0(),
+        pyccl.omega_x(ccl_cosmo, 1.0, "neutrinos_massive"),
+        atol=0.0,
+        rtol=1.0e-7,
+    )
+    # The normal hierarchy has 3 neutrino masses
+    assert cosmology.cosmo.vparam_len(Nc.HICosmoDEVParams.MU) == 3
+
+
+def test_ccl_to_nc_two_neutrinos() -> None:
+    """Test CCL to NumCosmo conversion without neutrinos."""
+    ccl_cosmo = pyccl.Cosmology(
+        Omega_c=0.25,
+        Omega_b=0.05,
+        Neff=3.046,
+        h=0.7,
+        sigma8=0.9,
+        n_s=0.96,
+        Omega_k=0.0,
+        w0=-1.0,
+        wa=0.0,
+        m_nu=[0.02, 0.02],
+        transfer_function="eisenstein_hu",
+        matter_power_spectrum="linear",
+    )
+    cosmology = create_nc_obj(ccl_cosmo)
+
+    assert cosmology.cosmo.Omega_b0() == ccl_cosmo["Omega_b"]
+    assert cosmology.cosmo.Omega_c0() == ccl_cosmo["Omega_c"]
+    assert cosmology.cosmo.Omega_k0() == ccl_cosmo["Omega_k"]
+    assert_allclose(
+        cosmology.cosmo.Omega_mnu0(),
+        pyccl.omega_x(ccl_cosmo, 1.0, "neutrinos_massive"),
+        atol=0.0,
+        rtol=1.0e-7,
+    )
+    assert cosmology.cosmo.vparam_len(Nc.HICosmoDEVParams.MU) == 2
 
 
 def test_background_params(
