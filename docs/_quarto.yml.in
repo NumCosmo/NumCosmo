@@ -18,6 +18,7 @@ project:
     - examples/intro/power_spectrum.qmd
     - examples/intro/recombination.qmd
     - examples/intro/simple.qmd
+    - benchmarks/ccl_background.qmd
 
 website:
   title: "The Numerical Cosmology Library"
@@ -43,6 +44,10 @@ website:
       logo: images/numcosmo_logo.png
       collapse-level: 2
       contents:
+        - section: "Benchmarks"
+          contents:
+            - href: benchmarks/ccl_background.qmd
+              text: "CCL Background"
         - section: "Programming Tutorials"
           contents:
             - section: "C Tutorials"

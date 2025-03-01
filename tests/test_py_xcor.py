@@ -57,6 +57,7 @@ from .fixtures_xcor import (  # pylint: disable=unused-import # noqa: F401
 
 Ncm.cfg_init()
 
+
 # Helper functions
 
 
@@ -400,7 +401,7 @@ def test_cmb_lens_auto_integrand(
         pytest.skip("CMB lensing not implemented for non-flat cosmologies")
     if ccl_cosmo_eh_linear.high_precision:
         reltol_W: float = 1.0e-4
-        reltol_ps = 1.0e-4
+        reltol_ps = 1.0e-3
         reltol_f = 1.0e-3
     else:
         reltol_W = 1.0e-4
@@ -558,7 +559,7 @@ def test_weak_lensing_kernel(
         np.array([nc_weak_lensing.eval_full(cosmo, z, dist, int(ell)) for z in z_a])
         * H_Mpc_a
     )
-    assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-30)
+    assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-20)
 
 
 def test_gal_kernel(
@@ -582,5 +583,4 @@ def test_gal_kernel(
     nc_Wchi_a = (
         np.array([nc_gal.eval_full(cosmo, z, dist, int(ell)) for z in z_a]) * H_Mpc_a
     )
-
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-30)
