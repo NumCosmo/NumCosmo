@@ -81,7 +81,6 @@
 #include <numcosmo/math/ncm_powspec_sphere_proj.h>
 #include <numcosmo/math/ncm_powspec_spline2d.h>
 #include <numcosmo/math/ncm_powspec.h>
-#include <numcosmo/math/ncm_hoaa.h>
 #include <numcosmo/math/ncm_csq1d.h>
 #include <numcosmo/math/ncm_func_eval.h>
 #include <numcosmo/math/ncm_mpsf_trig_int.h>
@@ -160,7 +159,6 @@
 #include <numcosmo/math/ncm_fit_esmcmc_walker_apes.h>
 #include <numcosmo/math/ncm_lh_ratio1d.h>
 #include <numcosmo/math/ncm_lh_ratio2d.h>
-#include <numcosmo/math/ncm_abc.h>
 #include <numcosmo/math/ncm_quaternion.h>
 
 /* Utilities */
