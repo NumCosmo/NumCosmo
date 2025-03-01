@@ -23,19 +23,32 @@
 
 """NumCosmoPy plotting utilities."""
 
+import os
 import warnings
 import dataclasses
 
 import numpy as np
 import numpy.typing as npt
-import getdist
-import getdist.plots
 import matplotlib.figure
 import matplotlib.artist
 import matplotlib.pyplot as plt
 
 from numcosmo_py import Ncm
 from .tools import set_rc_params_article
+
+original_display = os.environ.get("DISPLAY", "")
+if original_display is not None:
+    os.environ["DISPLAY"] = ":0"
+# pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-order
+import getdist  # noqa: E402
+import getdist.plots  # noqa: E402
+
+# pylint: enable=wrong-import-order
+# pylint: enable=wrong-import-position
+
+if original_display is not None:
+    os.environ["DISPLAY"] = original_display
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
