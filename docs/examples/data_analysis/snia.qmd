@@ -23,6 +23,9 @@ $\Omega_{b0} = 0.05$, and $w$ varying from $-1.5$ to $-0.5$.
 import numpy as np
 import pandas as pd
 from plotnine import *
+
+# This modules must be loaded before getdist to avoid getdist's secondary effects
+import numcosmo_py.plotting
 import getdist
 from getdist import plots
 
