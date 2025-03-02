@@ -1,0 +1,60 @@
+---
+title: "Benchmarking NumCosmo vs. CCL"
+author: "Sandro Dias Pinto Vitenti"
+date: "2025-03-02"
+abstract: |
+    This document compares the power spectrum implemented in NumCosmo and CCL.
+
+format:
+  html:
+    tbl-cap-location: margin
+    fig-cap-location: margin
+
+execute:
+  warning: true
+  error: true
+
+---
+
+{{< include /_definitions.qmd >}}
+
+## Introduction
+
+This notebook explores the power spectra and their derived quantities implemented in the Core Cosmology Library (CCL) and NumCosmo, two frameworks for computing cosmological observables.
+We aim to assess the consistency and accuracy of the matter power spectrum and related quantities, such as the linear growth factor and `sigma_8`, across these frameworks by comparing their outputs under identical physical parameters.
+To facilitate this analysis, we first establish a set of cosmological models with fixed and variable parameters, then define functions to compute and visualize the power spectra alongside their relative differences.
+The results are summarized in tables and plots below.
+
+```{python}
+import sys
+import numpy as np
+import math
+import matplotlib.pyplot as plt
+from IPython.display import HTML, Markdown, display
+
+# CCL
+import pyccl
+import pandas as pd
+
+# NumCosmo
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams, dsigmaM_dlnM
+
+from numcosmo_py.plotting.tools import set_rc_params_article, format_time
+import numcosmo_py.cosmology as ncc
+import numcosmo_py.ccl.comparison as nc_cmp
+
+```
+
+### Initializing NumCosmo
+
+To begin, we configure NumCosmo and redirect its output to this notebook using the following code:
+
+```{python}
+Ncm.cfg_init()
+Ncm.cfg_set_log_handler(lambda msg: sys.stdout.write(msg) and sys.stdout.flush())
+set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
+```
+{{< include _setup_models.qmd >}}
+
+## Power Spectrum Comparison
