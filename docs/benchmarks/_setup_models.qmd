@@ -15,9 +15,9 @@ from numcosmo_py.ccl.nc_ccl import create_nc_obj
 PARAMETERS_SET = [
     r"$\Lambda$CDM, flat",
     r"$\Lambda$CDM, flat, $1\nu$",
-    r"XCDM, flat, $2\nu$",
+    r"XCDM, flat",
     r"XCDM, spherical, $2\nu$",
-    r"XCDM, hyperbolic, $2\nu$",
+    r"XCDM, hyperbolic",
 ]
 COLORS = plt.rcParams["axes.prop_cycle"].by_key()["color"][:5]
 
@@ -41,9 +41,9 @@ def setup_models(
         [
             [0.0, 0.0, 0.0],
             [0.04, 0.0, 0.0],
-            [0.05, 0.01, 0.0],
+            [0.0, 0.0, 0.0],
             [0.03, 0.02, 0.0],
-            [0.03, 0.02, 0.0],
+            [0.0, 0.0, 0.0],
         ]
     )
     Omega_k_vals = [
@@ -87,24 +87,4 @@ def setup_models(
         models.append({"CCL": ccl_cosmo, "NC": cosmology})
 
     return parameters, models
-
-
-parameters, models = setup_models(high_precision=False)
-z = np.linspace(0.01, 15.0, 10000)
-
-```
-
-### Parameter Overview
-
-The table below summarizes the parameters. There are five parameters sets.
-
-```{python}
-# | label: tbl-ccl-vs-nc-params
-# | tbl-cap: Used cosmological parameters in CCL and NumCosmo
-# | tbl-colwidths: [10, 30, 60]
-# | code-fold: true
-
-# Create DataFrame
-df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
-display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
 ```

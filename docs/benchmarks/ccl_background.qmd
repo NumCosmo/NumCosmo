@@ -58,6 +58,27 @@ set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
 
 {{< include _setup_models.qmd >}}
 
+```{python}
+# Preparing the models
+parameters, models = setup_models(high_precision=False)
+z = np.linspace(0.01, 15.0, 10000)
+```
+
+### Parameter Overview
+
+The table below summarizes the parameters. There are five parameters sets.
+
+```{python}
+# | label: tbl-ccl-vs-nc-params
+# | tbl-cap: Used cosmological parameters in CCL and NumCosmo
+# | tbl-colwidths: [10, 30, 60]
+# | code-fold: true
+
+# Create DataFrame
+df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
 ## Cosmology Parameters  
 
 The following function compares the total mass density (baryonic + cold dark matter + massive neutrinos), the total mass density parameter, and the normalized Hubble function. 
@@ -65,7 +86,7 @@ Below, we present the results for all sets of parameters.
 
 Note that in CCL, the total matter density parameter is defined as the sum of the matter density parameter and the massive neutrino density parameter. 
 In contrast, NumCosmo defines it as the sum of the matter density parameter and the fraction of the massive neutrino density parameter that is non-relativistic at a given redshift. 
-For consistency, we compute $\Omega_m$ using the CCL prescription.
+For consistency, we compute $\Omega_m$ using the CCL prescription, this is done turning the `CCL_comp` parameter to `True` in the NumCosmo cosmology object.
 
 ```{python}
 
@@ -80,11 +101,10 @@ parameter_comparisons: list[list[nc_cmp.CompareFunc1d]] = [
     [func(m["CCL"], m["NC"], z, model=name) for m, name in zip(models, PARAMETERS_SET)]
     for func in parameter_funcs
 ]
-
 ```
 
 ```{python}
-# | label: fig-ccl-vs-nc-params-set0
+# | label: fig-ccl-vs-nc-params-sets
 # | fig-cap:
 # |   - "Total matter density parameter"
 # |   - "Radiation density parameter"
@@ -260,7 +280,8 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 
 The following function compares the growth factor and growth rate between the CCL and NumCosmo cosmologies.  
 
-Since CCL defines \(\Omega_m\) differently from NumCosmo, the resulting growth factor and growth rate will also differ. In practice, CCL includes ultra-relativistic neutrinos in the matter density, leading to increasing deviations at higher redshifts when compared to NumCosmo. This effect can be observed by inspecting the first model, which does not include massive neutrinos and shows the best agreement between the two approaches.
+Since CCL defines $\Omega_m$ differently from NumCosmo, the resulting growth factor and growth rate will also differ. In practice, CCL includes ultra-relativistic neutrinos in the matter density, leading to increasing deviations at higher redshifts when compared to NumCosmo. 
+However, since we are using the `CCL_comp` mode of NumCosmo, we compute $\Omega_m$ using the CCL prescription.
 
 ```{python}
 
