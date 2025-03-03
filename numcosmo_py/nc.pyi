@@ -7249,6 +7249,8 @@ class HICosmoDE(HICosmo):
     Object NcHICosmoDE
 
     Properties from NcHICosmoDE:
+      CCL-comp -> gboolean: CCL-comp
+        Whether to use CCL compatible mode
       H0 -> gdouble: H0
         H_0
       Omegac -> gdouble: Omegac
@@ -7327,6 +7329,7 @@ class HICosmoDE(HICosmo):
     """
 
     class Props:
+        CCL_comp: bool
         ENnu: float
         ENnu_fit: bool
         H0: float
@@ -7368,6 +7371,7 @@ class HICosmoDE(HICosmo):
     priv: HICosmoDEPrivate = ...
     def __init__(
         self,
+        CCL_comp: bool = ...,
         ENnu: float = ...,
         ENnu_fit: bool = ...,
         H0: float = ...,
@@ -7450,6 +7454,8 @@ class HICosmoDECpl(HICosmoDE):
         w_1:fit
 
     Properties from NcHICosmoDE:
+      CCL-comp -> gboolean: CCL-comp
+        Whether to use CCL compatible mode
       H0 -> gdouble: H0
         H_0
       Omegac -> gdouble: Omegac
@@ -7532,6 +7538,7 @@ class HICosmoDECpl(HICosmoDE):
         w0_fit: bool
         w1: float
         w1_fit: bool
+        CCL_comp: bool
         ENnu: float
         ENnu_fit: bool
         H0: float
@@ -7576,6 +7583,7 @@ class HICosmoDECpl(HICosmoDE):
         w0_fit: bool = ...,
         w1: float = ...,
         w1_fit: bool = ...,
+        CCL_comp: bool = ...,
         ENnu: float = ...,
         ENnu_fit: bool = ...,
         H0: float = ...,
@@ -7642,6 +7650,8 @@ class HICosmoDEJbp(HICosmoDE):
         w_1:fit
 
     Properties from NcHICosmoDE:
+      CCL-comp -> gboolean: CCL-comp
+        Whether to use CCL compatible mode
       H0 -> gdouble: H0
         H_0
       Omegac -> gdouble: Omegac
@@ -7724,6 +7734,7 @@ class HICosmoDEJbp(HICosmoDE):
         w0_fit: bool
         w1: float
         w1_fit: bool
+        CCL_comp: bool
         ENnu: float
         ENnu_fit: bool
         H0: float
@@ -7768,6 +7779,7 @@ class HICosmoDEJbp(HICosmoDE):
         w0_fit: bool = ...,
         w1: float = ...,
         w1_fit: bool = ...,
+        CCL_comp: bool = ...,
         ENnu: float = ...,
         ENnu_fit: bool = ...,
         H0: float = ...,
@@ -7938,6 +7950,8 @@ class HICosmoDEWSpline(HICosmoDE):
         w:fit
 
     Properties from NcHICosmoDE:
+      CCL-comp -> gboolean: CCL-comp
+        Whether to use CCL compatible mode
       H0 -> gdouble: H0
         H_0
       Omegac -> gdouble: Omegac
@@ -8021,6 +8035,7 @@ class HICosmoDEWSpline(HICosmoDE):
         w_length: int
         z1: float
         zf: float
+        CCL_comp: bool
         ENnu: float
         ENnu_fit: bool
         H0: float
@@ -8067,6 +8082,7 @@ class HICosmoDEWSpline(HICosmoDE):
         w_length: int = ...,
         z1: float = ...,
         zf: float = ...,
+        CCL_comp: bool = ...,
         ENnu: float = ...,
         ENnu_fit: bool = ...,
         H0: float = ...,
@@ -8132,6 +8148,8 @@ class HICosmoDEXcdm(HICosmoDE):
         w:fit
 
     Properties from NcHICosmoDE:
+      CCL-comp -> gboolean: CCL-comp
+        Whether to use CCL compatible mode
       H0 -> gdouble: H0
         H_0
       Omegac -> gdouble: Omegac
@@ -8212,6 +8230,7 @@ class HICosmoDEXcdm(HICosmoDE):
     class Props:
         w: float
         w_fit: bool
+        CCL_comp: bool
         ENnu: float
         ENnu_fit: bool
         H0: float
@@ -8254,6 +8273,7 @@ class HICosmoDEXcdm(HICosmoDE):
         self,
         w: float = ...,
         w_fit: bool = ...,
+        CCL_comp: bool = ...,
         ENnu: float = ...,
         ENnu_fit: bool = ...,
         H0: float = ...,
