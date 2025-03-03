@@ -227,7 +227,7 @@ def fixture_massfunc_ps(
     _, cosmo_nc = cosmologies
     ccl_hmf_PS = pyccl.halos.MassFuncPress74(mass_def=hmd_fof)
     hmf_PS = Nc.MultiplicityFuncPS.new()
-    mf_PS = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf, hmf_PS)
+    mf_PS = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_PS)
 
     return ccl_hmf_PS, mf_PS
 
@@ -240,7 +240,7 @@ def fixture_massfunc_st(
     _, cosmo_nc = cosmologies
     ccl_hmf_ST = pyccl.halos.MassFuncSheth99(mass_def=hmd_fof)
     hmf_ST = Nc.MultiplicityFuncST.new()
-    mf_ST = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf, hmf_ST)
+    mf_ST = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_ST)
 
     return ccl_hmf_ST, mf_ST
 
@@ -253,7 +253,9 @@ def fixture_massfunc_jenkins(
     _, cosmo_nc = cosmologies
     ccl_hmf_jenkins = pyccl.halos.MassFuncJenkins01()
     hmf_jenkins = Nc.MultiplicityFuncJenkins.new()
-    mf_Jenkins = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf, hmf_jenkins)
+    mf_Jenkins = Nc.HaloMassFunction.new(
+        cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_jenkins
+    )
     return ccl_hmf_jenkins, mf_Jenkins
 
 
@@ -271,7 +273,7 @@ def fixture_massfunc_tinker08(
     hmf_tinker.set_mdef(nc_rho_type)
     hmf_tinker.set_Delta(Delta)
     hmf_tinker.set_linear_interp(True)
-    mf_tinker = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf, hmf_tinker)
+    mf_tinker = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_tinker)
 
     return ccl_hmf_tinker, mf_tinker
 
@@ -289,7 +291,7 @@ def fixture_massfunc_tinker10(
     hmf_tinker = Nc.MultiplicityFuncTinkerMeanNormalized.new()
     hmf_tinker.set_mdef(nc_rho_type)
     hmf_tinker.set_Delta(Delta)
-    mf_tinker = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf, hmf_tinker)
+    mf_tinker = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_tinker)
 
     return ccl_hmf_tinker, mf_tinker
 
@@ -307,7 +309,9 @@ def fixture_massfunc_bocquet(
     hmd = pyccl.halos.MassDef(Delta, rho_type)
     ccl_hmf_bocquet = pyccl.halos.MassFuncBocquet16(hydro=ccl_hydro, mass_def=hmd)
     hmf_bocquet = Nc.MultiplicityFuncBocquet.new_full(nc_rho_type, nc_hydro, Delta)
-    mf_bocquet = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf, hmf_bocquet)
+    mf_bocquet = Nc.HaloMassFunction.new(
+        cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_bocquet
+    )
 
     return ccl_hmf_bocquet, mf_bocquet
 
@@ -327,7 +331,7 @@ def fixture_massfunc_watson(
     if nc_rho_type != Nc.MultiplicityFuncMassDef.FOF:
         assert isinstance(Delta, int)
         hmf_watson.set_Delta(Delta)
-    mf_watson = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf, hmf_watson)
+    mf_watson = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_watson)
 
     return ccl_hmf_watson, mf_watson
 
@@ -348,7 +352,9 @@ def fixture_massfunc_despali(
     if nc_rho_type != Nc.MultiplicityFuncMassDef.VIRIAL:
         assert isinstance(Delta, int)
         hmf_despali.set_Delta(Delta)
-    mf_despali = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf, hmf_despali)
+    mf_despali = Nc.HaloMassFunction.new(
+        cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_despali
+    )
 
     return ccl_hmf_despali, mf_despali
 
