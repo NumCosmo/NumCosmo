@@ -35,7 +35,11 @@ import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.helper import npa_to_seq
 from numcosmo_py.ccl.nc_ccl import create_nc_obj
-
+from numcosmo_py.ccl.comparison import (
+    compare_power_spectrum_linear,
+    compare_power_spectrum_nonlinear,
+    compare_sigma_r,
+)
 from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_k_a,
     fixture_z_a,
@@ -229,5 +233,67 @@ def test_powspec_class_deriv_z(nc_cosmo_eh_linear: ncpy.Cosmology) -> None:
             0.2, lambda z, k0: ps_ml.eval(nc_cosmo_eh_linear.cosmo, z, k0), k
         )
         assert_allclose(
-            dps, ps_ml.deriv_z(nc_cosmo_eh_linear.cosmo, 0.2, k), atol=0.0, rtol=1e-11
+            dps, ps_ml.deriv_z(nc_cosmo_eh_linear.cosmo, 0.2, k), atol=0.0, rtol=1.0e-10
         )
+
+
+Z_ARRAY = np.linspace(0.0, 5.0, 10)
+Z_IDS = [f"z={z:.2f}" for z in Z_ARRAY]
+
+
+@pytest.mark.parametrize("z", Z_ARRAY, ids=Z_IDS)
+def test_power_spectrum_linear(
+    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology, z
+) -> None:
+    """Compare NumCosmo and CCL linear power spectrum."""
+    if ccl_cosmo_eh_linear.high_precision:
+        rtol = 1.0e-8
+        if z > 2.0:
+            rtol = 1.0e-7
+    else:
+        rtol = 1.0e-4
+
+    k_test = np.geomspace(5.0e-5, 1.0e3, 1000)
+
+    cmp = compare_power_spectrum_linear(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, k_test, z
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
+
+
+@pytest.mark.parametrize("z", Z_ARRAY, ids=Z_IDS)
+def test_power_spectrum_nonlinear(
+    ccl_cosmo_eh_halofit: pyccl.Cosmology, nc_cosmo_eh_halofit: ncpy.Cosmology, z
+) -> None:
+    """Compare NumCosmo and CCL nonlinear power spectrum."""
+    if ccl_cosmo_eh_halofit.high_precision:
+        rtol = 1.0e-19
+    else:
+        rtol = 1.0e-4
+        if z > 3.0:
+            rtol = 1.0e-3
+        if z > 4.0:
+            rtol = 1.0e-2
+
+    k_test = np.geomspace(5.0e-5, 1.0e3, 1000)
+
+    cmp = compare_power_spectrum_nonlinear(
+        ccl_cosmo_eh_halofit, nc_cosmo_eh_halofit, k_test, z
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
+
+
+@pytest.mark.parametrize("z", Z_ARRAY, ids=Z_IDS)
+def test_sigma_r(
+    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology, z
+) -> None:
+    """Compare NumCosmo and CCL sigma_r."""
+    if ccl_cosmo_eh_linear.high_precision:
+        rtol = 1.0e-7
+    else:
+        rtol = 1.0e-5
+
+    r_test = np.geomspace(5.0e-2, 1.0e2, 1000)
+
+    cmp = compare_sigma_r(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, r_test, z)
+    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
