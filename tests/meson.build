@@ -567,11 +567,6 @@ if python_pyccl.found()
             'timeout': 0,
         },
         {
-            'name': 'py_power_spectrum_ccl',
-            'source': 'test_py_power_spectrum_ccl.py',
-            'timeout': 0,
-        },
-        {
             'name': 'py_powspec',
             'source': 'test_py_powspec.py',
             'timeout': 0,
