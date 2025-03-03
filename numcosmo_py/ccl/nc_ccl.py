@@ -65,6 +65,7 @@ def create_nc_obj(
     """Create a NumCosmo object from a CCL cosmology."""
     massnu_length, m_nu = _get_neutrino_masses(ccl_cosmo)
     cosmo = Nc.HICosmoDECpl(massnu_length=massnu_length)
+    cosmo.props.CCL_comp = True
     cosmo.omega_x2omega_k()
     cosmo["H0"] = ccl_cosmo["h"] * 100.0
     cosmo["Omegak"] = ccl_cosmo["Omega_k"]
