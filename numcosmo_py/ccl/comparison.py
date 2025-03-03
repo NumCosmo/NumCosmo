@@ -49,6 +49,8 @@ class CompareFunc1d:
         y_symbol: str = "y",
         x_unit: str | None = None,
         y_unit: str | None = None,
+        xscale: str = "linear",
+        yscale: str = "log",
     ) -> None:
         """Compare CCL and NumCosmo results for a function."""
         assert x.shape == y1.shape
@@ -63,6 +65,8 @@ class CompareFunc1d:
         self.y_symbol = y_symbol
         self.x_unit = x_unit
         self.y_unit = y_unit
+        self.xscale = xscale
+        self.yscale = yscale
         self.diff = np.zeros_like(y1)
 
         non_zero_indices = y1 != 0.0
@@ -116,8 +120,6 @@ class CompareFunc1d:
         self,
         axs: list[plt.Axes],
         *,
-        xscale: str = "linear",
-        yscale: str = "log",
         color: str = "black",
         lw: float = 0.8,
     ) -> None:
@@ -135,10 +137,10 @@ class CompareFunc1d:
         axs[0].plot(self.x, self.y2, lw=lw, color=color, linestyle="--")
         if np.sum(self.abs_diff) > 0.0:
             axs[1].plot(self.x, self.abs_diff, lw=lw, color=color)
-        axs[1].set_xscale(xscale)
+        axs[1].set_xscale(self.xscale)
         axs[1].set_yscale("log")
-        axs[0].set_xscale(xscale)
-        axs[0].set_yscale(yscale)
+        axs[0].set_xscale(self.xscale)
+        axs[0].set_yscale(self.yscale)
         axs[0].legend(loc="best")
         axs[0].set_ylabel(self.y_label)
         axs[1].set_xlabel(self.x_label)
@@ -199,14 +201,7 @@ def compare_Omega_m(
     a = 1.0 / (1.0 + z)
 
     ccl_Om = np.array(pyccl.omega_x(ccl_cosmo, a, "matter"))
-    # NumCosmo defines Omega_m including only non-radiation part of the neutrino density
-    # (rho_mnu - 3 p_mnu), as it is done in CLASS, however, CCL uses the full neutrino
-    # density. Thus, since CCL does not compute p_mnu, we recompute Omega_m from
-    # NumCosmo in the same way as CCL does.
-    nc_Oc = np.array([cosmo.E2Omega_c(z_i) / cosmo.E2(z_i) for z_i in z])
-    nc_Ob = np.array([cosmo.E2Omega_b(z_i) / cosmo.E2(z_i) for z_i in z])
-    nc_Omnu = np.array([cosmo.E2Omega_mnu(z_i) / cosmo.E2(z_i) for z_i in z])
-    nc_Om = nc_Oc + nc_Ob + nc_Omnu
+    nc_Om = np.array([cosmo.E2Omega_m(z_i) / cosmo.E2(z_i) for z_i in z])
 
     return CompareFunc1d(
         x=z, y1=ccl_Om, y2=nc_Om, model=model, x_symbol="z", y_symbol=r"\Omega_m"
@@ -625,4 +620,96 @@ def compare_Sigma_crit(
         model=model,
         x_symbol="z_s",
         y_symbol=r"\Sigma_\mathrm{crit}",
+    )
+
+
+# Comparing Power spectrum
+
+
+def compare_power_spectrum_linear(
+    ccl_cosmo: pyccl.Cosmology,
+    cosmology: ncc.Cosmology,
+    k: np.ndarray,
+    z: float,
+    *,
+    model: str = "unnamed",
+) -> CompareFunc1d:
+    """Compare power spectrum from CCL and NumCosmo."""
+    cosmo = cosmology.cosmo
+    ps_lin = cosmology.ps_ml
+
+    a = 1.0 / (1.0 + z)
+    ccl_pk = pyccl.linear_matter_power(ccl_cosmo, k, a)
+    nc_pk = np.array([ps_lin.eval(cosmo, z, k_i) for k_i in k])
+
+    return CompareFunc1d(
+        x=k,
+        y1=ccl_pk,
+        y2=nc_pk,
+        model=model,
+        x_symbol="k",
+        y_symbol=r"{P_{k,z={" + latex_float(z) + r"}}^\mathrm{lin}}",
+        x_unit="Mpc${}^{-1}$",
+        y_unit="Mpc${}^3$",
+        xscale="log",
+        yscale="log",
+    )
+
+
+def compare_power_spectrum_nonlinear(
+    ccl_cosmo: pyccl.Cosmology,
+    cosmology: ncc.Cosmology,
+    k: np.ndarray,
+    z: float,
+    *,
+    model: str = "unnamed",
+) -> CompareFunc1d:
+    """Compare power spectrum from CCL and NumCosmo."""
+    cosmo = cosmology.cosmo
+    ps_nln = cosmology.ps_mnl
+
+    a = 1.0 / (1.0 + z)
+    ccl_pk = pyccl.power.nonlin_matter_power(ccl_cosmo, k, a)
+    nc_pk = np.array([ps_nln.eval(cosmo, z, k_i) for k_i in k])
+
+    return CompareFunc1d(
+        x=k,
+        y1=ccl_pk,
+        y2=nc_pk,
+        model=model,
+        x_symbol="k",
+        y_symbol=r"{P_{k,z={" + latex_float(z) + r"}}^\mathrm{nln}}",
+        x_unit="Mpc${}^{-1}$",
+        y_unit="Mpc${}^3$",
+        xscale="log",
+        yscale="log",
+    )
+
+
+def compare_sigma_r(
+    ccl_cosmo: pyccl.Cosmology,
+    cosmology: ncc.Cosmology,
+    r: np.ndarray,
+    z: float,
+    *,
+    model: str = "unnamed",
+) -> CompareFunc1d:
+    """Compare sigma r from CCL and NumCosmo."""
+    psf = cosmology.psf
+
+    a = 1.0 / (1.0 + z)
+    ccl_sigma = pyccl.sigmaR(ccl_cosmo, r, a)
+    nc_sigma = np.array([psf.eval_sigma(z, r_i) for r_i in r])
+
+    return CompareFunc1d(
+        x=r,
+        y1=ccl_sigma,
+        y2=nc_sigma,
+        model=model,
+        x_symbol="r",
+        y_symbol=r"\sigma_R",
+        x_unit="Mpc",
+        y_unit="Mpc",
+        xscale="log",
+        yscale="log",
     )
