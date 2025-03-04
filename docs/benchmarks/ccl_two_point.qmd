@@ -1,0 +1,145 @@
+---
+title: "Benchmarking NumCosmo vs. CCL"
+author: "Sandro Dias Pinto Vitenti"
+date: "2025-03-02"
+abstract: |
+    This document compares the two-point correlation implemented in NumCosmo and CCL.
+
+format:
+  html:
+    tbl-cap-location: margin
+    fig-cap-location: margin
+
+execute:
+  warning: true
+  error: true
+
+---
+
+{{< include /_definitions.qmd >}}
+
+## Introduction
+
+This notebook explores the power spectra and their derived quantities implemented in the Core Cosmology Library (CCL) and NumCosmo, two frameworks for computing cosmological observables.
+We aim to assess the consistency and accuracy of the two-point correlation functions in these frameworks, particularly in terms of their relative differences.
+To facilitate this analysis, we first establish a set of cosmological models with fixed and variable parameters, then define functions to compute and visualize the power spectra alongside their relative differences.
+The results are summarized in tables and plots below.
+
+```{python}
+import sys
+import numpy as np
+import math
+import matplotlib.pyplot as plt
+from IPython.display import HTML, Markdown, display
+
+# CCL
+import pyccl
+import pandas as pd
+
+# NumCosmo
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams, dsigmaM_dlnM
+
+from numcosmo_py.plotting.tools import set_rc_params_article, format_time
+import numcosmo_py.cosmology as ncc
+import numcosmo_py.ccl.comparison as nc_cmp
+
+```
+
+### Initializing NumCosmo
+
+To begin, we configure NumCosmo and redirect its output to this notebook using the following code:
+
+```{python}
+Ncm.cfg_init()
+Ncm.cfg_set_log_handler(lambda msg: sys.stdout.write(msg) and sys.stdout.flush())
+set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
+```
+{{< include _setup_models.qmd >}}
+
+```{python}
+# Preparing the models
+parameters, models = setup_models(high_precision=False, dist_z_max=1500.0)
+lmax = 3000
+ells = np.arange(2, lmax + 1)
+ell_kernel_test = 80
+
+```
+
+### Parameter Overview
+
+The table below summarizes the parameters. There are five parameters sets.
+
+```{python}
+# | label: tbl-ccl-vs-nc-params
+# | tbl-cap: Used cosmological parameters in CCL and NumCosmo
+# | tbl-colwidths: [10, 30, 60]
+# | code-fold: true
+
+# Create DataFrame
+df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+## CMB Lensing
+
+The following code compares the CMB lensing power spectrum implemented in CCL and NumCosmo.
+
+```{python}
+
+cmb_len_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
+    [
+        nc_cmp.compare_cmb_lens_kernel(m["CCL"], m["NC"], ell_kernel_test, model=name)
+        for m, name in zip(models, PARAMETERS_SET)
+    ],
+    [
+        nc_cmp.compare_cmb_len_auto(m["CCL"], m["NC"], ells, model=name)
+        for m, name in zip(models, PARAMETERS_SET)
+    ],
+]
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-cmb-lens-sets
+# | fig-cap:
+# |   - "CMB lensing kernel, $\\ell = 80$"
+# |   - "CMB lensing power spectrum"
+# | fig-cap-location: top
+# | layout-ncol: 2
+# | code-fold: true
+
+for comparison in cmb_len_auto_comparisons:
+    fig, axs = plt.subplots(2, sharex=True)
+    fig.subplots_adjust(hspace=0)
+    for p, c in zip(comparison, COLORS):
+        p.plot(axs=axs, color=c)
+    axs[1].grid()
+
+    plt.show()
+plt.close()
+```
+
+The following table summarizes the results for all sets.
+```{python}
+# | label: tbl-ccl-vs-nc-cmb-lens-sets
+# | tbl-cap: Power Spectrum
+# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# | code-fold: true
+
+table = []
+
+for comparison in cmb_len_auto_comparisons:
+    for p in comparison:
+        table.append(p.summary_row(convert_g=False))
+
+df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+
+```
+
+All CCL calculations agree with the results from NumCosmo. However, this agreement decreases as the number of samples increases.  
+
+This counterintuitive behavior arises because CCL computes the distance from $z_\mathrm{lss}$ to $z$ as the difference between their comoving distances, rather than directly computing the distance between the two redshifts. As the number of samples increases, $\chi(z_\mathrm{lss})$ and $\chi(z)$ become closer in value, leading to a cancellation error that dominates the kernel.
+
+
+

@@ -29,8 +29,10 @@ import numpy.typing as npt
 import matplotlib.pyplot as plt
 import pyccl
 import numcosmo_py.cosmology as ncc
+import numcosmo_py.ccl.two_point as tp
 from numcosmo_py.plotting.tools import latex_float
 from numcosmo_py.helper import npa_to_seq
+from numcosmo_py import Ncm, Nc
 
 
 class CompareFunc1d:
@@ -589,6 +591,7 @@ def compare_scale_factor(
         x_symbol=r"\chi",
         y_symbol=r"a",
         x_unit="Mpc",
+        xscale="log",
     )
 
 
@@ -712,4 +715,100 @@ def compare_sigma_r(
         y_unit="Mpc",
         xscale="log",
         yscale="log",
+    )
+
+
+# Two-point correlation functions
+
+
+def compare_cmb_lens_kernel(
+    ccl_cosmo: pyccl.Cosmology,
+    cosmology: ncc.Cosmology,
+    ell: int,
+    *,
+    model: str = "unnamed",
+    n_samples: int | None = None,
+) -> CompareFunc1d:
+    """Compare CMB lensing kernel from CCL and NumCosmo."""
+    cosmo = cosmology.cosmo
+    dist = cosmology.dist
+    z_lss = cosmology.dist.decoupling_redshift(cosmo)
+    lmax = 3000
+
+    noise = Ncm.Vector.new(lmax + 1)
+    noise.set_zero()
+
+    if n_samples is not None:
+        ccl_cmb_lens = pyccl.CMBLensingTracer(
+            ccl_cosmo, z_source=z_lss, n_samples=n_samples
+        )
+    else:
+        ccl_cmb_lens = pyccl.CMBLensingTracer(ccl_cosmo, z_source=z_lss)
+    nc_cmb_lens = Nc.XcorLimberKernelCMBLensing.new(dist, Nc.RecombSeager(), noise)
+    nc_cmb_lens.prepare(cosmo)
+
+    z_a, _, H_Mpc_a, ccl_Wchi_a = tp.compute_kernel(ccl_cmb_lens, cosmology, ell)
+    nc_Wchi_a = (
+        np.array([nc_cmb_lens.eval_full(cosmo, z, dist, int(ell)) for z in z_a])
+        * H_Mpc_a
+    )
+
+    return CompareFunc1d(
+        x=z_a,
+        y1=ccl_Wchi_a,
+        y2=nc_Wchi_a,
+        model=model,
+        x_symbol="z",
+        y_symbol=r"{W_{\ell={" + str(ell) + r"}}^\kappa}",
+        xscale="log",
+        yscale="log",
+    )
+
+
+def compare_cmb_len_auto(
+    ccl_cosmo: pyccl.Cosmology,
+    cosmology: ncc.Cosmology,
+    ells: np.ndarray,
+    *,
+    model: str = "unnamed",
+    n_samples: int | None = None,
+):
+    """Compare CMB lensing auto correlation from CCL and NumCosmo."""
+    z_lss = cosmology.dist.decoupling_redshift(cosmology.cosmo)
+    if n_samples is not None:
+        ccl_cmb_lens = pyccl.CMBLensingTracer(
+            ccl_cosmo, z_source=z_lss, n_samples=n_samples
+        )
+    else:
+        ccl_cmb_lens = pyccl.CMBLensingTracer(ccl_cosmo, z_source=z_lss)
+
+    lmax = ells[-1]
+
+    noise = Ncm.Vector.new(len(ells))
+    noise.set_zero()
+    nc_cmb_lens = Nc.XcorLimberKernelCMBLensing.new(
+        cosmology.dist, Nc.RecombSeager(), noise
+    )
+
+    psp = ccl_cosmo.get_linear_power()
+    ccl_cmb_lens_auto = pyccl.angular_cl(
+        ccl_cosmo, ccl_cmb_lens, ccl_cmb_lens, ells, p_of_k_a_lin=psp, p_of_k_a=psp
+    )
+
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorLimberMethod.GSL)
+    nc_cmb_lens_auto_v = Ncm.Vector.new(lmax + 1 - 2)
+    xcor.prepare(cosmology.cosmo)
+    nc_cmb_lens.prepare(cosmology.cosmo)
+
+    xcor.limber(nc_cmb_lens, nc_cmb_lens, cosmology.cosmo, 2, lmax, nc_cmb_lens_auto_v)
+    nc_cmb_lens_auto = np.array(nc_cmb_lens_auto_v.dup_array())
+
+    return CompareFunc1d(
+        ells,
+        ccl_cmb_lens_auto,
+        nc_cmb_lens_auto,
+        model=model,
+        x_symbol=r"\ell",
+        y_symbol=r"C_\ell",
+        xscale="log",
     )

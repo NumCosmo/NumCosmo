@@ -344,7 +344,7 @@ The next function will compare the scale factor calculated from a comoving dista
 
 ```{python}
 
-chi = np.geomspace(1.0, 1.0e3, 1000)
+chi = np.geomspace(1.0e-2, 4.0e3, 1000)
 
 compare_scale_factor: list[nc_cmp.CompareFunc1d] = [
     nc_cmp.compare_scale_factor(m["CCL"], m["NC"], chi, model=name)

@@ -32,6 +32,7 @@ from numpy.testing import assert_allclose
 import pyccl
 
 import numcosmo_py.cosmology as ncpy
+from numcosmo_py.ccl.two_point import compute_kernel
 from numcosmo_py import Ncm, Nc
 
 from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
@@ -56,54 +57,6 @@ from .fixtures_xcor import (  # pylint: disable=unused-import # noqa: F401
 )
 
 Ncm.cfg_init()
-
-
-# Helper functions
-
-
-def compute_kernel(
-    tracer: pyccl.Tracer, cosmo: Nc.HICosmo, dist: Nc.Distance, ell: float
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Compute the kernel for a given tracer."""
-    Wchi_list, chi_list = tracer.get_kernel()
-    assert chi_list is not None
-    chi_a = np.array(chi_list[0])
-    for chi_a_i, Wchi_a_i in zip(chi_list, Wchi_list):
-        s = Ncm.Spline.new_array(
-            Ncm.SplineCubicNotaknot.new(), chi_a_i.tolist(), Wchi_a_i.tolist(), True
-        )
-        Wchi_a_i[:] = np.array([s.eval(chi) for chi in chi_a])
-
-    RH_Mpc = cosmo.RH_Mpc()
-    nu = ell + 0.5
-
-    bessel_factors_list = []
-
-    for der_bessel in tracer.get_bessel_derivative():
-        match der_bessel:
-            case 0:
-                bessel_factors_list.append(1.0)
-            case -1:
-                bessel_factors_list.append(1.0 / nu**2)
-            case _:
-                raise ValueError(f"Invalid Bessel derivative {der_bessel}")
-
-    z_a = np.array([dist.inv_comoving(cosmo, chi / RH_Mpc) for chi in chi_a])
-    H_Mpc_a = np.array([cosmo.E(z) / RH_Mpc for z in z_a])
-    a_array = 1.0 / (1.0 + np.array(z_a))
-    transfers_list = tracer.get_transfer(0.0, a_array)
-    ell_factors_list = tracer.get_f_ell(ell)
-
-    Wtotal = np.zeros_like(chi_a)
-    for Wchi_a, transfer, ell_factor, bessel_factor in zip(
-        Wchi_list, transfers_list, ell_factors_list, bessel_factors_list
-    ):
-        assert Wchi_a is not None
-        assert transfer is not None
-        Wtotal += Wchi_a * transfer * ell_factor * bessel_factor
-
-    return z_a[1:-1], chi_a[1:-1], H_Mpc_a[1:-1], Wtotal[1:-1]
-
 
 # Testing the NumCosmo tracers observables
 
@@ -377,7 +330,7 @@ def test_cmb_lens_kernel(
 
     ell = 79.0
 
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_lens, cosmo, dist, ell)
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_lens, nc_cosmo_eh_linear, ell)
     nc_cmb_lens.prepare(cosmo)
 
     nc_Wchi_a = (
@@ -415,7 +368,7 @@ def test_cmb_lens_auto_integrand(
     nc_cmb_lens.prepare(cosmo)
 
     ell = 77.0
-    z_a, chi_a, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_lens, cosmo, dist, ell)
+    z_a, chi_a, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_lens, nc_cosmo_eh_linear, ell)
 
     nu = ell + 0.5
     a_a = ccl_cosmo_eh_linear.scale_factor_of_chi(chi_a)
@@ -503,7 +456,7 @@ def test_cmb_isw_kernel(
         reltol_target = 1.0e-4
 
     ell = 77.0
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_isw, cosmo, dist, ell)
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_isw, nc_cosmo_eh_linear, ell)
     nc_cmb_isw.prepare(cosmo)
 
     nc_Wchi_a = (
@@ -528,7 +481,7 @@ def test_tsz_kernel(
         reltol_target = 1.0e-4
 
     ell = 77.0
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_tsz, cosmo, dist, ell)
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_tsz, nc_cosmo_eh_linear, ell)
     nc_tsz.prepare(cosmo)
 
     nc_Wchi_a = (
@@ -552,7 +505,7 @@ def test_weak_lensing_kernel(
         reltol_target = 1.0e-4
 
     ell = 77.0
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_weak_lensing, cosmo, dist, ell)
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_weak_lensing, nc_cosmo_eh_linear, ell)
     nc_weak_lensing.prepare(cosmo)
 
     nc_Wchi_a = (
@@ -577,7 +530,7 @@ def test_gal_kernel(
         reltol_target = 1.0e-4
 
     ell = 77.0
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_gal, cosmo, dist, ell)
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_gal, nc_cosmo_eh_linear, ell)
     nc_gal.prepare(cosmo)
 
     nc_Wchi_a = (
