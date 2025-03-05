@@ -34,6 +34,7 @@ import pyccl
 import numcosmo_py.cosmology as ncpy
 from numcosmo_py.ccl.two_point import compute_kernel
 from numcosmo_py import Ncm, Nc
+import numcosmo_py.ccl.comparison as nc_cmp
 
 from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_k_a,
@@ -537,3 +538,55 @@ def test_gal_kernel(
         np.array([nc_gal.eval_full(cosmo, z, dist, int(ell)) for z in z_a]) * H_Mpc_a
     )
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-30)
+
+
+def test_compare_kernels(
+    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
+) -> None:
+    """Compare CMB lensing kernel from CCL and NumCosmo."""
+    cmp = nc_cmp.compare_cmb_lens_kernel(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-6)
+
+    cmp = nc_cmp.compare_cmb_isw_kernel(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77)
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-1)
+
+    cmp = nc_cmp.compare_tsz_kernel(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77)
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-8)
+
+    cmp = nc_cmp.compare_galaxy_weak_lensing_kernel(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-3, atol=1.0e-15)
+
+    cmp = nc_cmp.compare_galaxy_number_count_kernel(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-4, atol=1.0e-12)
+
+
+def test_compare_autocorrelation(
+    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
+) -> None:
+    """Compare CCL and NumCosmo auto-correlation."""
+    ells = np.arange(2, 1000)
+
+    cmp = nc_cmp.compare_cmb_len_auto(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells)
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-2)
+
+    cmp = nc_cmp.compare_cmb_isw_auto(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells)
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-1)
+
+    cmp = nc_cmp.compare_tsz_auto(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells)
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-3)
+
+    cmp = nc_cmp.compare_galaxy_weak_lensing_auto(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-3)
+
+    cmp = nc_cmp.compare_galaxy_number_count_auto(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-4)
