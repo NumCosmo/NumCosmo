@@ -61,7 +61,7 @@ set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
 ```{python}
 # Preparing the models
 parameters, models = setup_models(high_precision=False)
-z = np.linspace(0.01, 15.0, 10000)
+z = np.geomspace(0.01, 1200.0, 10000)
 ```
 
 ### Parameter Overview
@@ -119,6 +119,7 @@ for parameter_comparison in parameter_comparisons:
     fig.subplots_adjust(hspace=0)
 
     for p, c in zip(parameter_comparison, COLORS):
+        p.xscale = "log"
         p.plot(axs=axs, color=c)
 
 plt.show()
@@ -192,6 +193,7 @@ for distance_comparison in distance_comparisons:
     fig.subplots_adjust(hspace=0)
 
     for d, c in zip(distance_comparison, COLORS):
+        d.xscale = "log"
         d.plot(axs=axs, color=c)
 
 plt.show()
@@ -313,6 +315,7 @@ for growth_comparison in growth_comparisons:
     fig.subplots_adjust(hspace=0)
 
     for p, c in zip(growth_comparison, COLORS):
+        p.xscale = "log"
         p.plot(axs=axs, color=c)
 
 plt.show()

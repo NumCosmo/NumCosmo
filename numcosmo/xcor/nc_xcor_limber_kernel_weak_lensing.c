@@ -532,7 +532,7 @@ _nc_xcor_limber_kernel_weak_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo
     flag = CVodeSetUserData (xclkg->cvode, &ts);
     NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
-    flag = CVodeSetStopTime (xclkg->cvode, 0.0);
+    flag = CVodeSetStopTime (xclkg->cvode, -1.0e-10);
     NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
 
     flag = CVodeSetMaxStep (xclkg->cvode, 1.0e-1);
@@ -542,14 +542,14 @@ _nc_xcor_limber_kernel_weak_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo
 
     while (TRUE)
     {
-      flag = CVode (xclkg->cvode, 0.0, xclkg->yv, &mz_ini, CV_ONE_STEP);
+      flag = CVode (xclkg->cvode, -1.0e-10, xclkg->yv, &mz_ini, CV_ONE_STEP);
 
       NCM_CVODE_CHECK (&flag, "CVode", 1, );
 
       g_array_append_val (x_array, mz_ini);
       g_array_append_val (y_array, NV_Ith_S (xclkg->yv, 0));
 
-      if (mz_ini == 0.0)
+      if (mz_ini == -1.0e-10)
         break;
     }
 
