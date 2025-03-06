@@ -72,7 +72,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassLnrichExt, nc_cluster_mass_lnrich_ext, 
 #define SIGMA_M2 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_M2))
 #define SIGMA_Z2 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_Z2))
 #define SIGMA_MZ (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_MZ))
-#define A0    (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_A0))
+#define A0       (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_A0))
 #define CUT      (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT))
 #define CUT_M1   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT_M1))
 #define CUT_Z1   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_LNRICH_EXT_CUT_Z1))
@@ -688,20 +688,19 @@ nc_cluster_mass_lnrich_ext_get_std_richness (NcClusterMassLnrichExt *lnrich_ext,
 /**
  * nc_cluster_mass_lnrich_ext_get_cut:
  * @lnrich_ext: a #NcClusterMassLnrichExt
- * @lnM: ln of the mass
- * @z: redshift
  *
  * Computes the cut in richness.
  *
  * Returns: the cut in richness.
  */
 gdouble
-nc_cluster_mass_lnrich_ext_get_cut (NcClusterMassLnrichExt *lnrich_ext, gdouble lnM, gdouble z)
+nc_cluster_mass_lnrich_ext_get_cut (NcClusterMassLnrichExt *lnrich_ext)
 {
   NcClusterMassLnrichExtPrivate * const self = lnrich_ext->priv;
-  const gdouble DlnM                         = lnM - self->lnM0;
-  const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
+  //const gdouble DlnM                         = lnM - self->lnM0;
+  //const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
 
-  return CUT + CUT_M1 * DlnM + CUT_Z1 * Dln1pz;
+  //return CUT + CUT_M1 * DlnM + CUT_Z1 * Dln1pz;
+    return CUT;
 }
 

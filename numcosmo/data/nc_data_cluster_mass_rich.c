@@ -161,6 +161,7 @@ static guint _nc_data_cluster_mass_rich_get_length (NcmData *data);
 static guint _nc_data_cluster_mass_rich_get_dof (NcmData *data);
 static void _nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static void _nc_data_cluster_mass_rich_prepare (NcmData *data, NcmMSet *mset);
+static void _nc_data_cluster_mass_rich_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 
 static void
 nc_data_cluster_mass_rich_class_init (NcDataClusterMassRichClass *klass)
@@ -201,6 +202,7 @@ nc_data_cluster_mass_rich_class_init (NcDataClusterMassRichClass *klass)
   data_class->get_dof    = &_nc_data_cluster_mass_rich_get_dof;
   data_class->m2lnL_val  = &_nc_data_cluster_mass_rich_m2lnL_val;
   data_class->prepare    = &_nc_data_cluster_mass_rich_prepare;
+  data_class->resample   = &_nc_data_cluster_mass_rich_resample;
 }
 
 static guint
@@ -265,7 +267,7 @@ _nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2l
       const gdouble lnR_i      = ncm_vector_get (self->lnR_cluster, i);
       const gdouble lnR_i_mean = nc_cluster_mass_lnrich_ext_get_mean_richness (lnrich_ext, lnM_i, z_i);
       const gdouble lnR_i_std  = nc_cluster_mass_lnrich_ext_get_std_richness (lnrich_ext, lnM_i, z_i);
-      const gdouble lnR_cut_i  = nc_cluster_mass_lnrich_ext_get_cut (lnrich_ext, lnM_i, z_i);
+      const gdouble lnR_cut_i  = nc_cluster_mass_lnrich_ext_get_cut (lnrich_ext);
 
       if (lnR_i > lnR_cut_i)
       {
@@ -387,3 +389,71 @@ nc_data_cluster_mass_rich_set_data (NcDataClusterMassRich *dmr, NcmVector *lnM, 
   ncm_data_set_init (NCM_DATA (dmr), TRUE);
 }
 
+static void
+_nc_data_cluster_mass_rich_resample (NcmData  *data, NcmMSet *mset, NcmRNG *rng)
+{
+  NcDataClusterMassRich *dmr             = NC_DATA_CLUSTER_MASS_RICH (data);
+  NcDataClusterMassRichPrivate * const self = nc_data_cluster_mass_rich_get_instance_private (dmr);
+
+  NcHICosmo *cosmo                        = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcClusterMass *clusterm                 = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+
+  guint i;
+  guint np = _nc_data_cluster_mass_rich_get_length (data);
+  gdouble *lnM_obs;
+  gdouble lnM;
+  gdouble z;
+  NcmVector *lnR_vec = ncm_vector_new(np);
+  NcmVector *z_vec   = ncm_vector_new(np);
+  NcmVector *lnM_vec = ncm_vector_new(np);
+    
+  _nc_data_cluster_mass_rich_prepare (data, mset);
+
+  ncm_rng_lock (rng);
+
+  for (i = 0; i < np; i++)
+  { 
+    lnM_obs[0] = -1;
+    lnM        = ncm_vector_get(self->lnM_cluster , i);
+    z          = ncm_vector_get(self->z_cluster , i);
+      
+    
+    if (NC_IS_CLUSTER_MASS_ASCASO (clusterm))
+  {
+
+   while(nc_cluster_mass_resample (clusterm,  cosmo, lnM, z, lnM_obs, NULL, rng) == FALSE)
+       {
+        nc_cluster_mass_resample (clusterm,  cosmo, lnM , z, lnM_obs, NULL, rng);   
+       }
+         
+  }
+
+    
+   else if (NC_IS_CLUSTER_MASS_LNRICH_EXT (clusterm))
+  {
+   NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+   
+   while(nc_cluster_mass_resample (clusterm,  cosmo, lnM, z, lnM_obs, NULL, rng) ==FALSE)
+       {
+           while(lnM_obs[0] < nc_cluster_mass_lnrich_ext_get_cut(lnrich_ext))
+        { 
+           nc_cluster_mass_resample (clusterm,  cosmo, lnM, z, lnM_obs, NULL, rng);
+        }
+       }
+   
+  }
+
+    ncm_vector_set(lnR_vec , i  ,lnM_obs[0]);
+    ncm_vector_set(lnM_vec , i  ,lnM);
+    ncm_vector_set(z_vec , i  ,z);  
+      
+
+      
+
+  ncm_rng_unlock (rng);
+
+
+  
+}
+nc_data_cluster_mass_rich_set_data (dmr , lnM_vec, z_vec, lnR_vec);
+}

@@ -570,7 +570,6 @@ _nc_data_cluster_ncount_prepare (NcmData *data, NcmMSet *mset)
 
 static gchar *_nc_data_cluster_ncount_desc (NcDataClusterNCount *ncount, NcHICosmo *cosmo);
 
-static void
 _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
   NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (data);
