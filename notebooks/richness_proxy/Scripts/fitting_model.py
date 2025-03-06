@@ -54,31 +54,18 @@ class FittingModel:
 
 #----------------------------------------------------------------------------#
 
-    def run_fit(self, mod):
-       
-     # #training_data
-     #    if training == True: 
-     #        X = pd.DataFrame({'mass': list(self.data_set["mass"]), 'redshift': list(self.data_set["redshift"])})
-     #        y = pd.DataFrame({'richness': list(self.data_set["richness"])})
-     #        data_train, data_test = self.cvdata(X, y)
-            
-     #    else:
-        data_train = self.data_set
-                        
+    def run_fit(self, mod):                       
 
     #data_set
-        rmdata = create_richness_mass_calib(data_train, mass_col_name = 'mass', redshift_col_name = 'redshift' )
-        
-        fixed_parameters = [] 
-    
+        rmdata = create_richness_mass_calib(self.data_set, mass_col_name = 'mass', redshift_col_name = 'redshift' )    
     
     #Swicth
+        fixed_parameters = [] 
+
         match mod:
             case "ext_ln1pz":
                 model = Nc.ClusterMassLnrichExt(use_ln1pz = True)
                 fixed_parameters = ['A0','cut', 'cutM1', 'cutZ1'] #fixing cut parameters
-                # model.param_set_by_name("muZ2", 0) #Set cut parameter value
-
             
             case "ext_z":
                 model = Nc.ClusterMassLnrichExt(use_ln1pz = False)
@@ -87,12 +74,9 @@ class FittingModel:
             case "ascaso":
                 model = Nc.ClusterMassAscaso()
                 fixed_parameters = ['cut'] #fixing cut parameter
-                # model.param_set_by_name("sigmap2", 0) #Set cut parameter value 
-                # model.param_set_by_name("mup2", 0) #Set cut parameter value 
-
-
+              
     #Model
-        model.param_set_by_name("cut", 1e2) #Set cut parameter value 
+        model.param_set_by_name("cut", np.log(self.data_set['richness'].min())) #Set cut parameter value 
         mset = Ncm.MSet()
         mset.set(model)
         rmdata.m2lnL_val(mset)  
@@ -108,7 +92,6 @@ class FittingModel:
     #All parameters free except cut parameters:
         for par in fixed_parameters:
              mset["NcClusterMass"].param_set_desc(par, {"fit": False})
-             # mset.param_set_ftype(7000, par, Ncm.ParamType.FIXED)
     
         mset.prepare_fparam_map()
     
@@ -118,11 +101,10 @@ class FittingModel:
         fit.run_restart(Ncm.FitRunMsgs.SIMPLE, 1.0e-3, 0.0, None, None)
         fit.log_info()
 
-        return model
+        return model, fit
 
     
-   
-    
+       
 #----------------------------------------------------------------------------#
     
 #get_mean_model(model, lnM,  z):
@@ -132,8 +114,6 @@ class FittingModel:
     def get_mean_model(self, model, lnM, z):
         
         return np.array([model.get_mean_richness(lnM[i], z[i]) for i in range(len(lnM))])
-
-
 
 
 #----------------------------------------------------------------------------#

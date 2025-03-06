@@ -10,7 +10,7 @@ mset = Ncm.MSet()
 
 lnrich_ext = Nc.ClusterMassLnrichExt()
 
-def catalog_fit(DATA, LINEAR):
+def catalog_fit(DATA, cut_param, LINEAR):
     rmdata = create_richness_mass_calib(DATA, mass_col_name = 'mass', redshift_col_name = 'redshift' )
     dset = Ncm.Dataset.new()
     dset.append_data(rmdata)
@@ -19,7 +19,7 @@ def catalog_fit(DATA, LINEAR):
     
     if LINEAR:
         fixed_parameters_ascaso = ['cut'] #fixing cut parameter
-        ascaso.param_set_by_name("cut", 1e2) #Set cut parameter value 
+        ascaso.param_set_by_name("cut", cut_param) #Set cut parameter value 
         mset.set(ascaso)
         rmdata.m2lnL_val(mset)  
         mset.param_set_all_ftype(Ncm.ParamType.FREE) #All parameters free
@@ -33,7 +33,7 @@ def catalog_fit(DATA, LINEAR):
     else:
         fixed_parameters_lnrich_ext = ['A0','cut', 'cutM1', 'cutZ1'] #fixing cut parameters
 
-        lnrich_ext.param_set_by_name("cut", 1e2) #Set cut parameter value 
+        lnrich_ext.param_set_by_name("cut", cut_param) #Set cut parameter value 
         mset.set(lnrich_ext)
         rmdata.m2lnL_val(mset)  
         mset.param_set_all_ftype(Ncm.ParamType.FREE) #All parameters free
@@ -54,13 +54,13 @@ def catalog_fit(DATA, LINEAR):
 
 
 
-def esmcmc(DATA, N_WALKERS, N_RUN, MODEL, FILE_NAME):
+def esmcmc(DATA, N_WALKERS, N_RUN, MODEL, FILE_NAME, cut_param):
     
     if MODEL == 'asc':
-        fit = catalog_fit(DATA, LINEAR=True)
+        fit = catalog_fit(DATA, cut_param, LINEAR=True)
     
     else:
-        fit = catalog_fit(DATA, LINEAR=False)
+        fit = catalog_fit(DATA, cut_param, LINEAR=False)
 
     
     Ncm.func_eval_set_max_threads(2)
