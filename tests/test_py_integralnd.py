@@ -24,12 +24,12 @@
 
 """Testing IntegralND class."""
 
-from typing import Tuple, List
-
+import pytest
 import numpy as np
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_allclose
 
-from numcosmo_py import Ncm
+from numcosmo_py import Ncm, GObject
+from numcosmo_py.helper import npa_to_seq
 
 #
 #  Initializing the library objects, this must be called before
@@ -41,13 +41,36 @@ Ncm.cfg_init()
 class IntegralND(Ncm.IntegralND):
     """Test class for IntegralND."""
 
-    def __init__(self, w: List[float], **kwargs) -> None:
-        """Initialize."""
+    def __init__(self, w: Ncm.Vector | list[float] | np.ndarray, **kwargs) -> None:
+        """Construct a IntegralND."""
         super().__init__(**kwargs)
-        self.w = np.array(w)
+        self.w: np.ndarray
+        self._set_w_vec(w)
+
+    def _get_w_vec(self) -> Ncm.Vector:
+        return Ncm.Vector.new_array(npa_to_seq(self.w))
+
+    def _set_w_vec(self, w: Ncm.Vector | list[float] | np.ndarray) -> None:
+        match w:
+            case Ncm.Vector():
+                self.w = np.array(w.dup_array())
+            case list():
+                self.w = np.array(w)
+            case np.ndarray():
+                self.w = w
+            case _:
+                raise ValueError(f"Invalid type {type(w)} for w")
+
+    w_vec = GObject.Property(
+        type=Ncm.Vector,
+        default="default",
+        flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
+        getter=_get_w_vec,
+        setter=_set_w_vec,
+    )
 
     # pylint: disable-next=arguments-differ
-    def do_get_dimensions(self) -> Tuple[int, int]:
+    def do_get_dimensions(self) -> tuple[int, int]:
         """Get number of dimensions."""
         return 3, 3
 
@@ -61,7 +84,6 @@ class IntegralND(Ncm.IntegralND):
         fval_vec: Ncm.Vector,
     ) -> None:
         """Integrand function."""
-
         x = np.asarray(x_vec.dup_array()).reshape((npoints, dim))
         fval = self.w * x * np.sin(self.w * x)
 
@@ -204,3 +226,33 @@ def test_integral_nd_serialize() -> None:
     assert test_f_dup.get_reltol() == test_f.get_reltol()
     assert test_f_dup.get_maxeval() == test_f.get_maxeval()
     assert test_f_dup.get_error() == test_f.get_error()
+    assert_allclose(test_f_dup.w, test_f.w)
+
+
+def test_integral_construct_list() -> None:
+    """Test creating a IntegralND object from a list."""
+    test_f = IntegralND(w=[1.0, 2.0, 3.0], method=Ncm.IntegralNDMethod.H_V)
+
+    assert test_f.w.tolist() == [1.0, 2.0, 3.0]
+
+
+def test_integral_construct_array() -> None:
+    """Test creating a IntegralND object from an array."""
+    test_f = IntegralND(w=np.array([1.0, 2.0, 3.0]), method=Ncm.IntegralNDMethod.H_V)
+
+    assert test_f.w.tolist() == [1.0, 2.0, 3.0]
+
+
+def test_integral_construct_vector() -> None:
+    """Test creating a IntegralND object from a Vector."""
+    test_f = IntegralND(
+        w=Ncm.Vector.new_array([1.0, 2.0, 3.0]), method=Ncm.IntegralNDMethod.H_V
+    )
+
+    assert test_f.w.tolist() == [1.0, 2.0, 3.0]
+
+
+def test_integral_construct_wrong_type() -> None:
+    """Test creating a IntegralND object from a Vector."""
+    with pytest.raises(ValueError, match="Invalid type .* for w"):
+        IntegralND(w="I'm not a list", method=Ncm.IntegralNDMethod.H_V)  # type: ignore

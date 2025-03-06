@@ -11,6 +11,7 @@ class MatchID:
         self.cluster_data = cluster_data
         self.truth_data = truth_data
         self.table_to_dataframe = self.table_to_dataframe()
+        self.matching_by_id = self.matching_by_id()
 
 #-------------------------------------------------------------------------------------------------#
 # table_to_dataframe()
@@ -36,7 +37,7 @@ class MatchID:
 # mt_catalog : Pandas dataframe with catalogs match.
 #-------------------------------------------------------------------------------------------------# 
    
-    def matching_by_id():
+    def matching_by_id(self):
 
         memberdf, truthdf, cluster_df = self.table_to_dataframe
         
@@ -65,8 +66,10 @@ class MatchID:
 # halos_bin_mz : Pandas dataframe with unique association between halos and clusters.
 #-------------------------------------------------------------------------------------------------# 
 
-    def unique_id_match():
+    def unique_id_match(self):
 
+        mt_catalog = self.matching_by_id
+        
         #This selects the clusters IDs
         clusters_id = mt_catalog[mt_catalog['is_central'] == True]['cluster_id'].unique() 
        
@@ -87,11 +90,16 @@ class MatchID:
             gcut = idgroups.get_group(cl)    # For each halo in cluster_id group, it selects halos in a range of ra e dec and then 
                                              # select the halo with maximum frequency of members.
             
-            ra_cut = (gcut['ra'] > gcut['cluster_ra'] - 1e-4) & (gcut['ra'] < gcut['cluster_ra'] + 1e-4) 
-            dec_cut = (gcut['dec'] > gcut['cluster_dec'] - 1e-4) & (gcut['dec'] < gcut['cluster_dec'] + 1e-4)
+            distance_2d = np.sqrt( (gcut['ra'] - gcut['cluster_ra']) ** 2 + (gcut['dec'] - gcut['cluster_dec']) ** 2  )
+            # ra_cut = (gcut['ra'] > gcut['cluster_ra'] - 1e-4) & (gcut['ra'] < gcut['cluster_ra'] + 1e-4) 
+            # dec_cut = (gcut['dec'] > gcut['cluster_dec'] - 1e-4) & (gcut['dec'] < gcut['cluster_dec'] + 1e-4)
+
+            dist_cut = distance_2d.min()
             freq_cut = gcut['freq'] == gcut['freq'].max()
-            
-            gcut = gcut[ra_cut & dec_cut]
+
+                        
+            # gcut = gcut[ra_cut & dec_cut]
+            gcut = gcut[dist_cut]
             gcut = gcut[freq_cut]
             
             match_dataframe = pd.concat([match_dataframe, gcut], ignore_index=True)
@@ -100,6 +108,14 @@ class MatchID:
         return match_dataframe
             
 
+
+
+
+
+        
+#-----------------------------------------------------------------------------------------------------------------------#
+# OLD SCRIPT        
+#-----------------------------------------------------------------------------------------------------------------------# 
         
 # def mtrmdc2(member_data, cluster_data, truth_data):
 #     #Table to pandas ------------------------------------------------------------# 
