@@ -45,17 +45,18 @@ G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
 /**
  * NcXcorLimberMethod:
  * @NC_XCOR_LIMBER_METHOD_GSL: FIXME
+ * @NC_XCOR_LIMBER_METHOD_CUBATURE: FIXME
  *
  * FIXME
- *
  *
  */
 typedef enum _NcXcorLimberMethod
 {
   NC_XCOR_LIMBER_METHOD_GSL = 0,
+  NC_XCOR_LIMBER_METHOD_CUBATURE,
 } NcXcorLimberMethod;
 
-#define NC_XCOR_PRECISION (1e-5)
+#define NC_XCOR_PRECISION (1.0e-5)
 
 GType nc_xcor_kinetic_get_type (void) G_GNUC_CONST;
 
