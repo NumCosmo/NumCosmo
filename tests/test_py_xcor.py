@@ -367,6 +367,8 @@ def test_xcor_set_get(nc_cosmo_default: ncpy.Cosmology) -> None:
     nc_xcor.props.meth = Nc.XcorLimberMethod.CUBATURE
     assert nc_xcor.props.meth == Nc.XcorLimberMethod.CUBATURE
 
+    assert nc_xcor.props.power_spec is nc_cosmo_default.ps_ml
+
 
 def test_cmb_lens_auto_integrand(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
