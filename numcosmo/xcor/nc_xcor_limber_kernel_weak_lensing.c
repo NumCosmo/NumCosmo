@@ -236,6 +236,7 @@ _nc_xcor_limber_kernel_weak_lensing_constructed (GObject *object)
     NcXcorLimberKernel *xclk             = NC_XCOR_LIMBER_KERNEL (xclkg);
     gdouble zmin, zmax, zmid;
 
+    nc_xcor_limber_kernel_set_z_range (xclk, 0.0, xclkg->dn_dz_zmax, 0.5 * xclkg->dn_dz_zmax);
     nc_xcor_limber_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
 
     ncm_spline_prepare (xclkg->dn_dz);
@@ -363,7 +364,7 @@ nc_xcor_limber_kernel_weak_lensing_class_init (NcXcorLimberKernelWeakLensingClas
                                    g_param_spec_double ("reltol",
                                                         NULL,
                                                         "Relative tolerance",
-                                                        GSL_DBL_EPSILON, 1.0, 1.0e-13,
+                                                        GSL_DBL_EPSILON, 1.0, 1.0e-7,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -472,8 +473,9 @@ _nc_xcor_limber_kernel_weak_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo
   nc_distance_prepare_if_needed (xclkg->dist, cosmo);
 
   {
-    src_int_params ts = {xclkg, cosmo, nc_hicosmo_Omega_k0 (cosmo)};
-    gdouble mz_ini    = -zmax;
+    src_int_params ts    = {xclkg, cosmo, nc_hicosmo_Omega_k0 (cosmo)};
+    gdouble mz_ini       = -zmax;
+    const gdouble mz_end = -1.0e-10;
     GArray *x_array, *y_array;
     gint flag;
 
@@ -495,8 +497,20 @@ _nc_xcor_limber_kernel_weak_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo
       y_array            = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
     }
 
-    NV_Ith_S (xclkg->yv, 0) = 0.0;
-    NV_Ith_S (xclkg->yv, 1) = 0.0;
+    {
+      /*
+       *  Setting up initial conditions based on second order approximation of the
+       *  original integral.
+       */
+      const gdouble dz = zmax * sqrt (GSL_DBL_EPSILON);
+      const gdouble f  = 0.5 * gsl_pow_2 (dz) * _kernel_wl_W_U_eval_dndz (xclkg, zmax) / nc_distance_transverse (xclkg->dist, cosmo, zmax) / nc_hicosmo_E (cosmo, zmax);
+      const gdouble g  = -dz *_kernel_wl_W_U_eval_dndz (xclkg, zmax) / nc_distance_transverse (xclkg->dist, cosmo, zmax);
+
+      NV_Ith_S (xclkg->yv, 0) = f;
+      NV_Ith_S (xclkg->yv, 1) = g;
+
+      mz_ini += dz;
+    }
 
     if (xclkg->cvode == NULL)
     {
@@ -532,7 +546,7 @@ _nc_xcor_limber_kernel_weak_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo
     flag = CVodeSetUserData (xclkg->cvode, &ts);
     NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
-    flag = CVodeSetStopTime (xclkg->cvode, -1.0e-10);
+    flag = CVodeSetStopTime (xclkg->cvode, mz_end);
     NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
 
     flag = CVodeSetMaxStep (xclkg->cvode, 1.0e-1);
@@ -542,14 +556,14 @@ _nc_xcor_limber_kernel_weak_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo
 
     while (TRUE)
     {
-      flag = CVode (xclkg->cvode, -1.0e-10, xclkg->yv, &mz_ini, CV_ONE_STEP);
+      flag = CVode (xclkg->cvode, mz_end, xclkg->yv, &mz_ini, CV_ONE_STEP);
 
       NCM_CVODE_CHECK (&flag, "CVode", 1, );
 
       g_array_append_val (x_array, mz_ini);
       g_array_append_val (y_array, NV_Ith_S (xclkg->yv, 0));
 
-      if (mz_ini == -1.0e-10)
+      if (mz_ini == mz_end)
         break;
     }
 
