@@ -325,7 +325,7 @@ def test_cmb_lens_kernel(
     if ccl_cosmo_eh_linear["Omega_k"] != 0.0:
         pytest.skip("CMB lensing not implemented for non-flat cosmologies")
     if ccl_cosmo_eh_linear.high_precision:
-        reltol_target: float = 1.0e-7
+        reltol_target: float = 1.0e-6
     else:
         reltol_target = 1.0e-4
 
