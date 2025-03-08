@@ -391,6 +391,66 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 
 The results are in very good agreement with the results from NumCosmo. Note the same Limber integration errors present in CCL also manifest here.
 
+## Time Comparison
+
+The following code compares the time measurements between CCL and NumCosmo.
+
+
+```{python}
+# Lets first get a simple dndz function. We use 1000 knots and a width of 0.1.
+dndz = nc_cmp.prepare_dndz(0.5, 0.1, 1000)
+z_a = np.array(dndz.peek_xv().dup_array())
+nz_a = np.array(dndz.peek_yv().dup_array())
+nc_wl_auto_v = Ncm.Vector.new(lmax + 1 - 2)
+
+
+def compute_using_ccl(
+    ccl_cosmo: pyccl.Cosmology, z_a: np.ndarray, nz_a: np.ndarray, ells: np.ndarray
+):
+    ccl_wl = pyccl.WeakLensingTracer(ccl_cosmo, dndz=(z_a, nz_a))
+    psp = ccl_cosmo.get_linear_power()
+    ccl_wl_auto = pyccl.angular_cl(
+        ccl_cosmo, ccl_wl, ccl_wl, ells, p_of_k_a_lin=psp, p_of_k_a=psp
+    )
+
+    return ccl_wl_auto
+
+
+def compute_using_nc(
+    cosmology: ncc.Cosmology,
+    dndz: Ncm.Spline,
+    ells: np.ndarray,
+    nc_wl_auto_v: Ncm.Vector,
+):
+    nc_wl = Nc.XcorLimberKernelWeakLensing.new(0.0, 2.0, dndz, 3.0, 7.0, cosmology.dist)
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorLimberMethod.CUBATURE)
+    xcor.prepare(cosmology.cosmo)
+    nc_wl.prepare(cosmology.cosmo)
+    xcor.limber(nc_wl, nc_wl, cosmology.cosmo, 2, lmax, nc_wl_auto_v)
+
+    return np.array(nc_wl_auto_v.dup_array())
+
+
+table = [
+    ["Galaxy Weak Lensing", "CCL"]
+    + nc_cmp.compute_times(
+        lambda: compute_using_ccl(models[0]["CCL"], z_a, nz_a, ells)
+    ),
+    ["Galaxy Weak Lensing", "NumCosmo"]
+    + nc_cmp.compute_times(
+        lambda: compute_using_nc(models[0]["NC"], dndz, ells, nc_wl_auto_v)
+    ),
+]
+
+columns = ["Quantity", "Library", "Mean Time", "Standard Deviation"]
+
+df = pd.DataFrame(table, columns=columns)
+df["Mean Time"] = df["Mean Time"].apply(format_time)
+df["Standard Deviation"] = df["Standard Deviation"].apply(format_time)
+
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
 ## Summary  
 
 In summary, the two frameworks demonstrate strong agreement across most calculations, with discrepancies at random multipoles ($\ell$). These differences are due to the Limber integral errors in CCL, which introduces numerical inaccuracies whenever the integration fails. 
