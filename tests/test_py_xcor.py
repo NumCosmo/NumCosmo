@@ -364,7 +364,7 @@ def test_cmb_lens_auto_integrand(
 
     psp = ccl_cosmo_eh_linear.get_linear_power()
 
-    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorLimberMethod.GSL)
+    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorLimberMethod.CUBATURE)
     xcor.prepare(cosmo)
     nc_cmb_lens.prepare(cosmo)
 
@@ -430,7 +430,7 @@ def test_cmb_lens_auto(
     assert all(np.isfinite(ccl_cmb_lens_auto))
     assert all(ccl_cmb_lens_auto >= 0.0)
 
-    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorLimberMethod.GSL)
+    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorLimberMethod.CUBATURE)
     nc_cmb_lens_auto_v = Ncm.Vector.new(lmax + 1 - 2)
     xcor.prepare(cosmo)
     nc_cmb_lens.prepare(cosmo)
@@ -544,10 +544,12 @@ def test_compare_kernels(
     ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
 ) -> None:
     """Compare CMB lensing kernel from CCL and NumCosmo."""
-    cmp = nc_cmp.compare_cmb_lens_kernel(
-        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77
-    )
-    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-6)
+    # TODO: Test curvature models when CCL supports them
+    if ccl_cosmo_eh_linear["Omega_k"] == 0.0:
+        cmp = nc_cmp.compare_cmb_lens_kernel(
+            ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77
+        )
+        assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-6)
 
     cmp = nc_cmp.compare_cmb_isw_kernel(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77)
     assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-1)
@@ -572,8 +574,10 @@ def test_compare_autocorrelation(
     """Compare CCL and NumCosmo auto-correlation."""
     ells = np.arange(2, 1000)
 
-    cmp = nc_cmp.compare_cmb_len_auto(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells)
-    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-2)
+    # TODO: Test curvature models when CCL supports them
+    if ccl_cosmo_eh_linear["Omega_k"] == 0.0:
+        cmp = nc_cmp.compare_cmb_len_auto(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells)
+        assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-2)
 
     cmp = nc_cmp.compare_cmb_isw_auto(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells)
     assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-1)
