@@ -286,22 +286,15 @@ nc_xcor_limber_auto_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint 
     const gdouble E_z       = nc_hicosmo_E (xcor_int_arg->cosmo, z);
     const NcXcorKinetic xck = { xi_z, E_z };
 
-    if (z == 0.0)
+    for (j = 0; j < fdim; j++)
     {
-      ncm_vector_set_zero (fval);
-    }
-    else
-    {
-      for (j = 0; j < fdim; j++)
-      {
-        const gint l             = xcor_int_arg->ells[j];
-        const gdouble k          = (l + 0.5) / (xi_z_phys); /* in Mpc-1 */
-        const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xcor_int_arg->ps), NCM_MODEL (xcor_int_arg->cosmo), z, k);
-        const gdouble k1z        = nc_xcor_limber_kernel_eval (xcor_int_arg->xclk1, xcor_int_arg->cosmo, z, &xck, l);
-        const gdouble res        = E_z * gsl_pow_2 (k1z / xi_z) * power_spec;
+      const gint l             = xcor_int_arg->ells[j];
+      const gdouble k          = (l + 0.5) / (xi_z_phys); /* in Mpc-1 */
+      const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xcor_int_arg->ps), NCM_MODEL (xcor_int_arg->cosmo), z, k);
+      const gdouble k1z        = nc_xcor_limber_kernel_eval (xcor_int_arg->xclk1, xcor_int_arg->cosmo, z, &xck, l);
+      const gdouble res        = E_z * gsl_pow_2 (k1z / xi_z) * power_spec;
 
-        ncm_vector_fast_set (fval, i * fdim + j, res);
-      }
+      ncm_vector_fast_set (fval, i * fdim + j, res);
     }
   }
 }
@@ -321,23 +314,16 @@ nc_xcor_limber_cross_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint
     const gdouble E_z       = nc_hicosmo_E (xcor_arg->cosmo, z);
     const NcXcorKinetic xck = { xi_z, E_z };
 
-    if (z == 0.0)
+    for (j = 0; j < fdim; j++)
     {
-      ncm_vector_set_zero (fval);
-    }
-    else
-    {
-      for (j = 0; j < fdim; j++)
-      {
-        const gint l             = xcor_arg->ells[j];
-        const gdouble k          = (l + 0.5) / (xi_z_phys); /* in Mpc-1 */
-        const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xcor_arg->ps), NCM_MODEL (xcor_arg->cosmo), z, k);
-        const gdouble k1z        = nc_xcor_limber_kernel_eval (xcor_arg->xclk1, xcor_arg->cosmo, z, &xck, l);
-        const gdouble k2z        = nc_xcor_limber_kernel_eval (xcor_arg->xclk2, xcor_arg->cosmo, z, &xck, l);
-        const gdouble res        = E_z * k1z * k2z * power_spec / (xi_z * xi_z);
+      const gint l             = xcor_arg->ells[j];
+      const gdouble k          = (l + 0.5) / (xi_z_phys); /* in Mpc-1 */
+      const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xcor_arg->ps), NCM_MODEL (xcor_arg->cosmo), z, k);
+      const gdouble k1z        = nc_xcor_limber_kernel_eval (xcor_arg->xclk1, xcor_arg->cosmo, z, &xck, l);
+      const gdouble k2z        = nc_xcor_limber_kernel_eval (xcor_arg->xclk2, xcor_arg->cosmo, z, &xck, l);
+      const gdouble res        = E_z * k1z * k2z * power_spec / (xi_z * xi_z);
 
-        ncm_vector_fast_set (fval, i * fdim + j, res);
-      }
+      ncm_vector_fast_set (fval, i * fdim + j, res);
     }
   }
 }
