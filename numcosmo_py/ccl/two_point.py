@@ -51,13 +51,12 @@ def compute_kernel(
     bessel_factors_list = []
 
     for der_bessel in tracer.get_bessel_derivative():
+        assert der_bessel in [-1, 0]
         match der_bessel:
             case 0:
                 bessel_factors_list.append(1.0)
             case -1:
                 bessel_factors_list.append(1.0 / nu**2)
-            case _:
-                raise ValueError(f"Invalid Bessel derivative {der_bessel}")
 
     z_a = np.array([dist.inv_comoving(cosmo, chi / RH_Mpc) for chi in chi_a])
     H_Mpc_a = np.array([cosmo.E(z) / RH_Mpc for z in z_a])
