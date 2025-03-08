@@ -344,15 +344,28 @@ def test_cmb_lens_kernel(
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=0.0)
 
 
-def test_xcor_set_get_reltol(nc_cosmo_default: ncpy.Cosmology) -> None:
+def test_xcor_set_get(nc_cosmo_default: ncpy.Cosmology) -> None:
     """Test get_reltol and set_reltol."""
     nc_xcor = Nc.Xcor.new(
         nc_cosmo_default.dist, nc_cosmo_default.ps_ml, Nc.XcorLimberMethod.GSL
     )
+
     nc_xcor.set_reltol(1.0e-4)
     assert nc_xcor.get_reltol() == 1.0e-4
+    assert nc_xcor.props.reltol == 1.0e-4
+
     nc_xcor.set_reltol(1.0e-5)
     assert nc_xcor.get_reltol() == 1.0e-5
+    assert nc_xcor.props.reltol == 1.0e-5
+
+    nc_xcor.props.reltol = 1.0e-6
+    assert nc_xcor.get_reltol() == 1.0e-6
+
+    nc_xcor.props.meth = Nc.XcorLimberMethod.GSL
+    assert nc_xcor.props.meth == Nc.XcorLimberMethod.GSL
+
+    nc_xcor.props.meth = Nc.XcorLimberMethod.CUBATURE
+    assert nc_xcor.props.meth == Nc.XcorLimberMethod.CUBATURE
 
 
 def test_cmb_lens_auto_integrand(
