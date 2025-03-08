@@ -393,7 +393,7 @@ XCOR_LIMBER_KERNEL_GAL_DEFAULT_NOISE_BIAS: float = 0.0
 XCOR_LIMBER_KERNEL_GAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN: int = 200
 XCOR_LIMBER_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
-XCOR_PRECISION: float = 1e-05
+XCOR_PRECISION: float = 1e-06
 _lock = ...  # FIXME Constant
 _namespace: str = r"NumCosmo"
 _version: str = r"1.0"
@@ -17149,10 +17149,6 @@ class PowspecMLTransfer(PowspecML):
         reltol: float
 
     props: Props = ...
-    parent_instance: PowspecML = ...
-    tf: TransferFunc = ...
-    gf: GrowthFunc = ...
-    Pm_k2Pzeta: float = ...
     def __init__(
         self,
         growth: GrowthFunc = ...,
@@ -18761,6 +18757,8 @@ class Xcor(GObject.Object):
         Matter power spectrum.
       meth -> NcXcorLimberMethod: meth
         Method.
+      reltol -> gdouble: reltol
+        Relative tolerance.
 
     Signals from GObject:
       notify (GParam)
@@ -18770,6 +18768,7 @@ class Xcor(GObject.Object):
         distance: Distance
         meth: XcorLimberMethod
         power_spec: NumCosmoMath.Powspec
+        reltol: float
 
     props: Props = ...
     def __init__(
@@ -18777,10 +18776,12 @@ class Xcor(GObject.Object):
         distance: Distance = ...,
         meth: XcorLimberMethod = ...,
         power_spec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
     ) -> None: ...
     @staticmethod
     def clear(xc: Xcor) -> None: ...
     def free(self) -> None: ...
+    def get_reltol(self) -> float: ...
     def limber(
         self,
         xclk1: XcorLimberKernel,
@@ -18796,6 +18797,7 @@ class Xcor(GObject.Object):
     ) -> Xcor: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> Xcor: ...
+    def set_reltol(self, reltol: float) -> None: ...
 
 class XcorAB(GObject.Object):
     r"""

@@ -64,6 +64,7 @@ struct _NcXcor
   NcmPowspec *ps;
   gdouble RH;
   NcXcorLimberMethod meth;
+  gdouble reltol;
 };
 
 enum
@@ -72,6 +73,7 @@ enum
   PROP_DISTANCE,
   PROP_MATTER_POWER_SPECTRUM,
   PROP_METH,
+  PROP_RELTOL,
 };
 
 G_DEFINE_TYPE (NcXcor, nc_xcor, G_TYPE_OBJECT)
@@ -128,6 +130,9 @@ _nc_xcor_set_property (GObject *object, guint prop_id, const GValue *value, GPar
     case PROP_METH:
       xc->meth = g_value_get_enum (value);
       break;
+    case PROP_RELTOL:
+      nc_xcor_set_reltol (xc, g_value_get_double (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -151,6 +156,9 @@ _nc_xcor_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
       break;
     case PROP_METH:
       g_value_set_enum (value, xc->meth);
+      break;
+    case PROP_RELTOL:
+      g_value_set_double (value, nc_xcor_get_reltol (xc));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -228,6 +236,19 @@ nc_xcor_class_init (NcXcorClass *klass)
                                                       NC_TYPE_XCOR_LIMBER_METHOD,
                                                       NC_XCOR_LIMBER_METHOD_GSL,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcXcor:reltol:
+   *
+   * This property keeps the relative tolerance.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_RELTOL,
+                                   g_param_spec_double ("reltol",
+                                                        NULL,
+                                                        "Relative tolerance.",
+                                                        GSL_DBL_EPSILON, 1.0e-1, NC_XCOR_PRECISION,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static void
@@ -384,6 +405,32 @@ nc_xcor_clear (NcXcor **xc)
 }
 
 /**
+ * nc_xcor_set_reltol:
+ * @xc: a #NcXcor
+ * @reltol: a relative tolerance
+ *
+ * Sets the relative tolerance of @xc.
+ *
+ */
+void
+nc_xcor_set_reltol (NcXcor *xc, const gdouble reltol)
+{
+  xc->reltol = reltol;
+}
+
+/**
+ * nc_xcor_get_reltol:
+ * @xc: a #NcXcor
+ *
+ * Returns: the relative tolerance of @xc
+ */
+gdouble
+nc_xcor_get_reltol (NcXcor *xc)
+{
+  return xc->reltol;
+}
+
+/**
  * nc_xcor_prepare:
  * @xc: a #NcXcor
  * @cosmo: a #NcHICosmo
@@ -461,6 +508,8 @@ _nc_xcor_limber_gsl (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *
   xclki.ps    = xc->ps;
   xclki.RH    = xc->RH;
 
+  zmin = zmin ? zmin != 0.0 : 1.0e-6;
+
   if (isauto)
     F.function = &_xcor_limber_gsl_auto_int;
   else
@@ -473,7 +522,8 @@ _nc_xcor_limber_gsl (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *
   for (i = 0; i < lmax - lmin + 1; i++)
   {
     xclki.l = lmin + i;
-    ret     = gsl_integration_qag (&F, zmin, zmax, 0.0, NC_XCOR_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &r, &err);
+    /* GSL integration sometimes underestimates the error, so we multiply the relative tolerance by 1e-2 */
+    ret = gsl_integration_qag (&F, zmin, zmax, 0.0, xc->reltol * 1.0e-2, NCM_INTEGRAL_PARTITION, 6, *w, &r, &err);
 
     if (ret != GSL_SUCCESS)
       g_error ("_nc_xcor_limber_gsl: %s.", gsl_strerror (ret));
@@ -497,7 +547,7 @@ _nc_xcor_limber_cubature_worker (NcmIntegralND *xcor_int_nd, NcXcorLimberArg *xc
 
   zmin = zmin ? zmin != 0.0 : 1.0e-6;
 
-  ncm_integral_nd_set_reltol (xcor_int_nd, 1.0e-5);
+  ncm_integral_nd_set_reltol (xcor_int_nd, xcor_arg->xc->reltol);
   ncm_integral_nd_set_abstol (xcor_int_nd, 0.0);
   ncm_integral_nd_set_method (xcor_int_nd, NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V);
 
@@ -548,6 +598,7 @@ _nc_xcor_limber_cubature (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKer
     NcXcorLimberArg *xcor_arg  = &xcor_int->data;
     NcmIntegralND *xcor_int_nd = NCM_INTEGRAL_ND (xcor_int);
 
+    xcor_arg->xc    = xc;
     xcor_arg->dist  = xc->dist;
     xcor_arg->ps    = xc->ps;
     xcor_arg->RH    = xc->RH;
@@ -565,6 +616,7 @@ _nc_xcor_limber_cubature (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKer
     NcXcorLimberArg *xcor_arg     = &xcor_cross->data;
     NcmIntegralND *xcor_int_nd    = NCM_INTEGRAL_ND (xcor_cross);
 
+    xcor_arg->xc    = xc;
     xcor_arg->dist  = xc->dist;
     xcor_arg->ps    = xc->ps;
     xcor_arg->RH    = xc->RH;

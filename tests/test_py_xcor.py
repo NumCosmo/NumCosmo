@@ -24,7 +24,9 @@
 
 """Unit tests for NumCosmo powwer-spectra."""
 
+import itertools as it
 import pytest
+from pytest_lazy_fixtures import lf
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -43,6 +45,7 @@ from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_ccl_cosmo_eh_halofit,
     fixture_nc_cosmo_eh_linear,
     fixture_nc_cosmo_eh_halofit,
+    fixture_nc_cosmo_default,
 )
 from .fixtures_xcor import (  # pylint: disable=unused-import # noqa: F401
     fixture_ccl_cmb_lens,
@@ -341,6 +344,17 @@ def test_cmb_lens_kernel(
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=0.0)
 
 
+def test_xcor_set_get_reltol(nc_cosmo_default: ncpy.Cosmology) -> None:
+    """Test get_reltol and set_reltol."""
+    nc_xcor = Nc.Xcor.new(
+        nc_cosmo_default.dist, nc_cosmo_default.ps_ml, Nc.XcorLimberMethod.GSL
+    )
+    nc_xcor.set_reltol(1.0e-4)
+    assert nc_xcor.get_reltol() == 1.0e-4
+    nc_xcor.set_reltol(1.0e-5)
+    assert nc_xcor.get_reltol() == 1.0e-5
+
+
 def test_cmb_lens_auto_integrand(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
     nc_cosmo_eh_linear: ncpy.Cosmology,
@@ -594,3 +608,54 @@ def test_compare_autocorrelation(
         ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells
     )
     assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-4)
+
+
+@pytest.mark.parametrize(
+    "k1, k2",
+    it.combinations_with_replacement(
+        [
+            lf("nc_cmb_lens"),
+            lf("nc_cmb_isw"),
+            lf("nc_gal"),
+            lf("nc_tsz"),
+            lf("nc_weak_lensing"),
+        ],
+        r=2,
+    ),
+)
+@pytest.mark.parametrize(
+    "ccl_cosmo_eh_linear",
+    [pytest.param((False, 0), id="high_prec_false_index_0")],
+    indirect=True,
+)
+def test_xcor_methods(
+    nc_cosmo_eh_linear: ncpy.Cosmology, k1: Nc.XcorLimberKernel, k2: Nc.XcorLimberKernel
+) -> None:
+    """Compare NumCosmo Xcor integration methods."""
+    xcor_gsl = Nc.Xcor.new(
+        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorLimberMethod.GSL
+    )
+
+    xcor_cub = Nc.Xcor.new(
+        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorLimberMethod.CUBATURE
+    )
+
+    xcor_gsl.prepare(nc_cosmo_eh_linear.cosmo)
+    xcor_cub.prepare(nc_cosmo_eh_linear.cosmo)
+
+    k1.prepare(nc_cosmo_eh_linear.cosmo)
+    k2.prepare(nc_cosmo_eh_linear.cosmo)
+
+    lmin = 2
+    lmax = 1000
+    vp_gsl = Ncm.Vector.new(lmax - lmin + 1)
+    vp_cub = Ncm.Vector.new(lmax - lmin + 1)
+
+    xcor_gsl.set_reltol(1.0e-7)
+    xcor_gsl.limber(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_gsl)
+    xcor_cub.limber(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_cub)
+
+    vp_gsl_a = np.array(vp_gsl.dup_array())
+    vp_cub_a = np.array(vp_cub.dup_array())
+
+    assert_allclose(vp_gsl_a, vp_cub_a, rtol=1.0e-5)
