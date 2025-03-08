@@ -554,25 +554,32 @@ def test_gal_kernel(
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-30)
 
 
+@pytest.mark.parametrize("n_points", [None, 400])
 def test_compare_kernels(
-    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: ncpy.Cosmology,
+    n_points: int | None,
 ) -> None:
     """Compare CMB lensing kernel from CCL and NumCosmo."""
     # TODO: Test curvature models when CCL supports them
     if ccl_cosmo_eh_linear["Omega_k"] == 0.0:
         cmp = nc_cmp.compare_cmb_lens_kernel(
-            ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77
+            ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77, n_samples=n_points
         )
         assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-6)
 
-    cmp = nc_cmp.compare_cmb_isw_kernel(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77)
+    cmp = nc_cmp.compare_cmb_isw_kernel(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77, n_chi=n_points
+    )
     assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-1)
 
-    cmp = nc_cmp.compare_tsz_kernel(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77)
+    cmp = nc_cmp.compare_tsz_kernel(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77, n_chi=n_points
+    )
     assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-8)
 
     cmp = nc_cmp.compare_galaxy_weak_lensing_kernel(
-        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77, n_samples=n_points
     )
     assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-3, atol=1.0e-15)
 
@@ -582,25 +589,34 @@ def test_compare_kernels(
     assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-4, atol=1.0e-12)
 
 
+@pytest.mark.parametrize("n_points", [None, 400])
 def test_compare_autocorrelation(
-    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: ncpy.Cosmology,
+    n_points: int | None,
 ) -> None:
     """Compare CCL and NumCosmo auto-correlation."""
     ells = np.arange(2, 1000)
 
     # TODO: Test curvature models when CCL supports them
     if ccl_cosmo_eh_linear["Omega_k"] == 0.0:
-        cmp = nc_cmp.compare_cmb_len_auto(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells)
+        cmp = nc_cmp.compare_cmb_len_auto(
+            ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells, n_samples=n_points
+        )
         assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-2)
 
-    cmp = nc_cmp.compare_cmb_isw_auto(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells)
+    cmp = nc_cmp.compare_cmb_isw_auto(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells, n_chi=n_points
+    )
     assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-1)
 
-    cmp = nc_cmp.compare_tsz_auto(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells)
+    cmp = nc_cmp.compare_tsz_auto(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells, n_chi=n_points
+    )
     assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-3)
 
     cmp = nc_cmp.compare_galaxy_weak_lensing_auto(
-        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells, n_samples=n_points
     )
     assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-3)
 
