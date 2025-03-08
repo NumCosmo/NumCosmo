@@ -329,7 +329,7 @@ nc_xcor_limber_cross_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint
  *
  * Two methods are available to compute Limber-approximated integrals: independent GSL numerical integration or vector integration using Sundials's CVode algorithm.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a #NcXcor
  *
  */
 NcXcor *
@@ -346,6 +346,8 @@ nc_xcor_new (NcDistance *dist, NcmPowspec *ps, NcXcorLimberMethod meth)
  * nc_xcor_ref:
  * @xc: a #NcXcor
  *
+ * Increments the reference count of @xc.
+ *
  * Returns: (transfer full): @xc
  */
 NcXcor *
@@ -358,7 +360,7 @@ nc_xcor_ref (NcXcor *xc)
  * nc_xcor_free:
  * @xc: a #NcXcor
  *
- * FIXME
+ * Decrements the reference count of @xc, and frees it if the count reaches 0.
  *
  */
 void
@@ -371,7 +373,8 @@ nc_xcor_free (NcXcor *xc)
  * nc_xcor_clear:
  * @xc: a #NcXcor
  *
- * FIXME
+ * If *@xc is not %NULL, decrements the reference count of @xc, and frees it if the
+ * count reaches 0.
  *
  */
 void
@@ -385,7 +388,7 @@ nc_xcor_clear (NcXcor **xc)
  * @xc: a #NcXcor
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Prepares @xc for computation.
  *
  */
 void
@@ -585,7 +588,10 @@ _nc_xcor_limber_cubature (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKer
  * @lmax: a #guint
  * @vp: a #NcmVector
  *
- * Performs the computation of the power spectrum $C_{\ell}^{AB}$ in the Limber approximation. The kernels of observables A and B are @xclk1 and @xclk2. If @xclk2 is NULL, the auto power spectrum is computed. The result for multipoles lmin to lmax (included) is stored in the #NcmVector @vp.
+ * Performs the computation of the power spectrum $C_{\ell}^{AB}$ in the Limber
+ * approximation. The kernels of observables A and B are @xclk1 and @xclk2. If @xclk2 is
+ * NULL, the auto power spectrum is computed. The result for multipoles lmin to lmax
+ * (included) is stored in the #NcmVector @vp.
  *
  */
 void

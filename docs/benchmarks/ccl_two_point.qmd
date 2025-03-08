@@ -402,9 +402,11 @@ dndz = nc_cmp.prepare_dndz(0.5, 0.1, 1000)
 z_a = np.array(dndz.peek_xv().dup_array())
 nz_a = np.array(dndz.peek_yv().dup_array())
 nc_wl_auto_v = Ncm.Vector.new(lmax + 1 - 2)
+bias = 3.0
+mbias = 1.234
 
 
-def compute_using_ccl(
+def compute_wl_using_ccl(
     ccl_cosmo: pyccl.Cosmology, z_a: np.ndarray, nz_a: np.ndarray, ells: np.ndarray
 ):
     ccl_wl = pyccl.WeakLensingTracer(ccl_cosmo, dndz=(z_a, nz_a))
@@ -416,7 +418,31 @@ def compute_using_ccl(
     return ccl_wl_auto
 
 
-def compute_using_nc(
+def compute_nc_using_ccl(
+    ccl_cosmo: pyccl.Cosmology,
+    z_a: np.ndarray,
+    nz_a: np.ndarray,
+    ells: np.ndarray,
+    bias: float,
+    mbias: float,
+) -> np.ndarray:
+    ccl_gal = pyccl.NumberCountsTracer(
+        ccl_cosmo,
+        has_rsd=False,
+        dndz=(z_a, nz_a),
+        bias=(z_a, np.ones_like(z_a) * bias),
+        mag_bias=(z_a, np.ones_like(z_a) * mbias),
+    )
+
+    psp = ccl_cosmo.get_linear_power()
+    ccl_gal_auto = pyccl.angular_cl(
+        ccl_cosmo, ccl_gal, ccl_gal, ells, p_of_k_a_lin=psp, p_of_k_a=psp
+    )
+
+    return ccl_gal_auto
+
+
+def compute_wl_using_nc(
     cosmology: ncc.Cosmology,
     dndz: Ncm.Spline,
     ells: np.ndarray,
@@ -431,14 +457,51 @@ def compute_using_nc(
     return np.array(nc_wl_auto_v.dup_array())
 
 
+def compute_nc_using_nc(
+    cosmology: ncc.Cosmology,
+    dndz: Ncm.Spline,
+    ells: np.ndarray,
+    bias: float,
+    mbias: float,
+    nc_wl_auto_v: Ncm.Vector,
+) -> np.ndarray:
+    nc_gal = Nc.XcorLimberKernelGal.new(0.0, 2.0, 1, 3.0, dndz, cosmology.dist, True)
+    nc_gal["mag_bias"] = mbias
+    nc_gal["bparam_0"] = bias
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorLimberMethod.CUBATURE)
+    nc_gal.prepare(cosmology.cosmo)
+    xcor.prepare(cosmology.cosmo)
+    xcor.limber(nc_gal, nc_gal, cosmology.cosmo, 2, lmax, nc_wl_auto_v)
+
+    return np.array(nc_wl_auto_v.dup_array())
+
+
 table = [
     ["Galaxy Weak Lensing", "CCL"]
     + nc_cmp.compute_times(
-        lambda: compute_using_ccl(models[0]["CCL"], z_a, nz_a, ells)
+        lambda: compute_wl_using_ccl(models[0]["CCL"], z_a, nz_a, ells),
+        repeat=5,
+        number=10,
     ),
     ["Galaxy Weak Lensing", "NumCosmo"]
     + nc_cmp.compute_times(
-        lambda: compute_using_nc(models[0]["NC"], dndz, ells, nc_wl_auto_v)
+        lambda: compute_wl_using_nc(models[0]["NC"], dndz, ells, nc_wl_auto_v),
+        repeat=5,
+        number=10,
+    ),
+    ["Galaxy Number Counts", "CCL"]
+    + nc_cmp.compute_times(
+        lambda: compute_nc_using_ccl(models[1]["CCL"], z_a, nz_a, ells, bias, mbias),
+        repeat=5,
+        number=10,
+    ),
+    ["Galaxy Number Counts", "NumCosmo"]
+    + nc_cmp.compute_times(
+        lambda: compute_nc_using_nc(
+            models[1]["NC"], dndz, ells, bias, mbias, nc_wl_auto_v
+        ),
+        repeat=5,
+        number=10,
     ),
 ]
 

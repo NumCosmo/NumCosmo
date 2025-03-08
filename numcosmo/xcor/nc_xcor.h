@@ -44,10 +44,10 @@ G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
 
 /**
  * NcXcorLimberMethod:
- * @NC_XCOR_LIMBER_METHOD_GSL: FIXME
- * @NC_XCOR_LIMBER_METHOD_CUBATURE: FIXME
+ * @NC_XCOR_LIMBER_METHOD_GSL: Use GSL numerical integration
+ * @NC_XCOR_LIMBER_METHOD_CUBATURE: Use cubature numerical integration
  *
- * FIXME
+ * Methods to compute Limber-approximated integrals.
  *
  */
 typedef enum _NcXcorLimberMethod
