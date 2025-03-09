@@ -52,7 +52,8 @@ typedef struct _NcClusterMassAscasoPrivate NcClusterMassAscasoPrivate;
  * @NC_CLUSTER_MASS_ASCASO_SIGMA_P0: bias of the standard deviation of the log-normal distribution
  * @NC_CLUSTER_MASS_ASCASO_SIGMA_P1: slope on the standard deviation of the log-normal distribution
  * @NC_CLUSTER_MASS_ASCASO_SIGMA_P2: redshift dependency standard deviation of the log-normal distribution
- * 
+ * @NC_CLUSTER_MASS_ASCASO_CUT: cut in richness
+ *
  * FIXME
  */
 typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_ASCASO_SPARAMS >*/
@@ -63,6 +64,7 @@ typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_ASCASO_SPARAMS >*/
   NC_CLUSTER_MASS_ASCASO_SIGMA_P0,
   NC_CLUSTER_MASS_ASCASO_SIGMA_P1,
   NC_CLUSTER_MASS_ASCASO_SIGMA_P2,
+  NC_CLUSTER_MASS_ASCASO_CUT,
   /* < private > */
   NC_CLUSTER_MASS_ASCASO_SPARAM_LEN, /*< skip >*/
 } NcClusterMassAscasoSParams;
@@ -73,6 +75,7 @@ typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_ASCASO_SPARAMS >*/
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P0  (0.33)
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P1  (-0.08 / M_LN10)
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P2  (0.0)
+#define NC_CLUSTER_MASS_ASCASO_DEFAULT_CUT  (6)
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL (0.0)
 
 struct _NcClusterMassAscasoClass
@@ -90,7 +93,10 @@ struct _NcClusterMassAscaso
 
 GType nc_cluster_mass_ascaso_get_type (void) G_GNUC_CONST;
 
+gdouble nc_cluster_mass_ascaso_get_mean_richness (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
+gdouble nc_cluster_mass_ascaso_get_std_richness (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
+gdouble nc_cluster_mass_ascaso_get_cut (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
+
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_MASS_ASCASO_H_ */
-
