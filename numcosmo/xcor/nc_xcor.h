@@ -44,18 +44,19 @@ G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
 
 /**
  * NcXcorLimberMethod:
- * @NC_XCOR_LIMBER_METHOD_GSL: FIXME
+ * @NC_XCOR_LIMBER_METHOD_GSL: Use GSL numerical integration
+ * @NC_XCOR_LIMBER_METHOD_CUBATURE: Use cubature numerical integration
  *
- * FIXME
- *
+ * Methods to compute Limber-approximated integrals.
  *
  */
 typedef enum _NcXcorLimberMethod
 {
   NC_XCOR_LIMBER_METHOD_GSL = 0,
+  NC_XCOR_LIMBER_METHOD_CUBATURE,
 } NcXcorLimberMethod;
 
-#define NC_XCOR_PRECISION (1e-5)
+#define NC_XCOR_PRECISION (1.0e-6)
 
 GType nc_xcor_kinetic_get_type (void) G_GNUC_CONST;
 
@@ -63,6 +64,9 @@ NcXcor *nc_xcor_new (NcDistance *dist, NcmPowspec *ps, NcXcorLimberMethod meth);
 NcXcor *nc_xcor_ref (NcXcor *xc);
 void nc_xcor_free (NcXcor *xc);
 void nc_xcor_clear (NcXcor **xc);
+
+void nc_xcor_set_reltol (NcXcor *xc, const gdouble reltol);
+gdouble nc_xcor_get_reltol (NcXcor *xc);
 
 void nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo);
 
