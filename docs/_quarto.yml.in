@@ -9,6 +9,7 @@ project:
     - numcosmo-api.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
+    - benchmarks/ccl_two_point.qmd
     - tutorials/c/gobject.qmd
     - tutorials/c/curve_tutorial.qmd
     - tutorials/python/cluster_wl_simul.qmd
@@ -51,6 +52,8 @@ website:
               text: "CCL Background"
             - href: benchmarks/ccl_power_spectrum.qmd
               text: "CCL Power Spectrum"
+            - href: benchmarks/ccl_two_point.qmd
+              text: "CCL Two-Point Correlation"
         - section: "Programming Tutorials"
           contents:
             - section: "C Tutorials"

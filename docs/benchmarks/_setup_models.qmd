@@ -30,6 +30,7 @@ def setup_models(
     n_s: float = 0.96,  # Scalar spectral index
     Neff: float = 3.046,  # Effective number of massless neutrinos
     high_precision: bool = False,  # Use high precision computations in CCL
+    dist_z_max: float = 15.0,  # Maximum redshift for distance computations
 ):
     """Setup cosmological models."""
     Omega_v_vals = np.array([0.7, 0.7, 0.7, 0.65, 0.75])  # Dark energy density
@@ -83,7 +84,7 @@ def setup_models(
             m_nu=m,
             transfer_function="eisenstein_hu",
         )
-        cosmology = create_nc_obj(ccl_cosmo)
+        cosmology = create_nc_obj(ccl_cosmo, dist_z_max=dist_z_max)
         models.append({"CCL": ccl_cosmo, "NC": cosmology})
 
     return parameters, models
