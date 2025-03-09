@@ -59,6 +59,7 @@ struct _NcHICosmoDEPrivate
   NcmSpline *nu_p_s[10];
   gdouble zmax;
   gsl_min_fminimizer *min;
+  gboolean CCL_comp;
 };
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO)
@@ -66,6 +67,7 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO
 enum
 {
   PROP_0,
+  PROP_CCL_COMP,
   PROP_SIZE,
 };
 
@@ -97,6 +99,46 @@ nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
   g_free (filename);
 
   cosmo_de->priv->min = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
+
+  cosmo_de->priv->CCL_comp = FALSE;
+}
+
+static void
+_nc_hicosmo_de_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcHICosmoDE *cosmo_de           = NC_HICOSMO_DE (object);
+  NcHICosmoDEPrivate * const self = cosmo_de->priv;
+
+  g_return_if_fail (NC_IS_HICOSMO_DE (object));
+
+  switch (prop_id)
+  {
+    case PROP_CCL_COMP:
+      self->CCL_comp = g_value_get_boolean (value);
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
+}
+
+static void
+_nc_hicosmo_de_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcHICosmoDE *cosmo_de           = NC_HICOSMO_DE (object);
+  NcHICosmoDEPrivate * const self = cosmo_de->priv;
+
+  g_return_if_fail (NC_IS_HICOSMO_DE (object));
+
+  switch (prop_id)
+  {
+    case PROP_CCL_COMP:
+      g_value_set_boolean (value, self->CCL_comp);
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
 }
 
 static gdouble _nc_hicosmo_de_neutrino_rho_integrand (gpointer userdata, const gdouble v, const gdouble w);
@@ -253,14 +295,23 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
   NcHICosmoClass *parent_class = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
 
+  model_class->set_property = &_nc_hicosmo_de_set_property;
+  model_class->get_property = &_nc_hicosmo_de_get_property;
   object_class->constructed = &_nc_hicosmo_de_constructed;
   object_class->dispose     = &_nc_hicosmo_de_dispose;
   object_class->finalize    = &_nc_hicosmo_de_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Darkenergy models abstract class", "NcHICosmoDE");
-
   ncm_model_class_add_params (model_class,
                               NC_HICOSMO_DE_SPARAM_LEN, NC_HICOSMO_DE_VPARAM_LEN, PROP_SIZE);
+
+  g_object_class_install_property (object_class,
+                                   PROP_CCL_COMP,
+                                   g_param_spec_boolean ("CCL-comp",
+                                                         NULL,
+                                                         "Whether to use CCL compatible mode",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /* Set H_0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_H0, "H_0", "H0",
@@ -619,7 +670,8 @@ _nc_hicosmo_de_Omega_gnu0 (NcHICosmo *cosmo)
 static gdouble
 _nc_hicosmo_de_Omega_r0 (NcHICosmo *cosmo)
 {
-  const gdouble Omega_mnu_r = 3.0 * _nc_hicosmo_de_Press_mnu0 (cosmo);
+  NcHICosmoDEPrivate *self  = NC_HICOSMO_DE (cosmo)->priv;
+  const gdouble Omega_mnu_r = self->CCL_comp ? 0.0 : 3.0 * _nc_hicosmo_de_Press_mnu0 (cosmo);
 
   return _nc_hicosmo_de_Omega_gnu0 (cosmo) + Omega_mnu_r;
 }
@@ -627,9 +679,10 @@ _nc_hicosmo_de_Omega_r0 (NcHICosmo *cosmo)
 static gdouble
 _nc_hicosmo_de_E2Omega_r (NcHICosmo *cosmo, const gdouble z)
 {
+  NcHICosmoDEPrivate *self  = NC_HICOSMO_DE (cosmo)->priv;
   const gdouble x4          = gsl_pow_4 (1.0 + z);
   const gdouble conv        = 7.0 / 8.0 * pow (4.0 / 11.0, 4.0 / 3.0);
-  const gdouble Omega_mnu_r = 3.0 * _nc_hicosmo_de_E2Press_mnu (cosmo, z);
+  const gdouble Omega_mnu_r = self->CCL_comp ? 0.0 : 3.0 * _nc_hicosmo_de_E2Press_mnu (cosmo, z);
 
   return (1.0 + ENNU * conv) * _nc_hicosmo_de_Omega_g0 (cosmo) * x4 + Omega_mnu_r;
 }
@@ -637,7 +690,8 @@ _nc_hicosmo_de_E2Omega_r (NcHICosmo *cosmo, const gdouble z)
 static gdouble
 _nc_hicosmo_de_Omega_m0 (NcHICosmo *cosmo)
 {
-  const gdouble Omega_mnu_r = 3.0 * _nc_hicosmo_de_Press_mnu0 (cosmo);
+  NcHICosmoDEPrivate *self  = NC_HICOSMO_DE (cosmo)->priv;
+  const gdouble Omega_mnu_r = self->CCL_comp ? 0.0 : 3.0 * _nc_hicosmo_de_Press_mnu0 (cosmo);
   const gdouble Omega_mnu_d = _nc_hicosmo_de_Omega_mnu0 (cosmo) - Omega_mnu_r;
 
   return OMEGA_M + Omega_mnu_d;
@@ -646,8 +700,9 @@ _nc_hicosmo_de_Omega_m0 (NcHICosmo *cosmo)
 static gdouble
 _nc_hicosmo_de_E2Omega_m (NcHICosmo *cosmo, const gdouble z)
 {
+  NcHICosmoDEPrivate *self  = NC_HICOSMO_DE (cosmo)->priv;
   const gdouble x3          = gsl_pow_3 (1.0 + z);
-  const gdouble Omega_mnu_r = 3.0 * _nc_hicosmo_de_E2Press_mnu (cosmo, z);
+  const gdouble Omega_mnu_r = self->CCL_comp ? 0.0 : 3.0 * _nc_hicosmo_de_E2Press_mnu (cosmo, z);
   const gdouble Omega_mnu_d = _nc_hicosmo_de_E2Omega_mnu (cosmo, z) - Omega_mnu_r;
 
   return OMEGA_M * x3 + Omega_mnu_d;

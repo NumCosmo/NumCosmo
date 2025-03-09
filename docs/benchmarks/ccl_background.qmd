@@ -39,7 +39,6 @@ import pandas as pd
 
 # NumCosmo
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams, dsigmaM_dlnM
 
 from numcosmo_py.plotting.tools import set_rc_params_article, format_time
 import numcosmo_py.cosmology as ncc
@@ -57,98 +56,12 @@ Ncm.cfg_set_log_handler(lambda msg: sys.stdout.write(msg) and sys.stdout.flush()
 set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
 ```
 
-### Initial Parameter Definitions
-
-We initialize the cosmological parameters and model-specific variables used for distance comparisons in NumCosmo. 
-Scalar parameters are fixed across all models, while arrays define variations in dark energy and neutrino properties for multiple scenarios.
-First, we instantiate a CCL cosmology object using the predefined global parameters. 
-Next, using the `numcosmo_py` function `create_nc_obj`, we generate a NumCosmo cosmology object initialized with the same parameters as the CCL model. 
-Fixed scalars apply universally, while arrays ($\Omega_v$, $w_0$, $w_a$, $m_\nu$) represent different model configurations.
-Finally, in the `setup_models` function, one can enable high-precision computations in CCL, which increases accuracy at the cost of longer computation times. When this mode is activated, the overall agreement between CCL and NumCosmo improves significantly.
+{{< include _setup_models.qmd >}}
 
 ```{python}
-# | code-fold: true
-
-PARAMETERS_SET = [
-    r"$\Lambda$CDM, flat",
-    r"$\Lambda$CDM, flat, $1\nu$",
-    r"XCDM, flat, $2\nu$",
-    r"XCDM, spherical, $2\nu$",
-    r"XCDM, hyperbolic, $2\nu$",
-]
-COLORS = plt.rcParams["axes.prop_cycle"].by_key()["color"][:5]
-
-
-def setup_models(
-    Omega_c: float = 0.25,  # Cold dark matter density
-    Omega_b: float = 0.05,  # Baryonic matter density
-    h: float = 0.7,  # Dimensionless Hubble constant
-    sigma8: float = 0.9,  # Matter density contrast std. dev. (8 Mpc/h)
-    n_s: float = 0.96,  # Scalar spectral index
-    Neff: float = 3.046,  # Effective number of massless neutrinos
-    high_precision: bool = False,  # Use high precision computations in CCL
-):
-    """Setup cosmological models."""
-    Omega_v_vals = np.array([0.7, 0.7, 0.7, 0.65, 0.75])  # Dark energy density
-    w0_vals = np.array([-1.0, -1.0, -0.9, -0.9, -0.9])  # DE equation of state w0
-    wa_vals = np.array([0.0, 0.0, 0.1, 0.1, 0.1])  # DE equation of state wa
-
-    # Neutrino masses (eV) for each model: [m1, m2, m3]
-    mnu = np.array(
-        [
-            [0.0, 0.0, 0.0],
-            [0.04, 0.0, 0.0],
-            [0.05, 0.01, 0.0],
-            [0.03, 0.02, 0.0],
-            [0.03, 0.02, 0.0],
-        ]
-    )
-    Omega_k_vals = [
-        float(1.0 - Omega_c - Omega_b - Omega_v) for Omega_v in Omega_v_vals
-    ]
-
-    parameters = [
-        ["$\\Omega_c$", "Cold Dark Matter Density", Omega_c],
-        ["$\\Omega_b$", "Baryonic Matter Density", Omega_b],
-        ["$\\Omega_v$", "Dark Energy Density", Omega_v_vals],
-        ["$\\Omega_k$", "Curvature Density", [f"{v:.3f}" for v in Omega_k_vals]],
-        ["$h$", "Hubble Constant (dimensionless)", h],
-        ["$n_s$", "Scalar Spectral Index", n_s],
-        ["$N_\\mathrm{eff}$", "Effective Nº of Massless Neutrinos", Neff],
-        ["$\\sigma_8$", "Matter Density Contrast Std. Dev. (8 Mpc/h)", sigma8],
-        ["$w_0$", "DE Equation of State Parameter", w0_vals],
-        ["$w_a$", "DE Equation of State Parameter", wa_vals],
-        ["$m_\\nu$", "Neutrino Masses (eV)", [f"{m.tolist()}" for m in mnu]],
-    ]
-    models = []
-    if high_precision:
-        CCLParams.set_high_prec_params()
-
-    for Omega_v, Omega_k, w0, wa, m in zip(
-        Omega_v_vals, Omega_k_vals, w0_vals, wa_vals, mnu
-    ):
-        ccl_cosmo = pyccl.Cosmology(
-            Omega_c=Omega_c,
-            Omega_b=Omega_b,
-            Neff=Neff,
-            h=h,
-            sigma8=sigma8,
-            n_s=n_s,
-            Omega_k=Omega_k,
-            w0=w0,
-            wa=wa,
-            m_nu=m,
-            transfer_function="eisenstein_hu",
-        )
-        cosmology = create_nc_obj(ccl_cosmo)
-        models.append({"CCL": ccl_cosmo, "NC": cosmology})
-
-    return parameters, models
-
-
+# Preparing the models
 parameters, models = setup_models(high_precision=False)
-z = np.linspace(0.01, 15.0, 10000)
-
+z = np.geomspace(0.01, 1200.0, 10000)
 ```
 
 ### Parameter Overview
@@ -173,7 +86,7 @@ Below, we present the results for all sets of parameters.
 
 Note that in CCL, the total matter density parameter is defined as the sum of the matter density parameter and the massive neutrino density parameter. 
 In contrast, NumCosmo defines it as the sum of the matter density parameter and the fraction of the massive neutrino density parameter that is non-relativistic at a given redshift. 
-For consistency, we compute $\Omega_m$ using the CCL prescription.
+For consistency, we compute $\Omega_m$ using the CCL prescription, this is done turning the `CCL_comp` parameter to `True` in the NumCosmo cosmology object.
 
 ```{python}
 
@@ -188,11 +101,10 @@ parameter_comparisons: list[list[nc_cmp.CompareFunc1d]] = [
     [func(m["CCL"], m["NC"], z, model=name) for m, name in zip(models, PARAMETERS_SET)]
     for func in parameter_funcs
 ]
-
 ```
 
 ```{python}
-# | label: fig-ccl-vs-nc-params-set0
+# | label: fig-ccl-vs-nc-params-sets
 # | fig-cap:
 # |   - "Total matter density parameter"
 # |   - "Radiation density parameter"
@@ -207,6 +119,7 @@ for parameter_comparison in parameter_comparisons:
     fig.subplots_adjust(hspace=0)
 
     for p, c in zip(parameter_comparison, COLORS):
+        p.xscale = "log"
         p.plot(axs=axs, color=c)
 
 plt.show()
@@ -280,6 +193,7 @@ for distance_comparison in distance_comparisons:
     fig.subplots_adjust(hspace=0)
 
     for d, c in zip(distance_comparison, COLORS):
+        d.xscale = "log"
         d.plot(axs=axs, color=c)
 
 plt.show()
@@ -368,7 +282,8 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 
 The following function compares the growth factor and growth rate between the CCL and NumCosmo cosmologies.  
 
-Since CCL defines \(\Omega_m\) differently from NumCosmo, the resulting growth factor and growth rate will also differ. In practice, CCL includes ultra-relativistic neutrinos in the matter density, leading to increasing deviations at higher redshifts when compared to NumCosmo. This effect can be observed by inspecting the first model, which does not include massive neutrinos and shows the best agreement between the two approaches.
+Since CCL defines $\Omega_m$ differently from NumCosmo, the resulting growth factor and growth rate will also differ. In practice, CCL includes ultra-relativistic neutrinos in the matter density, leading to increasing deviations at higher redshifts when compared to NumCosmo. 
+However, since we are using the `CCL_comp` mode of NumCosmo, we compute $\Omega_m$ using the CCL prescription.
 
 ```{python}
 
@@ -400,6 +315,7 @@ for growth_comparison in growth_comparisons:
     fig.subplots_adjust(hspace=0)
 
     for p, c in zip(growth_comparison, COLORS):
+        p.xscale = "log"
         p.plot(axs=axs, color=c)
 
 plt.show()
@@ -431,7 +347,7 @@ The next function will compare the scale factor calculated from a comoving dista
 
 ```{python}
 
-chi = np.geomspace(1.0, 1.0e3, 1000)
+chi = np.geomspace(1.0e-2, 4.0e3, 1000)
 
 compare_scale_factor: list[nc_cmp.CompareFunc1d] = [
     nc_cmp.compare_scale_factor(m["CCL"], m["NC"], chi, model=name)
@@ -544,3 +460,4 @@ In this notebook, we compared the cosmological results obtained using CCL and Nu
 - **Critical Surface Mass Density**: We assessed this observable and observed agreement.  
 
 Overall, the results demonstrate good agreement between the two methods, with the main differences arising from CCL's handling of neutrinos in the background model, particularly affecting growth-related observables at higher redshifts.
+

@@ -195,13 +195,13 @@ def test_compare_1d_plot() -> None:
     x = np.linspace(0.0, 2.0, 100, dtype=np.float64)
     y1 = 0.4 + 0.6 * x**2
     y2 = y1 + np.random.normal(0.0, 1.0e-6, y1.shape)
-    compare = CompareFunc1d(x, y1, y2)
     _, axs = plt.subplots(1, 2)
     xscale = "log"
     yscale = "linear"
     color = "black"
     lw = 1.2
-    compare.plot(axs, xscale=xscale, yscale=yscale, color=color, lw=lw)
+    compare = CompareFunc1d(x, y1, y2, xscale=xscale, yscale=yscale)
+    compare.plot(axs, color=color, lw=lw)
 
     # Check axis scales
     assert axs[0].get_xscale() == xscale

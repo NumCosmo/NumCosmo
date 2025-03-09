@@ -157,3 +157,9 @@ def fixture_nc_cosmo_eh_linear(ccl_cosmo_eh_linear) -> Cosmology:
 def fixture_nc_cosmo_eh_halofit(ccl_cosmo_eh_halofit) -> Cosmology:
     """Fixture for CCL and NumCosmo Cosmology."""
     return create_nc_obj(ccl_cosmo_eh_halofit, dist_z_max=2000.0)
+
+
+@pytest.fixture(name="nc_cosmo_default", scope="module")
+def fixture_nc_cosmo_default() -> Cosmology:
+    """Fixture for default NumCosmo Cosmology."""
+    return Cosmology.default()

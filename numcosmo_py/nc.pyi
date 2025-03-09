@@ -393,7 +393,7 @@ XCOR_LIMBER_KERNEL_GAL_DEFAULT_NOISE_BIAS: float = 0.0
 XCOR_LIMBER_KERNEL_GAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN: int = 200
 XCOR_LIMBER_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
-XCOR_PRECISION: float = 1e-05
+XCOR_PRECISION: float = 1e-06
 _lock = ...  # FIXME Constant
 _namespace: str = r"NumCosmo"
 _version: str = r"1.0"
@@ -421,122 +421,6 @@ def data_bao_create(dist: Distance, id: DataBaoId) -> NumCosmoMath.Data: ...
 def data_cmb_create(dist: Distance, id: DataCMBId) -> NumCosmoMath.Data: ...
 def data_snia_cov_error_quark() -> int: ...
 def halo_density_profile_nfw_class_set_ni(num: bool) -> None: ...
-
-class ABCClusterNCount(NumCosmoMath.ABC):
-    r"""
-    :Constructors:
-
-    ::
-
-        ABCClusterNCount(**properties)
-        new(mset:NumCosmoMath.MSet, prior:NumCosmoMath.MSetTransKern, dset:NumCosmoMath.Dataset) -> NumCosmo.ABCClusterNCount
-
-    Object NcABCClusterNCount
-
-    Properties from NcABCClusterNCount:
-      scale-cov -> gboolean: scale-cov
-        Scaled covariance
-      summary-type -> NcABCClusterNCountSummary: summary-type
-        Summary type
-      quantiles -> NcmVector: quantiles
-        Quantiles for binning
-      z-nodes -> NcmVector: z-nodes
-        Nodes for z
-      lnM-nodes -> NcmVector: lnM-nodes
-        Nodes for lnM
-      z-bins -> guint: z-bins
-        Number of bins in z
-      lnM-bins -> guint: lnM-bins
-        Number of bins in lnM
-      rbf-scale -> gdouble: rbf-scale
-        Scale for RBF interpolation
-      epsilon-update -> gdouble: epsilon-update
-        Value used to update epsilon
-      epsilon-update-type -> NcABCClusterNCountEpsilonUpdate: epsilon-update-type
-        Method used to update epsilon
-
-    Properties from NcmABC:
-      mset -> NcmMSet: mset
-        Model Set
-      prior -> NcmMSetTransKern: prior
-        Prior Sampler
-      trans-kernel -> NcmMSetTransKern: trans-kernel
-        Transition Kernel
-      data-set -> NcmDataset: data-set
-        Dataset
-      epsilon -> gdouble: epsilon
-        epsilon
-      nparticles -> guint: nparticles
-        Number of particles
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        epsilon_update: float
-        epsilon_update_type: ABCClusterNCountEpsilonUpdate
-        lnM_bins: int
-        lnM_nodes: NumCosmoMath.Vector
-        quantiles: NumCosmoMath.Vector
-        rbf_scale: float
-        scale_cov: bool
-        summary_type: ABCClusterNCountSummary
-        z_bins: int
-        z_nodes: NumCosmoMath.Vector
-        data_set: NumCosmoMath.Dataset
-        epsilon: float
-        mset: NumCosmoMath.MSet
-        nparticles: int
-        prior: NumCosmoMath.MSetTransKern
-        trans_kernel: NumCosmoMath.MSetTransKern
-
-    props: Props = ...
-    def __init__(
-        self,
-        epsilon_update: float = ...,
-        epsilon_update_type: ABCClusterNCountEpsilonUpdate = ...,
-        lnM_bins: int = ...,
-        lnM_nodes: NumCosmoMath.Vector = ...,
-        quantiles: NumCosmoMath.Vector = ...,
-        rbf_scale: float = ...,
-        scale_cov: bool = ...,
-        summary_type: ABCClusterNCountSummary = ...,
-        z_bins: int = ...,
-        z_nodes: NumCosmoMath.Vector = ...,
-        data_set: NumCosmoMath.Dataset = ...,
-        epsilon: float = ...,
-        mset: NumCosmoMath.MSet = ...,
-        prior: NumCosmoMath.MSetTransKern = ...,
-        trans_kernel: NumCosmoMath.MSetTransKern = ...,
-    ) -> None: ...
-    @classmethod
-    def new(
-        cls,
-        mset: NumCosmoMath.MSet,
-        prior: NumCosmoMath.MSetTransKern,
-        dset: NumCosmoMath.Dataset,
-    ) -> ABCClusterNCount: ...
-    def set_bin_nodes(
-        self, z_nodes: NumCosmoMath.Vector, lnM_nodes: NumCosmoMath.Vector
-    ) -> None: ...
-    def set_bin_quantile(
-        self, quantiles: typing.Optional[NumCosmoMath.Vector] = None
-    ) -> None: ...
-    def set_bin_uniform(self, z_bins: int, lnM_bins: int) -> None: ...
-    def set_epsilon_update(self, q: float) -> None: ...
-    def set_scale_cov(self, on: bool) -> None: ...
-
-class ABCClusterNCountClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        ABCClusterNCountClass()
-    """
-
-    parent_class: NumCosmoMath.ABCClass = ...
 
 class CBE(GObject.Object):
     r"""
@@ -7365,6 +7249,8 @@ class HICosmoDE(HICosmo):
     Object NcHICosmoDE
 
     Properties from NcHICosmoDE:
+      CCL-comp -> gboolean: CCL-comp
+        Whether to use CCL compatible mode
       H0 -> gdouble: H0
         H_0
       Omegac -> gdouble: Omegac
@@ -7443,6 +7329,7 @@ class HICosmoDE(HICosmo):
     """
 
     class Props:
+        CCL_comp: bool
         ENnu: float
         ENnu_fit: bool
         H0: float
@@ -7484,6 +7371,7 @@ class HICosmoDE(HICosmo):
     priv: HICosmoDEPrivate = ...
     def __init__(
         self,
+        CCL_comp: bool = ...,
         ENnu: float = ...,
         ENnu_fit: bool = ...,
         H0: float = ...,
@@ -7566,6 +7454,8 @@ class HICosmoDECpl(HICosmoDE):
         w_1:fit
 
     Properties from NcHICosmoDE:
+      CCL-comp -> gboolean: CCL-comp
+        Whether to use CCL compatible mode
       H0 -> gdouble: H0
         H_0
       Omegac -> gdouble: Omegac
@@ -7648,6 +7538,7 @@ class HICosmoDECpl(HICosmoDE):
         w0_fit: bool
         w1: float
         w1_fit: bool
+        CCL_comp: bool
         ENnu: float
         ENnu_fit: bool
         H0: float
@@ -7692,6 +7583,7 @@ class HICosmoDECpl(HICosmoDE):
         w0_fit: bool = ...,
         w1: float = ...,
         w1_fit: bool = ...,
+        CCL_comp: bool = ...,
         ENnu: float = ...,
         ENnu_fit: bool = ...,
         H0: float = ...,
@@ -7758,6 +7650,8 @@ class HICosmoDEJbp(HICosmoDE):
         w_1:fit
 
     Properties from NcHICosmoDE:
+      CCL-comp -> gboolean: CCL-comp
+        Whether to use CCL compatible mode
       H0 -> gdouble: H0
         H_0
       Omegac -> gdouble: Omegac
@@ -7840,6 +7734,7 @@ class HICosmoDEJbp(HICosmoDE):
         w0_fit: bool
         w1: float
         w1_fit: bool
+        CCL_comp: bool
         ENnu: float
         ENnu_fit: bool
         H0: float
@@ -7884,6 +7779,7 @@ class HICosmoDEJbp(HICosmoDE):
         w0_fit: bool = ...,
         w1: float = ...,
         w1_fit: bool = ...,
+        CCL_comp: bool = ...,
         ENnu: float = ...,
         ENnu_fit: bool = ...,
         H0: float = ...,
@@ -8054,6 +7950,8 @@ class HICosmoDEWSpline(HICosmoDE):
         w:fit
 
     Properties from NcHICosmoDE:
+      CCL-comp -> gboolean: CCL-comp
+        Whether to use CCL compatible mode
       H0 -> gdouble: H0
         H_0
       Omegac -> gdouble: Omegac
@@ -8137,6 +8035,7 @@ class HICosmoDEWSpline(HICosmoDE):
         w_length: int
         z1: float
         zf: float
+        CCL_comp: bool
         ENnu: float
         ENnu_fit: bool
         H0: float
@@ -8183,6 +8082,7 @@ class HICosmoDEWSpline(HICosmoDE):
         w_length: int = ...,
         z1: float = ...,
         zf: float = ...,
+        CCL_comp: bool = ...,
         ENnu: float = ...,
         ENnu_fit: bool = ...,
         H0: float = ...,
@@ -8248,6 +8148,8 @@ class HICosmoDEXcdm(HICosmoDE):
         w:fit
 
     Properties from NcHICosmoDE:
+      CCL-comp -> gboolean: CCL-comp
+        Whether to use CCL compatible mode
       H0 -> gdouble: H0
         H_0
       Omegac -> gdouble: Omegac
@@ -8328,6 +8230,7 @@ class HICosmoDEXcdm(HICosmoDE):
     class Props:
         w: float
         w_fit: bool
+        CCL_comp: bool
         ENnu: float
         ENnu_fit: bool
         H0: float
@@ -8370,6 +8273,7 @@ class HICosmoDEXcdm(HICosmoDE):
         self,
         w: float = ...,
         w_fit: bool = ...,
+        CCL_comp: bool = ...,
         ENnu: float = ...,
         ENnu_fit: bool = ...,
         H0: float = ...,
@@ -17245,10 +17149,6 @@ class PowspecMLTransfer(PowspecML):
         reltol: float
 
     props: Props = ...
-    parent_instance: PowspecML = ...
-    tf: TransferFunc = ...
-    gf: GrowthFunc = ...
-    Pm_k2Pzeta: float = ...
     def __init__(
         self,
         growth: GrowthFunc = ...,
@@ -18857,6 +18757,8 @@ class Xcor(GObject.Object):
         Matter power spectrum.
       meth -> NcXcorLimberMethod: meth
         Method.
+      reltol -> gdouble: reltol
+        Relative tolerance.
 
     Signals from GObject:
       notify (GParam)
@@ -18866,6 +18768,7 @@ class Xcor(GObject.Object):
         distance: Distance
         meth: XcorLimberMethod
         power_spec: NumCosmoMath.Powspec
+        reltol: float
 
     props: Props = ...
     def __init__(
@@ -18873,10 +18776,12 @@ class Xcor(GObject.Object):
         distance: Distance = ...,
         meth: XcorLimberMethod = ...,
         power_spec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
     ) -> None: ...
     @staticmethod
     def clear(xc: Xcor) -> None: ...
     def free(self) -> None: ...
+    def get_reltol(self) -> float: ...
     def limber(
         self,
         xclk1: XcorLimberKernel,
@@ -18892,6 +18797,7 @@ class Xcor(GObject.Object):
     ) -> Xcor: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> Xcor: ...
+    def set_reltol(self, reltol: float) -> None: ...
 
 class XcorAB(GObject.Object):
     r"""
@@ -19729,16 +19635,6 @@ class RecombSeagerOpt(GObject.GFlags):
     HII_FUDGE: RecombSeagerOpt = ...
     HII_FUDGE_GAUSS_COR: RecombSeagerOpt = ...
 
-class ABCClusterNCountEpsilonUpdate(GObject.GEnum):
-    QUANTILE: ABCClusterNCountEpsilonUpdate = ...
-    UNIFORM: ABCClusterNCountEpsilonUpdate = ...
-
-class ABCClusterNCountSummary(GObject.GEnum):
-    BIN_NODES: ABCClusterNCountSummary = ...
-    BIN_QUANTILE: ABCClusterNCountSummary = ...
-    BIN_UNIFORM: ABCClusterNCountSummary = ...
-    GAUSS_RBF: ABCClusterNCountSummary = ...
-
 class ClusterMassAscasoSParams(GObject.GEnum):
     MU_P0: ClusterMassAscasoSParams = ...
     MU_P1: ClusterMassAscasoSParams = ...
@@ -20414,4 +20310,5 @@ class XcorLimberKerneltSZSParams(GObject.GEnum):
     LEN: XcorLimberKerneltSZSParams = ...
 
 class XcorLimberMethod(GObject.GEnum):
+    CUBATURE: XcorLimberMethod = ...
     GSL: XcorLimberMethod = ...
