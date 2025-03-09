@@ -41,6 +41,17 @@
 
 #include "nc_powspec_ml_transfer.h"
 #include "nc_hiprim.h"
+#include "math/ncm_spline_cubic_notaknot.h"
+
+struct _NcPowspecMLTransfer
+{
+  /*< private > */
+  NcPowspecML parent_instance;
+  NcTransferFunc *tf;
+  NcGrowthFunc *gf;
+  gdouble Pm_k2Pzeta;
+  NcmSpline *Pk;
+};
 
 enum
 {
@@ -58,6 +69,7 @@ nc_powspec_ml_transfer_init (NcPowspecMLTransfer *ps_mlt)
   ps_mlt->tf         = NULL;
   ps_mlt->gf         = NULL;
   ps_mlt->Pm_k2Pzeta = 0.0;
+  ps_mlt->Pk         = NULL;
 }
 
 static void
@@ -122,6 +134,7 @@ _nc_powspec_ml_transfer_dispose (GObject *object)
 
   nc_transfer_func_clear (&ps_mlt->tf);
   nc_growth_func_clear (&ps_mlt->gf);
+  ncm_spline_clear (&ps_mlt->Pk);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_powspec_ml_transfer_parent_class)->dispose (object);
@@ -189,6 +202,28 @@ nc_powspec_ml_transfer_class_init (NcPowspecMLTransferClass *klass)
   powspec_class->get_nknots = &_nc_powspec_ml_transfer_get_nknots;
 }
 
+typedef struct _NcPowspecMLTransferArg
+{
+  NcHICosmo *cosmo;
+  NcHIPrim *prim;
+  NcTransferFunc *tf;
+  gdouble h;
+  gdouble Pm_k2Pzeta;
+} NcPowspecMLTransferArg;
+
+static gdouble
+_nc_powspec_ml_transfer_eval_pk (gdouble lnk, gpointer user_data)
+{
+  NcPowspecMLTransferArg *arg = (NcPowspecMLTransferArg *) user_data;
+  const gdouble k             = exp (lnk);
+  const gdouble kh            = k / arg->h;
+  const gdouble tf            = nc_transfer_func_eval (arg->tf, arg->cosmo, kh);
+  const gdouble tf2           = tf * tf;
+  const gdouble Delta_zeta_k  = nc_hiprim_SA_powspec_k (arg->prim, k);
+
+  return k * Delta_zeta_k * arg->Pm_k2Pzeta * tf2;
+}
+
 static void
 _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model)
 {
@@ -206,29 +241,38 @@ _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model)
 
     ps_mlt->Pm_k2Pzeta = (2.0 * M_PI * M_PI) * gsl_pow_2 ((2.0 / 5.0) * nc_growth_func_get_dust_norma_Da0 (ps_mlt->gf) / nc_hicosmo_Omega_m0 (cosmo)) * gsl_pow_4 (RH);
   }
+
+  {
+    NcmSplineCubicNotaknot *pk = ncm_spline_cubic_notaknot_new ();
+    NcmSpline *pk_s            = NCM_SPLINE (pk);
+    NcPowspecMLTransferArg arg = {cosmo, nc_hicosmo_peek_prim (cosmo), ps_mlt->tf, nc_hicosmo_h (cosmo), ps_mlt->Pm_k2Pzeta};
+    gsl_function F;
+
+    F.function = _nc_powspec_ml_transfer_eval_pk;
+    F.params   = &arg;
+
+    ncm_spline_set_func (pk_s, NCM_SPLINE_FUNCTION_SPLINE, &F, -8.0 * M_LN10, 4.0 * M_LN10, 0, 1.0e-13);
+
+    ncm_spline_clear (&ps_mlt->Pk);
+    ps_mlt->Pk = pk_s;
+  }
 }
 
 static gdouble
 _nc_powspec_ml_transfer_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
   NcHICosmo *cosmo            = NC_HICOSMO (model);
-  NcHIPrim *prim              = NC_HIPRIM (ncm_model_peek_submodel_by_mid (model, nc_hiprim_id ()));
   NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (powspec);
-  const gdouble kh            = k / nc_hicosmo_h (cosmo);
   const gdouble growth        = nc_growth_func_eval (ps_mlt->gf, cosmo, z);
-  const gdouble tf            = nc_transfer_func_eval (ps_mlt->tf, cosmo, kh);
-  const gdouble tfz           = growth * tf;
-  const gdouble tfz2          = tfz * tfz;
-  const gdouble Delta_zeta_k  = nc_hiprim_SA_powspec_k (prim, k);
+  const gdouble pk            = ncm_spline_eval (ps_mlt->Pk, log (k));
 
-  return k * Delta_zeta_k * ps_mlt->Pm_k2Pzeta * tfz2;
+  return growth * growth * pk;
 }
 
 static void
 _nc_powspec_ml_transfer_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk)
 {
   NcHICosmo *cosmo            = NC_HICOSMO (model);
-  NcHIPrim *prim              = NC_HIPRIM (ncm_model_peek_submodel_by_mid (model, nc_hiprim_id ()));
   NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (powspec);
   const gdouble growth        = nc_growth_func_eval (ps_mlt->gf, cosmo, z);
   const gdouble gf2           = gsl_pow_2 (growth);
@@ -238,14 +282,9 @@ _nc_powspec_ml_transfer_eval_vec (NcmPowspec *powspec, NcmModel *model, const gd
   for (i = 0; i < len; i++)
   {
     const gdouble ki = ncm_vector_get (k, i);
+    const gdouble pk = ncm_spline_eval (ps_mlt->Pk, log (ki));
 
-    const gdouble khi = ki / nc_hicosmo_h (cosmo);
-    const gdouble tf  = nc_transfer_func_eval (ps_mlt->tf, cosmo, khi);
-    const gdouble tf2 = tf * tf;
-
-    const gdouble Delta_zeta_k = nc_hiprim_SA_powspec_k (prim, ki);
-
-    ncm_vector_set (Pk, i, ki * Delta_zeta_k * ps_mlt->Pm_k2Pzeta * tf2 * gf2);
+    ncm_vector_set (Pk, i, pk * gf2);
   }
 }
 
@@ -253,25 +292,21 @@ static gdouble
 _nc_powspec_ml_transfer_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
   NcHICosmo *cosmo            = NC_HICOSMO (model);
-  NcHIPrim *prim              = NC_HIPRIM (ncm_model_peek_submodel_by_mid (model, nc_hiprim_id ()));
   NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (powspec);
-  const gdouble kh            = k / nc_hicosmo_h (cosmo);
   const gdouble growth        = nc_growth_func_eval (ps_mlt->gf, cosmo, z);
   const gdouble deriv_growth  = nc_growth_func_eval_deriv (ps_mlt->gf, cosmo, z);
-  const gdouble tf            = nc_transfer_func_eval (ps_mlt->tf, cosmo, kh);
-  const gdouble tf2           = tf * tf;
-  const gdouble Delta_zeta_k  = nc_hiprim_SA_powspec_k (prim, k);
+  const gdouble pk            = ncm_spline_eval (ps_mlt->Pk, log (k));
 
-  return k * Delta_zeta_k * ps_mlt->Pm_k2Pzeta * tf2 * 2.0 * growth * deriv_growth;
+  return pk * 2.0 * growth * deriv_growth;
 }
 
 static void
 _nc_powspec_ml_transfer_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
 {
-  /*NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (powspec);*/
+  NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (powspec);
 
   Nz[0] = 20;
-  Nk[0] = 1000;
+  Nk[0] = ncm_vector_len (ncm_spline_peek_xv (ps_mlt->Pk));
 }
 
 /**

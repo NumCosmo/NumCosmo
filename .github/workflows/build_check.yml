@@ -109,7 +109,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu", "macos"]
-        python-version: ["3.10"]
+        python-version: ["3.11"]
         mpi: ["openmpi", "mpich"]
         exclude:
           - os: "macos"
@@ -191,7 +191,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu"]
-        python-version: ["3.10"]
+        python-version: ["3.11"]
     defaults:
       run:
         shell: bash -el {0}
@@ -231,7 +231,7 @@ jobs:
           [[ -e $GCC_AR ]] && AR=$GCC_AR
           [[ -e $GCC_NM ]] && NM=$GCC_NM
           [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
-          meson setup build -Dbuildtype=debug -Db_coverage=true -Db_lto=false -Dnumcosmo_py=true -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
+          meson setup build -Dbuildtype=debug -Db_coverage=true -Db_lto=false -Dnumcosmo_py=true -Dfftw-planner=estimate -Dnumcosmo_debug=disabled --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
         run: |
           meson compile -C build
