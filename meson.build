@@ -257,6 +257,22 @@ endif
 
 add_project_arguments(numcosmo_debug_cflags, language: 'c')
 
+c_optimize_flags = [
+  '-funroll-loops',
+  '-fomit-frame-pointer',
+  '-ftree-vectorize',
+  '-fno-stack-protector',
+  '-fno-math-errno',
+]
+
+if get_option('optimization') in ['2', '3']
+  add_project_arguments(cc.get_supported_arguments(c_optimize_flags), language: 'c')
+endif
+
+if get_option('march-native').enabled()
+  add_project_arguments(cc.get_supported_arguments(['-march=native']), language: 'c')
+endif
+
 #######################################################################################
 # Checking headers:
 #######################################################################################
