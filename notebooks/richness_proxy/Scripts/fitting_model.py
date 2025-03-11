@@ -77,6 +77,7 @@ class FittingModel:
               
     #Model
         model.param_set_by_name("cut", np.log(self.data_set['richness'].min())) #Set cut parameter value 
+        # model.param_set_by_name("cut", np.log(10e-3))
         mset = Ncm.MSet()
         mset.set(model)
         rmdata.m2lnL_val(mset)  

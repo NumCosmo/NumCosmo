@@ -65,6 +65,7 @@ def create_nc_obj(
     """Create a NumCosmo object from a CCL cosmology."""
     massnu_length, m_nu = _get_neutrino_masses(ccl_cosmo)
     cosmo = Nc.HICosmoDECpl(massnu_length=massnu_length)
+    cosmo.props.CCL_comp = True
     cosmo.omega_x2omega_k()
     cosmo["H0"] = ccl_cosmo["h"] * 100.0
     cosmo["Omegak"] = ccl_cosmo["Omega_k"]
@@ -157,6 +158,7 @@ class CCLParams:
     DEFAULT_INTEGRATION_SIGMAR_EPSREL: float = (
         pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL
     )
+    DEFAULT_A_SPLINE_MINLOG: float = pyccl.spline_params.A_SPLINE_MINLOG
     DEFAULT_A_SPLINE_NLOG: int = pyccl.spline_params.A_SPLINE_NLOG
     DEFAULT_A_SPLINE_NA: int = pyccl.spline_params.A_SPLINE_NA
     DEFAULT_A_SPLINE_NA_PK: int = pyccl.spline_params.A_SPLINE_NA_PK
@@ -184,6 +186,7 @@ class CCLParams:
         pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL = (
             CCLParams.DEFAULT_INTEGRATION_SIGMAR_EPSREL
         )
+        pyccl.spline_params.A_SPLINE_MINLOG = CCLParams.DEFAULT_A_SPLINE_MINLOG
         pyccl.spline_params.A_SPLINE_NLOG = CCLParams.DEFAULT_A_SPLINE_NLOG
         pyccl.spline_params.A_SPLINE_NA = CCLParams.DEFAULT_A_SPLINE_NA
         pyccl.spline_params.A_SPLINE_NA_PK = CCLParams.DEFAULT_A_SPLINE_NA_PK
@@ -205,6 +208,7 @@ class CCLParams:
         pyccl.gsl_params.ODE_GROWTH_EPSREL = 1.0e-8
         pyccl.gsl_params.N_ITERATION = 10000
         pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL = 1.0e-9
+        pyccl.spline_params.A_SPLINE_MINLOG = 5.0e-5
         pyccl.spline_params.A_SPLINE_NLOG = 1000
         pyccl.spline_params.A_SPLINE_NA = 8000
         pyccl.spline_params.A_SPLINE_NA_PK = 1000
