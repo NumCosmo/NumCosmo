@@ -67,6 +67,10 @@ struct _NcXcorLimberKernelGal
   NcXcorLimberKernel parent_instance;
 
   NcmSpline *dn_dz;
+  gdouble dn_dz_zmin;
+  gdouble dn_dz_zmax;
+  gdouble dn_dz_min;
+  gdouble dn_dz_max;
 
   NcmSpline *bias_spline;
   guint nknots;
@@ -104,7 +108,12 @@ G_DEFINE_TYPE (NcXcorLimberKernelGal, nc_xcor_limber_kernel_gal, NC_TYPE_XCOR_LI
 static void
 nc_xcor_limber_kernel_gal_init (NcXcorLimberKernelGal *xclkg)
 {
-  xclkg->dn_dz       = NULL;
+  xclkg->dn_dz      = NULL;
+  xclkg->dn_dz_zmin = 0.0;
+  xclkg->dn_dz_zmax = 0.0;
+  xclkg->dn_dz_min  = 0.0;
+  xclkg->dn_dz_max  = 0.0;
+
   xclkg->bias_spline = NULL;
   xclkg->nknots      = 0;
   xclkg->bias        = NULL;
@@ -119,6 +128,17 @@ nc_xcor_limber_kernel_gal_init (NcXcorLimberKernelGal *xclkg)
   xclkg->noise_bias_old = 0.0;
 
   xclkg->nbarm1 = 0.0;
+}
+
+static void
+_nc_xcor_limber_kernel_gal_take_dndz (NcXcorLimberKernelGal *xclkg, NcmSpline *dn_dz)
+{
+  NcmVector *z_vec      = ncm_spline_peek_xv (dn_dz);
+  const guint z_vec_len = ncm_vector_len (z_vec);
+
+  xclkg->dn_dz      = dn_dz;
+  xclkg->dn_dz_zmin = ncm_vector_get (z_vec, 0);
+  xclkg->dn_dz_zmax = ncm_vector_get (z_vec, z_vec_len - 1);
 }
 
 static void
@@ -140,7 +160,7 @@ _nc_xcor_limber_kernel_gal_set_property (GObject *object, guint prop_id, const G
       xclkg->nbarm1 = g_value_get_double (value);
       break;
     case PROP_DN_DZ:
-      xclkg->dn_dz = g_value_dup_object (value);
+      _nc_xcor_limber_kernel_gal_take_dndz (xclkg, g_value_dup_object (value));
       break;
     case PROP_DIST:
       xclkg->dist = g_value_dup_object (value);
@@ -193,6 +213,7 @@ _nc_xcor_limber_kernel_gal_constructed (GObject *object)
     gdouble zmin, zmax, zmid;
     guint i;
 
+    nc_xcor_limber_kernel_set_z_range (xclk, 0.0, xclkg->dn_dz_zmax, 0.5 * xclkg->dn_dz_zmax);
     nc_xcor_limber_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
 
     /* Initialize g function spline for magnification bias */
@@ -205,13 +226,17 @@ _nc_xcor_limber_kernel_gal_constructed (GObject *object)
 
     /* Normalize the redshift distribution */
     ncm_spline_prepare (xclkg->dn_dz);
+    /* Normalize the redshift distribution */
+    {
+      gdouble ngal  = ncm_spline_eval_integ (xclkg->dn_dz, xclkg->dn_dz_zmin, xclkg->dn_dz_zmax);
+      NcmVector *yv = ncm_spline_peek_yv (xclkg->dn_dz);
 
-    gdouble ngal  = ncm_spline_eval_integ (xclkg->dn_dz, zmin, zmax);
-    NcmVector *yv = ncm_spline_get_yv (xclkg->dn_dz);
+      ncm_vector_scale (yv, 1.0 / ngal);
+      ncm_spline_prepare (xclkg->dn_dz);
 
-    ncm_vector_scale (yv, 1.0 / ngal);
-    ncm_spline_prepare (xclkg->dn_dz);
-    ncm_vector_free (yv);
+      xclkg->dn_dz_min = ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmin);
+      xclkg->dn_dz_max = ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmax);
+    }
 
     /* Prepare the bias spline and link it to the bias parameter vector */
     NcmVector *zv, *bv;
@@ -458,14 +483,26 @@ _nc_xcor_limber_kernel_gal_bias (NcXcorLimberKernelGal *xclkg, gdouble z)
 }
 
 static gdouble
+_nc_xcor_limber_kernel_gal_dndz (NcXcorLimberKernelGal *xclkg, gdouble z)
+{
+  const gdouble alpha = 1.0e-2;
+
+  if (z < xclkg->dn_dz_zmin)
+    return xclkg->dn_dz_min * exp (-gsl_pow_2 ((z - xclkg->dn_dz_zmin) / alpha));
+
+  if (z > xclkg->dn_dz_zmax)
+    return xclkg->dn_dz_max * exp (-gsl_pow_2 ((z - xclkg->dn_dz_zmax) / alpha));
+
+  return ncm_spline_eval (xclkg->dn_dz, z);
+}
+
+static gdouble
 _nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   NcXcorLimberKernelGal *xclkg = NC_XCOR_LIMBER_KERNEL_GAL (xclk);
-  const gdouble dn_dz_z        = ncm_spline_eval (xclkg->dn_dz, z);
+  const gdouble dn_dz_z        = _nc_xcor_limber_kernel_gal_dndz (xclkg, z);
   const gdouble bias_z         = _nc_xcor_limber_kernel_gal_bias (xclkg, z);
   gdouble res                  = bias_z * dn_dz_z;
-
-  NCM_UNUSED (l);
 
   if (xclkg->domagbias)
   {
