@@ -542,7 +542,7 @@ _nc_cluster_mass_lnrich_ext_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo
   lnM_obs[0] = ncm_rng_gaussian_gen (rng, lnR_true, sigma);
   ncm_rng_unlock (rng);
 
-  return (lnM_obs[0] <= self->lnR_max) && (lnM_obs[0] >= self->lnR_min);
+  return (lnM_obs[0] <= self->lnR_max) && (lnM_obs[0] >= self->lnR_min) && (lnM_obs[0] >= CUT);
 }
 
 static void
