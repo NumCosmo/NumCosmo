@@ -113,6 +113,26 @@ def test_gal_obs(nc_gal: Nc.XcorLimberKernelGal) -> None:
         assert_allclose(noise_bias_old0, 0.9876, atol=0.0)
 
 
+def test_gal_obs_extrapolation(
+    nc_cosmo_eh_linear: ncpy.Cosmology, nc_gal: Nc.XcorLimberKernelGal
+) -> None:
+    """Check that galaxy tracer has the correct number of observables."""
+    nc_gal.prepare(nc_cosmo_eh_linear.cosmo)
+    z_a = np.array(nc_gal.props.dndz.peek_xv().dup_array())
+    assert np.isfinite(
+        nc_gal.eval_full(nc_cosmo_eh_linear.cosmo, z_a[-1], nc_cosmo_eh_linear.dist, 77)
+    )
+
+    extra_z_a = np.linspace(z_a[-1], 2.0 * z_a[-1], 10)
+    k_a = np.array(
+        [
+            nc_gal.eval_full(nc_cosmo_eh_linear.cosmo, z, nc_cosmo_eh_linear.dist, 77)
+            for z in extra_z_a
+        ]
+    )
+    assert np.isfinite(k_a).all()
+
+
 def test_weak_lensing_obs(nc_weak_lensing: Nc.XcorLimberKernelWeakLensing) -> None:
     """Check that weak lensing tracer has the correct number of observables."""
     assert nc_weak_lensing is not None
