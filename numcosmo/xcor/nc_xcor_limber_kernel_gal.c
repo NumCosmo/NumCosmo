@@ -253,6 +253,8 @@ _nc_xcor_limber_kernel_gal_constructed (GObject *object)
       bv  = ncm_vector_get_subvector (orig_vec, bvi, bz_size);
     }
 
+    zmax = GSL_MAX (zmax, 4.0);
+
     switch (bz_size)
     {
       case 1:

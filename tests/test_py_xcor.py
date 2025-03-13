@@ -119,6 +119,7 @@ def test_gal_obs_extrapolation(
     """Check that galaxy tracer has the correct number of observables."""
     nc_gal.prepare(nc_cosmo_eh_linear.cosmo)
     z_a = np.array(nc_gal.props.dndz.peek_xv().dup_array())
+    nc_gal.set_z_range(z_a[0], z_a[-1] * 2.0, 0.5 * (z_a[-1] + z_a[0]))
     assert np.isfinite(
         nc_gal.eval_full(nc_cosmo_eh_linear.cosmo, z_a[-1], nc_cosmo_eh_linear.dist, 77)
     )
