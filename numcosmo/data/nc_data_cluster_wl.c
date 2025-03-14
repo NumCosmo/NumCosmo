@@ -48,7 +48,6 @@
 
 #include "galaxy/nc_galaxy_sd_shape.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift.h"
-#include "galaxy/nc_galaxy_sd_obs_redshift_gauss.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift_spec.h"
 #include "galaxy/nc_galaxy_sd_position.h"
 #include "math/ncm_integral_nd.h"
@@ -71,6 +70,7 @@ struct _NcDataClusterWLPrivate
   gboolean constructed;
   gdouble r_min;
   gdouble r_max;
+  gdouble dr;
   gdouble prec;
   guint len;
   NcmModelCtrl *ctrl_redshift;
@@ -120,6 +120,7 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
   self->constructed   = FALSE;
   self->r_max         = 0.0;
   self->r_min         = 0.0;
+  self->dr            = 0.0;
   self->prec          = 1.0e-6;
   self->len           = 0;
   self->ctrl_redshift = ncm_model_ctrl_new (NULL);
@@ -152,14 +153,20 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
       self->r_min = g_value_get_double (value);
 
       if (self->constructed)
-        g_assert_cmpfloat (self->r_min, <, self->r_max);
+      {
+          g_assert_cmpfloat (self->r_min, <, self->r_max);
+        self->dr = self->r_max - self->r_min;
+      }
 
       break;
     case PROP_R_MAX:
       self->r_max = g_value_get_double (value);
 
       if (self->constructed)
+      {
         g_assert_cmpfloat (self->r_min, <, self->r_max);
+        self->dr = self->r_max - self->r_min;
+      }
 
       break;
     case PROP_PREC:
@@ -286,23 +293,23 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcDataClusterWL:theta-min:
+   * NcDataClusterWL:r-min:
    *
    * Minimum radius of the weak lensing observables.
    *
    */
   g_object_class_install_property (object_class,
                                    PROP_R_MIN,
-                                   g_param_spec_double ("theta-min",
+                                   g_param_spec_double ("r-min",
                                                         NULL,
                                                         "Minimum radius of the weak lensing observables",
                                                         0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcDataClusterWL:theta-max:
+   * NcDataClusterWL:r-max:
    *
-   * Maximum theta of the weak lensing observables.
+   * Maximum radius of the weak lensing observables.
    *
    */
   g_object_class_install_property (object_class,
@@ -310,7 +317,7 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                    g_param_spec_double ("r-max",
                                                         NULL,
                                                         "Maximum radius of the weak lensing observables",
-                                                        0.0, G_MAXDOUBLE, 10.0,
+                                                        0.0, G_MAXDOUBLE, 5.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -391,6 +398,23 @@ nc_data_cluster_wl_int_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
 }
 
 static gdouble
+_nc_data_cluster_wl_eval_m2lnP_weight (NcDataClusterWL *dcwl, const gdouble m2lnP, const gdouble r)
+{
+  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
+  const gdouble lnP                   = -0.5 * m2lnP;
+  const gdouble dx1                   = 20.0 * self->dr;
+  const gdouble dx2                   = 20.0 * (r - self->r_min);
+  const gdouble dx3                   = 20.0 * (self->r_max - r);
+
+  if (r > self->r_min && r < self->r_max)
+    return m2lnP - log ((exp (-dx1 - 2.0 * lnP) + exp (-dx2 - lnP) + exp (-dx3 - lnP) + 1.0) / (exp (-dx1) + exp (-dx2) + exp (-dx3) + 1.0));
+  else if (r < self->r_min)
+    return -2.0 * (log ((1.0 + exp (dx2 + lnP)) / (1.0 + exp (dx2))));
+  else
+    return -2.0 * (log ((1.0 + exp (dx3 + lnP)) / (1.0 + exp (dx3))));
+}
+
+static gdouble
 _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
   NcmData *data                                      = NCM_DATA (dcwl);
@@ -401,9 +425,6 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
   NcGalaxySDPositionIntegrand *integrand_position    = nc_galaxy_sd_position_integ (self->galaxy_position);
   NcGalaxySDShapeIntegrand *integrand_shape          = nc_galaxy_sd_shape_integ (self->galaxy_shape);
   gdouble result                                     = 0;
-
-  ncm_vector_fast_set (self->zpi, 0, 0.0);
-  ncm_vector_fast_set (self->zpf, 0, 10.0);
 
   ncm_integral_nd_set_reltol (lh_int, self->prec);
   ncm_integral_nd_set_abstol (lh_int, 0.0);
@@ -426,8 +447,18 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
 
     for (gal_i = 0; gal_i < self->len; gal_i++)
     {
-      NcGalaxySDShapeData *data = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+      NcGalaxySDShapeData *data         = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+      NcGalaxySDPositionData *p_data    = data->sdpos_data;
+      NcGalaxySDObsRedshiftData *z_data = p_data->sdz_data;
+      const gdouble r                   = nc_galaxy_sd_shape_data_get_radius (data);
       gdouble m2lnP_gal_i;
+      gdouble zpi;
+      gdouble zpf;
+
+      nc_galaxy_sd_obs_redshift_get_lim (self->galaxy_redshift, z_data, &zpi, &zpf);
+
+      ncm_vector_fast_set (self->zpi, 0, zpi);
+      ncm_vector_fast_set (self->zpf, 0, zpf);
 
       likelihood_integral->data.data = data;
 
@@ -438,7 +469,7 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
       if (m2lnP_gal != NULL)
         ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
 
-      result += m2lnP_gal_i;
+      result += _nc_data_cluster_wl_eval_m2lnP_weight (dcwl, m2lnP_gal_i, r);
     }
   }
   else
@@ -451,6 +482,7 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
     {
       guint gal_i               = ncm_bootstrap_get (bstrap, i);
       NcGalaxySDShapeData *data = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+      const gdouble r           = nc_galaxy_sd_shape_data_get_radius (data);
       gdouble m2lnP_gal_i;
 
       likelihood_integral->data.data = data;
@@ -462,7 +494,7 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
       if (m2lnP_gal != NULL)
         ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
 
-      result += m2lnP_gal_i;
+      result += _nc_data_cluster_wl_eval_m2lnP_weight (dcwl, m2lnP_gal_i, r);
     }
   }
 
@@ -491,6 +523,7 @@ _nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     NcGalaxySDPositionData *p_data    = data->sdpos_data;
     NcGalaxySDObsRedshiftData *z_data = p_data->sdz_data;
 
+    nc_galaxy_sd_obs_redshift_prepare (galaxy_redshift, z_data);
     nc_galaxy_sd_obs_redshift_gen (galaxy_redshift, z_data, rng);
     nc_galaxy_sd_position_gen (galaxy_position, p_data, rng);
     nc_galaxy_sd_shape_gen (galaxy_shape, mset, data, rng);
@@ -528,8 +561,9 @@ _nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector 
       const gdouble int_pos     = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data);
       const gdouble int_shape   = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
       const gdouble m2lnP_gal_i = -2.0 * log (int_z * int_pos * int_shape);
+      const gdouble r           = nc_galaxy_sd_shape_data_get_radius (data);
 
-      result += m2lnP_gal_i;
+      result += _nc_data_cluster_wl_eval_m2lnP_weight (dcwl, m2lnP_gal_i, r);
     }
   }
   else
@@ -547,8 +581,9 @@ _nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector 
       const gdouble int_pos     = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data);
       const gdouble int_shape   = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
       const gdouble m2lnP_gal_i = -2.0 * log (int_z * int_pos * int_shape);
+      const gdouble r           = nc_galaxy_sd_shape_data_get_radius (data);
 
-      result += m2lnP_gal_i;
+      result += _nc_data_cluster_wl_eval_m2lnP_weight (dcwl, m2lnP_gal_i, r);
     }
   }
 
@@ -755,6 +790,7 @@ nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gd
 
   self->r_min = r_min;
   self->r_max = r_max;
+  self->dr    = r_max - r_min;
 }
 
 /**
