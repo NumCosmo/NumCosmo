@@ -47,15 +47,20 @@
 
 #include "model/nc_hicosmo_qgrw.h"
 #include "perturbations/nc_hipert_gw.h"
+#include "perturbations/nc_hipert_adiab.h"
 
 static void nc_hipert_itwo_fluids_interface_init (NcHIPertITwoFluidsInterface *iface);
 static void nc_hipert_igw_interface_init (NcHIPertIGWInterface *iface);
+static void nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface);
+
 
 G_DEFINE_TYPE_WITH_CODE (NcHICosmoQGRW, nc_hicosmo_qgrw, NC_TYPE_HICOSMO,
                          G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_ITWO_FLUIDS,
                                                 nc_hipert_itwo_fluids_interface_init)
                          G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IGW,
                                                 nc_hipert_igw_interface_init)
+                         G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IADIAB,
+                                                nc_hipert_iadiab_interface_init)
                         );
 
 enum
@@ -164,6 +169,33 @@ nc_hipert_igw_interface_init (NcHIPertIGWInterface *iface)
   iface->eval_m    = &_nc_hicosmo_qgrw_gw_eval_m;
   iface->eval_unit = &_nc_hicosmo_qgrw_gw_eval_unit;
   iface->eval_x    = &_nc_hicosmo_qgrw_gw_eval_x;
+}
+
+static gdouble _nc_hicosmo_qgrw_adiab_eval_xi (NcHIPertIAdiab *iad, const gdouble alpha, const gdouble k);
+static gdouble _nc_hicosmo_qgrw_adiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble alpha, const gdouble k);
+static gdouble _nc_hicosmo_qgrw_adiab_eval_nu (NcHIPertIAdiab *iad, const gdouble alpha, const gdouble k);
+static gdouble _nc_hicosmo_qgrw_adiab_eval_m (NcHIPertIAdiab *iad, const gdouble alpha, const gdouble k);
+static gdouble _nc_hicosmo_qgrw_adiab_eval_unit (NcHIPertIAdiab *iad);
+static gdouble _nc_hicosmo_qgrw_adiab_eval_x (NcHIPertIAdiab *iad, const gdouble alpha);
+static gdouble _nc_hicosmo_qgrw_adiab_eval_p2Psi (NcHIPertIAdiab *iad, const gdouble alpha, const gdouble k);
+static gdouble _nc_hicosmo_qgrw_adiab_eval_p2drho (NcHIPertIAdiab *iad, const gdouble alpha, const gdouble k);
+static gdouble _nc_hicosmo_qgrw_adiab_eval_lapse (NcHIPertIAdiab *iad, const gdouble alpha);
+
+static void
+nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface)
+{
+  iface->eval_xi         = &_nc_hicosmo_qgrw_adiab_eval_xi;
+  iface->eval_F1         = &_nc_hicosmo_qgrw_adiab_eval_F1;
+  iface->eval_nu         = &_nc_hicosmo_qgrw_adiab_eval_nu;
+  iface->eval_m          = &_nc_hicosmo_qgrw_adiab_eval_m;
+  iface->eval_unit       = &_nc_hicosmo_qgrw_adiab_eval_unit;
+  iface->eval_x          = &_nc_hicosmo_qgrw_adiab_eval_x;
+  iface->eval_p2Psi      = &_nc_hicosmo_qgrw_adiab_eval_p2Psi;
+  iface->eval_p2drho     = &_nc_hicosmo_qgrw_adiab_eval_p2drho;
+  iface->eval_lapse      = &_nc_hicosmo_qgrw_adiab_eval_lapse;
+  iface->eval_tau_hubble = NULL;
+  iface->eval_tau_jeans  = NULL;
+  iface->eval_hubble     = NULL;
 }
 
 #define VECTOR   (NCM_MODEL (cosmo))
@@ -315,7 +347,7 @@ _nc_hicosmo_qgrw_xb (NcHICosmo *cosmo)
         const gdouble Omegar   = OMEGA_R;                                          \
         const gdouble Omegaw   = OMEGA_W;                                          \
                                                                                    \
-        const gdouble x   = nc_hicosmo_x_alpha (cosmo, alpha);                     \
+        const gdouble x   = X_B * exp (-alpha2_2);                                 \
         const gdouble x2  = x * x;                                                 \
         const gdouble x3  = x2 * x;                                                \
         const gdouble x3w = pow (x3, w);                                           \
@@ -778,6 +810,222 @@ _nc_hicosmo_qgrw_gw_eval_x (NcHIPertIGW *igw, const gdouble alpha)
   return X_B * exp (-fabs (alpha));
 }
 
+static gdouble
+_nc_hicosmo_qgrw_adiab_eval_xi (NcHIPertIAdiab *iad, const gdouble alpha, const gdouble k)
+{
+  NcHICosmo *cosmo        = NC_HICOSMO (iad);
+  const gdouble epsilon   = GSL_SIGN (alpha);
+  const gdouble absalpha  = fabs (alpha);
+  const gdouble w2        = W;
+  const gdouble x         = X_B * exp (-absalpha);
+  const gdouble x2        = x * x;
+  const gdouble x3        = x2 * x;
+  const gdouble x4        = x2 * x2;
+  const gdouble x3_1pw    = x3 * pow (x3, w2);
+  const gdouble x_m3w     = x / pow (x3, w2);
+  const gdouble three_1mw = 3.0 * (1.0 - w2);
+  const gdouble oneF1_r   = ncm_exprel (-2.0 * absalpha);
+  const gdouble oneF1_p   = ncm_exprel (-three_1mw * absalpha);
+  const gdouble R0        = OMEGA_R / OMEGA_W;
+  const gdouble F         = (R0 * x_m3w * 2.0 * oneF1_r + three_1mw * oneF1_p) * epsilon * alpha;
+  const gdouble E2        = OMEGA_W * x3_1pw * F;
+  const gdouble absE      = sqrt (E2);
+  const gdouble c12       = 1.0 / 3.0;
+  const gdouble c22       = w2;
+  const gdouble c1        = sqrt (c12);
+  const gdouble c2        = sqrt (c22);
+  const gdouble rhopp1    = OMEGA_R * (1.0 + 1.0 / 3.0) * x4;
+  const gdouble rhopp2    = OMEGA_W * (1.0 + w2) * x3_1pw;
+  const gdouble phip      = -atan (epsilon * sqrt (rhopp1 / rhopp2));
+  const gdouble sin_phi   = -cos (phip);
+  const gdouble cos_phi   = sin (phip);
+  const gdouble sin2_phi  = sin_phi * sin_phi;
+  const gdouble cos2_phi  = cos_phi * cos_phi;
+  const gdouble rhopp     = rhopp1 + rhopp2;
+  const gdouble cs2       = c1 * c1 * cos2_phi + c2 * c2 * sin2_phi;
+  const gdouble cs        = sqrt (cs2);
+  const gdouble m_zeta    = rhopp / (cs2 * absE * x3);
+  const gdouble nu_zeta   = k * cs * x / absE;
+  const gdouble mnu_zeta  = m_zeta * nu_zeta;
+
+  return log (mnu_zeta);
+}
+
+static gdouble
+_nc_hicosmo_qgrw_adiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble alpha, const gdouble k)
+{
+  NcHICosmo *cosmo          = NC_HICOSMO (iad);
+  const gdouble epsilon     = GSL_SIGN (alpha);
+  const gdouble absalpha    = fabs (alpha);
+  const gdouble w2          = W;
+  const gdouble x           = X_B * exp (-absalpha);
+  const gdouble x2          = x * x;
+  const gdouble x3          = x2 * x;
+  const gdouble x4          = x2 * x2;
+  const gdouble x3_1pw      = x3 * pow (x3, w2);
+  const gdouble x_m3w       = x / pow (x3, w2);
+  const gdouble three_1pw   = 3.0 * (1.0 + w2);
+  const gdouble three_1mw   = 3.0 * (1.0 - w2);
+  const gdouble x_xb3_1mw   = exp (-three_1mw * absalpha);
+  const gdouble x_xb2       = exp (-2.0 * absalpha);
+  const gdouble oneF1_r     = ncm_exprel (-2.0 * absalpha);
+  const gdouble oneF1_p     = ncm_exprel (-three_1mw * absalpha);
+  const gdouble R0          = OMEGA_R / OMEGA_W;
+  const gdouble F           = (R0 * x_m3w * 2.0 * oneF1_r + three_1mw * oneF1_p) * epsilon * alpha;
+  const gdouble d1F         = epsilon * (three_1mw * x_xb3_1mw + x_m3w * R0 * (three_1mw * (x_xb2 - 1.0) + 2.0));
+  const gdouble E2          = OMEGA_W * x3_1pw * F;
+  const gdouble d1lnF       = d1F / F;
+  const gdouble d1lnE2      = (-three_1pw * epsilon + d1lnF);
+  const gdouble absE        = sqrt (E2);
+  const gdouble c12         = 1.0 / 3.0;
+  const gdouble c22         = w2;
+  const gdouble rhopp1      = OMEGA_R * (1.0 + 1.0 / 3.0) * x4;
+  const gdouble rhopp2      = OMEGA_W * (1.0 + w2) * x3_1pw;
+  const gdouble phip        = -atan (epsilon * sqrt (rhopp1 / rhopp2));
+  const gdouble sin_phi     = -cos (phip);
+  const gdouble cos_phi     = sin (phip);
+  const gdouble sin2_phi    = sin_phi * sin_phi;
+  const gdouble cos2_phi    = cos_phi * cos_phi;
+  const gdouble rhopp       = rhopp1 + rhopp2;
+  const gdouble cs2         = c12 * cos2_phi + c22 * sin2_phi;
+  const gdouble cs          = sqrt (cs2);
+  const gdouble nu_zeta     = k * cs * x / absE;
+  const gdouble dlnrhopp    = (4.0 * rhopp1 + 3.0 * (1.0 + w2) * rhopp2) / rhopp;
+  const gdouble dlncs2rhopp = (c12 * 4.0 * rhopp1 + c22 * 3.0 * (1.0 + w2) * rhopp2) / cs2;
+
+  return (1.5 * dlnrhopp - 0.5 * dlncs2rhopp - d1lnE2 - 2.0) * epsilon / (2.0 * nu_zeta);
+}
+
+static gdouble
+_nc_hicosmo_qgrw_adiab_eval_nu (NcHIPertIAdiab *iad, const gdouble alpha, const gdouble k)
+{
+  NcHICosmo *cosmo        = NC_HICOSMO (iad);
+  const gdouble epsilon   = GSL_SIGN (alpha);
+  const gdouble absalpha  = fabs (alpha);
+  const gdouble w2        = W;
+  const gdouble x         = X_B * exp (-absalpha);
+  const gdouble x2        = x * x;
+  const gdouble x3        = x2 * x;
+  const gdouble x4        = x2 * x2;
+  const gdouble x3_1pw    = x3 * pow (x3, w2);
+  const gdouble x_m3w     = x / pow (x3, w2);
+  const gdouble three_1mw = 3.0 * (1.0 - w2);
+  const gdouble oneF1_r   = ncm_exprel (-2.0 * absalpha);
+  const gdouble oneF1_p   = ncm_exprel (-three_1mw * absalpha);
+  const gdouble R0        = OMEGA_R / OMEGA_W;
+  const gdouble F         = (R0 * x_m3w * 2.0 * oneF1_r + three_1mw * oneF1_p) * epsilon * alpha;
+  const gdouble E2        = OMEGA_W * x3_1pw * F;
+  const gdouble absE      = sqrt (E2);
+  const gdouble c12       = 1.0 / 3.0;
+  const gdouble c22       = w2;
+  const gdouble c1        = sqrt (c12);
+  const gdouble c2        = sqrt (c22);
+  const gdouble rhopp1    = OMEGA_R * (1.0 + 1.0 / 3.0) * x4;
+  const gdouble rhopp2    = OMEGA_W * (1.0 + w2) * x3_1pw;
+  const gdouble phip      = -atan (epsilon * sqrt (rhopp1 / rhopp2));
+  const gdouble sin_phi   = -cos (phip);
+  const gdouble cos_phi   = sin (phip);
+  const gdouble sin2_phi  = sin_phi * sin_phi;
+  const gdouble cos2_phi  = cos_phi * cos_phi;
+  const gdouble cs2       = c1 * c1 * cos2_phi + c2 * c2 * sin2_phi;
+  const gdouble cs        = sqrt (cs2);
+  const gdouble nu_zeta   = k * cs * x / absE;
+
+  return nu_zeta;
+}
+
+static gdouble
+_nc_hicosmo_qgrw_adiab_eval_m (NcHIPertIAdiab *iad, const gdouble alpha, const gdouble k)
+{
+  NcHICosmo *cosmo        = NC_HICOSMO (iad);
+  const gdouble epsilon   = GSL_SIGN (alpha);
+  const gdouble absalpha  = fabs (alpha);
+  const gdouble w2        = W;
+  const gdouble x         = X_B * exp (-absalpha);
+  const gdouble x2        = x * x;
+  const gdouble x3        = x2 * x;
+  const gdouble x4        = x2 * x2;
+  const gdouble x3_1pw    = x3 * pow (x3, w2);
+  const gdouble x_m3w     = x / pow (x3, w2);
+  const gdouble three_1mw = 3.0 * (1.0 - w2);
+  const gdouble oneF1_r   = ncm_exprel (-2.0 * absalpha);
+  const gdouble oneF1_p   = ncm_exprel (-three_1mw * absalpha);
+  const gdouble R0        = OMEGA_R / OMEGA_W;
+  const gdouble F         = (R0 * x_m3w * 2.0 * oneF1_r + three_1mw * oneF1_p) * epsilon * alpha;
+  const gdouble E2        = OMEGA_W * x3_1pw * F;
+  const gdouble absE      = sqrt (E2);
+  const gdouble c12       = 1.0 / 3.0;
+  const gdouble c22       = w2;
+  const gdouble c1        = sqrt (c12);
+  const gdouble c2        = sqrt (c22);
+  const gdouble rhopp1    = OMEGA_R * (1.0 + 1.0 / 3.0) * x4;
+  const gdouble rhopp2    = OMEGA_W * (1.0 + w2) * x3_1pw;
+  const gdouble phip      = -atan (epsilon * sqrt (rhopp1 / rhopp2));
+  const gdouble sin_phi   = -cos (phip);
+  const gdouble cos_phi   = sin (phip);
+  const gdouble sin2_phi  = sin_phi * sin_phi;
+  const gdouble cos2_phi  = cos_phi * cos_phi;
+  const gdouble rhopp     = rhopp1 + rhopp2;
+  const gdouble cs2       = c1 * c1 * cos2_phi + c2 * c2 * sin2_phi;
+  const gdouble m_zeta    = rhopp / (cs2 * absE * x3);
+
+  return m_zeta;
+}
+
+static gdouble
+_nc_hicosmo_qgrw_adiab_eval_unit (NcHIPertIAdiab *iad)
+{
+  NcHICosmo *cosmo     = NC_HICOSMO (iad);
+  const gdouble RH_lp  = nc_hicosmo_RH_planck (cosmo);
+  const gdouble factor = sqrt (8.0 * ncm_c_pi () / 3.0);
+
+  return factor / RH_lp;
+}
+
+static gdouble
+_nc_hicosmo_qgrw_adiab_eval_x (NcHIPertIAdiab *iad, const gdouble alpha)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (iad);
+  const gdouble xb = X_B;
+
+  return xb * exp (-fabs (alpha));
+}
+
+static gdouble
+_nc_hicosmo_qgrw_adiab_eval_p2Psi (NcHIPertIAdiab *iad, const gdouble alpha, const gdouble k)
+{
+  return 0.0;
+}
+
+static gdouble
+_nc_hicosmo_qgrw_adiab_eval_p2drho (NcHIPertIAdiab *iad, const gdouble alpha, const gdouble k)
+{
+  return 0.0;
+}
+
+static gdouble
+_nc_hicosmo_qgrw_adiab_eval_lapse (NcHIPertIAdiab *iad, const gdouble alpha)
+{
+  NcHICosmo *cosmo        = NC_HICOSMO (iad);
+  const gdouble epsilon   = GSL_SIGN (alpha);
+  const gdouble absalpha  = fabs (alpha);
+  const gdouble w2        = W;
+  const gdouble x         = X_B * exp (-absalpha);
+  const gdouble x2        = x * x;
+  const gdouble x3        = x2 * x;
+  const gdouble x3_1pw    = x3 * pow (x3, w2);
+  const gdouble x_m3w     = x / pow (x3, w2);
+  const gdouble three_1mw = 3.0 * (1.0 - w2);
+  const gdouble oneF1_r   = ncm_exprel (-2.0 * absalpha);
+  const gdouble oneF1_p   = ncm_exprel (-three_1mw * absalpha);
+  const gdouble R0        = OMEGA_R / OMEGA_W;
+  const gdouble F         = (R0 * x_m3w * 2.0 * oneF1_r + three_1mw * oneF1_p) * epsilon * alpha;
+  const gdouble E2        = OMEGA_W * x3_1pw * F;
+  const gdouble absE      = sqrt (E2);
+
+  return 1.0 / absE;
+}
+
 /**
  * nc_hicosmo_qgrw_new:
  *
@@ -791,65 +1039,5 @@ nc_hicosmo_qgrw_new (void)
   NcHICosmoQGRW *qgrw = g_object_new (NC_TYPE_HICOSMO_QGRW, NULL);
 
   return qgrw;
-}
-
-typedef NcHIPertWKB NcHIPertWKBQgrwZeta;
-typedef NcHIPertWKBClass NcHIPertWKBQgrwZetaClass;
-
-G_DEFINE_TYPE (NcHIPertWKBQgrwZeta, nc_hipert_wkb_qgrw_zeta, NC_TYPE_HIPERT_WKB)
-
-static void
-nc_hipert_wkb_qgrw_zeta_init (NcHIPertWKBQgrwZeta *wkb_zeta)
-{
-}
-
-static void _nc_hipert_wkb_qgrw_zeta_get_nu_V (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *nu, gdouble *V);
-static void _nc_hipert_wkb_qgrw_zeta_get_mnu_dmnu (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *mnu, gdouble *dmnu);
-static gdouble _nc_hipert_wkb_qgrw_zeta_get_m (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k);
-static gdouble _nc_hipert_wkb_qgrw_zeta_get_nu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k);
-static gdouble _nc_hipert_wkb_qgrw_zeta_get_dVnu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k);
-
-static void
-nc_hipert_wkb_qgrw_zeta_class_init (NcHIPertWKBQgrwZetaClass *klass)
-{
-  klass->get_nu_V     = &_nc_hipert_wkb_qgrw_zeta_get_nu_V;
-  klass->get_mnu_dmnu = &_nc_hipert_wkb_qgrw_zeta_get_mnu_dmnu;
-  klass->get_m        = &_nc_hipert_wkb_qgrw_zeta_get_m;
-  klass->get_nu2      = &_nc_hipert_wkb_qgrw_zeta_get_nu2;
-  klass->get_dVnu2    = &_nc_hipert_wkb_qgrw_zeta_get_dVnu2;
-}
-
-static void
-_nc_hipert_wkb_qgrw_zeta_get_nu_V (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *nu, gdouble *V)
-{
-}
-
-static void
-_nc_hipert_wkb_qgrw_zeta_get_mnu_dmnu (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *mnu, gdouble *dmnu)
-{
-}
-
-static gdouble
-_nc_hipert_wkb_qgrw_zeta_get_m (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k)
-{
-  g_assert_not_reached ();
-
-  return 0.0;
-}
-
-static gdouble
-_nc_hipert_wkb_qgrw_zeta_get_nu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k)
-{
-  g_assert_not_reached ();
-
-  return 0.0;
-}
-
-static gdouble
-_nc_hipert_wkb_qgrw_zeta_get_dVnu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k)
-{
-  g_assert_not_reached ();
-
-  return 0.0;
 }
 
