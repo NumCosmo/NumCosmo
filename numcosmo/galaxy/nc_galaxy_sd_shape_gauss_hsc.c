@@ -72,6 +72,9 @@ typedef struct _NcGalaxySDShapeGaussHSCData
   gdouble epsilon_obs_2;
   gdouble sigma_int;
   gdouble sigma_obs;
+  gdouble c1;
+  gdouble c2;
+  gdouble m;
   gdouble radius;
   gdouble phi;
   NcWLSurfaceMassDensityOptzs optzs;
@@ -206,6 +209,9 @@ _nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalax
   const gdouble sigma_int                      = ldata->sigma_int;
   const gdouble noise1                         = ncm_rng_gaussian_gen (rng, 0.0, ldata->sigma_obs);
   const gdouble noise2                         = ncm_rng_gaussian_gen (rng, 0.0, ldata->sigma_obs);
+  const gdouble c1                             = ldata->c1;
+  const gdouble c2                             = ldata->c2;
+  const gdouble m                              = ldata->m;
   complex double e_s                           = _gauss_cut_gen (rng, sigma_int);
   gdouble theta                                = 0.0;
   gdouble phi                                  = 0.0;
@@ -234,7 +240,8 @@ _nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalax
       e_o = (e_s + gt) / (1.0 + gt * e_s);
   }
 
-  e_o = e_o * cexp (2.0 * I * phi) + noise;
+  /* TODO: check order of operations for bias and noise */
+  e_o = (e_o * cexp (2.0 * I * phi) + noise + c1 + I * c2) * (1.0 + m);
 
   e1 = creal (e_o);
   e2 = cimag (e_o);
@@ -308,8 +315,11 @@ _nc_galaxy_sd_shape_gauss_hsc_integ_f (gpointer callback_data, const gdouble z, 
   gdouble e2                         = ldata->epsilon_obs_2;
   gdouble sigma_int                  = ldata->sigma_int;
   gdouble sigma_obs                  = ldata->sigma_obs;
+  gdouble c1                         = ldata->c1;
+  gdouble c2                         = ldata->c2;
+  gdouble m                          = ldata->m;
   gdouble gt                         = 0.0;
-  complex double e_o                 = e1 + I * e2;
+  complex double e_o                 = (e1 - c1 + I * (e2 - c2)) / (1 + m);
   complex double e_s                 = e_o;
   complex double g                   = 0.0;
 
@@ -439,6 +449,9 @@ _nc_galaxy_sd_shape_gauss_hsc_ldata_read_row (NcGalaxySDShapeData *data, NcGalax
   ldata->epsilon_obs_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_2, i);
   ldata->sigma_int     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_SIGMA_INT, i);
   ldata->sigma_obs     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_SIGMA_OBS, i);
+  ldata->c1            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C1, i);
+  ldata->c2            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C2, i);
+  ldata->m             = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_M, i);
 }
 
 static void
@@ -450,6 +463,9 @@ _nc_galaxy_sd_shape_gauss_hsc_ldata_write_row (NcGalaxySDShapeData *data, NcGala
   nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_2, i, ldata->epsilon_obs_2);
   nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_SIGMA_INT, i, ldata->sigma_int);
   nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_SIGMA_OBS, i, ldata->sigma_obs);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C1, i, ldata->c1);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C2, i, ldata->c2);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_M, i, ldata->m);
 }
 
 static void
@@ -459,6 +475,9 @@ _nc_galaxy_sd_shape_gauss_hsc_ldata_required_columns (NcGalaxySDShapeData *data,
   columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_2));
   columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_SIGMA_INT));
   columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_SIGMA_OBS));
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C1));
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C2));
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_M));
 }
 
 static gdouble
@@ -546,6 +565,9 @@ nc_galaxy_sd_shape_gauss_hsc_clear (NcGalaxySDShapeGaussHSC **gsdshsc)
  * @data: a #NcGalaxySDShapeData
  * @sigma_int: the intrinsic shape dispersion
  * @sigma_obs: the observational shape dispersion
+ * @c1: the first additive bias parameter
+ * @c2: the second additive bias parameter
+ * @m: the multiplicative bias parameter
  * @coord: the coordinate system #NcGalaxyWLObsCoord
  * @rng: a #NcmRNG
  *
@@ -553,7 +575,7 @@ nc_galaxy_sd_shape_gauss_hsc_clear (NcGalaxySDShapeGaussHSC **gsdshsc)
  *
  */
 void
-nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShapeGaussHSC *gsdshsc, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble sigma_int, const gdouble sigma_obs, NcGalaxyWLObsCoord coord, NcmRNG *rng)
+nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShapeGaussHSC *gsdshsc, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble sigma_int, const gdouble sigma_obs, const gdouble c1, const gdouble c2, const gdouble m, NcGalaxyWLObsCoord coord, NcmRNG *rng)
 {
   NcGalaxySDShapeClass *sd_position_class = NC_GALAXY_SD_SHAPE_GET_CLASS (gsdshsc);
   NcGalaxySDShapeGaussHSCData *ldata      = (NcGalaxySDShapeGaussHSCData *) data->ldata;
@@ -561,6 +583,9 @@ nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShapeGaussHSC *gsdshsc, NcmMSet *mse
   data->coord      = coord;
   ldata->sigma_int = sigma_int;
   ldata->sigma_obs = sigma_obs;
+  ldata->c1        = c1;
+  ldata->c2        = c2;
+  ldata->m         = m;
 
   sd_position_class->gen (NC_GALAXY_SD_SHAPE (gsdshsc), mset, data, rng);
 }
@@ -573,12 +598,15 @@ nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShapeGaussHSC *gsdshsc, NcmMSet *mse
  * @epsilon_obs_2: the observed ellipticity component 2
  * @sigma_int: the intrinsic shape dispersion
  * @sigma_obs: the observational shape dispersion
+ * @c1: the first additive bias parameter
+ * @c2: the second additive bias parameter
+ * @m: the multiplicative bias parameter
  *
  * Sets the observed ellipticity components and the observational shape dispersion.
  *
  */
 void
-nc_galaxy_sd_shape_gauss_hsc_data_set (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalaxySDShapeData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble sigma_int, const gdouble sigma_obs)
+nc_galaxy_sd_shape_gauss_hsc_data_set (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalaxySDShapeData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble sigma_int, const gdouble sigma_obs, const gdouble c1, const gdouble c2, const gdouble m)
 {
   NcGalaxySDShapeGaussHSCData *ldata = (NcGalaxySDShapeGaussHSCData *) data->ldata;
 
@@ -586,6 +614,9 @@ nc_galaxy_sd_shape_gauss_hsc_data_set (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalax
   ldata->epsilon_obs_2 = epsilon_obs_2;
   ldata->sigma_int     = sigma_int;
   ldata->sigma_obs     = sigma_obs;
+  ldata->c1            = c1;
+  ldata->c2            = c2;
+  ldata->m             = m;
 }
 
 /**
@@ -596,12 +627,15 @@ nc_galaxy_sd_shape_gauss_hsc_data_set (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalax
  * @epsilon_obs_2: (out): the observed ellipticity component 2
  * @sigma_int: (out): the intrinsic shape dispersion
  * @sigma_obs: (out): the observational shape dispersion
+ * @c1: (out): the first additive bias parameter
+ * @c2: (out): the second additive bias parameter
+ * @m: (out): the multiplicative bias parameter
  *
  * Gets the observed ellipticity components and the observational shape dispersion.
  *
  */
 void
-nc_galaxy_sd_shape_gauss_hsc_data_get (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalaxySDShapeData *data, gdouble *epsilon_obs_1, gdouble *epsilon_obs_2, gdouble *sigma_int, gdouble *sigma_obs)
+nc_galaxy_sd_shape_gauss_hsc_data_get (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalaxySDShapeData *data, gdouble *epsilon_obs_1, gdouble *epsilon_obs_2, gdouble *sigma_int, gdouble *sigma_obs, gdouble *c1, gdouble *c2, gdouble *m)
 {
   NcGalaxySDShapeGaussHSCData *ldata = (NcGalaxySDShapeGaussHSCData *) data->ldata;
 
@@ -609,5 +643,8 @@ nc_galaxy_sd_shape_gauss_hsc_data_get (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalax
   *epsilon_obs_2 = ldata->epsilon_obs_2;
   *sigma_int     = ldata->sigma_int;
   *sigma_obs     = ldata->sigma_obs;
+  *c1            = ldata->c1;
+  *c2            = ldata->c2;
+  *m             = ldata->m;
 }
 
