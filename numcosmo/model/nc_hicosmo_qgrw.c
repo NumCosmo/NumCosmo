@@ -832,8 +832,6 @@ _nc_hicosmo_qgrw_adiab_eval_xi (NcHIPertIAdiab *iad, const gdouble alpha, const 
   const gdouble absE      = sqrt (E2);
   const gdouble c12       = 1.0 / 3.0;
   const gdouble c22       = w2;
-  const gdouble c1        = sqrt (c12);
-  const gdouble c2        = sqrt (c22);
   const gdouble rhopp1    = OMEGA_R * (1.0 + 1.0 / 3.0) * x4;
   const gdouble rhopp2    = OMEGA_W * (1.0 + w2) * x3_1pw;
   const gdouble phip      = -atan (epsilon * sqrt (rhopp1 / rhopp2));
@@ -842,7 +840,7 @@ _nc_hicosmo_qgrw_adiab_eval_xi (NcHIPertIAdiab *iad, const gdouble alpha, const 
   const gdouble sin2_phi  = sin_phi * sin_phi;
   const gdouble cos2_phi  = cos_phi * cos_phi;
   const gdouble rhopp     = rhopp1 + rhopp2;
-  const gdouble cs2       = c1 * c1 * cos2_phi + c2 * c2 * sin2_phi;
+  const gdouble cs2       = c12 * cos2_phi + c22 * sin2_phi;
   const gdouble cs        = sqrt (cs2);
   const gdouble m_zeta    = rhopp / (cs2 * absE * x3);
   const gdouble nu_zeta   = k * cs * x / absE;
@@ -890,10 +888,10 @@ _nc_hicosmo_qgrw_adiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble alpha, const 
   const gdouble cs2         = c12 * cos2_phi + c22 * sin2_phi;
   const gdouble cs          = sqrt (cs2);
   const gdouble nu_zeta     = k * cs * x / absE;
-  const gdouble dlnrhopp    = (4.0 * rhopp1 + 3.0 * (1.0 + w2) * rhopp2) / rhopp;
-  const gdouble dlncs2rhopp = (c12 * 4.0 * rhopp1 + c22 * 3.0 * (1.0 + w2) * rhopp2) / cs2;
+  const gdouble dlnrhopp    = -(4.0 * rhopp1 + three_1pw * rhopp2) / rhopp * epsilon;
+  const gdouble dlncs2rhopp = -(c12 * 4.0 * rhopp1 + c22 * three_1pw * rhopp2) / (c12 * rhopp1 + c22 * rhopp2) * epsilon;
 
-  return (1.5 * dlnrhopp - 0.5 * dlncs2rhopp - d1lnE2 - 2.0) * epsilon / (2.0 * nu_zeta);
+  return (1.5 * dlnrhopp - 0.5 * dlncs2rhopp - d1lnE2 + 2.0 * epsilon) / (2.0 * nu_zeta);
 }
 
 static gdouble
@@ -918,8 +916,6 @@ _nc_hicosmo_qgrw_adiab_eval_nu (NcHIPertIAdiab *iad, const gdouble alpha, const 
   const gdouble absE      = sqrt (E2);
   const gdouble c12       = 1.0 / 3.0;
   const gdouble c22       = w2;
-  const gdouble c1        = sqrt (c12);
-  const gdouble c2        = sqrt (c22);
   const gdouble rhopp1    = OMEGA_R * (1.0 + 1.0 / 3.0) * x4;
   const gdouble rhopp2    = OMEGA_W * (1.0 + w2) * x3_1pw;
   const gdouble phip      = -atan (epsilon * sqrt (rhopp1 / rhopp2));
@@ -927,7 +923,7 @@ _nc_hicosmo_qgrw_adiab_eval_nu (NcHIPertIAdiab *iad, const gdouble alpha, const 
   const gdouble cos_phi   = sin (phip);
   const gdouble sin2_phi  = sin_phi * sin_phi;
   const gdouble cos2_phi  = cos_phi * cos_phi;
-  const gdouble cs2       = c1 * c1 * cos2_phi + c2 * c2 * sin2_phi;
+  const gdouble cs2       = c12 * cos2_phi + c22 * sin2_phi;
   const gdouble cs        = sqrt (cs2);
   const gdouble nu_zeta   = k * cs * x / absE;
 
@@ -956,8 +952,6 @@ _nc_hicosmo_qgrw_adiab_eval_m (NcHIPertIAdiab *iad, const gdouble alpha, const g
   const gdouble absE      = sqrt (E2);
   const gdouble c12       = 1.0 / 3.0;
   const gdouble c22       = w2;
-  const gdouble c1        = sqrt (c12);
-  const gdouble c2        = sqrt (c22);
   const gdouble rhopp1    = OMEGA_R * (1.0 + 1.0 / 3.0) * x4;
   const gdouble rhopp2    = OMEGA_W * (1.0 + w2) * x3_1pw;
   const gdouble phip      = -atan (epsilon * sqrt (rhopp1 / rhopp2));
@@ -966,7 +960,7 @@ _nc_hicosmo_qgrw_adiab_eval_m (NcHIPertIAdiab *iad, const gdouble alpha, const g
   const gdouble sin2_phi  = sin_phi * sin_phi;
   const gdouble cos2_phi  = cos_phi * cos_phi;
   const gdouble rhopp     = rhopp1 + rhopp2;
-  const gdouble cs2       = c1 * c1 * cos2_phi + c2 * c2 * sin2_phi;
+  const gdouble cs2       = c12 * cos2_phi + c22 * sin2_phi;
   const gdouble m_zeta    = rhopp / (cs2 * absE * x3);
 
   return m_zeta;

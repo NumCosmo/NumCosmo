@@ -640,11 +640,13 @@ static gdouble
 _nc_hipert_eval_powspec_zeta_from_state (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k)
 {
   const gdouble unit = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
+  const gdouble n0   = 1.0 / ncm_c_two_pi_2 ();
+
   gdouble J11, J12, J22;
 
   ncm_csq1d_state_get_J (state, &J11, &J12, &J22);
 
-  return gsl_pow_2 (unit) * (J11 / 2.0);
+  return gsl_pow_2 (unit) * n0 * (J11 / 2.0);
 }
 
 static gdouble
@@ -653,11 +655,12 @@ _nc_hipert_eval_powspec_Psi_from_state (NcHIPertAdiab *adiab, NcmModel *model, N
   const gdouble unit  = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
   const gdouble tau   = ncm_csq1d_state_get_time (state);
   const gdouble p2Psi = nc_hipert_iadiab_eval_p2Psi (NC_HIPERT_IADIAB (model), tau, k);
+  const gdouble n0    = 1.0 / ncm_c_two_pi_2 ();
   gdouble J11, J12, J22;
 
   ncm_csq1d_state_get_J (state, &J11, &J12, &J22);
 
-  return gsl_pow_2 (unit * p2Psi) * (J22 / 2.0);
+  return gsl_pow_2 (unit * p2Psi) * n0 * (J22 / 2.0);
 }
 
 static gdouble
@@ -666,11 +669,12 @@ _nc_hipert_eval_powspec_drho_from_state (NcHIPertAdiab *adiab, NcmModel *model, 
   const gdouble unit   = nc_hipert_iadiab_eval_unit (NC_HIPERT_IADIAB (model));
   const gdouble tau    = ncm_csq1d_state_get_time (state);
   const gdouble p2drho = nc_hipert_iadiab_eval_p2drho (NC_HIPERT_IADIAB (model), tau, k);
+  const gdouble n0     = 1.0 / ncm_c_two_pi_2 ();
   gdouble J11, J12, J22;
 
   ncm_csq1d_state_get_J (state, &J11, &J12, &J22);
 
-  return gsl_pow_2 (unit * p2drho) * (J22 / 2.0);
+  return gsl_pow_2 (unit * p2drho) * n0 * (J22 / 2.0);
 }
 
 /**
@@ -682,7 +686,7 @@ _nc_hipert_eval_powspec_drho_from_state (NcHIPertAdiab *adiab, NcmModel *model, 
  * Evaluates the power spectrum of the gauge invariant variable $\zeta$ at a given time
  * $\tau$. The power spectrum is given by
  * $$
- * P_\zeta = u^2\frac{2\pi^2}{k^3} \frac{J_{11}}{2}.
+ * P_\zeta = u^2\frac{k^3}{2\pi^2} \frac{J_{11}}{2}.
  * $$
  * where $u$ is the numerical factor for the power spectrum of the adiabatic mode, $k$ is
  * the wave number.
