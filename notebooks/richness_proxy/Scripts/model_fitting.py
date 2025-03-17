@@ -64,7 +64,7 @@ class ModelFitting:
 
         match mod:
             case "ext_ln1pz":
-                model = Nc.ClusterMassLnrichExt(use_ln1pz = True)
+                model = Nc.ClusterMassLnrichExt(use_ln1pz = True, lnRichness_min=np.log(1.0), lnRichness_max=6)
                 fixed_parameters = ['A0','cut', 'cutM1', 'cutZ1'] #fixing cut parameters
             
             case "ext_z":
@@ -72,20 +72,12 @@ class ModelFitting:
                 fixed_parameters = ['A0' ,'cut', 'cutM1', 'cutZ1'] #fixing cut parameters
             
             case "ascaso":
-                model = Nc.ClusterMassAscaso()
+                model = ascaso = Nc.ClusterMassAscaso(lnRichness_min=np.log(1.0), lnRichness_max=6)
                 fixed_parameters = ['cut'] #fixing cut parameter
               
     #Model
         # model.param_set_by_name("cut", np.log(self.data_set['richness'].min())) #Set cut parameter value 
         model.param_set_by_name("cut", np.log(5))
-
-        model.param_set_by_name("mup0", 4.13105590509304 )
-        model.param_set_by_name("mup1", 1.13308187730147)
-        model.param_set_by_name("mup2", 0.306956374740925 )
-        model.param_set_by_name("sigmap0", 0.458272586294436 )
-        model.param_set_by_name("sigmap1", -0.0720333832727466)
-        model.param_set_by_name("sigmap2", -0.0777155254988554)
-  
         
         mset = Ncm.MSet()
         mset.set(model)
@@ -111,7 +103,7 @@ class ModelFitting:
         fit.run_restart(Ncm.FitRunMsgs.SIMPLE, 1.0e-3, 0.0, None, None)
         fit.log_info()
 
-        return model, fit
+        return model, fit, rmdata
 
     
        
