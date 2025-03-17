@@ -251,7 +251,7 @@ nc_cluster_mass_lnrich_ext_class_init (NcClusterMassLnrichExtClass *klass)
                                    g_param_spec_double ("lnRichness-max",
                                                         NULL,
                                                         "Maximum LnRichness",
-                                                        0.0, G_MAXDOUBLE,  M_LN10 * 2.0,
+                                                         M_LN10 * 1.0, G_MAXDOUBLE,  M_LN10 * 3.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -539,7 +539,8 @@ _nc_cluster_mass_lnrich_ext_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo
   _nc_cluster_mass_lnrich_ext_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
 
   ncm_rng_lock (rng);
-  lnM_obs[0] = ncm_rng_gaussian_gen (rng, lnR_true, sigma);
+  lnM_obs[0] = ncm_rng_gaussian_tail_gen (rng, CUT - lnR_true, sigma);
+  lnM_obs[0] += lnR_true; 
   ncm_rng_unlock (rng);
 
   return (lnM_obs[0] <= self->lnR_max) && (lnM_obs[0] >= self->lnR_min) && (lnM_obs[0] >= CUT);
