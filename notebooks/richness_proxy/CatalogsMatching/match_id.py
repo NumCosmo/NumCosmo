@@ -88,7 +88,7 @@ class MatchID:
         for cl in clusters_id:                                                                                        
             
             gcut = idgroups.get_group(cl)    # For each halo in cluster_id group, it selects halos in a range of ra e dec and then 
-                                             # select the halo with maximum frequency of members.
+                                             # select the halo with minimum proximity and maximum frequency of members.
             
             gcut['distance_2d'] = np.sqrt( (gcut['ra'] - gcut['cluster_ra']) ** 2 + (gcut['dec'] - gcut['cluster_dec']) ** 2  )
 
@@ -97,7 +97,6 @@ class MatchID:
             dist_cut = gcut['distance_2d'] == gcut['distance_2d'].min()
             freq_cut = gcut['freq'] == gcut['freq'].max()
                         
-            # gcut = gcut[ra_cut & dec_cut]
             gcut = gcut[dist_cut]
 
             if len(gcut) > 1:
