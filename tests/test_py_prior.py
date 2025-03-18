@@ -333,7 +333,7 @@ def test_py_prior_flat_param_new_name_invalid() -> None:
 def test_py_prior_mset_flist_psf(function_name):
     """Test NumCosmo priors on MSetFuncList."""
     cosmology = Cosmology.default()
-    func = Ncm.MSetFuncList.new(function_name, cosmology.psf)
+    func = Ncm.MSetFuncList.new(function_name, cosmology.psf_tophat)
     assert isinstance(func, Ncm.MSetFuncList)
     assert isinstance(func, Ncm.MSetFunc)
 
