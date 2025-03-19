@@ -101,7 +101,7 @@ class MatchID:
 
             if len(gcut) > 1:
                 gcut = gcut[freq_cut]
-            else 
+            else: 
                 pass
             
             match_dataframe = pd.concat([match_dataframe, gcut], ignore_index=True)
