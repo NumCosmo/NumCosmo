@@ -1,63 +1,61 @@
 from numcosmo_py import Ncm, Nc, GObject
 Ncm.cfg_init()
 import numpy as np
-import pandas as pd
-from astropy.table import Table
-from sklearn.model_selection import train_test_split
-
-from richness_mass_calib import create_richness_mass_calib
+# from richness_mass_calib import create_richness_mass_calib
 
 
 #-------------------------------------------------------------------------------------------------#
-#ModelFitting
-
+# Class: RichnessMassRelationCalibration
+#
 # data: data to calculate the fitted model;
-# b_z: length of redshift bin;
-# b_m: length of mass bin.
-
 #-------------------------------------------------------------------------------------------------#
 
-class ModelFitting:
+class RichnessMassRelationCalibration:
     
-    def __init__(self, data_set):
+    def __init__(self, data_set, rich_cut):
         self.data_set = data_set
-       
+        self.rich_cut = rich_cut
 
-        
-#----------------------------------------------------------------------------#
-# train_test_data(X, y)
+
+
+#-------------------------------------------------------------------------------------------------#
+# create_richness_mass_calib()
+# Description: Create a DataClusterMassRich object.
+#-------------------------------------------------------------------------------------------------#
+
+    def create_richness_mass_calib(self, mass_col_name: str="mass", redshift_col_name: str="redshift"):
+           
+        catalog_len = len(self.data_set)
     
-# X: input data.
-# y: target data.
-#----------------------------------------------------------------------------#
-
-    def train_test_data(self, X, y):
-        
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.3, random_state=0)
-
-        #Training data
-        data_train = pd.concat([X_train, y_train], axis=1)
-
-        #Test  data
-        data_test = pd.concat([X_test, y_test], axis=1)
-        
-        return data_train, data_test
-
-
+        lnM_v = Ncm.Vector.new(catalog_len)
+        z_v = Ncm.Vector.new(catalog_len)
+        rich_v = Ncm.Vector.new(catalog_len)
     
-
+        for i, mass in enumerate(self.data_set[mass_col_name]):
+            lnM_v.set(i, np.log(mass))
+    
+        for i, z in enumerate(self.data_set[redshift_col_name]):
+            z_v.set(i, z)
+    
+        for i, rich in enumerate(self.data_set['richness']):
+            rich_v.set(i, np.log(rich))
+    
+        dmr = Nc.DataClusterMassRich.new()
+        dmr.set_data(lnM_v, z_v, rich_v)
+    
+        return dmr
+        
 #----------------------------------------------------------------------------#  
 # run_fit(mod, training)        
 # mod: model name ('ext_ln1pz' or 'ext_z' or 'ascaso');
-# training: If training = True the fitting is calculated using training data.
-
+#
+# return: model, fit, rmdata
 #----------------------------------------------------------------------------#
 
     def run_fit(self, mod):                       
 
     #data_set
-        rmdata = create_richness_mass_calib(self.data_set, mass_col_name = 'mass', redshift_col_name = 'redshift' )    
+        rmdata = self.create_richness_mass_calib()    
     
     #Swicth
         fixed_parameters = [] 
@@ -76,8 +74,7 @@ class ModelFitting:
                 fixed_parameters = ['cut'] #fixing cut parameter
               
     #Model
-        # model.param_set_by_name("cut", np.log(self.data_set['richness'].min())) #Set cut parameter value 
-        model.param_set_by_name("cut", np.log(5))
+        model.param_set_by_name("cut", np.log(self.rich_cut)) #Set cut parameter value
         
         mset = Ncm.MSet()
         mset.set(model)
@@ -105,12 +102,11 @@ class ModelFitting:
 
         return model, fit, rmdata
 
-    
-       
-#----------------------------------------------------------------------------#
-    
-#get_mean_model(model, lnM,  z):
-
+          
+#----------------------------------------------------------------------------#   
+# get_mean_model(model, lnM,  z)
+#
+# return: Numpy array
 #----------------------------------------------------------------------------#        
 
     def get_mean_model(self, model, lnM, z):
@@ -119,9 +115,9 @@ class ModelFitting:
 
 
 #----------------------------------------------------------------------------#
-    
-#get_std_model(model, lnM,  z):
-
+#get_std_model(model, lnM,  z)
+#
+# return: Numpy array
 #----------------------------------------------------------------------------#        
     def get_std_model(self, model, lnM, z):
     

@@ -5,17 +5,15 @@ from astropy.table import Table
 
 
 #-------------------------------------------------------------------------------------------------#
-#DataB: Class
+# Class: BinnedData 
 #-------------------------------------------------------------------------------------------------#
 
-class DataB:
+class BinnedData:
     def __init__(self, data_set, z_bin_length, m_bin_length):
         self.data_set = data_set
         self.zl = z_bin_length
         self.ml = m_bin_length
         self.mz_bins = self.get_mz_bins()
-
-
         
 #-------------------------------------------------------------------------------------------------#
 # get_mz_bins()
