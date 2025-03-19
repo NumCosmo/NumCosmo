@@ -9,7 +9,7 @@ from richness_mass_calib import create_richness_mass_calib
 
 
 #-------------------------------------------------------------------------------------------------#
-#FittingModel
+#ModelFitting
 
 # data: data to calculate the fitted model;
 # b_z: length of redshift bin;
@@ -17,7 +17,7 @@ from richness_mass_calib import create_richness_mass_calib
 
 #-------------------------------------------------------------------------------------------------#
 
-class FittingModel:
+class ModelFitting:
     
     def __init__(self, data_set):
         self.data_set = data_set
@@ -64,7 +64,7 @@ class FittingModel:
 
         match mod:
             case "ext_ln1pz":
-                model = Nc.ClusterMassLnrichExt(use_ln1pz = True)
+                model = Nc.ClusterMassLnrichExt(use_ln1pz = True, lnRichness_min=np.log(1.0), lnRichness_max=6)
                 fixed_parameters = ['A0','cut', 'cutM1', 'cutZ1'] #fixing cut parameters
             
             case "ext_z":
@@ -72,12 +72,13 @@ class FittingModel:
                 fixed_parameters = ['A0' ,'cut', 'cutM1', 'cutZ1'] #fixing cut parameters
             
             case "ascaso":
-                model = Nc.ClusterMassAscaso()
+                model = ascaso = Nc.ClusterMassAscaso(lnRichness_min=np.log(1.0), lnRichness_max=6)
                 fixed_parameters = ['cut'] #fixing cut parameter
               
     #Model
-        model.param_set_by_name("cut", np.log(self.data_set['richness'].min())) #Set cut parameter value 
-        # model.param_set_by_name("cut", np.log(10e-3))
+        # model.param_set_by_name("cut", np.log(self.data_set['richness'].min())) #Set cut parameter value 
+        model.param_set_by_name("cut", np.log(5))
+        
         mset = Ncm.MSet()
         mset.set(model)
         rmdata.m2lnL_val(mset)  
@@ -102,7 +103,7 @@ class FittingModel:
         fit.run_restart(Ncm.FitRunMsgs.SIMPLE, 1.0e-3, 0.0, None, None)
         fit.log_info()
 
-        return model, fit
+        return model, fit, rmdata
 
     
        

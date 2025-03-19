@@ -26,7 +26,7 @@ class MatchID:
        
         memberdf = self.member_data.to_pandas().rename(columns={'id_member': 'id'})
         truthdf = self.truth_data.to_pandas().rename(columns={'galaxy_id': 'id'})
-        cluster_df= self.cluster_data.to_pandas()[['richness', 'richness_err', 'cluster_id', 'redshift', 'redshift_err']]
+        cluster_df= self.cluster_data.to_pandas()[['richness', 'richness_err', 'cluster_id', 'cluster_redshift', 'cluster_redshift_err', 'cluster_ra', 'cluster_dec']]
 
         return memberdf, truthdf, cluster_df
 
@@ -90,17 +90,20 @@ class MatchID:
             gcut = idgroups.get_group(cl)    # For each halo in cluster_id group, it selects halos in a range of ra e dec and then 
                                              # select the halo with maximum frequency of members.
             
-            distance_2d = np.sqrt( (gcut['ra'] - gcut['cluster_ra']) ** 2 + (gcut['dec'] - gcut['cluster_dec']) ** 2  )
-            # ra_cut = (gcut['ra'] > gcut['cluster_ra'] - 1e-4) & (gcut['ra'] < gcut['cluster_ra'] + 1e-4) 
-            # dec_cut = (gcut['dec'] > gcut['cluster_dec'] - 1e-4) & (gcut['dec'] < gcut['cluster_dec'] + 1e-4)
+            gcut['distance_2d'] = np.sqrt( (gcut['ra'] - gcut['cluster_ra']) ** 2 + (gcut['dec'] - gcut['cluster_dec']) ** 2  )
 
-            dist_cut = distance_2d.min()
+            print(len(gcut['distance_2d']))
+                       
+            dist_cut = gcut['distance_2d'] == gcut['distance_2d'].min()
             freq_cut = gcut['freq'] == gcut['freq'].max()
-
                         
             # gcut = gcut[ra_cut & dec_cut]
             gcut = gcut[dist_cut]
-            gcut = gcut[freq_cut]
+
+            if len(gcut) > 1:
+                gcut = gcut[freq_cut]
+            else 
+                pass
             
             match_dataframe = pd.concat([match_dataframe, gcut], ignore_index=True)
 

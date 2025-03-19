@@ -3,15 +3,15 @@
 
 import numpy as np
 
-from astropy.io import fits
-from astropy.table import Table
+# from astropy.io import fits
+# from astropy.table import Table
 
 from numcosmo_py import Ncm, Nc, GObject
 
-DC2_halos_m200c = fits.open(
-    "/global/cfs/projectdirs/lsst/groups/CL/cosmoDC2_v1.1.4/extragal/full/halos/halos_m200c_13.0.fits"
-)
-dt_halos = Table(DC2_halos_m200c[1].data)
+# DC2_halos_m200c = fits.open(
+#     "/global/cfs/projectdirs/lsst/groups/CL/cosmoDC2_v1.1.4/extragal/full/halos/halos_m200c_13.0.fits"
+# )
+# dt_halos = Table(DC2_halos_m200c[1].data)
 
 
 def create_richness_mass_calib(dt_halos, mass_col_name: str="m200c", redshift_col_name: str="redshift_true"):
