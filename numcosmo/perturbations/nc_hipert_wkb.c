@@ -454,7 +454,8 @@ _nc_hipert_wkb_phase_J (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gp
 void
 _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, NcmModel *model)
 {
-  NcHIPert *pert = NC_HIPERT (wkb);
+  NcHIPert *pert                = NC_HIPERT (wkb);
+  NcHIPertPrivate * const pself = nc_hipert_get_private (pert);
   gint flag;
   gdouble alpha = wkb->alpha_i;
   GArray *alpha_a;
@@ -513,36 +514,36 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, NcmModel *model)
     nu2   = nu * nu;
     dVnu2 = nc_hipert_wkb_get_dVnu2 (wkb, model, alpha, nc_hipert_get_mode_k (pert));
 
-    NV_Ith_S (pert->priv->y, 0) = 0.25 * log1p (V / nu2);
-    NV_Ith_S (pert->priv->y, 1) = 0.25 * (dVnu2 / (1.0 + V / nu2));
+    NV_Ith_S (pself->y, 0) = 0.25 * log1p (V / nu2);
+    NV_Ith_S (pself->y, 1) = 0.25 * (dVnu2 / (1.0 + V / nu2));
   }
 
   g_array_append_val (alpha_a, wkb->alpha_i);
-  g_array_append_val (lnF, NV_Ith_S (pert->priv->y, 0));
-  g_array_append_val (dlnF, NV_Ith_S (pert->priv->y, 1));
+  g_array_append_val (lnF, NV_Ith_S (pself->y, 0));
+  g_array_append_val (dlnF, NV_Ith_S (pself->y, 1));
 
-  if (!pert->priv->cvode_init)
+  if (!pself->cvode_init)
   {
-    flag = CVodeInit (pert->priv->cvode, &_nc_hipert_wkb_phase_f, wkb->alpha_i, pert->priv->y);
+    flag = CVodeInit (pself->cvode, &_nc_hipert_wkb_phase_f, wkb->alpha_i, pself->y);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
-    pert->priv->cvode_init = TRUE;
+    pself->cvode_init = TRUE;
   }
   else
   {
-    flag = CVodeReInit (pert->priv->cvode, wkb->alpha_i, pert->priv->y);
+    flag = CVodeReInit (pself->cvode, wkb->alpha_i, pself->y);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
   }
 
-  flag = CVodeSStolerances (pert->priv->cvode, pert->priv->reltol, pert->priv->abstol);
+  flag = CVodeSStolerances (pself->cvode, pself->reltol, pself->abstol);
   NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
 
-  flag = CVodeSetMaxNumSteps (pert->priv->cvode, 1000000);
+  flag = CVodeSetMaxNumSteps (pself->cvode, 1000000);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
-  flag = CVodeSetLinearSolver (pert->priv->cvode, pert->priv->LS, pert->priv->A);
+  flag = CVodeSetLinearSolver (pself->cvode, pself->LS, pself->A);
   NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
 
-  flag = CVodeSetJacFn (pert->priv->cvode, &_nc_hipert_wkb_phase_J);
+  flag = CVodeSetJacFn (pself->cvode, &_nc_hipert_wkb_phase_J);
   NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
 
   {
@@ -552,20 +553,20 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, NcmModel *model)
     arg.model = model;
     arg.wkb   = wkb;
 
-    flag = CVodeSetUserData (pert->priv->cvode, &arg);
+    flag = CVodeSetUserData (pself->cvode, &arg);
     NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
     while (alpha < wkb->alpha_f)
     {
       gdouble mnu, dmnu;
 
-      flag = CVode (pert->priv->cvode, wkb->alpha_f, pert->priv->y, &alpha, CV_ONE_STEP);
+      flag = CVode (pself->cvode, wkb->alpha_f, pself->y, &alpha, CV_ONE_STEP);
       NCM_CVODE_CHECK (&flag, "CVode[_nc_hipert_wkb_prepare_exact]", 1, );
 
       if (fabs (2.0 * (alpha - last) / (alpha + last)) > 1.0e-6)
       {
-        const gdouble rnu   = NV_Ith_S (pert->priv->y, 0);
-        const gdouble Unu   = NV_Ith_S (pert->priv->y, 1);
+        const gdouble rnu   = NV_Ith_S (pself->y, 0);
+        const gdouble Unu   = NV_Ith_S (pself->y, 1);
         const gdouble Rnu   = exp (rnu);
         const gdouble m_i   = nc_hipert_wkb_get_m (wkb, model, alpha, nc_hipert_get_mode_k (pert));
         const gdouble nu_i  = sqrt (nc_hipert_wkb_get_nu2 (wkb, model, alpha, nc_hipert_get_mode_k (pert)));
@@ -814,12 +815,15 @@ _nc_hipert_wkb_nuA2 (gdouble alpha, gpointer userdata)
 static gint
 _nc_hipert_wkb_nu2_root (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha0, gdouble *alpha, gsl_function *F)
 {
-  NcHIPert *pert = NC_HIPERT (wkb);
-  gint status;
-  gint iter = 0, max_iter = 1000000;
+  NcHIPert *pert                = NC_HIPERT (wkb);
+  NcHIPertPrivate * const pself = nc_hipert_get_private (pert);
+  gint iter                     = 0;
+  gint max_iter                 = 1000000;
+  gdouble prec                  = pself->reltol;
+  gdouble alpha1                = *alpha;
   const gsl_root_fsolver_type *T;
   gsl_root_fsolver *s;
-  gdouble prec = pert->priv->reltol, alpha1 = *alpha;
+  gint status;
 
   T = gsl_root_fsolver_brent;
   s = gsl_root_fsolver_alloc (T);

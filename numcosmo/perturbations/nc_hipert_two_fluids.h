@@ -40,38 +40,18 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_HIPERT_TWO_FLUIDS             (nc_hipert_two_fluids_get_type ())
-#define NC_HIPERT_TWO_FLUIDS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HIPERT_TWO_FLUIDS, NcHIPertTwoFluids))
-#define NC_HIPERT_TWO_FLUIDS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HIPERT_TWO_FLUIDS, NcHIPertTwoFluidsClass))
-#define NC_IS_HIPERT_TWO_FLUIDS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HIPERT_TWO_FLUIDS))
-#define NC_IS_HIPERT_TWO_FLUIDS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HIPERT_TWO_FLUIDS))
-#define NC_HIPERT_TWO_FLUIDS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HIPERT_TWO_FLUIDS, NcHIPertTwoFluidsClass))
+#define NC_TYPE_HIPERT_TWO_FLUIDS (nc_hipert_two_fluids_get_type ())
 
-typedef struct _NcHIPertTwoFluidsClass NcHIPertTwoFluidsClass;
-typedef struct _NcHIPertTwoFluids NcHIPertTwoFluids;
-typedef struct _NcHIPertTwoFluidsPrivate NcHIPertTwoFluidsPrivate;
-
-struct _NcHIPertTwoFluidsClass
-{
-  /*< private >*/
-  NcHIPertClass parent_class;
-};
-
-struct _NcHIPertTwoFluids
-{
-  /*< private >*/
-  NcHIPert parent_instance;
-  NcHIPertTwoFluidsPrivate *priv;
-};
+G_DECLARE_FINAL_TYPE (NcHIPertTwoFluids, nc_hipert_two_fluids, NC, HIPERT_TWO_FLUIDS, NcHIPert);
 
 /**
  * NcHIPertTwoFluidsCross:
- * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE1MAIN: FIXME
- * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE2MAIN: FIXME
- * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE1SUB: FIXME
- * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE2SUB: FIXME
+ * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE1MAIN: Adiabatic cross time for the main mode 1
+ * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE2MAIN: Adiabatic cross time for the main mode 2
+ * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE1SUB: Adiabatic cross time for the submode 1
+ * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE2SUB: Adiabatic cross time for the submode 2
  *
- * FIXME
+ * Adiabatic cross times for the main modes and submodes.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HIPERT_TWO_FLUIDS_CROSS  >*/
@@ -81,8 +61,6 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_TWO_FLUIDS_CROSS  >*/
   NC_HIPERT_TWO_FLUIDS_CROSS_MODE1SUB,
   NC_HIPERT_TWO_FLUIDS_CROSS_MODE2SUB,
 } NcHIPertTwoFluidsCross;
-
-GType nc_hipert_two_fluids_get_type (void) G_GNUC_CONST;
 
 NcHIPertTwoFluids *nc_hipert_two_fluids_new (void);
 NcHIPertTwoFluids *nc_hipert_two_fluids_ref (NcHIPertTwoFluids *ptf);

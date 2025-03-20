@@ -163,31 +163,31 @@ nc_hipert_boltzmann_std_class_init (NcHIPertBoltzmannStdClass *klass)
   pb_class->print_all     = &_nc_hipert_boltzmann_std_print_all;
 }
 
-#define _NC_PHI (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_PHI))
-#define _NC_C0 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_C0))
+#define _NC_PHI (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_PHI))
+#define _NC_C0 (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_C0))
 
-#define _NC_B0 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_B0))
-#define _NC_dB0 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_dB0))
+#define _NC_B0 (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_B0))
+#define _NC_dB0 (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_dB0))
 
-#define _NC_THETA0 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA0))
-#define _NC_dTHETA0 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_dTHETA0))
+#define _NC_THETA0 (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_THETA0))
+#define _NC_dTHETA0 (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_dTHETA0))
 
-#define _NC_C1 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_C1))
-#define _NC_V (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_V))
+#define _NC_C1 (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_C1))
+#define _NC_V (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_V))
 
-#define _NC_U (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_U))
-#define _NC_THETA1 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA1))
+#define _NC_U (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_U))
+#define _NC_THETA1 (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_THETA1))
 
-#define _NC_T (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_T))
-#define _NC_B1 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_B1))
+#define _NC_T (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_T))
+#define _NC_B1 (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_B1))
 
-#define _NC_THETA2 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA2))
-#define _NC_THETA(n) (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA (n)))
+#define _NC_THETA2 (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_THETA2))
+#define _NC_THETA(n) (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_THETA (n)))
 
-#define _NC_THETA_P0 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA_P0))
-#define _NC_THETA_P1 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA_P1))
-#define _NC_THETA_P2 (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA_P2))
-#define _NC_THETA_P(n) (NV_Ith_S (pert->priv->y, NC_HIPERT_BOLTZMANN_THETA_P (n)))
+#define _NC_THETA_P0 (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_THETA_P0))
+#define _NC_THETA_P1 (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_THETA_P1))
+#define _NC_THETA_P2 (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_THETA_P2))
+#define _NC_THETA_P(n) (NV_Ith_S (pself->y, NC_HIPERT_BOLTZMANN_THETA_P (n)))
 
 #define _NC_DPHI (NV_Ith_S (ydot, NC_HIPERT_BOLTZMANN_PHI))
 #define _NC_DC0 (NV_Ith_S (ydot, NC_HIPERT_BOLTZMANN_C0))
@@ -218,22 +218,23 @@ nc_hipert_boltzmann_std_class_init (NcHIPertBoltzmannStdClass *klass)
 static void
 _nc_hipert_boltzmann_std_init (NcHIPertBoltzmann *pb, NcHICosmo *cosmo)
 {
-  NcHIPert *pert             = NC_HIPERT (pb);
-  const gdouble x            = NC_HIPERT_BOLTZMANN_LAMBDA2X (pb->lambdai);
-  const gdouble z            = x - 1.0;
-  const gdouble E2           = nc_hicosmo_E2 (cosmo, z);
-  const gdouble E            = sqrt (E2);
-  const gdouble k_E          = nc_hipert_get_mode_k (pert) / E;
-  const gdouble kx_E         = x * k_E;
-  const gdouble tauprime     = nc_recomb_dtau_dlambda (pb->recomb, cosmo, pb->lambdai);
-  const gdouble kx_Etauprime = kx_E / tauprime;
+  NcHIPert *pert                = NC_HIPERT (pb);
+  NcHIPertPrivate * const pself = nc_hipert_get_private (pert);
+  const gdouble x               = NC_HIPERT_BOLTZMANN_LAMBDA2X (pb->lambdai);
+  const gdouble z               = x - 1.0;
+  const gdouble E2              = nc_hicosmo_E2 (cosmo, z);
+  const gdouble E               = sqrt (E2);
+  const gdouble k_E             = nc_hipert_get_mode_k (pert) / E;
+  const gdouble kx_E            = x * k_E;
+  const gdouble tauprime        = nc_recomb_dtau_dlambda (pb->recomb, cosmo, pb->lambdai);
+  const gdouble kx_Etauprime    = kx_E / tauprime;
   gdouble theta1;
   guint i;
 
   nc_hicosmo_clear (&pb->cosmo);
   pb->cosmo = nc_hicosmo_ref (cosmo);
 
-  N_VConst (0.0, pert->priv->y);
+  N_VConst (0.0, pself->y);
 
   _NC_PHI    = 1.0;
   _NC_C0     = 3.0 * _NC_PHI / 2.0;
@@ -265,30 +266,31 @@ static gint _nc_hipert_boltzmann_std_band_J (realtype t, N_Vector y, N_Vector fy
 static void
 _nc_hipert_boltzmann_std_set_opts (NcHIPertBoltzmann *pb)
 {
-  NcHIPert *pert = NC_HIPERT (pb);
+  NcHIPert *pert                = NC_HIPERT (pb);
+  NcHIPertPrivate * const pself = nc_hipert_get_private (pert);
   gint flag, i;
 
-  N_VConst (pert->priv->abstol, pert->priv->vec_abstol);
+  N_VConst (pself->abstol, pself->vec_abstol);
 
   for (i = 0; i <= NC_HIPERT_BOLTZMANN_THETA_P2; i++)
-    NV_Ith_S (pert->priv->vec_abstol, i) = 0.0;
+    NV_Ith_S (pself->vec_abstol, i) = 0.0;
 
-  flag = CVodeSVtolerances (pert->priv->cvode, pert->priv->reltol, pert->priv->vec_abstol);
+  flag = CVodeSVtolerances (pself->cvode, pself->reltol, pself->vec_abstol);
   NCM_CVODE_CHECK (&flag, "CVodeSVtolerances", 1, );
 
-  flag = CVodeSetMaxNumSteps (pert->priv->cvode, 1000000);
+  flag = CVodeSetMaxNumSteps (pself->cvode, 1000000);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
-  flag = CVodeSetUserData (pert->priv->cvode, pert);
+  flag = CVodeSetUserData (pself->cvode, pert);
   NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
-  flag = CVodeSetLinearSolver (pert->priv->cvode, pert->priv->LS, pert->priv->A);
+  flag = CVodeSetLinearSolver (pself->cvode, pself->LS, pself->A);
   NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
 
-  flag = CVodeSetJacFn (pert->priv->cvode, &_nc_hipert_boltzmann_std_band_J);
+  flag = CVodeSetJacFn (pself->cvode, &_nc_hipert_boltzmann_std_band_J);
   NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
 
-  flag = CVodeSetStopTime (pert->priv->cvode, pb->lambdaf);
+  flag = CVodeSetStopTime (pself->cvode, pb->lambdaf);
   NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
 
   return;
@@ -297,18 +299,19 @@ _nc_hipert_boltzmann_std_set_opts (NcHIPertBoltzmann *pb)
 static void
 _nc_hipert_boltzmann_std_reset (NcHIPertBoltzmann *pb)
 {
+  NcHIPert *pert                = NC_HIPERT (pb);
+  NcHIPertPrivate * const pself = nc_hipert_get_private (pert);
   gint flag;
-  NcHIPert *pert = NC_HIPERT (pb);
 
-  if (!pert->priv->cvode_init)
+  if (!pself->cvode_init)
   {
-    flag = CVodeInit (pert->priv->cvode, &_nc_hipert_boltzmann_std_step, pb->lambdai, pert->priv->y);
+    flag = CVodeInit (pself->cvode, &_nc_hipert_boltzmann_std_step, pb->lambdai, pself->y);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
-    pert->priv->cvode_init = TRUE;
+    pself->cvode_init = TRUE;
   }
   else
   {
-    flag = CVodeReInit (pert->priv->cvode, pb->lambdai, pert->priv->y);
+    flag = CVodeReInit (pself->cvode, pb->lambdai, pself->y);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
   }
 
@@ -320,24 +323,26 @@ _nc_hipert_boltzmann_std_reset (NcHIPertBoltzmann *pb)
 static void
 _nc_hipert_boltzmann_std_evol_step (NcHIPertBoltzmann *pb, gdouble lambda)
 {
-  NcHIPert *pert = NC_HIPERT (pb);
+  NcHIPert *pert                = NC_HIPERT (pb);
+  NcHIPertPrivate * const pself = nc_hipert_get_private (pert);
   gint flag;
   gdouble lambdai;
 
-  flag = CVode (pert->priv->cvode, lambda, pert->priv->y, &lambdai, CV_ONE_STEP);
+  flag = CVode (pself->cvode, lambda, pself->y, &lambdai, CV_ONE_STEP);
   NCM_CVODE_CHECK (&flag, "CVode", 1, );
 }
 
 static void
 _nc_hipert_boltzmann_std_evol (NcHIPertBoltzmann *pb, gdouble lambda)
 {
-  NcHIPert *pert = NC_HIPERT (pb);
+  NcHIPert *pert                = NC_HIPERT (pb);
+  NcHIPertPrivate * const pself = nc_hipert_get_private (pert);
+  gdouble lambdai               = pb->lambdai;
   gint flag;
-  gdouble lambdai = pb->lambdai;
 
   while (lambdai < lambda)
   {
-    flag = CVode (pert->priv->cvode, lambda, pert->priv->y, &lambdai, CV_NORMAL);
+    flag = CVode (pself->cvode, lambda, pself->y, &lambdai, CV_NORMAL);
     NCM_CVODE_CHECK (&flag, "CVode", 1, );
   }
 }
@@ -444,33 +449,34 @@ nc_hipert_boltzmann_std_new (NcRecomb *recomb, guint lmax)
 static gint
 _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpointer user_data)
 {
-  NcHIPertBoltzmann *pb  = NC_HIPERT_BOLTZMANN (user_data);
-  NcHIPert *pert         = NC_HIPERT (pb);
-  NcHICosmo *cosmo       = pb->cosmo;
-  const guint lmax       = pb->TT_lmax;
-  const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (cosmo);
-  const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (cosmo);
-  const gdouble Omega_c0 = nc_hicosmo_Omega_c0 (cosmo);
-  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
-  const gdouble R0       = 4.0 * Omega_r0 / (3.0 * Omega_b0);
-  const gdouble x        = NC_HIPERT_BOLTZMANN_LAMBDA2X (lambda);
-  const gdouble R        = R0 * x;
-  const gdouble x2       = x * x;
-  const gdouble x3       = x2 * x;
-  const gdouble k        = nc_hipert_get_mode_k (pert);
-  const gdouble k2       = k * k;
-  const gdouble E2       = nc_hicosmo_E2 (cosmo, x - 1.0);
-  const gdouble E        = sqrt (E2);
-  const gdouble k_E      = k / E;
-  const gdouble kx_E     = x * k_E;
-  const gdouble kx_3E    = kx_E / 3.0;
-  const gdouble k2x_3E   = k * kx_3E;
-  const gdouble k2x_3E2  = k2x_3E / E;
-  const gdouble k2x2_3E2 = x * k2x_3E2;
-  const gdouble psi      = -_NC_PHI - 12.0 * x2 / k2 * Omega_r0 * _NC_THETA2;
-  const gdouble PI       = _NC_THETA2 + _NC_THETA_P0 + _NC_THETA_P2;
-  const gdouble dErm2_dx = (3.0 * Omega_m0 * x2 + 4.0 * Omega_r0 * x3);
-  const gdouble taubar   = nc_recomb_dtau_dlambda (pb->recomb, cosmo, lambda);
+  NcHIPertBoltzmann *pb         = NC_HIPERT_BOLTZMANN (user_data);
+  NcHIPert *pert                = NC_HIPERT (pb);
+  NcHIPertPrivate * const pself = nc_hipert_get_private (pert);
+  NcHICosmo *cosmo              = pb->cosmo;
+  const guint lmax              = pb->TT_lmax;
+  const gdouble Omega_r0        = nc_hicosmo_Omega_r0 (cosmo);
+  const gdouble Omega_b0        = nc_hicosmo_Omega_b0 (cosmo);
+  const gdouble Omega_c0        = nc_hicosmo_Omega_c0 (cosmo);
+  const gdouble Omega_m0        = nc_hicosmo_Omega_m0 (cosmo);
+  const gdouble R0              = 4.0 * Omega_r0 / (3.0 * Omega_b0);
+  const gdouble x               = NC_HIPERT_BOLTZMANN_LAMBDA2X (lambda);
+  const gdouble R               = R0 * x;
+  const gdouble x2              = x * x;
+  const gdouble x3              = x2 * x;
+  const gdouble k               = nc_hipert_get_mode_k (pert);
+  const gdouble k2              = k * k;
+  const gdouble E2              = nc_hicosmo_E2 (cosmo, x - 1.0);
+  const gdouble E               = sqrt (E2);
+  const gdouble k_E             = k / E;
+  const gdouble kx_E            = x * k_E;
+  const gdouble kx_3E           = kx_E / 3.0;
+  const gdouble k2x_3E          = k * kx_3E;
+  const gdouble k2x_3E2         = k2x_3E / E;
+  const gdouble k2x2_3E2        = x * k2x_3E2;
+  const gdouble psi             = -_NC_PHI - 12.0 * x2 / k2 * Omega_r0 * _NC_THETA2;
+  const gdouble PI              = _NC_THETA2 + _NC_THETA_P0 + _NC_THETA_P2;
+  const gdouble dErm2_dx        = (3.0 * Omega_m0 * x2 + 4.0 * Omega_r0 * x3);
+  const gdouble taubar          = nc_recomb_dtau_dlambda (pb->recomb, cosmo, lambda);
   guint i;
 
   if (pb->tight_coupling)
