@@ -75,7 +75,7 @@ typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_ASCASO_SPARAMS >*/
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P0  (0.33)
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P1  (-0.08 / M_LN10)
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P2  (0.0)
-#define NC_CLUSTER_MASS_ASCASO_DEFAULT_CUT  (6)
+#define NC_CLUSTER_MASS_ASCASO_DEFAULT_CUT  (0.0)
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL (0.0)
 
 struct _NcClusterMassAscasoClass
@@ -96,6 +96,8 @@ GType nc_cluster_mass_ascaso_get_type (void) G_GNUC_CONST;
 gdouble nc_cluster_mass_ascaso_get_mean_richness (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_ascaso_get_std_richness (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_ascaso_get_cut (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
+gdouble nc_cluster_mass_ascaso_get_mean (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
+gdouble nc_cluster_mass_ascaso_get_std (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
 
 G_END_DECLS
 

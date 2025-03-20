@@ -124,6 +124,8 @@ GType nc_cluster_mass_lnrich_ext_get_type (void) G_GNUC_CONST;
 gdouble nc_cluster_mass_lnrich_ext_get_mean_richness (NcClusterMassLnrichExt *lnrich_ext, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_lnrich_ext_get_std_richness (NcClusterMassLnrichExt *lnrich_ext, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_lnrich_ext_get_cut (NcClusterMassLnrichExt *lnrich_ext);
+gdouble nc_cluster_mass_lnrich_ext_get_mean (NcClusterMassLnrichExt *lnrich_ext, gdouble lnM, gdouble z);
+gdouble nc_cluster_mass_lnrich_ext_get_std (NcClusterMassLnrichExt *lnrich_ext, gdouble lnM, gdouble z);
 
 G_END_DECLS
 

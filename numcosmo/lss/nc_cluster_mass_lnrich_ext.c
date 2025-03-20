@@ -478,7 +478,7 @@ _nc_cluster_mass_lnrich_ext_lnR_sigma (NcClusterMass *clusterm, const gdouble ln
 static gdouble
 _nc_cluster_mass_lnrich_ext_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
 {
-  /*NcClusterMassLnrichExt *lnrich_ext    = NC_CLUSTER_MASS_LNRICH_EXT (clusterm);*/
+  NcClusterMassLnrichExt *lnrich_ext    = NC_CLUSTER_MASS_LNRICH_EXT (clusterm);
   gdouble lnR_true, sigma;
 
   _nc_cluster_mass_lnrich_ext_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
@@ -486,7 +486,7 @@ _nc_cluster_mass_lnrich_ext_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoub
   {
     const gdouble x = (lnM_obs[0] - lnR_true) / sigma;
 
-    return 1.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x);
+    return 1.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x)/ erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
   }
 }
 
@@ -504,16 +504,16 @@ _nc_cluster_mass_lnrich_ext_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gd
     const gdouble x_max = (lnR_true - self->lnR_max) / (M_SQRT2 * sigma);
 
     if (x_max > 4.0)
-      return -(erfc (x_min) - erfc (x_max)) / 2.0;
+      return -(erfc (x_min) - erfc (x_max)) / 2.0/ erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
     else
-      return (erf (x_min) - erf (x_max)) / 2.0;
+      return (erf (x_min) - erf (x_max)) / 2.0/ erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
   }
 }
 
 static gdouble
 _nc_cluster_mass_lnrich_ext_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params)
 {
-  /*NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (clusterm);*/
+  NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (clusterm);
   gdouble lnR_true, sigma;
 
   _nc_cluster_mass_lnrich_ext_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
@@ -523,9 +523,9 @@ _nc_cluster_mass_lnrich_ext_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo,
     const gdouble x_max = (lnR_true - lnM_obs_upper[0]) / (M_SQRT2 * sigma);
 
     if (x_max > 4.0)
-      return -(erfc (x_min) - erfc (x_max)) / 2.0;
+      return -(erfc (x_min) - erfc (x_max)) / 2.0/ erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
     else
-      return (erf (x_min) - erf (x_max)) / 2.0;
+      return (erf (x_min) - erf (x_max)) / 2.0/ erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
   }
 }
 
@@ -549,10 +549,10 @@ _nc_cluster_mass_lnrich_ext_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo
 static void
 _nc_cluster_mass_lnrich_ext_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (clusterm);
-  const gdouble mean                 = lnM_obs[0] - MU; /* - P2 * log10(1.0 + z);  FIX This!!!! What is the mean richeness? */
-  const gdouble logRichnessl         = M_LN10 * log10 (1e13);
-  const gdouble logRichnessu         = M_LN10 * log10 (1e15);
+  /*NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (clusterm);*/
+  /*const gdouble mean                 = lnM_obs[0] - MU;  - P2 * log10(1.0 + z);  FIX This!!!! What is the mean richeness? */
+  const gdouble logRichnessl         = M_LN10 * log10 (1e12);
+  const gdouble logRichnessu         = M_LN10 * log10 (1e16);
 
   *lnM_lower = logRichnessl;
   *lnM_upper = logRichnessu;
@@ -563,9 +563,9 @@ _nc_cluster_mass_lnrich_ext_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo
 static void
 _nc_cluster_mass_lnrich_ext_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (clusterm);
-  const gdouble lnMl                 = M_LN10 * log10 (1e13);
-  const gdouble lnMu                 = M_LN10 * log10 (1e15);
+  /*NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (clusterm);*/
+  const gdouble lnMl                 = M_LN10 * log10 (1e12);
+  const gdouble lnMu                 = M_LN10 * log10 (1e16);
 
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;
@@ -574,9 +574,9 @@ _nc_cluster_mass_lnrich_ext_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *co
 static void
 _nc_cluster_mass_lnrich_ext_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (clusterm);
-  const gdouble lnMl                 =  M_LN10 * log10 (1e13);
-  const gdouble lnMu                 =  M_LN10 * log10 (1e15);
+  /*NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (clusterm);*/
+  const gdouble lnMl                 =  M_LN10 * log10 (1e12);
+  const gdouble lnMu                 =  M_LN10 * log10 (1e16);
 
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;
@@ -697,7 +697,7 @@ nc_cluster_mass_lnrich_ext_get_std_richness (NcClusterMassLnrichExt *lnrich_ext,
 gdouble
 nc_cluster_mass_lnrich_ext_get_cut (NcClusterMassLnrichExt *lnrich_ext)
 {
-  NcClusterMassLnrichExtPrivate * const self = lnrich_ext->priv;
+ /*NcClusterMassLnrichExtPrivate * const self = lnrich_ext->priv;*/
   //const gdouble DlnM                         = lnM - self->lnM0;
   //const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
 
@@ -705,3 +705,62 @@ nc_cluster_mass_lnrich_ext_get_cut (NcClusterMassLnrichExt *lnrich_ext)
     return CUT;
 }
 
+/**
+ *nc_cluster_mass_lnrich_ext_get_mean:
+ * @lnrich_ext: a #NcClusterMassLnrichExt
+ * @lnM: ln of the mass
+ * @z: redshift
+ *
+ * Computes the mean of the richness distribution with the cut correction.
+ *
+ */
+gdouble
+nc_cluster_mass_lnrich_ext_get_mean (NcClusterMassLnrichExt *lnrich_ext, gdouble lnM, gdouble z)
+{
+  gdouble lnR_mean, lnR_sigma, A, B, C, mean_correction;   
+  
+    
+  lnR_mean  = nc_cluster_mass_lnrich_ext_get_mean_richness (lnrich_ext, lnM, z);
+  lnR_sigma = nc_cluster_mass_lnrich_ext_get_std_richness  (lnrich_ext, lnM, z);
+    
+  A = (CUT - lnR_mean) / lnR_sigma; 
+    
+  B = ( 1.0 / (ncm_c_sqrt_2pi ())) * exp( -0.5 * (A  * A));
+    
+  C = 1.0 - 0.5 * (  1.0 + erf( A / M_SQRT2 ));
+    
+  mean_correction = (lnR_sigma * B / C );
+    
+    return lnR_mean + mean_correction;  
+
+}
+
+/**
+ * nc_cluster_mass_lnrich_ext_get_std:
+ * @lnrich_ext: a #NcClusterMassLnrichExt
+ * @lnM: ln of the mass
+ * @z: redshift
+ *
+ * Computes the standard deviation of the richness distribution with the cut correction.
+ *
+ */
+gdouble
+nc_cluster_mass_lnrich_ext_get_std (NcClusterMassLnrichExt *lnrich_ext, gdouble lnM, gdouble z)
+{
+  gdouble lnR_mean, lnR_sigma, A, B, C, std_correction;   
+  
+    
+  lnR_mean  = nc_cluster_mass_lnrich_ext_get_mean_richness (lnrich_ext, lnM, z);
+  lnR_sigma = nc_cluster_mass_lnrich_ext_get_std_richness  (lnrich_ext, lnM, z);
+    
+  A = (CUT - lnR_mean) / lnR_sigma; 
+    
+  B = ( 1.0 / (ncm_c_sqrt_2pi ())) * exp( -0.5 * (A  * A));
+    
+  C = 1.0 - 0.5 * (  1.0 + erf( A / M_SQRT2 ));
+    
+  std_correction = pow( 1.0 + ( A * B / C  ) - ( B / C ) * ( B / C ), 0.5);
+    
+  return lnR_sigma * std_correction;  
+
+}
