@@ -66,7 +66,7 @@ class MatchID:
 # halos_bin_mz : Pandas dataframe with unique association between halos and clusters.
 #-------------------------------------------------------------------------------------------------# 
 
-    def unique_id_match(self):
+    def unique_id_match(self, distance = False):
 
         mt_catalog = self.matching_by_id
         
@@ -90,14 +90,14 @@ class MatchID:
             gcut = idgroups.get_group(cl)    # For each halo in cluster_id group, it selects halos in a range of ra e dec and then 
                                              # select the halo with minimum proximity and maximum frequency of members.
             
-            gcut['distance_2d'] = np.sqrt( (gcut['ra'] - gcut['cluster_ra']) ** 2 + (gcut['dec'] - gcut['cluster_dec']) ** 2  )
+            if distance == True:
+                gcut['distance_2d'] = np.sqrt( (gcut['ra'] - gcut['cluster_ra']) ** 2 + (gcut['dec'] - gcut['cluster_dec']) ** 2  )
+                          
+                dist_cut = gcut['distance_2d'] == gcut['distance_2d'].min()
 
-            print(len(gcut['distance_2d']))
-                       
-            dist_cut = gcut['distance_2d'] == gcut['distance_2d'].min()
+                gcut = gcut[dist_cut]
+            
             freq_cut = gcut['freq'] == gcut['freq'].max()
-                        
-            gcut = gcut[dist_cut]
 
             if len(gcut) > 1:
                 gcut = gcut[freq_cut]
