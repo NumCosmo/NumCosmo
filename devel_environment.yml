@@ -6,7 +6,7 @@ dependencies:
   - astropy
   - black
   - c-compiler
-  - cfitsio
+  - cfitsio < 4.6.0
   - coverage
   - fftw
   - flake8
