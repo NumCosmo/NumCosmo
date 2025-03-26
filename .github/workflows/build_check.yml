@@ -157,11 +157,6 @@ jobs:
           [[ -e $GCC_NM ]] && NM=$GCC_NM
           [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
           meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
-      - name: Testing CI building
-        if: matrix.os == 'ubuntu'
-        run: |
-          cd build
-          /home/runner/miniconda3/envs/numcosmo_developer/bin/x86_64-conda-linux-gnu-cc -v -H -E -Inumcosmo/libnumcosmo.so.0.2400.1.p -Inumcosmo -I../numcosmo -I. -I.. -I../numcosmo/sundials/include -Inumcosmo/libcuba -I../numcosmo/libcuba -Inumcosmo/plc -I../numcosmo/plc -I../numcosmo/plc/cldf -I../numcosmo/plc/minipmc -I../numcosmo/plc/plik -I/home/runner/miniconda3/envs/numcosmo_developer/include -I -I/home/runner/miniconda3/envs/numcosmo_developer/include/glib-2.0 -I/home/runner/miniconda3/envs/numcosmo_developer/lib/glib-2.0/include -fdiagnostics-color=always --coverage -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wextra -std=gnu99 -O0 -g -DG_DISABLE_CAST_CHECKS -Wno-unused-parameter -DUSE_GCOV -DUSE_NCM_MPI -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/runner/miniconda3/envs/numcosmo_developer/include -DNDEBUG -D_FORTIFY_SOURCE=2 -O2 -isystem /home/runner/miniconda3/envs/numcosmo_developer/include -fPIC -fopenmp -fopenmp -fopenmp -pthread '-DG_LOG_DOMAIN="NUMCOSMO"' -DHAVE_CONFIG_H -MD -MQ numcosmo/libnumcosmo.so.0.2400.1.p/math_ncm_binsplit.c.o -MF numcosmo/libnumcosmo.so.0.2400.1.p/math_ncm_binsplit.c.o.d -o numcosmo/libnumcosmo.so.0.2400.1.p/math_ncm_binsplit.c.o -c ../numcosmo/math/ncm_binsplit.c           
       - name: Building NumCosmo
         run: |
           meson compile -C build
