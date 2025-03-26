@@ -251,7 +251,7 @@ _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model)
     F.function = _nc_powspec_ml_transfer_eval_pk;
     F.params   = &arg;
 
-    ncm_spline_set_func (pk_s, NCM_SPLINE_FUNCTION_SPLINE, &F, -8.0 * M_LN10, 4.0 * M_LN10, 0, 1.0e-13);
+    ncm_spline_set_func (pk_s, NCM_SPLINE_FUNCTION_SPLINE, &F, -8.0 * M_LN10, 8.0 * M_LN10, 0, 1.0e-13);
 
     ncm_spline_clear (&ps_mlt->Pk);
     ps_mlt->Pk = pk_s;
