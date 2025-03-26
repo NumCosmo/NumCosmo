@@ -156,6 +156,7 @@ jobs:
           gcc -E -v -I/home/runner/miniconda3/envs/numcosmo_developer/include - < /dev/null
           echo '#include <glib.h>' > test.c
           echo "Second!"
+          ls -lasth /home/runner/miniconda3/envs/numcosmo_developer/include/glib-2.0
           gcc -E -v -I/home/runner/miniconda3/envs/numcosmo_developer/include/glib-2.0 test.c
           [[ -e $GCC_AR ]] && AR=$GCC_AR
           [[ -e $GCC_NM ]] && NM=$GCC_NM
