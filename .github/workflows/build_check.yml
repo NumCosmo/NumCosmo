@@ -157,7 +157,7 @@ jobs:
           [[ -e $GCC_NM ]] && NM=$GCC_NM
           [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
           meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
-          cat build/meson-logs/meson-log.txt
+          cat $CONDA_PREFIX/lib/pkgconfig/cfitsio.pc
       - name: Building NumCosmo
         run: |
           meson compile -C build
