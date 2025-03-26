@@ -48,17 +48,18 @@
 
 typedef struct _NcHaloCMBhattacharya13Private
 {
-  gint placeholder;
+  gdouble Delta;
+  NcHaloMassSummaryMassDef mdef;
+
+  gdouble (*concentration) (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z);
 } NcHaloCMBhattacharya13Private;
 
 struct _NcHaloCMBhattacharya13
 {
   NcHaloMassSummary parent_instance;
-  NcHaloMassSummaryMassDef mdef;
   NcHaloMassFunction *mfp;
   NcmPowspecFilter *psf;
   NcGrowthFunc *gf;
-  gdouble z;
 };
 
 enum
@@ -75,6 +76,12 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcHaloCMBhattacharya13, nc_halo_cm_bhattacharya13, N
 static void
 nc_halo_cm_bhattacharya13_init (NcHaloCMBhattacharya13 *hcmb)
 {
+  NcHaloCMBhattacharya13Private * const self = nc_halo_cm_bhattacharya13_get_instance_private (hcmb);
+ 
+  self->Delta = 0.0;
+  self->mdef = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
+
+  self->concentration = NULL;
 }
 
 static void
@@ -92,6 +99,8 @@ _nc_halo_cm_bhattacharya13_finalize (GObject *object)
 
 static gdouble _nc_halo_cm_bhattacharya13_mass (NcHaloMassSummary *hms);
 static gdouble _nc_halo_cm_bhattacharya13_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z);
+static void _nc_halo_cm_bhattacharya13_set_Delta (NcHaloMassSummary *hms, gdouble Delta);
+static void _nc_halo_cm_bhattacharya13_set_mdef (NcHaloMassSummary *hms, NcHaloMassSummaryMassDef mdef);
 
 static void
 nc_halo_cm_bhattacharya13_class_init (NcHaloCMBhattacharya13Class *klass)
@@ -133,6 +142,8 @@ nc_halo_cm_bhattacharya13_class_init (NcHaloCMBhattacharya13Class *klass)
 
   hms_class->mass          = &_nc_halo_cm_bhattacharya13_mass;
   hms_class->concentration = &_nc_halo_cm_bhattacharya13_concentration;
+  hms_class->set_Delta     = &_nc_halo_cm_bhattacharya13_set_Delta;
+  hms_class->set_mdef      = &_nc_halo_cm_bhattacharya13_set_mdef;
 }
 
 static gdouble
@@ -143,58 +154,97 @@ _nc_halo_cm_bhattacharya13_mass (NcHaloMassSummary *hms)
   return exp10 (LOG10M_DELTA);
 }
 
-static gdouble
-_nc_halo_cm_bhattacharya13_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
+static gdouble _nc_halo_cm_bhattacharya13_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
+  NcHaloCMBhattacharya13 *hcmb               = NC_HALO_CM_BHATTACHARYA13 (hms);
+  NcHaloCMBhattacharya13Private * const self = nc_halo_cm_bhattacharya13_get_instance_private (hcmb);
 
-  NcHaloCMBhattacharya13 *hcmb   = NC_HALO_CM_BHATTACHARYA13 (hms);
-  gdouble mass                   = _nc_halo_cm_bhattacharya13_mass (hms);
-  gdouble Delta                  = nc_halo_mass_summary_Delta (hms, cosmo, z); 
+  return self->concentration (hms, cosmo, z)
+}
+
+static void
+_nc_halo_cm_bhattacharya13_set_Delta (NcHaloMassSummary *hms, gdouble Delta)
+{
+  NcHaloCMBhattacharya13 *hcmb               = NC_HALO_CM_BHATTACHARYA13 (hms);
+  NcHaloCMBhattacharya13Private * const self = nc_halo_cm_bhattacharya13_get_instance_private (hcmb);
+
+  if (self->mdef < NC_HALO_MASS_SUMMARY_MASS_DEF_LEN)
+    if ((self->mdef != NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL) && (Delta != 200.0))
+      g_error ("Bhattacharya13 concentration: mdef must be NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL or Delta must be 200.0 (mean and critical)");
+
+  self->Delta = Delta;
+}
+
+static gdouble
+_nc_halo_cm_bhattacharya13_concentration_mean (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
+{
+  gdouble mass = _nc_halo_cm_bhattacharya13_mass (hms);
+  gdouble h    = nc_hicosmo_h (cosmo);
+  gdouble lnM                    = log(mass);
+  gdouble R                      = exp(nc_halo_mass_function_lnM_to_lnR (mfp, cosmo, lnM));
+  gdouble D                      = nc_growth_func_eval (hcmb->gf, cosmo, z);
+  gdouble sigma                  = ncm_powspec_filter_eval_sigma (hcmb->psf, z, R);
+  gdouble nu                     = 1.686 / sigma;
+  
+
+  return 9.0 * pow (D, 1.15) * pow (nu, -0.29);
+}
+
+static gdouble
+_nc_halo_cm_bhattacharya13_concentration_critical (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
+{
+  gdouble mass = _nc_halo_cm_bhattacharya13_mass (hms);
   gdouble lnM                    = log(mass);
   gdouble R                      = exp(nc_halo_mass_function_lnM_to_lnR (hcmb->mfp, cosmo, lnM));
   gdouble D                      = nc_growth_func_eval (hcmb->gf, cosmo, z);
   gdouble sigma                  = ncm_powspec_filter_eval_sigma (hcmb->psf, z, R);
   gdouble nu                     = 1.686 / sigma;
 
-  hcmb->mdef                     = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
+  return 5.9 * pow (D, 0.54) * pow (nu, -0.35);
+}
 
-  switch (hcmb->mdef)
+static gdouble
+_nc_halo_cm_bhattacharya13_concentration_virial (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
+{
+  gdouble mass = _nc_halo_cm_bhattacharya13_mass (hms);
+  gdouble lnM                    = log(mass);
+  gdouble R                      = exp(nc_halo_mass_function_lnM_to_lnR (hcmb->mfp, cosmo, lnM));
+  gdouble D                      = nc_growth_func_eval (hcmb->gf, cosmo, z);
+  gdouble sigma                  = ncm_powspec_filter_eval_sigma (hcmb->psf, z, R);
+  gdouble nu                     = 1.686 / sigma;
+
+  return 7.7 * pow (D, 0.90) * pow (nu, -0.29);
+}
+
+static void
+_nc_halo_cm_bhattacharya13_set_mdef (NcHaloMassSummary *hms, NcHaloMassSummaryMassDef mdef)
+{
+  NcHaloCMBhattacharya13 *hcmd               = NC_HALO_CM_BHATTACHARYA13 (hms);
+  NcHaloCMBhattacharya13Private * const self = nc_halo_cm_bhattacharya13_get_instance_private (hcmd);
+
+  if (self->Delta != 0.0)
+    if ((mdef != NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL) && (self->Delta != 200.0))
+      g_error ("Bhattacharya13 concentration: mdef must be NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL or Delta must be 200.0 (mean and critical)");
+
+  self->mdef = mdef;
+
+  switch (mdef)
   {
     case NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN:
-  
-      if (Delta == 200.0){
-
-        return 9.0 * pow (D, 1.15) * pow (nu, -0.29);
-
-      }
-
-      else {
-        g_assert_not_reached();
-        return 0.0; 
-      }
+      self->concentration = _nc_halo_cm_bhattacharya13_concentration_mean;
+      break;
 
     case NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL:
-
-      if (Delta == 200.0){
-
-        return 5.9 * pow (D, 0.54) * pow (nu, -0.35);
-      }
-
-      else{
-        g_assert_not_reached();
-        return 0.0;    
-      } 
+      self->concentration = _nc_halo_cm_bhattacharya13_concentration_critical;
+      break;
 
     case NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL:
-
-      return 7.7 * pow (D, 0.90) * pow (nu, -0.29);
+      self->concentration = _nc_halo_cm_bhattacharya13_concentration_virial;
+      break;
 
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
-
-      return 0.0; /* LCOV_EXCL_LINE */
   }
-
 }
 
 /**
