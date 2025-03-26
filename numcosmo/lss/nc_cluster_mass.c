@@ -25,13 +25,13 @@
  */
 
 /**
- * SECTION:nc_cluster_mass
- * @title: NcClusterMass
- * @short_description: Abstract class for cluster mass distributions.
+ * NcClusterMass:
  *
- * NcClusterMass is the abstract class designed to abridge the functions
- * that any cluster mass distribution should implement, see NcClusterMassImpl.
- * Its parent_class is NcmModel.
+ * Abstract class for cluster mass distributions.
+ *
+ * NcClusterMass is the abstract class designed to abridge the functions that any
+ * cluster mass distribution should implement, see NcClusterMassImpl. Its parent_class
+ * is NcmModel.
  *
  */
 

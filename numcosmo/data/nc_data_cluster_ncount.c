@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_data_cluster_ncount
- * @title: NcDataClusterNCount
- * @short_description: Cluster number count data.
+ * NcDataClusterNCount:
+ *
+ * Cluster number count data.
  *
  * A likelihood function for cluster number count data.
  *

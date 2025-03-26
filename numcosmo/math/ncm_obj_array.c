@@ -25,13 +25,37 @@
  */
 
 /**
- * SECTION:ncm_obj_array
- * @title: NcmObjArray
- * @short_description: GObjects array with serialization support.
+ * NcmObjArray:
  *
- * A #NcmObjArray is a #GPtrArray that holds GObject's. It is used to
- * store GObject's that can be serialized to a #GVariant.
+ * GObjects array with serialization support.
  *
+ * A #NcmObjArray is a #GPtrArray that holds GObject's. It is used to store GObject's
+ * that can be serialized to a #GVariant.
+ *
+ */
+/**
+ * NcmObjDictStr:
+ *
+ * GObjects dictionary with string keys.
+ *
+ * A #NcmObjDictStr is a #GHashTable that holds GObject's with string keys. It is used
+ * to store GObject's that can be serialized to a #GVariant.
+ */
+/**
+ * NcmObjDictInt:
+ *
+ * GObjects dictionary with integer keys.
+ *
+ * A #NcmObjDictInt is a #GHashTable that holds GObject's with integer keys. It is used
+ * to store GObject's that can be serialized to a #GVariant.
+ */
+/**
+ * NcmVarDict:
+ *
+ * Variable dictionary.
+ *
+ * A #NcmVarDict is a #GHashTable that holds #GVariant's. It is used to store #GVariant's
+ * that can be serialized to a #GVariant.
  */
 
 #ifdef HAVE_CONFIG_H

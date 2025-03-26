@@ -25,23 +25,20 @@
  */
 
 /**
- * SECTION:ncm_fftlog
- * @title: NcmFftlog
- * @short_description: Abstract class for implementing logarithm fast fourier transform.
- * @stability: Stable
- * @include: numcosmo/math/ncm_fftlog.h
+ * NcmFftlog:
  *
- * This class provides the tools to compute the Fast Fourier Transform
- * of any function, which is assumed to be a periodic
- * sequence of logarithmically spaced points.
- * It is inspired on the approach FFTLog developed by
- * [Hamilton (2000)][XHamilton2000] [[arXiv](https://arxiv.org/abs/astro-ph/9905191)],
- * which was extended as described below.
+ * Abstract class for implementing logarithm fast fourier transform.
  *
- * A function $G(r)$ is written as
- * \begin{equation}\label{eq:Gr} G(r) = \int_0^\infty F(k) \ K(kr) dk, \end{equation}
- * where $F(k)$ is defined in the fundamental interval $[\ln k_0 - L/2, \ln k_0 + L/2]$, $L$ is the period,
- * $\ln k_0$ is the center value and $K(kr)$ is a kernel function. Assuming that $F(k)$ can be written in terms of the
+ * This class provides the tools to compute the Fast Fourier Transform of any function,
+ * which is assumed to be a periodic sequence of logarithmically spaced points. It is
+ * inspired on the approach FFTLog developed by [Hamilton (2000)][XHamilton2000]
+ * [[arXiv](https://arxiv.org/abs/astro-ph/9905191)], which was extended as described
+ * below.
+ *
+ * A function $G(r)$ is written as \begin{equation}\label{eq:Gr} G(r) = \int_0^\infty
+ * F(k) \ K(kr) dk, \end{equation} where $F(k)$ is defined in the fundamental interval
+ * $[\ln k_0 - L/2, \ln k_0 + L/2]$, $L$ is the period, $\ln k_0$ is the center value
+ * and $K(kr)$ is a kernel function. Assuming that $F(k)$ can be written in terms of the
  * $N$ lowest Fourier modes, we have
  *
  * $$F(k) = \sum_{n} c_n e^{\frac{2\pi i n}{L} \ln\left(\frac{k}{k_0}\right)}.$$

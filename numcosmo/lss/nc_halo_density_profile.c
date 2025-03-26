@@ -24,18 +24,17 @@
  */
 
 /**
- * SECTION:nc_halo_density_profile
- * @title: NcHaloDensityProfile
- * @short_description: Abstract class for density profile functions.
+ * NcHaloDensityProfile:
  *
- * This abstract class describes the radial matter density profile in real
- * space. Each implementation must provide, at least, the
- * dimensionless 3D density:
+ * Abstract class for density profile functions.
+ *
+ * This abstract class describes the radial matter density profile in real space. Each
+ * implementation must provide, at least, the dimensionless 3D density:
  * \begin{equation}\label{def:dlrho}
  * \hat\rho(x) \equiv \frac{\rho(x r_s)}{\rho_s}, \quad \rho(r) = \rho_s \hat\rho\left(\frac{r}{r_s}\right),
  * \end{equation}
- * where $\rho(r)$ is the actual density profile, $\rho_s$ is the profile scale
- * and $r_s$ the scale radius. This function corresponds to the virtual function
+ * where $\rho(r)$ is the actual density profile, $\rho_s$ is the profile scale and
+ * $r_s$ the scale radius. This function corresponds to the virtual function
  * nc_halo_density_profile_eval_dl_density().
  *
  * # Parametrization
@@ -175,7 +174,8 @@ typedef struct _NcHaloDensityProfilePrivate
   gdouble reltol;
   gdouble lnXi;
   gdouble lnXf;
-  gdouble dl_spher_mass;
+  NcmOdeSpline *dl_spher_mass_ode_s;
+  NcmSpline *dl_spher_mass_s;
   NcmSpline *dl_2d_density_s;
   NcmSpline *dl_cyl_mass_s;
   gdouble rho_s0;
@@ -197,23 +197,26 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcHaloDensityProfile, nc_halo_density_profile, NCM_T
 /*#define LOG10M_DELTA (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_LOG10M_DELTA)) */
 /*#define C_DELTA      (ncm_model_orig_param_get (VECTOR, NC_HALO_DENSITY_PROFILE_C_DELTA)) */
 
+static gdouble _nc_halo_density_profile_prepare_dl_spher_mass_int (gdouble y, gdouble x, gpointer userdata);
+
 static void
 nc_halo_density_profile_init (NcHaloDensityProfile *dp)
 {
   NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
   NcmSpline *s                             = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
-  self->hms             = NULL;
-  self->hms_ctrl        = ncm_model_ctrl_new (NULL);
-  self->z               = 0.0;
-  self->reltol          = 0.0;
-  self->lnXi            = 0.0;
-  self->lnXf            = 0.0;
-  self->dl_spher_mass   = 0.0;
-  self->dl_2d_density_s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-  self->dl_cyl_mass_s   = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-  self->rho_s0          = 0.0;
-  self->r_s0            = 0.0;
+  self->hms                 = NULL;
+  self->hms_ctrl            = ncm_model_ctrl_new (NULL);
+  self->z                   = 0.0;
+  self->reltol              = 0.0;
+  self->lnXi                = 0.0;
+  self->lnXf                = 0.0;
+  self->dl_spher_mass_ode_s = NCM_ODE_SPLINE (ncm_ode_spline_new_full (s, &_nc_halo_density_profile_prepare_dl_spher_mass_int, 0.0, 0.0, 1.0));
+  self->dl_spher_mass_s     = NULL;
+  self->dl_2d_density_s     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  self->dl_cyl_mass_s       = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  self->rho_s0              = 0.0;
+  self->r_s0                = 0.0;
 
   ncm_spline_free (s);
 }
@@ -272,6 +275,8 @@ _nc_halo_density_profile_dispose (GObject *object)
   NcHaloDensityProfile *dp                 = NC_HALO_DENSITY_PROFILE (object);
   NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
+  ncm_ode_spline_clear (&self->dl_spher_mass_ode_s);
+  self->dl_spher_mass_s = NULL;
   ncm_spline_clear (&self->dl_2d_density_s);
   ncm_spline_clear (&self->dl_cyl_mass_s);
   ncm_model_ctrl_clear (&self->hms_ctrl);
@@ -293,8 +298,8 @@ static void _nc_halo_density_profile_add_submodel (NcmModel *model, NcmModel *su
 
 static gdouble _nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
 
-static void _nc_halo_density_profile_prepare_ctes (NcHaloDensityProfile *dp, NcHICosmo *cosmo);
-static void _nc_halo_density_profile_prepare_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo);
+static void _nc_halo_density_profile_prepare_ctes (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z);
+static void _nc_halo_density_profile_prepare_dl_spher_mass (NcHaloDensityProfile *dp);
 static void _nc_halo_density_profile_prepare_dl_2d_density (NcHaloDensityProfile *dp);
 static void _nc_halo_density_profile_prepare_dl_cyl_mass (NcHaloDensityProfile *dp);
 
@@ -418,51 +423,49 @@ _nc_halo_density_profile_hms_is_update (NcHaloDensityProfile *dp)
 }
 
 static void
-_nc_halo_density_profile_prepare_ctes (NcHaloDensityProfile *dp, NcHICosmo *cosmo)
+_nc_halo_density_profile_prepare_ctes (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z)
 {
   _nc_halo_density_profile_hms_is_update (dp);
-  
+
   if (!ncm_model_lstate_is_update (NCM_MODEL (dp), PREPARE_CTES))
   {
     NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
-    const gdouble cDelta                     = nc_halo_mass_summary_concentration (self->hms, cosmo);
+    const gdouble cDelta                     = nc_halo_mass_summary_concentration (self->hms, cosmo, z);
     const gdouble MDelta                     = nc_halo_mass_summary_mass (self->hms);
 
     self->r_s0   = cbrt (3.0 * MDelta / (4.0 * ncm_c_pi ())) / cDelta;
-    self->rho_s0 = gsl_pow_3 (cDelta) / (3.0 * nc_halo_density_profile_eval_dl_spher_mass (dp, cosmo, cDelta));
+    self->rho_s0 = gsl_pow_3 (cDelta) / (3.0 * nc_halo_density_profile_eval_dl_spher_mass (dp, cDelta));
 
     ncm_model_lstate_set_update (NCM_MODEL (dp), PREPARE_CTES);
   }
 }
 
 static gdouble
-_nc_halo_density_profile_prepare_dl_spher_mass_int (gdouble x, gpointer userdata)
+_nc_halo_density_profile_prepare_dl_spher_mass_int (gdouble y, gdouble x, gpointer userdata)
 {
   NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (userdata);
+
+  if (x == 0.0)
+    return 0.0;
 
   return x * x * nc_halo_density_profile_eval_dl_density (dp, x);
 }
 
 static void
-_nc_halo_density_profile_prepare_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo)
+_nc_halo_density_profile_prepare_dl_spher_mass (NcHaloDensityProfile *dp)
 {
   _nc_halo_density_profile_hms_is_update (dp);
 
   if (!ncm_model_lstate_is_update (NCM_MODEL (dp), PREPARE_DL_SPHER_MASS))
   {
     NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
-    gsl_integration_workspace **w            = ncm_integral_get_workspace ();
-    const gdouble cDelta                     = nc_halo_mass_summary_concentration (self->hms, cosmo);
-    gint key                                 = 6;
-    gsl_function F;
-    gdouble err;
 
-    F.function = &_nc_halo_density_profile_prepare_dl_spher_mass_int;
-    F.params   = dp;
+    ncm_ode_spline_set_xf (self->dl_spher_mass_ode_s, exp (self->lnXf));
+    ncm_ode_spline_set_reltol (self->dl_spher_mass_ode_s, self->reltol * 1.0e-1);
+    ncm_ode_spline_set_abstol (self->dl_spher_mass_ode_s, 1.0e-30);
+    ncm_ode_spline_prepare (self->dl_spher_mass_ode_s, dp);
+    self->dl_spher_mass_s = ncm_ode_spline_peek_spline (self->dl_spher_mass_ode_s);
 
-    gsl_integration_qag (&F, 0.0, cDelta, 0.0, self->reltol, NCM_INTEGRAL_PARTITION, key, *w, &self->dl_spher_mass, &err);
-
-    ncm_memory_pool_return (w);
     ncm_model_lstate_set_update (NCM_MODEL (dp), PREPARE_DL_SPHER_MASS);
   }
 }
@@ -837,7 +840,6 @@ nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble
 /**
  * nc_halo_density_profile_eval_dl_spher_mass: (virtual eval_dl_spher_mass)
  * @dp: a #NcHaloDensityProfile
- * @cosmo: a #NcHICosmo
  * @x: dimensionless radius $x = r / r_s$
  *
  * This function computes the 2d projection of the dimensionless density
@@ -846,12 +848,11 @@ nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble
  * Returns: the value of the integral $I_{x^2\hat\rho}(x)$.
  */
 gdouble
-nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x)
+nc_halo_density_profile_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x)
 {
-  NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
-  gdouble concentration                    = nc_halo_mass_summary_concentration (self->hms, cosmo);
+  /*NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp); */
 
-  return NC_HALO_DENSITY_PROFILE_GET_CLASS (dp)->eval_dl_spher_mass (dp, cosmo, concentration);
+  return NC_HALO_DENSITY_PROFILE_GET_CLASS (dp)->eval_dl_spher_mass (dp, x);
 }
 
 /**
@@ -902,7 +903,7 @@ nc_halo_density_profile_rho_s (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const
 {
   NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
-  _nc_halo_density_profile_prepare_ctes (dp, cosmo);
+  _nc_halo_density_profile_prepare_ctes (dp, cosmo, z);
 
   return self->rho_s0 * nc_halo_mass_summary_Delta_rho_bg (self->hms, cosmo, z);
 }
@@ -923,7 +924,7 @@ nc_halo_density_profile_r_s (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const g
 {
   NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
-  _nc_halo_density_profile_prepare_ctes (dp, cosmo);
+  _nc_halo_density_profile_prepare_ctes (dp, cosmo, z);
 
   return self->r_s0 / cbrt (nc_halo_mass_summary_Delta_rho_bg (self->hms, cosmo, z));
 }
@@ -946,7 +947,7 @@ nc_halo_density_profile_r_s_rho_s (NcHaloDensityProfile *dp, NcHICosmo *cosmo, c
   NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
   const gdouble Delta_rho_bg               = nc_halo_mass_summary_Delta_rho_bg (self->hms, cosmo, z);
 
-  _nc_halo_density_profile_prepare_ctes (dp, cosmo);
+  _nc_halo_density_profile_prepare_ctes (dp, cosmo, z);
 
   r_s[0]   = self->r_s0 / cbrt (Delta_rho_bg);
   rho_s[0] = self->rho_s0 * Delta_rho_bg;
@@ -977,25 +978,51 @@ nc_halo_density_profile_eval_density (NcHaloDensityProfile *dp, NcHICosmo *cosmo
  * nc_halo_density_profile_eval_spher_mass:
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @z: redshift
+ * @r: radius in Mpc
+ * @z: redshift $z$
  *
- * This function computes the total mass enclose in the
+ * This function computes the total mass enclosed in the
  * sphere of radius $r$, see Eq. \eqref{eq:def:Mr}.
  *
- * Returns: the total spherical mass $M(r)\;\left[M_\odot\right]$.
+ * Returns: the total spherical mass $M(< r)\;\left[M_\odot\right]$.
  */
 gdouble
-nc_halo_density_profile_eval_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z)
+nc_halo_density_profile_eval_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z)
+{
+  /*NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp); */
+  gdouble r_s, rho_s, sVol, x;
+
+  nc_halo_density_profile_r_s_rho_s (dp, cosmo, z, &r_s, &rho_s);
+
+  sVol = 4.0 * ncm_c_pi () * gsl_pow_3 (r_s) * rho_s;
+  x    = r / r_s;
+
+  return sVol * nc_halo_density_profile_eval_dl_spher_mass (dp, x);
+}
+
+/**
+ * nc_halo_density_profile_eval_spher_mass_delta:
+ * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * This function computes the total mass enclosed in the
+ * sphere of radius $r_\Delta$, see Eq. \eqref{eq:def:Mr}.
+ *
+ * Returns: the total spherical mass $M(< r_\Delta)\;\left[M_\odot\right]$.
+ */
+gdouble
+nc_halo_density_profile_eval_spher_mass_delta (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z)
 {
   NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
-  gdouble concentration                    = nc_halo_mass_summary_concentration (self->hms, cosmo);
+  gdouble concentration                    = nc_halo_mass_summary_concentration (self->hms, cosmo, z);
   gdouble r_s, rho_s, sVol;
 
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, z, &r_s, &rho_s);
 
   sVol = 4.0 * ncm_c_pi () * gsl_pow_3 (r_s) * rho_s;
 
-  return sVol * nc_halo_density_profile_eval_dl_spher_mass (dp, cosmo, concentration);
+  return sVol * nc_halo_density_profile_eval_dl_spher_mass (dp, concentration);
 }
 
 /**
@@ -1169,10 +1196,10 @@ nc_halo_density_profile_eval_cyl_mass_array (NcHaloDensityProfile *dp, NcHICosmo
 /**
  * nc_halo_density_profile_eval_numint_dl_spher_mass:
  * @dp: a #NcHaloDensityProfile
- * @cosmo: a #NcHICosmo
- * @x: dimensionless radius $x = r / r_s$
+ * @X: dimensionless radius $X = r /r_s$
  *
- * This function computes the 2d projection of the dimensionless density
+ * This function computes the enclosed mass in a sphere within radius $X$, i.e.,
+ * the 2d projection of the dimensionless density
  * profile as described in Eq. \eqref{def:Ix2_dld}. This is the default
  * implementation that will be used unless the child object provides one.
  * This interface is present for testing purpose.
@@ -1180,13 +1207,13 @@ nc_halo_density_profile_eval_cyl_mass_array (NcHaloDensityProfile *dp, NcHICosmo
  * Returns: the value of the integral $I_{x^2\hat\rho}(c_\Delta)$.
  */
 gdouble
-nc_halo_density_profile_eval_numint_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x)
+nc_halo_density_profile_eval_numint_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble X)
 {
   NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
-  _nc_halo_density_profile_prepare_dl_spher_mass (dp, cosmo);
+  _nc_halo_density_profile_prepare_dl_spher_mass (dp);
 
-  return self->dl_spher_mass;
+  return ncm_spline_eval (self->dl_spher_mass_s, X);
 }
 
 /**
@@ -1236,6 +1263,7 @@ nc_halo_density_profile_eval_numint_dl_cyl_mass (NcHaloDensityProfile *dp, const
 /**
  * nc_halo_density_profile_get_numint_splines:
  * @dp: a #NcHaloDensityProfile
+ * @spher_mass: (out) (transfer full): size of the dl_spher_mass_s spline
  * @twod_density: (out) (transfer full): size of the dl_2d_density_s spline
  * @cyl_mass: (out) (transfer full): size of the dl_cyl_mass_s spline
  *
@@ -1244,13 +1272,15 @@ nc_halo_density_profile_eval_numint_dl_cyl_mass (NcHaloDensityProfile *dp, const
  *
  */
 void
-nc_halo_density_profile_get_numint_splines (NcHaloDensityProfile *dp, NcmSpline **twod_density, NcmSpline **cyl_mass)
+nc_halo_density_profile_get_numint_splines (NcHaloDensityProfile *dp, NcmSpline **spher_mass, NcmSpline **twod_density, NcmSpline **cyl_mass)
 {
   NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
 
+  _nc_halo_density_profile_prepare_dl_spher_mass (dp);
   _nc_halo_density_profile_prepare_dl_cyl_mass (dp);
   _nc_halo_density_profile_prepare_dl_2d_density (dp);
 
+  *spher_mass   = ncm_spline_ref (self->dl_spher_mass_s);
   *twod_density = ncm_spline_ref (self->dl_2d_density_s);
   *cyl_mass     = ncm_spline_ref (self->dl_cyl_mass_s);
 }

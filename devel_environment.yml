@@ -1,11 +1,13 @@
 ---
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   - astropy
   - black
   - c-compiler
   - cfitsio
+  - coverage
   - fftw
   - flake8
   - fortran-compiler
@@ -29,6 +31,7 @@ dependencies:
   - numpy >= 1.23.0
   - openblas=*=*openmp*
   - openmpi
+  - pandas
   - pip
   - pip:
       - pygobject-stubs
@@ -37,10 +40,13 @@ dependencies:
   - pygobject
   - pylint
   - pytest
+  - pytest-cov
+  - pytest-lazy-fixtures
   - python >= 3.10
   - rich
   - scipy
   - setuptools < 74
   - tqdm
   - typer
+  - zlib
 name: numcosmo_developer

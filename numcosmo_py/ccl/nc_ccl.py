@@ -23,7 +23,6 @@
 
 """NumCosmo and CCL comparison functions."""
 
-import math
 import numpy as np
 import pyccl
 
@@ -44,30 +43,45 @@ pyccl.physical_constants.RHO_CRITICAL = Ncm.C.crit_mass_density_h2_solar_mass_Mp
 pyccl.physical_constants.freeze()
 
 
+def _get_neutrino_masses(ccl_cosmo: pyccl.Cosmology) -> tuple[int, list[float]]:
+    """Get neutrino masses from CCL cosmology."""
+    assert isinstance(ccl_cosmo["m_nu"], (list, np.ndarray))
+    massnu_length = len(ccl_cosmo["m_nu"])
+    m_nu = list(ccl_cosmo["m_nu"])
+
+    return massnu_length, m_nu
+
+
 # pylint:disable-next=too-many-arguments,too-many-locals
 def create_nc_obj(
     ccl_cosmo: pyccl.Cosmology,
     prec: float = 1.0e-7,
+    *,
     dist_z_max: float = 15.0,
     ps_nln_z_max: float = 10.0,
     k_min: float = 1.0e-6,
     k_max: float = 1.0e3,
 ) -> Cosmology:
     """Create a NumCosmo object from a CCL cosmology."""
-    cosmo = Nc.HICosmoDECpl(massnu_length=0)
+    massnu_length, m_nu = _get_neutrino_masses(ccl_cosmo)
+    cosmo = Nc.HICosmoDECpl(massnu_length=massnu_length)
+    cosmo.props.CCL_comp = True
     cosmo.omega_x2omega_k()
-    cosmo.param_set_by_name("H0", ccl_cosmo["h"] * 100)
-    cosmo.param_set_by_name("Omegak", ccl_cosmo["Omega_k"])
-    cosmo.param_set_by_name("w0", ccl_cosmo["w0"])
-    cosmo.param_set_by_name("w1", ccl_cosmo["wa"])
-    cosmo.param_set_by_name("Omegab", ccl_cosmo["Omega_b"])
-    cosmo.param_set_by_name("Omegac", ccl_cosmo["Omega_c"])
-    cosmo.param_set_by_name("ENnu", ccl_cosmo["Neff"])
-    cosmo.param_set_by_name("Tgamma0", ccl_cosmo["T_CMB"])
+    cosmo["H0"] = ccl_cosmo["h"] * 100.0
+    cosmo["Omegak"] = ccl_cosmo["Omega_k"]
+    cosmo["w0"] = ccl_cosmo["w0"]
+    cosmo["w1"] = ccl_cosmo["wa"]
+    cosmo["Omegab"] = ccl_cosmo["Omega_b"]
+    cosmo["Omegac"] = ccl_cosmo["Omega_c"]
+    cosmo["ENnu"] = ccl_cosmo["N_nu_rel"]
+    cosmo["Tgamma0"] = ccl_cosmo["T_CMB"]
+    for i, m in enumerate(m_nu):
+        cosmo[f"massnu_{i}"] = m
+        cosmo[f"Tnu_{i}"] = ccl_cosmo["T_ncdm"]
 
     # Creates the HI Primordial object
     hiprim = Nc.HIPrimPowerLaw.new()
-    hiprim.param_set_by_name("n_SA", ccl_cosmo["n_s"])
+    hiprim["n_SA"] = ccl_cosmo["n_s"]
 
     # Creates the HI Reionization object
     hireion = Nc.HIReionCamb.new()
@@ -78,22 +92,13 @@ def create_nc_obj(
     dist = Nc.Distance.new(dist_z_max)
     dist.prepare(cosmo)
 
-    # Checking if neutrinos are compatible
-    if isinstance(ccl_cosmo["m_nu"], (list, np.ndarray)):
-        for m_nu_i in ccl_cosmo["m_nu"]:
-            if m_nu_i != 0.0:
-                raise ValueError("Massive neutrinos are not supported")
-    else:
-        if ccl_cosmo["m_nu"] != 0:
-            raise ValueError("Massive neutrinos are not supported")
-
     # Creating the transfer/linear power spectrum
-    tf = None  # pylint: disable=invalid-name
+    tf = None
     ps_ml = None
 
     # pylint: disable=protected-access
     if ccl_cosmo._config_init_kwargs["transfer_function"] == "eisenstein_hu":
-        tf = Nc.TransferFuncEH.new()  # pylint: disable=invalid-name
+        tf = Nc.TransferFuncEH.new()
         tf.props.CCL_comp = True
 
         ps_ml = Nc.PowspecMLTransfer.new(tf)
@@ -103,34 +108,38 @@ def create_nc_obj(
             + ccl_cosmo._config_init_kwargs["transfer_function"]  # noqa: W503
             + "` not supported"  # noqa: W503
         )
+    # pylint: enable=protected-access
 
     ps_ml.set_kmin(k_min)
     ps_ml.set_kmax(k_max)
     ps_ml.prepare(cosmo)
 
-    if not math.isnan(ccl_cosmo["A_s"]):
-        hiprim.param_set_by_name("ln10e10ASA", math.log(1.0e10 * ccl_cosmo["A_s"]))
+    if not np.isnan(ccl_cosmo["A_s"]):
+        hiprim.param_set_by_name("ln10e10ASA", np.log(1.0e10 * ccl_cosmo["A_s"]))
     else:
-        A_s = math.exp(hiprim.param_get_by_name("ln10e10ASA")) * 1.0e-10
+        A_s = np.exp(hiprim.param_get_by_name("ln10e10ASA")) * 1.0e-10
         fact = (
             ccl_cosmo["sigma8"]
             / ps_ml.sigma_tophat_R(cosmo, prec, 0.0, 8.0 / cosmo.h())  # noqa: W503
         ) ** 2
-        hiprim.param_set_by_name("ln10e10ASA", math.log(1.0e10 * A_s * fact))
+        hiprim.param_set_by_name("ln10e10ASA", np.log(1.0e10 * A_s * fact))
 
     ps_mln = None
+    # pylint: disable=protected-access
     if ccl_cosmo._config_init_kwargs["matter_power_spectrum"] == "halofit":
         ps_mln = Nc.PowspecMNLHaloFit.new(ps_ml, ps_nln_z_max, prec)
         ps_mln.set_kmin(k_min)
         ps_mln.set_kmax(k_max)
         ps_mln.prepare(cosmo)
+    # pylint: enable=protected-access
 
+    psf = None
     if ps_ml:
         psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)
         psf.set_best_lnr0()
 
     # pylint: enable=protected-access
-    return Cosmology(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mln)
+    return Cosmology(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mln, psf=psf)
 
 
 class CCLParams:
@@ -149,6 +158,7 @@ class CCLParams:
     DEFAULT_INTEGRATION_SIGMAR_EPSREL: float = (
         pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL
     )
+    DEFAULT_A_SPLINE_MINLOG: float = pyccl.spline_params.A_SPLINE_MINLOG
     DEFAULT_A_SPLINE_NLOG: int = pyccl.spline_params.A_SPLINE_NLOG
     DEFAULT_A_SPLINE_NA: int = pyccl.spline_params.A_SPLINE_NA
     DEFAULT_A_SPLINE_NA_PK: int = pyccl.spline_params.A_SPLINE_NA_PK
@@ -176,6 +186,7 @@ class CCLParams:
         pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL = (
             CCLParams.DEFAULT_INTEGRATION_SIGMAR_EPSREL
         )
+        pyccl.spline_params.A_SPLINE_MINLOG = CCLParams.DEFAULT_A_SPLINE_MINLOG
         pyccl.spline_params.A_SPLINE_NLOG = CCLParams.DEFAULT_A_SPLINE_NLOG
         pyccl.spline_params.A_SPLINE_NA = CCLParams.DEFAULT_A_SPLINE_NA
         pyccl.spline_params.A_SPLINE_NA_PK = CCLParams.DEFAULT_A_SPLINE_NA_PK
@@ -190,13 +201,14 @@ class CCLParams:
     @staticmethod
     def set_high_prec_params():
         """Set CCL parameters to high precision values."""
-        pyccl.gsl_params.INTEGRATION_EPSREL = 1.0e-13
-        pyccl.gsl_params.INTEGRATION_DISTANCE_EPSREL = 1.0e-13
+        pyccl.gsl_params.INTEGRATION_EPSREL = 1.0e-7
+        pyccl.gsl_params.INTEGRATION_DISTANCE_EPSREL = 1.0e-7
         pyccl.gsl_params.INTEGRATION_LIMBER_EPSREL = 1.0e-6
         pyccl.gsl_params.EPS_SCALEFAC_GROWTH = 1.0e-30
         pyccl.gsl_params.ODE_GROWTH_EPSREL = 1.0e-8
         pyccl.gsl_params.N_ITERATION = 10000
         pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL = 1.0e-9
+        pyccl.spline_params.A_SPLINE_MINLOG = 5.0e-5
         pyccl.spline_params.A_SPLINE_NLOG = 1000
         pyccl.spline_params.A_SPLINE_NA = 8000
         pyccl.spline_params.A_SPLINE_NA_PK = 1000

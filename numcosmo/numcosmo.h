@@ -117,6 +117,7 @@
 #include <numcosmo/lss/nc_halo_density_profile_hernquist.h>
 #include <numcosmo/lss/nc_halo_mass_summary.h>
 #include <numcosmo/lss/nc_halo_cm_param.h>
+#include <numcosmo/lss/nc_halo_cm_duffy08.h>
 #include <numcosmo/lss/nc_halo_cm_klypin11.h>
 #include <numcosmo/lss/nc_halo_cm_bhattacharya13.h>
 #include <numcosmo/lss/nc_galaxy_acf.h>
@@ -129,6 +130,7 @@
 #include <numcosmo/lss/nc_multiplicity_func_tinker_mean_normalized.h>
 #include <numcosmo/lss/nc_multiplicity_func_crocce.h>
 #include <numcosmo/lss/nc_multiplicity_func_bocquet.h>
+#include <numcosmo/lss/nc_multiplicity_func_despali.h>
 #include <numcosmo/lss/nc_multiplicity_func_watson.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
 #include <numcosmo/lss/nc_halo_bias.h>
@@ -194,9 +196,6 @@
 #include <numcosmo/data/nc_data_cluster_wl.h>
 #include <numcosmo/data/nc_data_planck_lkl.h>
 #include <numcosmo/data/nc_data_xcor.h>
-
-/* ABC */
-#include <numcosmo/abc/nc_abc_cluster_ncount.h>
 
 /* Cross-correlations */
 #include <numcosmo/xcor/nc_xcor.h>

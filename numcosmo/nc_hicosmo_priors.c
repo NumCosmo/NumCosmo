@@ -24,11 +24,11 @@
  */
 
 /**
- * SECTION:nc_hicosmo_priors
- * @title: NcHICosmoPrior
- * @short_description: Collection of priors for NcHICosmo models
+ * NcHICosmoPrior:
  *
- * FIXME
+ * Collection of priors for NcHICosmo models.
+ *
+ * This object provides a collection of priors for NcHICosmo models.
  *
  */
 

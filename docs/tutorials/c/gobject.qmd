@@ -1,0 +1,124 @@
+---
+title: GObject Basic Concepts 
+subtitle: A brief tutorial on how to write a GObject
+---
+
+## Overview
+
+The GLib Object System, or GObject, is a free software library providing a
+portable object system and transparent cross-language interoperability. GObject
+is designed for use both directly in C programs to provide object-oriented
+C-based APIs and through bindings to other languages to provide transparent
+cross-language interoperability, e.g. PyGObject. We present here a summarized
+description of this framework. For details see:
+[GObject Manual](https://developer.gnome.org/gobject/stable/),
+[GObject Wikipedia](https://en.wikipedia.org/wiki/GObject).
+
+## Namespaces
+
+The library is divided in two main name-spaces, `Ncm` (NumCosmoMath) where all
+generic mathematical and statistical objects and functions are defined, `Nc` 
+(NumCosmo) where all cosmological related objects and functions are defined.
+All types must be labeled using the 
+[camel-case](https://en.wikipedia.org/wiki/CamelCase), 
+and start with the respective name-space. For example, 
+[`NcmSpline`](manual/NcmSpline.html) is the type used
+to store instances of the Spline object which lives in the NumCosmoMath
+name-space. Similarly, [`NcHICosmo`](manual/NcHICosmo.html) is the type 
+used for the abstract object defining homogeneous and isotropic models (HICosmo).
+
+## Methods, functions and other names
+
+Functions and methods must be lower case and the terms separated by underscores,
+that is, a method of [`NcmSpline`](manual/NcmSpline.html) must be called `ncm_spline_method_name`. It is 
+acceptable for the method_name to have upper case letters when necessary.
+For example, [*nc_hicosmo_Omega_m0*](manual/NcHICosmo.html#nc-hicosmo-Omega-m0)
+uses the capital Omega to avoid confusion with lowercase omega_m0, which has
+a different meaning in the cosmological literature.
+
+Macros, enumerator and flags labels should be in uppercase and separated by 
+underscores. See for example [`NcHICosmoImpl`](manual/NcHICosmo.html#NcHICosmoImpl)
+for a flag type. The flag type itself, NcHICosmoImpl, must be in camel-case
+but its labels are underscore separated uppercase.
+
+A full example of a GObject implementation inside NumCosmo can be found
+[here](manual/NcmModel.html#NcmModel.description).
+
+## Object implementation
+
+All objects must implement a set of functions, for example an object named
+`NcObjectName` must implement:
+
+- `nc_object_name_class_init`: the methods (virtual functions) and properties are
+  defined here. This is the first function called when the object is
+  instantiated, and it is done just _once_ in the whole program lifetime.
+
+- `nc_object_name_init`: this is the first function to be called when (and
+  every time) a new instance is created. This function receives an 
+  _uninitialized_
+  instance struct and there one must initialize all members of the structure to
+  null values (`0` for integer, `0.0` for doubles, `NULL` for pointers, etc). Sometimes,
+  when a given member of the instance structure is not related to a property, you
+  must initialized it at this point (for example, members of the type 
+  [`NcmModelCtrl`](manual/NcmModelCtrl.html) are usually initialized at `_init`).
+
+- `_nc_object_name_set_property/_get_property`: the next step of the GObject system is to call
+  this function for _every_ property with `G_PARAM_CONSTRUCT`
+  or `G_PARAM_CONSTRUCT_ONLY` options. If the user calls the `nc_object_name_new`
+  function with some properties set to specific values, then these values will be
+  passed to nc_object_name_set_property. However, for those properties not passed
+  in the nc_object_name_new function, the default values will be used. In short,
+  the `\_CONSTRUCT` properties are always initialized by nc_object_name_set_property
+  calls. The `\_CONSTRUCT_ONLY` variables are only set during this phase and cannot
+  be set afterwards. Any other properties passed in the _new function, which are
+  not `CONSTRUCT`, will be set _only_ through the 
+  nc_object_name_set_property function. They will not be set to the default values, 
+  the default values are useless for non-`CONSTRUCT` properties.
+
+- `_nc_object_name_constructed`: this function is called after the `_CONSTRUCT`
+  properties are set. This function is sometimes necessary since in some
+  cases we must do some work after knowing the values of the `_CONSTRUCT` variables.
+
+- `_nc_object_name_dispose`: this function is called every time the object has its
+  ref_count decreased to 0. It may be called more than once trying to break a
+  reference count cycle (something out of the scope of this document, see 
+  [this document](https://developer.gnome.org/gobject/stable/gobject-memory.html)
+  for more details). That is why we must release all references to objects in 
+  _dispose using `_clear` functions.
+
+- `_nc_object_name_finish`: this function is called after nc_object_name_dispose.
+  Here we must release any allocated memory not related to the GObject system. 
+
+### Default methods
+
+In NumCosmo we have the following conventions for methods that all objects must implement:
+
+- `nc_object_name_ref`: Every time we call a `_ref` function the object's `ref_count` is increased by one.
+
+- `nc_object_name_clear/_free`: every time a _free or _clear function is
+  called the ref_count is decreased by one. The only difference between `_free` and
+  `_clear` functions is that `_clear` will check if the variable is `NULL`. If so,
+  `_clear` does nothing, otherwise it decreases ref_count by one 
+  *and* sets the
+  variable to `NULL`. When a reference to some object is given to you, you never
+  know if anyone else also has a reference to it. So when you no longer need it,
+  you just decrease the reference count by one. However, if you make a mistake and
+  decrease the ref_count twice, you may destroy the object that could still be
+  used by other parts of the code. That is why _clear function is so useful, when
+  you call it a second time, the pointer will be null and _clear will do nothing.
+
+## Example
+
+See below a simple example of NumCosmo/`GObject` implementation.
+
+### Header for NcObjectName
+```C
+{{< include  nc_object_name.h >}}
+```
+
+### Source for NcObjectName
+
+```C
+{{< include  nc_object_name.c >}}
+```
+

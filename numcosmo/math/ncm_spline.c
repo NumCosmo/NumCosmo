@@ -23,14 +23,12 @@
  */
 
 /**
- * SECTION:ncm_spline
- * @title: NcmSpline
- * @short_description: Abstract class for implementing splines.
- * @stability: Stable
- * @include: numcosmo/math/ncm_spline.h
+ * NcmSpline:
  *
- * This class comprises all functions to provide a #NcmSpline, together with
- * all necessary methods.
+ * Base class for implementing splines.
+ *
+ * This class comprises all functions to provide a #NcmSpline, together with all
+ * necessary methods.
  *
  */
 
@@ -52,6 +50,17 @@ typedef struct _NcmSplinePrivate
   gsl_interp_accel *acc;
   gboolean init;
   gboolean empty;
+  GArray *bucket;
+  gdouble bucket_dx;
+  gdouble one_over_dx;
+  gdouble x_min;
+  gdouble x_max;
+  gsize start_right;
+  gsize last_poly;
+  gdouble *x_data;
+  guint stride;
+
+  guint (*get_index) (const NcmSpline *s, const gdouble x);
 } NcmSplinePrivate;
 
 enum
@@ -70,12 +79,22 @@ ncm_spline_init (NcmSpline *s)
 {
   NcmSplinePrivate * const self = ncm_spline_get_instance_private (s);
 
-  self->len   = 0;
-  self->xv    = NULL;
-  self->yv    = NULL;
-  self->empty = TRUE;
-  self->acc   = NULL;
-  self->init  = FALSE;
+  self->len         = 0;
+  self->xv          = NULL;
+  self->yv          = NULL;
+  self->empty       = TRUE;
+  self->acc         = NULL;
+  self->init        = FALSE;
+  self->bucket      = g_array_new (FALSE, FALSE, sizeof (gsize));
+  self->bucket_dx   = 0.0;
+  self->one_over_dx = 0.0;
+  self->x_min       = 0.0;
+  self->x_max       = 0.0;
+  self->start_right = 0;
+  self->last_poly   = 0;
+  self->x_data      = NULL;
+  self->stride      = 0;
+  self->get_index   = NULL;
 }
 
 static void
@@ -113,18 +132,28 @@ _ncm_spline_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_X:
     {
       if (self->len == 0)
+      {
         g_error ("ncm_spline_set_property: cannot set vector on an empty spline.");
+      }
       else
+      {
         ncm_vector_substitute (&self->xv, g_value_get_object (value), TRUE);
+        NCM_SPLINE_GET_CLASS (s)->reset (s);
+      }
 
       break;
     }
     case PROP_Y:
     {
       if (self->len == 0)
+      {
         g_error ("ncm_spline_set_property: cannot set vector on an empty spline.");
+      }
       else
+      {
         ncm_vector_substitute (&self->yv, g_value_get_object (value), TRUE);
+        NCM_SPLINE_GET_CLASS (s)->reset (s);
+      }
 
       break;
     }
@@ -187,6 +216,7 @@ _ncm_spline_finalize (GObject *object)
   NcmSplinePrivate * const self = ncm_spline_get_instance_private (s);
 
   g_clear_pointer (&self->acc, gsl_interp_accel_free);
+  g_clear_pointer (&self->bucket, g_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);
@@ -780,6 +810,77 @@ ncm_spline_prepare (NcmSpline *s)
 
   self->init = TRUE;
   NCM_SPLINE_GET_CLASS (s)->prepare (s);
+  ncm_spline_post_prepare (s);
+}
+
+static guint _ncm_spline_get_index_no_stride_accel (const NcmSpline *s, const gdouble x);
+static guint _ncm_spline_get_index_no_stride (const NcmSpline *s, const gdouble x);
+static guint _ncm_spline_get_index_stride_accel (const NcmSpline *s, const gdouble x);
+static guint _ncm_spline_get_index_stride (const NcmSpline *s, const gdouble x);
+
+/**
+ * ncm_spline_post_prepare:
+ * @s: a #NcmSpline
+ *
+ * Computes lookup buckets for the spline @s to enable efficient evaluations
+ * using #ncm_spline_eval. This function is always called by #ncm_spline_prepare()
+ * after all necessary preparations are completed.
+ *
+ * It exists separately because some objects (e.g., #NcmSpline2d) prepare the
+ * spline without calling #ncm_spline_prepare(). These objects must explicitly
+ * invoke this function to perform the required post-processing.
+ *
+ * For normal use, this function should never be called directly.
+ *
+ */
+void
+ncm_spline_post_prepare (NcmSpline *s)
+{
+  NcmSplinePrivate * const self = ncm_spline_get_instance_private (s);
+  NcmVector *xv                 = self->xv;
+  const guint n_buckets         = (guint) (self->len - 1);
+  const gdouble x_min           = ncm_vector_get (xv, 0);
+  const gdouble x_max           = ncm_vector_get (xv, self->len - 1);
+  const gdouble dx              = (x_max - x_min) / n_buckets;
+  guint i                       = 0;
+  guint j                       = 0;
+
+  g_array_set_size (self->bucket, n_buckets + 1);
+  self->bucket_dx   = dx;
+  self->one_over_dx = 1.0 / dx;
+  self->x_min       = x_min;
+  self->x_max       = x_max;
+  self->start_right = self->len - 1;
+  self->last_poly   = self->len - 2;
+  self->x_data      = ncm_vector_data (xv);
+  self->stride      = ncm_vector_stride (xv);
+
+  for (i = 0; i <= n_buckets; i++)
+  {
+    gdouble x_bucket = x_min + i * dx;
+
+    while ((j < self->len - 1) && (ncm_vector_get (xv, j + 1) < x_bucket))
+      j++;
+
+    g_array_index (self->bucket, gsize, i) = j;
+  }
+
+  g_array_index (self->bucket, gsize, n_buckets) = self->len - 2;
+
+  if (ncm_vector_stride (self->xv) == 1)
+  {
+    if (self->acc)
+      self->get_index = _ncm_spline_get_index_no_stride_accel;
+    else
+      self->get_index = _ncm_spline_get_index_no_stride;
+  }
+  else
+  {
+    if (self->acc)
+      self->get_index = _ncm_spline_get_index_stride_accel;
+    else
+      self->get_index = _ncm_spline_get_index_stride;
+  }
 }
 
 /**
@@ -945,6 +1046,77 @@ _ncm_spline_accel_find (gsl_interp_accel *a, const gdouble xa[], const guint str
   return a->cache;
 }
 
+static guint
+_ncm_spline_get_index_no_stride_accel (const NcmSpline *s, const gdouble x)
+{
+  NcmSplinePrivate * const self = ncm_spline_get_instance_private ((NcmSpline *) s);
+
+  return gsl_interp_accel_find (self->acc, self->x_data, self->len, x);
+}
+
+static guint
+_ncm_spline_get_index_no_stride (const NcmSpline *s, const gdouble x)
+{
+  NcmSplinePrivate * const self = ncm_spline_get_instance_private ((NcmSpline *) s);
+  gsize left                    = 0;
+  gsize right                   = self->start_right;
+
+  if (G_UNLIKELY (x < self->x_min))
+    return 0;
+
+  if (G_UNLIKELY (x > self->x_max))
+    return self->last_poly;
+
+  {
+    const guint n_buckets = self->bucket->len - 1;
+    guint i_bucket        = (guint) ((x - self->x_min) * self->one_over_dx);
+
+    if (i_bucket >= n_buckets)
+      i_bucket = n_buckets - 1;
+
+    left  = g_array_index (self->bucket, gsize, i_bucket);
+    right = g_array_index (self->bucket, gsize, i_bucket + 1) + 1;
+  }
+
+  return gsl_interp_bsearch (self->x_data, x, left, right);
+}
+
+static guint
+_ncm_spline_get_index_stride_accel (const NcmSpline *s, const gdouble x)
+{
+  NcmSplinePrivate * const self = ncm_spline_get_instance_private ((NcmSpline *) s);
+
+  return _ncm_spline_accel_find (self->acc, self->x_data, self->stride, self->len, x);
+}
+
+static guint
+_ncm_spline_get_index_stride (const NcmSpline *s, const gdouble x)
+{
+  NcmSplinePrivate * const self = ncm_spline_get_instance_private ((NcmSpline *) s);
+  gsize left                    = 0;
+  gsize right                   = self->start_right;
+
+  if (G_UNLIKELY (x < self->x_min))
+    return 0;
+
+  if (G_UNLIKELY (x > self->x_max))
+    return self->last_poly;
+
+  if (TRUE)
+  {
+    const guint n_buckets = self->bucket->len - 1;
+    guint i_bucket        = (guint) ((x - self->x_min) * self->one_over_dx);
+
+    if (i_bucket >= n_buckets)
+      i_bucket = n_buckets - 1;
+
+    left  = g_array_index (self->bucket, gsize, i_bucket);
+    right = g_array_index (self->bucket, gsize, i_bucket + 1) + 1;
+  }
+
+  return _ncm_spline_bsearch_stride (self->x_data, self->stride, x, left, right);
+}
+
 /**
  * ncm_spline_get_index:
  * @s: a constant #NcmSpline
@@ -958,20 +1130,7 @@ ncm_spline_get_index (const NcmSpline *s, const gdouble x)
 {
   NcmSplinePrivate * const self = ncm_spline_get_instance_private ((NcmSpline *) s);
 
-  if (ncm_vector_stride (self->xv) == 1)
-  {
-    if (self->acc)
-      return gsl_interp_accel_find (self->acc, ncm_vector_ptr (self->xv, 0), self->len, x);
-    else
-      return gsl_interp_bsearch (ncm_vector_ptr (self->xv, 0), x, 0, ncm_vector_len (self->xv) - 1);
-  }
-  else
-  {
-    if (self->acc)
-      return _ncm_spline_accel_find (self->acc, ncm_vector_ptr (self->xv, 0), ncm_vector_stride (self->xv), self->len, x);
-    else
-      return _ncm_spline_bsearch_stride (ncm_vector_ptr (self->xv, 0), ncm_vector_stride (self->xv), x, 0, ncm_vector_len (self->xv) - 1);
-  }
+  return self->get_index (s, x);
 }
 
 /* Utilities -- internal use */

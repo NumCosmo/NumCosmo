@@ -26,17 +26,18 @@
  */
 
 /**
- * SECTION:ncm_stats_dist_kernel_st
- * @title: NcmStatsDistKernelST
- * @short_description: An N-dimensional Student's t kernel used to compute the kernel density estimation function (KDE) in the #NcmStatsDist class.
+ * NcmStatsDistKernelST:
  *
- * An N-dimensional Student's t kernel used to compute the kernel density estimation function (KDE) in the #NcmStatsDist class.
+ * An N-dimensional Student's t kernel used to compute the kernel density estimation
+ * function (KDE) in the #NcmStatsDist class.
  *
- * This object defines a multivariate Student's t kernel to be used in the #NcmStatsDistKernel class. Also, this object implements
- * the virtual methods of the #NcmStatsDistKernel class. For more information about the class, check the documentation of #NcmStatsDistKernel.
- * Below, there are some definitions of the multivariate Student t distribution.
- * For more information, check  [[On Sampling from the Multivariate t
- * Distribution, Marius Hofert](https://journal.r-project.org/archive/2013/RJ-2013-033/RJ-2013-033.pdf)].
+ * This object defines a multivariate Student's t kernel to be used in the
+ * #NcmStatsDistKernel class. Also, this object implements the virtual methods of the
+ * #NcmStatsDistKernel class. For more information about the class, check the
+ * documentation of #NcmStatsDistKernel. Below, there are some definitions of the
+ * multivariate Student t distribution. For more information, check  [[On Sampling from
+ * the Multivariate t Distribution, Marius
+ * Hofert](https://journal.r-project.org/archive/2013/RJ-2013-033/RJ-2013-033.pdf)].
  *
  * The multivariate t distribution with $\nu$ degrees of freedom has its stochastic representation as
  * \begin{align}

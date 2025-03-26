@@ -27,12 +27,9 @@
  */
 
 /**
- * SECTION:nc_growth_func
- * @title: NcGrowthFunc
- * @short_description: Growth function of linear perturbations.
- * @stability: Stable
- * @include: numcosmo/lss/nc_growth_func.h
+ * NcGrowthFunc:
  *
+ * Growth function of linear perturbations.
  *
  * This object implements the integration of second order differential equation (ODE)
  * for the matter (baryons + cold dark matter: $\Omega_m$, see nc_hicosmo_E2Omega_m()
@@ -440,18 +437,17 @@ growth_f (realtype a, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHICosmo *cosmo    = NC_HICOSMO (f_data);
   const gdouble a2    = a * a;
-  const gdouble a5    = a2 * gsl_pow_3 (a);
   const gdouble z     = 1.0 / a - 1.0;
   const gdouble E2    = nc_hicosmo_E2 (cosmo, z);
   const gdouble E     = sqrt (E2);
   const gdouble dE2dz = nc_hicosmo_dE2_dz (cosmo, z);
 
-  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
-  const gdouble D        = NV_Ith_S (y, 0);
-  const gdouble B        = NV_Ith_S (y, 1);
+  const gdouble E2Omega_m = nc_hicosmo_E2Omega_m (cosmo, z);
+  const gdouble D         = NV_Ith_S (y, 0);
+  const gdouble B         = NV_Ith_S (y, 1);
 
   NV_Ith_S (ydot, 0) = B;
-  NV_Ith_S (ydot, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a) * B + 3.0 * Omega_m0 * D / (2.0 * a5 * E2);
+  NV_Ith_S (ydot, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a) * B + 3.0 * E2Omega_m * D / (2.0 * a2 * E2);
   NV_Ith_S (ydot, 2) = 1.0 / gsl_pow_3 (a * E);
 
   return 0;
@@ -460,13 +456,12 @@ growth_f (realtype a, N_Vector y, N_Vector ydot, gpointer f_data)
 static gint
 growth_J (realtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
-  NcHICosmo *cosmo       = NC_HICOSMO (jac_data);
-  const gdouble a2       = a * a;
-  const gdouble a5       = a2 * gsl_pow_3 (a);
-  const gdouble z        = 1.0 / a - 1.0;
-  const gdouble E2       = nc_hicosmo_E2 (cosmo, z);
-  const gdouble dE2dz    = nc_hicosmo_dE2_dz (cosmo, z);
-  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+  NcHICosmo *cosmo        = NC_HICOSMO (jac_data);
+  const gdouble a2        = a * a;
+  const gdouble z         = 1.0 / a - 1.0;
+  const gdouble E2        = nc_hicosmo_E2 (cosmo, z);
+  const gdouble dE2dz     = nc_hicosmo_dE2_dz (cosmo, z);
+  const gdouble E2Omega_m = nc_hicosmo_E2Omega_m (cosmo, z);
 
   NCM_UNUSED (y);
   NCM_UNUSED (fy);
@@ -478,7 +473,7 @@ growth_J (realtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Ve
   SUN_DENSE_ACCESS (J, 0, 1) = 1.0;
   SUN_DENSE_ACCESS (J, 0, 2) = 0.0;
 
-  SUN_DENSE_ACCESS (J, 1, 0) = 3.0 * Omega_m0 / (2.0 * a5 * E2);
+  SUN_DENSE_ACCESS (J, 1, 0) = 3.0 * E2Omega_m / (2.0 * a2 * E2);
   SUN_DENSE_ACCESS (J, 1, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a);
   SUN_DENSE_ACCESS (J, 1, 2) = 0.0;
 

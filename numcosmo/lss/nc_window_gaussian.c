@@ -24,11 +24,9 @@
  */
 
 /**
- * SECTION:nc_window_gaussian
- * @title: NcWindowGaussian
- * @short_description: A gaussian window function.
- * @stability: Stable
- * @include: numcosmo/lss/nc_window_gaussian.h
+ * NcWindowGaussian:
+ *
+ * A gaussian window function.
  *
  * This object implements the #NcWindow class for a Gaussian window function.
  *
@@ -89,9 +87,9 @@ _nc_window_gaussian_eval_fourier (const NcWindow *wp, const gdouble k, const gdo
   gdouble kR  = k * R;
   gdouble kR2 = kR * kR;
   gdouble WG  = exp (-kR2 / 2.0);
-  
+
   NCM_UNUSED (wp);
-  
+
   return WG;
 }
 
@@ -102,9 +100,9 @@ _nc_window_gaussian_deriv_fourier (const NcWindow *wp, const gdouble k, const gd
   gdouble kR2 = kR * kR;
   gdouble k2R = kR2 / R;
   gdouble dWG = -k2R *exp (-kR2 / 2.0);
-  
+
   NCM_UNUSED (wp);
-  
+
   return dWG;
 }
 
@@ -113,9 +111,9 @@ _nc_window_gaussian_eval_realspace (const NcWindow *wp, const gdouble r, const g
 {
   gdouble r_R2         = r * r / (R * R);
   gdouble WG_realspace = 1.0 / gsl_pow_3 (sqrt (2 * M_PI * R * R)) * exp (-r_R2 / 2.0);
-  
+
   NCM_UNUSED (wp);
-  
+
   return WG_realspace;
 }
 
@@ -137,12 +135,12 @@ nc_window_gaussian_class_init (NcWindowGaussianClass *klass)
 {
   GObjectClass *object_class  = G_OBJECT_CLASS (klass);
   NcWindowClass *parent_class = NC_WINDOW_CLASS (klass);
-  
+
   parent_class->volume        = NC_WINDOW_VOLUME_GAUSSIAN;
   parent_class->eval_fourier  = &_nc_window_gaussian_eval_fourier;
   parent_class->deriv_fourier = &_nc_window_gaussian_deriv_fourier;
   parent_class->eval_real     = &_nc_window_gaussian_eval_realspace;
-  
+
   object_class->finalize = nc_window_gaussian_finalize;
 }
 

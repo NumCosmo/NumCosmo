@@ -27,12 +27,9 @@
  */
 
 /**
- * SECTION:nc_halo_position
- * @title: NcHaloPosition
- * @short_description: A class to represent the center of a halo.
- * @stability: Unstable
+ * NcHaloPosition:
  *
- * This class describes the center of a halo.
+ * A class to represent the center of a halo.
  *
  */
 

@@ -25,16 +25,18 @@
  */
 
 /**
- * SECTION:ncm_rng
- * @title: NcmRNG
- * @short_description: Encapsulated GNU Scientific Library (GSL) random number generator with support for multhreading.
- * @stability: Stable
- * @include: numcosmo/math/ncm_rng.h
+ * NcmRNG:
  *
- * This object encapsulates the [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/) pseudo random number generator (PRNG).
- * Its main purpose is to add support for saving and loading state and multhreading.
- * For more information about the GSL routines see both links: [random number generation](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-generation)
- * and [random number distributions](https://www.gnu.org/software/gsl/doc/html/randist.html#random-number-distributions).
+ * Encapsulated GNU Scientific Library (GSL) random number generator with support for
+ * multhreading.
+ *
+ * This object encapsulates the [GNU Scientific Library
+ * (GSL)](https://www.gnu.org/software/gsl/) pseudo random number generator (PRNG). Its
+ * main purpose is to add support for saving and loading state and multhreading. For
+ * more information about the GSL routines see both links: [random number
+ * generation](https://www.gnu.org/software/gsl/doc/html/rng.html#random-number-generation)
+ * and [random number
+ * distributions](https://www.gnu.org/software/gsl/doc/html/randist.html#random-number-distributions).
  *
  */
 

@@ -1,0 +1,40 @@
+---
+title: About NumCosmo
+---
+# About NumCosmo
+
+## Overview
+
+NumCosmo (Numerical Cosmology Library) is a high-performance, modular library designed for advanced cosmological modeling and statistical analysis. Developed primarily in C with GObject for seamless language bindings, NumCosmo offers both speed and ease of use. It supports parallelization with MPI and OpenMP, making it suitable for a wide range of computational tasks in cosmology.
+
+## Version Information
+
+- **Current Version**: {{< meta version >}} in preparation for Version 1.0.
+- **Upcoming**: Version 2.0 is in development, with enhanced Python integration and additional features.
+
+## Development and Contributions
+
+NumCosmo is an open-source project hosted on GitHub. We actively encourage contributions from the community, whether it's reporting bugs, suggesting new features, or contributing code.
+
+## Command Line Tool
+
+NumCosmo comes with a command-line tool that simplifies interactions with the library, making it easier for users to execute common tasks without diving deep into the codebase. This tool is especially useful for quick analyses and model testing.
+
+## State of Development
+
+We are in the final stages of completing Version 1, focusing on stability and performance. As we look ahead to Version 2, our goals include better Python integration, new cosmological models, and enhanced statistical tools with a simpler interface and set-up. 
+
+## Getting Involved
+
+NumCosmo encourages community involvement. Whether you are a researcher, developer, or just curious about cosmology, we welcome your input and contributions.
+
+- **How to Contribute**: Fork the repository, make your changes, and submit a pull request.
+- **Join the Discussion**: Engage with us on GitHub and help improving NumCosmo.
+
+## Authors
+
+* Sandro Dias Pinto Vitenti <vitenti@uel.br>
+* Mariana Penna-Lima <pennalima@gmail.com>
+* Cyrille Doux <cdoux@apc.in2p3.fr>
+
+

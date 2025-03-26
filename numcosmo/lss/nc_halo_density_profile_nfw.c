@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_halo_density_profile_nfw
- * @title: NcHaloDensityProfileNFW
- * @short_description: Density profile of Navarro-Frenk-White type.
+ * NcHaloDensityProfileNFW:
+ *
+ * Density profile of Navarro-Frenk-White type.
  *
  * This object implements the #NcHaloDensityProfile class for a Navarro-Frenk-White (NFW) density profile.
  *
@@ -144,7 +144,7 @@ _nc_halo_density_profile_nfw_finalize (GObject *object)
 static void _nc_halo_density_profile_nfw_add_submodel (NcmModel *model, NcmModel *submodel);
 
 static gdouble _nc_halo_density_profile_nfw_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);
-static gdouble _nc_halo_density_profile_nfw_eval_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x);
+static gdouble _nc_halo_density_profile_nfw_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x);
 static gdouble _nc_halo_density_profile_nfw_eval_dl_2d_density (NcHaloDensityProfile *dp, const gdouble X);
 static gdouble _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const gdouble X);
 
@@ -199,7 +199,7 @@ _nc_halo_density_profile_nfw_eval_dl_density (NcHaloDensityProfile *dp, const gd
 }
 
 static gdouble
-_nc_halo_density_profile_nfw_eval_dl_spher_mass (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble x)
+_nc_halo_density_profile_nfw_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x)
 {
   return log1p (x) - x / (1.0 + x);
 }

@@ -25,13 +25,24 @@
 
 
 /**
- * SECTION:ncm_dtuple
- * @title: NcmDTuple
- * @short_description: Fixed sized array of double values.
+ * NcmDTuple2:
+ * @elements: (array fixed-size=2): The elements of the tuple.
  *
- * In this module we define the #NcmDTuple2, #NcmDTuple3, which are fixed sized arrays
- * of double values.
+ * A 2-dimensional tuple of double precision floating point numbers.
  *
+ * In this module we define the #NcmDTuple2 which are fixed sized arrays of double
+ * values.
+ *
+ */
+
+/**
+ * NcmDTuple3:
+ * @elements: (array fixed-size=3): The elements of the tuple.
+ *
+ * A 3-dimensional tuple of double precision floating point numbers.
+ *
+ * In this module we define the #NcmDTuple3 which are fixed sized arrays of double
+ * values.
  */
 
 #ifdef HAVE_CONFIG_H

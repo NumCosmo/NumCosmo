@@ -74,7 +74,7 @@ def dict_to_var_dict(
     dictionary: Dict[
         str,
         Union[str, float, int, bool, Sequence[float], Sequence[int], Sequence[bool]],
-    ]
+    ],
 ) -> Ncm.VarDict:
     """Convert a dictionary to a VarDict."""
     var_dict = Ncm.VarDict.new()
