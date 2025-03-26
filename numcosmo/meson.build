@@ -812,7 +812,7 @@ if enable_gir
         dependencies: libnumcosmo_dep,
         includes: 'GObject-2.0',
         install: true,
-        extra_args: ['-DNUMCOSMO_GIR_SCAN', '-U__OPTIMIZE__'],
+        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
     )
 
     nc_introspection_sources = [
@@ -837,7 +837,7 @@ if enable_gir
         dependencies: libnumcosmo_dep,
         includes: ['GObject-2.0', numcosmo_math_gir[0]],
         install: true,
-        extra_args: ['-DNUMCOSMO_GIR_SCAN', '-U__OPTIMIZE__'],
+        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
     )
     if have_vala
         vapi_deps = [
