@@ -707,7 +707,7 @@ install_headers(
 sundials_inc = include_directories('sundials/include')
 libcuba_inc = include_directories('libcuba')
 
-libnumcosmo_dep = [
+libnumcosmo_dep_list = [
     mpi_c_dep,
     cfitsio_dep,
     libfyaml_dep,
@@ -758,13 +758,13 @@ libnumcosmo = library(
     # symbols are available at runtime.
     link_whole: [libplc],
     link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass],
-    dependencies: libnumcosmo_dep,
+    dependencies: libnumcosmo_dep_list,
     c_args: numcosmo_c_args,
 )
 
 libnumcosmo_dep = declare_dependency(
     link_with: libnumcosmo,
-    dependencies: libnumcosmo_dep,
+    dependencies: libnumcosmo_dep_list,
     sources: [
         ncm_enum_types[1],
         nc_enum_types[1],
