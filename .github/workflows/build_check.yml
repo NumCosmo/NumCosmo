@@ -157,7 +157,7 @@ jobs:
           echo '#include <glib.h>' > test.c
           echo "Second!"
           ls -lasth /home/runner/miniconda3/envs/numcosmo_developer/include/glib-2.0
-          gcc -E -v -I/home/runner/miniconda3/envs/numcosmo_developer/include/glib-2.0 -I/home/runner/miniconda3/envs/numcosmo_developer/lib/glib-2.0/include test.c
+          /home/runner/miniconda3/envs/numcosmo_developer/bin/x86_64-conda-linux-gnu-cc -E -v -I/home/runner/miniconda3/envs/numcosmo_developer/include/glib-2.0 -I/home/runner/miniconda3/envs/numcosmo_developer/lib/glib-2.0/include test.c
           [[ -e $GCC_AR ]] && AR=$GCC_AR
           [[ -e $GCC_NM ]] && NM=$GCC_NM
           [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
