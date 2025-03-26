@@ -153,6 +153,7 @@ jobs:
       - name: Setting up NumCosmo
         run: |
           conda activate numcosmo_developer
+          find $CONDA_PREFIX
           [[ -e $GCC_AR ]] && AR=$GCC_AR
           [[ -e $GCC_NM ]] && NM=$GCC_NM
           [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
