@@ -153,11 +153,6 @@ jobs:
       - name: Setting up NumCosmo
         run: |
           conda activate numcosmo_developer
-          gcc -E -v -I$CONDA_PREFIX/include - < /dev/null
-          echo '#include <glib.h>' > test.c
-          echo "Second!"
-          ls -lasth $CONDA_PREFIX/include/glib-2.0
-          $CONDA_PREFIX/bin/x86_64-conda-linux-gnu-cc -E -v -I$CONDA_PREFIX/include/glib-2.0 -I$CONDA_PREFIX/lib/glib-2.0/include test.c
           [[ -e $GCC_AR ]] && AR=$GCC_AR
           [[ -e $GCC_NM ]] && NM=$GCC_NM
           [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
