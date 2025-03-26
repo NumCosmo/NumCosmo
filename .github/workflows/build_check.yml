@@ -153,7 +153,9 @@ jobs:
       - name: Setting up NumCosmo
         run: |
           conda activate numcosmo_developer
-          find $CONDA_PREFIX
+          ls /home/runner/miniconda3/envs/numcosmo_developer/include/glib-2.0
+          ls /home/runner/miniconda3/envs/numcosmo_developer/include
+          cat /home/runner/miniconda3/envs/numcosmo_developer/include/glib-2.0/glib.h
           [[ -e $GCC_AR ]] && AR=$GCC_AR
           [[ -e $GCC_NM ]] && NM=$GCC_NM
           [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
