@@ -329,7 +329,7 @@ _nc_galaxy_sd_shape_gauss_integ_f (gpointer callback_data, const gdouble z, NcGa
   gdouble sigma_obs_1             = ldata->sigma_obs_1;
   gdouble sigma_obs_2             = ldata->sigma_obs_2;
   gdouble gt                      = 0.0;
-  complex double e_o              = e1 + I * e2;
+  complex double e_o              = data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN ? (e1 - I * e2) : (e1 + I * e2);
   complex double e_s              = e_o;
   complex double g                = 0.0;
 
