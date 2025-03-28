@@ -262,7 +262,7 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDS
   e1_int = creal (e_s);
   e2_int = cimag (e_s);
 
-  if (data->coord == NC_GALAXY_WL_OBS_COORD_CELESTIAL)
+  if (data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
   {
     e2     = -e2;
     e2_int = -e2_int;
@@ -329,7 +329,7 @@ _nc_galaxy_sd_shape_gauss_integ_f (gpointer callback_data, const gdouble z, NcGa
   gdouble sigma_obs_1             = ldata->sigma_obs_1;
   gdouble sigma_obs_2             = ldata->sigma_obs_2;
   gdouble gt                      = 0.0;
-  complex double e_o              = e1 + I * e2;
+  complex double e_o              = data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN ? (e1 - I * e2) : (e1 + I * e2);
   complex double e_s              = e_o;
   complex double g                = 0.0;
 
@@ -479,6 +479,14 @@ _nc_galaxy_sd_shape_gauss_ldata_required_columns (NcGalaxySDShapeData *data, GLi
   columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_2));
 }
 
+static gdouble
+_nc_galaxy_sd_shape_gauss_get_radius (NcGalaxySDShapeData *data)
+{
+  NcGalaxySDShapeGaussData *ldata = (NcGalaxySDShapeGaussData *) data->ldata;
+
+  return ldata->radius;
+}
+
 static void
 _nc_galaxy_sd_shape_gauss_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data)
 {
@@ -490,6 +498,7 @@ _nc_galaxy_sd_shape_gauss_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionDa
   data->ldata_read_row         = &_nc_galaxy_sd_shape_gauss_ldata_read_row;
   data->ldata_write_row        = &_nc_galaxy_sd_shape_gauss_ldata_write_row;
   data->ldata_required_columns = &_nc_galaxy_sd_shape_gauss_ldata_required_columns;
+  data->ldata_get_radius       = &_nc_galaxy_sd_shape_gauss_get_radius;
 }
 
 /**
