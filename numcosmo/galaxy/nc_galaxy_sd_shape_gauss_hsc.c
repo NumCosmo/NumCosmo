@@ -218,6 +218,7 @@ _nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalax
   gdouble gt                                   = 0.0;
   complex double e_o                           = e_s;
   complex double noise                         = noise1 + I * noise2;
+  complex double g                             = 0.0;
   gdouble e1, e2, e1_int, e2_int;
   gdouble r;
 
@@ -227,21 +228,26 @@ _nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalax
   nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
   r = nc_halo_position_projected_radius (halo_position, cosmo, theta);
 
+  /* Adding bias */
+  e_o = (e_o + c1 + I * c2) * (1.0 + m);
+
   if (z > z_cl)
   {
     gt = nc_wl_surface_mass_density_reduced_shear (surface_mass_density,
                                                    density_profile,
                                                    cosmo,
                                                    r, z, z_cl, z_cl);
+    g = gt * cexp (2.0 * I * phi);
+    /* Adding bias */
+    g = (1.0 + m) * g + (c1 + I * c2);
 
     if (fabs (gt) > 1.0)
-      e_o = (1.0 + gt * conj (e_s)) / (conj (e_s) + gt);
+      e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));
     else
-      e_o = (e_s + gt) / (1.0 + gt * e_s);
+      e_o = (e_s + g) / (1.0 + conj (g) * e_s);
   }
 
-  /* TODO: check order of operations for bias and noise */
-  e_o = (e_o * cexp (2.0 * I * phi) + noise + c1 + I * c2) * (1.0 + m);
+  e_o += noise;
 
   e1 = creal (e_o);
   e2 = cimag (e_o);
@@ -319,12 +325,9 @@ _nc_galaxy_sd_shape_gauss_hsc_integ_f (gpointer callback_data, const gdouble z, 
   gdouble c2                         = ldata->c2;
   gdouble m                          = ldata->m;
   gdouble gt                         = 0.0;
-  complex double e_o                 = (e1 - c1 + I * (e2 - c2)) / (1 + m);
+  complex double e_o                 = (data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN) ? (e1 - I * e2) : e1 + I * e2;
   complex double e_s                 = e_o;
   complex double g                   = 0.0;
-
-  if (data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
-    e_o = conj (e_o);
 
   if (z > z_cl)
   {
@@ -333,6 +336,8 @@ _nc_galaxy_sd_shape_gauss_hsc_integ_f (gpointer callback_data, const gdouble z, 
                                                          int_data->cosmo,
                                                          z, z_cl, &ldata->optzs);
     g = gt * cexp (2.0 * I * phi);
+    /* Adding bias */
+    g = (1.0 + m) * g + (c1 + I * c2);
 
     if (gt > 1.0)
       e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
