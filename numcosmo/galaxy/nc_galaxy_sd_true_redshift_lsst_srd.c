@@ -196,6 +196,7 @@ _nc_galaxy_sd_true_redshift_lsst_srd_update (NcGalaxySDTrueRedshift *gsdtr)
     self->z_norm  = alpha / (pow (z0, 1.0 + self->beta) * (gsl_sf_gamma_inc (self->gamma_a, y_low / self->y0) -
                                                            gsl_sf_gamma_inc (self->gamma_a, y_up / self->y0))
                             );
+    ncm_model_state_set_update (model);
   }
 }
 
