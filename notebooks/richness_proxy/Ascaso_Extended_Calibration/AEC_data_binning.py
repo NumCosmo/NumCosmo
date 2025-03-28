@@ -81,22 +81,12 @@ class BinnedData:
 
         return [np.log(binned_data["richness"]) for binned_data in self.mz_bins]
     
-#-------------------------------------------------------------------------------------------------#
-# get_bins_std()
-#
-# Returns: 
-# Std of lnR values in each bin.
-#-------------------------------------------------------------------------------------------------#    
-
-    def get_bins_std(self):
-        
-        return np.array( [np.std(lnrbin) for lnrbin in self.get_lnR_binned()] )
 
 #-------------------------------------------------------------------------------------------------#
-# get_bins_std()
+# get_bins_mean()
 #
 # Returns: 
-# Std of lnR values in each bin.
+# Mean of lnR values in each bin.
 #-------------------------------------------------------------------------------------------------#        
   
     def get_bins_mean(self):
@@ -109,6 +99,32 @@ class BinnedData:
         z_mean = [np.mean(binned_data["redshift"]) for binned_data in self.mz_bins if len(binned_data) > 0]
         
         return Table([richness_mean, mass_mean, z_mean], names=('richness', 'mass', 'redshift'))
+    
+
+#-------------------------------------------------------------------------------------------------#
+# get_bins_std()
+#
+# Returns: 
+# Std of lnR values in each bin.
+#-------------------------------------------------------------------------------------------------#    
+
+    def get_bins_std(self):
+
+        lnr_mean = np.log(self.get_bins_mean()['richness'])
+
+        std = []
+        
+        for i, lnrbin in enumerate(self.get_lnR_binned()):
+        
+            N = len(lnrbin)
+            d2 = abs(lnrbin - lnr_mean[i])**2
+            var = d2.sum() / (N - 1) 
+            std.append(var**0.5)
+
+        return std
+
+        # return np.array( [np.std(lnrbin, ddof=1) for lnrbin in self.get_lnR_binned()] )
+
 
 
 

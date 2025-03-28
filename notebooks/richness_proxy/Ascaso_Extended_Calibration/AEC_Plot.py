@@ -33,13 +33,13 @@ def cplot(model, model_name, data, bins_mean, bins_std, option: str="mean"):
             fig.suptitle('$<\ln\lambda| M, z>_{LINEAR}$')
             
         elif model_name == 'lnR_mean_ascaso_c': 
-            fig.suptitle('$<\ln\lambda| M, z>_{LINEAR}$ (Corrected)')
+            fig.suptitle('$<\ln\lambda| M, z>_{LINEAR}$ (with correction)')
             
         elif model_name == 'lnR_mean_ext_ln1pz': 
             fig.suptitle('$<\ln\lambda| M, z>_{QUADRATIC}$')
             
         elif model_name == 'lnR_mean_ext_ln1pz_c': 
-            fig.suptitle('$<\ln\lambda| M, z>_{QUADRATIC} (Corrected)$')
+            fig.suptitle('$<\ln\lambda| M, z>_{QUADRATIC} (with correction)$')
             
         else: 
             pass
@@ -58,13 +58,13 @@ def cplot(model, model_name, data, bins_mean, bins_std, option: str="mean"):
             fig.suptitle('Sd Linear Model', size=16)
             
         elif model_name == 'lnR_std_ascaso_c': 
-            fig.suptitle('Sd Linear Model (Corrected)', size=16)
+            fig.suptitle('Sd Linear Model (with correction)', size=16)
             
         elif model_name == 'lnR_std_ext_ln1pz': 
             fig.suptitle('Sd Quadratic Model', size=16)
             
         elif model_name == 'lnR_sd_ext_ln1pz_c': 
-            fig.suptitle('Sd Quadratic Model (Corrected)', size=16)
+            fig.suptitle('Sd Quadratic Model (with correction)', size=16)
             
         else: 
             pass
