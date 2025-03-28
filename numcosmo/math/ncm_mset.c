@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_mset
- * @title: NcmMSet
- * @short_description: A set of different NcmModel objects.
+ * NcmMSet:
+ *
+ * A set of different NcmModel objects.
  *
  * A #NcmMSet is a set of different #NcmModel objects. It is used to
  * represent a set of models that can be used to fit a data set.

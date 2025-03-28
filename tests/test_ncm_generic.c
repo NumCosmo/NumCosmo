@@ -73,6 +73,8 @@ void test_nc_hiprim_two_fluids_basic (void);
 void test_nc_halo_mass_summary_basic (void);
 void test_nc_halo_cm_param_basic (void);
 void test_nc_halo_cm_klypin11_basic (void);
+void test_nc_halo_cm_duffy08_basic (void);
+void test_nc_xcor_basic (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -121,6 +123,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/halo_mass_summary/basic", test_nc_halo_mass_summary_basic);
   g_test_add_func ("/nc/halo_cm_param/basic", test_nc_halo_cm_param_basic);
   g_test_add_func ("/nc/halo_cm_klypin11/basic", test_nc_halo_cm_klypin11_basic);
+  g_test_add_func ("/nc/halo_cm_duffy08/basic", test_nc_halo_cm_duffy08_basic);
+
+  g_test_add_func ("/nc/xcor/basic", test_nc_xcor_basic);
 
 
   g_test_run ();
@@ -818,5 +823,46 @@ test_nc_halo_cm_klypin11_basic (void)
   g_assert_true (NC_IS_HALO_CM_KLYPIN11 (hcmk));
 
   NCM_TEST_FREE (nc_halo_cm_klypin11_free, hcmk);
+}
+
+void
+test_nc_halo_cm_duffy08_basic (void)
+{
+  NcHaloCMDuffy08 *hcmd = nc_halo_cm_duffy08_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0);
+  NcHaloCMDuffy08 *hcmd2;
+
+  g_assert_true (hcmd != NULL);
+  g_assert_true (NC_IS_HALO_CM_DUFFY08 (hcmd));
+
+  hcmd2 = nc_halo_cm_duffy08_ref (hcmd);
+  nc_halo_cm_duffy08_clear (&hcmd2);
+  g_assert_true (hcmd2 == NULL);
+
+  g_assert_true (NC_IS_HALO_CM_DUFFY08 (hcmd));
+
+  NCM_TEST_FREE (nc_halo_cm_duffy08_free, hcmd);
+}
+
+void
+test_nc_xcor_basic (void)
+{
+  NcmPowspec *ps   = NCM_POWSPEC (nc_powspec_ml_cbe_new ());
+  NcDistance *dist = nc_distance_new (1100.0);
+  NcXcor *xc       = nc_xcor_new (dist, ps, NC_XCOR_LIMBER_METHOD_GSL);
+  NcXcor *xc2;
+
+  g_assert_true (xc != NULL);
+  g_assert_true (NC_IS_XCOR (xc));
+
+  xc2 = nc_xcor_ref (xc);
+  nc_xcor_clear (&xc2);
+  g_assert_true (xc2 == NULL);
+
+  g_assert_true (NC_IS_XCOR (xc));
+
+  ncm_powspec_clear (&ps);
+  nc_distance_clear (&dist);
+
+  NCM_TEST_FREE (nc_xcor_free, xc);
 }
 

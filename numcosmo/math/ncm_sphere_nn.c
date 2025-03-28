@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_sphere_nn
- * @title: NcmSphereNN
- * @short_description: An re-implementation of Healpix.
+ * NcmSphereNN:
+ *
+ * An re-implementation of Healpix.
  *
  * NN pixalization/manipulation algorithms, Ylm decomposition.
  *
@@ -317,7 +317,9 @@ ncm_sphere_nn_knn_search (NcmSphereNN *snn, const gdouble r, const gdouble theta
  *
  * Computes the @k nearest neighbors of the target point (@theta, @phi) and stores the
  * distances and indices in @distances and @indices, respectively. The distances are
- * Euclidean distances in the 3D space squared.
+ * Euclidean distances in the 3D space squared. The output distances are sorted in
+ * ascending order and are squared. The output indices are sorted in the same order
+ * as the distances.
  *
  */
 void
@@ -340,6 +342,71 @@ ncm_sphere_nn_knn_search_distances (NcmSphereNN *snn, const gdouble r, const gdo
   } while ((p = rb_knn_list_t_next (&trav)) != NULL);
 
   rb_knn_list_destroy (table);
+}
+
+/**
+ * ncm_sphere_nn_knn_search_distances_batch:
+ * @snn: a #NcmSphereNN
+ * @r: (element-type gdouble): the target radius
+ * @theta: (element-type gdouble): the target theta
+ * @phi: (element-type gdouble): the target phi
+ * @k: the number of nearest neighbors
+ * @distances: (out) (transfer full) (element-type gdouble): the distances to the @k nearest neighbors
+ * @indices: (out) (transfer full) (element-type glong): the indices of the @k nearest neighbors
+ *
+ * Computes the @k nearest neighbors of the target point (@theta, @phi) and stores the
+ * distances and indices in @distances and @indices, respectively. The distances are
+ * Euclidean distances in the 3D space squared.
+ *
+ */
+void
+ncm_sphere_nn_knn_search_distances_batch (NcmSphereNN *snn, GArray *r, GArray *theta, GArray *phi, const gint64 k, GArray **distances, GArray **indices)
+{
+  NcmSphereNNPrivate * const self = ncm_sphere_nn_get_instance_private (snn);
+
+  g_assert_cmpuint (theta->len, ==, phi->len);
+  g_assert_cmpuint (theta->len, ==, r->len);
+  g_assert_cmpuint (g_array_get_element_size (r), ==, sizeof (gdouble));
+  g_assert_cmpuint (g_array_get_element_size (theta), ==, sizeof (gdouble));
+  g_assert_cmpuint (g_array_get_element_size (phi), ==, sizeof (gdouble));
+
+  *distances = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), k * theta->len);
+  *indices   = g_array_sized_new (FALSE, FALSE, sizeof (glong), k * theta->len);
+
+  {
+    gdouble coord[3];
+    guint i;
+
+    for (i = 0; i < theta->len; i++)
+    {
+      const gdouble r_i = g_array_index (r, gdouble, i);
+      gdouble sin_theta, cos_theta, sin_phi, cos_phi;
+      guint n = 0;
+
+      sincos (g_array_index (theta, gdouble, i), &sin_theta, &cos_theta);
+      sincos (g_array_index (phi, gdouble, i), &sin_phi, &cos_phi);
+
+      coord[0] = r_i * sin_theta * cos_phi;
+      coord[1] = r_i * sin_theta * sin_phi;
+      coord[2] = r_i * cos_theta;
+
+      rb_knn_list_table_t *table = kdtree_knn_search (self->tree, coord, k);
+      rb_knn_list_traverser_t trav;
+      knn_list_t *p;
+
+      p = rb_knn_list_t_first (&trav, table);
+
+      do {
+        g_array_append_val (*distances, p->distance);
+        g_array_append_val (*indices, p->node->coord_index);
+        n++;
+      } while ((p = rb_knn_list_t_next (&trav)) != NULL);
+
+      g_assert_cmpuint (n, ==, k);
+
+      rb_knn_list_destroy (table);
+    }
+  }
 }
 
 /**

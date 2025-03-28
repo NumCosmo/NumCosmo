@@ -26,7 +26,6 @@
 import math
 import dataclasses
 from typing import Optional, Annotated, List
-import warnings
 from pathlib import Path
 import typer
 from rich.table import Table
@@ -35,10 +34,9 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-import getdist
-import getdist.plots
 
 from .. import Ncm
+from ..helper import npa_to_seq
 from ..interpolation.stats_dist import (
     create_stats_dist,
     CrossValidationMethod,
@@ -46,8 +44,8 @@ from ..interpolation.stats_dist import (
     InterpolationMethod,
 )
 from ..plotting.tools import set_rc_params_article, confidence_ellipse
-from ..plotting.getdist import mcat_to_mcsamples
 from .loading import LoadCatalog
+from ..plotting import mcat_to_catalog_data, plot_mcsamples
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -630,13 +628,15 @@ class PlotCorner(LoadCatalog):
         ),
     ] = 0
 
-    mcsample_only: Annotated[
+    auto_thin: Annotated[
         bool,
         typer.Option(
-            help="Generate only the MCSample object.",
-            hidden=True,
+            help=(
+                "Automatically thin the data using the estimate of "
+                "the autocorrelation time."
+            ),
         ),
-    ] = False
+    ] = True
 
     extra_experiment: Annotated[
         Optional[list[Path]],
@@ -659,20 +659,19 @@ class PlotCorner(LoadCatalog):
         ),
     ] = None
 
+    show: Annotated[
+        bool,
+        typer.Option(
+            help="Show the figure.",
+        ),
+    ] = True
+
     def __post_init__(self) -> None:
         """Corner plot of the catalog."""
         super().__post_init__()
-
         mcat = self.mcat
         if self.plot_name is None:
-            self.plot_name = str(self.mcmc_file)
-        mcsample, _, _ = mcat_to_mcsamples(mcat, self.plot_name, indices=self.indices)
-        self.mcsample = mcsample
-
-        if self.mcsample_only:
-            self.end_experiment()
-            return
-
+            self.plot_name = self.mcmc_file.stem
         if self.extra_experiment is None:
             self.extra_experiment = []
         if self.extra_mcmc_file is None:
@@ -689,56 +688,45 @@ class PlotCorner(LoadCatalog):
                 "Extra experiments and burn-ins must have the same length."
             )
 
+        thin = 1
+        if self.auto_thin:
+            mcat.estimate_autocorrelation_tau(False)
+            thin = int(np.ceil(mcat.peek_autocorrelation_tau().get_max()))
+
+        cd = mcat_to_catalog_data(mcat, self.plot_name, indices=self.indices, thin=thin)
+        mcsample = cd.to_mcsamples(collapse=True)
+
         mcsamples = [mcsample]
         for extra_experiment, extra_mcmc_file, extra_burnin in zip(
             self.extra_experiment, self.extra_mcmc_file, self.extra_burnin
         ):
-            extra_exp = dataclasses.replace(
-                self,
+            extra_exp = LoadCatalog(
                 experiment=extra_experiment,
                 mcmc_file=extra_mcmc_file,
                 burnin=extra_burnin,
-                log_file=None,
-                mcsample_only=True,
-                plot_name=None,
-                output=None,
-                product_file=False,
+                include=self.include,
+                exclude=self.exclude,
             )
-            mcsamples.append(extra_exp.mcsample)
+            if self.auto_thin:
+                extra_exp.mcat.estimate_autocorrelation_tau(False)
+                thin = int(np.ceil(extra_exp.mcat.peek_autocorrelation_tau().get_max()))
+            mcsamples.append(
+                mcat_to_catalog_data(
+                    extra_exp.mcat,
+                    extra_experiment.stem,
+                    thin=thin,
+                    indices=extra_exp.indices,
+                ).to_mcsamples(collapse=True)
+            )
 
-        self.plot_mcsamples(mcsamples)
-
-    def plot_mcsamples(self, mcsamples: list[getdist.MCSamples]):
-        """Plot MCSamples."""
-        mcat = self.mcat
-        set_rc_params_article(ncol=2)
-        g = getdist.plots.get_subplot_plotter(
-            width_inch=plt.rcParams["figure.figsize"][0]
-        )
-        g.settings.linewidth = 0.01
-        bf = None
-        if self.mark_bestfit:
-            bf = np.array(mcat.get_bestfit_row().dup_array())[1:]
-        g.triangle_plot(
-            mcsamples, shaded=True, markers=bf, title_limit=self.title_limit
-        )
-
-        def _set_rasterized(element):
-            if hasattr(element, "set_rasterized"):
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    element.set_rasterized(True)
-            if hasattr(element, "get_children"):
-                for child in element.get_children():
-                    _set_rasterized(child)
-
-        _set_rasterized(g.fig)
-
+        bestfit = cd.bestfit if self.mark_bestfit else None
+        fig = plot_mcsamples(mcsamples, markers=bestfit, title_limit=self.title_limit)
         if self.output is not None:
             filename = self.output.with_suffix(".corner.pdf").absolute().as_posix()
-            plt.savefig(filename, bbox_inches="tight", dpi=300)
+            fig.savefig(filename, bbox_inches="tight", dpi=300)
 
-        plt.show()
+        if self.show:
+            plt.show()
 
         self.end_experiment()
 
@@ -871,8 +859,10 @@ class GetBestFit(LoadCatalog):
         """Get best-fit parameters."""
         super().__post_init__()
 
-        best_fit = np.array(self.mcat.get_bestfit_row().dup_array())[self.nadd_vals :]
-        self.mset.fparams_set_array(best_fit.tolist())
+        best_fit = np.array(self.mcat.get_bestfit_row().dup_array(), dtype=np.float64)[
+            self.nadd_vals :
+        ]
+        self.mset.fparams_set_array(npa_to_seq(best_fit))
 
         if self.output is None:
             raise ValueError("Output file not defined.")

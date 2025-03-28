@@ -38,11 +38,6 @@ G_BEGIN_DECLS
 
 typedef struct _NcmBinSplit NcmBinSplit;
 
-/**
- * NcmBinSplit:
- *
- * FIXME
- */
 struct _NcmBinSplit
 {
   /*< private >*/

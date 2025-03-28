@@ -19,7 +19,6 @@ subdir('class')
 subdir('plc')
 
 ncm_sources = files(
-    'math/ncm_abc.c',
     'math/ncm_binsplit.c',
     'math/ncm_bootstrap.c',
     'math/ncm_c.c',
@@ -60,7 +59,6 @@ ncm_sources = files(
     'math/ncm_fit_state.c',
     'math/ncm_func_eval.c',
     'math/ncm_function_cache.c',
-    'math/ncm_hoaa.c',
     'math/ncm_integral1d.c',
     'math/ncm_integral1d_ptr.c',
     'math/ncm_integral_nd.c',
@@ -154,7 +152,6 @@ ncm_sources = files(
 ncm_sources_nogi = files()
 
 ncm_headers = files(
-    'math/ncm_abc.h',
     'math/ncm_binsplit.h',
     'math/ncm_bootstrap.h',
     'math/ncm_c.h',
@@ -195,7 +192,6 @@ ncm_headers = files(
     'math/ncm_fit_state.h',
     'math/ncm_func_eval.h',
     'math/ncm_function_cache.h',
-    'math/ncm_hoaa.h',
     'math/ncm_integral1d.h',
     'math/ncm_integral1d_ptr.h',
     'math/ncm_integral_nd.h',
@@ -299,7 +295,6 @@ ncm_headers_internal = files(
 )
 
 nc_headers = files(
-    'abc/nc_abc_cluster_ncount.h',
     'data/nc_data_bao.h',
     'data/nc_data_bao_a.h',
     'data/nc_data_bao_dhr_dar.h',
@@ -372,6 +367,7 @@ nc_headers = files(
     'lss/nc_multiplicity_func.h',
     'lss/nc_multiplicity_func_bocquet.h',
     'lss/nc_multiplicity_func_crocce.h',
+    'lss/nc_multiplicity_func_despali.h',
     'lss/nc_multiplicity_func_jenkins.h',
     'lss/nc_multiplicity_func_ps.h',
     'lss/nc_multiplicity_func_st.h',
@@ -465,7 +461,6 @@ nc_headers = files(
 )
 
 nc_sources = files(
-    'abc/nc_abc_cluster_ncount.c',
     'data/nc_data_bao.c',
     'data/nc_data_bao_a.c',
     'data/nc_data_bao_dhr_dar.c',
@@ -538,6 +533,7 @@ nc_sources = files(
     'lss/nc_multiplicity_func.c',
     'lss/nc_multiplicity_func_bocquet.c',
     'lss/nc_multiplicity_func_crocce.c',
+    'lss/nc_multiplicity_func_despali.c',
     'lss/nc_multiplicity_func_jenkins.c',
     'lss/nc_multiplicity_func_ps.c',
     'lss/nc_multiplicity_func_st.c',
@@ -713,7 +709,7 @@ install_headers(
 sundials_inc = include_directories('sundials/include')
 libcuba_inc = include_directories('libcuba')
 
-libnumcosmo_dep = [
+libnumcosmo_dep_list = [
     mpi_c_dep,
     cfitsio_dep,
     libfyaml_dep,
@@ -764,13 +760,13 @@ libnumcosmo = library(
     # symbols are available at runtime.
     link_whole: [libplc],
     link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass],
-    dependencies: libnumcosmo_dep,
+    dependencies: libnumcosmo_dep_list,
     c_args: numcosmo_c_args,
 )
 
 libnumcosmo_dep = declare_dependency(
     link_with: libnumcosmo,
-    dependencies: libnumcosmo_dep,
+    dependencies: libnumcosmo_dep_list,
     sources: [
         ncm_enum_types[1],
         nc_enum_types[1],
@@ -813,11 +809,12 @@ if enable_gir
         identifier_prefix: 'Ncm',
         symbol_prefix: 'ncm',
         header: 'numcosmo/numcosmo-math.h',
+        export_packages: 'numcosmo',
         sources: ncm_introspection_sources,
         dependencies: libnumcosmo_dep,
         includes: 'GObject-2.0',
         install: true,
-        extra_args: ['-DNUMCOSMO_GIR_SCAN', '-U__OPTIMIZE__'],
+        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
     )
 
     nc_introspection_sources = [
@@ -837,11 +834,12 @@ if enable_gir
         identifier_prefix: 'Nc',
         symbol_prefix: 'nc',
         header: 'numcosmo/numcosmo.h',
+        export_packages: 'numcosmo',
         sources: nc_introspection_sources,
         dependencies: libnumcosmo_dep,
         includes: ['GObject-2.0', numcosmo_math_gir[0]],
         install: true,
-        extra_args: ['-DNUMCOSMO_GIR_SCAN', '-U__OPTIMIZE__'],
+        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
     )
     if have_vala
         vapi_deps = [

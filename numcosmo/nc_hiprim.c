@@ -24,11 +24,12 @@
  */
 
 /**
- * SECTION:nc_hiprim
- * @title: NcHIPrim
- * @short_description: Abstract class for implementing homogeneous and isotropic primordial cosmological models.
+ * NcHIPrim:
  *
- * FIXME
+ * Abstract class for implementing homogeneous and isotropic primordial cosmological
+ * models.
+ *
+ * The class is abstract and should be subclassed to implement a specific model.
  *
  */
 

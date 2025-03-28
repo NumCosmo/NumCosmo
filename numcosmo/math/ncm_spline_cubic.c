@@ -24,15 +24,12 @@
  */
 
 /**
- * SECTION:ncm_spline_cubic
- * @title: NcmSplineCubic
- * @short_description: Abstract class for implementing cubic splines.
- * @stability: Stable
- * @include: numcosmo/math/ncm_spline_cubic.h
+ * NcmSplineCubic:
  *
+ * Base class for implementing cubic splines.
  *
- * This class implements the functions which use a polynomial interpolation
- * method of third degree.
+ * This class implements the functions which use a polynomial interpolation method of
+ * third degree.
  *
  */
 
@@ -51,6 +48,8 @@ typedef struct _NcmSplineCubicPrivate
 {
   /*< private >*/
   NcmSpline parent_instance;
+  NcmVector *xv;
+  NcmVector *yv;
   NcmVector *b;
   NcmVector *c;
   NcmVector *d;
@@ -164,6 +163,9 @@ _ncm_spline_cubic_reset (NcmSpline *s)
 
     _ncm_spline_cubic_alloc (sc, s_len);
   }
+
+  self->xv = ncm_spline_peek_xv (s);
+  self->yv = ncm_spline_peek_yv (s);
 }
 
 static gdouble
@@ -172,24 +174,15 @@ _ncm_spline_cubic_eval (const NcmSpline *s, const gdouble x)
   NcmSplineCubic *sc                 = NCM_SPLINE_CUBIC ((NcmSpline *) s);
   NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private (sc);
   const size_t i                     = ncm_spline_get_index (s, x);
+
   {
-    NcmVector *s_xv    = ncm_spline_peek_xv ((NcmSpline *) s);
-    NcmVector *s_yv    = ncm_spline_peek_yv ((NcmSpline *) s);
-    const gdouble delx = x - ncm_vector_get (s_xv, i);
-    const gdouble a_i  = ncm_vector_get (s_yv, i);
+    const gdouble delx = x - ncm_vector_get (self->xv, i);
+    const gdouble a_i  = ncm_vector_get (self->yv, i);
     const gdouble b_i  = ncm_vector_fast_get (self->b, i);
     const gdouble c_i  = ncm_vector_fast_get (self->c, i);
     const gdouble d_i  = ncm_vector_fast_get (self->d, i);
 
-#ifdef HAVE_FMA
-
-    return fma (fma (fma (d_i, delx, c_i), delx, b_i), delx, a_i);
-
-#else
-
-    return a_i + delx * (b_i + delx * (c_i + delx * d_i));
-
-#endif /* HAVE_FMA */
+    return a_i + delx * b_i + (delx * delx) * (c_i + delx * d_i);
   }
 }
 

@@ -1,0 +1,379 @@
+---
+title: NcmModel tutorial
+subtitle: Curve fitting tutorial
+---
+
+## Overview
+
+**NumCosmo: Defining Models in an Object-Oriented Framework**
+
+One of the key objectives of NumCosmo is to provide a comprehensive framework 
+for model fitting. In this tutorial, we will explore the process of defining 
+models within this framework. When modeling a phenomenon, the first step is to 
+identify the key quantities associated with the model and determine how to 
+describe them. In the NumCosmo framework, these aspects are expressed using 
+an Object-Oriented (OO) approach.
+
+The framework encourages the creation of an abstract model that defines only 
+the fundamental quantities. The specific details of these quantities are left 
+to the implementations of the abstract model. Although this separation might 
+initially seem complex, it offers several long-term advantages, including 
+reduced code complexity. Key benefits include:
+
+- **Abstract Interface Consistency**: Functions and objects that rely on the 
+  abstract model can be developed using a standard interface, without concern 
+  for specific implementations.
+- **Clear Model Definition**: The approach compels programmers and scientists 
+  to clearly distinguish between fundamental quantities of the model and the 
+  choices made during implementation.
+- **Modularity**: The framework naturally supports modularity, allowing 
+  specific implementations to be modified or replaced without affecting the 
+  broader codebase.
+- **Facilitated Collaboration**: Once the abstract model is defined, different 
+  groups can independently develop their implementations, simplifying 
+  collaborative efforts.
+
+In this tutorial, we will guide you through the process of writing an abstract 
+model in **C**. While this tutorial focuses on **C**, writing models in Python is 
+also possible and will be covered in a separate tutorial.
+
+## Our abstract model
+
+In this tutorial, we consider the case where we are modeling a phenomenon described 
+by a curve $f(x)$. In this simple example, it is clear that the only fundamental 
+quantities are the curve $f(x)$ itself and its domain $[x_l,\; x_u]$. Note that 
+we are not including any specific functional form for $f(x)$ or any parametrization; 
+these choices are left to the specific implementations of our model.
+
+If you are not familiar with the GObject framework, take a look at 
+[this tutorial](gobject.qmd).
+
+To translate this to an OO framework, we will define an abstract object `NcCurve` 
+(subclass of [`NcmModel`](manual/NcmModel.html) to represent the fundamental quantities. 
+The function $f(x)$ is represented by the virtual method called `nc_curve_f`, and the 
+interval by two properties called `xl` and `xu`, which represent $x_l$ and $x_u$, 
+respectively.
+
+## Abstract model header
+
+We include the full header below; however, first, we will highlight the main 
+steps:
+
+### Virtual method type
+
+This line determines the prototype of our virtual function. While this step 
+is not strictly necessary -- since one could use this prototype directly in the 
+class structure -- defining a type improves readability.
+```C
+typedef gdouble (*NcCurveF) (NcCurve *curve, const gdouble x);
+```
+
+### Object class
+
+In the GObject framework, virtual functions are defined as function pointers in the 
+class structure. In this simple example, there is a single virtual function, which we
+call `f` using the type defined above. The class structure is defined as follows:
+```C
+struct _NcCurveClass
+{
+  /*< private >*/
+  NcmModelClass parent_class;
+  NcCurveF f;
+}; 
+```
+
+### Implementation enumerator
+
+The [`NcmModel`](manual/NcmModel.html) framework is designed to support 
+complex models that may involve several virtual methods. Some of these methods may not
+be required by every implementation. For this reason in introduced the implementation 
+enumerator, this way, the object that use the model may ask if that model implements a
+specific virtual method. In our example we have a single virtual method, so the
+enumerator is given by:
+```C
+typedef enum _NcCurveImpl
+{
+  NC_CURVE_IMPL_f = 0,
+} NcCurveImpl; 
+```
+The enumerator above states that the first bit in the implementation enumerator
+controls if the child implements this method.
+
+### Defining the class id prototype
+In order to be able to analyze different models, we need an object to aggregate all
+necessary models. In NumCosmo this task is performed by the 
+[`NcmMSet`](manual/NcmMSet.html) (model set) object. We use the `NCM_MSET_MODEL_DECLARE_ID`
+macro to declare the id function `nc_curve_id` in the [`NcmMSet`](manual/NcmMSet.html)
+framework.
+```C
+NCM_MSET_MODEL_DECLARE_ID (nc_curve);
+```
+
+### Method prototypes
+Finally we declare the two methods necessary to close the implementation (apart from the default ones).
+```C
+void nc_curve_set_f_impl (NcCurveClass *curve_class, NcCurveF f);
+gdouble nc_curve_f (NcCurve *curve, const gdouble x);
+```
+The first one just declare the class method that will be used to set the
+virtual method `f`. It is necessary because it has two jobs, it sets
+the function pointer to the member `f` of the [class structure](#object-class)
+and updates the implementation flags to assert that child implements this method.
+
+## Abstract model source
+
+We include the full **C** file below, however, first we are going to highlight the main
+steps:
+
+### Private properties
+The first declaration in our code is the definition of the private struct
+```C
+struct _NcCurvePrivate
+{
+  gdouble xl;
+  gdouble xu;
+};
+```
+In principle we could have added these members directly to the `NcCurve`
+struct, however, this would allow users to modify it directly. By hiding
+it in the compilation unit we avoid this, the only way to modify these values
+will be through the exported methods. This is important since these methods
+will perform consistency checks and call all necessary hooks that update
+the model. 
+
+As a rule of thumb, if the access to the struct member is not part of
+computationally heavy part of the code (here these members are likely to be
+set just once in the beginning and stay constant throughout all computations),
+then it just me hidden in the private struct for the reasons described above.
+Nevertheless, if the member will be accessed constantly during the computations
+we would attribute it to the object struct and include a inline method to access
+it, this technique will be discussed in detail in a future tutorial.
+
+### Property enumerator
+
+The property enumerator is the part of the GObject framework used to define
+properties. Here the `PROP_0` member is required by the GObject implementation
+and do not correspond to any actual property. The following members `PROP_XL`
+and `PROP_XU` correspond respectively to $x_l$ and $x_u$. Finally, `PROP_SIZE*`
+is a convenience member (that we use by convention in NumCosmo) used to count 
+the number of properties, in this case `PROP_SIZE == 3` (an enumerator always 
+assign 0 to its first member and +1 to the subsequent, this can be changes by 
+explicitly assigning values).
+```C
+enum
+{
+  PROP_0,
+  PROP_XL,
+  PROP_XU,
+  PROP_SIZE,
+};
+```
+
+### Object defining macro
+
+The first step in creating the object is to call the `GObject` macro
+G_DEFINE_ABSTRACT_TYPE. This macro creates an abstract object (that cannot
+be instantiated) that is a child of [`NcmModel`](manual/NcmModel.html).
+```C
+G_DEFINE_ABSTRACT_TYPE (NcCurve, nc_curve, NCM_TYPE_MODEL);
+```
+This macro assumes that two functions will be implemented:
+- `nc_curve_init`: this function should make all necessary initialization to the
+  object that happens before any property is set. This usually consists of assign
+  null or zero value for all struct members.
+- `nc_curve_class_init`: the class method must define all object's properties and 
+  virtual methods.
+
+### Object initialization
+
+In this example, the initialization function `nc_curve_init` has two tasks, 
+getting the pointer to its private struct and assign the initial values for
+the properties. Our convention is that if both `xl` and `xu` are equal to zero
+then the object is in the initial state.
+```C
+static void
+nc_curve_init (NcCurve *curve)
+{
+  curve->priv = G_TYPE_INSTANCE_GET_PRIVATE (curve, NC_TYPE_CURVE, NcCurvePrivate);
+  curve->priv->xl = 0.0;
+  curve->priv->xu = 0.0;
+}
+```
+
+### Set/Get hooks
+
+In the GObject framework all properties are modified through the set/get hooks.
+Here we have a two properties, for both we delegate the set/get job to methods
+implemented below. We could implement it directly inside the enumerators below,
+however, implementing it in separated functions improve readability.
+```C
+static void
+_nc_curve_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcCurve *curve = NC_CURVE (object);
+  g_return_if_fail (NC_IS_CURVE (object));
+
+  switch (prop_id)
+  {
+    case PROP_XL:
+      nc_curve_set_xl (curve, g_value_get_double (value));
+      break;
+    case PROP_XU:
+      nc_curve_set_xu (curve, g_value_get_double (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_curve_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcCurve *curve = NC_CURVE (object);
+  g_return_if_fail (NC_IS_CURVE (object));
+
+  switch (prop_id)
+  {
+    case PROP_XL:
+      g_value_set_double (value, nc_curve_get_xl (curve));
+      break;
+    case PROP_XU:
+      g_value_set_double (value, nc_curve_get_xu (curve));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+```
+
+### Defining the id function
+
+The [`NcmMSet`](manual/NcmMSet.html) framework provides the macro 
+*NCM_MSET_MODEL_REGISTER_ID* that should be used in the object code to create
+the *nc_curve_id* function. This function will return the unique ID defined
+in the [`NcmMSet`](manual/NcmMSet.html) type list.
+
+```C
+NCM_MSET_MODEL_REGISTER_ID (nc_curve, NC_TYPE_CURVE);
+```
+
+### The class initialization hook
+
+#### Attributing the Set/Get hooks
+
+In the class initialization hook one must define the object related hooks, 
+as the set/get functions. Since we are using the [`NcmModel`](manual/NcmModel.html)
+framework, we need to attribute the set/get hooks to the `NcmModelClass`
+struct. This is necessary since the framework takes care in organizing all 
+model parameters and only the additional properties are handled by the set/get
+hooks defined here.
+```C
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+
+  ...
+  
+  model_class->set_property = &_nc_curve_set_property;
+  model_class->get_property = &_nc_curve_get_property;
+```
+
+The next step is to initialize the model parameters.
+```C
+ncm_model_class_set_name_nick (model_class, "Curve-f", "NcCurve");
+ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
+```
+These functions set the model name and nick and tells the framework that 
+it requires `0` scalar parameters and `0` vector parameters and it has additionally
+`PROP_SIZE` properties. It is usually the case that the abstract model
+has no parameters, this happens because the parameters are usually
+connected to the specific implementations and not to the abstract definitions.
+
+#### Registering the ID in [`NcmMSet`](manual/NcmMSet.html)
+
+```C
+  ncm_mset_model_register_id (model_class,
+                              "NcCurve",
+                              "Curve model.",
+                              NULL,
+                              FALSE,
+                              NCM_MSET_MODEL_MAIN);
+```
+This functions call takes care in registering the `NcCurve`
+type in the [`NcmMSet`](manual/NcmMSet.html) type list. This is
+necessary to set/get objects of this type from a [`NcmMSet`](manual/NcmMSet.html).
+
+#### Registering the properties
+
+As discussed above, the properties $x_l$ and $x_u$ will not be part of the model
+parameters and will be taken as fixed numbers, in this case, we include them
+as usual `GObject` properties.
+
+```C
+  g_object_class_install_property (object_class,
+                                   PROP_XL,
+                                   g_param_spec_double ("xl",
+                                                        NULL,
+                                                        "x lower bound",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_XU,
+                                   g_param_spec_double ("xu",
+                                                        NULL,
+                                                        "x upper bound",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+```
+
+#### Checking parameters implementation
+
+The function call below asserts that all required scalar and vector
+parameters were implemented correctly. In this case, none were required.
+```C
+  ncm_model_class_check_params_info (model_class);
+```
+
+#### Setting a default implementation for the virtual function
+
+This line sets the default implementation for the virtual function `f`.
+```C
+  curve_class = &_nc_curve_f;
+```
+
+### Methods
+
+Our implementation of the virtual function `f` here is just a placeholder
+that raises an error if called.
+```C
+static gdouble 
+_nc_curve_f (NcCurve *curve, const gdouble x)
+{
+  g_error ("nc_curve_f: model `%s' does not implement this function.", 
+           G_OBJECT_TYPE_NAME (curve)); 
+  return 0.0;
+}
+```
+
+We use the `NCM_MODEL_SET_IMPL_FUNC` to generate the code for the implementation
+function `nc_curve_set_f_impl`. This class method, when called by the child 
+implementations will attribute the function to the class struct and enable the 
+implementation flag for this method.
+```C
+NCM_MODEL_SET_IMPL_FUNC (NC_CURVE, NcCurve, nc_curve, NcCurveF, f)
+```
+
+## Example sources
+
+### Header
+
+```C
+{{< include nc_curve.h >}}
+```
+
+### Source
+
+```C
+{{< include nc_curve.c >}}
+```

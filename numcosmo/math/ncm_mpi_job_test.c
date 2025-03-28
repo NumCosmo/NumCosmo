@@ -26,15 +26,15 @@
  */
 
 /**
- * SECTION:ncm_mpi_job_test
- * @title: NcmMPIJobTest
- * @short_description: Test implementation of MPI job class
+ * NcmMPIJobTest:
+ *
+ * Test implementation of MPI job class.
  *
  * This subclass of #NcmMPIJob serves as a targeted tool for testing MPI job
- * functionality. It emulates a one-second computational workload, receiving a vector
- * of doubles as input and returning a single double from the specified position. The
- * intentional sleep period aids in validating communication and synchronization
- * aspects of MPI-based parallel computing.
+ * functionality. It emulates a one-second computational workload, receiving a vector of
+ * doubles as input and returning a single double from the specified position. The
+ * intentional sleep period aids in validating communication and synchronization aspects
+ * of MPI-based parallel computing.
  *
  * **Functionality Overview:**
  *

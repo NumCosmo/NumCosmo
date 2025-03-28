@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_fit_mcmc
- * @title: NcmFitMCMC
- * @short_description: Markov Chain Monte Carlo analysis.
+ * NcmFitMCMC:
+ *
+ * Markov Chain Monte Carlo analysis.
  *
  * Markov Chain Monte Carlo (MCMC) analysis is a method for sampling the posterior
  * probability distribution of a set of parameters. It relies on the

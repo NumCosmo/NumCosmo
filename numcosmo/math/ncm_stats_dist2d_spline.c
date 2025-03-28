@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_stats_dist2d_spline
- * @title: NcmStatsDist2dSpline
- * @short_description: Two-dimensional probability distribution based on a spline
+ * NcmStatsDist2dSpline:
+ *
+ * Two-dimensional probability distribution based on a spline
  *
  * Reconstruction of an arbitrary two-dimensional probability distribution based on a spline.
  *

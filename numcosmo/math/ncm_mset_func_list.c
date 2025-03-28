@@ -24,12 +24,12 @@
  */
 
 /**
- * SECTION:ncm_mset_func_list
- * @title: NcmMSetFuncList
- * @short_description: NcmMSet Functions list.
+ * NcmMSetFuncList:
  *
- * This object is a subclass of #NcmMSetFunc, designed to manage a list of functions.
- * To register these functions, the #ncm_mset_func_list_register function is employed.
+ * NcmMSet Functions list.
+ *
+ * This object is a subclass of #NcmMSetFunc, designed to manage a list of functions. To
+ * register these functions, the #ncm_mset_func_list_register function is employed.
  * Selection of functions is accomplished through the use of the
  * ncm_mset_func_list_select() function. Additionally, external objects have the
  * capability to register functions by utilizing the #ncm_mset_func_list_register

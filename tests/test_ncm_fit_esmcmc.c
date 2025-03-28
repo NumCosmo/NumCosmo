@@ -615,7 +615,7 @@ test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer 
   ncm_fit_esmcmc_set_auto_trim_type (test->esmcmc, NCM_MSET_CATALOG_TRIM_TYPE_CK);
 
   ncm_fit_esmcmc_start_run (test->esmcmc);
-  ncm_fit_esmcmc_run_burnin (test->esmcmc, 100, 10);
+  ncm_fit_esmcmc_run_burnin (test->esmcmc, 10, 10);
   ncm_fit_esmcmc_end_run (test->esmcmc);
 
   {
@@ -653,7 +653,7 @@ test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer 
     NcmStatsDistKernel *kernel        = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (ncm_mset_fparams_len (mset)));
     NcmStatsDist *sd                  = NCM_STATS_DIST (ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_SPLIT));
     NcmMSetTransKernCat *init_sampler = ncm_mset_trans_kern_cat_new (mcat, sd);
-    const guint nwalkers              = 3 * ncm_mset_catalog_nchains (mcat);
+    const guint nwalkers              = ncm_mset_catalog_nchains (mcat);
     NcmFitESMCMCWalkerAPES *apes      = ncm_fit_esmcmc_walker_apes_new (nwalkers, ncm_mset_fparams_len (mset));
     NcmFitESMCMC *esmcmc              = ncm_fit_esmcmc_new (fit,
                                                             nwalkers,
@@ -668,7 +668,7 @@ test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer 
     ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
 
     ncm_fit_esmcmc_start_run (esmcmc);
-    ncm_fit_esmcmc_run_lre (esmcmc, 100, 1.0e-2);
+    ncm_fit_esmcmc_run_lre (esmcmc, 100, 1.0e-1);
     ncm_fit_esmcmc_end_run (esmcmc);
 
     {

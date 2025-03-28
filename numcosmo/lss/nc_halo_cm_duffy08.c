@@ -4,7 +4,7 @@
  *            nc_halo_cm_duffy08.c
  *
  *  Thu Dec 05 09:42:15 2024
- *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br> 
+ *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br>
  ****************************************************************************/
 /*
  * nc_halo_cm_duffy08.c
@@ -48,14 +48,15 @@
 
 typedef struct _NcHaloCMDuffy08Private
 {
-  gint placeholder;
+  gdouble Delta;
+  NcHaloMassSummaryMassDef mdef;
+
+  gdouble (*concentration) (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z);
 } NcHaloCMDuffy08Private;
 
 struct _NcHaloCMDuffy08
 {
   NcHaloMassSummary parent_instance;
-  NcHaloMassSummaryMassDef mdef;
-  gdouble z;
 };
 
 enum
@@ -72,6 +73,12 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcHaloCMDuffy08, nc_halo_cm_duffy08, NC_TYPE_HALO_MA
 static void
 nc_halo_cm_duffy08_init (NcHaloCMDuffy08 *hcmd)
 {
+  NcHaloCMDuffy08Private * const self = nc_halo_cm_duffy08_get_instance_private (hcmd);
+
+  self->Delta = 0.0;
+  self->mdef  = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
+
+  self->concentration = NULL;
 }
 
 static void
@@ -89,6 +96,8 @@ _nc_halo_cm_duffy08_finalize (GObject *object)
 
 static gdouble _nc_halo_cm_duffy08_mass (NcHaloMassSummary *hms);
 static gdouble _nc_halo_cm_duffy08_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z);
+static void _nc_halo_cm_duffy08_set_Delta (NcHaloMassSummary *hms, gdouble Delta);
+static void _nc_halo_cm_duffy08_set_mdef (NcHaloMassSummary *hms, NcHaloMassSummaryMassDef mdef);
 
 static void
 nc_halo_cm_duffy08_class_init (NcHaloCMDuffy08Class *klass)
@@ -130,6 +139,8 @@ nc_halo_cm_duffy08_class_init (NcHaloCMDuffy08Class *klass)
 
   hms_class->mass          = &_nc_halo_cm_duffy08_mass;
   hms_class->concentration = &_nc_halo_cm_duffy08_concentration;
+  hms_class->set_Delta     = &_nc_halo_cm_duffy08_set_Delta;
+  hms_class->set_mdef      = &_nc_halo_cm_duffy08_set_mdef;
 }
 
 static gdouble
@@ -143,49 +154,81 @@ _nc_halo_cm_duffy08_mass (NcHaloMassSummary *hms)
 static gdouble
 _nc_halo_cm_duffy08_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
-  NcHaloCMDuffy08 *hcmd = NC_HALO_CM_DUFFY08 (hms);
-  gdouble mass          = _nc_halo_cm_duffy08_mass (hms);
-  gdouble h             = nc_hicosmo_h (cosmo);
-  gdouble Delta         = nc_halo_mass_summary_Delta (hms, cosmo, z);
-  hcmd->mdef            = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
+  NcHaloCMDuffy08 *hcmd               = NC_HALO_CM_DUFFY08 (hms);
+  NcHaloCMDuffy08Private * const self = nc_halo_cm_duffy08_get_instance_private (hcmd);
 
-  switch (hcmd->mdef)
+  return self->concentration (hms, cosmo, z);
+}
+
+static void
+_nc_halo_cm_duffy08_set_Delta (NcHaloMassSummary *hms, gdouble Delta)
+{
+  NcHaloCMDuffy08 *hcmd               = NC_HALO_CM_DUFFY08 (hms);
+  NcHaloCMDuffy08Private * const self = nc_halo_cm_duffy08_get_instance_private (hcmd);
+
+  if (self->mdef < NC_HALO_MASS_SUMMARY_MASS_DEF_LEN)
+    if ((self->mdef != NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL) && (Delta != 200.0))
+      g_error ("Duffy08 concentration: mdef must be NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL or Delta must be 200.0 (mean and critical)");
+
+  self->Delta = Delta;
+}
+
+static gdouble
+_nc_halo_cm_duffy08_concentration_mean (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
+{
+  gdouble mass = _nc_halo_cm_duffy08_mass (hms);
+  gdouble h    = nc_hicosmo_h (cosmo);
+
+  return 10.14 * pow (mass * h / 2.0e12, -0.081) * pow (1.0 + z, -1.01);
+}
+
+static gdouble
+_nc_halo_cm_duffy08_concentration_critical (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
+{
+  gdouble mass = _nc_halo_cm_duffy08_mass (hms);
+  gdouble h    = nc_hicosmo_h (cosmo);
+
+  return 5.71 * pow (mass * h / 2.0e12, -0.084) * pow (1.0 + z, -0.47);
+}
+
+static gdouble
+_nc_halo_cm_duffy08_concentration_virial (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
+{
+  gdouble mass = _nc_halo_cm_duffy08_mass (hms);
+  gdouble h    = nc_hicosmo_h (cosmo);
+
+  return 7.85 * pow (mass * h / 2.0e12, -0.081) * pow (1.0 + z, -0.71);
+}
+
+static void
+_nc_halo_cm_duffy08_set_mdef (NcHaloMassSummary *hms, NcHaloMassSummaryMassDef mdef)
+{
+  NcHaloCMDuffy08 *hcmd               = NC_HALO_CM_DUFFY08 (hms);
+  NcHaloCMDuffy08Private * const self = nc_halo_cm_duffy08_get_instance_private (hcmd);
+
+  if (self->Delta != 0.0)
+    if ((mdef != NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL) && (self->Delta != 200.0))
+      g_error ("Duffy08 concentration: mdef must be NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL or Delta must be 200.0 (mean and critical)");
+
+  self->mdef = mdef;
+
+  switch (mdef)
   {
     case NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN:
-  
-      if (Delta == 200.0){
-
-        return 10.14 * pow (mass * h / 2.0e12, -0.081) * pow (1.0 + z, -1.01);
-
-      }
-
-      else {
-        g_assert_not_reached();
-        return 0.0; 
-      }
+      self->concentration = _nc_halo_cm_duffy08_concentration_mean;
+      break;
 
     case NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL:
-
-      if (Delta == 200.0){
-
-        return 5.71 * pow (mass * h / 2.0e12, -0.084) * pow (1.0 + z, -0.47);
-      }
-
-      else{
-        g_assert_not_reached();
-        return 0.0;    
-      } 
+      self->concentration = _nc_halo_cm_duffy08_concentration_critical;
+      break;
 
     case NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL:
-
-      return 7.85 * pow (mass * h / 2.0e12, -0.081) * pow (1.0 + z, -0.71);
+      self->concentration = _nc_halo_cm_duffy08_concentration_virial;
+      break;
 
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
-
-      return 0.0; /* LCOV_EXCL_LINE */
   }
-
 }
 
 /**
@@ -203,9 +246,9 @@ NcHaloCMDuffy08 *
 nc_halo_cm_duffy08_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta)
 {
   NcHaloCMDuffy08 *hcmd = g_object_new (NC_TYPE_HALO_CM_DUFFY08,
-                                         "mass-def", mdef,
-                                         "Delta",    Delta,
-                                         NULL);
+                                        "mass-def", mdef,
+                                        "Delta",    Delta,
+                                        NULL);
 
   return hcmd;
 }

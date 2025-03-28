@@ -30,6 +30,7 @@ from numpy.testing import assert_allclose
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import npa_to_seq
 
 Ncm.cfg_init()
 
@@ -95,18 +96,45 @@ def test_halo_density_profile_basic(
     halo_mass_summary: Nc.HaloMassSummary,
 ):
     """Test HaloDensityProfile basic properties."""
-    R_array = np.geomspace(1e-2, 1e2, 100)
-    z_array = np.linspace(0.0, 1.0, 100)
+    R_array = np.geomspace(1e-2, 1e2, 100, dtype=np.float64)
+    z_array = np.linspace(0.0, 1.0, 100, dtype=np.float64)
     assert isinstance(halo_density_profile, Nc.HaloDensityProfile)
     assert halo_density_profile.peek_mass_summary() == halo_mass_summary
     for R, z in product(R_array, z_array):
         assert halo_density_profile.eval_2d_density(cosmo, R, z) > 0.0
         assert halo_density_profile.eval_cyl_mass(cosmo, R, z) > 0.0
         assert halo_density_profile.eval_density(cosmo, R, z) > 0.0
-        assert halo_density_profile.eval_spher_mass(cosmo, z) > 0.0
+        assert halo_density_profile.eval_spher_mass_delta(cosmo, z) > 0.0
+        assert halo_density_profile.eval_spher_mass(cosmo, R, z) > 0.0
         assert halo_density_profile.eval_dl_2d_density(R) > 0.0
         assert halo_density_profile.eval_dl_cyl_mass(R) > 0.0
         assert halo_density_profile.eval_dl_density(R) > 0.0
+
+
+def test_halo_density_profile_spher_mass(
+    halo_density_profile: Nc.HaloDensityProfile,
+    cosmo: Nc.HICosmo,
+):
+    """Test HaloDensityProfile spherical mass vectorized."""
+    R_array = np.geomspace(1e-2, 1e2, 100, dtype=np.float64)
+    z_array = np.linspace(0.0, 1.0, 100, dtype=np.float64)
+
+    r_s_rho_s_array = np.array(
+        [halo_density_profile.r_s_rho_s(cosmo, z) for z in z_array]
+    )
+
+    x_array = R_array / r_s_rho_s_array[:, 0]
+    sVol_array = 4.0 * np.pi * r_s_rho_s_array[:, 0] ** 3.0 * r_s_rho_s_array[:, 1]
+    dl_sphere_mass_array = np.array(
+        [halo_density_profile.eval_dl_spher_mass(x) for x in x_array]
+    )
+    calc_sphere_mass_array = dl_sphere_mass_array * sVol_array
+    spher_mass_array = [
+        halo_density_profile.eval_spher_mass(cosmo, R, z)
+        for z, R in zip(z_array, R_array)
+    ]
+
+    assert_allclose(calc_sphere_mass_array, spher_mass_array)
 
 
 def test_halo_density_profile_2d_density_vectorized(
@@ -114,10 +142,12 @@ def test_halo_density_profile_2d_density_vectorized(
     cosmo: Nc.HICosmo,
 ):
     """Test HaloDensityProfile 2D density vectorized."""
-    R_array = np.geomspace(1e-2, 1e2, 100)
-    z_array = np.linspace(0.0, 1.0, 100)
+    R_array = np.geomspace(1e-2, 1e2, 100, dtype=np.float64)
+    z_array = np.linspace(0.0, 1.0, 100, dtype=np.float64)
     twod_density_array = [
-        halo_density_profile.eval_2d_density_array(cosmo, R_array.tolist(), 1.0, 1.0, z)
+        halo_density_profile.eval_2d_density_array(
+            cosmo, npa_to_seq(R_array), 1.0, 1.0, z
+        )
         for z in z_array
     ]
     twod_density_ind = []
@@ -132,10 +162,12 @@ def test_halo_density_profile_cyl_mass_vectorized(
     cosmo: Nc.HICosmo,
 ):
     """Test HaloDensityProfile cylindrical mass vectorized."""
-    R_array = np.geomspace(1e-2, 1e2, 100)
-    z_array = np.linspace(0.0, 1.0, 100)
+    R_array = np.geomspace(1e-2, 1e2, 100, dtype=np.float64)
+    z_array = np.linspace(0.0, 1.0, 100, dtype=np.float64)
     cyl_mass_array = [
-        halo_density_profile.eval_cyl_mass_array(cosmo, R_array.tolist(), 1.0, 1.0, z)
+        halo_density_profile.eval_cyl_mass_array(
+            cosmo, npa_to_seq(R_array), 1.0, 1.0, z
+        )
         for z in z_array
     ]
     cyl_mass_ind = []
@@ -150,10 +182,10 @@ def test_halo_density_profile_density_vectorized(
     cosmo: Nc.HICosmo,
 ):
     """Test HaloDensityProfile density vectorized."""
-    R_array = np.geomspace(1e-2, 1e2, 100)
-    z_array = np.linspace(0.0, 1.0, 100)
+    R_array = np.geomspace(1e-2, 1e2, 100, dtype=np.float64)
+    z_array = np.linspace(0.0, 1.0, 100, dtype=np.float64)
     density_array = [
-        halo_density_profile.eval_density_array(cosmo, R_array.tolist(), 1.0, 1.0, z)
+        halo_density_profile.eval_density_array(cosmo, npa_to_seq(R_array), 1.0, 1.0, z)
         for z in z_array
     ]
     density_ind = []
@@ -185,9 +217,9 @@ def test_halo_density_profile_rho_s(
     for z in z_array:
         rho_s = halo_density_profile.rho_s(cosmo, z)
         r_s, rho_s0 = halo_density_profile.r_s_rho_s(cosmo, z)
-        mass = halo_density_profile.eval_spher_mass(cosmo, z)
-        cDelta = halo_mass_summary.concentration(cosmo)
-        dl_mass = halo_density_profile.eval_dl_spher_mass(cosmo, cDelta)
+        mass = halo_density_profile.eval_spher_mass_delta(cosmo, z)
+        cDelta = halo_mass_summary.concentration(cosmo, z)
+        dl_mass = halo_density_profile.eval_dl_spher_mass(cDelta)
 
         assert rho_s > 0.0
         assert r_s > 0.0
@@ -202,13 +234,19 @@ def test_halo_density_profile_get_numint_splines(
     """Test HaloDensityProfile get numint splines."""
     x_array = np.geomspace(1.0e-2, 1.0e1, 100)
 
-    twod_density, cyl_mass = halo_density_profile.get_numint_splines()
+    spher_mass, twod_density, cyl_mass = halo_density_profile.get_numint_splines()
 
+    assert isinstance(spher_mass, Ncm.Spline)
     assert isinstance(twod_density, Ncm.Spline)
     assert isinstance(cyl_mass, Ncm.Spline)
 
+    spher_mass_array = np.array([spher_mass.eval(x) for x in x_array])
     twod_density_array = np.exp([twod_density.eval(np.log(x)) for x in x_array])
     cyl_mass_array = np.exp([cyl_mass.eval(np.log(x)) for x in x_array])
+
+    spher_mass_array_cmp = np.array(
+        [halo_density_profile.eval_numint_dl_spher_mass(x) for x in x_array]
+    )
 
     twod_density_array_cmp = np.array(
         [halo_density_profile.eval_numint_dl_2d_density(x) for x in x_array]
@@ -218,5 +256,6 @@ def test_halo_density_profile_get_numint_splines(
         [halo_density_profile.eval_numint_dl_cyl_mass(x) for x in x_array]
     )
 
+    assert_allclose(spher_mass_array, spher_mass_array_cmp)
     assert_allclose(twod_density_array, twod_density_array_cmp)
     assert_allclose(cyl_mass_array, cyl_mass_array_cmp)

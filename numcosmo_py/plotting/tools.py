@@ -23,6 +23,7 @@
 
 """NumCosmo's plotting tools."""
 
+import shutil
 import math
 import numpy as np
 import numpy.typing as npt
@@ -85,19 +86,19 @@ def add_ellipse_from_ellipticity(
     edgecolor: str = "black",
     facecolor: str = "none",
 ) -> None:
-    """Add an ellipse to a plot based on the ellipticity.
+    r"""Add an ellipse to a plot based on the ellipticity.
 
     The ellipticity is given by the e1 and e2 components of the ellipticity vector. The
     semi-major and semi-minor axes are calculated from the ellipticity and the angle of
     the ellipse is calculated from the ellipticity components. The equation for the
     angle is given by:
     $$
-    \\theta = 0.5 \\arctan2(e2, e1),$$ $$q = \\frac{1 - \\epsilon}{1 + \\epsilon},
+    \theta = 0.5 \arctan2(e2, e1),$$ $$q = \frac{1 - \epsilon}{1 + \epsilon},
     $$
     where $q$ is the axis ratio, $a$ is the semi-major axis, and $b$ is the semi-minor
     axis. The area of the ellipse is given by:
     $$
-    A = \\pi a b.
+    A = \pi a b.
     $$
 
     :param ax: The axes to add the ellipse to.
@@ -135,9 +136,12 @@ def add_ellipse_from_ellipticity(
         ax.add_patch(ellipse)
 
 
-def latex_float(value: float):
+def latex_float(value: float, precision: int = 2, convert_g: bool = True) -> str:
     """Convert a float to a string with a fixed number of decimal places."""
-    float_str = f"{value:.2g}"
+    if convert_g:
+        float_str = f"{value:.{precision}g}"
+    else:
+        float_str = f"{value:.{precision}e}"
     if "e" in float_str:
         base, exponent = float_str.split("e")
         if math.isclose(float(base), 1.0):
@@ -153,7 +157,30 @@ def latex_float(value: float):
     return float_str
 
 
-def set_rc_params_article(column_width: float = 246.0, ncol: int = 2, nrows: int = 1):
+def format_time(value: float) -> str:
+    """Format a time value in seconds with appropriate units."""
+    units = [
+        (1.0e-9, "ns"),  # Nanoseconds
+        (1.0e-6, r"$\mu$s"),  # Microseconds
+        (1.0e-3, "ms"),  # Milliseconds
+        (1.0, "s"),  # Keep in seconds for larger values
+    ]
+
+    # Choose the most appropriate unit
+    for factor, unit in units:
+        if value < factor * 1000:  # Keep within 3 significant digits
+            return f"{value / factor:.2f} {unit}"
+
+    return f"{value:.2f} s"  # Fallback (large values)
+
+
+def set_rc_params_article(
+    column_width: float = 246.0,
+    ncol: int = 2,
+    nrows: int = 1,
+    fontsize: int = 8,
+    use_tex: bool | None = None,
+) -> None:
     """Set matplotlib rcParams for a LaTeX article."""
     fig_width_pt = column_width * ncol  # \showthe\columnwidth
     inches_per_pt = 1.0 / 72.27  # Convert pt to inch
@@ -161,14 +188,16 @@ def set_rc_params_article(column_width: float = 246.0, ncol: int = 2, nrows: int
     fig_width = fig_width_pt * inches_per_pt  # width in inches
     fig_height = fig_width * golden_mean  # height in inches
     fig_size = [fig_width, fig_height * nrows]
+    if use_tex is None:
+        use_tex = bool(shutil.which("latex"))
 
     params = {
-        "axes.labelsize": 8,
-        "font.size": 8,
-        "legend.fontsize": 8,
-        "xtick.labelsize": 8,
-        "ytick.labelsize": 8,
-        "text.usetex": True,
+        "axes.labelsize": fontsize,
+        "font.size": fontsize,
+        "legend.fontsize": fontsize,
+        "xtick.labelsize": fontsize,
+        "ytick.labelsize": fontsize,
+        "text.usetex": use_tex,
         "figure.figsize": fig_size,
     }
 

@@ -25,14 +25,9 @@
  */
 
 /**
- * SECTION:nc_halo_cm_klypin11
- * @title: NcHaloCMKlypin11
- * @short_description: Class defining the Klypin et al. 2011 concentration-mass relation
- * @stability: Unstable
- *
+ * NcHaloCMKlypin11:
  *
  * Class defining the Klypin et al. 2011 concentration-mass relation.
- * FIXME include reference and equation
  *
  */
 
@@ -86,7 +81,7 @@ _nc_halo_cm_klypin11_finalize (GObject *object)
 }
 
 static gdouble _nc_halo_cm_klypin11_mass (NcHaloMassSummary *hms);
-static gdouble _nc_halo_cm_klypin11_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo);
+static gdouble _nc_halo_cm_klypin11_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z);
 
 static void
 nc_halo_cm_klypin11_class_init (NcHaloCMKlypin11Class *klass)
@@ -113,7 +108,7 @@ nc_halo_cm_klypin11_class_init (NcHaloCMKlypin11Class *klass)
    * NcHaloCMKlypin11:log10MDelta-fit:
    *
    * Boolean property that controls whether the parameter
-   * #NcHaloMCParam:log10MDelta should be included in
+   * NcHaloMCParam:log10MDelta should be included in
    * a statistical analysis.
    *
    */
@@ -139,7 +134,7 @@ _nc_halo_cm_klypin11_mass (NcHaloMassSummary *hms)
 }
 
 static gdouble
-_nc_halo_cm_klypin11_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo)
+_nc_halo_cm_klypin11_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, const gdouble z)
 {
   gdouble mass = _nc_halo_cm_klypin11_mass (hms);
   gdouble h    = nc_hicosmo_h (cosmo);

@@ -40,11 +40,9 @@
  */
 
 /**
- * SECTION:ncm_powspec_filter
- * @title: NcmPowspecFilter
- * @short_description: Class to compute filtered power spectrum
- * @stability: Stable
- * @include: numcosmo/math/ncm_powspec_filter.h
+ * NcmPowspecFilter:
+ *
+ * Class to compute filtered power spectrum.
  *
  * This class computes the filtered power spectrum, $\sigma^2(k, r)$, and its derivatives with respect to $\ln r$
  * (#ncm_powspec_filter_eval_dnvar_dlnrn()) using the FFTLog approach (see #NcmFftlog),
@@ -528,7 +526,6 @@ _ncm_powspec_filter_dummy_z (gdouble z, gpointer userdata)
   arg->z = z;
   ncm_fftlog_eval_by_gsl_function (arg->psf->fftlog, &F);
 
-  /*printf ("# z-knots % 20.15g % 20.15g\n", z, ncm_vector_get (ncm_fftlog_peek_output_vector (arg->psf->fftlog, 0), 0));*/
   return ncm_vector_get (ncm_fftlog_peek_output_vector (arg->psf->fftlog, 0), 0);
 }
 

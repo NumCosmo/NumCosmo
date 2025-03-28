@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_xcor_limber_kernel_tSZ
- * @title: NcXcorLimberKerneltSZ
- * @short_description: Thermal Sunyaev Zel'dovich effect kernel
+ * NcXcorLimberKerneltSZ:
+ *
+ * Thermal Sunyaev Zel'dovich effect kernel.
  *
  * The thermal Sunyaev Zel'dovich (tSZ) effect is a modification in the observed
  * temperature of the cosmic microwave background (CMB) due to the inverse Compton

@@ -24,12 +24,11 @@
  */
 
 /**
- * SECTION:nc_multiplicity_func_st
- * @title: NcMultiplicityFuncST
- * @short_description: Dark matter halo -- Sheth-Tormen multiplicity function.
+ * NcMultiplicityFuncST:
  *
- * Computes the multiplicity function of dark matter halos using the
- * Sheth-Tormen model.
+ * Dark matter halo -- Sheth-Tormen multiplicity function.
+ *
+ * Computes the multiplicity function of dark matter halos using the Sheth-Tormen model.
  *
  */
 

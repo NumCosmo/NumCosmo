@@ -34,12 +34,10 @@
  */
 
 /**
- * SECTION:ncm_fftlog_sbessel_j
- * @title: NcmFftlogSBesselJ
- * @short_description: Logarithm fast fourier transform for a kernel given by the spatial correlation function multipoles.
- * @stability: Stable
- * @include: numcosmo/math/ncm_fftlog_sbessel_j.h
+ * NcmFftlogSBesselJ:
  *
+ * Logarithm fast fourier transform for a kernel given by the spatial correlation
+ * function multipoles.
  *
  * This object computes the function (see #NcmFftlog)
  * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L}} K(t) dt,$$

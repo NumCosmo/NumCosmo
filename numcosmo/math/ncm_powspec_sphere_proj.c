@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:ncm_powspec_sphere_proj
- * @title: NcmPowspecSphereProj
- * @short_description: Class to compute spherical projection of power spectra
+ * NcmPowspecSphereProj:
+ *
+ * Class to compute spherical projection of power spectra.
  *
  * The #NcmPowspecSphereProj class computes the spherical projection of power spectra.
  *

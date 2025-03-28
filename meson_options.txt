@@ -34,6 +34,13 @@ option(
 )
 
 option(
+       'march-native',
+       type: 'feature',
+       value: 'disabled',
+       description: 'Build with -march=native',
+)
+
+option(
        'introspection',
        type: 'feature',
        value: 'auto',
@@ -48,10 +55,10 @@ option(
 )
 
 option(
-       'gtkdoc',
-       type: 'feature',
-       value: 'auto',
-       description: 'Build documentation with gtk-doc',
+       'documentation',
+       type: 'boolean',
+       value: false,
+       description: 'Build documentation',
 )
 
 #######################################################################################

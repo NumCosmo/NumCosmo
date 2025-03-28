@@ -26,9 +26,9 @@
  */
 
 /**
- * SECTION:ncm_mpi_job
- * @title: NcmMPIJob
- * @short_description: Abstract class to implement MPI jobs
+ * NcmMPIJob:
+ *
+ * Abstract class to implement MPI jobs.
  *
  * This abstract class simplifies the implementation of MPI jobs through a master/slave
  * model. Subclasses must implement virtual methods. The master dispatches jobs to the
