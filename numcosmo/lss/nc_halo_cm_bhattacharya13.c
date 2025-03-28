@@ -159,7 +159,7 @@ static gdouble _nc_halo_cm_bhattacharya13_concentration (NcHaloMassSummary *hms,
   NcHaloCMBhattacharya13 *hcmb               = NC_HALO_CM_BHATTACHARYA13 (hms);
   NcHaloCMBhattacharya13Private * const self = nc_halo_cm_bhattacharya13_get_instance_private (hcmb);
 
-  return self->concentration (hms, cosmo, z)
+  return self->concentration (hms, cosmo, z);
 }
 
 static void
@@ -178,10 +178,10 @@ _nc_halo_cm_bhattacharya13_set_Delta (NcHaloMassSummary *hms, gdouble Delta)
 static gdouble
 _nc_halo_cm_bhattacharya13_concentration_mean (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
+  NcHaloCMBhattacharya13 *hcmb               = NC_HALO_CM_BHATTACHARYA13 (hms);
   gdouble mass = _nc_halo_cm_bhattacharya13_mass (hms);
-  gdouble h    = nc_hicosmo_h (cosmo);
   gdouble lnM                    = log(mass);
-  gdouble R                      = exp(nc_halo_mass_function_lnM_to_lnR (mfp, cosmo, lnM));
+  gdouble R                      = exp(nc_halo_mass_function_lnM_to_lnR (hcmb->mfp, cosmo, lnM));
   gdouble D                      = nc_growth_func_eval (hcmb->gf, cosmo, z);
   gdouble sigma                  = ncm_powspec_filter_eval_sigma (hcmb->psf, z, R);
   gdouble nu                     = 1.686 / sigma;
@@ -193,6 +193,7 @@ _nc_halo_cm_bhattacharya13_concentration_mean (NcHaloMassSummary *hms, NcHICosmo
 static gdouble
 _nc_halo_cm_bhattacharya13_concentration_critical (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
+  NcHaloCMBhattacharya13 *hcmb               = NC_HALO_CM_BHATTACHARYA13 (hms);
   gdouble mass = _nc_halo_cm_bhattacharya13_mass (hms);
   gdouble lnM                    = log(mass);
   gdouble R                      = exp(nc_halo_mass_function_lnM_to_lnR (hcmb->mfp, cosmo, lnM));
@@ -206,6 +207,7 @@ _nc_halo_cm_bhattacharya13_concentration_critical (NcHaloMassSummary *hms, NcHIC
 static gdouble
 _nc_halo_cm_bhattacharya13_concentration_virial (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
+  NcHaloCMBhattacharya13 *hcmb               = NC_HALO_CM_BHATTACHARYA13 (hms);
   gdouble mass = _nc_halo_cm_bhattacharya13_mass (hms);
   gdouble lnM                    = log(mass);
   gdouble R                      = exp(nc_halo_mass_function_lnM_to_lnR (hcmb->mfp, cosmo, lnM));
