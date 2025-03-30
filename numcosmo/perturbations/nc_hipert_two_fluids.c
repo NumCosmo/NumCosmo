@@ -540,7 +540,7 @@ nc_hipert_two_fluids_to_zeta_s (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdoubl
 }
 
 static gint
-_nc_hipert_two_fluids_f_QP (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
+_nc_hipert_two_fluids_f_QP (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
   const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
@@ -589,7 +589,7 @@ _nc_hipert_two_fluids_f_QP (realtype alpha, N_Vector y, N_Vector ydot, gpointer 
 #ifdef HAVE_SUNDIALS_ARKODE
 
 static gint
-_nc_hipert_two_fluids_f_QP_mode1 (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
+_nc_hipert_two_fluids_f_QP_mode1 (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
   const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
@@ -628,7 +628,7 @@ _nc_hipert_two_fluids_f_QP_mode1 (realtype alpha, N_Vector y, N_Vector ydot, gpo
 }
 
 static gint
-_nc_hipert_two_fluids_f_QP_mode2 (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
+_nc_hipert_two_fluids_f_QP_mode2 (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
   const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
@@ -670,7 +670,7 @@ _nc_hipert_two_fluids_f_QP_mode2 (realtype alpha, N_Vector y, N_Vector ydot, gpo
 #endif /* HAVE_SUNDIALS_ARKODE */
 
 static gint
-_nc_hipert_two_fluids_f_QP_mode1sub (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
+_nc_hipert_two_fluids_f_QP_mode1sub (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
   const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
@@ -716,7 +716,7 @@ _nc_hipert_two_fluids_f_QP_mode1sub (realtype alpha, N_Vector y, N_Vector ydot, 
 }
 
 static gint
-_nc_hipert_two_fluids_f_zetaS (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
+_nc_hipert_two_fluids_f_zetaS (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
   const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
@@ -748,7 +748,7 @@ _nc_hipert_two_fluids_f_zetaS (realtype alpha, N_Vector y, N_Vector ydot, gpoint
 #ifdef HAVE_SUNDIALS_ARKODE
 
 static gint
-_nc_hipert_two_fluids_f_zetaS_zeta (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
+_nc_hipert_two_fluids_f_zetaS_zeta (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
   const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
@@ -774,7 +774,7 @@ _nc_hipert_two_fluids_f_zetaS_zeta (realtype alpha, N_Vector y, N_Vector ydot, g
 }
 
 static gint
-_nc_hipert_two_fluids_f_zetaS_S (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
+_nc_hipert_two_fluids_f_zetaS_S (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
   const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
@@ -800,7 +800,7 @@ _nc_hipert_two_fluids_f_zetaS_S (realtype alpha, N_Vector y, N_Vector ydot, gpoi
 }
 
 static gint
-_nc_hipert_two_fluids_J_QP (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_two_fluids_J_QP (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
   const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
@@ -883,7 +883,7 @@ _nc_hipert_two_fluids_J_QP (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J
 #ifdef HAVE_SUNDIALS_ARKODE
 
 static gint
-_nc_hipert_two_fluids_J_QP_mode1 (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_two_fluids_J_QP_mode1 (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
   const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
@@ -961,7 +961,7 @@ _nc_hipert_two_fluids_J_QP_mode1 (realtype alpha, N_Vector y, N_Vector fy, SUNMa
 }
 
 static gint
-_nc_hipert_two_fluids_J_QP_mode2 (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_two_fluids_J_QP_mode2 (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
   const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
@@ -1039,7 +1039,7 @@ _nc_hipert_two_fluids_J_QP_mode2 (realtype alpha, N_Vector y, N_Vector fy, SUNMa
 }
 
 static gint
-_nc_hipert_two_fluids_J_zetaS (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_two_fluids_J_zetaS (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
   const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
@@ -1101,7 +1101,7 @@ _nc_hipert_two_fluids_J_zetaS (realtype alpha, N_Vector y, N_Vector fy, SUNMatri
 #ifdef HAVE_SUNDIALS_ARKODE
 
 static gint
-_nc_hipert_two_fluids_J_zetaS_zeta (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_two_fluids_J_zetaS_zeta (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
   const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
@@ -1159,7 +1159,7 @@ _nc_hipert_two_fluids_J_zetaS_zeta (realtype alpha, N_Vector y, N_Vector fy, SUN
 }
 
 static gint
-_nc_hipert_two_fluids_J_zetaS_S (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_two_fluids_J_zetaS_S (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
   const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
