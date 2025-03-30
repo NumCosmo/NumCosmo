@@ -528,7 +528,7 @@ _nc_xcor_limber_cubature_worker (NcmIntegralND *xcor_int_nd, NcXcorLimberArg *xc
   const guint size   = lmax - lmin + 1;
   NcmVector *err     = ncm_vector_new (size);
   GArray *ells_array = g_array_new (FALSE, FALSE, sizeof (gint));
-  const gint block   = 30;
+  const gint block   = sqrt (size);
   guint i;
 
   zmin = zmin ? zmin != 0.0 : 1.0e-6;

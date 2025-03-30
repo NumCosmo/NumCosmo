@@ -826,6 +826,7 @@ int hyperspherical_WKB(int K,int l,double beta,double y, double *Phi){
   double S, Q, C, argu, Ai;
   int airy_sign = 1, phisign = 1, dphisign = 1, intbeta;
   double ldbl = l;
+  S = 0.0;
 
   if (K==1){
     //Limit range to [0; pi/2]:
