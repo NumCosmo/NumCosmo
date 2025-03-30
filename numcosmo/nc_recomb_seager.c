@@ -136,6 +136,7 @@ struct _NcRecombSeagerPrivate
   gdouble Qb, Qb_t;
   gpointer cvode;
   gboolean init;
+  SUNContext sunctx;
   N_Vector y0;
   N_Vector y;
   N_Vector abstol;
@@ -158,9 +159,9 @@ enum
   PROP_SIZE,
 };
 
-static gint H_ion_full_f (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data);
+static gint H_ion_full_f (sunrealtype lambda, N_Vector y, N_Vector ydot, gpointer f_data);
 
-static gint H_ion_full_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint H_ion_full_J (sunrealtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
 static gdouble _nc_recomb_seager_K_HI_2p_2Pmean (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble H);
 static gdouble _nc_recomb_seager_K_HI_2p_2Pmean_gcor (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble H);
@@ -184,7 +185,10 @@ nc_recomb_seager_init (NcRecombSeager *recomb_seager)
 {
   NcRecombSeagerPrivate * const self = recomb_seager->priv = nc_recomb_seager_get_instance_private (recomb_seager);
 
-  self->cvode = CVodeCreate (CV_BDF);
+  if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
+    g_error ("ERROR: SUNContext_Create failed\n");
+
+  self->cvode = CVodeCreate (CV_BDF, self->sunctx);
   NCM_CVODE_CHECK ((void *) self->cvode, "CVodeCreate", 0, );
 
   self->init    = FALSE;
@@ -216,12 +220,12 @@ nc_recomb_seager_init (NcRecombSeager *recomb_seager)
 
   self->n = 3;
 
-  self->y0     = N_VNew_Serial (self->n);
-  self->y      = N_VNew_Serial (self->n);
-  self->abstol = N_VNew_Serial (self->n);
+  self->y0     = N_VNew_Serial (self->n, self->sunctx);
+  self->y      = N_VNew_Serial (self->n, self->sunctx);
+  self->abstol = N_VNew_Serial (self->n, self->sunctx);
 
-  self->A  = SUNDenseMatrix (self->n, self->n);
-  self->LS = SUNDenseLinearSolver (self->y, self->A);
+  self->A  = SUNDenseMatrix (self->n, self->n, self->sunctx);
+  self->LS = SUNLinSol_Dense (self->y, self->A, self->sunctx);
 
   NCM_CVODE_CHECK ((gpointer) self->A, "SUNDenseMatrix", 0, );
   NCM_CVODE_CHECK ((gpointer) self->LS, "SUNDenseLinearSolver", 0, );
@@ -317,6 +321,8 @@ _nc_recomb_seager_finalize (GObject *object)
   }
 
   CVodeFree (&self->cvode);
+
+  SUNContext_Free (&self->sunctx);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_recomb_seager_parent_class)->finalize (object);
@@ -595,7 +601,7 @@ typedef struct _NcRecombSeagerParams
 } NcRecombSeagerParams;
 
 static gint
-H_ion_full_f (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data)
+H_ion_full_f (sunrealtype lambda, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcRecombSeagerParams *rsp = (NcRecombSeagerParams *) f_data;
   const gdouble x           = exp (-lambda);
@@ -616,7 +622,7 @@ H_ion_full_f (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-H_ion_full_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+H_ion_full_J (sunrealtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcRecombSeagerParams *rsp = (NcRecombSeagerParams *) jac_data;
   const gdouble x           = exp (-lambda);
