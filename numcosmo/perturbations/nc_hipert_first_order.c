@@ -86,6 +86,7 @@ struct _NcHIPertFirstOrderPrivate
   gpointer arkode;
   gboolean arkode_init;
   guint cur_sys_size;
+  SUNContext sunctx;
   N_Vector y;
   N_Vector abstol_v;
   SUNMatrix A;
@@ -127,6 +128,9 @@ static void
 nc_hipert_first_order_init (NcHIPertFirstOrder *fo)
 {
   NcHIPertFirstOrderPrivate * const self = fo->priv = nc_hipert_first_order_get_instance_private (fo);
+
+  if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
+    g_error ("ERROR: SUNContext_Create failed\n");
 
   self->grav         = NULL;
   self->comps        = g_ptr_array_new ();
@@ -327,7 +331,7 @@ _nc_hipert_first_order_finalize (GObject *object)
 
   if (self->arkode != NULL)
   {
-    ARKStepFree (&self->arkode);
+    ARKodeFree (&self->arkode);
     self->arkode      = NULL;
     self->arkode_init = FALSE;
   }
@@ -344,6 +348,8 @@ _nc_hipert_first_order_finalize (GObject *object)
 
   g_clear_pointer (&self->y, N_VDestroy);
   g_clear_pointer (&self->abstol_v, N_VDestroy);
+
+  SUNContext_Free (&self->sunctx);
 
   self->cur_sys_size = 0;
 
@@ -1199,7 +1205,7 @@ typedef struct _NcHIPertFirstOrderWS
 } NcHIPertFirstOrderWS;
 
 static gint
-_nc_hipert_first_order_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
+_nc_hipert_first_order_f (sunrealtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertFirstOrderWS *ws               = (NcHIPertFirstOrderWS *) f_data;
   NcHIPertFirstOrder *fo                 = ws->fo;
@@ -1277,7 +1283,7 @@ _nc_hipert_first_order_alloc_integrator (NcHIPertFirstOrder *fo)
 
     if (self->arkode != NULL)
     {
-      ARKStepFree (&self->arkode);
+      ARKodeFree (&self->arkode);
       self->arkode      = NULL;
       self->arkode_init = FALSE;
     }
@@ -1287,8 +1293,8 @@ _nc_hipert_first_order_alloc_integrator (NcHIPertFirstOrder *fo)
 
     self->cur_sys_size = self->vars->len;
 
-    self->y        = N_VNew_Serial (self->cur_sys_size);
-    self->abstol_v = N_VNew_Serial (self->cur_sys_size);
+    self->y        = N_VNew_Serial (self->cur_sys_size, self->sunctx);
+    self->abstol_v = N_VNew_Serial (self->cur_sys_size, self->sunctx);
 
     if (self->A != NULL)
       SUNMatDestroy (self->A);
@@ -1299,10 +1305,10 @@ _nc_hipert_first_order_alloc_integrator (NcHIPertFirstOrder *fo)
       NCM_CVODE_CHECK (&flag, "SUNLinSolFree", 1, );
     }
 
-    self->A = SUNBandMatrix (self->cur_sys_size, self->mupper, self->mlower);
+    self->A = SUNBandMatrix (self->cur_sys_size, self->mupper, self->mlower, self->sunctx);
     NCM_CVODE_CHECK ((gpointer) self->A, "SUNBandMatrix", 0, );
 
-    self->LS = SUNBandLinearSolver (self->y, self->A);
+    self->LS = SUNLinSol_Band (self->y, self->A, self->sunctx);
     NCM_CVODE_CHECK ((gpointer) self->LS, "SUNDenseLinearSolver", 0, );
   }
 }
@@ -1321,7 +1327,7 @@ _nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble
     {
       if (self->cvode_init)
       {
-        self->cvode = CVodeCreate (CV_BDF); /*CVodeCreate (CV_BDF, CV_NEWTON);*/
+        self->cvode = CVodeCreate (CV_BDF, self->sunctx); /*CVodeCreate (CV_BDF, CV_NEWTON);*/
 
         flag = CVodeInit (self->cvode, &_nc_hipert_first_order_f, t0, self->y);
         NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
@@ -1359,42 +1365,42 @@ _nc_hipert_first_order_prepare_integrator (NcHIPertFirstOrder *fo, const gdouble
 #define INTTYPE _nc_hipert_first_order_f, NULL
       if (!self->arkode_init)
       {
-        self->arkode = ARKStepCreate (INTTYPE, t0, self->y);
+        self->arkode = ARKStepCreate (INTTYPE, t0, self->y, self->sunctx);
         NCM_CVODE_CHECK (&self->arkode, "ARKStepCreate", 0, );
 
-        flag = ARKStepSVtolerances (self->arkode, self->reltol, self->abstol_v);
-        NCM_CVODE_CHECK (&flag, "ARKStepSVtolerances", 1, );
+        flag = ARKodeSVtolerances (self->arkode, self->reltol, self->abstol_v);
+        NCM_CVODE_CHECK (&flag, "ARKodeSVtolerances", 1, );
 
-        flag = ARKStepSetMaxNumSteps (self->arkode, 0);
-        NCM_CVODE_CHECK (&flag, "ARKStepSetMaxNumSteps", 1, );
+        flag = ARKodeSetMaxNumSteps (self->arkode, 0);
+        NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
-        flag = ARKStepSetLinearSolver (self->arkode, self->LS, self->A);
-        NCM_CVODE_CHECK (&flag, "ARKStepSetLinearSolver", 1, );
+        flag = ARKodeSetLinearSolver (self->arkode, self->LS, self->A);
+        NCM_CVODE_CHECK (&flag, "ARKodeSetLinearSolver", 1, );
 
-        flag = ARKStepSetLinear (self->arkode, 1);
-        NCM_CVODE_CHECK (&flag, "ARKStepSetLinear", 1, );
+        flag = ARKodeSetLinear (self->arkode, 1);
+        NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
 
-        /*flag = ARKStepSetJacFn (self->cvode, NULL / *J* /); */
-        /*NCM_CVODE_CHECK (&flag, "ARKStepSetJacFn", 1, ); */
+        /*flag = ARKodeSetJacFn (self->cvode, NULL / *J* /); */
+        /*NCM_CVODE_CHECK (&flag, "ARKodeSetJacFn", 1, ); */
 
-        /*flag = ARKStepSetOrder (self->arkode, 7); */
-        /*NCM_CVODE_CHECK (&flag, "ARKStepSetOrder", 1, ); */
+        /*flag = ARKodeSetOrder (self->arkode, 7); */
+        /*NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, ); */
 
-        /*flag = ARKStepSetERKTableNum (self->arkode, FEHLBERG_13_7_8); */
-        /*NCM_CVODE_CHECK (&flag, "ARKStepSetERKTableNum", 1, ); */
+        /*flag = ARKodeSetERKTableNum (self->arkode, FEHLBERG_13_7_8); */
+        /*NCM_CVODE_CHECK (&flag, "ARKodeSetERKTableNum", 1, ); */
 
-        flag = ARKStepSetInitStep (self->arkode, fabs (t0) * self->reltol);
-        NCM_CVODE_CHECK (&flag, "ARKStepSetInitStep", 1, );
+        flag = ARKodeSetInitStep (self->arkode, fabs (t0) * self->reltol);
+        NCM_CVODE_CHECK (&flag, "ARKodeSetInitStep", 1, );
 
         self->arkode_init = TRUE;
       }
       else
       {
         flag = ARKStepReInit (self->arkode, INTTYPE, t0, self->y);
-        NCM_CVODE_CHECK (&flag, "ARKStepInit", 1, );
+        NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
 
-        flag = ARKStepSetInitStep (self->arkode, fabs (t0) * self->reltol);
-        NCM_CVODE_CHECK (&flag, "ARKStepSetInitStep", 1, );
+        flag = ARKodeSetInitStep (self->arkode, fabs (t0) * self->reltol);
+        NCM_CVODE_CHECK (&flag, "ARKodeSetInitStep", 1, );
       }
 
       break;
@@ -1461,19 +1467,19 @@ nc_hipert_first_order_prepare (NcHIPertFirstOrder *fo, NcHICosmo *cosmo)
     }
     case NC_HIPERT_FIRST_ORDER_INTEG_ARKODE:
     {
-      flag = ARKStepSetStopTime (self->arkode, tf);
+      flag = ARKodeSetStopTime (self->arkode, tf);
       NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
 
-      flag = ARKStepSetUserData (self->arkode, &userdata);
-      NCM_CVODE_CHECK (&flag, "ARKStepSetUserData", 1, );
+      flag = ARKodeSetUserData (self->arkode, &userdata);
+      NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
 
       while (TRUE)
       {
         gdouble t;
         guint i;
 
-        flag = ARKStepEvolve (self->arkode, tf, self->y, &t, ARK_ONE_STEP);
-        NCM_CVODE_CHECK (&flag, "ARKStepEvolve", 1, );
+        flag = ARKodeEvolve (self->arkode, tf, self->y, &t, ARK_ONE_STEP);
+        NCM_CVODE_CHECK (&flag, "ARKodeEvolve", 1, );
 
         printf ("% 22.15g ", t);
 
