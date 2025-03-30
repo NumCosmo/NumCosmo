@@ -120,6 +120,7 @@ typedef struct _NcmCSQ1DPrivate
   gboolean cvode_Um_init;
   gboolean cvode_Prop_init;
   gboolean arkode_init;
+  SUNContext sunctx;
   N_Vector y;
   N_Vector y_Up;
   N_Vector y_Um;
@@ -191,34 +192,37 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
   self->arkode          = NULL;
   self->arkode_init     = FALSE;
 
-  self->y      = N_VNew_Serial (2);
-  self->y_Up   = N_VNew_Serial (2);
-  self->y_Um   = N_VNew_Serial (2);
-  self->y_Prop = N_VNew_Serial (4);
+  if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
+    g_error ("ERROR: SUNContext_Create failed\n");
 
-  self->A = SUNDenseMatrix (2, 2);
+  self->y      = N_VNew_Serial (2, self->sunctx);
+  self->y_Up   = N_VNew_Serial (2, self->sunctx);
+  self->y_Um   = N_VNew_Serial (2, self->sunctx);
+  self->y_Prop = N_VNew_Serial (4, self->sunctx);
+
+  self->A = SUNDenseMatrix (2, 2, self->sunctx);
   NCM_CVODE_CHECK ((gpointer) self->A, "SUNDenseMatrix", 0, );
 
-  self->A_Up = SUNDenseMatrix (2, 2);
+  self->A_Up = SUNDenseMatrix (2, 2, self->sunctx);
   NCM_CVODE_CHECK ((gpointer) self->A_Up, "SUNDenseMatrix", 0, );
 
-  self->A_Um = SUNDenseMatrix (2, 2);
+  self->A_Um = SUNDenseMatrix (2, 2, self->sunctx);
   NCM_CVODE_CHECK ((gpointer) self->A_Um, "SUNDenseMatrix", 0, );
 
-  self->A_Prop = SUNDenseMatrix (4, 4);
+  self->A_Prop = SUNDenseMatrix (4, 4, self->sunctx);
   NCM_CVODE_CHECK ((gpointer) self->A_Prop, "SUNDenseMatrix", 0, );
 
-  self->LS = SUNDenseLinearSolver (self->y, self->A);
-  NCM_CVODE_CHECK ((gpointer) self->LS, "SUNDenseLinearSolver", 0, );
+  self->LS = SUNLinSol_Dense (self->y, self->A, self->sunctx);
+  NCM_CVODE_CHECK ((gpointer) self->LS, "SUNLinSol_Dense", 0, );
 
-  self->LS_Up = SUNDenseLinearSolver (self->y_Up, self->A_Up);
-  NCM_CVODE_CHECK ((gpointer) self->LS_Up, "SUNDenseLinearSolver", 0, );
+  self->LS_Up = SUNLinSol_Dense (self->y_Up, self->A_Up, self->sunctx);
+  NCM_CVODE_CHECK ((gpointer) self->LS_Up, "SUNLinSol_Dense", 0, );
 
-  self->LS_Um = SUNDenseLinearSolver (self->y_Um, self->A_Um);
-  NCM_CVODE_CHECK ((gpointer) self->LS_Um, "SUNDenseLinearSolver", 0, );
+  self->LS_Um = SUNLinSol_Dense (self->y_Um, self->A_Um, self->sunctx);
+  NCM_CVODE_CHECK ((gpointer) self->LS_Um, "SUNLinSol_Dense", 0, );
 
-  self->LS_Prop = SUNDenseLinearSolver (self->y_Prop, self->A_Prop);
-  NCM_CVODE_CHECK ((gpointer) self->LS_Um, "SUNDenseLinearSolver", 0, );
+  self->LS_Prop = SUNLinSol_Dense (self->y_Prop, self->A_Prop, self->sunctx);
+  NCM_CVODE_CHECK ((gpointer) self->LS_Um, "SUNLinSol_Dense", 0, );
 
   self->alpha_s  = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   self->dgamma_s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
@@ -302,7 +306,7 @@ _ncm_csq1d_finalize (GObject *object)
 
   if (self->arkode != NULL)
   {
-    ARKStepFree (&self->arkode);
+    ARKodeFree (&self->arkode);
     self->arkode      = NULL;
     self->arkode_init = FALSE;
   }
@@ -351,6 +355,8 @@ _ncm_csq1d_finalize (GObject *object)
 
     NCM_CVODE_CHECK (&flag, "SUNLinSolFree", 1, );
   }
+
+  SUNContext_Free (&self->sunctx);
 
   ncm_csq1d_state_free (self->cur_state);
 
@@ -1466,14 +1472,14 @@ ncm_csq1d_get_vacuum_max_time (NcmCSQ1D *csq1d)
   return self->vacuum_max_time;
 }
 
-static gint _ncm_csq1d_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
-static gint _ncm_csq1d_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint _ncm_csq1d_f (sunrealtype t, N_Vector y, N_Vector ydot, gpointer f_data);
+static gint _ncm_csq1d_J (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
-static gint _ncm_csq1d_f_Up (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
-static gint _ncm_csq1d_J_Up (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint _ncm_csq1d_f_Up (sunrealtype t, N_Vector y, N_Vector ydot, gpointer f_data);
+static gint _ncm_csq1d_J_Up (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
-static gint _ncm_csq1d_f_Um (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
-static gint _ncm_csq1d_J_Um (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint _ncm_csq1d_f_Um (sunrealtype t, N_Vector y, N_Vector ydot, gpointer f_data);
+static gint _ncm_csq1d_J_Um (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
 static void
 _ncm_csq1d_prepare_integrator (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws)
@@ -1483,7 +1489,7 @@ _ncm_csq1d_prepare_integrator (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws)
 
   if (!self->cvode_init)
   {
-    self->cvode = CVodeCreate (CV_BDF);
+    self->cvode = CVodeCreate (CV_BDF, self->sunctx);
 
     flag = CVodeInit (self->cvode, &_ncm_csq1d_f, self->t, self->y);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
@@ -1529,7 +1535,7 @@ _ncm_csq1d_prepare_integrator_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws)
 
   if (!self->cvode_Up_init)
   {
-    self->cvode_Up = CVodeCreate (CV_BDF);
+    self->cvode_Up = CVodeCreate (CV_BDF, self->sunctx);
 
     flag = CVodeInit (self->cvode_Up, &_ncm_csq1d_f_Up, self->t, self->y_Up);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
@@ -1583,7 +1589,7 @@ _ncm_csq1d_prepare_integrator_Um (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws)
 
   if (!self->cvode_Um_init)
   {
-    self->cvode_Um = CVodeCreate (CV_BDF);
+    self->cvode_Um = CVodeCreate (CV_BDF, self->sunctx);
 
     flag = CVodeInit (self->cvode_Um, &_ncm_csq1d_f_Um, self->t, self->y_Um);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
@@ -1622,7 +1628,7 @@ _ncm_csq1d_prepare_integrator_Um (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws)
 }
 
 static gint
-_ncm_csq1d_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
+_ncm_csq1d_f (sunrealtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcmCSQ1DWS *ws = (NcmCSQ1DWS *) f_data;
 
@@ -1641,7 +1647,7 @@ _ncm_csq1d_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-_ncm_csq1d_f_Up (realtype t, N_Vector y_Up, N_Vector ydot, gpointer f_data)
+_ncm_csq1d_f_Up (sunrealtype t, N_Vector y_Up, N_Vector ydot, gpointer f_data)
 {
   NcmCSQ1DWS *ws          = (NcmCSQ1DWS *) f_data;
   const gdouble chi       = NV_Ith_S (y_Up, 0);
@@ -1658,7 +1664,7 @@ _ncm_csq1d_f_Up (realtype t, N_Vector y_Up, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-_ncm_csq1d_f_Um (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
+_ncm_csq1d_f_Um (sunrealtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcmCSQ1DWS *ws          = (NcmCSQ1DWS *) f_data;
   const gdouble chi       = NV_Ith_S (y, 0);
@@ -1675,7 +1681,7 @@ _ncm_csq1d_f_Um (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-_ncm_csq1d_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_ncm_csq1d_J (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcmCSQ1DWS *ws       = (NcmCSQ1DWS *) jac_data;
   const gdouble alpha  = NV_Ith_S (y, 0);
@@ -1696,7 +1702,7 @@ _ncm_csq1d_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_dat
 }
 
 static gint
-_ncm_csq1d_J_Up (realtype t, N_Vector y_Up, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_ncm_csq1d_J_Up (sunrealtype t, N_Vector y_Up, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcmCSQ1DWS *ws          = (NcmCSQ1DWS *) jac_data;
   const gdouble chi       = NV_Ith_S (y_Up, 0);
@@ -1718,7 +1724,7 @@ _ncm_csq1d_J_Up (realtype t, N_Vector y_Up, N_Vector fy, SUNMatrix J, gpointer j
 }
 
 static gint
-_ncm_csq1d_J_Um (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_ncm_csq1d_J_Um (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcmCSQ1DWS *ws          = (NcmCSQ1DWS *) jac_data;
   const gdouble chi       = NV_Ith_S (y, 0);
@@ -3370,9 +3376,9 @@ ncm_csq1d_change_frame (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state, 
   return state;
 }
 
-static gint _ncm_csq1d_f_Prop (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
-static gint _ncm_csq1d_J_Prop (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-static gint _ncm_csq1d_root_Prop (realtype lambda, N_Vector y, realtype *gout, gpointer user_data);
+static gint _ncm_csq1d_f_Prop (sunrealtype t, N_Vector y, N_Vector ydot, gpointer f_data);
+static gint _ncm_csq1d_J_Prop (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint _ncm_csq1d_root_Prop (sunrealtype lambda, N_Vector y, sunrealtype *gout, gpointer user_data);
 
 static void
 _ncm_csq1d_prepare_integrator_Prop (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, const gdouble ti, const gdouble tf)
@@ -3382,7 +3388,7 @@ _ncm_csq1d_prepare_integrator_Prop (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, const gdoub
 
   if (!self->cvode_Prop_init)
   {
-    self->cvode_Prop = CVodeCreate (CV_BDF);
+    self->cvode_Prop = CVodeCreate (CV_BDF, self->sunctx);
 
     flag = CVodeInit (self->cvode_Prop, &_ncm_csq1d_f_Prop, ti, self->y_Prop);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
@@ -3424,7 +3430,7 @@ _ncm_csq1d_prepare_integrator_Prop (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws, const gdoub
 }
 
 static gint
-_ncm_csq1d_root_Prop (realtype t, N_Vector y, realtype *gout, gpointer f_data)
+_ncm_csq1d_root_Prop (sunrealtype t, N_Vector y, sunrealtype *gout, gpointer f_data)
 {
   NcmCSQ1DWS *ws = (NcmCSQ1DWS *) f_data;
   /*NcmCSQ1DPrivate * const self = ws->ncm_csq1d_get_instance_private (csq1d);*/
@@ -3439,7 +3445,7 @@ _ncm_csq1d_root_Prop (realtype t, N_Vector y, realtype *gout, gpointer f_data)
 }
 
 static gint
-_ncm_csq1d_f_Prop (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
+_ncm_csq1d_f_Prop (sunrealtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcmCSQ1DWS *ws        = (NcmCSQ1DWS *) f_data;
   const gdouble a       = NV_Ith_S (y, 0);
@@ -3473,7 +3479,7 @@ _ncm_csq1d_f_Prop (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-_ncm_csq1d_J_Prop (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_ncm_csq1d_J_Prop (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcmCSQ1DWS *ws        = (NcmCSQ1DWS *) jac_data;
   const gdouble m       = ncm_csq1d_eval_m (ws->csq1d, ws->model, t);
