@@ -91,6 +91,7 @@ typedef struct _NcmFftlogSBesselJLJMPrivate
   gdouble q;
   gdouble lnw;
   gdouble w;
+  SUNContext sunctx;
   N_Vector y;
   SUNMatrix J;
   SUNLinearSolver LS;
@@ -121,15 +122,19 @@ ncm_fftlog_sbessel_jljm_init (NcmFftlogSBesselJLJM *fftlog_jljm)
 {
   NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
 
-  self->ell        = 0;
-  self->dell       = 0;
-  self->lnw        = G_MAXDOUBLE;
-  self->w          = 0.0;
-  self->y          = N_VNew_Serial (4);
-  self->J          = SUNDenseMatrix (4, 4);
-  self->LS         = SUNLinSol_Dense (self->y, self->J);
-  self->NLS        = SUNNonlinSol_Newton (self->y);
-  self->cvode      = CVodeCreate (CV_BDF);
+  self->ell  = 0;
+  self->dell = 0;
+  self->lnw  = G_MAXDOUBLE;
+  self->w    = 0.0;
+
+  if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
+    g_error ("ERROR: SUNContext_Create failed\n");
+
+  self->y          = N_VNew_Serial (4, self->sunctx);
+  self->J          = SUNDenseMatrix (4, 4, self->sunctx);
+  self->LS         = SUNLinSol_Dense (self->y, self->J, self->sunctx);
+  self->NLS        = SUNNonlinSol_Newton (self->y, self->sunctx);
+  self->cvode      = CVodeCreate (CV_BDF, self->sunctx);
   self->cvode_init = FALSE;
 }
 
@@ -263,11 +268,11 @@ ncm_fftlog_sbessel_jljm_class_init (NcmFftlogSBesselJLJMClass *klass)
 
 #if defined (HAVE_FFTW3) && defined (HAVE_ACB_H)
 
-static gint _ncm_fftlog_sbessel_jljm_cpu_integrate_2f1_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data);
+static gint _ncm_fftlog_sbessel_jljm_cpu_integrate_2f1_f (sunrealtype x, N_Vector y, N_Vector ydot, gpointer f_data);
 static gint _ncm_fftlog_sbessel_jljm_cpu_integrate_2f1_jac (gdouble x, N_Vector y, N_Vector fy, SUNMatrix Jac, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
 static gint
-_ncm_fftlog_sbessel_jljm_cpu_integrate_2f1_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
+_ncm_fftlog_sbessel_jljm_cpu_integrate_2f1_f (sunrealtype x, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcmFftlogSBesselJLJMInt *data = (NcmFftlogSBesselJLJMInt *) f_data;
   const gdouble w1              = NV_Ith_S (y, 0);

@@ -709,7 +709,7 @@ install_headers(
 sundials_inc = include_directories('sundials/include')
 libcuba_inc = include_directories('libcuba')
 
-libnumcosmo_dep = [
+libnumcosmo_dep_list = [
     mpi_c_dep,
     cfitsio_dep,
     libfyaml_dep,
@@ -760,13 +760,13 @@ libnumcosmo = library(
     # symbols are available at runtime.
     link_whole: [libplc],
     link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass],
-    dependencies: libnumcosmo_dep,
+    dependencies: libnumcosmo_dep_list,
     c_args: numcosmo_c_args,
 )
 
 libnumcosmo_dep = declare_dependency(
     link_with: libnumcosmo,
-    dependencies: libnumcosmo_dep,
+    dependencies: libnumcosmo_dep_list,
     sources: [
         ncm_enum_types[1],
         nc_enum_types[1],
@@ -814,7 +814,7 @@ if enable_gir
         dependencies: libnumcosmo_dep,
         includes: 'GObject-2.0',
         install: true,
-        extra_args: ['-DNUMCOSMO_GIR_SCAN', '-U__OPTIMIZE__'],
+        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
     )
 
     nc_introspection_sources = [
@@ -839,7 +839,7 @@ if enable_gir
         dependencies: libnumcosmo_dep,
         includes: ['GObject-2.0', numcosmo_math_gir[0]],
         install: true,
-        extra_args: ['-DNUMCOSMO_GIR_SCAN', '-U__OPTIMIZE__'],
+        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
     )
     if have_vala
         vapi_deps = [
