@@ -72,6 +72,7 @@ struct _NcXcorLimberKernelWeakLensing
 
   /* Kernel integration */
   gpointer cvode;
+  SUNContext sunctx;
   N_Vector yv;
   SUNMatrix A;
   SUNLinearSolver LS;
@@ -126,10 +127,13 @@ G_DEFINE_TYPE (NcXcorLimberKernelWeakLensing, nc_xcor_limber_kernel_weak_lensing
 static void
 nc_xcor_limber_kernel_weak_lensing_init (NcXcorLimberKernelWeakLensing *xclkg)
 {
+  if (SUNContext_Create (SUN_COMM_NULL, &xclkg->sunctx))
+    g_error ("ERROR: SUNContext_Create failed\n");
+
   xclkg->cvode      = NULL;
-  xclkg->yv         = N_VNew_Serial (2);
-  xclkg->A          = SUNDenseMatrix (2, 2);
-  xclkg->LS         = SUNDenseLinearSolver (xclkg->yv, xclkg->A);
+  xclkg->yv         = N_VNew_Serial (2, xclkg->sunctx);
+  xclkg->A          = SUNDenseMatrix (2, 2, xclkg->sunctx);
+  xclkg->LS         = SUNLinSol_Dense (xclkg->yv, xclkg->A, xclkg->sunctx);
   xclkg->reltol     = 0.0;
   xclkg->abstol     = 0.0;
   xclkg->ctrl_cosmo = ncm_model_ctrl_new (NULL);
@@ -291,6 +295,8 @@ _nc_xcor_limber_kernel_weak_lensing_finalize (GObject *object)
     xclkg->LS = NULL;
   }
 
+  SUNContext_Free (&xclkg->sunctx);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_limber_kernel_weak_lensing_parent_class)->finalize (object);
 }
@@ -417,7 +423,7 @@ _kernel_wl_W_U_eval_dndz (NcXcorLimberKernelWeakLensing *xclkg, gdouble z)
 }
 
 static gint
-_kernel_wl_W_U_f (realtype mz, N_Vector y, N_Vector ydot, gpointer f_data)
+_kernel_wl_W_U_f (sunrealtype mz, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   src_int_params *ts = (src_int_params *) f_data;
   NcHICosmo *cosmo   = ts->cosmo;
@@ -434,7 +440,7 @@ _kernel_wl_W_U_f (realtype mz, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-_kernel_wl_W_U_J (realtype mz, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_kernel_wl_W_U_J (sunrealtype mz, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   src_int_params *ts = (src_int_params *) jac_data;
   NcHICosmo *cosmo   = ts->cosmo;
@@ -514,7 +520,7 @@ _nc_xcor_limber_kernel_weak_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo
 
     if (xclkg->cvode == NULL)
     {
-      xclkg->cvode = CVodeCreate (CV_BDF);
+      xclkg->cvode = CVodeCreate (CV_BDF, xclkg->sunctx);
 
       flag = CVodeInit (xclkg->cvode, &_kernel_wl_W_U_f, mz_ini, xclkg->yv);
       NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
