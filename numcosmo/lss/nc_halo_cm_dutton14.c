@@ -48,14 +48,15 @@
 
 typedef struct _NcHaloCMDutton14Private
 {
-  gint placeholder;
+  gdouble Delta;
+  NcHaloMassSummaryMassDef mdef;
+
+  gdouble (*concentration) (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z);
 } NcHaloCMDutton14Private;
 
 struct _NcHaloCMDutton14
 {
   NcHaloMassSummary parent_instance;
-  NcHaloMassSummaryMassDef mdef;
-  gdouble z;
 };
 
 enum
@@ -72,6 +73,12 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcHaloCMDutton14, nc_halo_cm_dutton14, NC_TYPE_HALO_
 static void
 nc_halo_cm_dutton14_init (NcHaloCMDutton14 *hcmdm)
 {
+  NcHaloCMDutton14Private * const self = nc_halo_cm_dutton14_get_instance_private (hcmdm);
+
+  self->Delta = 0.0;
+  self->mdef = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
+
+  self->concentration = NULL;
 }
 
 static void
@@ -89,6 +96,8 @@ _nc_halo_cm_dutton14_finalize (GObject *object)
 
 static gdouble _nc_halo_cm_dutton14_mass (NcHaloMassSummary *hms);
 static gdouble _nc_halo_cm_dutton14_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z);
+static void _nc_halo_cm_dutton14_set_Delta (NcHaloMassSummary *hms, gdouble Delta);
+static void _nc_halo_cm_dutton14_set_mdef (NcHaloMassSummary *hms, NcHaloMassSummaryMassDef mdef);
 
 static void
 nc_halo_cm_dutton14_class_init (NcHaloCMDutton14Class *klass)
@@ -130,6 +139,8 @@ nc_halo_cm_dutton14_class_init (NcHaloCMDutton14Class *klass)
 
   hms_class->mass          = &_nc_halo_cm_dutton14_mass;
   hms_class->concentration = &_nc_halo_cm_dutton14_concentration;
+  hms_class->set_Delta     = &_nc_halo_cm_dutton14_set_Delta;
+  hms_class->set_mdef      = &_nc_halo_cm_dutton14_set_mdef;
 }
 
 static gdouble
@@ -140,44 +151,78 @@ _nc_halo_cm_dutton14_mass (NcHaloMassSummary *hms)
   return exp10 (LOG10M_DELTA);
 }
 
-static gdouble
-_nc_halo_cm_dutton14_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
+static gdouble _nc_halo_cm_dutton14_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
   NcHaloCMDutton14 *hcmdm = NC_HALO_CM_DUTTON14 (hms);
-  gdouble mass            = _nc_halo_cm_dutton14_mass (hms);
-  gdouble h               = nc_hicosmo_h (cosmo);
-  gdouble Delta           = nc_halo_mass_summary_Delta (hms, cosmo, z);
+  NcHaloCMDutton14Private * const self = nc_halo_cm_dutton14_get_instance_private (hcmdm);
+
+  return self->concentration (hms, cosmo, z);
+}
+
+static void _nc_halo_cm_dutton14_set_Delta (NcHaloMassSummary *hms, gdouble Delta)
+{
+  NcHaloCMDutton14 *hcmdm = NC_HALO_CM_DUTTON14 (hms);
+  NcHaloCMDutton14Private * const self = nc_halo_cm_dutton14_get_instance_private (hcmdm);
+
+  if (self->mdef < NC_HALO_MASS_SUMMARY_MASS_DEF_LEN)
+    if (((self->mdef != NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL) && (Delta != 200.0)) || (self->mdef == NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN))
+      g_error ("Dutton14 concentration: mdef must be NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL or Delta must be 200.0 critical");
+
+  self->Delta = Delta;
+
+}
+
+static gdouble
+_nc_halo_cm_dutton14_concentration_critical (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
+{
+  gdouble mass = _nc_halo_cm_dutton14_mass (hms);
+  gdouble h    = nc_hicosmo_h (cosmo);
   gdouble a, b;
 
-  hcmdm->mdef             = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
+  a = 0.520 + (0.905 - 0.520) * exp(-0.617 * pow (z, 1.21));
+  b = -0.101 + 0.026 * z;
 
-  switch (hcmdm->mdef)
+  return pow (10, a + b * log10 (mass / 1.0e12 * h));
+}
+
+static gdouble
+_nc_halo_cm_dutton14_concentration_virial (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
+{
+  gdouble mass = _nc_halo_cm_dutton14_mass (hms);
+  gdouble h    = nc_hicosmo_h (cosmo);
+  gdouble a, b;
+
+  a = 0.537 + (1.025 - 0.537) * exp(-0.718 * pow (z, 1.08));
+  b = -0.097 + 0.024 * z;
+
+  return pow (10, a + b * log10 (mass / 1.0e12 * h));
+}
+
+static void
+_nc_halo_cm_dutton14_set_mdef (NcHaloMassSummary *hms, NcHaloMassSummaryMassDef mdef)
+{
+  NcHaloCMDutton14 *hcmdm               = NC_HALO_CM_DUTTON14 (hms);
+  NcHaloCMDutton14Private * const self = nc_halo_cm_dutton14_get_instance_private (hcmdm);
+
+  if (self->Delta != 0.0)
+    if (((mdef != NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL) && (self->Delta != 200.0)) || (mdef == NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN))
+      g_error ("Dutton14 concentration: mdef must be NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL or Delta must be 200.0 critical");
+
+  self->mdef = mdef;
+
+  switch (mdef)
   {
     case NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL:
-
-      if (Delta == 200.0){
-        a = 0.520 + (0.905 - 0.520) * exp(-0.617 * pow (z, 1.21));
-        b = -0.101 + 0.026 * z;
-        return pow (10, a + b * log10 (mass / 1.0e12 * h));
-      }
-
-      else{
-        g_assert_not_reached();
-        return 0.0;    
-      } 
+      self->concentration = _nc_halo_cm_dutton14_concentration_critical;
+      break;
 
     case NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL:
+      self->concentration = _nc_halo_cm_dutton14_concentration_virial;
+      break;
 
-        a = 0.537 + (1.025 - 0.537) * exp(-0.718 * pow (z, 1.08));
-        b = -0.097 + 0.024 * z;
-        return pow (10, a + b * log10 (mass / 1.0e12 * h));
-
-    default:                   
-      g_assert_not_reached ();
-
-      return 0.0;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
   }
-
 }
 
 /**
