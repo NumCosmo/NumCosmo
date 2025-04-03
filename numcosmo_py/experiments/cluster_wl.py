@@ -56,6 +56,7 @@ class GalaxySDShapeDist(str, Enum):
     """Galaxy shape source distribution types."""
 
     GAUSS = "gauss"
+    GAUSS_HSC = "gauss_hsc"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -216,6 +217,11 @@ class GalaxyDistributionModel:
             case GalaxySDShapeDist.GAUSS:
                 self.galaxy_shape = Nc.GalaxySDShapeGauss.new()
                 self.galaxy_shape["e-rms"] = galaxy_shape_e_rms
+                self.sigma_int = galaxy_shape_e_rms
+                self.e_sigma = galaxy_shape_e_sigma
+            case GalaxySDShapeDist.GAUSS_HSC:
+                self.galaxy_shape = Nc.GalaxySDShapeGaussHSC.new()
+                self.sigma_int = galaxy_shape_e_rms
                 self.e_sigma = galaxy_shape_e_sigma
             case _:
                 raise ValueError(f"Invalid galaxy shape distribution: {shape_type}")
@@ -247,18 +253,43 @@ class GalaxyDistributionModel:
             list(s_data.required_columns()),
         )
 
-        for i in range(self.n_galaxies):
-            self.gen_z(mset, z_data, rng)
-            self.galaxy_position.gen(mset, p_data, rng)
-            self.galaxy_shape.gen(
-                mset,
-                s_data,
-                self.e_sigma,
-                self.e_sigma,
-                Nc.GalaxyWLObsCoord.EUCLIDEAN,
-                rng,
-            )
-            s_data.write_row(obs, i)
+        match self.galaxy_shape:
+            case Nc.GalaxySDShapeGauss():
+                for i in range(self.n_galaxies):
+                    e_sigma1 = self.e_sigma * np.random.uniform(0.8, 1.2)
+                    e_sigma2 = self.e_sigma * np.random.uniform(0.8, 1.2)
+                    self.gen_z(mset, z_data, rng)
+                    self.galaxy_position.gen(mset, p_data, rng)
+                    self.galaxy_shape.gen(
+                        mset,
+                        s_data,
+                        e_sigma1,
+                        e_sigma2,
+                        Nc.GalaxyWLObsCoord.EUCLIDEAN,
+                        rng,
+                    )
+                    s_data.write_row(obs, i)
+            case Nc.GalaxySDShapeGaussHSC():
+                for i in range(self.n_galaxies):
+                    sigma_int = self.sigma_int * np.random.uniform(0.8, 1.2)
+                    sigma_obs = self.e_sigma * np.random.uniform(0.8, 1.2)
+                    c1 = np.random.normal(0.0, 0.01)
+                    c2 = np.random.normal(0.0, 0.01)
+                    m = np.random.normal(0.0, 0.08)
+                    self.gen_z(mset, z_data, rng)
+                    self.galaxy_position.gen(mset, p_data, rng)
+                    self.galaxy_shape.gen(
+                        mset,
+                        s_data,
+                        sigma_int,
+                        sigma_obs,
+                        c1,
+                        c2,
+                        m,
+                        Nc.GalaxyWLObsCoord.EUCLIDEAN,
+                        rng,
+                    )
+                    s_data.write_row(obs, i)
 
         cluster_data.set_obs(obs)
 

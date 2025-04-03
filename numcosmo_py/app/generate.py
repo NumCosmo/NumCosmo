@@ -86,7 +86,12 @@ class GeneratePlanck:
     ] = False
 
     def __post_init__(self) -> None:
-        """Generate Planck 2018 TT baseline experiment."""
+        """Generate Planck 2018 TT baseline experiment.
+
+        Raises:
+            ValueError: Invalid experiment file suffix.
+            ValueError: Invalid data type.
+        """
         Ncm.cfg_init()
 
         if self.experiment.suffix != ".yaml":
@@ -258,7 +263,11 @@ class GenerateJpasForecast:
     ] = 2959.1
 
     def __post_init__(self):
-        """Generate JPAS 2024 forecast experiment."""
+        """Generate JPAS 2024 forecast experiment.
+
+        Raises:
+            ValueError: Invalid experiment file suffix.
+        """
         Ncm.cfg_init()
 
         if self.experiment.suffix != ".yaml":
@@ -413,7 +422,11 @@ class GenerateClusterWL:
     ] = False
 
     def __post_init__(self):
-        """Generate LSST cluster weak lensing experiment."""
+        """Generate LSST cluster weak lensing experiment.
+
+        Raises:
+            ValueError: Invalid experiment file suffix.
+        """
         Ncm.cfg_init()
 
         if self.experiment.suffix != ".yaml":
