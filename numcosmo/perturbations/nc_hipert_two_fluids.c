@@ -91,6 +91,8 @@
 #include <arkode/arkode.h>
 #include <arkode/arkode_ls.h>
 #include <arkode/arkode_arkstep.h>
+#include <arkode/arkode_erkstep.h>
+#include <arkode/arkode_mristep.h>
 #include <arkode/arkode_sprk.h>
 #include <arkode/arkode_sprkstep.h>
 
@@ -110,6 +112,8 @@ typedef struct _NcHIPertTwoFluidsPrivate
   NcmVector *state;
   gpointer arg;
   gpointer arkode;
+  gpointer inner_arkode;
+  MRIStepInnerStepper inner_stepper;
 } NcHIPertTwoFluidsPrivate;
 
 struct _NcHIPertTwoFluids
@@ -145,7 +149,8 @@ nc_hipert_two_fluids_init (NcHIPertTwoFluids *ptf)
   self->arg = g_new0 (NcHIPertTwoFluidsArg, 1);
 
 #ifdef HAVE_SUNDIALS_ARKODE
-  self->arkode = NULL;
+  self->arkode       = NULL;
+  self->inner_arkode = NULL;
 #endif /* HAVE_SUNDIALS_ARKODE */
 }
 
@@ -174,6 +179,18 @@ nc_hipert_two_fluids_finalize (GObject *object)
   {
     ARKodeFree (&self->arkode);
     self->arkode = NULL;
+  }
+
+  if (self->inner_arkode != NULL)
+  {
+    ARKodeFree (&self->inner_arkode);
+    self->inner_arkode = NULL;
+  }
+
+  if (self->inner_stepper != NULL)
+  {
+    MRIStepInnerStepper_Free (&self->inner_stepper);
+    self->inner_stepper = NULL;
   }
 
 #endif /* HAVE_SUNDIALS_ARKODE */
@@ -751,6 +768,75 @@ _nc_hipert_two_fluids_f_zetaS (sunrealtype alpha, N_Vector y, N_Vector ydot, gpo
   NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = -eom->mnu2_zeta * zeta_I;
   NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = -eom->mnu2_s    * S_I;
 
+  return 0;
+}
+
+static gint
+_nc_hipert_two_fluids_f_fast (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
+{
+  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
+  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
+  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
+
+  const gdouble zeta_R  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R);
+  const gdouble S_R     = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_R);
+  const gdouble Pzeta_R = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R);
+  const gdouble PS_R    = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R);
+
+  const gdouble zeta_I  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I);
+  const gdouble S_I     = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_I);
+  const gdouble Pzeta_I = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I);
+  const gdouble PS_I    = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I);
+
+  /* printf ("fast: alpha = %g, zeta_R = %g, zeta_I = %g\n", alpha, zeta_R, zeta_I); */
+
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = eom->y * PS_R;
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = PS_R / eom->m_s;
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = 0.0;
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = -eom->mnu2_s * S_R;
+
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = eom->y * PS_I;
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = PS_I / eom->m_s;
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = 0.0;
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = -eom->mnu2_s * S_I;
+
+  return 0;
+}
+
+static gint
+_nc_hipert_two_fluids_f_slow (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
+{
+  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
+  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
+  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
+
+  const gdouble zeta_R  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R);
+  const gdouble S_R     = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_R);
+  const gdouble Pzeta_R = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R);
+  const gdouble PS_R    = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R);
+
+  const gdouble zeta_I  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I);
+  const gdouble S_I     = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_I);
+  const gdouble Pzeta_I = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I);
+  const gdouble PS_I    = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I);
+
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = Pzeta_R / eom->m_zeta;
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = eom->y * Pzeta_R;
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = -eom->mnu2_zeta * zeta_R;
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = 0.0;
+
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = Pzeta_I / eom->m_zeta;
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = eom->y * Pzeta_I;
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = -eom->mnu2_zeta * zeta_I;
+  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = 0.0;
+
+  /*
+   *  printf ("slow: % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
+   *       zeta_R, S_R, Pzeta_R, PS_R, zeta_I, S_I, Pzeta_I, PS_I);
+   *  printf ("    : % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
+   *       NV_Ith_S (ydot, 0), NV_Ith_S (ydot, 1), NV_Ith_S (ydot, 2), NV_Ith_S (ydot, 3),
+   *       NV_Ith_S (ydot, 4), NV_Ith_S (ydot, 5), NV_Ith_S (ydot, 6), NV_Ith_S (ydot, 7));
+   */
   return 0;
 }
 
@@ -1390,7 +1476,37 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
 #ifdef HAVE_SUNDIALS_ARKODE
     /* self->arkode = ARKStepCreate (fE, fI, alpha, pself->y, pself->sunctx); */
     /* NCM_CVODE_CHECK (self->arkode, "ARKodeInit", 0, ); */
-    self->arkode = SPRKStepCreate (_nc_hipert_two_fluids_f_variables, _nc_hipert_two_fluids_f_momenta, alpha, pself->y, pself->sunctx);
+    printf ("Creating ERKStep, alpha = %f\n", alpha);
+    fflush (stdout);
+
+    self->inner_arkode = ARKStepCreate (NULL, _nc_hipert_two_fluids_f_fast, alpha, pself->y, pself->sunctx);
+    NCM_CVODE_CHECK (self->inner_arkode, "ARKStepCreate", 0, );
+
+    flag = ARKodeSetLinearSolver (self->inner_arkode, pself->LS, pself->A);
+    NCM_CVODE_CHECK (&flag, "ARKodeSetLinearSolver", 1, );
+
+    flag = ARKodeSetLinear (self->inner_arkode, 1);
+    NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
+
+    printf ("Setting stop time to 0\n");
+    fflush (stdout);
+
+    flag = ARKodeSetStopTime (self->inner_arkode, 10.0);
+    NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, );
+
+    /*flag = ARKodeSetFixedStep (self->inner_arkode, 1.0e-4); */
+    /*NCM_CVODE_CHECK (&flag, "ARKodeSetFixedStep", 1, ); */
+
+    printf ("Creating inner stepper\n");
+    fflush (stdout);
+
+    flag = ARKodeCreateMRIStepInnerStepper (self->inner_arkode, &self->inner_stepper);
+    NCM_CVODE_CHECK (&flag, "ARKodeCreateMRIStepInnerStepper", 1, );
+
+    printf ("Creating MRIStep\n");
+    fflush (stdout);
+
+    self->arkode = MRIStepCreate (NULL, _nc_hipert_two_fluids_f_slow, alpha, pself->y, self->inner_stepper, pself->sunctx);
     NCM_CVODE_CHECK (self->arkode, "SPRKStepCreate", 0, );
 #endif /* HAVE_SUNDIALS_ARKODE */
 
@@ -1417,7 +1533,7 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
 #ifdef HAVE_SUNDIALS_ARKODE
     /* flag = ARKStepReInit (self->arkode, fE, fI, alpha, pself->y); */
     /* NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, ); */
-    SPRKStepReInit (self->arkode, _nc_hipert_two_fluids_f_variables, _nc_hipert_two_fluids_f_momenta, alpha, pself->y);
+    MRIStepReInit (self->arkode, _nc_hipert_two_fluids_f_slow, NULL, alpha, pself->y);
     NCM_CVODE_CHECK (&flag, "SPRKStepReInit", 1, );
 #endif /* HAVE_SUNDIALS_ARKODE */
   }
@@ -1437,33 +1553,44 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
   NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
 
 #ifdef HAVE_SUNDIALS_ARKODE
+
+  printf ("Setting relative tolerance to %f\n", pself->reltol);
+  fflush (stdout);
+
   flag = ARKodeSStolerances (self->arkode, pself->reltol, 0.0);
   NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1, );
+
+  printf ("Setting relative tolerance to %f\n", pself->reltol);
+  fflush (stdout);
+
+  flag = ARKodeSStolerances (self->inner_arkode, pself->reltol, 0.0);
+  NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1, );
+
+  flag = ARKodeSetInitStep (self->arkode, 1.0e-11);
+  NCM_CVODE_CHECK (&flag, "ARKodeSetInitStep", 1, );
+
+  printf ("Setting maximum number of steps to %d\n", G_MAXUINT32);
+  fflush (stdout);
 
   flag = ARKodeSetMaxNumSteps (self->arkode, G_MAXUINT32);
   NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
-  flag = SPRKStepSetUseCompensatedSums (self->arkode, 1);
-  NCM_CVODE_CHECK (&flag, "SPRKStepSetUseCompensatedSums", 1, );
+/*  flag = ARKodeSetFixedStep (self->arkode, 1.0e-4); */
+/*  NCM_CVODE_CHECK (&flag, "ARKodeSetFixedStep", 1, ); */
+  flag = ARKodeSetAdaptController (self->arkode, NULL);
+  NCM_CVODE_CHECK (&flag, "ARKodeSetAdaptController", 1, );
 
-  /* flag = ARKodeSetLinearSolver (self->arkode, pself->LS, pself->A); */
-  /* NCM_CVODE_CHECK (&flag, "ARKodeSetLinearSolver", 1, ); */
+  flag = ARKodeSetLinearSolver (self->arkode, pself->LS, pself->A);
+  NCM_CVODE_CHECK (&flag, "ARKodeSetLinearSolver", 1, );
 
   /*flag = ARKodeSetJacFn (self->arkode, dfI_dy); */
   /*NCM_CVODE_CHECK (&flag, "ARKodeSetJacFn", 1, ); */
 
-  /* flag = ARKodeSetLinear (self->arkode, 1); */
-  /* NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, ); */
+  flag = ARKodeSetLinear (self->arkode, 1);
+  NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
 
   /* flag = ARKodeSetOrder (self->arkode, 10); */
   /* NCM_CVODE_CHECK (&flag, "SPRKStepSetOrder", 1, ); */
-
-  flag = SPRKStepSetMethodName (self->arkode, "ARKODE_SPRK_SOFRONIOU_10_36");
-  NCM_CVODE_CHECK (&flag, "SPRKStepSetMethodName", 1, );
-
-
-  flag = ARKodeSetFixedStep (self->arkode, 1.0e-8);
-  NCM_CVODE_CHECK (&flag, "ARKodeSetFixedStep", 1, );
 
   if (useQP)
   {
@@ -1472,8 +1599,8 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
   }
   else
   {
-    /* flag = ARKodeSetJacFn (self->arkode, &_nc_hipert_two_fluids_J_zetaS); */
-    /* NCM_CVODE_CHECK (&flag, "ARKodeSetJacFn", 1, ); */
+    /*flag = ARKodeSetJacFn (self->arkode, &_nc_hipert_two_fluids_J_zetaS); */
+    /*NCM_CVODE_CHECK (&flag, "ARKodeSetJacFn", 1, ); */
   }
 
   switch (main_mode)
@@ -1557,10 +1684,35 @@ nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble a
     flag = ARKodeSetUserData (self->arkode, arg);
     NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
 
-    /*ARKodeSetDiagnostics (self->arkode, stderr); */
+    flag = ARKodeSetUserData (self->inner_arkode, arg);
+    NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
+
+    flag = ARKodeSetStopTime (self->arkode, alphaf);
+    NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, );
+
+    flag = ARKodeSetStopTime (self->inner_arkode, alphaf);
+    NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, );
+
+    printf ("A >>>>>>>>>>>>>>>>>>>>>>>>>>>> alphaf %g\n", alphaf);
+    fflush (stdout);
+
+    printf ("#-----------------------------------------\n");
+    fflush (stdout);
+    ARKodePrintMem (self->inner_arkode, stdout);
+    fflush (stdout);
+    printf ("#-----------------------------------------\n");
+    fflush (stdout);
+    /*ARKodePrintMem (self->arkode, stdout); */
+    fflush (stdout);
+    printf ("#-----------------------------------------\n");
+    fflush (stdout);
 
     flag = ARKodeEvolve (self->arkode, alphaf, pself->y, &alpha_i, ARK_NORMAL);
     NCM_CVODE_CHECK (&flag, "CVode[nc_hipert_two_fluids_evolve]", 1, );
+
+    fflush (stderr);
+    printf ("A evolved >>>>>>>>>>>>>>>>>>>>>>>>>>>> alpha_i %g\n", alpha_i);
+    fflush (stdout);
 
     pself->alpha0 = alpha_i;
   }
@@ -1641,8 +1793,32 @@ nc_hipert_two_fluids_evolve_array (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdo
 
   if (TRUE)
   {
+    printf ("B Setting user data\n");
+    fflush (stdout);
+
     flag = ARKodeSetUserData (self->arkode, arg);
     NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, NULL);
+
+    printf ("B Setting inner user data\n");
+    fflush (stdout);
+
+    flag = ARKodeSetUserData (self->inner_arkode, arg);
+    NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, NULL);
+
+    printf ("B Setting stop time %g\n", alphaf);
+    fflush (stdout);
+
+    flag = ARKodeSetStopTime (self->arkode, alphaf);
+    NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, NULL);
+
+    printf ("B Setting inner stop time %g\n", alphaf);
+    fflush (stdout);
+
+    flag = ARKodeSetStopTime (self->inner_arkode, alphaf);
+    NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, NULL);
+
+    printf ("B >>>>>>>>>>>>>>>>>>>>>>>>>>>> alphaf %g\n", alphaf);
+    fflush (stdout);
 
     g_array_append_val (array, pself->alpha0);
     g_array_append_vals (array, NV_DATA_S (pself->y), NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
