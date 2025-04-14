@@ -70,7 +70,7 @@ class RichnessMassRelationCalibration:
                 fixed_parameters = ['A0' ,'cut', 'cutM1', 'cutZ1'] #fixing cut parameters
             
             case "ascaso":
-                model = ascaso = Nc.ClusterMassAscaso(lnRichness_min=np.log(1.0), lnRichness_max=6)
+                model = Nc.ClusterMassAscaso(lnRichness_min=np.log(1.0), lnRichness_max=6)
                 fixed_parameters = ['cut'] #fixing cut parameter
               
     #Model
