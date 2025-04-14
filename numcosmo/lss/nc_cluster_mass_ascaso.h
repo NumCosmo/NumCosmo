@@ -93,11 +93,14 @@ struct _NcClusterMassAscaso
 
 GType nc_cluster_mass_ascaso_get_type (void) G_GNUC_CONST;
 
+void nc_cluster_mass_ascaso_set_enable_rejection (NcClusterMassAscaso *ascaso, gboolean on);
+
 gdouble nc_cluster_mass_ascaso_get_mean_richness (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_ascaso_get_std_richness (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_ascaso_get_cut (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_ascaso_get_mean (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_ascaso_get_std (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
+gboolean nc_cluster_mass_ascaso_get_enable_rejection (NcClusterMassAscaso *ascaso);
 
 G_END_DECLS
 

@@ -51,6 +51,7 @@ struct _NcClusterMassAscasoPrivate
   gdouble ln1pz0;
   gdouble lnR_max;
   gdouble lnR_min;
+  gboolean enable_rejection;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassAscaso, nc_cluster_mass_ascaso, NC_TYPE_CLUSTER_MASS)
@@ -72,6 +73,7 @@ enum
   PROP_Z0,
   PROP_LNRICHNESS_MIN,
   PROP_LNRICHNESS_MAX,
+  PROP_ENABLE_REJECTION,
   PROP_SIZE,
 };
 
@@ -86,6 +88,7 @@ nc_cluster_mass_ascaso_init (NcClusterMassAscaso *ascaso)
   self->ln1pz0  = 0.0;
   self->lnR_min = GSL_NEGINF;
   self->lnR_max = GSL_POSINF;
+  self->enable_rejection = TRUE;
 }
 
 static void
@@ -114,6 +117,9 @@ _nc_cluster_mass_ascaso_set_property (GObject *object, guint prop_id, const GVal
       self->lnR_max = g_value_get_double (value);
       g_assert (self->lnR_min < self->lnR_max);
       break;
+    case PROP_ENABLE_REJECTION:
+      nc_cluster_mass_ascaso_set_enable_rejection (ascaso, g_value_get_boolean (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -141,6 +147,9 @@ _nc_cluster_mass_ascaso_get_property (GObject *object, guint prop_id, GValue *va
       break;
     case PROP_LNRICHNESS_MAX:
       g_value_set_double (value, self->lnR_max);
+      break;
+    case PROP_ENABLE_REJECTION:
+      g_value_set_boolean (value, self->enable_rejection);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -234,6 +243,20 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
                                                         0.0, G_MAXDOUBLE,  M_LN10 * 2.5,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+    /**
+   * NcClusterMassAscaso:enable_rejection:
+   *
+   * FIXME Set if the objects sampled below CUT are rejected
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ENABLE_REJECTION,
+                                   g_param_spec_boolean ("enable-rejection",
+                                                         NULL,
+                                                         "Whether rejects the sampled objects below the CUT",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+    
   /**
    * NcClusterMassAscaso:MU_P0:
    *
@@ -370,7 +393,6 @@ _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoubl
 
   _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
 
-  {
     const gdouble x_min = (lnR_true - CUT) / (M_SQRT2 * sigma);
     const gdouble x_max = (lnR_true - self->lnR_max) / (M_SQRT2 * sigma);
 
@@ -378,7 +400,7 @@ _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoubl
       return -(erfc (x_min) - erfc (x_max))/ erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
     else
       return (erf (x_min) - erf (x_max))/ erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
-  }
+
 }
 
 static gdouble
@@ -390,15 +412,26 @@ _nc_cluster_mass_ascaso_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdo
 
   _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
 
-  {
     const gdouble x_min = (lnR_true - lnM_obs_lower[0]) / (M_SQRT2 * sigma);
     const gdouble x_max = (lnR_true - lnM_obs_upper[0]) / (M_SQRT2 * sigma);
-
+    if (lnM_obs_lower[0] < CUT && lnM_obs_upper[0] < CUT)
+    {
+     return 0.0;
+    }
+    else if (lnM_obs_lower[0] < CUT && lnM_obs_upper[0] >= CUT)
+    {
+    if (x_max > 4.0)
+      return -(erfc ((lnR_true - CUT) / (M_SQRT2 * sigma)) - erfc (x_max))/ erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
+    else
+      return (erf ((lnR_true - CUT) / (M_SQRT2 * sigma)) - erf (x_max))  / erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
+    }
+    else
+    {
     if (x_max > 4.0)
       return -(erfc (x_min) - erfc (x_max))/ erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
     else
       return (erf (x_min) - erf (x_max))  / erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
-  }
+    }
 }
 
 static gboolean
@@ -411,11 +444,18 @@ _nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gd
   _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
 
   ncm_rng_lock (rng);
+  if (self->enable_rejection)
+  {
+  lnM_obs[0] = ncm_rng_gaussian_gen (rng, lnR_true, sigma);
+  }
+  else
+  {
   lnM_obs[0] = ncm_rng_gaussian_tail_gen (rng, CUT - lnR_true, sigma);
   lnM_obs[0] += lnR_true; 
+  }
   ncm_rng_unlock (rng);
 
-  return (lnM_obs[0] <= self->lnR_max) && (lnM_obs[0] >= self->lnR_min) && (lnM_obs[0] >= CUT);
+  return (lnM_obs[0] <= self->lnR_max) && (lnM_obs[0] >= CUT);
 }
 
 static void
@@ -624,4 +664,37 @@ nc_cluster_mass_ascaso_get_std (NcClusterMassAscaso *ascaso, gdouble lnM, gdoubl
     
   return lnR_sigma * std_correction;  
 
+}
+
+/**
+ * nc_cluster_mass_ascaso_set_enable_rejection:
+ * @gbolean: a #NcClusterMassAscaso
+ * gbolean: on
+ *
+ * Set the enable_rejection property.
+ *
+ */
+
+void 
+nc_cluster_mass_ascaso_set_enable_rejection (NcClusterMassAscaso *ascaso, gboolean on)
+{
+ NcClusterMassAscasoPrivate * const self = ascaso->priv;
+ self->enable_rejection = on;
+    
+}
+
+
+/**
+ * nc_cluster_mass_ascaso_get_enable_rejection:
+ * @gbolean: a #NcClusterMassAscaso
+ *
+ * Get if the enable_rejection property is on.
+ *
+ */
+gboolean
+nc_cluster_mass_ascaso_get_enable_rejection (NcClusterMassAscaso *ascaso)
+
+{
+ NcClusterMassAscasoPrivate * const self = ascaso->priv;
+ return self->enable_rejection;
 }
