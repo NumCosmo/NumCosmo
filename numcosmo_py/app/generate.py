@@ -400,6 +400,10 @@ class GenerateClusterWL:
         float, typer.Option(help="Galaxy shape sigma.", show_default=True)
     ] = 1.0e-2
 
+    galaxy_density: Annotated[
+        float, typer.Option(help="Galaxy density.", show_default=True)
+    ] = 18.0
+
     parameter_list: Annotated[
         list[str],
         typer.Option(
@@ -453,6 +457,7 @@ class GenerateClusterWL:
             shape_dist=self.shape_dist,
             galaxy_shape_e_rms=self.galaxy_shape_e_rms,
             galaxy_shape_e_sigma=self.galaxy_shape_e_sigma,
+            density=self.galaxy_density,
             seed=self.seed,
             summary=self.summary,
         )

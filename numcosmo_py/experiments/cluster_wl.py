@@ -349,6 +349,7 @@ def generate_lsst_cluster_wl(
     shape_dist: GalaxySDShapeDist,
     galaxy_shape_e_rms: float,
     galaxy_shape_e_sigma: float,
+    density: float,
     seed: None | int,
     summary: bool,
 ) -> Ncm.ObjDictStr:
@@ -366,6 +367,7 @@ def generate_lsst_cluster_wl(
         dec_max=dec_max,
         z_min=z_min,
         z_max=z_max,
+        density=density * 60 * 60,
     )
     galaxy_model = GalaxyDistributionModel(
         galaxies=galaxy_distribution,

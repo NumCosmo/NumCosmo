@@ -477,9 +477,9 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
         ncm_integral_nd_eval (lh_int, zpi_v, zpf_v, res_v, err_v);
         res = ncm_vector_fast_get (res_v, 0);
 
-        if (res == 0.0)
+        if ((res == 0.0) || !gsl_finite (res))
         {
-          g_warning ("_nc_data_cluster_wl_eval_m2lnP_integ: galaxy %d has zero likelihood. Skipping it.", gal_i);
+          g_warning ("_nc_data_cluster_wl_eval_m2lnP_integ: galaxy %d has undefined likelihood [%g]. Skipping it.", gal_i, res);
           continue;
         }
 
@@ -551,7 +551,6 @@ _nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   NcGalaxySDObsRedshift *galaxy_redshift = NC_GALAXY_SD_OBS_REDSHIFT (ncm_mset_peek (mset, nc_galaxy_sd_obs_redshift_id ()));
   NcGalaxySDPosition *galaxy_position    = NC_GALAXY_SD_POSITION (ncm_mset_peek (mset, nc_galaxy_sd_position_id ()));
   guint gal_i;
-
 
   for (gal_i = 0; gal_i < self->len; gal_i++)
   {
