@@ -196,6 +196,10 @@ c_tests = [
         'sources': ['test_nc_data_bao_dvdv.c'],
     },
     {
+        'name': 'nc_data_bao_dvr_dtdh',
+        'sources': ['test_nc_data_bao_dvr_dtdh.c'],
+    },
+    {
         'name': 'nc_data_cluster_ncount',
         'sources': ['test_nc_data_cluster_ncount.c'],
     },

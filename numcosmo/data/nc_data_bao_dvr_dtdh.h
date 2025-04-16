@@ -1,13 +1,13 @@
 /***************************************************************************
- *            nc_data_bao_rdv.h
+ *            nc_data_bao_dvr_dtdh.h
  *
- *  Thu Apr 22 15:31:19 2010
- *  Copyright  2010  Sandro Dias Pinto Vitenti
- *  <vitenti@uel.br>
+ *  Tue Apr 15 17:27:40 2025
+ *  Copyright  2025  Mariana Penna-Lima
+ *  <pennalima@unb.br>
  ****************************************************************************/
 /*
- * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * nc_data_bao_dtr_dhr.h
+ * Copyright (C) 2025 Mariana Penna-Lima <pennalima@unb.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,28 +23,27 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_DATA_BAO_RDV_H_
-#define _NC_DATA_BAO_RDV_H_
+#ifndef _NC_DATA_BAO_DVR_DTDH_H_
+#define _NC_DATA_BAO_DVR_DTDH_H_
 
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_data_gauss.h>
+#include <numcosmo/math/ncm_data_gauss_cov.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/data/nc_data_bao.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_DATA_BAO_RDV (nc_data_bao_rdv_get_type ())
+#define NC_TYPE_DATA_BAO_DVR_DTDH (nc_data_bao_dvr_dtdh_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcDataBaoRDV, nc_data_bao_rdv, NC, DATA_BAO_RDV, NcmDataGauss)
+G_DECLARE_FINAL_TYPE (NcDataBaoDvrDtDh, nc_data_bao_dvr_dtdh, NC, DATA_BAO_DVR_DTDH, NcmDataGaussCov)
 
-NcDataBaoRDV *nc_data_bao_rdv_new_from_file (const gchar *filename);
-NcDataBaoRDV *nc_data_bao_rdv_new_from_id (NcDistance *dist, NcDataBaoId id);
-
-void nc_data_bao_rdv_set_dist (NcDataBaoRDV *bao_rdv, NcDistance *dist);
+NcDataBaoDvrDtDh *nc_data_bao_dvr_dtdh_new_from_file (const gchar *filename);
+NcDataBaoDvrDtDh *nc_data_bao_dvr_dtdh_new_from_id (NcDistance *dist, NcDataBaoId id);
+void nc_data_bao_dvr_dtdh_set_dist (NcDataBaoDvrDtDh *dvdtdh, NcDistance *dist);
 
 G_END_DECLS
 
-#endif /* _NC_DATA_BAO_RDV_H_ */
+#endif /* _NC_DATA_BAO_DTR_DHR_H_ */
 

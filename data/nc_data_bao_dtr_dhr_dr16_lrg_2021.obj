@@ -1,7 +1,7 @@
 (
   'NcDataBaoDtrDHr', 
   {
-    'desc'      : <'SDSS DR16 -- Alam et al., PRD 103, 083533 (2021); BAO LRG Sample(D_t / r_sd, DH / r_sd)'>, 
+    'desc'      : <'SDSS DR16 -- Alam et al., PRD 103, 083533 (2021); BAO LRG Sample(D_t / r_sd, DH / r_sd); data address https://svn.sdss.org/public/data/eboss/DR16cosmo/tags/v1_0_1/likelihoods/BAO-only/'>, 
     'init'      : <true>, 
     'n-points'  : <2>, 
     'mean'      : <[17.85823691865007, 19.32575373059217]>, 

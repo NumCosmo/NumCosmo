@@ -48,6 +48,19 @@
 #include "nc_enum_types.h"
 #include "math/ncm_cfg.h"
 
+typedef struct _NcDataBaoRDVPrivate
+{
+  gint placeholder;
+} NcDataBaoRDVPrivate;
+
+struct _NcDataBaoRDV
+{
+  NcmDataGauss parent_instance;
+  NcDistance *dist;
+  NcmVector *x;
+  gboolean r_DV;
+};
+
 enum
 {
   PROP_0,
@@ -300,6 +313,9 @@ nc_data_bao_rdv_new_from_id (NcDistance *dist, NcDataBaoId id)
       break;
     case NC_DATA_BAO_RDV_BOSS_QSO_ATA2017:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_rdv_boss_qso_ata2017.obj", TRUE);
+      break;
+    case NC_DATA_BAO_RDV_DESI_DR1_BGS_QSO_2024:
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_rdv_desi_dr1_bgs_qso_2024.obj", TRUE);
       break;
     default:
       g_error ("nc_data_bao_rdv_new_from_id: id %d not recognized.", id);
