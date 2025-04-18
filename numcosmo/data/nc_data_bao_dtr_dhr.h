@@ -36,30 +36,8 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_DATA_BAO_DTR_DHR             (nc_data_bao_dtr_dhr_get_type ())
-#define NC_DATA_BAO_DTR_DHR(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_BAO_DTR_DHR, NcDataBaoDtrDHr))
-#define NC_DATA_BAO_DTR_DHR_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_BAO_DTR_DHR, NcDataBaoDtrDHrClass))
-#define NC_IS_DATA_BAO_DTR_DHR(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_DATA_BAO_DTR_DHR))
-#define NC_IS_DATA_BAO_DTR_DHR_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_BAO_DTR_DHR))
-#define NC_DATA_BAO_DTR_DHR_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_BAO_DTR_DHR, NcDataBaoDtrDHrClass))
 
-typedef struct _NcDataBaoDtrDHrClass NcDataBaoDtrDHrClass;
-typedef struct _NcDataBaoDtrDHr NcDataBaoDtrDHr;
-
-struct _NcDataBaoDtrDHrClass
-{
-  /*< private >*/
-  NcmDataGaussCovClass parent_class;
-};
-
-struct _NcDataBaoDtrDHr
-{
-  /*< private >*/
-  NcmDataGaussCov parent_instance;
-  NcDistance *dist;
-  NcmVector *x;
-};
-
-GType nc_data_bao_dtr_dhr_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcDataBaoDtrDHr, nc_data_bao_dtr_dhr, NC, DATA_BAO_DTR_DHR, NcmDataGaussCov)
 
 NcDataBaoDtrDHr *nc_data_bao_dtr_dhr_new_from_file (const gchar *filename);
 NcDataBaoDtrDHr *nc_data_bao_dtr_dhr_new_from_id (NcDistance *dist, NcDataBaoId id);

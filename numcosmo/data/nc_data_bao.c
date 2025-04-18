@@ -48,6 +48,7 @@
 #include "data/nc_data_bao_dhr_dar.h"
 #include "data/nc_data_bao_dmr_hr.h"
 #include "data/nc_data_bao_dtr_dhr.h"
+#include "data/nc_data_bao_dvr_dtdh.h"
 
 /**
  * nc_data_bao_create:
@@ -105,8 +106,12 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE:
     case NC_DATA_BAO_DTR_DHR_SDSS_DR16_LRG_2021:
     case NC_DATA_BAO_DTR_DHR_SDSS_DR16_QSO_2021:
+    case NC_DATA_BAO_DTR_DHR_DESI_DR1_LYM_2025:
       data = NCM_DATA (nc_data_bao_dtr_dhr_new_from_id (dist, id));
       break;
+    case NC_DATA_BAO_DVR_DTDH_DESI_DR1_2024:
+      data = NCM_DATA (nc_data_bao_dvr_dtdh_new_from_id (dist, id));
+      break;  
     default:
       g_assert_not_reached ();
       break;

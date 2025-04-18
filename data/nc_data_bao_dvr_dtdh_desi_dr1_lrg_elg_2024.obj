@@ -1,9 +1,7 @@
 (
   'NcDataBaoDvrDtDh', 
   {
-    'desc'      : <'DESI DR1 -- BAO from galaxies and quasars -- Adame et al. (2024), arXiv:2404.03000, table 18; BAO
-Sample(D_v / r_sd, Dt / DH); Adame et al. (2025), arXiv:2404.03002: Footnote 14 mentions why to use these data
-and details for the Covariance matrix is given in section 2.3.2'>, 
+    'desc'      : <'DESI DR1 -- BAO from galaxies and quasars -- Adame et al. (2024), arXiv:2404.03000, table 18'>, 
     'init'      : <true>, 
     'n-points'  : <8>, 
     'mean'      : <[12.56, 1.542, 15.90, 1.193, 19.86, 0.824, 24.13, 0.498]>, 
@@ -17,6 +15,7 @@ and details for the Covariance matrix is given in section 2.3.2'>,
                      [ 0, 0, 0, 0, 0, 0, 0.1296, -0.00367632],
                      [0, 0, 0, 0, 0, 0, -0.00367632, 0.000529]
                    ]>, 
-    'z'         : <[0.51, 0.51, 0.71, 0.71, 0.93, 0.93, 1.32, 1.32]>
+    'z'         : <[0.51, 0.51, 0.71, 0.71, 0.93, 0.93, 1.32, 1.32]>,
+    'long-desc': <'BAO Sample (D_v / r_sd, Dt / DH); Adame et al. (2025), arXiv:2404.03002: Footnote 14 mentions why to use these data and details for the Covariance matrix is given in section 2.3.2'>
   }
 )

@@ -188,6 +188,10 @@ c_tests = [
         'sources': ['test_nc_hiqg_1d.c'],
     },
     {
+        'name': 'nc_data_bao_dtr_dhr',
+        'sources': ['test_nc_data_bao_dtr_dhr.c'],
+    },
+    {
         'name': 'nc_data_bao_rdv',
         'sources': ['test_nc_data_bao_rdv.c'],
     },
