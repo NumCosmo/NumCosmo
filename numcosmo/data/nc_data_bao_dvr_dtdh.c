@@ -91,9 +91,9 @@ nc_data_bao_dvr_dtdh_set_property (GObject *object, guint prop_id, const GValue 
     case PROP_Z:
       ncm_vector_substitute (&dvdtdh->x, g_value_get_object (value), TRUE);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -112,9 +112,9 @@ nc_data_bao_dvr_dtdh_get_property (GObject *object, guint prop_id, GValue *value
     case PROP_Z:
       g_value_set_object (value, dvdtdh->x);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -268,9 +268,9 @@ nc_data_bao_dvr_dtdh_new_from_id (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_DVR_DTDH_DESI_DR1_2024:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_dvr_dtdh_desi_dr1_lrg_elg_2024.obj", TRUE);
       break;
-    default:
-      g_error ("nc_data_bao_dtr_dhr_new_from_id: id %d not recognized.", id);
-      break;
+    default:                                                                  /* LCOV_EXCL_LINE */
+      g_error ("nc_data_bao_dtr_dhr_new_from_id: id %d not recognized.", id); /* LCOV_EXCL_LINE */
+      break;                                                                  /* LCOV_EXCL_LINE */
   }
 
   dvdtdh = nc_data_bao_dvr_dtdh_new_from_file (filename);

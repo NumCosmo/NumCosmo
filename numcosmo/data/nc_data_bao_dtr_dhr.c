@@ -49,7 +49,7 @@
 typedef struct _NcDataBaoDtrDHrPrivate
 {
   gint placeholder;
-}NcDataBaoDtrDHrPrivate;
+} NcDataBaoDtrDHrPrivate;
 
 struct _NcDataBaoDtrDHr
 {
@@ -91,9 +91,9 @@ nc_data_bao_dtr_dhr_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_Z:
       ncm_vector_substitute (&dhdt->x, g_value_get_object (value), TRUE);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -112,9 +112,9 @@ nc_data_bao_dtr_dhr_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_Z:
       g_value_set_object (value, dhdt->x);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -276,9 +276,9 @@ nc_data_bao_dtr_dhr_new_from_id (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_DTR_DHR_DESI_DR1_LYM_2025:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_dtr_dhr_desi_dr1_lym_2025.obj", TRUE);
       break;
-      default:
-      g_error ("nc_data_bao_dtr_dhr_new_from_id: id %d not recognized.", id);
-      break;
+    default:                                                                  /* LCOV_EXCL_LINE */
+      g_error ("nc_data_bao_dtr_dhr_new_from_id: id %d not recognized.", id); /* LCOV_EXCL_LINE */
+      break;                                                                  /* LCOV_EXCL_LINE */
   }
 
   dhdt = nc_data_bao_dtr_dhr_new_from_file (filename);

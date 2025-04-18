@@ -105,9 +105,9 @@ nc_data_bao_rdv_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_DATA_FORM:
       bao_rdv->r_DV = g_value_get_boolean (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -129,9 +129,9 @@ nc_data_bao_rdv_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_DATA_FORM:
       g_value_set_boolean (value, bao_rdv->r_DV);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -317,9 +317,9 @@ nc_data_bao_rdv_new_from_id (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_RDV_DESI_DR1_BGS_QSO_2024:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_rdv_desi_dr1_bgs_qso_2024.obj", TRUE);
       break;
-    default:
-      g_error ("nc_data_bao_rdv_new_from_id: id %d not recognized.", id);
-      break;
+    default:                                                              /* LCOV_EXCL_LINE */
+      g_error ("nc_data_bao_rdv_new_from_id: id %d not recognized.", id); /* LCOV_EXCL_LINE */
+      break;                                                              /* LCOV_EXCL_LINE */
   }
 
   bao_rdv = nc_data_bao_rdv_new_from_file (filename);

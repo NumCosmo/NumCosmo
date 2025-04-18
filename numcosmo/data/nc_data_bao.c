@@ -111,10 +111,10 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
       break;
     case NC_DATA_BAO_DVR_DTDH_DESI_DR1_2024:
       data = NCM_DATA (nc_data_bao_dvr_dtdh_new_from_id (dist, id));
-      break;  
-    default:
-      g_assert_not_reached ();
       break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+      break;                   /* LCOV_EXCL_LINE */
   }
 
   g_assert (NCM_IS_DATA (data));

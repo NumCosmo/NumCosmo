@@ -64,6 +64,9 @@ void test_nc_data_bao_rdv_set_sample_kazin2014 (TestNcDataBaoRDV *test, gconstpo
 void test_nc_data_bao_rdv_new_desi_dr1_bgs_qso_2024 (TestNcDataBaoRDV *test, gconstpointer pdata);
 void test_nc_data_bao_rdv_set_sample_desi_dr1_bgs_qso_2024 (TestNcDataBaoRDV *test, gconstpointer pdata);
 
+void test_nc_data_bao_rdv_get_distance (TestNcDataBaoRDV *test, gconstpointer pdata);
+void test_nc_data_bao_rdv_get_redshift (TestNcDataBaoRDV *test, gconstpointer pdata);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -103,6 +106,15 @@ main (gint argc, gchar *argv[])
               &test_nc_data_bao_rdv_new_desi_dr1_bgs_qso_2024,
               &test_nc_data_bao_rdv_set_sample_desi_dr1_bgs_qso_2024,
               &test_nc_data_bao_rdv_free);
+  g_test_add ("/nc/data_bao_rdv/get_distance", TestNcDataBaoRDV, NULL,
+              &test_nc_data_bao_rdv_new_desi_dr1_bgs_qso_2024,
+              &test_nc_data_bao_rdv_get_distance,
+              &test_nc_data_bao_rdv_free);
+  g_test_add ("/nc/data_bao_rdv/get_redshift", TestNcDataBaoRDV, NULL,
+              &test_nc_data_bao_rdv_new_desi_dr1_bgs_qso_2024,
+              &test_nc_data_bao_rdv_get_redshift,
+              &test_nc_data_bao_rdv_free);
+
 
   g_test_run ();
 }
@@ -585,6 +597,32 @@ test_nc_data_bao_rdv_set_sample_desi_dr1_bgs_qso_2024 (TestNcDataBaoRDV *test, g
   ncm_assert_cmpdouble (ncm_matrix_get (inv_cov, 0, 1), ==, icov01);
   ncm_assert_cmpdouble (ncm_matrix_get (inv_cov, 1, 0), ==, icov10);
   ncm_assert_cmpdouble (ncm_matrix_get (inv_cov, 1, 1), ==, icov11);
+
+  ncm_vector_free (x);
+}
+
+void
+test_nc_data_bao_rdv_get_distance (TestNcDataBaoRDV *test, gconstpointer pdata)
+{
+  NcDistance *dist  = NULL;
+  NcDataBaoRDV *rdv = test->rdv;
+
+  g_object_get (rdv, "dist", &dist, NULL);
+  g_assert_true (dist != NULL);
+  g_assert (NC_IS_DISTANCE (dist));
+
+  nc_distance_free (dist);
+}
+
+void
+test_nc_data_bao_rdv_get_redshift (TestNcDataBaoRDV *test, gconstpointer pdata)
+{
+  NcmVector *x      = NULL;
+  NcDataBaoRDV *rdv = test->rdv;
+
+  g_object_get (rdv, "z", &x, NULL);
+  g_assert_true (x != NULL);
+  g_assert (NCM_IS_VECTOR (x));
 
   ncm_vector_free (x);
 }

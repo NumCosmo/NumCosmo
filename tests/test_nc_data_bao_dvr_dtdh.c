@@ -44,6 +44,9 @@ void test_nc_data_bao_dvr_dtdh_free (TestNcDataBaoDvrDtDh *test, gconstpointer p
 void test_nc_data_bao_dvr_dtdh_new_desi_dr1_lrg_elg_2024 (TestNcDataBaoDvrDtDh *test, gconstpointer pdata);
 void test_nc_data_bao_dvr_dtdh_set_sample_desi_dr1_lrg_elg_2024 (TestNcDataBaoDvrDtDh *test, gconstpointer pdata);
 
+void test_nc_data_bao_dvr_dtdh_get_distance (TestNcDataBaoDvrDtDh *test, gconstpointer pdata);
+void test_nc_data_bao_dvr_dtdh_get_redshift (TestNcDataBaoDvrDtDh *test, gconstpointer pdata);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -54,6 +57,14 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/data_bao_dvr_dtdh/set_sample/desi2024", TestNcDataBaoDvrDtDh, NULL,
               &test_nc_data_bao_dvr_dtdh_new_desi_dr1_lrg_elg_2024,
               &test_nc_data_bao_dvr_dtdh_set_sample_desi_dr1_lrg_elg_2024,
+              &test_nc_data_bao_dvr_dtdh_free);
+  g_test_add ("/nc/data_bao_dvr_dtdh/get_distance", TestNcDataBaoDvrDtDh, NULL,
+              &test_nc_data_bao_dvr_dtdh_new_desi_dr1_lrg_elg_2024,
+              &test_nc_data_bao_dvr_dtdh_get_distance,
+              &test_nc_data_bao_dvr_dtdh_free);
+  g_test_add ("/nc/data_bao_dvr_dtdh/get_redshift", TestNcDataBaoDvrDtDh, NULL,
+              &test_nc_data_bao_dvr_dtdh_new_desi_dr1_lrg_elg_2024,
+              &test_nc_data_bao_dvr_dtdh_get_redshift,
               &test_nc_data_bao_dvr_dtdh_free);
 
   g_test_run ();
@@ -155,6 +166,32 @@ test_nc_data_bao_dvr_dtdh_set_sample_desi_dr1_lrg_elg_2024 (TestNcDataBaoDvrDtDh
   ncm_matrix_cmp (cov_m, cov, 1e-10);
 
   ncm_matrix_free (cov);
+  ncm_vector_free (x);
+}
+
+void
+test_nc_data_bao_dvr_dtdh_get_distance (TestNcDataBaoDvrDtDh *test, gconstpointer pdata)
+{
+  NcDistance *dist         = NULL;
+  NcDataBaoDvrDtDh *dvdtdh = test->dvdtdh;
+
+  g_object_get (dvdtdh, "dist", &dist, NULL);
+  g_assert_true (dist != NULL);
+  g_assert (NC_IS_DISTANCE (dist));
+
+  nc_distance_free (dist);
+}
+
+void
+test_nc_data_bao_dvr_dtdh_get_redshift (TestNcDataBaoDvrDtDh *test, gconstpointer pdata)
+{
+  NcmVector *x             = NULL;
+  NcDataBaoDvrDtDh *dvdtdh = test->dvdtdh;
+
+  g_object_get (dvdtdh, "z", &x, NULL);
+  g_assert_true (x != NULL);
+  g_assert (NCM_IS_VECTOR (x));
+
   ncm_vector_free (x);
 }
 
