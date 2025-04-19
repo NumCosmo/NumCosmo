@@ -104,7 +104,7 @@ EXP_PARAMETERS: dict[tuple[str, str], dict[str, ParameterDesc]] = {
         "NcHICosmo:w": ParameterDesc(value=-1.0),
         "NcHIPrim:ln10e10ASA": ParameterDesc(value=3.0413),
         "NcHIPrim:lnk0": ParameterDesc(value=-6.0),
-        "NcHIPrim:lnw": ParameterDesc(value=np.log(1.0e-4)),
+        "NcHIPrim:lnw": ParameterDesc(value=float(np.log(1.0e-4))),
         "NcHIReion:z_re": ParameterDesc(value=7.54),
         "NcPlanckFI:A_cib_217": ParameterDesc(value=48.5),
         "NcPlanckFI:xi_sz_cib": ParameterDesc(value=0.32),
@@ -130,7 +130,7 @@ EXP_PARAMETERS: dict[tuple[str, str], dict[str, ParameterDesc]] = {
         "NcHICosmo:w": ParameterDesc(value=-1.0),
         "NcHIPrim:ln10e10ASA": ParameterDesc(value=3.0447),
         "NcHIPrim:lnk0": ParameterDesc(value=-6.0),
-        "NcHIPrim:lnw": ParameterDesc(value=np.log(1.0e-4)),
+        "NcHIPrim:lnw": ParameterDesc(value=float(np.log(1.0e-4))),
         "NcHIReion:z_re": ParameterDesc(value=7.68),
         "NcPlanckFI:A_cib_217": ParameterDesc(value=47.2),
         "NcPlanckFI:xi_sz_cib": ParameterDesc(value=0.42),
@@ -166,7 +166,6 @@ def mset_set_parameters(
         if pi is None:
             raise ValueError(f"Invalid parameter: {param}")
         model, name = param.split(":")
-
         mset[model].param_set_desc(name, cast(dict[str, Any], value))
 
 

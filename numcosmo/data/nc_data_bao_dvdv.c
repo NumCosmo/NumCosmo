@@ -45,6 +45,18 @@
 #include "math/ncm_cfg.h"
 #include "nc_enum_types.h"
 
+typedef struct _NcDataBaoDVDVPrivate
+{
+  gint placeholder;
+} NcDataBaoDVDVPrivate;
+
+struct _NcDataBaoDVDV
+{
+  /*< private >*/
+  NcmDataGaussDiag parent_instance;
+  NcDistance *dist;
+};
+
 enum
 {
   PROP_0,
@@ -72,9 +84,9 @@ nc_data_bao_dvdv_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_DIST:
       nc_data_bao_dvdv_set_dist (bao_dvdv, g_value_get_object (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -90,9 +102,9 @@ nc_data_bao_dvdv_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_DIST:
       g_value_set_object (value, bao_dvdv->dist);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -209,9 +221,9 @@ nc_data_bao_dvdv_new_from_id (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_DVDV_PERCIVAL2010:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_dvdv_percival2010.obj", TRUE);
       break;
-    default:
-      g_error ("nc_data_bao_dvdv_new_from_id: id %d not recognized.", id);
-      break;
+    default:                                                               /* LCOV_EXCL_LINE */
+      g_error ("nc_data_bao_dvdv_new_from_id: id %d not recognized.", id); /* LCOV_EXCL_LINE */
+      break;                                                               /* LCOV_EXCL_LINE */
   }
 
   bao_dvdv = nc_data_bao_dvdv_new_from_file (filename);
