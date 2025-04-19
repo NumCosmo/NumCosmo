@@ -1,0 +1,13 @@
+(
+  'NcDataHubble', 
+  {
+    'desc':      <'Ratsimbazafy 2017 -- arXiv:1702.00418'>, 
+    'long-desc': <''>, 
+    'init':      <true>, 
+    'n-points':  <uint32 1>, 
+    'w-mean':    <false>, 
+    'mean':      <[89.0]>, 
+    'sigma':     <[49.6]>, 
+    'z':         <[0.47]>
+  } 
+)

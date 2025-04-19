@@ -1,0 +1,13 @@
+(
+  'NcDataHubble', 
+  {
+    'desc':      <'Jiao et al. 2023 -- arXiv:2205.05701'>, 
+    'long-desc': <''>, 
+    'init':      <true>, 
+    'n-points':  <uint32 1>, 
+    'w-mean':    <false>, 
+    'mean':      <[113.1]>, 
+    'sigma':     <[25.22]>, 
+    'z':         <[0.8]>
+  } 
+)
