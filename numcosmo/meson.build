@@ -305,6 +305,7 @@ nc_headers = files(
     'data/nc_data_bao_empirical_fit.h',
     'data/nc_data_bao_empirical_fit_2d.h',
     'data/nc_data_bao_rdv.h',
+    'data/nc_data_bao_dvr_dtdh.h',
     'data/nc_data_cluster_ncount.h',
     'data/nc_data_cluster_ncounts_gauss.h',
     'data/nc_data_cluster_pseudo_counts.h',
@@ -472,6 +473,7 @@ nc_sources = files(
     'data/nc_data_bao_empirical_fit.c',
     'data/nc_data_bao_empirical_fit_2d.c',
     'data/nc_data_bao_rdv.c',
+    'data/nc_data_bao_dvr_dtdh.c',
     'data/nc_data_cluster_ncount.c',
     'data/nc_data_cluster_ncounts_gauss.c',
     'data/nc_data_cluster_pseudo_counts.c',
@@ -711,7 +713,7 @@ install_headers(
 sundials_inc = include_directories('sundials/include')
 libcuba_inc = include_directories('libcuba')
 
-libnumcosmo_dep = [
+libnumcosmo_dep_list = [
     mpi_c_dep,
     cfitsio_dep,
     libfyaml_dep,
@@ -762,13 +764,13 @@ libnumcosmo = library(
     # symbols are available at runtime.
     link_whole: [libplc],
     link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass],
-    dependencies: libnumcosmo_dep,
+    dependencies: libnumcosmo_dep_list,
     c_args: numcosmo_c_args,
 )
 
 libnumcosmo_dep = declare_dependency(
     link_with: libnumcosmo,
-    dependencies: libnumcosmo_dep,
+    dependencies: libnumcosmo_dep_list,
     sources: [
         ncm_enum_types[1],
         nc_enum_types[1],
@@ -816,7 +818,7 @@ if enable_gir
         dependencies: libnumcosmo_dep,
         includes: 'GObject-2.0',
         install: true,
-        extra_args: ['-DNUMCOSMO_GIR_SCAN', '-U__OPTIMIZE__'],
+        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
     )
 
     nc_introspection_sources = [
@@ -841,7 +843,7 @@ if enable_gir
         dependencies: libnumcosmo_dep,
         includes: ['GObject-2.0', numcosmo_math_gir[0]],
         install: true,
-        extra_args: ['-DNUMCOSMO_GIR_SCAN', '-U__OPTIMIZE__'],
+        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
     )
     if have_vala
         vapi_deps = [
