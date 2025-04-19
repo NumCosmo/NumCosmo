@@ -47,6 +47,24 @@
 #include "nc_distance.h"
 #include "math/ncm_cfg.h"
 
+typedef struct _NcDataBaoEmpiricalFitPrivate
+{
+  gint placeholder;
+} NcDataBaoEmpiricalFitPrivate;
+
+struct _NcDataBaoEmpiricalFit
+{
+  /*< private >*/
+  NcmDataDist1d parent_instance;
+  gdouble Dv_fiduc;
+  gdouble rs_fiduc;
+  gdouble z;
+  NcmSpline *m2lnp;
+  NcmStatsDist1d *p;
+  gdouble p_mode;
+  NcDistance *dist;
+};
+
 enum
 {
   PROP_0,
@@ -114,9 +132,9 @@ nc_data_bao_empirical_fit_set_property (GObject *object, guint prop_id, const GV
     case PROP_DIST:
       nc_data_bao_empirical_fit_set_dist (bao_ef, g_value_get_object (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -144,9 +162,9 @@ nc_data_bao_empirical_fit_get_property (GObject *object, guint prop_id, GValue *
     case PROP_DIST:
       g_value_set_object (value, bao_ef->dist);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -321,9 +339,9 @@ nc_data_bao_empirical_fit_new_from_id (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_EMPIRICAL_FIT_1D_SDSS_DR16_ELG_2021:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_empirical_fit_1d_dvr_sdss_dr16_elg_2021.obj", TRUE);
       break;
-    default:
-      g_error ("nc_data_bao_empirical_fit_new_from_id: id %d not recognized.", id);
-      break;
+    default:                                                                        /* LCOV_EXCL_LINE */
+      g_error ("nc_data_bao_empirical_fit_new_from_id: id %d not recognized.", id); /* LCOV_EXCL_LINE */
+      break;                                                                        /* LCOV_EXCL_LINE */
   }
 
   bao_ef = nc_data_bao_empirical_fit_new_from_file (filename);

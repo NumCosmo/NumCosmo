@@ -120,6 +120,7 @@ struct _NcHIQG1DPrivate
   NcmVector *ImC;
   gboolean up_splines;
   gboolean noboundary;
+  SUNContext sunctx;
   SUNLinearSolver LS;
   SUNMatrix A;
   gdouble h;
@@ -167,6 +168,9 @@ static void
 nc_hiqg_1d_init (NcHIQG1D *qg1d)
 {
   NcHIQG1DPrivate * const self = qg1d->priv = nc_hiqg_1d_get_instance_private (qg1d);
+
+  if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
+    g_error ("ERROR: SUNContext_Create failed\n");
 
   self->lambda  = 0.0;
   self->acs_a   = 0.0;
@@ -371,9 +375,11 @@ _nc_hiqg_1d_finalize (GObject *object)
 
   if (self->bohm != NULL)
   {
-    ARKStepFree (&self->bohm);
+    ARKodeFree (&self->bohm);
     self->bohm = NULL;
   }
+
+  SUNContext_Free (&self->sunctx);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hiqg_1d_parent_class)->finalize (object);
@@ -1353,28 +1359,28 @@ _nc_hiqg_1d_init_solver (NcHIQG1D *qg1d)
   gint i;
 
   if (self->bohm != NULL)
-    ARKStepFree (&self->bohm);
+    ARKodeFree (&self->bohm);
 
   self->nBohm = 1;
 
   g_clear_pointer (&self->yBohm, N_VDestroy);
-  self->yBohm = N_VNew_Serial (self->nBohm);
+  self->yBohm = N_VNew_Serial (self->nBohm, self->sunctx);
 
   for (i = 0; i < self->nBohm; i++)
   {
     NV_Ith_S (self->yBohm, i) = ini_q / (1.0 * self->nBohm) * (i + 1.0);
   }
 
-  self->bohm = ARKStepCreate (&_nc_hiqg_1d_bohm_f, NULL, t0, self->yBohm);
+  self->bohm = ARKStepCreate (&_nc_hiqg_1d_bohm_f, NULL, t0, self->yBohm, self->sunctx);
   NCM_CVODE_CHECK (&self->bohm, "ARKodeCreate", 0, );
 
-  flag = ARKStepSetUserData (self->bohm, (void *) qg1d);
+  flag = ARKodeSetUserData (self->bohm, (void *) qg1d);
   NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
 
-  flag = ARKStepSetMaxNumSteps (self->bohm, 10000);
+  flag = ARKodeSetMaxNumSteps (self->bohm, 10000);
   NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
-  flag = ARKStepSStolerances (self->bohm, self->reltol, self->abstol);
+  flag = ARKodeSStolerances (self->bohm, self->reltol, self->abstol);
   NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1, );
 }
 
@@ -1800,10 +1806,10 @@ nc_hiqg_1d_evol (NcHIQG1D *qg1d, const gdouble t)
 
   if (t > 0.0)
   {
-    flag = ARKStepSetStopTime (self->bohm, t);
+    flag = ARKodeSetStopTime (self->bohm, t);
     NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, );
 
-    flag = ARKStepEvolve (self->bohm, t, self->yBohm, &ts, ARK_NORMAL);
+    flag = ARKodeEvolve (self->bohm, t, self->yBohm, &ts, ARK_NORMAL);
     NCM_CVODE_CHECK (&flag, "ARKode", 1, );
   }
 

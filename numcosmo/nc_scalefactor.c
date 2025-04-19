@@ -86,6 +86,7 @@ struct _NcScalefactorPrivate
   gpointer cvode;
   gdouble reltol;
   gdouble abstol;
+  SUNContext sunctx;
   N_Vector y;
   SUNMatrix A;
   SUNLinearSolver LS;
@@ -97,6 +98,9 @@ static void
 nc_scalefactor_init (NcScalefactor *a)
 {
   NcScalefactorPrivate * const self = a->priv = nc_scalefactor_get_instance_private (a);
+
+  if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
+    g_error ("ERROR: SUNContext_Create failed\n");
 
   self->a_eta       = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   self->eta_a       = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
@@ -114,7 +118,7 @@ nc_scalefactor_init (NcScalefactor *a)
 
   self->sets_conf_norm = FALSE;
 
-  self->cvode = CVodeCreate (CV_BDF);
+  self->cvode = CVodeCreate (CV_BDF, self->sunctx);
   NCM_CVODE_CHECK ((void *) self->cvode, "CVodeCreate", 0, );
   self->cvode_init = FALSE;
   self->quad_init  = FALSE;
@@ -122,10 +126,10 @@ nc_scalefactor_init (NcScalefactor *a)
   self->reltol = 0.0;
   self->abstol = 0.0;
 
-  self->y = N_VNew_Serial (2);
+  self->y = N_VNew_Serial (2, self->sunctx);
 
-  self->A  = SUNDenseMatrix (2, 2);
-  self->LS = SUNDenseLinearSolver (self->y, self->A);
+  self->A  = SUNDenseMatrix (2, 2, self->sunctx);
+  self->LS = SUNLinSol_Dense (self->y, self->A, self->sunctx);
 
   NCM_CVODE_CHECK ((gpointer) self->A, "SUNDenseMatrix", 0, );
   NCM_CVODE_CHECK ((gpointer) self->LS, "SUNDenseLinearSolver", 0, );
@@ -169,6 +173,8 @@ nc_scalefactor_finalize (GObject *object)
     SUNLinSolFree (self->LS);
     self->LS = NULL;
   }
+
+  SUNContext_Free (&self->sunctx);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_scalefactor_parent_class)->finalize (object);
@@ -296,8 +302,8 @@ nc_scalefactor_class_init (NcScalefactorClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
-static gint dz_deta_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
-static gint dz_deta_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint dz_deta_f (sunrealtype t, N_Vector y, N_Vector ydot, gpointer f_data);
+static gint dz_deta_J (sunrealtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
 /**
  * nc_scalefactor_new:
@@ -873,7 +879,7 @@ _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo)
 }
 
 static gint
-dz_deta_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
+dz_deta_f (sunrealtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHICosmo *cosmo = NC_HICOSMO (f_data);
   const gdouble z  = NV_Ith_S (y, 0);
@@ -887,7 +893,7 @@ dz_deta_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-dz_deta_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+dz_deta_J (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHICosmo *cosmo     = NC_HICOSMO (jac_data);
   const gdouble z      = NV_Ith_S (y, 0);
