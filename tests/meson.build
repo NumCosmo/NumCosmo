@@ -228,6 +228,10 @@ c_tests = [
         'sources': ['test_nc_halo_position.c'],
     },
     {
+        'name': 'nc_data_hubble',
+        'sources': ['test_nc_data_hubble.c'],
+    },
+    {
         'name': 'nc_wl_surface_mass_density',
         'sources': ['test_nc_wl_surface_mass_density.c'],
     },
