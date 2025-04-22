@@ -28,7 +28,7 @@ This module contains factory functions to create likelihoods for cosmology obser
 that do not involve perturbations.
 """
 
-from enum import Enum
+from enum import StrEnum, auto
 
 from numcosmo_py import Nc
 from numcosmo_py import Ncm
@@ -41,20 +41,22 @@ class SNIaID(GEnum):
     # pylint: disable=no-member
     COV_PANTHEON_PLUS_SH0ES_SYS_STAT = Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT
     SIMPLE_UNION2_1 = Nc.DataSNIAId.SIMPLE_UNION2_1
+    COV_DES_Y5_STAT_SYS = Nc.DataSNIAId.COV_DES_Y5_STAT_SYS
+    COV_DES_Y5_STATONLY = Nc.DataSNIAId.COV_DES_Y5_STATONLY
 
 
-class BAOID(str, Enum):
+class BAOID(StrEnum):
     """Possible BAO data sets ids."""
 
-    # pylint: disable=no-member
-    ALL_COMBINED_JAN_2023 = "ALL_COMBINED_JAN_2023"
+    SDSS_ALL_COMBINED = auto()
+    ALL_COMBINED_JAN_2023 = SDSS_ALL_COMBINED
 
 
-class HID(str, Enum):
+class HID(StrEnum):
     """Possible Hubble data sets ids."""
 
-    # pylint: disable=no-member
-    ALL_COMBINED_JAN_2023 = "ALL_COMBINED_JAN_2023"
+    ALL_COMBINED_JAN_2023 = auto()
+    ALL_COMBINED_APR_2025 = auto()
 
 
 def add_snia_likelihood(
@@ -88,22 +90,23 @@ def add_bao_likelihood(
     """Generate a likelihood for BAO data."""
     assert modelset.peek(Nc.HICosmo.id()) is not None
 
-    if bao_id == BAOID.ALL_COMBINED_JAN_2023:
-        bao_enums = [
-            Nc.DataBaoId.RDV_BEUTLER2011,
-            Nc.DataBaoId.EMPIRICAL_FIT_ROSS2015,
-            Nc.DataBaoId.DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE,
-            Nc.DataBaoId.DTR_DHR_SDSS_DR16_LRG_2021,
-            Nc.DataBaoId.DTR_DHR_SDSS_DR16_QSO_2021,
-            Nc.DataBaoId.EMPIRICAL_FIT_1D_SDSS_DR16_ELG_2021,
-            Nc.DataBaoId.EMPIRICAL_FIT_2D_SDSS_DR16_LYAUTO_2021,
-            Nc.DataBaoId.EMPIRICAL_FIT_2D_SDSS_DR16_LYXQSO_2021,
-        ]
-        for bao_enum in bao_enums:
-            bao_likelihood = Nc.data_bao_create(dist, bao_enum)
-            dataset.append_data(bao_likelihood)
-    else:
-        raise ValueError(f"Unknown BAO data set id: {bao_id}")
+    match bao_id:
+        case BAOID.ALL_COMBINED_JAN_2023:
+            bao_enums = [
+                Nc.DataBaoId.RDV_BEUTLER2011,
+                Nc.DataBaoId.EMPIRICAL_FIT_ROSS2015,
+                Nc.DataBaoId.DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE,
+                Nc.DataBaoId.DTR_DHR_SDSS_DR16_LRG_2021,
+                Nc.DataBaoId.DTR_DHR_SDSS_DR16_QSO_2021,
+                Nc.DataBaoId.EMPIRICAL_FIT_1D_SDSS_DR16_ELG_2021,
+                Nc.DataBaoId.EMPIRICAL_FIT_2D_SDSS_DR16_LYAUTO_2021,
+                Nc.DataBaoId.EMPIRICAL_FIT_2D_SDSS_DR16_LYXQSO_2021,
+            ]
+            for bao_enum in bao_enums:
+                bao_likelihood = Nc.data_bao_create(dist, bao_enum)
+                dataset.append_data(bao_likelihood)
+        case _:
+            raise ValueError(f"Unknown BAO data set id: {bao_id}")
 
 
 def add_h_likelihood(
@@ -114,10 +117,17 @@ def add_h_likelihood(
     """Generate a likelihood for Hubble data."""
     assert modelset.peek(Nc.HICosmo.id()) is not None
 
-    if h_id == HID.ALL_COMBINED_JAN_2023:
-        h_enums = [Nc.DataHubbleId.GOMEZ_VALENT_COMP2018]
-        for h_enum in h_enums:
-            h_likelihood = Nc.DataHubble.new_from_id(h_enum)
-            dataset.append_data(h_likelihood)
-    else:
-        raise ValueError(f"Unknown Hubble data set id: {h_id}")
+    match h_id:
+        case HID.ALL_COMBINED_JAN_2023:
+            h_enums = [Nc.DataHubbleId.GOMEZ_VALENT_COMP2018]
+            for h_enum in h_enums:
+                h_likelihood = Nc.DataHubble.new_from_id(h_enum)
+                dataset.append_data(h_likelihood)
+        case HID.ALL_COMBINED_APR_2025:
+            h_enums = [
+                Nc.DataHubbleId.GOMEZ_VALENT_COMP2018,
+                Nc.DataHubbleId.TOMASETTI2023,
+                Nc.DataHubbleId.JIMENEZ2023,
+            ]
+        case _:
+            raise ValueError(f"Unknown Hubble data set id: {h_id}")
