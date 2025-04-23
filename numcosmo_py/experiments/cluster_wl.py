@@ -176,14 +176,17 @@ class GalaxyDistributionModel:
             galaxies.ra_min, galaxies.ra_max, galaxies.dec_min, galaxies.dec_max
         )
         self.galaxy_redshift_true = Nc.GalaxySDTrueRedshiftLSSTSRD.new()
-        # self.galaxy_redshift_true.set_property(
-        #    "lim", Ncm.DTuple2.new(galaxies.z_min, galaxies.z_max)
-        # )
         dist = self.galaxy_redshift_true.dist(1.0e-5, 1.0e-15)
         frac = dist.eval_pdf(galaxies.z_max) - dist.eval_pdf(galaxies.z_min)
-        self.sky_area = (galaxies.ra_max - galaxies.ra_min) * (
-            galaxies.dec_max - galaxies.dec_min
-        )
+
+        alpha_max = np.deg2rad(galaxies.ra_max)
+        alpha_min = np.deg2rad(galaxies.ra_min)
+        delta_max = np.deg2rad(galaxies.dec_max)
+        delta_min = np.deg2rad(galaxies.dec_min)
+
+        self.sky_area = (
+            (alpha_max - alpha_min) * (np.sin(delta_max) - np.sin(delta_min))
+        ) * (180.0 / np.pi) ** 2
         self.n_galaxies = int(galaxies.density * frac * self.sky_area)
         print(
             f"Number of galaxies: {self.n_galaxies} = "
@@ -354,6 +357,14 @@ def generate_lsst_cluster_wl(
     summary: bool,
 ) -> Ncm.ObjDictStr:
     """Generate J-Pas forecast 2024 experiment dictionary."""
+    if (
+        (cluster_ra < ra_min)
+        or (cluster_ra > ra_max)
+        or (cluster_dec < dec_min)
+        or (cluster_dec > dec_max)
+    ):
+        raise ValueError(f"Cluster position out of bounds: {cluster_ra} {cluster_dec}")
+
     halo_position = HaloPositionData(ra=cluster_ra, dec=cluster_dec, z=cluster_z)
     cluster = ClusterModel(
         position=halo_position,
