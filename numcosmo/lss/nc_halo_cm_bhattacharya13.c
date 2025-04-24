@@ -178,8 +178,8 @@ _nc_halo_cm_bhattacharya13_set_Delta (NcHaloMassSummary *hms, gdouble Delta)
 static gdouble
 _nc_halo_cm_bhattacharya13_concentration_mean (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
-  NcHaloCMBhattacharya13 *hcmb               = NC_HALO_CM_BHATTACHARYA13 (hms);
-  gdouble mass = _nc_halo_cm_bhattacharya13_mass (hms);
+  NcHaloCMBhattacharya13 *hcmb   = NC_HALO_CM_BHATTACHARYA13 (hms);
+  gdouble mass                   = _nc_halo_cm_bhattacharya13_mass (hms);
   gdouble lnM                    = log(mass);
   gdouble R                      = exp(nc_halo_mass_function_lnM_to_lnR (hcmb->mfp, cosmo, lnM));
   gdouble D                      = nc_growth_func_eval (hcmb->gf, cosmo, z);
@@ -193,8 +193,8 @@ _nc_halo_cm_bhattacharya13_concentration_mean (NcHaloMassSummary *hms, NcHICosmo
 static gdouble
 _nc_halo_cm_bhattacharya13_concentration_critical (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
-  NcHaloCMBhattacharya13 *hcmb               = NC_HALO_CM_BHATTACHARYA13 (hms);
-  gdouble mass = _nc_halo_cm_bhattacharya13_mass (hms);
+  NcHaloCMBhattacharya13 *hcmb   = NC_HALO_CM_BHATTACHARYA13 (hms);
+  gdouble mass                   = _nc_halo_cm_bhattacharya13_mass (hms);
   gdouble lnM                    = log(mass);
   gdouble R                      = exp(nc_halo_mass_function_lnM_to_lnR (hcmb->mfp, cosmo, lnM));
   gdouble D                      = nc_growth_func_eval (hcmb->gf, cosmo, z);
@@ -207,8 +207,8 @@ _nc_halo_cm_bhattacharya13_concentration_critical (NcHaloMassSummary *hms, NcHIC
 static gdouble
 _nc_halo_cm_bhattacharya13_concentration_virial (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
-  NcHaloCMBhattacharya13 *hcmb               = NC_HALO_CM_BHATTACHARYA13 (hms);
-  gdouble mass = _nc_halo_cm_bhattacharya13_mass (hms);
+  NcHaloCMBhattacharya13 *hcmb   = NC_HALO_CM_BHATTACHARYA13 (hms);
+  gdouble mass                   = _nc_halo_cm_bhattacharya13_mass (hms);
   gdouble lnM                    = log(mass);
   gdouble R                      = exp(nc_halo_mass_function_lnM_to_lnR (hcmb->mfp, cosmo, lnM));
   gdouble D                      = nc_growth_func_eval (hcmb->gf, cosmo, z);

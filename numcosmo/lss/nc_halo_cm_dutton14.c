@@ -76,7 +76,7 @@ nc_halo_cm_dutton14_init (NcHaloCMDutton14 *hcmdm)
   NcHaloCMDutton14Private * const self = nc_halo_cm_dutton14_get_instance_private (hcmdm);
 
   self->Delta = 0.0;
-  self->mdef = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
+  self->mdef  = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
 
   self->concentration = NULL;
 }
@@ -153,7 +153,7 @@ _nc_halo_cm_dutton14_mass (NcHaloMassSummary *hms)
 
 static gdouble _nc_halo_cm_dutton14_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
-  NcHaloCMDutton14 *hcmdm = NC_HALO_CM_DUTTON14 (hms);
+  NcHaloCMDutton14 *hcmdm              = NC_HALO_CM_DUTTON14 (hms);
   NcHaloCMDutton14Private * const self = nc_halo_cm_dutton14_get_instance_private (hcmdm);
 
   return self->concentration (hms, cosmo, z);
@@ -161,7 +161,7 @@ static gdouble _nc_halo_cm_dutton14_concentration (NcHaloMassSummary *hms, NcHIC
 
 static void _nc_halo_cm_dutton14_set_Delta (NcHaloMassSummary *hms, gdouble Delta)
 {
-  NcHaloCMDutton14 *hcmdm = NC_HALO_CM_DUTTON14 (hms);
+  NcHaloCMDutton14 *hcmdm              = NC_HALO_CM_DUTTON14 (hms);
   NcHaloCMDutton14Private * const self = nc_halo_cm_dutton14_get_instance_private (hcmdm);
 
   if (self->mdef < NC_HALO_MASS_SUMMARY_MASS_DEF_LEN)
@@ -201,7 +201,7 @@ _nc_halo_cm_dutton14_concentration_virial (NcHaloMassSummary *hms, NcHICosmo *co
 static void
 _nc_halo_cm_dutton14_set_mdef (NcHaloMassSummary *hms, NcHaloMassSummaryMassDef mdef)
 {
-  NcHaloCMDutton14 *hcmdm               = NC_HALO_CM_DUTTON14 (hms);
+  NcHaloCMDutton14 *hcmdm              = NC_HALO_CM_DUTTON14 (hms);
   NcHaloCMDutton14Private * const self = nc_halo_cm_dutton14_get_instance_private (hcmdm);
 
   if (self->Delta != 0.0)
