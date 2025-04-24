@@ -129,6 +129,7 @@
 #include "lss/nc_halo_cm_param.h"
 #include "lss/nc_halo_cm_duffy08.h"
 #include "lss/nc_halo_cm_klypin11.h"
+#include "lss/nc_halo_cm_prada12.h"
 #include "lss/nc_halo_cm_bhattacharya13.h"
 #include "lss/nc_halo_cm_dutton14.h"
 #include "lss/nc_multiplicity_func.h"
@@ -671,6 +672,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_PARAM);
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_DUFFY08);
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_KLYPIN11);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_PRADA12);
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_BHATTACHARYA13);
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_DUTTON14);
 
