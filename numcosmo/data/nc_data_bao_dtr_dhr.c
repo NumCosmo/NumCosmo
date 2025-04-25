@@ -273,7 +273,7 @@ nc_data_bao_dtr_dhr_new_from_id (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_DTR_DHR_SDSS_DR16_QSO_2021:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_dtr_dhr_dr16_qso_2021.obj", TRUE);
       break;
-    case NC_DATA_BAO_DTR_DHR_DESI_DR1_LYM_2025:
+    case NC_DATA_BAO_DTR_DHR_DESI_DR1_LYA_2025:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_dtr_dhr_desi_dr1_lym_2025.obj", TRUE);
       break;
     default:                                                                  /* LCOV_EXCL_LINE */
