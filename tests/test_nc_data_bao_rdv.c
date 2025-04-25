@@ -6,8 +6,9 @@
  *  <pennalima@gmail.com>
  ****************************************************************************/
 /*
- * numcosmo
- * Copyright (C) Mariana Penna Lima 2015 <pennalima@gmail.com>
+ * test_nc_data_bao_rdv.c
+ * Copyright (C) 2015 Mariana Penna-Lima <pennalima@gmail.com>
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
