@@ -453,7 +453,7 @@ class GenerateClusterWL:
             z_min=self.z_min,
             z_max=self.z_max,
             z_dist=self.z_dist,
-            sigma_z=self.sigma_z,
+            sigma0=self.sigma_z,
             shape_dist=self.shape_dist,
             galaxy_shape_e_rms=self.galaxy_shape_e_rms,
             galaxy_shape_e_sigma=self.galaxy_shape_e_sigma,

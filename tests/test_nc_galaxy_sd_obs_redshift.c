@@ -211,7 +211,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_new (TestNcGalaxySDObsRedshift *test, gcons
   const gdouble z_min                    = 0.01;
   const gdouble z_max                    = 10.0;
   NcGalaxySDTrueRedshift *gsdtr          = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
-  NcGalaxySDObsRedshiftGauss *gsdorgauss = nc_galaxy_sd_obs_redshift_gauss_new (gsdtr);
+  NcGalaxySDObsRedshiftGauss *gsdorgauss = nc_galaxy_sd_obs_redshift_gauss_new (gsdtr, 0.1, 1.8);
 
   nc_galaxy_sd_true_redshift_set_lim (gsdtr, z_min, z_max);
 

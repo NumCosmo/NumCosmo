@@ -63,6 +63,7 @@ DATA_XCOR_DL: int = 10
 DATA_XCOR_MAX: int = 5
 GALAXY_SD_OBS_REDSHIFT_COL_Z: str = r"z"
 GALAXY_SD_OBS_REDSHIFT_GAUSS_COL_SIGMA: str = r"sigma_z"
+GALAXY_SD_OBS_REDSHIFT_GAUSS_COL_SIGMA0: str = r"sigma_0"
 GALAXY_SD_OBS_REDSHIFT_GAUSS_COL_ZP: str = r"zp"
 GALAXY_SD_POSITION_COL_DEC: str = r"dec"
 GALAXY_SD_POSITION_COL_RA: str = r"ra"
@@ -3409,9 +3410,6 @@ class DataBaoA(NumCosmoMath.DataGaussDiag):
         name: str
 
     props: Props = ...
-    parent_instance: NumCosmoMath.DataGaussDiag = ...
-    dist: Distance = ...
-    x: NumCosmoMath.Vector = ...
     def __init__(
         self,
         dist: Distance = ...,
@@ -3500,9 +3498,6 @@ class DataBaoDHrDAr(NumCosmoMath.DataGaussCov):
         name: str
 
     props: Props = ...
-    parent_instance: NumCosmoMath.DataGaussCov = ...
-    dist: Distance = ...
-    x: NumCosmoMath.Vector = ...
     def __init__(
         self,
         dist: Distance = ...,
@@ -3594,10 +3589,6 @@ class DataBaoDMrHr(NumCosmoMath.DataGaussCov):
         name: str
 
     props: Props = ...
-    parent_instance: NumCosmoMath.DataGaussCov = ...
-    dist: Distance = ...
-    x: NumCosmoMath.Vector = ...
-    rs_fiduc: float = ...
     def __init__(
         self,
         dist: Distance = ...,
@@ -3687,9 +3678,6 @@ class DataBaoDV(NumCosmoMath.DataGaussDiag):
         name: str
 
     props: Props = ...
-    parent_instance: NumCosmoMath.DataGaussDiag = ...
-    dist: Distance = ...
-    x: NumCosmoMath.Vector = ...
     def __init__(
         self,
         dist: Distance = ...,
@@ -3775,8 +3763,6 @@ class DataBaoDVDV(NumCosmoMath.DataGaussDiag):
         name: str
 
     props: Props = ...
-    parent_instance: NumCosmoMath.DataGaussDiag = ...
-    dist: Distance = ...
     def __init__(
         self,
         dist: Distance = ...,
@@ -3864,9 +3850,6 @@ class DataBaoDtrDHr(NumCosmoMath.DataGaussCov):
         name: str
 
     props: Props = ...
-    parent_instance: NumCosmoMath.DataGaussCov = ...
-    dist: Distance = ...
-    x: NumCosmoMath.Vector = ...
     def __init__(
         self,
         dist: Distance = ...,
@@ -3893,6 +3876,94 @@ class DataBaoDtrDHrClass(GObject.GPointer):
     ::
 
         DataBaoDtrDHrClass()
+    """
+
+    parent_class: NumCosmoMath.DataGaussCovClass = ...
+
+class DataBaoDvrDtDh(NumCosmoMath.DataGaussCov):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataBaoDvrDtDh(**properties)
+        new_from_file(filename:str) -> NumCosmo.DataBaoDvrDtDh
+        new_from_id(dist:NumCosmo.Distance, id:NumCosmo.DataBaoId) -> NumCosmo.DataBaoDvrDtDh
+
+    Object NcDataBaoDvrDtDh
+
+    Properties from NcDataBaoDvrDtDh:
+      dist -> NcDistance: dist
+        Distance object
+      z -> NcmVector: z
+        Data redshift
+
+    Properties from NcmDataGaussCov:
+      n-points -> guint: n-points
+        Data sample size
+      use-norma -> gboolean: use-norma
+        Use the likelihood normalization to calculate -2lnL
+      mean -> NcmVector: mean
+        Data mean
+      cov -> NcmMatrix: cov
+        Data covariance
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        dist: Distance
+        z: NumCosmoMath.Vector
+        cov: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        use_norma: bool
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        dist: Distance = ...,
+        z: NumCosmoMath.Vector = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataBaoDvrDtDh: ...
+    @classmethod
+    def new_from_id(cls, dist: Distance, id: DataBaoId) -> DataBaoDvrDtDh: ...
+    def set_dist(self, dist: Distance) -> None: ...
+
+class DataBaoDvrDtDhClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataBaoDvrDtDhClass()
     """
 
     parent_class: NumCosmoMath.DataGaussCovClass = ...
@@ -3959,14 +4030,6 @@ class DataBaoEmpiricalFit(NumCosmoMath.DataDist1d):
         name: str
 
     props: Props = ...
-    parent_instance: NumCosmoMath.DataDist1d = ...
-    Dv_fiduc: float = ...
-    rs_fiduc: float = ...
-    z: float = ...
-    m2lnp: NumCosmoMath.Spline = ...
-    p: NumCosmoMath.StatsDist1d = ...
-    p_mode: float = ...
-    dist: Distance = ...
     def __init__(
         self,
         Dv_fiduc: float = ...,
@@ -4055,13 +4118,6 @@ class DataBaoEmpiricalFit2d(NumCosmoMath.DataDist2d):
         name: str
 
     props: Props = ...
-    parent_instance: NumCosmoMath.DataDist2d = ...
-    Dh_rd_fiduc: float = ...
-    Dt_rd_fiduc: float = ...
-    z: float = ...
-    m2lnp: NumCosmoMath.Spline2d = ...
-    p: NumCosmoMath.StatsDist2d = ...
-    dist: Distance = ...
     def __init__(
         self,
         Dh_rd_fiduc: float = ...,
@@ -4173,10 +4229,6 @@ class DataBaoRDV(NumCosmoMath.DataGauss):
         name: str
 
     props: Props = ...
-    parent_instance: NumCosmoMath.DataGauss = ...
-    dist: Distance = ...
-    x: NumCosmoMath.Vector = ...
-    r_DV: bool = ...
     def __init__(
         self,
         dist: Distance = ...,
@@ -5919,9 +5971,15 @@ class GalaxySDObsRedshiftGauss(GalaxySDObsRedshift):
     ::
 
         GalaxySDObsRedshiftGauss(**properties)
-        new(sdz:NumCosmo.GalaxySDTrueRedshift) -> NumCosmo.GalaxySDObsRedshiftGauss
+        new(sdz:NumCosmo.GalaxySDTrueRedshift, zp_min:float, zp_max:float) -> NumCosmo.GalaxySDObsRedshiftGauss
 
     Object NcGalaxySDObsRedshiftGauss
+
+    Properties from NcGalaxySDObsRedshiftGauss:
+      lim -> NcmDTuple2: lim
+        Galaxy sample photometric redshift distribution limits
+      use-true-z -> gboolean: use-true-z
+        Use the true redshift distribution
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -5948,6 +6006,8 @@ class GalaxySDObsRedshiftGauss(GalaxySDObsRedshift):
     """
 
     class Props:
+        lim: NumCosmoMath.DTuple2
+        use_true_z: bool
         implementation: int
         name: str
         nick: str
@@ -5961,6 +6021,8 @@ class GalaxySDObsRedshiftGauss(GalaxySDObsRedshift):
     props: Props = ...
     def __init__(
         self,
+        lim: NumCosmoMath.DTuple2 = ...,
+        use_true_z: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -5978,12 +6040,18 @@ class GalaxySDObsRedshiftGauss(GalaxySDObsRedshift):
         self,
         mset: NumCosmoMath.MSet,
         data: GalaxySDObsRedshiftData,
-        sigma_z: float,
+        sigma0: float,
         rng: NumCosmoMath.RNG,
     ) -> None: ...
+    def get_lim(self) -> typing.Tuple[float, float]: ...
+    def get_use_true_z(self) -> bool: ...
     @classmethod
-    def new(cls, sdz: GalaxySDTrueRedshift) -> GalaxySDObsRedshiftGauss: ...
+    def new(
+        cls, sdz: GalaxySDTrueRedshift, zp_min: float, zp_max: float
+    ) -> GalaxySDObsRedshiftGauss: ...
     def ref(self) -> GalaxySDObsRedshiftGauss: ...
+    def set_lim(self, zp_min: float, zp_max: float) -> None: ...
+    def set_use_true_z(self, use_true_z: bool) -> None: ...
 
 class GalaxySDObsRedshiftGaussClass(GObject.GPointer):
     r"""
@@ -10227,7 +10295,6 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
 
     props: Props = ...
     parent_instance: HICosmo = ...
-    priv: HICosmoVexpPrivate = ...
     def __init__(
         self,
         H0: float = ...,
@@ -19901,11 +19968,13 @@ class DataBaoId(GObject.GEnum):
     DHR_DAR_SDSS_DR11_2015: DataBaoId = ...
     DHR_DAR_SDSS_DR11_2015_LYAF_AUTO_CROSS: DataBaoId = ...
     DMR_HR_SDSS_DR12_2016: DataBaoId = ...
+    DTR_DHR_DESI_DR1_LYM_2025: DataBaoId = ...
     DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE: DataBaoId = ...
     DTR_DHR_SDSS_DR16_LRG_2021: DataBaoId = ...
     DTR_DHR_SDSS_DR16_QSO_2021: DataBaoId = ...
     DVDV_PERCIVAL2007: DataBaoId = ...
     DVDV_PERCIVAL2010: DataBaoId = ...
+    DVR_DTDH_DESI_DR1_2024: DataBaoId = ...
     DV_EISENSTEIN2005: DataBaoId = ...
     EMPIRICAL_FIT_1D_SDSS_DR16_ELG_2021: DataBaoId = ...
     EMPIRICAL_FIT_2D_BAUTISTA2017: DataBaoId = ...
@@ -19916,6 +19985,7 @@ class DataBaoId(GObject.GEnum):
     RDV_BEUTLER2011: DataBaoId = ...
     RDV_BLAKE2012: DataBaoId = ...
     RDV_BOSS_QSO_ATA2017: DataBaoId = ...
+    RDV_DESI_DR1_BGS_QSO_2024: DataBaoId = ...
     RDV_KAZIN2014: DataBaoId = ...
     RDV_PADMANABHAN2012: DataBaoId = ...
     RDV_PERCIVAL2007: DataBaoId = ...

@@ -166,7 +166,7 @@ class GalaxyDistributionModel:
         self,
         galaxies: GalaxyDistributionData,
         z_dist: GalaxyZDist = GalaxyZDist.GAUSS,
-        sigma_z: float = 0.03,
+        sigma0: float = 0.03,
         shape_type: GalaxySDShapeDist = GalaxySDShapeDist.GAUSS,
         galaxy_shape_e_rms: float = 2.0e-1,
         galaxy_shape_e_sigma: float = 1.0e-4,
@@ -206,11 +206,11 @@ class GalaxyDistributionModel:
 
             case GalaxyZDist.GAUSS:
                 self.galaxy_redshift = Nc.GalaxySDObsRedshiftGauss.new(
-                    self.galaxy_redshift_true
+                    self.galaxy_redshift_true, galaxies.z_min, galaxies.z_max
                 )
 
                 def gen_z_gauss(mset, z_data, rng):
-                    self.galaxy_redshift.gen(mset, z_data, sigma_z, rng)
+                    self.galaxy_redshift.gen(mset, z_data, sigma0, rng)
 
                 self.gen_z = gen_z_gauss
             case _:
@@ -348,7 +348,7 @@ def generate_lsst_cluster_wl(
     z_min: float,
     z_max: float,
     z_dist: GalaxyZDist,
-    sigma_z: float,
+    sigma0: float,
     shape_dist: GalaxySDShapeDist,
     galaxy_shape_e_rms: float,
     galaxy_shape_e_sigma: float,
@@ -383,7 +383,7 @@ def generate_lsst_cluster_wl(
     galaxy_model = GalaxyDistributionModel(
         galaxies=galaxy_distribution,
         z_dist=z_dist,
-        sigma_z=sigma_z,
+        sigma0=sigma0,
         shape_type=shape_dist,
         galaxy_shape_e_rms=galaxy_shape_e_rms,
         galaxy_shape_e_sigma=galaxy_shape_e_sigma,
@@ -451,7 +451,7 @@ def generate_lsst_cluster_wl(
         table.add_row("Density", f"{galaxy_distribution.density}")
         table.add_row("z Distribution", f"{z_dist}")
         if z_dist != GalaxyZDist.SPEC:
-            table.add_row("z Sigma", f"{sigma_z}")
+            table.add_row("z Sigma_0", f"{sigma0}")
         table.add_row("Shape Distribution", f"{shape_dist}")
         table.add_row("Shape e_rms", f"{galaxy_shape_e_rms}")
         table.add_row("Shape e_sigma", f"{galaxy_shape_e_sigma}")

@@ -424,7 +424,8 @@ test_ncm_powspec_spline2d_basic (void)
 void
 test_nc_galaxy_sd_obs_redshift_basic (void)
 {
-  NcGalaxySDObsRedshift *gsdor = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_gauss_new (NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ())));
+  NcGalaxySDTrueRedshift *gsdtr = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
+  NcGalaxySDObsRedshift *gsdor  = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_gauss_new (gsdtr, 0.1, 1.0));
   NcGalaxySDObsRedshift *gsdor2;
 
   g_assert_true (gsdor != NULL);
@@ -436,13 +437,15 @@ test_nc_galaxy_sd_obs_redshift_basic (void)
 
   g_assert_true (NC_IS_GALAXY_SD_OBS_REDSHIFT (gsdor));
 
+  nc_galaxy_sd_true_redshift_clear (&gsdtr);
   NCM_TEST_FREE (nc_galaxy_sd_obs_redshift_free, gsdor);
 }
 
 void
 test_nc_galaxy_sd_obs_redshift_gauss_basic (void)
 {
-  NcGalaxySDObsRedshiftGauss *gsdorg = nc_galaxy_sd_obs_redshift_gauss_new (NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ()));
+  NcGalaxySDTrueRedshift *gsdtr      = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
+  NcGalaxySDObsRedshiftGauss *gsdorg = nc_galaxy_sd_obs_redshift_gauss_new (gsdtr, 0.1, 1.0);
   NcGalaxySDObsRedshiftGauss *gsdorg2;
 
   g_assert_true (gsdorg != NULL);

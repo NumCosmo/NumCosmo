@@ -179,7 +179,7 @@ static void
 test_nc_data_cluster_wl_new_gauss (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   NcGalaxySDTrueRedshift *z_true_dist = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
-  NcGalaxySDObsRedshift *z_dist       = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_gauss_new (z_true_dist));
+  NcGalaxySDObsRedshift *z_dist       = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_gauss_new (z_true_dist, 0.1, 1.8));
   NcGalaxySDPosition *p_dist          = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (-0.2, 0.2, -0.2, 0.2));
   NcGalaxySDShape *s_dist             = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new ());
   NcDataClusterWL *dcwl               = nc_data_cluster_wl_new ();
@@ -215,16 +215,16 @@ test_nc_data_cluster_wl_new_gauss (TestNcDataClusterWL *test, gconstpointer pdat
 static void
 test_nc_data_cluster_wl_new_pz (TestNcDataClusterWL *test, gconstpointer pdata)
 {
-  NcGalaxySDObsRedshift *z_dist       = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_pz_new ());
-  NcGalaxySDPosition *p_dist          = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (-0.2, 0.2, -0.2, 0.2));
-  NcGalaxySDShape *s_dist             = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new ());
-  NcDataClusterWL *dcwl               = nc_data_cluster_wl_new ();
-  NcHICosmo *cosmo                    = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcDistance *dist                    = nc_distance_new (100.0);
-  NcHaloMassSummary *hms              = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
-  NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
-  NcHaloPosition *hp                  = nc_halo_position_new (dist);
-  NcWLSurfaceMassDensity *smd         = nc_wl_surface_mass_density_new (dist);
+  NcGalaxySDObsRedshift *z_dist = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_pz_new ());
+  NcGalaxySDPosition *p_dist    = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (-0.2, 0.2, -0.2, 0.2));
+  NcGalaxySDShape *s_dist       = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new ());
+  NcDataClusterWL *dcwl         = nc_data_cluster_wl_new ();
+  NcHICosmo *cosmo              = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist              = nc_distance_new (100.0);
+  NcHaloMassSummary *hms        = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp      = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
+  NcHaloPosition *hp            = nc_halo_position_new (dist);
+  NcWLSurfaceMassDensity *smd   = nc_wl_surface_mass_density_new (dist);
 
   nc_halo_position_prepare (hp, cosmo);
 
