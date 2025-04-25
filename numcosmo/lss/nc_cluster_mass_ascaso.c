@@ -82,12 +82,12 @@ nc_cluster_mass_ascaso_init (NcClusterMassAscaso *ascaso)
 {
   NcClusterMassAscasoPrivate * const self = ascaso->priv = nc_cluster_mass_ascaso_get_instance_private (ascaso);
 
-  self->M0      = 0.0;
-  self->z0      = 0.0;
-  self->lnM0    = 0.0;
-  self->ln1pz0  = 0.0;
-  self->lnR_min = GSL_NEGINF;
-  self->lnR_max = GSL_POSINF;
+  self->M0               = 0.0;
+  self->z0               = 0.0;
+  self->lnM0             = 0.0;
+  self->ln1pz0           = 0.0;
+  self->lnR_min          = GSL_NEGINF;
+  self->lnR_max          = GSL_POSINF;
   self->enable_rejection = TRUE;
 }
 
@@ -243,7 +243,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
                                                         0.0, G_MAXDOUBLE,  M_LN10 * 2.5,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-    /**
+  /**
    * NcClusterMassAscaso:enable_rejection:
    *
    * FIXME Set if the objects sampled below CUT are rejected
@@ -256,7 +256,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-    
+
   /**
    * NcClusterMassAscaso:MU_P0:
    *
@@ -368,19 +368,19 @@ _nc_cluster_mass_ascaso_lnR_sigma (NcClusterMass *clusterm, const gdouble lnM, c
 static gdouble
 _nc_cluster_mass_ascaso_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
 {
-  NcClusterMassAscaso *ascaso             = NC_CLUSTER_MASS_ASCASO (clusterm);
-    
+  NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
+
   gdouble lnR_true, sigma;
 
   _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
 
   {
     const gdouble x = (lnM_obs[0] - lnR_true) / sigma;
-    
+
     if (lnM_obs[0] < CUT)
-        return 0.0;
+      return 0.0;
     else
-        return 2.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x)/ erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
+      return 2.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x) / erfc ((CUT - lnR_true) / (M_SQRT2 * sigma));
   }
 }
 
@@ -393,45 +393,51 @@ _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoubl
 
   _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
 
-    const gdouble x_min = (lnR_true - CUT) / (M_SQRT2 * sigma);
-    const gdouble x_max = (lnR_true - self->lnR_max) / (M_SQRT2 * sigma);
+  const gdouble x_min = (lnR_true - CUT) / (M_SQRT2 * sigma);
+  const gdouble x_max = (lnR_true - self->lnR_max) / (M_SQRT2 * sigma);
 
-    if (x_max > 4.0)
-      return -(erfc (x_min) - erfc (x_max))/ erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
-    else
-      return (erf (x_min) - erf (x_max))/ erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
-
+  if (x_max > 4.0)
+    return -(erfc (x_min) - erfc (x_max)) / erfc ((CUT - lnR_true) / (M_SQRT2 * sigma));
+  else
+    return (erf (x_min) - erf (x_max)) / erfc ((CUT - lnR_true) / (M_SQRT2 * sigma));
 }
 
 static gdouble
 _nc_cluster_mass_ascaso_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params)
 {
-  NcClusterMassAscaso *ascaso             = NC_CLUSTER_MASS_ASCASO (clusterm);
-    
-  gdouble lnR_true, sigma;
+  NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
 
-  _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
+  if ((lnM_obs_lower[0] < CUT) && (lnM_obs_upper[0] < CUT))
+  {
+    return 0.0;
+  }
+  else
+  {
+    gdouble lnR_true, sigma;
 
-    const gdouble x_min = (lnR_true - lnM_obs_lower[0]) / (M_SQRT2 * sigma);
-    const gdouble x_max = (lnR_true - lnM_obs_upper[0]) / (M_SQRT2 * sigma);
-    if (lnM_obs_lower[0] < CUT && lnM_obs_upper[0] < CUT)
+    _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
     {
-     return 0.0;
+      const gdouble x_min = (lnR_true - lnM_obs_lower[0]) / (M_SQRT2 * sigma);
+      const gdouble x_max = (lnR_true - lnM_obs_upper[0]) / (M_SQRT2 * sigma);
+      const gdouble x_cut = (lnR_true - CUT) / (M_SQRT2 * sigma);
+      const gdouble norma = erfc (-x_cut);
+
+      if ((lnM_obs_lower[0] < CUT) && (lnM_obs_upper[0] >= CUT))
+      {
+        if (x_max > 4.0)
+          return -(erfc (x_cut) - erfc (x_max)) / norma;
+        else
+          return (erf (x_cut) - erf (x_max))  / norma;
+      }
+      else
+      {
+        if (x_max > 4.0)
+          return -(erfc (x_min) - erfc (x_max)) / norma;
+        else
+          return (erf (x_min) - erf (x_max))  / norma;
+      }
     }
-    else if (lnM_obs_lower[0] < CUT && lnM_obs_upper[0] >= CUT)
-    {
-    if (x_max > 4.0)
-      return -(erfc ((lnR_true - CUT) / (M_SQRT2 * sigma)) - erfc (x_max))/ erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
-    else
-      return (erf ((lnR_true - CUT) / (M_SQRT2 * sigma)) - erf (x_max))  / erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
-    }
-    else
-    {
-    if (x_max > 4.0)
-      return -(erfc (x_min) - erfc (x_max))/ erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
-    else
-      return (erf (x_min) - erf (x_max))  / erfc((CUT - lnR_true) / (M_SQRT2 * sigma));
-    }
+  }
 }
 
 static gboolean
@@ -444,15 +450,17 @@ _nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gd
   _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
 
   ncm_rng_lock (rng);
+
   if (self->enable_rejection)
   {
-  lnM_obs[0] = ncm_rng_gaussian_gen (rng, lnR_true, sigma);
+    lnM_obs[0] = ncm_rng_gaussian_gen (rng, lnR_true, sigma);
   }
   else
   {
-  lnM_obs[0] = ncm_rng_gaussian_tail_gen (rng, CUT - lnR_true, sigma);
-  lnM_obs[0] += lnR_true; 
+    lnM_obs[0]  = ncm_rng_gaussian_tail_gen (rng, CUT - lnR_true, sigma);
+    lnM_obs[0] += lnR_true;
   }
+
   ncm_rng_unlock (rng);
 
   return (lnM_obs[0] <= self->lnR_max) && (lnM_obs[0] >= CUT);
@@ -533,7 +541,7 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
 
       const gdouble x = (lnM_obs_ptr[i] - lnR) / sigma;
 
-      res_ptr[i] = 2.0 * exp (-0.5 * x * x) / (sqrt_2pi * sigma)/ erfc((CUT - lnR) / (M_SQRT2 * sigma)) ;
+      res_ptr[i] = 2.0 * exp (-0.5 * x * x) / (sqrt_2pi * sigma) / erfc ((CUT - lnR) / (M_SQRT2 * sigma));
     }
   }
   else
@@ -546,7 +554,7 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
 
       const gdouble x = (lnM_obs_ptr[i * tda] - lnR) / sigma;
 
-      res_ptr[i] = 2.0 * exp (-0.5 * x * x) / (sqrt_2pi * sigma) / erfc((CUT - lnR) / (M_SQRT2 * sigma));
+      res_ptr[i] = 2.0 * exp (-0.5 * x * x) / (sqrt_2pi * sigma) / erfc ((CUT - lnR) / (M_SQRT2 * sigma));
     }
   }
 }
@@ -602,7 +610,6 @@ nc_cluster_mass_ascaso_get_std_richness (NcClusterMassAscaso *ascaso, gdouble ln
 gdouble
 nc_cluster_mass_ascaso_get_cut (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z)
 {
-
   return CUT;
 }
 
@@ -618,22 +625,21 @@ nc_cluster_mass_ascaso_get_cut (NcClusterMassAscaso *ascaso, gdouble lnM, gdoubl
 gdouble
 nc_cluster_mass_ascaso_get_mean (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z)
 {
-  gdouble lnR_mean, lnR_sigma, A, B, C, mean_correction;   
-  
-    
+  gdouble lnR_mean, lnR_sigma, A, B, C, mean_correction;
+
+
   lnR_mean  = nc_cluster_mass_ascaso_get_mean_richness (ascaso, lnM, z);
   lnR_sigma = nc_cluster_mass_ascaso_get_std_richness  (ascaso, lnM, z);
-    
-  A = (CUT - lnR_mean) / lnR_sigma; 
-    
-  B = ( 1.0 / (ncm_c_sqrt_2pi ())) * exp( -0.5 * (A  * A));
-    
-  C = 1.0 - 0.5 * (  1.0 + erf( A / M_SQRT2 ));
-    
-  mean_correction = (lnR_sigma * B / C );
-    
-    return lnR_mean + mean_correction;  
 
+  A = (CUT - lnR_mean) / lnR_sigma;
+
+  B = (1.0 / (ncm_c_sqrt_2pi ())) * exp (-0.5 * (A  * A));
+
+  C = 1.0 - 0.5 * (1.0 + erf (A / M_SQRT2));
+
+  mean_correction = (lnR_sigma * B / C);
+
+  return lnR_mean + mean_correction;
 }
 
 /**
@@ -648,41 +654,39 @@ nc_cluster_mass_ascaso_get_mean (NcClusterMassAscaso *ascaso, gdouble lnM, gdoub
 gdouble
 nc_cluster_mass_ascaso_get_std (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z)
 {
-  gdouble lnR_mean, lnR_sigma, A, B, C, std_correction;   
-  
-    
+  gdouble lnR_mean, lnR_sigma, A, B, C, std_correction;
+
+
   lnR_mean  = nc_cluster_mass_ascaso_get_mean_richness (ascaso, lnM, z);
   lnR_sigma = nc_cluster_mass_ascaso_get_std_richness  (ascaso, lnM, z);
-    
-  A = (CUT - lnR_mean) / lnR_sigma; 
-    
-  B = ( 1.0 / (ncm_c_sqrt_2pi ())) * exp( -0.5 * (A  * A));
-    
-  C = 1.0 - 0.5 * (  1.0 + erf( A / M_SQRT2 ));
-    
-  std_correction = pow( 1.0 + ( A * B / C  ) - ( B / C ) * ( B / C ), 0.5);
-    
-  return lnR_sigma * std_correction;  
 
+  A = (CUT - lnR_mean) / lnR_sigma;
+
+  B = (1.0 / (ncm_c_sqrt_2pi ())) * exp (-0.5 * (A  * A));
+
+  C = 1.0 - 0.5 * (1.0 + erf (A / M_SQRT2));
+
+  std_correction = pow (1.0 + (A * B / C) - (B / C) * (B / C), 0.5);
+
+  return lnR_sigma * std_correction;
 }
 
 /**
  * nc_cluster_mass_ascaso_set_enable_rejection:
- * @gbolean: a #NcClusterMassAscaso
- * gbolean: on
+ * @ascaso: a #NcClusterMassAscaso
+ * @on: a #NcClusterMassAscaso
  *
  * Set the enable_rejection property.
  *
  */
 
-void 
+void
 nc_cluster_mass_ascaso_set_enable_rejection (NcClusterMassAscaso *ascaso, gboolean on)
 {
- NcClusterMassAscasoPrivate * const self = ascaso->priv;
- self->enable_rejection = on;
-    
-}
+  NcClusterMassAscasoPrivate * const self = ascaso->priv;
 
+  self->enable_rejection = on;
+}
 
 /**
  * nc_cluster_mass_ascaso_get_enable_rejection:
@@ -693,8 +697,9 @@ nc_cluster_mass_ascaso_set_enable_rejection (NcClusterMassAscaso *ascaso, gboole
  */
 gboolean
 nc_cluster_mass_ascaso_get_enable_rejection (NcClusterMassAscaso *ascaso)
-
 {
- NcClusterMassAscasoPrivate * const self = ascaso->priv;
- return self->enable_rejection;
+  NcClusterMassAscasoPrivate * const self = ascaso->priv;
+
+  return self->enable_rejection;
 }
+
