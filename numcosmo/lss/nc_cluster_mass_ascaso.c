@@ -399,10 +399,10 @@ _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoubl
     const gdouble x_cut = (lnR_true - CUT) / (M_SQRT2 * sigma);
     const gdouble x_max = (lnR_true - self->lnR_max) / (M_SQRT2 * sigma);
 
-    if (x_max > 4.0)
-      return -(erfc (x_cut) - erfc (x_max)) / erfc (-x_cut);
+    if ((fabs (x_max) > 4.0) || (fabs (x_cut) > 4.0))
+      return -(erfc (x_cut) - erfc (x_max)) / 2.0;
     else
-      return (erf (x_cut) - erf (x_max)) / erfc (-x_cut);
+      return (erf (x_cut) - erf (x_max)) / 2.0;
   }
 }
 
@@ -424,21 +424,20 @@ _nc_cluster_mass_ascaso_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdo
       const gdouble x_min = (lnR_true - lnM_obs_lower[0]) / (M_SQRT2 * sigma);
       const gdouble x_max = (lnR_true - lnM_obs_upper[0]) / (M_SQRT2 * sigma);
       const gdouble x_cut = (lnR_true - CUT) / (M_SQRT2 * sigma);
-      const gdouble norma = erfc (-x_cut);
 
       if ((lnM_obs_lower[0] < CUT) && (lnM_obs_upper[0] >= CUT))
       {
-        if (x_max > 4.0)
-          return -(erfc (x_cut) - erfc (x_max)) / norma;
+        if ((fabs (x_max) > 4.0) || (fabs (x_cut) > 4.0))
+          return -(erfc (x_cut) - erfc (x_max)) / 2.0;
         else
-          return (erf (x_cut) - erf (x_max))  / norma;
+          return (erf (x_cut) - erf (x_max))  / 2.0;
       }
       else
       {
-        if (x_max > 4.0)
-          return -(erfc (x_min) - erfc (x_max)) / norma;
+        if ((fabs (x_max) > 4.0) || (fabs (x_min) > 4.0))
+          return -(erfc (x_min) - erfc (x_max)) / 2.0;
         else
-          return (erf (x_min) - erf (x_max))  / norma;
+          return (erf (x_min) - erf (x_max))  / 2.0;
       }
     }
   }
@@ -693,7 +692,7 @@ nc_cluster_mass_ascaso_set_enable_rejection (NcClusterMassAscaso *ascaso, gboole
 
 /**
  * nc_cluster_mass_ascaso_get_enable_rejection:
- * @gbolean: a #NcClusterMassAscaso
+ * @ascaso: a #NcClusterMassAscaso
  *
  * Get if the enable_rejection property is on.
  *
