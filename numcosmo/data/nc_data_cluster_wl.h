@@ -45,12 +45,19 @@
 #include <numcosmo/lss/nc_halo_density_profile.h>
 #include <numcosmo/lss/nc_wl_surface_mass_density.h>
 
-
 G_BEGIN_DECLS
 
 #define NC_TYPE_DATA_CLUSTER_WL (nc_data_cluster_wl_get_type ())
 
 G_DECLARE_FINAL_TYPE (NcDataClusterWL, nc_data_cluster_wl, NC, DATA_CLUSTER_WL, NcmData);
+
+typedef enum /*< flags,underscore_name=NC_DATA_CLUSTER_WL_RESAMPLE_FLAG >*/
+{
+  NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_POSITION = 1 << 0,
+  NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_REDSHIFT = 1 << 1,
+  NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_SHAPE    = 1 << 2,
+  NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL      = (1 << 3) - 1,
+} NcDataClusterWLResampleFlag;
 
 typedef struct _NcDataClusterWLPrivate NcDataClusterWLPrivate;
 
@@ -63,6 +70,8 @@ void nc_data_cluster_wl_set_prec (NcDataClusterWL *dcwl, gdouble prec);
 void nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs);
 void nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gdouble r_max);
 NcGalaxyWLObs *nc_data_cluster_wl_peek_obs (NcDataClusterWL *dcwl);
+void nc_data_cluster_wl_set_resample_flag (NcDataClusterWL *dcwl, guint resample_flag);
+guint nc_data_cluster_wl_get_resample_flag (NcDataClusterWL *dcwl);
 
 G_END_DECLS
 

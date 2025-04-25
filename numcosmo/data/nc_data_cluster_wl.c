@@ -76,6 +76,7 @@ struct _NcDataClusterWLPrivate
   NcmModelCtrl *ctrl_redshift;
   NcmModelCtrl *ctrl_position;
   NcmModelCtrl *ctrl_shape;
+  guint resample_flag;
   /* Integration temporary variables */
   NcmVector *err;
   NcmVector *zpi;
@@ -100,6 +101,7 @@ enum
   PROP_PREC,
   PROP_LEN,
   PROP_SIZE,
+  PROP_RESAMPLE_FLAG
 };
 
 struct _NcDataClusterWL
@@ -126,6 +128,7 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
   self->ctrl_redshift = ncm_model_ctrl_new (NULL);
   self->ctrl_position = ncm_model_ctrl_new (NULL);
   self->ctrl_shape    = ncm_model_ctrl_new (NULL);
+  self->resample_flag = NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL;
 
   self->err = ncm_vector_new (1);
   self->zpi = ncm_vector_new (1);
@@ -175,6 +178,9 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_LEN:
       self->len = g_value_get_uint (value);
       break;
+    case PROP_RESAMPLE_FLAG:
+      nc_data_cluster_wl_set_resample_flag (dcwl, g_value_get_uint (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -205,6 +211,9 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
       break;
     case PROP_LEN:
       g_value_set_uint (value, self->len);
+      break;
+    case PROP_RESAMPLE_FLAG:
+      g_value_set_uint (value, self->resample_flag);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -558,10 +567,17 @@ _nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     NcGalaxySDPositionData *p_data    = data->sdpos_data;
     NcGalaxySDObsRedshiftData *z_data = p_data->sdz_data;
 
-    nc_galaxy_sd_obs_redshift_prepare (galaxy_redshift, z_data);
-    nc_galaxy_sd_obs_redshift_gen (galaxy_redshift, z_data, rng);
-    nc_galaxy_sd_position_gen (galaxy_position, p_data, rng);
-    nc_galaxy_sd_shape_gen (galaxy_shape, mset, data, rng);
+    if (self->resample_flag & NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_REDSHIFT)
+    {
+      nc_galaxy_sd_obs_redshift_prepare (galaxy_redshift, z_data);
+      nc_galaxy_sd_obs_redshift_gen (galaxy_redshift, z_data, rng);
+    }
+
+    if (self->resample_flag & NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_POSITION)
+      nc_galaxy_sd_position_gen (galaxy_position, p_data, rng);
+
+    if (self->resample_flag & NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_SHAPE)
+      nc_galaxy_sd_shape_gen (galaxy_shape, mset, data, rng);
 
     nc_galaxy_sd_shape_data_write_row (data, self->obs, gal_i);
   }
@@ -844,3 +860,34 @@ nc_data_cluster_wl_peek_obs (NcDataClusterWL *dcwl)
   return self->obs;
 }
 
+/**
+ * nc_data_cluster_wl_set_resample_flag:
+ * @dcwl: a #NcDataClusterWL
+ * @resample_flag: resample flag
+ *
+ * Sets flag to resample any combination of position, redshift and shape.
+ *
+ */
+void
+nc_data_cluster_wl_set_resample_flag (NcDataClusterWL *dcwl, guint resample_flag)
+{
+  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
+
+  self->resample_flag = resample_flag;
+}
+
+/**
+ * nc_data_cluster_wl_get_resample_flag:
+ * @dcwl: a #NcDataClusterWL
+ *
+ * Gets the resample flag.
+ *
+ * Returns: the resample flag.
+ */
+guint
+nc_data_cluster_wl_get_resample_flag (NcDataClusterWL *dcwl)
+{
+  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
+
+  return self->resample_flag;
+}
