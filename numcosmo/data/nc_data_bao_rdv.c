@@ -317,6 +317,9 @@ nc_data_bao_rdv_new_from_id (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_RDV_DESI_DR1_BGS_QSO_2024:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_rdv_desi_dr1_bgs_qso_2024.obj", TRUE);
       break;
+    case NC_DATA_BAO_RDV_DESI_DR2_BGS_2025:
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_rdv_desi_dr2_bgs_2025.obj", TRUE);
+      break;
     default:                                                              /* LCOV_EXCL_LINE */
       g_error ("nc_data_bao_rdv_new_from_id: id %d not recognized.", id); /* LCOV_EXCL_LINE */
       break;                                                              /* LCOV_EXCL_LINE */
