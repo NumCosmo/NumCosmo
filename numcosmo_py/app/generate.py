@@ -49,7 +49,14 @@ from numcosmo_py.experiments.cluster_wl import (
     GalaxySDShapeDist,
     GalaxyZDist,
 )
-from numcosmo_py.experiments.xcdm_no_perturbations import SNIaID, add_snia_likelihood
+from numcosmo_py.datasets.hicosmo import (
+    SNIaID,
+    BAOID,
+    HID,
+    add_bao_likelihood,
+    add_h_likelihood,
+    add_snia_likelihood,
+)
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -463,12 +470,84 @@ class GenerateClusterWL:
 
         mset.prepare_fparam_map()
 
+        ser.to_binfile(
+            dataset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
+        )
+        ser.dict_str_to_yaml_file(exp, self.experiment.absolute().as_posix())
+
+
+@dataclasses.dataclass(kw_only=True)
+class GenerateQSpline:
+    """Generate QSpline experiment."""
+
+    experiment: Annotated[
+        Path, typer.Argument(help="Path to the experiment file to fit.")
+    ]
+
+    n_knots: Annotated[
+        int, typer.Option(help="Number of knots.", show_default=True, min=6)
+    ] = 6
+
+    z_max: Annotated[
+        float, typer.Option(help="Maximum redshift.", show_default=True)
+    ] = 2.1
+
+    include_snia: Annotated[
+        Optional[SNIaID], typer.Option(help="Include SNIa data.", show_default=True)
+    ] = None
+
+    include_bao: Annotated[
+        Optional[BAOID], typer.Option(help="Include BAO data.", show_default=True)
+    ] = None
+
+    include_huble: Annotated[
+        Optional[HID], typer.Option(help="Include Hubble data.", show_default=True)
+    ] = None
+
+    def __post_init__(self):
+        """Generate QSpline experiment."""
+        Ncm.cfg_init()
+
         if self.experiment.suffix != ".yaml":
             raise ValueError(
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
-        ser.to_binfile(
-            dataset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
+        cosmo = Nc.HICosmoQSpline.new(
+            Ncm.SplineCubicNotaknot(), self.n_knots, self.z_max
         )
-        ser.dict_str_to_yaml_file(exp, self.experiment.absolute().as_posix())
+        for i in range(self.n_knots):
+            cosmo.param_set_desc(f"qparam_{i}", {"fit": True})
+        mset = Ncm.MSet.new_array([cosmo])
+        dset = Ncm.Dataset.new()
+
+        dist = Nc.Distance.new(10.0)
+
+        if self.include_snia is not None:
+            add_snia_likelihood(dset, mset, dist, self.include_snia)
+
+        if self.include_bao is not None:
+            add_bao_likelihood(dset, mset, dist, self.include_bao)
+            cosmo.param_set_desc("asdrag", {"fit": True})
+
+        if self.include_huble is not None:
+            add_h_likelihood(dset, mset, self.include_huble)
+            cosmo.param_set_desc("H0", {"fit": True})
+
+        if dset.get_length() == 0:
+            raise ValueError("No data included in the experiment.")
+
+        mset.prepare_fparam_map()
+        likelihood = Ncm.Likelihood.new(dset)
+        # Save experiment
+        experiment = Ncm.ObjDictStr()
+
+        experiment.set("distance", dist)
+        experiment.set("likelihood", likelihood)
+        experiment.set("model-set", mset)
+
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser.to_binfile(
+            dset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
+        )
+        ser.dict_str_to_yaml_file(experiment, self.experiment.absolute().as_posix())

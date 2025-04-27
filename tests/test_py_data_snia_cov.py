@@ -44,6 +44,8 @@ def test_constructor():
 @pytest.mark.parametrize(
     "cov_id",
     [
+        Nc.DataSNIAId.COV_DES_Y5_STATONLY,
+        Nc.DataSNIAId.COV_DES_Y5_STAT_SYS,
         Nc.DataSNIAId.COV_JLA_SNLS3_SDSS_SYS_STAT,
         Nc.DataSNIAId.COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL,
         Nc.DataSNIAId.COV_PANTHEON,
