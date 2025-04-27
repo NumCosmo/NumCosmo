@@ -6,8 +6,9 @@
  *  <pennalima@gmail.com>
  ****************************************************************************/
 /*
- * numcosmo
- * Copyright (C) Mariana Penna Lima 2015 <pennalima@gmail.com>
+ * test_nc_data_bao_rdv.c
+ * Copyright (C) 2015 Mariana Penna-Lima <pennalima@gmail.com>
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -64,6 +65,9 @@ void test_nc_data_bao_rdv_set_sample_kazin2014 (TestNcDataBaoRDV *test, gconstpo
 void test_nc_data_bao_rdv_new_desi_dr1_bgs_qso_2024 (TestNcDataBaoRDV *test, gconstpointer pdata);
 void test_nc_data_bao_rdv_set_sample_desi_dr1_bgs_qso_2024 (TestNcDataBaoRDV *test, gconstpointer pdata);
 
+void test_nc_data_bao_rdv_new_desi_dr2_bgs_2025 (TestNcDataBaoRDV *test, gconstpointer pdata);
+void test_nc_data_bao_rdv_set_sample_desi_dr2_bgs_2025 (TestNcDataBaoRDV *test, gconstpointer pdata);
+
 void test_nc_data_bao_rdv_get_distance (TestNcDataBaoRDV *test, gconstpointer pdata);
 void test_nc_data_bao_rdv_get_redshift (TestNcDataBaoRDV *test, gconstpointer pdata);
 
@@ -105,6 +109,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/data_bao_rdv/set_sample/desi_dr1_bgs_qso_2024", TestNcDataBaoRDV, NULL,
               &test_nc_data_bao_rdv_new_desi_dr1_bgs_qso_2024,
               &test_nc_data_bao_rdv_set_sample_desi_dr1_bgs_qso_2024,
+              &test_nc_data_bao_rdv_free);
+  g_test_add ("/nc/data_bao_rdv/set_sample/desi_dr2_bgs_2025", TestNcDataBaoRDV, NULL,
+              &test_nc_data_bao_rdv_new_desi_dr2_bgs_2025,
+              &test_nc_data_bao_rdv_set_sample_desi_dr2_bgs_2025,
               &test_nc_data_bao_rdv_free);
   g_test_add ("/nc/data_bao_rdv/get_distance", TestNcDataBaoRDV, NULL,
               &test_nc_data_bao_rdv_new_desi_dr1_bgs_qso_2024,
@@ -597,6 +605,56 @@ test_nc_data_bao_rdv_set_sample_desi_dr1_bgs_qso_2024 (TestNcDataBaoRDV *test, g
   ncm_assert_cmpdouble (ncm_matrix_get (inv_cov, 0, 1), ==, icov01);
   ncm_assert_cmpdouble (ncm_matrix_get (inv_cov, 1, 0), ==, icov10);
   ncm_assert_cmpdouble (ncm_matrix_get (inv_cov, 1, 1), ==, icov11);
+
+  ncm_vector_free (x);
+}
+
+/* DESI DR2 - BGS - 2025 */
+
+void
+test_nc_data_bao_rdv_new_desi_dr2_bgs_2025 (TestNcDataBaoRDV *test, gconstpointer pdata)
+{
+  NcmData *data;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_DESI_DR2_BGS_2025;
+  NcDistance *dist = nc_distance_new (2.0);
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->rdv = NC_DATA_BAO_RDV (data);
+  g_assert_true (NC_IS_DATA_BAO_RDV (data));
+
+  nc_distance_free (dist);
+}
+
+void
+test_nc_data_bao_rdv_set_sample_desi_dr2_bgs_2025 (TestNcDataBaoRDV *test, gconstpointer pdata)
+{
+  NcDataBaoRDV *rdv   = test->rdv;
+  NcmDataGauss *gauss = NCM_DATA_GAUSS (rdv);
+  NcDataBaoId id      = NC_DATA_BAO_RDV_DESI_DR2_BGS_2025;
+  NcmVector *y        = ncm_data_gauss_peek_mean (gauss);
+  NcmMatrix *inv_cov  = ncm_data_gauss_peek_inv_cov (gauss);
+  gboolean R_DV       = FALSE;
+  NcmVector *x        = NULL;
+
+  const gdouble z0 = 0.295;
+
+  const gdouble bf0 = 7.942;
+
+  const gdouble icov00 = 1.0 / (0.075 * 0.075);
+
+  g_assert_true (rdv != NULL);
+  g_assert_true (NC_IS_DATA_BAO_RDV (rdv));
+
+  g_assert_cmpuint (test->id, ==, id);
+  g_assert_true (!R_DV);
+
+  g_object_get (rdv, "z", &x, NULL);
+
+  ncm_assert_cmpdouble (ncm_vector_get (x, 0), ==, z0);
+  ncm_assert_cmpdouble (ncm_vector_get (y, 0), ==, bf0);
+  ncm_assert_cmpdouble (ncm_matrix_get (inv_cov, 0, 0), ==, icov00);
 
   ncm_vector_free (x);
 }
