@@ -498,6 +498,10 @@ python_tests = [
         'name': 'cosmology',
         'source': 'test_cosmology.py',
     },
+    {
+        'name': 'py_numcosmo_py',
+        'source': 'test_py_numcosmo_py.py',
+    },
 ]
 
 if mpi_c_dep.found()
