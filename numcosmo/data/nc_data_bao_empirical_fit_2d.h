@@ -37,34 +37,8 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_DATA_BAO_EMPIRICAL_FIT_2D             (nc_data_bao_empirical_fit_2d_get_type ())
-#define NC_DATA_BAO_EMPIRICAL_FIT_2D(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_BAO_EMPIRICAL_FIT_2D, NcDataBaoEmpiricalFit2d))
-#define NC_DATA_BAO_EMPIRICAL_FIT_2D_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_BAO_EMPIRICAL_FIT_2D, NcDataBaoEmpiricalFit2dClass))
-#define NC_IS_DATA_BAO_EMPIRICAL_FIT_2D(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_DATA_BAO_EMPIRICAL_FIT_2D))
-#define NC_IS_DATA_BAO_EMPIRICAL_FIT_2D_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_BAO_EMPIRICAL_FIT_2D))
-#define NC_DATA_BAO_EMPIRICAL_FIT_2D_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_BAO_EMPIRICAL_FIT_2D, NcDataBaoEmpiricalFit2dClass))
 
-typedef struct _NcDataBaoEmpiricalFit2dClass NcDataBaoEmpiricalFit2dClass;
-typedef struct _NcDataBaoEmpiricalFit2d NcDataBaoEmpiricalFit2d;
-
-struct _NcDataBaoEmpiricalFit2dClass
-{
-  /*< private >*/
-  NcmDataDist2dClass parent_class;
-};
-
-struct _NcDataBaoEmpiricalFit2d
-{
-  /*< private >*/
-  NcmDataDist2d parent_instance;
-  gdouble Dh_rd_fiduc;
-  gdouble Dt_rd_fiduc;
-  gdouble z;
-  NcmSpline2d *m2lnp;
-  NcmStatsDist2d *p;
-  NcDistance *dist;
-};
-
-GType nc_data_bao_empirical_fit_2d_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcDataBaoEmpiricalFit2d, nc_data_bao_empirical_fit_2d, NC, DATA_BAO_EMPIRICAL_FIT_2D, NcmDataDist2d);
 
 NcDataBaoEmpiricalFit2d *nc_data_bao_empirical_fit_2d_new (NcmSpline2d *m2lnp, gdouble Dh_rd_fiduc, gdouble Dt_rd_fiduc, gdouble z);
 NcDataBaoEmpiricalFit2d *nc_data_bao_empirical_fit_2d_new_from_file (const gchar *filename);

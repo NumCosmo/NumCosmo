@@ -46,6 +46,8 @@ void test_nc_data_bao_dvdv_set_sample_percival2007 (TestNcDataBaoDVDV *test, gco
 void test_nc_data_bao_dvdv_new_percival2010 (TestNcDataBaoDVDV *test, gconstpointer pdata);
 void test_nc_data_bao_dvdv_set_sample_percival2010 (TestNcDataBaoDVDV *test, gconstpointer pdata);
 
+void test_nc_data_bao_dvdv_get_distance (TestNcDataBaoDVDV *test, gconstpointer pdata);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -60,6 +62,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/data_bao_dvdv/set_sample/percival2010", TestNcDataBaoDVDV, NULL,
               &test_nc_data_bao_dvdv_new_percival2010,
               &test_nc_data_bao_dvdv_set_sample_percival2010,
+              &test_nc_data_bao_dvdv_free);
+  g_test_add ("/nc/data_bao_dvdv/get_distance", TestNcDataBaoDVDV, NULL,
+              &test_nc_data_bao_dvdv_new_percival2010,
+              &test_nc_data_bao_dvdv_get_distance,
               &test_nc_data_bao_dvdv_free);
 
   g_test_run ();
@@ -149,5 +155,18 @@ test_nc_data_bao_dvdv_set_sample_percival2010 (TestNcDataBaoDVDV *test, gconstpo
 
   ncm_assert_cmpdouble (ncm_vector_get (y, 0), ==, bf0);
   ncm_assert_cmpdouble (ncm_vector_get (sigma_v, 0), ==, sigma);
+}
+
+void
+test_nc_data_bao_dvdv_get_distance (TestNcDataBaoDVDV *test, gconstpointer pdata)
+{
+  NcDistance *dist    = NULL;
+  NcDataBaoDVDV *dvdv = test->dvdv;
+
+  g_object_get (dvdv, "dist", &dist, NULL);
+  g_assert_true (dist != NULL);
+  g_assert (NC_IS_DISTANCE (dist));
+
+  nc_distance_free (dist);
 }
 
