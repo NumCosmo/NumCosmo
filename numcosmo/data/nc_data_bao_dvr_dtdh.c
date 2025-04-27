@@ -268,6 +268,9 @@ nc_data_bao_dvr_dtdh_new_from_id (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_DVR_DTDH_DESI_DR1_2024:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_dvr_dtdh_desi_dr1_lrg_elg_2024.obj", TRUE);
       break;
+    case NC_DATA_BAO_DVR_DTDH_DESI_DR2_2025:
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_dvr_dtdh_desi_dr2_2025.obj", TRUE);
+      break;
     default:                                                                  /* LCOV_EXCL_LINE */
       g_error ("nc_data_bao_dtr_dhr_new_from_id: id %d not recognized.", id); /* LCOV_EXCL_LINE */
       break;                                                                  /* LCOV_EXCL_LINE */

@@ -44,6 +44,9 @@ void test_nc_data_bao_dvr_dtdh_free (TestNcDataBaoDvrDtDh *test, gconstpointer p
 void test_nc_data_bao_dvr_dtdh_new_desi_dr1_lrg_elg_2024 (TestNcDataBaoDvrDtDh *test, gconstpointer pdata);
 void test_nc_data_bao_dvr_dtdh_set_sample_desi_dr1_lrg_elg_2024 (TestNcDataBaoDvrDtDh *test, gconstpointer pdata);
 
+void test_nc_data_bao_dvr_dtdh_new_desi_dr2_lrg_elg_qso_lya_2025 (TestNcDataBaoDvrDtDh *test, gconstpointer pdata);
+void test_nc_data_bao_dvr_dtdh_set_sample_desi_dr2_lrg_elg_qso_lya_2025 (TestNcDataBaoDvrDtDh *test, gconstpointer pdata);
+
 void test_nc_data_bao_dvr_dtdh_get_distance (TestNcDataBaoDvrDtDh *test, gconstpointer pdata);
 void test_nc_data_bao_dvr_dtdh_get_redshift (TestNcDataBaoDvrDtDh *test, gconstpointer pdata);
 
@@ -57,6 +60,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/data_bao_dvr_dtdh/set_sample/desi2024", TestNcDataBaoDvrDtDh, NULL,
               &test_nc_data_bao_dvr_dtdh_new_desi_dr1_lrg_elg_2024,
               &test_nc_data_bao_dvr_dtdh_set_sample_desi_dr1_lrg_elg_2024,
+              &test_nc_data_bao_dvr_dtdh_free);
+  g_test_add ("/nc/data_bao_dvr_dtdh/set_sample/desi2025", TestNcDataBaoDvrDtDh, NULL,
+              &test_nc_data_bao_dvr_dtdh_new_desi_dr2_lrg_elg_qso_lya_2025,
+              &test_nc_data_bao_dvr_dtdh_set_sample_desi_dr2_lrg_elg_qso_lya_2025,
               &test_nc_data_bao_dvr_dtdh_free);
   g_test_add ("/nc/data_bao_dvr_dtdh/get_distance", TestNcDataBaoDvrDtDh, NULL,
               &test_nc_data_bao_dvr_dtdh_new_desi_dr1_lrg_elg_2024,
@@ -166,6 +173,94 @@ test_nc_data_bao_dvr_dtdh_set_sample_desi_dr1_lrg_elg_2024 (TestNcDataBaoDvrDtDh
   ncm_matrix_cmp (cov_m, cov, 1e-10);
 
   ncm_matrix_free (cov);
+  ncm_vector_free (x);
+}
+
+/* DESI DR2 2025 */
+
+void
+test_nc_data_bao_dvr_dtdh_new_desi_dr2_lrg_elg_qso_lya_2025 (TestNcDataBaoDvrDtDh *test, gconstpointer pdata)
+{
+  NcDataBaoId id   = NC_DATA_BAO_DVR_DTDH_DESI_DR2_2025;
+  NcDistance *dist = nc_distance_new (3.0);
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_dvr_dtdh_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->dvdtdh = NC_DATA_BAO_DVR_DTDH (data);
+  g_assert_true (NC_IS_DATA_BAO_DVR_DTDH (data));
+
+  nc_distance_free (dist);
+}
+
+void
+test_nc_data_bao_dvr_dtdh_set_sample_desi_dr2_lrg_elg_qso_lya_2025 (TestNcDataBaoDvrDtDh *test, gconstpointer pdata)
+{
+  NcDataBaoDvrDtDh *dvdtdh   = test->dvdtdh;
+  NcmDataGaussCov *gauss_cov = NCM_DATA_GAUSS_COV (dvdtdh);
+  NcDataBaoId id             = NC_DATA_BAO_DVR_DTDH_DESI_DR2_2025;
+  NcmVector *y               = ncm_data_gauss_cov_peek_mean (gauss_cov);
+  NcmMatrix *cov_m           = ncm_data_gauss_cov_peek_cov (gauss_cov);
+  NcmVector *x               = NULL;
+
+
+  gdouble zs[12]  = {0.51, 0.51, 0.706, 0.706, 0.934, 0.934, 1.321, 1.321, 1.484, 1.484, 2.33, 2.33};
+  gdouble bfs[12] = {12.72, 0.622, 16.05, 0.892, 19.721, 1.223, 24.252, 1.948, 26.055, 2.386, 31.267, 4.518};
+
+  const gdouble a11   =  0.099 * 0.099;
+  const gdouble a12   =  0.099 * 0.017 * 0.05;
+  const gdouble a22   =  0.017 * 0.017;
+  const gdouble a33   =  0.11 * 0.11;
+  const gdouble a34   =  0.11 * 0.021 * (-0.018);
+  const gdouble a44   =  0.021 * 0.021;
+  const gdouble a55   =  0.091 * 0.091;
+  const gdouble a56   =  0.091 * 0.019 * 0.056;
+  const gdouble a66   =  0.019 * 0.019;
+  const gdouble a77   =  0.174 * 0.174;
+  const gdouble a78   =  0.174 * 0.045 * 0.202;
+  const gdouble a88   =  0.045 * 0.045;
+  const gdouble a99   =  0.398 * 0.398;
+  const gdouble a910  =  0.398 * 0.136 * 0.044;
+  const gdouble a1010 =  0.136 * 0.136;
+  const gdouble a1111 =  0.256 * 0.256;
+  const gdouble a1112 =  0.256 * 0.097 * 0.574;
+  const gdouble a1212 =  0.097 * 0.097;
+
+  gdouble covar[144] = {
+    a11, a12, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    a12, a22, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, a33, a34, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, a34, a44, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, a55, a56, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, a56, a66, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, a77, a78, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, a78, a88, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, a99, a910, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, a910, a1010, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, a1111, a1112,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, a1112, a1212
+  };
+
+  NcmVector *z   = ncm_vector_new_data_static (zs, 12, 1);
+  NcmVector *bf  = ncm_vector_new_data_static (bfs, 12, 1);
+  NcmMatrix *cov = ncm_matrix_new_data_static (covar, 12, 12);
+
+  g_assert_true (dvdtdh != NULL);
+  g_assert_true (NC_IS_DATA_BAO_DVR_DTDH (dvdtdh));
+
+  g_assert_cmpuint (test->id, ==, id);
+
+  g_object_get (dvdtdh, "z", &x, NULL);
+
+
+  ncm_vector_cmp2 (z, x, 1e-10, 1e-10);
+  ncm_vector_cmp2 (y, bf, 1e-10, 1e-10);
+  ncm_matrix_cmp (cov_m, cov, 1e-10);
+
+  ncm_matrix_free (cov);
+  ncm_vector_free (z);
+  ncm_vector_free (bf);
   ncm_vector_free (x);
 }
 
