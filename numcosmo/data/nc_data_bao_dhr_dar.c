@@ -50,6 +50,19 @@
 #include "nc_enum_types.h"
 #include "math/ncm_cfg.h"
 
+typedef struct _NcDataBaoDHrDArPrivate
+{
+  gint placeholder;
+} NcDataBaoDHrDArPrivate;
+
+struct _NcDataBaoDHrDAr
+{
+  /*< private >*/
+  NcmDataGaussCov parent_instance;
+  NcDistance *dist;
+  NcmVector *x;
+};
+
 enum
 {
   PROP_0,
@@ -82,9 +95,9 @@ nc_data_bao_dhr_dar_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_Z:
       ncm_vector_substitute (&dhda->x, g_value_get_object (value), TRUE);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -103,9 +116,9 @@ nc_data_bao_dhr_dar_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_Z:
       g_value_set_object (value, dhda->x);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -260,9 +273,9 @@ nc_data_bao_dhr_dar_new_from_id (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015_LYAF_AUTO_CROSS:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_dhr_dar_sdss_dr11_2015_LyaF_auto_cross.obj", TRUE);
       break;
-    default:
-      g_error ("nc_data_bao_dhr_dar_new_from_id: id %d not recognized.", id);
-      break;
+    default:                                                                  /* LCOV_EXCL_LINE */
+      g_error ("nc_data_bao_dhr_dar_new_from_id: id %d not recognized.", id); /* LCOV_EXCL_LINE */
+      break;                                                                  /* LCOV_EXCL_LINE */
   }
 
   dhda = nc_data_bao_dhr_dar_new_from_file (filename);
