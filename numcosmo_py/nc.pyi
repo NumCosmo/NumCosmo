@@ -72,8 +72,7 @@ GALAXY_SD_SHAPE_COL_EPSILON_INT_1: str = r"epsilon_int_1"
 GALAXY_SD_SHAPE_COL_EPSILON_INT_2: str = r"epsilon_int_2"
 GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_1: str = r"epsilon_obs_1"
 GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_2: str = r"epsilon_obs_2"
-GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_1: str = r"sigma_obs_1"
-GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_2: str = r"sigma_obs_2"
+GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS: str = r"sigma_obs"
 GALAXY_SD_SHAPE_GAUSS_DEFAULT_PARAMS_ABSTOL: float = 0.0
 GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA_INT: float = 0.3
 GALAXY_SD_SHAPE_GAUSS_HSC_COL_C1: str = r"c1"
@@ -4872,6 +4871,8 @@ class DataClusterWL(NumCosmoMath.Data):
         Precision for integral
       len -> guint: len
         Number of galaxies
+      enable-parallel -> gboolean: enable-parallel
+        Enable parallelization
 
     Properties from NcmData:
       name -> gchararray: name
@@ -4890,6 +4891,7 @@ class DataClusterWL(NumCosmoMath.Data):
     """
 
     class Props:
+        enable_parallel: bool
         len: int
         obs: GalaxyWLObs
         prec: float
@@ -4904,6 +4906,7 @@ class DataClusterWL(NumCosmoMath.Data):
     props: Props = ...
     def __init__(
         self,
+        enable_parallel: bool = ...,
         len: int = ...,
         obs: GalaxyWLObs = ...,
         prec: float = ...,
@@ -4917,6 +4920,7 @@ class DataClusterWL(NumCosmoMath.Data):
     @staticmethod
     def clear(dcwl: DataClusterWL) -> None: ...
     def free(self) -> None: ...
+    def get_resample_flag(self) -> int: ...
     @classmethod
     def new(cls) -> DataClusterWL: ...
     def peek_obs(self) -> GalaxyWLObs: ...
@@ -4924,6 +4928,7 @@ class DataClusterWL(NumCosmoMath.Data):
     def set_cut(self, r_min: float, r_max: float) -> None: ...
     def set_obs(self, obs: GalaxyWLObs) -> None: ...
     def set_prec(self, prec: float) -> None: ...
+    def set_resample_flag(self, resample_flag: int) -> None: ...
 
 class DataClusterWLClass(GObject.GPointer):
     r"""
@@ -6030,10 +6035,10 @@ class GalaxySDObsRedshiftGauss(GalaxySDObsRedshift):
     @staticmethod
     def clear(gsdorgauss: GalaxySDObsRedshiftGauss) -> None: ...
     def data_get(
-        self, data: GalaxySDObsRedshiftData, zp: float, sigma_z: float
+        self, data: GalaxySDObsRedshiftData, zp: float, sigma0: float, sigma_z: float
     ) -> None: ...
     def data_set(
-        self, data: GalaxySDObsRedshiftData, zp: float, sigma_z: float
+        self, data: GalaxySDObsRedshiftData, zp: float, sigma0: float, sigma_z: float
     ) -> None: ...
     def free(self) -> None: ...
     def gen(
@@ -6182,9 +6187,13 @@ class GalaxySDObsRedshiftSpec(GalaxySDObsRedshift):
     ::
 
         GalaxySDObsRedshiftSpec(**properties)
-        new(sdz:NumCosmo.GalaxySDTrueRedshift) -> NumCosmo.GalaxySDObsRedshiftSpec
+        new(sdz:NumCosmo.GalaxySDTrueRedshift, z_min:float, z_max:float) -> NumCosmo.GalaxySDObsRedshiftSpec
 
     Object NcGalaxySDObsRedshiftSpec
+
+    Properties from NcGalaxySDObsRedshiftSpec:
+      lim -> NcmDTuple2: lim
+        Galaxy sample photometric redshift distribution limits
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -6211,6 +6220,7 @@ class GalaxySDObsRedshiftSpec(GalaxySDObsRedshift):
     """
 
     class Props:
+        lim: NumCosmoMath.DTuple2
         implementation: int
         name: str
         nick: str
@@ -6224,6 +6234,7 @@ class GalaxySDObsRedshiftSpec(GalaxySDObsRedshift):
     props: Props = ...
     def __init__(
         self,
+        lim: NumCosmoMath.DTuple2 = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -6237,9 +6248,13 @@ class GalaxySDObsRedshiftSpec(GalaxySDObsRedshift):
         data: GalaxySDObsRedshiftData,
         rng: NumCosmoMath.RNG,
     ) -> None: ...
+    def get_lim(self) -> typing.Tuple[float, float]: ...
     @classmethod
-    def new(cls, sdz: GalaxySDTrueRedshift) -> GalaxySDObsRedshiftSpec: ...
+    def new(
+        cls, sdz: GalaxySDTrueRedshift, z_min: float, z_max: float
+    ) -> GalaxySDObsRedshiftSpec: ...
     def ref(self) -> GalaxySDObsRedshiftSpec: ...
+    def set_lim(self, z_min: float, z_max: float) -> None: ...
 
 class GalaxySDObsRedshiftSpecClass(GObject.GPointer):
     r"""
@@ -6710,22 +6725,20 @@ class GalaxySDShapeGauss(GalaxySDShape):
     def clear(gsdsgauss: GalaxySDShapeGauss) -> None: ...
     def data_get(
         self, data: GalaxySDShapeData
-    ) -> typing.Tuple[float, float, float, float]: ...
+    ) -> typing.Tuple[float, float, float]: ...
     def data_set(
         self,
         data: GalaxySDShapeData,
         epsilon_obs_1: float,
         epsilon_obs_2: float,
-        sigma_obs_1: float,
-        sigma_obs_2: float,
+        sigma_obs: float,
     ) -> None: ...
     def free(self) -> None: ...
     def gen(
         self,
         mset: NumCosmoMath.MSet,
         data: GalaxySDShapeData,
-        sigma_obs_1: float,
-        sigma_obs_2: float,
+        sigma_obs: float,
         coord: GalaxyWLObsCoord,
         rng: NumCosmoMath.RNG,
     ) -> None: ...
@@ -19842,6 +19855,12 @@ class DataCMBDataType(GObject.GFlags):
     TB: DataCMBDataType = ...
     TE: DataCMBDataType = ...
     TT: DataCMBDataType = ...
+
+class DataClusterWLResampleFlag(GObject.GFlags):
+    ALL: DataClusterWLResampleFlag = ...
+    POSITION: DataClusterWLResampleFlag = ...
+    REDSHIFT: DataClusterWLResampleFlag = ...
+    SHAPE: DataClusterWLResampleFlag = ...
 
 class HICosmoDEImpl(GObject.GFlags):
     D2E2OMEGA_DE_DZ2: HICosmoDEImpl = ...
