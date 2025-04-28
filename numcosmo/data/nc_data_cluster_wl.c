@@ -77,6 +77,7 @@ struct _NcDataClusterWLPrivate
   NcmModelCtrl *ctrl_position;
   NcmModelCtrl *ctrl_shape;
   guint resample_flag;
+  gboolean enable_parallel;
   /* Integration temporary variables */
   NcmVector *err;
   NcmVector *zpi;
@@ -101,7 +102,8 @@ enum
   PROP_PREC,
   PROP_LEN,
   PROP_SIZE,
-  PROP_RESAMPLE_FLAG
+  PROP_RESAMPLE_FLAG,
+  PROP_ENABLE_PARALLEL,
 };
 
 struct _NcDataClusterWL
@@ -117,18 +119,19 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
 {
   NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
 
-  self->obs           = NULL;
-  self->shape_data    = g_ptr_array_new ();
-  self->constructed   = FALSE;
-  self->r_max         = 0.0;
-  self->r_min         = 0.0;
-  self->dr            = 0.0;
-  self->prec          = 1.0e-6;
-  self->len           = 0;
-  self->ctrl_redshift = ncm_model_ctrl_new (NULL);
-  self->ctrl_position = ncm_model_ctrl_new (NULL);
-  self->ctrl_shape    = ncm_model_ctrl_new (NULL);
-  self->resample_flag = NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL;
+  self->obs             = NULL;
+  self->shape_data      = g_ptr_array_new ();
+  self->constructed     = FALSE;
+  self->r_max           = 0.0;
+  self->r_min           = 0.0;
+  self->dr              = 0.0;
+  self->prec            = 1.0e-6;
+  self->len             = 0;
+  self->ctrl_redshift   = ncm_model_ctrl_new (NULL);
+  self->ctrl_position   = ncm_model_ctrl_new (NULL);
+  self->ctrl_shape      = ncm_model_ctrl_new (NULL);
+  self->resample_flag   = NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL;
+  self->enable_parallel = FALSE;
 
   self->err = ncm_vector_new (1);
   self->zpi = ncm_vector_new (1);
@@ -181,6 +184,9 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_RESAMPLE_FLAG:
       nc_data_cluster_wl_set_resample_flag (dcwl, g_value_get_uint (value));
       break;
+    case PROP_ENABLE_PARALLEL:
+      self->enable_parallel = g_value_get_boolean (value);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -214,6 +220,9 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
       break;
     case PROP_RESAMPLE_FLAG:
       g_value_set_uint (value, self->resample_flag);
+      break;
+    case PROP_ENABLE_PARALLEL:
+      g_value_set_boolean (value, self->enable_parallel);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -357,6 +366,20 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcDataClusterWL:enable-parallel
+   *
+   * Enable parallelization.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ENABLE_PARALLEL,
+                                   g_param_spec_boolean ("enable-parallel",
+                                                         NULL,
+                                                         "Enable parallelization",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   data_class->bootstrap  = TRUE;
   data_class->resample   = &_nc_data_cluster_wl_resample;
   data_class->m2lnL_val  = &_nc_data_cluster_wl_m2lnL_val;
@@ -431,7 +454,7 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
   NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
   gdouble result                      = 0;
 
-  #pragma omp parallel reduction(+:result)
+  #pragma omp parallel reduction(+:result) if (self->enable_parallel)
   {
     NcDataClusterWLInt *likelihood_integral            = g_object_new (nc_data_cluster_wl_integ_get_type (), NULL);
     NcmIntegralND *lh_int                              = NCM_INTEGRAL_ND (likelihood_integral);
@@ -891,3 +914,4 @@ nc_data_cluster_wl_get_resample_flag (NcDataClusterWL *dcwl)
 
   return self->resample_flag;
 }
+
