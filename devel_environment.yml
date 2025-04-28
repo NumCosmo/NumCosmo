@@ -37,6 +37,7 @@ dependencies:
       - pygobject-stubs
       - pytest-tap
   - pyccl >= 3.0.0
+  - pydantic
   - pygobject
   - pylint
   - pytest
