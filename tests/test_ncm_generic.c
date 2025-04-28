@@ -463,7 +463,9 @@ test_nc_galaxy_sd_obs_redshift_gauss_basic (void)
 void
 test_nc_galaxy_sd_obs_redshift_spec_basic (void)
 {
-  NcGalaxySDObsRedshiftSpec *gsdors = nc_galaxy_sd_obs_redshift_spec_new (NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ()));
+  NcGalaxySDObsRedshiftSpec *gsdors = nc_galaxy_sd_obs_redshift_spec_new (
+    NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ()),
+    0.1, 1.0);
   NcGalaxySDObsRedshiftSpec *gsdors2;
 
   g_assert_true (gsdors != NULL);

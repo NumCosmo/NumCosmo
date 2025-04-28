@@ -110,7 +110,7 @@ test_nc_galaxy_sd_shape_gauss_new (TestNcGalaxySDShapeGauss *test, gconstpointer
 {
   NcGalaxySDShape *s_dist             = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new ());
   NcGalaxySDTrueRedshift *z_true_dist = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
-  NcGalaxySDObsRedshift *z_dist       = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_spec_new (z_true_dist));
+  NcGalaxySDObsRedshift *z_dist       = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_spec_new (z_true_dist, 0.0, 2.0));
   NcGalaxySDPosition *p_dist          = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (-0.2, 0.2, -0.2, 0.2));
 
   NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
@@ -201,13 +201,13 @@ test_nc_galaxy_sd_shape_gauss_gen (TestNcGalaxySDShapeGauss *test, gconstpointer
 
   for (i = 0; i < ntest; i++)
   {
-    gdouble epsilon_1_out, epsilon_2_out, sigma_obs_out_1, sigma_obs_out_2;
+    gdouble epsilon_1_out, epsilon_2_out, sigma_obs_out;
 
     z_data->z   = ncm_rng_uniform_gen (rng, 0.2, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0, 2.0);
     p_data->dec = ncm_rng_uniform_gen (rng, -2.0, 2.0);
-    nc_galaxy_sd_shape_gauss_gen (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), test->mset, s_data, sigma_obs, sigma_obs, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, rng);
-    nc_galaxy_sd_shape_gauss_data_get (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), s_data, &epsilon_1_out, &epsilon_2_out, &sigma_obs_out_1, &sigma_obs_out_2);
+    nc_galaxy_sd_shape_gauss_gen (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), test->mset, s_data, sigma_obs, NC_GALAXY_WL_OBS_COORD_CELESTIAL, rng);
+    nc_galaxy_sd_shape_gauss_data_get (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), s_data, &epsilon_1_out, &epsilon_2_out, &sigma_obs_out);
 
     {
       const gdouble z_cl = nc_halo_position_get_redshift (test->halo_position);
@@ -275,14 +275,14 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test, gconstpoint
 
   for (i = 0; i < ntest; i++)
   {
-    gdouble epsilon_1_out, epsilon_2_out, sigma_obs_out_1, sigma_obs_out_2;
+    gdouble epsilon_1_out, epsilon_2_out, sigma_obs_out;
     gdouble int0;
 
     z_data->z   = ncm_rng_uniform_gen (rng, 0.2, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0e-2, 2.0e-2);
     p_data->dec = ncm_rng_uniform_gen (rng, -2.0e-2, 2.0e-2);
-    nc_galaxy_sd_shape_gauss_gen (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), test->mset, s_data, sigma_obs, sigma_obs, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, rng);
-    nc_galaxy_sd_shape_gauss_data_get (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), s_data, &epsilon_1_out, &epsilon_2_out, &sigma_obs_out_1, &sigma_obs_out_2);
+    nc_galaxy_sd_shape_gauss_gen (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), test->mset, s_data, sigma_obs, NC_GALAXY_WL_OBS_COORD_CELESTIAL, rng);
+    nc_galaxy_sd_shape_gauss_data_get (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), s_data, &epsilon_1_out, &epsilon_2_out, &sigma_obs_out);
 
     g_assert_cmpfloat (hypot (s_data->epsilon_int_1, s_data->epsilon_int_2), <, 1.0);
     g_assert_cmpfloat (hypot (epsilon_1_out, epsilon_2_out), <, 1.2);
@@ -318,11 +318,13 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test, gconstpoint
 
       {
         const gdouble var_int     = gsl_pow_2 (sigma_int);
-        const gdouble total_var_1 = var_int + gsl_pow_2 (sigma_obs_out_1);
-        const gdouble total_var_2 = var_int + gsl_pow_2 (sigma_obs_out_2);
+        const gdouble total_var_1 = var_int + gsl_pow_2 (sigma_obs_out);
+        const gdouble total_var_2 = var_int + gsl_pow_2 (sigma_obs_out);
         const gdouble chi2_1      = gsl_pow_2 (creal (e_s)) / total_var_1;
         const gdouble chi2_2      = gsl_pow_2 (cimag (e_s)) / total_var_2;
-        const gdouble m2ln_int1   = chi2_1 + chi2_2 + log (2.0 * M_PI * total_var_1 * total_var_2);
+        const gdouble jac_num     = (1.0 - gt * gt);
+        const gdouble jac_den     = (1.0 - 2.0 * creal (conj (g) * e_o) + gt * gt * conj (e_o) * e_o);
+        const gdouble m2ln_int1   = chi2_1 + chi2_2 + log (2.0 * M_PI * total_var_1 * total_var_2) + 4.0 * log (jac_den / jac_num);
 
         ncm_assert_cmpdouble_e (-2.0 * log (int0), ==, m2ln_int1, 0.0, 1.0e-13);
       }
@@ -367,13 +369,12 @@ test_nc_galaxy_sd_shape_gauss_required_columns (TestNcGalaxySDShapeGauss *test, 
   NcGalaxySDShapeData *s_data       = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
   GList *columns                    = nc_galaxy_sd_shape_data_required_columns (s_data);
 
-  g_assert_cmpuint (g_list_length (columns), ==, 9);
+  g_assert_cmpuint (g_list_length (columns), ==, 8);
   g_assert_cmpstr (g_list_nth_data (columns, 0), ==, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_1);
   g_assert_cmpstr (g_list_nth_data (columns, 1), ==, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2);
   g_assert_cmpstr (g_list_nth_data (columns, 2), ==, NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_1);
   g_assert_cmpstr (g_list_nth_data (columns, 3), ==, NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_2);
-  g_assert_cmpstr (g_list_nth_data (columns, 4), ==, NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_1);
-  g_assert_cmpstr (g_list_nth_data (columns, 5), ==, NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS_2);
+  g_assert_cmpstr (g_list_nth_data (columns, 4), ==, NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS);
 
   g_list_free_full (columns, g_free);
   nc_galaxy_sd_obs_redshift_data_unref (z_data);
@@ -389,20 +390,18 @@ test_nc_galaxy_sd_shape_gauss_data_setget (TestNcGalaxySDShapeGauss *test, gcons
   NcGalaxySDShapeData *s_data       = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
   const gdouble epsilon_1           = 0.1;
   const gdouble epsilon_2           = 0.2;
-  const gdouble sigma_obs_1         = 0.03;
-  const gdouble sigma_obs_2         = 0.04;
+  const gdouble sigma_obs           = 0.03;
 
-  nc_galaxy_sd_shape_gauss_data_set (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), s_data, epsilon_1, epsilon_2, sigma_obs_1, sigma_obs_2);
+  nc_galaxy_sd_shape_gauss_data_set (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), s_data, epsilon_1, epsilon_2, sigma_obs);
 
   {
-    gdouble epsilon_1_out, epsilon_2_out, sigma_obs_out_1, sigma_obs_out_2;
+    gdouble epsilon_1_out, epsilon_2_out, sigma_obs_out;
 
-    nc_galaxy_sd_shape_gauss_data_get (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), s_data, &epsilon_1_out, &epsilon_2_out, &sigma_obs_out_1, &sigma_obs_out_2);
+    nc_galaxy_sd_shape_gauss_data_get (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), s_data, &epsilon_1_out, &epsilon_2_out, &sigma_obs_out);
 
     g_assert_cmpfloat (epsilon_1_out, ==, epsilon_1);
     g_assert_cmpfloat (epsilon_2_out, ==, epsilon_2);
-    g_assert_cmpfloat (sigma_obs_out_1, ==, sigma_obs_1);
-    g_assert_cmpfloat (sigma_obs_out_2, ==, sigma_obs_2);
+    g_assert_cmpfloat (sigma_obs_out, ==, sigma_obs);
   }
 
   nc_galaxy_sd_obs_redshift_data_unref (z_data);

@@ -216,7 +216,7 @@ test_nc_galaxy_sd_true_redshift_model_id (TestNcGalaxySDTrueRedshift *test, gcon
   NcmMSet *model_set                = ncm_mset_empty_new ();
   NcmSerialize *ser                 = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
   NcmModel *model_dup               = ncm_model_dup (NCM_MODEL (test->gsdtr), ser);
-  NcGalaxySDObsRedshiftSpec *gsdors = nc_galaxy_sd_obs_redshift_spec_new (NC_GALAXY_SD_TRUE_REDSHIFT (model_dup));
+  NcGalaxySDObsRedshiftSpec *gsdors = nc_galaxy_sd_obs_redshift_spec_new (NC_GALAXY_SD_TRUE_REDSHIFT (model_dup), 0.0, 2.0);
 
   ncm_mset_set (model_set, NCM_MODEL (gsdors), NULL);
 

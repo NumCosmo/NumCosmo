@@ -191,9 +191,7 @@ test_nc_galaxy_sd_obs_redshift_spec_new (TestNcGalaxySDObsRedshift *test, gconst
   const gdouble z_min                  = 0.01;
   const gdouble z_max                  = 10.0;
   NcGalaxySDTrueRedshift *gsdtr        = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
-  NcGalaxySDObsRedshiftSpec *gsdorspec = nc_galaxy_sd_obs_redshift_spec_new (gsdtr);
-
-  nc_galaxy_sd_true_redshift_set_lim (gsdtr, z_min, z_max);
+  NcGalaxySDObsRedshiftSpec *gsdorspec = nc_galaxy_sd_obs_redshift_spec_new (gsdtr, z_min, z_max);
 
   test->gsdor = NC_GALAXY_SD_OBS_REDSHIFT (gsdorspec);
   test->z_min = z_min;
@@ -211,9 +209,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_new (TestNcGalaxySDObsRedshift *test, gcons
   const gdouble z_min                    = 0.01;
   const gdouble z_max                    = 10.0;
   NcGalaxySDTrueRedshift *gsdtr          = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
-  NcGalaxySDObsRedshiftGauss *gsdorgauss = nc_galaxy_sd_obs_redshift_gauss_new (gsdtr, 0.1, 1.8);
-
-  nc_galaxy_sd_true_redshift_set_lim (gsdtr, z_min, z_max);
+  NcGalaxySDObsRedshiftGauss *gsdorgauss = nc_galaxy_sd_obs_redshift_gauss_new (gsdtr, z_min, z_max);
 
   test->gsdor = NC_GALAXY_SD_OBS_REDSHIFT (gsdorgauss);
   test->z_min = z_min;
@@ -467,7 +463,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_integ (TestNcGalaxySDObsRedshift *test, gco
   const guint nruns                         = 10000;
   guint i;
 
-  nc_galaxy_sd_obs_redshift_gauss_data_set (NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->gsdor), data, zp, sigma_z);
+  nc_galaxy_sd_obs_redshift_gauss_data_set (NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->gsdor), data, zp, sigma_z, sigma_z);
   nc_galaxy_sd_obs_redshift_integrand_prepare (integrand, mset);
 
   for (i = 0; i < nruns; i++)
@@ -584,10 +580,11 @@ test_nc_galaxy_sd_obs_redshift_gauss_required_columns (TestNcGalaxySDObsRedshift
   NcGalaxySDObsRedshiftData *data = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
   GList *columns                  = nc_galaxy_sd_obs_redshift_data_required_columns (data);
 
-  g_assert_cmpuint (g_list_length (columns), ==, 3);
+  g_assert_cmpuint (g_list_length (columns), ==, 4);
   g_assert_cmpstr (g_list_nth_data (columns, 0), ==, "z");
   g_assert_cmpstr (g_list_nth_data (columns, 1), ==, "zp");
-  g_assert_cmpstr (g_list_nth_data (columns, 2), ==, "sigma_z");
+  g_assert_cmpstr (g_list_nth_data (columns, 2), ==, "sigma_0");
+  g_assert_cmpstr (g_list_nth_data (columns, 3), ==, "sigma_z");
 
   g_list_free_full (columns, g_free);
   nc_galaxy_sd_obs_redshift_data_unref (data);
@@ -684,14 +681,17 @@ test_nc_galaxy_sd_obs_redshift_gauss_data_setget (TestNcGalaxySDObsRedshift *tes
   for (i = 0; i < ntests; i++)
   {
     const gdouble zp      = g_test_rand_double_range (0.0, 5.0);
+    const gdouble sigma0  = g_test_rand_double_range (0.01, 1.1);
     const gdouble sigma_z = g_test_rand_double_range (0.01, 1.1);
     gdouble zp_out;
+    gdouble sigma0_out;
     gdouble sigma_z_out;
 
-    nc_galaxy_sd_obs_redshift_gauss_data_set (NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->gsdor), data, zp, sigma_z);
-    nc_galaxy_sd_obs_redshift_gauss_data_get (NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->gsdor), data, &zp_out, &sigma_z_out);
+    nc_galaxy_sd_obs_redshift_gauss_data_set (NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->gsdor), data, zp, sigma0, sigma_z);
+    nc_galaxy_sd_obs_redshift_gauss_data_get (NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->gsdor), data, &zp_out, &sigma0_out, &sigma_z_out);
 
     g_assert_cmpfloat (zp_out, ==, zp);
+    g_assert_cmpfloat (sigma0_out, ==, sigma0);
     g_assert_cmpfloat (sigma_z_out, ==, sigma_z);
   }
 
