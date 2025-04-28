@@ -26,6 +26,7 @@
 from typing import Annotated, Optional
 import dataclasses
 from pathlib import Path
+import shlex
 
 import numpy as np
 import typer
@@ -46,8 +47,8 @@ from numcosmo_py.experiments.jpas_forecast24 import (
 )
 from numcosmo_py.experiments.cluster_wl import (
     generate_lsst_cluster_wl,
-    GalaxySDShapeDist,
-    GalaxyZDist,
+    GalaxyShapeGen,
+    GalaxyZGen,
 )
 from numcosmo_py.experiments.xcdm_no_perturbations import SNIaID, add_snia_likelihood
 
@@ -379,26 +380,24 @@ class GenerateClusterWL:
     ] = 1.6
 
     z_dist: Annotated[
-        GalaxyZDist,
-        typer.Option(help="Galaxy redshift distribution.", show_default=True),
-    ] = GalaxyZDist.GAUSS
-
-    sigma_z: Annotated[
-        float, typer.Option(help="Galaxy redshift dispersion.", show_default=True)
-    ] = 0.03
+        str,
+        typer.Option(
+            help=GalaxyZGen.get_help_text(),
+            show_default=True,
+            metavar=GalaxyZGen.get_help_metavar(),
+            rich_help_panel="Galaxy redshift source distribution",
+        ),
+    ] = "gauss zp_min=0.1 zp_max=1.2 sigma0=0.03"
 
     shape_dist: Annotated[
-        GalaxySDShapeDist,
-        typer.Option(help="Galaxy shape distribution.", show_default=True),
-    ] = GalaxySDShapeDist.GAUSS
-
-    galaxy_shape_e_rms: Annotated[
-        float, typer.Option(help="Galaxy shape rms.", show_default=True)
-    ] = 1.5e-1
-
-    galaxy_shape_e_sigma: Annotated[
-        float, typer.Option(help="Galaxy shape sigma.", show_default=True)
-    ] = 1.0e-2
+        str,
+        typer.Option(
+            help=GalaxyShapeGen.get_help_text(),
+            show_default=True,
+            metavar=GalaxyShapeGen.get_help_metavar(),
+            rich_help_panel="Galaxy shape source distribution",
+        ),
+    ] = "gauss e_rms=0.15 e_sigma=0.01"
 
     galaxy_density: Annotated[
         float, typer.Option(help="Galaxy density.", show_default=True)
@@ -438,6 +437,9 @@ class GenerateClusterWL:
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
+        _z_dist, z_gen = self.parse_z_dist()
+        _shape_dist, shape_gen = self.parse_shape_dist()
+
         exp = generate_lsst_cluster_wl(
             cluster_ra=self.cluster_ra,
             cluster_dec=self.cluster_dec,
@@ -452,11 +454,8 @@ class GenerateClusterWL:
             dec_max=self.dec_max,
             z_min=self.z_min,
             z_max=self.z_max,
-            z_dist=self.z_dist,
-            sigma0=self.sigma_z,
-            shape_dist=self.shape_dist,
-            galaxy_shape_e_rms=self.galaxy_shape_e_rms,
-            galaxy_shape_e_sigma=self.galaxy_shape_e_sigma,
+            z_gen=z_gen,
+            shape_gen=shape_gen,
             density=self.galaxy_density,
             seed=self.seed,
             summary=self.summary,
@@ -490,3 +489,33 @@ class GenerateClusterWL:
             dataset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
         )
         ser.dict_str_to_yaml_file(exp, self.experiment.absolute().as_posix())
+
+    def parse_z_dist(self):
+        """Parse the z_dist string."""
+        z_dist_list = shlex.split(self.z_dist)
+        z_dist_type = z_dist_list.pop(0)
+        try:
+            z_dist = GalaxyZGen(z_dist_type)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+
+        try:
+            z_dist_args = z_dist.model_cls.from_args(z_dist_list)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+        return z_dist, z_dist_args
+
+    def parse_shape_dist(self):
+        """Parse the shape_dist string."""
+        shape_dist_list = shlex.split(self.shape_dist)
+        shape_dist_type = shape_dist_list.pop(0)
+        try:
+            shape_dist = GalaxyShapeGen(shape_dist_type)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+
+        try:
+            shape_dist_args = shape_dist.model_cls.from_args(shape_dist_list)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+        return shape_dist, shape_dist_args

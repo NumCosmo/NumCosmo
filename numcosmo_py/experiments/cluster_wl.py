@@ -27,36 +27,326 @@ This module provides factory functions to create the experiment dictionary
 for the LSS Weak Lensing cluster forecast.
 """
 
-from enum import Enum
+from typing import Annotated, Any
+from enum import StrEnum, auto
 from dataclasses import dataclass
 import numpy as np
+from pydantic import BaseModel, Field, ConfigDict, PrivateAttr
 from rich.console import Console
 from rich.table import Table
+from tabulate import tabulate
+
+from numcosmo_py import Ncm, Nc, parse_options_strict
+
+DEFAULT_TABLE_FMT = "rounded_grid"
+
+DEFAULT_SPEC_Z_MIN = 0.0
+DEFAULT_SPEC_Z_MAX = 1.0
 
 
-from numcosmo_py import Ncm, Nc
+class GalaxyZGenSpec(BaseModel):
+    """Galaxy redshift source distribution parameters."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    z_min: Annotated[float, Field(ge=0.0)] = DEFAULT_SPEC_Z_MIN
+    z_max: Annotated[float, Field(gt=0.0)] = DEFAULT_SPEC_Z_MAX
+
+    _true: Nc.GalaxySDTrueRedshiftLSSTSRD = PrivateAttr()
+    _spec: Nc.GalaxySDObsRedshiftSpec = PrivateAttr()
+
+    @classmethod
+    def from_args(cls, args: list[str]) -> "GalaxyZGenSpec":
+        """Create a GalaxyZDistSpec from command line arguments."""
+        opts = parse_options_strict(args)
+        return cls.model_validate(opts)
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return the help text for the galaxy redshift source distribution."""
+        return [
+            "GalaxyZDistSpec",
+            f"z_min={DEFAULT_SPEC_Z_MIN}, z_max={DEFAULT_SPEC_Z_MAX}",
+        ]
+
+    def model_post_init(self, _: Any, /) -> None:
+        """Check that z_min is less than z_max."""
+        if self.z_min > self.z_max:
+            raise ValueError(f"z_min {self.z_min} must be less than z_max {self.z_max}")
+
+        self._true = Nc.GalaxySDTrueRedshiftLSSTSRD.new()
+        self._spec = Nc.GalaxySDObsRedshiftSpec.new(self._true, self.z_min, self.z_max)
+
+    def gen_z(
+        self, mset: Ncm.MSet, z_data: Nc.GalaxySDObsRedshiftData, rng: Ncm.RNG
+    ) -> None:
+        """Generate the galaxy redshift source distribution data observations."""
+        self._spec.gen(mset, z_data, rng)
+
+    def get_z_dist(self) -> Nc.GalaxySDObsRedshift:
+        """Return the galaxy redshift source distribution data observations."""
+        return self._spec
 
 
-class HaloProfileType(str, Enum):
-    """Halo density profile types."""
-
-    NFW = "nfw"
-    EINASTO = "einasto"
-    HERNQUIST = "hernquist"
+DEFAULT_GAUSS_ZP_MIN = 0.0
+DEFAULT_GAUSS_ZP_MAX = 1.0
+DEFAULT_GAUSS_SIGMA0 = 0.03
 
 
-class GalaxyZDist(str, Enum):
+class GalaxyZGenGauss(BaseModel):
+    """Galaxy redshift source distribution parameters."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    zp_min: Annotated[float, Field(ge=0.0)] = DEFAULT_GAUSS_ZP_MIN
+    zp_max: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_ZP_MAX
+    sigma0: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_SIGMA0
+
+    _true: Nc.GalaxySDTrueRedshiftLSSTSRD = PrivateAttr()
+    _gauss: Nc.GalaxySDObsRedshiftGauss = PrivateAttr()
+
+    @classmethod
+    def from_args(cls, args: list[str]) -> "GalaxyZGenGauss":
+        """Create a GalaxyZDistGauss from command line arguments."""
+        opts = parse_options_strict(args)
+        return cls.model_validate(opts)
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return the help text for the galaxy redshift source distribution."""
+        return [
+            "GalaxyZDistGauss",
+            (
+                f"zp_min={DEFAULT_GAUSS_ZP_MIN}, "
+                f"zp_max={DEFAULT_GAUSS_ZP_MAX}, "
+                f"sigma0={DEFAULT_GAUSS_SIGMA0}"
+            ),
+        ]
+
+    def model_post_init(self, _: Any, /) -> None:
+        """Check that zp_min is less than zp_max."""
+        if self.zp_min > self.zp_max:
+            raise ValueError(
+                f"zp_min {self.zp_min} must be less than zp_max {self.zp_max}"
+            )
+
+        self._true = Nc.GalaxySDTrueRedshiftLSSTSRD.new()
+        self._gauss = Nc.GalaxySDObsRedshiftGauss.new(
+            self._true, self.zp_min, self.zp_max
+        )
+
+    def gen_z(
+        self, mset: Ncm.MSet, z_data: Nc.GalaxySDObsRedshiftData, rng: Ncm.RNG
+    ) -> None:
+        """Generate the galaxy redshift source distribution data observations."""
+        self._gauss.gen(mset, z_data, self.sigma0, rng)
+
+    def get_z_dist(self) -> Nc.GalaxySDObsRedshift:
+        """Return the galaxy redshift source distribution data observations."""
+        return self._gauss
+
+
+GalaxyZGenTypes = GalaxyZGenSpec | GalaxyZGenGauss
+
+
+class GalaxyZGen(StrEnum):
     """Galaxy redshift source distribution types."""
 
-    SPEC = "spec"
-    GAUSS = "gauss"
+    SPEC = (auto(), GalaxyZGenSpec)
+    GAUSS = (auto(), GalaxyZGenGauss)
+
+    def __new__(cls, value: str, _model_cls: type[GalaxyZGenTypes]) -> "GalaxyZGen":
+        """Create a new instance of the enum.
+
+        Initialize the enum including help text and model class.
+        """
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        return obj
+
+    def __init__(self, _value: str, model_cls: type[GalaxyZGenTypes]) -> None:
+        """Initialize the enum."""
+        self.model_cls = model_cls
+
+    @classmethod
+    def get_help_text(cls) -> str:
+        """Return the help text for the galaxy redshift source distribution."""
+        headers = ["Enum", "Model", "Params"]
+        rows = []
+
+        for value in cls:
+            rows.append([value] + value.model_cls.help_text())
+
+        return "\b" + tabulate(rows, headers=headers, tablefmt=DEFAULT_TABLE_FMT)
+
+    @classmethod
+    def get_help_metavar(cls) -> str:
+        """Return the help metavar for the galaxy redshift source distribution."""
+        metavar = "[" + "|".join([value.value for value in cls]) + "]"
+        return metavar
 
 
-class GalaxySDShapeDist(str, Enum):
+DEFAULT_SHAPE_GAUSS_E_RMS = 0.15
+DEFAULT_SHAPE_GAUSS_E_SIGMA = 0.01
+
+
+class GalaxyShapeGenGauss(BaseModel):
+    """Galaxy shape Gaussian parameters."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    e_rms: Annotated[float, Field(gt=0.0)] = DEFAULT_SHAPE_GAUSS_E_RMS
+    e_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_SHAPE_GAUSS_E_SIGMA
+
+    _gauss: Nc.GalaxySDShapeGauss = PrivateAttr()
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return the help text for the galaxy shape distribution."""
+        return [
+            "GalaxyShapeGauss",
+            (
+                f"e_rms={DEFAULT_SHAPE_GAUSS_E_RMS}, "
+                f"e_sigma={DEFAULT_SHAPE_GAUSS_E_SIGMA}"
+            ),
+        ]
+
+    @classmethod
+    def from_args(cls, args: list[str]) -> "GalaxyShapeGenGauss":
+        """Create a GalaxyShapeGauss from command line arguments."""
+        opts = parse_options_strict(args)
+        return cls.model_validate(opts)
+
+    def model_post_init(self, _: Any, /) -> None:
+        """Check that e_rms is less than e_sigma."""
+        self._gauss = Nc.GalaxySDShapeGauss.new()
+        self._gauss["e-rms"] = self.e_rms
+
+    def gen_shape(
+        self, mset: Ncm.MSet, shape_data: Nc.GalaxySDShapeData, rng: Ncm.RNG
+    ) -> None:
+        """Generate the galaxy shape source distribution data observations."""
+        coord = Nc.GalaxyWLObsCoord.EUCLIDEAN
+        self._gauss.gen(mset, shape_data, self.e_sigma, coord, rng)
+
+    def get_shape_dist(self) -> Nc.GalaxySDShapeGauss:
+        """Return the galaxy shape source distribution data observations."""
+        return self._gauss
+
+
+DEFAULT_GAUSS_HSC_E_RMS = 0.15
+DEFAULT_GAUSS_HSC_E_SIGMA = 0.01
+DEFAULT_GAUSS_HSC_E_RMS_SIGMA = 0.01
+DEFAULT_GAUSS_HSC_C1_SIGMA = 0.01
+DEFAULT_GAUSS_HSC_C2_SIGMA = 0.01
+DEFAULT_GAUSS_HSC_M_SIGMA = 0.08
+
+
+class GalaxyShapeGenGaussHSC(BaseModel):
+    """Galaxy shape Gaussian parameters."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    e_rms: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_E_RMS
+    e_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_E_SIGMA
+    e_rms_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_E_RMS_SIGMA
+    c1_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_C1_SIGMA
+    c2_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_C2_SIGMA
+    m_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_M_SIGMA
+
+    _gauss_hsc: Nc.GalaxySDShapeGaussHSC = PrivateAttr()
+    _k: float = PrivateAttr()
+    _theta: float = PrivateAttr()
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return the help text for the galaxy shape distribution."""
+        return [
+            "GalaxyShapeGaussHSC",
+            (
+                f"e_rms={DEFAULT_GAUSS_HSC_E_RMS}, "
+                f"e_sigma={DEFAULT_GAUSS_HSC_E_SIGMA}, "
+                f"e_rms_sigma={DEFAULT_GAUSS_HSC_E_RMS_SIGMA}, "
+                f"c1_sigma={DEFAULT_GAUSS_HSC_C1_SIGMA}, "
+                f"c2_sigma={DEFAULT_GAUSS_HSC_C2_SIGMA}, "
+                f"m_sigma={DEFAULT_GAUSS_HSC_M_SIGMA}"
+            ),
+        ]
+
+    @classmethod
+    def from_args(cls, args: list[str]) -> "GalaxyShapeGenGaussHSC":
+        """Create a GalaxyShapeGaussHSC from command line arguments."""
+        opts = parse_options_strict(args)
+        return cls.model_validate(opts)
+
+    def model_post_init(self, _, /):
+        """Check that e_rms is less than e_sigma."""
+        self._gauss_hsc = Nc.GalaxySDShapeGaussHSC.new()
+        self._gauss_hsc["e-rms"] = self.e_rms
+        self._k = ((self.e_rms**2) / self.e_rms_sigma) ** 2
+        self._theta = self.e_rms_sigma**2 / self.e_rms**2
+
+    def gen_shape(self, mset: Ncm.MSet, shape_data: Nc.GalaxySDShapeData, rng: Ncm.RNG):
+        """Generate the galaxy shape source distribution data observations."""
+        e_sigma1 = np.sqrt(rng.gamma_gen(self._k, self._theta))
+        e_sigma2 = np.sqrt(rng.gamma_gen(self._k, self._theta))
+        c1 = rng.gaussian_gen(0.0, self.c1_sigma)
+        c2 = rng.gaussian_gen(0.0, self.c2_sigma)
+        m = np.exp(rng.gaussian_gen(0.0, self.m_sigma))
+        coord = Nc.GalaxyWLObsCoord.EUCLIDEAN
+        self._gauss_hsc.gen(mset, shape_data, e_sigma1, e_sigma2, c1, c2, m, coord, rng)
+
+    def get_shape_dist(self) -> Nc.GalaxySDShapeGaussHSC:
+        """Return the galaxy shape source distribution data observations."""
+        return self._gauss_hsc
+
+
+GalaxyShapeDistGenTypes = GalaxyShapeGenGauss | GalaxyShapeGenGaussHSC
+
+
+class GalaxyShapeGen(StrEnum):
     """Galaxy shape source distribution types."""
 
-    GAUSS = "gauss"
-    GAUSS_HSC = "gauss_hsc"
+    GAUSS = (auto(), GalaxyShapeGenGauss)
+    GAUSS_HSC = (auto(), GalaxyShapeGenGaussHSC)
+
+    def __new__(cls, value: str, _model_cls: type[GalaxyShapeDistGenTypes]):
+        """Create a new instance of the enum.
+
+        Initialize the enum including help text and model class.
+        """
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        return obj
+
+    def __init__(self, _value: str, model_cls: type[GalaxyShapeDistGenTypes]):
+        """Initialize the enum."""
+        self.model_cls = model_cls
+
+    @classmethod
+    def get_help_text(cls):
+        """Return the help text for the galaxy shape source distribution."""
+        headers = ["Enum", "Model", "Params"]
+        rows = []
+
+        for value in cls:
+            rows.append([value] + value.model_cls.help_text())
+
+        return "\b" + tabulate(rows, headers=headers, tablefmt=DEFAULT_TABLE_FMT)
+
+    @classmethod
+    def get_help_metavar(cls):
+        """Return the help metavar for the galaxy shape source distribution."""
+        metavar = "[" + "|".join([value.value for value in cls]) + "]"
+        return metavar
+
+
+class HaloProfileType(StrEnum):
+    """Halo density profile types."""
+
+    NFW = auto()
+    EINASTO = auto()
+    HERNQUIST = auto()
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -165,11 +455,8 @@ class GalaxyDistributionModel:
     def __init__(
         self,
         galaxies: GalaxyDistributionData,
-        z_dist: GalaxyZDist = GalaxyZDist.GAUSS,
-        sigma0: float = 0.03,
-        shape_type: GalaxySDShapeDist = GalaxySDShapeDist.GAUSS,
-        galaxy_shape_e_rms: float = 2.0e-1,
-        galaxy_shape_e_sigma: float = 1.0e-4,
+        z_gen: GalaxyZGenTypes = GalaxyZGenGauss(),
+        shape_gen: GalaxyShapeDistGenTypes = GalaxyShapeGenGauss(),
     ) -> None:
         """Initialize the galaxy distribution model."""
         self.galaxy_position = Nc.GalaxySDPositionFlat.new(
@@ -188,46 +475,8 @@ class GalaxyDistributionModel:
             (alpha_max - alpha_min) * (np.sin(delta_max) - np.sin(delta_min))
         ) * (180.0 / np.pi) ** 2
         self.n_galaxies = int(galaxies.density * frac * self.sky_area)
-        print(
-            f"Number of galaxies: {self.n_galaxies} = "
-            f"{galaxies.density} * {frac} * {self.sky_area}"
-        )
-
-        match z_dist:
-            case GalaxyZDist.SPEC:
-                self.galaxy_redshift = Nc.GalaxySDObsRedshiftSpec.new(
-                    self.galaxy_redshift_true
-                )
-
-                def gen_z_spec(mset, z_data, rng):
-                    self.galaxy_redshift.gen(mset, z_data, rng)
-
-                self.gen_z = gen_z_spec
-
-            case GalaxyZDist.GAUSS:
-                self.galaxy_redshift = Nc.GalaxySDObsRedshiftGauss.new(
-                    self.galaxy_redshift_true, galaxies.z_min, galaxies.z_max
-                )
-
-                def gen_z_gauss(mset, z_data, rng):
-                    self.galaxy_redshift.gen(mset, z_data, sigma0, rng)
-
-                self.gen_z = gen_z_gauss
-            case _:
-                raise ValueError(f"Invalid galaxy redshift distribution: {z_dist}")
-
-        match shape_type:
-            case GalaxySDShapeDist.GAUSS:
-                self.galaxy_shape = Nc.GalaxySDShapeGauss.new()
-                self.galaxy_shape["e-rms"] = galaxy_shape_e_rms
-                self.sigma_int = galaxy_shape_e_rms
-                self.e_sigma = galaxy_shape_e_sigma
-            case GalaxySDShapeDist.GAUSS_HSC:
-                self.galaxy_shape = Nc.GalaxySDShapeGaussHSC.new()
-                self.sigma_int = galaxy_shape_e_rms
-                self.e_sigma = galaxy_shape_e_sigma
-            case _:
-                raise ValueError(f"Invalid galaxy shape distribution: {shape_type}")
+        self.z_gen = z_gen
+        self.shape_gen = shape_gen
 
     def generate_data(
         self, cosmo: Nc.HICosmo, cluster: ClusterModel, rng: Ncm.RNG
@@ -235,20 +484,23 @@ class GalaxyDistributionModel:
         """Generate the galaxy data."""
         cluster.prepare(cosmo)
         cluster_data = Nc.DataClusterWL.new()
+        galaxy_redshift = self.z_gen.get_z_dist()
+        galaxy_shape = self.shape_gen.get_shape_dist()
+
         mset = Ncm.MSet.new_array(
             [
                 cosmo,
                 cluster.density_profile,
                 cluster.surface_mass_density,
                 cluster.halo_position,
-                self.galaxy_redshift,
+                galaxy_redshift,
                 self.galaxy_position,
-                self.galaxy_shape,
+                galaxy_shape,
             ]
         )
-        z_data = Nc.GalaxySDObsRedshiftData.new(self.galaxy_redshift)
+        z_data = Nc.GalaxySDObsRedshiftData.new(galaxy_redshift)
         p_data = Nc.GalaxySDPositionData.new(self.galaxy_position, z_data)
-        s_data = Nc.GalaxySDShapeData.new(self.galaxy_shape, p_data)
+        s_data = Nc.GalaxySDShapeData.new(galaxy_shape, p_data)
 
         obs = Nc.GalaxyWLObs.new(
             Nc.GalaxyWLObsCoord.EUCLIDEAN,
@@ -256,43 +508,11 @@ class GalaxyDistributionModel:
             list(s_data.required_columns()),
         )
 
-        match self.galaxy_shape:
-            case Nc.GalaxySDShapeGauss():
-                for i in range(self.n_galaxies):
-                    e_sigma1 = self.e_sigma * np.random.uniform(0.8, 1.2)
-                    e_sigma2 = self.e_sigma * np.random.uniform(0.8, 1.2)
-                    self.gen_z(mset, z_data, rng)
-                    self.galaxy_position.gen(mset, p_data, rng)
-                    self.galaxy_shape.gen(
-                        mset,
-                        s_data,
-                        e_sigma1,
-                        e_sigma2,
-                        Nc.GalaxyWLObsCoord.EUCLIDEAN,
-                        rng,
-                    )
-                    s_data.write_row(obs, i)
-            case Nc.GalaxySDShapeGaussHSC():
-                for i in range(self.n_galaxies):
-                    sigma_int = self.sigma_int * np.random.uniform(0.8, 1.2)
-                    sigma_obs = self.e_sigma * np.random.uniform(0.8, 1.2)
-                    c1 = np.random.normal(0.0, 0.01)
-                    c2 = np.random.normal(0.0, 0.01)
-                    m = np.random.normal(0.0, 0.08)
-                    self.gen_z(mset, z_data, rng)
-                    self.galaxy_position.gen(mset, p_data, rng)
-                    self.galaxy_shape.gen(
-                        mset,
-                        s_data,
-                        sigma_int,
-                        sigma_obs,
-                        c1,
-                        c2,
-                        m,
-                        Nc.GalaxyWLObsCoord.EUCLIDEAN,
-                        rng,
-                    )
-                    s_data.write_row(obs, i)
+        for i in range(self.n_galaxies):
+            self.z_gen.gen_z(mset, z_data, rng)
+            self.galaxy_position.gen(mset, p_data, rng)
+            self.shape_gen.gen_shape(mset, s_data, rng)
+            s_data.write_row(obs, i)
 
         cluster_data.set_obs(obs)
 
@@ -347,11 +567,8 @@ def generate_lsst_cluster_wl(
     dec_max: float,
     z_min: float,
     z_max: float,
-    z_dist: GalaxyZDist,
-    sigma0: float,
-    shape_dist: GalaxySDShapeDist,
-    galaxy_shape_e_rms: float,
-    galaxy_shape_e_sigma: float,
+    z_gen: GalaxyZGenTypes,
+    shape_gen: GalaxyShapeDistGenTypes,
     density: float,
     seed: None | int,
     summary: bool,
@@ -382,11 +599,8 @@ def generate_lsst_cluster_wl(
     )
     galaxy_model = GalaxyDistributionModel(
         galaxies=galaxy_distribution,
-        z_dist=z_dist,
-        sigma0=sigma0,
-        shape_type=shape_dist,
-        galaxy_shape_e_rms=galaxy_shape_e_rms,
-        galaxy_shape_e_sigma=galaxy_shape_e_sigma,
+        z_gen=z_gen,
+        shape_gen=shape_gen,
     )
     if seed is not None:
         rng = Ncm.RNG.seeded_new("mt19937", seed)
@@ -449,12 +663,8 @@ def generate_lsst_cluster_wl(
         table.add_row("z min", f"{galaxy_distribution.z_min}")
         table.add_row("z max", f"{galaxy_distribution.z_max}")
         table.add_row("Density", f"{galaxy_distribution.density}")
-        table.add_row("z Distribution", f"{z_dist}")
-        if z_dist != GalaxyZDist.SPEC:
-            table.add_row("z Sigma_0", f"{sigma0}")
-        table.add_row("Shape Distribution", f"{shape_dist}")
-        table.add_row("Shape e_rms", f"{galaxy_shape_e_rms}")
-        table.add_row("Shape e_sigma", f"{galaxy_shape_e_sigma}")
+        table.add_row("Redshift Generator", repr(z_gen))
+        table.add_row("Shape Generator", repr(shape_gen))
 
         console.print(table)
 
