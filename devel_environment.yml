@@ -6,7 +6,7 @@ dependencies:
   - astropy
   - black
   - c-compiler
-  - cfitsio < 4.6.0
+  - cfitsio
   - coverage
   - fftw
   - flake8
@@ -43,10 +43,11 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-lazy-fixtures
-  - python >= 3.10
+  - python >= 3.11
   - rich
   - scipy
-  - setuptools < 74
+  - setuptools
+  - tabulate
   - tqdm
   - typer
   - zlib

@@ -42,6 +42,7 @@ test = [
     "pytest",
     "rich",
     "sacc",
+    "tabulate",
     "typer",
 ]
 dev = [
