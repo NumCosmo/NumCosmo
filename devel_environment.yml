@@ -36,6 +36,7 @@ dependencies:
   - pip:
       - pygobject-stubs
       - pytest-tap
+      - types-tabulate
   - pyccl >= 3.0.0
   - pydantic
   - pygobject
