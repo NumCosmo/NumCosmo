@@ -39,13 +39,16 @@ G_BEGIN_DECLS
 
 #define NC_TYPE_GALAXY_SD_OBS_REDSHIFT_SPEC (nc_galaxy_sd_obs_redshift_spec_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcGalaxySDObsRedshiftSpec, nc_galaxy_sd_obs_redshift_spec, NC, GALAXY_SD_OBS_REDSHIFT_SPEC, NcGalaxySDObsRedshift)
+G_DECLARE_FINAL_TYPE (NcGalaxySDObsRedshiftSpec, nc_galaxy_sd_obs_redshift_spec, NC, GALAXY_SD_OBS_REDSHIFT_SPEC, NcGalaxySDObsRedshift);
 
-NcGalaxySDObsRedshiftSpec *nc_galaxy_sd_obs_redshift_spec_new (NcGalaxySDTrueRedshift * sdz);
+NcGalaxySDObsRedshiftSpec *nc_galaxy_sd_obs_redshift_spec_new (NcGalaxySDTrueRedshift *sdz, const gdouble z_min, const gdouble z_max);
 NcGalaxySDObsRedshiftSpec *nc_galaxy_sd_obs_redshift_spec_ref (NcGalaxySDObsRedshiftSpec *gsdorspec);
 
 void nc_galaxy_sd_obs_redshift_spec_free (NcGalaxySDObsRedshiftSpec *gsdorspec);
 void nc_galaxy_sd_obs_redshift_spec_clear (NcGalaxySDObsRedshiftSpec **gsdorspec);
+
+void nc_galaxy_sd_obs_redshift_spec_set_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, const gdouble z_min, const gdouble z_max);
+void nc_galaxy_sd_obs_redshift_spec_get_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, gdouble *z_min, gdouble *z_max);
 
 void nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshiftSpec *gsdorspec, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 
