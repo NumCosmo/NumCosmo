@@ -555,7 +555,7 @@ endif
 
 python_typer = python_module.find_installation(
     'python3',
-    modules: ['typer', 'rich'],
+    modules: ['typer', 'rich', 'pydantic'],
     required: false,
 )
 

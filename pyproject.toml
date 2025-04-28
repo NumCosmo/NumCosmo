@@ -34,14 +34,15 @@ authors = [
 
 [project.optional-dependencies]
 test = [
-    "pytest",
-    "pytest-tap",
-    "pytest-lazy-fixtures",
-    "rich",
-    "typer",
-    "pyccl",
-    "sacc",
     "firecrown",
+    "pyccl",
+    "pydantic",
+    "pytest-lazy-fixtures",
+    "pytest-tap",
+    "pytest",
+    "rich",
+    "sacc",
+    "typer",
 ]
 dev = [
     "mypy",
