@@ -73,6 +73,9 @@ nc_hipert_init (NcHIPert *pert)
 {
   NcHIPertPrivate * const self = pert->priv = nc_hipert_get_instance_private (pert);
 
+  if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
+    g_error ("ERROR: SUNContext_Create failed\n");
+
   self->alpha0   = 0.0;
   self->reltol   = 0.0;
   self->k        = 0.0;
@@ -82,7 +85,7 @@ nc_hipert_init (NcHIPert *pert)
   self->LS       = NULL;
 
   self->vec_abstol  = NULL;
-  self->cvode       = CVodeCreate (CV_ADAMS);
+  self->cvode       = CVodeCreate (CV_ADAMS, self->sunctx);
   self->cvode_init  = FALSE;
   self->cvode_stiff = FALSE;
 }
@@ -184,6 +187,8 @@ nc_hipert_finalize (GObject *object)
     SUNLinSolFree (self->LS);
     self->LS = NULL;
   }
+
+  SUNContext_Free (&self->sunctx);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_parent_class)->finalize (object);
@@ -428,11 +433,11 @@ nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
 
     if (self->sys_size > 0)
     {
-      self->y          = N_VNew_Serial (sys_size);
-      self->vec_abstol = N_VNew_Serial (sys_size);
+      self->y          = N_VNew_Serial (sys_size, self->sunctx);
+      self->vec_abstol = N_VNew_Serial (sys_size, self->sunctx);
 
-      self->A  = SUNDenseMatrix (sys_size, sys_size);
-      self->LS = SUNDenseLinearSolver (self->y, self->A);
+      self->A  = SUNDenseMatrix (sys_size, sys_size, self->sunctx);
+      self->LS = SUNLinSol_Dense (self->y, self->A, self->sunctx);
 
       NCM_CVODE_CHECK ((gpointer) self->A, "SUNDenseMatrix", 0, );
       NCM_CVODE_CHECK ((gpointer) self->LS, "SUNDenseLinearSolver", 0, );
@@ -470,9 +475,9 @@ nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
     self->cvode_stiff = stiff;
 
     if (stiff)
-      self->cvode = CVodeCreate (CV_BDF);
+      self->cvode = CVodeCreate (CV_BDF, self->sunctx);
     else
-      self->cvode = CVodeCreate (CV_ADAMS);
+      self->cvode = CVodeCreate (CV_ADAMS, self->sunctx);
 
     self->cvode_init = FALSE;
   }
@@ -497,9 +502,9 @@ nc_hipert_reset_solver (NcHIPert *pert)
   }
 
   if (self->cvode_stiff)
-    self->cvode = CVodeCreate (CV_BDF);
+    self->cvode = CVodeCreate (CV_BDF, self->sunctx);
   else
-    self->cvode = CVodeCreate (CV_ADAMS);
+    self->cvode = CVodeCreate (CV_ADAMS, self->sunctx);
 
   self->cvode_init = FALSE;
 }

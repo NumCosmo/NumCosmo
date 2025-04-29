@@ -48,6 +48,7 @@
 #include "data/nc_data_bao_dhr_dar.h"
 #include "data/nc_data_bao_dmr_hr.h"
 #include "data/nc_data_bao_dtr_dhr.h"
+#include "data/nc_data_bao_dvr_dtdh.h"
 
 /**
  * nc_data_bao_create:
@@ -83,6 +84,8 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_RDV_BLAKE2012:
     case NC_DATA_BAO_RDV_KAZIN2014:
     case NC_DATA_BAO_RDV_BOSS_QSO_ATA2017:
+    case NC_DATA_BAO_RDV_DESI_DR1_BGS_QSO_2024:
+    case NC_DATA_BAO_RDV_DESI_DR2_BGS_2025:
       data = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
       break;
     case NC_DATA_BAO_EMPIRICAL_FIT_ROSS2015:
@@ -104,11 +107,16 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE:
     case NC_DATA_BAO_DTR_DHR_SDSS_DR16_LRG_2021:
     case NC_DATA_BAO_DTR_DHR_SDSS_DR16_QSO_2021:
+    case NC_DATA_BAO_DTR_DHR_DESI_DR1_LYA_2025:
       data = NCM_DATA (nc_data_bao_dtr_dhr_new_from_id (dist, id));
       break;
-    default:
-      g_assert_not_reached ();
+    case NC_DATA_BAO_DVR_DTDH_DESI_DR1_2024:
+    case NC_DATA_BAO_DVR_DTDH_DESI_DR2_2025:
+      data = NCM_DATA (nc_data_bao_dvr_dtdh_new_from_id (dist, id));
       break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+      break;                   /* LCOV_EXCL_LINE */
   }
 
   g_assert (NCM_IS_DATA (data));
