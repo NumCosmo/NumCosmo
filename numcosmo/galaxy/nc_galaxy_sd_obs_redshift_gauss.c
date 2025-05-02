@@ -154,6 +154,7 @@ nc_galaxy_sd_obs_redshift_gauss_finalize (GObject *object)
 }
 
 static void _nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
+static gboolean _nc_galaxy_sd_obs_redshift_gauss_gen1 (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static void _nc_galaxy_sd_obs_redshift_gauss_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static void _nc_galaxy_sd_obs_redshift_gauss_get_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
 static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_gauss_integ (NcGalaxySDObsRedshift *gsdor);
@@ -212,6 +213,7 @@ nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *kla
   ncm_model_class_check_params_info (model_class);
 
   gsdor_class->gen          = &_nc_galaxy_sd_obs_redshift_gauss_gen;
+  gsdor_class->gen1         = &_nc_galaxy_sd_obs_redshift_gauss_gen1;
   gsdor_class->prepare      = &_nc_galaxy_sd_obs_redshift_gauss_prepare;
   gsdor_class->get_lim      = &_nc_galaxy_sd_obs_redshift_gauss_get_lim;
   gsdor_class->integ        = &_nc_galaxy_sd_obs_redshift_gauss_integ;
@@ -245,6 +247,27 @@ _nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDOb
   data->z      = z;
   ldata->zp    = zp;
   ldata->sigma = sigmaz;
+}
+
+static gboolean
+_nc_galaxy_sd_obs_redshift_gauss_gen1 (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng)
+{
+  NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
+  NcGalaxySDObsRedshiftGaussData * const ldata   = (NcGalaxySDObsRedshiftGaussData *) data->ldata;
+  gdouble sigmaz;
+  gdouble zp;
+  gdouble z;
+
+  z      = nc_galaxy_sd_true_redshift_gen (self->sdz, rng);
+  sigmaz = ldata->sigma0 * (1.0 + z);
+  zp     = ncm_rng_gaussian_gen (rng, z, sigmaz);
+
+  data->z      = z;
+  ldata->zp    = zp;
+  ldata->sigma = sigmaz;
+
+  return (zp >= self->zp_min) && (zp <= self->zp_max);
 }
 
 static void
@@ -295,7 +318,7 @@ _nc_galaxy_sd_obs_redshift_gauss_integ_f (gpointer callback_data, const gdouble 
   if (self->use_true_z)
   {
     const gdouble sigmaz = ldata->sigma0 * (1.0 + z);
-    const gdouble norm   =  (sqrt (2.0 * M_PI) * sigmaz);
+    const gdouble norm   = sqrt (2.0 * M_PI) * sigmaz * 0.5 * (1.0 + erf (z / (M_SQRT2 * sigmaz)));
     const gdouble int_z  = nc_galaxy_sd_true_redshift_integ (self->sdz, z);
     const gdouble int_zp = exp (-0.5 * gsl_pow_2 ((zp - z) / sigmaz)) / norm;
 
@@ -303,7 +326,7 @@ _nc_galaxy_sd_obs_redshift_gauss_integ_f (gpointer callback_data, const gdouble 
   }
   else
   {
-    const gdouble norm   =  (sqrt (2.0 * M_PI) * ldata->sigma);
+    const gdouble norm   = sqrt (2.0 * M_PI) * ldata->sigma * 0.5 * (1.0 + erf (z / (M_SQRT2 * ldata->sigma)));
     const gdouble int_zp = exp (-0.5 * gsl_pow_2 ((zp - z) / ldata->sigma)) / norm;
 
     return int_zp;
@@ -542,6 +565,32 @@ nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshiftGauss *gsdorgauss, Ncm
 
   ldata->sigma0 = sigma0;
   klass->gen (NC_GALAXY_SD_OBS_REDSHIFT (gsdorgauss), data, rng);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_gauss_gen1:
+ * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
+ * @mset: a #NcmMSet
+ * @data: a #NcGalaxySDObsRedshiftData
+ * @sigma0: the standard deviation of the redshift errors
+ * @rng: a #NcmRNG
+ *
+ * Sets the required columns for the data and generates a redshift observation. See
+ * nc_galaxy_sd_obs_redshift_gen1() for details.
+ *
+ * Returns: whether the redshift observation is within the limits.
+ */
+gboolean
+nc_galaxy_sd_obs_redshift_gauss_gen1 (NcGalaxySDObsRedshiftGauss *gsdorgauss, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, const gdouble sigma0, NcmRNG *rng)
+{
+  NcGalaxySDObsRedshiftClass *klass            = NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdorgauss);
+  NcGalaxySDObsRedshiftGaussData * const ldata = (NcGalaxySDObsRedshiftGaussData *) data->ldata;
+
+  g_assert_cmpfloat (sigma0, >=, 0.0);
+
+  ldata->sigma0 = sigma0;
+
+  return klass->gen1 (NC_GALAXY_SD_OBS_REDSHIFT (gsdorgauss), data, rng);
 }
 
 /**

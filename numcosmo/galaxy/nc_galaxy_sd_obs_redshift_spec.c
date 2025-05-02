@@ -145,6 +145,7 @@ nc_galaxy_sd_obs_redshift_spec_finalize (GObject *object)
 }
 
 static void _nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
+static gboolean _nc_galaxy_sd_obs_redshift_spec_gen1 (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static void _nc_galaxy_sd_obs_redshift_spec_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static void _nc_galaxy_sd_obs_redshift_spec_get_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
 static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_spec_integ (NcGalaxySDObsRedshift *gsdor);
@@ -183,6 +184,7 @@ nc_galaxy_sd_obs_redshift_spec_class_init (NcGalaxySDObsRedshiftSpecClass *klass
   ncm_model_class_check_params_info (model_class);
 
   gsdor_class->gen          = &_nc_galaxy_sd_obs_redshift_spec_gen;
+  gsdor_class->gen1         = &_nc_galaxy_sd_obs_redshift_spec_gen1;
   gsdor_class->prepare      = &_nc_galaxy_sd_obs_redshift_spec_prepare;
   gsdor_class->get_lim      = &_nc_galaxy_sd_obs_redshift_spec_get_lim;
   gsdor_class->integ        = &_nc_galaxy_sd_obs_redshift_spec_integ;
@@ -203,6 +205,17 @@ _nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObs
     if (max_tries-- == 0)
       g_error ("nc_galaxy_sd_obs_redshift_spec_gen: maximum number of iterations reached.");
   } while (data->z < self->z_min || data->z > self->z_max);
+}
+
+static gboolean
+_nc_galaxy_sd_obs_redshift_spec_gen1 (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng)
+{
+  NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdor);
+  NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
+
+  data->z = nc_galaxy_sd_true_redshift_gen (self->sdz, rng);
+
+  return (data->z >= self->z_min) && (data->z <= self->z_max);
 }
 
 static void
@@ -436,5 +449,25 @@ nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshiftSpec *gsdorspec, NcmMSe
   NcGalaxySDObsRedshiftClass *klass = NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdorspec);
 
   klass->gen (NC_GALAXY_SD_OBS_REDSHIFT (gsdorspec), data, rng);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_spec_gen1:
+ * @gsdorspec: a #NcGalaxySDObsRedshiftSpec
+ * @mset: a #NcmMSet
+ * @data: a #NcGalaxySDObsRedshiftData
+ * @rng: a #NcmRNG
+ *
+ * Generates a galaxy observed redshift. See nc_galaxy_sd_obs_redshift_spec_gen() for
+ * details.
+ *
+ * Returns: %TRUE if @data->z is within the redshift limits
+ */
+gboolean
+nc_galaxy_sd_obs_redshift_spec_gen1 (NcGalaxySDObsRedshiftSpec *gsdorspec, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, NcmRNG *rng)
+{
+  NcGalaxySDObsRedshiftClass *klass = NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdorspec);
+
+  return klass->gen1 (NC_GALAXY_SD_OBS_REDSHIFT (gsdorspec), data, rng);
 }
 

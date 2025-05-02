@@ -282,7 +282,7 @@ _nc_galaxy_sd_obs_redshift_pz_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxyS
  * Returns: (transfer full): a new #NcGalaxySDObsRedshiftPz object.
  */
 NcGalaxySDObsRedshiftPz *
-nc_galaxy_sd_obs_redshift_pz_new ()
+nc_galaxy_sd_obs_redshift_pz_new (void)
 {
   NcGalaxySDObsRedshiftPz *gsdorpz = g_object_new (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_PZ, NULL);
 

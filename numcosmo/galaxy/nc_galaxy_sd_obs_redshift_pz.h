@@ -37,7 +37,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcGalaxySDObsRedshiftPz, nc_galaxy_sd_obs_redshift_pz, NC, GALAXY_SD_OBS_REDSHIFT_PZ, NcGalaxySDObsRedshift)
 
-NcGalaxySDObsRedshiftPz *nc_galaxy_sd_obs_redshift_pz_new ();
+NcGalaxySDObsRedshiftPz *nc_galaxy_sd_obs_redshift_pz_new (void);
 NcGalaxySDObsRedshiftPz *nc_galaxy_sd_obs_redshift_pz_ref (NcGalaxySDObsRedshiftPz *gsdorpz);
 
 void nc_galaxy_sd_obs_redshift_pz_free (NcGalaxySDObsRedshiftPz *gsdorpz);
