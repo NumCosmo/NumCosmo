@@ -92,12 +92,19 @@ struct _NcGalaxySDShapeData
   gatomicrefcount ref_count;
 };
 
+
 NCM_MSET_MODEL_DECLARE_ID (nc_galaxy_sd_shape);
 
 GType nc_galaxy_sd_shape_data_get_type (void) G_GNUC_CONST;
 
 NcGalaxySDShapeData *nc_galaxy_sd_shape_data_ref (NcGalaxySDShapeData *data);
 void nc_galaxy_sd_shape_data_unref (NcGalaxySDShapeData *data);
+
+NcGalaxyWLObsEllipConv nc_galaxy_sd_shape_get_ellip_conv (NcGalaxySDShape *gsds);
+
+void nc_galaxy_sd_shape_apply_shear (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E, NcmComplex *E_obs);
+void nc_galaxy_sd_shape_apply_shear_inv (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs, NcmComplex *E);
+gdouble nc_galaxy_sd_shape_lndet_jac (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs);
 
 void nc_galaxy_sd_shape_data_read_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
 void nc_galaxy_sd_shape_data_write_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
