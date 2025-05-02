@@ -339,7 +339,7 @@ _nc_galaxy_sd_shape_set_ellip_conv (NcGalaxySDShape *gsds, NcGalaxyWLObsEllipCon
 {
   NcGalaxySDShapePrivate * const self = nc_galaxy_sd_shape_get_instance_private (gsds);
 
-  switch (self->ellip_conv)
+  switch (ellip_conv)
   {
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
       self->apply_shear          = _nc_galaxy_sd_shape_apply_shear_trace;

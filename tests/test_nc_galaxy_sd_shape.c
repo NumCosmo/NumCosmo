@@ -46,6 +46,7 @@ typedef struct _TestNcGalaxySDShapeGauss
   NcGalaxySDPosition *galaxy_position;
   NcGalaxySDShape *galaxy_shape;
   NcmMSet *mset;
+  NcGalaxyWLObsEllipConv ellip_conv;
   gdouble g_fiduc;
   glong seed;
   gdouble g_estimator;
@@ -68,46 +69,52 @@ static void test_nc_galaxy_sd_shape_gauss_data_setget (TestNcGalaxySDShapeGauss 
 gint
 main (gint argc, gchar *argv[])
 {
+  NcGalaxyWLObsEllipConv ellip_convs[2] = {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET};
+  gchar *ellip_conv_names[2]            = {"trace", "trace_det"};
+
+  struct
+  {
+    gchar *test_name;
+
+    void (*test_func) (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
+  } tests[7] = {
+    {"serialize", &test_nc_galaxy_sd_shape_serialize},
+    {"model_id", &test_nc_galaxy_sd_shape_model_id},
+    {"gen", &test_nc_galaxy_sd_shape_gauss_gen},
+    {"integ", &test_nc_galaxy_sd_shape_gauss_integ},
+    {"stats", &test_nc_galaxy_sd_shape_gauss_integ},
+    {"required_columns", &test_nc_galaxy_sd_shape_gauss_required_columns},
+    {"data_setget", &test_nc_galaxy_sd_shape_gauss_data_setget},
+  };
+
+  gint i, j;
+
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
   /* g_test_set_nonfatal_assertions (); */
+  for (i = 0; i < 2; i++)
+  {
+    NcGalaxyWLObsEllipConv ellip_conv = ellip_convs[i];
+    gchar *ellip_conv_name            = ellip_conv_names[i];
 
-  g_test_add ("/nc/galaxy_sd_shape/gauss/serialize", TestNcGalaxySDShapeGauss, NULL,
-              &test_nc_galaxy_sd_shape_gauss_new,
-              &test_nc_galaxy_sd_shape_serialize,
-              &test_nc_galaxy_sd_shape_free);
+    for (j = 0; j < 7; j++)
+    {
+      gchar *test_name = tests[j].test_name;
 
-  g_test_add ("/nc/galaxy_sd_shape/gauss/model_id", TestNcGalaxySDShapeGauss, NULL,
-              &test_nc_galaxy_sd_shape_gauss_new,
-              &test_nc_galaxy_sd_shape_model_id,
-              &test_nc_galaxy_sd_shape_free);
+      void (*test_func) (TestNcGalaxySDShapeGauss *test, gconstpointer pdata) = tests[j].test_func;
 
-  g_test_add ("/nc/galaxy_sd_shape/gauss/gen", TestNcGalaxySDShapeGauss, NULL,
-              &test_nc_galaxy_sd_shape_gauss_new,
-              &test_nc_galaxy_sd_shape_gauss_gen,
-              &test_nc_galaxy_sd_shape_free);
+      gchar *test_path;
 
-  g_test_add ("/nc/galaxy_sd_shape/gauss/integ", TestNcGalaxySDShapeGauss, NULL,
-              &test_nc_galaxy_sd_shape_gauss_new,
-              &test_nc_galaxy_sd_shape_gauss_integ,
-              &test_nc_galaxy_sd_shape_free);
-
-  g_test_add ("/nc/galaxy_sd_shape/gauss/stats", TestNcGalaxySDShapeGauss, NULL,
-              &test_nc_galaxy_sd_shape_gauss_new,
-              &test_nc_galaxy_sd_shape_gauss_stats,
-              &test_nc_galaxy_sd_shape_free);
-
-  g_test_add ("/nc/galaxy_sd_shape/gauss/required_columns", TestNcGalaxySDShapeGauss, NULL,
-              &test_nc_galaxy_sd_shape_gauss_new,
-              &test_nc_galaxy_sd_shape_gauss_required_columns,
-              &test_nc_galaxy_sd_shape_free);
-
-  g_test_add ("/nc/galaxy_sd_shape/gauss/data/setget", TestNcGalaxySDShapeGauss, NULL,
-              &test_nc_galaxy_sd_shape_gauss_new,
-              &test_nc_galaxy_sd_shape_gauss_data_setget,
-              &test_nc_galaxy_sd_shape_free);
+      test_path = g_strdup_printf ("/nc/galaxy_sd_shape/%s/%s", ellip_conv_name, test_name);
+      g_test_add (test_path, TestNcGalaxySDShapeGauss, GINT_TO_POINTER (ellip_conv),
+                  &test_nc_galaxy_sd_shape_gauss_new,
+                  test_func,
+                  &test_nc_galaxy_sd_shape_free);
+      g_free (test_path);
+    }
+  }
 
   g_test_run ();
 
@@ -117,7 +124,8 @@ main (gint argc, gchar *argv[])
 static void
 test_nc_galaxy_sd_shape_gauss_new (TestNcGalaxySDShapeGauss *test, gconstpointer pdata)
 {
-  NcGalaxySDShape *s_dist             = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET));
+  NcGalaxyWLObsEllipConv ellip_conv   = GPOINTER_TO_INT (pdata);
+  NcGalaxySDShape *s_dist             = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new (ellip_conv));
   NcGalaxySDTrueRedshift *z_true_dist = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
   NcGalaxySDObsRedshift *z_dist       = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_spec_new (z_true_dist, 0.0, 2.0));
   NcGalaxySDPosition *p_dist          = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (-0.2, 0.2, -0.2, 0.2));
@@ -141,6 +149,8 @@ test_nc_galaxy_sd_shape_gauss_new (TestNcGalaxySDShapeGauss *test, gconstpointer
   test->galaxy_redshift = z_dist;
   test->galaxy_position = p_dist;
   test->galaxy_shape    = s_dist;
+
+  test->ellip_conv = ellip_conv;
 
   test->mset = ncm_mset_new (cosmo, NULL, dp, hp, smd, z_dist, p_dist, s_dist, NULL);
 
@@ -175,6 +185,8 @@ test_nc_galaxy_sd_shape_serialize (TestNcGalaxySDShapeGauss *test, gconstpointer
   NcGalaxySDShape *sdsg_dup = NC_GALAXY_SD_SHAPE (ncm_serialize_dup_obj (ser, G_OBJECT (test->galaxy_shape)));
 
   g_assert_true (NC_IS_GALAXY_SD_SHAPE (sdsg_dup));
+  g_assert_true (nc_galaxy_sd_shape_get_ellip_conv (test->galaxy_shape) == test->ellip_conv);
+  g_assert_true (nc_galaxy_sd_shape_get_ellip_conv (sdsg_dup) == test->ellip_conv);
 
   ncm_serialize_free (ser);
   nc_galaxy_sd_shape_free (sdsg_dup);
@@ -235,10 +247,24 @@ test_nc_galaxy_sd_shape_gauss_gen (TestNcGalaxySDShapeGauss *test, gconstpointer
                                                        test->cosmo,
                                                        r, z_data->z, z_cl, z_cl);
 
-        if (fabs (gt) > 1.0)
-          e_o = (1.0 + gt * conj (e_s)) / (conj (e_s) + gt);
-        else
-          e_o = (e_s + gt) / (1.0 + gt * e_s);
+        switch (test->ellip_conv)
+        {
+          case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+
+            if (fabs (gt) > 1.0)
+              e_o = (1.0 + gt * conj (e_s)) / (conj (e_s) + gt);
+            else
+              e_o = (e_s + gt) / (1.0 + gt * e_s);
+
+            break;
+
+          case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+            e_o = (e_s + gt * (gt * conj (e_s) + 2.0)) / (1.0 + gt * gt + 2.0 * creal (gt * conj (e_s)));
+            break;
+          default:
+            g_assert_not_reached ();
+            break;
+        }
       }
 
       e_s = e_s * cexp (2.0 * I * phi);
@@ -319,38 +345,72 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test, gconstpoint
                                                        r, z_data->z, z_cl, z_cl);
         g = gt * cexp (2.0 * I * phi);
 
-        if (gt > 1.0)
-          e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
-        else
-          e_s = (e_o - g) / (1.0 - conj (g) * e_o);
+        switch (test->ellip_conv)
+        {
+          case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+
+            if (gt > 1.0)
+              e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
+            else
+              e_s = (e_o - g) / (1.0 - conj (g) * e_o);
+
+            break;
+
+          case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+            e_s = (e_o + g * (g * conj (e_o) - 2.0)) / (1.0 + g * conj (g) - 2.0 * creal (g * conj (e_o)));
+            break;
+
+          default:
+            g_assert_not_reached ();
+        }
       }
 
       {
-        const gdouble var_int     = gsl_pow_2 (sigma_int);
-        const gdouble total_var_1 = var_int + gsl_pow_2 (sigma_obs_out);
-        const gdouble total_var_2 = var_int + gsl_pow_2 (sigma_obs_out);
-        const gdouble chi2_1      = gsl_pow_2 (creal (e_s)) / total_var_1;
-        const gdouble chi2_2      = gsl_pow_2 (cimag (e_s)) / total_var_2;
-        const gdouble jac_num     = (1.0 - gt * gt);
-        const gdouble jac_den     = (1.0 - 2.0 * creal (conj (g) * e_o) + gt * gt * conj (e_o) * e_o);
-        const gdouble m2ln_int1   = chi2_1 + chi2_2 + log (2.0 * M_PI * total_var_1 * total_var_2) + 4.0 * log (jac_den / jac_num);
+        const gdouble var_int   = gsl_pow_2 (sigma_int);
+        const gdouble total_var = var_int + gsl_pow_2 (sigma_obs_out);
+        const gdouble chi2_1    = gsl_pow_2 (creal (e_s)) / total_var;
+        const gdouble chi2_2    = gsl_pow_2 (cimag (e_s)) / total_var;
+        gdouble jac_num, jac_den, m2ln_int1;
+
+        switch (test->ellip_conv)
+        {
+          case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+            jac_num = gsl_pow_2 (1.0 - gt * gt);
+            jac_den = gsl_pow_2 (1.0 - 2.0 * creal (conj (g) * e_o) + gt * gt * conj (e_o) * e_o);
+            break;
+
+          case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+            jac_num = gsl_pow_3 (1.0 - gt * gt);
+            jac_den = gsl_pow_3 (1.0 - 2.0 * creal (conj (g) * e_o) + gt * gt);
+            break;
+
+          default:
+            g_assert_not_reached ();
+            break;
+        }
+
+        m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
 
         ncm_assert_cmpdouble_e (-2.0 * log (int0), ==, m2ln_int1, 0.0, 1.0e-13);
+
+        e_s      = e_s * cexp (-2.0 * I * phi);
+        e_o      = e_o * cexp (-2.0 * I * phi);
+        data_e_s = data_e_s * cexp (-2.0 * I * phi);
+
+        /* For the trace convention e_o is a biased estimator for g. */
+        if (test->ellip_conv == NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE)
+          e_o = 0.5 * e_o / (1.0 - var_int);
+
+        ncm_stats_vec_set (stats, 0, creal (e_s));
+        ncm_stats_vec_set (stats, 1, cimag (e_s));
+        ncm_stats_vec_set (stats, 2, creal (data_e_s));
+        ncm_stats_vec_set (stats, 3, cimag (data_e_s));
+        ncm_stats_vec_set (stats, 4, creal (e_o));
+        ncm_stats_vec_set (stats, 5, cimag (e_o));
+        ncm_stats_vec_set (stats, 6, gt);
+
+        ncm_stats_vec_update (stats);
       }
-
-      e_s      = e_s * cexp (-2.0 * I * phi);
-      e_o      = e_o * cexp (-2.0 * I * phi);
-      data_e_s = data_e_s * cexp (-2.0 * I * phi);
-
-      ncm_stats_vec_set (stats, 0, creal (e_s));
-      ncm_stats_vec_set (stats, 1, cimag (e_s));
-      ncm_stats_vec_set (stats, 2, creal (data_e_s));
-      ncm_stats_vec_set (stats, 3, cimag (data_e_s));
-      ncm_stats_vec_set (stats, 4, creal (e_o));
-      ncm_stats_vec_set (stats, 5, cimag (e_o));
-      ncm_stats_vec_set (stats, 6, gt);
-
-      ncm_stats_vec_update (stats);
     }
   }
 
