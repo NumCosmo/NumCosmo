@@ -61,7 +61,7 @@ typedef enum /*< enum,underscore_name=NC_GALAXY_SD_SHAPE_GAUSS_PARAMS >*/
 #define NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA_INT   (0.3)
 #define NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_PARAMS_ABSTOL (0.0)
 
-NcGalaxySDShapeGauss *nc_galaxy_sd_shape_gauss_new ();
+NcGalaxySDShapeGauss *nc_galaxy_sd_shape_gauss_new (NcGalaxyWLObsEllipConv ellip_conv);
 NcGalaxySDShapeGauss *nc_galaxy_sd_shape_gauss_ref (NcGalaxySDShapeGauss *gsdsgauss);
 
 void nc_galaxy_sd_shape_gauss_free (NcGalaxySDShapeGauss *gsdsgauss);

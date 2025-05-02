@@ -44,7 +44,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcGalaxySDShapeGaussHSC, nc_galaxy_sd_shape_gauss_hsc, NC, GALAXY_SD_SHAPE_GAUSS_HSC, NcGalaxySDShape)
 
-NcGalaxySDShapeGaussHSC *nc_galaxy_sd_shape_gauss_hsc_new ();
+NcGalaxySDShapeGaussHSC *nc_galaxy_sd_shape_gauss_hsc_new (NcGalaxyWLObsEllipConv ellip_conv);
 NcGalaxySDShapeGaussHSC *nc_galaxy_sd_shape_gauss_hsc_ref (NcGalaxySDShapeGaussHSC *gsdshsc);
 
 void nc_galaxy_sd_shape_gauss_hsc_free (NcGalaxySDShapeGaussHSC *gsdshsc);
