@@ -32,16 +32,38 @@ from enum import StrEnum, auto
 from dataclasses import dataclass
 import numpy as np
 from pydantic import BaseModel, Field, ConfigDict, PrivateAttr
+from pydantic_core import core_schema
 from rich.console import Console
 from rich.table import Table
 from tabulate import tabulate
 
-from numcosmo_py import Ncm, Nc, parse_options_strict
+from numcosmo_py import Ncm, Nc, parse_options_strict, GEnum
 
 DEFAULT_TABLE_FMT = "rounded_grid"
 
 DEFAULT_SPEC_Z_MIN = 0.0
 DEFAULT_SPEC_Z_MAX = 1.0
+
+
+class EllipConv(GEnum):
+    """Ellipticity convention."""
+
+    # pylint: disable=no-member
+    TRACE = Nc.GalaxyWLObsEllipConv.TRACE
+    TRACE_DET = Nc.GalaxyWLObsEllipConv.TRACE_DET
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: Any
+    ) -> core_schema.CoreSchema:
+        """Get the Pydantic core schema for the TypeSource class."""
+        return core_schema.no_info_before_validator_function(
+            lambda v: cls(v) if isinstance(v, str) else v,
+            core_schema.enum_schema(cls, list(cls), sub_type="str"),
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda v: str(v.value)
+            ),
+        )
 
 
 class GalaxyZGenSpec(BaseModel):
@@ -79,9 +101,9 @@ class GalaxyZGenSpec(BaseModel):
 
     def gen_z(
         self, mset: Ncm.MSet, z_data: Nc.GalaxySDObsRedshiftData, rng: Ncm.RNG
-    ) -> None:
+    ) -> bool:
         """Generate the galaxy redshift source distribution data observations."""
-        self._spec.gen(mset, z_data, rng)
+        return self._spec.gen1(mset, z_data, rng)
 
     def get_z_dist(self) -> Nc.GalaxySDObsRedshift:
         """Return the galaxy redshift source distribution data observations."""
@@ -137,9 +159,9 @@ class GalaxyZGenGauss(BaseModel):
 
     def gen_z(
         self, mset: Ncm.MSet, z_data: Nc.GalaxySDObsRedshiftData, rng: Ncm.RNG
-    ) -> None:
+    ) -> bool:
         """Generate the galaxy redshift source distribution data observations."""
-        self._gauss.gen(mset, z_data, self.sigma0, rng)
+        return self._gauss.gen1(mset, z_data, self.sigma0, rng)
 
     def get_z_dist(self) -> Nc.GalaxySDObsRedshift:
         """Return the galaxy redshift source distribution data observations."""
@@ -195,6 +217,7 @@ class GalaxyShapeGenGauss(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    ellip_conv: Annotated[EllipConv, Field()] = EllipConv.TRACE_DET
     e_rms: Annotated[float, Field(gt=0.0)] = DEFAULT_SHAPE_GAUSS_E_RMS
     e_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_SHAPE_GAUSS_E_SIGMA
 
@@ -206,6 +229,7 @@ class GalaxyShapeGenGauss(BaseModel):
         return [
             "GalaxyShapeGauss",
             (
+                f"ellip_conv={EllipConv.TRACE_DET.value}, "
                 f"e_rms={DEFAULT_SHAPE_GAUSS_E_RMS}, "
                 f"e_sigma={DEFAULT_SHAPE_GAUSS_E_SIGMA}"
             ),
@@ -219,7 +243,7 @@ class GalaxyShapeGenGauss(BaseModel):
 
     def model_post_init(self, _: Any, /) -> None:
         """Check that e_rms is less than e_sigma."""
-        self._gauss = Nc.GalaxySDShapeGauss.new()
+        self._gauss = Nc.GalaxySDShapeGauss.new(self.ellip_conv.genum)
         self._gauss["e-rms"] = self.e_rms
 
     def gen_shape(
@@ -232,6 +256,11 @@ class GalaxyShapeGenGauss(BaseModel):
     def get_shape_dist(self) -> Nc.GalaxySDShapeGauss:
         """Return the galaxy shape source distribution data observations."""
         return self._gauss
+
+    def __repr__(self):
+        """Return a string representation of the model."""
+        args = ", ".join(f"{k}={v!r}" for k, v in self.model_dump().items())
+        return f"{self.__class__.__name__}({args})"
 
 
 DEFAULT_GAUSS_HSC_E_RMS = 0.15
@@ -247,6 +276,7 @@ class GalaxyShapeGenGaussHSC(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    ellip_conv: Annotated[EllipConv, Field()] = EllipConv.TRACE_DET
     e_rms: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_E_RMS
     e_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_E_SIGMA
     e_rms_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_E_RMS_SIGMA
@@ -264,6 +294,7 @@ class GalaxyShapeGenGaussHSC(BaseModel):
         return [
             "GalaxyShapeGaussHSC",
             (
+                f"ellip_conv={EllipConv.TRACE_DET.value}, "
                 f"e_rms={DEFAULT_GAUSS_HSC_E_RMS}, "
                 f"e_sigma={DEFAULT_GAUSS_HSC_E_SIGMA}, "
                 f"e_rms_sigma={DEFAULT_GAUSS_HSC_E_RMS_SIGMA}, "
@@ -299,6 +330,11 @@ class GalaxyShapeGenGaussHSC(BaseModel):
     def get_shape_dist(self) -> Nc.GalaxySDShapeGaussHSC:
         """Return the galaxy shape source distribution data observations."""
         return self._gauss_hsc
+
+    def __repr__(self):
+        """Return a string representation of the model."""
+        args = ", ".join(f"{k}={v!r}" for k, v in self.model_dump().items())
+        return f"{self.__class__.__name__}({args})"
 
 
 GalaxyShapeDistGenTypes = GalaxyShapeGenGauss | GalaxyShapeGenGaussHSC
@@ -371,8 +407,6 @@ class GalaxyDistributionData:
     ra_max: float
     dec_min: float
     dec_max: float
-    z_min: float
-    z_max: float
     density: float = 18 * 60 * 60  # 18 arcmin^-2 in deg^-2
 
 
@@ -387,6 +421,8 @@ class ClusterModel:
         profile_type: HaloProfileType = HaloProfileType.NFW,
         position: HaloPositionData = HaloPositionData(ra=12.34, dec=-55.123, z=0.2),
         cluster_c: float = 4.0,
+        r_min: float = 0.3,
+        r_max: float = 3.0,
         cluster_mass: float = 1.0e14,
         dist: None | Nc.Distance = None,
     ) -> None:
@@ -397,6 +433,8 @@ class ClusterModel:
         self.mass_def = mass_def
         self.mass_delta = delta
         self.profile_type = profile_type
+        self.r_min = r_min
+        self.r_max = r_max
 
         halo_mass_summary = Nc.HaloCMParam.new(mass_def, delta)
         match profile_type:
@@ -462,10 +500,6 @@ class GalaxyDistributionModel:
         self.galaxy_position = Nc.GalaxySDPositionFlat.new(
             galaxies.ra_min, galaxies.ra_max, galaxies.dec_min, galaxies.dec_max
         )
-        self.galaxy_redshift_true = Nc.GalaxySDTrueRedshiftLSSTSRD.new()
-        dist = self.galaxy_redshift_true.dist(1.0e-5, 1.0e-15)
-        frac = dist.eval_pdf(galaxies.z_max) - dist.eval_pdf(galaxies.z_min)
-
         alpha_max = np.deg2rad(galaxies.ra_max)
         alpha_min = np.deg2rad(galaxies.ra_min)
         delta_max = np.deg2rad(galaxies.dec_max)
@@ -474,7 +508,7 @@ class GalaxyDistributionModel:
         self.sky_area = (
             (alpha_max - alpha_min) * (np.sin(delta_max) - np.sin(delta_min))
         ) * (180.0 / np.pi) ** 2
-        self.n_galaxies = int(galaxies.density * frac * self.sky_area)
+        self.n_galaxies = int(galaxies.density * self.sky_area)
         self.z_gen = z_gen
         self.shape_gen = shape_gen
 
@@ -487,6 +521,9 @@ class GalaxyDistributionModel:
         galaxy_redshift = self.z_gen.get_z_dist()
         galaxy_shape = self.shape_gen.get_shape_dist()
 
+        cluster_data.props.r_min = cluster.r_min
+        cluster_data.props.r_max = cluster.r_max
+
         mset = Ncm.MSet.new_array(
             [
                 cosmo,
@@ -498,20 +535,31 @@ class GalaxyDistributionModel:
                 galaxy_shape,
             ]
         )
-        z_data = Nc.GalaxySDObsRedshiftData.new(galaxy_redshift)
-        p_data = Nc.GalaxySDPositionData.new(self.galaxy_position, z_data)
-        s_data = Nc.GalaxySDShapeData.new(galaxy_shape, p_data)
 
+        cluster.halo_position.prepare_if_needed(cosmo)
+        s_data_array = []
+        for i in range(self.n_galaxies):
+            z_data = Nc.GalaxySDObsRedshiftData.new(galaxy_redshift)
+            p_data = Nc.GalaxySDPositionData.new(self.galaxy_position, z_data)
+            s_data = Nc.GalaxySDShapeData.new(galaxy_shape, p_data)
+
+            valid_z = self.z_gen.gen_z(mset, z_data, rng)
+            self.galaxy_position.gen(mset, p_data, rng)
+            theta, _ = cluster.halo_position.polar_angles(p_data.ra, p_data.dec)
+            radius = cluster.halo_position.projected_radius(cosmo, theta)
+            self.shape_gen.gen_shape(mset, s_data, rng)
+
+            if (cluster.r_min <= radius <= cluster.r_max) and valid_z:
+                s_data_array.append(s_data)
+
+        self.n_galaxies = len(s_data_array)
         obs = Nc.GalaxyWLObs.new(
+            galaxy_shape.get_ellip_conv(),
             Nc.GalaxyWLObsCoord.EUCLIDEAN,
             self.n_galaxies,
             list(s_data.required_columns()),
         )
-
-        for i in range(self.n_galaxies):
-            self.z_gen.gen_z(mset, z_data, rng)
-            self.galaxy_position.gen(mset, p_data, rng)
-            self.shape_gen.gen_shape(mset, s_data, rng)
+        for i, s_data in enumerate(s_data_array):
             s_data.write_row(obs, i)
 
         cluster_data.set_obs(obs)
@@ -561,12 +609,12 @@ def generate_lsst_cluster_wl(
     cluster_mass_min: float,
     cluster_mass_max: float,
     cluster_c: float,
+    r_min: float,
+    r_max: float,
     ra_min: float,
     ra_max: float,
     dec_min: float,
     dec_max: float,
-    z_min: float,
-    z_max: float,
     z_gen: GalaxyZGenTypes,
     shape_gen: GalaxyShapeDistGenTypes,
     density: float,
@@ -587,14 +635,14 @@ def generate_lsst_cluster_wl(
         position=halo_position,
         cluster_mass=cluster_mass,
         cluster_c=cluster_c,
+        r_min=r_min,
+        r_max=r_max,
     )
     galaxy_distribution = GalaxyDistributionData(
         ra_min=ra_min,
         ra_max=ra_max,
         dec_min=dec_min,
         dec_max=dec_max,
-        z_min=z_min,
-        z_max=z_max,
         density=density * 60 * 60,
     )
     galaxy_model = GalaxyDistributionModel(
@@ -651,6 +699,8 @@ def generate_lsst_cluster_wl(
         table.add_row("Mass Delta", f"{cluster.mass_delta}")
         table.add_row("Mass", f"{cluster.mass:.2e}")
         table.add_row("Concentration", f"{cluster.concentration}")
+        table.add_row("Minimum Radius", f"{cluster.r_min}")
+        table.add_row("Maximum Radius", f"{cluster.r_max}")
         console.print(table)
 
         table = Table(title="Galaxy Sample Parameters")
@@ -660,8 +710,6 @@ def generate_lsst_cluster_wl(
         table.add_row("RA max", f"{galaxy_distribution.ra_max}")
         table.add_row("DEC min", f"{galaxy_distribution.dec_min}")
         table.add_row("DEC max", f"{galaxy_distribution.dec_max}")
-        table.add_row("z min", f"{galaxy_distribution.z_min}")
-        table.add_row("z max", f"{galaxy_distribution.z_max}")
         table.add_row("Density", f"{galaxy_distribution.density}")
         table.add_row("Redshift Generator", repr(z_gen))
         table.add_row("Shape Generator", repr(shape_gen))

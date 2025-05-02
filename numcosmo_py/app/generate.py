@@ -355,6 +355,14 @@ class GenerateClusterWL:
         float, typer.Option(help="Cluster concentration.", show_default=True)
     ] = 4.0
 
+    r_min: Annotated[float, typer.Option(help="Minimum radius.", show_default=True)] = (
+        0.3 / 0.7
+    )
+
+    r_max: Annotated[float, typer.Option(help="Maximum radius.", show_default=True)] = (
+        3.0 / 0.7
+    )
+
     ra_min: Annotated[
         float, typer.Option(help="Minimum right ascension.", show_default=True)
     ] = 12.14
@@ -370,14 +378,6 @@ class GenerateClusterWL:
     dec_max: Annotated[
         float, typer.Option(help="Maximum declination.", show_default=True)
     ] = -54.923
-
-    z_min: Annotated[
-        float, typer.Option(help="Minimum redshift.", show_default=True)
-    ] = 0.01
-
-    z_max: Annotated[
-        float, typer.Option(help="Maximum redshift.", show_default=True)
-    ] = 1.6
 
     z_dist: Annotated[
         str,
@@ -446,14 +446,14 @@ class GenerateClusterWL:
             cluster_z=self.cluster_z,
             cluster_mass=self.cluster_mass,
             cluster_c=self.cluster_c,
+            r_min=self.r_min,
+            r_max=self.r_max,
             cluster_mass_min=self.cluster_mass_min,
             cluster_mass_max=self.cluster_mass_max,
             ra_min=self.ra_min,
             ra_max=self.ra_max,
             dec_min=self.dec_min,
             dec_max=self.dec_max,
-            z_min=self.z_min,
-            z_max=self.z_max,
             z_gen=z_gen,
             shape_gen=shape_gen,
             density=self.galaxy_density,
