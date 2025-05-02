@@ -483,7 +483,7 @@ test_nc_galaxy_sd_obs_redshift_spec_basic (void)
 void
 test_nc_galaxy_sd_obs_redshift_pz_basic (void)
 {
-  NcGalaxySDObsRedshiftPz *gsdorpz = nc_galaxy_sd_obs_redshift_pz_new ((NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ())));
+  NcGalaxySDObsRedshiftPz *gsdorpz = nc_galaxy_sd_obs_redshift_pz_new ();
   NcGalaxySDObsRedshiftPz *gsdorpz2;
 
   g_assert_true (gsdorpz != NULL);
@@ -611,7 +611,7 @@ test_nc_galaxy_sd_position_flat_basic (void)
 void
 test_nc_galaxy_sd_shape_basic (void)
 {
-  NcGalaxySDShape *gsds = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new (0.0, 2.0, 0.05));
+  NcGalaxySDShape *gsds = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET));
   NcGalaxySDShape *gsds2;
 
   g_assert_true (gsds != NULL);
@@ -629,7 +629,7 @@ test_nc_galaxy_sd_shape_basic (void)
 void
 test_nc_galaxy_sd_shape_gauss_basic (void)
 {
-  NcGalaxySDShapeGauss *gsdsg = nc_galaxy_sd_shape_gauss_new (0.0, 2.0, 0.05);
+  NcGalaxySDShapeGauss *gsdsg = nc_galaxy_sd_shape_gauss_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET);
   NcGalaxySDShapeGauss *gsdsg2;
 
   g_assert_true (gsdsg != NULL);
@@ -702,7 +702,7 @@ void
 test_nc_galaxy_wl_obs_basic (void)
 {
   GStrv names        = g_strsplit ("e1 e2 ra dec z sz", " ", -1);
-  NcGalaxyWLObs *gwl = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_COORD_CELESTIAL, 100, names);
+  NcGalaxyWLObs *gwl = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 100, names);
   NcGalaxyWLObs *gwl2;
 
   g_assert_true (gwl != NULL);

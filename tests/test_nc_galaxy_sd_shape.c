@@ -46,6 +46,9 @@ typedef struct _TestNcGalaxySDShapeGauss
   NcGalaxySDPosition *galaxy_position;
   NcGalaxySDShape *galaxy_shape;
   NcmMSet *mset;
+  gdouble g_fiduc;
+  glong seed;
+  gdouble g_estimator;
 } TestNcGalaxySDShapeGauss;
 
 
@@ -57,6 +60,7 @@ static void test_nc_galaxy_sd_shape_model_id (TestNcGalaxySDShapeGauss *test, gc
 
 static void test_nc_galaxy_sd_shape_gauss_gen (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_shape_gauss_required_columns (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
 
 static void test_nc_galaxy_sd_shape_gauss_data_setget (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
@@ -90,6 +94,11 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_sd_shape_gauss_integ,
               &test_nc_galaxy_sd_shape_free);
 
+  g_test_add ("/nc/galaxy_sd_shape/gauss/stats", TestNcGalaxySDShapeGauss, NULL,
+              &test_nc_galaxy_sd_shape_gauss_new,
+              &test_nc_galaxy_sd_shape_gauss_stats,
+              &test_nc_galaxy_sd_shape_free);
+
   g_test_add ("/nc/galaxy_sd_shape/gauss/required_columns", TestNcGalaxySDShapeGauss, NULL,
               &test_nc_galaxy_sd_shape_gauss_new,
               &test_nc_galaxy_sd_shape_gauss_required_columns,
@@ -108,7 +117,7 @@ main (gint argc, gchar *argv[])
 static void
 test_nc_galaxy_sd_shape_gauss_new (TestNcGalaxySDShapeGauss *test, gconstpointer pdata)
 {
-  NcGalaxySDShape *s_dist             = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new ());
+  NcGalaxySDShape *s_dist             = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET));
   NcGalaxySDTrueRedshift *z_true_dist = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
   NcGalaxySDObsRedshift *z_dist       = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_spec_new (z_true_dist, 0.0, 2.0));
   NcGalaxySDPosition *p_dist          = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (-0.2, 0.2, -0.2, 0.2));
@@ -359,6 +368,158 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test, gconstpoint
   ncm_stats_vec_free (stats);
   ncm_rng_free (rng);
   g_ptr_array_unref (data_array);
+}
+
+gdouble
+_nc_galaxy_sd_shape_gauss_likelihood_test (gdouble g_test, gpointer userdata)
+{
+  TestNcGalaxySDShapeGauss *test = userdata;
+  NcmRNG *rng                    = ncm_rng_seeded_new (NULL, test->seed);
+  const gdouble sigma_int        = 0.3;
+  const guint ngals              = 1000;
+  complex double e_o             = 0.0;
+  complex double e_s             = 0.0;
+  gdouble m2lnL                  = 0.0;
+  gdouble g_estimator            = 0.0;
+  guint i;
+
+  for (i = 0; i < ngals; i++)
+  {
+    gdouble phi = ncm_rng_uniform_gen (rng, -M_PI, M_PI);
+    gdouble epsilon_int_1, epsilon_int_2;
+
+    do {
+      epsilon_int_1 = ncm_rng_gaussian_gen (rng, 0.0, sigma_int);
+      epsilon_int_2 = ncm_rng_gaussian_gen (rng, 0.0, sigma_int);
+    } while (hypot (epsilon_int_1, epsilon_int_2) > 1.0);
+
+    {
+      gdouble gt = test->g_fiduc;
+
+      e_s = (epsilon_int_1 + I * epsilon_int_2);
+      e_s = e_s * cexp (-2.0 * I * phi);
+      gt  = test->g_fiduc;
+
+      if (fabs (gt) > 1.0)
+        e_o = (1.0 + gt * conj (e_s)) / (conj (e_s) + gt);
+      else
+        e_o = (e_s + gt) / (1.0 + gt * e_s);
+
+      g_estimator += creal (e_o);
+
+      e_s = e_s * cexp (2.0 * I * phi);
+      e_o = e_o * cexp (2.0 * I * phi);
+    }
+
+    {
+      gdouble gt = g_test;
+      complex double g;
+
+      g = gt * cexp (2.0 * I * phi);
+
+      if (gt > 1.0)
+        e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
+      else
+        e_s = (e_o - g) / (1.0 - conj (g) * e_o);
+
+      {
+        const gdouble var_int    = gsl_pow_2 (sigma_int);
+        const gdouble total_var  = var_int;
+        const gdouble chi2_1     = gsl_pow_2 (creal (e_s)) / total_var;
+        const gdouble chi2_2     = gsl_pow_2 (cimag (e_s)) / total_var;
+        const gdouble jac_num    = (1.0 - gt * gt);
+        const gdouble jac_den    = (1.0 - 2.0 * creal (conj (g) * e_o) + gt * gt * conj (e_o) * e_o);
+        const gdouble jac_num_m1 = -gt * gt;
+        const gdouble jac_den_m1 =  -2.0 * creal (conj (g) * e_o) + gt * gt * conj (e_o) * e_o;
+        const gdouble m2ln_int1  = chi2_1 + chi2_2
+                                   + 4.0 * log1p (jac_den_m1) - 4.0 * log1p (jac_num_m1)
+                                   + 2.0 * log (2.0 * M_PI * total_var);
+
+        m2lnL += m2ln_int1;
+      }
+    }
+  }
+
+  ncm_rng_free (rng);
+
+  test->g_estimator = g_estimator / ngals / (1.0 - sigma_int * sigma_int);
+
+  return m2lnL;
+}
+
+static void
+test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShapeGauss *test, gconstpointer pdata)
+{
+  const gdouble g_test_min = 0.0;
+  const gdouble g_test_max = 1.0 - 1.0e-6;
+  gsl_min_fminimizer *fmin = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
+  NcmStatsVec *stats       = ncm_stats_vec_new (2, NCM_STATS_VEC_COV, FALSE);
+  gsl_function F;
+  gdouble g_test;
+  guint i;
+
+  F.function = _nc_galaxy_sd_shape_gauss_likelihood_test;
+  F.params   = test;
+
+  test->g_fiduc = 1.0e-1;
+
+  for (i = 0; i < 100000; i++)
+  {
+    gdouble f_min  = G_MAXDOUBLE;
+    gdouble g_min0 = test->g_fiduc;
+    gint j;
+
+    test->seed = g_test_rand_int ();
+
+    for (j = 0; j < 100; j++)
+    {
+      const gdouble my_g = g_test_min + (g_test_max - g_test_min) / 9999.0 * j;
+      const gdouble f    = GSL_FN_EVAL (&F, my_g);
+
+      if (f < f_min)
+      {
+        f_min  = f;
+        g_min0 = my_g;
+      }
+    }
+
+    gsl_min_fminimizer_set (fmin, &F, g_min0, g_test_min, g_test_max);
+
+    while (TRUE)
+    {
+      gdouble g_lower, g_upper;
+      gint ret;
+
+      ret = gsl_min_fminimizer_iterate (fmin);
+
+      if (ret != GSL_SUCCESS)
+        g_error ("gsl_min_fminimizer_iterate: %s", gsl_strerror (ret));
+
+      g_lower = gsl_min_fminimizer_x_lower (fmin);
+      g_upper = gsl_min_fminimizer_x_upper (fmin);
+
+      if (gsl_min_test_interval (g_lower, g_upper, 0.0, 1.0e-5) == GSL_SUCCESS)
+      {
+        g_test = gsl_min_fminimizer_x_minimum (fmin);
+        printf ("# g_test = % 22.15g % 22.15e: ", g_test, GSL_FN_EVAL (&F, g_test));
+        ncm_stats_vec_set (stats, 0, g_test);
+        ncm_stats_vec_set (stats, 1, test->g_estimator);
+        ncm_stats_vec_update (stats);
+        printf ("g_mean = % 22.15g +/- % 22.15g | % 22.15g | g_estimator = % 22.15g +/- % 22.15g\n",
+                ncm_stats_vec_get_mean (stats, 0), ncm_stats_vec_get_sd (stats, 0),
+                ncm_stats_vec_get_sd (stats, 0) / sqrt (i + 1.0),
+                ncm_stats_vec_get_mean (stats, 1), ncm_stats_vec_get_sd (stats, 1)
+               );
+        break;
+      }
+    }
+  }
+
+
+
+  ncm_stats_vec_free (stats);
+
+  gsl_min_fminimizer_free (fmin);
 }
 
 static void
