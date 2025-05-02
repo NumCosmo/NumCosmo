@@ -54,6 +54,7 @@
 #include <math.h>
 #include <gsl/gsl_math.h>
 
+#include "nc_enum_types.h"
 #include "nc_hicosmo.h"
 #include "lss/nc_halo_position.h"
 #include "lss/nc_halo_density_profile.h"
@@ -76,7 +77,7 @@ struct _NcDataClusterWLPrivate
   NcmModelCtrl *ctrl_redshift;
   NcmModelCtrl *ctrl_position;
   NcmModelCtrl *ctrl_shape;
-  guint resample_flag;
+  NcDataClusterWLResampleFlag resample_flag;
   gboolean enable_parallel;
   /* Integration temporary variables */
   NcmVector *err;
@@ -182,7 +183,7 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
       self->len = g_value_get_uint (value);
       break;
     case PROP_RESAMPLE_FLAG:
-      nc_data_cluster_wl_set_resample_flag (dcwl, g_value_get_uint (value));
+      nc_data_cluster_wl_set_resample_flag (dcwl, g_value_get_flags (value));
       break;
     case PROP_ENABLE_PARALLEL:
       self->enable_parallel = g_value_get_boolean (value);
@@ -219,7 +220,7 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
       g_value_set_uint (value, self->len);
       break;
     case PROP_RESAMPLE_FLAG:
-      g_value_set_uint (value, self->resample_flag);
+      g_value_set_flags (value, nc_data_cluster_wl_get_resample_flag (dcwl));
       break;
     case PROP_ENABLE_PARALLEL:
       g_value_set_boolean (value, self->enable_parallel);
@@ -365,6 +366,21 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                       "Number of galaxies",
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataClusterWL:resample-flag:
+   *
+   * Resample flag.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_RESAMPLE_FLAG,
+                                   g_param_spec_flags ("resample-flag",
+                                                       NULL,
+                                                       "Resample flag",
+                                                       NC_TYPE_DATA_CLUSTER_WL_RESAMPLE_FLAG,
+                                                       NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcDataClusterWL:enable-parallel
@@ -582,7 +598,11 @@ _nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   NcGalaxySDShape *galaxy_shape          = NC_GALAXY_SD_SHAPE (ncm_mset_peek (mset, nc_galaxy_sd_shape_id ()));
   NcGalaxySDObsRedshift *galaxy_redshift = NC_GALAXY_SD_OBS_REDSHIFT (ncm_mset_peek (mset, nc_galaxy_sd_obs_redshift_id ()));
   NcGalaxySDPosition *galaxy_position    = NC_GALAXY_SD_POSITION (ncm_mset_peek (mset, nc_galaxy_sd_position_id ()));
+  NcHaloPosition *halo_position          = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
+  NcHICosmo *cosmo                       = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   guint gal_i;
+
+  nc_halo_position_prepare_if_needed (halo_position, cosmo);
 
   for (gal_i = 0; gal_i < self->len; gal_i++)
   {
@@ -597,7 +617,19 @@ _nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     }
 
     if (self->resample_flag & NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_POSITION)
-      nc_galaxy_sd_position_gen (galaxy_position, p_data, rng);
+    {
+      gdouble radius;
+
+      do {
+        gdouble theta = 0.0;
+        gdouble phi   = 0.0;
+
+        nc_galaxy_sd_position_gen (galaxy_position, p_data, rng);
+
+        nc_halo_position_polar_angles (halo_position, p_data->ra, p_data->dec, &theta, &phi);
+        radius = nc_halo_position_projected_radius (halo_position, cosmo, theta);
+      } while (radius < self->r_min || radius > self->r_max);
+    }
 
     if (self->resample_flag & NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_SHAPE)
       nc_galaxy_sd_shape_gen (galaxy_shape, mset, data, rng);
@@ -731,6 +763,9 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
 
   g_assert ((cosmo != NULL) && (surface_mass_density != NULL) && (density_profile != NULL) && (halo_position != NULL));
   g_assert ((galaxy_shape != NULL) && (galaxy_redshift != NULL) && (galaxy_position != NULL));
+
+  if (nc_galaxy_wl_obs_get_ellip_conv (self->obs) != nc_galaxy_sd_shape_get_ellip_conv (galaxy_shape))
+    g_error ("nc_data_cluster_wl_prepare: ellip_conv mismatch.");
 
   self->cosmo                = cosmo;
   self->surface_mass_density = surface_mass_density;
@@ -886,15 +921,18 @@ nc_data_cluster_wl_peek_obs (NcDataClusterWL *dcwl)
 /**
  * nc_data_cluster_wl_set_resample_flag:
  * @dcwl: a #NcDataClusterWL
- * @resample_flag: resample flag
+ * @resample_flag: resample flag #NcDataClusterWLResampleFlag
  *
  * Sets flag to resample any combination of position, redshift and shape.
  *
  */
 void
-nc_data_cluster_wl_set_resample_flag (NcDataClusterWL *dcwl, guint resample_flag)
+nc_data_cluster_wl_set_resample_flag (NcDataClusterWL *dcwl, NcDataClusterWLResampleFlag resample_flag)
 {
   NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
+
+  if (resample_flag & ~NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL)
+    g_error ("nc_data_cluster_wl_set_resample_flag: unknown resample flag %d.", resample_flag);
 
   self->resample_flag = resample_flag;
 }
@@ -905,9 +943,9 @@ nc_data_cluster_wl_set_resample_flag (NcDataClusterWL *dcwl, guint resample_flag
  *
  * Gets the resample flag.
  *
- * Returns: the resample flag.
+ * Returns: the resample flag #NcDataClusterWLResampleFlag.
  */
-guint
+NcDataClusterWLResampleFlag
 nc_data_cluster_wl_get_resample_flag (NcDataClusterWL *dcwl)
 {
   NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);

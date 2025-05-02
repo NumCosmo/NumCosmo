@@ -66,12 +66,14 @@ NcDataClusterWL *nc_data_cluster_wl_ref (NcDataClusterWL *dcwl);
 
 void nc_data_cluster_wl_free (NcDataClusterWL *dcwl);
 void nc_data_cluster_wl_clear (NcDataClusterWL **dcwl);
+
 void nc_data_cluster_wl_set_prec (NcDataClusterWL *dcwl, gdouble prec);
 void nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs);
 void nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gdouble r_max);
 NcGalaxyWLObs *nc_data_cluster_wl_peek_obs (NcDataClusterWL *dcwl);
-void nc_data_cluster_wl_set_resample_flag (NcDataClusterWL *dcwl, guint resample_flag);
-guint nc_data_cluster_wl_get_resample_flag (NcDataClusterWL *dcwl);
+
+void nc_data_cluster_wl_set_resample_flag (NcDataClusterWL *dcwl, NcDataClusterWLResampleFlag resample_flag);
+NcDataClusterWLResampleFlag nc_data_cluster_wl_get_resample_flag (NcDataClusterWL *dcwl);
 
 G_END_DECLS
 
