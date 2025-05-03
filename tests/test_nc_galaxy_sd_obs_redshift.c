@@ -472,7 +472,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_integ (TestNcGalaxySDObsRedshift *test, gco
     const gdouble lsigma_z   = sigma_z * (1.0 + z);
     const gdouble norm       = sqrt (2.0 * M_PI) * lsigma_z;
     const gdouble int_true_z = nc_galaxy_sd_true_redshift_integ (gsdtr, z);
-    const gdouble int_pz     = exp (-0.5 * gsl_pow_2 ((zp - z) / lsigma_z)) / norm;
+    const gdouble int_pz     = exp (-0.5 * gsl_pow_2 ((zp - z) / lsigma_z)) / norm / (0.5 * (1.0 + erf (z / (M_SQRT2 * lsigma_z))));
     const gdouble int_obs_z  = nc_galaxy_sd_obs_redshift_integrand_eval (integrand, z, data);
 
     ncm_assert_cmpdouble_e (int_obs_z, ==, int_true_z * int_pz, 1.0e-10, 0.0);
