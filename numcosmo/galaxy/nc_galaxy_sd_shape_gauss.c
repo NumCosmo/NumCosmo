@@ -715,10 +715,12 @@ nc_galaxy_sd_shape_gauss_sigma_int_from_sigma_true (const gdouble sigma_true)
   const gdouble sigma_true2 = sigma_true * sigma_true;
   const gdouble beta        = 0.5 / sigma_true2;
   register gdouble alpha    = beta;
-  guint max_iter            = 10000;
+  gdouble prev_delta[3]     = {0.0, 0.0, 0.0};
+  guint iter                = 0;
 
   while (TRUE)
   {
+    gdouble lambda = 1.0;
     gdouble delta;
 
     if (alpha < 1.0e2)
@@ -740,16 +742,34 @@ nc_galaxy_sd_shape_gauss_sigma_int_from_sigma_true (const gdouble sigma_true)
       delta = falpha / dfalpha;
     }
 
+    if ((fabs (delta / prev_delta[0] - 1.0) < GSL_DBL_EPSILON) ||
+        (fabs (delta / prev_delta[1] - 1.0) < GSL_DBL_EPSILON) ||
+        (fabs (delta / prev_delta[2] - 1.0) < GSL_DBL_EPSILON))
+      lambda *= 0.5;
+
+    lambda *= (1.0 / (1.0 + 1.0e-1 * (iter / 20)));
+    delta  *= lambda;
+
     alpha -= delta;
 
-    if (--max_iter == 0)
+    if (lambda < 1.0e-2)
     {
       g_warning ("nc_galaxy_sd_shape_gauss_new: sigma_int_from_sigma_true failed to converge");
       break;
     }
 
-    if (fabs (delta) < GSL_DBL_EPSILON * 100.0)
+    if (++iter == 10000)
+    {
+      g_warning ("nc_galaxy_sd_shape_gauss_new: sigma_int_from_sigma_true failed to converge");
+      break;
+    }
+
+    if (fabs (delta) < GSL_DBL_EPSILON * 10.0)
       return sqrt (0.5 / alpha);
+
+    prev_delta[2] = prev_delta[1];
+    prev_delta[1] = prev_delta[0];
+    prev_delta[0] = delta;
   }
 
   return NAN;
