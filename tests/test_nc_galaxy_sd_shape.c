@@ -520,7 +520,8 @@ test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShapeGauss *test, gconstpoint
     required_columns_iter = g_list_next (required_columns_iter);
   }
 
-  required_columns_strv = g_strv_builder_unref_to_strv (builder);
+  required_columns_strv = g_strv_builder_end (builder);
+  g_strv_builder_unref (builder);
 
   obs = nc_galaxy_wl_obs_new (
     nc_galaxy_sd_shape_get_ellip_conv (test->galaxy_shape),
