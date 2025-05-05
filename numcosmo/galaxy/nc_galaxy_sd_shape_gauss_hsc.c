@@ -46,8 +46,10 @@
 #include "nc_enum_types.h"
 #include "galaxy/nc_galaxy_wl_obs.h"
 #include "galaxy/nc_galaxy_sd_shape_gauss_hsc.h"
+#include "galaxy/nc_galaxy_sd_shape_gauss.h"
 #include "galaxy/nc_galaxy_sd_shape.h"
 #include "lss/nc_halo_position.h"
+#include "math/ncm_stats_vec.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
@@ -59,6 +61,7 @@ typedef struct _NcGalaxySDShapeGaussHSCPrivate
 {
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_hp;
+  NcmStatsVec *obs_stats;
 } NcGalaxySDShapeGaussHSCPrivate;
 
 struct _NcGalaxySDShapeGaussHSC
@@ -95,6 +98,7 @@ nc_galaxy_sd_shape_gauss_hsc_init (NcGalaxySDShapeGaussHSC *gsdshsc)
 
   self->ctrl_cosmo = NULL;
   self->ctrl_hp    = NULL;
+  self->obs_stats  = ncm_stats_vec_new (6, NCM_STATS_VEC_COV, FALSE);
 }
 
 /* LCOV_EXCL_START */
@@ -138,6 +142,7 @@ _nc_galaxy_sd_shape_gauss_hsc_dispose (GObject *object)
 
   ncm_model_ctrl_clear (&self->ctrl_cosmo);
   ncm_model_ctrl_clear (&self->ctrl_hp);
+  ncm_stats_vec_clear (&self->obs_stats);
 
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_sd_shape_gauss_hsc_parent_class)->dispose (object);
@@ -157,6 +162,7 @@ static void _nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShape *gsds, NcmMSet *m
 static NcGalaxySDShapeIntegrand *_nc_galaxy_sd_shape_gauss_hsc_integ (NcGalaxySDShape *gsds);
 static gboolean _nc_galaxy_sd_shape_gauss_hsc_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
 static void _nc_galaxy_sd_shape_gauss_hsc_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data);
+static void _nc_galaxy_sd_shape_gauss_hsc_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
 
 static void
 nc_galaxy_sd_shape_gauss_hsc_class_init (NcGalaxySDShapeGaussHSCClass *klass)
@@ -178,6 +184,7 @@ nc_galaxy_sd_shape_gauss_hsc_class_init (NcGalaxySDShapeGaussHSCClass *klass)
   sd_shape_class->integ              = &_nc_galaxy_sd_shape_gauss_hsc_integ;
   sd_shape_class->prepare_data_array = &_nc_galaxy_sd_shape_gauss_hsc_prepare_data_array;
   sd_shape_class->data_init          = &_nc_galaxy_sd_shape_gauss_hsc_data_init;
+  sd_shape_class->direct_estimate    = &_nc_galaxy_sd_shape_gauss_hsc_direct_estimate;
 }
 
 static complex double
@@ -515,6 +522,85 @@ _nc_galaxy_sd_shape_gauss_hsc_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositi
   data->ldata_write_row        = &_nc_galaxy_sd_shape_gauss_hsc_ldata_write_row;
   data->ldata_required_columns = &_nc_galaxy_sd_shape_gauss_hsc_ldata_required_columns;
   data->ldata_get_radius       = &_nc_galaxy_sd_shape_gauss_hsc_ldata_get_radius;
+}
+
+static void
+_nc_galaxy_sd_shape_gauss_hsc_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho)
+{
+  NcGalaxySDShapeGaussHSC *gsdshsc            = NC_GALAXY_SD_SHAPE_GAUSS_HSC (gsds);
+  NcGalaxySDShapeGaussHSCPrivate * const self = nc_galaxy_sd_shape_gauss_hsc_get_instance_private (gsdshsc);
+  NcHICosmo *cosmo                            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHaloPosition *halo_position               = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
+  NcGalaxyWLObsEllipConv ellip_conv           = nc_galaxy_sd_shape_get_ellip_conv (gsds);
+  guint i;
+
+  nc_halo_position_prepare_if_needed (halo_position, cosmo);
+  ncm_stats_vec_reset (self->obs_stats, TRUE);
+
+  for (i = 0; i < data_array->len; i++)
+  {
+    NcGalaxySDShapeData *data_i          = g_ptr_array_index (data_array, i);
+    NcGalaxySDShapeGaussHSCData *ldata_i = (NcGalaxySDShapeGaussHSCData *) data_i->ldata;
+    const gdouble ra                     = data_i->sdpos_data->ra;
+    const gdouble dec                    = data_i->sdpos_data->dec;
+    const gdouble e1                     = ldata_i->epsilon_obs_1;
+    const gdouble e2                     = ldata_i->epsilon_obs_2;
+    const gdouble sigma_int              = ldata_i->sigma_int;
+    const gdouble sigma_obs              = ldata_i->sigma_obs;
+    const gdouble m                      = ldata_i->m;
+    const gdouble c1                     = ldata_i->c1;
+    const gdouble c2                     = ldata_i->c2;
+    const gdouble sigma_true             = nc_galaxy_sd_shape_gauss_sigma_true_from_sigma_int (sigma_int);
+    const gdouble var_tot                = sigma_true * sigma_true + sigma_obs * sigma_obs;
+    const gdouble weight                 = 1.0 / var_tot;
+    complex double e_o                   = data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN ? (e1 - I * e2) : (e1 + I * e2);
+    complex double hat_g;
+    gdouble theta, phi;
+
+    nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
+
+    hat_g = e_o * cexp (-2.0 * I * phi);
+
+    ncm_stats_vec_set (self->obs_stats, 0, creal (hat_g));
+    ncm_stats_vec_set (self->obs_stats, 1, cimag (hat_g));
+    ncm_stats_vec_set (self->obs_stats, 2, sigma_true * sigma_true);
+    ncm_stats_vec_set (self->obs_stats, 3, m);
+    ncm_stats_vec_set (self->obs_stats, 4, c1);
+    ncm_stats_vec_set (self->obs_stats, 5, c2);
+
+    ncm_stats_vec_update_weight (self->obs_stats, weight);
+  }
+
+  {
+    const gdouble mean_gt          = ncm_stats_vec_get_mean (self->obs_stats, 0);
+    const gdouble mean_gx          = ncm_stats_vec_get_mean (self->obs_stats, 1);
+    const gdouble mean_sigma_true2 = ncm_stats_vec_get_mean (self->obs_stats, 2);
+    const gdouble mean_m           = ncm_stats_vec_get_mean (self->obs_stats, 3);
+    const gdouble mean_c1          = ncm_stats_vec_get_mean (self->obs_stats, 4);
+    const gdouble mean_c2          = ncm_stats_vec_get_mean (self->obs_stats, 5);
+    const gdouble R                = 1.0 - mean_sigma_true2;
+
+    switch (ellip_conv)
+    {
+      case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+        *gt      = (mean_gt - mean_c1) / (1.0 + mean_m);
+        *gx      = (mean_gx - mean_c2) / (1.0 + mean_m);
+        *sigma_t = ncm_stats_vec_get_sd (self->obs_stats, 0) / (1.0 + mean_m);
+        *sigma_x = ncm_stats_vec_get_sd (self->obs_stats, 1) / (1.0 + mean_m);
+        *rho     = ncm_stats_vec_get_cor (self->obs_stats, 0, 1);
+        break;
+      case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+        *gt      = (0.5 * mean_gt / R - mean_c1) / (1.0 + mean_m);
+        *gx      = (0.5 * mean_gx / R - mean_c2) / (1.0 + mean_m);
+        *sigma_t = 0.5 * ncm_stats_vec_get_sd (self->obs_stats, 0) / R / (1.0 + mean_m);
+        *sigma_x = 0.5 * ncm_stats_vec_get_sd (self->obs_stats, 1) / R / (1.0 + mean_m);
+        *rho     = ncm_stats_vec_get_cor (self->obs_stats, 0, 1);
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+  }
 }
 
 /**

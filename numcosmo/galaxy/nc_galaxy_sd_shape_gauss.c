@@ -93,7 +93,7 @@ nc_galaxy_sd_shape_gauss_init (NcGalaxySDShapeGauss *gsdsgauss)
 
   self->ctrl_cosmo = NULL;
   self->ctrl_hp    = NULL;
-  self->obs_stats  = ncm_stats_vec_new (2, NCM_STATS_VEC_COV, FALSE);
+  self->obs_stats  = ncm_stats_vec_new (3, NCM_STATS_VEC_COV, FALSE);
 }
 
 /* LCOV_EXCL_START */
@@ -157,7 +157,7 @@ static void _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset,
 static NcGalaxySDShapeIntegrand *_nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds);
 static gboolean _nc_galaxy_sd_shape_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
 static void _nc_galaxy_sd_shape_gauss_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data);
-static void _nc_galaxy_sd_shape_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *g1, gdouble *g2, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
+static void _nc_galaxy_sd_shape_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
 
 static void
 nc_galaxy_sd_shape_gauss_class_init (NcGalaxySDShapeGaussClass *klass)
@@ -510,7 +510,7 @@ _nc_galaxy_sd_shape_gauss_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionDa
 }
 
 static void
-_nc_galaxy_sd_shape_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *g1, gdouble *g2, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho)
+_nc_galaxy_sd_shape_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho)
 {
   NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
@@ -541,31 +541,45 @@ _nc_galaxy_sd_shape_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset,
 
     nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-    switch (ellip_conv)
-    {
-      case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-        hat_g = e_o * cexp (-2.0 * I * phi);
-        break;
-      case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-        hat_g = e_o * cexp (-2.0 * I * phi) / (2.0 * (1.0 - var_tot));
-        break;
-      default:
-        g_assert_not_reached ();
-        break;
-    }
-
+    hat_g = e_o * cexp (-2.0 * I * phi);
 
     ncm_stats_vec_set (self->obs_stats, 0, creal (hat_g));
     ncm_stats_vec_set (self->obs_stats, 1, cimag (hat_g));
+    ncm_stats_vec_set (self->obs_stats, 2, sigma_true * sigma_true);
 
     ncm_stats_vec_update_weight (self->obs_stats, weight);
   }
 
-  *g1      = ncm_stats_vec_get_mean (self->obs_stats, 0);
-  *g2      = ncm_stats_vec_get_mean (self->obs_stats, 1);
-  *sigma_t = ncm_stats_vec_get_sd (self->obs_stats, 0);
-  *sigma_x = ncm_stats_vec_get_sd (self->obs_stats, 1);
-  *rho     = ncm_stats_vec_get_cov (self->obs_stats, 0, 1);
+  {
+    const gdouble mean_gt = ncm_stats_vec_get_mean (self->obs_stats, 0);
+    const gdouble mean_gx = ncm_stats_vec_get_mean (self->obs_stats, 1);
+
+    switch (ellip_conv)
+    {
+      case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+        *gt      = mean_gt;
+        *gx      = mean_gx;
+        *sigma_t = ncm_stats_vec_get_sd (self->obs_stats, 0);
+        *sigma_x = ncm_stats_vec_get_sd (self->obs_stats, 1);
+        *rho     = ncm_stats_vec_get_cov (self->obs_stats, 0, 1);
+        break;
+      case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+      {
+        const gdouble mean_sigma_true2 = ncm_stats_vec_get_mean (self->obs_stats, 2);
+        const gdouble R                = 1.0 - mean_sigma_true2;
+
+        *gt      = 0.5 * mean_gt / R;
+        *gx      = 0.5 * mean_gx / R;
+        *sigma_t = 0.5 * ncm_stats_vec_get_sd (self->obs_stats, 0) / R;
+        *sigma_x = 0.5 * ncm_stats_vec_get_sd (self->obs_stats, 1) / R;
+        *rho     = ncm_stats_vec_get_cor (self->obs_stats, 0, 1);
+        break;
+      }
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+  }
 }
 
 /**

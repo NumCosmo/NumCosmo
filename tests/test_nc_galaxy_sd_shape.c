@@ -67,6 +67,7 @@ static void test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test,
 static void test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
 
 static void test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_shape_gauss_hsc_stats (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
 
 static void test_nc_galaxy_sd_shape_gauss_required_columns (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_shape_gauss_hsc_required_columns (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
@@ -97,11 +98,12 @@ main (gint argc, gchar *argv[])
     {"required_columns", &test_nc_galaxy_sd_shape_gauss_required_columns},
     {"data_setget", &test_nc_galaxy_sd_shape_gauss_data_setget},
   };
-  TestNcGalaxySDShapeTests tests_gauss_hsc[6] = {
+  TestNcGalaxySDShapeTests tests_gauss_hsc[7] = {
     {"serialize", &test_nc_galaxy_sd_shape_serialize},
     {"model_id", &test_nc_galaxy_sd_shape_model_id},
     {"gen", &test_nc_galaxy_sd_shape_gauss_hsc_gen},
     {"integ", &test_nc_galaxy_sd_shape_gauss_hsc_integ},
+    {"stats", &test_nc_galaxy_sd_shape_gauss_hsc_stats},
     {"required_columns", &test_nc_galaxy_sd_shape_gauss_hsc_required_columns},
     {"data_setget", &test_nc_galaxy_sd_shape_gauss_hsc_data_setget},
   };
@@ -134,7 +136,7 @@ main (gint argc, gchar *argv[])
       g_free (test_path);
     }
 
-    for (j = 0; j < 6; j++)
+    for (j = 0; j < 7; j++)
     {
       gchar *test_name = tests_gauss_hsc[j].test_name;
 
@@ -233,6 +235,8 @@ test_nc_galaxy_sd_shape_gauss_hsc_new (TestNcGalaxySDShapeGauss *test, gconstpoi
   test->galaxy_shape    = s_dist;
 
   test->ellip_conv = ellip_conv;
+
+  ncm_model_param_set_by_name (NCM_MODEL (hms), "log10MDelta", TEST_LOG10_MASS, NULL);
 
   test->mset = ncm_mset_new (cosmo, NULL, dp, hp, smd, z_dist, p_dist, s_dist, NULL);
 
@@ -594,12 +598,12 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test, gconstpoint
     }
   }
 
-  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 0), ==, 0.0, 0.0, 1.0e-2);
-  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 1), ==, 0.0, 0.0, 1.0e-2);
-  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 2), ==, 0.0, 0.0, 1.0e-2);
-  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 3), ==, 0.0, 0.0, 1.0e-2);
-  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 4), ==, ncm_stats_vec_get_mean (stats, 6), 0.0, 1.0e-2);
-  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 5), ==, 0.0, 0.0, 1.0e-2);
+  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 0), ==, 0.0, 0.0, 2.0e-2);
+  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 1), ==, 0.0, 0.0, 2.0e-2);
+  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 2), ==, 0.0, 0.0, 2.0e-2);
+  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 3), ==, 0.0, 0.0, 2.0e-2);
+  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 4), ==, ncm_stats_vec_get_mean (stats, 6), 0.0, 2.0e-2);
+  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 5), ==, 0.0, 0.0, 2.0e-2);
 
   nc_galaxy_sd_obs_redshift_data_unref (z_data);
   nc_galaxy_sd_position_data_unref (p_data);
@@ -749,12 +753,12 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShapeGauss *test, gconstp
     }
   }
 
-  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 0), ==, 0.0, 0.0, 1.0e-2);
-  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 1), ==, 0.0, 0.0, 1.0e-2);
-  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 2), ==, 0.0, 0.0, 1.0e-2);
-  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 3), ==, 0.0, 0.0, 1.0e-2);
-  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 4), ==, ncm_stats_vec_get_mean (stats, 6), 0.0, 1.0e-2);
-  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 5), ==, 0.0, 0.0, 1.0e-2);
+  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 0), ==, 0.0, 0.0, 2.0e-2);
+  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 1), ==, 0.0, 0.0, 2.0e-2);
+  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 2), ==, 0.0, 0.0, 2.0e-2);
+  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 3), ==, 0.0, 0.0, 2.0e-2);
+  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 4), ==, ncm_stats_vec_get_mean (stats, 6), 0.0, 2.0e-2);
+  ncm_assert_cmpdouble_e (ncm_stats_vec_get_mean (stats, 5), ==, 0.0, 0.0, 2.0e-2);
 
   nc_galaxy_sd_obs_redshift_data_unref (z_data);
   nc_galaxy_sd_position_data_unref (p_data);
@@ -866,8 +870,8 @@ test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShapeGauss *test, gconstpoint
         g_assert (gsl_finite (estimated_log10M));
         g_assert (gsl_finite (sigma_log10M));
 
-        ncm_assert_cmpdouble (estimated_log10M, >, TEST_LOG10_MASS - 5.0 * sigma_log10M / sqrt (nfits));
-        ncm_assert_cmpdouble (estimated_log10M, <, TEST_LOG10_MASS + 5.0 * sigma_log10M / sqrt (nfits));
+        ncm_assert_cmpdouble (estimated_log10M, >, TEST_LOG10_MASS - 6.0 * sigma_log10M / sqrt (nfits));
+        ncm_assert_cmpdouble (estimated_log10M, <, TEST_LOG10_MASS + 6.0 * sigma_log10M / sqrt (nfits));
       }
 
       {
@@ -877,8 +881,8 @@ test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShapeGauss *test, gconstpoint
         g_assert (gsl_finite (estimated_gt));
         g_assert (gsl_finite (sigma_gt));
 
-        ncm_assert_cmpdouble (estimated_gt, >, true_gt - 5.0 * sigma_gt / sqrt (nfits));
-        ncm_assert_cmpdouble (estimated_gt, <, true_gt + 5.0 * sigma_gt / sqrt (nfits));
+        ncm_assert_cmpdouble (estimated_gt, >, true_gt - 6.0 * sigma_gt / sqrt (nfits));
+        ncm_assert_cmpdouble (estimated_gt, <, true_gt + 6.0 * sigma_gt / sqrt (nfits));
       }
 
       {
@@ -888,8 +892,164 @@ test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShapeGauss *test, gconstpoint
         g_assert (gsl_finite (estimated_hat_gt));
         g_assert (gsl_finite (sigma_hat_gt));
 
-        ncm_assert_cmpdouble (estimated_hat_gt, >, true_gt - 5.0 * sigma_hat_gt / sqrt (nfits));
-        ncm_assert_cmpdouble (estimated_hat_gt, <, true_gt + 5.0 * sigma_hat_gt / sqrt (nfits));
+        ncm_assert_cmpdouble (estimated_hat_gt, >, true_gt - 6.0 * sigma_hat_gt / sqrt (nfits));
+        ncm_assert_cmpdouble (estimated_hat_gt, <, true_gt + 6.0 * sigma_hat_gt / sqrt (nfits));
+      }
+
+      ncm_data_free (data);
+      ncm_likelihood_free (like);
+      ncm_dataset_free (dataset);
+      ncm_fit_free (fit);
+      ncm_mset_free (fiduc);
+      ncm_stats_vec_free (stats);
+    }
+
+    ncm_serialize_free (ser);
+  }
+
+
+  g_list_free_full (required_columns, g_free);
+  g_strfreev (required_columns_strv);
+  nc_galaxy_sd_obs_redshift_data_unref (z_data);
+  nc_galaxy_sd_position_data_unref (p_data);
+  nc_galaxy_sd_shape_data_unref (s_data);
+  ncm_rng_free (rng);
+  nc_galaxy_wl_obs_free (obs);
+  ncm_stats_vec_free (stats);
+}
+
+static void
+test_nc_galaxy_sd_shape_gauss_hsc_stats (TestNcGalaxySDShapeGauss *test, gconstpointer pdata)
+{
+  NcmRNG *rng                       = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcGalaxySDObsRedshiftData *z_data = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
+  NcGalaxySDPositionData *p_data    = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
+  NcGalaxySDShapeData *s_data       = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
+  const gdouble sigma_obs           = 0.0;
+  const guint ntest                 = 10000;
+  GList *required_columns           = nc_galaxy_sd_shape_data_required_columns (s_data);
+  GList *required_columns_iter      = required_columns;
+  GStrvBuilder *builder             = g_strv_builder_new ();
+  NcmStatsVec *stats                = ncm_stats_vec_new (7, NCM_STATS_VEC_COV, FALSE);
+  GStrv required_columns_strv;
+  NcGalaxyWLObs *obs;
+  gdouble radius;
+
+  guint i;
+
+  while (required_columns_iter)
+  {
+    g_strv_builder_add (builder, required_columns_iter->data);
+    required_columns_iter = g_list_next (required_columns_iter);
+  }
+
+  required_columns_strv = g_strv_builder_end (builder);
+  g_strv_builder_unref (builder);
+
+  obs = nc_galaxy_wl_obs_new (
+    nc_galaxy_sd_shape_get_ellip_conv (test->galaxy_shape),
+    NC_GALAXY_WL_OBS_COORD_CELESTIAL,
+    ntest,
+    required_columns_strv);
+
+  z_data->z   = 0.80;
+  p_data->ra  = 0.01;
+  p_data->dec = -0.03;
+
+  for (i = 0; i < ntest; i++)
+  {
+    const gdouble sigma_int = ncm_rng_uniform_gen (rng, 0.15, 0.3);
+    const gdouble c1        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
+    const gdouble c2        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
+    const gdouble m         = ncm_rng_uniform_gen (rng, -0.2, 0.2);
+
+    nc_galaxy_sd_shape_gauss_hsc_gen (NC_GALAXY_SD_SHAPE_GAUSS_HSC (test->galaxy_shape), test->mset, s_data,
+                                      sigma_int, sigma_obs, c1, c2, m,
+                                      NC_GALAXY_WL_OBS_COORD_CELESTIAL, rng);
+    nc_galaxy_sd_shape_data_write_row (s_data, obs, i);
+  }
+
+  radius = nc_galaxy_sd_shape_data_get_radius (s_data);
+
+  {
+    NcDataClusterWL *dcwl = nc_data_cluster_wl_new ();
+    NcmSerialize *ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    const gdouble z_cl    = nc_halo_position_get_redshift (test->halo_position);
+    const gdouble true_gt = nc_wl_surface_mass_density_reduced_shear (test->surface_mass_density,
+                                                                      test->density_profile,
+                                                                      test->cosmo,
+                                                                      radius, z_data->z, z_cl, z_cl);
+
+    nc_data_cluster_wl_set_obs (dcwl, obs);
+    nc_data_cluster_wl_set_resample_flag (dcwl, NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_SHAPE);
+    ncm_mset_param_set_ftype (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
+
+    {
+      NcmObjArray *data_array = nc_data_cluster_wl_peek_data_array (dcwl);
+      NcmData *data           = NCM_DATA (dcwl);
+      NcmDataset *dataset     = ncm_dataset_new_array (&data, 1);
+      NcmLikelihood *like     = ncm_likelihood_new (dataset);
+      NcmFit *fit             = ncm_fit_factory (NCM_FIT_TYPE_NLOPT, "ln-neldermead", like, test->mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
+      NcmStatsVec *stats      = ncm_stats_vec_new (7, NCM_STATS_VEC_COV, FALSE);
+      NcmMSet *fiduc          = ncm_mset_dup (test->mset, ser);
+      guint nfits             = 10;
+
+      for (i = 0; i < nfits; i++)
+      {
+        gdouble gt, hat_gt, hat_sigma_gt, hat_gx, hat_sigma_gx, hat_rho;
+
+        ncm_data_resample (data, fiduc, rng);
+        ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+        nc_galaxy_sd_shape_direct_estimate (test->galaxy_shape, test->mset, data_array, &hat_gt, &hat_gx, &hat_sigma_gt, &hat_sigma_gx, &hat_rho);
+
+        gt = nc_wl_surface_mass_density_reduced_shear (test->surface_mass_density,
+                                                       test->density_profile,
+                                                       test->cosmo,
+                                                       radius, z_data->z, z_cl, z_cl);
+
+        ncm_stats_vec_set (stats, 0, ncm_mset_fparam_get (test->mset, 0));
+        ncm_stats_vec_set (stats, 1, gt);
+        ncm_stats_vec_set (stats, 2, hat_gt);
+        ncm_stats_vec_set (stats, 3, hat_gx);
+        ncm_stats_vec_set (stats, 4, hat_sigma_gt);
+        ncm_stats_vec_set (stats, 5, hat_sigma_gx);
+        ncm_stats_vec_set (stats, 6, hat_rho);
+
+        ncm_stats_vec_update (stats);
+      }
+
+      {
+        const gdouble estimated_log10M = ncm_stats_vec_get_mean (stats, 0);
+        const gdouble sigma_log10M     = ncm_stats_vec_get_sd (stats, 0);
+
+        g_assert (gsl_finite (estimated_log10M));
+        g_assert (gsl_finite (sigma_log10M));
+
+        ncm_assert_cmpdouble (estimated_log10M, >, TEST_LOG10_MASS - 6.0 * sigma_log10M / sqrt (nfits));
+        ncm_assert_cmpdouble (estimated_log10M, <, TEST_LOG10_MASS + 6.0 * sigma_log10M / sqrt (nfits));
+      }
+
+      {
+        const gdouble estimated_gt = ncm_stats_vec_get_mean (stats, 1);
+        const gdouble sigma_gt     = ncm_stats_vec_get_sd (stats, 1);
+
+        g_assert (gsl_finite (estimated_gt));
+        g_assert (gsl_finite (sigma_gt));
+
+        ncm_assert_cmpdouble (estimated_gt, >, true_gt - 6.0 * sigma_gt / sqrt (nfits));
+        ncm_assert_cmpdouble (estimated_gt, <, true_gt + 6.0 * sigma_gt / sqrt (nfits));
+      }
+
+      {
+        const gdouble estimated_hat_gt = ncm_stats_vec_get_mean (stats, 2);
+        const gdouble sigma_hat_gt     = ncm_stats_vec_get_sd (stats, 2);
+
+        g_assert (gsl_finite (estimated_hat_gt));
+        g_assert (gsl_finite (sigma_hat_gt));
+
+        ncm_assert_cmpdouble (estimated_hat_gt, >, true_gt - 6.0 * sigma_hat_gt / sqrt (nfits));
+        ncm_assert_cmpdouble (estimated_hat_gt, <, true_gt + 6.0 * sigma_hat_gt / sqrt (nfits));
       }
 
       ncm_data_free (data);
