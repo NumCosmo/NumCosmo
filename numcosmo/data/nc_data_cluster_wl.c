@@ -449,18 +449,14 @@ nc_data_cluster_wl_int_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
 static gdouble
 _nc_data_cluster_wl_eval_m2lnP_weight (NcDataClusterWL *dcwl, const gdouble m2lnP, const gdouble r)
 {
-  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
-  const gdouble lnP                   = -0.5 * m2lnP;
-  const gdouble dx1                   = 20.0 * self->dr;
-  const gdouble dx2                   = 20.0 * (r - self->r_min);
-  const gdouble dx3                   = 20.0 * (self->r_max - r);
+  /* NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl); */
 
-  if ((r > self->r_min) && (r < self->r_max))
-    return m2lnP - log ((exp (-dx1 - 2.0 * lnP) + exp (-dx2 - lnP) + exp (-dx3 - lnP) + 1.0) / (exp (-dx1) + exp (-dx2) + exp (-dx3) + 1.0));
-  else if (r < self->r_min)
-    return -2.0 * (log ((1.0 + exp (dx2 + lnP)) / (1.0 + exp (dx2))));
-  else
-    return -2.0 * (log ((1.0 + exp (dx3 + lnP)) / (1.0 + exp (dx3))));
+/* Removed previous implementation: it was incomplete and introduced bias in the
+ * estimates. Leaving this dummy function in place, as it's still unclear whether the
+ * radius cuts should be handled at this stage.
+ */
+
+  return m2lnP;
 }
 
 static gdouble

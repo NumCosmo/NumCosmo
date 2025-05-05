@@ -54,6 +54,7 @@ typedef struct _TestNcGalaxySDShapeGauss
 
 
 static void test_nc_galaxy_sd_shape_gauss_new (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_shape_gauss_hsc_new (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_shape_free (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
 
 static void test_nc_galaxy_sd_shape_serialize (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
@@ -66,25 +67,30 @@ static void test_nc_galaxy_sd_shape_gauss_required_columns (TestNcGalaxySDShapeG
 
 static void test_nc_galaxy_sd_shape_gauss_data_setget (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
 
+typedef struct _TestNcGalaxySDShapeTests
+{
+  gchar *test_name;
+
+  void (*test_func) (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
+} TestNcGalaxySDShapeTests;
+
 gint
 main (gint argc, gchar *argv[])
 {
-  NcGalaxyWLObsEllipConv ellip_convs[2] = {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET};
-  gchar *ellip_conv_names[2]            = {"trace", "trace_det"};
-
-  struct
-  {
-    gchar *test_name;
-
-    void (*test_func) (TestNcGalaxySDShapeGauss *test, gconstpointer pdata);
-  } tests[7] = {
+  NcGalaxyWLObsEllipConv ellip_convs[2]   = {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET};
+  gchar *ellip_conv_names[2]              = {"trace", "trace_det"};
+  TestNcGalaxySDShapeTests tests_gauss[7] = {
     {"serialize", &test_nc_galaxy_sd_shape_serialize},
     {"model_id", &test_nc_galaxy_sd_shape_model_id},
     {"gen", &test_nc_galaxy_sd_shape_gauss_gen},
     {"integ", &test_nc_galaxy_sd_shape_gauss_integ},
-    {"stats", &test_nc_galaxy_sd_shape_gauss_integ},
+    {"stats", &test_nc_galaxy_sd_shape_gauss_stats},
     {"required_columns", &test_nc_galaxy_sd_shape_gauss_required_columns},
     {"data_setget", &test_nc_galaxy_sd_shape_gauss_data_setget},
+  };
+  TestNcGalaxySDShapeTests tests_gauss_hsc[2] = {
+    {"serialize", &test_nc_galaxy_sd_shape_serialize},
+    {"model_id", &test_nc_galaxy_sd_shape_model_id},
   };
 
   gint i, j;
@@ -101,15 +107,31 @@ main (gint argc, gchar *argv[])
 
     for (j = 0; j < 7; j++)
     {
-      gchar *test_name = tests[j].test_name;
+      gchar *test_name = tests_gauss[j].test_name;
 
-      void (*test_func) (TestNcGalaxySDShapeGauss *test, gconstpointer pdata) = tests[j].test_func;
+      void (*test_func) (TestNcGalaxySDShapeGauss *test, gconstpointer pdata) = tests_gauss[j].test_func;
 
       gchar *test_path;
 
-      test_path = g_strdup_printf ("/nc/galaxy_sd_shape/%s/%s", ellip_conv_name, test_name);
+      test_path = g_strdup_printf ("/nc/galaxy_sd_shape/gauss/%s/%s", ellip_conv_name, test_name);
       g_test_add (test_path, TestNcGalaxySDShapeGauss, GINT_TO_POINTER (ellip_conv),
                   &test_nc_galaxy_sd_shape_gauss_new,
+                  test_func,
+                  &test_nc_galaxy_sd_shape_free);
+      g_free (test_path);
+    }
+
+    for (j = 0; j < 2; j++)
+    {
+      gchar *test_name = tests_gauss_hsc[j].test_name;
+
+      void (*test_func) (TestNcGalaxySDShapeGauss *test, gconstpointer pdata) = tests_gauss_hsc[j].test_func;
+
+      gchar *test_path;
+
+      test_path = g_strdup_printf ("/nc/galaxy_sd_shape/gauss_hsc/%s/%s", ellip_conv_name, test_name);
+      g_test_add (test_path, TestNcGalaxySDShapeGauss, GINT_TO_POINTER (ellip_conv),
+                  &test_nc_galaxy_sd_shape_gauss_hsc_new,
                   test_func,
                   &test_nc_galaxy_sd_shape_free);
       g_free (test_path);
@@ -120,6 +142,8 @@ main (gint argc, gchar *argv[])
 
   return 0;
 }
+
+#define TEST_LOG10_MASS 14.0
 
 static void
 test_nc_galaxy_sd_shape_gauss_new (TestNcGalaxySDShapeGauss *test, gconstpointer pdata)
@@ -152,6 +176,8 @@ test_nc_galaxy_sd_shape_gauss_new (TestNcGalaxySDShapeGauss *test, gconstpointer
 
   test->ellip_conv = ellip_conv;
 
+  ncm_model_param_set_by_name (NCM_MODEL (hms), "log10MDelta", TEST_LOG10_MASS, NULL);
+
   test->mset = ncm_mset_new (cosmo, NULL, dp, hp, smd, z_dist, p_dist, s_dist, NULL);
 
   nc_galaxy_sd_true_redshift_free (z_true_dist);
@@ -159,6 +185,46 @@ test_nc_galaxy_sd_shape_gauss_new (TestNcGalaxySDShapeGauss *test, gconstpointer
 
   g_assert_true (NC_IS_GALAXY_SD_SHAPE (s_dist));
   g_assert_true (NC_IS_GALAXY_SD_SHAPE_GAUSS (s_dist));
+}
+
+static void
+test_nc_galaxy_sd_shape_gauss_hsc_new (TestNcGalaxySDShapeGauss *test, gconstpointer pdata)
+{
+  NcGalaxyWLObsEllipConv ellip_conv   = GPOINTER_TO_INT (pdata);
+  NcGalaxySDShape *s_dist             = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_hsc_new (ellip_conv));
+  NcGalaxySDTrueRedshift *z_true_dist = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
+  NcGalaxySDObsRedshift *z_dist       = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_spec_new (z_true_dist, 0.0, 2.0));
+  NcGalaxySDPosition *p_dist          = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (-0.2, 0.2, -0.2, 0.2));
+
+  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist            = nc_distance_new (100.0);
+  NcHaloMassSummary *hms      = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
+  NcHaloPosition *hp          = nc_halo_position_new (dist);
+  NcWLSurfaceMassDensity *smd = nc_wl_surface_mass_density_new (dist);
+
+  nc_halo_position_prepare (hp, cosmo);
+
+  test->cosmo = cosmo;
+
+  test->hms                  = hms;
+  test->density_profile      = dp;
+  test->halo_position        = hp;
+  test->surface_mass_density = smd;
+
+  test->galaxy_redshift = z_dist;
+  test->galaxy_position = p_dist;
+  test->galaxy_shape    = s_dist;
+
+  test->ellip_conv = ellip_conv;
+
+  test->mset = ncm_mset_new (cosmo, NULL, dp, hp, smd, z_dist, p_dist, s_dist, NULL);
+
+  nc_galaxy_sd_true_redshift_free (z_true_dist);
+  nc_distance_free (dist);
+
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE (s_dist));
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE_GAUSS_HSC (s_dist));
 }
 
 static void
@@ -430,156 +496,97 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShapeGauss *test, gconstpoint
   g_ptr_array_unref (data_array);
 }
 
-gdouble
-_nc_galaxy_sd_shape_gauss_likelihood_test (gdouble g_test, gpointer userdata)
-{
-  TestNcGalaxySDShapeGauss *test = userdata;
-  NcmRNG *rng                    = ncm_rng_seeded_new (NULL, test->seed);
-  const gdouble sigma_int        = 0.3;
-  const guint ngals              = 1000;
-  complex double e_o             = 0.0;
-  complex double e_s             = 0.0;
-  gdouble m2lnL                  = 0.0;
-  gdouble g_estimator            = 0.0;
-  guint i;
-
-  for (i = 0; i < ngals; i++)
-  {
-    gdouble phi = ncm_rng_uniform_gen (rng, -M_PI, M_PI);
-    gdouble epsilon_int_1, epsilon_int_2;
-
-    do {
-      epsilon_int_1 = ncm_rng_gaussian_gen (rng, 0.0, sigma_int);
-      epsilon_int_2 = ncm_rng_gaussian_gen (rng, 0.0, sigma_int);
-    } while (hypot (epsilon_int_1, epsilon_int_2) > 1.0);
-
-    {
-      gdouble gt = test->g_fiduc;
-
-      e_s = (epsilon_int_1 + I * epsilon_int_2);
-      e_s = e_s * cexp (-2.0 * I * phi);
-      gt  = test->g_fiduc;
-
-      if (fabs (gt) > 1.0)
-        e_o = (1.0 + gt * conj (e_s)) / (conj (e_s) + gt);
-      else
-        e_o = (e_s + gt) / (1.0 + gt * e_s);
-
-      g_estimator += creal (e_o);
-
-      e_s = e_s * cexp (2.0 * I * phi);
-      e_o = e_o * cexp (2.0 * I * phi);
-    }
-
-    {
-      gdouble gt = g_test;
-      complex double g;
-
-      g = gt * cexp (2.0 * I * phi);
-
-      if (gt > 1.0)
-        e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
-      else
-        e_s = (e_o - g) / (1.0 - conj (g) * e_o);
-
-      {
-        const gdouble var_int    = gsl_pow_2 (sigma_int);
-        const gdouble total_var  = var_int;
-        const gdouble chi2_1     = gsl_pow_2 (creal (e_s)) / total_var;
-        const gdouble chi2_2     = gsl_pow_2 (cimag (e_s)) / total_var;
-        const gdouble jac_num    = (1.0 - gt * gt);
-        const gdouble jac_den    = (1.0 - 2.0 * creal (conj (g) * e_o) + gt * gt * conj (e_o) * e_o);
-        const gdouble jac_num_m1 = -gt * gt;
-        const gdouble jac_den_m1 =  -2.0 * creal (conj (g) * e_o) + gt * gt * conj (e_o) * e_o;
-        const gdouble m2ln_int1  = chi2_1 + chi2_2
-                                   + 4.0 * log1p (jac_den_m1) - 4.0 * log1p (jac_num_m1)
-                                   + 2.0 * log (2.0 * M_PI * total_var);
-
-        m2lnL += m2ln_int1;
-      }
-    }
-  }
-
-  ncm_rng_free (rng);
-
-  test->g_estimator = g_estimator / ngals / (1.0 - sigma_int * sigma_int);
-
-  return m2lnL;
-}
-
 static void
 test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShapeGauss *test, gconstpointer pdata)
 {
-  const gdouble g_test_min = 0.0;
-  const gdouble g_test_max = 1.0 - 1.0e-6;
-  gsl_min_fminimizer *fmin = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
-  NcmStatsVec *stats       = ncm_stats_vec_new (2, NCM_STATS_VEC_COV, FALSE);
-  gsl_function F;
-  gdouble g_test;
+  NcmRNG *rng                       = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcGalaxySDObsRedshiftData *z_data = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
+  NcGalaxySDPositionData *p_data    = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
+  NcGalaxySDShapeData *s_data       = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
+  const gdouble sigma_obs           = 0.0;
+  const guint ntest                 = 10000;
+  GList *required_columns           = nc_galaxy_sd_shape_data_required_columns (s_data);
+  GList *required_columns_iter      = required_columns;
+  GStrvBuilder *builder             = g_strv_builder_new ();
+  NcmStatsVec *stats                = ncm_stats_vec_new (7, NCM_STATS_VEC_COV, FALSE);
+  GStrv required_columns_strv;
+  NcGalaxyWLObs *obs;
+
   guint i;
 
-  F.function = _nc_galaxy_sd_shape_gauss_likelihood_test;
-  F.params   = test;
-
-  test->g_fiduc = 1.0e-1;
-
-  for (i = 0; i < 100000; i++)
+  while (required_columns_iter)
   {
-    gdouble f_min  = G_MAXDOUBLE;
-    gdouble g_min0 = test->g_fiduc;
-    gint j;
+    g_strv_builder_add (builder, required_columns_iter->data);
+    required_columns_iter = g_list_next (required_columns_iter);
+  }
 
-    test->seed = g_test_rand_int ();
+  required_columns_strv = g_strv_builder_unref_to_strv (builder);
 
-    for (j = 0; j < 100; j++)
+  obs = nc_galaxy_wl_obs_new (
+    nc_galaxy_sd_shape_get_ellip_conv (test->galaxy_shape),
+    NC_GALAXY_WL_OBS_COORD_CELESTIAL,
+    ntest,
+    required_columns_strv);
+
+  z_data->z   = 0.80;
+  p_data->ra  = 0.01;
+  p_data->dec = -0.03;
+
+  for (i = 0; i < ntest; i++)
+  {
+    nc_galaxy_sd_shape_gauss_gen (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), test->mset, s_data, sigma_obs, NC_GALAXY_WL_OBS_COORD_CELESTIAL, rng);
+    nc_galaxy_sd_shape_data_write_row (s_data, obs, i);
+  }
+
+  {
+    NcDataClusterWL *dcwl = nc_data_cluster_wl_new ();
+
+    nc_data_cluster_wl_set_obs (dcwl, obs);
+    nc_data_cluster_wl_set_resample_flag (dcwl, NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_SHAPE);
+    ncm_mset_param_set_ftype (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
     {
-      const gdouble my_g = g_test_min + (g_test_max - g_test_min) / 9999.0 * j;
-      const gdouble f    = GSL_FN_EVAL (&F, my_g);
+      NcmData *data       = NCM_DATA (dcwl);
+      NcmDataset *dataset = ncm_dataset_new_array (&data, 1);
+      NcmLikelihood *like = ncm_likelihood_new (dataset);
+      NcmFit *fit         = ncm_fit_factory (NCM_FIT_TYPE_NLOPT, "ln-neldermead", like, test->mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
+      NcmFitMC *mc        = ncm_fit_mc_new (fit, NCM_FIT_MC_RESAMPLE_FROM_MODEL, NCM_FIT_RUN_MSGS_NONE);
 
-      if (f < f_min)
+      ncm_fit_mc_set_fiducial (mc, test->mset);
+
+      ncm_fit_mc_start_run (mc);
+      ncm_fit_mc_run (mc, 10);
+      ncm_fit_mc_end_run (mc);
+
+      ncm_fit_mc_mean_covar (mc);
+
       {
-        f_min  = f;
-        g_min0 = my_g;
+        const gdouble estimated_log10M = ncm_mset_param_get (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA);
+        const gdouble sigma_log10M     = ncm_fit_covar_fparam_sd (fit, 0);
+
+        g_assert (gsl_finite (estimated_log10M));
+        g_assert (gsl_finite (sigma_log10M));
+
+        ncm_assert_cmpdouble (estimated_log10M, >, TEST_LOG10_MASS - 5.0 * sigma_log10M / sqrt (10.0));
+        ncm_assert_cmpdouble (estimated_log10M, <, TEST_LOG10_MASS + 5.0 * sigma_log10M / sqrt (10.0));
       }
-    }
 
-    gsl_min_fminimizer_set (fmin, &F, g_min0, g_test_min, g_test_max);
-
-    while (TRUE)
-    {
-      gdouble g_lower, g_upper;
-      gint ret;
-
-      ret = gsl_min_fminimizer_iterate (fmin);
-
-      if (ret != GSL_SUCCESS)
-        g_error ("gsl_min_fminimizer_iterate: %s", gsl_strerror (ret));
-
-      g_lower = gsl_min_fminimizer_x_lower (fmin);
-      g_upper = gsl_min_fminimizer_x_upper (fmin);
-
-      if (gsl_min_test_interval (g_lower, g_upper, 0.0, 1.0e-5) == GSL_SUCCESS)
-      {
-        g_test = gsl_min_fminimizer_x_minimum (fmin);
-        printf ("# g_test = % 22.15g % 22.15e: ", g_test, GSL_FN_EVAL (&F, g_test));
-        ncm_stats_vec_set (stats, 0, g_test);
-        ncm_stats_vec_set (stats, 1, test->g_estimator);
-        ncm_stats_vec_update (stats);
-        printf ("g_mean = % 22.15g +/- % 22.15g | % 22.15g | g_estimator = % 22.15g +/- % 22.15g\n",
-                ncm_stats_vec_get_mean (stats, 0), ncm_stats_vec_get_sd (stats, 0),
-                ncm_stats_vec_get_sd (stats, 0) / sqrt (i + 1.0),
-                ncm_stats_vec_get_mean (stats, 1), ncm_stats_vec_get_sd (stats, 1)
-               );
-        break;
-      }
+      ncm_data_free (data);
+      ncm_likelihood_free (like);
+      ncm_dataset_free (dataset);
+      ncm_fit_free (fit);
+      ncm_fit_mc_free (mc);
     }
   }
 
 
-
+  g_list_free_full (required_columns, g_free);
+  g_strfreev (required_columns_strv);
+  nc_galaxy_sd_obs_redshift_data_unref (z_data);
+  nc_galaxy_sd_position_data_unref (p_data);
+  nc_galaxy_sd_shape_data_unref (s_data);
+  ncm_rng_free (rng);
+  nc_galaxy_wl_obs_free (obs);
   ncm_stats_vec_free (stats);
-
-  gsl_min_fminimizer_free (fmin);
 }
 
 static void
