@@ -48,6 +48,7 @@
 #include "galaxy/nc_galaxy_sd_shape_gauss.h"
 #include "galaxy/nc_galaxy_sd_shape.h"
 #include "lss/nc_halo_position.h"
+#include "math/ncm_stats_vec.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
@@ -59,6 +60,7 @@ typedef struct _NcGalaxySDShapeGaussPrivate
 {
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_hp;
+  NcmStatsVec *obs_stats;
 } NcGalaxySDShapeGaussPrivate;
 
 struct _NcGalaxySDShapeGauss
@@ -91,6 +93,7 @@ nc_galaxy_sd_shape_gauss_init (NcGalaxySDShapeGauss *gsdsgauss)
 
   self->ctrl_cosmo = NULL;
   self->ctrl_hp    = NULL;
+  self->obs_stats  = ncm_stats_vec_new (2, NCM_STATS_VEC_COV, FALSE);
 }
 
 /* LCOV_EXCL_START */
@@ -134,6 +137,7 @@ _nc_galaxy_sd_shape_gauss_dispose (GObject *object)
 
   ncm_model_ctrl_clear (&self->ctrl_cosmo);
   ncm_model_ctrl_clear (&self->ctrl_hp);
+  ncm_stats_vec_clear (&self->obs_stats);
 
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_sd_shape_gauss_parent_class)->dispose (object);
@@ -153,6 +157,7 @@ static void _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset,
 static NcGalaxySDShapeIntegrand *_nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds);
 static gboolean _nc_galaxy_sd_shape_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
 static void _nc_galaxy_sd_shape_gauss_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data);
+static void _nc_galaxy_sd_shape_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *g1, gdouble *g2, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
 
 static void
 nc_galaxy_sd_shape_gauss_class_init (NcGalaxySDShapeGaussClass *klass)
@@ -189,6 +194,7 @@ nc_galaxy_sd_shape_gauss_class_init (NcGalaxySDShapeGaussClass *klass)
   sd_shape_class->integ              = &_nc_galaxy_sd_shape_gauss_integ;
   sd_shape_class->prepare_data_array = &_nc_galaxy_sd_shape_gauss_prepare_data_array;
   sd_shape_class->data_init          = &_nc_galaxy_sd_shape_gauss_data_init;
+  sd_shape_class->direct_estimate    = &_nc_galaxy_sd_shape_gauss_direct_estimate;
 }
 
 #define VECTOR  (NCM_MODEL (gsds))
@@ -419,10 +425,7 @@ _nc_galaxy_sd_shape_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *ms
   NcWLSurfaceMassDensity *surface_mass_density = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
   NcHaloDensityProfile *density_profile        = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
   gdouble z_cl                                 = nc_halo_position_get_redshift (halo_position);
-  gdouble ra_cl, dec_cl;
   guint i;
-
-  nc_halo_position_get_ra_dec (halo_position, &ra_cl, &dec_cl);
 
   for (i = 0; i < data_array->len; i++)
   {
@@ -504,6 +507,65 @@ _nc_galaxy_sd_shape_gauss_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionDa
   data->ldata_write_row        = &_nc_galaxy_sd_shape_gauss_ldata_write_row;
   data->ldata_required_columns = &_nc_galaxy_sd_shape_gauss_ldata_required_columns;
   data->ldata_get_radius       = &_nc_galaxy_sd_shape_gauss_get_radius;
+}
+
+static void
+_nc_galaxy_sd_shape_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *g1, gdouble *g2, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho)
+{
+  NcGalaxySDShapeGauss *gsdsgauss          = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
+  NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
+  NcHICosmo *cosmo                         = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHaloPosition *halo_position            = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
+  gdouble sigma_int                        = SIGMA_INT;
+  NcGalaxyWLObsEllipConv ellip_conv        = nc_galaxy_sd_shape_get_ellip_conv (gsds);
+  guint i;
+
+  nc_halo_position_prepare_if_needed (halo_position, cosmo);
+  ncm_stats_vec_reset (self->obs_stats, TRUE);
+
+  for (i = 0; i < data_array->len; i++)
+  {
+    NcGalaxySDShapeData *data_i       = g_ptr_array_index (data_array, i);
+    NcGalaxySDShapeGaussData *ldata_i = (NcGalaxySDShapeGaussData *) data_i->ldata;
+    const gdouble ra                  = data_i->sdpos_data->ra;
+    const gdouble dec                 = data_i->sdpos_data->dec;
+    const gdouble e1                  = ldata_i->epsilon_obs_1;
+    const gdouble e2                  = ldata_i->epsilon_obs_2;
+    const gdouble sigma_obs           = ldata_i->sigma_obs;
+    const gdouble sigma_true          = nc_galaxy_sd_shape_gauss_sigma_true_from_sigma_int (sigma_int);
+    const gdouble var_tot             = sigma_true * sigma_true + sigma_obs * sigma_obs;
+    const gdouble weight              = 1.0 / var_tot;
+    complex double e_o                = data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN ? (e1 - I * e2) : (e1 + I * e2);
+    complex double hat_g;
+    gdouble theta, phi;
+
+    nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
+
+    switch (ellip_conv)
+    {
+      case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+        hat_g = e_o * cexp (-2.0 * I * phi);
+        break;
+      case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+        hat_g = e_o * cexp (-2.0 * I * phi) / (2.0 * (1.0 - var_tot));
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+
+
+    ncm_stats_vec_set (self->obs_stats, 0, creal (hat_g));
+    ncm_stats_vec_set (self->obs_stats, 1, cimag (hat_g));
+
+    ncm_stats_vec_update_weight (self->obs_stats, weight);
+  }
+
+  *g1      = ncm_stats_vec_get_mean (self->obs_stats, 0);
+  *g2      = ncm_stats_vec_get_mean (self->obs_stats, 1);
+  *sigma_t = ncm_stats_vec_get_sd (self->obs_stats, 0);
+  *sigma_x = ncm_stats_vec_get_sd (self->obs_stats, 1);
+  *rho     = ncm_stats_vec_get_cov (self->obs_stats, 0, 1);
 }
 
 /**
@@ -629,5 +691,91 @@ nc_galaxy_sd_shape_gauss_data_get (NcGalaxySDShapeGauss *gsdsgauss, NcGalaxySDSh
   *epsilon_obs_1 = ldata->epsilon_obs_1;
   *epsilon_obs_2 = ldata->epsilon_obs_2;
   *sigma_obs     = ldata->sigma_obs;
+}
+
+/**
+ * nc_galaxy_sd_shape_gauss_sigma_int_from_sigma_true:
+ * @sigma_true: the true shape dispersion
+ *
+ * Computes the internal variance parameter ($\sigma_\mathrm{int}$) of the Gaussian shape model
+ * corresponding to a given true shape dispersion ($\sigma_\mathrm{true}$).
+ *
+ * In this model, the observed ellipticity components are assumed to be independent and
+ * normally distributed, but constrained to lie within a unit disk. As a result, the
+ * variance parameter used in the Gaussian likelihood ($\sigma_\mathrm{int}^2$) does not
+ * directly equal the physical shape dispersion ($\sigma_\mathrm{true}^2$). This
+ * function solves numerically for the internal parameter that reproduces the given true
+ * shape dispersion.
+ *
+ * Returns: the internal shape dispersion $\sigma_\mathrm{int}$ corresponding to the input $\sigma_\mathrm{true}$.
+ */
+gdouble
+nc_galaxy_sd_shape_gauss_sigma_int_from_sigma_true (const gdouble sigma_true)
+{
+  const gdouble sigma_true2 = sigma_true * sigma_true;
+  const gdouble beta        = 0.5 / sigma_true2;
+  register gdouble alpha    = beta;
+  guint max_iter            = 10000;
+
+  while (TRUE)
+  {
+    gdouble delta;
+
+    if (alpha < 1.0e2)
+    {
+      const gdouble exp_alpha_m1 = expm1 (alpha);
+      const gdouble exp_alpha    = exp_alpha_m1 + 1.0;
+      const gdouble falpha       = (alpha - beta) * exp_alpha_m1 + alpha * beta;
+      const gdouble dfalpha      = (alpha - beta) * exp_alpha + exp_alpha_m1 + beta;
+
+      delta = falpha / dfalpha;
+    }
+    else
+    {
+      const gdouble exp_malpha_m1 = expm1 (-alpha);
+      const gdouble exp_malpha    = exp_malpha_m1 + 1.0;
+      const gdouble falpha        = -(alpha - beta) * exp_malpha_m1 + alpha * beta * exp_malpha;
+      const gdouble dfalpha       = -(alpha - beta) * exp_malpha - exp_malpha_m1 + beta * exp_malpha;
+
+      delta = falpha / dfalpha;
+    }
+
+    alpha -= delta;
+
+    if (--max_iter == 0)
+    {
+      g_warning ("nc_galaxy_sd_shape_gauss_new: sigma_int_from_sigma_true failed to converge");
+      break;
+    }
+
+    if (fabs (delta) < GSL_DBL_EPSILON * 100.0)
+      return sqrt (0.5 / alpha);
+  }
+
+  return NAN;
+}
+
+/**
+ * nc_galaxy_sd_shape_gauss_sigma_true_from_sigma_int:
+ * @sigma_int: the internal shape dispersion
+ *
+ * Computes the physical (true) shape dispersion σ_true corresponding to a given
+ * internal Gaussian model dispersion $\sigma_\mathrm{int}$.
+ *
+ * In the Gaussian likelihood model used for shape measurements, the variance parameter
+ * ($\sigma_\mathrm{int}^2$) applies to ellipticity components constrained to lie within
+ * a unit disk. This function analytically maps the internal dispersion back to the true
+ * shape dispersion, accounting for the truncation of the Gaussian support.
+ *
+ * Returns: the true shape dispersion $\sigma_\mathrm{true}$ corresponding to the input $\sigma_\mathrm{int}$.
+ */
+gdouble
+nc_galaxy_sd_shape_gauss_sigma_true_from_sigma_int (const gdouble sigma_int)
+{
+  gdouble s2      = sigma_int * sigma_int;
+  gdouble exp_arg = 1.0 / (2.0 * s2);
+  gdouble denom   = -2.0 * expm1 (exp_arg);
+
+  return sqrt (s2 + 1.0 / denom);
 }
 

@@ -76,6 +76,9 @@ void nc_galaxy_sd_shape_gauss_data_get (NcGalaxySDShapeGauss *gsdsgauss, NcGalax
 #define NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_2 "epsilon_obs_2"
 #define NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS "sigma_obs"
 
+gdouble nc_galaxy_sd_shape_gauss_sigma_int_from_sigma_true (const gdouble sigma_true);
+gdouble nc_galaxy_sd_shape_gauss_sigma_true_from_sigma_int (const gdouble sigma_int);
+
 G_END_DECLS
 
 #endif /* _NC_GALAXY_SD_SHAPE_GAUSS_H_ */

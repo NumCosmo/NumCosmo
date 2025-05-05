@@ -72,6 +72,7 @@ struct _NcGalaxySDShapeClass
   NcGalaxySDShapeIntegrand *(*integ) (NcGalaxySDShape *gsds);
   gboolean (*prepare_data_array) (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
   void (*data_init) (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data);
+  void (*direct_estimate) (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[10];
@@ -119,6 +120,7 @@ void nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds);
 void nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng);
 NcGalaxySDShapeIntegrand *nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds);
 gboolean nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
+void nc_galaxy_sd_shape_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
 
 NcGalaxySDShapeData *nc_galaxy_sd_shape_data_new (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data);
 

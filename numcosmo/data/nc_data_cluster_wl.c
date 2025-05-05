@@ -949,3 +949,19 @@ nc_data_cluster_wl_get_resample_flag (NcDataClusterWL *dcwl)
   return self->resample_flag;
 }
 
+/**
+ * nc_data_cluster_wl_peek_data_array:
+ * @dcwl: a #NcDataClusterWL
+ *
+ * Gets the data array.
+ *
+ * Returns: (transfer none): the data array.
+ */
+NcmObjArray *
+nc_data_cluster_wl_peek_data_array (NcDataClusterWL *dcwl)
+{
+  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
+
+  return self->shape_data;
+}
+

@@ -75,6 +75,8 @@ NcGalaxyWLObs *nc_data_cluster_wl_peek_obs (NcDataClusterWL *dcwl);
 void nc_data_cluster_wl_set_resample_flag (NcDataClusterWL *dcwl, NcDataClusterWLResampleFlag resample_flag);
 NcDataClusterWLResampleFlag nc_data_cluster_wl_get_resample_flag (NcDataClusterWL *dcwl);
 
+NcmObjArray *nc_data_cluster_wl_peek_data_array (NcDataClusterWL *dcwl);
+
 G_END_DECLS
 
 #endif /* _NC_DATA_CLUSTER_WL_H_ */

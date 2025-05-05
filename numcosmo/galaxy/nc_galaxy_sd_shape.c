@@ -166,6 +166,12 @@ _nc_galaxy_sd_shape_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sd
   g_error ("_nc_galaxy_sd_shape_data_new: method not implemented.");
 }
 
+static void
+_nc_galaxy_sd_shape_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *g1, gdouble *g2, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho)
+{
+  g_error ("_nc_galaxy_sd_shape_direct_estimate: method not implemented.");
+}
+
 /* LCOV_EXCL_STOP */
 
 static void
@@ -202,6 +208,7 @@ nc_galaxy_sd_shape_class_init (NcGalaxySDShapeClass *klass)
   klass->integ              = &_nc_galaxy_sd_shape_integ;
   klass->prepare_data_array = &_nc_galaxy_sd_shape_prepare_data_array;
   klass->data_init          = &_nc_galaxy_sd_shape_data_init;
+  klass->direct_estimate    = &_nc_galaxy_sd_shape_direct_estimate;
 }
 
 /**
@@ -633,6 +640,26 @@ gboolean
 nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array)
 {
   return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->prepare_data_array (gsds, mset, data_array);
+}
+
+/**
+ * nc_galaxy_sd_shape_direct_estimate: (virtual direct_estimate)
+ * @gsds: a #NcGalaxySDShape
+ * @mset: a #NcmMSet
+ * @data_array: (element-type NcGalaxySDShapeData): a #GPtrArray of #NcGalaxySDShapeData
+ * @gt: (out): the reduced tangential shear
+ * @gx: (out): the cross shear
+ * @sigma_t: (out): the tangential scatter
+ * @sigma_x: (out): the cross scatter
+ * @rho: (out): the correlation
+ *
+ * Computes the estimate of the galaxy shape using the direct method.
+ *
+ */
+void
+nc_galaxy_sd_shape_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho)
+{
+  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->direct_estimate (gsds, mset, data_array, gt, gx, sigma_t, sigma_x, rho);
 }
 
 /**
