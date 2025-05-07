@@ -235,7 +235,7 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDS
   gdouble phi                                  = 0.0;
   complex double e_o;
   gdouble e1, e2, e1_int, e2_int;
-  gdouble radius, gt;
+  gdouble radius;
 
   nc_halo_position_prepare_if_needed (halo_position, cosmo);
   nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
@@ -245,10 +245,10 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDS
 
   if (z > z_cl)
   {
-    gt = nc_wl_surface_mass_density_reduced_shear (surface_mass_density,
-                                                   density_profile,
-                                                   cosmo,
-                                                   radius, z, z_cl, z_cl);
+    const gdouble gt = nc_wl_surface_mass_density_reduced_shear (surface_mass_density,
+                                                                 density_profile,
+                                                                 cosmo,
+                                                                 radius, z, z_cl, z_cl);
 
     NcmComplex cplx_g   = NCM_COMPLEX_INIT_REAL (gt);
     NcmComplex cplx_E_s = NCM_COMPLEX_INIT (e_s);
