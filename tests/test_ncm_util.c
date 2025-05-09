@@ -64,6 +64,8 @@ test_ncm_util_projected_radius (void)
 
     g_assert_cmpfloat (ncm_util_projected_radius (theta, d), >=, 0);
   }
+
+  ncm_rng_free (rng);
 }
 
 void
@@ -111,6 +113,10 @@ test_ncm_util_complex (void)
     g_assert_cmpfloat (ncm_complex_Re (c1), ==, 0.0);
     g_assert_cmpfloat (ncm_complex_Im (c1), ==, 52.0);
 
+    ncm_complex_res_mul (c1, c2);
+    g_assert_cmpfloat (ncm_complex_Re (c1), ==, -208.0);
+    g_assert_cmpfloat (ncm_complex_Im (c1), ==, 156.0);
+
     ncm_complex_free (c1);
     ncm_complex_free (c2);
     ncm_complex_free (c3);
@@ -127,6 +133,26 @@ test_ncm_util_complex (void)
     z = ncm_complex_c (&c1);
     g_assert_cmpfloat (creal (z), ==, 1.0);
     g_assert_cmpfloat (cimag (z), ==, 2.0);
+  }
+
+  {
+    NcmComplex c1  = NCM_COMPLEX_INIT (1.0 + 2.0 * I);
+    NcmComplex *c2 = ncm_complex_dup (&c1);
+
+    g_assert_cmpfloat (ncm_complex_Re (&c1), ==, 1.0);
+    g_assert_cmpfloat (ncm_complex_Im (&c1), ==, 2.0);
+
+    g_assert_cmpfloat (ncm_complex_Re (c2), ==, 1.0);
+    g_assert_cmpfloat (ncm_complex_Im (c2), ==, 2.0);
+
+    ncm_complex_free (c2);
+  }
+
+  {
+    NcmComplex *c1 = ncm_complex_new ();
+
+    ncm_complex_clear (&c1);
+    g_assert_null (c1);
   }
 }
 
