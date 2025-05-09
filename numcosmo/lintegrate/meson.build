@@ -22,7 +22,7 @@ lintegrate_sources = files(
 liblintegrate = static_library(
     'libintegrate',
     sources: lintegrate_sources,
-    dependencies: [],
+    dependencies: [gsl_dep],
     install: false,
     gnu_symbol_visibility: 'hidden',
     c_args: lintegrate_c_args,
