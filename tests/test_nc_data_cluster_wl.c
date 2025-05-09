@@ -433,7 +433,7 @@ test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata)
   g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2));
   g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_1));
   g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_2));
-  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS));
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_SHAPE_GAUSS_COL_STD_NOISE));
 
   for (i = 0; i < ngals; i++)
   {
@@ -442,9 +442,9 @@ test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata)
     const gdouble dec           = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_POSITION_COL_DEC, i);
     const gdouble epsilon_int_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_1, i);
     const gdouble epsilon_int_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2, i);
-    const gdouble sigma_obs     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS, i);
+    const gdouble sigma_obs     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_COL_STD_NOISE, i);
     const gdouble var_obs       = sigma_obs * sigma_obs;
-    const gdouble sigma_int     = ncm_model_orig_param_get (NCM_MODEL (test->galaxy_shape), NC_GALAXY_SD_SHAPE_GAUSS_SIGMA_INT);
+    const gdouble sigma_int     = ncm_model_orig_param_get (NCM_MODEL (test->galaxy_shape), NC_GALAXY_SD_SHAPE_GAUSS_SIGMA);
     const gdouble var_int       = sigma_int * sigma_int;
     const gdouble e_rms_1       = sqrt (var_int + var_obs);
     const gdouble e_rms_2       = sqrt (var_int + var_obs);

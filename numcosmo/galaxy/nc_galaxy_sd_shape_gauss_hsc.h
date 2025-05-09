@@ -50,15 +50,15 @@ NcGalaxySDShapeGaussHSC *nc_galaxy_sd_shape_gauss_hsc_ref (NcGalaxySDShapeGaussH
 void nc_galaxy_sd_shape_gauss_hsc_free (NcGalaxySDShapeGaussHSC *gsdshsc);
 void nc_galaxy_sd_shape_gauss_hsc_clear (NcGalaxySDShapeGaussHSC **gsdshsc);
 
-void nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShapeGaussHSC *gsdshsc, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble sigma_int, const gdouble sigma_obs, const gdouble c1, const gdouble c2, const gdouble m, NcGalaxyWLObsCoord coord, NcmRNG *rng);
+void nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShapeGaussHSC *gsdshsc, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble std_shape, const gdouble std_noise, const gdouble c1, const gdouble c2, const gdouble m, NcGalaxyWLObsCoord coord, NcmRNG *rng);
 
-void nc_galaxy_sd_shape_gauss_hsc_data_set (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalaxySDShapeData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble sigma_int, const gdouble sigma_obs, const gdouble c1, const gdouble c2, const gdouble m);
-void nc_galaxy_sd_shape_gauss_hsc_data_get (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalaxySDShapeData *data, gdouble *epsilon_obs_1, gdouble *epsilon_obs_2, gdouble *sigma_int, gdouble *sigma_obs, gdouble *c1, gdouble *c2, gdouble *m);
+void nc_galaxy_sd_shape_gauss_hsc_data_set (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalaxySDShapeData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble std_shape, const gdouble std_noise, const gdouble c1, const gdouble c2, const gdouble m);
+void nc_galaxy_sd_shape_gauss_hsc_data_get (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalaxySDShapeData *data, gdouble *epsilon_obs_1, gdouble *epsilon_obs_2, gdouble *std_shape, gdouble *std_noise, gdouble *c1, gdouble *c2, gdouble *m);
 
 #define NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_1 "epsilon_obs_1"
 #define NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_2 "epsilon_obs_2"
-#define NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_SIGMA_INT "sigma_int"
-#define NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_SIGMA_OBS "sigma_obs"
+#define NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_SHAPE "std_shape"
+#define NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_NOISE "std_noise"
 #define NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C1 "c1"
 #define NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C2 "c2"
 #define NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_M "m"

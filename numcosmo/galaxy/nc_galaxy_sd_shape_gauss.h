@@ -46,19 +46,19 @@ G_DECLARE_FINAL_TYPE (NcGalaxySDShapeGauss, nc_galaxy_sd_shape_gauss, NC, GALAXY
 
 /**
  * NcGalaxySDShapeGaussParams:
- * @NC_GALAXY_SD_SHAPE_GAUSS_SIGMA_INT: Standard deviation of the ellipticity distribution.
+ * @NC_GALAXY_SD_SHAPE_GAUSS_SIGMA: Standard deviation of the ellipticity distribution.
  *
  * Gaussian galaxy shape distribution model parameters.
  *
  */
 typedef enum /*< enum,underscore_name=NC_GALAXY_SD_SHAPE_GAUSS_PARAMS >*/
 {
-  NC_GALAXY_SD_SHAPE_GAUSS_SIGMA_INT = 0,
+  NC_GALAXY_SD_SHAPE_GAUSS_SIGMA = 0,
   /* < private > */
   NC_GALAXY_SD_SHAPE_GAUSS_SPARAM_LEN, /*< skip >*/
 } NcGalaxySDShapeGaussParams;
 
-#define NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA_INT   (0.3)
+#define NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA   (0.3)
 #define NC_GALAXY_SD_SHAPE_GAUSS_DEFAULT_PARAMS_ABSTOL (0.0)
 
 NcGalaxySDShapeGauss *nc_galaxy_sd_shape_gauss_new (NcGalaxyWLObsEllipConv ellip_conv);
@@ -67,17 +67,17 @@ NcGalaxySDShapeGauss *nc_galaxy_sd_shape_gauss_ref (NcGalaxySDShapeGauss *gsdsga
 void nc_galaxy_sd_shape_gauss_free (NcGalaxySDShapeGauss *gsdsgauss);
 void nc_galaxy_sd_shape_gauss_clear (NcGalaxySDShapeGauss **gsdsgauss);
 
-void nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShapeGauss *gsdsgauss, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble sigma_obs, NcGalaxyWLObsCoord coord, NcmRNG *rng);
+void nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShapeGauss *gsdsgauss, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble std_noise, NcGalaxyWLObsCoord coord, NcmRNG *rng);
 
-void nc_galaxy_sd_shape_gauss_data_set (NcGalaxySDShapeGauss *gsdsgauss, NcGalaxySDShapeData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble sigma_obs);
-void nc_galaxy_sd_shape_gauss_data_get (NcGalaxySDShapeGauss *gsdsgauss, NcGalaxySDShapeData *data, gdouble *epsilon_obs_1, gdouble *epsilon_obs_2, gdouble *sigma_obs);
+void nc_galaxy_sd_shape_gauss_data_set (NcGalaxySDShapeGauss *gsdsgauss, NcGalaxySDShapeData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble std_noise);
+void nc_galaxy_sd_shape_gauss_data_get (NcGalaxySDShapeGauss *gsdsgauss, NcGalaxySDShapeData *data, gdouble *epsilon_obs_1, gdouble *epsilon_obs_2, gdouble *std_noise);
 
 #define NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_1 "epsilon_obs_1"
 #define NC_GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_2 "epsilon_obs_2"
-#define NC_GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS "sigma_obs"
+#define NC_GALAXY_SD_SHAPE_GAUSS_COL_STD_NOISE "std_noise"
 
-gdouble nc_galaxy_sd_shape_gauss_sigma_int_from_sigma_true (const gdouble sigma_true);
-gdouble nc_galaxy_sd_shape_gauss_sigma_true_from_sigma_int (const gdouble sigma_int);
+gdouble nc_galaxy_sd_shape_gauss_sigma_from_std_shape (const gdouble std_shape);
+gdouble nc_galaxy_sd_shape_gauss_std_shape_from_sigma (const gdouble sigma);
 
 G_END_DECLS
 
