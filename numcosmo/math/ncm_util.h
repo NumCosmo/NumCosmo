@@ -177,21 +177,11 @@ NCM_INLINE gdouble ncm_util_projected_radius (gdouble theta, gdouble d);
 #define NCM_TEST_GSL_RESULT(func, ret) \
         if (ret != GSL_SUCCESS) g_error ("%s: %s", func, gsl_strerror (ret))
 
-#define NCM_COMPLEX_ZERO \
-        {                \
-          {0.0, 0.0}     \
-        }
-
+#define NCM_COMPLEX_ZERO (0.0)
 #define NCM_COMPLEX(p) ((NcmComplex *) (p))
 #define NCM_COMPLEX_PTR(p) ((NcmComplex **) (p))
-#define NCM_COMPLEX_INIT(z)      \
-        {                        \
-          {creal (z), cimag (z)} \
-        }
-#define NCM_COMPLEX_INIT_REAL(z) \
-        {                        \
-          {(z), 0.0}             \
-        }
+#define NCM_COMPLEX_INIT(z) (z)
+#define NCM_COMPLEX_INIT_REAL(z) (z)
 
 #define ncm_g_string_clear(s)                      \
         G_STMT_START                               \

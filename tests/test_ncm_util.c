@@ -33,7 +33,7 @@
 #include <glib-object.h>
 
 void test_ncm_util_projected_radius (void);
-void test_ncm_util_polar_angles (void);
+void test_ncm_util_complex (void);
 
 int
 main (int argc, char *argv[])
@@ -45,6 +45,7 @@ main (int argc, char *argv[])
   g_test_set_nonfatal_assertions ();
 
   g_test_add_func ("/ncm/util/projected_radius", test_ncm_util_projected_radius);
+  g_test_add_func ("/ncm/util/complex", test_ncm_util_complex);
 
   g_test_run ();
 }
@@ -62,6 +63,57 @@ test_ncm_util_projected_radius (void)
     gdouble theta = ncm_rng_uniform_gen (rng, 0.0, M_PI);
 
     g_assert_cmpfloat (ncm_util_projected_radius (theta, d), >=, 0);
+  }
+}
+
+void
+test_ncm_util_complex (void)
+{
+  {
+    NcmComplex *c1 = ncm_complex_new ();
+
+    ncm_complex_set (c1, 1.0, 2.0);
+    g_assert_cmpfloat (ncm_complex_Re (c1), ==, 1.0);
+    g_assert_cmpfloat (ncm_complex_Im (c1), ==, 2.0);
+
+    ncm_complex_set_zero (c1);
+    g_assert_cmpfloat (ncm_complex_Re (c1), ==, 0.0);
+    g_assert_cmpfloat (ncm_complex_Im (c1), ==, 0.0);
+
+    ncm_complex_free (c1);
+  }
+
+  {
+    NcmComplex c1 = NCM_COMPLEX_INIT (1.0 + 2.0 * I);
+
+    g_assert_cmpfloat (ncm_complex_Re (&c1), ==, 1.0);
+    g_assert_cmpfloat (ncm_complex_Im (&c1), ==, 2.0);
+  }
+
+  {
+    NcmComplex *c1 = ncm_complex_new ();
+    NcmComplex *c2 = ncm_complex_new ();
+    NcmComplex *c3 = ncm_complex_new ();
+
+    ncm_complex_set (c1, 1.0, 2.0);
+    ncm_complex_set (c2, 3.0, 4.0);
+    ncm_complex_set (c3, 5.0, 6.0);
+
+    ncm_complex_mul_real (c1, 3.0);
+    g_assert_cmpfloat (ncm_complex_Re (c1), ==, 3.0);
+    g_assert_cmpfloat (ncm_complex_Im (c1), ==, 6.0);
+
+    ncm_complex_res_add_mul (c1, c2, c3);
+    g_assert_cmpfloat (ncm_complex_Re (c1), ==, -6.0);
+    g_assert_cmpfloat (ncm_complex_Im (c1), ==, 44.0);
+
+    ncm_complex_res_add_mul_real (c1, c2, 2.0);
+    g_assert_cmpfloat (ncm_complex_Re (c1), ==, 0.0);
+    g_assert_cmpfloat (ncm_complex_Im (c1), ==, 52.0);
+
+    ncm_complex_free (c1);
+    ncm_complex_free (c2);
+    ncm_complex_free (c3);
   }
 }
 
