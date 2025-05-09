@@ -115,5 +115,18 @@ test_ncm_util_complex (void)
     ncm_complex_free (c2);
     ncm_complex_free (c3);
   }
+
+  {
+    NcmComplex c1;
+    complex double z;
+
+    ncm_complex_set_c (&c1, 1.0 + 2.0 * I);
+    g_assert_cmpfloat (ncm_complex_Re (&c1), ==, 1.0);
+    g_assert_cmpfloat (ncm_complex_Im (&c1), ==, 2.0);
+
+    z = ncm_complex_c (&c1);
+    g_assert_cmpfloat (creal (z), ==, 1.0);
+    g_assert_cmpfloat (cimag (z), ==, 2.0);
+  }
 }
 
