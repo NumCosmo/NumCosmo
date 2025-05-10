@@ -35,7 +35,6 @@ from numcosmo_py.plotting.tools import add_ellipse_from_ellipticity
 
 Ncm.cfg_init()
 
-
 Omega_b = 0.05
 Omega_c = 0.25
 Omega_k = 0.0
@@ -147,8 +146,8 @@ p_dist = Nc.GalaxySDPositionFlat.new(
     galaxies_ra0, galaxies_ra1, galaxies_dec0, galaxies_dec1
 )
 z_true = Nc.GalaxySDTrueRedshiftLSSTSRD.new()
-z_dist = Nc.GalaxySDObsRedshiftGauss.new(z_true)
-s_dist = Nc.GalaxySDShapeGauss.new()
+z_dist = Nc.GalaxySDObsRedshiftGauss.new(z_true, 0.1, 2.0)
+s_dist = Nc.GalaxySDShapeGauss.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
 
 s_dist["e-rms"] = galaxy_shape_e_rms
 
@@ -213,7 +212,10 @@ p_data = Nc.GalaxySDPositionData.new(p_dist, z_data)
 s_data = Nc.GalaxySDShapeData.new(s_dist, p_data)
 
 obs = Nc.GalaxyWLObs.new(
-    Nc.GalaxyWLObsCoord.EUCLIDEAN, n_galaxies, list(s_data.required_columns())
+    Nc.GalaxyWLObsEllipConv.TRACE_DET,
+    Nc.GalaxyWLObsCoord.EUCLIDEAN,
+    n_galaxies,
+    list(s_data.required_columns()),
 )
 
 for i in range(n_galaxies):
@@ -222,7 +224,6 @@ for i in range(n_galaxies):
     s_dist.gen(
         mset,
         s_data,
-        galaxy_shape_e_sigma,
         galaxy_shape_e_sigma,
         Nc.GalaxyWLObsCoord.EUCLIDEAN,
         rng,
@@ -341,7 +342,10 @@ def gen_galaxies(halo_ra: float, halo_dec: float, halo_mass: float) -> pd.DataFr
     halo_position.prepare(cosmo)
 
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsCoord.EUCLIDEAN, n_galaxies, list(s_data.required_columns())
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        Nc.GalaxyWLObsCoord.EUCLIDEAN,
+        n_galaxies,
+        list(s_data.required_columns()),
     )
 
     for i in range(n_galaxies):
@@ -350,7 +354,6 @@ def gen_galaxies(halo_ra: float, halo_dec: float, halo_mass: float) -> pd.DataFr
         s_dist.gen(
             mset,
             s_data,
-            galaxy_shape_e_sigma,
             galaxy_shape_e_sigma,
             Nc.GalaxyWLObsCoord.EUCLIDEAN,
             rng,
