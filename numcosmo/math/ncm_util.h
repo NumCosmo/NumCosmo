@@ -102,12 +102,11 @@ void ncm_util_forward_or_call_error (GError **error, GError *local_error, const 
           }                                                        \
         } G_STMT_END
 
-typedef struct _NcmComplex NcmComplex;
-
-struct _NcmComplex
-{
-  gdouble z[2];
-};
+#ifndef NUMCOSMO_GIR_SCAN
+typedef complex double NcmComplex;
+#else /* NUMCOSMO_GIR_SCAN */
+typedef struct _NcmComplexShouldNeverAppear NcmComplex;
+#endif /* NUMCOSMO_GIR_SCAN */
 
 GType ncm_complex_get_type (void) G_GNUC_CONST;
 
@@ -178,21 +177,11 @@ NCM_INLINE gdouble ncm_util_projected_radius (gdouble theta, gdouble d);
 #define NCM_TEST_GSL_RESULT(func, ret) \
         if (ret != GSL_SUCCESS) g_error ("%s: %s", func, gsl_strerror (ret))
 
-#define NCM_COMPLEX_ZERO \
-        {                \
-          {0.0, 0.0}     \
-        }
-
+#define NCM_COMPLEX_ZERO (0.0)
 #define NCM_COMPLEX(p) ((NcmComplex *) (p))
 #define NCM_COMPLEX_PTR(p) ((NcmComplex **) (p))
-#define NCM_COMPLEX_INIT(z)      \
-        {                        \
-          {creal (z), cimag (z)} \
-        }
-#define NCM_COMPLEX_INIT_REAL(z) \
-        {                        \
-          {(z), 0.0}             \
-        }
+#define NCM_COMPLEX_INIT(z) (z)
+#define NCM_COMPLEX_INIT_REAL(z) (z)
 
 #define ncm_g_string_clear(s)                      \
         G_STMT_START                               \
@@ -512,26 +501,25 @@ ncm_util_projected_radius (gdouble theta, gdouble d)
 NCM_INLINE void
 ncm_complex_set (NcmComplex *c, const gdouble a, const gdouble b)
 {
-  c->z[0] = a;
-  c->z[1] = b;
+  *c = a + I * b;
 }
 
 NCM_INLINE void
 ncm_complex_set_zero (NcmComplex *c)
 {
-  c->z[0] = c->z[1] = 0.0;
+  *c = 0.0;
 }
 
 NCM_INLINE gdouble
 ncm_complex_Re (const NcmComplex *c)
 {
-  return c->z[0];
+  return creal (*c);
 }
 
 NCM_INLINE gdouble
 ncm_complex_Im (const NcmComplex *c)
 {
-  return c->z[1];
+  return cimag (*c);
 }
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -539,14 +527,13 @@ ncm_complex_Im (const NcmComplex *c)
 NCM_INLINE void
 ncm_complex_set_c (NcmComplex *c, const complex double z)
 {
-  c->z[0] = creal (z);
-  c->z[1] = cimag (z);
+  *c = z;
 }
 
 NCM_INLINE complex double
 ncm_complex_c (const NcmComplex *c)
 {
-  return c->z[0] + I * c->z[1];
+  return *c;
 }
 
 #endif /* NUMCOSMO_GIR_SCAN */
@@ -554,31 +541,25 @@ ncm_complex_c (const NcmComplex *c)
 NCM_INLINE void
 ncm_complex_res_add_mul_real (NcmComplex * restrict c1, const NcmComplex * restrict c2, const gdouble v)
 {
-  c1->z[0] += c2->z[0] * v;
-  c1->z[1] += c2->z[1] * v;
+  *c1 += (*c2) * v;
 }
 
 NCM_INLINE void
 ncm_complex_res_add_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2, const NcmComplex * restrict c3)
 {
-  c1->z[0] += c2->z[0] * c3->z[0] - c2->z[1] * c3->z[1];
-  c1->z[1] += c2->z[0] * c3->z[1] + c2->z[1] * c3->z[0];
+  *c1 += (*c2) * (*c3);
 }
 
 NCM_INLINE void
 ncm_complex_mul_real (NcmComplex *c, const gdouble v)
 {
-  c->z[0] *= v;
-  c->z[1] *= v;
+  *c *= v;
 }
 
 NCM_INLINE void
 ncm_complex_res_mul (NcmComplex * restrict c1, const NcmComplex * restrict c2)
 {
-  const gdouble Re_c1 = c1->z[0] * c2->z[0] - c1->z[1] * c1->z[1];
-
-  c1->z[1] = c1->z[0] * c2->z[1] + c1->z[1] * c2->z[0];
-  c1->z[0] = Re_c1;
+  *c1 *= *c2;
 }
 
 G_END_DECLS

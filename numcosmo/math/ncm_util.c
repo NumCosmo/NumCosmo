@@ -622,8 +622,7 @@ ncm_complex_dup (NcmComplex *c)
 {
   NcmComplex *cc = ncm_complex_new ();
 
-  cc->z[0] = c->z[0];
-  cc->z[1] = c->z[1];
+  *cc = *c;
 
   return cc;
 }

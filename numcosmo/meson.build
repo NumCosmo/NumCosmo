@@ -17,6 +17,7 @@ subdir('misc')
 subdir('toeplitz')
 subdir('class')
 subdir('plc')
+subdir('lintegrate')
 
 ncm_sources = files(
     'math/ncm_binsplit.c',
@@ -712,6 +713,7 @@ install_headers(
 
 sundials_inc = include_directories('sundials/include')
 libcuba_inc = include_directories('libcuba')
+lintegrate_inc = include_directories('lintegrate')
 
 libnumcosmo_dep_list = [
     mpi_c_dep,
@@ -758,12 +760,12 @@ libnumcosmo = library(
     install: true,
     # intl.lib is not compatible with SAFESEH
     link_args: [noseh_link_args],
-    include_directories: [configinc, sundials_inc, libcuba_inc, plc_inc],
+    include_directories: [configinc, sundials_inc, libcuba_inc, plc_inc, lintegrate_inc],
     # Planck likelihood code uses dlsym to load the Planck likelihood library
     # components. This requires linking with link_whole to ensure that the
     # symbols are available at runtime.
     link_whole: [libplc],
-    link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass],
+    link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass, liblintegrate],
     dependencies: libnumcosmo_dep_list,
     c_args: numcosmo_c_args,
 )
