@@ -149,7 +149,7 @@ z_true = Nc.GalaxySDTrueRedshiftLSSTSRD.new()
 z_dist = Nc.GalaxySDObsRedshiftGauss.new(z_true, 0.1, 2.0)
 s_dist = Nc.GalaxySDShapeGauss.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
 
-s_dist["e-rms"] = galaxy_shape_e_rms
+s_dist["sigma"] = galaxy_shape_e_rms
 
 pass
 ```
