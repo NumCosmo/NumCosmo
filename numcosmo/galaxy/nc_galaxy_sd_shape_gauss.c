@@ -263,6 +263,7 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDS
   }
 
   e_o = e_o * cexp (2.0 * I * phi) + noise;
+  e_s = e_s * cexp (2.0 * I * phi);
 
   e1 = creal (e_o);
   e2 = cimag (e_o);

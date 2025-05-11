@@ -197,7 +197,7 @@ We set the number of galaxies to $200$ to focus on a manageable subset of the da
 
 To ensure reproducibility, we create a random number generator with the seed `1235`. 
 
-We specify the coordinate system for the observed galaxy positions as `EUCLIDEAN`, which corresponds to right ascension and declination in degrees. 
+We specify the coordinate system for the observed galaxy positions as `CELESTIAL`, which corresponds to right ascension and declination in degrees. 
 The mock data, consisting of $200$ galaxies around the cluster, is then generated and stored in the `cluster` object.
 
 ```{python}
@@ -213,7 +213,7 @@ s_data = Nc.GalaxySDShapeData.new(s_dist, p_data)
 
 obs = Nc.GalaxyWLObs.new(
     Nc.GalaxyWLObsEllipConv.TRACE_DET,
-    Nc.GalaxyWLObsCoord.EUCLIDEAN,
+    Nc.GalaxyWLObsCoord.CELESTIAL,
     n_galaxies,
     list(s_data.required_columns()),
 )
@@ -225,7 +225,7 @@ for i in range(n_galaxies):
         mset,
         s_data,
         galaxy_shape_e_sigma,
-        Nc.GalaxyWLObsCoord.EUCLIDEAN,
+        Nc.GalaxyWLObsCoord.CELESTIAL,
         rng,
     )
     s_data.write_row(obs, i)
@@ -343,7 +343,7 @@ def gen_galaxies(halo_ra: float, halo_dec: float, halo_mass: float) -> pd.DataFr
 
     obs = Nc.GalaxyWLObs.new(
         Nc.GalaxyWLObsEllipConv.TRACE_DET,
-        Nc.GalaxyWLObsCoord.EUCLIDEAN,
+        Nc.GalaxyWLObsCoord.CELESTIAL,
         n_galaxies,
         list(s_data.required_columns()),
     )
@@ -355,7 +355,7 @@ def gen_galaxies(halo_ra: float, halo_dec: float, halo_mass: float) -> pd.DataFr
             mset,
             s_data,
             galaxy_shape_e_sigma,
-            Nc.GalaxyWLObsCoord.EUCLIDEAN,
+            Nc.GalaxyWLObsCoord.CELESTIAL,
             rng,
         )
         s_data.write_row(obs, i)
