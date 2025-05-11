@@ -23,7 +23,7 @@
 
 """Import NumCosmo Python bindings."""
 
-from enum import Enum, auto
+from enum import Enum, StrEnum, auto
 import re
 from typing import Dict, Union, Sequence, Iterator, cast
 import gi
@@ -55,7 +55,7 @@ __all__ = [
 ]
 
 
-class GEnum(str, Enum):
+class GEnum(StrEnum):
     """Enum for GObject enums."""
 
     def __new__(cls, value):
