@@ -646,7 +646,7 @@ test_ncm_fftlog_eval_calibrate (TestNcmFftlog *test, gconstpointer pdata)
     gdouble res, err;
 
     test->argK->lnr = lnr_l;
-    ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, 1.0e-3, &res, &err);
+    ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, 1.0e-4, &res, &err);
 
     ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
   }
