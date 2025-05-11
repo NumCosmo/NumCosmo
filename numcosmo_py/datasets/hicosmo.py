@@ -28,7 +28,7 @@ This module contains factory functions to create likelihoods for cosmology obser
 that do not involve perturbations.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from numcosmo_py import Nc
 from numcosmo_py import Ncm
@@ -43,14 +43,14 @@ class SNIaID(GEnum):
     SIMPLE_UNION2_1 = Nc.DataSNIAId.SIMPLE_UNION2_1
 
 
-class BAOID(str, Enum):
+class BAOID(StrEnum):
     """Possible BAO data sets ids."""
 
     # pylint: disable=no-member
     ALL_COMBINED_JAN_2023 = "ALL_COMBINED_JAN_2023"
 
 
-class HID(str, Enum):
+class HID(StrEnum):
     """Possible Hubble data sets ids."""
 
     # pylint: disable=no-member
