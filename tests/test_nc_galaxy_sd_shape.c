@@ -323,7 +323,8 @@ test_nc_galaxy_sd_shape_gauss_gen (TestNcGalaxySDShapeGauss *test, gconstpointer
       gdouble theta, phi, gt, r;
 
       nc_halo_position_polar_angles (test->halo_position, p_data->ra, p_data->dec, &theta, &phi);
-      r = nc_halo_position_projected_radius (test->halo_position, test->cosmo, theta);
+      r   = nc_halo_position_projected_radius (test->halo_position, test->cosmo, theta);
+      e_s = e_s * cexp (-2.0 * I * phi);
 
       if (z_data->z > z_cl)
       {
@@ -632,7 +633,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShapeGauss *test, gconstp
   for (i = 0; i < ntest; i++)
   {
     const gdouble std_shape = ncm_rng_uniform_gen (rng, 0.15, 0.3);
-    const gdouble sigma = nc_galaxy_sd_shape_gauss_sigma_from_std_shape (std_shape);
+    const gdouble sigma     = nc_galaxy_sd_shape_gauss_sigma_from_std_shape (std_shape);
     const gdouble c1        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
     const gdouble c2        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
     const gdouble m         = ncm_rng_uniform_gen (rng, -0.2, 0.2);
