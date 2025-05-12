@@ -59,6 +59,7 @@ typedef struct _NcGalaxySDShapeGaussPrivate
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_hp;
   NcmStatsVec *obs_stats;
+  gdouble std_shape;
 } NcGalaxySDShapeGaussPrivate;
 
 struct _NcGalaxySDShapeGauss
@@ -70,7 +71,6 @@ typedef struct _NcGalaxySDShapeGaussData
 {
   gdouble epsilon_obs_1;
   gdouble epsilon_obs_2;
-  gdouble std_shape;
   gdouble std_noise;
   gdouble radius;
   gdouble phi;
@@ -419,6 +419,8 @@ _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds)
 static gboolean
 _nc_galaxy_sd_shape_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array)
 {
+  NcGalaxySDShapeGauss *gsdsgauss              = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
+  NcGalaxySDShapeGaussPrivate * const self     = nc_galaxy_sd_shape_gauss_get_instance_private (gsdsgauss);
   NcHICosmo *cosmo                             = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHaloPosition *halo_position                = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
   NcWLSurfaceMassDensity *surface_mass_density = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
@@ -445,9 +447,9 @@ _nc_galaxy_sd_shape_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *ms
                                                          z_cl,
                                                          z_cl,
                                                          &ldata_i->optzs);
-
-    ldata_i->std_shape = nc_galaxy_sd_shape_gauss_std_shape_from_sigma (SIGMA);
   }
+
+  self->std_shape = nc_galaxy_sd_shape_gauss_std_shape_from_sigma (SIGMA);
 
   return TRUE;
 }
@@ -532,7 +534,7 @@ _nc_galaxy_sd_shape_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset,
     const gdouble e1                  = ldata_i->epsilon_obs_1;
     const gdouble e2                  = ldata_i->epsilon_obs_2;
     const gdouble std_noise           = ldata_i->std_noise;
-    const gdouble std_shape           = ldata_i->std_shape;
+    const gdouble std_shape           = self->std_shape;
     const gdouble var_tot             = std_shape * std_shape + std_noise * std_noise;
     const gdouble weight              = 1.0 / var_tot;
     complex double e_o                = data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN ? (e1 - I * e2) : (e1 + I * e2);
