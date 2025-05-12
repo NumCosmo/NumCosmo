@@ -213,13 +213,13 @@ _nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalax
   const gdouble ra                             = data->sdpos_data->ra;
   const gdouble dec                            = data->sdpos_data->dec;
   const gdouble z                              = data->sdpos_data->sdz_data->z;
-  const gdouble std_shape                      = ldata->std_shape;
+  const gdouble sigma                          = ldata->sigma;
   const gdouble noise1                         = ncm_rng_gaussian_gen (rng, 0.0, ldata->std_noise);
   const gdouble noise2                         = ncm_rng_gaussian_gen (rng, 0.0, ldata->std_noise);
   const gdouble c1                             = ldata->c1;
   const gdouble c2                             = ldata->c2;
   const gdouble m                              = ldata->m;
-  complex double e_s                           = _gauss_cut_gen (rng, std_shape);
+  complex double e_s                           = _gauss_cut_gen (rng, sigma);
   complex double noise                         = noise1 + I * noise2;
   gdouble theta                                = 0.0;
   gdouble phi                                  = 0.0;
@@ -550,8 +550,8 @@ _nc_galaxy_sd_shape_gauss_hsc_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *m
     const gdouble m                      = ldata_i->m;
     const gdouble c1                     = ldata_i->c1;
     const gdouble c2                     = ldata_i->c2;
-    const gdouble sigma                  = ldata_i->sigma;
-    const gdouble var_tot                = sigma * sigma + std_noise * std_noise;
+    const gdouble std_shape              = ldata_i->std_shape;
+    const gdouble var_tot                = std_shape * std_shape + std_noise * std_noise;
     const gdouble weight                 = 1.0 / var_tot;
     complex double e_o                   = data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN ? (e1 - I * e2) : (e1 + I * e2);
     complex double hat_g;
@@ -563,7 +563,7 @@ _nc_galaxy_sd_shape_gauss_hsc_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *m
 
     ncm_stats_vec_set (self->obs_stats, 0, creal (hat_g));
     ncm_stats_vec_set (self->obs_stats, 1, cimag (hat_g));
-    ncm_stats_vec_set (self->obs_stats, 2, sigma * sigma);
+    ncm_stats_vec_set (self->obs_stats, 2, std_shape * std_shape);
     ncm_stats_vec_set (self->obs_stats, 3, m);
     ncm_stats_vec_set (self->obs_stats, 4, c1);
     ncm_stats_vec_set (self->obs_stats, 5, c2);
