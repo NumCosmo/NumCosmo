@@ -289,7 +289,7 @@ test_nc_data_bao_dtr_dhr_set_sample_dr16_qso_2021 (TestNcDataBaoDtrDHr *test, gc
 void
 test_nc_data_bao_dtr_dhr_new_desi_dr1_lym_2025 (TestNcDataBaoDtrDHr *test, gconstpointer pdata)
 {
-  NcDataBaoId id   = NC_DATA_BAO_DTR_DHR_DESI_DR1_LYM_2025;
+  NcDataBaoId id   = NC_DATA_BAO_DTR_DHR_DESI_DR1_LYA_2025;
   NcDistance *dist = nc_distance_new (3.0);
   NcmData *data;
 
@@ -307,7 +307,7 @@ test_nc_data_bao_dtr_dhr_set_sample_desi_dr1_lym_2025 (TestNcDataBaoDtrDHr *test
 {
   NcDataBaoDtrDHr *dtdh      = test->dtdh;
   NcmDataGaussCov *gauss_cov = NCM_DATA_GAUSS_COV (dtdh);
-  NcDataBaoId id             = NC_DATA_BAO_DTR_DHR_DESI_DR1_LYM_2025;
+  NcDataBaoId id             = NC_DATA_BAO_DTR_DHR_DESI_DR1_LYA_2025;
   NcmVector *y               = ncm_data_gauss_cov_peek_mean (gauss_cov);
   NcmMatrix *cov_m           = ncm_data_gauss_cov_peek_cov (gauss_cov);
   NcmVector *x               = NULL;

@@ -1,0 +1,12 @@
+(
+  'NcDataBaoRDV', 
+  {
+    'desc'      : <'DESI DR2 -- M. Abdul Karim et al. (2025), arXiv:2503.14738, table IV (BGS)'>, 
+    'init'      : <true>, 
+    'n-points'  : <1>, 
+    'mean'      : <[7.942]>, 
+    'inv-cov'   : <[[177.77777777777777]]>, 
+    'z'         : <[0.295]>,
+    'is-rDV'    : <false>
+  }
+)
