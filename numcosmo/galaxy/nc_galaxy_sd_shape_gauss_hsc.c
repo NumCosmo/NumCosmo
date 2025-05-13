@@ -351,9 +351,11 @@ _nc_galaxy_sd_shape_gauss_hsc_integ_f (gpointer callback_data, const gdouble z, 
   }
   else
   {
+    complex double e_s = e_o - (c1 + I * c2);
+
     ncm_complex_set_zero (&cplx_g);
     ncm_complex_set_c (&cplx_E_o, e_o);
-    ncm_complex_set_c (&cplx_E_s, e_o);
+    ncm_complex_set_c (&cplx_E_s, e_s);
   }
 
   /* TODO: compute the actual convolution */
