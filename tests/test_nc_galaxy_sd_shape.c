@@ -152,22 +152,22 @@ main (gint argc, gchar *argv[])
       "/nc/galaxy_sd_shape/gauss_hsc/%s/convert_coordinate_system_noise", ellip_conv_name
                                                                );
 
-    g_test_add (test_path_convert_gauss, TestNcGalaxySDShape, (gpointer) & ellip_def_convert,
+    g_test_add (test_path_convert_gauss, TestNcGalaxySDShape, (gpointer) &ellip_def_convert,
                 &test_nc_galaxy_sd_shape_gauss_new,
                 &test_nc_galaxy_sd_shape_gauss_convert_coord,
                 &test_nc_galaxy_sd_shape_free);
 
-    g_test_add (test_path_convert_gauss_hsc, TestNcGalaxySDShape, (gpointer) & ellip_def_convert,
+    g_test_add (test_path_convert_gauss_hsc, TestNcGalaxySDShape, (gpointer) &ellip_def_convert,
                 &test_nc_galaxy_sd_shape_gauss_hsc_new,
                 &test_nc_galaxy_sd_shape_gauss_hsc_convert_coord,
                 &test_nc_galaxy_sd_shape_free);
 
-    g_test_add (test_path_convert_gauss_noise, TestNcGalaxySDShape, (gpointer) & ellip_def_convert,
+    g_test_add (test_path_convert_gauss_noise, TestNcGalaxySDShape, (gpointer) &ellip_def_convert,
                 &test_nc_galaxy_sd_shape_gauss_new,
                 &test_nc_galaxy_sd_shape_gauss_convert_coord_noise,
                 &test_nc_galaxy_sd_shape_free);
 
-    g_test_add (test_path_convert_gauss_hsc_noise, TestNcGalaxySDShape, (gpointer) & ellip_def_convert,
+    g_test_add (test_path_convert_gauss_hsc_noise, TestNcGalaxySDShape, (gpointer) &ellip_def_convert,
                 &test_nc_galaxy_sd_shape_gauss_hsc_new,
                 &test_nc_galaxy_sd_shape_gauss_hsc_convert_coord_noise,
                 &test_nc_galaxy_sd_shape_free);
@@ -184,7 +184,7 @@ main (gint argc, gchar *argv[])
 
       TestEllipDefinition ellip_def = {ellip_conv, ellip_coord};
 
-      for (k = 0; k < 7; k++)
+      for (k = 0; k < 8; k++)
       {
         gchar *test_name = tests_gauss[k].test_name;
 
@@ -193,14 +193,14 @@ main (gint argc, gchar *argv[])
         gchar *test_path;
 
         test_path = g_strdup_printf ("/nc/galaxy_sd_shape/gauss/%s/%s/%s", ellip_coord_name, ellip_conv_name, test_name);
-        g_test_add (test_path, TestNcGalaxySDShape, (gpointer) & ellip_def,
+        g_test_add (test_path, TestNcGalaxySDShape, (gpointer) &ellip_def,
                     &test_nc_galaxy_sd_shape_gauss_new,
                     test_func,
                     &test_nc_galaxy_sd_shape_free);
         g_free (test_path);
       }
 
-      for (k = 0; k < 7; k++)
+      for (k = 0; k < 8; k++)
       {
         gchar *test_name = tests_gauss_hsc[k].test_name;
 
@@ -209,7 +209,7 @@ main (gint argc, gchar *argv[])
         gchar *test_path;
 
         test_path = g_strdup_printf ("/nc/galaxy_sd_shape/gauss_hsc/%s/%s/%s", ellip_coord_name, ellip_conv_name, test_name);
-        g_test_add (test_path, TestNcGalaxySDShape, (gpointer) & ellip_def,
+        g_test_add (test_path, TestNcGalaxySDShape, (gpointer) &ellip_def,
                     &test_nc_galaxy_sd_shape_gauss_hsc_new,
                     test_func,
                     &test_nc_galaxy_sd_shape_free);
