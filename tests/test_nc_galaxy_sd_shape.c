@@ -386,7 +386,7 @@ test_nc_galaxy_sd_shape_gauss_convert_coord (TestNcGalaxySDShape *test, gconstpo
     gdouble e_o_1_celestial, e_o_2_celestial, std_noise_celestial;
     gdouble e_o_1_euclidean, e_o_2_euclidean, std_noise_euclidean;
 
-    z_data->z   = ncm_rng_uniform_gen (rng, 0.2, 1.2);
+    z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0, 2.0);
     p_data->dec = ncm_rng_uniform_gen (rng, -2.0, 2.0);
 
@@ -434,6 +434,10 @@ test_nc_galaxy_sd_shape_gauss_convert_coord (TestNcGalaxySDShape *test, gconstpo
             g_assert_not_reached ();
             break;
         }
+      }
+      else
+      {
+        e_o = e_s;
       }
 
       e_s = e_s * cexp (2.0 * I * phi);
@@ -496,6 +500,10 @@ test_nc_galaxy_sd_shape_gauss_convert_coord (TestNcGalaxySDShape *test, gconstpo
             break;
         }
       }
+      else
+      {
+        e_o = e_s;
+      }
 
       e_s = e_s * cexp (2.0 * I * phi);
       e_o = e_o * cexp (2.0 * I * phi);
@@ -542,7 +550,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_convert_coord (TestNcGalaxySDShape *test, gcon
     gdouble e_s_1_celestial, e_s_2_celestial;
     gdouble e_s_1_euclidean, e_s_2_euclidean;
 
-    z_data->z   = ncm_rng_uniform_gen (rng, 0.2, 1.2);
+    z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0, 2.0);
     p_data->dec = ncm_rng_uniform_gen (rng, -2.0, 2.0);
 
@@ -596,6 +604,10 @@ test_nc_galaxy_sd_shape_gauss_hsc_convert_coord (TestNcGalaxySDShape *test, gcon
             g_assert_not_reached ();
             break;
         }
+      }
+      else
+      {
+        e_o = e_s + c1 + I * c2;
       }
 
       ncm_assert_cmpdouble_e (creal (e_s), ==, e_s_1_celestial, 1e-10, 1e-10);
@@ -704,7 +716,7 @@ test_nc_galaxy_sd_shape_gauss_convert_coord_noise (TestNcGalaxySDShape *test, gc
     gdouble e_o_1_celestial, e_o_2_celestial, std_noise_celestial;
     gdouble e_o_1_euclidean, e_o_2_euclidean, std_noise_euclidean;
 
-    z_data->z   = ncm_rng_uniform_gen (rng, 0.2, 1.2);
+    z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0, 2.0);
     p_data->dec = ncm_rng_uniform_gen (rng, -2.0, 2.0);
 
@@ -767,7 +779,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_convert_coord_noise (TestNcGalaxySDShape *test
     gdouble e_s_1_celestial, e_s_2_celestial;
     gdouble e_s_1_euclidean, e_s_2_euclidean;
 
-    z_data->z   = ncm_rng_uniform_gen (rng, 0.2, 1.2);
+    z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0, 2.0);
     p_data->dec = ncm_rng_uniform_gen (rng, -2.0, 2.0);
 
@@ -824,7 +836,7 @@ test_nc_galaxy_sd_shape_gauss_gen (TestNcGalaxySDShape *test, gconstpointer pdat
   {
     gdouble epsilon_1_out, epsilon_2_out, std_noise_out;
 
-    z_data->z   = ncm_rng_uniform_gen (rng, 0.2, 1.2);
+    z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0, 2.0);
     p_data->dec = ncm_rng_uniform_gen (rng, -2.0, 2.0);
     nc_galaxy_sd_shape_gauss_gen (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), test->mset, s_data, std_noise, test->ellip_coord, rng);
@@ -870,6 +882,10 @@ test_nc_galaxy_sd_shape_gauss_gen (TestNcGalaxySDShape *test, gconstpointer pdat
             break;
         }
       }
+      else
+      {
+        e_o = e_s;
+      }
 
       e_s = e_s * cexp (2.0 * I * phi);
       e_o = e_o * cexp (2.0 * I * phi);
@@ -914,7 +930,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_gen (TestNcGalaxySDShape *test, gconstpointer 
     const gdouble m         = ncm_rng_uniform_gen (rng, -0.2, 0.2);
     gdouble epsilon_1_out, epsilon_2_out, std_shape_out, std_noise_out, c1_out, c2_out, m_out;
 
-    z_data->z   = ncm_rng_uniform_gen (rng, 0.2, 1.2);
+    z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0, 2.0);
     p_data->dec = ncm_rng_uniform_gen (rng, -2.0, 2.0);
 
@@ -934,12 +950,16 @@ test_nc_galaxy_sd_shape_gauss_hsc_gen (TestNcGalaxySDShape *test, gconstpointer 
       const gdouble z_cl = nc_halo_position_get_redshift (test->halo_position);
       complex double e_s = (s_data->epsilon_int_1 + I * s_data->epsilon_int_2);
       complex double e_o = e_s;
+      complex double c   = c1 + I * c2;
       gdouble theta, phi, gt, r;
 
       nc_halo_position_polar_angles (test->halo_position, p_data->ra, p_data->dec, &theta, &phi);
 
       if (test->ellip_coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
+      {
         phi = M_PI - phi;
+        c   = conj (c);
+      }
 
       r = nc_halo_position_projected_radius (test->halo_position, test->cosmo, theta);
 
@@ -953,7 +973,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_gen (TestNcGalaxySDShape *test, gconstpointer 
                                                        r, z_data->z, z_cl, z_cl);
 
         g = gt * cexp (2.0 * I * phi);
-        g = (1.0 + m) * g + (c1 + I * c2);
+        g = (1.0 + m) * g + c;
 
         switch (test->ellip_conv)
         {
@@ -973,6 +993,10 @@ test_nc_galaxy_sd_shape_gauss_hsc_gen (TestNcGalaxySDShape *test, gconstpointer 
             g_assert_not_reached ();
             break;
         }
+      }
+      else
+      {
+        e_o = e_s + c;
       }
 
       ncm_stats_vec_set (stats, 0, epsilon_1_out - creal (e_o));
@@ -1018,7 +1042,7 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShape *test, gconstpointer pd
     gdouble epsilon_1_out, epsilon_2_out, std_noise_out;
     gdouble int0;
 
-    z_data->z   = ncm_rng_uniform_gen (rng, 0.2, 1.2);
+    z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0e-2, 2.0e-2);
     p_data->dec = ncm_rng_uniform_gen (rng, -2.0e-2, 2.0e-2);
     nc_galaxy_sd_shape_gauss_gen (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), test->mset, s_data, std_noise, test->ellip_coord, rng);
@@ -1040,6 +1064,10 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShape *test, gconstpointer pd
       gdouble theta, phi, r;
 
       nc_halo_position_polar_angles (test->halo_position, p_data->ra, p_data->dec, &theta, &phi);
+
+      if (test->ellip_coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
+        phi = M_PI - phi;
+
       r = nc_halo_position_projected_radius (test->halo_position, test->cosmo, theta);
 
       if (z_data->z > z_cl)
@@ -1068,6 +1096,10 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShape *test, gconstpointer pd
           default:
             g_assert_not_reached ();
         }
+      }
+      else
+      {
+        e_s = e_o;
       }
 
       {
@@ -1163,7 +1195,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
     gdouble int0;
 
 
-    z_data->z   = ncm_rng_uniform_gen (rng, 0.2, 1.2);
+    z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0e-2, 2.0e-2);
     p_data->dec = ncm_rng_uniform_gen (rng, -2.0e-2, 2.0e-2);
 
@@ -1195,6 +1227,10 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
       gdouble theta, phi, r;
 
       nc_halo_position_polar_angles (test->halo_position, p_data->ra, p_data->dec, &theta, &phi);
+
+      if (test->ellip_coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
+        phi = M_PI - phi;
+
       r = nc_halo_position_projected_radius (test->halo_position, test->cosmo, theta);
 
       if (z_data->z > z_cl)
@@ -1224,6 +1260,10 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
           default:
             g_assert_not_reached ();
         }
+      }
+      else
+      {
+        e_s = e_o - (c1 + I * c2);
       }
 
       {
