@@ -374,17 +374,13 @@ _nc_cluster_mass_ascaso_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble l
 
   _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
 
-  if (lnM_obs[0] < CUT)
-  {
-    return 0.0;
-  }
-  else
-  {
     const gdouble x     = (lnM_obs[0] - lnR_true) / sigma;
     const gdouble x_cut = (lnR_true - CUT) / (M_SQRT2 * sigma);
 
-    return 2.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x) / erfc (-x_cut);
-  }
+    if (lnM_obs[0] < CUT)
+        return 0.0;
+    else
+        return 1.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x);
 }
 
 static gdouble
@@ -472,33 +468,33 @@ _nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gd
 static void
 _nc_cluster_mass_ascaso_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  /* NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm); */
-  /* const gdouble mean          = lnM_obs[0] - MU_P0; / * - P2 * log10(1.0 + z);  FIX This!!!! What is the mean richeness? * / */
-  const gdouble logRichnessl = M_LN10 * log10 (1e12);
-  const gdouble logRichnessu = M_LN10 * log10 (1e16);
 
-  *lnM_lower = logRichnessl;
-  *lnM_upper = logRichnessu;
+  const gdouble lnMl =  M_LN10 * 12.0;
+  const gdouble lnMu =  M_LN10 * 16.0;
 
+  *lnM_lower = lnMl;
+  *lnM_upper = lnMu;
   return;
 }
 
 static void
 _nc_cluster_mass_ascaso_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  const gdouble lnMl = M_LN10 * log10 (1e12);
-  const gdouble lnMu = M_LN10 * log10 (1e16);
 
+  const gdouble lnMl =  M_LN10 * 12.0;
+  const gdouble lnMu =  M_LN10 * 16.0;
+    
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;
 }
 
 static void
 _nc_cluster_mass_ascaso_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
-{
-  const gdouble lnMl = M_LN10 * log10 (1e12);
-  const gdouble lnMu = M_LN10 * log10 (1e16);
-
+{ 
+    
+  const gdouble lnMl =  M_LN10 * 12.0;
+  const gdouble lnMu =  M_LN10 * 16.0;
+    
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;
 
@@ -544,9 +540,17 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
       const gdouble x      = (lnM_obs_ptr[i] - lnR) / sigma;
       const gdouble x_cut  = (lnR - CUT) / (M_SQRT2 * sigma);
 
-      res_ptr[i] = 2.0 * exp (-0.5 * x * x) / (sqrt_2pi * sigma) / erfc (-x_cut);
+      if (lnM_obs_ptr[i] <CUT)
+      {
+        res_ptr[i]=0.0;
+      }
+    else
+      {
+        res_ptr[i] = 1.0 * exp (-0.5 * x * x) / (sqrt_2pi * sigma);
+      }
+}
     }
-  }
+
   else
   {
     for (i = 0; i < len; i++)
@@ -557,7 +561,14 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
       const gdouble x      = (lnM_obs_ptr[i * tda] - lnR) / sigma;
       const gdouble x_cut  = (lnR - CUT) / (M_SQRT2 * sigma);
 
-      res_ptr[i] = 2.0 * exp (-0.5 * x * x) / (sqrt_2pi * sigma) / erfc (-x_cut);
+      if (lnM_obs_ptr[i * tda] <CUT)
+      {
+     res_ptr[i]=0.0;
+      }
+    else
+      {
+      res_ptr[i] = 1.0 * exp (-0.5 * x * x) / (sqrt_2pi * sigma);
+      }
     }
   }
 }
