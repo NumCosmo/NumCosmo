@@ -788,7 +788,8 @@ _nc_hipert_two_fluids_f_fast (sunrealtype alpha, N_Vector y, N_Vector ydot, gpoi
   const gdouble Pzeta_I = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I);
   const gdouble PS_I    = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I);
 
-  /* printf ("fast: alpha = %g, zeta_R = %g, zeta_I = %g\n", alpha, zeta_R, zeta_I); */
+  printf ("fast: alpha = % 22.15g, zeta_R = %g, zeta_I = %g\n", alpha, zeta_R, zeta_I);
+  fflush (stdout);
 
   NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = eom->y * PS_R;
   NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = PS_R / eom->m_s;
@@ -830,13 +831,14 @@ _nc_hipert_two_fluids_f_slow (sunrealtype alpha, N_Vector y, N_Vector ydot, gpoi
   NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = -eom->mnu2_zeta * zeta_I;
   NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = 0.0;
 
-  /*
-   *  printf ("slow: % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
-   *       zeta_R, S_R, Pzeta_R, PS_R, zeta_I, S_I, Pzeta_I, PS_I);
-   *  printf ("    : % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
-   *       NV_Ith_S (ydot, 0), NV_Ith_S (ydot, 1), NV_Ith_S (ydot, 2), NV_Ith_S (ydot, 3),
-   *       NV_Ith_S (ydot, 4), NV_Ith_S (ydot, 5), NV_Ith_S (ydot, 6), NV_Ith_S (ydot, 7));
-   */
+
+  printf ("slow: % 22.15g % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
+          alpha, zeta_R, S_R, Pzeta_R, PS_R, zeta_I, S_I, Pzeta_I, PS_I);
+  printf ("    : % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
+          NV_Ith_S (ydot, 0), NV_Ith_S (ydot, 1), NV_Ith_S (ydot, 2), NV_Ith_S (ydot, 3),
+          NV_Ith_S (ydot, 4), NV_Ith_S (ydot, 5), NV_Ith_S (ydot, 6), NV_Ith_S (ydot, 7));
+  fflush (stdout);
+
   return 0;
 }
 
@@ -1479,11 +1481,11 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
     printf ("Creating ERKStep, alpha = %f\n", alpha);
     fflush (stdout);
 
-    self->inner_arkode = ARKStepCreate (NULL, _nc_hipert_two_fluids_f_fast, alpha, pself->y, pself->sunctx);
+    self->inner_arkode = ARKStepCreate (_nc_hipert_two_fluids_f_fast, NULL, alpha, pself->y, pself->sunctx);
     NCM_CVODE_CHECK (self->inner_arkode, "ARKStepCreate", 0, );
 
-    flag = ARKodeSetLinearSolver (self->inner_arkode, pself->LS, pself->A);
-    NCM_CVODE_CHECK (&flag, "ARKodeSetLinearSolver", 1, );
+    /*flag = ARKodeSetLinearSolver (self->inner_arkode, pself->LS, pself->A); */
+    /*NCM_CVODE_CHECK (&flag, "ARKodeSetLinearSolver", 1, ); */
 
     flag = ARKodeSetLinear (self->inner_arkode, 1);
     NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
@@ -1506,7 +1508,7 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
     printf ("Creating MRIStep\n");
     fflush (stdout);
 
-    self->arkode = MRIStepCreate (NULL, _nc_hipert_two_fluids_f_slow, alpha, pself->y, self->inner_stepper, pself->sunctx);
+    self->arkode = MRIStepCreate (_nc_hipert_two_fluids_f_slow, NULL, alpha, pself->y, self->inner_stepper, pself->sunctx);
     NCM_CVODE_CHECK (self->arkode, "SPRKStepCreate", 0, );
 #endif /* HAVE_SUNDIALS_ARKODE */
 
@@ -1580,8 +1582,8 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
   flag = ARKodeSetAdaptController (self->arkode, NULL);
   NCM_CVODE_CHECK (&flag, "ARKodeSetAdaptController", 1, );
 
-  flag = ARKodeSetLinearSolver (self->arkode, pself->LS, pself->A);
-  NCM_CVODE_CHECK (&flag, "ARKodeSetLinearSolver", 1, );
+  /* flag = ARKodeSetLinearSolver (self->arkode, pself->LS, pself->A); */
+  /* NCM_CVODE_CHECK (&flag, "ARKodeSetLinearSolver", 1, ); */
 
   /*flag = ARKodeSetJacFn (self->arkode, dfI_dy); */
   /*NCM_CVODE_CHECK (&flag, "ARKodeSetJacFn", 1, ); */
@@ -1696,19 +1698,19 @@ nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble a
     printf ("A >>>>>>>>>>>>>>>>>>>>>>>>>>>> alphaf %g\n", alphaf);
     fflush (stdout);
 
-    printf ("#-----------------------------------------\n");
+    printf ("#---------------------1--------------------\n");
     fflush (stdout);
     ARKodePrintMem (self->inner_arkode, stdout);
     fflush (stdout);
-    printf ("#-----------------------------------------\n");
+    printf ("#---------------------2--------------------\n");
     fflush (stdout);
     /*ARKodePrintMem (self->arkode, stdout); */
     fflush (stdout);
-    printf ("#-----------------------------------------\n");
+    printf ("#---------------------3--------------------\n");
     fflush (stdout);
 
     flag = ARKodeEvolve (self->arkode, alphaf, pself->y, &alpha_i, ARK_NORMAL);
-    NCM_CVODE_CHECK (&flag, "CVode[nc_hipert_two_fluids_evolve]", 1, );
+    NCM_CVODE_CHECK (&flag, "ARKodeEvolve[nc_hipert_two_fluids_evolve]", 1, );
 
     fflush (stderr);
     printf ("A evolved >>>>>>>>>>>>>>>>>>>>>>>>>>>> alpha_i %g\n", alpha_i);
@@ -1826,7 +1828,7 @@ nc_hipert_two_fluids_evolve_array (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdo
     while (alphaf > pself->alpha0)
     {
       flag = ARKodeEvolve (self->arkode, alphaf, pself->y, &alpha_i, ARK_ONE_STEP);
-      NCM_CVODE_CHECK (&flag, "CVode[nc_hipert_two_fluids_evolve]", 1, NULL);
+      NCM_CVODE_CHECK (&flag, "ARKodeEvolve[nc_hipert_two_fluids_evolve]", 1, NULL);
 
       pself->alpha0 = alpha_i;
 
