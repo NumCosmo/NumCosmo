@@ -240,6 +240,14 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDS
   nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
 
   nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
+
+  if (data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
+  {
+    phi   = M_PI - phi;
+    e_s   = conj (e_s);
+    noise = conj (noise);
+  }
+
   radius = nc_halo_position_projected_radius (halo_position, cosmo, theta);
 
   if (z > z_cl)
@@ -270,12 +278,6 @@ _nc_galaxy_sd_shape_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDS
 
   e1_int = creal (e_s);
   e2_int = cimag (e_s);
-
-  if (data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
-  {
-    e2     = -e2;
-    e2_int = -e2_int;
-  }
 
   data->epsilon_int_1  = e1_int;
   data->epsilon_int_2  = e2_int;
@@ -336,7 +338,7 @@ _nc_galaxy_sd_shape_gauss_integ_f (gpointer callback_data, const gdouble z, NcGa
   gdouble e2                      = ldata->epsilon_obs_2;
   gdouble sigma                   = SIGMA;
   gdouble std_noise               = ldata->std_noise;
-  complex double e_o              = data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN ? (e1 - I * e2) : (e1 + I * e2);
+  complex double e_o              = e1 + I * e2;
   NcmComplex cplx_g, cplx_E_o, cplx_E_s;
 
   if (z > z_cl)
@@ -437,6 +439,10 @@ _nc_galaxy_sd_shape_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *ms
     gdouble theta, phi;
 
     nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
+
+    if (data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
+      phi = M_PI - phi;
+
     ldata_i->radius = nc_halo_position_projected_radius (halo_position, cosmo, theta);
     ldata_i->phi    = phi;
 
@@ -537,11 +543,14 @@ _nc_galaxy_sd_shape_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset,
     const gdouble std_shape           = self->std_shape;
     const gdouble var_tot             = std_shape * std_shape + std_noise * std_noise;
     const gdouble weight              = 1.0 / var_tot;
-    complex double e_o                = data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN ? (e1 - I * e2) : (e1 + I * e2);
+    complex double e_o                = e1 + I * e2;
     complex double hat_g;
     gdouble theta, phi;
 
     nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
+
+    if (data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
+      phi = M_PI - phi;
 
     hat_g = e_o * cexp (-2.0 * I * phi);
 

@@ -221,16 +221,24 @@ _nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalax
   const gdouble m                              = ldata->m;
   complex double e_s                           = _gauss_cut_gen (rng, sigma);
   complex double noise                         = noise1 + I * noise2;
+  complex double c                             = c1 + I * c2;
   gdouble theta                                = 0.0;
   gdouble phi                                  = 0.0;
   complex double e_o;
-  gdouble e1, e2, e1_int, e2_int;
   gdouble radius;
 
   nc_halo_position_prepare_if_needed (halo_position, cosmo);
   nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
 
   nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
+
+  if (data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
+  {
+    phi   = M_PI - phi;
+    e_s   = conj (e_s);
+    noise = conj (noise);
+  }
+
   radius = nc_halo_position_projected_radius (halo_position, cosmo, theta);
 
   if (z > z_cl)
@@ -245,7 +253,7 @@ _nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalax
     NcmComplex cplx_E_o, cplx_g;
 
     /* Adding bias */
-    g = (1.0 + m) * g + (c1 + I * c2);
+    g = (1.0 + m) * g + c;
 
     ncm_complex_set_c (&cplx_g, g);
     nc_galaxy_sd_shape_apply_shear (gsds, &cplx_g, &cplx_E_s, &cplx_E_o);
@@ -254,27 +262,15 @@ _nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalax
   }
   else
   {
-    e_o = e_s + c1 + I * c2;
+    e_o = e_s + c;
   }
 
   e_o += noise;
 
-  e1 = creal (e_o);
-  e2 = cimag (e_o);
-
-  e1_int = creal (e_s);
-  e2_int = cimag (e_s);
-
-  if (data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
-  {
-    e2     = -e2;
-    e2_int = -e2_int;
-  }
-
-  data->epsilon_int_1  = e1_int;
-  data->epsilon_int_2  = e2_int;
-  ldata->epsilon_obs_1 = e1;
-  ldata->epsilon_obs_2 = e2;
+  data->epsilon_int_1  = creal (e_s);
+  data->epsilon_int_2  = cimag (e_s);
+  ldata->epsilon_obs_1 = creal (e_o);
+  ldata->epsilon_obs_2 = cimag (e_o);
   ldata->radius        = radius;
   ldata->phi           = phi;
 }
@@ -333,7 +329,7 @@ _nc_galaxy_sd_shape_gauss_hsc_integ_f (gpointer callback_data, const gdouble z, 
   gdouble c2                         = ldata->c2;
   gdouble m                          = ldata->m;
   gdouble sigma                      = ldata->sigma;
-  complex double e_o                 = (data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN) ? (e1 - I * e2) : e1 + I * e2;
+  complex double e_o                 = e1 + I * e2;
   NcmComplex cplx_g, cplx_E_o, cplx_E_s;
 
   if (z > z_cl)
@@ -438,6 +434,10 @@ _nc_galaxy_sd_shape_gauss_hsc_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet
     gdouble theta, phi;
 
     nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
+
+    if (data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
+      phi = M_PI - phi;
+
     ldata_i->radius = nc_halo_position_projected_radius (halo_position, cosmo, theta);
     ldata_i->phi    = phi;
 
@@ -553,11 +553,14 @@ _nc_galaxy_sd_shape_gauss_hsc_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *m
     const gdouble std_shape              = ldata_i->std_shape;
     const gdouble var_tot                = std_shape * std_shape + std_noise * std_noise;
     const gdouble weight                 = 1.0 / var_tot;
-    complex double e_o                   = data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN ? (e1 - I * e2) : (e1 + I * e2);
+    complex double e_o                   = e1 + I * e2;
     complex double hat_g;
     gdouble theta, phi;
 
     nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
+
+    if (data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
+      phi = M_PI - phi;
 
     hat_g = e_o * cexp (-2.0 * I * phi);
 
