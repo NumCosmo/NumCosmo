@@ -687,6 +687,7 @@ nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShapeGaussHSC *gsdshsc, NcmMSet *mse
   data->coord      = coord;
   ldata->std_shape = std_shape;
   ldata->std_noise = std_noise;
+  ldata->sigma     = nc_galaxy_sd_shape_gauss_sigma_from_std_shape (std_shape);
   ldata->c1        = c1;
   ldata->c2        = c2;
   ldata->m         = m;
