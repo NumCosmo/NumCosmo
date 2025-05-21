@@ -121,13 +121,11 @@ _nc_galaxy_sd_shape_get_property (GObject *object, guint property_id, GValue *va
     case PROP_ELLIP_CONV:
       g_value_set_enum (value, nc_galaxy_sd_shape_get_ellip_conv (gsds));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
-      break;
+    default:                                                          /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                          /* LCOV_EXCL_LINE */
   }
 }
-
-/* LCOV_EXCL_STOP */
 
 static void
 _nc_galaxy_sd_shape_finalize (GObject *object)
@@ -273,14 +271,24 @@ _nc_galaxy_sd_shape_apply_shear_inv_trace (NcGalaxySDShape *gsds, const NcmCompl
 static gdouble
 _nc_galaxy_sd_shape_apply_shear_trace_lndet_jac (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *chi_obs)
 {
-  complex double gn           = ncm_complex_c (g);
-  complex double chin_obs     = ncm_complex_c (chi_obs);
-  complex double gn_conj      = conj (gn);
-  const gdouble abs_g2        = gn * gn_conj;
-  const gdouble lndet_jac_num = 3.0 * log1p (-abs_g2);
+  complex double gn       = ncm_complex_c (g);
+  complex double chin_obs = ncm_complex_c (chi_obs);
+  complex double gn_conj  = conj (gn);
+  const gdouble abs_g2    = gn * gn_conj;
   const gdouble lndet_jac_den = 3.0 * log1p (-2.0 * creal (gn_conj * chin_obs) + abs_g2);
 
-  return lndet_jac_num - lndet_jac_den;
+  if (abs_g2 <= 1.0)
+  {
+    const gdouble lndet_jac_num = 3.0 * log1p (-abs_g2);
+
+    return lndet_jac_num - lndet_jac_den;
+  }
+  else
+  {
+    const gdouble lndet_jac_num = 3.0 * log (abs_g2 - 1.0);
+
+    return lndet_jac_num - lndet_jac_den;
+  }
 }
 
 static void
@@ -332,9 +340,9 @@ _nc_galaxy_sd_shape_apply_shear_trace_det_lndet_jac (NcGalaxySDShape *gsds, cons
   }
   else
   {
-    const double en_obs_m_gn       = en_obs - gn;
+    const complex double en_obs_m_gn       = en_obs - gn;
     const gdouble abs_en_obs_m_gn2 = en_obs_m_gn * conj (en_obs_m_gn);
-    const gdouble ln_jac_num       = 2.0 * log1p (-abs_g2);
+    const gdouble ln_jac_num       = 2.0 * log (abs_g2 - 1.0);
     const gdouble ln_jac_den       = 2.0 * log (abs_en_obs_m_gn2);
 
     return ln_jac_num - ln_jac_den;
@@ -358,9 +366,9 @@ _nc_galaxy_sd_shape_set_ellip_conv (NcGalaxySDShape *gsds, NcGalaxyWLObsEllipCon
       self->apply_shear_inv      = _nc_galaxy_sd_shape_apply_shear_inv_trace_det;
       self->int_to_obs_lndet_jac = _nc_galaxy_sd_shape_apply_shear_trace_det_lndet_jac;
       break;
-    default:
-      g_error ("nc_galaxy_sd_shape_get_ellip_conv: ellipse type %d not implemented.", self->ellip_conv);
-      break;
+    default:                                                                                             /* LCOV_EXCL_LINE */
+      g_error ("nc_galaxy_sd_shape_get_ellip_conv: ellipse type %d not implemented.", self->ellip_conv); /* LCOV_EXCL_LINE */
+      break;                                                                                             /* LCOV_EXCL_LINE */
   }
 
   self->ellip_conv = ellip_conv;

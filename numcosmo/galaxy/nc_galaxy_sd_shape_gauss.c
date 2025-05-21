@@ -586,9 +586,9 @@ _nc_galaxy_sd_shape_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset,
         *rho     = ncm_stats_vec_get_cor (self->obs_stats, 0, 1);
         break;
       }
-      default:
-        g_assert_not_reached ();
-        break;
+      default:                   /* LCOV_EXCL_LINE */
+        g_assert_not_reached (); /* LCOV_EXCL_LINE */
+        break;                   /* LCOV_EXCL_LINE */
     }
   }
 }
@@ -778,14 +778,14 @@ nc_galaxy_sd_shape_gauss_sigma_from_std_shape (const gdouble std_shape)
 
     if (lambda < 1.0e-2)
     {
-      g_warning ("nc_galaxy_sd_shape_gauss_new: sigma_from_std_shape failed to converge");
-      break;
+      g_warning ("nc_galaxy_sd_shape_gauss_new: sigma_from_std_shape failed to converge"); /* LCOV_EXCL_LINE */
+      break;                                                                               /* LCOV_EXCL_LINE */
     }
 
     if (++iter == 10000)
     {
-      g_warning ("nc_galaxy_sd_shape_gauss_new: sigma_from_std_shape failed to converge");
-      break;
+      g_warning ("nc_galaxy_sd_shape_gauss_new: sigma_from_std_shape failed to converge"); /* LCOV_EXCL_LINE */
+      break;                                                                               /* LCOV_EXCL_LINE */
     }
 
     if (fabs (delta) < GSL_DBL_EPSILON * 10.0)

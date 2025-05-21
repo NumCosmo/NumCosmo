@@ -601,9 +601,9 @@ _nc_galaxy_sd_shape_gauss_hsc_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *m
         *sigma_x = 0.5 * ncm_stats_vec_get_sd (self->obs_stats, 1) / R / (1.0 + mean_m);
         *rho     = ncm_stats_vec_get_cor (self->obs_stats, 0, 1);
         break;
-      default:
-        g_assert_not_reached ();
-        break;
+      default:                   /* LCOV_EXCL_LINE */
+        g_assert_not_reached (); /* LCOV_EXCL_LINE */
+        break;                   /* LCOV_EXCL_LINE */
     }
   }
 }
