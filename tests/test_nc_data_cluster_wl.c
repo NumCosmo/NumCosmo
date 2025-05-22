@@ -47,17 +47,28 @@ typedef struct _TestNcDataClusterWL
 } TestNcDataClusterWL;
 
 
-static void test_nc_data_cluster_wl_new_spec (TestNcDataClusterWL *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_new_gauss (TestNcDataClusterWL *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_new_pz (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_new_spec_gauss (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_new_gauss_gauss (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_new_pz_gauss (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_new_spec_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_new_gauss_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_new_pz_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata);
 static void test_nc_data_cluster_wl_free (TestNcDataClusterWL *test, gconstpointer pdata);
 
-static void test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_ra_dec_limits (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_gen_gauss (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_gen_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata);
 
-static void test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_serialize (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_ra_dec_limits_gauss (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_ra_dec_limits_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata);
+
+static void test_nc_data_cluster_wl_gen_obs_gauss (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_gen_obs_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata);
+
+static void test_nc_data_cluster_wl_m2lnP_gauss (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_m2lnP_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata);
+
+static void test_nc_data_cluster_wl_serialize_gauss (TestNcDataClusterWL *test, gconstpointer pdata);
+static void test_nc_data_cluster_wl_serialize_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -68,69 +79,134 @@ main (gint argc, gchar *argv[])
 
   /* g_test_set_nonfatal_assertions (); */
 
-  g_test_add ("/nc/data_cluster_wl/spec/gen", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_spec,
-              &test_nc_data_cluster_wl_gen,
+  g_test_add ("/nc/data_cluster_wl/gauss/spec/gen", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_spec_gauss,
+              &test_nc_data_cluster_wl_gen_gauss,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/data_cluster_wl/spec/ra_dec/limits", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_spec,
-              &test_nc_data_cluster_wl_ra_dec_limits,
+  g_test_add ("/nc/data_cluster_wl/gauss/spec/ra_dec/limits", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_spec_gauss,
+              &test_nc_data_cluster_wl_ra_dec_limits_gauss,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/data_cluster_wl/spec/gen_obs", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_spec,
-              &test_nc_data_cluster_wl_gen_obs,
+  g_test_add ("/nc/data_cluster_wl/gauss/spec/gen_obs", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_spec_gauss,
+              &test_nc_data_cluster_wl_gen_obs_gauss,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/data_cluster_wl/spec/m2lnP", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_spec,
-              &test_nc_data_cluster_wl_m2lnP,
+  g_test_add ("/nc/data_cluster_wl/gauss/spec/m2lnP", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_spec_gauss,
+              &test_nc_data_cluster_wl_m2lnP_gauss,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/data_cluster_wl/spec/serialize", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_spec,
-              &test_nc_data_cluster_wl_serialize,
+  g_test_add ("/nc/data_cluster_wl/gauss/spec/serialize", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_spec_gauss,
+              &test_nc_data_cluster_wl_serialize_gauss,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/data_cluster_wl/gauss/ra_dec/limits", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_gauss,
-              &test_nc_data_cluster_wl_ra_dec_limits,
+  g_test_add ("/nc/data_cluster_wl/gauss/gauss/ra_dec/limits", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_gauss_gauss,
+              &test_nc_data_cluster_wl_ra_dec_limits_gauss,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/data_cluster_wl/gauss/gen_obs", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_gauss,
-              &test_nc_data_cluster_wl_gen_obs,
+  g_test_add ("/nc/data_cluster_wl/gauss/gauss/gen_obs", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_gauss_gauss,
+              &test_nc_data_cluster_wl_gen_obs_gauss,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/data_cluster_wl/gauss/m2lnP", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_gauss,
-              &test_nc_data_cluster_wl_m2lnP,
+  g_test_add ("/nc/data_cluster_wl/gauss/gauss/m2lnP", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_gauss_gauss,
+              &test_nc_data_cluster_wl_m2lnP_gauss,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/data_cluster_wl/gauss/serialize", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_gauss,
-              &test_nc_data_cluster_wl_serialize,
+  g_test_add ("/nc/data_cluster_wl/gauss/gauss/serialize", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_gauss_gauss,
+              &test_nc_data_cluster_wl_serialize_gauss,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/data_cluster_wl/pz/ra_dec/limits", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_pz,
-              &test_nc_data_cluster_wl_ra_dec_limits,
+  g_test_add ("/nc/data_cluster_wl/gauss/pz/ra_dec/limits", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_pz_gauss,
+              &test_nc_data_cluster_wl_ra_dec_limits_gauss,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/data_cluster_wl/pz/gen_obs", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_pz,
-              &test_nc_data_cluster_wl_gen_obs,
+  g_test_add ("/nc/data_cluster_wl/gauss/pz/gen_obs", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_pz_gauss,
+              &test_nc_data_cluster_wl_gen_obs_gauss,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/data_cluster_wl/pz/m2lnP", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_pz,
-              &test_nc_data_cluster_wl_m2lnP,
+  g_test_add ("/nc/data_cluster_wl/gauss/pz/m2lnP", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_pz_gauss,
+              &test_nc_data_cluster_wl_m2lnP_gauss,
               &test_nc_data_cluster_wl_free);
 
-  g_test_add ("/nc/data_cluster_wl/pz/serialize", TestNcDataClusterWL, NULL,
-              &test_nc_data_cluster_wl_new_pz,
-              &test_nc_data_cluster_wl_serialize,
+  g_test_add ("/nc/data_cluster_wl/gauss/pz/serialize", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_pz_gauss,
+              &test_nc_data_cluster_wl_serialize_gauss,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/gauss_hsc/spec/gen", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_spec_gauss_hsc,
+              &test_nc_data_cluster_wl_gen_gauss_hsc,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/gauss_hsc/spec/ra_dec/limits", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_spec_gauss_hsc,
+              &test_nc_data_cluster_wl_ra_dec_limits_gauss_hsc,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/gauss_hsc/spec/gen_obs", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_spec_gauss_hsc,
+              &test_nc_data_cluster_wl_gen_obs_gauss_hsc,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/gauss_hsc/spec/m2lnP", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_spec_gauss_hsc,
+              &test_nc_data_cluster_wl_m2lnP_gauss_hsc,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/gauss_hsc/spec/serialize", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_spec_gauss_hsc,
+              &test_nc_data_cluster_wl_serialize_gauss_hsc,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/gauss_hsc/gauss/ra_dec/limits", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_gauss_gauss_hsc,
+              &test_nc_data_cluster_wl_ra_dec_limits_gauss_hsc,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/gauss_hsc/gauss/gen_obs", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_gauss_gauss_hsc,
+              &test_nc_data_cluster_wl_gen_obs_gauss_hsc,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/gauss_hsc/gauss/m2lnP", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_gauss_gauss_hsc,
+              &test_nc_data_cluster_wl_m2lnP_gauss_hsc,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/gauss_hsc/gauss/serialize", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_gauss_gauss_hsc,
+              &test_nc_data_cluster_wl_serialize_gauss_hsc,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/gauss_hsc/pz/ra_dec/limits", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_pz_gauss_hsc,
+              &test_nc_data_cluster_wl_ra_dec_limits_gauss_hsc,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/gauss_hsc/pz/gen_obs", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_pz_gauss_hsc,
+              &test_nc_data_cluster_wl_gen_obs_gauss_hsc,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/gauss_hsc/pz/m2lnP", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_pz_gauss_hsc,
+              &test_nc_data_cluster_wl_m2lnP_gauss_hsc,
+              &test_nc_data_cluster_wl_free);
+
+  g_test_add ("/nc/data_cluster_wl/gauss_hsc/pz/serialize", TestNcDataClusterWL, NULL,
+              &test_nc_data_cluster_wl_new_pz_gauss_hsc,
+              &test_nc_data_cluster_wl_serialize_gauss_hsc,
               &test_nc_data_cluster_wl_free);
 
   g_test_run ();
@@ -139,7 +215,7 @@ main (gint argc, gchar *argv[])
 }
 
 static void
-test_nc_data_cluster_wl_new_spec (TestNcDataClusterWL *test, gconstpointer pdata)
+test_nc_data_cluster_wl_new_spec_gauss (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   NcGalaxySDShape *s_dist             = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET));
   NcGalaxySDTrueRedshift *z_true_dist = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
@@ -176,7 +252,7 @@ test_nc_data_cluster_wl_new_spec (TestNcDataClusterWL *test, gconstpointer pdata
 }
 
 static void
-test_nc_data_cluster_wl_new_gauss (TestNcDataClusterWL *test, gconstpointer pdata)
+test_nc_data_cluster_wl_new_gauss_gauss (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   NcGalaxySDTrueRedshift *z_true_dist = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
   NcGalaxySDObsRedshift *z_dist       = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_gauss_new (z_true_dist, 0.1, 1.8));
@@ -213,11 +289,120 @@ test_nc_data_cluster_wl_new_gauss (TestNcDataClusterWL *test, gconstpointer pdat
 }
 
 static void
-test_nc_data_cluster_wl_new_pz (TestNcDataClusterWL *test, gconstpointer pdata)
+test_nc_data_cluster_wl_new_pz_gauss (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   NcGalaxySDObsRedshift *z_dist = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_pz_new ());
   NcGalaxySDPosition *p_dist    = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (-0.2, 0.2, -0.2, 0.2));
   NcGalaxySDShape *s_dist       = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET));
+  NcDataClusterWL *dcwl         = nc_data_cluster_wl_new ();
+  NcHICosmo *cosmo              = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist              = nc_distance_new (100.0);
+  NcHaloMassSummary *hms        = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp      = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
+  NcHaloPosition *hp            = nc_halo_position_new (dist);
+  NcWLSurfaceMassDensity *smd   = nc_wl_surface_mass_density_new (dist);
+
+  nc_halo_position_prepare (hp, cosmo);
+
+  test->dcwl  = dcwl;
+  test->cosmo = cosmo;
+
+  test->hms                  = hms;
+  test->density_profile      = dp;
+  test->halo_position        = hp;
+  test->surface_mass_density = smd;
+
+  test->galaxy_redshift = z_dist;
+  test->galaxy_position = p_dist;
+  test->galaxy_shape    = s_dist;
+
+  test->mset = ncm_mset_new (cosmo, NULL, dp, hp, smd, z_dist, p_dist, s_dist, NULL);
+
+  nc_distance_free (dist);
+
+  g_assert_true (NC_IS_DATA_CLUSTER_WL (dcwl));
+}
+
+static void
+test_nc_data_cluster_wl_new_spec_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata)
+{
+  NcGalaxySDShape *s_dist             = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_hsc_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET));
+  NcGalaxySDTrueRedshift *z_true_dist = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
+  NcGalaxySDObsRedshift *z_dist       = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_spec_new (z_true_dist, 0.0, 2.0));
+  NcGalaxySDPosition *p_dist          = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (-0.2, 0.2, -0.2, 0.2));
+  NcDataClusterWL *dcwl               = nc_data_cluster_wl_new ();
+  NcHICosmo *cosmo                    = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist                    = nc_distance_new (100.0);
+  NcHaloMassSummary *hms              = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
+  NcHaloPosition *hp                  = nc_halo_position_new (dist);
+  NcWLSurfaceMassDensity *smd         = nc_wl_surface_mass_density_new (dist);
+
+  nc_halo_position_prepare (hp, cosmo);
+
+  test->dcwl  = dcwl;
+  test->cosmo = cosmo;
+
+  test->hms                  = hms;
+  test->density_profile      = dp;
+  test->halo_position        = hp;
+  test->surface_mass_density = smd;
+
+  test->galaxy_redshift = z_dist;
+  test->galaxy_position = p_dist;
+  test->galaxy_shape    = s_dist;
+
+  test->mset = ncm_mset_new (cosmo, NULL, dp, hp, smd, z_dist, p_dist, s_dist, NULL);
+
+  nc_galaxy_sd_true_redshift_free (z_true_dist);
+  nc_distance_free (dist);
+
+  g_assert_true (NC_IS_DATA_CLUSTER_WL (dcwl));
+}
+
+static void
+test_nc_data_cluster_wl_new_gauss_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata)
+{
+  NcGalaxySDTrueRedshift *z_true_dist = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
+  NcGalaxySDObsRedshift *z_dist       = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_gauss_new (z_true_dist, 0.1, 1.8));
+  NcGalaxySDPosition *p_dist          = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (-0.2, 0.2, -0.2, 0.2));
+  NcGalaxySDShape *s_dist             = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_hsc_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET));
+  NcDataClusterWL *dcwl               = nc_data_cluster_wl_new ();
+  NcHICosmo *cosmo                    = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist                    = nc_distance_new (100.0);
+  NcHaloMassSummary *hms              = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
+  NcHaloPosition *hp                  = nc_halo_position_new (dist);
+  NcWLSurfaceMassDensity *smd         = nc_wl_surface_mass_density_new (dist);
+
+  nc_halo_position_prepare (hp, cosmo);
+
+  test->dcwl  = dcwl;
+  test->cosmo = cosmo;
+
+  test->hms                  = hms;
+  test->density_profile      = dp;
+  test->halo_position        = hp;
+  test->surface_mass_density = smd;
+
+  test->galaxy_redshift = z_dist;
+  test->galaxy_position = p_dist;
+  test->galaxy_shape    = s_dist;
+
+  test->mset = ncm_mset_new (cosmo, NULL, dp, hp, smd, z_dist, p_dist, s_dist, NULL);
+
+  nc_galaxy_sd_true_redshift_free (z_true_dist);
+  nc_distance_free (dist);
+
+  g_assert_true (NC_IS_DATA_CLUSTER_WL (dcwl));
+}
+
+static void
+test_nc_data_cluster_wl_new_pz_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata)
+{
+  NcGalaxySDObsRedshift *z_dist = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_pz_new ());
+  NcGalaxySDPosition *p_dist    = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (-0.2, 0.2, -0.2, 0.2));
+  NcGalaxySDShape *s_dist       = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_hsc_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET));
   NcDataClusterWL *dcwl         = nc_data_cluster_wl_new ();
   NcHICosmo *cosmo              = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcDistance *dist              = nc_distance_new (100.0);
@@ -266,7 +451,7 @@ test_nc_data_cluster_wl_free (TestNcDataClusterWL *test, gconstpointer pdata)
 }
 
 static void
-test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
+test_nc_data_cluster_wl_gen_gauss (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   NcmRNG *rng                       = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcGalaxySDObsRedshiftData *z_data = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
@@ -378,7 +563,119 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
 }
 
 static void
-test_nc_data_cluster_wl_ra_dec_limits (TestNcDataClusterWL *test, gconstpointer pdata)
+test_nc_data_cluster_wl_gen_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata)
+{
+  NcmRNG *rng                       = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcGalaxySDObsRedshiftData *z_data = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
+  NcGalaxySDPositionData *p_data    = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
+  NcGalaxySDShapeData *s_data       = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
+  GList *columns                    = nc_galaxy_sd_shape_data_required_columns (s_data);
+  GList *l                          = columns;
+  GStrvBuilder *builder             = g_strv_builder_new ();
+  guint nrows                       = 1000;
+  NcGalaxyWLObs *obs;
+  GStrv columns_strv;
+  guint i;
+
+  while (l)
+  {
+    g_strv_builder_add (builder, l->data);
+    l = g_list_next (l);
+  }
+
+  columns_strv = g_strv_builder_end (builder);
+  g_list_free_full (columns, g_free);
+  obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, nrows, columns_strv);
+
+  if (NC_IS_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->galaxy_redshift))
+  {
+    for (i = 0; i < nrows; i++)
+    {
+      nc_galaxy_sd_obs_redshift_gauss_gen (NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->galaxy_redshift), test->mset, z_data, 0.03, rng);
+      nc_galaxy_sd_position_flat_gen (NC_GALAXY_SD_POSITION_FLAT (test->galaxy_position), test->mset, p_data, rng);
+      nc_galaxy_sd_shape_gauss_hsc_gen (NC_GALAXY_SD_SHAPE_GAUSS_HSC (test->galaxy_shape), test->mset, s_data, 0.3, 0.1, 0.01, 0.01, 0.1, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, rng);
+      nc_galaxy_sd_shape_data_write_row (s_data, obs, i);
+    }
+  }
+  else if (NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (test->galaxy_redshift))
+  {
+    for (i = 0; i < nrows; i++)
+    {
+      nc_galaxy_sd_obs_redshift_spec_gen (NC_GALAXY_SD_OBS_REDSHIFT_SPEC (test->galaxy_redshift), test->mset, z_data, rng);
+      nc_galaxy_sd_position_flat_gen (NC_GALAXY_SD_POSITION_FLAT (test->galaxy_position), test->mset, p_data, rng);
+      nc_galaxy_sd_shape_gauss_hsc_gen (NC_GALAXY_SD_SHAPE_GAUSS_HSC (test->galaxy_shape), test->mset, s_data, 0.3, 0.1, 0.01, 0.01, 0.1, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, rng);
+      nc_galaxy_sd_shape_data_write_row (s_data, obs, i);
+    }
+  }
+  else if (NC_IS_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift))
+  {
+    guint nrows   = 100;
+    guint npoints = 1000;
+    gdouble z_min = 0.01;
+    gdouble z_max = 10.0;
+    gdouble z_avg;
+    gdouble z_sd;
+
+    obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, nrows, columns_strv);
+
+    for (i = 0; i < nrows; i++)
+    {
+      NcmVector *xv = ncm_vector_new (npoints);
+      NcmVector *yv = ncm_vector_new (npoints);
+      NcmSpline *pz;
+      guint j;
+
+      z_avg = g_test_rand_double_range (z_min, z_max);
+      z_sd  = 0.03 * (1.0 + z_avg);
+
+      for (j = 0; j < npoints; j++)
+      {
+        gdouble x_min = z_avg - 5.0 * z_sd;
+
+        if (x_min < z_min)
+          x_min = z_min;
+
+        gdouble x = x_min + 10.0 * z_sd * j / ((gdouble) npoints - 1.0);
+        gdouble y = exp (-0.5 * gsl_pow_2 ((x - z_avg) / z_sd)) / (sqrt (2.0 * M_PI) * z_sd);
+
+        ncm_vector_fast_set (xv, j, x);
+        ncm_vector_fast_set (yv, j, y);
+      }
+
+      pz = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
+
+      nc_galaxy_sd_obs_redshift_pz_data_set (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift), z_data, pz);
+      nc_galaxy_sd_obs_redshift_pz_prepare (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift), z_data);
+
+      nc_galaxy_sd_obs_redshift_pz_gen (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift), test->mset, z_data, rng);
+      nc_galaxy_sd_position_flat_gen (NC_GALAXY_SD_POSITION_FLAT (test->galaxy_position), test->mset, p_data, rng);
+      nc_galaxy_sd_shape_gauss_hsc_gen (NC_GALAXY_SD_SHAPE_GAUSS_HSC (test->galaxy_shape), test->mset, s_data, 0.3, 0.1, 0.01, 0.01, 0.1, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, rng);
+      nc_galaxy_sd_shape_data_write_row (s_data, obs, i);
+
+      ncm_vector_free (xv);
+      ncm_vector_free (yv);
+      ncm_spline_free (pz);
+    }
+  }
+  else
+  {
+    g_error ("Unknown galaxy redshift distribution");
+  }
+
+  g_strfreev (columns_strv);
+
+  nc_data_cluster_wl_set_obs (test->dcwl, obs);
+
+  nc_galaxy_sd_obs_redshift_data_unref (z_data);
+  nc_galaxy_sd_position_data_unref (p_data);
+  nc_galaxy_sd_shape_data_unref (s_data);
+  nc_galaxy_wl_obs_free (obs);
+  ncm_rng_free (rng);
+  g_strv_builder_unref (builder);
+}
+
+static void
+test_nc_data_cluster_wl_ra_dec_limits_gauss (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   NcGalaxyWLObs *obs;
   gdouble ra_min, ra_max, dec_min, dec_max;
@@ -388,7 +685,7 @@ test_nc_data_cluster_wl_ra_dec_limits (TestNcDataClusterWL *test, gconstpointer 
   nc_galaxy_sd_position_get_ra_lim (test->galaxy_position, &ra_min, &ra_max);
   nc_galaxy_sd_position_get_dec_lim (test->galaxy_position, &dec_min, &dec_max);
 
-  test_nc_data_cluster_wl_gen (test, pdata);
+  test_nc_data_cluster_wl_gen_gauss (test, pdata);
 
   obs   = nc_data_cluster_wl_peek_obs (test->dcwl);
   ngals = nc_galaxy_wl_obs_len (obs);
@@ -413,15 +710,49 @@ test_nc_data_cluster_wl_ra_dec_limits (TestNcDataClusterWL *test, gconstpointer 
 }
 
 static void
-test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata)
+test_nc_data_cluster_wl_ra_dec_limits_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata)
+{
+  NcGalaxyWLObs *obs;
+  gdouble ra_min, ra_max, dec_min, dec_max;
+  guint ngals;
+  guint i;
+
+  nc_galaxy_sd_position_get_ra_lim (test->galaxy_position, &ra_min, &ra_max);
+  nc_galaxy_sd_position_get_dec_lim (test->galaxy_position, &dec_min, &dec_max);
+
+  test_nc_data_cluster_wl_gen_gauss_hsc (test, pdata);
+
+  obs   = nc_data_cluster_wl_peek_obs (test->dcwl);
+  ngals = nc_galaxy_wl_obs_len (obs);
+
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_POSITION_COL_RA));
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_POSITION_COL_DEC));
+
+  for (i = 0; i < ngals; i++)
+  {
+    gdouble ra  = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_POSITION_COL_RA, i);
+    gdouble dec = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_POSITION_COL_DEC, i);
+    gdouble theta, phi;
+
+    nc_halo_position_polar_angles (test->halo_position, ra, dec, &theta, &phi);
+
+    g_assert_cmpfloat (ra, >=, ra_min);
+    g_assert_cmpfloat (ra, <=, ra_max);
+
+    g_assert_cmpfloat (dec, >=, dec_min);
+    g_assert_cmpfloat (dec, <=, dec_max);
+  }
+}
+
+static void
+test_nc_data_cluster_wl_gen_obs_gauss (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcGalaxyWLObs *obs;
   gdouble ngals;
   guint i;
 
-  nc_data_cluster_wl_set_cut (test->dcwl, 0.3, 3.0);
-  test_nc_data_cluster_wl_gen (test, pdata);
+  test_nc_data_cluster_wl_gen_gauss (test, pdata);
 
   obs   = nc_data_cluster_wl_peek_obs (test->dcwl);
   ngals = nc_galaxy_wl_obs_len (obs);
@@ -470,11 +801,71 @@ test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata)
 }
 
 static void
-test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
+test_nc_data_cluster_wl_gen_obs_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata)
+{
+  NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcGalaxyWLObs *obs;
+  gdouble ngals;
+  guint i;
+
+  test_nc_data_cluster_wl_gen_gauss_hsc (test, pdata);
+
+  obs   = nc_data_cluster_wl_peek_obs (test->dcwl);
+  ngals = nc_galaxy_wl_obs_len (obs);
+
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_OBS_REDSHIFT_COL_Z));
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_POSITION_COL_RA));
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_POSITION_COL_DEC));
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_1));
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2));
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_1));
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_2));
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_SHAPE));
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_NOISE));
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C1));
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C2));
+  g_assert_true (g_strv_contains ((const gchar * const *) nc_galaxy_wl_obs_peek_columns (obs), NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_M));
+
+  for (i = 0; i < ngals; i++)
+  {
+    const gdouble z             = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_OBS_REDSHIFT_COL_Z, i);
+    const gdouble ra            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_POSITION_COL_RA, i);
+    const gdouble dec           = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_POSITION_COL_DEC, i);
+    const gdouble epsilon_int_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_1, i);
+    const gdouble epsilon_int_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2, i);
+    const gdouble std_noise     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_COL_STD_NOISE, i);
+    const gdouble var_obs       = std_noise * std_noise;
+    const gdouble std_shape     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_SHAPE, i);
+    const gdouble var_shape       = std_shape * std_shape;
+    const gdouble e_rms_1       = sqrt (var_shape + var_obs);
+    const gdouble e_rms_2       = sqrt (var_shape + var_obs);
+    gdouble theta, phi;
+
+    nc_halo_position_polar_angles (test->halo_position, ra, dec, &theta, &phi);
+
+    g_assert_cmpfloat (ra, >=, -0.2);
+    g_assert_cmpfloat (ra, <=, 0.2);
+    g_assert_cmpfloat (dec, >=, -0.2);
+    g_assert_cmpfloat (dec, <=, 0.2);
+    g_assert_cmpfloat (z, >=, 0.0);
+    g_assert_cmpfloat (z, <=, 20.0);
+    g_assert_cmpfloat (epsilon_int_1, >=, -5.0 * e_rms_1);
+    g_assert_cmpfloat (epsilon_int_1, <=, 5.0 * e_rms_1);
+    g_assert_cmpfloat (epsilon_int_2, >=, -5.0 * e_rms_2);
+    g_assert_cmpfloat (epsilon_int_2, <=, 5.0 * e_rms_2);
+    g_assert_cmpfloat (std_shape, ==, 0.3);
+    g_assert_cmpfloat (std_noise, ==, 0.1);
+  }
+
+  ncm_rng_free (rng);
+}
+
+static void
+test_nc_data_cluster_wl_m2lnP_gauss (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   gdouble m2lnL_a, m2lnL_b;
 
-  test_nc_data_cluster_wl_gen (test, pdata);
+  test_nc_data_cluster_wl_gen_gauss (test, pdata);
 
   {
     ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
@@ -492,7 +883,7 @@ test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
     ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
     g_assert (gsl_finite (m2lnL_a));
 
-    ncm_mset_param_set (test->mset, nc_halo_position_id (), NC_HALO_POSITION_DEC, 0.1);
+    ncm_mset_param_set (test->mset, nc_halo_position_id (), NC_HALO_POSITION_RA, 0.2);
 
     ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
     g_assert (gsl_finite (m2lnL_a));
@@ -526,11 +917,67 @@ test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
 }
 
 static void
-test_nc_data_cluster_wl_serialize (TestNcDataClusterWL *test, gconstpointer pdata)
+test_nc_data_cluster_wl_m2lnP_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata)
+{
+  gdouble m2lnL_a, m2lnL_b;
+
+  test_nc_data_cluster_wl_gen_gauss_hsc (test, pdata);
+
+  {
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
+    g_assert (gsl_finite (m2lnL_a));
+
+    ncm_mset_param_set (test->mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_C, 0.3);
+
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
+    g_assert (gsl_finite (m2lnL_a));
+
+    ncm_assert_cmpdouble (m2lnL_a, !=, m2lnL_b);
+  }
+
+  {
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
+    g_assert (gsl_finite (m2lnL_a));
+
+    ncm_mset_param_set (test->mset, nc_halo_position_id (), NC_HALO_POSITION_RA, 0.2);
+
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
+    g_assert (gsl_finite (m2lnL_a));
+
+    ncm_assert_cmpdouble (m2lnL_a, !=, m2lnL_b);
+  }
+
+  {
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
+    g_assert (gsl_finite (m2lnL_a));
+
+    ncm_mset_param_set (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, log10 (2.123e14));
+
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
+    g_assert (gsl_finite (m2lnL_a));
+
+    ncm_assert_cmpdouble (m2lnL_a, !=, m2lnL_b);
+  }
+
+  {
+    g_object_set (test->dcwl, "enable-parallel", FALSE, NULL);
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
+    g_assert (gsl_finite (m2lnL_a));
+
+    g_object_set (test->dcwl, "enable-parallel", TRUE, NULL);
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
+    g_assert (gsl_finite (m2lnL_b));
+
+    ncm_assert_cmpdouble_e (m2lnL_a, ==, m2lnL_b, 1.0e-11, 0.0);
+  }
+}
+
+static void
+test_nc_data_cluster_wl_serialize_gauss (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
 
-  test_nc_data_cluster_wl_gen (test, pdata);
+  test_nc_data_cluster_wl_gen_gauss (test, pdata);
 
   {
     NcmMSet *mset_dup = ncm_mset_dup (test->mset, ser);
@@ -588,4 +1035,69 @@ test_nc_data_cluster_wl_serialize (TestNcDataClusterWL *test, gconstpointer pdat
 
   ncm_serialize_free (ser);
 }
+
+static void
+test_nc_data_cluster_wl_serialize_gauss_hsc (TestNcDataClusterWL *test, gconstpointer pdata)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+
+  test_nc_data_cluster_wl_gen_gauss_hsc (test, pdata);
+
+  {
+    NcmMSet *mset_dup = ncm_mset_dup (test->mset, ser);
+    NcmData *dcwl_dup = ncm_data_dup (NCM_DATA (test->dcwl), ser);
+    gdouble m2lnL, m2lnL_dup;
+
+    g_object_set (dcwl_dup, "enable-parallel", FALSE, NULL);
+    g_object_set (test->dcwl, "enable-parallel", FALSE, NULL);
+
+    g_assert_true (NC_IS_DATA_CLUSTER_WL (dcwl_dup));
+
+    ncm_data_m2lnL_val (dcwl_dup, mset_dup, &m2lnL);
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_dup);
+
+    ncm_assert_cmpdouble (m2lnL, ==, m2lnL_dup);
+
+    ncm_mset_param_set (test->mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_C, 0.3);
+    ncm_mset_param_set (mset_dup, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_C, 0.3);
+
+    ncm_data_m2lnL_val (dcwl_dup, mset_dup, &m2lnL);
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_dup);
+
+    ncm_assert_cmpdouble (m2lnL, ==, m2lnL_dup);
+
+    ncm_mset_param_set (test->mset, nc_halo_position_id (), NC_HALO_POSITION_DEC, 0.1);
+    ncm_mset_param_set (mset_dup, nc_halo_position_id (), NC_HALO_POSITION_DEC, 0.1);
+
+    ncm_data_m2lnL_val (dcwl_dup, mset_dup, &m2lnL);
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_dup);
+
+    ncm_assert_cmpdouble (m2lnL, ==, m2lnL_dup);
+
+    ncm_mset_param_set (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, log10 (2.123e14));
+    ncm_mset_param_set (mset_dup, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, log10 (2.123e14));
+
+    ncm_data_m2lnL_val (dcwl_dup, mset_dup, &m2lnL);
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_dup);
+
+    ncm_assert_cmpdouble (m2lnL, ==, m2lnL_dup);
+
+    ncm_mset_param_set (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, log10 (1.123e14));
+    ncm_mset_param_set (mset_dup, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, log10 (1.123e14));
+
+    ncm_data_m2lnL_val (dcwl_dup, test->mset, &m2lnL);
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), mset_dup, &m2lnL_dup);
+
+    ncm_assert_cmpdouble (m2lnL, ==, m2lnL_dup);
+
+    g_object_set (dcwl_dup, "enable-parallel", TRUE, NULL);
+    g_object_set (test->dcwl, "enable-parallel", TRUE, NULL);
+
+    ncm_mset_free (mset_dup);
+    ncm_data_free (dcwl_dup);
+  }
+
+  ncm_serialize_free (ser);
+}
+
 
