@@ -208,7 +208,7 @@ _nc_galaxy_sd_shape_gauss_update_std_shape (NcGalaxySDShape *gsds)
 {
   NcGalaxySDShapeGaussPrivate * const self = nc_galaxy_sd_shape_gauss_get_instance_private (NC_GALAXY_SD_SHAPE_GAUSS (gsds));
 
-  if (ncm_model_ctrl_model_update (self->ctrl_shape, NCM_MODEL (gsds)))
+  if (ncm_model_ctrl_update (self->ctrl_shape, NCM_MODEL (gsds)))
     self->std_shape = nc_galaxy_sd_shape_gauss_std_shape_from_sigma (SIGMA);
 }
 
@@ -444,8 +444,8 @@ _nc_galaxy_sd_shape_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *ms
   gboolean update_radius;
   guint i;
 
-  update_radius = (ncm_model_ctrl_model_update (self->ctrl_hp, NCM_MODEL (halo_position))) ||
-                  (ncm_model_ctrl_model_update (self->ctrl_cosmo, NCM_MODEL (cosmo)));
+  update_radius = (ncm_model_ctrl_update (self->ctrl_hp, NCM_MODEL (halo_position))) ||
+                  (ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo)));
 
   for (i = 0; i < data_array->len; i++)
   {

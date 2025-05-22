@@ -427,8 +427,8 @@ _nc_galaxy_sd_shape_gauss_hsc_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet
   gboolean update_radius;
   guint i;
 
-  update_radius = (ncm_model_ctrl_model_update (self->ctrl_hp, NCM_MODEL (halo_position))) ||
-                  (ncm_model_ctrl_model_update (self->ctrl_cosmo, NCM_MODEL (cosmo)));
+  update_radius = (ncm_model_ctrl_update (self->ctrl_hp, NCM_MODEL (halo_position))) ||
+                  (ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo)));
 
   for (i = 0; i < data_array->len; i++)
   {
