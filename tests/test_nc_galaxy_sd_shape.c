@@ -464,14 +464,14 @@ test_nc_galaxy_sd_shape_gauss_convert_coord (TestNcGalaxySDShape *test, gconstpo
             if (fabs (gt) > 1.0)
               e_o = (1.0 + gt * conj (e_s)) / (conj (e_s) + gt);
             else
-              e_o = (e_s + gt) / (1.0 + gt * e_s);
+              e_o = (e_s + gt) / (1.0 + gt * e_s);  /* LCOV_EXCL_LINE */
 
             break;
 
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
             e_o = (e_s + gt * (gt * conj (e_s) + 2.0)) / (1.0 + gt * gt + 2.0 * creal (gt * conj (e_s)));
             break;
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
             break;
         }
@@ -529,14 +529,14 @@ test_nc_galaxy_sd_shape_gauss_convert_coord (TestNcGalaxySDShape *test, gconstpo
             if (fabs (gt) > 1.0)
               e_o = (1.0 + gt * conj (e_s)) / (conj (e_s) + gt);
             else
-              e_o = (e_s + gt) / (1.0 + gt * e_s);
+              e_o = (e_s + gt) / (1.0 + gt * e_s);  /* LCOV_EXCL_LINE */
 
             break;
 
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
             e_o = (e_s + gt * (gt * conj (e_s) + 2.0)) / (1.0 + gt * gt + 2.0 * creal (gt * conj (e_s)));
             break;
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
             break;
         }
@@ -634,14 +634,14 @@ test_nc_galaxy_sd_shape_gauss_hsc_convert_coord (TestNcGalaxySDShape *test, gcon
             if (fabs (gt) > 1.0)
               e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));
             else
-              e_o = (e_s + g) / (1.0 + conj (g) * e_s);
+              e_o = (e_s + g) / (1.0 + conj (g) * e_s);  /* LCOV_EXCL_LINE */
 
             break;
 
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
             e_o = (e_s + g * (g * conj (e_s) + 2.0)) / (1.0 + g * conj (g) + 2.0 * creal (g * conj (e_s)));
             break;
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
             break;
         }
@@ -704,14 +704,14 @@ test_nc_galaxy_sd_shape_gauss_hsc_convert_coord (TestNcGalaxySDShape *test, gcon
             if (fabs (gt) > 1.0)
               e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));
             else
-              e_o = (e_s + g) / (1.0 + conj (g) * e_s);
+              e_o = (e_s + g) / (1.0 + conj (g) * e_s);  /* LCOV_EXCL_LINE */
 
             break;
 
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
             e_o = (e_s + g * (g * conj (e_s) + 2.0)) / (1.0 + g * conj (g) + 2.0 * creal (g * conj (e_s)));
             break;
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
             break;
         }
@@ -911,14 +911,14 @@ test_nc_galaxy_sd_shape_gauss_gen (TestNcGalaxySDShape *test, gconstpointer pdat
             if (fabs (gt) > 1.0)
               e_o = (1.0 + gt * conj (e_s)) / (conj (e_s) + gt);
             else
-              e_o = (e_s + gt) / (1.0 + gt * e_s);
+              e_o = (e_s + gt) / (1.0 + gt * e_s);  /* LCOV_EXCL_LINE */
 
             break;
 
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
             e_o = (e_s + gt * (gt * conj (e_s) + 2.0)) / (1.0 + gt * gt + 2.0 * creal (gt * conj (e_s)));
             break;
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
             break;
         }
@@ -1020,14 +1020,14 @@ test_nc_galaxy_sd_shape_gauss_hsc_gen (TestNcGalaxySDShape *test, gconstpointer 
             if (fabs (gt) > 1.0)
               e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));
             else
-              e_o = (e_s + g) / (1.0 + conj (g) * e_s);
+              e_o = (e_s + g) / (1.0 + conj (g) * e_s);  /* LCOV_EXCL_LINE */
 
             break;
 
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
             e_o = (e_s + g * (g * conj (e_s) + 2.0)) / (1.0 + g * conj (g) + 2.0 * creal (g * conj (e_s)));
             break;
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
             break;
         }
@@ -1123,7 +1123,7 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShape *test, gconstpointer pd
             if (gt > 1.0)
               e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
             else
-              e_s = (e_o - g) / (1.0 - conj (g) * e_o);
+              e_s = (e_o - g) / (1.0 - conj (g) * e_o);  /* LCOV_EXCL_LINE */
 
             break;
 
@@ -1131,7 +1131,7 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShape *test, gconstpointer pd
             e_s = (e_o + g * (g * conj (e_o) - 2.0)) / (1.0 + g * conj (g) - 2.0 * creal (g * conj (e_o)));
             break;
 
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
         }
       }
@@ -1159,7 +1159,7 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShape *test, gconstpointer pd
             jac_den = gsl_pow_3 (1.0 - 2.0 * creal (conj (g) * e_o) + gt * gt);
             break;
 
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
             break;
         }
@@ -1287,7 +1287,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
             if (gt > 1.0)
               e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
             else
-              e_s = (e_o - g) / (1.0 - conj (g) * e_o);
+              e_s = (e_o - g) / (1.0 - conj (g) * e_o);  /* LCOV_EXCL_LINE */
 
             break;
 
@@ -1295,7 +1295,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
             e_s = (e_o + g * (g * conj (e_o) - 2.0)) / (1.0 + g * conj (g) - 2.0 * creal (g * conj (e_o)));
             break;
 
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
         }
       }
@@ -1323,7 +1323,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
             jac_den = gsl_pow_3 (1.0 - 2.0 * creal (conj (g) * e_o) + g * conj (g));
             break;
 
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
             break;
         }
@@ -1443,6 +1443,7 @@ test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShape *test, gconstpointer pd
         gdouble gt, hat_gt, hat_sigma_gt, hat_gx, hat_sigma_gx, hat_rho;
 
         ncm_data_resample (data, fiduc, rng);
+        /* ncm_data_prepare (data, test->mset); */
         ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
 
         nc_galaxy_sd_shape_direct_estimate (test->galaxy_shape, test->mset, data_array, &hat_gt, &hat_gx, &hat_sigma_gt, &hat_sigma_gx, &hat_rho);
@@ -1558,13 +1559,13 @@ test_nc_galaxy_sd_shape_gauss_hsc_stats (TestNcGalaxySDShape *test, gconstpointe
 
   for (i = 0; i < ntest; i++)
   {
-    const gdouble sigma = ncm_rng_uniform_gen (rng, 0.15, 0.3);
-    const gdouble c1    = ncm_rng_uniform_gen (rng, -0.01, 0.01);
-    const gdouble c2    = ncm_rng_uniform_gen (rng, -0.01, 0.01);
-    const gdouble m     = ncm_rng_uniform_gen (rng, -0.2, 0.2);
+    const gdouble std_shape = ncm_rng_uniform_gen (rng, 0.15, 0.3);
+    const gdouble c1        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
+    const gdouble c2        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
+    const gdouble m         = ncm_rng_uniform_gen (rng, -0.2, 0.2);
 
     nc_galaxy_sd_shape_gauss_hsc_gen (NC_GALAXY_SD_SHAPE_GAUSS_HSC (test->galaxy_shape), test->mset, s_data,
-                                      sigma, std_noise, c1, c2, m,
+                                      std_shape, std_noise, c1, c2, m,
                                       test->ell_coord, rng);
     nc_galaxy_sd_shape_data_write_row (s_data, obs, i);
   }
@@ -1756,24 +1757,24 @@ test_nc_galaxy_sd_shape_gauss_hsc_data_setget (TestNcGalaxySDShape *test, gconst
   const gdouble epsilon_1           = 0.1;
   const gdouble epsilon_2           = 0.2;
   const gdouble std_noise           = 0.03;
-  const gdouble sigma               = 0.04;
+  const gdouble std_shape           = 0.04;
   const gdouble c1                  = 0.05;
   const gdouble c2                  = 0.06;
   const gdouble m                   = 0.07;
 
   nc_galaxy_sd_shape_gauss_hsc_data_set (NC_GALAXY_SD_SHAPE_GAUSS_HSC (test->galaxy_shape), s_data,
-                                         epsilon_1, epsilon_2, sigma, std_noise, c1, c2, m);
+                                         epsilon_1, epsilon_2, std_shape, std_noise, c1, c2, m);
 
   {
-    gdouble epsilon_1_out, epsilon_2_out, std_noise_out, sigma_out, c1_out, c2_out, m_out;
+    gdouble epsilon_1_out, epsilon_2_out, std_noise_out, std_shape_out, c1_out, c2_out, m_out;
 
     nc_galaxy_sd_shape_gauss_hsc_data_get (NC_GALAXY_SD_SHAPE_GAUSS_HSC (test->galaxy_shape), s_data,
-                                           &epsilon_1_out, &epsilon_2_out, &sigma_out, &std_noise_out, &c1_out, &c2_out, &m_out);
+                                           &epsilon_1_out, &epsilon_2_out, &std_shape_out, &std_noise_out, &c1_out, &c2_out, &m_out);
 
     g_assert_cmpfloat (epsilon_1_out, ==, epsilon_1);
     g_assert_cmpfloat (epsilon_2_out, ==, epsilon_2);
     g_assert_cmpfloat (std_noise_out, ==, std_noise);
-    g_assert_cmpfloat (sigma_out, ==, sigma);
+    g_assert_cmpfloat (std_shape_out, ==, std_shape);
     g_assert_cmpfloat (c1_out, ==, c1);
     g_assert_cmpfloat (c2_out, ==, c2);
     g_assert_cmpfloat (m_out, ==, m);
@@ -1843,21 +1844,21 @@ test_nc_galaxy_sd_shape_gauss_strong_lensing (TestNcGalaxySDShape *test, gconstp
             if (fabs (gt) > 1.0)
               e_o = (1.0 + gt * conj (e_s)) / (conj (e_s) + gt);
             else
-              e_o = (e_s + gt) / (1.0 + gt * e_s);
+              e_o = (e_s + gt) / (1.0 + gt * e_s);  /* LCOV_EXCL_LINE */
 
             break;
 
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
             e_o = (e_s + gt * (gt * conj (e_s) + 2.0)) / (1.0 + gt * gt + 2.0 * creal (gt * conj (e_s)));
             break;
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
             break;
         }
       }
       else
       {
-        e_o = e_s;
+        e_o = e_s; /* LCOV_EXCL_LINE */
       }
 
       e_s = e_s * cexp (2.0 * I * phi);
@@ -1903,7 +1904,7 @@ test_nc_galaxy_sd_shape_gauss_strong_lensing (TestNcGalaxySDShape *test, gconstp
             if (gt > 1.0)
               e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
             else
-              e_s = (e_o - g) / (1.0 - conj (g) * e_o);
+              e_s = (e_o - g) / (1.0 - conj (g) * e_o);  /* LCOV_EXCL_LINE */
 
             break;
 
@@ -1911,13 +1912,13 @@ test_nc_galaxy_sd_shape_gauss_strong_lensing (TestNcGalaxySDShape *test, gconstp
             e_s = (e_o + g * (g * conj (e_o) - 2.0)) / (1.0 + g * conj (g) - 2.0 * creal (g * conj (e_o)));
             break;
 
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
         }
       }
       else
       {
-        e_s = e_o;
+        e_s = e_o; /* LCOV_EXCL_LINE */
       }
 
       {
@@ -1933,7 +1934,7 @@ test_nc_galaxy_sd_shape_gauss_strong_lensing (TestNcGalaxySDShape *test, gconstp
             jac_num = gsl_pow_2 (1.0 - gt * gt);
 
             if (fabs (gt) <= 1.0)
-              jac_den = gsl_pow_2 (1.0 - 2.0 * creal (conj (g) * e_o) + gt * gt * conj (e_o) * e_o);
+              jac_den = gsl_pow_2 (1.0 - 2.0 * creal (conj (g) * e_o) + gt * gt * conj (e_o) * e_o);  /* LCOV_EXCL_LINE */
             else
               jac_den = gsl_pow_2 (conj (e_o - g) * (e_o - g));
 
@@ -1944,7 +1945,7 @@ test_nc_galaxy_sd_shape_gauss_strong_lensing (TestNcGalaxySDShape *test, gconstp
             jac_den = gsl_pow_3 (1.0 - 2.0 * creal (conj (g) * e_o) + gt * gt);
             break;
 
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
             break;
         }
@@ -2035,21 +2036,21 @@ test_nc_galaxy_sd_shape_gauss_hsc_strong_lensing (TestNcGalaxySDShape *test, gco
             if (fabs (gt) > 1.0)
               e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));
             else
-              e_o = (e_s + g) / (1.0 + conj (g) * e_s);
+              e_o = (e_s + g) / (1.0 + conj (g) * e_s);  /* LCOV_EXCL_LINE */
 
             break;
 
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
             e_o = (e_s + g * (g * conj (e_s) + 2.0)) / (1.0 + g * conj (g) + 2.0 * creal (g * conj (e_s)));
             break;
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
             break;
         }
       }
       else
       {
-        e_o = e_s + c;
+        e_o = e_s + c; /* LCOV_EXCL_LINE */
       }
 
       ncm_assert_cmpdouble_e (creal (e_o), ==, epsilon_1_out, 1e-10, 1e-10);
@@ -2096,7 +2097,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_strong_lensing (TestNcGalaxySDShape *test, gco
             if (gt > 1.0)
               e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
             else
-              e_s = (e_o - g) / (1.0 - conj (g) * e_o);
+              e_s = (e_o - g) / (1.0 - conj (g) * e_o);  /* LCOV_EXCL_LINE */
 
             break;
 
@@ -2104,22 +2105,22 @@ test_nc_galaxy_sd_shape_gauss_hsc_strong_lensing (TestNcGalaxySDShape *test, gco
             e_s = (e_o + g * (g * conj (e_o) - 2.0)) / (1.0 + g * conj (g) - 2.0 * creal (g * conj (e_o)));
             break;
 
-          default:
+          default: /* LCOV_EXCL_LINE */
             g_assert_not_reached ();
         }
       }
       else
       {
-        e_s = e_o - (c1 + I * c2);
+        e_s = e_o - (c1 + I * c2); /* LCOV_EXCL_LINE */
       }
 
       {
-        const gdouble var_int   = gsl_pow_2 (sigma);
-        const gdouble total_var = var_int + gsl_pow_2 (std_noise_out);
-        const gdouble chi2_1    = gsl_pow_2 (creal (e_s)) / total_var;
-        const gdouble chi2_2    = gsl_pow_2 (cimag (e_s)) / total_var;
+        const gdouble var_int       = gsl_pow_2 (sigma);
+        const gdouble total_var     = var_int + gsl_pow_2 (std_noise_out);
+        const gdouble chi2_1        = gsl_pow_2 (creal (e_s)) / total_var;
+        const gdouble chi2_2        = gsl_pow_2 (cimag (e_s)) / total_var;
         const complex double g_conj = conj (g);
-        const gdouble abs_g2 = g * g_conj;
+        const gdouble abs_g2        = g * g_conj;
         gdouble jac_num, jac_den, m2ln_int1;
 
         switch (test->ell_conv)
@@ -2128,7 +2129,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_strong_lensing (TestNcGalaxySDShape *test, gco
             jac_num = gsl_pow_2 (1.0 - abs_g2);
 
             if (abs_g2 <= 1.0)
-              jac_den = gsl_pow_2 (1.0 - 2.0 * creal (conj (g) * e_o) + abs_g2 * conj (e_o) * e_o);
+              jac_den = gsl_pow_2 (1.0 - 2.0 * creal (conj (g) * e_o) + abs_g2 * conj (e_o) * e_o);  /* LCOV_EXCL_LINE */
             else
               jac_den = gsl_pow_2 (conj (e_o - g) * (e_o - g));
 
@@ -2136,11 +2137,11 @@ test_nc_galaxy_sd_shape_gauss_hsc_strong_lensing (TestNcGalaxySDShape *test, gco
 
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
             jac_num = fabs (gsl_pow_3 (1.0 - abs_g2));
-            jac_den = gsl_pow_3 (1.0 - 2.0 * creal (conj (g) * e_o) + abs_g2);
+            jac_den = fabs (gsl_pow_3 (1.0 - 2.0 * creal (conj (g) * e_o) + abs_g2));
             break;
 
           default:
-            g_assert_not_reached ();
+            g_assert_not_reached (); /* LCOV_EXCL_LINE */
             break;
         }
 

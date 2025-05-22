@@ -61,6 +61,7 @@ void test_nc_galaxy_sd_true_redshift_lsst_srd_basic (void);
 void test_nc_galaxy_sd_true_redshift_lsst_srd_y10_basic (void);
 void test_nc_galaxy_sd_shape_basic (void);
 void test_nc_galaxy_sd_shape_gauss_basic (void);
+void test_nc_galaxy_sd_shape_gauss_hsc_basic (void);
 void test_nc_galaxy_sd_z_proxy_basic (void);
 void test_nc_galaxy_sd_z_proxy_dirac_basic (void);
 void test_nc_galaxy_sd_z_proxy_gauss_basic (void);
@@ -111,6 +112,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy/sd_position_flat/basic", test_nc_galaxy_sd_position_flat_basic);
   g_test_add_func ("/nc/galaxy/sd_shape/basic", test_nc_galaxy_sd_shape_basic);
   g_test_add_func ("/nc/galaxy/sd_shape_gauss/basic", test_nc_galaxy_sd_shape_gauss_basic);
+  g_test_add_func ("/nc/galaxy/sd_shape_gauss_hsc/basic", test_nc_galaxy_sd_shape_gauss_hsc_basic);
   g_test_add_func ("/nc/galaxy/sd_true_redshift/basic", test_nc_galaxy_sd_true_redshift_basic);
   g_test_add_func ("/nc/galaxy/sd_true_redshift_lsst_srd/basic", test_nc_galaxy_sd_true_redshift_lsst_srd_basic);
   g_test_add_func ("/nc/galaxy/sd_true_redshift_lsst_srd_y10/basic", test_nc_galaxy_sd_true_redshift_lsst_srd_y10_basic);
@@ -642,6 +644,24 @@ test_nc_galaxy_sd_shape_gauss_basic (void)
   g_assert_true (NC_IS_GALAXY_SD_SHAPE_GAUSS (gsdsg));
 
   NCM_TEST_FREE (nc_galaxy_sd_shape_gauss_free, gsdsg);
+}
+
+void
+test_nc_galaxy_sd_shape_gauss_hsc_basic (void)
+{
+  NcGalaxySDShapeGaussHSC *gsdsgh = nc_galaxy_sd_shape_gauss_hsc_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET);
+  NcGalaxySDShapeGaussHSC *gsdsgh2;
+
+  g_assert_true (gsdsgh != NULL);
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE_GAUSS_HSC (gsdsgh));
+
+  gsdsgh2 = nc_galaxy_sd_shape_gauss_hsc_ref (gsdsgh);
+  nc_galaxy_sd_shape_gauss_hsc_clear (&gsdsgh2);
+  g_assert_true (gsdsgh2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE_GAUSS_HSC (gsdsgh));
+
+  NCM_TEST_FREE (nc_galaxy_sd_shape_gauss_hsc_free, gsdsgh);
 }
 
 void

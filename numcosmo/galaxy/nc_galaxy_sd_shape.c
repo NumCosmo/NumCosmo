@@ -103,9 +103,9 @@ _nc_galaxy_sd_shape_set_property (GObject *object, guint property_id, const GVal
     case PROP_ELLIP_CONV:
       _nc_galaxy_sd_shape_set_ellip_conv (gsds, g_value_get_enum (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
-      break;
+    default:                                                          /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                          /* LCOV_EXCL_LINE */
   }
 }
 
@@ -271,11 +271,11 @@ _nc_galaxy_sd_shape_apply_shear_inv_trace (NcGalaxySDShape *gsds, const NcmCompl
 static gdouble
 _nc_galaxy_sd_shape_apply_shear_trace_lndet_jac (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *chi_obs)
 {
-  complex double gn       = ncm_complex_c (g);
-  complex double chin_obs = ncm_complex_c (chi_obs);
-  complex double gn_conj  = conj (gn);
-  const gdouble abs_g2    = gn * gn_conj;
-  const gdouble lndet_jac_den = 3.0 * log1p (-2.0 * creal (gn_conj * chin_obs) + abs_g2);
+  complex double gn           = ncm_complex_c (g);
+  complex double chin_obs     = ncm_complex_c (chi_obs);
+  complex double gn_conj      = conj (gn);
+  const gdouble abs_g2        = gn * gn_conj;
+  const gdouble lndet_jac_den = 3.0 * log (fabs (1 - 2.0 * creal (gn_conj * chin_obs) + abs_g2));
 
   if (abs_g2 <= 1.0)
   {
@@ -340,10 +340,10 @@ _nc_galaxy_sd_shape_apply_shear_trace_det_lndet_jac (NcGalaxySDShape *gsds, cons
   }
   else
   {
-    const complex double en_obs_m_gn       = en_obs - gn;
-    const gdouble abs_en_obs_m_gn2 = en_obs_m_gn * conj (en_obs_m_gn);
-    const gdouble ln_jac_num       = 2.0 * log (abs_g2 - 1.0);
-    const gdouble ln_jac_den       = 2.0 * log (abs_en_obs_m_gn2);
+    const complex double en_obs_m_gn = en_obs - gn;
+    const gdouble abs_en_obs_m_gn2   = en_obs_m_gn * conj (en_obs_m_gn);
+    const gdouble ln_jac_num         = 2.0 * log (abs_g2 - 1.0);
+    const gdouble ln_jac_den         = 2.0 * log (abs_en_obs_m_gn2);
 
     return ln_jac_num - ln_jac_den;
   }
