@@ -424,7 +424,7 @@ _nc_galaxy_sd_shape_gauss_hsc_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet
   NcWLSurfaceMassDensity *surface_mass_density = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
   NcHaloDensityProfile *density_profile        = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
   gdouble z_cl                                 = nc_halo_position_get_redshift (halo_position);
-  gdouble update_radius;
+  gboolean update_radius;
   guint i;
 
   update_radius = (ncm_model_ctrl_model_update (self->ctrl_hp, NCM_MODEL (halo_position))) ||
