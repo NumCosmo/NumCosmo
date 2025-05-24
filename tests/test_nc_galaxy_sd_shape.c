@@ -1372,9 +1372,9 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
 static void
 test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShape *test, gconstpointer pdata)
 {
-  gdouble seed =  g_test_rand_int ();
+  gdouble seed                      =  g_test_rand_int ();
   NcmRNG *rng                       = ncm_rng_seeded_new (NULL, seed);
-  NcmRNG *rng2                       = ncm_rng_seeded_new (NULL, seed);
+  NcmRNG *rng2                      = ncm_rng_seeded_new (NULL, seed);
   NcGalaxySDObsRedshiftData *z_data = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
   NcGalaxySDPositionData *p_data    = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
   NcGalaxySDShapeData *s_data       = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
@@ -1384,7 +1384,7 @@ test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShape *test, gconstpointer pd
   GList *required_columns_iter      = required_columns;
   GStrvBuilder *builder             = g_strv_builder_new ();
   NcmStatsVec *stats                = ncm_stats_vec_new (7, NCM_STATS_VEC_COV, FALSE);
-  NcmStatsVec *stats2                = ncm_stats_vec_new (7, NCM_STATS_VEC_COV, FALSE);
+  NcmStatsVec *stats2               = ncm_stats_vec_new (7, NCM_STATS_VEC_COV, FALSE);
   GStrv required_columns_strv;
   NcGalaxyWLObs *obs, *obs2;
   gdouble radius;
