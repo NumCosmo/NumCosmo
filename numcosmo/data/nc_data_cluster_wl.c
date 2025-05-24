@@ -617,13 +617,9 @@ _nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
       gdouble radius;
 
       do {
-        gdouble theta = 0.0;
-        gdouble phi   = 0.0;
-
         nc_galaxy_sd_position_gen (galaxy_position, p_data, rng);
 
-        nc_halo_position_polar_angles (halo_position, p_data->ra, p_data->dec, &theta, &phi);
-        radius = nc_halo_position_projected_radius (halo_position, cosmo, theta);
+        radius = nc_halo_position_projected_radius_from_ra_dec (halo_position, cosmo, p_data->ra, p_data->dec);
       } while (radius < self->r_min || radius > self->r_max);
     }
 
