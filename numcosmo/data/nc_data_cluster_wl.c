@@ -623,9 +623,7 @@ _nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
       } while (radius < self->r_min || radius > self->r_max);
     }
 
-    if (self->resample_flag & NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_SHAPE)
-      nc_galaxy_sd_shape_gen (galaxy_shape, mset, data, rng);
-
+    nc_galaxy_sd_shape_gen (galaxy_shape, mset, data, rng);
     nc_galaxy_sd_shape_data_write_row (data, self->obs, gal_i);
   }
 }
