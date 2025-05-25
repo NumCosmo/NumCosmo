@@ -132,7 +132,7 @@ test_nc_galaxy_wl_obs_new (TestNcGalaxyWLObs *test, gconstpointer pdata)
   GStrv col_names          = g_strsplit ("ra dec z", " ", -1);
   guint nrows              = 100;
 
-  test->obs = nc_galaxy_wl_obs_new (coord, nrows, col_names);
+  test->obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, coord, nrows, col_names);
   g_assert_nonnull (test->obs);
   g_assert_true (NC_IS_GALAXY_WL_OBS (test->obs));
 
@@ -146,7 +146,7 @@ test_nc_galaxy_wl_obs_new_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
   GStrv col_names          = g_strsplit ("ra dec pz", " ", -1);
   guint nrows              = 100;
 
-  test->obs = nc_galaxy_wl_obs_new (coord, nrows, col_names);
+  test->obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, coord, nrows, col_names);
   g_assert_nonnull (test->obs);
   g_assert_true (NC_IS_GALAXY_WL_OBS (test->obs));
 
@@ -302,7 +302,7 @@ test_nc_galaxy_wl_obs_setget (TestNcGalaxyWLObs *test, gconstpointer pdata)
   guint ngals        = 200;
   GStrv header       = g_strsplit ("ra dec z e1 e2 e1_int e2_int e_rms e_sigma", " ", -1);
   NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, ngals, header);
+  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, ngals, header);
   NcGalaxyWLObs *obs2;
   guint i;
 
