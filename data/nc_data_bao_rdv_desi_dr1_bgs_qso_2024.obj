@@ -1,0 +1,17 @@
+(
+  'NcDataBaoRDV', 
+  {
+    'desc'      : <'DESI DR1 -- BAO from galaxies and quasars -- Adame et al. (2024), arXiv:2404.03000, table 18 (BGS and QSO)'>, 
+    'init'      : <true>, 
+    'n-points'  : <2>, 
+    'mean'      : <[12.56, 1.542]>, 
+    'inv-cov'    : <[
+                     [ 44.444444444, 0], 
+                     [0, 2.227667632]
+                   ]>, 
+    'z'         : <[0.30, 1.49]>,
+    'is-rDV'    : <false>,
+    'long-desc' : <'BAO Sample(D_v / r_sd); Adame et al. (2025), arXiv:2404.03002: Footnote 14 mentions why to use these data and details for the Covariance matrix is given in section
+    2.3.2. Variances are 0.0225 and 0.4489, respectively.'>
+  }
+)

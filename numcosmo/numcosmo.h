@@ -133,6 +133,7 @@
 #include <numcosmo/lss/nc_multiplicity_func_watson.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
 #include <numcosmo/lss/nc_halo_bias.h>
+#include <numcosmo/lss/nc_halo_bias_despali.h>
 #include <numcosmo/lss/nc_halo_bias_ps.h>
 #include <numcosmo/lss/nc_halo_bias_st_spher.h>
 #include <numcosmo/lss/nc_halo_bias_st_ellip.h>
@@ -186,6 +187,7 @@
 #include <numcosmo/data/nc_data_bao_dhr_dar.h>
 #include <numcosmo/data/nc_data_bao_dtr_dhr.h>
 #include <numcosmo/data/nc_data_bao_dmr_hr.h>
+#include <numcosmo/data/nc_data_bao_dvr_dtdh.h>
 #include <numcosmo/data/nc_data_bao.h>
 #include <numcosmo/data/nc_data_cmb_dist_priors.h>
 #include <numcosmo/data/nc_data_cmb_shift_param.h>

@@ -70,7 +70,7 @@ class RichnessMassRelationCalibration:
                 fixed_parameters = ['A0' ,'cut', 'cutM1', 'cutZ1'] #fixing cut parameters
             
             case "ascaso":
-                model = ascaso = Nc.ClusterMassAscaso(lnRichness_min=np.log(1.0), lnRichness_max=6)
+                model = Nc.ClusterMassAscaso(lnRichness_min=np.log(1.0), lnRichness_max=6)
                 fixed_parameters = ['cut'] #fixing cut parameter
               
     #Model
@@ -111,7 +111,7 @@ class RichnessMassRelationCalibration:
 
     def get_mean_model(self, model, lnM, z):
         
-        return np.array([model.get_mean_richness(lnM[i], z[i]) for i in range(len(lnM))])
+        return np.array([model.get_mean(lnM[i], z[i]) for i in range(len(lnM))])
 
 
 #----------------------------------------------------------------------------#
@@ -121,7 +121,7 @@ class RichnessMassRelationCalibration:
 #----------------------------------------------------------------------------#        
     def get_std_model(self, model, lnM, z):
     
-        return np.array([model.get_std_richness(lnM[i], z[i]) for i in range(len(lnM))])
+        return np.array([model.get_std(lnM[i], z[i]) for i in range(len(lnM))])
             
             
     

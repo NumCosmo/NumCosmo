@@ -247,7 +247,11 @@ _nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2l
 
       local_m2lnL += gsl_pow_2 ((lnR_i - lnR_i_mean) / lnR_i_std)
                      + 2.0 * log (lnR_i_std)
+<<<<<<< HEAD
                      + 2.0 * log (gsl_sf_erfc ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std)) * 0.5);
+=======
+                     + 2.0 * log( 0.5 * gsl_sf_erfc ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std)));
+>>>>>>> fc7fbdce21a5d54e7c62bc9cd6cd4308d99f4aec
     }
   }
   else if (NC_IS_CLUSTER_MASS_LNRICH_EXT (cluster_mass))
@@ -267,7 +271,7 @@ _nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2l
 
       local_m2lnL += gsl_pow_2 ((lnR_i - lnR_i_mean) / lnR_i_std)
                      + 2.0 * log (lnR_i_std)
-                     + 2.0 * gsl_sf_log_erfc ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std));
+                     + 2.0 * log( 0.5 * gsl_sf_erfc ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std)));
     }
   }
   else

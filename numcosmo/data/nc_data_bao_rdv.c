@@ -48,6 +48,19 @@
 #include "nc_enum_types.h"
 #include "math/ncm_cfg.h"
 
+typedef struct _NcDataBaoRDVPrivate
+{
+  gint placeholder;
+} NcDataBaoRDVPrivate;
+
+struct _NcDataBaoRDV
+{
+  NcmDataGauss parent_instance;
+  NcDistance *dist;
+  NcmVector *x;
+  gboolean r_DV;
+};
+
 enum
 {
   PROP_0,
@@ -92,9 +105,9 @@ nc_data_bao_rdv_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_DATA_FORM:
       bao_rdv->r_DV = g_value_get_boolean (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -116,9 +129,9 @@ nc_data_bao_rdv_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_DATA_FORM:
       g_value_set_boolean (value, bao_rdv->r_DV);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -301,9 +314,15 @@ nc_data_bao_rdv_new_from_id (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_RDV_BOSS_QSO_ATA2017:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_rdv_boss_qso_ata2017.obj", TRUE);
       break;
-    default:
-      g_error ("nc_data_bao_rdv_new_from_id: id %d not recognized.", id);
+    case NC_DATA_BAO_RDV_DESI_DR1_BGS_QSO_2024:
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_rdv_desi_dr1_bgs_qso_2024.obj", TRUE);
       break;
+    case NC_DATA_BAO_RDV_DESI_DR2_BGS_2025:
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_rdv_desi_dr2_bgs_2025.obj", TRUE);
+      break;
+    default:                                                              /* LCOV_EXCL_LINE */
+      g_error ("nc_data_bao_rdv_new_from_id: id %d not recognized.", id); /* LCOV_EXCL_LINE */
+      break;                                                              /* LCOV_EXCL_LINE */
   }
 
   bao_rdv = nc_data_bao_rdv_new_from_file (filename);
