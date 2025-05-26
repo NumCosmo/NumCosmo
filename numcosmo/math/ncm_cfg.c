@@ -155,6 +155,7 @@
 #include "lss/nc_cluster_redshift_nodist.h"
 #include "lss/nc_cluster_photoz_gauss_global.h"
 #include "lss/nc_cluster_photoz_gauss.h"
+#include "lss/nc_halo_bias_despali.h"
 #include "lss/nc_halo_bias_ps.h"
 #include "lss/nc_halo_bias_st_ellip.h"
 #include "lss/nc_halo_bias_st_spher.h"
@@ -705,6 +706,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_PHOTOZ_GAUSS);
 
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_DESPALI);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_PS);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_ELLIP);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_SPHER);

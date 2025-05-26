@@ -539,7 +539,7 @@ nc_multiplicity_func_despali_delta_vir (NcMultiplicityFuncDespali *md, NcHICosmo
   const gdouble Omega_m = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
   const gdouble x       = Omega_m - 1.0;
 
-  const gboolean is_flat = ncm_cmp ((nc_hicosmo_Omega_k0 (cosmo)), (0.0), 1.0e-5, 0.0) == 0;
+  const gboolean is_flat = ncm_cmp ((nc_hicosmo_Omega_k0 (cosmo)), (0.0), 1.0e5, 0.0) == 0;
   if (is_flat)
   {
     return 18.0 * pow (M_PI, 2.0) + 82.0 * x - 39.0 * x * x;

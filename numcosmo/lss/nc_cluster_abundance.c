@@ -1,4 +1,4 @@
-/***************************************************************************
+suit/***************************************************************************
  *            nc_cluster_abundance.c
  *
  *  Tue Apr 20 10:59:01 2010
@@ -593,8 +593,8 @@ _nc_cluster_abundance_z_intp_lnM_intp_bin_N_integrand (gdouble lnM, gdouble z, g
     ncm_model_params_log_all (ncm_model_peek_submodel_by_mid (NCM_MODEL (obs_data->cosmo), nc_hiprim_id ()));
 
     g_error ("_nc_cluster_abundance_z_intp_lnM_intp_bin_N_integrand: negative integrand at: "
-             "lnM % 22.15g z % 22.15g z_intp % 22.15g lnM_intp % 22.15g d2NdzdlnM % 22.15g\n",
-             lnM, z, z_intp, lnM_intp, d2NdzdlnM);
+             "lnM % 22.15g z % 22.15g z_intp % 22.15g lnM_intp % 22.15g d2NdzdlnM % 22.15g lnM_obs_lower % 22.15g lnM_obs_upper % 22.15g \n",
+             lnM, z, z_intp, lnM_intp, d2NdzdlnM , obs_data->lnM_obs_lower[0] , obs_data->lnM_obs_upper[0]);
   }
 
   return z_intp * lnM_intp * d2NdzdlnM;
@@ -1559,7 +1559,7 @@ nc_ca_mean_bias_Mobs_denominator (NcClusterAbundance *cad, NcHICosmo *cosmo, gdo
 
   F.function = &_nc_ca_mean_bias_Mobs_denominator_integrand;
   F.params   = &obs_data;
-
+suit
   {
     obs_data.z   = z;
     obs_data.lnM = lnMobs;

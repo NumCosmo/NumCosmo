@@ -62,7 +62,6 @@ void ncm_data_gauss_cov_use_norma (NcmDataGaussCov *gauss, gboolean use_norma);
 void ncm_data_gauss_cov_replace_mean (NcmDataGaussCov *gauss, NcmVector *mean);
 void ncm_data_gauss_cov_set_cov (NcmDataGaussCov *gauss, NcmMatrix *cov);
 NcmVector *ncm_data_gauss_cov_peek_mean (NcmDataGaussCov *gauss);
-NcmVector *ncm_data_gauss_cov_peek_data (NcmDataGaussCov *gauss);
 NcmMatrix *ncm_data_gauss_cov_peek_cov (NcmDataGaussCov *gauss);
 NcmMatrix *ncm_data_gauss_cov_compute_cov (NcmDataGaussCov *gauss, NcmMSet *mset, gboolean *updated);
 NcmVector *ncm_data_gauss_cov_compute_mean (NcmDataGaussCov *gauss, NcmMSet *mset);

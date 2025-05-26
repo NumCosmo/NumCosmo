@@ -95,6 +95,7 @@ typedef struct _NcDataClusterNCountsGaussIndex
   guint i_lnM;
   gdouble *z_obs_lb;
   gdouble *z_obs_ub;
+  NcmVector *z_obs_params;
   gdouble *lnM_obs_lb;
   gdouble *lnM_obs_ub;
 } NcDataClusterNCountsGaussIndex;

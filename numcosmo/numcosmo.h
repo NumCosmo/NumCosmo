@@ -133,6 +133,7 @@
 #include <numcosmo/lss/nc_multiplicity_func_watson.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
 #include <numcosmo/lss/nc_halo_bias.h>
+#include <numcosmo/lss/nc_halo_bias_despali.h>
 #include <numcosmo/lss/nc_halo_bias_ps.h>
 #include <numcosmo/lss/nc_halo_bias_st_spher.h>
 #include <numcosmo/lss/nc_halo_bias_st_ellip.h>
