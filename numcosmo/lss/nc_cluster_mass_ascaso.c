@@ -432,7 +432,7 @@ _nc_cluster_mass_ascaso_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdo
       else
       {
         if ((fabs (x_max) > 4.0) || (fabs (x_min) > 4.0))
-          intp_bin = -(erfc (x_min) - erfc (x_max)) / 2.0; 
+          intp_bin = -(erfc (x_min) - erfc (x_max)) / 2.0;
         else
           intp_bin = (erf (x_min) - erf (x_max))  / 2.0;
       if (intp_bin < 0.0)
@@ -488,18 +488,18 @@ _nc_cluster_mass_ascaso_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo,
 
   const gdouble lnMl =  M_LN10 * 12.0;
   const gdouble lnMu =  M_LN10 * 16.0;
-    
+
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;
 }
 
 static void
 _nc_cluster_mass_ascaso_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
-{ 
-    
+{
+
   const gdouble lnMl =  M_LN10 * 12.0;
   const gdouble lnMu =  M_LN10 * 16.0;
-    
+
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;
 
@@ -720,4 +720,3 @@ nc_cluster_mass_ascaso_get_enable_rejection (NcClusterMassAscaso *ascaso)
 
   return self->enable_rejection;
 }
-

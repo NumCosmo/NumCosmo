@@ -36,12 +36,17 @@
 #include "build_cfg.h"
 
 #include "lss/nc_cluster_mass_selection.h"
+#include "math/ncm_integrate.h"
+#include "math/ncm_memory_pool.h"
 #include "math/ncm_c.h"
 #include "math/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>
 #endif /* NUMCOSMO_GIR_SCAN */
+
+
+#define _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY 6
 
 struct _NcClusterMassSelectionPrivate
 {
@@ -54,6 +59,8 @@ struct _NcClusterMassSelectionPrivate
   gboolean enable_rejection;
 };
 
+
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassSelection, nc_cluster_mass_selection, NC_TYPE_CLUSTER_MASS)
 
 #define VECTOR   (NCM_MODEL (selection))
@@ -63,6 +70,10 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassSelection, nc_cluster_mass_selection, N
 #define SIGMA_P0 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_SIGMA_P0))
 #define SIGMA_P1 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_SIGMA_P1))
 #define SIGMA_P2 (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_SIGMA_P2))
+#define LNM_C0   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_LNM_C0))
+#define LNM_CZ   (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_LNM_CZ))
+#define A_C0     (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_A_C0))
+#define A_CZ     (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_A_CZ))
 #define CUT      (ncm_model_orig_param_get (VECTOR, NC_CLUSTER_MASS_SELECTION_CUT))
 
 
@@ -80,7 +91,7 @@ enum
 static void
 nc_cluster_mass_selection_init (NcClusterMassSelection *selection)
 {
-  NcClusterMassSelectionPrivate * const self = selection->priv = nc_cluster_mass_selection_get_insta_ce_private (selection);
+  NcClusterMassSelectionPrivate * const self = selection->priv = nc_cluster_mass_selection_get_instance_private (selection);
 
   self->M0               = 0.0;
   self->z0               = 0.0;
@@ -90,6 +101,8 @@ nc_cluster_mass_selection_init (NcClusterMassSelection *selection)
   self->lnR_max          = GSL_POSINF;
   self->enable_rejection = TRUE;
 }
+
+
 
 static void
 _nc_cluster_mass_selection_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -164,6 +177,7 @@ _nc_cluster_mass_selection_finalize (GObject *object)
   G_OBJECT_CLASS (nc_cluster_mass_selection_parent_class)->finalize (object);
 }
 
+static void _nc_cluster_mass_selection_completeness(NcClusterMass *clusterm,gdouble lnM, gdouble z, gdouble *completeness);
 static gdouble _nc_cluster_mass_selection_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params);
 static gdouble _nc_cluster_mass_selection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z);
 static gdouble _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params);
@@ -186,7 +200,7 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
   model_class->get_property = &_nc_cluster_mass_selection_get_property;
   object_class->finalize    = &_nc_cluster_mass_selection_finalize;
 
-  ncm_model_class_set_name_nick (model_class, "Selection Ln-normal richness distribution", "Selection");
+  ncm_model_class_set_name_nick (model_class, "Selection Ln-normal richness distribution with selection function", "Selection");
   ncm_model_class_add_params (model_class, NC_CLUSTER_MASS_SELECTION_SPARAM_LEN, 0, PROP_SIZE);
 
   /**
@@ -233,7 +247,7 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
   /**
    * NcClusterMassSelection:lnRichness_max:
    *
-   * FIXME Set correct values (limits)
+   * FIXME Set correct values (limits)intp
    */
   g_object_class_install_property (object_class,
                                    PROP_LNRICHNESS_MAX,
@@ -295,6 +309,7 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
    *
    * Distribution's bias in the standard deviation, $\sigma \in [10^{-4}, 10]$.
    *
+   * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_SIGMA_P0, "\\sigma_p0", "sigmap0",
                               1.0e-4, 10.0, 1.0e-2,
@@ -306,6 +321,7 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
    *
    * Distribution's slope with respect to the mass in the standard deviation.
    *
+   * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_SIGMA_P1, "\\sigma_p1", "sigmap1",
                               -10.0, 10.0, 1.0e-2,
@@ -318,6 +334,7 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
  *
  * Distribution's slope with respect to the redshift in the standard deviation.
  *
+ * FIXME Set correct values (limits)
  */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_SIGMA_P2, "\\sigma_p2", "sigmap2",
                               -10.0,  10.0, 1.0e-2,
@@ -328,24 +345,26 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
 
 
 /**
- * NcClusterMassSelection:LNM_C0:
+ * NcClusterMassSelection:lnm_c0:
  *
  * completeness pivot mass constant.
  *
+ * FIXME Set correct values (limits)
  */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_LNM_C0, "LNM_C0", "ln_mc0",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_LNM_C0, "\\lnm_c0", "lnm_c0",
                               M_LN10 * 12.0,  M_LN10 * 1.0e16, 1.0e-2,
                               NC_CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_SELECTION_DEFAULT_LNM_C0,
                               NCM_PARAM_TYPE_FIXED);
 
 
 /**
- * NcClusterMassSelection:LNM_CZ:
+ * NcClusterMassSelection:lnm_cz:
  *
  * completeness pivot mass redshift dependency.
  *
+ * FIXME Set correct values (limits)
  */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_LNM_CZ, "LNM_CZ", "ln_mcz",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_LNM_CZ, "\\lnm_cz", "lnm_cz",
                               -1.0,  1.0, 1.0e-4,
                               NC_CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_SELECTION_DEFAULT_LNM_CZ,
                               NCM_PARAM_TYPE_FIXED);
@@ -353,26 +372,41 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
 
 
 /**
- * NcClusterMassSelection:AN_C0:
+ * NcClusterMassSelection:a_c0:
  *
  * completeness exponent constant.
  *
+ * FIXME Set correct values (limits)
  */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_AN_C0, "A_C0", "a_c0",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_A_C0, "\\a_c0", "a_c0",
                               -1.0,  1.0, 1.0e-4,
                               NC_CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_SELECTION_DEFAULT_A_C0,
                               NCM_PARAM_TYPE_FIXED);
 
 
 /**
- * NcClusterMassSelection:AN_CZ:
+ * NcClusterMassSelection:a_cz:
  *
  * completeness exponent redshift dependency.
  *
+ * FIXME Set correct values (limits)
  */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_LNM_CZ, "A_CZ", "a_cz",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_A_CZ, "\\a_cz", "a_cz",
                               -1.0,  1.0, 1.0e-4,
                               NC_CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_SELECTION_DEFAULT_A_CZ,
+                              NCM_PARAM_TYPE_FIXED);
+
+
+
+/**
+ * NcClusterMassSelection:CUT:
+ *
+ * Cut in richness.
+ *
+ */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_CUT, "CUT", "cut",
+                              0.0,  1.0e16, 1.0e-2,
+                              NC_CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_SELECTION_DEFAULT_CUT,
                               NCM_PARAM_TYPE_FIXED);
 
 
@@ -407,14 +441,14 @@ _nc_cluster_mass_selection_lnR_sigma (NcClusterMass *clusterm, const gdouble lnM
 }
 
 
-static gdouble
-_nc_cluster_mass_selection_completeness(NcClusterMass *clusterm,gdouble lnM, gdouble z, gdobule *completeness)
+static void
+_nc_cluster_mass_selection_completeness(NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *completeness)
 {
   NcClusterMassSelection *selection             = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = selection->priv;
-  const gdouble lnMc = LNM_C0 + LNM_CZ * (1 + z);
-  const gdouble a_nc = AN_C0  + AN_CZ  * (1 + z);
-  const gdouble M_r  = exp (lnM - lnMc);
+
+  gdouble lnMc = LNM_C0 + LNM_CZ * (1 + z);
+  gdouble a_nc = A_C0  + A_CZ  * (1 + z);
+  gdouble M_r  = exp (lnM - lnMc);
 
   completeness[0] =  pow(M_r , a_nc) /(1.0 + pow(M_r , a_nc));
 
@@ -422,31 +456,12 @@ _nc_cluster_mass_selection_completeness(NcClusterMass *clusterm,gdouble lnM, gdo
 }
 
 
-typedef struct _NcClusterMassSelectionInt
-{
-  NcHICosmo *cosmo;
-  NcClusterMass *clusterm;
-  gdouble lnM_obs;
-  const gdouble *lnM;
-  const gdouble *z;
-  const gdouble *lnM_obs_params;
-} NcClusterMassSelectionInt;
-
-static gdouble
-_nc_cluster_mass_selection_integrand (gdouble lnM_obs, gpointer userdata)
-{
-  NcClusterMassSelectionInt obs_data;   = (NcClusterMassSelectionInt *) userdata;
-
-  return _nc_cluster_mass_selection_p(obs_data->clusterm, obs_data->cosmo, obs_data->lnM, obs_data->z, lnM_obs , obs_data->lnM_obs_params);
-
-}
-
 static gdouble
 _nc_cluster_mass_selection_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
 {
   NcClusterMassSelection *selection = NC_CLUSTER_MASS_SELECTION (clusterm);
 
-  gdouble lnR_true, sigma;
+  gdouble lnR_true, sigma, completeness;
 
   _nc_cluster_mass_selection_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
   _nc_cluster_mass_selection_completeness(clusterm, lnM, z, &completeness);
@@ -459,9 +474,42 @@ _nc_cluster_mass_selection_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoubl
         return 1.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x) * completeness;
 }
 
-static gdouble
-_nc_cluster_mass_selection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_params)
+
+typedef struct _NcClusterMassSelectionInt
 {
+  NcHICosmo *cosmo;
+  NcClusterMass *clusterm;
+  gdouble lnM_obs;
+  gdouble lnM;
+  gdouble z;
+  const gdouble *lnM_obs_params;
+} NcClusterMassSelectionInt;
+
+static gdouble
+_nc_cluster_mass_selection_integrand (gdouble lnM_obs, gpointer userdata)
+{
+  NcClusterMassSelectionInt *obs_data   = (NcClusterMassSelectionInt *) userdata;
+  gdouble lnR_true, sigma, completeness;
+  NcClusterMassSelection *selection             = NC_CLUSTER_MASS_SELECTION (obs_data->clusterm);
+
+  _nc_cluster_mass_selection_lnR_sigma (obs_data->clusterm, obs_data->lnM, obs_data->z, &lnR_true, &sigma);
+  _nc_cluster_mass_selection_completeness(obs_data->clusterm, obs_data->lnM, obs_data->z, &completeness);
+
+    const gdouble x     = (lnM_obs - lnR_true) / sigma;
+
+    if (lnM_obs < CUT)
+        return 0.0;
+    else
+        return 1.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x) * completeness;
+
+}
+
+static gdouble
+_nc_cluster_mass_selection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z)
+{
+  NcClusterMassSelection *selection = NC_CLUSTER_MASS_SELECTION (clusterm);
+  NcClusterMassSelectionPrivate * const self = selection->priv;
+
   NcClusterMassSelectionInt obs_data;
   gdouble intp, err;
   gsl_function F;
@@ -470,13 +518,12 @@ _nc_cluster_mass_selection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdo
   obs_data.clusterm       = clusterm;
   obs_data.cosmo          = cosmo;
   obs_data.lnM            = lnM;
-  obs_data.lnM_obs_params = lnM_obs_params;
   obs_data.z              = z;
 
   F.function = &_nc_cluster_mass_selection_integrand;
   F.params   = &obs_data;
 
-  gsl_integration_qag (&F, CUT, self->lnR_max, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDAN_CE_DEFAULT_INT_KEY, *w, &intp, &err);
+  gsl_integration_qag (&F, CUT, self->lnR_max, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp, &err);
   ncm_memory_pool_return (w);
 
   return intp;
@@ -509,22 +556,17 @@ _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, 
 
       if ((lnM_obs_lower[0] < CUT) && (lnM_obs_upper[0] >= CUT))
       {
-        gsl_integration_qag (&F, CUT, lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDAN_CE_DEFAULT_INT_KEY, *w, &intp_bin, &err);
+        gsl_integration_qag (&F, CUT, lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp_bin, &err);
         ncm_memory_pool_return (w);
       }
       else
       {
-        gsl_integration_qag (&F, lnM_obs_lower[0], lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDAN_CE_DEFAULT_INT_KEY, *w, &intp_bin, &err);
+        gsl_integration_qag (&F, lnM_obs_lower[0], lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp_bin, &err);
         ncm_memory_pool_return (w);
       }
     return intp_bin;
     }
   }
-}
-
-/**
- * resample needs to be correct into a new version
- */
 
 
 static gboolean
@@ -626,7 +668,6 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
       const gdouble lnR    = lnR_pre + mu_p2 * Dln1pz;
       const gdouble sigma  = sigma_pre + sigma_p2 * Dln1pz;
       const gdouble x      = (lnM_obs_ptr[i] - lnR) / sigma;
-      const gdouble x_cut  = (lnR - CUT) / (M_SQRT2 * sigma);
 
       if (lnM_obs_ptr[i] <CUT)
       {
@@ -647,7 +688,6 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
       const gdouble lnR    = lnR_pre + mu_p2 * Dln1pz;
       const gdouble sigma  = sigma_pre + sigma_p2 * Dln1pz;
       const gdouble x      = (lnM_obs_ptr[i * tda] - lnR) / sigma;
-      const gdouble x_cut  = (lnR - CUT) / (M_SQRT2 * sigma);
 
       if (lnM_obs_ptr[i * tda] <CUT)
       {

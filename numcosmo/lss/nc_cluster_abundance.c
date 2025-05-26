@@ -1,4 +1,4 @@
-suit/***************************************************************************
+/***************************************************************************
  *            nc_cluster_abundance.c
  *
  *  Tue Apr 20 10:59:01 2010
@@ -1559,7 +1559,6 @@ nc_ca_mean_bias_Mobs_denominator (NcClusterAbundance *cad, NcHICosmo *cosmo, gdo
 
   F.function = &_nc_ca_mean_bias_Mobs_denominator_integrand;
   F.params   = &obs_data;
-suit
   {
     obs_data.z   = z;
     obs_data.lnM = lnMobs;
@@ -1691,4 +1690,3 @@ nc_cluster_abundance_mean_bias (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClu
 
   return N_bias;
 }
-
