@@ -151,6 +151,7 @@
 #include <numcosmo/lss/nc_cluster_mass_plcl.h>
 #include <numcosmo/lss/nc_cluster_mass_ascaso.h>
 #include <numcosmo/lss/nc_cluster_mass_lnrich_ext.h>
+#include <numcosmo/lss/nc_cluster_mass_selection.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_pseudo_counts.h>
 #include <numcosmo/lss/nc_cor_cluster_cmb_lens_limber.h>
@@ -210,4 +211,3 @@
 #include <numcosmo/xcor/nc_xcor_limber_kernel_tSZ.h>
 
 #endif /* _NUMCOSMO_H */
-

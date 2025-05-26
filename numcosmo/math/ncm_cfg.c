@@ -151,6 +151,7 @@
 #include "lss/nc_cluster_mass_plcl.h"
 #include "lss/nc_cluster_mass_ascaso.h"
 #include "lss/nc_cluster_mass_lnrich_ext.h"
+#include "lss/nc_cluster_mass_selection.h"
 #include "lss/nc_cluster_redshift.h"
 #include "lss/nc_cluster_redshift_nodist.h"
 #include "lss/nc_cluster_photoz_gauss_global.h"
@@ -250,7 +251,7 @@
 #endif /* NUMCOSMO_GIR_SCAN */
 
 /* *INDENT-OFF* */
-G_DEFINE_QUARK (ncm-cfg-error, ncm_cfg_error) 
+G_DEFINE_QUARK (ncm-cfg-error, ncm_cfg_error)
 /* *INDENT-ON* */
 
 static gchar *numcosmo_path         = NULL;
@@ -2510,4 +2511,3 @@ ncm_cfg_get_commit_hash (void)
 {
   return NUMCOSMO_GIT_COMMIT;
 }
-
