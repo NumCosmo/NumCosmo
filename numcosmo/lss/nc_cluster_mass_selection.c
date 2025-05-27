@@ -455,6 +455,16 @@ _nc_cluster_mass_selection_completeness(NcClusterMass *clusterm, gdouble lnM, gd
 
 }
 
+static void
+_nc_cluster_mass_selection_purity(NcClusterMass *clusterm, gdouble lnM_obs, gdouble z, gdouble *purity)
+{
+  NcClusterMassSelection *selection             = NC_CLUSTER_MASS_SELECTION (clusterm);
+
+
+  purity[0] =  pow(M_r , a_nc) /(1.0 + pow(M_r , a_nc));
+
+
+}
 
 static gdouble
 _nc_cluster_mass_selection_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
