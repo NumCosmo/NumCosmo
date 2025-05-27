@@ -75,7 +75,7 @@ typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_SELECTION_SPARAMS >*/
 
   /* < private > */
   NC_CLUSTER_MASS_SELECTION_SPARAM_LEN, /*< skip >*/
-} NcClusterMassSelectionSParams;
+}   NcClusterMassSelectionSParams;
 
 #define NC_CLUSTER_MASS_SELECTION_DEFAULT_MU_P0  (3.19)
 #define NC_CLUSTER_MASS_SELECTION_DEFAULT_MU_P1  (2.0 / M_LN10)
