@@ -95,6 +95,7 @@ typedef struct _NcDataClusterNCountsGaussIndex
   guint i_lnM;
   gdouble *z_obs_lb;
   gdouble *z_obs_ub;
+  NcmVector *z_obs_params;
   gdouble *lnM_obs_lb;
   gdouble *lnM_obs_ub;
 } NcDataClusterNCountsGaussIndex;
@@ -457,13 +458,16 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
     else
       s_matrix = self->s_matrix;
 
-    if (s_matrix == NULL)
-      g_error ("Super sample covariance matrix not set");
+    
 
     ncm_matrix_set_zero (cov);
 
     if (self->has_ssc)
     {
+      if (s_matrix == NULL)
+      {
+      g_error ("Super sample covariance matrix not set");
+      }
       for (i = 0; i < self->index_map->len; i++)
       {
         const NcDataClusterNCountsGaussIndex *k_i = &g_array_index (self->index_map, NcDataClusterNCountsGaussIndex, i);
