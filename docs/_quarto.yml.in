@@ -25,6 +25,7 @@ project:
 website:
   title: "The Numerical Cosmology Library"
   favicon: images/favicon_numcosmo.png
+  google_analytics: "G-ZRWDDX4BLS"
   navbar:
     search: true
     tools:
