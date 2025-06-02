@@ -604,6 +604,13 @@ _nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
       qgrw->eom_two_fluids.mnu2_zeta = rhopp * k * k / (x * gsl_pow_3 (absE));
       qgrw->eom_two_fluids.mnu2_s    = x3 * x2 * k * k / (absE * rhopp * cos2_phi * sin2_phi);
       qgrw->eom_two_fluids.y         = epsilon * (c1 * c1 - c2 * c2) * cos2_phi * sin2_phi;
+
+      qgrw->eom_two_fluids.A1Pzeta2 = 0.5 * Fnu * rhopp1 / (x3 * absE * c1);
+      qgrw->eom_two_fluids.A2Pzeta2 = 0.5 * Fnu * rhopp2 / (x3 * absE * c2);
+      qgrw->eom_two_fluids.A1PQ2    = gsl_pow_2 (absE * x3 / rhopp1) * qgrw->eom_two_fluids.A1Pzeta2;
+      qgrw->eom_two_fluids.A2PQ2    = gsl_pow_2 (absE * x3 / rhopp2) * qgrw->eom_two_fluids.A2Pzeta2;
+      qgrw->eom_two_fluids.T1       = gsl_pow_2 (absE * x3 / rhopp1);
+      qgrw->eom_two_fluids.T2       = gsl_pow_2 (absE * x3 / rhopp2);
     }
 
     qgrw->eom_two_fluids.skey  = ncm_model_state_get_pkey (NCM_MODEL (cosmo));

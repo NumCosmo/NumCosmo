@@ -80,6 +80,16 @@ struct _NcHIPertITwoFluidsEOM
   gdouble cos2phi;
   gdouble cs2;
   gdouble cm2;
+  gdouble A1Pzeta2;
+  gdouble A1PQ2;
+  gdouble A1zeta2;
+  gdouble A1Q2;
+  gdouble A2Pzeta2;
+  gdouble A2PQ2;
+  gdouble A2zeta2;
+  gdouble A2Q2;
+  gdouble T1;
+  gdouble T2;
 };
 
 /**
