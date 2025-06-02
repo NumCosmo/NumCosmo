@@ -25,7 +25,13 @@ project:
 website:
   title: "The Numerical Cosmology Library"
   favicon: images/favicon_numcosmo.png
-  google_analytics: "G-ZRWDDX4BLS"
+  cookie-consent:
+    type: express
+    style: headline
+    palette: dark
+  google-analytics:
+    tracking-id: "G-ZRWDDX4BLS"
+    anonymize-ip: true
   navbar:
     search: true
     tools:
