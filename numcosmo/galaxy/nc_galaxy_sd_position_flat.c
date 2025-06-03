@@ -188,7 +188,7 @@ _nc_galaxy_sd_position_flat_integ_f (gpointer callback_data, NcGalaxySDPositionD
   if ((ra >= self->ra_min) && (ra <= self->ra_max) && (dec >= self->dec_min) && (dec <= self->dec_max))
     return ra_log_norm + dec_log_norm + log (cos (ncm_c_degree_to_radian (dec)));
 
-  return 0.0;
+  return GSL_NEGINF;
 }
 
 static NcGalaxySDPositionIntegrand *

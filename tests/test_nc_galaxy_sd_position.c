@@ -360,9 +360,13 @@ test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpoint
     gsdp_data->dec = dec;
 
     if ((ra < ra_min) || (ra > ra_max) || (dec < dec_min) || (dec > dec_max))
-      g_assert_cmpfloat (nc_galaxy_sd_position_integrand_eval (integrand, gsdp_data), ==, 0.0);
+      g_assert_cmpfloat (nc_galaxy_sd_position_integrand_eval (integrand, gsdp_data), ==, GSL_NEGINF);
     else
-      g_assert_cmpfloat (nc_galaxy_sd_position_integrand_eval (integrand, gsdp_data), >, 0.0);
+    {
+      gdouble res = nc_galaxy_sd_position_integrand_eval (integrand, gsdp_data);
+
+      g_assert_true (gsl_finite (res));
+    }
   }
 
   nc_galaxy_sd_obs_redshift_data_unref (sdz_data);
