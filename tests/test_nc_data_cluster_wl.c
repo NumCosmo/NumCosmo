@@ -174,6 +174,15 @@ test_nc_data_cluster_wl_new (TestNcDataClusterWL *test, gconstpointer pdata)
   ncm_model_param_set (NCM_MODEL (hp), NC_HALO_POSITION_RA, ra);
   ncm_model_param_set (NCM_MODEL (hp), NC_HALO_POSITION_DEC, dec);
 
+  ncm_model_param_set_lower_bound (NCM_MODEL (hp), NC_HALO_POSITION_RA, -180.0);
+  ncm_model_param_set_upper_bound (NCM_MODEL (hp), NC_HALO_POSITION_RA, 180.0);
+  ncm_model_param_set_lower_bound (NCM_MODEL (hp), NC_HALO_POSITION_DEC, -90.0);
+  ncm_model_param_set_upper_bound (NCM_MODEL (hp), NC_HALO_POSITION_DEC, 90.0);
+  ncm_model_param_set_lower_bound (NCM_MODEL (hp), NC_HALO_POSITION_RA, ra - 0.025 / cos (dec * M_PI / 180.0));
+  ncm_model_param_set_upper_bound (NCM_MODEL (hp), NC_HALO_POSITION_RA, ra + 0.025 / cos (dec * M_PI / 180.0));
+  ncm_model_param_set_lower_bound (NCM_MODEL (hp), NC_HALO_POSITION_DEC, dec - 0.025);
+  ncm_model_param_set_upper_bound (NCM_MODEL (hp), NC_HALO_POSITION_DEC, dec + 0.025);
+
   nc_halo_position_prepare (hp, cosmo);
 
   nc_data_cluster_wl_set_cut (dcwl, min_radius, max_radius);
@@ -316,7 +325,7 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
       for (j = 0; j < npoints; j++)
       {
         gdouble x = x_min + (x_max - x_min) * j / ((gdouble) npoints - 1.0);
-        gdouble y = exp (-0.5 * gsl_pow_2 ((x - z_avg) / z_sd)) / (sqrt (2.0 * M_PI) * z_sd);
+        gdouble y = (-0.5 * gsl_pow_2 ((x - z_avg) / z_sd)) - log (sqrt (2.0 * M_PI) * z_sd);
 
         ncm_vector_fast_set (xv, j, x);
         ncm_vector_fast_set (yv, j, y);
@@ -972,10 +981,10 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
     ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, -90.0);
     ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, 90.0);
 
-    ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, ra - 0.05 / cos (dec * M_PI / 180.0));
-    ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, ra + 0.05 / cos (dec * M_PI / 180.0));
-    ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, dec - 0.05);
-    ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, dec + 0.05);
+    ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, ra - 0.025 / cos (dec * M_PI / 180.0));
+    ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, ra + 0.025 / cos (dec * M_PI / 180.0));
+    ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, dec - 0.025);
+    ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, dec + 0.025);
 
     nc_galaxy_sd_position_set_dec_lim (test->galaxy_position, dec - 0.1, dec + 0.1);
     nc_galaxy_sd_position_set_ra_lim (test->galaxy_position, ra - 0.1, ra + 0.1);

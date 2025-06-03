@@ -382,8 +382,7 @@ _nc_galaxy_sd_shape_gauss_integ_f (gpointer callback_data, const gdouble z, NcGa
     const gdouble chi2_1    = gsl_pow_2 (ncm_complex_Re (&cplx_E_s)) / total_var;
     const gdouble chi2_2    = gsl_pow_2 (ncm_complex_Im (&cplx_E_s)) / total_var;
     const gdouble lndetjac  = nc_galaxy_sd_shape_lndet_jac (gsds, &cplx_g, &cplx_E_o);
-
-    return exp (-0.5 * (chi2_1 + chi2_2) + lndetjac) / (2.0 * M_PI * total_var);
+    return -0.5 * (chi2_1 + chi2_2) + lndetjac - log (2.0 * M_PI * total_var);
   }
 }
 

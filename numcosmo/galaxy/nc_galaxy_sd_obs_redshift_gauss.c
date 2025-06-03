@@ -317,17 +317,17 @@ _nc_galaxy_sd_obs_redshift_gauss_integ_f (gpointer callback_data, const gdouble 
 
   if (self->use_true_z)
   {
-    const gdouble sigmaz = ldata->sigma0 * (1.0 + z);
-    const gdouble norm   = sqrt (2.0 * M_PI) * sigmaz * 0.5 * (1.0 + erf (z / (M_SQRT2 * sigmaz)));
-    const gdouble int_z  = nc_galaxy_sd_true_redshift_integ (self->sdz, z);
-    const gdouble int_zp = exp (-0.5 * gsl_pow_2 ((zp - z) / sigmaz)) / norm;
+    const gdouble sigmaz    = ldata->sigma0 * (1.0 + z);
+    const gdouble ln_norm   = log (sqrt (2.0 * M_PI) * sigmaz * 0.5 * (1.0 + erf (z / (M_SQRT2 * sigmaz))));
+    const gdouble ln_int_z  = nc_galaxy_sd_true_redshift_integ (self->sdz, z);
+    const gdouble ln_int_zp = -0.5 * gsl_pow_2 ((zp - z) / sigmaz) - ln_norm;
 
-    return int_z * int_zp;
+    return ln_int_z + ln_int_zp;
   }
   else
   {
-    const gdouble norm   = sqrt (2.0 * M_PI) * ldata->sigma * 0.5 * (1.0 + erf (z / (M_SQRT2 * ldata->sigma)));
-    const gdouble int_zp = exp (-0.5 * gsl_pow_2 ((zp - z) / ldata->sigma)) / norm;
+    const gdouble ln_norm = log (sqrt (2.0 * M_PI) * ldata->sigma * 0.5 * (1.0 + erf (z / (M_SQRT2 * ldata->sigma))));
+    const gdouble int_zp  = (-0.5 * gsl_pow_2 ((zp - z) / ldata->sigma)) - ln_norm;
 
     return int_zp;
   }

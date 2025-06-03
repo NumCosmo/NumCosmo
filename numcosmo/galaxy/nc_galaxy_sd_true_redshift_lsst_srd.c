@@ -56,7 +56,7 @@ typedef struct _NcGalaxySDTrueRedshiftLSSTSRDPrivate
 {
   gdouble z_min;
   gdouble z_max;
-  gdouble z_norm;
+  gdouble z_log_norm;
   gdouble y0;
   gdouble alpha;
   gdouble beta;
@@ -82,14 +82,14 @@ nc_galaxy_sd_true_redshift_lsst_srd_init (NcGalaxySDTrueRedshiftLSSTSRD *gsdtrls
 {
   NcGalaxySDTrueRedshiftLSSTSRDPrivate * const self = nc_galaxy_sd_true_redshift_lsst_srd_get_instance_private (gsdtrlsst);
 
-  self->z_min   = 0.0;
-  self->z_max   = 0.0;
-  self->z_norm  = 0.0;
-  self->y0      = 0.0;
-  self->alpha   = 0.0;
-  self->beta    = 0.0;
-  self->z0      = 0.0;
-  self->gamma_a = 0.0;
+  self->z_min      = 0.0;
+  self->z_max      = 0.0;
+  self->z_log_norm = 0.0;
+  self->y0         = 0.0;
+  self->alpha      = 0.0;
+  self->beta       = 0.0;
+  self->z0         = 0.0;
+  self->gamma_a    = 0.0;
 }
 
 static void
@@ -188,14 +188,12 @@ _nc_galaxy_sd_true_redshift_lsst_srd_update (NcGalaxySDTrueRedshift *gsdtr)
     const gdouble y_low = pow (self->z_min, alpha);
     const gdouble y_up  = pow (self->z_max, alpha);
 
-    self->alpha   = alpha;
-    self->beta    = beta;
-    self->z0      = z0;
-    self->gamma_a = (1.0 + beta) / alpha;
-    self->y0      = pow (z0, alpha);
-    self->z_norm  = alpha / (pow (z0, 1.0 + self->beta) * (gsl_sf_gamma_inc (self->gamma_a, y_low / self->y0) -
-                                                           gsl_sf_gamma_inc (self->gamma_a, y_up / self->y0))
-                            );
+    self->alpha      = alpha;
+    self->beta       = beta;
+    self->z0         = z0;
+    self->gamma_a    = (1.0 + beta) / alpha;
+    self->y0         = pow (z0, alpha);
+    self->z_log_norm = log (alpha) - log (pow (z0, 1.0 + self->beta) * (gsl_sf_gamma_inc (self->gamma_a, y_low / self->y0) - gsl_sf_gamma_inc (self->gamma_a, y_up / self->y0)));
     ncm_model_state_set_update (model);
   }
 }
@@ -229,7 +227,7 @@ _nc_galaxy_sd_true_redshift_lsst_srd_integ (NcGalaxySDTrueRedshift *gsdtr, gdoub
   {
     const gdouble y = pow (z, self->alpha);
 
-    return pow (z, self->beta) * exp (-(y / self->y0)) * self->z_norm;
+    return self->beta * log (z) - (y / self->y0) + self->z_log_norm;
   }
 }
 
