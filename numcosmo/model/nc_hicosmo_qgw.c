@@ -180,13 +180,11 @@ nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface)
 static gdouble
 _nc_hicosmo_qgw_adiab_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
 {
-  NcHICosmo *cosmo        = NC_HICOSMO (iad);
-  const gdouble w         = W;
-  const gdouble cs        = sqrt (w);
-  const gdouble tanh_tau  = tanh (tau);
-  const gdouble tanh_tau2 = tanh_tau * tanh_tau;
-  const gdouble lnfact    = log (3.0 * (1.0 + w) * k / (cs * tanh_tau2));
-  const gdouble x         = _nc_hicosmo_qgw_adiab_eval_x (iad, tau);
+  NcHICosmo *cosmo     = NC_HICOSMO (iad);
+  const gdouble w      = W;
+  const gdouble cs     = sqrt (w);
+  const gdouble lnfact = log ((1.0 + w) * k / cs);
+  const gdouble x      = _nc_hicosmo_qgw_adiab_eval_x (iad, tau);
 
   return lnfact - 2.0 * log (x);
 }
@@ -196,17 +194,14 @@ _nc_hicosmo_qgw_adiab_eval_F1 (NcHIPertIAdiab *iad, const gdouble tau, const gdo
 {
   NcHICosmo *cosmo           = NC_HICOSMO (iad);
   const gdouble w            = W;
-  const gdouble xb           = X_B;
+  const gdouble x            = _nc_hicosmo_qgw_adiab_eval_x (iad, tau);
   const gdouble Omega_w      = OMEGA_W;
-  const gdouble xb_1p3w_2    = pow (xb, (1.0 + 3.0 * w) / 2.0);
+  const gdouble x_1p3w_2     = pow (x, (1.0 + 3.0 * w) / 2.0);
   const gdouble sqrt_Omega_w = sqrt (Omega_w);
   const gdouble cs           = sqrt (w);
-  const gdouble tanh_tau     = tanh (tau);
-  const gdouble cosh_tau     = cosh (tau);
-  const gdouble cosh_2tau    = cosh (2.0 * tau);
-  const gdouble fact         = xb_1p3w_2 * sqrt_Omega_w / (2.0 * cs * k);
+  const gdouble F1           = GSL_SIGN (tau) * x_1p3w_2 * sqrt_Omega_w / (cs * k);
 
-  return fact / pow (cosh_tau, (7.0 - 3.0 * w) / (3.0 * (1.0 - w))) / tanh_tau * (cosh_2tau + 3.0 * w - 4.0);
+  return F1;
 }
 
 static gdouble
@@ -218,8 +213,9 @@ _nc_hicosmo_qgw_adiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdo
   const gdouble sqrt_Omega_w = sqrt (Omega_w);
   const gdouble cs           = sqrt (w);
   const gdouble x            = _nc_hicosmo_qgw_adiab_eval_x (iad, tau);
+  const gdouble nu           = cs * 2.0 / (3.0 * (1.0 - w)) * k / sqrt_Omega_w / pow (x, 0.5 + 1.5 * w) / fabs (tanh (tau));
 
-  return cs * 2.0 / (3.0 * (1.0 - w)) * k / sqrt_Omega_w / pow (x, 0.5 + 1.5 * w);
+  return nu;
 }
 
 static gdouble
@@ -228,14 +224,13 @@ _nc_hicosmo_qgw_adiab_eval_m (NcHIPertIAdiab *iad, const gdouble tau, const gdou
   NcHICosmo *cosmo           = NC_HICOSMO (iad);
   const gdouble w            = W;
   const gdouble Omega_w      = OMEGA_W;
-  const gdouble w2           = w * w;
   const gdouble sqrt_Omega_w = sqrt (Omega_w);
   const gdouble cs2          = w;
   const gdouble tanh_tau     = tanh (tau);
-  const gdouble tanh_tau2    = tanh_tau * tanh_tau;
+  const gdouble tanh_abs_tau = fabs (tanh_tau);
   const gdouble x            = _nc_hicosmo_qgw_adiab_eval_x (iad, tau);
 
-  return 9.0 * (1.0 - w2) * sqrt_Omega_w / (2.0 * pow (x, 1.5 * (1.0 - w)) * cs2 * tanh_tau2);
+  return 3.0 * (1.0 - w) * (1.0 + w) * sqrt_Omega_w / (2.0 * pow (x, 1.5 * (1.0 - w)) * cs2 * tanh_abs_tau);
 }
 
 static gdouble
@@ -293,7 +288,7 @@ _nc_hicosmo_qgw_adiab_eval_lapse (NcHIPertIAdiab *iad, const gdouble tau)
   const gdouble sqrt_Omega_w = sqrt (Omega_w);
   const gdouble x            = _nc_hicosmo_qgw_adiab_eval_x (iad, tau);
 
-  return 2.0 / (3.0 * (1.0 - w) * sqrt_Omega_w * pow (x, 1.5 * (1.0 + w)));
+  return 2.0 / (3.0 * (1.0 - w) * sqrt_Omega_w * pow (x, 1.5 * (1.0 + w))) * fabs (tanh (tau));
 }
 
 static gdouble
