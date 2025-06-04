@@ -193,7 +193,10 @@ _nc_galaxy_sd_true_redshift_lsst_srd_update (NcGalaxySDTrueRedshift *gsdtr)
     self->z0         = z0;
     self->gamma_a    = (1.0 + beta) / alpha;
     self->y0         = pow (z0, alpha);
-    self->z_log_norm = log (alpha) - log (pow (z0, 1.0 + self->beta) * (gsl_sf_gamma_inc (self->gamma_a, y_low / self->y0) - gsl_sf_gamma_inc (self->gamma_a, y_up / self->y0)));
+    self->z_log_norm = log (alpha / (pow (z0, 1.0 + self->beta) * (gsl_sf_gamma_inc (self->gamma_a, y_low / self->y0) -
+                                                                   gsl_sf_gamma_inc (self->gamma_a, y_up / self->y0))
+                                    ));
+
     ncm_model_state_set_update (model);
   }
 }

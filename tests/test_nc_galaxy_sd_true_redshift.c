@@ -311,22 +311,38 @@ test_nc_galaxy_sd_true_redshift_integ (TestNcGalaxySDTrueRedshift *test, gconstp
 {
   NcmRNG *rng       = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   const guint nruns = 10000;
+  gdouble alpha, beta, z0, y_low, y_up, gamma_a;
   gdouble z_min, z_max;
   guint i;
 
-  z_min = g_test_rand_double_range (0.0, 0.5);
+  alpha   = ncm_model_param_get (NCM_MODEL (test->gsdtr), NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_ALPHA);
+  beta    = ncm_model_param_get (NCM_MODEL (test->gsdtr), NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_BETA);
+  z0      = ncm_model_param_get (NCM_MODEL (test->gsdtr), NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Z0);
+  gamma_a = (1.0 + beta) / alpha;
+  z_min   = g_test_rand_double_range (0.0, 0.5);
 
   do {
     z_max = g_test_rand_double_range (0.3, 5.0);
   } while (z_max <= z_min);
 
+  y_low = pow (z_min, alpha);
+  y_up  = pow (z_max, alpha);
+
   nc_galaxy_sd_true_redshift_set_lim (test->gsdtr, z_min, z_max);
 
   for (i = 0; i < nruns; i++)
   {
-    gdouble z = g_test_rand_double_range (0.0, 5.0);
+    gdouble z    = g_test_rand_double_range (0.0, 5.0);
+    gdouble y    = pow (z, alpha);
+    gdouble y0   = pow (z0, alpha);
+    gdouble norm = alpha / (pow (z0, 1.0 + beta) * (gsl_sf_gamma_inc (gamma_a, y_low / y0) -
+                                                    gsl_sf_gamma_inc (gamma_a, y_up / y0))
+                           );
+    gdouble control = log (pow (z, beta) * exp (-(y / y0)) * norm);
+    gdouble res     = nc_galaxy_sd_true_redshift_integ (test->gsdtr, z);
 
-    g_assert_true (gsl_finite (nc_galaxy_sd_true_redshift_integ (test->gsdtr, z)));
+    g_assert_true (gsl_finite (res));
+    ncm_assert_cmpdouble_e (res, ==, control, 1.0e-9, 0.0);
   }
 
   ncm_rng_clear (&rng);
