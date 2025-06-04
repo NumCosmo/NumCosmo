@@ -56,7 +56,6 @@ static void test_nc_galaxy_sd_true_redshift_model_id (TestNcGalaxySDTrueRedshift
 static void test_nc_galaxy_sd_true_redshift_gen (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_true_redshift_integ (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_true_redshift_norma (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
-static void test_nc_galaxy_sd_true_redshift_dist (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -95,11 +94,6 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_sd_true_redshift_norma,
               &test_nc_galaxy_sd_true_redshift_free);
 
-  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd/dist", TestNcGalaxySDTrueRedshift, NULL,
-              &test_nc_galaxy_sd_true_redshift_lsst_srd_new,
-              &test_nc_galaxy_sd_true_redshift_dist,
-              &test_nc_galaxy_sd_true_redshift_free);
-
   g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd_y10/lim", TestNcGalaxySDTrueRedshift, NULL,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new,
               &test_nc_galaxy_sd_true_redshift_lim,
@@ -128,11 +122,6 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd_y10/norma", TestNcGalaxySDTrueRedshift, NULL,
               &test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new,
               &test_nc_galaxy_sd_true_redshift_norma,
-              &test_nc_galaxy_sd_true_redshift_free);
-
-  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd_y10/dist", TestNcGalaxySDTrueRedshift, NULL,
-              &test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new,
-              &test_nc_galaxy_sd_true_redshift_dist,
               &test_nc_galaxy_sd_true_redshift_free);
 
   g_test_run ();
@@ -337,7 +326,7 @@ test_nc_galaxy_sd_true_redshift_integ (TestNcGalaxySDTrueRedshift *test, gconstp
   {
     gdouble z = g_test_rand_double_range (0.0, 5.0);
 
-    g_assert_cmpfloat (nc_galaxy_sd_true_redshift_integ (test->gsdtr, z), >, 0.0);
+    g_assert_true (gsl_finite (nc_galaxy_sd_true_redshift_integ (test->gsdtr, z)));
   }
 
   ncm_rng_clear (&rng);
@@ -346,11 +335,10 @@ test_nc_galaxy_sd_true_redshift_integ (TestNcGalaxySDTrueRedshift *test, gconstp
 typedef struct _IntegData
 {
   NcGalaxySDTrueRedshift *gsdtr;
-  gdouble abstol;
 } IntegData;
 
 static gdouble
-_integ (gdouble z, gpointer user_data)
+_integ (gpointer user_data, gdouble z, gdouble w)
 {
   IntegData *data = (IntegData *) user_data;
 
@@ -360,32 +348,20 @@ _integ (gdouble z, gpointer user_data)
 static void
 test_nc_galaxy_sd_true_redshift_norma (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata)
 {
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc (1000);
-  IntegData data               = { test->gsdtr, 1.0e-10 };
-  gsl_function F;
+  NcmIntegral1dPtr *integral = ncm_integral1d_ptr_new (&_integ, NULL);
+  IntegData data             = { test->gsdtr };
   gdouble z_min, z_max;
-
-  F.function = _integ;
-  F.params   = &data;
 
   nc_galaxy_sd_true_redshift_get_lim (test->gsdtr, &z_min, &z_max);
 
   {
     gdouble result, abserr;
-    gint status;
 
-    status = gsl_integration_qag (&F, z_min, z_max, 1.0e-10, 1.0e-10, 1000, GSL_INTEG_GAUSS61, w, &result, &abserr);
+    ncm_integral1d_ptr_set_userdata (integral, &data);
 
-    g_assert_cmpint (status, ==, GSL_SUCCESS);
-    ncm_assert_cmpdouble_e (result, ==, 1.0, 1.0e-9, 0.0);
+    result = ncm_integral1d_eval_lnint (NCM_INTEGRAL1D (integral), z_min, z_max, &abserr);
+
+    ncm_assert_cmpdouble_e (result, ==, 0.0, 1.0e-9, 0.0);
   }
-}
-
-static void
-test_nc_galaxy_sd_true_redshift_dist (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata)
-{
-  NcmStatsDist1d *dist = nc_galaxy_sd_true_redshift_dist (test->gsdtr, 1.0e-10, 1.0e-10);
-
-  g_assert_true (NCM_IS_STATS_DIST1D (dist));
 }
 

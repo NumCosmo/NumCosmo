@@ -36,7 +36,6 @@
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_rng.h>
-#include <numcosmo/math/ncm_stats_dist1d.h>
 
 G_BEGIN_DECLS
 
@@ -70,8 +69,6 @@ void nc_galaxy_sd_true_redshift_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdouble 
 
 gdouble nc_galaxy_sd_true_redshift_gen (NcGalaxySDTrueRedshift *gsdtr, NcmRNG *rng);
 gdouble nc_galaxy_sd_true_redshift_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z);
-
-NcmStatsDist1d *nc_galaxy_sd_true_redshift_dist (NcGalaxySDTrueRedshift *gsdtr, const gdouble reltol, const gdouble abstol);
 
 G_END_DECLS
 
