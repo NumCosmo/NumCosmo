@@ -326,10 +326,11 @@ _nc_galaxy_sd_obs_redshift_gauss_integ_f (gpointer callback_data, const gdouble 
   }
   else
   {
-    const gdouble ln_norm = log (sqrt (2.0 * M_PI) * ldata->sigma * 0.5 * (1.0 + erf (z / (M_SQRT2 * ldata->sigma))));
-    const gdouble int_zp  = (-0.5 * gsl_pow_2 ((zp - z) / ldata->sigma)) - ln_norm;
+    const gdouble ln_norm   = log (sqrt (2.0 * M_PI) * ldata->sigma);
+    const gdouble chi2      = -0.5 * gsl_pow_2 ((zp - z) / ldata->sigma);
+    const gdouble ln_int_zp = chi2 - ln_norm;
 
-    return int_zp;
+    return ln_int_zp;
   }
 }
 

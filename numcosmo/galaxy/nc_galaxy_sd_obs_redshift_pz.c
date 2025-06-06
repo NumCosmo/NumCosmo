@@ -139,10 +139,26 @@ _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDO
 
   if (ldata->dist == NULL)
   {
-    NcmStatsDist1d *dist = NCM_STATS_DIST1D (ncm_stats_dist1d_spline_new (ldata->pz));
-    gdouble z_min, z_max;
+    NcmVector *xv     = ncm_spline_peek_xv (ldata->pz);
+    NcmVector *yv     = ncm_spline_peek_yv (ldata->pz);
+    NcmVector *m2lnyv = ncm_vector_new (ncm_vector_len (yv));
+    NcmSpline *m2lnp;
+    NcmStatsDist1d *dist;
+    gdouble z_min;
+    gdouble z_max;
+    guint j;
 
-    ncm_spline_get_bounds (ldata->pz, &z_min, &z_max);
+    ncm_spline_get_bounds(ldata->pz, &z_min, &z_max);
+
+    for (j = 0; j < ncm_vector_len (yv); j++)
+    {
+      gdouble y = -2.0 * ncm_vector_fast_get (yv, j);
+
+      ncm_vector_set (m2lnyv, j, y);
+    }
+
+    m2lnp = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, m2lnyv, TRUE));
+    dist  = NCM_STATS_DIST1D (ncm_stats_dist1d_spline_new (m2lnp));
 
     g_object_set (G_OBJECT (dist), "reltol", 1.0e-5, NULL);
     ncm_stats_dist1d_set_xi (dist, z_min);
@@ -153,6 +169,9 @@ _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDO
     ldata->dist = dist;
     ldata->z_min = z_min;
     ldata->z_max = z_max;
+
+    ncm_spline_free (m2lnp);
+    ncm_vector_free (m2lnyv);
   }
 }
 
