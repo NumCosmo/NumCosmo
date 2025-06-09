@@ -488,8 +488,6 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
         if (m2lnP_gal != NULL)
           ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
 
-        /* printf ("Galaxy %d: m2lnP = %g\n", gal_i, m2lnP_gal_i); */
-
         result += _nc_data_cluster_wl_eval_m2lnP_weight (dcwl, m2lnP_gal_i, 0.0);
       }
     }
