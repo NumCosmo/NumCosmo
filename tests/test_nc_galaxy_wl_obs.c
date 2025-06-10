@@ -240,7 +240,7 @@ test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata
     for (l = 0; l < 100; l++)
     {
       ncm_vector_set (xv, l, (gdouble) l);
-      ncm_vector_set (yv, l, log ((gdouble) l * l));
+      ncm_vector_set (yv, l, (gdouble) l * l);
     }
 
     pz = ncm_spline_new (NCM_SPLINE (nak), xv, yv, TRUE);
@@ -398,7 +398,7 @@ test_nc_galaxy_wl_obs_data_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
     for (j = 0; j < 100; j++)
     {
       ncm_vector_set (xv, j, (gdouble) j);
-      ncm_vector_set (yv, j, log ((gdouble) j * j));
+      ncm_vector_set (yv, j, (gdouble) j * j);
     }
 
     pz = ncm_spline_new (NCM_SPLINE (nak), xv, yv, TRUE);
@@ -416,7 +416,7 @@ test_nc_galaxy_wl_obs_data_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 
     for (j = 0; j < 100; j++)
     {
-      g_assert_cmpfloat_with_epsilon (ncm_spline_eval (nc_galaxy_wl_obs_peek_pz (test->obs, i), j), log ((gdouble) j * j), 1e-10);
+      g_assert_cmpfloat_with_epsilon (ncm_spline_eval (nc_galaxy_wl_obs_peek_pz (test->obs, i), j), (gdouble) j * j, 1e-10);
     }
 
     ncm_spline_free (NCM_SPLINE (nak));

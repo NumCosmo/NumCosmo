@@ -124,8 +124,7 @@ _nc_galaxy_sd_obs_redshift_pz_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRe
   NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
   gdouble z;
 
-  do
-  {
+  do {
     z = ncm_stats_dist1d_gen (ldata->dist, rng);
   } while (z < ldata->z_min || z > ldata->z_max);
 
@@ -148,11 +147,11 @@ _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDO
     gdouble z_max;
     guint j;
 
-    ncm_spline_get_bounds(ldata->pz, &z_min, &z_max);
+    ncm_spline_get_bounds (ldata->pz, &z_min, &z_max);
 
     for (j = 0; j < ncm_vector_len (yv); j++)
     {
-      gdouble y = -2.0 * ncm_vector_fast_get (yv, j);
+      gdouble y = -2.0 * log (ncm_vector_fast_get (yv, j) + 1.0e-5);
 
       ncm_vector_set (m2lnyv, j, y);
     }
@@ -166,7 +165,7 @@ _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDO
     ncm_stats_dist1d_prepare (dist);
     ncm_stats_dist1d_clear (&ldata->dist);
 
-    ldata->dist = dist;
+    ldata->dist  = dist;
     ldata->z_min = z_min;
     ldata->z_max = z_max;
 

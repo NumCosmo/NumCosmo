@@ -117,7 +117,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-  /* g_test_set_nonfatal_assertions (); */
+  g_test_set_nonfatal_assertions ();
 
   for (i = 0; i < 24; i++)
   {
@@ -280,10 +280,10 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
   GStrv columns_strv;
   guint i;
 
-  if (NC_IS_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift))
-    nrows = 100;
-  else if (NC_IS_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->galaxy_redshift))
-    nrows = 200;
+  // if (NC_IS_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift))
+  //   nrows = 100;
+  // else if (NC_IS_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->galaxy_redshift))
+  //   nrows = 200;
 
   while (l)
   {
@@ -468,6 +468,8 @@ static void
 test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
 {
   gdouble m2lnL_a, m2lnL_b;
+
+  ncm_data_prepare (NCM_DATA (test->dcwl), test->mset);
 
   {
     ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
@@ -954,6 +956,13 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
   guint nfits         = 10;
   guint nruns         = 1;
   guint i, j;
+
+  // if (NC_IS_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift) ||
+  //     NC_IS_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->galaxy_redshift))
+  // {
+  //   nfits = 10;
+  //   nruns = 1;
+  // }
 
   ncm_mset_param_set_ftype (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
   ncm_mset_param_set_ftype (test->mset, nc_halo_position_id (), NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FREE);

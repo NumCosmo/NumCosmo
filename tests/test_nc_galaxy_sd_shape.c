@@ -1165,7 +1165,7 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShape *test, gconstpointer pd
 
         m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
 
-        ncm_assert_cmpdouble_e (-2.0 * int0, ==, m2ln_int1, 1e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (-2.0 * log (int0), ==, m2ln_int1, 1e-10, 1.0e-10);
 
         e_s      = e_s * cexp (-2.0 * I * phi);
         e_o      = e_o * cexp (-2.0 * I * phi);
@@ -1329,7 +1329,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
 
         m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
 
-        ncm_assert_cmpdouble_e (-2.0 * int0, ==, m2ln_int1, 1e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (-2.0 * log (int0), ==, m2ln_int1, 1e-10, 1.0e-10);
 
         e_s      = e_s * cexp (-2.0 * I * phi);
         e_o      = e_o * cexp (-2.0 * I * phi);
@@ -1481,13 +1481,13 @@ test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShape *test, gconstpointer pd
 
       {
         const gdouble estimated_log10M = ncm_stats_vec_get_mean (stats, 0);
-        const gdouble sigma_log10M     = 6.0 * ncm_stats_vec_get_sd (stats, 0) / sqrt ((gdouble) nfits);
+        const gdouble sigma_log10M     = ncm_stats_vec_get_sd (stats, 0);
 
         g_assert (gsl_finite (estimated_log10M));
         g_assert (gsl_finite (sigma_log10M));
 
-        ncm_assert_cmpdouble (TEST_LOG10_MASS, >, estimated_log10M - sigma_log10M);
-        ncm_assert_cmpdouble (TEST_LOG10_MASS, <, estimated_log10M + sigma_log10M);
+        ncm_assert_cmpdouble (estimated_log10M, >, TEST_LOG10_MASS - 6.0 * sigma_log10M / sqrt (nfits));
+        ncm_assert_cmpdouble (estimated_log10M, <, TEST_LOG10_MASS + 6.0 * sigma_log10M / sqrt (nfits));
       }
 
       {
@@ -1602,13 +1602,13 @@ test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShape *test, gconstpointer pd
 
       {
         const gdouble estimated_log10M = ncm_stats_vec_get_mean (stats2, 0);
-        const gdouble sigma_log10M     = 6.0 * ncm_stats_vec_get_sd (stats2, 0) / sqrt ((gdouble)nfits);
+        const gdouble sigma_log10M     = ncm_stats_vec_get_sd (stats2, 0);
 
         g_assert (gsl_finite (estimated_log10M));
         g_assert (gsl_finite (sigma_log10M));
 
-        ncm_assert_cmpdouble (TEST_LOG10_MASS, >, estimated_log10M - sigma_log10M);
-        ncm_assert_cmpdouble (TEST_LOG10_MASS, <, estimated_log10M + sigma_log10M);
+        ncm_assert_cmpdouble (estimated_log10M, >, TEST_LOG10_MASS - 6.0 * sigma_log10M / sqrt (nfits));
+        ncm_assert_cmpdouble (estimated_log10M, <, TEST_LOG10_MASS + 6.0 * sigma_log10M / sqrt (nfits));
       }
 
       {
@@ -1773,13 +1773,13 @@ test_nc_galaxy_sd_shape_gauss_hsc_stats (TestNcGalaxySDShape *test, gconstpointe
 
       {
         const gdouble estimated_log10M = ncm_stats_vec_get_mean (stats, 0);
-        const gdouble sigma_log10M     = 6.0 * ncm_stats_vec_get_sd (stats, 0) / sqrt ((gdouble)nfits);
+        const gdouble sigma_log10M     = ncm_stats_vec_get_sd (stats, 0);
 
         g_assert (gsl_finite (estimated_log10M));
         g_assert (gsl_finite (sigma_log10M));
 
-        ncm_assert_cmpdouble (TEST_LOG10_MASS, >, estimated_log10M - sigma_log10M);
-        ncm_assert_cmpdouble (TEST_LOG10_MASS, <, estimated_log10M + sigma_log10M);
+        ncm_assert_cmpdouble (estimated_log10M, >, TEST_LOG10_MASS - 6.0 * sigma_log10M / sqrt (nfits));
+        ncm_assert_cmpdouble (estimated_log10M, <, TEST_LOG10_MASS + 6.0 * sigma_log10M / sqrt (nfits));
       }
 
       {
@@ -2114,7 +2114,7 @@ test_nc_galaxy_sd_shape_gauss_strong_lensing (TestNcGalaxySDShape *test, gconstp
 
         m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
 
-        ncm_assert_cmpdouble_e (-2.0 * int0, ==, m2ln_int1, 1.0e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (-2.0 * log (int0), ==, m2ln_int1, 1.0e-10, 1.0e-10);
       }
     }
   }
@@ -2309,7 +2309,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_strong_lensing (TestNcGalaxySDShape *test, gco
 
         m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
 
-        ncm_assert_cmpdouble_e (-2.0 * int0, ==, m2ln_int1, 1.0e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (-2.0 * log (int0), ==, m2ln_int1, 1.0e-10, 1.0e-10);
       }
     }
   }
