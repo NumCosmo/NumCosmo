@@ -606,8 +606,8 @@ _nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
   for (gal_i = 0; gal_i < self->len; gal_i++)
   {
-    NcGalaxySDShapeData *data         = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
-    NcGalaxySDPositionData *p_data    = data->sdpos_data;
+    NcGalaxySDShapeData *data_i         = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+    NcGalaxySDPositionData *p_data    = data_i->sdpos_data;
     NcGalaxySDObsRedshiftData *z_data = p_data->sdz_data;
 
     if (self->resample_flag & NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_REDSHIFT)
@@ -627,8 +627,8 @@ _nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
       } while (radius < self->r_min || radius > self->r_max);
     }
 
-    nc_galaxy_sd_shape_gen (galaxy_shape, mset, data, rng);
-    nc_galaxy_sd_shape_data_write_row (data, self->obs, gal_i);
+    nc_galaxy_sd_shape_gen (galaxy_shape, mset, data_i, rng);
+    nc_galaxy_sd_shape_data_write_row (data_i, self->obs, gal_i);
   }
 }
 
