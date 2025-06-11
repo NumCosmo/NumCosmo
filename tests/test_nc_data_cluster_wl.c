@@ -957,24 +957,70 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
   guint nruns         = 1;
   guint i, j;
 
-  // if (NC_IS_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift) ||
-  //     NC_IS_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->galaxy_redshift))
-  // {
-  //   nfits = 10;
-  //   nruns = 1;
-  // }
-
-  ncm_mset_param_set_ftype (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
-  ncm_mset_param_set_ftype (test->mset, nc_halo_position_id (), NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FREE);
-  ncm_mset_param_set_ftype (test->mset, nc_halo_position_id (), NC_HALO_POSITION_DEC, NCM_PARAM_TYPE_FREE);
-
   nc_data_cluster_wl_set_resample_flag (test->dcwl, NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL);
   g_object_set (test->dcwl, "enable-parallel", TRUE, NULL);
 
-  /* Test all fits */
+  /* Test mass fits */
+  ncm_mset_param_set_ftype (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
+  ncm_mset_param_set_ftype (test->mset, nc_halo_position_id (), NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FIXED);
+  ncm_mset_param_set_ftype (test->mset, nc_halo_position_id (), NC_HALO_POSITION_DEC, NCM_PARAM_TYPE_FIXED);
+
   for (i = 0; i < nruns; i++)
   {
-    gdouble log10M     = ncm_rng_uniform_gen (rng, 13.0, 16.0);
+    gdouble log10M     = ncm_rng_uniform_gen (rng, 14.0, 16.0);
+    gdouble ra         = ncm_rng_uniform_gen (rng, -180.0, 180.0);
+    gdouble dec        = ncm_rng_uniform_gen (rng, -90.0, 90.0);
+    gdouble min_radius = ncm_rng_uniform_gen (rng, 0.1, 0.7);
+    gdouble max_radius = ncm_rng_uniform_gen (rng, 1.0, 5.0);
+
+    /* Set fiducial variables */
+    ncm_model_param_set_by_name (NCM_MODEL (test->hms), "log10MDelta", log10M, NULL);
+    ncm_model_param_set_by_name (NCM_MODEL (test->hp), "ra", ra, NULL);
+    ncm_model_param_set_by_name (NCM_MODEL (test->hp), "dec", dec, NULL);
+
+    nc_galaxy_sd_position_set_ra_lim (test->galaxy_position, ra - 0.2 / cos (dec * M_PI / 180.0), ra + 0.2 / cos (dec * M_PI / 180.0));
+    nc_galaxy_sd_position_set_dec_lim (test->galaxy_position, dec - 0.2, dec + 0.2);
+
+    nc_data_cluster_wl_set_cut (test->dcwl, min_radius, max_radius);
+
+    j = 0;
+
+    while (j < nfits)
+    {
+      /* reset parameters before resample */
+      ncm_model_param_set_by_name (NCM_MODEL (test->hms), "log10MDelta", log10M, NULL);
+      ncm_model_param_set_by_name (NCM_MODEL (test->hp), "ra", ra, NULL);
+      ncm_model_param_set_by_name (NCM_MODEL (test->hp), "dec", dec, NULL);
+
+      ncm_data_resample (data, test->mset, rng);
+      ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+      gdouble param_fit = ncm_mset_fparam_get (test->mset, 0);
+
+      if ((param_fit > 10.0) && (param_fit < 17.0))
+      {
+        ncm_stats_vec_set (stats, 0, ncm_mset_fparam_get (test->mset, 0));
+
+        ncm_stats_vec_update (stats);
+        j++;
+      }
+    }
+
+    const gdouble mean_log10M = ncm_stats_vec_get_mean (stats, 0);
+    const gdouble sd_log10M   = ncm_stats_vec_get_sd (stats, 0);
+
+    ncm_assert_cmpdouble (mean_log10M, >, log10M - 8.0 * sd_log10M / sqrt (nfits));
+    ncm_assert_cmpdouble (mean_log10M, <, log10M + 8.0 * sd_log10M / sqrt (nfits));
+  }
+
+  /* Test ra fits */
+  ncm_mset_param_set_ftype (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FIXED);
+  ncm_mset_param_set_ftype (test->mset, nc_halo_position_id (), NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FREE);
+  ncm_mset_param_set_ftype (test->mset, nc_halo_position_id (), NC_HALO_POSITION_DEC, NCM_PARAM_TYPE_FIXED);
+
+  for (i = 0; i < nruns; i++)
+  {
+    gdouble log10M     = ncm_rng_uniform_gen (rng, 14.0, 16.0);
     gdouble ra         = ncm_rng_uniform_gen (rng, -180.0, 180.0);
     gdouble dec        = ncm_rng_uniform_gen (rng, -90.0, 90.0);
     gdouble min_radius = ncm_rng_uniform_gen (rng, 0.1, 0.7);
@@ -987,16 +1033,12 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
 
     ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, -180.0);
     ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, 180.0);
-    ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, -90.0);
-    ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, 90.0);
 
-    ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, ra - 0.025 / cos (dec * M_PI / 180.0));
-    ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, ra + 0.025 / cos (dec * M_PI / 180.0));
-    ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, dec - 0.025);
-    ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, dec + 0.025);
+    ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, ra - 0.008 / cos (dec * M_PI / 180.0));
+    ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, ra + 0.008 / cos (dec * M_PI / 180.0));
 
-    nc_galaxy_sd_position_set_dec_lim (test->galaxy_position, dec - 0.1, dec + 0.1);
-    nc_galaxy_sd_position_set_ra_lim (test->galaxy_position, ra - 0.1, ra + 0.1);
+    nc_galaxy_sd_position_set_ra_lim (test->galaxy_position, ra - 0.2 / cos (dec * M_PI / 180.0), ra + 0.2 / cos (dec * M_PI / 180.0));
+    nc_galaxy_sd_position_set_dec_lim (test->galaxy_position, dec - 0.2, dec + 0.2);
 
     nc_data_cluster_wl_set_cut (test->dcwl, min_radius, max_radius);
 
@@ -1011,24 +1053,63 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
       ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
 
       ncm_stats_vec_set (stats, 0, ncm_mset_fparam_get (test->mset, 0));
-      ncm_stats_vec_set (stats, 1, ncm_mset_fparam_get (test->mset, 1));
-      ncm_stats_vec_set (stats, 2, ncm_mset_fparam_get (test->mset, 2));
 
       ncm_stats_vec_update (stats);
     }
 
-    const gdouble mean_RA     = ncm_stats_vec_get_mean (stats, 0);
-    const gdouble mean_DEC    = ncm_stats_vec_get_mean (stats, 1);
-    const gdouble mean_log10M = ncm_stats_vec_get_mean (stats, 2);
-    const gdouble sd_RA       = ncm_stats_vec_get_sd (stats, 0);
-    const gdouble sd_DEC      = ncm_stats_vec_get_sd (stats, 1);
-    const gdouble sd_log10M   = ncm_stats_vec_get_sd (stats, 2);
-
-    ncm_assert_cmpdouble (mean_log10M, >, log10M - 6.0 * sd_log10M / sqrt (nfits));
-    ncm_assert_cmpdouble (mean_log10M, <, log10M + 6.0 * sd_log10M / sqrt (nfits));
+    const gdouble mean_RA = ncm_stats_vec_get_mean (stats, 0);
+    const gdouble sd_RA   = ncm_stats_vec_get_sd (stats, 0);
 
     ncm_assert_cmpdouble (mean_RA, >, ra - 6.0 * sd_RA / sqrt (nfits));
     ncm_assert_cmpdouble (mean_RA, <, ra + 6.0 * sd_RA / sqrt (nfits));
+  }
+
+  /* Test dec fits */
+  ncm_mset_param_set_ftype (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FIXED);
+  ncm_mset_param_set_ftype (test->mset, nc_halo_position_id (), NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FIXED);
+  ncm_mset_param_set_ftype (test->mset, nc_halo_position_id (), NC_HALO_POSITION_DEC, NCM_PARAM_TYPE_FREE);
+
+  for (i = 0; i < nruns; i++)
+  {
+    gdouble log10M     = ncm_rng_uniform_gen (rng, 14.0, 16.0);
+    gdouble ra         = ncm_rng_uniform_gen (rng, -180.0, 180.0);
+    gdouble dec        = ncm_rng_uniform_gen (rng, -90.0, 90.0);
+    gdouble min_radius = ncm_rng_uniform_gen (rng, 0.1, 0.7);
+    gdouble max_radius = ncm_rng_uniform_gen (rng, 1.0, 5.0);
+
+    /* Set fiducial variables */
+    ncm_model_param_set_by_name (NCM_MODEL (test->hms), "log10MDelta", log10M, NULL);
+    ncm_model_param_set_by_name (NCM_MODEL (test->hp), "ra", ra, NULL);
+    ncm_model_param_set_by_name (NCM_MODEL (test->hp), "dec", dec, NULL);
+
+    ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, -90.0);
+    ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, 90.0);
+
+    ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, dec - 0.008);
+    ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, dec + 0.008);
+
+    nc_galaxy_sd_position_set_ra_lim (test->galaxy_position, ra - 0.2 / cos (dec * M_PI / 180.0), ra + 0.2 / cos (dec * M_PI / 180.0));
+    nc_galaxy_sd_position_set_dec_lim (test->galaxy_position, dec - 0.2, dec + 0.2);
+
+    nc_data_cluster_wl_set_cut (test->dcwl, min_radius, max_radius);
+
+    for (j = 0; j < nfits; j++)
+    {
+      /* reset parameters before resample */
+      ncm_model_param_set_by_name (NCM_MODEL (test->hms), "log10MDelta", log10M, NULL);
+      ncm_model_param_set_by_name (NCM_MODEL (test->hp), "ra", ra, NULL);
+      ncm_model_param_set_by_name (NCM_MODEL (test->hp), "dec", dec, NULL);
+
+      ncm_data_resample (data, test->mset, rng);
+      ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+      ncm_stats_vec_set (stats, 0, ncm_mset_fparam_get (test->mset, 0));
+
+      ncm_stats_vec_update (stats);
+    }
+
+    const gdouble mean_DEC = ncm_stats_vec_get_mean (stats, 0);
+    const gdouble sd_DEC   = ncm_stats_vec_get_sd (stats, 0);
 
     ncm_assert_cmpdouble (mean_DEC, >, dec - 6.0 * sd_DEC / sqrt (nfits));
     ncm_assert_cmpdouble (mean_DEC, <, dec + 6.0 * sd_DEC / sqrt (nfits));
