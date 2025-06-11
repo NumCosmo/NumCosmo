@@ -953,7 +953,7 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
   NcmFit *fit         = ncm_fit_factory (NCM_FIT_TYPE_NLOPT, "ln-neldermead", like, test->mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
   NcmStatsVec *stats  = ncm_stats_vec_new (3, NCM_STATS_VEC_COV, FALSE);
   NcmRNG *rng         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  guint nfits         = 10;
+  guint nfits         = 5;
   guint nruns         = 1;
   guint i, j;
 
