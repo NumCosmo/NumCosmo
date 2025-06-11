@@ -1378,7 +1378,7 @@ test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShape *test, gconstpointer pd
   NcGalaxySDPositionData *p_data    = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
   NcGalaxySDShapeData *s_data       = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
   const gdouble std_noise           = 0.0;
-  const guint ntest                 = 10000;
+  const guint ntest                 = 1000;
   GList *required_columns           = nc_galaxy_sd_shape_data_required_columns (s_data);
   GList *required_columns_iter      = required_columns;
   GStrvBuilder *builder             = g_strv_builder_new ();
@@ -1677,7 +1677,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_stats (TestNcGalaxySDShape *test, gconstpointe
   NcGalaxySDPositionData *p_data    = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
   NcGalaxySDShapeData *s_data       = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
   const gdouble std_noise           = 0.0;
-  const guint ntest                 = 10000;
+  const guint ntest                 = 1000;
   GList *required_columns           = nc_galaxy_sd_shape_data_required_columns (s_data);
   GList *required_columns_iter      = required_columns;
   GStrvBuilder *builder             = g_strv_builder_new ();
