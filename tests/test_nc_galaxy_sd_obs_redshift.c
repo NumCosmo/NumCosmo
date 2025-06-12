@@ -381,6 +381,20 @@ test_nc_galaxy_sd_obs_redshift_spec_gen (TestNcGalaxySDObsRedshift *test, gconst
     ncm_stats_vec_free (pos_sample);
   }
 
+  for (i = 0; i < nruns; i++)
+  {
+    gint seed                        = g_test_rand_int ();
+    NcmRNG *rng2                     = ncm_rng_seeded_new (NULL, seed);
+    NcmRNG *rng3                     = ncm_rng_seeded_new (NULL, seed);
+    NcGalaxySDObsRedshiftData *data2 = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
+    NcGalaxySDObsRedshiftData *data3 = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
+
+    nc_galaxy_sd_obs_redshift_spec_gen (NC_GALAXY_SD_OBS_REDSHIFT_SPEC (test->gsdor), test->mset, data2, rng2);
+    nc_galaxy_sd_obs_redshift_gen (test->gsdor, data3, rng3);
+
+    ncm_assert_cmpdouble (data2->z, ==, data3->z);
+  }
+
   nc_galaxy_sd_obs_redshift_data_unref (data);
   ncm_rng_free (rng);
 }
@@ -388,14 +402,14 @@ test_nc_galaxy_sd_obs_redshift_spec_gen (TestNcGalaxySDObsRedshift *test, gconst
 static void
 test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift *test, gconstpointer pdata)
 {
-  NcmRNG *rng                     = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcGalaxySDObsRedshiftData *data = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
-  NcGalaxySDObsRedshiftGaussData * const ldata   = (NcGalaxySDObsRedshiftGaussData *) data->ldata;
-  const gdouble sigma             = 0.05;
-  const gdouble z_avg             = _test_get_z_avg (test);
-  const gdouble z_var             = sqrt (gsl_pow_4 (sigma * (1 + z_avg)) + gsl_pow_2 (_test_get_z_var (test)));
-  const guint nruns               = 10;
-  const guint ndata               = 10000;
+  NcmRNG *rng                                  = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcGalaxySDObsRedshiftData *data              = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
+  NcGalaxySDObsRedshiftGaussData * const ldata = (NcGalaxySDObsRedshiftGaussData *) data->ldata;
+  const gdouble sigma                          = 0.05;
+  const gdouble z_avg                          = _test_get_z_avg (test);
+  const gdouble z_var                          = sqrt (gsl_pow_4 (sigma * (1 + z_avg)) + gsl_pow_2 (_test_get_z_var (test)));
+  const guint nruns                            = 10;
+  const guint ndata                            = 10000;
   guint i;
 
   for (i = 0; i < nruns; i++)
@@ -462,6 +476,24 @@ test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift *test, gcons
     g_assert_cmpfloat (fabs (ncm_stats_vec_get_var (pos_sample, 1) / z_var - 1.0), <, 2.0e-1);
 
     ncm_stats_vec_free (pos_sample);
+  }
+
+  for (i = 0; i < nruns; i++)
+  {
+    gint seed                                     = g_test_rand_int ();
+    NcmRNG *rng2                                  = ncm_rng_seeded_new (NULL, seed);
+    NcmRNG *rng3                                  = ncm_rng_seeded_new (NULL, seed);
+    NcGalaxySDObsRedshiftData *data2              = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
+    NcGalaxySDObsRedshiftData *data3              = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
+    NcGalaxySDObsRedshiftGaussData * const ldata2 = (NcGalaxySDObsRedshiftGaussData *) data2->ldata;
+    NcGalaxySDObsRedshiftGaussData * const ldata3 = (NcGalaxySDObsRedshiftGaussData *) data3->ldata;
+
+    gboolean result2 = nc_galaxy_sd_obs_redshift_spec_gen1 (NC_GALAXY_SD_OBS_REDSHIFT_SPEC (test->gsdor), test->mset, data2, rng2);
+    gboolean result3 = nc_galaxy_sd_obs_redshift_gen1 (test->gsdor, data3, rng3);
+
+    ncm_assert_cmpdouble (data2->z, ==, data3->z);
+    ncm_assert_cmpdouble (ldata2->zp, ==, ldata3->zp);
+    g_assert (result2 == result3);
   }
 
   nc_galaxy_sd_obs_redshift_data_unref (data);
