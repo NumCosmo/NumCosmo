@@ -30,6 +30,7 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include "galaxy/nc_galaxy_sd_obs_redshift_gauss.c"
 
 #include <math.h>
 #include <glib.h>
@@ -335,6 +336,38 @@ test_nc_galaxy_sd_obs_redshift_spec_gen (TestNcGalaxySDObsRedshift *test, gconst
     {
       nc_galaxy_sd_obs_redshift_spec_gen (NC_GALAXY_SD_OBS_REDSHIFT_SPEC (test->gsdor), test->mset, data, rng);
 
+      g_assert_cmpfloat (data->z, >=, test->z_min);
+      g_assert_cmpfloat (data->z, <=, test->z_max);
+
+      ncm_stats_vec_set (pos_sample, 0, data->z);
+
+      ncm_stats_vec_update (pos_sample);
+    }
+
+    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), <, z_avg + 5.0 * sqrt (z_var / ndata));
+    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), >, z_avg - 5.0 * sqrt (z_var / ndata));
+
+    g_assert_cmpfloat (fabs (ncm_stats_vec_get_var (pos_sample, 0) / z_var - 1.0), <, 2.0e-1);
+
+    ncm_stats_vec_free (pos_sample);
+  }
+
+  for (i = 0; i < nruns; i++)
+  {
+    NcmStatsVec *pos_sample = ncm_stats_vec_new (1, NCM_STATS_VEC_COV, FALSE);
+    guint j;
+
+    nc_galaxy_sd_obs_redshift_prepare (test->gsdor, data);
+
+    for (j = 0; j < ndata; j++)
+    {
+      gboolean result = nc_galaxy_sd_obs_redshift_spec_gen1 (NC_GALAXY_SD_OBS_REDSHIFT_SPEC (test->gsdor), test->mset, data, rng);
+
+      if (result)
+        g_assert_true ((data->z >= test->z_min) && (data->z <= test->z_max));
+      else
+        g_assert_true ((data->z <= test->z_min) || (data->z >= test->z_max));
+
       ncm_stats_vec_set (pos_sample, 0, data->z);
 
       ncm_stats_vec_update (pos_sample);
@@ -357,6 +390,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift *test, gcons
 {
   NcmRNG *rng                     = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcGalaxySDObsRedshiftData *data = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
+  NcGalaxySDObsRedshiftGaussData * const ldata   = (NcGalaxySDObsRedshiftGaussData *) data->ldata;
   const gdouble sigma             = 0.05;
   const gdouble z_avg             = _test_get_z_avg (test);
   const gdouble z_var             = sqrt (gsl_pow_4 (sigma * (1 + z_avg)) + gsl_pow_2 (_test_get_z_var (test)));
@@ -366,7 +400,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift *test, gcons
 
   for (i = 0; i < nruns; i++)
   {
-    NcmStatsVec *pos_sample = ncm_stats_vec_new (1, NCM_STATS_VEC_COV, FALSE);
+    NcmStatsVec *pos_sample = ncm_stats_vec_new (2, NCM_STATS_VEC_COV, FALSE);
     guint j;
 
     nc_galaxy_sd_obs_redshift_prepare (test->gsdor, data);
@@ -375,7 +409,11 @@ test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift *test, gcons
     {
       nc_galaxy_sd_obs_redshift_gauss_gen (NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->gsdor), test->mset, data, sigma, rng);
 
+      g_assert_cmpfloat (ldata->zp, >=, test->z_min);
+      g_assert_cmpfloat (ldata->zp, <=, test->z_max);
+
       ncm_stats_vec_set (pos_sample, 0, data->z);
+      ncm_stats_vec_set (pos_sample, 1, ldata->zp);
 
       ncm_stats_vec_update (pos_sample);
     }
@@ -383,7 +421,45 @@ test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift *test, gcons
     g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), <, z_avg + 6.0 * sqrt (z_var / ndata));
     g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), >, z_avg - 6.0 * sqrt (z_var / ndata));
 
+    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 1), <, z_avg + 6.0 * sqrt (z_var / ndata));
+    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 1), >, z_avg - 6.0 * sqrt (z_var / ndata));
+
     g_assert_cmpfloat (fabs (ncm_stats_vec_get_var (pos_sample, 0) / z_var - 1.0), <, 2.0e-1);
+    g_assert_cmpfloat (fabs (ncm_stats_vec_get_var (pos_sample, 1) / z_var - 1.0), <, 2.0e-1);
+
+    ncm_stats_vec_free (pos_sample);
+  }
+
+  for (i = 0; i < nruns; i++)
+  {
+    NcmStatsVec *pos_sample = ncm_stats_vec_new (2, NCM_STATS_VEC_COV, FALSE);
+    guint j;
+
+    nc_galaxy_sd_obs_redshift_prepare (test->gsdor, data);
+
+    for (j = 0; j < ndata; j++)
+    {
+      gboolean result = nc_galaxy_sd_obs_redshift_gauss_gen1 (NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->gsdor), test->mset, data, sigma, rng);
+
+      if (result)
+        g_assert_true ((ldata->zp >= test->z_min) && (ldata->zp <= test->z_max));
+      else
+        g_assert_true ((ldata->zp <= test->z_min) || (ldata->zp >= test->z_max));
+
+      ncm_stats_vec_set (pos_sample, 0, data->z);
+      ncm_stats_vec_set (pos_sample, 1, ldata->zp);
+
+      ncm_stats_vec_update (pos_sample);
+    }
+
+    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), <, z_avg + 6.0 * sqrt (z_var / ndata));
+    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 0), >, z_avg - 6.0 * sqrt (z_var / ndata));
+
+    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 1), <, z_avg + 6.0 * sqrt (z_var / ndata));
+    g_assert_cmpfloat (ncm_stats_vec_get_mean (pos_sample, 1), >, z_avg - 6.0 * sqrt (z_var / ndata));
+
+    g_assert_cmpfloat (fabs (ncm_stats_vec_get_var (pos_sample, 0) / z_var - 1.0), <, 2.0e-1);
+    g_assert_cmpfloat (fabs (ncm_stats_vec_get_var (pos_sample, 1) / z_var - 1.0), <, 2.0e-1);
 
     ncm_stats_vec_free (pos_sample);
   }
