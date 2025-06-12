@@ -247,10 +247,7 @@ c_tests = [
     {
         'name': 'nc_data_cluster_wl',
         'sources': ['test_nc_data_cluster_wl.c'],
-    },
-    {
-        'name': 'nc_data_cluster_wl_monte_carlo',
-        'sources': ['test_nc_data_cluster_wl_monte_carlo.c'],
+        'timeout': 0,
     },
     {
         'name': 'nc_galaxy_wl_obs',
