@@ -285,6 +285,7 @@ struct _IntegData
   NcHaloDensityProfile *density_profile;
 };
 
+/* LCOV_EXCL_START */
 static gpointer
 _integ_data_copy (gpointer user_data)
 {
@@ -300,6 +301,7 @@ _integ_data_copy (gpointer user_data)
 
   return new_int_data;
 }
+/* LCOV_EXCL_STOP */
 
 static void
 _integ_data_free (gpointer user_data)

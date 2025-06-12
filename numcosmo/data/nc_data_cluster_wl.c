@@ -161,8 +161,8 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
 
       if (self->constructed)
       {
-        g_assert_cmpfloat (self->r_min, <, self->r_max);
-        self->dr = self->r_max - self->r_min;
+        g_assert_cmpfloat (self->r_min, <, self->r_max); /* LCOV_EXCL_LINE */
+        self->dr = self->r_max - self->r_min;            /* LCOV_EXCL_LINE */
       }
 
       break;
@@ -171,8 +171,8 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
 
       if (self->constructed)
       {
-        g_assert_cmpfloat (self->r_min, <, self->r_max);
-        self->dr = self->r_max - self->r_min;
+        g_assert_cmpfloat (self->r_min, <, self->r_max); /* LCOV_EXCL_LINE */
+        self->dr = self->r_max - self->r_min;            /* LCOV_EXCL_LINE */
       }
 
       break;
@@ -606,7 +606,7 @@ _nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
   for (gal_i = 0; gal_i < self->len; gal_i++)
   {
-    NcGalaxySDShapeData *data_i         = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+    NcGalaxySDShapeData *data_i       = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
     NcGalaxySDPositionData *p_data    = data_i->sdpos_data;
     NcGalaxySDObsRedshiftData *z_data = p_data->sdz_data;
 

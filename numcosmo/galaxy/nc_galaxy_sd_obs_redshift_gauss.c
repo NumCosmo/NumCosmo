@@ -291,6 +291,7 @@ struct _IntegData
   NcGalaxySDObsRedshiftGauss *gsdorgauss;
 };
 
+/* LCOV_EXCL_START */
 static gpointer
 _integ_data_copy (gpointer idata)
 {
@@ -300,6 +301,7 @@ _integ_data_copy (gpointer idata)
 
   return new_idata;
 }
+/* LCOV_EXCL_STOP */
 
 static void
 _integ_data_free (gpointer idata)
