@@ -363,6 +363,7 @@ test_nc_galaxy_sd_obs_redshift_spec_gen (TestNcGalaxySDObsRedshift *test, gconst
     {
       gboolean result = nc_galaxy_sd_obs_redshift_spec_gen1 (NC_GALAXY_SD_OBS_REDSHIFT_SPEC (test->gsdor), test->mset, data, rng);
 
+      g_assert_true (result);
       g_assert_true ((data->z >= test->z_min) && (data->z <= test->z_max));
 
       ncm_stats_vec_set (pos_sample, 0, data->z);
