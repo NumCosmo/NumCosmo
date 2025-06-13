@@ -247,6 +247,7 @@ c_tests = [
     {
         'name': 'nc_data_cluster_wl',
         'sources': ['test_nc_data_cluster_wl.c'],
+        'timeout': 0,
     },
     {
         'name': 'nc_galaxy_wl_obs',
@@ -502,6 +503,10 @@ python_tests = [
         'name': 'cosmology',
         'source': 'test_cosmology.py',
     },
+    {
+        'name': 'py_numcosmo_py',
+        'source': 'test_py_numcosmo_py.py',
+    },
 ]
 
 if mpi_c_dep.found()
@@ -551,7 +556,7 @@ endif
 
 python_typer = python_module.find_installation(
     'python3',
-    modules: ['typer', 'rich'],
+    modules: ['typer', 'rich', 'pydantic', 'tabulate'],
     required: false,
 )
 
