@@ -326,6 +326,7 @@ _integ_data_copy (gpointer user_data)
 
   return new_int_data;
 }
+
 /* LCOV_EXCL_STOP */
 
 static void

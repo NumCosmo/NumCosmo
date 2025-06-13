@@ -70,7 +70,7 @@ enum
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDShape, nc_galaxy_sd_shape, NCM_TYPE_MODEL);
-G_DEFINE_BOXED_TYPE (NcGalaxySDShapeData, nc_galaxy_sd_shape_data, nc_galaxy_sd_shape_data_ref, nc_galaxy_sd_shape_data_unref);
+G_DEFINE_BOXED_TYPE (NcGalaxySDShapeData, nc_galaxy_sd_shape_data, nc_galaxy_sd_shape_data_ref, nc_galaxy_sd_shape_data_unref); /* LCOV_EXCL_LINE */
 NCM_UTIL_DEFINE_CALLBACK (NcGalaxySDShapeIntegrand,
                           NC_GALAXY_SD_SHAPE_INTEGRAND,
                           nc_galaxy_sd_shape_integrand,
@@ -209,6 +209,8 @@ nc_galaxy_sd_shape_class_init (NcGalaxySDShapeClass *klass)
   klass->direct_estimate    = &_nc_galaxy_sd_shape_direct_estimate;
 }
 
+/* LCOV_EXCL_START */
+
 /**
  * nc_galaxy_sd_shape_data_ref:
  * @data: a #NcGalaxySDShapeData
@@ -223,6 +225,8 @@ nc_galaxy_sd_shape_data_ref (NcGalaxySDShapeData *data)
 
   return data;
 }
+
+/* LCOV_EXCL_STOP */
 
 /**
  * nc_galaxy_sd_shape_data_unref:
