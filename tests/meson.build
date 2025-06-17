@@ -507,6 +507,10 @@ python_tests = [
         'name': 'py_numcosmo_py',
         'source': 'test_py_numcosmo_py.py',
     },
+    {
+        'name': 'py_cluster_wl_app',
+        'source': 'test_py_cluster_wl_app.py',
+    }
 ]
 
 if mpi_c_dep.found()

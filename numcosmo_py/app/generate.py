@@ -359,9 +359,9 @@ class GenerateClusterWL:
         0.3 / 0.7
     )
 
-    r_max: Annotated[float, typer.Option(help="Maximum radius.", show_default=True)] = (
-        3.0 / 0.7
-    )
+    r_max: Annotated[
+        float, typer.Option(help="Maximum radius.", show_default=True)
+    ] = 3.0 / 0.7
 
     ra_min: Annotated[
         float, typer.Option(help="Minimum right ascension.", show_default=True)
@@ -379,6 +379,10 @@ class GenerateClusterWL:
         float, typer.Option(help="Maximum declination.", show_default=True)
     ] = -54.923
 
+    profile_type: Annotated[
+        str, typer.Option(help="Cluster profile to use.", show_default=True)
+    ] = "nfw"
+
     z_dist: Annotated[
         str,
         typer.Option(
@@ -387,7 +391,7 @@ class GenerateClusterWL:
             metavar=GalaxyZGen.get_help_metavar(),
             rich_help_panel="Galaxy redshift source distribution",
         ),
-    ] = "gauss zp_min=0.1 zp_max=1.2 sigma0=0.03"
+    ] = "gauss zp_min=0.0 zp_max=5.0 sigma0=0.03"
 
     shape_dist: Annotated[
         str,
@@ -397,7 +401,7 @@ class GenerateClusterWL:
             metavar=GalaxyShapeGen.get_help_metavar(),
             rich_help_panel="Galaxy shape source distribution",
         ),
-    ] = "gauss e_rms=0.15 e_sigma=0.01"
+    ] = "gauss ellip_conv=trace-det ellip_coord=celestial sigma=0.3 std_noise=0.1"
 
     galaxy_density: Annotated[
         float, typer.Option(help="Galaxy density.", show_default=True)
@@ -454,6 +458,7 @@ class GenerateClusterWL:
             ra_max=self.ra_max,
             dec_min=self.dec_min,
             dec_max=self.dec_max,
+            profile_type=self.profile_type,
             z_gen=z_gen,
             shape_gen=shape_gen,
             density=self.galaxy_density,
