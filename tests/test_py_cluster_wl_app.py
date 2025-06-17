@@ -24,6 +24,7 @@
 
 """Test NumCosmo app's Cluster WL module."""
 
+from filecmp import cmp
 import pytest
 from typer.testing import CliRunner
 from numpy import sin, cos, pi, log10, deg2rad
@@ -50,6 +51,13 @@ Ncm.cfg_init()
 def fixture_experiment_file(tmp_path) -> str:
     """Fixture for the experiment file."""
     tmp_file = tmp_path / "experiment.yaml"
+    return tmp_file
+
+
+@pytest.fixture(name="experiment_file_copy")
+def fixture_experiment_file_copy(tmp_path) -> str:
+    """Fixture for the experiment file copy."""
+    tmp_file = tmp_path / "experiment_copy.yaml"
     return tmp_file
 
 
@@ -169,10 +177,41 @@ def fixture_halo_profile(request) -> str:
 
 
 @pytest.fixture(
+    name="halo_profile_bad",
+    params=[
+        "--profile-type=bogus",
+        "--profile-type=0",
+    ],
+)
+def fixture_halo_profile_bad(request) -> str:
+    """Fixture for the halo profile bad configuration."""
+    return request.param
+
+
+@pytest.fixture(
     name="halo_mass_summary", params=zip(uniform(1e13, 1e16, 3), uniform(1.0, 10.0, 3))
 )
 def fixture_halo_mass_summary(request) -> tuple[float, float]:
     """Fixture for the halo mass summary."""
+    return request.param
+
+
+@pytest.fixture(
+    name="halo_mass_summary_bad",
+    params=[
+        "--cluster-mass=bogus",
+        "--cluster-c=bogus",
+        "--cluster-mass=0",
+        "--cluster-mass=1e8",
+        "--cluster-mass=1e20",
+        "--cluster-mass=-5",
+        "--cluster-c=0",
+        "--cluster-c=-5",
+        "--cluster-c=100",
+    ],
+)
+def fixture_halo_mass_summary_bad(request) -> str:
+    """Fixture for the halo mass summary bad configuration."""
     return request.param
 
 
@@ -185,9 +224,65 @@ def fixture_halo_position(request) -> tuple[float, float, float]:
     return request.param
 
 
+@pytest.fixture(
+    name="halo_position_bad",
+    params=[
+        ["--cluster-ra=bogus"],
+        ["--cluster-dec=bogus"],
+        ["--cluster-z=bogus"],
+        ["--cluster-ra=372"],
+        ["--cluster-dec=92"],
+        ["--cluster-ra=-10"],
+        ["--cluster-dec=-100"],
+        ["--cluster-ra=10", "--ra-min=11", "--ra-max=12"],
+        ["--cluster-ra=10", "--ra-min=9", "--ra-max=8"],
+        ["--cluster-dec=10", "--dec-min=11", "--dec-max=12"],
+        ["--cluster-dec=10", "--dec-min=9", "--dec-max=8"],
+        ["--cluster-z=-0.1"],
+        ["--cluster-z=5.1"],
+        ["--ra-min=bogus"],
+        ["--ra-max=bogus"],
+        ["--dec-min=bogus"],
+        ["--dec-max=bogus"],
+    ],
+)
+def fixture_halo_position_bad(request) -> list[str]:
+    """Fixture for the halo position bad configuration."""
+    return request.param
+
+
 @pytest.fixture(name="radius", params=zip(uniform(0.1, 1.0, 3), uniform(1.0, 10.0, 3)))
 def fixture_radius(request) -> tuple[float, float]:
     """Fixture for the radius."""
+    return request.param
+
+
+@pytest.fixture(
+    name="radius_bad",
+    params=[
+        "--r-min=bogus",
+        "--r-max=bogus",
+        "--r-min=0",
+        "--r-max=0",
+        "--r-min=-0.1",
+        "--r-max=-0.1",
+    ],
+)
+def fixture_radius_bad(request) -> list[str]:
+    """Fixture for the radius bad configuration."""
+    return request.param
+
+
+@pytest.fixture(
+    name="density_bad",
+    params=[
+        "--galaxy-density=bogus",
+        "--galaxy-density=0",
+        "--galaxy-density=-5",
+    ],
+)
+def fixture_density_bad(request) -> str:
+    """Fixture for the galaxy density bad configuration."""
     return request.param
 
 
@@ -376,6 +471,7 @@ def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_dist):
 
 def test_cluster_wl_app_generate_halo_profile(experiment_file, halo_profile):
     """Test the generation of the cluster WL app with diferent cluster profiles."""
+    # pylint: disable=unused-variable
     result = runner.invoke(
         app,
         [
@@ -411,7 +507,7 @@ def test_cluster_wl_app_generate_halo_profile(experiment_file, halo_profile):
             assert isinstance(hp, Nc.HaloDensityProfileHernquist)
 
 
-def test_cluster_wl_app_generate_profile_bad(experiment_file):
+def test_cluster_wl_app_generate_halo_profile_bad(experiment_file, halo_profile_bad):
     """Test the generation of the cluster WL app with
     bad cluster profile configuration."""
     result = runner.invoke(
@@ -420,7 +516,7 @@ def test_cluster_wl_app_generate_profile_bad(experiment_file):
             "generate",
             "cluster-wl",
             experiment_file.as_posix(),
-            "--profile-type=bogus",
+            halo_profile_bad,
         ],
     )
     assert result.exit_code != 0, result.output
@@ -435,6 +531,7 @@ def test_cluster_wl_app_generate_profile_bad(experiment_file):
 
 def test_cluster_wl_app_halo_mass_summary(experiment_file, halo_mass_summary):
     """Test the generation of the cluster WL app with specific halo mass summary."""
+    # pylint: disable=unused-variable
     mass, c = halo_mass_summary
     result = runner.invoke(
         app,
@@ -468,8 +565,31 @@ def test_cluster_wl_app_halo_mass_summary(experiment_file, halo_mass_summary):
     assert hms["cDelta"] == c
 
 
+def test_cluster_wl_app_halo_mass_summary_bad(experiment_file, halo_mass_summary_bad):
+    """Test the generation of the cluster WL app with
+    bad halo mass summary configuration."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            halo_mass_summary_bad,
+        ],
+    )
+    assert result.exit_code != 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+
+    assert (
+        not experiment_file.exists()
+    ), f"Experiment file {experiment_file} should not exist."
+    assert not dataset_file.exists(), f"Dataset file {dataset_file} should not exist."
+
+
 def test_cluster_wl_app_halo_position(experiment_file, halo_position):
     """Test the generation of the cluster WL app with specific RA and Dec."""
+    # pylint: disable=unused-variable
     cluster_ra, cluster_dec, cluster_z = halo_position
     dec_min = cluster_dec - 0.2
     dec_max = cluster_dec + 0.2
@@ -518,6 +638,25 @@ def test_cluster_wl_app_halo_position(experiment_file, halo_position):
     assert halo_position["z"] == cluster_z
 
 
+def test_cluster_wl_app_halo_position_bad(experiment_file, halo_position_bad):
+    """Test the generation of the cluster WL app with specific RA and Dec."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            *halo_position_bad,
+        ],
+    )
+    assert result.exit_code != 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+
+    assert not experiment_file.exists(), f"Experiment file {experiment_file} exists."
+    assert not dataset_file.exists(), f"Dataset file {dataset_file} exists."
+
+
 def test_cluster_wl_app_radius(experiment_file, radius):
     """Test the generation of the cluster WL app with specific radius."""
     r_min, r_max = radius
@@ -561,6 +700,27 @@ def test_cluster_wl_app_radius(experiment_file, radius):
 
         assert r >= r_min
         assert r <= r_max
+
+
+def test_cluster_wl_app_radius_bad(experiment_file, radius_bad):
+    """Test the generation of the cluster WL app with bad radius configuration."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            radius_bad,
+        ],
+    )
+    assert result.exit_code != 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+
+    assert (
+        not experiment_file.exists()
+    ), f"Experiment file {experiment_file} should not exist."
+    assert not dataset_file.exists(), f"Dataset file {dataset_file} should not exist."
 
 
 def test_cluster_wl_app_galaxy_density(experiment_file, halo_position):
@@ -618,3 +778,68 @@ def test_cluster_wl_app_galaxy_density(experiment_file, halo_position):
     obs = cluster_data.peek_obs()
 
     assert obs.len() <= n_galaxies
+
+
+def test_cluster_wl_app_galaxy_density_bad(experiment_file, density_bad):
+    """Test the generation of the cluster WL app with
+    bad galaxy density configuration."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            density_bad,
+        ],
+    )
+    assert result.exit_code != 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+
+    assert (
+        not experiment_file.exists()
+    ), f"Experiment file {experiment_file} should not exist."
+    assert not dataset_file.exists(), f"Dataset file {dataset_file} should not exist."
+
+
+def test_cluster_wl_app_seed(experiment_file, experiment_file_copy):
+    """Test the generation of the cluster WL app with a specific seed."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--seed=42",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    assert (
+        experiment_file.exists()
+    ), f"Experiment file {experiment_file} does not exist."
+    assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
+
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file_copy.as_posix(),
+            "--seed=42",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file_copy = experiment_file_copy.with_suffix(".dataset.gvar")
+    assert (
+        experiment_file_copy.exists()
+    ), f"Experiment file {experiment_file_copy} does not exist."
+    assert (
+        dataset_file_copy.exists()
+    ), f"Dataset file {dataset_file_copy} does not exist."
+
+    assert cmp(
+        dataset_file.as_posix(), dataset_file_copy.as_posix(), shallow=False
+    ), f"Dataset files {dataset_file} and {dataset_file_copy} are not equal."

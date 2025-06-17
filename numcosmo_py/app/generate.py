@@ -355,9 +355,9 @@ class GenerateClusterWL:
         float, typer.Option(help="Cluster concentration.", show_default=True)
     ] = 4.0
 
-    r_min: Annotated[float, typer.Option(help="Minimum radius.", show_default=True)] = (
-        0.3 / 0.7
-    )
+    r_min: Annotated[
+        float, typer.Option(help="Minimum radius.", show_default=True)
+    ] = 0.3 / 0.7
 
     r_max: Annotated[
         float, typer.Option(help="Maximum radius.", show_default=True)

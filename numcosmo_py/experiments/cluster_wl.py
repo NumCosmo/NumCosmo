@@ -87,6 +87,28 @@ class EllipCoord(GEnum):
         )
 
 
+class MassDef(GEnum):
+    """Mass definition for the halo mass summary."""
+
+    # pylint: disable=no-member
+    CRITICAL = Nc.HaloMassSummaryMassDef.CRITICAL
+    MEAN = Nc.HaloMassSummaryMassDef.MEAN
+    VIRIAL = Nc.HaloMassSummaryMassDef.VIRIAL
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: Any
+    ) -> core_schema.CoreSchema:
+        """Get the Pydantic core schema for the TypeSource class."""
+        return core_schema.no_info_before_validator_function(
+            lambda v: cls(v) if isinstance(v, str) else v,
+            core_schema.enum_schema(cls, list(cls), sub_type="str"),
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda v: str(v.value)
+            ),
+        )
+
+
 class GalaxyZGenSpec(BaseModel):
     """Galaxy redshift source distribution parameters."""
 
@@ -415,13 +437,14 @@ class HaloProfileType(StrEnum):
     HERNQUIST = auto()
 
 
-@dataclass(frozen=True, kw_only=True)
-class HaloPositionData:
+class HaloPositionData(BaseModel):
     """Cluster position parameters."""
 
-    ra: float
-    dec: float
-    z: float
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    ra: Annotated[float, Field(ge=0.0, le=360.0)]
+    dec: Annotated[float, Field(ge=-90.0, le=90.0)]
+    z: Annotated[float, Field(ge=0.0, le=5.0)] = 0.2
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -440,57 +463,55 @@ class GalaxyDistributionData:
     density: float = 18 * 60 * 60  # 18 arcmin^-2 in deg^-2
 
 
-class ClusterModel:
+class ClusterModel(BaseModel):
     """Cluster model parameters."""
 
-    def __init__(
-        self,
-        *,
-        mass_def: Nc.HaloMassSummaryMassDef = Nc.HaloMassSummaryMassDef.CRITICAL,
-        delta: float = 200.0,
-        profile_type: HaloProfileType = HaloProfileType.NFW,
-        position: HaloPositionData = HaloPositionData(ra=12.34, dec=-55.123, z=0.2),
-        cluster_c: float = 4.0,
-        r_min: float = 0.3,
-        r_max: float = 3.0,
-        cluster_mass: float = 1.0e14,
-        dist: None | Nc.Distance = None,
-    ) -> None:
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+
+    mass_def: Annotated[MassDef, Field()] = MassDef.CRITICAL
+    delta: Annotated[float, Field(gt=0.0)] = 200.0
+    profile_type: Annotated[HaloProfileType, Field()] = HaloProfileType.NFW
+    position: Annotated[HaloPositionData, Field()] = HaloPositionData(
+        ra=12.34, dec=-55.123, z=0.2
+    )
+    cluster_c: Annotated[float, Field(ge=0.1, le=30.0)] = 4.0
+    r_min: Annotated[float, Field(gt=0.0)] = 0.3
+    r_max: Annotated[float, Field(gt=0.0)] = 3.0
+    cluster_mass: Annotated[float, Field(ge=1.0e10, le=1.0e17)] = 1.0e14
+    dist: Annotated[None | Nc.Distance, Field()] = Nc.Distance.new(5.0)
+
+    halo_mass_summary: Annotated[Nc.HaloCMParam | None, Field(init=False)] = None
+    density_profile: Annotated[Nc.HaloDensityProfile | None, Field(init=False)] = None
+    surface_mass_density: Annotated[
+        Nc.WLSurfaceMassDensity | None, Field(init=False)
+    ] = None
+    halo_position: Annotated[Nc.HaloPosition | None, Field(init=False)] = None
+
+    def model_post_init(self, _, /):
         """Initialize the cluster model."""
-        if dist is None:
-            dist = Nc.Distance.new(5.0)
-
-        self.mass_def = mass_def
-        self.mass_delta = delta
-        self.profile_type = profile_type
-        self.r_min = r_min
-        self.r_max = r_max
-
-        halo_mass_summary = Nc.HaloCMParam.new(mass_def, delta)
-        match profile_type:
+        self.halo_mass_summary = Nc.HaloCMParam.new(self.mass_def.genum, self.delta)
+        match self.profile_type:
             case HaloProfileType.NFW:
-                self.density_profile = Nc.HaloDensityProfileNFW.new(halo_mass_summary)
+                self.density_profile = Nc.HaloDensityProfileNFW.new(
+                    self.halo_mass_summary
+                )
             case HaloProfileType.EINASTO:
                 self.density_profile = Nc.HaloDensityProfileEinasto.new(
-                    halo_mass_summary
+                    self.halo_mass_summary
                 )
             case HaloProfileType.HERNQUIST:
                 self.density_profile = Nc.HaloDensityProfileHernquist.new(
-                    halo_mass_summary
+                    self.halo_mass_summary
                 )
             case _:
-                raise ValueError(f"Invalid halo profile type: {profile_type}")
-
-        self.halo_mass_summary = halo_mass_summary
-        self.surface_mass_density = Nc.WLSurfaceMassDensity.new(dist)
-        self.halo_position = Nc.HaloPosition.new(dist)
-
-        self.halo_position["ra"] = position.ra
-        self.halo_position["dec"] = position.dec
-        self.halo_position["z"] = position.z
-
-        self.halo_mass_summary["cDelta"] = cluster_c
-        self.halo_mass_summary["log10MDelta"] = np.log10(cluster_mass)
+                raise ValueError(f"Invalid halo profile type: {self.profile_type}")
+        self.surface_mass_density = Nc.WLSurfaceMassDensity.new(self.dist)
+        self.halo_position = Nc.HaloPosition.new(self.dist)
+        self.halo_position["ra"] = self.position.ra
+        self.halo_position["dec"] = self.position.dec
+        self.halo_position["z"] = self.position.z
+        self.halo_mass_summary["cDelta"] = self.cluster_c
+        self.halo_mass_summary["log10MDelta"] = np.log10(self.cluster_mass)
 
     @property
     def position_data(self) -> HaloPositionData:
@@ -729,8 +750,8 @@ def generate_lsst_cluster_wl(
         table.add_row("DEC", f"{halo_position.dec}")
         table.add_row("z", f"{halo_position.z}")
         table.add_row("Mass Profile", f"{cluster.profile_type}")
-        table.add_row("Mass Definition", f"{cluster.mass_def.value_name}")
-        table.add_row("Mass Delta", f"{cluster.mass_delta}")
+        table.add_row("Mass Definition", f"{cluster.mass_def}")
+        table.add_row("Mass Delta", f"{cluster.delta}")
         table.add_row("Mass", f"{cluster.mass:.2e}")
         table.add_row("Concentration", f"{cluster.concentration}")
         table.add_row("Minimum Radius", f"{cluster.r_min}")
