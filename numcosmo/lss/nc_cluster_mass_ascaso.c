@@ -407,7 +407,7 @@ _nc_cluster_mass_ascaso_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdo
 {
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
 
-  if ((lnM_obs_lower[0] < CUT) && (lnM_obs_upper[0] < CUT))
+  if ((lnM_obs_lower[0] < CUT) && (lnM_obs_upper[0] < 0.0))
   {
     return 0.0;
   }
@@ -422,7 +422,7 @@ _nc_cluster_mass_ascaso_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdo
       const gdouble x_cut = (lnR_true - CUT) / (M_SQRT2 * sigma);
       gdouble intp_bin = 0.0;
 
-      if ((lnM_obs_lower[0] < CUT) && (lnM_obs_upper[0] >= CUT))
+      if ((lnM_obs_lower[0] <  0.0) && (lnM_obs_upper[0] >=  0.0))
       {
         if ((fabs (x_max) > 4.0) || (fabs (x_cut) > 4.0))
           return -(erfc (x_cut) - erfc (x_max)) / 2.0;
@@ -545,7 +545,7 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
       const gdouble x      = (lnM_obs_ptr[i] - lnR) / sigma;
       const gdouble x_cut  = (lnR - CUT) / (M_SQRT2 * sigma);
 
-      if (lnM_obs_ptr[i] <CUT)
+      if (lnM_obs_ptr[i] <0.0)
       {
         res_ptr[i]=0.0;
       }
@@ -566,7 +566,7 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
       const gdouble x      = (lnM_obs_ptr[i * tda] - lnR) / sigma;
       const gdouble x_cut  = (lnR - CUT) / (M_SQRT2 * sigma);
 
-      if (lnM_obs_ptr[i * tda] <CUT)
+      if (lnM_obs_ptr[i * tda] <0.0)
       {
      res_ptr[i]=0.0;
       }

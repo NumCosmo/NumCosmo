@@ -487,10 +487,10 @@ _nc_cluster_mass_selection_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoubl
 
 	const gdouble x     = (lnM_obs[0] - lnR_true) / sigma;
 
-	if (lnM_obs[0] < CUT)
-		return 0.0;
-	else
-		return 1.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x) * completeness/purity;
+    if (lnM_obs[0] < CUT)
+        return 0.0;
+    else
+        return 1.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x) * completeness/purity;
 }
 
 
@@ -514,13 +514,12 @@ _nc_cluster_mass_selection_integrand (gdouble lnM_obs, gpointer userdata)
 	_nc_cluster_mass_selection_lnR_sigma (obs_data->clusterm, obs_data->lnM, obs_data->z, &lnR_true, &sigma);
 	_nc_cluster_mass_selection_completeness(obs_data->clusterm, obs_data->lnM, obs_data->z, &completeness);
 	_nc_cluster_mass_selection_purity(obs_data->clusterm, lnM_obs, obs_data->z, &purity);
-
+    
 	const gdouble x     = (lnM_obs - lnR_true) / sigma;
-
-	if (lnM_obs < CUT)
-		return 0.0;
-	else
-		return 1.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x) * completeness/purity;
+    if (lnM_obs< CUT)
+    {return 0.0; }
+    else
+    {return 2.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x)/erfc ((CUT - lnR_true) / (M_SQRT2 * sigma)) * completeness/purity;}
 
 }
 
@@ -545,11 +544,7 @@ _nc_cluster_mass_selection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdo
 
 	gsl_integration_qag (&F, CUT, self->lnR_max, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp, &err);
 	ncm_memory_pool_return (w);
-
-    if (intp < 0.0)
-        return 0.0;
-    else
-    	return intp;
+    return intp;
 }
 
 static gdouble
@@ -557,7 +552,7 @@ _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, 
 {
 	NcClusterMassSelection *selection = NC_CLUSTER_MASS_SELECTION (clusterm);
 
-	if ((lnM_obs_lower[0] < CUT) && (lnM_obs_upper[0] < CUT))
+	if ((lnM_obs_lower[0]< CUT) && (lnM_obs_upper[0]< CUT))
 	{
 		return 0.0;
 	}
@@ -577,7 +572,7 @@ _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, 
 		F.function = &_nc_cluster_mass_selection_integrand;
 		F.params   = &obs_data;
 
-		if ((lnM_obs_lower[0] < CUT) && (lnM_obs_upper[0] >= CUT))
+		if ((lnM_obs_lower[0]< CUT) && (lnM_obs_upper[0] >= CUT))
 		{
 			gsl_integration_qag (&F, CUT, lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp_bin, &err);
 			ncm_memory_pool_return (w);
@@ -587,7 +582,7 @@ _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, 
 			gsl_integration_qag (&F, lnM_obs_lower[0], lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp_bin, &err);
 			ncm_memory_pool_return (w);
 		}
-		if (intp_bin < 0.0)
+		if (intp_bin< 0.0)
         return 0.0;
         else
     	return intp_bin;
@@ -625,7 +620,7 @@ static void
 _nc_cluster_mass_selection_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
 
-	const gdouble lnMl =  M_LN10 * 12.5;
+	const gdouble lnMl =  M_LN10 * 13.0;
 	const gdouble lnMu =  M_LN10 * 16.0;
 
 	*lnM_lower = lnMl;
@@ -637,7 +632,7 @@ static void
 _nc_cluster_mass_selection_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
 
-	const gdouble lnMl =  M_LN10 * 12.5;
+	const gdouble lnMl =  M_LN10 * 13.0;
 	const gdouble lnMu =  M_LN10 * 16.0;
 
 	*lnM_lower = lnMl;
@@ -648,7 +643,7 @@ static void
 _nc_cluster_mass_selection_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
 {
 
-	const gdouble lnMl =  M_LN10 * 12.5;
+	const gdouble lnMl =  M_LN10 * 13.0;
 	const gdouble lnMu =  M_LN10 * 16.0;
 
 	*lnM_lower = lnMl;
@@ -695,7 +690,7 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
 			const gdouble sigma  = sigma_pre + sigma_p2 * Dln1pz;
 			const gdouble x      = (lnM_obs_ptr[i] - lnR) / sigma;
 
-			if (lnM_obs_ptr[i] <CUT)
+			if (lnM_obs_ptr[i] <0.0)
 			{
 				res_ptr[i]=0.0;
 			}
@@ -715,7 +710,7 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
 			const gdouble sigma  = sigma_pre + sigma_p2 * Dln1pz;
 			const gdouble x      = (lnM_obs_ptr[i * tda] - lnR) / sigma;
 
-			if (lnM_obs_ptr[i * tda] <CUT)
+			if (lnM_obs_ptr[i * tda] <0.0)
 			{
 				res_ptr[i]=0.0;
 			}
