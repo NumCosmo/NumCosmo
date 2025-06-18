@@ -29,6 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_spline2d_bicubic.h>
 #include <numcosmo/lss/nc_cluster_mass.h>
 
 G_BEGIN_DECLS
@@ -53,10 +54,6 @@ typedef struct _NcClusterMassSelectionPrivate NcClusterMassSelectionPrivate;
  * @NC_CLUSTER_MASS_SELECTION_SIGMA_P1: slope on the standard deviation of the log-normal distribution
  * @NC_CLUSTER_MASS_SELECTION_SIGMA_P2: redshift dependency standard deviation of the log-normal distribution
  * @NC_CLUSTER_MASS_SELECTION_CUT: cut in richness
- * @NC_CLUSTER_MASS_SELECTION_LNM_C0: completenness constant mass pivot
- * @NC_CLUSTER_MASS_SELECTION_LNM_CZ:completenness redshift dependency mass pivot
- * @NC_CLUSTER_MASS_SELECTION_A_C0: completenness exponent constant
- * @NC_CLUSTER_MASS_SELECTION_A_CZ: completenness exponent redshift dependency
  * FIXME
  */
 typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_SELECTION_SPARAMS >*/
@@ -68,10 +65,7 @@ typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_SELECTION_SPARAMS >*/
   NC_CLUSTER_MASS_SELECTION_SIGMA_P1,
   NC_CLUSTER_MASS_SELECTION_SIGMA_P2,
   NC_CLUSTER_MASS_SELECTION_CUT,
-  NC_CLUSTER_MASS_SELECTION_LNM_C0,
-  NC_CLUSTER_MASS_SELECTION_LNM_CZ,
-  NC_CLUSTER_MASS_SELECTION_A_C0,
-  NC_CLUSTER_MASS_SELECTION_A_CZ,
+
 
   /* < private > */
   NC_CLUSTER_MASS_SELECTION_SPARAM_LEN, /*< skip >*/
@@ -84,10 +78,6 @@ typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_SELECTION_SPARAMS >*/
 #define NC_CLUSTER_MASS_SELECTION_DEFAULT_SIGMA_P1  (-0.08 / M_LN10)
 #define NC_CLUSTER_MASS_SELECTION_DEFAULT_SIGMA_P2  (0.0)
 #define NC_CLUSTER_MASS_SELECTION_DEFAULT_CUT  (0.0)
-#define NC_CLUSTER_MASS_SELECTION_DEFAULT_LNM_C0  (13.31 * M_LN10)
-#define NC_CLUSTER_MASS_SELECTION_DEFAULT_LNM_CZ  (0.2025 * M_LN10)
-#define NC_CLUSTER_MASS_SELECTION_DEFAULT_A_C0  (1.1321)
-#define NC_CLUSTER_MASS_SELECTION_DEFAULT_A_CZ  (0.7751)
 #define NC_CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL (0.0)
 
 struct _NcClusterMassSelectionClass
@@ -106,6 +96,9 @@ struct _NcClusterMassSelection
 GType nc_cluster_mass_selection_get_type (void) G_GNUC_CONST;
 
 void nc_cluster_mass_selection_set_enable_rejection (NcClusterMassSelection *selection, gboolean on);
+void nc_cluster_mass_selection_set_purity(NcClusterMassSelection *selection, NcmSpline2dBicubic *purity);
+void nc_cluster_mass_selection_set_completeness(NcClusterMassSelection *selection, NcmSpline2dBicubic *completeness);
+
 
 gdouble nc_cluster_mass_selection_get_mean_richness (NcClusterMassSelection *selection, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_selection_get_std_richness (NcClusterMassSelection *selection, gdouble lnM, gdouble z);
@@ -113,6 +106,8 @@ gdouble nc_cluster_mass_selection_get_cut (NcClusterMassSelection *selection, gd
 gdouble nc_cluster_mass_selection_get_mean (NcClusterMassSelection *selection, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_selection_get_std (NcClusterMassSelection *selection, gdouble lnM, gdouble z);
 gboolean nc_cluster_mass_selection_get_enable_rejection (NcClusterMassSelection *selection);
+NcmSpline2dBicubic * nc_cluster_mass_selection_get_purity(NcClusterMassSelection *selection);
+NcmSpline2dBicubic * nc_cluster_mass_selection_get_completeness(NcClusterMassSelection *selection);
 
 G_END_DECLS
 
