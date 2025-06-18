@@ -66,7 +66,22 @@ def fixture_redshift_dist(request) -> str:
     """Fixture for the redshift distribution."""
     if request.param == GalaxyZGen.SPEC:
         config = {"z_min": uniform(0.1, 0.5), "z_max": uniform(0.6, 10.0)}
-        bad_config = [
+    else:
+        config = {
+            "zp_min": uniform(0.1, 0.5),
+            "zp_max": uniform(0.6, 10.0),
+            "sigma0": uniform(0.01, 0.1),
+        }
+    return request.param, config
+
+
+@pytest.fixture(
+    name="redshift_dist_bad", params=[e.value for e in GalaxyZGen] + ["bogus"]
+)
+def fixture_redshift_dist_bad(request) -> str:
+    """Fixture for the redshift distribution bad configuration."""
+    if request.param == GalaxyZGen.SPEC:
+        config = [
             {"zp_min": 0.1, "zp_max": 0.5, "sigma0": 0.01},
             {"z_min": 0.1, "z_max": 0.5, "sigma0": 0.01},
             {"zp_min": 0.1, "zp_max": 0.5},
@@ -77,13 +92,8 @@ def fixture_redshift_dist(request) -> str:
             {"z_min": -0.1},
             {"z_max": -0.01},
         ]
-    else:
-        config = {
-            "zp_min": uniform(0.1, 0.5),
-            "zp_max": uniform(0.6, 10.0),
-            "sigma0": uniform(0.01, 0.1),
-        }
-        bad_config = [
+    elif request.param == GalaxyZGen.GAUSS:
+        config = [
             {"z_min": 0.1, "z_max": 0.5, "sigma0": 0.01},
             {"zp_min": 0.5, "zp_max": 0.2},
             {"zp_min": "a"},
@@ -94,7 +104,12 @@ def fixture_redshift_dist(request) -> str:
             {"zp_max": -0.01},
             {"sigma0": -0.01},
         ]
-    return request.param, config, bad_config
+    else:
+        config = [
+            {"z_min": 0.1, "z_max": 0.6},
+            {"zp_min": 0.1, "zp_max": 0.6, "sigma0": 0.01},
+        ]
+    return request.param, config
 
 
 @pytest.fixture(name="shape_dist", params=[e.value for e in GalaxyShapeGen])
@@ -107,7 +122,27 @@ def fixture_shape_dist(request) -> str:
             "sigma": uniform(0.2, 0.5),
             "std_noise": uniform(0.01, 0.1),
         }
-        bad_config = [
+    else:
+        config = {
+            "ellip_conv": choice(["trace", "trace-det"]),
+            "ellip_coord": choice(["celestial", "euclidean"]),
+            "std_shape": uniform(0.2, 0.4),
+            "std_noise": uniform(0.01, 0.1),
+            "std_sigma": uniform(0.01, 0.1),
+            "c1_sigma": uniform(0.01, 0.1),
+            "c2_sigma": uniform(0.01, 0.1),
+            "m_sigma": uniform(0.01, 0.1),
+        }
+    return request.param, config
+
+
+@pytest.fixture(
+    name="shape_dist_bad", params=[e.value for e in GalaxyShapeGen] + ["bogus"]
+)
+def fixture_shape_dist_bad(request) -> str:
+    """Fixture for the galaxy shape distribution bad configuration."""
+    if request.param == GalaxyShapeGen.GAUSS:
+        config = [
             {
                 "ellip_conv": "trace",
                 "ellip_coord": "celestial",
@@ -124,18 +159,8 @@ def fixture_shape_dist(request) -> str:
             {"sigma": -0.1},
             {"std_noise": -0.01},
         ]
-    else:
-        config = {
-            "ellip_conv": choice(["trace", "trace-det"]),
-            "ellip_coord": choice(["celestial", "euclidean"]),
-            "std_shape": uniform(0.2, 0.4),
-            "std_noise": uniform(0.01, 0.1),
-            "std_sigma": uniform(0.01, 0.1),
-            "c1_sigma": uniform(0.01, 0.1),
-            "c2_sigma": uniform(0.01, 0.1),
-            "m_sigma": uniform(0.01, 0.1),
-        }
-        bad_config = [
+    elif request.param == GalaxyShapeGen.GAUSS_HSC:
+        config = [
             {
                 "ellip_conv": "trace",
                 "ellip_coord": "celestial",
@@ -164,7 +189,26 @@ def fixture_shape_dist(request) -> str:
             {"c2_sigma": -0.01},
             {"m_sigma": -0.01},
         ]
-    return request.param, config, bad_config
+    else:
+        config = [
+            {
+                "ellip_conv": choice(["trace", "trace-det"]),
+                "ellip_coord": choice(["celestial", "euclidean"]),
+                "sigma": uniform(0.2, 0.5),
+                "std_noise": uniform(0.01, 0.1),
+            },
+            {
+                "ellip_conv": choice(["trace", "trace-det"]),
+                "ellip_coord": choice(["celestial", "euclidean"]),
+                "std_shape": uniform(0.2, 0.4),
+                "std_noise": uniform(0.01, 0.1),
+                "std_sigma": uniform(0.01, 0.1),
+                "c1_sigma": uniform(0.01, 0.1),
+                "c2_sigma": uniform(0.01, 0.1),
+                "m_sigma": uniform(0.01, 0.1),
+            },
+        ]
+    return request.param, config
 
 
 @pytest.fixture(
@@ -276,13 +320,35 @@ def fixture_radius_bad(request) -> list[str]:
 @pytest.fixture(
     name="density_bad",
     params=[
-        "--galaxy-density=bogus",
-        "--galaxy-density=0",
-        "--galaxy-density=-5",
+        "bogus",
+        "0",
+        "-5",
     ],
 )
 def fixture_density_bad(request) -> str:
     """Fixture for the galaxy density bad configuration."""
+    return request.param
+
+
+@pytest.fixture(
+    name="fit_parameters",
+    params=[
+        "NcHaloMassSummary:log10MDelta",
+        "NcHaloMassSummary:cDelta",
+        "NcHaloPosition:ra",
+        "NcHaloPosition:dec",
+    ],
+)
+def fixture_fit_parameters(request) -> str:
+    """Fixture for the fit parameters."""
+    return request.param
+
+
+@pytest.fixture(
+    name="fit_parameters_bad", params=["NcHaloMassSummary:bogus", "bougs:log10MDelta"]
+)
+def fixture_fit_parameters_bad(request) -> str:
+    """Fixture for the fit parameters bad configuration."""
     return request.param
 
 
@@ -328,18 +394,25 @@ def test_cluster_wl_app_generate_redshift(experiment_file, redshift_dist):
             "generate",
             "cluster-wl",
             experiment_file.as_posix(),
-            "--z-dist",
-            z_dist,
+            f"--z-dist={z_dist}",
+            "--summary",
         ],
     )
     assert result.exit_code == 0, result.output
+
+    if redshift_dist[0] == GalaxyZGen.SPEC:
+        assert "GalaxyZGenSpec" in result.output
+    else:
+        assert "GalaxyZGenGauss" in result.output
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
 
     assert (
         experiment_file.exists()
     ), f"Experiment file {experiment_file} does not exist."
-    assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
+    assert (
+        dataset_file.exists()
+    ), f"Dataset file {dataset_file} does not exist:\n {result.output}"
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     dataset = ser.from_binfile(dataset_file.as_posix())
@@ -359,10 +432,10 @@ def test_cluster_wl_app_generate_redshift(experiment_file, redshift_dist):
             )
 
 
-def test_cluster_wl_app_generate_redshift_bad(experiment_file, redshift_dist):
+def test_cluster_wl_app_generate_redshift_bad(experiment_file, redshift_dist_bad):
     """Test the generation of the cluster WL app with bad distribution configuration."""
-    for bad_config in redshift_dist[2]:
-        z_dist = redshift_dist[0]
+    for bad_config in redshift_dist_bad[1]:
+        z_dist = redshift_dist_bad[0]
         for key, value in bad_config.items():
             z_dist += f" {key}={str(value)}"
         result = runner.invoke(
@@ -371,8 +444,7 @@ def test_cluster_wl_app_generate_redshift_bad(experiment_file, redshift_dist):
                 "generate",
                 "cluster-wl",
                 experiment_file.as_posix(),
-                "--z-dist",
-                z_dist,
+                f"--z-dist={z_dist}",
             ],
         )
         assert result.exit_code != 0, result.output
@@ -398,11 +470,16 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_dist):
             "generate",
             "cluster-wl",
             experiment_file.as_posix(),
-            "--shape-dist",
-            s_dist,
+            f"--shape-dist={s_dist}",
+            "--summary",
         ],
     )
     assert result.exit_code == 0, result.output
+
+    if shape_dist[0] == GalaxyShapeGen.GAUSS:
+        assert "GalaxyShapeGenGauss" in result.output
+    else:
+        assert "GalaxyShapeGenGaussHSC" in result.output
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
 
@@ -440,11 +517,11 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_dist):
             assert abs(obs.get("m", i)) <= 1.0 + 6.0 * shape_dist[1]["m_sigma"]
 
 
-def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_dist):
+def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_dist_bad):
     """Test the generation of the cluster WL app with
     bad shape distribution configuration."""
-    for bad_config in shape_dist[2]:
-        s_dist = shape_dist[0]
+    for bad_config in shape_dist_bad[1]:
+        s_dist = shape_dist_bad[0]
         for key, value in bad_config.items():
             s_dist += f" {key}={str(value)}"
         result = runner.invoke(
@@ -453,8 +530,7 @@ def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_dist):
                 "generate",
                 "cluster-wl",
                 experiment_file.as_posix(),
-                "--shape-dist",
-                s_dist,
+                f"--shape-dist={s_dist}",
             ],
         )
         assert result.exit_code != 0, result.output
@@ -478,8 +554,7 @@ def test_cluster_wl_app_generate_halo_profile(experiment_file, halo_profile):
             "generate",
             "cluster-wl",
             experiment_file.as_posix(),
-            "--profile-type",
-            halo_profile,
+            f"--profile-type={halo_profile}",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -539,10 +614,8 @@ def test_cluster_wl_app_halo_mass_summary(experiment_file, halo_mass_summary):
             "generate",
             "cluster-wl",
             experiment_file.as_posix(),
-            "--cluster-mass",
-            str(mass),
-            "--cluster-c",
-            str(c),
+            f"--cluster-mass={mass}",
+            f"--cluster-c={c}",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -558,7 +631,6 @@ def test_cluster_wl_app_halo_mass_summary(experiment_file, halo_mass_summary):
     dataset = ser.from_binfile(dataset_file.as_posix())
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
     mset = experiment.get("model-set")
-
     hms = mset.peek_by_name("NcHaloMassSummary")
 
     assert hms["log10MDelta"] == log10(mass)
@@ -601,20 +673,13 @@ def test_cluster_wl_app_halo_position(experiment_file, halo_position):
             "generate",
             "cluster-wl",
             experiment_file.as_posix(),
-            "--cluster-ra",
-            str(cluster_ra),
-            "--cluster-dec",
-            str(cluster_dec),
-            "--cluster-z",
-            str(cluster_z),
-            "--ra-min",
-            str(ra_min),
-            "--ra-max",
-            str(ra_max),
-            "--dec-min",
-            str(dec_min),
-            "--dec-max",
-            str(dec_max),
+            f"--cluster-ra={cluster_ra}",
+            f"--cluster-dec={cluster_dec}",
+            f"--cluster-z={cluster_z}",
+            f"--ra-min={ra_min}",
+            f"--ra-max={ra_max}",
+            f"--dec-min={dec_min}",
+            f"--dec-max={dec_max}",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -630,12 +695,11 @@ def test_cluster_wl_app_halo_position(experiment_file, halo_position):
     dataset = ser.from_binfile(dataset_file.as_posix())
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
     mset = experiment.get("model-set")
+    hp = mset.peek_by_name("NcHaloPosition")
 
-    halo_position = mset.peek_by_name("NcHaloPosition")
-
-    assert halo_position["ra"] == cluster_ra
-    assert halo_position["dec"] == cluster_dec
-    assert halo_position["z"] == cluster_z
+    assert hp["ra"] == cluster_ra
+    assert hp["dec"] == cluster_dec
+    assert hp["z"] == cluster_z
 
 
 def test_cluster_wl_app_halo_position_bad(experiment_file, halo_position_bad):
@@ -666,10 +730,8 @@ def test_cluster_wl_app_radius(experiment_file, radius):
             "generate",
             "cluster-wl",
             experiment_file.as_posix(),
-            "--r-min",
-            str(r_min),
-            "--r-max",
-            str(r_max),
+            f"--r-min={r_min}",
+            f"--r-max={r_max}",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -687,7 +749,6 @@ def test_cluster_wl_app_radius(experiment_file, radius):
     mset = experiment.get("model-set")
     cluster_data = dataset.get_data(0)
     obs = cluster_data.peek_obs()
-
     hp = mset.peek_by_name("NcHaloPosition")
     cosmo = mset.peek_by_name("NcHICosmo")
 
@@ -745,22 +806,14 @@ def test_cluster_wl_app_galaxy_density(experiment_file, halo_position):
             "generate",
             "cluster-wl",
             experiment_file.as_posix(),
-            "--galaxy-density",
-            str(galaxy_density),
-            "--cluster-ra",
-            str(cluster_ra),
-            "--cluster-dec",
-            str(cluster_dec),
-            "--cluster-z",
-            str(cluster_z),
-            "--ra-min",
-            str(ra_min),
-            "--ra-max",
-            str(ra_max),
-            "--dec-min",
-            str(dec_min),
-            "--dec-max",
-            str(dec_max),
+            f"--galaxy-density={galaxy_density}",
+            f"--cluster-ra={cluster_ra}",
+            f"--cluster-dec={cluster_dec}",
+            f"--cluster-z={cluster_z}",
+            f"--ra-min={ra_min}",
+            f"--ra-max={ra_max}",
+            f"--dec-min={dec_min}",
+            f"--dec-max={dec_max}",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -789,7 +842,7 @@ def test_cluster_wl_app_galaxy_density_bad(experiment_file, density_bad):
             "generate",
             "cluster-wl",
             experiment_file.as_posix(),
-            density_bad,
+            f"--galaxy-density={density_bad}",
         ],
     )
     assert result.exit_code != 0, result.output
@@ -816,6 +869,7 @@ def test_cluster_wl_app_seed(experiment_file, experiment_file_copy):
     assert result.exit_code == 0, result.output
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
+
     assert (
         experiment_file.exists()
     ), f"Experiment file {experiment_file} does not exist."
@@ -833,13 +887,87 @@ def test_cluster_wl_app_seed(experiment_file, experiment_file_copy):
     assert result.exit_code == 0, result.output
 
     dataset_file_copy = experiment_file_copy.with_suffix(".dataset.gvar")
+
     assert (
         experiment_file_copy.exists()
     ), f"Experiment file {experiment_file_copy} does not exist."
     assert (
         dataset_file_copy.exists()
     ), f"Dataset file {dataset_file_copy} does not exist."
-
     assert cmp(
         dataset_file.as_posix(), dataset_file_copy.as_posix(), shallow=False
     ), f"Dataset files {dataset_file} and {dataset_file_copy} are not equal."
+
+
+def test_cluster_wl_app_file_extension_bad(experiment_file):
+    """Test the generation of the cluster WL app with an invalid file extension."""
+    experiment_file = experiment_file.with_suffix(".bogus")
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+        ],
+    )
+    assert result.exit_code != 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+
+    assert (
+        not experiment_file.exists()
+    ), f"Experiment file {experiment_file} does not exist."
+    assert not dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
+
+
+def test_cluster_wl_app_fit_parameters(experiment_file, fit_parameters):
+    """Test the generation of the cluster WL app with specific fit parameters."""
+    # pylint: disable=unused-variable
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            f"--parameter-list={fit_parameters}",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+
+    assert (
+        experiment_file.exists()
+    ), f"Experiment file {experiment_file} does not exist."
+    assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dataset = ser.from_binfile(dataset_file.as_posix())
+    experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
+    mset = experiment.get("model-set")
+    fparam = mset.fparam_full_name(0)
+
+    assert (
+        fparam == fit_parameters
+    ), f"Fit parameter {fparam} does not match {fit_parameters}."
+
+
+def test_cluster_wl_app_fit_parameters_bad(experiment_file, fit_parameters_bad):
+    """Test the generation of the cluster WL app with bad fit parameters."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            f"--parameter-list={fit_parameters_bad}",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+
+    assert (
+        not experiment_file.exists()
+    ), f"Experiment file {experiment_file} should not exist."
+    assert not dataset_file.exists(), f"Dataset file {dataset_file} should not exist."
