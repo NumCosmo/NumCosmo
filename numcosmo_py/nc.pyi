@@ -72,16 +72,16 @@ GALAXY_SD_SHAPE_COL_EPSILON_INT_1: str = r"epsilon_int_1"
 GALAXY_SD_SHAPE_COL_EPSILON_INT_2: str = r"epsilon_int_2"
 GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_1: str = r"epsilon_obs_1"
 GALAXY_SD_SHAPE_GAUSS_COL_EPSILON_OBS_2: str = r"epsilon_obs_2"
-GALAXY_SD_SHAPE_GAUSS_COL_SIGMA_OBS: str = r"sigma_obs"
+GALAXY_SD_SHAPE_GAUSS_COL_STD_NOISE: str = r"std_noise"
 GALAXY_SD_SHAPE_GAUSS_DEFAULT_PARAMS_ABSTOL: float = 0.0
-GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA_INT: float = 0.3
+GALAXY_SD_SHAPE_GAUSS_DEFAULT_SIGMA: float = 0.3
 GALAXY_SD_SHAPE_GAUSS_HSC_COL_C1: str = r"c1"
 GALAXY_SD_SHAPE_GAUSS_HSC_COL_C2: str = r"c2"
 GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_1: str = r"epsilon_obs_1"
 GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_2: str = r"epsilon_obs_2"
 GALAXY_SD_SHAPE_GAUSS_HSC_COL_M: str = r"m"
-GALAXY_SD_SHAPE_GAUSS_HSC_COL_SIGMA_INT: str = r"sigma_int"
-GALAXY_SD_SHAPE_GAUSS_HSC_COL_SIGMA_OBS: str = r"sigma_obs"
+GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_NOISE: str = r"std_noise"
+GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_SHAPE: str = r"std_shape"
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_ALPHA: float = 0.78
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_BETA: float = 2.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_PARAMS_ABSTOL: float = 0.0
@@ -4927,6 +4927,7 @@ class DataClusterWL(NumCosmoMath.Data):
     def get_resample_flag(self) -> DataClusterWLResampleFlag: ...
     @classmethod
     def new(cls) -> DataClusterWL: ...
+    def peek_data_array(self) -> NumCosmoMath.ObjArray: ...
     def peek_obs(self) -> GalaxyWLObs: ...
     def ref(self) -> DataClusterWL: ...
     def set_cut(self, r_min: float, r_max: float) -> None: ...
@@ -6620,9 +6621,15 @@ class GalaxySDShape(NumCosmoMath.Model):
     ) -> None: ...
     @staticmethod
     def clear(gsds: GalaxySDShape) -> None: ...
+    def direct_estimate(
+        self, mset: NumCosmoMath.MSet, data_array: typing.Sequence[GalaxySDShapeData]
+    ) -> typing.Tuple[float, float, float, float, float]: ...
     def do_data_init(
         self, sdpos_data: GalaxySDPositionData, data: GalaxySDShapeData
     ) -> None: ...
+    def do_direct_estimate(
+        self, mset: NumCosmoMath.MSet, data_array: typing.Sequence[GalaxySDShapeData]
+    ) -> typing.Tuple[float, float, float, float, float]: ...
     def do_gen(
         self, mset: NumCosmoMath.MSet, data: GalaxySDShapeData, rng: NumCosmoMath.RNG
     ) -> None: ...
@@ -6665,6 +6672,10 @@ class GalaxySDShapeClass(GObject.GPointer):
     ] = ...
     data_init: typing.Callable[
         [GalaxySDShape, GalaxySDPositionData, GalaxySDShapeData], None
+    ] = ...
+    direct_estimate: typing.Callable[
+        [GalaxySDShape, NumCosmoMath.MSet, typing.Sequence[GalaxySDShapeData]],
+        typing.Tuple[float, float, float, float, float],
     ] = ...
     padding: list[None] = ...
 
@@ -6712,10 +6723,10 @@ class GalaxySDShapeGauss(GalaxySDShape):
     Object NcGalaxySDShapeGauss
 
     Properties from NcGalaxySDShapeGauss:
-      e-rms -> gdouble: e-rms
-        \epsilon_\mathrm{rms}
-      e-rms-fit -> gboolean: e-rms-fit
-        \epsilon_\mathrm{rms}:fit
+      sigma -> gdouble: sigma
+        \sigma
+      sigma-fit -> gboolean: sigma-fit
+        \sigma:fit
 
     Properties from NcGalaxySDShape:
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
@@ -6746,8 +6757,8 @@ class GalaxySDShapeGauss(GalaxySDShape):
     """
 
     class Props:
-        e_rms: float
-        e_rms_fit: bool
+        sigma: float
+        sigma_fit: bool
         ellip_conv: GalaxyWLObsEllipConv
         implementation: int
         name: str
@@ -6762,8 +6773,8 @@ class GalaxySDShapeGauss(GalaxySDShape):
     props: Props = ...
     def __init__(
         self,
-        e_rms: float = ...,
-        e_rms_fit: bool = ...,
+        sigma: float = ...,
+        sigma_fit: bool = ...,
         ellip_conv: GalaxyWLObsEllipConv = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -6779,20 +6790,24 @@ class GalaxySDShapeGauss(GalaxySDShape):
         data: GalaxySDShapeData,
         epsilon_obs_1: float,
         epsilon_obs_2: float,
-        sigma_obs: float,
+        std_noise: float,
     ) -> None: ...
     def free(self) -> None: ...
     def gen(
         self,
         mset: NumCosmoMath.MSet,
         data: GalaxySDShapeData,
-        sigma_obs: float,
+        std_noise: float,
         coord: GalaxyWLObsCoord,
         rng: NumCosmoMath.RNG,
     ) -> None: ...
     @classmethod
     def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxySDShapeGauss: ...
     def ref(self) -> GalaxySDShapeGauss: ...
+    @staticmethod
+    def sigma_from_std_shape(std_shape: float) -> float: ...
+    @staticmethod
+    def std_shape_from_sigma(sigma: float) -> float: ...
 
 class GalaxySDShapeGaussClass(GObject.GPointer):
     r"""
@@ -6874,8 +6889,8 @@ class GalaxySDShapeGaussHSC(GalaxySDShape):
         data: GalaxySDShapeData,
         epsilon_obs_1: float,
         epsilon_obs_2: float,
-        sigma_int: float,
-        sigma_obs: float,
+        std_shape: float,
+        std_noise: float,
         c1: float,
         c2: float,
         m: float,
@@ -6885,8 +6900,8 @@ class GalaxySDShapeGaussHSC(GalaxySDShape):
         self,
         mset: NumCosmoMath.MSet,
         data: GalaxySDShapeData,
-        sigma_int: float,
-        sigma_obs: float,
+        std_shape: float,
+        std_noise: float,
         c1: float,
         c2: float,
         m: float,
@@ -6998,7 +7013,6 @@ class GalaxySDTrueRedshift(NumCosmoMath.Model):
     ) -> None: ...
     @staticmethod
     def clear(gsdtr: GalaxySDTrueRedshift) -> None: ...
-    def dist(self, reltol: float, abstol: float) -> NumCosmoMath.StatsDist1d: ...
     def do_gen(self, rng: NumCosmoMath.RNG) -> float: ...
     def do_get_lim(self, z_min: float, z_max: float) -> None: ...
     def do_integ(self, z: float) -> float: ...
@@ -20171,7 +20185,7 @@ class DistanceComovingMethod(GObject.GEnum):
     INT_E: DistanceComovingMethod = ...
 
 class GalaxySDShapeGaussParams(GObject.GEnum):
-    INT: GalaxySDShapeGaussParams = ...
+    SIGMA: GalaxySDShapeGaussParams = ...
 
 class GalaxySDTrueRedshiftLSSTSRDSParams(GObject.GEnum):
     ALPHA: GalaxySDTrueRedshiftLSSTSRDSParams = ...
