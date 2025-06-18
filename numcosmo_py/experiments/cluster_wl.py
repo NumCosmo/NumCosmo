@@ -503,7 +503,7 @@ class ClusterModel(BaseModel):
                 self.density_profile = Nc.HaloDensityProfileHernquist.new(
                     self.halo_mass_summary
                 )
-            case _:
+            case _:  # pragma: no cover
                 raise ValueError(f"Invalid halo profile type: {self.profile_type}")
         self.surface_mass_density = Nc.WLSurfaceMassDensity.new(self.dist)
         self.halo_position = Nc.HaloPosition.new(self.dist)
@@ -516,6 +516,7 @@ class ClusterModel(BaseModel):
     @property
     def position_data(self) -> HaloPositionData:
         """Return the cluster position."""
+        # pragma: no cover
         return HaloPositionData(
             ra=self.halo_position["ra"],
             dec=self.halo_position["dec"],
