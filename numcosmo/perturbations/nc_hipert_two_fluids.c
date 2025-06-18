@@ -770,14 +770,16 @@ _nc_hipert_two_fluids_f_zetaS (sunrealtype alpha, N_Vector y, N_Vector ydot, gpo
 
 #if 1
   {
-    const gdouble bla1   = eom->A1Pzeta2;
-    const gdouble bla2   = eom->A2Pzeta2;
-    const gdouble ble1   = eom->A1PQ2;
-    const gdouble ble2   = eom->A2PQ2;
-    const gdouble bli1   = gsl_pow_2 (eom->nu1 / eom->mnu2_s) * ble1;
-    const gdouble bli2   = gsl_pow_2 (eom->nu2 / eom->mnu2_s) * ble2;
-    const gdouble blo1   = gsl_pow_2 (eom->nu1 / eom->mnu2_zeta) * bla1;
-    const gdouble blo2   = gsl_pow_2 (eom->nu2 / eom->mnu2_zeta) * bla2;
+    const gdouble Avzeta1  = cabs (eom->vzeta1);
+    const gdouble AvQ1     = cabs (eom->vQ1);
+    const gdouble AvPzeta1 = cabs (eom->vPzeta1);
+    const gdouble AvPQ1    = cabs (eom->vPQ1);
+
+    const gdouble Avzeta2  = cabs (eom->vzeta2);
+    const gdouble AvQ2     = cabs (eom->vQ2);
+    const gdouble AvPzeta2 = cabs (eom->vPzeta2);
+    const gdouble AvPQ2    = cabs (eom->vPQ2);
+
     const gdouble Azeta  = hypot (zeta_R, zeta_I);
     const gdouble APzeta = hypot (Pzeta_R, Pzeta_I);
     const gdouble AS     = hypot (S_R, S_I);
@@ -785,14 +787,14 @@ _nc_hipert_two_fluids_f_zetaS (sunrealtype alpha, N_Vector y, N_Vector ydot, gpo
 #if 1
     printf ("% 22.15e % 22.15e % 22.15e, % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
             alpha,
-            Azeta * Azeta / blo2,
-            AS * AS / bli2,
-            APzeta * APzeta / bla2,
-            APS * APS / ble2,
-            Azeta * Azeta / blo1,
-            AS * AS / bli1,
-            APzeta * APzeta / bla1,
-            APS * APS / ble1
+            Azeta / Avzeta1,
+            AS / AvQ1,
+            APzeta / AvPzeta1,
+            APS / AvPQ1,
+            Azeta / Avzeta2,
+            AS / AvQ2,
+            APzeta / AvPzeta2,
+            APS / AvPQ2
            );
 #endif
 #if 0

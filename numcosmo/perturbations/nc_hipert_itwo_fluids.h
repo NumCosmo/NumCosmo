@@ -30,6 +30,10 @@
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/perturbations/nc_hipert_wkb.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
+#include <complex.h>
+#endif /* NUMCOSMO_GIR_SCAN */
+
 G_BEGIN_DECLS
 
 #define NC_TYPE_HIPERT_ITWO_FLUIDS               (nc_hipert_itwo_fluids_get_type ())
@@ -80,16 +84,20 @@ struct _NcHIPertITwoFluidsEOM
   gdouble cos2phi;
   gdouble cs2;
   gdouble cm2;
-  gdouble A1Pzeta2;
-  gdouble A1PQ2;
-  gdouble A1zeta2;
-  gdouble A1Q2;
-  gdouble A2Pzeta2;
-  gdouble A2PQ2;
-  gdouble A2zeta2;
-  gdouble A2Q2;
-  gdouble T1;
-  gdouble T2;
+/* New variables */
+  gdouble gw1;
+  gdouble gw2;
+  gdouble F;
+  #ifndef NUMCOSMO_GIR_SCAN
+  complex double vzeta1;
+  complex double vQ1;
+  complex double vPzeta1;
+  complex double vPQ1;
+  complex double vzeta2;
+  complex double vQ2;
+  complex double vPzeta2;
+  complex double vPQ2;
+  #endif /* NUMCOSMO_GIR_SCAN */
 };
 
 /**
