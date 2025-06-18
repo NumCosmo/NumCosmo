@@ -485,11 +485,6 @@ class GenerateClusterWL:
 
         mset.prepare_fparam_map()
 
-        if self.experiment.suffix != ".yaml":
-            raise ValueError(
-                f"Invalid experiment file suffix: {self.experiment.suffix}"
-            )
-
         ser.to_binfile(
             dataset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
         )
