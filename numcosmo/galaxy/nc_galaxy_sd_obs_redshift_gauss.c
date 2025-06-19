@@ -74,11 +74,7 @@ enum
   PROP_LEN,
 };
 
-G_DEFINE_TYPE_WITH_CODE (NcGalaxySDObsRedshiftGauss, nc_galaxy_sd_obs_redshift_gauss, NC_TYPE_GALAXY_SD_OBS_REDSHIFT,
-                         G_ADD_PRIVATE (NcGalaxySDObsRedshiftGauss);
-                         printf ("Initializing NcGalaxySDObsRedshiftGauss.\n");
-                         fflush (stdout);
-                        );
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDObsRedshiftGauss, nc_galaxy_sd_obs_redshift_gauss, NC_TYPE_GALAXY_SD_OBS_REDSHIFT);
 
 static void
 nc_galaxy_sd_obs_redshift_gauss_init (NcGalaxySDObsRedshiftGauss *gsdorgauss)
@@ -151,7 +147,7 @@ _nc_galaxy_sd_obs_redshift_gauss_dispose (GObject *object)
 }
 
 static void
-nc_galaxy_sd_obs_redshift_gauss_finalize (GObject *object)
+_nc_galaxy_sd_obs_redshift_gauss_finalize (GObject *object)
 {
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_sd_obs_redshift_gauss_parent_class)->finalize (object);
@@ -172,10 +168,13 @@ nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *kla
   GObjectClass *object_class              = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class              = NCM_MODEL_CLASS (klass);
 
+  printf ("# CLASS_INIT: nc_galaxy_sd_obs_redshift_gauss_class_init\n");
+  fflush (stdout);
+
   model_class->set_property = &_nc_galaxy_sd_obs_redshift_gauss_set_property;
   model_class->get_property = &_nc_galaxy_sd_obs_redshift_gauss_get_property;
   object_class->dispose     = &_nc_galaxy_sd_obs_redshift_gauss_dispose;
-  object_class->finalize    = &nc_galaxy_sd_obs_redshift_gauss_finalize;
+  object_class->finalize    = &_nc_galaxy_sd_obs_redshift_gauss_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Gaussian Observed Redshift", "GalaxySDObsRedshiftGauss");
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
