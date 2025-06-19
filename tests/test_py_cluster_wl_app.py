@@ -24,7 +24,9 @@
 
 """Test NumCosmo app's Cluster WL module."""
 
+from typing import cast
 from filecmp import cmp
+from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 from numpy import sin, cos, pi, log10, deg2rad
@@ -48,21 +50,21 @@ Ncm.cfg_init()
 
 
 @pytest.fixture(name="experiment_file")
-def fixture_experiment_file(tmp_path) -> str:
+def fixture_experiment_file(tmp_path: Path) -> Path:
     """Fixture for the experiment file."""
     tmp_file = tmp_path / "experiment.yaml"
     return tmp_file
 
 
 @pytest.fixture(name="experiment_file_copy")
-def fixture_experiment_file_copy(tmp_path) -> str:
+def fixture_experiment_file_copy(tmp_path: Path) -> Path:
     """Fixture for the experiment file copy."""
     tmp_file = tmp_path / "experiment_copy.yaml"
     return tmp_file
 
 
 @pytest.fixture(name="redshift_dist", params=[e.value for e in GalaxyZGen])
-def fixture_redshift_dist(request) -> str:
+def fixture_redshift_dist(request) -> tuple[str, dict]:
     """Fixture for the redshift distribution."""
     if request.param == GalaxyZGen.SPEC:
         config = {"z_min": uniform(0.1, 0.5), "z_max": uniform(0.6, 10.0)}
@@ -78,8 +80,9 @@ def fixture_redshift_dist(request) -> str:
 @pytest.fixture(
     name="redshift_dist_bad", params=[e.value for e in GalaxyZGen] + ["bogus"]
 )
-def fixture_redshift_dist_bad(request) -> str:
+def fixture_redshift_dist_bad(request) -> tuple[str, list[dict]]:
     """Fixture for the redshift distribution bad configuration."""
+    config: list[dict]
     if request.param == GalaxyZGen.SPEC:
         config = [
             {"zp_min": 0.1, "zp_max": 0.5, "sigma0": 0.01},
@@ -113,7 +116,7 @@ def fixture_redshift_dist_bad(request) -> str:
 
 
 @pytest.fixture(name="shape_dist", params=[e.value for e in GalaxyShapeGen])
-def fixture_shape_dist(request) -> str:
+def fixture_shape_dist(request) -> tuple[str, dict]:
     """Fixture for the galaxy shape distribution."""
     if request.param == GalaxyShapeGen.GAUSS:
         config = {
@@ -139,8 +142,9 @@ def fixture_shape_dist(request) -> str:
 @pytest.fixture(
     name="shape_dist_bad", params=[e.value for e in GalaxyShapeGen] + ["bogus"]
 )
-def fixture_shape_dist_bad(request) -> str:
+def fixture_shape_dist_bad(request) -> tuple[str, list[dict]]:
     """Fixture for the galaxy shape distribution bad configuration."""
+    config: list[dict]
     if request.param == GalaxyShapeGen.GAUSS:
         config = [
             {
@@ -216,7 +220,7 @@ def fixture_shape_dist_bad(request) -> str:
     params=[e.value for e in HaloProfileType],
 )
 def fixture_halo_profile(request) -> str:
-    """Fixture for the halo profile configuration"""
+    """Fixture for the halo profile configuration."""
     return request.param
 
 
@@ -518,8 +522,11 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_dist):
 
 
 def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_dist_bad):
-    """Test the generation of the cluster WL app with
-    bad shape distribution configuration."""
+    """Test the generation of the cluster WL.
+
+    Test the generation of the cluster WL app with bad shape distribution
+    configuration.
+    """
     for bad_config in shape_dist_bad[1]:
         s_dist = shape_dist_bad[0]
         for key, value in bad_config.items():
@@ -545,7 +552,7 @@ def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_dist_bad):
         ), f"Dataset file {dataset_file} should not exist."
 
 
-def test_cluster_wl_app_generate_halo_profile(experiment_file, halo_profile):
+def test_cluster_wl_app_generate_halo_profile(experiment_file: Path, halo_profile: str):
     """Test the generation of the cluster WL app with diferent cluster profiles."""
     # pylint: disable=unused-variable
     result = runner.invoke(
@@ -567,9 +574,9 @@ def test_cluster_wl_app_generate_halo_profile(experiment_file, halo_profile):
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    dataset = ser.from_binfile(dataset_file.as_posix())
+    _ = ser.from_binfile(dataset_file.as_posix())
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
-    mset = experiment.get("model-set")
+    mset: Ncm.MSet = cast(Ncm.MSet, experiment.get("model-set"))
 
     hp = mset.peek_by_name("NcHaloDensityProfile")
 
@@ -583,8 +590,10 @@ def test_cluster_wl_app_generate_halo_profile(experiment_file, halo_profile):
 
 
 def test_cluster_wl_app_generate_halo_profile_bad(experiment_file, halo_profile_bad):
-    """Test the generation of the cluster WL app with
-    bad cluster profile configuration."""
+    """Test the generation of the cluster WL app.
+
+    Test the generation of the cluster WL app with bad cluster profile configuration.
+    """
     result = runner.invoke(
         app,
         [
@@ -628,7 +637,7 @@ def test_cluster_wl_app_halo_mass_summary(experiment_file, halo_mass_summary):
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    dataset = ser.from_binfile(dataset_file.as_posix())
+    _ = ser.from_binfile(dataset_file.as_posix())
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
     mset = experiment.get("model-set")
     hms = mset.peek_by_name("NcHaloMassSummary")
@@ -638,8 +647,11 @@ def test_cluster_wl_app_halo_mass_summary(experiment_file, halo_mass_summary):
 
 
 def test_cluster_wl_app_halo_mass_summary_bad(experiment_file, halo_mass_summary_bad):
-    """Test the generation of the cluster WL app with
-    bad halo mass summary configuration."""
+    """Test the generation of the cluster WL app.
+
+    Test the generation of the cluster WL app with bad halo mass summary
+    configuration.
+    """
     result = runner.invoke(
         app,
         [
@@ -692,7 +704,7 @@ def test_cluster_wl_app_halo_position(experiment_file, halo_position):
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    dataset = ser.from_binfile(dataset_file.as_posix())
+    _ = ser.from_binfile(dataset_file.as_posix())
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
     mset = experiment.get("model-set")
     hp = mset.peek_by_name("NcHaloPosition")
@@ -834,8 +846,10 @@ def test_cluster_wl_app_galaxy_density(experiment_file, halo_position):
 
 
 def test_cluster_wl_app_galaxy_density_bad(experiment_file, density_bad):
-    """Test the generation of the cluster WL app with
-    bad galaxy density configuration."""
+    """Test the generation of the cluster WL app.
+
+    Test the generation of the cluster WL app with bad galaxy density configuration.
+    """
     result = runner.invoke(
         app,
         [
@@ -942,7 +956,7 @@ def test_cluster_wl_app_fit_parameters(experiment_file, fit_parameters):
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    dataset = ser.from_binfile(dataset_file.as_posix())
+    _ = ser.from_binfile(dataset_file.as_posix())
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
     mset = experiment.get("model-set")
     fparam = mset.fparam_full_name(0)
