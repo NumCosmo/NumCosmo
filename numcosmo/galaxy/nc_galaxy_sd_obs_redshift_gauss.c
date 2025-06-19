@@ -168,9 +168,6 @@ nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *kla
   GObjectClass *object_class              = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class              = NCM_MODEL_CLASS (klass);
 
-  printf ("# CLASS_INIT: nc_galaxy_sd_obs_redshift_gauss_class_init\n");
-  fflush (stdout);
-
   model_class->set_property = &_nc_galaxy_sd_obs_redshift_gauss_set_property;
   model_class->get_property = &_nc_galaxy_sd_obs_redshift_gauss_get_property;
   object_class->dispose     = &_nc_galaxy_sd_obs_redshift_gauss_dispose;
