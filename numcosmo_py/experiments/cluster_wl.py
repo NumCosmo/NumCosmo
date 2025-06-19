@@ -480,63 +480,81 @@ class ClusterModel(BaseModel):
     cluster_mass: Annotated[float, Field(ge=1.0e10, le=1.0e17)] = 1.0e14
     dist: Annotated[None | Nc.Distance, Field()] = Nc.Distance.new(5.0)
 
-    halo_mass_summary: Annotated[Nc.HaloCMParam | None, Field(init=False)] = None
-    density_profile: Annotated[Nc.HaloDensityProfile | None, Field(init=False)] = None
-    surface_mass_density: Annotated[
-        Nc.WLSurfaceMassDensity | None, Field(init=False)
-    ] = None
-    halo_position: Annotated[Nc.HaloPosition | None, Field(init=False)] = None
+    _halo_mass_summary: Nc.HaloCMParam = PrivateAttr()
+    _density_profile: Nc.HaloDensityProfile = PrivateAttr()
+    _surface_mass_density: Nc.WLSurfaceMassDensity = PrivateAttr()
+    _halo_position: Nc.HaloPosition = PrivateAttr()
 
     def model_post_init(self, _, /):
         """Initialize the cluster model."""
-        self.halo_mass_summary = Nc.HaloCMParam.new(self.mass_def.genum, self.delta)
+        self._halo_mass_summary = Nc.HaloCMParam.new(self.mass_def.genum, self.delta)
         match self.profile_type:
             case HaloProfileType.NFW:
-                self.density_profile = Nc.HaloDensityProfileNFW.new(
-                    self.halo_mass_summary
+                self._density_profile = Nc.HaloDensityProfileNFW.new(
+                    self._halo_mass_summary
                 )
             case HaloProfileType.EINASTO:
-                self.density_profile = Nc.HaloDensityProfileEinasto.new(
-                    self.halo_mass_summary
+                self._density_profile = Nc.HaloDensityProfileEinasto.new(
+                    self._halo_mass_summary
                 )
             case HaloProfileType.HERNQUIST:
-                self.density_profile = Nc.HaloDensityProfileHernquist.new(
-                    self.halo_mass_summary
+                self._density_profile = Nc.HaloDensityProfileHernquist.new(
+                    self._halo_mass_summary
                 )
             case _:  # pragma: no cover
                 raise ValueError(f"Invalid halo profile type: {self.profile_type}")
-        self.surface_mass_density = Nc.WLSurfaceMassDensity.new(self.dist)
-        self.halo_position = Nc.HaloPosition.new(self.dist)
-        self.halo_position["ra"] = self.position.ra
-        self.halo_position["dec"] = self.position.dec
-        self.halo_position["z"] = self.position.z
-        self.halo_mass_summary["cDelta"] = self.cluster_c
-        self.halo_mass_summary["log10MDelta"] = np.log10(self.cluster_mass)
+        self._surface_mass_density = Nc.WLSurfaceMassDensity.new(self.dist)
+        self._halo_position = Nc.HaloPosition.new(self.dist)
+        self._halo_position["ra"] = self.position.ra
+        self._halo_position["dec"] = self.position.dec
+        self._halo_position["z"] = self.position.z
+        self._halo_mass_summary["cDelta"] = self.cluster_c
+        self._halo_mass_summary["log10MDelta"] = np.log10(self.cluster_mass)
 
     @property
     def position_data(self) -> HaloPositionData:
         """Return the cluster position."""
         # pragma: no cover
         return HaloPositionData(
-            ra=self.halo_position["ra"],
-            dec=self.halo_position["dec"],
-            z=self.halo_position["z"],
+            ra=self._halo_position["ra"],
+            dec=self._halo_position["dec"],
+            z=self._halo_position["z"],
         )
 
     @property
     def mass(self) -> float:
         """Return the cluster mass."""
-        return 10.0 ** self.halo_mass_summary["log10MDelta"]
+        return 10.0 ** self._halo_mass_summary["log10MDelta"]
 
     @property
     def concentration(self) -> float:
         """Return the cluster concentration."""
-        return self.halo_mass_summary["cDelta"]
+        return self._halo_mass_summary["cDelta"]
+
+    @property
+    def density_profile(self) -> Nc.HaloDensityProfile:
+        """Return the density profile."""
+        return self._density_profile
+
+    @property
+    def surface_mass_density(self) -> Nc.WLSurfaceMassDensity:
+        """Return the surface mass density."""
+        return self._surface_mass_density
+
+    @property
+    def halo_position(self) -> Nc.HaloPosition:
+        """Return the halo position."""
+        return self._halo_position
+
+    @property
+    def halo_mass_summary(self) -> Nc.HaloCMParam:
+        """Return the halo mass summary."""
+        return self._halo_mass_summary
 
     def prepare(self, cosmo: Nc.HICosmo) -> None:
         """Prepare the cluster model."""
-        self.surface_mass_density.prepare(cosmo)
-        self.halo_position.prepare(cosmo)
+        self._surface_mass_density.prepare(cosmo)
+        self._halo_position.prepare(cosmo)
 
 
 class GalaxyDistributionModel:
@@ -674,8 +692,10 @@ def generate_lsst_cluster_wl(
     seed: None | int,
     summary: bool,
 ) -> Ncm.ObjDictStr:
-    """Generate a cluster weak lensing experiment with galaxies following
-    the LSST SRD redshift distribution.
+    """Generate a cluster weak lensing experiment.
+
+    This function generates a cluster with galaxies following the LSST SRD redshift
+    distribution.
     """
     if (
         (cluster_ra < ra_min)
