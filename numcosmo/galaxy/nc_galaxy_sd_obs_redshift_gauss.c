@@ -74,7 +74,11 @@ enum
   PROP_LEN,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDObsRedshiftGauss, nc_galaxy_sd_obs_redshift_gauss, NC_TYPE_GALAXY_SD_OBS_REDSHIFT);
+G_DEFINE_TYPE_WITH_CODE (NcGalaxySDObsRedshiftGauss, nc_galaxy_sd_obs_redshift_gauss, NC_TYPE_GALAXY_SD_OBS_REDSHIFT,
+                         G_ADD_PRIVATE (NcGalaxySDObsRedshiftGauss);
+                         printf ("Initializing NcGalaxySDObsRedshiftGauss.\n");
+                         fflush (stdout);
+                        );
 
 static void
 nc_galaxy_sd_obs_redshift_gauss_init (NcGalaxySDObsRedshiftGauss *gsdorgauss)
