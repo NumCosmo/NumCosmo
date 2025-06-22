@@ -49,7 +49,7 @@ G_DECLARE_FINAL_TYPE (NcHaloCMDiemer15, nc_halo_cm_diemer15, NC, HALO_CM_DIEMER1
  *
  * Fundamental parametrization of the profile $\rho(r)$.
  * The halo mass is a paremeter while the concentration is given by the 
- * Duffy et al. (2008) concentration-mass relation.
+ *  Diemer & Kravtsov (2015) concentration-mass relation.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HALO_CM_DIEMER15_SPARAMS >*/
