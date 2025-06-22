@@ -72,6 +72,13 @@ enum
 static void
 nc_hicosmo_qgrw_init (NcHICosmoQGRW *qgrw)
 {
+  qgrw->tv_two_fluids.skey  = -1;
+  qgrw->tv_two_fluids.alpha = 0.0;
+  qgrw->tv_two_fluids.k     = 0.0;
+
+  qgrw->eom_two_fluids.skey  = -1;
+  qgrw->eom_two_fluids.alpha = 0.0;
+  qgrw->eom_two_fluids.k     = 0.0;
 }
 
 static void
@@ -93,6 +100,7 @@ static gdouble _nc_hicosmo_qgrw_Omega_c0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_qgrw_xb (NcHICosmo *cosmo);
 
 static NcHIPertITwoFluidsEOM *_nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+static NcHIPertITwoFluidsWKB *_nc_hipert_itwo_fluids_wkb (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 static NcHIPertITwoFluidsTV *_nc_hipert_itwo_fluids_tv (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 
 static void
@@ -150,6 +158,7 @@ static void
 nc_hipert_itwo_fluids_interface_init (NcHIPertITwoFluidsInterface *iface)
 {
   iface->eom = &_nc_hipert_itwo_fluids_eom;
+  iface->wkb = &_nc_hipert_itwo_fluids_wkb;
   iface->tv  = &_nc_hipert_itwo_fluids_tv;
 }
 
@@ -604,107 +613,190 @@ _nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
       qgrw->eom_two_fluids.mnu2_zeta = rhopp * k * k / (x * gsl_pow_3 (absE));
       qgrw->eom_two_fluids.mnu2_s    = x3 * x2 * k * k / (absE * rhopp * cos2_phi * sin2_phi);
       qgrw->eom_two_fluids.y         = epsilon * (c1 * c1 - c2 * c2) * cos2_phi * sin2_phi;
-
-      {
-        const gdouble gw1             = rhopp1 / (absE * x3);
-        const gdouble gw2             = rhopp2 / (absE * x3);
-        const gdouble gw              = gw1 + gw2;
-        const gdouble g               = gw1 / gw;
-        const gdouble g2              = g * g;
-        const gdouble Ad1lnE          = epsilon * d1lnE;
-        const complex double norm1_c1 = 2.0 * I * Fnu * c1;
-        const complex double norm1_c2 = 2.0 * I * Fnu * c2;
-        const gdouble norm2_c1        = gsl_pow_2 (2.0 * Fnu * c1);
-        const gdouble norm2_c2        = gsl_pow_2 (2.0 * Fnu * c2);
-        const gdouble c24             = c22 * c22;
-        const gdouble c26             = c24 * c22;
-
-        const complex double delta1v_zeta1  = epsilon * (g - Ad1lnE * (g - 2.0)) / norm1_c1;
-        const complex double delta1v_Q1     = epsilon * (g - Ad1lnE * g) / norm1_c1;
-        const complex double delta1v_Pzeta1 = epsilon * (g - 2.0 - Ad1lnE * g) / norm1_c1;
-        const complex double delta1v_PQ1    = epsilon * (g - Ad1lnE * g) / norm1_c1;
-        const complex double delta1v_zeta2  = epsilon * ((1.0 + c22 * (3.0 - 6.0 * g)) / 2.0 + Ad1lnE * (+1.0 + g)) / norm1_c2;
-        const complex double delta1v_Q2     = epsilon * ((1.0 + c22 * (3.0 - 6.0 * g)) / 2.0 + Ad1lnE * (-1.0 + g)) / norm1_c2;
-        const complex double delta1v_Pzeta2 = epsilon * ((-1.0 - 3.0 * c22 * (1.0 + 2.0 * g)) / 2.0 + Ad1lnE * (-1.0 + g)) / norm1_c2;
-        const complex double delta1v_PQ2    = epsilon * ((-1.0 + c22 * (9.0 - 6.0 * g)) / 2.0 + Ad1lnE * (-1.0 + g)) / norm1_c2;
-        const complex double delta2v_zeta1  = (
-          (d2lnE * (4.0 - 3.0 * (1.0 + c22) * g) + Ad1lnE * (4.0 + (3.0 - 5.0 * g) * g + 9.0 * c24 * (-1.0 + g) * g + 6.0 * c22 * (-2.0 + g) * (-1.0 + 2.0 * g))
-           + d1lnE_2 * (8.0 + g * (-8.0 + g - 3.0 * c22 * g)) + (1.0 - 3.0 * c22) * g2) / (-1.0 + 3.0 * c22)
-                                              ) / norm2_c1;
-        const complex double delta2v_Q1 = (
-          (g * (-3.0 * (1.0 + c22) * d2lnE + Ad1lnE * (-3.0 + 3.0 * c22 * (4.0 + 3.0 * c22) * (-1.0 + g) - 5.0 * g) + g - 3.0 * c22 * g
-                + d1lnE_2 * (-6.0 + g - 3.0 * c22 * (2.0 + g)))) / (-1.0 + 3.0 * c22)
-                                          ) / norm2_c1;
-        const complex double delta2v_Pzeta1 = (
-          (-1.0 * (-1.0 + 3.0 * c22) * (-2.0 + g) * g + d2lnE * (4.0 - 5.0 * g + 3.0 * c22 * g)
-           + d1lnE_2 * (8.0 + g * (-10.0 - 3.0 * c22 * (-2.0 + g) + g))
-           + Ad1lnE * (4.0 + g - 9.0 * c24 * (-1.0 + g) * g + 6.0 * c22 * (2.0 + g * (-5.0 + 4.0 * g)) - 7.0 * g2)) / (-1.0 + 3.0 * c22)
-                                              ) / norm2_c1;
-        const complex double delta2v_PQ1 = (
-          (g * ((-5.0 + 3.0 * c22) * d2lnE + g - 3.0 * c22 * g + d1lnE_2 * (-10.0 - 3.0 * c22 * (-2.0 + g) + g)
-                - 1.0 * Ad1lnE * (5.0 + 3.0 * c22 * (4.0 + 3.0 * c22 * (-1.0 + g) - 8.0 * g) + 7.0 * g))) / (-1.0 + 3.0 * c22)
-                                           ) / norm2_c1;
-
-        const complex double delta2v_zeta2 = (
-          (1.0 - 6.0 * c22 * g - 54.0 * c26 * (-1.0 + g) * g
-           - 2.0 * d2lnE * (-1.0 + g + c22 * (3.0 + 9.0 * g))
-           + 2.0 * d1lnE_2 * (gsl_pow_2 (1.0 - g) - 3.0 * c22 * (1.0 + g * (6.0 + g))) + 9.0 * c24 * (-1.0 + 2.0 * g2)
-           + Ad1lnE * (3.0 - 2.0 * g * (1.0 + g) + 9.0 * c24 * (-1.0 + 2.0 * g * (-1.0 + 5.0 * g)) - 6.0 * c22 * (1.0 + 6.0 * g + 4.0 * g2))) / (-2.0 + 6.0 * c22)
-                                             ) / norm2_c2;
-
-        const complex double delta2v_Q2 = (
-          (1.0 - 2.0 * (1.0 + 9.0 * c22) * d2lnE * (-1.0 + g)
-           - 6.0 * c22 * g - 54.0 * c26 * (-1.0 + g) * g - 2.0 * d1lnE_2 * (-1.0 + g) * (3.0 - 1.0 * g + 3.0 * c22 * (5.0 + g))
-           + Ad1lnE * (5.0 - 2.0 * g * (1.0 + g) + 9.0 * c24 * (5.0 + 2.0 * g * (-7.0 + 5.0 * g))
-                       + 6.0 * c22 * (3.0 - 4.0 * g2)) + 9.0 * c24 * (-1.0 + 2.0 * g2)) / (-2.0 + 6.0 * c22)
-                                          ) / norm2_c2;
-
-        const complex double delta2v_Pzeta2 = (
-          (-1.0 + 2.0 * d2lnE * (-1.0 + c22 * (3.0 - 15.0 * g) + g) +
-           2.0 * d1lnE_2 * (-1.0 - 3.0 * c22 * (-1.0 + g * (8.0 + g)) + g2) + 9.0 * c24 * (1.0 + (2.0 - 6.0 * c22) * g2)
-           + Ad1lnE * (-3.0 + 9.0 * c24 * (1.0 + 2.0 * g * (-4.0 + 7.0 * g)) + 2.0 * g2 - 6.0 * c22 * (-1.0 + 4.0 * g + 8.0 * g2))) / (-2.0 + 6.0 * c22)
-                                              ) / norm2_c2;
-
-        const complex double delta2v_PQ2 = (
-          (-1.0 * (-1.0 + 3.0 * c22) * (-1.0 + 3.0 * c22 + 18.0 * c24 * gsl_pow_2 (1.0 - g)) - 2.0 * (-1.0 + 15.0 * c22) * d2lnE * (-1.0 + g)
-           - 2.0 * d1lnE_2 * (-1.0 + g) * (-1.0 - 1.0 * g + 3.0 * c22 * (9.0 + g))
-           + Ad1lnE * (-3.0 + 9.0 * c24 * (5.0 + 2.0 * g * (-10.0 + 7.0 * g)) + 6.0 * c22 * (7.0 + 2.0 * g - 8.0 * g2) + 2.0 * g2)) / (-2.0 + 6.0 * c22)
-                                           ) / norm2_c2;
-
-        qgrw->eom_two_fluids.gw1 = gw1;
-        qgrw->eom_two_fluids.gw2 = gw2;
-        qgrw->eom_two_fluids.F   = Fnu;
-
-        qgrw->eom_two_fluids.vzeta1  = epsilon * sqrt (c1 * gw1 / (2.0 * Fnu)) / gw;
-        qgrw->eom_two_fluids.vQ1     = sqrt (c1 * gw1 / (2.0 * Fnu)) * gw2 / gw;
-        qgrw->eom_two_fluids.vPzeta1 = (-I) * epsilon * sqrt (gw1 * Fnu / (2.0 * c1));
-        qgrw->eom_two_fluids.vPQ1    = (-I) * sqrt (Fnu / (2.0 * c1 * gw1));
-
-        qgrw->eom_two_fluids.vzeta2  = (-1.0) * epsilon * sqrt (c2 * gw2 / (2.0 * Fnu)) / gw;
-        qgrw->eom_two_fluids.vQ2     = sqrt (c2 * gw2 / (2.0 * Fnu)) * gw1 / gw;
-        qgrw->eom_two_fluids.vPzeta2 = I * epsilon * sqrt (gw2 * Fnu / (2.0 * c2));
-        qgrw->eom_two_fluids.vPQ2    = (-1.0) * I * sqrt (Fnu / (2.0 * c2 * gw2));
-
-        qgrw->eom_two_fluids.vzeta1  *= 1.0 + delta1v_zeta1 + delta2v_zeta1;
-        qgrw->eom_two_fluids.vQ1     *= 1.0 + delta1v_Q1 + delta2v_Q1;
-        qgrw->eom_two_fluids.vPzeta1 *= 1.0 + delta1v_Pzeta1 + delta2v_Pzeta1;
-        qgrw->eom_two_fluids.vPQ1    *= 1.0 + delta1v_PQ1 + delta2v_PQ1;
-
-        qgrw->eom_two_fluids.vzeta2  *= 1.0 + delta1v_zeta2 + delta2v_zeta2;
-        qgrw->eom_two_fluids.vQ2     *= 1.0 + delta1v_Q2 + delta2v_Q2;
-        qgrw->eom_two_fluids.vPzeta2 *= 1.0 + delta1v_Pzeta2 + delta2v_Pzeta2;
-        qgrw->eom_two_fluids.vPQ2    *= 1.0 + delta1v_PQ2 + delta2v_PQ2;
-      }
     }
 
     qgrw->eom_two_fluids.skey  = ncm_model_state_get_pkey (NCM_MODEL (cosmo));
     qgrw->eom_two_fluids.alpha = alpha;
     qgrw->eom_two_fluids.k     = k;
-
-    /*printf ("% 20.15g % 20.15g % 20.15g % 20.15e\n", alpha, nuS2, VS, fabs ((nuS2 - VS)/ VS));*/
   }
 
   return &qgrw->eom_two_fluids;
+}
+
+static NcHIPertITwoFluidsWKB *
+_nc_hipert_itwo_fluids_wkb (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
+{
+  NcHICosmo *cosmo    = NC_HICOSMO (itf);
+  NcHICosmoQGRW *qgrw = NC_HICOSMO_QGRW (itf);
+
+  const gdouble epsilon         = GSL_SIGN (alpha);
+  const gdouble absalpha        = fabs (alpha);
+  const gdouble w2              = W;
+  const gdouble x               = X_B * exp (-absalpha);
+  const gdouble x2              = x * x;
+  const gdouble x3              = x2 * x;
+  const gdouble x4              = x2 * x2;
+  const gdouble x3_1pw          = x3 * pow (x3, w2);
+  const gdouble x_m3w           = x / pow (x3, w2);
+  const gdouble three_1pw       = 3.0 * (1.0 + w2);
+  const gdouble three_1mw       = 3.0 * (1.0 - w2);
+  const gdouble x_xb3_1mw       = exp (-three_1mw * absalpha);
+  const gdouble x_xb2           = exp (-2.0 * absalpha);
+  const gdouble oneF1_r         = ncm_exprel (-2.0 * absalpha);
+  const gdouble oneF1_p         = ncm_exprel (-three_1mw * absalpha);
+  const gdouble R0              = OMEGA_R / OMEGA_W;
+  const gdouble F               = (R0 * x_m3w * 2.0 * oneF1_r + three_1mw * oneF1_p) * epsilon * alpha;
+  const gdouble d1F             = epsilon * (three_1mw * x_xb3_1mw + x_m3w * R0 * (three_1mw * (x_xb2 - 1.0) + 2.0));
+  const gdouble d2F             = -x_xb3_1mw * three_1mw * three_1mw + R0 * x_m3w * (gsl_pow_2 (1.0 - 3.0 * w2) - x_xb2 * three_1mw * three_1mw);
+  const gdouble E2              = OMEGA_W * x3_1pw * F;
+  const gdouble d1lnF           = d1F / F;
+  const gdouble d1lnE2          = (-three_1pw * epsilon + d1lnF);
+  const gdouble d2lnE2          = (d2F / F - d1lnF * d1lnF);
+  const gdouble d1lnE           = 0.5 * d1lnE2;
+  const gdouble d2lnE           = 0.5 * d2lnE2;
+  const gdouble d1lnE_2         = d1lnE * d1lnE;
+  const gdouble absE            = sqrt (E2);
+  const gdouble c12             = 1.0 / 3.0;
+  const gdouble c22             = w2;
+  const gdouble c24             = c22 * c22;
+  const gdouble c26             = c24 * c22;
+  const gdouble c1              = sqrt (c12);
+  const gdouble c2              = sqrt (c22);
+  const gdouble Fnu             = x * k / absE;
+  const gdouble rhopp1          = OMEGA_R * (1.0 + 1.0 / 3.0) * x4;
+  const gdouble rhopp2          = OMEGA_W * (1.0 + w2) * x3_1pw;
+  const gdouble gw1             = rhopp1 / (absE * x3);
+  const gdouble gw2             = rhopp2 / (absE * x3);
+  const gdouble gw              = gw1 + gw2;
+  const gdouble g               = gw1 / gw;
+  const gdouble g2              = g * g;
+  const gdouble Ad1lnE          = epsilon * d1lnE;
+  const complex double norm1_c1 = 2.0 * I * Fnu * c1;
+  const complex double norm1_c2 = 2.0 * I * Fnu * c2;
+  const gdouble norm2_c1        = gsl_pow_2 (2.0 * Fnu * c1);
+  const gdouble norm2_c2        = gsl_pow_2 (2.0 * Fnu * c2);
+
+  const complex double delta1v_zeta1  = epsilon * (g - Ad1lnE * (g - 2.0)) / norm1_c1;
+  const complex double delta1v_Q1     = epsilon * (g - Ad1lnE * g) / norm1_c1;
+  const complex double delta1v_Pzeta1 = epsilon * (g - 2.0 - Ad1lnE * g) / norm1_c1;
+  const complex double delta1v_PQ1    = epsilon * (g - Ad1lnE * g) / norm1_c1;
+  const complex double delta1v_zeta2  = epsilon * ((1.0 + c22 * (3.0 - 6.0 * g)) / 2.0 + Ad1lnE * (+1.0 + g)) / norm1_c2;
+  const complex double delta1v_Q2     = epsilon * ((1.0 + c22 * (3.0 - 6.0 * g)) / 2.0 + Ad1lnE * (-1.0 + g)) / norm1_c2;
+  const complex double delta1v_Pzeta2 = epsilon * ((-1.0 - 3.0 * c22 * (1.0 + 2.0 * g)) / 2.0 + Ad1lnE * (-1.0 + g)) / norm1_c2;
+  const complex double delta1v_PQ2    = epsilon * ((-1.0 + c22 * (9.0 - 6.0 * g)) / 2.0 + Ad1lnE * (-1.0 + g)) / norm1_c2;
+  const complex double delta2v_zeta1  = (
+    (d2lnE * (4.0 - 3.0 * (1.0 + c22) * g) + Ad1lnE * (4.0 + (3.0 - 5.0 * g) * g + 9.0 * c24 * (-1.0 + g) * g + 6.0 * c22 * (-2.0 + g) * (-1.0 + 2.0 * g))
+     + d1lnE_2 * (8.0 + g * (-8.0 + g - 3.0 * c22 * g)) + (1.0 - 3.0 * c22) * g2) / (-1.0 + 3.0 * c22)
+                                        ) / norm2_c1;
+  const complex double delta2v_Q1 = (
+    (g * (-3.0 * (1.0 + c22) * d2lnE + Ad1lnE * (-3.0 + 3.0 * c22 * (4.0 + 3.0 * c22) * (-1.0 + g) - 5.0 * g) + g - 3.0 * c22 * g
+          + d1lnE_2 * (-6.0 + g - 3.0 * c22 * (2.0 + g)))) / (-1.0 + 3.0 * c22)
+                                    ) / norm2_c1;
+  const complex double delta2v_Pzeta1 = (
+    (-1.0 * (-1.0 + 3.0 * c22) * (-2.0 + g) * g + d2lnE * (4.0 - 5.0 * g + 3.0 * c22 * g)
+     + d1lnE_2 * (8.0 + g * (-10.0 - 3.0 * c22 * (-2.0 + g) + g))
+     + Ad1lnE * (4.0 + g - 9.0 * c24 * (-1.0 + g) * g + 6.0 * c22 * (2.0 + g * (-5.0 + 4.0 * g)) - 7.0 * g2)) / (-1.0 + 3.0 * c22)
+                                        ) / norm2_c1;
+  const complex double delta2v_PQ1 = (
+    (g * ((-5.0 + 3.0 * c22) * d2lnE + g - 3.0 * c22 * g + d1lnE_2 * (-10.0 - 3.0 * c22 * (-2.0 + g) + g)
+          - 1.0 * Ad1lnE * (5.0 + 3.0 * c22 * (4.0 + 3.0 * c22 * (-1.0 + g) - 8.0 * g) + 7.0 * g))) / (-1.0 + 3.0 * c22)
+                                     ) / norm2_c1;
+
+  const complex double delta2v_zeta2 = (
+    (1.0 - 6.0 * c22 * g - 54.0 * c26 * (-1.0 + g) * g
+     - 2.0 * d2lnE * (-1.0 + g + c22 * (3.0 + 9.0 * g))
+     + 2.0 * d1lnE_2 * (gsl_pow_2 (1.0 - g) - 3.0 * c22 * (1.0 + g * (6.0 + g))) + 9.0 * c24 * (-1.0 + 2.0 * g2)
+     + Ad1lnE * (3.0 - 2.0 * g * (1.0 + g) + 9.0 * c24 * (-1.0 + 2.0 * g * (-1.0 + 5.0 * g)) - 6.0 * c22 * (1.0 + 6.0 * g + 4.0 * g2))) / (-2.0 + 6.0 * c22)
+                                       ) / norm2_c2;
+
+  const complex double delta2v_Q2 = (
+    (1.0 - 2.0 * (1.0 + 9.0 * c22) * d2lnE * (-1.0 + g)
+     - 6.0 * c22 * g - 54.0 * c26 * (-1.0 + g) * g - 2.0 * d1lnE_2 * (-1.0 + g) * (3.0 - 1.0 * g + 3.0 * c22 * (5.0 + g))
+     + Ad1lnE * (5.0 - 2.0 * g * (1.0 + g) + 9.0 * c24 * (5.0 + 2.0 * g * (-7.0 + 5.0 * g))
+                 + 6.0 * c22 * (3.0 - 4.0 * g2)) + 9.0 * c24 * (-1.0 + 2.0 * g2)) / (-2.0 + 6.0 * c22)
+                                    ) / norm2_c2;
+
+  const complex double delta2v_Pzeta2 = (
+    (-1.0 + 2.0 * d2lnE * (-1.0 + c22 * (3.0 - 15.0 * g) + g) +
+     2.0 * d1lnE_2 * (-1.0 - 3.0 * c22 * (-1.0 + g * (8.0 + g)) + g2) + 9.0 * c24 * (1.0 + (2.0 - 6.0 * c22) * g2)
+     + Ad1lnE * (-3.0 + 9.0 * c24 * (1.0 + 2.0 * g * (-4.0 + 7.0 * g)) + 2.0 * g2 - 6.0 * c22 * (-1.0 + 4.0 * g + 8.0 * g2))) / (-2.0 + 6.0 * c22)
+                                        ) / norm2_c2;
+
+  const complex double delta2v_PQ2 = (
+    (-1.0 * (-1.0 + 3.0 * c22) * (-1.0 + 3.0 * c22 + 18.0 * c24 * gsl_pow_2 (1.0 - g)) - 2.0 * (-1.0 + 15.0 * c22) * d2lnE * (-1.0 + g)
+     - 2.0 * d1lnE_2 * (-1.0 + g) * (-1.0 - 1.0 * g + 3.0 * c22 * (9.0 + g))
+     + Ad1lnE * (-3.0 + 9.0 * c24 * (5.0 + 2.0 * g * (-10.0 + 7.0 * g)) + 6.0 * c22 * (7.0 + 2.0 * g - 8.0 * g2) + 2.0 * g2)) / (-2.0 + 6.0 * c22)
+                                     ) / norm2_c2;
+
+  complex double vzeta1  = epsilon * sqrt (c1 * gw1 / (2.0 * Fnu)) / gw;
+  complex double vQ1     = sqrt (c1 * gw1 / (2.0 * Fnu)) * gw2 / gw;
+  complex double vPzeta1 = (-I) * epsilon * sqrt (gw1 * Fnu / (2.0 * c1));
+  complex double vPQ1    = (-I) * sqrt (Fnu / (2.0 * c1 * gw1));
+  complex double vzeta2  = (-1.0) * epsilon * sqrt (c2 * gw2 / (2.0 * Fnu)) / gw;
+  complex double vQ2     = sqrt (c2 * gw2 / (2.0 * Fnu)) * gw1 / gw;
+  complex double vPzeta2 = I * epsilon * sqrt (gw2 * Fnu / (2.0 * c2));
+  complex double vPQ2    = (-1.0) * I * sqrt (Fnu / (2.0 * c2 * gw2));
+
+  vzeta1  *= 1.0 + delta1v_zeta1 + delta2v_zeta1;
+  vQ1     *= 1.0 + delta1v_Q1 + delta2v_Q1;
+  vPzeta1 *= 1.0 + delta1v_Pzeta1 + delta2v_Pzeta1;
+  vPQ1    *= 1.0 + delta1v_PQ1 + delta2v_PQ1;
+
+  vzeta2  *= 1.0 + delta1v_zeta2 + delta2v_zeta2;
+  vQ2     *= 1.0 + delta1v_Q2 + delta2v_Q2;
+  vPzeta2 *= 1.0 + delta1v_Pzeta2 + delta2v_Pzeta2;
+  vPQ2    *= 1.0 + delta1v_PQ2 + delta2v_PQ2;
+
+  qgrw->wkb_two_fluids.gw1 = gw1;
+  qgrw->wkb_two_fluids.gw2 = gw2;
+  qgrw->wkb_two_fluids.Fnu = Fnu;
+
+  qgrw->wkb_two_fluids.zeta1  = vzeta1;
+  qgrw->wkb_two_fluids.Q1     = vQ1;
+  qgrw->wkb_two_fluids.Pzeta1 = vPzeta1;
+  qgrw->wkb_two_fluids.PQ1    = vPQ1;
+
+  qgrw->wkb_two_fluids.zeta2  = vzeta2;
+  qgrw->wkb_two_fluids.Q2     = vQ2;
+  qgrw->wkb_two_fluids.Pzeta2 = vPzeta2;
+  qgrw->wkb_two_fluids.PQ2    = vPQ2;
+
+/*
+ * Estimate the WKB scale for each component and mode. In single-component inflation,
+ * the validity of the WKB approximation is typically assessed using the product of the
+ * wavenumber and conformal time. In this two-component system, the WKB corrections
+ * include additional component-dependent terms beyond that simple criterion.
+ *
+ * The WKB scale is defined here as the cubic root of the absolute value of the product
+ * of the first- and second-order corrections. It serves as a scale-sensitive indicator
+ * for assessing WKB validity in each perturbation variable.
+ *
+ * Additionally, the total truncation error for each mode is estimated as the sum of the
+ * absolute values of the four corresponding correction products.
+ */
+  /* Mode 1: Effective Hubble radius estimates */
+  qgrw->wkb_two_fluids.mode1_zeta_scale  = csqrt (cabs (delta1v_zeta1 * delta2v_zeta1));
+  qgrw->wkb_two_fluids.mode1_Q_scale     = csqrt (cabs (delta1v_Q1 * delta2v_Q1));
+  qgrw->wkb_two_fluids.mode1_Pzeta_scale = csqrt (cabs (delta1v_Pzeta1 * delta2v_Pzeta1));
+  qgrw->wkb_two_fluids.mode1_PQ_scale    = csqrt (cabs (delta1v_PQ1 * delta2v_PQ1));
+
+  /* Mode 2: Effective Hubble radius estimates */
+  qgrw->wkb_two_fluids.mode2_zeta_scale  = csqrt (cabs (delta1v_zeta2 * delta2v_zeta2));
+  qgrw->wkb_two_fluids.mode2_Q_scale     = csqrt (cabs (delta1v_Q2 * delta2v_Q2));
+  qgrw->wkb_two_fluids.mode2_Pzeta_scale = csqrt (cabs (delta1v_Pzeta2 * delta2v_Pzeta2));
+  qgrw->wkb_two_fluids.mode2_PQ_scale    = csqrt (cabs (delta1v_PQ2 * delta2v_PQ2));
+
+  /* Mode 1 and 2: Truncation error estimates */
+  qgrw->wkb_two_fluids.mode1_scale = (cabs (delta1v_zeta1 * delta2v_zeta1)
+                                      + cabs (delta1v_Q1 * delta2v_Q1)
+                                      + cabs (delta1v_Pzeta1 * delta2v_Pzeta1)
+                                      + cabs (delta1v_PQ1 * delta2v_PQ1));
+  qgrw->wkb_two_fluids.mode2_scale = (cabs (delta1v_zeta2 * delta2v_zeta2)
+                                      + cabs (delta1v_Q2 * delta2v_Q2)
+                                      + cabs (delta1v_Pzeta2 * delta2v_Pzeta2)
+                                      + cabs (delta1v_PQ2 * delta2v_PQ2));
+
+  return &qgrw->wkb_two_fluids;
 }
 
 static NcHIPertITwoFluidsTV *

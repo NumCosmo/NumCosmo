@@ -111,6 +111,7 @@ struct _NcHICosmoQGRW
   NcHICosmo parent_instance;
   /*< private >*/
   NcHIPertITwoFluidsEOM eom_two_fluids;
+  NcHIPertITwoFluidsWKB wkb_two_fluids;
   NcHIPertITwoFluidsTV tv_two_fluids;
 };
 

@@ -112,8 +112,7 @@ typedef struct _NcHIPertTwoFluidsPrivate
   NcmVector *state;
   gpointer arg;
   gpointer arkode;
-  gpointer inner_arkode;
-  MRIStepInnerStepper inner_stepper;
+  gdouble wkb_reltol;
 } NcHIPertTwoFluidsPrivate;
 
 struct _NcHIPertTwoFluids
@@ -121,6 +120,13 @@ struct _NcHIPertTwoFluids
   /*< private >*/
   NcHIPert parent_instance;
   NcHIPertTwoFluidsPrivate *priv;
+};
+
+enum
+{
+  PROP_0,
+  PROP_WKB_RELTOL,
+  PROP_SIZE,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcHIPertTwoFluids, nc_hipert_two_fluids, NC_TYPE_HIPERT)
@@ -149,13 +155,47 @@ nc_hipert_two_fluids_init (NcHIPertTwoFluids *ptf)
   self->arg = g_new0 (NcHIPertTwoFluidsArg, 1);
 
 #ifdef HAVE_SUNDIALS_ARKODE
-  self->arkode       = NULL;
-  self->inner_arkode = NULL;
+  self->arkode = NULL;
 #endif /* HAVE_SUNDIALS_ARKODE */
 }
 
 static void
-nc_hipert_two_fluids_dispose (GObject *object)
+_nc_hipert_two_fluids_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcHIPertTwoFluids *ptf = NC_HIPERT_TWO_FLUIDS (object);
+
+  g_return_if_fail (NC_IS_HIPERT_TWO_FLUIDS (object));
+
+  switch (prop_id)
+  {
+    case PROP_WKB_RELTOL:
+      nc_hipert_two_fluids_set_wkb_reltol (ptf, g_value_get_double (value));
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
+}
+
+static void
+_nc_hipert_two_fluids_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  /* NcHIPertTwoFluids *ptf = NC_HIPERT_TWO_FLUIDS (object); */
+  g_return_if_fail (NC_IS_HIPERT_TWO_FLUIDS (object));
+
+  switch (prop_id)
+  {
+    case PROP_WKB_RELTOL:
+      g_value_set_double (value, nc_hipert_two_fluids_get_wkb_reltol (NC_HIPERT_TWO_FLUIDS (object)));
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
+}
+
+static void
+_nc_hipert_two_fluids_dispose (GObject *object)
 {
   NcHIPertTwoFluids *ptf                = NC_HIPERT_TWO_FLUIDS (object);
   NcHIPertTwoFluidsPrivate * const self = ptf->priv;
@@ -168,7 +208,7 @@ nc_hipert_two_fluids_dispose (GObject *object)
 }
 
 static void
-nc_hipert_two_fluids_finalize (GObject *object)
+_nc_hipert_two_fluids_finalize (GObject *object)
 {
   NcHIPertTwoFluids *ptf                = NC_HIPERT_TWO_FLUIDS (object);
   NcHIPertTwoFluidsPrivate * const self = ptf->priv;
@@ -179,18 +219,6 @@ nc_hipert_two_fluids_finalize (GObject *object)
   {
     ARKodeFree (&self->arkode);
     self->arkode = NULL;
-  }
-
-  if (self->inner_arkode != NULL)
-  {
-    ARKodeFree (&self->inner_arkode);
-    self->inner_arkode = NULL;
-  }
-
-  if (self->inner_stepper != NULL)
-  {
-    MRIStepInnerStepper_Free (&self->inner_stepper);
-    self->inner_stepper = NULL;
   }
 
 #endif /* HAVE_SUNDIALS_ARKODE */
@@ -210,8 +238,18 @@ nc_hipert_two_fluids_class_init (NcHIPertTwoFluidsClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  object_class->dispose  = nc_hipert_two_fluids_dispose;
-  object_class->finalize = nc_hipert_two_fluids_finalize;
+  object_class->set_property = &_nc_hipert_two_fluids_set_property;
+  object_class->get_property = &_nc_hipert_two_fluids_get_property;
+  object_class->dispose      = &_nc_hipert_two_fluids_dispose;
+  object_class->finalize     = &_nc_hipert_two_fluids_finalize;
+
+  g_object_class_install_property (object_class,
+                                   PROP_WKB_RELTOL,
+                                   g_param_spec_double ("wkb-reltol",
+                                                        NULL,
+                                                        "WKB reltol",
+                                                        GSL_DBL_EPSILON, 1.0e-1, 1.0e-2,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   NC_HIPERT_CLASS (klass)->set_mode_k = &_nc_hipert_two_fluids_set_mode_k;
   NC_HIPERT_CLASS (klass)->set_abstol = &_nc_hipert_two_fluids_set_abstol;
@@ -321,6 +359,40 @@ void
 nc_hipert_two_fluids_clear (NcHIPertTwoFluids **ptf)
 {
   g_clear_object (ptf);
+}
+
+/**
+ * nc_hipert_two_fluids_set_wkb_reltol:
+ * @ptf: a #NcHIPertTwoFluids
+ * @reltol: Relative tolerance
+ *
+ * Sets the relative tolerance used to determine the validity range of the WKB
+ * approximation. Beyond this threshold, the numerical solver is activated.
+ *
+ */
+void
+nc_hipert_two_fluids_set_wkb_reltol (NcHIPertTwoFluids *ptf, gdouble reltol)
+{
+  NcHIPertTwoFluidsPrivate * const self = ptf->priv;
+
+  self->wkb_reltol = reltol;
+}
+
+/**
+ * nc_hipert_two_fluids_get_wkb_reltol:
+ * @ptf: a #NcHIPertTwoFluids
+ *
+ * Retrieves the relative tolerance that defines the transition point between the WKB
+ * approximation and the numerical solver.
+ *
+ * Returns: the current relative tolerance.
+ */
+gdouble
+nc_hipert_two_fluids_get_wkb_reltol (NcHIPertTwoFluids *ptf)
+{
+  NcHIPertTwoFluidsPrivate * const self = ptf->priv;
+
+  return self->wkb_reltol;
 }
 
 /**
@@ -513,16 +585,53 @@ nc_hipert_two_fluids_get_init_cond_QP (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo,
  * @beta_R: mode $R$ initial phase
  * @init_cond: a #NcmVector (size >= 8) where to put the initial conditions
  *
- * Calculates the initial condition for the $\zeta{}S$ system with initial phase
- * for the R solution $\beta_R = $ @beta_R. The variable @main_mode chooses
- * which mode is excited (1 or 2).
+ * Calculates the initial condition for the $\zeta{}S$ system with initial phase for the
+ * R solution $\beta_R = $ @beta_R. The variable @main_mode chooses which mode is
+ * excited (1 or 2).
  *
  */
 void
 nc_hipert_two_fluids_get_init_cond_zetaS (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, guint main_mode, const gdouble beta_R, NcmVector *init_cond)
 {
-  nc_hipert_two_fluids_get_init_cond_QP (ptf, cosmo, alpha, main_mode, beta_R, init_cond);
-  nc_hipert_two_fluids_to_zeta_s (ptf, cosmo, alpha, init_cond);
+  NcHIPert *pert                = NC_HIPERT (ptf);
+  NcHIPertITwoFluidsWKB *tf_wkb = nc_hipert_itwo_fluids_wkb_eval (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, nc_hipert_get_mode_k (pert));
+
+  switch (main_mode)
+  {
+    case 1:
+    {
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R, creal (tf_wkb->zeta1));
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I, cimag (tf_wkb->zeta1));
+
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_S_R, creal (tf_wkb->Q1));
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_S_I, cimag (tf_wkb->Q1));
+
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R, creal (tf_wkb->Pzeta1));
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I, cimag (tf_wkb->Pzeta1));
+
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R, creal (tf_wkb->PQ1));
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I, cimag (tf_wkb->PQ1));
+      break;
+    }
+    case 2:
+    {
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R, creal (tf_wkb->zeta2));
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I, cimag (tf_wkb->zeta2));
+
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_S_R, creal (tf_wkb->Q2));
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_S_I, cimag (tf_wkb->Q2));
+
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R, creal (tf_wkb->Pzeta2));
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I, cimag (tf_wkb->Pzeta2));
+
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R, creal (tf_wkb->PQ2));
+      ncm_vector_set (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I, cimag (tf_wkb->PQ2));
+      break;
+    }
+    default:
+      g_error ("nc_hipert_two_fluids_get_init_cond_zetaS: Unknown main mode %u.", main_mode);
+      break;
+  }
 }
 
 /**
@@ -612,135 +721,6 @@ _nc_hipert_two_fluids_f_QP (sunrealtype alpha, N_Vector y, N_Vector ydot, gpoint
   return 0;
 }
 
-#ifdef HAVE_SUNDIALS_ARKODE
-
-static gint
-_nc_hipert_two_fluids_f_QP_mode1 (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
-{
-  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  const gdouble Q_R1 = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1);
-  const gdouble P_R1 = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1);
-
-  const gdouble Q_I1 = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1);
-  const gdouble P_I1 = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1);
-
-  const complex double A_R1 = NC_HIPERT_TWO_FLUIDS_QP2A (Q_R1, P_R1);
-  const complex double A_I1 = NC_HIPERT_TWO_FLUIDS_QP2A (Q_I1, P_I1);
-
-  const gdouble gammabar11 = eom->gammabar11;
-  const gdouble gammabar12 = eom->gammabar12;
-  const gdouble taubar12   = eom->taubar;
-
-  const complex double dA_R1 = I * eom->nu1 * A_R1 + gammabar11 * Q_R1;
-  const complex double dA_R2 = gammabar12 * Q_R1 - 0.5 * taubar12 * A_R1;
-
-  const complex double dA_I1 = I * eom->nu1 * A_I1 + gammabar11 * Q_I1;
-  const complex double dA_I2 = gammabar12 * Q_I1 - 0.5 * taubar12 * A_I1;
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = NC_HIPERT_TWO_FLUIDS_A2Q (dA_R1);
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = NC_HIPERT_TWO_FLUIDS_A2P (dA_R1);
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = NC_HIPERT_TWO_FLUIDS_A2Q (dA_R2);
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = NC_HIPERT_TWO_FLUIDS_A2P (dA_R2);
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = NC_HIPERT_TWO_FLUIDS_A2Q (dA_I1);
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = NC_HIPERT_TWO_FLUIDS_A2P (dA_I1);
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = NC_HIPERT_TWO_FLUIDS_A2Q (dA_I2);
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = NC_HIPERT_TWO_FLUIDS_A2P (dA_I2);
-
-  return 0;
-}
-
-static gint
-_nc_hipert_two_fluids_f_QP_mode2 (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
-{
-  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  const gdouble Q_R2 = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2);
-  const gdouble P_R2 = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2);
-
-  const gdouble Q_I2 = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2);
-  const gdouble P_I2 = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2);
-
-  const complex double A_R2 = NC_HIPERT_TWO_FLUIDS_QP2A (Q_R2, P_R2);
-
-  const complex double A_I2 = NC_HIPERT_TWO_FLUIDS_QP2A (Q_I2, P_I2);
-
-  const gdouble gammabar22 = eom->gammabar22;
-  const gdouble gammabar12 = eom->gammabar12;
-  const gdouble taubar12   = eom->taubar;
-
-  const complex double dA_R1 = gammabar12 * Q_R2 + 0.5 * taubar12 * A_R2;
-  const complex double dA_R2 = I * eom->nu2 * A_R2 + gammabar22 * Q_R2;
-
-  const complex double dA_I1 = gammabar12 * Q_I2 + 0.5 * taubar12 * A_I2;
-  const complex double dA_I2 = I * eom->nu2 * A_I2 + gammabar22 * Q_I2;
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = NC_HIPERT_TWO_FLUIDS_A2Q (dA_R1);
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = NC_HIPERT_TWO_FLUIDS_A2P (dA_R1);
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = NC_HIPERT_TWO_FLUIDS_A2Q (dA_R2);
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = NC_HIPERT_TWO_FLUIDS_A2P (dA_R2);
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = NC_HIPERT_TWO_FLUIDS_A2Q (dA_I1);
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = NC_HIPERT_TWO_FLUIDS_A2P (dA_I1);
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = NC_HIPERT_TWO_FLUIDS_A2Q (dA_I2);
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = NC_HIPERT_TWO_FLUIDS_A2P (dA_I2);
-
-  return 0;
-}
-
-#endif /* HAVE_SUNDIALS_ARKODE */
-
-static gint
-_nc_hipert_two_fluids_f_QP_mode1sub (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
-{
-  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  const gdouble Q_R2 = NV_Ith_S (y, 0);
-  const gdouble P_R2 = NV_Ith_S (y, 1);
-
-  const gdouble Q_I2 = NV_Ith_S (y, 2);
-  const gdouble P_I2 = NV_Ith_S (y, 3);
-
-  const complex double A_R2 = NC_HIPERT_TWO_FLUIDS_QP2A (Q_R2, P_R2);
-  const complex double A_I2 = NC_HIPERT_TWO_FLUIDS_QP2A (Q_I2, P_I2);
-
-  const gdouble gammabar11 = eom->gammabar11;
-  const gdouble gammabar22 = eom->gammabar22;
-  const gdouble gammabar12 = eom->gammabar12;
-  const gdouble taubar12   = eom->taubar;
-  const gdouble dsigma1    = eom->nu1 - 0.5 * gammabar11;
-  const gdouble dsigma2    = eom->nu2 - 0.5 * gammabar22;
-
-  const complex double Lambda = gammabar12 + I * taubar12;
-
-  const complex double A_R1 = (
-    +A_R2        * (Lambda     / (2.0 * (dsigma1 - dsigma2)) + gammabar11    * gammabar12 / (8.0 * dsigma1 * (dsigma1 + dsigma2)))
-    - conj (A_R2) * (gammabar12 / (2.0 * (dsigma1 + dsigma2)) + conj (Lambda) * gammabar11 / (8.0 * dsigma1 * (dsigma1 - dsigma2)))
-                              ) / (1.0 - gsl_pow_2 (gammabar11 / (4.0 * dsigma1)));
-  const complex double A_I1 = (
-    +A_I2        * (Lambda     / (2.0 * (dsigma1 - dsigma2)) + gammabar11    * gammabar12 / (8.0 * dsigma1 * (dsigma1 + dsigma2)))
-    - conj (A_I2) * (gammabar12 / (2.0 * (dsigma1 + dsigma2)) + conj (Lambda) * gammabar11 / (8.0 * dsigma1 * (dsigma1 - dsigma2)))
-                              ) / (1.0 - gsl_pow_2 (gammabar11 / (4.0 * dsigma1)));
-
-  const complex double dA_R2 = I * eom->nu2 * A_R2 + gammabar22 * Q_R2 + gammabar12 * cimag (A_R1) - 0.5 * taubar12 * A_R1;
-  const complex double dA_I2 = I * eom->nu2 * A_I2 + gammabar22 * Q_I2 + gammabar12 * cimag (A_I1) - 0.5 * taubar12 * A_I1;
-
-  NV_Ith_S (ydot, 0) = NC_HIPERT_TWO_FLUIDS_A2Q (dA_R2);
-  NV_Ith_S (ydot, 1) = NC_HIPERT_TWO_FLUIDS_A2P (dA_R2);
-
-  NV_Ith_S (ydot, 2) = NC_HIPERT_TWO_FLUIDS_A2Q (dA_I2);
-  NV_Ith_S (ydot, 3) = NC_HIPERT_TWO_FLUIDS_A2P (dA_I2);
-
-  return 0;
-}
-
 static gint
 _nc_hipert_two_fluids_f_zetaS (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
@@ -768,25 +748,28 @@ _nc_hipert_two_fluids_f_zetaS (sunrealtype alpha, N_Vector y, N_Vector ydot, gpo
   NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = -eom->mnu2_zeta * zeta_I;
   NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = -eom->mnu2_s    * S_I;
 
-#if 1
+#ifdef TWO_FLUIDS_DEBUG_WKB
   {
-    const gdouble Avzeta1  = cabs (eom->vzeta1);
-    const gdouble AvQ1     = cabs (eom->vQ1);
-    const gdouble AvPzeta1 = cabs (eom->vPzeta1);
-    const gdouble AvPQ1    = cabs (eom->vPQ1);
+    NcHIPertITwoFluidsWKB *wkb = nc_hipert_itwo_fluids_wkb_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
+    const gdouble Avzeta1      = cabs (wkb->zeta1);
+    const gdouble AvQ1         = cabs (wkb->Q1);
+    const gdouble AvPzeta1     = cabs (wkb->Pzeta1);
+    const gdouble AvPQ1        = cabs (wkb->PQ1);
 
-    const gdouble Avzeta2  = cabs (eom->vzeta2);
-    const gdouble AvQ2     = cabs (eom->vQ2);
-    const gdouble AvPzeta2 = cabs (eom->vPzeta2);
-    const gdouble AvPQ2    = cabs (eom->vPQ2);
+    const gdouble Avzeta2  = cabs (wkb->zeta2);
+    const gdouble AvQ2     = cabs (wkb->Q2);
+    const gdouble AvPzeta2 = cabs (wkb->Pzeta2);
+    const gdouble AvPQ2    = cabs (wkb->PQ2);
 
     const gdouble Azeta  = hypot (zeta_R, zeta_I);
     const gdouble APzeta = hypot (Pzeta_R, Pzeta_I);
     const gdouble AS     = hypot (S_R, S_I);
     const gdouble APS    = hypot (PS_R, PS_I);
-#if 1
-    printf ("% 22.15e % 22.15e % 22.15e, % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
+
+    printf ("% .4f % 18.11e % 18.11e % 18.11e % 18.11e, % 18.11e % 18.11e % 18.11e % 18.11e % 18.11e % 18.11e\n",
             alpha,
+            wkb->mode1_err,
+            wkb->mode2_err,
             Azeta / Avzeta1,
             AS / AvQ1,
             APzeta / AvPzeta1,
@@ -796,469 +779,10 @@ _nc_hipert_two_fluids_f_zetaS (sunrealtype alpha, N_Vector y, N_Vector ydot, gpo
             APzeta / AvPzeta2,
             APS / AvPQ2
            );
-#endif
-#if 0
-    printf ("% 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
-            alpha,
-            2.0 * APzeta * APzeta * eom->nu1 / eom->mnu2_zeta,
-            2.0 * APzeta * APzeta * eom->nu2 / eom->mnu2_zeta,
-            2.0 * APS * APS * eom->nu1 / eom->mnu2_s,
-            2.0 * APS * APS * eom->nu2 / eom->mnu2_s,
-            APS * APS,
-            APzeta * APzeta * eom->T1,
-            APzeta * APzeta * eom->T2
-           );
-    printf ("% 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
-            alpha,
-            APzeta / eom->m_zeta, eom->y * APS, (eom->nu1 * Azeta),
-            (APzeta / eom->m_zeta + eom->y * APS) / (eom->nu1 * Azeta),
-            APS / eom->m_s, eom->y * APzeta, (eom->nu1 * AS),
-            (APS / eom->m_s + eom->y * APzeta) / (eom->nu1 * AS)
-           );
-    printf ("% 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
-            alpha,
-            APzeta / Azeta / eom->mnu2_zeta * eom->nu1,
-            APS / AS / eom->mnu2_s * eom->nu1,
-            APzeta / Azeta / eom->mnu2_zeta * eom->nu2,
-            APS / AS / eom->mnu2_s * eom->nu2,
-            (APzeta / eom->m_zeta + eom->y * APS) / (eom->nu1 * Azeta),
-            (APS / eom->m_s + eom->y * APzeta) / (eom->nu1 * AS),
-            (APzeta / eom->m_zeta + eom->y * APS) / (eom->nu2 * Azeta),
-            (APS / eom->m_s + eom->y * APzeta) / (eom->nu2 * AS)
-           );
-#endif
     fflush (stdout);
+    fflush (stderr);
   }
-#endif
-
-  return 0;
-}
-
-static gint
-_nc_hipert_two_fluids_f_fast (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
-{
-  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  const gdouble zeta_R  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R);
-  const gdouble S_R     = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_R);
-  const gdouble Pzeta_R = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R);
-  const gdouble PS_R    = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R);
-
-  const gdouble zeta_I  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I);
-  const gdouble S_I     = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_I);
-  const gdouble Pzeta_I = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I);
-  const gdouble PS_I    = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I);
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = eom->y * PS_R;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = PS_R / eom->m_s + eom->y * Pzeta_R;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = -eom->mnu2_zeta * zeta_R;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = -eom->mnu2_s * S_R;
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = eom->y * PS_I;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = PS_I / eom->m_s + eom->y * Pzeta_I;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = -eom->mnu2_zeta * zeta_I;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = -eom->mnu2_s * S_I;
-
-#if 1
-  printf ("fast: alpha % 22.15e, zeta % 22.15e, S % 22.15e, Pzeta % 22.15e, PS % 22.15e % 22.15e % 22.15e\n",
-          alpha,
-          NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R) / zeta_R,
-          NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_R) / S_R,
-          NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) / Pzeta_R,
-          NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R) / PS_R,
-          eom->mnu2_s / eom->m_s, eom->mnu2_zeta / eom->m_zeta);
-  fflush (stdout);
-#endif
-
-  return 0;
-}
-
-static gint
-_nc_hipert_two_fluids_f_slow (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
-{
-  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  const gdouble zeta_R  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R);
-  const gdouble S_R     = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_R);
-  const gdouble Pzeta_R = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R);
-  const gdouble PS_R    = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R);
-
-  const gdouble zeta_I  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I);
-  const gdouble S_I     = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_I);
-  const gdouble Pzeta_I = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I);
-  const gdouble PS_I    = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I);
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = Pzeta_R / eom->m_zeta;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = 0.0;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = 0.0;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = 0.0;
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = Pzeta_I / eom->m_zeta;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = 0.0;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = 0.0;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = 0.0;
-
-#if 0
-  printf ("slow: alpha % 22.15e, zeta % 22.15e, S % 22.15e, Pzeta % 22.15e, PS % 22.15e\n",
-          alpha,
-          NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R) / zeta_R,
-          NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_R) / S_R,
-          NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) / Pzeta_R,
-          NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R) / PS_R);
-  fflush (stdout);
-#endif
-
-  return 0;
-}
-
-static gint
-_nc_hipert_two_fluids_f_variables (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
-{
-  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  const gdouble zeta_R  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R);
-  const gdouble S_R     = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_R);
-  const gdouble Pzeta_R = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R);
-  const gdouble PS_R    = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R);
-
-  const gdouble zeta_I  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I);
-  const gdouble S_I     = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_I);
-  const gdouble Pzeta_I = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I);
-  const gdouble PS_I    = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I);
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R) = Pzeta_R / eom->m_zeta + eom->y * PS_R;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_R)    = PS_R    / eom->m_s    + eom->y * Pzeta_R;
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I) = Pzeta_I / eom->m_zeta + eom->y * PS_I;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_I)    = PS_I    / eom->m_s    + eom->y * Pzeta_I;
-
-  /* printf ("alpha: % 22.15g, zeta_R: % 22.15g, S_R: % 22.15g, Pzeta_R: % 22.15g, PS_R: % 22.15g\n", alpha, zeta_R, S_R, Pzeta_R, PS_R); */
-  /* printf ("alpha: % 22.15g, zeta_I: % 22.15g, S_I: % 22.15g, Pzeta_I: % 22.15g, PS_I: % 22.15g\n", alpha, zeta_I, S_I, Pzeta_I, PS_I); */
-
-  return 0;
-}
-
-static gint
-_nc_hipert_two_fluids_f_momenta (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
-{
-  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  const gdouble zeta_R  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R);
-  const gdouble S_R     = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_R);
-  const gdouble Pzeta_R = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R);
-  const gdouble PS_R    = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R);
-
-  const gdouble zeta_I  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I);
-  const gdouble S_I     = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_I);
-  const gdouble Pzeta_I = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I);
-  const gdouble PS_I    = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I);
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = -eom->mnu2_zeta * zeta_R;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = -eom->mnu2_s    * S_R;
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = -eom->mnu2_zeta * zeta_I;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = -eom->mnu2_s    * S_I;
-
-  return 0;
-}
-
-#ifdef HAVE_SUNDIALS_ARKODE
-
-static gint
-_nc_hipert_two_fluids_f_zetaS_zeta (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
-{
-  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  const gdouble zeta_R  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R);
-  const gdouble Pzeta_R = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R);
-
-  const gdouble zeta_I  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I);
-  const gdouble Pzeta_I = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I);
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = Pzeta_R / eom->m_zeta;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = eom->y * Pzeta_R;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = -eom->mnu2_zeta * zeta_R;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = 0.0;
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = Pzeta_I / eom->m_zeta;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = eom->y * Pzeta_I;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = -eom->mnu2_zeta * zeta_I;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = 0.0;
-
-  return 0;
-}
-
-static gint
-_nc_hipert_two_fluids_f_zetaS_S (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
-{
-  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) f_data;
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  const gdouble S_R  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_R);
-  const gdouble PS_R = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R);
-
-  const gdouble S_I  = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_S_I);
-  const gdouble PS_I = NV_Ith_S (y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I);
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = eom->y * PS_R;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = PS_R / eom->m_s;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = 0.0;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = -eom->mnu2_s    * S_R;
-
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = eom->y * PS_I;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = PS_I / eom->m_s;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = 0.0;
-  NV_Ith_S (ydot, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = -eom->mnu2_s    * S_I;
-
-  return 0;
-}
-
-static gint
-_nc_hipert_two_fluids_J_QP (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-{
-  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  const gdouble gammabar11 = eom->gammabar11;
-  const gdouble gammabar22 = eom->gammabar22;
-  const gdouble gammabar12 = eom->gammabar12;
-  const gdouble taubar12   = eom->taubar;
-
-  /************************************************************************************************************/
-  /* Solution R */
-  /************************************************************************************************************/
-
-  /* eom->nu1 * P1 +  0.5 * taubar12 * Q2 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = eom->nu1;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = 0.5 * taubar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = 0.0;
-
-  /* - eom->nu1 * Q1 + gammabar11 * Q1 + gammabar12 * Q2 + 0.5 * taubar12 * P2 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = -eom->nu1 + gammabar11;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = gammabar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = 0.5 * taubar12;
-
-  /* eom->nu2 * P2 - 0.5 * taubar12 * Q1 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = -0.5 * taubar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = eom->nu2;
-
-  /* - eom->nu2 * Q2 + gammabar22 * Q2 + gammabar12 * Q1 - 0.5 * taubar12 * P1 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = gammabar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = -0.5 * taubar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = -eom->nu2 + gammabar22;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = 0.0;
-
-  /************************************************************************************************************/
-  /* Solution I */
-  /************************************************************************************************************/
-
-  /* eom->nu1 * P1 +  0.5 * taubar12 * Q2 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = eom->nu1;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = 0.5 * taubar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = 0.0;
-
-  /* - eom->nu1 * Q1 + gammabar11 * Q1 + gammabar12 * Q2 + 0.5 * taubar12 * P2 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = -eom->nu1 + gammabar11;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = gammabar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = 0.5 * taubar12;
-
-  /* eom->nu2 * P2 - 0.5 * taubar12 * Q1 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = -0.5 * taubar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = eom->nu2;
-
-  /* - eom->nu2 * Q2 + gammabar22 * Q2 + gammabar12 * Q1 - 0.5 * taubar12 * P1 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = gammabar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = -0.5 * taubar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = -eom->nu2 + gammabar22;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = 0.0;
-
-  return 0;
-}
-
-#endif /* HAVE_SUNDIALS_ARKODE */
-
-#ifdef HAVE_SUNDIALS_ARKODE
-
-static gint
-_nc_hipert_two_fluids_J_QP_mode1 (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-{
-  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  const gdouble gammabar11 = eom->gammabar11;
-  const gdouble gammabar12 = eom->gammabar12;
-  const gdouble taubar12   = eom->taubar;
-
-  /************************************************************************************************************/
-  /* Solution R */
-  /************************************************************************************************************/
-
-  /* eom->nu1 * P1 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = eom->nu1;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = 0.0;
-
-  /* - eom->nu1 * Q1 + gammabar11 * Q1  */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = -eom->nu1 + gammabar11;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = 0.0;
-
-  /* - 0.5 * taubar12 * Q1 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = -0.5 * taubar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = 0.0;
-
-  /* gammabar12 * Q1 - 0.5 * taubar12 * P1 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = gammabar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = -0.5 * taubar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = 0.0;
-
-  /************************************************************************************************************/
-  /* Solution I */
-  /************************************************************************************************************/
-
-  /* eom->nu1 * P1 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = eom->nu1;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = 0.0;
-
-  /* - eom->nu1 * Q1 + gammabar11 * Q1 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = -eom->nu1 + gammabar11;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = 0.0;
-
-  /* - 0.5 * taubar12 * Q1 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = -0.5 * taubar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = 0.0;
-
-  /* gammabar12 * Q1 - 0.5 * taubar12 * P1 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = gammabar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = -0.5 * taubar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = 0.0;
-
-  return 0;
-}
-
-static gint
-_nc_hipert_two_fluids_J_QP_mode2 (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-{
-  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  const gdouble gammabar22 = eom->gammabar22;
-  const gdouble gammabar12 = eom->gammabar12;
-  const gdouble taubar12   = eom->taubar;
-
-  /************************************************************************************************************/
-  /* Solution R */
-  /************************************************************************************************************/
-
-  /* 0.5 * taubar12 * Q2 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = 0.5 * taubar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = 0.0;
-
-  /* gammabar12 * Q2 + 0.5 * taubar12 * P2 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = gammabar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = 0.5 * taubar12;
-
-  /* eom->nu2 * P2 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = eom->nu2;
-
-  /* - eom->nu2 * Q2 + gammabar22 * Q2 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = -eom->nu2 + gammabar22;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = 0.0;
-
-  /************************************************************************************************************/
-  /* Solution I */
-  /************************************************************************************************************/
-
-  /* 0.5 * taubar12 * Q2 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = 0.5 * taubar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = 0.0;
-
-  /* gammabar12 * Q2 + 0.5 * taubar12 * P2 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = gammabar12;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = 0.5 * taubar12;
-
-  /* eom->nu2 * P2 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = eom->nu2;
-
-  /* - eom->nu2 * Q2 + gammabar22 * Q2 */
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = -eom->nu2 + gammabar22;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = 0.0;
+#endif /* DEBUG_WKB */
 
   return 0;
 }
@@ -1321,180 +845,83 @@ _nc_hipert_two_fluids_J_zetaS (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMa
   return 0;
 }
 
-static gint
-_nc_hipert_two_fluids_J_zetaS_fast (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-{
-  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  /************************************************************************************************************/
-  /* Solution R */
-  /************************************************************************************************************/
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R,  NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R,  NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R,  NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R,  NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = eom->y;
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_R,     NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_R,     NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_R,     NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_R,     NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = 1.0 / eom->m_s;
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R, NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = 0.0;
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R,    NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R,    NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = -eom->mnu2_s;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R,    NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R,    NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = 0.0;
-
-  /************************************************************************************************************/
-  /* Solution I */
-  /************************************************************************************************************/
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I,  NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I,  NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I,  NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I,  NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = eom->y;
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_I,     NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_I,     NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_I,     NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_I,     NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = 1.0 / eom->m_s;
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I, NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = 0.0;
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I,    NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I,    NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = -eom->mnu2_s;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I,    NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I,    NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = 0.0;
-
-  return 0;
-}
-
-#endif /* HAVE_SUNDIALS_ARKODE */
-
 #ifdef HAVE_SUNDIALS_ARKODE
 
 static gint
-_nc_hipert_two_fluids_J_zetaS_zeta (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_two_fluids_J_QP (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
   const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
   NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
 
-  /************************************************************************************************************/
-  /* Solution R */
-  /************************************************************************************************************/
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R,  NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R,  NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R,  NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = 1.0 / eom->m_zeta;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R,  NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = 0.0;
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_R,     NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_R,     NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_R,     NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = eom->y;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_R,     NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = 0.0;
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = -eom->mnu2_zeta;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R, NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = 0.0;
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R,    NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R,    NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R,    NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R,    NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = 0.0;
-
-  /************************************************************************************************************/
-  /* Solution I */
-  /************************************************************************************************************/
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I,  NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I,  NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I,  NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = 1.0 / eom->m_zeta;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I,  NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = 0.0;
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_I,     NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_I,     NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_I,     NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = eom->y;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_I,     NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = 0.0;
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = -eom->mnu2_zeta;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I, NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = 0.0;
-
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I,    NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I,    NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I,    NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I,    NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = 0.0;
-
-  return 0;
-}
-
-static gint
-_nc_hipert_two_fluids_J_zetaS_S (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-{
-  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) jac_data;
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
+  const gdouble gammabar11 = eom->gammabar11;
+  const gdouble gammabar22 = eom->gammabar22;
+  const gdouble gammabar12 = eom->gammabar12;
+  const gdouble taubar12   = eom->taubar;
 
   /************************************************************************************************************/
   /* Solution R */
   /************************************************************************************************************/
 
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R,  NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R,  NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R,  NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R,  NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = eom->y;
+  /* eom->nu1 * P1 +  0.5 * taubar12 * Q2 */
 
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_R,     NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_R,     NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_R,     NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_R,     NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = 1.0 / eom->m_s;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = 0.0;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = eom->nu1;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = 0.5 * taubar12;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = 0.0;
 
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R, NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = 0.0;
+  /* - eom->nu1 * Q1 + gammabar11 * Q1 + gammabar12 * Q2 + 0.5 * taubar12 * P2 */
 
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R,    NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R,    NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     = -eom->mnu2_s;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R,    NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R,    NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    = 0.0;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = -eom->nu1 + gammabar11;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = 0.0;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = gammabar12;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = 0.5 * taubar12;
+
+  /* eom->nu2 * P2 - 0.5 * taubar12 * Q1 */
+
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = -0.5 * taubar12;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = 0.0;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = 0.0;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = eom->nu2;
+
+  /* - eom->nu2 * Q2 + gammabar22 * Q2 + gammabar12 * Q1 - 0.5 * taubar12 * P1 */
+
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R1) = gammabar12;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R1) = -0.5 * taubar12;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2) = -eom->nu2 + gammabar22;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_R2) = 0.0;
 
   /************************************************************************************************************/
   /* Solution I */
   /************************************************************************************************************/
 
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I,  NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I,  NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I,  NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I,  NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = eom->y;
+  /* eom->nu1 * P1 +  0.5 * taubar12 * Q2 */
 
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_I,     NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_I,     NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_I,     NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_S_I,     NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = 1.0 / eom->m_s;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = 0.0;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = eom->nu1;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = 0.5 * taubar12;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = 0.0;
 
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I, NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = 0.0;
+/* - eom->nu1 * Q1 + gammabar11 * Q1 + gammabar12 * Q2 + 0.5 * taubar12 * P2 */
 
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I,    NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I)  = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I,    NC_HIPERT_ITWO_FLUIDS_VARS_S_I)     = -eom->mnu2_s;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I,    NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I) = 0.0;
-  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I,    NC_HIPERT_ITWO_FLUIDS_VARS_PS_I)    = 0.0;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = -eom->nu1 + gammabar11;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = 0.0;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = gammabar12;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I1,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = 0.5 * taubar12;
+
+/* eom->nu2 * P2 - 0.5 * taubar12 * Q1 */
+
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = -0.5 * taubar12;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = 0.0;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = 0.0;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = eom->nu2;
+
+/* - eom->nu2 * Q2 + gammabar22 * Q2 + gammabar12 * Q1 - 0.5 * taubar12 * P1 */
+
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I1) = gammabar12;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I1) = -0.5 * taubar12;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2) = -eom->nu2 + gammabar22;
+  SUN_DENSE_ACCESS (J, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2,  NC_HIPERT_ITWO_FLUIDS_VARS_P_I2) = 0.0;
 
   return 0;
 }
@@ -1524,80 +951,12 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
   gint flag;
   guint i;
 
-#ifdef HAVE_SUNDIALS_ARKODE
-  ARKRhsFn fE, fI;
-  ARKLsJacFn dfI_dy;
-#endif /* HAVE_SUNDIALS_ARKODE */
-
   if (vtype != c_vtype)
     nc_hipert_reset_solver (pert);
 
   nc_hipert_set_sys_size (pert, NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
 
   pself->alpha0 = alpha;
-
-#ifdef HAVE_SUNDIALS_ARKODE
-
-  if (useQP)
-  {
-    switch (main_mode)
-    {
-      case 1:
-        fE     = _nc_hipert_two_fluids_f_QP_mode1;
-        fI     = _nc_hipert_two_fluids_f_QP_mode2;
-        dfI_dy = _nc_hipert_two_fluids_J_QP_mode2;
-        break;
-      case 2:
-        fE     = _nc_hipert_two_fluids_f_QP_mode2;
-        fI     = _nc_hipert_two_fluids_f_QP_mode1;
-        dfI_dy = _nc_hipert_two_fluids_J_QP_mode1;
-        break;
-      case 3:
-        fE     = _nc_hipert_two_fluids_f_QP;
-        fI     = NULL;
-        dfI_dy = NULL;
-        break;
-      case 4:
-        fE     = NULL;
-        fI     = _nc_hipert_two_fluids_f_QP;
-        dfI_dy = _nc_hipert_two_fluids_J_QP;
-        break;
-      default:
-        g_error ("nc_hipert_two_fluids_set_init_cond: Unknown main mode %u.", main_mode);
-        break;
-    }
-  }
-  else
-  {
-    switch (main_mode)
-    {
-      case 1:
-        fE     = _nc_hipert_two_fluids_f_zetaS_zeta;
-        fI     = _nc_hipert_two_fluids_f_zetaS_S;
-        dfI_dy = _nc_hipert_two_fluids_J_zetaS_S;
-        break;
-      case 2:
-        fE     = _nc_hipert_two_fluids_f_zetaS_S;
-        fI     = _nc_hipert_two_fluids_f_zetaS_zeta;
-        dfI_dy = _nc_hipert_two_fluids_J_zetaS_zeta;
-        break;
-      case 3:
-        fE     = _nc_hipert_two_fluids_f_zetaS;
-        fI     = NULL;
-        dfI_dy = NULL;
-        break;
-      case 4:
-        fE     = NULL;
-        fI     = _nc_hipert_two_fluids_f_zetaS;
-        dfI_dy = _nc_hipert_two_fluids_J_zetaS;
-        break;
-      default:
-        g_error ("nc_hipert_two_fluids_set_init_cond: Unknown main mode %u.", main_mode);
-        break;
-    }
-  }
-
-#endif /* HAVE_SUNDIALS_ARKODE */
 
   for (i = 0; i < NC_HIPERT_ITWO_FLUIDS_VARS_LEN; i++)
   {
@@ -1607,43 +966,6 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
   if (!pself->cvode_init)
   {
 #ifdef HAVE_SUNDIALS_ARKODE
-    /* self->arkode = ARKStepCreate (fE, fI, alpha, pself->y, pself->sunctx); */
-    /* NCM_CVODE_CHECK (self->arkode, "ARKodeInit", 0, ); */
-    printf ("Creating ERKStep, alpha = %f\n", alpha);
-    fflush (stdout);
-
-    self->inner_arkode = ARKStepCreate (NULL, _nc_hipert_two_fluids_f_fast, alpha, pself->y, pself->sunctx);
-    NCM_CVODE_CHECK (self->inner_arkode, "ARKStepCreate", 0, );
-
-    flag = ARKodeSetLinearSolver (self->inner_arkode, pself->LS, pself->A);
-    NCM_CVODE_CHECK (&flag, "ARKodeSetLinearSolver", 1, );
-
-    flag = ARKodeSetJacFn (self->inner_arkode, _nc_hipert_two_fluids_J_zetaS_fast);
-    NCM_CVODE_CHECK (&flag, "ARKodeSetJacFn", 1, );
-
-    flag = ARKodeSetLinear (self->inner_arkode, 1);
-    NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
-
-    printf ("Setting stop time to 0\n");
-    fflush (stdout);
-
-    flag = ARKodeSetStopTime (self->inner_arkode, 10.0);
-    NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, );
-
-    /*flag = ARKodeSetFixedStep (self->inner_arkode, 1.0e-4); */
-    /*NCM_CVODE_CHECK (&flag, "ARKodeSetFixedStep", 1, ); */
-
-    printf ("Creating inner stepper\n");
-    fflush (stdout);
-
-    flag = ARKodeCreateMRIStepInnerStepper (self->inner_arkode, &self->inner_stepper);
-    NCM_CVODE_CHECK (&flag, "ARKodeCreateMRIStepInnerStepper", 1, );
-
-    printf ("Creating MRIStep\n");
-    fflush (stdout);
-
-    /* self->arkode = MRIStepCreate (_nc_hipert_two_fluids_f_slow, NULL, alpha, pself->y, self->inner_stepper, pself->sunctx); */
-    /* self->arkode = ARKStepCreate (_nc_hipert_two_fluids_f_fast, _nc_hipert_two_fluids_f_slow, alpha, pself->y, pself->sunctx); */
     self->arkode = ERKStepCreate (_nc_hipert_two_fluids_f_zetaS, alpha, pself->y, pself->sunctx);
     NCM_CVODE_CHECK (self->arkode, "ERKStepCreate", 0, );
 #endif /* HAVE_SUNDIALS_ARKODE */
@@ -1669,17 +991,10 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
 
 #ifdef HAVE_SUNDIALS_ARKODE
-    flag = ARKStepReInit (self->arkode, _nc_hipert_two_fluids_f_fast, _nc_hipert_two_fluids_f_slow, alpha, pself->y);
+    flag = ERKStepReInit (self->arkode, _nc_hipert_two_fluids_f_zetaS, alpha, pself->y);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
-    /*MRIStepReInit (self->arkode, _nc_hipert_two_fluids_f_slow, NULL, alpha, pself->y); */
-    /*NCM_CVODE_CHECK (&flag, "SPRKStepReInit", 1, ); */
 #endif /* HAVE_SUNDIALS_ARKODE */
   }
-
-/*
- *  flag = CVodeSetMaxStep (pself->cvode, 1.0);
- *  NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1,);
- */
 
   flag = CVodeSStolerances (pself->cvode, pself->reltol, 0.0);
   NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
@@ -1690,101 +1005,36 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
   flag = CVodeSetLinearSolver (pself->cvode, pself->LS, pself->A);
   NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
 
+  flag = CVodeSetJacFn (pself->cvode, &_nc_hipert_two_fluids_J_zetaS);
+  NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
+
+  flag = CVodeSetMaxHnilWarns (pself->cvode, -1);
+  NCM_CVODE_CHECK (&flag, "CVodeSetMaxHnilWarns", 1, );
+
 #ifdef HAVE_SUNDIALS_ARKODE
 
-  printf ("Setting relative tolerance to %f\n", pself->reltol);
-  fflush (stdout);
-
   flag = ARKodeSStolerances (self->arkode, pself->reltol, 0.0);
-  NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1, );
-
-  printf ("Setting relative tolerance to %f\n", pself->reltol);
-  fflush (stdout);
-
-  flag = ARKodeSStolerances (self->inner_arkode, pself->reltol, 0.0);
   NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1, );
 
   flag = ARKodeSetInitStep (self->arkode, 1.0e-11);
   NCM_CVODE_CHECK (&flag, "ARKodeSetInitStep", 1, );
 
-  printf ("Setting maximum number of steps to %d\n", G_MAXUINT32);
-  fflush (stdout);
-
   flag = ARKodeSetMaxNumSteps (self->arkode, G_MAXUINT32);
   NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
-/*  flag = ARKodeSetFixedStep (self->arkode, 1.0e-4); */
-/*  NCM_CVODE_CHECK (&flag, "ARKodeSetFixedStep", 1, ); */
   flag = ARKodeSetAdaptController (self->arkode, NULL);
   NCM_CVODE_CHECK (&flag, "ARKodeSetAdaptController", 1, );
 
-  /* flag = ARKodeSetLinearSolver (self->arkode, pself->LS, pself->A); */
-  /* NCM_CVODE_CHECK (&flag, "ARKodeSetLinearSolver", 1, ); */
-
-  /* flag = ARKodeSetJacFn (self->arkode, _nc_hipert_two_fluids_J_zetaS); */
-  /* NCM_CVODE_CHECK (&flag, "ARKodeSetJacFn", 1, ); */
-
-  flag = ARKodeSetLinear (self->arkode, 1);
-  NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
-
-  /* flag = ARKodeSetOrder (self->arkode, 10); */
-  /* NCM_CVODE_CHECK (&flag, "SPRKStepSetOrder", 1, ); */
+  /* flag = ARKodeSetLinear (self->arkode, 1); */
+  /* NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, ); */
 
   if (useQP)
   {
     flag = ARKodeSetJacFn (self->arkode, &_nc_hipert_two_fluids_J_QP);
     NCM_CVODE_CHECK (&flag, "ARKodeSetJacFn", 1, );
   }
-  else
-  {
-    /*flag = ARKodeSetJacFn (self->arkode, &_nc_hipert_two_fluids_J_zetaS); */
-    /*NCM_CVODE_CHECK (&flag, "ARKodeSetJacFn", 1, ); */
-  }
-
-  switch (main_mode)
-  {
-    case 1:
-    case 2:
-    case 3:
-    case 4:
-      /* flag = ARKStepSetImEx (self->arkode); */
-      /* NCM_CVODE_CHECK (&flag, "ARKodeSetImEx", 1, ); */
-
-      /* flag = ARKStepSetOrder (self->arkode, 5); */
-      /* NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, ); */
-
-      /*flag = ARKodeSetARKTableNum (self->arkode, 22, 9); */
-      /*NCM_CVODE_CHECK (&flag, "ARKodeSetIRKTableNum", 1, ); */
-      break;
-
-/*
- *   case 3:
- *     flag = ARKStepSetExplicit (self->arkode);
- *     NCM_CVODE_CHECK (&flag, "ARKodeSetExplicit", 1, );
- *
- *     flag = ARKStepSetOrder (self->arkode, 6);
- *     NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
- *
- *     flag = ARKStepSetERKTableNum (self->arkode, 10);
- *     NCM_CVODE_CHECK (&flag, "ARKodeSetERKTableNum", 1, );
- *     break;
- *   case 4:
- *     flag = ARKStepSetImplicit (self->arkode);
- *     NCM_CVODE_CHECK (&flag, "ARKodeSetImplicit", 1, );
- *
- *     flag = ARKStepSetIRKTableNum (self->arkode, 11 + 11);
- *     NCM_CVODE_CHECK (&flag, "ARKodeSetIRKTableNum", 1, );
- *     break;
- */
-    default:
-      g_error ("nc_hipert_two_fluids_set_init_cond: Unknown main mode %u.", main_mode);
-      break;
-  }
 
 #endif /* HAVE_SUNDIALS_ARKODE */
-
-/*  ARKodeSetAdaptivityMethod (self->arkode, 5, 1, 0, NULL); */
-/*  NCM_CVODE_CHECK (&flag, "ARKodeSetAdaptivityMethod", 1, ); */
 
   self->useQP = useQP;
 }
@@ -1805,7 +1055,6 @@ nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble a
   NcHIPert *pert                        = NC_HIPERT (ptf);
   NcHIPertPrivate * const pself         = nc_hipert_get_private (pert);
   NcHIPertTwoFluidsArg *arg             = self->arg;
-  gdouble *yi                           = NV_DATA_S (pself->y);
   gdouble alpha_i                       = 0.0;
   gint flag;
 
@@ -1822,35 +1071,11 @@ nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble a
     flag = ARKodeSetUserData (self->arkode, arg);
     NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
 
-    flag = ARKodeSetUserData (self->inner_arkode, arg);
-    NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
-
     flag = ARKodeSetStopTime (self->arkode, alphaf);
     NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, );
 
-    flag = ARKodeSetStopTime (self->inner_arkode, alphaf);
-    NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, );
-
-    printf ("A >>>>>>>>>>>>>>>>>>>>>>>>>>>> alphaf %g\n", alphaf);
-    fflush (stdout);
-
-    printf ("#---------------------1--------------------\n");
-    fflush (stdout);
-    ARKodePrintMem (self->inner_arkode, stdout);
-    fflush (stdout);
-    printf ("#---------------------2--------------------\n");
-    fflush (stdout);
-    /*ARKodePrintMem (self->arkode, stdout); */
-    fflush (stdout);
-    printf ("#---------------------3--------------------\n");
-    fflush (stdout);
-
     flag = ARKodeEvolve (self->arkode, alphaf, pself->y, &alpha_i, ARK_NORMAL);
     NCM_CVODE_CHECK (&flag, "ARKodeEvolve[nc_hipert_two_fluids_evolve]", 1, );
-
-    fflush (stderr);
-    printf ("A evolved >>>>>>>>>>>>>>>>>>>>>>>>>>>> alpha_i %g\n", alpha_i);
-    fflush (stdout);
 
     pself->alpha0 = alpha_i;
   }
@@ -1867,29 +1092,6 @@ nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble a
     NCM_CVODE_CHECK (&flag, "CVode[nc_hipert_two_fluids_evolve]", 1, );
 
     pself->alpha0 = alpha_i;
-  }
-
-  if (FALSE)
-  {
-    gdouble cmp_data[8];
-    NcmVector *cmp = ncm_vector_new_data_static (cmp_data, 8, 1);
-    NcmVector *ci  = ncm_vector_new_data_static (yi, 8, 1);
-
-    ncm_vector_memcpy (cmp, ci);
-
-    nc_hipert_two_fluids_get_init_cond_QP (ptf, cosmo, pself->alpha0, 2,
-                                           carg (NC_HIPERT_TWO_FLUIDS_QP2A (yi[NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2], yi[NC_HIPERT_ITWO_FLUIDS_VARS_P_R2])),
-                                           cmp);
-    ncm_vector_sub (cmp, ci);
-    ncm_vector_div (cmp, ci);
-
-    printf ("%.5f % 21.15e % 21.15e % 21.15e % 21.15e % 21.15e % 21.15e % 21.15e % 21.15e % 8.2e\n",
-            pself->alpha0,
-            cmp_data[0], cmp_data[1], cmp_data[2], cmp_data[3], cmp_data[4], cmp_data[5], cmp_data[6], cmp_data[7],
-            (1.0 - nc_hipert_two_fluids_get_state_mod (ptf)));
-
-    ncm_vector_free (ci);
-    ncm_vector_free (cmp);
   }
 }
 
@@ -1931,32 +1133,11 @@ nc_hipert_two_fluids_evolve_array (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdo
 
   if (TRUE)
   {
-    printf ("B Setting user data\n");
-    fflush (stdout);
-
     flag = ARKodeSetUserData (self->arkode, arg);
     NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, NULL);
 
-    printf ("B Setting inner user data\n");
-    fflush (stdout);
-
-    flag = ARKodeSetUserData (self->inner_arkode, arg);
-    NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, NULL);
-
-    printf ("B Setting stop time %g\n", alphaf);
-    fflush (stdout);
-
     flag = ARKodeSetStopTime (self->arkode, alphaf);
     NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, NULL);
-
-    printf ("B Setting inner stop time %g\n", alphaf);
-    fflush (stdout);
-
-    flag = ARKodeSetStopTime (self->inner_arkode, alphaf);
-    NCM_CVODE_CHECK (&flag, "ARKodeSetStopTime", 1, NULL);
-
-    printf ("B >>>>>>>>>>>>>>>>>>>>>>>>>>>> alphaf %g\n", alphaf);
-    fflush (stdout);
 
     g_array_append_val (array, pself->alpha0);
     g_array_append_vals (array, NV_DATA_S (pself->y), NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
@@ -2100,204 +1281,42 @@ nc_hipert_two_fluids_peek_state (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdoub
   return self->state;
 }
 
+static gdouble
+_nc_hipert_two_fluids_wkb_limit_mode1_root (gdouble alpha, gpointer userdata)
+{
+  NcHIPertTwoFluidsArg *arg = (NcHIPertTwoFluidsArg *) userdata;
+
+  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
+  NcHIPertITwoFluidsWKB *wkb = nc_hipert_itwo_fluids_wkb_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
+
+  return log (wkb->mode1_scale / arg->prec);
+}
+
+static gdouble
+_nc_hipert_two_fluids_wkb_limit_mode2_root (gdouble alpha, gpointer userdata)
+{
+  NcHIPertTwoFluidsArg *arg  = (NcHIPertTwoFluidsArg *) userdata;
+  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
+  NcHIPertITwoFluidsWKB *wkb = nc_hipert_itwo_fluids_wkb_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
+
+  return log (wkb->mode2_scale / arg->prec);
+}
+
 /**
- * nc_hipert_two_fluids_set_init_cond_mode1sub:
+ * nc_hipert_two_fluids_get_wkb_limit:
  * @ptf: a #NcHIPertTwoFluids
  * @cosmo: a #NcHICosmo
- * @alpha: the log-redshift time
- * @init_cond: a #NcmVector (size >= 4) containing the initial conditions
- *
- * Sets the initial conditions for the two fluids system evolution.
- *
- */
-void
-nc_hipert_two_fluids_set_init_cond_mode1sub (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, NcmVector *init_cond)
-{
-  NcHIPert *pert                = NC_HIPERT (ptf);
-  NcHIPertPrivate * const pself = nc_hipert_get_private (pert);
-  const guint sys_size          = 4;
-  gint flag;
-
-  nc_hipert_set_sys_size (pert, sys_size);
-
-  pself->alpha0 = alpha;
-
-  NV_Ith_S (pself->y, 0) = ncm_vector_get (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_Q_R2);
-  NV_Ith_S (pself->y, 1) = ncm_vector_get (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_P_R2);
-
-  NV_Ith_S (pself->y, 2) = ncm_vector_get (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_Q_I2);
-  NV_Ith_S (pself->y, 3) = ncm_vector_get (init_cond, NC_HIPERT_ITWO_FLUIDS_VARS_P_I2);
-
-  if (!pself->cvode_init)
-  {
-    flag = CVodeInit (pself->cvode, &_nc_hipert_two_fluids_f_QP_mode1sub, alpha, pself->y);
-    NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
-    pself->cvode_init = TRUE;
-  }
-  else
-  {
-    flag = CVodeReInit (pself->cvode, alpha, pself->y);
-    NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
-  }
-
-  flag = CVodeSetMaxStep (pself->cvode, 1.0);
-  NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
-
-  flag = CVodeSStolerances (pself->cvode, pself->reltol, 0.0);
-  NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
-
-  flag = CVodeSetMaxNumSteps (pself->cvode, G_MAXUINT32);
-  NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
-
-  flag = CVodeSetLinearSolver (pself->cvode, pself->LS, pself->A);
-  NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
-}
-
-/**
- * nc_hipert_two_fluids_evolve_mode1sub:
- * @ptf: a #NcHIPertTwoFluids.
- * @cosmo: a #NcHICosmo.
- * @alphaf: the final log-redshift time.
- *
- * Evolve the system until @alphaf.
- *
- */
-void
-nc_hipert_two_fluids_evolve_mode1sub (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphaf)
-{
-  NcHIPert *pert                        = NC_HIPERT (ptf);
-  NcHIPertPrivate * const pself         = nc_hipert_get_private (pert);
-  NcHIPertTwoFluidsPrivate * const self = ptf->priv;
-  NcHIPertTwoFluidsArg *arg             = self->arg;
-  gdouble alpha_i                       = 0.0;
-  gint flag;
-
-  arg->cosmo = cosmo;
-  arg->ptf   = ptf;
-
-  if (NV_LENGTH_S (pself->y) != 4)
-    g_error ("nc_hipert_two_fluids_evolve: cannot evolve full system, use the appropriated evolve function.");
-
-  flag = CVodeSetUserData (pself->cvode, arg);
-  NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
-
-  flag = CVode (pself->cvode, alphaf, pself->y, &alpha_i, CV_NORMAL);
-  NCM_CVODE_CHECK (&flag, "CVode[nc_hipert_two_fluids_evolve]", 1, );
-
-  pself->alpha0 = alpha_i;
-}
-
-/**
- * nc_hipert_two_fluids_get_state_mod:
- * @ptf: a #NcHIPertTwoFluids
- *
- * Get the current module for the solution.
- *
- * Returns: state module.
- */
-gdouble
-nc_hipert_two_fluids_get_state_mod (NcHIPertTwoFluids *ptf)
-{
-  NcHIPert *pert                = NC_HIPERT (ptf);
-  NcHIPertPrivate * const pself = nc_hipert_get_private (pert);
-
-  const complex double zeta  = NV_Ith_S (pself->y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R)  + I * NV_Ith_S (pself->y, NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I);
-  const complex double S     = NV_Ith_S (pself->y, NC_HIPERT_ITWO_FLUIDS_VARS_S_R)     + I * NV_Ith_S (pself->y, NC_HIPERT_ITWO_FLUIDS_VARS_S_I);
-  const complex double Pzeta = NV_Ith_S (pself->y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R) + I * NV_Ith_S (pself->y, NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I);
-  const complex double PS    = NV_Ith_S (pself->y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_R)    + I * NV_Ith_S (pself->y, NC_HIPERT_ITWO_FLUIDS_VARS_PS_I);
-
-/*
- *  printf ("% 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g\n",
- *         cabs (zeta), cabs (Pzeta), carg (zeta) / M_PI, carg (Pzeta) / M_PI,
- *         cabs (S), cabs (PS), carg (S) / M_PI, carg (PS) / M_PI
- *         );
- */
-  return
-    +2.0 * cabs (zeta) * cabs (Pzeta) * sin (carg (zeta) - carg (Pzeta))
-    + 2.0 * cabs (S) * cabs (PS) * sin (carg (S) - carg (PS));
-}
-
-static gdouble
-_nc_hipert_two_fluids_cross_time_mode1main_root (gdouble alpha, gpointer userdata)
-{
-  NcHIPertTwoFluidsArg *arg = (NcHIPertTwoFluidsArg *) userdata;
-
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  const gdouble p = fabs (eom->gammabar11 / eom->nu1);
-
-  return log (p / arg->prec);
-}
-
-static gdouble
-_nc_hipert_two_fluids_cross_time_mode2main_root (gdouble alpha, gpointer userdata)
-{
-  NcHIPertTwoFluidsArg *arg = (NcHIPertTwoFluidsArg *) userdata;
-
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  const gdouble p = fabs (eom->gammabar22 / eom->nu2);
-
-  return log (p / arg->prec);
-}
-
-static gdouble
-_nc_hipert_two_fluids_cross_time_mode1sub_root (gdouble alpha, gpointer userdata)
-{
-  NcHIPertTwoFluidsArg *arg = (NcHIPertTwoFluidsArg *) userdata;
-
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  gdouble p = 0.0;
-
-  p = sqrt (
-    gsl_pow_2 (eom->gammabar11 / eom->nu1) +
-    gsl_pow_2 (eom->gammabar22 / eom->nu1) +
-    gsl_pow_2 (eom->gammabar12 / eom->nu1) +
-    gsl_pow_2 (eom->taubar     / eom->nu1)
-           );
-
-  return log (p / arg->prec);
-}
-
-static gdouble
-_nc_hipert_two_fluids_cross_time_mode2sub_root (gdouble alpha, gpointer userdata)
-{
-  NcHIPertTwoFluidsArg *arg = (NcHIPertTwoFluidsArg *) userdata;
-
-  const gdouble k            = nc_hipert_get_mode_k (NC_HIPERT (arg->ptf));
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
-
-  gdouble p = 0.0;
-
-  p = sqrt (
-    gsl_pow_2 (eom->gammabar11 / eom->nu2) +
-    gsl_pow_2 (eom->gammabar22 / eom->nu2) +
-    gsl_pow_2 (eom->gammabar12 / eom->nu2) +
-    gsl_pow_2 (eom->taubar     / eom->nu2)
-           );
-
-  return log (p / arg->prec);
-}
-
-/**
- * nc_hipert_two_fluids_get_cross_time:
- * @ptf: a #NcHIPertTwoFluids
- * @cosmo: a #NcHICosmo
- * @cross: a #NcHIPertTwoFluidsCross
+ * @main_mode: main mode
  * @alpha_i: initial try
  * @prec: precision
  *
- * Get the initial time where the approximate solution is valid
- * within precision @prec.
+ * Get the initial time where the WKB approximation is valid up to @prec. The algorithm
+ * uses @alpha_i as the initial guess.
  *
  * Returns: initial time $\alpha_i$.
  */
 gdouble
-nc_hipert_two_fluids_get_cross_time (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, NcHIPertTwoFluidsCross cross, gdouble alpha_i, gdouble prec)
+nc_hipert_two_fluids_get_wkb_limit (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, guint main_mode, gdouble alpha_i, gdouble prec)
 {
   NcHIPert *pert                        = NC_HIPERT (ptf);
   NcHIPertPrivate * const pself         = nc_hipert_get_private (pert);
@@ -2310,19 +1329,13 @@ nc_hipert_two_fluids_get_cross_time (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, N
   gsl_function F;
   gdouble alpha0, alpha1, alpha = alpha_i;
 
-  switch (cross)
+  switch (main_mode)
   {
-    case NC_HIPERT_TWO_FLUIDS_CROSS_MODE1MAIN:
-      F.function = &_nc_hipert_two_fluids_cross_time_mode1main_root;
+    case 1:
+      F.function = &_nc_hipert_two_fluids_wkb_limit_mode1_root;
       break;
-    case NC_HIPERT_TWO_FLUIDS_CROSS_MODE2MAIN:
-      F.function = &_nc_hipert_two_fluids_cross_time_mode2main_root;
-      break;
-    case NC_HIPERT_TWO_FLUIDS_CROSS_MODE1SUB:
-      F.function = &_nc_hipert_two_fluids_cross_time_mode1sub_root;
-      break;
-    case NC_HIPERT_TWO_FLUIDS_CROSS_MODE2SUB:
-      F.function = &_nc_hipert_two_fluids_cross_time_mode2sub_root;
+    case 2:
+      F.function = &_nc_hipert_two_fluids_wkb_limit_mode2_root;
       break;
     default:
       g_assert_not_reached ();
@@ -2377,7 +1390,7 @@ nc_hipert_two_fluids_get_cross_time (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, N
     g_warning ("%s", gsl_strerror (status));
 
   if (iter >= max_iter)
-    g_warning ("nc_hipert_two_fluids_get_cross_time: maximum number of interations reached.");
+    g_warning ("nc_hipert_two_fluids_get_wkb_limit: maximum number of interations reached.");
 
   gsl_root_fsolver_free (s);
 
@@ -2395,7 +1408,7 @@ _nc_hipert_two_fluids_zeta_spectrum (const gdouble lnk, gpointer userdata)
 
   nc_hipert_set_mode_k (pert, k);
 
-  alpha_i = nc_hipert_two_fluids_get_cross_time (arg->ptf, arg->cosmo, arg->mode - 1, arg->alpha_i, arg->prec);
+  alpha_i = nc_hipert_two_fluids_get_wkb_limit (arg->ptf, arg->cosmo, arg->mode - 1, arg->alpha_i, arg->prec);
   nc_hipert_two_fluids_get_init_cond_zetaS (arg->ptf, arg->cosmo, alpha_i, arg->mode, M_PI * 0.25, init_cond);
   nc_hipert_two_fluids_set_init_cond (arg->ptf, arg->cosmo, alpha_i, arg->mode, FALSE, init_cond);
 

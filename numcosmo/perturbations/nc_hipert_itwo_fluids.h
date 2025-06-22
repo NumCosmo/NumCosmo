@@ -44,9 +44,11 @@ G_BEGIN_DECLS
 typedef struct _NcHIPertITwoFluids NcHIPertITwoFluids;
 typedef struct _NcHIPertITwoFluidsInterface NcHIPertITwoFluidsInterface;
 typedef struct _NcHIPertITwoFluidsEOM NcHIPertITwoFluidsEOM;
+typedef struct _NcHIPertITwoFluidsWKB NcHIPertITwoFluidsWKB;
 typedef struct _NcHIPertITwoFluidsTV NcHIPertITwoFluidsTV;
 
 typedef NcHIPertITwoFluidsEOM *(*NcHIPertITwoFluidsFuncEOM) (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+typedef NcHIPertITwoFluidsWKB *(*NcHIPertITwoFluidsFuncWKB) (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 typedef NcHIPertITwoFluidsTV *(*NcHIPertITwoFluidsFuncTV) (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 
 struct _NcHIPertITwoFluidsInterface
@@ -54,13 +56,15 @@ struct _NcHIPertITwoFluidsInterface
   /*< private >*/
   GTypeInterface parent;
   NcHIPertITwoFluidsFuncEOM eom;
+  NcHIPertITwoFluidsFuncWKB wkb;
   NcHIPertITwoFluidsFuncTV tv;
 };
 
 /**
  * NcHIPertITwoFluidsEOM:
  *
- * FIXME
+ * Structure used to store the perturbations' equations of motion coefficients for the
+ * two-fluid model.
  *
  */
 struct _NcHIPertITwoFluidsEOM
@@ -84,34 +88,20 @@ struct _NcHIPertITwoFluidsEOM
   gdouble cos2phi;
   gdouble cs2;
   gdouble cm2;
-/* New variables */
-  gdouble gw1;
-  gdouble gw2;
-  gdouble F;
-  #ifndef NUMCOSMO_GIR_SCAN
-  complex double vzeta1;
-  complex double vQ1;
-  complex double vPzeta1;
-  complex double vPQ1;
-  complex double vzeta2;
-  complex double vQ2;
-  complex double vPzeta2;
-  complex double vPQ2;
-  #endif /* NUMCOSMO_GIR_SCAN */
 };
 
 /**
  * NcHIPertITwoFluidsVars:
- * @NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R: FIXME
- * @NC_HIPERT_ITWO_FLUIDS_VARS_S_R:  FIXME
- * @NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R: FIXME
- * @NC_HIPERT_ITWO_FLUIDS_VARS_PS_R:  FIXME
- * @NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I: FIXME
- * @NC_HIPERT_ITWO_FLUIDS_VARS_S_I:  FIXME
- * @NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I: FIXME
- * @NC_HIPERT_ITWO_FLUIDS_VARS_PS_I:  FIXME
+ * @NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R: Real part of the adiabatic perturbation
+ * @NC_HIPERT_ITWO_FLUIDS_VARS_S_R:  Real part of the entropy perturbation
+ * @NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R: Real part of the adiabatic perturbation's momentum
+ * @NC_HIPERT_ITWO_FLUIDS_VARS_PS_R:  Real part of the entropy perturbation's momentum
+ * @NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I: Imaginary part of the adiabatic perturbation
+ * @NC_HIPERT_ITWO_FLUIDS_VARS_S_I:   Imaginary part of the entropy perturbation
+ * @NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I: Imaginary part of the adiabatic perturbation's momentum
+ * @NC_HIPERT_ITWO_FLUIDS_VARS_PS_I:   Imaginary part of the entropy perturbation's momentum
  *
- * FIXME
+ * Enumeration of variables used in the two-fluid model.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_VARS >*/
@@ -140,7 +130,7 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_VARS >*/
 /**
  * NcHIPertITwoFluidsTV:
  *
- * FIXME
+ * Structure used to store the perturbations' transfer functions for the two-fluid model.
  *
  */
 struct _NcHIPertITwoFluidsTV
@@ -155,17 +145,60 @@ struct _NcHIPertITwoFluidsTV
   gdouble Ps[NC_HIPERT_ITWO_FLUIDS_VARS_LEN / 2];
 };
 
+
+/**
+ * NcHIPertITwoFluidsWKB:
+ *
+ * Structure representing the WKB approximations of perturbations in the two-fluid
+ * model. Stores two approximations, one for each eigenmode, along with their
+ * corresponding estimated errors.
+ *
+ */
+struct _NcHIPertITwoFluidsWKB
+{
+  /*< private >*/
+  gdouble gw1;
+  gdouble gw2;
+  gdouble Fnu;
+  gdouble mode1_scale;
+  gdouble mode2_scale;
+  gdouble mode1_zeta_scale;
+  gdouble mode2_zeta_scale;
+  gdouble mode1_Q_scale;
+  gdouble mode2_Q_scale;
+  gdouble mode1_Pzeta_scale;
+  gdouble mode2_Pzeta_scale;
+  gdouble mode1_PQ_scale;
+  gdouble mode2_PQ_scale;
+#ifndef NUMCOSMO_GIR_SCAN
+  complex double zeta1;
+  complex double Q1;
+  complex double Pzeta1;
+  complex double PQ1;
+
+  complex double zeta2;
+  complex double Q2;
+  complex double Pzeta2;
+  complex double PQ2;
+#endif /* NUMCOSMO_GIR_SCAN */
+};
+
 GType nc_hipert_itwo_fluids_eom_get_type (void) G_GNUC_CONST;
+GType nc_hipert_itwo_fluids_wkb_get_type (void) G_GNUC_CONST;
 GType nc_hipert_itwo_fluids_tv_get_type (void) G_GNUC_CONST;
 GType nc_hipert_itwo_fluids_get_type (void) G_GNUC_CONST;
 
 NcHIPertITwoFluidsEOM *nc_hipert_itwo_fluids_eom_dup (NcHIPertITwoFluidsEOM *tf_eom);
 void nc_hipert_itwo_fluids_eom_free (NcHIPertITwoFluidsEOM *tf_eom);
 
+NcHIPertITwoFluidsWKB *nc_hipert_itwo_fluids_wkb_dup (NcHIPertITwoFluidsWKB *tf_wkb);
+void nc_hipert_itwo_fluids_wkb_free (NcHIPertITwoFluidsWKB *tf_wkb);
+
 NcHIPertITwoFluidsTV *nc_hipert_itwo_fluids_tv_dup (NcHIPertITwoFluidsTV *tf_tv);
 void nc_hipert_itwo_fluids_tv_free (NcHIPertITwoFluidsTV *tf_tv);
 
 NCM_INLINE NcHIPertITwoFluidsEOM *nc_hipert_itwo_fluids_eom_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+NCM_INLINE NcHIPertITwoFluidsWKB *nc_hipert_itwo_fluids_wkb_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 NCM_INLINE NcHIPertITwoFluidsTV *nc_hipert_itwo_fluids_tv_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 
 G_END_DECLS
@@ -183,6 +216,12 @@ NCM_INLINE NcHIPertITwoFluidsEOM *
 nc_hipert_itwo_fluids_eom_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
 {
   return NC_HIPERT_ITWO_FLUIDS_GET_INTERFACE (itf)->eom (itf, alpha, k);
+}
+
+NCM_INLINE NcHIPertITwoFluidsWKB *
+nc_hipert_itwo_fluids_wkb_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
+{
+  return NC_HIPERT_ITWO_FLUIDS_GET_INTERFACE (itf)->wkb (itf, alpha, k);
 }
 
 NCM_INLINE NcHIPertITwoFluidsTV *

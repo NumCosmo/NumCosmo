@@ -39,6 +39,7 @@
 
 G_DEFINE_INTERFACE (NcHIPertITwoFluids, nc_hipert_itwo_fluids, G_TYPE_OBJECT)
 G_DEFINE_BOXED_TYPE (NcHIPertITwoFluidsEOM, nc_hipert_itwo_fluids_eom, nc_hipert_itwo_fluids_eom_dup, nc_hipert_itwo_fluids_eom_free)
+G_DEFINE_BOXED_TYPE (NcHIPertITwoFluidsWKB, nc_hipert_itwo_fluids_wkb, nc_hipert_itwo_fluids_wkb_dup, nc_hipert_itwo_fluids_wkb_free)
 G_DEFINE_BOXED_TYPE (NcHIPertITwoFluidsTV, nc_hipert_itwo_fluids_tv, nc_hipert_itwo_fluids_tv_dup, nc_hipert_itwo_fluids_tv_free)
 
 static void
@@ -47,6 +48,7 @@ nc_hipert_itwo_fluids_default_init (NcHIPertITwoFluidsInterface *iface)
   g_assert_cmpuint ((NC_HIPERT_ITWO_FLUIDS_VARS_LEN % 2), ==, 0);
 
   iface->eom = NULL;
+  iface->wkb = NULL;
   iface->tv  = NULL;
 }
 
@@ -79,6 +81,37 @@ void
 nc_hipert_itwo_fluids_eom_free (NcHIPertITwoFluidsEOM *tf_eom)
 {
   g_free (tf_eom);
+}
+
+/**
+ * nc_hipert_itwo_fluids_wkb_dup:
+ * @tf_wkb: a #NcHIPertITwoFluidsWKB.
+ *
+ * Duplicates @tf_wkb.
+ *
+ * Returns: (transfer full): a copy of @tf_wkb.
+ */
+NcHIPertITwoFluidsWKB *
+nc_hipert_itwo_fluids_wkb_dup (NcHIPertITwoFluidsWKB *tf_wkb)
+{
+  NcHIPertITwoFluidsWKB *tf_wkb_dup = g_new (NcHIPertITwoFluidsWKB, 1);
+
+  *tf_wkb_dup = *tf_wkb;
+
+  return tf_wkb_dup;
+}
+
+/**
+ * nc_hipert_itwo_fluids_wkb_free:
+ * @tf_wkb: a #NcHIPertITwoFluidsWKB.
+ *
+ * Frees @tf_wkb.
+ *
+ */
+void
+nc_hipert_itwo_fluids_wkb_free (NcHIPertITwoFluidsWKB *tf_wkb)
+{
+  g_free (tf_wkb);
 }
 
 /**
@@ -125,6 +158,17 @@ nc_hipert_itwo_fluids_tv_free (NcHIPertITwoFluidsTV *tf_tv)
  * Returns: (transfer none): a #NcHIPertITwoFluidsEOM.
  */
 
+/**
+ * nc_hipert_itwo_fluids_wkb_eval:
+ * @itf: a #NcHIPertITwoFluids
+ * @alpha: time in log of scale factor
+ * @k: wave number
+ *
+ * Computes the WKB approximations of the perturbations of the
+ * two fluids system.
+ *
+ * Returns: (transfer none): a #NcHIPertITwoFluidsWKB.
+ */
 
 /**
  * nc_hipert_itwo_fluids_tv_eval:
