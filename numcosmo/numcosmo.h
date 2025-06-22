@@ -122,6 +122,7 @@
 #include <numcosmo/lss/nc_halo_cm_prada12.h>
 #include <numcosmo/lss/nc_halo_cm_bhattacharya13.h>
 #include <numcosmo/lss/nc_halo_cm_dutton14.h>
+#include <numcosmo/lss/nc_halo_cm_diemer15.h>
 #include <numcosmo/lss/nc_galaxy_acf.h>
 #include <numcosmo/lss/nc_multiplicity_func.h>
 #include <numcosmo/lss/nc_multiplicity_func_ps.h>
