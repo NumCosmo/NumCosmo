@@ -102,6 +102,7 @@ static gdouble _nc_hicosmo_qgrw_xb (NcHICosmo *cosmo);
 static NcHIPertITwoFluidsEOM *_nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 static NcHIPertITwoFluidsWKB *_nc_hipert_itwo_fluids_wkb (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 static NcHIPertITwoFluidsTV *_nc_hipert_itwo_fluids_tv (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+static gdouble _nc_hipert_itwo_fluids_eval_unit (NcHIPertITwoFluids *itf);
 
 static void
 nc_hicosmo_qgrw_class_init (NcHICosmoQGRWClass *klass)
@@ -157,9 +158,10 @@ nc_hicosmo_qgrw_class_init (NcHICosmoQGRWClass *klass)
 static void
 nc_hipert_itwo_fluids_interface_init (NcHIPertITwoFluidsInterface *iface)
 {
-  iface->eom = &_nc_hipert_itwo_fluids_eom;
-  iface->wkb = &_nc_hipert_itwo_fluids_wkb;
-  iface->tv  = &_nc_hipert_itwo_fluids_tv;
+  iface->eom       = &_nc_hipert_itwo_fluids_eom;
+  iface->wkb       = &_nc_hipert_itwo_fluids_wkb;
+  iface->tv        = &_nc_hipert_itwo_fluids_tv;
+  iface->eval_unit = &_nc_hipert_itwo_fluids_eval_unit;
 }
 
 static gdouble _nc_hicosmo_qgrw_gw_eval_xi (NcHIPertIGW *igw, const gdouble alpha, const gdouble k);
@@ -603,6 +605,8 @@ _nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
       const gdouble rhopp = rhopp1 + rhopp2;
       const gdouble cs2   = c1 * c1 * cos2_phi + c2 * c2 * sin2_phi;
       const gdouble cm2   = c2 * c2 * cos2_phi + c1 * c1 * sin2_phi;
+      const gdouble gw1   = rhopp1 / (absE * x3);
+      const gdouble gw2   = rhopp2 / (absE * x3);
 
       qgrw->eom_two_fluids.cos2phi   = cos2_phi;
       qgrw->eom_two_fluids.sin2phi   = sin2_phi;
@@ -613,6 +617,10 @@ _nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
       qgrw->eom_two_fluids.mnu2_zeta = rhopp * k * k / (x * gsl_pow_3 (absE));
       qgrw->eom_two_fluids.mnu2_s    = x3 * x2 * k * k / (absE * rhopp * cos2_phi * sin2_phi);
       qgrw->eom_two_fluids.y         = epsilon * (c1 * c1 - c2 * c2) * cos2_phi * sin2_phi;
+
+      qgrw->eom_two_fluids.gw1 = gw1;
+      qgrw->eom_two_fluids.gw2 = gw2;
+      qgrw->eom_two_fluids.Fnu = Fnu;
     }
 
     qgrw->eom_two_fluids.skey  = ncm_model_state_get_pkey (NCM_MODEL (cosmo));
@@ -747,19 +755,21 @@ _nc_hipert_itwo_fluids_wkb (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
   vPzeta2 *= 1.0 + delta1v_Pzeta2 + delta2v_Pzeta2;
   vPQ2    *= 1.0 + delta1v_PQ2 + delta2v_PQ2;
 
-  qgrw->wkb_two_fluids.gw1 = gw1;
-  qgrw->wkb_two_fluids.gw2 = gw2;
-  qgrw->wkb_two_fluids.Fnu = Fnu;
+  qgrw->wkb_two_fluids.state.alpha = alpha;
+  qgrw->wkb_two_fluids.state.k     = k;
+  qgrw->wkb_two_fluids.state.gw1   = gw1;
+  qgrw->wkb_two_fluids.state.gw2   = gw2;
+  qgrw->wkb_two_fluids.state.Fnu   = Fnu;
 
-  qgrw->wkb_two_fluids.zeta1  = vzeta1;
-  qgrw->wkb_two_fluids.Q1     = vQ1;
-  qgrw->wkb_two_fluids.Pzeta1 = vPzeta1;
-  qgrw->wkb_two_fluids.PQ1    = vPQ1;
+  qgrw->wkb_two_fluids.state.zeta1  = vzeta1;
+  qgrw->wkb_two_fluids.state.Q1     = vQ1;
+  qgrw->wkb_two_fluids.state.Pzeta1 = vPzeta1;
+  qgrw->wkb_two_fluids.state.PQ1    = vPQ1;
 
-  qgrw->wkb_two_fluids.zeta2  = vzeta2;
-  qgrw->wkb_two_fluids.Q2     = vQ2;
-  qgrw->wkb_two_fluids.Pzeta2 = vPzeta2;
-  qgrw->wkb_two_fluids.PQ2    = vPQ2;
+  qgrw->wkb_two_fluids.state.zeta2  = vzeta2;
+  qgrw->wkb_two_fluids.state.Q2     = vQ2;
+  qgrw->wkb_two_fluids.state.Pzeta2 = vPzeta2;
+  qgrw->wkb_two_fluids.state.PQ2    = vPQ2;
 
 /*
  * Estimate the WKB scale for each component and mode. In single-component inflation,
@@ -887,6 +897,16 @@ _nc_hipert_itwo_fluids_tv (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
   }
 
   return &qgrw->tv_two_fluids;
+}
+
+static gdouble
+_nc_hipert_itwo_fluids_eval_unit (NcHIPertITwoFluids *itf)
+{
+  NcHICosmo *cosmo     = NC_HICOSMO (itf);
+  const gdouble RH_lp  = nc_hicosmo_RH_planck (cosmo);
+  const gdouble factor = sqrt (8.0 * ncm_c_pi () / 3.0);
+
+  return factor / RH_lp;
 }
 
 static gdouble

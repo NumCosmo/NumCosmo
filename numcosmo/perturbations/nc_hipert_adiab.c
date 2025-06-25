@@ -815,7 +815,7 @@ nc_hipert_adiab_prepare_spectrum (NcHIPertAdiab *adiab, NcmModel *model, GArray 
 
 static NcmPowspecSpline2d *
 _nc_hipert_adiab_eval_powspec_func (NcHIPertAdiab *adiab, NcmModel *model,
-                                    gdouble (*eval_from_state)(NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k))
+                                    gdouble (*eval_from_state) (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k))
 {
   if (!ncm_spline2d_is_init (adiab->powspec_alpha) || !ncm_spline2d_is_init (adiab->powspec_gamma))
   {
