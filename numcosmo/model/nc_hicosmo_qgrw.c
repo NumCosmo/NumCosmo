@@ -1191,13 +1191,51 @@ _nc_hicosmo_qgrw_adiab_eval_x (NcHIPertIAdiab *iad, const gdouble alpha)
 static gdouble
 _nc_hicosmo_qgrw_adiab_eval_p2Psi (NcHIPertIAdiab *iad, const gdouble alpha, const gdouble k)
 {
-  return 0.0;
+  NcHICosmo *cosmo        = NC_HICOSMO (iad);
+  const gdouble epsilon   = GSL_SIGN (alpha);
+  const gdouble absalpha  = fabs (alpha);
+  const gdouble w2        = W;
+  const gdouble x         = X_B * exp (-absalpha);
+  const gdouble x2        = x * x;
+  const gdouble x3        = x2 * x;
+  const gdouble x3_1pw    = x3 * pow (x3, w2);
+  const gdouble x_m3w     = x / pow (x3, w2);
+  const gdouble three_1mw = 3.0 * (1.0 - w2);
+  const gdouble oneF1_r   = ncm_exprel (-2.0 * absalpha);
+  const gdouble oneF1_p   = ncm_exprel (-three_1mw * absalpha);
+  const gdouble R0        = OMEGA_R / OMEGA_W;
+  const gdouble F         = (R0 * x_m3w * 2.0 * oneF1_r + three_1mw * oneF1_p) * epsilon * alpha;
+  const gdouble E2        = OMEGA_W * x3_1pw * F;
+  const gdouble absE      = sqrt (E2);
+
+  return -3.0 * epsilon * x * absE / (2.0 * k * k);
 }
 
 static gdouble
 _nc_hicosmo_qgrw_adiab_eval_p2drho (NcHIPertIAdiab *iad, const gdouble alpha, const gdouble k)
 {
-  return 0.0;
+  NcHICosmo *cosmo        = NC_HICOSMO (iad);
+  const gdouble epsilon   = GSL_SIGN (alpha);
+  const gdouble absalpha  = fabs (alpha);
+  const gdouble w2        = W;
+  const gdouble x         = X_B * exp (-absalpha);
+  const gdouble x2        = x * x;
+  const gdouble x3        = x2 * x;
+  const gdouble x4        = x2 * x2;
+  const gdouble x3_1pw    = x3 * pow (x3, w2);
+  const gdouble x_m3w     = x / pow (x3, w2);
+  const gdouble three_1mw = 3.0 * (1.0 - w2);
+  const gdouble oneF1_r   = ncm_exprel (-2.0 * absalpha);
+  const gdouble oneF1_p   = ncm_exprel (-three_1mw * absalpha);
+  const gdouble R0        = OMEGA_R / OMEGA_W;
+  const gdouble F         = (R0 * x_m3w * 2.0 * oneF1_r + three_1mw * oneF1_p) * epsilon * alpha;
+  const gdouble E2        = OMEGA_W * x3_1pw * F;
+  const gdouble absE      = sqrt (E2);
+  const gdouble rhopp1    = OMEGA_R * (1.0 + 1.0 / 3.0) * x4;
+  const gdouble rhopp2    = OMEGA_W * (1.0 + w2) * x3_1pw;
+  const gdouble rhopp     = rhopp1 + rhopp2;
+
+  return -epsilon * x3 * absE / rhopp;
 }
 
 static gdouble

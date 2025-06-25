@@ -289,7 +289,7 @@ _nc_hipert_itwo_fluids_state_eval_obs_helper (const complex double zeta, const c
 gdouble
 nc_hipert_itwo_fluids_state_eval_obs (NcHIPertITwoFluidsState *tf_state, NcHIPertITwoFluidsObsMode obs_mode, NcHIPertITwoFluidsObs obs_a, NcHIPertITwoFluidsObs obs_b)
 {
-  const gdouble norma         = tf_state->norma * tf_state->norma * gsl_pow_3 (tf_state->k) / ncm_c_two_pi_2 ();
+  const gdouble norma         = tf_state->norma * tf_state->norma / ncm_c_two_pi_2 ();
   const gdouble epsilon       = GSL_SIGN (tf_state->alpha);
   NcHIPertITwoFluidsArgs args = {epsilon, tf_state->gw1, tf_state->gw2, tf_state->Fnu};
   complex double obs1a        = 0.0;

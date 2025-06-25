@@ -674,7 +674,7 @@ _nc_hipert_eval_powspec_drho_from_state (NcHIPertAdiab *adiab, NcmModel *model, 
 
   ncm_csq1d_state_get_J (state, &J11, &J12, &J22);
 
-  return gsl_pow_2 (unit * p2drho) * n0 * (J22 / 2.0);
+  return gsl_pow_2 (unit) * n0 * 0.5 * (gsl_pow_2 (p2drho) * J22 + 9.0 * J11 + 2.0 * 3.0 * p2drho * J12);
 }
 
 /**
