@@ -25,6 +25,7 @@
 """Tests on NcmDataSNIACov class."""
 
 import pytest
+import numpy as np
 
 from numcosmo_py import Ncm, Nc
 
@@ -63,3 +64,37 @@ def test_constructor_catalog_id(cov_id):
 
     assert snia_cov.get_dof() > 0
     assert snia_cov.get_length() > 0
+
+
+def test_recover_best_fit_DES_Y5():
+    cov_id = Nc.DataSNIAId.COV_DES_Y5_STAT_SYS
+    snia_data = Nc.DataSNIACov.new_from_cat_id(cov_id, True)
+    cosmo = Nc.HICosmoDEXcdm.new()
+    cosmo.omega_x2omega_k()
+    cosmo["Omegak"] = 0.0
+    cosmo.param_set_desc(f"w", {"fit": True})
+    cosmo.param_set_desc(f"Omegac", {"fit": True})
+
+    mset = Ncm.MSet.new_array([cosmo])
+    dset = Ncm.Dataset.new()
+
+    dist = Nc.Distance.new(10.0)
+
+    snia_model = Nc.SNIADistCov.new_by_id(dist, cov_id)
+    mset.set(snia_model)
+
+    dset.append_data(snia_data)
+
+    likelihood = Ncm.Likelihood.new(dset)
+    best_fit = Ncm.Fit.factory(
+        Ncm.FitType.NLOPT,
+        "ln-neldermead",
+        likelihood,
+        mset,
+        Ncm.FitGradType.NUMDIFF_CENTRAL,
+    )
+
+    best_fit.run(Ncm.FitRunMsgs.NONE)
+    # DES Y5 best fit Flat-wcdm from arXiv:2401.02929: Omegam = 0.264, w = -0.80 / Omegab = 0.0432
+    np.isclose(cosmo["Omegac"], 0.2208, rtol=1e-2, atol=1e-2)
+    np.isclose(cosmo["w"], -0.80, rtol=1e-2, atol=1e-2)

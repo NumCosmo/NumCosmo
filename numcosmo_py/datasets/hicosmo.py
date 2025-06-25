@@ -50,6 +50,7 @@ class BAOID(StrEnum):
 
     SDSS_ALL_COMBINED = auto()
     ALL_COMBINED_JAN_2023 = SDSS_ALL_COMBINED
+    ALL_COMBINED_JUN_2025 = auto()
 
 
 class HID(StrEnum):
@@ -95,12 +96,24 @@ def add_bao_likelihood(
             bao_enums = [
                 Nc.DataBaoId.RDV_BEUTLER2011,
                 Nc.DataBaoId.EMPIRICAL_FIT_ROSS2015,
+                Nc.DataBaoId.RDV_KAZIN2014,
                 Nc.DataBaoId.DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE,
                 Nc.DataBaoId.DTR_DHR_SDSS_DR16_LRG_2021,
                 Nc.DataBaoId.DTR_DHR_SDSS_DR16_QSO_2021,
                 Nc.DataBaoId.EMPIRICAL_FIT_1D_SDSS_DR16_ELG_2021,
                 Nc.DataBaoId.EMPIRICAL_FIT_2D_SDSS_DR16_LYAUTO_2021,
                 Nc.DataBaoId.EMPIRICAL_FIT_2D_SDSS_DR16_LYXQSO_2021,
+            ]
+            for bao_enum in bao_enums:
+                bao_likelihood = Nc.data_bao_create(dist, bao_enum)
+                dataset.append_data(bao_likelihood)
+        case BAOID.ALL_COMBINED_JUN_2025:
+            bao_enums = [
+                Nc.DataBaoId.RDV_BEUTLER2011,
+                Nc.DataBaoId.RDV_KAZIN2014,
+                Nc.DataBaoId.EMPIRICAL_FIT_ROSS2015,
+                Nc.DataBaoId.RDV_DESI_DR2_BGS_2025,
+                Nc.DataBaoId.DVR_DTDH_DESI_DR2_2025,
             ]
             for bao_enum in bao_enums:
                 bao_likelihood = Nc.data_bao_create(dist, bao_enum)

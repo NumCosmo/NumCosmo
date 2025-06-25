@@ -500,7 +500,7 @@ class GenerateQSpline:
         Optional[BAOID], typer.Option(help="Include BAO data.", show_default=True)
     ] = None
 
-    include_huble: Annotated[
+    include_hubble: Annotated[
         Optional[HID], typer.Option(help="Include Hubble data.", show_default=True)
     ] = None
 
@@ -530,8 +530,8 @@ class GenerateQSpline:
             add_bao_likelihood(dset, mset, dist, self.include_bao)
             cosmo.param_set_desc("asdrag", {"fit": True})
 
-        if self.include_huble is not None:
-            add_h_likelihood(dset, mset, self.include_huble)
+        if self.include_hubble is not None:
+            add_h_likelihood(dset, mset, self.include_hubble)
             cosmo.param_set_desc("H0", {"fit": True})
 
         if dset.get_length() == 0:
@@ -551,3 +551,88 @@ class GenerateQSpline:
             dset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
         )
         ser.dict_str_to_yaml_file(experiment, self.experiment.absolute().as_posix())
+
+
+@dataclasses.dataclass(kw_only=True)
+class GenerateXCDM:
+    """Generate XCDM experiment."""
+
+    experiment: Annotated[
+        Path, typer.Argument(help="Path to the experiment file to fit.")
+    ]
+
+    curvature: Annotated[
+        bool, typer.Option(help="Include curvature.", show_default=False)
+    ] = False
+
+    include_snia: Annotated[
+        Optional[SNIaID], typer.Option(help="Include SNIa data.", show_default=True)
+    ] = None
+
+    include_bao: Annotated[
+        Optional[BAOID], typer.Option(help="Include BAO data.", show_default=True)
+    ] = None
+
+    include_hubble: Annotated[
+        Optional[HID], typer.Option(help="Include Hubble data.", show_default=True)
+    ] = None
+
+    def __post_init__(self):
+        """Generate XCDM experiment."""
+        Ncm.cfg_init()
+
+        if self.experiment.suffix != ".yaml":
+            raise ValueError(
+                f"Invalid experiment file suffix: {self.experiment.suffix}"
+            )
+
+        cosmo = Nc.HICosmoDEXcdm.new()
+        if self.curvature is False:
+            cosmo.omega_x2omega_k()
+            cosmo["Omegak"] = 0.0
+
+        cosmo.param_set_desc(f"w", {"fit": True})
+        cosmo.param_set_desc(f"Omegac", {"fit": True})
+
+        mset = Ncm.MSet.new_array([cosmo])
+        dset = Ncm.Dataset.new()
+
+        dist = Nc.Distance.new(10.0)
+
+        if self.include_snia is not None:
+            add_snia_likelihood(dset, mset, dist, self.include_snia)
+
+        if self.include_bao is not None:
+            add_bao_likelihood(dset, mset, dist, self.include_bao)
+            cosmo.param_set_desc("asdrag", {"fit": True})
+
+        if self.include_hubble is not None:
+            add_h_likelihood(dset, mset, self.include_hubble)
+            cosmo.param_set_desc("H0", {"fit": True})
+
+        if dset.get_length() == 0:
+            raise ValueError("No data included in the experiment.")
+
+        mset.prepare_fparam_map()
+        likelihood = Ncm.Likelihood.new(dset)
+        # Save experiment
+        experiment = Ncm.ObjDictStr()
+
+        experiment.set("distance", dist)
+        experiment.set("likelihood", likelihood)
+        experiment.set("model-set", mset)
+
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser.to_binfile(
+            dset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
+        )
+        ser.dict_str_to_yaml_file(experiment, self.experiment.absolute().as_posix())
+
+        mfunc_oa = Ncm.ObjArray.new()
+        mfunc_Omegam = Ncm.MSetFuncList.new("NcHICosmo:Omega_m0", None)
+        mfunc_oa.add(mfunc_Omegam)
+
+        ser.array_to_yaml_file(
+            mfunc_oa,
+            self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
+        )
