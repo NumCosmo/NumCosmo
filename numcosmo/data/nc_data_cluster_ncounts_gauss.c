@@ -95,7 +95,6 @@ typedef struct _NcDataClusterNCountsGaussIndex
   guint i_lnM;
   gdouble *z_obs_lb;
   gdouble *z_obs_ub;
-  NcmVector *z_obs_params;
   gdouble *lnM_obs_lb;
   gdouble *lnM_obs_ub;
 } NcDataClusterNCountsGaussIndex;
@@ -458,7 +457,7 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
     else
       s_matrix = self->s_matrix;
 
-    
+
 
     ncm_matrix_set_zero (cov);
 
@@ -855,4 +854,3 @@ nc_data_cluster_ncounts_gauss_get_fix_cov (NcDataClusterNCountsGauss *ncounts_ga
 
   return self->fix_cov;
 }
-

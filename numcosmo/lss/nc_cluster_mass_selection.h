@@ -106,8 +106,8 @@ gdouble nc_cluster_mass_selection_get_cut (NcClusterMassSelection *selection, gd
 gdouble nc_cluster_mass_selection_get_mean (NcClusterMassSelection *selection, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_selection_get_std (NcClusterMassSelection *selection, gdouble lnM, gdouble z);
 gboolean nc_cluster_mass_selection_get_enable_rejection (NcClusterMassSelection *selection);
-NcmSpline2dBicubic * nc_cluster_mass_selection_get_purity(NcClusterMassSelection *selection);
-NcmSpline2dBicubic * nc_cluster_mass_selection_get_completeness(NcClusterMassSelection *selection);
+NcmSpline2d * nc_cluster_mass_selection_get_purity(NcClusterMassSelection *selection);
+NcmSpline2d * nc_cluster_mass_selection_get_completeness(NcClusterMassSelection *selection);
 
 G_END_DECLS
 
