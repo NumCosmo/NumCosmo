@@ -40,6 +40,7 @@ typedef struct _TestNcmIntegral1d
 
 void test_ncm_integral1d_new_sinx (TestNcmIntegral1d *test, gconstpointer pdata);
 void test_ncm_integral1d_new_x5_2_sinx (TestNcmIntegral1d *test, gconstpointer pdata);
+void test_ncm_integral1d_new_mx2_2 (TestNcmIntegral1d *test, gconstpointer pdata);
 void test_ncm_integral1d_free (TestNcmIntegral1d *test, gconstpointer pdata);
 
 void test_ncm_integral1d_sinx_eval (TestNcmIntegral1d *test, gconstpointer pdata);
@@ -51,6 +52,8 @@ void test_ncm_integral1d_x5_2_sinx_eval (TestNcmIntegral1d *test, gconstpointer 
 void test_ncm_integral1d_x5_2_sinx_hermite_p (TestNcmIntegral1d *test, gconstpointer pdata);
 void test_ncm_integral1d_x5_2_sinx_hermite (TestNcmIntegral1d *test, gconstpointer pdata);
 void test_ncm_integral1d_x5_2_sinx_laguerre (TestNcmIntegral1d *test, gconstpointer pdata);
+
+void test_ncm_integral1d_m2_x2_lnint (TestNcmIntegral1d *test, gconstpointer pdata);
 
 void test_ncm_integral1d_traps (TestNcmIntegral1d *test, gconstpointer pdata);
 void test_ncm_integral1d_invalid_test (TestNcmIntegral1d *test, gconstpointer pdata);
@@ -102,6 +105,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_integral1d_x5_2_sinx_laguerre,
               &test_ncm_integral1d_free);
 
+  g_test_add ("/ncm/integral1d/exp_mx2_2/lnint", TestNcmIntegral1d, NULL,
+              &test_ncm_integral1d_new_mx2_2,
+              &test_ncm_integral1d_m2_x2_lnint,
+              &test_ncm_integral1d_free);
+
   g_test_add ("/ncm/integral1d/traps", TestNcmIntegral1d, NULL,
               &test_ncm_integral1d_new_sinx,
               &test_ncm_integral1d_traps,
@@ -125,6 +133,12 @@ static gdouble
 test_x5_2_sin (gpointer userdata, const gdouble x, const gdouble w)
 {
   return x * x * sqrt (fabs (x)) * sin (x);
+}
+
+static gdouble
+test_exp_mx2_2 (gpointer userdata, const gdouble x, const gdouble w)
+{
+  return -0.5 * x * x;
 }
 
 void
@@ -158,6 +172,21 @@ test_ncm_integral1d_new_x5_2_sinx (TestNcmIntegral1d *test, gconstpointer pdata)
 }
 
 void
+test_ncm_integral1d_new_mx2_2 (TestNcmIntegral1d *test, gconstpointer pdata)
+{
+  test->int1d = NCM_INTEGRAL1D (ncm_integral1d_ptr_new (&test_exp_mx2_2, NULL));
+
+  test->reltol = ncm_integral1d_get_reltol (test->int1d);
+  g_assert_cmpfloat (test->reltol, ==, NCM_INTEGRAL1D_DEFAULT_RELTOL);
+
+  g_assert_cmpfloat (ncm_integral1d_get_abstol (test->int1d), ==, NCM_INTEGRAL1D_DEFAULT_ABSTOL);
+  g_assert_cmpuint (ncm_integral1d_get_rule (test->int1d), ==, NCM_INTEGRAL1D_DEFAULT_ALG);
+  g_assert_cmpuint (ncm_integral1d_get_partition (test->int1d), ==, NCM_INTEGRAL1D_DEFAULT_PARTITION);
+
+  g_assert_true (NCM_IS_INTEGRAL1D (test->int1d));
+}
+
+void
 _set_destroyed (gpointer b)
 {
   gboolean *destroyed = b;
@@ -172,7 +201,7 @@ test_ncm_integral1d_free (TestNcmIntegral1d *test, gconstpointer pdata)
 }
 
 #define NCM_INTEGRAL1D_TESTCMP_ABS g_assert_cmpfloat (fabs (result), <=, prec)
-#define NCM_INTEGRAL1D_TESTCMP(d) g_assert_cmpfloat (fabs ((result - ((gdouble) d)) / result), <=, prec)
+#define NCM_INTEGRAL1D_TESTCMP(d) ncm_assert_cmpdouble_e (result, ==, (d), prec, 0.0)
 
 void
 test_ncm_integral1d_sinx_eval (TestNcmIntegral1d *test, gconstpointer pdata)
@@ -313,6 +342,20 @@ test_ncm_integral1d_x5_2_sinx_laguerre (TestNcmIntegral1d *test, gconstpointer p
 
   result = ncm_integral1d_eval_gauss_laguerre_r (test->int1d, 8.0, &err);
   NCM_INTEGRAL1D_TESTCMP (0.000941693635000236963348513154712L);
+}
+
+void
+test_ncm_integral1d_m2_x2_lnint (TestNcmIntegral1d *test, gconstpointer pdata)
+{
+  gdouble err;
+  gdouble result;
+  const gdouble prec = 1.0e-11;
+
+  ncm_integral1d_set_reltol (test->int1d, prec);
+  ncm_integral1d_set_abstol (test->int1d, 0.0);
+  result = ncm_integral1d_eval_lnint (test->int1d, -10.0, 10.0, &err);
+
+  NCM_INTEGRAL1D_TESTCMP (0.5 * ncm_c_ln2pi ());
 }
 
 void
