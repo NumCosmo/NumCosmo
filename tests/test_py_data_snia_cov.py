@@ -26,6 +26,7 @@
 
 import pytest
 import numpy as np
+from numpy.testing import assert_allclose
 
 from numcosmo_py import Ncm, Nc
 
@@ -66,6 +67,46 @@ def test_constructor_catalog_id(cov_id):
     assert snia_cov.get_length() > 0
 
 
+def test_recover_best_fit_PantheonPlus():
+    cov_id = Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT
+    snia_data = Nc.DataSNIACov.new_from_cat_id(cov_id, True)
+    snia_data = snia_data.apply_filter_sh0es_z(0.01, True)
+    cosmo = Nc.HICosmoDEXcdm.new()
+    cosmo.omega_x2omega_k()
+    cosmo["Omegak"] = 0.0
+    cosmo.param_set_desc(f"w", {"fit": True})
+    cosmo.param_set_desc(f"Omegac", {"fit": True})
+    cosmo.param_set_desc(f"H0", {"fit": True})
+
+    mset = Ncm.MSet.new_array([cosmo])
+    dset = Ncm.Dataset.new()
+
+    dist = Nc.Distance.new(10.0)
+
+    snia_model = Nc.SNIADistCov.new_by_id(dist, cov_id)
+    mset.set(snia_model)
+
+    dset.append_data(snia_data)
+
+    likelihood = Ncm.Likelihood.new(dset)
+    best_fit = Ncm.Fit.factory(
+        Ncm.FitType.NLOPT,
+        "ln-neldermead",
+        likelihood,
+        mset,
+        Ncm.FitGradType.NUMDIFF_CENTRAL,
+    )
+
+    best_fit.run(Ncm.FitRunMsgs.NONE)
+    #  Pantheon+ Sh0es best-fit Flat-wcdm (values obtained using their code)
+    np.testing.assert_allclose(
+        [cosmo["Omegac"], cosmo["w"], cosmo["H0"]],
+        [0.253, -0.91, 73.44],
+        rtol=1e-2,
+        atol=1e-2,
+    )
+
+
 def test_recover_best_fit_DES_Y5():
     cov_id = Nc.DataSNIAId.COV_DES_Y5_STAT_SYS
     snia_data = Nc.DataSNIACov.new_from_cat_id(cov_id, True)
@@ -96,5 +137,6 @@ def test_recover_best_fit_DES_Y5():
 
     best_fit.run(Ncm.FitRunMsgs.NONE)
     # DES Y5 best fit Flat-wcdm from arXiv:2401.02929: Omegam = 0.264, w = -0.80 / Omegab = 0.0432
-    np.isclose(cosmo["Omegac"], 0.2208, rtol=1e-2, atol=1e-2)
-    np.isclose(cosmo["w"], -0.80, rtol=1e-2, atol=1e-2)
+    np.testing.assert_allclose(
+        [cosmo["Omegac"], cosmo["w"]], [0.2208, -0.80], rtol=1e-2, atol=1e-2
+    )

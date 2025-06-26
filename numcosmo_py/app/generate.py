@@ -593,6 +593,7 @@ class GenerateXCDM:
 
         cosmo.param_set_desc(f"w", {"fit": True})
         cosmo.param_set_desc(f"Omegac", {"fit": True})
+        # cosmo.param_set_desc(f"H0", {"fit": True})
 
         mset = Ncm.MSet.new_array([cosmo])
         dset = Ncm.Dataset.new()
@@ -604,7 +605,6 @@ class GenerateXCDM:
 
         if self.include_bao is not None:
             add_bao_likelihood(dset, mset, dist, self.include_bao)
-            cosmo.param_set_desc("asdrag", {"fit": True})
 
         if self.include_hubble is not None:
             add_h_likelihood(dset, mset, self.include_hubble)
