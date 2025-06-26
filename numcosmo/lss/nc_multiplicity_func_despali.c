@@ -35,7 +35,7 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
-
+#include <numcosmo/numcosmo.h>
 #include "lss/nc_multiplicity_func_despali.h"
 #include "math/ncm_spline_cubic_d2.h"
 #include "math/ncm_spline_gsl.h"
@@ -539,11 +539,15 @@ nc_multiplicity_func_despali_delta_vir (NcMultiplicityFuncDespali *md, NcHICosmo
   const gdouble Omega_m = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
   const gdouble x       = Omega_m - 1.0;
 
-  if (nc_hicosmo_Omega_k0 (cosmo) == 0)
+  const gboolean is_flat = ncm_cmp ((nc_hicosmo_Omega_k0 (cosmo)), (0.0), 1.0e5, 0.0) == 0;
+  if (is_flat)
+  {
     return 18.0 * pow (M_PI, 2.0) + 82.0 * x - 39.0 * x * x;
-
+  }
   else
+  {
     g_error ("Interpolation does not work in this regime.");
+}
 }
 
 /**

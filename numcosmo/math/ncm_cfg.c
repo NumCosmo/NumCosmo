@@ -150,10 +150,13 @@
 #include "lss/nc_cluster_mass_benson_xray.h"
 #include "lss/nc_cluster_mass_plcl.h"
 #include "lss/nc_cluster_mass_ascaso.h"
+#include "lss/nc_cluster_mass_lnrich_ext.h"
+#include "lss/nc_cluster_mass_selection.h"
 #include "lss/nc_cluster_redshift.h"
 #include "lss/nc_cluster_redshift_nodist.h"
 #include "lss/nc_cluster_photoz_gauss_global.h"
 #include "lss/nc_cluster_photoz_gauss.h"
+#include "lss/nc_halo_bias_despali.h"
 #include "lss/nc_halo_bias_ps.h"
 #include "lss/nc_halo_bias_st_ellip.h"
 #include "lss/nc_halo_bias_st_spher.h"
@@ -207,6 +210,7 @@
 #include "data/nc_data_cluster_ncount.h"
 #include "data/nc_data_cluster_ncounts_gauss.h"
 #include "data/nc_data_cluster_wl.h"
+#include "data/nc_data_cluster_mass_rich.h"
 #include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
 #include "data/nc_data_hubble.h"
@@ -247,7 +251,7 @@
 #endif /* NUMCOSMO_GIR_SCAN */
 
 /* *INDENT-OFF* */
-G_DEFINE_QUARK (ncm-cfg-error, ncm_cfg_error) 
+G_DEFINE_QUARK (ncm-cfg-error, ncm_cfg_error)
 /* *INDENT-ON* */
 
 static gchar *numcosmo_path         = NULL;
@@ -695,6 +699,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_BENSON_XRAY);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_PLCL);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_ASCASO);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_LNRICH_EXT);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT_NODIST);
@@ -702,6 +707,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_PHOTOZ_GAUSS);
 
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_DESPALI);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_PS);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_ELLIP);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_SPHER);
@@ -777,6 +783,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_MASS_RICH);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_SHIFT_PARAM);
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_DIST_PRIORS);
@@ -2504,4 +2511,3 @@ ncm_cfg_get_commit_hash (void)
 {
   return NUMCOSMO_GIT_COMMIT;
 }
-
