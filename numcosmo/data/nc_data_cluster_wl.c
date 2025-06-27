@@ -161,8 +161,8 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
 
       if (self->constructed)
       {
-        g_assert_cmpfloat (self->r_min, <, self->r_max); /* LCOV_EXCL_LINE */
-        self->dr = self->r_max - self->r_min;            /* LCOV_EXCL_LINE */
+        g_assert_cmpfloat (self->r_min, <, self->r_max);
+        self->dr = self->r_max - self->r_min;
       }
 
       break;
@@ -171,8 +171,8 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
 
       if (self->constructed)
       {
-        g_assert_cmpfloat (self->r_min, <, self->r_max); /* LCOV_EXCL_LINE */
-        self->dr = self->r_max - self->r_min;            /* LCOV_EXCL_LINE */
+        g_assert_cmpfloat (self->r_min, <, self->r_max);
+        self->dr = self->r_max - self->r_min;
       }
 
       break;
@@ -275,6 +275,7 @@ _nc_data_cluster_wl_constructed (GObject *object)
     NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
 
     g_assert_cmpfloat (self->r_min, <, self->r_max);
+    self->dr = self->r_max - self->r_min;
 
     self->constructed = TRUE;
   }

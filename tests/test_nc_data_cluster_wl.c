@@ -187,6 +187,23 @@ test_nc_data_cluster_wl_new (TestNcDataClusterWL *test, gconstpointer pdata)
 
   nc_data_cluster_wl_set_cut (dcwl, min_radius, max_radius);
 
+  {
+    gdouble r_min, r_max;
+
+    r_min = min_radius + 1.0;
+    r_max = max_radius + 1.0;
+
+    g_object_set (dcwl, "r-min", r_min, "r-max", r_max, NULL);
+    g_object_get (dcwl, "r-min", &r_min, "r-max", &r_max, NULL);
+    g_assert_cmpfloat (r_min, ==, min_radius + 1.0);
+    g_assert_cmpfloat (r_max, ==, max_radius + 1.0);
+
+    g_object_set (dcwl, "r-min", min_radius, "r-max", max_radius, NULL);
+    g_object_get (dcwl, "r-min", &r_min, "r-max", &r_max, NULL);
+    g_assert_cmpfloat (r_min, ==, min_radius);
+    g_assert_cmpfloat (r_max, ==, max_radius);
+  }
+
   p_dist = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (ra - 0.2, ra + 0.2, dec - 0.2, dec + 0.2));
 
   if (g_strcmp0 (ell_conv_name, "trace") == 0)
