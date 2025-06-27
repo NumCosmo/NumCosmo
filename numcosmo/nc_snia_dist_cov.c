@@ -432,6 +432,56 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
       nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
       break;
     }
+    case NC_DATA_SNIA_COV_DES_Y5_STATONLY:
+    {
+      gdouble lnsigma_int_data[7] = {lnsigma0, lnsigma0, lnsigma0, lnsigma0, lnsigma0, lnsigma0, lnsigma0};
+      NcmVector *lnsigma_int      = ncm_vector_new_data_static (lnsigma_int_data, 7, 1);
+
+      dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
+                           "dist",               dist,
+                           "alpha",              0.0,
+                           "beta",               0.0,
+                           "M1",                 -19.2,
+                           "M2",                 -19.2,
+                           "lnsigma_pecz",       lnsigma0,
+                           "lnsigma_lens",       lnsigma0,
+                           "lnsigma_int",        lnsigma_int,
+                           "lnsigma_int-length", 7,
+                           "alpha-fit",          FALSE,
+                           "beta-fit",           FALSE,
+                           "M1-fit",             TRUE,
+                           "M2-fit",             FALSE,
+                           NULL
+                          );
+      ncm_vector_free (lnsigma_int);
+      nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
+      break;
+    }
+    case NC_DATA_SNIA_COV_DES_Y5_STAT_SYS:
+    {
+      gdouble lnsigma_int_data[7] = {lnsigma0, lnsigma0, lnsigma0, lnsigma0, lnsigma0, lnsigma0, lnsigma0};
+      NcmVector *lnsigma_int      = ncm_vector_new_data_static (lnsigma_int_data, 7, 1);
+
+      dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
+                           "dist",               dist,
+                           "alpha",              0.0,
+                           "beta",               0.0,
+                           "M1",                 -19.2,
+                           "M2",                 -19.2,
+                           "lnsigma_pecz",       lnsigma0,
+                           "lnsigma_lens",       lnsigma0,
+                           "lnsigma_int",        lnsigma_int,
+                           "lnsigma_int-length", 7,
+                           "alpha-fit",          FALSE,
+                           "beta-fit",           FALSE,
+                           "M1-fit",             TRUE,
+                           "M2-fit",             FALSE,
+                           NULL
+                          );
+      ncm_vector_free (lnsigma_int);
+      nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
+      break;
+    }
     default:
       g_assert_not_reached ();
       break;

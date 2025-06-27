@@ -571,6 +571,11 @@ if python_typer.found()
             'name': 'py_cluster_wl_app',
             'source': 'test_py_cluster_wl_app.py',
         },
+        {
+            'name': 'py_generate',
+            'source': 'test_py_generate.py',
+            'timeout': 0,
+        },
     ]
 endif
 
