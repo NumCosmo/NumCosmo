@@ -591,8 +591,8 @@ class GenerateXCDM:
             cosmo.omega_x2omega_k()
             cosmo["Omegak"] = 0.0
 
-        cosmo.param_set_desc(f"w", {"fit": True})
-        cosmo.param_set_desc(f"Omegac", {"fit": True})
+        cosmo.param_set_desc("w", {"fit": True})
+        cosmo.param_set_desc("Omegac", {"fit": True})
         # cosmo.param_set_desc(f"H0", {"fit": True})
 
         mset = Ncm.MSet.new_array([cosmo])
