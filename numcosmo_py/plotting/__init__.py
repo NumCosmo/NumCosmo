@@ -173,8 +173,8 @@ def mcat_to_catalog_data(
         indices_array = indices_array[indices_array != weight_index]
 
     rows = rows[:, indices_array]
-    param_symbols: list[str] = list(mcat.col_symb(i) for i in indices_array)
-    param_names: list[str] = list(mcat.col_name(i) for i in indices_array)
+    param_symbols: list[str] = list(mcat.col_symb(int(i)) for i in indices_array)
+    param_names: list[str] = list(mcat.col_name(int(i)) for i in indices_array)
 
     bestfit = np.array(mcat.get_bestfit_row().dup_array())[indices_array]
 

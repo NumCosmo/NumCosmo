@@ -3,13 +3,13 @@
  *
  *  Tue Jul 16 06:25:17 2024
  *  Copyright  2024 Caio Lima de Oliveira
- *  <caiooliveiracode@pm.me>
+ *  <caiolimadeoliveira@pm.me>
  *  Copyright  2024  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_galaxy_wl_obs.h
- * Copyright (C) 2024 Caio Lima de Oliveira <caiooliveiracode@pm.me>
+ * Copyright (C) 2024 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -61,7 +61,47 @@ typedef enum _NcGalaxyWLObsCoord
   NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
 } NcGalaxyWLObsCoord;
 
-NcGalaxyWLObs *nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names);
+
+/**
+ * NcGalaxyWLObsEllipConv:
+ * @NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE: Normalization by the quadrupole trace.
+ * @NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET: Normalization by the quadrupole trace and determinant.
+ *
+ * Method used to compute the ellipticity from the quadrupole moment matrix.
+ * The quadrupole matrix can be normalized either by its trace or by a combination
+ * of trace and determinant. In both cases, the shape can be described by an ellipse
+ * parameterized as
+ * $$
+ * \left(\frac{x\cos\theta + y\sin\theta}{a}\right)^2 +
+ * \left(\frac{y\cos\theta - x\sin\theta}{b}\right)^2 = 1,
+ * $$
+ * where $a$ and $b$ are the semi-major and semi-minor axes, and $\theta$ is the
+ * orientation angle.
+ *
+ * For the trace normalization
+ * (@NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE), the ellipticity is commonly defined as
+ * $$
+ * \chi = \frac{a^2 - b^2}{a^2 + b^2} e^{2i\theta},
+ * $$
+ * sometimes referred to as the distortion.
+ *
+ * For the normalization involving both trace and determinant
+ * (@NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET), the ellipticity is typically defined as
+ * $$
+ * \epsilon = \frac{a - b}{a + b} e^{2i\theta},
+ * $$
+ * which corresponds to the complex ellipticity based on axis ratio.
+ *
+ */
+typedef enum _NcGalaxyWLObsEllipConv
+{
+  NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE,
+  NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET,
+  /*< private >*/
+  NC_GALAXY_WL_OBS_ELLIP_CONV_LEN
+} NcGalaxyWLObsEllipConv;
+
+NcGalaxyWLObs *nc_galaxy_wl_obs_new (NcGalaxyWLObsEllipConv ellip_conv, NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names);
 NcGalaxyWLObs *nc_galaxy_wl_obs_ref (NcGalaxyWLObs *obs);
 
 void nc_galaxy_wl_obs_free (NcGalaxyWLObs *obs);
@@ -79,6 +119,8 @@ GStrv nc_galaxy_wl_obs_peek_columns (NcGalaxyWLObs *obs);
 
 void nc_galaxy_wl_obs_set_coord (NcGalaxyWLObs *obs, NcGalaxyWLObsCoord coord);
 NcGalaxyWLObsCoord nc_galaxy_wl_obs_get_coord (NcGalaxyWLObs *obs);
+
+NcGalaxyWLObsEllipConv nc_galaxy_wl_obs_get_ellip_conv (NcGalaxyWLObs *obs);
 
 guint nc_galaxy_wl_obs_len (NcGalaxyWLObs *obs);
 
