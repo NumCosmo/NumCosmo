@@ -497,6 +497,36 @@ class GenerateClusterWL:
         )
         ser.dict_str_to_yaml_file(exp, self.experiment.absolute().as_posix())
 
+    def parse_z_dist(self):
+        """Parse the z_dist string."""
+        z_dist_list = shlex.split(self.z_dist)
+        z_dist_type = z_dist_list.pop(0)
+        try:
+            z_dist = GalaxyZGen(z_dist_type)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+
+        try:
+            z_dist_args = z_dist.model_cls.from_args(z_dist_list)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+        return z_dist, z_dist_args
+
+    def parse_shape_dist(self):
+        """Parse the shape_dist string."""
+        shape_dist_list = shlex.split(self.shape_dist)
+        shape_dist_type = shape_dist_list.pop(0)
+        try:
+            shape_dist = GalaxyShapeGen(shape_dist_type)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+
+        try:
+            shape_dist_args = shape_dist.model_cls.from_args(shape_dist_list)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+        return shape_dist, shape_dist_args
+
 
 @dataclasses.dataclass(kw_only=True)
 class GenerateQSpline:
@@ -658,34 +688,3 @@ class GenerateXCDM:
             mfunc_oa,
             self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
         )
-        ser.dict_str_to_yaml_file(exp, self.experiment.absolute().as_posix())
-
-    def parse_z_dist(self):
-        """Parse the z_dist string."""
-        z_dist_list = shlex.split(self.z_dist)
-        z_dist_type = z_dist_list.pop(0)
-        try:
-            z_dist = GalaxyZGen(z_dist_type)
-        except ValueError as e:
-            raise typer.BadParameter(e)
-
-        try:
-            z_dist_args = z_dist.model_cls.from_args(z_dist_list)
-        except ValueError as e:
-            raise typer.BadParameter(e)
-        return z_dist, z_dist_args
-
-    def parse_shape_dist(self):
-        """Parse the shape_dist string."""
-        shape_dist_list = shlex.split(self.shape_dist)
-        shape_dist_type = shape_dist_list.pop(0)
-        try:
-            shape_dist = GalaxyShapeGen(shape_dist_type)
-        except ValueError as e:
-            raise typer.BadParameter(e)
-
-        try:
-            shape_dist_args = shape_dist.model_cls.from_args(shape_dist_list)
-        except ValueError as e:
-            raise typer.BadParameter(e)
-        return shape_dist, shape_dist_args
