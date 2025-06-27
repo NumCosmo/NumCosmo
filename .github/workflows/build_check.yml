@@ -157,11 +157,9 @@ jobs:
           [[ -e $GCC_NM ]] && NM=$GCC_NM
           [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
           meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
-          cat build/numcosmo/nc_enum_types.h
-          cat build/numcosmo/nc_enum_types.c
       - name: Building NumCosmo
         run: |
-          meson compile -C build
+          meson compile -C build || (cat build/numcosmo/nc_enum_types.h && cat build/numcosmo/nc_enum_types.c && exit 1)
       - name: Installing NumCosmo
         run: |
           meson install -C build
