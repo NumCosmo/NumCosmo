@@ -136,7 +136,7 @@ jobs:
       - name: Cache Conda env
         uses: actions/cache@v4
         env:
-          CACHE_NUMBER: 0
+          CACHE_NUMBER: 1
         with:
           path: |
             ${{ env.CONDA }}/envs
@@ -159,7 +159,7 @@ jobs:
           meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
         run: |
-          meson compile -C build || (cat build/numcosmo/nc_enum_types.h && cat build/numcosmo/nc_enum_types.c && cat build/numcosmo/*/libnumcosmo.*.symbols && cat build/numcosmo/NumCosmo-1.0.gir && exit 1)
+          meson compile -C build
       - name: Installing NumCosmo
         run: |
           meson install -C build
