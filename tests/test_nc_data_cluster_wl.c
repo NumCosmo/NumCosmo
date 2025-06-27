@@ -977,6 +977,7 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
   nc_data_cluster_wl_set_resample_flag (test->dcwl, NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL);
   g_object_set (test->dcwl, "enable-parallel", TRUE, NULL);
 
+  ncm_stats_vec_reset (stats, TRUE);
   /* Test mass fits */
   ncm_mset_param_set_ftype (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FREE);
   ncm_mset_param_set_ftype (test->mset, nc_halo_position_id (), NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FIXED);
@@ -1032,6 +1033,7 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
     ncm_assert_cmpdouble (mean_log10M, <, log10M + 8.0 * sd_log10M / sqrt (nfits));
   }
 
+  ncm_stats_vec_reset (stats, TRUE);
   /* Test ra fits */
   ncm_mset_param_set_ftype (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FIXED);
   ncm_mset_param_set_ftype (test->mset, nc_halo_position_id (), NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FREE);
@@ -1083,6 +1085,7 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
     ncm_assert_cmpdouble (mean_RA, <, ra + 6.0 * sd_RA / sqrt (nfits));
   }
 
+  ncm_stats_vec_reset (stats, TRUE);
   /* Test dec fits */
   ncm_mset_param_set_ftype (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, NCM_PARAM_TYPE_FIXED);
   ncm_mset_param_set_ftype (test->mset, nc_halo_position_id (), NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FIXED);
@@ -1104,8 +1107,8 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
     ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, -90.0);
     ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, 90.0);
 
-    ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, dec - 0.008);
-    ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, dec + 0.008);
+    ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, dec - 0.08);
+    ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, dec + 0.08);
 
     nc_galaxy_sd_position_set_ra_lim (test->galaxy_position, ra - 0.2 / cos (dec * M_PI / 180.0), ra + 0.2 / cos (dec * M_PI / 180.0));
     nc_galaxy_sd_position_set_dec_lim (test->galaxy_position, dec - 0.2, dec + 0.2);
@@ -1127,11 +1130,13 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
       ncm_stats_vec_update (stats);
     }
 
-    const gdouble mean_DEC = ncm_stats_vec_get_mean (stats, 0);
-    const gdouble sd_DEC   = ncm_stats_vec_get_sd (stats, 0);
+    {
+      const gdouble mean_DEC = ncm_stats_vec_get_mean (stats, 0);
+      const gdouble sd_DEC   = ncm_stats_vec_get_sd (stats, 0);
 
-    ncm_assert_cmpdouble (mean_DEC, >, dec - 6.0 * sd_DEC / sqrt (nfits));
-    ncm_assert_cmpdouble (mean_DEC, <, dec + 6.0 * sd_DEC / sqrt (nfits));
+      ncm_assert_cmpdouble (mean_DEC, >, dec - 6.0 * sd_DEC / sqrt (nfits));
+      ncm_assert_cmpdouble (mean_DEC, <, dec + 6.0 * sd_DEC / sqrt (nfits));
+    }
   }
 
   ncm_dataset_clear (&dataset);
