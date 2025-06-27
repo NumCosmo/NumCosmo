@@ -970,7 +970,7 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
   NcmFit *fit         = ncm_fit_factory (NCM_FIT_TYPE_NLOPT, "ln-neldermead", like, test->mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
   NcmStatsVec *stats  = ncm_stats_vec_new (3, NCM_STATS_VEC_COV, FALSE);
   NcmRNG *rng         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  guint nfits         = 10;
+  guint nfits         = 20;
   guint nruns         = 1;
   guint i, j;
 
@@ -1004,6 +1004,8 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
 
     while (j < nfits)
     {
+      gdouble param_fit;
+
       /* reset parameters before resample */
       ncm_model_param_set_by_name (NCM_MODEL (test->hms), "log10MDelta", log10M, NULL);
       ncm_model_param_set_by_name (NCM_MODEL (test->hp), "ra", ra, NULL);
@@ -1012,7 +1014,7 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
       ncm_data_resample (data, test->mset, rng);
       ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
 
-      gdouble param_fit = ncm_mset_fparam_get (test->mset, 0);
+      param_fit = ncm_mset_fparam_get (test->mset, 0);
 
       if ((param_fit > 10.0) && (param_fit < 17.0))
       {
