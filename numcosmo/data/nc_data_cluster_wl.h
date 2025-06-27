@@ -51,7 +51,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcDataClusterWL, nc_data_cluster_wl, NC, DATA_CLUSTER_WL, NcmData);
 
-typedef enum /*< flags,underscore_name=NC_DATA_CLUSTER_WL_RESAMPLE_FLAG >*/
+typedef enum _NcDataClusterWLResampleFlag /*< flags,underscore_name=NC_DATA_CLUSTER_WL_RESAMPLE_FLAG >*/
 {
   NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_POSITION = 1 << 0,
   NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_REDSHIFT = 1 << 1,
