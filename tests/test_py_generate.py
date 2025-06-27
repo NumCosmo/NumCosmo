@@ -52,9 +52,22 @@ def test_generate_jpas_invalid_suffix(tmp_path: Path):
 def test_generate_qspline(tmp_path: Path):
     exp_file = tmp_path / "qspline.yaml"
     bao_id = hicosmo.BAOID.ALL_COMBINED_JUN_2025
-    exp = gen.GenerateQSpline(experiment=exp_file.absolute(), include_bao=bao_id)
+    sne_id = hicosmo.SNIaID.COV_DES_Y5_STAT_SYS
+    h_id = hicosmo.HID.ALL_COMBINED_APR_2025
+    exp = gen.GenerateQSpline(
+        experiment=exp_file.absolute(),
+        include_snia=sne_id,
+        include_hubble=h_id,
+        include_bao=bao_id,
+    )
 
     assert exp_file.exists()
+
+
+def test_generate_qspline_no_data(tmp_path: Path):
+    exp_file = tmp_path / "qspline.yaml"
+    with pytest.raises(ValueError, match="No data included in the experiment."):
+        exp = gen.GenerateQSpline(experiment=exp_file.absolute())
 
 
 def test_generate_qspline_invalid_suffix(tmp_path: Path):
@@ -67,10 +80,39 @@ def test_generate_qspline_invalid_suffix(tmp_path: Path):
 # XCDM
 def test_generate_xcdm(tmp_path: Path):
     exp_file = tmp_path / "xcdm.yaml"
-    bao_id = hicosmo.BAOID.ALL_COMBINED_JUN_2025
-    exp = gen.GenerateXCDM(experiment=exp_file.absolute(), include_bao=bao_id)
+    bao_id = [hicosmo.BAOID.ALL_COMBINED_JUN_2025, hicosmo.BAOID.ALL_COMBINED_JAN_2023]
+    sne_id = [hicosmo.SNIaID.COV_DES_Y5_STAT_SYS, hicosmo.SNIaID.COV_DES_Y5_STATONLY]
+    h_id = [hicosmo.HID.ALL_COMBINED_APR_2025, hicosmo.HID.ALL_COMBINED_JAN_2023]
+
+    for i in range(len(bao_id)):
+        exp = gen.GenerateXCDM(
+            experiment=exp_file.absolute(),
+            include_snia=sne_id[i],
+            include_hubble=h_id[i],
+            include_bao=bao_id[i],
+        )
 
     assert exp_file.exists()
+
+
+def test_generate_xcdm_no_data(tmp_path: Path):
+    exp_file = tmp_path / "xcdm.yaml"
+    with pytest.raises(ValueError, match="No data included in the experiment."):
+        exp = gen.GenerateXCDM(experiment=exp_file.absolute())
+
+
+def test_generate_xcdm_no_valid_bao_id(tmp_path: Path):
+    exp_file = tmp_path / "xcdm.yaml"
+    bao_id = str(-1)
+    with pytest.raises(ValueError, match="Unknown BAO data set id: -1"):
+        exp = gen.GenerateXCDM(experiment=exp_file.absolute(), include_bao=bao_id)
+
+
+def test_generate_xcdm_no_valid_hubble_id(tmp_path: Path):
+    exp_file = tmp_path / "xcdm.yaml"
+    h_id = str(-1)
+    with pytest.raises(ValueError, match="Unknown Hubble data set id: -1"):
+        exp = gen.GenerateXCDM(experiment=exp_file.absolute(), include_hubble=h_id)
 
 
 def test_generate_xcdm_invalid_suffix(tmp_path: Path):
