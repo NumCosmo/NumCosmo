@@ -783,7 +783,7 @@ libnumcosmo_dep = declare_dependency(
 # Generate pkg-config files
 # Code using NumCosmo frequently depends directly on gsl, glib, gobject, and gio, so we
 # include them in the Requires field.
-# This happends mostly because of inlining, but also because of the many macros defined
+# This happens mostly because of inlining, but also because of the many macros defined
 # in the glib headers.
 pkg.generate(
     libnumcosmo,
