@@ -41,7 +41,13 @@ from .catalog import (
     ParameterEvolution,
     GetBestFit,
 )
-from .generate import GeneratePlanck, GenerateJpasForecast, GenerateClusterWL
+from .generate import (
+    GeneratePlanck,
+    GenerateJpasForecast,
+    GenerateClusterWL,
+    GenerateQSpline,
+    GenerateXCDM,
+)
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
 app_run = typer.Typer(no_args_is_help=True, help="Run different statistical analyses.")
@@ -163,6 +169,18 @@ GEN_CLUSTER_WL_CMD: CMDArg = {
     "help": "Generate cluster weak lensing experiments.",
 }
 
+GEN_QSPLINE_CMD: CMDArg = {
+    "name": "qspline",
+    "no_args_is_help": True,
+    "help": "Generate qspline experiments.",
+}
+
+GEN_XCDM_CMD: CMDArg = {
+    "name": "xcdm",
+    "no_args_is_help": True,
+    "help": "Generate xcdm experiments.",
+}
+
 # ------------------------------------------------------------------------------
 # Installing from-cosmosis command if COSMOSIS is installed and
 # all prerequisites are met.
@@ -194,3 +212,5 @@ app_cat.command(**CAT_GET_BEST_FIT_CMD)(GetBestFit)
 app_generate.command(**GEN_PLANCK_CMD)(GeneratePlanck)
 app_generate.command(**GEN_JPAS_FORECAST_CMD)(GenerateJpasForecast)
 app_generate.command(**GEN_CLUSTER_WL_CMD)(GenerateClusterWL)
+app_generate.command(**GEN_QSPLINE_CMD)(GenerateQSpline)
+app_generate.command(**GEN_XCDM_CMD)(GenerateXCDM)
