@@ -159,7 +159,7 @@ jobs:
           meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
         run: |
-          meson compile -C build || (cat build/numcosmo/nc_enum_types.h && cat build/numcosmo/nc_enum_types.c && exit 1)
+          meson compile -C build || (cat build/numcosmo/nc_enum_types.h && cat build/numcosmo/nc_enum_types.c && build/numcosmo/libnumcosmo.so.0.2400.1.p/libnumcosmo.so.0.2400.1.symbols && cat build/numcosmo/NumCosmo-1.0.gir && exit 1)
       - name: Installing NumCosmo
         run: |
           meson install -C build
