@@ -3,13 +3,13 @@
  *
  *  Tue Jul 30 23:54:39 2024
  *  Copyright  2024  Caio Lima de Oliveira
- *  <caiooliveiraCode@proton.me>
+ *  <caiolimadeoliveira@pm.me>
  *  Copyright  2024  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Caio Lima de Oliveira 2024 <caiooliveiraCode@proton.me>
+ * Copyright (C) Caio Lima de Oliveira 2024 <caiolimadeoliveira@pm.me>
  * Copyright (C) Sandro Dias Pinto Vitenti 2024 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -132,7 +132,7 @@ test_nc_galaxy_wl_obs_new (TestNcGalaxyWLObs *test, gconstpointer pdata)
   GStrv col_names          = g_strsplit ("ra dec z", " ", -1);
   guint nrows              = 100;
 
-  test->obs = nc_galaxy_wl_obs_new (coord, nrows, col_names);
+  test->obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, coord, nrows, col_names);
   g_assert_nonnull (test->obs);
   g_assert_true (NC_IS_GALAXY_WL_OBS (test->obs));
 
@@ -146,7 +146,7 @@ test_nc_galaxy_wl_obs_new_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
   GStrv col_names          = g_strsplit ("ra dec pz", " ", -1);
   guint nrows              = 100;
 
-  test->obs = nc_galaxy_wl_obs_new (coord, nrows, col_names);
+  test->obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, coord, nrows, col_names);
   g_assert_nonnull (test->obs);
   g_assert_true (NC_IS_GALAXY_WL_OBS (test->obs));
 
@@ -302,7 +302,7 @@ test_nc_galaxy_wl_obs_setget (TestNcGalaxyWLObs *test, gconstpointer pdata)
   guint ngals        = 200;
   GStrv header       = g_strsplit ("ra dec z e1 e2 e1_int e2_int e_rms e_sigma", " ", -1);
   NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, ngals, header);
+  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, ngals, header);
   NcGalaxyWLObs *obs2;
   guint i;
 
@@ -416,7 +416,7 @@ test_nc_galaxy_wl_obs_data_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 
     for (j = 0; j < 100; j++)
     {
-      g_assert_cmpfloat_with_epsilon (ncm_spline_eval (nc_galaxy_wl_obs_peek_pz (test->obs, i), j), j * j, 1e-10);
+      g_assert_cmpfloat_with_epsilon (ncm_spline_eval (nc_galaxy_wl_obs_peek_pz (test->obs, i), j), (gdouble) j * j, 1e-10);
     }
 
     ncm_spline_free (NCM_SPLINE (nak));
