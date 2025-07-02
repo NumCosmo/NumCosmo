@@ -282,6 +282,8 @@ test_nc_data_cluster_wl_new (TestNcDataClusterWL *test, gconstpointer pdata)
 
   test_nc_data_cluster_wl_gen (test, pdata);
 
+  g_assert (gsl_finite (nc_data_cluster_wl_estimate_snr (test->dcwl, test->mset)));
+
   nc_galaxy_sd_true_redshift_free (z_true_dist);
 }
 

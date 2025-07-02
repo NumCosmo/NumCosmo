@@ -1017,6 +1017,7 @@ nc_data_cluster_wl_estimate_snr (NcDataClusterWL *dcwl, NcmMSet *mset)
   NcGalaxySDShape *galaxy_shape       = NC_GALAXY_SD_SHAPE (ncm_mset_peek (mset, nc_galaxy_sd_shape_id ()));
   gdouble hat_gt, hat_gx, hat_sigma_gt, hat_sigma_gx, hat_rho;
 
+  ncm_data_prepare (NCM_DATA (dcwl), mset);
   nc_galaxy_sd_shape_direct_estimate (galaxy_shape, mset, self->shape_data, &hat_gt, &hat_gx, &hat_sigma_gt, &hat_sigma_gx, &hat_rho);
 
   return hat_gt / hat_sigma_gt;
