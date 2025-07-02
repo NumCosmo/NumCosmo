@@ -1464,7 +1464,7 @@ test_nc_galaxy_sd_shape_gauss_stats (TestNcGalaxySDShape *test, gconstpointer pd
 
         gdouble mass_fit = ncm_mset_fparam_get (test->mset, 0);
 
-        if ((mass_fit != 10.0) || (mass_fit != 17.0))
+        if ((mass_fit != 10.0) && (mass_fit != 17.0))
         {
           ncm_stats_vec_set (stats, 0, mass_fit);
           ncm_stats_vec_set (stats, 1, gt);
