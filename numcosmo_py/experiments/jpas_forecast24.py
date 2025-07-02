@@ -476,7 +476,7 @@ def generate_jpas_forecast_2024(
         ncounts_gauss.set_has_ssc(True)
 
     ncounts_gauss.resample(mset, rng)
-    ncounts_gauss.peek_mean().log_vals("mean:" , "%.3f" , True)
+    ncounts_gauss.peek_mean().log_vals("mean:", "%.3f", True)
 
     if fitting_S_ij == JpasSSCType.NO_SSC:
         ncounts_gauss.set_has_ssc(False)
