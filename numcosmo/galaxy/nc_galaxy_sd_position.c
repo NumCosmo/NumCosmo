@@ -64,7 +64,7 @@ enum
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDPosition, nc_galaxy_sd_position, NCM_TYPE_MODEL)
-G_DEFINE_BOXED_TYPE (NcGalaxySDPositionData, nc_galaxy_sd_position_data, nc_galaxy_sd_position_data_ref, nc_galaxy_sd_position_data_unref);
+G_DEFINE_BOXED_TYPE (NcGalaxySDPositionData, nc_galaxy_sd_position_data, nc_galaxy_sd_position_data_ref, nc_galaxy_sd_position_data_unref); /* LCOV_EXCL_LINE */
 NCM_UTIL_DEFINE_CALLBACK (NcGalaxySDPositionIntegrand,
                           NC_GALAXY_SD_POSITION_INTEGRAND,
                           nc_galaxy_sd_position_integrand,
@@ -206,7 +206,7 @@ _nc_galaxy_sd_position_data_init (NcGalaxySDPosition *gsdp, NcGalaxySDObsRedshif
   g_error ("_nc_galaxy_sd_position_data_new: method not implemented.");
 }
 
-/* LCOV_LINE_STOP */
+/* LCOV_EXCL_STOP */
 
 static void
 nc_galaxy_sd_position_class_init (NcGalaxySDPositionClass *klass)
