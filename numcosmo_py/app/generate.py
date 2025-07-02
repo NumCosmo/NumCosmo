@@ -270,6 +270,15 @@ class GenerateJpasForecast:
         ),
     ] = 2959.1
 
+    resample_seed: Annotated[
+        int,
+        typer.Option(
+            help=("Seed used to generate experiment."),
+            show_default=True,
+            min=0,
+        ),
+    ] = 1234
+
     def __post_init__(self):
         """Generate JPAS 2024 forecast experiment.
 
@@ -297,6 +306,7 @@ class GenerateJpasForecast:
             fitting_Sij_type=self.fitting_sky_cut,
             resample_Sij_type=self.resample_sky_cut,
             resample_model=self.resample_model,
+            resample_seed=self.resample_seed,
             fitting_model=self.fitting_model,
         )
 
