@@ -3,11 +3,11 @@
  *
  *  Tue July 30 19:54:22 2024
  *  Copyright  2024  Caio Lima de Oliveira
- *  <caiooliveiraCode@proton.me>
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Caio Lima de Oliveira <caiooliveiraCode@proton.me>
+ * Copyright (C) Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
