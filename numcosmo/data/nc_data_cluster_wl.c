@@ -1001,3 +1001,24 @@ nc_data_cluster_wl_peek_data_array (NcDataClusterWL *dcwl)
   return self->shape_data;
 }
 
+/**
+ * nc_data_cluster_wl_estimate_snr:
+ * @dcwl: a #NcDataClusterWL
+ * @mset: a #NcmMSet
+ *
+ * Estimates the signal-to-noise ratio.
+ *
+ * Returns: the signal-to-noise ratio.
+ */
+gdouble
+nc_data_cluster_wl_estimate_snr (NcDataClusterWL *dcwl, NcmMSet *mset)
+{
+  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
+  NcGalaxySDShape *galaxy_shape       = NC_GALAXY_SD_SHAPE (ncm_mset_peek (mset, nc_galaxy_sd_shape_id ()));
+  gdouble hat_gt, hat_gx, hat_sigma_gt, hat_sigma_gx, hat_rho;
+
+  nc_galaxy_sd_shape_direct_estimate (galaxy_shape, mset, self->shape_data, &hat_gt, &hat_gx, &hat_sigma_gt, &hat_sigma_gx, &hat_rho);
+
+  return hat_gt / hat_sigma_gt;
+}
+

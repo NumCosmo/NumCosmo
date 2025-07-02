@@ -77,6 +77,8 @@ NcDataClusterWLResampleFlag nc_data_cluster_wl_get_resample_flag (NcDataClusterW
 
 NcmObjArray *nc_data_cluster_wl_peek_data_array (NcDataClusterWL *dcwl);
 
+gdouble nc_data_cluster_wl_estimate_snr (NcDataClusterWL *dcwl, NcmMSet *mset);
+
 G_END_DECLS
 
 #endif /* _NC_DATA_CLUSTER_WL_H_ */

@@ -75,6 +75,21 @@ static void test_nc_data_cluster_wl_serialize (TestNcDataClusterWL *test, gconst
 static void test_nc_data_cluster_wl_resample (TestNcDataClusterWL *test, gconstpointer pdata);
 static void test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pdata);
 
+/*
+ *  The shape dispersion bounds are artificially set to lower values to avoid low signal
+ *  to noise ratios.
+ */
+#define STD_NOISE_MIN (0.001)
+#define STD_NOISE_MAX (0.003)
+#define STD_SHAPE_MIN (0.05)
+#define STD_SHAPE_MAX (0.15)
+#define C1_MIN (-0.01)
+#define C1_MAX (0.01)
+#define C2_MIN (-0.01)
+#define C2_MAX (0.01)
+#define M_MIN (-0.2)
+#define M_MAX (0.2)
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -221,11 +236,20 @@ test_nc_data_cluster_wl_new (TestNcDataClusterWL *test, gconstpointer pdata)
     g_error ("test_nc_data_cluster_wl_new_spec_gauss: unknown ellip_conv name.");
 
   if (g_strcmp0 (shape_name, "gauss") == 0)
+  {
+    gdouble std_shape = ncm_rng_uniform_gen (rng, STD_SHAPE_MIN, STD_SHAPE_MAX);
+
     s_dist = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new (ell_conv));
+    ncm_model_param_set (NCM_MODEL (s_dist), NC_GALAXY_SD_SHAPE_GAUSS_SIGMA, std_shape);
+  }
   else if (g_strcmp0 (shape_name, "gauss_hsc") == 0)
+  {
     s_dist = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_hsc_new (ell_conv));
+  }
   else
+  {
     g_error ("test_nc_data_cluster_wl_new_spec_gauss: unknown shape name.");
+  }
 
   if (g_strcmp0 (redshift_name, "spec") == 0)
     z_dist = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_spec_new (z_true_dist, 0.0, 5.0));
@@ -373,17 +397,17 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
 
     if (NC_IS_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape))
     {
-      gdouble std_noise = ncm_rng_uniform_gen (rng, 0.0, 0.3);
+      gdouble std_noise = ncm_rng_uniform_gen (rng, STD_NOISE_MIN, STD_NOISE_MAX);
 
       nc_galaxy_sd_shape_gauss_gen (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), test->mset, s_data, std_noise, test->ell_coord, rng);
     }
     else if (NC_IS_GALAXY_SD_SHAPE_GAUSS_HSC (test->galaxy_shape))
     {
-      gdouble c1        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
-      gdouble c2        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
-      gdouble m         = ncm_rng_uniform_gen (rng, -0.2, 0.2);
-      gdouble std_shape = ncm_rng_uniform_gen (rng, 0.15, 0.3);
-      gdouble std_noise = ncm_rng_uniform_gen (rng, 0.0, 0.3);
+      gdouble c1        = ncm_rng_uniform_gen (rng, C1_MIN, C1_MAX);
+      gdouble c2        = ncm_rng_uniform_gen (rng, C2_MIN, C2_MAX);
+      gdouble m         = ncm_rng_uniform_gen (rng, M_MIN, M_MAX);
+      gdouble std_shape = ncm_rng_uniform_gen (rng, STD_SHAPE_MIN, STD_SHAPE_MAX);
+      gdouble std_noise = ncm_rng_uniform_gen (rng, STD_NOISE_MIN, STD_NOISE_MAX);
 
       nc_galaxy_sd_shape_gauss_hsc_gen (NC_GALAXY_SD_SHAPE_GAUSS_HSC (test->galaxy_shape), test->mset, s_data, std_shape, std_noise, c1, c2, m, test->ell_coord, rng);
     }
@@ -451,17 +475,18 @@ test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata)
     const gdouble dec_cl        = ncm_model_param_get (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC);
     const gdouble epsilon_int_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_1, i);
     const gdouble epsilon_int_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2, i);
-    const gdouble std_noise     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_COL_STD_NOISE, i);
-    const gdouble var_obs       = std_noise * std_noise;
-    gdouble sigma;
+    gdouble std_shape;
 
     if (NC_IS_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape))
-      sigma = ncm_model_orig_param_get (NCM_MODEL (test->galaxy_shape), NC_GALAXY_SD_SHAPE_GAUSS_SIGMA);
+      std_shape =
+        nc_galaxy_sd_shape_gauss_std_shape_from_sigma (
+          ncm_model_orig_param_get (NCM_MODEL (test->galaxy_shape), NC_GALAXY_SD_SHAPE_GAUSS_SIGMA)
+                                                      );
     else
-      sigma = nc_galaxy_sd_shape_gauss_sigma_from_std_shape (nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_SHAPE, i));
+      std_shape = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_SHAPE, i);
 
-    const gdouble var_int = sigma * sigma;
-    const gdouble e_rms   = sqrt (var_int + var_obs);
+    const gdouble var_int = std_shape * std_shape;
+    const gdouble int_rms = sqrt (var_int);
     const gdouble radius  = nc_halo_position_projected_radius_from_ra_dec (test->hp, test->cosmo, ra, dec);
 
     g_assert_cmpfloat (ra, >=, ra_cl - 0.2);
@@ -470,10 +495,10 @@ test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata)
     g_assert_cmpfloat (dec, <=, dec_cl + 0.2);
     g_assert_cmpfloat (z, >=, 0.0);
     g_assert_cmpfloat (z, <=, 10.0);
-    g_assert_cmpfloat (epsilon_int_1, >=, -5.0 * e_rms);
-    g_assert_cmpfloat (epsilon_int_1, <=, 5.0 * e_rms);
-    g_assert_cmpfloat (epsilon_int_2, >=, -5.0 * e_rms);
-    g_assert_cmpfloat (epsilon_int_2, <=, 5.0 * e_rms);
+    g_assert_cmpfloat (epsilon_int_1, >=, -5.0 * int_rms);
+    g_assert_cmpfloat (epsilon_int_1, <=, 5.0 * int_rms);
+    g_assert_cmpfloat (epsilon_int_2, >=, -5.0 * int_rms);
+    g_assert_cmpfloat (epsilon_int_2, <=, 5.0 * int_rms);
     g_assert_cmpfloat (radius, >=, test->min_radius);
     g_assert_cmpfloat (radius, <=, test->max_radius);
   }
@@ -1058,8 +1083,8 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
     ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, -180.0);
     ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, 180.0);
 
-    ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, ra - 0.008 / cos (dec * M_PI / 180.0));
-    ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, ra + 0.008 / cos (dec * M_PI / 180.0));
+    ncm_model_param_set_lower_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, ra - 0.08 / cos (dec * M_PI / 180.0));
+    ncm_model_param_set_upper_bound (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, ra + 0.08 / cos (dec * M_PI / 180.0));
 
     nc_galaxy_sd_position_set_ra_lim (test->galaxy_position, ra - 0.2 / cos (dec * M_PI / 180.0), ra + 0.2 / cos (dec * M_PI / 180.0));
     nc_galaxy_sd_position_set_dec_lim (test->galaxy_position, dec - 0.2, dec + 0.2);
