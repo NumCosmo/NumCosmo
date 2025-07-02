@@ -51,8 +51,10 @@ G_BEGIN_DECLS
  * @NC_DATA_SNIA_COV_PANTHEON: Pantheon SNIa compilation, reduced covariance already includes intrinsic, redshift and peculiar velocity variances.
  * @NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_SYS_STAT: Pantheon SNIa compilation 2022 plus Sh0es Cepheid distance, full covariance statistics and systematics
  * @NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT: Pantheon SNIa compilation 2022 plus Sh0es Cepheid distance, statistics covariance only
+ * @NC_DATA_SNIA_COV_DES_Y5_STATONLY: Dark Energy Survey Y5 SNIa compilation, statistics covariance only
+ * @NC_DATA_SNIA_COV_DES_Y5_STAT_SYS: Dark Energy Survey Y5 SNIa compilation, statistics and systematics covariance
  *
- * FIXME
+ * Supernovae data sets.
  *
  */
 typedef enum _NcDataSNIAId
@@ -74,6 +76,8 @@ typedef enum _NcDataSNIAId
   NC_DATA_SNIA_COV_PANTHEON,
   NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_SYS_STAT,
   NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT,
+  NC_DATA_SNIA_COV_DES_Y5_STATONLY,
+  NC_DATA_SNIA_COV_DES_Y5_STAT_SYS,
   /* < private > */
   NC_DATA_SNIA_LEN, /*< skip >*/
 } NcDataSNIAId;
@@ -83,7 +87,7 @@ typedef enum _NcDataSNIAId
 #define NC_DATA_SNIA_SIMPLE_LEN ((NC_DATA_SNIA_SIMPLE_END) -(NC_DATA_SNIA_SIMPLE_START) +1)
 
 #define NC_DATA_SNIA_COV_START NC_DATA_SNIA_COV_SNLS3_SYS_STAT
-#define NC_DATA_SNIA_COV_END NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT
+#define NC_DATA_SNIA_COV_END NC_DATA_SNIA_COV_DES_Y5_STAT_SYS
 #define NC_DATA_SNIA_COV_LEN ((NC_DATA_SNIA_COV_END) -(NC_DATA_SNIA_COV_START) +1)
 
 G_END_DECLS

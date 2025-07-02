@@ -24,7 +24,7 @@
 """NumCosmo cosmology class."""
 
 from typing import TypedDict
-from enum import Enum
+from enum import StrEnum
 from . import Ncm, Nc
 
 
@@ -41,7 +41,7 @@ class ParameterDesc(TypedDict, total=False):
     value: float
 
 
-class HIPrimModel(str, Enum):
+class HIPrimModel(StrEnum):
     """Planck 18 primordial model."""
 
     ATAN = "atan"

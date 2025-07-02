@@ -25,7 +25,7 @@
 
 from typing import Optional, Union
 import warnings
-from enum import Enum
+from enum import StrEnum, auto
 from numcosmo_py import Ncm
 from numcosmo_py.interpolation.stats_dist import (
     InterpolationMethod,
@@ -33,11 +33,11 @@ from numcosmo_py.interpolation.stats_dist import (
 )
 
 
-class WalkerTypes(str, Enum):
+class WalkerTypes(StrEnum):
     """Possible walkers for ensemble samplers."""
 
-    APES = "apes"
-    STRETCH = "stretch"
+    APES = auto()
+    STRETCH = auto()
 
 
 def create_esmcmc(
@@ -61,7 +61,6 @@ def create_esmcmc(
     start_mcat: Optional[Ncm.MSetCatalog] = None,
 ):
     """Create a new ensemble sampler object."""
-
     # New fit object using the likelihood.
     fit = Ncm.Fit.factory(
         Ncm.FitType.NLOPT,
@@ -150,7 +149,8 @@ def mcat_print_info(mcat, *, ntests=100):
     effective samples, the autocorrelation time, the maximum
     autocorrelation time, the maximum effective sample size, the
     maximum effective sample size time, the Heidelberger-Welch
-    statistic, the maximum Heidelberger-Welch statistic."""
+    statistic, the maximum Heidelberger-Welch statistic.
+    """
     mset = mcat.peek_mset()
     mcat.estimate_autocorrelation_tau(False)
 
