@@ -562,6 +562,11 @@ if python_typer.found()
             'source': 'test_py_numcosmo_app.py',
             'timeout': 0,
         },
+        {
+            'name': 'py_generate',
+            'source': 'test_py_generate.py',
+            'timeout': 0,
+        },
     ]
 endif
 
