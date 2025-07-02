@@ -1026,11 +1026,14 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
       }
     }
 
-    const gdouble mean_log10M = ncm_stats_vec_get_mean (stats, 0);
-    const gdouble sd_log10M   = ncm_stats_vec_get_sd (stats, 0);
+    {
+      /* We are adding 5% to the error due to the bias in the MLE. */
+      const gdouble mean_log10M = ncm_stats_vec_get_mean (stats, 0);
+      const gdouble sd_log10M   = ncm_stats_vec_get_sd (stats, 0) / sqrt (nfits) + 0.05;
 
-    ncm_assert_cmpdouble (mean_log10M, >, log10M - 8.0 * sd_log10M / sqrt (nfits));
-    ncm_assert_cmpdouble (mean_log10M, <, log10M + 8.0 * sd_log10M / sqrt (nfits));
+      ncm_assert_cmpdouble (mean_log10M, >, log10M - 6.0 * sd_log10M);
+      ncm_assert_cmpdouble (mean_log10M, <, log10M + 6.0 * sd_log10M);
+    }
   }
 
   ncm_stats_vec_reset (stats, TRUE);
