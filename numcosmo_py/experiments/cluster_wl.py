@@ -442,7 +442,7 @@ class HaloPositionData(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    ra: Annotated[float, Field(ge=0.0, le=360.0)]
+    ra: Annotated[float, Field(ge=-180.0, le=180.0)]
     dec: Annotated[float, Field(ge=-90.0, le=90.0)]
     z: Annotated[float, Field(ge=0.0, le=5.0)] = 0.2
 

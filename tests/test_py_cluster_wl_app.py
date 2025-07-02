@@ -265,7 +265,7 @@ def fixture_halo_mass_summary_bad(request) -> str:
 
 @pytest.fixture(
     name="halo_position",
-    params=zip(uniform(0, 360, 3), uniform(-90, 90, 3), uniform(0.1, 1.0, 3)),
+    params=zip(uniform(-180, 180, 3), uniform(-90, 90, 3), uniform(0.1, 1.0, 3)),
 )
 def fixture_halo_position(request) -> tuple[float, float, float]:
     """Fixture for the halo position."""
@@ -278,9 +278,9 @@ def fixture_halo_position(request) -> tuple[float, float, float]:
         ["--cluster-ra=bogus"],
         ["--cluster-dec=bogus"],
         ["--cluster-z=bogus"],
-        ["--cluster-ra=372"],
+        ["--cluster-ra=192"],
         ["--cluster-dec=92"],
-        ["--cluster-ra=-10"],
+        ["--cluster-ra=-358"],
         ["--cluster-dec=-100"],
         ["--cluster-ra=10", "--ra-min=11", "--ra-max=12"],
         ["--cluster-ra=10", "--ra-min=9", "--ra-max=8"],
