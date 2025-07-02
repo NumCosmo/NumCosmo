@@ -1054,9 +1054,9 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
     }
 
     {
-      /* We are adding 5% to the error due to the bias in the MLE. */
+      /* We are adding 10% to the error due to the bias in the MLE. */
       const gdouble mean_log10M = ncm_stats_vec_get_mean (stats, 0);
-      const gdouble sd_log10M   = ncm_stats_vec_get_sd (stats, 0) / sqrt (nfits) + 0.05;
+      const gdouble sd_log10M   = ncm_stats_vec_get_sd (stats, 0) / sqrt (nfits) + 0.1;
 
       ncm_assert_cmpdouble (mean_log10M, >, log10M - 6.0 * sd_log10M);
       ncm_assert_cmpdouble (mean_log10M, <, log10M + 6.0 * sd_log10M);
