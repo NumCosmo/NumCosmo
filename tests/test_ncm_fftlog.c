@@ -106,6 +106,9 @@ TestCases fixtures[] = {
 #endif /* defined (HAVE_FFTW3) && defined (HAVE_ACB_H) */
 };
 
+#define NUMINT_RELTOL1 1.0e-3
+#define NUMINT_RELTOL2 1.0e-8
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -568,7 +571,10 @@ test_ncm_fftlog_eval (TestNcmFftlog *test, gconstpointer pdata)
     gdouble res, err;
 
     test->argK->lnr = lnr_l;
-    ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, 1.0e-3, &res, &err);
+    ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, NUMINT_RELTOL1, &res, &err);
+
+    if (fabs (fftlog_res / res - 1.0) > reltol)
+      ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, NUMINT_RELTOL2, &res, &err);
 
     ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
   }
@@ -616,11 +622,12 @@ test_ncm_fftlog_eval_vector (TestNcmFftlog *test, gconstpointer pdata)
     gdouble res, err;
 
     test->argK->lnr = lnr_l;
-    ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, 1.0e-3, &res, &err);
+    ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, NUMINT_RELTOL1, &res, &err);
+
+    if (fabs (fftlog_res / res - 1.0) > reltol)
+      ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, NUMINT_RELTOL2, &res, &err);
 
     ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
-
-    /* printf ("%u % 22.15g % 22.15g % 22.15g % 22.15e\n", l, test->argK->lnr, res, fftlog_res, fabs (res / fftlog_res - 1.0)); */
   }
 }
 
@@ -646,7 +653,10 @@ test_ncm_fftlog_eval_calibrate (TestNcmFftlog *test, gconstpointer pdata)
     gdouble res, err;
 
     test->argK->lnr = lnr_l;
-    ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, 1.0e-3, &res, &err);
+    ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, NUMINT_RELTOL1, &res, &err);
+
+    if (fabs (fftlog_res / res - 1.0) > reltol)
+      ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, NUMINT_RELTOL2, &res, &err);
 
     ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
   }
@@ -693,11 +703,12 @@ test_ncm_fftlog_eval_serialized (TestNcmFftlog *test, gconstpointer pdata)
     gdouble res, err;
 
     test->argK->lnr = lnr_l;
-    ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, 1.0e-3, &res, &err);
+    ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, NUMINT_RELTOL1, &res, &err);
+
+    if (fabs (fftlog_res / res - 1.0) > reltol)
+      ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, NUMINT_RELTOL2, &res, &err);
 
     ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
-
-    /* printf ("%u % 22.15g % 22.15g % 22.15g % 22.15e\n", l, test->argK->lnr, res, fftlog_res, fabs (res / fftlog_res - 1.0)); */
   }
 
   ncm_serialize_free (ser);
@@ -738,7 +749,10 @@ test_ncm_fftlog_eval_deriv (TestNcmFftlog *test, gconstpointer pdata)
     gdouble res, err;
 
     test->argK->lnr = lnr_l;
-    ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, 1.0e-3, &res, &err);
+    ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, NUMINT_RELTOL1, &res, &err);
+
+    if (fabs (fftlog_res / res - 1.0) > reltol)
+      ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, NUMINT_RELTOL2, &res, &err);
 
     ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
   }
@@ -782,7 +796,10 @@ test_ncm_fftlog_eval_use_eval_int (TestNcmFftlog *test, gconstpointer pdata)
     gdouble res, err;
 
     test->argK->lnr = lnr_l;
-    ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, 1.0e-3, &res, &err);
+    ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, NUMINT_RELTOL1, &res, &err);
+
+    if (fabs (fftlog_res / res - 1.0) > reltol)
+      ncm_integral_locked_a_b (&test->KFk, test->lnk_i, test->lnk_f, 0.0, NUMINT_RELTOL2, &res, &err);
 
     ncm_assert_cmpdouble_e (res, ==, fftlog_res, reltol, 0.0);
   }

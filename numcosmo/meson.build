@@ -17,6 +17,7 @@ subdir('misc')
 subdir('toeplitz')
 subdir('class')
 subdir('plc')
+subdir('lintegrate')
 
 ncm_sources = files(
     'math/ncm_binsplit.c',
@@ -326,10 +327,12 @@ nc_headers = files(
     'galaxy/nc_galaxy_sd_obs_redshift.h',
     'galaxy/nc_galaxy_sd_obs_redshift_spec.h',
     'galaxy/nc_galaxy_sd_obs_redshift_gauss.h',
+    'galaxy/nc_galaxy_sd_obs_redshift_pz.h',
     'galaxy/nc_galaxy_sd_true_redshift.h',
     'galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h',
     'galaxy/nc_galaxy_sd_shape.h',
     'galaxy/nc_galaxy_sd_shape_gauss.h',
+    'galaxy/nc_galaxy_sd_shape_gauss_hsc.h',
     'lss/nc_cluster_abundance.h',
     'lss/nc_cluster_mass.h',
     'lss/nc_cluster_mass_ascaso.h',
@@ -492,10 +495,12 @@ nc_sources = files(
     'galaxy/nc_galaxy_sd_obs_redshift.c',
     'galaxy/nc_galaxy_sd_obs_redshift_spec.c',
     'galaxy/nc_galaxy_sd_obs_redshift_gauss.c',
+    'galaxy/nc_galaxy_sd_obs_redshift_pz.c',
     'galaxy/nc_galaxy_sd_true_redshift.c',
     'galaxy/nc_galaxy_sd_true_redshift_lsst_srd.c',
     'galaxy/nc_galaxy_sd_shape.c',
     'galaxy/nc_galaxy_sd_shape_gauss.c',
+    'galaxy/nc_galaxy_sd_shape_gauss_hsc.c',
     'lss/nc_cluster_abundance.c',
     'lss/nc_cluster_mass.c',
     'lss/nc_cluster_mass_ascaso.c',
@@ -708,6 +713,7 @@ install_headers(
 
 sundials_inc = include_directories('sundials/include')
 libcuba_inc = include_directories('libcuba')
+lintegrate_inc = include_directories('lintegrate')
 
 libnumcosmo_dep_list = [
     mpi_c_dep,
@@ -754,12 +760,12 @@ libnumcosmo = library(
     install: true,
     # intl.lib is not compatible with SAFESEH
     link_args: [noseh_link_args],
-    include_directories: [configinc, sundials_inc, libcuba_inc, plc_inc],
+    include_directories: [configinc, sundials_inc, libcuba_inc, plc_inc, lintegrate_inc],
     # Planck likelihood code uses dlsym to load the Planck likelihood library
     # components. This requires linking with link_whole to ensure that the
     # symbols are available at runtime.
     link_whole: [libplc],
-    link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass],
+    link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass, liblintegrate],
     dependencies: libnumcosmo_dep_list,
     c_args: numcosmo_c_args,
 )
@@ -777,7 +783,7 @@ libnumcosmo_dep = declare_dependency(
 # Generate pkg-config files
 # Code using NumCosmo frequently depends directly on gsl, glib, gobject, and gio, so we
 # include them in the Requires field.
-# This happends mostly because of inlining, but also because of the many macros defined
+# This happens mostly because of inlining, but also because of the many macros defined
 # in the glib headers.
 pkg.generate(
     libnumcosmo,
