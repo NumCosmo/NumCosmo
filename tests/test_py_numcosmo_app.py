@@ -272,6 +272,24 @@ def test_run_fit_restart(
         raise result.exception
 
 
+def test_run_mc(simple_experiment):
+    """Test run fit."""
+    filename, _ = simple_experiment
+    result = runner.invoke(app, ["run", "mc", "-p", filename.as_posix()])
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mc_seed(simple_experiment):
+    """Test run fit."""
+    filename, _ = simple_experiment
+    result = runner.invoke(
+        app, ["run", "mc", "-p", "--seed", "123", filename.as_posix()]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
 def test_run_theory_vector(simple_experiment):
     """Test run theory vector."""
     filename, _ = simple_experiment
