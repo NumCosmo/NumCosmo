@@ -36,7 +36,6 @@
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_rng.h>
-#include <numcosmo/math/ncm_stats_dist1d.h>
 
 G_BEGIN_DECLS
 
@@ -51,8 +50,8 @@ struct _NcGalaxySDTrueRedshiftClass
 
   gdouble (*gen) (NcGalaxySDTrueRedshift *gsdtr, NcmRNG *rng);
   gdouble (*integ) (NcGalaxySDTrueRedshift *gsdtr, gdouble z);
-  gboolean (*set_lim) (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max);
-  gboolean (*get_lim) (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max);
+  void (*set_lim) (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max);
+  void (*get_lim) (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[14];
@@ -65,13 +64,11 @@ NcGalaxySDTrueRedshift *nc_galaxy_sd_true_redshift_ref (NcGalaxySDTrueRedshift *
 void nc_galaxy_sd_true_redshift_free (NcGalaxySDTrueRedshift *gsdtr);
 void nc_galaxy_sd_true_redshift_clear (NcGalaxySDTrueRedshift **gsdtr);
 
-gboolean nc_galaxy_sd_true_redshift_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max);
-gboolean nc_galaxy_sd_true_redshift_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max);
+void nc_galaxy_sd_true_redshift_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max);
+void nc_galaxy_sd_true_redshift_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max);
 
 gdouble nc_galaxy_sd_true_redshift_gen (NcGalaxySDTrueRedshift *gsdtr, NcmRNG *rng);
 gdouble nc_galaxy_sd_true_redshift_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z);
-
-NcmStatsDist1d *nc_galaxy_sd_true_redshift_dist (NcGalaxySDTrueRedshift *gsdtr, const gdouble reltol, const gdouble abstol);
 
 G_END_DECLS
 

@@ -327,10 +327,12 @@ nc_headers = files(
     'galaxy/nc_galaxy_sd_obs_redshift.h',
     'galaxy/nc_galaxy_sd_obs_redshift_spec.h',
     'galaxy/nc_galaxy_sd_obs_redshift_gauss.h',
+    'galaxy/nc_galaxy_sd_obs_redshift_pz.h',
     'galaxy/nc_galaxy_sd_true_redshift.h',
     'galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h',
     'galaxy/nc_galaxy_sd_shape.h',
     'galaxy/nc_galaxy_sd_shape_gauss.h',
+    'galaxy/nc_galaxy_sd_shape_gauss_hsc.h',
     'lss/nc_cluster_abundance.h',
     'lss/nc_cluster_mass.h',
     'lss/nc_cluster_mass_ascaso.h',
@@ -493,10 +495,12 @@ nc_sources = files(
     'galaxy/nc_galaxy_sd_obs_redshift.c',
     'galaxy/nc_galaxy_sd_obs_redshift_spec.c',
     'galaxy/nc_galaxy_sd_obs_redshift_gauss.c',
+    'galaxy/nc_galaxy_sd_obs_redshift_pz.c',
     'galaxy/nc_galaxy_sd_true_redshift.c',
     'galaxy/nc_galaxy_sd_true_redshift_lsst_srd.c',
     'galaxy/nc_galaxy_sd_shape.c',
     'galaxy/nc_galaxy_sd_shape_gauss.c',
+    'galaxy/nc_galaxy_sd_shape_gauss_hsc.c',
     'lss/nc_cluster_abundance.c',
     'lss/nc_cluster_mass.c',
     'lss/nc_cluster_mass_ascaso.c',
@@ -779,7 +783,7 @@ libnumcosmo_dep = declare_dependency(
 # Generate pkg-config files
 # Code using NumCosmo frequently depends directly on gsl, glib, gobject, and gio, so we
 # include them in the Requires field.
-# This happends mostly because of inlining, but also because of the many macros defined
+# This happens mostly because of inlining, but also because of the many macros defined
 # in the glib headers.
 pkg.generate(
     libnumcosmo,

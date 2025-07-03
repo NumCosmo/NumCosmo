@@ -26,6 +26,7 @@
 from typing import Annotated, Optional
 import dataclasses
 from pathlib import Path
+import shlex
 
 import numpy as np
 import typer
@@ -46,8 +47,8 @@ from numcosmo_py.experiments.jpas_forecast24 import (
 )
 from numcosmo_py.experiments.cluster_wl import (
     generate_lsst_cluster_wl,
-    GalaxySDShapeDist,
-    GalaxyZDist,
+    GalaxyShapeGen,
+    GalaxyZGen,
 )
 from numcosmo_py.datasets.hicosmo import (
     SNIaID,
@@ -93,7 +94,12 @@ class GeneratePlanck:
     ] = False
 
     def __post_init__(self) -> None:
-        """Generate Planck 2018 TT baseline experiment."""
+        """Generate Planck 2018 TT baseline experiment.
+
+        Raises:
+            ValueError: Invalid experiment file suffix.
+            ValueError: Invalid data type.
+        """
         Ncm.cfg_init()
 
         if self.experiment.suffix != ".yaml":
@@ -265,7 +271,11 @@ class GenerateJpasForecast:
     ] = 2959.1
 
     def __post_init__(self):
-        """Generate JPAS 2024 forecast experiment."""
+        """Generate JPAS 2024 forecast experiment.
+
+        Raises:
+            ValueError: Invalid experiment file suffix.
+        """
         Ncm.cfg_init()
 
         if self.experiment.suffix != ".yaml":
@@ -352,6 +362,14 @@ class GenerateClusterWL:
         float, typer.Option(help="Cluster concentration.", show_default=True)
     ] = 4.0
 
+    r_min: Annotated[float, typer.Option(help="Minimum radius.", show_default=True)] = (
+        0.3 / 0.7
+    )
+
+    r_max: Annotated[float, typer.Option(help="Maximum radius.", show_default=True)] = (
+        3.0 / 0.7
+    )
+
     ra_min: Annotated[
         float, typer.Option(help="Minimum right ascension.", show_default=True)
     ] = 12.14
@@ -368,35 +386,33 @@ class GenerateClusterWL:
         float, typer.Option(help="Maximum declination.", show_default=True)
     ] = -54.923
 
-    z_min: Annotated[
-        float, typer.Option(help="Minimum redshift.", show_default=True)
-    ] = 0.01
-
-    z_max: Annotated[
-        float, typer.Option(help="Maximum redshift.", show_default=True)
-    ] = 1.6
+    profile_type: Annotated[
+        str, typer.Option(help="Cluster profile to use.", show_default=True)
+    ] = "nfw"
 
     z_dist: Annotated[
-        GalaxyZDist,
-        typer.Option(help="Galaxy redshift distribution.", show_default=True),
-    ] = GalaxyZDist.GAUSS
-
-    sigma_z: Annotated[
-        float, typer.Option(help="Galaxy redshift dispersion.", show_default=True)
-    ] = 0.03
+        str,
+        typer.Option(
+            help=GalaxyZGen.get_help_text(),
+            show_default=True,
+            metavar=GalaxyZGen.get_help_metavar(),
+            rich_help_panel="Galaxy redshift source distribution",
+        ),
+    ] = "gauss zp_min=0.0 zp_max=5.0 sigma0=0.03"
 
     shape_dist: Annotated[
-        GalaxySDShapeDist,
-        typer.Option(help="Galaxy shape distribution.", show_default=True),
-    ] = GalaxySDShapeDist.GAUSS
+        str,
+        typer.Option(
+            help=GalaxyShapeGen.get_help_text(),
+            show_default=True,
+            metavar=GalaxyShapeGen.get_help_metavar(),
+            rich_help_panel="Galaxy shape source distribution",
+        ),
+    ] = "gauss ellip_conv=trace-det ellip_coord=celestial sigma=0.3 std_noise=0.1"
 
-    galaxy_shape_e_rms: Annotated[
-        float, typer.Option(help="Galaxy shape rms.", show_default=True)
-    ] = 1.5e-1
-
-    galaxy_shape_e_sigma: Annotated[
-        float, typer.Option(help="Galaxy shape sigma.", show_default=True)
-    ] = 1.0e-2
+    galaxy_density: Annotated[
+        float, typer.Option(help="Galaxy density.", show_default=True)
+    ] = 18.0
 
     parameter_list: Annotated[
         list[str],
@@ -420,7 +436,11 @@ class GenerateClusterWL:
     ] = False
 
     def __post_init__(self):
-        """Generate LSST cluster weak lensing experiment."""
+        """Generate LSST cluster weak lensing experiment.
+
+        Raises:
+            ValueError: Invalid experiment file suffix.
+        """
         Ncm.cfg_init()
 
         if self.experiment.suffix != ".yaml":
@@ -428,25 +448,27 @@ class GenerateClusterWL:
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
+        _z_dist, z_gen = self.parse_z_dist()
+        _shape_dist, shape_gen = self.parse_shape_dist()
+
         exp = generate_lsst_cluster_wl(
             cluster_ra=self.cluster_ra,
             cluster_dec=self.cluster_dec,
             cluster_z=self.cluster_z,
             cluster_mass=self.cluster_mass,
             cluster_c=self.cluster_c,
+            r_min=self.r_min,
+            r_max=self.r_max,
             cluster_mass_min=self.cluster_mass_min,
             cluster_mass_max=self.cluster_mass_max,
             ra_min=self.ra_min,
             ra_max=self.ra_max,
             dec_min=self.dec_min,
             dec_max=self.dec_max,
-            z_min=self.z_min,
-            z_max=self.z_max,
-            z_dist=self.z_dist,
-            sigma_z=self.sigma_z,
-            shape_dist=self.shape_dist,
-            galaxy_shape_e_rms=self.galaxy_shape_e_rms,
-            galaxy_shape_e_sigma=self.galaxy_shape_e_sigma,
+            profile_type=self.profile_type,
+            z_gen=z_gen,
+            shape_gen=shape_gen,
+            density=self.galaxy_density,
             seed=self.seed,
             summary=self.summary,
         )
@@ -474,6 +496,36 @@ class GenerateClusterWL:
             dataset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
         )
         ser.dict_str_to_yaml_file(exp, self.experiment.absolute().as_posix())
+
+    def parse_z_dist(self):
+        """Parse the z_dist string."""
+        z_dist_list = shlex.split(self.z_dist)
+        z_dist_type = z_dist_list.pop(0)
+        try:
+            z_dist = GalaxyZGen(z_dist_type)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+
+        try:
+            z_dist_args = z_dist.model_cls.from_args(z_dist_list)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+        return z_dist, z_dist_args
+
+    def parse_shape_dist(self):
+        """Parse the shape_dist string."""
+        shape_dist_list = shlex.split(self.shape_dist)
+        shape_dist_type = shape_dist_list.pop(0)
+        try:
+            shape_dist = GalaxyShapeGen(shape_dist_type)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+
+        try:
+            shape_dist_args = shape_dist.model_cls.from_args(shape_dist_list)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+        return shape_dist, shape_dist_args
 
 
 @dataclasses.dataclass(kw_only=True)
