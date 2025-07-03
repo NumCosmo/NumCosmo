@@ -68,6 +68,14 @@ class RunMC(RunCommonOptions):
         ),
     ] = 100
 
+    seed: Annotated[
+        int | None,
+        typer.Option(
+            help="Seed for the random number generator. "
+            "If None (default), a random seed is used.",
+        ),
+    ] = None
+
     def __post_init__(self) -> None:
         """Compute Monte Carlo Analysis."""
         super().__post_init__()
@@ -83,6 +91,10 @@ class RunMC(RunCommonOptions):
 
         mc.set_nthreads(self.nthreads)
         mc.set_data_file(self.output.with_suffix(".mc.fits").absolute().as_posix())
+
+        if self.seed is not None:
+            rng = Ncm.RNG.seeded_new("mt19937", self.seed)
+            mc.set_rng(rng)
 
         mc.start_run()
         mc.run(self.nmc)
