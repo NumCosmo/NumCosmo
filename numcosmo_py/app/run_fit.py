@@ -68,6 +68,21 @@ class RunCommonOptions(LoadExperiment):
         ),
     ] = FitRunMessages.SIMPLE
 
+    params_reltol: Annotated[
+        Optional[float],
+        typer.Option(help="Relative tolerance for the fitting parameters."),
+    ] = None
+
+    m2lnl_reltol: Annotated[
+        Optional[float],
+        typer.Option(help="Relative tolerance for -2lnL."),
+    ] = None
+
+    m2lnl_abstol: Annotated[
+        Optional[float],
+        typer.Option(help="Absolute tolerance for -2lnL."),
+    ] = None
+
     def __post_init__(self) -> None:
         """Create common objects for the run command.
 
@@ -93,6 +108,13 @@ class RunCommonOptions(LoadExperiment):
             fit_logger.start_update,
             fit_logger.end_update,
         )
+        if self.params_reltol is not None:
+            fit.set_params_reltol(self.params_reltol)
+        if self.m2lnl_reltol is not None:
+            fit.set_m2lnL_reltol(self.m2lnl_reltol)
+        if self.m2lnl_abstol is not None:
+            fit.set_m2lnL_abstol(self.m2lnl_abstol)
+
         self.fit = fit
 
 

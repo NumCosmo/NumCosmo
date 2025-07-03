@@ -272,8 +272,38 @@ def test_run_fit_restart(
         raise result.exception
 
 
+def test_run_fit_params_reltol(simple_experiment):
+    """Test run fit with relative tolerance."""
+    filename, _ = simple_experiment
+    result = runner.invoke(
+        app, ["run", "fit", filename.as_posix(), "--params-reltol", "1.0e-7"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_fit_m2lnL_abstol(simple_experiment):
+    """Test run fit with absolute tolerance."""
+    filename, _ = simple_experiment
+    result = runner.invoke(
+        app, ["run", "fit", filename.as_posix(), "--m2lnl-abstol", "1.0e-7"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_fit_m2lnL_reltol(simple_experiment):
+    """Test run fit with relative tolerance."""
+    filename, _ = simple_experiment
+    result = runner.invoke(
+        app, ["run", "fit", filename.as_posix(), "--m2lnl-reltol", "1.0e-7"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
 def test_run_mc(simple_experiment):
-    """Test run fit."""
+    """Test run mc."""
     filename, _ = simple_experiment
     result = runner.invoke(app, ["run", "mc", "-p", filename.as_posix()])
     if result.exit_code != 0:
@@ -281,7 +311,7 @@ def test_run_mc(simple_experiment):
 
 
 def test_run_mc_seed(simple_experiment):
-    """Test run fit."""
+    """Test run mc with seed."""
     filename, _ = simple_experiment
     result = runner.invoke(
         app, ["run", "mc", "-p", "--seed", "123", filename.as_posix()]
