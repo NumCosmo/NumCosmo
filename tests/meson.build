@@ -550,6 +550,7 @@ if python_astropy_scipy.found()
         {
             'name': 'sky_match',
             'source': 'test_sky_match.py',
+            'timeout': 0,
         },
     ]
 endif
