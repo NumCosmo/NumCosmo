@@ -2,7 +2,7 @@
  * Programmer(s): Cody J. Balos, Aaron Collier and Radu Serban @ LLNL
  * -----------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2024, Lawrence Livermore National Security
+ * Copyright (c) 2002-2025, Lawrence Livermore National Security
  * and Southern Methodist University.
  * All rights reserved.
  *
@@ -28,7 +28,7 @@
 #endif
 
 #ifndef SUNDIALS_DEPRECATED_MSG
-#  define SUNDIALS_DEPRECATED_MSG(msg) __attribute__ ((__deprecated__(msg)))
+#  define SUNDIALS_DEPRECATED_MSG(msg) SUNDIALS_DEPRECATED
 #endif
 
 #ifndef SUNDIALS_DEPRECATED_EXPORT_MSG
@@ -44,10 +44,10 @@
  * -----------------------------------------------------------------*/
 
 
-#define SUNDIALS_VERSION "7.2.1"
+#define SUNDIALS_VERSION "7.3.0"
 #define SUNDIALS_VERSION_MAJOR 7
-#define SUNDIALS_VERSION_MINOR 2
-#define SUNDIALS_VERSION_PATCH 1
+#define SUNDIALS_VERSION_MINOR 3
+#define SUNDIALS_VERSION_PATCH 0
 #define SUNDIALS_VERSION_LABEL ""
 #define SUNDIALS_GIT_VERSION ""
 
@@ -84,6 +84,11 @@
  */
 #define SUNDIALS_INDEX_TYPE int64_t
 
+/* Define the type used for 'suncountertype'.
+ * The macro will be defined with a type of the appropriate size.
+ */
+#define SUNDIALS_COUNTER_TYPE long int
+
 /* Use POSIX timers if available.
  *     #define SUNDIALS_HAVE_POSIX_TIMERS
  */
@@ -96,7 +101,7 @@
 /* #undef SUNDIALS_BUILD_WITH_MONITORING */
 
 /* BUILD SUNDIALS with profiling functionalities */
-/* #undef SUNDIALS_BUILD_WITH_PROFILING */
+#define SUNDIALS_BUILD_WITH_PROFILING
 
 /* Enable error checking within SUNDIALS */
 /* #undef SUNDIALS_ENABLE_ERROR_CHECKS */
@@ -106,23 +111,23 @@
 
 /* Build metadata */
 #define SUN_C_COMPILER "GNU"
-#define SUN_C_COMPILER_VERSION "14.2.1"
-#define SUN_C_COMPILER_FLAGS ""
+#define SUN_C_COMPILER_VERSION "15.1.1"
+#define SUN_C_COMPILER_FLAGS "-Wmissing-declarations -Wcast-qual -Wno-unknown-warning-option -Wall -Wpedantic -Wextra -Wshadow -Wwrite-strings -Wcast-align -Wdisabled-optimization -Wvla -Walloca -Wduplicated-cond -Wduplicated-branches -Wunused-macros -Wunused-local-typedefs  -Werror"
 
 #define SUN_CXX_COMPILER ""
 #define SUN_CXX_COMPILER_VERSION ""
-#define SUN_CXX_COMPILER_FLAGS ""
+#define SUN_CXX_COMPILER_FLAGS "-Wmissing-declarations -Wcast-qual -Wno-unknown-warning-option -Wall -Wpedantic -Wextra -Wshadow -Wwrite-strings -Wcast-align -Wdisabled-optimization -Wvla -Walloca -Wduplicated-cond -Wduplicated-branches -Wunused-macros -Wunused-local-typedefs  -Werror"
 
 #define SUN_FORTRAN_COMPILER ""
 #define SUN_FORTRAN_COMPILER_VERSION ""
 #define SUN_FORTRAN_COMPILER_FLAGS ""
 
-#define SUN_BUILD_TYPE "RelWithDebInfo"
+#define SUN_BUILD_TYPE "Release"
 
-#define SUN_JOB_ID "20250330110449"
-#define SUN_JOB_START_TIME "20250330110449"
+#define SUN_JOB_ID "20250513172327"
+#define SUN_JOB_START_TIME "20250513172327"
 
-#define SUN_TPL_LIST "OPENMP;BLAS_LAPACK"
+#define SUN_TPL_LIST "OPENMP;BLAS_LAPACK;PTHREAD"
 #define SUN_TPL_LIST_SIZE ""
 
 #define SUNDIALS_SPACK_VERSION ""
@@ -275,10 +280,10 @@
 
 #define SUNDIALS_ARKODE 1
 #define SUNDIALS_CVODE 1
-#define SUNDIALS_IDA 1
 #define SUNDIALS_NVECTOR_SERIAL 1
 #define SUNDIALS_NVECTOR_MANYVECTOR 1
 #define SUNDIALS_NVECTOR_OPENMP 1
+#define SUNDIALS_NVECTOR_PTHREADS 1
 #define SUNDIALS_SUNMATRIX_BAND 1
 #define SUNDIALS_SUNMATRIX_DENSE 1
 #define SUNDIALS_SUNMATRIX_SPARSE 1

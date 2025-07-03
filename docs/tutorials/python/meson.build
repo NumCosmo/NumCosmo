@@ -1,4 +1,5 @@
 src_site_tutorials_python_files = files(
+    'bouncing.qmd',
     'cluster_wl_simul.qmd',
     'sky_match.qmd',
 )
