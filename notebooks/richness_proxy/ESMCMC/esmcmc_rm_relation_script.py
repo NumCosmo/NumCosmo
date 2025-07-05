@@ -5,7 +5,7 @@ Ncm.cfg_init()
 Ncm.cfg_set_log_handler(lambda msg: sys.stdout.write(msg) and sys.stdout.flush())
 
 
-ascaso = Nc.ClusterMassAscaso()
+ascaso = Nc.ClusterMassAscaso(lnRichness_min=np.log(1.0), lnRichness_max=6)
 lnrich_ext = Nc.ClusterMassLnrichExt()
 
 mset = Ncm.MSet()
@@ -75,10 +75,7 @@ def catalog_fit(DATA, rich_cut, LINEAR):
              mset["NcClusterMass"].param_set_desc(par, {"fit": False})
             
         mset.prepare_fparam_map()
-
-         
-
-    
+       
     # ---------------------------------------------------------------------------- #
 
     # Quadratic Model
@@ -89,6 +86,7 @@ def catalog_fit(DATA, rich_cut, LINEAR):
         fixed_parameters_lnrich_ext = ['A0','cut', 'cutM1', 'cutZ1'] 
 
         lnrich_ext.param_set_by_name("cut", np.log(rich_cut))
+        
 
         # Mset 
         mset.set(lnrich_ext)

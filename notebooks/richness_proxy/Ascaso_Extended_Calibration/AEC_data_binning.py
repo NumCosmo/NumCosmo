@@ -45,8 +45,7 @@ class BinnedData:
                     if len(bin_subset) > 1:
                         halos_bin_mz.append(bin_subset)
             
-            return halos_bin_mz
-        
+            return halos_bin_mz      
         
 #-------------------------------------------------------------------------------------------------#
 # get_lnM_binned()

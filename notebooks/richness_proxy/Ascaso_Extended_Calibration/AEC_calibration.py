@@ -75,6 +75,7 @@ class RichnessMassRelationCalibration:
               
     #Model
         model.param_set_by_name("cut", np.log(self.rich_cut)) #Set cut parameter value
+        # model.param_set_by_name("cut", -1e30) #Set cut parameter value
         
         mset = Ncm.MSet()
         mset.set(model)
