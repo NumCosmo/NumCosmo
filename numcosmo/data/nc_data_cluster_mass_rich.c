@@ -247,6 +247,7 @@ _nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2l
 
       local_m2lnL += gsl_pow_2 ((lnR_i - lnR_i_mean) / lnR_i_std)
                      + 2.0 * log (lnR_i_std)
+                     + 2.0 * log (gsl_sf_erfc ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std)) * 0.5);
                      + 2.0 * log( 0.5 * gsl_sf_erfc ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std)));
     }
   }
@@ -411,7 +412,7 @@ _nc_data_cluster_mass_rich_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
       if (NC_IS_CLUSTER_MASS_ASCASO (clusterm))
       {
-        
+
         nc_cluster_mass_resample (clusterm,  cosmo, lnM, z, lnM_obs, NULL, rng);
 
         ncm_vector_set (lnM_obs_vec, i, lnM_obs[0]);

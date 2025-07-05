@@ -6,7 +6,8 @@ dependencies:
   - astropy
   - black
   - c-compiler
-  - cfitsio < 4.6.0
+  - cfitsio
+  - click < 8.2.0
   - coverage
   - fftw
   - flake8
@@ -36,16 +37,19 @@ dependencies:
   - pip:
       - pygobject-stubs
       - pytest-tap
+      - types-tabulate
   - pyccl >= 3.0.0
+  - pydantic
   - pygobject
   - pylint
   - pytest
   - pytest-cov
   - pytest-lazy-fixtures
-  - python >= 3.10
+  - python >= 3.11
   - rich
   - scipy
-  - setuptools < 74
+  - setuptools
+  - tabulate
   - tqdm
   - typer
   - zlib

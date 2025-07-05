@@ -7,7 +7,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TypedDict, cast
 from pathlib import Path
-from enum import Enum, auto
+from enum import StrEnum, auto
 from typing_extensions import assert_never
 import numpy as np
 import numpy.typing as npt
@@ -35,19 +35,15 @@ class Coordinates(TypedDict, total=False):
     z: str
 
 
-class SelectionCriteria(str, Enum):
+class SelectionCriteria(StrEnum):
     """Selection criteria for the best candidate."""
-
-    @staticmethod
-    def _generate_next_value_(name, _start, _count, _last_values):
-        return name.lower()
 
     DISTANCES = auto()
     REDSHIFT_PROXIMITY = auto()
     MORE_MASSIVE = auto()
 
 
-class DistanceMethod(str, Enum):
+class DistanceMethod(StrEnum):
     """Distance method to use in the matching.
 
     :param ANGULAR_SEPARATION: Angular separation between the objects.
@@ -58,10 +54,6 @@ class DistanceMethod(str, Enum):
     :param MAX_RADIUS: 3d distance rescaled using the maximum of the query and match
         object radii.
     """
-
-    @staticmethod
-    def _generate_next_value_(name, _start, _count, _last_values):
-        return name.lower()
 
     ANGULAR_SEPARATION = auto()
     QUERY_RADIUS = auto()

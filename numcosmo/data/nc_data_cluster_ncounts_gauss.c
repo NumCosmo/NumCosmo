@@ -457,13 +457,16 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
     else
       s_matrix = self->s_matrix;
 
-    if (s_matrix == NULL)
-      g_error ("Super sample covariance matrix not set");
+
 
     ncm_matrix_set_zero (cov);
 
     if (self->has_ssc)
     {
+      if (s_matrix == NULL)
+      {
+      g_error ("Super sample covariance matrix not set");
+      }
       for (i = 0; i < self->index_map->len; i++)
       {
         const NcDataClusterNCountsGaussIndex *k_i = &g_array_index (self->index_map, NcDataClusterNCountsGaussIndex, i);
@@ -851,4 +854,3 @@ nc_data_cluster_ncounts_gauss_get_fix_cov (NcDataClusterNCountsGauss *ncounts_ga
 
   return self->fix_cov;
 }
-

@@ -151,10 +151,12 @@
 #include "lss/nc_cluster_mass_plcl.h"
 #include "lss/nc_cluster_mass_ascaso.h"
 #include "lss/nc_cluster_mass_lnrich_ext.h"
+#include "lss/nc_cluster_mass_selection.h"
 #include "lss/nc_cluster_redshift.h"
 #include "lss/nc_cluster_redshift_nodist.h"
 #include "lss/nc_cluster_photoz_gauss_global.h"
 #include "lss/nc_cluster_photoz_gauss.h"
+#include "lss/nc_halo_bias_despali.h"
 #include "lss/nc_halo_bias_ps.h"
 #include "lss/nc_halo_bias_st_ellip.h"
 #include "lss/nc_halo_bias_st_spher.h"
@@ -172,10 +174,12 @@
 #include "galaxy/nc_galaxy_sd_obs_redshift.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift_spec.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift_gauss.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift_pz.h"
 #include "galaxy/nc_galaxy_sd_true_redshift.h"
 #include "galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h"
 #include "galaxy/nc_galaxy_sd_shape.h"
 #include "galaxy/nc_galaxy_sd_shape_gauss.h"
+#include "galaxy/nc_galaxy_sd_shape_gauss_hsc.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_cbe.h"
@@ -249,7 +253,7 @@
 #endif /* NUMCOSMO_GIR_SCAN */
 
 /* *INDENT-OFF* */
-G_DEFINE_QUARK (ncm-cfg-error, ncm_cfg_error) 
+G_DEFINE_QUARK (ncm-cfg-error, ncm_cfg_error)
 /* *INDENT-ON* */
 
 static gchar *numcosmo_path         = NULL;
@@ -705,6 +709,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_PHOTOZ_GAUSS);
 
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_DESPALI);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_PS);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_ELLIP);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_SPHER);
@@ -729,10 +734,12 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_SPEC);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_PZ);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS_HSC);
 
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
@@ -2508,4 +2515,3 @@ ncm_cfg_get_commit_hash (void)
 {
   return NUMCOSMO_GIT_COMMIT;
 }
-
