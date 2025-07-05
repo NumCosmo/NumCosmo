@@ -41,6 +41,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcClusterPhotozGaussClass NcClusterPhotozGaussClass;
 typedef struct _NcClusterPhotozGauss NcClusterPhotozGauss;
+typedef struct _NcClusterPhotozGaussPrivate NcClusterPhotozGaussPrivate;
 
 struct _NcClusterPhotozGaussClass
 {
@@ -54,6 +55,7 @@ struct _NcClusterPhotozGauss
   NcClusterRedshift parent_instance;
   gdouble pz_max;
   gdouble pz_min;
+  NcClusterPhotozGaussPrivate *priv;
 };
 
 GType nc_cluster_photoz_gauss_get_type (void) G_GNUC_CONST;
