@@ -848,7 +848,7 @@ test_nc_xcor_basic (void)
 {
   NcmPowspec *ps   = NCM_POWSPEC (nc_powspec_ml_cbe_new ());
   NcDistance *dist = nc_distance_new (1100.0);
-  NcXcor *xc       = nc_xcor_new (dist, ps, NC_XCOR_LIMBER_METHOD_GSL);
+  NcXcor *xc       = nc_xcor_new (dist, ps, NC_XCOR_METHOD_GSL, NC_XCOR_KERNEL_METHOD_LIMBER);
   NcXcor *xc2;
 
   g_assert_true (xc != NULL);

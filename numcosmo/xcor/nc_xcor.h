@@ -33,7 +33,7 @@
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel.h>
+#include <numcosmo/xcor/nc_xcor_kernel.h>
 #include <numcosmo/math/ncm_powspec.h>
 
 G_BEGIN_DECLS
@@ -43,24 +43,40 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
 
 /**
- * NcXcorLimberMethod:
- * @NC_XCOR_LIMBER_METHOD_GSL: Use GSL numerical integration
- * @NC_XCOR_LIMBER_METHOD_CUBATURE: Use cubature numerical integration
+ * NcXcorMethod:
+ * @NC_XCOR_METHOD_GSL: Use GSL numerical integration
+ * @NC_XCOR_METHOD_CUBATURE: Use cubature numerical integration
  *
- * Methods to compute Limber-approximated integrals.
+ * Methods to compute integrals using several algorithms.
  *
  */
-typedef enum _NcXcorLimberMethod
+typedef enum _NcXcorMethod
 {
-  NC_XCOR_LIMBER_METHOD_GSL = 0,
-  NC_XCOR_LIMBER_METHOD_CUBATURE,
-} NcXcorLimberMethod;
+  NC_XCOR_METHOD_GSL = 0,
+  NC_XCOR_METHOD_CUBATURE,
+} NcXcorMethod;
+
+/**
+ * João:
+ * NcXcorKernelMethod:
+ * @NC_XCOR_KERNEL_METHOD_LIMBER: Use Limber approximation
+ *
+ * Methods to compute the cross-correlation.
+ *
+ */
+
+typedef enum _NcXcorKernelMethod
+{
+  NC_XCOR_KERNEL_METHOD_LIMBER = 0,
+  NC_XCOR_KERNEL_METHOD_BRUTE,
+} NcXcorKernelMethod;
 
 #define NC_XCOR_PRECISION (1.0e-6)
 
 GType nc_xcor_kinetic_get_type (void) G_GNUC_CONST;
 
-NcXcor *nc_xcor_new (NcDistance *dist, NcmPowspec *ps, NcXcorLimberMethod meth);
+//NcXcor *nc_xcor_new (NcDistance *dist, NcmPowspec *ps, NcXcorLimberMethod meth);
+NcXcor *nc_xcor_new (NcDistance *dist, NcmPowspec *ps, NcXcorMethod meth, NcXcorKernelMethod alg_meth); // João
 NcXcor *nc_xcor_ref (NcXcor *xc);
 void nc_xcor_free (NcXcor *xc);
 void nc_xcor_clear (NcXcor **xc);
@@ -70,7 +86,10 @@ gdouble nc_xcor_get_reltol (NcXcor *xc);
 
 void nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo);
 
-void nc_xcor_limber (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp);
+void nc_xcor (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp);
+
+// João: NcXcorLimberKernel must be substitute with a NcXcorKernel
+//void nc_xcor_general (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp);
 
 G_END_DECLS
 

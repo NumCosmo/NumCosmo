@@ -61,7 +61,7 @@
 #include "nc_hireion.h"
 #include "nc_snia_dist_cov.h"
 #include "xcor/nc_xcor.h"
-#include "xcor/nc_xcor_limber_kernel_gal.h"
+#include "xcor/nc_xcor_kernel_gal.h"
 
 #include <glib/gstdio.h>
 
@@ -381,17 +381,17 @@ nc_data_xcor_class_init (NcDataXcorClass *klass)
 }
 
 static gboolean
-_nc_data_xcor_fast_update (NcDataXcor *dxc, NcXcorLimberKernel *xcl, guint a, NcmMSet *mset)
+_nc_data_xcor_fast_update (NcDataXcor *dxc, NcXcorKernel *xcl, guint a, NcmMSet *mset)
 {
-  if (NC_IS_XCOR_LIMBER_KERNEL_GAL (xcl))
+  if (NC_IS_XCOR_KERNEL_GAL (xcl))
   {
-    NcXcorLimberKernelGal *xclkg = NC_XCOR_LIMBER_KERNEL_GAL (xcl);
+    NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (xcl);
 
-    if (nc_xcor_limber_kernel_gal_get_fast_update (xclkg))
+    if (nc_xcor_kernel_gal_get_fast_update (xclkg))
     {
       gdouble bias, bias_old, noise_bias_old;
 
-      nc_xcor_limber_kernel_gal_get_bias (xclkg, &bias, &bias_old, &noise_bias_old);
+      nc_xcor_kernel_gal_get_bias (xclkg, &bias, &bias_old, &noise_bias_old);
       {
         const gdouble biasratio = bias / bias_old;
 
@@ -400,7 +400,7 @@ _nc_data_xcor_fast_update (NcDataXcor *dxc, NcXcorLimberKernel *xcl, guint a, Nc
 
         ncm_vector_add_constant (cl_th_0_aa, -1.0 * noise_bias_old);
         ncm_vector_scale (cl_th_0_aa, gsl_pow_2 (biasratio));
-        nc_xcor_limber_kernel_add_noise (xcl, cl_th_0_aa, cl_th_1_aa, 0);
+        nc_xcor_kernel_add_noise (xcl, cl_th_0_aa, cl_th_1_aa, 0);
 
         ncm_vector_free (cl_th_0_aa);
         ncm_vector_free (cl_th_1_aa);
@@ -441,9 +441,9 @@ _nc_data_xcor_fast_update (NcDataXcor *dxc, NcXcorLimberKernel *xcl, guint a, Nc
       {
         NcmVector *orig_vec = ncm_model_orig_params_peek_vector (NCM_MODEL (xclkg));
 
-        nc_xcor_limber_kernel_gal_set_bias_old (xclkg,
+        nc_xcor_kernel_gal_set_bias_old (xclkg,
                                                 bias,
-                                                ncm_vector_get (orig_vec, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS)
+                                                ncm_vector_get (orig_vec, NC_XCOR_KERNEL_GAL_NOISE_BIAS)
                                                );
       }
 
@@ -486,9 +486,9 @@ _nc_data_xcor_prepare (NcmData *data, NcmMSet *mset)
     /* Prepare the kernels */
     for (a = 0; a < nobs; a++)
     {
-      NcXcorLimberKernel *xcl = NC_XCOR_LIMBER_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_limber_kernel_id (), a));
+      NcXcorKernel *xcl = NC_XCOR_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_kernel_id (), a));
 
-      nc_xcor_limber_kernel_prepare (xcl, cosmo);
+      nc_xcor_kernel_prepare (xcl, cosmo);
 
       for (b = a; b < nobs; b++)
       {
@@ -504,14 +504,14 @@ _nc_data_xcor_prepare (NcmData *data, NcmMSet *mset)
     for (a = 0; a < nobs; a++)
     {
       NcmModelCtrl *ctrl      = g_ptr_array_index (dxc->xclk_ctrl, a);
-      NcXcorLimberKernel *xcl = NC_XCOR_LIMBER_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_limber_kernel_id (), a));
+      NcXcorKernel *xcl = NC_XCOR_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_kernel_id (), a));
 
       if (ncm_model_ctrl_update (ctrl, NCM_MODEL (xcl)))
       {
         /* If the observable is gal, then simply scale with the bias and add the noise_bias term*/
         if (!(_nc_data_xcor_fast_update (dxc, xcl, a, mset)))
         {
-          nc_xcor_limber_kernel_prepare (xcl, cosmo);
+          nc_xcor_kernel_prepare (xcl, cosmo);
 
           for (b = 0; b < nobs; b++)
           {
@@ -527,16 +527,16 @@ _nc_data_xcor_prepare (NcmData *data, NcmMSet *mset)
   /* Compute all the Cl's that need to be updated */
   for (a = 0; a < nobs; a++)
   {
-    NcXcorLimberKernel *xcl1 = NC_XCOR_LIMBER_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_limber_kernel_id (), a));
+    NcXcorKernel *xcl1 = NC_XCOR_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_kernel_id (), a));
 
     if (prep[a][a])
     {
       NcmVector *cl_th_0_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0);
       NcmVector *cl_th_1_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 1);
 
-      nc_xcor_limber (dxc->xc, xcl1, NULL, cosmo, 0, dxc->xcab[a][a]->ell_th_cut_off, cl_th_0_aa);
+      nc_xcor (dxc->xc, xcl1, NULL, cosmo, 0, dxc->xcab[a][a]->ell_th_cut_off, cl_th_0_aa);
 
-      nc_xcor_limber_kernel_add_noise (xcl1, cl_th_0_aa, cl_th_1_aa, 0);
+      nc_xcor_kernel_add_noise (xcl1, cl_th_0_aa, cl_th_1_aa, 0);
 
       ncm_vector_free (cl_th_0_aa);
       ncm_vector_free (cl_th_1_aa);
@@ -548,12 +548,12 @@ _nc_data_xcor_prepare (NcmData *data, NcmMSet *mset)
       {
         if (prep[a][b])
         {
-          NcXcorLimberKernel *xcl2 = NC_XCOR_LIMBER_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_limber_kernel_id (), b));
+          NcXcorKernel *xcl2 = NC_XCOR_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_kernel_id (), b));
 
           NcmVector *cl_th_0_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 0);
           NcmVector *cl_th_1_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 1);
 
-          nc_xcor_limber (dxc->xc, xcl1, xcl2, cosmo, 0, dxc->xcab[a][b]->ell_th_cut_off, cl_th_0_ab);
+          nc_xcor (dxc->xc, xcl1, xcl2, cosmo, 0, dxc->xcab[a][b]->ell_th_cut_off, cl_th_0_ab);
 
           ncm_vector_memcpy (cl_th_1_ab, cl_th_0_ab);
 
