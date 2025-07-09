@@ -86,7 +86,7 @@ gdouble nc_xcor_get_reltol (NcXcor *xc);
 
 void nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo);
 
-void nc_xcor (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp);
+void nc_xcor_general (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp);
 
 // João: NcXcorLimberKernel must be substitute with a NcXcorKernel
 //void nc_xcor_general (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp);

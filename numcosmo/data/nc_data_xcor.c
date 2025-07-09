@@ -534,7 +534,7 @@ _nc_data_xcor_prepare (NcmData *data, NcmMSet *mset)
       NcmVector *cl_th_0_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0);
       NcmVector *cl_th_1_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 1);
 
-      nc_xcor (dxc->xc, xcl1, NULL, cosmo, 0, dxc->xcab[a][a]->ell_th_cut_off, cl_th_0_aa);
+      nc_xcor_general (dxc->xc, xcl1, NULL, cosmo, 0, dxc->xcab[a][a]->ell_th_cut_off, cl_th_0_aa);
 
       nc_xcor_kernel_add_noise (xcl1, cl_th_0_aa, cl_th_1_aa, 0);
 
@@ -553,7 +553,7 @@ _nc_data_xcor_prepare (NcmData *data, NcmMSet *mset)
           NcmVector *cl_th_0_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 0);
           NcmVector *cl_th_1_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 1);
 
-          nc_xcor (dxc->xc, xcl1, xcl2, cosmo, 0, dxc->xcab[a][b]->ell_th_cut_off, cl_th_0_ab);
+          nc_xcor_general (dxc->xc, xcl1, xcl2, cosmo, 0, dxc->xcab[a][b]->ell_th_cut_off, cl_th_0_ab);
 
           ncm_vector_memcpy (cl_th_1_ab, cl_th_0_ab);
 
