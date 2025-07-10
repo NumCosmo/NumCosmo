@@ -65,7 +65,7 @@ typedef struct _NcGalaxySDObsRedshiftSpecData
 enum
 {
   PROP_0,
-  PROP_GEN_LIM,
+  PROP_Z_LIM,
   PROP_LEN,
 };
 
@@ -90,14 +90,14 @@ _nc_galaxy_sd_obs_redshift_spec_set_property (GObject *object, guint prop_id, co
 
   switch (prop_id)
   {
-    case PROP_GEN_LIM:
+    case PROP_Z_LIM:
     {
       NcmDTuple2 *lim = g_value_get_boxed (value);
 
       if (lim == NULL)
-        g_error ("_nc_galaxy_sd_obs_redshift_spec_set_property: gen_lim is NULL");
+        g_error ("_nc_galaxy_sd_obs_redshift_spec_set_property: z_lim is NULL");
 
-      nc_galaxy_sd_obs_redshift_spec_set_gen_lim (gsdorspec, lim->elements[0], lim->elements[1]);
+      nc_galaxy_sd_obs_redshift_spec_set_z_lim (gsdorspec, lim->elements[0], lim->elements[1]);
       break;
     }
     default:                                                      /* LCOV_EXCL_LINE */
@@ -116,7 +116,7 @@ _nc_galaxy_sd_obs_redshift_spec_get_property (GObject *object, guint prop_id, GV
 
   switch (prop_id)
   {
-    case PROP_GEN_LIM:
+    case PROP_Z_LIM:
     {
       gdouble zp_min = self->z_min;
       gdouble zp_max = self->z_max;
@@ -168,16 +168,16 @@ nc_galaxy_sd_obs_redshift_spec_class_init (NcGalaxySDObsRedshiftSpecClass *klass
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
 
   /**
-   * NcGalaxySDObsRedshiftSpec:gen_lim:
+   * NcGalaxySDObsRedshiftSpec:z_lim:
    *
    * Galaxy sample photometric redshift distribution limits.
    *
    */
   g_object_class_install_property (object_class,
-                                   PROP_GEN_LIM,
-                                   g_param_spec_boxed ("gen-lim",
+                                   PROP_Z_LIM,
+                                   g_param_spec_boxed ("z-lim",
                                                        NULL,
-                                                       "Galaxy sample photometric redshift generation limits",
+                                                       "Galaxy sample redshift limits",
                                                        NCM_TYPE_DTUPLE2,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -337,8 +337,8 @@ _nc_galaxy_sd_obs_redshift_spec_add_submodel (NcmModel *model, NcmModel *submode
 /**
  * nc_galaxy_sd_obs_redshift_spec_new:
  * @sdz: a #NcGalaxySDTrueRedshift
- * @z_min: the minimum redshift for generation
- * @z_max: the maximum redshift for generation
+ * @z_min: the minimum redshift
+ * @z_max: the maximum redshift
  *
  * Creates a new #NcGalaxySDObsRedshiftSpec object.
  *
@@ -349,7 +349,7 @@ nc_galaxy_sd_obs_redshift_spec_new (NcGalaxySDTrueRedshift *sdz, const gdouble z
 {
   NcmDTuple2 lim                       = NCM_DTUPLE2_STATIC_INIT (z_min, z_max);
   NcGalaxySDObsRedshiftSpec *gsdorspec = g_object_new (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_SPEC,
-                                                       "gen-lim", &lim,
+                                                       "z-lim", &lim,
                                                        NULL);
 
   ncm_model_add_submodel (NCM_MODEL (gsdorspec), NCM_MODEL (sdz));
@@ -399,16 +399,16 @@ nc_galaxy_sd_obs_redshift_spec_clear (NcGalaxySDObsRedshiftSpec **gsdorspec)
 }
 
 /**
- * nc_galaxy_sd_obs_redshift_spec_set_gen_lim:
+ * nc_galaxy_sd_obs_redshift_spec_set_z_lim:
  * @gsdorspec: a #NcGalaxySDObsRedshiftSpec
- * @z_min: the minimum redshift for generation
- * @z_max: the maximum redshift for generation
+ * @z_min: the minimum redshift
+ * @z_max: the maximum redshift
  *
- * Sets the redshift limits of the galaxy sample redshift generation.
+ * Sets the redshift limits of the galaxy sample redshift distribution.
  *
  */
 void
-nc_galaxy_sd_obs_redshift_spec_set_gen_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, const gdouble z_min, const gdouble z_max)
+nc_galaxy_sd_obs_redshift_spec_set_z_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, const gdouble z_min, const gdouble z_max)
 {
   NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
 

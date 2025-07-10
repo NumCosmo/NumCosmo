@@ -320,7 +320,8 @@ _nc_galaxy_sd_obs_redshift_gauss_integ_f (gpointer callback_data, const gdouble 
   if (self->use_true_z)
   {
     const gdouble sigmaz = ldata->sigma0 * (1.0 + z);
-    const gdouble norm   = sqrt (2.0 * M_PI) * sigmaz * 0.5 * (1.0 + erf (z / (M_SQRT2 * sigmaz)));
+    const gdouble norm0  = sqrt (2.0 * M_PI) * sigmaz;
+    const gdouble norm   = norm0 * ncm_util_gaussian_integral (self->zp_min, self->zp_max, z, sigmaz);
     const gdouble int_z  = nc_galaxy_sd_true_redshift_integ (self->sdz, z);
     const gdouble int_zp = exp (-0.5 * gsl_pow_2 ((zp - z) / sigmaz)) / norm;
 
@@ -429,7 +430,7 @@ nc_galaxy_sd_obs_redshift_gauss_new (NcGalaxySDTrueRedshift *sdz, const gdouble 
 {
   NcmDTuple2 lim                         = NCM_DTUPLE2_STATIC_INIT (zp_min, zp_max);
   NcGalaxySDObsRedshiftGauss *gsdorgauss = g_object_new (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_GAUSS,
-                                                         "gen-lim", &lim,
+                                                         "zp-lim", &lim,
                                                          NULL);
 
   ncm_model_add_submodel (NCM_MODEL (gsdorgauss), NCM_MODEL (sdz));
