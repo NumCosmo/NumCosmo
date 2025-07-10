@@ -56,6 +56,22 @@ struct _NcHIPertTwoFluidsStateInterp
   gint interp_mode; /* 1 == time, 2 == wavenumber */
 };
 
+/**
+ * NcHIPertTwoFluidsError:
+ * @NC_HIPERT_TWO_FLUIDS_ERROR_INVALID_MODE: Invalid mode.
+ *
+ * Error domain for #NcHIPertTwoFluids.
+ *
+ */
+typedef enum _NcHIPertTwoFluidsError
+{
+  NC_HIPERT_TWO_FLUIDS_ERROR_INVALID_MODE,
+} NcHIPertTwoFluidsError;
+
+GQuark nc_hipert_two_fluids_error_quark (void);
+
+#define NC_HIPERT_TWO_FLUIDS_ERROR (nc_hipert_two_fluids_error_quark ())
+
 GType nc_hipert_two_fluids_state_interp_get_type (void) G_GNUC_CONST;
 
 NcHIPertTwoFluidsStateInterp *nc_hipert_two_fluids_state_interp_dup (NcHIPertTwoFluidsStateInterp *sinterp);
