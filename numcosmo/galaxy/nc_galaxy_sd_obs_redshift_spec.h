@@ -47,8 +47,8 @@ NcGalaxySDObsRedshiftSpec *nc_galaxy_sd_obs_redshift_spec_ref (NcGalaxySDObsReds
 void nc_galaxy_sd_obs_redshift_spec_free (NcGalaxySDObsRedshiftSpec *gsdorspec);
 void nc_galaxy_sd_obs_redshift_spec_clear (NcGalaxySDObsRedshiftSpec **gsdorspec);
 
-void nc_galaxy_sd_obs_redshift_spec_set_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, const gdouble z_min, const gdouble z_max);
-void nc_galaxy_sd_obs_redshift_spec_get_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, gdouble *z_min, gdouble *z_max);
+void nc_galaxy_sd_obs_redshift_spec_set_gen_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, const gdouble z_min, const gdouble z_max);
+void nc_galaxy_sd_obs_redshift_spec_get_integ_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
 
 void nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshiftSpec *gsdorspec, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 gboolean nc_galaxy_sd_obs_redshift_spec_gen1 (NcGalaxySDObsRedshiftSpec *gsdorspec, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);

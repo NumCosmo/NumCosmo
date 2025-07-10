@@ -47,8 +47,7 @@ NcGalaxySDObsRedshiftGauss *nc_galaxy_sd_obs_redshift_gauss_ref (NcGalaxySDObsRe
 void nc_galaxy_sd_obs_redshift_gauss_free (NcGalaxySDObsRedshiftGauss *gsdorgauss);
 void nc_galaxy_sd_obs_redshift_gauss_clear (NcGalaxySDObsRedshiftGauss **gsdorgauss);
 
-void nc_galaxy_sd_obs_redshift_gauss_set_lim (NcGalaxySDObsRedshiftGauss *gsdorgauss, const gdouble zp_min, const gdouble zp_max);
-void nc_galaxy_sd_obs_redshift_gauss_get_lim (NcGalaxySDObsRedshiftGauss *gsdorgauss, gdouble *zp_min, gdouble *zp_max);
+void nc_galaxy_sd_obs_redshift_gauss_set_gen_lim (NcGalaxySDObsRedshiftGauss *gsdorgauss, const gdouble zp_min, const gdouble zp_max);
 
 void nc_galaxy_sd_obs_redshift_gauss_set_use_true_z (NcGalaxySDObsRedshiftGauss *gsdorgauss, const gboolean use_true_z);
 gboolean nc_galaxy_sd_obs_redshift_gauss_get_use_true_z (NcGalaxySDObsRedshiftGauss *gsdorgauss);

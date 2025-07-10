@@ -69,7 +69,7 @@ typedef struct _NcGalaxySDObsRedshiftGaussData
 enum
 {
   PROP_0,
-  PROP_LIM,
+  PROP_GEN_LIM,
   PROP_USE_TRUE_Z,
   PROP_LEN,
 };
@@ -93,14 +93,14 @@ _nc_galaxy_sd_obs_redshift_gauss_set_property (GObject *object, guint prop_id, c
 
   switch (prop_id)
   {
-    case PROP_LIM:
+    case PROP_GEN_LIM:
     {
       NcmDTuple2 *lim = g_value_get_boxed (value);
 
       if (lim == NULL)
         g_error ("_nc_galaxy_sd_obs_redshift_gauss_set_property: lim is NULL");
 
-      nc_galaxy_sd_obs_redshift_gauss_set_lim (gsdorgauss, lim->elements[0], lim->elements[1]);
+      nc_galaxy_sd_obs_redshift_gauss_set_gen_lim (gsdorgauss, lim->elements[0], lim->elements[1]);
       break;
     }
     case PROP_USE_TRUE_Z:
@@ -115,17 +115,17 @@ _nc_galaxy_sd_obs_redshift_gauss_set_property (GObject *object, guint prop_id, c
 static void
 _nc_galaxy_sd_obs_redshift_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcGalaxySDObsRedshiftGauss *gsdorgauss = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (object);
+  NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (object);
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
 
   g_return_if_fail (NC_IS_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdorgauss));
 
   switch (prop_id)
   {
-    case PROP_LIM:
+    case PROP_GEN_LIM:
     {
-      gdouble zp_min, zp_max;
-
-      nc_galaxy_sd_obs_redshift_gauss_get_lim (gsdorgauss, &zp_min, &zp_max);
+      gdouble zp_min = self->zp_min;
+      gdouble zp_max = self->zp_max;
 
       g_value_take_boxed (value, ncm_dtuple2_new (zp_min, zp_max));
       break;
@@ -156,7 +156,8 @@ _nc_galaxy_sd_obs_redshift_gauss_finalize (GObject *object)
 static void _nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static gboolean _nc_galaxy_sd_obs_redshift_gauss_gen1 (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static void _nc_galaxy_sd_obs_redshift_gauss_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
-static void _nc_galaxy_sd_obs_redshift_gauss_get_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
+static void _nc_galaxy_sd_obs_redshift_gauss_get_gen_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
+static void _nc_galaxy_sd_obs_redshift_gauss_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
 static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_gauss_integ (NcGalaxySDObsRedshift *gsdor);
 static void _nc_galaxy_sd_obs_redshift_gauss_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static void _nc_galaxy_sd_obs_redshift_gauss_add_submodel (NcmModel *model, NcmModel *submodel);
@@ -177,16 +178,16 @@ nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *kla
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
 
   /**
-   * NcGalaxySDObsRedshiftGauss:lim:
+   * NcGalaxySDObsRedshiftGauss:gen_lim:
    *
-   * Galaxy sample photometric redshift distribution limits.
+   * Galaxy sample photometric redshift generation limits.
    *
    */
   g_object_class_install_property (object_class,
-                                   PROP_LIM,
-                                   g_param_spec_boxed ("lim",
+                                   PROP_GEN_LIM,
+                                   g_param_spec_boxed ("gen-lim",
                                                        NULL,
-                                                       "Galaxy sample photometric redshift distribution limits",
+                                                       "Galaxy sample photometric redshift generation limits",
                                                        NCM_TYPE_DTUPLE2,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -212,13 +213,14 @@ nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *kla
 
   ncm_model_class_check_params_info (model_class);
 
-  gsdor_class->gen          = &_nc_galaxy_sd_obs_redshift_gauss_gen;
-  gsdor_class->gen1         = &_nc_galaxy_sd_obs_redshift_gauss_gen1;
-  gsdor_class->prepare      = &_nc_galaxy_sd_obs_redshift_gauss_prepare;
-  gsdor_class->get_lim      = &_nc_galaxy_sd_obs_redshift_gauss_get_lim;
-  gsdor_class->integ        = &_nc_galaxy_sd_obs_redshift_gauss_integ;
-  gsdor_class->data_init    = &_nc_galaxy_sd_obs_redshift_gauss_data_init;
-  model_class->add_submodel = &_nc_galaxy_sd_obs_redshift_gauss_add_submodel;
+  gsdor_class->gen           = &_nc_galaxy_sd_obs_redshift_gauss_gen;
+  gsdor_class->gen1          = &_nc_galaxy_sd_obs_redshift_gauss_gen1;
+  gsdor_class->prepare       = &_nc_galaxy_sd_obs_redshift_gauss_prepare;
+  gsdor_class->get_gen_lim   = &_nc_galaxy_sd_obs_redshift_gauss_get_gen_lim;
+  gsdor_class->get_integ_lim = &_nc_galaxy_sd_obs_redshift_gauss_get_integ_lim;
+  gsdor_class->integ         = &_nc_galaxy_sd_obs_redshift_gauss_integ;
+  gsdor_class->data_init     = &_nc_galaxy_sd_obs_redshift_gauss_data_init;
+  model_class->add_submodel  = &_nc_galaxy_sd_obs_redshift_gauss_add_submodel;
 }
 
 #define VECTOR (NCM_MODEL (gsdor))
@@ -277,13 +279,22 @@ _nc_galaxy_sd_obs_redshift_gauss_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxy
 }
 
 static void
-_nc_galaxy_sd_obs_redshift_gauss_get_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
+_nc_galaxy_sd_obs_redshift_gauss_get_gen_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
 {
   NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
   NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
 
   *z_min = self->zp_min;
   *z_max = self->zp_max;
+}
+
+static void
+_nc_galaxy_sd_obs_redshift_gauss_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
+{
+  NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
+
+  nc_galaxy_sd_true_redshift_get_lim (self->sdz, z_min, z_max);
 }
 
 struct _IntegData
@@ -418,6 +429,8 @@ _nc_galaxy_sd_obs_redshift_gauss_add_submodel (NcmModel *model, NcmModel *submod
 /**
  * nc_galaxy_sd_obs_redshift_gauss_new:
  * @sdz: a #NcGalaxySDTrueRedshift.
+ * @zp_min: the minimum redshift for generation.
+ * @zp_max: the maximum redshift for generation.
  *
  * Creates a new #NcGalaxySDObsRedshiftGauss object.
  *
@@ -428,7 +441,7 @@ nc_galaxy_sd_obs_redshift_gauss_new (NcGalaxySDTrueRedshift *sdz, const gdouble 
 {
   NcmDTuple2 lim                         = NCM_DTUPLE2_STATIC_INIT (zp_min, zp_max);
   NcGalaxySDObsRedshiftGauss *gsdorgauss = g_object_new (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_GAUSS,
-                                                         "lim", &lim,
+                                                         "gen-lim", &lim,
                                                          NULL);
 
   ncm_model_add_submodel (NCM_MODEL (gsdorgauss), NCM_MODEL (sdz));
@@ -478,15 +491,15 @@ nc_galaxy_sd_obs_redshift_gauss_clear (NcGalaxySDObsRedshiftGauss **gsdorgauss)
 }
 
 /**
- * nc_galaxy_sd_obs_redshift_gauss_set_lim:
+ * nc_galaxy_sd_obs_redshift_gauss_set_gen_lim:
  * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
- * @zp_min: the minimum redshift
- * @zp_max: the maximum redshift
+ * @zp_min: the minimum redshift for generation
+ * @zp_max: the maximum redshift for generation
  *
- * Sets the minimum and maximum redshifts.
+ * Sets the minimum and maximum redshifts for generation.
  */
 void
-nc_galaxy_sd_obs_redshift_gauss_set_lim (NcGalaxySDObsRedshiftGauss *gsdorgauss, const gdouble zp_min, const gdouble zp_max)
+nc_galaxy_sd_obs_redshift_gauss_set_gen_lim (NcGalaxySDObsRedshiftGauss *gsdorgauss, const gdouble zp_min, const gdouble zp_max)
 {
   NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
 
@@ -494,24 +507,6 @@ nc_galaxy_sd_obs_redshift_gauss_set_lim (NcGalaxySDObsRedshiftGauss *gsdorgauss,
   self->zp_max = zp_max;
 
   ncm_model_state_mark_outdated (NCM_MODEL (gsdorgauss));
-}
-
-/**
- * nc_galaxy_sd_obs_redshift_gauss_get_lim:
- * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
- * @zp_min: (out): the minimum redshift
- * @zp_max: (out): the maximum redshift
- *
- * Gets the minimum and maximum redshifts.
- *
- */
-void
-nc_galaxy_sd_obs_redshift_gauss_get_lim (NcGalaxySDObsRedshiftGauss *gsdorgauss, gdouble *zp_min, gdouble *zp_max)
-{
-  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
-
-  *zp_min = self->zp_min;
-  *zp_max = self->zp_max;
 }
 
 /**
