@@ -725,7 +725,7 @@ test_nc_galaxy_sd_obs_redshift_spec_lim (TestNcGalaxySDObsRedshift *test, gconst
   gdouble z_min;
   gdouble z_max;
 
-  nc_galaxy_sd_obs_redshift_get_gen_lim (test->gsdor, data, &z_min, &z_max);
+  nc_galaxy_sd_obs_redshift_get_integ_lim (test->gsdor, data, &z_min, &z_max);
 
   g_assert_cmpfloat (z_min, ==, test->z_min);
   g_assert_cmpfloat (z_max, ==, test->z_max);
@@ -740,7 +740,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_lim (TestNcGalaxySDObsRedshift *test, gcons
   gdouble z_min;
   gdouble z_max;
 
-  nc_galaxy_sd_obs_redshift_get_gen_lim (test->gsdor, data, &z_min, &z_max);
+  nc_galaxy_sd_obs_redshift_gauss_get_zp_lim (NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->gsdor), &z_min, &z_max);
 
   g_assert_cmpfloat (z_min, ==, test->z_min);
   g_assert_cmpfloat (z_max, ==, test->z_max);

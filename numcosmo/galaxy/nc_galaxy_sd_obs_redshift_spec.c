@@ -147,7 +147,6 @@ nc_galaxy_sd_obs_redshift_spec_finalize (GObject *object)
 static void _nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static gboolean _nc_galaxy_sd_obs_redshift_spec_gen1 (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static void _nc_galaxy_sd_obs_redshift_spec_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
-static void _nc_galaxy_sd_obs_redshift_spec_get_gen_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
 static void _nc_galaxy_sd_obs_redshift_spec_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
 static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_spec_integ (NcGalaxySDObsRedshift *gsdor);
 static void _nc_galaxy_sd_obs_redshift_spec_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
@@ -187,7 +186,6 @@ nc_galaxy_sd_obs_redshift_spec_class_init (NcGalaxySDObsRedshiftSpecClass *klass
   gsdor_class->gen           = &_nc_galaxy_sd_obs_redshift_spec_gen;
   gsdor_class->gen1          = &_nc_galaxy_sd_obs_redshift_spec_gen1;
   gsdor_class->prepare       = &_nc_galaxy_sd_obs_redshift_spec_prepare;
-  gsdor_class->get_gen_lim   = &_nc_galaxy_sd_obs_redshift_spec_get_gen_lim;
   gsdor_class->get_integ_lim = &_nc_galaxy_sd_obs_redshift_spec_get_integ_lim;
   gsdor_class->integ         = &_nc_galaxy_sd_obs_redshift_spec_integ;
   gsdor_class->data_init     = &_nc_galaxy_sd_obs_redshift_spec_data_init;
@@ -224,16 +222,6 @@ static void
 _nc_galaxy_sd_obs_redshift_spec_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data)
 {
   /* Nothing to do */
-}
-
-static void
-_nc_galaxy_sd_obs_redshift_spec_get_gen_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
-{
-  NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdor);
-  NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
-
-  *z_min = self->z_min;
-  *z_max = self->z_max;
 }
 
 static void

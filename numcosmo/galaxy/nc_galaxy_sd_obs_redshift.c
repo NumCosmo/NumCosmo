@@ -131,12 +131,6 @@ _nc_galaxy_sd_obs_redshift_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsR
 }
 
 static void
-_nc_galaxy_sd_obs_redshift_get_gen_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
-{
-  g_error ("_nc_galaxy_sd_obs_redshift_get_gen_lim: method not implemented");
-}
-
-static void
 _nc_galaxy_sd_obs_redshift_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
 {
   g_error ("_nc_galaxy_sd_obs_redshift_get_integ_lim: method not implemented");
@@ -176,7 +170,6 @@ nc_galaxy_sd_obs_redshift_class_init (NcGalaxySDObsRedshiftClass *klass)
   klass->gen           = &_nc_galaxy_sd_obs_redshift_gen;
   klass->gen1          = &_nc_galaxy_sd_obs_redshift_gen1;
   klass->prepare       = &_nc_galaxy_sd_obs_redshift_prepare;
-  klass->get_gen_lim   = &_nc_galaxy_sd_obs_redshift_get_gen_lim;
   klass->get_integ_lim = &_nc_galaxy_sd_obs_redshift_get_integ_lim;
   klass->integ         = &_nc_galaxy_sd_obs_redshift_integ;
   klass->data_init     = &_nc_galaxy_sd_obs_redshift_data_init;
@@ -400,21 +393,6 @@ void
 nc_galaxy_sd_obs_redshift_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data)
 {
   NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->prepare (gsdor, data);
-}
-
-/**
- * nc_galaxy_sd_obs_redshift_get_gen_lim:
- * @gsdor: a #NcGalaxySDObsRedshift
- * @z_min: (out): the minimum redshift for generation
- * @z_max: (out): the maximum redshift for generation
- *
- * Gets the redshift generation limits.
- *
- */
-void
-nc_galaxy_sd_obs_redshift_get_gen_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
-{
-  NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->get_gen_lim (gsdor, data, z_min, z_max);
 }
 
 /**

@@ -93,7 +93,6 @@ nc_galaxy_sd_obs_redshift_pz_finalize (GObject *object)
 
 static void _nc_galaxy_sd_obs_redshift_pz_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static void _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
-static void _nc_galaxy_sd_obs_redshift_pz_get_gen_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
 static void _nc_galaxy_sd_obs_redshift_pz_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
 static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_pz_integ (NcGalaxySDObsRedshift *gsdor);
 static void _nc_galaxy_sd_obs_redshift_pz_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
@@ -114,7 +113,6 @@ nc_galaxy_sd_obs_redshift_pz_class_init (NcGalaxySDObsRedshiftPzClass *klass)
 
   gsdor_class->gen           = &_nc_galaxy_sd_obs_redshift_pz_gen;
   gsdor_class->prepare       = &_nc_galaxy_sd_obs_redshift_pz_prepare;
-  gsdor_class->get_gen_lim   = &_nc_galaxy_sd_obs_redshift_pz_get_gen_lim;
   gsdor_class->get_integ_lim = &_nc_galaxy_sd_obs_redshift_pz_get_integ_lim;
   gsdor_class->integ         = &_nc_galaxy_sd_obs_redshift_pz_integ;
   gsdor_class->data_init     = &_nc_galaxy_sd_obs_redshift_pz_data_init;
@@ -174,17 +172,6 @@ _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDO
     ncm_spline_free (m2lnp);
     ncm_vector_free (m2lnyv);
   }
-}
-
-static void
-_nc_galaxy_sd_obs_redshift_pz_get_gen_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
-{
-  NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
-
-  g_assert_nonnull (ldata->dist);
-
-  *z_min = ncm_stats_dist1d_get_xi (ldata->dist);
-  *z_max = ncm_stats_dist1d_get_xf (ldata->dist);
 }
 
 static void
