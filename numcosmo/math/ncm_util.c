@@ -548,6 +548,67 @@ ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const g
 }
 
 /**
+ * ncm_util_normal_gaussian_integral:
+ * @xl: the lower bound
+ * @xu: the upper bound
+ *
+ * Computes the integral of the Gaussian distribution with zero mean and unit variance
+ * between @xl and @xu
+ *
+ * Returns: value of the integral.
+ */
+gdouble
+ncm_util_normal_gaussian_integral (const gdouble xl, const gdouble xu)
+{
+  if (xl == xu)
+    return 0.0;
+
+  {
+    const gdouble sqrt_half = M_SQRT1_2;
+    gdouble ul, uu, sign;
+
+    if (xl < xu)
+    {
+      ul   = xl * sqrt_half;
+      uu   = xu * sqrt_half;
+      sign = 1.0;
+    }
+    else
+    {
+      ul   = xu * sqrt_half;
+      uu   = xl * sqrt_half;
+      sign = -1.0;
+    }
+
+    if ((ul > -5.0) && (uu < 5.0))
+      return sign * 0.5 * (erf (uu) - erf (ul));
+
+    if ((ul > 5.0) || (uu < -5.0))
+      return sign * 0.5 * (erfc (ul) - erfc (uu));
+    else
+      return sign * 0.5 * (erf (uu) - erf (ul));
+  }
+}
+
+/**
+ * ncm_util_gaussian_integral:
+ * @xl: the lower bound
+ * @xu: the upper bound
+ * @mu: the mean
+ * @sigma: the standard deviation
+ *
+ * Computes the integral of the Gaussian distribution with mean @mu and standard deviation @sigma
+ * between @xl and @xu.
+ *
+ * Returns: value of the integral.
+ */
+gdouble
+ncm_util_gaussian_integral (const gdouble xl, const gdouble xu, const gdouble mu, const gdouble sigma)
+{
+  return ncm_util_normal_gaussian_integral ((xl - mu) / sigma, (xu - mu) / sigma);
+}
+
+/**
  * ncm_cmp:
  * @x: a double
  * @y: a double

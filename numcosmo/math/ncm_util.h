@@ -62,6 +62,9 @@ gdouble ncm_util_sinhx_m_xcoshx_x3 (const gdouble x) G_GNUC_CONST;
 
 void ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const gdouble A, gdouble *rho1, gdouble *theta1);
 
+gdouble ncm_util_normal_gaussian_integral (const gdouble xl, const gdouble xu);
+gdouble ncm_util_gaussian_integral (const gdouble xl, const gdouble xu, const gdouble mu, const gdouble sigma);
+
 gint ncm_cmp (gdouble x, gdouble y, const gdouble reltol, const gdouble abstol);
 
 void ncm_rational_coarce_double (gdouble x, mpq_t q);

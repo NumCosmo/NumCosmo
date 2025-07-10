@@ -32,8 +32,14 @@
 #include <glib.h>
 #include <glib-object.h>
 
+#include <gsl/gsl_cdf.h>
+
 void test_ncm_util_projected_radius (void);
 void test_ncm_util_complex (void);
+void test_ncm_util_gaussian_int (void);
+void test_ncm_util_gaussian_int_rng_two_sides (void);
+void test_ncm_util_gaussian_int_rng_one_side (void);
+void test_ncm_util_gaussian_int_nonunit (void);
 
 int
 main (int argc, char *argv[])
@@ -46,6 +52,10 @@ main (int argc, char *argv[])
 
   g_test_add_func ("/ncm/util/projected_radius", test_ncm_util_projected_radius);
   g_test_add_func ("/ncm/util/complex", test_ncm_util_complex);
+  g_test_add_func ("/ncm/util/gaussian_integral/sigmas", test_ncm_util_gaussian_int);
+  g_test_add_func ("/ncm/util/gaussian_integral/rng/two_sides", test_ncm_util_gaussian_int_rng_two_sides);
+  g_test_add_func ("/ncm/util/gaussian_integral/rng/one_side", test_ncm_util_gaussian_int_rng_one_side);
+  g_test_add_func ("/ncm/util/gaussian_integral/nonunit", test_ncm_util_gaussian_int_nonunit);
 
   g_test_run ();
 }
@@ -153,6 +163,92 @@ test_ncm_util_complex (void)
 
     ncm_complex_clear (&c1);
     g_assert_null (c1);
+  }
+}
+
+void
+test_ncm_util_gaussian_int (void)
+{
+  const gdouble tol = 1.0e-14;
+  gdouble sigma_int[10];
+  gint i;
+
+  for (i = 0; i < 10; i++)
+  {
+    sigma_int[i] = gsl_cdf_chisq_P ((i + 1.0) * (i + 1.0), 1);
+  }
+
+  ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (-100.0, +100.0), ==, +1.0, tol, 0.0);
+  ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (+100.0, -100.0), ==, -1.0, tol, 0.0);
+
+  for (i = 0; i < 10; i++)
+  {
+    const gdouble x = i + 1.0;
+
+    ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (-x, +x), ==, +sigma_int[i], tol, 0.0);
+    ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (+x, -x), ==, -sigma_int[i], tol, 0.0);
+    ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (0.0, +x), ==, +0.5 * sigma_int[i], tol, 0.0);
+    ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (0.0, -x), ==, -0.5 * sigma_int[i], tol, 0.0);
+    ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (-x, 0.0), ==, +0.5 * sigma_int[i], tol, 0.0);
+    ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (+x, 0.0), ==, -0.5 * sigma_int[i], tol, 0.0);
+  }
+}
+
+void
+test_ncm_util_gaussian_int_rng_two_sides (void)
+{
+  const gdouble tol = 1.0e-14;
+  gint i;
+
+  for (i = 0; i < 10; i++)
+  {
+    const gdouble xl       = g_test_rand_double_range (-10.0, 0.0);
+    const gdouble xu       = g_test_rand_double_range (0.0, 10.0);
+    const gdouble symint_l = gsl_cdf_chisq_P (xl * xl, 1);
+    const gdouble symint_u = gsl_cdf_chisq_P (xu * xu, 1);
+    const gdouble symint_d = 0.5 * (symint_u - symint_l);
+    const gdouble int_val  = symint_l + symint_d;
+
+    ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (xl, xu), ==, +int_val, tol, 0.0);
+    ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (xu, xl), ==, -int_val, tol, 0.0);
+  }
+}
+
+void
+test_ncm_util_gaussian_int_rng_one_side (void)
+{
+  const gdouble tol = 1.0e-14;
+  gint i;
+
+  for (i = 0; i < 10; i++)
+  {
+    const gdouble xl       = g_test_rand_double_range (0.0, 0.0);
+    const gdouble xu       = g_test_rand_double_range (xl, 10.0);
+    const gdouble symint_l = gsl_cdf_chisq_P (xl * xl, 1);
+    const gdouble symint_u = gsl_cdf_chisq_P (xu * xu, 1);
+    const gdouble int_val  = 0.5 * (symint_u - symint_l);
+
+    ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (xl, xu), ==, +int_val, tol, 0.0);
+    ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (xu, xl), ==, -int_val, tol, 0.0);
+  }
+}
+
+void
+test_ncm_util_gaussian_int_nonunit (void)
+{
+  const gdouble tol = 1.0e-14;
+  gint i;
+
+  for (i = 0; i < 10; i++)
+  {
+    const gdouble mu      = g_test_rand_double_range (-10.0, 10.0);
+    const gdouble sigma   = g_test_rand_double_range (0.1, 2.0);
+    const gdouble xl      = g_test_rand_double_range (-10.0, 10.0);
+    const gdouble xu      = g_test_rand_double_range (-10.0, 10.0);
+    const gdouble nonunit = ncm_util_gaussian_integral (xl, xu, mu, sigma);
+    const gdouble unit    = ncm_util_normal_gaussian_integral ((xl - mu) / sigma, (xu - mu) / sigma);
+
+    ncm_assert_cmpdouble_e (nonunit, ==, unit, tol, 0.0);
   }
 }
 
