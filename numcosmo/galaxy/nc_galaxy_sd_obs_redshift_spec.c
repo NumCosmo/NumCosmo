@@ -419,6 +419,24 @@ nc_galaxy_sd_obs_redshift_spec_set_z_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, 
 }
 
 /**
+ * nc_galaxy_sd_obs_redshift_spec_get_z_lim:
+ * @gsdorspec: a #NcGalaxySDObsRedshiftSpec
+ * @z_min: (out): the minimum redshift
+ * @z_max: (out): the maximum redshift
+ *
+ * Gets the redshift limits of the galaxy sample redshift distribution.
+ *
+ */
+void
+nc_galaxy_sd_obs_redshift_spec_get_z_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, gdouble *z_min, gdouble *z_max)
+{
+  NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
+
+  *z_min = self->z_min;
+  *z_max = self->z_max;
+}
+
+/**
  * nc_galaxy_sd_obs_redshift_spec_gen:
  * @gsdorspec: a #NcGalaxySDObsRedshiftSpec
  * @mset: a #NcmMSet

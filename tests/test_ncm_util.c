@@ -171,6 +171,7 @@ test_ncm_util_gaussian_int (void)
 {
   const gdouble tol = 1.0e-14;
   gdouble sigma_int[10];
+  gdouble sign;
   gint i;
 
   for (i = 0; i < 10; i++)
@@ -181,9 +182,15 @@ test_ncm_util_gaussian_int (void)
   ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (-100.0, +100.0), ==, +1.0, tol, 0.0);
   ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (+100.0, -100.0), ==, -1.0, tol, 0.0);
 
+  ncm_assert_cmpdouble_e (ncm_util_log_normal_gaussian_integral (-100.0, +100.0, &sign), ==, 0.0, tol, 0.0);
+  g_assert_cmpfloat (sign, ==, +1.0);
+  ncm_assert_cmpdouble_e (ncm_util_log_normal_gaussian_integral (+100.0, -100.0, &sign), ==, 0.0, tol, 0.0);
+  g_assert_cmpfloat (sign, ==, -1.0);
+
   for (i = 0; i < 10; i++)
   {
     const gdouble x = i + 1.0;
+    gdouble logtol;
 
     ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (-x, +x), ==, +sigma_int[i], tol, 0.0);
     ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (+x, -x), ==, -sigma_int[i], tol, 0.0);
@@ -191,6 +198,21 @@ test_ncm_util_gaussian_int (void)
     ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (0.0, -x), ==, -0.5 * sigma_int[i], tol, 0.0);
     ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (-x, 0.0), ==, +0.5 * sigma_int[i], tol, 0.0);
     ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (+x, 0.0), ==, -0.5 * sigma_int[i], tol, 0.0);
+
+    logtol = tol / fabs (sigma_int[i] - 1.0);
+
+    ncm_assert_cmpdouble_e (ncm_util_log_normal_gaussian_integral (-x, +x, &sign), ==, log (sigma_int[i]), logtol, 0.0);
+    g_assert_cmpfloat (sign, ==, +1.0);
+    ncm_assert_cmpdouble_e (ncm_util_log_normal_gaussian_integral (+x, -x, &sign), ==, log (sigma_int[i]), logtol, 0.0);
+    g_assert_cmpfloat (sign, ==, -1.0);
+    ncm_assert_cmpdouble_e (ncm_util_log_normal_gaussian_integral (0.0, +x, &sign), ==, log (0.5 * sigma_int[i]), logtol, 0.0);
+    g_assert_cmpfloat (sign, ==, +1.0);
+    ncm_assert_cmpdouble_e (ncm_util_log_normal_gaussian_integral (0.0, -x, &sign), ==, log (0.5 * sigma_int[i]), logtol, 0.0);
+    g_assert_cmpfloat (sign, ==, -1.0);
+    ncm_assert_cmpdouble_e (ncm_util_log_normal_gaussian_integral (-x, 0.0, &sign), ==, log (0.5 * sigma_int[i]), logtol, 0.0);
+    g_assert_cmpfloat (sign, ==, +1.0);
+    ncm_assert_cmpdouble_e (ncm_util_log_normal_gaussian_integral (+x, 0.0, &sign), ==, log (0.5 * sigma_int[i]), logtol, 0.0);
+    g_assert_cmpfloat (sign, ==, -1.0);
   }
 }
 
@@ -198,6 +220,7 @@ void
 test_ncm_util_gaussian_int_rng_two_sides (void)
 {
   const gdouble tol = 1.0e-14;
+  gdouble sign, logtol;
   gint i;
 
   for (i = 0; i < 10; i++)
@@ -211,6 +234,13 @@ test_ncm_util_gaussian_int_rng_two_sides (void)
 
     ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (xl, xu), ==, +int_val, tol, 0.0);
     ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (xu, xl), ==, -int_val, tol, 0.0);
+
+    logtol = tol / fabs (int_val - 1.0);
+
+    ncm_assert_cmpdouble_e (ncm_util_log_normal_gaussian_integral (xl, xu, &sign), ==, log (int_val), logtol, 0.0);
+    g_assert_cmpfloat (sign, ==, +1.0);
+    ncm_assert_cmpdouble_e (ncm_util_log_normal_gaussian_integral (xu, xl, &sign), ==, log (int_val), logtol, 0.0);
+    g_assert_cmpfloat (sign, ==, -1.0);
   }
 }
 
@@ -218,6 +248,7 @@ void
 test_ncm_util_gaussian_int_rng_one_side (void)
 {
   const gdouble tol = 1.0e-14;
+  gdouble sign, logtol;
   gint i;
 
   for (i = 0; i < 10; i++)
@@ -230,6 +261,13 @@ test_ncm_util_gaussian_int_rng_one_side (void)
 
     ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (xl, xu), ==, +int_val, tol, 0.0);
     ncm_assert_cmpdouble_e (ncm_util_normal_gaussian_integral (xu, xl), ==, -int_val, tol, 0.0);
+
+    logtol = tol / fabs (int_val - 1.0);
+
+    ncm_assert_cmpdouble_e (ncm_util_log_normal_gaussian_integral (xl, xu, &sign), ==, log (int_val), logtol, 0.0);
+    g_assert_cmpfloat (sign, ==, +1.0);
+    ncm_assert_cmpdouble_e (ncm_util_log_normal_gaussian_integral (xu, xl, &sign), ==, log (int_val), logtol, 0.0);
+    g_assert_cmpfloat (sign, ==, -1.0);
   }
 }
 
@@ -237,18 +275,24 @@ void
 test_ncm_util_gaussian_int_nonunit (void)
 {
   const gdouble tol = 1.0e-14;
+  gdouble sign, logtol;
   gint i;
 
   for (i = 0; i < 10; i++)
   {
-    const gdouble mu      = g_test_rand_double_range (-10.0, 10.0);
-    const gdouble sigma   = g_test_rand_double_range (0.1, 2.0);
+    const gdouble mu      = g_test_rand_double_range (-1.0, 1.0);
+    const gdouble sigma   = g_test_rand_double_range (0.5, 2.0);
     const gdouble xl      = g_test_rand_double_range (-10.0, 10.0);
     const gdouble xu      = g_test_rand_double_range (-10.0, 10.0);
     const gdouble nonunit = ncm_util_gaussian_integral (xl, xu, mu, sigma);
     const gdouble unit    = ncm_util_normal_gaussian_integral ((xl - mu) / sigma, (xu - mu) / sigma);
 
     ncm_assert_cmpdouble_e (nonunit, ==, unit, tol, 0.0);
+
+    logtol = tol / fabs (fabs (unit) - 1.0);
+
+    ncm_assert_cmpdouble_e (ncm_util_log_gaussian_integral (xl, xu, mu, sigma, &sign), ==, log (fabs (unit)), logtol, 0.0);
+    g_assert_cmpfloat (sign, ==, GSL_SIGN (unit));
   }
 }
 

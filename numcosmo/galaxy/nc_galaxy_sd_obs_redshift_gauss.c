@@ -316,14 +316,15 @@ _nc_galaxy_sd_obs_redshift_gauss_integ_f (gpointer callback_data, const gdouble 
   NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (int_data->gsdorgauss);
   NcGalaxySDObsRedshiftGaussData * const ldata   = (NcGalaxySDObsRedshiftGaussData *) data->ldata;
   const gdouble zp                               = ldata->zp;
+  gdouble sign;
 
   if (self->use_true_z)
   {
-    const gdouble sigmaz = ldata->sigma0 * (1.0 + z);
-    const gdouble norm0  = sqrt (2.0 * M_PI) * sigmaz;
-    const gdouble norm   = norm0 * ncm_util_gaussian_integral (self->zp_min, self->zp_max, z, sigmaz);
-    const gdouble int_z  = nc_galaxy_sd_true_redshift_integ (self->sdz, z);
-    const gdouble int_zp = exp (-0.5 * gsl_pow_2 ((zp - z) / sigmaz)) / norm;
+    const gdouble sigmaz  = ldata->sigma0 * (1.0 + z);
+    const gdouble norm    = sqrt (2.0 * M_PI) * sigmaz;
+    const gdouble lognorm = ncm_util_log_gaussian_integral (self->zp_min, self->zp_max, z, sigmaz, &sign);
+    const gdouble int_z   = nc_galaxy_sd_true_redshift_integ (self->sdz, z);
+    const gdouble int_zp  = exp (-0.5 * gsl_pow_2 ((zp - z) / sigmaz) - lognorm) / norm;
 
     return int_z * int_zp;
   }

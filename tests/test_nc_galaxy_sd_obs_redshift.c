@@ -573,6 +573,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_integ (TestNcGalaxySDObsRedshift *test, gco
   const gdouble zp                          = 0.4;
   const gdouble sigma0                      = 0.05;
   const guint nruns                         = 10000;
+  gdouble sign;
   guint i;
 
   nc_galaxy_sd_obs_redshift_gauss_set_use_true_z (NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->gsdor), TRUE);
@@ -584,9 +585,10 @@ test_nc_galaxy_sd_obs_redshift_gauss_integ (TestNcGalaxySDObsRedshift *test, gco
   {
     const gdouble z       = g_test_rand_double_range (0.0, 5.0);
     const gdouble sigmaz  = sigma0 * (1.0 + z);
-    const gdouble norm    = sqrt (2.0 * M_PI) * sigmaz * 0.5 * (1.0 + erf (z / (M_SQRT2 * sigmaz)));
+    const gdouble norm    = sqrt (2.0 * M_PI) * sigmaz;
+    const double lognorm  = ncm_util_log_gaussian_integral (test->z_min, test->z_max, z, sigmaz, &sign);
     const gdouble int_z   = nc_galaxy_sd_true_redshift_integ (gsdtr, z);
-    const gdouble int_zp  = exp (-0.5 * gsl_pow_2 ((zp - z) / sigmaz)) / norm;
+    const gdouble int_zp  = exp (-0.5 * gsl_pow_2 ((zp - z) / sigmaz) - lognorm) / norm;
     const gdouble control = int_z * int_zp;
     const gdouble res     = nc_galaxy_sd_obs_redshift_integrand_eval (integrand, z, data);
 
@@ -725,7 +727,7 @@ test_nc_galaxy_sd_obs_redshift_spec_lim (TestNcGalaxySDObsRedshift *test, gconst
   gdouble z_min;
   gdouble z_max;
 
-  nc_galaxy_sd_obs_redshift_get_integ_lim (test->gsdor, data, &z_min, &z_max);
+  nc_galaxy_sd_obs_redshift_spec_get_z_lim (NC_GALAXY_SD_OBS_REDSHIFT_SPEC (test->gsdor), &z_min, &z_max);
 
   g_assert_cmpfloat (z_min, ==, test->z_min);
   g_assert_cmpfloat (z_max, ==, test->z_max);

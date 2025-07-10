@@ -64,6 +64,8 @@ void ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, co
 
 gdouble ncm_util_normal_gaussian_integral (const gdouble xl, const gdouble xu);
 gdouble ncm_util_gaussian_integral (const gdouble xl, const gdouble xu, const gdouble mu, const gdouble sigma);
+gdouble ncm_util_log_normal_gaussian_integral (const gdouble xl, const gdouble xu, gdouble *sign);
+gdouble ncm_util_log_gaussian_integral (const gdouble xl, const gdouble xu, const gdouble mu, const gdouble sigma, gdouble *sign);
 
 gint ncm_cmp (gdouble x, gdouble y, const gdouble reltol, const gdouble abstol);
 
