@@ -6,6 +6,7 @@ from gi.repository import NumCosmoMath
 
 T = typing.TypeVar("T")
 
+CLUSTER_MASS_ASCASO_DEFAULT_CUT: float = 0.0
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P0: float = 3.19
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P1: int = 0
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P2: int = 0
@@ -28,6 +29,23 @@ CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL: float = 0.0
 CLUSTER_MASS_LNNORMAL_DEFAULT_BIAS: float = 0.0
 CLUSTER_MASS_LNNORMAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
 CLUSTER_MASS_LNNORMAL_DEFAULT_SIGMA: float = 0.04
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_A0: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT_M1: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_CUT_Z1: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU: float = 3.19
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_M1: int = 0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_M2: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_MZ: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_Z1: int = 0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_MU_Z2: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_PARAMS_ABSTOL: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_0: float = 0.33
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_M1: int = 0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_M2: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_MZ: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_Z1: float = 0.0
+CLUSTER_MASS_LNRICH_EXT_DEFAULT_SIGMA_Z2: float = 0.0
 CLUSTER_MASS_PLCL_DEFAULT_A_L: float = 0.9
 CLUSTER_MASS_PLCL_DEFAULT_A_SZ: float = 1.0
 CLUSTER_MASS_PLCL_DEFAULT_B_L: float = 0.0
@@ -40,6 +58,14 @@ CLUSTER_MASS_PLCL_MCL: int = 1
 CLUSTER_MASS_PLCL_MPL: int = 0
 CLUSTER_MASS_PLCL_SD_CL: int = 1
 CLUSTER_MASS_PLCL_SD_PL: int = 0
+CLUSTER_MASS_SELECTION_DEFAULT_CUT: float = 0.0
+CLUSTER_MASS_SELECTION_DEFAULT_MU_P0: float = 3.19
+CLUSTER_MASS_SELECTION_DEFAULT_MU_P1: int = 0
+CLUSTER_MASS_SELECTION_DEFAULT_MU_P2: int = 0
+CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL: float = 0.0
+CLUSTER_MASS_SELECTION_DEFAULT_SIGMA_P0: float = 0.33
+CLUSTER_MASS_SELECTION_DEFAULT_SIGMA_P1: int = 0
+CLUSTER_MASS_SELECTION_DEFAULT_SIGMA_P2: float = 0.0
 CLUSTER_MASS_VANDERLINDE_DEFAULT_A_SZ: float = 6.01
 CLUSTER_MASS_VANDERLINDE_DEFAULT_B_SZ: float = 1.31
 CLUSTER_MASS_VANDERLINDE_DEFAULT_C_SZ: float = 1.6
@@ -1647,6 +1673,8 @@ class ClusterMassAscaso(ClusterMass):
         Minimum LnRichness
       lnRichness-max -> gdouble: lnRichness-max
         Maximum LnRichness
+      enable-rejection -> gboolean: enable-rejection
+        Whether rejects the sampled objects below the CUT
       mup0 -> gdouble: mup0
         mu_p0
       mup1 -> gdouble: mup1
@@ -1659,6 +1687,8 @@ class ClusterMassAscaso(ClusterMass):
         \sigma_p1
       sigmap2 -> gdouble: sigmap2
         \sigma_p2
+      cut -> gdouble: cut
+        CUT
       mup0-fit -> gboolean: mup0-fit
         mu_p0:fit
       mup1-fit -> gboolean: mup1-fit
@@ -1671,6 +1701,8 @@ class ClusterMassAscaso(ClusterMass):
         \sigma_p1:fit
       sigmap2-fit -> gboolean: sigmap2-fit
         \sigma_p2:fit
+      cut-fit -> gboolean: cut-fit
+        CUT:fit
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -1698,6 +1730,9 @@ class ClusterMassAscaso(ClusterMass):
 
     class Props:
         M0: float
+        cut: float
+        cut_fit: bool
+        enable_rejection: bool
         lnRichness_max: float
         lnRichness_min: float
         mup0: float
@@ -1729,6 +1764,9 @@ class ClusterMassAscaso(ClusterMass):
     def __init__(
         self,
         M0: float = ...,
+        cut: float = ...,
+        cut_fit: bool = ...,
+        enable_rejection: bool = ...,
         lnRichness_max: float = ...,
         lnRichness_min: float = ...,
         mup0: float = ...,
@@ -1748,6 +1786,13 @@ class ClusterMassAscaso(ClusterMass):
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
+    def get_cut(self, lnM: float, z: float) -> float: ...
+    def get_enable_rejection(self) -> bool: ...
+    def get_mean(self, lnM: float, z: float) -> float: ...
+    def get_mean_richness(self, lnM: float, z: float) -> float: ...
+    def get_std(self, lnM: float, z: float) -> float: ...
+    def get_std_richness(self, lnM: float, z: float) -> float: ...
+    def set_enable_rejection(self, on: bool) -> None: ...
 
 class ClusterMassAscasoClass(GObject.GPointer):
     r"""
@@ -2222,6 +2267,229 @@ class ClusterMassLnnormalClass(GObject.GPointer):
 
     parent_class: ClusterMassClass = ...
 
+class ClusterMassLnrichExt(ClusterMass):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterMassLnrichExt(**properties)
+
+    Object NcClusterMassLnrichExt
+
+    Properties from NcClusterMassLnrichExt:
+      M0 -> gdouble: M0
+        Pivot mass
+      z0 -> gdouble: z0
+        Pivot redshift
+      lnRichness-min -> gdouble: lnRichness-min
+        Minimum LnRichness
+      lnRichness-max -> gdouble: lnRichness-max
+        Maximum LnRichness
+      use-ln1pz -> gboolean: use-ln1pz
+        Whether we are going to use ln(1+z) or z in the fits.
+      mu -> gdouble: mu
+        \mu
+      muM1 -> gdouble: muM1
+        \mu_\mathrm{M_1}
+      muZ1 -> gdouble: muZ1
+        \mu_\mathrm{z_1}
+      muM2 -> gdouble: muM2
+        \mu_\mathrm{M_2}
+      muZ2 -> gdouble: muZ2
+        \mu_\mathrm{z_2}
+      muMZ -> gdouble: muMZ
+        \mu_\mathrm{MZ}
+      sigma0 -> gdouble: sigma0
+        \sigma_0
+      sigmaM1 -> gdouble: sigmaM1
+        \sigma_\mathrm{M_1}
+      sigmaZ1 -> gdouble: sigmaZ1
+        \sigma_\mathrm{z_1}
+      sigmaM2 -> gdouble: sigmaM2
+        \sigma_\mathrm{M_2}
+      sigmaZ2 -> gdouble: sigmaZ2
+        \sigma_\mathrm{z_2}
+      sigmaMZ -> gdouble: sigmaMZ
+        \sigma_\mathrm{MZ}
+      A0 -> gdouble: A0
+        \mu_\mathrm{A_0}
+      cut -> gdouble: cut
+        cut
+      cutM1 -> gdouble: cutM1
+        \cut_\mathrm{M_1}
+      cutZ1 -> gdouble: cutZ1
+        \cut_\mathrm{Z_1}
+      mu-fit -> gboolean: mu-fit
+        \mu:fit
+      muM1-fit -> gboolean: muM1-fit
+        \mu_\mathrm{M_1}:fit
+      muZ1-fit -> gboolean: muZ1-fit
+        \mu_\mathrm{z_1}:fit
+      muM2-fit -> gboolean: muM2-fit
+        \mu_\mathrm{M_2}:fit
+      muZ2-fit -> gboolean: muZ2-fit
+        \mu_\mathrm{z_2}:fit
+      muMZ-fit -> gboolean: muMZ-fit
+        \mu_\mathrm{MZ}:fit
+      sigma0-fit -> gboolean: sigma0-fit
+        \sigma_0:fit
+      sigmaM1-fit -> gboolean: sigmaM1-fit
+        \sigma_\mathrm{M_1}:fit
+      sigmaZ1-fit -> gboolean: sigmaZ1-fit
+        \sigma_\mathrm{z_1}:fit
+      sigmaM2-fit -> gboolean: sigmaM2-fit
+        \sigma_\mathrm{M_2}:fit
+      sigmaZ2-fit -> gboolean: sigmaZ2-fit
+        \sigma_\mathrm{z_2}:fit
+      sigmaMZ-fit -> gboolean: sigmaMZ-fit
+        \sigma_\mathrm{MZ}:fit
+      A0-fit -> gboolean: A0-fit
+        \mu_\mathrm{A_0}:fit
+      cut-fit -> gboolean: cut-fit
+        cut:fit
+      cutM1-fit -> gboolean: cutM1-fit
+        \cut_\mathrm{M_1}:fit
+      cutZ1-fit -> gboolean: cutZ1-fit
+        \cut_\mathrm{Z_1}:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        A0: float
+        A0_fit: bool
+        M0: float
+        cut: float
+        cut_fit: bool
+        cutM1: float
+        cutM1_fit: bool
+        cutZ1: float
+        cutZ1_fit: bool
+        lnRichness_max: float
+        lnRichness_min: float
+        mu: float
+        mu_fit: bool
+        muM1: float
+        muM1_fit: bool
+        muM2: float
+        muM2_fit: bool
+        muMZ: float
+        muMZ_fit: bool
+        muZ1: float
+        muZ1_fit: bool
+        muZ2: float
+        muZ2_fit: bool
+        sigma0: float
+        sigma0_fit: bool
+        sigmaM1: float
+        sigmaM1_fit: bool
+        sigmaM2: float
+        sigmaM2_fit: bool
+        sigmaMZ: float
+        sigmaMZ_fit: bool
+        sigmaZ1: float
+        sigmaZ1_fit: bool
+        sigmaZ2: float
+        sigmaZ2_fit: bool
+        use_ln1pz: bool
+        z0: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: ClusterMass = ...
+    priv: ClusterMassLnrichExtPrivate = ...
+    def __init__(
+        self,
+        A0: float = ...,
+        A0_fit: bool = ...,
+        M0: float = ...,
+        cut: float = ...,
+        cut_fit: bool = ...,
+        cutM1: float = ...,
+        cutM1_fit: bool = ...,
+        cutZ1: float = ...,
+        cutZ1_fit: bool = ...,
+        lnRichness_max: float = ...,
+        lnRichness_min: float = ...,
+        mu: float = ...,
+        mu_fit: bool = ...,
+        muM1: float = ...,
+        muM1_fit: bool = ...,
+        muM2: float = ...,
+        muM2_fit: bool = ...,
+        muMZ: float = ...,
+        muMZ_fit: bool = ...,
+        muZ1: float = ...,
+        muZ1_fit: bool = ...,
+        muZ2: float = ...,
+        muZ2_fit: bool = ...,
+        sigma0: float = ...,
+        sigma0_fit: bool = ...,
+        sigmaM1: float = ...,
+        sigmaM1_fit: bool = ...,
+        sigmaM2: float = ...,
+        sigmaM2_fit: bool = ...,
+        sigmaMZ: float = ...,
+        sigmaMZ_fit: bool = ...,
+        sigmaZ1: float = ...,
+        sigmaZ1_fit: bool = ...,
+        sigmaZ2: float = ...,
+        sigmaZ2_fit: bool = ...,
+        use_ln1pz: bool = ...,
+        z0: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_cut(self) -> float: ...
+    def get_mean(self, lnM: float, z: float) -> float: ...
+    def get_mean_richness(self, lnM: float, z: float) -> float: ...
+    def get_std(self, lnM: float, z: float) -> float: ...
+    def get_std_richness(self, lnM: float, z: float) -> float: ...
+
+class ClusterMassLnrichExtClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterMassLnrichExtClass()
+    """
+
+    parent_class: ClusterMassClass = ...
+
+class ClusterMassLnrichExtPrivate(GObject.GPointer): ...
+
 class ClusterMassNodist(ClusterMass):
     r"""
     :Constructors:
@@ -2452,6 +2720,161 @@ class ClusterMassPlCLClass(GObject.GPointer):
 
 class ClusterMassPrivate(GObject.GPointer): ...
 
+class ClusterMassSelection(ClusterMass):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterMassSelection(**properties)
+
+    Object NcClusterMassSelection
+
+    Properties from NcClusterMassSelection:
+      M0 -> gdouble: M0
+        Pivot mass
+      z0 -> gdouble: z0
+        Pivot redshift
+      lnRichness-min -> gdouble: lnRichness-min
+        Minimum LnRichness
+      lnRichness-max -> gdouble: lnRichness-max
+        Maximum LnRichness
+      enable-rejection -> gboolean: enable-rejection
+        Whether rejects the sampled objects below the CUT
+      mup0 -> gdouble: mup0
+        mu_p0
+      mup1 -> gdouble: mup1
+        mu_p1
+      mup2 -> gdouble: mup2
+        mu_p2
+      sigmap0 -> gdouble: sigmap0
+        \sigma_p0
+      sigmap1 -> gdouble: sigmap1
+        \sigma_p1
+      sigmap2 -> gdouble: sigmap2
+        \sigma_p2
+      cut -> gdouble: cut
+        CUT
+      mup0-fit -> gboolean: mup0-fit
+        mu_p0:fit
+      mup1-fit -> gboolean: mup1-fit
+        mu_p1:fit
+      mup2-fit -> gboolean: mup2-fit
+        mu_p2:fit
+      sigmap0-fit -> gboolean: sigmap0-fit
+        \sigma_p0:fit
+      sigmap1-fit -> gboolean: sigmap1-fit
+        \sigma_p1:fit
+      sigmap2-fit -> gboolean: sigmap2-fit
+        \sigma_p2:fit
+      cut-fit -> gboolean: cut-fit
+        CUT:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        M0: float
+        cut: float
+        cut_fit: bool
+        enable_rejection: bool
+        lnRichness_max: float
+        lnRichness_min: float
+        mup0: float
+        mup0_fit: bool
+        mup1: float
+        mup1_fit: bool
+        mup2: float
+        mup2_fit: bool
+        sigmap0: float
+        sigmap0_fit: bool
+        sigmap1: float
+        sigmap1_fit: bool
+        sigmap2: float
+        sigmap2_fit: bool
+        z0: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: ClusterMass = ...
+    priv: ClusterMassSelectionPrivate = ...
+    def __init__(
+        self,
+        M0: float = ...,
+        cut: float = ...,
+        cut_fit: bool = ...,
+        enable_rejection: bool = ...,
+        lnRichness_max: float = ...,
+        lnRichness_min: float = ...,
+        mup0: float = ...,
+        mup0_fit: bool = ...,
+        mup1: float = ...,
+        mup1_fit: bool = ...,
+        mup2: float = ...,
+        mup2_fit: bool = ...,
+        sigmap0: float = ...,
+        sigmap0_fit: bool = ...,
+        sigmap1: float = ...,
+        sigmap1_fit: bool = ...,
+        sigmap2: float = ...,
+        sigmap2_fit: bool = ...,
+        z0: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_cut(self, lnM: float, z: float) -> float: ...
+    def get_enable_rejection(self) -> bool: ...
+    def get_mean(self, lnM: float, z: float) -> float: ...
+    def get_mean_richness(self, lnM: float, z: float) -> float: ...
+    def get_std(self, lnM: float, z: float) -> float: ...
+    def get_std_richness(self, lnM: float, z: float) -> float: ...
+    def set_completeness(self, completeness: NumCosmoMath.Spline2dBicubic) -> None: ...
+    def set_enable_rejection(self, on: bool) -> None: ...
+    def set_purity(self, purity: NumCosmoMath.Spline2dBicubic) -> None: ...
+
+class ClusterMassSelectionClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterMassSelectionClass()
+    """
+
+    parent_class: ClusterMassClass = ...
+
+class ClusterMassSelectionPrivate(GObject.GPointer): ...
+
 class ClusterMassVanderlinde(ClusterMass):
     r"""
     :Constructors:
@@ -2629,6 +3052,7 @@ class ClusterPhotozGauss(ClusterRedshift):
     parent_instance: ClusterRedshift = ...
     pz_max: float = ...
     pz_min: float = ...
+    priv: ClusterPhotozGaussPrivate = ...
     def __init__(
         self,
         pz_max: float = ...,
@@ -2752,6 +3176,8 @@ class ClusterPhotozGaussGlobalClass(GObject.GPointer):
     """
 
     parent_class: ClusterRedshiftClass = ...
+
+class ClusterPhotozGaussPrivate(GObject.GPointer): ...
 
 class ClusterPseudoCounts(NumCosmoMath.Model):
     r"""
@@ -4436,6 +4862,83 @@ class DataCMBShiftParamClass(GObject.GPointer):
     """
 
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
+
+class DataClusterMassRich(NumCosmoMath.Data):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataClusterMassRich(**properties)
+        new() -> NumCosmo.DataClusterMassRich
+
+    Object NcDataClusterMassRich
+
+    Properties from NcDataClusterMassRich:
+      z-cluster -> NcmVector: z-cluster
+        Clusters (halo) redshift array
+      lnM-cluster -> NcmVector: lnM-cluster
+        Clusters (halo) ln-mass array
+      lnR-cluster -> NcmVector: lnR-cluster
+        Clusters (halo) ln-richness array
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        lnM_cluster: NumCosmoMath.Vector
+        lnR_cluster: NumCosmoMath.Vector
+        z_cluster: NumCosmoMath.Vector
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        lnM_cluster: NumCosmoMath.Vector = ...,
+        lnR_cluster: NumCosmoMath.Vector = ...,
+        z_cluster: NumCosmoMath.Vector = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(dmr: DataClusterMassRich) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls) -> DataClusterMassRich: ...
+    def ref(self) -> DataClusterMassRich: ...
+    def set_data(
+        self, lnM: NumCosmoMath.Vector, z: NumCosmoMath.Vector, lnR: NumCosmoMath.Vector
+    ) -> None: ...
+
+class DataClusterMassRichClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataClusterMassRichClass()
+    """
+
+    parent_class: NumCosmoMath.DataClass = ...
 
 class DataClusterNCount(NumCosmoMath.Data):
     r"""
@@ -13845,6 +14348,72 @@ class HaloBiasClass(GObject.GPointer):
     parent_class: GObject.ObjectClass = ...
     eval: typing.Callable[[HaloBias, HICosmo, float, float], float] = ...
 
+class HaloBiasDespali(HaloBias):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloBiasDespali(**properties)
+        new(mfp:NumCosmo.HaloMassFunction) -> NumCosmo.HaloBiasDespali
+        new_full(mfp:NumCosmo.HaloMassFunction, eo:bool, cmf:bool) -> NumCosmo.HaloBiasDespali
+
+    Object NcHaloBiasDespali
+
+    Properties from NcHaloBiasDespali:
+      eo -> gboolean: eo
+        Whether the halo finder uses eliptical overdensity
+      cmf -> gboolean: cmf
+        Whether the use of the cluster mass function
+
+    Properties from NcHaloBias:
+      mass-function -> NcHaloMassFunction: mass-function
+        Mass Function.
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        cmf: bool
+        eo: bool
+        mass_function: HaloMassFunction
+
+    props: Props = ...
+    parent_instance: HaloBias = ...
+    eo: bool = ...
+    cmf: bool = ...
+    def __init__(
+        self, cmf: bool = ..., eo: bool = ..., mass_function: HaloMassFunction = ...
+    ) -> None: ...
+    @staticmethod
+    def clear(biasf_despali: HaloBiasDespali) -> None: ...
+    def delta_c(self, cosmo: HICosmo, z: float) -> float: ...
+    def delta_vir(self, cosmo: HICosmo, z: float) -> float: ...
+    def free(self) -> None: ...
+    def get_cmf(self) -> bool: ...
+    def get_eo(self) -> bool: ...
+    @classmethod
+    def new(cls, mfp: HaloMassFunction) -> HaloBiasDespali: ...
+    @classmethod
+    def new_full(
+        cls, mfp: HaloMassFunction, eo: bool, cmf: bool
+    ) -> HaloBiasDespali: ...
+    def ref(self) -> HaloBiasDespali: ...
+    def set_cmf(self, on: bool) -> None: ...
+    def set_eo(self, on: bool) -> None: ...
+
+class HaloBiasDespaliClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloBiasDespaliClass()
+    """
+
+    parent_class: HaloBiasClass = ...
+
 class HaloBiasPS(HaloBias):
     r"""
     :Constructors:
@@ -19998,6 +20567,7 @@ class RecombSeagerOpt(GObject.GFlags):
     HII_FUDGE_GAUSS_COR: RecombSeagerOpt = ...
 
 class ClusterMassAscasoSParams(GObject.GEnum):
+    CUT: ClusterMassAscasoSParams = ...
     MU_P0: ClusterMassAscasoSParams = ...
     MU_P1: ClusterMassAscasoSParams = ...
     MU_P2: ClusterMassAscasoSParams = ...
@@ -20028,6 +20598,24 @@ class ClusterMassLnnormalSParams(GObject.GEnum):
     BIAS: ClusterMassLnnormalSParams = ...
     SIGMA: ClusterMassLnnormalSParams = ...
 
+class ClusterMassLnrichExtSParams(GObject.GEnum):
+    A0: ClusterMassLnrichExtSParams = ...
+    CUT: ClusterMassLnrichExtSParams = ...
+    CUT_M1: ClusterMassLnrichExtSParams = ...
+    CUT_Z1: ClusterMassLnrichExtSParams = ...
+    MU: ClusterMassLnrichExtSParams = ...
+    MU_M1: ClusterMassLnrichExtSParams = ...
+    MU_M2: ClusterMassLnrichExtSParams = ...
+    MU_MZ: ClusterMassLnrichExtSParams = ...
+    MU_Z1: ClusterMassLnrichExtSParams = ...
+    MU_Z2: ClusterMassLnrichExtSParams = ...
+    SIGMA_0: ClusterMassLnrichExtSParams = ...
+    SIGMA_M1: ClusterMassLnrichExtSParams = ...
+    SIGMA_M2: ClusterMassLnrichExtSParams = ...
+    SIGMA_MZ: ClusterMassLnrichExtSParams = ...
+    SIGMA_Z1: ClusterMassLnrichExtSParams = ...
+    SIGMA_Z2: ClusterMassLnrichExtSParams = ...
+
 class ClusterMassPlCLSParams(GObject.GEnum):
     A_L: ClusterMassPlCLSParams = ...
     A_SZ: ClusterMassPlCLSParams = ...
@@ -20036,6 +20624,15 @@ class ClusterMassPlCLSParams(GObject.GEnum):
     COR: ClusterMassPlCLSParams = ...
     SD_L: ClusterMassPlCLSParams = ...
     SD_SZ: ClusterMassPlCLSParams = ...
+
+class ClusterMassSelectionSParams(GObject.GEnum):
+    CUT: ClusterMassSelectionSParams = ...
+    MU_P0: ClusterMassSelectionSParams = ...
+    MU_P1: ClusterMassSelectionSParams = ...
+    MU_P2: ClusterMassSelectionSParams = ...
+    SIGMA_P0: ClusterMassSelectionSParams = ...
+    SIGMA_P1: ClusterMassSelectionSParams = ...
+    SIGMA_P2: ClusterMassSelectionSParams = ...
 
 class ClusterMassVanderlindeSParams(GObject.GEnum):
     A_SZ: ClusterMassVanderlindeSParams = ...
