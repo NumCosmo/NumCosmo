@@ -271,7 +271,9 @@ test_nc_galaxy_sd_true_redshift_gen (TestNcGalaxySDTrueRedshift *test, gconstpoi
     z_max = g_test_rand_double_range (0.3, 5.0);
   } while (z_max <= z_min);
 
-  nc_galaxy_sd_true_redshift_set_lim (test->gsdtr, z_min, z_max);
+  /* nc_galaxy_sd_true_redshift_set_lim (test->gsdtr, z_min, z_max); */
+
+  nc_galaxy_sd_true_redshift_get_lim (test->gsdtr, &z_min, &z_max);
 
   {
     const gdouble z_avg = _test_get_z_avg (gsdtrlsst);
