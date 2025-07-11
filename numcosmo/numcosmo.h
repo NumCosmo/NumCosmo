@@ -165,10 +165,12 @@
 #include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift_spec.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift_gauss.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift_pz.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_true_redshift.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape_gauss.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_shape_gauss_hsc.h>
 
 /* Observable data */
 #include <numcosmo/data/nc_data_snia.h>
@@ -185,6 +187,7 @@
 #include <numcosmo/data/nc_data_bao_dhr_dar.h>
 #include <numcosmo/data/nc_data_bao_dtr_dhr.h>
 #include <numcosmo/data/nc_data_bao_dmr_hr.h>
+#include <numcosmo/data/nc_data_bao_dvr_dtdh.h>
 #include <numcosmo/data/nc_data_bao.h>
 #include <numcosmo/data/nc_data_cmb_dist_priors.h>
 #include <numcosmo/data/nc_data_cmb_shift_param.h>

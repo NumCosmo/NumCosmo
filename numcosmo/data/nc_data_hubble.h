@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -34,14 +34,8 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_DATA_HUBBLE             (nc_data_hubble_get_type ())
-#define NC_DATA_HUBBLE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_HUBBLE, NcDataHubble))
-#define NC_DATA_HUBBLE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_HUBBLE, NcDataHubbleClass))
-#define NC_IS_DATA_HUBBLE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_DATA_HUBBLE))
-#define NC_IS_DATA_HUBBLE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_HUBBLE))
-#define NC_DATA_HUBBLE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_HUBBLE, NcDataHubbleClass))
 
-typedef struct _NcDataHubbleClass NcDataHubbleClass;
-typedef struct _NcDataHubble NcDataHubble;
+G_DECLARE_FINAL_TYPE (NcDataHubble, nc_data_hubble, NC, DATA_HUBBLE, NcmDataGaussDiag);
 
 /**
  * NcDataHubbleId:
@@ -57,45 +51,40 @@ typedef struct _NcDataHubble NcDataHubble;
  * @NC_DATA_HUBBLE_RIESS2008_HST: FIXME
  * @NC_DATA_HUBBLE_ZHANG2012: FIXME
  * @NC_DATA_HUBBLE_RIESS2016_HST_WFC3: FIXME
+ * @NC_DATA_HUBBLE_RATSIMBAZAFY2017: Ratsimbazafy et al. 2017 -- arXiv:1702.00418
  * @NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018: [Gomez-Valent et al. (2018)][XGomez-Valent2018]
  * @NC_DATA_HUBBLE_RIESS2018: FIXME
- * 
+ * @NC_DATA_HUBBLE_BORGHI2022: Borghi et al. 2022 -- arXiv:2110.04304
+ * @NC_DATA_HUBBLE_JIAO2023: Jiao et al. 2023 -- arXiv:2205.05701
+ * @NC_DATA_HUBBLE_JIMENEZ2023: Jimenez et al. 2023 -- arXiv:2306.11425
+ * @NC_DATA_HUBBLE_TOMASETTI2023: Tomasetti et al. 2023 -- arXiv:2305.16387
+ *
  * FIXME
  */
 typedef enum _NcDataHubbleId
 {
   NC_DATA_HUBBLE_SIMON2005 = 0,
   NC_DATA_HUBBLE_CABRE,
-  NC_DATA_HUBBLE_STERN2009, 
-  NC_DATA_HUBBLE_MORESCO2012_BC03, 
+  NC_DATA_HUBBLE_STERN2009,
+  NC_DATA_HUBBLE_MORESCO2012_BC03,
   NC_DATA_HUBBLE_MORESCO2012_MASTRO,
   NC_DATA_HUBBLE_MORESCO2015,
-  NC_DATA_HUBBLE_MORESCO2016_DR9_BC03, 
+  NC_DATA_HUBBLE_MORESCO2016_DR9_BC03,
   NC_DATA_HUBBLE_MORESCO2016_DR9_MASTRO,
-  NC_DATA_HUBBLE_BUSCA2013_BAO_WMAP, 
+  NC_DATA_HUBBLE_BUSCA2013_BAO_WMAP,
   NC_DATA_HUBBLE_RIESS2008_HST,
   NC_DATA_HUBBLE_ZHANG2012,
-  NC_DATA_HUBBLE_RIESS2016_HST_WFC3, 
+  NC_DATA_HUBBLE_RIESS2016_HST_WFC3,
+  NC_DATA_HUBBLE_RATSIMBAZAFY2017,
   NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018,
   NC_DATA_HUBBLE_RIESS2018,
+  NC_DATA_HUBBLE_BORGHI2022,
+  NC_DATA_HUBBLE_JIAO2023,
+  NC_DATA_HUBBLE_JIMENEZ2023,
+  NC_DATA_HUBBLE_TOMASETTI2023,
   /* < private > */
-  NC_DATA_HUBBLE_NSAMPLES,           /*< skip >*/
+  NC_DATA_HUBBLE_NSAMPLES, /*< skip >*/
 } NcDataHubbleId;
-
-struct _NcDataHubbleClass
-{
-  /*< private >*/
-  NcmDataGaussDiagClass parent_class;
-};
-
-struct _NcDataHubble
-{
-  /*< private >*/
-  NcmDataGaussDiag parent_instance;
-  NcmVector *x;
-};
-
-GType nc_data_hubble_get_type (void) G_GNUC_CONST;
 
 NcDataHubble *nc_data_hubble_new_empty (void);
 NcDataHubble *nc_data_hubble_new_from_file (const gchar *filename);
@@ -106,3 +95,4 @@ void nc_data_hubble_set_sample (NcDataHubble *hubble, NcDataHubbleId id);
 G_END_DECLS
 
 #endif /* _NC_DATA_HUBBLE_H_ */
+

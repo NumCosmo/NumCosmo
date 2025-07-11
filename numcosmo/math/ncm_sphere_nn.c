@@ -112,7 +112,7 @@ ncm_sphere_nn_class_init (NcmSphereNNClass *klass)
  * Returns: (transfer full): a new #NcmSphereNN.
  */
 NcmSphereNN *
-ncm_sphere_nn_new ()
+ncm_sphere_nn_new (void)
 {
   NcmSphereNN *snn = g_object_new (NCM_TYPE_SPHERE_NN,
                                    NULL);

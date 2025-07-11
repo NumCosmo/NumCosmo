@@ -43,7 +43,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmSphereNN, ncm_sphere_nn, NCM, SPHERE_NN, GObject)
 
-NcmSphereNN *ncm_sphere_nn_new ();
+NcmSphereNN *ncm_sphere_nn_new (void);
 NcmSphereNN *ncm_sphere_nn_ref (NcmSphereNN *snn);
 void ncm_sphere_nn_free (NcmSphereNN *snn);
 void ncm_sphere_nn_clear (NcmSphereNN **snn);

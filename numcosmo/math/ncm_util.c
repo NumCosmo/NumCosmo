@@ -622,8 +622,7 @@ ncm_complex_dup (NcmComplex *c)
 {
   NcmComplex *cc = ncm_complex_new ();
 
-  cc->z[0] = c->z[0];
-  cc->z[1] = c->z[1];
+  *cc = *c;
 
   return cc;
 }
@@ -664,6 +663,14 @@ ncm_complex_clear (NcmComplex **c)
  *
  */
 /**
+ * ncm_complex_set_c: (skip)
+ * @c: a #NcmComplex
+ * @z: a complex double
+ *
+ * Sets @c to $Re(z) + I Im(z)$.
+ *
+ */
+/**
  * ncm_complex_set_zero:
  * @c: a #NcmComplex
  *
@@ -685,6 +692,14 @@ ncm_complex_clear (NcmComplex **c)
  * Returns the imaginary part of @c.
  *
  * Returns: Im$(c)$.
+ */
+/**
+ * ncm_complex_c: (skip)
+ * @c: a #NcmComplex
+ *
+ * Returns the complex number $Re(c) + I Im(c)$.
+ *
+ * Returns: $Re(c) + I Im(c)$.
  */
 
 /**

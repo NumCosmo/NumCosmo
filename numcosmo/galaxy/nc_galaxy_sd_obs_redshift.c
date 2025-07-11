@@ -116,6 +116,26 @@ _nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedsh
   g_error ("_nc_galaxy_sd_obs_redshift_gen: method not implemented");
 }
 
+static gboolean
+_nc_galaxy_sd_obs_redshift_gen1 (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng)
+{
+  g_error ("_nc_galaxy_sd_obs_redshift_gen1: method not implemented");
+
+  return FALSE;
+}
+
+static void
+_nc_galaxy_sd_obs_redshift_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data)
+{
+  g_error ("_nc_galaxy_sd_obs_redshift_prepare: method not implemented");
+}
+
+static void
+_nc_galaxy_sd_obs_redshift_get_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
+{
+  g_error ("_nc_galaxy_sd_obs_redshift_get_lim: method not implemented");
+}
+
 static NcGalaxySDObsRedshiftIntegrand *
 _nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor)
 {
@@ -148,6 +168,9 @@ nc_galaxy_sd_obs_redshift_class_init (NcGalaxySDObsRedshiftClass *klass)
   ncm_model_class_check_params_info (model_class);
 
   klass->gen       = &_nc_galaxy_sd_obs_redshift_gen;
+  klass->gen1      = &_nc_galaxy_sd_obs_redshift_gen1;
+  klass->prepare   = &_nc_galaxy_sd_obs_redshift_prepare;
+  klass->get_lim   = &_nc_galaxy_sd_obs_redshift_get_lim;
   klass->integ     = &_nc_galaxy_sd_obs_redshift_integ;
   klass->data_init = &_nc_galaxy_sd_obs_redshift_data_init;
 }
@@ -328,6 +351,64 @@ void
 nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng)
 {
   NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->gen (gsdor, data, rng);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_gen1:
+ * @gsdor: a #NcGalaxySDObsRedshift instance
+ * @data: a pre-initialized #NcGalaxySDObsRedshiftData
+ * @rng: a #NcmRNG random number generator
+ *
+ * Attempts to generate a single redshift sample consistent with the observational
+ * constraints defined in @gsdor. The result is stored in @data.
+ *
+ * This method is typically used in scenarios where the total number of galaxies is
+ * fixed, and we wish to construct a subsample that satisfies observational selection
+ * criteria (e.g., redshift cuts or survey limitations). For each galaxy in the total
+ * sample, a redshift is proposed, and if it violates the constraints, the galaxy is
+ * discarded from the final subsample.
+ *
+ * This sampling approach avoids the need to compute the normalization or acceptance
+ * fraction analytically or numerically, which may involve complex or model-dependent
+ * integrals. It also offers flexibility for implementing more general or evolving
+ * selection functions.
+ *
+ * Returns: %TRUE if a valid redshift was generated; %FALSE otherwise.
+ */
+gboolean
+nc_galaxy_sd_obs_redshift_gen1 (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng)
+{
+  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->gen1 (gsdor, data, rng);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_prepare:
+ * @gsdor: a #NcGalaxySDObsRedshift
+ * @data: a #NcGalaxySDObsRedshiftData
+ *
+ * Prepares the galaxy redshift data for generation.
+ *
+ */
+void
+nc_galaxy_sd_obs_redshift_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data)
+{
+  NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->prepare (gsdor, data);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_get_lim:
+ * @gsdor: a #NcGalaxySDObsRedshift
+ * @data: a #NcGalaxySDObsRedshiftData
+ * @z_min: (out): the minimum redshift
+ * @z_max: (out): the maximum redshift
+ *
+ * Gets the redshift integration limits.
+ *
+ */
+void
+nc_galaxy_sd_obs_redshift_get_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
+{
+  NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->get_lim (gsdor, data, z_min, z_max);
 }
 
 /**
