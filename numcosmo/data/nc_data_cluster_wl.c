@@ -512,7 +512,7 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
 
         likelihood_integral->data.gal_i = gal_i;
 
-        nc_galaxy_sd_obs_redshift_get_lim (self->galaxy_redshift, z_data, &zpi, &zpf);
+        nc_galaxy_sd_obs_redshift_get_integ_lim (self->galaxy_redshift, z_data, &zpi, &zpf);
         ncm_vector_fast_set (zpi_v, 0, zpi);
         ncm_vector_fast_set (zpf_v, 0, zpf);
 
@@ -558,7 +558,7 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
 
         likelihood_integral->data.gal_i = gal_i;
 
-        nc_galaxy_sd_obs_redshift_get_lim (self->galaxy_redshift, z_data, &zpi, &zpf);
+        nc_galaxy_sd_obs_redshift_get_integ_lim (self->galaxy_redshift, z_data, &zpi, &zpf);
         ncm_vector_fast_set (zpi_v, 0, zpi);
         ncm_vector_fast_set (zpf_v, 0, zpf);
 
