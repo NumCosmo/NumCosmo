@@ -65,7 +65,7 @@ typedef struct _NcGalaxySDObsRedshiftSpecData
 enum
 {
   PROP_0,
-  PROP_LIM,
+  PROP_Z_LIM,
   PROP_LEN,
 };
 
@@ -90,14 +90,14 @@ _nc_galaxy_sd_obs_redshift_spec_set_property (GObject *object, guint prop_id, co
 
   switch (prop_id)
   {
-    case PROP_LIM:
+    case PROP_Z_LIM:
     {
       NcmDTuple2 *lim = g_value_get_boxed (value);
 
       if (lim == NULL)
-        g_error ("_nc_galaxy_sd_obs_redshift_spec_set_property: lim is NULL");
+        g_error ("_nc_galaxy_sd_obs_redshift_spec_set_property: z_lim is NULL");
 
-      nc_galaxy_sd_obs_redshift_spec_set_lim (gsdorspec, lim->elements[0], lim->elements[1]);
+      nc_galaxy_sd_obs_redshift_spec_set_z_lim (gsdorspec, lim->elements[0], lim->elements[1]);
       break;
     }
     default:                                                      /* LCOV_EXCL_LINE */
@@ -109,17 +109,17 @@ _nc_galaxy_sd_obs_redshift_spec_set_property (GObject *object, guint prop_id, co
 static void
 _nc_galaxy_sd_obs_redshift_spec_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcGalaxySDObsRedshiftSpec *gsdorspec = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (object);
+  NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (object);
+  NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
 
   g_return_if_fail (NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdorspec));
 
   switch (prop_id)
   {
-    case PROP_LIM:
+    case PROP_Z_LIM:
     {
-      gdouble zp_min, zp_max;
-
-      nc_galaxy_sd_obs_redshift_spec_get_lim (gsdorspec, &zp_min, &zp_max);
+      gdouble zp_min = self->z_min;
+      gdouble zp_max = self->z_max;
 
       g_value_take_boxed (value, ncm_dtuple2_new (zp_min, zp_max));
       break;
@@ -147,7 +147,7 @@ nc_galaxy_sd_obs_redshift_spec_finalize (GObject *object)
 static void _nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static gboolean _nc_galaxy_sd_obs_redshift_spec_gen1 (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static void _nc_galaxy_sd_obs_redshift_spec_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
-static void _nc_galaxy_sd_obs_redshift_spec_get_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
+static void _nc_galaxy_sd_obs_redshift_spec_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
 static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_spec_integ (NcGalaxySDObsRedshift *gsdor);
 static void _nc_galaxy_sd_obs_redshift_spec_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static void _nc_galaxy_sd_obs_redshift_spec_add_submodel (NcmModel *model, NcmModel *submodel);
@@ -168,28 +168,28 @@ nc_galaxy_sd_obs_redshift_spec_class_init (NcGalaxySDObsRedshiftSpecClass *klass
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
 
   /**
-   * NcGalaxySDObsRedshiftSpec:lim:
+   * NcGalaxySDObsRedshiftSpec:z_lim:
    *
    * Galaxy sample photometric redshift distribution limits.
    *
    */
   g_object_class_install_property (object_class,
-                                   PROP_LIM,
-                                   g_param_spec_boxed ("lim",
+                                   PROP_Z_LIM,
+                                   g_param_spec_boxed ("z-lim",
                                                        NULL,
-                                                       "Galaxy sample photometric redshift distribution limits",
+                                                       "Galaxy sample redshift limits",
                                                        NCM_TYPE_DTUPLE2,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   ncm_model_class_check_params_info (model_class);
 
-  gsdor_class->gen          = &_nc_galaxy_sd_obs_redshift_spec_gen;
-  gsdor_class->gen1         = &_nc_galaxy_sd_obs_redshift_spec_gen1;
-  gsdor_class->prepare      = &_nc_galaxy_sd_obs_redshift_spec_prepare;
-  gsdor_class->get_lim      = &_nc_galaxy_sd_obs_redshift_spec_get_lim;
-  gsdor_class->integ        = &_nc_galaxy_sd_obs_redshift_spec_integ;
-  gsdor_class->data_init    = &_nc_galaxy_sd_obs_redshift_spec_data_init;
-  model_class->add_submodel = &_nc_galaxy_sd_obs_redshift_spec_add_submodel;
+  gsdor_class->gen           = &_nc_galaxy_sd_obs_redshift_spec_gen;
+  gsdor_class->gen1          = &_nc_galaxy_sd_obs_redshift_spec_gen1;
+  gsdor_class->prepare       = &_nc_galaxy_sd_obs_redshift_spec_prepare;
+  gsdor_class->get_integ_lim = &_nc_galaxy_sd_obs_redshift_spec_get_integ_lim;
+  gsdor_class->integ         = &_nc_galaxy_sd_obs_redshift_spec_integ;
+  gsdor_class->data_init     = &_nc_galaxy_sd_obs_redshift_spec_data_init;
+  model_class->add_submodel  = &_nc_galaxy_sd_obs_redshift_spec_add_submodel;
 }
 
 static void
@@ -225,13 +225,12 @@ _nc_galaxy_sd_obs_redshift_spec_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxyS
 }
 
 static void
-_nc_galaxy_sd_obs_redshift_spec_get_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
+_nc_galaxy_sd_obs_redshift_spec_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
 {
   NcGalaxySDObsRedshiftSpec *gsdorspec          = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdor);
   NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
 
-  *z_min = self->z_min;
-  *z_max = self->z_max;
+  nc_galaxy_sd_true_redshift_get_lim (self->sdz, z_min, z_max);
 }
 
 struct _IntegData
@@ -350,7 +349,7 @@ nc_galaxy_sd_obs_redshift_spec_new (NcGalaxySDTrueRedshift *sdz, const gdouble z
 {
   NcmDTuple2 lim                       = NCM_DTUPLE2_STATIC_INIT (z_min, z_max);
   NcGalaxySDObsRedshiftSpec *gsdorspec = g_object_new (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_SPEC,
-                                                       "lim", &lim,
+                                                       "z-lim", &lim,
                                                        NULL);
 
   ncm_model_add_submodel (NCM_MODEL (gsdorspec), NCM_MODEL (sdz));
@@ -400,7 +399,7 @@ nc_galaxy_sd_obs_redshift_spec_clear (NcGalaxySDObsRedshiftSpec **gsdorspec)
 }
 
 /**
- * nc_galaxy_sd_obs_redshift_spec_set_lim:
+ * nc_galaxy_sd_obs_redshift_spec_set_z_lim:
  * @gsdorspec: a #NcGalaxySDObsRedshiftSpec
  * @z_min: the minimum redshift
  * @z_max: the maximum redshift
@@ -409,7 +408,7 @@ nc_galaxy_sd_obs_redshift_spec_clear (NcGalaxySDObsRedshiftSpec **gsdorspec)
  *
  */
 void
-nc_galaxy_sd_obs_redshift_spec_set_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, const gdouble z_min, const gdouble z_max)
+nc_galaxy_sd_obs_redshift_spec_set_z_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, const gdouble z_min, const gdouble z_max)
 {
   NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
 
@@ -420,15 +419,16 @@ nc_galaxy_sd_obs_redshift_spec_set_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, co
 }
 
 /**
- * nc_galaxy_sd_obs_redshift_spec_get_lim:
+ * nc_galaxy_sd_obs_redshift_spec_get_z_lim:
  * @gsdorspec: a #NcGalaxySDObsRedshiftSpec
  * @z_min: (out): the minimum redshift
  * @z_max: (out): the maximum redshift
  *
- * Returns the redshift limits of the galaxy sample redshift distribution.
+ * Gets the redshift limits of the galaxy sample redshift distribution.
+ *
  */
 void
-nc_galaxy_sd_obs_redshift_spec_get_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, gdouble *z_min, gdouble *z_max)
+nc_galaxy_sd_obs_redshift_spec_get_z_lim (NcGalaxySDObsRedshiftSpec *gsdorspec, gdouble *z_min, gdouble *z_max)
 {
   NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
 
