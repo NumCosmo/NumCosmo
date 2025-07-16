@@ -231,7 +231,7 @@ class TReNDAnalysis:
 #----------------------------------------------------------------------------------------------------------------#
     
     def comparison_plot(self, calib1, calib2):    
-        fig, axs = plt.subplots(3, 2, sharex=True, sharey='row')
+        fig, axs = plt.subplots(3, 2, figsize=(10,8), sharex=True, sharey='row')
         fig.subplots_adjust(wspace=0.30, hspace=0) 
     
         mcmc_list1 = [calib1.iloc[i:i+7] for i in range(0, len(calib1), 7)]
@@ -270,14 +270,14 @@ class TReNDAnalysis:
         axs[2, 1].set_ylim(ylim_mu2)
         
         for row in range(3):
-            axs[row, 0].set_ylabel(f'$\mu{row}$')
+            axs[row, 0].set_ylabel(f'$\mu{row}$', fontsize=12)
             for col in range(2):
                 axs[row, col].yaxis.set_major_formatter(mpl.ticker.FuncFormatter(lambda x, pos: f'{x:.2f}'))
                 axs[row, col].tick_params(axis='y', labelleft=True)  # força números do eixo y
                 axs[row, col].tick_params(axis='x')
         
-        axs[2, 0].set_xlabel('$\lambda_{c}$')
-        axs[2, 1].set_xlabel('$\lambda_{c}$')
+        axs[2, 0].set_xlabel('$\lambda_{c}$', fontsize=12)
+        axs[2, 1].set_xlabel('$\lambda_{c}$', fontsize=12)
         
         axs[0, 0].set_title("Simple log-normal")
         axs[0, 1].set_title("TReND")
@@ -309,8 +309,8 @@ class TReNDAnalysis:
         
         lgd = plt.legend(fontsize=12, bbox_to_anchor=(1.0, 1.0)) 
         
-        plt.ylabel('$\ln BF$')
-        plt.xlabel(r'$\lambda_{c}$')
+        plt.ylabel('$\ln BF$', fontsize=12)
+        plt.xlabel(r'$\lambda_{c}$', fontsize=12)
         # plt.title('Bayes factor' )
         
         plt.grid()
