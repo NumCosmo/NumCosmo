@@ -234,7 +234,7 @@ class TypeInfo:
 
 
 def _type_to_python(
-    ltype: TypeInfo,
+    ltype: GIRepository.TypeInfo,
     current_namespace: str,
     needed_namespaces: set[str],
     out_arg: bool = False,
@@ -245,6 +245,7 @@ def _type_to_python(
 
     if tag == tags.ARRAY:
         array_type = ltype.get_param_type(0)
+        assert array_type is not None
         t = _type_to_python(array_type, current_namespace, needed_namespaces)
         if out_arg:
             # As output argument array of ltype uint8 are returned as bytes
@@ -257,6 +258,7 @@ def _type_to_python(
 
     if tag in (tags.GLIST, tags.GSLIST):
         array_type = ltype.get_param_type(0)
+        assert array_type is not None
         t = _type_to_python(array_type, current_namespace, needed_namespaces)
         return f"list[{t}]"
 
@@ -275,6 +277,9 @@ def _type_to_python(
     if tag == tags.GHASH:
         key_type = ltype.get_param_type(0)
         value_type = ltype.get_param_type(1)
+        assert key_type is not None
+        assert value_type is not None
+
         kt = _type_to_python(key_type, current_namespace, needed_namespaces)
         vt = _type_to_python(value_type, current_namespace, needed_namespaces)
         return f"dict[{kt}, {vt}]"
@@ -315,8 +320,10 @@ def _type_to_python(
                 return f"typing.Callable[..., {return_type}]"
             return f"typing.Callable[[{', '.join(args)}], {return_type}]"
         else:
+            assert isinstance(interface, (GIRepository.BaseInfo, GI.BaseInfo))
             namespace = interface.get_namespace()
             name = interface.get_name()
+            assert name is not None
 
             if not re.match(_identifier_re, name):
                 raise ValueError(f"Invalid interface name: {name}")
@@ -787,7 +794,10 @@ def _gi_build_stub(
             names = []
             s = []
             for p in itertools.chain(readable_props, writable_props):
-                n = p.get_name().replace("-", "_")
+                assert isinstance(p, GIRepository.PropertyInfo)
+                local_name = p.get_name()
+                assert local_name is not None
+                n = local_name.replace("-", "_")
                 if n in names:
                     # Avoid duplicates
                     continue
@@ -827,7 +837,10 @@ def _gi_build_stub(
             names = []
             s = []
             for p in writable_props:
-                n = p.get_name().replace("-", "_")
+                assert isinstance(p, GIRepository.PropertyInfo)
+                local_name = p.get_name()
+                assert local_name is not None
+                n = local_name.replace("-", "_")
                 if n in names:
                     # Avoid duplicates
                     continue
