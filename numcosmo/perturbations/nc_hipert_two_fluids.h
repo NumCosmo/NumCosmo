@@ -109,7 +109,7 @@ NcmMatrix *nc_hipert_two_fluids_evolve_array (NcHIPertTwoFluids *ptf, NcHICosmo 
 NcmSpline *nc_hipert_two_fluids_compute_zeta_spectrum (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, guint mode, gdouble alpha_i, gdouble alpha, gdouble ki, gdouble kf, guint nnodes);
 
 NcHIPertTwoFluidsStateInterp *nc_hipert_two_fluids_evol_mode (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo);
-NcHIPertTwoFluidsStateInterp *nc_hipert_two_fluids_state_compute_spectrum (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, const gdouble alpha, const gdouble k_i, const gdouble k_f, guint nnodes);
+NcHIPertTwoFluidsStateInterp *nc_hipert_two_fluids_compute_spectrum (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, const gdouble alpha, const gdouble ki, const gdouble kf, guint nnodes);
 
 #define NC_HIPERT_TWO_FLUIDS_A2Q(Ai) (cimag (Ai))
 #define NC_HIPERT_TWO_FLUIDS_A2P(Ai) (creal (Ai))

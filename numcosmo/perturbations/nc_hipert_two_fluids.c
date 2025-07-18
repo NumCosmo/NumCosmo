@@ -29,7 +29,7 @@
  * Perturbation object for a two fluids system.
  *
  * This object provides the computation of the two fluid system of cosmological
- * perturbations. This problem is decribed by two fluids with energy density and
+ * perturbations. This problem is described by two fluids with energy density and
  * pressure given respectively by $\bar{\rho}_i$ and $\bar{p}_i$ for $i = 1,2$.
  *
  * The system is written in terms of the gauge invariant variable
@@ -446,6 +446,19 @@ nc_hipert_two_fluids_state_interp_eval (NcHIPertTwoFluidsStateInterp *sinterp, N
     sinterp->state.gw1   = eom->gw1;
     sinterp->state.gw2   = eom->gw2;
     sinterp->state.Fnu   = eom->Fnu;
+  }
+  else if (sinterp->interp_mode == 2)
+  {
+    NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (cosmo), sinterp->state.alpha, x);
+
+    sinterp->state.k   = x;
+    sinterp->state.gw1 = eom->gw1;
+    sinterp->state.gw2 = eom->gw2;
+    sinterp->state.Fnu = eom->Fnu;
+  }
+  else
+  {
+    g_assert_not_reached ();
   }
 
   return &sinterp->state;
@@ -1547,7 +1560,7 @@ nc_hipert_two_fluids_get_wkb_limit (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gu
     g_warning ("%s", gsl_strerror (status));
 
   if (iter >= max_iter)
-    g_warning ("nc_hipert_two_fluids_get_wkb_limit: maximum number of interations reached.");
+    g_warning ("nc_hipert_two_fluids_get_wkb_limit: maximum number of iterations reached.");
 
   gsl_root_fsolver_free (s);
 
@@ -1656,7 +1669,7 @@ nc_hipert_two_fluids_compute_zeta_spectrum (NcHIPertTwoFluids *ptf, NcHICosmo *c
  * Q, P_\zeta, P_Q)$ for each mode.
  *
  * Returns: (transfer full): a newly allocated #NcHIPertTwoFluidsStateInterp containing
- * spline interpolants for the perturbation evolution.
+ * spline interpolators for the perturbation evolution.
  */
 NcHIPertTwoFluidsStateInterp *
 nc_hipert_two_fluids_evol_mode (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo)
@@ -1818,6 +1831,118 @@ nc_hipert_two_fluids_evol_mode (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo)
     }
 
     ncm_vector_free (init_cond_vec);
+
+    return sinterp;
+  }
+}
+
+/**
+ * nc_hipert_two_fluids_compute_spectrum:
+ * @ptf: a #NcHIPertTwoFluids
+ * @cosmo: a #NcHICosmo
+ * @alpha: the scale factor
+ * @ki: the initial k
+ * @kf: the final k
+ * @nnodes: number of knots
+ *
+ * Computes the spectrum at a given scale factor.
+ *
+ * Returns: a #NcHIPertTwoFluidsStateInterp
+ */
+NcHIPertTwoFluidsStateInterp *
+nc_hipert_two_fluids_compute_spectrum (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, const gdouble alpha, const gdouble ki, const gdouble kf, guint nnodes)
+{
+  NcHIPert *pert                        = NC_HIPERT (ptf);
+  NcHIPertTwoFluidsPrivate * const self = ptf->priv;
+  const gdouble lnki                    = log (ki);
+  const gdouble lnkf                    = log (kf);
+  const gdouble alpha_try               = 0.5 * (self->alpha_i + self->alpha_f);
+  NcmVector *initial_condition          = ncm_vector_new (NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+  GArray *k_array                       = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  GArray *state1[NC_HIPERT_ITWO_FLUIDS_VARS_LEN];
+  GArray *state2[NC_HIPERT_ITWO_FLUIDS_VARS_LEN];
+  NcmVector *state;
+  gint mode;
+  guint i;
+
+  for (i = 0; i < NC_HIPERT_ITWO_FLUIDS_VARS_LEN; i++)
+  {
+    state1[i] = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+    state2[i] = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  }
+
+  for (i = 0; i < nnodes; i++)
+  {
+    const gdouble lnk = lnki + (lnkf - lnki) * i / (nnodes - 1);
+    const gdouble k   = exp (lnk);
+
+    nc_hipert_set_mode_k (pert, k);
+    g_array_append_val (k_array, k);
+
+    mode = 1;
+    {
+      const gdouble alpha_i = nc_hipert_two_fluids_get_wkb_limit (ptf, cosmo, mode, alpha_try, self->wkb_reltol);
+      gdouble alpha_last;
+      gint j;
+
+      nc_hipert_two_fluids_get_init_cond_zetaS (ptf, cosmo, alpha_i, mode, M_PI * 0.25, initial_condition);
+      nc_hipert_two_fluids_set_init_cond (ptf, cosmo, alpha_i, mode, FALSE, initial_condition);
+
+      nc_hipert_two_fluids_evolve (ptf, cosmo, alpha);
+
+      state = nc_hipert_two_fluids_peek_state (ptf, cosmo, &alpha_last);
+
+      for (j = 0; j < NC_HIPERT_ITWO_FLUIDS_VARS_LEN; j++)
+      {
+        G_ARRAY_APPEND_FUNCVAL (state1[j], ncm_vector_get (state, j));
+      }
+    }
+
+    mode = 2;
+    {
+      const gdouble alpha_i = nc_hipert_two_fluids_get_wkb_limit (ptf, cosmo, mode, alpha_try, self->wkb_reltol);
+      gdouble alpha_last;
+      gint j;
+
+      nc_hipert_two_fluids_get_init_cond_zetaS (ptf, cosmo, alpha_i, mode, M_PI * 0.25, initial_condition);
+      nc_hipert_two_fluids_set_init_cond (ptf, cosmo, alpha_i, mode, FALSE, initial_condition);
+
+      nc_hipert_two_fluids_evolve (ptf, cosmo, alpha);
+
+      state = nc_hipert_two_fluids_peek_state (ptf, cosmo, &alpha_last);
+
+      for (j = 0; j < NC_HIPERT_ITWO_FLUIDS_VARS_LEN; j++)
+      {
+        G_ARRAY_APPEND_FUNCVAL (state2[j], ncm_vector_get (state, j));
+      }
+    }
+  }
+
+  ncm_vector_free (initial_condition);
+
+  {
+    NcHIPertTwoFluidsStateInterp *sinterp = g_new0 (NcHIPertTwoFluidsStateInterp, 1);
+
+    sinterp->interp_mode = 1;
+    sinterp->state.alpha = alpha;
+    sinterp->state.norma = nc_hipert_itwo_fluids_eval_unit (NC_HIPERT_ITWO_FLUIDS (cosmo));
+
+    for (i = 0; i < NC_HIPERT_ITWO_FLUIDS_VARS_LEN; i++)
+    {
+      sinterp->mode1_splines[i] = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+      sinterp->mode2_splines[i] = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+
+      ncm_spline_set_array (sinterp->mode1_splines[i], k_array, state1[i], TRUE);
+      ncm_spline_set_array (sinterp->mode2_splines[i], k_array, state2[i], TRUE);
+    }
+
+    g_array_unref (k_array);
+
+    for (i = 0; i < NC_HIPERT_ITWO_FLUIDS_VARS_LEN; i++)
+    {
+      g_array_unref (state1[i]);
+      g_array_unref (state2[i]);
+    }
 
     return sinterp;
   }
