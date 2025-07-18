@@ -175,7 +175,7 @@ jobs:
           flake8 numcosmo_py
       - name: Running mypy
         run: |
-          mypy -p numcosmo_py
+          mypy --exclude '.*meson.*|numcosmo_py/generate_stubs\.py' -p numcosmo_py
       #- name: Checking indentation
       #  run: |
       #    uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/*.c numcosmo/*.h
