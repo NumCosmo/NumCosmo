@@ -12,6 +12,9 @@ py-version=3.11
 # Discover python modules and packages in the file system subtree.
 recursive=yes
 
+# List of packages with C extensions.
+extension-pkg-allow-list=gi._gi
+
 [MESSAGES CONTROL]
 
 # Enable the message, report, category or checker with the given id(s). You can
