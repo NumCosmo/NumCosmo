@@ -84,7 +84,7 @@ def test_cmb_isw_obs(nc_cmb_isw: Nc.XcorKernelCMBISW) -> None:
 def test_tsz_obs(nc_tsz: Nc.XcorKerneltSZ) -> None:
     """Check that tSZ tracer has the correct number of observables."""
     assert nc_tsz is not None
-    assert isinstance(nc_tsz, Nc.XcorKernelSZ)
+    assert isinstance(nc_tsz, Nc.XcorKerneltSZ)
     assert nc_tsz.obs_len() == 1
     assert nc_tsz.obs_params_len() == 0
 
@@ -368,7 +368,7 @@ def test_cmb_lens_kernel(
 def test_xcor_set_get(nc_cosmo_default: ncpy.Cosmology) -> None:
     """Test get_reltol and set_reltol."""
     nc_xcor = Nc.Xcor.new(
-        nc_cosmo_default.dist, nc_cosmo_default.ps_ml, Nc.XcorMethod.GSL
+        nc_cosmo_default.dist, nc_cosmo_default.ps_ml, Nc.XcorMethod.GSL, Nc.XcorKernelMethod.LIMBER
     )
 
     nc_xcor.set_reltol(1.0e-4)
@@ -387,6 +387,10 @@ def test_xcor_set_get(nc_cosmo_default: ncpy.Cosmology) -> None:
 
     nc_xcor.props.meth = Nc.XcorMethod.CUBATURE
     assert nc_xcor.props.meth == Nc.XcorMethod.CUBATURE
+
+    # João:
+    nc_xcor.props.alg_meth = Nc.XcorKernelMethod.LIMBER
+    assert nc_xcor.props.alg_meth == Nc.XcorKernelMethod.LIMBER
 
     assert nc_xcor.props.power_spec is nc_cosmo_default.ps_ml
 
@@ -414,7 +418,7 @@ def test_cmb_lens_auto_integrand(
 
     psp = ccl_cosmo_eh_linear.get_linear_power()
 
-    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorMethod.CUBATURE)
+    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorMethod.CUBATURE, Nc.XcorKernelMethod.LIMBER)
     xcor.prepare(cosmo)
     nc_cmb_lens.prepare(cosmo)
 
@@ -480,11 +484,11 @@ def test_cmb_lens_auto(
     assert all(np.isfinite(ccl_cmb_lens_auto))
     assert all(ccl_cmb_lens_auto >= 0.0)
 
-    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorMethod.CUBATURE)
+    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorMethod.CUBATURE, Nc.XcorKernelMethod.LIMBER)
     nc_cmb_lens_auto_v = Ncm.Vector.new(lmax + 1 - 2)
     xcor.prepare(cosmo)
     nc_cmb_lens.prepare(cosmo)
-    xcor.limber(nc_cmb_lens, nc_cmb_lens, cosmo, 2, lmax, nc_cmb_lens_auto_v)
+    xcor.general(nc_cmb_lens, nc_cmb_lens, cosmo, 2, lmax, nc_cmb_lens_auto_v)
     nc_cmb_lens_auto = np.array(nc_cmb_lens_auto_v.dup_array())
 
     assert_allclose(ccl_cmb_lens_auto, nc_cmb_lens_auto, rtol=reltol_target, atol=0.0)
@@ -685,11 +689,11 @@ def test_xcor_methods(
 ) -> None:
     """Compare NumCosmo Xcor integration methods."""
     xcor_gsl = Nc.Xcor.new(
-        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorMethod.GSL
+        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorMethod.GSL, Nc.XcorKernelMethod.LIMBER
     )
 
     xcor_cub = Nc.Xcor.new(
-        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorMethod.CUBATURE
+        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorMethod.CUBATURE, Nc.XcorKernelMethod.LIMBER
     )
 
     xcor_gsl.prepare(nc_cosmo_eh_linear.cosmo)
@@ -703,9 +707,10 @@ def test_xcor_methods(
     vp_gsl = Ncm.Vector.new(lmax - lmin + 1)
     vp_cub = Ncm.Vector.new(lmax - lmin + 1)
 
+    # João:
     xcor_gsl.set_reltol(1.0e-7)
-    xcor_gsl.limber(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_gsl)
-    xcor_cub.limber(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_cub)
+    xcor_gsl.general(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_gsl)
+    xcor_cub.general(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_cub)
 
     vp_gsl_a = np.array(vp_gsl.dup_array())
     vp_cub_a = np.array(vp_cub.dup_array())
