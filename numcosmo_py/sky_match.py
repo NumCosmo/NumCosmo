@@ -483,9 +483,9 @@ class SkyMatch:
     def ra_dec_to_theta_phi(self, ra, dec):
         """Convert RA and DEC to theta and phi.
 
-        :param float ra: right ascencion angle in degrees.
+        :param float ra: right ascension angle in degrees.
         :param float dec: declination angle in degrees.
-        :return: float theta: theta in radiands, float phi: phi in radiands
+        :return: float theta: theta in radians, float phi: phi in radians
         """
         ra_rad = np.radians(ra)
         dec_rad = np.radians(dec)

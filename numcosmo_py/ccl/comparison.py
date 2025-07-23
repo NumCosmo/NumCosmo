@@ -585,7 +585,7 @@ def compare_scale_factor(
     )
 
 
-# Weaklensing related
+# WeakLensing related
 
 
 def compare_Sigma_crit(
