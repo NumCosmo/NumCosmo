@@ -1,5 +1,7 @@
 import typing
 
+import numpy.typing as npt
+
 from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import NumCosmoMath
@@ -1332,24 +1334,32 @@ class ClusterAbundance(GObject.Object):
         cosmo: HICosmo,
         clusterz: ClusterRedshift,
         clusterm: ClusterMass,
-        lnM_obs_lower: typing.Sequence[float],
-        lnM_obs_upper: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]],
-        z_obs_lower: typing.Sequence[float],
-        z_obs_upper: typing.Sequence[float],
-        z_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        lnM_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ],
+        z_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     def intp_bin_d2n_bias(
         self,
         cosmo: HICosmo,
         clusterz: ClusterRedshift,
         clusterm: ClusterMass,
-        lnM_obs_lower: typing.Sequence[float],
-        lnM_obs_upper: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]],
-        z_obs_lower: typing.Sequence[float],
-        z_obs_upper: typing.Sequence[float],
-        z_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        lnM_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ],
+        z_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     def intp_d2n(
         self,
@@ -1364,18 +1374,24 @@ class ClusterAbundance(GObject.Object):
         cosmo: HICosmo,
         clusterz: ClusterRedshift,
         clusterm: ClusterMass,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]],
-        z_obs: typing.Sequence[float],
-        z_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ],
+        z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     def lnM_p_d2n(
         self,
         cosmo: HICosmo,
         clusterz: ClusterRedshift,
         clusterm: ClusterMass,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ],
         z: float,
     ) -> float: ...
     def mean_bias(
@@ -1411,18 +1427,18 @@ class ClusterAbundance(GObject.Object):
         clusterz: ClusterRedshift,
         clusterm: ClusterMass,
         lnM: float,
-        z_obs: typing.Sequence[float],
-        z_obs_params: typing.Sequence[float],
+        z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
     def z_p_lnM_p_d2n(
         self,
         cosmo: HICosmo,
         clusterz: ClusterRedshift,
         clusterm: ClusterMass,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
-        z_obs: typing.Sequence[float],
-        z_obs_params: typing.Sequence[float],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
 
 class ClusterAbundanceClass(GObject.GPointer):
@@ -1503,21 +1519,23 @@ class ClusterMass(NumCosmoMath.Model):
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     def do_P_bin_limits(
         self,
         cosmo: HICosmo,
-        lnM_obs_lower: typing.Sequence[float],
-        lnM_obs_upper: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
+        lnM_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[float, float]: ...
     def do_P_limits(
         self,
         cosmo: HICosmo,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[float, float]: ...
     def do_P_vec_z_lnMobs(
         self,
@@ -1526,7 +1544,7 @@ class ClusterMass(NumCosmoMath.Model):
         z: NumCosmoMath.Vector,
         lnM_obs: NumCosmoMath.Matrix,
         lnM_obs_params: NumCosmoMath.Matrix,
-        res: typing.Sequence[float],
+        res: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> None: ...
     def do_intP(self, cosmo: HICosmo, lnM: float, z: float) -> float: ...
     def do_intP_bin(
@@ -1534,17 +1552,19 @@ class ClusterMass(NumCosmoMath.Model):
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        lnM_obs_lower: typing.Sequence[float],
-        lnM_obs_upper: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        lnM_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     def do_resample(
         self,
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
         rng: NumCosmoMath.RNG,
     ) -> bool: ...
     def do_volume(self) -> float: ...
@@ -1557,9 +1577,11 @@ class ClusterMass(NumCosmoMath.Model):
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        lnM_obs_lower: typing.Sequence[float],
-        lnM_obs_upper: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        lnM_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     @staticmethod
     def log_all_models() -> None: ...
@@ -1571,21 +1593,23 @@ class ClusterMass(NumCosmoMath.Model):
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     def p_bin_limits(
         self,
         cosmo: HICosmo,
-        lnM_obs_lower: typing.Sequence[float],
-        lnM_obs_upper: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
+        lnM_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[float, float]: ...
     def p_limits(
         self,
         cosmo: HICosmo,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[float, float]: ...
     def p_vec_z_lnMobs(
         self,
@@ -1594,7 +1618,7 @@ class ClusterMass(NumCosmoMath.Model):
         z: NumCosmoMath.Vector,
         lnM_obs: NumCosmoMath.Matrix,
         lnM_obs_params: NumCosmoMath.Matrix,
-        res: typing.Sequence[float],
+        res: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> None: ...
     def plcl_Msz_Ml_p_ndetone(
         self,
@@ -1610,8 +1634,8 @@ class ClusterMass(NumCosmoMath.Model):
         lnM_M0: float,
         w1: float,
         w2: float,
-        Mobs: typing.Sequence[float],
-        Mobs_params: typing.Sequence[float],
+        Mobs: typing.Sequence[float] | npt.NDArray[np.float64],
+        Mobs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
     def plcl_pdf_only_lognormal(
         self, lnM: float, lnMsz_M0: float, lnMl_M0: float
@@ -1622,8 +1646,8 @@ class ClusterMass(NumCosmoMath.Model):
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
         rng: NumCosmoMath.RNG,
     ) -> bool: ...
     def volume(self) -> float: ...
@@ -2066,8 +2090,8 @@ class ClusterMassClass(GObject.GPointer):
             HICosmo,
             float,
             float,
-            typing.Sequence[float],
-            typing.Optional[typing.Sequence[float]],
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Optional[typing.Sequence[float] | npt.NDArray[np.float64]],
         ],
         float,
     ] = ...
@@ -2078,9 +2102,9 @@ class ClusterMassClass(GObject.GPointer):
             HICosmo,
             float,
             float,
-            typing.Sequence[float],
-            typing.Sequence[float],
-            typing.Optional[typing.Sequence[float]],
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Optional[typing.Sequence[float] | npt.NDArray[np.float64]],
         ],
         float,
     ] = ...
@@ -2090,23 +2114,28 @@ class ClusterMassClass(GObject.GPointer):
             HICosmo,
             float,
             float,
-            typing.Sequence[float],
-            typing.Sequence[float],
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Sequence[float] | npt.NDArray[np.float64],
             NumCosmoMath.RNG,
         ],
         bool,
     ] = ...
     P_limits: typing.Callable[
-        [ClusterMass, HICosmo, typing.Sequence[float], typing.Sequence[float]],
+        [
+            ClusterMass,
+            HICosmo,
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Sequence[float] | npt.NDArray[np.float64],
+        ],
         typing.Tuple[float, float],
     ] = ...
     P_bin_limits: typing.Callable[
         [
             ClusterMass,
             HICosmo,
-            typing.Sequence[float],
-            typing.Sequence[float],
-            typing.Sequence[float],
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Sequence[float] | npt.NDArray[np.float64],
         ],
         typing.Tuple[float, float],
     ] = ...
@@ -2120,7 +2149,7 @@ class ClusterMassClass(GObject.GPointer):
             NumCosmoMath.Vector,
             NumCosmoMath.Matrix,
             NumCosmoMath.Matrix,
-            typing.Sequence[float],
+            typing.Sequence[float] | npt.NDArray[np.float64],
         ],
         None,
     ] = ...
@@ -2425,8 +2454,8 @@ class ClusterMassPlCL(ClusterMass):
         n: int,
         mszl: ClusterMassPlCL,
         lnM: float,
-        Mobs: typing.Sequence[float],
-        Mobs_params: typing.Sequence[float],
+        Mobs: typing.Sequence[float] | npt.NDArray[np.float64],
+        Mobs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> None: ...
     @staticmethod
     def peak_new_variables(
@@ -2435,8 +2464,8 @@ class ClusterMassPlCL(ClusterMass):
         ub: float,
         mszl: ClusterMassPlCL,
         lnM: float,
-        Mobs: typing.Sequence[float],
-        Mobs_params: typing.Sequence[float],
+        Mobs: typing.Sequence[float] | npt.NDArray[np.float64],
+        Mobs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> None: ...
 
 class ClusterMassPlCLClass(GObject.GPointer):
@@ -2884,8 +2913,8 @@ class ClusterPseudoCounts(NumCosmoMath.Model):
         clusterm: ClusterMass,
         cosmo: HICosmo,
         z: float,
-        Mobs: typing.Sequence[float],
-        Mobs_params: typing.Sequence[float],
+        Mobs: typing.Sequence[float] | npt.NDArray[np.float64],
+        Mobs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
     def posterior_numerator_plcl(
         self,
@@ -3013,9 +3042,11 @@ class ClusterRedshift(NumCosmoMath.Model):
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        z_obs_lower: typing.Sequence[float],
-        z_obs_upper: typing.Sequence[float],
-        z_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        z_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     @staticmethod
     def log_all_models() -> None: ...
@@ -3027,21 +3058,21 @@ class ClusterRedshift(NumCosmoMath.Model):
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        z_obs: typing.Sequence[float],
-        z_obs_params: typing.Sequence[float],
+        z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
     def p_bin_limits(
         self,
         cosmo: HICosmo,
-        z_obs_lower: typing.Sequence[float],
-        z_obs_upper: typing.Sequence[float],
-        z_obs_params: typing.Sequence[float],
+        z_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[float, float]: ...
     def p_limits(
         self,
         cosmo: HICosmo,
-        z_obs: typing.Sequence[float],
-        z_obs_params: typing.Sequence[float],
+        z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[float, float]: ...
     def ref(self) -> ClusterRedshift: ...
     def resample(
@@ -3189,8 +3220,8 @@ class CorClusterCmbLensLimber(GObject.Object):
         dp: HaloDensityProfile,
         k: float,
         z: float,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
     def oneh_term(
         self,
@@ -3199,10 +3230,10 @@ class CorClusterCmbLensLimber(GObject.Object):
         dist: Distance,
         dp: HaloDensityProfile,
         l: int,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
-        z_obs: typing.Sequence[float],
-        z_obs_params: typing.Sequence[float],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
     def twoh_int_mass1(
         self, cad: ClusterAbundance, clusterm: ClusterMass, cosmo: HICosmo, z: float
@@ -3231,8 +3262,8 @@ class CorClusterCmbLensLimber(GObject.Object):
         dist: Distance,
         dp: HaloDensityProfile,
         l: int,
-        z_obs: typing.Sequence[float],
-        z_obs_params: typing.Sequence[float],
+        z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
 
 class CorClusterCmbLensLimberClass(GObject.GPointer):
@@ -5698,7 +5729,7 @@ class Distance(GObject.Object):
     def acoustic_scale(self, cosmo: HICosmo) -> float: ...
     def angular_diameter(self, cosmo: HICosmo, z: float) -> float: ...
     def angular_diameter_array(
-        self, cosmo: HICosmo, z: typing.Sequence[float]
+        self, cosmo: HICosmo, z: typing.Sequence[float] | npt.NDArray[np.float64]
     ) -> list[float]: ...
     def angular_diameter_curvature_scale(self, cosmo: HICosmo) -> float: ...
     def angular_diameter_vector(
@@ -5711,7 +5742,7 @@ class Distance(GObject.Object):
     def clear(dist: Distance) -> None: ...
     def comoving(self, cosmo: HICosmo, z: float) -> float: ...
     def comoving_array(
-        self, cosmo: HICosmo, z: typing.Sequence[float]
+        self, cosmo: HICosmo, z: typing.Sequence[float] | npt.NDArray[np.float64]
     ) -> list[float]: ...
     def comoving_lss(self, cosmo: HICosmo) -> float: ...
     def comoving_vector(
@@ -5728,7 +5759,7 @@ class Distance(GObject.Object):
     def dilation_scale(self, cosmo: HICosmo, z: float) -> float: ...
     def dmodulus(self, cosmo: HICosmo, z: float) -> float: ...
     def dmodulus_array(
-        self, cosmo: HICosmo, z: typing.Sequence[float]
+        self, cosmo: HICosmo, z: typing.Sequence[float] | npt.NDArray[np.float64]
     ) -> list[float]: ...
     def dmodulus_hef(self, cosmo: HICosmo, z_he: float, z_cmb: float) -> float: ...
     def dmodulus_vector(
@@ -5743,7 +5774,7 @@ class Distance(GObject.Object):
     def lookback_time(self, cosmo: HICosmo, z: float) -> float: ...
     def luminosity(self, cosmo: HICosmo, z: float) -> float: ...
     def luminosity_array(
-        self, cosmo: HICosmo, z: typing.Sequence[float]
+        self, cosmo: HICosmo, z: typing.Sequence[float] | npt.NDArray[np.float64]
     ) -> list[float]: ...
     def luminosity_hef(self, cosmo: HICosmo, z_he: float, z_cmb: float) -> float: ...
     def luminosity_vector(
@@ -5766,7 +5797,7 @@ class Distance(GObject.Object):
     def theta100CMB(self, cosmo: HICosmo) -> float: ...
     def transverse(self, cosmo: HICosmo, z: float) -> float: ...
     def transverse_array(
-        self, cosmo: HICosmo, z: typing.Sequence[float]
+        self, cosmo: HICosmo, z: typing.Sequence[float] | npt.NDArray[np.float64]
     ) -> list[float]: ...
     def transverse_vector(
         self, cosmo: HICosmo, z: NumCosmoMath.Vector, Dt: NumCosmoMath.Vector
@@ -9517,7 +9548,7 @@ class HICosmoQConstClass(GObject.GPointer):
 
     parent_class: HICosmoClass = ...
 
-class HICosmoQGRW(HICosmo, HIPertIGW, HIPertITwoFluids):
+class HICosmoQGRW(HICosmo, HIPertIAdiab, HIPertIGW, HIPertITwoFluids):
     r"""
     :Constructors:
 
@@ -9598,6 +9629,7 @@ class HICosmoQGRW(HICosmo, HIPertIGW, HIPertITwoFluids):
     props: Props = ...
     parent_instance: HICosmo = ...
     eom_two_fluids: HIPertITwoFluidsEOM = ...
+    wkb_two_fluids: HIPertITwoFluidsWKB = ...
     tv_two_fluids: HIPertITwoFluidsTV = ...
     def __init__(
         self,
@@ -10485,7 +10517,6 @@ class HIPert(GObject.Object):
 
     props: Props = ...
     parent_instance: GObject.Object = ...
-    priv: HIPertPrivate = ...
     def __init__(
         self,
         abstol: float = ...,
@@ -10601,8 +10632,8 @@ class HIPertAdiab(NumCosmoMath.CSQ1D):
     def prepare_spectrum(
         self,
         model: NumCosmoMath.Model,
-        k_array: typing.Sequence[float],
-        tau_array: typing.Sequence[float],
+        k_array: typing.Sequence[float] | npt.NDArray[np.float64],
+        tau_array: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> None: ...
     def ref(self) -> HIPertAdiab: ...
     def set_k(self, k: float) -> None: ...
@@ -11461,8 +11492,8 @@ class HIPertEM(NumCosmoMath.CSQ1D):
     def prepare_spectrum(
         self,
         model: NumCosmoMath.Model,
-        k_array: typing.Sequence[float],
-        tau_array: typing.Sequence[float],
+        k_array: typing.Sequence[float] | npt.NDArray[np.float64],
+        tau_array: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[NumCosmoMath.PowspecSpline2d, NumCosmoMath.PowspecSpline2d]: ...
     def ref(self) -> HIPertEM: ...
     def set_k(self, k: float) -> None: ...
@@ -12161,7 +12192,9 @@ class HIPertITwoFluids(GObject.GInterface):
     """
 
     def eom_eval(self, alpha: float, k: float) -> HIPertITwoFluidsEOM: ...
+    def eval_unit(self) -> float: ...
     def tv_eval(self, alpha: float, k: float) -> HIPertITwoFluidsTV: ...
+    def wkb_eval(self, alpha: float, k: float) -> HIPertITwoFluidsWKB: ...
 
 class HIPertITwoFluidsEOM(GObject.GBoxed):
     r"""
@@ -12190,6 +12223,9 @@ class HIPertITwoFluidsEOM(GObject.GBoxed):
     cos2phi: float = ...
     cs2: float = ...
     cm2: float = ...
+    gw1: float = ...
+    gw2: float = ...
+    Fnu: float = ...
     def dup(self) -> HIPertITwoFluidsEOM: ...
     def free(self) -> None: ...
 
@@ -12204,7 +12240,33 @@ class HIPertITwoFluidsInterface(GObject.GPointer):
 
     parent: GObject.TypeInterface = ...
     eom: typing.Callable[[HIPertITwoFluids, float, float], HIPertITwoFluidsEOM] = ...
+    wkb: typing.Callable[[HIPertITwoFluids, float, float], HIPertITwoFluidsWKB] = ...
     tv: typing.Callable[[HIPertITwoFluids, float, float], HIPertITwoFluidsTV] = ...
+    eval_unit: typing.Callable[[HIPertITwoFluids], float] = ...
+
+class HIPertITwoFluidsState(GObject.GBoxed):
+    r"""
+    :Constructors:
+
+    ::
+
+        HIPertITwoFluidsState()
+    """
+
+    alpha: float = ...
+    k: float = ...
+    gw1: float = ...
+    gw2: float = ...
+    Fnu: float = ...
+    norma: float = ...
+    def dup(self) -> HIPertITwoFluidsState: ...
+    def eval_obs(
+        self,
+        obs_mode: HIPertITwoFluidsObsMode,
+        obs_a: HIPertITwoFluidsObs,
+        obs_b: HIPertITwoFluidsObs,
+    ) -> float: ...
+    def free(self) -> None: ...
 
 class HIPertITwoFluidsTV(GObject.GBoxed):
     r"""
@@ -12225,7 +12287,28 @@ class HIPertITwoFluidsTV(GObject.GBoxed):
     def dup(self) -> HIPertITwoFluidsTV: ...
     def free(self) -> None: ...
 
-class HIPertPrivate(GObject.GPointer): ...
+class HIPertITwoFluidsWKB(GObject.GBoxed):
+    r"""
+    :Constructors:
+
+    ::
+
+        HIPertITwoFluidsWKB()
+    """
+
+    mode1_scale: float = ...
+    mode2_scale: float = ...
+    mode1_zeta_scale: float = ...
+    mode2_zeta_scale: float = ...
+    mode1_Q_scale: float = ...
+    mode2_Q_scale: float = ...
+    mode1_Pzeta_scale: float = ...
+    mode2_Pzeta_scale: float = ...
+    mode1_PQ_scale: float = ...
+    mode2_PQ_scale: float = ...
+    state: HIPertITwoFluidsState = ...
+    def dup(self) -> HIPertITwoFluidsWKB: ...
+    def free(self) -> None: ...
 
 class HIPertTwoFluids(HIPert):
     r"""
@@ -12237,6 +12320,14 @@ class HIPertTwoFluids(HIPert):
         new() -> NumCosmo.HIPertTwoFluids
 
     Object NcHIPertTwoFluids
+
+    Properties from NcHIPertTwoFluids:
+      wkb-reltol -> gdouble: wkb-reltol
+        WKB reltol
+      alpha-i -> gdouble: alpha-i
+        alpha_i
+      alpha-f -> gdouble: alpha-f
+        alpha_f
 
     Properties from NcHIPert:
       k -> gdouble: k
@@ -12255,6 +12346,9 @@ class HIPertTwoFluids(HIPert):
     """
 
     class Props:
+        alpha_f: float
+        alpha_i: float
+        wkb_reltol: float
         abstol: float
         alphai: float
         k: float
@@ -12262,10 +12356,11 @@ class HIPertTwoFluids(HIPert):
         sys_size: int
 
     props: Props = ...
-    parent_instance: HIPert = ...
-    priv: HIPertTwoFluidsPrivate = ...
     def __init__(
         self,
+        alpha_f: float = ...,
+        alpha_i: float = ...,
+        wkb_reltol: float = ...,
         abstol: float = ...,
         alphai: float = ...,
         k: float = ...,
@@ -12274,6 +12369,13 @@ class HIPertTwoFluids(HIPert):
     ) -> None: ...
     @staticmethod
     def clear(ptf: HIPertTwoFluids) -> None: ...
+    def compute_spectrum(
+        self,
+        cosmo: HICosmo,
+        alpha: float,
+        k_a: typing.Sequence[float] | npt.NDArray[np.float64],
+        logger: typing.Optional[typing.Callable[[int, int], None]] = None,
+    ) -> HIPertTwoFluidsStateInterp: ...
     def compute_zeta_spectrum(
         self,
         cosmo: HICosmo,
@@ -12285,15 +12387,15 @@ class HIPertTwoFluids(HIPert):
         nnodes: int,
     ) -> NumCosmoMath.Spline: ...
     def eom(self, cosmo: HICosmo, alpha: float) -> HIPertITwoFluidsEOM: ...
+    @staticmethod
+    def error_quark() -> int: ...
+    def evol_mode(self, cosmo: HICosmo) -> HIPertTwoFluidsStateInterp: ...
     def evolve(self, cosmo: HICosmo, alphaf: float) -> None: ...
     def evolve_array(
         self, cosmo: HICosmo, alphaf: float, step_reltol: float, step_abstol: float
     ) -> NumCosmoMath.Matrix: ...
-    def evolve_mode1sub(self, cosmo: HICosmo, alphaf: float) -> None: ...
     def free(self) -> None: ...
-    def get_cross_time(
-        self, cosmo: HICosmo, cross: HIPertTwoFluidsCross, alpha_i: float, prec: float
-    ) -> float: ...
+    def get_final_time(self) -> float: ...
     def get_init_cond_QP(
         self,
         cosmo: HICosmo,
@@ -12310,13 +12412,18 @@ class HIPertTwoFluids(HIPert):
         beta_R: float,
         init_cond: NumCosmoMath.Vector,
     ) -> None: ...
-    def get_state_mod(self) -> float: ...
+    def get_initial_time(self) -> float: ...
+    def get_wkb_limit(
+        self, cosmo: HICosmo, main_mode: int, alpha_i: float, prec: float
+    ) -> float: ...
+    def get_wkb_reltol(self) -> float: ...
     @classmethod
     def new(cls) -> HIPertTwoFluids: ...
     def peek_state(
         self, cosmo: HICosmo
     ) -> typing.Tuple[NumCosmoMath.Vector, float]: ...
     def ref(self) -> HIPertTwoFluids: ...
+    def set_final_time(self, alpha_f: float) -> None: ...
     def set_init_cond(
         self,
         cosmo: HICosmo,
@@ -12325,12 +12432,12 @@ class HIPertTwoFluids(HIPert):
         useQP: bool,
         init_cond: NumCosmoMath.Vector,
     ) -> None: ...
-    def set_init_cond_mode1sub(
-        self, cosmo: HICosmo, alpha: float, init_cond: NumCosmoMath.Vector
-    ) -> None: ...
+    def set_initial_time(self, alpha_i: float) -> None: ...
+    def set_wkb_reltol(self, reltol: float) -> None: ...
     def to_zeta_s(
         self, cosmo: HICosmo, alpha: float, state: NumCosmoMath.Vector
     ) -> None: ...
+    def wkb(self, cosmo: HICosmo, alpha: float) -> HIPertITwoFluidsWKB: ...
 
 class HIPertTwoFluidsClass(GObject.GPointer):
     r"""
@@ -12343,7 +12450,22 @@ class HIPertTwoFluidsClass(GObject.GPointer):
 
     parent_class: HIPertClass = ...
 
-class HIPertTwoFluidsPrivate(GObject.GPointer): ...
+class HIPertTwoFluidsStateInterp(GObject.GBoxed):
+    r"""
+    :Constructors:
+
+    ::
+
+        HIPertTwoFluidsStateInterp()
+    """
+
+    mode1_splines: list[NumCosmoMath.Spline] = ...
+    mode2_splines: list[NumCosmoMath.Spline] = ...
+    state: HIPertITwoFluidsState = ...
+    interp_mode: int = ...
+    def dup(self) -> HIPertTwoFluidsStateInterp: ...
+    def eval(self, cosmo: HICosmo, x: float) -> HIPertITwoFluidsState: ...
+    def free(self) -> None: ...
 
 class HIPertWKB(HIPert):
     r"""
@@ -12459,49 +12581,6 @@ class HIPertWKBClass(GObject.GPointer):
     get_dVnu2: typing.Callable[[HIPertWKB, NumCosmoMath.Model, float, float], float] = (
         ...
     )
-
-class HIPertWKBQgrwZeta(HIPertWKB):
-    r"""
-    :Constructors:
-
-    ::
-
-        HIPertWKBQgrwZeta(**properties)
-
-    Object NcHIPertWKBQgrwZeta
-
-    Properties from NcHIPert:
-      k -> gdouble: k
-        Mode k
-      sys-size -> guint: sys-size
-        System size
-      reltol -> gdouble: reltol
-        Relative tolerance
-      abstol -> gdouble: abstol
-        Absolute tolerance
-      alphai -> gdouble: alphai
-        Initial time
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        abstol: float
-        alphai: float
-        k: float
-        reltol: float
-        sys_size: int
-
-    props: Props = ...
-    def __init__(
-        self,
-        abstol: float = ...,
-        alphai: float = ...,
-        k: float = ...,
-        reltol: float = ...,
-        sys_size: int = ...,
-    ) -> None: ...
 
 class HIPrim(NumCosmoMath.Model):
     r"""
@@ -14481,7 +14560,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
     def eval_2d_density_array(
         self,
         cosmo: HICosmo,
-        R: typing.Sequence[float],
+        R: typing.Sequence[float] | npt.NDArray[np.float64],
         fin: float,
         fout: float,
         z: float,
@@ -14490,7 +14569,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
     def eval_cyl_mass_array(
         self,
         cosmo: HICosmo,
-        R: typing.Sequence[float],
+        R: typing.Sequence[float] | npt.NDArray[np.float64],
         fin: float,
         fout: float,
         z: float,
@@ -14499,7 +14578,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
     def eval_density_array(
         self,
         cosmo: HICosmo,
-        r: typing.Sequence[float],
+        r: typing.Sequence[float] | npt.NDArray[np.float64],
         fin: float,
         fout: float,
         z: float,
@@ -18888,10 +18967,10 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         self,
         dp: HaloDensityProfile,
         cosmo: HICosmo,
-        R: typing.Sequence[float],
+        R: typing.Sequence[float] | npt.NDArray[np.float64],
         fin: float,
         fout: float,
-        zs: typing.Sequence[float],
+        zs: typing.Sequence[float] | npt.NDArray[np.float64],
         zl: float,
         zc: float,
     ) -> list[float]: ...
@@ -18899,10 +18978,10 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         self,
         dp: HaloDensityProfile,
         cosmo: HICosmo,
-        R: typing.Sequence[float],
+        R: typing.Sequence[float] | npt.NDArray[np.float64],
         fin: float,
         fout: float,
-        zs: typing.Sequence[float],
+        zs: typing.Sequence[float] | npt.NDArray[np.float64],
         zl: float,
         zc: float,
     ) -> list[float]: ...
@@ -18943,7 +19022,7 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         self,
         dp: HaloDensityProfile,
         cosmo: HICosmo,
-        R: typing.Sequence[float],
+        R: typing.Sequence[float] | npt.NDArray[np.float64],
         fin: float,
         fout: float,
         zc: float,
@@ -18961,7 +19040,7 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         self,
         dp: HaloDensityProfile,
         cosmo: HICosmo,
-        R: typing.Sequence[float],
+        R: typing.Sequence[float] | npt.NDArray[np.float64],
         fin: float,
         fout: float,
         zc: float,
@@ -21070,6 +21149,44 @@ class HIPertGravSElem(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
+class HIPertITwoFluidsObs(GObject.GEnum):
+    DELTA_DIFF: HIPertITwoFluidsObs = ...
+    DELTA_R: HIPertITwoFluidsObs = ...
+    DELTA_TOT: HIPertITwoFluidsObs = ...
+    DELTA_W: HIPertITwoFluidsObs = ...
+    FKU_DIFF: HIPertITwoFluidsObs = ...
+    FKU_R: HIPertITwoFluidsObs = ...
+    FKU_TOT: HIPertITwoFluidsObs = ...
+    FKU_W: HIPertITwoFluidsObs = ...
+    ZETA: HIPertITwoFluidsObs = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class HIPertITwoFluidsObsMode(GObject.GEnum):
+    BOTH: HIPertITwoFluidsObsMode = ...
+    ONE: HIPertITwoFluidsObsMode = ...
+    TWO: HIPertITwoFluidsObsMode = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
 class HIPertITwoFluidsVars(GObject.GEnum):
     PS_I: HIPertITwoFluidsVars = ...
     PS_R: HIPertITwoFluidsVars = ...
@@ -21091,11 +21208,8 @@ class HIPertITwoFluidsVars(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class HIPertTwoFluidsCross(GObject.GEnum):
-    MODE1MAIN: HIPertTwoFluidsCross = ...
-    MODE1SUB: HIPertTwoFluidsCross = ...
-    MODE2MAIN: HIPertTwoFluidsCross = ...
-    MODE2SUB: HIPertTwoFluidsCross = ...
+class HIPertTwoFluidsError(GObject.GEnum):
+    MODE: HIPertTwoFluidsError = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
