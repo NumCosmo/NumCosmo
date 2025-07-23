@@ -438,27 +438,26 @@ nc_hipert_two_fluids_state_interp_eval (NcHIPertTwoFluidsStateInterp *sinterp, N
   sinterp->state.PQ2 = ncm_spline_eval (sinterp->mode2_splines[NC_HIPERT_ITWO_FLUIDS_VARS_PS_R], x)
                        + I * ncm_spline_eval (sinterp->mode2_splines[NC_HIPERT_ITWO_FLUIDS_VARS_PS_I], x);
 
-  if (sinterp->interp_mode == 1)
-  {
-    NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (cosmo), x, sinterp->state.k);
 
-    sinterp->state.alpha = x;
-    sinterp->state.gw1   = eom->gw1;
-    sinterp->state.gw2   = eom->gw2;
-    sinterp->state.Fnu   = eom->Fnu;
+  switch (sinterp->interp_mode)
+  {
+    case 1:
+      sinterp->state.alpha = x;
+      break;
+    case 2:
+      sinterp->state.k = x;
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
   }
-  else if (sinterp->interp_mode == 2)
-  {
-    NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (cosmo), sinterp->state.alpha, x);
 
-    sinterp->state.k   = x;
+  {
+    NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_eval (NC_HIPERT_ITWO_FLUIDS (cosmo), sinterp->state.alpha, sinterp->state.k);
+
     sinterp->state.gw1 = eom->gw1;
     sinterp->state.gw2 = eom->gw2;
     sinterp->state.Fnu = eom->Fnu;
-  }
-  else
-  {
-    g_assert_not_reached ();
   }
 
   return &sinterp->state;
@@ -1841,29 +1840,36 @@ nc_hipert_two_fluids_evol_mode (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo)
  * @ptf: a #NcHIPertTwoFluids
  * @cosmo: a #NcHICosmo
  * @alpha: the scale factor
- * @ki: the initial k
- * @kf: the final k
- * @nnodes: number of knots
+ * @k_a: (element-type gdouble): an array of k
+ * @logger: (nullable) (scope call): a #NcHIPertTwoFluidsLogger
  *
  * Computes the spectrum at a given scale factor.
  *
  * Returns: a #NcHIPertTwoFluidsStateInterp
  */
 NcHIPertTwoFluidsStateInterp *
-nc_hipert_two_fluids_compute_spectrum (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, const gdouble alpha, const gdouble ki, const gdouble kf, guint nnodes)
+nc_hipert_two_fluids_compute_spectrum (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, const gdouble alpha, GArray *k_a, NcHIPertTwoFluidsLogger logger)
 {
   NcHIPert *pert                        = NC_HIPERT (ptf);
   NcHIPertTwoFluidsPrivate * const self = ptf->priv;
-  const gdouble lnki                    = log (ki);
-  const gdouble lnkf                    = log (kf);
   const gdouble alpha_try               = 0.5 * (self->alpha_i + self->alpha_f);
   NcmVector *initial_condition          = ncm_vector_new (NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
-  GArray *k_array                       = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  GArray *k_array                       = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), k_a->len);
   GArray *state1[NC_HIPERT_ITWO_FLUIDS_VARS_LEN];
   GArray *state2[NC_HIPERT_ITWO_FLUIDS_VARS_LEN];
   NcmVector *state;
   gint mode;
   guint i;
+
+  g_assert_cmpint (k_a->len, >, 0);
+  g_assert_cmpint (g_array_get_element_size (k_a), ==, sizeof (gdouble));
+
+  g_assert_cmpfloat (g_array_index (k_a, gdouble, 0), >, 0.0);
+
+  for (i = 0; i < k_a->len - 1; i++)
+  {
+    g_assert_cmpfloat (g_array_index (k_a, gdouble, i + 1), >, g_array_index (k_a, gdouble, i));
+  }
 
   for (i = 0; i < NC_HIPERT_ITWO_FLUIDS_VARS_LEN; i++)
   {
@@ -1871,10 +1877,9 @@ nc_hipert_two_fluids_compute_spectrum (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo,
     state2[i] = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   }
 
-  for (i = 0; i < nnodes; i++)
+  for (i = 0; i < k_a->len; i++)
   {
-    const gdouble lnk = lnki + (lnkf - lnki) * i / (nnodes - 1);
-    const gdouble k   = exp (lnk);
+    const gdouble k = g_array_index (k_a, gdouble, i);
 
     nc_hipert_set_mode_k (pert, k);
     g_array_append_val (k_array, k);
@@ -1916,6 +1921,9 @@ nc_hipert_two_fluids_compute_spectrum (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo,
         G_ARRAY_APPEND_FUNCVAL (state2[j], ncm_vector_get (state, j));
       }
     }
+
+    if (logger)
+      logger (i, k_a->len);
   }
 
   ncm_vector_free (initial_condition);
@@ -1923,7 +1931,7 @@ nc_hipert_two_fluids_compute_spectrum (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo,
   {
     NcHIPertTwoFluidsStateInterp *sinterp = g_new0 (NcHIPertTwoFluidsStateInterp, 1);
 
-    sinterp->interp_mode = 1;
+    sinterp->interp_mode = 2;
     sinterp->state.alpha = alpha;
     sinterp->state.norma = nc_hipert_itwo_fluids_eval_unit (NC_HIPERT_ITWO_FLUIDS (cosmo));
 
