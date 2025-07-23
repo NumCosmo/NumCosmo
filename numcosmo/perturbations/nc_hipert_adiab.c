@@ -608,7 +608,7 @@ nc_hipert_adiab_eval_cosmic_time (NcHIPertAdiab *adiab, NcmModel *model, const g
 }
 
 /**
- * nc_hipert_adiab_eval_delta_critial:
+ * nc_hipert_adiab_eval_delta_critical:
  * @adiab: a #NcHIPertAdiab
  * @model: a #NcmModel
  * @tau: $\tau$
@@ -618,7 +618,7 @@ nc_hipert_adiab_eval_cosmic_time (NcHIPertAdiab *adiab, NcmModel *model, const g
  * Returns: the critical density contrast.
  */
 gdouble
-nc_hipert_adiab_eval_delta_critial (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau)
+nc_hipert_adiab_eval_delta_critical (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau)
 {
   const gdouble tau_hubble = nc_hipert_iadiab_eval_tau_hubble (NC_HIPERT_IADIAB (model), adiab->k);
   const gdouble t_hubble   = nc_hipert_adiab_eval_cosmic_time (adiab, model, -tau_hubble);
