@@ -728,6 +728,9 @@ class GenerateDEWSpline:
             )
 
         cosmo = Nc.HICosmoDEWSpline.new(self.n_knots, self.z_max)
+        cosmo.omega_x2omega_k()
+        cosmo["Omegak"] = 0.0
+
         for i in range(self.n_knots):
             cosmo.param_set_desc(f"w_{i}", {"fit": True})
 
@@ -742,7 +745,10 @@ class GenerateDEWSpline:
 
         if self.include_bao is not None:
             add_bao_likelihood(dset, mset, dist, self.include_bao)
-            # cosmo.param_set_desc("asdrag", {"fit": True})
+            # cosmo.param_set_desc(
+            #     f"w_{self.n_knots-1}",
+            #     {"fit": True, "lower-bound": -1.5, "upper-bound": 0.0},
+            # )
 
         if self.include_hubble is not None:
             add_h_likelihood(dset, mset, self.include_hubble)
