@@ -52,8 +52,8 @@ def fixture_Pk2d() -> Ncm.Spline2d:
     Pk2d = Ncm.Spline2dBicubic(
         spline=Ncm.SplineCubicNotaknot.new(),
         x_vector=Ncm.Vector.new_array(npa_to_seq(za)),
-        y_vector=Ncm.Vector.new_array(np.log(ka).tolist()),
-        z_matrix=Ncm.Matrix.new_array(Pk.flatten().tolist(), len(za)),
+        y_vector=Ncm.Vector.new_array(np.log(ka)),
+        z_matrix=Ncm.Matrix.new_array(Pk.flatten(), len(za)),
     )
 
     return Pk2d

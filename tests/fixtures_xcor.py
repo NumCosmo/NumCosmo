@@ -34,7 +34,6 @@ import pyccl
 
 import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm, Nc
-from numcosmo_py.helper import npa_to_seq
 from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_ccl_cosmo_eh_linear,
     fixture_nc_cosmo_eh_linear,
@@ -67,7 +66,7 @@ def fixture_nc_cmb_lens(
     nc_cmb_lens = Nc.XcorLimberKernelCMBLensing.new(
         nc_cosmo_eh_linear.dist,
         Nc.RecombSeager(),
-        Ncm.Vector.new_array(np.arange(lmax + 1).tolist()),
+        Ncm.Vector.new_array(np.arange(lmax + 1)),
     )
 
     return nc_cmb_lens
@@ -92,7 +91,7 @@ def fixture_nc_cmb_isw(
         nc_cosmo_eh_linear.dist,
         nc_cosmo_eh_linear.ps_ml,
         nc_cosmo_eh_linear.recomb,
-        Ncm.Vector.new_array(np.arange(lmax + 1).tolist()),
+        Ncm.Vector.new_array(np.arange(lmax + 1)),
     )
 
     return nc_cmb_isw
@@ -150,8 +149,8 @@ def fixture_nc_gal(
     z_a: npt.NDArray[np.float64] = np.linspace(z_low, z_high, Z_A_LEN, dtype=np.float64)
     nz_a = np.exp(-((z_a - mu) ** 2) / sigma**2 / 2.0) / np.sqrt(2.0 * np.pi * sigma**2)
 
-    z_v = Ncm.Vector.new_array(npa_to_seq(z_a))
-    nz_v = Ncm.Vector.new_array(nz_a.tolist())
+    z_v = Ncm.Vector.new_array(z_a)
+    nz_v = Ncm.Vector.new_array(nz_a)
     dndz = Ncm.SplineCubicNotaknot.new_full(z_v, nz_v, True)
 
     magbias = mbias != 0.0
@@ -204,8 +203,8 @@ def fixture_nc_weak_lensing(
     z_a: npt.NDArray[np.float64] = np.linspace(z_low, z_high, Z_A_LEN, dtype=np.float64)
     nz_a = np.exp(-((z_a - mu) ** 2) / sigma**2 / 2.0) / np.sqrt(2.0 * np.pi * sigma**2)
 
-    z_v = Ncm.Vector.new_array(npa_to_seq(z_a))
-    nz_v = Ncm.Vector.new_array(nz_a.tolist())
+    z_v = Ncm.Vector.new_array(z_a)
+    nz_v = Ncm.Vector.new_array(nz_a)
     dndz = Ncm.SplineCubicNotaknot.new_full(z_v, nz_v, True)
 
     nc_wl = Nc.XcorLimberKernelWeakLensing.new(
