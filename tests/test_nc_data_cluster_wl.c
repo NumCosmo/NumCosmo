@@ -284,7 +284,9 @@ test_nc_data_cluster_wl_new (TestNcDataClusterWL *test, gconstpointer pdata)
 
   g_assert (gsl_finite (nc_data_cluster_wl_estimate_snr (test->dcwl, test->mset)));
 
+  ncm_rng_free (rng);
   nc_galaxy_sd_true_redshift_free (z_true_dist);
+  nc_distance_free (dist);
 }
 
 static void
@@ -430,7 +432,7 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
   nc_galaxy_wl_obs_free (obs);
   ncm_rng_free (rng);
   g_strv_builder_unref (builder);
-  g_list_free (columns);
+  g_list_free_full (columns, g_free);
   g_list_free (l);
 }
 
