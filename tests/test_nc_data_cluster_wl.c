@@ -564,6 +564,18 @@ test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
 
     ncm_assert_cmpdouble_e (m2lnL_a, ==, m2lnL_b, 1.0e-11, 0.0);
   }
+
+  {
+    nc_data_cluster_wl_use_lnint (test->dcwl, TRUE);
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
+    g_assert (gsl_finite (m2lnL_a));
+
+    nc_data_cluster_wl_use_lnint (test->dcwl, FALSE);
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
+    g_assert (gsl_finite (m2lnL_b));
+
+    ncm_assert_cmpdouble_e (m2lnL_a, ==, m2lnL_b, 1.0e-7, 0.0);
+  }
 }
 
 static void

@@ -355,6 +355,7 @@ _nc_galaxy_sd_shape_gauss_integ_f (gpointer callback_data, const gdouble z, NcGa
   gdouble sigma                   = SIGMA;
   gdouble std_noise               = ldata->std_noise;
   complex double e_o              = e1 + I * e2;
+  complex double g;
   NcmComplex cplx_g, cplx_E_o, cplx_E_s;
 
   if (z > z_cl)
@@ -364,19 +365,24 @@ _nc_galaxy_sd_shape_gauss_integ_f (gpointer callback_data, const gdouble z, NcGa
                                                                        int_data->cosmo,
                                                                        z, z_cl, &ldata->optzs);
 
-    complex double g = gt * cexp (2.0 * I * phi);
-
-    ncm_complex_set_c (&cplx_g, g);
-    ncm_complex_set_c (&cplx_E_o, e_o);
-
-    nc_galaxy_sd_shape_apply_shear_inv (gsds, &cplx_g, &cplx_E_o, &cplx_E_s);
+    g = gt * cexp (2.0 * I * phi);
   }
   else
   {
-    ncm_complex_set_zero (&cplx_g);
-    ncm_complex_set_c (&cplx_E_o, e_o);
-    ncm_complex_set_c (&cplx_E_s, e_o);
+    const gdouble gt = nc_wl_surface_mass_density_reduced_shear_optzs (int_data->surface_mass_density,
+                                                                       int_data->density_profile,
+                                                                       int_data->cosmo,
+                                                                       z_cl * (1.0 + GSL_DBL_EPSILON), z_cl, &ldata->optzs);
+    const gdouble step = 1.0 / (1.0 + exp (-(z - z_cl) / 0.001));
+
+    g = step * gt * cexp (2.0 * I * phi);
   }
+
+  ncm_complex_set_c (&cplx_g, g);
+  ncm_complex_set_c (&cplx_E_o, e_o);
+
+  nc_galaxy_sd_shape_apply_shear_inv (gsds, &cplx_g, &cplx_E_o, &cplx_E_s);
+
 
   /* TODO: compute the actual convolution */
   {
