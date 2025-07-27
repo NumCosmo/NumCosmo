@@ -1165,7 +1165,7 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShape *test, gconstpointer pd
 
         m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
 
-        ncm_assert_cmpdouble_e (-2.0 * log (int0), ==, m2ln_int1, 1e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (-2.0 * int0, ==, m2ln_int1, 1e-10, 1.0e-10);
 
         e_s      = e_s * cexp (-2.0 * I * phi);
         e_o      = e_o * cexp (-2.0 * I * phi);
@@ -1329,7 +1329,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
 
         m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
 
-        ncm_assert_cmpdouble_e (-2.0 * log (int0), ==, m2ln_int1, 1e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (-2.0 * int0, ==, m2ln_int1, 1e-10, 1.0e-10);
 
         e_s      = e_s * cexp (-2.0 * I * phi);
         e_o      = e_o * cexp (-2.0 * I * phi);
@@ -1626,7 +1626,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_stats (TestNcGalaxySDShape *test, gconstpointe
       {
         gdouble gt, hat_gt, hat_sigma_gt, hat_gx, hat_sigma_gx, hat_rho;
 
-        ncm_model_param_set_by_name (NCM_MODEL (test->hms), "log10MDelta", TEST_LOG10_MASS, NULL);
+        ncm_model_param_set_by_name (NCM_MODEL (test->hms), "log10MDelta", TEST_LOG10_MASS + 2.0, NULL);
         ncm_data_resample (data, fiduc, rng);
         ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
 
@@ -1991,7 +1991,7 @@ test_nc_galaxy_sd_shape_gauss_strong_lensing (TestNcGalaxySDShape *test, gconstp
 
         m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
 
-        ncm_assert_cmpdouble_e (-2.0 * log (int0), ==, m2ln_int1, 1.0e-8, 1.0e-8);
+        ncm_assert_cmpdouble_e (-2.0 * int0, ==, m2ln_int1, 1.0e-8, 1.0e-8);
       }
     }
   }
@@ -2186,7 +2186,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_strong_lensing (TestNcGalaxySDShape *test, gco
 
         m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
 
-        ncm_assert_cmpdouble_e (-2.0 * log (int0), ==, m2ln_int1, 1.0e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (-2.0 * int0, ==, m2ln_int1, 1.0e-10, 1.0e-10);
       }
     }
   }

@@ -823,12 +823,11 @@ _nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector 
       {
         NcGalaxySDShapeData *s_data_i = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
 
-        const gdouble z           = s_data_i->sdpos_data->sdz_data->z;
-        const gdouble int_z       = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, s_data_i->sdpos_data->sdz_data);
-        const gdouble int_pos     = nc_galaxy_sd_position_integrand_eval (integrand_position, s_data_i->sdpos_data);
-        const gdouble int_shape   = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, s_data_i);
-        const gdouble P_gal_i     = int_z * int_pos * int_shape;
-        const gdouble m2lnP_gal_i = P_gal_i > 0.0 ? -2.0 * log (P_gal_i) : NC_GALAXY_LOW_PROB;
+        const gdouble z            = s_data_i->sdpos_data->sdz_data->z;
+        const gdouble ln_int_z     = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, s_data_i->sdpos_data->sdz_data);
+        const gdouble ln_int_pos   = nc_galaxy_sd_position_integrand_eval (integrand_position, s_data_i->sdpos_data);
+        const gdouble ln_int_shape = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, s_data_i);
+        const gdouble m2lnP_gal_i  = -2.0 * (ln_int_z + ln_int_pos + ln_int_shape);
 
         if (!gsl_finite (m2lnP_gal_i))
         {
@@ -857,12 +856,11 @@ _nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector 
 
         NcGalaxySDShapeData *s_data_i = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
 
-        const gdouble z           = s_data_i->sdpos_data->sdz_data->z;
-        const gdouble int_z       = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, s_data_i->sdpos_data->sdz_data);
-        const gdouble int_pos     = nc_galaxy_sd_position_integrand_eval (integrand_position, s_data_i->sdpos_data);
-        const gdouble int_shape   = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, s_data_i);
-        const gdouble P_gal_i     = int_z * int_pos * int_shape;
-        const gdouble m2lnP_gal_i = P_gal_i > 0.0 ? -2.0 * log (P_gal_i) : NC_GALAXY_LOW_PROB;
+        const gdouble z            = s_data_i->sdpos_data->sdz_data->z;
+        const gdouble ln_int_z     = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, s_data_i->sdpos_data->sdz_data);
+        const gdouble ln_int_pos   = nc_galaxy_sd_position_integrand_eval (integrand_position, s_data_i->sdpos_data);
+        const gdouble ln_int_shape = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, s_data_i);
+        const gdouble m2lnP_gal_i  = -2.0 * (ln_int_z + ln_int_pos + ln_int_shape);
 
         if (!gsl_finite (m2lnP_gal_i))
         {
