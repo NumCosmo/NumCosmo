@@ -1276,31 +1276,39 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
                                                        test->density_profile,
                                                        test->cosmo,
                                                        r, z_data->z, z_cl, z_cl);
-        g = gt * cexp (2.0 * I * phi);
-        g = (1.0 + m) * g + (c1 + I * c2);
-
-        switch (test->ell_conv)
-        {
-          case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-
-            if (gt > 1.0)
-              e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
-            else
-              e_s = (e_o - g) / (1.0 - conj (g) * e_o);  /* LCOV_EXCL_LINE */
-
-            break;
-
-          case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-            e_s = (e_o + g * (g * conj (e_o) - 2.0)) / (1.0 + g * conj (g) - 2.0 * creal (g * conj (e_o)));
-            break;
-
-          default: /* LCOV_EXCL_LINE */
-            g_assert_not_reached ();
-        }
       }
       else
       {
-        e_s = e_o - (c1 + I * c2);
+        const gdouble step = exp ((z_data->z - z_cl) / 0.001);
+
+        gt = nc_wl_surface_mass_density_reduced_shear (test->surface_mass_density,
+                                                       test->density_profile,
+                                                       test->cosmo,
+                                                       r, z_cl * (1.0 + GSL_DBL_EPSILON), z_cl, z_cl);
+
+        gt *= step;
+      }
+
+      g = gt * cexp (2.0 * I * phi);
+      g = (1.0 + m) * g + (c1 + I * c2);
+
+      switch (test->ell_conv)
+      {
+        case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+
+          if (gt > 1.0)
+            e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
+          else
+            e_s = (e_o - g) / (1.0 - conj (g) * e_o);  /* LCOV_EXCL_LINE */
+
+          break;
+
+        case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+          e_s = (e_o + g * (g * conj (e_o) - 2.0)) / (1.0 + g * conj (g) - 2.0 * creal (g * conj (e_o)));
+          break;
+
+        default: /* LCOV_EXCL_LINE */
+          g_assert_not_reached ();
       }
 
       {

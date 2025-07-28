@@ -351,7 +351,7 @@ _nc_galaxy_sd_shape_gauss_hsc_integ_f (gpointer callback_data, const gdouble z, 
                                                                        int_data->density_profile,
                                                                        int_data->cosmo,
                                                                        z_cl * (1.0 + GSL_DBL_EPSILON), z_cl, &ldata->optzs);
-    const gdouble step = 1.0 / (1.0 + exp (-(z - z_cl) / 0.001));
+    const gdouble step = exp ((z - z_cl) / 0.001);
 
     g = step * gt * cexp (2.0 * I * phi);
   }
