@@ -67,7 +67,7 @@
  * This object cannot be used without the child object containing the cited functions.
  *
  * After defining the child class with the necessary functions,
- * the user may use the integration object with the prefered method
+ * the user may use the integration object with the preferred method
  * from the cubature library.
  *
  * The user may provide the input values for: @rel_tol - ncm_integral_nd_set_reltol(), @abs_tol - ncm_integral_nd_set_abstol(),
