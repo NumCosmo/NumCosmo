@@ -1052,6 +1052,8 @@ _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
         g_array_append_val (ret_req_array, request);
         g_array_append_val (ret_buf_desc_a, bd);
       }
+
+      g_free (j);
     }
   }
 
@@ -1128,6 +1130,8 @@ _ncm_mpi_job_run_array_async_ctrl_thread (gpointer data)
       bd->t   = ret_type;
 
       MPI_Irecv (bd->buf, self->return_len, self->input_dtype, slave_id, NCM_MPI_CTRL_TAG_WORK_RETURN, MPI_COMM_WORLD, request);
+
+      g_free (j);
     }
   }
 
@@ -1218,6 +1222,8 @@ ncm_mpi_job_run_array_async (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArr
         ncm_mpi_job_run (mpi_job, j->input, j->ret);
         NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] Job %d took %fs.\n", _mpi_ctrl.size, _mpi_ctrl.rank, j->id,
                                  ncm_timer_elapsed (self->nt) - t0);
+
+        g_free (j);
       }
     }
 
