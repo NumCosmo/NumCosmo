@@ -11,13 +11,19 @@
    <libhwloc>
    Memcheck:Leak
    ...
-   obj:/usr/*lib*/libhwloc*
+   obj:*libhwloc*
 }
 {
    <libopen-rte>
    Memcheck:Leak
    ...
-   obj:/usr/*lib*/libopen-rte*
+   obj:*libopen-rte*
+}
+{
+   <libopen-pal>
+   Memcheck:Leak
+   ...
+   obj:*libopen-pal*
 }
 {
    <PMPI_Init>
@@ -57,7 +63,7 @@
 {
    <libfyaml_use_uninitialised>
    Memcheck:Cond
-   obj:/usr/lib/libfyaml.so.0.0.0
+   obj:*libfyaml.so.*
    ...
    fun:fy_emit_document_to_string
    ...
