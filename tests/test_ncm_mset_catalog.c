@@ -110,6 +110,8 @@ main (gint argc, gchar *argv[])
                   fixtures[i].func,
                   tests[j].func,
                   &test_ncm_mset_catalog_free);
+
+      g_free (path);
     }
   }
 
