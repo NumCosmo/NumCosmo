@@ -304,6 +304,8 @@ test_ncm_stats_dist_kernel_norm (TestNcmStatsDistKernel *test, gconstpointer pda
     ncm_vector_free (kernel_vec);
   }
   ncm_model_mvnd_free (model_mvnd);
+  ncm_data_gauss_cov_mvnd_free (data_mvnd);
+
   ncm_rng_free (rng);
   ncm_vector_free (m2lnp_v);
   ncm_mset_free (mset);
@@ -421,6 +423,7 @@ test_ncm_stats_dist_kernel_sum (TestNcmStatsDistKernel *test, gconstpointer pdat
   ncm_vector_free (weights);
   ncm_vector_free (chi2);
   ncm_vector_free (lnnorms_vec);
+  ncm_vector_free (lnK);
   g_clear_pointer (&t_array0, g_array_unref);
   g_clear_pointer (&t_array1, g_array_unref);
 }
@@ -433,7 +436,7 @@ test_ncm_stats_dist_kernel_sample (TestNcmStatsDistKernel *test, gconstpointer p
   gdouble href            = g_test_rand_double_range (1.0, 200.0);
   gdouble dif             = 0.0;
   NcmVector *mu           = ncm_vector_new (test->dim);
-  NcmStatsVec *test_stats = ncm_stats_vec_new (test->dim, NCM_STATS_VEC_VAR, FALSE);
+  NcmStatsVec *test_stats = ncm_stats_vec_new (test->dim, NCM_STATS_VEC_VAR, TRUE);
   const guint ntests      = 300 * g_test_rand_int_range (1, 5);
   guint i, j;
 
@@ -462,6 +465,7 @@ test_ncm_stats_dist_kernel_sample (TestNcmStatsDistKernel *test, gconstpointer p
       ncm_stats_dist_kernel_sample (test->kernel, cov_decomp, href, mu, x_test, rng);
 
       ncm_stats_vec_append (test_stats, x_test, FALSE);
+      ncm_vector_free (x_test);
     }
 
     for (i = 0; i < test->dim; i++)
@@ -484,8 +488,6 @@ test_ncm_stats_dist_kernel_sample (TestNcmStatsDistKernel *test, gconstpointer p
   }
 
   g_assert_cmpfloat (dif, <, (test->dim * 0.2));
-
-
 
   ncm_vector_free (mu);
   ncm_matrix_free (cov_decomp);

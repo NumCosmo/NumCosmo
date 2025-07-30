@@ -373,6 +373,8 @@ _nc_hicosmo_Vexp_finalize (GObject *object)
     self->LS = NULL;
   }
 
+  SUNContext_Free (&self->sunctx);
+
   g_clear_pointer (&self->evol_c, g_array_unref);
   g_clear_pointer (&self->evol_e, g_array_unref);
 
