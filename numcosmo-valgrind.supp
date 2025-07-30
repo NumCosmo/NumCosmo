@@ -20,10 +20,24 @@
    obj:*libopen-rte*
 }
 {
+   <libcuda>
+   Memcheck:Leak
+   ...
+   obj:*libcuda*
+}
+{
    <libopen-pal>
    Memcheck:Leak
    ...
    obj:*libopen-pal*
+}
+{
+   <usc-reachable>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:ucs_init
+   ...
 }
 {
    <PMPI_Init>
