@@ -32,14 +32,6 @@
    obj:*libopen-pal*
 }
 {
-   <usc-reachable>
-   Memcheck:Leak
-   match-leak-kinds: reachable
-   ...
-   fun:ucs_init
-   ...
-}
-{
    <PMPI_Init>
    Memcheck:Leak
    match-leak-kinds: all

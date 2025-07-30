@@ -309,7 +309,6 @@ test_ncm_stats_dist_kernel_norm (TestNcmStatsDistKernel *test, gconstpointer pda
   ncm_rng_free (rng);
   ncm_vector_free (m2lnp_v);
   ncm_mset_free (mset);
-  ncm_matrix_free (cov);
 }
 
 static void
