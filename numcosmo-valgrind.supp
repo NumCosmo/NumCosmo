@@ -84,3 +84,35 @@
    fun:_ncm_serialize_to_yaml_node
    ...
 }
+{
+   <PydanticCore>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   ...
+   obj:*_pydantic_core*
+   fun:PyInit__pydantic_core
+   fun:_PyImport_RunModInitFunc
+   ...
+}
+{
+   <GILeak>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   ...
+   fun:g_type_create_instance
+   fun:gi_info_new_full
+   fun:pyg_flags_add_full
+   fun:_wrap_pyg_flags_add
+   ...
+}
+{
+   <GILeak>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   ...
+   fun:g_type_create_instance
+   fun:gi_info_new_full
+   fun:pyg_enum_add_full
+   fun:_wrap_pyg_enum_add
+   ...
+}
