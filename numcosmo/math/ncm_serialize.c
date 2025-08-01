@@ -717,6 +717,8 @@ ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_s
 
     g_variant_iter_free (p_iter);
   }
+
+  g_variant_unref (params);
 }
 
 /**
@@ -1281,6 +1283,7 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
 
                       g_value_take_object (&lval, vector);
 
+                      g_variant_unref (var);
                       g_free (prop_val_str);
                     }
                   }
@@ -1305,6 +1308,7 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
 
                       g_value_take_object (&lval, matrix);
 
+                      g_variant_unref (var);
                       g_free (prop_val_str);
                     }
                   }
@@ -1342,6 +1346,7 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
 
                   dtuple2 = ncm_dtuple2_new_from_variant (var);
                   g_value_take_boxed (&lval, dtuple2);
+                  g_variant_unref (var);
                 }
                 else if (g_type_is_a (pspec->value_type, NCM_TYPE_DTUPLE3))
                 {
@@ -1355,6 +1360,7 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
 
                   dtuple3 = ncm_dtuple3_new_from_variant (var);
                   g_value_take_boxed (&lval, dtuple3);
+                  g_variant_unref (var);
                 }
                 else if (g_type_is_a (pspec->value_type, G_TYPE_STRV))
                 {
