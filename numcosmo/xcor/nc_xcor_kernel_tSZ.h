@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_xcor_limber_kernel_tSZ.h
+ *            nc_xcor_kernel_tSZ.h
  *
  *  Tue January 10 12:00:00 2022
  *  Copyright  2022  Arthur de Souza Molina
@@ -23,36 +23,36 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_XCOR_LIMBER_KERNEL_TSZ_H_
-#define _NC_XCOR_LIMBER_KERNEL_TSZ_H_
+#ifndef _NC_XCOR_KERNEL_TSZ_H_
+#define _NC_XCOR_KERNEL_TSZ_H_
 
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel.h>
+#include <numcosmo/xcor/nc_xcor_kernel.h>
 #include <numcosmo/math/ncm_c.h>
 G_BEGIN_DECLS
 
-#define NC_TYPE_XCOR_LIMBER_KERNEL_TSZ (nc_xcor_limber_kernel_tsz_get_type ())
+#define NC_TYPE_XCOR_KERNEL_TSZ (nc_xcor_kernel_tsz_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcXcorLimberKerneltSZ, nc_xcor_limber_kernel_tsz, NC, XCOR_LIMBER_KERNEL_TSZ, NcXcorLimberKernel)
+G_DECLARE_FINAL_TYPE (NcXcorKerneltSZ, nc_xcor_kernel_tsz, NC, XCOR_KERNEL_TSZ, NcXcorKernel)
 
 
 /**
- * NcXcorLimberKerneltSZSParams:
- * @NC_XCOR_LIMBER_KERNEL_TSZ_SPARAM_LEN: Number of parameters.
+ * NcXcorKerneltSZSParams:
+ * @NC_XCOR_KERNEL_TSZ_SPARAM_LEN: Number of parameters.
  *
  * Enum values for the tSZ kernel parameters.
  *
  */
-typedef enum /*< enum,underscore_name=NC_XCOR_LIMBER_KERNEL_TSZ_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_XCOR_KERNEL_TSZ_SPARAMS >*/
 {
-  NC_XCOR_LIMBER_KERNEL_TSZ_SPARAM_LEN
-} NcXcorLimberKerneltSZSParams;
+  NC_XCOR_KERNEL_TSZ_SPARAM_LEN
+} NcXcorKerneltSZSParams;
 
-NcXcorLimberKerneltSZ *nc_xcor_limber_kernel_tsz_new (gdouble zmax);
+NcXcorKerneltSZ *nc_xcor_kernel_tsz_new (gdouble zmax);
 
 G_END_DECLS
 
-#endif /* _NC_XCOR_LIMBER_KERNEL_TSZ_H_ */
+#endif /* _NC_XCOR_KERNEL_TSZ_H_ */
 
