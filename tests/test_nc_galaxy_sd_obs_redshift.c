@@ -392,6 +392,11 @@ test_nc_galaxy_sd_obs_redshift_spec_gen (TestNcGalaxySDObsRedshift *test, gconst
     nc_galaxy_sd_obs_redshift_gen (test->gsdor, data3, rng3);
 
     ncm_assert_cmpdouble (data2->z, ==, data3->z);
+
+    ncm_rng_free (rng2);
+    ncm_rng_free (rng3);
+    nc_galaxy_sd_obs_redshift_data_unref (data2);
+    nc_galaxy_sd_obs_redshift_data_unref (data3);
   }
 
   nc_galaxy_sd_obs_redshift_data_unref (data);
@@ -498,6 +503,11 @@ test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift *test, gcons
     ncm_assert_cmpdouble (data2->z, ==, data3->z);
     ncm_assert_cmpdouble (zp, ==, zp2);
     g_assert (result2 == result3);
+
+    nc_galaxy_sd_obs_redshift_data_unref (data2);
+    nc_galaxy_sd_obs_redshift_data_unref (data3);
+    ncm_rng_free (rng2);
+    ncm_rng_free (rng3);
   }
 
   nc_galaxy_sd_obs_redshift_data_unref (data);
@@ -696,7 +706,6 @@ test_nc_galaxy_sd_obs_redshift_spec_required_columns (TestNcGalaxySDObsRedshift 
   NcGalaxySDObsRedshiftData *data = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
   GList *columns                  = nc_galaxy_sd_obs_redshift_data_required_columns (data);
 
-
   g_assert_cmpuint (g_list_length (columns), ==, 1);
   g_assert_cmpstr (g_list_nth_data (columns, 0), ==, "z");
 
@@ -798,6 +807,9 @@ test_nc_galaxy_sd_obs_redshift_pz_lim (TestNcGalaxySDObsRedshift *test, gconstpo
   g_assert_cmpfloat_with_epsilon (z_max, z_avg + 5 * z_sd, 1e-10);
 
   nc_galaxy_sd_obs_redshift_data_unref (data);
+  ncm_spline_free (pz);
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
 }
 
 static void

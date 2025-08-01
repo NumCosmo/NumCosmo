@@ -241,6 +241,8 @@ test_ncm_matrix_new_array (TestNcmMatrix *test, gconstpointer pdata)
 
       for (i = 0; i < test->nrows * test->ncols; i++)
         ncm_assert_cmpdouble (g_array_index (ga, gdouble, i), ==, g_array_index (ga_dup, gdouble, i));
+
+      g_array_unref (ga_dup);
     }
 
     g_array_unref (ga);

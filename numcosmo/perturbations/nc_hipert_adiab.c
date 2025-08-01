@@ -190,6 +190,11 @@ _nc_hipert_adiab_dispose (GObject *object)
   ncm_spline2d_clear (&pa->powspec_alpha);
   ncm_spline2d_clear (&pa->powspec_gamma);
 
+  ncm_ode_spline_clear (&pa->ctime_forward);
+  ncm_ode_spline_clear (&pa->ctime_backward);
+
+  ncm_model_ctrl_clear (&pa->model_ctrl);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_adiab_parent_class)->dispose (object);
 }
@@ -861,6 +866,8 @@ _nc_hipert_adiab_eval_powspec_func (NcHIPertAdiab *adiab, NcmModel *model,
       powspec = ncm_powspec_spline2d_new (powspec_spline);
 
       ncm_matrix_free (powspec_mat);
+      ncm_spline2d_free (powspec_spline);
+      ncm_vector_free (lnk_vec);
 
       return powspec;
     }
