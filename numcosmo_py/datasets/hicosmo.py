@@ -133,9 +133,6 @@ def add_h_likelihood(
     match h_id:
         case HID.ALL_COMBINED_JAN_2023:
             h_enums = [Nc.DataHubbleId.GOMEZ_VALENT_COMP2018]
-            for h_enum in h_enums:
-                h_likelihood = Nc.DataHubble.new_from_id(h_enum)
-                dataset.append_data(h_likelihood)
         case HID.ALL_COMBINED_APR_2025:
             h_enums = [
                 Nc.DataHubbleId.GOMEZ_VALENT_COMP2018,
@@ -144,3 +141,7 @@ def add_h_likelihood(
             ]
         case _:
             raise ValueError(f"Unknown Hubble data set id: {h_id}")
+
+    for h_enum in h_enums:
+        h_likelihood = Nc.DataHubble.new_from_id(h_enum)
+        dataset.append_data(h_likelihood)

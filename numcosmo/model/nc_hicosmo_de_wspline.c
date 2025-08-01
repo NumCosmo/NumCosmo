@@ -220,7 +220,7 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
   object_class->dispose     = &_nc_hicosmo_de_wspline_dispose;
   object_class->finalize    = &_nc_hicosmo_de_wspline_finalize;
 
-  ncm_model_class_set_name_nick (model_class, "XCDM - Constant EOS", "XCDM");
+  ncm_model_class_set_name_nick (model_class, "WSpline - DE EOS reconstruction w(z)", "WSpline");
   ncm_model_class_add_params (model_class, 0,
                               NC_HICOSMO_DE_WSPLINE_VPARAM_LEN - NC_HICOSMO_DE_VPARAM_LEN,
                               PROP_SIZE);

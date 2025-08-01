@@ -86,6 +86,8 @@
 #include "math/ncm_fit_nlopt.h"
 #include "math/ncm_prior_gauss_param.h"
 #include "math/ncm_prior_gauss_func.h"
+#include "math/ncm_prior_flat_param.h"
+#include "math/ncm_prior_flat_func.h"
 #include "math/ncm_fftlog_sbessel_j.h"
 #include "math/ncm_fftlog_sbessel_jljm.h"
 #include "nc_hicosmo.h"
@@ -606,6 +608,10 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_PARAM);
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);
+
+  ncm_cfg_register_obj (NCM_TYPE_PRIOR_FLAT_PARAM);
+  ncm_cfg_register_obj (NCM_TYPE_PRIOR_FLAT_FUNC);
+
 
   ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_J);
   ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_JLJM);
