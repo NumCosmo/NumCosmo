@@ -466,7 +466,6 @@ def lapack_dsytrs(
 ) -> int: ...
 def lapack_ws_clear(ws: LapackWS) -> None: ...
 def lh_ratio2d_region_clear(rg: LHRatio2dRegion) -> None: ...
-def likelihoood_peek_m2lnL_v(lh: Likelihood) -> Vector: ...
 def memory_pool_return(p: None) -> None: ...
 def message_str(msg: str) -> None: ...
 def message_ww(msg: str, first: str, rest: str, ncols: int) -> None: ...
@@ -3018,13 +3017,13 @@ class Fit(GObject.Object):
       grad-type -> NcmFitGradType: grad-type
         Differentiation method
       maxiter -> guint: maxiter
-        Maximum number of interations
+        Maximum number of iterations
       m2lnL-reltol -> gdouble: m2lnL-reltol
-        Relative tolarence in m2lnL
+        Relative tolerance in m2lnL
       m2lnL-abstol -> gdouble: m2lnL-abstol
-        Absolute tolarence in m2lnL
+        Absolute tolerance in m2lnL
       params-reltol -> gdouble: params-reltol
-        Relative tolarence in fitted parameters
+        Relative tolerance in fitted parameters
       equality-constraints -> NcmObjArray: equality-constraints
         Equality constraints array
       equality-constraints-tot -> NcmVector: equality-constraints-tot
@@ -3760,13 +3759,13 @@ class FitGSLLS(Fit):
       grad-type -> NcmFitGradType: grad-type
         Differentiation method
       maxiter -> guint: maxiter
-        Maximum number of interations
+        Maximum number of iterations
       m2lnL-reltol -> gdouble: m2lnL-reltol
-        Relative tolarence in m2lnL
+        Relative tolerance in m2lnL
       m2lnL-abstol -> gdouble: m2lnL-abstol
-        Absolute tolarence in m2lnL
+        Absolute tolerance in m2lnL
       params-reltol -> gdouble: params-reltol
-        Relative tolarence in fitted parameters
+        Relative tolerance in fitted parameters
       equality-constraints -> NcmObjArray: equality-constraints
         Equality constraints array
       equality-constraints-tot -> NcmVector: equality-constraints-tot
@@ -3855,13 +3854,13 @@ class FitGSLMM(Fit):
       grad-type -> NcmFitGradType: grad-type
         Differentiation method
       maxiter -> guint: maxiter
-        Maximum number of interations
+        Maximum number of iterations
       m2lnL-reltol -> gdouble: m2lnL-reltol
-        Relative tolarence in m2lnL
+        Relative tolerance in m2lnL
       m2lnL-abstol -> gdouble: m2lnL-abstol
-        Absolute tolarence in m2lnL
+        Absolute tolerance in m2lnL
       params-reltol -> gdouble: params-reltol
-        Relative tolarence in fitted parameters
+        Relative tolerance in fitted parameters
       equality-constraints -> NcmObjArray: equality-constraints
         Equality constraints array
       equality-constraints-tot -> NcmVector: equality-constraints-tot
@@ -3963,13 +3962,13 @@ class FitGSLMMS(Fit):
       grad-type -> NcmFitGradType: grad-type
         Differentiation method
       maxiter -> guint: maxiter
-        Maximum number of interations
+        Maximum number of iterations
       m2lnL-reltol -> gdouble: m2lnL-reltol
-        Relative tolarence in m2lnL
+        Relative tolerance in m2lnL
       m2lnL-abstol -> gdouble: m2lnL-abstol
-        Absolute tolarence in m2lnL
+        Absolute tolerance in m2lnL
       params-reltol -> gdouble: params-reltol
-        Relative tolarence in fitted parameters
+        Relative tolerance in fitted parameters
       equality-constraints -> NcmObjArray: equality-constraints
         Equality constraints array
       equality-constraints-tot -> NcmVector: equality-constraints-tot
@@ -4087,13 +4086,13 @@ class FitLevmar(Fit):
       grad-type -> NcmFitGradType: grad-type
         Differentiation method
       maxiter -> guint: maxiter
-        Maximum number of interations
+        Maximum number of iterations
       m2lnL-reltol -> gdouble: m2lnL-reltol
-        Relative tolarence in m2lnL
+        Relative tolerance in m2lnL
       m2lnL-abstol -> gdouble: m2lnL-abstol
-        Absolute tolarence in m2lnL
+        Absolute tolerance in m2lnL
       params-reltol -> gdouble: params-reltol
-        Relative tolarence in fitted parameters
+        Relative tolerance in fitted parameters
       equality-constraints -> NcmObjArray: equality-constraints
         Equality constraints array
       equality-constraints-tot -> NcmVector: equality-constraints-tot
@@ -4407,13 +4406,13 @@ class FitNLOpt(Fit):
       grad-type -> NcmFitGradType: grad-type
         Differentiation method
       maxiter -> guint: maxiter
-        Maximum number of interations
+        Maximum number of iterations
       m2lnL-reltol -> gdouble: m2lnL-reltol
-        Relative tolarence in m2lnL
+        Relative tolerance in m2lnL
       m2lnL-abstol -> gdouble: m2lnL-abstol
-        Absolute tolarence in m2lnL
+        Absolute tolerance in m2lnL
       params-reltol -> gdouble: params-reltol
-        Relative tolarence in fitted parameters
+        Relative tolerance in fitted parameters
       equality-constraints -> NcmObjArray: equality-constraints
         Equality constraints array
       equality-constraints-tot -> NcmVector: equality-constraints-tot
@@ -5239,6 +5238,7 @@ class Likelihood(GObject.Object):
     @classmethod
     def new(cls, dset: Dataset) -> Likelihood: ...
     def peek_dataset(self) -> Dataset: ...
+    def peek_m2lnL_v(self) -> Vector: ...
     def priors_add(self, prior: Prior) -> None: ...
     def priors_leastsquares_f(self, mset: MSet, priors_f: Vector) -> None: ...
     def priors_length_f(self) -> int: ...
