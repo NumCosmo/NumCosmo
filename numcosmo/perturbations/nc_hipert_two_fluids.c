@@ -29,7 +29,7 @@
  * Perturbation object for a two fluids system.
  *
  * This object provides the computation of the two fluid system of cosmological
- * perturbations. This problem is decribed by two fluids with energy density and
+ * perturbations. This problem is described by two fluids with energy density and
  * pressure given respectively by $\bar{\rho}_i$ and $\bar{p}_i$ for $i = 1,2$.
  *
  * The system is written in terms of the gauge invariant variable
@@ -148,6 +148,8 @@ nc_hipert_two_fluids_dispose (GObject *object)
 
   nc_hipert_wkb_clear (&self->wkb_zeta);
   nc_hipert_wkb_clear (&self->wkb_S);
+
+  ncm_vector_clear (&self->state);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_two_fluids_parent_class)->dispose (object);
@@ -1242,7 +1244,7 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
 
 #ifdef HAVE_SUNDIALS_ARKODE
   ARKRhsFn fE, fI;
-  ARKLsJacFn dfI_dy;
+  ARKLSJacFn dfI_dy;
 #endif /* HAVE_SUNDIALS_ARKODE */
 
   if (vtype != c_vtype)
@@ -1972,7 +1974,7 @@ nc_hipert_two_fluids_get_cross_time (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, N
     g_warning ("%s", gsl_strerror (status));
 
   if (iter >= max_iter)
-    g_warning ("nc_hipert_two_fluids_get_cross_time: maximum number of interations reached.");
+    g_warning ("nc_hipert_two_fluids_get_cross_time: maximum number of iterations reached.");
 
   gsl_root_fsolver_free (s);
 

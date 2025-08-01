@@ -29,7 +29,6 @@ import numpy as np
 from getdist import MCSamples
 
 from numcosmo_py import Ncm
-from numcosmo_py.helper import npa_to_seq
 from .model import build_mset
 from ..plotting import mcat_to_catalog_data
 
@@ -80,16 +79,14 @@ class Catalog:
             if sample.shape[0] != ncols:
                 raise ValueError("sample shape does not match catalog")
 
-            self._catalog.add_from_vector(Ncm.Vector.new_array(npa_to_seq(sample)))
+            self._catalog.add_from_vector(Ncm.Vector.new_array(sample))
 
         elif len(sample.shape) == 2:
             if sample.shape[1] != ncols:
                 raise ValueError("sample shape does not match catalog")
             if interweaved:
                 for point in sample:
-                    self._catalog.add_from_vector(
-                        Ncm.Vector.new_array(npa_to_seq(point))
-                    )
+                    self._catalog.add_from_vector(Ncm.Vector.new_array(point))
             else:
                 nwalkers = self._catalog.nchains()
 

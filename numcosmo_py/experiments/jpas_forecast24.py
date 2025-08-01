@@ -32,7 +32,6 @@ from enum import StrEnum, auto
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
-from numcosmo_py.helper import npa_to_seq
 from numcosmo_py.external.pyssc import pyssc as PySSC
 
 
@@ -435,8 +434,8 @@ def generate_jpas_forecast_2024(
     )
     lnM_bins_knots = create_lnM_bins(lnM_min=lnM_min, lnM_max=lnM_max, nknots=lnMnknots)
 
-    z_bins_vec = Ncm.Vector.new_array(npa_to_seq(z_bins_knots))
-    lnM_bins_vec = Ncm.Vector.new_array(npa_to_seq(lnM_bins_knots))
+    z_bins_vec = Ncm.Vector.new_array(z_bins_knots)
+    lnM_bins_vec = Ncm.Vector.new_array(lnM_bins_knots)
 
     #   NCountsGauss
 

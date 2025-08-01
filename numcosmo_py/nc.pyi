@@ -1,5 +1,7 @@
 import typing
 
+import numpy.typing as npt
+
 from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import NumCosmoMath
@@ -1332,24 +1334,32 @@ class ClusterAbundance(GObject.Object):
         cosmo: HICosmo,
         clusterz: ClusterRedshift,
         clusterm: ClusterMass,
-        lnM_obs_lower: typing.Sequence[float],
-        lnM_obs_upper: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]],
-        z_obs_lower: typing.Sequence[float],
-        z_obs_upper: typing.Sequence[float],
-        z_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        lnM_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ],
+        z_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     def intp_bin_d2n_bias(
         self,
         cosmo: HICosmo,
         clusterz: ClusterRedshift,
         clusterm: ClusterMass,
-        lnM_obs_lower: typing.Sequence[float],
-        lnM_obs_upper: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]],
-        z_obs_lower: typing.Sequence[float],
-        z_obs_upper: typing.Sequence[float],
-        z_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        lnM_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ],
+        z_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     def intp_d2n(
         self,
@@ -1364,18 +1374,24 @@ class ClusterAbundance(GObject.Object):
         cosmo: HICosmo,
         clusterz: ClusterRedshift,
         clusterm: ClusterMass,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]],
-        z_obs: typing.Sequence[float],
-        z_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ],
+        z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     def lnM_p_d2n(
         self,
         cosmo: HICosmo,
         clusterz: ClusterRedshift,
         clusterm: ClusterMass,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ],
         z: float,
     ) -> float: ...
     def mean_bias(
@@ -1411,18 +1427,18 @@ class ClusterAbundance(GObject.Object):
         clusterz: ClusterRedshift,
         clusterm: ClusterMass,
         lnM: float,
-        z_obs: typing.Sequence[float],
-        z_obs_params: typing.Sequence[float],
+        z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
     def z_p_lnM_p_d2n(
         self,
         cosmo: HICosmo,
         clusterz: ClusterRedshift,
         clusterm: ClusterMass,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
-        z_obs: typing.Sequence[float],
-        z_obs_params: typing.Sequence[float],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
 
 class ClusterAbundanceClass(GObject.GPointer):
@@ -1503,21 +1519,23 @@ class ClusterMass(NumCosmoMath.Model):
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     def do_P_bin_limits(
         self,
         cosmo: HICosmo,
-        lnM_obs_lower: typing.Sequence[float],
-        lnM_obs_upper: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
+        lnM_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[float, float]: ...
     def do_P_limits(
         self,
         cosmo: HICosmo,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[float, float]: ...
     def do_P_vec_z_lnMobs(
         self,
@@ -1526,7 +1544,7 @@ class ClusterMass(NumCosmoMath.Model):
         z: NumCosmoMath.Vector,
         lnM_obs: NumCosmoMath.Matrix,
         lnM_obs_params: NumCosmoMath.Matrix,
-        res: typing.Sequence[float],
+        res: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> None: ...
     def do_intP(self, cosmo: HICosmo, lnM: float, z: float) -> float: ...
     def do_intP_bin(
@@ -1534,17 +1552,19 @@ class ClusterMass(NumCosmoMath.Model):
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        lnM_obs_lower: typing.Sequence[float],
-        lnM_obs_upper: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        lnM_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     def do_resample(
         self,
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
         rng: NumCosmoMath.RNG,
     ) -> bool: ...
     def do_volume(self) -> float: ...
@@ -1557,9 +1577,11 @@ class ClusterMass(NumCosmoMath.Model):
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        lnM_obs_lower: typing.Sequence[float],
-        lnM_obs_upper: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        lnM_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     @staticmethod
     def log_all_models() -> None: ...
@@ -1571,21 +1593,23 @@ class ClusterMass(NumCosmoMath.Model):
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     def p_bin_limits(
         self,
         cosmo: HICosmo,
-        lnM_obs_lower: typing.Sequence[float],
-        lnM_obs_upper: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
+        lnM_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[float, float]: ...
     def p_limits(
         self,
         cosmo: HICosmo,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[float, float]: ...
     def p_vec_z_lnMobs(
         self,
@@ -1594,7 +1618,7 @@ class ClusterMass(NumCosmoMath.Model):
         z: NumCosmoMath.Vector,
         lnM_obs: NumCosmoMath.Matrix,
         lnM_obs_params: NumCosmoMath.Matrix,
-        res: typing.Sequence[float],
+        res: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> None: ...
     def plcl_Msz_Ml_p_ndetone(
         self,
@@ -1610,8 +1634,8 @@ class ClusterMass(NumCosmoMath.Model):
         lnM_M0: float,
         w1: float,
         w2: float,
-        Mobs: typing.Sequence[float],
-        Mobs_params: typing.Sequence[float],
+        Mobs: typing.Sequence[float] | npt.NDArray[np.float64],
+        Mobs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
     def plcl_pdf_only_lognormal(
         self, lnM: float, lnMsz_M0: float, lnMl_M0: float
@@ -1622,8 +1646,8 @@ class ClusterMass(NumCosmoMath.Model):
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
         rng: NumCosmoMath.RNG,
     ) -> bool: ...
     def volume(self) -> float: ...
@@ -2066,8 +2090,8 @@ class ClusterMassClass(GObject.GPointer):
             HICosmo,
             float,
             float,
-            typing.Sequence[float],
-            typing.Optional[typing.Sequence[float]],
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Optional[typing.Sequence[float] | npt.NDArray[np.float64]],
         ],
         float,
     ] = ...
@@ -2078,9 +2102,9 @@ class ClusterMassClass(GObject.GPointer):
             HICosmo,
             float,
             float,
-            typing.Sequence[float],
-            typing.Sequence[float],
-            typing.Optional[typing.Sequence[float]],
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Optional[typing.Sequence[float] | npt.NDArray[np.float64]],
         ],
         float,
     ] = ...
@@ -2090,23 +2114,28 @@ class ClusterMassClass(GObject.GPointer):
             HICosmo,
             float,
             float,
-            typing.Sequence[float],
-            typing.Sequence[float],
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Sequence[float] | npt.NDArray[np.float64],
             NumCosmoMath.RNG,
         ],
         bool,
     ] = ...
     P_limits: typing.Callable[
-        [ClusterMass, HICosmo, typing.Sequence[float], typing.Sequence[float]],
+        [
+            ClusterMass,
+            HICosmo,
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Sequence[float] | npt.NDArray[np.float64],
+        ],
         typing.Tuple[float, float],
     ] = ...
     P_bin_limits: typing.Callable[
         [
             ClusterMass,
             HICosmo,
-            typing.Sequence[float],
-            typing.Sequence[float],
-            typing.Sequence[float],
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Sequence[float] | npt.NDArray[np.float64],
         ],
         typing.Tuple[float, float],
     ] = ...
@@ -2120,7 +2149,7 @@ class ClusterMassClass(GObject.GPointer):
             NumCosmoMath.Vector,
             NumCosmoMath.Matrix,
             NumCosmoMath.Matrix,
-            typing.Sequence[float],
+            typing.Sequence[float] | npt.NDArray[np.float64],
         ],
         None,
     ] = ...
@@ -2425,8 +2454,8 @@ class ClusterMassPlCL(ClusterMass):
         n: int,
         mszl: ClusterMassPlCL,
         lnM: float,
-        Mobs: typing.Sequence[float],
-        Mobs_params: typing.Sequence[float],
+        Mobs: typing.Sequence[float] | npt.NDArray[np.float64],
+        Mobs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> None: ...
     @staticmethod
     def peak_new_variables(
@@ -2435,8 +2464,8 @@ class ClusterMassPlCL(ClusterMass):
         ub: float,
         mszl: ClusterMassPlCL,
         lnM: float,
-        Mobs: typing.Sequence[float],
-        Mobs_params: typing.Sequence[float],
+        Mobs: typing.Sequence[float] | npt.NDArray[np.float64],
+        Mobs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> None: ...
 
 class ClusterMassPlCLClass(GObject.GPointer):
@@ -2884,8 +2913,8 @@ class ClusterPseudoCounts(NumCosmoMath.Model):
         clusterm: ClusterMass,
         cosmo: HICosmo,
         z: float,
-        Mobs: typing.Sequence[float],
-        Mobs_params: typing.Sequence[float],
+        Mobs: typing.Sequence[float] | npt.NDArray[np.float64],
+        Mobs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
     def posterior_numerator_plcl(
         self,
@@ -3013,9 +3042,11 @@ class ClusterRedshift(NumCosmoMath.Model):
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        z_obs_lower: typing.Sequence[float],
-        z_obs_upper: typing.Sequence[float],
-        z_obs_params: typing.Optional[typing.Sequence[float]] = None,
+        z_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
     @staticmethod
     def log_all_models() -> None: ...
@@ -3027,21 +3058,21 @@ class ClusterRedshift(NumCosmoMath.Model):
         cosmo: HICosmo,
         lnM: float,
         z: float,
-        z_obs: typing.Sequence[float],
-        z_obs_params: typing.Sequence[float],
+        z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
     def p_bin_limits(
         self,
         cosmo: HICosmo,
-        z_obs_lower: typing.Sequence[float],
-        z_obs_upper: typing.Sequence[float],
-        z_obs_params: typing.Sequence[float],
+        z_obs_lower: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_upper: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[float, float]: ...
     def p_limits(
         self,
         cosmo: HICosmo,
-        z_obs: typing.Sequence[float],
-        z_obs_params: typing.Sequence[float],
+        z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[float, float]: ...
     def ref(self) -> ClusterRedshift: ...
     def resample(
@@ -3189,8 +3220,8 @@ class CorClusterCmbLensLimber(GObject.Object):
         dp: HaloDensityProfile,
         k: float,
         z: float,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
     def oneh_term(
         self,
@@ -3199,10 +3230,10 @@ class CorClusterCmbLensLimber(GObject.Object):
         dist: Distance,
         dp: HaloDensityProfile,
         l: int,
-        lnM_obs: typing.Sequence[float],
-        lnM_obs_params: typing.Sequence[float],
-        z_obs: typing.Sequence[float],
-        z_obs_params: typing.Sequence[float],
+        lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
     def twoh_int_mass1(
         self, cad: ClusterAbundance, clusterm: ClusterMass, cosmo: HICosmo, z: float
@@ -3231,8 +3262,8 @@ class CorClusterCmbLensLimber(GObject.Object):
         dist: Distance,
         dp: HaloDensityProfile,
         l: int,
-        z_obs: typing.Sequence[float],
-        z_obs_params: typing.Sequence[float],
+        z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> float: ...
 
 class CorClusterCmbLensLimberClass(GObject.GPointer):
@@ -4875,6 +4906,8 @@ class DataClusterWL(NumCosmoMath.Data):
         Resample flag
       enable-parallel -> gboolean: enable-parallel
         Enable parallelization
+      use-lnint -> gboolean: use-lnint
+        Use logarithmic integration
 
     Properties from NcmData:
       name -> gchararray: name
@@ -4900,6 +4933,7 @@ class DataClusterWL(NumCosmoMath.Data):
         r_max: float
         r_min: float
         resample_flag: DataClusterWLResampleFlag
+        use_lnint: bool
         bootstrap: NumCosmoMath.Bootstrap
         desc: str
         init: bool
@@ -4916,6 +4950,7 @@ class DataClusterWL(NumCosmoMath.Data):
         r_max: float = ...,
         r_min: float = ...,
         resample_flag: DataClusterWLResampleFlag = ...,
+        use_lnint: bool = ...,
         bootstrap: NumCosmoMath.Bootstrap = ...,
         desc: str = ...,
         init: bool = ...,
@@ -4935,6 +4970,7 @@ class DataClusterWL(NumCosmoMath.Data):
     def set_obs(self, obs: GalaxyWLObs) -> None: ...
     def set_prec(self, prec: float) -> None: ...
     def set_resample_flag(self, resample_flag: DataClusterWLResampleFlag) -> None: ...
+    def use_lnint(self, use_lnint: bool) -> None: ...
 
 class DataClusterWLClass(GObject.GPointer):
     r"""
@@ -5698,7 +5734,7 @@ class Distance(GObject.Object):
     def acoustic_scale(self, cosmo: HICosmo) -> float: ...
     def angular_diameter(self, cosmo: HICosmo, z: float) -> float: ...
     def angular_diameter_array(
-        self, cosmo: HICosmo, z: typing.Sequence[float]
+        self, cosmo: HICosmo, z: typing.Sequence[float] | npt.NDArray[np.float64]
     ) -> list[float]: ...
     def angular_diameter_curvature_scale(self, cosmo: HICosmo) -> float: ...
     def angular_diameter_vector(
@@ -5711,7 +5747,7 @@ class Distance(GObject.Object):
     def clear(dist: Distance) -> None: ...
     def comoving(self, cosmo: HICosmo, z: float) -> float: ...
     def comoving_array(
-        self, cosmo: HICosmo, z: typing.Sequence[float]
+        self, cosmo: HICosmo, z: typing.Sequence[float] | npt.NDArray[np.float64]
     ) -> list[float]: ...
     def comoving_lss(self, cosmo: HICosmo) -> float: ...
     def comoving_vector(
@@ -5728,7 +5764,7 @@ class Distance(GObject.Object):
     def dilation_scale(self, cosmo: HICosmo, z: float) -> float: ...
     def dmodulus(self, cosmo: HICosmo, z: float) -> float: ...
     def dmodulus_array(
-        self, cosmo: HICosmo, z: typing.Sequence[float]
+        self, cosmo: HICosmo, z: typing.Sequence[float] | npt.NDArray[np.float64]
     ) -> list[float]: ...
     def dmodulus_hef(self, cosmo: HICosmo, z_he: float, z_cmb: float) -> float: ...
     def dmodulus_vector(
@@ -5743,7 +5779,7 @@ class Distance(GObject.Object):
     def lookback_time(self, cosmo: HICosmo, z: float) -> float: ...
     def luminosity(self, cosmo: HICosmo, z: float) -> float: ...
     def luminosity_array(
-        self, cosmo: HICosmo, z: typing.Sequence[float]
+        self, cosmo: HICosmo, z: typing.Sequence[float] | npt.NDArray[np.float64]
     ) -> list[float]: ...
     def luminosity_hef(self, cosmo: HICosmo, z_he: float, z_cmb: float) -> float: ...
     def luminosity_vector(
@@ -5766,7 +5802,7 @@ class Distance(GObject.Object):
     def theta100CMB(self, cosmo: HICosmo) -> float: ...
     def transverse(self, cosmo: HICosmo, z: float) -> float: ...
     def transverse_array(
-        self, cosmo: HICosmo, z: typing.Sequence[float]
+        self, cosmo: HICosmo, z: typing.Sequence[float] | npt.NDArray[np.float64]
     ) -> list[float]: ...
     def transverse_vector(
         self, cosmo: HICosmo, z: NumCosmoMath.Vector, Dt: NumCosmoMath.Vector
@@ -10581,7 +10617,7 @@ class HIPertAdiab(NumCosmoMath.CSQ1D):
     @staticmethod
     def clear(pa: HIPertAdiab) -> None: ...
     def eval_cosmic_time(self, model: NumCosmoMath.Model, tau: float) -> float: ...
-    def eval_delta_critial(self, model: NumCosmoMath.Model, tau: float) -> float: ...
+    def eval_delta_critical(self, model: NumCosmoMath.Model, tau: float) -> float: ...
     def eval_powspec_Psi(
         self, model: NumCosmoMath.Model
     ) -> NumCosmoMath.PowspecSpline2d: ...
@@ -10601,8 +10637,8 @@ class HIPertAdiab(NumCosmoMath.CSQ1D):
     def prepare_spectrum(
         self,
         model: NumCosmoMath.Model,
-        k_array: typing.Sequence[float],
-        tau_array: typing.Sequence[float],
+        k_array: typing.Sequence[float] | npt.NDArray[np.float64],
+        tau_array: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> None: ...
     def ref(self) -> HIPertAdiab: ...
     def set_k(self, k: float) -> None: ...
@@ -11461,8 +11497,8 @@ class HIPertEM(NumCosmoMath.CSQ1D):
     def prepare_spectrum(
         self,
         model: NumCosmoMath.Model,
-        k_array: typing.Sequence[float],
-        tau_array: typing.Sequence[float],
+        k_array: typing.Sequence[float] | npt.NDArray[np.float64],
+        tau_array: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[NumCosmoMath.PowspecSpline2d, NumCosmoMath.PowspecSpline2d]: ...
     def ref(self) -> HIPertEM: ...
     def set_k(self, k: float) -> None: ...
@@ -14481,7 +14517,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
     def eval_2d_density_array(
         self,
         cosmo: HICosmo,
-        R: typing.Sequence[float],
+        R: typing.Sequence[float] | npt.NDArray[np.float64],
         fin: float,
         fout: float,
         z: float,
@@ -14490,7 +14526,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
     def eval_cyl_mass_array(
         self,
         cosmo: HICosmo,
-        R: typing.Sequence[float],
+        R: typing.Sequence[float] | npt.NDArray[np.float64],
         fin: float,
         fout: float,
         z: float,
@@ -14499,7 +14535,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
     def eval_density_array(
         self,
         cosmo: HICosmo,
-        r: typing.Sequence[float],
+        r: typing.Sequence[float] | npt.NDArray[np.float64],
         fin: float,
         fout: float,
         z: float,
@@ -18888,10 +18924,10 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         self,
         dp: HaloDensityProfile,
         cosmo: HICosmo,
-        R: typing.Sequence[float],
+        R: typing.Sequence[float] | npt.NDArray[np.float64],
         fin: float,
         fout: float,
-        zs: typing.Sequence[float],
+        zs: typing.Sequence[float] | npt.NDArray[np.float64],
         zl: float,
         zc: float,
     ) -> list[float]: ...
@@ -18899,10 +18935,10 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         self,
         dp: HaloDensityProfile,
         cosmo: HICosmo,
-        R: typing.Sequence[float],
+        R: typing.Sequence[float] | npt.NDArray[np.float64],
         fin: float,
         fout: float,
-        zs: typing.Sequence[float],
+        zs: typing.Sequence[float] | npt.NDArray[np.float64],
         zl: float,
         zc: float,
     ) -> list[float]: ...
@@ -18943,7 +18979,7 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         self,
         dp: HaloDensityProfile,
         cosmo: HICosmo,
-        R: typing.Sequence[float],
+        R: typing.Sequence[float] | npt.NDArray[np.float64],
         fin: float,
         fout: float,
         zc: float,
@@ -18961,7 +18997,7 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         self,
         dp: HaloDensityProfile,
         cosmo: HICosmo,
-        R: typing.Sequence[float],
+        R: typing.Sequence[float] | npt.NDArray[np.float64],
         fin: float,
         fout: float,
         zc: float,
