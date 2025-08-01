@@ -228,6 +228,8 @@ _nc_hipert_two_fluids_dispose (GObject *object)
   nc_hipert_wkb_clear (&self->wkb_zeta);
   nc_hipert_wkb_clear (&self->wkb_S);
 
+  ncm_vector_clear (&self->state);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_two_fluids_parent_class)->dispose (object);
 }

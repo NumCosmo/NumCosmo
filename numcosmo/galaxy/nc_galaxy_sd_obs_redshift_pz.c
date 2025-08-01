@@ -212,7 +212,7 @@ _nc_galaxy_sd_obs_redshift_pz_integ_f (gpointer callback_data, const gdouble z, 
 {
   NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
 
-  return ncm_spline_eval (ldata->pz, z);
+  return log (ncm_spline_eval (ldata->pz, z));
 }
 
 static NcGalaxySDObsRedshiftIntegrand *

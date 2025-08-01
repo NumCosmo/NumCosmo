@@ -57,6 +57,7 @@ typedef struct _NcGalaxySDTrueRedshiftLSSTSRDPrivate
   gdouble z_min;
   gdouble z_max;
   gdouble z_norm;
+  gdouble ln_z_norm;
   gdouble y0;
   gdouble alpha;
   gdouble beta;
@@ -196,6 +197,7 @@ _nc_galaxy_sd_true_redshift_lsst_srd_update (NcGalaxySDTrueRedshift *gsdtr)
     self->z_norm  = alpha / (pow (z0, 1.0 + self->beta) * (gsl_sf_gamma_inc (self->gamma_a, y_low / self->y0) -
                                                            gsl_sf_gamma_inc (self->gamma_a, y_up / self->y0))
                             );
+    self->ln_z_norm = log (self->z_norm);
 
     ncm_model_state_set_update (model);
   }
@@ -230,7 +232,8 @@ _nc_galaxy_sd_true_redshift_lsst_srd_integ (NcGalaxySDTrueRedshift *gsdtr, gdoub
   {
     const gdouble y = pow (z, self->alpha);
 
-    return pow (z, self->beta) * exp (-(y / self->y0)) * self->z_norm;
+    /* return pow (z, self->beta) * exp (-(y / self->y0)) * self->z_norm; */
+    return self->beta * log (z) - (y / self->y0) + self->ln_z_norm;
   }
 }
 
