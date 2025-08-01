@@ -326,7 +326,7 @@ ncm_mpsf_sbessel_d (gulong l, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
   mpq_t q;
 
   mpq_init (q);
-  ncm_rational_coarce_double (x, q);
+  ncm_rational_coarse_double (x, q);
   ncm_mpsf_sbessel (l, q, res, rnd);
   mpq_clear (q);
 }

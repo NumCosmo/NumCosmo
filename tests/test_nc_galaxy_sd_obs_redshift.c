@@ -392,6 +392,11 @@ test_nc_galaxy_sd_obs_redshift_spec_gen (TestNcGalaxySDObsRedshift *test, gconst
     nc_galaxy_sd_obs_redshift_gen (test->gsdor, data3, rng3);
 
     ncm_assert_cmpdouble (data2->z, ==, data3->z);
+
+    ncm_rng_free (rng2);
+    ncm_rng_free (rng3);
+    nc_galaxy_sd_obs_redshift_data_unref (data2);
+    nc_galaxy_sd_obs_redshift_data_unref (data3);
   }
 
   nc_galaxy_sd_obs_redshift_data_unref (data);
@@ -498,6 +503,11 @@ test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift *test, gcons
     ncm_assert_cmpdouble (data2->z, ==, data3->z);
     ncm_assert_cmpdouble (zp, ==, zp2);
     g_assert (result2 == result3);
+
+    nc_galaxy_sd_obs_redshift_data_unref (data2);
+    nc_galaxy_sd_obs_redshift_data_unref (data3);
+    ncm_rng_free (rng2);
+    ncm_rng_free (rng3);
   }
 
   nc_galaxy_sd_obs_redshift_data_unref (data);
@@ -583,14 +593,14 @@ test_nc_galaxy_sd_obs_redshift_gauss_integ (TestNcGalaxySDObsRedshift *test, gco
 
   for (i = 0; i < nruns; i++)
   {
-    const gdouble z       = g_test_rand_double_range (0.0, 5.0);
-    const gdouble sigmaz  = sigma0 * (1.0 + z);
-    const gdouble norm    = sqrt (2.0 * M_PI) * sigmaz;
-    const double lognorm  = ncm_util_log_gaussian_integral (test->z_min, test->z_max, z, sigmaz, &sign);
-    const gdouble int_z   = nc_galaxy_sd_true_redshift_integ (gsdtr, z);
-    const gdouble int_zp  = exp (-0.5 * gsl_pow_2 ((zp - z) / sigmaz) - lognorm) / norm;
-    const gdouble control = int_z * int_zp;
-    const gdouble res     = nc_galaxy_sd_obs_redshift_integrand_eval (integrand, z, data);
+    const gdouble z         = g_test_rand_double_range (0.0, 5.0);
+    const gdouble sigmaz    = sigma0 * (1.0 + z);
+    const gdouble norm      = sqrt (2.0 * M_PI) * sigmaz;
+    const double lognorm    = ncm_util_log_gaussian_integral (test->z_min, test->z_max, z, sigmaz, &sign);
+    const gdouble ln_int_z  = nc_galaxy_sd_true_redshift_integ (gsdtr, z);
+    const gdouble ln_int_zp = (-0.5 * gsl_pow_2 ((zp - z) / sigmaz) - lognorm) - log (norm);
+    const gdouble control   = ln_int_z + ln_int_zp;
+    const gdouble res       = nc_galaxy_sd_obs_redshift_integrand_eval (integrand, z, data);
 
     ncm_assert_cmpdouble_e (control, ==, res, 1.0e-10, 0.0);
   }
@@ -601,8 +611,8 @@ test_nc_galaxy_sd_obs_redshift_gauss_integ (TestNcGalaxySDObsRedshift *test, gco
   {
     const gdouble z       = g_test_rand_double_range (0.0, 5.0);
     const gdouble norm    = sqrt (2.0 * M_PI) * sigma0;
-    const gdouble chi2    = exp (-0.5 * gsl_pow_2 ((zp - z) / sigma0));
-    const gdouble control = chi2 / norm;
+    const gdouble chi2    = -0.5 * gsl_pow_2 ((zp - z) / sigma0);
+    const gdouble control = chi2 - log (norm);
     const gdouble res     = nc_galaxy_sd_obs_redshift_integrand_eval (integrand, z, data);
 
     ncm_assert_cmpdouble_e (control, ==, res, 1.0e-10, 0.0);
@@ -675,7 +685,7 @@ test_nc_galaxy_sd_obs_redshift_pz_integ (TestNcGalaxySDObsRedshift *test, gconst
   for (i = 0; i < nruns; i++)
   {
     const gdouble z     = g_test_rand_double_range (ncm_vector_get (xv, 0), ncm_vector_get (xv, npoints - 1));
-    const gdouble f     = exp (-0.5 * gsl_pow_2 ((z - z_avg) / z_sd)) / (sqrt (2.0 * M_PI) * z_sd);
+    const gdouble f     = (-0.5 * gsl_pow_2 ((z - z_avg) / z_sd)) - log (sqrt (2.0 * M_PI) * z_sd);
     const gdouble integ = nc_galaxy_sd_obs_redshift_integrand_eval (integrand, z, data);
 
     ncm_assert_cmpdouble_e (f, ==, integ, 1.0e-6, 0.0);
@@ -695,7 +705,6 @@ test_nc_galaxy_sd_obs_redshift_spec_required_columns (TestNcGalaxySDObsRedshift 
 {
   NcGalaxySDObsRedshiftData *data = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
   GList *columns                  = nc_galaxy_sd_obs_redshift_data_required_columns (data);
-
 
   g_assert_cmpuint (g_list_length (columns), ==, 1);
   g_assert_cmpstr (g_list_nth_data (columns, 0), ==, "z");
@@ -798,6 +807,9 @@ test_nc_galaxy_sd_obs_redshift_pz_lim (TestNcGalaxySDObsRedshift *test, gconstpo
   g_assert_cmpfloat_with_epsilon (z_max, z_avg + 5 * z_sd, 1e-10);
 
   nc_galaxy_sd_obs_redshift_data_unref (data);
+  ncm_spline_free (pz);
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
 }
 
 static void

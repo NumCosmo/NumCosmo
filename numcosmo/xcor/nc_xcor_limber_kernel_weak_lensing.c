@@ -268,6 +268,7 @@ _nc_xcor_limber_kernel_weak_lensing_dispose (GObject *object)
   ncm_spline_clear (&xclkg->kernel_W_mz);
 
   nc_distance_clear (&xclkg->dist);
+  ncm_model_ctrl_clear (&xclkg->ctrl_cosmo);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_limber_kernel_weak_lensing_parent_class)->dispose (object);
@@ -578,6 +579,9 @@ _nc_xcor_limber_kernel_weak_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo
       ncm_spline_set (xclkg->kernel_W_mz, xv, yv, TRUE);
       ncm_vector_free (xv);
       ncm_vector_free (yv);
+
+      g_array_unref (x_array);
+      g_array_unref (y_array);
     }
   }
 }
