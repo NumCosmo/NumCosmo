@@ -111,7 +111,7 @@ _ncm_coarse_dbl_get_bs (void)
 }
 
 /**
- * ncm_rational_coarce_double: (skip)
+ * ncm_rational_coarse_double: (skip)
  * @x: a double
  * @q: a #mpq_t to store the result
  *
@@ -119,7 +119,7 @@ _ncm_coarse_dbl_get_bs (void)
  *
  */
 void
-ncm_rational_coarce_double (gdouble x, mpq_t q)
+ncm_rational_coarse_double (gdouble x, mpq_t q)
 {
   NcmCoarseDbl **cdbl_ptr = _ncm_coarse_dbl_get_bs ();
   NcmCoarseDbl *cdbl      = *cdbl_ptr;

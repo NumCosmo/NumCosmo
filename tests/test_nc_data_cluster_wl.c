@@ -284,7 +284,9 @@ test_nc_data_cluster_wl_new (TestNcDataClusterWL *test, gconstpointer pdata)
 
   g_assert (gsl_finite (nc_data_cluster_wl_estimate_snr (test->dcwl, test->mset)));
 
+  ncm_rng_free (rng);
   nc_galaxy_sd_true_redshift_free (z_true_dist);
+  nc_distance_free (dist);
 }
 
 static void
@@ -389,33 +391,35 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
       g_error ("test_nc_data_cluster_wl_gen: unknown redshift name.");
     }
 
-    gdouble radius = 0.0;
-
-    do {
-      nc_galaxy_sd_position_gen (test->galaxy_position, p_data, rng);
-
-      radius = nc_halo_position_projected_radius_from_ra_dec (test->hp, test->cosmo, p_data->ra, p_data->dec);
-    } while (radius < test->min_radius || radius > test->max_radius);
-
-    if (NC_IS_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape))
     {
-      gdouble std_noise = ncm_rng_uniform_gen (rng, STD_NOISE_MIN, STD_NOISE_MAX);
+      gdouble radius = 0.0;
 
-      nc_galaxy_sd_shape_gauss_gen (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), test->mset, s_data, std_noise, test->ell_coord, rng);
-    }
-    else if (NC_IS_GALAXY_SD_SHAPE_GAUSS_HSC (test->galaxy_shape))
-    {
-      gdouble c1        = ncm_rng_uniform_gen (rng, C1_MIN, C1_MAX);
-      gdouble c2        = ncm_rng_uniform_gen (rng, C2_MIN, C2_MAX);
-      gdouble m         = ncm_rng_uniform_gen (rng, M_MIN, M_MAX);
-      gdouble std_shape = ncm_rng_uniform_gen (rng, STD_SHAPE_MIN, STD_SHAPE_MAX);
-      gdouble std_noise = ncm_rng_uniform_gen (rng, STD_NOISE_MIN, STD_NOISE_MAX);
+      do {
+        nc_galaxy_sd_position_gen (test->galaxy_position, p_data, rng);
 
-      nc_galaxy_sd_shape_gauss_hsc_gen (NC_GALAXY_SD_SHAPE_GAUSS_HSC (test->galaxy_shape), test->mset, s_data, std_shape, std_noise, c1, c2, m, test->ell_coord, rng);
-    }
-    else
-    {
-      g_error ("test_nc_data_cluster_wl_gen: unknown shape name.");
+        radius = nc_halo_position_projected_radius_from_ra_dec (test->hp, test->cosmo, p_data->ra, p_data->dec);
+      } while (radius < test->min_radius || radius > test->max_radius);
+
+      if (NC_IS_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape))
+      {
+        gdouble std_noise = ncm_rng_uniform_gen (rng, STD_NOISE_MIN, STD_NOISE_MAX);
+
+        nc_galaxy_sd_shape_gauss_gen (NC_GALAXY_SD_SHAPE_GAUSS (test->galaxy_shape), test->mset, s_data, std_noise, test->ell_coord, rng);
+      }
+      else if (NC_IS_GALAXY_SD_SHAPE_GAUSS_HSC (test->galaxy_shape))
+      {
+        gdouble c1        = ncm_rng_uniform_gen (rng, C1_MIN, C1_MAX);
+        gdouble c2        = ncm_rng_uniform_gen (rng, C2_MIN, C2_MAX);
+        gdouble m         = ncm_rng_uniform_gen (rng, M_MIN, M_MAX);
+        gdouble std_shape = ncm_rng_uniform_gen (rng, STD_SHAPE_MIN, STD_SHAPE_MAX);
+        gdouble std_noise = ncm_rng_uniform_gen (rng, STD_NOISE_MIN, STD_NOISE_MAX);
+
+        nc_galaxy_sd_shape_gauss_hsc_gen (NC_GALAXY_SD_SHAPE_GAUSS_HSC (test->galaxy_shape), test->mset, s_data, std_shape, std_noise, c1, c2, m, test->ell_coord, rng);
+      }
+      else
+      {
+        g_error ("test_nc_data_cluster_wl_gen: unknown shape name.");
+      }
     }
 
     nc_galaxy_sd_shape_data_write_row (s_data, obs, i);
@@ -430,7 +434,7 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
   nc_galaxy_wl_obs_free (obs);
   ncm_rng_free (rng);
   g_strv_builder_unref (builder);
-  g_list_free (columns);
+  g_list_free_full (columns, g_free);
   g_list_free (l);
 }
 
@@ -562,6 +566,18 @@ test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
 
     ncm_assert_cmpdouble_e (m2lnL_a, ==, m2lnL_b, 1.0e-11, 0.0);
   }
+
+  {
+    nc_data_cluster_wl_use_lnint (test->dcwl, TRUE);
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
+    g_assert (gsl_finite (m2lnL_a));
+
+    nc_data_cluster_wl_use_lnint (test->dcwl, FALSE);
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
+    g_assert (gsl_finite (m2lnL_b));
+
+    ncm_assert_cmpdouble_e (m2lnL_a, ==, m2lnL_b, 1.0e-7, 0.0);
+  }
 }
 
 static void
@@ -640,7 +656,10 @@ test_nc_data_cluster_wl_resample (TestNcDataClusterWL *test, gconstpointer pdata
   gdouble ngals                     = nc_galaxy_wl_obs_len (obs);
   NcGalaxyWLObs *obs_copy           = nc_galaxy_wl_obs_new (test->ell_conv, test->ell_coord, ngals, columns);
   NcGalaxyWLObs *obs2;
+  GList *l_init;
   guint i;
+
+  l_init = l;
 
   while (l)
   {
@@ -725,7 +744,9 @@ test_nc_data_cluster_wl_resample (TestNcDataClusterWL *test, gconstpointer pdata
     }
   }
 
-  l = nc_galaxy_sd_shape_data_required_columns (s_data);
+  g_list_free_full (l_init, g_free);
+  l      = nc_galaxy_sd_shape_data_required_columns (s_data);
+  l_init = l;
 
   while (l)
   {
@@ -810,7 +831,9 @@ test_nc_data_cluster_wl_resample (TestNcDataClusterWL *test, gconstpointer pdata
     }
   }
 
-  l = nc_galaxy_sd_shape_data_required_columns (s_data);
+  g_list_free_full (l_init, g_free);
+  l      = nc_galaxy_sd_shape_data_required_columns (s_data);
+  l_init = l;
 
   while (l)
   {
@@ -895,7 +918,9 @@ test_nc_data_cluster_wl_resample (TestNcDataClusterWL *test, gconstpointer pdata
     }
   }
 
-  l = nc_galaxy_sd_shape_data_required_columns (s_data);
+  g_list_free_full (l_init, g_free);
+  l      = nc_galaxy_sd_shape_data_required_columns (s_data);
+  l_init = l;
 
   while (l)
   {
@@ -984,7 +1009,7 @@ test_nc_data_cluster_wl_resample (TestNcDataClusterWL *test, gconstpointer pdata
   nc_galaxy_sd_obs_redshift_data_unref (z_data);
   nc_galaxy_sd_position_data_unref (p_data);
   nc_galaxy_sd_shape_data_unref (s_data);
-  g_list_free (l);
+  g_list_free_full (l_init, g_free);
   nc_galaxy_wl_obs_free (obs_copy);
 }
 

@@ -69,7 +69,7 @@ gdouble ncm_util_log_gaussian_integral (const gdouble xl, const gdouble xu, cons
 
 gint ncm_cmp (gdouble x, gdouble y, const gdouble reltol, const gdouble abstol);
 
-void ncm_rational_coarce_double (gdouble x, mpq_t q);
+void ncm_rational_coarse_double (gdouble x, mpq_t q);
 void ncm_mpz_inits (mpz_t z, ...) G_GNUC_NULL_TERMINATED;
 void ncm_mpz_clears (mpz_t z, ...) G_GNUC_NULL_TERMINATED;
 void _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2, const gdouble reltol, const gdouble abstol);
