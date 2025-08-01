@@ -26,7 +26,6 @@
 
 import pytest
 import numpy as np
-from numpy.testing import assert_allclose
 
 from numcosmo_py import Ncm, Nc
 
@@ -68,15 +67,16 @@ def test_constructor_catalog_id(cov_id):
 
 
 def test_recover_best_fit_PantheonPlus():
+    """Test recover best fit PantheonPlus."""
     cov_id = Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT
     snia_data = Nc.DataSNIACov.new_from_cat_id(cov_id, True)
     snia_data = snia_data.apply_filter_sh0es_z(0.01, True)
     cosmo = Nc.HICosmoDEXcdm.new()
     cosmo.omega_x2omega_k()
     cosmo["Omegak"] = 0.0
-    cosmo.param_set_desc(f"w", {"fit": True})
-    cosmo.param_set_desc(f"Omegac", {"fit": True})
-    cosmo.param_set_desc(f"H0", {"fit": True})
+    cosmo.param_set_desc("w", {"fit": True})
+    cosmo.param_set_desc("Omegac", {"fit": True})
+    cosmo.param_set_desc("H0", {"fit": True})
 
     mset = Ncm.MSet.new_array([cosmo])
     dset = Ncm.Dataset.new()
@@ -108,13 +108,14 @@ def test_recover_best_fit_PantheonPlus():
 
 
 def test_recover_best_fit_DES_Y5():
+    """Test recover best fit DES Y5."""
     cov_id = Nc.DataSNIAId.COV_DES_Y5_STAT_SYS
     snia_data = Nc.DataSNIACov.new_from_cat_id(cov_id, True)
     cosmo = Nc.HICosmoDEXcdm.new()
     cosmo.omega_x2omega_k()
     cosmo["Omegak"] = 0.0
-    cosmo.param_set_desc(f"w", {"fit": True})
-    cosmo.param_set_desc(f"Omegac", {"fit": True})
+    cosmo.param_set_desc("w", {"fit": True})
+    cosmo.param_set_desc("Omegac", {"fit": True})
 
     mset = Ncm.MSet.new_array([cosmo])
     dset = Ncm.Dataset.new()
@@ -136,7 +137,8 @@ def test_recover_best_fit_DES_Y5():
     )
 
     best_fit.run(Ncm.FitRunMsgs.NONE)
-    # DES Y5 best fit Flat-wcdm from arXiv:2401.02929: Omegam = 0.264, w = -0.80 / Omegab = 0.0432
+    # DES Y5 best fit Flat-wcdm from arXiv:2401.02929: Omegam = 0.264, w = -0.80 /
+    # Omegab = 0.0432
     np.testing.assert_allclose(
         [cosmo["Omegac"], cosmo["w"]], [0.2208, -0.80], rtol=1e-2, atol=1e-2
     )
