@@ -2553,7 +2553,7 @@ _ncm_serialize_gtype_to_gvariant_type (GType t)
  *
  * Converts a GValue to a GVariant.
  *
- * Returns: (transfer full): A GVariant convertion of @val.
+ * Returns: (transfer full): A GVariant conversion of @val.
  */
 GVariant *
 ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
@@ -2685,7 +2685,7 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
     gchar *ni_name = ncm_serialize_peek_name (ser, obj);
     gchar *fname   = g_strdup_printf ("%s[%s]", obj_name, ni_name);
 
-    /*printf ("# Found instante %p at ptr_name %s.\n", obj, fname);*/
+    /*printf ("# Found instance %p at ptr_name %s.\n", obj, fname);*/
     ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, fname, NULL));
     g_free (fname);
   }
@@ -2693,7 +2693,7 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
   {
     gchar *fname = g_strdup_printf ("%s[%s]", obj_name, saved_name);
 
-    /*printf ("# Found instante %p at saved_ptr_name %s.\n", obj, fname);*/
+    /*printf ("# Found instance %p at saved_ptr_name %s.\n", obj, fname);*/
     ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, fname, NULL));
     g_free (fname);
   }
@@ -3766,7 +3766,7 @@ static NcmSerialize *_global_ser = NULL;
 /**
  * ncm_serialize_global:
  *
- * Gets the global serialization object, instanciates it if necessary.
+ * Gets the global serialization object, instantiates it if necessary.
  *
  * Returns: (transfer full): The global #NcmSerialize.
  */
@@ -4187,7 +4187,7 @@ ncm_serialize_global_from_name_params (const gchar *obj_name, GVariant *params)
  *
  * Global version of ncm_serialize_gvalue_to_gvariant().
  *
- * Returns: (transfer full): A GVariant convertion of @val.
+ * Returns: (transfer full): A GVariant conversion of @val.
  */
 GVariant *
 ncm_serialize_global_gvalue_to_gvariant (GValue *val)

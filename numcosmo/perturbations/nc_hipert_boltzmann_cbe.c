@@ -246,7 +246,7 @@ nc_hipert_boltzmann_cbe_new (void)
                                                       "cbe", cbe,
                                                       NULL);
 
-  nc_cbe_unref (cbe);
+  nc_cbe_free (cbe);
 
   return boltzmann_cbe;
 }

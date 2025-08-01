@@ -656,7 +656,10 @@ test_nc_data_cluster_wl_resample (TestNcDataClusterWL *test, gconstpointer pdata
   gdouble ngals                     = nc_galaxy_wl_obs_len (obs);
   NcGalaxyWLObs *obs_copy           = nc_galaxy_wl_obs_new (test->ell_conv, test->ell_coord, ngals, columns);
   NcGalaxyWLObs *obs2;
+  GList *l_init;
   guint i;
+
+  l_init = l;
 
   while (l)
   {
@@ -741,8 +744,9 @@ test_nc_data_cluster_wl_resample (TestNcDataClusterWL *test, gconstpointer pdata
     }
   }
 
-  g_list_free_full (g_list_first (l), g_free);
-  l = nc_galaxy_sd_shape_data_required_columns (s_data);
+  g_list_free_full (l_init, g_free);
+  l      = nc_galaxy_sd_shape_data_required_columns (s_data);
+  l_init = l;
 
   while (l)
   {
@@ -827,8 +831,9 @@ test_nc_data_cluster_wl_resample (TestNcDataClusterWL *test, gconstpointer pdata
     }
   }
 
-  g_list_free_full (g_list_first (l), g_free);
-  l = nc_galaxy_sd_shape_data_required_columns (s_data);
+  g_list_free_full (l_init, g_free);
+  l      = nc_galaxy_sd_shape_data_required_columns (s_data);
+  l_init = l;
 
   while (l)
   {
@@ -913,8 +918,9 @@ test_nc_data_cluster_wl_resample (TestNcDataClusterWL *test, gconstpointer pdata
     }
   }
 
-  g_list_free_full (g_list_first (l), g_free);
-  l = nc_galaxy_sd_shape_data_required_columns (s_data);
+  g_list_free_full (l_init, g_free);
+  l      = nc_galaxy_sd_shape_data_required_columns (s_data);
+  l_init = l;
 
   while (l)
   {
@@ -1003,7 +1009,7 @@ test_nc_data_cluster_wl_resample (TestNcDataClusterWL *test, gconstpointer pdata
   nc_galaxy_sd_obs_redshift_data_unref (z_data);
   nc_galaxy_sd_position_data_unref (p_data);
   nc_galaxy_sd_shape_data_unref (s_data);
-  g_list_free_full (g_list_first (l), g_free);
+  g_list_free_full (l_init, g_free);
   nc_galaxy_wl_obs_free (obs_copy);
 }
 

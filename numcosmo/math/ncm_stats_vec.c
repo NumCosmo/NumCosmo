@@ -961,7 +961,7 @@ ncm_stats_vec_get_quantile (NcmStatsVec *svec, guint i)
  * probability $p$ initialized through ncm_stats_vec_enable_quantile(),
  * i.e., it returns the difference between $(p + 1)/2$ quantile
  * and the $p/2$. For example, if $p = 0.5$ then it returns the
- * interquartile range.
+ * inter-quartile range.
  *
  * Returns: the current estimate of the quantile spread.
  */
@@ -1006,7 +1006,7 @@ _ncm_stats_vec_get_autocorr_alloc (NcmStatsVec *svec, guint size)
     g_clear_pointer (&svec->param_c2r, fftw_destroy_plan);
     g_clear_pointer (&svec->param_r2c, fftw_destroy_plan);
 
-    /*g_debug ("# _ncm_stats_vec_get_autocorr_alloc: calculating wisdown %u\n", effsize);*/
+    /*g_debug ("# _ncm_stats_vec_get_autocorr_alloc: calculating wisdom %u\n", effsize);*/
     ncm_cfg_load_fftw_wisdom ("ncm_stats_vec_autocorr_%u", effsize);
 
     ncm_cfg_lock_plan_fftw ();
@@ -1016,7 +1016,7 @@ _ncm_stats_vec_get_autocorr_alloc (NcmStatsVec *svec, guint size)
 
     ncm_cfg_save_fftw_wisdom ("ncm_stats_vec_autocorr_%u", effsize);
     svec->fft_plan_size = effsize;
-    /*g_debug ("# _ncm_stats_vec_get_autocorr_alloc: calculated  wisdown %u\n", effsize);*/
+    /*g_debug ("# _ncm_stats_vec_get_autocorr_alloc: calculated  wisdom %u\n", effsize);*/
   }
 
 #endif /* HAVE_FFTW3 */
@@ -1031,7 +1031,7 @@ _ncm_stats_vec_get_autocov (NcmStatsVec *svec, guint p, guint subsample, guint p
   g_assert_cmpuint (svec->nitens / subsample, >, pad);
 
   if (eff_nitens == 0)
-    g_error ("_ncm_stats_vec_get_autocov: too few itens to calculate.");
+    g_error ("_ncm_stats_vec_get_autocov: too few items to calculate.");
 
   _ncm_stats_vec_get_autocorr_alloc (svec, eff_nitens);
   {
@@ -1088,7 +1088,7 @@ _ncm_stats_vec_get_autocov (NcmStatsVec *svec, guint p, guint subsample, guint p
  * @p: parameter id
  *
  * Calculates the autocorrelation vector, the j-th element represent
- * the selfcorrelation with lag-j.
+ * the self-correlation with lag-j.
  *
  * The returning vector use the internal memory allocation and will
  * change with subsequent calls to ncm_stats_vec_get_autocorr().
@@ -1122,7 +1122,7 @@ ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p)
  * @subsample: size of the subsample ($>0$)
  *
  * Calculates the autocorrelation vector, the j-th element represent
- * the selfcorrelation with lag-j using the @subsample parameter.
+ * the self-correlation with lag-j using the @subsample parameter.
  *
  * The returning vector use the internal memory allocation and will
  * change with subsequent calls to ncm_stats_vec_get_autocorr().
@@ -1157,7 +1157,7 @@ ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsampl
  * @order: max order
  * @ar_crit: a #NcmStatsVecARType
  * @rho: (inout) (nullable): the vector containing the ar(@p) model parameters
- * @pacf: (inout) (nullable):  the vector containing the partial autocorrelations
+ * @pacf: (inout) (nullable):  the vector containing the partial auto-correlations
  * @ivar: (out): innovations variance
  * @c_order: (out): the actual order calculated
  *
@@ -2094,8 +2094,8 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
  * Calculates the integrated autocorrelation time for the parameter @p
  * using all rows of data.
  *
- * If @max_lag is 0 or larger than the current number of itens than it use
- * the current number of itens as @max_lag.
+ * If @max_lag is 0 or larger than the current number of items than it use
+ * the current number of items as @max_lag.
  *
  * Returns: the integrated autocorrelation time of the whole data.
  */
@@ -2228,7 +2228,7 @@ ncm_stats_vec_get (NcmStatsVec *svec, guint i)
  * ncm_stats_vec_update:
  * @svec: a #NcmStatsVec.
  *
- * Same as ncm_stats_vec_update_weight() assuming weigth equal to one.
+ * Same as ncm_stats_vec_update_weight() assuming weight equal to one.
  *
  */
 void
@@ -2480,9 +2480,9 @@ ncm_stats_vec_nrows (NcmStatsVec *svec)
  * ncm_stats_vec_nitens:
  * @svec: a #NcmStatsVec
  *
- * Gets the number of itens added to the object;
+ * Gets the number of items added to the object;
  *
- * Returns: the number of itens added.
+ * Returns: the number of items added.
  */
 guint
 ncm_stats_vec_nitens (NcmStatsVec *svec)
