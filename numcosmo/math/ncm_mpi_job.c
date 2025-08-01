@@ -765,6 +765,8 @@ ncm_mpi_job_init_all_slaves (NcmMPIJob *mpi_job, NcmSerialize *ser)
 
     self->owned_slaves       = _mpi_ctrl.nslaves;
     _mpi_ctrl.working_slaves = _mpi_ctrl.nslaves;
+
+    g_variant_unref (job_ser);
   }
 
 #else
