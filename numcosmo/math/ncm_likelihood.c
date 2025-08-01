@@ -326,7 +326,7 @@ ncm_likelihood_peek_dataset (NcmLikelihood *lh)
 }
 
 /**
- * ncm_likelihoood_peek_m2lnL_v:
+ * ncm_likelihood_peek_m2lnL_v:
  * @lh: a #NcmLikelihood
  *
  * Gets the m2lnL vector associated with the #NcmLikelihood containing the
@@ -335,7 +335,7 @@ ncm_likelihood_peek_dataset (NcmLikelihood *lh)
  * Returns: (transfer none): the m2lnL vector associated with the #NcmLikelihood.
  */
 NcmVector *
-ncm_likelihoood_peek_m2lnL_v (NcmLikelihood *lh)
+ncm_likelihood_peek_m2lnL_v (NcmLikelihood *lh)
 {
   return lh->m2lnL_v;
 }

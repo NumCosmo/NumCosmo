@@ -40,9 +40,7 @@ def compute_kernel(
     assert chi_list is not None
     chi_a = np.array(chi_list[0])
     for chi_a_i, Wchi_a_i in zip(chi_list, Wchi_list):
-        s = Ncm.Spline.new_array(
-            Ncm.SplineCubicNotaknot.new(), chi_a_i.tolist(), Wchi_a_i.tolist(), True
-        )
+        s = Ncm.Spline.new_array(Ncm.SplineCubicNotaknot.new(), chi_a_i, Wchi_a_i, True)
         Wchi_a_i[:] = np.array([s.eval(chi) for chi in chi_a])
 
     RH_Mpc = cosmo.RH_Mpc()

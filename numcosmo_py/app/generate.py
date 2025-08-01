@@ -262,7 +262,7 @@ class GenerateJpasForecast:
         float,
         typer.Option(
             help=(
-                "Jpas survey area. This option is unvailable "
+                "Jpas survey area. This option is unavailable "
                 "for the partial sky cases."
             ),
             show_default=True,
@@ -441,6 +441,10 @@ class GenerateClusterWL:
         Optional[int], typer.Option(help="Random seed.", show_default=True)
     ] = None
 
+    use_lnint: Annotated[
+        bool, typer.Option(help="Use log-integration.", show_default=True)
+    ] = False
+
     summary: Annotated[
         bool, typer.Option(help="Print experiment summary.", show_default=True)
     ] = False
@@ -480,6 +484,7 @@ class GenerateClusterWL:
             shape_gen=shape_gen,
             density=self.galaxy_density,
             seed=self.seed,
+            use_lnint=self.use_lnint,
             summary=self.summary,
         )
 

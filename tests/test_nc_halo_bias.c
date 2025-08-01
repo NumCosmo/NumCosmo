@@ -84,9 +84,11 @@ test_nc_halo_bias_free (TestNcHaloBias *test, gconstpointer pdata)
 {
   NCM_TEST_FREE (nc_halo_bias_free, NC_HALO_BIAS (test->ps));
 
-
-
   ncm_model_free (NCM_MODEL (test->cosmo));
+
+  nc_halo_bias_free (NC_HALO_BIAS (test->bste));
+  nc_halo_bias_free (NC_HALO_BIAS (test->bsts));
+  nc_halo_bias_free (NC_HALO_BIAS (test->bt));
 
   nc_halo_mass_function_free (test->mfp);
 }
@@ -105,7 +107,6 @@ test_nc_halo_bias_new (TestNcHaloBias *test, gconstpointer pdata)
   NcHaloBiasSTEllip *bste  = nc_halo_bias_st_ellip_new (mfp);
   NcHaloBiasSTSpher *bsts  = nc_halo_bias_st_spher_new (mfp);
   NcHaloBiasTinker *bt     = nc_halo_bias_tinker_new (mfp);
-
 
   test->cosmo = cosmo;
   test->bsts  = bsts;
@@ -145,7 +146,6 @@ test_nc_halo_bias_new (TestNcHaloBias *test, gconstpointer pdata)
   g_assert_true (NC_IS_HALO_BIAS_ST_ELLIP (bste));
   g_assert_true (NC_IS_HALO_BIAS_TINKER (bt));
   g_assert_true (NC_IS_HALO_BIAS_PS (ps));
-
 
   nc_multiplicity_func_free (mulf);
   ncm_powspec_filter_free (psf);

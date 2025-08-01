@@ -77,9 +77,9 @@ def test_set_lnk_lnw_spline_init(two_fluids):
     lnPk2d = Ncm.Spline2dBicubic(
         init=True,
         spline=Ncm.SplineCubicNotaknot.new(),
-        x_vector=Ncm.Vector.new_array(lnk.tolist()),
-        y_vector=Ncm.Vector.new_array(lnw.tolist()),
-        z_matrix=Ncm.Matrix.new_array(lnPk.flatten().tolist(), len(lnk)),
+        x_vector=Ncm.Vector.new_array(lnk),
+        y_vector=Ncm.Vector.new_array(lnw),
+        z_matrix=Ncm.Matrix.new_array(lnPk.flatten(), len(lnk)),
     )
 
     two_fluids.set_lnk_lnw_spline(lnPk2d)
@@ -109,9 +109,9 @@ def test_set_lnk_lnw_spline_no_init(two_fluids):
 
     lnPk2d = Ncm.Spline2dBicubic(
         spline=Ncm.SplineCubicNotaknot.new(),
-        x_vector=Ncm.Vector.new_array(lnk.tolist()),
-        y_vector=Ncm.Vector.new_array(lnw.tolist()),
-        z_matrix=Ncm.Matrix.new_array(lnPk.flatten().tolist(), len(lnk)),
+        x_vector=Ncm.Vector.new_array(lnk),
+        y_vector=Ncm.Vector.new_array(lnw),
+        z_matrix=Ncm.Matrix.new_array(lnPk.flatten(), len(lnk)),
     )
 
     two_fluids.set_lnk_lnw_spline(lnPk2d)
@@ -141,9 +141,9 @@ def test_set_lnk_lnw_spline_serialize(two_fluids):
 
     lnPk2d = Ncm.Spline2dBicubic(
         spline=Ncm.SplineCubicNotaknot.new(),
-        x_vector=Ncm.Vector.new_array(lnk.tolist()),
-        y_vector=Ncm.Vector.new_array(lnw.tolist()),
-        z_matrix=Ncm.Matrix.new_array(lnPk.flatten().tolist(), len(lnk)),
+        x_vector=Ncm.Vector.new_array(lnk),
+        y_vector=Ncm.Vector.new_array(lnw),
+        z_matrix=Ncm.Matrix.new_array(lnPk.flatten(), len(lnk)),
     )
 
     two_fluids.set_lnk_lnw_spline(lnPk2d)
