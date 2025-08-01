@@ -1098,6 +1098,8 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
   if (!normal_exit)
     g_main_loop_quit (mpi_ml);
 
+  ncm_serialize_free (ser);
+
   return normal_exit;
 }
 

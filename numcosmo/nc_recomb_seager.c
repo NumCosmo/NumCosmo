@@ -30,7 +30,7 @@
  *
  * Cosmic recombination implementing Seager (1999).
  *
- * Cosmic recobination as initally describe in [Seager (1999)][XSeager1999] and [Seager
+ * Cosmic recombination as initially describe in [Seager (1999)][XSeager1999] and [Seager
  * (2000)][XSeager2000]. The code includes now all modifications as in [recfast
  * 1.5.2](http://www.astro.ubc.ca/people/scott/recfast.html), which includes the
  * modifications discussed in [Wong (2008)][XWong2008]. Nonetheless, we do not include
@@ -702,7 +702,7 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
                        &F, lambdai, lambda_HeIII, 0, recomb->prec);
 
   /*****************************************************************************
-   * Assuming hydrogen is completly ionized and no more double ionized helium
+   * Assuming hydrogen is completely ionized and no more double ionized helium
    * i.e., $X_\HeIII = 0$.
    ****************************************************************************/
   {
@@ -876,6 +876,8 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
     g_array_unref (XHeII_a);
   }
 
+  ncm_spline_clear (&recomb->tau_s);
+  ncm_spline_clear (&recomb->dtau_dlambda_s);
   recomb->tau_s          = ncm_spline_copy_empty (self->Xe_s);
   recomb->dtau_dlambda_s = ncm_spline_copy_empty (self->Xe_s);
 

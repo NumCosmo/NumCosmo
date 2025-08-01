@@ -1165,7 +1165,7 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShape *test, gconstpointer pd
 
         m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
 
-        ncm_assert_cmpdouble_e (-2.0 * log (int0), ==, m2ln_int1, 1e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (-2.0 * int0, ==, m2ln_int1, 1e-10, 1.0e-10);
 
         e_s      = e_s * cexp (-2.0 * I * phi);
         e_o      = e_o * cexp (-2.0 * I * phi);
@@ -1276,31 +1276,39 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
                                                        test->density_profile,
                                                        test->cosmo,
                                                        r, z_data->z, z_cl, z_cl);
-        g = gt * cexp (2.0 * I * phi);
-        g = (1.0 + m) * g + (c1 + I * c2);
-
-        switch (test->ell_conv)
-        {
-          case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-
-            if (gt > 1.0)
-              e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
-            else
-              e_s = (e_o - g) / (1.0 - conj (g) * e_o);  /* LCOV_EXCL_LINE */
-
-            break;
-
-          case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-            e_s = (e_o + g * (g * conj (e_o) - 2.0)) / (1.0 + g * conj (g) - 2.0 * creal (g * conj (e_o)));
-            break;
-
-          default: /* LCOV_EXCL_LINE */
-            g_assert_not_reached ();
-        }
       }
       else
       {
-        e_s = e_o - (c1 + I * c2);
+        const gdouble step = exp ((z_data->z - z_cl) / 0.001);
+
+        gt = nc_wl_surface_mass_density_reduced_shear (test->surface_mass_density,
+                                                       test->density_profile,
+                                                       test->cosmo,
+                                                       r, z_cl * (1.0 + GSL_DBL_EPSILON), z_cl, z_cl);
+
+        gt *= step;
+      }
+
+      g = gt * cexp (2.0 * I * phi);
+      g = (1.0 + m) * g + (c1 + I * c2);
+
+      switch (test->ell_conv)
+      {
+        case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+
+          if (gt > 1.0)
+            e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
+          else
+            e_s = (e_o - g) / (1.0 - conj (g) * e_o);  /* LCOV_EXCL_LINE */
+
+          break;
+
+        case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+          e_s = (e_o + g * (g * conj (e_o) - 2.0)) / (1.0 + g * conj (g) - 2.0 * creal (g * conj (e_o)));
+          break;
+
+        default: /* LCOV_EXCL_LINE */
+          g_assert_not_reached ();
       }
 
       {
@@ -1329,7 +1337,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
 
         m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
 
-        ncm_assert_cmpdouble_e (-2.0 * log (int0), ==, m2ln_int1, 1e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (-2.0 * int0, ==, m2ln_int1, 1e-10, 1.0e-10);
 
         e_s      = e_s * cexp (-2.0 * I * phi);
         e_o      = e_o * cexp (-2.0 * I * phi);
@@ -1626,7 +1634,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_stats (TestNcGalaxySDShape *test, gconstpointe
       {
         gdouble gt, hat_gt, hat_sigma_gt, hat_gx, hat_sigma_gx, hat_rho;
 
-        ncm_model_param_set_by_name (NCM_MODEL (test->hms), "log10MDelta", TEST_LOG10_MASS, NULL);
+        ncm_model_param_set_by_name (NCM_MODEL (test->hms), "log10MDelta", TEST_LOG10_MASS + 2.0, NULL);
         ncm_data_resample (data, fiduc, rng);
         ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
 
@@ -1991,7 +1999,7 @@ test_nc_galaxy_sd_shape_gauss_strong_lensing (TestNcGalaxySDShape *test, gconstp
 
         m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
 
-        ncm_assert_cmpdouble_e (-2.0 * log (int0), ==, m2ln_int1, 1.0e-8, 1.0e-8);
+        ncm_assert_cmpdouble_e (-2.0 * int0, ==, m2ln_int1, 1.0e-8, 1.0e-8);
       }
     }
   }
@@ -2186,7 +2194,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_strong_lensing (TestNcGalaxySDShape *test, gco
 
         m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
 
-        ncm_assert_cmpdouble_e (-2.0 * log (int0), ==, m2ln_int1, 1.0e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (-2.0 * int0, ==, m2ln_int1, 1.0e-10, 1.0e-10);
       }
     }
   }

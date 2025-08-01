@@ -340,7 +340,7 @@ test_nc_galaxy_sd_true_redshift_integ (TestNcGalaxySDTrueRedshift *test, gconstp
     gdouble norm = alpha / (pow (z0, 1.0 + beta) * (gsl_sf_gamma_inc (gamma_a, y_low / y0) -
                                                     gsl_sf_gamma_inc (gamma_a, y_up / y0))
                            );
-    gdouble control = pow (z, beta) * exp (-(y / y0)) * norm;
+    gdouble control = log (pow (z, beta) * exp (-(y / y0)) * norm);
     gdouble res     = nc_galaxy_sd_true_redshift_integ (test->gsdtr, z);
 
     g_assert_true (gsl_finite (res));
@@ -361,7 +361,7 @@ _integ (gdouble z, gpointer user_data)
 {
   IntegData *data = (IntegData *) user_data;
 
-  return nc_galaxy_sd_true_redshift_integ (data->gsdtr, z);
+  return exp (nc_galaxy_sd_true_redshift_integ (data->gsdtr, z));
 }
 
 static void

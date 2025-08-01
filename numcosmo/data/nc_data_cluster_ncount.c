@@ -1684,6 +1684,7 @@ void
 nc_data_cluster_ncount_add_bin (NcDataClusterNCount *ncount, NcmVector *lnM_obs_lb, NcmVector *lnM_obs_ub, NcmVector *z_obs_lb, NcmVector *z_obs_ub)
 {
   NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcmVector *tmp;
 
   g_assert_cmpuint (ncm_vector_len (lnM_obs_lb), ==, self->lnM_obs_len);
   g_assert_cmpuint (ncm_vector_len (lnM_obs_ub), ==, self->lnM_obs_len);
@@ -1691,11 +1692,15 @@ nc_data_cluster_ncount_add_bin (NcDataClusterNCount *ncount, NcmVector *lnM_obs_
   g_assert_cmpuint (ncm_vector_len (z_obs_ub), ==, self->z_obs_len);
   g_assert_cmpuint (ncm_vector_len (z_obs_ub), ==, self->z_obs_len);
 
-  ncm_obj_array_add (self->lnM_obs_bins, G_OBJECT (ncm_vector_dup (lnM_obs_lb)));
-  ncm_obj_array_add (self->lnM_obs_bins, G_OBJECT (ncm_vector_dup (lnM_obs_ub)));
+  ncm_obj_array_add (self->lnM_obs_bins, G_OBJECT (tmp = ncm_vector_dup (lnM_obs_lb)));
+  ncm_vector_free (tmp);
+  ncm_obj_array_add (self->lnM_obs_bins, G_OBJECT (tmp = ncm_vector_dup (lnM_obs_ub)));
+  ncm_vector_free (tmp);
 
-  ncm_obj_array_add (self->z_obs_bins, G_OBJECT (ncm_vector_dup (z_obs_lb)));
-  ncm_obj_array_add (self->z_obs_bins, G_OBJECT (ncm_vector_dup (z_obs_ub)));
+  ncm_obj_array_add (self->z_obs_bins, G_OBJECT (tmp = ncm_vector_dup (z_obs_lb)));
+  ncm_vector_free (tmp);
+  ncm_obj_array_add (self->z_obs_bins, G_OBJECT (tmp = ncm_vector_dup (z_obs_ub)));
+  ncm_vector_free (tmp);
 }
 
 /**
@@ -2277,6 +2282,11 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
 
         ncm_obj_array_add (self->z_obs_bins, G_OBJECT (z_obs_lb));
         ncm_obj_array_add (self->z_obs_bins, G_OBJECT (z_obs_ub));
+
+        ncm_vector_free (z_obs_lb);
+        ncm_vector_free (z_obs_ub);
+        ncm_vector_free (lnM_obs_lb);
+        ncm_vector_free (lnM_obs_ub);
       }
 
       fits_read_col (fptr, TDOUBLE, bin_count_i, 1, 1, nbins, NULL, ncm_vector_data (self->bin_count), NULL, &status);

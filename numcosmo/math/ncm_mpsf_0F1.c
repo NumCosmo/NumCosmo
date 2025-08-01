@@ -192,8 +192,8 @@ ncm_mpsf_0F1_d (gdouble b, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
 
   mpq_init (xq);
   mpq_init (bq);
-  ncm_rational_coarce_double (b, bq);
-  ncm_rational_coarce_double (x, xq);
+  ncm_rational_coarse_double (b, bq);
+  ncm_rational_coarse_double (x, xq);
   ncm_mpsf_0F1_q (bq, xq, res, rnd);
   mpq_clear (xq);
   mpq_clear (bq);

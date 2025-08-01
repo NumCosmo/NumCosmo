@@ -717,7 +717,7 @@ ncm_vector_get_variant (const NcmVector *cv)
  * @cv: a constant #NcmVector
  *
  * Convert @cv to a GVariant of the type "ad" using the same memory space.
- * The vector @cv should not be modified during the variant existance.
+ * The vector @cv should not be modified during the variant existence.
  * If the vector has stride != 1 then ncm_vector_get_variant() is called.
  *
  * Returns: (transfer full): A #GVariant of the type "ad".
@@ -749,7 +749,7 @@ ncm_vector_peek_variant (const NcmVector *cv)
  * @cv: a constant #NcmVector
  * @prestr: initial string
  * @format: float format
- * @cr: whether to include a cariage return
+ * @cr: whether to include a carriage return
  *
  * Log the values of @cv using @prestr and @format.
  *
@@ -838,7 +838,7 @@ ncm_vector_log_vals_func (const NcmVector *cv, const gchar *prestr, const gchar 
  * ncm_vector_const_new_gsl: (skip)
  * @gv: constant #gsl_vector from [GNU Scientific Library (GSL)](https://www.gnu.org/software/gsl/doc/html/index.html)
  *
- * This function converts the #gsl_vetor @gv into a new constant #NcmVector.
+ * This function converts the #gsl_vector @gv into a new constant #NcmVector.
  *
  * Returns: A new constant #NcmVector.
  */
