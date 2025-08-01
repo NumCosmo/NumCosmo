@@ -72,6 +72,8 @@ nc_hipert_boltzmann_cbe_init (NcHIPertBoltzmannCBE *boltzmann_cbe)
   boltzmann_cbe->EE_Cls     = NULL;
   boltzmann_cbe->BB_Cls     = NULL;
   boltzmann_cbe->TE_Cls     = NULL;
+  boltzmann_cbe->TB_Cls     = NULL;
+  boltzmann_cbe->EB_Cls     = NULL;
 }
 
 static void
@@ -121,6 +123,8 @@ nc_hipert_boltzmann_cbe_dispose (GObject *object)
   ncm_vector_clear (&boltzmann_cbe->EE_Cls);
   ncm_vector_clear (&boltzmann_cbe->BB_Cls);
   ncm_vector_clear (&boltzmann_cbe->TE_Cls);
+  ncm_vector_clear (&boltzmann_cbe->TB_Cls);
+  ncm_vector_clear (&boltzmann_cbe->EB_Cls);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_boltzmann_cbe_parent_class)->dispose (object);
@@ -241,6 +245,8 @@ nc_hipert_boltzmann_cbe_new (void)
   NcHIPertBoltzmannCBE *boltzmann_cbe = g_object_new (NC_TYPE_HIPERT_BOLTZMANN_CBE,
                                                       "cbe", cbe,
                                                       NULL);
+
+  nc_cbe_unref (cbe);
 
   return boltzmann_cbe;
 }

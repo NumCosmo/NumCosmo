@@ -625,7 +625,7 @@ _ncm_stats_dist_amise (const gsl_vector *v, void *params)
 }
 
 static void
-_ncm_stats_dist_minimize_obj (NcmStatsDist *sd, gdouble (*objective)(const gsl_vector *, void *))
+_ncm_stats_dist_minimize_obj (NcmStatsDist *sd, gdouble (*objective) (const gsl_vector *, void *))
 {
   NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
   gdouble s                        = 0.1;
@@ -662,6 +662,9 @@ _ncm_stats_dist_minimize_obj (NcmStatsDist *sd, gdouble (*objective)(const gsl_v
       printf ("# iter: %d, over-smooth: % 22.15g, m2lnp = % 22.15g, gsl status (%d)\n",
               iter, self->over_smooth, self->fmin->fval, status);
   }
+
+  ncm_vector_free (x);
+  ncm_vector_free (ss);
 }
 
 static void

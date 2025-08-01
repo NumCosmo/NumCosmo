@@ -1653,6 +1653,8 @@ ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble 
 
   ncm_stats_vec_clear (&chunk);
 
+  g_array_unref (ar_order);
+
   return pvals;
 }
 

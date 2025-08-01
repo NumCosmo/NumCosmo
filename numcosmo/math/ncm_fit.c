@@ -1768,7 +1768,7 @@ ncm_fit_log_start (NcmFit *fit)
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
   {
     _ncm_fit_message_sepa (fit);
-    _ncm_fit_message (fit, "# Model fitting. Interating using:\n");
+    _ncm_fit_message (fit, "# Model fitting. Iterating using:\n");
     _ncm_fit_message (fit, "#  - solver:            %s\n", ncm_fit_get_desc (fit));
     _ncm_fit_message (fit, "#  - differentiation:   %s\n", self->grad.diff_name);
 
