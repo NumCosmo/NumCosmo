@@ -3017,7 +3017,7 @@ _ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVarian
 
     if (anchor)
     {
-      gint rc = fy_node_set_anchor (root_key, g_strdup (anchor), FY_NT);
+      gint rc = fy_node_set_anchor_copy (root_key, anchor, FY_NT);
 
       g_assert (rc == 0);
     }
