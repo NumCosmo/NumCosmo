@@ -356,7 +356,7 @@ nc_hiprim_two_fluids_set_lnk_lnw_spline (NcHIPrimTwoFluids *two_fluids, NcmSplin
 
   ncm_spline2d_clear (&self->lnSA_powspec_lnk_lnw);
 
-  self->lnSA_powspec_lnk_lnw = lnSA_powspec_lnk_lnw;
+  self->lnSA_powspec_lnk_lnw = ncm_spline2d_ref (lnSA_powspec_lnk_lnw);
 
   if (!ncm_spline2d_is_init (self->lnSA_powspec_lnk_lnw))
     ncm_spline2d_prepare (self->lnSA_powspec_lnk_lnw);
