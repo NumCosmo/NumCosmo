@@ -89,6 +89,7 @@
 struct _NcGrowthFuncPrivate
 {
   gpointer cvode;
+  SUNContext sunctx;
   N_Vector yv;
   SUNMatrix A;
   SUNLinearSolver LS;
@@ -113,10 +114,13 @@ nc_growth_func_init (NcGrowthFunc *gf)
 {
   NcGrowthFuncPrivate * const self = gf->priv = nc_growth_func_get_instance_private (gf);
 
+  if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
+    g_error ("ERROR: SUNContext_Create failed\n");
+
   self->cvode      = NULL;
-  self->yv         = N_VNew_Serial (3);
-  self->A          = SUNDenseMatrix (3, 3);
-  self->LS         = SUNDenseLinearSolver (self->yv, self->A);
+  self->yv         = N_VNew_Serial (3, self->sunctx);
+  self->A          = SUNDenseMatrix (3, 3, self->sunctx);
+  self->LS         = SUNLinSol_Dense (self->yv, self->A, self->sunctx);
   self->x_i        = 0.0;
   self->reltol     = 0.0;
   self->abstol     = 0.0;
@@ -210,6 +214,8 @@ _nc_growth_func_finalize (GObject *object)
     SUNLinSolFree (self->LS);
     self->LS = NULL;
   }
+
+  SUNContext_Free (&self->sunctx);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_growth_func_parent_class)->finalize (object);
@@ -433,37 +439,35 @@ nc_growth_func_get_x_i (NcGrowthFunc *gf)
 }
 
 static gint
-growth_f (realtype a, N_Vector y, N_Vector ydot, gpointer f_data)
+growth_f (sunrealtype a, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHICosmo *cosmo    = NC_HICOSMO (f_data);
   const gdouble a2    = a * a;
-  const gdouble a5    = a2 * gsl_pow_3 (a);
   const gdouble z     = 1.0 / a - 1.0;
   const gdouble E2    = nc_hicosmo_E2 (cosmo, z);
   const gdouble E     = sqrt (E2);
   const gdouble dE2dz = nc_hicosmo_dE2_dz (cosmo, z);
 
-  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
-  const gdouble D        = NV_Ith_S (y, 0);
-  const gdouble B        = NV_Ith_S (y, 1);
+  const gdouble E2Omega_m = nc_hicosmo_E2Omega_m (cosmo, z);
+  const gdouble D         = NV_Ith_S (y, 0);
+  const gdouble B         = NV_Ith_S (y, 1);
 
   NV_Ith_S (ydot, 0) = B;
-  NV_Ith_S (ydot, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a) * B + 3.0 * Omega_m0 * D / (2.0 * a5 * E2);
+  NV_Ith_S (ydot, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a) * B + 3.0 * E2Omega_m * D / (2.0 * a2 * E2);
   NV_Ith_S (ydot, 2) = 1.0 / gsl_pow_3 (a * E);
 
   return 0;
 }
 
 static gint
-growth_J (realtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+growth_J (sunrealtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
-  NcHICosmo *cosmo       = NC_HICOSMO (jac_data);
-  const gdouble a2       = a * a;
-  const gdouble a5       = a2 * gsl_pow_3 (a);
-  const gdouble z        = 1.0 / a - 1.0;
-  const gdouble E2       = nc_hicosmo_E2 (cosmo, z);
-  const gdouble dE2dz    = nc_hicosmo_dE2_dz (cosmo, z);
-  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+  NcHICosmo *cosmo        = NC_HICOSMO (jac_data);
+  const gdouble a2        = a * a;
+  const gdouble z         = 1.0 / a - 1.0;
+  const gdouble E2        = nc_hicosmo_E2 (cosmo, z);
+  const gdouble dE2dz     = nc_hicosmo_dE2_dz (cosmo, z);
+  const gdouble E2Omega_m = nc_hicosmo_E2Omega_m (cosmo, z);
 
   NCM_UNUSED (y);
   NCM_UNUSED (fy);
@@ -475,7 +479,7 @@ growth_J (realtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Ve
   SUN_DENSE_ACCESS (J, 0, 1) = 1.0;
   SUN_DENSE_ACCESS (J, 0, 2) = 0.0;
 
-  SUN_DENSE_ACCESS (J, 1, 0) = 3.0 * Omega_m0 / (2.0 * a5 * E2);
+  SUN_DENSE_ACCESS (J, 1, 0) = 3.0 * E2Omega_m / (2.0 * a2 * E2);
   SUN_DENSE_ACCESS (J, 1, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a);
   SUN_DENSE_ACCESS (J, 1, 2) = 0.0;
 
@@ -534,7 +538,7 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
 
   if (self->cvode == NULL)
   {
-    self->cvode = CVodeCreate (CV_BDF);
+    self->cvode = CVodeCreate (CV_BDF, self->sunctx);
 
     flag = CVodeInit (self->cvode, &growth_f, ai, self->yv);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );

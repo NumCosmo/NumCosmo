@@ -15,6 +15,7 @@ subdir('reference')
 subdir('images')
 subdir('tutorials')
 subdir('examples')
+subdir('benchmarks')
 
 quarto_conf = configuration_data()
 quarto_conf.set('version', meson.project_version())
@@ -64,6 +65,9 @@ if get_option('documentation')
             meson.current_build_dir(),
             '--output-dir', 'numcosmo-site',
             '--use-freezer',
+            '--log', 'numcosmo-site.log',
+            '--log-format', 'plain',
+            '--log-level', 'info',
         ],
         build_by_default: true,
         env: env,

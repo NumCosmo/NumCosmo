@@ -301,7 +301,7 @@ ATimes (gpointer user_data, N_Vector v_vec, N_Vector z_vec)
 }
 
 gint
-PSolve (gpointer user_data, N_Vector r_vec, N_Vector z_vec, realtype tol, int lr)
+PSolve (gpointer user_data, N_Vector r_vec, N_Vector z_vec, sunrealtype tol, int lr)
 {
   NcmSplineRBFPrivate * const self = user_data;
   const gint len                   = ncm_matrix_nrows (self->interp_matrix);
@@ -895,7 +895,7 @@ ncm_spline_rbf_set_shape_params (NcmSplineRBF *rbf, NcmVector *shape_params)
 /*
  *   SUNLinearSolver LS;
  *   N_Vector        xhat, x, b;
- *   realtype        *vecdata;
+ *   sunrealtype        *vecdata;
  *   gint i;
  *   gint maxl = len;
  *   gint ret;

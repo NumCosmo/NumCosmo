@@ -272,6 +272,54 @@ def test_run_fit_restart(
         raise result.exception
 
 
+def test_run_fit_params_reltol(simple_experiment):
+    """Test run fit with relative tolerance."""
+    filename, _ = simple_experiment
+    result = runner.invoke(
+        app, ["run", "fit", filename.as_posix(), "--params-reltol", "1.0e-7"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_fit_m2lnL_abstol(simple_experiment):
+    """Test run fit with absolute tolerance."""
+    filename, _ = simple_experiment
+    result = runner.invoke(
+        app, ["run", "fit", filename.as_posix(), "--m2lnl-abstol", "1.0e-7"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_fit_m2lnL_reltol(simple_experiment):
+    """Test run fit with relative tolerance."""
+    filename, _ = simple_experiment
+    result = runner.invoke(
+        app, ["run", "fit", filename.as_posix(), "--m2lnl-reltol", "1.0e-7"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mc(simple_experiment):
+    """Test run mc."""
+    filename, _ = simple_experiment
+    result = runner.invoke(app, ["run", "mc", "-p", filename.as_posix()])
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mc_seed(simple_experiment):
+    """Test run mc with seed."""
+    filename, _ = simple_experiment
+    result = runner.invoke(
+        app, ["run", "mc", "-p", "--seed", "123", filename.as_posix()]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
 def test_run_theory_vector(simple_experiment):
     """Test run theory vector."""
     filename, _ = simple_experiment
@@ -600,6 +648,38 @@ def test_run_mcmc_apes_analyze(simple_experiment):
             output.absolute().with_suffix(".mcmc.fits").as_posix(),
         ],
     )
+
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mcmc_apes_plot_corner(simple_experiment):
+    """Run a MCMC analysis using APES."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+
+    assert output.absolute().with_suffix(".mcmc.fits").exists()
+    if result.exit_code != 0:
+        raise result.exception
+
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "plot-corner",
+            filename.as_posix(),
+            output.absolute().with_suffix(".mcmc.fits").as_posix(),
+            "--no-show",
+            "--output",
+            output.absolute(),
+        ],
+    )
+
+    assert output.absolute().with_suffix(".corner.pdf").exists()
 
     if result.exit_code != 0:
         raise result.exception

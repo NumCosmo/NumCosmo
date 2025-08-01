@@ -147,6 +147,12 @@ void test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_eval_deriv (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_eval_deriv2 (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_eval_int (TestNcmSpline *test, gconstpointer pdata);
+void test_ncm_spline_get_index (TestNcmSpline *test, gconstpointer pdata);
+void test_ncm_spline_get_index_stride2 (TestNcmSpline *test, gconstpointer pdata);
+void test_ncm_spline_get_index_stride5 (TestNcmSpline *test, gconstpointer pdata);
+void test_ncm_spline_get_index_acc (TestNcmSpline *test, gconstpointer pdata);
+void test_ncm_spline_get_index_acc_stride2 (TestNcmSpline *test, gconstpointer pdata);
+void test_ncm_spline_get_index_acc_stride5 (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_free_empty (TestNcmSpline *test, gconstpointer pdata);
 
 void test_ncm_spline_invalid_vector_sizes (TestNcmSpline *test, gconstpointer pdata);
@@ -185,19 +191,25 @@ TestNcmSplineFunc _test_ncm_spline_traps[] = {
 };
 
 TestNcmSplineFunc _test_ncm_spline_tests[] = {
-  {&test_ncm_spline_new,                "/new"},
-  {&test_ncm_spline_new_array,          "/new/array"},
-  {&test_ncm_spline_new_data,           "/new/data"},
-  {&test_ncm_spline_copy_empty,         "/copy/empty"},
-  {&test_ncm_spline_copy,               "/copy"},
-  {&test_ncm_spline_set_type,           "/set_type"},
-  {&test_ncm_spline_set_type_serialize, "/set_type/serialize"},
-  {&test_ncm_spline_serialize,          "/serialize"},
-  {&test_ncm_spline_eval,               "/eval"},
-  {&test_ncm_spline_eval_deriv,         "/eval/deriv"},
-  {&test_ncm_spline_eval_deriv2,        "/eval/deriv2"},
-  {&test_ncm_spline_eval_int,           "/int"},
-  {&test_ncm_spline_traps,              "/traps"},
+  {&test_ncm_spline_new,                   "/new"},
+  {&test_ncm_spline_new_array,             "/new/array"},
+  {&test_ncm_spline_new_data,              "/new/data"},
+  {&test_ncm_spline_copy_empty,            "/copy/empty"},
+  {&test_ncm_spline_copy,                  "/copy"},
+  {&test_ncm_spline_set_type,              "/set_type"},
+  {&test_ncm_spline_set_type_serialize,    "/set_type/serialize"},
+  {&test_ncm_spline_serialize,             "/serialize"},
+  {&test_ncm_spline_eval,                  "/eval"},
+  {&test_ncm_spline_eval_deriv,            "/eval/deriv"},
+  {&test_ncm_spline_eval_deriv2,           "/eval/deriv2"},
+  {&test_ncm_spline_eval_int,              "/int"},
+  {&test_ncm_spline_get_index,             "/get_index"},
+  {&test_ncm_spline_get_index_stride2,     "/get_index/stride2"},
+  {&test_ncm_spline_get_index_stride5,     "/get_index/stride5"},
+  {&test_ncm_spline_get_index_acc,         "/get_index/acc"},
+  {&test_ncm_spline_get_index_acc_stride2, "/get_index/acc/stride2"},
+  {&test_ncm_spline_get_index_acc_stride5, "/get_index/acc/stride5"},
+  {&test_ncm_spline_traps,                 "/traps"},
   {NULL}
 };
 
@@ -963,6 +975,198 @@ test_ncm_spline_eval_int (TestNcmSpline *test, gconstpointer pdata)
     }
 
     ncm_spline_free (s);
+  }
+}
+
+static void _test_ncm_spline_get_index_worker (NcmSpline *s, NcmVector *xv, NcmVector *yv, const guint size);
+
+void
+test_ncm_spline_get_index (TestNcmSpline *test, gconstpointer pdata)
+{
+  NcmSpline *s     = ncm_spline_copy (test->s_base);
+  const guint size = 30000;
+  NcmVector *xv    = ncm_vector_new (size);
+  NcmVector *yv    = ncm_vector_new (size);
+
+  _test_ncm_spline_get_index_worker (s, xv, yv, size);
+
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+  ncm_spline_free (s);
+}
+
+void
+test_ncm_spline_get_index_stride2 (TestNcmSpline *test, gconstpointer pdata)
+{
+  if (NCM_IS_SPLINE_GSL (test->s_base))
+  {
+    g_test_skip ("GSL spline does not support stride");
+  }
+  else
+  {
+    NcmSpline *s       = ncm_spline_copy (test->s_base);
+    const guint size   = 30000;
+    NcmVector *xv_full = ncm_vector_new (2 * size);
+    NcmVector *xv      = ncm_vector_get_subvector_stride (xv_full, 0, size, 2);
+    NcmVector *yv      = ncm_vector_new (size);
+
+    _test_ncm_spline_get_index_worker (s, xv, yv, size);
+
+    ncm_vector_free (xv_full);
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
+    ncm_spline_free (s);
+  }
+}
+
+void
+test_ncm_spline_get_index_stride5 (TestNcmSpline *test, gconstpointer pdata)
+{
+  if (NCM_IS_SPLINE_GSL (test->s_base))
+  {
+    g_test_skip ("GSL spline does not support stride");
+  }
+  else
+  {
+    NcmSpline *s       = ncm_spline_copy (test->s_base);
+    const guint size   = 10000;
+    NcmVector *xv_full = ncm_vector_new (5 * size);
+    NcmVector *xv      = ncm_vector_get_subvector_stride (xv_full, 0, size, 5);
+    NcmVector *yv      = ncm_vector_new (size);
+
+    _test_ncm_spline_get_index_worker (s, xv, yv, size);
+
+    ncm_vector_free (xv_full);
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
+    ncm_spline_free (s);
+  }
+}
+
+void
+test_ncm_spline_get_index_acc (TestNcmSpline *test, gconstpointer pdata)
+{
+  NcmSpline *s     = ncm_spline_copy (test->s_base);
+  const guint size = 30000;
+  NcmVector *xv    = ncm_vector_new (size);
+  NcmVector *yv    = ncm_vector_new (size);
+
+  ncm_spline_acc (s, TRUE);
+  _test_ncm_spline_get_index_worker (s, xv, yv, size);
+
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+  ncm_spline_free (s);
+}
+
+void
+test_ncm_spline_get_index_acc_stride2 (TestNcmSpline *test, gconstpointer pdata)
+{
+  if (NCM_IS_SPLINE_GSL (test->s_base))
+  {
+    g_test_skip ("GSL spline does not support stride");
+  }
+  else
+  {
+    NcmSpline *s       = ncm_spline_copy (test->s_base);
+    const guint size   = 30000;
+    NcmVector *xv_full = ncm_vector_new (2 * size);
+    NcmVector *xv      = ncm_vector_get_subvector_stride (xv_full, 0, size, 2);
+    NcmVector *yv      = ncm_vector_new (size);
+
+    ncm_spline_acc (s, TRUE);
+    _test_ncm_spline_get_index_worker (s, xv, yv, size);
+
+    ncm_vector_free (xv_full);
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
+    ncm_spline_free (s);
+  }
+}
+
+void
+test_ncm_spline_get_index_acc_stride5 (TestNcmSpline *test, gconstpointer pdata)
+{
+  if (NCM_IS_SPLINE_GSL (test->s_base))
+  {
+    g_test_skip ("GSL spline does not support stride");
+  }
+  else
+  {
+    NcmSpline *s       = ncm_spline_copy (test->s_base);
+    const guint size   = 10000;
+    NcmVector *xv_full = ncm_vector_new (5 * size);
+    NcmVector *xv      = ncm_vector_get_subvector_stride (xv_full, 0, size, 5);
+    NcmVector *yv      = ncm_vector_new (size);
+
+    ncm_spline_acc (s, TRUE);
+    _test_ncm_spline_get_index_worker (s, xv, yv, size);
+
+    ncm_vector_free (xv_full);
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
+    ncm_spline_free (s);
+  }
+}
+
+static void
+_test_ncm_spline_get_index_worker (NcmSpline *s, NcmVector *xv, NcmVector *yv, const guint size)
+{
+  gdouble xi = -3.0123;
+  gdouble d[4];
+  guint i;
+
+  d[0] = g_test_rand_double ();
+  d[1] = g_test_rand_double ();
+  d[2] = g_test_rand_double ();
+  d[3] = g_test_rand_double ();
+
+  for (i = 0; i < size; i++)
+  {
+    ncm_vector_set (xv, i, xi);
+    ncm_vector_set (yv, i, F_cubic (xi, d));
+    xi += g_test_rand_double_range (1.0e-6, 0.1);
+  }
+
+  ncm_spline_set (s, xv, yv, TRUE);
+
+  {
+    const gdouble xmin = ncm_vector_get (xv, 0);
+    const gdouble xmax = ncm_vector_get (xv, size - 1);
+
+    g_assert_cmpuint (ncm_spline_get_index (s, xmin), ==, 0);
+    g_assert_cmpuint (ncm_spline_get_index (s, xmax), ==, size - 2);
+
+    g_assert_cmpuint (ncm_spline_get_index (s, xmin * (1.0 + GSL_DBL_EPSILON)), ==, 0);
+    g_assert_cmpuint (ncm_spline_get_index (s, xmin * (1.0 - GSL_DBL_EPSILON)), ==, 0);
+
+    g_assert_cmpuint (ncm_spline_get_index (s, xmax * (1.0 + GSL_DBL_EPSILON)), ==, size - 2);
+    g_assert_cmpuint (ncm_spline_get_index (s, xmax * (1.0 - GSL_DBL_EPSILON)), ==, size - 2);
+
+    for (i = 1; i < size - 1; i++)
+    {
+      gdouble x = ncm_vector_get (xv, i);
+      guint idx;
+
+      g_assert_cmpuint (ncm_spline_get_index (s, x), ==, i);
+
+      idx = ncm_spline_get_index (s, x * (1.0 + GSL_DBL_EPSILON));
+      g_assert_cmpfloat (ncm_vector_get (xv, idx), <=, x);
+      g_assert_cmpfloat (ncm_vector_get (xv, idx + 1), >=, x);
+
+      idx = ncm_spline_get_index (s, x * (1.0 - GSL_DBL_EPSILON));
+      g_assert_cmpfloat (ncm_vector_get (xv, idx), <=, x);
+      g_assert_cmpfloat (ncm_vector_get (xv, idx + 1), >=, x);
+    }
+
+    for (i = 0; i < size; i++)
+    {
+      const gdouble x = g_test_rand_double_range (xmin, xmax);
+      const guint idx = ncm_spline_get_index (s, x);
+
+      g_assert_cmpfloat (ncm_vector_get (xv, idx), <=, x);
+      g_assert_cmpfloat (ncm_vector_get (xv, idx + 1), >=, x);
+    }
   }
 }
 

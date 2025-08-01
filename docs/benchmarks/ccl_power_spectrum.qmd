@@ -1,0 +1,214 @@
+---
+title: "Benchmarking NumCosmo vs. CCL"
+author: "Sandro Dias Pinto Vitenti"
+date: "2025-03-02"
+abstract: |
+    This document compares the power spectrum implemented in NumCosmo and CCL.
+
+format:
+  html:
+    tbl-cap-location: margin
+    fig-cap-location: margin
+
+execute:
+  warning: true
+  error: true
+
+---
+
+{{< include /_definitions.qmd >}}
+
+## Introduction
+
+This notebook explores the power spectra and their derived quantities implemented in the Core Cosmology Library (CCL) and NumCosmo, two frameworks for computing cosmological observables.
+We aim to assess the consistency and accuracy of the matter power spectrum and related quantities, such as the linear growth factor and `sigma_8`, across these frameworks by comparing their outputs under identical physical parameters.
+To facilitate this analysis, we first establish a set of cosmological models with fixed and variable parameters, then define functions to compute and visualize the power spectra alongside their relative differences.
+The results are summarized in tables and plots below.
+
+```{python}
+import sys
+import numpy as np
+import math
+import matplotlib.pyplot as plt
+from IPython.display import HTML, Markdown, display
+
+# CCL
+import pyccl
+import pandas as pd
+
+# NumCosmo
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams, dsigmaM_dlnM
+
+from numcosmo_py.plotting.tools import set_rc_params_article, format_time
+import numcosmo_py.cosmology as ncc
+import numcosmo_py.ccl.comparison as nc_cmp
+
+```
+
+### Initializing NumCosmo
+
+To begin, we configure NumCosmo and redirect its output to this notebook using the following code:
+
+```{python}
+Ncm.cfg_init()
+Ncm.cfg_set_log_handler(lambda msg: sys.stdout.write(msg) and sys.stdout.flush())
+set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
+```
+{{< include _setup_models.qmd >}}
+
+```{python}
+# Preparing the models
+parameters, models = setup_models(high_precision=False)
+z = np.linspace(0.01, 15.0, 10000)
+```
+
+### Parameter Overview
+
+The table below summarizes the parameters. There are five parameters sets.
+
+```{python}
+# | label: tbl-ccl-vs-nc-params
+# | tbl-cap: Used cosmological parameters in CCL and NumCosmo
+# | tbl-colwidths: [10, 30, 60]
+# | code-fold: true
+
+# Create DataFrame
+df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+## Power Spectrum Comparison
+
+The following code compares the power spectrum implemented in NumCosmo and CCL for a range of redshifts and wavenumbers.
+
+```{python}
+
+ps_funcs = [
+    nc_cmp.compare_power_spectrum_linear,
+    nc_cmp.compare_power_spectrum_nonlinear,
+]
+z = np.array([0.0, 0.2, 0.5, 1.0, 2.0])
+k = np.geomspace(5.0e-5, 1.0e3, 1000)
+
+ps_comparisons: list[list[list[nc_cmp.CompareFunc1d]]] = [
+    [
+        [
+            func(m["CCL"], m["NC"], k, z_i, model=name)
+            for m, name in zip(models, PARAMETERS_SET)
+        ]
+        for func in ps_funcs
+    ]
+    for z_i in z
+]
+
+```
+
+
+```{python}
+# | label: fig-ccl-vs-nc-ps-sets
+# | fig-cap:
+# |   - "Linear power spectrum, $z = 0$"
+# |   - "Nonlinear power spectrum, $z = 0$"
+# |   - "Linear power spectrum, $z = 0.2$"
+# |   - "Nonlinear power spectrum, $z = 0.2$"
+# |   - "Linear power spectrum, $z = 0.5$"
+# |   - "Nonlinear power spectrum, $z = 0.5$"
+# |   - "Linear power spectrum, $z = 1.0$"
+# |   - "Nonlinear power spectrum, $z = 1.0$"
+# |   - "Linear power spectrum, $z = 2.0$"
+# |   - "Nonlinear power spectrum, $z = 2.0$"
+# | fig-cap-location: top
+# | layout-ncol: 2
+# | code-fold: true
+
+for ps_comparison_z in ps_comparisons:
+    for ps_comparison in ps_comparison_z:
+        fig, axs = plt.subplots(2, sharex=True)
+        fig.subplots_adjust(hspace=0)
+        for p, c in zip(ps_comparison, COLORS):
+            p.plot(axs=axs, color=c)
+        axs[1].grid()
+        plt.show()
+plt.close()
+```
+
+The following table summarizes the results for all sets.
+```{python}
+# | label: tbl-ccl-vs-nc-ps-sets
+# | tbl-cap: Power Spectrum
+# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# | code-fold: true
+
+table = []
+
+for ps_comparison_z in ps_comparisons:
+    for ps_comparison in ps_comparison_z:
+        for p in ps_comparison:
+            table.append(p.summary_row(convert_g=False))
+
+df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+
+```
+
+## Matter Density Variance
+
+The following code compares the variance of the matter density averaged over a sphere of radius $r$ for a range of redshifts.
+
+```{python}
+
+z = np.array([0.0, 0.2, 0.5, 1.0, 2.0, 6.0])
+r = np.geomspace(1.0e-1, 1.0e1, 1000)
+
+compare_variances: list[nc_cmp.CompareFunc1d] = [
+    [
+        nc_cmp.compare_sigma_r(m["CCL"], m["NC"], r, z_i, model=name)
+        for m, name in zip(models, PARAMETERS_SET)
+    ]
+    for z_i in z
+]
+
+```
+
+
+```{python}
+# | label: fig-ccl-vs-nc-variance-sets
+# | fig-cap:
+# |   - "Matter density variance, $z = 0$"
+# |   - "Matter density variance, $z = 0.2$"
+# |   - "Matter density variance, $z = 0.5$"
+# |   - "Matter density variance, $z = 1.0$"
+# |   - "Matter density variance, $z = 2.0$"
+# |   - "Matter density variance, $z = 6.0$"
+# | fig-cap-location: top
+# | layout-ncol: 2
+# | code-fold: true
+
+for compare_variance_z in compare_variances:
+    fig, axs = plt.subplots(2, sharex=True)
+    fig.subplots_adjust(hspace=0)
+    for p, c in zip(compare_variance_z, COLORS):
+        p.plot(axs=axs, color=c)
+    axs[1].grid()
+    plt.show()
+plt.close()
+```
+
+The following table summarizes the results for all parameter sets.
+```{python}
+# | label: tbl-ccl-vs-nc-variance-sets
+# | tbl-cap: Matter Density Variance
+# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# | code-fold: true
+
+table = []
+
+for compare_variance_z in compare_variances:
+    for d in compare_variance_z:
+        table.append(d.summary_row(convert_g=False))
+
+df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+
+```

@@ -1,0 +1,523 @@
+---
+title: "Benchmarking NumCosmo vs. CCL"
+author: "Sandro Dias Pinto Vitenti"
+date: "2025-03-02"
+abstract: |
+    This document compares the two-point correlation implemented in NumCosmo and CCL.
+
+format:
+  html:
+    tbl-cap-location: margin
+    fig-cap-location: margin
+
+execute:
+  warning: true
+  error: true
+
+---
+
+{{< include /_definitions.qmd >}}
+
+## Introduction
+
+This notebook examines the two-point correlation functions and related quantities implemented in the Core Cosmology Library (CCL) and NumCosmo. 
+Our goal is to evaluate the consistency and accuracy of these functions by analyzing their relative differences.
+
+To this end, we define a set of cosmological models with fixed and variable parameters, then implement functions to compute and visualize the power spectra and their relative differences. 
+The results are presented through tables and plots.
+
+```{python}
+import sys
+import numpy as np
+import math
+import matplotlib.pyplot as plt
+from IPython.display import HTML, Markdown, display
+
+# CCL
+import pyccl
+import pandas as pd
+
+# NumCosmo
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams, dsigmaM_dlnM
+
+from numcosmo_py.plotting.tools import set_rc_params_article, format_time
+import numcosmo_py.cosmology as ncc
+import numcosmo_py.ccl.comparison as nc_cmp
+```
+
+### Initializing NumCosmo
+
+To begin, we configure NumCosmo and redirect its output to this notebook using the following code:
+
+```{python}
+Ncm.cfg_init()
+Ncm.cfg_set_log_handler(lambda msg: sys.stdout.write(msg) and sys.stdout.flush())
+set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
+```
+
+{{< include _setup_models.qmd >}}
+
+```{python}
+# Preparing the models
+parameters, models = setup_models(high_precision=False, dist_z_max=1500.0)
+lmax = 3000
+ells = np.arange(2, lmax + 1)
+ell_kernel_test = 80
+
+```
+
+### Parameter Overview
+
+The table below summarizes the parameter sets. 
+We consider five sets, designed to cover a broad range of cosmologies, including models with and without neutrinos, spatial curvature, $\Lambda$CDM, and alternative values for the dark energy equation of state.
+
+```{python}
+# | label: tbl-ccl-vs-nc-params
+# | tbl-cap: Used cosmological parameters in CCL and NumCosmo
+# | tbl-colwidths: [10, 30, 60]
+# | code-fold: true
+
+# Create DataFrame
+df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+## CMB Lensing
+
+The following code compares the CMB lensing power spectrum implemented in CCL and NumCosmo.
+We plot the lensing kernel and power spectrum for each set.
+
+```{python}
+
+cmb_len_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
+    [
+        nc_cmp.compare_cmb_lens_kernel(m["CCL"], m["NC"], ell_kernel_test, model=name)
+        for m, name in zip(models, PARAMETERS_SET)
+    ],
+    [
+        nc_cmp.compare_cmb_len_auto(m["CCL"], m["NC"], ells, model=name)
+        for m, name in zip(models, PARAMETERS_SET)
+    ],
+]
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-cmb-lens-sets
+# | fig-cap:
+# |   - "CMB lensing kernel, $\\ell = 80$"
+# |   - "CMB lensing power spectrum"
+# | fig-cap-location: top
+# | layout-ncol: 2
+# | code-fold: true
+
+for comparison in cmb_len_auto_comparisons:
+    fig, axs = plt.subplots(2, sharex=True)
+    fig.subplots_adjust(hspace=0)
+    for p, c in zip(comparison, COLORS):
+        p.plot(axs=axs, color=c)
+    axs[1].grid()
+
+    plt.show()
+plt.close()
+```
+
+The following table summarizes the results for all sets.
+```{python}
+# | label: tbl-ccl-vs-nc-cmb-lens-sets
+# | tbl-cap: Power Spectrum
+# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# | code-fold: true
+
+table = []
+
+for comparison in cmb_len_auto_comparisons:
+    for p in comparison:
+        table.append(p.summary_row(convert_g=False))
+
+df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+
+```
+
+All CCL calculations are consistent with the results from NumCosmo, though this agreement decreases as the number of samples increases.
+
+This counterintuitive behavior occurs because CCL computes the distance from $z_\mathrm{lss}$ to $z$ as the difference between their comoving distances, rather than directly calculating the distance between the two redshifts. As the number of samples increases, $\chi(z_\mathrm{lss})$ and $\chi(z)$ become more similar, leading to a cancellation error that dominates the kernel.
+
+Additionally, several spikes appear in the relative difference of $C_\ell^{\kappa\kappa}$, which are attributed to errors in the CCL Limber integration.
+
+## CMB Integrated Sachs-Wolfe (ISW)
+
+The following code compares the CMB ISW power spectrum as implemented in CCL and NumCosmo. 
+We show both the ISW kernel and the final $C_\ell$ values to highlight the agreement and differences between the two frameworks.
+
+```{python} 
+
+cmb_isw_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
+    [
+        nc_cmp.compare_cmb_isw_kernel(m["CCL"], m["NC"], ell_kernel_test, model=name)
+        for m, name in zip(models, PARAMETERS_SET)
+    ],
+    [
+        nc_cmp.compare_cmb_isw_auto(m["CCL"], m["NC"], ells, model=name)
+        for m, name in zip(models, PARAMETERS_SET)
+    ],
+]
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-cmb-isw-sets
+# | fig-cap:
+# |   - "CMB ISW kernel, $\\ell = 80$"
+# |   - "CMB ISW power spectrum"
+# | fig-cap-location: top
+# | layout-ncol: 2
+# | code-fold: true
+
+for comparison in cmb_isw_auto_comparisons:
+    fig, axs = plt.subplots(2, sharex=True)
+    fig.subplots_adjust(hspace=0)
+    for p, c in zip(comparison, COLORS):
+        p.plot(axs=axs, color=c)
+    axs[1].grid()
+
+    plt.show()
+plt.close()
+```
+
+
+The following table summarizes the results for all sets.
+```{python}
+# | label: tbl-ccl-vs-nc-cmb-isw-sets
+# | tbl-cap: Power Spectrum
+# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# | code-fold: true
+
+table = []
+
+for comparison in cmb_isw_auto_comparisons:
+    for p in comparison:
+        table.append(p.summary_row(convert_g=False))
+
+df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+
+```
+
+
+The CCL calculations show marginal agreement with those from NumCosmo. This discrepancy stems from CCL’s reduced accuracy in computing the growth function and growth factor at high redshifts ($z \gtrsim 10$). While this limitation does not significantly impact cross-correlations involving the ISW kernel when combined with probes anchored at lower redshifts, it introduces pronounced errors in the ISW autocorrelation, which depends on precise integration over the full redshift range up to $\z_\mathrm{lss}$.  
+
+As illustrated in the ISW kernel plot, the results exhibit strong agreement up to $z \sim 10$, beyond which discrepancies grow increasingly pronounced, reflecting the cumulative effect of inaccuracies in CCL’s high-$z$ growth calculations.  
+
+## Thermal Sunyaev-Zel’dovich (tSZ) Effect  
+
+The code below benchmarks the thermal Sunyaev-Zel’dovich (tSZ) kernel and angular power spectrum ($C_\ell$) implementations in CCL and NumCosmo. 
+This comparison cross-validates the two frameworks, focusing on relative differences in the kernel and $C_\ell$ values.
+
+```{python} 
+
+tsz_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
+    [
+        nc_cmp.compare_tsz_kernel(m["CCL"], m["NC"], ell_kernel_test, model=name)
+        for m, name in zip(models, PARAMETERS_SET)
+    ],
+    [
+        nc_cmp.compare_tsz_auto(m["CCL"], m["NC"], ells, model=name)
+        for m, name in zip(models, PARAMETERS_SET)
+    ],
+]
+```
+
+```{python} 
+# | label: fig-ccl-vs-nc-tsz-sets
+# | fig-cap:
+# |   - "Thermal Sunyaev-Zel'dovich kernel, $\\ell = 80$"
+# |   - "Thermal Sunyaev-Zel'dovich power spectrum"
+# | fig-cap-location: top
+# | layout-ncol: 2
+# | code-fold: true
+
+for comparison in tsz_auto_comparisons:
+    fig, axs = plt.subplots(2, sharex=True)
+    fig.subplots_adjust(hspace=0)
+    for p, c in zip(comparison, COLORS):
+        p.plot(axs=axs, color=c)
+    axs[1].grid()
+
+    plt.show()
+plt.close()
+```
+
+The following table summarizes the results for all sets.
+```{python}
+# | label: tbl-ccl-vs-nc-tsz-sets
+# | tbl-cap: Power Spectrum
+# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# | code-fold: true
+
+table = []
+
+for comparison in tsz_auto_comparisons:
+    for p in comparison:
+        table.append(p.summary_row(convert_g=False))
+
+df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+
+```
+
+All CCL calculations show good agreement with the results from NumCosmo.  
+
+However, the same Limber integration errors present in CCL also manifest here, leading to eventual spikes in the relative difference between the two frameworks at random multipoles ($\ell$). 
+
+## Galaxy Weak Lensing
+
+The following code compares the galaxy weak lensing kernel and angular power spectrum implemented in CCL and NumCosmo.
+
+```{python}
+
+
+gwl_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
+    [
+        nc_cmp.compare_galaxy_weak_lensing_kernel(
+            m["CCL"], m["NC"], ell_kernel_test, model=name
+        )
+        for m, name in zip(models, PARAMETERS_SET)
+    ],
+    [
+        nc_cmp.compare_galaxy_weak_lensing_auto(m["CCL"], m["NC"], ells, model=name)
+        for m, name in zip(models, PARAMETERS_SET)
+    ],
+]
+```
+
+```{python} 
+# | label: fig-ccl-vs-nc-gwl-sets
+# | fig-cap:
+# |   - "Galaxy Weak Lensing kernel, $\\ell = 80$"
+# |   - "Galaxy Weak Lensing power spectrum"
+# | fig-cap-location: top
+# | layout-ncol: 2
+# | code-fold: true
+
+for comparison in gwl_auto_comparisons:
+    fig, axs = plt.subplots(2, sharex=True)
+    fig.subplots_adjust(hspace=0)
+    for p, c in zip(comparison, COLORS):
+        p.plot(axs=axs, color=c)
+    axs[1].grid()
+
+    plt.show()
+plt.close()
+```
+
+The following table summarizes the results for all sets.
+```{python}
+# | label: tbl-ccl-vs-nc-gwl-sets
+# | tbl-cap: Power Spectrum
+# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# | code-fold: true
+
+table = []
+
+for comparison in gwl_auto_comparisons:
+    for p in comparison:
+        table.append(p.summary_row(convert_g=False))
+
+df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+
+```
+
+All CCL calculations agree with the results from NumCosmo. Again the same Limber integration errors present in CCL also manifest here, leading to eventual spikes in the relative difference between the two frameworks at random multipoles ($\ell$).
+
+## Galaxy Number Count
+
+The following code compares the galaxy number count power spectrum implemented in CCL and NumCosmo.
+
+```{python}
+
+gnc_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
+    [
+        nc_cmp.compare_galaxy_number_count_kernel(
+            m["CCL"], m["NC"], ell_kernel_test, model=name
+        )
+        for m, name in zip(models, PARAMETERS_SET)
+    ],
+    [
+        nc_cmp.compare_galaxy_number_count_auto(m["CCL"], m["NC"], ells, model=name)
+        for m, name in zip(models, PARAMETERS_SET)
+    ]
+]
+```
+
+```{python} 
+# | label: fig-ccl-vs-nc-gnc-sets
+# | fig-cap:
+# |   - "Galaxy Number Count kernel, $\\ell = 80$"
+# |   - "Galaxy Number Count power spectrum"
+# | fig-cap-location: top
+# | layout-ncol: 2
+# | code-fold: true
+
+for comparison in gnc_auto_comparisons:
+    fig, axs = plt.subplots(2, sharex=True)
+    fig.subplots_adjust(hspace=0)
+    for p, c in zip(comparison, COLORS):
+        p.plot(axs=axs, color=c)
+    axs[1].grid()
+
+    plt.show()
+plt.close()
+```
+
+The following table summarizes the results for all sets.
+```{python}
+# | label: tbl-ccl-vs-nc-gnc-sets
+# | tbl-cap: Power Spectrum
+# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# | code-fold: true
+
+table = []
+
+for comparison in gnc_auto_comparisons:
+    for p in comparison:
+        table.append(p.summary_row(convert_g=False))
+
+df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+
+```
+
+The results are in very good agreement with the results from NumCosmo. Note the same Limber integration errors present in CCL also manifest here.
+
+## Time Comparison
+
+The following code compares the time measurements between CCL and NumCosmo.
+
+
+```{python}
+# Lets first get a simple dndz function. We use 1000 knots and a width of 0.1.
+dndz = nc_cmp.prepare_dndz(0.5, 0.1, 1000)
+z_a = np.array(dndz.peek_xv().dup_array())
+nz_a = np.array(dndz.peek_yv().dup_array())
+nc_wl_auto_v = Ncm.Vector.new(lmax + 1 - 2)
+bias = 3.0
+mbias = 1.234
+
+
+def compute_wl_using_ccl(
+    ccl_cosmo: pyccl.Cosmology, z_a: np.ndarray, nz_a: np.ndarray, ells: np.ndarray
+):
+    ccl_wl = pyccl.WeakLensingTracer(ccl_cosmo, dndz=(z_a, nz_a))
+    psp = ccl_cosmo.get_linear_power()
+    ccl_wl_auto = pyccl.angular_cl(
+        ccl_cosmo, ccl_wl, ccl_wl, ells, p_of_k_a_lin=psp, p_of_k_a=psp
+    )
+
+    return ccl_wl_auto
+
+
+def compute_nc_using_ccl(
+    ccl_cosmo: pyccl.Cosmology,
+    z_a: np.ndarray,
+    nz_a: np.ndarray,
+    ells: np.ndarray,
+    bias: float,
+    mbias: float,
+) -> np.ndarray:
+    ccl_gal = pyccl.NumberCountsTracer(
+        ccl_cosmo,
+        has_rsd=False,
+        dndz=(z_a, nz_a),
+        bias=(z_a, np.ones_like(z_a) * bias),
+        mag_bias=(z_a, np.ones_like(z_a) * mbias),
+    )
+
+    psp = ccl_cosmo.get_linear_power()
+    ccl_gal_auto = pyccl.angular_cl(
+        ccl_cosmo, ccl_gal, ccl_gal, ells, p_of_k_a_lin=psp, p_of_k_a=psp
+    )
+
+    return ccl_gal_auto
+
+
+def compute_wl_using_nc(
+    cosmology: ncc.Cosmology,
+    dndz: Ncm.Spline,
+    ells: np.ndarray,
+    nc_wl_auto_v: Ncm.Vector,
+):
+    nc_wl = Nc.XcorLimberKernelWeakLensing.new(0.0, 2.0, dndz, 3.0, 7.0, cosmology.dist)
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorLimberMethod.CUBATURE)
+    xcor.prepare(cosmology.cosmo)
+    nc_wl.prepare(cosmology.cosmo)
+    xcor.limber(nc_wl, nc_wl, cosmology.cosmo, 2, lmax, nc_wl_auto_v)
+
+    return np.array(nc_wl_auto_v.dup_array())
+
+
+def compute_nc_using_nc(
+    cosmology: ncc.Cosmology,
+    dndz: Ncm.Spline,
+    ells: np.ndarray,
+    bias: float,
+    mbias: float,
+    nc_wl_auto_v: Ncm.Vector,
+) -> np.ndarray:
+    nc_gal = Nc.XcorLimberKernelGal.new(0.0, 2.0, 1, 3.0, dndz, cosmology.dist, True)
+    nc_gal["mag_bias"] = mbias
+    nc_gal["bparam_0"] = bias
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorLimberMethod.CUBATURE)
+    nc_gal.prepare(cosmology.cosmo)
+    xcor.prepare(cosmology.cosmo)
+    xcor.limber(nc_gal, nc_gal, cosmology.cosmo, 2, lmax, nc_wl_auto_v)
+
+    return np.array(nc_wl_auto_v.dup_array())
+
+
+table = [
+    ["Galaxy Weak Lensing", "CCL"]
+    + nc_cmp.compute_times(
+        lambda: compute_wl_using_ccl(models[0]["CCL"], z_a, nz_a, ells),
+        repeat=5,
+        number=10,
+    ),
+    ["Galaxy Weak Lensing", "NumCosmo"]
+    + nc_cmp.compute_times(
+        lambda: compute_wl_using_nc(models[0]["NC"], dndz, ells, nc_wl_auto_v),
+        repeat=5,
+        number=10,
+    ),
+    ["Galaxy Number Counts", "CCL"]
+    + nc_cmp.compute_times(
+        lambda: compute_nc_using_ccl(models[1]["CCL"], z_a, nz_a, ells, bias, mbias),
+        repeat=5,
+        number=10,
+    ),
+    ["Galaxy Number Counts", "NumCosmo"]
+    + nc_cmp.compute_times(
+        lambda: compute_nc_using_nc(
+            models[1]["NC"], dndz, ells, bias, mbias, nc_wl_auto_v
+        ),
+        repeat=5,
+        number=10,
+    ),
+]
+
+columns = ["Quantity", "Library", "Mean Time", "Standard Deviation"]
+
+df = pd.DataFrame(table, columns=columns)
+df["Mean Time"] = df["Mean Time"].apply(format_time)
+df["Standard Deviation"] = df["Standard Deviation"].apply(format_time)
+
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+## Summary  
+
+In summary, the two frameworks demonstrate strong agreement across most calculations, with discrepancies at random multipoles ($\ell$). These differences are due to the Limber integral errors in CCL, which introduces numerical inaccuracies whenever the integration fails. 
+Additionally, the ISW computation in CCL exhibits large deviations at high redshifts ($z \gtrsim 10$), stemming from inaccuracies in the growth function and growth factor. While these errors do not significantly impact cross-correlations with low-redshift probes, they become critical in the ISW autocorrelation, which depends on precise integration over the full redshift range up to $z_\mathrm{lss}$.  
+
+The Limber integration errors in CCL further manifest as spikes in random values of $\ell$, particularly, when there is good agreement between the two frameworks they 
+become more noticeable. 

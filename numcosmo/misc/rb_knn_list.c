@@ -31,7 +31,12 @@
 int
 rb_knn_list_compare (const knn_list_t *rb_a, const knn_list_t *rb_b)
 {
-  return (rb_a->distance < rb_b->distance) ? -1 : (rb_a->distance > rb_b->distance);
+  gint ret = (rb_a->distance < rb_b->distance) ? -1 : (rb_a->distance > rb_b->distance);
+
+  if (ret != 0)
+    return ret;
+
+  return (rb_a->node->coord_index < rb_b->node->coord_index) ? -1 : (rb_a->node->coord_index > rb_b->node->coord_index);
 }
 
 /* Creates and returns a new table

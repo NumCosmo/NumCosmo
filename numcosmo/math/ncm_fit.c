@@ -446,7 +446,7 @@ ncm_fit_class_init (NcmFitClass *klass)
                                    PROP_MAXITER,
                                    g_param_spec_uint ("maxiter",
                                                       NULL,
-                                                      "Maximum number of interations",
+                                                      "Maximum number of iterations",
                                                       0, G_MAXUINT32, NCM_FIT_DEFAULT_MAXITER,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -454,21 +454,21 @@ ncm_fit_class_init (NcmFitClass *klass)
                                    PROP_M2LNL_RELTOL,
                                    g_param_spec_double ("m2lnL-reltol",
                                                         NULL,
-                                                        "Relative tolarence in m2lnL",
+                                                        "Relative tolerance in m2lnL",
                                                         0.0, G_MAXDOUBLE, NCM_FIT_DEFAULT_M2LNL_RELTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_M2LNL_ABSTOL,
                                    g_param_spec_double ("m2lnL-abstol",
                                                         NULL,
-                                                        "Absolute tolarence in m2lnL",
+                                                        "Absolute tolerance in m2lnL",
                                                         0.0, G_MAXDOUBLE, NCM_FIT_DEFAULT_M2LNL_ABSTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_PARAMS_RELTOL,
                                    g_param_spec_double ("params-reltol",
                                                         NULL,
-                                                        "Relative tolarence in fitted parameters",
+                                                        "Relative tolerance in fitted parameters",
                                                         0.0, G_MAXDOUBLE, NCM_FIT_DEFAULT_PARAMS_RELTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
@@ -791,7 +791,7 @@ static void _ncm_fit_ls_f_J_nd_ac (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 
 static NcmFitGrad _ncm_fit_grad_numdiff_forward = {
   NCM_FIT_GRAD_NUMDIFF_FORWARD,
-  "Numerical differentiantion (forward)",
+  "Numerical differentiation (forward)",
   &_ncm_fit_ls_J_nd_fo,
   &_ncm_fit_ls_f_J_nd_fo,
   &_ncm_fit_m2lnL_grad_nd_fo,
@@ -800,7 +800,7 @@ static NcmFitGrad _ncm_fit_grad_numdiff_forward = {
 
 static NcmFitGrad _ncm_fit_grad_numdiff_central = {
   NCM_FIT_GRAD_NUMDIFF_CENTRAL,
-  "Numerical differentiantion (central)",
+  "Numerical differentiation (central)",
   &_ncm_fit_ls_J_nd_ce,
   &_ncm_fit_ls_f_J_nd_ce,
   &_ncm_fit_m2lnL_grad_nd_ce,
@@ -809,7 +809,7 @@ static NcmFitGrad _ncm_fit_grad_numdiff_central = {
 
 static NcmFitGrad _ncm_fit_grad_numdiff_accurate = {
   NCM_FIT_GRAD_NUMDIFF_ACCURATE,
-  "Numerical differentiantion (Richardson extrapolation)",
+  "Numerical differentiation (Richardson extrapolation)",
   &_ncm_fit_ls_J_nd_ac,
   &_ncm_fit_ls_f_J_nd_ac,
   &_ncm_fit_m2lnL_grad_nd_ac,
@@ -851,7 +851,7 @@ ncm_fit_set_grad_type (NcmFit *fit, NcmFitGradType gtype)
 /**
  * ncm_fit_set_maxiter:
  * @fit: a #NcmFit
- * @maxiter: maximum number of interations
+ * @maxiter: maximum number of iterations
  *
  * Sets the maximum number of iterations.
  *
@@ -898,7 +898,7 @@ ncm_fit_get_maxiter (NcmFit *fit)
 /**
  * ncm_fit_set_m2lnL_reltol:
  * @fit: a #NcmFit
- * @tol: relative tolarance
+ * @tol: relative tolerance
  *
  * Sets the relative tolerance for the m2lnL.
  *
@@ -1157,7 +1157,7 @@ ncm_fit_params_set_vector_offset (NcmFit *fit, NcmVector *x, guint offset)
 /**
  * ncm_fit_params_set_array:
  * @fit: a #NcmFit
- * @x: (in) (array) (element-type gdouble): an array of gdoubles
+ * @x: (in) (array) (element-type gdouble): an array of gdouble
  *
  * Sets the parameters from array @x.
  *
@@ -1632,7 +1632,7 @@ ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
  * @fit: a #NcmFit
  * @mtype: a #NcmFitRunMsgs
  * @abstol: restart absolute tolerance
- * @reltol: restart relative tolarence
+ * @reltol: restart relative tolerance
  * @save_mset: (nullable): the #NcmMSet used to save progress
  * @mset_file: (nullable): the file name to save progress
  *
@@ -1768,7 +1768,7 @@ ncm_fit_log_start (NcmFit *fit)
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
   {
     _ncm_fit_message_sepa (fit);
-    _ncm_fit_message (fit, "# Model fitting. Interating using:\n");
+    _ncm_fit_message (fit, "# Model fitting. Iterating using:\n");
     _ncm_fit_message (fit, "#  - solver:            %s\n", ncm_fit_get_desc (fit));
     _ncm_fit_message (fit, "#  - differentiation:   %s\n", self->grad.diff_name);
 
@@ -1858,7 +1858,7 @@ ncm_fit_log_state (NcmFit *fit)
 
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
   {
-    NcmVector *m2lnL_v = ncm_likelihoood_peek_m2lnL_v (self->lh);
+    NcmVector *m2lnL_v = ncm_likelihood_peek_m2lnL_v (self->lh);
     gdouble elap_sec   = g_timer_elapsed (self->timer, NULL);
     gulong elap_min    = elap_sec / 60;
     gulong elap_hour   = elap_min / 60;
@@ -2669,7 +2669,7 @@ ncm_fit_fisher_bias (NcmFit *fit, NcmVector *f_true)
  * ncm_fit_numdiff_m2lnL_covar:
  * @fit: a #NcmFit
  *
- * Calcualtes the covariance matrix using the inverse of the
+ * Calculates the covariance matrix using the inverse of the
  * Hessian matrix $\partial_i\partial_j -\ln(L)$, where
  * the derivatives are taken with respect to the free parameters.
  *

@@ -34,7 +34,6 @@ import pyccl
 
 import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm, Nc
-from numcosmo_py.helper import npa_to_seq
 from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_ccl_cosmo_eh_linear,
     fixture_nc_cosmo_eh_linear,
@@ -67,7 +66,7 @@ def fixture_nc_cmb_lens(
     nc_cmb_lens = Nc.XcorLimberKernelCMBLensing.new(
         nc_cosmo_eh_linear.dist,
         Nc.RecombSeager(),
-        Ncm.Vector.new_array(np.arange(lmax + 1).tolist()),
+        Ncm.Vector.new_array(np.arange(lmax + 1)),
     )
 
     return nc_cmb_lens
@@ -92,7 +91,7 @@ def fixture_nc_cmb_isw(
         nc_cosmo_eh_linear.dist,
         nc_cosmo_eh_linear.ps_ml,
         nc_cosmo_eh_linear.recomb,
-        Ncm.Vector.new_array(np.arange(lmax + 1).tolist()),
+        Ncm.Vector.new_array(np.arange(lmax + 1)),
     )
 
     return nc_cmb_isw
@@ -134,6 +133,7 @@ GAL_IDS = [
 SRC_GAL_Z_CENTERS = np.linspace(0.5, 1.6, 2)
 SRC_GAL_Z_SIGMA = 0.02
 SRC_GAL_Z_IDS = [f"z={z:.2f}" for z in SRC_GAL_Z_CENTERS]
+Z_A_LEN = 5000
 
 
 @pytest.fixture(name="nc_gal", params=GAL_PARAMS, ids=GAL_IDS)
@@ -144,11 +144,13 @@ def fixture_nc_gal(
     """Fixture for NumCosmo galaxy tracer."""
     mu, mbias, bias, bias_nknots = request.param
     sigma = GAL_Z_SIGMA
-    z_a: npt.NDArray[np.float64] = np.linspace(0.0, 2.0, 20_000, dtype=np.float64)
+    z_low = max(mu - 20.0 * sigma, 0.0)
+    z_high = mu + 20.0 * sigma
+    z_a: npt.NDArray[np.float64] = np.linspace(z_low, z_high, Z_A_LEN, dtype=np.float64)
     nz_a = np.exp(-((z_a - mu) ** 2) / sigma**2 / 2.0) / np.sqrt(2.0 * np.pi * sigma**2)
 
-    z_v = Ncm.Vector.new_array(npa_to_seq(z_a))
-    nz_v = Ncm.Vector.new_array(nz_a.tolist())
+    z_v = Ncm.Vector.new_array(z_a)
+    nz_v = Ncm.Vector.new_array(nz_a)
     dndz = Ncm.SplineCubicNotaknot.new_full(z_v, nz_v, True)
 
     magbias = mbias != 0.0
@@ -158,7 +160,6 @@ def fixture_nc_gal(
     for i in range(bias_nknots):
         nc_gal.orig_vparam_set(Nc.XcorLimberKernelGalVParams.BIAS, i, bias)
     nc_gal.orig_param_set(Nc.XcorLimberKernelGalSParams.MAG_BIAS, mbias)
-
     return nc_gal
 
 
@@ -196,11 +197,14 @@ def fixture_nc_weak_lensing(
     """Fixture for NumCosmo weak lensing tracer."""
     mu = request.param
     sigma = SRC_GAL_Z_SIGMA
-    z_a = np.linspace(0.0, 2.0, 20_000, dtype=np.float64)
+    z_low = mu - 10.0 * sigma
+    z_low = max(z_low, 0.0)
+    z_high = mu + 10.0 * sigma
+    z_a: npt.NDArray[np.float64] = np.linspace(z_low, z_high, Z_A_LEN, dtype=np.float64)
     nz_a = np.exp(-((z_a - mu) ** 2) / sigma**2 / 2.0) / np.sqrt(2.0 * np.pi * sigma**2)
 
-    z_v = Ncm.Vector.new_array(npa_to_seq(z_a))
-    nz_v = Ncm.Vector.new_array(nz_a.tolist())
+    z_v = Ncm.Vector.new_array(z_a)
+    nz_v = Ncm.Vector.new_array(nz_a)
     dndz = Ncm.SplineCubicNotaknot.new_full(z_v, nz_v, True)
 
     nc_wl = Nc.XcorLimberKernelWeakLensing.new(

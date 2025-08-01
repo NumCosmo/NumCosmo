@@ -28,35 +28,34 @@ experiment dictionary and the extra functions for the forecast.
 """
 
 from typing import cast
-from enum import Enum
+from enum import StrEnum, auto
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
-from numcosmo_py.helper import npa_to_seq
 from numcosmo_py.external.pyssc import pyssc as PySSC
 
 
-class JpasSSCType(str, Enum):
+class JpasSSCType(StrEnum):
     """J-Pas 2024 Super Sample Covariance types."""
 
-    NO_SSC = "no_ssc"
-    FULLSKY = "fullsky"
-    FULL = "full"
-    GUARANTEED = "guaranteed"
+    NO_SSC = auto()
+    FULLSKY = auto()
+    FULL = auto()
+    GUARANTEED = auto()
 
 
-class ClusterMassType(str, Enum):
+class ClusterMassType(StrEnum):
     """Mass-observable relation types."""
 
-    NODIST = "nodist"
-    ASCASO = "ascaso"
+    NODIST = auto()
+    ASCASO = auto()
 
 
-class ClusterRedshiftType(str, Enum):
+class ClusterRedshiftType(StrEnum):
     """Photoz types."""
 
-    NODIST = "nodist"
-    GAUSS = "gauss"
+    NODIST = auto()
+    GAUSS = auto()
 
 
 def create_zbins_kernels(
@@ -349,7 +348,11 @@ def create_cluster_redshift(
 
 
 def _set_mset_params(mset: Ncm.MSet, params: tuple[float, float, float]) -> None:
-    """Set the parameters for the mass model."""
+    """Set the parameters for the cosmology model.
+
+    :param mset: The mass model set.
+    :param params: The parameters for the cosmology model, (Omegac, w, sigma8).
+    """
     tf = Nc.TransferFuncEH()
     psml = Nc.PowspecMLTransfer.new(tf)
     psml.require_kmin(1.0e-6)
@@ -431,8 +434,8 @@ def generate_jpas_forecast_2024(
     )
     lnM_bins_knots = create_lnM_bins(lnM_min=lnM_min, lnM_max=lnM_max, nknots=lnMnknots)
 
-    z_bins_vec = Ncm.Vector.new_array(npa_to_seq(z_bins_knots))
-    lnM_bins_vec = Ncm.Vector.new_array(npa_to_seq(lnM_bins_knots))
+    z_bins_vec = Ncm.Vector.new_array(z_bins_knots)
+    lnM_bins_vec = Ncm.Vector.new_array(lnM_bins_knots)
 
     #   NCountsGauss
 

@@ -406,7 +406,7 @@ _nc_hipert_wkb_prepare_approx (NcHIPertWKB *wkb, NcmModel *model)
 }
 
 static gint
-_nc_hipert_wkb_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
+_nc_hipert_wkb_phase_f (sunrealtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
 /*  NcHIPertWKBArg *arg   = (NcHIPertWKBArg *) f_data; */
 /*  gdouble nu = 0.0, V = 0.0; */
@@ -428,7 +428,7 @@ _nc_hipert_wkb_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_da
 }
 
 static gint
-_nc_hipert_wkb_phase_J (realtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_wkb_phase_J (sunrealtype alpha, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertWKBArg *arg = (NcHIPertWKBArg *) jac_data;
   gdouble nu = 0.0, V = 0.0;

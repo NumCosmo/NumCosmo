@@ -17,9 +17,9 @@ subdir('misc')
 subdir('toeplitz')
 subdir('class')
 subdir('plc')
+subdir('lintegrate')
 
 ncm_sources = files(
-    'math/ncm_abc.c',
     'math/ncm_binsplit.c',
     'math/ncm_bootstrap.c',
     'math/ncm_c.c',
@@ -60,7 +60,6 @@ ncm_sources = files(
     'math/ncm_fit_state.c',
     'math/ncm_func_eval.c',
     'math/ncm_function_cache.c',
-    'math/ncm_hoaa.c',
     'math/ncm_integral1d.c',
     'math/ncm_integral1d_ptr.c',
     'math/ncm_integral_nd.c',
@@ -154,7 +153,6 @@ ncm_sources = files(
 ncm_sources_nogi = files()
 
 ncm_headers = files(
-    'math/ncm_abc.h',
     'math/ncm_binsplit.h',
     'math/ncm_bootstrap.h',
     'math/ncm_c.h',
@@ -195,7 +193,6 @@ ncm_headers = files(
     'math/ncm_fit_state.h',
     'math/ncm_func_eval.h',
     'math/ncm_function_cache.h',
-    'math/ncm_hoaa.h',
     'math/ncm_integral1d.h',
     'math/ncm_integral1d_ptr.h',
     'math/ncm_integral_nd.h',
@@ -299,7 +296,6 @@ ncm_headers_internal = files(
 )
 
 nc_headers = files(
-    'abc/nc_abc_cluster_ncount.h',
     'data/nc_data_bao.h',
     'data/nc_data_bao_a.h',
     'data/nc_data_bao_dhr_dar.h',
@@ -310,6 +306,7 @@ nc_headers = files(
     'data/nc_data_bao_empirical_fit.h',
     'data/nc_data_bao_empirical_fit_2d.h',
     'data/nc_data_bao_rdv.h',
+    'data/nc_data_bao_dvr_dtdh.h',
     'data/nc_data_cluster_ncount.h',
     'data/nc_data_cluster_ncounts_gauss.h',
     'data/nc_data_cluster_pseudo_counts.h',
@@ -330,10 +327,12 @@ nc_headers = files(
     'galaxy/nc_galaxy_sd_obs_redshift.h',
     'galaxy/nc_galaxy_sd_obs_redshift_spec.h',
     'galaxy/nc_galaxy_sd_obs_redshift_gauss.h',
+    'galaxy/nc_galaxy_sd_obs_redshift_pz.h',
     'galaxy/nc_galaxy_sd_true_redshift.h',
     'galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h',
     'galaxy/nc_galaxy_sd_shape.h',
     'galaxy/nc_galaxy_sd_shape_gauss.h',
+    'galaxy/nc_galaxy_sd_shape_gauss_hsc.h',
     'lss/nc_cluster_abundance.h',
     'lss/nc_cluster_mass.h',
     'lss/nc_cluster_mass_ascaso.h',
@@ -359,6 +358,7 @@ nc_headers = files(
     'lss/nc_halo_bias_tinker.h',
     'lss/nc_halo_mass_summary.h',
     'lss/nc_halo_cm_param.h',
+    'lss/nc_halo_cm_duffy08.h',
     'lss/nc_halo_cm_klypin11.h',
     'lss/nc_halo_position.h',
     'lss/nc_halo_density_profile.h',
@@ -464,7 +464,6 @@ nc_headers = files(
 )
 
 nc_sources = files(
-    'abc/nc_abc_cluster_ncount.c',
     'data/nc_data_bao.c',
     'data/nc_data_bao_a.c',
     'data/nc_data_bao_dhr_dar.c',
@@ -475,6 +474,7 @@ nc_sources = files(
     'data/nc_data_bao_empirical_fit.c',
     'data/nc_data_bao_empirical_fit_2d.c',
     'data/nc_data_bao_rdv.c',
+    'data/nc_data_bao_dvr_dtdh.c',
     'data/nc_data_cluster_ncount.c',
     'data/nc_data_cluster_ncounts_gauss.c',
     'data/nc_data_cluster_pseudo_counts.c',
@@ -495,10 +495,12 @@ nc_sources = files(
     'galaxy/nc_galaxy_sd_obs_redshift.c',
     'galaxy/nc_galaxy_sd_obs_redshift_spec.c',
     'galaxy/nc_galaxy_sd_obs_redshift_gauss.c',
+    'galaxy/nc_galaxy_sd_obs_redshift_pz.c',
     'galaxy/nc_galaxy_sd_true_redshift.c',
     'galaxy/nc_galaxy_sd_true_redshift_lsst_srd.c',
     'galaxy/nc_galaxy_sd_shape.c',
     'galaxy/nc_galaxy_sd_shape_gauss.c',
+    'galaxy/nc_galaxy_sd_shape_gauss_hsc.c',
     'lss/nc_cluster_abundance.c',
     'lss/nc_cluster_mass.c',
     'lss/nc_cluster_mass_ascaso.c',
@@ -524,6 +526,7 @@ nc_sources = files(
     'lss/nc_halo_bias_tinker.c',
     'lss/nc_halo_mass_summary.c',
     'lss/nc_halo_cm_param.c',
+    'lss/nc_halo_cm_duffy08.c',
     'lss/nc_halo_cm_klypin11.c',
     'lss/nc_halo_position.c',
     'lss/nc_halo_density_profile.c',
@@ -710,8 +713,9 @@ install_headers(
 
 sundials_inc = include_directories('sundials/include')
 libcuba_inc = include_directories('libcuba')
+lintegrate_inc = include_directories('lintegrate')
 
-libnumcosmo_dep = [
+libnumcosmo_dep_list = [
     mpi_c_dep,
     cfitsio_dep,
     libfyaml_dep,
@@ -756,19 +760,19 @@ libnumcosmo = library(
     install: true,
     # intl.lib is not compatible with SAFESEH
     link_args: [noseh_link_args],
-    include_directories: [configinc, sundials_inc, libcuba_inc, plc_inc],
+    include_directories: [configinc, sundials_inc, libcuba_inc, plc_inc, lintegrate_inc],
     # Planck likelihood code uses dlsym to load the Planck likelihood library
     # components. This requires linking with link_whole to ensure that the
     # symbols are available at runtime.
     link_whole: [libplc],
-    link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass],
-    dependencies: libnumcosmo_dep,
+    link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass, liblintegrate],
+    dependencies: libnumcosmo_dep_list,
     c_args: numcosmo_c_args,
 )
 
 libnumcosmo_dep = declare_dependency(
     link_with: libnumcosmo,
-    dependencies: libnumcosmo_dep,
+    dependencies: libnumcosmo_dep_list,
     sources: [
         ncm_enum_types[1],
         nc_enum_types[1],
@@ -779,7 +783,7 @@ libnumcosmo_dep = declare_dependency(
 # Generate pkg-config files
 # Code using NumCosmo frequently depends directly on gsl, glib, gobject, and gio, so we
 # include them in the Requires field.
-# This happends mostly because of inlining, but also because of the many macros defined
+# This happens mostly because of inlining, but also because of the many macros defined
 # in the glib headers.
 pkg.generate(
     libnumcosmo,
@@ -816,7 +820,7 @@ if enable_gir
         dependencies: libnumcosmo_dep,
         includes: 'GObject-2.0',
         install: true,
-        extra_args: ['-DNUMCOSMO_GIR_SCAN', '-U__OPTIMIZE__'],
+        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
     )
 
     nc_introspection_sources = [
@@ -841,7 +845,7 @@ if enable_gir
         dependencies: libnumcosmo_dep,
         includes: ['GObject-2.0', numcosmo_math_gir[0]],
         install: true,
-        extra_args: ['-DNUMCOSMO_GIR_SCAN', '-U__OPTIMIZE__'],
+        extra_args: ['-DNUMCOSMO_GIR_SCAN'],
     )
     if have_vala
         vapi_deps = [

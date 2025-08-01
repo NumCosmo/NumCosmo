@@ -223,7 +223,7 @@ _nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
   const gdouble h2    = h * h;
   const gdouble wm    = nc_hicosmo_Omega_m0 (cosmo) * h2;
   const gdouble wb    = nc_hicosmo_Omega_b0 (cosmo) * h2;
-  const gdouble wc    = nc_hicosmo_Omega_c0 (cosmo) * h2;
+  const gdouble wc    = wm - wb;
   const gdouble wb_wm = wb / wm; /* \frac{\Omega_{b0}}{\Omega_{m0}} */
   const gdouble wc_wm = wc / wm; /* \frac{\Omega_{c0}}{\Omega_{m0}} */
 

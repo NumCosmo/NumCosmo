@@ -259,8 +259,8 @@ _nc_hipert_boltzmann_std_init (NcHIPertBoltzmann *pb, NcHICosmo *cosmo)
   return;
 }
 
-static gint _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpointer user_data);
-static gint _nc_hipert_boltzmann_std_band_J (realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint _nc_hipert_boltzmann_std_step (sunrealtype lambda, N_Vector y, N_Vector ydot, gpointer user_data);
+static gint _nc_hipert_boltzmann_std_band_J (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
 static void
 _nc_hipert_boltzmann_std_set_opts (NcHIPertBoltzmann *pb)
@@ -442,7 +442,7 @@ nc_hipert_boltzmann_std_new (NcRecomb *recomb, guint lmax)
 }
 
 static gint
-_nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpointer user_data)
+_nc_hipert_boltzmann_std_step (sunrealtype lambda, N_Vector y, N_Vector ydot, gpointer user_data)
 {
   NcHIPertBoltzmann *pb  = NC_HIPERT_BOLTZMANN (user_data);
   NcHIPert *pert         = NC_HIPERT (pb);
@@ -621,7 +621,7 @@ _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpoin
 #define _NC_BAND_ELEM(J, i, j) SUN_BAND_ACCESS ((J), (gint) (i), (gint) (j))
 
 static gint
-_nc_hipert_boltzmann_std_band_J (realtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_boltzmann_std_band_J (sunrealtype lambda, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertBoltzmann *pb  = NC_HIPERT_BOLTZMANN (jac_data);
   NcHIPert *pert         = NC_HIPERT (pb);

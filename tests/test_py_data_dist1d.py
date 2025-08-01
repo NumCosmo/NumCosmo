@@ -36,10 +36,6 @@ Ncm.cfg_init()
 class DataDist1dTest(Ncm.DataDist1d):
     """Test class for NcmDataDist1D."""
 
-    def __init__(self, n_points: int):
-        """Constructor for DataDist1dTest."""
-        super().__init__(n_points=n_points)
-
     def do_dist1d_m2lnL_val(  # pylint: disable=arguments-differ
         self, _: Ncm.MSet, x: float
     ) -> float:
@@ -55,7 +51,6 @@ class DataDist1dTest(Ncm.DataDist1d):
 
 def test_data_dist1d_set_get_size():
     """Test NcmDataDist1D."""
-
     n_points = 10
     data_dist = DataDist1dTest(n_points=n_points)
     assert data_dist.get_size() == n_points
@@ -66,7 +61,6 @@ def test_data_dist1d_set_get_size():
 
 def test_data_dist1d_get_vector():
     """Test NcmDataDist1D."""
-
     n_points = 10
     data_dist = DataDist1dTest(n_points=n_points)
 
@@ -77,7 +71,6 @@ def test_data_dist1d_get_vector():
 
 def test_data_dist1d_resample():
     """Test NcmDataDist1D."""
-
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.empty_new()
     sv = Ncm.StatsVec.new(1, Ncm.StatsVecType.VAR, False)
@@ -99,7 +92,6 @@ def test_data_dist1d_resample():
 
 def test_data_dist1d_bootstrap():
     """Test NcmDataDist1D."""
-
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.empty_new()
     sv = Ncm.StatsVec.new(1, Ncm.StatsVecType.VAR, False)
@@ -128,7 +120,6 @@ def test_data_dist1d_bootstrap():
 
 def test_data_dist1d_serialize():
     """Test NcmDataDist1D."""
-
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.empty_new()
 

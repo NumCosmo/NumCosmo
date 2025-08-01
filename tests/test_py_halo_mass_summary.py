@@ -79,7 +79,7 @@ def test_halo_mass_summary_basic(
 ):
     """Test HaloMassSummary basic properties."""
     assert isinstance(halo_mass_summary, Nc.HaloMassSummary)
-    assert halo_mass_summary.concentration(cosmo) > 0.0
+    assert halo_mass_summary.concentration(cosmo, 0.0) > 0.0
     assert halo_mass_summary.mass() > 0.0
     assert halo_mass_summary.Delta(cosmo, 0.0) > 0.0
     assert halo_mass_summary.Delta(cosmo, 1.0) > 0.0
@@ -112,11 +112,11 @@ def test_halo_mass_summary_concentration(
         case Nc.HaloCMParam():
             cDelta = halo_mass_summary["cDelta"]
         case Nc.HaloCMKlypin11():
-            cDelta = halo_mass_summary.concentration(cosmo)
+            cDelta = halo_mass_summary.concentration(cosmo, 0.0)
         case _:
             raise ValueError("Invalid HaloMassSummary type")
 
-    assert_allclose(halo_mass_summary.concentration(cosmo), cDelta, rtol=1e-5)
+    assert_allclose(halo_mass_summary.concentration(cosmo, 0.0), cDelta, rtol=1e-5)
 
 
 def test_halo_mass_summary_klypin11(
@@ -128,9 +128,9 @@ def test_halo_mass_summary_klypin11(
             return
         case Nc.HaloCMKlypin11():
             halo_mass_summary["log10MDelta"] = 12.5
-            cDelta1 = halo_mass_summary.concentration(cosmo)
+            cDelta1 = halo_mass_summary.concentration(cosmo, 0.0)
             halo_mass_summary["log10MDelta"] = 13.5
-            cDelta2 = halo_mass_summary.concentration(cosmo)
+            cDelta2 = halo_mass_summary.concentration(cosmo, 0.0)
         case _:
             raise ValueError("Invalid HaloMassSummary type")
 

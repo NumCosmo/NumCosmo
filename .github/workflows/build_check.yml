@@ -109,7 +109,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu", "macos"]
-        python-version: ["3.10"]
+        python-version: ["3.11"]
         mpi: ["openmpi", "mpich"]
         exclude:
           - os: "macos"
@@ -136,7 +136,7 @@ jobs:
       - name: Cache Conda env
         uses: actions/cache@v4
         env:
-          CACHE_NUMBER: 0
+          CACHE_NUMBER: 1
         with:
           path: |
             ${{ env.CONDA }}/envs
@@ -145,10 +145,10 @@ jobs:
         id: cache
       - name: Update environment
         run: |
-          mamba env update -q -v -n numcosmo_developer -f devel_environment.yml
-          mamba remove -q -v -n numcosmo_developer openmpi
-          mamba install -q -v -n numcosmo_developer ${{ matrix.mpi }}
-          mamba install -q -v -n numcosmo_developer libfabric-devel
+          conda env update -q -v -n numcosmo_developer -f devel_environment.yml
+          conda remove -q -v -n numcosmo_developer openmpi
+          conda install -q -v -n numcosmo_developer ${{ matrix.mpi }}
+          conda install -q -v -n numcosmo_developer libfabric-devel
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Setting up NumCosmo
         run: |
@@ -175,7 +175,7 @@ jobs:
           flake8 numcosmo_py
       - name: Running mypy
         run: |
-          mypy -p numcosmo_py
+          mypy --exclude '.*meson.*|numcosmo_py/generate_stubs\.py' -p numcosmo_py
       #- name: Checking indentation
       #  run: |
       #    uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/*.c numcosmo/*.h
@@ -191,7 +191,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu"]
-        python-version: ["3.10"]
+        python-version: ["3.11"]
     defaults:
       run:
         shell: bash -el {0}
@@ -231,7 +231,7 @@ jobs:
           [[ -e $GCC_AR ]] && AR=$GCC_AR
           [[ -e $GCC_NM ]] && NM=$GCC_NM
           [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
-          meson setup build -Dbuildtype=debug -Db_coverage=true -Db_lto=false -Dnumcosmo_py=true -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
+          meson setup build -Dbuildtype=debug -Db_coverage=true -Db_lto=false -Dnumcosmo_py=true -Dfftw-planner=estimate -Dnumcosmo_debug=disabled --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
         run: |
           meson compile -C build

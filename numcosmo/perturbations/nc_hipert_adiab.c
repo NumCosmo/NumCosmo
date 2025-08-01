@@ -190,6 +190,11 @@ _nc_hipert_adiab_dispose (GObject *object)
   ncm_spline2d_clear (&pa->powspec_alpha);
   ncm_spline2d_clear (&pa->powspec_gamma);
 
+  ncm_ode_spline_clear (&pa->ctime_forward);
+  ncm_ode_spline_clear (&pa->ctime_backward);
+
+  ncm_model_ctrl_clear (&pa->model_ctrl);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_adiab_parent_class)->dispose (object);
 }
@@ -608,7 +613,7 @@ nc_hipert_adiab_eval_cosmic_time (NcHIPertAdiab *adiab, NcmModel *model, const g
 }
 
 /**
- * nc_hipert_adiab_eval_delta_critial:
+ * nc_hipert_adiab_eval_delta_critical:
  * @adiab: a #NcHIPertAdiab
  * @model: a #NcmModel
  * @tau: $\tau$
@@ -618,7 +623,7 @@ nc_hipert_adiab_eval_cosmic_time (NcHIPertAdiab *adiab, NcmModel *model, const g
  * Returns: the critical density contrast.
  */
 gdouble
-nc_hipert_adiab_eval_delta_critial (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau)
+nc_hipert_adiab_eval_delta_critical (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau)
 {
   const gdouble tau_hubble = nc_hipert_iadiab_eval_tau_hubble (NC_HIPERT_IADIAB (model), adiab->k);
   const gdouble t_hubble   = nc_hipert_adiab_eval_cosmic_time (adiab, model, -tau_hubble);
@@ -811,7 +816,7 @@ nc_hipert_adiab_prepare_spectrum (NcHIPertAdiab *adiab, NcmModel *model, GArray 
 
 static NcmPowspecSpline2d *
 _nc_hipert_adiab_eval_powspec_func (NcHIPertAdiab *adiab, NcmModel *model,
-                                    gdouble (*eval_from_state)(NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k))
+                                    gdouble (*eval_from_state) (NcHIPertAdiab *adiab, NcmModel *model, NcmCSQ1DState *state, const gdouble k))
 {
   if (!ncm_spline2d_is_init (adiab->powspec_alpha) || !ncm_spline2d_is_init (adiab->powspec_gamma))
   {
@@ -861,6 +866,8 @@ _nc_hipert_adiab_eval_powspec_func (NcHIPertAdiab *adiab, NcmModel *model,
       powspec = ncm_powspec_spline2d_new (powspec_spline);
 
       ncm_matrix_free (powspec_mat);
+      ncm_spline2d_free (powspec_spline);
+      ncm_vector_free (lnk_vec);
 
       return powspec;
     }

@@ -38,7 +38,6 @@ Ncm.cfg_init()
 
 def test_fit_bao_sdss_dr16() -> None:
     """Example fitting BAO SDSS DR16 likelihoods."""
-
     #
     #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm
     #
@@ -249,7 +248,7 @@ def test_fit_bao_sdss_dr16() -> None:
     #
     #
     esmcmc.start_run()
-    esmcmc.run_lre(500, 1.0e-3)
+    esmcmc.run(30)
     esmcmc.end_run()
 
     #

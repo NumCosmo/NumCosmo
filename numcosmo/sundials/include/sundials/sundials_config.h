@@ -1,43 +1,68 @@
 /* -----------------------------------------------------------------
  * Programmer(s): Cody J. Balos, Aaron Collier and Radu Serban @ LLNL
  * -----------------------------------------------------------------
- * LLNS/SMU Copyright Start
- * Copyright (c) 2002-2020, Southern Methodist University and
- * Lawrence Livermore National Security
- *
- * This work was performed under the auspices of the U.S. Department
- * of Energy by Southern Methodist University and Lawrence Livermore
- * National Laboratory under Contract DE-AC52-07NA27344.
- * Produced at Southern Methodist University and the Lawrence
- * Livermore National Laboratory.
- *
+ * SUNDIALS Copyright Start
+ * Copyright (c) 2002-2024, Lawrence Livermore National Security
+ * and Southern Methodist University.
  * All rights reserved.
- * For details, see the LICENSE file.
- * LLNS/SMU Copyright End
+ *
+ * See the top-level LICENSE and NOTICE files for details.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SUNDIALS Copyright End
  * -----------------------------------------------------------------
  * SUNDIALS configuration header file.
  * -----------------------------------------------------------------*/
 
-#include "sundials_export.h"
+#ifndef _SUNDIALS_CONFIG_H
+#define _SUNDIALS_CONFIG_H
+
+#include "sundials/sundials_export.h"
+
+/* Indicates that the function will not report an error via last_err,
+   a return code. In C++, it is just defined as noexcept. */
+#if defined(__cplusplus)
+#define SUNDIALS_NOEXCEPT noexcept
+#else
+#define SUNDIALS_NOEXCEPT
+#endif
+
+#ifndef SUNDIALS_DEPRECATED_MSG
+#  define SUNDIALS_DEPRECATED_MSG(msg) __attribute__ ((__deprecated__(msg)))
+#endif
+
+#ifndef SUNDIALS_DEPRECATED_EXPORT_MSG
+#  define SUNDIALS_DEPRECATED_EXPORT_MSG(msg) SUNDIALS_EXPORT SUNDIALS_DEPRECATED_MSG(msg)
+#endif
+
+#ifndef SUNDIALS_DEPRECATED_NO_EXPORT_MSG
+#  define SUNDIALS_DEPRECATED_NO_EXPORT_MSG(msg) SUNDIALS_NO_EXPORT SUNDIALS_DEPRECATED_MSG(msg)
+#endif
 
 /* ------------------------------------------------------------------
  * Define SUNDIALS version numbers
  * -----------------------------------------------------------------*/
 
 
-#define SUNDIALS_VERSION "5.5.0"
-#define SUNDIALS_VERSION_MAJOR 5
-#define SUNDIALS_VERSION_MINOR 5
-#define SUNDIALS_VERSION_PATCH 0
+#define SUNDIALS_VERSION "7.2.1"
+#define SUNDIALS_VERSION_MAJOR 7
+#define SUNDIALS_VERSION_MINOR 2
+#define SUNDIALS_VERSION_PATCH 1
 #define SUNDIALS_VERSION_LABEL ""
+#define SUNDIALS_GIT_VERSION ""
 
 
 /* ------------------------------------------------------------------
  * SUNDIALS build information
  * -----------------------------------------------------------------*/
 
+#define SUNDIALS_C_COMPILER_HAS_BUILTIN_EXPECT
+#define SUNDIALS_C_COMPILER_HAS_ATTRIBUTE_ASSUME
+/* #undef SUNDIALS_C_COMPILER_HAS_BUILTIN_ASSUME */
+/* #undef SUNDIALS_C_COMPILER_HAS_ASSUME */
+#define SUNDIALS_C_COMPILER_HAS_ATTRIBUTE_UNUSED
 
-/* Define precision of SUNDIALS data type 'realtype'
+/* Define precision of SUNDIALS data type 'sunrealtype'
  * Depending on the precision level, one of the following
  * three macros will be defined:
  *     #define SUNDIALS_SINGLE_PRECISION 1
@@ -59,24 +84,151 @@
  */
 #define SUNDIALS_INDEX_TYPE int64_t
 
-/* Use generic math functions
- * If it was decided that generic math functions can be used, then
- *     #define SUNDIALS_USE_GENERIC_MATH
- */
-#define SUNDIALS_USE_GENERIC_MATH
-
 /* Use POSIX timers if available.
  *     #define SUNDIALS_HAVE_POSIX_TIMERS
  */
 #define SUNDIALS_HAVE_POSIX_TIMERS
 
+/* BUILD CVODE with fused kernel functionality */
+/* #undef SUNDIALS_BUILD_PACKAGE_FUSED_KERNELS */
+
+/* BUILD SUNDIALS with monitoring functionalities */
+/* #undef SUNDIALS_BUILD_WITH_MONITORING */
+
+/* BUILD SUNDIALS with profiling functionalities */
+/* #undef SUNDIALS_BUILD_WITH_PROFILING */
+
+/* Enable error checking within SUNDIALS */
+/* #undef SUNDIALS_ENABLE_ERROR_CHECKS */
+
+/* BUILD SUNDIALS with logging functionalities */
+#define SUNDIALS_LOGGING_LEVEL 2
+
+/* Build metadata */
+#define SUN_C_COMPILER "GNU"
+#define SUN_C_COMPILER_VERSION "14.2.1"
+#define SUN_C_COMPILER_FLAGS ""
+
+#define SUN_CXX_COMPILER ""
+#define SUN_CXX_COMPILER_VERSION ""
+#define SUN_CXX_COMPILER_FLAGS ""
+
+#define SUN_FORTRAN_COMPILER ""
+#define SUN_FORTRAN_COMPILER_VERSION ""
+#define SUN_FORTRAN_COMPILER_FLAGS ""
+
+#define SUN_BUILD_TYPE "RelWithDebInfo"
+
+#define SUN_JOB_ID "20250330110449"
+#define SUN_JOB_START_TIME "20250330110449"
+
+#define SUN_TPL_LIST "OPENMP;BLAS_LAPACK"
+#define SUN_TPL_LIST_SIZE ""
+
+#define SUNDIALS_SPACK_VERSION ""
 
 /* ------------------------------------------------------------------
  * SUNDIALS TPL macros
  * -----------------------------------------------------------------*/
 
+/* Caliper */
+/* #undef SUNDIALS_CALIPER_ENABLED */
 
+/* Adiak */
+/* #undef SUNDIALS_ADIAK_ENABLED */
 
+/* Ginkgo */
+/* #undef SUNDIALS_GINKGO_ENABLED */
+#define SUN_GINKGO_VERSION ""
+
+/* HYPRE */
+/* #undef SUNDIALS_HYPRE_ENABLED */
+#define SUN_HYPRE_VERSION ""
+#define SUN_HYPRE_VERSION_MAJOR 
+#define SUN_HYPRE_VERSION_MINOR 
+#define SUN_HYPRE_VERSION_PATCH 
+
+/* KLU */
+/* #undef SUNDIALS_KLU_ENABLED */
+#define SUN_KLU_VERSION ""
+
+/* KOKKOS */
+/* #undef SUNDIALS_KOKKOS_ENABLED */
+#define SUN_KOKKOS_VERSION ""
+
+/* KOKKOS_KERNELS */
+/* #undef SUNDIALS_KOKKOS_KERNELS_ENABLED */
+#define SUN_KOKKOS_KERNELS_VERSION ""
+
+/* LAPACK */
+#define SUNDIALS_BLAS_LAPACK_ENABLED
+#define SUN_LAPACK_VERSION ""
+
+/* MAGMA */
+/* #undef SUNDIALS_MAGMA_ENABLED */
+#define SUN_MAGMA_VERSION ""
+
+/* MPI */
+#define SUN_MPI_C_COMPILER ""
+#define SUN_MPI_C_VERSION ""
+
+#define SUN_MPI_CXX_COMPILER ""
+#define SUN_MPI_CXX_VERSION ""
+
+#define SUN_MPI_FORTRAN_COMPILER ""
+#define SUN_MPI_FORTRAN_VERSION ""
+
+/* ONEMKL */
+/* #undef SUNDIALS_ONEMKL_ENABLED */
+#define SUN_ONEMKL_VERSION ""
+
+/* OpenMP */
+#define SUNDIALS_OPENMP_ENABLED
+#define SUN_OPENMP_VERSION ""
+
+/* PETSC */
+/* #undef SUNDIALS_PETSC_ENABLED */
+#define SUN_PETSC_VERSION ""
+
+/* PTHREADS */
+/* #undef SUNDIALS_PTHREADS_ENABLED */
+#define SUN_PTHREADS_VERSION ""
+
+/* RAJA */
+/* #undef SUNDIALS_RAJA_ENABLED */
+#define SUN_RAJA_VERSION ""
+
+/* SUPERLUDIST */
+/* #undef SUNDIALS_SUPERLUDIST_ENABLED */
+#define SUN_SUPERLUDIST_VERSION ""
+
+/* SUPERLUMT */
+/* #undef SUNDIALS_SUPERLUMT_ENABLED */
+#define SUN_SUPERLUMT_VERSION ""
+
+/* TRILLINOS */
+/* #undef SUNDIALS_TRILLINOS_ENABLED */
+#define SUN_TRILLINOS_VERSION ""
+
+/* XBRAID */
+/* #undef SUNDIALS_XBRAID_ENABLED */
+#define SUN_XBRAID_VERSION ""
+
+/* RAJA backends */
+/* #undef SUNDIALS_RAJA_BACKENDS_CUDA */
+/* #undef SUNDIALS_RAJA_BACKENDS_HIP */
+/* #undef SUNDIALS_RAJA_BACKENDS_SYCL */
+
+/* Ginkgo backends */
+/* #undef SUNDIALS_GINKGO_BACKENDS_CUDA */
+/* #undef SUNDIALS_GINKGO_BACKENDS_HIP */
+/* #undef SUNDIALS_GINKGO_BACKENDS_OMP */
+/* #undef SUNDIALS_GINKGO_BACKENDS_REF */
+/* #undef SUNDIALS_GINKGO_BACKENDS_SYCL */
+
+/* MAGMA backends */
+/* #undef SUNDIALS_MAGMA_BACKENDS_CUDA */
+/* #undef SUNDIALS_MAGMA_BACKENDS_HIP */
 
 /* Set if SUNDIALS is built with MPI support, then
  *     #define SUNDIALS_MPI_ENABLED 1
@@ -85,33 +237,45 @@
  */
 #define SUNDIALS_MPI_ENABLED 0
 
- /* SUPERLUMT threading type */
-/* #undef SUNDIALS_SUPERLUMT_THREAD_TYPE */
+/* oneMKL interface options */
+/* #undef SUNDIALS_ONEMKL_USE_GETRF_LOOP */
+/* #undef SUNDIALS_ONEMKL_USE_GETRS_LOOP */
 
- /* Trilinos with MPI is available, then
-  *    #define SUNDIALS_TRILINOS_HAVE_MPI
-  */
+/* SUPERLUMT threading type */
+#define SUNDIALS_SUPERLUMT_THREAD_TYPE "PTHREAD"
+
+/* Trilinos with MPI is available, then
+ *    #define SUNDIALS_TRILINOS_HAVE_MPI
+ */
 /* #undef SUNDIALS_TRILINOS_HAVE_MPI */
 
-/* CVODE should use fused kernels if utilizing
-  * the CUDA NVector.
-  */
-/* #undef SUNDIALS_BUILD_PACKAGE_FUSED_KERNELS */
 
+/* ------------------------------------------------------------------
+ * SUNDIALS language macros
+ * -----------------------------------------------------------------*/
 
-/* BUILD SUNDIALS with monitoring functionalities
-  * the CUDA NVector.
-  */
-/* #undef SUNDIALS_BUILD_WITH_MONITORING */
+/* CUDA */
+/* #undef SUNDIALS_CUDA_ENABLED */
+#define SUN_CUDA_VERSION ""
+#define SUN_CUDA_COMPILER ""
+#define SUN_CUDA_ARCHITECTURES ""
+
+/* HIP */
+/* #undef SUNDIALS_HIP_ENABLED */
+#define SUN_HIP_VERSION ""
+#define SUN_AMDGPU_TARGETS ""
+
+/* SYCL options */
+/* #undef SUNDIALS_SYCL_2020_UNSUPPORTED */
 
 
 /* ------------------------------------------------------------------
  * SUNDIALS modules enabled
  * -----------------------------------------------------------------*/
 
-
 #define SUNDIALS_ARKODE 1
 #define SUNDIALS_CVODE 1
+#define SUNDIALS_IDA 1
 #define SUNDIALS_NVECTOR_SERIAL 1
 #define SUNDIALS_NVECTOR_MANYVECTOR 1
 #define SUNDIALS_NVECTOR_OPENMP 1
@@ -125,63 +289,10 @@
 #define SUNDIALS_SUNLINSOL_SPFGMR 1
 #define SUNDIALS_SUNLINSOL_SPGMR 1
 #define SUNDIALS_SUNLINSOL_SPTFQMR 1
+#define SUNDIALS_SUNLINSOL_LAPACKBAND 1
+#define SUNDIALS_SUNLINSOL_LAPACKDENSE 1
 #define SUNDIALS_SUNNONLINSOL_NEWTON 1
 #define SUNDIALS_SUNNONLINSOL_FIXEDPOINT 1
 
 
-
-/* ------------------------------------------------------------------
- * SUNDIALS fortran configuration
- * -----------------------------------------------------------------*/
-
-
-/* FCMIX: Define Fortran name-mangling macro for C identifiers.
- * Depending on the inferred scheme, one of the following six
- * macros will be defined:
- *     #define SUNDIALS_F77_FUNC(name,NAME) name
- *     #define SUNDIALS_F77_FUNC(name,NAME) name ## _
- *     #define SUNDIALS_F77_FUNC(name,NAME) name ## __
- *     #define SUNDIALS_F77_FUNC(name,NAME) NAME
- *     #define SUNDIALS_F77_FUNC(name,NAME) NAME ## _
- *     #define SUNDIALS_F77_FUNC(name,NAME) NAME ## __
- */
-
-
-/* FCMIX: Define Fortran name-mangling macro for C identifiers
- *        which contain underscores.
- */
-
-
-/* FNVECTOR: Allow user to specify different MPI communicator
- * If it was found that the MPI implementation supports MPI_Comm_f2c, then
- *      #define SUNDIALS_MPI_COMM_F2C 1
- * otherwise
- *      #define SUNDIALS_MPI_COMM_F2C 0
- */
-#define SUNDIALS_MPI_COMM_F2C 1
-
-
-/* ------------------------------------------------------------------
- * SUNDIALS inline macros.
- * -----------------------------------------------------------------*/
-
-
-/* Mark SUNDIALS function as inline.
- */
-#ifndef SUNDIALS_CXX_INLINE
-#define SUNDIALS_CXX_INLINE inline
-#endif
-
-#ifndef SUNDIALS_C_INLINE
-#define SUNDIALS_C_INLINE inline
-#endif
-
-#ifdef __cplusplus
-#define SUNDIALS_INLINE SUNDIALS_CXX_INLINE
-#else
-#define SUNDIALS_INLINE SUNDIALS_C_INLINE
-#endif
-
-/* Mark SUNDIALS function as static inline.
- */
-#define SUNDIALS_STATIC_INLINE static SUNDIALS_INLINE
+#endif /* _SUNDIALS_CONFIG_H */

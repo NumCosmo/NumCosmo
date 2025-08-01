@@ -188,12 +188,20 @@ c_tests = [
         'sources': ['test_nc_hiqg_1d.c'],
     },
     {
+        'name': 'nc_data_bao_dtr_dhr',
+        'sources': ['test_nc_data_bao_dtr_dhr.c'],
+    },
+    {
         'name': 'nc_data_bao_rdv',
         'sources': ['test_nc_data_bao_rdv.c'],
     },
     {
         'name': 'nc_data_bao_dvdv',
         'sources': ['test_nc_data_bao_dvdv.c'],
+    },
+    {
+        'name': 'nc_data_bao_dvr_dtdh',
+        'sources': ['test_nc_data_bao_dvr_dtdh.c'],
     },
     {
         'name': 'nc_data_cluster_ncount',
@@ -220,6 +228,10 @@ c_tests = [
         'sources': ['test_nc_halo_position.c'],
     },
     {
+        'name': 'nc_data_hubble',
+        'sources': ['test_nc_data_hubble.c'],
+    },
+    {
         'name': 'nc_wl_surface_mass_density',
         'sources': ['test_nc_wl_surface_mass_density.c'],
     },
@@ -235,6 +247,7 @@ c_tests = [
     {
         'name': 'nc_data_cluster_wl',
         'sources': ['test_nc_data_cluster_wl.c'],
+        'timeout': 0,
     },
     {
         'name': 'nc_galaxy_wl_obs',
@@ -490,6 +503,10 @@ python_tests = [
         'name': 'cosmology',
         'source': 'test_cosmology.py',
     },
+    {
+        'name': 'py_numcosmo_py',
+        'source': 'test_py_numcosmo_py.py',
+    },
 ]
 
 if mpi_c_dep.found()
@@ -533,13 +550,14 @@ if python_astropy_scipy.found()
         {
             'name': 'sky_match',
             'source': 'test_sky_match.py',
+            'timeout': 0,
         },
     ]
 endif
 
 python_typer = python_module.find_installation(
     'python3',
-    modules: ['typer', 'rich'],
+    modules: ['typer', 'rich', 'pydantic', 'tabulate'],
     required: false,
 )
 
@@ -548,6 +566,15 @@ if python_typer.found()
         {
             'name': 'py_numcosmo_app',
             'source': 'test_py_numcosmo_app.py',
+            'timeout': 0,
+        },
+        {
+            'name': 'py_cluster_wl_app',
+            'source': 'test_py_cluster_wl_app.py',
+        },
+        {
+            'name': 'py_generate',
+            'source': 'test_py_generate.py',
             'timeout': 0,
         },
     ]
@@ -577,8 +604,29 @@ if python_pyccl.found()
             'timeout': 0,
         },
         {
+            'name': 'py_concentration_mass_relations',
+            'source': 'test_py_concentration_mass_relations.py',
+            'timeout': 0,
+        },
+        {
             'name': 'py_xcor',
             'source': 'test_py_xcor.py',
+            'timeout': 0,
+        },
+    ]
+endif
+
+python_getdist = python_module.find_installation(
+    'python3',
+    modules: ['getdist'],
+    required: false,
+)
+
+if python_getdist.found()
+    python_tests += [
+        {
+            'name': 'plotting',
+            'source': 'test_plotting.py',
             'timeout': 0,
         },
     ]

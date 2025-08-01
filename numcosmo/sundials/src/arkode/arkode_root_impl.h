@@ -2,7 +2,7 @@
  * Programmer(s): Daniel R. Reynolds @ SMU
  *---------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2020, Lawrence Livermore National Security
+ * Copyright (c) 2002-2024, Lawrence Livermore National Security
  * and Southern Methodist University.
  * All rights reserved.
  *
@@ -11,34 +11,32 @@
  * SPDX-License-Identifier: BSD-3-Clause
  * SUNDIALS Copyright End
  *---------------------------------------------------------------
- * Implementation header file for ARKode's root-finding (in time)
+ * Implementation header file for ARKODE's root-finding (in time)
  * utility.
  *--------------------------------------------------------------*/
 
 #ifndef _ARKODE_ROOT_IMPL_H
 #define _ARKODE_ROOT_IMPL_H
 
-#include <stdarg.h>
 #include <arkode/arkode.h>
+#include <stdarg.h>
 
-#ifdef __cplusplus  /* wrapper to enable C++ usage */
+#ifdef __cplusplus /* wrapper to enable C++ usage */
 extern "C" {
 #endif
 
-
 /*===============================================================
-  ARKode Root-finding constants
+  ARKODE Root-finding constants
   ===============================================================*/
 
-#define ARK_ROOT_LRW   5
-#define ARK_ROOT_LIW  12   /* int, ptr, etc */
+#define ARK_ROOT_LRW 5
+#define ARK_ROOT_LIW 12
 
 /* Numeric constants */
-#define HUND   RCONST(100.0)    /* real 100.0   */
-
+#define HUND SUN_RCONST(100.0)
 
 /*===============================================================
-  ARKode Root-finding Data Structure
+  ARKODE Root-finding Data Structure
   ===============================================================*/
 
 /*---------------------------------------------------------------
@@ -46,43 +44,41 @@ extern "C" {
   -----------------------------------------------------------------
   The type ARKodeRootMem is type pointer to struct
   ARKodeRootMemRec.  This structure contains data pertaining to
-  the use of root-finding capabilities in ARKode.
+  the use of root-finding capabilities in ARKODE.
   ---------------------------------------------------------------*/
-typedef struct ARKodeRootMemRec {
+typedef struct ARKodeRootMemRec
+{
+  ARKRootFn gfun;          /* function g for roots sought                  */
+  int nrtfn;               /* number of components of g                    */
+  int* iroots;             /* array for root information                   */
+  int* rootdir;            /* array specifying direction of zero-crossing  */
+  sunrealtype tlo;         /* nearest endpoint of interval in root search  */
+  sunrealtype thi;         /* farthest endpoint of interval in root search */
+  sunrealtype trout;       /* t value returned by rootfinding routine      */
+  sunrealtype* glo;        /* saved array of g values at t = tlo           */
+  sunrealtype* ghi;        /* saved array of g values at t = thi           */
+  sunrealtype* grout;      /* array of g values at t = trout               */
+  sunrealtype toutc;       /* copy of tout (if NORMAL mode)                */
+  sunrealtype ttol;        /* tolerance on root location                   */
+  int taskc;               /* copy of parameter itask                      */
+  int irfnd;               /* flag showing whether last step had a root    */
+  long int nge;            /* counter for g evaluations                    */
+  sunbooleantype* gactive; /* array with active/inactive event functions   */
+  int mxgnull;             /* num. warning messages about possible g==0    */
+  void* root_data;         /* pointer to user_data                         */
 
-  ARKRootFn    gfun;        /* function g for roots sought                  */
-  int          nrtfn;       /* number of components of g                    */
-  int         *iroots;      /* array for root information                   */
-  int         *rootdir;     /* array specifying direction of zero-crossing  */
-  realtype     tlo;         /* nearest endpoint of interval in root search  */
-  realtype     thi;         /* farthest endpoint of interval in root search */
-  realtype     trout;       /* t value returned by rootfinding routine      */
-  realtype    *glo;         /* saved array of g values at t = tlo           */
-  realtype    *ghi;         /* saved array of g values at t = thi           */
-  realtype    *grout;       /* array of g values at t = trout               */
-  realtype     toutc;       /* copy of tout (if NORMAL mode)                */
-  realtype     ttol;        /* tolerance on root location                   */
-  int          taskc;       /* copy of parameter itask                      */
-  int          irfnd;       /* flag showing whether last step had a root    */
-  long int     nge;         /* counter for g evaluations                    */
-  booleantype *gactive;     /* array with active/inactive event functions   */
-  int          mxgnull;     /* num. warning messages about possible g==0    */
-  void        *root_data;   /* pointer to user_data                         */
-
-} *ARKodeRootMem;
-
+}* ARKodeRootMem;
 
 /*===============================================================
-  ARKode Root-finding Routines
+  ARKODE Root-finding Routines
 ===============================================================*/
 
 int arkRootFree(void* arkode_mem);
-int arkPrintRootMem(void* arkode_mem, FILE *outfile);
+int arkPrintRootMem(void* arkode_mem, FILE* outfile);
 int arkRootCheck1(void* arkode_mem);
 int arkRootCheck2(void* arkode_mem);
 int arkRootCheck3(void* arkode_mem);
 int arkRootfind(void* arkode_mem);
-
 
 #ifdef __cplusplus
 }

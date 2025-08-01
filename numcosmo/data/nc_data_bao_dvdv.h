@@ -36,29 +36,8 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_DATA_BAO_DVDV             (nc_data_bao_dvdv_get_type ())
-#define NC_DATA_BAO_DVDV(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_BAO_DVDV, NcDataBaoDVDV))
-#define NC_DATA_BAO_DVDV_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_BAO_DVDV, NcDataBaoDVDVClass))
-#define NC_IS_DATA_BAO_DVDV(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_DATA_BAO_DVDV))
-#define NC_IS_DATA_BAO_DVDV_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_BAO_DVDV))
-#define NC_DATA_BAO_DVDV_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_BAO_DVDV, NcDataBaoDVDVClass))
 
-typedef struct _NcDataBaoDVDVClass NcDataBaoDVDVClass;
-typedef struct _NcDataBaoDVDV NcDataBaoDVDV;
-
-struct _NcDataBaoDVDVClass
-{
-  /*< private >*/
-  NcmDataGaussDiagClass parent_class;
-};
-
-struct _NcDataBaoDVDV
-{
-  /*< private >*/
-  NcmDataGaussDiag parent_instance;
-  NcDistance *dist;
-};
-
-GType nc_data_bao_dvdv_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcDataBaoDVDV, nc_data_bao_dvdv, NC, DATA_BAO_DVDV, NcmDataGaussDiag)
 
 NcDataBaoDVDV *nc_data_bao_dvdv_new_from_file (const gchar *filename);
 NcDataBaoDVDV *nc_data_bao_dvdv_new_from_id (NcDistance *dist, NcDataBaoId id);

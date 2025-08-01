@@ -24,7 +24,7 @@
 """NumCosmo APP subcommand run the ESMCMC algorithm."""
 
 import dataclasses
-from enum import Enum
+from enum import StrEnum, auto
 from pathlib import Path
 from typing import Optional, Annotated, Union
 
@@ -38,7 +38,7 @@ from ..interpolation.stats_dist import (
 from .run_fit import RunCommonOptions
 
 
-class IniSampler(str, Enum):
+class IniSampler(StrEnum):
     """Initial sampler to use for the MCMC."""
 
     GAUSS_MSET = "gauss-mset"
@@ -46,12 +46,12 @@ class IniSampler(str, Enum):
     FROM_CATALOG = "from-catalog"
 
 
-class Parallelization(str, Enum):
+class Parallelization(StrEnum):
     """Parallel sampler to use for the MCMC."""
 
-    NONE = "none"
-    MPI = "mpi"
-    THREADS = "threads"
+    NONE = auto()
+    MPI = auto()
+    THREADS = auto()
 
 
 @dataclasses.dataclass(kw_only=True)

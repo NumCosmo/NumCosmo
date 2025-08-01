@@ -117,6 +117,7 @@
 #include <numcosmo/lss/nc_halo_density_profile_hernquist.h>
 #include <numcosmo/lss/nc_halo_mass_summary.h>
 #include <numcosmo/lss/nc_halo_cm_param.h>
+#include <numcosmo/lss/nc_halo_cm_duffy08.h>
 #include <numcosmo/lss/nc_halo_cm_klypin11.h>
 #include <numcosmo/lss/nc_galaxy_acf.h>
 #include <numcosmo/lss/nc_multiplicity_func.h>
@@ -164,10 +165,12 @@
 #include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift_spec.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift_gauss.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift_pz.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_true_redshift.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape_gauss.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_shape_gauss_hsc.h>
 
 /* Observable data */
 #include <numcosmo/data/nc_data_snia.h>
@@ -184,6 +187,7 @@
 #include <numcosmo/data/nc_data_bao_dhr_dar.h>
 #include <numcosmo/data/nc_data_bao_dtr_dhr.h>
 #include <numcosmo/data/nc_data_bao_dmr_hr.h>
+#include <numcosmo/data/nc_data_bao_dvr_dtdh.h>
 #include <numcosmo/data/nc_data_bao.h>
 #include <numcosmo/data/nc_data_cmb_dist_priors.h>
 #include <numcosmo/data/nc_data_cmb_shift_param.h>
@@ -194,9 +198,6 @@
 #include <numcosmo/data/nc_data_cluster_wl.h>
 #include <numcosmo/data/nc_data_planck_lkl.h>
 #include <numcosmo/data/nc_data_xcor.h>
-
-/* ABC */
-#include <numcosmo/abc/nc_abc_cluster_ncount.h>
 
 /* Cross-correlations */
 #include <numcosmo/xcor/nc_xcor.h>
