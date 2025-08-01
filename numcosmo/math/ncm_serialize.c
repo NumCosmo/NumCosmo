@@ -86,6 +86,7 @@ struct _NcmSerialize
   GRegex *parse_obj_regex;
   NcmSerializeOpt opts;
   guint autosave_count;
+  GPtrArray *dangling_anchors; /* For YAML anchors */
 };
 
 G_DEFINE_TYPE (NcmSerialize, ncm_serialize, G_TYPE_OBJECT)
@@ -105,9 +106,12 @@ ncm_serialize_init (NcmSerialize *ser)
   ser->saved_name_ser = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free,
                                                (GDestroyNotify) & g_variant_unref);
 
-  ser->is_named_regex  = g_regex_new ("^\\s*([A-Za-z][A-Za-z0-9\\+\\-\\_]+)\\s*\\[([A-Za-z0-9\\:]+)\\]\\s*$", 0, 0, &error);
-  ser->parse_obj_regex = g_regex_new ("^\\s*([A-Za-z][A-Za-z0-9\\+\\-\\_]+\\s*(?:\\[[A-Za-z0-9\\:]+\\])?)\\s*([\\{]?.*[\\}]?)\\s*$", 0, 0, &error);
-  ser->autosave_count  = 0;
+  ser->is_named_regex   = g_regex_new ("^\\s*([A-Za-z][A-Za-z0-9\\+\\-\\_]+)\\s*\\[([A-Za-z0-9\\:]+)\\]\\s*$", 0, 0, &error);
+  ser->parse_obj_regex  = g_regex_new ("^\\s*([A-Za-z][A-Za-z0-9\\+\\-\\_]+\\s*(?:\\[[A-Za-z0-9\\:]+\\])?)\\s*([\\{]?.*[\\}]?)\\s*$", 0, 0, &error);
+  ser->autosave_count   = 0;
+  ser->dangling_anchors = g_ptr_array_new ();
+
+  g_ptr_array_set_free_func (ser->dangling_anchors, (GDestroyNotify) g_free);
 }
 
 static void
@@ -165,6 +169,8 @@ _ncm_serialize_finalize (GObject *object)
 
   g_regex_unref (ser->is_named_regex);
   g_regex_unref (ser->parse_obj_regex);
+
+  g_ptr_array_unref (ser->dangling_anchors);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_serialize_parent_class)->finalize (object);
@@ -1573,6 +1579,8 @@ ncm_serialize_array_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 
     fy_document_destroy (doc);
 
+    g_ptr_array_set_size (ser->dangling_anchors, 0);
+
     return array;
   }
 
@@ -1637,6 +1645,8 @@ ncm_serialize_dict_str_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
     }
 
     fy_document_destroy (doc);
+
+    g_ptr_array_set_size (ser->dangling_anchors, 0);
 
     return dict;
   }
@@ -1710,6 +1720,8 @@ ncm_serialize_dict_int_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 
     fy_document_destroy (doc);
 
+    g_ptr_array_set_size (ser->dangling_anchors, 0);
+
     return dict;
   }
 
@@ -1780,6 +1792,8 @@ ncm_serialize_var_dict_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
     }
 
     fy_document_destroy (doc);
+
+    g_ptr_array_set_size (ser->dangling_anchors, 0);
 
     return dict;
   }
@@ -2955,6 +2969,8 @@ ncm_serialize_variant_to_yaml (NcmSerialize *ser, GVariant *var_obj)
     yaml = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
     fy_document_destroy (doc);
 
+    g_ptr_array_set_size (ser->dangling_anchors, 0);
+
     return yaml;
   }
 #else
@@ -3017,9 +3033,11 @@ _ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVarian
 
     if (anchor)
     {
-      gint rc = fy_node_set_anchor_copy (root_key, anchor, FY_NT);
+      gchar *dup_anchor = g_strdup (anchor);
+      gint rc           = fy_node_set_anchor (root_key, dup_anchor, FY_NT);
 
       g_assert (rc == 0);
+      g_ptr_array_add (ser->dangling_anchors, dup_anchor);
     }
 
     fy_node_mapping_append (root,
@@ -3253,6 +3271,8 @@ ncm_serialize_array_to_yaml (NcmSerialize *ser, NcmObjArray *oa)
   yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
   fy_document_destroy (doc);
 
+  g_ptr_array_set_size (ser->dangling_anchors, 0);
+
   return yaml_str;
 
 #else /* HAVE_LIBFYAML */
@@ -3299,6 +3319,8 @@ ncm_serialize_dict_str_to_yaml (NcmSerialize *ser, NcmObjDictStr *ods)
   fy_document_set_root (doc, root);
   yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
   fy_document_destroy (doc);
+
+  g_ptr_array_set_size (ser->dangling_anchors, 0);
 
   return yaml_str;
 
@@ -3348,6 +3370,8 @@ ncm_serialize_dict_int_to_yaml (NcmSerialize *ser, NcmObjDictInt *odi)
   yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
   fy_document_destroy (doc);
 
+  g_ptr_array_set_size (ser->dangling_anchors, 0);
+
   return yaml_str;
 
 #else /* HAVE_LIBFYAML */
@@ -3391,6 +3415,8 @@ ncm_serialize_var_dict_to_yaml (NcmSerialize *ser, NcmVarDict *dict)
   fy_document_set_root (doc, root);
   yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
   fy_document_destroy (doc);
+
+  g_ptr_array_set_size (ser->dangling_anchors, 0);
 
   return yaml_str;
 
