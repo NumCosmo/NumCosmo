@@ -44,6 +44,7 @@ def fixture_adiab_qgw():
 
     adiab.set_ti(-300.0)
     adiab.set_tf(-10.0)
+    adiab.set_reltol(1.0e-9)
 
     return adiab, Nc.HICosmoQGW()
 
@@ -190,19 +191,19 @@ def _compute_analytical_solution_qgw(adiab_qgw, t_adiab):
     cs2 = w
     Omegaw = qgw.props.Omegaw
     sqrtOmegaw = np.sqrt(Omegaw)
-    norma = np.sqrt(np.pi * cs2 / (6.0 * (1.0 + 3.0 * w) * (1.0 + w) * sqrtOmegaw))
+    norma = np.sqrt(np.pi * cs2 / (2.0 * (1.0 + 3.0 * w) * (1.0 + w) * sqrtOmegaw))
     w = qgw.props.w
     alpha = 3.0 * (1.0 - w) / (2.0 * (1.0 + 3.0 * w))
     x = qgw.eval_x(t_adiab)
     E = np.abs(qgw.eval_hubble(t_adiab))
     eta = 2.0 * x / (E * (1.0 + 3.0 * w))
     cs = np.sqrt(w)
-    csketa = cs * adiab.get_k() * eta
-    hfnormm = norma * (2.0 / ((1.0 + 3.0 * w) * eta * sqrtOmegaw)) ** (alpha)
+    cs_k_eta = cs * adiab.get_k() * eta
+    hf_norm = norma * (2.0 / ((1.0 + 3.0 * w) * eta * sqrtOmegaw)) ** (alpha)
 
     # Analytical solution for phi and Pphi
-    theo_phi = hfnormm * hankel1e(alpha, csketa)
-    theo_Pphi = (csketa / hfnormm) * 0.25 * math.pi * hankel1e(1.0 + alpha, csketa)
+    theo_phi = hf_norm * hankel1e(alpha, cs_k_eta)
+    theo_Pphi = (cs_k_eta / hf_norm) * 0.25 * math.pi * hankel1e(1.0 + alpha, cs_k_eta)
 
     return theo_phi, theo_Pphi
 
@@ -654,7 +655,7 @@ def test_spectrum_zeta_qgw(adiab_qgw):
             theo_phi, _ = _compute_analytical_solution_qgw(adiab_qgw, t)
             assert_allclose(
                 Pzeta.eval(qgw, t, k),
-                np.abs(theo_phi * unit(qgw)) ** 2,
+                np.abs(theo_phi * unit(qgw)) ** 2 / (2.0 * np.pi**2),
                 rtol=1.0e-7,
             )
 
@@ -690,7 +691,7 @@ def test_spectrum_zeta_vexp(adiab_vexp):
             phi2 = 0.5 * adiab.eval_at(vexp, t, state).get_J()[0]
             assert_allclose(
                 Pzeta.eval(vexp, t, k),
-                phi2 * unit(vexp) ** 2,
+                phi2 * unit(vexp) ** 2 / (2.0 * np.pi**2),
                 rtol=1.0e-7,
             )
 
@@ -724,7 +725,8 @@ def test_spectrum_Psi_qgw(adiab_qgw):
             _, theo_Pphi = _compute_analytical_solution_qgw(adiab_qgw, t)
             assert_allclose(
                 PPsi.eval(qgw, t, k),
-                np.abs(theo_Pphi * unit(qgw) * p2Psi(qgw, t, k)) ** 2,
+                np.abs(theo_Pphi * unit(qgw) * p2Psi(qgw, t, k)) ** 2
+                / (2.0 * np.pi**2),
                 rtol=1.0e-7,
             )
 
@@ -755,9 +757,16 @@ def test_spectrum_drho_qgw(adiab_qgw):
     for k in k_a:
         adiab.set_k(k)
         for t in t_a:
-            _, theo_Pphi = _compute_analytical_solution_qgw(adiab_qgw, t)
-            assert_allclose(
-                Pdrho.eval(qgw, t, k),
-                np.abs(theo_Pphi * unit(qgw) * p2drho(qgw, t, k)) ** 2,
-                rtol=1.0e-7,
+            theo_phi, theo_Pphi = _compute_analytical_solution_qgw(adiab_qgw, t)
+            phi2 = np.abs(theo_phi) ** 2
+            Pphi2 = np.abs(theo_Pphi) ** 2
+            cov = 2.0 * np.abs(np.conj(theo_phi) * theo_Pphi)
+            u1 = unit(qgw)
+            pf = p2drho(qgw, t, k)
+
+            theo_drho = (
+                (Pphi2 * pf**2 + phi2 * 9.0 + 3.0 * pf * cov) * u1**2 / (2.0 * np.pi**2)
             )
+            num_drho = Pdrho.eval(qgw, t, k)
+
+            assert_allclose(num_drho, theo_drho, rtol=1.0e-7)
