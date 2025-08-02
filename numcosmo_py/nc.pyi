@@ -1,5 +1,10 @@
+"""Stubs for the GI module: NumCosmo."""
+
+from __future__ import annotations
+
 import typing
 
+import numpy as np
 import numpy.typing as npt
 
 from gi.repository import GLib

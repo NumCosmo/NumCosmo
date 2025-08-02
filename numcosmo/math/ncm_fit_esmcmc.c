@@ -603,7 +603,7 @@ ncm_fit_esmcmc_class_init (NcmFitESMCMCClass *klass)
                                    PROP_MIN_RUNS,
                                    g_param_spec_uint ("min-runs",
                                                       NULL,
-                                                      "Minumum number of runs",
+                                                      "Minimum number of runs",
                                                       1, G_MAXUINT, 10,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,

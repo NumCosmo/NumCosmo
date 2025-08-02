@@ -512,15 +512,15 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
   /**
    * NcmFftlog:name:
    *
-   * FFTW Plan wisdown's name to perform the transformation.
+   * FFTW Plan wisdom's name to perform the transformation.
    *
    */
   g_object_class_install_property (object_class,
                                    PROP_NAME,
                                    g_param_spec_string ("name",
                                                         NULL,
-                                                        "FFTW Plan wisdown name",
-                                                        "fftlog_default_wisdown",
+                                                        "FFTW Plan wisdom name",
+                                                        "fftlog_default_wisdom",
                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**

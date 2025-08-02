@@ -390,9 +390,13 @@ def _build(
 
     imports += [f"from gi.repository import {n}" for n in sorted(ns)]
 
+    module_docstring = f"Stubs for the GI module: {namespace}."
+
     return (
+        f'"""{module_docstring}"""\n\n' + "from __future__ import annotations" + "\n\n"
         "import typing"
         + "\n\n"
+        + "import numpy as np\n"
         + "import numpy.typing as npt"
         + "\n\n"
         + "\n".join(imports)
@@ -653,7 +657,7 @@ def _gi_build_stub(
             ret += f"{name} = ... # FIXME Constant\n"
 
     if ret and constants:
-        ret += "\n"
+        ret += "\n\n"
 
     # Functions
     for name in sorted(functions):
