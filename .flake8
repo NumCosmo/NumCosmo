@@ -1,5 +1,5 @@
 [flake8]
 max-line-length = 88
 extend-ignore = E203, E501
-per-file-ignores = 
-    *.pyi: E301 E302 E305
+per-file-ignores =
+    *.pyi: D100,D101,D102,D103,D104,D105,D106,D107

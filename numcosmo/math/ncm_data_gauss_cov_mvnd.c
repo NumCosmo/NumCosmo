@@ -296,7 +296,7 @@ ncm_data_gauss_cov_mvnd_gen (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, gpoi
 
       if (N[0] > maxiter)
       {
-        g_error ("ncm_data_gauss_cov_mvnd_gen: too many interations, cannot find a valid realization!");
+        g_error ("ncm_data_gauss_cov_mvnd_gen: too many iterations, cannot find a valid realization!");
         break;
       }
     } while (!bound (obj, y));

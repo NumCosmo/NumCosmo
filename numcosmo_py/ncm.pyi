@@ -1,10 +1,5 @@
-"""Stubs for the GI module: NumCosmoMath."""
-
-from __future__ import annotations
-
 import typing
 
-import numpy as np
 import numpy.typing as npt
 
 from gi.repository import GLib
@@ -14,30 +9,30 @@ T = typing.TypeVar("T")
 
 BOOTSTRAP_RNG_NAME: str = r"bootstrap"
 CFG_DATA_DIR_ENV: str = r"NUMCOSMO_DATA_DIR"
-COMPLEX_ZERO: float = 0.0
+COMPLEX_ZERO: float = 0
 DATA_RESAMPLE_RNG_NAME: str = r"data_resample"
-DEFAULT_PRECISION: float = 0.0
+DEFAULT_PRECISION: float = 0
 DTUPLE2_TYPE: str = r"(dd)"
 DTUPLE3_TYPE: str = r"(ddd)"
-FIT_DEFAULT_M2LNL_ABSTOL: float = 0.0
-FIT_DEFAULT_M2LNL_RELTOL: float = 0.0
+FIT_DEFAULT_M2LNL_ABSTOL: float = 0
+FIT_DEFAULT_M2LNL_RELTOL: float = 0
 FIT_DEFAULT_MAXITER: int = 100000
-FIT_DEFAULT_PARAMS_RELTOL: float = 1e-05
+FIT_DEFAULT_PARAMS_RELTOL: float = 1.0000000000000001e-05
 FIT_ESMCMC_M2LNL_ID: int = 0
-FIT_ESMCMC_MIN_SYNC_INTERVAL: float = 10.0
+FIT_ESMCMC_MIN_SYNC_INTERVAL: float = 10
 FIT_ESMCMC_MPI_IN_LEN: int = 3
 FIT_ESMCMC_MPI_OUT_LEN: int = 1
-FIT_MCMC_MIN_SYNC_INTERVAL: float = 10.0
-FIT_MC_MIN_SYNC_INTERVAL: float = 10.0
-INTEGRAL1D_DEFAULT_ABSTOL: float = 0.0
+FIT_MCMC_MIN_SYNC_INTERVAL: float = 10
+FIT_MC_MIN_SYNC_INTERVAL: float = 10
+INTEGRAL1D_DEFAULT_ABSTOL: float = 0
 INTEGRAL1D_DEFAULT_ALG: int = 6
 INTEGRAL1D_DEFAULT_PARTITION: int = 100000
-INTEGRAL1D_DEFAULT_RELTOL: float = 0.0
-INTEGRAL_ABS_ERROR: float = 0.0
+INTEGRAL1D_DEFAULT_RELTOL: float = 0
+INTEGRAL_ABS_ERROR: float = 0
 INTEGRAL_ALG: int = 6
-INTEGRAL_ERROR: float = 0.0
-INTEGRAL_ND_DEFAULT_ABSTOL: float = 0.0
-INTEGRAL_ND_DEFAULT_RELTOL: float = 0.0
+INTEGRAL_ERROR: float = 0
+INTEGRAL_ND_DEFAULT_ABSTOL: float = 0
+INTEGRAL_ND_DEFAULT_RELTOL: float = 0
 INTEGRAL_PARTITION: int = 100000
 MODEL_CLASS_IMPL_ALL: int = 18446744073709551615
 MODEL_MAX_STATES: int = 10
@@ -63,8 +58,8 @@ MSET_CATALOG_RTYPE_UNDEFINED: str = r"undefined-run"
 MSET_CATALOG_WEIGHTED_LABEL: str = r"WEIGHTED"
 MSET_INIT_MARRAY: int = 32
 MSET_MAX_STACKSIZE: int = 1000
-ODE_SPLINE_DEFAULT_ABSTOL: float = 0.0
-ODE_SPLINE_MIN_STEP: float = 0.0
+ODE_SPLINE_DEFAULT_ABSTOL: float = 0
+ODE_SPLINE_MIN_STEP: float = 0
 POWSPEC_CORR3D_DEFAULT_SIZE: int = 200
 POWSPEC_FILTER_DEFAULT_SIZE: int = 200
 POWSPEC_SPHERE_PROJ_DEFAULT_SIZE: int = 200
@@ -83,13 +78,13 @@ SERIALIZE_PROPERTY_TYPE: str = r"{sv}"
 SERIALIZE_STRV_TYPE: str = r"as"
 SERIALIZE_VAR_DICT_TYPE: str = r"a{sv}"
 SERIALIZE_VECTOR_TYPE: str = r"ad"
-SF_SPHERICAL_HARMONICS_ARRAY_DEFAULT_ABSTOL: float = 0.0
-SF_SPHERICAL_HARMONICS_DEFAULT_ABSTOL: float = 0.0
-SF_SPHERICAL_HARMONICS_EPS: float = 0.0
+SF_SPHERICAL_HARMONICS_ARRAY_DEFAULT_ABSTOL: float = 0
+SF_SPHERICAL_HARMONICS_DEFAULT_ABSTOL: float = 0
+SF_SPHERICAL_HARMONICS_EPS: float = 0
 SF_SPHERICAL_HARMONICS_LATERAL_MOVE: int = 1
 SF_SPHERICAL_HARMONICS_MAX_LEN: int = 6
 SPHERE_MAP_DEFAULT_SIGNAL: str = r"SIGNAL"
-SPHERE_MAP_HEALPIX_NULLVAL: float = 1.6375e30
+SPHERE_MAP_HEALPIX_NULLVAL: float = 1.6374999999999999e30
 SPLINE2D_BICUBIC_00: int = 0
 SPLINE2D_BICUBIC_01: int = 2
 SPLINE2D_BICUBIC_10: int = 1
@@ -102,7 +97,7 @@ SPLINE_FUNC_DEFAULT_MAX_NODES: int = 10000000
 SPLINE_KNOT_DIFF_TOL: int = 0
 THREAD_POOL_MAX: int = 5
 TIMER_SEC_FORMAT: str = r"%07.4f"
-ZERO_LIMIT: float = 0.0
+ZERO_LIMIT: float = 0
 _lock = ...  # FIXME Constant
 _namespace: str = r"NumCosmoMath"
 _version: str = r"1.0"
@@ -2467,7 +2462,7 @@ class Fftlog(GObject.Object):
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
-        FFTW Plan wisdown name
+        FFTW Plan wisdom name
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
@@ -2612,7 +2607,7 @@ class FftlogGausswin2(Fftlog):
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
-        FFTW Plan wisdown name
+        FFTW Plan wisdom name
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
@@ -2710,7 +2705,7 @@ class FftlogSBesselJ(Fftlog):
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
-        FFTW Plan wisdown name
+        FFTW Plan wisdom name
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
@@ -2822,7 +2817,7 @@ class FftlogSBesselJLJM(Fftlog):
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
-        FFTW Plan wisdown name
+        FFTW Plan wisdom name
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
@@ -2939,7 +2934,7 @@ class FftlogTophatwin2(Fftlog):
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
-        FFTW Plan wisdown name
+        FFTW Plan wisdom name
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
@@ -3233,7 +3228,7 @@ class FitESMCMC(GObject.Object):
       trim-type -> NcmMSetCatalogTrimType: trim-type
         Trimming tests to apply
       min-runs -> guint: min-runs
-        Minumum number of runs
+        Minimum number of runs
       max-runs-time -> gdouble: max-runs-time
         Maximum time between runs
       skip-check -> gboolean: skip-check
