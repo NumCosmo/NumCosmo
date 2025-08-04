@@ -3487,6 +3487,8 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         Kernel used in posterior approximation
       over-smooth -> gdouble: over-smooth
         Over-smooth parameter used to adjust kernel bandwidth
+      shrink -> gdouble: shrink
+        Shrink factor for weight computation
       random-walk-prob -> gdouble: random-walk-prob
         Probability of random walk step
       random-walk-scale -> gdouble: random-walk-scale
@@ -3512,6 +3514,7 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         over_smooth: float
         random_walk_prob: float
         random_walk_scale: float
+        shrink: float
         use_interp: bool
         use_threads: bool
         nparams: int
@@ -3525,6 +3528,7 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         over_smooth: float = ...,
         random_walk_prob: float = ...,
         random_walk_scale: float = ...,
+        shrink: float = ...,
         use_interp: bool = ...,
         use_threads: bool = ...,
         nparams: int = ...,
@@ -3538,6 +3542,7 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
     def get_over_smooth(self) -> float: ...
     def get_random_walk_prob(self) -> float: ...
     def get_random_walk_scale(self) -> float: ...
+    def get_shrink(self) -> float: ...
     def get_use_threads(self) -> bool: ...
     def interp(self) -> bool: ...
     @classmethod
@@ -3564,6 +3569,7 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
     def set_over_smooth(self, os: float) -> None: ...
     def set_random_walk_prob(self, prob: float) -> None: ...
     def set_random_walk_scale(self, scale: float) -> None: ...
+    def set_shrink(self, shrink: float) -> None: ...
     def set_use_threads(self, use_threads: bool) -> None: ...
     def use_interp(self, use_interp: bool) -> None: ...
 

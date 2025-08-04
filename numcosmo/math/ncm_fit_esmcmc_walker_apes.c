@@ -86,6 +86,7 @@ enum
   PROP_METHOD,
   PROP_K_TYPE,
   PROP_OVER_SMOOTH,
+  PROP_SHRINK,
   PROP_RANDOM_WALK_PROB,
   PROP_RANDOM_WALK_SCALE,
   PROP_USE_INTERP,
@@ -118,6 +119,7 @@ typedef struct _NcmFitESMCMCWalkerAPESPrivate
   NcmFitESMCMCWalkerAPESMethod method;
   NcmFitESMCMCWalkerAPESKType k_type;
   gdouble over_smooth;
+  gdouble shrink;            /* Shrink factor for weight computation */
   gdouble random_walk_prob;  /* Probability of random walk step */
   gdouble random_walk_scale; /* Scale of the random walk step */
   NcmFitESMCMCWalkerAPESRandomWalk rw0;
@@ -159,6 +161,7 @@ ncm_fit_esmcmc_walker_apes_init (NcmFitESMCMCWalkerAPES *apes)
   self->method            = NCM_FIT_ESMCMC_WALKER_APES_METHOD_LEN;
   self->k_type            = NCM_FIT_ESMCMC_WALKER_APES_KTYPE_LEN;
   self->over_smooth       = 0.0;
+  self->shrink            = 0.0;
   self->random_walk_prob  = 0.0;
   self->random_walk_scale = 0.0;
   self->use_interp        = FALSE;
@@ -193,6 +196,9 @@ _ncm_fit_esmcmc_walker_apes_set_property (GObject *object, guint prop_id, const 
       break;
     case PROP_OVER_SMOOTH:
       ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, g_value_get_double (value));
+      break;
+    case PROP_SHRINK:
+      ncm_fit_esmcmc_walker_apes_set_shrink (apes, g_value_get_double (value));
       break;
     case PROP_RANDOM_WALK_PROB:
       ncm_fit_esmcmc_walker_apes_set_random_walk_prob (apes, g_value_get_double (value));
@@ -229,6 +235,9 @@ _ncm_fit_esmcmc_walker_apes_get_property (GObject *object, guint prop_id, GValue
       break;
     case PROP_OVER_SMOOTH:
       g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_over_smooth (apes));
+      break;
+    case PROP_SHRINK:
+      g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_shrink (apes));
       break;
     case PROP_RANDOM_WALK_PROB:
       g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_random_walk_prob (apes));
@@ -368,6 +377,21 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                                         NULL,
                                                         "Over-smooth parameter used to adjust kernel bandwidth",
                                                         1.0e-10, 1.0e10, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFitESMCMCWalkerAPES:shrink:
+   *
+   * Shrink factor for weight computation. This property defines the shrink factor
+   * used in the weight computation for the APES proposal. The default value is 0.01.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SHRINK,
+                                   g_param_spec_double ("shrink",
+                                                        NULL,
+                                                        "Shrink factor for weight computation",
+                                                        0.0, 1.0, 0.01,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -547,6 +571,9 @@ _ncm_fit_esmcmc_walker_apes_set_sys (NcmFitESMCMCWalker *walker)
 
     ncm_stats_dist_set_over_smooth (self->sd0, self->over_smooth);
     ncm_stats_dist_set_over_smooth (self->sd1, self->over_smooth);
+
+    ncm_stats_dist_set_shrink (self->sd0, self->shrink);
+    ncm_stats_dist_set_shrink (self->sd1, self->shrink);
 
     ncm_stats_dist_set_use_threads (self->sd0, self->use_threads);
     ncm_stats_dist_set_use_threads (self->sd1, self->use_threads);
@@ -1143,6 +1170,26 @@ ncm_fit_esmcmc_walker_apes_set_over_smooth (NcmFitESMCMCWalkerAPES *apes, const 
 }
 
 /**
+ * ncm_fit_esmcmc_walker_apes_set_shrink:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @shrink: a double
+ *
+ * Sets the shrink parameter to adjust the kernel weights. The value must be between 0.0
+ * and 1.0. See ncm_stats_dist_set_shrink() for more details.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_shrink (NcmFitESMCMCWalkerAPES *apes, const gdouble shrink)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  if ((shrink < 0.0) || (shrink > 1.0))
+    g_error ("ncm_fit_esmcmc_walker_apes_set_shrink: invalid shrink `%f'.", shrink);
+
+  self->shrink = shrink;
+}
+
+/**
  * ncm_fit_esmcmc_walker_apes_set_random_walk_prob:
  * @apes: a #NcmFitESMCMCWalkerAPES
  * @prob: a double
@@ -1228,6 +1275,22 @@ ncm_fit_esmcmc_walker_apes_get_over_smooth (NcmFitESMCMCWalkerAPES *apes)
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
 
   return self->over_smooth;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_get_shrink:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Gets the currently used shrink parameter.
+ *
+ * Returns: currently used shrink.
+ */
+gdouble
+ncm_fit_esmcmc_walker_apes_get_shrink (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  return self->shrink;
 }
 
 /**

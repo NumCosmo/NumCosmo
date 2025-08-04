@@ -83,12 +83,14 @@ void ncm_fit_esmcmc_walker_apes_clear (NcmFitESMCMCWalkerAPES **apes);
 void ncm_fit_esmcmc_walker_apes_set_method (NcmFitESMCMCWalkerAPES *apes, NcmFitESMCMCWalkerAPESMethod method);
 void ncm_fit_esmcmc_walker_apes_set_k_type (NcmFitESMCMCWalkerAPES *apes, NcmFitESMCMCWalkerAPESKType k_type);
 void ncm_fit_esmcmc_walker_apes_set_over_smooth (NcmFitESMCMCWalkerAPES *apes, const gdouble os);
+void ncm_fit_esmcmc_walker_apes_set_shrink (NcmFitESMCMCWalkerAPES *apes, const gdouble shrink);
 void ncm_fit_esmcmc_walker_apes_set_random_walk_prob (NcmFitESMCMCWalkerAPES *apes, const gdouble prob);
 void ncm_fit_esmcmc_walker_apes_set_random_walk_scale (NcmFitESMCMCWalkerAPES *apes, const gdouble scale);
 
 NcmFitESMCMCWalkerAPESMethod ncm_fit_esmcmc_walker_apes_get_method (NcmFitESMCMCWalkerAPES *apes);
 NcmFitESMCMCWalkerAPESKType ncm_fit_esmcmc_walker_apes_get_k_type (NcmFitESMCMCWalkerAPES *apes);
 gdouble ncm_fit_esmcmc_walker_apes_get_over_smooth (NcmFitESMCMCWalkerAPES *apes);
+gdouble ncm_fit_esmcmc_walker_apes_get_shrink (NcmFitESMCMCWalkerAPES *apes);
 gdouble ncm_fit_esmcmc_walker_apes_get_random_walk_prob (NcmFitESMCMCWalkerAPES *apes);
 gdouble ncm_fit_esmcmc_walker_apes_get_random_walk_scale (NcmFitESMCMCWalkerAPES *apes);
 
