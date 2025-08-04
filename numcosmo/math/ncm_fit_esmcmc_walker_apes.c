@@ -68,6 +68,7 @@
 #include "math/ncm_fit_esmcmc_walker.h"
 #include "math/ncm_fit_esmcmc_walker_apes.h"
 
+#include "math/ncm_c.h"
 #include "math/ncm_fit_esmcmc.h"
 #include "math/ncm_stats_dist_vkde.h"
 #include "math/ncm_stats_dist_kernel_st.h"
@@ -85,9 +86,18 @@ enum
   PROP_METHOD,
   PROP_K_TYPE,
   PROP_OVER_SMOOTH,
+  PROP_RANDOM_WALK_PROB,
+  PROP_RANDOM_WALK_SCALE,
   PROP_USE_INTERP,
   PROP_USE_THREADS,
 };
+
+typedef struct _NcmFitESMCMCWalkerAPESRandomWalk
+{
+  NcmVector *std;
+  NcmVector *lb;
+  NcmVector *ub;
+} NcmFitESMCMCWalkerAPESRandomWalk;
 
 typedef struct _NcmFitESMCMCWalkerAPESPrivate
 {
@@ -108,6 +118,10 @@ typedef struct _NcmFitESMCMCWalkerAPESPrivate
   NcmFitESMCMCWalkerAPESMethod method;
   NcmFitESMCMCWalkerAPESKType k_type;
   gdouble over_smooth;
+  gdouble random_walk_prob;  /* Probability of random walk step */
+  gdouble random_walk_scale; /* Scale of the random walk step */
+  NcmFitESMCMCWalkerAPESRandomWalk rw0;
+  NcmFitESMCMCWalkerAPESRandomWalk rw1;
   gboolean use_interp;
   gboolean use_threads;
   gboolean constructed;
@@ -128,27 +142,36 @@ ncm_fit_esmcmc_walker_apes_init (NcmFitESMCMCWalkerAPES *apes)
 {
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
 
-  self->size        = 0;
-  self->size_2      = 0;
-  self->nparams     = 0;
-  self->a_size      = 0;
-  self->a_nparams   = 0;
-  self->mk          = -1;
-  self->m2lnp_star  = NULL;
-  self->m2lnp_cur   = NULL;
-  self->desc        = NULL;
-  self->sd0         = NULL;
-  self->sd1         = NULL;
-  self->thetastar   = g_ptr_array_new ();
-  self->m2lnL_s0    = NULL;
-  self->m2lnL_s1    = NULL;
-  self->method      = NCM_FIT_ESMCMC_WALKER_APES_METHOD_LEN;
-  self->k_type      = NCM_FIT_ESMCMC_WALKER_APES_KTYPE_LEN;
-  self->over_smooth = 0.0;
-  self->use_interp  = FALSE;
-  self->use_threads = FALSE;
-  self->constructed = FALSE;
-  self->exploration = 0;
+  self->size              = 0;
+  self->size_2            = 0;
+  self->nparams           = 0;
+  self->a_size            = 0;
+  self->a_nparams         = 0;
+  self->mk                = -1;
+  self->m2lnp_star        = NULL;
+  self->m2lnp_cur         = NULL;
+  self->desc              = NULL;
+  self->sd0               = NULL;
+  self->sd1               = NULL;
+  self->thetastar         = g_ptr_array_new ();
+  self->m2lnL_s0          = NULL;
+  self->m2lnL_s1          = NULL;
+  self->method            = NCM_FIT_ESMCMC_WALKER_APES_METHOD_LEN;
+  self->k_type            = NCM_FIT_ESMCMC_WALKER_APES_KTYPE_LEN;
+  self->over_smooth       = 0.0;
+  self->random_walk_prob  = 0.0;
+  self->random_walk_scale = 0.0;
+  self->use_interp        = FALSE;
+  self->use_threads       = FALSE;
+  self->constructed       = FALSE;
+  self->exploration       = 0;
+
+  self->rw0.std = NULL;
+  self->rw0.lb  = NULL;
+  self->rw0.ub  = NULL;
+  self->rw1.std = NULL;
+  self->rw1.lb  = NULL;
+  self->rw1.ub  = NULL;
 
   g_ptr_array_set_free_func (self->thetastar, (GDestroyNotify) ncm_vector_free);
 }
@@ -170,6 +193,12 @@ _ncm_fit_esmcmc_walker_apes_set_property (GObject *object, guint prop_id, const 
       break;
     case PROP_OVER_SMOOTH:
       ncm_fit_esmcmc_walker_apes_set_over_smooth (apes, g_value_get_double (value));
+      break;
+    case PROP_RANDOM_WALK_PROB:
+      ncm_fit_esmcmc_walker_apes_set_random_walk_prob (apes, g_value_get_double (value));
+      break;
+    case PROP_RANDOM_WALK_SCALE:
+      ncm_fit_esmcmc_walker_apes_set_random_walk_scale (apes, g_value_get_double (value));
       break;
     case PROP_USE_INTERP:
       ncm_fit_esmcmc_walker_apes_use_interp (apes, g_value_get_boolean (value));
@@ -200,6 +229,12 @@ _ncm_fit_esmcmc_walker_apes_get_property (GObject *object, guint prop_id, GValue
       break;
     case PROP_OVER_SMOOTH:
       g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_over_smooth (apes));
+      break;
+    case PROP_RANDOM_WALK_PROB:
+      g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_random_walk_prob (apes));
+      break;
+    case PROP_RANDOM_WALK_SCALE:
+      g_value_set_double (value, ncm_fit_esmcmc_walker_apes_get_random_walk_scale (apes));
       break;
     case PROP_USE_INTERP:
       g_value_set_boolean (value, ncm_fit_esmcmc_walker_apes_interp (apes));
@@ -243,6 +278,13 @@ _ncm_fit_esmcmc_walker_apes_dispose (GObject *object)
   ncm_stats_dist_clear (&self->sd0);
   ncm_stats_dist_clear (&self->sd1);
 
+  ncm_vector_clear (&self->rw0.std);
+  ncm_vector_clear (&self->rw0.lb);
+  ncm_vector_clear (&self->rw0.ub);
+  ncm_vector_clear (&self->rw1.std);
+  ncm_vector_clear (&self->rw1.lb);
+  ncm_vector_clear (&self->rw1.ub);
+
   g_clear_pointer (&self->thetastar, g_ptr_array_unref);
 
   /* Chain up : end */
@@ -284,6 +326,14 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
   object_class->dispose      = &_ncm_fit_esmcmc_walker_apes_dispose;
   object_class->finalize     = &_ncm_fit_esmcmc_walker_apes_finalize;
 
+  /**
+   * NcmFitESMCMCWalkerAPES:method:
+   *
+   * Method used in posterior approximation.
+   * This property can be set to one of the #NcmFitESMCMCWalkerAPESMethod values.
+   * The default value is #NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_METHOD,
                                    g_param_spec_enum ("method",
@@ -291,6 +341,14 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                                       "Method used in posterior approximation",
                                                       NCM_TYPE_FIT_ESMCMC_WALKER_APES_METHOD, NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFitESMCMCWalkerAPES:k-type:
+   *
+   * Kernel used in posterior approximation. This property can be set to one of the
+   * #NcmFitESMCMCWalkerAPESKType values. The default value is
+   * #NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY.
+   */
   g_object_class_install_property (object_class,
                                    PROP_K_TYPE,
                                    g_param_spec_enum ("kernel-type",
@@ -298,6 +356,12 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                                       "Kernel used in posterior approximation",
                                                       NCM_TYPE_FIT_ESMCMC_WALKER_APES_KTYPE, NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFitESMCMCWalkerAPES:over-smooth:
+   *
+   * Over-smooth parameter used to adjust kernel bandwidth. The default value is 1.0.
+   */
   g_object_class_install_property (object_class,
                                    PROP_OVER_SMOOTH,
                                    g_param_spec_double ("over-smooth",
@@ -306,6 +370,49 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                                         1.0e-10, 1.0e10, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmFitESMCMCWalkerAPES:random-walk-prob:
+   *
+   * Probability of random walk step. This property defines the probability of a random
+   * walk step being taken when proposing new points for the walkers. The default value
+   * is 0.0, meaning no random walk step is taken.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_RANDOM_WALK_PROB,
+                                   g_param_spec_double ("random-walk-prob",
+                                                        NULL,
+                                                        "Probability of random walk step",
+                                                        0.01, 1.0, 0.2,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFitESMCMCWalkerAPES:random-walk-scale:
+   *
+   * Scale factor for the random walk step used in proposal generation. This property
+   * defines the standard deviation of the random walk proposal as a fraction of the
+   * empirical standard deviation computed from the current half-ensemble (i.e., the
+   * half not being updated). The default value is 0.25, meaning the random walk step
+   * will have a standard deviation equal to 25% of that empirical value.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_RANDOM_WALK_SCALE,
+                                   g_param_spec_double ("random-walk-scale",
+                                                        NULL,
+                                                        "Scale of the random walk step",
+                                                        0.01, 1.0, 0.25,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFitESMCMCWalkerAPES:use-interp:
+   *
+   * Whether to use interpolation to build the posterior approximation. This property
+   * defines whether the walker will use interpolation to build the posterior
+   * approximation. The default value is TRUE, meaning interpolation will be used. If
+   * set to FALSE, the walker will not use interpolation.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_USE_INTERP,
                                    g_param_spec_boolean ("use-interp",
@@ -314,6 +421,15 @@ ncm_fit_esmcmc_walker_apes_class_init (NcmFitESMCMCWalkerAPESClass *klass)
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmFitESMCMCWalkerAPES:use-threads:
+   *
+   * Whether to use threads when building the posterior approximation. This property
+   * defines whether the walker will use threads when building the posterior
+   * approximation. The default value is FALSE, meaning threads will not be used. If set
+   * to TRUE, the walker will use threads.
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_USE_THREADS,
                                    g_param_spec_boolean ("use-threads",
@@ -489,6 +605,101 @@ _ncm_fit_esmcmc_walker_apes_get_nparams (NcmFitESMCMCWalker *walker)
 }
 
 static void
+_ncm_fit_esmcmc_walker_apes_prepare_random_walk (NcmFitESMCMCWalker *walker, NcmStatsDist *sd, NcmFitESMCMCWalkerAPESRandomWalk *random_walk, NcmMSet *mset)
+{
+  NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  if (self->random_walk_prob > 0.0)
+  {
+    NcmMatrix *cov = ncm_stats_dist_peek_full_cov (sd);
+    guint i;
+
+    if ((random_walk->std == NULL) || (ncm_vector_len (random_walk->std) != self->nparams))
+    {
+      ncm_vector_clear (&random_walk->std);
+      ncm_vector_clear (&random_walk->lb);
+      ncm_vector_clear (&random_walk->ub);
+
+      random_walk->std = ncm_vector_new (self->nparams);
+      random_walk->lb  = ncm_vector_new (self->nparams);
+      random_walk->ub  = ncm_vector_new (self->nparams);
+    }
+
+    for (i = 0; i < self->nparams; i++)
+    {
+      const gdouble var = ncm_matrix_get (cov, i, i);
+      const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
+      const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
+
+      ncm_vector_set (random_walk->lb, i, lb);
+      ncm_vector_set (random_walk->ub, i, ub);
+
+      /*
+       * The standard deviation is the square root of the variance. If the variance is
+       * non-positive, then the standard deviation is undefined.
+       */
+      if (var <= 0.0)
+        g_error ("Invalid covariance matrix: diagonal element %d is non-positive.", i);
+
+      /*
+       * 0.25 is a scaling factor for the standard deviation. TODO: Make this a
+       * parameter.
+       */
+      ncm_vector_set (random_walk->std, i, sqrt (var) * 0.25);
+    }
+  }
+}
+
+static void
+_ncm_fit_esmcmc_walker_apes_random_walk_sample (NcmFitESMCMCWalker *walker, NcmStatsDist *sd, NcmFitESMCMCWalkerAPESRandomWalk *random_walk, const NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
+{
+  NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+  guint i;
+
+  for (i = 0; i < self->nparams; i++)
+  {
+    const gdouble lb      = ncm_vector_fast_get (random_walk->lb, i);
+    const gdouble ub      = ncm_vector_fast_get (random_walk->ub, i);
+    const gdouble std     = ncm_vector_fast_get (random_walk->std, i);
+    const gdouble theta_i = ncm_vector_get (theta, i);
+    gdouble x;
+
+    do {
+      x = ncm_rng_gaussian_gen (rng, theta_i, std);
+    } while ((x < lb) || (x > ub));
+
+    ncm_vector_set (thetastar, i, x);
+  }
+}
+
+static void
+_ncm_fit_esmcmc_walker_apes_sample (NcmFitESMCMCWalker *walker, NcmStatsDist *sd, NcmMSet *mset, NcmFitESMCMCWalkerAPESRandomWalk *random_walk, const NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
+{
+  NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  if (self->random_walk_prob == 0.0)
+  {
+    do {
+      ncm_stats_dist_sample (sd, thetastar, rng);
+    } while (!ncm_mset_fparam_valid_bounds (mset, thetastar));
+  }
+  else
+  {
+    do {
+      if (ncm_rng_uniform01_pos_gen (rng) < self->random_walk_prob)
+        _ncm_fit_esmcmc_walker_apes_random_walk_sample (walker, sd, random_walk, theta, thetastar, rng);
+      else
+        ncm_stats_dist_sample (sd, thetastar, rng);
+
+      /* Ensure the sampled point is within bounds */
+    } while (!ncm_mset_fparam_valid_bounds (mset, thetastar));
+  }
+}
+
+static void
 _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GPtrArray *theta, GPtrArray *m2lnL, guint ki, guint kf, NcmRNG *rng)
 {
   NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
@@ -518,13 +729,14 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
     else
       ncm_stats_dist_prepare (self->sd0);
 
+    _ncm_fit_esmcmc_walker_apes_prepare_random_walk (walker, self->sd0, &self->rw0, mset);
+
     for (i = ki; i < self->size_2; i++)
     {
+      NcmVector *theta_i     = g_ptr_array_index (theta, i);
       NcmVector *thetastar_i = g_ptr_array_index (self->thetastar, i);
 
-      do {
-        ncm_stats_dist_sample (self->sd0, thetastar_i, rng);
-      } while (!ncm_mset_fparam_valid_bounds (mset, thetastar_i));
+      _ncm_fit_esmcmc_walker_apes_sample (walker, self->sd0, mset, &self->rw0, theta_i, thetastar_i, rng);
     }
   }
 
@@ -550,18 +762,61 @@ _ncm_fit_esmcmc_walker_apes_setup (NcmFitESMCMCWalker *walker, NcmMSet *mset, GP
     else
       ncm_stats_dist_prepare (self->sd1);
 
+    _ncm_fit_esmcmc_walker_apes_prepare_random_walk (walker, self->sd1, &self->rw1, mset);
+
     for (i = self->size_2; i < kf; i++)
     {
+      NcmVector *theta_i     = g_ptr_array_index (theta, i);
       NcmVector *thetastar_i = g_ptr_array_index (self->thetastar, i);
 
-      do {
-        ncm_stats_dist_sample (self->sd1, thetastar_i, rng);
-      } while (!ncm_mset_fparam_valid_bounds (mset, thetastar_i));
+      _ncm_fit_esmcmc_walker_apes_sample (walker, self->sd1, mset, &self->rw1, theta_i, thetastar_i, rng);
     }
   }
 
   if (self->exploration > 0)
     self->exploration--;
+}
+
+static gdouble
+_ncm_fit_esmcmc_walker_apes_transition_prob (NcmFitESMCMCWalker *walker, NcmStatsDist *sd, NcmFitESMCMCWalkerAPESRandomWalk *random_walk, const NcmVector *theta, NcmVector *thetastar)
+{
+  NcmFitESMCMCWalkerAPES *apes               = NCM_FIT_ESMCMC_WALKER_APES (walker);
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+  gdouble m2lnp, sign;
+
+  if (self->random_walk_prob > 0.0)
+  {
+    gdouble m2lnp_sd = ncm_stats_dist_eval_m2lnp (sd, thetastar);
+    gdouble m2lnp_rw = 0.0;
+    guint i;
+
+    for (i = 0; i < self->nparams; i++)
+    {
+      const gdouble lb          = ncm_vector_fast_get (random_walk->lb, i);
+      const gdouble ub          = ncm_vector_fast_get (random_walk->ub, i);
+      const gdouble std         = ncm_vector_fast_get (random_walk->std, i);
+      const gdouble theta_i     = ncm_vector_get (theta, i);
+      const gdouble thetastar_i = ncm_vector_get (thetastar, i);
+      const gdouble ln_norm     = 0.5 * ncm_c_ln2pi () + log (std) + ncm_util_log_gaussian_integral (lb, ub, theta_i, std, &sign);
+
+      m2lnp_rw += gsl_pow_2 ((thetastar_i - theta_i) / std) + 2.0 * ln_norm;
+    }
+
+    m2lnp_rw += -2.0 * log (self->random_walk_prob);
+    m2lnp_sd += -2.0 * log1p (-self->random_walk_prob);
+
+    if (m2lnp_sd < m2lnp_rw)
+      m2lnp = m2lnp_sd - 2.0 * log1p (exp (-0.5 * (m2lnp_rw - m2lnp_sd)));
+    else
+      m2lnp = m2lnp_rw - 2.0 * log1p (exp (-0.5 * (m2lnp_sd - m2lnp_rw)));
+  }
+  else
+  {
+    m2lnp = ncm_stats_dist_eval_m2lnp (sd, thetastar);
+  }
+
+
+  return m2lnp;
 }
 
 static void
@@ -575,8 +830,8 @@ _ncm_fit_esmcmc_walker_apes_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
 
   if (k < self->size_2)
   {
-    const gdouble m2lnapes_star = ncm_stats_dist_eval_m2lnp (self->sd0, thetastar);
-    const gdouble m2lnapes_cur  = ncm_stats_dist_eval_m2lnp (self->sd0, theta_k);
+    const gdouble m2lnapes_star = _ncm_fit_esmcmc_walker_apes_transition_prob (walker, self->sd0, &self->rw0, theta_k, thetastar);
+    const gdouble m2lnapes_cur  = _ncm_fit_esmcmc_walker_apes_transition_prob (walker, self->sd0, &self->rw0, thetastar, theta_k);
 
     g_assert (gsl_finite (m2lnapes_star) && gsl_finite (m2lnapes_cur));
 
@@ -586,8 +841,8 @@ _ncm_fit_esmcmc_walker_apes_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
 
   if (k >= self->size_2)
   {
-    const gdouble m2lnapes_star = ncm_stats_dist_eval_m2lnp (self->sd1, thetastar);
-    const gdouble m2lnapes_cur  = ncm_stats_dist_eval_m2lnp (self->sd1, theta_k);
+    const gdouble m2lnapes_star = _ncm_fit_esmcmc_walker_apes_transition_prob (walker, self->sd1, &self->rw1, theta_k, thetastar);
+    const gdouble m2lnapes_cur  = _ncm_fit_esmcmc_walker_apes_transition_prob (walker, self->sd1, &self->rw1, thetastar, theta_k);
 
     g_assert (gsl_finite (m2lnapes_star) && gsl_finite (m2lnapes_cur));
 
@@ -888,6 +1143,46 @@ ncm_fit_esmcmc_walker_apes_set_over_smooth (NcmFitESMCMCWalkerAPES *apes, const 
 }
 
 /**
+ * ncm_fit_esmcmc_walker_apes_set_random_walk_prob:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @prob: a double
+ *
+ * Sets the probability of performing a random walk step. The value must be between 0.0
+ * and 1.0.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_random_walk_prob (NcmFitESMCMCWalkerAPES *apes, const gdouble prob)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  if ((prob < 0.0) || (prob > 1.0))
+    g_error ("ncm_fit_esmcmc_walker_apes_set_random_walk_prob: invalid probability `%f'.", prob);
+
+  self->random_walk_prob = prob;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_set_random_walk_scale:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ * @scale: a double
+ *
+ * Sets the scale factor for the random walk step. The value must be greater than 0.0.
+ * This factor multiplies the standard deviation used in the random walk proposal.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_apes_set_random_walk_scale (NcmFitESMCMCWalkerAPES *apes, const gdouble scale)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  if (scale <= 0.0)
+    g_error ("ncm_fit_esmcmc_walker_apes_set_random_walk_scale: invalid scale `%f'.", scale);
+
+  self->random_walk_scale = scale;
+}
+
+/**
  * ncm_fit_esmcmc_walker_apes_get_method:
  * @apes: a #NcmFitESMCMCWalkerAPES
  *
@@ -933,6 +1228,38 @@ ncm_fit_esmcmc_walker_apes_get_over_smooth (NcmFitESMCMCWalkerAPES *apes)
   NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
 
   return self->over_smooth;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_get_random_walk_prob:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Gets the currently used random walk probability.
+ *
+ * Returns: currently used random walk probability.
+ */
+gdouble
+ncm_fit_esmcmc_walker_apes_get_random_walk_prob (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  return self->random_walk_prob;
+}
+
+/**
+ * ncm_fit_esmcmc_walker_apes_get_random_walk_scale:
+ * @apes: a #NcmFitESMCMCWalkerAPES
+ *
+ * Gets the currently used random walk scale.
+ *
+ * Returns: currently used random walk scale.
+ */
+gdouble
+ncm_fit_esmcmc_walker_apes_get_random_walk_scale (NcmFitESMCMCWalkerAPES *apes)
+{
+  NcmFitESMCMCWalkerAPESPrivate * const self = ncm_fit_esmcmc_walker_apes_get_instance_private (apes);
+
+  return self->random_walk_scale;
 }
 
 /**
