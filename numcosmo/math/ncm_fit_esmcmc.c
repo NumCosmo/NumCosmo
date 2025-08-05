@@ -2015,13 +2015,16 @@ _ncm_fit_esmcmc_run_interval (NcmFitESMCMC *esmcmc, const glong i, const glong f
         prob = exp (-0.5 * m2lnp);
         prob = GSL_MIN (prob, 1.0);
 
-        ncm_stats_vec_set (self->stats, 0, -0.5 * m2lnL_cur[0] / M_LN10);
-        ncm_stats_vec_set (self->stats, 1, -0.5 * m2lnL_star[0] / M_LN10);
-        ncm_stats_vec_set (self->stats, 2, -0.5 * (m2lnL_star[0] - m2lnL_cur[0]) / M_LN10);
-        ncm_stats_vec_set (self->stats, 3, -0.5 * m2lnq / M_LN10);
-        ncm_stats_vec_set (self->stats, 4, -0.5 * m2lnp / M_LN10);
-        ncm_stats_vec_set (self->stats, 5, prob);
-        ncm_stats_vec_update (self->stats);
+        #pragma omp critical
+        {
+          ncm_stats_vec_set (self->stats, 0, -0.5 * m2lnL_cur[0] / M_LN10);
+          ncm_stats_vec_set (self->stats, 1, -0.5 * m2lnL_star[0] / M_LN10);
+          ncm_stats_vec_set (self->stats, 2, -0.5 * (m2lnL_star[0] - m2lnL_cur[0]) / M_LN10);
+          ncm_stats_vec_set (self->stats, 3, -0.5 * m2lnq / M_LN10);
+          ncm_stats_vec_set (self->stats, 4, -0.5 * m2lnp / M_LN10);
+          ncm_stats_vec_set (self->stats, 5, prob);
+          ncm_stats_vec_update (self->stats);
+        }
       }
     }
     else
