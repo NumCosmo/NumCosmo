@@ -130,13 +130,13 @@ class RunMCMC(RunCommonOptions):
         typer.Option(
             help=(
                 r"Probability of using a random walk step in the proposal generation. "
-                r"The default value is 0.2, meaning that 20% of the proposals will be "
+                r"The default value is 0.02, meaning that 2% of the proposals will be "
                 r"generated using a random walk step."
             ),
             min=0.0,
             max=1.0,
         ),
-    ] = 0.2
+    ] = 0.02
 
     random_walk_scale: Annotated[
         float,
