@@ -42,17 +42,17 @@
  * given a sample vector $\vec{x}$, the distribution evaluated in these points. Some of
  * these calculations are explained below.
  *
- * The #NcmStatsDistKDE class uses one covariance matrix for all the sample points. So, given $n$ points, there is only
- * one covariance matrix $\Sigma$ that is used for all the $i$-th kernels $\phi(|x-x_i|, \Sigma)$. After the covariance
- * matrix is computed, the algorithm computes the Cholesky decomposition, that is
- * \begin{align}
- * \Sigma &= AA^T
- * ,\end{align}
- * where $A$ is a triangular positive defined matrix and $A^T$ is its transpose. The $A$ matrix is used in the least square squares
- * calculation method that is called in the #NcmStatsDist class.
+ * The #NcmStatsDistKDE class uses one covariance matrix for all the sample points. So,
+ * given $n$ points, there is only one covariance matrix $\Sigma$ that is used for all
+ * the $i$-th kernels $\phi(|x-x_i|, \Sigma)$. After the covariance matrix is computed,
+ * the algorithm computes the Cholesky decomposition, that is \begin{align} \Sigma &=
+ * AA^T ,\end{align} where $A$ is a triangular positive defined matrix and $A^T$ is its
+ * transpose. The $A$ matrix is used in the least square squares calculation method that
+ * is called in the #NcmStatsDist class.
  *
  *
- * The object also prepares the interpolation matrix to be implemented in the least-squares problem, that is, given the relation
+ * The object also prepares the interpolation matrix to be implemented in the
+ * least-squares problem, that is, given the relation
  *
  * $\left[\begin{array}{cccc}
  * \phi\left(\left\|\mathbf{x}_{1}-\mathbf{x}_{1}\right\|\right) & \phi\left(\left\|\mathbf{x}_{2}-\mathbf{x}_{1}\right\|\right) & \ldots & \phi\left(\left\|\mathbf{x}_{n}-\mathbf{x}_{1}\right\|\right) \newline
@@ -71,16 +71,20 @@
  * g_{n}
  * ,\end{array}\right]$
  *
- * which is explained in the #NcmStatsDist class, this object prepares the first matrix for all the $n$ points in the sample, using the covariance matrix and the defined kernel.
- * The #NcmStatsDist class implements the solution for this relation and then one can compute the distribution for a given
- * vector $\vec{x}$ using a method of the #NcmStatsDist class but that is implemented in this object.
+ * which is explained in the #NcmStatsDist class, this object prepares the first matrix
+ * for all the $n$ points in the sample, using the covariance matrix and the defined
+ * kernel. The #NcmStatsDist class implements the solution for this relation and then
+ * one can compute the distribution for a given vector $\vec{x}$ using a method of the
+ * #NcmStatsDist class but that is implemented in this object.
  *
  *
- * The user must provide input the values: @sdk, @CV_type - ncm_stats_dist_kde_new(), @y - ncm_stats_dist_add_obs(), @split_frac - ncm_stats_dist_set_split_frac(),
- * @over_smooth - ncm_stats_dist_set_over_smooth(), $v(x)$ - ncm_stats_dist_prepare_interp().
- * To see an example of how to use this object and the main functions that are called within each function,
- * check the fluxogram at the end of this documentation,
- * where the order of the functions that should be called by the user and some of the functions that the algorithm calls.
+ * The user must provide input the values: @sdk, @CV_type - ncm_stats_dist_kde_new(), @y
+ * - ncm_stats_dist_add_obs(), @split_frac - ncm_stats_dist_set_split_frac(),
+ * @over_smooth - ncm_stats_dist_set_over_smooth(), $v(x)$ -
+ * ncm_stats_dist_prepare_interp(). To see an example of how to use this object and the
+ * main functions that are called within each function, check the flowchart at the end
+ * of this documentation, where the order of the functions that should be called by the
+ * user and some of the functions that the algorithm calls.
  *
  * ![kde_sketch](kde.png)
  *
