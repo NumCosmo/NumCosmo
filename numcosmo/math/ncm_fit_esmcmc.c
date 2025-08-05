@@ -105,6 +105,7 @@ typedef struct _NcmFitESMCMCPrivate
   guint naccepted_lup;
   guint noffboard_lup;
   gboolean started;
+  NcmStatsVec *stats;
   GMutex dup_fit;
   GMutex resample_lock;
   GMutex update_lock;
@@ -212,6 +213,7 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
   self->naccepted_lup = 0;
   self->noffboard_lup = 0;
   self->started       = FALSE;
+  self->stats         = NULL;
 
   g_mutex_init (&self->dup_fit);
   g_mutex_init (&self->resample_lock);
@@ -307,6 +309,20 @@ _ncm_fit_esmcmc_constructed (GObject *object)
 
     g_assert (self->mj == NULL);
     self->mj = NCM_MPI_JOB (ncm_mpi_job_mcmc_new (self->fit, self->func_oa));
+
+    /* Create statistics to track the following quantities for each proposal:
+     *
+     *   log10(L_cur)        : log10 posterior at current state
+     *   log10(L_star)       : log10 posterior at proposed state
+     *   log10(L_cur/L_star) : log10 ratio of posteriors
+     *   log10(q/q_star)     : log10 proposal ratio
+     *   log10(p)            : log10 acceptance probability
+     *   prob                : acceptance probability
+     *
+     * These are used to monitor sampling dynamics and proposal asymmetry.
+     */
+    self->stats = ncm_stats_vec_new (6, NCM_STATS_VEC_COV, FALSE);
+    ncm_stats_vec_enable_quantile (self->stats, 0.8);
   }
 }
 
@@ -510,6 +526,8 @@ _ncm_fit_esmcmc_dispose (GObject *object)
     ncm_memory_pool_free (self->walker_pool, TRUE);
     self->walker_pool = NULL;
   }
+
+  ncm_stats_vec_clear (&self->stats);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_esmcmc_parent_class)->dispose (object);
@@ -1169,6 +1187,33 @@ ncm_fit_esmcmc_get_offboard_ratio_last_update (NcmFitESMCMC *esmcmc)
 }
 
 void
+_ncm_fit_esmcmc_log_ensemble_stats (NcmFitESMCMC *esmcmc)
+{
+  NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
+
+  const gdouble *log10L   = ncm_stats_vec_get_quantile_all (self->stats, 2);
+  const gdouble *log10q   = ncm_stats_vec_get_quantile_all (self->stats, 3);
+  const gdouble *log10p   = ncm_stats_vec_get_quantile_all (self->stats, 4);
+  const gdouble *prob     = ncm_stats_vec_get_quantile_all (self->stats, 5);
+  const gdouble prob_mean = ncm_stats_vec_get_mean (self->stats, 5);
+  const gdouble cor_q_L   = ncm_stats_vec_get_cor (self->stats, 2, 3);
+  const gdouble cor_L_p   = ncm_stats_vec_get_cor (self->stats, 3, 4);
+  const gdouble cor_q_p   = ncm_stats_vec_get_cor (self->stats, 2, 4);
+
+  g_message ("# ========== Walker[%28s] Ensemble Diagnostic Summary ==========\n", ncm_fit_esmcmc_walker_desc (self->walker));
+  g_message ("#                     minimum          40%%          80%%          90%%      maximum\n");
+  g_message ("# log10 p ratio: % 12.5g % 12.5g % 12.5g % 12.5g % 12.5g\n", log10L[0], log10L[1], log10L[2], log10L[3], log10L[4]);
+  g_message ("# log10 q ratio: % 12.5g % 12.5g % 12.5g % 12.5g % 12.5g\n", log10q[0], log10q[1], log10q[2], log10q[3], log10q[4]);
+  g_message ("# log10 a prob:  % 12.5g % 12.5g % 12.5g % 12.5g % 12.5g\n", log10p[0], log10p[1], log10p[2], log10p[3], log10p[4]);
+  g_message ("# accept. prob:  % 12.5g % 12.5g % 12.5g % 12.5g % 12.5g\n", prob[0], prob[1], prob[2], prob[3], prob[4]);
+  g_message ("# ======================================================================================\n");
+  g_message ("#                mean accept.    cor(q, p)     cor(q, a)     cor(p, a)\n");
+  g_message ("#                % 12.5g % 12.5g % 12.5g % 12.5g\n", prob_mean, cor_q_L, cor_q_p, cor_L_p);
+  g_message ("# a = acceptance, p = posterior, q = proposal\n");
+  g_message ("# ======================================================================================\n");
+}
+
+void
 _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf, gboolean init)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
@@ -1257,6 +1302,8 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf, gboolean init)
         ncm_timer_task_log_time_left (self->nt);
         ncm_timer_task_log_cur_datetime (self->nt);
         ncm_timer_task_log_end_datetime (self->nt);
+
+        _ncm_fit_esmcmc_log_ensemble_stats (esmcmc);
       }
 
       break;
@@ -1296,6 +1343,8 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf, gboolean init)
         ncm_timer_task_log_time_left (self->nt);
         ncm_timer_task_log_cur_datetime (self->nt);
         ncm_timer_task_log_end_datetime (self->nt);
+
+        _ncm_fit_esmcmc_log_ensemble_stats (esmcmc);
       }
 
       break;
@@ -1325,8 +1374,6 @@ _ncm_fit_esmcmc_gen_init_points_mpi (NcmFitESMCMC *esmcmc, const glong i, const 
     for (j = 0; j < NCM_FIT_ESMCMC_MPI_IN_LEN; j++)
       ncm_vector_set (thetastar_in_k, self->fparam_len + j, -1.0);
 
-    /*ncm_vector_log_vals (g_ptr_array_index (self->full_thetastar_inout, k), "#  FULL IN: ", "% 22.15g", TRUE);*/
-
     g_ptr_array_add (thetastar_in_a,  thetastar_in_k);
     g_ptr_array_add (thetastar_out_a, thetastar_out_k);
   }
@@ -1339,14 +1386,10 @@ _ncm_fit_esmcmc_gen_init_points_mpi (NcmFitESMCMC *esmcmc, const glong i, const 
   {
     NcmVector *thetastar_out_k = g_ptr_array_index (thetastar_out_a, j);
 
-    /*ncm_vector_log_vals (g_ptr_array_index (self->full_thetastar_inout, k), "# FULL OUT: ", "% 22.15g", TRUE);*/
-
     if (ncm_vector_get (thetastar_out_k, 0) != 0.0)
     {
       NcmVector *full_theta_k     = g_ptr_array_index (self->full_theta, k);
       NcmVector *full_thetastar_k = g_ptr_array_index (self->full_thetastar, k);
-
-      /*printf ("# AHA %ld % 22.15g % 22.15g\n", k, ncm_vector_get (full_thetastar_k, 0), ncm_vector_get (full_thetastar_k, 1));*/
 
       ncm_vector_memcpy (full_theta_k, full_thetastar_k);
 
@@ -1869,8 +1912,6 @@ _ncm_fit_esmcmc_eval_mpi (NcmFitESMCMC *esmcmc, const glong i, const glong f)
     ncm_vector_set (thetastar_in_k, self->fparam_len + 1, ncm_fit_esmcmc_walker_prob_norm (self->walker, self->theta, self->m2lnL, thetastar, k));
     ncm_vector_set (thetastar_in_k, self->fparam_len + 2, ncm_vector_get (self->jumps, k));
 
-    /*ncm_vector_log_vals (g_ptr_array_index (self->full_thetastar_inout, k), "#  FULL IN: ", "% 22.15g", TRUE);*/
-
     if (ncm_mset_fparam_valid_bounds (mset, thetastar))
     {
       g_ptr_array_add (thetastar_in_a,  thetastar_in_k);
@@ -1886,15 +1927,25 @@ _ncm_fit_esmcmc_eval_mpi (NcmFitESMCMC *esmcmc, const glong i, const glong f)
 
   for (k = i; k < f; k++)
   {
-    NcmVector *thetastar_out_k = g_ptr_array_index (self->thetastar_out, k);
+    NcmVector *thetastar_out_k  = g_ptr_array_index (self->thetastar_out, k);
+    NcmVector *full_theta_k     = g_ptr_array_index (self->full_theta, k);
+    NcmVector *full_thetastar_k = g_ptr_array_index (self->full_thetastar, k);
+    NcmVector *thetastar_in_k   = g_ptr_array_index (self->thetastar_in, k);
+    const gdouble m2lnL_star    = ncm_vector_get (full_thetastar_k, NCM_FIT_ESMCMC_M2LNL_ID);
+    const gdouble m2lnL_cur     = ncm_vector_get (full_theta_k, NCM_FIT_ESMCMC_M2LNL_ID);
+    const gdouble m2lnq         = -2.0 * ncm_vector_get (thetastar_in_k, self->fparam_len + 1);
+    const gdouble m2lnp         = m2lnL_star - m2lnL_cur + m2lnq;
 
-    /*ncm_vector_log_vals (g_ptr_array_index (self->full_thetastar_inout, k), "# FULL OUT: ", "% 22.15g", TRUE);*/
+    ncm_stats_vec_set (self->stats, 0, -0.5 * m2lnL_cur / M_LN10);
+    ncm_stats_vec_set (self->stats, 1, -0.5 * m2lnL_star / M_LN10);
+    ncm_stats_vec_set (self->stats, 2, -0.5 * (m2lnL_star - m2lnL_cur) / M_LN10);
+    ncm_stats_vec_set (self->stats, 3, -0.5 * m2lnq / M_LN10);
+    ncm_stats_vec_set (self->stats, 4, -0.5 * m2lnp / M_LN10);
+    ncm_stats_vec_set (self->stats, 5, GSL_MIN (1.0, exp (-0.5 * m2lnp)));
+    ncm_stats_vec_update (self->stats);
 
     if (ncm_vector_get (thetastar_out_k, 0) != 0.0)
     {
-      NcmVector *full_theta_k     = g_ptr_array_index (self->full_theta, k);
-      NcmVector *full_thetastar_k = g_ptr_array_index (self->full_thetastar, k);
-
       ncm_vector_memcpy (full_theta_k, full_thetastar_k);
 
       g_array_index (self->accepted, gboolean, k) = TRUE;
@@ -1957,8 +2008,20 @@ _ncm_fit_esmcmc_run_interval (NcmFitESMCMC *esmcmc, const glong i, const glong f
 
       if (gsl_finite (m2lnL_star[0]))
       {
-        prob = ncm_fit_esmcmc_walker_prob (self->walker, self->theta, self->m2lnL, thetastar, k, m2lnL_cur[0], m2lnL_star[0]);
+        const gdouble lnq   = ncm_fit_esmcmc_walker_prob_norm (self->walker, self->theta, self->m2lnL, thetastar, k);
+        const gdouble m2lnq = -2.0 * lnq;
+        const gdouble m2lnp = m2lnL_star[0] - m2lnL_cur[0] + m2lnq;
+
+        prob = exp (-0.5 * m2lnp);
         prob = GSL_MIN (prob, 1.0);
+
+        ncm_stats_vec_set (self->stats, 0, -0.5 * m2lnL_cur[0] / M_LN10);
+        ncm_stats_vec_set (self->stats, 1, -0.5 * m2lnL_star[0] / M_LN10);
+        ncm_stats_vec_set (self->stats, 2, -0.5 * (m2lnL_star[0] - m2lnL_cur[0]) / M_LN10);
+        ncm_stats_vec_set (self->stats, 3, -0.5 * m2lnq / M_LN10);
+        ncm_stats_vec_set (self->stats, 4, -0.5 * m2lnp / M_LN10);
+        ncm_stats_vec_set (self->stats, 5, prob);
+        ncm_stats_vec_update (self->stats);
       }
     }
     else
@@ -2006,6 +2069,7 @@ _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
 
   if (self->n > 0)
   {
+    ncm_stats_vec_reset (self->stats, TRUE);
     _ncm_fit_esmcmc_get_jumps (esmcmc, ki, self->nwalkers);
 
     if (ki < nwalkers_2)
@@ -2028,6 +2092,7 @@ _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
 
     for (i = 1; i < self->n; i++)
     {
+      ncm_stats_vec_reset (self->stats, TRUE);
       _ncm_fit_esmcmc_get_jumps (esmcmc, 0, self->nwalkers);
 
       ncm_fit_esmcmc_walker_setup (self->walker, mset, self->theta, self->m2lnL, 0, nwalkers_2, rng);
@@ -2279,7 +2344,7 @@ ncm_fit_esmcmc_peek_fit (NcmFitESMCMC *esmcmc)
 }
 
 static void
-_ncm_fit_esmcmc_validade_interval (NcmFitESMCMC *esmcmc, glong i, glong f)
+_ncm_fit_esmcmc_validate_interval (NcmFitESMCMC *esmcmc, glong i, glong f)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
   gboolean mthread                 = (self->nthreads > 1);
@@ -2420,10 +2485,9 @@ _ncm_fit_esmcmc_validate_mpi (NcmFitESMCMC *esmcmc, const glong i, const glong f
  * @pi: initial position
  * @pf: final position
  *
- * Recalculates the value of $-2\ln(L)$ and compares
- * with the values found in the catalog. This function
- * is particularly useful to check if any problem occured
- * during a multithread evaluation of the likelihood.
+ * Recalculates the value of $-2\ln(L)$ and compares with the values found in the
+ * catalog. This function is particularly useful to check if any problem occurred during
+ * a multithread evaluation of the likelihood.
  *
  * Choosing @pf == 0 performs the validation from  @pi to the end.
  *
@@ -2459,7 +2523,7 @@ ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf)
   if (self->has_mpi)
     _ncm_fit_esmcmc_validate_mpi (esmcmc, pi, pf);
   else
-    _ncm_fit_esmcmc_validade_interval (esmcmc, pi, pf);
+    _ncm_fit_esmcmc_validate_interval (esmcmc, pi, pf);
 
   if (self->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
   {
