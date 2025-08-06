@@ -977,6 +977,31 @@ ncm_stats_vec_get_quantile_spread (NcmStatsVec *svec, guint i)
   }
 }
 
+/**
+ * ncm_stats_vec_get_quantile_all:
+ * @svec: a #NcmStatsVec
+ * @i: a variable index
+ *
+ * Returns the current estimate of the quantile initialized
+ * through ncm_stats_vec_enable_quantile(). It returns an
+ * array containing the minimum, p/2, p, (p + 1)/2 and maximum
+ * value.
+ *
+ * Returns: (transfer none) (array fixed-size=5): the current estimate of the quantile.
+ */
+gdouble *
+ncm_stats_vec_get_quantile_all (NcmStatsVec *svec, guint i)
+{
+  g_assert_cmpuint (i, <, svec->q_array->len);
+
+  {
+    gsl_rstat_quantile_workspace *qws_i = g_ptr_array_index (svec->q_array, i);
+    gdouble *q                          = qws_i->q;
+
+    return q;
+  }
+}
+
 static void
 _ncm_stats_vec_get_autocorr_alloc (NcmStatsVec *svec, guint size)
 {
