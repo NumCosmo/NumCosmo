@@ -30,29 +30,38 @@
  *
  * Abstract class for implementing walkers for #NcmFitESMCMC.
  *
- * This class provides the tools to construct the walkers used to generate a Monte Carlo Markov Chain
- * using an ensemble sampler. The objects of this class shall be implemented in the #NcmFitESMCMC class,
- * which will generate the MCMC sample. Below, there is a small review about an ensemble sampler and the walker features.
- * For more information about ensemble samplers, check [[Ensemble Samplers With Affine Invariance, Jonathan Goodman and Jonathan Weare](https://msp.org/camcos/2010/5-1/camcos-v5-n1-p04-s.pdf)].
+ * This class provides the tools to construct the walkers used to generate a Monte Carlo
+ * Markov Chain using an ensemble sampler. The objects of this class shall be
+ * implemented in the #NcmFitESMCMC class, which will generate the MCMC sample. Below,
+ * there is a small review about an ensemble sampler and the walker features. For more
+ * information about ensemble samplers, check [[Ensemble Samplers With Affine
+ * Invariance, Jonathan Goodman and Jonathan
+ * Weare](https://msp.org/camcos/2010/5-1/camcos-v5-n1-p04-s.pdf)].
  *
- * A Monte Carlo Markov Chain (MCMC) is an algorithm method to sample from probability distributions without having to sample
- * directly from the distribution. Suppose that we want to generate a sample from an $n$-dimensional distribution $\pi(X)$.
- * If the function is complicated enough, it is not an easy task to compute the inverse and the norm of the distribution to sample from it,
- * and that is when the MCMC method may be used.
+ * A Monte Carlo Markov Chain (MCMC) is an algorithm method to sample from probability
+ * distributions without having to sample directly from the distribution. Suppose that
+ * we want to generate a sample from an $n$-dimensional distribution $\pi(X)$. If the
+ * function is complicated enough, it is not an easy task to compute the inverse and the
+ * norm of the distribution to sample from it, and that is when the MCMC method may be
+ * used.
  *
- * The MCMC method consists of a point proposal $Y$ based on a kernel $K(Y|X)$, which depends on a step proposal and in an acceptance probability $A(Y|X)$,
- * such that the accepted points are distributed by the target distribution $\pi(X)$.
- * This process of proposing one point in a time $t$ and acceptance or rejection based on the distribution may be viewed as one walker.
- * The ensemble sampler is defined as
+ * The MCMC method consists of a point proposal $Y$ based on a kernel $K(Y|X)$, which
+ * depends on a step proposal and in an acceptance probability $A(Y|X)$, such that the
+ * accepted points are distributed by the target distribution $\pi(X)$. This process of
+ * proposing one point in a time $t$ and acceptance or rejection based on the
+ * distribution may be viewed as one walker. The ensemble sampler is defined as
  * \begin{align}
  * \label{eq2.1}
- * \vec{X}&\equiv(X_1,X_2,X_3,...,X_L)
- * ,\end{align}
+ * \vec{X}&\equiv(X_1,X_2,X_3,...,X_L),
+ * \end{align}
  * where $X_i \in \mathbb{R}^{n}$ is called a walker and $\vec{X} \in \mathbb{R}^{Ln}$.
- * The process now consists in proposing points for all the walkers in a time $t$ to a new point in $t+1$, using the information from the other walkers.
- * The ensemble considers the position of the remaining walkers when moving each particular walker, which is the advantage of this method when comparing
- * it to single walker algorithms since this feature leads to faster convergences. The desired target joint distribution of the ensemble is one that let
- * the walkers be independent of each other, such that each walker has the desired target distribution $\pi(X)$, that is,
+ * The process now consists in proposing points for all the walkers in a time $t$ to a
+ * new point in $t+1$, using the information from the other walkers. The ensemble
+ * considers the position of the remaining walkers when moving each particular walker,
+ * which is the advantage of this method when comparing it to single walker algorithms
+ * since this feature leads to faster convergences. The desired target joint
+ * distribution of the ensemble is one that let the walkers be independent of each
+ * other, such that each walker has the desired target distribution $\pi(X)$, that is,
  * \begin{align}
  * \label{eq2.2}
  * \Pi(\vec{X})=\prod_{i}^{L}\pi(X_i)
