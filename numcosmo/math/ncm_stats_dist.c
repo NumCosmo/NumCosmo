@@ -131,6 +131,7 @@ enum
   PROP_CV_TYPE,
   PROP_USE_THREADS,
   PROP_SPLIT_FRAC,
+  PROP_SHRINK,
   PROP_PRINT_FIT,
 };
 
@@ -153,6 +154,7 @@ ncm_stats_dist_init (NcmStatsDist *sd)
   self->cv_type         = NCM_STATS_DIST_CV_LEN;
   self->use_threads     = FALSE;
   self->split_frac      = 0.0;
+  self->shrink          = 0.0;
   self->min_m2lnp       = 0.0;
   self->max_m2lnp       = 0.0;
   self->href            = 0.0;
@@ -207,6 +209,9 @@ _ncm_stats_dist_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_SPLIT_FRAC:
       ncm_stats_dist_set_split_frac (sd, g_value_get_double (value));
       break;
+    case PROP_SHRINK:
+      ncm_stats_dist_set_shrink (sd, g_value_get_double (value));
+      break;
     case PROP_PRINT_FIT:
       ncm_stats_dist_set_print_fit (sd, g_value_get_boolean (value));
       break;
@@ -243,6 +248,9 @@ _ncm_stats_dist_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_SPLIT_FRAC:
       g_value_set_double (value, ncm_stats_dist_get_split_frac (sd));
+      break;
+    case PROP_SHRINK:
+      g_value_set_double (value, ncm_stats_dist_get_shrink (sd));
       break;
     case PROP_PRINT_FIT:
       g_value_set_boolean (value, ncm_stats_dist_get_print_fit (sd));
@@ -322,6 +330,22 @@ static NcmMatrix *
 _ncm_stats_dist_peek_cov_decomp (NcmStatsDist *sd, guint i)
 {
   g_error ("method peek_cov_decomp not implemented by %s.", G_OBJECT_TYPE_NAME (sd));
+
+  return NULL;
+}
+
+static NcmMatrix *
+_ncm_stats_dist_peek_full_cov_decomp (NcmStatsDist *sd)
+{
+  g_error ("method peek_full_cov_decomp not implemented by %s.", G_OBJECT_TYPE_NAME (sd));
+
+  return NULL;
+}
+
+static NcmMatrix *
+_ncm_stats_dist_peek_full_cov (NcmStatsDist *sd)
+{
+  g_error ("method peek_full_cov not implemented by %s.", G_OBJECT_TYPE_NAME (sd));
 
   return NULL;
 }
@@ -410,6 +434,15 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
                                                         "Fraction to use in the split cross-validation",
                                                         0.10, 0.95, 0.5,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_SHRINK,
+                                   g_param_spec_double ("shrink",
+                                                        NULL,
+                                                        "Shrink factor for the weights",
+                                                        0.0, 1.0, 0.01,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   g_object_class_install_property (object_class,
                                    PROP_PRINT_FIT,
                                    g_param_spec_boolean ("print-fit",
@@ -419,17 +452,19 @@ ncm_stats_dist_class_init (NcmStatsDistClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 
-  klass->set_dim            = &_ncm_stats_dist_set_dim;
-  klass->get_href           = &_ncm_stats_dist_get_href;
-  klass->prepare_kernel     = &_ncm_stats_dist_prepare_kernel;
-  klass->prepare            = &_ncm_stats_dist_prepare;
-  klass->prepare_interp     = &_ncm_stats_dist_prepare_interp;
-  klass->compute_IM         = &_ncm_stats_dist_compute_IM;
-  klass->peek_cov_decomp    = &_ncm_stats_dist_peek_cov_decomp;
-  klass->get_lnnorm         = &_ncm_stats_dist_get_lnnorm;
-  klass->eval_weights       = &_ncm_stats_dist_eval_weights;
-  klass->eval_weights_m2lnp = &_ncm_stats_dist_eval_weights_m2lnp;
-  klass->reset              = &_ncm_stats_dist_reset;
+  klass->set_dim              = &_ncm_stats_dist_set_dim;
+  klass->get_href             = &_ncm_stats_dist_get_href;
+  klass->prepare_kernel       = &_ncm_stats_dist_prepare_kernel;
+  klass->prepare              = &_ncm_stats_dist_prepare;
+  klass->prepare_interp       = &_ncm_stats_dist_prepare_interp;
+  klass->compute_IM           = &_ncm_stats_dist_compute_IM;
+  klass->peek_cov_decomp      = &_ncm_stats_dist_peek_cov_decomp;
+  klass->peek_full_cov_decomp = &_ncm_stats_dist_peek_full_cov_decomp;
+  klass->peek_full_cov        = &_ncm_stats_dist_peek_full_cov;
+  klass->get_lnnorm           = &_ncm_stats_dist_get_lnnorm;
+  klass->eval_weights         = &_ncm_stats_dist_eval_weights;
+  klass->eval_weights_m2lnp   = &_ncm_stats_dist_eval_weights_m2lnp;
+  klass->reset                = &_ncm_stats_dist_reset;
 }
 
 static void
@@ -1055,7 +1090,8 @@ _ncm_stats_dist_prepare_interp (NcmStatsDist *sd, NcmVector *m2lnp)
     const gdouble total_weight = ncm_vector_sum_cpts (self->weights);
 
     g_assert (total_weight > 0.0);
-    ncm_vector_scale (self->weights, 1.0 / total_weight);
+    ncm_vector_scale (self->weights, (1.0 - self->shrink) / total_weight);
+    ncm_vector_add_constant (self->weights, self->shrink / self->n_kernels);
   }
 }
 
@@ -1288,6 +1324,44 @@ ncm_stats_dist_get_split_frac (NcmStatsDist *sd)
   NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
 
   return self->split_frac;
+}
+
+/**
+ * ncm_stats_dist_set_shrink:
+ * @sd: a #NcmStatsDist
+ * @shrink: the shrink factor
+ *
+ * Sets the shrink factor to @shrink. The shrink factor is used to shrink the weights of
+ * the sample points in the interpolation. A shrink factor of 0.0 no shrinkage is applied,
+ * a shrink factor of 1.0 full shrinkage is applied.
+ *
+ */
+void
+ncm_stats_dist_set_shrink (NcmStatsDist *sd, const gdouble shrink)
+{
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
+
+  g_assert_cmpfloat (shrink, >=, 0.0);
+  g_assert_cmpfloat (shrink, <=, 1.0);
+
+  self->shrink = shrink;
+}
+
+/**
+ * ncm_stats_dist_get_shrink:
+ * @sd: a #NcmStatsDist
+ *
+ * The shrink factor is used to shrink the weights of the sample points in the
+ * interpolation.
+ *
+ * Returns: the shrink factor.
+ */
+gdouble
+ncm_stats_dist_get_shrink (NcmStatsDist *sd)
+{
+  NcmStatsDistPrivate * const self = ncm_stats_dist_get_instance_private (sd);
+
+  return self->shrink;
 }
 
 /**
@@ -1632,8 +1706,7 @@ ncm_stats_dist_peek_sample_array (NcmStatsDist *sd)
  * @sd: a #NcmStatsDist
  * @i: kernel index
  *
- * Gets the covariance matrix associated with the @i-th
- * kernel.
+ * Gets the covariance matrix associated with the @i-th kernel.
  *
  * Returns: (transfer none): Cholesky decomposition of the @i-th covariance matrix.
  */
@@ -1643,6 +1716,39 @@ ncm_stats_dist_peek_cov_decomp (NcmStatsDist *sd, guint i)
   NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
 
   return sd_class->peek_cov_decomp (sd, i);
+}
+
+/**
+ * ncm_stats_dist_peek_full_cov_decomp: (virtual peek_full_cov_decomp)
+ * @sd: a #NcmStatsDist
+ *
+ * Gets the full covariance matrix decomposition. This is a the Cholesky decomposition
+ * of the covariance matrix of the whole sample.
+ *
+ * Returns: (transfer none): full covariance matrix decomposition.
+ */
+NcmMatrix *
+ncm_stats_dist_peek_full_cov_decomp (NcmStatsDist *sd)
+{
+  NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
+
+  return sd_class->peek_full_cov_decomp (sd);
+}
+
+/**
+ * ncm_stats_dist_peek_full_cov: (virtual peek_full_cov)
+ * @sd: a #NcmStatsDist
+ *
+ * Gets the full covariance matrix of the whole sample.
+ *
+ * Returns: (transfer none): full covariance matrix.
+ */
+NcmMatrix *
+ncm_stats_dist_peek_full_cov (NcmStatsDist *sd)
+{
+  NcmStatsDistClass *sd_class = NCM_STATS_DIST_GET_CLASS (sd);
+
+  return sd_class->peek_full_cov (sd);
 }
 
 /**
