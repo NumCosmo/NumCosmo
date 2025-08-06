@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_xcor_limber_kernel.c
+ *            nc_xcor_kernel.c
  *
  *  Tue July 14 12:00:00 2015
  *  Copyright  2015  Cyrille Doux
@@ -25,7 +25,7 @@
 
 
 /**
- * NcXcorLimberKernel:
+ * NcXcorKernel:
  *
  * Base object for the kernels of projected observables used in cross-correlations.
  *
@@ -47,16 +47,16 @@
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_serialize.h"
-#include "xcor/nc_xcor_limber_kernel.h"
+#include "xcor/nc_xcor_kernel.h"
 #include "xcor/nc_xcor.h"
 
-typedef struct _NcXcorLimberKernelPrivate
+typedef struct _NcXcorKernelPrivate
 {
   /*< private >*/
   NcmModel parent_instance;
   gdouble cons_factor;
   gdouble zmin, zmax, zmid;
-} NcXcorLimberKernelPrivate;
+} NcXcorKernelPrivate;
 
 enum
 {
@@ -67,13 +67,13 @@ enum
 };
 
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcXcorLimberKernel, nc_xcor_limber_kernel, NCM_TYPE_MODEL)
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcXcorKernel, nc_xcor_kernel, NCM_TYPE_MODEL)
 G_DEFINE_BOXED_TYPE (NcXcorKinetic, nc_xcor_kinetic, nc_xcor_kinetic_copy, nc_xcor_kinetic_free)
 
 static void
-nc_xcor_limber_kernel_init (NcXcorLimberKernel *xclk)
+nc_xcor_kernel_init (NcXcorKernel *xclk)
 {
-  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   self->cons_factor = 0.0;
   self->zmin        = 0.0;
@@ -82,26 +82,26 @@ nc_xcor_limber_kernel_init (NcXcorLimberKernel *xclk)
 }
 
 static void
-_nc_xcor_limber_kernel_dispose (GObject *object)
+_nc_xcor_kernel_dispose (GObject *object)
 {
   /* Chain up : end */
-  G_OBJECT_CLASS (nc_xcor_limber_kernel_parent_class)->dispose (object);
+  G_OBJECT_CLASS (nc_xcor_kernel_parent_class)->dispose (object);
 }
 
 static void
-_nc_xcor_limber_kernel_finalize (GObject *object)
+_nc_xcor_kernel_finalize (GObject *object)
 {
   /* Chain up : end */
-  G_OBJECT_CLASS (nc_xcor_limber_kernel_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_xcor_kernel_parent_class)->finalize (object);
 }
 
 static void
-_nc_xcor_limber_kernel_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_xcor_kernel_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcXcorLimberKernel *xclk        = NC_XCOR_LIMBER_KERNEL (object);
-  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+  NcXcorKernel *xclk        = NC_XCOR_KERNEL (object);
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  g_return_if_fail (NC_IS_XCOR_LIMBER_KERNEL (object));
+  g_return_if_fail (NC_IS_XCOR_KERNEL (object));
 
   switch (prop_id)
   {
@@ -118,12 +118,12 @@ _nc_xcor_limber_kernel_set_property (GObject *object, guint prop_id, const GValu
 }
 
 static void
-_nc_xcor_limber_kernel_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcXcorLimberKernel *xclk        = NC_XCOR_LIMBER_KERNEL (object);
-  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+  NcXcorKernel *xclk        = NC_XCOR_KERNEL (object);
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  g_return_if_fail (NC_IS_XCOR_LIMBER_KERNEL (object));
+  g_return_if_fail (NC_IS_XCOR_KERNEL (object));
 
   switch (prop_id)
   {
@@ -139,20 +139,20 @@ _nc_xcor_limber_kernel_get_property (GObject *object, guint prop_id, GValue *val
   }
 }
 
-NCM_MSET_MODEL_REGISTER_ID (nc_xcor_limber_kernel, NC_TYPE_XCOR_LIMBER_KERNEL);
+NCM_MSET_MODEL_REGISTER_ID (nc_xcor_kernel, NC_TYPE_XCOR_KERNEL);
 
 static void
-nc_xcor_limber_kernel_class_init (NcXcorLimberKernelClass *klass)
+nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property = &_nc_xcor_limber_kernel_set_property;
-  model_class->get_property = &_nc_xcor_limber_kernel_get_property;
-  object_class->dispose     = &_nc_xcor_limber_kernel_dispose;
-  object_class->finalize    = &_nc_xcor_limber_kernel_finalize;
+  model_class->set_property = &_nc_xcor_kernel_set_property;
+  model_class->get_property = &_nc_xcor_kernel_get_property;
+  object_class->dispose     = &_nc_xcor_kernel_dispose;
+  object_class->finalize    = &_nc_xcor_kernel_finalize;
 
-  ncm_model_class_set_name_nick (model_class, "Cross-correlation Limber Kernels", "xcor-limber-kernel");
+  ncm_model_class_set_name_nick (model_class, "Cross-correlation Kernels", "xcor-kernel");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
 
   ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
@@ -172,46 +172,46 @@ nc_xcor_limber_kernel_class_init (NcXcorLimberKernelClass *klass)
                                                         0.0, 1e5, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  ncm_mset_model_register_id (model_class, "NcXcorLimberKernel", "Cross-correlation Limber Kernels",
+  ncm_mset_model_register_id (model_class, "NcXcorKernel", "Cross-correlation Kernels",
                               NULL, TRUE, NCM_MSET_MODEL_MAIN);
 }
 
 /**
- * nc_xcor_limber_kernel_ref:
- * @xclk: a #NcXcorLimberKernel
+ * nc_xcor_kernel_ref:
+ * @xclk: a #NcXcorKernel
  *
  * FIXME
  *
  * Returns: (transfer full): @xclk.
  */
-NcXcorLimberKernel *
-nc_xcor_limber_kernel_ref (NcXcorLimberKernel *xclk)
+NcXcorKernel *
+nc_xcor_kernel_ref (NcXcorKernel *xclk)
 {
   return g_object_ref (xclk);
 }
 
 /**
- * nc_xcor_limber_kernel_free:
- * @xclk: a #NcXcorLimberKernel
+ * nc_xcor_kernel_free:
+ * @xclk: a #NcXcorKernel
  *
  * FIXME
  *
  */
 void
-nc_xcor_limber_kernel_free (NcXcorLimberKernel *xclk)
+nc_xcor_kernel_free (NcXcorKernel *xclk)
 {
   g_object_unref (xclk);
 }
 
 /**
- * nc_xcor_limber_kernel_clear:
- * @xclk: a #NcXcorLimberKernel
+ * nc_xcor_kernel_clear:
+ * @xclk: a #NcXcorKernel
  *
  * FIXME
  *
  */
 void
-nc_xcor_limber_kernel_clear (NcXcorLimberKernel **xclk)
+nc_xcor_kernel_clear (NcXcorKernel **xclk)
 {
   g_clear_object (xclk);
 }
@@ -248,36 +248,36 @@ nc_xcor_kinetic_free (NcXcorKinetic *xck)
 }
 
 /**
- * nc_xcor_limber_kernel_obs_len: (virtual obs_len)
- * @xclk: a #NcXcorLimberKernel
+ * nc_xcor_kernel_obs_len: (virtual obs_len)
+ * @xclk: a #NcXcorKernel
  *
  * FIXME
  *
  * Returns: FIXME
  */
 guint
-nc_xcor_limber_kernel_obs_len (NcXcorLimberKernel *xclk)
+nc_xcor_kernel_obs_len (NcXcorKernel *xclk)
 {
-  return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->obs_len (xclk);
+  return NC_XCOR_KERNEL_GET_CLASS (xclk)->obs_len (xclk);
 }
 
 /**
- * nc_xcor_limber_kernel_obs_params_len: (virtual obs_params_len)
- * @xclk: a #NcXcorLimberKernel
+ * nc_xcor_kernel_obs_params_len: (virtual obs_params_len)
+ * @xclk: a #NcXcorKernel
  *
  * FIXME
  *
  * Returns: FIXME
  */
 guint
-nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel *xclk)
+nc_xcor_kernel_obs_params_len (NcXcorKernel *xclk)
 {
-  return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->obs_params_len (xclk);
+  return NC_XCOR_KERNEL_GET_CLASS (xclk)->obs_params_len (xclk);
 }
 
 /**
- * nc_xcor_limber_kernel_set_z_range:
- * @xclk: a #NcXcorLimberKernel
+ * nc_xcor_kernel_set_z_range:
+ * @xclk: a #NcXcorKernel
  * @zmin: minimum redshift
  * @zmax: maximum redshift
  * @zmid: mid redshift
@@ -286,9 +286,9 @@ nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel *xclk)
  *
  */
 void
-nc_xcor_limber_kernel_set_z_range (NcXcorLimberKernel *xclk, gdouble zmin, gdouble zmax, gdouble zmid)
+nc_xcor_kernel_set_z_range (NcXcorKernel *xclk, gdouble zmin, gdouble zmax, gdouble zmid)
 {
-  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   self->zmin = zmin;
   self->zmax = zmax;
@@ -296,8 +296,8 @@ nc_xcor_limber_kernel_set_z_range (NcXcorLimberKernel *xclk, gdouble zmin, gdoub
 }
 
 /**
- * nc_xcor_limber_kernel_get_z_range:
- * @xclk: a #NcXcorLimberKernel
+ * nc_xcor_kernel_get_z_range:
+ * @xclk: a #NcXcorKernel
  * @zmin: (out): minimum redshift
  * @zmax: (out): maximum redshift
  * @zmid: (out) (allow-none): mid redshift
@@ -306,9 +306,9 @@ nc_xcor_limber_kernel_set_z_range (NcXcorLimberKernel *xclk, gdouble zmin, gdoub
  *
  */
 void
-nc_xcor_limber_kernel_get_z_range (NcXcorLimberKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid)
+nc_xcor_kernel_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid)
 {
-  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   *zmin = self->zmin;
   *zmax = self->zmax;
@@ -316,40 +316,40 @@ nc_xcor_limber_kernel_get_z_range (NcXcorLimberKernel *xclk, gdouble *zmin, gdou
 }
 
 /**
- * nc_xcor_limber_kernel_set_const_factor:
- * @xclk: a #NcXcorLimberKernel
+ * nc_xcor_kernel_set_const_factor:
+ * @xclk: a #NcXcorKernel
  * @cf: a #gdouble
  *
  * Set the constant factor of the kernel.
  *
  */
 void
-nc_xcor_limber_kernel_set_const_factor (NcXcorLimberKernel *xclk, gdouble cf)
+nc_xcor_kernel_set_const_factor (NcXcorKernel *xclk, gdouble cf)
 {
-  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   self->cons_factor = cf;
 }
 
 /**
- * nc_xcor_limber_kernel_get_const_factor:
- * @xclk: a #NcXcorLimberKernel
+ * nc_xcor_kernel_get_const_factor:
+ * @xclk: a #NcXcorKernel
  *
  * Get the constant factor of the kernel.
  *
  * Returns: the constant factor.
  */
 gdouble
-nc_xcor_limber_kernel_get_const_factor (NcXcorLimberKernel *xclk)
+nc_xcor_kernel_get_const_factor (NcXcorKernel *xclk)
 {
-  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   return self->cons_factor;
 }
 
 /**
- * nc_xcor_limber_kernel_eval: (virtual eval)
- * @xclk: a #NcXcorLimberKernel
+ * nc_xcor_kernel_eval: (virtual eval)
+ * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @z: a #gdouble
  * @xck: a #NcXcorKinetic
@@ -360,19 +360,19 @@ nc_xcor_limber_kernel_get_const_factor (NcXcorLimberKernel *xclk)
  * Returns: FIXME
  */
 gdouble
-nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
+nc_xcor_kernel_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
-  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   if ((self->zmin <= z) && (self->zmax >= z))
-    return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, xck, l);
+    return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, xck, l);
   else
     return 0.0;
 }
 
 /**
- * nc_xcor_limber_kernel_eval_full:
- * @xclk: a #NcXcorLimberKernel
+ * nc_xcor_kernel_eval_full:
+ * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @z: a #gdouble
  * @dist: a #NcDistance
@@ -383,22 +383,22 @@ nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble 
  * Returns: FIXME
  */
 gdouble
-nc_xcor_limber_kernel_eval_full (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l)
+nc_xcor_kernel_eval_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l)
 {
-  NcXcorLimberKernelPrivate *self = nc_xcor_limber_kernel_get_instance_private (xclk);
+  NcXcorKernelPrivate *self       = nc_xcor_kernel_get_instance_private (xclk);
   const gdouble xi_z              = nc_distance_comoving (dist, cosmo, z); /* in units of Hubble radius */
   const gdouble E_z               = nc_hicosmo_E (cosmo, z);
   const NcXcorKinetic xck         = { xi_z, E_z };
 
   if ((self->zmin <= z) && (self->zmax >= z))
-    return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, &xck, l) * self->cons_factor;
+    return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, &xck, l) * self->cons_factor;
   else
     return 0.0;
 }
 
 /**
- * nc_xcor_limber_kernel_add_noise: (virtual add_noise)
- * @xclk: a #NcXcorLimberKernel
+ * nc_xcor_kernel_add_noise: (virtual add_noise)
+ * @xclk: a #NcXcorKernel
  * @vp1: a #NcmVector
  * @vp2: a #NcmVector
  * @lmin: a #guint
@@ -407,27 +407,27 @@ nc_xcor_limber_kernel_eval_full (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdo
  *
  */
 void
-nc_xcor_limber_kernel_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin)
+nc_xcor_kernel_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin)
 {
-  NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->add_noise (xclk, vp1, vp2, lmin);
+  NC_XCOR_KERNEL_GET_CLASS (xclk)->add_noise (xclk, vp1, vp2, lmin);
 }
 
 /**
- * nc_xcor_limber_kernel_prepare: (virtual prepare)
- * @xclk: a #NcXcorLimberKernel
+ * nc_xcor_kernel_prepare: (virtual prepare)
+ * @xclk: a #NcXcorKernel
  * @cosmo: a NcHICosmo
  *
  * FIXME
  *
  */
 void
-nc_xcor_limber_kernel_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
+nc_xcor_kernel_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 {
-  return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->prepare (xclk, cosmo);
+  return NC_XCOR_KERNEL_GET_CLASS (xclk)->prepare (xclk, cosmo);
 }
 
 static void
-_nc_xcor_limber_kernel_log_all_models_go (GType model_type, guint n)
+_nc_xcor_kernel_log_all_models_go (GType model_type, guint n)
 {
   guint nc, i, j;
   GType *models = g_type_children (model_type, &nc);
@@ -445,7 +445,7 @@ _nc_xcor_limber_kernel_log_all_models_go (GType model_type, guint n)
     g_message ("%s\n", g_type_name (models[i]));
 
     if (ncc)
-      _nc_xcor_limber_kernel_log_all_models_go (models[i], n + 2);
+      _nc_xcor_kernel_log_all_models_go (models[i], n + 2);
 
     g_free (modelsc);
   }
@@ -454,16 +454,16 @@ _nc_xcor_limber_kernel_log_all_models_go (GType model_type, guint n)
 }
 
 /**
- * nc_xcor_limber_kernel_log_all_models:
+ * nc_xcor_kernel_log_all_models:
  *
  * FIXME
  *
  */
 void
-nc_xcor_limber_kernel_log_all_models (void)
+nc_xcor_kernel_log_all_models (void)
 {
-  g_message ("# Registred NcXcorLimberKernel:%s are:\n",
-             g_type_name (NC_TYPE_XCOR_LIMBER_KERNEL));
-  _nc_xcor_limber_kernel_log_all_models_go (NC_TYPE_XCOR_LIMBER_KERNEL, 0);
+  g_message ("# Registred NcXcorKernel:%s are:\n",
+             g_type_name (NC_TYPE_XCOR_KERNEL));
+  _nc_xcor_kernel_log_all_models_go (NC_TYPE_XCOR_KERNEL, 0);
 }
 
