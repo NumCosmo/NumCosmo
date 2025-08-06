@@ -81,6 +81,7 @@ GType nc_hicosmo_de_wspline_get_type (void) G_GNUC_CONST;
 NcHICosmoDEWSpline *nc_hicosmo_de_wspline_new (gsize nknots, const gdouble z_f);
 
 NcmVector *nc_hicosmo_de_wspline_get_alpha (NcHICosmoDEWSpline *wspline);
+gdouble nc_hicosmo_de_wspline_mean_kappa (NcHICosmoDEWSpline *wspline);
 
 G_END_DECLS
 
