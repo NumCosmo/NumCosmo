@@ -67,10 +67,10 @@ def test_compute_full_spectrum(
     """Test NcHIPertTwoFluids compute_full_spectrum."""
     two_fluids.props.reltol = 1.0e-9
 
-    def spec_params(Omegars=1.0e-5, w=1.0e-3, E0=1.0):
+    def spec_params(Omega_rs=1.0e-5, w=1.0e-3, E0=1.0):
         cosmo_qgrw.props.w = w
-        cosmo_qgrw.props.Omegar = E0 * Omegars
-        cosmo_qgrw.props.Omegaw = E0 * (1.0 - Omegars)
+        cosmo_qgrw.props.Omegar = E0 * Omega_rs
+        cosmo_qgrw.props.Omegaw = E0 * (1.0 - Omega_rs)
 
         spec1 = two_fluids.compute_zeta_spectrum(
             cosmo_qgrw, 1, -cosmo_qgrw.abs_alpha(1.0e-14), -1.0, 1.0e-3, 1.0e8, 10
@@ -90,7 +90,7 @@ def test_compute_full_spectrum(
         specs2.append(spec2)
 
     lnk_v = specs1[0].peek_xv()
-    lnw_v = Ncm.Vector.new_array(np.log(w_a))
+    lnw_v = Ncm.Vector.new_array(np.log(w_a).tolist())
     zm = Ncm.Matrix.new(lnw_v.len(), lnk_v.len())
 
     for i, (spec1, spec2, w) in enumerate(zip(specs1, specs2, w_a)):

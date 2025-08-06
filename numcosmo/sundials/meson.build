@@ -179,6 +179,8 @@ sundials_sources = files(
     'include/sundials/sundials_version.h',
     'src/sundials/sundials_adaptcontroller.c',
     'src/sundials/sundials_adiak_metadata.h',
+    'src/sundials/sundials_adjointcheckpointscheme.c',
+    'src/sundials/sundials_adjointstepper.c',
     'src/sundials/sundials_band.c',
     'src/sundials/sundials_context.c',
     'src/sundials/sundials_debug.h',
