@@ -103,6 +103,7 @@ void ncm_stats_vec_enable_quantile (NcmStatsVec *svec, gdouble p);
 void ncm_stats_vec_disable_quantile (NcmStatsVec *svec);
 gdouble ncm_stats_vec_get_quantile (NcmStatsVec *svec, guint i);
 gdouble ncm_stats_vec_get_quantile_spread (NcmStatsVec *svec, guint i);
+gdouble *ncm_stats_vec_get_quantile_all (NcmStatsVec *svec, guint i);
 
 NcmVector *ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p);
 NcmVector *ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsample);

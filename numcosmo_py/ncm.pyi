@@ -466,7 +466,6 @@ def lapack_dsytrs(
 ) -> int: ...
 def lapack_ws_clear(ws: LapackWS) -> None: ...
 def lh_ratio2d_region_clear(rg: LHRatio2dRegion) -> None: ...
-def likelihoood_peek_m2lnL_v(lh: Likelihood) -> Vector: ...
 def memory_pool_return(p: None) -> None: ...
 def message_str(msg: str) -> None: ...
 def message_ww(msg: str, first: str, rest: str, ncols: int) -> None: ...
@@ -2463,7 +2462,7 @@ class Fftlog(GObject.Object):
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
-        FFTW Plan wisdown name
+        FFTW Plan wisdom name
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
@@ -2608,7 +2607,7 @@ class FftlogGausswin2(Fftlog):
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
-        FFTW Plan wisdown name
+        FFTW Plan wisdom name
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
@@ -2706,7 +2705,7 @@ class FftlogSBesselJ(Fftlog):
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
-        FFTW Plan wisdown name
+        FFTW Plan wisdom name
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
@@ -2818,7 +2817,7 @@ class FftlogSBesselJLJM(Fftlog):
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
-        FFTW Plan wisdown name
+        FFTW Plan wisdom name
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
@@ -2935,7 +2934,7 @@ class FftlogTophatwin2(Fftlog):
       no-ringing -> gboolean: no-ringing
         No ringing
       name -> gchararray: name
-        FFTW Plan wisdown name
+        FFTW Plan wisdom name
       use-eval-int -> gboolean: use-eval-int
         Whether to use evaluation interval
       use-smooth-padding -> gboolean: use-smooth-padding
@@ -3018,13 +3017,13 @@ class Fit(GObject.Object):
       grad-type -> NcmFitGradType: grad-type
         Differentiation method
       maxiter -> guint: maxiter
-        Maximum number of interations
+        Maximum number of iterations
       m2lnL-reltol -> gdouble: m2lnL-reltol
-        Relative tolarence in m2lnL
+        Relative tolerance in m2lnL
       m2lnL-abstol -> gdouble: m2lnL-abstol
-        Absolute tolarence in m2lnL
+        Absolute tolerance in m2lnL
       params-reltol -> gdouble: params-reltol
-        Relative tolarence in fitted parameters
+        Relative tolerance in fitted parameters
       equality-constraints -> NcmObjArray: equality-constraints
         Equality constraints array
       equality-constraints-tot -> NcmVector: equality-constraints-tot
@@ -3229,7 +3228,7 @@ class FitESMCMC(GObject.Object):
       trim-type -> NcmMSetCatalogTrimType: trim-type
         Trimming tests to apply
       min-runs -> guint: min-runs
-        Minumum number of runs
+        Minimum number of runs
       max-runs-time -> gdouble: max-runs-time
         Maximum time between runs
       skip-check -> gboolean: skip-check
@@ -3488,6 +3487,12 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         Kernel used in posterior approximation
       over-smooth -> gdouble: over-smooth
         Over-smooth parameter used to adjust kernel bandwidth
+      shrink -> gdouble: shrink
+        Shrink factor for weight computation
+      random-walk-prob -> gdouble: random-walk-prob
+        Probability of random walk step
+      random-walk-scale -> gdouble: random-walk-scale
+        Scale of the random walk step
       use-interp -> gboolean: use-interp
         Whether to use interpolation to build the posterior approximation
       use-threads -> gboolean: use-threads
@@ -3507,6 +3512,9 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         kernel_type: FitESMCMCWalkerAPESKType
         method: FitESMCMCWalkerAPESMethod
         over_smooth: float
+        random_walk_prob: float
+        random_walk_scale: float
+        shrink: float
         use_interp: bool
         use_threads: bool
         nparams: int
@@ -3518,6 +3526,9 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
         kernel_type: FitESMCMCWalkerAPESKType = ...,
         method: FitESMCMCWalkerAPESMethod = ...,
         over_smooth: float = ...,
+        random_walk_prob: float = ...,
+        random_walk_scale: float = ...,
+        shrink: float = ...,
         use_interp: bool = ...,
         use_threads: bool = ...,
         nparams: int = ...,
@@ -3529,6 +3540,9 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
     def get_k_type(self) -> FitESMCMCWalkerAPESKType: ...
     def get_method(self) -> FitESMCMCWalkerAPESMethod: ...
     def get_over_smooth(self) -> float: ...
+    def get_random_walk_prob(self) -> float: ...
+    def get_random_walk_scale(self) -> float: ...
+    def get_shrink(self) -> float: ...
     def get_use_threads(self) -> bool: ...
     def interp(self) -> bool: ...
     @classmethod
@@ -3553,6 +3567,9 @@ class FitESMCMCWalkerAPES(FitESMCMCWalker):
     def set_local_frac(self, local_frac: float) -> None: ...
     def set_method(self, method: FitESMCMCWalkerAPESMethod) -> None: ...
     def set_over_smooth(self, os: float) -> None: ...
+    def set_random_walk_prob(self, prob: float) -> None: ...
+    def set_random_walk_scale(self, scale: float) -> None: ...
+    def set_shrink(self, shrink: float) -> None: ...
     def set_use_threads(self, use_threads: bool) -> None: ...
     def use_interp(self, use_interp: bool) -> None: ...
 
@@ -3760,13 +3777,13 @@ class FitGSLLS(Fit):
       grad-type -> NcmFitGradType: grad-type
         Differentiation method
       maxiter -> guint: maxiter
-        Maximum number of interations
+        Maximum number of iterations
       m2lnL-reltol -> gdouble: m2lnL-reltol
-        Relative tolarence in m2lnL
+        Relative tolerance in m2lnL
       m2lnL-abstol -> gdouble: m2lnL-abstol
-        Absolute tolarence in m2lnL
+        Absolute tolerance in m2lnL
       params-reltol -> gdouble: params-reltol
-        Relative tolarence in fitted parameters
+        Relative tolerance in fitted parameters
       equality-constraints -> NcmObjArray: equality-constraints
         Equality constraints array
       equality-constraints-tot -> NcmVector: equality-constraints-tot
@@ -3855,13 +3872,13 @@ class FitGSLMM(Fit):
       grad-type -> NcmFitGradType: grad-type
         Differentiation method
       maxiter -> guint: maxiter
-        Maximum number of interations
+        Maximum number of iterations
       m2lnL-reltol -> gdouble: m2lnL-reltol
-        Relative tolarence in m2lnL
+        Relative tolerance in m2lnL
       m2lnL-abstol -> gdouble: m2lnL-abstol
-        Absolute tolarence in m2lnL
+        Absolute tolerance in m2lnL
       params-reltol -> gdouble: params-reltol
-        Relative tolarence in fitted parameters
+        Relative tolerance in fitted parameters
       equality-constraints -> NcmObjArray: equality-constraints
         Equality constraints array
       equality-constraints-tot -> NcmVector: equality-constraints-tot
@@ -3963,13 +3980,13 @@ class FitGSLMMS(Fit):
       grad-type -> NcmFitGradType: grad-type
         Differentiation method
       maxiter -> guint: maxiter
-        Maximum number of interations
+        Maximum number of iterations
       m2lnL-reltol -> gdouble: m2lnL-reltol
-        Relative tolarence in m2lnL
+        Relative tolerance in m2lnL
       m2lnL-abstol -> gdouble: m2lnL-abstol
-        Absolute tolarence in m2lnL
+        Absolute tolerance in m2lnL
       params-reltol -> gdouble: params-reltol
-        Relative tolarence in fitted parameters
+        Relative tolerance in fitted parameters
       equality-constraints -> NcmObjArray: equality-constraints
         Equality constraints array
       equality-constraints-tot -> NcmVector: equality-constraints-tot
@@ -4087,13 +4104,13 @@ class FitLevmar(Fit):
       grad-type -> NcmFitGradType: grad-type
         Differentiation method
       maxiter -> guint: maxiter
-        Maximum number of interations
+        Maximum number of iterations
       m2lnL-reltol -> gdouble: m2lnL-reltol
-        Relative tolarence in m2lnL
+        Relative tolerance in m2lnL
       m2lnL-abstol -> gdouble: m2lnL-abstol
-        Absolute tolarence in m2lnL
+        Absolute tolerance in m2lnL
       params-reltol -> gdouble: params-reltol
-        Relative tolarence in fitted parameters
+        Relative tolerance in fitted parameters
       equality-constraints -> NcmObjArray: equality-constraints
         Equality constraints array
       equality-constraints-tot -> NcmVector: equality-constraints-tot
@@ -4407,13 +4424,13 @@ class FitNLOpt(Fit):
       grad-type -> NcmFitGradType: grad-type
         Differentiation method
       maxiter -> guint: maxiter
-        Maximum number of interations
+        Maximum number of iterations
       m2lnL-reltol -> gdouble: m2lnL-reltol
-        Relative tolarence in m2lnL
+        Relative tolerance in m2lnL
       m2lnL-abstol -> gdouble: m2lnL-abstol
-        Absolute tolarence in m2lnL
+        Absolute tolerance in m2lnL
       params-reltol -> gdouble: params-reltol
-        Relative tolarence in fitted parameters
+        Relative tolerance in fitted parameters
       equality-constraints -> NcmObjArray: equality-constraints
         Equality constraints array
       equality-constraints-tot -> NcmVector: equality-constraints-tot
@@ -4521,7 +4538,7 @@ class FitState(GObject.Object):
       is-least-squares -> gboolean: is-least-squares
         Is a least squares fit state
       niters -> guint: niters
-        Number of interations
+        Number of iterations
       func-eval -> guint: func-eval
         Number of function evaluations
       grad-eval -> guint: grad-eval
@@ -5239,6 +5256,7 @@ class Likelihood(GObject.Object):
     @classmethod
     def new(cls, dset: Dataset) -> Likelihood: ...
     def peek_dataset(self) -> Dataset: ...
+    def peek_m2lnL_v(self) -> Vector: ...
     def priors_add(self, prior: Prior) -> None: ...
     def priors_leastsquares_f(self, mset: MSet, priors_f: Vector) -> None: ...
     def priors_length_f(self) -> int: ...
@@ -10503,6 +10521,8 @@ class StatsDist(GObject.Object):
         Whether to use OpenMP threads during computation
       split-frac -> gdouble: split-frac
         Fraction to use in the split cross-validation
+      shrink -> gdouble: shrink
+        Shrink factor for the weights
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
 
@@ -10516,6 +10536,7 @@ class StatsDist(GObject.Object):
         kernel: StatsDistKernel
         over_smooth: float
         print_fit: bool
+        shrink: float
         split_frac: float
         use_threads: bool
 
@@ -10527,6 +10548,7 @@ class StatsDist(GObject.Object):
         kernel: StatsDistKernel = ...,
         over_smooth: float = ...,
         print_fit: bool = ...,
+        shrink: float = ...,
         split_frac: float = ...,
         use_threads: bool = ...,
     ) -> None: ...
@@ -10539,6 +10561,8 @@ class StatsDist(GObject.Object):
     def do_get_href(self) -> float: ...
     def do_get_lnnorm(self, i: int) -> float: ...
     def do_peek_cov_decomp(self, i: int) -> Matrix: ...
+    def do_peek_full_cov(self) -> Matrix: ...
+    def do_peek_full_cov_decomp(self) -> Matrix: ...
     def do_prepare(self) -> None: ...
     def do_prepare_interp(self, m2lnp: Vector) -> None: ...
     def do_prepare_kernel(self, sample_array: typing.Sequence[Vector]) -> None: ...
@@ -10558,10 +10582,13 @@ class StatsDist(GObject.Object):
     def get_print_fit(self) -> bool: ...
     def get_rnorm(self) -> float: ...
     def get_sample_size(self) -> int: ...
+    def get_shrink(self) -> float: ...
     def get_split_frac(self) -> float: ...
     def get_use_threads(self) -> bool: ...
     def kernel_choose(self, rng: RNG) -> int: ...
     def peek_cov_decomp(self, i: int) -> Matrix: ...
+    def peek_full_cov(self) -> Matrix: ...
+    def peek_full_cov_decomp(self) -> Matrix: ...
     def peek_kernel(self) -> StatsDistKernel: ...
     def peek_sample_array(self) -> list[Vector]: ...
     def peek_weights(self) -> Vector: ...
@@ -10575,6 +10602,7 @@ class StatsDist(GObject.Object):
     def set_kernel(self, sdk: StatsDistKernel) -> None: ...
     def set_over_smooth(self, over_smooth: float) -> None: ...
     def set_print_fit(self, print_fit: bool) -> None: ...
+    def set_shrink(self, shrink: float) -> None: ...
     def set_split_frac(self, split_frac: float) -> None: ...
     def set_use_threads(self, use_threads: bool) -> None: ...
 
@@ -10971,6 +10999,8 @@ class StatsDistClass(GObject.GPointer):
     prepare_interp: typing.Callable[[StatsDist, Vector], None] = ...
     compute_IM: typing.Callable[[StatsDist, Matrix], None] = ...
     peek_cov_decomp: typing.Callable[[StatsDist, int], Matrix] = ...
+    peek_full_cov_decomp: typing.Callable[[StatsDist], Matrix] = ...
+    peek_full_cov: typing.Callable[[StatsDist], Matrix] = ...
     get_lnnorm: typing.Callable[[StatsDist, int], float] = ...
     eval_weights: typing.Callable[[StatsDist, Vector, Vector], float] = ...
     eval_weights_m2lnp: typing.Callable[[StatsDist, Vector, Vector], float] = ...
@@ -11009,6 +11039,8 @@ class StatsDistKDE(StatsDist):
         Whether to use OpenMP threads during computation
       split-frac -> gdouble: split-frac
         Fraction to use in the split cross-validation
+      shrink -> gdouble: shrink
+        Shrink factor for the weights
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
 
@@ -11025,6 +11057,7 @@ class StatsDistKDE(StatsDist):
         kernel: StatsDistKernel
         over_smooth: float
         print_fit: bool
+        shrink: float
         split_frac: float
         use_threads: bool
 
@@ -11039,6 +11072,7 @@ class StatsDistKDE(StatsDist):
         kernel: StatsDistKernel = ...,
         over_smooth: float = ...,
         print_fit: bool = ...,
+        shrink: float = ...,
         split_frac: float = ...,
         use_threads: bool = ...,
     ) -> None: ...
@@ -11281,6 +11315,8 @@ class StatsDistVKDE(StatsDistKDE):
         Whether to use OpenMP threads during computation
       split-frac -> gdouble: split-frac
         Fraction to use in the split cross-validation
+      shrink -> gdouble: shrink
+        Shrink factor for the weights
       print-fit -> gboolean: print-fit
         Whether to print the fitting process
 
@@ -11299,6 +11335,7 @@ class StatsDistVKDE(StatsDistKDE):
         kernel: StatsDistKernel
         over_smooth: float
         print_fit: bool
+        shrink: float
         split_frac: float
         use_threads: bool
 
@@ -11315,6 +11352,7 @@ class StatsDistVKDE(StatsDistKDE):
         kernel: StatsDistKernel = ...,
         over_smooth: float = ...,
         print_fit: bool = ...,
+        shrink: float = ...,
         split_frac: float = ...,
         use_threads: bool = ...,
     ) -> None: ...
@@ -11401,6 +11439,7 @@ class StatsVec(GObject.Object):
     def get_mean_vector(self, mean: Vector, offset: int) -> None: ...
     def get_param_at(self, i: int, p: int) -> float: ...
     def get_quantile(self, i: int) -> float: ...
+    def get_quantile_all(self, i: int) -> list[float]: ...
     def get_quantile_spread(self, i: int) -> float: ...
     def get_sd(self, i: int) -> float: ...
     def get_subsample_autocorr(self, p: int, subsample: int) -> Vector: ...
