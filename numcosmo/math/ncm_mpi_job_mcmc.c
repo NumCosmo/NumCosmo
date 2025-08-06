@@ -415,7 +415,6 @@ _ncm_mpi_job_mcmc_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
   {
     ncm_vector_set (ret, 0, 1.0);
 
-    /*printf ("# has oa?! %p\n", self->func_oa);*/
     if (self->func_oa != NULL)
     {
       guint i;
@@ -425,7 +424,6 @@ _ncm_mpi_job_mcmc_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
         NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (self->func_oa, i));
         const gdouble a_i = ncm_mset_func_eval0 (func, mset);
 
-        /*printf ("### %d % 22.15g\n", i, a_i);*/
         ncm_vector_set (ret, i + 1 + NCM_FIT_ESMCMC_MPI_OUT_LEN, a_i);
       }
     }
