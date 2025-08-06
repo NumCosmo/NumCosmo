@@ -352,6 +352,7 @@ void _nc_hiprim_register_functions (void);
 void _nc_hireion_register_functions (void);
 void _nc_distance_register_functions (void);
 void _nc_planck_fi_cor_tt_register_functions (void);
+void _nc_hicosmo_de_wspline_register_functions (void);
 
 #ifdef HAVE_MPI
 static void _ncm_cfg_mpi_main_loop (void);
@@ -808,6 +809,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   _nc_hireion_register_functions ();
   _nc_distance_register_functions ();
   _nc_planck_fi_cor_tt_register_functions ();
+  _nc_hicosmo_de_wspline_register_functions ();
 
   numcosmo_init = TRUE;
 

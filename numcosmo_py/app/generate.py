@@ -745,10 +745,6 @@ class GenerateDEWSpline:
 
         if self.include_bao is not None:
             add_bao_likelihood(dset, mset, dist, self.include_bao)
-            # cosmo.param_set_desc(
-            #     f"w_{self.n_knots-1}",
-            #     {"fit": True, "lower-bound": -1.5, "upper-bound": 0.0},
-            # )
 
         if self.include_hubble is not None:
             add_h_likelihood(dset, mset, self.include_hubble)
@@ -759,6 +755,16 @@ class GenerateDEWSpline:
 
         mset.prepare_fparam_map()
         likelihood = Ncm.Likelihood.new(dset)
+        # It can be useful to add Omega_m as a function when fitting Omegac
+        mfunc_oa = Ncm.ObjArray.new()
+        mfunc_Omegam = Ncm.MSetFuncList.new("NcHICosmo:Omega_m0", None)
+        mfunc_oa.add(mfunc_Omegam)
+        mfunc_mean_kappa = Ncm.MSetFuncList.new("NcHICosmoDEWSpline:mean_kappa", None)
+        mfunc_oa.add(mfunc_mean_kappa)
+
+        prior = Ncm.PriorGaussFunc.new(mfunc_mean_kappa, 0.0, 3.0, 0.0)
+        likelihood.priors_add(prior)
+
         # Save experiment
         experiment = Ncm.ObjDictStr()
 
@@ -771,11 +777,6 @@ class GenerateDEWSpline:
             dset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
         )
         ser.dict_str_to_yaml_file(experiment, self.experiment.absolute().as_posix())
-
-        # It can be useful to add Omega_m as a function when fitting Omegac
-        mfunc_oa = Ncm.ObjArray.new()
-        mfunc_Omegam = Ncm.MSetFuncList.new("NcHICosmo:Omega_m0", None)
-        mfunc_oa.add(mfunc_Omegam)
 
         ser.array_to_yaml_file(
             mfunc_oa,
