@@ -247,7 +247,7 @@ def fixture_massfunc_st(
 
 @pytest.fixture(name="massfunc_jenkins")
 def fixture_massfunc_jenkins(
-    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology]
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
 ) -> tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction]:
     """Fixture for mass functions and power spectra."""
     _, cosmo_nc = cosmologies
