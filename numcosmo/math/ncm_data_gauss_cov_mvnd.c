@@ -274,7 +274,7 @@ ncm_data_gauss_cov_mvnd_peek_mean (NcmDataGaussCovMVND *data_mvnd)
  * @N: (out): number of realizations necessary to generate a valid one
  *
  * Generates one realization of the MVND. If @bound is not NULL,
- * generates realizations untill @bound returns TRUE.
+ * generates realizations until @bound returns TRUE.
  *
  * Returns: (transfer none): a #NcmVector (should not be modified)
  */
