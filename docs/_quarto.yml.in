@@ -12,7 +12,8 @@ project:
     - benchmarks/ccl_two_point.qmd
     - tutorials/c/gobject.qmd
     - tutorials/c/curve_tutorial.qmd
-    - tutorials/python/bouncing.qmd
+    - tutorials/python/bounce.qmd
+    - tutorials/python/bounce_spectra.qmd
     - tutorials/python/cluster_wl_simul.qmd
     - tutorials/python/sky_match.qmd
     - examples/data_analysis/snia.qmd
@@ -72,8 +73,10 @@ website:
                 text: "Model Fit Tutorial"
             - section: "Python Tutorials"
               contents:
-              - href: tutorials/python/bouncing.qmd
-                text: "Bouncing Cosmology"
+              - href: tutorials/python/bounce.qmd
+                text: "Bounce Adiabatic Spectrum"
+              - href: tutorials/python/bounce_spectra.qmd
+                text: "Bounce Two-Fluid Spectra"
               - href: tutorials/python/cluster_wl_simul.qmd
                 text: "Cluster WL Simulation"
               - href: tutorials/python/sky_match.qmd

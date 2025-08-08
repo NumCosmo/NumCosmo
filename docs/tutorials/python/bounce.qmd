@@ -1,10 +1,11 @@
 ---
-title: "Computing Bouncing Cosmology Spectra with NumCosmo"
+title: "Computing Bounce Adiabatic Spectrum"
 format: html
 ---
 
 {{< include /_functions.qmd >}}
-{{< include /_definitions.qmd >}}
+{{< include /notes/_numcosmo_py.qmd >}}
+{{< include /notes/_adiabatic.qmd >}}
 
 ## Purpose {#sec-purpose}
 
@@ -14,13 +15,14 @@ We compute and compare the power spectrum of a bouncing cosmology with that of s
 1. **Single-fluid model** – A single component with an arbitrary equation of state, usually interpreted as dark matter.  
 2. **Two-fluid model** – A combination of radiation and a fluid with an arbitrary equation of state (typically dark matter).  
 
-For the two-fluid model, we compute the power spectrum in two ways: (i) considering only the adiabatic mode and (ii) accounting for both adiabatic and entropy modes.  
+In both cases we are considering only adiabatic perturbations, see the tutorial [Bounce Spectra](bounce_spectra.qmd) for a more general treatment including entropy perturbations.
 
 ## Defining Theoretical Models  
 
 We begin by defining a cosmological model using NumCosmo’s `numcosmo_py`[^numcosmo_py]. Additionally, we import `numpy`, `pandas` and `matplotlib`, which will be used later in the tutorial.  
 
 ```{python}
+import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -29,7 +31,11 @@ import matplotlib.colors as colors
 from IPython.display import HTML, Markdown, display
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.plotting.tools import set_rc_params_article, latex_float
+from numcosmo_py.plotting.tools import (
+    set_rc_params_article,
+    latex_float,
+    format_alpha_xaxis,
+)
 
 Ncm.cfg_init()
 
@@ -46,12 +52,19 @@ cosmo_w["Omegaw"] = 1.0  # Set dark matter fraction
 cosmo_rw["Omegar"] = 1.41e-7  # Set radiation fraction
 cosmo_rw["Omegaw"] = 1.0 - cosmo_rw["Omegar"]  # Set dark matter fraction
 
+# Create bouncing/figures directory if it doesn't exist and set a variable for it
+fig_dir = "bounce/figures"
+if not os.path.exists(fig_dir):
+    os.makedirs(fig_dir)
 
 ```
 
 ### Model Parameters
 
 The table below lists the parameters of the `HICosmoQGW` and `HICosmoQGRW` models.  
+
+- **`HICosmoQGW`**: A single-fluid model, where *QGW* stands for *quantum gravity with w*.  
+- **`HICosmoQGRW`**: A two-fluid model, where *QGRW* stands for *quantum gravity with radiation and w*.  
 
 ```{python}
 # | label: tbl-parameters
@@ -106,43 +119,24 @@ df["Upper-bound"] = format_column(df["Upper-bound"])
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
 ```
 
-### Model Descriptions  
-
-- **`HICosmoQGW`**: A single-fluid model, where *QGW* stands for *quantum gravity with w*.  
-- **`HICosmoQGRW`**: A two-fluid model, where *QGRW* stands for *quantum gravity with radiation and w*.  
-
-Here’s an improved version of your text with clearer explanations and a better distinction between the two uses of *adiabatic*:  
-
----
-
-## Single-Fluid Model  
-
-We begin by computing the power spectrum of a single-fluid model.  
 In the perturbation code, all distances are measured in units of the Hubble radius. 
 The model evolves from $\alpha = -\infty$ (the distant past) to $\alpha = 0$ (the bounce). 
 The time parameter $\alpha$ is defined as
 $$
 x \equiv \frac{a_0}{a} = x_b e^{-|\alpha|}
 $$
-where $x_b$ (listed in the table above) represents the maximum contraction before the bounce.  
+where $x_b$ (listed in the table above) represents the maximum contraction before the bounce.
 
 To set up the model, we must specify the time limits, which are critical when initializing the perturbations. 
-In practice, these limits are used to determine when the mode is accurately described by the *adiabatic approximation*, a condition required to define the *adiabatic vacuum*.
+In practice, these limits are used to determine when the mode is accurately described by the *adiabatic approximation*[^adiabatic], a condition required to define the *adiabatic vacuum*.
 Once the initial conditions are set, the system can be numerically evolved beyond this approximation.
 
-### Adiabatic Terminology  
-
-The term *adiabatic* appears in two distinct contexts:  
-
-1. **Adiabatic mode in perturbations**: The variable $\zeta$ describes the overall curvature perturbation, which represents a specific combination of all matter fields. In contrast, entropy modes capture the differences between individual matter fields.  
-2. **Adiabatic regime during evolution**: At early times, each mode evolves through a phase where it is well approximated by the WKB (Wentzel-Kramers-Brillouin) method. This phase is referred to as the *adiabatic regime* for that perturbation.  
+## Computing the Power Spectrum
 
 To compute the power spectrum, we use the `HIPertAdiab` object, which describes the $\zeta$ perturbation. 
 Here, we specifically use it to identify the adiabatic regime in the sense of the WKB approximation.  
 
 ```{python}
-
-
 # Time conversion functions
 def tau_of_alpha(alpha):
     """Converts alpha to tau"""
@@ -176,7 +170,7 @@ tau_ini = tau_of_alpha(alpha_ini)  # Initial time in tau
 alpha_adiab_max = -1.0e-1  # Maximum time for adiabatic vacuum
 tau_adiab_max = tau_of_alpha(alpha_adiab_max)
 
-alpha_end = -1.0e-3  # Final time in alpha
+alpha_end = 20.0  # Final time in alpha
 tau_end = tau_of_alpha(alpha_end)  # Final time in tau
 
 adiab_w.set_k(k)
@@ -309,13 +303,13 @@ Now we plot the evolution of the mode ($k = 1 \mathrm{Mpc}^{-1}$) for both model
 # | label: fig-adiabatic-evolution
 # | fig-cap: Adiabatic Evolution
 # | fig-cap-location: top
-# | fig-ncol: 2
 # | code-fold: true
 
 unit_w = Nc.HIPertIAdiab.eval_unit(cosmo_w)
 unit_rw = Nc.HIPertIAdiab.eval_unit(cosmo_rw)
 
-fig, axs = plt.subplots(figsize=(12, 6))
+set_rc_params_article(ncol=2, nrows=1)
+fig, axs = plt.subplots()
 axs.plot(
     alpha_tau_a,
     unit_w * k ** (1.5) * np.hypot(field_sol_w[:, 0], field_sol_w[:, 1]),
@@ -326,11 +320,17 @@ axs.plot(
     unit_rw * k ** (1.5) * np.hypot(field_sol_rw[:, 0], field_sol_rw[:, 1]),
     label="QGRW",
 )
+format_alpha_xaxis(axs, cosmo_w, n_ticks=8)
 axs.set_yscale("log")
-axs.set_xlabel(r"$\alpha$")
+
 axs.set_ylabel(r"$\left|k^{3/2}\zeta_k\right|$")
 axs.legend()
 axs.grid()
+
+plt.savefig(f"{fig_dir}/adiabatic_evolution.pdf", bbox_inches="tight")
+
+fig.set_size_inches(12, 8)
+
 plt.show()
 
 ```
@@ -345,13 +345,16 @@ For that we plot the evolution of the mode for different $k$ values.
 
 ```{python}
 # | label: fig-adiabatic-k-dependence
-# | fig-cap: Adiabatic $k$ Dependence
+# | fig-cap:
+# |   - "Adiabatic mode $k$ dependence for QGW"
+# |   - "Adiabatic mode $k$ dependence for QGRW"
 # | fig-cap-location: top
+# | layout-ncol: 2
 # | code-fold: true
 
-# Two plots in one figure
-fig, axs = plt.subplots(1, 2, figsize=(12, 6), sharey=True)
-fig.subplots_adjust(wspace=0.0)
+set_rc_params_article(ncol=1, nrows=1)
+fig1, axs1 = plt.subplots()
+fig2, axs2 = plt.subplots()
 
 k_a = np.geomspace(1.0e-1 / RH_Mpc, 1.0e2, 10)
 cmap = cm.viridis
@@ -386,7 +389,7 @@ for k in k_a:
 
     tau_alpha_a = np.array([tau_of_alpha(alpha) for alpha in alpha_a])
 
-    axs[0].plot(
+    axs1.plot(
         alpha_tau_a,
         unit_w * krh ** (1.5) * np.hypot(field_sol_w[:, 0], field_sol_w[:, 1]),
         color=cmap(norm(k)),
@@ -396,8 +399,9 @@ for k in k_a:
             if label_set
             else None
         ),
+        lw=0.5,
     )
-    axs[1].plot(
+    axs2.plot(
         alpha_a,
         unit_rw * krh ** (1.5) * np.hypot(field_sol_rw[:, 0], field_sol_rw[:, 1]),
         color=cmap(norm(k)),
@@ -407,23 +411,30 @@ for k in k_a:
             if label_set
             else None
         ),
+        lw=0.5,
     )
 
     label_set = False
 
-cbar = plt.colorbar(color_map, ax=axs)
-cbar.set_label(r"$k\;[\mathrm{Mpc}^{-1}]$ values")
+for ax in [axs1, axs2]:
+    cbar = plt.colorbar(color_map, ax=ax, orientation="vertical")
+    cbar.set_label(r"$k\;[\mathrm{Mpc}^{-1}]$")
 
-axs[0].set_yscale("log")
-axs[1].set_yscale("log")
-axs[0].set_xlabel(r"$\alpha$")
-axs[1].set_xlabel(r"$\alpha$")
-axs[0].set_ylabel(r"$\left|k^{3/2}\zeta_k\right|$")
-axs[0].legend()
-axs[0].grid()
-axs[1].legend()
-axs[1].grid()
-plt.show()  
+    ax.set_yscale("log")
+    ax.set_ylabel(r"$\left|k^{3/2}\zeta_k\right|$")
+    ax.legend()
+    ax.grid()
+
+format_alpha_xaxis(axs1, cosmo_w)
+format_alpha_xaxis(axs2, cosmo_rw)
+
+fig1.savefig(f"{fig_dir}/adiabatic_k_dependence_w.pdf", bbox_inches="tight")
+fig2.savefig(f"{fig_dir}/adiabatic_k_dependence_rw.pdf", bbox_inches="tight")
+
+fig1.set_size_inches(6, 4)
+fig2.set_size_inches(6, 4)
+
+plt.show()
 
 ```
 
@@ -477,7 +488,8 @@ We plot the power spectrum for the QGW and QGRW models.
 # | fig-cap-location: top
 # | code-fold: true
 
-fig, axs = plt.subplots(figsize=(12, 6))
+set_rc_params_article(ncol=2, nrows=1)
+fig, axs = plt.subplots()
 
 axs.plot(ps_k_a, Pzeta_w, color="tab:blue", linestyle="-", label="QGW")
 axs.plot(ps_k_a, Pzeta_rw, color="tab:orange", linestyle="-", label="QGRW")
@@ -489,6 +501,11 @@ axs.set_xlabel(r"$k$ [$\mathrm{Mpc}^{-1}$]")
 axs.set_ylabel(r"$P_{\zeta,k}$")
 axs.legend()
 axs.grid()
+
+plt.savefig(f"{fig_dir}/adiabatic_power_spectrum.pdf", bbox_inches="tight")
+
+fig.set_size_inches(12, 8)
+
 plt.show()
 
 ```

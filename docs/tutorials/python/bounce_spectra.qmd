@@ -1,0 +1,136 @@
+---
+title: "Computing Bounce Spectra"
+format: html
+---
+
+{{< include /_functions.qmd >}}
+{{< include /notes/_numcosmo_py.qmd >}}
+{{< include /notes/_adiabatic.qmd >}}
+
+## Purpose {#sec-purpose}
+
+This tutorial demonstrates how to compute the power spectrum of a bouncing cosmology using NumCosmo. A bouncing cosmology modifies the standard $\Lambda$CDM model by introducing a bounce, typically motivated by quantum cosmology effects.
+
+We compare the power spectrum of a bouncing cosmology with that of standard $\Lambda$CDM (with inflation), considering a model with two components: radiation and a fluid with an arbitrary equation of state (often interpreted as dark matter). The analysis includes all perturbation spectra, including entropy perturbations.
+
+Specifically, we will examine the vacuum definition (using the adiabatic vacuum)[^adiabatic], how to assess whether the system is in the adiabatic regime, the role of different phases during the universe's contraction, and the evolution of the power spectra for all perturbations.
+
+## Defining Theoretical Models  
+
+We begin by defining a cosmological model using NumCosmo’s `numcosmo_py`[^numcosmo_py]. Additionally, we import `numpy`, `pandas` and `matplotlib`, which will be used later in the tutorial.  
+
+```{python}
+import os
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib.colors as colors
+import matplotlib.ticker as ticker
+from IPython.display import HTML, Markdown, display
+
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.plotting.tools import set_rc_params_article, latex_float
+
+Ncm.cfg_init()
+
+cosmo_rw = Nc.HICosmoQGRW.new()
+cosmo_rw["w"] = 1.0e-7  # Set the dark energy equation of state
+cosmo_rw["xb"] = 1.0e30  # Set bounce depth
+cosmo_rw["Omegar"] = 1.0e-5  # Set radiation fraction
+cosmo_rw["Omegaw"] = 1.0 - cosmo_rw["Omegar"]  # Set dark matter fraction
+
+# Create bouncing/figures directory if it doesn't exist and set a variable for it
+fig_dir = "bounce/figures"
+if not os.path.exists(fig_dir):
+    os.makedirs(fig_dir)
+
+```
+
+### Model Parameters
+
+The table below lists the parameters of the `HICosmoQGRW` model.  
+
+- **`HICosmoQGRW`**: A two-fluid model, where *QGRW* stands for *quantum gravity with radiation and w*.  
+
+```{python}
+# | label: tbl-parameters
+# | tbl-cap: Parameters of HICosmoQGW and HICosmoQGRW
+# | code-fold: true
+
+desc_keys = [
+    "name",
+    "symbol",
+    "value",
+    "scale",
+    "abstol",
+    "lower-bound",
+    "upper-bound",
+    "fit",
+]
+
+all_parameters = set(cosmo_rw.param_names())
+param_data = []
+for name in sorted(all_parameters):
+    if name in cosmo_rw.param_names():
+        row = {"Parameter": f"QGRW:{name}"}
+        p_desc = cosmo_rw.param_get_desc(name)
+        for key in desc_keys:
+            row[key.capitalize()] = (
+                p_desc[key] if key != "symbol" else f"${p_desc[key]}$"
+            )
+        param_data.append(row)
+
+
+def format_column(col):
+    return col.apply(lambda x: f"${latex_float(x, precision=4)}$")
+
+
+df = pd.DataFrame(param_data)
+df["Value"] = format_column(df["Value"])
+df["Scale"] = format_column(df["Scale"])
+df["Abstol"] = format_column(df["Abstol"])
+df["Lower-bound"] = format_column(df["Lower-bound"])
+df["Upper-bound"] = format_column(df["Upper-bound"])
+
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+In the perturbation code, all distances are measured in units of the Hubble radius. 
+The model evolves from $\alpha = -\infty$ (the distant past) to $\alpha = 0$ (the bounce). 
+The time parameter $\alpha$ is defined as
+$$
+x \equiv \frac{a_0}{a} = x_b e^{-|\alpha|}
+$$
+where $x_b$ (listed in the table above) represents the maximum contraction before the bounce.  
+
+To set up the model, we must specify the time limits, which are critical when initializing the perturbations. 
+In practice, these limits are used to determine when the mode is accurately described by the *adiabatic approximation*[^adiabatic], a condition required to define the *adiabatic vacuum*.
+Once the initial conditions are set, the system can be numerically evolved beyond this approximation.
+
+## Computing the Power Spectra
+
+To compute the power spectra, we use the `HIPertTwoFluids` object, which describes all the components of perturbations, including
+both matter and radiation perturbations. Here we use the vacuum initial conditions using the adiabatic vacuum.
+
+```{python}
+# Compute the Hubble radius in Mpc
+RH_Mpc = cosmo_rw.RH_Mpc()
+
+# Set the mode k to 1 Mpc^-1 (normalized by the Hubble radius)
+k = RH_Mpc
+# Set the relative tolerance for the adiabatic approximation
+reltol = 1.0e-9
+
+# Define the initial and final time limits for evolution
+alpha_ini = -16.0  # Initial time in alpha
+alpha_adiab_max = -1.0e-1  # Maximum time for adiabatic vacuum
+alpha_end = 30.0  # Final time in alpha
+
+pert = Nc.HIPertTwoFluids.new()
+pert.props.reltol = reltol
+pert.set_mode_k(k)
+pert.set_initial_time(alpha_ini)
+pert.set_final_time(alpha_end)
+
+```
