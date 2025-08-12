@@ -670,7 +670,7 @@ ncm_spline_set_array (NcmSpline *s, GArray *x, GArray *y, gboolean init)
  * @s: a #NcmSpline
  * @x: array of knots
  * @y: array of the values of the function, to be interpolated, computed at @x
- * @len: lenght of @x and @y
+ * @len: length of @x and @y
  * @init: TRUE to prepare @s or FALSE to not prepare it
  *
  * This function sets @x as the knot vector and @y as the function values vector

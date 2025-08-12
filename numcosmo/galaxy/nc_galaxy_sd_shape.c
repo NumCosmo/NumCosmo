@@ -644,7 +644,7 @@ nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds)
  * @mset: a #NcmMSet
  * @data_array: (element-type NcGalaxySDShapeData): a #GPtrArray of #NcGalaxySDShapeData
  *
- * Prepares the matrix to compute the probability density of the observaple shape.
+ * Prepares the matrix to compute the probability density of the observable shape.
  *
  * Returns: TRUE if the matrix was prepared, FALSE otherwise.
  */

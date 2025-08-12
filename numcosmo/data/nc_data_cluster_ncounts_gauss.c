@@ -824,7 +824,7 @@ nc_data_cluster_ncounts_gauss_get_s_matrix (NcDataClusterNCountsGauss *ncounts_g
  *
  * Gets the matrix containing the super sample covariance.
  * This matrix will be used only during resampling and it is used to test
- * misspecification of the covariance matrix.
+ * mis-specification of the covariance matrix.
  *
  * Returns: (transfer full): Super sample covariance #NcmMatrix used to resample.
  */

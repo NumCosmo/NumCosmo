@@ -346,7 +346,7 @@ class GalaxyShapeGenGaussHSC(BaseModel):
                 f"ellip_coord={EllipCoord.CELESTIAL.value}, "
                 f"std_shape={DEFAULT_GAUSS_HSC_STD_SHAPE}, "
                 f"std_noise={DEFAULT_GAUSS_HSC_STD_NOISE}, "
-                f"std_sigma={DEFAULT_GAUSS_HSC_STD_SIGMA}, "
+                f"std_sigma={DEFAULT_GAUSS_HSC_STD_SIGMA}, \n"
                 f"c1_sigma={DEFAULT_GAUSS_HSC_C1_SIGMA}, "
                 f"c2_sigma={DEFAULT_GAUSS_HSC_C2_SIGMA}, "
                 f"m_sigma={DEFAULT_GAUSS_HSC_M_SIGMA}"
@@ -583,7 +583,11 @@ class GalaxyDistributionModel:
         self.shape_gen = shape_gen
 
     def generate_data(
-        self, cosmo: Nc.HICosmo, cluster: ClusterModel, rng: Ncm.RNG
+        self,
+        cosmo: Nc.HICosmo,
+        cluster: ClusterModel,
+        rng: Ncm.RNG,
+        use_lnint: bool = False,
     ) -> tuple[Nc.DataClusterWL, Ncm.MSet]:
         """Generate the galaxy data."""
         cluster.prepare(cosmo)
@@ -593,6 +597,7 @@ class GalaxyDistributionModel:
 
         cluster_data.props.r_min = cluster.r_min
         cluster_data.props.r_max = cluster.r_max
+        cluster_data.use_lnint(use_lnint)
 
         mset = Ncm.MSet.new_array(
             [
@@ -690,6 +695,7 @@ def generate_lsst_cluster_wl(
     shape_gen: GalaxyShapeDistGenTypes,
     density: float,
     seed: None | int,
+    use_lnint: bool,
     summary: bool,
 ) -> Ncm.ObjDictStr:
     """Generate a cluster weak lensing experiment.
@@ -746,7 +752,9 @@ def generate_lsst_cluster_wl(
         },
     )
 
-    cluster_data, mset = galaxy_model.generate_data(create_cosmo(), cluster, rng)
+    cluster_data, mset = galaxy_model.generate_data(
+        create_cosmo(), cluster, rng, use_lnint=use_lnint
+    )
 
     dset = Ncm.Dataset.new_array([cluster_data])
     likelihood = Ncm.Likelihood.new(dset)

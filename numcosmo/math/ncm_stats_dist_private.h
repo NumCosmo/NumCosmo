@@ -51,6 +51,7 @@ typedef struct _NcmStatsDistPrivate
   NcmStatsDistCV cv_type;
   gboolean use_threads;
   gdouble split_frac;
+  gdouble shrink;
   gdouble min_m2lnp;
   gdouble max_m2lnp;
   gdouble href;
