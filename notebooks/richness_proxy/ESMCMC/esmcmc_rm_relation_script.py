@@ -61,7 +61,8 @@ def catalog_fit(DATA, rich_cut, LINEAR):
         
         # fixing cut parameter
         fixed_parameters_ascaso = ['cut'] 
-        ascaso.param_set_by_name("cut", np.log(rich_cut))        
+        # ascaso.param_set_by_name("cut", np.log(rich_cut))        
+        ascaso.param_set_by_name("cut", -np.inf)        
 
         # Mset 
         mset.set(ascaso) 
