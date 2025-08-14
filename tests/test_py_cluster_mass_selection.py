@@ -34,10 +34,19 @@ Ncm.cfg_init()
 @pytest.fixture(name="cluster_m_selection")
 def fixture_cluster_mass_selection() -> Nc.ClusterMassSelection:
     """Fixture for the NcClusterMassSelection."""
+    
     cluster_m = Nc.ClusterMassSelection(lnR_min = np.log(5), lnR_max = np.log(200))
     return cluster_m
 
 @pytest.fixture(name="cluster_m_selection", params=[1, 2, 3, 4, 5, 6])
 def fixture_cluster_mass_selection(request):
     """Fixture for NcClusterMassSelection."""
+    
+    cluster_m = Nc.ClusterMassSelection(lnR_min = np.log(5), lnR_max = np.log(200))
     return request.param
+
+@pytest.fixture(name="cluster_m_selection")
+def fixture_cluster_mass_selection(request):
+    """Fixture for NcClusterMassSelection."""
+    cluster_m = Nc.ClusterMassSelection(lnR_min = np.log(5), lnR_max = np.log(200))
+    return cluster_m.get_completeness()
