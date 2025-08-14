@@ -90,7 +90,7 @@ enum
 	PROP_LNRICHNESS_MAX,
 	PROP_ENABLE_REJECTION,
 	PROP_PURITY,
-  PROP_COMPLETENESS,
+    PROP_COMPLETENESS,
 	PROP_SIZE,
 };
 
@@ -544,7 +544,7 @@ _nc_cluster_mass_selection_integrand (gdouble lnM_obs, gpointer userdata)
     if (lnM_obs< CUT)
     {return 0.0; }
     else
-    {return 2.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x)/erfc ((CUT - lnR_true) / (M_SQRT2 * sigma)) * ipurity;}
+    {return 2.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x)/erfc ((CUT - lnR_true) / (M_SQRT2 * sigma))* ipurity;}
 
 }
 
