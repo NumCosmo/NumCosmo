@@ -259,7 +259,7 @@ ncm_sf_sin_int (gdouble x)
 
   mpq_init (xq);
 
-  ncm_rational_coarce_double (x, xq);
+  ncm_rational_coarse_double (x, xq);
   ncm_mpsf_sin_int_mpfr (xq, res, GMP_RNDN);
   mpq_clear (xq);
 

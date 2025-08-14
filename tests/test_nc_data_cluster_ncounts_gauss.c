@@ -161,6 +161,17 @@ test_nc_data_cluster_ncounts_gauss_new (TestNcClusterNCountsGauss *test, gconstp
 void
 test_nc_data_cluster_ncounts_gauss_free (TestNcClusterNCountsGauss *test, gconstpointer pdata)
 {
+  ncm_vector_clear (&test->z_obs);
+  ncm_vector_clear (&test->lnM_obs);
+
+  ncm_matrix_clear (&test->z_obs_params);
+  ncm_matrix_clear (&test->lnM_obs_params);
+
+  ncm_matrix_clear (&test->s_matrix);
+  ncm_matrix_clear (&test->resample_s_matrix);
+
+  nc_cluster_abundance_free (test->cad);
+  nc_data_cluster_ncounts_gauss_free (test->ncounts_gauss);
   NCM_TEST_FREE (ncm_mset_free, test->mset);
 }
 
@@ -250,18 +261,22 @@ test_nc_data_cluster_ncounts_gauss_serialize (TestNcClusterNCountsGauss *test, g
 void
 test_nc_data_cluster_ncounts_gauss_s_matrix (TestNcClusterNCountsGauss *test, gconstpointer pdata)
 {
+  NcmMatrix *tmp;
+
   nc_data_cluster_ncounts_gauss_set_has_ssc (test->ncounts_gauss, TRUE);
   g_assert_true (nc_data_cluster_ncounts_gauss_get_has_ssc (test->ncounts_gauss) == TRUE);
 
   g_assert_null (nc_data_cluster_ncounts_gauss_get_s_matrix (test->ncounts_gauss));
   g_assert_null (nc_data_cluster_ncounts_gauss_get_resample_s_matrix (test->ncounts_gauss));
 
-
   nc_data_cluster_ncounts_gauss_set_s_matrix (test->ncounts_gauss, test->s_matrix);
   nc_data_cluster_ncounts_gauss_set_resample_s_matrix (test->ncounts_gauss, test->resample_s_matrix);
 
-  g_assert_true (nc_data_cluster_ncounts_gauss_get_s_matrix (test->ncounts_gauss) == test->s_matrix);
-  g_assert_true (nc_data_cluster_ncounts_gauss_get_resample_s_matrix (test->ncounts_gauss) == test->resample_s_matrix);
+  g_assert_true ((tmp = nc_data_cluster_ncounts_gauss_get_s_matrix (test->ncounts_gauss)) == test->s_matrix);
+  ncm_matrix_free (tmp);
+
+  g_assert_true ((tmp = nc_data_cluster_ncounts_gauss_get_resample_s_matrix (test->ncounts_gauss)) == test->resample_s_matrix);
+  ncm_matrix_free (tmp);
 }
 
 void
@@ -273,12 +288,14 @@ test_nc_data_cluster_ncounts_gauss_mean_func (TestNcClusterNCountsGauss *test, g
 
   ncm_data_set_init (NCM_DATA (gauss_cov), TRUE);
 
-  mean = ncm_vector_dup (ncm_data_gauss_cov_compute_mean (gauss_cov, test->mset));
+  mean = ncm_data_gauss_cov_compute_mean (gauss_cov, test->mset);
 
   for (i = 0; i < ncm_vector_len (mean); i++)
   {
     g_assert_true (gsl_finite (ncm_vector_get (mean, i)));
   }
+
+  ncm_vector_free (mean);
 }
 
 void
@@ -301,7 +318,7 @@ test_nc_data_cluster_ncounts_gauss_cov (TestNcClusterNCountsGauss *test, gconstp
 
   g_assert_false (nc_data_cluster_ncounts_gauss_get_fix_cov (test->ncounts_gauss));
 
-  cov_diag = ncm_matrix_dup (ncm_data_gauss_cov_compute_cov (gauss_cov, test->mset, NULL));
+  cov_diag = ncm_data_gauss_cov_compute_cov (gauss_cov, test->mset, NULL);
   ncm_data_gauss_cov_set_cov (gauss_cov, cov_diag);
 
   for (i = 0; i < ncm_matrix_row_len (cov_diag); i++)
@@ -319,7 +336,7 @@ test_nc_data_cluster_ncounts_gauss_cov (TestNcClusterNCountsGauss *test, gconstp
 
   nc_data_cluster_ncounts_gauss_set_has_ssc (test->ncounts_gauss, TRUE);
 
-  cov_1 = ncm_matrix_dup (ncm_data_gauss_cov_compute_cov (gauss_cov, test->mset,  NULL));
+  cov_1 = ncm_data_gauss_cov_compute_cov (gauss_cov, test->mset,  NULL);
 
   ncm_data_resample (NCM_DATA (test->ncounts_gauss), test->mset, rng);
 
@@ -339,13 +356,11 @@ test_nc_data_cluster_ncounts_gauss_cov (TestNcClusterNCountsGauss *test, gconstp
     }
   }
 
-
   nc_data_cluster_ncounts_gauss_set_fix_cov (test->ncounts_gauss, TRUE);
 
   g_assert_true (nc_data_cluster_ncounts_gauss_get_fix_cov (test->ncounts_gauss) == TRUE);
 
-
-  cov_2 = ncm_matrix_dup (ncm_data_gauss_cov_compute_cov (gauss_cov, test->mset, NULL));
+  cov_2 = ncm_data_gauss_cov_compute_cov (gauss_cov, test->mset, NULL);
 
   for (i = 0; i < ncm_matrix_row_len (cov_2); i++)
   {
@@ -358,7 +373,7 @@ test_nc_data_cluster_ncounts_gauss_cov (TestNcClusterNCountsGauss *test, gconstp
   }
 
   nc_data_cluster_ncounts_gauss_set_fix_cov (test->ncounts_gauss, FALSE);
-  cov_3 = ncm_matrix_dup (ncm_data_gauss_cov_compute_cov (gauss_cov, test->mset, NULL));
+  cov_3 = ncm_data_gauss_cov_compute_cov (gauss_cov, test->mset, NULL);
 
   for (i = 0; i < ncm_matrix_row_len (cov_1); i++)
   {
@@ -371,7 +386,7 @@ test_nc_data_cluster_ncounts_gauss_cov (TestNcClusterNCountsGauss *test, gconstp
   nc_data_cluster_ncounts_gauss_set_has_ssc (test->ncounts_gauss, FALSE);
 
   nc_data_cluster_ncounts_gauss_set_fix_cov (test->ncounts_gauss, FALSE);
-  cov_4 = ncm_matrix_dup (ncm_data_gauss_cov_compute_cov (gauss_cov, test->mset, NULL));
+  cov_4 = ncm_data_gauss_cov_compute_cov (gauss_cov, test->mset, NULL);
 
   for (i = 0; i < ncm_matrix_row_len (cov_1); i++)
   {
@@ -380,5 +395,14 @@ test_nc_data_cluster_ncounts_gauss_cov (TestNcClusterNCountsGauss *test, gconstp
       ncm_assert_cmpdouble_e (ncm_matrix_get (cov_4, i, j),  !=, ncm_matrix_get (cov_3, i, j), 1.0e-15, 0.0);
     }
   }
+
+  ncm_matrix_free (cov_diag);
+  ncm_matrix_free (cov_1);
+  ncm_matrix_free (cov_resample);
+  ncm_matrix_free (cov_2);
+  ncm_matrix_free (cov_3);
+  ncm_matrix_free (cov_4);
+
+  ncm_rng_free (rng);
 }
 

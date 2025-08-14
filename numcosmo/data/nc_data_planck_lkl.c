@@ -839,6 +839,8 @@ nc_data_planck_lkl_full_new_id (NcDataPlanckLKLType id, NcHIPertBoltzmann *pb)
 
     if (filename == NULL)
       nc_data_planck_lkl_download_baseline (ncm_cfg_get_fullpath_base ());
+    else
+      g_free (filename);
 
     return nc_data_planck_lkl_full_new (_nc_data_planck_lkl_files[id], pb);
   }
@@ -851,7 +853,7 @@ nc_data_planck_lkl_full_new_id (NcDataPlanckLKLType id, NcHIPertBoltzmann *pb)
  *
  * FIXME
  *
- * Returns: (transfer none): a string constaining the param name
+ * Returns: (transfer none): a string containing the param name
  */
 const gchar *
 nc_data_planck_lkl_get_param_name (NcDataPlanckLKL *plik, guint i)
@@ -867,7 +869,7 @@ nc_data_planck_lkl_get_param_name (NcDataPlanckLKL *plik, guint i)
  *
  * FIXME
  *
- * Returns: (array zero-terminated=1) (element-type utf8) (transfer full): an array of strings constaining the param names
+ * Returns: (array zero-terminated=1) (element-type utf8) (transfer full): an array of strings containing the param names
  */
 gchar **
 nc_data_planck_lkl_get_param_names (NcDataPlanckLKL *plik)

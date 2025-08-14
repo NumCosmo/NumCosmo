@@ -2335,6 +2335,8 @@ ncm_csq1d_get_time_array (NcmCSQ1D *csq1d, gdouble *smallest_t)
   if (smallest_t != NULL)
     smallest_t[0] = s_t;
 
+  ncm_vector_free (asinh_t_v);
+
   return t_a;
 }
 
