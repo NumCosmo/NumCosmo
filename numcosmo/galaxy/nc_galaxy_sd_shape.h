@@ -72,6 +72,7 @@ struct _NcGalaxySDShapeClass
   NcGalaxySDShapeIntegrand *(*integ) (NcGalaxySDShape *gsds);
   gboolean (*prepare_data_array) (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
   void (*data_init) (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data);
+  void (*direct_estimate) (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[10];
@@ -88,8 +89,10 @@ struct _NcGalaxySDShapeData
   void (*ldata_read_row) (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
   void (*ldata_write_row) (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
   void (*ldata_required_columns) (NcGalaxySDShapeData *data, GList *columns);
+  gdouble (*ldata_get_radius) (NcGalaxySDShapeData *data);
   gatomicrefcount ref_count;
 };
+
 
 NCM_MSET_MODEL_DECLARE_ID (nc_galaxy_sd_shape);
 
@@ -98,9 +101,16 @@ GType nc_galaxy_sd_shape_data_get_type (void) G_GNUC_CONST;
 NcGalaxySDShapeData *nc_galaxy_sd_shape_data_ref (NcGalaxySDShapeData *data);
 void nc_galaxy_sd_shape_data_unref (NcGalaxySDShapeData *data);
 
+NcGalaxyWLObsEllipConv nc_galaxy_sd_shape_get_ellip_conv (NcGalaxySDShape *gsds);
+
+void nc_galaxy_sd_shape_apply_shear (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E, NcmComplex *E_obs);
+void nc_galaxy_sd_shape_apply_shear_inv (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs, NcmComplex *E);
+gdouble nc_galaxy_sd_shape_lndet_jac (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs);
+
 void nc_galaxy_sd_shape_data_read_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
 void nc_galaxy_sd_shape_data_write_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
 GList *nc_galaxy_sd_shape_data_required_columns (NcGalaxySDShapeData *data);
+gdouble nc_galaxy_sd_shape_data_get_radius (NcGalaxySDShapeData *data);
 
 NcGalaxySDShape *nc_galaxy_sd_shape_ref (NcGalaxySDShape *gsds);
 
@@ -110,6 +120,7 @@ void nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds);
 void nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng);
 NcGalaxySDShapeIntegrand *nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds);
 gboolean nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
+void nc_galaxy_sd_shape_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
 
 NcGalaxySDShapeData *nc_galaxy_sd_shape_data_new (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data);
 

@@ -159,6 +159,7 @@ struct _IntegData
   NcGalaxySDPositionData *data;
 };
 
+/* LCOV_EXCL_START */
 static gpointer
 _integ_data_copy (gpointer idata)
 {
@@ -168,6 +169,8 @@ _integ_data_copy (gpointer idata)
 
   return new_idata;
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 _integ_data_free (gpointer idata)
@@ -186,9 +189,10 @@ _nc_galaxy_sd_position_flat_integ_f (gpointer callback_data, NcGalaxySDPositionD
   const gdouble dec                          = data->dec;
 
   if ((ra >= self->ra_min) && (ra <= self->ra_max) && (dec >= self->dec_min) && (dec <= self->dec_max))
-    return ra_norm * dec_norm * cos (ncm_c_degree_to_radian (dec));
+    /* return ra_norm * dec_norm * cos (ncm_c_degree_to_radian (dec)); */
+    return log (ra_norm * dec_norm * cos (ncm_c_degree_to_radian (dec)));
 
-  return 0.0;
+  return GSL_NEGINF;
 }
 
 static NcGalaxySDPositionIntegrand *

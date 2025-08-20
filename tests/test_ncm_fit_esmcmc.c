@@ -548,6 +548,8 @@ test_ncm_fit_esmcmc_run_burnin (TestNcmFitESMCMC *test, gconstpointer pdata)
 
     var_m2lnL = ncm_matrix_get (cov, m2lnL_index, m2lnL_index);
 
+    ncm_matrix_free (cov);
+
     if (ncm_cmp (var_m2lnL, 2.0 * test->dim, 0.4, 0.0) != 0)
     {
       NcmFitESMCMCWalker *walker;
@@ -597,6 +599,8 @@ test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata
 
     var_m2lnL = ncm_matrix_get (cov, m2lnL_index, m2lnL_index);
 
+    ncm_matrix_free (cov);
+
     ncm_assert_cmpdouble_e (var_m2lnL, ==, (2.0 * test->dim), 0.4, 0.0);
   }
 }
@@ -627,6 +631,8 @@ test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer 
     ncm_mset_catalog_get_full_covar (mcat, &cov);
 
     var_m2lnL = ncm_matrix_get (cov, m2lnL_index, m2lnL_index);
+
+    ncm_matrix_free (cov);
 
     if (ncm_cmp (var_m2lnL, 2.0 * test->dim, 0.4, 0.0) != 0)
     {
@@ -734,6 +740,9 @@ test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pda
         if (ncm_fit_esmcmc_walker_apes_get_k_type (NCM_FIT_ESMCMC_WALKER_APES (walker)) == NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS)
         {
           g_test_skip ("APES-Move:*:Gauss walker not supported");
+
+          ncm_matrix_free (cat_cov);
+          ncm_matrix_free (cat_fcov);
 
           return;
         }

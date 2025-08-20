@@ -46,6 +46,7 @@ c_tests = [
         'sources': ['test_ncm_stats_dist.c'],
         'timeout': 0,
         'priority': 10,
+        'suite': ['c-slow', 'stats-dist'],
     },
     {
         'name': 'ncm_stats_dist_kernel',
@@ -128,6 +129,7 @@ c_tests = [
         'sources': ['test_ncm_fit_esmcmc.c'],
         'timeout': 0,
         'priority': 10,
+        'suite': ['c-slow', 'fit-esmcmc'],
     },
     {
         'name': 'ncm_func_eval',
@@ -239,6 +241,8 @@ c_tests = [
         'name': 'nc_powspec',
         'sources': ['test_nc_powspec.c'],
         'timeout': 0,
+        'priority': 10,
+        'suite': ['c-slow', 'powspec'],
     },
     {
         'name': 'nc_distance',
@@ -247,6 +251,9 @@ c_tests = [
     {
         'name': 'nc_data_cluster_wl',
         'sources': ['test_nc_data_cluster_wl.c'],
+        'timeout': 0,
+        'priority': 10,
+        'suite': ['c-slow', 'data-cluster-wl'],
     },
     {
         'name': 'nc_galaxy_wl_obs',
@@ -289,6 +296,11 @@ foreach c_test : c_tests
     else
         priority = 0
     endif
+    if c_test.has_key('suite')
+        suite = c_test['suite']
+    else
+        suite = ['c']
+    endif
     test(
         c_test['name'],
         executable_test,
@@ -299,6 +311,7 @@ foreach c_test : c_tests
         ],
         protocol: 'tap',
         priority: priority,
+        suite: suite,
     )
 endforeach
 
@@ -326,6 +339,11 @@ if mpi_c_dep.found()
             else
                 timeout = 60
             endif
+            if c_test_mpi.has_key('suite')
+                suite = c_test_mpi['suite']
+            else
+                suite = ['c', 'mpi']
+            endif
 
             mpiexec_args = (
                 [
@@ -343,10 +361,10 @@ if mpi_c_dep.found()
                     'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
                 ],
                 protocol: 'tap',
+                suite: suite,
             )
         endforeach
     endif
-
 endif
 
 python_tests = [
@@ -502,6 +520,10 @@ python_tests = [
         'name': 'cosmology',
         'source': 'test_cosmology.py',
     },
+    {
+        'name': 'py_numcosmo_py',
+        'source': 'test_py_numcosmo_py.py',
+    },
 ]
 
 if mpi_c_dep.found()
@@ -545,13 +567,14 @@ if python_astropy_scipy.found()
         {
             'name': 'sky_match',
             'source': 'test_sky_match.py',
+            'timeout': 0,
         },
     ]
 endif
 
 python_typer = python_module.find_installation(
     'python3',
-    modules: ['typer', 'rich'],
+    modules: ['typer', 'rich', 'pydantic', 'tabulate'],
     required: false,
 )
 
@@ -560,6 +583,15 @@ if python_typer.found()
         {
             'name': 'py_numcosmo_app',
             'source': 'test_py_numcosmo_app.py',
+            'timeout': 0,
+        },
+        {
+            'name': 'py_cluster_wl_app',
+            'source': 'test_py_cluster_wl_app.py',
+        },
+        {
+            'name': 'py_generate',
+            'source': 'test_py_generate.py',
             'timeout': 0,
         },
     ]
@@ -683,6 +715,12 @@ if enable_gir
             timeout = 60
         endif
 
+        if python_test.has_key('suite')
+            suite = python_test['suite']
+        else
+            suite = ['python']
+        endif
+
         test(
             python_test['name'],
             python,
@@ -696,6 +734,7 @@ if enable_gir
             protocol: pytest_protocol,
             is_parallel: pytest_is_parallel,
             timeout: timeout,
+            suite: suite,
         )
     endforeach
 
@@ -727,6 +766,7 @@ if enable_gir
                         depends: [numcosmo_gir, numcosmo_math_gir],
                         env: env,
                         timeout: timeout,
+                        suite: ['python', 'mpi'],
                         # protocol: pytest_protocol, # FIXME: mpiexec does not support TAP
                     )
                 endif

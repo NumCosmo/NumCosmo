@@ -103,7 +103,7 @@ void nc_hipert_adiab_set_k (NcHIPertAdiab *adiab, const gdouble k);
 gdouble nc_hipert_adiab_get_k (NcHIPertAdiab *adiab);
 
 gdouble nc_hipert_adiab_eval_cosmic_time (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
-gdouble nc_hipert_adiab_eval_delta_critial (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
+gdouble nc_hipert_adiab_eval_delta_critical (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
 
 gdouble nc_hipert_adiab_eval_powspec_zeta_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);
 gdouble nc_hipert_adiab_eval_powspec_Psi_at (NcHIPertAdiab *adiab, NcmModel *model, const gdouble tau);

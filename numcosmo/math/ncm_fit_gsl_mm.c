@@ -164,6 +164,8 @@ ncm_fit_gsl_mm_finalize (GObject *object)
   gsl_multimin_fdfminimizer_free (fit_gsl_mm->mm);
   fit_gsl_mm->mm = NULL;
 
+  g_clear_pointer (&fit_gsl_mm->desc, g_free);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_gsl_mm_parent_class)->finalize (object);
 }

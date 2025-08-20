@@ -87,6 +87,8 @@ typedef enum _NcDataSNIACovData
   NC_DATA_SNIA_COV_TOTAL_LENGTH, /*< skip >*/
 } NcDataSNIACovData;
 
+#define NC_DATA_SNIA_COV_LENGTH (NC_DATA_SNIA_COV_ABSMAG_SET)
+
 /*
  * Data ordering of Version 1 (V1) data format.
  */
@@ -2617,22 +2619,22 @@ _nc_data_snia_cov_load_snia_data_V01 (NcDataSNIACov *snia_cov, const gchar *file
           if (*itens[n - 1] == '\0')
             pad_end++;
 
-          if (n - 1 - pad_end == NC_DATA_SNIA_COV_V1_LENGTH)
+          if (n - 1 - pad_end == NC_DATA_SNIA_COV_LENGTH)
           {
             has_dataset = FALSE;
           }
-          else if (n - 2 - pad_end >= NC_DATA_SNIA_COV_V1_LENGTH)
+          else if (n - 2 - pad_end >= NC_DATA_SNIA_COV_LENGTH)
           {
             has_dataset = TRUE;
 
-            if (n - 2 - pad_end > NC_DATA_SNIA_COV_V1_LENGTH)
+            if (n - 2 - pad_end > NC_DATA_SNIA_COV_LENGTH)
               g_warning ("_nc_data_snia_cov_load_snia_data_V01: data file [%s] must have %d or %d columns, it has %u, ignoring the extra columns!",
-                         filename, NC_DATA_SNIA_COV_V1_LENGTH + 1, NC_DATA_SNIA_COV_V1_LENGTH + 2, n - pad_end);
+                         filename, NC_DATA_SNIA_COV_LENGTH + 1, NC_DATA_SNIA_COV_LENGTH + 2, n - pad_end);
           }
           else
           {
             g_error ("_nc_data_snia_cov_load_snia_data_V01: data file [%s] must have %d or %d columns, it has %u!",
-                     filename, NC_DATA_SNIA_COV_V1_LENGTH + 1, NC_DATA_SNIA_COV_V1_LENGTH + 2, n - pad_end);
+                     filename, NC_DATA_SNIA_COV_LENGTH + 1, NC_DATA_SNIA_COV_LENGTH + 2, n - pad_end);
           }
         }
         else if (n != g_strv_length (itens))
@@ -2645,7 +2647,7 @@ _nc_data_snia_cov_load_snia_data_V01 (NcDataSNIACov *snia_cov, const gchar *file
                    filename, self->mu_len, nrow);
 
         {
-          NcmVector *data[NC_DATA_SNIA_COV_V1_LENGTH];
+          NcmVector *data[NC_DATA_SNIA_COV_LENGTH];
 
           data[NC_DATA_SNIA_COV_ZCMB]              = self->z_cmb;
           data[NC_DATA_SNIA_COV_ZHE]               = self->z_he;
@@ -2662,7 +2664,7 @@ _nc_data_snia_cov_load_snia_data_V01 (NcDataSNIACov *snia_cov, const gchar *file
           data[NC_DATA_SNIA_COV_DIAG_MAG_COLOUR]   = diag_mag_colour;
           data[NC_DATA_SNIA_COV_DIAG_WIDTH_COLOUR] = diag_width_colour;
 
-          for (i = 0; i < NC_DATA_SNIA_COV_V1_LENGTH; i++)
+          for (i = 0; i < NC_DATA_SNIA_COV_LENGTH; i++)
           {
             const gdouble val = g_ascii_strtod (itens[i + 1], NULL);
 
@@ -2849,59 +2851,89 @@ _nc_data_snia_cov_load_snia_data_V2 (NcDataSNIACov *snia_cov, const gchar *filen
 static void
 _nc_data_snia_cov_load_matrix (const gchar *filename, NcmMatrix *data)
 {
-  GError *error = NULL;
-  gchar *file   = NULL;
-  gsize length  = 0;
-  gchar **itens;
-  guint itens_len    = 0;
-  guint pad_start    = 0;
-  guint pad_end      = 0;
+  GError *error      = NULL;
   guint64 matrix_len = 0;
+  GArray *array      = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), ncm_matrix_nrows (data) * ncm_matrix_ncols (data));
   guint i, j;
 
-  if (!g_file_get_contents (filename, &file, &length, &error))
-    g_error ("_nc_data_snia_cov_load_matrix: cannot open file %s: %s",
-             filename, error->message);
+  {
+    GIOChannel *channel = g_io_channel_new_file (filename, "r", &error);
+    GError *io_error    = NULL;
+    GIOStatus status;
+    gchar *line = NULL;
+    gsize len   = 0;
 
-  itens     = g_regex_split_simple ("\\s+", file, 0, 0);
-  itens_len = g_strv_length (itens);
+    if (!channel)
+      g_error ("_nc_data_snia_cov_load_matrix: cannot open file %s: %s",
+               filename, error->message);
 
-  if (*itens[0] == '\0')
-    pad_start = 1;
+    status = g_io_channel_read_line (channel, &line, &len, NULL, &io_error);
 
-  if (*itens[itens_len - 1] == '\0')
-    pad_end = 1;
+    if ((status != G_IO_STATUS_NORMAL) && (io_error != NULL))
+      g_error ("_nc_data_snia_cov_load_matrix: Error reading file: %s", io_error->message);
 
-  if (pad_start)
-    itens_len--;
+    {
+      gchar *endptr;
 
-  if (pad_end)
-    itens_len--;
+      matrix_len = g_ascii_strtoull (line, &endptr, 10);
 
-  matrix_len = g_ascii_strtoll (itens[pad_start], NULL, 10);
-  pad_start++;
-  itens_len--;
+      if (endptr == line)
+      {
+        g_error ("_nc_data_snia_cov_load_matrix: Invalid matrix length: %s", line);
+        g_free (line);
+
+        return;
+      }
+    }
+    g_free (line);
+
+    while ((status = g_io_channel_read_line (channel, &line, &len, NULL, &io_error)) == G_IO_STATUS_NORMAL)
+    {
+      if (line[0] == '\0')
+      {
+        g_free (line);
+        continue;
+      }
+      else
+      {
+        gchar *endptr;
+        double val = g_ascii_strtod (line, &endptr);
+
+        if (endptr == line)
+        {
+          g_warning ("_nc_data_snia_cov_load_matrix: Invalid double: %s.", line);
+          g_free (line);
+          continue;
+        }
+
+        g_array_append_val (array, val);
+
+        g_free (line);
+      }
+    }
+
+    if ((status != G_IO_STATUS_EOF) && (io_error != NULL))
+      g_error ("_nc_data_snia_cov_load_matrix: Error reading file: %s", io_error->message);
+
+    g_io_channel_shutdown (channel, TRUE, NULL);
+    g_io_channel_unref (channel);
+  }
+
+  g_assert_cmpuint (matrix_len * matrix_len, ==, array->len);
 
   if (matrix_len != ncm_matrix_nrows (data))
     g_error ("_nc_data_snia_cov_load_matrix: expected a %ux%u matrix but got %"G_GINT64_MODIFIER "dx%"G_GINT64_MODIFIER "d",
              ncm_matrix_nrows (data), ncm_matrix_nrows (data), matrix_len, matrix_len);
 
-  if (matrix_len * matrix_len != itens_len)
-    g_error ("_nc_data_snia_cov_load_matrix: matrix header say %"G_GINT64_MODIFIER "d length but got %u",
-             matrix_len * matrix_len, itens_len);
-
   for (i = 0; i < matrix_len; i++)
   {
     for (j = 0; j < matrix_len; j++)
     {
-      const gdouble val = g_ascii_strtod (itens[pad_start + i * matrix_len + j], NULL);
-
-      ncm_matrix_set (data, i, j, val);
+      ncm_matrix_set (data, i, j, g_array_index (array, gdouble, i * matrix_len + j));
     }
   }
 
-  g_strfreev (itens);
-  g_free (file);
+  g_array_free (array, TRUE);
 }
 
 static void
@@ -3732,6 +3764,8 @@ static const gchar *_nc_data_snia_cats[] = {
   "snia_pantheon.fits",
   "snia_pantheon_plus_sh0es.fits",
   "snia_pantheon_plus_sh0es_statonly.fits",
+  "snia_des_y5_statonly.fits",
+  "snia_des_y5_stat_sys.fits",
 };
 
 /**

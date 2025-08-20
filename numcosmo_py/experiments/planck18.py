@@ -24,7 +24,7 @@
 """Factory functions to generate Planck18 likelihood and models."""
 
 from typing import Any, cast
-from enum import Enum
+from enum import StrEnum
 
 import numpy as np
 
@@ -32,7 +32,7 @@ from numcosmo_py import Ncm, Nc
 from numcosmo_py.cosmology import HIPrimModel, create_cosmo, ParameterDesc
 
 
-class Planck18Types(str, Enum):
+class Planck18Types(StrEnum):
     """Planck 18 baseline data combinations."""
 
     TT = "TT"

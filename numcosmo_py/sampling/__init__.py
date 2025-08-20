@@ -24,7 +24,7 @@
 """Sampling module for numcosmo."""
 
 from typing import Optional, Union, Type, IO
-from enum import Enum
+from enum import StrEnum, auto
 
 from rich.console import Console
 from rich.highlighter import RegexHighlighter
@@ -215,8 +215,8 @@ class NcmFitLogger:
         self.task = None
 
 
-class FisherType(str, Enum):
+class FisherType(StrEnum):
     """Possible linear matter power spectrum models."""
 
-    OBSERVED = "observed"
-    EXPECTED = "expected"
+    OBSERVED = auto()
+    EXPECTED = auto()

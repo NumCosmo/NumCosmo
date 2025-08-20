@@ -165,6 +165,7 @@ test_nc_cluster_abundance_free (TestNcClusterAbundance *test, gconstpointer pdat
   NCM_TEST_FREE (ncm_mset_free, test->mset);
   NCM_TEST_FREE (ncm_model_free, NCM_MODEL (test->clusterm));
   NCM_TEST_FREE (ncm_model_free, NCM_MODEL (test->clusterz));
+  NCM_TEST_FREE (ncm_model_free, NCM_MODEL (test->cosmo));
 }
 
 void

@@ -174,10 +174,12 @@
 #include "galaxy/nc_galaxy_sd_obs_redshift.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift_spec.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift_gauss.h"
+#include "galaxy/nc_galaxy_sd_obs_redshift_pz.h"
 #include "galaxy/nc_galaxy_sd_true_redshift.h"
 #include "galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h"
 #include "galaxy/nc_galaxy_sd_shape.h"
 #include "galaxy/nc_galaxy_sd_shape_gauss.h"
+#include "galaxy/nc_galaxy_sd_shape_gauss_hsc.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_cbe.h"
@@ -732,10 +734,12 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_SPEC);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_PZ);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS_HSC);
 
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
@@ -1094,6 +1098,8 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
 
   if (!normal_exit)
     g_main_loop_quit (mpi_ml);
+
+  ncm_serialize_free (ser);
 
   return normal_exit;
 }
@@ -1915,22 +1921,22 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
   {
-    char *wisdown_str = fftw_export_wisdom_to_string ();
+    char *wisdom_str = fftw_export_wisdom_to_string ();
 
-    if (wisdown_str != NULL)
+    if (wisdom_str != NULL)
     {
-      gssize len  = strlen (wisdown_str);
+      gssize len  = strlen (wisdom_str);
       gboolean OK = FALSE;
 
 #if GLIB_CHECK_VERSION (2, 66, 0)
-      OK = g_file_set_contents_full (full_filename, wisdown_str, len,
+      OK = g_file_set_contents_full (full_filename, wisdom_str, len,
                                      G_FILE_SET_CONTENTS_CONSISTENT,
                                      0666, NULL);
 #else /* GLIB_CHECK_VERSION (2, 66, 0) */
-      OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+      OK = g_file_set_contents (full_filename, wisdom_str, len, NULL);
 #endif /* GLIB_CHECK_VERSION (2, 66, 0) */
       g_assert (OK);
-      g_free (wisdown_str);
+      g_free (wisdom_str);
     }
   }
 
@@ -1942,24 +1948,24 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
   {
-    char *wisdown_str = fftwf_export_wisdom_to_string ();
+    char *wisdom_str = fftwf_export_wisdom_to_string ();
 
-    if (wisdown_str != NULL)
+    if (wisdom_str != NULL)
     {
-      gssize len  = strlen (wisdown_str);
+      gssize len  = strlen (wisdom_str);
       gboolean OK = FALSE;
 
 #if GLIB_CHECK_VERSION (2, 66, 0)
-      OK = g_file_set_contents_full (full_filename, wisdown_str, len,
+      OK = g_file_set_contents_full (full_filename, wisdom_str, len,
                                      G_FILE_SET_CONTENTS_CONSISTENT,
                                      0666, NULL);
 #else /* GLIB_CHECK_VERSION (2, 66, 0) */
-      OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+      OK = g_file_set_contents (full_filename, wisdom_str, len, NULL);
 #endif /* GLIB_CHECK_VERSION (2, 66, 0) */
 
       g_assert (OK);
 
-      g_free (wisdown_str);
+      g_free (wisdom_str);
     }
   }
 #endif
@@ -2210,7 +2216,7 @@ static gdouble __fftw_timelimit   = 60.0;
  * @error: a GError
  *
  * Sets the default FFTW flag (FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
- * to be used when building plans. The variable @timeout sets the maximum time spended on
+ * to be used when building plans. The variable @timeout sets the maximum time spent on
  * planners.
  *
  */
@@ -2250,7 +2256,7 @@ ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout, GError **error
  * @error: a GError
  *
  * Sets the default FFTW flag (FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
- * to be used when building plans. The variable @timeout sets the maximum time spended on
+ * to be used when building plans. The variable @timeout sets the maximum time spent on
  * planners. The argument @flag_str is a string representation of the flag:
  *
  * - "estimate": FFTW_ESTIMATE
