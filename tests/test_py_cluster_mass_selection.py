@@ -332,13 +332,6 @@ def test_cluster_mass_selection_resample(cluster_mass_selection):
     assert ncount_rejection.get_z_obs().col_len() < ncount_no_rejection.get_z_obs().col_len()
 
 
-
-
-
-
-
-
-'''
 def test_cluster_mass_selection_hmf(cluster_mass_selection):
 
 
@@ -372,11 +365,18 @@ def test_cluster_mass_selection_hmf(cluster_mass_selection):
     execution_time = timeit.timeit(cad_n_test,globals=my_globals,number=100)
     print(f"Average time per execution cad.n with selection: {execution_time / 100:.6f} seconds")
 
-    cad_d2n_richness_test = """[cad.d2n(cosmo ,cluster_z , cluster_m,[lnR[i]], None,0.5) for i in range(nsize)]"""
+    cad_d2n_richness_test = """[cad.d2n(cosmo ,cluster_z , cluster_m,lnM[i],0.5) for i in range(nsize)]"""
     execution_time = timeit.timeit(cad_d2n_richness_test,globals=my_globals,number=100)
     print(f"Average time per execution cad.d2n richness with selection : {execution_time / 100:.6f} seconds")
 
-    cad_d2n_redshift_test = """[cad.d2n(cosmo ,cluster_z , cluster_m,[np.log(20)], None,z[i]) for i in range(nsize)]"""
+    cad_d2n_redshift_test = """[cad.d2n(cosmo ,cluster_z , cluster_m,np.log(1e13),z[i]) for i in range(nsize)]"""
     execution_time = timeit.timeit(cad_d2n_redshift_test,globals=my_globals,number=100)
     print(f"Average time per execution cad.d2n redshift with selection: {execution_time / 100:.6f} seconds")
-'''
+
+    cad_intp_bin_d2n_richness_test = """[cad.intp_bin_d2n(cosmo ,cluster_z , cluster_m,[lnR[i]], [lnR[i+1]], None ,[0.1], [1.1], None) for i in range(nsize-1)]"""
+    execution_time = timeit.timeit(cad_intp_bin_d2n_richness_test,globals=my_globals,number=1)
+    print(f"Average time per execution cad.intp_bin_d2n richness with selection : {execution_time / 1:.6f} seconds")
+
+    cad_intp_bin_d2n_redshift_test = """[cad.intp_bin_d2n(cosmo ,cluster_z , cluster_m,[np.log(5)], [np.log(200)], None ,[z[i]], [z[i+1]], None)  for i in range(nsize-1)]"""
+    execution_time = timeit.timeit(cad_intp_bin_d2n_redshift_test,globals=my_globals,number=1)
+    print(f"Average time per execution cad.intp_bin_d2n redshift with selection: {execution_time / 1:.6f} seconds")
