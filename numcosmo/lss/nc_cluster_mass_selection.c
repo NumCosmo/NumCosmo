@@ -50,7 +50,7 @@
 
 #define _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY 6
 
-struct _NcClusterMassSelectionPrivate
+typedef struct _NcClusterMassSelectionPrivate
 {
 	gdouble M0;
 	gdouble z0;
@@ -59,9 +59,9 @@ struct _NcClusterMassSelectionPrivate
 	gdouble lnR_max;
 	gdouble lnR_min;
 	gboolean enable_rejection;
-	NcmSpline2d *purity;
+	NcmSpline2d *ipurity;
   NcmSpline2d *completeness;
-};
+} NcClusterMassSelectionPrivate;
 
 
 
@@ -89,8 +89,8 @@ enum
 	PROP_LNRICHNESS_MIN,
 	PROP_LNRICHNESS_MAX,
 	PROP_ENABLE_REJECTION,
-	PROP_PURITY,
-    PROP_COMPLETENESS,
+	PROP_IPURITY,
+  PROP_COMPLETENESS,
 	PROP_SIZE,
 };
 
@@ -106,8 +106,8 @@ nc_cluster_mass_selection_init (NcClusterMassSelection *selection)
 	self->lnR_min          = GSL_NEGINF;
 	self->lnR_max          = GSL_POSINF;
 	self->enable_rejection = TRUE;
-	self->purity           = NULL;
-    self->completeness     = NULL;
+	self->ipurity           = NULL;
+  self->completeness     = NULL;
 }
 
 
@@ -141,17 +141,11 @@ _nc_cluster_mass_selection_set_property (GObject *object, guint prop_id, const G
 	case PROP_ENABLE_REJECTION:
 		nc_cluster_mass_selection_set_enable_rejection (selection, g_value_get_boolean (value));
 		break;
-	case PROP_PURITY:
-		ncm_spline2d_clear (&self->purity);
-		self->purity  = g_value_dup_object (value);
-        if (self->purity != NULL)
-        {ncm_spline2d_prepare (self->purity);}
+	case PROP_IPURITY:
+		nc_cluster_mass_selection_set_ipurity (selection, g_value_get_object (value));
 		break;
     case PROP_COMPLETENESS:
-		ncm_spline2d_clear (&self->completeness);
-		self->completeness  = g_value_dup_object (value);
-        if (self->completeness != NULL)
-        {ncm_spline2d_prepare (self->completeness);}
+		nc_cluster_mass_selection_set_completeness (selection, g_value_get_object (value));
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -184,11 +178,11 @@ _nc_cluster_mass_selection_get_property (GObject *object, guint prop_id, GValue 
 	case PROP_ENABLE_REJECTION:
 		g_value_set_boolean (value, self->enable_rejection);
 		break;
-	case PROP_PURITY:
-		g_value_set_object (value, self->purity);
+	case PROP_IPURITY:
+		g_value_set_object (value, nc_cluster_mass_selection_peek_ipurity(selection));
 		break;
     case PROP_COMPLETENESS:
-		g_value_set_object (value, self->completeness);
+		g_value_set_object (value, nc_cluster_mass_selection_peek_completeness(selection));
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -203,8 +197,7 @@ _nc_cluster_mass_selection_finalize (GObject *object)
 	G_OBJECT_CLASS (nc_cluster_mass_selection_parent_class)->finalize (object);
 }
 
-static void _nc_cluster_mass_selection_completeness(NcClusterMass *clusterm,gdouble lnM, gdouble z, gdouble *completeness);
-static void _nc_cluster_mass_selection_purity(NcClusterMass *clusterm,gdouble lnM_obs, gdouble z, gdouble *purity);
+
 static gdouble _nc_cluster_mass_selection_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params);
 static gdouble _nc_cluster_mass_selection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z);
 static gdouble _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params);
@@ -391,9 +384,9 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
                       G_PARAM_STATIC_NAME |
                       G_PARAM_STATIC_BLURB));
 
-    g_object_class_install_property (object_class,PROP_PURITY, g_param_spec_object ("purity",
+    g_object_class_install_property (object_class,PROP_IPURITY, g_param_spec_object ("ipurity",
                       NULL,
-                      "2D Spline for purity function",
+                      "2D Spline for ipurity function",
                       NCM_TYPE_SPLINE2D,
                       G_PARAM_READWRITE |
                       G_PARAM_STATIC_NAME |
@@ -439,61 +432,78 @@ nc_cluster_mass_selection_set_completeness(NcClusterMassSelection *selection, Nc
     ncm_spline2d_prepare(self->completeness);
 }
 
+/**
+ * nc_cluster_mass_selection_peek_completeness:
+ * @selection: a #NcClusterMassSelection
+ *
+ * Get the spline for the completeness as function of
+ * $\ln(M)$ and $z$.
+ *
+ * Returns: (transfer none): the spline for the cluster completeness.
+ */
 NcmSpline2d *
-nc_cluster_mass_selection_get_completeness(NcClusterMassSelection *selection)
+nc_cluster_mass_selection_peek_completeness(NcClusterMassSelection *selection)
 {
 	NcClusterMassSelectionPrivate * const self = selection->priv;
 
 	return self->completeness;
 }
 
-static void
-_nc_cluster_mass_selection_completeness(NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *completeness)
+gdouble
+nc_cluster_mass_selection_completeness(NcClusterMassSelection *selection, gdouble lnM, gdouble z)
 {
-    NcClusterMassSelection *selection = NC_CLUSTER_MASS_SELECTION (clusterm);
     NcClusterMassSelectionPrivate * const self = selection->priv;
 
     if (self->completeness == NULL)
     {
-        completeness[0] = 1.0;
+        return 1.0;
     }
     else
     {
-        completeness[0] = ncm_spline2d_eval(self->completeness, lnM, z);
+        return  ncm_spline2d_eval(self->completeness, lnM, z);
     }
 }
 
 
 void
-nc_cluster_mass_selection_set_purity(NcClusterMassSelection *selection, NcmSpline2dBicubic *purity)
+nc_cluster_mass_selection_set_ipurity(NcClusterMassSelection *selection, NcmSpline2dBicubic *ipurity)
 {
 
 	NcClusterMassSelectionPrivate * const self = selection->priv;
-	self->purity = NCM_SPLINE2D(purity);
-	ncm_spline2d_prepare(self->purity);
+	self->ipurity = NCM_SPLINE2D(ipurity);
+	ncm_spline2d_prepare(self->ipurity);
 }
+
+/**
+ * nc_cluster_mass_selection_peek_ipurity:
+ * @selection: a #NcClusterMassSelection
+ *
+ * Get the spline for the inverse of purity as function of
+ * $\ln(M_obs)$ and $z$.
+ *
+ * Returns: (transfer none): the spline for the cluster inverse purity.
+ */
 
 NcmSpline2d *
-nc_cluster_mass_selection_get_purity(NcClusterMassSelection *selection)
+nc_cluster_mass_selection_peek_ipurity(NcClusterMassSelection *selection)
 {
 	NcClusterMassSelectionPrivate * const self = selection->priv;
 
-	return self->purity;
+	return self->ipurity;
 }
 
-static void
-_nc_cluster_mass_selection_purity(NcClusterMass *clusterm, gdouble lnM_obs, gdouble z,  gdouble *purity)
+gdouble
+nc_cluster_mass_selection_ipurity(NcClusterMassSelection *selection, gdouble lnM_obs, gdouble z)
 {
-    NcClusterMassSelection *selection = NC_CLUSTER_MASS_SELECTION (clusterm);
     NcClusterMassSelectionPrivate * const self = selection->priv;
 
-    if (self->purity == NULL)
+    if (self->ipurity == NULL)
     {
-        purity[0] = 1.0;
+        return  1.0;
     }
     else
     {
-        purity[0] = ncm_spline2d_eval(self->purity, lnM_obs, z);
+        return  ncm_spline2d_eval(self->ipurity, lnM_obs, z);
     }
 }
 
@@ -508,8 +518,8 @@ _nc_cluster_mass_selection_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoubl
 	gdouble lnR_true, sigma, completeness, ipurity;
 
 	_nc_cluster_mass_selection_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
-	_nc_cluster_mass_selection_completeness(clusterm, lnM, z, &completeness);
-	_nc_cluster_mass_selection_purity(clusterm, lnM_obs[0], z, &ipurity);
+	completeness = nc_cluster_mass_selection_completeness(selection, lnM, z);
+	ipurity = nc_cluster_mass_selection_ipurity(selection, lnM_obs[0], z);
 
 	const gdouble x     = (lnM_obs[0] - lnR_true) / sigma;
 
@@ -538,7 +548,7 @@ _nc_cluster_mass_selection_integrand (gdouble lnM_obs, gpointer userdata)
 	NcClusterMassSelection *selection             = NC_CLUSTER_MASS_SELECTION (obs_data->clusterm);
 
 	_nc_cluster_mass_selection_lnR_sigma (obs_data->clusterm, obs_data->lnM, obs_data->z, &lnR_true, &sigma);
-	_nc_cluster_mass_selection_purity(obs_data->clusterm, lnM_obs, obs_data->z, &ipurity);
+   ipurity  = nc_cluster_mass_selection_ipurity(selection, lnM_obs, obs_data->z);
 
 	const gdouble x     = (lnM_obs - lnR_true) / sigma;
     if (lnM_obs< CUT)
@@ -569,7 +579,7 @@ _nc_cluster_mass_selection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdo
 
 	gsl_integration_qag (&F, CUT, self->lnR_max, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp, &err);
 	ncm_memory_pool_return (w);
-	_nc_cluster_mass_selection_completeness(clusterm, lnM, z, &completeness);
+	completeness = nc_cluster_mass_selection_completeness(selection, lnM, z);
     return intp * completeness;
 }
 
@@ -594,7 +604,7 @@ _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, 
 		obs_data.lnM            = lnM;
 		obs_data.lnM_obs_params = lnM_obs_params;
 		obs_data.z              = z;
-		_nc_cluster_mass_selection_completeness(clusterm, lnM, z, &completeness);
+		completeness = nc_cluster_mass_selection_completeness(selection, lnM, z);
 
 		F.function = &_nc_cluster_mass_selection_integrand;
 		F.params   = &obs_data;
@@ -693,7 +703,7 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
 {
 	NcClusterMassSelection *selection             = NC_CLUSTER_MASS_SELECTION (clusterm);
 	NcClusterMassSelectionPrivate * const self = selection->priv;
-    
+
 	const gdouble *lnM_obs_ptr = ncm_matrix_const_data (lnM_obs);
 	const gdouble *z_ptr       = ncm_vector_const_data (z);
 	const guint tda            = ncm_matrix_tda (lnM_obs);
@@ -709,8 +719,8 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
 	guint i;
     gdouble completeness, ipurity;
 
-    
-    
+
+
 	if ((tda == 1) && (sz == 1))
 	{
 		for (i = 0; i < len; i++)
@@ -720,10 +730,10 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
 			const gdouble sigma  = sigma_pre + sigma_p2 * Dln1pz;
 			const gdouble x      = (lnM_obs_ptr[i] - lnR) / sigma;
 
-           _nc_cluster_mass_selection_completeness(clusterm, lnM, z_ptr[i], &completeness);
-	       _nc_cluster_mass_selection_purity(clusterm, lnM_obs_ptr[i], z_ptr[i], &ipurity);
-            
-            
+         completeness = nc_cluster_mass_selection_completeness(selection, lnM, z_ptr[i]);
+	       ipurity  = nc_cluster_mass_selection_ipurity(selection, lnM_obs_ptr[i], z_ptr[i]);
+
+
 			if (lnM_obs_ptr[i] <0.0)
 			{
 				res_ptr[i]=0.0;
@@ -743,9 +753,9 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
 			const gdouble lnR    = lnR_pre + mu_p2 * Dln1pz;
 			const gdouble sigma  = sigma_pre + sigma_p2 * Dln1pz;
 			const gdouble x      = (lnM_obs_ptr[i * tda] - lnR) / sigma;
-            _nc_cluster_mass_selection_completeness(clusterm, lnM, z_ptr[i* sz], &completeness);
-	        _nc_cluster_mass_selection_purity(clusterm, lnM_obs_ptr[i* tda], z_ptr[i *  sz], &ipurity);
-            
+      gdouble  completeness  = nc_cluster_mass_selection_completeness(selection, lnM, z_ptr[i* sz]);
+	    gdouble ipurity  = nc_cluster_mass_selection_ipurity(selection, lnM_obs_ptr[i* tda], z_ptr[i *  sz]);
+
 			if (lnM_obs_ptr[i * tda] <0.0)
 			{
 				res_ptr[i]=0.0;
@@ -799,15 +809,13 @@ nc_cluster_mass_selection_get_std_richness (NcClusterMassSelection *selection, g
 /**
  * nc_cluster_mass_selection_get_cut:
  * @selection: a #NcClusterMassSelection
- * @lnM: ln of the mass
- * @z: redshift
  *
  * Computes the cut in richness.
  *
  * Returns: the cut in richness.
  */
 gdouble
-nc_cluster_mass_selection_get_cut (NcClusterMassSelection *selection, gdouble lnM, gdouble z)
+nc_cluster_mass_selection_get_cut (NcClusterMassSelection *selection)
 {
 	return CUT;
 }
