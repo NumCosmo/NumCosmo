@@ -189,13 +189,13 @@ def set_rc_params_article(
     nrows: int = 1,
     fontsize: int = 8,
     use_tex: bool | None = None,
+    aspect_ratio: float = (math.sqrt(5) - 1.0) / 2.0,
 ) -> None:
     """Set matplotlib rcParams for a LaTeX article."""
     fig_width_pt = column_width * ncol  # \showthe\columnwidth
     inches_per_pt = 1.0 / 72.27  # Convert pt to inch
-    golden_mean = (math.sqrt(5) - 1.0) / 2.0  # Aesthetic ratio
     fig_width = fig_width_pt * inches_per_pt  # width in inches
-    fig_height = fig_width * golden_mean  # height in inches
+    fig_height = fig_width * aspect_ratio  # height in inches
     fig_size = [fig_width, fig_height * nrows]
     if use_tex is None:
         use_tex = bool(shutil.which("latex"))
@@ -242,7 +242,13 @@ def plot_m2lnp(
     return img
 
 
-def format_alpha_xaxis(ax: plt.Axes, cosmo: Nc.HICosmo, n_ticks: int = 5):
+def format_alpha_xaxis(
+    ax: plt.Axes,
+    cosmo: Nc.HICosmo,
+    n_ticks: int = 5,
+    top: bool = True,
+    bottom: bool = True,
+):
     r"""Format the alpha axis.
 
     Sets the x-axis label to "$\alpha$" and the secondary x-axis to "$x$".
@@ -252,12 +258,15 @@ def format_alpha_xaxis(ax: plt.Axes, cosmo: Nc.HICosmo, n_ticks: int = 5):
         x = cosmo.x_alpha(alpha)
         return f"${latex_float(x, precision=1, convert_g=False)}$"
 
-    ax.set_xlabel(r"$\alpha$")
-    xmin, xmax = ax.get_xlim()
+    if bottom:
+        ax.set_xlabel(r"$\alpha$")
 
-    b = ((xmax - xmin) / n_ticks) // np.log(10.0)
-
-    sec_ax = ax.secondary_xaxis("top")
-    sec_ax.set_xlabel("$x$")
-    sec_ax.xaxis.set_major_locator(ticker.MultipleLocator(base=b * np.log(10.0)))
-    sec_ax.xaxis.set_major_formatter(ticker.FuncFormatter(custom_formatter))
+    if top:
+        xmin, xmax = ax.get_xlim()
+        b = ((xmax - xmin) / n_ticks) // np.log(10.0)
+        if b < 1.0:
+            b = ((xmax - xmin) / n_ticks) // np.log(2.0)
+        sec_ax = ax.secondary_xaxis("top")
+        sec_ax.set_xlabel("$x$")
+        sec_ax.xaxis.set_major_locator(ticker.MultipleLocator(base=b * np.log(10.0)))
+        sec_ax.xaxis.set_major_formatter(ticker.FuncFormatter(custom_formatter))

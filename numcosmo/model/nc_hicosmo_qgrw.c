@@ -785,16 +785,16 @@ _nc_hipert_itwo_fluids_wkb (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
  * absolute values of the four corresponding correction products.
  */
   /* Mode 1: Effective Hubble radius estimates */
-  qgrw->wkb_two_fluids.mode1_zeta_scale  = csqrt (cabs (delta1v_zeta1 * delta2v_zeta1));
-  qgrw->wkb_two_fluids.mode1_Q_scale     = csqrt (cabs (delta1v_Q1 * delta2v_Q1));
-  qgrw->wkb_two_fluids.mode1_Pzeta_scale = csqrt (cabs (delta1v_Pzeta1 * delta2v_Pzeta1));
-  qgrw->wkb_two_fluids.mode1_PQ_scale    = csqrt (cabs (delta1v_PQ1 * delta2v_PQ1));
+  qgrw->wkb_two_fluids.mode1_zeta_scale  = cbrt (cabs (delta1v_zeta1 * delta2v_zeta1));
+  qgrw->wkb_two_fluids.mode1_Q_scale     = cbrt (cabs (delta1v_Q1 * delta2v_Q1));
+  qgrw->wkb_two_fluids.mode1_Pzeta_scale = cbrt (cabs (delta1v_Pzeta1 * delta2v_Pzeta1));
+  qgrw->wkb_two_fluids.mode1_PQ_scale    = cbrt (cabs (delta1v_PQ1 * delta2v_PQ1));
 
   /* Mode 2: Effective Hubble radius estimates */
-  qgrw->wkb_two_fluids.mode2_zeta_scale  = csqrt (cabs (delta1v_zeta2 * delta2v_zeta2));
-  qgrw->wkb_two_fluids.mode2_Q_scale     = csqrt (cabs (delta1v_Q2 * delta2v_Q2));
-  qgrw->wkb_two_fluids.mode2_Pzeta_scale = csqrt (cabs (delta1v_Pzeta2 * delta2v_Pzeta2));
-  qgrw->wkb_two_fluids.mode2_PQ_scale    = csqrt (cabs (delta1v_PQ2 * delta2v_PQ2));
+  qgrw->wkb_two_fluids.mode2_zeta_scale  = cbrt (cabs (delta1v_zeta2 * delta2v_zeta2));
+  qgrw->wkb_two_fluids.mode2_Q_scale     = cbrt (cabs (delta1v_Q2 * delta2v_Q2));
+  qgrw->wkb_two_fluids.mode2_Pzeta_scale = cbrt (cabs (delta1v_Pzeta2 * delta2v_Pzeta2));
+  qgrw->wkb_two_fluids.mode2_PQ_scale    = cbrt (cabs (delta1v_PQ2 * delta2v_PQ2));
 
   /* Mode 1 and 2: Truncation error estimates */
   qgrw->wkb_two_fluids.mode1_scale = (cabs (delta1v_zeta1 * delta2v_zeta1)

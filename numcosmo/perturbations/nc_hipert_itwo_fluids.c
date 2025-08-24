@@ -238,6 +238,15 @@ _nc_hipert_itwo_fluids_state_eval_obs_helper (const complex double zeta, const c
       return zeta;
 
       break;
+
+    case NC_HIPERT_ITWO_FLUIDS_OBS_ZETA_DIFF:
+      return (epsilon * (gw1 + gw2) / (gw1 * gw2) * Q);
+
+      break;
+    case NC_HIPERT_ITWO_FLUIDS_OBS_PZETA:
+      return Pzeta;
+
+      break;
     case NC_HIPERT_ITWO_FLUIDS_OBS_FKU_TOT:
       return Fnu * zeta;
 
@@ -322,5 +331,41 @@ nc_hipert_itwo_fluids_state_eval_obs (NcHIPertITwoFluidsState *tf_state, NcHIPer
   }
 
   return norma * creal (obs1a * conj (obs1b) + obs2a * conj (obs2b));
+}
+
+/**
+ * nc_hipert_itwo_fluids_state_eval_mode:
+ * @tf_state: a #NcHIPertITwoFluidsState
+ * @obs_mode: a #NcHIPertITwoFluidsObsMode
+ * @obs: a #NcHIPertITwoFluidsObs
+ *
+ * Computes the mode function for @obs.
+ *
+ * Returns: (transfer full): the value of the mode function.
+ */
+NcmComplex *
+nc_hipert_itwo_fluids_state_eval_mode (NcHIPertITwoFluidsState *tf_state, NcHIPertITwoFluidsObsMode obs_mode, NcHIPertITwoFluidsObs obs)
+{
+  const gdouble epsilon       = GSL_SIGN (tf_state->alpha);
+  NcHIPertITwoFluidsArgs args = {epsilon, tf_state->gw1, tf_state->gw2, tf_state->Fnu};
+  complex double mode_func    = 0.0;
+  NcmComplex *mode            = ncm_complex_new ();
+
+  switch (obs_mode)
+  {
+    case NC_HIPERT_ITWO_FLUIDS_OBS_MODE_ONE:
+      mode_func = _nc_hipert_itwo_fluids_state_eval_obs_helper (tf_state->zeta1, tf_state->Q1, tf_state->Pzeta1, tf_state->PQ1, &args, obs);
+      break;
+    case NC_HIPERT_ITWO_FLUIDS_OBS_MODE_TWO:
+      mode_func = _nc_hipert_itwo_fluids_state_eval_obs_helper (tf_state->zeta2, tf_state->Q2, tf_state->Pzeta2, tf_state->PQ2, &args, obs);
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  ncm_complex_set_c (mode, tf_state->norma * mode_func);
+
+  return mode;
 }
 

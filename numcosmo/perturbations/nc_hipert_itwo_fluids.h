@@ -133,6 +133,8 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_VARS >*/
 /**
  * NcHIPertITwoFluidsObs:
  * @NC_HIPERT_ITWO_FLUIDS_OBS_ZETA: Adiabatic perturbation (curvature perturbation), $\\zeta$.
+ * @NC_HIPERT_ITWO_FLUIDS_OBS_ZETA_DIFF: Isocurvature perturbation (difference), $\\zeta_\\mathrm{diff} = \\zeta_r - \\zeta_w$.
+ * @NC_HIPERT_ITWO_FLUIDS_OBS_PZETA: Adiabatic perturbation's momentum, $\\Pi_\\zeta$.
  * @NC_HIPERT_ITWO_FLUIDS_OBS_FKU_TOT: Total velocity potential, $F_k\\mathcal{V}$.
  * @NC_HIPERT_ITWO_FLUIDS_OBS_FKU_DIFF: Velocity potential difference, $k_\\mathrm{phys}\\mathcal{V}_\\mathrm{diff}$.
  * @NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_TOT: Total density contrast, $\\delta_\\mathrm{tot}$.
@@ -160,6 +162,8 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_VARS >*/
 typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_OBS >*/
 {
   NC_HIPERT_ITWO_FLUIDS_OBS_ZETA,
+  NC_HIPERT_ITWO_FLUIDS_OBS_ZETA_DIFF,
+  NC_HIPERT_ITWO_FLUIDS_OBS_PZETA,
   NC_HIPERT_ITWO_FLUIDS_OBS_FKU_TOT,
   NC_HIPERT_ITWO_FLUIDS_OBS_FKU_DIFF,
   NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_TOT,
@@ -287,6 +291,7 @@ NCM_INLINE NcHIPertITwoFluidsTV *nc_hipert_itwo_fluids_tv_eval (NcHIPertITwoFlui
 NCM_INLINE gdouble nc_hipert_itwo_fluids_eval_unit (NcHIPertITwoFluids *itf);
 
 gdouble nc_hipert_itwo_fluids_state_eval_obs (NcHIPertITwoFluidsState *tf_state, NcHIPertITwoFluidsObsMode obs_mode, NcHIPertITwoFluidsObs obs_a, NcHIPertITwoFluidsObs obs_b);
+NcmComplex *nc_hipert_itwo_fluids_state_eval_mode (NcHIPertITwoFluidsState *tf_state, NcHIPertITwoFluidsObsMode obs_mode, NcHIPertITwoFluidsObs obs);
 
 G_END_DECLS
 
