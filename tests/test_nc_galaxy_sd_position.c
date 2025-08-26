@@ -328,7 +328,7 @@ test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpoint
   NcmRNG *rng                            = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcGalaxySDObsRedshiftData *sdz_data    = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
   NcGalaxySDPositionData *gsdp_data      = nc_galaxy_sd_position_data_new (test->gsdp, sdz_data);
-  NcGalaxySDPositionIntegrand *integrand = nc_galaxy_sd_position_integ (test->gsdp);
+  NcGalaxySDPositionIntegrand *integrand = nc_galaxy_sd_position_integ (test->gsdp, TRUE);
   NcmMSet *mset                          = ncm_mset_empty_new ();
   const guint nruns                      = 10000;
   gdouble ra_min, ra_max, dec_min, dec_max;

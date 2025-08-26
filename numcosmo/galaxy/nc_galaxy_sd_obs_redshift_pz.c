@@ -94,7 +94,7 @@ nc_galaxy_sd_obs_redshift_pz_finalize (GObject *object)
 static void _nc_galaxy_sd_obs_redshift_pz_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static void _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static void _nc_galaxy_sd_obs_redshift_pz_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
-static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_pz_integ (NcGalaxySDObsRedshift *gsdor);
+static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_pz_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp);
 static void _nc_galaxy_sd_obs_redshift_pz_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 
 static void
@@ -208,19 +208,27 @@ _integ_data_free (gpointer idata)
 }
 
 static gdouble
-_nc_galaxy_sd_obs_redshift_pz_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDObsRedshiftData *data)
+_nc_galaxy_sd_obs_redshift_pz_ln_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDObsRedshiftData *data)
 {
   NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
 
   return log (ncm_spline_eval (ldata->pz, z));
 }
 
+static gdouble
+_nc_galaxy_sd_obs_redshift_pz_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDObsRedshiftData *data)
+{
+  NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
+
+  return ncm_spline_eval (ldata->pz, z);
+}
+
 static NcGalaxySDObsRedshiftIntegrand *
-_nc_galaxy_sd_obs_redshift_pz_integ (NcGalaxySDObsRedshift *gsdor)
+_nc_galaxy_sd_obs_redshift_pz_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp)
 {
   NcGalaxySDObsRedshiftPz *gsdorpz      = NC_GALAXY_SD_OBS_REDSHIFT_PZ (gsdor);
   struct _IntegData *int_data           = g_new0 (struct _IntegData, 1);
-  NcGalaxySDObsRedshiftIntegrand *integ = nc_galaxy_sd_obs_redshift_integrand_new (&_nc_galaxy_sd_obs_redshift_pz_integ_f,
+  NcGalaxySDObsRedshiftIntegrand *integ = nc_galaxy_sd_obs_redshift_integrand_new (use_lnp ? &_nc_galaxy_sd_obs_redshift_pz_ln_integ_f : &_nc_galaxy_sd_obs_redshift_pz_integ_f,
                                                                                    &_integ_data_free,
                                                                                    &_integ_data_copy,
                                                                                    NULL,

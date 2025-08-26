@@ -577,7 +577,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_integ (TestNcGalaxySDObsRedshift *test, gco
 {
   NcmRNG *rng                               = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcGalaxySDObsRedshiftData *data           = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
-  NcGalaxySDObsRedshiftIntegrand *integrand = nc_galaxy_sd_obs_redshift_integ (test->gsdor);
+  NcGalaxySDObsRedshiftIntegrand *integrand = nc_galaxy_sd_obs_redshift_integ (test->gsdor, TRUE);
   NcGalaxySDTrueRedshift *gsdtr             = NC_GALAXY_SD_TRUE_REDSHIFT (ncm_model_peek_submodel_by_mid (NCM_MODEL (test->gsdor), nc_galaxy_sd_true_redshift_id ()));
   NcmMSet *mset                             = ncm_mset_empty_new ();
   const gdouble zp                          = 0.4;
@@ -597,7 +597,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_integ (TestNcGalaxySDObsRedshift *test, gco
     const gdouble sigmaz    = sigma0 * (1.0 + z);
     const gdouble norm      = sqrt (2.0 * M_PI) * sigmaz;
     const double lognorm    = ncm_util_log_gaussian_integral (test->z_min, test->z_max, z, sigmaz, &sign);
-    const gdouble ln_int_z  = nc_galaxy_sd_true_redshift_integ (gsdtr, z);
+    const gdouble ln_int_z  = nc_galaxy_sd_true_redshift_ln_integ (gsdtr, z);
     const gdouble ln_int_zp = (-0.5 * gsl_pow_2 ((zp - z) / sigmaz) - lognorm) - log (norm);
     const gdouble control   = ln_int_z + ln_int_zp;
     const gdouble res       = nc_galaxy_sd_obs_redshift_integrand_eval (integrand, z, data);
@@ -629,7 +629,7 @@ test_nc_galaxy_sd_obs_redshift_spec_integ (TestNcGalaxySDObsRedshift *test, gcon
 {
   NcmRNG *rng                               = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcGalaxySDObsRedshiftData *data           = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
-  NcGalaxySDObsRedshiftIntegrand *integrand = nc_galaxy_sd_obs_redshift_integ (test->gsdor);
+  NcGalaxySDObsRedshiftIntegrand *integrand = nc_galaxy_sd_obs_redshift_integ (test->gsdor, TRUE);
   NcGalaxySDTrueRedshift *gsdtr             = NC_GALAXY_SD_TRUE_REDSHIFT (ncm_model_peek_submodel_by_mid (NCM_MODEL (test->gsdor), nc_galaxy_sd_true_redshift_id ()));
   NcmMSet *mset                             = ncm_mset_empty_new ();
   const guint nruns                         = 10000;
@@ -640,7 +640,7 @@ test_nc_galaxy_sd_obs_redshift_spec_integ (TestNcGalaxySDObsRedshift *test, gcon
   for (i = 0; i < nruns; i++)
   {
     const gdouble z          = g_test_rand_double_range (0.0, 5.0);
-    const gdouble int_true_z = nc_galaxy_sd_true_redshift_integ (gsdtr, z);
+    const gdouble int_true_z = nc_galaxy_sd_true_redshift_ln_integ (gsdtr, z);
     const gdouble int_obs_z  = nc_galaxy_sd_obs_redshift_integrand_eval (integrand, z, data);
 
     ncm_assert_cmpdouble_e (int_obs_z, ==, int_true_z, 1.0e-10, 0.0);
@@ -657,7 +657,7 @@ test_nc_galaxy_sd_obs_redshift_pz_integ (TestNcGalaxySDObsRedshift *test, gconst
 {
   NcmRNG *rng                               = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   NcGalaxySDObsRedshiftData *data           = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
-  NcGalaxySDObsRedshiftIntegrand *integrand = nc_galaxy_sd_obs_redshift_integ (test->gsdor);
+  NcGalaxySDObsRedshiftIntegrand *integrand = nc_galaxy_sd_obs_redshift_integ (test->gsdor, TRUE);
   NcmMSet *mset                             = ncm_mset_empty_new ();
   const guint nruns                         = 10000;
   const guint npoints                       = 10000;

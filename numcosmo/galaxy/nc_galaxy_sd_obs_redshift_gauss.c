@@ -157,7 +157,7 @@ static void _nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshift *gsdor, 
 static gboolean _nc_galaxy_sd_obs_redshift_gauss_gen1 (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static void _nc_galaxy_sd_obs_redshift_gauss_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static void _nc_galaxy_sd_obs_redshift_gauss_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
-static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_gauss_integ (NcGalaxySDObsRedshift *gsdor);
+static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_gauss_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp);
 static void _nc_galaxy_sd_obs_redshift_gauss_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static void _nc_galaxy_sd_obs_redshift_gauss_add_submodel (NcmModel *model, NcmModel *submodel);
 
@@ -310,7 +310,7 @@ _integ_data_free (gpointer idata)
 }
 
 static gdouble
-_nc_galaxy_sd_obs_redshift_gauss_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDObsRedshiftData *data)
+_nc_galaxy_sd_obs_redshift_gauss_ln_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDObsRedshiftData *data)
 {
   const struct _IntegData *int_data              = (struct _IntegData *) callback_data;
   NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (int_data->gsdorgauss);
@@ -323,8 +323,7 @@ _nc_galaxy_sd_obs_redshift_gauss_integ_f (gpointer callback_data, const gdouble 
     const gdouble sigmaz   = ldata->sigma0 * (1.0 + z);
     const gdouble norm     = sqrt (2.0 * M_PI) * sigmaz;
     const gdouble lognorm  = ncm_util_log_gaussian_integral (self->zp_min, self->zp_max, z, sigmaz, &sign);
-    const gdouble ln_int_z = nc_galaxy_sd_true_redshift_integ (self->sdz, z);
-    /* const gdouble int_zp  = exp (-0.5 * gsl_pow_2 ((zp - z) / sigmaz) - lognorm) / norm; */
+    const gdouble ln_int_z = nc_galaxy_sd_true_redshift_ln_integ (self->sdz, z);
     const gdouble ln_int_zp = -0.5 * gsl_pow_2 ((zp - z) / sigmaz) - lognorm - log (norm);
 
     return ln_int_z + ln_int_zp;
@@ -332,21 +331,46 @@ _nc_galaxy_sd_obs_redshift_gauss_integ_f (gpointer callback_data, const gdouble 
   else
   {
     const gdouble norm = sqrt (2.0 * M_PI) * ldata->sigma;
-
-    /* const gdouble chi2   = exp (-0.5 * gsl_pow_2 ((zp - z) / ldata->sigma)); */
-    /* const gdouble int_zp = chi2 / norm; */
     const gdouble ln_int_zp = -0.5 * gsl_pow_2 ((zp - z) / ldata->sigma) - log (norm);
 
     return ln_int_zp;
   }
 }
 
+static gdouble
+_nc_galaxy_sd_obs_redshift_gauss_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDObsRedshiftData *data)
+{
+  const struct _IntegData *int_data              = (struct _IntegData *) callback_data;
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (int_data->gsdorgauss);
+  NcGalaxySDObsRedshiftGaussData * const ldata   = (NcGalaxySDObsRedshiftGaussData *) data->ldata;
+  const gdouble zp                               = ldata->zp;
+  gdouble sign;
+
+  if (self->use_true_z)
+  {
+    const gdouble sigmaz  = ldata->sigma0 * (1.0 + z);
+    const gdouble norm    = sqrt (2.0 * M_PI) * sigmaz;
+    const gdouble lognorm = ncm_util_log_gaussian_integral (self->zp_min, self->zp_max, z, sigmaz, &sign);
+    const gdouble int_z   = nc_galaxy_sd_true_redshift_integ (self->sdz, z);
+    const gdouble int_zp  = exp (-0.5 * gsl_pow_2 ((zp - z) / sigmaz) - lognorm) / norm;
+
+    return int_z + int_zp;
+  }
+  else
+  {
+    const gdouble norm   = sqrt (2.0 * M_PI) * ldata->sigma;
+    const gdouble int_zp = exp (-0.5 * gsl_pow_2 ((zp - z) / ldata->sigma)) / norm;
+
+    return int_zp;
+  }
+}
+
 static NcGalaxySDObsRedshiftIntegrand *
-_nc_galaxy_sd_obs_redshift_gauss_integ (NcGalaxySDObsRedshift *gsdor)
+_nc_galaxy_sd_obs_redshift_gauss_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp)
 {
   NcGalaxySDObsRedshiftGauss *gsdorgauss = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
   struct _IntegData *int_data            = g_new0 (struct _IntegData, 1);
-  NcGalaxySDObsRedshiftIntegrand *integ  = nc_galaxy_sd_obs_redshift_integrand_new (&_nc_galaxy_sd_obs_redshift_gauss_integ_f,
+  NcGalaxySDObsRedshiftIntegrand *integ  = nc_galaxy_sd_obs_redshift_integrand_new (use_lnp ? &_nc_galaxy_sd_obs_redshift_gauss_ln_integ_f : &_nc_galaxy_sd_obs_redshift_gauss_integ_f,
                                                                                     &_integ_data_free,
                                                                                     &_integ_data_copy,
                                                                                     NULL,
