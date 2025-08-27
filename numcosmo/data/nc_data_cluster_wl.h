@@ -71,7 +71,6 @@ void nc_data_cluster_wl_set_prec (NcDataClusterWL *dcwl, gdouble prec);
 void nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs);
 void nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gdouble r_max);
 void nc_data_cluster_wl_use_lnint (NcDataClusterWL *dcwl, gboolean use_lnint);
-void nc_data_cluster_wl_use_lnp (NcDataClusterWL *dcwl, gboolean use_lnp);
 
 NcGalaxyWLObs *nc_data_cluster_wl_peek_obs (NcDataClusterWL *dcwl);
 
