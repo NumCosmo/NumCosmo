@@ -311,6 +311,6 @@ nc_galaxy_sd_true_redshift_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
 gdouble
 nc_galaxy_sd_true_redshift_ln_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
 {
-  return NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->integ (gsdtr, z);
+  return NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->ln_integ (gsdtr, z);
 }
 
