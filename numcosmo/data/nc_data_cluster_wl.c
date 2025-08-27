@@ -440,12 +440,12 @@ typedef struct _NcDataClusterWLIntArg
 static void nc_data_cluster_wl_cubature_integrand (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
 static void nc_data_cluster_wl_int_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
 
-NCM_INTEGRAL_ND_DEFINE_TYPE (NC, DATA_CLUSTER_WL_INT, NcDataClusterWLInt, nc_data_cluster_wl_cubature_integrand, nc_data_cluster_wl_int_dim, nc_data_cluster_wl_cubature_integrand, NcDataClusterWLIntArg);
+NCM_INTEGRAL_ND_DEFINE_TYPE (NC, DATA_CLUSTER_WL_CUBATURE_INTEGRAND, NcDataClusterWLCubatureIntegrand, nc_data_cluster_wl_cubature_integrand, nc_data_cluster_wl_int_dim, nc_data_cluster_wl_cubature_integrand, NcDataClusterWLIntArg);
 
 static void
 nc_data_cluster_wl_cubature_integrand (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
 {
-  NcDataClusterWLInt *lh_int                         = NC_DATA_CLUSTER_WL_INT (intnd);
+  NcDataClusterWLCubatureIntegrand *lh_int           = DATA_CLUSTER_WL_CUBATURE_INTEGRAND (intnd);
   NcGalaxySDShapeData *data                          = lh_int->data.data;
   NcGalaxySDObsRedshiftIntegrand *integrand_redshift = lh_int->data.integrand_redshift;
   NcGalaxySDPositionIntegrand *integrand_position    = lh_int->data.integrand_position;
@@ -507,7 +507,7 @@ _nc_data_cluster_wl_eval_m2lnP_weight (NcDataClusterWL *dcwl, const gdouble m2ln
 
 typedef struct _CubatureIntegrator
 {
-  NcDataClusterWLInt *likelihood_integral;
+  NcDataClusterWLCubatureIntegrand *likelihood_integral;
   NcmIntegralND *lh_int;
   NcmVector *zpi;
   NcmVector *zpf;
@@ -519,7 +519,7 @@ gpointer
 cubature_integrator_new (NcDataClusterWL *dcwl)
 {
   NcDataClusterWLPrivate * const self     = nc_data_cluster_wl_get_instance_private (dcwl);
-  NcDataClusterWLInt *likelihood_integral = g_object_new (nc_data_cluster_wl_cubature_integrand_get_type (), NULL);
+  NcDataClusterWLCubatureIntegrand *likelihood_integral = g_object_new (nc_data_cluster_wl_cubature_integrand_get_type (), NULL);
   CubatureIntegrator *integrator          = g_new0 (CubatureIntegrator, 1);
 
   integrator->likelihood_integral = likelihood_integral;
