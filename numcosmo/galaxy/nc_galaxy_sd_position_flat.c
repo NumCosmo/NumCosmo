@@ -215,7 +215,7 @@ _nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, gboolean use_lnp)
 {
   NcGalaxySDPositionFlat *gsdpflat   = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   struct _IntegData *int_data        = g_new0 (struct _IntegData, 1);
-  NcGalaxySDPositionIntegrand *integ = nc_galaxy_sd_position_integrand_new (use_lnp ? &_nc_galaxy_sd_position_flat_ln_integ_f : &_nc_galaxy_sd_position_flat_integ_f,
+  NcGalaxySDPositionIntegrand *integ = nc_galaxy_sd_position_integrand_new (use_lnp ? _nc_galaxy_sd_position_flat_ln_integ_f : _nc_galaxy_sd_position_flat_integ_f,
                                                                             _integ_data_free,
                                                                             _integ_data_copy,
                                                                             NULL,

@@ -228,9 +228,9 @@ _nc_galaxy_sd_obs_redshift_pz_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_
 {
   NcGalaxySDObsRedshiftPz *gsdorpz      = NC_GALAXY_SD_OBS_REDSHIFT_PZ (gsdor);
   struct _IntegData *int_data           = g_new0 (struct _IntegData, 1);
-  NcGalaxySDObsRedshiftIntegrand *integ = nc_galaxy_sd_obs_redshift_integrand_new (use_lnp ? &_nc_galaxy_sd_obs_redshift_pz_ln_integ_f : &_nc_galaxy_sd_obs_redshift_pz_integ_f,
-                                                                                   &_integ_data_free,
-                                                                                   &_integ_data_copy,
+  NcGalaxySDObsRedshiftIntegrand *integ = nc_galaxy_sd_obs_redshift_integrand_new (use_lnp ? _nc_galaxy_sd_obs_redshift_pz_ln_integ_f : _nc_galaxy_sd_obs_redshift_pz_integ_f,
+                                                                                   _integ_data_free,
+                                                                                   _integ_data_copy,
                                                                                    NULL,
                                                                                    int_data);
 

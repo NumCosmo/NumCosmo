@@ -342,7 +342,7 @@ _integ_data_free (gpointer user_data)
   g_free (int_data);
 }
 
-static gdouble
+static void
 _nc_galaxy_sd_shape_gauss_pre_integ (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data, gdouble *total_var, gdouble *chi2_1, gdouble *chi2_2, gdouble *lndetjac)
 {
   struct _IntegData *int_data     = (struct _IntegData *) callback_data;
@@ -356,7 +356,6 @@ _nc_galaxy_sd_shape_gauss_pre_integ (gpointer callback_data, const gdouble z, Nc
   gdouble std_noise               = ldata->std_noise;
   complex double e_o              = e1 + I * e2;
   complex double g;
-  gdouble var_int;
   NcmComplex cplx_g, cplx_E_o, cplx_E_s;
 
   if (z > z_cl)
@@ -443,7 +442,7 @@ _nc_galaxy_sd_shape_gauss_integ (NcGalaxySDShape *gsds, gboolean use_lnp)
 {
   NcGalaxySDShapeGauss *gsdsgauss = NC_GALAXY_SD_SHAPE_GAUSS (gsds);
   struct _IntegData *int_data     = g_new0 (struct _IntegData, 1);
-  NcGalaxySDShapeIntegrand *integ = nc_galaxy_sd_shape_integrand_new (use_lnp ? &_nc_galaxy_sd_shape_gauss_ln_integ_f : &_nc_galaxy_sd_shape_gauss_integ_f,
+  NcGalaxySDShapeIntegrand *integ = nc_galaxy_sd_shape_integrand_new (use_lnp ? _nc_galaxy_sd_shape_gauss_ln_integ_f : _nc_galaxy_sd_shape_gauss_integ_f,
                                                                       _integ_data_free,
                                                                       _integ_data_copy,
                                                                       _integ_data_prepare,
