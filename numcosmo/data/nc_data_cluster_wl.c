@@ -445,7 +445,7 @@ NCM_INTEGRAL_ND_DEFINE_TYPE (NC, DATA_CLUSTER_WL_CUBATURE_INTEGRAND, NcDataClust
 static void
 nc_data_cluster_wl_cubature_integrand (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
 {
-  NcDataClusterWLCubatureIntegrand *lh_int           = DATA_CLUSTER_WL_CUBATURE_INTEGRAND (intnd);
+  NcDataClusterWLCubatureIntegrand *lh_int           = NC_DATA_CLUSTER_WL_CUBATURE_INTEGRAND (intnd);
   NcGalaxySDShapeData *data                          = lh_int->data.data;
   NcGalaxySDObsRedshiftIntegrand *integrand_redshift = lh_int->data.integrand_redshift;
   NcGalaxySDPositionIntegrand *integrand_position    = lh_int->data.integrand_position;
