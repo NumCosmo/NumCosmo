@@ -151,6 +151,7 @@ _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDO
 
     for (j = 0; j < ncm_vector_len (yv); j++)
     {
+      /* TODO: handle yv[j] == 0 */
       gdouble y = -2.0 * log (ncm_vector_fast_get (yv, j) + 1.0e-5);
 
       ncm_vector_set (m2lnyv, j, y);
@@ -212,6 +213,7 @@ _nc_galaxy_sd_obs_redshift_pz_ln_integ_f (gpointer callback_data, const gdouble 
 {
   NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
 
+  /* TODO: refactor object to use spline of ln(pz) directly */
   return log (ncm_spline_eval (ldata->pz, z));
 }
 
