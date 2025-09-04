@@ -179,6 +179,18 @@ nc_hipert_itwo_fluids_wkb_free (NcHIPertITwoFluidsWKB *tf_wkb)
 }
 
 /**
+ * nc_hipert_itwo_fluids_wkb_peek_state:
+ * @tf_wkb: a #NcHIPertITwoFluidsWKB
+ *
+ * Returns: (transfer none): the state of @tf_wkb.
+ */
+NcHIPertITwoFluidsState *
+nc_hipert_itwo_fluids_wkb_peek_state (NcHIPertITwoFluidsWKB *tf_wkb)
+{
+  return &tf_wkb->state;
+}
+
+/**
  * nc_hipert_itwo_fluids_eom_eval:
  * @itf: a #NcHIPertITwoFluids
  * @alpha: time in log of scale factor

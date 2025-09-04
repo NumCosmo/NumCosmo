@@ -284,6 +284,7 @@ void nc_hipert_itwo_fluids_eom_free (NcHIPertITwoFluidsEOM *tf_eom);
 
 NcHIPertITwoFluidsWKB *nc_hipert_itwo_fluids_wkb_dup (NcHIPertITwoFluidsWKB *tf_wkb);
 void nc_hipert_itwo_fluids_wkb_free (NcHIPertITwoFluidsWKB *tf_wkb);
+NcHIPertITwoFluidsState *nc_hipert_itwo_fluids_wkb_peek_state (NcHIPertITwoFluidsWKB *tf_wkb);
 
 NCM_INLINE NcHIPertITwoFluidsEOM *nc_hipert_itwo_fluids_eom_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 NCM_INLINE NcHIPertITwoFluidsWKB *nc_hipert_itwo_fluids_wkb_eval (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);

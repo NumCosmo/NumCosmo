@@ -760,6 +760,7 @@ _nc_hipert_itwo_fluids_wkb (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
   qgrw->wkb_two_fluids.state.gw1   = gw1;
   qgrw->wkb_two_fluids.state.gw2   = gw2;
   qgrw->wkb_two_fluids.state.Fnu   = Fnu;
+  qgrw->wkb_two_fluids.state.norma = _nc_hipert_itwo_fluids_eval_unit (itf);
 
   qgrw->wkb_two_fluids.state.zeta1  = vzeta1;
   qgrw->wkb_two_fluids.state.Q1     = vQ1;
