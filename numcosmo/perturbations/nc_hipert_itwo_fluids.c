@@ -272,7 +272,7 @@ _nc_hipert_itwo_fluids_state_eval_obs_helper (const complex double zeta, const c
 
       break;
     case NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_DIFF:
-      return PQ;
+      return -PQ;
 
       break;
     case NC_HIPERT_ITWO_FLUIDS_OBS_FKU_R:
@@ -284,11 +284,11 @@ _nc_hipert_itwo_fluids_state_eval_obs_helper (const complex double zeta, const c
 
       break;
     case NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_R:
-      return 3.0 * zeta + (gw2 * PQ - epsilon * Pzeta) / (gw1 + gw2);
+      return 3.0 * zeta - (gw2 * PQ + epsilon * Pzeta) / (gw1 + gw2);
 
       break;
     case NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_W:
-      return 3.0 * zeta - (gw1 * PQ + epsilon * Pzeta) / (gw1 + gw2);
+      return 3.0 * zeta + (gw1 * PQ - epsilon * Pzeta) / (gw1 + gw2);
 
       break;
     default:
