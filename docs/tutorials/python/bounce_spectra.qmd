@@ -59,6 +59,13 @@ cosmo_rw["Omegaw"] = Omegaw  # Set dark matter fraction
 # Compute the Hubble radius in Mpc
 RH_Mpc = cosmo_rw.RH_Mpc()
 
+# Define the mode k values in Mpc^-1
+k_values = np.geomspace(1.0e-8, 1.0e8, 8)
+
+# Define the k values for the power spectrum
+k_for_pk_a = np.geomspace(1.0e-6, 1.0e6, 300)
+k_for_plot_a = np.geomspace(1.0e-6, 1.0e6, 6000)
+
 
 def compute_lp_RH_squared():
     H0n = H0 * units.km / units.s / units.Mpc
@@ -469,8 +476,7 @@ pert.set_initial_time(alpha_ini_integ)
 pert.set_final_time(alpha_end_integ)
 pert.set_wkb_reltol(1.0e-3)
 
-# Define the modes to compute and prepare a color map to depict them
-k_values = np.geomspace(1.0e-6, 1.0e8, 8)
+# Prepare a color map to depict the modes
 norm = mpl.colors.LogNorm(vmin=1.0 / k_values.max(), vmax=1.0 / k_values.min())
 sm = mpl.cm.ScalarMappable(norm=norm, cmap=cmap)
 
@@ -1665,11 +1671,6 @@ pert.set_initial_time(alpha_ini_integ)
 pert.set_final_time(alpha_end_integ)
 pert.set_wkb_reltol(1.0e-3)
 
-# Define the modes to compute and prepare a color map to depict them
-k_values = np.geomspace(1.0e-6, 1.0e6, 6)
-norm = mpl.colors.LogNorm(vmin=1.0 / k_values.max(), vmax=1.0 / k_values.min())
-sm = mpl.cm.ScalarMappable(norm=norm, cmap=cmap)
-
 observables = [
     (Nc.HIPertITwoFluidsObs.ZETA, "zeta"),
     (Nc.HIPertITwoFluidsObs.ZETA_DIFF, "dzeta"),
@@ -1681,9 +1682,6 @@ observables = [
     (Nc.HIPertITwoFluidsObs.DELTA_W, "delta_w"),
     (Nc.HIPertITwoFluidsObs.PZETA, "pzeta"),
 ]
-
-k_for_pk_a = np.geomspace(1.0e-6, 1.0e6, 300)
-k_for_plot_a = np.geomspace(1.0e-6, 1.0e6, 6000)
 
 s_interp = pert.compute_spectrum(cosmo_rw, alpha_pk_end, k_for_pk_a * RH_Mpc, None)
 
