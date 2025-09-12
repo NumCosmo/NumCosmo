@@ -60,11 +60,11 @@ cosmo_rw["Omegaw"] = Omegaw  # Set dark matter fraction
 RH_Mpc = cosmo_rw.RH_Mpc()
 
 # Define the mode k values in Mpc^-1
-k_values = np.geomspace(1.0e-8, 1.0e8, 8)
+k_values = np.geomspace(1.0e-6, 1.0e10, 5)
 
 # Define the k values for the power spectrum
-k_for_pk_a = np.geomspace(1.0e-6, 1.0e6, 300)
-k_for_plot_a = np.geomspace(1.0e-6, 1.0e6, 6000)
+k_for_pk_a = np.geomspace(1.0e-6, 1.0e8, 300)
+k_for_plot_a = np.geomspace(1.0e-6, 1.0e8, 6000)
 
 
 def compute_lp_RH_squared():
