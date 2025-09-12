@@ -68,8 +68,8 @@ enum
   PROP_FIDUC,
   PROP_MTYPE,
   PROP_NTHREADS,
-  PROP_KEEP_ORDER,
   PROP_DATA_FILE,
+  PROP_FUNC_ARRAY,
 };
 
 struct _NcmFitMC
@@ -87,7 +87,6 @@ struct _NcmFitMC
   NcmSerialize *ser;
   guint nthreads;
   guint n;
-  gboolean keep_order;
   NcmMemoryPool *mp;
   gint write_index;
   gint cur_sample_id;
@@ -97,6 +96,10 @@ struct _NcmFitMC
   GMutex resample_lock;
   GMutex update_lock;
   GCond write_cond;
+  NcmObjArray *func_oa;
+  gchar *func_oa_file;
+  guint nadd_vals;
+  guint theta_len;
 };
 
 G_DEFINE_TYPE (NcmFitMC, ncm_fit_mc, G_TYPE_OBJECT)
@@ -114,11 +117,15 @@ ncm_fit_mc_init (NcmFitMC *mc)
   mc->ser           = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
   mc->nthreads      = 0;
   mc->n             = 0;
-  mc->keep_order    = FALSE;
   mc->mp            = NULL;
   mc->cur_sample_id = -1; /* Represents that no samples were calculated yet. */
   mc->write_index   = 0;
   mc->started       = FALSE;
+  mc->func_oa       = NULL;
+  mc->func_oa_file  = NULL;
+  mc->nadd_vals     = 0;
+  mc->theta_len     = 0;
+
   g_mutex_init (&mc->dup_fit);
   g_mutex_init (&mc->resample_lock);
   g_mutex_init (&mc->update_lock);
@@ -151,12 +158,31 @@ ncm_fit_mc_set_property (GObject *object, guint prop_id, const GValue *value, GP
     case PROP_NTHREADS:
       ncm_fit_mc_set_nthreads (mc, g_value_get_uint (value));
       break;
-    case PROP_KEEP_ORDER:
-      ncm_fit_mc_keep_order (mc, g_value_get_boolean (value));
-      break;
     case PROP_DATA_FILE:
       ncm_fit_mc_set_data_file (mc, g_value_get_string (value));
       break;
+    case PROP_FUNC_ARRAY:
+    {
+      ncm_obj_array_clear (&mc->func_oa);
+      mc->func_oa = g_value_dup_boxed (value);
+
+      if (mc->func_oa != NULL)
+      {
+        guint i;
+
+        for (i = 0; i < mc->func_oa->len; i++)
+        {
+          NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (mc->func_oa, i));
+
+          g_assert (NCM_IS_MSET_FUNC (func));
+          g_assert (ncm_mset_func_is_scalar (func));
+          g_assert (ncm_mset_func_is_const (func));
+        }
+      }
+
+      break;
+    }
+
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -187,11 +213,11 @@ ncm_fit_mc_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
     case PROP_NTHREADS:
       g_value_set_uint (value, mc->nthreads);
       break;
-    case PROP_KEEP_ORDER:
-      g_value_set_boolean (value, mc->keep_order);
-      break;
     case PROP_DATA_FILE:
       g_value_set_string (value, ncm_mset_catalog_peek_filename (mc->mcat));
+      break;
+    case PROP_FUNC_ARRAY:
+      g_value_set_boxed (value, mc->func_oa);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -216,6 +242,9 @@ ncm_fit_mc_dispose (GObject *object)
     ncm_memory_pool_free (mc->mp, TRUE);
     mc->mp = NULL;
   }
+
+  ncm_obj_array_clear (&mc->func_oa);
+  g_clear_pointer (&mc->func_oa_file, g_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_mc_parent_class)->dispose (object);
@@ -275,31 +304,69 @@ ncm_fit_mc_class_init (NcmFitMCClass *klass)
                                                       NCM_TYPE_FIT_RUN_MSGS, NCM_FIT_RUN_MSGS_SIMPLE,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_KEEP_ORDER,
-                                   g_param_spec_boolean ("keep-order",
-                                                         NULL,
-                                                         "Whether keep the catalog in order of sampling",
-                                                         TRUE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
                                    PROP_NTHREADS,
                                    g_param_spec_uint ("nthreads",
                                                       NULL,
                                                       "Number of threads to run",
                                                       0, 100, 0,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_FUNC_ARRAY,
+                                   g_param_spec_boxed ("function-array",
+                                                       NULL,
+                                                       "Functions array",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static void
 _ncm_fit_mc_set_fit_obj (NcmFitMC *mc, NcmFit *fit)
 {
-  NcmMSet *mset = ncm_fit_peek_mset (fit);
+  NcmMSet *mset          = ncm_fit_peek_mset (fit);
+  const guint nfuncs     = (mc->func_oa != NULL) ? mc->func_oa->len : 0;
+  const guint nadd_vals  = mc->nadd_vals = nfuncs + 1;
+  const guint fparam_len = ncm_mset_fparam_len (mset);
+
+  mc->theta_len =  fparam_len + nadd_vals;
 
   g_assert (mc->fit == NULL);
-  mc->fit  = ncm_fit_ref (fit);
-  mc->mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE,
-                                   NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL,
-                                   NULL);
+  mc->fit = ncm_fit_ref (fit);
+
+
+  if (nfuncs > 0)
+  {
+    gchar **names   = g_new (gchar *, nadd_vals + 1);
+    gchar **symbols = g_new (gchar *, nadd_vals + 1);
+    guint k;
+
+    names[0]   = g_strdup (NCM_MSET_CATALOG_M2LNL_COLNAME);
+    symbols[0] = g_strdup (NCM_MSET_CATALOG_M2LNL_SYMBOL);
+
+    for (k = 0; k < nfuncs; k++)
+    {
+      NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (mc->func_oa, k));
+
+      g_assert (NCM_IS_MSET_FUNC (func));
+
+      names[1 + k]   = g_strdup (ncm_mset_func_peek_uname (func));
+      symbols[1 + k] = g_strdup (ncm_mset_func_peek_usymbol (func));
+    }
+
+    names[1 + k]   = NULL;
+    symbols[1 + k] = NULL;
+
+    mc->mcat = ncm_mset_catalog_new_array (mset, nadd_vals, 1, FALSE, names, symbols);
+
+    g_strfreev (names);
+    g_strfreev (symbols);
+  }
+  else
+  {
+    mc->mcat = ncm_mset_catalog_new (mset, nadd_vals, 1, FALSE,
+                                     NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL,
+                                     NULL);
+  }
+
   ncm_mset_catalog_set_m2lnp_var (mc->mcat, 0);
 }
 
@@ -321,6 +388,32 @@ ncm_fit_mc_new (NcmFit *fit, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype)
                                "fit", fit,
                                "rtype", rtype,
                                "mtype", mtype,
+                               NULL);
+
+  return mc;
+}
+
+/**
+ * ncm_fit_mc_new_funcs_array:
+ * @fit: a #NcmFit
+ * @rtype: a #NcmFitMCResampleType
+ * @mtype: a #NcmFitRunMsgs
+ * @funcs_array: a #NcmObjArray
+ *
+ * Creates a new #NcmFitMC object with the fit object @fit, the resample type
+ * @rtype and the run messages type @mtype. The functions array @funcs_array
+ * is used to compute extra columns in the catalog.
+ *
+ * Returns: (transfer full): a new #NcmFitMC.
+ */
+NcmFitMC *
+ncm_fit_mc_new_funcs_array (NcmFit *fit, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, NcmObjArray *funcs_array)
+{
+  NcmFitMC *mc = g_object_new (NCM_TYPE_FIT_MC,
+                               "fit", fit,
+                               "rtype", rtype,
+                               "mtype", mtype,
+                               "function-array", funcs_array,
                                NULL);
 
   return mc;
@@ -481,24 +574,6 @@ ncm_fit_mc_set_nthreads (NcmFitMC *mc, guint nthreads)
 }
 
 /**
- * ncm_fit_mc_keep_order:
- * @mc: a #NcmFitMC
- * @keep_order: whether keep the catalog in order of sampling
- *
- * Sets whether keep the catalog in order of sampling. When performing
- * parallel runs, the catalog is not kept in order of sampling. This
- * is done to avoid the overhead of locking the catalog. If you want
- * to keep the catalog in order of sampling, set this property to
- * %TRUE.
- *
- */
-void
-ncm_fit_mc_keep_order (NcmFitMC *mc, gboolean keep_order)
-{
-  mc->keep_order = keep_order;
-}
-
-/**
  * ncm_fit_mc_set_fiducial:
  * @mc: a #NcmFitMC
  * @fiduc: a #NcmMSet
@@ -563,16 +638,33 @@ ncm_fit_mc_is_running (NcmFitMC *mc)
   return mc->started;
 }
 
+void _ncm_fit_mc_update_post (NcmFitMC *mc);
+
 void
-_ncm_fit_mc_update (NcmFitMC *mc, NcmFit *fit)
+_ncm_fit_mc_update_from_fit_mset (NcmFitMC *mc, NcmFit *fit)
 {
   NcmMSet *mset       = ncm_fit_peek_mset (fit);
   NcmFitState *fstate = ncm_fit_peek_state (fit);
 
+  ncm_mset_catalog_add_from_mset (mc->mcat, mset, ncm_fit_state_get_m2lnL_curval (fstate), NULL);
+
+  _ncm_fit_mc_update_post (mc);
+}
+
+void
+_ncm_fit_mc_update_from_theta (NcmFitMC *mc, NcmVector *theta)
+{
+  ncm_mset_catalog_add_from_vector (mc->mcat, theta);
+
+  _ncm_fit_mc_update_post (mc);
+}
+
+void
+_ncm_fit_mc_update_post (NcmFitMC *mc)
+{
   const guint part = 5;
   const guint step = (mc->n / part) == 0 ? 1 : (mc->n / part);
 
-  ncm_mset_catalog_add_from_mset (mc->mcat, mset, ncm_fit_state_get_m2lnL_curval (fstate), NULL);
   ncm_timer_task_increment (mc->nt);
 
   switch (mc->mtype)
@@ -603,8 +695,6 @@ _ncm_fit_mc_update (NcmFitMC *mc, NcmFit *fit)
     }
     default:
     case NCM_FIT_RUN_MSGS_FULL:
-      ncm_fit_set_messages (fit, mc->mtype);
-      ncm_fit_log_state (fit);
       ncm_mset_catalog_log_current_stats (mc->mcat);
       /* ncm_timer_task_increment (mc->nt); */
       ncm_timer_task_log_elapsed (mc->nt);
@@ -880,7 +970,7 @@ _ncm_fit_mc_run_single (NcmFitMC *mc)
     _ncm_fit_mc_resample (mc, mc->fit);
     ncm_fit_run (mc->fit, NCM_FIT_RUN_MSGS_NONE);
 
-    _ncm_fit_mc_update (mc, mc->fit);
+    _ncm_fit_mc_update_from_fit_mset (mc, mc->fit);
     mc->write_index++;
   }
 }
@@ -902,69 +992,138 @@ _ncm_fit_mc_dup_fit (gpointer userdata)
 }
 
 static void
-_ncm_fit_mc_mt_eval_keep_order (glong i, glong f, gpointer data)
-{
-  NcmFitMC *mc     = NCM_FIT_MC (data);
-  NcmMSet *mset    = ncm_fit_peek_mset (mc->fit);
-  NcmFit **fit_ptr = ncm_memory_pool_get (mc->mp);
-  NcmFit *fit      = *fit_ptr;
-  guint j;
-
-  for (j = i; j < f; j++)
-  {
-    gint sample_index;
-
-    ncm_mset_param_set_vector (mset, mc->bf);
-
-    g_mutex_lock (&mc->resample_lock);
-    sample_index = _ncm_fit_mc_resample (mc, fit);
-    g_mutex_unlock (&mc->resample_lock);
-
-    ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
-
-    g_mutex_lock (&mc->update_lock);
-
-    while (mc->write_index != sample_index)
-      g_cond_wait (&mc->write_cond, &mc->update_lock);
-
-    _ncm_fit_mc_update (mc, fit);
-    mc->write_index++;
-    g_cond_broadcast (&mc->write_cond);
-
-    g_mutex_unlock (&mc->update_lock);
-  }
-
-  ncm_memory_pool_return (fit_ptr);
-}
-
-static void
 _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
 {
-  G_LOCK_DEFINE_STATIC (update_lock);
+  NcmFitMC *mc                 = NCM_FIT_MC (data);
+  const glong n                = f - i;
+  const glong cur_pos          = mc->cur_sample_id + 1;
+  const glong last_write_index = mc->write_index + n;
+  GPtrArray *thetas            = g_ptr_array_sized_new (n);
+  GArray *ready                = g_array_sized_new (FALSE, FALSE, sizeof (gboolean), n);
+  glong li;
 
-  NcmFitMC *mc     = NCM_FIT_MC (data);
-  NcmMSet *mset    = ncm_fit_peek_mset (mc->fit);
-  NcmFit **fit_ptr = ncm_memory_pool_get (mc->mp);
-  NcmFit *fit      = *fit_ptr;
-  guint j;
+  g_ptr_array_set_free_func (thetas, (GDestroyNotify) ncm_vector_free);
 
-  for (j = i; j < f; j++)
+  for (li = 0; li < n; li++)
   {
-    ncm_mset_param_set_vector (mset, mc->bf);
+    NcmVector *theta = ncm_vector_new (mc->theta_len);
 
-    g_mutex_lock (&mc->resample_lock);
-    _ncm_fit_mc_resample (mc, fit);
-    g_mutex_unlock (&mc->resample_lock);
-
-    ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
-
-    G_LOCK (update_lock);
-    _ncm_fit_mc_update (mc, fit);
-    mc->write_index++;
-    G_UNLOCK (update_lock);
+    g_ptr_array_add (thetas, theta);
+    g_array_index (ready, gboolean, li) = FALSE;
   }
 
-  ncm_memory_pool_return (fit_ptr);
+#pragma omp parallel shared (mc, thetas, ready)
+  {
+    /* Each thread gets a fit */
+    NcmFit *fit              = NULL;
+    NcmMSet *mset            = NULL;
+    NcmFitState *fstate      = NULL;
+    NcmVector *theta         = NULL;
+    NcmObjArray *funcs_array = NULL;
+    NcmVector *oa_vals       = NULL;
+    glong j, k, sample_index;
+
+    #pragma omp critical(dup_fit)
+    {
+      fit    = ncm_fit_dup (mc->fit, mc->ser);
+      mset   = ncm_fit_peek_mset (fit);
+      fstate = ncm_fit_peek_state (fit);
+
+      if (mc->func_oa != NULL)
+      {
+        funcs_array = ncm_serialize_dup_array (mc->ser, mc->func_oa);
+        oa_vals     = ncm_vector_new (mc->func_oa->len);
+      }
+
+      ncm_serialize_reset (mc->ser, TRUE);
+    }
+
+    #pragma omp for
+
+    for (j = 0; j < n; j++)
+    {
+      ncm_mset_param_set_vector (mset, mc->bf);
+
+      #pragma omp critical(resample_phase)
+      {
+        sample_index = _ncm_fit_mc_resample (mc, fit);
+      }
+      theta = g_ptr_array_index (thetas, sample_index - cur_pos);
+
+      /* This is the slow section that we want to parallelize over */
+      ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+      if (mc->func_oa != NULL)
+      {
+        for (k = 0; k < mc->func_oa->len; k++)
+        {
+          NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (funcs_array, j));
+          const gdouble a_k = ncm_mset_func_eval0 (func, mset);
+
+          ncm_vector_set (oa_vals, j, a_k);
+        }
+      }
+
+      /* End of the slow section */
+
+      #pragma omp critical(update_phase)
+      {
+        ncm_vector_set (theta, 0, ncm_fit_state_get_m2lnL_curval (fstate));
+        ncm_mset_fparams_get_vector_offset (mset, theta, mc->nadd_vals);
+
+        if (mc->func_oa != NULL)
+        {
+          for (k = 0; k < mc->func_oa->len; k++)
+          {
+            const gdouble a_k = ncm_vector_get (oa_vals, k);
+
+            ncm_vector_set (theta, k + 1, a_k);
+          }
+        }
+
+        g_array_index (ready, gboolean, sample_index - cur_pos) = TRUE;
+
+        {
+          const glong cur_write_index = mc->write_index;
+
+          for (k = cur_write_index; k < last_write_index; k++)
+          {
+            if (g_array_index (ready, gboolean, k - cur_pos))
+            {
+              NcmVector *saving_theta = g_ptr_array_index (thetas, k - cur_pos);
+
+              _ncm_fit_mc_update_from_theta (mc, saving_theta);
+              mc->write_index++;
+            }
+            else
+            {
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    ncm_fit_clear (&fit);
+    ncm_obj_array_clear (&funcs_array);
+  }
+
+  {
+    const glong cur_write_index = mc->write_index;
+
+    for (li = cur_write_index; li < last_write_index; li++)
+    {
+      NcmVector *theta = g_ptr_array_index (thetas, li - cur_pos);
+
+      g_assert (g_array_index (ready, gboolean, li - cur_pos));
+
+      _ncm_fit_mc_update_from_theta (mc, theta);
+      mc->write_index++;
+    }
+  }
+
+  g_ptr_array_free (thetas, TRUE);
+  g_array_free (ready, TRUE);
 }
 
 static void
@@ -994,10 +1153,7 @@ _ncm_fit_mc_run_mt (NcmFitMC *mc)
 
   g_assert_cmpuint (mc->nthreads, >, 1);
 
-  if (mc->keep_order)
-    ncm_func_eval_threaded_loop_full (&_ncm_fit_mc_mt_eval_keep_order, 0, mc->n, mc);
-  else
-    ncm_func_eval_threaded_loop_full (&_ncm_fit_mc_mt_eval, 0, mc->n, mc);
+  _ncm_fit_mc_mt_eval (0, mc->n, mc);
 }
 
 /**
@@ -1006,8 +1162,8 @@ _ncm_fit_mc_run_mt (NcmFitMC *mc)
  * @prerun: number of pre-runs
  * @lre: largest relative error
  *
- * Runs the Monte Carlo until the largest relative error considering the
- * erros on the parameter means is less than @lre.
+ * Runs the Monte Carlo until the largest relative error considering the errors on the
+ * parameter means is less than @lre.
  *
  */
 void
