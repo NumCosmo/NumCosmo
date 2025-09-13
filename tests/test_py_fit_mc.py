@@ -34,6 +34,11 @@ from numcosmo_py import Ncm
 Ncm.cfg_init()
 
 MEAN = 1.2543
+MC_RESAMPLE_TYPES = [
+    Ncm.FitMCResampleType.FROM_MODEL,
+    Ncm.FitMCResampleType.BOOTSTRAP_NOMIX,
+    Ncm.FitMCResampleType.BOOTSTRAP_MIX,
+]
 
 
 @pytest.fixture(
@@ -64,8 +69,8 @@ def fixture_fit(request) -> Ncm.Fit:
 
 @pytest.fixture(
     name="mc",
-    params=list(Ncm.FitMCResampleType),
-    ids=[x.name for x in list(Ncm.FitMCResampleType)],
+    params=MC_RESAMPLE_TYPES,
+    ids=[x.name for x in MC_RESAMPLE_TYPES],
 )
 def fixture_mc(fit: Ncm.Fit, request) -> Ncm.FitMC:
     """Fixture for NcmFitMC object."""
