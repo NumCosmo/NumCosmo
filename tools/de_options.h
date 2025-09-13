@@ -91,7 +91,7 @@ struct _NcDEDataSimpleEntries
 typedef struct _NcDEDataClusterEntries NcDEDataClusterEntries;
 
 /**
- * NcDEDataNcusterEntries:
+ * NcDEDataClusterEntries:
  *
  * FIXME
  *
