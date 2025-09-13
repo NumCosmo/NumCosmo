@@ -74,7 +74,7 @@ def fixture_mc(fit: Ncm.Fit, request) -> Ncm.FitMC:
 
 @pytest.mark.parametrize("nthreads", [1, 4], ids=["threads=1", "threads=4"])
 def test_fit_mc_run(capfd, mc: Ncm.FitMC, nthreads: int):
-    """Test NcmFit factory."""
+    """Test NcmFitMC run."""
     n_runs = 100
 
     mc.set_nthreads(nthreads)
@@ -98,7 +98,7 @@ def test_fit_mc_run(capfd, mc: Ncm.FitMC, nthreads: int):
 
 
 def test_serialize_deserialize(mc: Ncm.FitMC):
-    """Test NcmFit serialize and deserialize."""
+    """Test NcmFitMC serialize and deserialize."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
     mc2: Ncm.FitMC = ser.dup_obj(mc)
@@ -106,3 +106,36 @@ def test_serialize_deserialize(mc: Ncm.FitMC):
     assert mc.props.nthreads == mc2.props.nthreads
     assert mc.props.rtype == mc2.props.rtype
     assert mc.props.mtype == mc2.props.mtype
+
+
+def test_threaded_vs_serial(capfd, mc: Ncm.FitMC):
+    """Test NcmFitMC serial vs threaded."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+
+    mc2: Ncm.FitMC = ser.dup_obj(mc)
+
+    mc.set_mtype(Ncm.FitRunMsgs.NONE)
+    mc.set_nthreads(1)
+    mc.set_rng(Ncm.RNG.seeded_new("mt19937", 1234))
+    mc.start_run()
+    mc.run(100)
+    mc.end_run()
+
+    mc2.set_mtype(Ncm.FitRunMsgs.NONE)
+    mc2.set_nthreads(4)
+    mc2.set_rng(Ncm.RNG.seeded_new("mt19937", 1234))
+    mc2.start_run()
+    mc2.run(100)
+    mc2.end_run()
+
+    out, err = capfd.readouterr()
+    assert out == ""
+    assert err == ""
+
+    mcat = mc.peek_catalog()
+    mcat2 = mc2.peek_catalog()
+
+    rows = [mcat.peek_row(i).dup_array() for i in range(mcat.len())]
+    rows2 = [mcat2.peek_row(i).dup_array() for i in range(mcat2.len())]
+
+    npt.assert_allclose(rows, rows2)

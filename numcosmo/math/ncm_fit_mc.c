@@ -92,10 +92,6 @@ struct _NcmFitMC
   gint cur_sample_id;
   gint first_sample_id;
   gboolean started;
-  GMutex dup_fit;
-  GMutex resample_lock;
-  GMutex update_lock;
-  GCond write_cond;
   NcmObjArray *func_oa;
   gchar *func_oa_file;
   guint nadd_vals;
@@ -117,7 +113,6 @@ ncm_fit_mc_init (NcmFitMC *mc)
   mc->ser           = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
   mc->nthreads      = 0;
   mc->n             = 0;
-  mc->mp            = NULL;
   mc->cur_sample_id = -1; /* Represents that no samples were calculated yet. */
   mc->write_index   = 0;
   mc->started       = FALSE;
@@ -125,11 +120,6 @@ ncm_fit_mc_init (NcmFitMC *mc)
   mc->func_oa_file  = NULL;
   mc->nadd_vals     = 0;
   mc->theta_len     = 0;
-
-  g_mutex_init (&mc->dup_fit);
-  g_mutex_init (&mc->resample_lock);
-  g_mutex_init (&mc->update_lock);
-  g_cond_init (&mc->write_cond);
 }
 
 static void _ncm_fit_mc_set_fit_obj (NcmFitMC *mc, NcmFit *fit);
@@ -237,12 +227,6 @@ ncm_fit_mc_dispose (GObject *object)
   ncm_serialize_clear (&mc->ser);
   ncm_mset_catalog_clear (&mc->mcat);
 
-  if (mc->mp != NULL)
-  {
-    ncm_memory_pool_free (mc->mp, TRUE);
-    mc->mp = NULL;
-  }
-
   ncm_obj_array_clear (&mc->func_oa);
   g_clear_pointer (&mc->func_oa_file, g_free);
 
@@ -253,12 +237,7 @@ ncm_fit_mc_dispose (GObject *object)
 static void
 ncm_fit_mc_finalize (GObject *object)
 {
-  NcmFitMC *mc = NCM_FIT_MC (object);
-
-  g_mutex_clear (&mc->dup_fit);
-  g_mutex_clear (&mc->resample_lock);
-  g_mutex_clear (&mc->update_lock);
-  g_cond_clear (&mc->write_cond);
+  /* NcmFitMC *mc = NCM_FIT_MC (object); */
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_mc_parent_class)->finalize (object);
@@ -810,12 +789,6 @@ ncm_fit_mc_end_run (NcmFitMC *mc)
   if (ncm_timer_task_is_running (mc->nt))
     ncm_timer_task_end (mc->nt);
 
-  if (mc->mp != NULL)
-  {
-    ncm_memory_pool_free (mc->mp, TRUE);
-    mc->mp = NULL;
-  }
-
   ncm_mset_catalog_sync (mc->mcat, TRUE);
 
   mc->started = FALSE;
@@ -975,22 +948,6 @@ _ncm_fit_mc_run_single (NcmFitMC *mc)
   }
 }
 
-static gpointer
-_ncm_fit_mc_dup_fit (gpointer userdata)
-{
-  NcmFitMC *mc = NCM_FIT_MC (userdata);
-
-  g_mutex_lock (&mc->dup_fit);
-  {
-    NcmFit *fit = ncm_fit_dup (mc->fit, mc->ser);
-
-    ncm_serialize_reset (mc->ser, TRUE);
-    g_mutex_unlock (&mc->dup_fit);
-
-    return fit;
-  }
-}
-
 static void
 _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
 {
@@ -1137,19 +1094,6 @@ _ncm_fit_mc_run_mt (NcmFitMC *mc)
 
     return;
   }
-
-  if (mc->mp != NULL)
-    ncm_memory_pool_free (mc->mp, TRUE);
-
-  mc->mp = ncm_memory_pool_new (&_ncm_fit_mc_dup_fit, mc,
-                                (GDestroyNotify) & ncm_fit_free);
-
-  /*
-   * The line below added de main fit object to the pool, but can cause
-   * several race conditions as it is used to make the copies for the other
-   * threads. So, no.
-   */
-  /*ncm_memory_pool_add (mc->mp, mc->fit); */
 
   g_assert_cmpuint (mc->nthreads, >, 1);
 
