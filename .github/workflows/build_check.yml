@@ -236,8 +236,6 @@ jobs:
       - name: Building NumCosmo
         run: |
           meson compile -C build
-          source build/numcosmo_export.sh
-          python -m pytest tests/test_py_fit_mc.py -x -v -s
       - name: Check and coverage
         # First run to generate the coverage base
         # Second run to generate the coverage for the tests

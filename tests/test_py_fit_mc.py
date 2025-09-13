@@ -39,6 +39,7 @@ MC_RESAMPLE_TYPES = [
     Ncm.FitMCResampleType.BOOTSTRAP_NOMIX,
     Ncm.FitMCResampleType.BOOTSTRAP_MIX,
 ]
+MC_RESAMPLE_LABELS = ["FROM_MODEL", "BOOTSTRAP_NOMIX", "BOOTSTRAP_MIX"]
 
 
 @pytest.fixture(
@@ -67,11 +68,7 @@ def fixture_fit(request) -> Ncm.Fit:
     )
 
 
-@pytest.fixture(
-    name="mc",
-    params=MC_RESAMPLE_TYPES,
-    ids=[x.name for x in MC_RESAMPLE_TYPES],
-)
+@pytest.fixture(name="mc", params=MC_RESAMPLE_TYPES, ids=MC_RESAMPLE_LABELS)
 def fixture_mc(fit: Ncm.Fit, request) -> Ncm.FitMC:
     """Fixture for NcmFitMC object."""
     return Ncm.FitMC.new(fit, request.param, Ncm.FitRunMsgs.SIMPLE)
