@@ -61,6 +61,8 @@ typedef enum _NcmFitMCResampleType
 typedef void (*NcmFitMCResample) (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng);
 
 NcmFitMC *ncm_fit_mc_new (NcmFit *fit, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype);
+NcmFitMC *ncm_fit_mc_new_funcs_array (NcmFit *fit, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, NcmObjArray *funcs_array);
+
 void ncm_fit_mc_free (NcmFitMC *mc);
 void ncm_fit_mc_clear (NcmFitMC **mc);
 
