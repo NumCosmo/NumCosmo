@@ -36,7 +36,6 @@ Ncm.cfg_init()
 @pytest.fixture(name="fit")
 def fixture_fit() -> Ncm.Fit:
     """Fixture for NcmFit object."""
-
     rng = Ncm.RNG.seeded_new(None, 1234)
     model_mvnd = Ncm.ModelMVND.new(5)
     data_mvnd = Ncm.DataGaussCovMVND.new_full(5, 1.0, 2.0, 30.0, 0.0, 0.0, rng)
@@ -52,7 +51,6 @@ def fixture_fit() -> Ncm.Fit:
 
 def test_fit_factory(capfd, fit: Ncm.Fit):
     """Test NcmFit factory."""
-
     mset = fit.peek_mset()
     mset.param_set(Ncm.ModelMVND.id(), 0, 1.0e300)
 
@@ -65,7 +63,6 @@ def test_fit_factory(capfd, fit: Ncm.Fit):
 
 def test_fit_log_state_non_computed(capfd, fit: Ncm.Fit):
     """Test NcmFit log_state."""
-
     fit.set_messages(Ncm.FitRunMsgs.SIMPLE)
     fit.log_state()
 
@@ -77,7 +74,6 @@ def test_fit_log_state_non_computed(capfd, fit: Ncm.Fit):
 
 def test_fit_log_state_computed(capfd, fit: Ncm.Fit):
     """Test NcmFit log_state."""
-
     fit.set_messages(Ncm.FitRunMsgs.SIMPLE)
     fit.m2lnL_val()
     fit.log_state()
@@ -90,7 +86,6 @@ def test_fit_log_state_computed(capfd, fit: Ncm.Fit):
 
 def test_fit_obs_fisher_log(capfd, fit: Ncm.Fit):
     """Test NcmFit obs_fisher_log."""
-
     fit.set_messages(Ncm.FitRunMsgs.SIMPLE)
     fit.obs_fisher()
 
@@ -103,7 +98,6 @@ def test_fit_obs_fisher_log(capfd, fit: Ncm.Fit):
 
 def test_fit_obs_set_logger(capsys, fit: Ncm.Fit):
     """Test NcmFit obs_set_logger."""
-
     fit.set_messages(Ncm.FitRunMsgs.SIMPLE)
 
     def writer(_fit: Ncm.Fit, msg: str) -> None:

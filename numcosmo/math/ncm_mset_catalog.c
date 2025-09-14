@@ -31,11 +31,11 @@
  * This class defines a catalog type object. This object can automatically synchronize
  * with a fits file (thought cfitsio).
  *
- * For Mote Carlo studies, like resampling from a fiducial model or bootstrap, it is used
- * to save the best-fitting values of each realization. Since the order of the
+ * For Mote Carlo studies, like resampling from a fiducial model or bootstrap, it is
+ * used to save the best-fitting values of each realization. Since the order of the
  * resampling is important, due to the fact that we use the same pseudo-random number
- * generator for all resamplings, this object also guarantees the order of the samples
- * added.
+ * generator for all resampling calls, this object also guarantees the order of the
+ * samples added.
  *
  * For Markov Chain Monte Carlo (MCMC) this object saves the value of the same likelihood in
  * different points of the parameter space.
@@ -896,7 +896,8 @@ ncm_mset_catalog_free (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_clear:
  * @mcat: a #NcmMSetCatalog
  *
- * Decrese the reference count of *@mcat atomically and sets the pointer *@mcat to null.
+ * Decrease the reference count of *@mcat atomically and sets the pointer *@mcat to
+ * null.
  *
  */
 void
@@ -1840,13 +1841,13 @@ _ncm_mset_catalog_write_row (NcmMSetCatalog *mcat, NcmVector *row, guint row_ind
   gint status                 = 0;
   guint i;
 
-  /*printf ("Writting %u\n", row_index);*/
+  /*printf ("Writing %u\n", row_index);*/
 
   for (i = 0; i < ncm_vector_len (row); i++)
   {
     fits_write_col_dbl (self->fptr, g_array_index (self->porder, gint, i), row_index + self->burnin,
                         1, 1, ncm_vector_ptr (row, i), &status);
-    /*printf ("writting[%d]... %u %u == % 20.15g\n", g_array_index (self->porder, gint, i), i, row_index, ncm_vector_get (row, i));*/
+    /*printf ("writing[%d]... %u %u == % 20.15g\n", g_array_index (self->porder, gint, i), i, row_index, ncm_vector_get (row, i));*/
     NCM_FITS_ERROR (status);
   }
 }
@@ -2278,8 +2279,8 @@ ncm_mset_catalog_peek_filename (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_get_rng:
  * @mcat: a #NcmMSetCatalog
  *
- * This function checks if any pseudo random number generator (RNG) is registred in the catalog.
- * If so, it returns it or NULL.
+ * This function checks if any pseudo random number generator (RNG) is registered in the
+ * catalog. If so, it returns it or NULL.
  *
  * Returns: (transfer full) (allow-none): the registered #NcmRNG in the catalog or NULL.
  */
@@ -2298,8 +2299,8 @@ ncm_mset_catalog_get_rng (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_peek_rng:
  * @mcat: a #NcmMSetCatalog
  *
- * This function checks if any pseudo random number generator (RNG) is registred in the catalog.
- * If so, it returns it or NULL.
+ * This function checks if any pseudo random number generator (RNG) is registered in the
+ * catalog. If so, it returns it or NULL.
  *
  * Returns: (transfer none) (allow-none): the registered #NcmRNG in the catalog or NULL.
  */
@@ -2367,12 +2368,12 @@ ncm_mset_catalog_largest_error (NcmMSetCatalog *mcat)
   {
     for (i = fpi; i < fpf; i++)
     {
-      const gdouble mu    = ncm_stats_vec_get_mean (self->pstats, i);
-      const gdouble sd    = ncm_stats_vec_get_sd (self->pstats, i);
-      gdouble lerror_i    = fabs (sd / (mu * sqrt_n));
-      guint lerror_i_truc = lerror_i;
+      const gdouble mu     = ncm_stats_vec_get_mean (self->pstats, i);
+      const gdouble sd     = ncm_stats_vec_get_sd (self->pstats, i);
+      gdouble lerror_i     = fabs (sd / (mu * sqrt_n));
+      guint lerror_i_trunc = lerror_i;
 
-      if (lerror_i_truc == 1)
+      if (lerror_i_trunc == 1)
         lerror_i = fabs (sd / sqrt_n);
 
       lerror_i *= sqrt (ncm_vector_get (self->tau, i));
@@ -2388,9 +2389,9 @@ ncm_mset_catalog_largest_error (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_len:
  * @mcat: a #NcmMSetCatalog
  *
- * Number of itens in the catalog.
+ * Number of items in the catalog.
  *
- * Returns: number of itens in the catalog.
+ * Returns: number of items in the catalog.
  */
 guint
 ncm_mset_catalog_len (NcmMSetCatalog *mcat)
@@ -2404,7 +2405,7 @@ ncm_mset_catalog_len (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_max_time:
  * @mcat: a #NcmMSetCatalog
  *
- * Number of itens in the catalog divided by the number
+ * Number of items in the catalog divided by the number
  * of chains.
  *
  * Returns: number of ensembles in the catalog.
@@ -2638,13 +2639,11 @@ ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, guint *co
  * @mcat: a #NcmMSetCatalog
  * @burnin: number of elements to ignore
  *
- * Sets the number of elements to ignore when reading from
- * a catalogue, it must be set before loading data from
- * a file.
+ * Sets the number of elements to ignore when reading from a catalogue, it must be set
+ * before loading data from a file.
  *
- * It will not affect a catalogue in any other context,
- * only when reading data from a file. It is recommended
- * to be used only when analysing a catalogue.
+ * It will not affect a catalogue in any other context, only when reading data from a
+ * file. It is recommended to be used only when analyzing a catalogue.
  *
  */
 void
@@ -2872,7 +2871,7 @@ ncm_mset_catalog_add_from_mset (NcmMSetCatalog *mcat, NcmMSet *mset, ...)
  * @mset: a #NcmMSet
  * @ax: (array) (element-type double): additional values array
  *
- * This funtion adds a new element to the catalog using the parameters from @mset.
+ * This function adds a new element to the catalog using the parameters from @mset.
  * It assumes that @mset is compatible with the catalog and expect the
  * right number of additional values in the array @ax.
  *
@@ -4098,7 +4097,7 @@ ncm_mset_catalog_get_param_shrink_factor (NcmMSetCatalog *mcat, guint p)
  * ncm_mset_catalog_get_shrink_factor:
  * @mcat: a #NcmMSetCatalog
  *
- * Gets the current shrink factor which is  the multivatiate potential scale reduction factor (MPSRF), namely,
+ * Gets the current shrink factor which is  the multivariate potential scale reduction factor (MPSRF), namely,
  * $$\hat{R}^p = \sqrt{\frac{n - 1}{n} + \left( \frac{m + 1}{m} \right) \lambda_1},$$
  * where $n$ is the number of points of one chain, $m$ is the number of chains and $\lambda_1$ is the largest
  * eigenvalue of the positive definite matrix $W^{-1}B/n$.
@@ -4299,24 +4298,24 @@ ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pvalue, gboolea
  * @x_v: #NcmVector of arguments of @func
  * @p_val: (element-type double): p-values for the confidence intervals
  *
- * Calculates the mean and the confidence interval (CI) for the value of @func
- * for each p-value in @p_val. It stores the results in a #NcmVector, where the
- * first element contains the mean and the following contain the lower and
- * upper bounds for each p-value in @p_val.
+ * Calculates the mean and the confidence interval (CI) for the value of @func for each
+ * p-value in @p_val. It stores the results in a #NcmVector, where the first element
+ * contains the mean and the following contain the lower and upper bounds for each
+ * p-value in @p_val.
  *
- * This function calculates the quantiles directly using:
- * gsl_stats_quantile_from_sorted_data for this reason it must allocates the
- * catalog size times the number of elements in @x, for a less memory intensive
- * version use ncm_mset_catalog_calc_ci_interp().
+ * This function calculates the quantile directly using:
+ * gsl_stats_quantile_from_sorted_data for this reason it must allocates the catalog
+ * size times the number of elements in @x, for a less memory intensive version use
+ * ncm_mset_catalog_calc_ci_interp().
  *
  * The #NcmMSetFunc @func must be of dimension one.
  *
  * # Example: #
  *
- * If @p_val contains two values ($1\sigma$) 0.6827 and ($\sigma$) 0.9545,
- * the first element will contain the mean, the second and third, the lower
- * and upper bounds, respectively. Then, the fourth and fifth elements the
- * lower and upper bounds of $2\sigma$ CI.
+ * If @p_val contains two values ($1\sigma$) 0.6827 and ($\sigma$) 0.9545, the first
+ * element will contain the mean, the second and third, the lower and upper bounds,
+ * respectively. Then, the fourth and fifth elements the lower and upper bounds of
+ * $2\sigma$ CI.
  *
  * Returns: (transfer full): a #NcmVector containing the mean and lower/upper bound of the confidence interval for @func.
  */
@@ -4396,22 +4395,22 @@ ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
  * @nodes: number of nodes in the distribution approximations
  * @mtype: #NcmFitRunMsgs log level
  *
- * Calculates the mean and the confidence interval (CI) for the value of @func
- * for each p-value in @p_val. It stores the results in a #NcmMatrix, where the
- * first element contains the mean and the following contain the lower and
- * upper bounds for each p-value in @p_val.
+ * Calculates the mean and the confidence interval (CI) for the value of @func for each
+ * p-value in @p_val. It stores the results in a #NcmMatrix, where the first element
+ * contains the mean and the following contain the lower and upper bounds for each
+ * p-value in @p_val.
  *
- * This function creates an approximation of the distribution for each value of
- * the function @func and calculates the quantiles from this approximation.
+ * This function creates an approximation of the distribution for each value of the
+ * function @func and calculates the quantile from this approximation.
  *
  * The #NcmMSetFunc @func must be of dimension one.
  *
  * # Example: #
  *
- * If @p_val contains two values ($1\sigma$) 0.6827 and ($\sigma$) 0.9545,
- * the first element will contain the mean, the second and third, the lower
- * and upper bounds, respectively. Then, the fourth and fifth elements the
- * lower and upper bounds of $2\sigma$ CI.
+ * If @p_val contains two values ($1\sigma$) 0.6827 and ($\sigma$) 0.9545, the first
+ * element will contain the mean, the second and third, the lower and upper bounds,
+ * respectively. Then, the fourth and fifth elements the lower and upper bounds of
+ * $2\sigma$ CI.
  *
  * Returns: (transfer full): a #NcmMatrix containing the mean and lower/upper bound of the confidence interval for @func.
  */

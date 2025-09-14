@@ -1369,7 +1369,7 @@ ncm_message (const gchar *msg, ...)
  *
  * Creates a word wrapped string.
  *
- * Returns: (transfer full): word wraped string @msg.
+ * Returns: (transfer full): word wrapped string @msg.
  */
 gchar *
 ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols)
