@@ -353,6 +353,13 @@ ncm_fit_mc_class_init (NcmFitMCClass *klass)
                                                       0, 100, 0,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
+                                   PROP_DATA_FILE,
+                                   g_param_spec_string ("data-file",
+                                                        NULL,
+                                                        "Data file to be used by the catalog",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
                                    PROP_FUNC_ARRAY,
                                    g_param_spec_boxed ("function-array",
                                                        NULL,

@@ -24,6 +24,7 @@
 
 """Tests for NcmFitMC object."""
 
+from pathlib import Path
 import re
 import pytest
 import numpy as np
@@ -99,15 +100,18 @@ def test_fit_mc_run(capfd, mc: Ncm.FitMC, nthreads: int):
     )
 
 
-def test_serialize_deserialize(mc: Ncm.FitMC):
+def test_serialize_deserialize(mc: Ncm.FitMC, tmp_path: Path):
     """Test NcmFitMC serialize and deserialize."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
+    file = tmp_path / "fit_mc_test.nc"
+    mc.set_data_file(file.as_posix())
     mc2: Ncm.FitMC = ser.dup_obj(mc)
 
     assert mc.props.nthreads == mc2.props.nthreads
     assert mc.props.rtype == mc2.props.rtype
     assert mc.props.mtype == mc2.props.mtype
+    assert mc.props.data_file == mc2.props.data_file
 
 
 def test_threaded_vs_serial(capfd, mc: Ncm.FitMC):
