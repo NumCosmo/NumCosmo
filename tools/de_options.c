@@ -41,7 +41,7 @@ nc_de_opt_get_run_group (NcDERunEntries *de_run)
   GOptionEntry run_entries[] =
   {
     { "runconf",  'c', 0, G_OPTION_ARG_FILENAME, &de_run->runconf,   "Configuration file defining a run",                          NULL },
-    { "save-run", 's', 0, G_OPTION_ARG_FILENAME, &de_run->saverun,   "Save run confuguration to file",                             NULL },
+    { "save-run", 's', 0, G_OPTION_ARG_FILENAME, &de_run->saverun,   "Save run configuration to file",                             NULL },
     { "main-seed",  0, 0, G_OPTION_ARG_INT64,    &de_run->main_seed, "Seed used to setup the main RNG",                            NULL },
     { "nthreads",   0, 0, G_OPTION_ARG_INT,      &de_run->nthreads,  "Max number of threads to be created by the pool",            NULL },
     { NULL }
@@ -131,12 +131,12 @@ nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple, GOptionE
 {
   GOptionEntry data_simple_entries[] =
   {
-    { "snia-list",      0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_snia_list,       "Print all SNIa data avaliable",        NULL },
-    { "bao-list",       0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_bao_list,        "Print all BAO data avaliable",         NULL },
-    { "cmb-list",       0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_cmb_list,        "Print all CMB data avaliable",         NULL },
-    { "H-list",         0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_H_list,          "Print all Hubble data avaliable",      NULL },
-    { "H-BAO-list",     0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_H_BAO_list,      "Print all Hubble BAO data avaliable",  NULL },
-    { "cluster-list",   0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_cluster_list,    "Print all Cluster data avaliable",     NULL },
+    { "snia-list",      0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_snia_list,       "Print all SNIa data available",        NULL },
+    { "bao-list",       0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_bao_list,        "Print all BAO data available",         NULL },
+    { "cmb-list",       0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_cmb_list,        "Print all CMB data available",         NULL },
+    { "H-list",         0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_H_list,          "Print all Hubble data available",      NULL },
+    { "H-BAO-list",     0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_H_BAO_list,      "Print all Hubble BAO data available",  NULL },
+    { "cluster-list",   0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_cluster_list,    "Print all Cluster data available",     NULL },
     { "snia-id",      'S',                    0, G_OPTION_ARG_STRING,       &de_data_simple->snia_id,      "ID of the SNe Ia sample to use",        NULL },
     { "snia-objser",    0,                    0, G_OPTION_ARG_STRING,       &de_data_simple->snia_objser,  "The SNe Ia analysis object",            NULL },
     { "snia-use-det",   0,                    0, G_OPTION_ARG_NONE,         &de_data_simple->snia_use_det, "Whenever to use the normalized Likelihood when fitting SN Ia data", NULL },
@@ -169,18 +169,18 @@ nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster, GOpti
 {
   GOptionEntry entries_cluster[] =
   {
-    { "filter",        0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->filter_type,           "Which filter to apply to the powerspectrum", NULL },
-    { "transfer",      0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->ps_type,               "Which powerspectrum to use", NULL },
+    { "filter",        0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->filter_type,           "Which filter to apply to the power-spectrum", NULL },
+    { "transfer",      0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->ps_type,               "Which power-spectrum to use", NULL },
     { "multiplicity",  0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->multiplicity_name,     "Which multiplicity function to use", NULL },
     { "cluster-m",     0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->clusterm_ser,          "Which NcClusterMass object to use", NULL },
     { "cluster-z",     0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->clusterz_ser,          "Which NcClusterRedshift object to use", NULL },
     { "mf_ds_index",   0, 0, G_OPTION_ARG_INT,            &de_data_cluster->mf_ds_index,           "Determines the coefficients of the multiplicity function", NULL },
-    { "use-true-data", 0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->use_true_data,         "Use true mass and redshift, must be avaliable", NULL },
+    { "use-true-data", 0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->use_true_data,         "Use true mass and redshift, must be available", NULL },
     { "binned",        0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->binned,                "Binned analyses", NULL },
     { "binmass",       0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->binmass,               "Use dNdz integrating the full mass function in each z", NULL },
     { "area",          0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->area_survey,           "User must provide the area in square degree. The conversion to steradian is done internally", NULL },
     { "n_bins",        0, 0, G_OPTION_ARG_INT,            &de_data_cluster->n_bins,                "Number of bins", NULL },
-    { "catalog",       0, 0, G_OPTION_ARG_FILENAME_ARRAY, &de_data_cluster->cata_file,             "Use the folowing catalog as the observational data. It can be used multiple times", "catalog.dat"},
+    { "catalog",       0, 0, G_OPTION_ARG_FILENAME_ARRAY, &de_data_cluster->cata_file,             "Use the following catalog as the observational data. It can be used multiple times", "catalog.dat"},
     { "save-cat",      0, 0, G_OPTION_ARG_FILENAME,       &de_data_cluster->save_cata,             "Use this option to save the catalog used. (will overwrite)", NULL },
     { NULL }
   };
@@ -199,11 +199,11 @@ _nc_de_print_fit_list (const gchar *option_name, const gchar *value, gpointer da
 {
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_TYPE, "Minimization objects");
 
-  ncm_cfg_enum_print_all (NCM_TYPE_FIT_GSLMM_ALGOS, "Minimization algorithims [gsl-mm]");
-  ncm_cfg_enum_print_all (NCM_TYPE_FIT_GSLMMS_ALGOS, "Minimization algorithims [gsl-mms]");
-  ncm_cfg_enum_print_all (NCM_TYPE_FIT_LEVMAR_ALGOS, "Minimization algorithims [levmar]");
+  ncm_cfg_enum_print_all (NCM_TYPE_FIT_GSLMM_ALGOS, "Minimization algorithms [gsl-mm]");
+  ncm_cfg_enum_print_all (NCM_TYPE_FIT_GSLMMS_ALGOS, "Minimization algorithms [gsl-mms]");
+  ncm_cfg_enum_print_all (NCM_TYPE_FIT_LEVMAR_ALGOS, "Minimization algorithms [levmar]");
 #ifdef HAVE_NLOPT
-  ncm_cfg_enum_print_all (NCM_TYPE_FIT_NLOPT_ALGORITHM, "Minimization algorithims [nlopt]");
+  ncm_cfg_enum_print_all (NCM_TYPE_FIT_NLOPT_ALGORITHM, "Minimization algorithms [nlopt]");
 #endif
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_GRAD_TYPE, "Differentiation methods");
 
@@ -261,16 +261,16 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "esmcmc-walk",      0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_walk,      "Uses walk move instead of stretch move in ESMCMC", NULL},
     { "esmcmc-apes",      0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_apes,      "Uses APES instead of stretch move in ESMCMC", NULL},
     { "esmcmc-sbox",      0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_sbox,      "Uses stretch move never leaving the bounding box", NULL},
-    { "esmcmc-ms",        0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_ms,        "Uses multi-stretchs in one step", NULL},
+    { "esmcmc-ms",        0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_ms,        "Uses multi-stretches in one step", NULL},
     { "esmcmc-kde",       0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_kde,       "Uses density estimation instead of interpolation in APES", NULL},
     { "esmcmc-os",        0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->esmcmc_os,        "Uses over-smooth in the APES sampler", NULL},
     { "fisher",           0, G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_fisher_type, "Calculated the Fisher matrix, where T=E or T=O uses the expected or observed Fisher matrix", "=T"},
     { "fit-type",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_type,         "Fitting object to be used", NULL },
-    { "fit-diff",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_diff,         "Fitting differentiation algorithim method", NULL },
-    { "fit-algo",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_algo,         "Fitting algorithim", NULL },
+    { "fit-diff",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_diff,         "Fitting differentiation algorithm method", NULL },
+    { "fit-algo",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_algo,         "Fitting algorithm", NULL },
     { "fit-reltol",       0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->fit_reltol,       "Fitting relative tolerance for the minimum", NULL },
     { "fit-params-reltol", 0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->fit_params_reltol, "Fitting relative tolerance for the parameters", NULL },
-    { "fit-list",         0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_fit_list,  "Print all the minimization/differentiation objects avaliable", NULL },
+    { "fit-list",         0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_fit_list,  "Print all the minimization/differentiation objects available", NULL },
     { "restart-abstol",   0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->restart_abstol,   "Restart absolute tolerance", NULL },
     { "restart-reltol",   0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->restart_reltol,   "Restart relative tolerance", NULL },
     { "max-iter",         0, 0, G_OPTION_ARG_INT,          &de_fit->max_iter,         "Max number of iterations used by the minimization algorithms", NULL },
@@ -288,11 +288,10 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "mc-nthreads",      0, 0, G_OPTION_ARG_INT,          &de_fit->mc_nthreads,      "If larger than one it will run in mc-nthreads threads", NULL},
     { "mc-seed",          0, 0, G_OPTION_ARG_INT64,        &de_fit->mc_seed,          "Seed to be used by the Monte Carlo simulation", NULL},
     { "mc-lre",           0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->mc_lre,           "Will run Monte Carlo until largest relative error lre is attained", NULL},
-    { "mc-nwalkers",      0, 0, G_OPTION_ARG_INT,       &de_fit->mc_nwalkers,      "Number of walkers to use in the ESMCMC analysis, it must be even for a parallel analysis", NULL},
-    { "mc-prerun",        0, 0, G_OPTION_ARG_INT,       &de_fit->mc_prerun,        "Minimum number of point to calculate in a MC, MCMC or ESMCMC analysis, set to zero to use the default values", NULL},
+    { "mc-nwalkers",      0, 0, G_OPTION_ARG_INT,          &de_fit->mc_nwalkers,      "Number of walkers to use in the ESMCMC analysis, it must be even for a parallel analysis", NULL},
+    { "mc-prerun",        0, 0, G_OPTION_ARG_INT,          &de_fit->mc_prerun,        "Minimum number of point to calculate in a MC, MCMC or ESMCMC analysis, set to zero to use the default values", NULL},
     { "mc-data",          0, 0, G_OPTION_ARG_FILENAME,     &de_fit->mc_data,          "Use file to keep Monte Carlo run data", NULL},
-    { "mc-unordered",     0, 0, G_OPTION_ARG_NONE,         &de_fit->mc_unordered,     "Do not maintain the sample order in the catalog", NULL},
-    { "mcbs-nbootstraps", 0, 0, G_OPTION_ARG_INT,       &de_fit->mcbs_nbootstraps, "Number of bootstraps per iteration of MCBS", NULL},
+    { "mcbs-nbootstraps", 0, 0, G_OPTION_ARG_INT,          &de_fit->mcbs_nbootstraps, "Number of bootstraps per iteration of MCBS", NULL},
     { "fiducial",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fiducial,         "Use the fiducial model to resample", NULL},
     { "qspline-cp",       0, 0, G_OPTION_ARG_NONE,         &de_fit->qspline_cp,       "Include the continuity priors on a NcHICosmoQSpline model", NULL},
     { "qspline-cp-sigma", 0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->qspline_cp_sigma, "Value of sigma for the continuity priors", NULL},

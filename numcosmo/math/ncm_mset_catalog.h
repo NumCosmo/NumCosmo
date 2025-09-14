@@ -59,7 +59,7 @@ typedef enum _NcmMSetCatalogSync
 
 /**
  * NcmMSetCatalogTrimType:
- * @NCM_MSET_CATALOG_TRIM_TYPE_ESS: trim the catalog using the maximum ess criterium.
+ * @NCM_MSET_CATALOG_TRIM_TYPE_ESS: trim the catalog using the maximum ess criterion.
  * @NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL: trim the catalog using the Heidelberger and Welch’s convergence diagnostic.
  * @NCM_MSET_CATALOG_TRIM_TYPE_CK: trim the catalog using the estimate of the time where $-2\ln(L)$ stops evolving.
  * @NCM_MSET_CATALOG_TRIM_TYPE_ALL: trim the catalog using all tests above.
@@ -79,7 +79,7 @@ typedef enum _NcmMSetCatalogTrimType
  * NcmMSetCatalogPostNormMethod:
  * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX: Uses a MVND limited in a hyperbox.
  * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS: Uses a MVND limited in a hyperbox and bootstrap to estimate error.
- * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELIPSOID: Uses a MVND limited in elipsoids.
+ * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELIPSOID: Uses a MVND limited in a elipsoid.
  *
  * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().
  *
@@ -96,7 +96,7 @@ typedef enum _NcmMSetCatalogPostNormMethod
 /**
  * NcmMSetCatalogTauMethod:
  * @NCM_MSET_CATALOG_TAU_METHOD_ACOR: uses the autocorrelation to estimate $\tau$.
- * @NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL: uses an autoregressive model fitting to estimate $\tau$.
+ * @NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL: uses an auto-regressive model fitting to estimate $\tau$.
  *
  * Method used to estimate the autocorrelation time $\tau$.
  *
