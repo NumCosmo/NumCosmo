@@ -4208,6 +4208,8 @@ class FitMC(GObject.Object):
         Run messages type
       nthreads -> guint: nthreads
         Number of threads to run
+      data-file -> gchararray: data-file
+        Data file to be used by the catalog
       function-array -> NcmObjArray: function-array
         Functions array
 
@@ -4216,6 +4218,7 @@ class FitMC(GObject.Object):
     """
 
     class Props:
+        data_file: str
         fiducial: MSet
         fit: Fit
         function_array: ObjArray
@@ -4226,6 +4229,7 @@ class FitMC(GObject.Object):
     props: Props = ...
     def __init__(
         self,
+        data_file: str = ...,
         fiducial: MSet = ...,
         fit: Fit = ...,
         function_array: ObjArray = ...,
