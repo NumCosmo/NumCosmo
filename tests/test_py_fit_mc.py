@@ -29,7 +29,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from numcosmo_py import Ncm
+from numcosmo_py import Ncm, GObject
 
 Ncm.cfg_init()
 
@@ -141,3 +141,61 @@ def test_threaded_vs_serial(capfd, mc: Ncm.FitMC):
     rows2 = [mcat2.peek_row(i).dup_array() for i in range(mcat2.len())]
 
     npt.assert_allclose(rows, rows2)
+
+
+class MVNDMean(Ncm.MSetFunc1):
+    """MVND mean."""
+
+    __gtype_name__ = "NcmPyMVNDMean"
+    index = GObject.Property(type=int, default=0)
+
+    def __init__(self, index=0):
+        """Initialize the MVNDMean object.
+
+        Sets the dimension to 1 and the number of variables to 0.
+        """
+        super().__init__(
+            dimension=1, nvariables=0, eval_x=Ncm.Vector.new(1), index=index
+        )
+
+    def do_eval1(self, mset: Ncm.MSet, _):  # pylint: disable-msg=arguments-differ
+        """Compute the MVND mean."""
+        mvnd = mset.peek(Ncm.ModelMVND.id())
+        assert mvnd is not None
+        return [np.mean(mvnd.orig_vparam_get(0, self.index))]
+
+
+@pytest.mark.parametrize("nthreads", [1, 4], ids=["threads=1", "threads=4"])
+@pytest.mark.parametrize("rtype", MC_RESAMPLE_TYPES, ids=MC_RESAMPLE_LABELS)
+def test_mc_funcs(
+    fit: Ncm.Fit, rtype: Ncm.FitMCResampleType, nthreads: int
+) -> Ncm.FitMC:
+    """Fixture for NcmFitMC object."""
+    funcs_oa = Ncm.ObjArray.new()
+
+    mset = fit.peek_mset()
+    fparam_len = mset.fparam_len()
+
+    for i in range(fparam_len):
+        funcs_oa.add(MVNDMean(index=i))
+
+    mc = Ncm.FitMC.new_funcs_array(fit, rtype, Ncm.FitRunMsgs.NONE, funcs_oa)
+
+    mc.set_nthreads(nthreads)
+    n_runs = 100
+
+    mc.start_run()
+    mc.run(n_runs)
+    mc.end_run()
+
+    mcat = mc.peek_catalog()
+    assert mcat.nchains() == 1
+    assert mcat.len() == n_runs
+
+    for i in range(mcat.len()):
+        row = mcat.peek_row(i).dup_array()
+        npt.assert_allclose(
+            row[1 : 1 + fparam_len],
+            row[1 + fparam_len : 1 + 2 * fparam_len],
+            rtol=1.0e-11,
+        )

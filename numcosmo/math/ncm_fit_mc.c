@@ -96,6 +96,7 @@ struct _NcmFitMC
   gchar *func_oa_file;
   guint nadd_vals;
   guint theta_len;
+  gboolean constructed;
 };
 
 G_DEFINE_TYPE (NcmFitMC, ncm_fit_mc, G_TYPE_OBJECT)
@@ -120,9 +121,8 @@ ncm_fit_mc_init (NcmFitMC *mc)
   mc->func_oa_file  = NULL;
   mc->nadd_vals     = 0;
   mc->theta_len     = 0;
+  mc->constructed   = FALSE;
 }
-
-static void _ncm_fit_mc_set_fit_obj (NcmFitMC *mc, NcmFit *fit);
 
 static void
 ncm_fit_mc_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -134,10 +134,17 @@ ncm_fit_mc_set_property (GObject *object, guint prop_id, const GValue *value, GP
   switch (prop_id)
   {
     case PROP_FIT:
-      _ncm_fit_mc_set_fit_obj (mc, g_value_get_object (value));
+      g_assert (mc->fit == NULL);
+      mc->fit = g_value_dup_object (value);
+
       break;
     case PROP_RTYPE:
-      ncm_fit_mc_set_rtype (mc, g_value_get_enum (value));
+
+      if (mc->constructed)
+        ncm_fit_mc_set_rtype (mc, g_value_get_enum (value));
+      else
+        mc->rtype = g_value_get_enum (value);
+
       break;
     case PROP_FIDUC:
       ncm_fit_mc_set_fiducial (mc, g_value_get_object (value));
@@ -216,6 +223,61 @@ ncm_fit_mc_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
 }
 
 static void
+ncm_fit_mc_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (ncm_fit_mc_parent_class)->constructed (object);
+  {
+    NcmFitMC *mc           = NCM_FIT_MC (object);
+    NcmMSet *mset          = ncm_fit_peek_mset (mc->fit);
+    const guint nfuncs     = (mc->func_oa != NULL) ? mc->func_oa->len : 0;
+    const guint nadd_vals  = mc->nadd_vals = nfuncs + 1;
+    const guint fparam_len = ncm_mset_fparam_len (mset);
+
+    mc->theta_len =  fparam_len + nadd_vals;
+
+    if (nfuncs > 0)
+    {
+      gchar **names   = g_new (gchar *, nadd_vals + 1);
+      gchar **symbols = g_new (gchar *, nadd_vals + 1);
+      guint k;
+
+      names[0]   = g_strdup (NCM_MSET_CATALOG_M2LNL_COLNAME);
+      symbols[0] = g_strdup (NCM_MSET_CATALOG_M2LNL_SYMBOL);
+
+      for (k = 0; k < nfuncs; k++)
+      {
+        NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (mc->func_oa, k));
+
+        g_assert (NCM_IS_MSET_FUNC (func));
+
+        names[1 + k]   = g_strdup (ncm_mset_func_peek_uname (func));
+        symbols[1 + k] = g_strdup (ncm_mset_func_peek_usymbol (func));
+      }
+
+      names[1 + k]   = NULL;
+      symbols[1 + k] = NULL;
+
+      mc->mcat = ncm_mset_catalog_new_array (mset, nadd_vals, 1, FALSE, names, symbols);
+
+      g_strfreev (names);
+      g_strfreev (symbols);
+    }
+    else
+    {
+      mc->mcat = ncm_mset_catalog_new (mset, nadd_vals, 1, FALSE,
+                                       NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL,
+                                       NULL);
+    }
+
+    ncm_mset_catalog_set_m2lnp_var (mc->mcat, 0);
+
+    ncm_fit_mc_set_rtype (mc, mc->rtype);
+    mc->constructed = TRUE;
+  }
+}
+
+static void
 ncm_fit_mc_dispose (GObject *object)
 {
   NcmFitMC *mc = NCM_FIT_MC (object);
@@ -250,6 +312,7 @@ ncm_fit_mc_class_init (NcmFitMCClass *klass)
 
   object_class->set_property = &ncm_fit_mc_set_property;
   object_class->get_property = &ncm_fit_mc_get_property;
+  object_class->constructed  = &ncm_fit_mc_constructed;
   object_class->dispose      = &ncm_fit_mc_dispose;
   object_class->finalize     = &ncm_fit_mc_finalize;
 
@@ -296,57 +359,6 @@ ncm_fit_mc_class_init (NcmFitMCClass *klass)
                                                        "Functions array",
                                                        NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-}
-
-static void
-_ncm_fit_mc_set_fit_obj (NcmFitMC *mc, NcmFit *fit)
-{
-  NcmMSet *mset          = ncm_fit_peek_mset (fit);
-  const guint nfuncs     = (mc->func_oa != NULL) ? mc->func_oa->len : 0;
-  const guint nadd_vals  = mc->nadd_vals = nfuncs + 1;
-  const guint fparam_len = ncm_mset_fparam_len (mset);
-
-  mc->theta_len =  fparam_len + nadd_vals;
-
-  g_assert (mc->fit == NULL);
-  mc->fit = ncm_fit_ref (fit);
-
-
-  if (nfuncs > 0)
-  {
-    gchar **names   = g_new (gchar *, nadd_vals + 1);
-    gchar **symbols = g_new (gchar *, nadd_vals + 1);
-    guint k;
-
-    names[0]   = g_strdup (NCM_MSET_CATALOG_M2LNL_COLNAME);
-    symbols[0] = g_strdup (NCM_MSET_CATALOG_M2LNL_SYMBOL);
-
-    for (k = 0; k < nfuncs; k++)
-    {
-      NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (mc->func_oa, k));
-
-      g_assert (NCM_IS_MSET_FUNC (func));
-
-      names[1 + k]   = g_strdup (ncm_mset_func_peek_uname (func));
-      symbols[1 + k] = g_strdup (ncm_mset_func_peek_usymbol (func));
-    }
-
-    names[1 + k]   = NULL;
-    symbols[1 + k] = NULL;
-
-    mc->mcat = ncm_mset_catalog_new_array (mset, nadd_vals, 1, FALSE, names, symbols);
-
-    g_strfreev (names);
-    g_strfreev (symbols);
-  }
-  else
-  {
-    mc->mcat = ncm_mset_catalog_new (mset, nadd_vals, 1, FALSE,
-                                     NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL,
-                                     NULL);
-  }
-
-  ncm_mset_catalog_set_m2lnp_var (mc->mcat, 0);
 }
 
 /**
@@ -618,17 +630,6 @@ ncm_fit_mc_is_running (NcmFitMC *mc)
 }
 
 void _ncm_fit_mc_update_post (NcmFitMC *mc);
-
-void
-_ncm_fit_mc_update_from_fit_mset (NcmFitMC *mc, NcmFit *fit)
-{
-  NcmMSet *mset       = ncm_fit_peek_mset (fit);
-  NcmFitState *fstate = ncm_fit_peek_state (fit);
-
-  ncm_mset_catalog_add_from_mset (mc->mcat, mset, ncm_fit_state_get_m2lnL_curval (fstate), NULL);
-
-  _ncm_fit_mc_update_post (mc);
-}
 
 void
 _ncm_fit_mc_update_from_theta (NcmFitMC *mc, NcmVector *theta)
@@ -934,7 +935,8 @@ ncm_fit_mc_run (NcmFitMC *mc, guint n)
 static void
 _ncm_fit_mc_run_single (NcmFitMC *mc)
 {
-  NcmMSet *mset = ncm_fit_peek_mset (mc->fit);
+  NcmMSet *mset    = ncm_fit_peek_mset (mc->fit);
+  NcmVector *theta = ncm_vector_new (mc->theta_len);
   guint i;
 
   for (i = 0; i < mc->n; i++)
@@ -943,9 +945,31 @@ _ncm_fit_mc_run_single (NcmFitMC *mc)
     _ncm_fit_mc_resample (mc, mc->fit);
     ncm_fit_run (mc->fit, NCM_FIT_RUN_MSGS_NONE);
 
-    _ncm_fit_mc_update_from_fit_mset (mc, mc->fit);
+    {
+      NcmFitState *fstate = ncm_fit_peek_state (mc->fit);
+
+      ncm_vector_set (theta, 0, ncm_fit_state_get_m2lnL_curval (fstate));
+      ncm_mset_fparams_get_vector_offset (mset, theta, mc->nadd_vals);
+    }
+
+    if (mc->func_oa != NULL)
+    {
+      glong k;
+
+      for (k = 0; k < mc->func_oa->len; k++)
+      {
+        NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (mc->func_oa, k));
+        const gdouble a_k = ncm_mset_func_eval0 (func, mset);
+
+        ncm_vector_set (theta, k + 1, a_k);
+      }
+    }
+
+    _ncm_fit_mc_update_from_theta (mc, theta);
     mc->write_index++;
   }
+
+  ncm_vector_free (theta);
 }
 
 static void
@@ -1014,10 +1038,10 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
       {
         for (k = 0; k < mc->func_oa->len; k++)
         {
-          NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (funcs_array, j));
+          NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (funcs_array, k));
           const gdouble a_k = ncm_mset_func_eval0 (func, mset);
 
-          ncm_vector_set (oa_vals, j, a_k);
+          ncm_vector_set (oa_vals, k, a_k);
         }
       }
 
