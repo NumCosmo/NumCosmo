@@ -344,13 +344,14 @@ _ncm_data_gauss_cov_lnNorma2_bs (NcmDataGaussCov *gauss, NcmMSet *mset, NcmBoots
 {
   NcmDataGaussCovPrivate * const self = ncm_data_gauss_cov_get_instance_private (gauss);
 
-  const gdouble lb = 1.0e-200;
-  const gdouble ub = 1.0e+200;
-  gdouble detL     = 1.0;
-  glong exponent   = 0;
+  const gdouble lb  = 1.0e-200;
+  const gdouble ub  = 1.0e+200;
+  gdouble detL      = 1.0;
+  glong exponent    = 0;
+  const guint bsize = ncm_bootstrap_get_bsize (bstrap);
   guint i;
 
-  for (i = 0; i < self->np; i++)
+  for (i = 0; i < bsize; i++)
   {
     const guint k       = ncm_bootstrap_get (bstrap, i);
     const gdouble Lii   = ncm_matrix_get (self->LLT, k, k);
@@ -420,6 +421,13 @@ _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
     const guint bsize    = ncm_bootstrap_get_bsize (bstrap);
     guint i;
+
+    if (bsize == 0)
+    {
+      *m2lnL = 0.0;
+
+      return;
+    }
 
     g_assert (ncm_bootstrap_is_init (bstrap));
 
