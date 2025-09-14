@@ -437,7 +437,7 @@ ncm_dataset_all_init (NcmDataset *dset)
  * ncm_dataset_get_length:
  * @dset: pointer to type defined by #NcmDataset
  *
- * Number of diferent #NcmData in @dset.
+ * Number of different #NcmData in @dset.
  *
  * Returns: number of #NcmData objects in the set
  */
@@ -452,7 +452,7 @@ ncm_dataset_get_length (NcmDataset *dset)
  * @dset: pointer to type defined by #NcmDataset
  * @n: the #NcmData index.
  *
- * Gets the @n-th #NcmData in @dset and increses its reference count by one.
+ * Gets the @n-th #NcmData in @dset and increases its reference count by one.
  *
  * Returns: (transfer full): the #NcmData associated with @n.
  */
@@ -555,7 +555,7 @@ ncm_dataset_get_data_array (NcmDataset *dset)
  * ncm_dataset_free:
  * @dset: pointer to type defined by #NcmDataset
  *
- * Decreses the reference count of @dset by one.
+ * Decreases the reference count of @dset by one.
  */
 void
 ncm_dataset_free (NcmDataset *dset)
@@ -567,7 +567,7 @@ ncm_dataset_free (NcmDataset *dset)
  * ncm_dataset_clear:
  * @dset: pointer to type defined by #NcmDataset
  *
- * Decreses the reference count of *@dset by one, and sets *@dset to NULL.
+ * Decreases the reference count of *@dset by one, and sets *@dset to NULL.
  */
 void
 ncm_dataset_clear (NcmDataset **dset)
@@ -673,8 +673,7 @@ ncm_dataset_bootstrap_resample (NcmDataset *dset, NcmRNG *rng)
       {
         NcmData *data        = ncm_dataset_peek_data (dset, i);
         NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
-
-        guint bsize = g_array_index (dset->bstrap, guint, i);
+        guint bsize          = g_array_index (dset->bstrap, guint, i);
 
         ncm_bootstrap_set_bsize (bstrap, bsize);
 
