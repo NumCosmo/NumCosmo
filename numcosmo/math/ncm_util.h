@@ -125,6 +125,7 @@ NCM_INLINE void ncm_complex_set_zero (NcmComplex *c);
 
 NCM_INLINE gdouble ncm_complex_Re (const NcmComplex *c);
 NCM_INLINE gdouble ncm_complex_Im (const NcmComplex *c);
+NCM_INLINE gdouble ncm_complex_Abs (const NcmComplex *c);
 
 #ifndef NUMCOSMO_GIR_SCAN
 NCM_INLINE void ncm_complex_set_c (NcmComplex *c, const complex double z);
@@ -525,6 +526,12 @@ NCM_INLINE gdouble
 ncm_complex_Im (const NcmComplex *c)
 {
   return cimag (*c);
+}
+
+NCM_INLINE gdouble
+ncm_complex_Abs (const NcmComplex *c)
+{
+  return cabs (*c);
 }
 
 #ifndef NUMCOSMO_GIR_SCAN

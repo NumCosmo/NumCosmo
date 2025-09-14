@@ -4,7 +4,7 @@ title: "Supernova Type Ia Analysis"
 
 {{< include /_functions.qmd >}} 
 
-{{< include /_definitions.qmd >}}
+{{< include /notes/_numcosmo_py.qmd >}}
 
 ## Introduction
 

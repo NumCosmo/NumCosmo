@@ -9,7 +9,7 @@ abstract: |
   the CLASS backend and includes HALOFIT for nonlinear corrections.
 ---
 
-{{< include /_definitions.qmd >}}
+{{< include /notes/_numcosmo_py.qmd >}}
 
 ## Introduction
 

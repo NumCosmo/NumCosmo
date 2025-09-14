@@ -33,6 +33,9 @@ from matplotlib import transforms
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from matplotlib import cm
+import matplotlib.ticker as ticker
+
+from numcosmo_py import Nc
 
 
 def confidence_ellipse(mu, cov, ax, n_std=1.0, facecolor="none", **kwargs):
@@ -43,7 +46,7 @@ def confidence_ellipse(mu, cov, ax, n_std=1.0, facecolor="none", **kwargs):
     """
     pearson = cov[0, 1] / np.sqrt(cov[0, 0] * cov[1, 1])
     # Using a special case to obtain the eigenvalues of this
-    # two-dimensionl dataset.
+    # two-dimensional dataset.
     ell_radius_x = np.sqrt(1 + pearson)
     ell_radius_y = np.sqrt(1 - pearson)
     ellipse = Ellipse(
@@ -54,13 +57,13 @@ def confidence_ellipse(mu, cov, ax, n_std=1.0, facecolor="none", **kwargs):
         **kwargs,
     )
 
-    # Calculating the stdandard deviation of x from
-    # the squareroot of the variance and multiplying
+    # Calculating the standard deviation of x from
+    # the square root of the variance and multiplying
     # with the given number of standard deviations.
     scale_x = np.sqrt(cov[0, 0]) * n_std
     mean_x = mu[0]
 
-    # calculating the stdandard deviation of y ...
+    # calculating the standard deviation of y ...
     scale_y = np.sqrt(cov[1, 1]) * n_std
     mean_y = mu[1]
 
@@ -138,6 +141,8 @@ def add_ellipse_from_ellipticity(
 
 def latex_float(value: float, precision: int = 2, convert_g: bool = True) -> str:
     """Convert a float to a string with a fixed number of decimal places."""
+    if value == 0.0:
+        return "0"
     if convert_g:
         float_str = f"{value:.{precision}g}"
     else:
@@ -148,6 +153,10 @@ def latex_float(value: float, precision: int = 2, convert_g: bool = True) -> str
             if exponent == 0.0:
                 return r"1"
             return f"10^{{{int(exponent)}}}"
+        if math.isclose(float(base), -1.0):
+            if exponent == 0.0:
+                return r"-1"
+            return rf"-10^{{{int(exponent)}}}"
 
         if exponent == 0.0:
             return f"{base}"
@@ -180,13 +189,13 @@ def set_rc_params_article(
     nrows: int = 1,
     fontsize: int = 8,
     use_tex: bool | None = None,
+    aspect_ratio: float = (math.sqrt(5) - 1.0) / 2.0,
 ) -> None:
     """Set matplotlib rcParams for a LaTeX article."""
     fig_width_pt = column_width * ncol  # \showthe\columnwidth
     inches_per_pt = 1.0 / 72.27  # Convert pt to inch
-    golden_mean = (math.sqrt(5) - 1.0) / 2.0  # Aesthetic ratio
     fig_width = fig_width_pt * inches_per_pt  # width in inches
-    fig_height = fig_width * golden_mean  # height in inches
+    fig_height = fig_width * aspect_ratio  # height in inches
     fig_size = [fig_width, fig_height * nrows]
     if use_tex is None:
         use_tex = bool(shutil.which("latex"))
@@ -231,3 +240,33 @@ def plot_m2lnp(
     )
 
     return img
+
+
+def format_alpha_xaxis(
+    ax: plt.Axes,
+    cosmo: Nc.HICosmo,
+    n_ticks: int = 5,
+    top: bool = True,
+    bottom: bool = True,
+):
+    r"""Format the alpha axis.
+
+    Sets the x-axis label to "$\alpha$" and the secondary x-axis to "$x$".
+    """
+
+    def custom_formatter(alpha, _pos):
+        x = cosmo.x_alpha(alpha)
+        return f"${latex_float(x, precision=1, convert_g=False)}$"
+
+    if bottom:
+        ax.set_xlabel(r"$\alpha$")
+
+    if top:
+        xmin, xmax = ax.get_xlim()
+        b = ((xmax - xmin) / n_ticks) // np.log(10.0)
+        if b < 1.0:
+            b = ((xmax - xmin) / n_ticks) // np.log(2.0)
+        sec_ax = ax.secondary_xaxis("top")
+        sec_ax.set_xlabel("$x$")
+        sec_ax.xaxis.set_major_locator(ticker.MultipleLocator(base=b * np.log(10.0)))
+        sec_ax.xaxis.set_major_formatter(ticker.FuncFormatter(custom_formatter))
