@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_xcor_limber_kernel_tSZ.c
+ *            nc_xcor_kernel_tSZ.c
  *
  *  Tue January 10 12:00:00 2022
  *  Copyright  2022  Arthur de Souza Molina
@@ -24,7 +24,7 @@
  */
 
 /**
- * NcXcorLimberKerneltSZ:
+ * NcXcorKerneltSZ:
  *
  * Thermal Sunyaev Zel'dovich effect kernel.
  *
@@ -47,22 +47,22 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 #include "math/ncm_cfg.h"
-#include "xcor/nc_xcor_limber_kernel_tSZ.h"
+#include "xcor/nc_xcor_kernel_tSZ.h"
 #include "xcor/nc_xcor.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcXcorLimberKerneltSZ
+struct _NcXcorKerneltSZ
 {
   /*< private >*/
-  NcXcorLimberKernel parent_instance;
+  NcXcorKernel parent_instance;
   gdouble noise;
 };
 
 
-G_DEFINE_TYPE (NcXcorLimberKerneltSZ, nc_xcor_limber_kernel_tsz, NC_TYPE_XCOR_LIMBER_KERNEL);
+G_DEFINE_TYPE (NcXcorKerneltSZ, nc_xcor_kernel_tsz, NC_TYPE_XCOR_KERNEL);
 
 #define VECTOR (NCM_MODEL (xclkl)->params)
 
@@ -74,17 +74,17 @@ enum
 };
 
 static void
-nc_xcor_limber_kernel_tsz_init (NcXcorLimberKerneltSZ *xclkl)
+nc_xcor_kernel_tsz_init (NcXcorKerneltSZ *xclkl)
 {
   xclkl->noise = 0.0;
 }
 
 static void
-_nc_xcor_limber_kernel_tsz_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_xcor_kernel_tsz_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcXcorLimberKerneltSZ *xclkl = NC_XCOR_LIMBER_KERNEL_TSZ (object);
+  NcXcorKerneltSZ *xclkl = NC_XCOR_KERNEL_TSZ (object);
 
-  g_return_if_fail (NC_IS_XCOR_LIMBER_KERNEL_TSZ (object));
+  g_return_if_fail (NC_IS_XCOR_KERNEL_TSZ (object));
 
   switch (prop_id)
   {
@@ -98,11 +98,11 @@ _nc_xcor_limber_kernel_tsz_set_property (GObject *object, guint prop_id, const G
 }
 
 static void
-_nc_xcor_limber_kernel_tsz_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_xcor_kernel_tsz_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcXcorLimberKerneltSZ *xclkl = NC_XCOR_LIMBER_KERNEL_TSZ (object);
+  NcXcorKerneltSZ *xclkl = NC_XCOR_KERNEL_TSZ (object);
 
-  g_return_if_fail (NC_IS_XCOR_LIMBER_KERNEL_TSZ (object));
+  g_return_if_fail (NC_IS_XCOR_KERNEL_TSZ (object));
 
   switch (prop_id)
   {
@@ -116,42 +116,42 @@ _nc_xcor_limber_kernel_tsz_get_property (GObject *object, guint prop_id, GValue 
 }
 
 static void
-_nc_xcor_limber_kernel_tsz_dispose (GObject *object)
+_nc_xcor_kernel_tsz_dispose (GObject *object)
 {
   /* Chain up : end */
-  G_OBJECT_CLASS (nc_xcor_limber_kernel_tsz_parent_class)->dispose (object);
+  G_OBJECT_CLASS (nc_xcor_kernel_tsz_parent_class)->dispose (object);
 }
 
 static void
-_nc_xcor_limber_kernel_tsz_finalize (GObject *object)
+_nc_xcor_kernel_tsz_finalize (GObject *object)
 {
   /* Chain up : end */
-  G_OBJECT_CLASS (nc_xcor_limber_kernel_tsz_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_xcor_kernel_tsz_parent_class)->finalize (object);
 }
 
-static gdouble _nc_xcor_limber_kernel_tsz_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
-static void _nc_xcor_limber_kernel_tsz_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo);
-static void _nc_xcor_limber_kernel_tsz_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
-static guint _nc_xcor_limber_kernel_tsz_obs_len (NcXcorLimberKernel *xclk);
-static guint _nc_xcor_limber_kernel_tsz_obs_params_len (NcXcorLimberKernel *xclk);
+static gdouble _nc_xcor_kernel_tsz_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+static void _nc_xcor_kernel_tsz_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
+static void _nc_xcor_kernel_tsz_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
+static guint _nc_xcor_kernel_tsz_obs_len (NcXcorKernel *xclk);
+static guint _nc_xcor_kernel_tsz_obs_params_len (NcXcorKernel *xclk);
 
 static void
-nc_xcor_limber_kernel_tsz_class_init (NcXcorLimberKerneltSZClass *klass)
+nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
 {
   GObjectClass *object_class            = G_OBJECT_CLASS (klass);
-  NcXcorLimberKernelClass *parent_class = NC_XCOR_LIMBER_KERNEL_CLASS (klass);
+  NcXcorKernelClass *parent_class       = NC_XCOR_KERNEL_CLASS (klass);
   NcmModelClass *model_class            = NCM_MODEL_CLASS (klass);
 
-  object_class->finalize    = &_nc_xcor_limber_kernel_tsz_finalize;
-  object_class->dispose     = &_nc_xcor_limber_kernel_tsz_dispose;
-  model_class->set_property = &_nc_xcor_limber_kernel_tsz_set_property;
-  model_class->get_property = &_nc_xcor_limber_kernel_tsz_get_property;
+  object_class->finalize    = &_nc_xcor_kernel_tsz_finalize;
+  object_class->dispose     = &_nc_xcor_kernel_tsz_dispose;
+  model_class->set_property = &_nc_xcor_kernel_tsz_set_property;
+  model_class->get_property = &_nc_xcor_kernel_tsz_get_property;
 
   ncm_model_class_set_name_nick (model_class, "Xcor with the thermal Sunyaev Zel'dovich Compton-y parameter", "Xcor-tSZ");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
 
   /**
-   * NcXcorLimberKerneltSZ:zmax:
+   * NcXcorKerneltSZ:zmax:
    *
    * FIXME Set correct values (limits)
    */
@@ -166,37 +166,37 @@ nc_xcor_limber_kernel_tsz_class_init (NcXcorLimberKerneltSZClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->eval      = &_nc_xcor_limber_kernel_tsz_eval;
-  parent_class->prepare   = &_nc_xcor_limber_kernel_tsz_prepare;
-  parent_class->add_noise = &_nc_xcor_limber_kernel_tsz_add_noise;
+  parent_class->eval      = &_nc_xcor_kernel_tsz_eval;
+  parent_class->prepare   = &_nc_xcor_kernel_tsz_prepare;
+  parent_class->add_noise = &_nc_xcor_kernel_tsz_add_noise;
 
-  parent_class->obs_len        = &_nc_xcor_limber_kernel_tsz_obs_len;
-  parent_class->obs_params_len = &_nc_xcor_limber_kernel_tsz_obs_params_len;
+  parent_class->obs_len        = &_nc_xcor_kernel_tsz_obs_len;
+  parent_class->obs_params_len = &_nc_xcor_kernel_tsz_obs_params_len;
 
-  ncm_model_class_add_impl_flag (model_class, NC_XCOR_LIMBER_KERNEL_IMPL_ALL);
+  ncm_model_class_add_impl_flag (model_class, NC_XCOR_KERNEL_IMPL_ALL);
 }
 
 /**
- * nc_xcor_limber_kernel_tsz_new:
+ * nc_xcor_kernel_tsz_new:
  * @zmax: a gdouble
  *
  * Creates a new instance of the tSZ kernel.
  *
- * Returns: (transfer full): a new #NcXcorLimberKerneltSZ
+ * Returns: (transfer full): a new #NcXcorKerneltSZ
  */
-NcXcorLimberKerneltSZ *
-nc_xcor_limber_kernel_tsz_new (gdouble zmax)
+NcXcorKerneltSZ *
+nc_xcor_kernel_tsz_new (gdouble zmax)
 {
-  NcXcorLimberKerneltSZ *xclkl = g_object_new (NC_TYPE_XCOR_LIMBER_KERNEL_TSZ,
-                                               "zmin", 0.0,
-                                               "zmax", zmax,
-                                               NULL);
+  NcXcorKerneltSZ *xclkl = g_object_new (NC_TYPE_XCOR_KERNEL_TSZ,
+                                         "zmin", 0.0,
+                                         "zmax", zmax,
+                                         NULL);
 
   return xclkl;
 }
 
 static gdouble
-_nc_xcor_limber_kernel_tsz_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
+_nc_xcor_kernel_tsz_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   const gdouble nc_prefac = ncm_c_thomson_cs () / (ncm_c_mass_e () * ncm_c_c () * ncm_c_c ());
   const gdouble units     = nc_hicosmo_RH_Mpc (cosmo) * ncm_c_Mpc () * ncm_c_eV () / (1.0e-6);
@@ -207,31 +207,31 @@ _nc_xcor_limber_kernel_tsz_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdo
 }
 
 static void
-_nc_xcor_limber_kernel_tsz_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
+_nc_xcor_kernel_tsz_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 {
-  NcXcorLimberKerneltSZ *xclkl = NC_XCOR_LIMBER_KERNEL_TSZ (xclk);
+  NcXcorKerneltSZ *xclkl = NC_XCOR_KERNEL_TSZ (xclk);
 
-  g_return_if_fail (NC_IS_XCOR_LIMBER_KERNEL_TSZ (xclkl));
-  nc_xcor_limber_kernel_set_const_factor (xclk, 1.0);
+  g_return_if_fail (NC_IS_XCOR_KERNEL_TSZ (xclkl));
+  nc_xcor_kernel_set_const_factor (xclk, 1.0);
 }
 
 static void
-_nc_xcor_limber_kernel_tsz_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin)
+_nc_xcor_kernel_tsz_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin)
 {
-  NcXcorLimberKerneltSZ *xclkl = NC_XCOR_LIMBER_KERNEL_TSZ (xclk);
+  NcXcorKerneltSZ *xclkl = NC_XCOR_KERNEL_TSZ (xclk);
 
   ncm_vector_memcpy (vp2, vp1);
   ncm_vector_add_constant (vp2, xclkl->noise);
 }
 
 static guint
-_nc_xcor_limber_kernel_tsz_obs_len (NcXcorLimberKernel *xclk)
+_nc_xcor_kernel_tsz_obs_len (NcXcorKernel *xclk)
 {
   return 1;
 }
 
 static guint
-_nc_xcor_limber_kernel_tsz_obs_params_len (NcXcorLimberKernel *xclk)
+_nc_xcor_kernel_tsz_obs_params_len (NcXcorKernel *xclk)
 {
   return 0;
 }
