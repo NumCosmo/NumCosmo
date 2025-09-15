@@ -90,7 +90,7 @@ enum
 	PROP_LNRICHNESS_MAX,
 	PROP_ENABLE_REJECTION,
 	PROP_IPURITY,
-  PROP_COMPLETENESS,
+    PROP_COMPLETENESS,
 	PROP_SIZE,
 };
 
@@ -107,7 +107,7 @@ nc_cluster_mass_selection_init (NcClusterMassSelection *selection)
 	self->lnR_max          = GSL_POSINF;
 	self->enable_rejection = TRUE;
 	self->ipurity           = NULL;
-  self->completeness     = NULL;
+    self->completeness     = NULL;
 }
 
 
@@ -142,10 +142,16 @@ _nc_cluster_mass_selection_set_property (GObject *object, guint prop_id, const G
 		nc_cluster_mass_selection_set_enable_rejection (selection, g_value_get_boolean (value));
 		break;
 	case PROP_IPURITY:
-		nc_cluster_mass_selection_set_ipurity (selection, g_value_get_object (value));
+		ncm_spline2d_clear (&self->ipurity);
+		self->ipurity  = g_value_dup_object (value);
+        if (self->ipurity != NULL)
+        {ncm_spline2d_prepare (self->ipurity);}
 		break;
     case PROP_COMPLETENESS:
-		nc_cluster_mass_selection_set_completeness (selection, g_value_get_object (value));
+        ncm_spline2d_clear (&self->completeness);
+		self->completeness  = g_value_dup_object (value);
+        if (self->completeness != NULL)
+        {ncm_spline2d_prepare (self->completeness);}
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -179,10 +185,10 @@ _nc_cluster_mass_selection_get_property (GObject *object, guint prop_id, GValue 
 		g_value_set_boolean (value, self->enable_rejection);
 		break;
 	case PROP_IPURITY:
-		g_value_set_object (value, nc_cluster_mass_selection_peek_ipurity(selection));
+		g_value_set_object (value, self->ipurity);
 		break;
     case PROP_COMPLETENESS:
-		g_value_set_object (value, nc_cluster_mass_selection_peek_completeness(selection));
+		g_value_set_object (value, self->completeness);
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -580,7 +586,7 @@ _nc_cluster_mass_selection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdo
 	gsl_integration_qag (&F, CUT, self->lnR_max, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp, &err);
 	ncm_memory_pool_return (w);
 	completeness = nc_cluster_mass_selection_completeness(selection, lnM, z);
-    return intp * completeness;
+    return fabs(intp * completeness);
 }
 
 static gdouble
@@ -619,10 +625,7 @@ _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, 
 			gsl_integration_qag (&F, lnM_obs_lower[0], lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp_bin, &err);
 			ncm_memory_pool_return (w);
 		}
-		if (intp_bin * completeness < 0.0)
-        return 0.0;
-        else
-    	return intp_bin * completeness;
+    	return fabs(intp_bin * completeness);
 	}
 }
 
@@ -653,13 +656,16 @@ _nc_cluster_mass_selection_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo,
 	return (lnM_obs[0] <= self->lnR_max) && (lnM_obs[0] >= CUT);
 }
 
+
 static void
 _nc_cluster_mass_selection_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
 
-	const gdouble lnMl =  M_LN10 * 13.0;
+	const gdouble lnMl =  M_LN10 * 12.0;
 	const gdouble lnMu =  M_LN10 * 16.0;
 
+    
+    
 	*lnM_lower = lnMl;
 	*lnM_upper = lnMu;
 	return;
@@ -669,7 +675,7 @@ static void
 _nc_cluster_mass_selection_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
 
-	const gdouble lnMl =  M_LN10 * 13.0;
+	const gdouble lnMl =  M_LN10 * 12.0;
 	const gdouble lnMu =  M_LN10 * 16.0;
 
 	*lnM_lower = lnMl;
@@ -680,7 +686,7 @@ static void
 _nc_cluster_mass_selection_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
 {
 
-	const gdouble lnMl =  M_LN10 * 13.0;
+	const gdouble lnMl =  M_LN10 * 12.0;
 	const gdouble lnMu =  M_LN10 * 16.0;
 
 	*lnM_lower = lnMl;

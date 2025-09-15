@@ -2053,7 +2053,6 @@ _ncm_fit_esmcmc_run_interval (NcmFitESMCMC *esmcmc, const glong i, const glong f
 
     ncm_memory_pool_return (fk_ptr);
   }
-    printf("oi1");
 }
 
 static void
@@ -2110,7 +2109,6 @@ _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
       ncm_mset_catalog_timed_sync (self->mcat, FALSE);
     }
   }
-    printf("oi2");
 }
 
 /**

@@ -702,6 +702,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_PLCL);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_ASCASO);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_LNRICH_EXT);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_SELECTION);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT_NODIST);
