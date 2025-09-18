@@ -15,7 +15,7 @@ dependencies:
   - libfyaml
   - matplotlib
   - nlopt
-  - numcosmo
+  - numcosmo >= 0.25.0
   - numpy >= 1.23
   - openblas=*=*openmp*
   - openmpi
@@ -30,12 +30,12 @@ dependencies:
   - pydantic
   - pygobject
   - python >= 3.11
-  - r-tinytex
   - rich
   - scipy
   - scipy
   - setuptools
   - tabulate
+  - texlive-core
   - tqdm
   - typer
   - zlib
