@@ -30,12 +30,12 @@ dependencies:
   - pydantic
   - pygobject
   - python >= 3.11
+  - r-tinytex
   - rich
   - scipy
   - scipy
   - setuptools
   - tabulate
-  - tex-gyre
   - tqdm
   - typer
   - zlib
