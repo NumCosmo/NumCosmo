@@ -35,6 +35,7 @@ dependencies:
   - scipy
   - setuptools
   - tabulate
+  - tex-gyre
   - tqdm
   - typer
   - zlib
