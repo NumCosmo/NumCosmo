@@ -137,7 +137,7 @@ _nc_galaxy_sd_obs_redshift_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxy
 }
 
 static NcGalaxySDObsRedshiftIntegrand *
-_nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor)
+_nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp)
 {
   g_error ("_nc_galaxy_sd_obs_redshift_integ: method not implemented");
 
@@ -414,14 +414,15 @@ nc_galaxy_sd_obs_redshift_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxyS
 /**
  * nc_galaxy_sd_obs_redshift_integ:
  * @gsdor: a #NcGalaxySDObsRedshift
+ * @use_lnp: if TRUE the integrand must return the natural logarithm of the probability density
  *
  * Prepares the integrand for the galaxy redshift data.
  *
  */
 NcGalaxySDObsRedshiftIntegrand *
-nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor)
+nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp)
 {
-  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->integ (gsdor);
+  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->integ (gsdor, use_lnp);
 }
 
 /**

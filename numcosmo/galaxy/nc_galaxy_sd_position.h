@@ -65,7 +65,7 @@ struct _NcGalaxySDPositionClass
   NcmModelClass parent_class;
 
   void (*gen) (NcGalaxySDPosition *gsdp, NcGalaxySDPositionData *data, NcmRNG *rng);
-  NcGalaxySDPositionIntegrand *(*integ) (NcGalaxySDPosition *gsdp);
+  NcGalaxySDPositionIntegrand *(*integ) (NcGalaxySDPosition *gsdp, gboolean use_lnp);
   gboolean (*set_ra_lim) (NcGalaxySDPosition *gsdp, const gdouble ra_min, const gdouble ra_max);
   gboolean (*set_dec_lim) (NcGalaxySDPosition *gsdp, const gdouble dec_min, const gdouble dec_max);
   gboolean (*get_ra_lim) (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
@@ -110,7 +110,7 @@ gboolean nc_galaxy_sd_position_set_dec_lim (NcGalaxySDPosition *gsdp, const gdou
 gboolean nc_galaxy_sd_position_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_min, gdouble *dec_max);
 
 void nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcGalaxySDPositionData *data, NcmRNG *rng);
-NcGalaxySDPositionIntegrand *nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp);
+NcGalaxySDPositionIntegrand *nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, gboolean use_lnp);
 
 NcGalaxySDPositionData *nc_galaxy_sd_position_data_new (NcGalaxySDPosition *gsdp, NcGalaxySDObsRedshiftData *sdz_data);
 

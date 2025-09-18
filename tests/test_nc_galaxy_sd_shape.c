@@ -1059,25 +1059,27 @@ test_nc_galaxy_sd_shape_gauss_hsc_gen (TestNcGalaxySDShape *test, gconstpointer 
 static void
 test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShape *test, gconstpointer pdata)
 {
-  NcmRNG *rng                         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcGalaxySDObsRedshiftData *z_data   = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
-  NcGalaxySDPositionData *p_data      = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
-  NcGalaxySDShapeData *s_data         = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
-  NcmStatsVec *stats                  = ncm_stats_vec_new (7, NCM_STATS_VEC_COV, FALSE);
-  NcGalaxySDShapeIntegrand *integrand = nc_galaxy_sd_shape_integ (test->galaxy_shape);
-  GPtrArray *data_array               = g_ptr_array_new ();
-  const gdouble std_noise             = 0.03;
-  const gdouble sigma                 = ncm_model_orig_param_get (NCM_MODEL (test->galaxy_shape), NC_GALAXY_SD_SHAPE_GAUSS_SIGMA);
-  const guint ntest                   = 10000;
+  NcmRNG *rng                            = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcGalaxySDObsRedshiftData *z_data      = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
+  NcGalaxySDPositionData *p_data         = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
+  NcGalaxySDShapeData *s_data            = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
+  NcmStatsVec *stats                     = ncm_stats_vec_new (7, NCM_STATS_VEC_COV, FALSE);
+  NcGalaxySDShapeIntegrand *integrand    = nc_galaxy_sd_shape_integ (test->galaxy_shape, FALSE);
+  NcGalaxySDShapeIntegrand *ln_integrand = nc_galaxy_sd_shape_integ (test->galaxy_shape, TRUE);
+  GPtrArray *data_array                  = g_ptr_array_new ();
+  const gdouble std_noise                = 0.03;
+  const gdouble sigma                    = ncm_model_orig_param_get (NCM_MODEL (test->galaxy_shape), NC_GALAXY_SD_SHAPE_GAUSS_SIGMA);
+  const guint ntest                      = 10000;
   guint i;
 
   g_ptr_array_add (data_array, s_data);
   nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
+  nc_galaxy_sd_shape_integrand_prepare (ln_integrand, test->mset);
 
   for (i = 0; i < ntest; i++)
   {
     gdouble epsilon_1_out, epsilon_2_out, std_noise_out;
-    gdouble int0;
+    gdouble int0, lnint0;
 
     z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0e-2, 2.0e-2);
@@ -1089,7 +1091,11 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShape *test, gconstpointer pd
     g_assert_cmpfloat (hypot (epsilon_1_out, epsilon_2_out), <, 1.2);
 
     nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
-    int0 = nc_galaxy_sd_shape_integrand_eval (integrand, z_data->z, s_data);
+
+    int0   = nc_galaxy_sd_shape_integrand_eval (integrand, z_data->z, s_data);
+    lnint0 = nc_galaxy_sd_shape_integrand_eval (ln_integrand, z_data->z, s_data);
+
+    ncm_assert_cmpdouble_e (log (int0), ==, lnint0, 1e-10, 1.0e-10);
 
     {
       const gdouble z_cl      = nc_halo_position_get_redshift (test->halo_position);
@@ -1144,7 +1150,7 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShape *test, gconstpointer pd
         const gdouble total_var = var_int + gsl_pow_2 (std_noise_out);
         const gdouble chi2_1    = gsl_pow_2 (creal (e_s)) / total_var;
         const gdouble chi2_2    = gsl_pow_2 (cimag (e_s)) / total_var;
-        gdouble jac_num, jac_den, m2ln_int1;
+        gdouble jac_num, jac_den, int1, lnint1;
 
         switch (test->ell_conv)
         {
@@ -1163,9 +1169,11 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShape *test, gconstpointer pd
             break;
         }
 
-        m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
+        int1   = exp (-0.5 * (chi2_1 + chi2_2)) / (2.0 * M_PI * total_var) * (jac_num / jac_den);
+        lnint1 = -0.5 * (chi2_1 + chi2_2) - log (2.0 * M_PI * total_var) + log (jac_num / jac_den);
 
-        ncm_assert_cmpdouble_e (-2.0 * int0, ==, m2ln_int1, 1e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (int0, ==, int1, 1e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (lnint0, ==, lnint1, 1e-10, 1.0e-10);
 
         e_s      = e_s * cexp (-2.0 * I * phi);
         e_o      = e_o * cexp (-2.0 * I * phi);
@@ -1207,19 +1215,21 @@ test_nc_galaxy_sd_shape_gauss_integ (TestNcGalaxySDShape *test, gconstpointer pd
 static void
 test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointer pdata)
 {
-  NcmRNG *rng                         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcGalaxySDObsRedshiftData *z_data   = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
-  NcGalaxySDPositionData *p_data      = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
-  NcGalaxySDShapeData *s_data         = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
-  NcmStatsVec *stats                  = ncm_stats_vec_new (7, NCM_STATS_VEC_COV, FALSE);
-  NcGalaxySDShapeIntegrand *integrand = nc_galaxy_sd_shape_integ (test->galaxy_shape);
-  GPtrArray *data_array               = g_ptr_array_new ();
-  const gdouble std_noise             = 0.03;
-  const guint ntest                   = 10000;
+  NcmRNG *rng                            = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcGalaxySDObsRedshiftData *z_data      = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
+  NcGalaxySDPositionData *p_data         = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
+  NcGalaxySDShapeData *s_data            = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
+  NcmStatsVec *stats                     = ncm_stats_vec_new (7, NCM_STATS_VEC_COV, FALSE);
+  NcGalaxySDShapeIntegrand *integrand    = nc_galaxy_sd_shape_integ (test->galaxy_shape, FALSE);
+  NcGalaxySDShapeIntegrand *ln_integrand = nc_galaxy_sd_shape_integ (test->galaxy_shape, TRUE);
+  GPtrArray *data_array                  = g_ptr_array_new ();
+  const gdouble std_noise                = 0.03;
+  const guint ntest                      = 10000;
   guint i;
 
   g_ptr_array_add (data_array, s_data);
   nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
+  nc_galaxy_sd_shape_integrand_prepare (ln_integrand, test->mset);
 
   for (i = 0; i < ntest; i++)
   {
@@ -1229,7 +1239,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
     const gdouble c2        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
     const gdouble m         = ncm_rng_uniform_gen (rng, -0.2, 0.2);
     gdouble epsilon_1_out, epsilon_2_out, std_noise_out, std_shape_out, c1_out, c2_out, m_out;
-    gdouble int0;
+    gdouble int0, lnint0;
 
 
     z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
@@ -1252,7 +1262,11 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
     ncm_assert_cmpdouble_e (m_out, ==, m, 1.0e-12, 0.0);
 
     nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
-    int0 = nc_galaxy_sd_shape_integrand_eval (integrand, z_data->z, s_data);
+
+    int0   = nc_galaxy_sd_shape_integrand_eval (integrand, z_data->z, s_data);
+    lnint0 = nc_galaxy_sd_shape_integrand_eval (ln_integrand, z_data->z, s_data);
+
+    ncm_assert_cmpdouble_e (log (int0), ==, lnint0, 1e-10, 1.0e-10);
 
     {
       const gdouble z_cl      = nc_halo_position_get_redshift (test->halo_position);
@@ -1316,7 +1330,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
         const gdouble total_var = var_int + gsl_pow_2 (std_noise_out);
         const gdouble chi2_1    = gsl_pow_2 (creal (e_s)) / total_var;
         const gdouble chi2_2    = gsl_pow_2 (cimag (e_s)) / total_var;
-        gdouble jac_num, jac_den, m2ln_int1;
+        gdouble jac_num, jac_den, int1, lnint1;
 
         switch (test->ell_conv)
         {
@@ -1335,9 +1349,11 @@ test_nc_galaxy_sd_shape_gauss_hsc_integ (TestNcGalaxySDShape *test, gconstpointe
             break;
         }
 
-        m2ln_int1 = chi2_1 + chi2_2 + 2.0 * log (2.0 * M_PI * total_var) + 2.0 * log (jac_den / jac_num);
+        int1   = exp (-0.5 * (chi2_1 + chi2_2)) / (2.0 * M_PI * total_var) * (jac_num / jac_den);
+        lnint1 = -0.5 * (chi2_1 + chi2_2) - log (2.0 * M_PI * total_var) + log (jac_num / jac_den);
 
-        ncm_assert_cmpdouble_e (-2.0 * int0, ==, m2ln_int1, 1e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (int0, ==, int1, 1e-10, 1.0e-10);
+        ncm_assert_cmpdouble_e (lnint0, ==, lnint1, 1e-10, 1.0e-10);
 
         e_s      = e_s * cexp (-2.0 * I * phi);
         e_o      = e_o * cexp (-2.0 * I * phi);
@@ -1839,7 +1855,7 @@ test_nc_galaxy_sd_shape_gauss_strong_lensing (TestNcGalaxySDShape *test, gconstp
   NcGalaxySDObsRedshiftData *z_data   = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
   NcGalaxySDPositionData *p_data      = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
   NcGalaxySDShapeData *s_data         = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
-  NcGalaxySDShapeIntegrand *integrand = nc_galaxy_sd_shape_integ (test->galaxy_shape);
+  NcGalaxySDShapeIntegrand *integrand = nc_galaxy_sd_shape_integ (test->galaxy_shape, TRUE);
   GPtrArray *data_array               = g_ptr_array_new ();
   const gdouble std_noise             = 0.0;
   const gdouble sigma                 = ncm_model_orig_param_get (NCM_MODEL (test->galaxy_shape), NC_GALAXY_SD_SHAPE_GAUSS_SIGMA);
@@ -2019,7 +2035,7 @@ test_nc_galaxy_sd_shape_gauss_hsc_strong_lensing (TestNcGalaxySDShape *test, gco
   NcGalaxySDObsRedshiftData *z_data   = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
   NcGalaxySDPositionData *p_data      = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
   NcGalaxySDShapeData *s_data         = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
-  NcGalaxySDShapeIntegrand *integrand = nc_galaxy_sd_shape_integ (test->galaxy_shape);
+  NcGalaxySDShapeIntegrand *integrand = nc_galaxy_sd_shape_integ (test->galaxy_shape, TRUE);
   GPtrArray *data_array               = g_ptr_array_new ();
   const gdouble std_noise             = 0.0;
   const guint ntest                   = 10000;

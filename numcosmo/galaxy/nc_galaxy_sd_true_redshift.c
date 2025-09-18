@@ -139,6 +139,14 @@ _nc_galaxy_sd_true_redshift_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
   return 0.0;
 }
 
+static gdouble
+_nc_galaxy_sd_true_redshift_ln_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
+{
+  g_error ("_nc_galaxy_sd_true_redshift_ln_integ: not implemented");
+
+  return 0.0;
+}
+
 static void
 _nc_galaxy_sd_true_redshift_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max)
 {
@@ -183,10 +191,11 @@ nc_galaxy_sd_true_redshift_class_init (NcGalaxySDTrueRedshiftClass *klass)
   ncm_mset_model_register_id (model_class, "NcGalaxySDTrueRedshift", "Galaxy sample redshift distribution", NULL, FALSE, nc_galaxy_sd_obs_redshift_id ());
   ncm_model_class_check_params_info (model_class);
 
-  klass->gen     = &_nc_galaxy_sd_true_redshift_gen;
-  klass->integ   = &_nc_galaxy_sd_true_redshift_integ;
-  klass->set_lim = &_nc_galaxy_sd_true_redshift_set_lim;
-  klass->get_lim = &_nc_galaxy_sd_true_redshift_get_lim;
+  klass->gen      = &_nc_galaxy_sd_true_redshift_gen;
+  klass->integ    = &_nc_galaxy_sd_true_redshift_integ;
+  klass->ln_integ = &_nc_galaxy_sd_true_redshift_ln_integ;
+  klass->set_lim  = &_nc_galaxy_sd_true_redshift_set_lim;
+  klass->get_lim  = &_nc_galaxy_sd_true_redshift_get_lim;
 }
 
 /**
@@ -288,5 +297,20 @@ gdouble
 nc_galaxy_sd_true_redshift_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
 {
   return NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->integ (gsdtr, z);
+}
+
+/**
+ * nc_galaxy_sd_true_redshift_ln_integ:
+ * @gsdtr: a #NcGalaxySDTrueRedshift
+ * @z: the redshift
+ *
+ * Evaluates the galaxy sample redshift distribution at redshift @z.
+ *
+ * Returns: the probability density at $z$, $P(z)$.
+ */
+gdouble
+nc_galaxy_sd_true_redshift_ln_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
+{
+  return NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->ln_integ (gsdtr, z);
 }
 
