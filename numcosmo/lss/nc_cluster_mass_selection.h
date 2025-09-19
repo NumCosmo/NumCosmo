@@ -98,6 +98,7 @@ GType nc_cluster_mass_selection_get_type (void) G_GNUC_CONST;
 void nc_cluster_mass_selection_set_enable_rejection (NcClusterMassSelection *selection, gboolean on);
 void nc_cluster_mass_selection_set_ipurity(NcClusterMassSelection *selection, NcmSpline2dBicubic *ipurity);
 void nc_cluster_mass_selection_set_completeness(NcClusterMassSelection *selection, NcmSpline2dBicubic *completeness);
+void nc_cluster_mass_selection_set_lnM_limits(NcClusterMassSelection *selection, NcmVector *lnM_limits);
 
 gdouble nc_cluster_mass_selection_completeness(NcClusterMassSelection *selection, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_selection_ipurity(NcClusterMassSelection *selection, gdouble lnM_obs, gdouble z);

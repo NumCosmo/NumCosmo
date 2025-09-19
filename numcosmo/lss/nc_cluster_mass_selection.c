@@ -60,7 +60,8 @@ typedef struct _NcClusterMassSelectionPrivate
 	gdouble lnR_min;
 	gboolean enable_rejection;
 	NcmSpline2d *ipurity;
-  NcmSpline2d *completeness;
+    NcmSpline2d *completeness;
+    NcmVector *lnM_limits;
 } NcClusterMassSelectionPrivate;
 
 
@@ -91,6 +92,7 @@ enum
 	PROP_ENABLE_REJECTION,
 	PROP_IPURITY,
     PROP_COMPLETENESS,
+    PROP_LNM_LIMITS,
 	PROP_SIZE,
 };
 
@@ -106,8 +108,9 @@ nc_cluster_mass_selection_init (NcClusterMassSelection *selection)
 	self->lnR_min          = GSL_NEGINF;
 	self->lnR_max          = GSL_POSINF;
 	self->enable_rejection = TRUE;
-	self->ipurity           = NULL;
+	self->ipurity          = NULL;
     self->completeness     = NULL;
+    self->lnM_limits       = NULL;
 }
 
 
@@ -153,6 +156,9 @@ _nc_cluster_mass_selection_set_property (GObject *object, guint prop_id, const G
         if (self->completeness != NULL)
         {ncm_spline2d_prepare (self->completeness);}
 		break;
+    case PROP_LNM_LIMITS:
+        nc_cluster_mass_selection_set_lnM_limits (selection,  g_value_get_object (value));
+        break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
 		break;
@@ -190,6 +196,9 @@ _nc_cluster_mass_selection_get_property (GObject *object, guint prop_id, GValue 
     case PROP_COMPLETENESS:
 		g_value_set_object (value, self->completeness);
 		break;
+    case PROP_LNM_LIMITS:
+        g_value_set_object (value, self->lnM_limits);
+        break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
 		break;
@@ -295,7 +304,21 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
 	                                                       "Whether rejects the sampled objects below the CUT",
 	                                                       TRUE,
 	                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+    
+    
+    
+    /**
+	 * NcClusterMassSelection:lnM_limits:
+	 *
+	 * FIXME Set the mass limits for the cluster mass relation related to the completeness
+	 */
+    g_object_class_install_property (object_class,
+                                   PROP_LNM_LIMITS,
+                                   g_param_spec_object ("lnM-limits",
+                                                        NULL,
+                                                        "Mass limits for cluster mass relation",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 	/**
 	 * NcClusterMassSelection:MU_P0:
@@ -532,7 +555,7 @@ _nc_cluster_mass_selection_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoubl
     if (lnM_obs[0] < CUT)
         return 0.0;
     else
-        return 2.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x)/erfc ((CUT - lnR_true) / (M_SQRT2 * sigma)) * completeness *ipurity;
+        return fabs(2.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x)/erfc ((CUT - lnR_true) / (M_SQRT2 * sigma)) * completeness *ipurity);
 }
 
 
@@ -586,7 +609,11 @@ _nc_cluster_mass_selection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdo
 	gsl_integration_qag (&F, CUT, self->lnR_max, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp, &err);
 	ncm_memory_pool_return (w);
 	completeness = nc_cluster_mass_selection_completeness(selection, lnM, z);
-    return fabs(intp * completeness);
+    
+    if (intp * completeness  < 0)
+    {return 0.0;}
+    else
+    {return fabs( intp * completeness);}
 }
 
 static gdouble
@@ -625,7 +652,10 @@ _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, 
 			gsl_integration_qag (&F, lnM_obs_lower[0], lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp_bin, &err);
 			ncm_memory_pool_return (w);
 		}
-    	return fabs(intp_bin * completeness);
+        if (intp_bin * completeness < 0)
+        {return 0.0;}
+        else
+        {return fabs(intp_bin * completeness);}
 	}
 }
 
@@ -656,15 +686,31 @@ _nc_cluster_mass_selection_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo,
 	return (lnM_obs[0] <= self->lnR_max) && (lnM_obs[0] >= CUT);
 }
 
+void
+nc_cluster_mass_selection_set_lnM_limits(NcClusterMassSelection *selection, NcmVector *lnM_limits)
+{
+  NcClusterMassSelectionPrivate * const self = selection->priv;
+   
+  self->lnM_limits =  ncm_vector_ref (lnM_limits);
+}
 
 static void
 _nc_cluster_mass_selection_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
-{
+{ 
+    NcClusterMassSelection *selection             = NC_CLUSTER_MASS_SELECTION (clusterm);
+	NcClusterMassSelectionPrivate * const self = selection->priv;
+    gdouble lnMl, lnMu;
+    if(self->lnM_limits == NULL)
+    {
+	lnMl =  M_LN10 * 12.0;
+	lnMu =  M_LN10 * 16.0;
+    }
+    else
+    {
+    lnMl =  ncm_vector_get(self->lnM_limits, 0);
+	lnMu =  ncm_vector_get(self->lnM_limits, 1);
+    }
 
-	const gdouble lnMl =  M_LN10 * 12.0;
-	const gdouble lnMu =  M_LN10 * 16.0;
-
-    
     
 	*lnM_lower = lnMl;
 	*lnM_upper = lnMu;
@@ -675,20 +721,44 @@ static void
 _nc_cluster_mass_selection_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
 
-	const gdouble lnMl =  M_LN10 * 12.0;
-	const gdouble lnMu =  M_LN10 * 16.0;
+	NcClusterMassSelection *selection             = NC_CLUSTER_MASS_SELECTION (clusterm);
+	NcClusterMassSelectionPrivate * const self = selection->priv;
+    gdouble lnMl, lnMu;
+    if(self->lnM_limits == NULL)
+    {
+	lnMl =  M_LN10 * 12.0;
+	lnMu =  M_LN10 * 16.0;
+    }
+    else
+    {
+    lnMl =  ncm_vector_get(self->lnM_limits, 0);
+	lnMu =  ncm_vector_get(self->lnM_limits, 1);
+    }
 
 	*lnM_lower = lnMl;
 	*lnM_upper = lnMu;
+    
+    return;
 }
 
 static void
 _nc_cluster_mass_selection_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
 {
 
-	const gdouble lnMl =  M_LN10 * 12.0;
-	const gdouble lnMu =  M_LN10 * 16.0;
-
+	NcClusterMassSelection *selection             = NC_CLUSTER_MASS_SELECTION (clusterm);
+	NcClusterMassSelectionPrivate * const self = selection->priv;
+    gdouble lnMl, lnMu;
+    if(self->lnM_limits == NULL)
+    {
+	lnMl =  M_LN10 * 12.0;
+	lnMu =  M_LN10 * 16.0;
+    }
+    else
+    {
+    lnMl =  ncm_vector_get(self->lnM_limits, 0);
+	lnMu =  ncm_vector_get(self->lnM_limits, 1);
+    }
+    
 	*lnM_lower = lnMl;
 	*lnM_upper = lnMu;
 
