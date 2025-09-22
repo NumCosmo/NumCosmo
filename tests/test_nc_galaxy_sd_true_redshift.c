@@ -340,11 +340,19 @@ test_nc_galaxy_sd_true_redshift_integ (TestNcGalaxySDTrueRedshift *test, gconstp
     gdouble norm = alpha / (pow (z0, 1.0 + beta) * (gsl_sf_gamma_inc (gamma_a, y_low / y0) -
                                                     gsl_sf_gamma_inc (gamma_a, y_up / y0))
                            );
-    gdouble control = log (pow (z, beta) * exp (-(y / y0)) * norm);
+    gdouble ln_control = log (pow (z, beta) * exp (-(y / y0)) * norm);
+    gdouble ln_res     = nc_galaxy_sd_true_redshift_ln_integ (test->gsdtr, z);
+
+    g_assert_true (gsl_finite (ln_res));
+    ncm_assert_cmpdouble_e (ln_res, ==, ln_control, 1.0e-9, 0.0);
+
+    gdouble control = pow (z, beta) * exp (-(y / y0)) * norm;
     gdouble res     = nc_galaxy_sd_true_redshift_integ (test->gsdtr, z);
 
     g_assert_true (gsl_finite (res));
     ncm_assert_cmpdouble_e (res, ==, control, 1.0e-9, 0.0);
+
+    ncm_assert_cmpdouble_e (exp (ln_res), ==, res, 1.0e-9, 0.0);
   }
 
   ncm_rng_clear (&rng);
@@ -361,30 +369,45 @@ _integ (gdouble z, gpointer user_data)
 {
   IntegData *data = (IntegData *) user_data;
 
-  return exp (nc_galaxy_sd_true_redshift_integ (data->gsdtr, z));
+  return nc_galaxy_sd_true_redshift_integ (data->gsdtr, z);
+}
+
+static gdouble
+_ln_integ (gpointer user_data, gdouble z, gdouble w)
+{
+  IntegData *data = (IntegData *) user_data;
+
+  return nc_galaxy_sd_true_redshift_ln_integ (data->gsdtr, z);
 }
 
 static void
 test_nc_galaxy_sd_true_redshift_norma (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata)
 {
+  NcmIntegral1dPtr *lnint      = ncm_integral1d_ptr_new (_ln_integ, NULL);
   gsl_integration_workspace *w = gsl_integration_workspace_alloc (1000);
   IntegData data               = { test->gsdtr, 1.0e-10 };
+  IntegData lndata             = { test->gsdtr, 1.0e-10 };
   gsl_function F;
   gdouble z_min, z_max;
 
   F.function = _integ;
   F.params   = &data;
 
+  ncm_integral1d_set_abstol (NCM_INTEGRAL1D (lnint), data.abstol);
+  ncm_integral1d_ptr_set_userdata (lnint, &lndata);
   nc_galaxy_sd_true_redshift_get_lim (test->gsdtr, &z_min, &z_max);
 
   {
-    gdouble result, abserr;
+    gdouble result, abserr, lnresult, lnabserr;
     gint status;
 
     status = gsl_integration_qag (&F, z_min, z_max, 1.0e-10, 1.0e-10, 1000, GSL_INTEG_GAUSS61, w, &result, &abserr);
 
+    lnresult = ncm_integral1d_eval_lnint (NCM_INTEGRAL1D (lnint), z_min, z_max, &lnabserr);
+
     g_assert_cmpint (status, ==, GSL_SUCCESS);
     ncm_assert_cmpdouble_e (result, ==, 1.0, 1.0e-9, 0.0);
+    ncm_assert_cmpdouble_e (lnresult, ==, 0.0, 1.0e-9, 0.0);
   }
 }
 
