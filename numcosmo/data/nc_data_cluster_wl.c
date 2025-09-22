@@ -437,15 +437,15 @@ typedef struct _NcDataClusterWLIntArg
   guint gal_i;
 } NcDataClusterWLIntArg;
 
-static void nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
+static void nc_data_cluster_wl_cubature_integrand (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
 static void nc_data_cluster_wl_int_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
 
-NCM_INTEGRAL_ND_DEFINE_TYPE (NC, DATA_CLUSTER_WL_INT, NcDataClusterWLInt, nc_data_cluster_wl_integ, nc_data_cluster_wl_int_dim, nc_data_cluster_wl_integ, NcDataClusterWLIntArg);
+NCM_INTEGRAL_ND_DEFINE_TYPE (NC, DATA_CLUSTER_WL_CUBATURE_INTEGRAND, NcDataClusterWLCubatureIntegrand, nc_data_cluster_wl_cubature_integrand, nc_data_cluster_wl_int_dim, nc_data_cluster_wl_cubature_integrand, NcDataClusterWLIntArg);
 
 static void
-nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
+nc_data_cluster_wl_cubature_integrand (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
 {
-  NcDataClusterWLInt *lh_int                         = NC_DATA_CLUSTER_WL_INT (intnd);
+  NcDataClusterWLCubatureIntegrand *lh_int           = NC_DATA_CLUSTER_WL_CUBATURE_INTEGRAND (intnd);
   NcGalaxySDShapeData *data                          = lh_int->data.data;
   NcGalaxySDObsRedshiftIntegrand *integrand_redshift = lh_int->data.integrand_redshift;
   NcGalaxySDPositionIntegrand *integrand_position    = lh_int->data.integrand_position;
@@ -456,28 +456,29 @@ nc_data_cluster_wl_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint n
 
   for (i = 0; i < npoints; i++)
   {
-    const gdouble z            = ncm_vector_fast_get (x, i);
-    const gdouble ln_int_z     = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, data->sdpos_data->sdz_data);
-    const gdouble ln_int_pos   = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data);
-    const gdouble ln_int_shape = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
-    const gdouble res          = ln_int_z + ln_int_pos + ln_int_shape;
+    const gdouble z         = ncm_vector_fast_get (x, i);
+    const gdouble int_z     = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, data->sdpos_data->sdz_data);
+    const gdouble int_pos   = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data);
+    const gdouble int_shape = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
+    const gdouble res       = int_z * int_pos * int_shape;
 
-    ncm_vector_set (fval, i, exp (res));
+    ncm_vector_set (fval, i, res);
   }
 }
 
 static gdouble
-nc_data_cluster_wl_integ2 (gpointer user_data, const gdouble z, const gdouble w)
+nc_data_cluster_wl_lnint_integrand (gpointer user_data, const gdouble z, const gdouble w)
 {
   NcDataClusterWLIntArg *arg                         = (NcDataClusterWLIntArg *) user_data;
   NcGalaxySDShapeData *data                          = arg->data;
   NcGalaxySDObsRedshiftIntegrand *integrand_redshift = arg->integrand_redshift;
   NcGalaxySDPositionIntegrand *integrand_position    = arg->integrand_position;
   NcGalaxySDShapeIntegrand *integrand_shape          = arg->integrand_shape;
-  const gdouble ln_int_z                             = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, data->sdpos_data->sdz_data);
-  const gdouble ln_int_pos                           = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data);
-  const gdouble ln_int_shape                         = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
-  const gdouble res                                  = ln_int_z + ln_int_pos + ln_int_shape;
+
+  const gdouble int_z     = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, data->sdpos_data->sdz_data);
+  const gdouble int_pos   = nc_galaxy_sd_position_integrand_eval (integrand_position, data->sdpos_data);
+  const gdouble int_shape = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, data);
+  const gdouble res       = int_z + int_pos + int_shape;
 
   return res;
 }
@@ -506,7 +507,7 @@ _nc_data_cluster_wl_eval_m2lnP_weight (NcDataClusterWL *dcwl, const gdouble m2ln
 
 typedef struct _CubatureIntegrator
 {
-  NcDataClusterWLInt *likelihood_integral;
+  NcDataClusterWLCubatureIntegrand *likelihood_integral;
   NcmIntegralND *lh_int;
   NcmVector *zpi;
   NcmVector *zpf;
@@ -515,10 +516,10 @@ typedef struct _CubatureIntegrator
 } CubatureIntegrator;
 
 gpointer
-integrator_cubature_new (NcDataClusterWL *dcwl)
+cubature_integrator_new (NcDataClusterWL *dcwl)
 {
   NcDataClusterWLPrivate * const self     = nc_data_cluster_wl_get_instance_private (dcwl);
-  NcDataClusterWLInt *likelihood_integral = g_object_new (nc_data_cluster_wl_integ_get_type (), NULL);
+  NcDataClusterWLCubatureIntegrand *likelihood_integral = g_object_new (nc_data_cluster_wl_cubature_integrand_get_type (), NULL);
   CubatureIntegrator *integrator          = g_new0 (CubatureIntegrator, 1);
 
   integrator->likelihood_integral = likelihood_integral;
@@ -537,7 +538,7 @@ integrator_cubature_new (NcDataClusterWL *dcwl)
 }
 
 void
-integrator_cubature_free (gpointer integrator)
+cubature_integrator_free (gpointer integrator)
 {
   CubatureIntegrator *intg = (CubatureIntegrator *) integrator;
 
@@ -550,7 +551,7 @@ integrator_cubature_free (gpointer integrator)
 }
 
 NcDataClusterWLIntArg *
-integrator_cubature_get_arg (gpointer integrator)
+cubature_integrator_get_arg (gpointer integrator)
 {
   CubatureIntegrator *intg = (CubatureIntegrator *) integrator;
 
@@ -558,7 +559,7 @@ integrator_cubature_get_arg (gpointer integrator)
 }
 
 gdouble
-integrator_cubature_integrate (gpointer integrator, gdouble zmin, gdouble zmax)
+cubature_integrator_integrate (gpointer integrator, gdouble zmin, gdouble zmax)
 {
   CubatureIntegrator *intg = (CubatureIntegrator *) integrator;
   gdouble P_gal, m2lnP_gal;
@@ -567,6 +568,7 @@ integrator_cubature_integrate (gpointer integrator, gdouble zmin, gdouble zmax)
   ncm_vector_fast_set (intg->zpf, 0, zmax);
 
   ncm_integral_nd_eval (intg->lh_int, intg->zpi, intg->zpf, intg->res, intg->err);
+
   P_gal     = ncm_vector_fast_get (intg->res, 0);
   m2lnP_gal = P_gal > 0.0 ? -2.0 * log (P_gal) : NC_GALAXY_LOW_PROB;
 
@@ -584,12 +586,12 @@ typedef struct _LnIntIntegrator
 } LnIntIntegrator;
 
 gpointer
-integrator_lnint_new (NcDataClusterWL *dcwl)
+lnint_integrator_new (NcDataClusterWL *dcwl)
 {
   NcDataClusterWLPrivate *self = nc_data_cluster_wl_get_instance_private (dcwl);
   LnIntIntegrator *integrator  = g_new0 (LnIntIntegrator, 1);
 
-  integrator->int1d = ncm_integral1d_ptr_new (nc_data_cluster_wl_integ2, NULL);
+  integrator->int1d = ncm_integral1d_ptr_new (nc_data_cluster_wl_lnint_integrand, NULL);
 
   ncm_integral1d_set_reltol (NCM_INTEGRAL1D (integrator->int1d), self->prec);
   ncm_integral1d_set_abstol (NCM_INTEGRAL1D (integrator->int1d), 0.0);
@@ -599,7 +601,7 @@ integrator_lnint_new (NcDataClusterWL *dcwl)
 }
 
 void
-integrator_lnint_free (gpointer integrator)
+lnint_integrator_free (gpointer integrator)
 {
   LnIntIntegrator *intg = (LnIntIntegrator *) integrator;
 
@@ -608,7 +610,7 @@ integrator_lnint_free (gpointer integrator)
 }
 
 NcDataClusterWLIntArg *
-integrator_lnint_get_arg (gpointer integrator)
+lnint_integrator_get_arg (gpointer integrator)
 {
   LnIntIntegrator *intg = (LnIntIntegrator *) integrator;
 
@@ -616,7 +618,7 @@ integrator_lnint_get_arg (gpointer integrator)
 }
 
 gdouble
-integrator_lnint_integrate (gpointer integrator, gdouble zmin, gdouble zmax)
+lnint_integrator_integrate (gpointer integrator, gdouble zmin, gdouble zmax)
 {
   LnIntIntegrator *intg = (LnIntIntegrator *) integrator;
   gdouble err;
@@ -638,26 +640,26 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
   NcDataClusterWLIntArg *(*get_arg) (gpointer integrator) = NULL;
   void (*free_integrator) (gpointer integrator) = NULL;
 
-  if (!self->use_lnint)
+  if (self->use_lnint)
   {
-    integrator_new  = integrator_cubature_new;
-    integrate       = integrator_cubature_integrate;
-    get_arg         = integrator_cubature_get_arg;
-    free_integrator = integrator_cubature_free;
+    integrator_new  = lnint_integrator_new;
+    integrate       = lnint_integrator_integrate;
+    get_arg         = lnint_integrator_get_arg;
+    free_integrator = lnint_integrator_free;
   }
   else
   {
-    integrator_new  = integrator_lnint_new;
-    integrate       = integrator_lnint_integrate;
-    get_arg         = integrator_lnint_get_arg;
-    free_integrator = integrator_lnint_free;
+    integrator_new  = cubature_integrator_new;
+    integrate       = cubature_integrator_integrate;
+    get_arg         = cubature_integrator_get_arg;
+    free_integrator = cubature_integrator_free;
   }
 
   #pragma omp parallel reduction(+:result) if (self->enable_parallel)
   {
-    NcGalaxySDObsRedshiftIntegrand *integrand_redshift = nc_galaxy_sd_obs_redshift_integ (self->galaxy_redshift);
-    NcGalaxySDPositionIntegrand *integrand_position    = nc_galaxy_sd_position_integ (self->galaxy_position);
-    NcGalaxySDShapeIntegrand *integrand_shape          = nc_galaxy_sd_shape_integ (self->galaxy_shape);
+    NcGalaxySDObsRedshiftIntegrand *integrand_redshift = nc_galaxy_sd_obs_redshift_integ (self->galaxy_redshift, self->use_lnint);
+    NcGalaxySDPositionIntegrand *integrand_position    = nc_galaxy_sd_position_integ (self->galaxy_position, self->use_lnint);
+    NcGalaxySDShapeIntegrand *integrand_shape          = nc_galaxy_sd_shape_integ (self->galaxy_shape, self->use_lnint);
     gpointer integrator                                = integrator_new (dcwl);
     NcDataClusterWLIntArg *arg                         = get_arg (integrator);
 
@@ -802,9 +804,9 @@ _nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector 
 
   #pragma omp parallel reduction(+:result) if (self->enable_parallel)
   {
-    NcGalaxySDObsRedshiftIntegrand *integrand_redshift = nc_galaxy_sd_obs_redshift_integ (self->galaxy_redshift);
-    NcGalaxySDPositionIntegrand *integrand_position    = nc_galaxy_sd_position_integ (self->galaxy_position);
-    NcGalaxySDShapeIntegrand *integrand_shape          = nc_galaxy_sd_shape_integ (self->galaxy_shape);
+    NcGalaxySDObsRedshiftIntegrand *integrand_redshift = nc_galaxy_sd_obs_redshift_integ (self->galaxy_redshift, FALSE);
+    NcGalaxySDPositionIntegrand *integrand_position    = nc_galaxy_sd_position_integ (self->galaxy_position, FALSE);
+    NcGalaxySDShapeIntegrand *integrand_shape          = nc_galaxy_sd_shape_integ (self->galaxy_shape, FALSE);
 
     if (m2lnP_gal != NULL)
       g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
@@ -823,11 +825,11 @@ _nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector 
       {
         NcGalaxySDShapeData *s_data_i = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
 
-        const gdouble z            = s_data_i->sdpos_data->sdz_data->z;
-        const gdouble ln_int_z     = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, s_data_i->sdpos_data->sdz_data);
-        const gdouble ln_int_pos   = nc_galaxy_sd_position_integrand_eval (integrand_position, s_data_i->sdpos_data);
-        const gdouble ln_int_shape = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, s_data_i);
-        const gdouble m2lnP_gal_i  = -2.0 * (ln_int_z + ln_int_pos + ln_int_shape);
+        const gdouble z           = s_data_i->sdpos_data->sdz_data->z;
+        const gdouble int_z       = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, s_data_i->sdpos_data->sdz_data);
+        const gdouble int_pos     = nc_galaxy_sd_position_integrand_eval (integrand_position, s_data_i->sdpos_data);
+        const gdouble int_shape   = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, s_data_i);
+        const gdouble m2lnP_gal_i = -2.0 * log (int_z * int_pos * int_shape);
 
         if (!gsl_finite (m2lnP_gal_i))
         {
@@ -856,11 +858,11 @@ _nc_data_cluster_wl_eval_m2lnP (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector 
 
         NcGalaxySDShapeData *s_data_i = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
 
-        const gdouble z            = s_data_i->sdpos_data->sdz_data->z;
-        const gdouble ln_int_z     = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, s_data_i->sdpos_data->sdz_data);
-        const gdouble ln_int_pos   = nc_galaxy_sd_position_integrand_eval (integrand_position, s_data_i->sdpos_data);
-        const gdouble ln_int_shape = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, s_data_i);
-        const gdouble m2lnP_gal_i  = -2.0 * (ln_int_z + ln_int_pos + ln_int_shape);
+        const gdouble z           = s_data_i->sdpos_data->sdz_data->z;
+        const gdouble int_z       = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, s_data_i->sdpos_data->sdz_data);
+        const gdouble int_pos     = nc_galaxy_sd_position_integrand_eval (integrand_position, s_data_i->sdpos_data);
+        const gdouble int_shape   = nc_galaxy_sd_shape_integrand_eval (integrand_shape, z, s_data_i);
+        const gdouble m2lnP_gal_i = -2.0 * log (int_z * int_pos * int_shape);
 
         if (!gsl_finite (m2lnP_gal_i))
         {
@@ -1089,9 +1091,9 @@ nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gd
 /**
  * nc_data_cluster_wl_use_lnint:
  * @dcwl: a #NcDataClusterWL
- * @use_lnint: use log integral
+ * @use_lnint: use logarithmic integration
  *
- * Sets flag to use log integral.
+ * Sets flag to use logarithmic integration.
  *
  */
 void
