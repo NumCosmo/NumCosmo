@@ -159,7 +159,7 @@ _nc_galaxy_sd_shape_gauss_hsc_finalize (GObject *object)
 }
 
 static void _nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng);
-static NcGalaxySDShapeIntegrand *_nc_galaxy_sd_shape_gauss_hsc_integ (NcGalaxySDShape *gsds);
+static NcGalaxySDShapeIntegrand *_nc_galaxy_sd_shape_gauss_hsc_integ (NcGalaxySDShape *gsds, gboolean use_lnp);
 static gboolean _nc_galaxy_sd_shape_gauss_hsc_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
 static void _nc_galaxy_sd_shape_gauss_hsc_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data);
 static void _nc_galaxy_sd_shape_gauss_hsc_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
@@ -317,8 +317,8 @@ _integ_data_free (gpointer user_data)
   g_free (int_data);
 }
 
-static gdouble
-_nc_galaxy_sd_shape_gauss_hsc_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data)
+static void
+_nc_galaxy_sd_shape_gauss_hsc_pre_integ (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data, gdouble *total_var, gdouble *chi2_1, gdouble *chi2_2, gdouble *lndetjac)
 {
   struct _IntegData *int_data        = (struct _IntegData *) callback_data;
   NcGalaxySDShape *gsds              = NC_GALAXY_SD_SHAPE (int_data->gsdshsc);
@@ -364,17 +364,30 @@ _nc_galaxy_sd_shape_gauss_hsc_integ_f (gpointer callback_data, const gdouble z, 
 
   nc_galaxy_sd_shape_apply_shear_inv (gsds, &cplx_g, &cplx_E_o, &cplx_E_s);
 
-  /* TODO: compute the actual convolution */
-  {
-    const gdouble var_int   = gsl_pow_2 (sigma);
-    const gdouble total_var = var_int + gsl_pow_2 (std_noise);
-    const gdouble chi2_1    = gsl_pow_2 (ncm_complex_Re (&cplx_E_s)) / total_var;
-    const gdouble chi2_2    = gsl_pow_2 (ncm_complex_Im (&cplx_E_s)) / total_var;
-    const gdouble lndetjac  = nc_galaxy_sd_shape_lndet_jac (gsds, &cplx_g, &cplx_E_o);
+  *total_var = gsl_pow_2 (sigma) + gsl_pow_2 (std_noise);
+  *chi2_1    = gsl_pow_2 (ncm_complex_Re (&cplx_E_s)) / *total_var;
+  *chi2_2    = gsl_pow_2 (ncm_complex_Im (&cplx_E_s)) / *total_var;
+  *lndetjac  = nc_galaxy_sd_shape_lndet_jac (gsds, &cplx_g, &cplx_E_o);
+}
 
-    /* return exp (-0.5 * (chi2_1 + chi2_2) + lndetjac) / (2.0 * M_PI * total_var); */
-    return -0.5 * (chi2_1 + chi2_2) + lndetjac - log (2.0 * M_PI * total_var);
-  }
+static gdouble
+_nc_galaxy_sd_shape_gauss_hsc_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data)
+{
+  gdouble total_var, chi2_1, chi2_2, lndetjac;
+
+  _nc_galaxy_sd_shape_gauss_hsc_pre_integ (callback_data, z, data, &total_var, &chi2_1, &chi2_2, &lndetjac);
+
+  return exp (-0.5 * (chi2_1 + chi2_2) + lndetjac) / (2.0 * M_PI * total_var);
+}
+
+static gdouble
+_nc_galaxy_sd_shape_gauss_hsc_ln_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data)
+{
+  gdouble total_var, chi2_1, chi2_2, lndetjac;
+
+  _nc_galaxy_sd_shape_gauss_hsc_pre_integ (callback_data, z, data, &total_var, &chi2_1, &chi2_2, &lndetjac);
+
+  return -0.5 * (chi2_1 + chi2_2) + lndetjac - log (2.0 * M_PI * total_var);
 }
 
 static void
@@ -406,11 +419,11 @@ _integ_data_prepare (gpointer user_data, NcmMSet *mset)
 }
 
 static NcGalaxySDShapeIntegrand *
-_nc_galaxy_sd_shape_gauss_hsc_integ (NcGalaxySDShape *gsds)
+_nc_galaxy_sd_shape_gauss_hsc_integ (NcGalaxySDShape *gsds, gboolean use_lnp)
 {
   NcGalaxySDShapeGaussHSC *gsdshsc = NC_GALAXY_SD_SHAPE_GAUSS_HSC (gsds);
   struct _IntegData *int_data      = g_new0 (struct _IntegData, 1);
-  NcGalaxySDShapeIntegrand *integ  = nc_galaxy_sd_shape_integrand_new (_nc_galaxy_sd_shape_gauss_hsc_integ_f,
+  NcGalaxySDShapeIntegrand *integ  = nc_galaxy_sd_shape_integrand_new (use_lnp ? _nc_galaxy_sd_shape_gauss_hsc_ln_integ_f : _nc_galaxy_sd_shape_gauss_hsc_integ_f,
                                                                        _integ_data_free,
                                                                        _integ_data_copy,
                                                                        _integ_data_prepare,
