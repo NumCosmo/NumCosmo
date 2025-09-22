@@ -493,6 +493,10 @@ python_tests = [
         'source': 'test_py_model.py',
     },
     {
+        'name': 'py_model_de_wspline',
+        'source': 'test_py_model_de_wspline.py',
+    },
+    {
         'name': 'py_mset',
         'source': 'test_py_mset.py',
     },
