@@ -50,6 +50,7 @@ struct _NcGalaxySDTrueRedshiftClass
 
   gdouble (*gen) (NcGalaxySDTrueRedshift *gsdtr, NcmRNG *rng);
   gdouble (*integ) (NcGalaxySDTrueRedshift *gsdtr, gdouble z);
+  gdouble (*ln_integ) (NcGalaxySDTrueRedshift *gsdtr, gdouble z);
   void (*set_lim) (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max);
   void (*get_lim) (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max);
 
@@ -69,6 +70,7 @@ void nc_galaxy_sd_true_redshift_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdouble 
 
 gdouble nc_galaxy_sd_true_redshift_gen (NcGalaxySDTrueRedshift *gsdtr, NcmRNG *rng);
 gdouble nc_galaxy_sd_true_redshift_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z);
+gdouble nc_galaxy_sd_true_redshift_ln_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z);
 
 G_END_DECLS
 

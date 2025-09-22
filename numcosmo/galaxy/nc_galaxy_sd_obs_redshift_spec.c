@@ -148,7 +148,7 @@ static void _nc_galaxy_sd_obs_redshift_spec_gen (NcGalaxySDObsRedshift *gsdor, N
 static gboolean _nc_galaxy_sd_obs_redshift_spec_gen1 (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static void _nc_galaxy_sd_obs_redshift_spec_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static void _nc_galaxy_sd_obs_redshift_spec_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
-static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_spec_integ (NcGalaxySDObsRedshift *gsdor);
+static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_spec_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp);
 static void _nc_galaxy_sd_obs_redshift_spec_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static void _nc_galaxy_sd_obs_redshift_spec_add_submodel (NcmModel *model, NcmModel *submodel);
 
@@ -258,6 +258,15 @@ _integ_data_free (gpointer idata)
 }
 
 static gdouble
+_nc_galaxy_sd_obs_redshift_spec_ln_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDObsRedshiftData *data)
+{
+  const struct _IntegData *int_data             = (struct _IntegData *) callback_data;
+  NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (int_data->gsdorspec);
+
+  return nc_galaxy_sd_true_redshift_ln_integ (self->sdz, z);
+}
+
+static gdouble
 _nc_galaxy_sd_obs_redshift_spec_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDObsRedshiftData *data)
 {
   const struct _IntegData *int_data             = (struct _IntegData *) callback_data;
@@ -267,11 +276,11 @@ _nc_galaxy_sd_obs_redshift_spec_integ_f (gpointer callback_data, const gdouble z
 }
 
 static NcGalaxySDObsRedshiftIntegrand *
-_nc_galaxy_sd_obs_redshift_spec_integ (NcGalaxySDObsRedshift *gsdor)
+_nc_galaxy_sd_obs_redshift_spec_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp)
 {
   NcGalaxySDObsRedshiftSpec *gsdorspec  = NC_GALAXY_SD_OBS_REDSHIFT_SPEC (gsdor);
   struct _IntegData *int_data           = g_new0 (struct _IntegData, 1);
-  NcGalaxySDObsRedshiftIntegrand *integ = nc_galaxy_sd_obs_redshift_integrand_new (_nc_galaxy_sd_obs_redshift_spec_integ_f,
+  NcGalaxySDObsRedshiftIntegrand *integ = nc_galaxy_sd_obs_redshift_integrand_new (use_lnp ? _nc_galaxy_sd_obs_redshift_spec_ln_integ_f : _nc_galaxy_sd_obs_redshift_spec_integ_f,
                                                                                    _integ_data_free,
                                                                                    _integ_data_copy,
                                                                                    NULL,
