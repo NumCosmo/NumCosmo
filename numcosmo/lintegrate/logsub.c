@@ -15,21 +15,39 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_sf_log.h>
+#include <math.h>
+#include <float.h>
 
-/* function to perform log(exp(lna) - exp(lnb)) maintaining numerical precision */
-static double logsubexp(const double x, const double y);
+/* Numerically stable log(exp(x) - exp(y)) for any x, y
+ * Returns -INFINITY if x == y
+ */
+static inline double
+logsubexp (double x, double y)
+{
+  double a, b;
+  double tmp;
 
-#define LOGDIFF(x, y) ((x) < (y) ? logsubexp(y, x) : logsubexp(x, y))
-
-/* function to perform log(exp(lna) - exp(lnb)) maintaining numerical precision */
-double logsubexp(const double x, const double y){
-  double tmp = x - y;
-  if ( x > y && fabs(tmp) > 1e3*GSL_DBL_EPSILON ){ /* numbers smaller than this can just give numerical noise in the gsl_sf_log_1plusx function */
-    return x + gsl_sf_log_1plusx(-exp(-tmp));
+  if (x > y)
+  {
+    a = x;
+    b = y;
   }
-  else{
-    return -INFINITY;
+  else
+  {
+    a = y;
+    b = x;
   }
+
+  tmp = a - b;
+
+  if (tmp > M_LN2)
+    /* Large difference: exp(-tmp) small, use log1p */
+    return a + log1p (-exp (-tmp));
+  else
+    /* Small difference: avoid cancellation */
+    return a + log (-expm1 (-tmp));
 }
+
+/* Macro for convenience, equivalent to LOGDIFF(x, y) */
+#define LOGDIFF(x, y) logsubexp (x, y)
+

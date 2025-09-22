@@ -18,22 +18,20 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_sf_log.h>
 
-/* function to perform log(exp(lna) + exp(lnb)) maintaining numerical precision */
-static double logaddexp(const double x, const double y);
+#include <math.h>
+#include <float.h>
 
-/* function to perform log(exp(lna) + exp(lnb)) maintaining numerical precision */
-double logaddexp(const double x, const double y){
+/* Numerically stable log(exp(x) + exp(y)) */
+static inline double
+logaddexp (double x, double y)
+{
   double tmp = x - y;
-  if ( x == y || fabs(tmp) < 1e3*GSL_DBL_EPSILON ){ return x + M_LN2; } /* require the x == y to deal with cases when x and y are both -inf */
-  else{
-    if ( tmp > 0. ){
-      return x + gsl_sf_log_1plusx(exp(-tmp));
-    }
-    else if ( tmp <= 0. ){
-      return y + gsl_sf_log_1plusx(exp(tmp));
-    }
-    else{
-      return tmp;
-    }
-  }
+
+  if (fabs (tmp) < 1e-12)
+    return x + M_LN2;
+  else if (tmp > 0)
+    return x + log1p (exp (-tmp));
+  else
+    return y + log1p (exp (tmp));
 }
+
