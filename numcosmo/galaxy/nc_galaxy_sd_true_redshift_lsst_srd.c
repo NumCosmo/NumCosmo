@@ -109,6 +109,7 @@ _nc_galaxy_sd_true_redshift_lsst_srd_finalize (GObject *object)
 
 static gdouble _nc_galaxy_sd_true_redshift_lsst_srd_gen (NcGalaxySDTrueRedshift *gsdtrlsst, NcmRNG *rng);
 static gdouble _nc_galaxy_sd_true_redshift_lsst_srd_integ (NcGalaxySDTrueRedshift *gsdtrlsst, gdouble z);
+static gdouble _nc_galaxy_sd_true_redshift_lsst_srd_ln_integ (NcGalaxySDTrueRedshift *gsdtrlsst, gdouble z);
 static void _nc_galaxy_sd_true_redshift_lsst_srd_set_lim (NcGalaxySDTrueRedshift *gsdtrlsst, const gdouble z_min, const gdouble z_max);
 static void _nc_galaxy_sd_true_redshift_lsst_srd_get_lim (NcGalaxySDTrueRedshift *gsdtrlsst, gdouble *z_min, gdouble *z_max);
 
@@ -160,10 +161,11 @@ nc_galaxy_sd_true_redshift_lsst_srd_class_init (NcGalaxySDTrueRedshiftLSSTSRDCla
 
   ncm_model_class_check_params_info (model_class);
 
-  sd_redshift_class->gen     = &_nc_galaxy_sd_true_redshift_lsst_srd_gen;
-  sd_redshift_class->integ   = &_nc_galaxy_sd_true_redshift_lsst_srd_integ;
-  sd_redshift_class->set_lim = &_nc_galaxy_sd_true_redshift_lsst_srd_set_lim;
-  sd_redshift_class->get_lim = &_nc_galaxy_sd_true_redshift_lsst_srd_get_lim;
+  sd_redshift_class->gen      = &_nc_galaxy_sd_true_redshift_lsst_srd_gen;
+  sd_redshift_class->integ    = &_nc_galaxy_sd_true_redshift_lsst_srd_integ;
+  sd_redshift_class->ln_integ = &_nc_galaxy_sd_true_redshift_lsst_srd_ln_integ;
+  sd_redshift_class->set_lim  = &_nc_galaxy_sd_true_redshift_lsst_srd_set_lim;
+  sd_redshift_class->get_lim  = &_nc_galaxy_sd_true_redshift_lsst_srd_get_lim;
 }
 
 #define VECTOR (NCM_MODEL (gsdtr))
@@ -222,6 +224,21 @@ _nc_galaxy_sd_true_redshift_lsst_srd_gen (NcGalaxySDTrueRedshift *gsdtr, NcmRNG 
 }
 
 static gdouble
+_nc_galaxy_sd_true_redshift_lsst_srd_ln_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
+{
+  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst          = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtr);
+  NcGalaxySDTrueRedshiftLSSTSRDPrivate * const self = nc_galaxy_sd_true_redshift_lsst_srd_get_instance_private (gsdtrlsst);
+
+  _nc_galaxy_sd_true_redshift_lsst_srd_update (gsdtr);
+
+  {
+    const gdouble y = pow (z, self->alpha);
+
+    return self->beta * log (z) - (y / self->y0) + self->ln_z_norm;
+  }
+}
+
+static gdouble
 _nc_galaxy_sd_true_redshift_lsst_srd_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
 {
   NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst          = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtr);
@@ -232,8 +249,7 @@ _nc_galaxy_sd_true_redshift_lsst_srd_integ (NcGalaxySDTrueRedshift *gsdtr, gdoub
   {
     const gdouble y = pow (z, self->alpha);
 
-    /* return pow (z, self->beta) * exp (-(y / self->y0)) * self->z_norm; */
-    return self->beta * log (z) - (y / self->y0) + self->ln_z_norm;
+    return pow (z, self->beta) * exp (-(y / self->y0)) * self->z_norm;
   }
 }
 
