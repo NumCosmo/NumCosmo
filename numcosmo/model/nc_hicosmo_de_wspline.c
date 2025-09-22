@@ -414,11 +414,11 @@ nc_hicosmo_de_wspline_get_alpha (NcHICosmoDEWSpline *wspline)
 gdouble
 _mean_kappa_integrand (gdouble alpha, gpointer data)
 {
-  NcHICosmoDEWSplinePrivate * const self = (NcHICosmoDEWSplinePrivate * const)data;
-  const gdouble d2w = ncm_spline_eval_deriv2 (self->w_alpha, alpha);
-  const gdouble d1w = ncm_spline_eval_deriv (self->w_alpha, alpha);
+  NcHICosmoDEWSplinePrivate * const self = (NcHICosmoDEWSplinePrivate * const) data;
+  const gdouble d2w                      = ncm_spline_eval_deriv2 (self->w_alpha, alpha);
+  const gdouble d1w                      = ncm_spline_eval_deriv (self->w_alpha, alpha);
 
-  return d2w * d2w / gsl_pow_3(1.0 + d1w * d1w);
+  return d2w * d2w / gsl_pow_3 (1.0 + d1w * d1w);
 }
 
 /**
@@ -433,12 +433,12 @@ gdouble
 nc_hicosmo_de_wspline_mean_kappa (NcHICosmoDEWSpline *wspline)
 {
   NcHICosmoDEWSplinePrivate * const self = wspline->priv;
-  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  gsl_integration_workspace **w          = ncm_integral_get_workspace ();
   gsl_function F;
   gdouble result, error;
 
   _nc_hicosmo_de_wspline_prepare (wspline);
-  
+
   F.function = &_mean_kappa_integrand;
   F.params   = self;
 
@@ -446,7 +446,7 @@ nc_hicosmo_de_wspline_mean_kappa (NcHICosmoDEWSpline *wspline)
 
   ncm_memory_pool_return (w);
 
-  return sqrt(result / self->alpha_f);
+  return sqrt (result / self->alpha_f);
 }
 
 static void
@@ -463,3 +463,4 @@ _nc_hicosmo_de_wspline_register_functions (void)
 {
   ncm_mset_func_list_register ("mean_kappa", "\\bar{\\kappa}", "NcHICosmoDEWSpline", "Mean w curvature", G_TYPE_NONE, _nc_hicosmo_de_wspline_mean_kappa, 0, 1);
 }
+
