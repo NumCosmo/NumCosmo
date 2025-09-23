@@ -703,3 +703,97 @@ class GenerateXCDM:
             mfunc_oa,
             self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
         )
+
+
+@dataclasses.dataclass(kw_only=True)
+class GenerateDEWSpline:
+    """Generate DE WSpline experiment."""
+
+    experiment: Annotated[
+        Path, typer.Argument(help="Path to the experiment file to fit.")
+    ]
+
+    n_knots: Annotated[
+        int, typer.Option(help="Number of knots.", show_default=True, min=5)
+    ] = 5
+
+    z_max: Annotated[
+        float, typer.Option(help="Maximum redshift.", show_default=True)
+    ] = 2.33
+
+    include_snia: Annotated[
+        Optional[SNIaID], typer.Option(help="Include SNIa data.", show_default=True)
+    ] = None
+
+    include_bao: Annotated[
+        Optional[BAOID], typer.Option(help="Include BAO data.", show_default=True)
+    ] = None
+
+    include_hubble: Annotated[
+        Optional[HID], typer.Option(help="Include Hubble data.", show_default=True)
+    ] = None
+
+    def __post_init__(self):
+        """Generate DE WSpline experiment."""
+        Ncm.cfg_init()
+
+        if self.experiment.suffix != ".yaml":
+            raise ValueError(
+                f"Invalid experiment file suffix: {self.experiment.suffix}"
+            )
+
+        cosmo = Nc.HICosmoDEWSpline.new(self.n_knots, self.z_max)
+        cosmo.omega_x2omega_k()
+        cosmo["Omegak"] = 0.0
+
+        for i in range(self.n_knots):
+            cosmo.param_set_desc(f"w_{i}", {"fit": True})
+
+        cosmo.param_set_desc("Omegac", {"fit": True})
+        mset = Ncm.MSet.new_array([cosmo])
+        dset = Ncm.Dataset.new()
+
+        dist = Nc.Distance.new(10.0)
+
+        if self.include_snia is not None:
+            add_snia_likelihood(dset, mset, dist, self.include_snia)
+
+        if self.include_bao is not None:
+            add_bao_likelihood(dset, mset, dist, self.include_bao)
+
+        if self.include_hubble is not None:
+            add_h_likelihood(dset, mset, self.include_hubble)
+            cosmo.param_set_desc("H0", {"fit": True})
+
+        if dset.get_length() == 0:
+            raise ValueError("No data included in the experiment.")
+
+        mset.prepare_fparam_map()
+        likelihood = Ncm.Likelihood.new(dset)
+        # It can be useful to add Omega_m as a function when fitting Omegac
+        mfunc_oa = Ncm.ObjArray.new()
+        mfunc_Omegam = Ncm.MSetFuncList.new("NcHICosmo:Omega_m0", None)
+        mfunc_oa.add(mfunc_Omegam)
+        mfunc_mean_kappa = Ncm.MSetFuncList.new("NcHICosmoDEWSpline:mean_kappa", None)
+        mfunc_oa.add(mfunc_mean_kappa)
+
+        prior = Ncm.PriorGaussFunc.new(mfunc_mean_kappa, 0.0, 3.0, 0.0)
+        likelihood.priors_add(prior)
+
+        # Save experiment
+        experiment = Ncm.ObjDictStr()
+
+        experiment.set("distance", dist)
+        experiment.set("likelihood", likelihood)
+        experiment.set("model-set", mset)
+
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser.to_binfile(
+            dset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
+        )
+        ser.dict_str_to_yaml_file(experiment, self.experiment.absolute().as_posix())
+
+        ser.array_to_yaml_file(
+            mfunc_oa,
+            self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
+        )
