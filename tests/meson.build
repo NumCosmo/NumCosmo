@@ -381,6 +381,10 @@ python_tests = [
         'source': 'test_py_hicosmo.py',
     },
     {
+        'name': 'py_hicosmo_de_wspline',
+        'source': 'test_py_hicosmo_de_wspline.py',
+    },
+    {
         'name': 'py_hicosmo_Vexp',
         'source': 'test_py_hicosmo_Vexp.py',
     },
