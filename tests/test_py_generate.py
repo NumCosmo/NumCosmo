@@ -120,3 +120,33 @@ def test_generate_xcdm_invalid_suffix(tmp_path: Path):
     bao_id = hicosmo.BAOID.ALL_COMBINED_JUN_2025
     with pytest.raises(ValueError, match="Invalid experiment file suffix: .txt"):
         exp = gen.GenerateXCDM(experiment=exp_file.absolute(), include_bao=bao_id)
+
+
+# DEWSpline
+# QSpline
+def test_generate_dewspline(tmp_path: Path):
+    exp_file = tmp_path / "dewspline.yaml"
+    bao_id = hicosmo.BAOID.ALL_COMBINED_JUN_2025
+    sne_id = hicosmo.SNIaID.COV_DES_Y5_STAT_SYS
+    h_id = hicosmo.HID.ALL_COMBINED_APR_2025
+    exp = gen.GenerateDEWSpline(
+        experiment=exp_file.absolute(),
+        include_snia=sne_id,
+        include_hubble=h_id,
+        include_bao=bao_id,
+    )
+
+    assert exp_file.exists()
+
+
+def test_generate_dewspline_no_data(tmp_path: Path):
+    exp_file = tmp_path / "qspline.yaml"
+    with pytest.raises(ValueError, match="No data included in the experiment."):
+        exp = gen.GenerateDEWSpline(experiment=exp_file.absolute())
+
+
+def test_generate_dewspline_invalid_suffix(tmp_path: Path):
+    exp_file = tmp_path / "dewspline.txt"
+    bao_id = hicosmo.BAOID.ALL_COMBINED_JUN_2025
+    with pytest.raises(ValueError, match="Invalid experiment file suffix: .txt"):
+        exp = gen.GenerateDEWSpline(experiment=exp_file.absolute(), include_bao=bao_id)

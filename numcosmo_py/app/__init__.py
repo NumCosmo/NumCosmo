@@ -47,6 +47,7 @@ from .generate import (
     GenerateClusterWL,
     GenerateQSpline,
     GenerateXCDM,
+    GenerateDEWSpline,
 )
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
@@ -181,6 +182,12 @@ GEN_XCDM_CMD: CMDArg = {
     "help": "Generate xcdm experiments.",
 }
 
+GEN_DEWSPLINE_CMD: CMDArg = {
+    "name": "de-wspline",
+    "no_args_is_help": True,
+    "help": "Generate DE w(z) spline experiments.",
+}
+
 # ------------------------------------------------------------------------------
 # Installing from-cosmosis command if COSMOSIS is installed and
 # all prerequisites are met.
@@ -214,3 +221,4 @@ app_generate.command(**GEN_JPAS_FORECAST_CMD)(GenerateJpasForecast)
 app_generate.command(**GEN_CLUSTER_WL_CMD)(GenerateClusterWL)
 app_generate.command(**GEN_QSPLINE_CMD)(GenerateQSpline)
 app_generate.command(**GEN_XCDM_CMD)(GenerateXCDM)
+app_generate.command(**GEN_DEWSPLINE_CMD)(GenerateDEWSpline)
