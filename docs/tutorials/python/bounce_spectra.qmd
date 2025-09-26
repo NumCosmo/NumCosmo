@@ -32,6 +32,7 @@ from IPython.display import HTML, Markdown, display
 from itertools import cycle
 from astropy import units
 from astropy import constants
+from tqdm import tqdm
 
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.plotting.tools import (
@@ -43,7 +44,7 @@ from numcosmo_py.plotting.tools import (
 Ncm.cfg_init()
 
 H0 = 70.0
-w = 1.0e-7
+w = 1.0e-6
 xb = 1.0e30
 Omegar = 1.0e-7
 Omegaw = 1.0 - Omegar
@@ -213,7 +214,11 @@ alpha_pk_end = cosmo_rw.abs_alpha(1.0e15)  # Final time in alpha for the power s
 
 # Compute equality and reference times
 x_eq = (3.0 * Omegaw * (1.0 + w) / (4.0 * Omegar)) ** (1.0 / (1.0 - 3.0 * w))
+x_S = ((c2**2 / c1**2) * 3.0 * Omegaw * (1.0 + w) / (4.0 * Omegar)) ** (
+    1.0 / (1.0 - 3.0 * w)
+)
 alpha_eq = -cosmo_rw.abs_alpha(x_eq)
+alpha_S = -cosmo_rw.abs_alpha(x_S)
 alpha0 = -cosmo_rw.abs_alpha(1.0)
 
 # Create the time grid
@@ -1683,7 +1688,23 @@ observables = [
     (Nc.HIPertITwoFluidsObs.PZETA, "pzeta"),
 ]
 
-s_interp = pert.compute_spectrum(cosmo_rw, alpha_pk_end, k_for_pk_a * RH_Mpc, None)
+# Open the log file with line buffering
+with open("spectrum_progress.log", "w", buffering=1) as f:
+    # Create tqdm progress bar writing to the file
+    progress_bar = tqdm(total=len(k_for_pk_a), file=f, ncols=80)
+
+    def progress_callback(step: int, _: int) -> None:
+        # Update the progress bar
+        progress_bar.update(1)
+        progress_bar.refresh()
+        f.flush()
+
+    # Run your computation with the callback
+    s_interp = pert.compute_spectrum(
+        cosmo_rw, alpha_pk_end, k_for_pk_a * RH_Mpc, progress_callback
+    )
+
+    progress_bar.close()
 
 power_spectra_k = {
     f"{name}{mode_str}": np.abs(
@@ -1709,11 +1730,14 @@ Now we can plot the power spectra for the observables of interest. We will plot 
 
 ```{python}
 # | label: fig-zeta-power-spectrum-k
-# | fig-cap: "Power spectrum of the adiabatic perturbation $\\zeta$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\zeta}$. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The solid line correspond Mode~1, and the dashed line correspond to Mode~2."
+# | fig-cap: "Power spectrum of the adiabatic perturbation $\\zeta$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\zeta}$. The wavenumber $k^\\mathrm{S}_2$ and $k^{\\times}_2$ are marked with vertical solid and dashed lines, respectively. The large scale approximation is marked with a dotted line."
 # | fig-cap-location: bottom
 # | code-fold: true
 
 k_pivot = 1.0
+k_S_2 = k_pivot / (
+    c2 * Nc.HIPertITwoFluids.eom_eval(cosmo_rw, alpha_S, k_pivot).Fnu * RH_Mpc
+)
 k_cross1 = k_pivot / (
     c1 * Nc.HIPertITwoFluids.eom_eval(cosmo_rw, alpha_eq, k_pivot).Fnu * RH_Mpc
 )
@@ -1727,6 +1751,7 @@ fig, ax = plt.subplots()
 
 P_zeta1_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta1"]
 P_zeta2_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta2"]
+P_zeta_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta"]
 
 ax.plot(
     k_for_plot_a, P_zeta1_k, lw=lw, linestyle="solid", label=r"$\mathcal{P}_{\zeta 1}$"
@@ -1734,21 +1759,19 @@ ax.plot(
 ax.plot(
     k_for_plot_a, P_zeta2_k, lw=lw, linestyle="solid", label=r"$\mathcal{P}_{\zeta 2}$"
 )
-
 ax.plot(
-    k_for_plot_a,
-    k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["dzeta"],
-    lw=lw,
-    linestyle="dashed",
-    label=r"$\mathcal{P}_{\Delta \zeta}$",
+    k_for_plot_a, P_zeta_k, lw=lw, linestyle="solid", label=r"$\mathcal{P}_{\zeta}$"
 )
 
 AP_zeta_k = large_scale_P_zeta(k_for_plot_a * RH_Mpc)
 
 ax.plot(k_for_plot_a, AP_zeta_k, lw=lw, linestyle="dotted")
 
-ax.axvline(k_cross1, linestyle="solid", lw=lw, color="k")
+ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
 ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+
+# Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
 
 ax.set_ylabel(r"$\mathcal{P}_{\zeta}$")
 ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
@@ -1757,6 +1780,8 @@ ax.legend()
 ax.set_xscale("log")
 ax.set_yscale("log")
 ax.grid()
+
+ax.set_ylim(np.min(P_zeta2_k) * 1.0e-2, np.max(P_zeta2_k) * 1.0e2)
 
 fig.savefig(os.path.join(fig_dir, "zeta_power_spectrum_k.pdf"), bbox_inches="tight")
 
@@ -1802,6 +1827,7 @@ ax.plot(
 
 ax.axvline(k_cross1, linestyle="solid", lw=lw, color="k")
 ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+ax.axvline(k_S_2, linestyle="dotted", lw=lw, color="k")
 
 ax.set_ylabel(r"$\mathcal{P}_{\Pi_\zeta}$")
 ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
@@ -1811,7 +1837,7 @@ ax.set_xscale("log")
 ax.set_yscale("log")
 ax.grid()
 
-fig.savefig(os.path.join(fig_dir, "zeta_power_spectrum_k.pdf"), bbox_inches="tight")
+fig.savefig(os.path.join(fig_dir, "Pzeta_power_spectrum_k.pdf"), bbox_inches="tight")
 
 fig.set_size_inches(6, 3)
 plt.show()
@@ -1823,7 +1849,7 @@ Next we plot the power spectra for $\delta_{\rho}$ and $\Delta\delta_{\rho}$:
 
 ```{python}
 # | label: fig-delta-rho-power-spectrum-k
-# | fig-cap: "Power spectrum of the density perturbation $\\delta_{\\rho}$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\delta_{\\rho}}$. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The solid line correspond Mode~1, and the dashed line correspond to Mode~2."
+# | fig-cap: "Power spectrum of the density perturbation $\\delta_{\\rho}$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\delta_{\\rho}}$. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The solid line correspond Mode 1, and the dashed line correspond to Mode 2."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1849,6 +1875,7 @@ ax.plot(
 
 ax.axvline(k_cross1, linestyle="solid", lw=lw, color="k")
 ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+ax.axvline(k_S_2, linestyle="dotted", lw=lw, color="k")
 
 ax.set_ylabel(r"$\mathcal{P}_{\delta_{\rho}}$")
 ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
@@ -1869,7 +1896,7 @@ We can also plot the power spectra for the individual fluid density perturbation
 
 ```{python}
 # | label: fig-delta-rw-power-spectrum-k
-# | fig-cap: "Power spectrum of the individual fluid density perturbations $\\delta_{\\mathrm{r}}$ (solid) and $\\delta_{w}$ (dashed) as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectra $\\mathcal{P}_{\\delta_{\\mathrm{r}}}$ and $\\mathcal{P}_{\\delta_{w}}$. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The solid line correspond Mode~1, and the dashed line correspond to Mode~2."
+# | fig-cap: "Power spectrum of the individual fluid density perturbations $\\delta_{\\mathrm{r}}$ (solid) and $\\delta_{w}$ (dashed) as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectra $\\mathcal{P}_{\\delta_{\\mathrm{r}}}$ and $\\mathcal{P}_{\\delta_{w}}$. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The solid line correspond Mode 1, and the dashed line correspond to Mode 2."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1895,6 +1922,7 @@ ax.plot(
 
 ax.axvline(k_cross1, linestyle="solid", lw=lw, color="k")
 ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+ax.axvline(k_S_2, linestyle="dotted", lw=lw, color="k")
 
 ax.set_ylabel(r"$\mathcal{P}_{\delta_{i}}$")
 ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
@@ -1913,7 +1941,7 @@ Finally, the fluid velocity potentials $\mathcal{V}_{\mathrm{r}}$ and $\mathcal{
 
 ```{python}
 # | label: fig-fku-rw-power-spectrum-k
-# | fig-cap: "Power spectrum of the fluid velocity potentials $\\mathcal{V}_{\\mathrm{r}}$ (solid) and $\\mathcal{V}_{w}$ (dashed) as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectra $\\mathcal{P}_{\\mathcal{V}_{\\mathrm{r}}}$ and $\\mathcal{P}_{\\mathcal{V}_{w}}$. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The solid line correspond Mode~1, and the dashed line correspond to Mode~2."
+# | fig-cap: "Power spectrum of the fluid velocity potentials $\\mathcal{V}_{\\mathrm{r}}$ (solid) and $\\mathcal{V}_{w}$ (dashed) as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectra $\\mathcal{P}_{\\mathcal{V}_{\\mathrm{r}}}$ and $\\mathcal{P}_{\\mathcal{V}_{w}}$. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The solid line correspond Mode 1, and the dashed line correspond to Mode 2."
 # | fig-cap-location: bottom
 # | code-fold: true
 
