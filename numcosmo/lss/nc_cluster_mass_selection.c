@@ -609,11 +609,8 @@ _nc_cluster_mass_selection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdo
 	gsl_integration_qag (&F, CUT, self->lnR_max, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp, &err);
 	ncm_memory_pool_return (w);
 	completeness = nc_cluster_mass_selection_completeness(selection, lnM, z);
-    
-    if (intp * completeness  < 0)
-    {return 0.0;}
-    else
-    {return fabs( intp * completeness);}
+
+    return fabs( intp * completeness);
 }
 
 static gdouble
@@ -651,12 +648,10 @@ _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, 
 		{
 			gsl_integration_qag (&F, lnM_obs_lower[0], lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp_bin, &err);
 			ncm_memory_pool_return (w);
-		}
-        if (intp_bin * completeness < 0)
-        {return 0.0;}
-        else
-        {return fabs(intp_bin * completeness);}
+
+        return fabs(intp_bin * completeness);
 	}
+}
 }
 
 
