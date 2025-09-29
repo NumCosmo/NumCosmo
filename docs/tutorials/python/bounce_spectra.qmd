@@ -1795,6 +1795,21 @@ print(
 
 ```
 
+Now considering a CMB like interval ($10^{-4} < k < 10^0$ Mpc$^{-1}$), we can see that the power spectrum is dominated by the large-scale approximation plus the small-scale loss of power. To be more precise, we fist a constant in this interval, which is the ratio of the power spectrum to the large-scale approximation.
+
+```{python}
+
+k_for_cmb_constraint = k_for_plot_a < 1.0
+lnk_for_cmb = np.log(k_for_plot_a[k_for_cmb_constraint])
+ln_zeta_cmb = np.log(RH_Mpc**3 * power_spectra_k["zeta"][k_for_cmb_constraint])
+
+# Fit a constant to the power spectrum in the CMB-scales interval
+ln_zeta_cmb_fit = np.polyfit(lnk_for_cmb, ln_zeta_cmb, deg=0)
+
+
+```
+
+
 Next we plot the power spectra for $\Pi_\zeta$ and $\Delta\Pi_\zeta$:
 
 ```{python}
