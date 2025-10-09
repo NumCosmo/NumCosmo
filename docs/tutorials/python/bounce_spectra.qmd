@@ -1801,7 +1801,8 @@ Now considering a CMB like interval ($10^{-4} < k < 10^0$ Mpc$^{-1}$), we can se
 
 k_for_cmb_constraint = k_for_plot_a < 1.0
 k_for_cmb = k_for_plot_a[k_for_cmb_constraint]
-lnk_for_cmb = np.log(k_for_plot_a[k_for_cmb_constraint])
+# Using same pivot scale as Planck 2018 k0 = 0.05 Mpc^-1
+lnk_for_cmb = np.log(k_for_plot_a[k_for_cmb_constraint] / 0.05)
 ln_zeta_cmb = np.log(
     RH_Mpc**3 * k_for_cmb**3 * power_spectra_k["zeta"][k_for_cmb_constraint]
 )
