@@ -1814,7 +1814,7 @@ ns_lin = fit_lin[-2] + 1.0
 # Quadratic fit (spectral index + running)
 fit_quad = np.polyfit(lnk_for_cmb, ln_zeta_cmb, deg=2)
 ns_quad = fit_quad[-2] + 1.0
-alpha_s = fit_quad[-3]
+alpha_s = fit_quad[-3] * 2.0
 
 # Report
 report = f"""
