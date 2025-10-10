@@ -1958,3 +1958,164 @@ nc_hipert_two_fluids_compute_spectrum (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo,
   }
 }
 
+/**
+ * nc_hipert_two_fluids_compute_spectra:
+ * @ptf: a #NcHIPertTwoFluids
+ * @cosmo: a #NcHICosmo
+ * @alpha_a: (element-type gdouble): an array of alpha
+ * @k_a: (element-type gdouble): an array of k
+ * @logger: (nullable) (scope call): a #NcHIPertTwoFluidsLogger
+ *
+ * Computes the spectrum at a set of alpha values and a set of k values.
+ *
+ * Returns: (transfer full) (element-type NcHIPertTwoFluidsStateInterp): a #NcHIPertTwoFluidsStateInterp
+ */
+GPtrArray *
+nc_hipert_two_fluids_compute_spectra (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, GArray *alpha_a, GArray *k_a, NcHIPertTwoFluidsLogger logger)
+{
+  NcHIPert *pert                        = NC_HIPERT (ptf);
+  NcHIPertTwoFluidsPrivate * const self = ptf->priv;
+  const gdouble alpha_try               = 0.5 * (self->alpha_i + self->alpha_f);
+  NcmVector *initial_condition          = ncm_vector_new (NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+  GArray *k_array                       = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), k_a->len);
+  const guint n_alpha                   = alpha_a->len;
+  GPtrArray *spectra                    = g_ptr_array_new ();
+  GArray **state1[NC_HIPERT_ITWO_FLUIDS_VARS_LEN];
+  GArray **state2[NC_HIPERT_ITWO_FLUIDS_VARS_LEN];
+  NcmVector *state;
+  gint mode;
+  guint i, j;
+
+  /* g_ptr_array_set_free_func (spectra, g_free); */
+
+  g_assert_cmpint (k_a->len, >, 0);
+  g_assert_cmpint (n_alpha, >, 0);
+  g_assert_cmpint (g_array_get_element_size (k_a), ==, sizeof (gdouble));
+  g_assert_cmpint (g_array_get_element_size (alpha_a), ==, sizeof (gdouble));
+
+  g_assert_cmpfloat (g_array_index (k_a, gdouble, 0), >, 0.0);
+
+  /* Checking the order of the k array */
+  for (i = 0; i < k_a->len - 1; i++)
+  {
+    g_assert_cmpfloat (g_array_index (k_a, gdouble, i + 1), >, g_array_index (k_a, gdouble, i));
+  }
+
+  /* Checking the order of the alpha array */
+  for (i = 0; i < n_alpha - 1; i++)
+  {
+    g_assert_cmpfloat (g_array_index (alpha_a, gdouble, i + 1), >, g_array_index (alpha_a, gdouble, i));
+  }
+
+  for (i = 0; i < NC_HIPERT_ITWO_FLUIDS_VARS_LEN; i++)
+  {
+    state1[i] = g_new0 (GArray *, n_alpha);
+    state2[i] = g_new0 (GArray *, n_alpha);
+
+    for (j = 0; j < n_alpha; j++)
+    {
+      state1[i][j] = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+      state2[i][j] = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+    }
+  }
+
+  for (i = 0; i < k_a->len; i++)
+  {
+    const gdouble k = g_array_index (k_a, gdouble, i);
+
+    nc_hipert_set_mode_k (pert, k);
+    g_array_append_val (k_array, k);
+
+    mode = 1;
+    {
+      const gdouble alpha_i = nc_hipert_two_fluids_get_wkb_limit (ptf, cosmo, mode, alpha_try, self->wkb_reltol);
+      gdouble alpha_last;
+      guint k;
+
+      nc_hipert_two_fluids_get_init_cond_zetaS (ptf, cosmo, alpha_i, mode, M_PI * 0.25, initial_condition);
+      nc_hipert_two_fluids_set_init_cond (ptf, cosmo, alpha_i, mode, FALSE, initial_condition);
+
+      for (k = 0; k < n_alpha; k++)
+      {
+        const gdouble alpha = g_array_index (alpha_a, gdouble, k);
+
+        nc_hipert_two_fluids_evolve (ptf, cosmo, alpha);
+
+        state = nc_hipert_two_fluids_peek_state (ptf, cosmo, &alpha_last);
+
+        for (j = 0; j < NC_HIPERT_ITWO_FLUIDS_VARS_LEN; j++)
+        {
+          G_ARRAY_APPEND_FUNCVAL (state1[j][k], ncm_vector_get (state, j));
+        }
+      }
+    }
+
+    mode = 2;
+    {
+      const gdouble alpha_i = nc_hipert_two_fluids_get_wkb_limit (ptf, cosmo, mode, alpha_try, self->wkb_reltol);
+      gdouble alpha_last;
+      guint k;
+
+      nc_hipert_two_fluids_get_init_cond_zetaS (ptf, cosmo, alpha_i, mode, M_PI * 0.25, initial_condition);
+      nc_hipert_two_fluids_set_init_cond (ptf, cosmo, alpha_i, mode, FALSE, initial_condition);
+
+      for (k = 0; k < n_alpha; k++)
+      {
+        const gdouble alpha = g_array_index (alpha_a, gdouble, k);
+
+        nc_hipert_two_fluids_evolve (ptf, cosmo, alpha);
+
+        state = nc_hipert_two_fluids_peek_state (ptf, cosmo, &alpha_last);
+
+        for (j = 0; j < NC_HIPERT_ITWO_FLUIDS_VARS_LEN; j++)
+        {
+          G_ARRAY_APPEND_FUNCVAL (state2[j][k], ncm_vector_get (state, j));
+        }
+      }
+    }
+
+    if (logger)
+      logger (i, k_a->len);
+  }
+
+  ncm_vector_free (initial_condition);
+
+  for (j = 0; j < n_alpha; j++)
+  {
+    NcHIPertTwoFluidsStateInterp *sinterp = g_new0 (NcHIPertTwoFluidsStateInterp, 1);
+    const gdouble alpha                   = g_array_index (alpha_a, gdouble, j);
+
+    g_ptr_array_add (spectra, sinterp);
+
+    sinterp->interp_mode = 2;
+    sinterp->state.alpha = alpha;
+    sinterp->state.norma = nc_hipert_itwo_fluids_eval_unit (NC_HIPERT_ITWO_FLUIDS (cosmo));
+
+    for (i = 0; i < NC_HIPERT_ITWO_FLUIDS_VARS_LEN; i++)
+    {
+      sinterp->mode1_splines[i] = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+      sinterp->mode2_splines[i] = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+      printf ("%p %p %p\n", sinterp, sinterp->mode1_splines[i], sinterp->mode2_splines[i]);
+
+      ncm_spline_set_array (sinterp->mode1_splines[i], k_array, state1[i][j], TRUE);
+      ncm_spline_set_array (sinterp->mode2_splines[i], k_array, state2[i][j], TRUE);
+    }
+
+    for (i = 0; i < NC_HIPERT_ITWO_FLUIDS_VARS_LEN; i++)
+    {
+      g_array_unref (state1[i][j]);
+      g_array_unref (state2[i][j]);
+    }
+  }
+
+  for (i = 0; i < NC_HIPERT_ITWO_FLUIDS_VARS_LEN; i++)
+  {
+    g_free (state1[i]);
+    g_free (state2[i]);
+  }
+
+  g_array_unref (k_array);
+
+  return spectra;
+}
+

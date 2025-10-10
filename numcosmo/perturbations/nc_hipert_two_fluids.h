@@ -112,6 +112,7 @@ NcmSpline *nc_hipert_two_fluids_compute_zeta_spectrum (NcHIPertTwoFluids *ptf, N
 
 NcHIPertTwoFluidsStateInterp *nc_hipert_two_fluids_evol_mode (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo);
 NcHIPertTwoFluidsStateInterp *nc_hipert_two_fluids_compute_spectrum (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, const gdouble alpha, GArray *k_a, NcHIPertTwoFluidsLogger logger);
+GPtrArray *nc_hipert_two_fluids_compute_spectra (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, GArray *alpha_a, GArray *k_a, NcHIPertTwoFluidsLogger logger);
 
 #define NC_HIPERT_TWO_FLUIDS_A2Q(Ai) (cimag (Ai))
 #define NC_HIPERT_TWO_FLUIDS_A2P(Ai) (creal (Ai))

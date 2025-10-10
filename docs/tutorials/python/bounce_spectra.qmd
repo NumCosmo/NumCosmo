@@ -1700,16 +1700,16 @@ with open("spectrum_progress.log", "w", buffering=1) as f:
         f.flush()
 
     # Run your computation with the callback
-    s_interp = pert.compute_spectrum(
-        cosmo_rw, alpha_pk_end, k_for_pk_a * RH_Mpc, progress_callback
+    s_interp_a = pert.compute_spectra(
+        cosmo_rw, [0.01, alpha_pk_end], k_for_pk_a * RH_Mpc, progress_callback
     )
 
     progress_bar.close()
 
-power_spectra_k = {
+power_spectra0_k = {
     f"{name}{mode_str}": np.abs(
         [
-            s_interp.eval(cosmo_rw, k * RH_Mpc).eval_obs(mode, obs, obs)
+            s_interp_a[0].eval(cosmo_rw, k * RH_Mpc).eval_obs(mode, obs, obs)
             for k in k_for_plot_a
         ]
     )
@@ -1720,6 +1720,22 @@ power_spectra_k = {
         (Nc.HIPertITwoFluidsObsMode.BOTH, ""),
     ]
 }
+
+power_spectra_k = {
+    f"{name}{mode_str}": np.abs(
+        [
+            s_interp_a[1].eval(cosmo_rw, k * RH_Mpc).eval_obs(mode, obs, obs)
+            for k in k_for_plot_a
+        ]
+    )
+    for obs, name in observables
+    for mode, mode_str in [
+        (Nc.HIPertITwoFluidsObsMode.ONE, "1"),
+        (Nc.HIPertITwoFluidsObsMode.TWO, "2"),
+        (Nc.HIPertITwoFluidsObsMode.BOTH, ""),
+    ]
+}
+
 
 ```
 
@@ -1911,9 +1927,11 @@ ax.plot(
     label=r"$\mathcal{P}_{\Pi_\zeta 2}$",
 )
 
-ax.axvline(k_cross1, linestyle="solid", lw=lw, color="k")
+ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
 ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
-ax.axvline(k_S_2, linestyle="dotted", lw=lw, color="k")
+
+# Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
 
 ax.set_ylabel(r"$\mathcal{P}_{\Pi_\zeta}$")
 ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
@@ -1959,9 +1977,11 @@ ax.plot(
     label=r"$\mathcal{P}_{\Delta \delta_{\rho}}$",
 )
 
-ax.axvline(k_cross1, linestyle="solid", lw=lw, color="k")
+ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
 ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
-ax.axvline(k_S_2, linestyle="dotted", lw=lw, color="k")
+
+# Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
 
 ax.set_ylabel(r"$\mathcal{P}_{\delta_{\rho}}$")
 ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
@@ -2006,9 +2026,11 @@ ax.plot(
     label=r"$\mathcal{P}_{\delta_{w}}$",
 )
 
-ax.axvline(k_cross1, linestyle="solid", lw=lw, color="k")
+ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
 ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
-ax.axvline(k_S_2, linestyle="dotted", lw=lw, color="k")
+
+# Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
 
 ax.set_ylabel(r"$\mathcal{P}_{\delta_{i}}$")
 ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
@@ -2023,7 +2045,7 @@ fig.set_size_inches(6, 3)
 plt.show()
 ```
 
-Finally, the fluid velocity potentials $\mathcal{V}_{\mathrm{r}}$ and $\mathcal{V}_{w}$:
+The fluid velocity potentials $\mathcal{V}_{\mathrm{r}}$ and $\mathcal{V}_{w}$:
 
 ```{python}
 # | label: fig-fku-rw-power-spectrum-k
@@ -2051,21 +2073,11 @@ ax.plot(
     label=r"$\mathcal{P}_{\mathcal{V}_{w}}$",
 )
 
-ax.axvline(
-    k_cross1,
-    linestyle="solid",
-    lw=lw,
-    color="k",
-    label=r"$c_\mathrm{r} F_\nu(x_\mathrm{eq})$",
-)
+ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
+ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
 
-ax.axvline(
-    k_cross2,
-    linestyle="dashed",
-    lw=lw,
-    color="k",
-    label=r"$c_\mathrm{w} F_\nu(x_\mathrm{eq})$",
-)
+# Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
 
 ax.set_ylabel(r"$\mathcal{P}_{\mathcal{V}_{i}}$")
 ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
@@ -2080,3 +2092,49 @@ fig.set_size_inches(6, 3)
 plt.show()
 ```
 
+We can also plot $\zeta$ and $\Delta\zeta$ in the same plot to observe another source of isocurvature.
+
+```{python}
+# | label: fig-zeta-dzeta-power-spectrum-k
+# | fig-cap: "Power spectrum of "
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+
+fig, ax = plt.subplots()
+
+ax.plot(
+    k_for_plot_a,
+    k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta"],
+    lw=lw,
+    linestyle="solid",
+    label=r"$\mathcal{P}_{\zeta}$",
+)
+
+ax.plot(
+    k_for_plot_a,
+    k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["dzeta"],
+    lw=lw,
+    linestyle="dashed",
+    label=r"$\mathcal{P}_{\Delta \zeta}$",
+)
+
+ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
+ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+
+# Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+
+ax.set_ylabel(r"$\mathcal{P}_{\zeta}$, $\mathcal{P}_{\Delta \zeta}$")
+ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+
+ax.legend()
+ax.set_xscale("log")
+ax.set_yscale("log")
+ax.grid()
+
+fig.savefig(os.path.join(fig_dir, "fku_rw_power_spectrum_k.pdf"), bbox_inches="tight")
+fig.set_size_inches(6, 3)
+plt.show()
+```
