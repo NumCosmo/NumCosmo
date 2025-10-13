@@ -4,7 +4,7 @@ conda:
   environment: devel_environment.yml
 
 build:
-  os: ubuntu-22.04
+  os: ubuntu-24.04
   tools:
     # Because we are using python: miniconda-latest, we will be using conda
     # instead of conda.
