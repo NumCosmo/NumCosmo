@@ -14,7 +14,7 @@ build:
     - conda env create --file devel_environment.yml
     - conda install -n numcosmo_developer -y gi-docgen jupyter plotnine tabulate ipython_genutils
     - wget https://github.com/quarto-dev/quarto-cli/releases/download/v1.8.25/quarto-1.8.25-linux-amd64.deb
-    - sudo dpkg -i quarto-1.8.25-linux-amd64.deb
+    - dpkg -i quarto-1.8.25-linux-amd64.deb
     - conda run -n numcosmo_developer meson setup build -Ddocumentation=true -Db_lto=false 
     - conda run -n numcosmo_developer meson compile -C build
     - mkdir --parents $READTHEDOCS_OUTPUT/html/
