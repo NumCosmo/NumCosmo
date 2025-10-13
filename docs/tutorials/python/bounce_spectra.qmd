@@ -47,7 +47,7 @@ from numcosmo_py.plotting.tools import (
 Ncm.cfg_init()
 
 H0 = 70.0
-w = 1.0e-10
+w = 1.0e-6
 xb = 1.0e30
 Omegar = 1.0e-7
 Omegaw = 1.0 - Omegar
@@ -241,7 +241,7 @@ We then plot the gravitational weights:
 
 ```{python}
 # | label: fig-gravitational-weight
-# | fig-cap: "Gravitational weights $\\gamma_\\mathrm{r}$ and $\\gamma_w$, and $F_\\nu$ (ratio of Hubble radius to physical wavelength). Shaded regions indicate matter (light red) and radiation dominance (light blue). The dashed line indicates the time of equality, $x=x_\\mathrm{eq}$. The dotted line indicates $x=1$."
+# | fig-cap: "Gravitational weights $\\gamma_\\mathrm{r}$, $\\gamma_w$, and $F_\\nu$. Shaded areas show matter/radiation dominance; vertical lines mark $x_{\\rm eq}$ and $x=1$."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -286,7 +286,7 @@ The simple $c_i F_\nu$ test is only an estimate of the truncation error. In the 
 
 ```{python}
 # | label: fig-truncation-error
-# | fig-cap: "The adiabatic truncation error for each mode and its square root. Shaded regions indicate matter and radiation dominance. The dashed line indicates the time of equality, $x=x_\\mathrm{eq}$. The dotted line indicates $x=1$."
+# | fig-cap: "Adiabatic truncation estimates for each mode (compare with $c_iF_\\nu$). Shaded regions: matter/radiation dominance; vertical lines mark $x_{\\rm eq}$ and $x=1$."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -368,7 +368,7 @@ to zero during the matter-radiation transition. It is useful to zoom in on the r
 
 ```{python}
 # | label: fig-truncation-error-zoom
-# | fig-cap: "Zoom-in of the adiabatic truncation error for each mode around matter-radiation equality. Shaded regions indicate matter and radiation dominance. The dashed line indicates the time of equality, $x=x_\\mathrm{eq}$."
+# | fig-cap: "Zoom around matter-radiation equality showing adiabatic truncation estimates."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -556,7 +556,7 @@ We can plot the mode evolution for mode $k\in {k_\mathrm{min}, k_\mathrm{max}}$,
 
 ```{python}
 # | label: fig-zeta-mode-evolution
-# | fig-cap: "Evolution of multiple modes, each shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). Top panels: $\\lambda$ for each mode compared with the Hubble radius multiplied by the relevant sound speed, $c_s x R_H$ for the radiation-supported solution ($k^{-1}\\zeta_1$, left) and $c_w x R_H$ for the matter-supported solution ($k^{-1}\\zeta_2$, right). The extra factor $k^{-1}$ separates the modes visually. Bottom panels: evolution of $\\zeta_1$ and $\\zeta_2$ across radiation- and matter-dominated eras. Vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. To emphasize oscillations inside the Hubble radius (sub-Hubble regime), only the real part of the mode functions is plotted. Deep inside this regime, computing exact mode functions is computationally expensive, so the adiabatic approximation is used instead, which smooths out oscillations and explains their absence in that region."
+# | fig-cap: "Mode evolution for $\\zeta_i$; colors show comoving wavelength $\\lambda$ (Mpc). Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\zeta_i$ evolution; vertical lines mark sound-horizon crossings."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -700,7 +700,7 @@ Now we can do the same for the entropy perturbation $Q_i \propto \Delta\zeta_i \
 
 ```{python}
 # | label: fig-dzeta-mode-evolution
-# | fig-cap: "Evolution of multiple modes, each shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). Top panels: $\\lambda$ for each mode compared with the Hubble radius multiplied by the relevant sound speed, $c_s x R_H$ for the radiation-supported solution ($k^{-1}\\Delta\\zeta_1$, left) and $c_w x R_H$ for the matter-supported solution ($k^{-1}\\Delta\\zeta_2$, right). The extra factor $k^{-1}$ separates the modes visually. Bottom panels: evolution of $\\Delta\\zeta_1$ and $\\Delta\\zeta_2$ across radiation- and matter-dominated eras. Vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. To emphasize oscillations inside the Hubble radius (sub-Hubble regime), only the real part of the mode functions is plotted. Deep inside this regime, computing exact mode functions is computationally expensive, so the adiabatic approximation is used instead, which smooths out oscillations and explains their absence in that region."
+# | fig-cap: "Mode evolution for the entropy perturbations $\\Delta\\zeta_i$; color bar shows $\\lambda$. Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\Delta\\zeta_i$ evolution."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -827,7 +827,7 @@ Next we can plot the density perturbations $\bar{\delta}_{\rho i}$ for each mode
 
 ```{python}
 # | label: fig-delta-rho-mode-evolution
-# | fig-cap: "Evolution of multiple modes, each shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). Top panels: $\\lambda$ for each mode compared with the Hubble radius multiplied by the relevant sound speed, $c_s x R_H$ for the radiation-supported solution ($k^{-1}\\delta\\rho_1$, left) and $c_w x R_H$ for the matter-supported solution ($k^{-1}\\delta\\rho_2$, right). The extra factor $k^{-1}$ separates the modes visually. Bottom panels: evolution of $\\delta\\rho_1$ and $\\delta\\rho_2$ across radiation- and matter-dominated eras. Vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. To emphasize oscillations inside the Hubble radius (sub-Hubble regime), only the real part of the mode functions is plotted. Deep inside this regime, computing exact mode functions is computationally expensive, so the adiabatic approximation is used instead, which smooths out oscillations and explains their absence in that region."
+# | fig-cap: "Mode evolution for density perturbations $\\delta_{\\rho i}$; color bar shows $\\lambda$. Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\bar{\\delta}_{\\rho i}$ evolution."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -951,7 +951,7 @@ Finally, we can plot the difference in density perturbations $\Delta\delta_{\rho
 
 ```{python}
 # | label: fig-delta-delta-rho-mode-evolution
-# | fig-cap: "Evolution of multiple modes, each shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). Top panels: $\\lambda$ for each mode compared with the Hubble radius multiplied by the relevant sound speed, $c_s x R_H$ for the radiation-supported solution ($k^{-1}\\Delta\\delta\\rho_1$, left) and $c_w x R_H$ for the matter-supported solution ($k^{-1}\\Delta\\delta\\rho_2$, right). The extra factor $k^{-1}$ separates the modes visually. Bottom panels: evolution of $\\Delta\\delta\\rho_1$ and $\\Delta\\delta\\rho_2$ across radiation- and matter-dominated eras. Vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. To emphasize oscillations inside the Hubble radius (sub-Hubble regime), only the real part of the mode functions is plotted. Deep inside this regime, computing exact mode functions is computationally expensive, so the adiabatic approximation is used instead, which smooths out oscillations and explains their absence in that region."
+# | fig-cap: "Mode evolution for $\\Delta\\delta_{\\rho i}$; color bar shows $\\lambda$. Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\Delta\\delta_{\\rho i}$ evolution."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1075,7 +1075,7 @@ For completeness, we also plot the evolution of the momentum of the curvature pe
 
 ```{python}
 # | label: fig-pzeta-evolution
-# | fig-cap: "Evolution of multiple modes, each shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). Top panels: $\\lambda$ for each mode compared with the Hubble radius multiplied by the relevant sound speed, $c_s x R_H$ for the radiation-supported solution ($k^{-1}\\Pi_{\\zeta 1}$, left) and $c_w x R_H$ for the matter-supported solution ($k^{-1}\\Pi_{\\zeta 2}, right). The extra factor $k^{-1}$ separates the modes visually. Bottom panels: evolution of $\\Pi_{\\zeta 1}$ and $\\Pi_{\\zeta 2}$ across radiation- and matter-dominated eras. Vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. To emphasize oscillations inside the Hubble radius (sub-Hubble regime), only the real part of the mode functions is plotted. Deep inside this regime, computing exact mode functions is computationally expensive, so the adiabatic approximation is used instead, which smooths out oscillations and explains their absence in that region."
+# | fig-cap: "Mode evolution for momentum $\\Pi_{\\zeta i}$; color bar shows $\\lambda$. Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\Pi_{\\zeta i}$ evolution."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1192,11 +1192,11 @@ $$
 $$
 
 
-Now we plot the power spectrum time evolution for $\zeta_i$:
+Now we plot the power spectrum time evolution for $\zeta_i$. The figure shows the two mode spectra ($\zeta_1$ left, $\zeta_2$ right). A dotted horizontal line marks the large-scale approximation; shaded regions indicate radiation- and matter-dominated eras.
 
 ```{python}
 # | label: fig-zeta-power-spectrum
-# | fig-cap: "Power spectrum of the adiabatic perturbation $\\zeta_i$ for each mode, shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). The left and right panels show the dimensionless power spectrum of $\\zeta_1$ and $\\zeta_2$, respectively. The horizontal dotted line mark the large scale power spectrum approximation. The shaded regions indicate the radiation-dominated era (left) and the matter-dominated era (right)."
+# | fig-cap: "Dimensionless power $\\mathcal{P}_{\\zeta_i}(\\alpha)$ for modes 1 (left) and 2 (right); colors show $\\lambda$ (Mpc)."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1253,7 +1253,7 @@ Now we plot the power spectrum time evolution for $\Pi_{\zeta i}$:
 
 ```{python}
 # | label: fig-pzeta-power-spectrum
-# | fig-cap: "Power spectrum of the adiabatic perturbation $\\Pi_{\\zeta i}$ for each mode, shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). The left and right panels show the dimensionless power spectrum of $\\Pi_{\\zeta 1}$ and $\\Pi_{\\zeta 2}$, respectively. The horizontal dotted line mark the large scale power spectrum approximation. The shaded regions indicate the radiation-dominated era (left) and the matter-dominated era (right)."
+# | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\Pi_{\\\\zeta i}}(\\\\alpha)$ for each mode; colors show $\\\\lambda$ (Mpc)."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1310,7 +1310,7 @@ Now we can plot the power spectrum time evolution for $\Delta\zeta_i$:
 
 ```{python}
 # | label: fig-delta-zeta-power-spectrum
-# | fig-cap: "Power spectrum of the entropy perturbation $\\Delta\\zeta_i$ for each mode, shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). The left and right panels show the dimensionless power spectrum of $\\Delta\\zeta_1$ and $\\Delta\\zeta_2$, respectively. The shaded regions indicate the radiation-dominated era (left) and the matter-dominated era (right)."
+# | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\Delta\\\\zeta_i}(\\\\alpha)$ for each mode; colors show $\\\\lambda$ (Mpc)."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1366,7 +1366,7 @@ Now that we have seen the evolution of each adiabatic perturbation $\zeta_i$ and
 
 ```{python}
 # | label: fig-full-zeta-power-spectrum
-# | fig-cap: "Power spectrum of the total adiabatic perturbation $\\zeta$ and its entropy perturbation $\\Delta\\zeta$, shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\zeta}$."
+# | fig-cap: "Total adiabatic power $\\\\mathcal{P}_{\\\\zeta}(\\\\alpha)$ and entropy power $\\\\mathcal{P}_{\\\\Delta\\\\zeta}(\\\\alpha)$; colors show $\\\\lambda$."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1435,7 +1435,7 @@ We also plot the power spectrum time evolution for $\delta_{\rho_i}$:
 
 ```{python}
 # | label: fig-delta-rho-power-spectrum
-# | fig-cap: "Power spectrum of the density perturbation $\\delta_{\\rho i}$ for each mode, shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). The top panel shows the dimensionless power spectrum $k^3 P_{\\delta_{\\rho i}} / (2 \\pi^2)$, where $P_{\\delta_{\\rho i}}$ is the power spectrum of $\\delta_{\\rho i}$. The bottom panel shows the dimensionless power spectrum $k^3 P_{\\Delta \\delta_{\\rho i}} / (2 \\pi^2)$, where $P_{\\Delta \\delta_{\\rho i}}$ is the power spectrum of the difference in density perturbations $\\Delta \\delta_{\\rho i} = \\delta_{\\rho_{\\mathrm{r}}i} - \\delta_{\\rho_{w}i}$. The extra factor $k^{-1}$ separates the modes visually. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The shaded regions indicate the radiation-dominated era (left) and the matter-dominated era (right)."
+# | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\delta_{\\\\rho i}}(\\\\alpha)$ for each mode; colors show comoving wavelength $\\\\lambda$ (Mpc)."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1493,7 +1493,7 @@ We also plot the power spectrum time evolution for $\Delta\delta_{\zeta_i}$:
 
 ```{python}
 # | label: fig-diff-delta-rho-power-spectrum
-# | fig-cap: "Power spectrum of the difference in density perturbations $\\Delta \\delta_{\\rho i}$ for each mode, shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). The top panel shows the dimensionless power spectrum $k^3 P_{\\Delta \\delta_{\\rho i}} / (2 \\pi^2)$, where $P_{\\Delta \\delta_{\\rho i}}$ is the power spectrum of the difference in density perturbations $\\Delta \\delta_{\\rho i} = \\delta_{\\rho_{\\mathrm{r}}i} - \\delta_{\\rho_{w}i}$. The extra factor $k^{-1}$ separates the modes visually. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The shaded regions indicate the radiation-dominated era (left) and the matter-dominated era (right)."
+# | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\Delta\\\\delta_{\\\\rho i}}(\\\\alpha)$ for each mode; colors show comoving wavelength $\\\\lambda$ (Mpc)."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1553,8 +1553,8 @@ We also plot the power spectrum time evolution for the total $\delta_{\rho}$:
 ```{python}
 # | label: fig-full-delta-rho-power-spectrum
 # | fig-cap:
-# |   - "Power spectrum of the total density perturbation $\\delta_{\\rho}$, shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\delta_{\\rho}}$."
-# |   - "Power spectrum of the difference in density perturbations $\\Delta \\delta_{\\rho}$, shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\Delta \\delta_{\\rho}}$."
+# |   - "Total density power $\\mathcal{P}_{\\delta_{\\rho}}(\\alpha)$; colors show comoving wavelength $\\lambda$ (Mpc)."
+# |   - "Difference density power $\\mathcal{P}_{\\Delta\\delta_{\\rho}}(\\alpha)$; colors show $\\lambda$ (Mpc)."
 # | layout-ncol: 2
 # | fig-cap-location: bottom
 # | code-fold: true
@@ -1719,9 +1719,7 @@ Now we can plot the power spectra for the observables of interest. We will plot 
 
 ```{python}
 # | label: fig-zeta-power-spectrum-k
-# | fig-cap:
-# |   - "Power spectrum of the adiabatic perturbation $\\zeta$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\zeta}$. The wavenumber $k^\\mathrm{S}_2$ and $k^{\\times}_2$ are marked with vertical solid and dashed lines, respectively. The large scale approximation is marked with a dotted line."
-# |   - "Same plot as above but at $x = 10^{15}$ at the expanding phase."
+# | fig-cap: "Dimensionless power $\\mathcal{P}_{\\zeta}(k)$ at selected times; vertical lines mark characteristic wavenumbers."
 # | fig-cap-location: bottom
 # | layout-ncol: 2
 # | code-fold: true
@@ -1846,12 +1844,11 @@ display(Markdown(report))
 
 ```
 
-Now we can plot this section of the power spectrum adding the
-linear and quadratic fits:
+Now we can plot this CMB-like section of the power spectrum and overplot the linear and quadratic fits used to extract an effective spectral index and running parameter.
 
 ```{python}
 # | label: fig-zeta-power-spectrum-cmb-k
-# | fig-cap: "Power spectrum of the adiabatic perturbation $\\zeta$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\zeta}$."
+# | fig-cap: "CMB-range dimensionless power $\\mathcal{P}_{\\zeta}(k)$ with linear and quadratic fits (pivot 0.05 Mpc$^{-1}$)."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1901,9 +1898,7 @@ Next we plot the power spectra for $\Pi_\zeta$ and $\Delta\Pi_\zeta$:
 
 ```{python}
 # | label: fig-pzeta-power-spectrum-k
-# | fig-cap:
-# |   - "Power spectrum of the adiabatic perturbation $\\Pi_\\zeta$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\Pi_\\zeta}$."
-# |   - "Same plot as above but at $x = 10^{15}$ at the expanding phase."
+# | fig-cap: "Dimensionless power $\\mathcal{P}_{\\Pi_\\zeta}(k)$ at selected times; vertical lines mark characteristic wavenumbers."
 # | fig-cap-location: bottom
 # | layout-ncol: 2
 # | code-fold: true
@@ -1961,9 +1956,7 @@ Next we plot the power spectra for $\delta_{\rho}$ and $\Delta\delta_{\rho}$:
 
 ```{python}
 # | label: fig-delta-rho-power-spectrum-k
-# | fig-cap:
-# |   - "Power spectrum of the density perturbation $\\delta_{\\rho}$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\delta_{\\rho}}$. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The solid line correspond Mode 1, and the dashed line correspond to Mode 2."
-# |   - "Same plot as above but at $x = 10^{15}$ at the expanding phase."
+# | fig-cap: "Dimensionless power $\\mathcal{P}_{\\delta_{\\rho}}(k)$ and $\\mathcal{P}_{\\Delta\\delta_{\\rho}}(k)$ at selected times; solid/dashed lines show mode 1/2."
 # | fig-cap-location: bottom
 # | layout-ncol: 2
 # | code-fold: true
@@ -2017,8 +2010,8 @@ We can also plot the power spectra for the individual fluid density perturbation
 ```{python}
 # | label: fig-delta-rw-power-spectrum-k
 # | fig-cap:
-# |   - "Power spectrum of the individual fluid density perturbations $\\delta_{\\mathrm{r}}$ (solid) and $\\delta_{w}$ (dashed) as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectra $\\mathcal{P}_{\\delta_{\\mathrm{r}}}$ and $\\mathcal{P}_{\\delta_{w}}$. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The solid line correspond Mode 1, and the dashed line correspond to Mode 2."
-# |   - "Same plot as above but at $x = 10^{15}$ at the expanding phase."
+# |   - "Dimensionless power $\\mathcal{P}_{\\delta_{\\mathrm{r}}}(k)$ (solid) at selected times; vertical lines mark characteristic wavenumbers."
+# |   - "Dimensionless power $\\mathcal{P}_{\\delta_w}(k)$ (dashed) at selected times; same layout."
 # | fig-cap-location: bottom
 # | layout-ncol: 2
 # | code-fold: true
@@ -2071,7 +2064,7 @@ The fluid velocity potentials $\mathcal{V}_{\mathrm{r}}$ and $\mathcal{V}_{w}$:
 
 ```{python}
 # | label: fig-fku-rw-power-spectrum-k
-# | fig-cap: "Power spectrum of the fluid velocity potentials $\\mathcal{V}_{\\mathrm{r}}$ (solid) and $\\mathcal{V}_{w}$ (dashed) as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectra $\\mathcal{P}_{\\mathcal{V}_{\\mathrm{r}}}$ and $\\mathcal{P}_{\\mathcal{V}_{w}}$. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The solid line correspond Mode 1, and the dashed line correspond to Mode 2."
+# | fig-cap: "Dimensionless power of fluid velocity potentials $\\mathcal{P}_{\\mathcal{V}_r}$ (solid) and $\\mathcal{P}_{\\mathcal{V}_w}$ vs. $k$."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -2131,8 +2124,8 @@ We can also plot $\zeta$ and $\Delta\zeta$ in the same plot to observe another s
 ```{python}
 # | label: fig-zeta-dzeta-power-spectrum-k
 # | fig-cap:
-# |   - "Power spectrum of "
-# |   - "Same plot as above but at $x = 10^{15}$ at the expanding phase."
+# |   - "Dimensionless power $\\mathcal{P}_{\\zeta}(k)$ at selected times."
+# |   - "Dimensionless power $\\mathcal{P}_{\\Delta\\zeta}(k)$ at selected times."
 # | fig-cap-location: bottom
 # | layout-ncol: 2
 # | code-fold: true
@@ -2216,7 +2209,7 @@ We can plot the tensor power spectrum evolution for each mode:
 
 ```{python}
 # | label: fig-tensor-power-spectrum-evol
-# | fig-cap: "Evolution of the tensor power spectrum $\\mathcal{P}_{h}$ for each mode "
+# | fig-cap: "Evolution of the tensor power spectrum $\\mathcal{P}_h(\\alpha)$ for each mode."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -2256,8 +2249,8 @@ We can also plot it at the final time:
 ```{python}
 # | label: fig-tensor-power-spectrum-k
 # | fig-cap:
-# |   - "Power spectrum of the tensor perturbation $h$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{h}$."
-# |   - "Same plot as above but at $x = 10^{15}$ at the expanding phase."
+# |   - "Tensor power $\\mathcal{P}_h(k)$ at an early time; vertical lines mark characteristic wavenumbers."
+# |   - "Tensor power $\\mathcal{P}_h(k)$ at a late/expanding time (e.g. $x=10^{15}$)."
 # | fig-cap-location: bottom
 # | layout-ncol: 2
 # | code-fold: true
