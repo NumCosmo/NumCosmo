@@ -66,6 +66,8 @@ k_values = np.geomspace(1.0e-6, 1.0e10, 5)
 # Define the k values for the power spectrum
 k_for_pk_a = np.geomspace(1.0e-6, 1.0e8, 300)
 k_for_plot_a = np.geomspace(1.0e-6, 1.0e8, 6000)
+aspect2c = 0.3
+aspect2c2r = 0.5
 
 
 def compute_lp_RH_squared():
@@ -313,7 +315,7 @@ delta_Pzeta2 = np.array([res.mode2_Pzeta_scale for res in results])
 delta_PQ1 = np.array([res.mode1_PQ_scale for res in results])
 delta_PQ2 = np.array([res.mode2_PQ_scale for res in results])
 
-set_rc_params_article(ncol=2, nrows=1, aspect_ratio=0.5)
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
 fig, ax = plt.subplots()
 
 next_color = get_next_color()
@@ -371,7 +373,7 @@ ax.grid()
 
 # Save and show
 plt.savefig(os.path.join(fig_dir, "truncation-error.pdf"), bbox_inches="tight")
-fig.set_size_inches(12, 6)
+fig.set_size_inches(6, 3)
 plt.show()
 ```
 
@@ -401,7 +403,7 @@ delta_PQ1 = np.array([res.mode1_PQ_scale for res in results_zoom])
 delta_PQ2 = np.array([res.mode2_PQ_scale for res in results_zoom])
 Fnu = np.array([res.state.Fnu for res in results_zoom])
 
-set_rc_params_article(ncol=2, nrows=1, aspect_ratio=0.5)
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
 fig, (ax1, ax2) = plt.subplots(ncols=2, nrows=1, sharex=True, sharey=True)
 
 next_color = get_next_color()
@@ -465,7 +467,7 @@ ax2.grid()
 
 # Save and show
 plt.savefig(os.path.join(fig_dir, "truncation-error-zoom.pdf"), bbox_inches="tight")
-fig.set_size_inches(12, 6)
+fig.set_size_inches(12, 12 * aspect2c)
 plt.show()
 ```
 
@@ -572,7 +574,7 @@ We can plot the mode evolution for mode $k\in {k_\mathrm{min}, k_\mathrm{max}}$,
 # | fig-cap-location: bottom
 # | code-fold: true
 
-set_rc_params_article(ncol=2, nrows=1, aspect_ratio=0.5)
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
 fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(
     ncols=2, nrows=2, sharex=True, sharey="row"
 )
@@ -703,7 +705,7 @@ cbar.set_label(r"$\lambda$ [Mpc]")
 
 # Save and show
 plt.savefig(os.path.join(fig_dir, "mode_zeta_evolution.pdf"), bbox_inches="tight")
-fig.set_size_inches(12, 6)
+fig.set_size_inches(12, 12 * aspect2c2r)
 
 plt.show()
 ```
@@ -716,7 +718,7 @@ Now we can do the same for the entropy perturbation $Q_i \propto \Delta\zeta_i \
 # | fig-cap-location: bottom
 # | code-fold: true
 
-set_rc_params_article(ncol=2, nrows=1, aspect_ratio=0.5)
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
 fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(
     ncols=2, nrows=2, sharex=True, sharey="row"
 )
@@ -830,7 +832,7 @@ cbar.set_label(r"$\lambda$ [Mpc]")
 
 # Save and show
 plt.savefig(os.path.join(fig_dir, "mode_dzeta_evolution.pdf"), bbox_inches="tight")
-fig.set_size_inches(12, 6)
+fig.set_size_inches(12, 12 * aspect2c2r)
 
 plt.show()
 ```
@@ -843,7 +845,7 @@ Next we can plot the density perturbations $\bar{\delta}_{\rho i}$ for each mode
 # | fig-cap-location: bottom
 # | code-fold: true
 
-set_rc_params_article(ncol=2, nrows=1, aspect_ratio=0.5)
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
 fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(
     ncols=2, nrows=2, sharex=True, sharey="row"
 )
@@ -954,7 +956,7 @@ cbar.set_label(r"$\lambda$ [Mpc]")
 
 # Save and show
 plt.savefig(os.path.join(fig_dir, "mode_drho_evolution.pdf"), bbox_inches="tight")
-fig.set_size_inches(12, 6)
+fig.set_size_inches(12, 12 * aspect2c2r)
 
 plt.show()
 ```
@@ -967,7 +969,7 @@ Finally, we can plot the difference in density perturbations $\Delta\delta_{\rho
 # | fig-cap-location: bottom
 # | code-fold: true
 
-set_rc_params_article(ncol=2, nrows=1, aspect_ratio=0.5)
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
 fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(
     ncols=2, nrows=2, sharex=True, sharey="row"
 )
@@ -1079,7 +1081,7 @@ cbar.set_label(r"$\lambda$ [Mpc]")
 plt.savefig(
     os.path.join(fig_dir, "mode_diff_delta_rho_evolution.pdf"), bbox_inches="tight"
 )
-fig.set_size_inches(12, 6)
+fig.set_size_inches(12, 12 * aspect2c2r)
 plt.show()
 ```
 
@@ -1091,7 +1093,7 @@ For completeness, we also plot the evolution of the momentum of the curvature pe
 # | fig-cap-location: bottom
 # | code-fold: true
 
-set_rc_params_article(ncol=2, nrows=1, aspect_ratio=0.5)
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
 fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(
     ncols=2, nrows=2, sharex=True, sharey="row"
 )
@@ -1190,7 +1192,7 @@ cbar = fig.colorbar(sm, ax=[ax0, ax1, ax2, ax3], pad=0.02)
 cbar.set_label(r"$\lambda$ [Mpc]")
 # Save and show
 plt.savefig(os.path.join(fig_dir, "mode_pzeta_evolution.pdf"), bbox_inches="tight")
-fig.set_size_inches(12, 6)
+fig.set_size_inches(12, 12 * aspect2c2r)
 plt.show()
 
 ```
@@ -1212,7 +1214,7 @@ Now we plot the power spectrum time evolution for $\zeta_i$:
 # | fig-cap-location: bottom
 # | code-fold: true
 
-set_rc_params_article(ncol=2, nrows=1, aspect_ratio=0.5)
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
 
 fig, (ax0, ax1) = plt.subplots(ncols=2, nrows=1, sharey=True)
 fig.subplots_adjust(hspace=0.0, wspace=0.0)
@@ -1257,7 +1259,7 @@ cbar.set_label(r"$\lambda$ [Mpc]")
 
 fig.savefig(os.path.join(fig_dir, "zeta_power_spectrum.pdf"), bbox_inches="tight")
 
-fig.set_size_inches(12, 6)
+fig.set_size_inches(12, 12 * aspect2c)
 plt.show()
 ```
 
@@ -1269,7 +1271,7 @@ Now we plot the power spectrum time evolution for $\Pi_{\zeta i}$:
 # | fig-cap-location: bottom
 # | code-fold: true
 
-set_rc_params_article(ncol=2, nrows=1, aspect_ratio=0.5)
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
 
 fig, (ax0, ax1) = plt.subplots(ncols=2, nrows=1, sharey=True)
 fig.subplots_adjust(hspace=0.0, wspace=0.0)
@@ -1314,7 +1316,7 @@ cbar.set_label(r"$\lambda$ [Mpc]")
 
 fig.savefig(os.path.join(fig_dir, "pzeta_power_spectrum.pdf"), bbox_inches="tight")
 
-fig.set_size_inches(12, 6)
+fig.set_size_inches(12, 12 * aspect2c)
 plt.show()
 ```
 
@@ -1326,7 +1328,7 @@ Now we can plot the power spectrum time evolution for $\Delta\zeta_i$:
 # | fig-cap-location: bottom
 # | code-fold: true
 
-set_rc_params_article(ncol=2, nrows=1, aspect_ratio=0.5)
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
 
 fig, (ax0, ax1) = plt.subplots(ncols=2, nrows=1, sharey=True)
 fig.subplots_adjust(hspace=0.0, wspace=0.0)
@@ -1370,7 +1372,7 @@ cbar.set_label(r"$\lambda$ [Mpc]")
 
 fig.savefig(os.path.join(fig_dir, "delta_zeta_power_spectrum.pdf"), bbox_inches="tight")
 
-fig.set_size_inches(12, 6)
+fig.set_size_inches(12, 12 * aspect2c)
 plt.show()
 ```
 
@@ -1378,22 +1380,20 @@ Now that we have seen the evolution of each adiabatic perturbation $\zeta_i$ and
 
 ```{python}
 # | label: fig-full-zeta-power-spectrum
-# | fig-cap:
-# |   - "Power spectrum of the total adiabatic perturbation $\\zeta$, shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\zeta}$."
-# |   - "Power spectrum of the entropy perturbation $\\Delta\\zeta$, shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\Delta\\zeta}$."
-# | layout-ncol: 2
+# | fig-cap: "Power spectrum of the total adiabatic perturbation $\\zeta$ and its entropy perturbation $\\Delta\\zeta$, shown in a distinct color with comoving wavelength $\\lambda$ indicated in the color bar (in Mpc). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\zeta}$."
 # | fig-cap-location: bottom
 # | code-fold: true
 
-set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
 
-fig, ax = plt.subplots()
+fig, (ax0, ax1) = plt.subplots(ncols=2, nrows=1, sharey=True)
+fig.subplots_adjust(hspace=0.0, wspace=0.0)
 
 for k, power_spectra in zip(k_values, power_spectra_list):
     lambda_com = 1.0 / k
     color = cmap(norm(lambda_com))
 
-    ax.plot(
+    ax0.plot(
         alpha_pk_a,
         k**3 * RH_Mpc**3 * power_spectra["zeta"],
         lw=lw,
@@ -1401,33 +1401,22 @@ for k, power_spectra in zip(k_values, power_spectra_list):
         color=color,
         label=r"$\mathcal{P}_{\zeta}$" if k == k_values[0] else None,
     )
-ax.set_ylabel(r"$\mathcal{P}_{\zeta}$")
+ax0.set_ylabel(r"$\mathcal{P}_{\zeta}$, $\mathcal{P}_{\Delta\zeta}$")
 
 # Shaded dominance regions
-ax.axvspan(alpha_pk_ini, alpha_eq, **md)
-ax.axvspan(alpha_eq, alpha_pk_end, **rd)
-ax.set_yscale("log")
-ax.legend()
-format_alpha_xaxis(ax, cosmo_rw)
-ax.set_xlabel(r"$\alpha$")
-ax.grid()
-
-# Colorbar for k
-cbar = fig.colorbar(sm, ax=ax, pad=0.02)
-cbar.set_label(r"$\lambda$ [Mpc]")
-
-fig.savefig(os.path.join(fig_dir, "zeta_total_power_spectrum.pdf"), bbox_inches="tight")
-
-fig.set_size_inches(6, 3)
-plt.show()
-
-fig, ax = plt.subplots()
+ax0.axvspan(alpha_pk_ini, alpha_eq, **md)
+ax0.axvspan(alpha_eq, alpha_pk_end, **rd)
+ax0.set_yscale("log")
+ax0.legend()
+format_alpha_xaxis(ax0, cosmo_rw)
+ax0.set_xlabel(r"$\alpha$")
+ax0.grid()
 
 for k, power_spectra in zip(k_values, power_spectra_list):
     lambda_com = 1.0 / k
     color = cmap(norm(lambda_com))
 
-    ax.plot(
+    ax1.plot(
         alpha_pk_a,
         k**3 * RH_Mpc**3 * power_spectra["dzeta"],
         lw=lw,
@@ -1435,26 +1424,23 @@ for k, power_spectra in zip(k_values, power_spectra_list):
         color=color,
         label=r"$\mathcal{P}_{\Delta\zeta}$" if k == k_values[0] else None,
     )
-ax.set_ylabel(r"$\mathcal{P}_{\Delta\zeta}$")
 
 # Shaded dominance regions
-ax.axvspan(alpha_pk_ini, alpha_eq, **md)
-ax.axvspan(alpha_eq, alpha_pk_end, **rd)
-ax.set_yscale("log")
-ax.legend()
-format_alpha_xaxis(ax, cosmo_rw)
-ax.set_xlabel(r"$\alpha$")
-ax.grid()
+ax1.axvspan(alpha_pk_ini, alpha_eq, **md)
+ax1.axvspan(alpha_eq, alpha_pk_end, **rd)
+ax1.set_yscale("log")
+ax1.legend()
+format_alpha_xaxis(ax1, cosmo_rw)
+ax1.set_xlabel(r"$\alpha$")
+ax1.grid()
 
 # Colorbar for k
-cbar = fig.colorbar(sm, ax=ax, pad=0.02)
+cbar = fig.colorbar(sm, ax=ax1, pad=0.02)
 cbar.set_label(r"$\lambda$ [Mpc]")
 
-fig.savefig(
-    os.path.join(fig_dir, "zeta_entropy_power_spectrum.pdf"), bbox_inches="tight"
-)
+fig.savefig(os.path.join(fig_dir, "zeta_total_power_spectrum.pdf"), bbox_inches="tight")
 
-fig.set_size_inches(6, 3)
+fig.set_size_inches(12, 12 * aspect2c)
 plt.show()
 
 ```
@@ -1467,7 +1453,7 @@ We also plot the power spectrum time evolution for $\delta_{\rho_i}$:
 # | fig-cap-location: bottom
 # | code-fold: true
 
-set_rc_params_article(ncol=2, nrows=1, aspect_ratio=0.5)
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
 
 fig, (ax0, ax1) = plt.subplots(ncols=2, nrows=1, sharey=True)
 fig.subplots_adjust(hspace=0.0, wspace=0.0)
@@ -1512,7 +1498,7 @@ cbar.set_label(r"$\lambda$ [Mpc]")
 
 fig.savefig(os.path.join(fig_dir, "delta_rho_power_spectrum.pdf"), bbox_inches="tight")
 
-fig.set_size_inches(12, 6)
+fig.set_size_inches(12, 12 * aspect2c)
 plt.show()
 
 ```
@@ -1525,7 +1511,7 @@ We also plot the power spectrum time evolution for $\Delta\delta_{\zeta_i}$:
 # | fig-cap-location: bottom
 # | code-fold: true
 
-set_rc_params_article(ncol=2, nrows=1, aspect_ratio=0.5)
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
 
 fig, (ax0, ax1) = plt.subplots(ncols=2, nrows=1, sharey=True)
 fig.subplots_adjust(hspace=0.0, wspace=0.0)
@@ -1571,7 +1557,7 @@ fig.savefig(
     os.path.join(fig_dir, "diff_delta_rho_power_spectrum.pdf"), bbox_inches="tight"
 )
 
-fig.set_size_inches(12, 6)
+fig.set_size_inches(12, 12 * aspect2c)
 plt.show()
 
 ```
@@ -1687,6 +1673,7 @@ observables = [
     (Nc.HIPertITwoFluidsObs.DELTA_W, "delta_w"),
     (Nc.HIPertITwoFluidsObs.PZETA, "pzeta"),
 ]
+alpha_a = [0.01, alpha_pk_end]
 
 # Open the log file with line buffering
 with open("spectrum_progress.log", "w", buffering=1) as f:
@@ -1701,7 +1688,7 @@ with open("spectrum_progress.log", "w", buffering=1) as f:
 
     # Run your computation with the callback
     s_interp_a = pert.compute_spectra(
-        cosmo_rw, [0.01, alpha_pk_end], k_for_pk_a * RH_Mpc, progress_callback
+        cosmo_rw, alpha_a, k_for_pk_a * RH_Mpc, progress_callback
     )
 
     progress_bar.close()
@@ -1721,7 +1708,7 @@ power_spectra0_k = {
     ]
 }
 
-power_spectra_k = {
+power_spectra1_k = {
     f"{name}{mode_str}": np.abs(
         [
             s_interp_a[1].eval(cosmo_rw, k * RH_Mpc).eval_obs(mode, obs, obs)
@@ -1735,7 +1722,7 @@ power_spectra_k = {
         (Nc.HIPertITwoFluidsObsMode.BOTH, ""),
     ]
 }
-
+power_spectra_k_a = [power_spectra0_k, power_spectra1_k]
 
 ```
 
@@ -1746,8 +1733,11 @@ Now we can plot the power spectra for the observables of interest. We will plot 
 
 ```{python}
 # | label: fig-zeta-power-spectrum-k
-# | fig-cap: "Power spectrum of the adiabatic perturbation $\\zeta$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\zeta}$. The wavenumber $k^\\mathrm{S}_2$ and $k^{\\times}_2$ are marked with vertical solid and dashed lines, respectively. The large scale approximation is marked with a dotted line."
+# | fig-cap:
+# |   - "Power spectrum of the adiabatic perturbation $\\zeta$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\zeta}$. The wavenumber $k^\\mathrm{S}_2$ and $k^{\\times}_2$ are marked with vertical solid and dashed lines, respectively. The large scale approximation is marked with a dotted line."
+# |   - "Same plot as above but at $x = 10^{15}$ at the expanding phase."
 # | fig-cap-location: bottom
+# | layout-ncol: 2
 # | code-fold: true
 
 k_pivot = 1.0
@@ -1763,51 +1753,73 @@ k_cross2 = k_pivot / (
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
 
-fig, ax = plt.subplots()
+text_a = []
 
-P_zeta1_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta1"]
-P_zeta2_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta2"]
-P_zeta_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta"]
+for i, (alpha, power_spectra_k) in enumerate(zip(alpha_a, power_spectra_k_a)):
+    fig, ax = plt.subplots()
 
-ax.plot(
-    k_for_plot_a, P_zeta1_k, lw=lw, linestyle="solid", label=r"$\mathcal{P}_{\zeta 1}$"
-)
-ax.plot(
-    k_for_plot_a, P_zeta2_k, lw=lw, linestyle="solid", label=r"$\mathcal{P}_{\zeta 2}$"
-)
-ax.plot(
-    k_for_plot_a, P_zeta_k, lw=lw, linestyle="solid", label=r"$\mathcal{P}_{\zeta}$"
-)
+    P_zeta1_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta1"]
+    P_zeta2_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta2"]
+    P_zeta_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta"]
 
-AP_zeta_k = large_scale_P_zeta(k_for_plot_a * RH_Mpc)
+    ax.plot(
+        k_for_plot_a,
+        P_zeta1_k,
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\zeta 1}$",
+    )
+    ax.plot(
+        k_for_plot_a,
+        P_zeta2_k,
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\zeta 2}$",
+    )
+    ax.plot(
+        k_for_plot_a,
+        P_zeta_k,
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\zeta}$",
+    )
 
-ax.plot(k_for_plot_a, AP_zeta_k, lw=lw, linestyle="dotted")
+    AP_zeta_k = large_scale_P_zeta(k_for_plot_a * RH_Mpc)
 
-ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
-ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+    ax.plot(k_for_plot_a, AP_zeta_k, lw=lw, linestyle="dotted")
 
-# Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
-ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+    ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
+    ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
 
-ax.set_ylabel(r"$\mathcal{P}_{\zeta}$")
-ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
 
-ax.legend()
-ax.set_xscale("log")
-ax.set_yscale("log")
-ax.grid()
+    ax.set_ylabel(r"$\mathcal{P}_{\zeta}$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
 
-ax.set_ylim(np.min(P_zeta2_k) * 1.0e-2, np.max(P_zeta2_k) * 1.0e2)
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    ax.legend()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
 
-fig.savefig(os.path.join(fig_dir, "zeta_power_spectrum_k.pdf"), bbox_inches="tight")
+    ax.set_ylim(np.min(P_zeta2_k) * 1.0e-2, np.max(P_zeta2_k) * 1.0e2)
 
-fig.set_size_inches(6, 3)
-plt.show()
+    fig.savefig(
+        os.path.join(fig_dir, f"zeta_power_spectrum{i}_k.pdf"), bbox_inches="tight"
+    )
 
-print(
-    f"Ratio of power spectrum to large-scale power spectrum "
-    f"approximation:\n {P_zeta1_k[0] / AP_zeta_k[0]} {P_zeta2_k[0] / AP_zeta_k[0]}"
-)
+    fig.set_size_inches(6, 3)
+    plt.show()
+
+    text_a.append(
+        f"Ratio of power spectrum to large-scale power spectrum "
+        f"approximation:\n {P_zeta1_k[0] / AP_zeta_k[0]} {P_zeta2_k[0] / AP_zeta_k[0]}"
+    )
+
+for text in text_a:
+    print(text)
 
 ```
 
@@ -1815,6 +1827,7 @@ Now considering a CMB like interval ($10^{-4} < k < 10^0$ Mpc$^{-1}$), we can se
 
 ```{python}
 
+power_spectra_k = power_spectra_k_a[1]
 k_for_cmb_constraint = k_for_plot_a < 1.0
 k_for_cmb = k_for_plot_a[k_for_cmb_constraint]
 # Using same pivot scale as Planck 2018 k0 = 0.05 Mpc^-1
@@ -1858,6 +1871,7 @@ linear and quadratic fits:
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
 
+power_spectra_k = power_spectra_k_a[1]
 fig, ax = plt.subplots()
 
 P_zeta_k = k_for_cmb**3 * RH_Mpc**3 * power_spectra_k["zeta"][k_for_cmb_constraint]
@@ -1887,7 +1901,7 @@ ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
 
 ax.legend()
 ax.set_xscale("log")
-#ax.set_yscale("log")
+# ax.set_yscale("log")
 ax.grid()
 
 fig.savefig(os.path.join(fig_dir, "zeta_power_spectrum_cmb_k.pdf"), bbox_inches="tight")
@@ -1901,50 +1915,58 @@ Next we plot the power spectra for $\Pi_\zeta$ and $\Delta\Pi_\zeta$:
 
 ```{python}
 # | label: fig-pzeta-power-spectrum-k
-# | fig-cap: "Power spectrum of the adiabatic perturbation $\\Pi_\\zeta$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\Pi_\\zeta}$."
+# | fig-cap:
+# |   - "Power spectrum of the adiabatic perturbation $\\Pi_\\zeta$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\Pi_\\zeta}$."
+# |   - "Same plot as above but at $x = 10^{15}$ at the expanding phase."
 # | fig-cap-location: bottom
+# | layout-ncol: 2
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
 
-fig, ax = plt.subplots()
+for i, (alpha, power_spectra_k) in enumerate(zip(alpha_a, power_spectra_k_a)):
+    fig, ax = plt.subplots()
 
-P_pzeta1_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["pzeta1"]
-P_pzeta2_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["pzeta2"]
+    P_pzeta1_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["pzeta1"]
+    P_pzeta2_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["pzeta2"]
 
-ax.plot(
-    k_for_plot_a,
-    P_pzeta1_k,
-    lw=lw,
-    linestyle="solid",
-    label=r"$\mathcal{P}_{\Pi_\zeta 1}$",
-)
-ax.plot(
-    k_for_plot_a,
-    P_pzeta2_k,
-    lw=lw,
-    linestyle="solid",
-    label=r"$\mathcal{P}_{\Pi_\zeta 2}$",
-)
+    ax.plot(
+        k_for_plot_a,
+        P_pzeta1_k,
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\Pi_\zeta 1}$",
+    )
+    ax.plot(
+        k_for_plot_a,
+        P_pzeta2_k,
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\Pi_\zeta 2}$",
+    )
 
-ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
-ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+    ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
+    ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
 
-# Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
-ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
 
-ax.set_ylabel(r"$\mathcal{P}_{\Pi_\zeta}$")
-ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+    ax.set_ylabel(r"$\mathcal{P}_{\Pi_\zeta}$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
 
-ax.legend()
-ax.set_xscale("log")
-ax.set_yscale("log")
-ax.grid()
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    ax.legend()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
 
-fig.savefig(os.path.join(fig_dir, "Pzeta_power_spectrum_k.pdf"), bbox_inches="tight")
+    fig.savefig(
+        os.path.join(fig_dir, f"Pzeta_power_spectrum{i}_k.pdf"), bbox_inches="tight"
+    )
 
-fig.set_size_inches(6, 3)
-plt.show()
+    fig.set_size_inches(6, 3)
+    plt.show()
 
 
 ```
@@ -1953,96 +1975,110 @@ Next we plot the power spectra for $\delta_{\rho}$ and $\Delta\delta_{\rho}$:
 
 ```{python}
 # | label: fig-delta-rho-power-spectrum-k
-# | fig-cap: "Power spectrum of the density perturbation $\\delta_{\\rho}$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\delta_{\\rho}}$. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The solid line correspond Mode 1, and the dashed line correspond to Mode 2."
+# | fig-cap:
+# |   - "Power spectrum of the density perturbation $\\delta_{\\rho}$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{\\delta_{\\rho}}$. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The solid line correspond Mode 1, and the dashed line correspond to Mode 2."
+# |   - "Same plot as above but at $x = 10^{15}$ at the expanding phase."
 # | fig-cap-location: bottom
+# | layout-ncol: 2
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
 
-fig, ax = plt.subplots()
+for i, (alpha, power_spectra_k) in enumerate(zip(alpha_a, power_spectra_k_a)):
+    fig, ax = plt.subplots()
 
-ax.plot(
-    k_for_plot_a,
-    k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["delta_rho"],
-    lw=lw,
-    linestyle="solid",
-    label=r"$\mathcal{P}_{\delta_{\rho}}$",
-)
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["delta_rho"],
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\delta_{\rho}}$",
+    )
 
-ax.plot(
-    k_for_plot_a,
-    k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["diff_delta_rho"],
-    lw=lw,
-    linestyle="dashed",
-    label=r"$\mathcal{P}_{\Delta \delta_{\rho}}$",
-)
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["diff_delta_rho"],
+        lw=lw,
+        linestyle="dashed",
+        label=r"$\mathcal{P}_{\Delta \delta_{\rho}}$",
+    )
 
-ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
-ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+    ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
+    ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
 
-# Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
-ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
 
-ax.set_ylabel(r"$\mathcal{P}_{\delta_{\rho}}$")
-ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+    ax.set_ylabel(r"$\mathcal{P}_{\delta_{\rho}}$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
 
-ax.legend()
-ax.set_xscale("log")
-ax.set_yscale("log")
-ax.grid()
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    ax.legend()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
 
-fig.savefig(
-    os.path.join(fig_dir, "delta_rho_power_spectrum_k.pdf"), bbox_inches="tight"
-)
-fig.set_size_inches(6, 3)
-plt.show()
+    fig.savefig(
+        os.path.join(fig_dir, f"delta_rho_power_spectrum{i}_k.pdf"), bbox_inches="tight"
+    )
+    fig.set_size_inches(6, 3)
+    plt.show()
 ```
 
 We can also plot the power spectra for the individual fluid density perturbations $\delta_{\mathrm{r}}$ and $\delta_{w}$:
 
 ```{python}
 # | label: fig-delta-rw-power-spectrum-k
-# | fig-cap: "Power spectrum of the individual fluid density perturbations $\\delta_{\\mathrm{r}}$ (solid) and $\\delta_{w}$ (dashed) as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectra $\\mathcal{P}_{\\delta_{\\mathrm{r}}}$ and $\\mathcal{P}_{\\delta_{w}}$. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The solid line correspond Mode 1, and the dashed line correspond to Mode 2."
+# | fig-cap:
+# |   - "Power spectrum of the individual fluid density perturbations $\\delta_{\\mathrm{r}}$ (solid) and $\\delta_{w}$ (dashed) as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectra $\\mathcal{P}_{\\delta_{\\mathrm{r}}}$ and $\\mathcal{P}_{\\delta_{w}}$. The vertical lines mark the times when $\\lambda = c_i x R_H$, corresponding to sound-horizon crossing ($c_i F_\\nu = 1$), and help identify the transition between sub- and super-Hubble behavior for each mode. The solid line correspond Mode 1, and the dashed line correspond to Mode 2."
+# |   - "Same plot as above but at $x = 10^{15}$ at the expanding phase."
 # | fig-cap-location: bottom
+# | layout-ncol: 2
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
 
-fig, ax = plt.subplots()
+for i, (alpha, power_spectra_k) in enumerate(zip(alpha_a, power_spectra_k_a)):
+    fig, ax = plt.subplots()
 
-ax.plot(
-    k_for_plot_a,
-    k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["delta_r"],
-    lw=lw,
-    linestyle="solid",
-    label=r"$\mathcal{P}_{\delta_{\mathrm{r}}}$",
-)
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["delta_r"],
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\delta_{\mathrm{r}}}$",
+    )
 
-ax.plot(
-    k_for_plot_a,
-    k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["delta_w"],
-    lw=lw,
-    linestyle="dashed",
-    label=r"$\mathcal{P}_{\delta_{w}}$",
-)
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["delta_w"],
+        lw=lw,
+        linestyle="dashed",
+        label=r"$\mathcal{P}_{\delta_{w}}$",
+    )
 
-ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
-ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+    ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
+    ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
 
-# Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
-ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
 
-ax.set_ylabel(r"$\mathcal{P}_{\delta_{i}}$")
-ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+    ax.set_ylabel(r"$\mathcal{P}_{\delta_{i}}$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
 
-ax.legend()
-ax.set_xscale("log")
-ax.set_yscale("log")
-ax.grid()
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    ax.legend()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
 
-fig.savefig(os.path.join(fig_dir, "delta_rw_power_spectrum_k.pdf"), bbox_inches="tight")
-fig.set_size_inches(6, 3)
-plt.show()
+    fig.savefig(
+        os.path.join(fig_dir, f"delta_rw_power_spectrum{i}_k.pdf"), bbox_inches="tight"
+    )
+    fig.set_size_inches(6, 3)
+    plt.show()
 ```
 
 The fluid velocity potentials $\mathcal{V}_{\mathrm{r}}$ and $\mathcal{V}_{w}$:
@@ -2053,88 +2089,175 @@ The fluid velocity potentials $\mathcal{V}_{\mathrm{r}}$ and $\mathcal{V}_{w}$:
 # | fig-cap-location: bottom
 # | code-fold: true
 
-set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
 
-fig, ax = plt.subplots()
+fig, (ax0, ax1) = plt.subplots(ncols=2, nrows=1, sharey=True)
+fig.subplots_adjust(hspace=0.0, wspace=0.0)
 
-ax.plot(
-    k_for_plot_a,
-    k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["fku_r"],
-    lw=lw,
-    linestyle="solid",
-    label=r"$\mathcal{P}_{\mathcal{V}_{\mathrm{r}}}$",
-)
+for i, (alpha, power_spectra_k, ax) in enumerate(
+    zip(alpha_a, power_spectra_k_a, [ax0, ax1])
+):
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["fku_r"],
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\mathcal{V}_{\mathrm{r}}}$",
+        alpha=0.8,
+    )
 
-ax.plot(
-    k_for_plot_a,
-    k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["fku_w"],
-    lw=lw,
-    linestyle="dashed",
-    label=r"$\mathcal{P}_{\mathcal{V}_{w}}$",
-)
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["fku_w"],
+        lw=lw,
+        linestyle="dashed",
+        label=r"$\mathcal{P}_{\mathcal{V}_{w}}$",
+    )
 
-ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
-ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+    ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
+    ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
 
-# Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
-ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
 
-ax.set_ylabel(r"$\mathcal{P}_{\mathcal{V}_{i}}$")
-ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+    if i == 0:
+        ax.set_ylabel(r"$\mathcal{P}_{\mathcal{V}_{i}}$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
 
-ax.legend()
-ax.set_xscale("log")
-ax.set_yscale("log")
-ax.grid()
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    if i == 0:
+        ax.legend()
 
-fig.savefig(os.path.join(fig_dir, "fku_rw_power_spectrum_k.pdf"), bbox_inches="tight")
-fig.set_size_inches(6, 3)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
+
+fig.savefig(os.path.join(fig_dir, f"fku_rw_power_spectrum_k.pdf"), bbox_inches="tight")
+
+fig.set_size_inches(12, 12 * aspect2c)
 plt.show()
+
 ```
 
 We can also plot $\zeta$ and $\Delta\zeta$ in the same plot to observe another source of isocurvature.
 
 ```{python}
 # | label: fig-zeta-dzeta-power-spectrum-k
-# | fig-cap: "Power spectrum of "
+# | fig-cap:
+# |   - "Power spectrum of "
+# |   - "Same plot as above but at $x = 10^{15}$ at the expanding phase."
 # | fig-cap-location: bottom
+# | layout-ncol: 2
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
 
+for i, (alpha, power_spectra_k) in enumerate(zip(alpha_a, power_spectra_k_a)):
+    fig, ax = plt.subplots()
+
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta"],
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\zeta}$",
+    )
+
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["dzeta"],
+        lw=lw,
+        linestyle="dashed",
+        label=r"$\mathcal{P}_{\Delta \zeta}$",
+    )
+
+    ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
+    ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+
+    ax.set_ylabel(r"$\mathcal{P}_{\zeta}$, $\mathcal{P}_{\Delta \zeta}$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    ax.legend()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
+
+    fig.savefig(
+        os.path.join(fig_dir, f"fku_rw_power_spectrum{i}_k.pdf"), bbox_inches="tight"
+    )
+    fig.set_size_inches(6, 3)
+    plt.show()
+```
+
+## Tensor power spectrum
+
+Now we can also compute the tensor power spectrum.
+
+```{python}
+
+pgw = Nc.HIPertGW.new()
+
+pgw.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+pgw.set_ti(alpha_pk_ini)
+pgw.set_tf(alpha_pk_end)
+pgw.set_vacuum_max_time(-1.0e-1)
+pgw.set_vacuum_reltol(1.0e-8)
+Ncm.CSQ1D.set_reltol(pgw, 1.0e-10)
+
+gw_pk_evol = []
+
+for k in k_values:
+    pgw.set_k(k * RH_Mpc)
+    pgw.prepare(cosmo_rw)
+
+    pk = np.array([pgw.eval_powspec_at(cosmo_rw, alpha) for alpha in alpha_pk_a])
+    gw_pk_evol.append(pk)
+
+```
+
+We can plot the tensor power spectrum evolution for each mode:
+
+```{python}
+# | label: fig-tensor-power-spectrum
+# | fig-cap: "Evolution of the tensor power spectrum $\\mathcal{P}_{h}$ for each mode "
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
 fig, ax = plt.subplots()
 
-ax.plot(
-    k_for_plot_a,
-    k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta"],
-    lw=lw,
-    linestyle="solid",
-    label=r"$\mathcal{P}_{\zeta}$",
-)
+for k, gw_pk in zip(k_values, gw_pk_evol):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
 
-ax.plot(
-    k_for_plot_a,
-    k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["dzeta"],
-    lw=lw,
-    linestyle="dashed",
-    label=r"$\mathcal{P}_{\Delta \zeta}$",
-)
+    ax.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * gw_pk,
+        lw=lw,
+        linestyle="solid",
+        color=color,
+    )
 
-ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
-ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
-
-# Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
-ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
-
-ax.set_ylabel(r"$\mathcal{P}_{\zeta}$, $\mathcal{P}_{\Delta \zeta}$")
-ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
-
-ax.legend()
-ax.set_xscale("log")
+format_alpha_xaxis(ax, cosmo_rw)
+ax.set_xlabel(r"$\alpha$")
+ax.set_ylabel(r"$\mathcal{P}_{h}$")
 ax.set_yscale("log")
 ax.grid()
 
-fig.savefig(os.path.join(fig_dir, "fku_rw_power_spectrum_k.pdf"), bbox_inches="tight")
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=ax, pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+
+fig.savefig(os.path.join(fig_dir, f"tensor_pw_evol.pdf"), bbox_inches="tight")
 fig.set_size_inches(6, 3)
 plt.show()
+
 ```
+
+

@@ -388,3 +388,33 @@ nc_hipert_gw_get_k (NcHIPertGW *pgw)
   return pgw->k;
 }
 
+/**
+ * nc_hipert_gw_eval_powspec_at:
+ * @pgw: a #NcHIPertGW
+ * @model: a #NcmModel
+ * @tau: $\tau$
+ *
+ * Evaluates the power spectrum of the tensor perturbation at a given time
+ * $$
+ * P_h = u^2\frac{k^3}{2\pi^2} \frac{J_{11}}{2}.
+ * $$
+ * where $u$ is the numerical factor for the power spectrum of the tensor mode, $k$ is
+ * the wave number.
+ *
+ * Returns: the power spectrum of the tensor perturbation.
+ */
+gdouble
+nc_hipert_gw_eval_powspec_at (NcHIPertGW *pgw, NcmModel *model, const gdouble tau)
+{
+  const gdouble unit = nc_hipert_igw_eval_unit (NC_HIPERT_IGW (model));
+  const gdouble n0   = 1.0 / ncm_c_two_pi_2 ();
+  NcmCSQ1DState state;
+  gdouble J11, J12, J22;
+
+  ncm_csq1d_eval_at (NCM_CSQ1D (pgw), model, tau, &state);
+
+  ncm_csq1d_state_get_J (&state, &J11, &J12, &J22);
+
+  return gsl_pow_2 (unit) * n0 * (J11 / 2.0);
+}
+
