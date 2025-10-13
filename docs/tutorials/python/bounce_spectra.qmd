@@ -9,15 +9,18 @@ format: html
 
 ## Purpose {#sec-purpose}
 
-This tutorial demonstrates how to compute the power spectrum of a bouncing cosmology using NumCosmo. A bouncing cosmology modifies the standard $\Lambda$CDM model by introducing a bounce, typically motivated by quantum cosmology effects.
+This tutorial shows how to compute perturbation power spectra for a simple bouncing cosmology using NumCosmo. The example replaces the usual inflationary phase with a nonsingular bounce and compares the resulting spectra with those from standard $\Lambda$CDM.
 
-We compare the power spectrum of a bouncing cosmology with that of standard $\Lambda$CDM (with inflation), considering a model with two components: radiation and a fluid with an arbitrary equation of state (often interpreted as dark matter). The analysis includes all perturbation spectra, including entropy perturbations.
+We use a two-component model (radiation + a fluid with equation-of-state parameter $w$) and compute all relevant perturbation spectra, including adiabatic and entropy modes. The tutorial covers:
 
-Specifically, we will examine the vacuum definition (using the adiabatic vacuum), how to assess whether the system is in the adiabatic regime, the role of different phases during the universe's contraction, and the evolution of the power spectra for all perturbations.
+- setting up the background model and parameters,
+- defining vacuum initial conditions using the adiabatic prescription and checking the adiabatic regime,
+- evolving mode functions through contraction and bounce phases,
+- computing and visualizing time- and wavenumber-dependent power spectra.
 
-## Defining Theoretical Models  
+## Defining the model
 
-We begin by defining a cosmological model using NumCosmo’s `numcosmo_py`[^numcosmo_py]. Additionally, we import `numpy`, `pandas` and `matplotlib`, which will be used later in the tutorial.  
+First we create a background cosmology with the `numcosmo_py` bindings and import standard analysis libraries (`numpy`, `pandas`, `matplotlib`). The code cells below construct a two-component model (radiation + fluid) and choose parameters that produce a contracting phase with a nonsingular bounce.
 
 ```{python}
 import os
@@ -44,7 +47,7 @@ from numcosmo_py.plotting.tools import (
 Ncm.cfg_init()
 
 H0 = 70.0
-w = 1.0e-6
+w = 1.0e-10
 xb = 1.0e30
 Omegar = 1.0e-7
 Omegaw = 1.0 - Omegar
@@ -99,12 +102,12 @@ if not os.path.exists(fig_dir):
 
 ```
 
-### Model Parameters
+### Model parameters
 
-The table below lists the parameters of the `HICosmoQGRW` model.  
+The table below lists parameters exposed by the `HICosmoQGRW` model. Briefly:
 
-- **`HICosmoQGRW`**: A two-fluid model, where *QGRW* stands for *quantum gravity with radiation and w*.  
-
+- `HICosmoQGRW` implements a two-fluid background (radiation + fluid with parameter $w$).
+- All distances and time variables are expressed in units of the Hubble radius as used by the model.
 ```{python}
 # | label: tbl-parameters
 # | tbl-cap: Parameters of HICosmoQGRW
@@ -148,49 +151,34 @@ df["Upper-bound"] = format_column(df["Upper-bound"])
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
 ```
 
-In the perturbation code, all distances are expressed in units of the Hubble radius.  
-The model evolves from $\alpha = -\infty$ (the distant past) to $\alpha = 0$ (the bounce).  
-The time parameter $\alpha$ is defined as
+All distances in the code are given in units of the Hubble radius. The background is evolved from $\alpha=-\infty$ (remote past) to $\alpha=0$ (the bounce), with
 $$
-x \equiv \frac{a_0}{a} = x_b e^{-|\alpha|}
+x \equiv \frac{a_0}{a} = x_b e^{-|\alpha|},
 $$
-where $x_b$ (listed in the table above) is the maximum contraction before the bounce.  
+where $x_b$ controls the maximum contraction before the bounce. Choosing appropriate time limits is essential: they determine when each mode is in the adiabatic regime and therefore when the adiabatic vacuum can be imposed. After setting initial conditions in that regime, modes are integrated numerically through the bounce.
 
-To set up the model, we specify the time limits, which are crucial for initializing the perturbations. These limits determine when a mode can be accurately described by the *adiabatic approximation*[^adiabatic], a requirement for defining the *adiabatic vacuum*. Once the initial conditions are established, the system can be evolved numerically beyond this approximation.
+## Background quantities
 
-## Background-Related Quantities
-
-The evolution of perturbations is determined by background quantities of the model.  
-In particular, the equations of motion depend on the *gravitational weight*  
-
+The perturbation equations require several background functions; an important example is the gravitational weight
 $$
-\gamma_i = \frac{a^3 \kappa (\rho_i + p_i)}{3|H|}, 
-\qquad \kappa = \frac{8\pi G}{c^4},
-$$  
-where $H$ is the Hubble parameter, and $i = w, \mathrm{r}$ refers to the matter and radiation components, respectively.
-
-These quantities are computed by the background model through the `NcHIPertITwoFluids` interface, implemented in the `HICosmoQGRW` model.  
-Since `HICosmoQGRW` works in units of the Hubble radius, the interface returns  
+\gamma_i = \frac{a^3 \kappa (\rho_i + p_i)}{3|H|}, \qquad \kappa = \frac{8\pi G}{c^4},
 $$
-\gamma_i = \frac{a^3 \Omega_i x^{3(1+w_i)} (1+w_i)}{|E|}, 
-\qquad E = \frac{H}{H_0}, 
-\qquad \Omega_i = \frac{\kappa \rho_{i0}}{3 H_0^2},
-$$  
-where $H_0$ is the present-day Hubble constant, and $w_i = w, \tfrac13$ for the matter and radiation components, respectively.
-
-We first compute the time when the gravitational weights are equal,  
+with $i=\mathrm{r},w$ for radiation and the $w$-fluid. The `NcHIPertITwoFluids` interface (implemented by `HICosmoQGRW`) returns these weights in code units. In these units one finds
 $$
-\Omega_w(1+w) x^{3(1+w)} = \Omega_r \frac{4}{3} x^4, 
-\qquad 
-x_\mathrm{eq} = \left( \frac{3 \Omega_w (1+w)}{4 \Omega_r} \right)^{\frac{1}{1-3w}}.
-$$  
-At $x = 1$, the Hubble parameter and Hubble radius match their present-day values, corresponding to a specific moment in the contraction phase.
+\gamma_i = \frac{a^3 \Omega_i x^{3(1+w_i)} (1+w_i)}{|E|}, \qquad E=\frac{H}{H_0},
+$$
+where $\Omega_i$ and $w_i$ are the usual density fractions and equation-of-state parameters ($w_r=1/3$, $w_w=w$).
 
-Besides the gravitational weights, perturbations are also sensitive to the dimensionless parameter  
+We can solve for the time of equality between the two gravitational weights,
+$$
+\Omega_w(1+w) x^{3(1+w)} = \Omega_r \frac{4}{3} x^4 \quad\Rightarrow\quad x_{\rm eq} = \left(\frac{3\Omega_w(1+w)}{4\Omega_r}\right)^{1/(1-3w)}.
+$$
+
+Another key dimensionless quantity is
 $$
 F_\nu = \frac{c\,k}{a|H|},
 $$
-which measures the ratio between the Hubble radius $R_H = 1/|H|$ and the physical wavelength of the mode $\lambda_{\mathrm{phys}} = 2\pi a/k$. This quantity tracks whether a given mode is inside ($F_\nu \gg 1$) or outside ($F_\nu \ll 1$) the Hubble radius.
+which compares the physical wavelength to the Hubble radius (modes with $F_\nu\gg1$ are sub-Hubble; $F_\nu\ll1$ are super-Hubble).
 
 ```{python}
 # Compute the individual speeds of sound
@@ -290,13 +278,11 @@ fig.set_size_inches(6, 3)
 plt.show()
 ```
 
-## Computing the Power Spectra Evolution
+## Adiabatic regime and truncation error
 
-For the adiabatic approximation to hold, the adiabatic correction factors for each mode variable, $\zeta$, $Q$, and their conjugate momenta $\Pi\zeta$ and $P_Q$, must remain smaller than unity. Although these correction terms can be complex, their behavior is primarily governed by the factor $1/(c_i F_\nu)$. In practice, evaluating $c_i F_\nu \gg 1$ and $c_i F_\nu \ll 1$ delineates the sub-Hubble and super-Hubble regimes, respectively. The transition at $c_i F_\nu = 1$ marks the end of the adiabatic regime.
+The adiabatic approximation relies on small correction factors for the mode functions and their conjugate momenta. A useful diagnostic is the product $c_i F_\nu$: when $c_i F_\nu\gg1$ a mode is deep inside the sub-Hubble (adiabatic) regime; when $c_i F_\nu\ll1$ it is super-Hubble. The transition $c_i F_\nu=1$ approximately marks the boundary of the adiabatic regime.
 
-Note however, that this is just a rough estimate of the adiabatic series truncation error. The actual truncation error is estimated using
-the third order correction computed as the product of the first and second order corrections. Below we plot the cubic square root of each mode
-third order estimated error and compare with the simpler $c_i F_\nu$.
+The simple $c_i F_\nu$ test is only an estimate of the truncation error. In the code we compute a third-order truncation estimate (product of first- and second-order corrections) and compare its cubic root with $c_i F_\nu$ to assess the quality of the adiabatic series.
 
 ```{python}
 # | label: fig-truncation-error
@@ -2219,12 +2205,17 @@ for k in k_values:
     pk = np.array([pgw.eval_powspec_at(cosmo_rw, alpha) for alpha in alpha_pk_a])
     gw_pk_evol.append(pk)
 
+gw_pk_k = []
+
+for alpha in alpha_a:
+    gw_pk_k.append(pgw.eval_powspec(cosmo_rw, alpha, k_for_pk_a * RH_Mpc))
+
 ```
 
 We can plot the tensor power spectrum evolution for each mode:
 
 ```{python}
-# | label: fig-tensor-power-spectrum
+# | label: fig-tensor-power-spectrum-evol
 # | fig-cap: "Evolution of the tensor power spectrum $\\mathcal{P}_{h}$ for each mode "
 # | fig-cap-location: bottom
 # | code-fold: true
@@ -2260,4 +2251,47 @@ plt.show()
 
 ```
 
+We can also plot it at the final time:
 
+```{python}
+# | label: fig-tensor-power-spectrum-k
+# | fig-cap:
+# |   - "Power spectrum of the tensor perturbation $h$ as a function of comoving wavenumber $k$ (in Mpc$^{-1}$). The plot shows the dimensionless power spectrum $\\mathcal{P}_{h}$."
+# |   - "Same plot as above but at $x = 10^{15}$ at the expanding phase."
+# | fig-cap-location: bottom
+# | layout-ncol: 2
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+
+for i, alpha in enumerate(alpha_a):
+    fig, ax = plt.subplots()
+
+    gw_pk_k_a = np.array([gw_pk_k[i].eval(k * RH_Mpc) for k in k_for_plot_a])
+
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * gw_pk_k_a,
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{h}$",
+    )
+
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+
+    ax.set_ylabel(r"$\mathcal{P}_{h}$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    ax.legend()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
+
+    fig.savefig(os.path.join(fig_dir, f"tensor_pw{i}_k.pdf"), bbox_inches="tight")
+    fig.set_size_inches(6, 3)
+plt.show()
+
+```
