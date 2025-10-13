@@ -13,6 +13,7 @@ build:
     - conda env remove -n numcosmo_developer -q || true
     - conda env create --file devel_environment.yml
     - conda install -n numcosmo_developer -y gi-docgen jupyter plotnine tabulate ipython_genutils ipykernel nbformat quarto
+    - conda run -n numcosmo_developer meson setup build -Ddocumentation=true -Db_lto=false
     - conda run -n numcosmo_developer meson compile -C build || cat build/numcosmo-site.log
     - . build/numcosmo_export.sh; conda run -n numcosmo_developer quarto render build/docs --output-dir test-site --execute-debug --log-level debug --no-cache --execute-daemon-restart --debug
     - mkdir --parents $READTHEDOCS_OUTPUT/html/
