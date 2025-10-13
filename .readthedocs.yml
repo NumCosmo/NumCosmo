@@ -12,10 +12,10 @@ build:
   commands:
     - conda env remove -n numcosmo_developer -q || true
     - conda env create --file devel_environment.yml
-    - conda install -n numcosmo_developer -y gi-docgen jupyter plotnine tabulate ipython_genutils
+    - conda install -n numcosmo_developer -y gi-docgen jupyter plotnine tabulate ipython_genutils ipykernel nbformat 
     - wget https://github.com/quarto-dev/quarto-cli/releases/download/v1.8.25/quarto-1.8.25-linux-amd64.tar.gz && mkdir ~/opt && tar -C ~/opt -xvzf quarto-1.8.25-linux-amd64.tar.gz
     - PATH="$HOME/opt/quarto-1.8.25/bin:$PATH" conda run -n numcosmo_developer meson setup build -Ddocumentation=true -Db_lto=false
-    - conda run -n numcosmo_developer meson compile -C build
+    - conda run -n numcosmo_developer meson compile -C build || cat build/numcosmo-site.log
     - mkdir --parents $READTHEDOCS_OUTPUT/html/
     - mv build/docs/numcosmo-site/* $READTHEDOCS_OUTPUT/html/.
 
