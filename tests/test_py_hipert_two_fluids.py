@@ -46,10 +46,10 @@ def fixture_two_fluids() -> Nc.HIPertTwoFluids:
 def fixture_cosmo_qgrw() -> Nc.HICosmo:
     """Fixture for NcCosmoQGrw."""
     cosmo = Nc.HICosmoQGRW()
-    cosmo.props.w = 1.0e-5
-    cosmo.props.Omegar = 1.0 * (1.0e-5)
-    cosmo.props.Omegaw = 1.0 * (1.0 - 1.0e-5)
-    cosmo.props.xb = 1.0e30
+    cosmo["w"] = 1.0e-5
+    cosmo["Omegar"] = 1.0 * (1.0e-5)
+    cosmo["Omegaw"] = 1.0 * (1.0 - 1.0e-5)
+    cosmo["xb"] = 1.0e30
 
     return cosmo
 
@@ -68,9 +68,9 @@ def test_compute_full_spectrum(
     two_fluids.props.reltol = 1.0e-9
 
     def spec_params(Omega_rs=1.0e-5, w=1.0e-3, E0=1.0):
-        cosmo_qgrw.props.w = w
-        cosmo_qgrw.props.Omegar = E0 * Omega_rs
-        cosmo_qgrw.props.Omegaw = E0 * (1.0 - Omega_rs)
+        cosmo_qgrw["w"] = w
+        cosmo_qgrw["Omegar"] = E0 * Omega_rs
+        cosmo_qgrw["Omegaw"] = E0 * (1.0 - Omega_rs)
 
         spec1 = two_fluids.compute_zeta_spectrum(
             cosmo_qgrw, 1, -cosmo_qgrw.abs_alpha(1.0e-14), -1.0, 1.0e-3, 1.0e8, 10
@@ -122,9 +122,7 @@ def test_evolve_array(two_fluids: Nc.HIPertTwoFluids, cosmo_qgrw: Nc.HICosmo):
     init_cond = Ncm.Vector.new_array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     two_fluids.props.reltol = 1.0e-9
 
-    alpha_i = two_fluids.get_cross_time(
-        cosmo_qgrw, Nc.HIPertTwoFluidsCross.MODE1MAIN, -90.0, 1.0e-8
-    )
+    alpha_i = two_fluids.get_wkb_limit(cosmo_qgrw, 1, -90.0, 1.0e-8)
     assert alpha_i < 0.0
     two_fluids.get_init_cond_zetaS(cosmo_qgrw, alpha_i, 1, np.pi * 0.25, init_cond)
     two_fluids.set_init_cond(cosmo_qgrw, alpha_i, 1, False, init_cond)

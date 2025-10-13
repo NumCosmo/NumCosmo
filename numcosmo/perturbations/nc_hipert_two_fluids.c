@@ -1579,7 +1579,7 @@ _nc_hipert_two_fluids_zeta_spectrum (const gdouble lnk, gpointer userdata)
 
   nc_hipert_set_mode_k (pert, k);
 
-  alpha_i = nc_hipert_two_fluids_get_wkb_limit (arg->ptf, arg->cosmo, arg->mode - 1, arg->alpha_i, arg->prec);
+  alpha_i = nc_hipert_two_fluids_get_wkb_limit (arg->ptf, arg->cosmo, arg->mode, arg->alpha_i, arg->prec);
   nc_hipert_two_fluids_get_init_cond_zetaS (arg->ptf, arg->cosmo, alpha_i, arg->mode, M_PI * 0.25, init_cond);
   nc_hipert_two_fluids_set_init_cond (arg->ptf, arg->cosmo, alpha_i, arg->mode, FALSE, init_cond);
 
