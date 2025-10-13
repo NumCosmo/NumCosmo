@@ -20,7 +20,7 @@ We use a two-component model (radiation + a fluid with equation-of-state paramet
 
 ## Defining the model
 
-First we create a background cosmology with the `numcosmo_py` bindings and import standard analysis libraries (`numpy`, `pandas`, `matplotlib`). The code cells below construct a two-component model (radiation + fluid) and choose parameters that produce a contracting phase with a nonsingular bounce.
+First we create a background cosmology with the `numcosmo_py`[^numcosmo_py] bindings and import standard analysis libraries (`numpy`, `pandas`, `matplotlib`). The code cells below construct a two-component model (radiation + fluid) and choose parameters that produce a contracting phase with a nonsingular bounce.
 
 ```{python}
 import os
@@ -155,7 +155,7 @@ All distances in the code are given in units of the Hubble radius. The backgroun
 $$
 x \equiv \frac{a_0}{a} = x_b e^{-|\alpha|},
 $$
-where $x_b$ controls the maximum contraction before the bounce. Choosing appropriate time limits is essential: they determine when each mode is in the adiabatic regime and therefore when the adiabatic vacuum can be imposed. After setting initial conditions in that regime, modes are integrated numerically through the bounce.
+where $x_b$ controls the maximum contraction before the bounce. Choosing appropriate time limits is essential: they determine when each mode is in the adiabatic[^adiabatic] regime and therefore when the adiabatic vacuum can be imposed. After setting initial conditions in that regime, modes are integrated numerically through the bounce.
 
 ## Background quantities
 
