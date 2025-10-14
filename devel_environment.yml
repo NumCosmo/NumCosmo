@@ -50,7 +50,6 @@ dependencies:
   - pytest-cov
   - pytest-lazy-fixtures
   - python >= 3.11
-  - quarto
   - rich
   - scipy
   - setuptools
