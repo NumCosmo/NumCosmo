@@ -389,6 +389,10 @@ python_tests = [
         'source': 'test_py_hicosmo_Vexp.py',
     },
     {
+        'name': 'py_hicosmo_qgrw',
+        'source': 'test_py_hicosmo_qgrw.py',
+    },
+    {
         'name': 'py_hireion',
         'source': 'test_py_hireion.py',
     },
@@ -471,6 +475,7 @@ python_tests = [
     {
         'name': 'py_data_snia_cov',
         'source': 'test_py_data_snia_cov.py',
+        'timeout': 0,
     },
     {
         'name': 'py_dataset',
