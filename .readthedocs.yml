@@ -12,6 +12,7 @@ build:
   commands:
     - conda env update --file devel_environment.yml --prune
     - conda install -n numcosmo_developer -y gi-docgen plotnine tabulate quarto nbformat nbclient jupyter jupyterlab nbconvert ipykernel
+    - jupyter notebook --no-browser --ip=0.0.0.0 --port=8888
     - conda run -n numcosmo_developer meson setup build -Ddocumentation=true -Db_lto=false
     - conda run -n numcosmo_developer meson compile -C build || cat build/numcosmo-site.log
     - . build/numcosmo_export.sh; conda run -n numcosmo_developer quarto render build/docs --output-dir test-site --execute-debug --log-level debug --no-cache --execute-daemon-restart --debug
