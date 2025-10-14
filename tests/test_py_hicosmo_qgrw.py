@@ -93,7 +93,10 @@ def test_iadiab_eval_at(qgrw: Nc.HICosmoQGRW, alpha_a: np.ndarray) -> None:
         nu = Nc.HIPertIAdiab.eval_nu(qgrw, alpha, k)
         xi = Nc.HIPertIAdiab.eval_xi(qgrw, alpha, k)
         x = Nc.HIPertIAdiab.eval_x(qgrw, alpha)
-        for val in (F1, m, nu, xi, x, unit):
+        p2Psi = Nc.HIPertIAdiab.eval_p2Psi(qgrw, alpha, k)
+        p2drho = Nc.HIPertIAdiab.eval_p2drho(qgrw, alpha, k)
+        lapse = Nc.HIPertIAdiab.eval_lapse(qgrw, alpha)
+        for val in (F1, m, nu, xi, x, unit, p2Psi, p2drho, lapse):
             assert np.isfinite(val)
 
         assert_allclose(np.log(m * nu), xi, rtol=1.0e-11, atol=0.0)
@@ -119,6 +122,47 @@ def test_igw_eval_at(qgrw: Nc.HICosmoQGRW, alpha_a: np.ndarray) -> None:
         assert_allclose(np.log(m * nu), xi, rtol=1.0e-11, atol=0.0)
 
 
+def _test_oem(oem: Nc.HIPertITwoFluidsEOM) -> None:
+    assert isinstance(oem, Nc.HIPertITwoFluidsEOM)
+    assert oem.gw1 > 0.0
+    assert oem.gw2 > 0.0
+    assert oem.gw1 != oem.gw2
+    assert oem.Fnu >= 0.0
+    assert oem.cs2 > 0.0
+    assert oem.cm2 > 0.0
+    assert oem.m_zeta > 0.0
+    assert oem.m_s > 0.0
+    assert oem.mnu2_zeta > 0.0
+    assert oem.mnu2_s > 0.0
+    assert_allclose(
+        oem.m_zeta * oem.Fnu**2 * oem.cs2, oem.mnu2_zeta, rtol=1.0e-11, atol=0.0
+    )
+    assert_allclose(oem.m_s * oem.Fnu**2 * oem.cm2, oem.mnu2_s, rtol=1.0e-11, atol=0.0)
+
+
+def _test_wkb(wkb: Nc.HIPertITwoFluidsWKB) -> None:
+    assert isinstance(wkb, Nc.HIPertITwoFluidsWKB)
+    for val in [
+        wkb.mode1_zeta_scale,
+        wkb.mode2_zeta_scale,
+        wkb.mode1_Q_scale,
+        wkb.mode2_Q_scale,
+        wkb.mode1_Pzeta_scale,
+        wkb.mode2_Pzeta_scale,
+        wkb.mode1_PQ_scale,
+        wkb.mode2_PQ_scale,
+    ]:
+        assert np.isfinite(val)
+
+    state = wkb.peek_state()
+    assert isinstance(state, Nc.HIPertITwoFluidsState)
+    assert state.gw1 > 0.0
+    assert state.gw2 > 0.0
+    assert state.gw1 != state.gw2
+    assert state.Fnu >= 0.0
+    assert state.norma > 0.0
+
+
 def test_itwo_fluids_wkb_eval(qgrw: Nc.HICosmoQGRW, alpha_a: np.ndarray) -> None:
     """Evaluate HICosmoQGRW implementation of NcHIPertITwoFluids at a given time."""
     k_a = np.geomspace(1.0e-3, 1.0e3, 5)
@@ -129,29 +173,10 @@ def test_itwo_fluids_wkb_eval(qgrw: Nc.HICosmoQGRW, alpha_a: np.ndarray) -> None
 
     for alpha, k in product(alpha_a, k_a):
         wkb = Nc.HIPertITwoFluids.wkb_eval(qgrw, alpha, k)
-
-        for val in [
-            wkb.mode1_zeta_scale,
-            wkb.mode2_zeta_scale,
-            wkb.mode1_Q_scale,
-            wkb.mode2_Q_scale,
-            wkb.mode1_Pzeta_scale,
-            wkb.mode2_Pzeta_scale,
-            wkb.mode1_PQ_scale,
-            wkb.mode2_PQ_scale,
-        ]:
-            assert np.isfinite(val)
-
-        state = wkb.peek_state()
-        assert isinstance(state, Nc.HIPertITwoFluidsState)
-
-        assert_allclose(state.alpha, alpha, rtol=0.0, atol=1.0e-14)
-        assert_allclose(state.k, k, rtol=0.0, atol=1.0e-14)
-        assert state.gw1 > 0.0
-        assert state.gw2 > 0.0
-        assert state.gw1 != state.gw2
-        assert state.Fnu >= 0.0
-        assert state.norma > 0.0
+        _test_wkb(wkb)
+    for k, alpha in product(k_a, alpha_a):
+        wkb = Nc.HIPertITwoFluids.wkb_eval(qgrw, alpha, k)
+        _test_wkb(wkb)
 
 
 def test_itwo_fluids_oem_eval(qgrw: Nc.HICosmoQGRW, alpha_a: np.ndarray) -> None:
@@ -160,22 +185,7 @@ def test_itwo_fluids_oem_eval(qgrw: Nc.HICosmoQGRW, alpha_a: np.ndarray) -> None
 
     for alpha, k in product(alpha_a, k_a):
         oem = Nc.HIPertITwoFluids.eom_eval(qgrw, alpha, k)
-        for val in [
-            oem.gw1,
-            oem.gw2,
-            oem.Fnu,
-            oem.cs2,
-            oem.cm2,
-            oem.m_zeta,
-            oem.m_s,
-            oem.mnu2_zeta,
-            oem.mnu2_s,
-        ]:
-            assert np.isfinite(val)
-
-        assert_allclose(
-            oem.m_zeta * oem.Fnu**2 * oem.cs2, oem.mnu2_zeta, rtol=1.0e-11, atol=0.0
-        )
-        assert_allclose(
-            oem.m_s * oem.Fnu**2 * oem.cm2, oem.mnu2_s, rtol=1.0e-11, atol=0.0
-        )
+        _test_oem(oem)
+    for k, alpha in product(k_a, alpha_a):
+        oem = Nc.HIPertITwoFluids.eom_eval(qgrw, alpha, k)
+        _test_oem(oem)
