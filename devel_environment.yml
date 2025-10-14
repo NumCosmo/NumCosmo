@@ -8,7 +8,7 @@ dependencies:
   - black
   - c-compiler
   - cfitsio
-  - click < 8.2.0
+  - click
   - coverage
   - fftw
   - flake8
@@ -50,6 +50,7 @@ dependencies:
   - pytest-cov
   - pytest-lazy-fixtures
   - python >= 3.11
+  - quarto
   - rich
   - scipy
   - setuptools
