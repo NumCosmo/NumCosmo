@@ -14,8 +14,8 @@ build:
       - echo $PATH
       - conda info
       - conda env list  
-      - meson setup build -Ddocumentation=true -Db_lto=false
-      - meson compile -C build
+      - conda run -n numcosmo_developer meson setup build -Ddocumentation=true -Db_lto=false
+      - conda run -n numcosmo_developer meson compile -C build
       - mkdir --parents $READTHEDOCS_OUTPUT/html/
       - mv build/docs/numcosmo-site/* $READTHEDOCS_OUTPUT/html/.
     build:
