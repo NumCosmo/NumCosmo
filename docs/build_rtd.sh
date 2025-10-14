@@ -2,6 +2,6 @@
 
 set -e
 source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate numcosmo_developer
+conda activate base
 meson setup build -Ddocumentation=true -Db_lto=false
 meson compile -C build
