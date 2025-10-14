@@ -14,12 +14,14 @@ dependencies:
   - fortran-compiler
   - gcovr
   - getdist
+  - gi-docgen
   - glib
   - glib-tools
   - gmp
   - gobject-introspection
   - gsl
   - hdf5
+  - jupyter
   - lcov
   - libflint
   - libfyaml
@@ -38,6 +40,7 @@ dependencies:
       - pygobject-stubs
       - pytest-tap
       - types-tabulate
+  - plotnine
   - pyccl >= 3.0.0
   - pydantic
   - pygobject
@@ -46,6 +49,7 @@ dependencies:
   - pytest-cov
   - pytest-lazy-fixtures
   - python >= 3.11
+  - quarto
   - rich
   - scipy
   - setuptools
