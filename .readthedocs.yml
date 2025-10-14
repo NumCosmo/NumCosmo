@@ -13,14 +13,15 @@ build:
     pre_build:
       - echo $PATH
       - conda info
-      - conda env list  
-      - conda activate numcosmo_developer && meson setup build -Ddocumentation=true -Db_lto=false
-      - conda activate numcosmo_developer && meson compile -C build
-      - mkdir --parents $READTHEDOCS_OUTPUT/html/
-      - mv build/docs/numcosmo-site/* $READTHEDOCS_OUTPUT/html/.
+      - conda env list
     build:
       html:
-        - conda info
+        - source $(conda info --base)/etc/profile.d/conda.sh \
+          && conda activate numcosmo_developer \
+          && meson setup build -Ddocumentation=true -Db_lto=false \
+          && meson compile -C build
+        - mkdir --parents $READTHEDOCS_OUTPUT/html/
+        - mv build/docs/numcosmo-site/* $READTHEDOCS_OUTPUT/html/.
   
 
 # Debug line
