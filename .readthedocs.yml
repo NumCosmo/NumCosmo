@@ -18,6 +18,10 @@ build:
       - meson compile -C build
       - mkdir --parents $READTHEDOCS_OUTPUT/html/
       - mv build/docs/numcosmo-site/* $READTHEDOCS_OUTPUT/html/.
+    build:
+      html:
+        - conda info
+  
 
 # Debug line
 #     - . build/numcosmo_export.sh; PATH="$HOME/opt/quarto-1.8.25/bin:$PATH" conda run -n numcosmo_developer quarto render build/docs --output-dir test-site --execute-debug --log-level debug --no-cache --execute-daemon-restart --debug
