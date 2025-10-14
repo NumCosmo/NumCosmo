@@ -1,6 +1,6 @@
 version: 2
 
-formats: ['html']
+formats: ['htmlzip']
 
 conda:
   environment: devel_environment.yml
