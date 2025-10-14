@@ -16,10 +16,7 @@ build:
       - conda env list
     build:
       html:
-        - source $(conda info --base)/etc/profile.d/conda.sh \
-          && conda activate numcosmo_developer \
-          && meson setup build -Ddocumentation=true -Db_lto=false \
-          && meson compile -C build
+        - bash docs/build_rtd.sh
         - mkdir --parents $READTHEDOCS_OUTPUT/html/
         - mv build/docs/numcosmo-site/* $READTHEDOCS_OUTPUT/html/.
   
