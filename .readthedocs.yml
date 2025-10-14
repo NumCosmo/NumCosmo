@@ -8,8 +8,11 @@ build:
   tools:
     # Because we are using python: miniconda-latest, we will be using conda
     # instead of conda.
-    python: miniconda-latest
+    python: mambaforge-latest
   commands:
+    - echo $PATH
+    - mamba info
+    - mamba env list  
     - conda run -n numcosmo_developer meson setup build -Ddocumentation=true -Db_lto=false
     - conda run -n numcosmo_developer meson compile -C build
     - mkdir --parents $READTHEDOCS_OUTPUT/html/
