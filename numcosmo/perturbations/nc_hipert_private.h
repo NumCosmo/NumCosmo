@@ -31,7 +31,7 @@
 
 G_BEGIN_DECLS
 
-struct _NcHIPertPrivate
+typedef struct _NcHIPertPrivate
 {
   /*< private >*/
   SUNContext sunctx;
@@ -48,7 +48,9 @@ struct _NcHIPertPrivate
   N_Vector vec_abstol;
   gdouble k;
   gboolean prepared;
-};
+} NcHIPertPrivate;
+
+NcHIPertPrivate *nc_hipert_get_private (NcHIPert *pert);
 
 G_END_DECLS
 

@@ -11,15 +11,18 @@ on:
 jobs:
 
   build-gcc-ubuntu:
-    name: (ubuntu, apt)
+    name: (ubuntu, apt, pip)
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.11' 
     - name: Install pre-requisites
       run: |
         sudo apt-get update
-        sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev libopenmpi-dev uncrustify
-        sudo pip install meson ninja pytest pytest-tap pytest-lazy-fixtures numpy --break-system-packages
+        sudo apt-get install gobject-introspection gir1.2-glib-2.0 gir1.2-glib-2.0-dev libgirepository-2.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev libopenmpi-dev libcairo2-dev uncrustify
+        pip install meson ninja pytest pytest-tap pytest-lazy-fixtures numpy pygobject --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
@@ -57,7 +60,8 @@ jobs:
         path: build/meson-dist/numcosmo-*.tar.xz
     - name: Test example compilation using installed library
       run: |
-        sudo meson install -C build
+        meson install -C build --destdir=install_tmp
+        sudo cp -a build/install_tmp/* /
         cd examples
         gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple $(pkg-config numcosmo --libs --cflags)
         gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca $(pkg-config numcosmo --libs --cflags)
@@ -65,7 +69,7 @@ jobs:
         ./example_ca
 
   build-gcc-macos:
-    name: (macos, brew)
+    name: (macos, brew, pip)
     runs-on: macos-latest
     env:
       CC: gcc-14
