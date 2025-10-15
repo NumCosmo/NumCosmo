@@ -86,7 +86,7 @@ def test_set_rc_params_article_and_restore():
 
 def test_confidence_ellipse_adds_patch():
     """confidence_ellipse returns an artists.Artist and adds to axes."""
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     mu = np.array([1.0, 2.0])
     cov = np.array([[0.2, 0.05], [0.05, 0.1]])
     patch = tools.confidence_ellipse(mu, cov, ax, n_std=2.0, edgecolor="r")
@@ -94,12 +94,11 @@ def test_confidence_ellipse_adds_patch():
     assert patch in ax.patches
     # basic property checks
     assert hasattr(patch, "get_width")
-    fig.canvas.close()
 
 
 def test_add_ellipse_from_ellipticity_creates_patches():
     """add_ellipse_from_ellipticity creates one patch per input point."""
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     ra = np.array([0.0, 1.0, 2.0])
     dec = np.array([0.0, 0.5, -0.5])
     e1 = np.array([0.1, 0.2, 0.0])
@@ -108,7 +107,6 @@ def test_add_ellipse_from_ellipticity_creates_patches():
     tools.add_ellipse_from_ellipticity(ax, ra, dec, e1, e2, ellipse_scale=0.5)
     after = len(ax.patches)
     assert after - before == 3
-    fig.canvas.close()
 
 
 def test_plot_m2lnp_and_output_image():
@@ -119,18 +117,17 @@ def test_plot_m2lnp_and_output_image():
     xv, yv = np.meshgrid(x, y)
     # create a mock -2lnp array (larger values away from center)
     z = ((xv - 0.5) ** 2 + (yv - 0.5) ** 2) * 10.0
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     img = tools.plot_m2lnp(x, y, z.flatten(), ax, plotn=n)
     assert img is not None
     # image norm should be LogNorm instance
 
     assert isinstance(img.norm, LogNorm)
-    fig.canvas.close()
 
 
 def test_format_alpha_xaxis_creates_secondary_axes():
     """format_alpha_xaxis adds a secondary axis with proper label and formatter."""
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
 
     cosmo = Nc.HICosmoQGRW.new()
 
@@ -152,4 +149,3 @@ def test_format_alpha_xaxis_creates_secondary_axes():
             for sec in ax.figure.axes
         )
         assert found_x_label
-    fig.canvas.close()
