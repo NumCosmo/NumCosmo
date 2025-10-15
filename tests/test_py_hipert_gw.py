@@ -22,7 +22,13 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Tests on NcHIPertEM class."""
+"""Tests for the HIPertGW (tensor perturbation) interface and helpers.
+
+This file exercises HIPertGW behavior (setters/getters, initial-condition
+search, adiabatic solutions, evolution and power-spectrum evaluation) for
+two example cosmologies used in the test-suite: `HICosmoVexp` and
+`HICosmoQGRW`.
+"""
 import math
 import pytest
 
@@ -35,8 +41,12 @@ Ncm.cfg_init()
 
 
 @pytest.fixture(name="pgw_vexp")
-def fixture_em():
-    """Fixture for NcHIPertEM."""
+def fixture_em() -> tuple[Nc.HIPertGW, Nc.HICosmoVexp]:
+    """Provide a (HIPertGW, HICosmoVexp) pair configured for tests.
+
+    The HIPertGW instance is configured with adiabatic initial-state
+    parameters and time bounds derived from the `HICosmoVexp` model.
+    """
     pgw = Nc.HIPertGW.new()
     vexp = Nc.HICosmoVexp()
 
@@ -67,8 +77,12 @@ def fixture_em():
 
 
 @pytest.fixture(name="pgw_qgrw")
-def fixture_qgrw():
-    """Fixture for NcHIPertQG."""
+def fixture_qgrw() -> tuple[Nc.HIPertGW, Nc.HICosmoQGRW]:
+    """Provide a (HIPertGW, HICosmoQGRW) pair configured for tests.
+
+    The HIPertGW instance is configured with adiabatic initial-state
+    parameters and time bounds appropriate for the `HICosmoQGRW` model.
+    """
     qgrw = Nc.HICosmoQGRW.new()
     qgrw["H0"] = 70.0
     qgrw["Omegar"] = 1.0e-5
@@ -88,8 +102,13 @@ def fixture_qgrw():
     return pgw, qgrw
 
 
-def test_hipert_gw_vexp(pgw_vexp):
-    """Test basic functionality of NcHIPertAdiab."""
+def test_hipert_gw_vexp(pgw_vexp: tuple[Nc.HIPertGW, Nc.HICosmoVexp]) -> None:
+    """Verify basic HIPertGW setters/getters and initial-condition modes.
+
+    Exercises tolerances, thresholds, save flags and initial-condition
+    type setters on a HIPertGW instance paired with a `HICosmoVexp`
+    cosmology.
+    """
     pgw, vexp = pgw_vexp
 
     assert_allclose(pgw.get_k(), 1.0)
@@ -127,8 +146,15 @@ def test_hipert_gw_vexp(pgw_vexp):
     assert pgw.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.NONADIABATIC2
 
 
-def test_initial_conditions_time_vexp(pgw_vexp):
-    """Test initial conditions of NcHIPertAdiab."""
+def test_initial_conditions_time_vexp(
+    pgw_vexp: tuple[Nc.HIPertGW, Nc.HICosmoVexp],
+) -> None:
+    """Find and validate the adiabatic-time limit for the Vexp cosmology.
+
+    Confirms the adiabatic time-finder returns a valid time inside the
+    configured integration window and that the auxiliary `find_adiab_max`
+    result matches evaluations of `eval_F1`.
+    """
     pgw, vexp = pgw_vexp
 
     limit_found, t_adiab = pgw.find_adiab_time_limit(
@@ -148,8 +174,14 @@ def test_initial_conditions_time_vexp(pgw_vexp):
     assert math.fabs(F1_min - pgw.eval_F1(vexp, t_ub)) <= 1.0e-1
 
 
-def test_initial_conditions_adiabatic_vexp(pgw_vexp):
-    """Test initial conditions of NcHIPertAdiab."""
+def test_initial_conditions_adiabatic_vexp(
+    pgw_vexp: tuple[Nc.HIPertGW, Nc.HICosmoVexp],
+) -> None:
+    """Compute adiabatic initial state and verify the returned fields.
+
+    For a range of target precisions, compute the adiabatic state and
+    assert the returned complex field and its momentum are finite.
+    """
     pgw, vexp = pgw_vexp
 
     state = Ncm.CSQ1DState.new()
@@ -174,8 +206,13 @@ def test_initial_conditions_adiabatic_vexp(pgw_vexp):
         assert np.isfinite(Pphi)
 
 
-def test_evolution_vexp(pgw_vexp):
-    """Test initial conditions of NcHIPertAdiab."""
+def test_evolution_vexp(pgw_vexp: tuple[Nc.HIPertGW, Nc.HICosmoVexp]) -> None:
+    """Prepare and evolve HIPertGW for the Vexp cosmology and check outputs.
+
+    Runs the evolution at configured times, verifies that the state
+    invariants (J matrix) match expectations and that the instantaneous
+    power spectrum computation returns consistent finite values.
+    """
     pgw, vexp = pgw_vexp
 
     state = Ncm.CSQ1DState.new()
@@ -184,6 +221,8 @@ def test_evolution_vexp(pgw_vexp):
     pgw.prepare(vexp)
 
     t_a, _smaller_abst = pgw.get_time_array()
+    unit = Nc.HIPertIGW.eval_unit(vexp)
+    assert np.isfinite(unit)
 
     for t in t_a:
         state = pgw.eval_at(vexp, t, state)
@@ -198,24 +237,60 @@ def test_evolution_vexp(pgw_vexp):
 
         J11, J12, J22 = state.get_J()
 
-        assert np.isfinite(J11)
-        assert np.isfinite(J22)
-        assert np.isfinite(J12)
+        assert_allclose(J11, 2.0 * abs(phi) ** 2)
+        assert_allclose(J22, 2.0 * abs(Pphi) ** 2)
+        assert_allclose(J12, 2.0 * np.real(np.conj(phi) * Pphi))
+
+        pk = pgw.eval_powspec_at(vexp, t)
+
+        assert_allclose(pk, abs(unit * phi) ** 2 / (2.0 * math.pi**2))
 
 
-def test_evolution_vexp_duplicate(pgw_vexp):
-    """Test initial conditions of NcHIPertAdiab."""
+def test_powspec_vexp(pgw_vexp: tuple[Nc.HIPertGW, Nc.HICosmoVexp]) -> None:
+    """Evaluate the power spectrum spline for a range of k and assert finiteness.
+
+    Ensures that `eval_powspec` returns an `Ncm.Spline` and that its
+    evaluations produce finite numbers across a sampling grid.
+    """
+    pgw, vexp = pgw_vexp
+
+    pgw.set_tf(1.0)  # We do not want to evolve through the singularity
+    pgw.prepare(vexp)
+
+    k_a = np.geomspace(1.0e-4, 1.0e4, 10)
+    k_eval_a = np.geomspace(1.0e-4, 1.0e4, 50)
+
+    pw_s = pgw.eval_powspec(vexp, 1.0, k_a)
+    assert isinstance(pw_s, Ncm.Spline)
+    pw_k_a = np.array([pw_s.eval(k) for k in k_eval_a])
+    assert np.all(np.isfinite(pw_k_a))
+
+
+def test_evolution_vexp_duplicate(pgw_vexp: tuple[Nc.HIPertGW, Nc.HICosmoVexp]) -> None:
+    """Serialize/duplicate objects and run the evolution test on the copies.
+
+    Verifies that serialization duplication preserves object types and
+    that duplicated objects behave the same under evolution as the
+    originals.
+    """
     pgw, vexp = pgw_vexp
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     pgw_dup = ser.dup_obj(pgw)
     vexp_dup = ser.dup_obj(vexp)
+    assert isinstance(pgw_dup, Nc.HIPertGW)
+    assert isinstance(vexp_dup, Nc.HICosmoVexp)
 
     test_evolution_vexp((pgw_dup, vexp_dup))
 
 
-def test_interface_eval_vexp(pgw_vexp):
-    """Test interface evaluation of NcHIPertAdiab."""
+def test_interface_eval_vexp(pgw_vexp: tuple[Nc.HIPertGW, Nc.HICosmoVexp]) -> None:
+    """Directly exercise the HIPertIGW interface evaluation helpers.
+
+    Calls static interface helpers (eval_unit, eval_F1, eval_m, eval_xi,
+    eval_nu, eval_x) across a tau grid to ensure they return finite
+    numerical values for the `HICosmoVexp` model.
+    """
     _, vexp = pgw_vexp
 
     tau_a = np.linspace(vexp.tau_min() + 1.0, vexp.tau_max(), 1000)
@@ -229,8 +304,13 @@ def test_interface_eval_vexp(pgw_vexp):
         assert np.isfinite(Nc.HIPertIGW.eval_x(vexp, tau))
 
 
-def test_hipert_gw_qgrw(pgw_qgrw):
-    """Test basic functionality of NcHIPertAdiab."""
+def test_hipert_gw_qgrw(pgw_qgrw: tuple[Nc.HIPertGW, Nc.HICosmoQGRW]) -> None:
+    """Verify HIPertGW setters/getters and state flags for QGRW cosmology.
+
+    Mirrors the basic checks performed for the Vexp fixture but using
+    `HICosmoQGRW` to ensure behavior is consistent across cosmology
+    implementations.
+    """
     pgw, qgrw = pgw_qgrw
 
     assert_allclose(pgw.get_k(), 1.0)
@@ -268,8 +348,14 @@ def test_hipert_gw_qgrw(pgw_qgrw):
     assert pgw.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.NONADIABATIC2
 
 
-def test_initial_conditions_time_qgrw(pgw_qgrw):
-    """Test initial conditions of NcHIPertAdiab."""
+def test_initial_conditions_time_qgrw(
+    pgw_qgrw: tuple[Nc.HIPertGW, Nc.HICosmoQGRW],
+) -> None:
+    """Find and validate the adiabatic-time limit for the QGRW cosmology.
+
+    Checks that the time finder returns a valid time and that `find_adiab_max`
+    results are consistent with `eval_F1` evaluations.
+    """
     pgw, qgrw = pgw_qgrw
 
     limit_found, t_adiab = pgw.find_adiab_time_limit(
@@ -289,8 +375,14 @@ def test_initial_conditions_time_qgrw(pgw_qgrw):
     assert math.fabs(F1_min - pgw.eval_F1(qgrw, t_ub)) <= 1.0e-1
 
 
-def test_initial_conditions_adiabatic_qgrw(pgw_qgrw):
-    """Test initial conditions of NcHIPertAdiab."""
+def test_initial_conditions_adiabatic_qgrw(
+    pgw_qgrw: tuple[Nc.HIPertGW, Nc.HICosmoQGRW],
+) -> None:
+    """Compute adiabatic initial states for QGRW and assert finiteness.
+
+    Iterates over a range of requested precisions, computes the adiabatic
+    solution, and asserts the complex field and its momentum are finite.
+    """
     pgw, qgrw = pgw_qgrw
 
     state = Ncm.CSQ1DState.new()
@@ -315,8 +407,13 @@ def test_initial_conditions_adiabatic_qgrw(pgw_qgrw):
         assert np.isfinite(Pphi)
 
 
-def test_evolution_qgrw(pgw_qgrw):
-    """Test initial conditions of NcHIPertAdiab."""
+def test_evolution_qgrw(pgw_qgrw: tuple[Nc.HIPertGW, Nc.HICosmoQGRW]) -> None:
+    """Prepare and evolve HIPertGW for the QGRW cosmology and validate outputs.
+
+    Evolves the HIPertGW state, checks the J invariants and compares the
+    instantaneous power spectrum with the analytical combination of the
+    unit and mode field.
+    """
     pgw, qgrw = pgw_qgrw
 
     state = Ncm.CSQ1DState.new()
@@ -325,6 +422,8 @@ def test_evolution_qgrw(pgw_qgrw):
     pgw.prepare(qgrw)
 
     t_a, _smaller_abst = pgw.get_time_array()
+    unit = Nc.HIPertIGW.eval_unit(qgrw)
+    assert np.isfinite(unit)
 
     for t in t_a:
         state = pgw.eval_at(qgrw, t, state)
@@ -339,24 +438,57 @@ def test_evolution_qgrw(pgw_qgrw):
 
         J11, J12, J22 = state.get_J()
 
-        assert np.isfinite(J11)
-        assert np.isfinite(J22)
-        assert np.isfinite(J12)
+        assert_allclose(J11, 2.0 * abs(phi) ** 2)
+        assert_allclose(J22, 2.0 * abs(Pphi) ** 2)
+        assert_allclose(J12, 2.0 * np.real(np.conj(phi) * Pphi))
+
+        pk = pgw.eval_powspec_at(qgrw, t)
+        assert_allclose(pk, abs(unit * phi) ** 2 / (2.0 * math.pi**2))
 
 
-def test_evolution_qgrw_duplicate(pgw_qgrw):
-    """Test initial conditions of NcHIPertAdiab."""
+def test_powspec_qgrw(pgw_qgrw: tuple[Nc.HIPertGW, Nc.HICosmoQGRW]) -> None:
+    """Evaluate the power spectrum spline for QGRW and assert finiteness.
+
+    Ensures `eval_powspec` returns an `Ncm.Spline` and that its evaluations
+    over a sampling grid are finite numbers.
+    """
+    pgw, qgrw = pgw_qgrw
+
+    pgw.set_tf(1.0)
+    pgw.prepare(qgrw)
+
+    k_a = np.geomspace(1.0e-4, 1.0e4, 10)
+    k_eval_a = np.geomspace(1.0e-4, 1.0e4, 50)
+
+    pw_s = pgw.eval_powspec(qgrw, 1.0, k_a)
+    assert isinstance(pw_s, Ncm.Spline)
+    pw_k_a = np.array([pw_s.eval(k) for k in k_eval_a])
+    assert np.all(np.isfinite(pw_k_a))
+
+
+def test_evolution_qgrw_duplicate(pgw_qgrw: tuple[Nc.HIPertGW, Nc.HICosmoQGRW]) -> None:
+    """Serialize/duplicate QGRW objects and run the evolution on the copies.
+
+    Verifies duplicated objects preserve types and that evolution behaves
+    correctly on serialized copies.
+    """
     pgw, qgrw = pgw_qgrw
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     pgw_dup = ser.dup_obj(pgw)
     qgrw_dup = ser.dup_obj(qgrw)
+    assert isinstance(pgw_dup, Nc.HIPertGW)
+    assert isinstance(qgrw_dup, Nc.HICosmoQGRW)
 
     test_evolution_qgrw((pgw_dup, qgrw_dup))
 
 
-def test_interface_eval_qgrw(pgw_qgrw):
-    """Test interface evaluation of NcHIPertAdiab."""
+def test_interface_eval_qgrw(pgw_qgrw: tuple[Nc.HIPertGW, Nc.HICosmoQGRW]) -> None:
+    """Exercise HIPertIGW interface evaluation helpers for QGRW cosmology.
+
+    Calls the static interface helpers (eval_unit, eval_F1, eval_m, eval_xi,
+    eval_nu, eval_x) across a tau grid to assert they return finite values.
+    """
     _, qgrw = pgw_qgrw
 
     tau_a = np.linspace(-qgrw.abs_alpha(1.0e-24), 1.0, 1000)

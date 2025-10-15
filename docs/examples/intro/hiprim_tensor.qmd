@@ -8,7 +8,7 @@ abstract: |
   CMB observables (TT, TE, EE, BB), and visualization of the results.
 ---
 
-{{< include /_definitions.qmd >}}
+{{< include /notes/_numcosmo_py.qmd >}}
 
 ## Introduction
 

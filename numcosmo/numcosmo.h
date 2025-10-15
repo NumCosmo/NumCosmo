@@ -71,7 +71,6 @@
 #include <numcosmo/perturbations/nc_hipert_gw.h>
 #include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 #include <numcosmo/perturbations/nc_hipert_two_fluids.h>
-#include <numcosmo/perturbations/nc_hipert_wkb.h>
 #include <numcosmo/perturbations/nc_hipert.h>
 
 /* Model implementations */
