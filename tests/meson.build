@@ -647,6 +647,22 @@ if python_pyccl.found()
     ]
 endif
 
+python_matplotlib = python_module.find_installation(
+    'python3',
+    modules: ['matplotlib'],
+    required: false,
+)
+
+if python_matplotlib.found()
+    python_tests += [
+        {
+            'name': 'plotting_tools',
+            'source': 'test_plotting_tools.py',
+            'timeout': 0,
+        },
+    ]
+endif
+
 python_getdist = python_module.find_installation(
     'python3',
     modules: ['getdist'],
