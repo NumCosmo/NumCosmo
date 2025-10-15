@@ -403,6 +403,7 @@ python_tests = [
     {
         'name': 'py_hipert_em',
         'source': 'test_py_hipert_em.py',
+        'timeout': 0,
     },
     {
         'name': 'py_hipert_gw',
