@@ -1,4 +1,5 @@
 ---
+name: numcosmo_developer
 channels:
   - conda-forge
   - nodefaults
@@ -7,19 +8,21 @@ dependencies:
   - black
   - c-compiler
   - cfitsio
-  - click < 8.2.0
+  - click
   - coverage
   - fftw
   - flake8
   - fortran-compiler
   - gcovr
   - getdist
+  - gi-docgen
   - glib
   - glib-tools
   - gmp
   - gobject-introspection
   - gsl
   - hdf5
+  - jupyter
   - lcov
   - libflint
   - libfyaml
@@ -38,6 +41,7 @@ dependencies:
       - pygobject-stubs
       - pytest-tap
       - types-tabulate
+  - plotnine
   - pyccl >= 3.0.0
   - pydantic
   - pygobject
@@ -46,6 +50,7 @@ dependencies:
   - pytest-cov
   - pytest-lazy-fixtures
   - python >= 3.11
+  - quarto
   - rich
   - scipy
   - setuptools
@@ -53,4 +58,3 @@ dependencies:
   - tqdm
   - typer
   - zlib
-name: numcosmo_developer

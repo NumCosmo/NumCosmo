@@ -387,6 +387,11 @@ python_tests = [
     {
         'name': 'py_hicosmo_Vexp',
         'source': 'test_py_hicosmo_Vexp.py',
+        'timeout': 0,
+    },
+    {
+        'name': 'py_hicosmo_qgrw',
+        'source': 'test_py_hicosmo_qgrw.py',
     },
     {
         'name': 'py_hireion',
@@ -399,6 +404,7 @@ python_tests = [
     {
         'name': 'py_hipert_em',
         'source': 'test_py_hipert_em.py',
+        'timeout': 0,
     },
     {
         'name': 'py_hipert_gw',
@@ -471,6 +477,7 @@ python_tests = [
     {
         'name': 'py_data_snia_cov',
         'source': 'test_py_data_snia_cov.py',
+        'timeout': 0,
     },
     {
         'name': 'py_dataset',
@@ -636,6 +643,22 @@ if python_pyccl.found()
         {
             'name': 'py_xcor',
             'source': 'test_py_xcor.py',
+            'timeout': 0,
+        },
+    ]
+endif
+
+python_matplotlib = python_module.find_installation(
+    'python3',
+    modules: ['matplotlib'],
+    required: false,
+)
+
+if python_matplotlib.found()
+    python_tests += [
+        {
+            'name': 'plotting_tools',
+            'source': 'test_plotting_tools.py',
             'timeout': 0,
         },
     ]

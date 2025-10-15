@@ -114,18 +114,22 @@ test_ncm_util_complex (void)
     ncm_complex_mul_real (c1, 3.0);
     g_assert_cmpfloat (ncm_complex_Re (c1), ==, 3.0);
     g_assert_cmpfloat (ncm_complex_Im (c1), ==, 6.0);
+    g_assert_cmpfloat (ncm_complex_Abs (c1), ==, hypot (3.0, 6.0));
 
     ncm_complex_res_add_mul (c1, c2, c3);
     g_assert_cmpfloat (ncm_complex_Re (c1), ==, -6.0);
     g_assert_cmpfloat (ncm_complex_Im (c1), ==, 44.0);
+    g_assert_cmpfloat (ncm_complex_Abs (c1), ==, hypot (-6.0, 44.0));
 
     ncm_complex_res_add_mul_real (c1, c2, 2.0);
     g_assert_cmpfloat (ncm_complex_Re (c1), ==, 0.0);
     g_assert_cmpfloat (ncm_complex_Im (c1), ==, 52.0);
+    g_assert_cmpfloat (ncm_complex_Abs (c1), ==, hypot (0.0, 52.0));
 
     ncm_complex_res_mul (c1, c2);
     g_assert_cmpfloat (ncm_complex_Re (c1), ==, -208.0);
     g_assert_cmpfloat (ncm_complex_Im (c1), ==, 156.0);
+    g_assert_cmpfloat (ncm_complex_Abs (c1), ==, hypot (-208.0, 156.0));
 
     ncm_complex_free (c1);
     ncm_complex_free (c2);
@@ -139,6 +143,7 @@ test_ncm_util_complex (void)
     ncm_complex_set_c (&c1, 1.0 + 2.0 * I);
     g_assert_cmpfloat (ncm_complex_Re (&c1), ==, 1.0);
     g_assert_cmpfloat (ncm_complex_Im (&c1), ==, 2.0);
+    g_assert_cmpfloat (ncm_complex_Abs (&c1), ==, hypot (1.0, 2.0));
 
     z = ncm_complex_c (&c1);
     g_assert_cmpfloat (creal (z), ==, 1.0);
@@ -151,6 +156,7 @@ test_ncm_util_complex (void)
 
     g_assert_cmpfloat (ncm_complex_Re (&c1), ==, 1.0);
     g_assert_cmpfloat (ncm_complex_Im (&c1), ==, 2.0);
+    g_assert_cmpfloat (ncm_complex_Abs (&c1), ==, hypot (1.0, 2.0));
 
     g_assert_cmpfloat (ncm_complex_Re (c2), ==, 1.0);
     g_assert_cmpfloat (ncm_complex_Im (c2), ==, 2.0);
