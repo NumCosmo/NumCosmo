@@ -11,7 +11,7 @@ on:
 jobs:
 
   build-gcc-ubuntu:
-    name: (ubuntu, apt)
+    name: (ubuntu, apt, pip)
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
@@ -60,7 +60,7 @@ jobs:
         path: build/meson-dist/numcosmo-*.tar.xz
     - name: Test example compilation using installed library
       run: |
-        sudo meson install -C build
+        sudo -E meson install -C build
         cd examples
         gcc -D_GNU_SOURCE -Wall example_simple.c -o example_simple $(pkg-config numcosmo --libs --cflags)
         gcc -D_GNU_SOURCE -Wall example_ca.c -o example_ca $(pkg-config numcosmo --libs --cflags)
@@ -68,7 +68,7 @@ jobs:
         ./example_ca
 
   build-gcc-macos:
-    name: (macos, brew)
+    name: (macos, brew, pip)
     runs-on: macos-latest
     env:
       CC: gcc-14

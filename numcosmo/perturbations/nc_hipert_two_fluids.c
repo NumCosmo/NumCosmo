@@ -105,8 +105,6 @@
 
 typedef struct _NcHIPertTwoFluidsPrivate
 {
-  NcHIPertWKB *wkb_zeta;
-  NcHIPertWKB *wkb_S;
   N_Vector abstol;
   gboolean useQP;
   NcmVector *state;
@@ -155,14 +153,10 @@ nc_hipert_two_fluids_init (NcHIPertTwoFluids *ptf)
 {
   NcHIPertTwoFluidsPrivate * const self = ptf->priv = nc_hipert_two_fluids_get_instance_private (ptf);
 
-  self->wkb_zeta = NULL;
-  self->wkb_S    = NULL;
-  self->abstol   = NULL;
-  self->useQP    = FALSE;
-  self->state    = ncm_vector_new (NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
-
-  self->arg = g_new0 (NcHIPertTwoFluidsArg, 1);
-
+  self->abstol     = NULL;
+  self->useQP      = FALSE;
+  self->state      = ncm_vector_new (NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
+  self->arg        = g_new0 (NcHIPertTwoFluidsArg, 1);
   self->alpha_i    = 0.0;
   self->alpha_f    = 0.0;
   self->wkb_reltol = 0.0;
@@ -224,9 +218,6 @@ _nc_hipert_two_fluids_dispose (GObject *object)
 {
   NcHIPertTwoFluids *ptf                = NC_HIPERT_TWO_FLUIDS (object);
   NcHIPertTwoFluidsPrivate * const self = ptf->priv;
-
-  nc_hipert_wkb_clear (&self->wkb_zeta);
-  nc_hipert_wkb_clear (&self->wkb_S);
 
   ncm_vector_clear (&self->state);
 

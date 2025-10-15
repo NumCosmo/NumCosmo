@@ -35,7 +35,6 @@
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/perturbations/nc_hipert.h>
-#include <numcosmo/perturbations/nc_hipert_wkb.h>
 #include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 
 G_BEGIN_DECLS

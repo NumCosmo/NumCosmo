@@ -28,7 +28,6 @@
 
 #include <glib-object.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/perturbations/nc_hipert_wkb.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
