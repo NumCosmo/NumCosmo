@@ -373,7 +373,8 @@ nc_hipert_two_fluids_state_interp_dup (NcHIPertTwoFluidsStateInterp *sinterp)
     sinterp_dup->mode2_splines[i] = ncm_spline_ref (sinterp->mode2_splines[i]);
   }
 
-  sinterp_dup->state = sinterp->state;
+  sinterp_dup->state       = sinterp->state;
+  sinterp_dup->interp_mode = sinterp->interp_mode;
 
   return sinterp_dup;
 }

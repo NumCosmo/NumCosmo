@@ -24,7 +24,7 @@
 
 """Tests on NcHIPertTwoFluids perturbations module."""
 
-from itertools import product
+import itertools as it
 import pytest
 from numpy.testing import assert_allclose
 import numpy as np
@@ -38,6 +38,9 @@ Ncm.cfg_init()
 def fixture_two_fluids() -> Nc.HIPertTwoFluids:
     """Fixture for NcHIPertTwoFluids."""
     two_fluids = Nc.HIPertTwoFluids.new()
+    two_fluids.set_initial_time(-160.0)
+    two_fluids.set_final_time(1.0)
+    two_fluids.set_wkb_reltol(1.0e-3)
 
     return two_fluids
 
@@ -111,7 +114,7 @@ def test_compute_full_spectrum(
     s_calib = ser.from_binfile(default_calib_file)
     assert isinstance(s_calib, Ncm.Spline2dBicubic)
 
-    for w, lnk in product(w_a, lnk_v.dup_array()):
+    for w, lnk in it.product(w_a, lnk_v.dup_array()):
         Pk0 = s.eval(lnk, np.log(w))
         Pk1 = s_calib.eval(lnk, np.log(w))
         assert_allclose(Pk0, Pk1, rtol=1.0e-3)
@@ -135,3 +138,67 @@ def test_evolve_array(two_fluids: Nc.HIPertTwoFluids, cosmo_qgrw: Nc.HICosmo):
 
     assert len(m_a) > 0
     assert all(np.isfinite(m_a))
+
+
+def test_evol_mode_and_state_interp(
+    two_fluids: Nc.HIPertTwoFluids, cosmo_qgrw: Nc.HICosmo
+):
+    """Test `evol_mode` and the returned NcHIPertTwoFluidsStateInterp."""
+    two_fluids.props.reltol = 1.0e-9
+
+    s_interp = two_fluids.evol_mode(cosmo_qgrw)
+    assert s_interp is not None
+    assert isinstance(s_interp, Nc.HIPertTwoFluidsStateInterp)
+
+    ti = two_fluids.get_initial_time()
+    tf = two_fluids.get_final_time()
+    k = two_fluids.get_mode_k()
+
+    assert ti < tf
+    alpha_a = np.linspace(ti, tf, 100)
+
+    s_interp2 = s_interp.dup()
+    assert s_interp2 is not None
+    assert isinstance(s_interp2, Nc.HIPertTwoFluidsStateInterp)
+    assert s_interp2 is not s_interp
+
+    for alpha in alpha_a:
+        state = s_interp.eval(cosmo_qgrw, alpha)
+        state2 = s_interp2.eval(cosmo_qgrw, alpha)
+        assert isinstance(state, Nc.HIPertITwoFluidsState)
+        assert state.alpha == alpha
+        assert state.k == k
+        assert state.gw1 > 0.0
+        assert state.gw2 > 0.0
+        assert state.gw1 != state.gw2
+        assert state.Fnu >= 0.0
+        assert state.norma > 0.0
+        assert_allclose(state.gw1, state2.gw1, rtol=1.0e-11, atol=0.0)
+        assert_allclose(state.gw2, state2.gw2, rtol=1.0e-11, atol=0.0)
+        assert_allclose(state.Fnu, state2.Fnu, rtol=1.0e-11, atol=0.0)
+        assert_allclose(state.norma, state2.norma, rtol=1.0e-11, atol=0.0)
+
+        for mode, obs in it.product(
+            [Nc.HIPertITwoFluidsObsMode.ONE, Nc.HIPertITwoFluidsObsMode.TWO],
+            list(Nc.HIPertITwoFluidsObs),
+        ):
+            val = state.eval_mode(mode, obs)
+            assert isinstance(val, Ncm.Complex)
+            assert np.isfinite(val.Re())
+            assert np.isfinite(val.Im())
+
+        for obs1, obs2 in it.combinations_with_replacement(
+            list(Nc.HIPertITwoFluidsObs), 2
+        ):
+            val1 = state.eval_obs(Nc.HIPertITwoFluidsObsMode.ONE, obs1, obs2)
+            val2 = state.eval_obs(Nc.HIPertITwoFluidsObsMode.TWO, obs1, obs2)
+            val = state.eval_obs(Nc.HIPertITwoFluidsObsMode.BOTH, obs1, obs2)
+            assert isinstance(val1, float)
+            assert isinstance(val2, float)
+            assert isinstance(val, float)
+            assert np.isfinite(val1)
+            assert np.isfinite(val2)
+            assert np.isfinite(val)
+            assert_allclose(
+                val1 + val2, val, rtol=1.0e-11, atol=1.0e-11 * (abs(val1) + abs(val2))
+            )

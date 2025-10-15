@@ -163,6 +163,16 @@ def _test_wkb(wkb: Nc.HIPertITwoFluidsWKB) -> None:
     assert state.norma > 0.0
 
 
+def _test_tv(tv: Nc.HIPertITwoFluidsTV, alpha: float, k: float) -> None:
+    assert isinstance(tv, Nc.HIPertITwoFluidsTV)
+    assert tv.alpha == alpha
+    assert tv.k == k
+    assert all(np.isfinite(tv.zeta))
+    assert all(np.isfinite(tv.s))
+    assert all(np.isfinite(tv.Pzeta))
+    assert all(np.isfinite(tv.Ps))
+
+
 def test_itwo_fluids_wkb_eval(qgrw: Nc.HICosmoQGRW, alpha_a: np.ndarray) -> None:
     """Evaluate HICosmoQGRW implementation of NcHIPertITwoFluids at a given time."""
     k_a = np.geomspace(1.0e-3, 1.0e3, 5)
@@ -189,3 +199,15 @@ def test_itwo_fluids_oem_eval(qgrw: Nc.HICosmoQGRW, alpha_a: np.ndarray) -> None
     for k, alpha in product(k_a, alpha_a):
         oem = Nc.HIPertITwoFluids.eom_eval(qgrw, alpha, k)
         _test_oem(oem)
+
+
+def test_itwo_fluids_tv_eval(qgrw: Nc.HICosmoQGRW, alpha_a: np.ndarray) -> None:
+    """Evaluate HICosmoQGRW implementation of NcHIPertITwoFluids at a given time."""
+    k_a = np.geomspace(1.0e-3, 1.0e3, 5)
+
+    for alpha, k in product(alpha_a, k_a):
+        tv = Nc.HIPertITwoFluids.tv_eval(qgrw, alpha, k)
+        _test_tv(tv, alpha, k)
+    for k, alpha in product(k_a, alpha_a):
+        tv = Nc.HIPertITwoFluids.tv_eval(qgrw, alpha, k)
+        _test_tv(tv, alpha, k)
