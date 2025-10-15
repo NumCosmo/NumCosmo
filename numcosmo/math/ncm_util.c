@@ -866,6 +866,14 @@ ncm_complex_clear (NcmComplex **c)
  * Returns: Im$(c)$.
  */
 /**
+ * ncm_complex_Abs:
+ * @c: a #NcmComplex
+ *
+ * Returns the absolute value of @c.
+ *
+ * Returns: $|c|$
+ */
+/**
  * ncm_complex_c: (skip)
  * @c: a #NcmComplex
  *

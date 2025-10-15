@@ -645,11 +645,11 @@ _ncm_csq1d_eval_F2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
   NcmCSQ1DWS ws                = {csq1d, model, 0.0, 0.0};
   const gdouble nu             = ncm_csq1d_eval_nu (csq1d, model, t);
-  const gdouble twonu          = 2.0 * nu;
+  const gdouble two_nu         = 2.0 * nu;
 
   gdouble err;
 
-  return ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_F1_func, &ws, &err) / twonu;
+  return ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_F1_func, &ws, &err) / two_nu;
 }
 
 /* State related functions */
@@ -955,21 +955,21 @@ _arccosh_exp_x (const gdouble x)
 void
 ncm_csq1d_state_get_circle (NcmCSQ1DState *state, const gdouble r, const gdouble theta, NcmCSQ1DState *cstate)
 {
-  const gdouble alpha   = state->alpha;
-  const gdouble gamma   = state->gamma;
-  const gdouble ct      = cos (theta);
-  const gdouble st      = sin (theta);
-  const gdouble tr      = tanh (r);
-  const gdouble ca      = cosh (alpha);
-  const gdouble ta      = tanh (alpha);
-  const gdouble lncr    = gsl_sf_lncosh (r);
-  const gdouble lnca    = gsl_sf_lncosh (alpha);
-  const gdouble f       = (ta + ct * tr);
-  const gdouble absf    = fabs (f);
-  const gdouble ln_absf = log (absf);
-  const gdouble signf   = GSL_SIGN (f);
-  const gdouble t1      = signf * _arcsinh_exp_x (lncr + lnca + ln_absf);
-  const gdouble t2      = -(2.0 * st * tr / (ca * (1.0 + tr * ct * ta) + tr * st));
+  const gdouble alpha    = state->alpha;
+  const gdouble gamma    = state->gamma;
+  const gdouble ct       = cos (theta);
+  const gdouble st       = sin (theta);
+  const gdouble tr       = tanh (r);
+  const gdouble ca       = cosh (alpha);
+  const gdouble ta       = tanh (alpha);
+  const gdouble ln_cr    = gsl_sf_lncosh (r);
+  const gdouble ln_ca    = gsl_sf_lncosh (alpha);
+  const gdouble f        = (ta + ct * tr);
+  const gdouble abs_f    = fabs (f);
+  const gdouble ln_abs_f = log (abs_f);
+  const gdouble sign_f   = GSL_SIGN (f);
+  const gdouble t1       = sign_f * _arcsinh_exp_x (ln_cr + ln_ca + ln_abs_f);
+  const gdouble t2       = -(2.0 * st * tr / (ca * (1.0 + tr * ct * ta) + tr * st));
 
   ncm_csq1d_state_set_ag (cstate, state->frame, state->t, t1, gamma + 0.5 * log1p (t2));
 }
@@ -993,14 +993,14 @@ ncm_csq1d_state_compute_distance (NcmCSQ1DState *state, NcmCSQ1DState *state1)
 
   if ((fabs (state->alpha) > 1.0) || (fabs (state1->alpha) > 1.0) || (fabs (dgamma01) > 1.0))
   {
-    const gdouble lncoshalpha0 = gsl_sf_lncosh (state->alpha);
-    const gdouble lncoshalpha1 = gsl_sf_lncosh (state1->alpha);
-    const gdouble lncoshdgamma = gsl_sf_lncosh (dgamma01);
-    const gdouble tanhalpha0   = tanh (state->alpha);
-    const gdouble tanhalpha1   = tanh (state1->alpha);
-    const gdouble f            = log1p (-tanhalpha0 * tanhalpha1 * exp (-lncoshdgamma));
+    const gdouble ln_cosh_alpha0 = gsl_sf_lncosh (state->alpha);
+    const gdouble ln_cosh_alpha1 = gsl_sf_lncosh (state1->alpha);
+    const gdouble ln_cosh_dgamma = gsl_sf_lncosh (dgamma01);
+    const gdouble tanh_alpha0    = tanh (state->alpha);
+    const gdouble tanh_alpha1    = tanh (state1->alpha);
+    const gdouble f              = log1p (-tanh_alpha0 * tanh_alpha1 * exp (-ln_cosh_dgamma));
 
-    return _arccosh_exp_x (lncoshalpha0 + lncoshalpha1 + lncoshdgamma + f);
+    return _arccosh_exp_x (ln_cosh_alpha0 + ln_cosh_alpha1 + ln_cosh_dgamma + f);
   }
   else
   {
@@ -1182,8 +1182,8 @@ ncm_csq1d_set_prop_threshold (NcmCSQ1D *csq1d, const gdouble prop_threshold)
  * @csq1d: a #NcmCSQ1D
  * @save: whether to save all evolution
  *
- * If true saves all evolution to be evaluted later through
- * ncm_csq1d_eval_at() and related methods.
+ * If true saves all evolution to be evaluated later through ncm_csq1d_eval_at() and
+ * related methods.
  *
  */
 void
@@ -1635,13 +1635,13 @@ _ncm_csq1d_f (sunrealtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   const gdouble alpha  = NV_Ith_S (y, 0);
   const gdouble dgamma = NV_Ith_S (y, 1);
 
-  const gdouble nu    = ncm_csq1d_eval_nu (ws->csq1d, ws->model, t);
-  const gdouble F1    = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, t);
-  const gdouble twonu = 2.0 * nu;
+  const gdouble nu     = ncm_csq1d_eval_nu (ws->csq1d, ws->model, t);
+  const gdouble F1     = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, t);
+  const gdouble two_nu = 2.0 * nu;
 
-  NV_Ith_S (ydot, 0) = -twonu *sinh (dgamma);
+  NV_Ith_S (ydot, 0) = -two_nu *sinh (dgamma);
 
-  NV_Ith_S (ydot, 1) = +twonu * (-F1 + cosh (dgamma) * tanh (alpha));
+  NV_Ith_S (ydot, 1) = +two_nu * (-F1 + cosh (dgamma) * tanh (alpha));
 
   return 0;
 }
@@ -1687,16 +1687,16 @@ _ncm_csq1d_J (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer jac_
   const gdouble alpha  = NV_Ith_S (y, 0);
   const gdouble dgamma = NV_Ith_S (y, 1);
   const gdouble nu     = ncm_csq1d_eval_nu (ws->csq1d, ws->model, t);
-  const gdouble twonu  = 2.0 * nu;
+  const gdouble two_nu = 2.0 * nu;
 
-  /* - twonu * sinh (dgamma); */
+  /* - two_nu * sinh (dgamma); */
   SM_ELEMENT_D (J, 0, 0) = 0.0;
-  SM_ELEMENT_D (J, 0, 1) = -twonu *cosh (dgamma);
+  SM_ELEMENT_D (J, 0, 1) = -two_nu *cosh (dgamma);
 
-  /* + twonu * (-F1 + cosh (dgamma) * tanh (alpha)); */
-  SM_ELEMENT_D (J, 1, 0) = +twonu *cosh (dgamma) / gsl_pow_2 (cosh (alpha));
+  /* + two_nu * (-F1 + cosh (dgamma) * tanh (alpha)); */
+  SM_ELEMENT_D (J, 1, 0) = +two_nu *cosh (dgamma) / gsl_pow_2 (cosh (alpha));
 
-  SM_ELEMENT_D (J, 1, 1) = +twonu *sinh (dgamma) * tanh (alpha);
+  SM_ELEMENT_D (J, 1, 1) = +two_nu *sinh (dgamma) * tanh (alpha);
 
   return 0;
 }
@@ -2484,7 +2484,7 @@ _ncm_csq1d_F2_func (const gdouble t, gpointer user_data)
 }
 
 static gdouble
-_ncm_csq1d_lnnu_func (const gdouble t, gpointer user_data)
+_ncm_csq1d_ln_nu_func (const gdouble t, gpointer user_data)
 {
   NcmCSQ1DWS *ws   = (NcmCSQ1DWS *) user_data;
   const gdouble nu = ncm_csq1d_eval_nu (ws->csq1d, ws->model, t);
@@ -2702,13 +2702,13 @@ _ncm_csq1d_compute_adiab4 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, Nc
   const gdouble F1_2           = F1 * F1;
   const gdouble F1_3           = F1_2 * F1;
   const gdouble nu             = ncm_csq1d_eval_nu (csq1d, model, t);
-  const gdouble twonu          = 2.0 * nu;
-  gdouble err, F3, d2F2, dlnnu, F4, alpha_reltol0, dgamma_reltol0;
+  const gdouble two_nu         = 2.0 * nu;
+  gdouble err, F3, d2F2, dln_nu, F4, alpha_reltol0, dgamma_reltol0;
 
-  F3    = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err) / twonu;
-  d2F2  = ncm_diff_rc_d2_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err);
-  dlnnu = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_lnnu_func, &ws, &err);
-  F4    = d2F2 / gsl_pow_2 (twonu) - dlnnu * F3 / twonu;
+  F3     = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err) / two_nu;
+  d2F2   = ncm_diff_rc_d2_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err);
+  dln_nu = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_ln_nu_func, &ws, &err);
+  F4     = d2F2 / gsl_pow_2 (two_nu) - dln_nu * F3 / two_nu;
 
   state->frame = NCM_CSQ1D_FRAME_ADIAB1;
   state->t     = t;
@@ -2842,13 +2842,13 @@ _ncm_csq1d_eval_adiab4_at_no_test (NcmCSQ1D *csq1d, NcmModel *model, const gdoub
   const gdouble F1_2           = F1 * F1;
   const gdouble F1_3           = F1_2 * F1;
   const gdouble nu             = ncm_csq1d_eval_nu (csq1d, model, t);
-  const gdouble twonu          = 2.0 * nu;
-  gdouble err, F3, d2F2, dlnnu, F4, alpha_reltol0, dgamma_reltol0;
+  const gdouble two_nu         = 2.0 * nu;
+  gdouble err, F3, d2F2, dln_nu, F4, alpha_reltol0, dgamma_reltol0;
 
-  F3    = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err) / twonu;
-  d2F2  = ncm_diff_rc_d2_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err);
-  dlnnu = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_lnnu_func, &ws, &err);
-  F4    = d2F2 / gsl_pow_2 (twonu) - dlnnu * F3 / twonu;
+  F3     = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err) / two_nu;
+  d2F2   = ncm_diff_rc_d2_1_to_1 (self->diff, t, &_ncm_csq1d_F2_func, &ws, &err);
+  dln_nu = ncm_diff_rc_d1_1_to_1 (self->diff, t, &_ncm_csq1d_ln_nu_func, &ws, &err);
+  F4     = d2F2 / gsl_pow_2 (two_nu) - dln_nu * F3 / two_nu;
 
   if (F1 != 0.0)
     alpha_reltol0 = gsl_pow_2 ((F1_3 / 3.0 - F3) / F1);
@@ -3775,18 +3775,18 @@ _ncm_csq1d_evolve_prop_vector (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *
 
   /*
    * The propagator is computed in a intermediate frame, we need to change from the
-   * non-adibatic 1 to the intermediate frame first. This transformation does not
+   * non-adiabatic 1 to the intermediate frame first. This transformation does not
    * change Up_i, so we can use it to compute the new chi_i.
    */
   chi_i =  (chi_i - exp (Up_i) * q1_ti);
 
   {
-    const gdouble onepchi2 = 1.0 + chi_i * chi_i;
-    const gdouble exp_Up_i = exp (Up_i);
+    const gdouble one_p_chi2 = 1.0 + chi_i * chi_i;
+    const gdouble exp_Up_i   = exp (Up_i);
     gdouble chi, Up;
 
-    chi = a12 * a21 * chi_i + a22 * (a11 * chi_i - a12 * exp_Up_i) - a11 * a21 * onepchi2 / exp_Up_i;
-    Up  = -(2.0 * a21 * a22 * chi_i - a22 * a22 * exp_Up_i - a21 * a21 * onepchi2 / exp_Up_i);
+    chi = a12 * a21 * chi_i + a22 * (a11 * chi_i - a12 * exp_Up_i) - a11 * a21 * one_p_chi2 / exp_Up_i;
+    Up  = -(2.0 * a21 * a22 * chi_i - a22 * a22 * exp_Up_i - a21 * a21 * one_p_chi2 / exp_Up_i);
 
     /*
      * The transformation above result in a new chi and Up in the intermediate frame.

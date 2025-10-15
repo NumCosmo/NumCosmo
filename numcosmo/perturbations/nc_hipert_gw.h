@@ -90,6 +90,9 @@ void nc_hipert_gw_clear (NcHIPertGW **pgw);
 void nc_hipert_gw_set_k (NcHIPertGW *pgw, const gdouble k);
 gdouble nc_hipert_gw_get_k (NcHIPertGW *pgw);
 
+gdouble nc_hipert_gw_eval_powspec_at (NcHIPertGW *pgw, NcmModel *model, const gdouble tau);
+NcmSpline *nc_hipert_gw_eval_powspec (NcHIPertGW *pgw, NcmModel *model, const gdouble tau, GArray *k_a);
+
 G_END_DECLS
 
 #endif /* _NC_HIPERT_GW_H_ */
