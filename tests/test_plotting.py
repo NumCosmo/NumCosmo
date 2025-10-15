@@ -6,7 +6,7 @@
 # Copyright  2025  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# test_py_serialize.py
+# test_plotting.py
 # Copyright (C) 2025 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
