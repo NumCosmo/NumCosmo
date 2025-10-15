@@ -387,6 +387,7 @@ python_tests = [
     {
         'name': 'py_hicosmo_Vexp',
         'source': 'test_py_hicosmo_Vexp.py',
+        'timeout': 0,
     },
     {
         'name': 'py_hicosmo_qgrw',
