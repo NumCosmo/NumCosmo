@@ -202,3 +202,68 @@ def test_evol_mode_and_state_interp(
             assert_allclose(
                 val1 + val2, val, rtol=1.0e-11, atol=1.0e-11 * (abs(val1) + abs(val2))
             )
+
+
+def test_wkb_eval(cosmo_qgrw: Nc.HICosmo):
+    """Test NcHIPertITwoFluidsWKB evaluation."""
+
+    k_a = np.geomspace(1.0e-3, 1.0e3, 5)
+    alpha_a = np.linspace(-100.0, 1.0, 5)
+
+    for k, alpha in it.product(k_a, alpha_a):
+        wkb = Nc.HIPertITwoFluids.wkb_eval(cosmo_qgrw, alpha, k)
+        assert isinstance(wkb, Nc.HIPertITwoFluidsWKB)
+        wkb2 = wkb.dup()
+        assert isinstance(wkb2, Nc.HIPertITwoFluidsWKB)
+        assert wkb2 is not wkb
+        assert_allclose(wkb.mode1_zeta_scale, wkb2.mode1_zeta_scale, rtol=0.0, atol=0.0)
+        assert_allclose(wkb.mode2_zeta_scale, wkb2.mode2_zeta_scale, rtol=0.0, atol=0.0)
+        assert_allclose(wkb.mode1_Q_scale, wkb2.mode1_Q_scale, rtol=0.0, atol=0.0)
+        assert_allclose(wkb.mode2_Q_scale, wkb2.mode2_Q_scale, rtol=0.0, atol=0.0)
+        assert_allclose(
+            wkb.mode1_Pzeta_scale, wkb2.mode1_Pzeta_scale, rtol=0.0, atol=0.0
+        )
+        assert_allclose(
+            wkb.mode2_Pzeta_scale, wkb2.mode2_Pzeta_scale, rtol=0.0, atol=0.0
+        )
+        assert_allclose(wkb.mode1_PQ_scale, wkb2.mode1_PQ_scale, rtol=0.0, atol=0.0)
+        assert_allclose(wkb.mode2_PQ_scale, wkb2.mode2_PQ_scale, rtol=0.0, atol=0.0)
+
+
+def test_eom_eval(cosmo_qgrw: Nc.HICosmo):
+    """Test NcHIPertITwoFluidsOEM evaluation."""
+    k_a = np.geomspace(1.0e-3, 1.0e3, 5)
+    alpha_a = np.linspace(-100.0, 1.0, 5)
+
+    for k, alpha in it.product(k_a, alpha_a):
+        eom = Nc.HIPertITwoFluids.eom_eval(cosmo_qgrw, alpha, k)
+        assert isinstance(eom, Nc.HIPertITwoFluidsEOM)
+        eom2 = eom.dup()
+        assert isinstance(eom2, Nc.HIPertITwoFluidsEOM)
+        assert eom2 is not eom
+        assert_allclose(eom.gw1, eom2.gw1, rtol=0.0, atol=0.0)
+        assert_allclose(eom.gw2, eom2.gw2, rtol=0.0, atol=0.0)
+        assert_allclose(eom.Fnu, eom2.Fnu, rtol=0.0, atol=0.0)
+        assert_allclose(eom.cs2, eom2.cs2, rtol=0.0, atol=0.0)
+        assert_allclose(eom.cm2, eom2.cm2, rtol=0.0, atol=0.0)
+
+
+def test_state(cosmo_qgrw: Nc.HICosmo):
+    """Test NcHIPertITwoFluidsWKB evaluation."""
+
+    k_a = np.geomspace(1.0e-3, 1.0e3, 5)
+    alpha_a = np.linspace(-100.0, 1.0, 5)
+
+    for k, alpha in it.product(k_a, alpha_a):
+        wkb = Nc.HIPertITwoFluids.wkb_eval(cosmo_qgrw, alpha, k)
+        state = wkb.peek_state()
+
+        assert isinstance(state, Nc.HIPertITwoFluidsState)
+
+        state2 = state.dup()
+        assert isinstance(state2, Nc.HIPertITwoFluidsState)
+        assert state2 is not state
+        assert_allclose(state.gw1, state2.gw1, rtol=0.0, atol=0.0)
+        assert_allclose(state.gw2, state2.gw2, rtol=0.0, atol=0.0)
+        assert_allclose(state.Fnu, state2.Fnu, rtol=0.0, atol=0.0)
+        assert_allclose(state.norma, state2.norma, rtol=0.0, atol=0.0)

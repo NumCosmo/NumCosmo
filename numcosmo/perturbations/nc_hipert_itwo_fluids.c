@@ -291,9 +291,9 @@ _nc_hipert_itwo_fluids_state_eval_obs_helper (const complex double zeta, const c
       return 3.0 * zeta + (gw1 * PQ - epsilon * Pzeta) / (gw1 + gw2);
 
       break;
-    default:
-      g_assert_not_reached ();
-      break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+      break;                   /* LCOV_EXCL_LINE */
   }
 }
 
@@ -337,9 +337,9 @@ nc_hipert_itwo_fluids_state_eval_obs (NcHIPertITwoFluidsState *tf_state, NcHIPer
       obs2b = _nc_hipert_itwo_fluids_state_eval_obs_helper (tf_state->zeta2, tf_state->Q2, tf_state->Pzeta2, tf_state->PQ2, &args, obs_b);
       break;
 
-    default:
-      g_assert_not_reached ();
-      break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+      break;                   /* LCOV_EXCL_LINE */
   }
 
   return norma * creal (obs1a * conj (obs1b) + obs2a * conj (obs2b));
@@ -371,9 +371,9 @@ nc_hipert_itwo_fluids_state_eval_mode (NcHIPertITwoFluidsState *tf_state, NcHIPe
     case NC_HIPERT_ITWO_FLUIDS_OBS_MODE_TWO:
       mode_func = _nc_hipert_itwo_fluids_state_eval_obs_helper (tf_state->zeta2, tf_state->Q2, tf_state->Pzeta2, tf_state->PQ2, &args, obs);
       break;
-    default:
-      g_assert_not_reached ();
-      break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+      break;                   /* LCOV_EXCL_LINE */
   }
 
   ncm_complex_set_c (mode, tf_state->norma * mode_func);

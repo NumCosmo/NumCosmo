@@ -27,6 +27,7 @@
 from itertools import product
 import pytest
 from numpy.testing import assert_allclose
+
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
@@ -76,8 +77,8 @@ def test_serialize(qgrw: Nc.HICosmoQGRW):
     assert isinstance(qgrw2, Ncm.Model)
 
     assert qgrw2 is not qgrw
-    assert qgrw2.props.H0 == qgrw.props.H0
-    assert qgrw2.props.Omegar == qgrw.props.Omegar
+    assert qgrw2["H0"] == qgrw["H0"]
+    assert qgrw2["Omegar"] == qgrw["Omegar"]
 
 
 def test_iadiab_eval_at(qgrw: Nc.HICosmoQGRW, alpha_a: np.ndarray) -> None:
