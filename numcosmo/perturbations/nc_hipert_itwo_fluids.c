@@ -243,58 +243,49 @@ _nc_hipert_itwo_fluids_state_eval_obs_helper (const complex double zeta, const c
   const gdouble gw1     = args->gw1;
   const gdouble gw2     = args->gw2;
   const gdouble Fnu     = args->Fnu;
+  complex double val    = 0.0;
 
   switch (obs)
   {
     case NC_HIPERT_ITWO_FLUIDS_OBS_ZETA:
-      return zeta;
-
+      val = zeta;
       break;
-
     case NC_HIPERT_ITWO_FLUIDS_OBS_ZETA_DIFF:
-      return (epsilon * (gw1 + gw2) / (gw1 * gw2) * Q);
-
+      val = (epsilon * (gw1 + gw2) / (gw1 * gw2) * Q);
       break;
     case NC_HIPERT_ITWO_FLUIDS_OBS_PZETA:
-      return Pzeta;
-
+      val = Pzeta;
       break;
     case NC_HIPERT_ITWO_FLUIDS_OBS_FKU_TOT:
-      return Fnu * zeta;
-
+      val = Fnu * zeta;
       break;
     case NC_HIPERT_ITWO_FLUIDS_OBS_FKU_DIFF:
-      return Fnu * (epsilon * (gw1 + gw2) / (gw1 * gw2) * Q);
-
+      val = Fnu * (epsilon * (gw1 + gw2) / (gw1 * gw2) * Q);
       break;
     case NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_TOT:
-      return 3.0 * zeta - epsilon * Pzeta / (gw1 + gw2);
-
+      val = 3.0 * zeta - epsilon * Pzeta / (gw1 + gw2);
       break;
     case NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_DIFF:
-      return -PQ;
-
+      val = -PQ;
       break;
     case NC_HIPERT_ITWO_FLUIDS_OBS_FKU_R:
-      return Fnu * (zeta + epsilon * Q / gw1);
-
+      val = Fnu * (zeta + epsilon * Q / gw1);
       break;
     case NC_HIPERT_ITWO_FLUIDS_OBS_FKU_W:
-      return Fnu * (zeta - epsilon * Q / gw2);
-
+      val = Fnu * (zeta - epsilon * Q / gw2);
       break;
     case NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_R:
-      return 3.0 * zeta - (gw2 * PQ + epsilon * Pzeta) / (gw1 + gw2);
-
+      val = 3.0 * zeta - (gw2 * PQ + epsilon * Pzeta) / (gw1 + gw2);
       break;
     case NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_W:
-      return 3.0 * zeta + (gw1 * PQ - epsilon * Pzeta) / (gw1 + gw2);
-
+      val = 3.0 * zeta + (gw1 * PQ - epsilon * Pzeta) / (gw1 + gw2);
       break;
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
       break;                   /* LCOV_EXCL_LINE */
   }
+
+  return val;
 }
 
 /**

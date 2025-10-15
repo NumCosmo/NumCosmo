@@ -63,6 +63,15 @@ def test_init(two_fluids: Nc.HIPertTwoFluids) -> None:
     assert isinstance(two_fluids, Nc.HIPertTwoFluids)
     assert isinstance(two_fluids, Nc.HIPert)
 
+    two_fluids.set_prepared(True)
+    assert two_fluids.prepared() is True
+
+    two_fluids.set_prepared(False)
+    assert two_fluids.prepared() is False
+
+    two_fluids.set_stiff_solver(True)
+    two_fluids.set_stiff_solver(False)
+
 
 def test_compute_full_spectrum(
     two_fluids: Nc.HIPertTwoFluids, cosmo_qgrw: Nc.HICosmo
