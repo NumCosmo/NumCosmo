@@ -180,13 +180,13 @@ nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface)
 static gdouble
 _nc_hicosmo_qgw_adiab_eval_xi (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
 {
-  NcHICosmo *cosmo     = NC_HICOSMO (iad);
-  const gdouble w      = W;
-  const gdouble cs     = sqrt (w);
-  const gdouble lnfact = log ((1.0 + w) * k / cs);
-  const gdouble x      = _nc_hicosmo_qgw_adiab_eval_x (iad, tau);
+  NcHICosmo *cosmo      = NC_HICOSMO (iad);
+  const gdouble w       = W;
+  const gdouble cs      = sqrt (w);
+  const gdouble ln_fact = log ((1.0 + w) * k / cs);
+  const gdouble x       = _nc_hicosmo_qgw_adiab_eval_x (iad, tau);
 
-  return lnfact - log (gsl_pow_2 (x * tanh (tau)));
+  return ln_fact - log (gsl_pow_2 (x * tanh (tau)));
 }
 
 static gdouble
