@@ -1,4 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
+
 /***************************************************************************
  *            nc_hipert_grav.h
  *
@@ -14,12 +15,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -55,9 +56,9 @@ typedef struct _NcHIPertGravInfo NcHIPertGravInfo;
 
 /**
  * NcHIPertGravScalar:
- * 
+ *
  * Boxed object describing scalar modes of the gravitational perturbations.
- */ 
+ */
 struct _NcHIPertGravScalar
 {
   /*< private >*/
@@ -68,9 +69,9 @@ struct _NcHIPertGravScalar
 
 /**
  * NcHIPertGravVector:
- * 
+ *
  * Boxed object describing vector modes of the gravitational perturbations.
- */ 
+ */
 struct _NcHIPertGravVector
 {
   /*< private >*/
@@ -79,9 +80,9 @@ struct _NcHIPertGravVector
 
 /**
  * NcHIPertGravTensor:
- * 
+ *
  * Boxed object describing tensor modes of the gravitational perturbations.
- */ 
+ */
 struct _NcHIPertGravTensor
 {
   /*< private >*/
@@ -90,9 +91,9 @@ struct _NcHIPertGravTensor
 
 /**
  * NcHIPertGravTScalar:
- * 
+ *
  * Boxed object describing scalar modes of the energy-momentum tensor perturbations.
- */ 
+ */
 struct _NcHIPertGravTScalar
 {
   gdouble drho_m_Aphi;
@@ -104,9 +105,9 @@ struct _NcHIPertGravTScalar
 
 /**
  * NcHIPertGravTVector:
- * 
+ *
  * Boxed object describing vector modes of the energy-momentum tensor perturbations.
- */ 
+ */
 struct _NcHIPertGravTVector
 {
   gdouble a;
@@ -114,9 +115,9 @@ struct _NcHIPertGravTVector
 
 /**
  * NcHIPertGravTTensor:
- * 
+ *
  * Boxed object describing tensor modes of the energy-momentum tensor perturbations.
- */ 
+ */
 struct _NcHIPertGravTTensor
 {
   gdouble a;
@@ -124,9 +125,9 @@ struct _NcHIPertGravTTensor
 
 /**
  * NcHIPertGravTScalarInfo:
- * 
+ *
  * Boxed object describing the dependencies of the scalar modes of the gravitational perturbations.
- */ 
+ */
 struct _NcHIPertGravTScalarInfo
 {
   GArray *drho_deps;
@@ -140,21 +141,21 @@ struct _NcHIPertGravTScalarInfo
  * @NC_HIPERT_GRAV_SELEM_PHI: gravitation potential $\phi$
  * @NC_HIPERT_GRAV_SELEM_DSIGMA: gravitation potential $\delta\sigma$
  * @NC_HIPERT_GRAV_SELEM_PSI: gravitation potential $\psi$
- * @NC_HIPERT_GRAV_SELEM_DOTPSI: time derivative of the gravitation potential $\dot{\psi}$
+ * @NC_HIPERT_GRAV_SELEM_DOT_PSI: time derivative of the gravitation potential $\dot{\psi}$
  * @NC_HIPERT_GRAV_SELEM_DRHO: energy momentum tensor component $\delta\rho$
  * @NC_HIPERT_GRAV_SELEM_RHOPPV: energy momentum tensor component $(\rho+p)\mathcal{V}$
  * @NC_HIPERT_GRAV_SELEM_DP: energy momentum tensor component $\delta{}p$
  * @NC_HIPERT_GRAV_SELEM_DPI: energy momentum tensor component $\delta\Pi$
- * 
+ *
  * Elements present in the scalar equations.
- * 
+ *
  */
 typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_SELEM >*/
 {
   NC_HIPERT_GRAV_SELEM_PHI = G_MININT,
   NC_HIPERT_GRAV_SELEM_DSIGMA,
   NC_HIPERT_GRAV_SELEM_PSI,
-  NC_HIPERT_GRAV_SELEM_DOTPSI,
+  NC_HIPERT_GRAV_SELEM_DOT_PSI,
   NC_HIPERT_GRAV_SELEM_DRHO,
   NC_HIPERT_GRAV_SELEM_RHOPPV,
   NC_HIPERT_GRAV_SELEM_DP,
@@ -167,17 +168,17 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_SELEM >*/
  * NcHIPertGravGauge:
  * @NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS: Synchronous gauge
  * @NC_HIPERT_GRAV_GAUGE_NEWTONIAN: Newtonian gauge
- * @NC_HIPERT_GRAV_GAUGE_CONST_CURV: Constant curvature gauge
+ * @NC_HIPERT_GRAV_GAUGE_CONST_CURVATURE: Constant curvature gauge
  * @NC_HIPERT_GRAV_GAUGE_CONST_EXP: Constant expansion gauge
- * 
+ *
  * Gravitation gauges.
- * 
+ *
  */
 typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_GAUGE >*/
 {
   NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS,
   NC_HIPERT_GRAV_GAUGE_NEWTONIAN,
-  NC_HIPERT_GRAV_GAUGE_CONST_CURV,
+  NC_HIPERT_GRAV_GAUGE_CONST_CURVATURE,
   NC_HIPERT_GRAV_GAUGE_CONST_EXP,
   /* < private > */
   NC_HIPERT_GRAV_GAUGE_LEN, /*< skip >*/
@@ -190,17 +191,17 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_GAUGE >*/
  * @phi_deps: (array) (element-type gint): $\phi$ dependencies
  * @dsigma_deps: (array) (element-type gint): $\delta\sigma$ dependencies
  * @psi_deps: (array) (element-type gint): $\psi$ dependencies
- * @dotpsi_deps: (array) (element-type gint): $\psi$ dependencies
- * 
+ * @dot_psi_deps: (array) (element-type gint): $\psi$ dependencies
+ *
  * Gravitation section info
- * 
+ *
  */
 struct _NcHIPertGravInfo
 {
   GArray *phi_deps;
   GArray *dsigma_deps;
   GArray *psi_deps;
-  GArray *dotpsi_deps; 
+  GArray *dot_psi_deps;
 };
 
 typedef guint (*NcHIPertGravNDynVar) (NcHIPertGrav *grav);
@@ -218,7 +219,7 @@ struct _NcHIPertGravClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  NcHIPertGravNDynVar ndyn_var;
+  NcHIPertGravNDynVar n_dyn_var;
   NcHIPertGravDeps get_deps;
   NcHIPertGravSetGauge set_gauge;
   NcHIPertGravGetGauge get_gauge;
@@ -285,21 +286,21 @@ NCM_INLINE NcHIPertGravInfo *nc_hipert_grav_info_dup (NcHIPertGravInfo *ginfo);
 
 NCM_INLINE void nc_hipert_grav_info_free (NcHIPertGravInfo *ginfo);
 NCM_INLINE void nc_hipert_grav_info_set_zero (NcHIPertGravInfo *ginfo);
-NCM_INLINE void nc_hipert_grav_info_set_phi_deps (NcHIPertGravInfo *ginfo, GArray *phi_deps); 
-NCM_INLINE void nc_hipert_grav_info_set_dsigma_deps (NcHIPertGravInfo *ginfo, GArray *dsigma_deps); 
+NCM_INLINE void nc_hipert_grav_info_set_phi_deps (NcHIPertGravInfo *ginfo, GArray *phi_deps);
+NCM_INLINE void nc_hipert_grav_info_set_dsigma_deps (NcHIPertGravInfo *ginfo, GArray *dsigma_deps);
 NCM_INLINE void nc_hipert_grav_info_set_psi_deps (NcHIPertGravInfo *ginfo, GArray *psi_deps);
-NCM_INLINE void nc_hipert_grav_info_set_dotpsi_deps (NcHIPertGravInfo *ginfo, GArray *dotpsi_deps);
+NCM_INLINE void nc_hipert_grav_info_set_dot_psi_deps (NcHIPertGravInfo *ginfo, GArray *dot_psi_deps);
 
 NCM_INLINE GArray *nc_hipert_grav_info_get_phi_deps (NcHIPertGravInfo *ginfo);
-NCM_INLINE GArray *nc_hipert_grav_info_get_dsigma_deps (NcHIPertGravInfo *ginfo); 
+NCM_INLINE GArray *nc_hipert_grav_info_get_dsigma_deps (NcHIPertGravInfo *ginfo);
 NCM_INLINE GArray *nc_hipert_grav_info_get_psi_deps (NcHIPertGravInfo *ginfo);
-NCM_INLINE GArray *nc_hipert_grav_info_get_dotpsi_deps (NcHIPertGravInfo *ginfo); 
+NCM_INLINE GArray *nc_hipert_grav_info_get_dot_psi_deps (NcHIPertGravInfo *ginfo);
 
 NCM_INLINE NcHIPertGravTScalarInfo *nc_hipert_grav_T_scalar_info_new (void);
-NCM_INLINE NcHIPertGravTScalarInfo *nc_hipert_grav_T_scalar_info_dup (NcHIPertGravTScalarInfo *Tsinfo);
-NCM_INLINE void nc_hipert_grav_T_scalar_info_free (NcHIPertGravTScalarInfo *Tsinfo);
-NCM_INLINE void nc_hipert_grav_T_scalar_info_append (NcHIPertGravTScalarInfo *Tsinfo, NcHIPertGravTScalarInfo *Tsinfo1);
-NCM_INLINE void nc_hipert_grav_T_scalar_info_set_zero (NcHIPertGravTScalarInfo *Tsinfo);
+NCM_INLINE NcHIPertGravTScalarInfo *nc_hipert_grav_T_scalar_info_dup (NcHIPertGravTScalarInfo *Ts_info);
+NCM_INLINE void nc_hipert_grav_T_scalar_info_free (NcHIPertGravTScalarInfo *Ts_info);
+NCM_INLINE void nc_hipert_grav_T_scalar_info_append (NcHIPertGravTScalarInfo *Ts_info, NcHIPertGravTScalarInfo *Ts_info1);
+NCM_INLINE void nc_hipert_grav_T_scalar_info_set_zero (NcHIPertGravTScalarInfo *Ts_info);
 
 NcHIPertGrav *nc_hipert_grav_ref (NcHIPertGrav *grav);
 void nc_hipert_grav_free (NcHIPertGrav *grav);
@@ -307,7 +308,7 @@ void nc_hipert_grav_clear (NcHIPertGrav **grav);
 
 NCM_INLINE NcHIPertBGVarID nc_hipert_grav_get_id (NcHIPertGrav *grav);
 
-NCM_INLINE guint nc_hipert_grav_ndyn_var (NcHIPertGrav *grav);
+NCM_INLINE guint nc_hipert_grav_n_dyn_var (NcHIPertGrav *grav);
 NCM_INLINE GArray *nc_hipert_grav_get_deps (NcHIPertGrav *grav, guint vindex);
 
 NCM_INLINE void nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertGravGauge gauge);
@@ -531,11 +532,11 @@ NCM_INLINE NcHIPertGravInfo *
 nc_hipert_grav_info_new (void)
 {
   NcHIPertGravInfo *ginfo = g_new0 (NcHIPertGravInfo, 1);
-  
+
   ginfo->phi_deps     = g_array_new (TRUE, TRUE, sizeof (gint));
   ginfo->dsigma_deps  = g_array_new (TRUE, TRUE, sizeof (gint));
   ginfo->psi_deps     = g_array_new (TRUE, TRUE, sizeof (gint));
-  ginfo->dotpsi_deps  = g_array_new (TRUE, TRUE, sizeof (gint));
+  ginfo->dot_psi_deps = g_array_new (TRUE, TRUE, sizeof (gint));
 
   return ginfo;
 }
@@ -549,7 +550,7 @@ nc_hipert_grav_info_dup (NcHIPertGravInfo *ginfo)
   g_array_append_vals (ginfo_dup->dsigma_deps, ginfo->dsigma_deps->data, ginfo->dsigma_deps->len);
   g_array_append_vals (ginfo_dup->psi_deps,    ginfo->psi_deps->data,    ginfo->psi_deps->len);
 
-  g_array_append_vals (ginfo_dup->dotpsi_deps, ginfo->dotpsi_deps->data, ginfo->dotpsi_deps->len);
+  g_array_append_vals (ginfo_dup->dot_psi_deps, ginfo->dot_psi_deps->data, ginfo->dot_psi_deps->len);
 
   return ginfo_dup;
 }
@@ -560,7 +561,7 @@ nc_hipert_grav_info_free (NcHIPertGravInfo *ginfo)
   g_array_unref (ginfo->phi_deps);
   g_array_unref (ginfo->dsigma_deps);
   g_array_unref (ginfo->psi_deps);
-  g_array_unref (ginfo->dotpsi_deps);
+  g_array_unref (ginfo->dot_psi_deps);
   g_free (ginfo);
 }
 
@@ -570,11 +571,11 @@ nc_hipert_grav_info_set_zero (NcHIPertGravInfo *ginfo)
   g_array_set_size (ginfo->phi_deps,    0);
   g_array_set_size (ginfo->dsigma_deps, 0);
   g_array_set_size (ginfo->psi_deps,    0);
-  g_array_set_size (ginfo->dotpsi_deps, 0);
+  g_array_set_size (ginfo->dot_psi_deps, 0);
 }
 
 NCM_INLINE void
-nc_hipert_grav_info_set_phi_deps (NcHIPertGravInfo *ginfo, GArray *phi_deps) 
+nc_hipert_grav_info_set_phi_deps (NcHIPertGravInfo *ginfo, GArray *phi_deps)
 {
   g_assert_cmpuint (g_array_get_element_size (ginfo->phi_deps), ==, g_array_get_element_size (phi_deps));
   g_array_set_size (ginfo->phi_deps,    0);
@@ -582,7 +583,7 @@ nc_hipert_grav_info_set_phi_deps (NcHIPertGravInfo *ginfo, GArray *phi_deps)
 }
 
 NCM_INLINE void
-nc_hipert_grav_info_set_dsigma_deps (NcHIPertGravInfo *ginfo, GArray *dsigma_deps) 
+nc_hipert_grav_info_set_dsigma_deps (NcHIPertGravInfo *ginfo, GArray *dsigma_deps)
 {
   g_assert_cmpuint (g_array_get_element_size (ginfo->dsigma_deps), ==, g_array_get_element_size (dsigma_deps));
   g_array_set_size (ginfo->dsigma_deps,    0);
@@ -590,7 +591,7 @@ nc_hipert_grav_info_set_dsigma_deps (NcHIPertGravInfo *ginfo, GArray *dsigma_dep
 }
 
 NCM_INLINE void
-nc_hipert_grav_info_set_psi_deps (NcHIPertGravInfo *ginfo, GArray *psi_deps) 
+nc_hipert_grav_info_set_psi_deps (NcHIPertGravInfo *ginfo, GArray *psi_deps)
 {
   g_assert_cmpuint (g_array_get_element_size (ginfo->psi_deps), ==, g_array_get_element_size (psi_deps));
   g_array_set_size (ginfo->psi_deps,    0);
@@ -598,124 +599,127 @@ nc_hipert_grav_info_set_psi_deps (NcHIPertGravInfo *ginfo, GArray *psi_deps)
 }
 
 NCM_INLINE void
-nc_hipert_grav_info_set_dotpsi_deps (NcHIPertGravInfo *ginfo, GArray *dotpsi_deps) 
+nc_hipert_grav_info_set_dot_psi_deps (NcHIPertGravInfo *ginfo, GArray *dot_psi_deps)
 {
-  g_assert_cmpuint (g_array_get_element_size (ginfo->dotpsi_deps), ==, g_array_get_element_size (dotpsi_deps));
-  g_array_set_size (ginfo->dotpsi_deps,    0);
-  g_array_append_vals (ginfo->dotpsi_deps, dotpsi_deps->data, dotpsi_deps->len);
+  g_assert_cmpuint (g_array_get_element_size (ginfo->dot_psi_deps), ==, g_array_get_element_size (dot_psi_deps));
+  g_array_set_size (ginfo->dot_psi_deps,    0);
+  g_array_append_vals (ginfo->dot_psi_deps, dot_psi_deps->data, dot_psi_deps->len);
 }
 
 NCM_INLINE GArray *
-nc_hipert_grav_info_get_phi_deps (NcHIPertGravInfo *ginfo) 
+nc_hipert_grav_info_get_phi_deps (NcHIPertGravInfo *ginfo)
 {
   return g_array_ref (ginfo->phi_deps);
 }
 
 NCM_INLINE GArray *
-nc_hipert_grav_info_get_dsigma_deps (NcHIPertGravInfo *ginfo) 
+nc_hipert_grav_info_get_dsigma_deps (NcHIPertGravInfo *ginfo)
 {
   return g_array_ref (ginfo->dsigma_deps);
 }
 
 NCM_INLINE GArray *
-nc_hipert_grav_info_get_psi_deps (NcHIPertGravInfo *ginfo) 
+nc_hipert_grav_info_get_psi_deps (NcHIPertGravInfo *ginfo)
 {
   return g_array_ref (ginfo->psi_deps);
 }
 
 NCM_INLINE GArray *
-nc_hipert_grav_info_get_dotpsi_deps (NcHIPertGravInfo *ginfo) 
+nc_hipert_grav_info_get_dot_psi_deps (NcHIPertGravInfo *ginfo)
 {
-  return g_array_ref (ginfo->dotpsi_deps);
+  return g_array_ref (ginfo->dot_psi_deps);
 }
 
 NCM_INLINE NcHIPertGravTScalarInfo *
 nc_hipert_grav_T_scalar_info_new (void)
 {
-  NcHIPertGravTScalarInfo *Tsinfo = g_new0 (NcHIPertGravTScalarInfo, 1);
+  NcHIPertGravTScalarInfo *Ts_info = g_new0 (NcHIPertGravTScalarInfo, 1);
 
-  Tsinfo->drho_deps   = g_array_new (TRUE, TRUE, sizeof (gint));
-  Tsinfo->rhoppv_deps = g_array_new (TRUE, TRUE, sizeof (gint));
-  Tsinfo->dp_deps     = g_array_new (TRUE, TRUE, sizeof (gint));
-  Tsinfo->dPi_deps    = g_array_new (TRUE, TRUE, sizeof (gint));
+  Ts_info->drho_deps   = g_array_new (TRUE, TRUE, sizeof (gint));
+  Ts_info->rhoppv_deps = g_array_new (TRUE, TRUE, sizeof (gint));
+  Ts_info->dp_deps     = g_array_new (TRUE, TRUE, sizeof (gint));
+  Ts_info->dPi_deps    = g_array_new (TRUE, TRUE, sizeof (gint));
 
-  return Tsinfo;
+  return Ts_info;
 }
 
 NCM_INLINE NcHIPertGravTScalarInfo *
-nc_hipert_grav_T_scalar_info_dup (NcHIPertGravTScalarInfo *Tsinfo)
+nc_hipert_grav_T_scalar_info_dup (NcHIPertGravTScalarInfo *Ts_info)
 {
-  NcHIPertGravTScalarInfo *Tsinfo_dup = nc_hipert_grav_T_scalar_info_new ();
-  nc_hipert_grav_T_scalar_info_append (Tsinfo_dup, Tsinfo);
-  return Tsinfo_dup;
+  NcHIPertGravTScalarInfo *Ts_info_dup = nc_hipert_grav_T_scalar_info_new ();
+
+  nc_hipert_grav_T_scalar_info_append (Ts_info_dup, Ts_info);
+
+  return Ts_info_dup;
 }
 
-NCM_INLINE void 
-nc_hipert_grav_T_scalar_info_free (NcHIPertGravTScalarInfo *Tsinfo)
+NCM_INLINE void
+nc_hipert_grav_T_scalar_info_free (NcHIPertGravTScalarInfo *Ts_info)
 {
-  g_array_unref (Tsinfo->drho_deps);
-  g_array_unref (Tsinfo->rhoppv_deps);
-  g_array_unref (Tsinfo->dp_deps);
-  g_array_unref (Tsinfo->dPi_deps);
+  g_array_unref (Ts_info->drho_deps);
+  g_array_unref (Ts_info->rhoppv_deps);
+  g_array_unref (Ts_info->dp_deps);
+  g_array_unref (Ts_info->dPi_deps);
 
-  g_free (Tsinfo);
+  g_free (Ts_info);
 }
 
-NCM_INLINE void 
-nc_hipert_grav_T_scalar_info_append (NcHIPertGravTScalarInfo *Tsinfo, NcHIPertGravTScalarInfo *Tsinfo1)
+NCM_INLINE void
+nc_hipert_grav_T_scalar_info_append (NcHIPertGravTScalarInfo *Ts_info, NcHIPertGravTScalarInfo *Ts_info1)
 {
-  g_array_append_vals (Tsinfo->drho_deps,   Tsinfo1->drho_deps->data,   Tsinfo1->drho_deps->len);
-  g_array_append_vals (Tsinfo->rhoppv_deps, Tsinfo1->rhoppv_deps->data, Tsinfo1->rhoppv_deps->len);
-  g_array_append_vals (Tsinfo->dp_deps,     Tsinfo1->dp_deps->data,     Tsinfo1->dp_deps->len);
-  g_array_append_vals (Tsinfo->dPi_deps,    Tsinfo1->dPi_deps->data,    Tsinfo1->dPi_deps->len);
+  g_array_append_vals (Ts_info->drho_deps,   Ts_info1->drho_deps->data,   Ts_info1->drho_deps->len);
+  g_array_append_vals (Ts_info->rhoppv_deps, Ts_info1->rhoppv_deps->data, Ts_info1->rhoppv_deps->len);
+  g_array_append_vals (Ts_info->dp_deps,     Ts_info1->dp_deps->data,     Ts_info1->dp_deps->len);
+  g_array_append_vals (Ts_info->dPi_deps,    Ts_info1->dPi_deps->data,    Ts_info1->dPi_deps->len);
 }
 
-#define __NC_HIPERT_COMP_ADD_PAD(a,pad) \
-G_BEGIN_DECLS { \
-  guint __i; \
-  for (__i = 0; __i < (a)->len; __i++) \
-  { \
-    if (g_array_index ((a), gint, __i) >= 0) \
-      { \
-        g_array_index ((a), gint, __i) += pad; \
-      } \
-  } \
-} G_END_DECLS
+#define __NC_HIPERT_COMP_ADD_PAD(a, pad)             \
+        G_BEGIN_DECLS {                              \
+          guint __i;                                 \
+          for (__i = 0; __i < (a)->len; __i++)       \
+          {                                          \
+            if (g_array_index ((a), gint, __i) >= 0) \
+            {                                        \
+              g_array_index ((a), gint, __i) += pad; \
+            }                                        \
+          }                                          \
+        } G_END_DECLS
 
-NCM_INLINE void 
-nc_hipert_grav_T_scalar_info_add_pad (NcHIPertGravTScalarInfo *Tsinfo, gint pad)
+NCM_INLINE void
+nc_hipert_grav_T_scalar_info_add_pad (NcHIPertGravTScalarInfo *Ts_info, gint pad)
 {
   if (pad == 0)
     return;
 
-  __NC_HIPERT_COMP_ADD_PAD (Tsinfo->drho_deps,   pad);
-  __NC_HIPERT_COMP_ADD_PAD (Tsinfo->rhoppv_deps, pad);
-  __NC_HIPERT_COMP_ADD_PAD (Tsinfo->dp_deps,     pad);
-  __NC_HIPERT_COMP_ADD_PAD (Tsinfo->dPi_deps,    pad);
+  __NC_HIPERT_COMP_ADD_PAD (Ts_info->drho_deps,   pad);
+  __NC_HIPERT_COMP_ADD_PAD (Ts_info->rhoppv_deps, pad);
+  __NC_HIPERT_COMP_ADD_PAD (Ts_info->dp_deps,     pad);
+  __NC_HIPERT_COMP_ADD_PAD (Ts_info->dPi_deps,    pad);
 }
 
-NCM_INLINE void 
-nc_hipert_grav_T_scalar_info_set_zero (NcHIPertGravTScalarInfo *Tsinfo)
+NCM_INLINE void
+nc_hipert_grav_T_scalar_info_set_zero (NcHIPertGravTScalarInfo *Ts_info)
 {
-  g_array_set_size (Tsinfo->drho_deps,   0);
-  g_array_set_size (Tsinfo->rhoppv_deps, 0);
-  g_array_set_size (Tsinfo->dp_deps,     0);
-  g_array_set_size (Tsinfo->dPi_deps,    0);
+  g_array_set_size (Ts_info->drho_deps,   0);
+  g_array_set_size (Ts_info->rhoppv_deps, 0);
+  g_array_set_size (Ts_info->dp_deps,     0);
+  g_array_set_size (Ts_info->dPi_deps,    0);
 }
 
-
-NCM_INLINE NcHIPertBGVarID 
+NCM_INLINE NcHIPertBGVarID
 nc_hipert_grav_get_id (NcHIPertGrav *grav)
 {
   const NcHIPertBGVarID id = nc_hipert_bg_var_class_get_id_by_ns (G_OBJECT_TYPE_NAME (grav));
+
   g_assert_cmpint (id, >=, 0);
+
   return id;
 }
 
-NCM_INLINE guint 
-nc_hipert_grav_ndyn_var (NcHIPertGrav *grav)
+NCM_INLINE guint
+nc_hipert_grav_n_dyn_var (NcHIPertGrav *grav)
 {
-  return NC_HIPERT_GRAV_GET_CLASS (grav)->ndyn_var (grav);
+  return NC_HIPERT_GRAV_GET_CLASS (grav)->n_dyn_var (grav);
 }
 
 NCM_INLINE GArray *
@@ -724,13 +728,13 @@ nc_hipert_grav_get_deps (NcHIPertGrav *grav, guint vindex)
   return NC_HIPERT_GRAV_GET_CLASS (grav)->get_deps (grav, vindex);
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertGravGauge gauge)
 {
   NC_HIPERT_GRAV_GET_CLASS (grav)->set_gauge (grav, gauge);
 }
 
-NCM_INLINE NcHIPertGravGauge 
+NCM_INLINE NcHIPertGravGauge
 nc_hipert_grav_get_gauge (NcHIPertGrav *grav)
 {
   return NC_HIPERT_GRAV_GET_CLASS (grav)->get_gauge (grav);
@@ -759,3 +763,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HIPERT_GRAV_INLINE_H_ */
+

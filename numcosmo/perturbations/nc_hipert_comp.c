@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_hipert_comp.c
  *
@@ -115,7 +113,7 @@ _nc_hipert_comp_finalize (GObject *object)
   G_OBJECT_CLASS (nc_hipert_comp_parent_class)->finalize (object);
 }
 
-static guint _nc_hipert_comp_ndyn_var (NcHIPertComp *comp);
+static guint _nc_hipert_comp_n_dyn_var (NcHIPertComp *comp);
 static GArray *_nc_hipert_comp_get_deps (NcHIPertComp *comp, guint vindex);
 
 static void _nc_hipert_comp_set_gauge (NcHIPertComp *comp, NcHIPertGravGauge gauge);
@@ -148,7 +146,7 @@ nc_hipert_comp_class_init (NcHIPertCompClass *klass)
                                                       NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->ndyn_var          = &_nc_hipert_comp_ndyn_var;
+  klass->n_dyn_var         = &_nc_hipert_comp_n_dyn_var;
   klass->get_deps          = &_nc_hipert_comp_get_deps;
   klass->set_gauge         = &_nc_hipert_comp_set_gauge;
   klass->get_gauge         = &_nc_hipert_comp_get_gauge;
@@ -160,9 +158,9 @@ nc_hipert_comp_class_init (NcHIPertCompClass *klass)
 }
 
 static guint
-_nc_hipert_comp_ndyn_var (NcHIPertComp *comp)
+_nc_hipert_comp_n_dyn_var (NcHIPertComp *comp)
 {
-  g_error ("_nc_hipert_comp_ndyn_var: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp));
+  g_error ("_nc_hipert_comp_n_dyn_var: not implemented by `%s'.", G_OBJECT_TYPE_NAME (comp));
 
   return 0;
 }
@@ -267,15 +265,15 @@ nc_hipert_comp_clear (NcHIPertComp **comp)
  */
 
 /**
- * nc_hipert_comp_ndyn_var: (virtual ndyn_var)
+ * nc_hipert_comp_n_dyn_var: (virtual n_dyn_var)
  * @comp: a #NcHIPertComp
  *
  * Returns: the number of dynamical components in @comp.
  */
 guint
-nc_hipert_comp_ndyn_var (NcHIPertComp *comp)
+nc_hipert_comp_n_dyn_var (NcHIPertComp *comp)
 {
-  return NC_HIPERT_COMP_GET_CLASS (comp)->ndyn_var (comp);
+  return NC_HIPERT_COMP_GET_CLASS (comp)->n_dyn_var (comp);
 }
 
 /**
@@ -321,7 +319,7 @@ nc_hipert_comp_get_gauge (NcHIPertComp *comp)
 }
 
 /**
- * nc_hipert_comp_get_Tscalar_coupling: (virtual get_T_scalar_info)
+ * nc_hipert_comp_get_T_scalar_info: (virtual get_T_scalar_info)
  * @comp: a #NcHIPertComp
  *
  * Provides all information about the scalar energy momentum tensor.

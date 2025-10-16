@@ -107,7 +107,7 @@ _nc_hipert_grav_einstein_finalize (GObject *object)
 
 NC_HIPERT_BG_VAR_ID_FUNC_IMPL (nc_hipert_grav_einstein, NcHIPertGravEinstein)
 
-static guint _nc_hipert_grav_einstein_ndyn_var (NcHIPertGrav *grav);
+static guint _nc_hipert_grav_einstein_n_dyn_var (NcHIPertGrav *grav);
 static GArray *_nc_hipert_grav_einstein_get_deps (NcHIPertGrav *grav, guint vindex);
 
 static NcHIPertGravInfo *_nc_hipert_grav_einstein_get_G_scalar_info (NcHIPertGrav *grav);
@@ -139,7 +139,7 @@ nc_hipert_grav_einstein_class_init (NcHIPertGravEinsteinClass *klass)
                                       0);
 
 
-  grav_class->ndyn_var          = &_nc_hipert_grav_einstein_ndyn_var;
+  grav_class->n_dyn_var         = &_nc_hipert_grav_einstein_n_dyn_var;
   grav_class->get_deps          = &_nc_hipert_grav_einstein_get_deps;
   grav_class->get_G_scalar_info = &_nc_hipert_grav_einstein_get_G_scalar_info;
   grav_class->get_G_scalar      = &_nc_hipert_grav_einstein_get_G_scalar;
@@ -150,26 +150,26 @@ nc_hipert_grav_einstein_class_init (NcHIPertGravEinsteinClass *klass)
 #define APPEND(a, b) (g_array_append_vals ((a), (b), LEN (b)))
 
 static guint
-_nc_hipert_grav_einstein_ndyn_var (NcHIPertGrav *grav)
+_nc_hipert_grav_einstein_n_dyn_var (NcHIPertGrav *grav)
 {
-  guint ndyn_var = 0;
+  guint n_dyn_var = 0;
 
   switch (nc_hipert_grav_get_gauge (grav))
   {
     case NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS:
     case NC_HIPERT_GRAV_GAUGE_NEWTONIAN:
-      ndyn_var = 1;
+      n_dyn_var = 1;
       break;
-    case NC_HIPERT_GRAV_GAUGE_CONST_CURV:
+    case NC_HIPERT_GRAV_GAUGE_CONST_CURVATURE:
     case NC_HIPERT_GRAV_GAUGE_CONST_EXP:
-      ndyn_var = 0;
+      n_dyn_var = 0;
       break;
     default:
       g_assert_not_reached ();
       break;
   }
 
-  return ndyn_var;
+  return n_dyn_var;
 }
 
 static GArray *
@@ -215,7 +215,7 @@ _nc_hipert_grav_einstein_get_deps (NcHIPertGrav *grav, guint vindex)
 
       break;
     }
-    case NC_HIPERT_GRAV_GAUGE_CONST_CURV:
+    case NC_HIPERT_GRAV_GAUGE_CONST_CURVATURE:
     {
       break;
     }
@@ -240,29 +240,29 @@ _nc_hipert_grav_einstein_get_G_scalar_info (NcHIPertGrav *grav)
   {
     case NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS:
     {
-      NcHIPertGravSElem dsigma_deps_a[] = {NC_HIPERT_GRAV_SELEM_PSI, NC_HIPERT_GRAV_SELEM_DRHO, NC_HIPERT_GRAV_SELEM_RHOPPV};
-      NcHIPertGravSElem psi_deps_a[]    = {NC_HIPERT_GRAV_DYN_VAR (0)};
-      NcHIPertGravSElem dotpsi_deps_a[] = {NC_HIPERT_GRAV_SELEM_DSIGMA, NC_HIPERT_GRAV_SELEM_RHOPPV};
+      NcHIPertGravSElem dsigma_deps_a[]  = {NC_HIPERT_GRAV_SELEM_PSI, NC_HIPERT_GRAV_SELEM_DRHO, NC_HIPERT_GRAV_SELEM_RHOPPV};
+      NcHIPertGravSElem psi_deps_a[]     = {NC_HIPERT_GRAV_DYN_VAR (0)};
+      NcHIPertGravSElem dot_psi_deps_a[] = {NC_HIPERT_GRAV_SELEM_DSIGMA, NC_HIPERT_GRAV_SELEM_RHOPPV};
 
       APPEND (ginfo->dsigma_deps, dsigma_deps_a);
       APPEND (ginfo->psi_deps,    psi_deps_a);
-      APPEND (ginfo->dotpsi_deps, dotpsi_deps_a);
+      APPEND (ginfo->dot_psi_deps, dot_psi_deps_a);
 
       break;
     }
     case NC_HIPERT_GRAV_GAUGE_NEWTONIAN:
     {
-      NcHIPertGravSElem phi_deps_a[]    = {NC_HIPERT_GRAV_SELEM_PSI, NC_HIPERT_GRAV_SELEM_DPI};
-      NcHIPertGravSElem psi_deps_a[]    = {NC_HIPERT_GRAV_DYN_VAR (0)};
-      NcHIPertGravSElem dotpsi_deps_a[] = {NC_HIPERT_GRAV_SELEM_PHI, NC_HIPERT_GRAV_SELEM_RHOPPV};
+      NcHIPertGravSElem phi_deps_a[]     = {NC_HIPERT_GRAV_SELEM_PSI, NC_HIPERT_GRAV_SELEM_DPI};
+      NcHIPertGravSElem psi_deps_a[]     = {NC_HIPERT_GRAV_DYN_VAR (0)};
+      NcHIPertGravSElem dot_psi_deps_a[] = {NC_HIPERT_GRAV_SELEM_PHI, NC_HIPERT_GRAV_SELEM_RHOPPV};
 
       APPEND (ginfo->phi_deps,    phi_deps_a);
       APPEND (ginfo->psi_deps,    psi_deps_a);
-      APPEND (ginfo->dotpsi_deps, dotpsi_deps_a);
+      APPEND (ginfo->dot_psi_deps, dot_psi_deps_a);
 
       break;
     }
-    case NC_HIPERT_GRAV_GAUGE_CONST_CURV:
+    case NC_HIPERT_GRAV_GAUGE_CONST_CURVATURE:
       break;
     default:
       g_assert_not_reached ();

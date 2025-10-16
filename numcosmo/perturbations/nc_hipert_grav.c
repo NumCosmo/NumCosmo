@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_hipert_grav.c
  *
@@ -126,7 +124,7 @@ _nc_hipert_grav_finalize (GObject *object)
   G_OBJECT_CLASS (nc_hipert_grav_parent_class)->finalize (object);
 }
 
-static guint _nc_hipert_grav_ndyn_var (NcHIPertGrav *grav);
+static guint _nc_hipert_grav_n_dyn_var (NcHIPertGrav *grav);
 static GArray *_nc_hipert_grav_get_deps (NcHIPertGrav *grav, guint vindex);
 
 static void _nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertGravGauge gauge);
@@ -154,8 +152,8 @@ nc_hipert_grav_class_init (NcHIPertGravClass *klass)
                                                       NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->ndyn_var = &_nc_hipert_grav_ndyn_var;
-  klass->get_deps = &_nc_hipert_grav_get_deps;
+  klass->n_dyn_var = &_nc_hipert_grav_n_dyn_var;
+  klass->get_deps  = &_nc_hipert_grav_get_deps;
 
   klass->set_gauge         = &_nc_hipert_grav_set_gauge;
   klass->get_gauge         = &_nc_hipert_grav_get_gauge;
@@ -165,9 +163,9 @@ nc_hipert_grav_class_init (NcHIPertGravClass *klass)
 }
 
 static guint
-_nc_hipert_grav_ndyn_var (NcHIPertGrav *grav)
+_nc_hipert_grav_n_dyn_var (NcHIPertGrav *grav)
 {
-  g_error ("_nc_hipert_grav_ndyn_var: not implemented by `%s'.", G_OBJECT_TYPE_NAME (grav));
+  g_error ("_nc_hipert_grav_n_dyn_var: not implemented by `%s'.", G_OBJECT_TYPE_NAME (grav));
 
   return 0;
 }
@@ -477,11 +475,11 @@ _nc_hipert_grav_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPe
  * Sets $\psi$ dependencies to @psi_deps.
  */
 /**
- * nc_hipert_grav_info_set_dotpsi_deps:
+ * nc_hipert_grav_info_set_dot_psi_deps:
  * @ginfo: a #NcHIPertGravInfo
- * @dotpsi_deps: (array) (element-type gint): the $\dotpsi$ dependencies
+ * @dot_psi_deps: (array) (element-type gint): the $\dot_psi$ dependencies
  *
- * Sets $\dot\psi$ dependencies to @dotpsi_deps.
+ * Sets $\dot\psi$ dependencies to @dot_psi_deps.
  */
 /**
  * nc_hipert_grav_info_get_phi_deps:
@@ -502,10 +500,10 @@ _nc_hipert_grav_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPe
  * Returns: (array) (element-type gint) (transfer full): the $\psi$ dependencies
  */
 /**
- * nc_hipert_grav_info_get_dotpsi_deps:
+ * nc_hipert_grav_info_get_dot_psi_deps:
  * @ginfo: a #NcHIPertGravInfo
  *
- * Returns: (array) (element-type gint) (transfer full): the $\dotpsi$ dependencies
+ * Returns: (array) (element-type gint) (transfer full): the $\dot_psi$ dependencies
  */
 
 /**
@@ -556,7 +554,7 @@ nc_hipert_grav_clear (NcHIPertGrav **grav)
  */
 
 /**
- * nc_hipert_grav_ndyn_var: (virtual ndyn_var)
+ * nc_hipert_grav_n_dyn_var: (virtual n_dyn_var)
  * @grav: a #NcHIPertGrav
  *
  * Returns: the number of dynamical components in @grav.
@@ -580,7 +578,7 @@ nc_hipert_grav_clear (NcHIPertGrav **grav)
  * nc_hipert_grav_get_gauge: (virtual get_gauge)
  * @grav: a #NcHIPertGrav
  *
- * Gets the gauge #NcHIPertGravGauge used by the gravonent @grav.
+ * Gets the gauge #NcHIPertGravGauge used by @grav.
  *
  * Returns: current gauge of @grav.
  */
@@ -588,7 +586,7 @@ nc_hipert_grav_clear (NcHIPertGrav **grav)
  * nc_hipert_grav_get_G_scalar_info: (virtual get_G_scalar_info)
  * @grav: a #NcHIPertGrav
  *
- * Gets the determination type and dependencies for each gravitation pontential.
+ * Gets the determination type and dependencies for each gravitation potential.
  *
  * Returns: a #NcHIPertGravInfo describing the scalar sector.
  */

@@ -550,7 +550,7 @@ __cmp_gint (gconstpointer a, gconstpointer b)
 }
 
 static void
-_nc_hipert_first_order_solve_deps (NcHIPertFirstOrder *fo, NcHIPertGravInfo *ginfo, NcHIPertGravTScalarInfo *Tsinfo, GArray *deps, guint r)
+_nc_hipert_first_order_solve_deps (NcHIPertFirstOrder *fo, NcHIPertGravInfo *ginfo, NcHIPertGravTScalarInfo *Ts_info, GArray *deps, guint r)
 {
   gboolean subs = FALSE;
   guint i;
@@ -583,25 +583,25 @@ _nc_hipert_first_order_solve_deps (NcHIPertFirstOrder *fo, NcHIPertGravInfo *gin
           /*g_message ("Appending psi     %d!\n", ginfo->psi_deps->len);*/
           APPEND (deps, ginfo->psi_deps);
           break;
-        case NC_HIPERT_GRAV_SELEM_DOTPSI:
-          /*g_message ("Appending dotphi  %d!\n", ginfo->dotpsi_deps->len);*/
-          APPEND (deps, ginfo->dotpsi_deps);
+        case NC_HIPERT_GRAV_SELEM_DOT_PSI:
+          /*g_message ("Appending dot_phi %d!\n", ginfo->dot_psi_deps->len);*/
+          APPEND (deps, ginfo->dot_psi_deps);
           break;
         case NC_HIPERT_GRAV_SELEM_DRHO:
-          /*g_message ("Appending drho    %d!\n", Tsinfo->drho_deps->len);*/
-          APPEND (deps, Tsinfo->drho_deps);
+          /*g_message ("Appending drho    %d!\n", Ts_info->drho_deps->len);*/
+          APPEND (deps, Ts_info->drho_deps);
           break;
         case NC_HIPERT_GRAV_SELEM_RHOPPV:
-          /*g_message ("Appending rhoppv  %d!\n", Tsinfo->rhoppv_deps->len);*/
-          APPEND (deps, Tsinfo->rhoppv_deps);
+          /*g_message ("Appending rhoppv  %d!\n", Ts_info->rhoppv_deps->len);*/
+          APPEND (deps, Ts_info->rhoppv_deps);
           break;
         case NC_HIPERT_GRAV_SELEM_DP:
-          /*g_message ("Appending dp      %d!\n", Tsinfo->dp_deps->len);*/
-          APPEND (deps, Tsinfo->dp_deps);
+          /*g_message ("Appending dp      %d!\n", Ts_info->dp_deps->len);*/
+          APPEND (deps, Ts_info->dp_deps);
           break;
         case NC_HIPERT_GRAV_SELEM_DPI:
-          /*g_message ("Appending dPi     %d!\n", Tsinfo->dPi_deps->len);*/
-          APPEND (deps, Tsinfo->dPi_deps);
+          /*g_message ("Appending dPi     %d!\n", Ts_info->dPi_deps->len);*/
+          APPEND (deps, Ts_info->dPi_deps);
           break;
         default:
           g_assert_not_reached ();
@@ -616,7 +616,7 @@ _nc_hipert_first_order_solve_deps (NcHIPertFirstOrder *fo, NcHIPertGravInfo *gin
 
   if (subs)
   {
-    _nc_hipert_first_order_solve_deps (fo, ginfo, Tsinfo, deps, r + 1);
+    _nc_hipert_first_order_solve_deps (fo, ginfo, Ts_info, deps, r + 1);
   }
   else
   {
@@ -650,7 +650,7 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
   NcHIPertFirstOrderPrivate * const self = fo->priv;
   gint *adj;
   gint node_num = self->vars->len;
-  gchar *Jrow   = g_new0 (gchar, node_num + 1);
+  gchar *J_row  = g_new0 (gchar, node_num + 1);
   gint adj_max  = MAX (node_num * (node_num - 1), 1);
   gint adj_num  = 0;
   gint *adj_row;
@@ -692,12 +692,12 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
     for (j = 0; j < node_num; j++)
     {
       if (i == j)
-        Jrow[j] = 'D';
+        J_row[j] = 'D';
       else
-        Jrow[j] = '.';
+        J_row[j] = '.';
     }
 
-    Jrow[j] = '\0';
+    J_row[j] = '\0';
 
     for (j = 0; j < (gint) var.deps->len; j++)
     {
@@ -706,12 +706,12 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
       adj_set (node_num, adj_max, &adj_num, adj_row, adj, var.index + 1, dep + 1);
 
       if (var.index != dep)
-        Jrow[dep] = 'X';
+        J_row[dep] = 'X';
 
       /*printf ("%d %d %d %d\n", var.index, dep, i, j);*/
     }
 
-    ncm_message ("#  %s\n", Jrow);
+    ncm_message ("#  %s\n", J_row);
   }
 
 /*
@@ -775,12 +775,12 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
     for (j = 0; j < node_num; j++)
     {
       if (i == j)
-        Jrow[j] = 'D';
+        J_row[j] = 'D';
       else
-        Jrow[j] = '.';
+        J_row[j] = '.';
     }
 
-    Jrow[j] = '\0';
+    J_row[j] = '\0';
 
     for (j = 0; j < (gint) var.deps->len; j++)
     {
@@ -790,13 +790,13 @@ _nc_hipert_first_order_arrange_vars (NcHIPertFirstOrder *fo)
       self->mlower = MAX (self->mlower, i - dep);
 
       if (i != dep)
-        Jrow[dep] = 'X';
+        J_row[dep] = 'X';
     }
 
-    ncm_message ("#  %s\n", Jrow);
+    ncm_message ("#  %s\n", J_row);
   }
 
-  g_free (Jrow);
+  g_free (J_row);
   g_message ("#\n#  ADJ (permuted) bandwidth = (%d, %d)\n", self->mupper, self->mlower);
 
   if ((orig_mupper + orig_mlower) <= (self->mupper + self->mlower))
@@ -819,16 +819,16 @@ _nc_hipert_first_order_prepare_internal (NcHIPertFirstOrder *fo)
 
   if (self->grav != NULL)
   {
-    NcHIPertGravInfo *ginfo         = nc_hipert_grav_get_G_scalar_info (self->grav);
-    NcHIPertGravTScalarInfo *Tsinfo = nc_hipert_grav_T_scalar_info_new ();
-    const guint grav_ndyn           = nc_hipert_grav_ndyn_var (self->grav);
+    NcHIPertGravInfo *ginfo          = nc_hipert_grav_get_G_scalar_info (self->grav);
+    NcHIPertGravTScalarInfo *Ts_info = nc_hipert_grav_T_scalar_info_new ();
+    const guint grav_n_dyn           = nc_hipert_grav_n_dyn_var (self->grav);
 
     guint i, pad = 0;
 
     g_array_set_size (self->vars, 0);
 
     /* Adding gravitation potentials to the variables list */
-    for (i = 0; i < grav_ndyn; i++)
+    for (i = 0; i < grav_n_dyn; i++)
     {
       GArray *grav_dyn_var_i_deps = nc_hipert_grav_get_deps (self->grav, i);
       NcHIPertFirstOrderVar var   = {-1, self->vars->len, grav_dyn_var_i_deps};
@@ -846,15 +846,15 @@ _nc_hipert_first_order_prepare_internal (NcHIPertFirstOrder *fo)
 
       if (comp != NULL)
       {
-        NcHIPertGravTScalarInfo *Tsinfo_i = nc_hipert_comp_get_T_scalar_info (comp);
-        guint ndyn                        = nc_hipert_comp_ndyn_var (comp);
+        NcHIPertGravTScalarInfo *Ts_info_i = nc_hipert_comp_get_T_scalar_info (comp);
+        guint n_dyn                        = nc_hipert_comp_n_dyn_var (comp);
         guint j;
 
-        nc_hipert_grav_T_scalar_info_add_pad (Tsinfo_i, pad);
-        nc_hipert_grav_T_scalar_info_append (Tsinfo, Tsinfo_i);
-        nc_hipert_grav_T_scalar_info_free (Tsinfo_i);
+        nc_hipert_grav_T_scalar_info_add_pad (Ts_info_i, pad);
+        nc_hipert_grav_T_scalar_info_append (Ts_info, Ts_info_i);
+        nc_hipert_grav_T_scalar_info_free (Ts_info_i);
 
-        for (j = 0; j < ndyn; j++)
+        for (j = 0; j < n_dyn; j++)
         {
           GArray *comp_j_deps       = nc_hipert_comp_get_deps (comp, j);
           NcHIPertFirstOrderVar var = {i, self->vars->len, comp_j_deps};
@@ -897,11 +897,11 @@ _nc_hipert_first_order_prepare_internal (NcHIPertFirstOrder *fo)
       }
 
       g_message ("\n");
-      g_message ("# dotpsi deps: ");
+      g_message ("# dot_psi deps: ");
 
-      for (i = 0; i < ginfo->dotpsi_deps->len; i++)
+      for (i = 0; i < ginfo->dot_psi_deps->len; i++)
       {
-        g_message (" %2d", g_array_index (ginfo->dotpsi_deps, gint, i));
+        g_message (" %2d", g_array_index (ginfo->dot_psi_deps, gint, i));
       }
 
       g_message ("\n");
@@ -909,33 +909,33 @@ _nc_hipert_first_order_prepare_internal (NcHIPertFirstOrder *fo)
 
       g_message ("# drho deps:   ");
 
-      for (i = 0; i < Tsinfo->drho_deps->len; i++)
+      for (i = 0; i < Ts_info->drho_deps->len; i++)
       {
-        g_message (" %2d", g_array_index (Tsinfo->drho_deps, gint, i));
+        g_message (" %2d", g_array_index (Ts_info->drho_deps, gint, i));
       }
 
       g_message ("\n");
       g_message ("# rhoppv deps: ");
 
-      for (i = 0; i < Tsinfo->rhoppv_deps->len; i++)
+      for (i = 0; i < Ts_info->rhoppv_deps->len; i++)
       {
-        g_message (" %2d", g_array_index (Tsinfo->rhoppv_deps, gint, i));
+        g_message (" %2d", g_array_index (Ts_info->rhoppv_deps, gint, i));
       }
 
       g_message ("\n");
       g_message ("# dp deps:     ");
 
-      for (i = 0; i < Tsinfo->dp_deps->len; i++)
+      for (i = 0; i < Ts_info->dp_deps->len; i++)
       {
-        g_message (" %2d", g_array_index (Tsinfo->dp_deps, gint, i));
+        g_message (" %2d", g_array_index (Ts_info->dp_deps, gint, i));
       }
 
       g_message ("\n");
       g_message ("# dPi deps:    ");
 
-      for (i = 0; i < Tsinfo->dPi_deps->len; i++)
+      for (i = 0; i < Ts_info->dPi_deps->len; i++)
       {
-        g_message (" %2d", g_array_index (Tsinfo->dPi_deps, gint, i));
+        g_message (" %2d", g_array_index (Ts_info->dPi_deps, gint, i));
       }
 
       g_message ("\n");
@@ -948,13 +948,13 @@ _nc_hipert_first_order_prepare_internal (NcHIPertFirstOrder *fo)
       {
         NcHIPertFirstOrderVar var = g_array_index (self->vars, NcHIPertFirstOrderVar, i);
 
-        _nc_hipert_first_order_solve_deps (fo, ginfo, Tsinfo, var.deps, 0);
+        _nc_hipert_first_order_solve_deps (fo, ginfo, Ts_info, var.deps, 0);
       }
     }
 
     _nc_hipert_first_order_arrange_vars (fo);
 
-    nc_hipert_grav_T_scalar_info_free (Tsinfo);
+    nc_hipert_grav_T_scalar_info_free (Ts_info);
     nc_hipert_grav_info_free (ginfo);
   }
 }

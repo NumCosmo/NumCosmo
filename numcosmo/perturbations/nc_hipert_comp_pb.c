@@ -28,7 +28,7 @@
 /**
  * NcHIPertCompPB:
  *
- * Photon-Baryon plasma compoment.
+ * Photon-Baryon plasma component.
  *
  * This object is a subclass of #NcHIPertComp and is designed to implement the
  * photon-baryon plasma component of the perturbations. It is employed by
@@ -117,7 +117,7 @@ _nc_hipert_comp_pb_finalize (GObject *object)
 
 NC_HIPERT_BG_VAR_ID_FUNC_IMPL (nc_hipert_comp_pb, NcHIPertCompPB);
 
-static guint _nc_hipert_comp_pb_ndyn_var (NcHIPertComp *comp);
+static guint _nc_hipert_comp_pb_n_dyn_var (NcHIPertComp *comp);
 static GArray *_nc_hipert_comp_pb_get_deps (NcHIPertComp *comp, guint vindex);
 static NcHIPertGravTScalarInfo *_nc_hipert_comp_pb_get_T_scalar_info (NcHIPertComp *comp);
 static void _nc_hipert_comp_pb_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar);
@@ -147,7 +147,7 @@ nc_hipert_comp_pb_class_init (NcHIPertCompPBClass *klass)
                                       NULL,
                                       0);
 
-  comp_class->ndyn_var          = &_nc_hipert_comp_pb_ndyn_var;
+  comp_class->n_dyn_var         = &_nc_hipert_comp_pb_n_dyn_var;
   comp_class->get_deps          = &_nc_hipert_comp_pb_get_deps;
   comp_class->get_T_scalar_info = &_nc_hipert_comp_pb_get_T_scalar_info;
   comp_class->get_T_scalar      = &_nc_hipert_comp_pb_get_T_scalar;
@@ -155,7 +155,7 @@ nc_hipert_comp_pb_class_init (NcHIPertCompPBClass *klass)
 }
 
 static guint
-_nc_hipert_comp_pb_ndyn_var (NcHIPertComp *comp)
+_nc_hipert_comp_pb_n_dyn_var (NcHIPertComp *comp)
 {
   NcHIPertCompPB *pb = NC_HIPERT_COMP_PB (comp);
 
@@ -177,7 +177,7 @@ _nc_hipert_comp_pb_get_deps (NcHIPertComp *comp, guint vindex)
     {
       gint deps_a[] = {
         NC_HIPERT_COMP_PB_VAR_V_B,
-        NC_HIPERT_GRAV_SELEM_DOTPSI,
+        NC_HIPERT_GRAV_SELEM_DOT_PSI,
         NC_HIPERT_GRAV_SELEM_DSIGMA
       };
 
@@ -199,7 +199,7 @@ _nc_hipert_comp_pb_get_deps (NcHIPertComp *comp, guint vindex)
     {
       gint deps_a[] = {
         NC_HIPERT_COMP_PB_VAR_V_G,
-        NC_HIPERT_GRAV_SELEM_DOTPSI,
+        NC_HIPERT_GRAV_SELEM_DOT_PSI,
         NC_HIPERT_GRAV_SELEM_DSIGMA
       };
 
@@ -263,17 +263,17 @@ _nc_hipert_comp_pb_get_deps (NcHIPertComp *comp, guint vindex)
 static NcHIPertGravTScalarInfo *
 _nc_hipert_comp_pb_get_T_scalar_info (NcHIPertComp *comp)
 {
-  NcHIPertGravTScalarInfo *Tsinfo = nc_hipert_grav_T_scalar_info_new ();
+  NcHIPertGravTScalarInfo *Ts_info = nc_hipert_grav_T_scalar_info_new ();
 
   gint drho_deps_a[]   = {NC_HIPERT_COMP_PB_VAR_DELTA_B, NC_HIPERT_COMP_PB_VAR_DELTA_G};
   gint rhoppv_deps_a[] = {NC_HIPERT_COMP_PB_VAR_V_B, NC_HIPERT_COMP_PB_VAR_V_G};
   gint dPi_deps_a[]    = {NC_HIPERT_COMP_PB_VAR_THETA_G};
 
-  APPEND (Tsinfo->drho_deps,   drho_deps_a);
-  APPEND (Tsinfo->rhoppv_deps, rhoppv_deps_a);
-  APPEND (Tsinfo->dPi_deps,    dPi_deps_a);
+  APPEND (Ts_info->drho_deps,   drho_deps_a);
+  APPEND (Ts_info->rhoppv_deps, rhoppv_deps_a);
+  APPEND (Ts_info->dPi_deps,    dPi_deps_a);
 
-  return Tsinfo;
+  return Ts_info;
 }
 
 static void
