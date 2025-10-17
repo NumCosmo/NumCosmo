@@ -29,7 +29,6 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 
 G_BEGIN_DECLS
 
@@ -46,20 +45,18 @@ typedef struct _NcHICosmoQGMG NcHICosmoQGMG;
 /**
  * NcHICosmoQGMGSParams:
  * @NC_HICOSMO_QGMG_H0: Hubble constant.
- * @NC_HICOSMO_QGMG_OMEGA_R: Radiation density at $a_0$.
- * @NC_HICOSMO_QGMG_OMEGA_W: $w$-fluid density at $a_0$.
- * @NC_HICOSMO_QGMG_W: $w$-fluid equation of state.
+ * @NC_HICOSMO_QGMG_OMEGA_MG: Massive Gas density at $a_0$.
+ * @NC_HICOSMO_QGMG_TM: Temperature over mass ratio.
  * @NC_HICOSMO_QGMG_X_B: Redshift at the bounce.
  *
- * Parameter of the Quantum Gravity Radiation W model.
+ * Parameter of the Quantum Gravity Massive Gas model.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_QGMG_SPARAMS >*/
 {
   NC_HICOSMO_QGMG_H0 = 0,
-  NC_HICOSMO_QGMG_OMEGA_R,
-  NC_HICOSMO_QGMG_OMEGA_W,
-  NC_HICOSMO_QGMG_W,
+  NC_HICOSMO_QGMG_OMEGA_MG,
+  NC_HICOSMO_QGMG_TM,
   NC_HICOSMO_QGMG_X_B,
   /* < private > */
   NC_HICOSMO_QGMG_SPARAM_LEN, /*< skip >*/
@@ -73,32 +70,25 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_QGMG_SPARAMS >*/
 #define NC_HICOSMO_QGMG_DEFAULT_H0      ncm_c_hubble_cte_planck6_base ()
 
 /**
- * NC_HICOSMO_QGMG_DEFAULT_OMEGA_R: (value 1.0e-5)
+ * NC_HICOSMO_QGMG_DEFAULT_OMEGA_MG: (value 1.0)
  *
- * Default $\Omega_{r0}$.
+ * Default $\Omega_{\mathrm{mg}0}$.
  */
-#define NC_HICOSMO_QGMG_DEFAULT_OMEGA_R (1.0e-5)
+#define NC_HICOSMO_QGMG_DEFAULT_OMEGA_MG (1.0)
 
 /**
- * NC_HICOSMO_QGMG_DEFAULT_OMEGA_W: (value 0.99999)
- *
- * Default $\Omega_{w0}$.
- */
-#define NC_HICOSMO_QGMG_DEFAULT_OMEGA_W (1.0 - NC_HICOSMO_QGMG_DEFAULT_OMEGA_R)
-
-/**
- * NC_HICOSMO_QGMG_DEFAULT_W: (value 1.0e-12)
+ * NC_HICOSMO_QGMG_DEFAULT_TM: (value 1.0e-5)
  *
  * Default $w$.
  */
-#define NC_HICOSMO_QGMG_DEFAULT_W       (1.0e-12)
+#define NC_HICOSMO_QGMG_DEFAULT_TM (1.0e-5)
 
 /**
  * NC_HICOSMO_QGMG_DEFAULT_OMEGA_X_B: (value 1.0e30)
  *
  * Default $x_b$.
  */
-#define NC_HICOSMO_QGMG_DEFAULT_X_B     (1.0e30)
+#define NC_HICOSMO_QGMG_DEFAULT_X_B (1.0e30)
 
 struct _NcHICosmoQGMGClass
 {
@@ -109,10 +99,6 @@ struct _NcHICosmoQGMGClass
 struct _NcHICosmoQGMG
 {
   NcHICosmo parent_instance;
-  /*< private >*/
-  NcHIPertITwoFluidsEOM eom_two_fluids;
-  NcHIPertITwoFluidsWKB wkb_two_fluids;
-  NcHIPertITwoFluidsTV tv_two_fluids;
 };
 
 GType nc_hicosmo_qgmg_get_type (void) G_GNUC_CONST;

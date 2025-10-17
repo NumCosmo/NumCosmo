@@ -48,15 +48,18 @@
 #include "model/nc_hicosmo_qgmg.h"
 #include "perturbations/nc_hipert_gw.h"
 #include "perturbations/nc_hipert_adiab.h"
+#include "math/ncm_c.h"
 
-static void nc_hipert_itwo_fluids_interface_init (NcHIPertITwoFluidsInterface *iface);
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_sf_bessel.h>
+#endif /* NUMCOSMO_GIR_SCAN */
+
+
 static void nc_hipert_igw_interface_init (NcHIPertIGWInterface *iface);
 static void nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface);
 
 
 G_DEFINE_TYPE_WITH_CODE (NcHICosmoQGMG, nc_hicosmo_qgmg, NC_TYPE_HICOSMO,
-                         G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_ITWO_FLUIDS,
-                                                nc_hipert_itwo_fluids_interface_init)
                          G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IGW,
                                                 nc_hipert_igw_interface_init)
                          G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IADIAB,
@@ -72,13 +75,6 @@ enum
 static void
 nc_hicosmo_qgmg_init (NcHICosmoQGMG *qgmg)
 {
-  qgmg->tv_two_fluids.skey  = -1;
-  qgmg->tv_two_fluids.alpha = 0.0;
-  qgmg->tv_two_fluids.k     = 0.0;
-
-  qgmg->eom_two_fluids.skey  = -1;
-  qgmg->eom_two_fluids.alpha = 0.0;
-  qgmg->eom_two_fluids.k     = 0.0;
 }
 
 static void
@@ -99,11 +95,6 @@ static gdouble _nc_hicosmo_qgmg_Omega_t0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_qgmg_Omega_c0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_qgmg_xb (NcHICosmo *cosmo);
 
-static NcHIPertITwoFluidsEOM *_nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
-static NcHIPertITwoFluidsWKB *_nc_hipert_itwo_fluids_wkb (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
-static NcHIPertITwoFluidsTV *_nc_hipert_itwo_fluids_tv (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
-static gdouble _nc_hipert_itwo_fluids_eval_unit (NcHIPertITwoFluids *itf);
-
 static void
 nc_hicosmo_qgmg_class_init (NcHICosmoQGMGClass *klass)
 {
@@ -120,19 +111,14 @@ nc_hicosmo_qgmg_class_init (NcHICosmoQGMGClass *klass)
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QGMG_DEFAULT_H0,
                               NCM_PARAM_TYPE_FIXED);
   /* Set Omega_r0 param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGMG_OMEGA_R, "\\Omega_{r0}", "Omegar",
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGMG_OMEGA_MG, "\\Omega_{\\mathrm{mg}0}", "Omegamg",
                               1e-8,  10.0, 1.0e-2,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QGMG_DEFAULT_OMEGA_R,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QGMG_DEFAULT_OMEGA_MG,
                               NCM_PARAM_TYPE_FREE);
-  /* Set Omega_x0 param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGMG_OMEGA_W, "\\Omega_{w0}", "Omegaw",
-                              1e-8,  10.0, 1.0e-2,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QGMG_DEFAULT_OMEGA_W,
-                              NCM_PARAM_TYPE_FREE);
-  /* Set w param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGMG_W, "w", "w",
+  /* Set Tm param info */
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGMG_TM, "Tm", "Tm",
                               1e-50,  1.0, 1.0e-8,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QGMG_DEFAULT_W,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QGMG_DEFAULT_TM,
                               NCM_PARAM_TYPE_FIXED);
   /* Set xb param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGMG_X_B, "x_b", "xb",
@@ -153,15 +139,6 @@ nc_hicosmo_qgmg_class_init (NcHICosmoQGMGClass *klass)
   nc_hicosmo_set_bgp_cs2_impl   (parent_class, &_nc_hicosmo_qgmg_bgp_cs2);
 
   object_class->finalize = nc_hicosmo_qgmg_finalize;
-}
-
-static void
-nc_hipert_itwo_fluids_interface_init (NcHIPertITwoFluidsInterface *iface)
-{
-  iface->eom       = &_nc_hipert_itwo_fluids_eom;
-  iface->wkb       = &_nc_hipert_itwo_fluids_wkb;
-  iface->tv        = &_nc_hipert_itwo_fluids_tv;
-  iface->eval_unit = &_nc_hipert_itwo_fluids_eval_unit;
 }
 
 static gdouble _nc_hicosmo_qgmg_gw_eval_xi (NcHIPertIGW *igw, const gdouble alpha, const gdouble k);
@@ -211,9 +188,8 @@ nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface)
 
 #define VECTOR   (NCM_MODEL (cosmo))
 #define MACRO_H0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGMG_H0))
-#define OMEGA_R  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGMG_OMEGA_R))
-#define OMEGA_W  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGMG_OMEGA_W))
-#define W        (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGMG_W))
+#define OMEGA_MG (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGMG_OMEGA_MG))
+#define TM       (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGMG_TM))
 #define X_B      (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_QGMG_X_B))
 
 /****************************************************************************
@@ -223,25 +199,16 @@ nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface)
 static gdouble
 _nc_hicosmo_qgmg_E2 (NcHICosmo *cosmo, gdouble z)
 {
-  const gdouble x    = 1.0 + z;
-  const gdouble x2   = x * x;
-  const gdouble x3   = x2 * x;
-  const gdouble x4   = x2 * x2;
-  const gdouble x3w  = pow (x3, W);
-  const gdouble x6   = x3 * x3;
-  const gdouble xb   = X_B;
-  const gdouble xb2  = xb * xb;
-  const gdouble xb3  = xb2 * xb;
-  const gdouble xb3w = pow (xb3, W);
+  const gdouble x        = 1.0 + z;
+  const gdouble x2       = x * x;
+  const gdouble Tm       = TM;
+  const gdouble sTm      = sqrt (Tm);
+  const gdouble sTm3     = gsl_pow_3 (sTm);
+  const gdouble R        = 1.0 / (x2 * 4.0 * Tm);
+  const gdouble Omega_mg = OMEGA_MG;
+  const gdouble fact     = 0.25 / ncm_c_sqrt_2pi ();
 
-#ifdef NC_HICOSMO_QGMG_CHECK_INTERVAL
-
-  if (G_UNLIKELY (ncm_cmp (x, xb, 1e-4) == 0))
-    g_warning ("_nc_hicosmo_qgmg_E2: used outside if its valid interval.");
-
-#endif /* NC_HICOSMO_QGMG_CHECK_INTERVAL */
-
-  return (OMEGA_R * (x4 - x6 / xb2) + OMEGA_W * (x3 * x3w - x6 * xb3w / xb3));
+  return Omega_mg * fact / sTm3 * gsl_sf_bessel_K1_scaled (R) / R;
 }
 
 /****************************************************************************
@@ -262,13 +229,6 @@ _nc_hicosmo_qgmg_dE2_dz (NcHICosmo *cosmo, gdouble z)
   const gdouble xb3w = pow (xb3, W);
   const gdouble poly = OMEGA_R * (4.0 * x3 - 6.0 * x5 / xb2) + OMEGA_W * (3.0 * (1.0 + W) * x2 * x3w - 6.0 * x5 * xb3w / xb3);
 
-#ifdef NC_HICOSMO_QGMG_CHECK_INTERVAL
-
-  if (G_UNLIKELY (ncm_cmp (x, xb, 1e-4) == 0))
-    g_warning ("_nc_hicosmo_qgmg_E2: used outside if its valid interval.");
-
-#endif /* NC_HICOSMO_QGMG_CHECK_INTERVAL */
-
   return poly;
 }
 
@@ -288,13 +248,6 @@ _nc_hicosmo_qgmg_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
   const gdouble xb3w        = pow (xb3, W);
 
   const gdouble poly = OMEGA_R * (12.0 * x2 - 30.0 * x4 / xb2) + OMEGA_W * (three1p3w * three1p3wm1 * x * x3w - 30.0 * x4  * xb3w / xb3);
-
-#ifdef NC_HICOSMO_QGMG_CHECK_INTERVAL
-
-  if (G_UNLIKELY (ncm_cmp (x, xb, 1e-4) == 0))
-    g_warning ("_nc_hicosmo_qgmg_E2: used outside if its valid interval.");
-
-#endif /* NC_HICOSMO_QGMG_CHECK_INTERVAL */
 
   return poly;
 }
