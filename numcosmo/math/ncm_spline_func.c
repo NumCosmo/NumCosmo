@@ -253,7 +253,7 @@ ncm_spline_new_function_4 (NcmSpline *s, gsl_function *F, const gdouble xi, cons
 
 static void
 ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi, const gdouble xf, gsize max_nodes, const gdouble rel_error, const gdouble f_scale, gint refine, gdouble refine_ns)
-{
+{ 
   GArray *x_array  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   GArray *y_array  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   GArray *xt_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
@@ -265,20 +265,18 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
   guint i;
 
   n = (n < 3) ? 3 : n;
-
+  
   ncm_assert_cmpdouble_e (xf, >, xi, DBL_EPSILON, 0.0);
   g_assert_cmpfloat (f_scale, >=, 0.0);
 
   max_nodes = (max_nodes <= 0) ? G_MAXUINT64 : max_nodes;
-
+    
   g_array_set_size (xt_array, n);
   g_array_set_size (yt_array, n);
-
   for (i = 0; i < n; i++)
   {
     const gdouble x = xi + (xf - xi) / (n - 1.0) * i;
     const gdouble y = GSL_FN_EVAL (F, x);
-
     BIVEC_LIST_APPEND (nodes, x, y);
     BIVEC_LIST_OK (nodes) = 0;
 
@@ -287,14 +285,12 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
     g_assert (gsl_finite (x));
     g_assert (gsl_finite (y));
   }
-
   ncm_spline_set_array (s, x_array, y_array, TRUE);
 
 #define SWAP_PTR(a, b)                                    \
         do {                                              \
           const gpointer tmp = (b); (b) = (a); (a) = tmp; \
         } while (FALSE)
-
   while (TRUE)
   {
     gsize improves = 0;
@@ -321,7 +317,7 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
 
       ncm_stats_vec_set (dx_stats, 0, x1 - x0);
       ncm_stats_vec_update (dx_stats);
-
+        
       if (BIVEC_LIST_OK (wnodes) == 1)
       {
         continue;
@@ -337,7 +333,6 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
         const gdouble Iys     = ncm_spline_eval_integ (s, x0, x1);
         const gboolean test_p = fabs (y - ys)    <= rel_error * (fabs (y)   + f_scale);
         const gboolean test_I = fabs (Iyc - Iys) <= rel_error * (fabs (Iyc) + f_scale * dx);
-
         if (fabs ((x - x0) / x) < NCM_SPLINE_KNOT_DIFF_TOL)
           g_error ("Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous at x = (% 20.15g, % 20.15g, % 20.15g).\n"
                    "\tFunction value at f(x0) = % 22.15g, f(x) = % 22.15g and f(x1) = % 22.15g, cmp (%e, %e).",
@@ -345,13 +340,13 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
                    y0, y, y1,
                    fabs (y0 / y - 1.0),
                    fabs (y1 / y - 1.0));
-
+        
         BIVEC_LIST_INSERT_BEFORE (nodes, wnodes->next, x, y);
         wnodes = g_list_next (wnodes);
         g_array_append_val (xt_array, BIVEC_LIST_X (wnodes));
         g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
         BIVEC_LIST_OK (wnodes) = BIVEC_LIST_OK (wnodes->prev);
-
+        
         if (test_p && test_I)
         {
           BIVEC_LIST_OK (wnodes->prev)++;
@@ -362,27 +357,30 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
           improves++;
         }
       }
-    } while ((wnodes = g_list_next (wnodes)) && wnodes->next);
 
+    } while ((wnodes = g_list_next (wnodes)) && wnodes->next);
+    
     if (wnodes != NULL)
     {
       g_array_append_val (xt_array, BIVEC_LIST_X (wnodes));
       g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
+
     }
 
+      
+   
     SWAP_PTR (x_array, xt_array);
     SWAP_PTR (y_array, yt_array);
 
     ncm_spline_set_array (s, x_array, y_array, TRUE);
-
     if (x_array->len > max_nodes)
-    {
+    { 
       g_warning ("ncm_spline_new_function_spline: cannot archive requested precision with at most %zu nodes", max_nodes);
       break;
     }
 
     if (improves == 0)
-    {
+    { 
       if (refine < 1)
       {
         break;
@@ -392,7 +390,6 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
         const gdouble dx_mean = ncm_stats_vec_get_mean (dx_stats, 0);
         const gdouble dx_sd   = ncm_stats_vec_get_sd (dx_stats, 0);
         const gdouble dx_lim  = refine_ns * dx_sd + dx_mean;
-
         refine--;
 
         if (max_dx > dx_lim)
@@ -408,6 +405,7 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
               BIVEC_LIST_OK (wnodes) = 0;
           } while ((wnodes = g_list_next (wnodes)) && wnodes->next);
         }
+        
         else
         {
           break;
@@ -415,7 +413,6 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
       }
     }
   }
-
   g_list_free_full (nodes, _BIVec_free);
 
   g_array_unref (x_array);

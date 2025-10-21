@@ -280,7 +280,7 @@ _nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 
 static gdouble
 _nc_transfer_func_eh_calc (NcTransferFunc *tf, gdouble kh)
-{
+{ 
   NcTransferFuncEH *tf_eh              = NC_TRANSFER_FUNC_EH (tf);
   NcTransferFuncEHPrivate * const self = tf_eh->priv;
 
@@ -308,8 +308,8 @@ _nc_transfer_func_eh_calc (NcTransferFunc *tf, gdouble kh)
   const gdouble C_ac     = self->ac_142 + 386.0 / (1.0 + 69.9 * q_1_08);
   const gdouble To2      = c6 / (c6 + C_ac * q2);
   const gdouble Tc       = f * To1 + (1.0 - f) * To2;
-
   return self->wb_wm * Tb + self->wc_wm * Tc;
+  printf("terminou eh_calc\n");
 }
 
 /**

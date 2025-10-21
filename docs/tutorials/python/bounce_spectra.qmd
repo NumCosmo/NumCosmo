@@ -1,0 +1,2290 @@
+---
+title: "Computing Bounce Spectra"
+format: html
+---
+
+{{< include /_functions.qmd >}}
+{{< include /notes/_numcosmo_py.qmd >}}
+{{< include /notes/_adiabatic.qmd >}}
+
+## Purpose {#sec-purpose}
+
+This tutorial shows how to compute perturbation power spectra for a simple bouncing cosmology using NumCosmo. The example replaces the usual inflationary phase with a nonsingular bounce and compares the resulting spectra with those from standard $\Lambda$CDM.
+
+We use a two-component model (radiation + a fluid with equation-of-state parameter $w$) and compute all relevant perturbation spectra, including adiabatic and entropy modes. The tutorial covers:
+
+- setting up the background model and parameters,
+- defining vacuum initial conditions using the adiabatic prescription and checking the adiabatic regime,
+- evolving mode functions through contraction and bounce phases,
+- computing and visualizing time- and wavenumber-dependent power spectra.
+
+## Defining the model
+
+First we create a background cosmology with the `numcosmo_py`[^numcosmo_py] bindings and import standard analysis libraries (`numpy`, `pandas`, `matplotlib`). The code cells below construct a two-component model (radiation + fluid) and choose parameters that produce a contracting phase with a nonsingular bounce.
+
+```{python}
+import os
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib.colors as colors
+import matplotlib.ticker as ticker
+import matplotlib as mpl
+from IPython.display import HTML, Markdown, display
+from itertools import cycle
+from astropy import units
+from astropy import constants
+from tqdm import tqdm
+
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.plotting.tools import (
+    set_rc_params_article,
+    latex_float,
+    format_alpha_xaxis,
+)
+
+Ncm.cfg_init()
+
+H0 = 70.0
+w = 1.0e-6
+xb = 1.0e30
+Omegar = 1.0e-7
+Omegaw = 1.0 - Omegar
+
+cosmo_rw = Nc.HICosmoQGRW.new()
+
+cosmo_rw["H0"] = H0  # Set the Hubble constant
+cosmo_rw["w"] = w  # Set the dark energy equation of state
+cosmo_rw["xb"] = xb  # Set bounce depth
+cosmo_rw["Omegar"] = Omegar  # Set radiation fraction
+cosmo_rw["Omegaw"] = Omegaw  # Set dark matter fraction
+
+# Compute the Hubble radius in Mpc
+RH_Mpc = cosmo_rw.RH_Mpc()
+
+# Define the mode k values in Mpc^-1
+k_values = np.geomspace(1.0e-6, 1.0e10, 5)
+
+# Define the k values for the power spectrum
+k_for_pk_a = np.geomspace(1.0e-6, 1.0e8, 300)
+k_for_plot_a = np.geomspace(1.0e-6, 1.0e8, 6000)
+aspect2c = 0.3
+aspect2c2r = 0.5
+
+
+def compute_lp_RH_squared():
+    H0n = H0 * units.km / units.s / units.Mpc
+    num = (8 * np.pi * constants.G * constants.hbar) / (3 * constants.c**3)
+    den = (constants.c / H0n) ** 2
+    expr = num / den
+    return expr.to(units.dimensionless_unscaled).value
+
+
+lp_RH2 = compute_lp_RH_squared()
+
+
+def large_scale_P_zeta(kh):
+    cw = np.sqrt(w)
+    return (
+        lp_RH2
+        * (1.0 + w)
+        * xb**2
+        * Omegaw ** (2.0 / (1.0 + 3.0 * w))
+        / (64.0 * np.pi**2 * Omegar * cw ** ((5.0 + 3.0 * w) / (1.0 + 3.0 * w)))
+    ) * kh ** (12.0 * w / (1.0 + 3.0 * w))
+
+
+# Create bouncing/figures directory if it doesn't exist and set a variable for it
+fig_dir = "bounce/figures"
+if not os.path.exists(fig_dir):
+    os.makedirs(fig_dir)
+
+```
+
+### Model parameters
+
+The table below lists parameters exposed by the `HICosmoQGRW` model. Briefly:
+
+- `HICosmoQGRW` implements a two-fluid background (radiation + fluid with parameter $w$).
+- All distances and time variables are expressed in units of the Hubble radius as used by the model.
+```{python}
+# | label: tbl-parameters
+# | tbl-cap: Parameters of HICosmoQGRW
+# | code-fold: true
+
+desc_keys = [
+    "name",
+    "symbol",
+    "value",
+    "scale",
+    "abstol",
+    "lower-bound",
+    "upper-bound",
+    "fit",
+]
+
+all_parameters = set(cosmo_rw.param_names())
+param_data = []
+for name in sorted(all_parameters):
+    if name in cosmo_rw.param_names():
+        row = {"Parameter": f"QGRW:{name}"}
+        p_desc = cosmo_rw.param_get_desc(name)
+        for key in desc_keys:
+            row[key.capitalize()] = (
+                p_desc[key] if key != "symbol" else f"${p_desc[key]}$"
+            )
+        param_data.append(row)
+
+
+def format_column(col):
+    return col.apply(lambda x: f"${latex_float(x, precision=4)}$")
+
+
+df = pd.DataFrame(param_data)
+df["Value"] = format_column(df["Value"])
+df["Scale"] = format_column(df["Scale"])
+df["Abstol"] = format_column(df["Abstol"])
+df["Lower-bound"] = format_column(df["Lower-bound"])
+df["Upper-bound"] = format_column(df["Upper-bound"])
+
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+All distances in the code are given in units of the Hubble radius. The background is evolved from $\alpha=-\infty$ (remote past) to $\alpha=0$ (the bounce), with
+$$
+x \equiv \frac{a_0}{a} = x_b e^{-|\alpha|},
+$$
+where $x_b$ controls the maximum contraction before the bounce. Choosing appropriate time limits is essential: they determine when each mode is in the adiabatic[^adiabatic] regime and therefore when the adiabatic vacuum can be imposed. After setting initial conditions in that regime, modes are integrated numerically through the bounce.
+
+## Background quantities
+
+The perturbation equations require several background functions; an important example is the gravitational weight
+$$
+\gamma_i = \frac{a^3 \kappa (\rho_i + p_i)}{3|H|}, \qquad \kappa = \frac{8\pi G}{c^4},
+$$
+with $i=\mathrm{r},w$ for radiation and the $w$-fluid. The `NcHIPertITwoFluids` interface (implemented by `HICosmoQGRW`) returns these weights in code units. In these units one finds
+$$
+\gamma_i = \frac{a^3 \Omega_i x^{3(1+w_i)} (1+w_i)}{|E|}, \qquad E=\frac{H}{H_0},
+$$
+where $\Omega_i$ and $w_i$ are the usual density fractions and equation-of-state parameters ($w_r=1/3$, $w_w=w$).
+
+We can solve for the time of equality between the two gravitational weights,
+$$
+\Omega_w(1+w) x^{3(1+w)} = \Omega_r \frac{4}{3} x^4 \quad\Rightarrow\quad x_{\rm eq} = \left(\frac{3\Omega_w(1+w)}{4\Omega_r}\right)^{1/(1-3w)}.
+$$
+
+Another key dimensionless quantity is
+$$
+F_\nu = \frac{c\,k}{a|H|},
+$$
+which compares the physical wavelength to the Hubble radius (modes with $F_\nu\gg1$ are sub-Hubble; $F_\nu\ll1$ are super-Hubble).
+
+```{python}
+# Compute the individual speeds of sound
+c1 = np.sqrt(1.0 / 3.0)
+c2 = np.sqrt(w)
+
+# Set the mode k to 1 Mpc^-1 (normalized by the Hubble radius)
+k = 1.0 * RH_Mpc
+
+# Set the relative tolerance for the adiabatic approximation
+reltol = 1.0e-9
+
+# Define the initial and final time limits for evolution
+alpha_ini_integ = -160
+alpha_adiab_max = -1.0e-1  # Maximum time for adiabatic vacuum
+alpha_end_integ = cosmo_rw.abs_alpha(1.0e15)
+
+alpha_mode_ini = -110.0  # Initial time in alpha for the mode evolution
+alpha_mode_end = -10.0  # Final time in alpha for the mode evolution
+
+alpha_pk_ini = -110.0  # Initial time in alpha for the power spectrum
+alpha_pk_end = cosmo_rw.abs_alpha(1.0e15)  # Final time in alpha for the power spectrum
+
+# Compute equality and reference times
+x_eq = (3.0 * Omegaw * (1.0 + w) / (4.0 * Omegar)) ** (1.0 / (1.0 - 3.0 * w))
+x_S = ((c2**2 / c1**2) * 3.0 * Omegaw * (1.0 + w) / (4.0 * Omegar)) ** (
+    1.0 / (1.0 - 3.0 * w)
+)
+alpha_eq = -cosmo_rw.abs_alpha(x_eq)
+alpha_S = -cosmo_rw.abs_alpha(x_S)
+alpha0 = -cosmo_rw.abs_alpha(1.0)
+
+# Create the time grid
+alpha_mode_a = np.linspace(alpha_mode_ini, alpha_mode_end, 6000)
+alpha_pk_a = np.linspace(alpha_pk_ini, alpha_pk_end, 6000)
+
+x_mode_a = np.array([cosmo_rw.x_alpha(alpha) for alpha in alpha_mode_a])
+x_pk_a = np.array([cosmo_rw.x_alpha(alpha) for alpha in alpha_pk_a])
+
+# Plot style definitions
+
+lw = 0.5
+cmap = plt.get_cmap("jet")
+# Set the colors for the different dominance regions
+md = {"facecolor": "#FFE4B5", "alpha": 0.5}
+rd = {"facecolor": "#ADD8E6", "alpha": 0.5}
+
+
+def get_next_color():
+    col_cycle = cycle(plt.rcParams["axes.prop_cycle"].by_key()["color"])
+
+    def next_color():
+        return next(col_cycle)
+
+    return next_color
+
+```
+
+We then plot the gravitational weights:
+
+```{python}
+# | label: fig-gravitational-weight
+# | fig-cap: "Gravitational weights $\\gamma_\\mathrm{r}$, $\\gamma_w$, and $F_\\nu$. Shaded areas show matter/radiation dominance; vertical lines mark $x_{\\rm eq}$ and $x=1$."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+results = [Nc.HIPertITwoFluids.eom_eval(cosmo_rw, alpha, k) for alpha in alpha_mode_a]
+gamma_r = np.array([res.gw1 for res in results])
+gamma_w = np.array([res.gw2 for res in results])
+Fnu = np.array([res.Fnu for res in results])
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+fig, ax = plt.subplots()
+
+# Plot gravitational weights
+ax.plot(alpha_mode_a, gamma_r, label=r"$\gamma_\mathrm{r}$")
+ax.plot(alpha_mode_a, gamma_w, label=r"$\gamma_w$")
+ax.plot(alpha_mode_a, Fnu, label=r"$F_\nu$")
+
+# Vertical markers
+ax.axvline(x=alpha_eq, color="k", linestyle="dashed", lw=lw)
+ax.axvline(x=alpha0, color="k", linestyle="dotted", lw=lw)
+
+ax.axvspan(alpha_mode_ini, alpha_eq, **md)
+ax.axvspan(alpha_eq, alpha_mode_end, **rd)
+
+# Axis formatting
+format_alpha_xaxis(ax, cosmo_rw)
+ax.set_yscale("log")
+ax.set_ylabel(r"$R_{\textsc{h}0}\gamma_i$, $F_\nu$")
+ax.legend(ncol=2)
+ax.grid()
+
+# Save and show
+plt.savefig(os.path.join(fig_dir, "gravitational-weight.pdf"), bbox_inches="tight")
+fig.set_size_inches(6, 3)
+plt.show()
+```
+
+## Adiabatic regime and truncation error
+
+The adiabatic approximation relies on small correction factors for the mode functions and their conjugate momenta. A useful diagnostic is the product $c_i F_\nu$: when $c_i F_\nu\gg1$ a mode is deep inside the sub-Hubble (adiabatic) regime; when $c_i F_\nu\ll1$ it is super-Hubble. The transition $c_i F_\nu=1$ approximately marks the boundary of the adiabatic regime.
+
+The simple $c_i F_\nu$ test is only an estimate of the truncation error. In the code we compute a third-order truncation estimate (product of first- and second-order corrections) and compare its cubic root with $c_i F_\nu$ to assess the quality of the adiabatic series.
+
+```{python}
+# | label: fig-truncation-error
+# | fig-cap: "Adiabatic truncation estimates for each mode (compare with $c_iF_\\nu$). Shaded regions: matter/radiation dominance; vertical lines mark $x_{\\rm eq}$ and $x=1$."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+results = [Nc.HIPertITwoFluids.wkb_eval(cosmo_rw, alpha, k) for alpha in alpha_mode_a]
+
+delta_zeta1 = np.array([res.mode1_zeta_scale for res in results])
+delta_zeta2 = np.array([res.mode2_zeta_scale for res in results])
+delta_Q1 = np.array([res.mode1_Q_scale for res in results])
+delta_Q2 = np.array([res.mode2_Q_scale for res in results])
+delta_Pzeta1 = np.array([res.mode1_Pzeta_scale for res in results])
+delta_Pzeta2 = np.array([res.mode2_Pzeta_scale for res in results])
+delta_PQ1 = np.array([res.mode1_PQ_scale for res in results])
+delta_PQ2 = np.array([res.mode2_PQ_scale for res in results])
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+fig, ax = plt.subplots()
+
+next_color = get_next_color()
+
+scale_array = [
+    (
+        delta_zeta1,
+        delta_zeta2,
+        r"$\Delta_{\zeta_1} c_\mathrm{r} F_\nu$",
+        r"$\Delta_{\zeta_2} c_w F_\nu$",
+    ),
+    (
+        delta_Q1,
+        delta_Q2,
+        r"$\Delta_{Q_1} c_\mathrm{r} F_\nu$",
+        r"$\Delta_{Q_2} c_w F_\nu$",
+    ),
+    (
+        delta_Pzeta1,
+        delta_Pzeta2,
+        r"$\Delta_{\Pi{\zeta_1}} c_\mathrm{r} F_\nu$",
+        r"$\Delta_{\Pi{\zeta_2}} c_w F_\nu$",
+    ),
+    (
+        delta_PQ1,
+        delta_PQ2,
+        r"$\Delta_{\Pi{Q_1}} c_\mathrm{r} F_\nu$",
+        r"$\Delta_{\Pi{Q_2}} c_w F_\nu$",
+    ),
+]
+
+# Plot the truncation error
+for delta1, delta2, label1, label2 in scale_array:
+    c = next_color()
+    ax.plot(
+        alpha_mode_a, delta1 * c1 * Fnu, color=c, linestyle="-", lw=lw, label=label1
+    )
+    ax.plot(
+        alpha_mode_a, delta2 * c2 * Fnu, color=c, linestyle="--", lw=lw, label=label2
+    )
+
+# Vertical markers
+ax.axvline(x=alpha_eq, color="k", linestyle="dashed", lw=lw)
+ax.axvline(x=alpha0, color="k", linestyle="dotted", lw=lw)
+
+ax.axvspan(alpha_mode_ini, alpha_eq, **md)
+ax.axvspan(alpha_eq, alpha_mode_end, **rd)
+
+# Axis formatting
+format_alpha_xaxis(ax, cosmo_rw)
+# ax.set_yscale("log")
+ax.set_ylabel(r"Adiabatic Scale Comparison")
+ax.legend(ncol=2)
+ax.grid()
+
+# Save and show
+plt.savefig(os.path.join(fig_dir, "truncation-error.pdf"), bbox_inches="tight")
+fig.set_size_inches(6, 3)
+plt.show()
+```
+
+Note that the mode~2 variables (associated with the matter speed of sound $c_w$) usually have a smaller truncation error than the mode~1 passing closer
+to zero during the matter-radiation transition. It is useful to zoom in on the region around $x_\mathrm{eq}$ to see the differences more clearly.
+
+```{python}
+# | label: fig-truncation-error-zoom
+# | fig-cap: "Zoom around matter-radiation equality showing adiabatic truncation estimates."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+alpha_zoom_ini = alpha_eq - 5.0
+alpha_zoom_end = alpha_eq + 5.0
+
+alpha_zoom_a = np.linspace(alpha_zoom_ini, alpha_zoom_end, 2000)
+results_zoom = [
+    Nc.HIPertITwoFluids.wkb_eval(cosmo_rw, alpha, k) for alpha in alpha_zoom_a
+]
+delta_zeta1 = np.array([res.mode1_zeta_scale for res in results_zoom])
+delta_zeta2 = np.array([res.mode2_zeta_scale for res in results_zoom])
+delta_Q1 = np.array([res.mode1_Q_scale for res in results_zoom])
+delta_Q2 = np.array([res.mode2_Q_scale for res in results_zoom])
+delta_Pzeta1 = np.array([res.mode1_Pzeta_scale for res in results_zoom])
+delta_Pzeta2 = np.array([res.mode2_Pzeta_scale for res in results_zoom])
+delta_PQ1 = np.array([res.mode1_PQ_scale for res in results_zoom])
+delta_PQ2 = np.array([res.mode2_PQ_scale for res in results_zoom])
+Fnu = np.array([res.state.Fnu for res in results_zoom])
+
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
+fig, (ax1, ax2) = plt.subplots(ncols=2, nrows=1, sharex=True, sharey=True)
+
+next_color = get_next_color()
+
+scale_array = [
+    (
+        delta_zeta1,
+        delta_zeta2,
+        r"$\Delta_{\zeta_1} c_\mathrm{r} F_\nu$",
+        r"$\Delta_{\zeta_2} c_w F_\nu$",
+    ),
+    (
+        delta_Q1,
+        delta_Q2,
+        r"$\Delta_{Q_1} c_\mathrm{r} F_\nu$",
+        r"$\Delta_{Q_2} c_w F_\nu$",
+    ),
+    (
+        delta_Pzeta1,
+        delta_Pzeta2 * 1.01,  # Slightly adjust to avoid overlap
+        r"$\Delta_{\Pi{\zeta_1}} c_\mathrm{r} F_\nu$",
+        r"$\Delta_{\Pi{\zeta_2}} c_w F_\nu$",
+    ),
+    (
+        delta_PQ1,
+        delta_PQ2,
+        r"$\Delta_{\Pi{Q_1}} c_\mathrm{r} F_\nu$",
+        r"$\Delta_{\Pi{Q_2}} c_w F_\nu$",
+    ),
+]
+print(delta_Pzeta2)
+
+# Plot the truncation error
+for delta1, delta2, label1, label2 in scale_array:
+    c = next_color()
+    ax1.plot(
+        alpha_zoom_a, delta1 * c1 * Fnu, color=c, linestyle="-", lw=lw, label=label1
+    )
+    ax2.plot(
+        alpha_zoom_a, delta2 * c2 * Fnu, color=c, linestyle="--", lw=lw, label=label2
+    )
+
+# Vertical markers
+ax1.axvline(x=alpha_eq, color="k", linestyle="dashed", lw=lw)
+ax2.axvline(x=alpha_eq, color="k", linestyle="dashed", lw=lw)
+
+ax1.axvspan(alpha_zoom_ini, alpha_eq, **md)
+ax1.axvspan(alpha_eq, alpha_zoom_end, **rd)
+ax2.axvspan(alpha_zoom_ini, alpha_eq, **md)
+ax2.axvspan(alpha_eq, alpha_zoom_end, **rd)
+
+# Axis formatting
+format_alpha_xaxis(ax1, cosmo_rw)
+format_alpha_xaxis(ax2, cosmo_rw)
+ax1.set_ylabel(r"Adiabatic Scale Comparison")
+
+ax1.legend(ncol=2, loc="upper left")
+ax2.legend(ncol=2, loc="upper left")
+ax1.grid()
+ax2.grid()
+
+# Save and show
+plt.savefig(os.path.join(fig_dir, "truncation-error-zoom.pdf"), bbox_inches="tight")
+fig.set_size_inches(12, 12 * aspect2c)
+plt.show()
+```
+
+### Evolving the Modes
+
+To compute the power spectra, we use the `HIPertTwoFluids` object, which includes all perturbation components, such as matter and radiation. Initial conditions are set in the adiabatic vacuum state. The time where $c_i F_\nu = 1$ also identifies the limit of validity for the adiabatic approximation for each mode.
+
+```{python}
+
+pert = Nc.HIPertTwoFluids.new()
+pert.props.reltol = reltol
+pert.set_initial_time(alpha_ini_integ)
+pert.set_final_time(alpha_end_integ)
+pert.set_wkb_reltol(1.0e-3)
+
+# Prepare a color map to depict the modes
+norm = mpl.colors.LogNorm(vmin=1.0 / k_values.max(), vmax=1.0 / k_values.min())
+sm = mpl.cm.ScalarMappable(norm=norm, cmap=cmap)
+
+observables = [
+    (Nc.HIPertITwoFluidsObs.ZETA, "zeta"),
+    (Nc.HIPertITwoFluidsObs.ZETA_DIFF, "dzeta"),
+    (Nc.HIPertITwoFluidsObs.DELTA_TOT, "delta_rho"),
+    (Nc.HIPertITwoFluidsObs.DELTA_DIFF, "diff_delta_rho"),
+    (Nc.HIPertITwoFluidsObs.PZETA, "pzeta"),
+]
+
+modes_list = []
+modes_wkb_list = []
+power_spectra_list = []
+
+for k in k_values:
+    lambda_com = 1.0 / k
+    pert.set_mode_k(k * RH_Mpc)
+    color = cmap(norm(lambda_com))
+    modes = {}
+    modes_wkb = {}
+    power_spectra = {}
+
+    s_interp = pert.evol_mode(cosmo_rw)
+
+    for obs, name in observables:
+        for mode, mode_str in [
+            (Nc.HIPertITwoFluidsObsMode.ONE, "1"),
+            (Nc.HIPertITwoFluidsObsMode.TWO, "2"),
+        ]:
+            modes[f"{name}{mode_str}"] = np.abs(
+                [
+                    s_interp.eval(cosmo_rw, alpha).eval_mode(mode, obs).Re()
+                    for alpha in alpha_mode_a
+                ]
+            )
+            modes_wkb[f"{name}{mode_str}"] = np.abs(
+                [
+                    Nc.HIPertITwoFluids.wkb_eval(cosmo_rw, alpha, k * RH_Mpc)
+                    .peek_state()
+                    .eval_mode(mode, obs)
+                    .Abs()
+                    for alpha in alpha_mode_a
+                ]
+            )
+
+    for obs, obs_name in observables:
+        for mode, mode_str in [
+            (Nc.HIPertITwoFluidsObsMode.ONE, "1"),
+            (Nc.HIPertITwoFluidsObsMode.TWO, "2"),
+            (Nc.HIPertITwoFluidsObsMode.BOTH, ""),
+        ]:
+            power_spectra[f"{obs_name}{mode_str}"] = np.abs(
+                [
+                    s_interp.eval(cosmo_rw, alpha).eval_obs(mode, obs, obs)
+                    for alpha in alpha_pk_a
+                ]
+            )
+
+    modes_list.append(modes)
+    modes_wkb_list.append(modes_wkb)
+    power_spectra_list.append(power_spectra)
+
+
+def find_single_crossing(x_a, y1_a, y2_a):
+    """
+    Finds the x-coordinate where y1_a and y2_a cross.
+    Assumes they cross exactly once.
+    """
+    diff = y1_a - y2_a
+    idx = np.where(np.sign(diff[:-1]) != np.sign(diff[1:]))[0][0]
+
+    # Linear interpolation
+    x0, x1 = x_a[idx], x_a[idx + 1]
+    y0, y1 = diff[idx], diff[idx + 1]
+    x_cross = x0 - y0 * (x1 - x0) / (y1 - y0)
+
+    return x_cross
+
+
+```
+
+We can plot the mode evolution for mode $k\in {k_\mathrm{min}, k_\mathrm{max}}$, each mode has two linearly independent solutions associated with creation and annihilation operators.
+
+```{python}
+# | label: fig-zeta-mode-evolution
+# | fig-cap: "Mode evolution for $\\zeta_i$; colors show comoving wavelength $\\lambda$ (Mpc). Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\zeta_i$ evolution; vertical lines mark sound-horizon crossings."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
+fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(
+    ncols=2, nrows=2, sharex=True, sharey="row"
+)
+fig.subplots_adjust(hspace=0.0, wspace=0.0)
+
+c1_comoving_RH_a = c1 * (
+    np.array(
+        [
+            Nc.HIPertITwoFluids.eom_eval(cosmo_rw, alpha, k).Fnu / k
+            for alpha in alpha_mode_a
+        ]
+    )
+    * RH_Mpc
+)
+c2_comoving_RH_a = c2 * (
+    np.array(
+        [
+            Nc.HIPertITwoFluids.eom_eval(cosmo_rw, alpha, k).Fnu / k
+            for alpha in alpha_mode_a
+        ]
+    )
+    * RH_Mpc
+)
+first = True
+
+for k, modes, modes_wkb in zip(k_values, modes_list, modes_wkb_list):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    alpha_cross1 = find_single_crossing(
+        alpha_mode_a, c1_comoving_RH_a, np.ones_like(alpha_mode_a) * lambda_com
+    )
+
+    alpha_cross2 = find_single_crossing(
+        alpha_mode_a, c2_comoving_RH_a, np.ones_like(alpha_mode_a) * lambda_com
+    )
+
+    ax2.plot(
+        alpha_mode_a,
+        modes["zeta1"] / k,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\zeta_1$" if first else None,
+    )
+    ax3.plot(
+        alpha_mode_a,
+        modes["zeta2"] / k,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\zeta_2$" if first else None,
+    )
+    ax2.plot(
+        alpha_mode_a,
+        modes_wkb["zeta1"] / k,
+        linestyle="dashed",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\zeta_1^\mathrm{WKB}$" if first else None,
+    )
+    ax3.plot(
+        alpha_mode_a,
+        modes_wkb["zeta2"] / k,
+        linestyle="dashed",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\zeta_2^\mathrm{WKB}$" if first else None,
+    )
+
+    ax0.axhline(
+        lambda_com,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$\lambda$" if first else None,
+    )
+    ax1.axhline(
+        lambda_com,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$\lambda$" if first else None,
+    )
+
+    ax0.axvline(x=alpha_cross1, linestyle="solid", lw=lw, color=color)
+    ax2.axvline(x=alpha_cross1, linestyle="solid", lw=lw, color=color)
+
+    ax1.axvline(x=alpha_cross2, linestyle="solid", lw=lw, color=color)
+    ax3.axvline(x=alpha_cross2, linestyle="solid", lw=lw, color=color)
+    first = False
+
+ax0.plot(
+    alpha_mode_a,
+    c1_comoving_RH_a,
+    linestyle="dashed",
+    lw=lw,
+    color="k",
+    label=r"$c_\mathrm{r} x R_H$",
+)
+ax1.plot(
+    alpha_mode_a,
+    c2_comoving_RH_a,
+    linestyle="dashed",
+    lw=lw,
+    color="k",
+    label=r"$c_w x R_H$",
+)
+
+# Shaded dominance regions
+for ax in (ax0, ax1, ax2, ax3):
+    ax.axvspan(alpha_mode_ini, alpha_eq, **md)
+    ax.axvspan(alpha_eq, alpha_mode_end, **rd)
+    ax.set_yscale("log")
+    ax.legend()
+
+format_alpha_xaxis(ax0, cosmo_rw, bottom=False)
+format_alpha_xaxis(ax2, cosmo_rw, top=False)
+format_alpha_xaxis(ax1, cosmo_rw, bottom=False)
+format_alpha_xaxis(ax3, cosmo_rw, top=False)
+
+ax0.set_ylabel(r"$\lambda$, $c_s x R_H$ [Mpc]")
+ax2.set_ylabel(r"$k^{-1}\zeta_i$")
+
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=[ax0, ax1, ax2, ax3], pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+
+# Save and show
+plt.savefig(os.path.join(fig_dir, "mode_zeta_evolution.pdf"), bbox_inches="tight")
+fig.set_size_inches(12, 12 * aspect2c2r)
+
+plt.show()
+```
+
+Now we can do the same for the entropy perturbation $Q_i \propto \Delta\zeta_i \equiv \zeta_{\mathrm{r}i} - \zeta_{w i}$, which is the difference between the radiation and matter modes.
+
+```{python}
+# | label: fig-dzeta-mode-evolution
+# | fig-cap: "Mode evolution for the entropy perturbations $\\Delta\\zeta_i$; color bar shows $\\lambda$. Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\Delta\\zeta_i$ evolution."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
+fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(
+    ncols=2, nrows=2, sharex=True, sharey="row"
+)
+fig.subplots_adjust(hspace=0.0, wspace=0.0)
+
+first = True
+
+for k, modes, modes_wkb in zip(k_values, modes_list, modes_wkb_list):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    alpha_cross1 = find_single_crossing(
+        alpha_mode_a, c1_comoving_RH_a, np.ones_like(alpha_mode_a) * lambda_com
+    )
+    alpha_cross2 = find_single_crossing(
+        alpha_mode_a, c2_comoving_RH_a, np.ones_like(alpha_mode_a) * lambda_com
+    )
+
+    ax2.plot(
+        alpha_mode_a,
+        modes["dzeta1"] / k,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\Delta\zeta_1$" if first else None,
+    )
+    ax3.plot(
+        alpha_mode_a,
+        modes["dzeta2"] / k,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\Delta\zeta_2$" if first else None,
+    )
+
+    # Now the WKB approximation
+
+    ax2.plot(
+        alpha_mode_a,
+        modes_wkb["dzeta1"] / k,
+        linestyle="dashed",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\Delta\zeta_1^\mathrm{WKB}$" if first else None,
+    )
+    ax3.plot(
+        alpha_mode_a,
+        modes_wkb["dzeta2"] / k,
+        linestyle="dashed",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\Delta\zeta_2^\mathrm{WKB}$" if first else None,
+    )
+
+    ax0.axhline(
+        lambda_com,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$\lambda$" if first else None,
+    )
+    ax1.axhline(
+        lambda_com,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$\lambda$" if first else None,
+    )
+
+    ax0.axvline(x=alpha_cross1, linestyle="solid", lw=lw, color=color)
+    ax2.axvline(x=alpha_cross1, linestyle="solid", lw=lw, color=color)
+    ax1.axvline(x=alpha_cross2, linestyle="solid", lw=lw, color=color)
+    ax3.axvline(x=alpha_cross2, linestyle="solid", lw=lw, color=color)
+
+    first = False
+
+ax0.plot(
+    alpha_mode_a,
+    c1_comoving_RH_a,
+    linestyle="dashed",
+    lw=lw,
+    color="k",
+    label=r"$c_\mathrm{r} x R_H$",
+)
+ax1.plot(
+    alpha_mode_a,
+    c2_comoving_RH_a,
+    linestyle="dashed",
+    lw=lw,
+    color="k",
+    label=r"$c_w x R_H$",
+)
+
+for ax in (ax0, ax1, ax2, ax3):
+    ax.axvspan(alpha_mode_ini, alpha_eq, **md)
+    ax.axvspan(alpha_eq, alpha_mode_end, **rd)
+    ax.set_yscale("log")
+    ax.legend()
+
+format_alpha_xaxis(ax0, cosmo_rw, bottom=False)
+format_alpha_xaxis(ax2, cosmo_rw, top=False)
+format_alpha_xaxis(ax1, cosmo_rw, bottom=False)
+format_alpha_xaxis(ax3, cosmo_rw, top=False)
+
+ax0.set_ylabel(r"$\lambda$, $c_s x R_H$ [Mpc]")
+ax2.set_ylabel(r"$k^{-1}\Delta\zeta_i$")
+
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=[ax0, ax1, ax2, ax3], pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+
+# Save and show
+plt.savefig(os.path.join(fig_dir, "mode_dzeta_evolution.pdf"), bbox_inches="tight")
+fig.set_size_inches(12, 12 * aspect2c2r)
+
+plt.show()
+```
+
+Next we can plot the density perturbations $\bar{\delta}_{\rho i}$ for each mode.
+
+```{python}
+# | label: fig-delta-rho-mode-evolution
+# | fig-cap: "Mode evolution for density perturbations $\\delta_{\\rho i}$; color bar shows $\\lambda$. Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\bar{\\delta}_{\\rho i}$ evolution."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
+fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(
+    ncols=2, nrows=2, sharex=True, sharey="row"
+)
+fig.subplots_adjust(hspace=0.0, wspace=0.0)
+
+first = True
+
+for k, modes, modes_wkb in zip(k_values, modes_list, modes_wkb_list):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    alpha_cross1 = find_single_crossing(
+        alpha_mode_a, c1_comoving_RH_a, np.ones_like(alpha_mode_a) * lambda_com
+    )
+    alpha_cross2 = find_single_crossing(
+        alpha_mode_a, c2_comoving_RH_a, np.ones_like(alpha_mode_a) * lambda_com
+    )
+
+    ax2.plot(
+        alpha_mode_a,
+        modes["delta_rho1"] / k,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\bar{\delta}_{\rho 1}$" if first else None,
+    )
+    ax3.plot(
+        alpha_mode_a,
+        modes["delta_rho2"] / k,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\bar{\delta}_{\rho 2}$" if first else None,
+    )
+
+    ax2.plot(
+        alpha_mode_a,
+        modes_wkb["delta_rho1"] / k,
+        linestyle="dashed",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\bar{\delta}_{\rho 1}^\mathrm{WKB}$" if first else None,
+    )
+    ax3.plot(
+        alpha_mode_a,
+        modes_wkb["delta_rho2"] / k,
+        linestyle="dashed",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\bar{\delta}_{\rho 2}^\mathrm{WKB}$" if first else None,
+    )
+
+    ax0.axhline(
+        lambda_com,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$\lambda$" if first else None,
+    )
+    ax1.axhline(
+        lambda_com,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$\lambda$" if first else None,
+    )
+
+    ax0.axvline(x=alpha_cross1, linestyle="solid", lw=lw, color=color)
+    ax2.axvline(x=alpha_cross1, linestyle="solid", lw=lw, color=color)
+    ax1.axvline(x=alpha_cross2, linestyle="solid", lw=lw, color=color)
+    ax3.axvline(x=alpha_cross2, linestyle="solid", lw=lw, color=color)
+
+    first = False
+
+ax0.plot(
+    alpha_mode_a,
+    c1_comoving_RH_a,
+    linestyle="dashed",
+    lw=lw,
+    color="k",
+    label=r"$c_\mathrm{r} x R_H$",
+)
+ax1.plot(
+    alpha_mode_a,
+    c2_comoving_RH_a,
+    linestyle="dashed",
+    lw=lw,
+    color="k",
+    label=r"$c_w x R_H$",
+)
+
+for ax in (ax0, ax1, ax2, ax3):
+    ax.axvspan(alpha_mode_ini, alpha_eq, **md)
+    ax.axvspan(alpha_eq, alpha_mode_end, **rd)
+    ax.set_yscale("log")
+    ax.legend()
+
+format_alpha_xaxis(ax0, cosmo_rw, bottom=False)
+format_alpha_xaxis(ax2, cosmo_rw, top=False)
+format_alpha_xaxis(ax1, cosmo_rw, bottom=False)
+format_alpha_xaxis(ax3, cosmo_rw, top=False)
+
+ax0.set_ylabel(r"$\lambda$, $c_s x R_H$ [Mpc]")
+ax2.set_ylabel(r"$k^{-1}\bar{\delta}_{\rho i}$")
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=[ax0, ax1, ax2, ax3], pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+
+# Save and show
+plt.savefig(os.path.join(fig_dir, "mode_drho_evolution.pdf"), bbox_inches="tight")
+fig.set_size_inches(12, 12 * aspect2c2r)
+
+plt.show()
+```
+
+Finally, we can plot the difference in density perturbations $\Delta\delta_{\rho i} = \delta_{\rho_{\mathrm{r}}i} - \delta_{\rho_{w}i}$ for each mode.
+
+```{python}
+# | label: fig-delta-delta-rho-mode-evolution
+# | fig-cap: "Mode evolution for $\\Delta\\delta_{\\rho i}$; color bar shows $\\lambda$. Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\Delta\\delta_{\\rho i}$ evolution."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
+fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(
+    ncols=2, nrows=2, sharex=True, sharey="row"
+)
+fig.subplots_adjust(hspace=0.0, wspace=0.0)
+
+first = True
+
+for k, modes, modes_wkb in zip(k_values, modes_list, modes_wkb_list):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    alpha_cross1 = find_single_crossing(
+        alpha_mode_a, c1_comoving_RH_a, np.ones_like(alpha_mode_a) * lambda_com
+    )
+    alpha_cross2 = find_single_crossing(
+        alpha_mode_a, c2_comoving_RH_a, np.ones_like(alpha_mode_a) * lambda_com
+    )
+
+    ax2.plot(
+        alpha_mode_a,
+        modes["diff_delta_rho1"] / k,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\Delta\delta_{\rho 1}$" if first else None,
+    )
+    ax3.plot(
+        alpha_mode_a,
+        modes["diff_delta_rho2"] / k,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\Delta\delta_{\rho 2}$" if first else None,
+    )
+
+    ax2.plot(
+        alpha_mode_a,
+        modes_wkb["diff_delta_rho1"] / k,
+        linestyle="dashed",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\Delta\delta_{\rho 1}^\mathrm{WKB}$" if first else None,
+    )
+    ax3.plot(
+        alpha_mode_a,
+        modes_wkb["diff_delta_rho2"] / k,
+        linestyle="dashed",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\Delta\delta_{\rho 2}^\mathrm{WKB}$" if first else None,
+    )
+
+    ax0.axhline(
+        lambda_com,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$\lambda$" if first else None,
+    )
+    ax1.axhline(
+        lambda_com,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$\lambda$" if first else None,
+    )
+
+    ax0.axvline(x=alpha_cross1, linestyle="solid", lw=lw, color=color)
+    ax2.axvline(x=alpha_cross1, linestyle="solid", lw=lw, color=color)
+    ax1.axvline(x=alpha_cross2, linestyle="solid", lw=lw, color=color)
+    ax3.axvline(x=alpha_cross2, linestyle="solid", lw=lw, color=color)
+
+    first = False
+
+ax0.plot(
+    alpha_mode_a,
+    c1_comoving_RH_a,
+    linestyle="dashed",
+    lw=lw,
+    color="k",
+    label=r"$c_\mathrm{r} x R_H$",
+)
+ax1.plot(
+    alpha_mode_a,
+    c2_comoving_RH_a,
+    linestyle="dashed",
+    lw=lw,
+    color="k",
+    label=r"$c_w x R_H$",
+)
+
+for ax in (ax0, ax1, ax2, ax3):
+    ax.axvspan(alpha_mode_ini, alpha_eq, **md)
+    ax.axvspan(alpha_eq, alpha_mode_end, **rd)
+    ax.set_yscale("log")
+    ax.legend()
+
+format_alpha_xaxis(ax0, cosmo_rw, bottom=False)
+format_alpha_xaxis(ax2, cosmo_rw, top=False)
+format_alpha_xaxis(ax1, cosmo_rw, bottom=False)
+format_alpha_xaxis(ax3, cosmo_rw, top=False)
+
+ax0.set_ylabel(r"$\lambda$, $c_s x R_H$ [Mpc]")
+ax2.set_ylabel(r"$k^{-1}\Delta\delta_{\rho i}$")
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=[ax0, ax1, ax2, ax3], pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+# Save and show
+plt.savefig(
+    os.path.join(fig_dir, "mode_diff_delta_rho_evolution.pdf"), bbox_inches="tight"
+)
+fig.set_size_inches(12, 12 * aspect2c2r)
+plt.show()
+```
+
+For completeness, we also plot the evolution of the momentum of the curvature perturbation:
+
+```{python}
+# | label: fig-pzeta-evolution
+# | fig-cap: "Mode evolution for momentum $\\Pi_{\\zeta i}$; color bar shows $\\lambda$. Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\Pi_{\\zeta i}$ evolution."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
+fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(
+    ncols=2, nrows=2, sharex=True, sharey="row"
+)
+fig.subplots_adjust(hspace=0.0, wspace=0.0)
+
+first = True
+
+for k, modes, modes_wkb in zip(k_values, modes_list, modes_wkb_list):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    alpha_cross1 = find_single_crossing(
+        alpha_mode_a, c1_comoving_RH_a, np.ones_like(alpha_mode_a) * lambda_com
+    )
+    alpha_cross2 = find_single_crossing(
+        alpha_mode_a, c2_comoving_RH_a, np.ones_like(alpha_mode_a) * lambda_com
+    )
+
+    ax2.plot(
+        alpha_mode_a,
+        modes["pzeta1"] / k,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\Pi_{\zeta 1}$" if first else None,
+    )
+    ax3.plot(
+        alpha_mode_a,
+        modes["pzeta2"] / k,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\Pi_{\zeta 2}$" if first else None,
+    )
+
+    ax2.plot(
+        alpha_mode_a,
+        modes_wkb["pzeta1"] / k,
+        linestyle="dashed",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\Pi_{\zeta 1}^\mathrm{WKB}$" if first else None,
+    )
+    ax3.plot(
+        alpha_mode_a,
+        modes_wkb["pzeta2"] / k,
+        linestyle="dashed",
+        lw=lw,
+        color=color,
+        label=r"$k^{-1}\Pi_{\zeta 2}^\mathrm{WKB}$" if first else None,
+    )
+
+    ax0.axhline(
+        lambda_com,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$\lambda$" if first else None,
+    )
+    ax1.axhline(
+        lambda_com,
+        linestyle="solid",
+        lw=lw,
+        color=color,
+        label=r"$\lambda$" if first else None,
+    )
+
+    ax0.axvline(x=alpha_cross1, linestyle="solid", lw=lw, color=color)
+    ax2.axvline(x=alpha_cross1, linestyle="solid", lw=lw, color=color)
+    ax1.axvline(x=alpha_cross2, linestyle="solid", lw=lw, color=color)
+    ax3.axvline(x=alpha_cross2, linestyle="solid", lw=lw, color=color)
+
+    first = False
+
+ax0.set_ylabel(r"$\lambda$ [Mpc]")
+ax2.set_ylabel(r"$k^{-1}\Pi_{\zeta 1}$")
+
+for ax in (ax0, ax1, ax2, ax3):
+    ax.axvspan(alpha_mode_ini, alpha_eq, **md)
+    ax.axvspan(alpha_eq, alpha_mode_end, **rd)
+    ax.set_yscale("log")
+    ax.legend()
+
+format_alpha_xaxis(ax0, cosmo_rw, bottom=False)
+format_alpha_xaxis(ax2, cosmo_rw, top=False)
+format_alpha_xaxis(ax1, cosmo_rw, bottom=False)
+format_alpha_xaxis(ax3, cosmo_rw, top=False)
+
+ax0.set_xlabel(r"$\alpha$ [Mpc]")
+ax2.set_xlabel(r"$\alpha$ [Mpc]")
+ax1.set_xlabel(r"$\alpha$ [Mpc]")
+ax3.set_xlabel(r"$\alpha$ [Mpc]")
+
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=[ax0, ax1, ax2, ax3], pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+# Save and show
+plt.savefig(os.path.join(fig_dir, "mode_pzeta_evolution.pdf"), bbox_inches="tight")
+fig.set_size_inches(12, 12 * aspect2c2r)
+plt.show()
+
+```
+
+## Power Spectra
+
+The power spectra are computed using the `HIPertTwoFluids` object, which includes all perturbation components, such as matter and radiation. The initial conditions are set in the adiabatic vacuum state. We can now plot the evolution of the dimensionless power spectra for each mode. We already have computed
+all power spectra for the observables of interest, which are stored in the `power_spectra_list` variable. We denote the dimensionless power spectrum for mode $X$ by
+$$
+\mathcal{P}_X \equiv k^3 P_X, \qquad P_X \equiv \frac{\left\vert X \right\vert^2}{2\pi^2}.
+$$
+
+
+Now we plot the power spectrum time evolution for $\zeta_i$. The figure shows the two mode spectra ($\zeta_1$ left, $\zeta_2$ right). A dotted horizontal line marks the large-scale approximation; shaded regions indicate radiation- and matter-dominated eras.
+
+```{python}
+# | label: fig-zeta-power-spectrum
+# | fig-cap: "Dimensionless power $\\mathcal{P}_{\\zeta_i}(\\alpha)$ for modes 1 (left) and 2 (right); colors show $\\lambda$ (Mpc)."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
+
+fig, (ax0, ax1) = plt.subplots(ncols=2, nrows=1, sharey=True)
+fig.subplots_adjust(hspace=0.0, wspace=0.0)
+
+for k, power_spectra in zip(k_values, power_spectra_list):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    ax0.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * power_spectra["zeta1"],
+        lw=lw,
+        linestyle="solid",
+        color=color,
+        label=r"$\mathcal{P}_{\zeta_1}$" if k == k_values[0] else None,
+    )
+    ax1.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * power_spectra["zeta2"],
+        lw=lw,
+        linestyle="dashed",
+        color=color,
+        label=r"$\mathcal{P}_{\zeta_2}$" if k == k_values[0] else None,
+    )
+
+ax0.set_ylabel(r"$\mathcal{P}_{\zeta_i}$")
+
+# Shaded dominance regions
+for ax in (ax0, ax1):
+    ax.axvspan(alpha_pk_ini, alpha_eq, **md)
+    ax.axvspan(alpha_eq, alpha_pk_end, **rd)
+    ax.axhline(large_scale_P_zeta(RH_Mpc), lw=lw, color="k", linestyle="dotted")
+    ax.set_yscale("log")
+    ax.legend()
+    format_alpha_xaxis(ax, cosmo_rw)
+    ax.set_xlabel(r"$\alpha$")
+    ax.grid()
+
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=(ax0, ax1), pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+
+fig.savefig(os.path.join(fig_dir, "zeta_power_spectrum.pdf"), bbox_inches="tight")
+
+fig.set_size_inches(12, 12 * aspect2c)
+plt.show()
+```
+
+Now we plot the power spectrum time evolution for $\Pi_{\zeta i}$:
+
+```{python}
+# | label: fig-pzeta-power-spectrum
+# | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\Pi_{\\\\zeta i}}(\\\\alpha)$ for each mode; colors show $\\\\lambda$ (Mpc)."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
+
+fig, (ax0, ax1) = plt.subplots(ncols=2, nrows=1, sharey=True)
+fig.subplots_adjust(hspace=0.0, wspace=0.0)
+
+for k, power_spectra in zip(k_values, power_spectra_list):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    ax0.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * power_spectra["pzeta1"],
+        lw=lw,
+        linestyle="solid",
+        color=color,
+        label=r"$\mathcal{P}_{\Pi_{\zeta 1}}$" if k == k_values[0] else None,
+    )
+    ax1.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * power_spectra["pzeta2"],
+        lw=lw,
+        linestyle="dashed",
+        color=color,
+        label=r"$\mathcal{P}_{\Pi_{\zeta 2}}$" if k == k_values[0] else None,
+    )
+
+ax0.set_ylabel(r"$\mathcal{P}_{\Pi_{\zeta i}}$")
+
+# Shaded dominance regions
+for ax in (ax0, ax1):
+    ax.axvspan(alpha_pk_ini, alpha_eq, **md)
+    ax.axvspan(alpha_eq, alpha_pk_end, **rd)
+    ax.axhline(large_scale_P_zeta(RH_Mpc), lw=lw, color="k", linestyle="dotted")
+    ax.set_yscale("log")
+    ax.legend()
+    format_alpha_xaxis(ax, cosmo_rw)
+    ax.set_xlabel(r"$\alpha$")
+    ax.grid()
+
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=(ax0, ax1), pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+
+fig.savefig(os.path.join(fig_dir, "pzeta_power_spectrum.pdf"), bbox_inches="tight")
+
+fig.set_size_inches(12, 12 * aspect2c)
+plt.show()
+```
+
+Now we can plot the power spectrum time evolution for $\Delta\zeta_i$:
+
+```{python}
+# | label: fig-delta-zeta-power-spectrum
+# | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\Delta\\\\zeta_i}(\\\\alpha)$ for each mode; colors show $\\\\lambda$ (Mpc)."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
+
+fig, (ax0, ax1) = plt.subplots(ncols=2, nrows=1, sharey=True)
+fig.subplots_adjust(hspace=0.0, wspace=0.0)
+
+for k, power_spectra in zip(k_values, power_spectra_list):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    ax0.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * power_spectra["dzeta1"],
+        lw=lw,
+        linestyle="solid",
+        color=color,
+        label=r"$\mathcal{P}_{\Delta\zeta_1}$" if k == k_values[0] else None,
+    )
+    ax1.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * power_spectra["dzeta2"],
+        lw=lw,
+        linestyle="dashed",
+        color=color,
+        label=r"$\mathcal{P}_{\Delta\zeta_2}$" if k == k_values[0] else None,
+    )
+
+ax0.set_ylabel(r"$\mathcal{P}_{\Delta\zeta_i}$")
+
+# Shaded dominance regions
+for ax in (ax0, ax1):
+    ax.axvspan(alpha_pk_ini, alpha_eq, **md)
+    ax.axvspan(alpha_eq, alpha_pk_end, **rd)
+    ax.set_yscale("log")
+    ax.legend()
+    format_alpha_xaxis(ax, cosmo_rw)
+    ax.set_xlabel(r"$\alpha$")
+    ax.grid()
+
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=(ax0, ax1), pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+
+fig.savefig(os.path.join(fig_dir, "delta_zeta_power_spectrum.pdf"), bbox_inches="tight")
+
+fig.set_size_inches(12, 12 * aspect2c)
+plt.show()
+```
+
+Now that we have seen the evolution of each adiabatic perturbation $\zeta_i$ and $\Delta\zeta_i$, we can plot the evolution of the total $\zeta$ as well as the entropy perturbation $\Delta\zeta = (\zeta_{\mathrm{r}} - \zeta_{w})$.
+
+```{python}
+# | label: fig-full-zeta-power-spectrum
+# | fig-cap: "Total adiabatic power $\\\\mathcal{P}_{\\\\zeta}(\\\\alpha)$ and entropy power $\\\\mathcal{P}_{\\\\Delta\\\\zeta}(\\\\alpha)$; colors show $\\\\lambda$."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
+
+fig, (ax0, ax1) = plt.subplots(ncols=2, nrows=1, sharey=True)
+fig.subplots_adjust(hspace=0.0, wspace=0.0)
+
+for k, power_spectra in zip(k_values, power_spectra_list):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    ax0.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * power_spectra["zeta"],
+        lw=lw,
+        linestyle="solid",
+        color=color,
+        label=r"$\mathcal{P}_{\zeta}$" if k == k_values[0] else None,
+    )
+ax0.set_ylabel(r"$\mathcal{P}_{\zeta}$, $\mathcal{P}_{\Delta\zeta}$")
+
+# Shaded dominance regions
+ax0.axvspan(alpha_pk_ini, alpha_eq, **md)
+ax0.axvspan(alpha_eq, alpha_pk_end, **rd)
+ax0.set_yscale("log")
+ax0.legend()
+format_alpha_xaxis(ax0, cosmo_rw)
+ax0.set_xlabel(r"$\alpha$")
+ax0.grid()
+
+for k, power_spectra in zip(k_values, power_spectra_list):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    ax1.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * power_spectra["dzeta"],
+        lw=lw,
+        linestyle="solid",
+        color=color,
+        label=r"$\mathcal{P}_{\Delta\zeta}$" if k == k_values[0] else None,
+    )
+
+# Shaded dominance regions
+ax1.axvspan(alpha_pk_ini, alpha_eq, **md)
+ax1.axvspan(alpha_eq, alpha_pk_end, **rd)
+ax1.set_yscale("log")
+ax1.legend()
+format_alpha_xaxis(ax1, cosmo_rw)
+ax1.set_xlabel(r"$\alpha$")
+ax1.grid()
+
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=ax1, pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+
+fig.savefig(os.path.join(fig_dir, "zeta_total_power_spectrum.pdf"), bbox_inches="tight")
+
+fig.set_size_inches(12, 12 * aspect2c)
+plt.show()
+
+```
+
+We also plot the power spectrum time evolution for $\delta_{\rho_i}$:
+
+```{python}
+# | label: fig-delta-rho-power-spectrum
+# | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\delta_{\\\\rho i}}(\\\\alpha)$ for each mode; colors show comoving wavelength $\\\\lambda$ (Mpc)."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
+
+fig, (ax0, ax1) = plt.subplots(ncols=2, nrows=1, sharey=True)
+fig.subplots_adjust(hspace=0.0, wspace=0.0)
+
+for k, power_spectra in zip(k_values, power_spectra_list):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    ax0.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * power_spectra["delta_rho1"],
+        lw=lw,
+        linestyle="solid",
+        color=color,
+        label=r"$\mathcal{P}_{\delta_{\rho 1}}$" if k == k_values[0] else None,
+    )
+    ax1.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * power_spectra["delta_rho2"],
+        lw=lw,
+        linestyle="dashed",
+        color=color,
+        label=r"$\mathcal{P}_{\delta_{\rho 2}}$" if k == k_values[0] else None,
+    )
+
+ax0.set_ylabel(r"$\mathcal{P}_{\delta_{\rho i}}$")
+
+# Shaded dominance regions
+for ax in (ax0, ax1):
+    ax.axvspan(alpha_pk_ini, alpha_eq, **md)
+    ax.axvspan(alpha_eq, alpha_pk_end, **rd)
+    ax.set_yscale("log")
+    ax.legend()
+    format_alpha_xaxis(ax, cosmo_rw)
+    ax.set_xlabel(r"$\alpha$")
+    ax.grid()
+
+
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=(ax0, ax1), pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+
+fig.savefig(os.path.join(fig_dir, "delta_rho_power_spectrum.pdf"), bbox_inches="tight")
+
+fig.set_size_inches(12, 12 * aspect2c)
+plt.show()
+
+```
+
+We also plot the power spectrum time evolution for $\Delta\delta_{\zeta_i}$:
+
+```{python}
+# | label: fig-diff-delta-rho-power-spectrum
+# | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\Delta\\\\delta_{\\\\rho i}}(\\\\alpha)$ for each mode; colors show comoving wavelength $\\\\lambda$ (Mpc)."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
+
+fig, (ax0, ax1) = plt.subplots(ncols=2, nrows=1, sharey=True)
+fig.subplots_adjust(hspace=0.0, wspace=0.0)
+
+for k, power_spectra in zip(k_values, power_spectra_list):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    ax0.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * power_spectra["diff_delta_rho1"],
+        lw=lw,
+        linestyle="solid",
+        color=color,
+        label=r"$\mathcal{P}_{\Delta \delta_{\rho 1}}$" if k == k_values[0] else None,
+    )
+    ax1.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * power_spectra["diff_delta_rho2"],
+        lw=lw,
+        linestyle="dashed",
+        color=color,
+        label=r"$\mathcal{P}_{\Delta \delta_{\rho 2}}$" if k == k_values[0] else None,
+    )
+
+ax0.set_ylabel(r"$\mathcal{P}_{\Delta \delta_{\rho i}}$")
+
+# Shaded dominance regions
+for ax in (ax0, ax1):
+    ax.axvspan(alpha_pk_ini, alpha_eq, **md)
+    ax.axvspan(alpha_eq, alpha_pk_end, **rd)
+    ax.set_yscale("log")
+    ax.legend()
+    format_alpha_xaxis(ax, cosmo_rw)
+    ax.set_xlabel(r"$\alpha$")
+    ax.grid()
+
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=(ax0, ax1), pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+
+fig.savefig(
+    os.path.join(fig_dir, "diff_delta_rho_power_spectrum.pdf"), bbox_inches="tight"
+)
+
+fig.set_size_inches(12, 12 * aspect2c)
+plt.show()
+
+```
+
+We also plot the power spectrum time evolution for the total $\delta_{\rho}$:
+
+```{python}
+# | label: fig-full-delta-rho-power-spectrum
+# | fig-cap:
+# |   - "Total density power $\\mathcal{P}_{\\delta_{\\rho}}(\\alpha)$; colors show comoving wavelength $\\lambda$ (Mpc)."
+# |   - "Difference density power $\\mathcal{P}_{\\Delta\\delta_{\\rho}}(\\alpha)$; colors show $\\lambda$ (Mpc)."
+# | layout-ncol: 2
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+
+fig, ax = plt.subplots()
+
+for k, power_spectra in zip(k_values, power_spectra_list):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    ax.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * power_spectra["delta_rho"],
+        lw=lw,
+        linestyle="solid",
+        color=color,
+        label=r"$\mathcal{P}_{\delta_{\rho}}$" if k == k_values[0] else None,
+    )
+ax.set_ylabel(r"$\mathcal{P}_{\delta_{\rho}}$")
+
+# Shaded dominance regions
+ax.axvspan(alpha_pk_ini, alpha_eq, **md)
+ax.axvspan(alpha_eq, alpha_pk_end, **rd)
+ax.set_yscale("log")
+ax.legend()
+format_alpha_xaxis(ax, cosmo_rw)
+ax.set_xlabel(r"$\alpha$")
+ax.grid()
+
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=ax, pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+
+fig.savefig(
+    os.path.join(fig_dir, "full_delta_rho_power_spectrum.pdf"), bbox_inches="tight"
+)
+
+fig.set_size_inches(6, 3)
+plt.show()
+
+fig, ax = plt.subplots()
+
+for k, power_spectra in zip(k_values, power_spectra_list):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    ax.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * power_spectra["diff_delta_rho"],
+        lw=lw,
+        linestyle="solid",
+        color=color,
+        label=r"$\mathcal{P}_{\Delta \delta_{\rho}}$" if k == k_values[0] else None,
+    )
+ax.set_ylabel(r"$\mathcal{P}_{\Delta \delta_{\rho}}$")
+
+# Shaded dominance regions
+ax.axvspan(alpha_pk_ini, alpha_eq, **md)
+ax.axvspan(alpha_eq, alpha_pk_end, **rd)
+ax.set_yscale("log")
+ax.legend()
+format_alpha_xaxis(ax, cosmo_rw)
+ax.set_xlabel(r"$\alpha$")
+ax.grid()
+
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=ax, pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+
+fig.savefig(
+    os.path.join(fig_dir, "full_diff_delta_rho_power_spectrum.pdf"), bbox_inches="tight"
+)
+
+fig.set_size_inches(6, 3)
+plt.show()
+
+```
+
+
+## Computing Power Spectra
+
+Now that we have seen the evolution of the adiabatic perturbations and their power spectra, we can compute the power spectra for the observables of interest. The `HIPertTwoFluids` object has a method called `compute_power_spectra` that computes the power spectra for all perturbation components, such as matter and radiation. We can use this method to compute the power spectra for the observables of interest.
+
+```{python}
+
+pert = Nc.HIPertTwoFluids.new()
+pert.props.reltol = reltol
+pert.set_initial_time(alpha_ini_integ)
+pert.set_final_time(alpha_end_integ)
+pert.set_wkb_reltol(1.0e-3)
+
+observables = [
+    (Nc.HIPertITwoFluidsObs.ZETA, "zeta"),
+    (Nc.HIPertITwoFluidsObs.ZETA_DIFF, "dzeta"),
+    (Nc.HIPertITwoFluidsObs.DELTA_TOT, "delta_rho"),
+    (Nc.HIPertITwoFluidsObs.DELTA_DIFF, "diff_delta_rho"),
+    (Nc.HIPertITwoFluidsObs.FKU_R, "fku_r"),
+    (Nc.HIPertITwoFluidsObs.FKU_W, "fku_w"),
+    (Nc.HIPertITwoFluidsObs.DELTA_R, "delta_r"),
+    (Nc.HIPertITwoFluidsObs.DELTA_W, "delta_w"),
+    (Nc.HIPertITwoFluidsObs.PZETA, "pzeta"),
+]
+alpha_a = [0.01, alpha_pk_end]
+
+# Open the log file with line buffering
+with open("spectrum_progress.log", "w", buffering=1) as f:
+    # Create tqdm progress bar writing to the file
+    progress_bar = tqdm(total=len(k_for_pk_a), file=f, ncols=80)
+
+    def progress_callback(step: int, _: int) -> None:
+        # Update the progress bar
+        progress_bar.update(1)
+        progress_bar.refresh()
+        f.flush()
+
+    # Run your computation with the callback
+    s_interp_a = pert.compute_spectra(
+        cosmo_rw, alpha_a, k_for_pk_a * RH_Mpc, progress_callback
+    )
+
+    progress_bar.close()
+
+power_spectra0_k = {
+    f"{name}{mode_str}": np.abs(
+        [
+            s_interp_a[0].eval(cosmo_rw, k * RH_Mpc).eval_obs(mode, obs, obs)
+            for k in k_for_plot_a
+        ]
+    )
+    for obs, name in observables
+    for mode, mode_str in [
+        (Nc.HIPertITwoFluidsObsMode.ONE, "1"),
+        (Nc.HIPertITwoFluidsObsMode.TWO, "2"),
+        (Nc.HIPertITwoFluidsObsMode.BOTH, ""),
+    ]
+}
+
+power_spectra1_k = {
+    f"{name}{mode_str}": np.abs(
+        [
+            s_interp_a[1].eval(cosmo_rw, k * RH_Mpc).eval_obs(mode, obs, obs)
+            for k in k_for_plot_a
+        ]
+    )
+    for obs, name in observables
+    for mode, mode_str in [
+        (Nc.HIPertITwoFluidsObsMode.ONE, "1"),
+        (Nc.HIPertITwoFluidsObsMode.TWO, "2"),
+        (Nc.HIPertITwoFluidsObsMode.BOTH, ""),
+    ]
+}
+power_spectra_k_a = [power_spectra0_k, power_spectra1_k]
+
+```
+
+
+### Plotting the Power Spectra
+
+Now we can plot the power spectra for the observables of interest. We will plot the power spectra for $\zeta$, $\Delta\zeta$.
+
+```{python}
+# | label: fig-zeta-power-spectrum-k
+# | fig-cap: "Dimensionless power $\\mathcal{P}_{\\zeta}(k)$ at selected times; vertical lines mark characteristic wavenumbers."
+# | fig-cap-location: bottom
+# | layout-ncol: 2
+# | code-fold: true
+
+k_pivot = 1.0
+k_S_2 = k_pivot / (
+    c2 * Nc.HIPertITwoFluids.eom_eval(cosmo_rw, alpha_S, k_pivot).Fnu * RH_Mpc
+)
+k_cross1 = k_pivot / (
+    c1 * Nc.HIPertITwoFluids.eom_eval(cosmo_rw, alpha_eq, k_pivot).Fnu * RH_Mpc
+)
+k_cross2 = k_pivot / (
+    c2 * Nc.HIPertITwoFluids.eom_eval(cosmo_rw, alpha_eq, k_pivot).Fnu * RH_Mpc
+)
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+
+text_a = []
+
+for i, (alpha, power_spectra_k) in enumerate(zip(alpha_a, power_spectra_k_a)):
+    fig, ax = plt.subplots()
+
+    P_zeta1_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta1"]
+    P_zeta2_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta2"]
+    P_zeta_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta"]
+
+    ax.plot(
+        k_for_plot_a,
+        P_zeta1_k,
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\zeta 1}$",
+    )
+    ax.plot(
+        k_for_plot_a,
+        P_zeta2_k,
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\zeta 2}$",
+    )
+    ax.plot(
+        k_for_plot_a,
+        P_zeta_k,
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\zeta}$",
+    )
+
+    AP_zeta_k = large_scale_P_zeta(k_for_plot_a * RH_Mpc)
+
+    ax.plot(k_for_plot_a, AP_zeta_k, lw=lw, linestyle="dotted")
+
+    ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
+    ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+
+    ax.set_ylabel(r"$\mathcal{P}_{\zeta}$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    ax.legend()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
+
+    ax.set_ylim(np.min(P_zeta2_k) * 1.0e-2, np.max(P_zeta2_k) * 1.0e2)
+
+    fig.savefig(
+        os.path.join(fig_dir, f"zeta_power_spectrum{i}_k.pdf"), bbox_inches="tight"
+    )
+
+    fig.set_size_inches(6, 3)
+    plt.show()
+
+    text_a.append(
+        f"Ratio of power spectrum to large-scale power spectrum "
+        f"approximation:\n {P_zeta1_k[0] / AP_zeta_k[0]} {P_zeta2_k[0] / AP_zeta_k[0]}"
+    )
+
+for text in text_a:
+    print(text)
+
+```
+
+Now considering a CMB like interval ($10^{-4} < k < 10^0$ Mpc$^{-1}$), we can see that the power spectrum is dominated by the large-scale approximation plus the small-scale loss of power. To be more precise, we fit polynomial in this interval providing an effective spectral index. Moreover, we can also fit higher-order polynomials to the power spectrum in the CMB-scales obtaining the effective spectral index and running parameters.
+
+```{python}
+
+power_spectra_k = power_spectra_k_a[1]
+k_for_cmb_constraint = k_for_plot_a < 1.0
+k_for_cmb = k_for_plot_a[k_for_cmb_constraint]
+# Using same pivot scale as Planck 2018 k0 = 0.05 Mpc^-1
+lnk_for_cmb = np.log(k_for_plot_a[k_for_cmb_constraint] / 0.05)
+ln_zeta_cmb = np.log(
+    RH_Mpc**3 * k_for_cmb**3 * power_spectra_k["zeta"][k_for_cmb_constraint]
+)
+
+# Linear fit (spectral index only)
+fit_lin = np.polyfit(lnk_for_cmb, ln_zeta_cmb, deg=1)
+ns_lin = fit_lin[-2] + 1.0
+
+# Quadratic fit (spectral index + running)
+fit_quad = np.polyfit(lnk_for_cmb, ln_zeta_cmb, deg=2)
+ns_quad = fit_quad[-2] + 1.0
+alpha_s = fit_quad[-3] * 2.0
+
+# Report
+report = f"""
+### Fit to the power spectrum in the CMB-scales interval
+
+**Linear fit (constant spectral index):**
+- Effective spectral index: {ns_lin:.4f}
+
+**Quadratic fit (including running):**
+- Effective spectral index: {ns_quad:.4f}  
+- Running parameter: {alpha_s:.4f}
+"""
+display(Markdown(report))
+
+```
+
+Now we can plot this CMB-like section of the power spectrum and overplot the linear and quadratic fits used to extract an effective spectral index and running parameter.
+
+```{python}
+# | label: fig-zeta-power-spectrum-cmb-k
+# | fig-cap: "CMB-range dimensionless power $\\mathcal{P}_{\\zeta}(k)$ with linear and quadratic fits (pivot 0.05 Mpc$^{-1}$)."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+
+power_spectra_k = power_spectra_k_a[1]
+fig, ax = plt.subplots()
+
+P_zeta_k = k_for_cmb**3 * RH_Mpc**3 * power_spectra_k["zeta"][k_for_cmb_constraint]
+P_zeta_lin_k = np.exp(fit_lin[0] * lnk_for_cmb + fit_lin[1])
+P_zeta_quad_k = np.exp(
+    fit_quad[0] * lnk_for_cmb**2 + fit_quad[1] * lnk_for_cmb + fit_quad[2]
+)
+
+ax.plot(k_for_cmb, P_zeta_k, lw=lw, linestyle="solid", label=r"$\mathcal{P}_{\zeta}$")
+ax.plot(
+    k_for_cmb,
+    P_zeta_lin_k,
+    lw=lw,
+    linestyle="dashed",
+    label=r"$\mathcal{P}_{\zeta}$ (linear fit)",
+)
+ax.plot(
+    k_for_cmb,
+    P_zeta_quad_k,
+    lw=lw,
+    linestyle="dotted",
+    label=r"$\mathcal{P}_{\zeta}$ (quadratic fit)",
+)
+
+ax.set_ylabel(r"$\mathcal{P}_{\zeta}$")
+ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+
+ax.legend()
+ax.set_xscale("log")
+# ax.set_yscale("log")
+ax.grid()
+
+fig.savefig(os.path.join(fig_dir, "zeta_power_spectrum_cmb_k.pdf"), bbox_inches="tight")
+
+fig.set_size_inches(6, 3)
+plt.show()
+
+```
+
+Next we plot the power spectra for $\Pi_\zeta$ and $\Delta\Pi_\zeta$:
+
+```{python}
+# | label: fig-pzeta-power-spectrum-k
+# | fig-cap: "Dimensionless power $\\mathcal{P}_{\\Pi_\\zeta}(k)$ at selected times; vertical lines mark characteristic wavenumbers."
+# | fig-cap-location: bottom
+# | layout-ncol: 2
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+
+for i, (alpha, power_spectra_k) in enumerate(zip(alpha_a, power_spectra_k_a)):
+    fig, ax = plt.subplots()
+
+    P_pzeta1_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["pzeta1"]
+    P_pzeta2_k = k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["pzeta2"]
+
+    ax.plot(
+        k_for_plot_a,
+        P_pzeta1_k,
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\Pi_\zeta 1}$",
+    )
+    ax.plot(
+        k_for_plot_a,
+        P_pzeta2_k,
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\Pi_\zeta 2}$",
+    )
+
+    ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
+    ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+
+    ax.set_ylabel(r"$\mathcal{P}_{\Pi_\zeta}$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    ax.legend()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
+
+    fig.savefig(
+        os.path.join(fig_dir, f"Pzeta_power_spectrum{i}_k.pdf"), bbox_inches="tight"
+    )
+
+    fig.set_size_inches(6, 3)
+    plt.show()
+
+
+```
+
+Next we plot the power spectra for $\delta_{\rho}$ and $\Delta\delta_{\rho}$:
+
+```{python}
+# | label: fig-delta-rho-power-spectrum-k
+# | fig-cap: "Dimensionless power $\\mathcal{P}_{\\delta_{\\rho}}(k)$ and $\\mathcal{P}_{\\Delta\\delta_{\\rho}}(k)$ at selected times; solid/dashed lines show mode 1/2."
+# | fig-cap-location: bottom
+# | layout-ncol: 2
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+
+for i, (alpha, power_spectra_k) in enumerate(zip(alpha_a, power_spectra_k_a)):
+    fig, ax = plt.subplots()
+
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["delta_rho"],
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\delta_{\rho}}$",
+    )
+
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["diff_delta_rho"],
+        lw=lw,
+        linestyle="dashed",
+        label=r"$\mathcal{P}_{\Delta \delta_{\rho}}$",
+    )
+
+    ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
+    ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+
+    ax.set_ylabel(r"$\mathcal{P}_{\delta_{\rho}}$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    ax.legend()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
+
+    fig.savefig(
+        os.path.join(fig_dir, f"delta_rho_power_spectrum{i}_k.pdf"), bbox_inches="tight"
+    )
+    fig.set_size_inches(6, 3)
+    plt.show()
+```
+
+We can also plot the power spectra for the individual fluid density perturbations $\delta_{\mathrm{r}}$ and $\delta_{w}$:
+
+```{python}
+# | label: fig-delta-rw-power-spectrum-k
+# | fig-cap:
+# |   - "Dimensionless power $\\mathcal{P}_{\\delta_{\\mathrm{r}}}(k)$ (solid) at selected times; vertical lines mark characteristic wavenumbers."
+# |   - "Dimensionless power $\\mathcal{P}_{\\delta_w}(k)$ (dashed) at selected times; same layout."
+# | fig-cap-location: bottom
+# | layout-ncol: 2
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+
+for i, (alpha, power_spectra_k) in enumerate(zip(alpha_a, power_spectra_k_a)):
+    fig, ax = plt.subplots()
+
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["delta_r"],
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\delta_{\mathrm{r}}}$",
+    )
+
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["delta_w"],
+        lw=lw,
+        linestyle="dashed",
+        label=r"$\mathcal{P}_{\delta_{w}}$",
+    )
+
+    ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
+    ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+
+    ax.set_ylabel(r"$\mathcal{P}_{\delta_{i}}$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    ax.legend()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
+
+    fig.savefig(
+        os.path.join(fig_dir, f"delta_rw_power_spectrum{i}_k.pdf"), bbox_inches="tight"
+    )
+    fig.set_size_inches(6, 3)
+    plt.show()
+```
+
+The fluid velocity potentials $\mathcal{V}_{\mathrm{r}}$ and $\mathcal{V}_{w}$:
+
+```{python}
+# | label: fig-fku-rw-power-spectrum-k
+# | fig-cap: "Dimensionless power of fluid velocity potentials $\\mathcal{P}_{\\mathcal{V}_r}$ (solid) and $\\mathcal{P}_{\\mathcal{V}_w}$ vs. $k$."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
+
+fig, (ax0, ax1) = plt.subplots(ncols=2, nrows=1, sharey=True)
+fig.subplots_adjust(hspace=0.0, wspace=0.0)
+
+for i, (alpha, power_spectra_k, ax) in enumerate(
+    zip(alpha_a, power_spectra_k_a, [ax0, ax1])
+):
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["fku_r"],
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\mathcal{V}_{\mathrm{r}}}$",
+        alpha=0.8,
+    )
+
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["fku_w"],
+        lw=lw,
+        linestyle="dashed",
+        label=r"$\mathcal{P}_{\mathcal{V}_{w}}$",
+    )
+
+    ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
+    ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+
+    if i == 0:
+        ax.set_ylabel(r"$\mathcal{P}_{\mathcal{V}_{i}}$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    if i == 0:
+        ax.legend()
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
+
+fig.savefig(os.path.join(fig_dir, f"fku_rw_power_spectrum_k.pdf"), bbox_inches="tight")
+
+fig.set_size_inches(12, 12 * aspect2c)
+plt.show()
+
+```
+
+We can also plot $\zeta$ and $\Delta\zeta$ in the same plot to observe another source of isocurvature.
+
+```{python}
+# | label: fig-zeta-dzeta-power-spectrum-k
+# | fig-cap:
+# |   - "Dimensionless power $\\mathcal{P}_{\\zeta}(k)$ at selected times."
+# |   - "Dimensionless power $\\mathcal{P}_{\\Delta\\zeta}(k)$ at selected times."
+# | fig-cap-location: bottom
+# | layout-ncol: 2
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+
+for i, (alpha, power_spectra_k) in enumerate(zip(alpha_a, power_spectra_k_a)):
+    fig, ax = plt.subplots()
+
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["zeta"],
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{\zeta}$",
+    )
+
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * power_spectra_k["dzeta"],
+        lw=lw,
+        linestyle="dashed",
+        label=r"$\mathcal{P}_{\Delta \zeta}$",
+    )
+
+    ax.axvline(k_S_2, linestyle="solid", lw=lw, color="k")
+    ax.axvline(k_cross2, linestyle="dashed", lw=lw, color="k")
+
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+
+    ax.set_ylabel(r"$\mathcal{P}_{\zeta}$, $\mathcal{P}_{\Delta \zeta}$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    ax.legend()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
+
+    fig.savefig(
+        os.path.join(fig_dir, f"fku_rw_power_spectrum{i}_k.pdf"), bbox_inches="tight"
+    )
+    fig.set_size_inches(6, 3)
+    plt.show()
+```
+
+## Tensor power spectrum
+
+Now we can also compute the tensor power spectrum.
+
+```{python}
+
+pgw = Nc.HIPertGW.new()
+
+pgw.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+pgw.set_ti(alpha_pk_ini)
+pgw.set_tf(alpha_pk_end)
+pgw.set_vacuum_max_time(-1.0e-1)
+pgw.set_vacuum_reltol(1.0e-8)
+Ncm.CSQ1D.set_reltol(pgw, 1.0e-10)
+
+gw_pk_evol = []
+
+for k in k_values:
+    pgw.set_k(k * RH_Mpc)
+    pgw.prepare(cosmo_rw)
+
+    pk = np.array([pgw.eval_powspec_at(cosmo_rw, alpha) for alpha in alpha_pk_a])
+    gw_pk_evol.append(pk)
+
+gw_pk_k = []
+
+for alpha in alpha_a:
+    gw_pk_k.append(pgw.eval_powspec(cosmo_rw, alpha, k_for_pk_a * RH_Mpc))
+
+```
+
+We can plot the tensor power spectrum evolution for each mode:
+
+```{python}
+# | label: fig-tensor-power-spectrum-evol
+# | fig-cap: "Evolution of the tensor power spectrum $\\mathcal{P}_h(\\alpha)$ for each mode."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+fig, ax = plt.subplots()
+
+for k, gw_pk in zip(k_values, gw_pk_evol):
+    lambda_com = 1.0 / k
+    color = cmap(norm(lambda_com))
+
+    ax.plot(
+        alpha_pk_a,
+        k**3 * RH_Mpc**3 * gw_pk,
+        lw=lw,
+        linestyle="solid",
+        color=color,
+    )
+
+format_alpha_xaxis(ax, cosmo_rw)
+ax.set_xlabel(r"$\alpha$")
+ax.set_ylabel(r"$\mathcal{P}_{h}$")
+ax.set_yscale("log")
+ax.grid()
+
+# Colorbar for k
+cbar = fig.colorbar(sm, ax=ax, pad=0.02)
+cbar.set_label(r"$\lambda$ [Mpc]")
+
+fig.savefig(os.path.join(fig_dir, f"tensor_pw_evol.pdf"), bbox_inches="tight")
+fig.set_size_inches(6, 3)
+plt.show()
+
+```
+
+We can also plot it at the final time:
+
+```{python}
+# | label: fig-tensor-power-spectrum-k
+# | fig-cap:
+# |   - "Tensor power $\\mathcal{P}_h(k)$ at an early time; vertical lines mark characteristic wavenumbers."
+# |   - "Tensor power $\\mathcal{P}_h(k)$ at a late/expanding time (e.g. $x=10^{15}$)."
+# | fig-cap-location: bottom
+# | layout-ncol: 2
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+
+for i, alpha in enumerate(alpha_a):
+    fig, ax = plt.subplots()
+
+    gw_pk_k_a = np.array([gw_pk_k[i].eval(k * RH_Mpc) for k in k_for_plot_a])
+
+    ax.plot(
+        k_for_plot_a,
+        k_for_plot_a**3 * RH_Mpc**3 * gw_pk_k_a,
+        lw=lw,
+        linestyle="solid",
+        label=r"$\mathcal{P}_{h}$",
+    )
+
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+
+    ax.set_ylabel(r"$\mathcal{P}_{h}$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    ax.legend()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
+
+    fig.savefig(os.path.join(fig_dir, f"tensor_pw{i}_k.pdf"), bbox_inches="tight")
+    fig.set_size_inches(6, 3)
+plt.show()
+
+```

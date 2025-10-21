@@ -808,11 +808,14 @@ nc_hipert_boltzmann_get_EB_lmax (NcHIPertBoltzmann *pb)
 void
 nc_hipert_boltzmann_set_recomb (NcHIPertBoltzmann *pb, NcRecomb *recomb)
 {
+  NcHIPert *pert                = NC_HIPERT (pb);
+  NcHIPertPrivate * const pself = nc_hipert_get_private (pert);
+
   if (pb->recomb != recomb)
   {
     nc_recomb_clear (&pb->recomb);
-    pb->recomb                     = nc_recomb_ref (recomb);
-    NC_HIPERT (pb)->priv->prepared = FALSE;
+    pb->recomb      = nc_recomb_ref (recomb);
+    pself->prepared = FALSE;
     ncm_model_ctrl_force_update (pb->ctrl_cosmo);
   }
 }

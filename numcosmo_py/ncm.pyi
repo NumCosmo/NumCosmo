@@ -1235,6 +1235,7 @@ class Complex(GObject.GBoxed):
         new() -> NumCosmoMath.Complex
     """
 
+    def Abs(self) -> float: ...
     def Im(self) -> float: ...
     def Re(self) -> float: ...
     @staticmethod
@@ -4193,6 +4194,7 @@ class FitMC(GObject.Object):
 
         FitMC(**properties)
         new(fit:NumCosmoMath.Fit, rtype:NumCosmoMath.FitMCResampleType, mtype:NumCosmoMath.FitRunMsgs) -> NumCosmoMath.FitMC
+        new_funcs_array(fit:NumCosmoMath.Fit, rtype:NumCosmoMath.FitMCResampleType, mtype:NumCosmoMath.FitRunMsgs, funcs_array:NumCosmoMath.ObjArray) -> NumCosmoMath.FitMC
 
     Object NcmFitMC
 
@@ -4207,17 +4209,20 @@ class FitMC(GObject.Object):
         Run messages type
       nthreads -> guint: nthreads
         Number of threads to run
-      keep-order -> gboolean: keep-order
-        Whether keep the catalog in order of sampling
+      data-file -> gchararray: data-file
+        Data file to be used by the catalog
+      function-array -> NcmObjArray: function-array
+        Functions array
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
+        data_file: str
         fiducial: MSet
         fit: Fit
-        keep_order: bool
+        function_array: ObjArray
         mtype: FitRunMsgs
         nthreads: int
         rtype: FitMCResampleType
@@ -4225,9 +4230,10 @@ class FitMC(GObject.Object):
     props: Props = ...
     def __init__(
         self,
+        data_file: str = ...,
         fiducial: MSet = ...,
         fit: Fit = ...,
-        keep_order: bool = ...,
+        function_array: ObjArray = ...,
         mtype: FitRunMsgs = ...,
         nthreads: int = ...,
         rtype: FitMCResampleType = ...,
@@ -4242,6 +4248,14 @@ class FitMC(GObject.Object):
     def mean_covar(self) -> None: ...
     @classmethod
     def new(cls, fit: Fit, rtype: FitMCResampleType, mtype: FitRunMsgs) -> FitMC: ...
+    @classmethod
+    def new_funcs_array(
+        cls,
+        fit: Fit,
+        rtype: FitMCResampleType,
+        mtype: FitRunMsgs,
+        funcs_array: ObjArray,
+    ) -> FitMC: ...
     def peek_catalog(self) -> MSetCatalog: ...
     def reset(self) -> None: ...
     def run(self, n: int) -> None: ...

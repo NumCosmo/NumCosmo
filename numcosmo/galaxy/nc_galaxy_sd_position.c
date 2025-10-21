@@ -161,7 +161,7 @@ _nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcGalaxySDPositionData *da
 }
 
 static NcGalaxySDPositionIntegrand *
-_nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp)
+_nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, gboolean use_lnp)
 {
   g_error ("_nc_galaxy_sd_position_integ: method not implemented.");
 
@@ -530,15 +530,16 @@ nc_galaxy_sd_position_gen (NcGalaxySDPosition *gsdp, NcGalaxySDPositionData *dat
 /**
  * nc_galaxy_sd_position_integ: (virtual integ)
  * @gsdp: a #NcGalaxySDPosition
+ * @use_lnp: if TRUE the integrand must return the natural logarithm of the probability density
  *
  * Prepares the integrand for the galaxy position distribution.
  *
  * Returns: (transfer full): a new NcGalaxySDPositionIntegrand object.
  */
 NcGalaxySDPositionIntegrand *
-nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp)
+nc_galaxy_sd_position_integ (NcGalaxySDPosition *gsdp, gboolean use_lnp)
 {
-  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->integ (gsdp);
+  return NC_GALAXY_SD_POSITION_GET_CLASS (gsdp)->integ (gsdp, use_lnp);
 }
 
 /**

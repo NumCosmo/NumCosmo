@@ -373,6 +373,10 @@ python_tests = [
         'source': 'test_py_cfg.py',
     },
     {
+        'name': 'py_cluster_mass_selection',
+        'source': 'test_py_cluster_mass_selection.py',
+    },
+    {
         'name': 'py_cluster_abundance_sampling',
         'source': 'test_py_cluster_abundance_sampling.py',
     },
@@ -381,8 +385,17 @@ python_tests = [
         'source': 'test_py_hicosmo.py',
     },
     {
+        'name': 'py_hicosmo_de_wspline',
+        'source': 'test_py_hicosmo_de_wspline.py',
+    },
+    {
         'name': 'py_hicosmo_Vexp',
         'source': 'test_py_hicosmo_Vexp.py',
+        'timeout': 0,
+    },
+    {
+        'name': 'py_hicosmo_qgrw',
+        'source': 'test_py_hicosmo_qgrw.py',
     },
     {
         'name': 'py_hireion',
@@ -395,6 +408,7 @@ python_tests = [
     {
         'name': 'py_hipert_em',
         'source': 'test_py_hipert_em.py',
+        'timeout': 0,
     },
     {
         'name': 'py_hipert_gw',
@@ -467,6 +481,7 @@ python_tests = [
     {
         'name': 'py_data_snia_cov',
         'source': 'test_py_data_snia_cov.py',
+        'timeout': 0,
     },
     {
         'name': 'py_dataset',
@@ -507,6 +522,10 @@ python_tests = [
     {
         'name': 'py_fit',
         'source': 'test_py_fit.py',
+    },
+    {
+        'name': 'py_fit_mc',
+        'source': 'test_py_fit_mc.py',
     },
     {
         'name': 'py_powspec_ml_spline',
@@ -628,6 +647,22 @@ if python_pyccl.found()
         {
             'name': 'py_xcor',
             'source': 'test_py_xcor.py',
+            'timeout': 0,
+        },
+    ]
+endif
+
+python_matplotlib = python_module.find_installation(
+    'python3',
+    modules: ['matplotlib'],
+    required: false,
+)
+
+if python_matplotlib.found()
+    python_tests += [
+        {
+            'name': 'plotting_tools',
+            'source': 'test_plotting_tools.py',
             'timeout': 0,
         },
     ]

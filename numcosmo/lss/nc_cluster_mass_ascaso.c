@@ -474,7 +474,7 @@ static void
 _nc_cluster_mass_ascaso_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
 
-  const gdouble lnMl =  M_LN10 * 12.0;
+  const gdouble lnMl =  M_LN10 * 13.0;
   const gdouble lnMu =  M_LN10 * 16.0;
 
   *lnM_lower = lnMl;
@@ -486,7 +486,7 @@ static void
 _nc_cluster_mass_ascaso_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
 
-  const gdouble lnMl =  M_LN10 * 12.0;
+  const gdouble lnMl =  M_LN10 * 13.0;
   const gdouble lnMu =  M_LN10 * 16.0;
 
   *lnM_lower = lnMl;
@@ -497,7 +497,7 @@ static void
 _nc_cluster_mass_ascaso_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
 {
 
-  const gdouble lnMl =  M_LN10 * 12.0;
+  const gdouble lnMl =  M_LN10 * 13.0;
   const gdouble lnMu =  M_LN10 * 16.0;
 
   *lnM_lower = lnMl;

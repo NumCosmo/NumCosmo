@@ -86,6 +86,8 @@
 #include "math/ncm_fit_nlopt.h"
 #include "math/ncm_prior_gauss_param.h"
 #include "math/ncm_prior_gauss_func.h"
+#include "math/ncm_prior_flat_param.h"
+#include "math/ncm_prior_flat_func.h"
 #include "math/ncm_fftlog_sbessel_j.h"
 #include "math/ncm_fftlog_sbessel_jljm.h"
 #include "nc_hicosmo.h"
@@ -354,6 +356,7 @@ void _nc_hiprim_register_functions (void);
 void _nc_hireion_register_functions (void);
 void _nc_distance_register_functions (void);
 void _nc_planck_fi_cor_tt_register_functions (void);
+void _nc_hicosmo_de_wspline_register_functions (void);
 
 #ifdef HAVE_MPI
 static void _ncm_cfg_mpi_main_loop (void);
@@ -611,6 +614,10 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_PARAM);
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);
 
+  ncm_cfg_register_obj (NCM_TYPE_PRIOR_FLAT_PARAM);
+  ncm_cfg_register_obj (NCM_TYPE_PRIOR_FLAT_FUNC);
+
+
   ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_J);
   ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_JLJM);
 
@@ -702,6 +709,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_PLCL);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_ASCASO);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_LNRICH_EXT);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_SELECTION);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT_NODIST);
@@ -809,6 +817,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   _nc_hireion_register_functions ();
   _nc_distance_register_functions ();
   _nc_planck_fi_cor_tt_register_functions ();
+  _nc_hicosmo_de_wspline_register_functions ();
 
   numcosmo_init = TRUE;
 
@@ -1370,7 +1379,7 @@ ncm_message (const gchar *msg, ...)
  *
  * Creates a word wrapped string.
  *
- * Returns: (transfer full): word wraped string @msg.
+ * Returns: (transfer full): word wrapped string @msg.
  */
 gchar *
 ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols)

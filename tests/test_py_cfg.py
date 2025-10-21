@@ -33,8 +33,8 @@ from numcosmo_py import Ncm, GLib
 Ncm.cfg_init()
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 24
-VERSION_MICRO = 1
+VERSION_MINOR = 25
+VERSION_MICRO = 0
 
 
 @pytest.fixture(
