@@ -2,7 +2,6 @@ import numpy as np
 
 from numcosmo_py import Ncm, Nc, GObject
 Ncm.cfg_init()
-Ncm.cfg_set_log_handler(lambda msg: sys.stdout.write(msg) and sys.stdout.flush())
 
 
 ascaso = Nc.ClusterMassAscaso(lnRichness_min=np.log(1.0), lnRichness_max=6)
@@ -62,6 +61,7 @@ def catalog_fit(DATA, rich_cut, LINEAR):
         # fixing cut parameter
         fixed_parameters_ascaso = ['cut'] 
         ascaso.param_set_by_name("cut", np.log(rich_cut))        
+        # ascaso.param_set_by_name("cut", -np.inf)        
 
         # Mset 
         mset.set(ascaso) 
