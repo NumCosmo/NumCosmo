@@ -64,7 +64,7 @@ class IDMatch:
     def unique(self, matched_catalog, n_components = 5, nodes_per_side = 10, edge_prob = 0.3):
 
         all_combinations = matched_catalog.copy().drop_duplicates(subset=['cat1_id', 'cat2_id'])      
-        tuples = list(all_combinations[['cat1_id', 'cat2_id', 'cross_frac']].itertuples(index=False, name=None))
+        tuples = list(all_combinations[['cat1_id', 'cat2_id', 'cross_fraction']].itertuples(index=False, name=None))
        
         G = nx.Graph()
         for id1, id2, w in tuples:
@@ -130,7 +130,7 @@ class IDMatch:
         frac1_array = np.array(matched_catalog['shared_frac_cat1'])
         frac2_array = np.array(matched_catalog['shared_frac_cat2'])
          
-        matched_catalog['cross_frac'] = frac1_array * ( frac1_array + frac2_array ) / 2 
+        matched_catalog['cross_fraction'] = frac1_array * ( frac1_array + frac2_array ) / 2 
 
         unique = self.unique(matched_catalog)       
         

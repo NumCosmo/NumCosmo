@@ -54,9 +54,9 @@ class TReNDAnalysis:
                 RICH_CUT = rcut
                 MASS_CUT = mcut 
     
-                FILE_NAME = "/global/homes/c/cinlima/ESMCMC/"+model_type+"/asc_rmin_"+str(RICH_CUT)+"_mmin_"+str(MASS_CUT)+".fits"
+                FILE_NAME = "/global/homes/c/cinlima/ESMCMC/"+model_type+"/asc_rmin_"+str(RICH_CUT)+"_mmin_"+str(int(MASS_CUT))+".fits"
  
-                burnin_cat = Ncm.MSetCatalog.new_from_file_ro(FILE_NAME, 0.0).peek_e_mean_stats().estimate_const_break(0) + 1  
+                burnin_cat = Ncm.MSetCatalog.new_from_file_ro(FILE_NAME, 0.0).peek_e_mean_stats().estimate_const_break(0)  
                 
                 mcat = Ncm.MSetCatalog.new_from_file_ro(FILE_NAME, N_WALKERS * burnin_cat) 
                 
@@ -145,14 +145,14 @@ class TReNDAnalysis:
                 RICH_CUT = rcut
                 MASS_CUT = mcut 
         
-                FILE_NAME1 = "/global/homes/c/cinlima/ESMCMC/with_correction/asc_rmin_"+str(RICH_CUT)+"_mmin_"+str(MASS_CUT)+".fits"   
-                FILE_NAME2 = "/global/homes/c/cinlima/ESMCMC/without_correction/asc_rmin_"+str(RICH_CUT)+"_mmin_"+str(MASS_CUT)+".fits"
+                FILE_NAME1 = "/global/homes/c/cinlima/ESMCMC/with_correction/asc_rmin_"+str(RICH_CUT)+"_mmin_"+str(int(MASS_CUT))+".fits"   
+                FILE_NAME2 = "/global/homes/c/cinlima/ESMCMC/without_correction/asc_rmin_"+str(RICH_CUT)+"_mmin_"+str(int(MASS_CUT))+".fits"
            
-                burnin_cat1 = Ncm.MSetCatalog.new_from_file_ro(FILE_NAME1, 0.0).peek_e_mean_stats().estimate_const_break(0) + 10  
+                burnin_cat1 = Ncm.MSetCatalog.new_from_file_ro(FILE_NAME1, 0.0).peek_e_mean_stats().estimate_const_break(0)   
                 mcat1 = Ncm.MSetCatalog.new_from_file_ro(FILE_NAME1, N_WALKERS * burnin_cat1)
                 be1, post_lnnorm_sd1 = mcat1.get_post_lnnorm()
             
-                burnin_cat2 = Ncm.MSetCatalog.new_from_file_ro(FILE_NAME2, 0.0).peek_e_mean_stats().estimate_const_break(0) + 10  
+                burnin_cat2 = Ncm.MSetCatalog.new_from_file_ro(FILE_NAME2, 0.0).peek_e_mean_stats().estimate_const_break(0)  
                 mcat2 = Ncm.MSetCatalog.new_from_file_ro(FILE_NAME2, N_WALKERS * burnin_cat2)
                 be2, post_lnnorm_sd2 = mcat2.get_post_lnnorm()
     
