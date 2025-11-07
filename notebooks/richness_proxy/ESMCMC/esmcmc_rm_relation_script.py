@@ -136,7 +136,8 @@ def esmcmc(DATA, rich_cut, N_WALKERS, N_RUN, MODEL, FILE_NAME):
     esmcmc = Ncm.FitESMCMC.new(fit, N_WALKERS, init_sampler, apes, Ncm.FitRunMsgs.FULL)
     esmcmc.set_nthreads(2)
     esmcmc.set_data_file(FILE_NAME)
-
+    esmcmc.set_skip_check(True)
+    
     esmcmc.start_run()
     esmcmc.run(N_RUN)  
     esmcmc.end_run()

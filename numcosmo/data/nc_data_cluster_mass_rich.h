@@ -42,6 +42,7 @@ NcDataClusterMassRich *nc_data_cluster_mass_rich_new (void);
 NcDataClusterMassRich *nc_data_cluster_mass_rich_ref (NcDataClusterMassRich *dmr);
 void nc_data_cluster_mass_rich_free (NcDataClusterMassRich *dmr);
 void nc_data_cluster_mass_rich_clear (NcDataClusterMassRich **dmr);
+void nc_data_cluster_mass_rich_recut (NcDataClusterMassRich *dmr, gdouble cut);
 
 void nc_data_cluster_mass_rich_set_data (NcDataClusterMassRich *dmr, NcmVector *lnM, NcmVector *z, NcmVector *lnR);
 NcmVector *nc_data_cluster_mass_rich_peek_lnM (NcDataClusterMassRich *dmr);
