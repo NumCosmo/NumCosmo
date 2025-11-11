@@ -264,7 +264,8 @@ _nc_data_cluster_mass_rich_compute_likelihood (const gdouble lnR_i, const gdoubl
 {
   return gsl_pow_2 ((lnR_i - lnR_i_mean) / lnR_i_std)
          + 2.0 * log (lnR_i_std)
-         + 2.0 * log (0.5 * erfc ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std)));
+         - 2.0 * M_LN2
+         + 2.0 * gsl_sf_log_erfc ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std));
 }
 
 static gdouble
