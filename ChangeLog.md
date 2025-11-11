@@ -1,7 +1,89 @@
 CHANGELOG
 ----------------------
 
+[v0.26.0]
+ * Splitting NumCosmo initialization. (#232)
+
+     * Splitting NumCosmo initialization.
+     * Initializing object types and functions automatically at numcosmo_py.
+     * Updating to python 3.12 in CI.
+ * Bounce tutorial (#212)
+
+     * Implementing adiabatic interface in QGRW.
+     * New bouncing model tutorial.
+     * Fixing bugs in qgrw and qgw.
+     * Including missing factor in the power-spectrum.
+     * Updating perturbation code.
+     * Updating to sundials 7.3.0.
+     * Second order WKB for TwoFluids working.
+     * Reorganizing code and WKB approximation for TwoFluids.
+     * Support for high level interface for two point observables.
+     * Fixing minor bounce related terms in qgw.
+     * Implementing adiabatic Psi and drho computation for qgrw.
+     * Introducing better error handling.
+     * Finished the implementation of compute_spectrum.
+     * Updated adiab tests.
+     * Renaming variable and adding explicit type conversion.
+     * Reorganizing documents and footnotes.
+     * Introducing more observables to TwoFluids.
+     * Adding Abs interface for Complex.
+     * New code to compute spectra at different times.
+     * Computing tensor spectrum and improving bounce_spectra.
+     * Adding prereqs.
+     * Adding more tests for QGRW.
+     * Updated Ubuntu build.
+     * Removed old nc_hipert_wkb.
+     * Testing GW powspec interface.
+     * Testing plotting tools.
+     * Setting timeout to 0 for Vexp.
+     * Updated stubs.
+
+ * DE w(z) spline - experiment (#226)
+
+     * Included experiment in generate.py: Dark Energy - w(z) spline.
+     * Fixed documentation (description of the model, nickname)  - wspline.
+     * Generate DE wspline: Flat universe.
+     * Support for curvature calculation;
+     * New test for model_de_wspline.
+
+     ---------
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Add option to choose non logarithmic integrand (#230)
+
+     * Add toggle to choose between integrand and log integrand
+     * Merge `use_lnp` and `use_lnint` toggles
+     * Fix integration calculations in Gaussian redshift model
+     * Fix nc_galaxy_sd_true_redshift_ln_integ function
+     * Refactor integrand function calls to remove unnecessary de-referencing
+     and fix function types
+     * Add cubature integration checks to nc_galaxy_sd_true_redshift_integ test
+     * Rename and refactor cubature integrand type for clarity and consistency
+     * Properly test both integrand interfaces for nc_galaxy_sd_position
+     * Properly test both integrand interfaces in nc_galaxy_sd_true_redshift
+     * Add TODO comments for refactoring spline usage in
+     nc_galaxy_sd_obs_redshift_pz
+     * Properly test both integrand interfaces in nc_galaxy_sd_obs_redshift
+     objects
+     * OBS: spec and gauss integrand interfaces diverge on high z and should be
+     better handled later
+     * Properly test both integrand interfaces in nc_galaxy_sd_shape objects
+     * Add monte_carlo_lnint test for nc_data_cluster_wl
+     * Improving test timmings.
+
+     ---------
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Restricting NumCosmo version and trying texlive-core.
+
+ * Trying r-tinytex.
+
+
 [v0.25.0]
+ * Fixed version test.
+
+ * New release 0.25.0.
+
  * Environment for NumCosmo use.
 
  * Adding support for derived quantities in MC runs. (#231)
@@ -5416,6 +5498,14 @@ CHANGELOG
 
 
 []
+ * Splitting NumCosmo initialization. (#232)
+ * Bounce tutorial (#212)
+ * DE w(z) spline - experiment (#226)
+ * Add option to choose non logarithmic integrand (#230)
+ * Restricting NumCosmo version and trying texlive-core.
+ * Trying r-tinytex.
+ * Fixed version test.
+ * New release 0.25.0.
  * Environment for NumCosmo use.
  * Adding support for derived quantities in MC runs. (#231)
  * Updated stubs.

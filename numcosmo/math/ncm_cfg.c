@@ -542,6 +542,67 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message, NULL);
   _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_error, NULL);
 
+  ncm_cfg_register_objects ();
+  ncm_cfg_register_functions ();
+
+  numcosmo_init = TRUE;
+
+  _mpi_ctrl.initialized    = 0;
+  _mpi_ctrl.size           = 1;
+  _mpi_ctrl.rank           = 0;
+  _mpi_ctrl.nslaves        = 0;
+  _mpi_ctrl.working_slaves = 0;
+
+  atexit (_ncm_cfg_exit);
+
+#ifdef HAVE_MPI
+  MPI_Initialized (&_mpi_ctrl.initialized);
+
+  if (!_mpi_ctrl.initialized)
+  {
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI not initialized, calling MPI_Init.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+    MPI_Init (argc, argv);
+    MPI_Initialized (&_mpi_ctrl.initialized);
+  }
+  else
+  {
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI was already initialized!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+  }
+
+  {
+    gchar mpi_hostname[MPI_MAX_PROCESSOR_NAME];
+    gint len = 0;
+
+    MPI_Comm_size (MPI_COMM_WORLD, &_mpi_ctrl.size);
+    MPI_Comm_rank (MPI_COMM_WORLD, &_mpi_ctrl.rank);
+    MPI_Get_processor_name (mpi_hostname, &len);
+
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] We have %d MPI process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);
+
+    if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
+    {
+      _ncm_cfg_mpi_main_loop ();
+    }
+    else
+    {
+      _mpi_ctrl.nslaves        = (_mpi_ctrl.size - 1);
+      _mpi_ctrl.working_slaves = 0;
+    }
+  }
+#endif /* HAVE_MPI */
+
+  return;
+}
+
+/**
+ * ncm_cfg_register_objects:
+ *
+ * Registers the objects of the library.
+ *
+ */
+void
+ncm_cfg_register_objects (void)
+{
   ncm_cfg_register_obj (NCM_TYPE_RNG);
 
   ncm_cfg_register_obj (NCM_TYPE_VECTOR);
@@ -803,59 +864,32 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_LKL);
 
-  _nc_hicosmo_register_functions ();
-  _nc_hicosmo_de_register_functions ();
-  _nc_hiprim_register_functions ();
-  _nc_hireion_register_functions ();
-  _nc_distance_register_functions ();
-  _nc_planck_fi_cor_tt_register_functions ();
-  _nc_hicosmo_de_wspline_register_functions ();
+  return;
+}
 
-  numcosmo_init = TRUE;
+static gsize _functions_initialized = 0;
 
-  _mpi_ctrl.initialized    = 0;
-  _mpi_ctrl.size           = 1;
-  _mpi_ctrl.rank           = 0;
-  _mpi_ctrl.nslaves        = 0;
-  _mpi_ctrl.working_slaves = 0;
-
-  atexit (_ncm_cfg_exit);
-
-#ifdef HAVE_MPI
-  MPI_Initialized (&_mpi_ctrl.initialized);
-
-  if (!_mpi_ctrl.initialized)
+/**
+ * ncm_cfg_register_functions:
+ *
+ * Register functions for the ncm_cfg namespace.
+ *
+ */
+void
+ncm_cfg_register_functions (void)
+{
+  if (g_once_init_enter (&_functions_initialized))
   {
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI not initialized, calling MPI_Init.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-    MPI_Init (argc, argv);
-    MPI_Initialized (&_mpi_ctrl.initialized);
+    _nc_hicosmo_register_functions ();
+    _nc_hicosmo_de_register_functions ();
+    _nc_hiprim_register_functions ();
+    _nc_hireion_register_functions ();
+    _nc_distance_register_functions ();
+    _nc_planck_fi_cor_tt_register_functions ();
+    _nc_hicosmo_de_wspline_register_functions ();
+
+    g_once_init_leave (&_functions_initialized, TRUE);
   }
-  else
-  {
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI was already initialized!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-  }
-
-  {
-    gchar mpi_hostname[MPI_MAX_PROCESSOR_NAME];
-    gint len = 0;
-
-    MPI_Comm_size (MPI_COMM_WORLD, &_mpi_ctrl.size);
-    MPI_Comm_rank (MPI_COMM_WORLD, &_mpi_ctrl.rank);
-    MPI_Get_processor_name (mpi_hostname, &len);
-
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] We have %d MPI process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);
-
-    if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
-    {
-      _ncm_cfg_mpi_main_loop ();
-    }
-    else
-    {
-      _mpi_ctrl.nslaves        = (_mpi_ctrl.size - 1);
-      _mpi_ctrl.working_slaves = 0;
-    }
-  }
-#endif /* HAVE_MPI */
 
   return;
 }
