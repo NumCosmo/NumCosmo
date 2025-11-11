@@ -177,7 +177,7 @@ test_nc_cluster_abundance_sanity (TestNcClusterAbundance *test, gconstpointer pd
   nc_data_cluster_ncount_init_from_sampling (test->ncdata, test->mset, test->area, rng);
   nc_halo_mass_function_prepare (mfp, test->cosmo);
   g_assert_true (nc_halo_mass_function_peek_survey_area (mfp) == test->area);
-  g_assert_cmpfloat (nc_halo_mass_function_d2n_dzdlnM (mfp, test->cosmo, 100, 1000), ==, mfp->mf_lb);
+  g_assert_cmpfloat (nc_halo_mass_function_d2n_dzdlnM (mfp, test->cosmo, 10.0, 100.0), ==, mfp->mf_lb);
 
   {
     gchar *desc = ncm_data_get_desc (NCM_DATA (test->ncdata));
