@@ -54,7 +54,9 @@ typedef struct _NcClusterMassSelectionPrivate NcClusterMassSelectionPrivate;
  * @NC_CLUSTER_MASS_SELECTION_SIGMA_P1: slope on the standard deviation of the log-normal distribution
  * @NC_CLUSTER_MASS_SELECTION_SIGMA_P2: redshift dependency standard deviation of the log-normal distribution
  * @NC_CLUSTER_MASS_SELECTION_CUT: cut in richness
+ *
  * FIXME
+ *
  */
 typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_SELECTION_SPARAMS >*/
 {
@@ -65,8 +67,6 @@ typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_SELECTION_SPARAMS >*/
   NC_CLUSTER_MASS_SELECTION_SIGMA_P1,
   NC_CLUSTER_MASS_SELECTION_SIGMA_P2,
   NC_CLUSTER_MASS_SELECTION_CUT,
-
-
   /* < private > */
   NC_CLUSTER_MASS_SELECTION_SPARAM_LEN, /*< skip >*/
 }   NcClusterMassSelectionSParams;
@@ -96,21 +96,22 @@ struct _NcClusterMassSelection
 GType nc_cluster_mass_selection_get_type (void) G_GNUC_CONST;
 
 void nc_cluster_mass_selection_set_enable_rejection (NcClusterMassSelection *selection, gboolean on);
-void nc_cluster_mass_selection_set_ipurity(NcClusterMassSelection *selection, NcmSpline2dBicubic *ipurity);
-void nc_cluster_mass_selection_set_completeness(NcClusterMassSelection *selection, NcmSpline2dBicubic *completeness);
-void nc_cluster_mass_selection_set_lnM_limits(NcClusterMassSelection *selection, NcmVector *lnM_limits);
+void nc_cluster_mass_selection_set_ipurity (NcClusterMassSelection *selection, NcmSpline2dBicubic *ipurity);
+void nc_cluster_mass_selection_set_completeness (NcClusterMassSelection *selection, NcmSpline2dBicubic *completeness);
+void nc_cluster_mass_selection_set_lnM_limits (NcClusterMassSelection *selection, NcmVector *lnM_limits);
 
-gdouble nc_cluster_mass_selection_completeness(NcClusterMassSelection *selection, gdouble lnM, gdouble z);
-gdouble nc_cluster_mass_selection_ipurity(NcClusterMassSelection *selection, gdouble lnM_obs, gdouble z);
+gdouble nc_cluster_mass_selection_completeness (NcClusterMassSelection *selection, gdouble lnM, gdouble z);
+gdouble nc_cluster_mass_selection_ipurity (NcClusterMassSelection *selection, gdouble lnM_obs, gdouble z);
 gdouble nc_cluster_mass_selection_get_mean_richness (NcClusterMassSelection *selection, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_selection_get_std_richness (NcClusterMassSelection *selection, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_selection_get_cut (NcClusterMassSelection *selection);
 gdouble nc_cluster_mass_selection_get_mean (NcClusterMassSelection *selection, gdouble lnM, gdouble z);
 gdouble nc_cluster_mass_selection_get_std (NcClusterMassSelection *selection, gdouble lnM, gdouble z);
 gboolean nc_cluster_mass_selection_get_enable_rejection (NcClusterMassSelection *selection);
-NcmSpline2d *nc_cluster_mass_selection_peek_ipurity(NcClusterMassSelection *selection);
-NcmSpline2d *nc_cluster_mass_selection_peek_completeness(NcClusterMassSelection *selection);
+NcmSpline2d *nc_cluster_mass_selection_peek_ipurity (NcClusterMassSelection *selection);
+NcmSpline2d *nc_cluster_mass_selection_peek_completeness (NcClusterMassSelection *selection);
 
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_MASS_SELECTION_H_ */
+

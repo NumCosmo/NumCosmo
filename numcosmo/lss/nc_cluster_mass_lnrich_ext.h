@@ -59,7 +59,7 @@ typedef struct _NcClusterMassLnrichExtPrivate NcClusterMassLnrichExtPrivate;
  * @NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_M2: quadratic slope on the standard deviation of the log-normal distribution
  * @NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_Z2: quadratic redshift dependency on the standard deviation of the log-normal distribution
  * @NC_CLUSTER_MASS_LNRICH_EXT_SIGMA_MZ: cross term on the standard deviation of the log-normal distribution
- * @NC_CLUSTER_MASS_LNRICH_EXT_A0: 
+ * @NC_CLUSTER_MASS_LNRICH_EXT_A0: bias of the mean
  * @NC_CLUSTER_MASS_LNRICH_EXT_CUT: cut in richness
  * @NC_CLUSTER_MASS_LNRICH_EXT_CUT_M1: slope on the cut in richness
  * @NC_CLUSTER_MASS_LNRICH_EXT_CUT_Z1: redshift dependency on the cut in richness
