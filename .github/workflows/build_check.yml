@@ -17,7 +17,7 @@ jobs:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v6
       with:
-        python-version: '3.11' 
+        python-version: '3.12'
     - name: Install pre-requisites
       run: |
         sudo apt-get update
@@ -113,7 +113,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu", "macos"]
-        python-version: ["3.11"]
+        python-version: ["3.12"]
         mpi: ["openmpi", "mpich"]
         exclude:
           - os: "macos"
@@ -153,6 +153,7 @@ jobs:
           conda remove -q -v -n numcosmo_developer openmpi
           conda install -q -v -n numcosmo_developer ${{ matrix.mpi }}
           conda install -q -v -n numcosmo_developer libfabric-devel
+          conda list
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Setting up NumCosmo
         run: |
