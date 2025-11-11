@@ -289,7 +289,6 @@ def create_numcosmo_mapping(
     matter_ps: LinearMatterPowerSpectrum = LinearMatterPowerSpectrum.NONE,
     nonlin_matter_ps: NonLinearMatterPowerSpectrum = NonLinearMatterPowerSpectrum.NONE,
     distance_max_z: float = 10.0,
-    require_nonlinear_pk: bool = False,
     reltol: float = 1.0e-4,
 ) -> MappingNumCosmo:
     """Create a NumCosmo mapping.
@@ -325,12 +324,7 @@ def create_numcosmo_mapping(
         ps_mnl = Nc.PowspecMNLHaloFit.new(ps_ml, 3.0, reltol)
         ps_ml.set_reltol_spline(reltol)
 
-    return MappingNumCosmo(
-        p_ml=ps_ml,
-        p_mnl=ps_mnl,
-        dist=dist,
-        require_nonlinear_pk=require_nonlinear_pk,
-    )
+    return MappingNumCosmo(p_ml=ps_ml, p_mnl=ps_mnl, dist=dist)
 
 
 COSMO_PARAMETER_CONVERSION = {
