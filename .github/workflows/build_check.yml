@@ -141,7 +141,7 @@ jobs:
         id: cache
         with:
           path: ${{ env.CONDA }}/envs
-          key: conda-${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-${{ steps.get-date.outputs.today }}-${{ hashFiles('environment.yml') }}-v${{ env.CACHE_VERSION }}
+          key: conda-${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-${{ matrix.mpi }}-${{ steps.get-date.outputs.today }}-${{ hashFiles('environment.yml') }}-v${{ env.CACHE_VERSION }}
       - name: Update environment
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
