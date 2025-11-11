@@ -607,7 +607,7 @@ nc_cluster_mass_ascaso_get_std_richness (NcClusterMassAscaso *ascaso, gdouble ln
   const gdouble DlnM                      = lnM - self->lnM0;
   const gdouble Dln1pz                    = log1p (z) - self->ln1pz0;
 
-  return SIGMA_P0 + SIGMA_P1 * DlnM + SIGMA_P2 * Dln1pz;
+  return fabs (SIGMA_P0 + SIGMA_P1 * DlnM + SIGMA_P2 * Dln1pz);
 }
 
 /**

@@ -451,6 +451,10 @@ python_tests = [
         'source': 'test_py_sanity.py',
     },
     {
+        'name': 'py_data_cluster_mass_rich',
+        'source': 'test_py_data_cluster_mass_rich.py',
+    },
+    {
         'name': 'py_data_funnel',
         'source': 'test_py_data_funnel.py',
     },

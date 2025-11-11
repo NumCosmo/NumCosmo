@@ -271,8 +271,8 @@ _nc_data_cluster_mass_rich_compute_likelihood (const gdouble lnR_i, const gdoubl
 static gdouble
 _nc_data_cluster_mass_rich_compute_ascaso (NcDataClusterMassRichPrivate *self, NcClusterMassAscaso *ascaso)
 {
-  gdouble local_m2lnL  = 0.0;
   const guint ncluster = ncm_vector_len (self->z_cluster);
+  gdouble local_m2lnL  = 0.0;
   guint i;
 
   for (i = 0; i < ncluster; i++)
@@ -293,8 +293,8 @@ _nc_data_cluster_mass_rich_compute_ascaso (NcDataClusterMassRichPrivate *self, N
 static gdouble
 _nc_data_cluster_mass_rich_compute_ascaso_bootstrap (NcDataClusterMassRichPrivate *self, NcClusterMassAscaso *ascaso, NcmBootstrap *bstrap)
 {
-  gdouble local_m2lnL = 0.0;
   const guint bsize   = ncm_bootstrap_get_bsize (bstrap);
+  gdouble local_m2lnL = 0.0;
   guint k;
 
   for (k = 0; k < bsize; k++)
