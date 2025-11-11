@@ -41,7 +41,7 @@ dependencies:
       - pygobject-stubs
       - pytest-tap
       - types-tabulate
-  - plotnine
+  - plotnine < 0.15
   - pyccl >= 3.0.0
   - pydantic
   - pygobject

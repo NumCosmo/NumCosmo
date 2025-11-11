@@ -54,6 +54,9 @@ __all__ = [
     "dict_to_var_dict",
 ]
 
+Ncm.cfg_register_objects()
+Ncm.cfg_register_functions()
+
 
 class GEnum(StrEnum):
     """Enum for GObject enums."""
