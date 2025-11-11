@@ -640,7 +640,6 @@ ncm_data_gauss_cov_peek_mean (NcmDataGaussCov *gauss)
   return self->y;
 }
 
-
 /**
  * ncm_data_gauss_cov_set_cov:
  * @gauss: a #NcmDataGaussCov

@@ -2560,3 +2560,4 @@ ncm_cfg_get_commit_hash (void)
 {
   return NUMCOSMO_GIT_COMMIT;
 }
+

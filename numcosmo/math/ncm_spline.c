@@ -1,5 +1,3 @@
-
-
 /***************************************************************************
  *            ncm_spline.c
  *
@@ -351,6 +349,7 @@ ncm_spline_new (const NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
   NcmSpline *s_new = ncm_spline_copy_empty (s);
 
   ncm_spline_set (s_new, xv, yv, init);
+
   return s_new;
 }
 

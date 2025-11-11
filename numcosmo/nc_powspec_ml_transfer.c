@@ -220,7 +220,8 @@ _nc_powspec_ml_transfer_eval_pk (gdouble lnk, gpointer user_data)
   const gdouble tf            = nc_transfer_func_eval (arg->tf, arg->cosmo, kh);
   const gdouble tf2           = tf * tf;
 
-  const gdouble Delta_zeta_k  = nc_hiprim_SA_powspec_k (arg->prim, k);
+  const gdouble Delta_zeta_k = nc_hiprim_SA_powspec_k (arg->prim, k);
+
   return k * Delta_zeta_k * arg->Pm_k2Pzeta * tf2;
 }
 
@@ -242,8 +243,7 @@ _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model)
     ps_mlt->Pm_k2Pzeta = (2.0 * M_PI * M_PI) * gsl_pow_2 ((2.0 / 5.0) * nc_growth_func_get_dust_norma_Da0 (ps_mlt->gf) / nc_hicosmo_Omega_m0 (cosmo)) * gsl_pow_4 (RH);
   }
 
-  { 
-
+  {
     NcmSplineCubicNotaknot *pk = ncm_spline_cubic_notaknot_new ();
     NcmSpline *pk_s            = NCM_SPLINE (pk);
     NcPowspecMLTransferArg arg = {cosmo, nc_hicosmo_peek_prim (cosmo), ps_mlt->tf, nc_hicosmo_h (cosmo), ps_mlt->Pm_k2Pzeta};
@@ -258,7 +258,6 @@ _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model)
 
     ncm_spline_clear (&ps_mlt->Pk);
     ps_mlt->Pk = pk_s;
-
   }
 }
 
