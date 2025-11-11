@@ -215,7 +215,6 @@ def test_evol_mode_and_state_interp(
 
 def test_wkb_eval(cosmo_qgrw: Nc.HICosmo):
     """Test NcHIPertITwoFluidsWKB evaluation."""
-
     k_a = np.geomspace(1.0e-3, 1.0e3, 5)
     alpha_a = np.linspace(-100.0, 1.0, 5)
 
@@ -259,7 +258,6 @@ def test_eom_eval(cosmo_qgrw: Nc.HICosmo):
 
 def test_state(cosmo_qgrw: Nc.HICosmo):
     """Test NcHIPertITwoFluidsWKB evaluation."""
-
     k_a = np.geomspace(1.0e-3, 1.0e3, 5)
     alpha_a = np.linspace(-100.0, 1.0, 5)
 
