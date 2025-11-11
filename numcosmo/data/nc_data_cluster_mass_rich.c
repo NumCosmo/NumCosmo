@@ -236,7 +236,7 @@ nc_data_cluster_mass_rich_class_init (NcDataClusterMassRichClass *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  data_class->bootstrap  = FALSE;
+  data_class->bootstrap  = TRUE;
   data_class->get_length = &_nc_data_cluster_mass_rich_get_length;
   data_class->get_dof    = &_nc_data_cluster_mass_rich_get_dof;
   data_class->m2lnL_val  = &_nc_data_cluster_mass_rich_m2lnL_val;
@@ -259,57 +259,161 @@ _nc_data_cluster_mass_rich_get_dof (NcmData *data)
   return _nc_data_cluster_mass_rich_get_length (data);
 }
 
+static inline gdouble
+_nc_data_cluster_mass_rich_compute_likelihood (const gdouble lnR_i, const gdouble lnR_i_mean, const gdouble lnR_i_std, const gdouble lnR_cut_i)
+{
+  return gsl_pow_2 ((lnR_i - lnR_i_mean) / lnR_i_std)
+         + 2.0 * log (lnR_i_std)
+         + 2.0 * log (0.5 * erfc ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std)));
+}
+
+static gdouble
+_nc_data_cluster_mass_rich_compute_ascaso (NcDataClusterMassRichPrivate *self, NcClusterMassAscaso *ascaso)
+{
+  gdouble local_m2lnL  = 0.0;
+  const guint ncluster = ncm_vector_len (self->z_cluster);
+  guint i;
+
+  for (i = 0; i < ncluster; i++)
+  {
+    const gdouble z_i        = ncm_vector_get (self->z_cluster, i);
+    const gdouble lnM_i      = ncm_vector_get (self->lnM_cluster, i);
+    const gdouble lnR_i      = ncm_vector_get (self->lnR_cluster, i);
+    const gdouble lnR_i_mean = nc_cluster_mass_ascaso_get_mean_richness (ascaso, lnM_i, z_i);
+    const gdouble lnR_i_std  = nc_cluster_mass_ascaso_get_std_richness (ascaso, lnM_i, z_i);
+    const gdouble lnR_cut_i  = nc_cluster_mass_ascaso_get_cut (ascaso, lnM_i, z_i);
+
+    local_m2lnL += _nc_data_cluster_mass_rich_compute_likelihood (lnR_i, lnR_i_mean, lnR_i_std, lnR_cut_i);
+  }
+
+  return local_m2lnL;
+}
+
+static gdouble
+_nc_data_cluster_mass_rich_compute_ascaso_bootstrap (NcDataClusterMassRichPrivate *self, NcClusterMassAscaso *ascaso, NcmBootstrap *bstrap)
+{
+  gdouble local_m2lnL = 0.0;
+  const guint bsize   = ncm_bootstrap_get_bsize (bstrap);
+  guint k;
+
+  for (k = 0; k < bsize; k++)
+  {
+    const guint i            = ncm_bootstrap_get (bstrap, k);
+    const gdouble z_i        = ncm_vector_get (self->z_cluster, i);
+    const gdouble lnM_i      = ncm_vector_get (self->lnM_cluster, i);
+    const gdouble lnR_i      = ncm_vector_get (self->lnR_cluster, i);
+    const gdouble lnR_i_mean = nc_cluster_mass_ascaso_get_mean_richness (ascaso, lnM_i, z_i);
+    const gdouble lnR_i_std  = nc_cluster_mass_ascaso_get_std_richness (ascaso, lnM_i, z_i);
+    const gdouble lnR_cut_i  = nc_cluster_mass_ascaso_get_cut (ascaso, lnM_i, z_i);
+
+    local_m2lnL += _nc_data_cluster_mass_rich_compute_likelihood (lnR_i, lnR_i_mean, lnR_i_std, lnR_cut_i);
+  }
+
+  return local_m2lnL;
+}
+
+static gdouble
+_nc_data_cluster_mass_rich_compute_lnrich_ext (NcDataClusterMassRichPrivate *self, NcClusterMassLnrichExt *lnrich_ext)
+{
+  gdouble local_m2lnL     = 0.0;
+  const gdouble lnR_cut_i = nc_cluster_mass_lnrich_ext_get_cut (lnrich_ext);
+  const guint ncluster    = ncm_vector_len (self->z_cluster);
+  guint i;
+
+  for (i = 0; i < ncluster; i++)
+  {
+    const gdouble z_i        = ncm_vector_get (self->z_cluster, i);
+    const gdouble lnM_i      = ncm_vector_get (self->lnM_cluster, i);
+    const gdouble lnR_i      = ncm_vector_get (self->lnR_cluster, i);
+    const gdouble lnR_i_mean = nc_cluster_mass_lnrich_ext_get_mean_richness (lnrich_ext, lnM_i, z_i);
+    const gdouble lnR_i_std  = nc_cluster_mass_lnrich_ext_get_std_richness (lnrich_ext, lnM_i, z_i);
+
+    local_m2lnL += _nc_data_cluster_mass_rich_compute_likelihood (lnR_i, lnR_i_mean, lnR_i_std, lnR_cut_i);
+  }
+
+  return local_m2lnL;
+}
+
+static gdouble
+_nc_data_cluster_mass_rich_compute_lnrich_ext_bootstrap (NcDataClusterMassRichPrivate *self, NcClusterMassLnrichExt *lnrich_ext, NcmBootstrap *bstrap)
+{
+  gdouble local_m2lnL     = 0.0;
+  const gdouble lnR_cut_i = nc_cluster_mass_lnrich_ext_get_cut (lnrich_ext);
+  const guint bsize       = ncm_bootstrap_get_bsize (bstrap);
+  guint k;
+
+  for (k = 0; k < bsize; k++)
+  {
+    const guint i            = ncm_bootstrap_get (bstrap, k);
+    const gdouble z_i        = ncm_vector_get (self->z_cluster, i);
+    const gdouble lnM_i      = ncm_vector_get (self->lnM_cluster, i);
+    const gdouble lnR_i      = ncm_vector_get (self->lnR_cluster, i);
+    const gdouble lnR_i_mean = nc_cluster_mass_lnrich_ext_get_mean_richness (lnrich_ext, lnM_i, z_i);
+    const gdouble lnR_i_std  = nc_cluster_mass_lnrich_ext_get_std_richness (lnrich_ext, lnM_i, z_i);
+
+    local_m2lnL += _nc_data_cluster_mass_rich_compute_likelihood (lnR_i, lnR_i_mean, lnR_i_std, lnR_cut_i);
+  }
+
+  return local_m2lnL;
+}
+
 static void
 _nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
   NcDataClusterMassRich *dmr                = NC_DATA_CLUSTER_MASS_RICH (data);
   NcDataClusterMassRichPrivate * const self = nc_data_cluster_mass_rich_get_instance_private (dmr);
   NcClusterMass *cluster_mass               = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-  register gdouble local_m2lnL              = 0.0;
+  gdouble local_m2lnL                       = 0.0;
 
-  if (NC_IS_CLUSTER_MASS_ASCASO (cluster_mass))
+  if (!ncm_data_bootstrap_enabled (data))
   {
-    NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-    const guint ncluster        = ncm_vector_len (self->z_cluster);
-    guint i;
-
-    for (i = 0; i < ncluster; i++)
+    if (NC_IS_CLUSTER_MASS_ASCASO (cluster_mass))
     {
-      const gdouble z_i        = ncm_vector_get (self->z_cluster, i);
-      const gdouble lnM_i      = ncm_vector_get (self->lnM_cluster, i);
-      const gdouble lnR_i      = ncm_vector_get (self->lnR_cluster, i);
-      const gdouble lnR_i_mean = nc_cluster_mass_ascaso_get_mean_richness (ascaso, lnM_i, z_i);
-      const gdouble lnR_i_std  = nc_cluster_mass_ascaso_get_std_richness (ascaso, lnM_i, z_i);
-      const gdouble lnR_cut_i  = nc_cluster_mass_ascaso_get_cut (ascaso, lnM_i, z_i);
+      NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (cluster_mass);
 
-      local_m2lnL += gsl_pow_2 ((lnR_i - lnR_i_mean) / lnR_i_std)
-                     + 2.0 * log (lnR_i_std)
-                     + 2.0 * log (gsl_sf_erfc ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std)) * 0.5);
+      local_m2lnL = _nc_data_cluster_mass_rich_compute_ascaso (self, ascaso);
     }
-  }
-  else if (NC_IS_CLUSTER_MASS_LNRICH_EXT (cluster_mass))
-  {
-    NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-    const guint ncluster               = ncm_vector_len (self->z_cluster);
-    guint i;
-
-    for (i = 0; i < ncluster; i++)
+    else if (NC_IS_CLUSTER_MASS_LNRICH_EXT (cluster_mass))
     {
-      const gdouble z_i        = ncm_vector_get (self->z_cluster, i);
-      const gdouble lnM_i      = ncm_vector_get (self->lnM_cluster, i);
-      const gdouble lnR_i      = ncm_vector_get (self->lnR_cluster, i);
-      const gdouble lnR_i_mean = nc_cluster_mass_lnrich_ext_get_mean_richness (lnrich_ext, lnM_i, z_i);
-      const gdouble lnR_i_std  = nc_cluster_mass_lnrich_ext_get_std_richness (lnrich_ext, lnM_i, z_i);
-      const gdouble lnR_cut_i  = nc_cluster_mass_lnrich_ext_get_cut (lnrich_ext);
+      NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (cluster_mass);
 
-      local_m2lnL += gsl_pow_2 ((lnR_i - lnR_i_mean) / lnR_i_std)
-                     + 2.0 * log (lnR_i_std)
-                     + 2.0 * log (0.5 * gsl_sf_erfc ((lnR_cut_i - lnR_i_mean) / (M_SQRT2 * lnR_i_std)));
+      local_m2lnL = _nc_data_cluster_mass_rich_compute_lnrich_ext (self, lnrich_ext);
+    }
+    else
+    {
+      g_error ("nc_data_cluster_mass_rich_mean_func: unsupported cluster mass model");
     }
   }
   else
   {
-    g_error ("nc_data_cluster_mass_rich_mean_func: unsupported cluster mass model");
+    NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
+    const guint bsize    = ncm_bootstrap_get_bsize (bstrap);
+
+    if (bsize == 0)
+    {
+      *m2lnL = 0.0;
+
+      return;
+    }
+
+    g_assert (ncm_bootstrap_is_init (bstrap));
+
+    if (NC_IS_CLUSTER_MASS_ASCASO (cluster_mass))
+    {
+      NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (cluster_mass);
+
+      local_m2lnL = _nc_data_cluster_mass_rich_compute_ascaso_bootstrap (self, ascaso, bstrap);
+    }
+    else if (NC_IS_CLUSTER_MASS_LNRICH_EXT (cluster_mass))
+    {
+      NcClusterMassLnrichExt *lnrich_ext = NC_CLUSTER_MASS_LNRICH_EXT (cluster_mass);
+
+      local_m2lnL = _nc_data_cluster_mass_rich_compute_lnrich_ext_bootstrap (self, lnrich_ext, bstrap);
+    }
+    else
+    {
+      g_error ("nc_data_cluster_mass_rich_mean_func: unsupported cluster mass model");
+    }
   }
 
   *m2lnL = local_m2lnL;

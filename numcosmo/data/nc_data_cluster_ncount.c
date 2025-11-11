@@ -626,7 +626,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   if (self->z_obs_params_len > 0)
     z_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->z_obs_params_len);
 
-      lnM_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->lnM_obs_len);
+  lnM_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->lnM_obs_len);
 
   if (self->lnM_obs_params_len > 0)
     lnM_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->lnM_obs_params_len);
