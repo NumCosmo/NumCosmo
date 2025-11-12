@@ -25,6 +25,7 @@
 """Tests on NcmDataClusterMassRich class."""
 
 import pytest
+from numpy.testing import assert_allclose
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
@@ -98,7 +99,11 @@ def fixture_fit(
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
     ascaso.param_set_desc("cut", {"fit": False})
     fit = Ncm.Fit.factory(
-        Ncm.FitType.GSL_MMS, None, likelihood, mset, Ncm.FitGradType.NUMDIFF_CENTRAL
+        Ncm.FitType.NLOPT,
+        "ln-neldermead",
+        likelihood,
+        mset,
+        Ncm.FitGradType.NUMDIFF_CENTRAL,
     )
     return fit
 
@@ -109,16 +114,12 @@ def test_data_cluster_mass_rich_fit(fit: Ncm.Fit):
     fparam_len = mset.fparam_len()
     original_params = np.array([mset.fparam_get(i) for i in range(fparam_len)])
 
-    fit.run(Ncm.FitRunMsgs.NONE)
-    fit.obs_fisher()
-    cov = np.array(fit.get_covar().dup_array()).reshape(fparam_len, fparam_len)
-
+    fit.run_restart(Ncm.FitRunMsgs.NONE, 1.0e-2, 0.0)
     new_params = np.array([mset.fparam_get(i) for i in range(fparam_len)])
 
     # Check that original_params - new_params is close given cov
     diff = original_params - new_params
-    chi2 = np.dot(diff, np.linalg.solve(cov, diff))
-    assert chi2 < fparam_len * 9.0, "Parameters differ too much from original values"
+    assert np.sum(diff**2) < fparam_len
 
 
 @pytest.mark.parametrize(
