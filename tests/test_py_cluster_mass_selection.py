@@ -42,7 +42,7 @@ LN_RICHNESS_CUT = np.log(5)
 
 @pytest.fixture(name="prim")
 def fixture_prim() -> Nc.HIPrim:
-    """Fixture for HIPrimPowerLaw."""
+    """Create primordial power spectrum model."""
     prim = Nc.HIPrimPowerLaw.new()
     prim.props.n_SA = 0.967
     return prim
@@ -50,13 +50,16 @@ def fixture_prim() -> Nc.HIPrim:
 
 @pytest.fixture(name="reion")
 def fixture_reion() -> Nc.HIReion:
-    """Fixture for HIReionCamb."""
+    """Create reionization model."""
     return Nc.HIReionCamb.new()
 
 
 @pytest.fixture(name="cosmo")
 def fixture_cosmo(prim: Nc.HIPrim, reion: Nc.HIReion) -> Nc.HICosmo:
-    """Create and configure a cosmological model."""
+    """Create cosmological model with dark energy.
+
+    Configures a flat LCDM cosmology with w = -1.
+    """
     cosmo = Nc.HICosmoDEXcdm()
     cosmo.param_set_by_name("Omegax", 1 - 0.2603)
     cosmo.param_set_by_name("H0", 71)
@@ -72,7 +75,10 @@ def fixture_cosmo(prim: Nc.HIPrim, reion: Nc.HIReion) -> Nc.HICosmo:
 
 @pytest.fixture(name="psf")
 def fixture_psf(cosmo: Nc.HICosmo, prim: Nc.HIPrim) -> Ncm.PowspecFilter:
-    """Create and configure power spectrum filter."""
+    """Create power spectrum filter.
+
+    Configures a tophat filter and normalizes to sigma8 = 0.8.
+    """
     tf = Nc.TransferFuncEH()
     psml = Nc.PowspecMLTransfer.new(tf)
     psml.require_kmin(1.0e-6)
@@ -91,7 +97,10 @@ def fixture_psf(cosmo: Nc.HICosmo, prim: Nc.HIPrim) -> Ncm.PowspecFilter:
 
 @pytest.fixture(name="cluster_m")
 def fixture_cluster_m() -> Nc.ClusterMass:
-    """Create and configure cluster mass selection model."""
+    """Create cluster mass-richness relation model.
+
+    Configures a selection model with richness cut at ln(5).
+    """
     cluster_m = Nc.ClusterMassSelection(
         lnRichness_min=LN_RICHNESS_CUT, lnRichness_max=np.log(200)
     )
@@ -108,7 +117,11 @@ def fixture_cluster_m() -> Nc.ClusterMass:
 
 @pytest.fixture(name="completeness")
 def fixture_completeness() -> Ncm.Spline2d:
-    """Create completeness 2D spline from data."""
+    """Create completeness function as 2D spline.
+
+    Returns a bicubic spline interpolating completeness as a function of
+    cluster mass and redshift.
+    """
     lnM_bins_knots = np.linspace(13.0 * np.log(10), 16 * np.log(10), 10)
     z_bins_knots = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.1])
     lnM_centers = 0.5 * (lnM_bins_knots[:-1] + lnM_bins_knots[1:])
@@ -233,7 +246,11 @@ def fixture_completeness() -> Ncm.Spline2d:
 
 @pytest.fixture(name="ipurity")
 def fixture_ipurity() -> Ncm.Spline2d:
-    """Create inverse purity 2D spline from data."""
+    """Create inverse purity function as 2D spline.
+
+    Returns a bicubic spline interpolating inverse purity as a function of
+    richness and redshift.
+    """
     lnR_bins_knots = np.log(np.array([5, 10, 15, 20, 35, 70, 100, 200]))
     z_bins_knots = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.1])
     lnR_centers = 0.5 * (lnR_bins_knots[:-1] + lnR_bins_knots[1:])
@@ -335,14 +352,20 @@ def fixture_ipurity() -> Ncm.Spline2d:
 
 
 def _benchmark_function(func_str: str, globals_dict: dict, number: int = 100):
-    """Execute and time a function, printing the average execution time."""
+    """Execute and time a function.
+
+    Returns the average execution time over the specified number of runs.
+    """
     execution_time = timeit.timeit(func_str, globals=globals_dict, number=number)
     return execution_time / number
 
 
 @pytest.fixture(name="cluster_z")
 def fixture_cluster_z():
-    """Create and configure cluster redshift object."""
+    """Create cluster redshift distribution.
+
+    Returns a no-distribution model with redshift range [0.1, 1.1].
+    """
     return Nc.ClusterRedshiftNodist(z_min=0.1, z_max=1.1)
 
 
@@ -353,7 +376,11 @@ def fixture_cluster_abundance(
     cluster_z: Nc.ClusterRedshift,
     cluster_m: Nc.ClusterMass,
 ):
-    """Create and configure cluster abundance object."""
+    """Create cluster abundance calculator.
+
+    Configures halo mass function with Despali multiplicity function and
+    Tinker bias for the survey area.
+    """
     dist = Nc.Distance.new(2.0)
     dist.prepare(cosmo)
 
@@ -374,14 +401,18 @@ def fixture_cluster_abundance(
 
 
 def test_get_cut(cluster_m: Nc.ClusterMass) -> None:
-    """Fixture providing configured cluster mass selection model and dependencies."""
+    """Test richness cut parameter."""
     assert cluster_m.get_cut() == LN_RICHNESS_CUT
 
 
 def test_cluster_mass_selection_completeness_and_purity(
     cluster_m: Nc.ClusterMass, completeness: Ncm.Spline2d, ipurity: Ncm.Spline2d
 ) -> None:
-    """Test completeness and purity functions with and without splines."""
+    """Test completeness and purity functions.
+
+    Verifies that without splines, completeness and purity default to 1.0,
+    and that splines can be properly set and retrieved.
+    """
     nsize = 500
     lnM = np.linspace(np.log(1e12), np.log(1e16), nsize)
     z = np.linspace(0, 2, nsize)
@@ -409,7 +440,11 @@ def test_cluster_mass_selection_completeness_and_purity(
 def test_cluster_mass_selection_mean_std(
     cluster_m: Nc.ClusterMass, completeness: Ncm.Spline2d, ipurity: Ncm.Spline2d
 ) -> None:
-    """Test mean and standard deviation with and without truncation."""
+    """Test mean and standard deviation of truncated distribution.
+
+    Verifies that truncation increases mean and decreases standard deviation
+    compared to the untruncated Gaussian.
+    """
     nsize = 100
     cluster_m.set_ipurity(ipurity)
     cluster_m.set_completeness(completeness)
@@ -454,7 +489,8 @@ def test_cluster_mass_selection_distribution(
 ) -> None:
     """Benchmark probability distribution function.
 
-    Benchmark across mass, redshift, and richness."""
+    Times the evaluation of p() across mass, redshift, and richness dimensions.
+    """
     nsize = 100
     cluster_m.set_ipurity(ipurity)
     cluster_m.set_completeness(completeness)
@@ -637,7 +673,11 @@ def test_cluster_mass_selection_resample(
     cosmo: Nc.HICosmo,
     cluster_abundance: Nc.ClusterAbundance,
 ) -> None:
-    """Test resampling with and without rejection."""
+    """Test cluster resampling with rejection.
+
+    Verifies that rejection sampling produces fewer clusters than sampling
+    without rejection.
+    """
     cluster_m.set_ipurity(ipurity)
     cluster_m.set_completeness(completeness)
     cluster_z = Nc.ClusterRedshiftNodist(z_min=0.1, z_max=1.1)
@@ -683,7 +723,11 @@ def test_cluster_mass_selection_hmf(
     cosmo: Nc.HICosmo,
     cluster_abundance: Nc.ClusterAbundance,
 ) -> None:
-    """Benchmark cluster abundance calculations with selection effects."""
+    """Benchmark cluster abundance calculations.
+
+    Times the evaluation of cluster number counts and differential number
+    counts with selection effects applied.
+    """
     cluster_m.set_ipurity(ipurity)
     cluster_m.set_completeness(completeness)
     cluster_z = Nc.ClusterRedshiftNodist(z_min=0.1, z_max=1.1)
