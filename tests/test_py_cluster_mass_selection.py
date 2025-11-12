@@ -25,40 +25,55 @@
 
 """Tests for the cluster mass with completeness and purity module."""
 
-import pytest
 import timeit
 import math
+import pytest
 import numpy as np
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.helper import npa_to_seq
 
 Ncm.cfg_init()
 
+# Constants
+SURVEY_AREA_DEG2 = 439.790
+SURVEY_AREA_RAD2 = SURVEY_AREA_DEG2 * (np.pi / 180) ** 2
+LN_RICHNESS_CUT = np.log(5)
 
-@pytest.fixture(name="cluster_mass_selection")
-def fixture_cluster_mass_selection():
-    """"Fixture for the NcClusterMassSelection.""" ""
 
-    # cosmological model
+@pytest.fixture(name="prim")
+def fixture_prim() -> Nc.HIPrim:
+    """Fixture for HIPrimPowerLaw."""
+    prim = Nc.HIPrimPowerLaw.new()
+    prim.props.n_SA = 0.967
+    return prim
+
+
+@pytest.fixture(name="reion")
+def fixture_reion() -> Nc.HIReion:
+    """Fixture for HIReionCamb."""
+    return Nc.HIReionCamb.new()
+
+
+@pytest.fixture(name="cosmo")
+def fixture_cosmo(prim: Nc.HIPrim, reion: Nc.HIReion) -> Nc.HICosmo:
+    """Create and configure a cosmological model."""
     cosmo = Nc.HICosmoDEXcdm()
-    # cosmo.omega_x2omega_k()
-    # cosmo.param_set_by_name("Omegak", 0.00)
     cosmo.param_set_by_name("Omegax", 1 - 0.2603)
     cosmo.param_set_by_name("H0", 71)
     cosmo.param_set_by_name("Omegab", 0.0406)
-    cosmo.param_set_by_name("Omegac", 0.22)  # 0.2603
-    cosmo.param_set_by_name("w", -1.0)  # -1.0
-
-    prim = Nc.HIPrimPowerLaw.new()
-    prim.props.n_SA = 0.967
-
-    reion = Nc.HIReionCamb.new()
+    cosmo.param_set_by_name("Omegac", 0.22)
+    cosmo.param_set_by_name("w", -1.0)
 
     cosmo.add_submodel(prim)
     cosmo.add_submodel(reion)
 
-    tf = Nc.TransferFuncEH()
+    return cosmo
 
+
+@pytest.fixture(name="psf")
+def fixture_psf(cosmo: Nc.HICosmo, prim: Nc.HIPrim) -> Ncm.PowspecFilter:
+    """Create and configure power spectrum filter."""
+    tf = Nc.TransferFuncEH()
     psml = Nc.PowspecMLTransfer.new(tf)
     psml.require_kmin(1.0e-6)
     psml.require_kmax(1.0e3)
@@ -67,29 +82,39 @@ def fixture_cluster_mass_selection():
     psf.set_best_lnr0()
     psf.prepare(cosmo)
 
-    old_amplitude = np.exp(prim.props.ln10e10ASA)
-    prim.props.ln10e10ASA = np.log((0.8 / cosmo.sigma8(psf)) ** 2 * old_amplitude)
+    # Normalize to sigma8 = 0.8
+    old_amplitude = np.exp(prim["ln10e10ASA"])
+    prim["ln10e10ASA"] = np.log((0.8 / cosmo.sigma8(psf)) ** 2 * old_amplitude)
 
-    cut = np.log(5)
-    cluster_m = Nc.ClusterMassSelection(lnRichness_min=cut, lnRichness_max=np.log(200))
+    return psf
+
+
+@pytest.fixture(name="cluster_m")
+def fixture_cluster_m() -> Nc.ClusterMass:
+    """Create and configure cluster mass selection model."""
+    cluster_m = Nc.ClusterMassSelection(
+        lnRichness_min=LN_RICHNESS_CUT, lnRichness_max=np.log(200)
+    )
     cluster_m.param_set_by_name("mup0", 4.12769558168741)
     cluster_m.param_set_by_name("mup1", 1.17476066603899)
     cluster_m.param_set_by_name("mup2", 0.393577193825473)
     cluster_m.param_set_by_name("sigmap0", 0.408750324989284)
     cluster_m.param_set_by_name("sigmap1", -0.123232985316648)
     cluster_m.param_set_by_name("sigmap2", -0.0644996574273048)
-    cluster_m.param_set_by_name("cut", cut)
+    cluster_m.param_set_by_name("cut", LN_RICHNESS_CUT)
 
-    assert cluster_m.get_cut() == cut
+    return cluster_m
 
+
+@pytest.fixture(name="completeness")
+def fixture_completeness() -> Ncm.Spline2d:
+    """Create completeness 2D spline from data."""
     lnM_bins_knots = np.linspace(13.0 * np.log(10), 16 * np.log(10), 10)
     z_bins_knots = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.1])
     lnM_centers = 0.5 * (lnM_bins_knots[:-1] + lnM_bins_knots[1:])
     z_centers = 0.5 * (z_bins_knots[:-1] + z_bins_knots[1:])
 
-    completeness_knots = Ncm.Matrix.new(len(z_centers), len(lnM_centers))
-
-    completeness_smooth_clipped = np.array(
+    completeness_data = np.array(
         [
             [
                 0.00775574,
@@ -192,26 +217,29 @@ def fixture_cluster_mass_selection():
             ],
         ]
     )
+
+    completeness_knots = Ncm.Matrix.new(len(z_centers), len(lnM_centers))
     for i in range(len(z_centers)):
         for j in range(len(lnM_centers)):
-            completeness_knots.set(i, j, completeness_smooth_clipped.T[i][j])
+            completeness_knots.set(i, j, completeness_data.T[i][j])
 
-    completeness = Ncm.Spline2dBicubic(
+    return Ncm.Spline2dBicubic(
         spline=Ncm.SplineCubicNotaknot.new(),
         x_vector=Ncm.Vector.new_array(npa_to_seq(lnM_centers)),
         y_vector=Ncm.Vector.new_array(npa_to_seq(z_centers)),
         z_matrix=completeness_knots,
     )
 
+
+@pytest.fixture(name="ipurity")
+def fixture_ipurity() -> Ncm.Spline2d:
+    """Create inverse purity 2D spline from data."""
     lnR_bins_knots = np.log(np.array([5, 10, 15, 20, 35, 70, 100, 200]))
     z_bins_knots = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.1])
-
     lnR_centers = 0.5 * (lnR_bins_knots[:-1] + lnR_bins_knots[1:])
     z_centers = 0.5 * (z_bins_knots[:-1] + z_bins_knots[1:])
 
-    ipurity_knots = Ncm.Matrix.new(len(z_centers), len(lnR_centers))
-
-    ipurity_smooth_clipped = np.array(
+    ipurity_data = np.array(
         [
             [
                 1 / 0.56847321,
@@ -292,37 +320,85 @@ def fixture_cluster_mass_selection():
             ],
         ]
     )
+
+    ipurity_knots = Ncm.Matrix.new(len(z_centers), len(lnR_centers))
     for i in range(len(z_centers)):
         for j in range(len(lnR_centers)):
-            ipurity_knots.set(i, j, ipurity_smooth_clipped.T[i][j])
+            ipurity_knots.set(i, j, ipurity_data.T[i][j])
 
-    ipurity = Ncm.Spline2dBicubic(
+    return Ncm.Spline2dBicubic(
         spline=Ncm.SplineCubicNotaknot.new(),
         x_vector=Ncm.Vector.new_array(npa_to_seq(lnR_centers)),
         y_vector=Ncm.Vector.new_array(npa_to_seq(z_centers)),
         z_matrix=ipurity_knots,
     )
 
-    return cluster_m, completeness, ipurity, cosmo, psf
+
+def _benchmark_function(func_str: str, globals_dict: dict, number: int = 100):
+    """Execute and time a function, printing the average execution time."""
+    execution_time = timeit.timeit(func_str, globals=globals_dict, number=number)
+    return execution_time / number
 
 
-def test_cluster_mass_selection_completeness_and_purity(cluster_mass_selection):
+@pytest.fixture(name="cluster_z")
+def fixture_cluster_z():
+    """Create and configure cluster redshift object."""
+    return Nc.ClusterRedshiftNodist(z_min=0.1, z_max=1.1)
 
+
+@pytest.fixture(name="cluster_abundance")
+def fixture_cluster_abundance(
+    cosmo: Nc.HICosmo,
+    psf: Ncm.PowspecFilter,
+    cluster_z: Nc.ClusterRedshift,
+    cluster_m: Nc.ClusterMass,
+):
+    """Create and configure cluster abundance object."""
+    dist = Nc.Distance.new(2.0)
+    dist.prepare(cosmo)
+
+    mulf = Nc.MultiplicityFuncDespali.new()
+    mulf.set_mdef(Nc.MultiplicityFuncMassDef.VIRIAL)
+
+    hmf = Nc.HaloMassFunction.new(dist, psf, mulf)
+    hmf.prepare(cosmo)
+    hmf.set_area(SURVEY_AREA_RAD2)
+
+    hbias = Nc.HaloBiasTinker.new(hmf)
+
+    cad = Nc.ClusterAbundance.new(hmf, hbias)
+    cad.set_area(SURVEY_AREA_RAD2)
+    cad.prepare(cosmo, cluster_z, cluster_m)
+
+    return cad
+
+
+def test_get_cut(cluster_m: Nc.ClusterMass) -> None:
+    """Fixture providing configured cluster mass selection model and dependencies."""
+    assert cluster_m.get_cut() == LN_RICHNESS_CUT
+
+
+def test_cluster_mass_selection_completeness_and_purity(
+    cluster_m: Nc.ClusterMass, completeness: Ncm.Spline2d, ipurity: Ncm.Spline2d
+) -> None:
+    """Test completeness and purity functions with and without splines."""
     nsize = 500
     lnM = np.linspace(np.log(1e12), np.log(1e16), nsize)
     z = np.linspace(0, 2, nsize)
     lnR = np.linspace(np.log(1), np.log(1000), nsize)
-    cluster_m, completeness, ipurity, cosmo, psf = cluster_mass_selection
 
+    # Initially, no completeness/ipurity should be set
     assert cluster_m.peek_completeness() is None
     assert cluster_m.peek_ipurity() is None
 
+    # Without splines, completeness and ipurity should be 1.0
     for i in range(nsize):
         assert cluster_m.completeness(lnM[i], 0.5) == 1.0
         assert cluster_m.completeness(np.log(1e14), z[i]) == 1.0
         assert cluster_m.ipurity(np.log(5), z[i]) == 1.0
         assert cluster_m.ipurity(lnR[i], 0.5) == 1.0
 
+    # Set splines and verify they are properly assigned
     cluster_m.set_ipurity(ipurity)
     cluster_m.set_completeness(completeness)
 
@@ -330,16 +406,19 @@ def test_cluster_mass_selection_completeness_and_purity(cluster_mass_selection):
     assert cluster_m.peek_ipurity() is ipurity
 
 
-def test_cluster_mass_selection_mean_std(cluster_mass_selection):
-
+def test_cluster_mass_selection_mean_std(
+    cluster_m: Nc.ClusterMass, completeness: Ncm.Spline2d, ipurity: Ncm.Spline2d
+) -> None:
+    """Test mean and standard deviation with and without truncation."""
     nsize = 100
-    cluster_m, completeness, ipurity, cosmo, psf = cluster_mass_selection
     cluster_m.set_ipurity(ipurity)
     cluster_m.set_completeness(completeness)
 
     lnM = np.linspace(np.log(1e13), np.log(1e16), nsize)
     z = np.linspace(0, 1.1, nsize)
 
+    # With truncation, mean should be >= untruncated mean, std should be <= untruncated
+    # std
     for i in range(nsize):
         assert cluster_m.get_mean(lnM[i], 0.5) >= cluster_m.get_mean_richness(
             lnM[i], 0.5
@@ -347,12 +426,12 @@ def test_cluster_mass_selection_mean_std(cluster_mass_selection):
         assert cluster_m.get_mean(np.log(1e14), z[i]) >= cluster_m.get_mean_richness(
             np.log(1e14), z[i]
         )
-
         assert cluster_m.get_std(lnM[i], 0.5) <= cluster_m.get_std_richness(lnM[i], 0.5)
         assert cluster_m.get_std(np.log(1e14), z[i]) <= cluster_m.get_std_richness(
             np.log(1e14), z[i]
         )
 
+    # Without truncation (cut at -infinity), mean and std should match
     cluster_m.param_set_by_name("cut", -1e20)
     for i in range(nsize):
         assert cluster_m.get_mean(lnM[i], 0.5) == cluster_m.get_mean_richness(
@@ -361,17 +440,22 @@ def test_cluster_mass_selection_mean_std(cluster_mass_selection):
         assert cluster_m.get_mean(np.log(1e14), z[i]) == cluster_m.get_mean_richness(
             np.log(1e14), z[i]
         )
-
         assert cluster_m.get_std(lnM[i], 0.5) == cluster_m.get_std_richness(lnM[i], 0.5)
         assert cluster_m.get_std(np.log(1e14), z[i]) == cluster_m.get_std_richness(
             np.log(1e14), z[i]
         )
 
 
-def test_cluster_mass_selection_distribution(cluster_mass_selection):
+def test_cluster_mass_selection_distribution(
+    cluster_m: Nc.ClusterMass,
+    completeness: Ncm.Spline2d,
+    ipurity: Ncm.Spline2d,
+    cosmo: Nc.HICosmo,
+) -> None:
+    """Benchmark probability distribution function.
 
+    Benchmark across mass, redshift, and richness."""
     nsize = 100
-    cluster_m, completeness, ipurity, cosmo, psf = cluster_mass_selection
     cluster_m.set_ipurity(ipurity)
     cluster_m.set_completeness(completeness)
 
@@ -392,33 +476,38 @@ def test_cluster_mass_selection_distribution(cluster_mass_selection):
         }
     )
 
-    cluster_p_mass_test = (
-        """[cluster_m.p(cosmo, lnM[i], 0.5, [np.log(20)],None) for i in range(nsize)]"""
-    )
-    execution_time = timeit.timeit(cluster_p_mass_test, globals=my_globals, number=100)
-    print(
-        f"Average time per execution cluster_m.p mass: {execution_time / 100:.6f} seconds"
-    )
+    # Benchmark p() function for different parameters
+    tests = [
+        (
+            "mass",
+            "[cluster_m.p(cosmo, lnM[i], 0.5, [np.log(20)], None) "
+            "for i in range(nsize)]",
+        ),
+        (
+            "redshift",
+            "[cluster_m.p(cosmo, np.log(1e14), z[i], [np.log(20)], None) "
+            "for i in range(nsize)]",
+        ),
+        (
+            "richness",
+            "[cluster_m.p(cosmo, np.log(1e14), 0.5, [lnR[i]], None) "
+            "for i in range(nsize)]",
+        ),
+    ]
 
-    cluster_p_z_test = """[cluster_m.p(cosmo, np.log(1e14), z[i], [np.log(20)],None) for i in range(nsize)]"""
-    execution_time = timeit.timeit(cluster_p_z_test, globals=my_globals, number=100)
-    print(
-        f"Average time per execution cluster_m.p redshift: {execution_time / 100:.6f} seconds"
-    )
-
-    cluster_p_richness_test = """[cluster_m.p(cosmo, np.log(1e14), 0.5, [lnR[i]],None) for i in range(nsize)]"""
-    execution_time = timeit.timeit(
-        cluster_p_richness_test, globals=my_globals, number=100
-    )
-    print(
-        f"Average time per execution cluster_m.p richness: {execution_time / 100:.6f} seconds"
-    )
+    for name, test_str in tests:
+        avg_time = _benchmark_function(test_str, my_globals)
+        print(f"Average time per execution cluster_m.p {name}: {avg_time:.6f} seconds")
 
 
-def test_cluster_mass_selection_cumulative(cluster_mass_selection):
-
+def test_cluster_mass_selection_cumulative(
+    cluster_m: Nc.ClusterMass,
+    completeness: Ncm.Spline2d,
+    ipurity: Ncm.Spline2d,
+    cosmo: Nc.HICosmo,
+) -> None:
+    """Benchmark cumulative distribution function across mass and redshift."""
     nsize = 100
-    cluster_m, completeness, ipurity, cosmo, psf = cluster_mass_selection
     cluster_m.set_ipurity(ipurity)
     cluster_m.set_completeness(completeness)
 
@@ -437,29 +526,30 @@ def test_cluster_mass_selection_cumulative(cluster_mass_selection):
         }
     )
 
-    cluster_intp_mass_test = (
-        """[cluster_m.intp(cosmo, lnM[i], 0.5) for i in range(nsize)]"""
-    )
-    execution_time = timeit.timeit(
-        cluster_intp_mass_test, globals=my_globals, number=100
-    )
-    print(
-        f"Average time per execution cluster_m.intp mass: {execution_time / 100:.6f} seconds"
-    )
+    # Benchmark intp() function for different parameters
+    tests = [
+        ("mass", "[cluster_m.intp(cosmo, lnM[i], 0.5) for i in range(nsize)]"),
+        (
+            "redshift",
+            "[cluster_m.intp(cosmo, np.log(1e14), z[i]) for i in range(nsize)]",
+        ),
+    ]
 
-    cluster_intp_z_test = (
-        """[cluster_m.intp(cosmo, np.log(1e14), z[i]) for i in range(nsize)]"""
-    )
-    execution_time = timeit.timeit(cluster_intp_z_test, globals=my_globals, number=100)
-    print(
-        f"Average time per execution cluster_m.intp redshift: {execution_time / 100:.6f} seconds"
-    )
+    for name, test_str in tests:
+        avg_time = _benchmark_function(test_str, my_globals)
+        print(
+            f"Average time per execution cluster_m.intp {name}: {avg_time:.6f} seconds"
+        )
 
 
-def test_cluster_mass_selection_cumulative_bin(cluster_mass_selection):
-
+def test_cluster_mass_selection_cumulative_bin(
+    cluster_m: Nc.ClusterMass,
+    completeness: Ncm.Spline2d,
+    ipurity: Ncm.Spline2d,
+    cosmo: Nc.HICosmo,
+) -> None:
+    """Benchmark binned cumulative distribution function across mass and redshift."""
     nsize = 100
-    cluster_m, completeness, ipurity, cosmo, psf = cluster_mass_selection
     cluster_m.set_ipurity(ipurity)
     cluster_m.set_completeness(completeness)
 
@@ -480,35 +570,46 @@ def test_cluster_mass_selection_cumulative_bin(cluster_mass_selection):
         }
     )
 
-    cluster_intp_bin_mass_test = """[[cluster_m.intp_bin(cosmo, lnM[i], 0.5, [lnR[j]], [lnR[j+1]], None) for j in range(nsize-1)] for i in range(nsize)]"""
-    execution_time = timeit.timeit(
-        cluster_intp_bin_mass_test, globals=my_globals, number=100
-    )
-    print(
-        f"Average time per execution cluster_m.intp_bin mass: {execution_time / 100:.6f} seconds"
-    )
+    # Benchmark intp_bin() function for different parameters
+    tests = [
+        (
+            "mass",
+            "[[cluster_m.intp_bin(cosmo, lnM[i], 0.5, [lnR[j]], [lnR[j+1]], None) "
+            "for j in range(nsize-1)] for i in range(nsize)]",
+        ),
+        (
+            "redshift",
+            "[[cluster_m.intp_bin(cosmo, np.log(1e14), z[i], [lnR[j]], [lnR[j+1]], "
+            "None) for j in range(nsize-1)] for i in range(nsize)]",
+        ),
+    ]
 
-    cluster_intp_bin_redshift_test = """[[cluster_m.intp_bin(cosmo, np.log(1e14), z[i], [lnR[j]], [lnR[j+1]], None) for j in range(nsize-1)] for i in range(nsize)]"""
-    execution_time = timeit.timeit(
-        cluster_intp_bin_redshift_test, globals=my_globals, number=100
-    )
-    print(
-        f"Average time per execution cluster_m.intp_bin redshift: {execution_time / 100:.6f} seconds"
-    )
+    for name, test_str in tests:
+        avg_time = _benchmark_function(test_str, my_globals)
+        print(
+            f"Average time per execution cluster_m.intp_bin {name}: "
+            f"{avg_time:.6f} seconds"
+        )
 
 
-def test_cluster_mass_selection_limits(cluster_mass_selection):
-
-    cluster_m, completeness, ipurity, cosmo, psf = cluster_mass_selection
+def test_cluster_mass_selection_limits(
+    cluster_m: Nc.ClusterMass,
+    completeness: Ncm.Spline2d,
+    ipurity: Ncm.Spline2d,
+    cosmo: Nc.HICosmo,
+) -> None:
+    """Test mass limits for different selection functions."""
     cluster_m.set_ipurity(ipurity)
     cluster_m.set_completeness(completeness)
 
     nsize = 100
     lnM = np.linspace(np.log(1e12), np.log(1e16), nsize)
 
+    # Test n_limits
     assert math.isclose(cluster_m.n_limits(cosmo)[0], lnM[0], rel_tol=1e-14)
     assert math.isclose(cluster_m.n_limits(cosmo)[1], lnM[-1], rel_tol=1e-14)
 
+    # Test p_limits
     assert math.isclose(
         cluster_m.p_limits(cosmo, [np.log(5)], [0])[0], lnM[0], rel_tol=1e-14
     )
@@ -516,6 +617,7 @@ def test_cluster_mass_selection_limits(cluster_mass_selection):
         cluster_m.p_limits(cosmo, [np.log(5)], [0])[1], lnM[-1], rel_tol=1e-14
     )
 
+    # Test p_bin_limits
     assert math.isclose(
         cluster_m.p_bin_limits(cosmo, [np.log(5)], [np.log(10)], [0])[0],
         lnM[0],
@@ -528,52 +630,42 @@ def test_cluster_mass_selection_limits(cluster_mass_selection):
     )
 
 
-def test_cluster_mass_selection_resample(cluster_mass_selection):
-
-    cluster_m, completeness, ipurity, cosmo, psf = cluster_mass_selection
+def test_cluster_mass_selection_resample(
+    cluster_m: Nc.ClusterMass,
+    completeness: Ncm.Spline2d,
+    ipurity: Ncm.Spline2d,
+    cosmo: Nc.HICosmo,
+    cluster_abundance: Nc.ClusterAbundance,
+) -> None:
+    """Test resampling with and without rejection."""
     cluster_m.set_ipurity(ipurity)
     cluster_m.set_completeness(completeness)
     cluster_z = Nc.ClusterRedshiftNodist(z_min=0.1, z_max=1.1)
 
-    nsize = 100
-    lnM = np.linspace(np.log(1e13), np.log(1e16), nsize)
-    z = np.linspace(0, 1.1, nsize)
-    lnR = np.linspace(np.log(5), np.log(200), nsize)
-
-    dist = Nc.Distance.new(2.0)
-    dist.prepare(cosmo)
-
-    mulf = Nc.MultiplicityFuncDespali.new()
-    mulf.set_mdef(Nc.MultiplicityFuncMassDef.VIRIAL)
-    hmf = Nc.HaloMassFunction.new(dist, psf, mulf)
-    hmf.prepare(cosmo)
-    hmf.set_area(439.790 * (np.pi / 180) ** 2)
-    hbias = Nc.HaloBiasTinker.new(hmf)
-    cad = Nc.ClusterAbundance.new(hmf, hbias)
-    cad.set_area(439.790 * (np.pi / 180) ** 2)
-    cad.prepare(cosmo, cluster_z, cluster_m)
-
+    cad = cluster_abundance
     mset = Ncm.MSet.new_array([cosmo, cluster_z, cluster_m])
     rng = Ncm.RNG.seeded_new(None, 42)
 
-    assert cluster_m.get_enable_rejection() == True
+    # Test with rejection enabled
+    assert cluster_m.get_enable_rejection()
     ncount_rejection = Nc.DataClusterNCount.new(
         cad, "NcClusterRedshiftNodist", "NcClusterMassSelection"
     )
-    ncount_rejection.init_from_sampling(mset, 439.790 * ((np.pi / 180) ** 2), rng)
+    ncount_rejection.init_from_sampling(mset, SURVEY_AREA_RAD2, rng)
 
+    # Test with rejection disabled
     cluster_m.set_enable_rejection(False)
-    assert cluster_m.get_enable_rejection() == False
+    assert not cluster_m.get_enable_rejection()
     ncount_no_rejection = Nc.DataClusterNCount.new(
         cad, "NcClusterRedshiftNodist", "NcClusterMassSelection"
     )
-    ncount_no_rejection.init_from_sampling(mset, 439.790 * ((np.pi / 180) ** 2), rng)
+    ncount_no_rejection.init_from_sampling(mset, SURVEY_AREA_RAD2, rng)
 
+    # Rejection should produce fewer clusters
     assert (
         ncount_rejection.get_lnM_true().len() < ncount_no_rejection.get_lnM_true().len()
     )
     assert ncount_rejection.get_z_true().len() < ncount_no_rejection.get_z_true().len()
-
     assert (
         ncount_rejection.get_lnM_obs().col_len()
         < ncount_no_rejection.get_lnM_obs().col_len()
@@ -584,9 +676,14 @@ def test_cluster_mass_selection_resample(cluster_mass_selection):
     )
 
 
-def test_cluster_mass_selection_hmf(cluster_mass_selection):
-
-    cluster_m, completeness, ipurity, cosmo, psf = cluster_mass_selection
+def test_cluster_mass_selection_hmf(
+    cluster_m: Nc.ClusterMass,
+    completeness: Ncm.Spline2d,
+    ipurity: Ncm.Spline2d,
+    cosmo: Nc.HICosmo,
+    cluster_abundance: Nc.ClusterAbundance,
+) -> None:
+    """Benchmark cluster abundance calculations with selection effects."""
     cluster_m.set_ipurity(ipurity)
     cluster_m.set_completeness(completeness)
     cluster_z = Nc.ClusterRedshiftNodist(z_min=0.1, z_max=1.1)
@@ -596,18 +693,7 @@ def test_cluster_mass_selection_hmf(cluster_mass_selection):
     z = np.linspace(0, 1.1, nsize)
     lnR = np.linspace(np.log(5), np.log(200), nsize)
 
-    dist = Nc.Distance.new(2.0)
-    dist.prepare(cosmo)
-
-    mulf = Nc.MultiplicityFuncDespali.new()
-    mulf.set_mdef(Nc.MultiplicityFuncMassDef.VIRIAL)
-    hmf = Nc.HaloMassFunction.new(dist, psf, mulf)
-    hmf.prepare(cosmo)
-    hmf.set_area(439.790 * (np.pi / 180) ** 2)
-    hbias = Nc.HaloBiasTinker.new(hmf)
-    cad = Nc.ClusterAbundance.new(hmf, hbias)
-    cad.set_area(439.790 * (np.pi / 180) ** 2)
-    cad.prepare(cosmo, cluster_z, cluster_m)
+    cad = cluster_abundance
 
     my_globals = globals().copy()
     my_globals.update(
@@ -624,42 +710,37 @@ def test_cluster_mass_selection_hmf(cluster_mass_selection):
         }
     )
 
-    cad_n_test = """cad.n(cosmo ,cluster_z , cluster_m)"""
-    execution_time = timeit.timeit(cad_n_test, globals=my_globals, number=100)
-    print(
-        f"Average time per execution cad.n with selection: {execution_time / 100:.6f} seconds"
-    )
+    # Benchmark cluster abundance functions
+    tests = [
+        ("cad.n", "cad.n(cosmo, cluster_z, cluster_m)", 100),
+        (
+            "cad.d2n mass",
+            "[cad.d2n(cosmo, cluster_z, cluster_m, lnM[i], 0.5) "
+            "for i in range(nsize)]",
+            100,
+        ),
+        (
+            "cad.d2n redshift",
+            "[cad.d2n(cosmo, cluster_z, cluster_m, np.log(1e13), "
+            "z[i]) for i in range(nsize)]",
+            100,
+        ),
+        (
+            "cad.intp_bin_d2n richness",
+            "[cad.intp_bin_d2n(cosmo, cluster_z, cluster_m, [lnR[i]], "
+            "[lnR[i+1]], None, [0.1], [1.1], None) for i in range(nsize-1)]",
+            1,
+        ),
+        (
+            "cad.intp_bin_d2n redshift",
+            "[cad.intp_bin_d2n(cosmo, cluster_z, cluster_m, [np.log(5)], "
+            "[np.log(200)], None, [z[i]], [z[i+1]], None) for i in range(nsize-1)]",
+            1,
+        ),
+    ]
 
-    cad_d2n_richness_test = (
-        """[cad.d2n(cosmo ,cluster_z , cluster_m,lnM[i],0.5) for i in range(nsize)]"""
-    )
-    execution_time = timeit.timeit(
-        cad_d2n_richness_test, globals=my_globals, number=100
-    )
-    print(
-        f"Average time per execution cad.d2n richness with selection : {execution_time / 100:.6f} seconds"
-    )
-
-    cad_d2n_redshift_test = """[cad.d2n(cosmo ,cluster_z , cluster_m,np.log(1e13),z[i]) for i in range(nsize)]"""
-    execution_time = timeit.timeit(
-        cad_d2n_redshift_test, globals=my_globals, number=100
-    )
-    print(
-        f"Average time per execution cad.d2n redshift with selection: {execution_time / 100:.6f} seconds"
-    )
-
-    cad_intp_bin_d2n_richness_test = """[cad.intp_bin_d2n(cosmo ,cluster_z , cluster_m,[lnR[i]], [lnR[i+1]], None ,[0.1], [1.1], None) for i in range(nsize-1)]"""
-    execution_time = timeit.timeit(
-        cad_intp_bin_d2n_richness_test, globals=my_globals, number=1
-    )
-    print(
-        f"Average time per execution cad.intp_bin_d2n richness with selection : {execution_time / 1:.6f} seconds"
-    )
-
-    cad_intp_bin_d2n_redshift_test = """[cad.intp_bin_d2n(cosmo ,cluster_z , cluster_m,[np.log(5)], [np.log(200)], None ,[z[i]], [z[i+1]], None)  for i in range(nsize-1)]"""
-    execution_time = timeit.timeit(
-        cad_intp_bin_d2n_redshift_test, globals=my_globals, number=1
-    )
-    print(
-        f"Average time per execution cad.intp_bin_d2n redshift with selection: {execution_time / 1:.6f} seconds"
-    )
+    for name, test_str, number in tests:
+        avg_time = _benchmark_function(test_str, my_globals, number)
+        print(
+            f"Average time per execution {name} with selection: {avg_time:.6f} seconds"
+        )
