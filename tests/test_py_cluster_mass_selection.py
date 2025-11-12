@@ -25,7 +25,7 @@
 
 """Tests for the cluster mass with completeness and purity module."""
 
-import timeit
+from timeit import timeit
 import math
 import pytest
 import numpy as np
@@ -351,15 +351,6 @@ def fixture_ipurity() -> Ncm.Spline2d:
     )
 
 
-def _benchmark_function(func_str: str, globals_dict: dict, number: int = 100):
-    """Execute and time a function.
-
-    Returns the average execution time over the specified number of runs.
-    """
-    execution_time = timeit.timeit(func_str, globals=globals_dict, number=number)
-    return execution_time / number
-
-
 @pytest.fixture(name="cluster_z")
 def fixture_cluster_z():
     """Create cluster redshift distribution.
@@ -499,40 +490,32 @@ def test_cluster_mass_selection_distribution(
     z = np.linspace(0, 1.1, nsize)
     lnR = np.linspace(np.log(5), np.log(200), nsize)
 
-    my_globals = globals().copy()
-    my_globals.update(
-        {
-            "nsize": nsize,
-            "lnM": lnM,
-            "z": z,
-            "lnR": lnR,
-            "np": np,
-            "cluster_m": cluster_m,
-            "cosmo": cosmo,
-        }
-    )
-
-    # Benchmark p() function for different parameters
     tests = [
         (
             "mass",
-            "[cluster_m.p(cosmo, lnM[i], 0.5, [np.log(20)], None) "
-            "for i in range(nsize)]",
+            lambda: [
+                cluster_m.p(cosmo, lnM[i], 0.5, [np.log(20)], None)
+                for i in range(nsize)
+            ],
         ),
         (
             "redshift",
-            "[cluster_m.p(cosmo, np.log(1e14), z[i], [np.log(20)], None) "
-            "for i in range(nsize)]",
+            lambda: [
+                cluster_m.p(cosmo, np.log(1e14), z[i], [np.log(20)], None)
+                for i in range(nsize)
+            ],
         ),
         (
             "richness",
-            "[cluster_m.p(cosmo, np.log(1e14), 0.5, [lnR[i]], None) "
-            "for i in range(nsize)]",
+            lambda: [
+                cluster_m.p(cosmo, np.log(1e14), 0.5, [lnR[i]], None)
+                for i in range(nsize)
+            ],
         ),
     ]
 
-    for name, test_str in tests:
-        avg_time = _benchmark_function(test_str, my_globals)
+    for name, func in tests:
+        avg_time = timeit(func, number=100)
         print(f"Average time per execution cluster_m.p {name}: {avg_time:.6f} seconds")
 
 
@@ -550,29 +533,16 @@ def test_cluster_mass_selection_cumulative(
     lnM = np.linspace(np.log(1e13), np.log(1e16), nsize)
     z = np.linspace(0, 1.1, nsize)
 
-    my_globals = globals().copy()
-    my_globals.update(
-        {
-            "nsize": nsize,
-            "lnM": lnM,
-            "z": z,
-            "np": np,
-            "cluster_m": cluster_m,
-            "cosmo": cosmo,
-        }
-    )
-
-    # Benchmark intp() function for different parameters
     tests = [
-        ("mass", "[cluster_m.intp(cosmo, lnM[i], 0.5) for i in range(nsize)]"),
+        ("mass", lambda: [cluster_m.intp(cosmo, lnM[i], 0.5) for i in range(nsize)]),
         (
             "redshift",
-            "[cluster_m.intp(cosmo, np.log(1e14), z[i]) for i in range(nsize)]",
+            lambda: [cluster_m.intp(cosmo, np.log(1e14), z[i]) for i in range(nsize)],
         ),
     ]
 
-    for name, test_str in tests:
-        avg_time = _benchmark_function(test_str, my_globals)
+    for name, func in tests:
+        avg_time = timeit(func, number=100)
         print(
             f"Average time per execution cluster_m.intp {name}: {avg_time:.6f} seconds"
         )
@@ -593,35 +563,33 @@ def test_cluster_mass_selection_cumulative_bin(
     z = np.linspace(0, 1.1, nsize)
     lnR = np.linspace(np.log(5), np.log(200), nsize)
 
-    my_globals = globals().copy()
-    my_globals.update(
-        {
-            "nsize": nsize,
-            "lnM": lnM,
-            "z": z,
-            "lnR": lnR,
-            "np": np,
-            "cluster_m": cluster_m,
-            "cosmo": cosmo,
-        }
-    )
-
-    # Benchmark intp_bin() function for different parameters
     tests = [
         (
             "mass",
-            "[[cluster_m.intp_bin(cosmo, lnM[i], 0.5, [lnR[j]], [lnR[j+1]], None) "
-            "for j in range(nsize-1)] for i in range(nsize)]",
+            lambda: [
+                [
+                    cluster_m.intp_bin(cosmo, lnM[i], 0.5, [lnR[j]], [lnR[j + 1]], None)
+                    for j in range(nsize - 1)
+                ]
+                for i in range(nsize)
+            ],
         ),
         (
             "redshift",
-            "[[cluster_m.intp_bin(cosmo, np.log(1e14), z[i], [lnR[j]], [lnR[j+1]], "
-            "None) for j in range(nsize-1)] for i in range(nsize)]",
+            lambda: [
+                [
+                    cluster_m.intp_bin(
+                        cosmo, np.log(1e14), z[i], [lnR[j]], [lnR[j + 1]], None
+                    )
+                    for j in range(nsize - 1)
+                ]
+                for i in range(nsize)
+            ],
         ),
     ]
 
-    for name, test_str in tests:
-        avg_time = _benchmark_function(test_str, my_globals)
+    for name, func in tests:
+        avg_time = timeit(func, number=100)
         print(
             f"Average time per execution cluster_m.intp_bin {name}: "
             f"{avg_time:.6f} seconds"
@@ -739,52 +707,63 @@ def test_cluster_mass_selection_hmf(
 
     cad = cluster_abundance
 
-    my_globals = globals().copy()
-    my_globals.update(
-        {
-            "nsize": nsize,
-            "lnM": lnM,
-            "z": z,
-            "lnR": lnR,
-            "np": np,
-            "cluster_m": cluster_m,
-            "cosmo": cosmo,
-            "cluster_z": cluster_z,
-            "cad": cad,
-        }
-    )
-
-    # Benchmark cluster abundance functions
     tests = [
-        ("cad.n", "cad.n(cosmo, cluster_z, cluster_m)", 100),
+        ("cad.n", lambda: cad.n(cosmo, cluster_z, cluster_m), 100),
         (
             "cad.d2n mass",
-            "[cad.d2n(cosmo, cluster_z, cluster_m, lnM[i], 0.5) "
-            "for i in range(nsize)]",
+            lambda: [
+                cad.d2n(cosmo, cluster_z, cluster_m, lnM[i], 0.5) for i in range(nsize)
+            ],
             100,
         ),
         (
             "cad.d2n redshift",
-            "[cad.d2n(cosmo, cluster_z, cluster_m, np.log(1e13), "
-            "z[i]) for i in range(nsize)]",
+            lambda: [
+                cad.d2n(cosmo, cluster_z, cluster_m, np.log(1e13), z[i])
+                for i in range(nsize)
+            ],
             100,
         ),
         (
             "cad.intp_bin_d2n richness",
-            "[cad.intp_bin_d2n(cosmo, cluster_z, cluster_m, [lnR[i]], "
-            "[lnR[i+1]], None, [0.1], [1.1], None) for i in range(nsize-1)]",
+            lambda: [
+                cad.intp_bin_d2n(
+                    cosmo,
+                    cluster_z,
+                    cluster_m,
+                    [lnR[i]],
+                    [lnR[i + 1]],
+                    None,
+                    [0.1],
+                    [1.1],
+                    None,
+                )
+                for i in range(nsize - 1)
+            ],
             1,
         ),
         (
             "cad.intp_bin_d2n redshift",
-            "[cad.intp_bin_d2n(cosmo, cluster_z, cluster_m, [np.log(5)], "
-            "[np.log(200)], None, [z[i]], [z[i+1]], None) for i in range(nsize-1)]",
+            lambda: [
+                cad.intp_bin_d2n(
+                    cosmo,
+                    cluster_z,
+                    cluster_m,
+                    [np.log(5)],
+                    [np.log(200)],
+                    None,
+                    [z[i]],
+                    [z[i + 1]],
+                    None,
+                )
+                for i in range(nsize - 1)
+            ],
             1,
         ),
     ]
 
-    for name, test_str, number in tests:
-        avg_time = _benchmark_function(test_str, my_globals, number)
+    for name, func, number in tests:
+        avg_time = timeit(func, number=number)
         print(
             f"Average time per execution {name} with selection: {avg_time:.6f} seconds"
         )
