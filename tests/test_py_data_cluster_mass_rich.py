@@ -26,6 +26,7 @@
 
 import pytest
 import numpy as np
+from numpy.testing import assert_allclose
 
 from numcosmo_py import Ncm, Nc
 
@@ -133,6 +134,7 @@ def test_data_cluster_mass_rich_bootstrap(fit: Ncm.Fit, mc_type: Ncm.FitMCResamp
     original_params = np.array([mset.fparam_get(i) for i in range(fparam_len)])
 
     mc = Ncm.FitMC.new(fit, mc_type, Ncm.FitRunMsgs.NONE)
+    mc.set_nthreads(2)
     mc.start_run()
     mc.run(100)
     mc.end_run()
@@ -165,3 +167,28 @@ def test_data_cluster_mass_rich_apply_cut(
         lnR = np.array(cluster_mass_rich.peek_lnR().dup_array())
         assert len(lnR) <= n_clusters
         assert all(lnR > cut)
+
+
+def test_serialize_deserialize(cluster_mass_rich: Nc.DataClusterMassRich):
+    """Test serialize and deserialize."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    cluster_mass_rich2 = ser.dup_obj(cluster_mass_rich)
+    assert isinstance(cluster_mass_rich2, Nc.DataClusterMassRich)
+
+    assert cluster_mass_rich2 is not cluster_mass_rich
+
+    assert cluster_mass_rich2.get_length() == cluster_mass_rich.get_length()
+    assert cluster_mass_rich2.get_dof() == cluster_mass_rich.get_dof()
+
+    assert_allclose(
+        cluster_mass_rich.peek_lnM().dup_array(),
+        cluster_mass_rich2.peek_lnM().dup_array(),
+    )
+    assert_allclose(
+        cluster_mass_rich.peek_lnR().dup_array(),
+        cluster_mass_rich2.peek_lnR().dup_array(),
+    )
+    assert_allclose(
+        cluster_mass_rich.peek_z().dup_array(),
+        cluster_mass_rich2.peek_z().dup_array(),
+    )
