@@ -149,7 +149,6 @@
 #include <numcosmo/lss/nc_cluster_mass_benson_xray.h>
 #include <numcosmo/lss/nc_cluster_mass_plcl.h>
 #include <numcosmo/lss/nc_cluster_mass_ascaso.h>
-#include <numcosmo/lss/nc_cluster_mass_lnrich_ext.h>
 #include <numcosmo/lss/nc_cluster_mass_selection.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_pseudo_counts.h>
