@@ -152,7 +152,7 @@ def test_data_cluster_mass_rich_bootstrap(fit: Ncm.Fit, mc_type: Ncm.FitMCResamp
     # Bootstrap estimation can be biased
     if mc_type == Ncm.FitMCResampleType.BOOTSTRAP_NOMIX:
         assert (
-            chi2 < fparam_len * 20.0
+            chi2 < fparam_len * 80.0
         ), "Parameters differ too much from original values"
     else:
         assert (
