@@ -368,22 +368,25 @@ _ncm_data_gauss_diag_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       gdouble tmp          = 0.0;
       gdouble wt           = 0.0;
 
-      for (i = 0; i < bsize; i++)
+      if (bsize > 0)
       {
-        guint k            = ncm_bootstrap_get (bstrap, i);
-        const gdouble y_k  = ncm_vector_get (self->y, k);
-        const gdouble yt_k = ncm_vector_get (self->v, k);
-        const gdouble r_k  = (yt_k - y_k);
-        const gdouble w_k  = ncm_vector_get (self->weight, k);
-        const gdouble r_k2 = r_k * r_k;
+        for (i = 0; i < bsize; i++)
+        {
+          guint k            = ncm_bootstrap_get (bstrap, i);
+          const gdouble y_k  = ncm_vector_get (self->y, k);
+          const gdouble yt_k = ncm_vector_get (self->v, k);
+          const gdouble r_k  = (yt_k - y_k);
+          const gdouble w_k  = ncm_vector_get (self->weight, k);
+          const gdouble r_k2 = r_k * r_k;
 
-        *m2lnL += r_k2 * w_k + log (w_k);
-        tmp    += r_k * w_k;
-        wt     += w_k;
+          *m2lnL += r_k2 * w_k - log (w_k);
+          tmp    += r_k * w_k;
+          wt     += w_k;
+        }
+
+        *m2lnL -= tmp * tmp / wt;
+        *m2lnL += bsize * ncm_c_ln2pi ();
       }
-
-      *m2lnL -= tmp * tmp / wt;
-      *m2lnL += self->np * ncm_c_ln2pi ();
     }
   }
   else
@@ -407,18 +410,21 @@ _ncm_data_gauss_diag_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
       const guint bsize    = ncm_bootstrap_get_bsize (bstrap);
 
-      for (i = 0; i < bsize; i++)
+      if (bsize > 0)
       {
-        guint k               = ncm_bootstrap_get (bstrap, i);
-        const gdouble y_k     = ncm_vector_get (self->y, k);
-        const gdouble yt_k    = ncm_vector_get (self->v, k);
-        const gdouble sigma_k = ncm_vector_get (self->sigma, k);
-        const gdouble r_k     = (yt_k - y_k) / sigma_k;
+        for (i = 0; i < bsize; i++)
+        {
+          guint k               = ncm_bootstrap_get (bstrap, i);
+          const gdouble y_k     = ncm_vector_get (self->y, k);
+          const gdouble yt_k    = ncm_vector_get (self->v, k);
+          const gdouble sigma_k = ncm_vector_get (self->sigma, k);
+          const gdouble r_k     = (yt_k - y_k) / sigma_k;
 
-        *m2lnL += r_k * r_k + 2.0 * log (sigma_k);
+          *m2lnL += r_k * r_k + 2.0 * log (sigma_k);
+        }
+
+        *m2lnL += bsize * ncm_c_ln2pi ();
       }
-
-      *m2lnL += self->np * ncm_c_ln2pi ();
     }
   }
 }
