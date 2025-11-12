@@ -25,7 +25,6 @@
 """Tests on NcmDataClusterMassRich class."""
 
 import pytest
-from numpy.testing import assert_allclose
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
