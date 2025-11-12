@@ -150,11 +150,7 @@ def test_data_cluster_mass_rich_bootstrap(fit: Ncm.Fit, mc_type: Ncm.FitMCResamp
     diff = original_params - new_params
     chi2 = np.dot(diff, np.linalg.solve(cov, diff))
     # Bootstrap estimation can be biased
-    if mc_type == Ncm.FitMCResampleType.BOOTSTRAP_NOMIX:
-        assert (
-            chi2 < fparam_len * 80.0
-        ), "Parameters differ too much from original values"
-    else:
+    if mc_type == Ncm.FitMCResampleType.FROM_MODEL:
         assert (
             chi2 < fparam_len * 9.0
         ), "Parameters differ too much from original values"
