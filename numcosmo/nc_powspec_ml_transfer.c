@@ -219,8 +219,7 @@ _nc_powspec_ml_transfer_eval_pk (gdouble lnk, gpointer user_data)
   const gdouble kh            = k / arg->h;
   const gdouble tf            = nc_transfer_func_eval (arg->tf, arg->cosmo, kh);
   const gdouble tf2           = tf * tf;
-
-  const gdouble Delta_zeta_k = nc_hiprim_SA_powspec_k (arg->prim, k);
+  const gdouble Delta_zeta_k  = nc_hiprim_SA_powspec_k (arg->prim, k);
 
   return k * Delta_zeta_k * arg->Pm_k2Pzeta * tf2;
 }
@@ -251,8 +250,6 @@ _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model)
 
     F.function = _nc_powspec_ml_transfer_eval_pk;
     F.params   = &arg;
-
-    /* ncm_model_orig_params_log_all(NCM_MODEL (cosmo)); */
 
     ncm_spline_set_func (pk_s, NCM_SPLINE_FUNCTION_SPLINE, &F, -8.0 * M_LN10, 8.0 * M_LN10, 0, 1.0e-13);
 

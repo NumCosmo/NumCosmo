@@ -370,8 +370,6 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, const gdouble xi,
       g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
     }
 
-
-
     SWAP_PTR (x_array, xt_array);
     SWAP_PTR (y_array, yt_array);
 
