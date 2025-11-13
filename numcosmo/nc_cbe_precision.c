@@ -764,9 +764,9 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_TOL_GAUSS_LEGENDRE:
       cbe_prec->priv->ppr.tol_gauss_legendre = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -1232,9 +1232,9 @@ nc_cbe_precision_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_TOL_GAUSS_LEGENDRE:
       g_value_set_double (value, cbe_prec->priv->ppr.tol_gauss_legendre);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

@@ -96,9 +96,9 @@ _nc_galaxy_selfunc_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_SHELL_SPLINES:
       nc_galaxy_selfunc_set_shell_splines (gsf, g_value_get_boxed (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -117,9 +117,9 @@ _nc_galaxy_selfunc_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_SHELL_SPLINES:
       g_value_take_boxed (value, nc_galaxy_selfunc_get_shell_splines (gsf));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

@@ -120,9 +120,9 @@ _nc_cluster_mass_ascaso_set_property (GObject *object, guint prop_id, const GVal
     case PROP_ENABLE_REJECTION:
       nc_cluster_mass_ascaso_set_enable_rejection (ascaso, g_value_get_boolean (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -151,9 +151,9 @@ _nc_cluster_mass_ascaso_get_property (GObject *object, guint prop_id, GValue *va
     case PROP_ENABLE_REJECTION:
       g_value_set_boolean (value, self->enable_rejection);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

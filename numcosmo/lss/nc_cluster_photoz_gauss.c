@@ -92,9 +92,9 @@ _nc_cluster_photoz_gauss_set_property (GObject *object, guint prop_id, const GVa
     case PROP_PZ_MAX:
       self->pz_max = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -114,9 +114,9 @@ _nc_cluster_photoz_gauss_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_PZ_MAX:
       g_value_set_double (value, self->pz_max);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

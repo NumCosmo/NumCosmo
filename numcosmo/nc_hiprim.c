@@ -79,9 +79,9 @@ nc_hiprim_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_K_PIVOT:
       nc_hiprim_set_k_pivot (prim, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -97,9 +97,9 @@ nc_hiprim_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
     case PROP_K_PIVOT:
       g_value_set_double (value, nc_hiprim_get_k_pivot (prim));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

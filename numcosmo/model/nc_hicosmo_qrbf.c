@@ -136,9 +136,9 @@ _nc_hicosmo_qrbf_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_Z_F:
       g_value_set_double (value, self->z_f);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -155,9 +155,9 @@ _nc_hicosmo_qrbf_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_Z_F:
       nc_hicosmo_qrbf_set_z_f (qrbf, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -591,9 +591,9 @@ _nc_hicosmo_qrbf_rprior_set_property (GObject *object, guint prop_id, const GVal
     case PROP_LAMBDA:
       self->lambda = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -610,9 +610,9 @@ _nc_hicosmo_qrbf_rprior_get_property (GObject *object, guint prop_id, GValue *va
     case PROP_LAMBDA:
       g_value_set_double (value, self->lambda);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

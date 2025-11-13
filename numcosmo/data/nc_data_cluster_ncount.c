@@ -256,9 +256,9 @@ nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
       g_clear_pointer (&self->rnd_name, g_free);
       self->rnd_name = g_value_dup_string (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -326,9 +326,9 @@ nc_data_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_RNG_NAME:
       g_value_set_string (value, self->rnd_name);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
