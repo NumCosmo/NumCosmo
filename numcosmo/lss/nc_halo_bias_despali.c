@@ -140,7 +140,7 @@ nc_halo_bias_despali_class_init (NcHaloBiasDespaliClass *klass)
                                    PROP_EO,
                                    g_param_spec_boolean ("eo",
                                                          NULL,
-                                                         "Whether the halo finder uses eliptical overdensity",
+                                                         "Whether the halo finder uses elliptical overdensity",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -473,15 +473,15 @@ nc_halo_bias_despali_delta_vir (NcHaloBiasDespali *biasf_despali, NcHICosmo *cos
     return 18.0 * pow (M_PI, 2.0) + 82.0 * x - 39.0 * x * x;
 
   else
-    g_error ("Interpolation does not work in this regime.");
+    g_error ("Interpolation does not work for spatially curved cosmology.");
 }
 
 /**
  * nc_halo_bias_despali_set_eo:
  * @biasf_despali: a #NcHaloBiasDespali
- * @on: Whether the halo finder uses eliptical overdensidy.
+ * @on: Whether the halo finder uses elliptical overdensity.
  *
- * Sets array of #Set if halo finder uses eliptical overdensidy.
+ * Sets array of #Set if halo finder uses elliptical overdensity.
  *
  */
 void
@@ -509,7 +509,7 @@ nc_halo_bias_despali_get_eo (NcHaloBiasDespali *biasf_despali)
  * @biasf_despali: a #NcHaloBiasDespali
  * @on: Whether the we use cluster mass function.
  *
- * Sets array of #Set if  uses eliptical  mass function.
+ * Sets array of #Set if  uses elliptical  mass function.
  *
  */
 void

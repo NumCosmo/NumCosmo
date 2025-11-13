@@ -195,14 +195,14 @@ def test_halo_density_profile_density_vectorized(
     assert_allclose(density_array, density_ind_array)
 
 
-def test_halo_density_profile_get_phys_limts(
+def test_halo_density_profile_get_phys_limits(
     halo_density_profile: Nc.HaloDensityProfile,
     cosmo: Nc.HICosmo,
 ):
     """Test HaloDensityProfile get physical limits."""
     z_array = np.linspace(0.0, 1.0, 100)
     for z in z_array:
-        R_min, R_max = halo_density_profile.get_phys_limts(cosmo, z)
+        R_min, R_max = halo_density_profile.get_phys_limits(cosmo, z)
         assert R_min > 0.0
         assert R_max > R_min
 
