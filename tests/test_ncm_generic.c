@@ -79,6 +79,9 @@ void test_nc_halo_cm_param_basic (void);
 void test_nc_halo_cm_klypin11_basic (void);
 void test_nc_halo_cm_duffy08_basic (void);
 void test_nc_halo_bias_despali_basic (void);
+void test_nc_cluster_mass_ascaso_basic (void);
+void test_nc_cluster_mass_selection_basic (void);
+void test_nc_cluster_photoz_gauss_basic (void);
 void test_nc_xcor_basic (void);
 
 gint
@@ -135,6 +138,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/halo_cm_duffy08/basic", test_nc_halo_cm_duffy08_basic);
 
   g_test_add_func ("/nc/halo_bias_despali/basic", test_nc_halo_bias_despali_basic);
+
+  g_test_add_func ("/nc/cluster_mass_ascaso/basic", test_nc_cluster_mass_ascaso_basic);
+  g_test_add_func ("/nc/cluster_mass_selection/basic", test_nc_cluster_mass_selection_basic);
+  g_test_add_func ("/nc/cluster_photoz_gauss/basic", test_nc_cluster_photoz_gauss_basic);
 
   g_test_add_func ("/nc/xcor/basic", test_nc_xcor_basic);
 
@@ -986,5 +993,56 @@ test_nc_halo_bias_despali_basic (void)
   nc_halo_mass_function_clear (&hmf);
 
   NCM_TEST_FREE (nc_halo_bias_despali_free, hbd);
+}
+
+void
+test_nc_cluster_mass_ascaso_basic (void)
+{
+  NcClusterMassAscaso *cluster_m = g_object_new (NC_TYPE_CLUSTER_MASS_ASCASO, NULL);
+  NcClusterMassAscaso *cluster_m2;
+
+  g_assert_true (cluster_m != NULL);
+  g_assert_true (NC_IS_CLUSTER_MASS_ASCASO (cluster_m));
+
+  cluster_m2 = g_object_ref (cluster_m);
+  g_clear_object (&cluster_m2);
+  g_assert_true (cluster_m2 == NULL);
+
+  g_assert_true (NC_IS_CLUSTER_MASS_ASCASO (cluster_m));
+
+  NCM_TEST_FREE (g_object_unref, cluster_m);
+}
+
+void
+test_nc_cluster_mass_selection_basic (void)
+{
+  NcClusterMassSelection *cluster_m = g_object_new (NC_TYPE_CLUSTER_MASS_SELECTION, NULL);
+  NcClusterMassSelection *cluster_m2;
+
+  g_assert_true (cluster_m != NULL);
+  g_assert_true (NC_IS_CLUSTER_MASS_SELECTION (cluster_m));
+
+  cluster_m2 = g_object_ref (cluster_m);
+  g_clear_object (&cluster_m2);
+  g_assert_true (cluster_m2 == NULL);
+
+  g_assert_true (NC_IS_CLUSTER_MASS_SELECTION (cluster_m));
+
+  NCM_TEST_FREE (g_object_unref, cluster_m);
+}
+
+void
+test_nc_cluster_photoz_gauss_basic (void)
+{
+  NcClusterPhotozGauss *cluster_z = nc_cluster_photoz_gauss_new ();
+  NcClusterPhotozGauss *cluster_z2;
+
+  g_assert_true (cluster_z != NULL);
+  g_assert_true (NC_IS_CLUSTER_PHOTOZ_GAUSS (cluster_z));
+  cluster_z2 = g_object_ref (cluster_z);
+  g_clear_object (&cluster_z2);
+  g_assert_true (cluster_z2 == NULL);
+  g_assert_true (NC_IS_CLUSTER_PHOTOZ_GAUSS (cluster_z));
+  NCM_TEST_FREE (g_object_unref, cluster_z);
 }
 

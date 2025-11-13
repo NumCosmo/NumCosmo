@@ -62,9 +62,9 @@ enum
 
 static void
 nc_cluster_photoz_gauss_init (NcClusterPhotozGauss *pzg)
-{ 
+{
   NcClusterPhotozGaussPrivate * const self = pzg->priv = nc_cluster_photoz_gauss_get_instance_private (pzg);
-    
+
   self->pz_max = 0.0;
   self->pz_min = 0.0;
 }
@@ -79,8 +79,8 @@ _nc_cluster_photoz_gauss_finalize (GObject *object)
 static void
 _nc_cluster_photoz_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcClusterPhotozGauss *pzg = NC_CLUSTER_PHOTOZ_GAUSS (object);
-  NcClusterPhotozGaussPrivate *const self = pzg->priv;
+  NcClusterPhotozGauss *pzg                = NC_CLUSTER_PHOTOZ_GAUSS (object);
+  NcClusterPhotozGaussPrivate * const self = pzg->priv;
 
   g_return_if_fail (NC_IS_CLUSTER_PHOTOZ_GAUSS (object));
 
@@ -101,8 +101,8 @@ _nc_cluster_photoz_gauss_set_property (GObject *object, guint prop_id, const GVa
 static void
 _nc_cluster_photoz_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcClusterPhotozGauss *pzg = NC_CLUSTER_PHOTOZ_GAUSS (object);
-  NcClusterPhotozGaussPrivate *const self = pzg->priv;
+  NcClusterPhotozGauss *pzg                = NC_CLUSTER_PHOTOZ_GAUSS (object);
+  NcClusterPhotozGaussPrivate * const self = pzg->priv;
 
   g_return_if_fail (NC_IS_CLUSTER_PHOTOZ_GAUSS (object));
 
@@ -202,9 +202,9 @@ _nc_cluster_photoz_gauss_p (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const
 static gdouble
 _nc_cluster_photoz_gauss_intp (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z)
 {
-  NcClusterPhotozGauss *pzg = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
-  NcClusterPhotozGaussPrivate *const self = pzg->priv;
-    
+  NcClusterPhotozGauss *pzg                = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
+  NcClusterPhotozGaussPrivate * const self = pzg->priv;
+
   const gdouble sigma       = 0.03 * (1.0 + z);
   const gdouble sqrt2_sigma = M_SQRT2 * sigma;
   const gdouble x_min       = (z - self->pz_min) / sqrt2_sigma;
@@ -221,7 +221,6 @@ _nc_cluster_photoz_gauss_intp (NcClusterRedshift *clusterz, NcHICosmo *cosmo, co
 static gdouble
 _nc_cluster_photoz_gauss_intp_bin (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params)
 {
-    
   const gdouble sigma       = z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_SIGMA];
   const gdouble sqrt2_sigma = M_SQRT2 * sigma;
   const gdouble z_bias      = z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS];
@@ -240,8 +239,8 @@ _nc_cluster_photoz_gauss_intp_bin (NcClusterRedshift *clusterz, NcHICosmo *cosmo
 static gboolean
 _nc_cluster_photoz_gauss_resample (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble *z_obs, const gdouble *z_obs_params, NcmRNG *rng)
 {
-  NcClusterPhotozGauss *pzg = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
-  NcClusterPhotozGaussPrivate *const self = pzg->priv;
+  NcClusterPhotozGauss *pzg                = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
+  NcClusterPhotozGaussPrivate * const self = pzg->priv;
   gdouble sigma_z;
 
   sigma_z = z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_SIGMA];
@@ -272,13 +271,12 @@ _nc_cluster_photoz_gauss_p_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo
 
 static void
 _nc_cluster_photoz_gauss_p_bin_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
-{ 
-  
+{
   const gdouble sigma       = z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_SIGMA];
   const gdouble z_bias      = z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS];
   const gdouble z_eff_lower = z_bias + z_obs_lower[0];
   const gdouble z_eff_upper = z_bias + z_obs_upper[0];
- 
+
   *z_lower = z_eff_lower  - 10.0 * sigma;
   *z_upper = z_eff_upper  + 10.0 * sigma;
 }
@@ -286,10 +284,10 @@ _nc_cluster_photoz_gauss_p_bin_limits (NcClusterRedshift *clusterz, NcHICosmo *c
 static void
 _nc_cluster_photoz_gauss_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper)
 {
-  NcClusterPhotozGauss *pzg = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
-  NcClusterPhotozGaussPrivate *const self = pzg->priv;
-  const gdouble zl          = GSL_MAX (self->pz_min - 10.0 * 0.03 * (1.0 + self->pz_min), 0.0);
-  const gdouble zu          = self->pz_max + 10.0 * 0.03 * (1.0 + self->pz_max);
+  NcClusterPhotozGauss *pzg                = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
+  NcClusterPhotozGaussPrivate * const self = pzg->priv;
+  const gdouble zl                         = GSL_MAX (self->pz_min - 10.0 * 0.03 * (1.0 + self->pz_min), 0.0);
+  const gdouble zu                         = self->pz_max + 10.0 * 0.03 * (1.0 + self->pz_max);
 
   *z_lower = zl;
   *z_upper = zu;
@@ -300,11 +298,11 @@ _nc_cluster_photoz_gauss_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo
 /**
  * nc_cluster_photoz_gauss_new:
  *
- * FIXME
+ * Creates a new #NcClusterRedshift.
  *
  * Returns: A new #NcClusterRedshift.
  */
-NcClusterRedshift *
+NcClusterPhotozGauss *
 nc_cluster_photoz_gauss_new ()
 {
   return g_object_new (NC_TYPE_CLUSTER_PHOTOZ_GAUSS, NULL);
@@ -313,8 +311,8 @@ nc_cluster_photoz_gauss_new ()
 static gdouble
 _nc_cluster_photoz_gauss_volume (NcClusterRedshift *clusterz)
 {
-  NcClusterPhotozGauss *pzg = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
-  NcClusterPhotozGaussPrivate *const self = pzg->priv;
+  NcClusterPhotozGauss *pzg                = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
+  NcClusterPhotozGaussPrivate * const self = pzg->priv;
 
   return (self->pz_max - self->pz_min);
 }

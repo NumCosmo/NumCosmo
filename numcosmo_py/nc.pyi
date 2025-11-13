@@ -3233,8 +3233,13 @@ class ClusterRedshift(NumCosmoMath.Model):
         z_obs_params: float,
     ) -> float: ...
     def do_resample(
-        self, cosmo: HICosmo, lnM: float, z: float, rng: NumCosmoMath.RNG
-    ) -> typing.Tuple[bool, float, float]: ...
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: float,
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
+        rng: NumCosmoMath.RNG,
+    ) -> typing.Tuple[bool, float]: ...
     def do_volume(self) -> float: ...
     def free(self) -> None: ...
     @staticmethod
@@ -3279,8 +3284,13 @@ class ClusterRedshift(NumCosmoMath.Model):
     ) -> typing.Tuple[float, float]: ...
     def ref(self) -> ClusterRedshift: ...
     def resample(
-        self, cosmo: HICosmo, lnM: float, z: float, rng: NumCosmoMath.RNG
-    ) -> typing.Tuple[bool, float, float]: ...
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: float,
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
+        rng: NumCosmoMath.RNG,
+    ) -> typing.Tuple[bool, float]: ...
     def volume(self) -> float: ...
 
 class ClusterRedshiftClass(GObject.GPointer):
@@ -3301,8 +3311,15 @@ class ClusterRedshiftClass(GObject.GPointer):
         [ClusterRedshift, HICosmo, float, float, float, float, float], float
     ] = ...
     resample: typing.Callable[
-        [ClusterRedshift, HICosmo, float, float, NumCosmoMath.RNG],
-        typing.Tuple[bool, float, float],
+        [
+            ClusterRedshift,
+            HICosmo,
+            float,
+            float,
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            NumCosmoMath.RNG,
+        ],
+        typing.Tuple[bool, float],
     ] = ...
     P_limits: typing.Callable[
         [ClusterRedshift, HICosmo, float, float, float, float], None

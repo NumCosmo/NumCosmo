@@ -381,6 +381,10 @@ python_tests = [
         'source': 'test_py_cluster_mass_ascaso.py',
     },
     {
+        'name': 'py_cluster_cluster_photoz_gauss',
+        'source': 'test_py_cluster_photoz_gauss.py',
+    },
+    {
         'name': 'py_cluster_abundance_sampling',
         'source': 'test_py_cluster_abundance_sampling.py',
     },
