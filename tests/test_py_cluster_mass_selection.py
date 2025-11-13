@@ -307,6 +307,9 @@ def fixture_cluster_m(
     Configures a selection model with richness cut at ln(5). Includes
     completeness and ipurity splines.
     """
+    assert isinstance(completeness, Ncm.Spline2dBicubic)
+    assert isinstance(ipurity, Ncm.Spline2dBicubic)
+
     cluster_m_empty.set_completeness(completeness)
     cluster_m_empty.set_ipurity(ipurity)
     return cluster_m_empty
@@ -384,6 +387,8 @@ def test_cluster_mass_selection_completeness_and_purity(
         assert cluster_m_empty.ipurity(lnR[i], 0.5) == 1.0
 
     # Set splines and verify they are properly assigned
+    assert isinstance(completeness, Ncm.Spline2dBicubic)
+    assert isinstance(ipurity, Ncm.Spline2dBicubic)
     cluster_m_empty.set_ipurity(ipurity)
     cluster_m_empty.set_completeness(completeness)
 
@@ -796,12 +801,108 @@ def test_cluster_mass_selection_intp_basic(
 ) -> None:
     """Test cumulative distribution function.
 
-    Verifies that intp() returns values between 0 and completeness,
-    and is monotonically increasing.
+    Verifies that intp() returns values between 0 and 1.
     """
     lnM = np.log(1e14)
     z = 0.5
 
-    # intp should be between 0 and completeness
+    # intp should be between 0 and 1
     intp_val = cluster_m.intp(cosmo, lnM, z)
     assert 0.0 <= intp_val <= 1.0
+
+
+def test_cluster_mass_selection_intp_bin_basic(
+    cluster_m: Nc.ClusterMassSelection, cosmo: Nc.HICosmo
+) -> None:
+    """Test binned integration of probability distribution.
+
+    Verifies that intp_bin() returns positive values and that
+    summing bins recovers the total integral.
+    """
+    lnM = np.log(1e14)
+    z = 0.5
+    mean_lnR = cluster_m.get_mean_richness(lnM, z)
+    std_lnR = cluster_m.get_std_richness(lnM, z)
+
+    # Single bin should be positive
+    bin_val = cluster_m.intp_bin(cosmo, lnM, z, [mean_lnR], [mean_lnR + std_lnR], None)
+    assert bin_val > 0.0
+
+    # Sum of bins should equal total integral
+    lnR_edges = np.linspace(mean_lnR - 5 * std_lnR, mean_lnR + 5 * std_lnR, 11)
+    bin_sum = sum(
+        cluster_m.intp_bin(cosmo, lnM, z, [lnR_edges[i]], [lnR_edges[i + 1]], None)
+        for i in range(len(lnR_edges) - 1)
+    )
+    total_integral = cluster_m.intp(cosmo, lnM, z)
+
+    assert np.isclose(bin_sum, total_integral, rtol=1e-3)
+
+
+def test_cluster_mass_selection_intp_bin_consistency(
+    cluster_m: Nc.ClusterMassSelection, cosmo: Nc.HICosmo
+) -> None:
+    """Test intp_bin() matches manual integration of p().
+
+    Verifies that intp_bin() over an interval matches trapezoidal
+    integration of p() over the same interval.
+    """
+    lnM = np.log(1e14)
+    z = 0.5
+    mean_lnR = cluster_m.get_mean_richness(lnM, z)
+    std_lnR = cluster_m.get_std_richness(lnM, z)
+
+    lnR_lower = mean_lnR - std_lnR
+    lnR_upper = mean_lnR + std_lnR
+
+    # Manual integration
+    lnR_array = np.linspace(lnR_lower, lnR_upper, 200)
+    p_array = np.array([cluster_m.p(cosmo, lnM, z, [lnR], None) for lnR in lnR_array])
+    manual_integral = np.trapezoid(p_array, lnR_array)
+
+    # Internal integration via intp_bin
+    intp_bin_val = cluster_m.intp_bin(cosmo, lnM, z, [lnR_lower], [lnR_upper], None)
+
+    assert np.isclose(manual_integral, intp_bin_val, rtol=1e-3)
+
+
+def test_cluster_mass_selection_truncated_gaussian(
+    cluster_m_empty: Nc.ClusterMassSelection,
+) -> None:
+    """Test truncated Gaussian mean and std corrections.
+
+    Verifies that get_mean() and get_std() correctly account for
+    truncation at the richness cut, while get_mean_richness() and
+    get_std_richness() return the untruncated Gaussian parameters.
+    """
+    lnM = np.log(1e14)
+    z = 0.5
+    cut = cluster_m_empty.get_cut()
+
+    # Untruncated parameters
+    mean_untrunc = cluster_m_empty.get_mean_richness(lnM, z)
+    std_untrunc = cluster_m_empty.get_std_richness(lnM, z)
+
+    # Truncated parameters
+    mean_trunc = cluster_m_empty.get_mean(lnM, z)
+    std_trunc = cluster_m_empty.get_std(lnM, z)
+
+    # Truncation should increase mean (shift right)
+    assert mean_trunc > mean_untrunc
+
+    # Truncation should decrease std (reduce spread)
+    assert std_trunc < std_untrunc
+
+    # Verify truncation formulas
+    alpha = (cut - mean_untrunc) / std_untrunc
+    phi_alpha = np.exp(-0.5 * alpha**2) / np.sqrt(2 * np.pi)
+    Phi_alpha = 0.5 * (1 + math.erf(alpha / np.sqrt(2)))
+
+    # Mean correction: μ_trunc = μ + σ * φ(α) / (1 - Φ(α))
+    expected_mean = mean_untrunc + std_untrunc * phi_alpha / (1 - Phi_alpha)
+    assert np.isclose(mean_trunc, expected_mean, rtol=1e-10)
+
+    # Std correction: σ_trunc = σ * sqrt(1 + α*φ(α)/(1-Φ(α)) - (φ(α)/(1-Φ(α)))²)
+    lambda_alpha = phi_alpha / (1 - Phi_alpha)
+    expected_std = std_untrunc * np.sqrt(1 + alpha * lambda_alpha - lambda_alpha**2)
+    assert np.isclose(std_trunc, expected_std, rtol=1e-10)

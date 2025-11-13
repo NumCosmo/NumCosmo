@@ -4,7 +4,7 @@ import numpy.typing as npt
 
 from gi.repository import GLib
 from gi.repository import GObject
-from gi.repository import NumCosmoMath
+from . import ncm as NumCosmoMath
 
 T = typing.TypeVar("T")
 

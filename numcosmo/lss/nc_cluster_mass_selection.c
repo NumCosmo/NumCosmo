@@ -627,17 +627,13 @@ _nc_cluster_mass_selection_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, 
     F.params   = &obs_data;
 
     if ((lnM_obs_lower[0] < CUT) && (lnM_obs_upper[0] >= CUT))
-    {
       gsl_integration_qag (&F, CUT, lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp_bin, &err);
-      ncm_memory_pool_return (w);
-    }
     else
-    {
       gsl_integration_qag (&F, lnM_obs_lower[0], lnM_obs_upper[0], 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_MASS_SELECTION_DEFAULT_INT_KEY, *w, &intp_bin, &err);
-      ncm_memory_pool_return (w);
 
-      return fabs (intp_bin * completeness);
-    }
+    ncm_memory_pool_return (w);
+
+    return fabs (intp_bin * completeness);
   }
 
   g_assert_not_reached ();
@@ -683,6 +679,8 @@ void
 nc_cluster_mass_selection_set_lnM_limits (NcClusterMassSelection *selection, NcmVector *lnM_limits)
 {
   NcClusterMassSelectionPrivate * const self = selection->priv;
+
+  g_assert_cmpuint (ncm_vector_len (lnM_limits), ==, 2);
 
   ncm_vector_clear (&self->lnM_limits);
   self->lnM_limits =  ncm_vector_ref (lnM_limits);
@@ -801,7 +799,6 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
 
       completeness = nc_cluster_mass_selection_completeness (selection, lnM, z_ptr[i]);
       ipurity      = nc_cluster_mass_selection_ipurity (selection, lnM_obs_ptr[i], z_ptr[i]);
-
 
       if (lnM_obs_ptr[i] < 0.0)
         res_ptr[i] = 0.0;
