@@ -1552,8 +1552,8 @@ class ClusterMass(NumCosmoMath.Model):
         lnM: float,
         z: NumCosmoMath.Vector,
         lnM_obs: NumCosmoMath.Matrix,
-        lnM_obs_params: NumCosmoMath.Matrix,
-        res: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[NumCosmoMath.Matrix],
+        res: NumCosmoMath.Vector,
     ) -> None: ...
     def do_intP(self, cosmo: HICosmo, lnM: float, z: float) -> float: ...
     def do_intP_bin(
@@ -1626,8 +1626,8 @@ class ClusterMass(NumCosmoMath.Model):
         lnM: float,
         z: NumCosmoMath.Vector,
         lnM_obs: NumCosmoMath.Matrix,
-        lnM_obs_params: NumCosmoMath.Matrix,
-        res: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[NumCosmoMath.Matrix],
+        res: NumCosmoMath.Vector,
     ) -> None: ...
     def plcl_Msz_Ml_p_ndetone(
         self,
@@ -2176,8 +2176,8 @@ class ClusterMassClass(GObject.GPointer):
             float,
             NumCosmoMath.Vector,
             NumCosmoMath.Matrix,
-            NumCosmoMath.Matrix,
-            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Optional[NumCosmoMath.Matrix],
+            NumCosmoMath.Vector,
         ],
         None,
     ] = ...

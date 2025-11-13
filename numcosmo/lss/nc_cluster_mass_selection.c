@@ -220,8 +220,7 @@ static void _nc_cluster_mass_selection_p_limits (NcClusterMass *clusterm,  NcHIC
 static void _nc_cluster_mass_selection_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 static void _nc_cluster_mass_selection_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
 static gdouble _nc_cluster_mass_selection_volume (NcClusterMass *clusterm);
-
-static void _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res);
+static void _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, NcmVector *res);
 
 static void
 nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
@@ -768,7 +767,7 @@ _nc_cluster_mass_selection_volume (NcClusterMass *clusterm)
 }
 
 static void
-_nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res)
+_nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, NcmVector *res)
 {
   NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
   NcClusterMassSelectionPrivate * const self = selection->priv;
@@ -784,9 +783,11 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
   const gdouble sigma_pre    = SIGMA_P0 + SIGMA_P1 * DlnM;
   const gdouble mu_p2        = MU_P2;
   const gdouble sigma_p2     = SIGMA_P2;
-  gdouble *res_ptr           = &g_array_index (res, gdouble, 0);
+  gdouble *res_ptr           = ncm_vector_ptr (res, 0);
   guint i;
   gdouble completeness, ipurity;
+
+  g_assert_cmpuint (ncm_vector_stride (res), ==, 1);
 
   if ((tda == 1) && (sz == 1))
   {

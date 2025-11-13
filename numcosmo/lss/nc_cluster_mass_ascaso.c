@@ -172,8 +172,7 @@ static void _nc_cluster_mass_ascaso_p_limits (NcClusterMass *clusterm,  NcHICosm
 static void _nc_cluster_mass_ascaso_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 static void _nc_cluster_mass_ascaso_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
 static gdouble _nc_cluster_mass_ascaso_volume (NcClusterMass *clusterm);
-
-static void _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res);
+static void _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, NcmVector *res);
 
 static void
 nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
@@ -514,7 +513,7 @@ _nc_cluster_mass_ascaso_volume (NcClusterMass *clusterm)
 }
 
 static void
-_nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res)
+_nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, NcmVector *res)
 {
   NcClusterMassAscaso *ascaso             = NC_CLUSTER_MASS_ASCASO (clusterm);
   NcClusterMassAscasoPrivate * const self = ascaso->priv;
@@ -530,8 +529,10 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
   const gdouble sigma_pre    = SIGMA_P0 + SIGMA_P1 * DlnM;
   const gdouble mu_p2        = MU_P2;
   const gdouble sigma_p2     = SIGMA_P2;
-  gdouble *res_ptr           = &g_array_index (res, gdouble, 0);
+  gdouble *res_ptr           = ncm_vector_ptr (res, 0);
   guint i;
+
+  g_assert_cmpuint (ncm_vector_stride (res), ==, 1);
 
   if ((tda == 1) && (sz == 1))
   {
