@@ -377,6 +377,10 @@ python_tests = [
         'source': 'test_py_cluster_mass_selection.py',
     },
     {
+        'name': 'py_cluster_mass_ascaso',
+        'source': 'test_py_cluster_mass_ascaso.py',
+    },
+    {
         'name': 'py_cluster_abundance_sampling',
         'source': 'test_py_cluster_abundance_sampling.py',
     },
