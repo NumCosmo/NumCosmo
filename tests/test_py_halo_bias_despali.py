@@ -25,7 +25,6 @@
 """Tests for Nc.HaloBiasDespali model."""
 
 import pytest
-from numpy.testing import assert_allclose
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
@@ -87,8 +86,8 @@ def test_halo_bias_despali_delta_c_and_vir(
     assert np.all(np.array(delta_vir_values) > 0.0)
 
     # sanity: they should vary smoothly with z
-    assert_allclose(np.diff(delta_c_values), np.diff(delta_c_values), rtol=1e-3)
-    assert_allclose(np.diff(delta_vir_values), np.diff(delta_vir_values), rtol=1e-3)
+    assert all(np.diff(delta_c_values) > 0.0)
+    assert all(np.diff(delta_vir_values) > 0.0)
 
 
 def test_halo_bias_despali_new_full(mfunc: Nc.HaloMassFunction):
@@ -97,3 +96,82 @@ def test_halo_bias_despali_new_full(mfunc: Nc.HaloMassFunction):
         bias_despali = Nc.HaloBiasDespali.new_full(mfunc, eo, cmf)
         assert bias_despali.get_eo() == eo
         assert bias_despali.get_cmf() == cmf
+
+
+def test_halo_bias_despali_eval_virial(
+    cosmo: Nc.HICosmo, dist: Nc.Distance, psf: Ncm.PowspecFilter
+):
+    """Test bias evaluation with virial mass definition."""
+    mulf = Nc.MultiplicityFuncDespali.new()
+    mulf.set_mdef(Nc.MultiplicityFuncMassDef.VIRIAL)
+    mfunc = Nc.HaloMassFunction.new(dist, psf, mulf)
+
+    # Test all flag combinations for virial
+    for eo, cmf in [(False, False), (True, False), (False, True)]:
+        bias_despali = Nc.HaloBiasDespali.new_full(mfunc, eo, cmf)
+        bias_value = bias_despali.eval(cosmo, 0.5, 0.5)
+        assert np.isfinite(bias_value)
+        assert bias_value > 0.0
+
+
+def test_halo_bias_despali_eval_mean(
+    cosmo: Nc.HICosmo, dist: Nc.Distance, psf: Ncm.PowspecFilter
+):
+    """Test bias evaluation with mean mass definition."""
+    mulf = Nc.MultiplicityFuncDespali.new()
+    mulf.set_mdef(Nc.MultiplicityFuncMassDef.MEAN)
+    mfunc = Nc.HaloMassFunction.new(dist, psf, mulf)
+
+    # Test both eo flag values for mean
+    for eo in [False, True]:
+        bias_despali = Nc.HaloBiasDespali.new_full(mfunc, eo, False)
+        bias_value = bias_despali.eval(cosmo, 0.5, 0.5)
+        assert np.isfinite(bias_value)
+        assert bias_value > 0.0
+
+
+def test_halo_bias_despali_eval_critical(
+    cosmo: Nc.HICosmo, dist: Nc.Distance, psf: Ncm.PowspecFilter
+):
+    """Test bias evaluation with critical mass definition."""
+    mulf = Nc.MultiplicityFuncDespali.new()
+    mulf.set_mdef(Nc.MultiplicityFuncMassDef.CRITICAL)
+    mfunc = Nc.HaloMassFunction.new(dist, psf, mulf)
+
+    # Test both eo flag values for critical
+    for eo in [False, True]:
+        bias_despali = Nc.HaloBiasDespali.new_full(mfunc, eo, False)
+        bias_value = bias_despali.eval(cosmo, 0.5, 0.5)
+        assert np.isfinite(bias_value)
+        assert bias_value > 0.0
+
+
+def test_halo_bias_despali_properties(mfunc: Nc.HaloMassFunction):
+    """Test setting properties via GObject interface."""
+    bias_despali = Nc.HaloBiasDespali.new(mfunc)
+
+    # Test setting via properties
+    bias_despali.props.eo = True
+    bias_despali.props.cmf = True
+    assert bias_despali.props.eo
+    assert bias_despali.props.cmf
+
+    bias_despali.props.eo = False
+    bias_despali.props.cmf = False
+    assert not bias_despali.props.eo
+    assert not bias_despali.props.cmf
+
+
+def test_serialization_deserialization(bias_despali: Nc.HaloBiasDespali):
+    """Test serialization and deserialization."""
+    for eo, cmf in [(False, False), (True, False), (False, True), (True, True)]:
+        bias_despali.set_eo(eo)
+        bias_despali.set_cmf(cmf)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        bias_despali_dup = ser.dup_obj(bias_despali)
+        assert bias_despali_dup is not None
+        assert isinstance(bias_despali_dup, Nc.HaloBiasDespali)
+        assert bias_despali_dup is not bias_despali
+
+        assert bias_despali_dup.get_eo() == bias_despali.get_eo()
+        assert bias_despali_dup.get_cmf() == bias_despali.get_cmf()

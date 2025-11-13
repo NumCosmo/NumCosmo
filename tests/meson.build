@@ -431,6 +431,10 @@ python_tests = [
         'source': 'test_py_halo_bias_despali.py',
     },
     {
+        'name': 'py_halo_bias_tinker',
+        'source': 'test_py_halo_bias_tinker.py',
+    },
+    {
         'name': 'py_de_cont',
         'source': 'test_py_de_cont.py',
     },
