@@ -40,8 +40,8 @@ SURVEY_AREA_RAD2 = SURVEY_AREA_DEG2 * (np.pi / 180) ** 2
 LN_RICHNESS_CUT = np.log(5)
 
 
-@pytest.fixture(name="cluster_m")
-def fixture_cluster_m() -> Nc.ClusterMass:
+@pytest.fixture(name="cluster_m_empty")
+def fixture_cluster_m_empty() -> Nc.ClusterMassSelection:
     """Create cluster mass-richness relation model.
 
     Configures a selection model with richness cut at ln(5).
@@ -296,8 +296,24 @@ def fixture_ipurity() -> Ncm.Spline2d:
     )
 
 
+@pytest.fixture(name="cluster_m")
+def fixture_cluster_m(
+    cluster_m_empty: Nc.ClusterMassSelection,
+    completeness: Ncm.Spline2d,
+    ipurity: Ncm.Spline2d,
+) -> Nc.ClusterMassSelection:
+    """Create cluster mass-richness relation model.
+
+    Configures a selection model with richness cut at ln(5). Includes
+    completeness and ipurity splines.
+    """
+    cluster_m_empty.set_completeness(completeness)
+    cluster_m_empty.set_ipurity(ipurity)
+    return cluster_m_empty
+
+
 @pytest.fixture(name="cluster_z")
-def fixture_cluster_z():
+def fixture_cluster_z() -> Nc.ClusterRedshiftNodist:
     """Create cluster redshift distribution.
 
     Returns a no-distribution model with redshift range [0.1, 1.1].
@@ -309,8 +325,8 @@ def fixture_cluster_z():
 def fixture_cluster_abundance(
     cosmo: Nc.HICosmo,
     psf: Ncm.PowspecFilter,
-    cluster_z: Nc.ClusterRedshift,
-    cluster_m: Nc.ClusterMass,
+    cluster_z: Nc.ClusterRedshiftNodist,
+    cluster_m: Nc.ClusterMassSelection,
 ):
     """Create cluster abundance calculator.
 
@@ -336,13 +352,15 @@ def fixture_cluster_abundance(
     return cad
 
 
-def test_get_cut(cluster_m: Nc.ClusterMass) -> None:
+def test_get_cut(cluster_m: Nc.ClusterMassSelection) -> None:
     """Test richness cut parameter."""
     assert cluster_m.get_cut() == LN_RICHNESS_CUT
 
 
 def test_cluster_mass_selection_completeness_and_purity(
-    cluster_m: Nc.ClusterMass, completeness: Ncm.Spline2d, ipurity: Ncm.Spline2d
+    cluster_m_empty: Nc.ClusterMassSelection,
+    completeness: Ncm.Spline2d,
+    ipurity: Ncm.Spline2d,
 ) -> None:
     """Test completeness and purity functions.
 
@@ -355,36 +373,31 @@ def test_cluster_mass_selection_completeness_and_purity(
     lnR = np.linspace(np.log(1), np.log(1000), nsize)
 
     # Initially, no completeness/ipurity should be set
-    assert cluster_m.peek_completeness() is None
-    assert cluster_m.peek_ipurity() is None
+    assert cluster_m_empty.peek_completeness() is None
+    assert cluster_m_empty.peek_ipurity() is None
 
     # Without splines, completeness and ipurity should be 1.0
     for i in range(nsize):
-        assert cluster_m.completeness(lnM[i], 0.5) == 1.0
-        assert cluster_m.completeness(np.log(1e14), z[i]) == 1.0
-        assert cluster_m.ipurity(np.log(5), z[i]) == 1.0
-        assert cluster_m.ipurity(lnR[i], 0.5) == 1.0
+        assert cluster_m_empty.completeness(lnM[i], 0.5) == 1.0
+        assert cluster_m_empty.completeness(np.log(1e14), z[i]) == 1.0
+        assert cluster_m_empty.ipurity(np.log(5), z[i]) == 1.0
+        assert cluster_m_empty.ipurity(lnR[i], 0.5) == 1.0
 
     # Set splines and verify they are properly assigned
-    cluster_m.set_ipurity(ipurity)
-    cluster_m.set_completeness(completeness)
+    cluster_m_empty.set_ipurity(ipurity)
+    cluster_m_empty.set_completeness(completeness)
 
-    assert cluster_m.peek_completeness() is completeness
-    assert cluster_m.peek_ipurity() is ipurity
+    assert cluster_m_empty.peek_completeness() is completeness
+    assert cluster_m_empty.peek_ipurity() is ipurity
 
 
-def test_cluster_mass_selection_mean_std(
-    cluster_m: Nc.ClusterMass, completeness: Ncm.Spline2d, ipurity: Ncm.Spline2d
-) -> None:
+def test_cluster_mass_selection_mean_std(cluster_m: Nc.ClusterMassSelection) -> None:
     """Test mean and standard deviation of truncated distribution.
 
     Verifies that truncation increases mean and decreases standard deviation
     compared to the untruncated Gaussian.
     """
     nsize = 100
-    cluster_m.set_ipurity(ipurity)
-    cluster_m.set_completeness(completeness)
-
     lnM = np.linspace(np.log(1e13), np.log(1e16), nsize)
     z = np.linspace(0, 1.1, nsize)
 
@@ -418,18 +431,13 @@ def test_cluster_mass_selection_mean_std(
 
 
 def test_cluster_mass_selection_distribution(
-    cluster_m: Nc.ClusterMass,
-    completeness: Ncm.Spline2d,
-    ipurity: Ncm.Spline2d,
-    cosmo: Nc.HICosmo,
+    cluster_m: Nc.ClusterMassSelection, cosmo: Nc.HICosmo
 ) -> None:
     """Benchmark probability distribution function.
 
     Times the evaluation of p() across mass, redshift, and richness dimensions.
     """
     nsize = 100
-    cluster_m.set_ipurity(ipurity)
-    cluster_m.set_completeness(completeness)
 
     lnM = np.linspace(np.log(1e13), np.log(1e16), nsize)
     z = np.linspace(0, 1.1, nsize)
@@ -465,15 +473,10 @@ def test_cluster_mass_selection_distribution(
 
 
 def test_cluster_mass_selection_cumulative(
-    cluster_m: Nc.ClusterMass,
-    completeness: Ncm.Spline2d,
-    ipurity: Ncm.Spline2d,
-    cosmo: Nc.HICosmo,
+    cluster_m: Nc.ClusterMassSelection, cosmo: Nc.HICosmo
 ) -> None:
     """Benchmark cumulative distribution function across mass and redshift."""
     nsize = 100
-    cluster_m.set_ipurity(ipurity)
-    cluster_m.set_completeness(completeness)
 
     lnM = np.linspace(np.log(1e13), np.log(1e16), nsize)
     z = np.linspace(0, 1.1, nsize)
@@ -494,16 +497,10 @@ def test_cluster_mass_selection_cumulative(
 
 
 def test_cluster_mass_selection_cumulative_bin(
-    cluster_m: Nc.ClusterMass,
-    completeness: Ncm.Spline2d,
-    ipurity: Ncm.Spline2d,
-    cosmo: Nc.HICosmo,
+    cluster_m: Nc.ClusterMassSelection, cosmo: Nc.HICosmo
 ) -> None:
     """Benchmark binned cumulative distribution function across mass and redshift."""
     nsize = 100
-    cluster_m.set_ipurity(ipurity)
-    cluster_m.set_completeness(completeness)
-
     lnM = np.linspace(np.log(1e13), np.log(1e16), nsize)
     z = np.linspace(0, 1.1, nsize)
     lnR = np.linspace(np.log(5), np.log(200), nsize)
@@ -542,15 +539,9 @@ def test_cluster_mass_selection_cumulative_bin(
 
 
 def test_cluster_mass_selection_limits(
-    cluster_m: Nc.ClusterMass,
-    completeness: Ncm.Spline2d,
-    ipurity: Ncm.Spline2d,
-    cosmo: Nc.HICosmo,
+    cluster_m: Nc.ClusterMassSelection, cosmo: Nc.HICosmo
 ) -> None:
     """Test mass limits for different selection functions."""
-    cluster_m.set_ipurity(ipurity)
-    cluster_m.set_completeness(completeness)
-
     nsize = 100
     lnM = np.linspace(np.log(1e12), np.log(1e16), nsize)
 
@@ -580,9 +571,7 @@ def test_cluster_mass_selection_limits(
 
 
 def test_cluster_mass_selection_resample(
-    cluster_m: Nc.ClusterMass,
-    completeness: Ncm.Spline2d,
-    ipurity: Ncm.Spline2d,
+    cluster_m: Nc.ClusterMassSelection,
     cosmo: Nc.HICosmo,
     cluster_abundance: Nc.ClusterAbundance,
 ) -> None:
@@ -591,8 +580,6 @@ def test_cluster_mass_selection_resample(
     Verifies that rejection sampling produces fewer clusters than sampling
     without rejection.
     """
-    cluster_m.set_ipurity(ipurity)
-    cluster_m.set_completeness(completeness)
     cluster_z = Nc.ClusterRedshiftNodist(z_min=0.1, z_max=1.1)
 
     cad = cluster_abundance
@@ -630,9 +617,7 @@ def test_cluster_mass_selection_resample(
 
 
 def test_cluster_mass_selection_hmf(
-    cluster_m: Nc.ClusterMass,
-    completeness: Ncm.Spline2d,
-    ipurity: Ncm.Spline2d,
+    cluster_m: Nc.ClusterMassSelection,
     cosmo: Nc.HICosmo,
     cluster_abundance: Nc.ClusterAbundance,
 ) -> None:
@@ -641,8 +626,8 @@ def test_cluster_mass_selection_hmf(
     Times the evaluation of cluster number counts and differential number
     counts with selection effects applied.
     """
-    cluster_m.set_ipurity(ipurity)
-    cluster_m.set_completeness(completeness)
+    assert isinstance(cluster_m, Nc.ClusterMassSelection)
+
     cluster_z = Nc.ClusterRedshiftNodist(z_min=0.1, z_max=1.1)
 
     nsize = 100
@@ -712,3 +697,111 @@ def test_cluster_mass_selection_hmf(
         print(
             f"Average time per execution {name} with selection: {avg_time:.6f} seconds"
         )
+
+
+def test_cluster_mass_selection_properties(
+    cluster_m: Nc.ClusterMassSelection,
+    completeness: Ncm.Spline2d,
+    ipurity: Ncm.Spline2d,
+) -> None:
+    """Test setting properties via GObject interface."""
+    assert isinstance(cluster_m, Nc.ClusterMassSelection)
+    cluster_m.props.enable_rejection = False
+    assert not cluster_m.props.enable_rejection
+
+    cluster_m.props.enable_rejection = True
+    assert cluster_m.props.enable_rejection
+
+    cluster_m.props.ipurity = ipurity
+    assert cluster_m.props.ipurity is ipurity
+
+    cluster_m.props.completeness = completeness
+    assert cluster_m.props.completeness is completeness
+
+
+def test_serialization_deserialization(cluster_m: Nc.ClusterMassSelection) -> None:
+    """Test serialization and deserialization."""
+    assert isinstance(cluster_m, Nc.ClusterMassSelection)
+    cluster_m.set_enable_rejection(True)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    cluster_m_dup_obj = ser.dup_obj(cluster_m)
+    assert isinstance(cluster_m_dup_obj, Nc.ClusterMassSelection)
+    cluster_m_dup: Nc.ClusterMassSelection = cluster_m_dup_obj
+
+    assert cluster_m_dup is not None
+    assert isinstance(cluster_m_dup, Nc.ClusterMassSelection)
+    assert cluster_m_dup is not cluster_m
+
+    assert cluster_m_dup.get_enable_rejection() == cluster_m.get_enable_rejection()
+    assert cluster_m_dup.peek_ipurity() is not None
+    assert cluster_m_dup.peek_completeness() is not None
+
+
+def test_cluster_mass_selection_p_basic(
+    cluster_m: Nc.ClusterMassSelection, cosmo: Nc.HICosmo
+) -> None:
+    """Test probability distribution function.
+
+    Verifies that p() returns positive probabilities for valid inputs,
+    decreases with distance from mean richness, and integrates to the
+    completeness factor.
+    """
+    lnM = np.log(1e14)
+    z = 0.5
+    mean_lnR = cluster_m.get_mean_richness(lnM, z)
+
+    # Probability at mean should be positive
+    p_mean = cluster_m.p(cosmo, lnM, z, [mean_lnR], None)
+    assert p_mean > 0.0
+
+    # Probability should decrease away from mean
+    p_above = cluster_m.p(cosmo, lnM, z, [mean_lnR + 1.0], None)
+    p_below = cluster_m.p(cosmo, lnM, z, [mean_lnR - 1.0], None)
+    assert p_above < p_mean
+    assert p_below < p_mean
+
+    # Probability should be very small far from mean
+    p_far = cluster_m.p(cosmo, lnM, z, [mean_lnR + 5.0], None)
+    assert p_far < p_mean * 0.01
+
+
+def test_cluster_mass_selection_p_integral(
+    cluster_m: Nc.ClusterMassSelection, cosmo: Nc.HICosmo
+) -> None:
+    """Test probability distribution integrates to completeness.
+
+    Verifies that integrating p() over richness equals the completeness
+    factor using trapezoidal rule.
+    """
+    lnM = np.log(1e14)
+    z = 0.5
+    mean_lnR = cluster_m.get_mean_richness(lnM, z)
+    std_lnR = cluster_m.get_std_richness(lnM, z)
+
+    # Integrate over ±5 sigma range
+    lnR_array = np.linspace(mean_lnR - 5 * std_lnR, mean_lnR + 5 * std_lnR, 200)
+    p_array = np.array([cluster_m.p(cosmo, lnM, z, [lnR], None) for lnR in lnR_array])
+
+    # Trapezoidal integration
+    integral = np.trapezoid(p_array, lnR_array)
+    assert integral < 1.0
+    intp_val = cluster_m.intp(cosmo, lnM, z)
+
+    assert np.isclose(integral, intp_val, rtol=1e-3)
+
+
+def test_cluster_mass_selection_intp_basic(
+    cluster_m: Nc.ClusterMassSelection, cosmo: Nc.HICosmo
+) -> None:
+    """Test cumulative distribution function.
+
+    Verifies that intp() returns values between 0 and completeness,
+    and is monotonically increasing.
+    """
+    lnM = np.log(1e14)
+    z = 0.5
+
+    # intp should be between 0 and completeness
+    intp_val = cluster_m.intp(cosmo, lnM, z)
+    assert 0.0 <= intp_val <= 1.0

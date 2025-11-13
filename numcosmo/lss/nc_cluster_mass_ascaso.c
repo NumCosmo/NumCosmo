@@ -372,11 +372,8 @@ _nc_cluster_mass_ascaso_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble l
   gdouble lnR_true, sigma;
 
   _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
-
   {
     const gdouble x = (lnM_obs[0] - lnR_true) / sigma;
-
-    /* const gdouble x_cut = (lnR_true - CUT) / (M_SQRT2 * sigma); */
 
     if (lnM_obs[0] < CUT)
       return 0.0;
@@ -639,18 +636,12 @@ nc_cluster_mass_ascaso_get_cut (NcClusterMassAscaso *ascaso, gdouble lnM, gdoubl
 gdouble
 nc_cluster_mass_ascaso_get_mean (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z)
 {
-  gdouble lnR_mean, lnR_sigma, A, B, C, mean_correction;
-
-  lnR_mean  = nc_cluster_mass_ascaso_get_mean_richness (ascaso, lnM, z);
-  lnR_sigma = nc_cluster_mass_ascaso_get_std_richness  (ascaso, lnM, z);
-
-  A = (CUT - lnR_mean) / lnR_sigma;
-
-  B = (1.0 / (ncm_c_sqrt_2pi ())) * exp (-0.5 * (A  * A));
-
-  C = 1.0 - 0.5 * (1.0 + erf (A / M_SQRT2));
-
-  mean_correction = (lnR_sigma * B / C);
+  const gdouble lnR_mean        = nc_cluster_mass_ascaso_get_mean_richness (ascaso, lnM, z);
+  const gdouble lnR_sigma       = nc_cluster_mass_ascaso_get_std_richness  (ascaso, lnM, z);
+  const gdouble A               = (CUT - lnR_mean) / lnR_sigma;
+  const gdouble B               = (1.0 / (ncm_c_sqrt_2pi ())) * exp (-0.5 * (A  * A));
+  const gdouble C               = 1.0 - 0.5 * (1.0 + erf (A / M_SQRT2));
+  const gdouble mean_correction = (lnR_sigma * B / C);
 
   return lnR_mean + mean_correction;
 }
@@ -661,25 +652,19 @@ nc_cluster_mass_ascaso_get_mean (NcClusterMassAscaso *ascaso, gdouble lnM, gdoub
  * @lnM: ln of the mass
  * @z: redshift
  *
- * Computes the standard deviation of the richness distribution with the cut correction.
+ * Computes the standard deviation of the richness distribution with the cut
+ * correction.
  *
  */
 gdouble
 nc_cluster_mass_ascaso_get_std (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z)
 {
-  gdouble lnR_mean, lnR_sigma, A, B, C, std_correction;
-
-
-  lnR_mean  = nc_cluster_mass_ascaso_get_mean_richness (ascaso, lnM, z);
-  lnR_sigma = nc_cluster_mass_ascaso_get_std_richness  (ascaso, lnM, z);
-
-  A = (CUT - lnR_mean) / lnR_sigma;
-
-  B = (1.0 / (ncm_c_sqrt_2pi ())) * exp (-0.5 * (A  * A));
-
-  C = 1.0 - 0.5 * (1.0 + erf (A / M_SQRT2));
-
-  std_correction = pow (1.0 + (A * B / C) - (B / C) * (B / C), 0.5);
+  const gdouble lnR_mean       = nc_cluster_mass_ascaso_get_mean_richness (ascaso, lnM, z);
+  const gdouble lnR_sigma      = nc_cluster_mass_ascaso_get_std_richness  (ascaso, lnM, z);
+  const gdouble A              = (CUT - lnR_mean) / lnR_sigma;
+  const gdouble B              = (1.0 / (ncm_c_sqrt_2pi ())) * exp (-0.5 * (A  * A));
+  const gdouble C              = 1.0 - 0.5 * (1.0 + erf (A / M_SQRT2));
+  const gdouble std_correction = pow (1.0 + (A * B / C) - (B / C) * (B / C), 0.5);
 
   return lnR_sigma * std_correction;
 }
