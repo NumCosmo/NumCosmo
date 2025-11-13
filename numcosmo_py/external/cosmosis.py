@@ -295,8 +295,8 @@ def create_numcosmo_mapping(
 
     Mapping to be used in the likelihoods converted from Cosmosis.
     """
-    ps_ml = None
-    ps_mnl = None
+    ps_ml: Nc.PowspecML | None = None
+    ps_mnl: Nc.PowspecMNL | None = None
     dist = Nc.Distance.new(distance_max_z)
     dist.comoving_distance_spline.set_reltol(reltol)
 

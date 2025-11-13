@@ -309,6 +309,7 @@ def create_cluster_mass(
     cluster_mass_type: ClusterMassType,
 ) -> Nc.ClusterMass:
     """Create the cluster mass-observable relation."""
+    cluster_m: Nc.ClusterMassAscaso | Nc.ClusterMassNodist
     if cluster_mass_type == ClusterMassType.NODIST:
         cluster_m = Nc.ClusterMassNodist(
             lnM_min=np.log(10) * 14.0, lnM_max=np.log(10) * 16.0
@@ -334,6 +335,7 @@ def create_cluster_redshift(
     cluster_redshift_type: ClusterRedshiftType,
 ) -> Nc.ClusterRedshift:
     """Create the cluster photoz relation."""
+    cluster_z: Nc.ClusterRedshiftNodist | Nc.ClusterPhotozGaussGlobal
     if cluster_redshift_type == ClusterRedshiftType.NODIST:
         cluster_z = Nc.ClusterRedshiftNodist(z_min=0.0, z_max=2.0)
     elif cluster_redshift_type == ClusterRedshiftType.GAUSS:
