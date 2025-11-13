@@ -14146,7 +14146,7 @@ class HaloBiasDespali(HaloBias):
 
     Properties from NcHaloBiasDespali:
       eo -> gboolean: eo
-        Whether the halo finder uses eliptical overdensity
+        Whether the halo finder uses elliptical overdensity
       cmf -> gboolean: cmf
         Whether the use of the cluster mass function
 
@@ -14872,7 +14872,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
     ) -> typing.Tuple[
         NumCosmoMath.Spline, NumCosmoMath.Spline, NumCosmoMath.Spline
     ]: ...
-    def get_phys_limts(
+    def get_phys_limits(
         self, cosmo: HICosmo, z: float
     ) -> typing.Tuple[float, float]: ...
     def get_reltol(self) -> float: ...

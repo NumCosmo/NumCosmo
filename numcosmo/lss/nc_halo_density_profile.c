@@ -781,7 +781,7 @@ nc_halo_density_profile_get_lnXf (NcHaloDensityProfile *dp)
 }
 
 /**
- * nc_halo_density_profile_get_phys_limts:
+ * nc_halo_density_profile_get_phys_limits:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  * @dp: a #NcHaloDensityProfile
@@ -796,7 +796,7 @@ nc_halo_density_profile_get_lnXf (NcHaloDensityProfile *dp)
  *
  */
 void
-nc_halo_density_profile_get_phys_limts (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z, gdouble *Ri, gdouble *Rf)
+nc_halo_density_profile_get_phys_limits (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z, gdouble *Ri, gdouble *Rf)
 {
   NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
   const gdouble r_s                        = nc_halo_density_profile_r_s (dp, cosmo, z);
