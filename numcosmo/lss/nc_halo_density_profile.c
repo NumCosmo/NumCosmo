@@ -64,10 +64,10 @@
  * r_{s0} \equiv \frac{1}{c_\Delta}\left(\frac{3M_\Delta}{4\pi}\right)^{1/3}.
  * \end{equation}
  * We split the expression of $r_s$ in a constant part $r_{s0}$ and a redshift
- * dependent (time-depedent) part $(\Delta\,\rho_\mathrm{bg}(z))^{-1/3}$.
+ * dependent (time-dependent) part $(\Delta\,\rho_\mathrm{bg}(z))^{-1/3}$.
  *
  * Note that, the parameter $r_s$ can be computed directly from $(M_\Delta,\; c_\Delta)$,
- * given the mass definition, without refering to $\hat\rho(x)$.
+ * given the mass definition, without referring to $\hat\rho(x)$.
  *
  * ## Computing $\rho_s$
  *
