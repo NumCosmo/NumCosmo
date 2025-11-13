@@ -783,6 +783,7 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
   const gdouble sigma_pre    = SIGMA_P0 + SIGMA_P1 * DlnM;
   const gdouble mu_p2        = MU_P2;
   const gdouble sigma_p2     = SIGMA_P2;
+  const gdouble cut          = CUT;
   gdouble *res_ptr           = ncm_vector_ptr (res, 0);
   guint i;
   gdouble completeness, ipurity;
@@ -801,7 +802,7 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
       completeness = nc_cluster_mass_selection_completeness (selection, lnM, z_ptr[i]);
       ipurity      = nc_cluster_mass_selection_ipurity (selection, lnM_obs_ptr[i], z_ptr[i]);
 
-      if (lnM_obs_ptr[i] < 0.0)
+      if (lnM_obs_ptr[i] < cut)
         res_ptr[i] = 0.0;
       else
         res_ptr[i] = 2.0 / (sqrt_2pi * sigma) * exp (-0.5 * x * x) / erfc ((CUT - lnR) / (M_SQRT2 * sigma)) * completeness * ipurity;
@@ -818,7 +819,7 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
       gdouble completeness = nc_cluster_mass_selection_completeness (selection, lnM, z_ptr[i * sz]);
       gdouble ipurity      = nc_cluster_mass_selection_ipurity (selection, lnM_obs_ptr[i * tda], z_ptr[i *  sz]);
 
-      if (lnM_obs_ptr[i * tda] < 0.0)
+      if (lnM_obs_ptr[i * tda] < cut)
         res_ptr[i] = 0.0;
       else
         res_ptr[i] = 2.0 / (sqrt_2pi * sigma) * exp (-0.5 * x * x) / erfc ((CUT - lnR) / (M_SQRT2 * sigma)) * completeness * ipurity;

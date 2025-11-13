@@ -199,3 +199,32 @@ def test_cluster_mass_ascaso_truncated_gaussian(
     lambda_alpha = phi_alpha / (1 - Phi_alpha)
     expected_std = std_untrunc * np.sqrt(1 + alpha * lambda_alpha - lambda_alpha**2)
     assert np.isclose(std_trunc, expected_std, rtol=1e-10)
+
+
+def test_cluster_mass_ascaso_p_vec_z_lnMobs(
+    cluster_m: Nc.ClusterMassAscaso, cosmo: Nc.HICosmo
+) -> None:
+    """Test vectorized probability distribution function.
+
+    Verifies that p_vec_z_lnMobs() matches individual p() calls
+    for multiple redshifts and richness values.
+    """
+    lnM = np.log(1e14)
+    z_array = np.linspace(0.1, 1.1, 100)
+    lnR_array = np.log(np.geomspace(3.0, 1e3, 100))
+
+    # Create Ncm.Vector for z and Ncm.Matrix for lnR (one column)
+    z_vec = Ncm.Vector.new_array(z_array)
+    lnR_mat = Ncm.Matrix.new_array(lnR_array, 1)
+
+    # Allocate result array
+    res = Ncm.Vector.new(len(z_array))
+
+    # Vectorized call
+    cluster_m.p_vec_z_lnMobs(cosmo, lnM, z_vec, lnR_mat, None, res)
+
+    # Compare with individual calls
+    for i, (z, lnR) in enumerate(zip(z_array, lnR_array)):
+        p_scalar = cluster_m.p(cosmo, lnM, z, [lnR], None)
+        p_vec = res.get(i)
+        assert np.isclose(p_scalar, p_vec, rtol=1e-10)

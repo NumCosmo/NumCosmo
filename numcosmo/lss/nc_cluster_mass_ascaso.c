@@ -529,6 +529,7 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
   const gdouble sigma_pre    = SIGMA_P0 + SIGMA_P1 * DlnM;
   const gdouble mu_p2        = MU_P2;
   const gdouble sigma_p2     = SIGMA_P2;
+  const gdouble cut          = CUT;
   gdouble *res_ptr           = ncm_vector_ptr (res, 0);
   guint i;
 
@@ -543,9 +544,7 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
       const gdouble sigma  = sigma_pre + sigma_p2 * Dln1pz;
       const gdouble x      = (lnM_obs_ptr[i] - lnR) / sigma;
 
-      /* const gdouble x_cut  = (lnR - CUT) / (M_SQRT2 * sigma); */
-
-      if (lnM_obs_ptr[i] < 0.0)
+      if (lnM_obs_ptr[i] < cut)
         res_ptr[i] = 0.0;
       else
         res_ptr[i] = 1.0 * exp (-0.5 * x * x) / (sqrt_2pi * sigma);
@@ -560,9 +559,7 @@ _nc_cluster_mass_ascaso_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosm
       const gdouble sigma  = sigma_pre + sigma_p2 * Dln1pz;
       const gdouble x      = (lnM_obs_ptr[i * tda] - lnR) / sigma;
 
-      /* const gdouble x_cut  = (lnR - CUT) / (M_SQRT2 * sigma); */
-
-      if (lnM_obs_ptr[i * tda] < 0.0)
+      if (lnM_obs_ptr[i * tda] < cut)
         res_ptr[i] = 0.0;
       else
         res_ptr[i] = 1.0 * exp (-0.5 * x * x) / (sqrt_2pi * sigma);
