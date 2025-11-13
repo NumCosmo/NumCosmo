@@ -78,6 +78,7 @@ void test_nc_halo_mass_summary_basic (void);
 void test_nc_halo_cm_param_basic (void);
 void test_nc_halo_cm_klypin11_basic (void);
 void test_nc_halo_cm_duffy08_basic (void);
+void test_nc_halo_bias_despali_basic (void);
 void test_nc_xcor_basic (void);
 
 gint
@@ -132,6 +133,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/halo_cm_param/basic", test_nc_halo_cm_param_basic);
   g_test_add_func ("/nc/halo_cm_klypin11/basic", test_nc_halo_cm_klypin11_basic);
   g_test_add_func ("/nc/halo_cm_duffy08/basic", test_nc_halo_cm_duffy08_basic);
+
+  g_test_add_func ("/nc/halo_bias_despali/basic", test_nc_halo_bias_despali_basic);
 
   g_test_add_func ("/nc/xcor/basic", test_nc_xcor_basic);
 
@@ -953,5 +956,35 @@ test_nc_xcor_basic (void)
   nc_distance_clear (&dist);
 
   NCM_TEST_FREE (nc_xcor_free, xc);
+}
+
+void
+test_nc_halo_bias_despali_basic (void)
+{
+  NcDistance *dist        = nc_distance_new (1100.0);
+  NcTransferFunc *tf      = nc_transfer_func_eh_new ();
+  NcPowspecML *ps_ml      = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+  NcmPowspecFilter *psf   = ncm_powspec_filter_new (NCM_POWSPEC (ps_ml), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
+  NcMultiplicityFunc *mf  = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_despali_new ());
+  NcHaloMassFunction *hmf = nc_halo_mass_function_new (dist, psf, mf);
+  NcHaloBiasDespali *hbd  = nc_halo_bias_despali_new (hmf);
+  NcHaloBiasDespali *hbd2;
+
+  g_assert_true (hbd != NULL);
+  g_assert_true (NC_IS_HALO_BIAS_DESPALI (hbd));
+
+  hbd2 = nc_halo_bias_despali_ref (hbd);
+  nc_halo_bias_despali_clear (&hbd2);
+  g_assert_true (hbd2 == NULL);
+
+  g_assert_true (NC_IS_HALO_BIAS_DESPALI (hbd));
+
+  nc_distance_clear (&dist);
+  nc_transfer_func_clear (&tf);
+  ncm_powspec_filter_clear (&psf);
+  nc_multiplicity_func_clear (&mf);
+  nc_halo_mass_function_clear (&hmf);
+
+  NCM_TEST_FREE (nc_halo_bias_despali_free, hbd);
 }
 
