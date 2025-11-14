@@ -1445,9 +1445,13 @@ class ClusterAbundance(GObject.Object):
         clusterz: ClusterRedshift,
         clusterm: ClusterMass,
         lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
-        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ],
         z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
-        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
 
 class ClusterAbundanceClass(GObject.GPointer):
@@ -2807,7 +2811,7 @@ class ClusterPhotozGauss(ClusterRedshift):
     ::
 
         ClusterPhotozGauss(**properties)
-        new() -> NumCosmo.ClusterRedshift
+        new() -> NumCosmo.ClusterPhotozGauss
 
     Object NcClusterPhotozGauss
 
