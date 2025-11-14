@@ -183,7 +183,6 @@ nc_cluster_photoz_gauss_class_init (NcClusterPhotozGaussClass *klass)
   parent_class->volume          = &_nc_cluster_photoz_gauss_volume;
   parent_class->_obs_len        = 1;
   parent_class->_obs_params_len = 2;
-  parent_class->volume        = &_nc_cluster_photoz_gauss_volume;
 
   ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_REDSHIFT_IMPL_ALL);
 }
@@ -236,27 +235,6 @@ _nc_cluster_photoz_gauss_intp_bin (NcClusterRedshift *clusterz, NcHICosmo *cosmo
            (1.0 + erf (z / sqrt2_sigma));
 }
 
-static gdouble
-_nc_cluster_photoz_gauss_intp_bin (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z , const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params)
-{
-  NcClusterPhotozGauss *pzg = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
-  const gdouble z_bias      = z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS];
-  const gdouble z_eff       = z_bias + z;
-  const gdouble sigma       = z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_SIGMA];
-  const gdouble sqrt2_sigma = M_SQRT2 * sigma;
-  const gdouble x_lb       = (z_eff - z_obs_lower[0]) / sqrt2_sigma;
-  const gdouble x_ub      = (z_eff - z_obs_upper[0]) / sqrt2_sigma;
-  
-  if (x_ub > 4.0)
-    return -(erfc (x_lb) - erfc (x_ub)) /
-           (1.0 + erf (z_eff / sqrt2_sigma));
-  else
-    return (erf (x_lb) - erf (x_ub)) /
-           (1.0 + erf (z_eff / sqrt2_sigma));
-}
-
-
-
 static gboolean
 _nc_cluster_photoz_gauss_resample (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble *z_obs, const gdouble *z_obs_params, NcmRNG *rng)
 {
@@ -289,21 +267,7 @@ _nc_cluster_photoz_gauss_p_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo
 
   return;
 }
-static void 
-_nc_cluster_photoz_gauss_p_bin_limits (NcClusterRedshift *clusterz,  NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
-{
 
-  const gdouble mean_lower = z_obs_lower[0] - z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS];
-  const gdouble mean_upper = z_obs_upper[0] - z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS];
-  const gdouble zl   = GSL_MAX (mean_lower - 10.0 * z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_SIGMA], 0.0);
-  const gdouble zu   = mean_upper + 10.0 * z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_SIGMA];
-
-  *z_lower = zl;
-  *z_upper = zu;
-
-
-   return;
-}
 static void
 _nc_cluster_photoz_gauss_p_bin_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
 {
