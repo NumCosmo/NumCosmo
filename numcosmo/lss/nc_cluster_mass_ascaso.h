@@ -105,3 +105,4 @@ gboolean nc_cluster_mass_ascaso_get_enable_rejection (NcClusterMassAscaso *ascas
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_MASS_ASCASO_H_ */
+
