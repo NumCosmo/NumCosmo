@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_xcor_limber_kernel_CMB_lensing.h
+ *            nc_xcor_kernel_CMB_lensing.h
  *
  *  Tue July 14 12:00:00 2015
  *  Copyright  2015  Cyrille Doux
@@ -23,39 +23,39 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_XCOR_LIMBER_KERNEL_CMB_LENSING_H_
-#define _NC_XCOR_LIMBER_KERNEL_CMB_LENSING_H_
+#ifndef _NC_XCOR_KERNEL_CMB_LENSING_H_
+#define _NC_XCOR_KERNEL_CMB_LENSING_H_
 
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_spline.h>
 #include <numcosmo/math/ncm_spline_cubic_notaknot.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel.h>
+#include <numcosmo/xcor/nc_xcor_kernel.h>
 #include <numcosmo/nc_recomb.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING (nc_xcor_limber_kernel_cmb_lensing_get_type ())
+#define NC_TYPE_XCOR_KERNEL_CMB_LENSING (nc_xcor_kernel_cmb_lensing_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcXcorLimberKernelCMBLensing, nc_xcor_limber_kernel_cmb_lensing, NC, XCOR_LIMBER_KERNEL_CMB_LENSING, NcXcorLimberKernel)
+G_DECLARE_FINAL_TYPE (NcXcorKernelCMBLensing, nc_xcor_kernel_cmb_lensing, NC, XCOR_KERNEL_CMB_LENSING, NcXcorKernel)
 
 /**
- * NcXcorLimberKernelCMBLensingSParams:
- * @NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAM_LEN: FIXME
+ * NcXcorKernelCMBLensingSParams:
+ * @NC_XCOR_KERNEL_CMB_LENSING_SPARAM_LEN: FIXME
  *
  * FIXME
  */
-typedef enum /*< enum,underscore_name=NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_XCOR_KERNEL_CMB_LENSING_SPARAMS >*/
 {
-  NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAM_LEN,
-} NcXcorLimberKernelCMBLensingSParams;
+  NC_XCOR_KERNEL_CMB_LENSING_SPARAM_LEN,
+} NcXcorKernelCMBLensingSParams;
 
-#define NC_XCOR_LIMBER_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL (0.0)
+#define NC_XCOR_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL (0.0)
 
-NcXcorLimberKernelCMBLensing *nc_xcor_limber_kernel_cmb_lensing_new (NcDistance *dist, NcRecomb *recomb, NcmVector *Nl);
+NcXcorKernelCMBLensing *nc_xcor_kernel_cmb_lensing_new (NcDistance *dist, NcRecomb *recomb, NcmVector *Nl);
 
 G_END_DECLS
 
-#endif /* _NC_XCOR_LIMBER_KERNEL_CMB_LENSING_H_ */
+#endif /* _NC_XCOR_KERNEL_CMB_LENSING_H_ */
 
