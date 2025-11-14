@@ -30,7 +30,7 @@ Ncm.cfg_init()
 @pytest.fixture(name="cluster_pz")
 def fixture_cluster_pz() -> Nc.ClusterPhotozGauss:
     """Create cluster photometric redshift model."""
-    return Nc.ClusterPhotozGauss.new()
+    return Nc.ClusterPhotozGauss(pz_min=0.1, pz_max=0.9)
 
 
 def test_serialization_deserialization(cluster_pz: Nc.ClusterPhotozGauss) -> None:
@@ -98,11 +98,10 @@ def test_cluster_photoz_gauss_resample(
     """Test resampling function."""
     lnM = np.log(1e14)
     z = 0.5
-    sigma_z = 0.03
+    z_obs_params = [0.02, 0.03]  # bias, sigma
     rng = Ncm.RNG.new()
 
-    z_obs = [0.0]
-    success, z_obs = cluster_pz.resample(cosmo, lnM, z, [sigma_z], rng)
+    success, z_obs = cluster_pz.resample(cosmo, lnM, z, z_obs_params, rng)
 
     assert isinstance(success, bool)
     assert z_obs > 0.0  # Should be positive
@@ -213,3 +212,79 @@ def test_cluster_photoz_gauss_sigma_effect(
 
     # Smaller sigma should give higher peak probability
     assert p_small_sigma > p_large_sigma
+
+
+def test_cluster_photoz_gauss_p_integral(
+    cluster_pz: Nc.ClusterPhotozGauss, cosmo: Nc.HICosmo
+) -> None:
+    """Test probability distribution integrates correctly using trapezoid."""
+    lnM = np.log(1e14)
+    z = 0.5
+    bias = 0.02
+    sigma = 0.03
+    z_obs_params = [bias, sigma]
+
+    # Create array of observed redshifts around the mean
+    z_mean = z + bias
+    z_obs_array = np.linspace(z_mean - 5 * sigma, z_mean + 5 * sigma, 200)
+    p_array = np.array(
+        [cluster_pz.p(cosmo, lnM, z, [z_obs], z_obs_params) for z_obs in z_obs_array]
+    )
+    assert all(p > 0 for p in p_array)
+
+    integral = np.trapezoid(p_array, z_obs_array)
+    intp_val = cluster_pz.intp(cosmo, lnM, z)
+
+    assert np.isclose(integral, intp_val, rtol=1e-2)
+
+
+def test_cluster_photoz_gauss_intp_bin_consistency(
+    cluster_pz: Nc.ClusterPhotozGauss, cosmo: Nc.HICosmo
+) -> None:
+    """Test intp_bin matches manual integration of p using trapezoid."""
+    lnM = np.log(1e14)
+    z = 0.5
+    bias = 0.02
+    sigma = 0.03
+    z_obs_params = [bias, sigma]
+
+    z_obs_lower = [0.4]
+    z_obs_upper = [0.6]
+
+    # Manual integration using trapezoid
+    z_obs_array = np.linspace(z_obs_lower[0], z_obs_upper[0], 200)
+    p_array = np.array(
+        [cluster_pz.p(cosmo, lnM, z, [z_obs], z_obs_params) for z_obs in z_obs_array]
+    )
+    manual_integral = np.trapezoid(p_array, z_obs_array)
+
+    # Compare with intp_bin
+    intp_bin_val = cluster_pz.intp_bin(
+        cosmo, lnM, z, z_obs_lower, z_obs_upper, z_obs_params
+    )
+
+    assert np.isclose(manual_integral, intp_bin_val, rtol=1e-2)
+
+
+def test_cluster_photoz_gauss_bin_sum_consistency(
+    cluster_pz: Nc.ClusterPhotozGauss, cosmo: Nc.HICosmo
+) -> None:
+    """Test sum of bins matches total integral using trapezoid."""
+    lnM = np.log(1e14)
+    z = 0.5
+    bias = 0.02
+    sigma = 0.03
+    z_obs_params = [bias, sigma]
+
+    # Create bins spanning the distribution
+    z_mean = z + bias
+    z_edges = np.linspace(z_mean - 5 * sigma, z_mean + 5 * sigma, 11)
+
+    bin_sum = sum(
+        cluster_pz.intp_bin(cosmo, lnM, z, [z_edges[i]], [z_edges[i + 1]], z_obs_params)
+        for i in range(len(z_edges) - 1)
+    )
+
+    total_integral = cluster_pz.intp(cosmo, lnM, z)
+
+    assert np.isclose(bin_sum, total_integral, rtol=1e-2)

@@ -204,11 +204,10 @@ _nc_cluster_photoz_gauss_intp (NcClusterRedshift *clusterz, NcHICosmo *cosmo, co
 {
   NcClusterPhotozGauss *pzg                = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
   NcClusterPhotozGaussPrivate * const self = pzg->priv;
-
-  const gdouble sigma       = 0.03 * (1.0 + z);
-  const gdouble sqrt2_sigma = M_SQRT2 * sigma;
-  const gdouble x_min       = (z - self->pz_min) / sqrt2_sigma;
-  const gdouble x_max       = (z - self->pz_max) / sqrt2_sigma;
+  const gdouble sigma                      = 0.03 * (1.0 + z);
+  const gdouble sqrt2_sigma                = M_SQRT2 * sigma;
+  const gdouble x_min                      = (z - self->pz_min) / sqrt2_sigma;
+  const gdouble x_max                      = (z - self->pz_max) / sqrt2_sigma;
 
   if (x_max > 4.0)
     return -(erfc (x_min) - erfc (x_max)) /
