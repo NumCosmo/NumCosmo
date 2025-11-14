@@ -77,8 +77,7 @@ static void _nc_cluster_mass_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo
 static void _nc_cluster_mass_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *z_lower, gdouble *z_upper);
 static void _nc_cluster_mass_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
 static gdouble _nc_cluster_mass_volume (NcClusterMass *clusterm);
-
-static void _nc_cluster_mass_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res);
+static void _nc_cluster_mass_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, NcmVector *res);
 
 static void
 nc_cluster_mass_class_init (NcClusterMassClass *klass)
@@ -171,7 +170,7 @@ _nc_cluster_mass_volume (NcClusterMass *clusterm)
 }
 
 static void
-_nc_cluster_mass_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res)
+_nc_cluster_mass_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, NcmVector *res)
 {
   g_error ("_nc_cluster_mass_p_vec_z_lnMobs: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterm));
 }
@@ -408,15 +407,26 @@ nc_cluster_mass_volume (NcClusterMass *clusterm)
  * @lnM: FIXME
  * @z: a #NcmVector
  * @lnM_obs: a #NcmMatrix
- * @lnM_obs_params: a #NcmMatrix
- * @res: (element-type gdouble): a GArray
+ * @lnM_obs_params: (allow-none): a #NcmMatrix
+ * @res: a #NcmVector to store the result
  *
- * FIXME
+ * This method computes the probability distribution of @lnM for each redshift in @z
+ * given the true mass @lnM and the observed mass proxies @lnM_obs and their parameters @lnM_obs_params.
  *
  */
 void
-nc_cluster_mass_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, GArray *res)
+nc_cluster_mass_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, NcmVector *res)
 {
+  const guint z_len       = ncm_vector_len (z);
+  const guint lnM_obs_len = ncm_matrix_nrows (lnM_obs);
+  const guint res_len     = ncm_vector_len (res);
+
+  g_assert_cmpuint (z_len, ==, res_len);
+  g_assert_cmpuint (lnM_obs_len, ==, res_len);
+
+  if (lnM_obs_params != NULL)
+    g_assert_cmpuint (lnM_obs_len, ==, ncm_matrix_nrows (lnM_obs_params));
+
   NC_CLUSTER_MASS_GET_CLASS (clusterm)->P_vec_z_lnMobs (clusterm, cosmo, lnM, z, lnM_obs, lnM_obs_params, res);
 }
 
@@ -429,7 +439,7 @@ _nc_cluster_mass_log_all_models_go (GType model_type, guint n)
   for (i = 0; i < nc; i++)
   {
     guint ncc;
-    GType *modelsc = g_type_children (models[i], &ncc);
+    GType *model_sc = g_type_children (models[i], &ncc);
 
     g_message ("#  ");
 
@@ -441,7 +451,7 @@ _nc_cluster_mass_log_all_models_go (GType model_type, guint n)
     if (ncc)
       _nc_cluster_mass_log_all_models_go (models[i], n + 2);
 
-    g_free (modelsc);
+    g_free (model_sc);
   }
 
   g_free (models);

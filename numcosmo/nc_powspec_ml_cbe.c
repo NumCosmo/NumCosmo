@@ -96,9 +96,9 @@ _nc_powspec_ml_cbe_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_CBE_K_MAX:
       nc_powspec_ml_cbe_set_intern_k_max (ps_cbe, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -120,9 +120,9 @@ _nc_powspec_ml_cbe_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_CBE_K_MAX:
       g_value_set_double (value, nc_powspec_ml_cbe_get_intern_k_max (ps_cbe));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

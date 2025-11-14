@@ -103,9 +103,9 @@ _nc_hipert_bg_var_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_ZF:
       nc_hipert_bg_var_set_zf (bg_var, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -130,9 +130,9 @@ _nc_hipert_bg_var_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_ZF:
       g_value_set_double (value, nc_hipert_bg_var_get_zf (bg_var));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

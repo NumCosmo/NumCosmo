@@ -208,9 +208,9 @@ nc_scalefactor_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_ABSTOL:
       nc_scalefactor_set_abstol (a, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -242,9 +242,9 @@ nc_scalefactor_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_ABSTOL:
       g_value_set_double (value, nc_scalefactor_get_abstol (a));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

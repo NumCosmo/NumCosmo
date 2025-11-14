@@ -4,10 +4,11 @@ import numpy.typing as npt
 
 from gi.repository import GLib
 from gi.repository import GObject
-from gi.repository import NumCosmoMath
+from . import ncm as NumCosmoMath
 
 T = typing.TypeVar("T")
 
+CLUSTER_MASS_ASCASO_DEFAULT_CUT: float = 0.0
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P0: float = 3.19
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P1: int = 0
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P2: int = 0
@@ -42,6 +43,14 @@ CLUSTER_MASS_PLCL_MCL: int = 1
 CLUSTER_MASS_PLCL_MPL: int = 0
 CLUSTER_MASS_PLCL_SD_CL: int = 1
 CLUSTER_MASS_PLCL_SD_PL: int = 0
+CLUSTER_MASS_SELECTION_DEFAULT_CUT: float = 0.0
+CLUSTER_MASS_SELECTION_DEFAULT_MU_P0: float = 3.19
+CLUSTER_MASS_SELECTION_DEFAULT_MU_P1: int = 0
+CLUSTER_MASS_SELECTION_DEFAULT_MU_P2: int = 0
+CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL: float = 0.0
+CLUSTER_MASS_SELECTION_DEFAULT_SIGMA_P0: float = 0.33
+CLUSTER_MASS_SELECTION_DEFAULT_SIGMA_P1: int = 0
+CLUSTER_MASS_SELECTION_DEFAULT_SIGMA_P2: float = 0.0
 CLUSTER_MASS_VANDERLINDE_DEFAULT_A_SZ: float = 6.01
 CLUSTER_MASS_VANDERLINDE_DEFAULT_B_SZ: float = 1.31
 CLUSTER_MASS_VANDERLINDE_DEFAULT_C_SZ: float = 1.6
@@ -1436,9 +1445,13 @@ class ClusterAbundance(GObject.Object):
         clusterz: ClusterRedshift,
         clusterm: ClusterMass,
         lnM_obs: typing.Sequence[float] | npt.NDArray[np.float64],
-        lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ],
         z_obs: typing.Sequence[float] | npt.NDArray[np.float64],
-        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
+        z_obs_params: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> float: ...
 
 class ClusterAbundanceClass(GObject.GPointer):
@@ -1543,8 +1556,8 @@ class ClusterMass(NumCosmoMath.Model):
         lnM: float,
         z: NumCosmoMath.Vector,
         lnM_obs: NumCosmoMath.Matrix,
-        lnM_obs_params: NumCosmoMath.Matrix,
-        res: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[NumCosmoMath.Matrix],
+        res: NumCosmoMath.Vector,
     ) -> None: ...
     def do_intP(self, cosmo: HICosmo, lnM: float, z: float) -> float: ...
     def do_intP_bin(
@@ -1617,8 +1630,8 @@ class ClusterMass(NumCosmoMath.Model):
         lnM: float,
         z: NumCosmoMath.Vector,
         lnM_obs: NumCosmoMath.Matrix,
-        lnM_obs_params: NumCosmoMath.Matrix,
-        res: typing.Sequence[float] | npt.NDArray[np.float64],
+        lnM_obs_params: typing.Optional[NumCosmoMath.Matrix],
+        res: NumCosmoMath.Vector,
     ) -> None: ...
     def plcl_Msz_Ml_p_ndetone(
         self,
@@ -1671,6 +1684,8 @@ class ClusterMassAscaso(ClusterMass):
         Minimum LnRichness
       lnRichness-max -> gdouble: lnRichness-max
         Maximum LnRichness
+      enable-rejection -> gboolean: enable-rejection
+        Whether rejects the sampled objects below the CUT
       mup0 -> gdouble: mup0
         mu_p0
       mup1 -> gdouble: mup1
@@ -1683,6 +1698,8 @@ class ClusterMassAscaso(ClusterMass):
         \sigma_p1
       sigmap2 -> gdouble: sigmap2
         \sigma_p2
+      cut -> gdouble: cut
+        CUT
       mup0-fit -> gboolean: mup0-fit
         mu_p0:fit
       mup1-fit -> gboolean: mup1-fit
@@ -1695,6 +1712,8 @@ class ClusterMassAscaso(ClusterMass):
         \sigma_p1:fit
       sigmap2-fit -> gboolean: sigmap2-fit
         \sigma_p2:fit
+      cut-fit -> gboolean: cut-fit
+        CUT:fit
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -1722,6 +1741,9 @@ class ClusterMassAscaso(ClusterMass):
 
     class Props:
         M0: float
+        cut: float
+        cut_fit: bool
+        enable_rejection: bool
         lnRichness_max: float
         lnRichness_min: float
         mup0: float
@@ -1753,6 +1775,9 @@ class ClusterMassAscaso(ClusterMass):
     def __init__(
         self,
         M0: float = ...,
+        cut: float = ...,
+        cut_fit: bool = ...,
+        enable_rejection: bool = ...,
         lnRichness_max: float = ...,
         lnRichness_min: float = ...,
         mup0: float = ...,
@@ -1772,6 +1797,13 @@ class ClusterMassAscaso(ClusterMass):
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
+    def get_cut(self, lnM: float, z: float) -> float: ...
+    def get_enable_rejection(self) -> bool: ...
+    def get_mean(self, lnM: float, z: float) -> float: ...
+    def get_mean_richness(self, lnM: float, z: float) -> float: ...
+    def get_std(self, lnM: float, z: float) -> float: ...
+    def get_std_richness(self, lnM: float, z: float) -> float: ...
+    def set_enable_rejection(self, on: bool) -> None: ...
 
 class ClusterMassAscasoClass(GObject.GPointer):
     r"""
@@ -2148,8 +2180,8 @@ class ClusterMassClass(GObject.GPointer):
             float,
             NumCosmoMath.Vector,
             NumCosmoMath.Matrix,
-            NumCosmoMath.Matrix,
-            typing.Sequence[float] | npt.NDArray[np.float64],
+            typing.Optional[NumCosmoMath.Matrix],
+            NumCosmoMath.Vector,
         ],
         None,
     ] = ...
@@ -2481,6 +2513,178 @@ class ClusterMassPlCLClass(GObject.GPointer):
 
 class ClusterMassPrivate(GObject.GPointer): ...
 
+class ClusterMassSelection(ClusterMass):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterMassSelection(**properties)
+
+    Object NcClusterMassSelection
+
+    Properties from NcClusterMassSelection:
+      M0 -> gdouble: M0
+        Pivot mass
+      z0 -> gdouble: z0
+        Pivot redshift
+      lnRichness-min -> gdouble: lnRichness-min
+        Minimum LnRichness
+      lnRichness-max -> gdouble: lnRichness-max
+        Maximum LnRichness
+      enable-rejection -> gboolean: enable-rejection
+        Whether rejects the sampled objects below the CUT
+      ipurity -> NcmSpline2d: ipurity
+        2D Spline for ipurity function
+      completeness -> NcmSpline2d: completeness
+        2D Spline for completeness function
+      lnM-limits -> NcmVector: lnM-limits
+        Mass limits for cluster mass relation
+      mup0 -> gdouble: mup0
+        mu_p0
+      mup1 -> gdouble: mup1
+        mu_p1
+      mup2 -> gdouble: mup2
+        mu_p2
+      sigmap0 -> gdouble: sigmap0
+        \sigma_p0
+      sigmap1 -> gdouble: sigmap1
+        \sigma_p1
+      sigmap2 -> gdouble: sigmap2
+        \sigma_p2
+      cut -> gdouble: cut
+        CUT
+      mup0-fit -> gboolean: mup0-fit
+        mu_p0:fit
+      mup1-fit -> gboolean: mup1-fit
+        mu_p1:fit
+      mup2-fit -> gboolean: mup2-fit
+        mu_p2:fit
+      sigmap0-fit -> gboolean: sigmap0-fit
+        \sigma_p0:fit
+      sigmap1-fit -> gboolean: sigmap1-fit
+        \sigma_p1:fit
+      sigmap2-fit -> gboolean: sigmap2-fit
+        \sigma_p2:fit
+      cut-fit -> gboolean: cut-fit
+        CUT:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        M0: float
+        completeness: NumCosmoMath.Spline2d
+        cut: float
+        cut_fit: bool
+        enable_rejection: bool
+        ipurity: NumCosmoMath.Spline2d
+        lnM_limits: NumCosmoMath.Vector
+        lnRichness_max: float
+        lnRichness_min: float
+        mup0: float
+        mup0_fit: bool
+        mup1: float
+        mup1_fit: bool
+        mup2: float
+        mup2_fit: bool
+        sigmap0: float
+        sigmap0_fit: bool
+        sigmap1: float
+        sigmap1_fit: bool
+        sigmap2: float
+        sigmap2_fit: bool
+        z0: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: ClusterMass = ...
+    priv: ClusterMassSelectionPrivate = ...
+    def __init__(
+        self,
+        M0: float = ...,
+        completeness: NumCosmoMath.Spline2d = ...,
+        cut: float = ...,
+        cut_fit: bool = ...,
+        enable_rejection: bool = ...,
+        ipurity: NumCosmoMath.Spline2d = ...,
+        lnM_limits: NumCosmoMath.Vector = ...,
+        lnRichness_max: float = ...,
+        lnRichness_min: float = ...,
+        mup0: float = ...,
+        mup0_fit: bool = ...,
+        mup1: float = ...,
+        mup1_fit: bool = ...,
+        mup2: float = ...,
+        mup2_fit: bool = ...,
+        sigmap0: float = ...,
+        sigmap0_fit: bool = ...,
+        sigmap1: float = ...,
+        sigmap1_fit: bool = ...,
+        sigmap2: float = ...,
+        sigmap2_fit: bool = ...,
+        z0: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def completeness(self, lnM: float, z: float) -> float: ...
+    def get_cut(self) -> float: ...
+    def get_enable_rejection(self) -> bool: ...
+    def get_mean(self, lnM: float, z: float) -> float: ...
+    def get_mean_richness(self, lnM: float, z: float) -> float: ...
+    def get_std(self, lnM: float, z: float) -> float: ...
+    def get_std_richness(self, lnM: float, z: float) -> float: ...
+    def ipurity(self, lnM_obs: float, z: float) -> float: ...
+    def peek_completeness(self) -> NumCosmoMath.Spline2d: ...
+    def peek_ipurity(self) -> NumCosmoMath.Spline2d: ...
+    def set_completeness(self, completeness: NumCosmoMath.Spline2dBicubic) -> None: ...
+    def set_enable_rejection(self, on: bool) -> None: ...
+    def set_ipurity(self, ipurity: NumCosmoMath.Spline2dBicubic) -> None: ...
+    def set_lnM_limits(self, lnM_limits: NumCosmoMath.Vector) -> None: ...
+
+class ClusterMassSelectionClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterMassSelectionClass()
+    """
+
+    parent_class: ClusterMassClass = ...
+
+class ClusterMassSelectionPrivate(GObject.GPointer): ...
+
 class ClusterMassVanderlinde(ClusterMass):
     r"""
     :Constructors:
@@ -2607,7 +2811,7 @@ class ClusterPhotozGauss(ClusterRedshift):
     ::
 
         ClusterPhotozGauss(**properties)
-        new() -> NumCosmo.ClusterRedshift
+        new() -> NumCosmo.ClusterPhotozGauss
 
     Object NcClusterPhotozGauss
 
@@ -2658,6 +2862,7 @@ class ClusterPhotozGauss(ClusterRedshift):
     parent_instance: ClusterRedshift = ...
     pz_max: float = ...
     pz_min: float = ...
+    priv: ClusterPhotozGaussPrivate = ...
     def __init__(
         self,
         pz_max: float = ...,
@@ -2781,6 +2986,8 @@ class ClusterPhotozGaussGlobalClass(GObject.GPointer):
     """
 
     parent_class: ClusterRedshiftClass = ...
+
+class ClusterPhotozGaussPrivate(GObject.GPointer): ...
 
 class ClusterPseudoCounts(NumCosmoMath.Model):
     r"""
@@ -3030,8 +3237,13 @@ class ClusterRedshift(NumCosmoMath.Model):
         z_obs_params: float,
     ) -> float: ...
     def do_resample(
-        self, cosmo: HICosmo, lnM: float, z: float, rng: NumCosmoMath.RNG
-    ) -> typing.Tuple[bool, float, float]: ...
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: float,
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
+        rng: NumCosmoMath.RNG,
+    ) -> typing.Tuple[bool, float]: ...
     def do_volume(self) -> float: ...
     def free(self) -> None: ...
     @staticmethod
@@ -3076,8 +3288,13 @@ class ClusterRedshift(NumCosmoMath.Model):
     ) -> typing.Tuple[float, float]: ...
     def ref(self) -> ClusterRedshift: ...
     def resample(
-        self, cosmo: HICosmo, lnM: float, z: float, rng: NumCosmoMath.RNG
-    ) -> typing.Tuple[bool, float, float]: ...
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: float,
+        z_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
+        rng: NumCosmoMath.RNG,
+    ) -> typing.Tuple[bool, float]: ...
     def volume(self) -> float: ...
 
 class ClusterRedshiftClass(GObject.GPointer):
@@ -3098,8 +3315,15 @@ class ClusterRedshiftClass(GObject.GPointer):
         [ClusterRedshift, HICosmo, float, float, float, float, float], float
     ] = ...
     resample: typing.Callable[
-        [ClusterRedshift, HICosmo, float, float, NumCosmoMath.RNG],
-        typing.Tuple[bool, float, float],
+        [
+            ClusterRedshift,
+            HICosmo,
+            float,
+            float,
+            typing.Sequence[float] | npt.NDArray[np.float64],
+            NumCosmoMath.RNG,
+        ],
+        typing.Tuple[bool, float],
     ] = ...
     P_limits: typing.Callable[
         [ClusterRedshift, HICosmo, float, float, float, float], None
@@ -4467,6 +4691,95 @@ class DataCMBShiftParamClass(GObject.GPointer):
     """
 
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
+
+class DataClusterMassRich(NumCosmoMath.Data):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataClusterMassRich(**properties)
+        new() -> NumCosmo.DataClusterMassRich
+
+    Object NcDataClusterMassRich
+
+    Properties from NcDataClusterMassRich:
+      z-cluster -> NcmVector: z-cluster
+        Clusters (halo) redshift array
+      lnM-cluster -> NcmVector: lnM-cluster
+        Clusters (halo) ln-mass array
+      lnR-cluster -> NcmVector: lnR-cluster
+        Clusters (halo) ln-richness array
+      lnM-resample -> NcmVector: lnM-resample
+        Clusters (halo) ln-mass array for resample with rejection
+      z-resample -> NcmVector: z-resample
+        Clusters (halo) redshift array for resample with rejection
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        lnM_cluster: NumCosmoMath.Vector
+        lnM_resample: NumCosmoMath.Vector
+        lnR_cluster: NumCosmoMath.Vector
+        z_cluster: NumCosmoMath.Vector
+        z_resample: NumCosmoMath.Vector
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        lnM_cluster: NumCosmoMath.Vector = ...,
+        lnM_resample: NumCosmoMath.Vector = ...,
+        lnR_cluster: NumCosmoMath.Vector = ...,
+        z_cluster: NumCosmoMath.Vector = ...,
+        z_resample: NumCosmoMath.Vector = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    def apply_cut(self, cut: float) -> None: ...
+    @staticmethod
+    def clear(dmr: DataClusterMassRich) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls) -> DataClusterMassRich: ...
+    def peek_lnM(self) -> NumCosmoMath.Vector: ...
+    def peek_lnR(self) -> NumCosmoMath.Vector: ...
+    def peek_z(self) -> NumCosmoMath.Vector: ...
+    def ref(self) -> DataClusterMassRich: ...
+    def set_data(
+        self, lnM: NumCosmoMath.Vector, z: NumCosmoMath.Vector, lnR: NumCosmoMath.Vector
+    ) -> None: ...
+
+class DataClusterMassRichClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataClusterMassRichClass()
+    """
+
+    parent_class: NumCosmoMath.DataClass = ...
 
 class DataClusterNCount(NumCosmoMath.Data):
     r"""
@@ -13840,6 +14153,72 @@ class HaloBiasClass(GObject.GPointer):
     parent_class: GObject.ObjectClass = ...
     eval: typing.Callable[[HaloBias, HICosmo, float, float], float] = ...
 
+class HaloBiasDespali(HaloBias):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloBiasDespali(**properties)
+        new(mfp:NumCosmo.HaloMassFunction) -> NumCosmo.HaloBiasDespali
+        new_full(mfp:NumCosmo.HaloMassFunction, eo:bool, cmf:bool) -> NumCosmo.HaloBiasDespali
+
+    Object NcHaloBiasDespali
+
+    Properties from NcHaloBiasDespali:
+      eo -> gboolean: eo
+        Whether the halo finder uses elliptical overdensity
+      cmf -> gboolean: cmf
+        Whether the use of the cluster mass function
+
+    Properties from NcHaloBias:
+      mass-function -> NcHaloMassFunction: mass-function
+        Mass Function.
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        cmf: bool
+        eo: bool
+        mass_function: HaloMassFunction
+
+    props: Props = ...
+    parent_instance: HaloBias = ...
+    eo: bool = ...
+    cmf: bool = ...
+    def __init__(
+        self, cmf: bool = ..., eo: bool = ..., mass_function: HaloMassFunction = ...
+    ) -> None: ...
+    @staticmethod
+    def clear(biasf_despali: HaloBiasDespali) -> None: ...
+    def delta_c(self, cosmo: HICosmo, z: float) -> float: ...
+    def delta_vir(self, cosmo: HICosmo, z: float) -> float: ...
+    def free(self) -> None: ...
+    def get_cmf(self) -> bool: ...
+    def get_eo(self) -> bool: ...
+    @classmethod
+    def new(cls, mfp: HaloMassFunction) -> HaloBiasDespali: ...
+    @classmethod
+    def new_full(
+        cls, mfp: HaloMassFunction, eo: bool, cmf: bool
+    ) -> HaloBiasDespali: ...
+    def ref(self) -> HaloBiasDespali: ...
+    def set_cmf(self, on: bool) -> None: ...
+    def set_eo(self, on: bool) -> None: ...
+
+class HaloBiasDespaliClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloBiasDespaliClass()
+    """
+
+    parent_class: HaloBiasClass = ...
+
 class HaloBiasPS(HaloBias):
     r"""
     :Constructors:
@@ -14514,7 +14893,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
     ) -> typing.Tuple[
         NumCosmoMath.Spline, NumCosmoMath.Spline, NumCosmoMath.Spline
     ]: ...
-    def get_phys_limts(
+    def get_phys_limits(
         self, cosmo: HICosmo, z: float
     ) -> typing.Tuple[float, float]: ...
     def get_reltol(self) -> float: ...
@@ -20090,6 +20469,7 @@ class RecombSeagerOpt(GObject.GFlags):
     _value_repr_: wrapper_descriptor = ...
 
 class ClusterMassAscasoSParams(GObject.GEnum):
+    CUT: ClusterMassAscasoSParams = ...
     MU_P0: ClusterMassAscasoSParams = ...
     MU_P1: ClusterMassAscasoSParams = ...
     MU_P2: ClusterMassAscasoSParams = ...
@@ -20183,6 +20563,26 @@ class ClusterMassPlCLSParams(GObject.GEnum):
     COR: ClusterMassPlCLSParams = ...
     SD_L: ClusterMassPlCLSParams = ...
     SD_SZ: ClusterMassPlCLSParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class ClusterMassSelectionSParams(GObject.GEnum):
+    CUT: ClusterMassSelectionSParams = ...
+    MU_P0: ClusterMassSelectionSParams = ...
+    MU_P1: ClusterMassSelectionSParams = ...
+    MU_P2: ClusterMassSelectionSParams = ...
+    SIGMA_P0: ClusterMassSelectionSParams = ...
+    SIGMA_P1: ClusterMassSelectionSParams = ...
+    SIGMA_P2: ClusterMassSelectionSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

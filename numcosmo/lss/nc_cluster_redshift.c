@@ -308,12 +308,13 @@ nc_cluster_redshift_intp_bin (NcClusterRedshift *clusterz, NcHICosmo *cosmo, con
  * @z: true redshift
  * @lnM: true mass
  * @z_obs: (out): observed redshift
- * @z_obs_params: (out): observed redshift params
- *  @rng: a #NcmRNG
+ * @z_obs_params: (array) (element-type gdouble): observed redshift params
+ * @rng: a #NcmRNG
  *
- * FIXME
+ * Randomly samples the redshift distribution @clusterz given @z, @lnM and
+ * @z_obs_params, and assigns the sampled redshift to @z_obs.
  *
- * Returns: FIXME
+ * Returns: TRUE if successful.
  */
 gboolean
 nc_cluster_redshift_resample (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble *z_obs, const gdouble *z_obs_params, NcmRNG *rng)

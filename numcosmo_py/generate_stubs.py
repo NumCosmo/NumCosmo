@@ -388,7 +388,12 @@ def _build(
         )
         ns.remove("cairo")
 
-    imports += [f"from gi.repository import {n}" for n in sorted(ns)]
+    imports = []
+    for n in sorted(ns):
+        if n == "NumCosmoMath":
+            imports.append("from . import ncm as NumCosmoMath")
+            continue
+        imports.append(f"from gi.repository import {n}")
 
     return (
         "import typing"
