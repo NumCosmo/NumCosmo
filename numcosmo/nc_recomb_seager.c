@@ -249,9 +249,9 @@ _nc_recomb_seager_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_OPTS:
       nc_recomb_seager_set_options (recomb_seager, g_value_get_flags (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -267,9 +267,9 @@ _nc_recomb_seager_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_OPTS:
       g_value_set_flags (value, nc_recomb_seager_get_options (recomb_seager));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

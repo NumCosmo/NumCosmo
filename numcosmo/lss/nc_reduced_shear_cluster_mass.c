@@ -80,9 +80,9 @@ _nc_reduced_shear_cluster_mass_set_property (GObject *object, guint prop_id, con
     case PROP_NZBINS:
       rscm->nzbins = g_value_get_uint (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -101,9 +101,9 @@ _nc_reduced_shear_cluster_mass_get_property (GObject *object, guint prop_id, GVa
     case PROP_NZBINS:
       g_value_set_uint (value, rscm->nzbins);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

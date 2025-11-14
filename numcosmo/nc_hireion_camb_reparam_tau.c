@@ -78,9 +78,9 @@ nc_hireion_camb_reparam_tau_set_property (GObject *object, guint prop_id, const 
     case PROP_COSMO:
       ncm_model_ctrl_update (reparam_tau->ctrl, NCM_MODEL (g_value_get_object (value)));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -96,9 +96,9 @@ nc_hireion_camb_reparam_tau_get_property (GObject *object, guint prop_id, GValue
     case PROP_COSMO:
       g_value_take_object (value, ncm_model_ctrl_get_model (reparam_tau->ctrl));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

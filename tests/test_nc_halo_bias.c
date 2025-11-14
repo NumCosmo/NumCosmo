@@ -43,6 +43,7 @@ struct _TestNcHaloBias
   NcHICosmo *cosmo;
   NcHaloMassFunction *mfp;
   gdouble z;
+  gdouble lnM;
   gdouble R1, R2, R3;
   gint ntests;
   gboolean (*rng_params) (TestNcHaloBias *test);
@@ -114,6 +115,7 @@ test_nc_halo_bias_new (TestNcHaloBias *test, gconstpointer pdata)
   test->ps    = ps;
   test->mfp   = mfp;
   test->z     = 1.0;
+  test->lnM   = 32.23;
 
   {
     NcHaloBiasPS *ps_test = nc_halo_bias_ps_new_full (mfp, 1.0);
