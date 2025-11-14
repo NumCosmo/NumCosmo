@@ -73,9 +73,9 @@ nc_data_cmb_shift_param_set_property (GObject *object, guint prop_id, const GVal
     case PROP_Z:
       ncm_vector_substitute (&cmb_shift_param->x, g_value_get_object (value), TRUE);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -94,9 +94,9 @@ nc_data_cmb_shift_param_get_property (GObject *object, guint prop_id, GValue *va
     case PROP_Z:
       g_value_set_object (value, cmb_shift_param->x);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

@@ -275,9 +275,9 @@ _nc_hiqg_1d_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_NOBOUNDARY:
       self->noboundary = g_value_get_boolean (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -306,9 +306,9 @@ _nc_hiqg_1d_get_property (GObject *object, guint prop_id, GValue *value, GParamS
     case PROP_NOBOUNDARY:
       g_value_set_boolean (value, self->noboundary);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

@@ -76,9 +76,9 @@ nc_data_cmb_dist_priors_set_property (GObject *object, guint prop_id, const GVal
     case PROP_DIST:
       nc_data_cmb_dist_priors_set_dist (cmb_dist_priors, g_value_get_object (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -94,9 +94,9 @@ nc_data_cmb_dist_priors_get_property (GObject *object, guint prop_id, GValue *va
     case PROP_DIST:
       g_value_set_object (value, cmb_dist_priors->dist);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

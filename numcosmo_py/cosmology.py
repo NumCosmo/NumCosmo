@@ -178,6 +178,7 @@ def create_cosmo(
     cosmo.param_set_desc("Omegak", {"fit": False})
     cosmo.param_set_desc("w", {"fit": False})
 
+    prim: Nc.HIPrim
     match prim_model:
         case HIPrimModel.ATAN:
             prim = Nc.HIPrimAtan.new()

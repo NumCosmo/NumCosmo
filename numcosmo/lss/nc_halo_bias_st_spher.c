@@ -101,9 +101,9 @@ _nc_halo_bias_st_spher_set_property (GObject *object, guint prop_id, const GValu
     case PROP_P:
       biasf_st_spher->p = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -125,9 +125,9 @@ _nc_halo_bias_st_spher_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_P:
       g_value_set_double (value, biasf_st_spher->p);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
