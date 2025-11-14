@@ -92,9 +92,9 @@ nc_data_cluster_pseudo_counts_set_property (GObject *object, guint prop_id, cons
     case PROP_M_Z_FLAT_PRIOR:
       dcpc->M_Z_FlatPrior = g_value_get_boolean (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -122,9 +122,9 @@ nc_data_cluster_pseudo_counts_get_property (GObject *object, guint prop_id, GVal
     case PROP_M_Z_FLAT_PRIOR:
       g_value_set_boolean (value, dcpc->M_Z_FlatPrior);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

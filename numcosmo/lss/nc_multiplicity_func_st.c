@@ -95,9 +95,9 @@ _nc_multiplicity_func_st_set_property (GObject *object, guint prop_id, const GVa
     case PROP_DELTA_C:
       nc_multiplicity_func_st_set_delta_c (mst, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -122,9 +122,9 @@ _nc_multiplicity_func_st_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_DELTA_C:
       g_value_set_double (value, nc_multiplicity_func_st_get_delta_c (mst));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

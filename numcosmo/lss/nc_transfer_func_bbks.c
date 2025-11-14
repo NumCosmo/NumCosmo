@@ -103,9 +103,9 @@ _nc_transfer_func_bbks_set_property (GObject *object, guint prop_id, const GValu
     case PROP_TYPE:
       nc_transfer_func_bbks_set_type (tf_bbks, g_value_get_enum (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -122,9 +122,9 @@ _nc_transfer_func_bbks_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_TYPE:
       g_value_set_enum (value, self->type);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

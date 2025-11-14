@@ -91,9 +91,9 @@ _nc_xcor_kernel_tsz_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_NOISE:
       xclkl->noise = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -109,9 +109,9 @@ _nc_xcor_kernel_tsz_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_NOISE:
       g_value_set_double (value, xclkl->noise);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

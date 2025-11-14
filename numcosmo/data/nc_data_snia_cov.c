@@ -530,9 +530,9 @@ nc_data_snia_cov_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_COV_MBC_MBC:
       nc_data_snia_cov_set_cov_mbc_mbc (snia_cov, g_value_get_object (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -615,9 +615,9 @@ nc_data_snia_cov_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_COV_MBC_MBC:
       g_value_set_object (value, nc_data_snia_cov_peek_cov_mbc_mbc (snia_cov));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -2608,15 +2608,15 @@ _nc_data_snia_cov_load_snia_data_V01 (NcDataSNIACov *snia_cov, const gchar *file
       }
       else
       {
-        gchar **itens = g_regex_split_simple ("\\s+", line, 0, 0);
+        gchar **items = g_regex_split_simple ("\\s+", line, 0, 0);
 
         if (n == 0)
         {
           guint pad_end = 0;
 
-          n = g_strv_length (itens);
+          n = g_strv_length (items);
 
-          if (*itens[n - 1] == '\0')
+          if (*items[n - 1] == '\0')
             pad_end++;
 
           if (n - 1 - pad_end == NC_DATA_SNIA_COV_LENGTH)
@@ -2637,7 +2637,7 @@ _nc_data_snia_cov_load_snia_data_V01 (NcDataSNIACov *snia_cov, const gchar *file
                      filename, NC_DATA_SNIA_COV_LENGTH + 1, NC_DATA_SNIA_COV_LENGTH + 2, n - pad_end);
           }
         }
-        else if (n != g_strv_length (itens))
+        else if (n != g_strv_length (items))
         {
           g_error ("_nc_data_snia_cov_load_snia_data_V01: data file [%s] has different number of columns in different rows [%u]!", filename, nrow);
         }
@@ -2666,7 +2666,7 @@ _nc_data_snia_cov_load_snia_data_V01 (NcDataSNIACov *snia_cov, const gchar *file
 
           for (i = 0; i < NC_DATA_SNIA_COV_LENGTH; i++)
           {
-            const gdouble val = g_ascii_strtod (itens[i + 1], NULL);
+            const gdouble val = g_ascii_strtod (items[i + 1], NULL);
 
             ncm_vector_set (data[i], nrow, val);
           }
@@ -2674,7 +2674,7 @@ _nc_data_snia_cov_load_snia_data_V01 (NcDataSNIACov *snia_cov, const gchar *file
 
         if (has_dataset)
         {
-          gint64 dset_id = g_ascii_strtoll (itens[i + 1], NULL, 10);
+          gint64 dset_id = g_ascii_strtoll (items[i + 1], NULL, 10);
 
           g_array_index (dataset, guint32, nrow) = dset_id;
           max_dset_id                            = GSL_MAX (max_dset_id, dset_id);
@@ -2686,7 +2686,7 @@ _nc_data_snia_cov_load_snia_data_V01 (NcDataSNIACov *snia_cov, const gchar *file
         }
 
         nrow++;
-        g_strfreev (itens);
+        g_strfreev (items);
         g_free (line);
       }
     }
@@ -2754,22 +2754,22 @@ _nc_data_snia_cov_load_snia_data_V2 (NcDataSNIACov *snia_cov, const gchar *filen
       }
       else
       {
-        gchar **itens = g_regex_split_simple ("\\s+", line, 0, 0);
+        gchar **items = g_regex_split_simple ("\\s+", line, 0, 0);
 
         if (n == 0)
         {
           guint pad_end = 0;
 
-          n = g_strv_length (itens);
+          n = g_strv_length (items);
 
-          if (*itens[n - 1] == '\0')
+          if (*items[n - 1] == '\0')
             pad_end++;
 
           if (n - pad_end != NC_DATA_SNIA_COV_V2_LENGTH)
             g_error ("_nc_data_snia_cov_load_snia_data_V2: data file [%s] must have %d columns, it has %u!",
                      filename, NC_DATA_SNIA_COV_V2_LENGTH, n - pad_end);
         }
-        else if (n != g_strv_length (itens))
+        else if (n != g_strv_length (items))
         {
           g_error ("_nc_data_snia_cov_load_snia_data_V2: data file [%s] has different number of columns in different rows [%u]!", filename, nrow);
         }
@@ -2815,11 +2815,11 @@ _nc_data_snia_cov_load_snia_data_V2 (NcDataSNIACov *snia_cov, const gchar *filen
 
           for (i = 0; i < NC_DATA_SNIA_COV_V2_LENGTH; i++)
           {
-            const gdouble val = g_ascii_strtod (itens[i], NULL);
+            const gdouble val = g_ascii_strtod (items[i], NULL);
 
             if ((i == NC_DATA_SNIA_COV_V2_IS_CALIB) || (i == NC_DATA_SNIA_COV_V2_USED_IN_SH0ES))
             {
-              gint64 tmp1 = g_ascii_strtoll (itens[i], NULL, 10);
+              gint64 tmp1 = g_ascii_strtoll (items[i], NULL, 10);
               GArray *a   = data[i];
 
               g_array_index (a, guint32, nrow) = tmp1;
@@ -2833,7 +2833,7 @@ _nc_data_snia_cov_load_snia_data_V2 (NcDataSNIACov *snia_cov, const gchar *filen
         }
 
         nrow++;
-        g_strfreev (itens);
+        g_strfreev (items);
         g_free (line);
       }
     }
@@ -3446,7 +3446,7 @@ _nc_data_snia_cov_prep_to_estimate (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov
     }
   }
 
-  /* Make the Cholesky decomposition substituting the upper triagle of cov_full. */
+  /* Make the Cholesky decomposition substituting the upper triangle of cov_full. */
   ret = ncm_matrix_cholesky_decomp (self->cov_full, 'U');
 
   if (ret != 0)

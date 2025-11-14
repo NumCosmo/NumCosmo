@@ -99,6 +99,7 @@ struct _NcDataClusterNCountPrivate
   GArray *p_z;
   GArray *p_lnM;
   GArray *d2n;
+  NcmVector *p_z_vec;
   gdouble area_survey;
   guint np;
   guint z_obs_len;
@@ -145,6 +146,7 @@ nc_data_cluster_ncount_init (NcDataClusterNCount *ncount)
   self->p_z                = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->p_lnM              = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->d2n                = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->p_z_vec            = NULL;
   self->area_survey        = 0.0;
   self->np                 = 0.0;
   self->log_np_fac         = 0.0;
@@ -256,9 +258,9 @@ nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
       g_clear_pointer (&self->rnd_name, g_free);
       self->rnd_name = g_value_dup_string (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -326,9 +328,9 @@ nc_data_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_RNG_NAME:
       g_value_set_string (value, self->rnd_name);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -360,6 +362,8 @@ nc_data_cluster_ncount_dispose (GObject *object)
   g_clear_pointer (&self->p_z, g_array_unref);
   g_clear_pointer (&self->p_lnM, g_array_unref);
   g_clear_pointer (&self->d2n, g_array_unref);
+
+  ncm_vector_clear (&self->p_z_vec);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_ncount_parent_class)->dispose (object);
@@ -1362,7 +1366,7 @@ func_eval_lnM_p_d2n (unsigned ndim, const double *x, void *fdata, unsigned fdim,
   NcClusterAbundance *cad = evald2n->cad;
   guint n;
 
-  nc_cluster_mass_p_vec_z_lnMobs (evald2n->clusterm, evald2n->cosmo, x[0], evald2n->self->z_true, evald2n->self->lnM_obs, NULL, evald2n->self->p_z);
+  nc_cluster_mass_p_vec_z_lnMobs (evald2n->clusterm, evald2n->cosmo, x[0], evald2n->self->z_true, evald2n->self->lnM_obs, NULL, evald2n->self->p_z_vec);
   ncm_spline2d_eval_vec_y (cad->mfp->d2NdzdlnM, x[0], evald2n->self->z_true, evald2n->self->z_order, evald2n->self->d2n);
 
   for (n = 0; n < fdim; n++)
@@ -1550,6 +1554,9 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   g_array_set_size (self->lnM_order, self->np);
 
   g_array_set_size (self->p_z, self->np);
+  ncm_vector_clear (&self->p_z_vec);
+  self->p_z_vec = ncm_vector_new_array (self->p_z);
+
   g_array_set_size (self->p_lnM, self->np);
   g_array_set_size (self->d2n, self->np);
 

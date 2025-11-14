@@ -80,9 +80,18 @@ class RunMC(RunCommonOptions):
         """Compute Monte Carlo Analysis."""
         super().__post_init__()
 
-        mc = Ncm.FitMC.new(
-            fit=self.fit, rtype=self.run_type.genum, mtype=self.run_messages.genum
-        )
+        if self.functions is not None:
+            mc: Ncm.FitMC = Ncm.FitMC.new_funcs_array(
+                fit=self.fit,
+                rtype=self.run_type.genum,
+                mtype=self.run_messages.genum,
+                funcs_array=self.functions,
+            )
+        else:
+
+            mc = Ncm.FitMC.new(
+                fit=self.fit, rtype=self.run_type.genum, mtype=self.run_messages.genum
+            )
 
         if self.output is None:
             raise typer.BadParameter(

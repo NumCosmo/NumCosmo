@@ -36,6 +36,16 @@ from .test_py_data_gauss import DataGaussTest
 Ncm.cfg_init()
 
 
+def _get_chisq(data_dist: DataGaussDiagTest) -> float:
+    """Helper function."""
+    n_points = data_dist.get_size()
+    return (
+        n_points
+        + n_points * np.log(2.0 * np.pi)
+        + 2.0 * np.sum(np.log(data_dist.peek_std().dup_array()))
+    )
+
+
 def test_dataset_constructor():
     """Test constructor."""
     dset = Ncm.Dataset.new()
@@ -135,9 +145,10 @@ def test_dataset_new_array_get_data_array():
 def test_dataset_resample():
     """Test resample."""
     rng = Ncm.RNG.new()
+    data_dist = DataGaussDiagTest(n_points=200)
     dset = Ncm.Dataset.new_array(
         [
-            DataGaussDiagTest(n_points=200),
+            data_dist,
             DataGaussTest(corr=0.3, sigma1=1.0, sigma2=2.0),
         ]
     )
@@ -167,7 +178,7 @@ def test_dataset_resample():
 
     mean = np.array(sv.peek_mean().dup_array())
     sd = np.array([sv.get_sd(i) for i in range(sv.len())])
-    assert_allclose(mean[0], dset.get_n(), atol=0.1)
+    assert_allclose(mean[0], _get_chisq(data_dist) + 2.0, atol=0.1)
     assert_allclose(mean[1:], 0, atol=0.15)
     assert_allclose(sd[1:], 1.0, atol=0.1)
 
@@ -175,9 +186,10 @@ def test_dataset_resample():
 def test_dataset_bootstrap_partial_resample():
     """Test resample."""
     rng = Ncm.RNG.new()
+    data_dist = DataGaussDiagTest(n_points=200)
     dset = Ncm.Dataset.new_array(
         [
-            DataGaussDiagTest(n_points=200),
+            data_dist,
             DataGaussTest(corr=0.3, sigma1=1.0, sigma2=2.0),
         ]
     )
@@ -197,15 +209,16 @@ def test_dataset_bootstrap_partial_resample():
         sv.set(0, dset.m2lnL_val(mset))
         sv.update()
 
-    assert_allclose(sv.get_mean(0), dset.get_n(), atol=20.0)
+    assert_allclose(sv.get_mean(0), _get_chisq(data_dist) + 2.0, atol=20.0)
 
 
 def test_dataset_bootstrap_total_resample():
     """Test resample."""
     rng = Ncm.RNG.new()
+    data_dist = DataGaussDiagTest(n_points=200)
     dset = Ncm.Dataset.new_array(
         [
-            DataGaussDiagTest(n_points=200),
+            data_dist,
             DataGaussTest(corr=0.3, sigma1=1.0, sigma2=2.0),
         ]
     )
@@ -225,7 +238,7 @@ def test_dataset_bootstrap_total_resample():
         sv.set(0, dset.m2lnL_val(mset))
         sv.update()
 
-    assert_allclose(sv.get_mean(0), dset.get_n(), atol=10.0)
+    assert_allclose(sv.get_mean(0), _get_chisq(data_dist) + 2.0, atol=10.0)
 
 
 def test_dataset_log_info():

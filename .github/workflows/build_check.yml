@@ -8,6 +8,10 @@ on:
     branches:
       - '*'
 
+env:
+  CONDA_ENV: numcosmo_developer
+  CACHE_VERSION: 0
+
 jobs:
 
   build-gcc-ubuntu:
@@ -122,39 +126,36 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup miniforge
         uses: conda-incubator/setup-miniconda@v3
         with:
-          auto-update-conda: true
-          activate-environment: numcosmo_developer
-          python-version: ${{ matrix.python-version }}
-          mamba-version: "*"
-          show-channel-urls: true
-          use-mamba: true
-          conda-remove-defaults: true
           miniforge-version: latest
+          python-version: ${{ matrix.python-version }}
+          activate-environment: ${{ env.CONDA_ENV }}
       - name: Cache date
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
       - name: Cache Conda env
-        uses: actions/cache@v4
-        env:
-          CACHE_NUMBER: 1
-        with:
-          path: |
-            ${{ env.CONDA }}/envs
-            ~/.numcosmo
-          key: miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ matrix.mpi }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
+        uses: actions/cache/restore@v4
         id: cache
+        with:
+          path: ${{ env.CONDA }}/envs
+          key: conda-${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-${{ matrix.mpi }}-${{ steps.get-date.outputs.today }}-${{ hashFiles('environment.yml') }}-v${{ env.CACHE_VERSION }}
       - name: Update environment
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          conda env update -q -v -n numcosmo_developer -f devel_environment.yml
+          conda env update -q -v -n ${{ env.CONDA_ENV }} -f devel_environment.yml
           conda remove -q -v -n numcosmo_developer openmpi
           conda install -q -v -n numcosmo_developer ${{ matrix.mpi }}
           conda install -q -v -n numcosmo_developer libfabric-devel
           conda list
-        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Save conda-forge cache
+        id: cache-primes-save
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CONDA }}/envs
+          key: ${{ steps.cache.outputs.cache-primary-key }}
       - name: Setting up NumCosmo
         run: |
           conda activate numcosmo_developer
@@ -202,35 +203,33 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup miniforge
         uses: conda-incubator/setup-miniconda@v3
         with:
-          auto-update-conda: true
-          activate-environment: numcosmo_developer
-          python-version: ${{ matrix.python-version }}
-          mamba-version: "*"
-          show-channel-urls: true
-          use-mamba: true
-          conda-remove-defaults: true
           miniforge-version: latest
+          python-version: ${{ matrix.python-version }}
+          activate-environment: ${{ env.CONDA_ENV }}
       - name: Cache date
         id: get-date
         run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
       - name: Cache Conda env
-        uses: actions/cache@v4
-        env:
-          CACHE_NUMBER: 0
-        with:
-          path: |
-            ${{ env.CONDA }}/envs
-            ~/.numcosmo
-          key: coverage-miniforge-${{ runner.os }}--${{ runner.arch }}--python-${{ matrix.python-version }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('devel_environment.yml') }}-${{ env.CACHE_NUMBER }}
+        uses: actions/cache/restore@v4
         id: cache
+        with:
+          path: ${{ env.CONDA }}/envs
+          key: conda-${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-${{ steps.get-date.outputs.today }}-${{ hashFiles('environment.yml') }}-v${{ env.CACHE_VERSION }}
       - name: Update environment
-        run: |
-          conda env update -q -v -n numcosmo_developer -f devel_environment.yml
         if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          conda env update -q -v -n ${{ env.CONDA_ENV }} -f devel_environment.yml
+          conda list
+      - name: Save conda-forge cache
+        id: cache-primes-save
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CONDA }}/envs
+          key: ${{ steps.cache.outputs.cache-primary-key }}
       - name: Setting up NumCosmo
         run: |
           conda activate numcosmo_developer
