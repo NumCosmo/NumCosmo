@@ -374,9 +374,9 @@ _nc_cluster_abundance_z_p_lnM_p_d2n_integrand (gdouble lnM, gdouble z, gpointer 
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass
  * @lnM_obs: (array) (element-type gdouble): logarithm base e of the observed mass
- * @lnM_obs_params: (array) (element-type gdouble): FIXME
+ * @lnM_obs_params: (array) (element-type gdouble) (allow-none) : FIXME
  * @z_obs: (array) (element-type gdouble): observed redshift
- * @z_obs_params: (array) (element-type gdouble): FIXME
+ * @z_obs_params: (array) (element-type gdouble) (allow-none): FIXME
  *
  * This function computes $ \int_0^\infty dz \int_{-\infty}^\infty d\ln M \frac{d^2N(\ln M, z)}{dzd\ln M} * P(z^{phot}|z) *
  * P(\ln M^{obs}|\ln M, z) $. We studied the convergence of this integral to optimize this function. We verified
@@ -594,7 +594,7 @@ _nc_cluster_abundance_z_intp_lnM_intp_bin_N_integrand (gdouble lnM, gdouble z, g
 
     g_error ("_nc_cluster_abundance_z_intp_lnM_intp_bin_N_integrand: negative integrand at: "
              "lnM % 22.15g z % 22.15g z_intp % 22.15g lnM_intp % 22.15g d2NdzdlnM % 22.15g lnM_obs_lower % 22.15g lnM_obs_upper % 22.15g \n",
-             lnM, z, z_intp, lnM_intp, d2NdzdlnM , obs_data->lnM_obs_lower[0] , obs_data->lnM_obs_upper[0]);
+             lnM, z, z_intp, lnM_intp, d2NdzdlnM, obs_data->lnM_obs_lower[0], obs_data->lnM_obs_upper[0]);
   }
 
   return z_intp * lnM_intp * d2NdzdlnM;
@@ -617,7 +617,6 @@ _nc_cluster_abundance_z_intp_lnM_intp_N (NcClusterAbundance *cad, NcHICosmo *cos
 
   nc_cluster_redshift_n_limits (clusterz, cosmo, &zl, &zu);
   nc_cluster_mass_n_limits (clusterm, cosmo, &lnMl, &lnMu);
-
   ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NCM_DEFAULT_PRECISION, 0.0, &N, &err);
 
   return N;
@@ -1243,7 +1242,6 @@ nc_cluster_abundance_intp_bin_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, Nc
 
   nc_cluster_redshift_p_bin_limits (clusterz, cosmo, z_obs_lower, z_obs_upper, z_obs_params, &zl, &zu);
   nc_cluster_mass_p_bin_limits (clusterm, cosmo, lnM_obs_lower, lnM_obs_upper, lnM_obs_params, &lnMl, &lnMu);
-
   ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NCM_DEFAULT_PRECISION, 0.0, &N, &err);
 
   return N;
@@ -1690,3 +1688,4 @@ nc_cluster_abundance_mean_bias (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClu
 
   return N_bias;
 }
+

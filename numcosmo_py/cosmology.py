@@ -66,7 +66,7 @@ class Cosmology:
         dist: Nc.Distance,
         ps_ml: Nc.PowspecML | None = None,
         ps_mnl: Nc.PowspecMNL | None = None,
-        psf: Ncm.PowspecFilter | None = None,
+        psf_tophat: Ncm.PowspecFilter | None = None,
         compute_inv_comoving: bool = True,
     ) -> None:
         """Initialize the NumCosmo cosmology class."""
@@ -74,7 +74,7 @@ class Cosmology:
         self.dist = dist
         self._ps_ml = ps_ml
         self._ps_mnl = ps_mnl
-        self._psf = psf
+        self._psf_tophat = psf_tophat
         self.dist.compute_inv_comoving(compute_inv_comoving)
         self.recomb = Nc.RecombSeager()
 
@@ -100,7 +100,7 @@ class Cosmology:
         ps_ml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())
         ps_mnl = Nc.PowspecMNLHaloFit.new(ps_ml, halofit_max_z, halofit_reltol)
         psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)
-        return cls(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mnl, psf=psf)
+        return cls(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mnl, psf_tophat=psf)
 
     @classmethod
     def default_minimal(cls, dist_max_z: float = 10.0) -> "Cosmology":
@@ -128,11 +128,11 @@ class Cosmology:
         return self._ps_mnl
 
     @property
-    def psf(self) -> Ncm.PowspecFilter:
-        """Return the power spectrum filter."""
-        if self._psf is None:
-            raise AttributeError("Power spectrum filter not set.")
-        return self._psf
+    def psf_tophat(self) -> Ncm.PowspecFilter:
+        """Return the top-hat power spectrum filter."""
+        if self._psf_tophat is None:
+            raise AttributeError("Top-hat power spectrum filter not set.")
+        return self._psf_tophat
 
     @property
     def mset(self) -> Ncm.MSet:
@@ -147,8 +147,8 @@ class Cosmology:
             self._ps_ml.prepare_if_needed(self.cosmo)
         if self._ps_mnl is not None:
             self._ps_mnl.prepare_if_needed(self.cosmo)
-        if self._psf is not None:
-            self._psf.prepare_if_needed(self.cosmo)
+        if self._psf_tophat is not None:
+            self._psf_tophat.prepare_if_needed(self.cosmo)
 
 
 def create_cosmo(

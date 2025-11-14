@@ -691,7 +691,7 @@ def compare_sigma_r(
     model: str = "unnamed",
 ) -> CompareFunc1d:
     """Compare sigma r from CCL and NumCosmo."""
-    psf = cosmology.psf
+    psf = cosmology.psf_tophat
 
     a = 1.0 / (1.0 + z)
     ccl_sigma = pyccl.sigmaR(ccl_cosmo, r, a)
