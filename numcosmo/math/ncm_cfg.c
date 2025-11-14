@@ -147,7 +147,6 @@
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_mass_nodist.h"
 #include "lss/nc_cluster_mass_lnnormal.h"
-#include "lss/nc_cluster_mass_richness.h"
 #include "lss/nc_cluster_mass_vanderlinde.h"
 #include "lss/nc_cluster_mass_benson.h"
 #include "lss/nc_cluster_mass_benson_xray.h"
@@ -160,7 +159,6 @@
 #include "lss/nc_cluster_photoz_gauss.h"
 #include "lss/nc_halo_bias_despali.h"
 #include "lss/nc_halo_bias_ps.h"
-#include "lss/nc_halo_bias_despali.h"
 #include "lss/nc_halo_bias_st_ellip.h"
 #include "lss/nc_halo_bias_st_spher.h"
 #include "lss/nc_halo_bias_tinker.h"
@@ -211,7 +209,6 @@
 #include "data/nc_data_bao_dmr_hr.h"
 #include "data/nc_data_bao_dvr_dtdh.h"
 #include "data/nc_data_dist_mu.h"
-#include "data/nc_data_cluster_mass_rich.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
 #include "data/nc_data_cluster_ncount.h"
 #include "data/nc_data_cluster_ncounts_gauss.h"
@@ -766,7 +763,6 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_LNNORMAL);
-  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_RICHNESS);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_VANDERLINDE);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_BENSON);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_BENSON_XRAY);
@@ -782,7 +778,6 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_DESPALI);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_PS);
-  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_DESPALI);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_ELLIP);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_SPHER);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TINKER);
