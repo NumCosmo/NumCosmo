@@ -189,9 +189,9 @@ _nc_cluster_abundance_set_property (GObject *object, guint prop_id, const GValue
     case PROP_MEANBIAS:
       cad->mbiasf = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -210,9 +210,9 @@ _nc_cluster_abundance_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_MEANBIAS:
       g_value_set_object (value, cad->mbiasf);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -593,8 +593,8 @@ _nc_cluster_abundance_z_intp_lnM_intp_bin_N_integrand (gdouble lnM, gdouble z, g
     ncm_model_params_log_all (ncm_model_peek_submodel_by_mid (NCM_MODEL (obs_data->cosmo), nc_hiprim_id ()));
 
     g_error ("_nc_cluster_abundance_z_intp_lnM_intp_bin_N_integrand: negative integrand at: "
-             "lnM % 22.15g z % 22.15g z_intp % 22.15g lnM_intp % 22.15g d2NdzdlnM % 22.15g\n",
-             lnM, z, z_intp, lnM_intp, d2NdzdlnM);
+             "lnM % 22.15g z % 22.15g z_intp % 22.15g lnM_intp % 22.15g d2NdzdlnM % 22.15g lnM_obs_lower % 22.15g lnM_obs_upper % 22.15g \n",
+             lnM, z, z_intp, lnM_intp, d2NdzdlnM , obs_data->lnM_obs_lower[0] , obs_data->lnM_obs_upper[0]);
   }
   //printf(" %22.15g , %22.15g , %22.15g , %22.15g , %22.15g \n" , z_intp , lnM_intp , d2NdzdlnM , lnM , z);
   return z_intp * lnM_intp * d2NdzdlnM;
@@ -1555,7 +1555,6 @@ nc_ca_mean_bias_Mobs_denominator (NcClusterAbundance *cad, NcHICosmo *cosmo, gdo
 
   F.function = &_nc_ca_mean_bias_Mobs_denominator_integrand;
   F.params   = &obs_data;
-
   {
     obs_data.z   = z;
     obs_data.lnM = lnMobs;
@@ -1687,4 +1686,3 @@ nc_cluster_abundance_mean_bias (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClu
 
   return N_bias;
 }
-

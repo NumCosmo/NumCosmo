@@ -99,9 +99,9 @@ _nc_halo_bias_despali_set_property (GObject *object, guint prop_id, const GValue
     case PROP_CMF:
       nc_halo_bias_despali_set_cmf (biasf_despali, g_value_get_boolean (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -120,9 +120,9 @@ _nc_halo_bias_despali_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_CMF:
       g_value_set_boolean (value, biasf_despali->cmf);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -140,7 +140,7 @@ nc_halo_bias_despali_class_init (NcHaloBiasDespaliClass *klass)
                                    PROP_EO,
                                    g_param_spec_boolean ("eo",
                                                          NULL,
-                                                         "Whether the halo finder uses eliptical overdensity",
+                                                         "Whether the halo finder uses elliptical overdensity",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -283,7 +283,7 @@ _nc_halo_bias_despali_virial_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble 
     const gdouble p        = 0.2206;
     const gdouble nu_prime = a * nu;
 
-    bias_Despali_virial = 1 + nu_prime / (2 * delta_c) + p / (delta_c * (pow (nu_prime, p) + 1)) - 3 / (2 * delta_c);
+    bias_Despali_virial = 1 +  nu_prime / (2 * delta_c) + p / (delta_c * (pow (nu_prime, p) + 1)) - 3 / (2 * delta_c);
   }
   else
   {
@@ -473,15 +473,15 @@ nc_halo_bias_despali_delta_vir (NcHaloBiasDespali *biasf_despali, NcHICosmo *cos
     return 18.0 * pow (M_PI, 2.0) + 82.0 * x - 39.0 * x * x;
 
   else
-    g_error ("Interpolation does not work in this regime.");
+    g_error ("Interpolation does not work for spatially curved cosmology.");
 }
 
 /**
  * nc_halo_bias_despali_set_eo:
  * @biasf_despali: a #NcHaloBiasDespali
- * @on: Whether the halo finder uses eliptical overdensidy.
+ * @on: Whether the halo finder uses elliptical overdensity.
  *
- * Sets array of #Set if halo finder uses eliptical overdensidy.
+ * Sets array of #Set if halo finder uses elliptical overdensity.
  *
  */
 void
@@ -509,7 +509,7 @@ nc_halo_bias_despali_get_eo (NcHaloBiasDespali *biasf_despali)
  * @biasf_despali: a #NcHaloBiasDespali
  * @on: Whether the we use cluster mass function.
  *
- * Sets array of #Set if  uses eliptical  mass function.
+ * Sets array of #Set if  uses elliptical  mass function.
  *
  */
 void

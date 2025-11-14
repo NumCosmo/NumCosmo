@@ -299,6 +299,7 @@ def compare_Omega_de(
 ):
     """Compare Omega_de from CCL and NumCosmo."""
     cosmo = cosmology.cosmo
+    assert isinstance(cosmo, Nc.HICosmoDE)
     a = 1.0 / (1.0 + z)
 
     ccl_Ode = np.array(pyccl.omega_x(ccl_cosmo, a, "dark_energy"))
@@ -519,6 +520,7 @@ def compare_growth_factor(
     ps_lin = cosmology.ps_ml
     a = 1.0 / (1.0 + z)
 
+    assert isinstance(ps_lin, Nc.PowspecMLTransfer)
     gf = ps_lin.peek_gf()
     gf.prepare(cosmo)
 
@@ -542,6 +544,7 @@ def compare_growth_rate(
     ps_lin = cosmology.ps_ml
     a = 1.0 / (1.0 + z)
 
+    assert isinstance(ps_lin, Nc.PowspecMLTransfer)
     gf = ps_lin.peek_gf()
     gf.prepare(cosmo)
 

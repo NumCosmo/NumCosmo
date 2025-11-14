@@ -64,10 +64,10 @@
  * r_{s0} \equiv \frac{1}{c_\Delta}\left(\frac{3M_\Delta}{4\pi}\right)^{1/3}.
  * \end{equation}
  * We split the expression of $r_s$ in a constant part $r_{s0}$ and a redshift
- * dependent (time-depedent) part $(\Delta\,\rho_\mathrm{bg}(z))^{-1/3}$.
+ * dependent (time-dependent) part $(\Delta\,\rho_\mathrm{bg}(z))^{-1/3}$.
  *
  * Note that, the parameter $r_s$ can be computed directly from $(M_\Delta,\; c_\Delta)$,
- * given the mass definition, without refering to $\hat\rho(x)$.
+ * given the mass definition, without referring to $\hat\rho(x)$.
  *
  * ## Computing $\rho_s$
  *
@@ -239,9 +239,9 @@ _nc_halo_density_profile_set_property (GObject *object, guint prop_id, const GVa
     case PROP_LNXF:
       nc_halo_density_profile_set_lnXf (dp, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -263,9 +263,9 @@ _nc_halo_density_profile_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_LNXF:
       g_value_set_double (value, nc_halo_density_profile_get_lnXf (dp));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -781,7 +781,7 @@ nc_halo_density_profile_get_lnXf (NcHaloDensityProfile *dp)
 }
 
 /**
- * nc_halo_density_profile_get_phys_limts:
+ * nc_halo_density_profile_get_phys_limits:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  * @dp: a #NcHaloDensityProfile
@@ -796,7 +796,7 @@ nc_halo_density_profile_get_lnXf (NcHaloDensityProfile *dp)
  *
  */
 void
-nc_halo_density_profile_get_phys_limts (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z, gdouble *Ri, gdouble *Rf)
+nc_halo_density_profile_get_phys_limits (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z, gdouble *Ri, gdouble *Rf)
 {
   NcHaloDensityProfilePrivate * const self = nc_halo_density_profile_get_instance_private (dp);
   const gdouble r_s                        = nc_halo_density_profile_r_s (dp, cosmo, z);

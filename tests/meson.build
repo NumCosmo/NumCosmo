@@ -373,6 +373,18 @@ python_tests = [
         'source': 'test_py_cfg.py',
     },
     {
+        'name': 'py_cluster_mass_selection',
+        'source': 'test_py_cluster_mass_selection.py',
+    },
+    {
+        'name': 'py_cluster_mass_ascaso',
+        'source': 'test_py_cluster_mass_ascaso.py',
+    },
+    {
+        'name': 'py_cluster_cluster_photoz_gauss',
+        'source': 'test_py_cluster_photoz_gauss.py',
+    },
+    {
         'name': 'py_cluster_abundance_sampling',
         'source': 'test_py_cluster_abundance_sampling.py',
     },
@@ -423,6 +435,14 @@ python_tests = [
         'source': 'test_py_halo_density_profile.py',
     },
     {
+        'name': 'py_halo_bias_despali',
+        'source': 'test_py_halo_bias_despali.py',
+    },
+    {
+        'name': 'py_halo_bias_tinker',
+        'source': 'test_py_halo_bias_tinker.py',
+    },
+    {
         'name': 'py_de_cont',
         'source': 'test_py_de_cont.py',
     },
@@ -445,6 +465,10 @@ python_tests = [
     {
         'name': 'py_sanity',
         'source': 'test_py_sanity.py',
+    },
+    {
+        'name': 'py_data_cluster_mass_rich',
+        'source': 'test_py_data_cluster_mass_rich.py',
     },
     {
         'name': 'py_data_funnel',

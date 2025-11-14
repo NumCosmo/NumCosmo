@@ -86,9 +86,9 @@ nc_recomb_cbe_set_property (GObject *object, guint prop_id, const GValue *value,
     case PROP_CBE:
       nc_recomb_cbe_set_cbe (recomb_cbe, g_value_get_object (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -104,9 +104,9 @@ nc_recomb_cbe_get_property (GObject *object, guint prop_id, GValue *value, GPara
     case PROP_CBE:
       g_value_set_object (value, nc_recomb_cbe_peek_cbe (recomb_cbe));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

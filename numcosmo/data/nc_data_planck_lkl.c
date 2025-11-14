@@ -169,9 +169,9 @@ nc_data_planck_lkl_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_PERT_BOLTZMANN:
       nc_data_planck_lkl_set_hipert_boltzmann (plik, g_value_get_object (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -199,9 +199,9 @@ nc_data_planck_lkl_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_CHKSUM:
       g_value_set_string (value, plik->chksum);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
