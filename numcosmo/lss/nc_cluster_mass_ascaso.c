@@ -191,7 +191,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   /**
    * NcClusterMassAscaso:M0:
    *
-   * Pivot mass FIXME Set correct values (limits)
+   * Pivot mass in the richness-mass scaling relation (in solar masses).
    */
   g_object_class_install_property (object_class,
                                    PROP_M0,
@@ -204,7 +204,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
 /**
  * NcClusterMassAscaso:Z0:
  *
- * Pivot redshift FIXME Set correct values (limits)
+ * Pivot redshift in the richness-mass scaling relation.
  */
   g_object_class_install_property (object_class,
                                    PROP_Z0,
@@ -219,7 +219,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   /**
    * NcClusterMassAscaso:lnRichness_min:
    *
-   * FIXME Set correct values (limits)
+   * Minimum logarithm (base e) of richness for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_LNRICHNESS_MIN,
@@ -232,7 +232,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   /**
    * NcClusterMassAscaso:lnRichness_max:
    *
-   * FIXME Set correct values (limits)
+   * Maximum logarithm (base e) of richness for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_LNRICHNESS_MAX,
@@ -245,7 +245,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   /**
    * NcClusterMassAscaso:enable_rejection:
    *
-   * FIXME Set if the objects sampled below CUT are rejected
+   * Whether to reject sampled objects with richness below the cut threshold.
    */
   g_object_class_install_property (object_class,
                                    PROP_ENABLE_REJECTION,
@@ -259,8 +259,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   /**
    * NcClusterMassAscaso:MU_P0:
    *
-   * Distribution's  bias in the mean.
-   * FIXME Set correct values (limits)
+   * Bias parameter in the mean of the richness-mass relation.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_MU_P0, "mu_p0", "mup0",
                               0.0,  6.0, 1.0e-1,
@@ -270,8 +269,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   /**
    * NcClusterMassAscaso:MU_P1:
    *
-   * Distribution's slope with respect to the mass in the mean.
-   * FIXME Set correct values (limits)
+   * Mass slope parameter in the mean of the richness-mass relation.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_MU_P1, "mu_p1", "mup1",
                               -10.0,  10.0, 1.0e-2,
@@ -281,8 +279,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   /**
    * NcClusterMassAscaso:MU_P2:
    *
-   * Distribution's slope with respect to the redshift in the mean.
-   * FIXME Set correct values (limits)
+   * Redshift evolution parameter in the mean of the richness-mass relation.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_MU_P2, "mu_p2", "mup2",
                               -10.0,  10.0, 1.0e-2,

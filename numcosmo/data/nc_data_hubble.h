@@ -39,27 +39,27 @@ G_DECLARE_FINAL_TYPE (NcDataHubble, nc_data_hubble, NC, DATA_HUBBLE, NcmDataGaus
 
 /**
  * NcDataHubbleId:
- * @NC_DATA_HUBBLE_SIMON2005: FIXME
- * @NC_DATA_HUBBLE_CABRE: FIXME
- * @NC_DATA_HUBBLE_STERN2009: FIXME
+ * @NC_DATA_HUBBLE_SIMON2005: Simon et al. (2005) Hubble parameter measurements
+ * @NC_DATA_HUBBLE_CABRE: Cabre Hubble parameter measurements
+ * @NC_DATA_HUBBLE_STERN2009: Stern et al. (2009) Hubble parameter measurements
  * @NC_DATA_HUBBLE_MORESCO2012_BC03: [Moresco et al. (2012)][XMoresco2012]
  * @NC_DATA_HUBBLE_MORESCO2012_MASTRO: [Moresco et al. (2012)][XMoresco2012]
  * @NC_DATA_HUBBLE_MORESCO2015: [Moresco (2015)][XMoresco2015]
  * @NC_DATA_HUBBLE_MORESCO2016_DR9_BC03: [Moresco et al. (2016)][XMoresco2016]
  * @NC_DATA_HUBBLE_MORESCO2016_DR9_MASTRO: [Moresco et al. (2016)][XMoresco2016]
- * @NC_DATA_HUBBLE_BUSCA2013_BAO_WMAP: FIXME
- * @NC_DATA_HUBBLE_RIESS2008_HST: FIXME
- * @NC_DATA_HUBBLE_ZHANG2012: FIXME
- * @NC_DATA_HUBBLE_RIESS2016_HST_WFC3: FIXME
+ * @NC_DATA_HUBBLE_BUSCA2013_BAO_WMAP: Busca et al. (2013) BAO+WMAP Hubble measurements
+ * @NC_DATA_HUBBLE_RIESS2008_HST: Riess et al. (2008) HST Hubble measurements
+ * @NC_DATA_HUBBLE_ZHANG2012: Zhang et al. (2012) Hubble parameter measurements
+ * @NC_DATA_HUBBLE_RIESS2016_HST_WFC3: Riess et al. (2016) HST WFC3 Hubble measurements
  * @NC_DATA_HUBBLE_RATSIMBAZAFY2017: Ratsimbazafy et al. 2017 -- arXiv:1702.00418
  * @NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018: [Gomez-Valent et al. (2018)][XGomez-Valent2018]
- * @NC_DATA_HUBBLE_RIESS2018: FIXME
+ * @NC_DATA_HUBBLE_RIESS2018: Riess et al. (2018) Hubble parameter measurements
  * @NC_DATA_HUBBLE_BORGHI2022: Borghi et al. 2022 -- arXiv:2110.04304
  * @NC_DATA_HUBBLE_JIAO2023: Jiao et al. 2023 -- arXiv:2205.05701
  * @NC_DATA_HUBBLE_JIMENEZ2023: Jimenez et al. 2023 -- arXiv:2306.11425
  * @NC_DATA_HUBBLE_TOMASETTI2023: Tomasetti et al. 2023 -- arXiv:2305.16387
  *
- * FIXME
+ * Enumeration of available Hubble parameter H(z) datasets.
  */
 typedef enum _NcDataHubbleId
 {

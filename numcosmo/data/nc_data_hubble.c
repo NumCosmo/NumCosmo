@@ -150,6 +150,11 @@ nc_data_hubble_class_init (NcDataHubbleClass *klass)
   object_class->dispose      = &nc_data_hubble_dispose;
   object_class->finalize     = &nc_data_hubble_finalize;
 
+  /**
+   * NcDataHubble:z:
+   *
+   * Vector containing the redshift values at which Hubble parameter measurements were obtained.
+   */
   g_object_class_install_property (object_class,
                                    PROP_Z,
                                    g_param_spec_object ("z",
@@ -207,9 +212,9 @@ _nc_data_hubble_set_size (NcmDataGaussDiag *diag, guint np)
 /**
  * nc_data_hubble_new_empty:
  *
- * FIXME
+ * Creates a new empty #NcDataHubble object.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcDataHubble
  */
 NcDataHubble *
 nc_data_hubble_new_empty (void)
@@ -242,9 +247,11 @@ nc_data_hubble_new_from_file (const gchar *filename)
  * nc_data_hubble_new_from_id:
  * @id: a #NcDataHubbleId
  *
- * FIXME
+ * Creates a new #NcDataHubble from a predefined dataset identifier.
+ * Loads the corresponding Hubble parameter measurements from the data file
+ * associated with @id.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcDataHubble
  */
 NcDataHubble *
 nc_data_hubble_new_from_id (NcDataHubbleId id)

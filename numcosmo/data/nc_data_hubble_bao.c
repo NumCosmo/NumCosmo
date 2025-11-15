@@ -213,9 +213,9 @@ _nc_data_hubble_bao_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector 
  * @dist: a #NcDistance
  * @id: a #NcDataHubbleBaoId
  *
- * FIXME
+ * Creates a new #NcDataHubbleBao from a predefined Hubble+BAO dataset identifier.
  *
- * Returns: a #NcmData
+ * Returns: (transfer full): a #NcmData
  */
 NcmData *
 nc_data_hubble_bao_new (NcDistance *dist, NcDataHubbleBaoId id)
@@ -253,7 +253,7 @@ _nc_data_hubble_bao_set_size (NcmDataGaussDiag *diag, guint np)
  * @hubble_bao: a #NcDataHubbleBao.
  * @id: a #NcDataHubbleBaoId
  *
- * FIXME
+ * Sets the Hubble+BAO sample data from the given dataset identifier.
  *
  */
 void

@@ -257,15 +257,14 @@ nc_cluster_mass_clear (NcClusterMass **clusterm)
  * nc_cluster_mass_p: (virtual P)
  * @clusterm: a #NcClusterMass
  * @cosmo: a #NcHICosmo
- * @lnM: FIXME
- * @z: FIXME
- * @lnM_obs: (array) (element-type gdouble): FIXME
- * @lnM_obs_params: (array) (element-type gdouble) (allow-none): FIXME
+ * @lnM: logarithm base e of the true mass
+ * @z: true redshift
+ * @lnM_obs: (array) (element-type gdouble): observed mass array
+ * @lnM_obs_params: (array) (element-type gdouble) (allow-none): observational parameters
  *
+ * Computes the probability distribution $P(\ln M_{\mathrm{obs}}|\ln M, z)$.
  *
- * FIXME
- *
- * Returns: FIXME
+ * Returns: probability value
  */
 gdouble
 nc_cluster_mass_p (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
@@ -299,13 +298,13 @@ nc_cluster_mass_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble l
  * @cosmo: a #NcHICosmo
  * @lnM: logarithm base e of the true mass
  * @z: true redshift
- * @lnM_obs_lower: (array) (element-type gdouble): FIXME
- * @lnM_obs_upper: (array) (element-type gdouble): FIXME
- * @lnM_obs_params:(array) (element-type gdouble) (allow-none): FIXME
+ * @lnM_obs_lower: (array) (element-type gdouble): lower bounds of observed mass bins
+ * @lnM_obs_upper: (array) (element-type gdouble): upper bounds of observed mass bins
+ * @lnM_obs_params:(array) (element-type gdouble) (allow-none): observational parameters
  *
- * FIXME
+ * Computes the integrated probability over the observed mass bin.
  *
- * Returns: FIXME
+ * Returns: integrated probability
  */
 gdouble
 nc_cluster_mass_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params)
@@ -342,7 +341,7 @@ nc_cluster_mass_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdoub
  * @lnM_lower: (out): pointer to the lower limit of the real mass integration.
  * @lnM_upper: (out): pointer to the upper limit of the real mass integration.
  *
- * FIXME
+ * Computes the integration limits for the true mass given the observed mass and its parameters.
  *
  */
 void
@@ -355,13 +354,13 @@ nc_cluster_mass_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdoub
  * nc_cluster_mass_p_bin_limits: (virtual P_bin_limits)
  * @clusterm: a #NcClusterMass.
  * @cosmo: a #NcHICosmo.
- * @lnM_obs_lower: (array) (element-type gdouble): observed mass.
- * @lnM_obs_upper: (array) (element-type gdouble): observed mass.
+ * @lnM_obs_lower: (array) (element-type gdouble): lower bounds of observed mass bins.
+ * @lnM_obs_upper: (array) (element-type gdouble): upper bounds of observed mass bins.
  * @lnM_obs_params: (array) (element-type gdouble): observed mass params.
  * @lnM_lower: (out): pointer to the lower limit of the real mass integration.
  * @lnM_upper: (out): pointer to the upper limit of the real mass integration.
  *
- * FIXME
+ * Computes the integration limits for the true mass given the observed mass bin boundaries.
  *
  */
 void
@@ -377,7 +376,7 @@ nc_cluster_mass_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const g
  * @lnM_lower: (out): lower limit of the logarithm base e of the true mass.
  * @lnM_upper: (out): upper limit of the logarithm base e of the true mass.
  *
- * FIXME
+ * Computes the mass limits for the cluster abundance calculation.
  * The function which will call this one is responsible to allocate memory for @lnM_lower and @lnM_upper.
  */
 void
@@ -390,9 +389,9 @@ nc_cluster_mass_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *ln
  * nc_cluster_mass_volume: (virtual volume)
  * @clusterm: a #NcClusterMass.
  *
- * FIXME
+ * Computes the effective volume in the observable mass space.
  *
- * Returns: FIXME
+ * Returns: the effective volume
  */
 gdouble
 nc_cluster_mass_volume (NcClusterMass *clusterm)
@@ -404,7 +403,7 @@ nc_cluster_mass_volume (NcClusterMass *clusterm)
  * nc_cluster_mass_p_vec_z_lnMobs: (virtual P_vec_z_lnMobs)
  * @clusterm: a #NcClusterMass
  * @cosmo: a #NcHICosmo
- * @lnM: FIXME
+ * @lnM: logarithm base e of the true mass
  * @z: a #NcmVector
  * @lnM_obs: a #NcmMatrix
  * @lnM_obs_params: (allow-none): a #NcmMatrix

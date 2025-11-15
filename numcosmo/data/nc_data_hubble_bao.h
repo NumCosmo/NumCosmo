@@ -46,9 +46,9 @@ typedef struct _NcDataHubbleBao NcDataHubbleBao;
 
 /**
  * NcDataHubbleBaoId:
- * @NC_DATA_HUBBLE_BAO_BUSCA2013: FIXME
+ * @NC_DATA_HUBBLE_BAO_BUSCA2013: Busca et al. (2013) combined Hubble and BAO measurements
  *
- * FIXME
+ * Enumeration of available combined Hubble parameter and BAO datasets.
  */
 typedef enum _NcDataHubbleBaoId
 {

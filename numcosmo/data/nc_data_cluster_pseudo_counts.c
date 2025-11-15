@@ -304,7 +304,7 @@ _nc_data_cluster_pseudo_counts_prepare (NcmData *data, NcmMSet *mset)
   NcClusterPseudoCounts *cpc      = NC_CLUSTER_PSEUDO_COUNTS (ncm_mset_peek (mset, nc_cluster_pseudo_counts_id ()));
 
   if (dcpc->cad == NULL)
-    g_error ("_nc_data_cluster_pseudo_counts_prepare: NcClusterAbundance not set, call _l");
+    g_error ("_nc_data_cluster_pseudo_counts_prepare: NcClusterAbundance not set, call nc_data_cluster_pseudo_counts_set_cad() first.");
 
   g_assert ((cosmo != NULL) && (clusterz != NULL) && (clusterm != NULL) && (cpc != NULL));
 
@@ -562,7 +562,10 @@ nc_data_cluster_pseudo_counts_set_true_data (NcDataClusterPseudoCounts *dcpc, co
  * @rng: a #NcmRNG
  * @np: number of clusters
  *
- * FIXME
+ * Initializes the cluster pseudo counts data by sampling @np clusters.
+ * Sets the number of clusters and generates observational uncertainties
+ * for Planck and CLASH catalogs, then resamples the data using the
+ * provided model set @mset and random number generator @rng.
  *
  */
 void

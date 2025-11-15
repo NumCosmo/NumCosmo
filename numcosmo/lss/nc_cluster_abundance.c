@@ -242,7 +242,9 @@ nc_cluster_abundance_class_init (NcClusterAbundanceClass *klass)
   /**
    * NcClusterAbundance:mean-bias:
    *
-   * FIXME
+   * The mean halo bias function used to compute the bias-weighted cluster abundance.
+   * This is used in clustering analyses to relate the spatial distribution of clusters
+   * to the underlying matter distribution.
    */
   g_object_class_install_property (object_class,
                                    PROP_MEANBIAS,
@@ -374,9 +376,9 @@ _nc_cluster_abundance_z_p_lnM_p_d2n_integrand (gdouble lnM, gdouble z, gpointer 
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass
  * @lnM_obs: (array) (element-type gdouble): logarithm base e of the observed mass
- * @lnM_obs_params: (array) (element-type gdouble) (allow-none) : FIXME
+ * @lnM_obs_params: (array) (element-type gdouble) (allow-none): parameters for the observed mass distribution (e.g., measurement uncertainties)
  * @z_obs: (array) (element-type gdouble): observed redshift
- * @z_obs_params: (array) (element-type gdouble) (allow-none): FIXME
+ * @z_obs_params: (array) (element-type gdouble) (allow-none): parameters for the observed redshift distribution (e.g., photometric redshift uncertainties)
  *
  * This function computes $ \int_0^\infty dz \int_{-\infty}^\infty d\ln M \frac{d^2N(\ln M, z)}{dzd\ln M} * P(z^{phot}|z) *
  * P(\ln M^{obs}|\ln M, z) $. We studied the convergence of this integral to optimize this function. We verified
@@ -431,7 +433,7 @@ _nc_cluster_abundance_z_p_d2n_integrand (gdouble z, gpointer params)
  * @clusterm: a #NcClusterMass
  * @lnM: the logarithm base e of the mass (gdouble)
  * @z_obs: (array) (element-type gdouble): observed redshift
- * @z_obs_params: (array) (element-type gdouble): FIXME
+ * @z_obs_params: (array) (element-type gdouble): parameters for the observed redshift distribution
  *
  * This function computes $ \int_{z_{phot} - 10\sigma_{phot}}^{z_{phot} + 10\sigma_{phot}} dz \,
  * \frac{d^2N}{dzdlnM} * P(z^{photo}|z) $. The integral limits were determined requiring a precision
@@ -499,7 +501,7 @@ _nc_cluster_abundance_lnM_p_d2n_integrand (gdouble lnM, gpointer params)
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass
  * @lnM_obs: (array) (element-type gdouble): logarithm base e of the observed mass
- * @lnM_obs_params: (array) (element-type gdouble) (allow-none): other information of the observed mass, such as its error
+ * @lnM_obs_params: (array) (element-type gdouble) (allow-none): parameters for the observed mass distribution (e.g., measurement uncertainties)
  * @z: redshift
  *
  * This function computes $ \int_{\ln M^{obs} - 7\sigma_{\ln M}}^{\ln M^{obs} + 7\sigma_{\ln M}} d\ln M \,
@@ -710,14 +712,14 @@ _nc_cluster_abundance_lnM_intp_N (NcClusterAbundance *cad, NcHICosmo *cosmo, NcC
  * @cosmo: a #NcHICosmo
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass
- * @lnM_obs: (array) (element-type gdouble): FIXME
- * @lnM_obs_params: (array) (element-type gdouble) (allow-none): FIXME
- * @z_obs: (array) (element-type gdouble): FIXME
- * @z_obs_params: (array) (element-type gdouble) (allow-none): FIXME
+ * @lnM_obs: (array) (element-type gdouble): observed mass values
+ * @lnM_obs_params: (array) (element-type gdouble) (allow-none): parameters for the observed mass distribution
+ * @z_obs: (array) (element-type gdouble): observed redshift values
+ * @z_obs_params: (array) (element-type gdouble) (allow-none): parameters for the observed redshift distribution
  *
- * FIXME
+ * Computes the bias-weighted differential abundance for the given observed mass and redshift.
  *
- * Returns: FIXME
+ * Returns: the bias-weighted differential abundance
  */
 gdouble
 nc_cluster_abundance_intp_d2n_bias (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params)
@@ -927,9 +929,9 @@ nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClust
 /**
  * nc_cluster_abundance_set_area:
  * @cad: a #NcClusterAbundance
- * @area: FIXME
+ * @area: sky area in square degrees
  *
- * This function prepares ...
+ * Sets the sky area for the cluster abundance calculation.
  *
  */
 void
@@ -1192,9 +1194,9 @@ nc_cluster_abundance_n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterReds
  * @lnM: logarithm base e of the cluster mass
  * @z: redshift
  *
- * FIXME
+ * Computes the interpolated differential abundance $d^2N/dzd\ln M$ at the given mass and redshift.
  *
- * Returns: FIXME
+ * Returns: the differential abundance
  */
 gdouble
 nc_cluster_abundance_intp_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble lnM, gdouble z)
@@ -1208,16 +1210,16 @@ nc_cluster_abundance_intp_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClus
  * @cosmo: a #NcHICosmo
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass
- * @lnM_obs_lower: (array) (element-type gdouble): FIXME
- * @lnM_obs_upper: (array) (element-type gdouble): FIXME
- * @lnM_obs_params: (array) (element-type gdouble) (allow-none): FIXME
- * @z_obs_lower: (array) (element-type gdouble): FIXME
- * @z_obs_upper: (array) (element-type gdouble): FIXME
- * @z_obs_params: (array) (element-type gdouble) (allow-none): FIXME
+ * @lnM_obs_lower: (array) (element-type gdouble): lower bounds of observed mass bins
+ * @lnM_obs_upper: (array) (element-type gdouble): upper bounds of observed mass bins
+ * @lnM_obs_params: (array) (element-type gdouble) (allow-none): parameters for the observed mass distribution
+ * @z_obs_lower: (array) (element-type gdouble): lower bounds of observed redshift bins
+ * @z_obs_upper: (array) (element-type gdouble): upper bounds of observed redshift bins
+ * @z_obs_params: (array) (element-type gdouble) (allow-none): parameters for the observed redshift distribution
  *
- * FIXME
+ * Computes the integrated differential abundance over the specified observed mass and redshift bins.
  *
- * Returns: FIXME
+ * Returns: the integrated differential abundance in the specified bins
  */
 gdouble
 nc_cluster_abundance_intp_bin_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params)
@@ -1249,10 +1251,10 @@ nc_cluster_abundance_intp_bin_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, Nc
 
 /**
  * nc_cluster_abundance_bin_realization: (skip)
- * @zr: FIXME
- * @h: FIXME
+ * @zr: array of redshift values
+ * @h: array of histograms
  *
- * FIXME
+ * Bins the redshift realizations into histograms.
  */
 void
 nc_cluster_abundance_bin_realization (GArray *zr, gsl_histogram **h)
@@ -1297,12 +1299,13 @@ nc_cluster_abundance_realizations_save_to_file (GPtrArray *realizations, gchar *
 
 /**
  * nc_cluster_abundance_realizations_read_from_file:
- * @file_realization: (array length=n_realizations): is the file's name which contains the redshift values of the clusters obtained with random Poisson generator.
- * @n_realizations: is the number of realizations generated.
+ * @file_realization: (array length=n_realizations): file name containing redshift values from Poisson-generated cluster realizations
+ * @n_realizations: number of realizations to read
  *
- * GPtrArray *realizations is an array of array with the z values of all realizations. To complete...
+ * Reads cluster abundance realizations from a file. Each realization contains an array of
+ * redshift values for clusters generated using a Poisson process.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): array of realizations, each containing redshift values
  */
 GPtrArray *
 nc_cluster_abundance_realizations_read_from_file (gchar *file_realization, guint n_realizations)
@@ -1589,7 +1592,9 @@ nc_ca_mean_bias_Mobs_denominator (NcClusterAbundance *cad, NcHICosmo *cosmo, gdo
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass
  *
- * FIXME
+ * Prepares the cluster abundance object if the cosmology or cluster models have changed.
+ * This function checks if any of the models have been updated and calls nc_cluster_abundance_prepare()
+ * if necessary.
  *
  */
 
@@ -1613,16 +1618,16 @@ nc_cluster_abundance_intp_bin_d2n_bias_integrand (gdouble lnM, gdouble z, gpoint
  * @cosmo: a #NcHICosmo
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass
- * @lnM_obs_lower: (array) (element-type gdouble): FIXME
- * @lnM_obs_upper: (array) (element-type gdouble): FIXME
- * @lnM_obs_params: (array) (element-type gdouble) (allow-none): FIXME
- * @z_obs_lower: (array) (element-type gdouble): FIXME
- * @z_obs_upper: (array) (element-type gdouble): FIXME
- * @z_obs_params: (array) (element-type gdouble) (allow-none): FIXME
+ * @lnM_obs_lower: (array) (element-type gdouble): lower bounds of observed mass bins
+ * @lnM_obs_upper: (array) (element-type gdouble): upper bounds of observed mass bins
+ * @lnM_obs_params: (array) (element-type gdouble) (allow-none): parameters for the observed mass distribution
+ * @z_obs_lower: (array) (element-type gdouble): lower bounds of observed redshift bins
+ * @z_obs_upper: (array) (element-type gdouble): upper bounds of observed redshift bins
+ * @z_obs_params: (array) (element-type gdouble) (allow-none): parameters for the observed redshift distribution
  *
- * FIXME
+ * Computes the bias-weighted integrated differential abundance over the specified bins.
  *
- * Returns: FIXME
+ * Returns: the bias-weighted integrated differential abundance
  */
 
 gdouble

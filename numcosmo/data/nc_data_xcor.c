@@ -572,7 +572,8 @@ _nc_data_xcor_prepare (NcmData *data, NcmMSet *mset)
  * @a: a #guint
  * @b: a #guint
  *
- * FIXME
+ * Computes the mean function (theoretical pseudo-$C_\ell$) for the
+ * cross-correlation between observables @a and @b, storing the result in @vp.
  *
  */
 void
@@ -679,7 +680,9 @@ _nc_data_xcor_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp)
  * @c: a #guint
  * @d: a #guint
  *
- * FIXME
+ * Computes the covariance matrix element between pseudo-$C_\ell^{AB}$ and
+ * pseudo-$C_\ell^{CD}$ for observables @a, @b, @c, and @d, storing the
+ * result in @cov.
  *
  */
 void
@@ -824,11 +827,12 @@ _nc_data_xcor_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov)
  * nc_data_xcor_new_full:
  * @nobs: a #guint, the number of observables
  * @xc: a #NcXcor to perform the computation of theoretical power spectra.
- * @use_norma: a #gboolean, whether to normalize the likehood.
+ * @use_norma: a #gboolean, whether to normalize the likelihood.
  *
- * FIXME
+ * Creates a new #NcDataXcor object for @nobs observables using @xc to
+ * compute theoretical angular power spectra.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcDataXcor
  */
 NcDataXcor *
 nc_data_xcor_new_full (const guint nobs, NcXcor *xc, const gboolean use_norma) /*, const gchar* xcname[]) */
@@ -1062,7 +1066,8 @@ nc_data_xcor_set_5 (NcDataXcor *dxc)
  * @a: a #guint
  * @b: a #guint
  *
- * FIXME
+ * Retrieves the observed angular power spectrum for the cross-correlation
+ * between observables @a and @b, storing it in @vp.
  *
  */
 void

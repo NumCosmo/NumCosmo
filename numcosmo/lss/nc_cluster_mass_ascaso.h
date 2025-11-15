@@ -54,7 +54,7 @@ typedef struct _NcClusterMassAscasoPrivate NcClusterMassAscasoPrivate;
  * @NC_CLUSTER_MASS_ASCASO_SIGMA_P2: redshift dependency standard deviation of the log-normal distribution
  * @NC_CLUSTER_MASS_ASCASO_CUT: cut in richness
  *
- * FIXME
+ * Parameters for the Ascaso cluster mass-richness relation.
  */
 typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_ASCASO_SPARAMS >*/
 {

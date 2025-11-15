@@ -210,11 +210,11 @@ _nc_data_dist_mu_set_size (NcmDataGaussDiag *diag, guint np)
 
 /**
  * nc_data_dist_mu_new_empty:
- * @dist: FIXME
+ * @dist: a #NcDistance
  *
- * FIXME
+ * Creates a new empty #NcDataDistMu with the given distance object.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcDataDistMu
  */
 NcDataDistMu *
 nc_data_dist_mu_new_empty (NcDistance *dist)
@@ -250,9 +250,9 @@ nc_data_dist_mu_new_from_file (const gchar *filename)
  * @dist: a #NcDistance
  * @id: a #NcDataSNIAId
  *
- * FIXME
+ * Creates a new #NcDataDistMu from a predefined SNIa dataset identifier.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcDataDistMu
  */
 NcDataDistMu *
 nc_data_dist_mu_new_from_id (NcDistance *dist, NcDataSNIAId id)
