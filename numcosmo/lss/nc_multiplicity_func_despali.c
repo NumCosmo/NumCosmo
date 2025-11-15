@@ -396,7 +396,7 @@ _nc_multiplicity_func_despali_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, 
 /**
  * nc_multiplicity_func_despali_new:
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncDespali with default parameters.
  *
  * Returns: A new #NcMultiplicityFuncDespali.
  */
@@ -410,9 +410,9 @@ nc_multiplicity_func_despali_new (void)
 /**
  * nc_multiplicity_func_despali_new_full:
  * @mdef: a #NcMultiplicityFuncMassDef
- * @Delta: parameter that multiplies the background mass density (mean ou critical)
+ * @Delta: parameter that multiplies the background mass density (mean or critical)
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncDespali with the specified mass definition and Delta parameter.
  *
  * Returns: A new #NcMultiplicityFuncDespali.
  */

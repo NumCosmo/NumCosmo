@@ -791,11 +791,12 @@ nc_halo_mass_function_dn_dz (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble 
  * @lnMu: logarithm base e of mass, upper threshold $\ln M_u$
  * @zl: minimum redshift
  * @zu: maximum redshift
- * @spline: whenever to create an intermediary spline of the integration
+ * @spline: spline optimization strategy for the integration
  *
- * FIXME
+ * Computes the total number of halos in the mass range $[M_l, M_u]$ and
+ * redshift range $[z_l, z_u]$ within the survey area.
  *
- * Returns: FIXME
+ * Returns: the total number of halos
  */
 gdouble
 nc_halo_mass_function_n (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble zl, gdouble zu, NcHaloMassFunctionSplineOptimize spline)

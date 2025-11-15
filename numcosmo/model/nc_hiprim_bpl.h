@@ -53,7 +53,7 @@ typedef struct _NcHIPrimBPL NcHIPrimBPL;
  * @NC_HIPRIM_BPL_T_SA_RATIO: Tensor-to-scalar ratio
  * @NC_HIPRIM_BPL_N_T: Tensor spectral index
  *
- * FIXME
+ * Enumeration of parameters for the broken power law primordial spectrum model.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HIPRIM_BPL_SPARAMS >*/

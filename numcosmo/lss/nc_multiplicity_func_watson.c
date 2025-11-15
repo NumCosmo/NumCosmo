@@ -246,8 +246,7 @@ _nc_multiplicity_func_watson_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, g
 /**
  * nc_multiplicity_func_watson_new:
  *
- * FIXME
- *
+ * Creates a new #NcMultiplicityFuncWatson with default parameters (FOF mass definition).
  *
  * Returns: A new #NcMultiplicityFuncWatson.
  */

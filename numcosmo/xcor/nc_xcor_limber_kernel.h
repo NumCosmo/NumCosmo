@@ -61,9 +61,9 @@ struct _NcXcorLimberKernelClass
 
 /**
  * NcXcorLimberKernelImpl:
- * @NC_XCOR_LIMBER_KERNEL_IMPL_EVAL: FIXME
- * @NC_XCOR_LIMBER_KERNEL_IMPL_PREPARE: FIXME
- * @NC_XCOR_LIMBER_KERNEL_IMPL_ADD_NOISE: FIXME
+ * @NC_XCOR_LIMBER_KERNEL_IMPL_EVAL: kernel evaluation implementation
+ * @NC_XCOR_LIMBER_KERNEL_IMPL_PREPARE: kernel preparation implementation
+ * @NC_XCOR_LIMBER_KERNEL_IMPL_ADD_NOISE: noise addition implementation
  *
  */
 typedef enum _NcXcorLimberKernelImpl
@@ -78,8 +78,8 @@ typedef enum _NcXcorLimberKernelImpl
 
 /**
  * NcXcorKinetic:
- * @xi_z: FIXME
- * @E_z: FIXME
+ * @xi_z: comoving distance at redshift z
+ * @E_z: normalized Hubble parameter at redshift z
  *
  * A boxed type for the kinetic quantities necessary to compute the kernels.
  *

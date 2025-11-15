@@ -65,7 +65,7 @@
 gdouble
 ncm_sf_sbessel (gulong l, gdouble x)
 {
-  MPFR_DECL_INIT (res, 53); /* Should it be 53? FIXME */
+  MPFR_DECL_INIT (res, 53); /* 53 bits matches IEEE 754 double precision mantissa */
 
   gdouble res_d;
 

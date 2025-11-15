@@ -157,7 +157,8 @@ nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *kl
    * NcHaloDensityProfileEinasto:alpha:
    *
    * Defines how the profile steepens with slope.
-   * FIXME Set correct values (limits)
+   * Typical values range from 0.12 to 0.35 based on N-body simulations
+   * (Gao et al. 2008, Dutton & Maccio 2014).
    */
   ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA, "\\alpha", "alpha",
                               0.12,  0.35, 0.01,

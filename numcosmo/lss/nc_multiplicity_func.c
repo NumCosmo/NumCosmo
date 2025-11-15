@@ -395,9 +395,10 @@ nc_multiplicity_func_get_matter_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cosm
  * @sigma: standard fluctuation of the matter density contrast
  * @z: redshift
  *
- * FIXME
+ * Evaluates the multiplicity function $f(\sigma, z)$ at the given
+ * variance @sigma and redshift @z.
  *
- * Returns: FIXME
+ * Returns: the value of the multiplicity function
  */
 gdouble
 nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
@@ -428,9 +429,10 @@ nc_multiplicity_func_has_correction_factor (NcMultiplicityFunc *mulf)
  * @z: redshift
  * @lnM: logarithm base e of the mass
  *
- * FIXME
+ * Computes the correction factor for the multiplicity function.
+ * Some multiplicity functions require mass-dependent corrections.
  *
- * Returns: FIXME
+ * Returns: the correction factor value
  */
 gdouble
 nc_multiplicity_func_correction_factor (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)

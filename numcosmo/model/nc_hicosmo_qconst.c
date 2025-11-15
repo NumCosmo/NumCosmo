@@ -163,9 +163,9 @@ _nc_hicosmo_qconst_Omega_t0 (NcHICosmo *cosmo)
 /**
  * nc_hicosmo_qconst_new:
  *
- * FIXME
+ * Creates a new instance of #NcHICosmoQConst with constant deceleration parameter.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcHICosmoQConst
  */
 NcHICosmoQConst *
 nc_hicosmo_qconst_new (void)

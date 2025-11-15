@@ -116,7 +116,8 @@ _nc_hicosmo_de_reparam_ok_new2old (NcmReparam *reparam, NcmModel *model)
  * nc_hicosmo_de_reparam_ok_new: (constructor)
  * @length: number of parameters
  *
- * FIXME
+ * Creates a new #NcHICosmoDEReparamOk reparametrization object that transforms
+ * $\Omega_{x0}$ to $\Omega_{k0}$ for dark energy models.
  *
  * Returns: (transfer full): a new #NcHICosmoDEReparamOk
  */

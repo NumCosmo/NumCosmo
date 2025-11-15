@@ -53,7 +53,7 @@ typedef struct _NcHICosmoDEPrivate NcHICosmoDEPrivate;
  * @NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2: DE component of the second derivative of $E^2(z)$ with respect to $z$
  * @NC_HICOSMO_DE_IMPL_w_de: DE equation of state
  *
- * FIXME
+ * Implementation flags for dark energy cosmology model functions.
  *
  */
 typedef enum /*< flags,underscore_name=NC_HICOSMO_DE_IMPL >*/
@@ -78,7 +78,7 @@ typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble z);
  * @NC_HICOSMO_DE_ENNU: effective number of neutrinos
  * @NC_HICOSMO_DE_OMEGA_B: baryon density parameter
  *
- * FIXME
+ * Scalar parameters for dark energy cosmology models.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_SPARAMS >*/
@@ -101,7 +101,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_SPARAMS >*/
  * @NC_HICOSMO_DE_MASSNU_MU: massive neutrino chemical potentials
  * @NC_HICOSMO_DE_MASSNU_G: massive neutrino degeneracy factors
  *
- * FIXME
+ * Vector parameters for dark energy cosmology models.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_VPARAMS >*/

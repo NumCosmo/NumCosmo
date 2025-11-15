@@ -46,11 +46,11 @@ typedef struct _NcClusterMassBenson NcClusterMassBenson;
 /**
  * NcClusterMassBensonSParams:
  * @NC_CLUSTER_MASS_BENSON_A_SZ: normalization of the mass-observable relation
- * @NC_CLUSTER_MASS_BENSON_B_SZ: FIXME
- * @NC_CLUSTER_MASS_BENSON_C_SZ: FIXME
+ * @NC_CLUSTER_MASS_BENSON_B_SZ: mass slope of the mass-observable relation
+ * @NC_CLUSTER_MASS_BENSON_C_SZ: redshift evolution of the mass-observable relation
  * @NC_CLUSTER_MASS_BENSON_D_SZ: standard deviation of the mass-observable relation
  *
- * FIXME
+ * Parameters for the Benson cluster mass-SZ relation.
  */
 typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_BENSON_SPARAMS >*/
 {

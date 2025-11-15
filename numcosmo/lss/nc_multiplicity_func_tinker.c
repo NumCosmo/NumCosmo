@@ -308,7 +308,7 @@ _nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, g
 /**
  * nc_multiplicity_func_tinker_new:
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncTinker with default parameters.
  *
  * Returns: A new #NcMultiplicityFuncTinker.
  */
@@ -322,9 +322,9 @@ nc_multiplicity_func_tinker_new (void)
 /**
  * nc_multiplicity_func_tinker_new_full:
  * @mdef: a #NcMultiplicityFuncMassDef
- * @Delta: parameter that multiplies the background mass density (mean ou critical)
+ * @Delta: parameter that multiplies the background mass density (mean or critical)
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncTinker with the specified mass definition and Delta parameter.
  *
  * Returns: A new #NcMultiplicityFuncTinker.
  */

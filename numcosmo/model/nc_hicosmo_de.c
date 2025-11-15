@@ -1062,7 +1062,7 @@ nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de, GError **error)
  * nc_hicosmo_de_new_add_bbn:
  * @lh: a #NcmLikelihood
  *
- * FIXME
+ * Adds a Big Bang Nucleosynthesis (BBN) prior to the likelihood.
  *
  */
 void
@@ -1122,40 +1122,40 @@ _nc_hicosmo_de_w_de (NcHICosmoDE *cosmo_de, gdouble z)
 
 /**
  * nc_hicosmo_de_set_E2Omega_de_impl: (skip)
- * @cosmo_de_class: FIXME
- * @f: FIXME
+ * @cosmo_de_class: a #NcHICosmoDEClass
+ * @f: function pointer
  *
- * FIXME
+ * Sets the implementation for computing $E^2\Omega_{\mathrm{de}}(z)$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEFunc1, E2Omega_de)
 
 /**
  * nc_hicosmo_de_set_dE2Omega_de_dz_impl: (skip)
- * @cosmo_de_class: FIXME
- * @f: FIXME
+ * @cosmo_de_class: a #NcHICosmoDEClass
+ * @f: function pointer
  *
- * FIXME
+ * Sets the implementation for computing the derivative $\frac{d(E^2\Omega_{\mathrm{de}})}{dz}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEFunc1, dE2Omega_de_dz)
 
 /**
  * nc_hicosmo_de_set_d2E2Omega_de_dz2_impl: (skip)
- * @cosmo_de_class: FIXME
- * @f: FIXME
+ * @cosmo_de_class: a #NcHICosmoDEClass
+ * @f: function pointer
  *
- * FIXME
+ * Sets the implementation for computing the second derivative $\frac{d^2(E^2\Omega_{\mathrm{de}})}{dz^2}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEFunc1, d2E2Omega_de_dz2)
 
 /**
  * nc_hicosmo_de_set_w_de_impl: (skip)
- * @cosmo_de_class: FIXME
- * @f: FIXME
+ * @cosmo_de_class: a #NcHICosmoDEClass
+ * @f: function pointer
  *
- * FIXME
+ * Sets the implementation for computing the dark energy equation of state $w_{\mathrm{de}}(z)$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEFunc1, w_de)
@@ -1165,45 +1165,45 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEF
  * @cosmo_de: a #NcHICosmoDE
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the dark energy density parameter times $E^2(z)$ at redshift @z.
  *
- * Returns: FIXME
+ * Returns: $E^2(z)\Omega_{\mathrm{de}}(z)$
  */
 /**
  * nc_hicosmo_dE2Omega_de_dz:
  * @cosmo_de: a #NcHICosmoDE
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the first derivative of $E^2\Omega_{\mathrm{de}}$ with respect to redshift.
  *
- * Returns: FIXME
+ * Returns: $\frac{d(E^2\Omega_{\mathrm{de}})}{dz}$
  */
 /**
  * nc_hicosmo_d2E2Omega_de_dz2:
  * @cosmo_de: a #NcHICosmoDE
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the second derivative of $E^2\Omega_{\mathrm{de}}$ with respect to redshift.
  *
- * Returns: FIXME
+ * Returns: $\frac{d^2(E^2\Omega_{\mathrm{de}})}{dz^2}$
  */
 /**
  * nc_hicosmo_w_de:
  * @cosmo_de: a #NcHICosmoDE
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the dark energy equation of state parameter at redshift @z.
  *
- * Returns: FIXME
+ * Returns: $w_{\mathrm{de}}(z)$
  */
 /**
  * nc_hicosmo_de_E2Omega_de_onepw:
  * @cosmo_de: a #NcHICosmoDE
  * @z: redshift $z$
  *
- * $E^2\Omega_\mathrm{de}(1+w)$.
+ * Computes $E^2\Omega_{\mathrm{de}}(1+w)$ at redshift @z.
  *
- * Returns: FIXME
+ * Returns: $E^2(z)\Omega_{\mathrm{de}}(z)(1+w_{\mathrm{de}}(z))$
  */
 
 static void

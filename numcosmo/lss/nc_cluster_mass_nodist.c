@@ -146,7 +146,8 @@ nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
   /**
    * NcClusterMassNodist:lnM_min:
    *
-   * FIXME Set correct values (limits)
+   * Minimum logarithm (base e) of cluster mass in solar masses.
+   * Default range: $10^{11}$ to $10^{17} M_\odot$.
    */
   g_object_class_install_property (object_class,
                                    PROP_LNM_MIN,
@@ -159,7 +160,8 @@ nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
   /**
    * NcClusterMassNodist:lnM_max:
    *
-   * FIXME Set correct values (limits)
+   * Maximum logarithm (base e) of cluster mass in solar masses.
+   * Default range: $10^{11}$ to $10^{17} M_\odot$.
    */
   g_object_class_install_property (object_class,
                                    PROP_LNM_MAX,

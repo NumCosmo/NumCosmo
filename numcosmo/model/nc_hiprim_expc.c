@@ -126,9 +126,9 @@ nc_hiprim_expc_class_init (NcHIPrimExpcClass *klass)
 /**
  * nc_hiprim_expc_new: (constructor)
  *
- * FIXME
+ * Creates a new instance of #NcHIPrimExpc (Exponential Cutoff primordial spectrum).
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcHIPrimExpc
  */
 NcHIPrimExpc *
 nc_hiprim_expc_new (void)

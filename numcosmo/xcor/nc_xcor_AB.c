@@ -260,9 +260,9 @@ nc_xcor_AB_class_init (NcXcorABClass *klass)
  * @mixing_filename: (allow-none): a #gchar, the name of the file containing the mixing matrix
  * @mixing_filelength: a #guint, the size of the matrix in @mixing_filename (in case it is larger than @ell_th_cut_off)
  *
- * FIXME
+ * Creates a new #NcXcorAB for cross-correlation between fields A and B.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcXcorAB
  */
 NcXcorAB *
 nc_xcor_AB_new (guint a, guint b, guint ell_th_cut_off, guint ell_lik_min, guint ell_lik_max, const gchar *clobs_filename, const gchar *mixing_filename, const guint mixing_filelength)
@@ -339,7 +339,7 @@ nc_xcor_AB_ref (NcXcorAB *xcab)
  * nc_xcor_AB_free:
  * @xcab: a #NcXcorAB
  *
- * FIXME
+ * Decreases the reference count of @xcab.
  *
  */
 void
@@ -352,7 +352,7 @@ nc_xcor_AB_free (NcXcorAB *xcab)
  * nc_xcor_AB_clear:
  * @xcab: a #NcXcorAB
  *
- * FIXME
+ * Clears @xcab and sets the pointer to NULL.
  *
  */
 void

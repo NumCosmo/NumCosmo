@@ -50,16 +50,16 @@ typedef gdouble (*NcHICosmoGCGFunc1) (NcHICosmoGCG *cosmo_gcg, gdouble z);
 
 /**
  * NcHICosmoGCGSParams:
- * @NC_HICOSMO_GCG_H0: FIXME
- * @NC_HICOSMO_GCG_OMEGA_C: FIXME
- * @NC_HICOSMO_GCG_OMEGA_X: FIXME
- * @NC_HICOSMO_GCG_T_GAMMA0: FIXME
- * @NC_HICOSMO_GCG_HE_YP: FIXME
- * @NC_HICOSMO_GCG_ENNU: FIXME
- * @NC_HICOSMO_GCG_OMEGA_B: FIXME
- * @NC_HICOSMO_GCG_GAMMA: FIXME
+ * @NC_HICOSMO_GCG_H0: Hubble constant [km/(s Mpc)]
+ * @NC_HICOSMO_GCG_OMEGA_C: cold dark matter density parameter
+ * @NC_HICOSMO_GCG_OMEGA_X: generalized Chaplygin gas density parameter
+ * @NC_HICOSMO_GCG_T_GAMMA0: CMB temperature today
+ * @NC_HICOSMO_GCG_HE_YP: primordial helium abundance
+ * @NC_HICOSMO_GCG_ENNU: effective number of neutrinos
+ * @NC_HICOSMO_GCG_OMEGA_B: baryon density parameter
+ * @NC_HICOSMO_GCG_GAMMA: generalized Chaplygin gas parameter
  *
- * FIXME
+ * Scalar parameters for generalized Chaplygin gas cosmology models.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_GCG_SPARAMS >*/
@@ -78,12 +78,12 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_GCG_SPARAMS >*/
 
 /**
  * NcHICosmoGCGVParams:
- * @NC_HICOSMO_GCG_MASSNU_M: FIXME
- * @NC_HICOSMO_GCG_MASSNU_T: FIXME
- * @NC_HICOSMO_GCG_MASSNU_MU: FIXME
- * @NC_HICOSMO_GCG_MASSNU_G: FIXME
+ * @NC_HICOSMO_GCG_MASSNU_M: neutrino masses
+ * @NC_HICOSMO_GCG_MASSNU_T: massive neutrino temperatures
+ * @NC_HICOSMO_GCG_MASSNU_MU: massive neutrino chemical potentials
+ * @NC_HICOSMO_GCG_MASSNU_G: massive neutrino degeneracy factors
  *
- * FIXME
+ * Vector parameters for generalized Chaplygin gas cosmology models.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_GCG_VPARAMS >*/

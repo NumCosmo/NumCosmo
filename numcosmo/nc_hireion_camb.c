@@ -284,7 +284,7 @@ _nc_hireion_camb_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambd
 /**
  * nc_hireion_camb_new:
  *
- * FIXME
+ * Creates a new #NcHIReionCamb object implementing the CAMB reionization model.
  *
  * Returns: a newly created #NcHIReionCamb.
  */

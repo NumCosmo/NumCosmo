@@ -410,9 +410,9 @@ _nc_hicosmo_qgw_xb (NcHICosmo *cosmo)
 /**
  * nc_hicosmo_qgw_new:
  *
- * FIXME
+ * Creates a new instance of #NcHICosmoQGW (Quantum Gravity Wave cosmological model).
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcHICosmoQGW
  */
 NcHICosmoQGW *
 nc_hicosmo_qgw_new (void)

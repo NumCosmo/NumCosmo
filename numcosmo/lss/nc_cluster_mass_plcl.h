@@ -50,14 +50,14 @@ typedef struct _NcClusterMassPlCL NcClusterMassPlCL;
 /**
  * NcClusterMassPlCLSParams:
  * @NC_CLUSTER_MASS_PLCL_A_SZ: slope of the mass-SZ relation
- * @NC_CLUSTER_MASS_PLCL_B_SZ: FIXME
+ * @NC_CLUSTER_MASS_PLCL_B_SZ: normalization of the mass-SZ relation
  * @NC_CLUSTER_MASS_PLCL_SD_SZ: standard deviation of the mass-SZ relation
  * @NC_CLUSTER_MASS_PLCL_A_L: slope of the mass-lensing relation
- * @NC_CLUSTER_MASS_PLCL_B_L: FIXME
+ * @NC_CLUSTER_MASS_PLCL_B_L: normalization of the mass-lensing relation
  * @NC_CLUSTER_MASS_PLCL_SD_L: standard deviation of the mass-lensing relation
  * @NC_CLUSTER_MASS_PLCL_COR: correlation coefficient between the SZ and lensing masses
  *
- * FIXME
+ * Parameters for the Planck cluster mass relation combining SZ and lensing.
  */
 typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_PLCL_SPARAMS >*/
 {

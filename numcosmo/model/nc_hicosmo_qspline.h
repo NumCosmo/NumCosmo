@@ -54,7 +54,7 @@ typedef struct _NcHICosmoQSplineContPrior NcHICosmoQSplineContPrior;
  * NcHICosmoQSplineSParams:
  * @NC_HICOSMO_QSPLINE_H0: Hubble constant
  * @NC_HICOSMO_QSPLINE_OMEGA_T: Total energy density of the universe
- * @NC_HICOSMO_QSPLINE_AS_DRAG: FIXME
+ * @NC_HICOSMO_QSPLINE_AS_DRAG: Sound horizon at drag epoch
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_SPARAMS >*/
@@ -68,7 +68,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_SPARAMS >*/
 
 /**
  * NcHICosmoQSplineVParams:
- * @NC_HICOSMO_QSPLINE_Q: FIXME
+ * @NC_HICOSMO_QSPLINE_Q: Deceleration parameter values at spline knots
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_VPARAMS >*/

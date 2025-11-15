@@ -30,9 +30,13 @@
  * @short_description: Class defining the Duffy et al. 2008 concentration-mass relation
  * @stability: Unstable
  *
- *
  * Class defining the Duffy et al. 2008 concentration-mass relation.
- * FIXME include reference and equation
+ * The concentration parameter $c_\Delta$ is given by:
+ * $$c_\Delta = A \left(\frac{M_\Delta}{M_\mathrm{pivot}}\right)^B (1+z)^C,$$
+ * where $M_\mathrm{pivot} = 2 \times 10^{12} h^{-1} M_\odot$ and the parameters
+ * $(A, B, C)$ depend on the mass definition (mean, critical, or virial).
+ *
+ * Reference: [Duffy et al. (2008)](https://arxiv.org/abs/0804.2486)
  *
  */
 

@@ -308,7 +308,9 @@ ncm_fit_mcbs_set_rng (NcmFitMCBS *mcbs, NcmRNG *rng)
  * The results are stored in the catalog of @mcbs.
  * The catalog is cleared before the analysis.
  *
- * WARNING not working correctly with bsmt > 0 FIXME
+ * Note: Multi-threading for bootstrap analysis (@bsmt > 0) is currently
+ * not fully supported and may produce incorrect results. Use @bsmt = 0
+ * for reliable single-threaded execution.
  *
  */
 void
@@ -355,7 +357,7 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
     ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_DISABLE);
     /*ncm_fit_mc_set_first_sample_id (mcbs->mc_resample, i + 1); */
     ncm_fit_mc_run (mcbs->mc_resample, i + 1);
-    ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_TOTAL); /* FIXME */
+    ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_TOTAL);
 
     if (mcbs->base_name != NULL)
     {

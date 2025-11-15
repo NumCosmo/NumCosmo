@@ -684,9 +684,9 @@ nc_cbe_class_init (NcCBEClass *klass)
 /**
  * nc_cbe_new: (constructor)
  *
- * FIXME
+ * Creates a new #NcCBE object with default precision parameters.
  *
- * Returns: (transfer full): a new #NcCBEPrecision.
+ * Returns: (transfer full): a new #NcCBE
  */
 NcCBE *
 nc_cbe_new (void)
@@ -703,11 +703,11 @@ nc_cbe_new (void)
 
 /**
  * nc_cbe_prec_new: (constructor)
- * @cbe_prec: a #NcCBEPrecision.
+ * @cbe_prec: a #NcCBEPrecision
  *
- * FIXME
+ * Creates a new #NcCBE object using the specified precision parameters.
  *
- * Returns: (transfer full): a new #NcCBEPrecision.
+ * Returns: (transfer full): a new #NcCBE
  */
 NcCBE *
 nc_cbe_prec_new (NcCBEPrecision *cbe_prec)

@@ -48,7 +48,8 @@ gchar *camb_filename = NULL;
 /**
  * nc_transfer_func_camb_new:
  *
- * FIXME
+ * Creates a new #NcTransferFuncCAMB object that uses CAMB as backend for
+ * computing the transfer function.
  *
  * Returns: A new #NcTransferFunc.
  */

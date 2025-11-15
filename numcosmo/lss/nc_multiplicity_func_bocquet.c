@@ -431,9 +431,9 @@ _nc_multiplicity_func_bocquet_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, 
 /**
  * nc_multiplicity_func_bocquet_new:
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncBocquet with default parameters.
  *
- * Returns: A new #NcMultiplicityFuncBocquet.
+ * Returns: (transfer full): A new #NcMultiplicityFuncBocquet.
  */
 NcMultiplicityFuncBocquet *
 nc_multiplicity_func_bocquet_new (void)
@@ -446,11 +446,12 @@ nc_multiplicity_func_bocquet_new (void)
  * nc_multiplicity_func_bocquet_new_full:
  * @mdef: a #NcMultiplicityFuncMassDef
  * @sim: a #NcMultiplicityFuncBocquetSim
- * @Delta: parameter that multiplies the background mass density (mean ou critical)
+ * @Delta: parameter that multiplies the background mass density (mean or critical)
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncBocquet with specified mass definition,
+ * simulation type, and overdensity parameter.
  *
- * Returns: A new #NcMultiplicityFuncBocquet.
+ * Returns: (transfer full): A new #NcMultiplicityFuncBocquet.
  */
 NcMultiplicityFuncBocquet *
 nc_multiplicity_func_bocquet_new_full (NcMultiplicityFuncMassDef mdef, NcMultiplicityFuncBocquetSim sim, gdouble Delta)

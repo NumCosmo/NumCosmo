@@ -172,7 +172,7 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
   /**
    * NcClusterMassVanderlinde:signif_obs_min:
    *
-   * FIXME Set correct values (limits)
+   * Minimum observed SZ significance for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_SIGNIFICANCE_OBS_MIN,
@@ -185,7 +185,7 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
   /**
    * NcClusterMassVanderlinde:signif_obs_max:
    *
-   * FIXME Set correct values (limits)
+   * Maximum observed SZ significance for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_SIGNIFICANCE_OBS_MAX,
@@ -199,7 +199,6 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
    * NcClusterMassVanderlinde:z0:
    *
    * Reference redshift in the SZ signal-mass scaling relation.
-   * FIXME Set correct values (limits)
    */
   g_object_class_install_property (object_class,
                                    PROP_Z0,
@@ -213,7 +212,6 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
    * NcClusterMassVanderlinde:M0:
    *
    * Reference mass (in h^(-1) * M_sun unit) in the SZ signal-mass scaling relation.
-   * FIXME Set correct values (limits)
    */
   g_object_class_install_property (object_class,
                                    PROP_M0,

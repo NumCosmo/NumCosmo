@@ -147,7 +147,8 @@ nc_cluster_photoz_gauss_class_init (NcClusterPhotozGaussClass *klass)
   /**
    * NcClusterPhotozGauss:pz_min:
    *
-   * FIXME Set correct values (limits)
+   * Minimum photometric redshift for the survey selection.
+   * Typical values range from 0.0 to 0.5 depending on the survey.
    */
   g_object_class_install_property (object_class,
                                    PROP_PZ_MIN,
@@ -160,7 +161,8 @@ nc_cluster_photoz_gauss_class_init (NcClusterPhotozGaussClass *klass)
   /**
    * NcClusterPhotozGauss:pz_max:
    *
-   * FIXME Set correct values (limits)
+   * Maximum photometric redshift for the survey selection.
+   * Typical values range from 0.5 to 3.0 depending on the survey depth.
    */
   g_object_class_install_property (object_class,
                                    PROP_PZ_MAX,

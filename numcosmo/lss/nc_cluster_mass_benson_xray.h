@@ -46,11 +46,11 @@ typedef struct _NcClusterMassBensonXRay NcClusterMassBensonXRay;
 /**
  * NcClusterMassBensonXRaySParams:
  * @NC_CLUSTER_MASS_BENSON_XRAY_A_X: normalization of the X-ray mass-observable relation
- * @NC_CLUSTER_MASS_BENSON_XRAY_B_X: FIXME
- * @NC_CLUSTER_MASS_BENSON_XRAY_C_X: FIXME
+ * @NC_CLUSTER_MASS_BENSON_XRAY_B_X: mass slope of the X-ray mass-observable relation
+ * @NC_CLUSTER_MASS_BENSON_XRAY_C_X: redshift evolution of the X-ray mass-observable relation
  * @NC_CLUSTER_MASS_BENSON_XRAY_D_X: standard deviation of the X-ray mass-observable relation
  *
- * FIXME
+ * Parameters for the Benson cluster mass-X-ray relation.
  */
 typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_BENSON_XRAY_SPARAMS >*/
 {

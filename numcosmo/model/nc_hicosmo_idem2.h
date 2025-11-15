@@ -50,16 +50,16 @@ typedef gdouble (*NcHICosmoIDEM2Func1) (NcHICosmoIDEM2 *cosmo_idem2, gdouble z);
 
 /**
  * NcHICosmoIDEM2SParams:
- * @NC_HICOSMO_IDEM2_H0: FIXME
- * @NC_HICOSMO_IDEM2_OMEGA_C: FIXME
- * @NC_HICOSMO_IDEM2_OMEGA_X: FIXME
- * @NC_HICOSMO_IDEM2_T_GAMMA0: FIXME
- * @NC_HICOSMO_IDEM2_HE_YP: FIXME
- * @NC_HICOSMO_IDEM2_ENNU: FIXME
- * @NC_HICOSMO_IDEM2_OMEGA_B: FIXME
- * @NC_HICOSMO_IDEM2_GAMMA: FIXME
+ * @NC_HICOSMO_IDEM2_H0: Hubble constant [km/(s Mpc)]
+ * @NC_HICOSMO_IDEM2_OMEGA_C: cold dark matter density parameter
+ * @NC_HICOSMO_IDEM2_OMEGA_X: interacting dark energy-matter density parameter
+ * @NC_HICOSMO_IDEM2_T_GAMMA0: CMB temperature today
+ * @NC_HICOSMO_IDEM2_HE_YP: primordial helium abundance
+ * @NC_HICOSMO_IDEM2_ENNU: effective number of neutrinos
+ * @NC_HICOSMO_IDEM2_OMEGA_B: baryon density parameter
+ * @NC_HICOSMO_IDEM2_GAMMA: interaction parameter
  *
- * FIXME
+ * Scalar parameters for interacting dark energy-matter cosmology models (IDEM2).
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_IDEM2_SPARAMS >*/
@@ -78,12 +78,12 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_IDEM2_SPARAMS >*/
 
 /**
  * NcHICosmoIDEM2VParams:
- * @NC_HICOSMO_IDEM2_MASSNU_M: FIXME
- * @NC_HICOSMO_IDEM2_MASSNU_T: FIXME
- * @NC_HICOSMO_IDEM2_MASSNU_MU: FIXME
- * @NC_HICOSMO_IDEM2_MASSNU_G: FIXME
+ * @NC_HICOSMO_IDEM2_MASSNU_M: neutrino masses
+ * @NC_HICOSMO_IDEM2_MASSNU_T: massive neutrino temperatures
+ * @NC_HICOSMO_IDEM2_MASSNU_MU: massive neutrino chemical potentials
+ * @NC_HICOSMO_IDEM2_MASSNU_G: massive neutrino degeneracy factors
  *
- * FIXME
+ * Vector parameters for interacting dark energy-matter cosmology models (IDEM2).
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_IDEM2_VPARAMS >*/

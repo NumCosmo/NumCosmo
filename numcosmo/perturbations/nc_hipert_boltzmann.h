@@ -95,19 +95,19 @@ struct _NcHIPertBoltzmannClass
 
 /**
  * NcHIPertBoltzmannVars:
- * @NC_HIPERT_BOLTZMANN_B0: FIXME
- * @NC_HIPERT_BOLTZMANN_THETA0: FIXME
- * @NC_HIPERT_BOLTZMANN_C0: FIXME
- * @NC_HIPERT_BOLTZMANN_PHI: FIXME
- * @NC_HIPERT_BOLTZMANN_B1: FIXME
- * @NC_HIPERT_BOLTZMANN_THETA1: FIXME
- * @NC_HIPERT_BOLTZMANN_C1: FIXME
- * @NC_HIPERT_BOLTZMANN_THETA2: FIXME
- * @NC_HIPERT_BOLTZMANN_THETA_P0: FIXME
- * @NC_HIPERT_BOLTZMANN_THETA_P1: FIXME
- * @NC_HIPERT_BOLTZMANN_THETA_P2: FIXME
+ * @NC_HIPERT_BOLTZMANN_B0: baryon density perturbation monopole
+ * @NC_HIPERT_BOLTZMANN_THETA0: photon temperature perturbation monopole
+ * @NC_HIPERT_BOLTZMANN_C0: cold dark matter density perturbation monopole
+ * @NC_HIPERT_BOLTZMANN_PHI: gravitational potential
+ * @NC_HIPERT_BOLTZMANN_B1: baryon velocity dipole
+ * @NC_HIPERT_BOLTZMANN_THETA1: photon temperature perturbation dipole
+ * @NC_HIPERT_BOLTZMANN_C1: cold dark matter velocity dipole
+ * @NC_HIPERT_BOLTZMANN_THETA2: photon temperature perturbation quadrupole
+ * @NC_HIPERT_BOLTZMANN_THETA_P0: photon polarization monopole
+ * @NC_HIPERT_BOLTZMANN_THETA_P1: photon polarization dipole
+ * @NC_HIPERT_BOLTZMANN_THETA_P2: photon polarization quadrupole
  *
- * FIXME
+ * Variables for the Boltzmann perturbation equations.
  */
 typedef enum /*< enum,underscore_name=NC_HIPERT_BOLTZMANN_VARS  >*/
 {

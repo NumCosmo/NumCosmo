@@ -813,7 +813,7 @@ _ncm_fit_mcmc_mt_eval (glong i, glong f, gpointer data)
   NcmFit *fit      = *fit_ptr;
   guint j;
 
-  g_assert_not_reached (); /* FIXME not implemented */
+  g_assert_not_reached (); /* Multi-threaded MCMC evaluation not yet implemented */
 
   for (j = i; j < f; j++)
   {
