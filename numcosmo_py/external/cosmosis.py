@@ -28,7 +28,7 @@ import os
 import math
 from typing import List, Dict, Tuple, Optional
 from pathlib import Path
-from enum import Enum
+from enum import StrEnum, auto
 
 from cosmosis.runtime.config import Inifile
 import cosmosis.runtime.logs
@@ -47,20 +47,20 @@ from firecrown.connector.numcosmo.numcosmo import NumCosmoFactory, MappingNumCos
 from numcosmo_py import Ncm, Nc, GObject, to_camel_case
 
 
-class LinearMatterPowerSpectrum(str, Enum):
+class LinearMatterPowerSpectrum(StrEnum):
     """Possible linear matter power spectrum models."""
 
-    NONE = "none"
-    BBKS = "bbks"
-    EISENSTEIN_HU = "eisenstein_hu"
-    CLASS = "class"
+    NONE = auto()
+    BBKS = auto()
+    EISENSTEIN_HU = auto()
+    CLASS = auto()
 
 
-class NonLinearMatterPowerSpectrum(str, Enum):
+class NonLinearMatterPowerSpectrum(StrEnum):
     """Possible non-linear matter power spectrum models."""
 
-    NONE = "none"
-    HALOFIT = "halofit"
+    NONE = auto()
+    HALOFIT = auto()
 
 
 def convert_parameter(p: Parameter, required_parameters: List[str]) -> Ncm.SParam:
@@ -289,15 +289,14 @@ def create_numcosmo_mapping(
     matter_ps: LinearMatterPowerSpectrum = LinearMatterPowerSpectrum.NONE,
     nonlin_matter_ps: NonLinearMatterPowerSpectrum = NonLinearMatterPowerSpectrum.NONE,
     distance_max_z: float = 10.0,
-    require_nonlinear_pk: bool = False,
     reltol: float = 1.0e-4,
 ) -> MappingNumCosmo:
     """Create a NumCosmo mapping.
 
     Mapping to be used in the likelihoods converted from Cosmosis.
     """
-    ps_ml = None
-    ps_mnl = None
+    ps_ml: Nc.PowspecML | None = None
+    ps_mnl: Nc.PowspecMNL | None = None
     dist = Nc.Distance.new(distance_max_z)
     dist.comoving_distance_spline.set_reltol(reltol)
 
@@ -325,12 +324,7 @@ def create_numcosmo_mapping(
         ps_mnl = Nc.PowspecMNLHaloFit.new(ps_ml, 3.0, reltol)
         ps_ml.set_reltol_spline(reltol)
 
-    return MappingNumCosmo(
-        p_ml=ps_ml,
-        p_mnl=ps_mnl,
-        dist=dist,
-        require_nonlinear_pk=require_nonlinear_pk,
-    )
+    return MappingNumCosmo(p_ml=ps_ml, p_mnl=ps_mnl, dist=dist)
 
 
 COSMO_PARAMETER_CONVERSION = {

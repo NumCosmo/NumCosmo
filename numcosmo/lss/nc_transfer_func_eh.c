@@ -147,9 +147,9 @@ _nc_transfer_func_eh_set_property (GObject *object, guint prop_id, const GValue 
     case PROP_CCL_COMP:
       nc_transfer_func_eh_set_CCL_comp (tf_eh, g_value_get_boolean (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -166,9 +166,9 @@ _nc_transfer_func_eh_get_property (GObject *object, guint prop_id, GValue *value
     case PROP_CCL_COMP:
       g_value_set_boolean (value, self->CCL_comp);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -223,7 +223,7 @@ _nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
   const gdouble h2    = h * h;
   const gdouble wm    = nc_hicosmo_Omega_m0 (cosmo) * h2;
   const gdouble wb    = nc_hicosmo_Omega_b0 (cosmo) * h2;
-  const gdouble wc    = nc_hicosmo_Omega_c0 (cosmo) * h2;
+  const gdouble wc    = wm - wb;
   const gdouble wb_wm = wb / wm; /* \frac{\Omega_{b0}}{\Omega_{m0}} */
   const gdouble wc_wm = wc / wm; /* \frac{\Omega_{c0}}{\Omega_{m0}} */
 

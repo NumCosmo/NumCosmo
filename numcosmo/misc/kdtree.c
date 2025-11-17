@@ -18,15 +18,6 @@ is_leaf (struct kdnode *node)
   return node->left == node->right;
 }
 
-static inline void
-swap (long *a, long *b)
-{
-  long tmp = *a;
-
-  *a = *b;
-  *b = tmp;
-}
-
 static inline double
 square (double d)
 {
@@ -50,12 +41,6 @@ static inline double
 D (struct kdtree *tree, long index, int r)
 {
   return tree->coord_table[index][r];
-}
-
-static inline int
-knn_search_skip (struct kdtree *tree, rb_knn_list_table_t *table, double *knn_distance, int k, double value, double target)
-{
-  return (table->rb_knn_list_count >= k) && (square (target - value) > *knn_distance);
 }
 
 static inline void

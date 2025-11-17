@@ -80,9 +80,9 @@ _nc_cluster_pseudo_counts_set_property (GObject *object, guint prop_id, const GV
     case PROP_NCLUSTERS:
       cpc->nclusters = g_value_get_uint (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -98,9 +98,9 @@ _nc_cluster_pseudo_counts_get_property (GObject *object, guint prop_id, GValue *
     case PROP_NCLUSTERS:
       g_value_set_uint (value, cpc->nclusters);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

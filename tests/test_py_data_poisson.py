@@ -35,8 +35,7 @@ class DataPoissonTest(Ncm.DataPoisson):
     """Test class for NcmDataPoisson."""
 
     def __init__(self, n_bins: int = 200):
-        """Constructor for DataGaussTest."""
-
+        """Construct for DataGaussTest."""
         super().__init__(n_bins=n_bins, init=True)
         self.n_bins = n_bins
 
@@ -44,7 +43,6 @@ class DataPoissonTest(Ncm.DataPoisson):
         self, mset: Ncm.MSet, n: int
     ) -> float:
         """Do mean function."""
-
         mvnd = mset.peek(Ncm.ModelMVND.id())
         assert mvnd is not None
         assert mvnd.vparam_len(0) == 2
@@ -56,7 +54,6 @@ class DataPoissonTest(Ncm.DataPoisson):
 
 def test_data_poisson_set_get_size():
     """Test NcmDataPoisson."""
-
     n_bins = 200
 
     data_dist = DataPoissonTest(n_bins=n_bins)
@@ -69,8 +66,7 @@ def test_data_poisson_set_get_size():
 
 
 def test_data_poisson_init_from_vector():
-    """Test NcmDataPoission."""
-
+    """Test NcmDataPoisson."""
     nodes = Ncm.Vector.new_array(np.linspace(0.0, 1.0, 100 + 1))
     values = Ncm.Vector.new_array(np.linspace(100.0, 200.0, 100))
 
@@ -89,7 +85,6 @@ def test_data_poisson_init_from_vector():
 
 def test_data_poisson_init_zero():
     """Test NcmDataPoisson."""
-
     data_dist = DataPoissonTest()
 
     nodes = Ncm.Vector.new_array(np.linspace(0.0, 1.0, 100 + 1))
@@ -107,7 +102,6 @@ def test_data_poisson_init_zero():
 
 def test_data_poisson_init_from_binning():
     """Test NcmDataPoisson."""
-
     data_dist = DataPoissonTest()
 
     nodes = Ncm.Vector.new_array(np.linspace(0.0, 1.0, 100 + 1))
@@ -126,7 +120,6 @@ def test_data_poisson_init_from_binning():
 
 def test_data_poisson_resample():
     """Test NcmDataPoisson."""
-
     n_bins = 20
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
@@ -165,7 +158,6 @@ def test_data_poisson_resample():
 
 def test_data_poisson_bootstrap():
     """Test NcmDataDist2D."""
-
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -205,7 +197,6 @@ def test_data_poisson_bootstrap():
 
 def test_data_poisson_serialize():
     """Test NcmDataPoisson."""
-
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -236,7 +227,6 @@ def test_data_poisson_serialize():
 
 def test_data_poisson_fisher():
     """Test NcmDataPoisson fisher matrix."""
-
     rng = Ncm.RNG.new()
     mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2)])
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
@@ -260,7 +250,6 @@ def test_data_poisson_fisher():
 
 def test_data_poisson_fisher_bias():
     """Test NcmDataPoisson fisher matrix and bias."""
-
     true_theta = [1.0, 2.0]
     theta_shift = [0.1, -0.02]
 
@@ -279,9 +268,7 @@ def test_data_poisson_fisher_bias():
     fisher0 = data_dist.fisher_matrix(mset)
     fisher1, delta_theta = data_dist.fisher_matrix_bias(
         mset,
-        Ncm.Vector.new_array(
-            np.linspace(true_theta[0], true_theta[1], n_bins).tolist()
-        ),
+        Ncm.Vector.new_array(np.linspace(true_theta[0], true_theta[1], n_bins)),
     )
 
     assert_allclose(fisher0.dup_array(), fisher1.dup_array(), atol=1.0e-6)

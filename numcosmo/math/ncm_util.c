@@ -111,7 +111,7 @@ _ncm_coarse_dbl_get_bs (void)
 }
 
 /**
- * ncm_rational_coarce_double: (skip)
+ * ncm_rational_coarse_double: (skip)
  * @x: a double
  * @q: a #mpq_t to store the result
  *
@@ -119,7 +119,7 @@ _ncm_coarse_dbl_get_bs (void)
  *
  */
 void
-ncm_rational_coarce_double (gdouble x, mpq_t q)
+ncm_rational_coarse_double (gdouble x, mpq_t q)
 {
   NcmCoarseDbl **cdbl_ptr = _ncm_coarse_dbl_get_bs ();
   NcmCoarseDbl *cdbl      = *cdbl_ptr;
@@ -547,6 +547,178 @@ ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const g
   theta1[0] = cimag (zp);
 }
 
+#define ERF_BOUND (3.0)
+
+/**
+ * ncm_util_normal_gaussian_integral:
+ * @xl: the lower bound
+ * @xu: the upper bound
+ *
+ * Computes the integral of the Gaussian distribution with zero mean and unit variance
+ * between @xl and @xu
+ *
+ * Returns: value of the integral.
+ */
+gdouble
+ncm_util_normal_gaussian_integral (const gdouble xl, const gdouble xu)
+{
+  if (xl == xu)
+    return 0.0;
+
+  {
+    const gdouble sqrt_half = M_SQRT1_2;
+    gdouble ul, uu, sign;
+
+    if (xl < xu)
+    {
+      ul   = xl * sqrt_half;
+      uu   = xu * sqrt_half;
+      sign = +1.0;
+    }
+    else
+    {
+      ul   = xu * sqrt_half;
+      uu   = xl * sqrt_half;
+      sign = -1.0;
+    }
+
+    if (ul > ERF_BOUND)
+    {
+      /*
+       * When both ul and uu are in the right tail (ul > ERF_BOUND), erf(x) ≈ 1 and
+       * loses precision. Use erfc(x) = 1 - erf(x) for better accuracy since x >
+       * ERF_BOUND.
+       */
+      const gdouble val = 0.5 * (erfc (ul) - erfc (uu));
+
+      return sign * val;
+    }
+    else if (uu < -ERF_BOUND)
+    {
+      /*
+       * When both ul and uu are in the left tail (uu < -ERF_BOUND), erf(x) approximates
+       * -1 and is numerically unstable. Use erf(x) = -erf(-x) = erfc(-x) -1 for better
+       * accuracy since -x > ERF_BOUND.
+       */
+      const gdouble val = 0.5 * (erfc (-uu) - erfc (-ul));
+
+      return sign * val;
+    }
+    else
+    {
+      /*
+       * Otherwise, we can use erf.
+       */
+      const gdouble val = 0.5 * (erf (uu) - erf (ul));
+
+      return sign * val;
+    }
+  }
+}
+
+/**
+ * ncm_util_gaussian_integral:
+ * @xl: the lower bound
+ * @xu: the upper bound
+ * @mu: the mean
+ * @sigma: the standard deviation
+ *
+ * Computes the integral of the Gaussian distribution with mean @mu and standard deviation @sigma
+ * between @xl and @xu.
+ *
+ * Returns: value of the integral.
+ */
+gdouble
+ncm_util_gaussian_integral (const gdouble xl, const gdouble xu, const gdouble mu, const gdouble sigma)
+{
+  return ncm_util_normal_gaussian_integral ((xl - mu) / sigma, (xu - mu) / sigma);
+}
+
+/**
+ * ncm_util_log_normal_gaussian_integral:
+ * @xl: the lower bound
+ * @xu: the upper bound
+ * @sign: (nullable): pointer to a gdouble to store the sign of the integral
+ *
+ * Computes the logarithm of the integral of the Gaussian distribution with zero mean
+ * and unit variance between @xl and @xu. If @sign is not %NULL, the sign of the
+ * result (+/-1) is stored in *@sign.
+ *
+ * Returns: log of the absolute value of the integral.
+ */
+gdouble
+ncm_util_log_normal_gaussian_integral (const gdouble xl, const gdouble xu, gdouble *sign)
+{
+  if (xl == xu)
+    return -INFINITY;
+
+  {
+    const gdouble sqrt_half = M_SQRT1_2;
+    gdouble ul, uu;
+
+    if (xl < xu)
+    {
+      ul    = xl * sqrt_half;
+      uu    = xu * sqrt_half;
+      *sign = 1.0;
+    }
+    else
+    {
+      ul    = xu * sqrt_half;
+      uu    = xl * sqrt_half;
+      *sign = -1.0;
+    }
+
+    if (ul > ERF_BOUND)
+    {
+      const gdouble val = 0.5 * (erfc (ul) - erfc (uu));
+
+      return log (fabs (val));
+    }
+    else if (uu < -ERF_BOUND)
+    {
+      const gdouble val = 0.5 * (erfc (-ul) - erfc (-uu));
+
+      return log (fabs (val));
+    }
+    else if ((uu > ERF_BOUND) && (ul < -ERF_BOUND))
+    {
+      const gdouble val = -0.5 * (erfc (uu) + erfc (-ul));
+
+      return log1p (val);
+    }
+    else
+    {
+      const gdouble val = 0.5 * (erf (uu) - erf (ul));
+
+      return log (fabs (val));
+    }
+  }
+}
+
+/**
+ * ncm_util_log_gaussian_integral:
+ * @xl: the lower bound
+ * @xu: the upper bound
+ * @mu: the mean
+ * @sigma: the standard deviation
+ * @sign: (nullable): pointer to a gdouble to store the sign of the integral
+ *
+ * Computes the logarithm of the integral of the Gaussian distribution with mean @mu and
+ * standard deviation @sigma between @xl and @xu. Uses the standard normal log integral.
+ * If @sign is not %NULL, the sign of the result (+/-1) is stored in *@sign.
+ *
+ * Returns: log of the integral value.
+ */
+gdouble
+ncm_util_log_gaussian_integral (const gdouble xl, const gdouble xu, const gdouble mu, const gdouble sigma, gdouble *sign)
+{
+  const gdouble zl = (xl - mu) / sigma;
+  const gdouble zu = (xu - mu) / sigma;
+
+  return ncm_util_log_normal_gaussian_integral (zl, zu, sign);
+}
+
 /**
  * ncm_cmp:
  * @x: a double
@@ -622,8 +794,7 @@ ncm_complex_dup (NcmComplex *c)
 {
   NcmComplex *cc = ncm_complex_new ();
 
-  cc->z[0] = c->z[0];
-  cc->z[1] = c->z[1];
+  *cc = *c;
 
   return cc;
 }
@@ -664,6 +835,14 @@ ncm_complex_clear (NcmComplex **c)
  *
  */
 /**
+ * ncm_complex_set_c: (skip)
+ * @c: a #NcmComplex
+ * @z: a complex double
+ *
+ * Sets @c to $Re(z) + I Im(z)$.
+ *
+ */
+/**
  * ncm_complex_set_zero:
  * @c: a #NcmComplex
  *
@@ -685,6 +864,22 @@ ncm_complex_clear (NcmComplex **c)
  * Returns the imaginary part of @c.
  *
  * Returns: Im$(c)$.
+ */
+/**
+ * ncm_complex_Abs:
+ * @c: a #NcmComplex
+ *
+ * Returns the absolute value of @c.
+ *
+ * Returns: $|c|$
+ */
+/**
+ * ncm_complex_c: (skip)
+ * @c: a #NcmComplex
+ *
+ * Returns the complex number $Re(c) + I Im(c)$.
+ *
+ * Returns: $Re(c) + I Im(c)$.
  */
 
 /**

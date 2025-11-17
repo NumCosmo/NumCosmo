@@ -120,7 +120,7 @@ test_nc_galaxy_sd_position_flat_new (TestNcGalaxySDPosition *test, gconstpointer
 
   {
     NcGalaxySDTrueRedshift *gsdtr    = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
-    NcGalaxySDObsRedshift *gsdor     = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_spec_new (gsdtr));
+    NcGalaxySDObsRedshift *gsdor     = NC_GALAXY_SD_OBS_REDSHIFT (nc_galaxy_sd_obs_redshift_spec_new (gsdtr, 0.0, 2.0));
     NcGalaxySDPositionFlat *gsdpflat = nc_galaxy_sd_position_flat_new (ra_min, ra_max, dec_min, dec_max);
 
     test->gsdp  = NC_GALAXY_SD_POSITION (gsdpflat);
@@ -325,12 +325,13 @@ test_nc_galaxy_sd_position_flat_gen (TestNcGalaxySDPosition *test, gconstpointer
 static void
 test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpointer pdata)
 {
-  NcmRNG *rng                            = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  NcGalaxySDObsRedshiftData *sdz_data    = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
-  NcGalaxySDPositionData *gsdp_data      = nc_galaxy_sd_position_data_new (test->gsdp, sdz_data);
-  NcGalaxySDPositionIntegrand *integrand = nc_galaxy_sd_position_integ (test->gsdp);
-  NcmMSet *mset                          = ncm_mset_empty_new ();
-  const guint nruns                      = 10000;
+  NcmRNG *rng                               = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcGalaxySDObsRedshiftData *sdz_data       = nc_galaxy_sd_obs_redshift_data_new (test->gsdor);
+  NcGalaxySDPositionData *gsdp_data         = nc_galaxy_sd_position_data_new (test->gsdp, sdz_data);
+  NcGalaxySDPositionIntegrand *integrand    = nc_galaxy_sd_position_integ (test->gsdp, FALSE);
+  NcGalaxySDPositionIntegrand *ln_integrand = nc_galaxy_sd_position_integ (test->gsdp, TRUE);
+  NcmMSet *mset                             = ncm_mset_empty_new ();
+  const guint nruns                         = 10000;
   gdouble ra_min, ra_max, dec_min, dec_max;
   guint i;
 
@@ -350,6 +351,7 @@ test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpoint
   nc_galaxy_sd_position_set_dec_lim (test->gsdp, dec_min, dec_max);
 
   nc_galaxy_sd_position_integrand_prepare (integrand, mset);
+  nc_galaxy_sd_position_integrand_prepare (ln_integrand, mset);
 
   for (i = 0; i < nruns; i++)
   {
@@ -360,14 +362,21 @@ test_nc_galaxy_sd_position_flat_integ (TestNcGalaxySDPosition *test, gconstpoint
     gsdp_data->dec = dec;
 
     if ((ra < ra_min) || (ra > ra_max) || (dec < dec_min) || (dec > dec_max))
+    {
       g_assert_cmpfloat (nc_galaxy_sd_position_integrand_eval (integrand, gsdp_data), ==, 0.0);
+      g_assert_cmpfloat (nc_galaxy_sd_position_integrand_eval (ln_integrand, gsdp_data), ==, GSL_NEGINF);
+    }
     else
-      g_assert_cmpfloat (nc_galaxy_sd_position_integrand_eval (integrand, gsdp_data), >, 0.0);
+    {
+      g_assert (gsl_finite (nc_galaxy_sd_position_integrand_eval (integrand, gsdp_data)));
+      g_assert (gsl_finite (nc_galaxy_sd_position_integrand_eval (ln_integrand, gsdp_data)));
+    }
   }
 
   nc_galaxy_sd_obs_redshift_data_unref (sdz_data);
   nc_galaxy_sd_position_data_unref (gsdp_data);
   nc_galaxy_sd_position_integrand_free (integrand);
+  nc_galaxy_sd_position_integrand_free (ln_integrand);
   ncm_rng_free (rng);
   ncm_mset_free (mset);
 }

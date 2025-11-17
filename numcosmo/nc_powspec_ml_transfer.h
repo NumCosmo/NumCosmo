@@ -35,34 +35,10 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_POWSPEC_ML_TRANSFER             (nc_powspec_ml_transfer_get_type ())
-#define NC_POWSPEC_ML_TRANSFER(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_POWSPEC_ML_TRANSFER, NcPowspecMLTransfer))
-#define NC_POWSPEC_ML_TRANSFER_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_POWSPEC_ML_TRANSFER, NcPowspecMLTransferClass))
-#define NC_IS_POWSPEC_ML_TRANSFER(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_POWSPEC_ML_TRANSFER))
-#define NC_IS_POWSPEC_ML_TRANSFER_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_POWSPEC_ML_TRANSFER))
-#define NC_POWSPEC_ML_TRANSFER_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_POWSPEC_ML_TRANSFER, NcPowspecMLTransferClass))
+#define NC_TYPE_POWSPEC_ML_TRANSFER (nc_powspec_ml_transfer_get_type ())
+G_DECLARE_FINAL_TYPE (NcPowspecMLTransfer, nc_powspec_ml_transfer, NC, POWSPEC_ML_TRANSFER, NcPowspecML)
 
-typedef struct _NcPowspecMLTransferClass NcPowspecMLTransferClass;
-typedef struct _NcPowspecMLTransfer NcPowspecMLTransfer;
-
-struct _NcPowspecMLTransferClass
-{
-  /*< private > */
-  NcPowspecMLClass parent_class;
-};
-
-struct _NcPowspecMLTransfer
-{
-  /*< private > */
-  NcPowspecML parent_instance;
-  NcTransferFunc *tf;
-  NcGrowthFunc *gf;
-  gdouble Pm_k2Pzeta;
-};
-
-GType nc_powspec_ml_transfer_get_type (void) G_GNUC_CONST;
-
-NcPowspecMLTransfer *nc_powspec_ml_transfer_new (NcTransferFunc *tf);
+NcPowspecMLTransfer *nc_powspec_ml_transfer_new (NcTransferFunc * tf);
 
 void nc_powspec_ml_transfer_set_tf (NcPowspecMLTransfer *ps_mlt, NcTransferFunc *tf);
 void nc_powspec_ml_transfer_set_gf (NcPowspecMLTransfer *ps_mlt, NcGrowthFunc *gf);

@@ -28,35 +28,34 @@ experiment dictionary and the extra functions for the forecast.
 """
 
 from typing import cast
-from enum import Enum
+from enum import StrEnum, auto
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
-from numcosmo_py.helper import npa_to_seq
 from numcosmo_py.external.pyssc import pyssc as PySSC
 
 
-class JpasSSCType(str, Enum):
+class JpasSSCType(StrEnum):
     """J-Pas 2024 Super Sample Covariance types."""
 
-    NO_SSC = "no_ssc"
-    FULLSKY = "fullsky"
-    FULL = "full"
-    GUARANTEED = "guaranteed"
+    NO_SSC = auto()
+    FULLSKY = auto()
+    FULL = auto()
+    GUARANTEED = auto()
 
 
-class ClusterMassType(str, Enum):
+class ClusterMassType(StrEnum):
     """Mass-observable relation types."""
 
-    NODIST = "nodist"
-    ASCASO = "ascaso"
+    NODIST = auto()
+    ASCASO = auto()
 
 
-class ClusterRedshiftType(str, Enum):
+class ClusterRedshiftType(StrEnum):
     """Photoz types."""
 
-    NODIST = "nodist"
-    GAUSS = "gauss"
+    NODIST = auto()
+    GAUSS = auto()
 
 
 def create_zbins_kernels(
@@ -310,6 +309,7 @@ def create_cluster_mass(
     cluster_mass_type: ClusterMassType,
 ) -> Nc.ClusterMass:
     """Create the cluster mass-observable relation."""
+    cluster_m: Nc.ClusterMassAscaso | Nc.ClusterMassNodist
     if cluster_mass_type == ClusterMassType.NODIST:
         cluster_m = Nc.ClusterMassNodist(
             lnM_min=np.log(10) * 14.0, lnM_max=np.log(10) * 16.0
@@ -335,6 +335,7 @@ def create_cluster_redshift(
     cluster_redshift_type: ClusterRedshiftType,
 ) -> Nc.ClusterRedshift:
     """Create the cluster photoz relation."""
+    cluster_z: Nc.ClusterRedshiftNodist | Nc.ClusterPhotozGaussGlobal
     if cluster_redshift_type == ClusterRedshiftType.NODIST:
         cluster_z = Nc.ClusterRedshiftNodist(z_min=0.0, z_max=2.0)
     elif cluster_redshift_type == ClusterRedshiftType.GAUSS:
@@ -463,8 +464,8 @@ def generate_jpas_forecast_2024(
     )
     lnM_bins_knots = create_lnM_bins(lnM_min=lnM_min, lnM_max=lnM_max, nknots=lnMnknots)
 
-    z_bins_vec = Ncm.Vector.new_array(npa_to_seq(z_bins_knots))
-    lnM_bins_vec = Ncm.Vector.new_array(npa_to_seq(lnM_bins_knots))
+    z_bins_vec = Ncm.Vector.new_array(z_bins_knots)
+    lnM_bins_vec = Ncm.Vector.new_array(lnM_bins_knots)
 
     #   NCountsGauss
 

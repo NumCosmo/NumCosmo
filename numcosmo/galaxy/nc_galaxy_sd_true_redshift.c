@@ -45,8 +45,6 @@
 #include "galaxy/nc_galaxy_sd_true_redshift.h"
 #include "galaxy/nc_galaxy_sd_obs_redshift.h"
 #include "math/ncm_dtuple.h"
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_stats_dist1d_spline.h"
 
 typedef struct _NcGalaxySDTrueRedshiftPrivate
 {
@@ -141,20 +139,24 @@ _nc_galaxy_sd_true_redshift_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
   return 0.0;
 }
 
-static gboolean
+static gdouble
+_nc_galaxy_sd_true_redshift_ln_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
+{
+  g_error ("_nc_galaxy_sd_true_redshift_ln_integ: not implemented");
+
+  return 0.0;
+}
+
+static void
 _nc_galaxy_sd_true_redshift_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max)
 {
   g_error ("_nc_galaxy_sd_true_redshift_set_lim: not implemented");
-
-  return FALSE;
 }
 
-static gboolean
+static void
 _nc_galaxy_sd_true_redshift_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max)
 {
   g_error ("_nc_galaxy_sd_true_redshift_get_lim: not implemented");
-
-  return FALSE;
 }
 
 /* LCOV_EXCL_STOP */
@@ -189,10 +191,11 @@ nc_galaxy_sd_true_redshift_class_init (NcGalaxySDTrueRedshiftClass *klass)
   ncm_mset_model_register_id (model_class, "NcGalaxySDTrueRedshift", "Galaxy sample redshift distribution", NULL, FALSE, nc_galaxy_sd_obs_redshift_id ());
   ncm_model_class_check_params_info (model_class);
 
-  klass->gen     = &_nc_galaxy_sd_true_redshift_gen;
-  klass->integ   = &_nc_galaxy_sd_true_redshift_integ;
-  klass->set_lim = &_nc_galaxy_sd_true_redshift_set_lim;
-  klass->get_lim = &_nc_galaxy_sd_true_redshift_get_lim;
+  klass->gen      = &_nc_galaxy_sd_true_redshift_gen;
+  klass->integ    = &_nc_galaxy_sd_true_redshift_integ;
+  klass->ln_integ = &_nc_galaxy_sd_true_redshift_ln_integ;
+  klass->set_lim  = &_nc_galaxy_sd_true_redshift_set_lim;
+  klass->get_lim  = &_nc_galaxy_sd_true_redshift_get_lim;
 }
 
 /**
@@ -245,10 +248,10 @@ nc_galaxy_sd_true_redshift_clear (NcGalaxySDTrueRedshift **gsdtr)
  * Sets the redshift limits of the galaxy sample redshift distribution.
  *
  */
-gboolean
+void
 nc_galaxy_sd_true_redshift_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble z_min, const gdouble z_max)
 {
-  return NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->set_lim (gsdtr, z_min, z_max);
+  NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->set_lim (gsdtr, z_min, z_max);
 }
 
 /**
@@ -260,10 +263,10 @@ nc_galaxy_sd_true_redshift_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble
  * Gets the redshift limits of the galaxy sample redshift distribution.
  *
  */
-gboolean
+void
 nc_galaxy_sd_true_redshift_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdouble *z_min, gdouble *z_max)
 {
-  return NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->get_lim (gsdtr, z_min, z_max);
+  NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->get_lim (gsdtr, z_min, z_max);
 }
 
 /**
@@ -296,55 +299,18 @@ nc_galaxy_sd_true_redshift_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
   return NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->integ (gsdtr, z);
 }
 
-typedef struct _NcGalaxySDTrueRedshiftIntegData
-{
-  NcGalaxySDTrueRedshift *gsdtr;
-  gdouble abstol;
-} NcGalaxySDTrueRedshiftIntegData;
-
-static gdouble
-_nc_galaxy_sd_true_redshift_integ_f (gdouble z, gpointer user_data)
-{
-  NcGalaxySDTrueRedshiftIntegData *data = (NcGalaxySDTrueRedshiftIntegData *) user_data;
-  NcGalaxySDTrueRedshift *gsdtr         = data->gsdtr;
-
-  return -2.0 * log (nc_galaxy_sd_true_redshift_integ (gsdtr, z) + data->abstol);
-}
-
 /**
- * nc_galaxy_sd_true_redshift_dist:
+ * nc_galaxy_sd_true_redshift_ln_integ:
  * @gsdtr: a #NcGalaxySDTrueRedshift
- * @reltol: relative tolerance
- * @abstol: absolute tolerance
+ * @z: the redshift
  *
- * Computes the redshift distribution of the galaxy sample redshift distribution.
+ * Evaluates the galaxy sample redshift distribution at redshift @z.
  *
- * Returns: (transfer full): the redshift distribution object #NcmStatsDist1d.
+ * Returns: the probability density at $z$, $P(z)$.
  */
-NcmStatsDist1d *
-nc_galaxy_sd_true_redshift_dist (NcGalaxySDTrueRedshift *gsdtr, const gdouble reltol, const gdouble abstol)
+gdouble
+nc_galaxy_sd_true_redshift_ln_integ (NcGalaxySDTrueRedshift *gsdtr, gdouble z)
 {
-  NcmSpline *s                               = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-  NcGalaxySDTrueRedshiftIntegData integ_data = {gsdtr, abstol};
-  gsl_function F;
-  gdouble z_min, z_max;
-
-  F.function = _nc_galaxy_sd_true_redshift_integ_f;
-  F.params   = &integ_data;
-
-  nc_galaxy_sd_true_redshift_get_lim (gsdtr, &z_min, &z_max);
-  ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, z_min, z_max, 0, reltol);
-
-  {
-    NcmStatsDist1dSpline *spline = ncm_stats_dist1d_spline_new (s);
-
-    g_object_set (G_OBJECT (spline), "reltol", reltol, "abstol", abstol, NULL);
-
-    ncm_spline_free (s);
-
-    ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (spline));
-
-    return NCM_STATS_DIST1D (spline);
-  }
+  return NC_GALAXY_SD_TRUE_REDSHIFT_GET_CLASS (gsdtr)->ln_integ (gsdtr, z);
 }
 

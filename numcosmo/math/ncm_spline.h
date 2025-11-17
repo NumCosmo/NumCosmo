@@ -93,6 +93,7 @@ void ncm_spline_free (NcmSpline *s);
 void ncm_spline_clear (NcmSpline **s);
 
 void ncm_spline_prepare (NcmSpline *s);
+void ncm_spline_post_prepare (NcmSpline *s);
 void ncm_spline_prepare_base (NcmSpline *s);
 gdouble ncm_spline_eval (const NcmSpline *s, const gdouble x);
 gdouble ncm_spline_eval_deriv (const NcmSpline *s, const gdouble x);

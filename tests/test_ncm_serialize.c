@@ -394,7 +394,7 @@ test_ncm_serialize_global_from_string_nest (TestNcmSerialize *test, gconstpointe
   g_free (obj_new_ser);
   g_object_unref (obj_new);
 
-  g_assert_true (NC_IS_TRANSFER_FUNC_EH (NC_POWSPEC_ML_TRANSFER (ps_ml)->tf));
+  g_assert_true (NC_IS_TRANSFER_FUNC_EH (nc_powspec_ml_transfer_peek_tf (NC_POWSPEC_ML_TRANSFER (ps_ml))));
 
   NCM_TEST_FREE (nc_powspec_ml_free, ps_ml);
 }
@@ -517,12 +517,12 @@ test_ncm_serialize_from_string_nest_named (TestNcmSerialize *test, gconstpointer
   g_free (obj_new_ser);
   g_object_unref (obj_new);
 
-  g_assert_true (NC_IS_TRANSFER_FUNC_EH (NC_POWSPEC_ML_TRANSFER (ps_ml)->tf));
+  g_assert_true (NC_IS_TRANSFER_FUNC_EH (nc_powspec_ml_transfer_peek_tf (NC_POWSPEC_ML_TRANSFER (ps_ml))));
 
   g_assert_cmphex (GPOINTER_TO_SIZE (ncm_serialize_peek_by_name (test->ser, "T0")), ==, GPOINTER_TO_SIZE (ps_ml));
-  g_assert_cmphex (GPOINTER_TO_SIZE (ncm_serialize_peek_by_name (test->ser, "T1")), ==, GPOINTER_TO_SIZE (NC_POWSPEC_ML_TRANSFER (ps_ml)->tf));
+  g_assert_cmphex (GPOINTER_TO_SIZE (ncm_serialize_peek_by_name (test->ser, "T1")), ==, GPOINTER_TO_SIZE (nc_powspec_ml_transfer_peek_tf (NC_POWSPEC_ML_TRANSFER (ps_ml))));
 
-  g_assert_cmpstr (ncm_serialize_peek_name (test->ser, NC_POWSPEC_ML_TRANSFER (ps_ml)->tf), ==, "T1");
+  g_assert_cmpstr (ncm_serialize_peek_name (test->ser, nc_powspec_ml_transfer_peek_tf (NC_POWSPEC_ML_TRANSFER (ps_ml))), ==, "T1");
   g_assert_cmpstr (ncm_serialize_peek_name (test->ser, ps_ml), ==, "T0");
   g_variant_unref (ncm_serialize_to_variant (test->ser, obj));
 

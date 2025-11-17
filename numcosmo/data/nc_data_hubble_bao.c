@@ -85,9 +85,9 @@ _nc_data_hubble_bao_set_property (GObject *object, guint prop_id, const GValue *
       ncm_vector_clear (&hubble_bao->x);
       hubble_bao->x = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -106,9 +106,9 @@ _nc_data_hubble_bao_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_Z:
       g_value_set_object (value, hubble_bao->x);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

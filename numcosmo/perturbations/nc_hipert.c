@@ -71,7 +71,10 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHIPert, nc_hipert, G_TYPE_OBJECT)
 static void
 nc_hipert_init (NcHIPert *pert)
 {
-  NcHIPertPrivate * const self = pert->priv = nc_hipert_get_instance_private (pert);
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
+
+  if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
+    g_error ("ERROR: SUNContext_Create failed\n");
 
   self->alpha0   = 0.0;
   self->reltol   = 0.0;
@@ -82,7 +85,7 @@ nc_hipert_init (NcHIPert *pert)
   self->LS       = NULL;
 
   self->vec_abstol  = NULL;
-  self->cvode       = CVodeCreate (CV_ADAMS);
+  self->cvode       = CVodeCreate (CV_ADAMS, self->sunctx);
   self->cvode_init  = FALSE;
   self->cvode_stiff = FALSE;
 }
@@ -91,7 +94,7 @@ static void
 nc_hipert_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHIPert *pert               = NC_HIPERT (object);
-  NcHIPertPrivate * const self = pert->priv;
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
 
   g_return_if_fail (NC_IS_HIPERT (object));
 
@@ -112,9 +115,9 @@ nc_hipert_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_ALPHAI:
       self->alpha0 = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -122,7 +125,7 @@ static void
 nc_hipert_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHIPert *pert               = NC_HIPERT (object);
-  NcHIPertPrivate * const self = pert->priv;
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
 
   g_return_if_fail (NC_IS_HIPERT (object));
 
@@ -143,9 +146,9 @@ nc_hipert_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
     case PROP_ALPHAI:
       g_value_set_double (value, self->alpha0);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -153,7 +156,7 @@ static void
 nc_hipert_finalize (GObject *object)
 {
   NcHIPert *pert               = NC_HIPERT (object);
-  NcHIPertPrivate * const self = pert->priv;
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
 
   if (self->cvode != NULL)
   {
@@ -184,6 +187,8 @@ nc_hipert_finalize (GObject *object)
     SUNLinSolFree (self->LS);
     self->LS = NULL;
   }
+
+  SUNContext_Free (&self->sunctx);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_parent_class)->finalize (object);
@@ -247,6 +252,12 @@ nc_hipert_class_init (NcHIPertClass *klass)
   klass->set_reltol = &_nc_hipert_set_reltol;
 }
 
+NcHIPertPrivate *
+nc_hipert_get_private (NcHIPert *pert)
+{
+  return nc_hipert_get_instance_private (pert);
+}
+
 /**
  * nc_hipert_set_mode_k:
  * @pert: a #NcHIPert.
@@ -258,7 +269,7 @@ nc_hipert_class_init (NcHIPertClass *klass)
 static void
 _nc_hipert_set_mode_k (NcHIPert *pert, gdouble k)
 {
-  NcHIPertPrivate * const self = pert->priv;
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
 
   if (self->k != k)
   {
@@ -278,7 +289,7 @@ _nc_hipert_set_mode_k (NcHIPert *pert, gdouble k)
 static void
 _nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol)
 {
-  NcHIPertPrivate * const self = pert->priv;
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
 
   if (self->reltol != reltol)
   {
@@ -298,7 +309,7 @@ _nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol)
 static void
 _nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
 {
-  NcHIPertPrivate * const self = pert->priv;
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
 
   if (self->abstol != abstol)
   {
@@ -318,7 +329,7 @@ _nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
 gdouble
 nc_hipert_get_reltol (NcHIPert *pert)
 {
-  NcHIPertPrivate * const self = pert->priv;
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
 
   return self->reltol;
 }
@@ -334,7 +345,7 @@ nc_hipert_get_reltol (NcHIPert *pert)
 gdouble
 nc_hipert_get_abstol (NcHIPert *pert)
 {
-  NcHIPertPrivate * const self = pert->priv;
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
 
   return self->abstol;
 }
@@ -350,7 +361,7 @@ nc_hipert_get_abstol (NcHIPert *pert)
 gdouble
 nc_hipert_get_mode_k (NcHIPert *pert)
 {
-  NcHIPertPrivate * const self = pert->priv;
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
 
   return self->k;
 }
@@ -364,7 +375,7 @@ nc_hipert_get_mode_k (NcHIPert *pert)
 gboolean
 nc_hipert_prepared (NcHIPert *pert)
 {
-  NcHIPertPrivate * const self = pert->priv;
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
 
   return self->prepared;
 }
@@ -380,7 +391,7 @@ nc_hipert_prepared (NcHIPert *pert)
 void
 nc_hipert_set_prepared (NcHIPert *pert, gboolean prepared)
 {
-  NcHIPertPrivate * const self = pert->priv;
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
 
   self->prepared = prepared;
 }
@@ -396,7 +407,7 @@ nc_hipert_set_prepared (NcHIPert *pert, gboolean prepared)
 void
 nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
 {
-  NcHIPertPrivate * const self = pert->priv;
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
 
   if (self->sys_size != sys_size)
   {
@@ -428,11 +439,11 @@ nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
 
     if (self->sys_size > 0)
     {
-      self->y          = N_VNew_Serial (sys_size);
-      self->vec_abstol = N_VNew_Serial (sys_size);
+      self->y          = N_VNew_Serial (sys_size, self->sunctx);
+      self->vec_abstol = N_VNew_Serial (sys_size, self->sunctx);
 
-      self->A  = SUNDenseMatrix (sys_size, sys_size);
-      self->LS = SUNDenseLinearSolver (self->y, self->A);
+      self->A  = SUNDenseMatrix (sys_size, sys_size, self->sunctx);
+      self->LS = SUNLinSol_Dense (self->y, self->A, self->sunctx);
 
       NCM_CVODE_CHECK ((gpointer) self->A, "SUNDenseMatrix", 0, );
       NCM_CVODE_CHECK ((gpointer) self->LS, "SUNDenseLinearSolver", 0, );
@@ -455,7 +466,7 @@ nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
 void
 nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
 {
-  NcHIPertPrivate * const self = pert->priv;
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
   guint a                      = stiff ? 1 : 0;
   guint b                      = self->cvode_stiff ? 1 : 0;
 
@@ -470,9 +481,9 @@ nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
     self->cvode_stiff = stiff;
 
     if (stiff)
-      self->cvode = CVodeCreate (CV_BDF);
+      self->cvode = CVodeCreate (CV_BDF, self->sunctx);
     else
-      self->cvode = CVodeCreate (CV_ADAMS);
+      self->cvode = CVodeCreate (CV_ADAMS, self->sunctx);
 
     self->cvode_init = FALSE;
   }
@@ -488,7 +499,7 @@ nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
 void
 nc_hipert_reset_solver (NcHIPert *pert)
 {
-  NcHIPertPrivate * const self = pert->priv;
+  NcHIPertPrivate * const self = nc_hipert_get_instance_private (pert);
 
   if (self->cvode != NULL)
   {
@@ -497,9 +508,9 @@ nc_hipert_reset_solver (NcHIPert *pert)
   }
 
   if (self->cvode_stiff)
-    self->cvode = CVodeCreate (CV_BDF);
+    self->cvode = CVodeCreate (CV_BDF, self->sunctx);
   else
-    self->cvode = CVodeCreate (CV_ADAMS);
+    self->cvode = CVodeCreate (CV_ADAMS, self->sunctx);
 
   self->cvode_init = FALSE;
 }

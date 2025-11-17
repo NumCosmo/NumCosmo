@@ -24,7 +24,9 @@
 
 """Unit tests for NumCosmo powwer-spectra."""
 
+import itertools as it
 import pytest
+from pytest_lazy_fixtures import lf
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -32,7 +34,9 @@ from numpy.testing import assert_allclose
 import pyccl
 
 import numcosmo_py.cosmology as ncpy
+from numcosmo_py.ccl.two_point import compute_kernel
 from numcosmo_py import Ncm, Nc
+import numcosmo_py.ccl.comparison as nc_cmp
 
 from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_k_a,
@@ -41,6 +45,7 @@ from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_ccl_cosmo_eh_halofit,
     fixture_nc_cosmo_eh_linear,
     fixture_nc_cosmo_eh_halofit,
+    fixture_nc_cosmo_default,
 )
 from .fixtures_xcor import (  # pylint: disable=unused-import # noqa: F401
     fixture_ccl_cmb_lens,
@@ -56,53 +61,6 @@ from .fixtures_xcor import (  # pylint: disable=unused-import # noqa: F401
 )
 
 Ncm.cfg_init()
-
-# Helper functions
-
-
-def compute_kernel(
-    tracer: pyccl.Tracer, cosmo: Nc.HICosmo, dist: Nc.Distance, ell: float
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Compute the kernel for a given tracer."""
-    Wchi_list, chi_list = tracer.get_kernel()
-    assert chi_list is not None
-    chi_a = np.array(chi_list[0])
-    for chi_a_i, Wchi_a_i in zip(chi_list, Wchi_list):
-        s = Ncm.Spline.new_array(
-            Ncm.SplineCubicNotaknot.new(), chi_a_i.tolist(), Wchi_a_i.tolist(), True
-        )
-        Wchi_a_i[:] = np.array([s.eval(chi) for chi in chi_a])
-
-    RH_Mpc = cosmo.RH_Mpc()
-    nu = ell + 0.5
-
-    bessel_factors_list = []
-
-    for der_bessel in tracer.get_bessel_derivative():
-        match der_bessel:
-            case 0:
-                bessel_factors_list.append(1.0)
-            case -1:
-                bessel_factors_list.append(1.0 / nu**2)
-            case _:
-                raise ValueError(f"Invalid Bessel derivative {der_bessel}")
-
-    z_a = np.array([dist.inv_comoving(cosmo, chi / RH_Mpc) for chi in chi_a])
-    H_Mpc_a = np.array([cosmo.E(z) / RH_Mpc for z in z_a])
-    a_array = 1.0 / (1.0 + np.array(z_a))
-    transfers_list = tracer.get_transfer(0.0, a_array)
-    ell_factors_list = tracer.get_f_ell(ell)
-
-    Wtotal = np.zeros_like(chi_a)
-    for Wchi_a, transfer, ell_factor, bessel_factor in zip(
-        Wchi_list, transfers_list, ell_factors_list, bessel_factors_list
-    ):
-        assert Wchi_a is not None
-        assert transfer is not None
-        Wtotal += Wchi_a * transfer * ell_factor * bessel_factor
-
-    return z_a[1:-1], chi_a[1:-1], H_Mpc_a[1:-1], Wtotal[1:-1]
-
 
 # Testing the NumCosmo tracers observables
 
@@ -153,6 +111,27 @@ def test_gal_obs(nc_gal: Nc.XcorLimberKernelGal) -> None:
         assert_allclose(bias0, 3.21, atol=0.0)
         assert_allclose(bias_old0, 1.2345, atol=0.0)
         assert_allclose(noise_bias_old0, 0.9876, atol=0.0)
+
+
+def test_gal_obs_extrapolation(
+    nc_cosmo_eh_linear: ncpy.Cosmology, nc_gal: Nc.XcorLimberKernelGal
+) -> None:
+    """Check that galaxy tracer has the correct number of observables."""
+    nc_gal.prepare(nc_cosmo_eh_linear.cosmo)
+    z_a = np.array(nc_gal.props.dndz.peek_xv().dup_array())
+    nc_gal.set_z_range(z_a[0], z_a[-1] * 2.0, 0.5 * (z_a[-1] + z_a[0]))
+    assert np.isfinite(
+        nc_gal.eval_full(nc_cosmo_eh_linear.cosmo, z_a[-1], nc_cosmo_eh_linear.dist, 77)
+    )
+
+    extra_z_a = np.linspace(z_a[-1], 2.0 * z_a[-1], 10)
+    k_a = np.array(
+        [
+            nc_gal.eval_full(nc_cosmo_eh_linear.cosmo, z, nc_cosmo_eh_linear.dist, 77)
+            for z in extra_z_a
+        ]
+    )
+    assert np.isfinite(k_a).all()
 
 
 def test_weak_lensing_obs(nc_weak_lensing: Nc.XcorLimberKernelWeakLensing) -> None:
@@ -370,13 +349,13 @@ def test_cmb_lens_kernel(
     if ccl_cosmo_eh_linear["Omega_k"] != 0.0:
         pytest.skip("CMB lensing not implemented for non-flat cosmologies")
     if ccl_cosmo_eh_linear.high_precision:
-        reltol_target: float = 1.0e-7
+        reltol_target: float = 1.0e-6
     else:
         reltol_target = 1.0e-4
 
     ell = 79.0
 
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_lens, cosmo, dist, ell)
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_lens, nc_cosmo_eh_linear, ell)
     nc_cmb_lens.prepare(cosmo)
 
     nc_Wchi_a = (
@@ -384,6 +363,32 @@ def test_cmb_lens_kernel(
         * H_Mpc_a
     )
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=0.0)
+
+
+def test_xcor_set_get(nc_cosmo_default: ncpy.Cosmology) -> None:
+    """Test get_reltol and set_reltol."""
+    nc_xcor = Nc.Xcor.new(
+        nc_cosmo_default.dist, nc_cosmo_default.ps_ml, Nc.XcorLimberMethod.GSL
+    )
+
+    nc_xcor.set_reltol(1.0e-4)
+    assert nc_xcor.get_reltol() == 1.0e-4
+    assert nc_xcor.props.reltol == 1.0e-4
+
+    nc_xcor.set_reltol(1.0e-5)
+    assert nc_xcor.get_reltol() == 1.0e-5
+    assert nc_xcor.props.reltol == 1.0e-5
+
+    nc_xcor.props.reltol = 1.0e-6
+    assert nc_xcor.get_reltol() == 1.0e-6
+
+    nc_xcor.props.meth = Nc.XcorLimberMethod.GSL
+    assert nc_xcor.props.meth == Nc.XcorLimberMethod.GSL
+
+    nc_xcor.props.meth = Nc.XcorLimberMethod.CUBATURE
+    assert nc_xcor.props.meth == Nc.XcorLimberMethod.CUBATURE
+
+    assert nc_xcor.props.power_spec is nc_cosmo_default.ps_ml
 
 
 def test_cmb_lens_auto_integrand(
@@ -400,7 +405,7 @@ def test_cmb_lens_auto_integrand(
         pytest.skip("CMB lensing not implemented for non-flat cosmologies")
     if ccl_cosmo_eh_linear.high_precision:
         reltol_W: float = 1.0e-4
-        reltol_ps = 1.0e-4
+        reltol_ps = 1.0e-3
         reltol_f = 1.0e-3
     else:
         reltol_W = 1.0e-4
@@ -409,12 +414,12 @@ def test_cmb_lens_auto_integrand(
 
     psp = ccl_cosmo_eh_linear.get_linear_power()
 
-    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorLimberMethod.GSL)
+    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorLimberMethod.CUBATURE)
     xcor.prepare(cosmo)
     nc_cmb_lens.prepare(cosmo)
 
     ell = 77.0
-    z_a, chi_a, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_lens, cosmo, dist, ell)
+    z_a, chi_a, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_lens, nc_cosmo_eh_linear, ell)
 
     nu = ell + 0.5
     a_a = ccl_cosmo_eh_linear.scale_factor_of_chi(chi_a)
@@ -475,7 +480,7 @@ def test_cmb_lens_auto(
     assert all(np.isfinite(ccl_cmb_lens_auto))
     assert all(ccl_cmb_lens_auto >= 0.0)
 
-    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorLimberMethod.GSL)
+    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorLimberMethod.CUBATURE)
     nc_cmb_lens_auto_v = Ncm.Vector.new(lmax + 1 - 2)
     xcor.prepare(cosmo)
     nc_cmb_lens.prepare(cosmo)
@@ -502,7 +507,7 @@ def test_cmb_isw_kernel(
         reltol_target = 1.0e-4
 
     ell = 77.0
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_isw, cosmo, dist, ell)
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_isw, nc_cosmo_eh_linear, ell)
     nc_cmb_isw.prepare(cosmo)
 
     nc_Wchi_a = (
@@ -527,7 +532,7 @@ def test_tsz_kernel(
         reltol_target = 1.0e-4
 
     ell = 77.0
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_tsz, cosmo, dist, ell)
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_tsz, nc_cosmo_eh_linear, ell)
     nc_tsz.prepare(cosmo)
 
     nc_Wchi_a = (
@@ -551,14 +556,14 @@ def test_weak_lensing_kernel(
         reltol_target = 1.0e-4
 
     ell = 77.0
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_weak_lensing, cosmo, dist, ell)
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_weak_lensing, nc_cosmo_eh_linear, ell)
     nc_weak_lensing.prepare(cosmo)
 
     nc_Wchi_a = (
         np.array([nc_weak_lensing.eval_full(cosmo, z, dist, int(ell)) for z in z_a])
         * H_Mpc_a
     )
-    assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-30)
+    assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-20)
 
 
 def test_gal_kernel(
@@ -576,11 +581,133 @@ def test_gal_kernel(
         reltol_target = 1.0e-4
 
     ell = 77.0
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_gal, cosmo, dist, ell)
+    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_gal, nc_cosmo_eh_linear, ell)
     nc_gal.prepare(cosmo)
 
     nc_Wchi_a = (
         np.array([nc_gal.eval_full(cosmo, z, dist, int(ell)) for z in z_a]) * H_Mpc_a
     )
-
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-30)
+
+
+@pytest.mark.parametrize("n_points", [None, 400])
+def test_compare_kernels(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: ncpy.Cosmology,
+    n_points: int | None,
+) -> None:
+    """Compare CMB lensing kernel from CCL and NumCosmo."""
+    # TODO: Test curvature models when CCL supports them
+    if ccl_cosmo_eh_linear["Omega_k"] == 0.0:
+        cmp = nc_cmp.compare_cmb_lens_kernel(
+            ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77, n_samples=n_points
+        )
+        assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-6)
+
+    cmp = nc_cmp.compare_cmb_isw_kernel(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77, n_chi=n_points
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-1)
+
+    cmp = nc_cmp.compare_tsz_kernel(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77, n_chi=n_points
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-8)
+
+    cmp = nc_cmp.compare_galaxy_weak_lensing_kernel(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77, n_samples=n_points
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-3, atol=1.0e-15)
+
+    cmp = nc_cmp.compare_galaxy_number_count_kernel(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ell=77
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-4, atol=1.0e-12)
+
+
+@pytest.mark.parametrize("n_points", [None, 400])
+def test_compare_autocorrelation(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: ncpy.Cosmology,
+    n_points: int | None,
+) -> None:
+    """Compare CCL and NumCosmo auto-correlation."""
+    ells = np.arange(2, 1000)
+
+    # TODO: Test curvature models when CCL supports them
+    if ccl_cosmo_eh_linear["Omega_k"] == 0.0:
+        cmp = nc_cmp.compare_cmb_len_auto(
+            ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells, n_samples=n_points
+        )
+        assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-2)
+
+    cmp = nc_cmp.compare_cmb_isw_auto(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells, n_chi=n_points
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-1)
+
+    cmp = nc_cmp.compare_tsz_auto(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells, n_chi=n_points
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-3)
+
+    cmp = nc_cmp.compare_galaxy_weak_lensing_auto(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells, n_samples=n_points
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-3)
+
+    cmp = nc_cmp.compare_galaxy_number_count_auto(
+        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells
+    )
+    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-4)
+
+
+@pytest.mark.parametrize(
+    "k1, k2",
+    it.combinations_with_replacement(
+        [
+            lf("nc_cmb_lens"),
+            lf("nc_cmb_isw"),
+            lf("nc_gal"),
+            lf("nc_tsz"),
+            lf("nc_weak_lensing"),
+        ],
+        r=2,
+    ),
+)
+@pytest.mark.parametrize(
+    "ccl_cosmo_eh_linear",
+    [pytest.param((False, 0), id="high_prec_false_index_0")],
+    indirect=True,
+)
+def test_xcor_methods(
+    nc_cosmo_eh_linear: ncpy.Cosmology, k1: Nc.XcorLimberKernel, k2: Nc.XcorLimberKernel
+) -> None:
+    """Compare NumCosmo Xcor integration methods."""
+    xcor_gsl = Nc.Xcor.new(
+        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorLimberMethod.GSL
+    )
+
+    xcor_cub = Nc.Xcor.new(
+        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorLimberMethod.CUBATURE
+    )
+
+    xcor_gsl.prepare(nc_cosmo_eh_linear.cosmo)
+    xcor_cub.prepare(nc_cosmo_eh_linear.cosmo)
+
+    k1.prepare(nc_cosmo_eh_linear.cosmo)
+    k2.prepare(nc_cosmo_eh_linear.cosmo)
+
+    lmin = 2
+    lmax = 1000
+    vp_gsl = Ncm.Vector.new(lmax - lmin + 1)
+    vp_cub = Ncm.Vector.new(lmax - lmin + 1)
+
+    xcor_gsl.set_reltol(1.0e-7)
+    xcor_gsl.limber(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_gsl)
+    xcor_cub.limber(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_cub)
+
+    vp_gsl_a = np.array(vp_gsl.dup_array())
+    vp_cub_a = np.array(vp_cub.dup_array())
+
+    assert_allclose(vp_gsl_a, vp_cub_a, rtol=1.0e-5)

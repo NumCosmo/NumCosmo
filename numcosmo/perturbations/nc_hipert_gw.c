@@ -388,3 +388,79 @@ nc_hipert_gw_get_k (NcHIPertGW *pgw)
   return pgw->k;
 }
 
+/**
+ * nc_hipert_gw_eval_powspec_at:
+ * @pgw: a #NcHIPertGW
+ * @model: a #NcmModel
+ * @tau: $\tau$
+ *
+ * Evaluates the power spectrum of the tensor perturbation at a given time
+ * $$
+ * P_h = u^2\frac{k^3}{2\pi^2} \frac{J_{11}}{2}.
+ * $$
+ * where $u$ is the numerical factor for the power spectrum of the tensor mode, $k$ is
+ * the wave number.
+ *
+ * Returns: the power spectrum of the tensor perturbation.
+ */
+gdouble
+nc_hipert_gw_eval_powspec_at (NcHIPertGW *pgw, NcmModel *model, const gdouble tau)
+{
+  const gdouble unit = nc_hipert_igw_eval_unit (NC_HIPERT_IGW (model));
+  const gdouble n0   = 1.0 / ncm_c_two_pi_2 ();
+  NcmCSQ1DState state;
+  gdouble J11, J12, J22;
+
+  ncm_csq1d_eval_at (NCM_CSQ1D (pgw), model, tau, &state);
+
+  ncm_csq1d_state_get_J (&state, &J11, &J12, &J22);
+
+  return gsl_pow_2 (unit) * n0 * (J11 / 2.0);
+}
+
+/**
+ * nc_hipert_gw_eval_powspec:
+ * @pgw: a #NcHIPertGW
+ * @model: a #NcmModel
+ * @tau: $\tau$
+ * @k_a: (element-type gdouble): an array of wave numbers
+ *
+ * Evaluates the power spectrum of the tensor perturbation at a given time
+ * $$
+ * P_h = u^2\frac{k^3}{2\pi^2} \frac{J_{11}}{2}.
+ * $$
+ * where $u$ is the numerical factor for the power spectrum of the tensor mode, $k$ is
+ * the wave number.
+ *
+ * Returns: (transfer full): the power spectrum of the tensor perturbation.
+ */
+NcmSpline *
+nc_hipert_gw_eval_powspec (NcHIPertGW *pgw, NcmModel *model, const gdouble tau, GArray *k_a)
+{
+  NcmCSQ1D *csq1d     = NCM_CSQ1D (pgw);
+  const guint k_len   = k_a->len;
+  NcmVector *k_v_orig = ncm_vector_new_array (k_a);
+  NcmVector *k_v      = ncm_vector_dup (k_v_orig);
+  NcmVector *pk_v     = ncm_vector_new (k_len);
+  NcmSpline *pk_s     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  guint i;
+
+  g_assert_cmpfloat (tau, >=, ncm_csq1d_get_ti (csq1d));
+  g_assert_cmpfloat (tau, <=, ncm_csq1d_get_tf (csq1d));
+
+  for (i = 0; i < k_len; i++)
+  {
+    nc_hipert_gw_set_k (pgw, g_array_index (k_a, gdouble, i));
+    ncm_csq1d_prepare (NCM_CSQ1D (pgw), model);
+    ncm_vector_fast_set (pk_v, i, nc_hipert_gw_eval_powspec_at (pgw, model, tau));
+  }
+
+  ncm_spline_set (pk_s, k_v, pk_v, TRUE);
+
+  ncm_vector_free (k_v);
+  ncm_vector_free (k_v_orig);
+  ncm_vector_free (pk_v);
+
+  return pk_s;
+}
+
