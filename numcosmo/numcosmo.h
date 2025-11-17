@@ -107,6 +107,7 @@
 #include <numcosmo/lss/nc_transfer_func.h>
 #include <numcosmo/lss/nc_transfer_func_bbks.h>
 #include <numcosmo/lss/nc_transfer_func_eh.h>
+#include <numcosmo/lss/nc_transfer_func_eh_no_baryon.h>
 #include <numcosmo/lss/nc_transfer_func_camb.h>
 #include <numcosmo/lss/nc_growth_func.h>
 #include <numcosmo/lss/nc_halo_position.h>

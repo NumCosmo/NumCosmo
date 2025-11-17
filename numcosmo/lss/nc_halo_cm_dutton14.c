@@ -25,14 +25,12 @@
  */
 
 /**
- * SECTION:nc_halo_cm_dutton14
- * @title: NcHaloCMDutton14
- * @short_description: Class defining the Dutton & Macciò (2014) concentration-mass relation
- * @stability: Unstable
- *
- *
- * Class defining the Dutton & Macciò  2014 concentration-mass relation.
- * FIXME include reference and equation
+ * NcHaloCMDutton14
+ * 
+ * Class defining the Dutton et al. 2014 concentration-mass relation
+ * 
+ * This class implements the A. A. Dutton and A. V. Macciò 2014 concentration-mass relation.
+ * FIXME include reference (arXiv:1402.7073), equation and range of mass and redshift.
  *
  */
 
@@ -177,12 +175,13 @@ _nc_halo_cm_dutton14_concentration_critical (NcHaloMassSummary *hms, NcHICosmo *
 {
   gdouble mass = _nc_halo_cm_dutton14_mass (hms);
   gdouble h    = nc_hicosmo_h (cosmo);
-  gdouble a, b;
+  gdouble a, b, logc;
 
   a = 0.520 + (0.905 - 0.520) * exp(-0.617 * pow (z, 1.21));
   b = -0.101 + 0.026 * z;
+  logc = a + b * log10 (mass * h / 1.0e12);
 
-  return pow (10, a + b * log10 (mass / 1.0e12 * h));
+  return pow (10, logc);
 }
 
 static gdouble
@@ -190,12 +189,13 @@ _nc_halo_cm_dutton14_concentration_virial (NcHaloMassSummary *hms, NcHICosmo *co
 {
   gdouble mass = _nc_halo_cm_dutton14_mass (hms);
   gdouble h    = nc_hicosmo_h (cosmo);
-  gdouble a, b;
+  gdouble a, b, logc;
 
   a = 0.537 + (1.025 - 0.537) * exp(-0.718 * pow (z, 1.08));
   b = -0.097 + 0.024 * z;
+  logc = a + b * log10 (mass * h / 1.0e12);
 
-  return pow (10, a + b * log10 (mass / 1.0e12 * h));
+  return pow (10, logc);
 }
 
 static void

@@ -50,7 +50,8 @@ struct _NcMultiplicityFuncWatsonPrivate
 enum
 {
   PROP_0,
-  PROP_SIZE
+  PROP_SIZE,
+  PROP_LEN,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncWatson, nc_multiplicity_func_watson, NC_TYPE_MULTIPLICITY_FUNC)

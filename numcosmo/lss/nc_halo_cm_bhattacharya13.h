@@ -32,7 +32,6 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/lss/nc_halo_mass_summary.h>
 #include <numcosmo/lss/nc_growth_func.h>
-#include <numcosmo/math/ncm_powspec_filter.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
 
 
