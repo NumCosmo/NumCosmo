@@ -3,13 +3,13 @@
  *
  *  Fri Aug 16 07:18:13 2024
  *  Copyright  2024  Caio Lima de Oliveira
- *  <code.caio@limadeoliveira.me>
+ *  <caiolimadeoliveira@pm.me>
  *  Copyright  2024  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Caio Lima de Oliveira 2024 <code.caio@limadeoliveira.me>
+ * Copyright (C) Caio Lima de Oliveira 2024 <caiolimadeoliveira@pm.me>
  * Copyright (C) Sandro Dias Pinto Vitenti 2024 <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

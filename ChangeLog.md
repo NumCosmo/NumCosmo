@@ -1,11 +1,471 @@
 CHANGELOG
 ----------------------
 
-[Current]
+[v0.26.0]
+ * Splitting NumCosmo initialization. (#232)
+
+     * Splitting NumCosmo initialization.
+     * Initializing object types and functions automatically at numcosmo_py.
+     * Updating to python 3.12 in CI.
+ * Bounce tutorial (#212)
+
+     * Implementing adiabatic interface in QGRW.
+     * New bouncing model tutorial.
+     * Fixing bugs in qgrw and qgw.
+     * Including missing factor in the power-spectrum.
+     * Updating perturbation code.
+     * Updating to sundials 7.3.0.
+     * Second order WKB for TwoFluids working.
+     * Reorganizing code and WKB approximation for TwoFluids.
+     * Support for high level interface for two point observables.
+     * Fixing minor bounce related terms in qgw.
+     * Implementing adiabatic Psi and drho computation for qgrw.
+     * Introducing better error handling.
+     * Finished the implementation of compute_spectrum.
+     * Updated adiab tests.
+     * Renaming variable and adding explicit type conversion.
+     * Reorganizing documents and footnotes.
+     * Introducing more observables to TwoFluids.
+     * Adding Abs interface for Complex.
+     * New code to compute spectra at different times.
+     * Computing tensor spectrum and improving bounce_spectra.
+     * Adding prereqs.
+     * Adding more tests for QGRW.
+     * Updated Ubuntu build.
+     * Removed old nc_hipert_wkb.
+     * Testing GW powspec interface.
+     * Testing plotting tools.
+     * Setting timeout to 0 for Vexp.
+     * Updated stubs.
+
+ * DE w(z) spline - experiment (#226)
+
+     * Included experiment in generate.py: Dark Energy - w(z) spline.
+     * Fixed documentation (description of the model, nickname)  - wspline.
+     * Generate DE wspline: Flat universe.
+     * Support for curvature calculation;
+     * New test for model_de_wspline.
+
+     ---------
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Add option to choose non logarithmic integrand (#230)
+
+     * Add toggle to choose between integrand and log integrand
+     * Merge `use_lnp` and `use_lnint` toggles
+     * Fix integration calculations in Gaussian redshift model
+     * Fix nc_galaxy_sd_true_redshift_ln_integ function
+     * Refactor integrand function calls to remove unnecessary de-referencing
+     and fix function types
+     * Add cubature integration checks to nc_galaxy_sd_true_redshift_integ test
+     * Rename and refactor cubature integrand type for clarity and consistency
+     * Properly test both integrand interfaces for nc_galaxy_sd_position
+     * Properly test both integrand interfaces in nc_galaxy_sd_true_redshift
+     * Add TODO comments for refactoring spline usage in
+     nc_galaxy_sd_obs_redshift_pz
+     * Properly test both integrand interfaces in nc_galaxy_sd_obs_redshift
+     objects
+     * OBS: spec and gauss integrand interfaces diverge on high z and should be
+     better handled later
+     * Properly test both integrand interfaces in nc_galaxy_sd_shape objects
+     * Add monte_carlo_lnint test for nc_data_cluster_wl
+     * Improving test timmings.
+
+     ---------
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Restricting NumCosmo version and trying texlive-core.
+
+ * Trying r-tinytex.
+
+
+[v0.25.0]
+ * Fixed version test.
+
+ * New release 0.25.0.
+
+ * Environment for NumCosmo use.
+
+ * Adding support for derived quantities in MC runs. (#231)
+
+     * Adding support for derived quantities in MC runs.
+     * Rewrote the thread parallelization using OpenMP.
+     * Fixed and testing for NcmFitMC.
+     * Removing old parallelization code.
+     * Testing the new openmp code.
+     * Fixing MC function array.
+     * Testing MC function array.
+     * Adding missing code for serializing data-file.
+     * Testing new property.
+     * Updated stubs.
+ * Updated stubs.
+
+ * Adding support for random walk in APES. (#229)
+
+     * Adding support for random walk in APES.
+     * Adding shrink to KDE in APES.
+     * Adding interface options in numcosmo command line.
+     * Adding interface for shrink control in APES.
+     * Now logging for ensemble stats.
+     * Removing old comments and rewrapping text.
+     * Support for returning all computed quantiles.
+     * Adjusting defaults and re-wrapping text.
+     * Add critical section to avoid race conditions in stats update.
+     * Splitting tests.
+
+ * Updated stubs.
+
+ * Fixing typos.
+
+ * Update stub formatting to match linter conventions. Fixed typos.
+
+ * Updated stubs.
+
+ * Fixing memory leaks. (#228)
+
+     * Fixing minor leaks.
+     * Improving suppression file.
+     * Fixing typos.
+     * Workaround fyaml bug.
+ * Improving galaxy integration (#227)
+
+     * Galaxy distribution objects now compute ln_prob.
+     * Fixing typos.
+     * Support lnint integrator.
+     * Support for ln-int integrator.
+     * Minor typo fix and help improvement.
+     * Updating stubs.
+     * Updated non-integrated likelihood.
+     * Updated tests.
+     * Fixed leaks.
+     * Testing ln_int.
+     * Add smooth transition for shear g before lens.
+     * Fixing test.
+ * Improving stub generation. (#225)
+
+     * Improving stub generation to include numpy arrays.
+     * Updating stubs.
+     * Removing unnecessary conversions.
+     * Fixing typos.
+     * Using conda instead of mamba in rtd.
+ * Stub update (#224)
+
+     * Adding stubs generating code to numcosmo_py.
+     * Minimal script to update stubs.
+     * Improving type-hints.
+     * Excluding the generate stubs from mypy check in CI.
+ * Refactor galaxy redshift limit functions (#222)
+
+     * Refactor galaxy redshift limit functions
+     * Renamed and implemented new functions for obtaining redshift limits in
+     the galaxy redshift objects:
+      - Changed `nc_galaxy_sd_obs_redshift_get_lim` to
+     `nc_galaxy_sd_obs_redshift_get_integ_lim` for integration limits.
+      - Added `nc_galaxy_sd_obs_redshift_get_zp_lim` for distribution limits.
+      - Updated related classes and structures to accommodate the new function
+     signatures and ensure proper functionality.
+     * Adding helper functions for gaussian integral computation.
+     * Moved local implementation to the object where it is related to.
+     * Using correct normalization for z-gauss.
+     * Fixing method/variable names.
+     * Computing the log of the normalization.
+     * Updating tests.
+     * Improving tests for gaussian integral.
+     * Testing missing lines.
+
+     ---------
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Adding support for setting seed to a MC. (#221)
+
+     * Adding support for setting seed to a MC.
+
+     * Support for setting fitting precision.
+
+     * Removing timeout of skymatch.
+ * Updated stubs.
+
+ * New P(z) redshift object (#190)
+
+     * Add nc_galaxy_sd_obs_redshift_pz object and data access functions
+     * Implement nc_galaxy_sd_obs_redshift_pz_gen and add corresponding tests
+     * Add nc_galaxy_sd_obs_redshift_pz to documentation and tutorials
+     * Add prepare and get_lim methods to nc_galaxy_sd_obs_redshift object
+     * Refactor: simplify redshift bounds retrieval using ncm_spline_get_bounds
+     * Add sd_obs_redshift_pz tests to test_nc_data_cluster_wl
+     * Remove redundant or obsolete pz tests
+     * Revamp sd_obs_redshift_pz tests
+     * Fix gen, setget, and integration tests for redshift_pz
+     * Fix memory leaks and segmentation fault in redshift_pz
+     * Fix: update RA field range in HaloPositionData and test fixtures
+     * Fix: properly handle coordinate systems in redshift and shape generation
+     * Fix: adjust redshift range and improve conversion handling in tests
+     * Fix: always update shape on resample
+     * Fix: update normalization and integration calculations for redshift
+     distributions
+     * Fix: remove debug prints and update test normalization
+     * Fix: reset mass, ra and dec before resample
+     * Fix: use lnint during integration
+     * Fix: return GSL_NEGINF for out-of-bounds integrand evaluation
+     * Refactor: remove unused functions and headers from sd_true_redshift
+     * Add sd_shape_gauss_hsc object and initial tests
+     * Add bias, Jacobian, and ellipticity convention support to
+     sd_shape_gauss_hsc
+     * Add gen1: generate a single galaxy observed redshift
+     * Add tests for redshift and shape generation including bad configurations
+     * Add strong lensing tests for galaxy shape models
+     * Add support for smooth center galaxy cut and truncated redshift
+     * Refactor galaxy shape parameters: sigma_int, sigma_true, sigma_obs →
+     sigma, std_shape, std_noise
+     * Rename shape parameters: e_rms → sigma, e_sigma → std_noise
+     * Refactor: make std_shape a NcGalaxySDShapeGauss property
+     * Fix: set std_shape from sigma during preparation and generation
+     * Fix: adjust handling of Euclidean coordinates in shape calculations
+     * Fix: apply bias correction for z < z_cl in shape_gauss_hsc
+     * Fix: update tests to cover coordinate conversion and shape noise
+     * Fix: update and reorganize test structure for galaxy shape statistics
+     * Add cluster WL generation and configuration tests
+     * Add validation for cluster model parameters
+     * Add signal-to-noise ratio computation to nc_data_cluster_wl
+     * Add simplified normal likelihood with upper/lower limit control
+     * Add parallelization support and option to disable it
+     * Add tools for command-line parsing
+     * Add support for coordinate system conversion and related tests
+     * Add fixtures for test configuration and bad parameter validation
+     * Refactor: simplify resampling logic and eliminate redundant code
+     * Refactor: reduce number of Monte Carlo and shape statistics tests
+     * Refactor: isolate monte_carlo tests (later reverted)
+     * Revert "Reformulate sigma_int"
+     * Revert "move monte_carlo tests to its own test suite"
+     * Update documentation, tutorial, and environment files
+     * Update stubs and fix mypy issues
+     * Style: apply black and remove coverage lines
+     * Fix: update copyright
+     * Fix: CI debugging, typos, and include misuse
+     * Fix: improve robustness of Newton iteration
+     * Fix: increase sample size and better calibration in MC tests
+     * Fix: handling low-probability galaxies and bias estimates
+     * Fix: use ncm_model_ctrl_update for model_ctrl
+     * Refactor: add LCOV exclusion comments for coverage
+     * Ran black
+
+     ---------
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * New DES Y5 SNIA support. (#215)
+
+     * New DES Y5 SNIA support.
+     * Adding support for qspline experiments.
+     * Generate: inclued XCDM experiment.
+     * Test: obtain best-fit Flat-wcdm amd compare to DES-Y5 SNeIa result.
+     * Dataset: hicosmo.py - Create all_combined_JUN_2025 for BAO data (DESI
+     DR2).
+     * Aded "@NC_DATA_BAO_DVR_DTDH_DESI_DR2_2025" in the documentation.
+     * Added: test for Pantheon+ supernovae data; test_py_generate.py.
+     * Updating stubs.
+     * Fixing mypy issues.
+
+     ---------
+
+     Co-authored-by: Mariana Penna Lima <pennalima@gmail.com>
+ * Adding google analytics to NumCosmo site. (#220)
+
+     * Adding google analytics to NumCosmo site.
+
+     * Adding more control of GA.
+ * Improving reltol for numerical int for fftlog test. (#219)
+
+     * Improving reltol for numerical int for fftlog test.
+
+     * Falling back to higher precision integration when failing.
+ * Update enums and reqs. (#218)
+
+
+ * Adding lintegrate (#217)
+
+     * Support for lnint integral using lintegrate.
+
+     * Meson build file.
+
+     * Adding gsl dependency to lintegrate.
+
+     * Testing NcmComplex and removing lintegrate from coverage.
+
+     * Adding more tests for NcmComplex.
+
+     * Adding more tests for NcmComplex.
+ * BAO data - DESI  DR2 2025. (#216)
+
+     * BAO data - DESI 2025.
+     * Include DESI DR2 BAO data (obj file).
+ * * Included new CC data in the enumerator (nc_data_hubble). (#214)
+
+     * Included new CC data in the enumerator (nc_data_hubble).
+     * Added test for nc_data_hubble object.
+     * Added test_nc_data_hubble
+
+ * Updated stubs.
+
+ * Included new Cosmic Chronometers H(z) data: (#209)
+
+     * Ratsimbazafy et al. (2017) (arXiv:1702.00418):
+     nc_data_hubble_ratsimbazafy2017.obj
+     * Borghi et al. (2022) (arXiv:2110.04304): nc_data_hubble_borghi2022.obj
+     * Jimenez et al. (2023) (arXiv:2306.11425): nc_data_hubble_jimenez2023.obj
+     * Jiao et al. (2023) (arXiv:2205.05701): nc_data_hubble_jiao2023.obj
+     * Tomasetti (2023) (arXiv:2305.16387): nc_data_hubble_tomasetti2023.obj
+
+ * Bao data desi (#213)
+
+     * Added DESI DR1 BAO data (Adame et al. 2024).
+     * Created new data bao object adapted to the LRG and ELG DESI data.
+     * Respective tests were created. Updated nc_data_bao_rdv object.
+     * Added DESI DR1 BAO data: BGS, QSO, Lyman alpha.
+     * Updated object, nc_data_bao_dtr_dhr, and created its respective test.
+     * All BAO data objects are updated. 
+     * Improved the BAO tests.
+ * Updating sundials to 7.2.1. (#211)
+
+     Updated objects to use new sundials interface. Fixed minor bug in
+     experiments/planck18.py.
+ * Fixing compilation glitches. (#210)
+
+     * Fixing minor compilation warnings.
+     * Replacing mamba with conda.
+     * Avoiding buggy version of cfitsio.
+ * Updated README links.
+
+ * Better calibration for two-point limber. (#208)
+
+     * Better calibration for two-point limber.
+     * Testing number counts extrapolation.
+     * Fixed interval tests.
+ * Benchmark two-point calculations.  (#207)
+
+     * New two-point comparison benchmark document.
+     * Adding more unit testing.
+     * Added support to cubature vector integration.
+     * Integrating ells in blocks.
+     * Adjusting tolerance.
+     * Adding timing.
+     * Support for optimization flags.
+     * Creating a intermediate spline for performance.
+     * Updating tests and stubs.
+     * Improving documentation.
+     * Improving benchmark.
+     * Calibrating tests.
+     * More testing for xcor.
+     * Testing setting number of points in CCL tracers.
+     * Disabling debug in coverage run.
+     * Removing edge case.
+     * Modified error treatment.
+ * Benchmark PowerSpectra (#206)
+
+     * Reorganizing documents.
+     * Initial version of CCL/NumCosmo PS comparison.
+     * New ccl_power_spectrum.qmd benchmark.
+     * Added CCL compatibility mode to NcHICosmoDE.
+     * Updated documents to use shared _setup_models.qmd.
+     * New unit tests for CCL power spectrum comparison.
+     * Merging unit test files.
+     * Excluding unreachable lines from coverage.
+ * Removing outdate/unsupported old code. (#205)
+
+
+ * Benchmarks (#204)
+
+     * Completed ccl_background.qmd implementation  
+     * Removed old notebook  
+     * Vectorization improvements: renamed NcDistance methods, spline bucket
+     search, refactored comparison code  
+     * Testing and calibration: spline evaluation, CCL/xcor fixtures, kernel
+     adjustments, test intervals  
+     * Quarto configuration: fixed getdist.plots conflict (external library
+     fix), output logging, Jupyter/MATPLOTLIB adjustments  
+     * CCL enhancements: background tests, Omega_x comparisons, high-precision
+     calibration  
+     * Neutrino model testing: added edge cases, parameter updates (A_s vs
+     sigma8)  
+     * Output fixes: disabled LaTeX, rc_params updates, matplotlib behavior
+     fixes  
+     * Maintenance: stub updates, dependency fixes, menu reorganization 
+ * Matching algorithm (#203)
+
+     * First version of matching algorithm
+     * Adding support for repeated objects.
+     * Adding support for batch search.
+     * Updated stubs.
+     * Testing batch insert and batch search.
+     * Adding vectorized distances calculation.
+     * Adding new tests for distances.
+     * Updating stubs.
+     * Refactored SkyMatch.
+     * Updated tests.
+     * Testing large inserts.
+     * Adding missing distance tests.
+     * Testing mask and calibrating tolerances.
+     * More testing for distances.
+     * Removing impossible lines from coverage.
+     * Testing dist with model implementing Dc.
+     * Testing cross matching.
+     * Adding support to assert_never.
+     * Testing qconst with curvature.
+     * Testing no mask calls.
+     * Adding SkyMatch tutorial.
+     * Fixing tutorial seed.
+
+     ---------
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Mass concentration duffy08 (#202)
+
+     * Mass concentration duffy08
+     * Corrected issues with mdef
+     * Allowing concentration-mass relations to be redshift dependent.
+     * Generalizing Einasto dl_sphere_mass for any radius.
+     * Created function: nc_halo_density_profile_eval_spher_mass_delta (compute
+     the enclosed mass within radius R_Delta).
+     * nc_halo_density_profile_eval_numint_dl_spher_mass: it computes now the
+     enclosed mass for any radius (not only R_Delta).
+     * Updated the respective tests.
+     * Testing concentration mass relations.
+     * Adding setting hooks for massdef and Delta for HaloMassSummary.
+     * Updating stubs.
+     * Adding missing test for dl_spher_mass_s.
+     * Adding test to meson.build
+     * Adding missing tests.
+     * Fixed typo in tests.
+
+     ---------
+
+     Co-authored-by: thaisornellas <thais.ornellas@uel.br> Co-authored-by:
+     Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Moving examples to docs (#201)
+
+     * Adding pandas to conda environment.
+     * Moving recobination example.
+     * Improving docs.
+     * Removing old examples and left-overs.
+     * Moved hiprim example.
+     * Testing new helper functions.
+     * Moving example_hiprim_tensor_modes example.
+     * Moving example_ps.
+     * Moving example_epdf1d.
+     * Reorganized plotting, adding auto-thinning.
+     * Testing plotting tools.
+     * Use tex only if available.
+     * Testing numcosmo catalog plot-corner.
+ * Bumping to new version in development.
+
 
 [v0.24.0]
- * Bumping minor version.
+ * Updating version in pyproject.toml
 
+ * Bumping minor version. (#200)
+
+     * Bumping minor version.
+
+     * Updated changelog.
  * Improving docs (#199)
 
      * Improving doc building.
@@ -5038,7 +5498,54 @@ CHANGELOG
 
 
 []
- * Bumping minor version.
+ * Splitting NumCosmo initialization. (#232)
+ * Bounce tutorial (#212)
+ * DE w(z) spline - experiment (#226)
+ * Add option to choose non logarithmic integrand (#230)
+ * Restricting NumCosmo version and trying texlive-core.
+ * Trying r-tinytex.
+ * Fixed version test.
+ * New release 0.25.0.
+ * Environment for NumCosmo use.
+ * Adding support for derived quantities in MC runs. (#231)
+ * Updated stubs.
+ * Adding support for random walk in APES. (#229)
+ * Updated stubs.
+ * Fixing typos.
+ * Update stub formatting to match linter conventions. Fixed typos.
+ * Updated stubs.
+ * Fixing memory leaks. (#228)
+ * Improving galaxy integration (#227)
+ * Improving stub generation. (#225)
+ * Stub update (#224)
+ * Refactor galaxy redshift limit functions (#222)
+ * Adding support for setting seed to a MC. (#221)
+ * Updated stubs.
+ * New P(z) redshift object (#190)
+ * New DES Y5 SNIA support. (#215)
+ * Adding google analytics to NumCosmo site. (#220)
+ * Improving reltol for numerical int for fftlog test. (#219)
+ * Update enums and reqs. (#218)
+ * Adding lintegrate (#217)
+ * BAO data - DESI  DR2 2025. (#216)
+ * * Included new CC data in the enumerator (nc_data_hubble). (#214)
+ * Updated stubs.
+ * Included new Cosmic Chronometers H(z) data: (#209)
+ * Bao data desi (#213)
+ * Updating sundials to 7.2.1. (#211)
+ * Fixing compilation glitches. (#210)
+ * Updated README links.
+ * Better calibration for two-point limber. (#208)
+ * Benchmark two-point calculations.  (#207)
+ * Benchmark PowerSpectra (#206)
+ * Removing outdate/unsupported old code. (#205)
+ * Benchmarks (#204)
+ * Matching algorithm (#203)
+ * Mass concentration duffy08 (#202)
+ * Moving examples to docs (#201)
+ * Bumping to new version in development.
+ * Updating version in pyproject.toml
+ * Bumping minor version. (#200)
  * Improving docs (#199)
  * Imported Despali Mass function from jpas-forecast. (#198)
  * Moving to a quarto generated documentation (#197)

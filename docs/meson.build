@@ -1,5 +1,4 @@
 src_site_files = files(
-    '_definitions.qmd',
     '_functions.qmd',
     'about.qmd',
     'container.css',
@@ -16,6 +15,7 @@ subdir('images')
 subdir('tutorials')
 subdir('examples')
 subdir('benchmarks')
+subdir('notes')
 
 quarto_conf = configuration_data()
 quarto_conf.set('version', meson.project_version())

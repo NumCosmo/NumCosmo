@@ -457,13 +457,13 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
     else
       s_matrix = self->s_matrix;
 
-    if (s_matrix == NULL)
-      g_error ("Super sample covariance matrix not set");
-
     ncm_matrix_set_zero (cov);
 
     if (self->has_ssc)
     {
+      if (s_matrix == NULL)
+        g_error ("Super sample covariance matrix not set");
+
       for (i = 0; i < self->index_map->len; i++)
       {
         const NcDataClusterNCountsGaussIndex *k_i = &g_array_index (self->index_map, NcDataClusterNCountsGaussIndex, i);
@@ -674,9 +674,9 @@ nc_data_cluster_ncounts_gauss_set_s_matrix (NcDataClusterNCountsGauss *ncounts_g
  * @ncounts_gauss: a #NcDataClusterNCountsGauss
  * @s_matrix: a #NcmMatrix
  *
- * Sets a #NcmMatrix representing the super sample covariance effect in each bin.
- * This matrix will be used only during resampling and it is used to test
- * misspecification of the covariance matrix.
+ * Sets a #NcmMatrix representing the super sample covariance effect in each bin. This
+ * matrix will be used only during resampling and it is used to test miss specification
+ * of the covariance matrix.
  */
 void
 nc_data_cluster_ncounts_gauss_set_resample_s_matrix (NcDataClusterNCountsGauss *ncounts_gauss, NcmMatrix *s_matrix)
@@ -821,7 +821,7 @@ nc_data_cluster_ncounts_gauss_get_s_matrix (NcDataClusterNCountsGauss *ncounts_g
  *
  * Gets the matrix containing the super sample covariance.
  * This matrix will be used only during resampling and it is used to test
- * misspecification of the covariance matrix.
+ * mis-specification of the covariance matrix.
  *
  * Returns: (transfer full): Super sample covariance #NcmMatrix used to resample.
  */

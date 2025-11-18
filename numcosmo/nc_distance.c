@@ -176,9 +176,9 @@ _nc_distance_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_INV_COMOVING:
       nc_distance_compute_inv_comoving (dist, g_value_get_boolean (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -200,9 +200,9 @@ _nc_distance_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_INV_COMOVING:
       g_value_set_boolean (value, dist->cpu_inv_comoving);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

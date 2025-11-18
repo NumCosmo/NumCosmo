@@ -62,9 +62,14 @@ gdouble ncm_util_sinhx_m_xcoshx_x3 (const gdouble x) G_GNUC_CONST;
 
 void ncm_util_mln_1mIexpzA_1pIexpmzA (const gdouble rho, const gdouble theta, const gdouble A, gdouble *rho1, gdouble *theta1);
 
+gdouble ncm_util_normal_gaussian_integral (const gdouble xl, const gdouble xu);
+gdouble ncm_util_gaussian_integral (const gdouble xl, const gdouble xu, const gdouble mu, const gdouble sigma);
+gdouble ncm_util_log_normal_gaussian_integral (const gdouble xl, const gdouble xu, gdouble *sign);
+gdouble ncm_util_log_gaussian_integral (const gdouble xl, const gdouble xu, const gdouble mu, const gdouble sigma, gdouble *sign);
+
 gint ncm_cmp (gdouble x, gdouble y, const gdouble reltol, const gdouble abstol);
 
-void ncm_rational_coarce_double (gdouble x, mpq_t q);
+void ncm_rational_coarse_double (gdouble x, mpq_t q);
 void ncm_mpz_inits (mpz_t z, ...) G_GNUC_NULL_TERMINATED;
 void ncm_mpz_clears (mpz_t z, ...) G_GNUC_NULL_TERMINATED;
 void _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2, const gdouble reltol, const gdouble abstol);
@@ -120,6 +125,7 @@ NCM_INLINE void ncm_complex_set_zero (NcmComplex *c);
 
 NCM_INLINE gdouble ncm_complex_Re (const NcmComplex *c);
 NCM_INLINE gdouble ncm_complex_Im (const NcmComplex *c);
+NCM_INLINE gdouble ncm_complex_Abs (const NcmComplex *c);
 
 #ifndef NUMCOSMO_GIR_SCAN
 NCM_INLINE void ncm_complex_set_c (NcmComplex *c, const complex double z);
@@ -520,6 +526,12 @@ NCM_INLINE gdouble
 ncm_complex_Im (const NcmComplex *c)
 {
   return cimag (*c);
+}
+
+NCM_INLINE gdouble
+ncm_complex_Abs (const NcmComplex *c)
+{
+  return cabs (*c);
 }
 
 #ifndef NUMCOSMO_GIR_SCAN

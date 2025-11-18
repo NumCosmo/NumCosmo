@@ -124,7 +124,7 @@ test_nc_cluster_abundance_new (TestNcClusterAbundance *test, gconstpointer pdata
   NcHIReion *reion            = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim              = NC_HIPRIM (nc_hiprim_power_law_new ());
   NcDistance *dist            = nc_distance_new (3.0);
-  NcTransferFunc *tf          = NC_TRANSFER_FUNC (ncm_serialize_global_from_string ("NcTransferFuncEH"));
+  NcTransferFunc *tf          = nc_transfer_func_eh_new ();
   NcPowspecML *ps_ml          = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
   NcmPowspecFilter *psf       = ncm_powspec_filter_new (NCM_POWSPEC (ps_ml), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
   NcMultiplicityFunc *mulf    = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_tinker_new_full (NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL, 200));
@@ -165,6 +165,7 @@ test_nc_cluster_abundance_free (TestNcClusterAbundance *test, gconstpointer pdat
   NCM_TEST_FREE (ncm_mset_free, test->mset);
   NCM_TEST_FREE (ncm_model_free, NCM_MODEL (test->clusterm));
   NCM_TEST_FREE (ncm_model_free, NCM_MODEL (test->clusterz));
+  NCM_TEST_FREE (ncm_model_free, NCM_MODEL (test->cosmo));
 }
 
 void
@@ -173,10 +174,10 @@ test_nc_cluster_abundance_sanity (TestNcClusterAbundance *test, gconstpointer pd
   NcmRNG *rng             = ncm_rng_new (NULL);
   NcHaloMassFunction *mfp = NC_HALO_MASS_FUNCTION (test->cad->mfp);
 
-
   nc_data_cluster_ncount_init_from_sampling (test->ncdata, test->mset, test->area, rng);
+  nc_halo_mass_function_prepare (mfp, test->cosmo);
   g_assert_true (nc_halo_mass_function_peek_survey_area (mfp) == test->area);
-  g_assert_true (nc_halo_mass_function_d2n_dzdlnM (mfp, test->cosmo, 100, 1000) == mfp->mf_lb);
+  g_assert_cmpfloat (nc_halo_mass_function_d2n_dzdlnM (mfp, test->cosmo, 10.0, 100.0), ==, mfp->mf_lb);
 
   {
     gchar *desc = ncm_data_get_desc (NCM_DATA (test->ncdata));

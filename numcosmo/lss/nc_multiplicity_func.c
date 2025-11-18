@@ -90,9 +90,9 @@ _nc_multiplicity_func_set_property (GObject *object, guint prop_id, const GValue
     case PROP_DELTA:
       NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->set_Delta (mulf, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -113,9 +113,9 @@ _nc_multiplicity_func_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_DELTA:
       g_value_set_double (value, nc_multiplicity_func_get_Delta (mulf));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

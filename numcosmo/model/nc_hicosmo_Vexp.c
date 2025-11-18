@@ -313,6 +313,8 @@ _nc_hicosmo_Vexp_dispose (GObject *object)
   ncm_spline_clear (&self->lnqc_mtau);
   ncm_spline_clear (&self->lnqe_tau);
 
+  ncm_spline_clear (&self->phi_tau);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_Vexp_parent_class)->dispose (object);
 }
@@ -370,6 +372,8 @@ _nc_hicosmo_Vexp_finalize (GObject *object)
     SUNLinSolFree (self->LS);
     self->LS = NULL;
   }
+
+  SUNContext_Free (&self->sunctx);
 
   g_clear_pointer (&self->evol_c, g_array_unref);
   g_clear_pointer (&self->evol_e, g_array_unref);
@@ -1119,6 +1123,8 @@ _nc_hicosmo_Vexp_init_qt (NcHICosmoVexp *Vexp, const gdouble direction)
 
     flag = CVodeSetMaxStep (self->cvode_qt, 1.0);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, );
+
+    self->qt_init = TRUE;
   }
   else
   {

@@ -40,8 +40,6 @@ G_BEGIN_DECLS
 #define NC_IS_HICOSMO_QGRW_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HICOSMO_QGRW))
 #define NC_HICOSMO_QGRW_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO_QGRW, NcHICosmoQGRWClass))
 
-#define NC_TYPE_HIPERT_WKB_QGRW_ZETA     (nc_hipert_wkb_qgrw_zeta_get_type ())
-
 typedef struct _NcHICosmoQGRWClass NcHICosmoQGRWClass;
 typedef struct _NcHICosmoQGRW NcHICosmoQGRW;
 
@@ -113,11 +111,11 @@ struct _NcHICosmoQGRW
   NcHICosmo parent_instance;
   /*< private >*/
   NcHIPertITwoFluidsEOM eom_two_fluids;
+  NcHIPertITwoFluidsWKB wkb_two_fluids;
   NcHIPertITwoFluidsTV tv_two_fluids;
 };
 
 GType nc_hicosmo_qgrw_get_type (void) G_GNUC_CONST;
-GType nc_hipert_wkb_qgrw_zeta_get_type (void) G_GNUC_CONST;
 
 NcHICosmoQGRW *nc_hicosmo_qgrw_new (void);
 

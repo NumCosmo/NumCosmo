@@ -1,0 +1,42 @@
+---
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - astropy
+  - black
+  - cfitsio
+  - click < 8.2.0
+  - getdist
+  - gsl
+  - hdf5
+  - jupyterlab
+  - libflint
+  - libfyaml
+  - matplotlib
+  - nlopt
+  - numcosmo >= 0.25.0
+  - numpy >= 1.23
+  - openblas=*=*openmp*
+  - openmpi
+  - pandas
+  - pandas
+  - pip
+  - pip:
+      - pygobject-stubs
+      - pytest-tap
+      - types-tabulate
+  - pyccl >= 3.0.0
+  - pydantic
+  - pygobject
+  - python >= 3.11
+  - rich
+  - scipy
+  - scipy
+  - setuptools
+  - tabulate
+  - texlive-core
+  - tqdm
+  - typer
+  - zlib
+name: numcosmo

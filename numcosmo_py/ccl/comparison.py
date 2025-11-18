@@ -31,7 +31,6 @@ import pyccl
 import numcosmo_py.cosmology as ncc
 import numcosmo_py.ccl.two_point as tp
 from numcosmo_py.plotting.tools import latex_float
-from numcosmo_py.helper import npa_to_seq
 from numcosmo_py import Ncm, Nc
 
 
@@ -300,6 +299,7 @@ def compare_Omega_de(
 ):
     """Compare Omega_de from CCL and NumCosmo."""
     cosmo = cosmology.cosmo
+    assert isinstance(cosmo, Nc.HICosmoDE)
     a = 1.0 / (1.0 + z)
 
     ccl_Ode = np.array(pyccl.omega_x(ccl_cosmo, a, "dark_energy"))
@@ -352,9 +352,7 @@ def compare_distance_comoving(
     RH_Mpc = cosmo.RH_Mpc()
 
     ccl_D = np.array(pyccl.comoving_radial_distance(ccl_cosmo, a))
-    nc_D = (
-        np.array(dist.comoving_array(cosmo, npa_to_seq(z)), dtype=np.float64) * RH_Mpc
-    )
+    nc_D = np.array(dist.comoving_array(cosmo, z), dtype=np.float64) * RH_Mpc
 
     return CompareFunc1d(
         x=z, y1=ccl_D, y2=nc_D, model=model, x_symbol="z", y_symbol=r"D_c", y_unit="Mpc"
@@ -376,9 +374,7 @@ def compare_distance_transverse(
     RH_Mpc = cosmo.RH_Mpc()
 
     ccl_D = np.array(pyccl.comoving_angular_distance(ccl_cosmo, a))
-    nc_D = (
-        np.array(dist.transverse_array(cosmo, npa_to_seq(z)), dtype=np.float64) * RH_Mpc
-    )
+    nc_D = np.array(dist.transverse_array(cosmo, z), dtype=np.float64) * RH_Mpc
 
     return CompareFunc1d(
         x=z, y1=ccl_D, y2=nc_D, model=model, x_symbol="z", y_symbol=r"D_t", y_unit="Mpc"
@@ -400,10 +396,7 @@ def compare_distance_angular_diameter(
     RH_Mpc = cosmo.RH_Mpc()
 
     ccl_D = np.array(pyccl.angular_diameter_distance(ccl_cosmo, a))
-    nc_D = (
-        np.array(dist.angular_diameter_array(cosmo, npa_to_seq(z)), dtype=np.float64)
-        * RH_Mpc
-    )
+    nc_D = np.array(dist.angular_diameter_array(cosmo, z), dtype=np.float64) * RH_Mpc
 
     return CompareFunc1d(
         x=z, y1=ccl_D, y2=nc_D, model=model, x_symbol="z", y_symbol=r"D_A", y_unit="Mpc"
@@ -425,9 +418,7 @@ def compare_distance_luminosity(
     RH_Mpc = cosmo.RH_Mpc()
 
     ccl_D = np.array(pyccl.luminosity_distance(ccl_cosmo, a))
-    nc_D = (
-        np.array(dist.luminosity_array(cosmo, npa_to_seq(z)), dtype=np.float64) * RH_Mpc
-    )
+    nc_D = np.array(dist.luminosity_array(cosmo, z), dtype=np.float64) * RH_Mpc
 
     return CompareFunc1d(
         x=z, y1=ccl_D, y2=nc_D, model=model, x_symbol="z", y_symbol=r"D_L", y_unit="Mpc"
@@ -449,7 +440,7 @@ def compare_distance_modulus(
     RH_Mpc = cosmo.RH_Mpc()
 
     ccl_D = np.array(pyccl.distance_modulus(ccl_cosmo, a))
-    nc_D = np.array(dist.dmodulus_array(cosmo, npa_to_seq(z))) + 5 * np.log10(RH_Mpc)
+    nc_D = np.array(dist.dmodulus_array(cosmo, z)) + 5 * np.log10(RH_Mpc)
 
     return CompareFunc1d(
         x=z, y1=ccl_D, y2=nc_D, model=model, x_symbol="z", y_symbol=r"\mu"
@@ -529,6 +520,7 @@ def compare_growth_factor(
     ps_lin = cosmology.ps_ml
     a = 1.0 / (1.0 + z)
 
+    assert isinstance(ps_lin, Nc.PowspecMLTransfer)
     gf = ps_lin.peek_gf()
     gf.prepare(cosmo)
 
@@ -552,6 +544,7 @@ def compare_growth_rate(
     ps_lin = cosmology.ps_ml
     a = 1.0 / (1.0 + z)
 
+    assert isinstance(ps_lin, Nc.PowspecMLTransfer)
     gf = ps_lin.peek_gf()
     gf.prepare(cosmo)
 
@@ -595,7 +588,7 @@ def compare_scale_factor(
     )
 
 
-# Weaklensing related
+# WeakLensing related
 
 
 def compare_Sigma_crit(
@@ -698,7 +691,7 @@ def compare_sigma_r(
     model: str = "unnamed",
 ) -> CompareFunc1d:
     """Compare sigma r from CCL and NumCosmo."""
-    psf = cosmology.psf
+    psf = cosmology.psf_tophat
 
     a = 1.0 / (1.0 + z)
     ccl_sigma = pyccl.sigmaR(ccl_cosmo, r, a)
@@ -1010,8 +1003,8 @@ def prepare_dndz(
     z_a: npt.NDArray[np.float64] = np.linspace(z_low, z_high, z_len, dtype=np.float64)
     nz_a = np.exp(-((z_a - mu) ** 2) / sigma**2 / 2.0) / np.sqrt(2.0 * np.pi * sigma**2)
 
-    z_v = Ncm.Vector.new_array(npa_to_seq(z_a))
-    nz_v = Ncm.Vector.new_array(nz_a.tolist())
+    z_v = Ncm.Vector.new_array(z_a)
+    nz_v = Ncm.Vector.new_array(nz_a)
     return Ncm.SplineCubicNotaknot.new_full(z_v, nz_v, True)
 
 

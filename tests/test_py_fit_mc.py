@@ -1,0 +1,205 @@
+#!/usr/bin/env python
+#
+# test_py_fit_mc.py
+#
+# Sat Sep 13 12:53:40 2025
+# Copyright  2025  Sandro Dias Pinto Vitenti
+# <vitenti@uel.br>
+#
+# test_py_fit_mc.py
+# Copyright (C) 2025 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+#
+# numcosmo is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# numcosmo is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""Tests for NcmFitMC object."""
+
+from pathlib import Path
+import re
+import pytest
+import numpy as np
+import numpy.testing as npt
+
+from numcosmo_py import Ncm, GObject
+
+Ncm.cfg_init()
+
+MEAN = 1.2543
+MC_RESAMPLE_TYPES = [
+    Ncm.FitMCResampleType.FROM_MODEL,
+    Ncm.FitMCResampleType.BOOTSTRAP_NOMIX,
+    Ncm.FitMCResampleType.BOOTSTRAP_MIX,
+]
+MC_RESAMPLE_LABELS = ["FROM_MODEL", "BOOTSTRAP_NOMIX", "BOOTSTRAP_MIX"]
+
+
+@pytest.fixture(
+    name="fit", params=[1, 2, 5, 10], ids=["dim=1", "dim=2", "dim=5", "dim=10"]
+)
+def fixture_fit(request) -> Ncm.Fit:
+    """Fixture for NcmFit object."""
+    rng = Ncm.RNG.seeded_new(None, 1234)
+    problem_size: int = request.param
+    model_mvnd = Ncm.ModelMVND.new(problem_size)
+    data_mvnd = [
+        Ncm.DataGaussCovMVND.new_full(
+            problem_size, 1.0e-1, 2.0e-1, 30.0, MEAN, MEAN, rng
+        )
+        for _ in range(4)
+    ]
+
+    mset = Ncm.MSet.new_array([model_mvnd])
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    mset.prepare_fparam_map()
+    mset.fparams_set_array(np.ones(problem_size) * MEAN)
+    likelihood = Ncm.Likelihood.new(Ncm.Dataset.new_array(data_mvnd))
+
+    return Ncm.Fit.factory(
+        Ncm.FitType.GSL_MMS, None, likelihood, mset, Ncm.FitGradType.NUMDIFF_CENTRAL
+    )
+
+
+@pytest.fixture(name="mc", params=MC_RESAMPLE_TYPES, ids=MC_RESAMPLE_LABELS)
+def fixture_mc(fit: Ncm.Fit, request) -> Ncm.FitMC:
+    """Fixture for NcmFitMC object."""
+    return Ncm.FitMC.new(fit, request.param, Ncm.FitRunMsgs.SIMPLE)
+
+
+@pytest.mark.parametrize("nthreads", [1, 4], ids=["threads=1", "threads=4"])
+def test_fit_mc_run(capfd, mc: Ncm.FitMC, nthreads: int):
+    """Test NcmFitMC run."""
+    n_runs = 100
+
+    mc.set_nthreads(nthreads)
+
+    mc.start_run()
+    mc.run(n_runs)
+    mc.end_run()
+
+    out, _ = capfd.readouterr()
+
+    assert re.search(r"Task:NcmFitMC, completed: 100 of 100", out)
+
+    mcat = mc.peek_catalog()
+
+    assert mcat.nchains() == 1
+    assert mcat.len() == n_runs
+
+    npt.assert_allclose(
+        mcat.get_mean().dup_array(), np.ones(mcat.ncols() - 1) * MEAN, rtol=1.0e-1
+    )
+
+
+def test_serialize_deserialize(mc: Ncm.FitMC, tmp_path: Path):
+    """Test NcmFitMC serialize and deserialize."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+
+    file = tmp_path / "fit_mc_test.nc"
+    mc.set_data_file(file.as_posix())
+    mc2: Ncm.FitMC = ser.dup_obj(mc)
+
+    assert mc.props.nthreads == mc2.props.nthreads
+    assert mc.props.rtype == mc2.props.rtype
+    assert mc.props.mtype == mc2.props.mtype
+    assert mc.props.data_file == mc2.props.data_file
+
+
+def test_threaded_vs_serial(capfd, mc: Ncm.FitMC):
+    """Test NcmFitMC serial vs threaded."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+
+    mc2: Ncm.FitMC = ser.dup_obj(mc)
+
+    mc.set_mtype(Ncm.FitRunMsgs.NONE)
+    mc.set_nthreads(1)
+    mc.set_rng(Ncm.RNG.seeded_new("mt19937", 1234))
+    mc.start_run()
+    mc.run(100)
+    mc.end_run()
+
+    mc2.set_mtype(Ncm.FitRunMsgs.NONE)
+    mc2.set_nthreads(4)
+    mc2.set_rng(Ncm.RNG.seeded_new("mt19937", 1234))
+    mc2.start_run()
+    mc2.run(100)
+    mc2.end_run()
+
+    out, err = capfd.readouterr()
+    assert out == ""
+    assert err == ""
+
+    mcat = mc.peek_catalog()
+    mcat2 = mc2.peek_catalog()
+
+    rows = [mcat.peek_row(i).dup_array() for i in range(mcat.len())]
+    rows2 = [mcat2.peek_row(i).dup_array() for i in range(mcat2.len())]
+
+    npt.assert_allclose(rows, rows2)
+
+
+class MVNDMean(Ncm.MSetFunc1):
+    """MVND mean."""
+
+    __gtype_name__ = "NcmPyMVNDMean"
+    index = GObject.Property(type=int, default=0)
+
+    def __init__(self, index=0):
+        """Initialize the MVNDMean object.
+
+        Sets the dimension to 1 and the number of variables to 0.
+        """
+        super().__init__(
+            dimension=1, nvariables=0, eval_x=Ncm.Vector.new(1), index=index
+        )
+
+    def do_eval1(self, mset: Ncm.MSet, _):  # pylint: disable-msg=arguments-differ
+        """Compute the MVND mean."""
+        mvnd = mset.peek(Ncm.ModelMVND.id())
+        assert mvnd is not None
+        return [np.mean(mvnd.orig_vparam_get(0, self.index))]
+
+
+@pytest.mark.parametrize("nthreads", [1, 4], ids=["threads=1", "threads=4"])
+@pytest.mark.parametrize("rtype", MC_RESAMPLE_TYPES, ids=MC_RESAMPLE_LABELS)
+def test_mc_funcs(
+    fit: Ncm.Fit, rtype: Ncm.FitMCResampleType, nthreads: int
+) -> Ncm.FitMC:
+    """Fixture for NcmFitMC object."""
+    funcs_oa = Ncm.ObjArray.new()
+
+    mset = fit.peek_mset()
+    fparam_len = mset.fparam_len()
+
+    for i in range(fparam_len):
+        funcs_oa.add(MVNDMean(index=i))
+
+    mc = Ncm.FitMC.new_funcs_array(fit, rtype, Ncm.FitRunMsgs.NONE, funcs_oa)
+
+    mc.set_nthreads(nthreads)
+    n_runs = 100
+
+    mc.start_run()
+    mc.run(n_runs)
+    mc.end_run()
+
+    mcat = mc.peek_catalog()
+    assert mcat.nchains() == 1
+    assert mcat.len() == n_runs
+
+    for i in range(mcat.len()):
+        row = mcat.peek_row(i).dup_array()
+        npt.assert_allclose(
+            row[1 : 1 + fparam_len],
+            row[1 + fparam_len : 1 + 2 * fparam_len],
+            rtol=1.0e-11,
+        )

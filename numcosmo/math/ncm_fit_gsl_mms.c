@@ -301,7 +301,7 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
     if (size == last_size)
     {
-      if (++still_count == 3)
+      if (++still_count >= 3)
       {
         ncm_fit_log_step_error (fit, "size do not improve [prec: %8.5e size: %8.5e]", prec, size);
         status = GSL_SUCCESS;
@@ -329,7 +329,9 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
         gsl_multimin_fminimizer_set (fit_gsl_mms->mms, &fit_gsl_mms->f, ncm_vector_gsl (fparams), ncm_vector_gsl (fit_gsl_mms->ss));
         status = GSL_CONTINUE;
         restart--;
-        last_min = fit_gsl_mms->mms->fval;
+        last_min    = fit_gsl_mms->mms->fval;
+        last_size   = size;
+        still_count = 0;
       }
     }
 

@@ -42,6 +42,13 @@
 #include "model/nc_hicosmo_de_wspline.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_spline_gsl.h"
+#include "math/ncm_integrate.h"
+#include "math/ncm_memory_pool.h"
+#include "math/ncm_mset_func_list.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_integration.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcHICosmoDEWSplinePrivate
 {
@@ -96,9 +103,9 @@ _nc_hicosmo_de_wspline_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_Z_F:
       g_value_set_double (value, self->z_f);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -118,9 +125,9 @@ _nc_hicosmo_de_wspline_set_property (GObject *object, guint prop_id, const GValu
     case PROP_Z_F:
       self->z_f = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -136,7 +143,6 @@ _nc_hicosmo_de_wspline_constructed (GObject *object)
     NcmVector *orig_vec                    = ncm_model_orig_params_peek_vector (model);
     NcmModelClass *model_class             = NCM_MODEL_GET_CLASS (model);
     guint wz_size                          = ncm_model_vparam_len (model, NC_HICOSMO_DE_WSPLINE_W);
-    const gdouble alpha1                   = log1p (self->z_1);
     const gdouble alphaf                   = log1p (self->z_f);
     NcmVector *alphav, *wv;
     guint i, wvi;
@@ -152,17 +158,12 @@ _nc_hicosmo_de_wspline_constructed (GObject *object)
     alphav = ncm_vector_new (wz_size);
     wv     = ncm_vector_get_subvector (orig_vec, wvi, wz_size);
 
-    ncm_vector_set (alphav, 0, 0.0);
-    ncm_vector_set (alphav, 1, alpha1);
-
     {
-      const gdouble dalpha = (log (alphaf) - log (alpha1)) / (wz_size - 2);
-
-      for (i = 0; i < wz_size - 2; i++)
+      for (i = 0; i < wz_size; i++)
       {
-        const gdouble alpha = alpha1 * exp (dalpha * (i + 1.0));
+        const gdouble alpha = 0.5 * alphaf + 0.5 * alphaf * cos (M_PI * (i * 1.0) / (wz_size - 1.0));
 
-        ncm_vector_set (alphav, 2 + i, alpha);
+        ncm_vector_set (alphav, wz_size - 1 - i, alpha);
       }
     }
 
@@ -220,7 +221,7 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
   object_class->dispose     = &_nc_hicosmo_de_wspline_dispose;
   object_class->finalize    = &_nc_hicosmo_de_wspline_finalize;
 
-  ncm_model_class_set_name_nick (model_class, "XCDM - Constant EOS", "XCDM");
+  ncm_model_class_set_name_nick (model_class, "WSpline - DE EOS reconstruction w(z)", "WSpline");
   ncm_model_class_add_params (model_class, 0,
                               NC_HICOSMO_DE_WSPLINE_VPARAM_LEN - NC_HICOSMO_DE_VPARAM_LEN,
                               PROP_SIZE);
@@ -408,5 +409,58 @@ nc_hicosmo_de_wspline_get_alpha (NcHICosmoDEWSpline *wspline)
   NcHICosmoDEWSplinePrivate * const self = wspline->priv;
 
   return ncm_spline_peek_xv (self->w_alpha);
+}
+
+gdouble
+_mean_kappa_integrand (gdouble alpha, gpointer data)
+{
+  NcHICosmoDEWSplinePrivate * const self = (NcHICosmoDEWSplinePrivate * const) data;
+  const gdouble d2w                      = ncm_spline_eval_deriv2 (self->w_alpha, alpha);
+  const gdouble d1w                      = ncm_spline_eval_deriv (self->w_alpha, alpha);
+
+  return d2w * d2w / gsl_pow_3 (1.0 + d1w * d1w);
+}
+
+/**
+ * nc_hicosmo_de_wspline_mean_kappa:
+ * @wspline: a #NcHICosmoDEWSpline
+ *
+ * Gets the mean value of $w(z)$ curvature.
+ *
+ * Returns: The mean value of $w(z)$ curvature
+ */
+gdouble
+nc_hicosmo_de_wspline_mean_kappa (NcHICosmoDEWSpline *wspline)
+{
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+  gsl_integration_workspace **w          = ncm_integral_get_workspace ();
+  gsl_function F;
+  gdouble result, error;
+
+  _nc_hicosmo_de_wspline_prepare (wspline);
+
+  F.function = &_mean_kappa_integrand;
+  F.params   = self;
+
+  gsl_integration_qag (&F, 0.0, self->alpha_f, 1e-9, 0.0, NCM_INTEGRAL_PARTITION, 6, *w, &result, &error);
+
+  ncm_memory_pool_return (w);
+
+  return sqrt (result / self->alpha_f);
+}
+
+static void
+_nc_hicosmo_de_wspline_mean_kappa (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoDEWSpline *cosmo = NC_HICOSMO_DE_WSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
+  g_assert (NC_IS_HICOSMO_DE_WSPLINE (cosmo));
+  f[0] = nc_hicosmo_de_wspline_mean_kappa (cosmo);
+}
+
+void
+_nc_hicosmo_de_wspline_register_functions (void)
+{
+  ncm_mset_func_list_register ("mean_kappa", "\\bar{\\kappa}", "NcHICosmoDEWSpline", "Mean w curvature", G_TYPE_NONE, _nc_hicosmo_de_wspline_mean_kappa, 0, 1);
 }
 

@@ -27,7 +27,6 @@
 from numpy.testing import assert_allclose
 import numpy as np
 from numcosmo_py import Ncm
-from numcosmo_py.helper import npa_to_seq
 from numcosmo_py.ncm import MSet
 
 Ncm.cfg_init()
@@ -41,8 +40,8 @@ class DataGaussDiagTest(Ncm.DataGaussDiag):
         mean_array = np.linspace(-1.0, 1.0, n_points, dtype=np.float64)
         sigma_array = np.linspace(1.0e-1, 2.0e-1, n_points, dtype=np.float64)
 
-        mean = Ncm.Vector.new_array(npa_to_seq(mean_array))
-        sigma = Ncm.Vector.new_array(npa_to_seq(sigma_array))
+        mean = Ncm.Vector.new_array(mean_array)
+        sigma = Ncm.Vector.new_array(sigma_array)
         super().__init__(n_points=n_points, sigma=sigma, mean=mean, init=True)
 
     def do_mean_func(  # pylint: disable=arguments-differ
@@ -56,7 +55,7 @@ class DataGaussDiagTest(Ncm.DataGaussDiag):
         a = mvnd.orig_vparam_get(0, 0)
         b = mvnd.orig_vparam_get(0, 1)
 
-        vp.set_array(npa_to_seq(np.linspace(a, b, self.get_size(), dtype=np.float64)))
+        vp.set_array(np.linspace(a, b, self.get_size(), dtype=np.float64))
 
 
 class DataGaussDiagTestUpdateSigma(DataGaussDiagTest):
@@ -98,6 +97,16 @@ def test_data_gauss_diag_get_inv_cov():
     assert sigma.len() == n_points
 
 
+def _get_chisq(data_dist: DataGaussDiagTest) -> float:
+    """Helper function."""
+    n_points = data_dist.get_size()
+    return (
+        n_points
+        + n_points * np.log(2.0 * np.pi)
+        + 2.0 * np.sum(np.log(data_dist.peek_std().dup_array()))
+    )
+
+
 def test_data_gauss_diag_resample():
     """Test NcmDataGaussDiag."""
     n_points = 20
@@ -131,7 +140,7 @@ def test_data_gauss_diag_resample():
 
     assert_allclose(mean[:n_points], np.linspace(5.0, 15.0, n_points), atol=0.6)
     assert_allclose(mean[n_points : 2 * n_points], 0.0, atol=0.6)
-    assert_allclose(mean[2 * n_points], n_points, atol=n_points * 0.2)
+    assert_allclose(mean[2 * n_points], _get_chisq(data_dist), atol=n_points * 0.2)
 
 
 def test_data_gauss_diag_bootstrap():
@@ -160,7 +169,7 @@ def test_data_gauss_diag_bootstrap():
 
         assert np.sum(freq) == n_points
 
-    assert_allclose(sv.get_mean(0), n_points, atol=10.0)
+    assert_allclose(sv.get_mean(0), _get_chisq(data_dist), atol=10.0)
 
     data_dist.set_size(10)
     assert bootstrap.get_bsize() == 10
@@ -193,7 +202,7 @@ def test_data_gauss_diag_bootstrap_set():
 
         assert np.sum(freq) == n_points
 
-    assert_allclose(sv.get_mean(0), n_points, atol=10.0)
+    assert_allclose(sv.get_mean(0), _get_chisq(data_dist), atol=10.0)
 
     data_dist.set_size(10)
     assert bootstrap.get_bsize() == 10
@@ -227,7 +236,7 @@ def test_data_gauss_diag_bootstrap_twice():
 
         assert np.sum(freq) == n_points
 
-    assert_allclose(sv.get_mean(0), n_points, atol=10.0)
+    assert_allclose(sv.get_mean(0), _get_chisq(data_dist), atol=10.0)
 
     data_dist.set_size(10)
     assert bootstrap.get_bsize() == 10
@@ -261,7 +270,7 @@ def test_data_gauss_diag_bootstrap_wmean():
 
         assert np.sum(freq) == n_points
 
-    assert_allclose(sv.get_mean(0), n_points, atol=10.0)
+    assert_allclose(sv.get_mean(0), _get_chisq(data_dist), atol=10.0)
 
     data_dist.set_size(10)
     assert bootstrap.get_bsize() == 10
@@ -350,7 +359,7 @@ def test_data_gauss_diag_update_cov_resample():
 
     assert_allclose(mean[:n_points], np.linspace(-2.0, 2.0, n_points), atol=0.6)
     assert_allclose(mean[n_points : 2 * n_points], 0.0, atol=0.6)
-    assert_allclose(mean[2 * n_points], n_points, atol=n_points * 0.2)
+    assert_allclose(mean[2 * n_points], _get_chisq(data_dist), atol=n_points * 0.2)
 
 
 def test_data_gauss_diag_fisher():
@@ -396,9 +405,7 @@ def test_data_gauss_diag_fisher_bias():
     fisher0 = data_dist.fisher_matrix(mset)
     fisher1, delta_theta = data_dist.fisher_matrix_bias(
         mset,
-        Ncm.Vector.new_array(
-            np.linspace(true_theta[0], true_theta[1], n_points).tolist()
-        ),
+        Ncm.Vector.new_array(np.linspace(true_theta[0], true_theta[1], n_points)),
     )
 
     assert_allclose(fisher0.dup_array(), fisher1.dup_array(), atol=1.0e-6)
@@ -441,7 +448,7 @@ def test_data_gauss_diag_resample_wmean():
 
     assert_allclose(mean[:n_points], np.linspace(5.0, 15.0, n_points), atol=0.6)
     assert_allclose(mean[n_points : 2 * n_points], 0.0, atol=0.6)
-    assert_allclose(mean[2 * n_points], n_points, atol=n_points * 0.2)
+    assert_allclose(mean[2 * n_points], _get_chisq(data_dist), atol=n_points * 0.2)
 
 
 if __name__ == "__main__":

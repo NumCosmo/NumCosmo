@@ -289,15 +289,14 @@ def create_numcosmo_mapping(
     matter_ps: LinearMatterPowerSpectrum = LinearMatterPowerSpectrum.NONE,
     nonlin_matter_ps: NonLinearMatterPowerSpectrum = NonLinearMatterPowerSpectrum.NONE,
     distance_max_z: float = 10.0,
-    require_nonlinear_pk: bool = False,
     reltol: float = 1.0e-4,
 ) -> MappingNumCosmo:
     """Create a NumCosmo mapping.
 
     Mapping to be used in the likelihoods converted from Cosmosis.
     """
-    ps_ml = None
-    ps_mnl = None
+    ps_ml: Nc.PowspecML | None = None
+    ps_mnl: Nc.PowspecMNL | None = None
     dist = Nc.Distance.new(distance_max_z)
     dist.comoving_distance_spline.set_reltol(reltol)
 
@@ -325,12 +324,7 @@ def create_numcosmo_mapping(
         ps_mnl = Nc.PowspecMNLHaloFit.new(ps_ml, 3.0, reltol)
         ps_ml.set_reltol_spline(reltol)
 
-    return MappingNumCosmo(
-        p_ml=ps_ml,
-        p_mnl=ps_mnl,
-        dist=dist,
-        require_nonlinear_pk=require_nonlinear_pk,
-    )
+    return MappingNumCosmo(p_ml=ps_ml, p_mnl=ps_mnl, dist=dist)
 
 
 COSMO_PARAMETER_CONVERSION = {
