@@ -25,9 +25,7 @@
  */
 
 /**
- * SECTION:nc_halo_cm_diemer15
- * @title: NcHaloCMDiemer15
- * @short_description: Class defining the Diemer & Kravtsov 2015 concentration-mass relation
+ * NcHaloCMDiemer15:
  *
  *
  * Class defining the Diemer & Kravtsov 2015 concentration-mass relation.

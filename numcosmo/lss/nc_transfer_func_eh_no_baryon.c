@@ -100,10 +100,10 @@ typedef struct _NcTransferFuncEHNoBaryonPrivate
 {
   gdouble c2_2;
   gdouble h;
-  gdouble wm_h;
+  gdouble wm;
   gdouble s;
   gdouble alphaGamma;
-}NcTransferFuncEHNoBaryonPrivate;
+} NcTransferFuncEHNoBaryonPrivate;
 
 struct _NcTransferFuncEHNoBaryon
 {
@@ -124,10 +124,10 @@ nc_transfer_func_eh_no_baryon_init (NcTransferFuncEHNoBaryon *tf_eh)
 {
   NcTransferFuncEHNoBaryonPrivate * const self = nc_transfer_func_eh_no_baryon_get_instance_private (tf_eh);
 
-  self->c2_2     = 0.0;
-  self->h        = 0.0;
-  self->wm_h     = 0.0;
-  self->s        = 0.0;
+  self->c2_2       = 0.0;
+  self->h          = 0.0;
+  self->wm         = 0.0;
+  self->s          = 0.0;
   self->alphaGamma = 0.0;
 }
 
@@ -147,7 +147,7 @@ nc_transfer_func_eh_no_baryon_class_init (NcTransferFuncEHNoBaryonClass *klass)
   GObjectClass *object_class        = G_OBJECT_CLASS (klass);
   NcTransferFuncClass *parent_class = NC_TRANSFER_FUNC_CLASS (klass);
 
-  object_class->finalize     = &_nc_transfer_func_eh_no_baryon_finalize;
+  object_class->finalize = &_nc_transfer_func_eh_no_baryon_finalize;
 
   parent_class->prepare = &_nc_transfer_func_eh_no_baryon_prepare;
   parent_class->calc    = &_nc_transfer_func_eh_no_baryon_calc;
@@ -165,19 +165,18 @@ _nc_transfer_func_eh_no_baryon_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
   const gdouble h2     = h * h;
   const gdouble wb     = nc_hicosmo_Omega_b0 (cosmo) * h2;
   const gdouble wm     = nc_hicosmo_Omega_m0 (cosmo) * h2;
-  const gdouble wm_h   = wm / h;
   const gdouble wb_wm  = wb / wm;
   const gdouble wb_wm2 = wb_wm * wb_wm;
-  const gdouble wb_3_4 = pow(wb, 0.75);
+  const gdouble wb_3_4 = pow (wb, 0.75);
 
   const gdouble c2_2       = c2 * c2;
   const gdouble s          = 44.5 * log (9.83 / wm) / sqrt (1.0 + 10.0 * wb_3_4);
   const gdouble alphaGamma = 1.0 - 0.328 * log (431.0 * wm) * wb_wm + 0.38 * log (22.3 * wm) * wb_wm2;
 
-  self->c2_2       = c2_2; 
-  self->h        = h;
-  self->wm_h     = wm_h;
-  self->s        = s;
+  self->c2_2       = c2_2;
+  self->h          = h;
+  self->wm         = wm;
+  self->s          = s;
   self->alphaGamma = alphaGamma;
 
 /*  printf("s = %g\n, alphaGamma = %g\n", self->s, self->alphaGamma); */
@@ -189,15 +188,14 @@ _nc_transfer_func_eh_no_baryon_calc (NcTransferFunc *tf, gdouble kh)
   NcTransferFuncEHNoBaryon *tf_eh              = NC_TRANSFER_FUNC_EH_NO_BARYON (tf);
   NcTransferFuncEHNoBaryonPrivate * const self = nc_transfer_func_eh_no_baryon_get_instance_private (tf_eh);
 
-  const gdouble k     = kh * self->h;
-  const gdouble gamma = self->wm_h * (self->alphaGamma + (1.0 - self->alphaGamma) / (1.0 + pow(0.43 * k * self->s, 4))); 
+  const gdouble k         = kh * self->h; /* [Mpc^-1] */
+  const gdouble Gamma_eff = self->wm * (self->alphaGamma + (1.0 - self->alphaGamma) / (1.0 + pow (0.43 * k * self->s, 4)));
+  const gdouble q         = k * self->c2_2 / Gamma_eff;
+  const gdouble q2        = q * q;
+  const gdouble Lo        = log (2.0 * M_E + 1.8 * q);
+  const gdouble Co        = 14.2 + 731.0 / (1.0 + 62.5 * q);
+  const gdouble To        = Lo / (Lo + Co * q2);
 
-  const gdouble q        = k * self->c2_2 / gamma;
-  const gdouble q2       = q * q;
-  const gdouble Lo       = log (2.0 * M_E + 1.8 * q);
-  const gdouble Co        = 14.2 + 731.0 / (1.0 + 62.5 * q); 
-  const gdouble To       = Lo / (Lo + Co * q2);
- 
   return To;
 }
 
