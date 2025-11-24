@@ -27,7 +27,6 @@
 /**
  * NcHaloCMDiemer15:
  *
- *
  * Class defining the Diemer & Kravtsov 2015 concentration-mass relation.
  * FIXME include reference and equation
  *
@@ -40,6 +39,8 @@
 
 /* #include "nc_enum_types.h" */
 #include "lss/nc_halo_cm_diemer15.h"
+#include "nc_powspec_ml_transfer.h"
+#include "lss/nc_transfer_func_eh_no_baryon.h"
 #include <math.h>
 #include <gsl/gsl_math.h>
 
@@ -47,6 +48,8 @@ typedef struct _NcHaloCMDiemer15Private
 {
   gdouble Delta;
   NcHaloMassSummaryMassDef mdef;
+  NcHaloMassFunction *mfp;
+  NcmPowspec *powspec;
 
   gdouble (*concentration) (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z);
 } NcHaloCMDiemer15Private;
@@ -54,15 +57,12 @@ typedef struct _NcHaloCMDiemer15Private
 struct _NcHaloCMDiemer15
 {
   NcHaloMassSummary parent_instance;
-  NcHaloMassFunction *mfp;
-  NcmPowspecFilter *psf;
-  NcmPowspec *powspec;
-  NcmModel *model;
 };
 
 enum
 {
   PROP_0,
+  PROP_MFP,
   PROP_LEN,
 };
 
@@ -75,16 +75,28 @@ static void
 nc_halo_cm_diemer15_init (NcHaloCMDiemer15 *hcmdk)
 {
   NcHaloCMDiemer15Private * const self = nc_halo_cm_diemer15_get_instance_private (hcmdk);
+  NcTransferFunc *tf                   = nc_transfer_func_eh_no_baryon_new ();
+  NcPowspecMLTransfer *ps_mlt          = nc_powspec_ml_transfer_new (tf);
 
-  self->Delta = 0.0;
-  self->mdef  = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
+  self->Delta   = 0.0;
+  self->mdef    = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
+  self->mfp     = NULL;
+  self->powspec = NCM_POWSPEC (ps_mlt);
 
   self->concentration = NULL;
+
+  nc_transfer_func_free (tf);
 }
 
 static void
 _nc_halo_cm_diemer15_dispose (GObject *object)
 {
+  NcHaloCMDiemer15 *hcmdk              = NC_HALO_CM_DIEMER15 (object);
+  NcHaloCMDiemer15Private * const self = nc_halo_cm_diemer15_get_instance_private (hcmdk);
+
+  nc_halo_mass_function_clear (&self->mfp);
+  ncm_powspec_clear (&self->powspec);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_halo_cm_diemer15_parent_class)->dispose (object);
 }
@@ -101,17 +113,71 @@ static void _nc_halo_cm_diemer15_set_Delta (NcHaloMassSummary *hms, gdouble Delt
 static void _nc_halo_cm_diemer15_set_mdef (NcHaloMassSummary *hms, NcHaloMassSummaryMassDef mdef);
 
 static void
+_nc_halo_cm_diemer15_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcHaloCMDiemer15 *hcmdk              = NC_HALO_CM_DIEMER15 (object);
+  NcHaloCMDiemer15Private * const self = nc_halo_cm_diemer15_get_instance_private (hcmdk);
+
+  g_return_if_fail (NC_IS_HALO_CM_DIEMER15 (object));
+
+  switch (prop_id)
+  {
+    case PROP_MFP:
+      nc_halo_mass_function_clear (&self->mfp);
+      self->mfp = g_value_dup_object (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_halo_cm_diemer15_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcHaloCMDiemer15 *hcmdk              = NC_HALO_CM_DIEMER15 (object);
+  NcHaloCMDiemer15Private * const self = nc_halo_cm_diemer15_get_instance_private (hcmdk);
+
+  g_return_if_fail (NC_IS_HALO_CM_DIEMER15 (object));
+
+  switch (prop_id)
+  {
+    case PROP_MFP:
+      g_value_set_object (value, self->mfp);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
 nc_halo_cm_diemer15_class_init (NcHaloCMDiemer15Class *klass)
 {
   GObjectClass *object_class        = G_OBJECT_CLASS (klass);
   NcHaloMassSummaryClass *hms_class = NC_HALO_MASS_SUMMARY_CLASS (klass);
   NcmModelClass *model_class        = NCM_MODEL_CLASS (klass);
 
-  object_class->dispose  = &_nc_halo_cm_diemer15_dispose;
-  object_class->finalize = &_nc_halo_cm_diemer15_finalize;
+  object_class->set_property = &_nc_halo_cm_diemer15_set_property;
+  object_class->get_property = &_nc_halo_cm_diemer15_get_property;
+  object_class->dispose      = &_nc_halo_cm_diemer15_dispose;
+  object_class->finalize     = &_nc_halo_cm_diemer15_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Diemer & Kravtsov (2015) concentration-mass relation", "CM_DIEMER15");
   ncm_model_class_add_params (model_class, NC_HALO_CM_DIEMER15_LOCAL_SPARAM_LEN, 0, PROP_LEN);
+
+  /**
+   * NcHaloCMDiemer15:mass-function:
+   *
+   * The halo mass function object.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_MFP,
+                                   g_param_spec_object ("mass-function",
+                                                        NULL,
+                                                        "Halo mass function",
+                                                        NC_TYPE_HALO_MASS_FUNCTION,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcHaloCMDiemer15:log10MDelta:
@@ -155,7 +221,7 @@ _nc_halo_cm_diemer15_mass (NcHaloMassSummary *hms)
 static gdouble
 _nc_halo_cm_diemer15_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
-  NcHaloCMDiemer15 *hcmdk               = NC_HALO_CM_DIEMER15 (hms);
+  NcHaloCMDiemer15 *hcmdk              = NC_HALO_CM_DIEMER15 (hms);
   NcHaloCMDiemer15Private * const self = nc_halo_cm_diemer15_get_instance_private (hcmdk);
 
   return self->concentration (hms, cosmo, z);
@@ -174,33 +240,36 @@ _nc_halo_cm_diemer15_set_Delta (NcHaloMassSummary *hms, gdouble Delta)
   self->Delta = Delta;
 }
 
-static gdouble _dlnpk_dlnk (NcHaloMassSummary *hms, gdouble z, gdouble k_R)
+static gdouble
+_dlnpk_dlnk (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z, gdouble k_R)
 {
-  NcHaloCMDiemer15 *hcmdk = NC_HALO_CM_DIEMER15 (hms);
-  gdouble ln_kR_plus      = log (ncm_powspec_eval (hcmdk->powspec, hcmdk->model, z, k_R + 1E-5));
-  gdouble ln_kR_minus     = log (ncm_powspec_eval (hcmdk->powspec, hcmdk->model, z, k_R - 1E-5));
-  gdouble ln_k_plus       = log (k_R + 1E-5);
-  gdouble ln_k_minus      = log (k_R - 1E-5);
+  NcHaloCMDiemer15 *hcmdk              = NC_HALO_CM_DIEMER15 (hms);
+  NcHaloCMDiemer15Private * const self = nc_halo_cm_diemer15_get_instance_private (hcmdk);
+  const gdouble Pk                     = ncm_powspec_eval (self->powspec, NCM_MODEL (cosmo), z, k_R);
+  const gdouble dPk_dk                 = ncm_powspec_deriv_k (self->powspec, NCM_MODEL (cosmo), z, k_R);
 
-  return (ln_kR_plus - ln_kR_minus) / (ln_k_plus - ln_k_minus);
+  return k_R * dPk_dk / Pk;
 }
 
 static gdouble
 _nc_halo_cm_diemer15_concentration_critical (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
-  
-  NcHaloCMDiemer15 *hcmdk = NC_HALO_CM_DIEMER15 (hms);
-  gdouble mass            = _nc_halo_cm_diemer15_mass (hms);
-  gdouble R               = exp(nc_halo_mass_function_lnM_to_lnR (hcmdk->mfp, cosmo, log(mass))) * 0.69;
-  gdouble k_R             = 2.0 * M_PI / R;
-  gdouble cmin            = 6.58 + 1.27 * _dlnpk_dlnk (hms, z, k_R);
-  gdouble nmin            = 7.28 + 1.56 * _dlnpk_dlnk (hms, z, k_R);
-  gdouble sigma           = ncm_powspec_filter_eval_sigma (hcmdk->psf, z, R);
-  gdouble nu              = 1.686 / sigma;
+  NcHaloCMDiemer15 *hcmdk              = NC_HALO_CM_DIEMER15 (hms);
+  NcHaloCMDiemer15Private * const self = nc_halo_cm_diemer15_get_instance_private (hcmdk);
 
-  return cmin * 0.5 * (pow((nmin/nu), 1.08) + pow(nu/nmin, 1.77));
+  nc_halo_mass_function_prepare_if_needed (self->mfp, cosmo);
+
+  const gdouble mass  = _nc_halo_cm_diemer15_mass (hms);
+  const gdouble lnM   = log (mass);
+  const gdouble sigma = nc_halo_mass_function_sigma_lnM (self->mfp, cosmo, lnM, z);
+  const gdouble R     = exp (nc_halo_mass_function_lnM_to_lnR (self->mfp, cosmo, lnM)) * 0.69;
+  const gdouble k_R   = 2.0 * M_PI / R;
+  const gdouble cmin  = 6.58 + 1.27 * _dlnpk_dlnk (hms, cosmo, z, k_R);
+  const gdouble nmin  = 7.28 + 1.56 * _dlnpk_dlnk (hms, cosmo, z, k_R);
+  const gdouble nu    = 1.686 / sigma;
+
+  return cmin * 0.5 * (pow ((nmin / nu), 1.08) + pow (nu / nmin, 1.77));
 }
-
 
 static void
 _nc_halo_cm_diemer15_set_mdef (NcHaloMassSummary *hms, NcHaloMassSummaryMassDef mdef)
@@ -240,9 +309,9 @@ NcHaloCMDiemer15 *
 nc_halo_cm_diemer15_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta)
 {
   NcHaloCMDiemer15 *hcmdk = g_object_new (NC_TYPE_HALO_CM_DIEMER15,
-                                        "mass-def", mdef,
-                                        "Delta",    Delta,
-                                        NULL);
+                                          "mass-def", mdef,
+                                          "Delta",    Delta,
+                                          NULL);
 
   return hcmdk;
 }
@@ -286,5 +355,22 @@ void
 nc_halo_cm_diemer15_clear (NcHaloCMDiemer15 **hcmdk)
 {
   g_clear_object (hcmdk);
+}
+
+/**
+ * nc_halo_cm_diemer15_prepare:
+ * @hcmdk: a #NcHaloCMDiemer15
+ * @cosmo: a #NcHICosmo
+ *
+ * Prepares the object with the cosmology model.
+ *
+ */
+void
+nc_halo_cm_diemer15_prepare (NcHaloCMDiemer15 *hcmdk, NcHICosmo *cosmo)
+{
+  NcHaloCMDiemer15Private * const self = nc_halo_cm_diemer15_get_instance_private (hcmdk);
+
+  if (self->powspec != NULL)
+    ncm_powspec_prepare_if_needed (self->powspec, NCM_MODEL (cosmo));
 }
 

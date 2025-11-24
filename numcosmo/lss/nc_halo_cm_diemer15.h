@@ -4,7 +4,7 @@
  *            nc_halo_cm_diemer15.h
  *
  *  Wed Jun 11 16:13:15 2025
- *  Copyright  2025  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br> 
+ *  Copyright  2025  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br>
  ****************************************************************************/
 /*
  * nc_halo_cm_diemer15.h
@@ -35,6 +35,7 @@
 #include <numcosmo/math/ncm_powspec_filter.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
 #include <numcosmo/lss/nc_halo_mass_summary.h>
+#include <numcosmo/nc_hicosmo.h>
 
 
 G_BEGIN_DECLS
@@ -48,7 +49,7 @@ G_DECLARE_FINAL_TYPE (NcHaloCMDiemer15, nc_halo_cm_diemer15, NC, HALO_CM_DIEMER1
  * @NC_HALO_CM_DIEMER15_LOG10M_DELTA: halo mass $\log_{10}(M_\Delta)$
  *
  * Fundamental parametrization of the profile $\rho(r)$.
- * The halo mass is a paremeter while the concentration is given by the 
+ * The halo mass is a paremeter while the concentration is given by the
  *  Diemer & Kravtsov (2015) concentration-mass relation.
  *
  */
@@ -66,6 +67,8 @@ NcHaloCMDiemer15 *nc_halo_cm_diemer15_ref (NcHaloCMDiemer15 *hcmdk);
 
 void nc_halo_cm_diemer15_free (NcHaloCMDiemer15 *hcmdk);
 void nc_halo_cm_diemer15_clear (NcHaloCMDiemer15 **hcmdk);
+
+void nc_halo_cm_diemer15_prepare (NcHaloCMDiemer15 *hcmdk, NcHICosmo *cosmo);
 
 #define NC_HALO_CM_DIEMER15_DEFAULT_LOG10M_DELTA (log10 (2.0e14))
 #define NC_HALO_CM_DIEMER15_DEFAULT_PARAMS_ABSTOL (0.0)
