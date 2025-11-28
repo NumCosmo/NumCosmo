@@ -4710,10 +4710,12 @@ class DataClusterMassRich(NumCosmoMath.Data):
         Clusters (halo) ln-mass array
       lnR-cluster -> NcmVector: lnR-cluster
         Clusters (halo) ln-richness array
-      lnM-resample -> NcmVector: lnM-resample
-        Clusters (halo) ln-mass array for resample with rejection
-      z-resample -> NcmVector: z-resample
-        Clusters (halo) redshift array for resample with rejection
+      lnM-original -> NcmVector: lnM-original
+        Clusters (halo) ln-mass array with original data
+      z-original -> NcmVector: z-original
+        Clusters (halo) redshift array with original data
+      lnR-original -> NcmVector: lnR-original
+        Clusters (halo) ln-richness array with original data
 
     Properties from NcmData:
       name -> gchararray: name
@@ -4733,10 +4735,11 @@ class DataClusterMassRich(NumCosmoMath.Data):
 
     class Props:
         lnM_cluster: NumCosmoMath.Vector
-        lnM_resample: NumCosmoMath.Vector
+        lnM_original: NumCosmoMath.Vector
         lnR_cluster: NumCosmoMath.Vector
+        lnR_original: NumCosmoMath.Vector
         z_cluster: NumCosmoMath.Vector
-        z_resample: NumCosmoMath.Vector
+        z_original: NumCosmoMath.Vector
         bootstrap: NumCosmoMath.Bootstrap
         desc: str
         init: bool
@@ -4747,10 +4750,11 @@ class DataClusterMassRich(NumCosmoMath.Data):
     def __init__(
         self,
         lnM_cluster: NumCosmoMath.Vector = ...,
-        lnM_resample: NumCosmoMath.Vector = ...,
+        lnM_original: NumCosmoMath.Vector = ...,
         lnR_cluster: NumCosmoMath.Vector = ...,
+        lnR_original: NumCosmoMath.Vector = ...,
         z_cluster: NumCosmoMath.Vector = ...,
-        z_resample: NumCosmoMath.Vector = ...,
+        z_original: NumCosmoMath.Vector = ...,
         bootstrap: NumCosmoMath.Bootstrap = ...,
         desc: str = ...,
         init: bool = ...,
