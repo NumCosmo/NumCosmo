@@ -66,9 +66,9 @@ typedef void (*NcmStatsVecUpdateFunc) (NcmStatsVec *svec, const gdouble w, NcmVe
 /**
  * NcmStatsVecARType:
  * @NCM_STATS_VEC_AR_NONE: Calculates using the required order.
- * @NCM_STATS_VEC_AR_FPE: Uses the FPE criterium to choose the ar order.
- * @NCM_STATS_VEC_AR_AIC: Uses the AIC criterium to choose the ar order.
- * @NCM_STATS_VEC_AR_AICC: Uses the AICc criterium to choose the ar order.
+ * @NCM_STATS_VEC_AR_FPE: Uses the FPE criterion to choose the ar order.
+ * @NCM_STATS_VEC_AR_AIC: Uses the AIC criterion to choose the ar order.
+ * @NCM_STATS_VEC_AR_AICC: Uses the AICc criterion to choose the ar order.
  *
  * FIXME
  *

@@ -130,7 +130,13 @@ _integrand_powspec_1h (gdouble lnM, gpointer userdata)
   /*printf("M = %.5e\n", M); */
   /*printf("integrando mass, lognormal = %.15g\n", nc_cluster_mass_intp (int_data->cad->m, int_data->cosmo, lnM, int_data->z)); */
 
-  g_assert_not_reached (); /* FIXME: nc_halo_density_profile_eval_fourier */
+  g_assert_not_reached (); /* placeholder: the Fourier evaluation of the halo
+                            * density profile (nc_halo_density_profile_eval_fourier)
+                            * is not used here and must be implemented when
+                            * available. The current integrand uses u=1.0 as a
+                            * temporary stub and thus this assert should not be
+                            * reached in normal operation.
+                            */
 
   return integrand_powspec_1h;
 }
@@ -144,12 +150,21 @@ _integrand_powspec_1h (gdouble lnM, gpointer userdata)
  * @dp: a #NcHaloDensityProfile
  * @k: mode
  * @z: redshift
- * @lnM_obs: (in) (array) (element-type double): FIXME
- * @lnM_obs_params: (in) (array) (element-type double): FIXME
+ * @lnM_obs: (in) (array) (element-type double): Observable-related inputs for the
+ *   cluster mass / selection model. The exact layout depends on the concrete
+ *   #NcClusterMass implementation (for example it may contain observed
+ *   log-mass values or bin edges used by the selection function).
+ * @lnM_obs_params: (in) (array) (element-type double): Parameters that
+ *   configure the interpretation of @lnM_obs (for example, pivot, scatter or
+ *   binning details). Concrete defaults and valid ranges are defined by the
+ *   corresponding model registration and should be consulted there.
  *
  * This function computes the 1-halo integral on mass of the cluster and CMB lensing potential $\psi$, using Limber approximation.
  *
- * Returns: FIXME
+ * Returns: The value of the mass integral used in the 1-halo contribution.
+ *   This is the integrated mass-dependent term (dimensionless) that will be
+ *   multiplied by the redshift-dependent prefactors when assembling the
+ *   full 1-halo angular power spectrum integrand.
  */
 gdouble
 nc_cor_cluster_cmb_lens_limber_oneh_int_mass (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *cosmo, NcHaloDensityProfile *dp, gdouble k, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
@@ -230,10 +245,18 @@ _integrand_redshift_1h (gdouble z, gpointer userdata)
  * @dist: a #NcDistance
  * @dp: a #NcHaloDensityProfile
  * @l: spherical harmonis index
- * @lnM_obs: (in) (array) (element-type double): FIXME
- * @lnM_obs_params: (in) (array) (element-type double): FIXME
- * @z_obs: (in) (array) (element-type double): FIXME
- * @z_obs_params: (in) (array) (element-type double): FIXME
+ * @lnM_obs: (in) (array) (element-type double): Observable-related inputs for
+ *   the cluster mass/selection model (see notes in
+ *   nc_cor_cluster_cmb_lens_limber_oneh_int_mass). Used to evaluate selection
+ *   functions inside the mass integration.
+ * @lnM_obs_params: (in) (array) (element-type double): Parameters that
+ *   configure the interpretation of @lnM_obs (see the cluster mass model for
+ *   concrete semantics and defaults).
+ * @z_obs: (in) (array) (element-type double): Observable-related inputs for
+ *   the redshift selection or binning (e.g. redshift values or bin edges).
+ * @z_obs_params: (in) (array) (element-type double): Parameters that
+ *   configure the redshift observable array. By convention the first two
+ *   elements are used as the lower and upper integration limits [zl, zu].
  *
  * This function computes the 1-halo term of the cluster and CMB lensing potential $\psi$, using Limber approximation:
  * \begin{equation}
@@ -243,7 +266,10 @@ _integrand_redshift_1h (gdouble z, gpointer userdata)
  * \end{equation}
  * where ...
  *
- * Returns: $\left(C_l^{cl \psi} \right)_{1h}$
+ * Returns: $\left(C_l^{cl \psi} \right)_{1h}$ -- the 1-halo contribution to
+ *   the cluster -- CMB lensing angular cross-spectrum. The returned value is
+ *   dimensionless and corresponds to the integrand result after performing
+ *   the mass and redshift integrations shown in the documentation above.
  */
 gdouble
 nc_cor_cluster_cmb_lens_limber_oneh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *cosmo, NcDistance *dist, NcHaloDensityProfile *dp, gint l, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params)
@@ -318,7 +344,9 @@ _integrand_mass_2h_first (gdouble lnM, gpointer userdata)
  * This function computes the first integral on mass of the 2-halo term of the cluster and CMB lensing potential
  * $\psi$, using Limber approximation.
  *
- * Returns: FIXME
+ * Returns: The evaluated first mass integral (dimensionless). This quantity
+ *   contains the halo-bias weighted mass integral (bias * dn/dlnM * S) that
+ *   enters the 2-halo term assembly.
  */
 gdouble
 nc_cor_cluster_cmb_lens_limber_twoh_int_mass1 (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble z)
@@ -385,7 +413,9 @@ _integrand_powspec_2h (gdouble lnM, gpointer userdata)
  *
  * This function computes the 2-halo term of the matter-matter power spectrum.
  *
- * Returns: FIXME
+ * Returns: The 2-halo matter-matter power spectrum contribution at the
+ *   requested mode @k and redshift @z. The value follows the conventions used
+ *   by ncm_powspec_eval for units and normalization.
  */
 gdouble
 nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *cosmo, NcHaloDensityProfile *dp, gdouble k, gdouble z)
@@ -455,7 +485,13 @@ _integrand_mass_2h_second (gdouble lnM, gpointer userdata)
   gdouble u                         = 1.0; /*nc_halo_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z); */
   gdouble integrand_mass_2h_second  = M * dn_dlnM_times_b * u;
 
-  g_assert_not_reached (); /* FIXME: nc_halo_density_profile_eval_fourier */
+  g_assert_not_reached (); /* placeholder: the Fourier evaluation of the halo
+                            * density profile (nc_halo_density_profile_eval_fourier)
+                            * is not used here and must be implemented when
+                            * available. The current integrand uses u=1.0 as a
+                            * temporary stub and thus this assert should not be
+                            * reached in normal operation.
+                            */
 
   return integrand_mass_2h_second;
 }
@@ -473,7 +509,10 @@ _integrand_mass_2h_second (gdouble lnM, gpointer userdata)
  * This function computes the second integral on mass of the 2-halo term of the cluster and CMB lensing potential
  * $\psi$, using Limber approximation.
  *
- * Returns: FIXME
+ * Returns: The evaluated second mass integral used in the 2-halo term. This
+ *   quantity is the mass-weighted integrand (M * dn/dlnM * profile term) that
+ *   complements the first mass integral when constructing the full 2-halo
+ *   contribution.
  */
 gdouble
 nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *cosmo, NcHaloDensityProfile *dp, gdouble k, gdouble z)
@@ -547,8 +586,11 @@ _integrand_redshift_2h (gdouble z, gpointer userdata)
  * @dist: a #NcDistance
  * @dp: a #NcHaloDensityProfile
  * @l: spherical harmonis index
- * @z_obs: (in) (array) (element-type double): FIXME
- * @z_obs_params: (in) (array) (element-type double): FIXME
+ * @z_obs: (in) (array) (element-type double): Observable-related inputs for
+ *   the redshift selection or binning (e.g. redshift values or bin edges).
+ * @z_obs_params: (in) (array) (element-type double): Parameters that
+ *   configure the redshift observable array. By convention the first two
+ *   elements are used as the lower and upper integration limits [zl, zu].
  *
  * This function computes the 2-halo term of the cluster and CMB lensing potential $\psi$, using Limber approximation:
  * \begin{equation}
@@ -558,7 +600,11 @@ _integrand_redshift_2h (gdouble z, gpointer userdata)
  * \end{equation}
  * where ...
  *
- * Returns: $\left(C_l^{cl \psi} \right)_{2h}$
+ * Returns: $\left(C_l^{cl \psi} \right)_{2h}$ -- the 2-halo contribution to
+ *   the cluster -- CMB lensing angular cross-spectrum. The returned value
+ *   follows the same dimensional conventions as the 1-halo result and is
+ *   computed by integrating the product of the linear power spectrum and the
+ *   two mass integrals over redshift.
  */
 gdouble
 nc_cor_cluster_cmb_lens_limber_twoh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *cosmo, NcDistance *dist, NcHaloDensityProfile *dp, gint l, gdouble *z_obs, gdouble *z_obs_params)

@@ -304,13 +304,12 @@ ncm_fit_mcbs_set_rng (NcmFitMCBS *mcbs, NcmRNG *rng)
  * @mtype: a #NcmFitRunMsgs
  * @bsmt: number of threads to be used in the bootstrap analysis
  *
- * Runs the Monte Carlo and bootstrap analysis.
- * The results are stored in the catalog of @mcbs.
- * The catalog is cleared before the analysis.
+ * Runs the Monte Carlo and bootstrap analysis. The results are stored in the catalog
+ * of @mcbs. The catalog is cleared before the analysis.
  *
- * Note: Multi-threading for bootstrap analysis (@bsmt > 0) is currently
- * not fully supported and may produce incorrect results. Use @bsmt = 0
- * for reliable single-threaded execution.
+ * Note: Multi-threading for bootstrap analysis (@bsmt > 0) is currently not fully
+ * supported and may produce incorrect results. Use @bsmt = 0 for reliable
+ * single-threaded execution.
  *
  */
 void

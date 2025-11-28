@@ -31,7 +31,7 @@
  * The thermal Sunyaev Zel'dovich (tSZ) effect is a modification in the observed
  * temperature of the cosmic microwave background (CMB) due to the inverse Compton
  * scattering of CMB photons with high-energy electrons along the line-of-sight. These
- * electrons are present in the intracluster medium (ICM) of galaxy clusters, for
+ * electrons are present in the intra-cluster medium (ICM) of galaxy clusters, for
  * example.
  *
  * ## Compton-y parameter
@@ -151,9 +151,11 @@ nc_xcor_limber_kernel_tsz_class_init (NcXcorLimberKerneltSZClass *klass)
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
 
   /**
-   * NcXcorLimberKerneltSZ:zmax:
+   * NcXcorLimberKerneltSZ:noise:
    *
-   * FIXME Set correct values (limits)
+   * Constant noise level for the thermal Sunyaev-Zel'dovich power spectrum.
+   * This represents instrumental and systematic noise contributions.
+   * Range: [-10.0, 10.0], typically small positive values.
    */
   g_object_class_install_property (object_class,
                                    PROP_NOISE,

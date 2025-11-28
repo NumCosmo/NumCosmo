@@ -382,9 +382,11 @@ static void _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo);
 /**
  * nc_scalefactor_prepare:
  * @a: a #NcScalefactor
- * @cosmo: FIXME
+ * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Prepares the object @a using the cosmological model @cosmo.
+ * This function computes the scale factor evolution and prepares
+ * internal splines for interpolation.
  *
  */
 void
@@ -402,9 +404,11 @@ nc_scalefactor_prepare (NcScalefactor *a, NcHICosmo *cosmo)
 /**
  * nc_scalefactor_prepare_if_needed:
  * @a: a #NcScalefactor
- * @cosmo: FIXME
+ * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Prepares the object @a using the cosmological model @cosmo if the model
+ * has changed since the last preparation. This function checks if an update
+ * is needed before recomputing the scale factor evolution.
  *
  */
 void

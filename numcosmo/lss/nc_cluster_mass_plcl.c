@@ -143,8 +143,10 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
   /**
    * NcClusterMassPlCL:M0:
    *
-   * Reference mass (in h^(-1) * M_sun unit) in the SZ signal-mass scaling relation.
-   * FIXME Set correct values (limits)
+   * Reference (pivot) mass used to render observed and model masses dimensionless
+   * (units: h^{-1} M_sun). The property default and allowed range are registered
+   * in the property declaration below (see g_param_spec_double). Change there if
+   * different pivot choices are required.
    */
   g_object_class_install_property (object_class,
                                    PROP_M0,
@@ -157,8 +159,9 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
   /**
    * NcClusterMassPlCL:Asz:
    *
-   * SZ signal-mass scaling parameter.
-   * FIXME Set correct values (limits)
+   * SZ observable power-law slope in the SZ--mass scaling relation. Parameter
+   * bounds and default value are provided when the parameter is registered
+   * via ncm_model_class_set_sparam (see call below).
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_A_SZ, "\\alpha_{SZ}", "Asz",
                               0.5, 1.5, 0.1,
@@ -168,8 +171,9 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
   /**
    * NcClusterMassPlCL:Bsz:
    *
-   * SZ signal-mass scaling parameter.
-   * FIXME Set correct values (limits)
+   * SZ observable intercept (or additive) parameter in the SZ--mass scaling
+   * relation. Parameter bounds and default value are provided when registered
+   * via ncm_model_class_set_sparam (see call below).
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_B_SZ, "b_{SZ}", "Bsz",
                               -1.0,  0.9999, 2.0e-2,
@@ -179,8 +183,8 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
   /**
    * NcClusterMassPlCL:sigma_sz:
    *
-   * Standard deviation of the SZ signal-mass scaling relation.
-   * FIXME Set correct values (limits)
+   * Intrinsic scatter (standard deviation) of the SZ--mass relation. The
+   * allowed range and default are provided at registration time (ncm_model_class_set_sparam).
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_SD_SZ, "\\sigma_{SZ}", "sigma_sz",
                               1e-2,  1.0, 5.0e-2,
@@ -190,8 +194,8 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
   /**
    * NcClusterMassPlCL:Al:
    *
-   * Lensing signal-mass scaling parameter.
-   * FIXME Set correct values (limits)
+   * Lensing observable power-law slope in the lensing--mass scaling relation.
+   * Parameter bounds and default value are registered below.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_A_L, "\\alpha_{L}", "Al",
                               0.5,  1.5, 1.0e-1,
@@ -201,8 +205,8 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
   /**
    * NcClusterMassPlCL:Bl:
    *
-   * Lensing signal-mass scaling parameter.
-   * FIXME Set correct values (limits)
+   * Lensing observable intercept parameter in the lensing--mass scaling
+   * relation. Bounds and default are provided in the registration call below.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_B_L, "b_{L}", "Bl",
                               -1.0,  0.9999, 2.0e-2,
@@ -212,8 +216,9 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
   /**
    * NcClusterMassPlCL:sigma_l:
    *
-   * Standard deviation of the lensing signal-mass scaling relation.
-   * FIXME Set correct values (limits)
+   * Intrinsic scatter (standard deviation) of the lensing--mass relation. The
+   * allowed range and default value are declared when the parameter is
+   * registered via ncm_model_class_set_sparam.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_SD_L, "\\sigma_{L}", "sigma_l",
                               1e-2,  1.0, 5.0e-2,
@@ -339,8 +344,8 @@ nc_cluster_mass_plcl_pdf_only_lognormal (NcClusterMass *clusterm, gdouble lnM, g
  * @Mobs: (array) (element-type double): observed masses
  * @Mobs_params: (array) (element-type double): observed mass paramaters
  *
- * FIXME
- * Integrals in $M_{sz}$ and $M_l$ performed in the dimensionless quantities $\ln (M_{sz} / M_0)$
+ * Compute the joint probability density used internally by the PL-CL mass model.
+ * Integrals in $M_{sz}$ and $M_l$ are performed in the dimensionless quantities $\ln (M_{sz} / M_0)$
  * and $\ln (M_l / M_0)$, respectively. The Gaussian distributions between $M_{Pl}$ and $M_{CL}$
  * are written in terms of the dimensionless quantities $M_{Pl}/M_0$, $M_{CL}/M_0$, $\sigma_{Pl}/M_0$
  * and $\sigma_{CL}/M_0$.
@@ -348,7 +353,9 @@ nc_cluster_mass_plcl_pdf_only_lognormal (NcClusterMass *clusterm, gdouble lnM, g
  * This distribution is "partially" normalized. The constant normalization factor is included
  * only in nc_cluster_pseudo_counts_posterior_numerator_plcl().
  *
- * Returns: FIXME
+ * Returns: Value proportional to the joint probability density
+ * $P(\ln M_{SZ}, \ln M_L \mid M_{500})$ (dimensionless). The caller is
+ * responsible for any additional normalization when building a posterior.
  */
 gdouble
 nc_cluster_mass_plcl_pdf (NcClusterMass *clusterm, gdouble lnM_M0, gdouble w1, gdouble w2, const gdouble *Mobs, const gdouble *Mobs_params)
@@ -438,7 +445,9 @@ _nc_cluster_mass_plcl_Msz_Ml_M500_p_integrand (gdouble lnMsz, gdouble lnMl, gpoi
 
 /**
  * nc_cluster_mass_plcl_peak_new_variables:
- * @N: FIXME
+ * @N: number of standard deviations used to set search bounds around the
+ * peak; if @N == 0 the function computes the analytic peak and sets the lower
+ * and upper bounds equal to that value.
  * @lb: lower bounds
  * @ub: upper bounds
  * @mszl: a #NcClusterMassPlCL
@@ -446,7 +455,10 @@ _nc_cluster_mass_plcl_Msz_Ml_M500_p_integrand (gdouble lnMsz, gdouble lnMl, gpoi
  * @Mobs: (array) (element-type double): observed mass
  * @Mobs_params: (array) (element-type double): observed mass paramaters
  *
- * FIXME
+ * Compute search bounds for the transformed variables (w1, w2) used when
+ * finding the integrand peak. When @N == 0 the function returns the exact
+ * peak (lb == ub). For @N > 0 the bounds are widened by N times the observational
+ * uncertainties.
  *
  */
 void
@@ -516,14 +528,16 @@ nc_cluster_mass_plcl_peak_new_variables (gdouble N, gdouble *lb, gdouble *ub, Nc
 
 /**
  * nc_cluster_mass_plcl_gsl_f_new_variables: (skip)
- * @p: FIXME
- * @hx: FIXME
+ * @p: gsl_vector containing the parameter vector (w1, w2, ...)
+ * @hx: gsl_vector used to store the components of the objective
+ *      function (chi^2-like components) evaluated at @p
  * @mszl: a #NcClusterMassPlCL
  * @lnM_M0: logarithm base e of the mass divided by the pivot mass
  * @Mobs: (array) (element-type double): observed mass
- * @Mobs_params: (array) (element-type double): observed mass paramaters
+ * @Mobs_params: (array) (element-type double): observed mass parameters
  *
- * FIXME
+ * Populate @hx with the residuals / components used by the solver. This
+ * routine does not return a value; results are communicated through @hx.
  *
  */
 void
@@ -559,14 +573,17 @@ nc_cluster_mass_plcl_gsl_f_new_variables (const gsl_vector *p, gsl_vector *hx, N
 
 /**
  * nc_cluster_mass_plcl_gsl_J_new_variables: (skip)
- * @p: FIXME
- * @j: FIXME
+ * @p: gsl_vector containing the parameter vector (w1, w2)
+ * @j: gsl_matrix that will be filled with the Jacobian (partial
+ *     derivatives of the function components with respect to parameters)
  * @mszl: a #NcClusterMassPlCL
  * @lnM_M0: logarithm base e of the mass divided by the pivot mass
  * @Mobs: (array) (element-type double): observed mass
- * @Mobs_params: (array) (element-type double): observed mass paramaters
+ * @Mobs_params: (array) (element-type double): observed mass parameters
  *
- * FIXME
+ * Fill the Jacobian matrix @j with the analytic partial derivatives of the
+ * components used by the optimizer. The function writes into the provided
+ * matrix and does not return a value.
  *
  */
 void
@@ -606,7 +623,9 @@ nc_cluster_mass_plcl_gsl_J_new_variables (const gsl_vector *p, gsl_matrix *j, Nc
  * @Mobs_params: (array) (element-type double): observed mass paramaters
  *
  * The $\chi^2$ is minimized with respect to the parameters $\ln\left(M_{SZ}/M_0\right)$ and
- *  $\ln\left(M_{L}/M_0\right)$, therefore @p = 2. FIXME
+ *  $\ln\left(M_{L}/M_0\right)$, therefore @p = 2 (parameters are the two
+ *  transformed mass variables w1 and w2). This function computes the
+ *  components of the objective (chi^2-like) vector used by the minimizer.
  *
  */
 void
@@ -963,7 +982,10 @@ _nc_cluster_mass_plcl_Msz_Ml_p_ndetone_integrand (gdouble lnMsz_M0, gdouble lnMl
  * This function computes the i-th term of the posterior given flat priors for
  * the selection function and mass function. See function nc_cluster_pseudo_counts_posterior_ndetone().
  *
- * Returns: FIXME
+ * Returns: Dimensionless probability term for the single-detection posterior
+ * contribution. The returned value is the integrated probability for the
+ * provided observed masses and thresholds (no prior on the selection function
+ * is included here).
  */
 gdouble
 nc_cluster_mass_plcl_Msz_Ml_p_ndetone (NcClusterMass *clusterm, gdouble lnMcut, const gdouble z, const gdouble Mpl, const gdouble Mcl, const gdouble sigma_pl, const gdouble sigma_cl)

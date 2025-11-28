@@ -234,9 +234,10 @@ _nc_hipert_boltzmann_cbe_get_EB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 /**
  * nc_hipert_boltzmann_cbe_new: (constructor)
  *
- * FIXME
+ * Creates a new #NcHIPertBoltzmannCBE object with default CLASS backend settings.
+ * This object provides the Boltzmann hierarchy solver using the CLASS code.
  *
- * Returns: (transfer full): a new #NcCBEPrecision.
+ * Returns: (transfer full): a new #NcHIPertBoltzmannCBE.
  */
 NcHIPertBoltzmannCBE *
 nc_hipert_boltzmann_cbe_new (void)
@@ -255,7 +256,8 @@ nc_hipert_boltzmann_cbe_new (void)
  * nc_hipert_boltzmann_cbe_full_new: (constructor)
  * @cbe: a #NcCBE.
  *
- * FIXME
+ * Creates a new #NcHIPertBoltzmannCBE object using the provided CLASS backend @cbe.
+ * This allows for custom CLASS configuration and precision settings.
  *
  * Returns: (transfer full): a new #NcHIPertBoltzmannCBE.
  */

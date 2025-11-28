@@ -375,7 +375,9 @@ nc_xcor_limber_kernel_gal_class_init (NcXcorLimberKernelGalClass *klass)
 
   /*
    * Distribution's magnification bias: mag_bias.
-   * FIXME Set correct values (limits)
+   * The magnification bias parameter $s$ in the galaxy kernel, where the magnification
+   * contribution is proportional to $(5s-2)$. Typical values range from 0 to 1.
+   * Range: [-10.0, 10.0], typical values around 0.4-0.6 for flux-limited surveys.
    */
   ncm_model_class_set_sparam (model_class, NC_XCOR_LIMBER_KERNEL_GAL_MAG_BIAS,
                               "mag_bias", "mag_bias",
