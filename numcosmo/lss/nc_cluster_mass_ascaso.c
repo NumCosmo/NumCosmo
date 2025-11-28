@@ -358,7 +358,7 @@ _nc_cluster_mass_ascaso_lnR_sigma (NcClusterMass *clusterm, const gdouble lnM, c
   const gdouble Dln1pz                    = log1p (z) - self->ln1pz0;
 
   lnR[0]   = MU_P0    + MU_P1    * DlnM + MU_P2    * Dln1pz;
-  sigma[0] = SIGMA_P0 + SIGMA_P1 * DlnM + SIGMA_P2 * Dln1pz;
+  sigma[0] = hypot (SIGMA_P0 + SIGMA_P1 * DlnM + SIGMA_P2 * Dln1pz, exp (-0.5 * lnR[0]));
 }
 
 static gdouble
@@ -580,7 +580,7 @@ nc_cluster_mass_ascaso_get_mean_richness (NcClusterMassAscaso *ascaso, gdouble l
   const gdouble DlnM                      = lnM - self->lnM0;
   const gdouble Dln1pz                    = log1p (z) - self->ln1pz0;
 
-  return MU_P0    + MU_P1    * DlnM + MU_P2    * Dln1pz;
+  return MU_P0 + MU_P1 * DlnM + MU_P2 * Dln1pz;
 }
 
 /**
@@ -599,8 +599,9 @@ nc_cluster_mass_ascaso_get_std_richness (NcClusterMassAscaso *ascaso, gdouble ln
   const gdouble DlnM                      = lnM - self->lnM0;
   const gdouble Dln1pz                    = log1p (z) - self->ln1pz0;
   const gdouble sigma                     = SIGMA_P0 + SIGMA_P1 * DlnM + SIGMA_P2 * Dln1pz;
+  const gdouble mean                      = nc_cluster_mass_ascaso_get_mean_richness (ascaso, lnM, z);
 
-  return sqrt (sigma * sigma + 1.0e-6);
+  return hypot (sigma, exp (-0.5 * mean));
 }
 
 /**
