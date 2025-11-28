@@ -54,8 +54,9 @@ typedef struct _NcDataClusterMassRichPrivate
   NcmVector *z_cluster;
   NcmVector *lnM_cluster;
   NcmVector *lnR_cluster;
-  NcmVector *lnM_resample;
-  NcmVector *z_resample;
+  NcmVector *lnM_original;
+  NcmVector *z_original;
+  NcmVector *lnR_original;
 } NcDataClusterMassRichPrivate;
 
 enum
@@ -64,8 +65,9 @@ enum
   PROP_Z_CLUSTER,
   PROP_LNM_CLUSTER,
   PROP_LNR_CLUSTER,
-  PROP_LNM_RESAMPLE,
-  PROP_Z_RESAMPLE,
+  PROP_LNM_ORIGINAL,
+  PROP_Z_ORIGINAL,
+  PROP_LNR_ORIGINAL,
   PROP_SIZE,
 };
 
@@ -84,8 +86,9 @@ nc_data_cluster_mass_rich_init (NcDataClusterMassRich *dmr)
   self->z_cluster    = NULL;
   self->lnM_cluster  = NULL;
   self->lnR_cluster  = NULL;
-  self->lnM_resample = NULL;
-  self->z_resample   = NULL;
+  self->lnM_original = NULL;
+  self->z_original   = NULL;
+  self->lnR_original = NULL;
 }
 
 static void
@@ -126,11 +129,14 @@ nc_data_cluster_mass_rich_set_property (GObject *object, guint prop_id, const GV
     case PROP_LNR_CLUSTER:
       _nc_data_cluster_mass_rich_set_vector (&self->lnR_cluster, value);
       break;
-    case PROP_LNM_RESAMPLE:
-      _nc_data_cluster_mass_rich_set_vector (&self->lnM_resample, value);
+    case PROP_LNM_ORIGINAL:
+      _nc_data_cluster_mass_rich_set_vector (&self->lnM_original, value);
       break;
-    case PROP_Z_RESAMPLE:
-      _nc_data_cluster_mass_rich_set_vector (&self->z_resample, value);
+    case PROP_Z_ORIGINAL:
+      _nc_data_cluster_mass_rich_set_vector (&self->z_original, value);
+      break;
+    case PROP_LNR_ORIGINAL:
+      _nc_data_cluster_mass_rich_set_vector (&self->lnR_original, value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -157,11 +163,14 @@ nc_data_cluster_mass_rich_get_property (GObject *object, guint prop_id, GValue *
     case PROP_LNR_CLUSTER:
       g_value_set_object (value, self->lnR_cluster);
       break;
-    case PROP_LNM_RESAMPLE:
-      g_value_set_object (value, self->lnM_resample);
+    case PROP_LNM_ORIGINAL:
+      g_value_set_object (value, self->lnM_original);
       break;
-    case PROP_Z_RESAMPLE:
-      g_value_set_object (value, self->z_resample);
+    case PROP_Z_ORIGINAL:
+      g_value_set_object (value, self->z_original);
+      break;
+    case PROP_LNR_ORIGINAL:
+      g_value_set_object (value, self->lnR_original);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -178,8 +187,9 @@ nc_data_cluster_mass_rich_dispose (GObject *object)
   ncm_vector_clear (&self->z_cluster);
   ncm_vector_clear (&self->lnM_cluster);
   ncm_vector_clear (&self->lnR_cluster);
-  ncm_vector_clear (&self->lnM_resample);
-  ncm_vector_clear (&self->z_resample);
+  ncm_vector_clear (&self->lnM_original);
+  ncm_vector_clear (&self->z_original);
+  ncm_vector_clear (&self->lnR_original);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_mass_rich_parent_class)->dispose (object);
@@ -234,18 +244,25 @@ nc_data_cluster_mass_rich_class_init (NcDataClusterMassRichClass *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_LNM_RESAMPLE,
-                                   g_param_spec_object ("lnM-resample",
+                                   PROP_LNM_ORIGINAL,
+                                   g_param_spec_object ("lnM-original",
                                                         NULL,
-                                                        "Clusters (halo) ln-mass array for resample with rejection",
+                                                        "Clusters (halo) ln-mass array with original data",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
-                                   PROP_Z_RESAMPLE,
-                                   g_param_spec_object ("z-resample",
+                                   PROP_Z_ORIGINAL,
+                                   g_param_spec_object ("z-original",
                                                         NULL,
-                                                        "Clusters (halo) redshift array for resample with rejection",
+                                                        "Clusters (halo) redshift array with original data",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_LNR_ORIGINAL,
+                                   g_param_spec_object ("lnR-original",
+                                                        NULL,
+                                                        "Clusters (halo) ln-richness array with original data",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -263,7 +280,7 @@ _nc_data_cluster_mass_rich_get_length (NcmData *data)
   NcDataClusterMassRich *dmr                = NC_DATA_CLUSTER_MASS_RICH (data);
   NcDataClusterMassRichPrivate * const self = nc_data_cluster_mass_rich_get_instance_private (dmr);
 
-  if (self->z_resample == NULL)
+  if (self->z_original == NULL)
     g_error ("nc_data_cluster_mass_rich_get_length: sample data not set, "
              "the object must be initialized calling nc_data_cluster_mass_rich_set_data().");
 
@@ -453,17 +470,19 @@ nc_data_cluster_mass_rich_set_data (NcDataClusterMassRich *dmr, NcmVector *lnM, 
     return;
   }
 
-  ncm_vector_clear (&self->z_resample);
-  ncm_vector_clear (&self->lnM_resample);
+  ncm_vector_clear (&self->z_original);
+  ncm_vector_clear (&self->lnM_original);
   ncm_vector_clear (&self->z_cluster);
   ncm_vector_clear (&self->lnM_cluster);
   ncm_vector_clear (&self->lnR_cluster);
 
-  self->z_resample   = ncm_vector_dup (z);
-  self->lnM_resample = ncm_vector_dup (lnM);
-  self->z_cluster    = ncm_vector_dup (z);
-  self->lnM_cluster  = ncm_vector_dup (lnM);
-  self->lnR_cluster  = ncm_vector_dup (lnR);
+  self->z_original   = ncm_vector_dup (z);
+  self->lnM_original = ncm_vector_dup (lnM);
+  self->lnR_original = ncm_vector_dup (lnR);
+
+  self->z_cluster   = ncm_vector_dup (z);
+  self->lnM_cluster = ncm_vector_dup (lnM);
+  self->lnR_cluster = ncm_vector_dup (lnR);
 
   ncm_data_set_init (NCM_DATA (dmr), TRUE);
 }
@@ -475,7 +494,7 @@ _nc_data_cluster_mass_rich_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   NcDataClusterMassRichPrivate * const self = nc_data_cluster_mass_rich_get_instance_private (dmr);
   NcHICosmo *cosmo                          = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcClusterMass *clusterm                   = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-  guint np                                  = ncm_vector_len (self->z_resample);
+  guint np                                  = ncm_vector_len (self->z_original);
   GArray *lnM_array                         = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), np);
   GArray *z_array                           = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), np);
   GArray *lnR_array                         = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), np);
@@ -487,16 +506,20 @@ _nc_data_cluster_mass_rich_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
   for (i = 0; i < np; i++)
   {
-    lnM = ncm_vector_get (self->lnM_resample, i);
-    z   = ncm_vector_get (self->z_resample, i);
+    lnM = ncm_vector_get (self->lnM_original, i);
+    z   = ncm_vector_get (self->z_original, i);
 
     if (nc_cluster_mass_ascaso_get_enable_rejection (ascaso))
     {
-      if (nc_cluster_mass_resample (clusterm,  cosmo, lnM, z, &lnR, NULL, rng))
+      while (TRUE)
       {
-        g_array_append_val (lnM_array, lnM);
-        g_array_append_val (z_array, z);
-        g_array_append_val (lnR_array, lnR);
+        if (nc_cluster_mass_resample (clusterm,  cosmo, lnM, z, &lnR, NULL, rng))
+        {
+          g_array_append_val (lnM_array, lnM);
+          g_array_append_val (z_array, z);
+          g_array_append_val (lnR_array, lnR);
+          break;
+        }
       }
     }
     else
