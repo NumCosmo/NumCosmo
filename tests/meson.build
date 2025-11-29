@@ -604,6 +604,10 @@ if python_astropy_scipy.found()
             'source': 'test_py_data_dist2d.py',
         },
         {
+            'name': 'py_pln1d',
+            'source': 'test_py_pln1d.py',
+        },
+        {
             'name': 'sky_match',
             'source': 'test_sky_match.py',
             'timeout': 0,

@@ -47,6 +47,7 @@ void test_ncm_mpi_job_fit_basic (void);
 void test_ncm_mpi_job_mcmc_basic (void);
 void test_ncm_mpi_job_feval_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
+void test_ncm_pln1d_basic (void);
 
 void test_nc_data_cluster_mass_rich_basic (void);
 void test_nc_data_cluster_wl_basic (void);
@@ -106,6 +107,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mpi_job_mcmc/basic", test_ncm_mpi_job_mcmc_basic);
   g_test_add_func ("/ncm/mpi_job_feval/basic", test_ncm_mpi_job_feval_basic);
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
+  g_test_add_func ("/ncm/pln1d/basic", test_ncm_pln1d_basic);
 
   g_test_add_func ("/nc/data/cluster_mass_rich/basic", test_nc_data_cluster_mass_rich_basic);
   g_test_add_func ("/nc/data/cluster_wl/basic", test_nc_data_cluster_wl_basic);
@@ -433,6 +435,24 @@ test_ncm_powspec_spline2d_basic (void)
     NCM_TEST_FREE (ncm_powspec_spline2d_free, ps_s2d);
     NCM_TEST_FREE (ncm_spline2d_free, NCM_SPLINE2D (sb2d));
   }
+}
+
+void
+test_ncm_pln1d_basic (void)
+{
+  NcmPLN1D *pln1d = ncm_pln1d_new (60);
+  NcmPLN1D *pln1d2;
+
+  g_assert_true (pln1d != NULL);
+  g_assert_true (NCM_IS_PLN1D (pln1d));
+
+  pln1d2 = ncm_pln1d_ref (pln1d);
+  ncm_pln1d_clear (&pln1d2);
+  g_assert_true (pln1d2 == NULL);
+
+  g_assert_true (NCM_IS_PLN1D (pln1d));
+
+  NCM_TEST_FREE (ncm_pln1d_free, pln1d);
 }
 
 void

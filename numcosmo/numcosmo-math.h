@@ -107,6 +107,7 @@
 #include <numcosmo/math/ncm_mset_func1.h>
 #include <numcosmo/math/ncm_mset_func_list.h>
 #include <numcosmo/math/ncm_ode_spline.h>
+#include <numcosmo/math/ncm_pln1d.h>
 #include <numcosmo/math/ncm_reparam_linear.h>
 #include <numcosmo/math/ncm_data.h>
 #include <numcosmo/math/ncm_data_dist1d.h>

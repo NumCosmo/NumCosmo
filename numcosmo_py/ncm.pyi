@@ -7690,6 +7690,54 @@ class OdeSplineClass(GObject.GPointer):
 
     parent_class: GObject.ObjectClass = ...
 
+class PLN1D(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        PLN1D(**properties)
+        new(gh_order:int) -> NumCosmoMath.PLN1D
+
+    Object NcmPLN1D
+
+    Properties from NcmPLN1D:
+      gh-order -> guint: Gauss-Hermite order
+        Order of the Gauss-Hermite quadrature to be used in the integration
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        gh_order: int
+
+    props: Props = ...
+    def __init__(self, gh_order: int = ...) -> None: ...
+    @staticmethod
+    def clear(pln1d: PLN1D) -> None: ...
+    def eval_lnp(self, R: float, mu: float, sigma: float) -> float: ...
+    def eval_p(self, R: float, mu: float, sigma: float) -> float: ...
+    def free(self) -> None: ...
+    def get_order(self) -> int: ...
+    @staticmethod
+    def mode(R: float, mu: float, sigma: float) -> float: ...
+    @classmethod
+    def new(cls, gh_order: int) -> PLN1D: ...
+    def ref(self) -> PLN1D: ...
+    def set_order(self, gh_order: int) -> None: ...
+
+class PLN1DClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        PLN1DClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
 class Powspec(GObject.Object):
     r"""
     :Constructors:
@@ -12426,7 +12474,7 @@ class MPIJobCtrlTag(GObject.GEnum):
     _value_repr_: wrapper_descriptor = ...
 
 class MSetCatalogPostNormMethod(GObject.GEnum):
-    ELIPSOID: MSetCatalogPostNormMethod = ...
+    ELLIPSOID: MSetCatalogPostNormMethod = ...
     HYPERBOX: MSetCatalogPostNormMethod = ...
     HYPERBOX_BS: MSetCatalogPostNormMethod = ...
     _generate_next_value_: function = ...
