@@ -59,6 +59,8 @@ guint ncm_pln1d_get_order (NcmPLN1D *pln1d);
 gdouble ncm_pln1d_mode (gdouble R, gdouble mu, gdouble sigma);
 gdouble ncm_pln1d_eval_p (NcmPLN1D *pln, gdouble R, gdouble mu, gdouble sigma);
 gdouble ncm_pln1d_eval_lnp (NcmPLN1D *pln, gdouble R, gdouble mu, gdouble sigma);
+gdouble ncm_pln1d_eval_range_sum (NcmPLN1D *pln, guint R_min, guint R_max, gdouble mu, gdouble sigma);
+gdouble ncm_pln1d_eval_range_sum_lnp (NcmPLN1D *pln, guint R_min, guint R_max, gdouble mu, gdouble sigma);
 
 G_END_DECLS
 

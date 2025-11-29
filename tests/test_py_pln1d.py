@@ -713,6 +713,168 @@ class TestPLN1D(unittest.TestCase):
                 f"(rel_error={rel_error:.4f}) for R={R}, mu={mu}, sigma={sigma}",
             )
 
+    def test_pln1d_eval_range_sum_basic(self):
+        """Test basic range sum evaluation."""
+        self.pln.set_order(100)
+        mu = 0.0
+        sigma = 1.0
 
-if __name__ == "__main__":
-    unittest.main()
+        # Test a small range
+        R_min = 0
+        R_max = 10
+        result = self.pln.eval_range_sum(R_min, R_max, mu, sigma)
+
+        # Result should be positive and finite
+        self.assertGreater(result, 0.0)
+        self.assertTrue(np.isfinite(result))
+
+    def test_pln1d_eval_range_sum_lnp_basic(self):
+        """Test basic range sum log-probability evaluation."""
+        self.pln.set_order(100)
+        mu = 0.0
+        sigma = 1.0
+
+        # Test a small range
+        R_min = 0
+        R_max = 10
+        result = self.pln.eval_range_sum_lnp(R_min, R_max, mu, sigma)
+
+        # Result should be finite (can be negative in log space)
+        self.assertTrue(np.isfinite(result))
+
+    def test_pln1d_eval_range_sum_consistency_with_individual_evals(self):
+        """Test that range sum equals sum of individual evaluations."""
+        self.pln.set_order(100)
+        mu = 0.0
+        sigma = 1.0
+
+        R_min = 0
+        R_max = 20
+
+        # Compute range sum
+        range_sum = self.pln.eval_range_sum(R_min, R_max, mu, sigma)
+
+        # Compute sum of individual evaluations
+        individual_sum = sum(
+            self.pln.eval_p(R, mu, sigma) for R in range(R_min, R_max + 1)
+        )
+
+        # Results should agree very closely
+        rel_error = abs(range_sum - individual_sum) / max(range_sum, individual_sum)
+        self.assertLess(
+            rel_error,
+            1.0e-7,
+            f"Range sum {range_sum:.6e} vs individual sum {individual_sum:.6e}",
+        )
+
+    def test_pln1d_eval_range_sum_lnp_consistency(self):
+        """Test that eval_range_sum = exp(eval_range_sum_lnp)."""
+        self.pln.set_order(100)
+        mu = 0.0
+        sigma = 1.0
+
+        R_min = 0
+        R_max = 15
+
+        # Compute both forms
+        p_sum = self.pln.eval_range_sum(R_min, R_max, mu, sigma)
+        lnp_sum = self.pln.eval_range_sum_lnp(R_min, R_max, mu, sigma)
+
+        # Check relationship: p_sum = exp(lnp_sum)
+        expected_p = np.exp(lnp_sum)
+        rel_error = abs(p_sum - expected_p) / expected_p
+        self.assertLess(
+            rel_error,
+            1.0e-10,
+            f"Range sum {p_sum:.6e} vs exp(lnp_sum) {expected_p:.6e}",
+        )
+
+    def test_pln1d_eval_range_sum_varies_with_range(self):
+        """Test that range sum increases with larger ranges."""
+        self.pln.set_order(100)
+        mu = 0.0
+        sigma = 1.0
+
+        # Test progressively larger ranges
+        range_sums = []
+        for R_max in [10, 20, 30, 50]:
+            result = self.pln.eval_range_sum(0, R_max, mu, sigma)
+            range_sums.append(result)
+            self.assertGreater(result, 0.0)
+            self.assertTrue(np.isfinite(result))
+
+        # Results should be strictly increasing
+        for i in range(len(range_sums) - 1):
+            self.assertGreater(
+                range_sums[i + 1],
+                range_sums[i],
+                "Range sums should increase with larger range",
+            )
+
+    def test_pln1d_eval_range_sum_high_mu(self):
+        """Test range sum with moderately high mu."""
+        self.pln.set_order(100)
+        mu = 3.0  # Moderately high mu
+        sigma = 0.5
+
+        R_min = 5
+        R_max = 25
+        result = self.pln.eval_range_sum(R_min, R_max, mu, sigma)
+
+        # Result should be positive and finite
+        self.assertGreater(result, 0.0)
+        self.assertTrue(np.isfinite(result))
+
+        # Should be close to individual sum
+        individual_sum = sum(
+            self.pln.eval_p(R, mu, sigma) for R in range(R_min, R_max + 1)
+        )
+        rel_error = abs(result - individual_sum) / max(result, individual_sum)
+        self.assertLess(rel_error, 1.0e-10)
+
+    def test_pln1d_eval_range_sum_single_R(self):
+        """Test range sum with single R value (R_min == R_max)."""
+        self.pln.set_order(100)
+        mu = 0.0
+        sigma = 1.0
+
+        R = 5
+        range_sum = self.pln.eval_range_sum(R, R, mu, sigma)
+        individual = self.pln.eval_p(R, mu, sigma)
+
+        # Should be equal for single R
+        rel_error = abs(range_sum - individual) / individual
+        self.assertLess(rel_error, 1.0e-12)
+
+    def test_pln1d_eval_range_sum_different_orders(self):
+        """Test that different GH orders give consistent range sum results."""
+        mu = 0.0
+        sigma = 1.0
+        R_min = 0
+        R_max = 20
+
+        results = {}
+        for order in [30, 60, 100]:
+            self.pln.set_order(order)
+            results[order] = self.pln.eval_range_sum(R_min, R_max, mu, sigma)
+
+        # All results should be positive
+        for order, value in results.items():
+            self.assertGreater(value, 0.0)
+
+        # Results should converge with higher orders (within 1% for these ranges)
+        rel_diff = abs(results[30] - results[100]) / results[100]
+        self.assertLess(rel_diff, 1.0e-4)
+
+    def test_pln1d_eval_range_sum_normalization(self):
+        """Test that summing over sufficient range approaches 1.0."""
+        self.pln.set_order(100)
+        mu = 0.0
+        sigma = 1.0
+
+        # Sum over a very large range to approximate total probability
+        R_max = 200
+        result = self.pln.eval_range_sum(0, R_max, mu, sigma)
+
+        # Should be close to 1.0 for normalization
+        self.assertAlmostEqual(result, 1.0, places=3)

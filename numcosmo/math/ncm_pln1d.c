@@ -374,8 +374,9 @@ _ncm_pln1d_eval_gh_lnp (NcmPLN1D *pln, gdouble R, gdouble mu, gdouble sigma)
   const gdouble ln_scale       = -0.5 * (gsl_pow_2 (mu / sigma) + z * z) - lgamma (R + 1.0);
   const gdouble ln_2pi         = ncm_c_ln2pi ();
   gdouble ln_sum               = -INFINITY;
+  guint i;
 
-  for (guint i = 0; i < n; i++)
+  for (i = 0; i < n; i++)
   {
     const gdouble y    = self->nodes[i];
     const gdouble ln_w = self->ln_weights[i];
@@ -397,6 +398,102 @@ _ncm_pln1d_eval_laplace_lnp (gdouble R, gdouble mu, gdouble sigma)
   const gdouble lnf     = -0.5 * (umz * umz + R_sigma * R_sigma) - umz / sigma + R_sigma * u;
 
   return lnf - lgamma (R + 1.0) - 0.5 * log1p (sigma * umz);
+}
+
+/**
+ * ncm_pln1d_eval_range_sum_lnp:
+ * @pln: a #NcmPLN1D
+ * @R_min: minimum Poisson rate parameter (inclusive)
+ * @R_max: maximum Poisson rate parameter (inclusive)
+ * @mu: log-normal mean (location parameter)
+ * @sigma: log-normal standard deviation (scale parameter)
+ *
+ * Evaluate the cumulative Poisson–Lognormal probability by summing over a range of R values.
+ * This computes: ∑_{R=R_min}^{R_max} P(R|μ,σ)
+ *
+ * This is more efficient than calling ncm_pln1d_eval_p repeatedly
+ * as it reuses the shifted Gauss-Hermite nodes for all R values.
+ *
+ * The shift point z is computed using the central R value to ensure
+ * good accuracy across the range.
+ *
+ * Returns: the logarithm of the cumulative probability.
+ */
+gdouble
+ncm_pln1d_eval_range_sum_lnp (NcmPLN1D *pln, guint R_min, guint R_max, gdouble mu, gdouble sigma)
+{
+  NcmPLN1DPrivate * const self = ncm_pln1d_get_instance_private (pln);
+  const guint n                = self->gh_order;
+  const gdouble ln_2pi         = ncm_c_ln2pi ();
+  gdouble ln_sum               = -INFINITY;
+
+  g_assert_cmpuint (R_min, <=, R_max);
+
+  if (sigma > 1.0e-4)
+  {
+    /* Use Gauss-Hermite quadrature with a single shift point for the range */
+    /* Compute z using the central R value for better accuracy across range */
+    const gdouble R_central = 0.5 * (R_min + R_max);
+    const gdouble z         = ncm_pln1d_mode (R_central, mu, sigma);
+    const gdouble u_base    = mu / sigma;
+
+    for (guint j = R_min; j <= R_max; j++)
+    {
+      const gdouble R        = (gdouble) j;
+      const gdouble u        = u_base + R * sigma;
+      const gdouble ln_scale = -0.5 * (gsl_pow_2 (u_base) + z * z) - lgamma (R + 1.0);
+      gdouble ln_R_sum       = -INFINITY;
+
+      for (guint i = 0; i < n; i++)
+      {
+        const gdouble y    = self->nodes[i];
+        const gdouble ln_w = self->ln_weights[i];
+        const gdouble logf = _ncm_pln1d_log_integrand0 (y + z, u, sigma) - y * z;
+
+        ln_R_sum = logaddexp (ln_R_sum, ln_w + logf);
+      }
+
+      {
+        const gdouble p_R = ln_R_sum + ln_scale - 0.5 * ln_2pi;
+
+        ln_sum = logaddexp (ln_sum, p_R);
+      }
+    }
+  }
+  else
+  {
+    /* Use Laplace approximation for small sigma */
+    for (guint j = R_min; j <= R_max; j++)
+    {
+      const gdouble R   = (gdouble) j;
+      const gdouble p_R = _ncm_pln1d_eval_laplace_lnp (R, mu, sigma);
+
+      ln_sum = logaddexp (ln_sum, p_R);
+    }
+  }
+
+  return ln_sum;
+}
+
+/**
+ * ncm_pln1d_eval_range_sum:
+ * @pln: a #NcmPLN1D
+ * @R_min: minimum Poisson rate parameter (inclusive)
+ * @R_max: maximum Poisson rate parameter (inclusive)
+ * @mu: log-normal mean (location parameter)
+ * @sigma: log-normal standard deviation (scale parameter)
+ *
+ * Evaluate the cumulative Poisson–Lognormal probability by summing over a range of R values.
+ * This computes: ∑_{R=R_min}^{R_max} P(R|μ,σ)
+ *
+ * This is the non-log version of ncm_pln1d_eval_range_sum_lnp.
+ *
+ * Returns: the cumulative probability.
+ */
+gdouble
+ncm_pln1d_eval_range_sum (NcmPLN1D *pln, guint R_min, guint R_max, gdouble mu, gdouble sigma)
+{
+  return exp (ncm_pln1d_eval_range_sum_lnp (pln, R_min, R_max, mu, sigma));
 }
 
 /**
