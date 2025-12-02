@@ -29,42 +29,33 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/lss/nc_cluster_mass.h>
+#include <numcosmo/lss/nc_cluster_mass_richness.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_CLUSTER_MASS_ASCASO             (nc_cluster_mass_ascaso_get_type ())
-#define NC_CLUSTER_MASS_ASCASO(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_CLUSTER_MASS_ASCASO, NcClusterMassAscaso))
-#define NC_CLUSTER_MASS_ASCASO_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_CLUSTER_MASS_ASCASO, NcClusterMassAscasoClass))
-#define NC_IS_CLUSTER_MASS_ASCASO(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_CLUSTER_MASS_ASCASO))
-#define NC_IS_CLUSTER_MASS_ASCASO_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_CLUSTER_MASS_ASCASO))
-#define NC_CLUSTER_MASS_ASCASO_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_CLUSTER_MASS_ASCASO, NcClusterMassAscasoClass))
+#define NC_TYPE_CLUSTER_MASS_ASCASO (nc_cluster_mass_ascaso_get_type ())
 
-typedef struct _NcClusterMassAscasoClass NcClusterMassAscasoClass;
-typedef struct _NcClusterMassAscaso NcClusterMassAscaso;
-typedef struct _NcClusterMassAscasoPrivate NcClusterMassAscasoPrivate;
+G_DECLARE_FINAL_TYPE (NcClusterMassAscaso, nc_cluster_mass_ascaso, NC, CLUSTER_MASS_ASCASO, NcClusterMassRichness)
 
 /**
  * NcClusterMassAscasoSParams:
- * @NC_CLUSTER_MASS_ASCASO_MU_P0: bias of the mean
- * @NC_CLUSTER_MASS_ASCASO_MU_P1: slope on the mean
- * @NC_CLUSTER_MASS_ASCASO_MU_P2: redshift dependency on the mean
- * @NC_CLUSTER_MASS_ASCASO_SIGMA_P0: bias of the standard deviation of the log-normal distribution
- * @NC_CLUSTER_MASS_ASCASO_SIGMA_P1: slope on the standard deviation of the log-normal distribution
- * @NC_CLUSTER_MASS_ASCASO_SIGMA_P2: redshift dependency standard deviation of the log-normal distribution
- * @NC_CLUSTER_MASS_ASCASO_CUT: cut in richness
+ * @NC_CLUSTER_MASS_ASCASO_MU_P0: constant term (bias) in the mean log-richness
+ * @NC_CLUSTER_MASS_ASCASO_MU_P1: linear mass coefficient in the mean log-richness
+ * @NC_CLUSTER_MASS_ASCASO_MU_P2: redshift evolution coefficient in the mean log-richness
+ * @NC_CLUSTER_MASS_ASCASO_SIGMA_P0: constant term (bias) in the standard deviation
+ * @NC_CLUSTER_MASS_ASCASO_SIGMA_P1: linear mass coefficient in the standard deviation
+ * @NC_CLUSTER_MASS_ASCASO_SIGMA_P2: redshift evolution coefficient in the standard deviation
  *
  * Parameters for the Ascaso cluster mass-richness relation.
  */
 typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_ASCASO_SPARAMS >*/
 {
-  NC_CLUSTER_MASS_ASCASO_MU_P0,
+  NC_CLUSTER_MASS_ASCASO_MU_P0 = NC_CLUSTER_MASS_RICHNESS_SPARAM_LEN,
   NC_CLUSTER_MASS_ASCASO_MU_P1,
   NC_CLUSTER_MASS_ASCASO_MU_P2,
   NC_CLUSTER_MASS_ASCASO_SIGMA_P0,
   NC_CLUSTER_MASS_ASCASO_SIGMA_P1,
   NC_CLUSTER_MASS_ASCASO_SIGMA_P2,
-  NC_CLUSTER_MASS_ASCASO_CUT,
   /* < private > */
   NC_CLUSTER_MASS_ASCASO_SPARAM_LEN, /*< skip >*/
 } NcClusterMassAscasoSParams;
@@ -75,32 +66,7 @@ typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_ASCASO_SPARAMS >*/
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P0  (0.33)
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P1  (-0.08 / M_LN10)
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA_P2  (0.0)
-#define NC_CLUSTER_MASS_ASCASO_DEFAULT_CUT  (0.0)
 #define NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL (0.0)
-
-struct _NcClusterMassAscasoClass
-{
-  /*< private >*/
-  NcClusterMassClass parent_class;
-};
-
-struct _NcClusterMassAscaso
-{
-  /*< private >*/
-  NcClusterMass parent_instance;
-  NcClusterMassAscasoPrivate *priv;
-};
-
-GType nc_cluster_mass_ascaso_get_type (void) G_GNUC_CONST;
-
-void nc_cluster_mass_ascaso_set_enable_rejection (NcClusterMassAscaso *ascaso, gboolean on);
-
-gdouble nc_cluster_mass_ascaso_get_mean_richness (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
-gdouble nc_cluster_mass_ascaso_get_std_richness (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
-gdouble nc_cluster_mass_ascaso_get_cut (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
-gdouble nc_cluster_mass_ascaso_get_mean (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
-gdouble nc_cluster_mass_ascaso_get_std (NcClusterMassAscaso *ascaso, gdouble lnM, gdouble z);
-gboolean nc_cluster_mass_ascaso_get_enable_rejection (NcClusterMassAscaso *ascaso);
 
 G_END_DECLS
 

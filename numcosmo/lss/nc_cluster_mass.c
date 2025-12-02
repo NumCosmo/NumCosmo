@@ -45,17 +45,17 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_vector.h"
 
-struct _NcClusterMassPrivate
+typedef struct _NcClusterMassPrivate
 {
   guint place_holder;
-};
+} NcClusterMassPrivate;
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcClusterMass, nc_cluster_mass, NCM_TYPE_MODEL)
 
 static void
 nc_cluster_mass_init (NcClusterMass *clusterm)
 {
-  NcClusterMassPrivate * const self = clusterm->priv = nc_cluster_mass_get_instance_private (clusterm);
+  NcClusterMassPrivate * const self = nc_cluster_mass_get_instance_private (clusterm);
 
   self->place_holder = 0;
 }
@@ -465,7 +465,7 @@ _nc_cluster_mass_log_all_models_go (GType model_type, guint n)
 void
 nc_cluster_mass_log_all_models (void)
 {
-  g_message ("# Registred NcClusterMass:%s are:\n", g_type_name (NC_TYPE_CLUSTER_MASS));
+  g_message ("# Registered NcClusterMass:%s are:\n", g_type_name (NC_TYPE_CLUSTER_MASS));
   _nc_cluster_mass_log_all_models_go (NC_TYPE_CLUSTER_MASS, 0);
 }
 

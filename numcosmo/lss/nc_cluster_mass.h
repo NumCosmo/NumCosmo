@@ -35,16 +35,10 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_CLUSTER_MASS            (nc_cluster_mass_get_type ())
-#define NC_CLUSTER_MASS(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_CLUSTER_MASS, NcClusterMass))
-#define NC_CLUSTER_MASS_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_CLUSTER_MASS, NcClusterMassClass))
-#define NC_IS_CLUSTER_MASS(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_CLUSTER_MASS))
-#define NC_IS_CLUSTER_MASS_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_CLUSTER_MASS))
-#define NC_CLUSTER_MASS_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_CLUSTER_MASS, NcClusterMassClass))
+#define NC_TYPE_CLUSTER_MASS (nc_cluster_mass_get_type ())
 
-typedef struct _NcClusterMassClass NcClusterMassClass;
-typedef struct _NcClusterMass NcClusterMass;
-typedef struct _NcClusterMassPrivate NcClusterMassPrivate;
+G_DECLARE_DERIVABLE_TYPE (NcClusterMass, nc_cluster_mass, NC, CLUSTER_MASS, NcmModel)
+
 
 /**
  * NcClusterMassImpl:
@@ -87,15 +81,6 @@ struct _NcClusterMassClass
   guint _obs_len;
   guint _obs_params_len;
 };
-
-struct _NcClusterMass
-{
-  /*< private >*/
-  NcmModel parent_instance;
-  NcClusterMassPrivate *priv;
-};
-
-GType nc_cluster_mass_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_cluster_mass);
 
