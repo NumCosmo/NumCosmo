@@ -48,7 +48,7 @@ def fixture_cluster_m() -> Nc.ClusterMassAscaso:
 
 def test_get_cut(cluster_m: Nc.ClusterMassAscaso) -> None:
     """Test richness cut parameter."""
-    assert cluster_m.get_cut(np.log(1e14), 0.5) == LN_RICHNESS_CUT
+    assert cluster_m.get_cut() == LN_RICHNESS_CUT
 
 
 def test_cluster_mass_ascaso_mean_std(cluster_m: Nc.ClusterMassAscaso) -> None:
@@ -58,14 +58,12 @@ def test_cluster_mass_ascaso_mean_std(cluster_m: Nc.ClusterMassAscaso) -> None:
     z = np.linspace(0, 1.1, nsize)
 
     for i in range(nsize):
-        assert cluster_m.get_mean(lnM[i], 0.5) >= cluster_m.get_mean_richness(
-            lnM[i], 0.5
-        )
-        assert cluster_m.get_mean(np.log(1e14), z[i]) >= cluster_m.get_mean_richness(
+        assert cluster_m.get_mean(lnM[i], 0.5) >= cluster_m.mu(lnM[i], 0.5)
+        assert cluster_m.get_mean(np.log(1e14), z[i]) >= cluster_m.mu(
             np.log(1e14), z[i]
         )
-        assert cluster_m.get_std(lnM[i], 0.5) <= cluster_m.get_std_richness(lnM[i], 0.5)
-        assert cluster_m.get_std(np.log(1e14), z[i]) <= cluster_m.get_std_richness(
+        assert cluster_m.get_std(lnM[i], 0.5) <= cluster_m.sigma(lnM[i], 0.5)
+        assert cluster_m.get_std(np.log(1e14), z[i]) <= cluster_m.sigma(
             np.log(1e14), z[i]
         )
 
@@ -86,7 +84,7 @@ def test_cluster_mass_ascaso_p_basic(
     """Test probability distribution function."""
     lnM = np.log(1e14)
     z = 0.5
-    mean_lnR = cluster_m.get_mean_richness(lnM, z)
+    mean_lnR = cluster_m.mu(lnM, z)
 
     p_mean = cluster_m.p(cosmo, lnM, z, [mean_lnR], None)
     assert p_mean > 0.0
@@ -106,8 +104,8 @@ def test_cluster_mass_ascaso_p_integral(
     """Test probability distribution integrates correctly."""
     lnM = np.log(1e14)
     z = 0.5
-    mean_lnR = cluster_m.get_mean_richness(lnM, z)
-    std_lnR = cluster_m.get_std_richness(lnM, z)
+    mean_lnR = cluster_m.mu(lnM, z)
+    std_lnR = cluster_m.sigma(lnM, z)
 
     lnR_array = np.linspace(mean_lnR - 5 * std_lnR, mean_lnR + 5 * std_lnR, 200)
     p_array = np.array([cluster_m.p(cosmo, lnM, z, [lnR], None) for lnR in lnR_array])
@@ -135,8 +133,8 @@ def test_cluster_mass_ascaso_intp_bin_basic(
     """Test binned integration of probability distribution."""
     lnM = np.log(1e14)
     z = 0.5
-    mean_lnR = cluster_m.get_mean_richness(lnM, z)
-    std_lnR = cluster_m.get_std_richness(lnM, z)
+    mean_lnR = cluster_m.mu(lnM, z)
+    std_lnR = cluster_m.sigma(lnM, z)
 
     bin_val = cluster_m.intp_bin(cosmo, lnM, z, [mean_lnR], [mean_lnR + std_lnR], None)
     assert bin_val > 0.0
@@ -157,8 +155,8 @@ def test_cluster_mass_ascaso_intp_bin_consistency(
     """Test intp_bin() matches manual integration of p()."""
     lnM = np.log(1e14)
     z = 0.5
-    mean_lnR = cluster_m.get_mean_richness(lnM, z)
-    std_lnR = cluster_m.get_std_richness(lnM, z)
+    mean_lnR = cluster_m.mu(lnM, z)
+    std_lnR = cluster_m.sigma(lnM, z)
 
     lnR_lower = mean_lnR - std_lnR
     lnR_upper = mean_lnR + std_lnR
@@ -178,10 +176,10 @@ def test_cluster_mass_ascaso_truncated_gaussian(
     """Test truncated Gaussian mean and std corrections."""
     lnM = np.log(1e14)
     z = 0.5
-    cut = cluster_m.get_cut(np.log(1e14), 0.5)
+    cut = cluster_m.get_cut()
 
-    mean_untrunc = cluster_m.get_mean_richness(lnM, z)
-    std_untrunc = cluster_m.get_std_richness(lnM, z)
+    mean_untrunc = cluster_m.mu(lnM, z)
+    std_untrunc = cluster_m.sigma(lnM, z)
 
     mean_trunc = cluster_m.get_mean(lnM, z)
     std_trunc = cluster_m.get_std(lnM, z)

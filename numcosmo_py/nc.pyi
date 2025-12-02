@@ -8,7 +8,6 @@ from . import ncm as NumCosmoMath
 
 T = typing.TypeVar("T")
 
-CLUSTER_MASS_ASCASO_DEFAULT_CUT: float = 0.0
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P0: float = 3.19
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P1: int = 0
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P2: int = 0
@@ -28,6 +27,14 @@ CLUSTER_MASS_BENSON_XRAY_DEFAULT_B_X: float = 0.57
 CLUSTER_MASS_BENSON_XRAY_DEFAULT_C_X: float = 0.4
 CLUSTER_MASS_BENSON_XRAY_DEFAULT_D_X: float = 0.12
 CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL: float = 0.0
+CLUSTER_MASS_EXT_DEFAULT_MU_P0: float = 4.0
+CLUSTER_MASS_EXT_DEFAULT_MU_P1: float = 1.0
+CLUSTER_MASS_EXT_DEFAULT_MU_P2: float = 0.1
+CLUSTER_MASS_EXT_DEFAULT_MU_P3: float = 0.01
+CLUSTER_MASS_EXT_DEFAULT_PARAMS_ABSTOL: float = 0.0
+CLUSTER_MASS_EXT_DEFAULT_SIGMA_P0: float = 0.3
+CLUSTER_MASS_EXT_DEFAULT_SIGMA_P1: float = 0.3
+CLUSTER_MASS_EXT_DEFAULT_SIGMA_P2: float = 0.1
 CLUSTER_MASS_LNNORMAL_DEFAULT_BIAS: float = 0.0
 CLUSTER_MASS_LNNORMAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
 CLUSTER_MASS_LNNORMAL_DEFAULT_SIGMA: float = 0.04
@@ -43,6 +50,8 @@ CLUSTER_MASS_PLCL_MCL: int = 1
 CLUSTER_MASS_PLCL_MPL: int = 0
 CLUSTER_MASS_PLCL_SD_CL: int = 1
 CLUSTER_MASS_PLCL_SD_PL: int = 0
+CLUSTER_MASS_RICHNESS_DEFAULT_CUT: float = 0.0
+CLUSTER_MASS_RICHNESS_DEFAULT_PARAMS_ABSTOL: float = 0.0
 CLUSTER_MASS_SELECTION_DEFAULT_CUT: float = 0.0
 CLUSTER_MASS_SELECTION_DEFAULT_MU_P0: float = 3.19
 CLUSTER_MASS_SELECTION_DEFAULT_MU_P1: int = 0
@@ -1517,7 +1526,6 @@ class ClusterMass(NumCosmoMath.Model):
 
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
-    priv: ClusterMassPrivate = ...
     def __init__(
         self,
         reparam: NumCosmoMath.Reparam = ...,
@@ -1665,7 +1673,7 @@ class ClusterMass(NumCosmoMath.Model):
     ) -> bool: ...
     def volume(self) -> float: ...
 
-class ClusterMassAscaso(ClusterMass):
+class ClusterMassAscaso(ClusterMassRichness):
     r"""
     :Constructors:
 
@@ -1676,16 +1684,6 @@ class ClusterMassAscaso(ClusterMass):
     Object NcClusterMassAscaso
 
     Properties from NcClusterMassAscaso:
-      M0 -> gdouble: M0
-        Pivot mass
-      z0 -> gdouble: z0
-        Pivot redshift
-      lnRichness-min -> gdouble: lnRichness-min
-        Minimum LnRichness
-      lnRichness-max -> gdouble: lnRichness-max
-        Maximum LnRichness
-      enable-rejection -> gboolean: enable-rejection
-        Whether rejects the sampled objects below the CUT
       mup0 -> gdouble: mup0
         mu_p0
       mup1 -> gdouble: mup1
@@ -1698,8 +1696,6 @@ class ClusterMassAscaso(ClusterMass):
         \sigma_p1
       sigmap2 -> gdouble: sigmap2
         \sigma_p2
-      cut -> gdouble: cut
-        CUT
       mup0-fit -> gboolean: mup0-fit
         mu_p0:fit
       mup1-fit -> gboolean: mup1-fit
@@ -1712,6 +1708,20 @@ class ClusterMassAscaso(ClusterMass):
         \sigma_p1:fit
       sigmap2-fit -> gboolean: sigmap2-fit
         \sigma_p2:fit
+
+    Properties from NcClusterMassRichness:
+      M0 -> gdouble: M0
+        Pivot mass
+      z0 -> gdouble: z0
+        Pivot redshift
+      lnRichness-min -> gdouble: lnRichness-min
+        Minimum LnRichness
+      lnRichness-max -> gdouble: lnRichness-max
+        Maximum LnRichness
+      sample-full-dist -> gboolean: sample-full-dist
+        Whether to sample from the full (untruncated) distribution
+      cut -> gdouble: cut
+        CUT
       cut-fit -> gboolean: cut-fit
         CUT:fit
 
@@ -1740,12 +1750,6 @@ class ClusterMassAscaso(ClusterMass):
     """
 
     class Props:
-        M0: float
-        cut: float
-        cut_fit: bool
-        enable_rejection: bool
-        lnRichness_max: float
-        lnRichness_min: float
         mup0: float
         mup0_fit: bool
         mup1: float
@@ -1758,6 +1762,12 @@ class ClusterMassAscaso(ClusterMass):
         sigmap1_fit: bool
         sigmap2: float
         sigmap2_fit: bool
+        M0: float
+        cut: float
+        cut_fit: bool
+        lnRichness_max: float
+        lnRichness_min: float
+        sample_full_dist: bool
         z0: float
         implementation: int
         name: str
@@ -1770,16 +1780,8 @@ class ClusterMassAscaso(ClusterMass):
         vector_params_len: int
 
     props: Props = ...
-    parent_instance: ClusterMass = ...
-    priv: ClusterMassAscasoPrivate = ...
     def __init__(
         self,
-        M0: float = ...,
-        cut: float = ...,
-        cut_fit: bool = ...,
-        enable_rejection: bool = ...,
-        lnRichness_max: float = ...,
-        lnRichness_min: float = ...,
         mup0: float = ...,
         mup0_fit: bool = ...,
         mup1: float = ...,
@@ -1792,18 +1794,17 @@ class ClusterMassAscaso(ClusterMass):
         sigmap1_fit: bool = ...,
         sigmap2: float = ...,
         sigmap2_fit: bool = ...,
+        M0: float = ...,
+        cut: float = ...,
+        cut_fit: bool = ...,
+        lnRichness_max: float = ...,
+        lnRichness_min: float = ...,
+        sample_full_dist: bool = ...,
         z0: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
-    def get_cut(self, lnM: float, z: float) -> float: ...
-    def get_enable_rejection(self) -> bool: ...
-    def get_mean(self, lnM: float, z: float) -> float: ...
-    def get_mean_richness(self, lnM: float, z: float) -> float: ...
-    def get_std(self, lnM: float, z: float) -> float: ...
-    def get_std_richness(self, lnM: float, z: float) -> float: ...
-    def set_enable_rejection(self, on: bool) -> None: ...
 
 class ClusterMassAscasoClass(GObject.GPointer):
     r"""
@@ -1814,9 +1815,7 @@ class ClusterMassAscasoClass(GObject.GPointer):
         ClusterMassAscasoClass()
     """
 
-    parent_class: ClusterMassClass = ...
-
-class ClusterMassAscasoPrivate(GObject.GPointer): ...
+    parent_class: ClusterMassRichnessClass = ...
 
 class ClusterMassBenson(ClusterMass):
     r"""
@@ -2190,6 +2189,158 @@ class ClusterMassClass(GObject.GPointer):
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
 
+class ClusterMassExt(ClusterMassRichness):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterMassExt(**properties)
+
+    Object NcClusterMassExt
+
+    Properties from NcClusterMassExt:
+      mup0 -> gdouble: mup0
+        mu_p0
+      mup1 -> gdouble: mup1
+        mu_p1
+      mup2 -> gdouble: mup2
+        mu_p2
+      mup3 -> gdouble: mup3
+        mu_p3
+      sigmap0 -> gdouble: sigmap0
+        \sigma_p0
+      sigmap1 -> gdouble: sigmap1
+        \sigma_p1
+      sigmap2 -> gdouble: sigmap2
+        \sigma_p2
+      mup0-fit -> gboolean: mup0-fit
+        mu_p0:fit
+      mup1-fit -> gboolean: mup1-fit
+        mu_p1:fit
+      mup2-fit -> gboolean: mup2-fit
+        mu_p2:fit
+      mup3-fit -> gboolean: mup3-fit
+        mu_p3:fit
+      sigmap0-fit -> gboolean: sigmap0-fit
+        \sigma_p0:fit
+      sigmap1-fit -> gboolean: sigmap1-fit
+        \sigma_p1:fit
+      sigmap2-fit -> gboolean: sigmap2-fit
+        \sigma_p2:fit
+
+    Properties from NcClusterMassRichness:
+      M0 -> gdouble: M0
+        Pivot mass
+      z0 -> gdouble: z0
+        Pivot redshift
+      lnRichness-min -> gdouble: lnRichness-min
+        Minimum LnRichness
+      lnRichness-max -> gdouble: lnRichness-max
+        Maximum LnRichness
+      sample-full-dist -> gboolean: sample-full-dist
+        Whether to sample from the full (untruncated) distribution
+      cut -> gdouble: cut
+        CUT
+      cut-fit -> gboolean: cut-fit
+        CUT:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        mup0: float
+        mup0_fit: bool
+        mup1: float
+        mup1_fit: bool
+        mup2: float
+        mup2_fit: bool
+        mup3: float
+        mup3_fit: bool
+        sigmap0: float
+        sigmap0_fit: bool
+        sigmap1: float
+        sigmap1_fit: bool
+        sigmap2: float
+        sigmap2_fit: bool
+        M0: float
+        cut: float
+        cut_fit: bool
+        lnRichness_max: float
+        lnRichness_min: float
+        sample_full_dist: bool
+        z0: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        mup0: float = ...,
+        mup0_fit: bool = ...,
+        mup1: float = ...,
+        mup1_fit: bool = ...,
+        mup2: float = ...,
+        mup2_fit: bool = ...,
+        mup3: float = ...,
+        mup3_fit: bool = ...,
+        sigmap0: float = ...,
+        sigmap0_fit: bool = ...,
+        sigmap1: float = ...,
+        sigmap1_fit: bool = ...,
+        sigmap2: float = ...,
+        sigmap2_fit: bool = ...,
+        M0: float = ...,
+        cut: float = ...,
+        cut_fit: bool = ...,
+        lnRichness_max: float = ...,
+        lnRichness_min: float = ...,
+        sample_full_dist: bool = ...,
+        z0: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+
+class ClusterMassExtClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterMassExtClass()
+    """
+
+    parent_class: ClusterMassRichnessClass = ...
+
 class ClusterMassLnnormal(ClusterMass):
     r"""
     :Constructors:
@@ -2511,7 +2662,121 @@ class ClusterMassPlCLClass(GObject.GPointer):
 
     parent_class: ClusterMassClass = ...
 
-class ClusterMassPrivate(GObject.GPointer): ...
+class ClusterMassRichness(ClusterMass):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterMassRichness(**properties)
+
+    Object NcClusterMassRichness
+
+    Properties from NcClusterMassRichness:
+      M0 -> gdouble: M0
+        Pivot mass
+      z0 -> gdouble: z0
+        Pivot redshift
+      lnRichness-min -> gdouble: lnRichness-min
+        Minimum LnRichness
+      lnRichness-max -> gdouble: lnRichness-max
+        Maximum LnRichness
+      sample-full-dist -> gboolean: sample-full-dist
+        Whether to sample from the full (untruncated) distribution
+      cut -> gdouble: cut
+        CUT
+      cut-fit -> gboolean: cut-fit
+        CUT:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        M0: float
+        cut: float
+        cut_fit: bool
+        lnRichness_max: float
+        lnRichness_min: float
+        sample_full_dist: bool
+        z0: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: ClusterMass = ...
+    def __init__(
+        self,
+        M0: float = ...,
+        cut: float = ...,
+        cut_fit: bool = ...,
+        lnRichness_max: float = ...,
+        lnRichness_min: float = ...,
+        sample_full_dist: bool = ...,
+        z0: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def compute_truncated_mean(self, lnR_mean: float, lnR_sigma: float) -> float: ...
+    def compute_truncated_std(self, lnR_mean: float, lnR_sigma: float) -> float: ...
+    def do_mu(self, lnM: float, z: float) -> float: ...
+    def do_mu_sigma(self, lnM: float, z: float) -> typing.Tuple[float, float]: ...
+    def do_sigma(self, lnM: float, z: float) -> float: ...
+    def get_cut(self) -> float: ...
+    def get_mean(self, lnM: float, z: float) -> float: ...
+    def get_sample_full_dist(self) -> bool: ...
+    def get_std(self, lnM: float, z: float) -> float: ...
+    def ln1pz0(self) -> float: ...
+    def lnM0(self) -> float: ...
+    def mu(self, lnM: float, z: float) -> float: ...
+    def mu_sigma(self, lnM: float, z: float) -> typing.Tuple[float, float]: ...
+    def set_sample_full_dist(self, on: bool) -> None: ...
+    def sigma(self, lnM: float, z: float) -> float: ...
+
+class ClusterMassRichnessClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        ClusterMassRichnessClass()
+    """
+
+    parent_class: ClusterMassClass = ...
+    mu: typing.Callable[[ClusterMassRichness, float, float], float] = ...
+    sigma: typing.Callable[[ClusterMassRichness, float, float], float] = ...
+    mu_sigma: typing.Callable[
+        [ClusterMassRichness, float, float], typing.Tuple[float, float]
+    ] = ...
+    padding: list[None] = ...
 
 class ClusterMassSelection(ClusterMass):
     r"""
@@ -20473,7 +20738,6 @@ class RecombSeagerOpt(GObject.GFlags):
     _value_repr_: wrapper_descriptor = ...
 
 class ClusterMassAscasoSParams(GObject.GEnum):
-    CUT: ClusterMassAscasoSParams = ...
     MU_P0: ClusterMassAscasoSParams = ...
     MU_P1: ClusterMassAscasoSParams = ...
     MU_P2: ClusterMassAscasoSParams = ...
@@ -20514,6 +20778,26 @@ class ClusterMassBensonXRaySParams(GObject.GEnum):
     B_X: ClusterMassBensonXRaySParams = ...
     C_X: ClusterMassBensonXRaySParams = ...
     D_X: ClusterMassBensonXRaySParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class ClusterMassExtSParams(GObject.GEnum):
+    MU_P0: ClusterMassExtSParams = ...
+    MU_P1: ClusterMassExtSParams = ...
+    MU_P2: ClusterMassExtSParams = ...
+    MU_P3: ClusterMassExtSParams = ...
+    SIGMA_P0: ClusterMassExtSParams = ...
+    SIGMA_P1: ClusterMassExtSParams = ...
+    SIGMA_P2: ClusterMassExtSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -20567,6 +20851,20 @@ class ClusterMassPlCLSParams(GObject.GEnum):
     COR: ClusterMassPlCLSParams = ...
     SD_L: ClusterMassPlCLSParams = ...
     SD_SZ: ClusterMassPlCLSParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class ClusterMassRichnessSParams(GObject.GEnum):
+    CUT: ClusterMassRichnessSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
