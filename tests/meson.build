@@ -556,12 +556,18 @@ python_tests = [
         'source': 'test_py_powspec_spline2d.py',
     },
     {
-        'name': 'cosmology',
-        'source': 'test_cosmology.py',
+        'name': 'pkg_cosmology',
+        'source': 'test_pkg_cosmology.py',
+        'suite': ['python', 'pkg'],
     },
     {
         'name': 'py_numcosmo_py',
         'source': 'test_py_numcosmo_py.py',
+    },
+    {
+        'name': 'pkg_cluster_richness',
+        'source': 'test_pkg_cluster_richness.py',
+        'suite': ['python', 'pkg'],
     },
 ]
 
@@ -608,9 +614,10 @@ if python_astropy_scipy.found()
             'source': 'test_py_pln1d.py',
         },
         {
-            'name': 'sky_match',
-            'source': 'test_sky_match.py',
+            'name': 'pkg_sky_match',
+            'source': 'test_pkg_sky_match.py',
             'timeout': 0,
+            'suite': ['python', 'pkg'],
         },
     ]
 endif
@@ -685,9 +692,10 @@ python_matplotlib = python_module.find_installation(
 if python_matplotlib.found()
     python_tests += [
         {
-            'name': 'plotting_tools',
-            'source': 'test_plotting_tools.py',
+            'name': 'pkg_plotting_tools',
+            'source': 'test_pkg_plotting_tools.py',
             'timeout': 0,
+            'suite': ['python', 'pkg'],
         },
     ]
 endif
@@ -701,9 +709,10 @@ python_getdist = python_module.find_installation(
 if python_getdist.found()
     python_tests += [
         {
-            'name': 'plotting',
-            'source': 'test_plotting.py',
+            'name': 'pkg_plotting',
+            'source': 'test_pkg_plotting.py',
             'timeout': 0,
+            'suite': ['python', 'pkg'],
         },
     ]
 endif
