@@ -189,7 +189,7 @@ _nc_cluster_mass_ascaso_mu (NcClusterMassRichness *mr, gdouble lnM, gdouble z)
   const gdouble lnM0          = nc_cluster_mass_richness_lnM0 (mr);
   const gdouble ln1pz0        = nc_cluster_mass_richness_ln1pz0 (mr);
   const gdouble DlnM          = lnM - lnM0;
-  const gdouble Dln1pz        = ln1pz0 - ln1pz0;
+  const gdouble Dln1pz        = log1p (z) - ln1pz0;
 
   return MU_P0 + MU_P1 * DlnM + MU_P2 * Dln1pz;
 }
@@ -201,7 +201,7 @@ _nc_cluster_mass_ascaso_sigma (NcClusterMassRichness *mr, gdouble lnM, gdouble z
   const gdouble lnM0          = nc_cluster_mass_richness_lnM0 (mr);
   const gdouble ln1pz0        = nc_cluster_mass_richness_ln1pz0 (mr);
   const gdouble DlnM          = lnM - lnM0;
-  const gdouble Dln1pz        = ln1pz0 - ln1pz0;
+  const gdouble Dln1pz        = log1p (z) - ln1pz0;
   const gdouble sigma         = SIGMA_P0 + SIGMA_P1 * DlnM + SIGMA_P2 * Dln1pz;
 
   /* Add a small number to the standard deviation to avoid numerical instabilities */

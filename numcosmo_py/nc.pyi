@@ -1671,6 +1671,15 @@ class ClusterMass(NumCosmoMath.Model):
         lnM_obs_params: typing.Sequence[float] | npt.NDArray[np.float64],
         rng: NumCosmoMath.RNG,
     ) -> bool: ...
+    def resample_vec(
+        self,
+        cosmo: HICosmo,
+        lnM: float,
+        z: float,
+        lnM_obs: NumCosmoMath.Vector,
+        lnM_obs_params: typing.Optional[NumCosmoMath.Vector],
+        rng: NumCosmoMath.RNG,
+    ) -> bool: ...
     def volume(self) -> float: ...
 
 class ClusterMassAscaso(ClusterMassRichness):

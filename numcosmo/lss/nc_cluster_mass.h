@@ -95,6 +95,7 @@ gdouble nc_cluster_mass_p (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdou
 gdouble nc_cluster_mass_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z);
 gdouble nc_cluster_mass_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params);
 gboolean nc_cluster_mass_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng);
+gboolean nc_cluster_mass_resample_vec (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, gdouble z, NcmVector *lnM_obs, const NcmVector *lnM_obs_params, NcmRNG *rng);
 void nc_cluster_mass_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 void nc_cluster_mass_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 void nc_cluster_mass_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);

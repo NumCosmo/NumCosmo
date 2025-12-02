@@ -333,6 +333,31 @@ nc_cluster_mass_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdoub
 }
 
 /**
+ * nc_cluster_mass_resample_vec:
+ * @clusterm: a #NcClusterMass
+ * @cosmo: a #NcHICosmo
+ * @lnM: logarithm base e of the true mass
+ * @z: true redshift
+ * @lnM_obs: a #NcmVector to store the observed mass proxies
+ * @lnM_obs_params: (nullable): a #NcmVector with observed mass params
+ * @rng: a #NcmRNG
+ *
+ * Generates a random sample of the observed mass proxies given the true mass and redshift.
+ * This is a convenience wrapper around nc_cluster_mass_resample() that uses #NcmVector
+ * for proper Python bindings support.
+ *
+ * Returns: TRUE if the sample was generated successfully within the limits of the observable mass proxies.
+ */
+gboolean
+nc_cluster_mass_resample_vec (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, NcmVector *lnM_obs, const NcmVector *lnM_obs_params, NcmRNG *rng)
+{
+  return nc_cluster_mass_resample (clusterm, cosmo, lnM, z,
+                                   ncm_vector_ptr (lnM_obs, 0),
+                                   lnM_obs_params != NULL ? ncm_vector_ptr ((NcmVector *) lnM_obs_params, 0) : NULL,
+                                   rng);
+}
+
+/**
  * nc_cluster_mass_p_limits: (virtual P_limits)
  * @clusterm: a #NcClusterMass.
  * @cosmo: a #NcHICosmo.
