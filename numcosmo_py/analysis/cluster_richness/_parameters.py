@@ -26,7 +26,7 @@ subclass instances (NcClusterMassAscaso, NcClusterMassExt, etc.).
 from dataclasses import dataclass
 from typing import Any, TypeVar
 
-from numcosmo_py import Nc, Ncm
+from numcosmo_py import Nc, Ncm, GLib
 
 
 # Type variable for generic model duplication
@@ -144,8 +144,8 @@ def model_params_from_dict(
     for name, value in params.items():
         try:
             model[name] = value
-        except Exception:  # noqa: BLE001
-            pass  # Skip parameters not in this model
+        except GLib.Error:
+            pass
 
 
 def copy_model_params(
