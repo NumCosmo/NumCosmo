@@ -1,7 +1,7 @@
 #
 # _diagnostics.py
 #
-# Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+# Copyright (C) 2025 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the

@@ -1,7 +1,7 @@
 #
 # _analyzer.py
 #
-# Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+# Copyright (C) 2025 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -22,6 +22,8 @@ This module provides the main analysis pipeline for studying cluster
 mass-richness relations with progressive richness cuts.
 """
 
+from typing import Optional
+
 import numpy as np
 from rich.console import Console
 from rich.panel import Panel
@@ -39,12 +41,17 @@ from ._parameters import (
 from ._utils import setup_model_fit_params, PARAM_FORMAT
 
 
-#: Rich console for output
-console = Console()
-
 #: Global flags for enabling/disabling MCMC and bootstrap
 COMPUTE_MCMC = False
 COMPUTE_BOOTSTRAP = False
+
+
+def _get_default_console() -> Console:
+    """Get or create the default console instance.
+
+    :return: Default Console instance
+    """
+    return Console()
 
 
 class CutAnalyzer:
@@ -69,6 +76,7 @@ class CutAnalyzer:
         file_prefix: str | None = None,
         sample_desc: str = "Sample",
         verbose: bool = True,
+        console: Optional[Console] = None,
     ):
         """Initialize the analyzer.
 
@@ -82,6 +90,7 @@ class CutAnalyzer:
         :param file_prefix: Prefix for output files (default: None)
         :param sample_desc: Description of the sample for display (default: "Sample")
         :param verbose: Whether to print progress (default: True)
+        :param console: Rich Console for output (default: creates new Console)
         """
         self.lnM = lnM
         self.z = z
@@ -93,6 +102,7 @@ class CutAnalyzer:
         self.file_prefix = file_prefix
         self.sample_desc = sample_desc
         self.verbose = verbose
+        self.console = console if console is not None else _get_default_console()
         self.results: dict[float, CutAnalysisResult] = {}
 
         # Will be initialized in _initialize_model
@@ -134,12 +144,13 @@ class CutAnalyzer:
         assert self.cluster_m is not None
 
         # Apply cut
+        data.apply_cut(cut)
         self.cluster_m["cut"] = cut
         n_clusters = int(np.sum(self.lnR > cut))
 
         # Best-fit
         if self.verbose:
-            console.print("    [yellow]→ Running fit...[/yellow]", end="")
+            self.console.print("    [yellow]→ Running fit...[/yellow]", end="")
         dset = Ncm.Dataset.new()
         dset.append_data(data)
         likelihood = Ncm.Likelihood.new(dset)
@@ -158,12 +169,12 @@ class CutAnalyzer:
         m2lnL = fit.peek_state().get_m2lnL_curval()
 
         if self.verbose:
-            console.print(" [green]✓[/green]")
+            self.console.print(" [green]✓[/green]")
 
         # MCMC (if requested)
         if self.compute_mcmc:
             if self.verbose:
-                console.print(
+                self.console.print(
                     "    [yellow]→ Running MCMC (1000 walkers)...[/yellow]", end=""
                 )
             nwalkers = 1000
@@ -199,15 +210,18 @@ class CutAnalyzer:
             model_params_from_list(mcmc_median_model, np.median(rows, axis=0).tolist())
 
             if self.verbose:
-                console.print(" [green]✓[/green]")
+                self.console.print(" [green]✓[/green]")
         else:
             mcmc_mean_model = dup_model(bestfit_model)
             mcmc_median_model = dup_model(bestfit_model)
 
         # Bootstrap
         if self.verbose:
-            console.print(
-                f"    [yellow]→ Running bootstrap ({self.n_bootstrap} samples)...[/yellow]",
+            self.console.print(
+                (
+                    f"    [yellow]→ Running bootstrap "
+                    f"({self.n_bootstrap} samples)...[/yellow]"
+                ),
                 end="",
             )
         if self.compute_bootstrap:
@@ -234,7 +248,7 @@ class CutAnalyzer:
         else:
             bootstrap_model = dup_model(bestfit_model)
         if self.verbose:
-            console.print(" [green]✓[/green]")
+            self.console.print(" [green]✓[/green]")
 
         return CutAnalysisResult(
             cut=cut,
@@ -247,26 +261,15 @@ class CutAnalyzer:
         )
 
     def analyze(
-        self, model_init: Nc.ClusterMassRichness | None = None
+        self, model_init: Nc.ClusterMassRichness
     ) -> dict[float, CutAnalysisResult]:
         """Analyze dataset with progressive cuts.
 
         Iterates through all cuts, performing the complete analysis pipeline on each.
 
-        :param model_init: Initial model with starting parameters. If None, creates
-            a default NcClusterMassAscaso model (default: None)
+        :param model_init: Initial model with starting parameters.
         :return: Results indexed by cut value
         """
-        if model_init is None:
-            # Create default Ascaso model with typical initial values
-            model_init = Nc.ClusterMassAscaso(lnRichness_min=0.0, lnRichness_max=20.0)
-            model_init["mup0"] = 4.0
-            model_init["mup1"] = 1.0
-            model_init["mup2"] = 0.2
-            model_init["sigmap0"] = 0.5
-            model_init["sigmap1"] = 0.03
-            model_init["sigmap2"] = 0.15
-
         self._initialize_model(model_init)
         assert self.cluster_m is not None
         mset = Ncm.MSet.new_array([self.cluster_m])
@@ -275,17 +278,18 @@ class CutAnalyzer:
         data = self._setup_real_data()
 
         if self.verbose:
-            console.print(
-                f"[cyan]Analyzing {len(self.lnM)} objects with {len(self.cuts)} cuts...[/cyan]"
+            self.console.print(
+                f"[cyan]Analyzing {len(self.lnM)} objects with "
+                f"{len(self.cuts)} cuts...[/cyan]"
             )
 
         for cut in self.cuts:
             if self.verbose:
-                console.print(f"  Processing cut {np.exp(cut):.2f}...")
+                self.console.print(f"  Processing cut {np.exp(cut):.2f}...")
             result = self._analyze_cut(data, mset, cut)
             self.results[cut] = result
             if self.verbose:
-                console.print(
+                self.console.print(
                     f"    Found {result.n_clusters} objects. "
                     f"μ₀={result.bestfit['mup0']:.3f}"
                 )
@@ -341,4 +345,4 @@ class CutAnalyzer:
                 ),
             )
 
-        console.print(Panel(table))
+        self.console.print(Panel(table))

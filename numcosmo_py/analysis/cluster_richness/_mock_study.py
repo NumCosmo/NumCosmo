@@ -1,7 +1,7 @@
 #
 # _mock_study.py
 #
-# Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+# Copyright (C) 2025 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -22,6 +22,8 @@ This module provides tools for generating mock realizations from a fiducial
 model and analyzing them to assess parameter biases and uncertainties.
 """
 
+from typing import Optional
+
 import numpy as np
 from rich.console import Console, Group
 from rich.live import Live
@@ -41,8 +43,12 @@ from ._analyzer import CutAnalyzer, COMPUTE_MCMC, COMPUTE_BOOTSTRAP
 from ._database import BestfitDatabase
 
 
-#: Rich console for output
-console = Console()
+def _get_default_console() -> Console:
+    """Get or create the default console instance.
+
+    :return: Default Console instance
+    """
+    return Console()
 
 
 class MockStudy:
@@ -69,6 +75,7 @@ class MockStudy:
         fiducial_results: dict[float, CutAnalysisResult] | None = None,
         db_path: str = "bestfits.db",
         recompute: bool = False,
+        console: Optional[Console] = None,
     ):
         """Initialize mock study.
 
@@ -87,6 +94,7 @@ class MockStudy:
             "bestfits.db")
         :param recompute: Force recomputation of all bestfits, ignoring cached values
             (default: False)
+        :param console: Rich console for output (default: None, creates new Console)
         """
         self.model_fiducial = model_fiducial
         self.lnM = lnM
@@ -101,6 +109,7 @@ class MockStudy:
         self.db = BestfitDatabase(db_path)
         self.recompute = recompute
         self.cached_bestfits: dict[tuple[int, float], Nc.ClusterMassRichness] = {}
+        self.console = console if console is not None else _get_default_console()
 
     def _generate_mock(
         self, mock_seed: int
@@ -113,6 +122,10 @@ class MockStudy:
         # Duplicate fiducial model to avoid modifying it
         cluster_m = dup_model(self.model_fiducial)
         cluster_m["cut"] = np.log(5.0)  # Same initial cut of the real data
+        # For mock generation we need the full richness distribution, i.e., we keep all
+        # clusters. Setting sample_full_dist to False restricts sampling to the allowed
+        # richness range only.
+        cluster_m.set_sample_full_dist(False)
 
         mset = Ncm.MSet.new_array([cluster_m])
         mset.prepare_fparam_map()
@@ -144,7 +157,7 @@ class MockStudy:
         rng = np.random.default_rng(seed)
         mock_seeds = [rng.integers(0, 2**31) for _ in range(self.n_mocks)]
 
-        console.print(
+        self.console.print(
             f"[magenta]Running mock study: {self.n_mocks} mocks "
             f"× {len(self.cuts)} cuts[/magenta]"
         )
@@ -314,7 +327,7 @@ class MockStudy:
 
             return table
 
-        with Live(console=console, refresh_per_second=1) as live:
+        with Live(console=self.console, refresh_per_second=1) as live:
             # Load existing bestfits from database if not recomputing
             if not self.recompute:
                 all_computed_seeds = self.db.get_all_computed_seeds()
@@ -324,7 +337,7 @@ class MockStudy:
                         if bestfit:
                             self.cached_bestfits[(mock_seed, cut)] = bestfit
                 if all_computed_seeds:
-                    console.print(
+                    self.console.print(
                         f"[cyan]Loaded {len(all_computed_seeds)} seeds from database "
                         f"({self.db.count_entries()} total entries)[/cyan]"
                     )
@@ -351,6 +364,7 @@ class MockStudy:
                     file_prefix=mock_file_prefix,
                     sample_desc=f"Mock Seed: {int(mock_seed)}",
                     verbose=False,
+                    console=self.console,
                 )
                 results = analyzer.analyze(model_init=self.model_fiducial)
                 self.mock_results.append(results)
@@ -383,7 +397,7 @@ class MockStudy:
                 # Update live display
                 live.update(display_content)
 
-        console.print("[green]Mock study complete![/green]")
+        self.console.print("[green]Mock study complete![/green]")
 
     def compute_gof_statistics(self) -> dict[float, dict[str, float]]:
         """Compute goodness-of-fit (GOF) statistics using parametric bootstrap.
@@ -397,11 +411,13 @@ class MockStudy:
         :return: dictionary mapping cuts to GOF statistics
         """
         if not self.mock_results:
-            console.print("[red]No mock results available for GOF computation[/red]")
+            self.console.print(
+                "[red]No mock results available for GOF computation[/red]"
+            )
             return {}
 
         if self.fiducial_results is None:
-            console.print(
+            self.console.print(
                 "[red]Fiducial results not provided for GOF computation[/red]"
             )
             return {}
@@ -474,4 +490,4 @@ class MockStudy:
                 f"{stats['n_mocks']}",
             )
 
-        console.print(Panel(table))
+        self.console.print(Panel(table))

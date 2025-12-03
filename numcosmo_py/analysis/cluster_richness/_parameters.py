@@ -1,7 +1,7 @@
 #
 # _parameters.py
 #
-# Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+# Copyright (C) 2025 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -168,7 +168,11 @@ def model_params_as_list(model: Nc.ClusterMassRichness) -> list[float]:
     :param model: A NcClusterMassRichness subclass instance
     :return: List of parameter values in model's internal order
     """
-    return [model.param_get(i) for i in range(model.sparam_len())]
+    return [
+        model.param_get(i)
+        for i in range(model.sparam_len())
+        if model.param_get_ftype(i) != Ncm.ParamType.FIXED
+    ]
 
 
 def model_params_from_list(model: Nc.ClusterMassRichness, values: list[float]) -> None:
@@ -178,6 +182,8 @@ def model_params_from_list(model: Nc.ClusterMassRichness, values: list[float]) -
     :param values: List of parameter values in model's internal order
     """
     for i, value in enumerate(values[: model.sparam_len()]):
+        if model.param_get_ftype(i) == Ncm.ParamType.FIXED:
+            continue
         model.param_set(i, value)
 
 
@@ -187,4 +193,8 @@ def get_model_param_names(model: Nc.ClusterMassRichness) -> list[str]:
     :param model: A NcClusterMassRichness subclass instance
     :return: List of parameter names
     """
-    return [model.param_name(i) for i in range(model.sparam_len())]
+    return [
+        model.param_name(i)
+        for i in range(model.sparam_len())
+        if model.param_get_ftype(i) != Ncm.ParamType.FIXED
+    ]

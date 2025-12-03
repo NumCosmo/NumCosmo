@@ -34,11 +34,11 @@ from pathlib import Path
 import typer
 
 from numcosmo_py import Ncm
-from numcosmo_py.sampling import set_ncm_console
+from .logging import AppLogging
 
 
 @dataclasses.dataclass(kw_only=True)
-class LoadExperiment:
+class LoadExperiment(AppLogging):
     """Load an experiment file.
 
     Common block for commands that load an experiment. All commands that load an
@@ -83,21 +83,16 @@ class LoadExperiment:
         ),
     ] = None
 
-    log_file: Annotated[
-        Optional[Path],
-        typer.Option(
-            "--log-file",
-            "-l",
-            help="Path to the file where the log should be written.",
-        ),
-    ] = None
-
     def __post_init__(self) -> None:
         """Load the experiment file and prepare the experiment."""
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
         builders_file = self.experiment.with_suffix(".builders.yaml")
-        # Builders file is optional
+        # Builders file is optional.
+        #
+        # The models need to be created before initializing NumCosmo, this is necessary
+        # since in a MPI environment the slave processes need to have the models
+        # registered before waiting for commands from the master process.
         if builders_file.exists():
             model_builders = ser.dict_str_from_yaml_file(
                 builders_file.absolute().as_posix()
@@ -110,15 +105,8 @@ class LoadExperiment:
                 assert isinstance(model_builder, Ncm.ModelBuilder)
                 model_builder.create()
 
-        # We need to initialize NumCosmo after creating the model builders
-        # this is necessary because when using MPI, the model builders
-        # should be created in all processes before initializing NumCosmo.
-        Ncm.cfg_init()
-        self.console_io = None
-        if self.log_file:
-            self.console_io = open(self.log_file, "w", encoding="utf-8")
-
-        console = set_ncm_console(self.console_io)
+        # Initialize logging from parent class (also initializes NumCosmo)
+        super().__post_init__()
 
         dataset_file = self.experiment.with_suffix(".dataset.gvar")
         if dataset_file.exists():
@@ -190,7 +178,6 @@ class LoadExperiment:
                 )
             mset.param_set_mset(saved_mset)
 
-        self.console = console
         self.likelihood = likelihood
         self.mset = mset
 
@@ -234,8 +221,7 @@ class LoadExperiment:
             ser.dict_str_to_yaml_file(
                 self.output_dict, self.output.absolute().as_posix()
             )
-        if self.console_io is not None:
-            self.console_io.close()
+        self.close_logging()
 
 
 @dataclasses.dataclass(kw_only=True)

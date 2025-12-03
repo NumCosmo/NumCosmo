@@ -49,6 +49,7 @@ from .generate import (
     GenerateXCDM,
     GenerateDEWSpline,
 )
+from .cluster_richness import RunClusterRichnessAnalysis
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
 app_run = typer.Typer(no_args_is_help=True, help="Run different statistical analyses.")
@@ -57,11 +58,13 @@ app_cat = typer.Typer(
     no_args_is_help=True, help="MCMC catalog analysis and calibration."
 )
 app_generate = typer.Typer(no_args_is_help=True, help="Generate experiment files.")
+app_analysis = typer.Typer(no_args_is_help=True, help="Data analysis tools.")
 
 app.add_typer(app_run, name="run")
 app_run.add_typer(app_run_mcmc, name="mcmc")
 app.add_typer(app_cat, name="catalog")
 app.add_typer(app_generate, name="generate")
+app.add_typer(app_analysis, name="analysis")
 
 CMDArg = TypedDict("CMDArg", {"no_args_is_help": bool, "help": str, "name": str})
 
@@ -188,6 +191,12 @@ GEN_DEWSPLINE_CMD: CMDArg = {
     "help": "Generate DE w(z) spline experiments.",
 }
 
+ANALYSIS_CLUSTER_RICHNESS_CMD: CMDArg = {
+    "name": "cluster-richness",
+    "no_args_is_help": True,
+    "help": "Analyze cluster mass-richness scaling relations.",
+}
+
 # ------------------------------------------------------------------------------
 # Installing from-cosmosis command if COSMOSIS is installed and
 # all prerequisites are met.
@@ -222,3 +231,6 @@ app_generate.command(**GEN_CLUSTER_WL_CMD)(GenerateClusterWL)
 app_generate.command(**GEN_QSPLINE_CMD)(GenerateQSpline)
 app_generate.command(**GEN_XCDM_CMD)(GenerateXCDM)
 app_generate.command(**GEN_DEWSPLINE_CMD)(GenerateDEWSpline)
+# ------------------------------------------------------------------------------
+# Installing analysis subcommands
+app_analysis.command(**ANALYSIS_CLUSTER_RICHNESS_CMD)(RunClusterRichnessAnalysis)

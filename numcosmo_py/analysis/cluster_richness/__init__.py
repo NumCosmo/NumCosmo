@@ -1,7 +1,7 @@
 #
 # __init__.py
 #
-# Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+# Copyright (C) 2025 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -69,6 +69,7 @@ from ._utils import (
     setup_model_fit_params,
     create_richness_model,
     get_model_type_name,
+    RichnessModelType,
     PARAM_FORMAT,
 )
 from ._analyzer import CutAnalyzer, COMPUTE_MCMC, COMPUTE_BOOTSTRAP
@@ -91,7 +92,6 @@ from ._diagnostics import (
     plot_sigma_residuals,
     plot_diagnostic_summary,
 )
-from ._example import run_analysis_example
 
 __all__ = [
     # Results dataclass
@@ -111,6 +111,7 @@ __all__ = [
     "setup_model_fit_params",
     "create_richness_model",
     "get_model_type_name",
+    "RichnessModelType",
     "PARAM_FORMAT",
     # Analysis
     "CutAnalyzer",
@@ -135,6 +136,4 @@ __all__ = [
     "plot_empirical_vs_model_sigma",
     "plot_sigma_residuals",
     "plot_diagnostic_summary",
-    # Example
-    "run_analysis_example",
 ]

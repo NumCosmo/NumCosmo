@@ -1,7 +1,7 @@
 #
 # _utils.py
 #
-# Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+# Copyright (C) 2025 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -21,46 +21,39 @@
 This module provides helper functions used across the package.
 """
 
+from enum import StrEnum
+
 from numcosmo_py import Nc
 
 
 #: Format string for parameter display
 PARAM_FORMAT = ".3f"
+FIXED_PARAMETERS = ["cut"]
 
 
-def setup_model_fit_params(
-    model: Nc.ClusterMassRichness,
-    bounds: tuple[float, float] = (-20.0, 20.0),
-    scale: float = 1.0e-1,
-    abstol: float = 1.0e-50,
-) -> None:
+class RichnessModelType(StrEnum):
+    """Enumeration of supported richness model types."""
+
+    ASCASO = "ascaso"
+    EXT = "ext"
+
+
+def setup_model_fit_params(model: Nc.ClusterMassRichness) -> None:
     """Set up model parameters for fitting with default bounds.
 
-    Configures all parameters in the model with fitting bounds and tolerances.
+    This function sets the "fit" flag for all parameters except the cut parameter.
 
     :param model: A NcClusterMassRichness subclass instance
-    :param bounds: Lower and upper bounds for all parameters (default: (-20.0, 20.0))
-    :param scale: Scale for parameter optimization (default: 1.0e-1)
-    :param abstol: Absolute tolerance (default: 1.0e-50)
     """
     for i in range(model.sparam_len()):
         name = model.param_name(i)
-        value = model.param_get(i)
-        model.param_set_desc(
-            name,
-            {
-                "lower-bound": bounds[0],
-                "upper-bound": bounds[1],
-                "scale": scale,
-                "abstol": abstol,
-                "fit": True,
-                "value": value,
-            },
-        )
+        if name in FIXED_PARAMETERS:
+            continue  # Do not fit the fixed parameters
+        model.param_set_desc(name, {"fit": True})
 
 
 def create_richness_model(
-    model_type: str = "ascaso",
+    model_type: str | RichnessModelType = RichnessModelType.ASCASO,
     lnRichness_min: float = 0.0,
     lnRichness_max: float = 20.0,
 ) -> Nc.ClusterMassRichness:
@@ -72,17 +65,19 @@ def create_richness_model(
     :return: New model instance
     :raises ValueError: If model_type is not recognized
     """
-    model_type_lower = model_type.lower()
-    if model_type_lower == "ascaso":
-        return Nc.ClusterMassAscaso(
-            lnRichness_min=lnRichness_min, lnRichness_max=lnRichness_max
-        )
-    elif model_type_lower == "ext":
-        return Nc.ClusterMassExt(
-            lnRichness_min=lnRichness_min, lnRichness_max=lnRichness_max
-        )
-    else:
-        raise ValueError(f"Unknown model type: {model_type}. Use 'ascaso' or 'ext'.")
+    match model_type:
+        case RichnessModelType.ASCASO:
+            return Nc.ClusterMassAscaso(
+                lnRichness_min=lnRichness_min, lnRichness_max=lnRichness_max
+            )
+        case RichnessModelType.EXT:
+            return Nc.ClusterMassExt(
+                lnRichness_min=lnRichness_min, lnRichness_max=lnRichness_max
+            )
+        case _:
+            raise ValueError(
+                f"Unknown model type: {model_type}. Use 'ascaso' or 'ext'."
+            )
 
 
 def get_model_type_name(model: Nc.ClusterMassRichness) -> str:
@@ -91,9 +86,10 @@ def get_model_type_name(model: Nc.ClusterMassRichness) -> str:
     :param model: A NcClusterMassRichness subclass instance
     :return: Type name string ("ascaso", "ext", or the GObject type name)
     """
-    if isinstance(model, Nc.ClusterMassAscaso):
-        return "ascaso"
-    elif isinstance(model, Nc.ClusterMassExt):
-        return "ext"
-    else:
-        return type(model).__name__
+    match model:
+        case Nc.ClusterMassAscaso():
+            return "ascaso"
+        case Nc.ClusterMassExt():
+            return "ext"
+        case _:
+            return type(model).__name__
