@@ -18,8 +18,18 @@
 
 """Truncated normal distribution statistics.
 
-This module provides functions for computing statistics of truncated
-normal distributions and inverting them to recover underlying parameters.
+This module provides functions for working with truncated normal distributions
+in the context of mass-richness relations.
+
+Model: lnR ~ N(mu(lnM, z), sigma(lnM, z)^2) truncated at lnR >= lnR_cut
+
+Independent variables: lnM (log mass), z (redshift)
+Model parameters: mu(lnM, z), sigma(lnM, z) - Gaussian distribution parameters
+Dependent variable: lnR (log richness)
+
+Functions provided:
+- Forward conversion: (mu, sigma) → (truncated mean, truncated std)
+- Inverse conversion: (truncated mean, truncated std) → (mu, sigma)
 """
 
 import sys
@@ -45,15 +55,20 @@ class InversionResult(TypedDict, total=False):
 def mean_lnR_truncated(
     mu: float | np.ndarray, sigma: float | np.ndarray, lnR_cut: float
 ) -> float | np.ndarray:
-    """Calculate the mean of a truncated normal distribution.
+    """Calculate the truncated mean from model parameters.
 
-    For a normal distribution N(mu, sigma^2) truncated from below at lnR_cut,
-    compute the expected value of the truncated distribution.
+    Forward conversion: Given model parameters mu(lnM, z) and sigma(lnM, z),
+    compute the expected value (mean) of the truncated distribution for lnR.
 
-    :param mu: Mean of the underlying normal distribution
-    :param sigma: Standard deviation of the underlying normal distribution
-    :param lnR_cut: Lower truncation point
-    :return: Mean of the truncated distribution
+    For lnR ~ N(mu, sigma^2) truncated at lnR >= lnR_cut:
+    E[lnR | lnR >= lnR_cut] = mu + sigma * lambda(alpha)
+
+    where alpha = (lnR_cut - mu) / sigma and lambda is the inverse Mills ratio.
+
+    :param mu: Model parameter mu(lnM, z) - location of the underlying Gaussian
+    :param sigma: Model parameter sigma(lnM, z) - scale of the underlying Gaussian
+    :param lnR_cut: Lower truncation point in log richness
+    :return: Truncated mean of lnR
     """
     A = (lnR_cut - mu) / sigma
     phi = norm.pdf(A)
@@ -66,15 +81,20 @@ def mean_lnR_truncated(
 def std_lnR_truncated(
     mu: float | np.ndarray, sigma: float | np.ndarray, lnR_cut: float
 ) -> float | np.ndarray:
-    """Calculate the standard deviation of a truncated normal distribution.
+    """Calculate the truncated standard deviation from model parameters.
 
-    For a normal distribution N(mu, sigma^2) truncated from below at lnR_cut,
-    compute the standard deviation of the truncated distribution.
+    Forward conversion: Given model parameters mu(lnM, z) and sigma(lnM, z),
+    compute the standard deviation of the truncated distribution for lnR.
 
-    :param mu: Mean of the underlying normal distribution
-    :param sigma: Standard deviation of the underlying normal distribution
-    :param lnR_cut: Lower truncation point
-    :return: Standard deviation of the truncated distribution
+    For lnR ~ N(mu, sigma^2) truncated at lnR >= lnR_cut:
+    Var[lnR | lnR >= lnR_cut] = sigma^2 * [1 + alpha*lambda(alpha) - lambda(alpha)^2]
+
+    where alpha = (lnR_cut - mu) / sigma and lambda is the inverse Mills ratio.
+
+    :param mu: Model parameter mu(lnM, z) - location of the underlying Gaussian
+    :param sigma: Model parameter sigma(lnM, z) - scale of the underlying Gaussian
+    :param lnR_cut: Lower truncation point in log richness
+    :return: Truncated standard deviation of lnR
     """
     A = (lnR_cut - mu) / sigma
     phi = norm.pdf(A)
@@ -85,41 +105,43 @@ def std_lnR_truncated(
 
 
 def invert_truncated_stats(
-    m_obs: float,
-    s_obs: float,
+    mean_obs: float,
+    std_obs: float,
     lnR_cut: float,
     mu_bounds: tuple[float, float] = (-2.0, 6.0),
     sigma_bounds: tuple[float, float] = (1e-4, 5.0),
     tries: list[tuple[float, float]] | None = None,
 ) -> InversionResult:
-    """Invert truncated normal statistics to recover underlying parameters.
+    """Recover model parameters from observed truncated statistics.
 
-    Solve for (mu, sigma) such that truncated-mean(mu, sigma) = m_obs and
-    truncated-std(mu, sigma) = s_obs, where the distribution is truncated
-    from below at lnR_cut.
+    Inverse conversion: Given observed sample statistics (mean, std) of lnR,
+    solve for the underlying model parameters (mu, sigma) that would produce
+    these truncated statistics.
 
-    :param m_obs: Observed truncated mean
-    :param s_obs: Observed truncated standard deviation
-    :param lnR_cut: Lower truncation point
-    :param mu_bounds: Bounds for mu search (default: (-2.0, 6.0))
-    :param sigma_bounds: Bounds for sigma search (default: (1e-4, 5.0))
+    Solves the system:
+      mean_lnR_truncated(mu, sigma, lnR_cut) = mean_obs
+      std_lnR_truncated(mu, sigma, lnR_cut) = std_obs
+
+    :param mean_obs: Observed sample mean of lnR (truncated)
+    :param std_obs: Observed sample standard deviation of lnR (truncated)
+    :param lnR_cut: Lower truncation point in log richness
+    :param mu_bounds: Search bounds for mu parameter (default: (-2.0, 6.0))
+    :param sigma_bounds: Search bounds for sigma parameter (default: (1e-4, 5.0))
     :param tries: Initial guesses as list of (mu0, log_sigma0) tuples (default: None)
-    :return: Dictionary with keys: mu, sigma, success, message, and optimization info
+    :return: Dictionary with recovered mu, sigma, success flag, and optimization info
     """
 
     # objective on parameters x = [mu, t] with sigma = exp(t) to enforce positivity
     def residuals(x):
         mu = x[0]
         sigma = np.exp(x[1])
-        r1 = mean_lnR_truncated(mu, sigma, lnR_cut) - m_obs
-        r2 = std_lnR_truncated(mu, sigma, lnR_cut) - s_obs
+        r1 = mean_lnR_truncated(mu, sigma, lnR_cut) - mean_obs
+        r2 = std_lnR_truncated(mu, sigma, lnR_cut) - std_obs
         return np.array([r1, r2])
 
     # default initial guesses (several tries for robustness)
     if tries is None:
-        tries = [
-            (m_obs, s_obs),
-        ]
+        tries = [(1.0, 0.5)]
 
     # bounds in transformed space
     mu_lo, mu_hi = mu_bounds
@@ -134,7 +156,7 @@ def invert_truncated_stats(
         x0 = np.array([mu0, logsigma0])
         r0 = np.linalg.norm(residuals(x0))
         for my_try, logsigma_try in zip(
-            np.random.uniform(mu_lo, mu_hi, 20), np.random.uniform(t_lo, t_hi, 20)
+            np.random.uniform(0.0, mu_hi, 200), np.random.uniform(t_lo, t_hi, 200)
         ):
             r = residuals([my_try, logsigma_try])
             if np.linalg.norm(r) < r0:
@@ -184,11 +206,14 @@ def invert_truncated_stats(
 def invert_truncated_stats_mu_from_sample(
     lnR_sample: np.ndarray, lnR_cut: float
 ) -> float | None:
-    """Recover underlying mu from a sample of truncated data.
+    """Recover model parameter mu from observed lnR sample.
 
-    :param lnR_sample: Array of log-richness values from truncated distribution
-    :param lnR_cut: Lower truncation point
-    :return: Estimated underlying mu, or None if inversion failed
+    Convenience function that computes sample statistics and inverts them
+    to recover the underlying mu parameter.
+
+    :param lnR_sample: Array of observed log-richness values (truncated sample)
+    :param lnR_cut: Lower truncation point in log richness
+    :return: Estimated model parameter mu, or None if inversion failed
     """
     assert len(lnR_sample) > 0, "Sample must have at least one element"
     result = invert_truncated_stats(np.mean(lnR_sample), np.std(lnR_sample), lnR_cut)
@@ -198,11 +223,14 @@ def invert_truncated_stats_mu_from_sample(
 def invert_truncated_stats_sigma_from_sample(
     lnR_sample: np.ndarray, lnR_cut: float
 ) -> float | None:
-    """Recover underlying sigma from a sample of truncated data.
+    """Recover model parameter sigma from observed lnR sample.
 
-    :param lnR_sample: Array of log-richness values from truncated distribution
-    :param lnR_cut: Lower truncation point
-    :return: Estimated underlying sigma, or None if inversion failed
+    Convenience function that computes sample statistics and inverts them
+    to recover the underlying sigma parameter.
+
+    :param lnR_sample: Array of observed log-richness values (truncated sample)
+    :param lnR_cut: Lower truncation point in log richness
+    :return: Estimated model parameter sigma, or None if inversion failed
     """
     assert len(lnR_sample) > 0, "Sample must have at least one element"
     result = invert_truncated_stats(np.mean(lnR_sample), np.std(lnR_sample), lnR_cut)

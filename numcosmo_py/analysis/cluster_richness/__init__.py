@@ -18,8 +18,20 @@
 
 """Cluster richness analysis package.
 
-This package provides tools for analyzing cluster mass-richness relations
-using NcClusterMassRichness models (Ascaso, Ext, or custom subclasses), including:
+This package provides tools for analyzing cluster mass-richness relations.
+
+Model Structure:
+    lnR ~ N(mu(lnM, z), sigma(lnM, z)^2) with truncation at lnR >= lnR_cut
+
+    - Independent variables: lnM (log mass), z (redshift)
+    - Model parameters: mu(lnM, z), sigma(lnM, z) - Gaussian distribution parameters
+    - Dependent variable: lnR (log richness)
+
+Validation Approaches:
+    1. Forward: Model (mu, sigma) → Truncated (mean, std) → Compare with sample
+    2. Inverse: Sample (mean, std) → Recover (mu, sigma) → Compare with model
+
+Tools provided:
 
 - CutAnalyzer for analyzing datasets with progressive richness cuts
 - BestfitDatabase for ACID-compliant storage of best-fit models

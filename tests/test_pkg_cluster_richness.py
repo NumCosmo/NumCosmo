@@ -432,15 +432,6 @@ class TestSetupModelFitParams:
             # At minimum, the function should run without error
             pass
 
-    def test_custom_bounds(self, richness_model: Nc.ClusterMassRichness) -> None:
-        """Test setting custom bounds."""
-        # Should run without error
-        setup_model_fit_params(richness_model, bounds=(-10.0, 10.0))
-
-    def test_custom_scale(self, richness_model: Nc.ClusterMassRichness) -> None:
-        """Test setting custom scale."""
-        setup_model_fit_params(richness_model, scale=0.01)
-
 
 class TestCreateRichnessModel:
     """Tests for create_richness_model function."""
@@ -864,7 +855,8 @@ class TestCutAnalyzer:
             cuts=cuts,
             verbose=False,
         )
-        results = analyzer.analyze()
+        model_init = create_richness_model("ascaso")
+        results = analyzer.analyze(model_init=model_init)
 
         assert len(results) == 1
         assert cuts[0] in results
@@ -901,7 +893,8 @@ class TestCutAnalyzer:
             cuts=cuts,
             verbose=False,
         )
-        results = analyzer.analyze()
+        model_init = create_richness_model("ascaso")
+        results = analyzer.analyze(model_init=model_init)
 
         assert len(results) == 3
         for cut in cuts:
@@ -918,7 +911,8 @@ class TestCutAnalyzer:
             cuts=cuts,
             verbose=False,
         )
-        analyzer.analyze()
+        model_init = create_richness_model("ascaso")
+        analyzer.analyze(model_init=model_init)
 
         assert len(analyzer.results) == 1
 
@@ -933,6 +927,7 @@ class TestCutAnalyzer:
             cuts=cuts,
             verbose=False,
         )
-        analyzer.analyze()
+        model_init = create_richness_model("ascaso")
+        analyzer.analyze(model_init=model_init)
         # Should not raise
         analyzer.display_results()

@@ -186,6 +186,14 @@ class RunClusterRichnessAnalysis(AppLogging):
         ),
     ] = False
 
+    n_bins: Annotated[
+        int,
+        typer.Option(
+            "--n-bins",
+            help="Number of bins for the diagnostic analysis.",
+        ),
+    ] = 20
+
     show_plots: Annotated[
         bool,
         typer.Option(
@@ -464,7 +472,7 @@ class RunClusterRichnessAnalysis(AppLogging):
 
             # Compute statistics
             stats = compute_binned_statistics(
-                mean_pred, std_pred, lnR_cut, mu, sigma, cut
+                mean_pred, std_pred, lnR_cut, mu, sigma, cut, nbins=self.n_bins
             )
 
             if self.run_diagnostics:
@@ -478,15 +486,7 @@ class RunClusterRichnessAnalysis(AppLogging):
                 self.console.print(f"  Mean model σ: {sigma_mod:.3f}")
 
             if self.show_plots:
-                plot_diagnostic_summary(
-                    mean_pred,
-                    std_pred,
-                    lnR_cut,
-                    mu,
-                    sigma,
-                    cut,
-                    show=True,
-                )
+                plot_diagnostic_summary(stats, cut, show=True)
 
     def _create_initial_model(self) -> Nc.ClusterMassRichness:
         """Create the initial model based on model_type.

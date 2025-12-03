@@ -18,8 +18,15 @@
 
 """Diagnostic plotting functions for cluster richness analysis.
 
-This module provides visualization tools for analyzing the truncated
-mass-richness relation and validating model fits.
+This module provides visualization tools for validating mass-richness models
+by comparing model predictions with observed data.
+
+Two validation approaches:
+1. Forward: Model (mu, sigma) → Truncated (mean, std) → Compare with sample stats
+2. Inverse: Sample (mean, std) → Invert to (mu, sigma) → Compare with model
+
+The diagnostics help verify that the model parameters mu(lnM, z) and sigma(lnM, z)
+correctly predict the distribution of observed lnR values.
 """
 
 from typing import cast
@@ -47,24 +54,31 @@ def compute_binned_statistics(
 ) -> dict[str, np.ndarray]:
     """Compute binned statistics for diagnostic analysis.
 
-    :param mu: Predicted truncated mean values
-    :param std_pred: Predicted truncated sigma values
-    :param lnR: Observed log-richness values
-    :param mu_theo: Theoretical (untruncated) mean values
-    :param sigma_theo: Theoretical (untruncated) sigma values
+    Bins data in two ways:
+    1. By predicted truncated mean - for comparing predicted vs observed lnR statistics
+    2. By model parameter mu - for validating parameter recovery via inversion
+
+    :param mean_pred: Predicted truncated mean from model (forward: mu → mean)
+    :param std_pred: Predicted truncated std from model (forward: sigma → std)
+    :param lnR: Observed log-richness values from sample
+    :param mu: Model parameter mu(lnM, z) for each cluster
+    :param sigma: Model parameter sigma(lnM, z) for each cluster
     :param lnR_cut: Richness cut value (log units)
     :param nbins: Number of bins (default: 40)
-    :return: Dictionary of computed statistics
+    :return: Dictionary of computed statistics for both binning schemes
     """
     # Compute bins using quantiles for equal-count bins
-    mean_bins = np.quantile(mean_pred, np.linspace(0, 1, nbins + 1))
-    mean_bin_centers = 0.5 * (mean_bins[:-1] + mean_bins[1:])
+    if False:
+        mean_bins = np.quantile(mean_pred, np.linspace(0, 1, nbins + 1))
+        mu_bins = np.quantile(mu, np.linspace(0, 1, nbins + 1))
+    else:
+        mean_bins = np.linspace(np.min(mean_pred), np.max(mean_pred), nbins + 1)
+        mu_bins = np.linspace(np.min(mu), np.max(mu), nbins + 1)
 
-    # Compute bins using quantiles for equal-count bins
-    mu_bins = np.quantile(mu, np.linspace(0, 1, nbins + 1))
+    mean_bin_centers = 0.5 * (mean_bins[:-1] + mean_bins[1:])
     mu_bin_centers = 0.5 * (mu_bins[:-1] + mu_bins[1:])
 
-    # Compute empirical mean and variance in bins
+    # Binning by predicted truncated mean: Compare model predictions vs observations
     sample_count, _, _ = binned_statistic(
         mean_pred, lnR, statistic="count", bins=mean_bins
     )
@@ -93,7 +107,7 @@ def compute_binned_statistics(
         result = invert_truncated_stats_mu_from_sample(x, lnR_cut)
         return result if result is not None else np.nan
 
-    # Compute predicted mean and variance in bins
+    # Binning by model parameter mu: Validate parameter recovery via inversion
     mu_count, _, _ = binned_statistic(mu, mu, statistic="count", bins=mu_bins)
     bin_mu, _, _ = binned_statistic(mu, mu, statistic="mean", bins=mu_bins)
     bin_sigma, _, _ = binned_statistic(mu, sigma, statistic="mean", bins=mu_bins)
@@ -104,24 +118,24 @@ def compute_binned_statistics(
     )
 
     return {
-        # Bins based on truncated mean predictions
+        # Binning scheme 1: By predicted truncated mean (forward validation)
         "mean_bins": mean_bins,
         "mean_bin_centers": mean_bin_centers,
-        # Empirical statistics in mean_pred bins
+        # Observed sample statistics in mean_pred bins
         "sample_count": sample_count,
         "sample_mean": sample_mean,
         "sample_std": sample_std,
-        # Predicted values in mean_pred bins
+        # Model predictions (forward: mu,sigma → mean,std) in mean_pred bins
         "bin_mean_pred": bin_mean_pred,
         "bin_std_pred": bin_std_pred,
-        # Bins based on theoretical (untruncated) mu
+        # Binning scheme 2: By model parameter mu (inverse validation)
         "mu_bins": mu_bins,
         "mu_bin_centers": mu_bin_centers,
-        # Theoretical statistics in mu bins
+        # Model parameters in mu bins
         "mu_count": mu_count,
         "bin_mu": bin_mu,
         "bin_sigma": bin_sigma,
-        # Recovered parameters from inversion in mu bins
+        # Recovered parameters (inverse: mean,std → mu,sigma) in mu bins
         "sample_mu": sample_mu,
         "sample_sigma": sample_sigma,
     }
@@ -132,7 +146,10 @@ def plot_mu_recovery(
     ax: Axes | None = None,
     show: bool = True,
 ) -> tuple[Figure, Axes]:
-    """Plot recovered mu vs theoretical mu.
+    """Plot recovered mu vs model mu (inverse validation).
+
+    Validates inverse conversion: sample statistics → model parameters.
+    Compares mu recovered from sample (mean, std) against model mu(lnM, z).
 
     :param stats: Dictionary from compute_binned_statistics
     :param ax: Matplotlib axes to plot on (default: None, creates new figure)
@@ -144,25 +161,31 @@ def plot_mu_recovery(
     else:
         fig = cast(Figure, ax.get_figure())
 
-    ax.plot(
+    mu_bins = stats["mu_bins"]
+    widths = mu_bins[1:] - mu_bins[:-1]
+
+    ax.bar(
         stats["mu_bin_centers"],
         stats["sample_mu"],
-        "o-",
-        markersize=4,
-        label=r"Recovered $\mu$ (from inversion)",
+        width=widths,
+        edgecolor="C0",
+        facecolor="C0",
+        alpha=0.7,
+        label=r"Recovered $\mu$ (inverse: sample → model)",
     )
-    ax.plot(
-        stats["mu_bin_centers"],
+    ax.stairs(
         stats["bin_mu"],
-        "k--",
-        lw=1.5,
-        label=r"True $\mu$ (untruncated)",
+        mu_bins,
+        color="black",
+        lw=2,
+        baseline=None,
+        label=r"Model $\mu(\ln M, z)$",
     )
-    ax.set_xlabel(r"Theoretical mean $\mu$")
-    ax.set_ylabel(r"Recovered mean $\mu$")
-    ax.set_title(r"$\mu$ Recovery from Truncated Distribution")
+    ax.set_xlabel(r"Model parameter $\mu(\ln M, z)$")
+    ax.set_ylabel(r"Recovered $\mu$")
+    ax.set_title(r"Model Parameter $\mu$ Recovery (Inverse Validation)")
     ax.legend(loc="best", fontsize="small")
-    ax.grid(True, alpha=0.3)
+    ax.grid(True, alpha=0.3, axis="y")
     fig.tight_layout()
 
     if show:
@@ -176,7 +199,10 @@ def plot_sigma_recovery(
     ax: Axes | None = None,
     show: bool = True,
 ) -> tuple[Figure, Axes]:
-    """Plot recovered sigma vs theoretical sigma.
+    """Plot recovered sigma vs model sigma (inverse validation).
+
+    Validates inverse conversion: sample statistics → model parameters.
+    Compares sigma recovered from sample (mean, std) against model sigma(lnM, z).
 
     :param stats: Dictionary from compute_binned_statistics
     :param ax: Matplotlib axes to plot on (default: None, creates new figure)
@@ -188,25 +214,31 @@ def plot_sigma_recovery(
     else:
         fig = cast(Figure, ax.get_figure())
 
-    ax.plot(
+    mu_bins = stats["mu_bins"]
+    widths = mu_bins[1:] - mu_bins[:-1]
+
+    ax.bar(
         stats["mu_bin_centers"],
         stats["sample_sigma"],
-        "o-",
-        markersize=4,
-        label=r"Recovered $\sigma$ (from inversion)",
+        width=widths,
+        edgecolor="C0",
+        facecolor="C0",
+        alpha=0.7,
+        label=r"Recovered $\sigma$ (inverse: sample → model)",
     )
-    ax.plot(
-        stats["mu_bin_centers"],
+    ax.stairs(
         stats["bin_sigma"],
-        "s--",
-        markersize=4,
-        label=r"True $\sigma$ (untruncated)",
+        mu_bins,
+        color="black",
+        lw=2,
+        baseline=None,
+        label=r"Model $\sigma(\ln M, z)$",
     )
-    ax.set_xlabel(r"Theoretical mean $\mu$")
-    ax.set_ylabel(r"Recovered dispersion $\sigma$")
-    ax.set_title(r"$\sigma$ Recovery from Truncated Distribution")
+    ax.set_xlabel(r"Model parameter $\mu(\ln M, z)$")
+    ax.set_ylabel(r"Recovered $\sigma$")
+    ax.set_title(r"Model Parameter $\sigma$ Recovery (Inverse Validation)")
     ax.legend(loc="best", fontsize="small")
-    ax.grid(True, alpha=0.3)
+    ax.grid(True, alpha=0.3, axis="y")
     fig.tight_layout()
 
     if show:
@@ -220,7 +252,10 @@ def plot_bin_counts(
     ax: Axes | None = None,
     show: bool = True,
 ) -> tuple[Figure, Axes]:
-    """Plot number of elements per bin.
+    """Plot cluster count per bin.
+
+    Shows the distribution of clusters across bins of predicted truncated mean.
+    Helps assess statistical power in different regions.
 
     :param stats: Dictionary from compute_binned_statistics
     :param ax: Matplotlib axes to plot on (default: None, creates new figure)
@@ -232,12 +267,22 @@ def plot_bin_counts(
     else:
         fig = cast(Figure, ax.get_figure())
 
-    ax.plot(stats["mean_bin_centers"], stats["sample_count"], "o-", markersize=4)
-    ax.set_xlabel(r"Predicted truncated mean $\langle \ln R \rangle$")
+    mean_bins = stats["mean_bins"]
+    widths = mean_bins[1:] - mean_bins[:-1]
+
+    ax.bar(
+        stats["mean_bin_centers"],
+        stats["sample_count"],
+        width=widths,
+        edgecolor="black",
+        alpha=0.7,
+        label="Clusters per bin",
+    )
+    ax.set_xlabel(r"Predicted truncated mean $\mathrm{E}[\ln R]$ from model")
     ax.set_ylabel("Clusters per bin")
-    ax.set_title("Bin Population")
+    ax.set_title("Cluster Count Distribution")
     ax.set_yscale("log")
-    ax.grid(True, alpha=0.3)
+    ax.grid(True, alpha=0.3, axis="y")
     fig.tight_layout()
 
     if show:
@@ -252,7 +297,10 @@ def plot_mean_lnR(
     ax: Axes | None = None,
     show: bool = True,
 ) -> tuple[Figure, Axes]:
-    """Plot mean ln(R) per bin.
+    """Plot observed vs predicted truncated mean (forward validation).
+
+    Validates forward conversion: model parameters → truncated statistics.
+    Compares predicted truncated mean from model against observed sample mean.
 
     :param stats: Dictionary from compute_binned_statistics
     :param with_errors: Whether to include error bars (default: True)
@@ -265,30 +313,39 @@ def plot_mean_lnR(
     else:
         fig = cast(Figure, ax.get_figure())
 
+    mean_bins = stats["mean_bins"]
+    widths = mean_bins[1:] - mean_bins[:-1]
+
     if with_errors:
         yerr = stats["sample_std"] / np.sqrt(stats["sample_count"])
     else:
         yerr = stats["sample_std"]
 
-    ax.errorbar(
+    # Bar plot for observed sample mean with error bars
+    ax.bar(
         stats["mean_bin_centers"],
         stats["sample_mean"],
+        width=widths,
         yerr=yerr,
-        fmt="o",
-        markersize=4,
+        edgecolor="C0",
+        facecolor="C0",
+        alpha=0.7,
         capsize=2,
-        label=r"Sample mean $\langle \ln R \rangle$",
+        label=r"Observed sample mean of $\ln R$",
     )
-    ax.plot(
-        stats["mean_bin_centers"],
+
+    # Step plot for model prediction (forward: mu,sigma → mean)
+    ax.stairs(
         stats["bin_mean_pred"],
-        "k--",
-        lw=1.5,
-        label="Predicted truncated mean",
+        mean_bins,
+        color="black",
+        lw=2,
+        baseline=None,
+        label=r"Predicted $\mathrm{E}[\ln R]$ (forward: model → truncated)",
     )
-    ax.set_xlabel(r"Predicted truncated mean $\langle \ln R \rangle$")
-    ax.set_ylabel(r"Observed $\ln R$")
-    ax.set_title("Mean Richness: Data vs Model")
+    ax.set_xlabel(r"Predicted truncated mean $\mathrm{E}[\ln R]$ from model")
+    ax.set_ylabel(r"Mean $\ln R$")
+    ax.set_title("Truncated Mean Comparison (Forward Validation)")
     ax.legend(loc="best", fontsize="small")
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
@@ -304,7 +361,10 @@ def plot_empirical_vs_model_sigma(
     ax: Axes | None = None,
     show: bool = True,
 ) -> tuple[Figure, Axes]:
-    """Plot empirical sigma(lnR) vs model prediction.
+    """Plot observed vs predicted truncated std (forward validation).
+
+    Validates forward conversion: model parameters → truncated statistics.
+    Compares predicted truncated std from model against observed sample std.
 
     :param stats: Dictionary from compute_binned_statistics
     :param ax: Matplotlib axes to plot on (default: None, creates new figure)
@@ -316,23 +376,32 @@ def plot_empirical_vs_model_sigma(
     else:
         fig = cast(Figure, ax.get_figure())
 
-    ax.plot(
+    mean_bins = stats["mean_bins"]
+    widths = mean_bins[1:] - mean_bins[:-1]
+
+    # Bar plot for observed sample std
+    ax.bar(
         stats["mean_bin_centers"],
         stats["sample_std"],
-        "o",
-        markersize=4,
-        label=r"Sample std $\sigma(\ln R)$",
+        width=widths,
+        edgecolor="C0",
+        facecolor="C0",
+        alpha=0.7,
+        label=r"Observed sample std of $\ln R$",
     )
-    ax.plot(
-        stats["mean_bin_centers"],
+
+    # Step plot for model prediction (forward: mu,sigma → std)
+    ax.stairs(
         stats["bin_std_pred"],
-        "-",
-        lw=1.5,
-        label="Predicted truncated std",
+        mean_bins,
+        color="C1",
+        lw=2,
+        baseline=None,
+        label=r"Predicted $\mathrm{Std}[\ln R]$ (forward: model → truncated)",
     )
-    ax.set_xlabel(r"Predicted truncated mean $\langle \ln R \rangle$")
-    ax.set_ylabel(r"Dispersion $\sigma(\ln R)$")
-    ax.set_title("Dispersion: Data vs Model")
+    ax.set_xlabel(r"Predicted truncated mean $\mathrm{E}[\ln R]$ from model")
+    ax.set_ylabel(r"Std $\ln R$")
+    ax.set_title("Truncated Std Comparison (Forward Validation)")
     ax.legend(loc="best", fontsize="small")
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
@@ -348,7 +417,10 @@ def plot_sigma_residuals(
     ax: Axes | None = None,
     show: bool = True,
 ) -> tuple[Figure, Axes]:
-    """Plot residuals between empirical and model sigma.
+    """Plot residuals between observed and predicted truncated std.
+
+    Shows deviations between model predictions (forward) and observed data.
+    Helps identify systematic biases in the model.
 
     :param stats: Dictionary from compute_binned_statistics
     :param ax: Matplotlib axes to plot on (default: None, creates new figure)
@@ -360,14 +432,23 @@ def plot_sigma_residuals(
     else:
         fig = cast(Figure, ax.get_figure())
 
+    mean_bins = stats["mean_bins"]
+    widths = mean_bins[1:] - mean_bins[:-1]
     residuals = stats["sample_std"] - stats["bin_std_pred"]
 
     ax.axhline(0, color="gray", lw=1, ls="--")
-    ax.plot(stats["mean_bin_centers"], residuals, "o-", markersize=4)
-    ax.set_xlabel(r"Predicted truncated mean $\langle \ln R \rangle$")
-    ax.set_ylabel(r"$\sigma_{\rm sample} - \sigma_{\rm model}$")
-    ax.set_title("Dispersion Residuals")
-    ax.grid(True, alpha=0.3)
+    ax.bar(
+        stats["mean_bin_centers"],
+        residuals,
+        width=widths,
+        edgecolor="black",
+        alpha=0.7,
+        color="C2",
+    )
+    ax.set_xlabel(r"Predicted truncated mean $\mathrm{E}[\ln R]$ from model")
+    ax.set_ylabel(r"$\mathrm{Std}_{\rm observed} - \mathrm{Std}_{\rm predicted}$")
+    ax.set_title("Truncated Std Residuals")
+    ax.grid(True, alpha=0.3, axis="y")
     fig.tight_layout()
 
     if show:
@@ -377,30 +458,17 @@ def plot_sigma_residuals(
 
 
 def plot_diagnostic_summary(
-    mean_pred: np.ndarray,
-    std_pred: np.ndarray,
-    lnR: np.ndarray,
-    mu: np.ndarray,
-    sigma: np.ndarray,
+    stats: dict[str, np.ndarray],
     lnR_cut: float,
-    nbins: int = 40,
     show: bool = True,
 ) -> tuple[Figure, np.ndarray]:
     """Create a summary figure with all diagnostic plots.
 
-    :param mu: Predicted truncated mean values
-    :param lnR: Observed log-richness values
-    :param mu_theo: Theoretical (untruncated) mean values
-    :param sigma_theo: Theoretical (untruncated) sigma values
-    :param lnR_cut: Richness cut value (log units)
-    :param nbins: Number of bins (default: 40)
+    :param stats: Dictionary from compute_binned_statistics
+    :param lnR_cut: Richness cut value (log units) for title
     :param show: Whether to call plt.show() (default: True)
     :return: Figure and array of Axes objects
     """
-    stats = compute_binned_statistics(
-        mean_pred, std_pred, lnR, mu, sigma, lnR_cut, nbins
-    )
-
     fig, axes = plt.subplots(2, 3, figsize=(15, 8))
 
     plot_mu_recovery(stats, ax=axes[0, 0], show=False)
