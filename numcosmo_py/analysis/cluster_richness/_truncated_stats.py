@@ -190,6 +190,7 @@ def invert_truncated_stats_mu_from_sample(
     :param lnR_cut: Lower truncation point
     :return: Estimated underlying mu, or None if inversion failed
     """
+    assert len(lnR_sample) > 0, "Sample must have at least one element"
     result = invert_truncated_stats(np.mean(lnR_sample), np.std(lnR_sample), lnR_cut)
     return result["mu"]
 
@@ -203,5 +204,6 @@ def invert_truncated_stats_sigma_from_sample(
     :param lnR_cut: Lower truncation point
     :return: Estimated underlying sigma, or None if inversion failed
     """
+    assert len(lnR_sample) > 0, "Sample must have at least one element"
     result = invert_truncated_stats(np.mean(lnR_sample), np.std(lnR_sample), lnR_cut)
     return result["sigma"]

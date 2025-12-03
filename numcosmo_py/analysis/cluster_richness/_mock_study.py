@@ -39,7 +39,7 @@ from ._parameters import (
     get_model_param_names,
 )
 from ._utils import PARAM_FORMAT
-from ._analyzer import CutAnalyzer, COMPUTE_MCMC, COMPUTE_BOOTSTRAP
+from ._analyzer import CutAnalyzer
 from ._database import BestfitDatabase
 
 
@@ -68,6 +68,8 @@ class MockStudy:
         lnM: np.ndarray,
         z: np.ndarray,
         cuts: list[float],
+        compute_mcmc: bool = False,
+        compute_bootstrap: bool = False,
         n_mocks: int = 100,
         n_bootstrap: int = 100,
         file_prefix: str | None = None,
@@ -83,6 +85,8 @@ class MockStudy:
         :param lnM: Log mass array (template)
         :param z: Redshift array (template)
         :param cuts: List of richness cuts to analyze
+        :param compute_mcmc: Whether to compute MCMC results (default: False)
+        :param compute_bootstrap: Whether to compute bootstrap results (default: False)
         :param n_mocks: Number of mocks to generate (default: 100)
         :param n_bootstrap: Number of bootstrap resamples per analysis (default: 100)
         :param file_prefix: If provided, pass seed-based prefix to CutAnalyzer for
@@ -100,6 +104,8 @@ class MockStudy:
         self.lnM = lnM
         self.z = z
         self.cuts = cuts
+        self.compute_mcmc = compute_mcmc
+        self.compute_bootstrap = compute_bootstrap
         self.n_mocks = n_mocks
         self.n_bootstrap = n_bootstrap
         self.file_prefix = file_prefix
@@ -359,8 +365,8 @@ class MockStudy:
                     lnR_mock,
                     self.cuts,
                     n_bootstrap=self.n_bootstrap,
-                    compute_mcmc=COMPUTE_MCMC,
-                    compute_bootstrap=COMPUTE_BOOTSTRAP,
+                    compute_mcmc=self.compute_mcmc,
+                    compute_bootstrap=self.compute_bootstrap,
                     file_prefix=mock_file_prefix,
                     sample_desc=f"Mock Seed: {int(mock_seed)}",
                     verbose=False,

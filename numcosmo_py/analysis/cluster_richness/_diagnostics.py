@@ -31,23 +31,24 @@ from matplotlib.axes import Axes
 from scipy.stats import binned_statistic
 
 from ._truncated_stats import (
-    std_lnR_truncated,
     invert_truncated_stats_mu_from_sample,
     invert_truncated_stats_sigma_from_sample,
 )
 
 
 def compute_binned_statistics(
-    mu: np.ndarray,
+    mean_pred: np.ndarray,
+    std_pred: np.ndarray,
     lnR: np.ndarray,
-    mu_theo: np.ndarray,
-    sigma_theo: np.ndarray,
+    mu: np.ndarray,
+    sigma: np.ndarray,
     lnR_cut: float,
     nbins: int = 40,
 ) -> dict[str, np.ndarray]:
     """Compute binned statistics for diagnostic analysis.
 
     :param mu: Predicted truncated mean values
+    :param std_pred: Predicted truncated sigma values
     :param lnR: Observed log-richness values
     :param mu_theo: Theoretical (untruncated) mean values
     :param sigma_theo: Theoretical (untruncated) sigma values
@@ -55,70 +56,74 @@ def compute_binned_statistics(
     :param nbins: Number of bins (default: 40)
     :return: Dictionary of computed statistics
     """
-    # Predicted truncated sigma
-    sigma_pred = std_lnR_truncated(mu_theo, sigma_theo, lnR_cut)
+    # Compute bins using quantiles for equal-count bins
+    mean_bins = np.quantile(mean_pred, np.linspace(0, 1, nbins + 1))
+    mean_bin_centers = 0.5 * (mean_bins[:-1] + mean_bins[1:])
 
     # Compute bins using quantiles for equal-count bins
     mu_bins = np.quantile(mu, np.linspace(0, 1, nbins + 1))
-    mu_theo_bins = np.quantile(mu_theo, np.linspace(0, 1, nbins + 1))
+    mu_bin_centers = 0.5 * (mu_bins[:-1] + mu_bins[1:])
 
-    mu_bin_center = 0.5 * (mu_bins[:-1] + mu_bins[1:])
-    mu_theo_bin_center = 0.5 * (mu_theo_bins[:-1] + mu_theo_bins[1:])
-
-    # Compute empirical variance in bins
-    var_lnR_emp, _, _ = binned_statistic(
-        mu, lnR, statistic=lambda x: np.var(x, ddof=1), bins=mu_bins
+    # Compute empirical mean and variance in bins
+    sample_count, _, _ = binned_statistic(
+        mean_pred, lnR, statistic="count", bins=mean_bins
+    )
+    sample_mean, _, _ = binned_statistic(
+        mean_pred, lnR, statistic="mean", bins=mean_bins
+    )
+    sample_std, _, _ = binned_statistic(
+        mean_pred, lnR, statistic=lambda x: np.std(x, ddof=1), bins=mean_bins
+    )
+    bin_mean_pred, _, _ = binned_statistic(
+        mean_pred, mean_pred, statistic="mean", bins=mean_bins
+    )
+    bin_std_pred, _, _ = binned_statistic(
+        mean_pred, std_pred, statistic="mean", bins=mean_bins
     )
 
-    # Predicted sigma in same bins - cast to numpy array to satisfy type checker
-    sigma_pred_arr = np.asarray(sigma_pred)
-    sigma_bin_pred, _, _ = binned_statistic(
-        mu, sigma_pred_arr, statistic="mean", bins=mu_bins
-    )
-    mu_count, _, _ = binned_statistic(mu, mu, statistic="count", bins=mu_bins)
-    lnR_mean, _, _ = binned_statistic(mu, lnR, statistic="mean", bins=mu_bins)
-
-    # Recovered parameters via inversion - use wrapper to handle None
     def _invert_sigma(x: np.ndarray) -> float:
+        if len(x) == 0:
+            return np.nan
         result = invert_truncated_stats_sigma_from_sample(x, lnR_cut)
         return result if result is not None else np.nan
 
     def _invert_mu(x: np.ndarray) -> float:
+        if len(x) == 0:
+            return np.nan
         result = invert_truncated_stats_mu_from_sample(x, lnR_cut)
         return result if result is not None else np.nan
 
-    sigma_rec, _, _ = binned_statistic(
-        mu_theo,
-        lnR,
-        statistic=_invert_sigma,
-        bins=mu_theo_bins,
-    )
-    mu_rec, _, _ = binned_statistic(
-        mu_theo,
-        lnR,
-        statistic=_invert_mu,
-        bins=mu_theo_bins,
-    )
-    mu_rec_count, _, _ = binned_statistic(
-        mu_theo, mu_theo, statistic="count", bins=mu_theo_bins
-    )
-    sigma_theo_mean, _, _ = binned_statistic(
-        mu_theo, sigma_theo, statistic="mean", bins=mu_theo_bins
+    # Compute predicted mean and variance in bins
+    mu_count, _, _ = binned_statistic(mu, mu, statistic="count", bins=mu_bins)
+    bin_mu, _, _ = binned_statistic(mu, mu, statistic="mean", bins=mu_bins)
+    bin_sigma, _, _ = binned_statistic(mu, sigma, statistic="mean", bins=mu_bins)
+
+    sample_mu, _, _ = binned_statistic(mu, lnR, statistic=_invert_mu, bins=mu_bins)
+    sample_sigma, _, _ = binned_statistic(
+        mu, lnR, statistic=_invert_sigma, bins=mu_bins
     )
 
     return {
+        # Bins based on truncated mean predictions
+        "mean_bins": mean_bins,
+        "mean_bin_centers": mean_bin_centers,
+        # Empirical statistics in mean_pred bins
+        "sample_count": sample_count,
+        "sample_mean": sample_mean,
+        "sample_std": sample_std,
+        # Predicted values in mean_pred bins
+        "bin_mean_pred": bin_mean_pred,
+        "bin_std_pred": bin_std_pred,
+        # Bins based on theoretical (untruncated) mu
         "mu_bins": mu_bins,
-        "mu_bin_center": mu_bin_center,
-        "mu_theo_bins": mu_theo_bins,
-        "mu_theo_bin_center": mu_theo_bin_center,
-        "var_lnR_emp": var_lnR_emp,
-        "sigma_bin_pred": sigma_bin_pred,
+        "mu_bin_centers": mu_bin_centers,
+        # Theoretical statistics in mu bins
         "mu_count": mu_count,
-        "lnR_mean": lnR_mean,
-        "sigma_rec": sigma_rec,
-        "mu_rec": mu_rec,
-        "mu_rec_count": mu_rec_count,
-        "sigma_theo_mean": sigma_theo_mean,
+        "bin_mu": bin_mu,
+        "bin_sigma": bin_sigma,
+        # Recovered parameters from inversion in mu bins
+        "sample_mu": sample_mu,
+        "sample_sigma": sample_sigma,
     }
 
 
@@ -139,14 +144,25 @@ def plot_mu_recovery(
     else:
         fig = cast(Figure, ax.get_figure())
 
-    ax.plot(stats["mu_theo_bin_center"], stats["mu_rec"], "o-", label="Recovered μ")
     ax.plot(
-        stats["mu_theo_bin_center"], stats["mu_theo_bin_center"], "k--", label="True μ"
+        stats["mu_bin_centers"],
+        stats["sample_mu"],
+        "o-",
+        markersize=4,
+        label=r"Recovered $\mu$ (from inversion)",
     )
-    ax.set_xlabel(r"$\mu$")
-    ax.set_ylabel(r"$\mu$")
-    ax.legend()
-    ax.grid(True)
+    ax.plot(
+        stats["mu_bin_centers"],
+        stats["bin_mu"],
+        "k--",
+        lw=1.5,
+        label=r"True $\mu$ (untruncated)",
+    )
+    ax.set_xlabel(r"Theoretical mean $\mu$")
+    ax.set_ylabel(r"Recovered mean $\mu$")
+    ax.set_title(r"$\mu$ Recovery from Truncated Distribution")
+    ax.legend(loc="best", fontsize="small")
+    ax.grid(True, alpha=0.3)
     fig.tight_layout()
 
     if show:
@@ -172,14 +188,25 @@ def plot_sigma_recovery(
     else:
         fig = cast(Figure, ax.get_figure())
 
-    ax.plot(stats["mu_theo_bin_center"], stats["sigma_rec"], "o-", label="Recovered σ")
     ax.plot(
-        stats["mu_theo_bin_center"], stats["sigma_theo_mean"], "s-", label="Predicted σ"
+        stats["mu_bin_centers"],
+        stats["sample_sigma"],
+        "o-",
+        markersize=4,
+        label=r"Recovered $\sigma$ (from inversion)",
     )
-    ax.set_xlabel(r"$\mu$")
-    ax.set_ylabel(r"$\sigma$")
-    ax.legend()
-    ax.grid(True)
+    ax.plot(
+        stats["mu_bin_centers"],
+        stats["bin_sigma"],
+        "s--",
+        markersize=4,
+        label=r"True $\sigma$ (untruncated)",
+    )
+    ax.set_xlabel(r"Theoretical mean $\mu$")
+    ax.set_ylabel(r"Recovered dispersion $\sigma$")
+    ax.set_title(r"$\sigma$ Recovery from Truncated Distribution")
+    ax.legend(loc="best", fontsize="small")
+    ax.grid(True, alpha=0.3)
     fig.tight_layout()
 
     if show:
@@ -205,11 +232,12 @@ def plot_bin_counts(
     else:
         fig = cast(Figure, ax.get_figure())
 
-    ax.plot(stats["mu_bin_center"], stats["mu_count"], "o-")
-    ax.set_xlabel(r"$\mu$")
-    ax.set_ylabel("Number of elements per bin")
+    ax.plot(stats["mean_bin_centers"], stats["sample_count"], "o-", markersize=4)
+    ax.set_xlabel(r"Predicted truncated mean $\langle \ln R \rangle$")
+    ax.set_ylabel("Clusters per bin")
+    ax.set_title("Bin Population")
     ax.set_yscale("log")
-    ax.grid(True)
+    ax.grid(True, alpha=0.3)
     fig.tight_layout()
 
     if show:
@@ -238,15 +266,31 @@ def plot_mean_lnR(
         fig = cast(Figure, ax.get_figure())
 
     if with_errors:
-        yerr = np.sqrt(stats["var_lnR_emp"] / stats["mu_count"])
+        yerr = stats["sample_std"] / np.sqrt(stats["sample_count"])
     else:
-        yerr = np.sqrt(stats["var_lnR_emp"])
+        yerr = stats["sample_std"]
 
-    ax.errorbar(stats["mu_bin_center"], stats["lnR_mean"], yerr=yerr, fmt="o-")
-    ax.plot(stats["mu_bin_center"], stats["mu_bin_center"], "k--")
-    ax.set_xlabel(r"$\mu$")
-    ax.set_ylabel(r"$\ln R$")
-    ax.grid(True)
+    ax.errorbar(
+        stats["mean_bin_centers"],
+        stats["sample_mean"],
+        yerr=yerr,
+        fmt="o",
+        markersize=4,
+        capsize=2,
+        label=r"Sample mean $\langle \ln R \rangle$",
+    )
+    ax.plot(
+        stats["mean_bin_centers"],
+        stats["bin_mean_pred"],
+        "k--",
+        lw=1.5,
+        label="Predicted truncated mean",
+    )
+    ax.set_xlabel(r"Predicted truncated mean $\langle \ln R \rangle$")
+    ax.set_ylabel(r"Observed $\ln R$")
+    ax.set_title("Mean Richness: Data vs Model")
+    ax.legend(loc="best", fontsize="small")
+    ax.grid(True, alpha=0.3)
     fig.tight_layout()
 
     if show:
@@ -273,15 +317,24 @@ def plot_empirical_vs_model_sigma(
         fig = cast(Figure, ax.get_figure())
 
     ax.plot(
-        stats["mu_bin_center"],
-        np.sqrt(stats["var_lnR_emp"]),
+        stats["mean_bin_centers"],
+        stats["sample_std"],
         "o",
-        label=r"Empirical $\sigma(\ln R)$",
+        markersize=4,
+        label=r"Sample std $\sigma(\ln R)$",
     )
-    ax.plot(stats["mu_bin_center"], stats["sigma_bin_pred"], "-", label=r"Model σ(μ)")
-    ax.set_xlabel(r"$\mu$ (mean ln richness)")
-    ax.set_ylabel(r"$\sigma(\ln R)$")
-    ax.legend()
+    ax.plot(
+        stats["mean_bin_centers"],
+        stats["bin_std_pred"],
+        "-",
+        lw=1.5,
+        label="Predicted truncated std",
+    )
+    ax.set_xlabel(r"Predicted truncated mean $\langle \ln R \rangle$")
+    ax.set_ylabel(r"Dispersion $\sigma(\ln R)$")
+    ax.set_title("Dispersion: Data vs Model")
+    ax.legend(loc="best", fontsize="small")
+    ax.grid(True, alpha=0.3)
     fig.tight_layout()
 
     if show:
@@ -307,12 +360,14 @@ def plot_sigma_residuals(
     else:
         fig = cast(Figure, ax.get_figure())
 
-    residuals = np.sqrt(stats["var_lnR_emp"]) - stats["sigma_bin_pred"]
+    residuals = stats["sample_std"] - stats["bin_std_pred"]
 
-    ax.axhline(0, color="gray", lw=1)
-    ax.plot(stats["mu_bin_center"], residuals, "o-")
-    ax.set_xlabel(r"$\mu$")
-    ax.set_ylabel(r"Residual: empirical $\sigma$ − model $\sigma$")
+    ax.axhline(0, color="gray", lw=1, ls="--")
+    ax.plot(stats["mean_bin_centers"], residuals, "o-", markersize=4)
+    ax.set_xlabel(r"Predicted truncated mean $\langle \ln R \rangle$")
+    ax.set_ylabel(r"$\sigma_{\rm sample} - \sigma_{\rm model}$")
+    ax.set_title("Dispersion Residuals")
+    ax.grid(True, alpha=0.3)
     fig.tight_layout()
 
     if show:
@@ -322,10 +377,11 @@ def plot_sigma_residuals(
 
 
 def plot_diagnostic_summary(
-    mu: np.ndarray,
+    mean_pred: np.ndarray,
+    std_pred: np.ndarray,
     lnR: np.ndarray,
-    mu_theo: np.ndarray,
-    sigma_theo: np.ndarray,
+    mu: np.ndarray,
+    sigma: np.ndarray,
     lnR_cut: float,
     nbins: int = 40,
     show: bool = True,
@@ -341,7 +397,9 @@ def plot_diagnostic_summary(
     :param show: Whether to call plt.show() (default: True)
     :return: Figure and array of Axes objects
     """
-    stats = compute_binned_statistics(mu, lnR, mu_theo, sigma_theo, lnR_cut, nbins)
+    stats = compute_binned_statistics(
+        mean_pred, std_pred, lnR, mu, sigma, lnR_cut, nbins
+    )
 
     fig, axes = plt.subplots(2, 3, figsize=(15, 8))
 
@@ -352,7 +410,11 @@ def plot_diagnostic_summary(
     plot_empirical_vs_model_sigma(stats, ax=axes[1, 1], show=False)
     plot_sigma_residuals(stats, ax=axes[1, 2], show=False)
 
-    fig.suptitle(f"Diagnostic Summary (cut = {np.exp(lnR_cut):.1f})")
+    fig.suptitle(
+        f"Diagnostic Summary (richness cut $\\lambda \\geq$ {np.exp(lnR_cut):.1f})",
+        fontsize=14,
+        fontweight="bold",
+    )
     fig.tight_layout()
 
     if show:

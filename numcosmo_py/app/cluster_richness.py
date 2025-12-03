@@ -29,17 +29,23 @@ from typing import Annotated, Optional
 import numpy as np
 import typer
 from astropy.table import Table
+from rich.panel import Panel
+from rich.table import Table as RichTable
+
 
 from numcosmo_py import Nc
 from numcosmo_py.analysis.cluster_richness import (
     RichnessModelType,
     CutAnalyzer,
     MockStudy,
-    COMPUTE_MCMC,
-    COMPUTE_BOOTSTRAP,
     get_model_param_names,
     model_params_as_list,
     PARAM_FORMAT,
+    compute_binned_statistics,
+    plot_diagnostic_summary,
+    mean_lnR_truncated,
+    std_lnR_truncated,
+    CutAnalysisResult,
 )
 from .logging import AppLogging
 
@@ -161,12 +167,32 @@ class RunClusterRichnessAnalysis(AppLogging):
         ),
     ] = "cluster_richness"
 
-    # Optional: skip phases
-    skip_mocks: Annotated[
+    run_mocks: Annotated[
         bool,
         typer.Option(
-            "--skip-mocks",
-            help="Skip mock study phase (only analyze real data).",
+            "--run-mocks",
+            help="Run mock study for bias assessment (requires --run-analysis).",
+            is_flag=True,
+        ),
+    ] = False
+
+    run_diagnostics: Annotated[
+        bool,
+        typer.Option(
+            "--run-diagnostics",
+            "-d",
+            help="Run diagnostic analysis on the results.",
+            is_flag=True,
+        ),
+    ] = False
+
+    show_plots: Annotated[
+        bool,
+        typer.Option(
+            "--show-plots",
+            "-p",
+            help="Display diagnostic plots (requires --run-analysis).",
+            is_flag=True,
         ),
     ] = False
 
@@ -176,7 +202,7 @@ class RunClusterRichnessAnalysis(AppLogging):
             "--mcmc/--no-mcmc",
             help="Compute MCMC for uncertainty estimation.",
         ),
-    ] = COMPUTE_MCMC
+    ] = False
 
     compute_bootstrap: Annotated[
         bool,
@@ -184,11 +210,37 @@ class RunClusterRichnessAnalysis(AppLogging):
             "--bootstrap/--no-bootstrap",
             help="Compute bootstrap for uncertainty estimation.",
         ),
-    ] = COMPUTE_BOOTSTRAP
+    ] = False
 
     def __post_init__(self) -> None:
         """Run the cluster richness analysis."""
         super().__post_init__()
+
+        # Load and display data summary
+        lnM, z, lnR, cuts_array = self._load_data()
+
+        # Print summary
+        self._print_summary_only(lnM, z, lnR, cuts_array)
+
+        # Run real data analysis if requested
+        real_results = None
+        model_fiducial = None
+
+        real_results, model_fiducial = self._run_real_analysis(lnM, z, lnR, cuts_array)
+
+        # Run mock study if requested
+        if self.run_mocks and real_results is not None and model_fiducial is not None:
+            self._run_mock_study(lnM, z, cuts_array, real_results, model_fiducial)
+
+        # Run diagnostics if requested
+        if (self.run_diagnostics or self.show_plots) and real_results is not None:
+            self._run_diagnostics(lnM, z, lnR, cuts_array, real_results)
+
+    def _load_data(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Load data from FITS file and return arrays.
+
+        :return: Tuple of (lnM, z, lnR, cuts_array)
+        """
         # Parse cuts
         if self.cuts is None:
             cuts_array = np.log(np.array([5, 10, 15, 20, 30]))
@@ -217,6 +269,68 @@ class RunClusterRichnessAnalysis(AppLogging):
         lnM = np.log(mass)
         lnR = np.log(richness)
 
+        return lnM, z, lnR, cuts_array
+
+    def _print_summary_only(
+        self,
+        lnM: np.ndarray,
+        z: np.ndarray,
+        lnR: np.ndarray,
+        cuts_array: np.ndarray,
+    ) -> None:
+        """Print data summary without running analysis.
+
+        :param lnM: Log mass array
+        :param z: Redshift array
+        :param lnR: Log richness array
+        :param cuts_array: Array of richness cuts (log values)
+        """
+        self.console.print("\n[bold cyan]Data Summary[/bold cyan]")
+        self.console.print(f"  Total clusters: {len(lnM)}")
+        self.console.print(
+            f"  Mass range: [{np.exp(lnM.min()):.2e}, {np.exp(lnM.max()):.2e}]"
+        )
+        self.console.print(f"  Redshift range: [{z.min():.3f}, {z.max():.3f}]")
+        self.console.print(
+            f"  Richness range: [{np.exp(lnR.min()):.1f}, {np.exp(lnR.max()):.1f}]"
+        )
+
+        # Show cluster counts per cut
+        table = RichTable(
+            title="Clusters per Richness Cut",
+            show_header=True,
+            header_style="bold magenta",
+        )
+        table.add_column("Richness Cut", style="green")
+        table.add_column("N clusters", style="cyan")
+        table.add_column("Fraction", style="yellow")
+
+        for cut in cuts_array:
+            n_above = np.sum(lnR >= cut)
+            fraction = n_above / len(lnR) * 100
+            table.add_row(
+                f"λ ≥ {np.exp(cut):.1f}",
+                f"{n_above}",
+                f"{fraction:.1f}%",
+            )
+
+        self.console.print(Panel(table))
+
+    def _run_real_analysis(
+        self,
+        lnM: np.ndarray,
+        z: np.ndarray,
+        lnR: np.ndarray,
+        cuts_array: np.ndarray,
+    ) -> tuple[dict, Nc.ClusterMassRichness]:
+        """Run real data analysis.
+
+        :param lnM: Log mass array
+        :param z: Redshift array
+        :param lnR: Log richness array
+        :param cuts_array: Array of richness cuts (log values)
+        :return: Tuple of (results dict, fiducial model)
+        """
         self.console.print(f"  Loaded {len(lnM)} clusters")
         self.console.print(
             f"  Mass range: [{np.exp(lnM.min()):.2e}, {np.exp(lnM.max()):.2e}]"
@@ -229,7 +343,7 @@ class RunClusterRichnessAnalysis(AppLogging):
         # Create initial model
         model_init = self._create_initial_model()
 
-        # Phase 1: Analyze real data
+        # Analyze real data
         self.console.print("\n[bold magenta]PHASE 1: Real Data Analysis[/bold magenta]")
         real_analyzer = CutAnalyzer(
             lnM,
@@ -257,42 +371,122 @@ class RunClusterRichnessAnalysis(AppLogging):
         for name, value in zip(param_names, param_values):
             self.console.print(f"  {name}={value:{PARAM_FORMAT}}")
 
-        # Phase 2: Mock analysis (if not skipped)
-        if not self.skip_mocks and self.n_mocks > 0:
-            self.console.print("\n[bold magenta]PHASE 2: Mock Study[/bold magenta]")
-            mock_study = MockStudy(
-                model_fiducial,
-                lnM,
-                z,
-                cuts_array.tolist(),
-                n_mocks=self.n_mocks,
-                n_bootstrap=self.n_bootstrap,
-                file_prefix=f"{self.output_prefix}_mock",
-                fiducial_results=real_results,
-                console=self.console,
-            )
-            mock_study.run(seed=self.seed)
+        return real_results, model_fiducial
 
-            # Phase 3: GOF Analysis
-            self.console.print(
-                "\n[bold magenta]PHASE 3: Goodness-of-Fit Analysis[/bold magenta]"
-            )
-            gof_stats = mock_study.compute_gof_statistics()
-            mock_study.display_gof_results(gof_stats)
+    def _run_mock_study(
+        self,
+        lnM: np.ndarray,
+        z: np.ndarray,
+        cuts_array: np.ndarray,
+        real_results: dict,
+        model_fiducial: Nc.ClusterMassRichness,
+    ) -> None:
+        """Run mock study for bias assessment.
 
-            self.console.print("\n[bold green]Analysis complete![/bold green]")
-            self.console.print(
-                f"[cyan]Real data: {len(real_results)} cuts analyzed[/cyan]"
+        :param lnM: Log mass array
+        :param z: Redshift array
+        :param cuts_array: Array of richness cuts (log values)
+        :param real_results: Results from real data analysis
+        :param model_fiducial: Fiducial model from real data analysis
+        """
+        if self.n_mocks <= 0:
+            self.console.print("[yellow]Skipping mock study: n_mocks is 0.[/yellow]")
+            return
+
+        self.console.print("\n[bold magenta]PHASE 2: Mock Study[/bold magenta]")
+        mock_study = MockStudy(
+            model_fiducial,
+            lnM,
+            z,
+            cuts_array.tolist(),
+            n_mocks=self.n_mocks,
+            n_bootstrap=self.n_bootstrap,
+            file_prefix=f"{self.output_prefix}_mock",
+            fiducial_results=real_results,
+            console=self.console,
+        )
+        mock_study.run(seed=self.seed)
+
+        # GOF Analysis
+        self.console.print(
+            "\n[bold magenta]PHASE 3: Goodness-of-Fit Analysis[/bold magenta]"
+        )
+        gof_stats = mock_study.compute_gof_statistics()
+        mock_study.display_gof_results(gof_stats)
+
+        self.console.print("\n[bold green]Mock study complete![/bold green]")
+        self.console.print(
+            f"[cyan]Mock study: {len(mock_study.mock_results)} mocks analyzed[/cyan]"
+        )
+
+    def _run_diagnostics(
+        self,
+        lnM: np.ndarray,
+        z: np.ndarray,
+        lnR: np.ndarray,
+        cuts_array: np.ndarray,
+        real_results: dict[float, CutAnalysisResult],
+    ) -> None:
+        """Run diagnostic analysis and optionally show plots.
+
+        :param lnM: Log mass array
+        :param z: Redshift array
+        :param lnR: Log richness array
+        :param cuts_array: Array of richness cuts (log values)
+        :param real_results: Results from real data analysis
+        """
+        self.console.print("\n[bold magenta]Diagnostic Analysis[/bold magenta]")
+
+        for cut in cuts_array:
+            if cut not in real_results:
+                continue
+
+            result = real_results[cut]
+            model = result.bestfit
+
+            # Filter data for this cut
+            mask = lnR >= cut
+            lnM_cut = lnM[mask]
+            z_cut = z[mask]
+            lnR_cut = lnR[mask]
+
+            # Compute model predictions
+            mu = np.array([model.mu(lnM_cut[i], z_cut[i]) for i in range(len(lnM_cut))])
+            sigma = np.array(
+                [model.sigma(lnM_cut[i], z_cut[i]) for i in range(len(lnM_cut))]
             )
-            self.console.print(
-                f"[cyan]Mock study: {len(mock_study.mock_results)} mocks analyzed"
-                "[/cyan]"
+
+            # Compute predicted mean and std of truncated distribution
+            mean_pred = mean_lnR_truncated(mu, sigma, cut)
+            std_pred = std_lnR_truncated(mu, sigma, cut)
+            assert isinstance(mean_pred, np.ndarray)
+            assert isinstance(std_pred, np.ndarray)
+
+            # Compute statistics
+            stats = compute_binned_statistics(
+                mean_pred, std_pred, lnR_cut, mu, sigma, cut
             )
-        else:
-            self.console.print(
-                "\n[bold green]Real data analysis complete![/bold green]"
-            )
-            self.console.print(f"[cyan]{len(real_results)} cuts analyzed[/cyan]")
+
+            if self.run_diagnostics:
+                self.console.print(f"\n[cyan]Cut λ ≥ {np.exp(cut):.1f}:[/cyan]")
+                self.console.print(f"  N clusters: {len(lnR_cut)}")
+
+                # Print some diagnostic statistics
+                sigma_emp = np.nanmean(stats["sample_std"])
+                sigma_mod = np.nanmean(stats["bin_std_pred"])
+                self.console.print(f"  Mean empirical σ: {sigma_emp:.3f}")
+                self.console.print(f"  Mean model σ: {sigma_mod:.3f}")
+
+            if self.show_plots:
+                plot_diagnostic_summary(
+                    mean_pred,
+                    std_pred,
+                    lnR_cut,
+                    mu,
+                    sigma,
+                    cut,
+                    show=True,
+                )
 
     def _create_initial_model(self) -> Nc.ClusterMassRichness:
         """Create the initial model based on model_type.

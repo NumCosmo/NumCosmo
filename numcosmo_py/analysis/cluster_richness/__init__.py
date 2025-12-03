@@ -72,7 +72,7 @@ from ._utils import (
     RichnessModelType,
     PARAM_FORMAT,
 )
-from ._analyzer import CutAnalyzer, COMPUTE_MCMC, COMPUTE_BOOTSTRAP
+from ._analyzer import CutAnalyzer
 from ._database import BestfitDatabase
 from ._mock_study import MockStudy
 from ._truncated_stats import (
@@ -115,8 +115,6 @@ __all__ = [
     "PARAM_FORMAT",
     # Analysis
     "CutAnalyzer",
-    "COMPUTE_MCMC",
-    "COMPUTE_BOOTSTRAP",
     # Database
     "BestfitDatabase",
     # Mock study

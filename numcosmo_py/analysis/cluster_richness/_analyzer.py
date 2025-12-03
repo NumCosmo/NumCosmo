@@ -41,11 +41,6 @@ from ._parameters import (
 from ._utils import setup_model_fit_params, PARAM_FORMAT
 
 
-#: Global flags for enabling/disabling MCMC and bootstrap
-COMPUTE_MCMC = False
-COMPUTE_BOOTSTRAP = False
-
-
 def _get_default_console() -> Console:
     """Get or create the default console instance.
 

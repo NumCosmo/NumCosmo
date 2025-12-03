@@ -52,8 +52,6 @@ from numcosmo_py.analysis.cluster_richness import (
     BestfitDatabase,
     # Analyzer module
     CutAnalyzer,
-    COMPUTE_MCMC,
-    COMPUTE_BOOTSTRAP,
 )
 
 Ncm.cfg_init()
@@ -938,15 +936,3 @@ class TestCutAnalyzer:
         analyzer.analyze()
         # Should not raise
         analyzer.display_results()
-
-
-class TestAnalyzerGlobalFlags:
-    """Tests for analyzer global flags."""
-
-    def test_compute_mcmc_default(self) -> None:
-        """Test default COMPUTE_MCMC value."""
-        assert COMPUTE_MCMC is False
-
-    def test_compute_bootstrap_default(self) -> None:
-        """Test default COMPUTE_BOOTSTRAP value."""
-        assert COMPUTE_BOOTSTRAP is False
