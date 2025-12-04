@@ -198,12 +198,12 @@ def create_cosmo() -> Nc.HICosmo:
     cosmo.omega_x2omega_k()
     cosmo["H0"] = 67.81
     cosmo["Omegab"] = 0.0486
-    cosmo["Omegac"] = 0.2612
     cosmo["w"] = -1.0
     cosmo["Omegak"] = 0.00
 
     cosmo.param_set_desc("H0", {"fit": False})
-    cosmo.param_set_desc("Omegac", {"fit": True})
+    cosmo.param_set_desc("Omegac",{ "lower-bound": 0.1,"upper-bound": 0.3,"scale": 1.0e-2,"abstol": 1.0e-50,"fit": True,"value":0.2612,})
+
     cosmo.param_set_desc("Omegab", {"fit": False})
     cosmo.param_set_desc("w", {"fit": True})
     cosmo.param_set_desc("Omegak", {"fit": False})
@@ -350,42 +350,15 @@ def create_cluster_redshift(
 
 
 def _set_mset_params(mset: Ncm.MSet, params: tuple[float, float, float]) -> None:
-<<<<<<< HEAD
-    """Set the parameters for the mass model."""
-<<<<<<< HEAD
-    param_names = ["NcHICosmo:Omegac", "NcHICosmo:w", "NcHIPrim:ln10e10ASA"]
-    
-=======
->>>>>>> 2de4259916cf3226ca3cc5cf0d35e0962ac87ac5
-=======
     """Set the parameters for the cosmology model.
 
     :param mset: The mass model set.
     :param params: The parameters for the cosmology model, (Omegac, w, sigma8).
     """
->>>>>>> f81b5976cdb4356db9de13d8c1da699e3120f0b7
     tf = Nc.TransferFuncEH()
     psml = Nc.PowspecMLTransfer.new(tf)
     psml.require_kmin(1.0e-6)
     psml.require_kmax(1.0e3)
-<<<<<<< HEAD
-    
-    for i, param_name in enumerate(param_names):
-        pi = mset.fparam_get_pi_by_name(param_name)
-        
-        
-        
-        if i ==2:
-            
-            cosmo = mset.peek(mset.get_id_by_ns("NcHICosmo"))
-            A_s = np.exp(mset.param_get(pi.mid, pi.pid)) * 1.0e-10
-            
-            fact = (params[2] / psml.sigma_tophat_R(cosmo, 1.0e-7, 0.0, 8.0 / 0.6774)) ** 2
-            mset.param_set(pi.mid, pi.pid,  np.log(1.0e10 * A_s * fact))
-        else:
-            mset.param_set(pi.mid, pi.pid, params[i])
-        
-=======
     Omegac, w, sigma8 = params
 
     cosmo: Nc.HICosmo = cast(Nc.HICosmo, mset["NcHICosmo"])
@@ -397,7 +370,6 @@ def _set_mset_params(mset: Ncm.MSet, params: tuple[float, float, float]) -> None
     fact = (sigma8 / psml.sigma_tophat_R(cosmo, 1.0e-7, 0.0, 8.0 / cosmo.h())) ** 2
     prim["ln10e10ASA"] = np.log(1.0e10 * A_s * fact)
 
->>>>>>> 2de4259916cf3226ca3cc5cf0d35e0962ac87ac5
 
 def generate_jpas_forecast_2024(
     area: float = 2959.1,

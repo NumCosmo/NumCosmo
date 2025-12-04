@@ -190,36 +190,16 @@ class GenerateJpasForecast:
         tuple[float, float, float],
         typer.Option(
             help=(
-<<<<<<< HEAD
-                "Model for "
-                "resample.(NcHICosmo:Omegac,NcHICosmo:w,NcHICosmo:sigma8)"
-            ),
-            show_default=True,
-        ),
-    ] = (0.2612, -1.0,  0.8159)
-=======
                 "Model for resample. (NcHICosmo:Omegac,NcHICosmo:w,NcHICosmo:sigma8)"
             ),
             show_default=True,
         ),
     ] = (0.2612, -1.0, 0.8159)
->>>>>>> 2de4259916cf3226ca3cc5cf0d35e0962ac87ac5
 
     fitting_model: Annotated[
         tuple[float, float, float],
         typer.Option(
-<<<<<<< HEAD
-<<<<<<< HEAD
-            help=(
-                "Model for fitting. "
-                "(NcHICosmo:Omegac,NcHICosmo:w,NcHICosmo:sigma8)"
-            ),
-=======
-            help="Model for fitting. (NcHICosmo:Omegac,NcHICosmo:w,NcHICosmo:sigma8)",
->>>>>>> 2de4259916cf3226ca3cc5cf0d35e0962ac87ac5
-=======
             help=("Model for fitting. (NcHICosmo:Omegac,NcHICosmo:w,NcHICosmo:sigma8)"),
->>>>>>> f81b5976cdb4356db9de13d8c1da699e3120f0b7
             show_default=True,
         ),
     ] = (0.2612, -1.0, 0.8159)
