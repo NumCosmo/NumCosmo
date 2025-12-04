@@ -228,29 +228,29 @@ class GenerateJpasForecast:
         typer.Option(help="Cluster photoz relation.", show_default=True),
     ] = ClusterRedshiftType.NODIST
 
-    lnM_min: Annotated[
+    lnM_obs_min: Annotated[
         float,
         typer.Option(
-            help="Jpas minimum mass.",
+            help="Jpas minimum observed mass.",
             show_default=True,
         ),
     ] = (
         np.log(10.0) * 14.0
     )
 
-    lnM_max: Annotated[
+    lnM_obs_max: Annotated[
         float,
         typer.Option(
-            help="Jpas maximum mass.",
+            help="Jpas maximum observed mass.",
             show_default=True,
         ),
     ] = (
         np.log(10.0) * 15.0
     )
 
-    lnMnknots: Annotated[
+    lnMobsnknots: Annotated[
         int,
-        typer.Option(help="Jpas number of mass bins.", show_default=True, min=2),
+        typer.Option(help="Jpas number of observed mass bins.", show_default=True, min=2),
     ] = 2
 
     cluster_mass_type: Annotated[
@@ -298,9 +298,9 @@ class GenerateJpasForecast:
             z_max=self.z_max,
             znknots=self.znknots,
             cluster_redshift_type=self.cluster_redshift_type,
-            lnM_min=self.lnM_min,
-            lnM_max=self.lnM_max,
-            lnMnknots=self.lnMnknots,
+            lnM_obs_min=self.lnM_obs_min,
+            lnM_obs_max=self.lnM_obs_max,
+            lnMobsnknots=self.lnMobsnknots,
             cluster_mass_type=self.cluster_mass_type,
             use_fixed_cov=self.use_fixed_cov,
             fitting_Sij_type=self.fitting_sky_cut,
