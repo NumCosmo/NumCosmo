@@ -459,17 +459,17 @@ def create_cluster_mass(
             lnM_min=np.log(10) * 14.0, lnM_max=np.log(10) * 16.0
         )
     elif cluster_mass_type == ClusterMassType.ASCASO:
-        # Ascaso et al. (2015) relation for richness ($N_{gal}$)
+        # Ascaso et al. (2015) relation for richness
         cluster_m = Nc.ClusterMassAscaso(
             lnRichness_min=0.0, lnRichness_max=np.log(10) * 2.5, z0=0
         )
         # Set fiducial values for the mass-richness relation parameters
         cluster_m["mup0"] = 3.207   # $mu_{M|lambda}$ normalization
-        cluster_m["mup1"] = 0.993   # $mu_{M|lambda}$ slope with $ln lambda$
+        cluster_m["mup1"] = 0.993   # $mu_{M|lambda}$ mass dependence
         cluster_m["mup2"] = 0       # $mu_{M|lambda}$ redshift dependence
         cluster_m["sigmap0"] = 0.456 # $sigma_{M|lambda}$ normalization
-        cluster_m["sigmap1"] = -0.169 # $sigma_{M|lambda}$ redshift dependence
-        cluster_m["sigmap2"] = 0
+        cluster_m["sigmap1"] = -0.169 # $sigma_{M|lambda}$ mass dependence
+        cluster_m["sigmap2"] = 0 # $sigma_{M|lambda}$ redshift dependence
     else:
         raise ValueError(f"Invalid cluster mass type: {cluster_mass_type}")
 
