@@ -288,12 +288,22 @@ def create_cosmo() -> Nc.HICosmo:
     cosmo["H0"] = 67.81
     cosmo["Omegab"] = 0.0486
     cosmo["w"] = -1.0
-    cosmo["Omegak"] = 0.00 # Flat cosmology
+    cosmo["Omegak"] = 0.00  # Flat cosmology
 
     # --- Define Fitting Status ---
     cosmo.param_set_desc("H0", {"fit": False})
     # $Omega_c$ is a free parameter
-    cosmo.param_set_desc("Omegac",{ "lower-bound": 0.1,"upper-bound": 0.3,"scale": 1.0e-2,"abstol": 1.0e-50,"fit": True,"value":0.2612,})
+    cosmo.param_set_desc(
+        "Omegac",
+        {
+            "lower-bound": 0.1,
+            "upper-bound": 0.3,
+            "scale": 1.0e-2,
+            "abstol": 1.0e-50,
+            "fit": True,
+            "value": 0.2612,
+        },
+    )
     cosmo.param_set_desc("Omegab", {"fit": False})
     # $w$ is a free parameter (Dark Energy EoS)
     cosmo.param_set_desc("w", {"fit": True})
@@ -302,9 +312,11 @@ def create_cosmo() -> Nc.HICosmo:
     # --- Primordial Power Spectrum Model ---
     prim = Nc.HIPrimPowerLaw.new()
     prim["ln10e10ASA"] = 3.02745  # Amplitude equivalent to $A_s$
-    prim["n_SA"] = 0.9660        # Scalar spectral index
+    prim["n_SA"] = 0.9660  # Scalar spectral index
 
-    prim.param_set_desc("ln10e10ASA", {"fit": True}) # $A_s$ amplitude is a fit parameter
+    prim.param_set_desc(
+        "ln10e10ASA", {"fit": True}
+    )  # $A_s$ amplitude is a fit parameter
     prim.param_set_desc("n_SA", {"fit": False})
 
     # --- Reionization Model (fixed) ---
@@ -331,12 +343,12 @@ def create_mfunc_array(psml: Nc.PowspecML) -> Ncm.ObjArray:
     # Set k-range for power spectrum calculation
     psml.require_kmin(1.0e-5)
     psml.require_kmax(1.0e1)
-    psml.require_zi(0.0) # Initial redshift
-    psml.require_zf(1.0) # Final redshift (for some internal calculations)
+    psml.require_zi(0.0)  # Initial redshift
+    psml.require_zf(1.0)  # Final redshift (for some internal calculations)
 
     # Setup filter for $sigma_8$ calculation (Top-Hat in real space)
     psf_cbe = Ncm.PowspecFilter.new(psml, Ncm.PowspecFilterType.TOPHAT)
-    psf_cbe.set_best_lnr0() # Set $R=8 text{ Mpc}/h$ for $sigma_8$
+    psf_cbe.set_best_lnr0()  # Set $R=8 text{ Mpc}/h$ for $sigma_8$
 
     # $sigma_8$ function
     mfunc_sigma8 = Ncm.MSetFuncList.new("NcHICosmo:sigma8", psf_cbe)
@@ -464,12 +476,12 @@ def create_cluster_mass(
             lnRichness_min=0.0, lnRichness_max=np.log(10) * 2.5, z0=0
         )
         # Set fiducial values for the mass-richness relation parameters
-        cluster_m["mup0"] = 3.207   # $mu_{M|lambda}$ normalization
-        cluster_m["mup1"] = 0.993   # $mu_{M|lambda}$ mass dependence
-        cluster_m["mup2"] = 0       # $mu_{M|lambda}$ redshift dependence
-        cluster_m["sigmap0"] = 0.456 # $sigma_{M|lambda}$ normalization
-        cluster_m["sigmap1"] = -0.169 # $sigma_{M|lambda}$ mass dependence
-        cluster_m["sigmap2"] = 0 # $sigma_{M|lambda}$ redshift dependence
+        cluster_m["mup0"] = 3.207  # $mu_{M|lambda}$ normalization
+        cluster_m["mup1"] = 0.993  # $mu_{M|lambda}$ mass dependence
+        cluster_m["mup2"] = 0  # $mu_{M|lambda}$ redshift dependence
+        cluster_m["sigmap0"] = 0.456  # $sigma_{M|lambda}$ normalization
+        cluster_m["sigmap1"] = -0.169  # $sigma_{M|lambda}$ mass dependence
+        cluster_m["sigmap2"] = 0  # $sigma_{M|lambda}$ redshift dependence
     else:
         raise ValueError(f"Invalid cluster mass type: {cluster_mass_type}")
 
@@ -493,8 +505,8 @@ def create_cluster_redshift(
     elif cluster_redshift_type == ClusterRedshiftType.GAUSS:
         # Gaussian photoz error distribution
         cluster_z = Nc.ClusterPhotozGaussGlobal(pz_min=0.0, pz_max=1.0)
-        cluster_z["z-bias"] = 0       # Photoz bias $langle z_{obs} - z_{true} rangle$
-        cluster_z["sigma0"] = 0.1     # Photoz scatter $sigma_z$
+        cluster_z["z-bias"] = 0  # Photoz bias $langle z_{obs} - z_{true} rangle$
+        cluster_z["sigma0"] = 0.1  # Photoz scatter $sigma_z$
     else:
         raise ValueError(f"Invalid cluster redshift type: {cluster_redshift_type}")
 
@@ -610,10 +622,10 @@ def generate_jpas_forecast_2024(
     psml.require_kmin(1.0e-6)
     psml.require_kmax(1.0e3)
     psf = Ncm.PowspecFilter.new(psml, Ncm.PowspecFilterType.TOPHAT)
-    psf.set_best_lnr0() # Sets R=8 Mpc/h for $sigma_8$
+    psf.set_best_lnr0()  # Sets R=8 Mpc/h for $sigma_8$
     mulf = Nc.MultiplicityFuncTinker.new()
     mulf.set_mdef(Nc.MultiplicityFuncMassDef.CRITICAL)
-    mulf.set_Delta(200.0) # Uses $Delta = 200c$ for mass definition
+    mulf.set_Delta(200.0)  # Uses $Delta = 200c$ for mass definition
     hmf = Nc.HaloMassFunction.new(dist, psf, mulf)
     hbias_Tinker = Nc.HaloBiasTinker.new(hmf)
     cad = Nc.ClusterAbundance.new(hmf, hbias_Tinker)
@@ -626,7 +638,7 @@ def generate_jpas_forecast_2024(
     cosmo = create_cosmo()
 
     mset = Ncm.MSet.new_array([cosmo, cluster_m, cluster_z])
-    mset.prepare_fparam_map() # Map fitting parameters for efficient access
+    mset.prepare_fparam_map()  # Map fitting parameters for efficient access
 
     # --- Define Bins and Kernels ---
     kernel_z, kernels_T, z_bins_knots = create_zbins_kernels(
@@ -644,7 +656,7 @@ def generate_jpas_forecast_2024(
     n_bins = (z_bins_vec.len() - 1) * (lnM_obs_bins_vec.len() - 1)
     ncounts_gauss.set_size(n_bins)
     ncounts_gauss.set_init(True)
-    ncounts_gauss.use_norma(True) # Use normalized counts/volume
+    ncounts_gauss.use_norma(True)  # Use normalized counts/volume
     ncounts_gauss.set_z_obs(z_bins_vec)
     ncounts_gauss.set_lnM_obs(lnM_obs_bins_vec)
 
@@ -672,7 +684,7 @@ def generate_jpas_forecast_2024(
     rng = Ncm.RNG.seeded_new(None, resample_seed)
 
     _set_mset_params(mset, resample_model)
-    
+
     # Temporarily enable SSC for resampling if needed
     if resample_Sij_type != JpasSSCType.NO_SSC:
         ncounts_gauss.set_has_ssc(True)
@@ -689,14 +701,14 @@ def generate_jpas_forecast_2024(
     # Compute and fix the full covariance matrix (if requested, useful for Fisher matrix)
     if use_fixed_cov:
         print("Computing fixed covariance...")
-        _set_mset_params(mset, fitting_model) # Use fitting model for fixed covariance
+        _set_mset_params(mset, fitting_model)  # Use fitting model for fixed covariance
         cov, updated = ncounts_gauss.compute_cov(mset)
 
         assert updated
         ncounts_gauss.set_cov(cov)
         ncounts_gauss.set_fix_cov(True)
         print("Covariance fixed.")
-    
+
     # Set the model back to the resample model (or fiducial) for initial fitting state
     _set_mset_params(mset, resample_model)
 

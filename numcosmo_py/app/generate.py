@@ -250,7 +250,9 @@ class GenerateJpasForecast:
 
     lnMobsnknots: Annotated[
         int,
-        typer.Option(help="Jpas number of observed mass bins.", show_default=True, min=2),
+        typer.Option(
+            help="Jpas number of observed mass bins.", show_default=True, min=2
+        ),
     ] = 2
 
     cluster_mass_type: Annotated[
