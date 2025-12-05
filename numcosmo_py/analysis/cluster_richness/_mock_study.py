@@ -39,7 +39,7 @@ from ._parameters import (
     get_model_param_names,
 )
 from ._utils import PARAM_FORMAT
-from ._analyzer import CutAnalyzer
+from ._analyzer import CutAnalyzer, ClusterData
 from ._database import BestfitDatabase
 
 
@@ -65,8 +65,7 @@ class MockStudy:
     def __init__(
         self,
         model_fiducial: Nc.ClusterMassRichness,
-        lnM: np.ndarray,
-        z: np.ndarray,
+        data: ClusterData,
         cuts: list[float],
         compute_mcmc: bool = False,
         compute_bootstrap: bool = False,
@@ -82,8 +81,7 @@ class MockStudy:
         """Initialize mock study.
 
         :param model_fiducial: Fiducial model to generate mocks from
-        :param lnM: Log mass array (template)
-        :param z: Redshift array (template)
+        :param data: ClusterData with lnM, z, lnR, sigma_lnR (template for mock generation)
         :param cuts: List of richness cuts to analyze
         :param compute_mcmc: Whether to compute MCMC results (default: False)
         :param compute_bootstrap: Whether to compute bootstrap results (default: False)
@@ -101,8 +99,7 @@ class MockStudy:
         :param console: Rich console for output (default: None, creates new Console)
         """
         self.model_fiducial = model_fiducial
-        self.lnM = lnM
-        self.z = z
+        self.data = data
         self.cuts = cuts
         self.compute_mcmc = compute_mcmc
         self.compute_bootstrap = compute_bootstrap
@@ -117,13 +114,11 @@ class MockStudy:
         self.cached_bestfits: dict[tuple[int, float], Nc.ClusterMassRichness] = {}
         self.console = console if console is not None else _get_default_console()
 
-    def _generate_mock(
-        self, mock_seed: int
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _generate_mock(self, mock_seed: int) -> ClusterData:
         """Generate a single mock realization.
 
         :param mock_seed: Random seed for reproducible generation
-        :return: Tuple of (lnM, z, lnR_mock) for the generated mock
+        :return: ClusterData with lnM, z, lnR_mock, and sigma_lnR from fiducial
         """
         # Duplicate fiducial model to avoid modifying it
         cluster_m = dup_model(self.model_fiducial)
@@ -137,21 +132,37 @@ class MockStudy:
         mset.prepare_fparam_map()
 
         rng = Ncm.RNG.seeded_new(None, int(mock_seed))
-        data = Nc.DataClusterMassRich.new()
+        nc_data = Nc.DataClusterMassRich.new()
 
-        lnM_v = Ncm.Vector.new_array(self.lnM)
-        z_v = Ncm.Vector.new_array(self.z)
-        rich = Ncm.Vector.new(len(self.lnM))
+        lnM_v = Ncm.Vector.new_array(self.data.lnM)
+        z_v = Ncm.Vector.new_array(self.data.z)
+        rich = Ncm.Vector.new(len(self.data))
         rich.set_zero()
+        sigma_lnR_v = Ncm.Vector.new_array(self.data.sigma_lnR)
 
-        data.set_data(lnM_v, z_v, rich)
-        data.resample(mset, rng)
+        nc_data.set_data(lnM_v, z_v, rich, sigma_lnR_v)
+        nc_data.resample(mset, rng)
 
         # Extract resampled data
         lnR_mock = np.array(
-            [data.peek_lnR().get(i) for i in range(data.peek_lnR().len())]
+            [nc_data.peek_lnR().get(i) for i in range(nc_data.peek_lnR().len())]
         )
-        return self.lnM, self.z, lnR_mock
+        lnM_mock = np.array(
+            [nc_data.peek_lnM().get(i) for i in range(nc_data.peek_lnM().len())]
+        )
+        z_mock = np.array(
+            [nc_data.peek_z().get(i) for i in range(nc_data.peek_z().len())]
+        )
+        sigma_lnR_mock = np.array(
+            [
+                nc_data.peek_sigma_lnR().get(i)
+                for i in range(nc_data.peek_sigma_lnR().len())
+            ]
+        )
+
+        return ClusterData(
+            lnM=lnM_mock, z=z_mock, lnR=lnR_mock, sigma_lnR=sigma_lnR_mock
+        )
 
     def run(self, seed: int | None = None):
         """Run the mock study.
@@ -351,7 +362,7 @@ class MockStudy:
             for i, mock_seed_int in enumerate(mock_seeds):
                 mock_seed = int(mock_seed_int)  # type: ignore
                 # Generate mock
-                lnM_mock, z_mock, lnR_mock = self._generate_mock(mock_seed)
+                mock_data = self._generate_mock(mock_seed)
 
                 # Create seed-based prefix if file_prefix is provided
                 mock_file_prefix = None
@@ -360,9 +371,7 @@ class MockStudy:
 
                 # Analyze with CutAnalyzer
                 analyzer = CutAnalyzer(
-                    lnM_mock,
-                    z_mock,
-                    lnR_mock,
+                    mock_data,
                     self.cuts,
                     n_bootstrap=self.n_bootstrap,
                     compute_mcmc=self.compute_mcmc,

@@ -4984,12 +4984,16 @@ class DataClusterMassRich(NumCosmoMath.Data):
         Clusters (halo) ln-mass array
       lnR-cluster -> NcmVector: lnR-cluster
         Clusters (halo) ln-richness array
+      sigma-lnR-cluster -> NcmVector: sigma-lnR-cluster
+        Clusters (halo) ln-richness uncertainty array
       lnM-original -> NcmVector: lnM-original
         Clusters (halo) ln-mass array with original data
       z-original -> NcmVector: z-original
         Clusters (halo) redshift array with original data
       lnR-original -> NcmVector: lnR-original
         Clusters (halo) ln-richness array with original data
+      sigma-lnR-original -> NcmVector: sigma-lnR-original
+        Clusters (halo) ln-richness uncertainty array with original data
 
     Properties from NcmData:
       name -> gchararray: name
@@ -5012,6 +5016,8 @@ class DataClusterMassRich(NumCosmoMath.Data):
         lnM_original: NumCosmoMath.Vector
         lnR_cluster: NumCosmoMath.Vector
         lnR_original: NumCosmoMath.Vector
+        sigma_lnR_cluster: NumCosmoMath.Vector
+        sigma_lnR_original: NumCosmoMath.Vector
         z_cluster: NumCosmoMath.Vector
         z_original: NumCosmoMath.Vector
         bootstrap: NumCosmoMath.Bootstrap
@@ -5027,6 +5033,8 @@ class DataClusterMassRich(NumCosmoMath.Data):
         lnM_original: NumCosmoMath.Vector = ...,
         lnR_cluster: NumCosmoMath.Vector = ...,
         lnR_original: NumCosmoMath.Vector = ...,
+        sigma_lnR_cluster: NumCosmoMath.Vector = ...,
+        sigma_lnR_original: NumCosmoMath.Vector = ...,
         z_cluster: NumCosmoMath.Vector = ...,
         z_original: NumCosmoMath.Vector = ...,
         bootstrap: NumCosmoMath.Bootstrap = ...,
@@ -5042,10 +5050,15 @@ class DataClusterMassRich(NumCosmoMath.Data):
     def new(cls) -> DataClusterMassRich: ...
     def peek_lnM(self) -> NumCosmoMath.Vector: ...
     def peek_lnR(self) -> NumCosmoMath.Vector: ...
+    def peek_sigma_lnR(self) -> NumCosmoMath.Vector: ...
     def peek_z(self) -> NumCosmoMath.Vector: ...
     def ref(self) -> DataClusterMassRich: ...
     def set_data(
-        self, lnM: NumCosmoMath.Vector, z: NumCosmoMath.Vector, lnR: NumCosmoMath.Vector
+        self,
+        lnM: NumCosmoMath.Vector,
+        z: NumCosmoMath.Vector,
+        lnR: NumCosmoMath.Vector,
+        sigma_lnR: NumCosmoMath.Vector,
     ) -> None: ...
 
 class DataClusterMassRichClass(GObject.GPointer):

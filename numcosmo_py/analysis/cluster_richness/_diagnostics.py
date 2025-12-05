@@ -49,8 +49,10 @@ def compute_binned_statistics(
     lnR: np.ndarray,
     mu: np.ndarray,
     sigma: np.ndarray,
+    sigma_lnR: np.ndarray,
     lnR_cut: float,
     nbins: int = 40,
+    use_quantiles: bool = False,
 ) -> dict[str, np.ndarray]:
     """Compute binned statistics for diagnostic analysis.
 
@@ -58,42 +60,36 @@ def compute_binned_statistics(
     1. By predicted truncated mean - for comparing predicted vs observed lnR statistics
     2. By model parameter mu - for validating parameter recovery via inversion
 
+    The predictions account for total scatter: sigma_total = sqrt(sigma^2 + sigma_lnR^2),
+    which combines the intrinsic model scatter with catalog measurement uncertainties.
+
     :param mean_pred: Predicted truncated mean from model (forward: mu → mean)
     :param std_pred: Predicted truncated std from model (forward: sigma → std)
     :param lnR: Observed log-richness values from sample
     :param mu: Model parameter mu(lnM, z) for each cluster
     :param sigma: Model parameter sigma(lnM, z) for each cluster
+    :param sigma_lnR: Catalog uncertainty in ln(richness) for each cluster
     :param lnR_cut: Richness cut value (log units)
     :param nbins: Number of bins (default: 40)
     :return: Dictionary of computed statistics for both binning schemes
     """
+    # Compute total scatter: intrinsic model + catalog uncertainty
+    sigma_total = np.sqrt(sigma**2 + sigma_lnR**2)
     # Compute bins using quantiles for equal-count bins
-    if False:
-        mean_bins = np.quantile(mean_pred, np.linspace(0, 1, nbins + 1))
+    if use_quantiles:
         mu_bins = np.quantile(mu, np.linspace(0, 1, nbins + 1))
     else:
-        mean_bins = np.linspace(np.min(mean_pred), np.max(mean_pred), nbins + 1)
         mu_bins = np.linspace(np.min(mu), np.max(mu), nbins + 1)
 
-    mean_bin_centers = 0.5 * (mean_bins[:-1] + mean_bins[1:])
     mu_bin_centers = 0.5 * (mu_bins[:-1] + mu_bins[1:])
 
     # Binning by predicted truncated mean: Compare model predictions vs observations
-    sample_count, _, _ = binned_statistic(
-        mean_pred, lnR, statistic="count", bins=mean_bins
-    )
-    sample_mean, _, _ = binned_statistic(
-        mean_pred, lnR, statistic="mean", bins=mean_bins
-    )
-    sample_std, _, _ = binned_statistic(
-        mean_pred, lnR, statistic=lambda x: np.std(x, ddof=1), bins=mean_bins
-    )
+    sample_mean, _, _ = binned_statistic(mu, lnR, statistic="mean", bins=mu_bins)
+    sample_std, _, _ = binned_statistic(mu, lnR, statistic="std", bins=mu_bins)
     bin_mean_pred, _, _ = binned_statistic(
-        mean_pred, mean_pred, statistic="mean", bins=mean_bins
+        mu, mean_pred, statistic="mean", bins=mu_bins
     )
-    bin_std_pred, _, _ = binned_statistic(
-        mean_pred, std_pred, statistic="mean", bins=mean_bins
-    )
+    bin_std_pred, _, _ = binned_statistic(mu, std_pred, statistic="mean", bins=mu_bins)
 
     def _invert_sigma(x: np.ndarray) -> float:
         if len(x) == 0:
@@ -111,6 +107,12 @@ def compute_binned_statistics(
     mu_count, _, _ = binned_statistic(mu, mu, statistic="count", bins=mu_bins)
     bin_mu, _, _ = binned_statistic(mu, mu, statistic="mean", bins=mu_bins)
     bin_sigma, _, _ = binned_statistic(mu, sigma, statistic="mean", bins=mu_bins)
+    bin_sigma_lnR, _, _ = binned_statistic(
+        mu, sigma_lnR, statistic="mean", bins=mu_bins
+    )
+    bin_sigma_total, _, _ = binned_statistic(
+        mu, sigma_total, statistic="mean", bins=mu_bins
+    )
 
     sample_mu, _, _ = binned_statistic(mu, lnR, statistic=_invert_mu, bins=mu_bins)
     sample_sigma, _, _ = binned_statistic(
@@ -119,10 +121,7 @@ def compute_binned_statistics(
 
     return {
         # Binning scheme 1: By predicted truncated mean (forward validation)
-        "mean_bins": mean_bins,
-        "mean_bin_centers": mean_bin_centers,
         # Observed sample statistics in mean_pred bins
-        "sample_count": sample_count,
         "sample_mean": sample_mean,
         "sample_std": sample_std,
         # Model predictions (forward: mu,sigma → mean,std) in mean_pred bins
@@ -135,6 +134,8 @@ def compute_binned_statistics(
         "mu_count": mu_count,
         "bin_mu": bin_mu,
         "bin_sigma": bin_sigma,
+        "bin_sigma_lnR": bin_sigma_lnR,
+        "bin_sigma_total": bin_sigma_total,
         # Recovered parameters (inverse: mean,std → mu,sigma) in mu bins
         "sample_mu": sample_mu,
         "sample_sigma": sample_sigma,
@@ -267,12 +268,12 @@ def plot_bin_counts(
     else:
         fig = cast(Figure, ax.get_figure())
 
-    mean_bins = stats["mean_bins"]
-    widths = mean_bins[1:] - mean_bins[:-1]
+    mu_bins = stats["mu_bins"]
+    widths = mu_bins[1:] - mu_bins[:-1]
 
     ax.bar(
-        stats["mean_bin_centers"],
-        stats["sample_count"],
+        stats["mu_bin_centers"],
+        stats["mu_count"],
         width=widths,
         edgecolor="black",
         alpha=0.7,
@@ -313,17 +314,17 @@ def plot_mean_lnR(
     else:
         fig = cast(Figure, ax.get_figure())
 
-    mean_bins = stats["mean_bins"]
-    widths = mean_bins[1:] - mean_bins[:-1]
+    mu_bins = stats["mu_bins"]
+    widths = mu_bins[1:] - mu_bins[:-1]
 
     if with_errors:
-        yerr = stats["sample_std"] / np.sqrt(stats["sample_count"])
+        yerr = stats["sample_std"] / np.sqrt(stats["mu_count"])
     else:
         yerr = stats["sample_std"]
 
     # Bar plot for observed sample mean with error bars
     ax.bar(
-        stats["mean_bin_centers"],
+        stats["mu_bin_centers"],
         stats["sample_mean"],
         width=widths,
         yerr=yerr,
@@ -337,7 +338,7 @@ def plot_mean_lnR(
     # Step plot for model prediction (forward: mu,sigma → mean)
     ax.stairs(
         stats["bin_mean_pred"],
-        mean_bins,
+        mu_bins,
         color="black",
         lw=2,
         baseline=None,
@@ -376,12 +377,12 @@ def plot_empirical_vs_model_sigma(
     else:
         fig = cast(Figure, ax.get_figure())
 
-    mean_bins = stats["mean_bins"]
-    widths = mean_bins[1:] - mean_bins[:-1]
+    mu_bins = stats["mu_bins"]
+    widths = mu_bins[1:] - mu_bins[:-1]
 
     # Bar plot for observed sample std
     ax.bar(
-        stats["mean_bin_centers"],
+        stats["mu_bin_centers"],
         stats["sample_std"],
         width=widths,
         edgecolor="C0",
@@ -393,7 +394,7 @@ def plot_empirical_vs_model_sigma(
     # Step plot for model prediction (forward: mu,sigma → std)
     ax.stairs(
         stats["bin_std_pred"],
-        mean_bins,
+        mu_bins,
         color="C1",
         lw=2,
         baseline=None,
@@ -432,13 +433,13 @@ def plot_sigma_residuals(
     else:
         fig = cast(Figure, ax.get_figure())
 
-    mean_bins = stats["mean_bins"]
-    widths = mean_bins[1:] - mean_bins[:-1]
+    mu_bins = stats["mu_bins"]
+    widths = mu_bins[1:] - mu_bins[:-1]
     residuals = stats["sample_std"] - stats["bin_std_pred"]
 
     ax.axhline(0, color="gray", lw=1, ls="--")
     ax.bar(
-        stats["mean_bin_centers"],
+        stats["mu_bin_centers"],
         residuals,
         width=widths,
         edgecolor="black",
@@ -449,6 +450,74 @@ def plot_sigma_residuals(
     ax.set_ylabel(r"$\mathrm{Std}_{\rm observed} - \mathrm{Std}_{\rm predicted}$")
     ax.set_title("Truncated Std Residuals")
     ax.grid(True, alpha=0.3, axis="y")
+    fig.tight_layout()
+
+    if show:
+        plt.show()
+
+    return fig, ax
+
+
+def plot_scatter_components(
+    stats: dict[str, np.ndarray],
+    ax: Axes | None = None,
+    show: bool = True,
+) -> tuple[Figure, Axes]:
+    """Plot scatter components: intrinsic model sigma, catalog uncertainty, and total.
+
+    Shows how catalog uncertainties contribute to the total observed scatter.
+    The total scatter is what the likelihood uses: sigma_total = sqrt(sigma^2 + sigma_lnR^2).
+
+    :param stats: Dictionary from compute_binned_statistics
+    :param ax: Matplotlib axes to plot on (default: None, creates new figure)
+    :param show: Whether to call plt.show() (default: True)
+    :return: Figure and Axes objects
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 4))
+    else:
+        fig = cast(Figure, ax.get_figure())
+
+    mu_bins = stats["mu_bins"]
+
+    ax.stairs(
+        stats["bin_sigma"],
+        mu_bins,
+        color="C0",
+        lw=2,
+        baseline=None,
+        label=r"Intrinsic model $\sigma(\ln M, z)$",
+    )
+    ax.stairs(
+        stats["bin_sigma_lnR"],
+        mu_bins,
+        color="C2",
+        lw=2,
+        baseline=None,
+        label=r"Catalog uncertainty $\sigma_{\ln R}$",
+    )
+    ax.stairs(
+        stats["bin_sigma_total"],
+        mu_bins,
+        color="black",
+        lw=2,
+        baseline=None,
+        label=r"Total scatter $\sqrt{\sigma^2 + \sigma_{\ln R}^2}$",
+    )
+    ax.stairs(
+        stats["sample_sigma"],
+        mu_bins,
+        color="C1",
+        lw=2,
+        linestyle="--",
+        baseline=None,
+        label=r"Recovered $\sigma$ (inverse: sample → model)",
+    )
+    ax.set_xlabel(r"Model parameter $\mu(\ln M, z)$")
+    ax.set_ylabel(r"Scatter $\sigma$")
+    ax.set_title("Scatter Components")
+    ax.legend(loc="best", fontsize="small")
+    ax.grid(True, alpha=0.3)
     fig.tight_layout()
 
     if show:
@@ -469,14 +538,18 @@ def plot_diagnostic_summary(
     :param show: Whether to call plt.show() (default: True)
     :return: Figure and array of Axes objects
     """
-    fig, axes = plt.subplots(2, 3, figsize=(15, 8))
+    fig, axes = plt.subplots(3, 3, figsize=(15, 12))
 
     plot_mu_recovery(stats, ax=axes[0, 0], show=False)
     plot_sigma_recovery(stats, ax=axes[0, 1], show=False)
-    plot_bin_counts(stats, ax=axes[0, 2], show=False)
-    plot_mean_lnR(stats, ax=axes[1, 0], show=False)
-    plot_empirical_vs_model_sigma(stats, ax=axes[1, 1], show=False)
-    plot_sigma_residuals(stats, ax=axes[1, 2], show=False)
+    plot_scatter_components(stats, ax=axes[0, 2], show=False)
+    plot_bin_counts(stats, ax=axes[1, 0], show=False)
+    plot_mean_lnR(stats, ax=axes[1, 1], show=False)
+    plot_empirical_vs_model_sigma(stats, ax=axes[1, 2], show=False)
+    plot_sigma_residuals(stats, ax=axes[2, 0], show=False)
+    # Leave axes[2, 1] and axes[2, 2] empty for future additions
+    axes[2, 1].axis("off")
+    axes[2, 2].axis("off")
 
     fig.suptitle(
         f"Diagnostic Summary (richness cut $\\lambda \\geq$ {np.exp(lnR_cut):.1f})",

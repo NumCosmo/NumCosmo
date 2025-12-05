@@ -84,7 +84,7 @@ from ._utils import (
     RichnessModelType,
     PARAM_FORMAT,
 )
-from ._analyzer import CutAnalyzer
+from ._analyzer import CutAnalyzer, ClusterData
 from ._database import BestfitDatabase
 from ._mock_study import MockStudy
 from ._truncated_stats import (
@@ -102,12 +102,15 @@ from ._diagnostics import (
     plot_mean_lnR,
     plot_empirical_vs_model_sigma,
     plot_sigma_residuals,
+    plot_scatter_components,
     plot_diagnostic_summary,
 )
 
 __all__ = [
     # Results dataclass
     "CutAnalysisResult",
+    # Data container
+    "ClusterData",
     # Model utilities
     "dup_model",
     "model_to_yaml",
@@ -145,5 +148,6 @@ __all__ = [
     "plot_mean_lnR",
     "plot_empirical_vs_model_sigma",
     "plot_sigma_residuals",
+    "plot_scatter_components",
     "plot_diagnostic_summary",
 ]

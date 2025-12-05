@@ -201,8 +201,9 @@ _nc_cluster_mass_ext_mu (NcClusterMassRichness *mr, gdouble lnM, gdouble z)
   NcClusterMassExt *ext = NC_CLUSTER_MASS_EXT (mr);
   const gdouble lnM0    = nc_cluster_mass_richness_lnM0 (mr);
   const gdouble DlnM    = lnM - lnM0;
+  const gdouble Dln1pz  = log1p (z) - nc_cluster_mass_richness_ln1pz0 (mr);
 
-  return MU_P0 + MU_P1 * DlnM + MU_P2 * DlnM * DlnM + MU_P3 * DlnM * DlnM * DlnM;
+  return MU_P0 + MU_P1 * DlnM + MU_P2 * DlnM * DlnM + MU_P3 * Dln1pz;
 }
 
 static gdouble

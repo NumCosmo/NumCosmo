@@ -295,7 +295,7 @@ nc_cluster_mass_richness_class_init (NcClusterMassRichnessClass *klass)
   cm_class->volume          = &_nc_cluster_mass_richness_volume;
   cm_class->P_vec_z_lnMobs  = &_nc_cluster_mass_richness_p_vec_z_lnMobs;
   cm_class->_obs_len        = 1;
-  cm_class->_obs_params_len = 0;
+  cm_class->_obs_params_len = 1;
 
   ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 
@@ -342,9 +342,11 @@ _nc_cluster_mass_richness_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble 
   }
   else
   {
-    const gdouble x = (lnM_obs[0] - mu) / sigma;
+    const gdouble sigma_lnR_cat = lnM_obs_params[0];
+    const gdouble sigma_total   = sqrt (sigma * sigma + sigma_lnR_cat * sigma_lnR_cat);
+    const gdouble x             = (lnM_obs[0] - mu) / sigma_total;
 
-    return 1.0 / (ncm_c_sqrt_2pi () * sigma) * exp (-0.5 * x * x);
+    return 1.0 / (ncm_c_sqrt_2pi () * sigma_total) * exp (-0.5 * x * x);
   }
 }
 
@@ -357,6 +359,7 @@ _nc_cluster_mass_richness_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdoub
 
   nc_cluster_mass_richness_mu_sigma (mr, lnM, z, &mu, &sigma);
   {
+    /* Note: intP does not use catalog sigma - it represents the selection function */
     const gdouble x_cut = (mu - CUT) / (M_SQRT2 * sigma);
     const gdouble x_max = (mu - self->lnR_max) / (M_SQRT2 * sigma);
 
@@ -379,8 +382,10 @@ _nc_cluster_mass_richness_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, g
   else
   {
     gdouble mu, sigma;
+    const gdouble sigma_lnR_cat = lnM_obs_params[0];
 
     nc_cluster_mass_richness_mu_sigma (mr, lnM, z, &mu, &sigma);
+    sigma = sqrt (sigma * sigma + sigma_lnR_cat * sigma_lnR_cat);
     {
       const gdouble x_min = (mu - lnM_obs_lower[0]) / (M_SQRT2 * sigma);
       const gdouble x_max = (mu - lnM_obs_upper[0]) / (M_SQRT2 * sigma);
@@ -415,19 +420,21 @@ _nc_cluster_mass_richness_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, g
 {
   NcClusterMassRichness *mr                 = NC_CLUSTER_MASS_RICHNESS (clusterm);
   NcClusterMassRichnessPrivate * const self = nc_cluster_mass_richness_get_instance_private (mr);
-  gdouble mu, sigma;
+  gdouble mu, sigma, sigma_total;
 
   nc_cluster_mass_richness_mu_sigma (mr, lnM, z, &mu, &sigma);
+
+  sigma_total = sqrt (sigma * sigma + lnM_obs_params[0] * lnM_obs_params[0]);
 
   ncm_rng_lock (rng);
 
   if (self->sample_full_dist)
   {
-    lnM_obs[0] = ncm_rng_gaussian_gen (rng, mu, sigma);
+    lnM_obs[0] = ncm_rng_gaussian_gen (rng, mu, sigma_total);
   }
   else
   {
-    lnM_obs[0]  = ncm_rng_gaussian_tail_gen (rng, CUT - mu, sigma);
+    lnM_obs[0]  = ncm_rng_gaussian_tail_gen (rng, CUT - mu, sigma_total);
     lnM_obs[0] += mu;
   }
 
@@ -497,35 +504,45 @@ _nc_cluster_mass_richness_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *co
 
   if ((tda == 1) && (sz == 1))
   {
+    const gdouble *params_ptr = ncm_matrix_const_data (lnM_obs_params);
+    const guint params_tda    = ncm_matrix_tda (lnM_obs_params);
+
     for (i = 0; i < len; i++)
     {
       gdouble lnR, sigma;
+      const gdouble sigma_lnR_cat = params_ptr[i * params_tda];
 
       nc_cluster_mass_richness_mu_sigma (mr, lnM, z_ptr[i], &lnR, &sigma);
       {
-        const gdouble x = (lnM_obs_ptr[i] - lnR) / sigma;
+        const gdouble sigma_total = sqrt (sigma * sigma + sigma_lnR_cat * sigma_lnR_cat);
+        const gdouble x           = (lnM_obs_ptr[i] - lnR) / sigma_total;
 
         if (lnM_obs_ptr[i] < cut)
           res_ptr[i] = 0.0;
         else
-          res_ptr[i] = 1.0 * exp (-0.5 * x * x) / (sqrt_2pi * sigma);
+          res_ptr[i] = 1.0 * exp (-0.5 * x * x) / (sqrt_2pi * sigma_total);
       }
     }
   }
   else
   {
+    const gdouble *params_ptr = ncm_matrix_const_data (lnM_obs_params);
+    const guint params_tda    = ncm_matrix_tda (lnM_obs_params);
+
     for (i = 0; i < len; i++)
     {
       gdouble lnR, sigma;
+      const gdouble sigma_lnR_cat = params_ptr[i * params_tda];
 
       nc_cluster_mass_richness_mu_sigma (mr, lnM, z_ptr[i * sz], &lnR, &sigma);
       {
-        const gdouble x = (lnM_obs_ptr[i * tda] - lnR) / sigma;
+        const gdouble sigma_total = sqrt (sigma * sigma + sigma_lnR_cat * sigma_lnR_cat);
+        const gdouble x           = (lnM_obs_ptr[i * tda] - lnR) / sigma_total;
 
         if (lnM_obs_ptr[i * tda] < cut)
           res_ptr[i] = 0.0;
         else
-          res_ptr[i] = 1.0 * exp (-0.5 * x * x) / (sqrt_2pi * sigma);
+          res_ptr[i] = 1.0 * exp (-0.5 * x * x) / (sqrt_2pi * sigma_total);
       }
     }
   }

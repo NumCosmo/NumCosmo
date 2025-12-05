@@ -37,6 +37,7 @@ from numcosmo_py import Nc
 from numcosmo_py.analysis.cluster_richness import (
     RichnessModelType,
     CutAnalyzer,
+    ClusterData,
     MockStudy,
     get_model_param_names,
     model_params_as_list,
@@ -95,6 +96,29 @@ class RunClusterRichnessAnalysis(AppLogging):
             help="Name of the richness column in the FITS file.",
         ),
     ] = "richness"
+
+    sigma_lnR_column: Annotated[
+        Optional[str],
+        typer.Option(
+            "--sigma-lnR-col",
+            help=(
+                "Name of the richness uncertainty column in the FITS file. "
+                "If not provided, will look for '{richness_column}_err'."
+            ),
+        ),
+    ] = None
+
+    ignore_noise: Annotated[
+        bool,
+        typer.Option(
+            "--ignore-noise",
+            help=(
+                "Ignore richness measurement uncertainties in the analysis. "
+                "By default, uncertainties are included."
+            ),
+            is_flag=True,
+        ),
+    ] = False
 
     # Model configuration
     model_type: Annotated[
@@ -225,29 +249,31 @@ class RunClusterRichnessAnalysis(AppLogging):
         super().__post_init__()
 
         # Load and display data summary
-        lnM, z, lnR, cuts_array = self._load_data()
+        data, cuts_array = self._load_data()
 
         # Print summary
-        self._print_summary_only(lnM, z, lnR, cuts_array)
+        self._print_summary_only(data, cuts_array)
 
         # Run real data analysis if requested
         real_results = None
         model_fiducial = None
 
-        real_results, model_fiducial = self._run_real_analysis(lnM, z, lnR, cuts_array)
+        real_results, model_fiducial = self._run_real_analysis(data, cuts_array)
 
         # Run mock study if requested
         if self.run_mocks and real_results is not None and model_fiducial is not None:
-            self._run_mock_study(lnM, z, cuts_array, real_results, model_fiducial)
+            self._run_mock_study(data, cuts_array, real_results, model_fiducial)
 
         # Run diagnostics if requested
         if (self.run_diagnostics or self.show_plots) and real_results is not None:
-            self._run_diagnostics(lnM, z, lnR, cuts_array, real_results)
+            self._run_diagnostics(data, cuts_array, real_results)
 
-    def _load_data(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Load data from FITS file and return arrays.
+    def _load_data(
+        self,
+    ) -> tuple[ClusterData, np.ndarray]:
+        """Load data from FITS file and return ClusterData.
 
-        :return: Tuple of (lnM, z, lnR, cuts_array)
+        :return: Tuple of (ClusterData, cuts_array)
         """
         # Parse cuts
         if self.cuts is None:
@@ -262,11 +288,19 @@ class RunClusterRichnessAnalysis(AppLogging):
         )
         table_halos = Table.read(self.fits_file, hdu=self.hdu)
 
+        # Determine sigma_lnR column name
+        sigma_col = (
+            self.sigma_lnR_column
+            if self.sigma_lnR_column is not None
+            else f"{self.richness_column}_err"
+        )
+
         # Extract columns
         try:
             mass = np.array(table_halos[self.mass_column])
             z = np.array(table_halos[self.redshift_column])
             richness = np.array(table_halos[self.richness_column])
+            richness_err = np.array(table_halos[sigma_col])
         except KeyError as e:
             available_cols = ", ".join(table_halos.colnames)
             self.console.print(f"[bold red]Error: Column {e} not found.[/bold red]")
@@ -276,31 +310,40 @@ class RunClusterRichnessAnalysis(AppLogging):
         # Convert to log values
         lnM = np.log(mass)
         lnR = np.log(richness)
+        if self.ignore_noise:
+            sigma_lnR = np.zeros_like(lnR)
+        else:
+            sigma_lnR = richness_err / richness  # Propagate error to log space
 
-        return lnM, z, lnR, cuts_array
+        data = ClusterData(lnM=lnM, z=z, lnR=lnR, sigma_lnR=sigma_lnR)
+        return data, cuts_array
 
     def _print_summary_only(
         self,
-        lnM: np.ndarray,
-        z: np.ndarray,
-        lnR: np.ndarray,
+        data: ClusterData,
         cuts_array: np.ndarray,
     ) -> None:
         """Print data summary without running analysis.
 
-        :param lnM: Log mass array
-        :param z: Redshift array
-        :param lnR: Log richness array
+        :param data: ClusterData with lnM, z, lnR, sigma_lnR
         :param cuts_array: Array of richness cuts (log values)
         """
         self.console.print("\n[bold cyan]Data Summary[/bold cyan]")
-        self.console.print(f"  Total clusters: {len(lnM)}")
+        self.console.print(f"  Total clusters: {len(data)}")
         self.console.print(
-            f"  Mass range: [{np.exp(lnM.min()):.2e}, {np.exp(lnM.max()):.2e}]"
+            f"  Mass range: [{np.exp(data.lnM.min()):.2e}, "
+            f"{np.exp(data.lnM.max()):.2e}]"
         )
-        self.console.print(f"  Redshift range: [{z.min():.3f}, {z.max():.3f}]")
         self.console.print(
-            f"  Richness range: [{np.exp(lnR.min()):.1f}, {np.exp(lnR.max()):.1f}]"
+            f"  Redshift range: [{data.z.min():.3f}, {data.z.max():.3f}]"
+        )
+        self.console.print(
+            f"  Richness range: [{np.exp(data.lnR.min()):.1f}, "
+            f"{np.exp(data.lnR.max()):.1f}]"
+        )
+        self.console.print(
+            f"  σ(ln R) range: [{data.sigma_lnR.min():.4f}, "
+            f"{data.sigma_lnR.max():.4f}]"
         )
 
         # Show cluster counts per cut
@@ -314,8 +357,8 @@ class RunClusterRichnessAnalysis(AppLogging):
         table.add_column("Fraction", style="yellow")
 
         for cut in cuts_array:
-            n_above = np.sum(lnR >= cut)
-            fraction = n_above / len(lnR) * 100
+            n_above = np.sum(data.lnR >= cut)
+            fraction = n_above / len(data) * 100
             table.add_row(
                 f"λ ≥ {np.exp(cut):.1f}",
                 f"{n_above}",
@@ -326,26 +369,26 @@ class RunClusterRichnessAnalysis(AppLogging):
 
     def _run_real_analysis(
         self,
-        lnM: np.ndarray,
-        z: np.ndarray,
-        lnR: np.ndarray,
+        data: ClusterData,
         cuts_array: np.ndarray,
     ) -> tuple[dict, Nc.ClusterMassRichness]:
         """Run real data analysis.
 
-        :param lnM: Log mass array
-        :param z: Redshift array
-        :param lnR: Log richness array
+        :param data: ClusterData with lnM, z, lnR, sigma_lnR
         :param cuts_array: Array of richness cuts (log values)
         :return: Tuple of (results dict, fiducial model)
         """
-        self.console.print(f"  Loaded {len(lnM)} clusters")
+        self.console.print(f"  Loaded {len(data)} clusters")
         self.console.print(
-            f"  Mass range: [{np.exp(lnM.min()):.2e}, {np.exp(lnM.max()):.2e}]"
+            f"  Mass range: [{np.exp(data.lnM.min()):.2e}, "
+            f"{np.exp(data.lnM.max()):.2e}]"
         )
-        self.console.print(f"  Redshift range: [{z.min():.3f}, {z.max():.3f}]")
         self.console.print(
-            f"  Richness range: [{np.exp(lnR.min()):.1f}, {np.exp(lnR.max()):.1f}]"
+            f"  Redshift range: [{data.z.min():.3f}, {data.z.max():.3f}]"
+        )
+        self.console.print(
+            f"  Richness range: [{np.exp(data.lnR.min()):.1f}, "
+            f"{np.exp(data.lnR.max()):.1f}]"
         )
 
         # Create initial model
@@ -354,9 +397,7 @@ class RunClusterRichnessAnalysis(AppLogging):
         # Analyze real data
         self.console.print("\n[bold magenta]PHASE 1: Real Data Analysis[/bold magenta]")
         real_analyzer = CutAnalyzer(
-            lnM,
-            z,
-            lnR,
+            data,
             cuts_array.tolist(),
             n_bootstrap=self.n_bootstrap,
             compute_mcmc=self.compute_mcmc,
@@ -383,16 +424,14 @@ class RunClusterRichnessAnalysis(AppLogging):
 
     def _run_mock_study(
         self,
-        lnM: np.ndarray,
-        z: np.ndarray,
+        data: ClusterData,
         cuts_array: np.ndarray,
         real_results: dict,
         model_fiducial: Nc.ClusterMassRichness,
     ) -> None:
         """Run mock study for bias assessment.
 
-        :param lnM: Log mass array
-        :param z: Redshift array
+        :param data: ClusterData with lnM, z, lnR, sigma_lnR
         :param cuts_array: Array of richness cuts (log values)
         :param real_results: Results from real data analysis
         :param model_fiducial: Fiducial model from real data analysis
@@ -404,8 +443,7 @@ class RunClusterRichnessAnalysis(AppLogging):
         self.console.print("\n[bold magenta]PHASE 2: Mock Study[/bold magenta]")
         mock_study = MockStudy(
             model_fiducial,
-            lnM,
-            z,
+            data,
             cuts_array.tolist(),
             n_mocks=self.n_mocks,
             n_bootstrap=self.n_bootstrap,
@@ -429,17 +467,13 @@ class RunClusterRichnessAnalysis(AppLogging):
 
     def _run_diagnostics(
         self,
-        lnM: np.ndarray,
-        z: np.ndarray,
-        lnR: np.ndarray,
+        data: ClusterData,
         cuts_array: np.ndarray,
         real_results: dict[float, CutAnalysisResult],
     ) -> None:
         """Run diagnostic analysis and optionally show plots.
 
-        :param lnM: Log mass array
-        :param z: Redshift array
-        :param lnR: Log richness array
+        :param data: ClusterData with lnM, z, lnR, sigma_lnR
         :param cuts_array: Array of richness cuts (log values)
         :param real_results: Results from real data analysis
         """
@@ -453,31 +487,43 @@ class RunClusterRichnessAnalysis(AppLogging):
             model = result.bestfit
 
             # Filter data for this cut
-            mask = lnR >= cut
-            lnM_cut = lnM[mask]
-            z_cut = z[mask]
-            lnR_cut = lnR[mask]
+            data_cut = data.apply_cut(cut)
 
             # Compute model predictions
-            mu = np.array([model.mu(lnM_cut[i], z_cut[i]) for i in range(len(lnM_cut))])
+            mu = np.array(
+                [model.mu(data_cut.lnM[i], data_cut.z[i]) for i in range(len(data_cut))]
+            )
             sigma = np.array(
-                [model.sigma(lnM_cut[i], z_cut[i]) for i in range(len(lnM_cut))]
+                [
+                    model.sigma(data_cut.lnM[i], data_cut.z[i])
+                    for i in range(len(data_cut))
+                ]
             )
 
-            # Compute predicted mean and std of truncated distribution
-            mean_pred = mean_lnR_truncated(mu, sigma, cut)
-            std_pred = std_lnR_truncated(mu, sigma, cut)
+            # Compute total scatter: intrinsic model + catalog uncertainty
+            sigma_total = np.sqrt(sigma**2 + data_cut.sigma_lnR**2)
+
+            # Compute predicted mean and std of truncated distribution using total scatter
+            mean_pred = mean_lnR_truncated(mu, sigma_total, cut)
+            std_pred = std_lnR_truncated(mu, sigma_total, cut)
             assert isinstance(mean_pred, np.ndarray)
             assert isinstance(std_pred, np.ndarray)
 
             # Compute statistics
             stats = compute_binned_statistics(
-                mean_pred, std_pred, lnR_cut, mu, sigma, cut, nbins=self.n_bins
+                mean_pred,
+                std_pred,
+                data_cut.lnR,
+                mu,
+                sigma,
+                data_cut.sigma_lnR,
+                cut,
+                nbins=self.n_bins,
             )
 
             if self.run_diagnostics:
                 self.console.print(f"\n[cyan]Cut λ ≥ {np.exp(cut):.1f}:[/cyan]")
-                self.console.print(f"  N clusters: {len(lnR_cut)}")
+                self.console.print(f"  N clusters: {len(data_cut)}")
 
                 # Print some diagnostic statistics
                 sigma_emp = np.nanmean(stats["sample_std"])

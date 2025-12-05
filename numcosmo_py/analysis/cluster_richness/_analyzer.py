@@ -22,6 +22,7 @@ This module provides the main analysis pipeline for studying cluster
 mass-richness relations with progressive richness cuts.
 """
 
+from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
@@ -39,6 +40,60 @@ from ._parameters import (
     get_model_param_names,
 )
 from ._utils import setup_model_fit_params, PARAM_FORMAT
+
+
+@dataclass
+class ClusterData:
+    """Container for cluster observable data.
+
+    This dataclass holds all the observables for a cluster sample:
+    - Independent variables: lnM (log mass), z (redshift)
+    - Dependent variable: lnR (log richness)
+    - Observational uncertainty: sigma_lnR (catalog uncertainty on log richness)
+
+    All arrays must have the same length.
+    """
+
+    lnM: np.ndarray
+    """Log mass array (natural log of solar masses)"""
+
+    z: np.ndarray
+    """Redshift array"""
+
+    lnR: np.ndarray
+    """Log richness array (natural log)"""
+
+    sigma_lnR: np.ndarray
+    """Catalog uncertainty on log richness (natural log units)"""
+
+    def __post_init__(self):
+        """Validate that all arrays have the same length."""
+        lengths = {
+            "lnM": len(self.lnM),
+            "z": len(self.z),
+            "lnR": len(self.lnR),
+            "sigma_lnR": len(self.sigma_lnR),
+        }
+        if len(set(lengths.values())) != 1:
+            raise ValueError(f"All arrays must have the same length. Got: {lengths}")
+
+    def __len__(self) -> int:
+        """Return the number of clusters in the dataset."""
+        return len(self.lnM)
+
+    def apply_cut(self, lnR_cut: float) -> "ClusterData":
+        """Apply a richness cut and return a new ClusterData instance.
+
+        :param lnR_cut: Richness cut in log units
+        :return: New ClusterData with only clusters above the cut
+        """
+        mask = self.lnR >= lnR_cut
+        return ClusterData(
+            lnM=self.lnM[mask],
+            z=self.z[mask],
+            lnR=self.lnR[mask],
+            sigma_lnR=self.sigma_lnR[mask],
+        )
 
 
 def _get_default_console() -> Console:
@@ -61,9 +116,7 @@ class CutAnalyzer:
 
     def __init__(
         self,
-        lnM: np.ndarray,
-        z: np.ndarray,
-        lnR: np.ndarray,
+        data: ClusterData,
         cuts: list[float],
         n_bootstrap: int = 100,
         compute_mcmc: bool = False,
@@ -75,9 +128,7 @@ class CutAnalyzer:
     ):
         """Initialize the analyzer.
 
-        :param lnM: Log mass array (natural log of solar masses)
-        :param z: Redshift array
-        :param lnR: Log richness array
+        :param data: ClusterData object containing lnM, z, lnR, and sigma_lnR
         :param cuts: List of richness cuts (in log units)
         :param n_bootstrap: Number of bootstrap resamples (default: 100)
         :param compute_mcmc: Whether to run MCMC (default: False)
@@ -87,9 +138,7 @@ class CutAnalyzer:
         :param verbose: Whether to print progress (default: True)
         :param console: Rich Console for output (default: creates new Console)
         """
-        self.lnM = lnM
-        self.z = z
-        self.lnR = lnR
+        self.data = data
         self.cuts = cuts
         self.n_bootstrap = n_bootstrap
         self.compute_mcmc = compute_mcmc
@@ -113,21 +162,22 @@ class CutAnalyzer:
         setup_model_fit_params(self.cluster_m)
 
     def _setup_real_data(self) -> Nc.DataClusterMassRich:
-        """Create NumCosmo data object from arrays.
+        """Create NumCosmo data object from ClusterData.
 
         :return: DataClusterMassRich object
         """
-        data = Nc.DataClusterMassRich.new()
+        nc_data = Nc.DataClusterMassRich.new()
 
-        lnM_v = Ncm.Vector.new_array(self.lnM)
-        z_v = Ncm.Vector.new_array(self.z)
-        lnR_v = Ncm.Vector.new_array(self.lnR)
+        lnM_v = Ncm.Vector.new_array(self.data.lnM)
+        z_v = Ncm.Vector.new_array(self.data.z)
+        lnR_v = Ncm.Vector.new_array(self.data.lnR)
+        sigma_lnR_v = Ncm.Vector.new_array(self.data.sigma_lnR)
 
-        data.set_data(lnM_v, z_v, lnR_v)
-        return data
+        nc_data.set_data(lnM_v, z_v, lnR_v, sigma_lnR_v)
+        return nc_data
 
     def _analyze_cut(
-        self, data: Nc.DataClusterMassRich, mset: Ncm.MSet, cut: float
+        self, data: Nc.DataClusterMassRich, cut: float
     ) -> CutAnalysisResult:
         """Analyze a single cut.
 
@@ -137,11 +187,14 @@ class CutAnalyzer:
         :return: Analysis result for this cut
         """
         assert self.cluster_m is not None
+        cluster_m = dup_model(self.cluster_m)
+        mset = Ncm.MSet.new_array([cluster_m])
+        mset.prepare_fparam_map()
 
         # Apply cut
         data.apply_cut(cut)
-        self.cluster_m["cut"] = cut
-        n_clusters = int(np.sum(self.lnR > cut))
+        cluster_m["cut"] = cut
+        n_clusters = int(np.sum(self.data.lnR >= cut))
 
         # Best-fit
         if self.verbose:
@@ -159,8 +212,8 @@ class CutAnalyzer:
         )
         fit.set_params_reltol(1.0e-11)
         fit.set_m2lnL_reltol(1.0e-11)
-        fit.run(Ncm.FitRunMsgs.NONE)
-        bestfit_model = dup_model(self.cluster_m)
+        fit.run_restart(Ncm.FitRunMsgs.NONE, 1.0e-3, 0.0, None, None)
+        bestfit_model = dup_model(cluster_m)
         m2lnL = fit.peek_state().get_m2lnL_curval()
 
         if self.verbose:
@@ -198,10 +251,10 @@ class CutAnalyzer:
                 [mcat.peek_row(i).dup_array()[1:] for i in range(150, mcat.len())]
             )
             # Compute mean from rows
-            mcmc_mean_model = dup_model(self.cluster_m)
+            mcmc_mean_model = dup_model(cluster_m)
             model_params_from_list(mcmc_mean_model, np.mean(rows, axis=0).tolist())
 
-            mcmc_median_model = dup_model(self.cluster_m)
+            mcmc_median_model = dup_model(cluster_m)
             model_params_from_list(mcmc_median_model, np.median(rows, axis=0).tolist())
 
             if self.verbose:
@@ -235,7 +288,7 @@ class CutAnalyzer:
             fitmc.end_run()
             fitmc.mean_covar()
 
-            bootstrap_model = dup_model(self.cluster_m)
+            bootstrap_model = dup_model(cluster_m)
             model_params_from_list(
                 bootstrap_model,
                 fitmc.get_catalog().get_mean().dup_array(),
@@ -266,22 +319,18 @@ class CutAnalyzer:
         :return: Results indexed by cut value
         """
         self._initialize_model(model_init)
-        assert self.cluster_m is not None
-        mset = Ncm.MSet.new_array([self.cluster_m])
-        mset.prepare_fparam_map()
-
         data = self._setup_real_data()
 
         if self.verbose:
             self.console.print(
-                f"[cyan]Analyzing {len(self.lnM)} objects with "
+                f"[cyan]Analyzing {len(self.data)} objects with "
                 f"{len(self.cuts)} cuts...[/cyan]"
             )
 
         for cut in self.cuts:
             if self.verbose:
                 self.console.print(f"  Processing cut {np.exp(cut):.2f}...")
-            result = self._analyze_cut(data, mset, cut)
+            result = self._analyze_cut(data, cut)
             self.results[cut] = result
             if self.verbose:
                 self.console.print(
