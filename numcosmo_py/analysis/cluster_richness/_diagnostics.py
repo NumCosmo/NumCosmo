@@ -36,10 +36,12 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from scipy.stats import binned_statistic
+from scipy.stats import norm
 
 from ._truncated_stats import (
     invert_truncated_stats_mu_from_sample,
     invert_truncated_stats_sigma_from_sample,
+    truncated_to_normal,
 )
 
 
@@ -524,6 +526,216 @@ def plot_scatter_components(
         plt.show()
 
     return fig, ax
+
+
+def plot_standardized_residuals_qq(
+    lnR: np.ndarray,
+    mu: np.ndarray,
+    sigma: np.ndarray,
+    lnR_cut: float,
+    ax: Axes | None = None,
+    show: bool = True,
+) -> tuple[Figure, Axes]:
+    """Plot Q-Q plot of standardized residuals.
+
+    Transforms truncated normal samples to standard normal using the model
+    parameters (mu, sigma) and compares against theoretical N(0,1) quantiles.
+    If the model is correct, points should fall on the diagonal.
+
+    :param lnR: Observed log-richness values
+    :param mu: Model parameter mu(lnM, z) for each cluster
+    :param sigma: Model parameter sigma(lnM, z) for each cluster
+    :param lnR_cut: Richness cut value (log units)
+    :param ax: Matplotlib axes to plot on (default: None, creates new figure)
+    :param show: Whether to call plt.show() (default: True)
+    :return: Figure and Axes objects
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 6))
+    else:
+        fig = cast(Figure, ax.get_figure())
+
+    # Transform truncated samples to standard normal
+    z_obs = truncated_to_normal(lnR, mu, sigma, lnR_cut)
+
+    # Sort observed z-scores
+    z_sorted = np.sort(z_obs)
+
+    # Theoretical quantiles from N(0,1)
+    n = len(z_sorted)
+    p = (np.arange(1, n + 1) - 0.5) / n
+    z_theoretical = np.percentile(np.random.standard_normal(100000), p * 100)
+
+    # Q-Q plot
+    ax.scatter(z_theoretical, z_sorted, alpha=0.5, s=10, edgecolors="none")
+
+    # Add diagonal reference line
+    lim = max(
+        abs(z_theoretical.min()),
+        abs(z_theoretical.max()),
+        abs(z_sorted.min()),
+        abs(z_sorted.max()),
+    )
+    ax.plot([-lim, lim], [-lim, lim], "r--", lw=2, label="Perfect fit")
+
+    ax.set_xlabel("Theoretical N(0,1) Quantiles")
+    ax.set_ylabel("Observed Standardized Residuals")
+    ax.set_title("Q-Q Plot: Standardized Residuals vs N(0,1)")
+    ax.legend(loc="best")
+    ax.grid(True, alpha=0.3)
+    ax.set_aspect("equal")
+    fig.tight_layout()
+
+    if show:
+        plt.show()
+
+    return fig, ax
+
+
+def plot_standardized_residuals_histogram(
+    lnR: np.ndarray,
+    mu: np.ndarray,
+    sigma: np.ndarray,
+    lnR_cut: float,
+    ax: Axes | None = None,
+    show: bool = True,
+) -> tuple[Figure, Axes]:
+    """Plot histogram of standardized residuals compared to N(0,1).
+
+    Transforms truncated normal samples to standard normal using the model
+    parameters and overlays the expected N(0,1) density. If the model is
+    correct, the histogram should match the theoretical distribution.
+
+    :param lnR: Observed log-richness values
+    :param mu: Model parameter mu(lnM, z) for each cluster
+    :param sigma: Model parameter sigma(lnM, z) for each cluster
+    :param lnR_cut: Richness cut value (log units)
+    :param ax: Matplotlib axes to plot on (default: None, creates new figure)
+    :param show: Whether to call plt.show() (default: True)
+    :return: Figure and Axes objects
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(8, 5))
+    else:
+        fig = cast(Figure, ax.get_figure())
+
+    # Transform truncated samples to standard normal
+    z_obs = truncated_to_normal(lnR, mu, sigma, lnR_cut)
+
+    # Histogram of standardized residuals
+    ax.hist(
+        z_obs,
+        bins=50,
+        density=True,
+        alpha=0.7,
+        edgecolor="black",
+        label="Observed residuals",
+    )
+
+    assert isinstance(z_obs, np.ndarray)
+    z_range = np.linspace(z_obs.min() - 0.5, z_obs.max() + 0.5, 200)
+    ax.plot(z_range, norm.pdf(z_range), "r-", lw=2, label="Theoretical N(0,1)")
+
+    ax.set_xlabel("Standardized Residuals")
+    ax.set_ylabel("Density")
+    ax.set_title("Distribution of Standardized Residuals")
+    ax.legend(loc="best")
+    ax.grid(True, alpha=0.3, axis="y")
+    fig.tight_layout()
+
+    if show:
+        plt.show()
+
+    return fig, ax
+
+
+def plot_standardized_residuals_vs_predicted(
+    lnR: np.ndarray,
+    mu: np.ndarray,
+    sigma: np.ndarray,
+    lnR_cut: float,
+    ax: Axes | None = None,
+    show: bool = True,
+) -> tuple[Figure, Axes]:
+    """Plot standardized residuals vs predicted values.
+
+    Helps identify systematic patterns or heteroscedasticity in the residuals.
+    Points should be randomly scattered around zero with no trends.
+
+    :param lnR: Observed log-richness values
+    :param mu: Model parameter mu(lnM, z) for each cluster
+    :param sigma: Model parameter sigma(lnM, z) for each cluster
+    :param lnR_cut: Richness cut value (log units)
+    :param ax: Matplotlib axes to plot on (default: None, creates new figure)
+    :param show: Whether to call plt.show() (default: True)
+    :return: Figure and Axes objects
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(8, 5))
+    else:
+        fig = cast(Figure, ax.get_figure())
+
+    # Transform truncated samples to standard normal
+    z_obs = truncated_to_normal(lnR, mu, sigma, lnR_cut)
+
+    # Plot residuals vs predicted mu
+    ax.scatter(mu, z_obs, alpha=0.5, s=10, edgecolors="none")
+    ax.axhline(0, color="r", linestyle="--", lw=2, label="Zero residual")
+
+    # Add reference bands at ±2 sigma
+    ax.axhline(2, color="gray", linestyle=":", lw=1, alpha=0.5)
+    ax.axhline(-2, color="gray", linestyle=":", lw=1, alpha=0.5)
+
+    ax.set_xlabel(r"Predicted $\mu(\ln M, z)$")
+    ax.set_ylabel("Standardized Residuals")
+    ax.set_title("Residuals vs Predicted Values")
+    ax.legend(loc="best")
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+
+    if show:
+        plt.show()
+
+    return fig, ax
+
+
+def plot_residuals_summary(
+    lnR: np.ndarray,
+    mu: np.ndarray,
+    sigma: np.ndarray,
+    lnR_cut: float,
+    show: bool = True,
+) -> tuple[Figure, np.ndarray]:
+    """Create a summary figure with standardized residual diagnostics.
+
+    :param lnR: Observed log-richness values
+    :param mu: Model parameter mu(lnM, z) for each cluster
+    :param sigma: Model parameter sigma(lnM, z) for each cluster
+    :param lnR_cut: Richness cut value (log units)
+    :param show: Whether to call plt.show() (default: True)
+    :return: Figure and array of Axes objects
+    """
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+
+    plot_standardized_residuals_qq(lnR, mu, sigma, lnR_cut, ax=axes[0], show=False)
+    plot_standardized_residuals_histogram(
+        lnR, mu, sigma, lnR_cut, ax=axes[1], show=False
+    )
+    plot_standardized_residuals_vs_predicted(
+        lnR, mu, sigma, lnR_cut, ax=axes[2], show=False
+    )
+
+    fig.suptitle(
+        f"Standardized Residuals Diagnostics (richness cut $\\lambda \\geq$ {np.exp(lnR_cut):.1f})",
+        fontsize=14,
+        fontweight="bold",
+    )
+    fig.tight_layout()
+
+    if show:
+        plt.show()
+
+    return fig, axes
 
 
 def plot_diagnostic_summary(

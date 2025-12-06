@@ -44,6 +44,7 @@ from numcosmo_py.analysis.cluster_richness import (
     PARAM_FORMAT,
     compute_binned_statistics,
     plot_diagnostic_summary,
+    plot_residuals_summary,
     mean_lnR_truncated,
     std_lnR_truncated,
     CutAnalysisResult,
@@ -533,6 +534,7 @@ class RunClusterRichnessAnalysis(AppLogging):
 
             if self.show_plots:
                 plot_diagnostic_summary(stats, cut, show=True)
+                plot_residuals_summary(data_cut.lnR, mu, sigma_total, cut, show=True)
 
     def _create_initial_model(self) -> Nc.ClusterMassRichness:
         """Create the initial model based on model_type.

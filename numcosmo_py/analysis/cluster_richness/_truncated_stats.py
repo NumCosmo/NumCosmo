@@ -235,3 +235,53 @@ def invert_truncated_stats_sigma_from_sample(
     assert len(lnR_sample) > 0, "Sample must have at least one element"
     result = invert_truncated_stats(np.mean(lnR_sample), np.std(lnR_sample), lnR_cut)
     return result["sigma"]
+
+
+def truncated_to_normal(
+    x: float | np.ndarray,
+    mu: float | np.ndarray,
+    sigma: float | np.ndarray,
+    a: float,
+) -> float | np.ndarray:
+    """Map samples from one-sided truncated to standard normal.
+
+    It maps truncated N(mu, sigma^2) on [a, ∞) to standard normal N(0,1).
+
+    Numerically stable transformation using the CDF method for one-sided truncation.
+    Uses different strategies based on whether the truncation point is in the left
+    or right tail to avoid catastrophic cancellation.
+
+    For x ~ TruncatedNormal(mu, sigma, [a, ∞)), returns z ~ Normal(0, 1) such that
+    the quantile positions are preserved.
+
+    :param x: Sample(s) from truncated normal distribution (scalar or array)
+    :param mu: Location parameter of underlying Gaussian (scalar or array matching x)
+    :param sigma: Scale parameter of underlying Gaussian (scalar or array matching x)
+    :param a: Lower truncation point (scalar)
+    :return: Corresponding standard normal sample(s)
+    """
+    # Standardize the limits and data
+    alpha = (a - mu) / sigma
+    t = (x - mu) / sigma
+
+    # Handle both scalar and array cases for alpha
+    # Use vectorized operations that work for both scalars and arrays
+    SF_alpha = norm.sf(alpha)
+    SF_t = norm.sf(t)
+    Phi_alpha = norm.cdf(alpha)
+    Phi_t = norm.cdf(t)
+
+    # For alpha > 0 (right tail): u = 1 - SF(t)/SF(alpha)
+    # For alpha <= 0 (left tail): u = [Φ(t) - Φ(alpha)] / [1 - Φ(alpha)]
+    u_right = 1.0 - SF_t / SF_alpha
+    u_left = (Phi_t - Phi_alpha) / (1.0 - Phi_alpha)
+
+    # Use np.where to select the appropriate formula based on alpha
+    u = np.where(alpha > 0, u_right, u_left)
+
+    # Map uniform [0,1] to standard normal
+    # Clamp u to avoid numerical issues at boundaries
+    # u = np.clip(u, 1e-15, 1.0 - 1e-15)
+    z = norm.ppf(u)
+
+    return z

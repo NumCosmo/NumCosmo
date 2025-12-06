@@ -93,6 +93,7 @@ from ._truncated_stats import (
     invert_truncated_stats,
     invert_truncated_stats_mu_from_sample,
     invert_truncated_stats_sigma_from_sample,
+    truncated_to_normal,
 )
 from ._diagnostics import (
     compute_binned_statistics,
@@ -103,6 +104,10 @@ from ._diagnostics import (
     plot_empirical_vs_model_sigma,
     plot_sigma_residuals,
     plot_scatter_components,
+    plot_standardized_residuals_qq,
+    plot_standardized_residuals_histogram,
+    plot_standardized_residuals_vs_predicted,
+    plot_residuals_summary,
     plot_diagnostic_summary,
 )
 
@@ -140,6 +145,7 @@ __all__ = [
     "invert_truncated_stats",
     "invert_truncated_stats_mu_from_sample",
     "invert_truncated_stats_sigma_from_sample",
+    "truncated_to_normal",
     # Diagnostics
     "compute_binned_statistics",
     "plot_mu_recovery",
@@ -149,5 +155,9 @@ __all__ = [
     "plot_empirical_vs_model_sigma",
     "plot_sigma_residuals",
     "plot_scatter_components",
+    "plot_standardized_residuals_qq",
+    "plot_standardized_residuals_histogram",
+    "plot_standardized_residuals_vs_predicted",
+    "plot_residuals_summary",
     "plot_diagnostic_summary",
 ]
