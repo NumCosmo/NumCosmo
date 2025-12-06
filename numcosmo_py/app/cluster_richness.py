@@ -504,7 +504,8 @@ class RunClusterRichnessAnalysis(AppLogging):
             # Compute total scatter: intrinsic model + catalog uncertainty
             sigma_total = np.sqrt(sigma**2 + data_cut.sigma_lnR**2)
 
-            # Compute predicted mean and std of truncated distribution using total scatter
+            # Compute predicted mean and std of truncated distribution using total
+            # scatter
             mean_pred = mean_lnR_truncated(mu, sigma_total, cut)
             std_pred = std_lnR_truncated(mu, sigma_total, cut)
             assert isinstance(mean_pred, np.ndarray)
@@ -531,6 +532,30 @@ class RunClusterRichnessAnalysis(AppLogging):
                 sigma_mod = np.nanmean(stats["bin_std_pred"])
                 self.console.print(f"  Mean empirical σ: {sigma_emp:.3f}")
                 self.console.print(f"  Mean model σ: {sigma_mod:.3f}")
+
+                # How many cluster have integer richness?
+                R_array = np.exp(data_cut.lnR)
+                rounded_R = np.round(R_array)
+                int_indexes = np.isclose(R_array, rounded_R, atol=1e-2)
+                int_R_array = rounded_R[int_indexes]
+                # Unique integer richness values
+                unique_int_R = np.unique(int_R_array)
+                # Their repetitions
+                repeated_int_R = {
+                    int(r): int(np.sum(int_R_array == r)) for r in unique_int_R
+                }
+                # Filter only those with more than 1 occurrence
+                repeated_int_R = {k: v for k, v in repeated_int_R.items() if v > 1}
+                self.console.print(
+                    f"  Clusters with integer richness above cut "
+                    f"λ ≥ {np.exp(cut):.1f}: "
+                    f"{np.sum(list(repeated_int_R.values()))} "
+                    f"out of {len(data_cut)}"
+                )
+                self.console.print(
+                    f"  Unique integer richness values: {len(unique_int_R)}, "
+                    f"values and counts: \n{repeated_int_R}"
+                )
 
             if self.show_plots:
                 plot_diagnostic_summary(stats, cut, show=True)
