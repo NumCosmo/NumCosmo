@@ -65,6 +65,10 @@ def create_richness_model(
     :return: New model instance
     :raises ValueError: If model_type is not recognized
     """
+    # Normalize string input to lowercase for case-insensitive matching
+    if isinstance(model_type, str):
+        model_type = model_type.lower()
+    
     match model_type:
         case RichnessModelType.ASCASO:
             return Nc.ClusterMassAscaso(

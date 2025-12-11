@@ -195,8 +195,11 @@ void
 test_nc_data_cluster_ncount_sanity (TestNcDataClusterNCount *test, gconstpointer pdata)
 {
   NcmRNG *rng = ncm_rng_new (NULL);
+  guint data_len;
 
   nc_data_cluster_ncount_init_from_sampling (test->ncdata, test->mset, test->area, rng);
+
+  data_len = nc_data_cluster_ncount_get_len (test->ncdata);
 
   {
     gchar *desc = ncm_data_get_desc (NCM_DATA (test->ncdata));
@@ -210,7 +213,7 @@ test_nc_data_cluster_ncount_sanity (TestNcDataClusterNCount *test, gconstpointer
 
   g_assert_cmpuint (nc_data_cluster_ncount_get_len (test->ncdata), >, 0);
   g_assert_cmpuint (nc_data_cluster_ncount_lnM_obs_len (test->ncdata), ==, 1);
-  g_assert_cmpuint (nc_data_cluster_ncount_lnM_obs_params_len (test->ncdata), ==, 0);
+  g_assert_cmpuint (nc_data_cluster_ncount_lnM_obs_params_len (test->ncdata), ==, 1);
   g_assert_cmpuint (nc_data_cluster_ncount_z_obs_len (test->ncdata), ==, 1);
   g_assert_cmpuint (nc_data_cluster_ncount_z_obs_params_len (test->ncdata), ==, 0);
 
@@ -231,7 +234,9 @@ test_nc_data_cluster_ncount_sanity (TestNcDataClusterNCount *test, gconstpointer
     ncm_matrix_free (m);
 
     m = nc_data_cluster_ncount_get_lnM_obs_params (test->ncdata);
-    g_assert_null (m);
+    g_assert_cmpuint (ncm_matrix_nrows (m), ==, data_len);
+    g_assert_cmpuint (ncm_matrix_ncols (m), ==, 1);
+    ncm_matrix_free (m);
 
     m = nc_data_cluster_ncount_get_z_obs (test->ncdata);
     ncm_matrix_free (m);

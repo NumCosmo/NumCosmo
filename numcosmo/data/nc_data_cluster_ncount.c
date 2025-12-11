@@ -1366,7 +1366,7 @@ func_eval_lnM_p_d2n (unsigned ndim, const double *x, void *fdata, unsigned fdim,
   NcClusterAbundance *cad = evald2n->cad;
   guint n;
 
-  nc_cluster_mass_p_vec_z_lnMobs (evald2n->clusterm, evald2n->cosmo, x[0], evald2n->self->z_true, evald2n->self->lnM_obs, NULL, evald2n->self->p_z_vec);
+  nc_cluster_mass_p_vec_z_lnMobs (evald2n->clusterm, evald2n->cosmo, x[0], evald2n->self->z_true, evald2n->self->lnM_obs, evald2n->self->lnM_obs_params, evald2n->self->p_z_vec);
   ncm_spline2d_eval_vec_y (cad->mfp->d2NdzdlnM, x[0], evald2n->self->z_true, evald2n->self->z_order, evald2n->self->d2n);
 
   for (n = 0; n < fdim; n++)

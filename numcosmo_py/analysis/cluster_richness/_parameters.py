@@ -176,15 +176,26 @@ def model_params_as_list(model: Nc.ClusterMassRichness) -> list[float]:
 
 
 def model_params_from_list(model: Nc.ClusterMassRichness, values: list[float]) -> None:
-    """Set model parameters from an ordered list.
+    """Set model parameters from list of values (only FREE parameters).
 
-    :param model: A NcClusterMassRichness subclass instance to modify
-    :param values: List of parameter values in model's internal order
+    :param model: Model instance to update
+    :param values: List of parameter values
+    :raises ValueError: If number of values doesn't match number of FREE parameters
     """
-    for i, value in enumerate(values[: model.sparam_len()]):
+    free_params = [
+        i for i in range(model.sparam_len()) if model.param_get_ftype(i) != Ncm.ParamType.FIXED
+    ]
+    if len(values) != len(free_params):
+        raise ValueError(
+            f"Expected {len(free_params)} parameter values, got {len(values)}"
+        )
+
+    j = 0
+    for i in range(model.sparam_len()):
         if model.param_get_ftype(i) == Ncm.ParamType.FIXED:
             continue
-        model.param_set(i, value)
+        model.param_set(i, values[j])
+        j += 1
 
 
 def get_model_param_names(model: Nc.ClusterMassRichness) -> list[str]:
@@ -193,8 +204,4 @@ def get_model_param_names(model: Nc.ClusterMassRichness) -> list[str]:
     :param model: A NcClusterMassRichness subclass instance
     :return: List of parameter names
     """
-    return [
-        model.param_name(i)
-        for i in range(model.sparam_len())
-        if model.param_get_ftype(i) != Ncm.ParamType.FIXED
-    ]
+    return [model.param_name(i) for i in range(model.sparam_len())]

@@ -52,6 +52,7 @@ from numcosmo_py.analysis.cluster_richness import (
     BestfitDatabase,
     # Analyzer module
     CutAnalyzer,
+    ClusterData,
 )
 
 Ncm.cfg_init()
@@ -110,7 +111,7 @@ def fixture_richness_model(
 
 
 @pytest.fixture(name="sample_data")
-def fixture_sample_data(ascaso_model: Nc.ClusterMassAscaso) -> tuple:
+def fixture_sample_data(ascaso_model: Nc.ClusterMassAscaso) -> ClusterData:
     """Generate sample data for testing."""
     n_samples = 200
     rng = Ncm.RNG.seeded_new(None, 42)
@@ -119,22 +120,25 @@ def fixture_sample_data(ascaso_model: Nc.ClusterMassAscaso) -> tuple:
     lnM = np.linspace(np.log(1e13), np.log(1e15), n_samples)
     z = np.linspace(0.1, 1.0, n_samples)
 
-    # Create data object
+    # Create data object with sigma_lnR
     lnM_v = Ncm.Vector.new_array(lnM)
     z_v = Ncm.Vector.new_array(z)
     lnR_v = Ncm.Vector.new(n_samples)
     lnR_v.set_zero()
+    sigma_lnR_v = Ncm.Vector.new(n_samples)
+    sigma_lnR_v.set_all(0.1)  # Set catalog uncertainty to 0.1
 
     data = Nc.DataClusterMassRich.new()
-    data.set_data(lnM_v, z_v, lnR_v)
+    data.set_data(lnM_v, z_v, lnR_v, sigma_lnR_v)
 
     mset = Ncm.MSet.new_array([ascaso_model])
     mset.prepare_fparam_map()
     data.resample(mset, rng)
 
     lnR = np.array([data.peek_lnR().get(i) for i in range(n_samples)])
+    sigma_lnR = np.array([sigma_lnR_v.get(i) for i in range(n_samples)])
 
-    return lnM, z, lnR
+    return ClusterData(lnM=lnM, z=z, lnR=lnR, sigma_lnR=sigma_lnR)
 
 
 @pytest.fixture(name="temp_db_path")
@@ -305,40 +309,73 @@ class TestModelParamsAsList:
 
     def test_returns_list(self, richness_model: Nc.ClusterMassRichness) -> None:
         """Test that it returns a list."""
+        setup_model_fit_params(richness_model)  # Mark params as FREE
         result = model_params_as_list(richness_model)
         assert isinstance(result, list)
 
     def test_correct_length(self, richness_model: Nc.ClusterMassRichness) -> None:
-        """Test list has correct length."""
+        """Test list has correct length (only FREE parameters)."""
+        setup_model_fit_params(richness_model)  # Mark params as FREE
         result = model_params_as_list(richness_model)
-        assert len(result) == richness_model.sparam_len()
+        # Count FREE parameters
+        n_free = sum(
+            1
+            for i in range(richness_model.sparam_len())
+            if richness_model.param_get_ftype(i) != Ncm.ParamType.FIXED
+        )
+        assert len(result) == n_free
 
     def test_correct_order(self, richness_model: Nc.ClusterMassRichness) -> None:
-        """Test values are in correct order."""
+        """Test values are in correct order (only FREE parameters)."""
+        setup_model_fit_params(richness_model)  # Mark params as FREE
         result = model_params_as_list(richness_model)
-        for i, value in enumerate(result):
-            assert value == richness_model.param_get(i)
+        free_indices = [
+            i
+            for i in range(richness_model.sparam_len())
+            if richness_model.param_get_ftype(i) != Ncm.ParamType.FIXED
+        ]
+        for idx, value in enumerate(result):
+            assert value == richness_model.param_get(free_indices[idx])
 
 
 class TestModelParamsFromList:
     """Tests for model_params_from_list function."""
 
     def test_sets_params(self, richness_model: Nc.ClusterMassRichness) -> None:
-        """Test setting parameters from list."""
-        n_params = richness_model.sparam_len()
-        new_values = [float(i + 1) for i in range(n_params)]
+        """Test setting FREE parameters from list."""
+        setup_model_fit_params(richness_model)  # Mark params as FREE
+        n_free = sum(
+            1
+            for i in range(richness_model.sparam_len())
+            if richness_model.param_get_ftype(i) != Ncm.ParamType.FIXED
+        )
+        new_values = [float(i + 1) for i in range(n_free)]
         model_params_from_list(richness_model, new_values)
 
-        for i, value in enumerate(new_values):
-            assert richness_model.param_get(i) == value
+        # Verify FREE parameters were set
+        free_indices = [
+            i
+            for i in range(richness_model.sparam_len())
+            if richness_model.param_get_ftype(i) != Ncm.ParamType.FIXED
+        ]
+        for idx, value in enumerate(new_values):
+            assert richness_model.param_get(free_indices[idx]) == value
 
     def test_roundtrip(self, richness_model: Nc.ClusterMassRichness) -> None:
-        """Test list roundtrip."""
+        """Test list roundtrip (only FREE parameters)."""
+        setup_model_fit_params(richness_model)  # Mark params as FREE
         original = model_params_as_list(richness_model)
         target = dup_model(richness_model)
+        setup_model_fit_params(target)  # Mark target params as FREE
         model_params_from_list(target, original)
 
-        for i in range(richness_model.sparam_len()):
+        # Verify FREE parameters match
+        free_indices = [
+            i
+            for i in range(richness_model.sparam_len())
+            if richness_model.param_get_ftype(i) != Ncm.ParamType.FIXED
+        ]
+        for i in free_indices:
             assert target.param_get(i) == richness_model.param_get(i)
 
 
@@ -830,28 +867,22 @@ class TestBestfitDatabase:
 class TestCutAnalyzer:
     """Tests for CutAnalyzer class."""
 
-    def test_init(self, sample_data: tuple) -> None:
+    def test_init(self, sample_data: ClusterData) -> None:
         """Test CutAnalyzer initialization."""
-        lnM, z, lnR = sample_data
         cuts = [np.log(10), np.log(20)]
         analyzer = CutAnalyzer(
-            lnM=lnM,
-            z=z,
-            lnR=lnR,
+            data=sample_data,
             cuts=cuts,
             verbose=False,
         )
-        assert analyzer.lnM is lnM
+        assert len(analyzer.data) == len(sample_data)
         assert analyzer.cuts == cuts
 
-    def test_analyze_with_default_model(self, sample_data: tuple) -> None:
+    def test_analyze_with_default_model(self, sample_data: ClusterData) -> None:
         """Test analyze with default model."""
-        lnM, z, lnR = sample_data
         cuts = [np.log(10)]
         analyzer = CutAnalyzer(
-            lnM=lnM,
-            z=z,
-            lnR=lnR,
+            data=sample_data,
             cuts=cuts,
             verbose=False,
         )
@@ -865,15 +896,12 @@ class TestCutAnalyzer:
         assert result.n_clusters > 0
 
     def test_analyze_with_custom_model(
-        self, sample_data: tuple, ascaso_model: Nc.ClusterMassAscaso
+        self, sample_data: ClusterData, ascaso_model: Nc.ClusterMassAscaso
     ) -> None:
         """Test analyze with custom model."""
-        lnM, z, lnR = sample_data
         cuts = [np.log(10)]
         analyzer = CutAnalyzer(
-            lnM=lnM,
-            z=z,
-            lnR=lnR,
+            data=sample_data,
             cuts=cuts,
             verbose=False,
         )
@@ -882,14 +910,11 @@ class TestCutAnalyzer:
         assert len(results) == 1
         assert cuts[0] in results
 
-    def test_analyze_multiple_cuts(self, sample_data: tuple) -> None:
+    def test_analyze_multiple_cuts(self, sample_data: ClusterData) -> None:
         """Test analyze with multiple cuts."""
-        lnM, z, lnR = sample_data
         cuts = [np.log(10), np.log(15), np.log(20)]
         analyzer = CutAnalyzer(
-            lnM=lnM,
-            z=z,
-            lnR=lnR,
+            data=sample_data,
             cuts=cuts,
             verbose=False,
         )
@@ -900,14 +925,11 @@ class TestCutAnalyzer:
         for cut in cuts:
             assert cut in results
 
-    def test_results_stored(self, sample_data: tuple) -> None:
+    def test_results_stored(self, sample_data: ClusterData) -> None:
         """Test that results are stored in analyzer."""
-        lnM, z, lnR = sample_data
         cuts = [np.log(10)]
         analyzer = CutAnalyzer(
-            lnM=lnM,
-            z=z,
-            lnR=lnR,
+            data=sample_data,
             cuts=cuts,
             verbose=False,
         )
@@ -916,14 +938,11 @@ class TestCutAnalyzer:
 
         assert len(analyzer.results) == 1
 
-    def test_display_results_no_error(self, sample_data: tuple) -> None:
+    def test_display_results_no_error(self, sample_data: ClusterData) -> None:
         """Test that display_results runs without error."""
-        lnM, z, lnR = sample_data
         cuts = [np.log(10)]
         analyzer = CutAnalyzer(
-            lnM=lnM,
-            z=z,
-            lnR=lnR,
+            data=sample_data,
             cuts=cuts,
             verbose=False,
         )
