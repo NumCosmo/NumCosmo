@@ -2288,3 +2288,88 @@ for i, alpha in enumerate(alpha_a):
 plt.show()
 
 ```
+
+### Tensor-to-scalar ratio
+
+The tensor-to-scalar ratio $r$ is a key observable in cosmology, defined as the ratio of the tensor power spectrum (accounting for two polarization states) to the total scalar (curvature) power spectrum:
+
+$$
+r(k) = \frac{2\mathcal{P}_h(k)}{\mathcal{P}_\zeta(k)}
+$$
+
+This ratio provides important constraints on the underlying physics of the early universe. In standard slow-roll inflation, $r$ is directly related to the energy scale of inflation.
+
+```{python}
+
+# Compute tensor-to-scalar ratio at selected times
+tensor_to_scalar_ratio = []
+
+for i, alpha in enumerate(alpha_a):
+    gw_pk_k_a = np.array([gw_pk_k[i].eval(k * RH_Mpc) for k in k_for_plot_a])
+    zeta_pk_k_a = power_spectra_k_a[i]["zeta"]
+    
+    # r = 2*P_h / P_zeta (factor of 2 for two polarizations)
+    r_k = 2.0 * gw_pk_k_a / zeta_pk_k_a
+    tensor_to_scalar_ratio.append(r_k)
+
+```
+
+We can plot the tensor-to-scalar ratio as a function of wavenumber:
+
+```{python}
+# | label: fig-tensor-to-scalar-ratio
+# | fig-cap:
+# |   - "Tensor-to-scalar ratio $r(k)$ at an early time."
+# |   - "Tensor-to-scalar ratio $r(k)$ at a late/expanding time."
+# | fig-cap-location: bottom
+# | layout-ncol: 2
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+
+for i, alpha in enumerate(alpha_a):
+    fig, ax = plt.subplots()
+
+    ax.plot(
+        k_for_plot_a,
+        tensor_to_scalar_ratio[i],
+        lw=lw,
+        linestyle="solid",
+        label=r"$r(k)$",
+        color="tab:purple",
+    )
+
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+
+    ax.set_ylabel(r"$r(k) = 2\mathcal{P}_h / \mathcal{P}_\zeta$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    ax.legend()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
+
+    fig.savefig(
+        os.path.join(fig_dir, f"tensor_to_scalar_ratio{i}_k.pdf"), bbox_inches="tight"
+    )
+    fig.set_size_inches(6, 3)
+plt.show()
+
+```
+
+We can also compute the mean tensor-to-scalar ratio in the CMB-scales interval ($10^{-4} < k < 10^0$ Mpc$^{-1}$):
+
+```{python}
+
+# Compute mean r in CMB scales
+k_cmb_mask = (k_for_plot_a >= 1.0e-4) & (k_for_plot_a <= 1.0e0)
+
+for i, alpha in enumerate(alpha_a):
+    r_cmb_mean = np.mean(tensor_to_scalar_ratio[i][k_cmb_mask])
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    print(f"α={alpha:.2f}, x = {x_latex}: mean r in CMB scales = {r_cmb_mean:.4e}")
+
+```
