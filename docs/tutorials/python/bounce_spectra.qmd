@@ -1834,9 +1834,11 @@ report = f"""
 ### Fit to the power spectrum in the CMB-scales interval
 
 **Linear fit (constant spectral index):**
+
 - Effective spectral index: {ns_lin:.4f}
 
 **Quadratic fit (including running):**
+
 - Effective spectral index: {ns_quad:.4f}  
 - Running parameter: {alpha_s:.4f}
 """
@@ -2168,7 +2170,8 @@ for i, (alpha, power_spectra_k) in enumerate(zip(alpha_a, power_spectra_k_a)):
     ax.grid()
 
     fig.savefig(
-        os.path.join(fig_dir, f"fku_rw_power_spectrum{i}_k.pdf"), bbox_inches="tight"
+        os.path.join(fig_dir, f"zeta_dzeta_power_spectrum{i}_k.pdf"),
+        bbox_inches="tight",
     )
     fig.set_size_inches(6, 3)
     plt.show()
