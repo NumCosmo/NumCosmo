@@ -2297,7 +2297,7 @@ plt.show()
 The tensor-to-scalar ratio $r$ is a key observable in cosmology, defined as the ratio of the tensor power spectrum (accounting for two polarization states) to the total scalar (curvature) power spectrum:
 
 $$
-r(k) = \frac{2\mathcal{P}_h(k)}{\mathcal{P}_\zeta(k)}
+r(k) = \frac{\mathcal{P}_h(k)}{\mathcal{P}_\zeta(k)}
 $$
 
 This ratio provides important constraints on the underlying physics of the early universe. In standard slow-roll inflation, $r$ is directly related to the energy scale of inflation.
@@ -2345,7 +2345,7 @@ for i, alpha in enumerate(alpha_a):
     # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
     ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
 
-    ax.set_ylabel(r"$r(k) = 2\mathcal{P}_h / \mathcal{P}_\zeta$")
+    ax.set_ylabel(r"$r(k) = \mathcal{P}_h / \mathcal{P}_\zeta$")
     ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
 
     x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
@@ -2373,6 +2373,95 @@ k_cmb_mask = (k_for_plot_a >= 1.0e-4) & (k_for_plot_a <= 1.0e0)
 for i, alpha in enumerate(alpha_a):
     r_cmb_mean = np.mean(tensor_to_scalar_ratio[i][k_cmb_mask])
     x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
-    print(f"α={alpha:.2f}, x = {x_latex}: mean r in CMB scales = {r_cmb_mean:.4e}")
+    print(f"α = {alpha:.2f}, x = {x_latex}: mean r in CMB scales = {r_cmb_mean:.4e}")
 
 ```
+
+
+## Preparing the fiducial power spectrum
+
+## Testing the calibrated model
+
+The `HIPrimTwoFluids` model includes a pre-calibrated version that loads normalization data from a binary file. This calibration includes a 2D spline for the normalized power spectrum and a 1D spline (`Pk0`) that describes how the normalization at $k_{\min}$ scales with the equation-of-state parameter $w$.
+
+We can load the calibrated model and verify the expected scaling relationship: $\ln P_{k_0} \propto -\frac{5}{2} \ln w$.
+
+```{python}
+# Load the calibration data directly from the binary file
+ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+default_calib_file = Ncm.cfg_get_data_filename("hiprim_2f_var.bin", True)
+calib_dict = ser.dict_str_from_binfile(default_calib_file)
+Pk0 = calib_dict.get("Pk0")
+assert isinstance(Pk0, Ncm.Spline)
+Pk0.prepare()
+
+# Define a range of w values for testing
+w_range = np.geomspace(1.0e-9, 1.0e-2, 100)
+lnw_range = np.log(w_range)
+
+# Evaluate the Pk0 spline at these w values
+lnPk0_values = np.array([Pk0.eval(lnw) for lnw in lnw_range])
+Pk0_values = np.exp(lnPk0_values)
+
+# Perform linear fit in log-log space to extract the scaling exponent
+coeffs = np.polyfit(lnw_range, lnPk0_values, 1)
+lnPk0_fit = np.polyval(coeffs, lnw_range)
+
+print(f"Linear fit in log-log space:")
+print(f"  Slope: {coeffs[0]:.6f} (expected: -2.5)")
+print(f"  Intercept: {coeffs[1]:.6f}")
+print(f"  Deviation from expected slope: {abs(coeffs[0] + 2.5):.6f}")
+```
+
+Now we can visualize this scaling relationship:
+
+```{python}
+# | label: fig-pk0-scaling
+# | fig-cap: "Scaling of the power spectrum normalization $P_{k_0}$ with the equation-of-state parameter $w$. The comparison with the expected $w^{-5/2}$ power law shows excellent agreement."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+fig, ax = plt.subplots()
+
+# Plot the spline data
+ax.plot(
+    w_range,
+    Pk0_values,
+    "b-",
+    linewidth=lw,
+    label=r"$P_{k_0}(w)$",
+)
+
+# Add expected slope line (slope = -2.5)
+expected_slope = -2.5
+lnw_ref = lnw_range[0]
+lnPk0_ref = lnPk0_values[0]
+lnPk0_expected = expected_slope * (lnw_range - lnw_ref) + lnPk0_ref
+Pk0_expected = np.exp(lnPk0_expected)
+
+ax.plot(
+    w_range,
+    Pk0_expected,
+    "r--",
+    linewidth=lw,
+    label=f"Expected: slope={expected_slope}",
+)
+
+ax.set_xscale("log")
+ax.set_yscale("log")
+ax.set_xlabel(r"$w$")
+ax.set_ylabel(r"$P_{k_0}(w)$")
+ax.set_title(r"Normalization $P_{k_0}$ at $k = k_{\rm min}$")
+ax.legend(loc="best")
+ax.grid(True, alpha=0.3)
+
+plt.savefig(os.path.join(fig_dir, "pk0_scaling.pdf"), bbox_inches="tight")
+fig.set_size_inches(6, 3)
+plt.show()
+
+print(f"Expected slope: {expected_slope}")
+print(f"Reference point: w = {w_range[0]:.2e}, lnPk0 = {lnPk0_ref:.6f}")
+```
+
+
