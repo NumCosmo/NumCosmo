@@ -2417,7 +2417,7 @@ Now we can visualize this scaling relationship:
 
 ```{python}
 # | label: fig-pk0-scaling
-# | fig-cap: "Scaling of the power spectrum normalization $P_{k_0}$ with the equation-of-state parameter $w$. The comparison with the expected $w^{-5/2}$ power law shows excellent agreement."
+# | fig-cap: "Scaling of the power spectrum normalization $\\bar{\\mathcal{P}}(10^{-3}; w)$ with the equation-of-state parameter $w$. The comparison with the expected $w^{-5/2}$ power law shows excellent agreement."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -2430,7 +2430,7 @@ ax.plot(
     Pk0_values,
     "b-",
     linewidth=lw,
-    label=r"$P_{k_0}(w)$",
+    label=r"$\bar{\mathcal{P}}(10^{-3}; w)$",
 )
 
 # Add expected slope line (slope = -2.5)
@@ -2451,8 +2451,8 @@ ax.plot(
 ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlabel(r"$w$")
-ax.set_ylabel(r"$P_{k_0}(w)$")
-ax.set_title(r"Normalization $P_{k_0}$ at $k = k_{\rm min}$")
+ax.set_ylabel(r"$\bar{\mathcal{P}}(10^{-3}; w)$")
+ax.set_title(r"Normalization $\bar{\mathcal{P}}(10^{-3}; w)$")
 ax.legend(loc="best")
 ax.grid(True, alpha=0.3)
 
@@ -2464,4 +2464,201 @@ print(f"Expected slope: {expected_slope}")
 print(f"Reference point: w = {w_range[0]:.2e}, lnPk0 = {lnPk0_ref:.6f}")
 ```
 
+We can also examine the normalized power spectrum by dividing out the expected scaling factor:
 
+```{python}
+# | label: fig-pk0-normalized
+# | fig-cap: "Normalized power spectrum $\\bar{\\mathcal{P}}(10^{-3}; w)$ divided by the scaling factor $\\ell_\textsc{P}^2x_b^2 \\Omega_w^2 / (R_{H}^2 \\Omega_r c_w^5)$, where $c_w = \\sqrt{w}$. This removes the dominant $w$ dependence."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+# Compute the normalization factor
+xb = cosmo_rw.props.xb
+Omegar = cosmo_rw.props.Omegar
+Omegaw = cosmo_rw.props.Omegaw
+RH_planck = cosmo_rw.RH_planck()
+
+# For each w value, compute c_w = sqrt(w) and the normalization
+normalization = np.array(
+    [(xb**2 * Omegaw**2) / (RH_planck**2 * Omegar * np.sqrt(w) ** 5) for w in w_range]
+)
+
+Pk0_normalized = Pk0_values / normalization
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+fig, ax = plt.subplots()
+
+ax.plot(
+    w_range,
+    Pk0_normalized,
+    "b-",
+    linewidth=lw,
+    label=r"Normalized $\bar{\mathcal{P}}(10^{-3}; w)$",
+)
+
+ax.set_xscale("log")
+ax.set_xlabel(r"$w$")
+ax.set_ylabel(
+    r"$\bar{\mathcal{P}}(10^{-3}; w) / \left(\ell_\textsc{P}^2 x_b^2 \Omega_w^2 / (R_H^2 \Omega_r c_w^5) \right)$"
+)
+ax.set_title(r"Normalized power spectrum at $\kappa = 10^{-3}$")
+ax.legend(loc="best")
+ax.grid(True, alpha=0.3)
+
+plt.savefig(os.path.join(fig_dir, "pk0_normalized.pdf"), bbox_inches="tight")
+fig.set_size_inches(6, 3)
+plt.show()
+
+print(f"Normalized Pk0 range: [{Pk0_normalized.min():.6e}, {Pk0_normalized.max():.6e}]")
+print(f"Variation: {Pk0_normalized.max() / Pk0_normalized.min():.4f}x")
+```
+
+## CMB Power Spectra Comparison
+
+Now we compute the CMB temperature angular power spectra ($C_\ell^{TT}$) for both the two-fluids bounce model and the standard power-law inflationary model. This comparison shows how the primordial spectrum differences propagate to observable CMB anisotropies.
+
+We use the Boltzmann code interface (`HIPertBoltzmannCBE`) to compute the lensed $C_\ell$ spectra up to $\ell_{\rm max} = 2500$. The two models are fitted to Planck 2018 data with their respective best-fit cosmological parameters.
+
+```{python}
+# | label: fig-cmb-cls-comparison
+# | fig-cap: "CMB temperature power spectra comparison. Top: $\\mathcal{D}_\\ell = \\ell(\\ell+1)C_\\ell/(2\\pi)$ for two-fluids (red) and power-law (blue dashed). Bottom: Ratio $\\mathcal{D}_\\ell^{\\rm 2F}/\\mathcal{D}_\\ell^{\\rm PL}$."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+
+def compute_D_ell_twofluid(lmax=2500):
+    """Compute CMB TT power spectrum for two-fluids bounce model."""
+    # Setup precision and Boltzmann code
+    cbe_prec = Nc.CBEPrecision.new()
+    cbe_prec.props.k_per_decade_primordial = 50.0
+    cbe_prec.props.tight_coupling_approximation = 0
+
+    cbe = Nc.CBE.prec_new(cbe_prec)
+
+    Bcbe = Nc.HIPertBoltzmannCBE.full_new(cbe)
+    Bcbe.set_TT_lmax(lmax)
+    Bcbe.set_target_Cls(Nc.DataCMBDataType.TT)
+    Bcbe.set_lensed_Cls(True)
+
+    # Setup cosmology with two-fluids primordial spectrum
+    cosmo = Nc.HICosmoDEXcdm.new()
+    cosmo.cmb_params()
+    reion = Nc.HIReionCamb.new()
+    hiprim = Nc.HIPrimTwoFluids(use_default_calib=True)
+
+    # Best-fit parameters for Planck 2018 with two-fluids model
+    cosmo["Omegak"] = 0.0
+    cosmo["H0"] = 69.5616151425007
+    cosmo["omegab"] = 0.0226931446150128
+    cosmo["omegac"] = 0.116422916054973
+    hiprim["ln10e10ASA"] = 3.07203761177891
+    hiprim["lnk0"] = -6.251936466867
+    hiprim["lnw"] = -12.6152819113359
+    reion["z_re"] = 8.35735404822378
+
+    cosmo.add_submodel(reion)
+    cosmo.add_submodel(hiprim)
+
+    Bcbe.prepare(cosmo)
+
+    # Extract TT power spectrum
+    Cls = Ncm.Vector.new(lmax + 1)
+    Bcbe.get_TT_Cls(Cls)
+
+    Cls_a = np.array(Cls.dup_array())[2:]
+    ell = np.arange(2, lmax + 1)
+
+    # Convert to D_ell = ell(ell+1) C_ell / (2pi)
+    Dls_a = ell * (ell + 1.0) * Cls_a / (2.0 * np.pi)
+
+    return ell, Dls_a
+
+
+def compute_D_ell_powerlaw(lmax=2500):
+    """Compute CMB TT power spectrum for power-law inflationary model."""
+    # Setup precision and Boltzmann code
+    cbe_prec = Nc.CBEPrecision.new()
+    cbe_prec.props.k_per_decade_primordial = 50.0
+    cbe_prec.props.tight_coupling_approximation = 0
+
+    cbe = Nc.CBE.prec_new(cbe_prec)
+
+    Bcbe = Nc.HIPertBoltzmannCBE.full_new(cbe)
+    Bcbe.set_TT_lmax(lmax)
+    Bcbe.set_target_Cls(Nc.DataCMBDataType.TT)
+    Bcbe.set_lensed_Cls(True)
+
+    # Setup cosmology with power-law primordial spectrum
+    cosmo = Nc.HICosmoDEXcdm.new()
+    cosmo.cmb_params()
+    reion = Nc.HIReionCamb.new()
+    hiprim = Nc.HIPrimPowerLaw()
+
+    # Best-fit parameters for Planck 2018 with power-law model
+    cosmo["Omegak"] = 0.0
+    cosmo["H0"] = 68.2682642143184
+    cosmo["omegab"] = 0.0223445767610612
+    cosmo["omegac"] = 0.1189257178946
+    hiprim["ln10e10ASA"] = 3.04632994161073
+    hiprim["n_SA"] = 0.967382455314431
+    reion["z_re"] = 7.79677265563444
+
+    cosmo.add_submodel(reion)
+    cosmo.add_submodel(hiprim)
+
+    Bcbe.prepare(cosmo)
+
+    # Extract TT power spectrum
+    Cls = Ncm.Vector.new(lmax + 1)
+    Bcbe.get_TT_Cls(Cls)
+
+    Cls_a = np.array(Cls.dup_array())[2:]
+    ell = np.arange(2, lmax + 1)
+
+    # Convert to D_ell = ell(ell+1) C_ell / (2pi)
+    Dls_a = ell * (ell + 1.0) * Cls_a / (2.0 * np.pi)
+
+    return ell, Dls_a
+
+
+# Compute power spectra for both models
+ell, Dell_2f = compute_D_ell_twofluid()
+_, Dell_pl = compute_D_ell_powerlaw()
+
+# Create comparison plot with two panels
+set_rc_params_article(ncol=1, nrows=2, aspect_ratio=0.5)
+fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
+fig.subplots_adjust(hspace=0.0)
+
+# Top panel: D_ell comparison
+ax1.plot(ell, Dell_2f, "r-", linewidth=1.5, label="Two-fluids bounce")
+ax1.plot(ell, Dell_pl, "b--", linewidth=1.5, label="Power-law inflation")
+
+ax1.set_xscale("log")
+ax1.set_ylabel(r"$\mathcal{D}_\ell \equiv \ell(\ell+1)C_\ell/(2\pi)$ [$\mu$K$^2$]")
+ax1.legend(loc="best")
+ax1.grid(True, alpha=0.3)
+ax1.set_title("CMB Temperature Power Spectra")
+
+# Bottom panel: Ratio
+ratio = Dell_2f / Dell_pl - 1.0
+ax2.plot(ell, ratio, "k-", linewidth=1.0)
+ax2.axhline(y=0.0, color="gray", linestyle="--", linewidth=0.8, alpha=0.5)
+
+ax2.set_xscale("log")
+ax2.set_xlabel(r"Multipole $\ell$")
+ax2.set_ylabel(r"$\mathcal{D}_\ell^{\rm 2F}/\mathcal{D}_\ell^{\rm PL} - 1$")
+ax2.grid(True, alpha=0.3)
+
+plt.savefig(os.path.join(fig_dir, "cmb_cls_comparison.pdf"), bbox_inches="tight")
+fig.set_size_inches(6, 6)
+plt.show()
+
+# Print statistics
+print(f"\nCMB Power Spectra Statistics:")
+print(f"  Two-fluids peak: {Dell_2f.max():.2f} μK² at ℓ = {ell[Dell_2f.argmax()]}")
+print(f"  Power-law peak:  {Dell_pl.max():.2f} μK² at ℓ = {ell[Dell_pl.argmax()]}")
+print(f"  Ratio mean: {ratio.mean():.6f}")
+print(f"  Ratio std:  {ratio.std():.6f}")
+print(f"  Ratio range: [{ratio.min():.6f}, {ratio.max():.6f}]")
+```
