@@ -11595,7 +11595,7 @@ class TriVec(GObject.GBoxed):
         new() -> NumCosmoMath.TriVec
         new_astro_coord(r:float, delta:float, alpha:float) -> NumCosmoMath.TriVec
         new_astro_ra_dec(r:float, ra:float, dec:float) -> NumCosmoMath.TriVec
-        new_full(c:float) -> NumCosmoMath.TriVec
+        new_full(c:list) -> NumCosmoMath.TriVec
         new_full_c(x:float, y:float, z:float) -> NumCosmoMath.TriVec
         new_sphere(r:float, theta:float, phi:float) -> NumCosmoMath.TriVec
     """
@@ -11616,7 +11616,9 @@ class TriVec(GObject.GBoxed):
     @classmethod
     def new_astro_ra_dec(cls, r: float, ra: float, dec: float) -> TriVec: ...
     @classmethod
-    def new_full(cls, c: float) -> TriVec: ...
+    def new_full(
+        cls, c: typing.Sequence[float] | npt.NDArray[np.float64]
+    ) -> TriVec: ...
     @classmethod
     def new_full_c(cls, x: float, y: float, z: float) -> TriVec: ...
     @classmethod

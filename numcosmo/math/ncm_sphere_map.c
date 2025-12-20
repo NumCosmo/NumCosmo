@@ -1365,7 +1365,8 @@ _ncm_sphere_map_zphi2pix_nest (NcmSphereMap *smap, const gdouble z, const gdoubl
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   const gdouble two_3              = 2.0 / 3.0;
   const gdouble abs_z              = fabs (z);
-  const gdouble tt                 = fmod (phi / M_PI_2, 4.0);
+  const gdouble phi_norm           = (phi < 0.0) ? fmod (phi, 2.0 * M_PI) + 2.0 * M_PI : phi;
+  const gdouble tt                 = fmod (phi_norm / M_PI_2, 4.0);
   gint64 x, y, f;
 
   if (abs_z <= two_3)
@@ -1418,7 +1419,8 @@ _ncm_sphere_map_zphi2pix_ring (NcmSphereMap *smap, const gdouble z, const gdoubl
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   const gdouble two_3              = 2.0 / 3.0;
   const gdouble abs_z              = fabs (z);
-  const gdouble tt                 = fmod (phi / M_PI_2, 4.0);
+  const gdouble phi_norm           = (phi < 0.0) ? fmod (phi, 2.0 * M_PI) + 2.0 * M_PI : phi;
+  const gdouble tt                 = fmod (phi_norm / M_PI_2, 4.0);
 
   if (abs_z <= two_3)
   {

@@ -79,7 +79,7 @@ ncm_trivec_new (void)
 
 /**
  * ncm_trivec_new_full: (constructor)
- * @c: components
+ * @c: (array fixed-size=3) (element-type double): components
  *
  * Creates a new #NcmTriVec with the given components.
  *

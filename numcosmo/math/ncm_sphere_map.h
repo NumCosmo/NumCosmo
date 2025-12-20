@@ -104,7 +104,7 @@ NcmSphereMapCoordSys ncm_sphere_map_get_coordsys (NcmSphereMap *smap);
 void ncm_sphere_map_set_lmax (NcmSphereMap *smap, guint lmax);
 guint ncm_sphere_map_get_lmax (NcmSphereMap *smap);
 
-void ncm_sphere_map_clear_smapels (NcmSphereMap *smap);
+void ncm_sphere_map_clear_pixels (NcmSphereMap *smap);
 
 gint64 ncm_sphere_map_nest2ring (NcmSphereMap *smap, const gint64 nest_index);
 gint64 ncm_sphere_map_ring2nest (NcmSphereMap *smap, const gint64 ring_index);
@@ -147,7 +147,7 @@ NcmSpline *ncm_sphere_map_calc_Ctheta (NcmSphereMap *smap, const gdouble reltol)
 #define NCM_SPHERE_MAP_INT_TO_XY(i, x, y)         \
         G_STMT_START {                            \
           gint shift = 0, shifted = i;            \
-          x          = y = 0;                     \
+          x = y = 0;                              \
           do {                                    \
             x |= ((shifted & 1) << shift);        \
             y |= (((shifted & 2) >> 1) << shift); \
