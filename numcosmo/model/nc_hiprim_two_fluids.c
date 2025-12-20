@@ -39,11 +39,13 @@
 
 #include "model/nc_hiprim_two_fluids.h"
 #include "math/ncm_serialize.h"
+#include "math/ncm_obj_array.h"
 #include "math/ncm_cfg.h"
 
 typedef struct _NcHIPrimTwoFluidsPrivate
 {
   NcmSpline2d *lnSA_powspec_lnk_lnw;
+  NcmSpline *Pk0;
   gboolean use_default_calib;
   gdouble Omega_r_fiducial;
 } NcHIPrimTwoFluidsPrivate;
@@ -55,6 +57,7 @@ enum
 {
   PROP_0,
   PROP_LNK_LNW_SPLINE,
+  PROP_PK0_SPLINE,
   PROP_USE_DEFAULT_CALIB,
   PROP_SIZE,
 };
@@ -65,6 +68,7 @@ nc_hiprim_two_fluids_init (NcHIPrimTwoFluids *two_fluids)
   NcHIPrimTwoFluidsPrivate * const self = nc_hiprim_two_fluids_get_instance_private (two_fluids);
 
   self->lnSA_powspec_lnk_lnw = NULL;
+  self->Pk0                  = NULL;
   self->use_default_calib    = FALSE;
   self->Omega_r_fiducial     = 0.0;
 }
@@ -78,6 +82,9 @@ _nc_hiprim_two_fluids_set_property (GObject *object, guint prop_id, const GValue
   {
     case PROP_LNK_LNW_SPLINE:
       nc_hiprim_two_fluids_set_lnk_lnw_spline (two_fluids, g_value_get_object (value));
+      break;
+    case PROP_PK0_SPLINE:
+      nc_hiprim_two_fluids_set_Pk0_spline (two_fluids, g_value_get_object (value));
       break;
     case PROP_USE_DEFAULT_CALIB:
       nc_hiprim_two_fluids_set_use_default_calib (two_fluids, g_value_get_boolean (value));
@@ -98,6 +105,9 @@ _nc_hiprim_two_fluids_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_LNK_LNW_SPLINE:
       g_value_set_object (value, nc_hiprim_two_fluids_peek_lnk_lnw_spline (two_fluids));
       break;
+    case PROP_PK0_SPLINE:
+      g_value_set_object (value, nc_hiprim_two_fluids_peek_Pk0_spline (two_fluids));
+      break;
     case PROP_USE_DEFAULT_CALIB:
       g_value_set_boolean (value, nc_hiprim_two_fluids_get_use_default_calib (two_fluids));
       break;
@@ -114,6 +124,7 @@ _nc_hiprim_two_fluids_dispose (GObject *object)
   NcHIPrimTwoFluidsPrivate * const self = nc_hiprim_two_fluids_get_instance_private (two_fluids);
 
   ncm_spline2d_clear (&self->lnSA_powspec_lnk_lnw);
+  ncm_spline_clear (&self->Pk0);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hiprim_two_fluids_parent_class)->dispose (object);
@@ -183,6 +194,13 @@ nc_hiprim_two_fluids_class_init (NcHIPrimTwoFluidsClass *klass)
                                                         NULL,
                                                         "Spline for the primordial adiabatic scalar power spectrum as a function of ln(k) and ln(w)",
                                                         NCM_TYPE_SPLINE2D,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_PK0_SPLINE,
+                                   g_param_spec_object ("Pk0-spline",
+                                                        NULL,
+                                                        "Spline for the normalization of the power spectrum as a function of ln(w)",
+                                                        NCM_TYPE_SPLINE,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_USE_DEFAULT_CALIB,
@@ -299,17 +317,38 @@ nc_hiprim_two_fluids_set_use_default_calib (NcHIPrimTwoFluids *two_fluids, gbool
     return;
 
   ncm_spline2d_clear (&self->lnSA_powspec_lnk_lnw);
+  ncm_spline_clear (&self->Pk0);
 
   if (use_default_calib)
   {
     NcmSerialize *ser         = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-    gchar *default_calib_file = ncm_cfg_get_data_filename ("hiprim_2f_spline.bin", TRUE);
+    gchar *default_calib_file = ncm_cfg_get_data_filename ("hiprim_2f_var.bin", TRUE);
+    NcmObjDictStr *calib_dict = ncm_serialize_dict_str_from_binfile (ser, default_calib_file);
+    GObject *normalized_Pk_obj;
+    GObject *Pk0_obj;
 
-    self->lnSA_powspec_lnk_lnw = NCM_SPLINE2D (ncm_serialize_from_binfile (ser, default_calib_file));
-    g_assert_nonnull (self->lnSA_powspec_lnk_lnw);
-    g_assert (NCM_IS_SPLINE2D (self->lnSA_powspec_lnk_lnw));
+    g_assert_nonnull (calib_dict);
+
+    /* Extract the normalized Pk spline */
+    normalized_Pk_obj = ncm_obj_dict_str_peek (calib_dict, "normalized:Pk");
+    g_assert_nonnull (normalized_Pk_obj);
+    g_assert (NCM_IS_SPLINE2D (normalized_Pk_obj));
+
+    self->lnSA_powspec_lnk_lnw = ncm_spline2d_ref (NCM_SPLINE2D (normalized_Pk_obj));
     g_assert (ncm_spline2d_is_init (self->lnSA_powspec_lnk_lnw));
 
+    /* Extract the Pk0 normalization spline (as a function of lnw) */
+    Pk0_obj = ncm_obj_dict_str_peek (calib_dict, "Pk0");
+    g_assert_nonnull (Pk0_obj);
+    g_assert (NCM_IS_SPLINE (Pk0_obj));
+
+    self->Pk0 = ncm_spline_ref (NCM_SPLINE (Pk0_obj));
+
+    if (!ncm_spline_is_init (self->Pk0))
+      ncm_spline_prepare (self->Pk0);
+
+
+    ncm_obj_dict_str_unref (calib_dict);
     g_free (default_calib_file);
     ncm_serialize_free (ser);
   }
@@ -380,5 +419,52 @@ nc_hiprim_two_fluids_peek_lnk_lnw_spline (NcHIPrimTwoFluids *two_fluids)
     return NULL;
 
   return self->lnSA_powspec_lnk_lnw;
+}
+
+/**
+ * nc_hiprim_two_fluids_set_Pk0_spline:
+ * @two_fluids: a #NcHIPrimTwoFluids
+ * @Pk0: a #NcmSpline
+ *
+ * Set the spline for the normalization of the power spectrum as a function of ln(w).
+ *
+ */
+void
+nc_hiprim_two_fluids_set_Pk0_spline (NcHIPrimTwoFluids *two_fluids, NcmSpline *Pk0)
+{
+  NcHIPrimTwoFluidsPrivate * const self = nc_hiprim_two_fluids_get_instance_private (two_fluids);
+
+  if (self->use_default_calib)
+  {
+    g_error ("nc_hiprim_two_fluids_set_Pk0_spline: Cannot set spline when use_default_calib is TRUE.");
+
+    return;
+  }
+
+  ncm_spline_clear (&self->Pk0);
+
+  self->Pk0 = ncm_spline_ref (Pk0);
+
+  if (!ncm_spline_is_init (self->Pk0))
+    ncm_spline_prepare (self->Pk0);
+}
+
+/**
+ * nc_hiprim_two_fluids_peek_Pk0_spline:
+ * @two_fluids: a #NcHIPrimTwoFluids
+ *
+ * Get the spline for the normalization of the power spectrum as a function of $\ln(w)$.
+ *
+ * Returns: (transfer none): the Pk0 normalization spline.
+ */
+NcmSpline *
+nc_hiprim_two_fluids_peek_Pk0_spline (NcHIPrimTwoFluids *two_fluids)
+{
+  NcHIPrimTwoFluidsPrivate * const self = nc_hiprim_two_fluids_get_instance_private (two_fluids);
+
+  if (self->use_default_calib)
+    return NULL;
+
+  return self->Pk0;
 }
 
