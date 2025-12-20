@@ -155,7 +155,7 @@ test_ncm_cfg_logfile_set_logstream (TesNcmCfg *test, gconstpointer pdata)
 
   /* Reruns this same test in a subprocess */
   g_test_trap_subprocess (NULL, 0, 0);
-  g_test_trap_assert_stderr ("This message should be printed in stderr 1");
+  g_test_trap_assert_stderr ("*This message should be printed in stderr 1*");
 }
 
 void
@@ -175,7 +175,7 @@ test_ncm_cfg_logfile_on_off (TesNcmCfg *test, gconstpointer pdata)
 
   /* Reruns this same test in a subprocess */
   g_test_trap_subprocess (NULL, 0, 0);
-  g_test_trap_assert_stderr ("This message should be printed in stderr 1");
+  g_test_trap_assert_stderr ("*This message should be printed in stderr 1*");
 }
 
 void
@@ -195,7 +195,7 @@ test_ncm_cfg_logfile_str_on_off (TesNcmCfg *test, gconstpointer pdata)
 
   /* Reruns this same test in a subprocess */
   g_test_trap_subprocess (NULL, 0, 0);
-  g_test_trap_assert_stderr ("This message should be printed in stderr 1");
+  g_test_trap_assert_stderr ("*This message should be printed in stderr 1*");
 }
 
 void

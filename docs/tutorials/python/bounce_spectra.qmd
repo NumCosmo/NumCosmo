@@ -1834,9 +1834,11 @@ report = f"""
 ### Fit to the power spectrum in the CMB-scales interval
 
 **Linear fit (constant spectral index):**
+
 - Effective spectral index: {ns_lin:.4f}
 
 **Quadratic fit (including running):**
+
 - Effective spectral index: {ns_quad:.4f}  
 - Running parameter: {alpha_s:.4f}
 """
@@ -2168,7 +2170,8 @@ for i, (alpha, power_spectra_k) in enumerate(zip(alpha_a, power_spectra_k_a)):
     ax.grid()
 
     fig.savefig(
-        os.path.join(fig_dir, f"fku_rw_power_spectrum{i}_k.pdf"), bbox_inches="tight"
+        os.path.join(fig_dir, f"zeta_dzeta_power_spectrum{i}_k.pdf"),
+        bbox_inches="tight",
     )
     fig.set_size_inches(6, 3)
     plt.show()
@@ -2287,4 +2290,375 @@ for i, alpha in enumerate(alpha_a):
     fig.set_size_inches(6, 3)
 plt.show()
 
+```
+
+### Tensor-to-scalar ratio
+
+The tensor-to-scalar ratio $r$ is a key observable in cosmology, defined as the ratio of the tensor power spectrum (accounting for two polarization states) to the total scalar (curvature) power spectrum:
+
+$$
+r(k) = \frac{\mathcal{P}_h(k)}{\mathcal{P}_\zeta(k)}
+$$
+
+This ratio provides important constraints on the underlying physics of the early universe. In standard slow-roll inflation, $r$ is directly related to the energy scale of inflation.
+
+```{python}
+
+# Compute tensor-to-scalar ratio at selected times
+tensor_to_scalar_ratio = []
+
+for i, alpha in enumerate(alpha_a):
+    gw_pk_k_a = np.array([gw_pk_k[i].eval(k * RH_Mpc) for k in k_for_plot_a])
+    zeta_pk_k_a = power_spectra_k_a[i]["zeta"]
+    
+    # r = 2*P_h / P_zeta (factor of 2 for two polarizations)
+    r_k = 2.0 * gw_pk_k_a / zeta_pk_k_a
+    tensor_to_scalar_ratio.append(r_k)
+
+```
+
+We can plot the tensor-to-scalar ratio as a function of wavenumber:
+
+```{python}
+# | label: fig-tensor-to-scalar-ratio
+# | fig-cap:
+# |   - "Tensor-to-scalar ratio $r(k)$ at an early time."
+# |   - "Tensor-to-scalar ratio $r(k)$ at a late/expanding time."
+# | fig-cap-location: bottom
+# | layout-ncol: 2
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+
+for i, alpha in enumerate(alpha_a):
+    fig, ax = plt.subplots()
+
+    ax.plot(
+        k_for_plot_a,
+        tensor_to_scalar_ratio[i],
+        lw=lw,
+        linestyle="solid",
+        label=r"$r(k)$",
+        color="tab:purple",
+    )
+
+    # Highlight the CMB-scales interval: 10^-4 < k < 10^0 Mpc^-1
+    ax.axvspan(1.0e-4, 1.0e0, alpha=0.2, color="tab:green", label="CMB scales")
+
+    ax.set_ylabel(r"$r(k) = \mathcal{P}_h / \mathcal{P}_\zeta$")
+    ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
+
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    ax.set_title(f"$\\alpha={alpha:.2f}$, $x = {x_latex}$")
+    ax.legend()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid()
+
+    fig.savefig(
+        os.path.join(fig_dir, f"tensor_to_scalar_ratio{i}_k.pdf"), bbox_inches="tight"
+    )
+    fig.set_size_inches(6, 3)
+plt.show()
+
+```
+
+We can also compute the mean tensor-to-scalar ratio in the CMB-scales interval ($10^{-4} < k < 10^0$ Mpc$^{-1}$):
+
+```{python}
+
+# Compute mean r in CMB scales
+k_cmb_mask = (k_for_plot_a >= 1.0e-4) & (k_for_plot_a <= 1.0e0)
+
+for i, alpha in enumerate(alpha_a):
+    r_cmb_mean = np.mean(tensor_to_scalar_ratio[i][k_cmb_mask])
+    x_latex = latex_float(cosmo_rw.x_alpha(alpha), precision=4)
+    print(f"α = {alpha:.2f}, x = {x_latex}: mean r in CMB scales = {r_cmb_mean:.4e}")
+
+```
+
+
+## Preparing the fiducial power spectrum
+
+## Testing the calibrated model
+
+The `HIPrimTwoFluids` model includes a pre-calibrated version that loads normalization data from a binary file. This calibration includes a 2D spline for the normalized power spectrum and a 1D spline (`Pk0`) that describes how the normalization at $k_{\min}$ scales with the equation-of-state parameter $w$.
+
+We can load the calibrated model and verify the expected scaling relationship: $\ln P_{k_0} \propto -\frac{5}{2} \ln w$.
+
+```{python}
+# Load the calibration data directly from the binary file
+ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+default_calib_file = Ncm.cfg_get_data_filename("hiprim_2f_var.bin", True)
+calib_dict = ser.dict_str_from_binfile(default_calib_file)
+Pk0 = calib_dict.get("Pk0")
+assert isinstance(Pk0, Ncm.Spline)
+Pk0.prepare()
+
+# Define a range of w values for testing
+w_range = np.geomspace(1.0e-9, 1.0e-2, 100)
+lnw_range = np.log(w_range)
+
+# Evaluate the Pk0 spline at these w values
+lnPk0_values = np.array([Pk0.eval(lnw) for lnw in lnw_range])
+Pk0_values = np.exp(lnPk0_values)
+
+# Perform linear fit in log-log space to extract the scaling exponent
+coeffs = np.polyfit(lnw_range, lnPk0_values, 1)
+lnPk0_fit = np.polyval(coeffs, lnw_range)
+
+print(f"Linear fit in log-log space:")
+print(f"  Slope: {coeffs[0]:.6f} (expected: -2.5)")
+print(f"  Intercept: {coeffs[1]:.6f}")
+print(f"  Deviation from expected slope: {abs(coeffs[0] + 2.5):.6f}")
+```
+
+Now we can visualize this scaling relationship:
+
+```{python}
+# | label: fig-pk0-scaling
+# | fig-cap: "Scaling of the power spectrum normalization $\\bar{\\mathcal{P}}(10^{-3}; w)$ with the equation-of-state parameter $w$. The comparison with the expected $w^{-5/2}$ power law shows excellent agreement."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+fig, ax = plt.subplots()
+
+# Plot the spline data
+ax.plot(
+    w_range,
+    Pk0_values,
+    "b-",
+    linewidth=lw,
+    label=r"$\bar{\mathcal{P}}(10^{-3}; w)$",
+)
+
+# Add expected slope line (slope = -2.5)
+expected_slope = -2.5
+lnw_ref = lnw_range[0]
+lnPk0_ref = lnPk0_values[0]
+lnPk0_expected = expected_slope * (lnw_range - lnw_ref) + lnPk0_ref
+Pk0_expected = np.exp(lnPk0_expected)
+
+ax.plot(
+    w_range,
+    Pk0_expected,
+    "r--",
+    linewidth=lw,
+    label=f"Expected: slope={expected_slope}",
+)
+
+ax.set_xscale("log")
+ax.set_yscale("log")
+ax.set_xlabel(r"$w$")
+ax.set_ylabel(r"$\bar{\mathcal{P}}(10^{-3}; w)$")
+ax.set_title(r"Normalization $\bar{\mathcal{P}}(10^{-3}; w)$")
+ax.legend(loc="best")
+ax.grid(True, alpha=0.3)
+
+plt.savefig(os.path.join(fig_dir, "pk0_scaling.pdf"), bbox_inches="tight")
+fig.set_size_inches(6, 3)
+plt.show()
+
+print(f"Expected slope: {expected_slope}")
+print(f"Reference point: w = {w_range[0]:.2e}, lnPk0 = {lnPk0_ref:.6f}")
+```
+
+We can also examine the normalized power spectrum by dividing out the expected scaling factor:
+
+```{python}
+# | label: fig-pk0-normalized
+# | fig-cap: "Normalized power spectrum $\\bar{\\mathcal{P}}(10^{-3}; w)$ divided by the scaling factor $\\ell_\textsc{P}^2x_b^2 \\Omega_w^2 / (R_{H}^2 \\Omega_r c_w^5)$, where $c_w = \\sqrt{w}$. This removes the dominant $w$ dependence."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+# Compute the normalization factor
+xb = cosmo_rw.props.xb
+Omegar = cosmo_rw.props.Omegar
+Omegaw = cosmo_rw.props.Omegaw
+RH_planck = cosmo_rw.RH_planck()
+
+# For each w value, compute c_w = sqrt(w) and the normalization
+normalization = np.array(
+    [(xb**2 * Omegaw**2) / (RH_planck**2 * Omegar * np.sqrt(w) ** 5) for w in w_range]
+)
+
+Pk0_normalized = Pk0_values / normalization
+
+set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
+fig, ax = plt.subplots()
+
+ax.plot(
+    w_range,
+    Pk0_normalized,
+    "b-",
+    linewidth=lw,
+    label=r"Normalized $\bar{\mathcal{P}}(10^{-3}; w)$",
+)
+
+ax.set_xscale("log")
+ax.set_xlabel(r"$w$")
+ax.set_ylabel(
+    r"$\bar{\mathcal{P}}(10^{-3}; w) / \left(\ell_\textsc{P}^2 x_b^2 \Omega_w^2 / (R_H^2 \Omega_r c_w^5) \right)$"
+)
+ax.set_title(r"Normalized power spectrum at $\kappa = 10^{-3}$")
+ax.legend(loc="best")
+ax.grid(True, alpha=0.3)
+
+plt.savefig(os.path.join(fig_dir, "pk0_normalized.pdf"), bbox_inches="tight")
+fig.set_size_inches(6, 3)
+plt.show()
+
+print(f"Normalized Pk0 range: [{Pk0_normalized.min():.6e}, {Pk0_normalized.max():.6e}]")
+print(f"Variation: {Pk0_normalized.max() / Pk0_normalized.min():.4f}x")
+```
+
+## CMB Power Spectra Comparison
+
+Now we compute the CMB temperature angular power spectra ($C_\ell^{TT}$) for both the two-fluids bounce model and the standard power-law inflationary model. This comparison shows how the primordial spectrum differences propagate to observable CMB anisotropies.
+
+We use the Boltzmann code interface (`HIPertBoltzmannCBE`) to compute the lensed $C_\ell$ spectra up to $\ell_{\rm max} = 2500$. The two models are fitted to Planck 2018 data with their respective best-fit cosmological parameters.
+
+```{python}
+# | label: fig-cmb-cls-comparison
+# | fig-cap: "CMB temperature power spectra comparison. Top: $\\mathcal{D}_\\ell = \\ell(\\ell+1)C_\\ell/(2\\pi)$ for two-fluids (red) and power-law (blue dashed). Bottom: Ratio $\\mathcal{D}_\\ell^{\\rm 2F}/\\mathcal{D}_\\ell^{\\rm PL}$."
+# | fig-cap-location: bottom
+# | code-fold: true
+
+
+def compute_D_ell_twofluid(lmax=2500):
+    """Compute CMB TT power spectrum for two-fluids bounce model."""
+    # Setup precision and Boltzmann code
+    cbe_prec = Nc.CBEPrecision.new()
+    cbe_prec.props.k_per_decade_primordial = 50.0
+    cbe_prec.props.tight_coupling_approximation = 0
+
+    cbe = Nc.CBE.prec_new(cbe_prec)
+
+    Bcbe = Nc.HIPertBoltzmannCBE.full_new(cbe)
+    Bcbe.set_TT_lmax(lmax)
+    Bcbe.set_target_Cls(Nc.DataCMBDataType.TT)
+    Bcbe.set_lensed_Cls(True)
+
+    # Setup cosmology with two-fluids primordial spectrum
+    cosmo = Nc.HICosmoDEXcdm.new()
+    cosmo.cmb_params()
+    reion = Nc.HIReionCamb.new()
+    hiprim = Nc.HIPrimTwoFluids(use_default_calib=True)
+
+    # Best-fit parameters for Planck 2018 with two-fluids model
+    cosmo["Omegak"] = 0.0
+    cosmo["H0"] = 69.5616151425007
+    cosmo["omegab"] = 0.0226931446150128
+    cosmo["omegac"] = 0.116422916054973
+    hiprim["ln10e10ASA"] = 3.07203761177891
+    hiprim["lnk0"] = -6.251936466867
+    hiprim["lnw"] = -12.6152819113359
+    reion["z_re"] = 8.35735404822378
+
+    cosmo.add_submodel(reion)
+    cosmo.add_submodel(hiprim)
+
+    Bcbe.prepare(cosmo)
+
+    # Extract TT power spectrum
+    Cls = Ncm.Vector.new(lmax + 1)
+    Bcbe.get_TT_Cls(Cls)
+
+    Cls_a = np.array(Cls.dup_array())[2:]
+    ell = np.arange(2, lmax + 1)
+
+    # Convert to D_ell = ell(ell+1) C_ell / (2pi)
+    Dls_a = ell * (ell + 1.0) * Cls_a / (2.0 * np.pi)
+
+    return ell, Dls_a
+
+
+def compute_D_ell_powerlaw(lmax=2500):
+    """Compute CMB TT power spectrum for power-law inflationary model."""
+    # Setup precision and Boltzmann code
+    cbe_prec = Nc.CBEPrecision.new()
+    cbe_prec.props.k_per_decade_primordial = 50.0
+    cbe_prec.props.tight_coupling_approximation = 0
+
+    cbe = Nc.CBE.prec_new(cbe_prec)
+
+    Bcbe = Nc.HIPertBoltzmannCBE.full_new(cbe)
+    Bcbe.set_TT_lmax(lmax)
+    Bcbe.set_target_Cls(Nc.DataCMBDataType.TT)
+    Bcbe.set_lensed_Cls(True)
+
+    # Setup cosmology with power-law primordial spectrum
+    cosmo = Nc.HICosmoDEXcdm.new()
+    cosmo.cmb_params()
+    reion = Nc.HIReionCamb.new()
+    hiprim = Nc.HIPrimPowerLaw()
+
+    # Best-fit parameters for Planck 2018 with power-law model
+    cosmo["Omegak"] = 0.0
+    cosmo["H0"] = 68.2682642143184
+    cosmo["omegab"] = 0.0223445767610612
+    cosmo["omegac"] = 0.1189257178946
+    hiprim["ln10e10ASA"] = 3.04632994161073
+    hiprim["n_SA"] = 0.967382455314431
+    reion["z_re"] = 7.79677265563444
+
+    cosmo.add_submodel(reion)
+    cosmo.add_submodel(hiprim)
+
+    Bcbe.prepare(cosmo)
+
+    # Extract TT power spectrum
+    Cls = Ncm.Vector.new(lmax + 1)
+    Bcbe.get_TT_Cls(Cls)
+
+    Cls_a = np.array(Cls.dup_array())[2:]
+    ell = np.arange(2, lmax + 1)
+
+    # Convert to D_ell = ell(ell+1) C_ell / (2pi)
+    Dls_a = ell * (ell + 1.0) * Cls_a / (2.0 * np.pi)
+
+    return ell, Dls_a
+
+
+# Compute power spectra for both models
+ell, Dell_2f = compute_D_ell_twofluid()
+_, Dell_pl = compute_D_ell_powerlaw()
+
+# Create comparison plot with two panels
+set_rc_params_article(ncol=1, nrows=2, aspect_ratio=0.5)
+fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
+fig.subplots_adjust(hspace=0.0)
+
+# Top panel: D_ell comparison
+ax1.plot(ell, Dell_2f, "r-", linewidth=1.5, label="Two-fluids bounce")
+ax1.plot(ell, Dell_pl, "b--", linewidth=1.5, label="Power-law inflation")
+
+ax1.set_xscale("log")
+ax1.set_ylabel(r"$\mathcal{D}_\ell \equiv \ell(\ell+1)C_\ell/(2\pi)$ [$\mu$K$^2$]")
+ax1.legend(loc="best")
+ax1.grid(True, alpha=0.3)
+ax1.set_title("CMB Temperature Power Spectra")
+
+# Bottom panel: Ratio
+ratio = Dell_2f / Dell_pl - 1.0
+ax2.plot(ell, ratio, "k-", linewidth=1.0)
+ax2.axhline(y=0.0, color="gray", linestyle="--", linewidth=0.8, alpha=0.5)
+
+ax2.set_xscale("log")
+ax2.set_xlabel(r"Multipole $\ell$")
+ax2.set_ylabel(r"$\mathcal{D}_\ell^{\rm 2F}/\mathcal{D}_\ell^{\rm PL} - 1$")
+ax2.grid(True, alpha=0.3)
+
+plt.savefig(os.path.join(fig_dir, "cmb_cls_comparison.pdf"), bbox_inches="tight")
+fig.set_size_inches(6, 6)
+plt.show()
+
+# Print statistics
+print(f"\nCMB Power Spectra Statistics:")
+print(f"  Two-fluids peak: {Dell_2f.max():.2f} μK² at ℓ = {ell[Dell_2f.argmax()]}")
+print(f"  Power-law peak:  {Dell_pl.max():.2f} μK² at ℓ = {ell[Dell_pl.argmax()]}")
+print(f"  Ratio mean: {ratio.mean():.6f}")
+print(f"  Ratio std:  {ratio.std():.6f}")
+print(f"  Ratio range: [{ratio.min():.6f}, {ratio.max():.6f}]")
 ```

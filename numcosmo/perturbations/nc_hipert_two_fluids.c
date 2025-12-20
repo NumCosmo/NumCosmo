@@ -2087,7 +2087,6 @@ nc_hipert_two_fluids_compute_spectra (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, 
     {
       sinterp->mode1_splines[i] = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
       sinterp->mode2_splines[i] = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-      printf ("%p %p %p\n", sinterp, sinterp->mode1_splines[i], sinterp->mode2_splines[i]);
 
       ncm_spline_set_array (sinterp->mode1_splines[i], k_array, state1[i][j], TRUE);
       ncm_spline_set_array (sinterp->mode2_splines[i], k_array, state2[i][j], TRUE);
