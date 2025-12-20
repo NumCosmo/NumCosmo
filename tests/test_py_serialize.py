@@ -25,6 +25,7 @@
 """Tests for serialization."""
 
 from typing import List
+from pathlib import Path
 
 import pytest
 import numpy as np
@@ -692,3 +693,154 @@ def test_serialize_C_cmp_objs_clean_dup(dup_mode, a1, a2, a3) -> None:
 
     assert c_dup.Cods.get("b1") is c_dup.Codi.get(2001)
     assert c_dup.Cods.get("b2") is c_dup.Ca.get(0)
+
+
+def test_serialize_dict_str_to_binfile(ser_opt, a1, a2, a3, tmp_path: Path) -> None:
+    """Test serializing NcmObjDictStr to binary file."""
+    ods = Ncm.ObjDictStr.new()
+    ods.set("a1", a1)
+    ods.set("a2", a2)
+    ods.set("a3", a3)
+
+    ser = Ncm.Serialize.new(ser_opt)
+
+    # Save to binary file
+    bin_file = tmp_path / "test_dict_str.bin"
+    ser.dict_str_to_binfile(ods, str(bin_file))
+
+    # Verify file was created
+    assert bin_file.exists()
+    assert bin_file.stat().st_size > 0
+
+    # Load from binary file
+    ods_loaded = ser.dict_str_from_binfile(str(bin_file))
+
+    # Verify loaded dictionary
+    assert isinstance(ods_loaded, Ncm.ObjDictStr)
+    assert ods_loaded.len() == 3
+
+    # Verify each object
+    a1_loaded = ods_loaded.get("a1")
+    a2_loaded = ods_loaded.get("a2")
+    a3_loaded = ods_loaded.get("a3")
+
+    assert isinstance(a1_loaded, GTestA)
+    assert isinstance(a2_loaded, GTestA)
+    assert isinstance(a3_loaded, GTestA)
+
+    assert a1_loaded == a1
+    assert a2_loaded == a2
+    assert a3_loaded == a3
+
+
+def test_serialize_dict_str_binfile_empty(ser_opt, tmp_path: Path) -> None:
+    """Test serializing empty NcmObjDictStr to binary file."""
+    ods = Ncm.ObjDictStr.new()
+    ser = Ncm.Serialize.new(ser_opt)
+
+    # Save empty dictionary
+    bin_file = tmp_path / "test_dict_str_empty.bin"
+    ser.dict_str_to_binfile(ods, str(bin_file))
+
+    # Load and verify
+    ods_loaded = ser.dict_str_from_binfile(str(bin_file))
+    assert isinstance(ods_loaded, Ncm.ObjDictStr)
+    assert ods_loaded.len() == 0
+
+
+def test_serialize_dict_str_binfile_nested(ser_opt, a1, a2, a3, tmp_path: Path) -> None:
+    """Test serializing nested structures with NcmObjDictStr to binary file."""
+    # Create nested structure
+    ods1 = Ncm.ObjDictStr.new()
+    ods1.set("a1", a1)
+    ods1.set("a2", a2)
+
+    ods2 = Ncm.ObjDictStr.new()
+    ods2.set("a3", a3)
+
+    odi = Ncm.ObjDictInt.new()
+    odi.set(1001, a1)
+
+    oa = Ncm.ObjArray.new()
+    oa.add(a2)
+    oa.add(a3)
+
+    b = GTestB(B_string="nested_test", As=a1, Aa=oa, Aods=ods1, Aodi=odi)  # type: ignore
+
+    # Create outer dictionary
+    ods_outer = Ncm.ObjDictStr.new()
+    ods_outer.set("b_obj", b)
+    ods_outer.set("a1", a1)
+
+    ser = Ncm.Serialize.new(ser_opt)
+
+    # Save to binary file
+    bin_file = tmp_path / "test_dict_str_nested.bin"
+    ser.dict_str_to_binfile(ods_outer, str(bin_file))
+
+    # Load and verify
+    ods_loaded = ser.dict_str_from_binfile(str(bin_file))
+
+    assert isinstance(ods_loaded, Ncm.ObjDictStr)
+    assert ods_loaded.len() == 2
+
+    b_loaded = ods_loaded.get("b_obj")
+    a1_loaded = ods_loaded.get("a1")
+
+    assert isinstance(b_loaded, GTestB)
+    assert isinstance(a1_loaded, GTestA)
+
+    assert b_loaded == b
+    assert a1_loaded == a1
+
+
+def test_serialize_dict_str_binfile_roundtrip_multiple(
+    ser_opt, a1, a2, tmp_path: Path
+) -> None:
+    """Test multiple save/load cycles with binary files."""
+    ods = Ncm.ObjDictStr.new()
+    ods.set("a1", a1)
+    ods.set("a2", a2)
+
+    ser = Ncm.Serialize.new(ser_opt)
+
+    # First roundtrip
+    bin_file1 = tmp_path / "test_roundtrip1.bin"
+    ser.dict_str_to_binfile(ods, str(bin_file1))
+    ods_loaded1 = ser.dict_str_from_binfile(str(bin_file1))
+
+    # Second roundtrip
+    bin_file2 = tmp_path / "test_roundtrip2.bin"
+    ser.dict_str_to_binfile(ods_loaded1, str(bin_file2))
+    ods_loaded2 = ser.dict_str_from_binfile(str(bin_file2))
+
+    # Verify both loaded dictionaries match original
+    assert ods_loaded1.get("a1") == a1
+    assert ods_loaded1.get("a2") == a2
+    assert ods_loaded2.get("a1") == a1
+    assert ods_loaded2.get("a2") == a2
+
+
+def test_serialize_dict_str_binfile_overwrite(
+    ser_opt, a1, a2, a3, tmp_path: Path
+) -> None:
+    """Test overwriting existing binary file."""
+    ser = Ncm.Serialize.new(ser_opt)
+    bin_file = tmp_path / "test_overwrite.bin"
+
+    # First save
+    ods1 = Ncm.ObjDictStr.new()
+    ods1.set("a1", a1)
+    ser.dict_str_to_binfile(ods1, str(bin_file))
+
+    # Overwrite with different content
+    ods2 = Ncm.ObjDictStr.new()
+    ods2.set("a2", a2)
+    ods2.set("a3", a3)
+    ser.dict_str_to_binfile(ods2, str(bin_file))
+
+    # Load and verify we get the second content
+    ods_loaded = ser.dict_str_from_binfile(str(bin_file))
+    assert ods_loaded.len() == 2
+    assert ods_loaded.get("a2") == a2
+    assert ods_loaded.get("a3") == a3

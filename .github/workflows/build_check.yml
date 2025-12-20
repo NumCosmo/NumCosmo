@@ -197,8 +197,8 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu"]
-        python-version: ["3.11"]
-        suites: ["python","c", "stats-dist", "fit-esmcmc", "powspec", "data-cluster-wl"]
+        python-version: ["3.12"]
+        suites: ["python","c", "stats-dist", "fit-esmcmc", "powspec", "data-cluster-wl", "py-powspec", "py-xcor"]
     defaults:
       run:
         shell: bash -el {0}

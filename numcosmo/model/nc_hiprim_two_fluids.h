@@ -97,6 +97,9 @@ gboolean nc_hiprim_two_fluids_get_use_default_calib (NcHIPrimTwoFluids *two_flui
 void nc_hiprim_two_fluids_set_lnk_lnw_spline (NcHIPrimTwoFluids *two_fluids, NcmSpline2d *lnSA_powspec_lnk_lnw);
 NcmSpline2d *nc_hiprim_two_fluids_peek_lnk_lnw_spline (NcHIPrimTwoFluids *two_fluids);
 
+void nc_hiprim_two_fluids_set_Pk0_spline (NcHIPrimTwoFluids *two_fluids, NcmSpline *Pk0);
+NcmSpline *nc_hiprim_two_fluids_peek_Pk0_spline (NcHIPrimTwoFluids *two_fluids);
+
 G_END_DECLS
 
 #endif /* _NC_HIPRIM_TWO_FLUIDS_H_ */
