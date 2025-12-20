@@ -412,14 +412,14 @@ class TestSphericalHarmonics:
 
         # All pixels should have the same value
         expected_value = monopole_value
-        assert_allclose(ncm_map, expected_value, rtol=1e-6)
+        assert_allclose(ncm_map, expected_value, rtol=1e-10)
 
         # Compare with healpy
         alm_size = healpy.Alm.getsize(lmax)
         hp_alm = np.zeros(alm_size, dtype=complex)
         hp_alm[0] = monopole_value * np.sqrt(4 * np.pi)
         hp_map = healpy.alm2map(hp_alm, nside, lmax=lmax)
-        assert_allclose(ncm_map, hp_map, rtol=1e-6)
+        assert_allclose(ncm_map, hp_map, rtol=1e-10)
 
     def test_alm2map_dipole(self, smap: Ncm.SphereMap, nside: int) -> None:
         """Test alm2map with dipole (l=1) only."""
@@ -449,7 +449,7 @@ class TestSphericalHarmonics:
         hp_map = healpy.alm2map(hp_alm, nside, lmax=lmax)
 
         # Compare NumCosmo and healpy maps
-        assert_allclose(ncm_map, hp_map, rtol=1e-6, atol=1e-8)
+        assert_allclose(ncm_map, hp_map, rtol=1e-10, atol=1e-10)
 
         # The pattern should be cos(theta)
         pix_indices = np.arange(npix)
@@ -482,6 +482,221 @@ class TestSphericalHarmonics:
         # Should match reasonably well for smooth maps
         # NumCosmo's map2alm uses direct projection, not least-squares
         assert_allclose(ncm_map_back, smooth_map, rtol=0.1, atol=0.1)
+
+
+class TestIterativeRefinement:
+    """Test iterative refinement in spherical harmonic transforms."""
+
+    @pytest.fixture(name="lmax_undersampled")
+    def fixture_lmax_undersampled(self, nside: int) -> int:
+        """Choose undersampled lmax where iterations help."""
+        # Undersampled: lmax < 3 * nside
+        return 2 * nside
+
+    @pytest.fixture(name="lmax_wellsampled")
+    def fixture_lmax_wellsampled(self, nside: int) -> int:
+        """Choose well-sampled lmax."""
+        # Well-sampled: lmax ~ 3 * nside
+        return min(3 * nside, 512)
+
+    @pytest.mark.parametrize("iter_val", [0, 1, 2, 3])
+    def test_iter_property(
+        self, smap: Ncm.SphereMap, lmax_undersampled: int, iter_val: int
+    ) -> None:
+        """Test that iter property can be set and retrieved."""
+        smap.set_lmax(lmax_undersampled)
+        smap.set_iter(iter_val)
+        retrieved_iter = smap.get_iter()
+        assert (
+            retrieved_iter == iter_val
+        ), f"Expected iter={iter_val}, got {retrieved_iter}"
+
+    @pytest.mark.parametrize("iter_val", [0, 1, 3])
+    def test_iter_matches_healpy(
+        self,
+        smap: Ncm.SphereMap,
+        nside: int,
+        lmax_undersampled: int,
+        random_seed: int,
+        iter_val: int,
+    ) -> None:
+        """Test that NumCosmo with iter matches healpy with same iter."""
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+
+        # Generate white noise map
+        noise_map = np.random.randn(npix)
+
+        # Set iter and compute alm with NumCosmo
+        smap.set_lmax(lmax_undersampled)
+        smap.set_iter(iter_val)
+        smap.set_map(noise_map)
+        smap.prepare_alm()
+
+        # Get NumCosmo alm
+        nc_alm = np.zeros(healpy.Alm.getsize(lmax_undersampled), dtype=complex)
+        for ell in range(lmax_undersampled + 1):
+            for m in range(ell + 1):
+                re_alm, im_alm = smap.get_alm(ell, m)
+                hp_idx = healpy.Alm.getidx(lmax_undersampled, ell, m)
+                nc_alm[hp_idx] = re_alm + 1j * im_alm
+
+        # Compute alm with healpy using same iter
+        hp_alm = healpy.map2alm(noise_map, lmax=lmax_undersampled, iter=iter_val)
+
+        # Should match to machine precision for all iter values
+        assert_allclose(nc_alm.real, hp_alm.real, rtol=1e-10, atol=1e-14)
+        assert_allclose(nc_alm.imag, hp_alm.imag, rtol=1e-10, atol=1e-14)
+
+    def test_iter_convergence(
+        self, smap: Ncm.SphereMap, nside: int, lmax_undersampled: int, random_seed: int
+    ) -> None:
+        """Test that iterations improve reconstruction accuracy."""
+        if nside < 32:
+            pytest.skip("Need nside >= 32 to see clear iteration benefit")
+
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+
+        # Generate structured test map (not just white noise)
+        pix_indices = np.arange(npix)
+        theta, phi = healpy.pix2ang(nside, pix_indices)
+        # Add large-scale structure that's undersampled at lmax=2*nside
+        test_map = np.random.randn(npix) + 3.0 * np.sin(2 * theta) * np.cos(3 * phi)
+
+        smap.set_lmax(lmax_undersampled)
+
+        # Test with different iter values
+        errors = {}
+        for iter_val in [0, 1, 3]:
+            smap.set_iter(iter_val)
+            smap.set_map(test_map)
+            smap.prepare_alm()
+
+            # Extract alm
+            nc_alm = np.zeros(healpy.Alm.getsize(lmax_undersampled), dtype=complex)
+            for ell in range(lmax_undersampled + 1):
+                for m in range(ell + 1):
+                    re_alm, im_alm = smap.get_alm(ell, m)
+                    hp_idx = healpy.Alm.getidx(lmax_undersampled, ell, m)
+                    nc_alm[hp_idx] = re_alm + 1j * im_alm
+
+            # Synthesize back to check reconstruction
+            reconstructed = healpy.alm2map(nc_alm, nside)
+            residual = test_map - reconstructed
+            rms_error = np.sqrt(np.mean(residual**2))
+            errors[iter_val] = rms_error
+
+        # With iterations, error should decrease or stay similar
+        # (may not always decrease for white noise component)
+        # Just verify that iter > 0 doesn't make things worse
+        assert (
+            errors[1] <= errors[0] * 1.1
+        ), "iter=1 should not increase error significantly"
+        assert (
+            errors[3] <= errors[0] * 1.1
+        ), "iter=3 should not increase error significantly"
+
+    def test_iter_with_different_lmax(self, nside: int, random_seed: int) -> None:
+        """Test iter behavior with different lmax values."""
+        if nside < 16:
+            pytest.skip("Need nside >= 16 for this test")
+
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+        noise_map = np.random.randn(npix)
+
+        # Test both undersampled and well-sampled cases
+        test_cases = [
+            (nside, "undersampled"),  # lmax = nside < 3*nside
+            (2 * nside, "moderately undersampled"),  # lmax = 2*nside
+            (min(3 * nside, 256), "well-sampled"),  # lmax ~ 3*nside
+        ]
+
+        for lmax, description in test_cases:
+            smap = Ncm.SphereMap.new(nside)
+            smap.set_lmax(lmax)
+
+            # Test iter=0 and iter=3
+            for iter_val in [0, 3]:
+                smap.set_iter(iter_val)
+                smap.set_map(noise_map)
+                smap.prepare_alm()
+
+                # Compare with healpy
+                hp_alm = healpy.map2alm(noise_map, lmax=lmax, iter=iter_val)
+
+                # Check a few coefficients
+                for ell in range(min(lmax + 1, 5)):
+                    for m in range(ell + 1):
+                        re_alm, _ = smap.get_alm(ell, m)
+                        hp_idx = healpy.Alm.getidx(lmax, ell, m)
+                        hp_val = hp_alm[hp_idx]
+
+                        assert_allclose(
+                            re_alm,
+                            hp_val.real,
+                            rtol=1e-10,
+                            atol=1e-14,
+                            err_msg=f"Mismatch at {description}, lmax={lmax}, iter={iter_val}, l={ell}, m={m}",
+                        )
+
+    def test_iter_default_value(self, smap: Ncm.SphereMap) -> None:
+        """Test that default iter value is 0 (backward compatible)."""
+        default_iter = smap.get_iter()
+        assert default_iter == 0, "Default iter should be 0 for backward compatibility"
+
+    def test_iter_with_roundtrip(
+        self, smap: Ncm.SphereMap, nside: int, lmax_undersampled: int, random_seed: int
+    ) -> None:
+        """Test iter in map -> alm -> map roundtrip."""
+        if nside < 32:
+            pytest.skip("Need nside >= 32 for clear roundtrip test")
+
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+
+        # Create smooth test map
+        pix_indices = np.arange(npix)
+        theta, phi = healpy.pix2ang(nside, pix_indices)
+        smooth_map = 5.0 + 2.0 * np.cos(theta) + 1.5 * np.sin(theta) * np.cos(phi)
+
+        smap.set_lmax(lmax_undersampled)
+
+        # Test with different iter values
+        for iter_val in [0, 1, 3]:
+            smap.set_iter(iter_val)
+            smap.set_map(smooth_map)
+            smap.prepare_alm()
+            smap.alm2map()
+
+            # Get reconstructed map
+            reconstructed = np.array([smap.get_pix(i) for i in range(npix)])
+
+            # Should match well for smooth maps
+            # Higher iter might give slightly better reconstruction
+            rms_diff = np.sqrt(np.mean((reconstructed - smooth_map) ** 2))
+            assert rms_diff < 0.5, f"Roundtrip error too large for iter={iter_val}"
+
+    @pytest.mark.parametrize("iter_val", [0, 1, 2, 3, 5, 10])
+    def test_iter_range(
+        self, smap: Ncm.SphereMap, nside: int, lmax_undersampled: int, iter_val: int
+    ) -> None:
+        """Test that various iter values work without errors."""
+        smap.set_lmax(lmax_undersampled)
+        smap.set_iter(iter_val)
+
+        # Create simple test map
+        npix = healpy.nside2npix(nside)
+        test_map = np.ones(npix)
+
+        # Should complete without error
+        smap.set_map(test_map)
+        smap.prepare_alm()
+
+        # Should be able to retrieve alm
+        re_alm, _ = smap.get_alm(0, 0)
+        assert re_alm > 0, "Monopole should be positive"
 
 
 class TestPowerSpectrum:

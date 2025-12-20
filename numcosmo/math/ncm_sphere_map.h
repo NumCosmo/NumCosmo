@@ -104,6 +104,9 @@ NcmSphereMapCoordSys ncm_sphere_map_get_coordsys (NcmSphereMap *smap);
 void ncm_sphere_map_set_lmax (NcmSphereMap *smap, guint lmax);
 guint ncm_sphere_map_get_lmax (NcmSphereMap *smap);
 
+void ncm_sphere_map_set_iter (NcmSphereMap *smap, guint iter);
+guint ncm_sphere_map_get_iter (NcmSphereMap *smap);
+
 void ncm_sphere_map_clear_pixels (NcmSphereMap *smap);
 
 gint64 ncm_sphere_map_nest2ring (NcmSphereMap *smap, const gint64 nest_index);
