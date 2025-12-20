@@ -13560,6 +13560,8 @@ class HIPrimTwoFluids(HIPrim):
     Properties from NcHIPrimTwoFluids:
       lnk-lnw-spline -> NcmSpline2d: lnk-lnw-spline
         Spline for the primordial adiabatic scalar power spectrum as a function of ln(k) and ln(w)
+      Pk0-spline -> NcmSpline: Pk0-spline
+        Spline for the normalization of the power spectrum as a function of ln(w)
       use-default-calib -> gboolean: use-default-calib
         Use default calibration
       ln10e10ASA -> gdouble: ln10e10ASA
@@ -13612,6 +13614,7 @@ class HIPrimTwoFluids(HIPrim):
     """
 
     class Props:
+        Pk0_spline: NumCosmoMath.Spline
         T_SA_ratio: float
         T_SA_ratio_fit: bool
         ln10e10ASA: float
@@ -13639,6 +13642,7 @@ class HIPrimTwoFluids(HIPrim):
     parent_instance: HIPrim = ...
     def __init__(
         self,
+        Pk0_spline: NumCosmoMath.Spline = ...,
         T_SA_ratio: float = ...,
         T_SA_ratio_fit: bool = ...,
         ln10e10ASA: float = ...,
@@ -13659,7 +13663,9 @@ class HIPrimTwoFluids(HIPrim):
     def get_use_default_calib(self) -> bool: ...
     @classmethod
     def new(cls) -> HIPrimTwoFluids: ...
+    def peek_Pk0_spline(self) -> NumCosmoMath.Spline: ...
     def peek_lnk_lnw_spline(self) -> NumCosmoMath.Spline2d: ...
+    def set_Pk0_spline(self, Pk0: NumCosmoMath.Spline) -> None: ...
     def set_lnk_lnw_spline(
         self, lnSA_powspec_lnk_lnw: NumCosmoMath.Spline2d
     ) -> None: ...

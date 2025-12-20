@@ -302,7 +302,7 @@ ncm_spline_copy_empty (const NcmSpline *s)
 
 /**
  * ncm_spline_copy:
- * @s: a costant #NcmSpline
+ * @s: a constant #NcmSpline
  *
  * This function copies the two #NcmVector of the spline @s into those two
  * #NcmVector of a new #NcmSpline.
@@ -381,7 +381,7 @@ ncm_spline_new_array (const NcmSpline *s, GArray *x, GArray *y, gboolean init)
  * @s: a constant #NcmSpline
  * @x: array of knots
  * @y: array of the values of the function, to be interpolated, computed at @x
- * @len: lenght of @x and @y
+ * @len: length of @x and @y
  * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it
  *
  * This function returns a new #NcmSpline, where the knots of this new spline are given
@@ -407,7 +407,7 @@ ncm_spline_new_data (const NcmSpline *s, gdouble *x, gdouble *y, gsize len, gboo
  * @yv: #NcmVector of the values of the function, to be interpolated, computed at @xv
  * @init: TRUE to prepare @s or FALSE to not prepare it
  *
- * This funtion sets both @xv and @yv vectors to @s.
+ * This function sets both @xv and @yv vectors to @s.
  * The two vectors must have the same length.
  *
  * Returns: (transfer none): a #NcmSpline
@@ -525,7 +525,7 @@ ncm_spline_clear (NcmSpline **s)
  * Therefore, it should not be called concomitantly by two different threads.
  *
  * Warning: the accelerator must be reset if the spline's size changes, otherwise,
- * it can accessan out-of-bound index.
+ * it can access an out-of-bound index.
  *
  */
 void
@@ -888,7 +888,7 @@ ncm_spline_post_prepare (NcmSpline *s)
  * @s: a #NcmSpline
  *
  * This function computes the second derivatives of @s and it is used to prepare a
- * bidimensional spline.
+ * bi-dimensional spline.
  *
  */
 

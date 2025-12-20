@@ -653,6 +653,7 @@ if python_pyccl.found()
             'name': 'py_powspec',
             'source': 'test_py_powspec.py',
             'timeout': 0,
+            'suite': ['py-powspec'],
         },
         {
             'name': 'py_massfunc',
@@ -668,6 +669,7 @@ if python_pyccl.found()
             'name': 'py_xcor',
             'source': 'test_py_xcor.py',
             'timeout': 0,
+            'suite': ['py-xcor'],
         },
     ]
 endif

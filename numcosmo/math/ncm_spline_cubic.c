@@ -350,9 +350,9 @@ ncm_spline_cubic_peek_d_vec (const NcmSplineCubic *s)
  * ncm_spline_cubic_peek_diag_vec:
  * @s: a #NcmSplineCubic
  *
- * Gets the vector diag of the tridiagonal matrix. This method is used by subclasses
- * to implement the ncm_spline_prepare() virtual method.
- * It should not be used by the user.
+ * Gets the vector diag of the tri-diagonal matrix. This method is used by subclasses
+ * to implement the ncm_spline_prepare() virtual method. It should not be used by the
+ * user.
  *
  * Returns: (transfer none): the vector of coefficients g.
  */
@@ -368,9 +368,9 @@ ncm_spline_cubic_peek_diag_vec (const NcmSplineCubic *s)
  * ncm_spline_cubic_peek_offdiag_vec:
  * @s: a #NcmSplineCubic
  *
- * Gets the vector offdiag of the tridiagonal matrix. This method is used by subclasses
- * to implement the ncm_spline_prepare() virtual method.
- * It should not be used by the user.
+ * Gets the vector offdiag of the tri-diagonal matrix. This method is used by
+ * subclasses to implement the ncm_spline_prepare() virtual method. It should not be
+ * used by the user.
  *
  * Returns: (transfer none): the vector of coefficients g.
  */

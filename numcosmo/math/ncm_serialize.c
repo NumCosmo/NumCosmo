@@ -2865,6 +2865,79 @@ ncm_serialize_dict_str_to_variant (NcmSerialize *ser, NcmObjDictStr *ods)
 }
 
 /**
+ * ncm_serialize_dict_str_to_binfile:
+ * @ser: a #NcmSerialize
+ * @ods: a #NcmObjDictStr
+ * @filename: File where to save the serialized version of the dictionary
+ *
+ * Serializes @ods and saves the binary in @filename.
+ *
+ */
+void
+ncm_serialize_dict_str_to_binfile (NcmSerialize *ser, NcmObjDictStr *ods, const gchar *filename)
+{
+  GError *error     = NULL;
+  GVariant *var_ser = ncm_serialize_dict_str_to_variant (ser, ods);
+  gsize length      = g_variant_get_size (var_ser);
+
+  g_assert (filename != NULL);
+
+  if (!g_file_set_contents (filename, g_variant_get_data (var_ser), length, &error))
+    g_error ("ncm_serialize_dict_str_to_binfile: cannot save to file %s: %s",
+             filename, error->message);
+
+  g_variant_unref (var_ser);
+}
+
+/**
+ * ncm_serialize_dict_str_from_binfile:
+ * @ser: a #NcmSerialize
+ * @filename: File containing the binary serialized version of the dictionary
+ *
+ * Parses the serialized binary data in @filename and returns the newly created #NcmObjDictStr.
+ *
+ * Returns: (transfer full): A new #NcmObjDictStr.
+ */
+NcmObjDictStr *
+ncm_serialize_dict_str_from_binfile (NcmSerialize *ser, const gchar *filename)
+{
+  GError *error      = NULL;
+  gchar *file        = NULL;
+  gsize length       = 0;
+  NcmObjDictStr *ods = NULL;
+
+  g_assert (filename != NULL);
+
+  if (!g_file_get_contents (filename, &file, &length, &error))
+    g_error ("ncm_serialize_dict_str_from_binfile: cannot open file %s: %s",
+             filename, error->message);
+
+  if (length == 0)
+  {
+    /* Empty dictionary case */
+    g_free (file);
+
+    return ncm_obj_dict_str_new ();
+  }
+
+  {
+    GVariant *var_ser = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_STR_TYPE),
+                                                 file,
+                                                 length,
+                                                 TRUE,
+                                                 g_free,
+                                                 file
+                                                );
+
+    ods = ncm_serialize_dict_str_from_variant (ser, var_ser);
+
+    g_variant_unref (var_ser);
+  }
+
+  return ods;
+}
+
+/**
  * ncm_serialize_dict_int_to_variant:
  * @ser: a #NcmSerialize
  * @odi: a #NcmObjDictInt
