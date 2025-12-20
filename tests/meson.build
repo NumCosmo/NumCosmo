@@ -463,6 +463,10 @@ python_tests = [
         'source': 'test_py_sphere_nn.py',
     },
     {
+        'name': 'py_sphere_map',
+        'source': 'test_py_sphere_map.py',
+    },
+    {
         'name': 'py_sanity',
         'source': 'test_py_sanity.py',
     },

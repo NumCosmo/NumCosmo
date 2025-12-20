@@ -460,9 +460,7 @@ class TestSphericalHarmonics:
         correlation = np.corrcoef(ncm_map, expected_pattern)[0, 1]
         assert correlation > 0.99
 
-    def test_map2alm2map_roundtrip(
-        self, smap: Ncm.SphereMap, nside: int, random_seed: int
-    ) -> None:
+    def test_map2alm2map_roundtrip(self, smap: Ncm.SphereMap, nside: int) -> None:
         """Test map -> alm -> map roundtrip for smooth maps."""
         # White noise is poorly represented with limited lmax
         # Use a smooth map instead (monopole + dipole)
@@ -471,7 +469,7 @@ class TestSphericalHarmonics:
 
         # Create smooth map (monopole + dipole component)
         pix_indices = np.arange(npix)
-        theta, phi = healpy.pix2ang(nside, pix_indices, nest=False)
+        theta, _ = healpy.pix2ang(nside, pix_indices, nest=False)
         smooth_map = 5.0 + 2.0 * np.cos(theta)  # monopole + dipole
 
         # NumCosmo roundtrip
