@@ -16,7 +16,7 @@ dependencies:
   - matplotlib
   - nlopt
   - numcosmo >= 0.25.0
-  - numpy >= 1.23
+  - numpy < 2.4
   - openblas=*=*openmp*
   - openmpi
   - pandas
