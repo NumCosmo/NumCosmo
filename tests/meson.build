@@ -463,10 +463,6 @@ python_tests = [
         'source': 'test_py_sphere_nn.py',
     },
     {
-        'name': 'py_sphere_map',
-        'source': 'test_py_sphere_map.py',
-    },
-    {
         'name': 'py_sanity',
         'source': 'test_py_sanity.py',
     },
@@ -722,6 +718,21 @@ if python_getdist.found()
             'name': 'plotting',
             'source': 'test_plotting.py',
             'timeout': 0,
+        },
+    ]
+endif
+
+python_healpy = python_module.find_installation(
+    'python3',
+    modules: ['healpy'],
+    required: false,
+)
+
+if python_healpy.found()
+    python_tests += [
+        {
+            'name': 'py_sphere_map',
+            'source': 'test_py_sphere_map.py',
         },
     ]
 endif
