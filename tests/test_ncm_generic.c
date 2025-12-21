@@ -78,6 +78,10 @@ void test_nc_halo_mass_summary_basic (void);
 void test_nc_halo_cm_param_basic (void);
 void test_nc_halo_cm_klypin11_basic (void);
 void test_nc_halo_cm_duffy08_basic (void);
+void test_nc_halo_cm_bhattacharya13_basic (void);
+void test_nc_halo_cm_diemer15_basic (void);
+void test_nc_halo_cm_prada12_basic (void);
+void test_nc_halo_cm_dutton14_basic (void);
 void test_nc_halo_bias_despali_basic (void);
 void test_nc_cluster_mass_ascaso_basic (void);
 void test_nc_cluster_mass_selection_basic (void);
@@ -136,6 +140,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/halo_cm_param/basic", test_nc_halo_cm_param_basic);
   g_test_add_func ("/nc/halo_cm_klypin11/basic", test_nc_halo_cm_klypin11_basic);
   g_test_add_func ("/nc/halo_cm_duffy08/basic", test_nc_halo_cm_duffy08_basic);
+  g_test_add_func ("/nc/halo_cm_bhattacharya13/basic", test_nc_halo_cm_bhattacharya13_basic);
+  g_test_add_func ("/nc/halo_cm_diemer15/basic", test_nc_halo_cm_diemer15_basic);
+  g_test_add_func ("/nc/halo_cm_prada12/basic", test_nc_halo_cm_prada12_basic);
+  g_test_add_func ("/nc/halo_cm_dutton14/basic", test_nc_halo_cm_dutton14_basic);
 
   g_test_add_func ("/nc/halo_bias_despali/basic", test_nc_halo_bias_despali_basic);
 
@@ -940,6 +948,125 @@ test_nc_halo_cm_duffy08_basic (void)
   g_assert_true (NC_IS_HALO_CM_DUFFY08 (hcmd));
 
   NCM_TEST_FREE (nc_halo_cm_duffy08_free, hcmd);
+}
+
+void
+test_nc_halo_cm_bhattacharya13_basic (void)
+{
+  NcDistance *dist        = nc_distance_new (1100.0);
+  NcTransferFunc *tf      = nc_transfer_func_eh_new ();
+  NcPowspecML *ps_ml      = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+  NcmPowspecFilter *psf   = ncm_powspec_filter_new (NCM_POWSPEC (ps_ml), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
+  NcMultiplicityFunc *mf  = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_tinker_new ());
+  NcHaloMassFunction *hmf = nc_halo_mass_function_new (dist, psf, mf);
+  NcGrowthFunc *gf        = nc_growth_func_new ();
+  NcHaloCMBhattacharya13 *hcmb;
+  NcHaloCMBhattacharya13 *hcmb2;
+
+  nc_multiplicity_func_set_mdef (mf, NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL);
+  nc_multiplicity_func_set_Delta (mf, 200.0);
+
+  hcmb = nc_halo_cm_bhattacharya13_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0, hmf, gf);
+
+  g_assert_true (hcmb != NULL);
+  g_assert_true (NC_IS_HALO_CM_BHATTACHARYA13 (hcmb));
+
+  hcmb2 = nc_halo_cm_bhattacharya13_ref (hcmb);
+  nc_halo_cm_bhattacharya13_clear (&hcmb2);
+  g_assert_true (hcmb2 == NULL);
+
+  g_assert_true (NC_IS_HALO_CM_BHATTACHARYA13 (hcmb));
+
+  nc_distance_clear (&dist);
+  nc_transfer_func_clear (&tf);
+  ncm_powspec_filter_clear (&psf);
+  nc_multiplicity_func_clear (&mf);
+  nc_halo_mass_function_clear (&hmf);
+  nc_growth_func_clear (&gf);
+
+  NCM_TEST_FREE (nc_halo_cm_bhattacharya13_free, hcmb);
+}
+
+void
+test_nc_halo_cm_diemer15_basic (void)
+{
+  NcDistance *dist        = nc_distance_new (1100.0);
+  NcTransferFunc *tf      = nc_transfer_func_eh_new ();
+  NcPowspecML *ps_ml      = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+  NcmPowspecFilter *psf   = ncm_powspec_filter_new (NCM_POWSPEC (ps_ml), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
+  NcMultiplicityFunc *mf  = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_tinker_new ());
+  NcHaloMassFunction *hmf = nc_halo_mass_function_new (dist, psf, mf);
+  NcHaloCMDiemer15 *hcmd;
+  NcHaloCMDiemer15 *hcmd2;
+
+  hcmd = nc_halo_cm_diemer15_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0, hmf);
+
+  g_assert_true (hcmd != NULL);
+  g_assert_true (NC_IS_HALO_CM_DIEMER15 (hcmd));
+
+  hcmd2 = nc_halo_cm_diemer15_ref (hcmd);
+  nc_halo_cm_diemer15_clear (&hcmd2);
+  g_assert_true (hcmd2 == NULL);
+
+  g_assert_true (NC_IS_HALO_CM_DIEMER15 (hcmd));
+
+  nc_distance_clear (&dist);
+  nc_transfer_func_clear (&tf);
+  ncm_powspec_filter_clear (&psf);
+  nc_multiplicity_func_clear (&mf);
+  nc_halo_mass_function_clear (&hmf);
+
+  NCM_TEST_FREE (nc_halo_cm_diemer15_free, hcmd);
+}
+
+void
+test_nc_halo_cm_prada12_basic (void)
+{
+  NcDistance *dist        = nc_distance_new (1100.0);
+  NcTransferFunc *tf      = nc_transfer_func_eh_new ();
+  NcPowspecML *ps_ml      = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+  NcmPowspecFilter *psf   = ncm_powspec_filter_new (NCM_POWSPEC (ps_ml), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
+  NcMultiplicityFunc *mf  = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_tinker_new ());
+  NcHaloMassFunction *hmf = nc_halo_mass_function_new (dist, psf, mf);
+  NcHaloCMPrada12 *hcmp;
+  NcHaloCMPrada12 *hcmp2;
+
+  hcmp = nc_halo_cm_prada12_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0, hmf);
+
+  g_assert_true (hcmp != NULL);
+  g_assert_true (NC_IS_HALO_CM_PRADA12 (hcmp));
+
+  hcmp2 = nc_halo_cm_prada12_ref (hcmp);
+  nc_halo_cm_prada12_clear (&hcmp2);
+  g_assert_true (hcmp2 == NULL);
+
+  g_assert_true (NC_IS_HALO_CM_PRADA12 (hcmp));
+
+  nc_distance_clear (&dist);
+  nc_transfer_func_clear (&tf);
+  ncm_powspec_filter_clear (&psf);
+  nc_multiplicity_func_clear (&mf);
+  nc_halo_mass_function_clear (&hmf);
+
+  NCM_TEST_FREE (nc_halo_cm_prada12_free, hcmp);
+}
+
+void
+test_nc_halo_cm_dutton14_basic (void)
+{
+  NcHaloCMDutton14 *hcmd = nc_halo_cm_dutton14_new (NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL, 200.0);
+  NcHaloCMDutton14 *hcmd2;
+
+  g_assert_true (hcmd != NULL);
+  g_assert_true (NC_IS_HALO_CM_DUTTON14 (hcmd));
+
+  hcmd2 = nc_halo_cm_dutton14_ref (hcmd);
+  nc_halo_cm_dutton14_clear (&hcmd2);
+  g_assert_true (hcmd2 == NULL);
+
+  g_assert_true (NC_IS_HALO_CM_DUTTON14 (hcmd));
+
+  NCM_TEST_FREE (nc_halo_cm_dutton14_free, hcmd);
 }
 
 void

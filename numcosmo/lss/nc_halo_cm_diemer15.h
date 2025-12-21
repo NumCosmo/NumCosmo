@@ -68,8 +68,6 @@ NcHaloCMDiemer15 *nc_halo_cm_diemer15_ref (NcHaloCMDiemer15 *hcmdk);
 void nc_halo_cm_diemer15_free (NcHaloCMDiemer15 *hcmdk);
 void nc_halo_cm_diemer15_clear (NcHaloCMDiemer15 **hcmdk);
 
-void nc_halo_cm_diemer15_prepare (NcHaloCMDiemer15 *hcmdk, NcHICosmo *cosmo);
-
 #define NC_HALO_CM_DIEMER15_DEFAULT_LOG10M_DELTA (log10 (2.0e14))
 #define NC_HALO_CM_DIEMER15_DEFAULT_PARAMS_ABSTOL (0.0)
 

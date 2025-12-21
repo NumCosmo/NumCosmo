@@ -95,9 +95,9 @@ _nc_halo_cm_prada12_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_MFP:
       self->mfp = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -124,7 +124,7 @@ static void
 _nc_halo_cm_prada12_dispose (GObject *object)
 {
   NcHaloCMPrada12 *hcmp               = NC_HALO_CM_PRADA12 (object);
-  NcHaloCMPrada12Private * const self =  nc_halo_cm_prada12_get_instance_private (hcmp);
+  NcHaloCMPrada12Private * const self = nc_halo_cm_prada12_get_instance_private (hcmp);
 
   nc_halo_mass_function_clear (&self->mfp);
 

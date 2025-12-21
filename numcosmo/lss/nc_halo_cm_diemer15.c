@@ -126,9 +126,9 @@ _nc_halo_cm_diemer15_set_property (GObject *object, guint prop_id, const GValue 
       nc_halo_mass_function_clear (&self->mfp);
       self->mfp = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -145,9 +145,9 @@ _nc_halo_cm_diemer15_get_property (GObject *object, guint prop_id, GValue *value
     case PROP_MFP:
       g_value_set_object (value, self->mfp);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -360,22 +360,5 @@ void
 nc_halo_cm_diemer15_clear (NcHaloCMDiemer15 **hcmdk)
 {
   g_clear_object (hcmdk);
-}
-
-/**
- * nc_halo_cm_diemer15_prepare:
- * @hcmdk: a #NcHaloCMDiemer15
- * @cosmo: a #NcHICosmo
- *
- * Prepares the object with the cosmology model.
- *
- */
-void
-nc_halo_cm_diemer15_prepare (NcHaloCMDiemer15 *hcmdk, NcHICosmo *cosmo)
-{
-  NcHaloCMDiemer15Private * const self = nc_halo_cm_diemer15_get_instance_private (hcmdk);
-
-  g_assert (self->powspec != NULL);
-  ncm_powspec_prepare_if_needed (self->powspec, NCM_MODEL (cosmo));
 }
 

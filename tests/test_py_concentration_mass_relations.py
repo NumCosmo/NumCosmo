@@ -107,6 +107,11 @@ DUFFY08_OPTS = [
     ("critical", Nc.HaloMassSummaryMassDef.CRITICAL, 200),
 ]
 
+BHATTACHARYA13_OPTS = [
+    ("matter", Nc.HaloMassSummaryMassDef.MEAN, 200),
+    ("critical", Nc.HaloMassSummaryMassDef.CRITICAL, 200),
+]
+
 
 @pytest.fixture(
     name="duffy08_mdef",
@@ -115,6 +120,16 @@ DUFFY08_OPTS = [
 )
 def fixture_duffy08_mdef(request) -> tuple[str, Nc.HaloMassSummaryMassDef, int]:
     """Fixture for mass definition of concentration-mass relations."""
+    return request.param
+
+
+@pytest.fixture(
+    name="bhattacharya13_mdef",
+    params=BHATTACHARYA13_OPTS,
+    ids=[f"{mdef}_{Delta}" for mdef, _, Delta in BHATTACHARYA13_OPTS],
+)
+def fixture_bhattacharya13_mdef(request) -> tuple[str, Nc.HaloMassSummaryMassDef, int]:
+    """Fixture for mass definition of Bhattacharya13 concentration-mass relation."""
     return request.param
 
 
@@ -158,28 +173,31 @@ def fixture_cmr_klypin11() -> (
 @pytest.fixture(name="cmr_bhattacharya13")
 def fixture_cmr_bhattacharya13(
     cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+    bhattacharya13_mdef: tuple[str, Nc.HaloMassSummaryMassDef, int],
 ) -> tuple[pyccl.halos.ConcentrationBhattacharya13, Nc.HaloMassSummary]:
     """Fixture for Bhattacharya13 concentration-mass relation."""
-    hmd = pyccl.halos.MassDef(200, "critical")
+    rho_type, nc_rho_type, Delta = bhattacharya13_mdef
+    hmd = pyccl.halos.MassDef(Delta, rho_type)
     ccl_cmr_Bhattacharya13 = pyccl.halos.ConcentrationBhattacharya13(mass_def=hmd)
 
     # Get cosmology objects
     _, cosmology = cosmologies
     ps_ml = cosmology.ps_ml
 
-    # Create mass function
+    # Create mass function with matching mass definition
     mulf = Nc.MultiplicityFuncTinker.new()
-    mulf.set_mdef(Nc.MultiplicityFuncMassDef.CRITICAL)
-    mulf.set_Delta(200.0)
+    if nc_rho_type == Nc.HaloMassSummaryMassDef.MEAN:
+        mulf.set_mdef(Nc.MultiplicityFuncMassDef.MEAN)
+    else:
+        mulf.set_mdef(Nc.MultiplicityFuncMassDef.CRITICAL)
+    mulf.set_Delta(Delta)
     mfp = Nc.HaloMassFunction.new(cosmology.dist, cosmology.psf_tophat, mulf)
 
     # Get growth function from power spectrum
     assert isinstance(ps_ml, Nc.PowspecMLTransfer)
     gf = ps_ml.peek_gf()
 
-    cmr_Bhattacharya13 = Nc.HaloCMBhattacharya13.new(
-        Nc.HaloMassSummaryMassDef.CRITICAL, 200.0, mfp, gf
-    )
+    cmr_Bhattacharya13 = Nc.HaloCMBhattacharya13.new(nc_rho_type, Delta, mfp, gf)
 
     return ccl_cmr_Bhattacharya13, cmr_Bhattacharya13
 
@@ -341,6 +359,131 @@ def test_cmr_concentration_redshift_dependence(
         assert c > 0.0
         assert c < 100.0
         assert np.isfinite(c)
+
+
+def test_cmr_param_cdelta_property() -> None:
+    """Test cDelta property for NcHaloCMParam."""
+    cmr = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.CRITICAL, 200.0)
+
+    # Test cDelta parameter access and modification
+    original_cdelta = cmr["cDelta"]
+    assert isinstance(original_cdelta, float)
+    assert original_cdelta > 0.0
+
+    # Set a new value
+    test_cdelta = 5.5
+    cmr["cDelta"] = test_cdelta
+    assert np.isclose(cmr["cDelta"], test_cdelta)
+
+    # Restore original value
+    cmr["cDelta"] = original_cdelta
+
+
+def test_cmr_bhattacharya13_mass_function_property(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+) -> None:
+    """Test mass-function property for NcHaloCMBhattacharya13."""
+    _, cosmology = cosmologies
+    ps_ml = cosmology.ps_ml
+
+    # Create initial mass function
+    mulf = Nc.MultiplicityFuncTinker.new()
+    mulf.set_mdef(Nc.MultiplicityFuncMassDef.CRITICAL)
+    mulf.set_Delta(200.0)
+    mfp = Nc.HaloMassFunction.new(cosmology.dist, cosmology.psf_tophat, mulf)
+
+    # Get growth function
+    assert isinstance(ps_ml, Nc.PowspecMLTransfer)
+    gf = ps_ml.peek_gf()
+
+    cmr = Nc.HaloCMBhattacharya13.new(
+        Nc.HaloMassSummaryMassDef.CRITICAL, 200.0, mfp, gf
+    )
+
+    # Test getting mass-function property
+    retrieved_mfp = cmr.props.mass_function
+    assert retrieved_mfp is not None
+    assert isinstance(retrieved_mfp, Nc.HaloMassFunction)
+
+    # Test getting growth-function property
+    retrieved_gf = cmr.props.growth_function
+    assert retrieved_gf is not None
+    assert isinstance(retrieved_gf, Nc.GrowthFunc)
+
+
+def test_cmr_diemer15_mass_function_property(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+) -> None:
+    """Test mass-function property for NcHaloCMDiemer15."""
+    _, cosmology = cosmologies
+
+    # Create mass function
+    mulf = Nc.MultiplicityFuncTinker.new()
+    mulf.set_mdef(Nc.MultiplicityFuncMassDef.CRITICAL)
+    mulf.set_Delta(200.0)
+    mfp = Nc.HaloMassFunction.new(cosmology.dist, cosmology.psf_tophat, mulf)
+
+    cmr = Nc.HaloCMDiemer15.new(Nc.HaloMassSummaryMassDef.CRITICAL, 200.0, mfp)
+
+    # Test getting mass-function property
+    retrieved_mfp = cmr.props.mass_function
+    assert retrieved_mfp is not None
+    assert isinstance(retrieved_mfp, Nc.HaloMassFunction)
+
+
+def test_cmr_prada12_mass_function_property(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+) -> None:
+    """Test mass-function property for NcHaloCMPrada12."""
+    _, cosmology = cosmologies
+
+    # Create mass function
+    mulf = Nc.MultiplicityFuncTinker.new()
+    mulf.set_mdef(Nc.MultiplicityFuncMassDef.CRITICAL)
+    mulf.set_Delta(200.0)
+    mfp = Nc.HaloMassFunction.new(cosmology.dist, cosmology.psf_tophat, mulf)
+
+    cmr = Nc.HaloCMPrada12.new(Nc.HaloMassSummaryMassDef.CRITICAL, 200.0, mfp)
+
+    # Test getting mass-function property
+    retrieved_mfp = cmr.props.mass_function
+    assert retrieved_mfp is not None
+    assert isinstance(retrieved_mfp, Nc.HaloMassFunction)
+
+
+@parametrized_all_cmr()
+def test_cmr_serialize_duplicate(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+    cmr_fixture: tuple[pyccl.halos.Concentration, Nc.HaloMassSummary],
+) -> None:
+    """Test serialization and duplication of concentration-mass relations."""
+    _, cosmo_nc = cosmologies
+    _, nc_hms = cmr_fixture
+
+    # Set test values
+    nc_hms["log10MDelta"] = 13.5
+
+    # Serialize and duplicate
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    nc_hms_dup = ser.dup_obj(nc_hms)
+
+    # Verify it's a different object
+    assert nc_hms_dup is not nc_hms
+
+    # Verify it's the correct type
+    assert isinstance(nc_hms_dup, Nc.HaloMassSummary)
+    assert type(nc_hms_dup) is type(nc_hms)
+
+    # Verify parameter values are copied
+    assert np.isclose(nc_hms_dup["log10MDelta"], nc_hms["log10MDelta"])
+
+    # Verify mass and concentration calculations match
+    assert np.isclose(nc_hms_dup.mass(), nc_hms.mass())
+
+    z = 0.5
+    c1 = nc_hms.concentration(cosmo_nc.cosmo, z)
+    c2 = nc_hms_dup.concentration(cosmo_nc.cosmo, z)
+    assert np.isclose(c1, c2)
 
 
 @parametrized_concentration_mass_tests()
