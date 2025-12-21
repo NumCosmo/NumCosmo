@@ -22,6 +22,7 @@ dependencies:
   - gobject-introspection
   - gsl
   - hdf5
+  - healpy
   - jupyter
   - lcov
   - libflint
@@ -32,7 +33,7 @@ dependencies:
   - mypy
   - ninja
   - nlopt
-  - numpy >= 1.23.0
+  - numpy < 2.4
   - openblas=*=*openmp*
   - openmpi
   - pandas

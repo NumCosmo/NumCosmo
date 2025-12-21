@@ -361,7 +361,7 @@ _nc_cluster_mass_ascaso_lnR_sigma (NcClusterMass *clusterm, const gdouble lnM, c
   const gdouble Dln1pz                    = log1p (z) - self->ln1pz0;
 
   lnR[0]   = MU_P0    + MU_P1    * DlnM + MU_P2    * Dln1pz;
-  sigma[0] = SIGMA_P0 + SIGMA_P1 * DlnM + SIGMA_P2 * Dln1pz;
+  sigma[0] = fabs (SIGMA_P0 + SIGMA_P1 * DlnM + SIGMA_P2 * Dln1pz);
 }
 
 static gdouble
@@ -389,57 +389,28 @@ _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoubl
   gdouble lnR_true, sigma;
 
   _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
-  {
-    const gdouble x_cut = (lnR_true - CUT) / (M_SQRT2 * sigma);
-    const gdouble x_max = (lnR_true - self->lnR_max) / (M_SQRT2 * sigma);
 
-    if ((fabs (x_max) > 4.0) || (fabs (x_cut) > 4.0))
-      return -(erfc (x_cut) - erfc (x_max)) / 2.0;
-    else
-      return (erf (x_cut) - erf (x_max)) / 2.0;
-  }
+  return ncm_util_gaussian_integral (CUT, self->lnR_max, lnR_true, sigma);
 }
 
 static gdouble
 _nc_cluster_mass_ascaso_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params)
 {
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
+  const gdouble cut           = CUT;
+  gdouble lnR_true, sigma;
 
-  if ((lnM_obs_lower[0] < CUT) && (lnM_obs_upper[0] < 0.0))
-  {
+  /* If entire bin is below CUT, return 0 */
+  if (lnM_obs_upper[0] < cut)
     return 0.0;
-  }
-  else
+
+  _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
+
+  /* Enforce CUT as effective lower bound */
   {
-    gdouble lnR_true, sigma;
+    const gdouble effective_lower = (lnM_obs_lower[0] < cut) ? cut : lnM_obs_lower[0];
 
-    _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
-    {
-      const gdouble x_min = (lnR_true - lnM_obs_lower[0]) / (M_SQRT2 * sigma);
-      const gdouble x_max = (lnR_true - lnM_obs_upper[0]) / (M_SQRT2 * sigma);
-      const gdouble x_cut = (lnR_true - CUT) / (M_SQRT2 * sigma);
-      gdouble intp_bin    = 0.0;
-
-      if ((lnM_obs_lower[0] <  0.0) && (lnM_obs_upper[0] >=  0.0))
-      {
-        if ((fabs (x_max) > 4.0) || (fabs (x_cut) > 4.0))
-          return -(erfc (x_cut) - erfc (x_max)) / 2.0;
-        else
-          return (erf (x_cut) - erf (x_max))  / 2.0;
-      }
-      else
-      {
-        if ((fabs (x_max) > 4.0) || (fabs (x_min) > 4.0))
-          intp_bin = -(erfc (x_min) - erfc (x_max)) / 2.0;
-        else
-          intp_bin = (erf (x_min) - erf (x_max))  / 2.0;
-
-        if (intp_bin < 0.0)
-          return 0.0;
-        else
-          return intp_bin;
-      }
-    }
+    return ncm_util_gaussian_integral (effective_lower, lnM_obs_upper[0], lnR_true, sigma);
   }
 }
 

@@ -46,6 +46,7 @@ void test_ncm_sphere_map_angles (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_ring (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_pix2alm (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_pix2alm2pix (TestNcmSphereMap *test, gconstpointer pdata);
+void test_ncm_sphere_map_properties (TestNcmSphereMap *test, gconstpointer pdata);
 
 void test_ncm_sphere_map_traps (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_invalid_nside (TestNcmSphereMap *test, gconstpointer pdata);
@@ -80,6 +81,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/sphere_map/pix2alm2pix", TestNcmSphereMap, NULL,
               &test_ncm_sphere_map_new,
               &test_ncm_sphere_map_pix2alm2pix,
+              &test_ncm_sphere_map_free);
+
+  g_test_add ("/ncm/sphere_map/properties", TestNcmSphereMap, NULL,
+              &test_ncm_sphere_map_new,
+              &test_ncm_sphere_map_properties,
               &test_ncm_sphere_map_free);
 
   g_test_add ("/ncm/sphere_map/traps", TestNcmSphereMap, NULL,
@@ -288,6 +294,66 @@ test_ncm_sphere_map_pix2alm2pix (TestNcmSphereMap *test, gconstpointer pdata)
   ncm_sphere_map_alm2map (test->pix);
 
   ncm_rng_free (rng);
+}
+
+void
+test_ncm_sphere_map_properties (TestNcmSphereMap *test, gconstpointer pdata)
+{
+  const guint test_lmax = 512;
+  const guint test_iter = 5;
+  guint lmax_get, iter_get;
+  NcmSphereMapOrder order_get;
+  NcmSphereMapCoordSys coordsys_get;
+
+  g_assert_true (test->pix != NULL);
+
+  /* Test lmax property getter/setter and function */
+  ncm_sphere_map_set_lmax (test->pix, test_lmax);
+  lmax_get = ncm_sphere_map_get_lmax (test->pix);
+  g_assert_cmpuint (lmax_get, ==, test_lmax);
+
+  /* Test lmax property through GObject API */
+  g_object_get (test->pix, "lmax", &lmax_get, NULL);
+  g_assert_cmpuint (lmax_get, ==, test_lmax);
+
+  /* Test iter property getter/setter */
+  ncm_sphere_map_set_iter (test->pix, test_iter);
+  iter_get = ncm_sphere_map_get_iter (test->pix);
+  g_assert_cmpuint (iter_get, ==, test_iter);
+
+  /* Test iter property through GObject API */
+  g_object_get (test->pix, "iter", &iter_get, NULL);
+  g_assert_cmpuint (iter_get, ==, test_iter);
+
+  /* Test order property getter/setter */
+  ncm_sphere_map_set_order (test->pix, NCM_SPHERE_MAP_ORDER_RING);
+  order_get = ncm_sphere_map_get_order (test->pix);
+  g_assert_cmpint (order_get, ==, NCM_SPHERE_MAP_ORDER_RING);
+
+  /* Test order property through GObject API */
+  g_object_get (test->pix, "order", &order_get, NULL);
+  g_assert_cmpint (order_get, ==, NCM_SPHERE_MAP_ORDER_RING);
+
+  ncm_sphere_map_set_order (test->pix, NCM_SPHERE_MAP_ORDER_NEST);
+  order_get = ncm_sphere_map_get_order (test->pix);
+  g_assert_cmpint (order_get, ==, NCM_SPHERE_MAP_ORDER_NEST);
+
+  /* Test coordsys property getter/setter */
+  ncm_sphere_map_set_coordsys (test->pix, NCM_SPHERE_MAP_COORD_SYS_GALACTIC);
+  coordsys_get = ncm_sphere_map_get_coordsys (test->pix);
+  g_assert_cmpint (coordsys_get, ==, NCM_SPHERE_MAP_COORD_SYS_GALACTIC);
+
+  /* Test coordsys property through GObject API */
+  g_object_get (test->pix, "coordsys", &coordsys_get, NULL);
+  g_assert_cmpint (coordsys_get, ==, NCM_SPHERE_MAP_COORD_SYS_GALACTIC);
+
+  ncm_sphere_map_set_coordsys (test->pix, NCM_SPHERE_MAP_COORD_SYS_ECLIPTIC);
+  coordsys_get = ncm_sphere_map_get_coordsys (test->pix);
+  g_assert_cmpint (coordsys_get, ==, NCM_SPHERE_MAP_COORD_SYS_ECLIPTIC);
+
+  ncm_sphere_map_set_coordsys (test->pix, NCM_SPHERE_MAP_COORD_SYS_CELESTIAL);
+  coordsys_get = ncm_sphere_map_get_coordsys (test->pix);
+  g_assert_cmpint (coordsys_get, ==, NCM_SPHERE_MAP_COORD_SYS_CELESTIAL);
 }
 
 void
