@@ -321,7 +321,7 @@ def test_halo_cm_klypin11_compare_colossus(cosmo: Nc.HICosmo) -> None:
     )  # mass in Msun, colossus mass in Msun/h
     c_nc = np.zeros(len(log10m_array))
     for i, log10M in enumerate(log10m_array):
-        hms["log10MDelta"] = log10M + np.log10(cosmo.h())
+        hms["log10MDelta"] = log10M - np.log10(cosmo.h())
         c_nc[i] = hms.concentration(cosmo, 0.0)
 
     assert_allclose(c_nc, c_colossus, rtol=1e-5)

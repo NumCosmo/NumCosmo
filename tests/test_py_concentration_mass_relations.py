@@ -167,10 +167,10 @@ def fixture_mass_and_z_array() -> tuple[np.ndarray, np.ndarray]:
     return m_arr, z_arr
 
 
-def parametrized_concmass_tests():
+def parametrized_concentration_mass_tests():
     """Parametrized concentration-mass relation tests."""
     return pytest.mark.parametrize(
-        "concmassrels",
+        "concentration_mass_relations",
         [
             lf("cmr_duffy08"),
             lf("cmr_duffy08_vir"),
@@ -179,19 +179,16 @@ def parametrized_concmass_tests():
     )
 
 
-@parametrized_concmass_tests()
+@parametrized_concentration_mass_tests()
 def test_compare_cmr(
     cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
-    concmassrels: tuple[pyccl.halos.Concentration, Nc.HaloMassSummary],
+    concentration_mass_relations: tuple[pyccl.halos.Concentration, Nc.HaloMassSummary],
     mass_and_z_array: tuple[np.ndarray, np.ndarray],
 ) -> None:
     """Test comparison of concentration-mass relations."""
     cosmo_ccl, cosmo_nc = cosmologies
-    ccl_hmc, nc_hms = concmassrels
+    ccl_hmc, nc_hms = concentration_mass_relations
     m_arr, z_arr = mass_and_z_array
-
-    # nc_hmf.set_eval_limits(cosmo_nc.cosmo, np.log(1.0e11), np.log(1.0e16), 0.0, 2.0)
-    # nc_hmf.prepare(cosmo_nc.cosmo)
 
     for z in z_arr:
         a = 1.0 / (1.0 + z)

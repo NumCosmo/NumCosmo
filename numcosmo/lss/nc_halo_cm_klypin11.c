@@ -139,7 +139,7 @@ _nc_halo_cm_klypin11_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, co
   gdouble mass = _nc_halo_cm_klypin11_mass (hms);
   gdouble h    = nc_hicosmo_h (cosmo);
 
-  return 9.6 * pow (mass / h / 1.0e12, -0.075);
+  return 9.6 * pow (mass * h / 1.0e12, -0.075);
 }
 
 /**
