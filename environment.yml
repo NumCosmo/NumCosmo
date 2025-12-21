@@ -10,6 +10,7 @@ dependencies:
   - getdist
   - gsl
   - hdf5
+  - healpy
   - jupyterlab
   - libflint
   - libfyaml

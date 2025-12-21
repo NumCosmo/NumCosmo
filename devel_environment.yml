@@ -22,6 +22,7 @@ dependencies:
   - gobject-introspection
   - gsl
   - hdf5
+  - healpy
   - jupyter
   - lcov
   - libflint
