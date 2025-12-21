@@ -55,22 +55,25 @@ class JpasSSCType(StrEnum):
     FULLSKY = auto()
     """Uses a full-sky approximation for the SSC matrix $S_{ij}$."""
     FULL = auto()
-    """Uses the HEALPix mask for the **full** J-PAS sky coverage for SSC calculation."""
+    """Uses the HEALPix mask for the full J-PAS sky coverage for SSC."""
     GUARANTEED = auto()
-    """Uses the HEALPix mask for the **guaranteed** J-PAS sky coverage for SSC calculation."""
+    """Uses the HEALPix mask for the guaranteed J-PAS sky coverage for SSC."""
 
 
 class ClusterMassType(StrEnum):
     """Mass-observable relation types.
 
-    Defines the model used to relate the cluster's observable property (e.g., richness, $N_{gal}$)
-    to its underlying true mass ($lnM$ or $ln M_{200c}$).
+    Defines the model used to relate the cluster's observable property (e.g., richness,
+    $N_{gal}$) to its underlying true mass ($lnM$ or $ln M_{200c}$).
     """
 
     NODIST = auto()
-    """No distribution; assumes a perfect mass-observable relation (no intrinsic scatter)."""
+    """No distribution
+
+    assumes a perfect mass-observable relation (no intrinsic scatter).
+    """
     ASCASO = auto()
-    """Uses the mass-richness relation parameters from Ascaso et al. (2015) for scatter/bias."""
+    """Uses the mass-richness relation parameters from Ascaso et al. (2015)."""
 
 
 class ClusterRedshiftType(StrEnum):
@@ -99,12 +102,14 @@ def create_zbins_kernels(
 
     :param z_min: Minimum redshift of the cluster bin range.
     :param z_max: Maximum redshift of the cluster bin range.
-    :param nknots: Number of knots (boundaries) for the redshift bins (e.g., 8 knots give 7 bins).
+    :param nknots: Number of knots (boundaries) for the redshift bins (e.g., 8 knots
+        give 7 bins).
     :param kernel_nknots: Number of points for the kernel's internal redshift array.
     :param kernel_zmax: Maximum redshift for the kernel evaluation range.
     :return: A tuple containing:
         - kernel_z (np.ndarray): Redshift values for kernel evaluation ($z$).
-        - kernels_T (np.ndarray): The kernel matrix $T_i(z)$ where $T_i(z) = 1/Delta z_i$ inside bin $i$ and 0 otherwise.
+        - kernels_T (np.ndarray): The kernel matrix $T_i(z)$ where $T_i(z) = 1/Delta
+          z_i$ inside bin $i$ and 0 otherwise.
         - z_bins_knots (np.ndarray): Redshift bin boundaries.
     """
     # Redshift bins and knots (boundaries)
@@ -137,8 +142,9 @@ def create_lnM_obs_bins(
 ) -> np.ndarray:
     """Create the log-observable mass bins for the J-Pas 2024 forecast.
 
-    The mass variable is typically $ln M$ (log-base-e of $M_{200c}$) in units of $h^{-1} M_odot$.
-    These bins are defined in terms of the observed proxy (e.g., richness).
+    The mass variable is typically $ln M$ (log-base-e of $M_{200c}$) in units of
+    $h^{-1} M_\\odot$. These bins are defined in terms of the observed proxy (e.g.,
+    richness).
 
     :param lnM_obs_min: Minimum log-mass-observable knot boundary.
     :param lnM_obs_max: Maximum log-mass-observable knot boundary.
@@ -151,7 +157,7 @@ def create_lnM_obs_bins(
 
 
 def survey_area(sky_cut: JpasSSCType) -> float:
-    """Return the survey area in square degrees ($text{sqd}$) for the J-Pas 2024 forecast.
+    """Survey area in square degrees ($\text{sqd}$) for the J-Pas 2024 forecast.
 
     :param sky_cut: The type of sky coverage assumed.
     :raises ValueError: If the sky cut type is not FULLSKY or a masked type.
@@ -281,7 +287,8 @@ def create_cosmo() -> Nc.HICosmo:
 
     # Set default fitting types (typically linear scale, fixed tolerance)
     cosmo.params_set_default_ftype()
-    # Ensure $Omega_x$ (Dark Energy) is calculated from $Omega_k$ (curvature) and $Omega_m$
+    # Ensure $Omega_x$ (Dark Energy) is calculated from $Omega_k$ (curvature) and
+    # $Omega_m$
     cosmo.omega_x2omega_k()
 
     # --- Set Fiducial Values (from current best-fit cosmology) ---
@@ -332,8 +339,9 @@ def create_cosmo() -> Nc.HICosmo:
 def create_mfunc_array(psml: Nc.PowspecML) -> Ncm.ObjArray:
     """Create a list of extra functions (derived parameters) for J-Pas 2024 forecast.
 
-    These functions compute parameters like $sigma_8$ and $Omega_{m0}$ from the
-    primary cosmological parameters, often required for visualization or as nuisance parameters.
+    These functions compute parameters like $sigma_8$ and $Omega_{m0}$ from the primary
+    cosmological parameters, often required for visualization or as nuisance
+    parameters.
 
     :param psml: The power spectrum model to be used for calculations.
     :return: An array of Ncm.MSetFuncList objects (derived parameters).
@@ -567,12 +575,12 @@ def generate_jpas_forecast_2024(
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Generate J-Pas 2024 cluster abundance forecast experiment dictionary.
 
-    This function assembles all model components, sets up the likelihood,
-    generates mock data, and applies covariance matrices (including SSC)
-    for a Fisher matrix forecast or likelihood analysis.
+    This function assembles all model components, sets up the likelihood, generates
+    mock data, and applies covariance matrices (including SSC) for a Fisher matrix
+    forecast or likelihood analysis.
 
-    :param area: The fixed survey area in square degrees to use. This is overridden
-                 if a masked SSC type (FULL/GUARANTEED) is used for resampling or fitting.
+    :param area: The fixed survey area in square degrees to use. This is overridden if
+        a masked SSC type (FULL/GUARANTEED) is used for resampling or fitting.
     :param z_min: Minimum redshift for the cluster bins.
     :param z_max: Maximum redshift for the cluster bins.
     :param znknots: Number of redshift bin boundaries.
@@ -582,33 +590,28 @@ def generate_jpas_forecast_2024(
     :param lnMobsnknots: Number of log-observable mass bin boundaries.
     :param cluster_mass_type: Model for mass-observable relation scatter/bias.
     :param use_fixed_cov: If True, the full covariance is computed once and fixed.
-    :param fitting_model: $(Omega_c, w, sigma_8)$ for the model used to calculate
-                          the **theoretical covariance matrix**.
-    :param resample_model: $(Omega_c, w, sigma_8)$ for the model used to **generate
-                           the mock data vector**.
+    :param fitting_model: $(Omega_c, w, sigma_8)$ for the model used to calculate the
+        **theoretical covariance matrix**.
+    :param resample_model: $(Omega_c, w, sigma_8)$ for the model used to **generate the
+        mock data vector**.
     :param resample_seed: Seed for the random number generator used for mock data.
     :param fitting_Sij_type: The type of SSC matrix $S_{ij}$ to use for the fitting
-                             (theoretical) covariance.
-    :param resample_Sij_type: The type of SSC matrix $S_{ij}$ to use for generating
-                              the mock data vector.
+        (theoretical) covariance.
+    :param resample_Sij_type: The type of SSC matrix $S_{ij}$ to use for generating the
+        mock data vector.
     :return: A tuple containing:
-             - experiment (Ncm.ObjDictStr): Dictionary containing the likelihood and model set.
+             - experiment (Ncm.ObjDictStr): Dictionary containing the likelihood and
+               model set.
              - mfunc_oa (Ncm.ObjArray): Array of extra (derived) functions.
     """
     # Adjust area if a masked SSC type is used, giving priority to resample model
-    if (
-        resample_Sij_type == JpasSSCType.FULL
-        or resample_Sij_type == JpasSSCType.GUARANTEED
-    ):
+    if resample_Sij_type in (JpasSSCType.FULL, JpasSSCType.GUARANTEED):
         area = survey_area(resample_Sij_type)
         print(
             f"sky cut is of type {resample_Sij_type} adjusting to "
             f"corresponding survey area = {area:.2f} sqd. "
         )
-    elif (
-        fitting_Sij_type == JpasSSCType.FULL
-        or fitting_Sij_type == JpasSSCType.GUARANTEED
-    ):
+    elif fitting_Sij_type in (JpasSSCType.FULL, JpasSSCType.GUARANTEED):
         area = survey_area(fitting_Sij_type)
         print(
             f"sky cut is of type {fitting_Sij_type} adjusting to "
@@ -692,13 +695,15 @@ def generate_jpas_forecast_2024(
     # Generate the mock data vector (this computes $mu_{resample}$ and resamples $N$)
     ncounts_gauss.resample(mset, rng)
 
-    # Reset $text{has_ssc}$ based on the $text{fitting_Sij_type}$ for the actual likelihood evaluation
+    # Reset $text{has_ssc}$ based on the $text{fitting_Sij_type}$ for the actual
+    # likelihood evaluation
     if fitting_Sij_type == JpasSSCType.NO_SSC:
         ncounts_gauss.set_has_ssc(False)
     else:
         ncounts_gauss.set_has_ssc(True)
 
-    # Compute and fix the full covariance matrix (if requested, useful for Fisher matrix)
+    # Compute and fix the full covariance matrix (if requested, useful for Fisher
+    # matrix)
     if use_fixed_cov:
         print("Computing fixed covariance...")
         _set_mset_params(mset, fitting_model)  # Use fitting model for fixed covariance

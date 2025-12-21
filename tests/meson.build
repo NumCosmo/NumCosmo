@@ -678,6 +678,22 @@ if python_pyccl.found()
     ]
 endif
 
+python_pyssc = python_module.find_installation(
+    'python3',
+    modules: ['numcosmo_py.external.pyssc'],
+    required: false,
+)
+
+if python_pyssc.found()
+    python_tests += [
+        {
+            'name': 'py_jpas_forecast24',
+            'source': 'test_py_jpas_forecast24.py',
+            'timeout': 0,
+        },
+    ]
+endif
+
 python_matplotlib = python_module.find_installation(
     'python3',
     modules: ['matplotlib'],
