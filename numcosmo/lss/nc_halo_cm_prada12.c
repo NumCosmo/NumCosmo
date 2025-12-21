@@ -4,7 +4,7 @@
  *            nc_halo_cm_prada12.c
  *
  *  Mon Dec 16 15:01:55 2024
- *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br> 
+ *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br>
  ****************************************************************************/
 /*
  * nc_halo_cm_prada12.c
@@ -26,9 +26,9 @@
 
 /**
  * NcHaloCMPrada12
- * 
+ *
  * Class defining the Prada et al. 2012 concentration-mass relation
- * 
+ *
  * This class implements the Prada et al. 2012 concentration-mass relation.
  * FIXME include reference, equation and ranges of mass and redshift.
  *
@@ -48,7 +48,9 @@ typedef struct _NcHaloCMPrada12Private
 {
   gdouble Delta;
   NcHaloMassSummaryMassDef mdef;
+
   gdouble (*concentration) (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z);
+
   NcHaloMassFunction *mfp;
 } NcHaloCMPrada12Private;
 
@@ -74,9 +76,9 @@ nc_halo_cm_prada12_init (NcHaloCMPrada12 *hcmp)
 {
   NcHaloCMPrada12Private * const self = nc_halo_cm_prada12_get_instance_private (hcmp);
 
-  self->Delta = 0.0;
-  self->mdef  = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
-  self->mfp = NULL;
+  self->Delta         = 0.0;
+  self->mdef          = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
+  self->mfp           = NULL;
   self->concentration = NULL;
 }
 
@@ -92,7 +94,7 @@ _nc_halo_cm_prada12_set_property (GObject *object, guint prop_id, const GValue *
   {
     case PROP_MFP:
       self->mfp = g_value_dup_object (value);
-      break;  
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -148,8 +150,8 @@ nc_halo_cm_prada12_class_init (NcHaloCMPrada12Class *klass)
   NcHaloMassSummaryClass *hms_class = NC_HALO_MASS_SUMMARY_CLASS (klass);
   NcmModelClass *model_class        = NCM_MODEL_CLASS (klass);
 
-  object_class->dispose  = &_nc_halo_cm_prada12_dispose;
-  object_class->finalize = &_nc_halo_cm_prada12_finalize;
+  object_class->dispose      = &_nc_halo_cm_prada12_dispose;
+  object_class->finalize     = &_nc_halo_cm_prada12_finalize;
   object_class->set_property = &_nc_halo_cm_prada12_set_property;
   object_class->get_property = &_nc_halo_cm_prada12_get_property;
 
@@ -234,41 +236,41 @@ _nc_halo_cm_prada12_set_Delta (NcHaloMassSummary *hms, gdouble Delta)
 static gdouble
 _cmin (const gdouble x)
 {
-  return 3.681 + (5.033 - 3.681) * (1 / M_PI * atan(6.948 * (x - 0.424)) + 0.5);
+  return 3.681 + (5.033 - 3.681) * (1 / M_PI * atan (6.948 * (x - 0.424)) + 0.5);
 }
 
 static gdouble
 _sigmin (const gdouble x)
 {
-  return 1.047 + (1.646 - 1.047) * (1 / M_PI * atan(7.386 * (x - 0.526)) + 0.5);
+  return 1.047 + (1.646 - 1.047) * (1 / M_PI * atan (7.386 * (x - 0.526)) + 0.5);
 }
 
 static gdouble
 _nc_halo_cm_prada12_concentration_critical (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
-  
-  NcHaloCMPrada12 *hcmp = NC_HALO_CM_PRADA12 (hms);
+  NcHaloCMPrada12 *hcmp               = NC_HALO_CM_PRADA12 (hms);
   NcHaloCMPrada12Private * const self =  nc_halo_cm_prada12_get_instance_private (hcmp);
 
   g_return_val_if_fail (NC_IS_HICOSMO_DE (cosmo), NAN);
+
   NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (cosmo);
 
   nc_halo_mass_function_prepare_if_needed (self->mfp, cosmo);
 
   gdouble mass  = _nc_halo_cm_prada12_mass (hms);
-  gdouble lnM   = log(mass);
+  gdouble lnM   = log (mass);
   gdouble sigma = nc_halo_mass_function_sigma_lnM (self->mfp, cosmo, lnM, z);
   gdouble a     = 1.0 / (1.0 + z);
   gdouble Ode0  = nc_hicosmo_de_E2Omega_de (cosmo_de, 0.0);
   gdouble Om0   = nc_hicosmo_Omega_m0 (cosmo);
-  
-  gdouble x             = a * pow (Ode0 / Om0, (1.0 / 3.0));
+
+  gdouble x = a * pow (Ode0 / Om0, (1.0 / 3.0));
   gdouble B0, B1, sig, C;
 
-  B0 = _cmin(x) / _cmin(1.393);
-  B1 = _sigmin(x) / _sigmin(1.393);
+  B0  = _cmin (x) / _cmin (1.393);
+  B1  = _sigmin (x) / _sigmin (1.393);
   sig = B1 * sigma;
-  C = 2.881 * (pow(sig / 1.257, 1.022) + 1.0) * exp(0.060 / pow(sig, 2.0));
+  C   = 2.881 * (pow (sig / 1.257, 1.022) + 1.0) * exp (0.060 / pow (sig, 2.0));
 
   return B0 * C;
 }
@@ -281,7 +283,10 @@ _nc_halo_cm_prada12_set_mdef (NcHaloMassSummary *hms, NcHaloMassSummaryMassDef m
 
   if (self->Delta != 0.0)
     if ((mdef != NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL) || (self->Delta != 200.0))
+    {
+      printf ("%f %d\n", self->Delta, mdef);
       g_error ("Prada12 concentration: mdef must be NC_HALO_MASS_SUMMARY_MASS_DEF_CRITIAL and Delta must be 200.0");
+    }
 
   self->mdef = mdef;
 
@@ -311,9 +316,9 @@ NcHaloCMPrada12 *
 nc_halo_cm_prada12_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta)
 {
   NcHaloCMPrada12 *hcmp = g_object_new (NC_TYPE_HALO_CM_PRADA12,
-                                         "mass-def", mdef,
-                                         "Delta",    Delta,
-                                         NULL);
+                                        "mass-def", mdef,
+                                        "Delta",    Delta,
+                                        NULL);
 
   return hcmp;
 }
