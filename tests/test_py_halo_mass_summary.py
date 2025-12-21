@@ -495,3 +495,43 @@ def test_halo_cm_prada12_compare_colossus(
             c_nc[i, j] = hms.concentration(cosmo, z)
 
     assert_allclose(c_nc, c_colossus, rtol=3e-4)
+
+
+def test_halo_cm_diemer15_compare_colossus(
+    dist: Nc.Distance, psf: Ncm.PowspecFilter, cosmo: Nc.HICosmo
+) -> None:
+    """Test Diemer15 against Colossus reference data."""
+
+    # Pre-generated from Colossus (shape: len(Z_ARRAY) x len(log10m_array))
+    c_colossus = np.array(
+        [
+            [13.11850632, 10.48474103, 8.12989781, 6.09954273, 4.52362895],
+            [9.93527223, 7.97227869, 6.24012582, 4.8003626, 3.83021077],
+            [7.75884376, 6.27055974, 4.99019725, 4.00396672, 3.56143261],
+            [6.31542825, 5.16064852, 4.21014309, 3.5824162, 3.62145936],
+            [5.33539427, 4.42711531, 3.73304491, 3.41073544, 3.91818934],
+        ]
+    )
+
+    # Setup mass function for CRITICAL/200
+    mulf = Nc.MultiplicityFuncTinker.new()
+    mulf.set_mdef(Nc.MultiplicityFuncMassDef.CRITICAL)
+    mulf.set_Delta(200)
+    mulf.set_linear_interp(True)
+    mfp = Nc.HaloMassFunction.new(dist, psf, mulf)
+
+    # Setup
+    hms = Nc.HaloCMDiemer15(
+        mass_def=Nc.HaloMassSummaryMassDef.CRITICAL, Delta=200.0, mass_function=mfp
+    )
+
+    # NumCosmo computation
+    log10M_array = np.log10(10.0 ** np.arange(10.0, 15.0, 1.0) / cosmo.h())
+    z_array = np.linspace(0.0, 2.0, 5)
+    c_nc = np.zeros((len(z_array), len(log10M_array)))
+    for i, z in enumerate(z_array):
+        for j, log10M in enumerate(log10M_array):
+            hms["log10MDelta"] = log10M
+            c_nc[i, j] = hms.concentration(cosmo, z)
+
+    assert_allclose(c_nc, c_colossus, rtol=5e-4)

@@ -260,14 +260,16 @@ _nc_halo_cm_diemer15_concentration_critical (NcHaloMassSummary *hms, NcHICosmo *
   nc_halo_mass_function_prepare_if_needed (self->mfp, cosmo);
   ncm_powspec_prepare_if_needed (self->powspec, NCM_MODEL (cosmo));
 
-  const gdouble mass  = _nc_halo_cm_diemer15_mass (hms);
-  const gdouble lnM   = log (mass);
-  const gdouble sigma = nc_halo_mass_function_sigma_lnM (self->mfp, cosmo, lnM, z);
-  const gdouble R     = exp (nc_halo_mass_function_lnM_to_lnR (self->mfp, cosmo, lnM)) * 0.69;
-  const gdouble k_R   = 2.0 * M_PI / R;
-  const gdouble cmin  = 6.58 + 1.27 * _dlnpk_dlnk (hms, cosmo, z, k_R);
-  const gdouble nmin  = 7.28 + 1.56 * _dlnpk_dlnk (hms, cosmo, z, k_R);
-  const gdouble nu    = 1.686 / sigma;
+  const gdouble mass      = _nc_halo_cm_diemer15_mass (hms);
+  const gdouble lnM       = log (mass);
+  const gdouble sigma     = nc_halo_mass_function_sigma_lnM (self->mfp, cosmo, lnM, z);
+  const gdouble R         = exp (nc_halo_mass_function_lnM_to_lnR (self->mfp, cosmo, lnM));
+  const gdouble kappa     = 1.0; /* TODO: colossus uses kappa = 1.0 but paper uses kappa = 0.69 (original parameters) */
+  const gdouble k_R       = 2.0 * M_PI * kappa / R;
+  const gdouble dlnk_dlnk = _dlnpk_dlnk (hms, cosmo, z, k_R);
+  const gdouble cmin      = 6.58 + 1.27 * dlnk_dlnk;
+  const gdouble nmin      = 7.28 + 1.56 * dlnk_dlnk;
+  const gdouble nu        = 1.686 / sigma;
 
   return cmin * 0.5 * (pow ((nmin / nu), 1.08) + pow (nu / nmin, 1.77));
 }
