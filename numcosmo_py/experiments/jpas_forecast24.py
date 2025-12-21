@@ -465,23 +465,28 @@ def create_covariance_S(
 
 def create_cluster_mass(
     cluster_mass_type: ClusterMassType,
-) -> Nc.ClusterMass:
+) -> tuple[Nc.ClusterMass, float, float]:
     """Create the cluster mass-observable relation model.
 
     :param cluster_mass_type: The type of mass-observable relation to use.
     :raises ValueError: If the cluster mass type is invalid.
-    :return: An initialized NumCosmo ClusterMass model.
+    :return: A tuple containing:
+        - cluster_m: An initialized NumCosmo ClusterMass model.
+        - lnM_obs_min: Recommended minimum log-observable for this model.
+        - lnM_obs_max: Recommended maximum log-observable for this model.
     """
     cluster_m: Nc.ClusterMassAscaso | Nc.ClusterMassNodist
     if cluster_mass_type == ClusterMassType.NODIST:
         # Assumes perfect relation: $M_{obs} = M_{true}$
-        cluster_m = Nc.ClusterMassNodist(
-            lnM_min=np.log(10) * 14.0, lnM_max=np.log(10) * 16.0
-        )
+        lnM_obs_min = np.log(10) * 14.0
+        lnM_obs_max = np.log(10) * 16.0
+        cluster_m = Nc.ClusterMassNodist(lnM_min=lnM_obs_min, lnM_max=lnM_obs_max)
     elif cluster_mass_type == ClusterMassType.ASCASO:
         # Ascaso et al. (2015) relation for richness
+        lnM_obs_min = np.log(5.0)  # ln(richness_min) = ln(1) = 0
+        lnM_obs_max = np.log(10) * 2.5  # ln(richness_max) = ln(10^2.5)
         cluster_m = Nc.ClusterMassAscaso(
-            lnRichness_min=0.0, lnRichness_max=np.log(10) * 2.5, z0=0
+            lnRichness_min=lnM_obs_min, lnRichness_max=lnM_obs_max, z0=0
         )
         # Set fiducial values for the mass-richness relation parameters
         cluster_m["mup0"] = 3.207  # $mu_{M|lambda}$ normalization
@@ -493,7 +498,7 @@ def create_cluster_mass(
     else:
         raise ValueError(f"Invalid cluster mass type: {cluster_mass_type}")
 
-    return cluster_m
+    return cluster_m, lnM_obs_min, lnM_obs_max
 
 
 def create_cluster_redshift(
@@ -562,8 +567,8 @@ def generate_jpas_forecast_2024(
     z_max: float = 0.8,
     znknots: int = 8,
     cluster_redshift_type: ClusterRedshiftType = ClusterRedshiftType.NODIST,
-    lnM_obs_min: float = np.log(10.0) * 14.0,
-    lnM_obs_max: float = np.log(10.0) * 15.0,
+    lnM_obs_min: float | None = None,
+    lnM_obs_max: float | None = None,
     lnMobsnknots: int = 2,
     cluster_mass_type: ClusterMassType = ClusterMassType.NODIST,
     use_fixed_cov: bool = False,
@@ -585,9 +590,11 @@ def generate_jpas_forecast_2024(
     :param z_max: Maximum redshift for the cluster bins.
     :param znknots: Number of redshift bin boundaries.
     :param cluster_redshift_type: Model for cluster photometric redshift scatter.
-    :param lnM_obs_min: Minimum log-observable mass for the bins.
-    :param lnM_obs_max: Maximum log-observable mass for the bins.
-    :param lnMobsnknots: Number of log-observable mass bin boundaries.
+    :param lnM_obs_min: Minimum log-observable for the bins. If None, uses the default
+        from the cluster_mass_type model.
+    :param lnM_obs_max: Maximum log-observable for the bins. If None, uses the default
+        from the cluster_mass_type model.
+    :param lnMobsnknots: Number of log-observable bin boundaries.
     :param cluster_mass_type: Model for mass-observable relation scatter/bias.
     :param use_fixed_cov: If True, the full covariance is computed once and fixed.
     :param fitting_model: $(Omega_c, w, sigma_8)$ for the model used to calculate the
@@ -636,9 +643,17 @@ def generate_jpas_forecast_2024(
     cad.set_area(area * (np.pi / 180) ** 2)
 
     # --- Instantiate Models ---
-    cluster_m = create_cluster_mass(cluster_mass_type)
+    cluster_m, default_lnM_obs_min, default_lnM_obs_max = create_cluster_mass(
+        cluster_mass_type
+    )
     cluster_z = create_cluster_redshift(cluster_redshift_type)
     cosmo = create_cosmo()
+
+    # Use defaults if not specified
+    if lnM_obs_min is None:
+        lnM_obs_min = default_lnM_obs_min
+    if lnM_obs_max is None:
+        lnM_obs_max = default_lnM_obs_max
 
     mset = Ncm.MSet.new_array([cosmo, cluster_m, cluster_z])
     mset.prepare_fparam_map()  # Map fitting parameters for efficient access
@@ -714,6 +729,7 @@ def generate_jpas_forecast_2024(
         ncounts_gauss.set_fix_cov(True)
         print("Covariance fixed.")
 
+    print("Experiment generation complete.", flush=True)
     # Set the model back to the resample model (or fiducial) for initial fitting state
     _set_mset_params(mset, resample_model)
 

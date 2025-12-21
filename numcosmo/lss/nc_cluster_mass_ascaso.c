@@ -361,7 +361,7 @@ _nc_cluster_mass_ascaso_lnR_sigma (NcClusterMass *clusterm, const gdouble lnM, c
   const gdouble Dln1pz                    = log1p (z) - self->ln1pz0;
 
   lnR[0]   = MU_P0    + MU_P1    * DlnM + MU_P2    * Dln1pz;
-  sigma[0] = SIGMA_P0 + SIGMA_P1 * DlnM + SIGMA_P2 * Dln1pz;
+  sigma[0] = fabs (SIGMA_P0 + SIGMA_P1 * DlnM + SIGMA_P2 * Dln1pz);
 }
 
 static gdouble
