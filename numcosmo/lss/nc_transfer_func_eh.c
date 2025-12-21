@@ -37,7 +37,7 @@
  *  T(k) = \frac{\Omega_b}{\Omega_m} T_b(k) + \frac{\Omega_{c}}{\Omega_m} T_c(k) \, ,
  * \end{equation*}
  * where $\Omega_b$, $\Omega_m$ and $\Omega_{c}$ are the baryons (#nc_hicosmo_Omega_b0),
- * matter (#nc_hicosmo_Omega_m0) and cold dark matter (#nc_hicosmo_Omega_c0) density parameters today, respectevely.
+ * matter (#nc_hicosmo_Omega_m0) and cold dark matter (#nc_hicosmo_Omega_c0) density parameters today, respectively.
  * $T_b(k)$ and $T_c(k)$ are the weights from baryons and cold dark matter to the transfer function $T(k)$.
  *
  * The cold dark matter term is defined as,
@@ -105,7 +105,7 @@ typedef struct _NcTransferFuncEHPrivate
   gdouble ab, bc, bb, bb3, ac_142; /* ac_142 = 14.2/ac */
   gdouble wb_wm, wc_wm;
   gboolean CCL_comp;
-}NcTransferFuncEHPrivate;
+} NcTransferFuncEHPrivate;
 
 struct _NcTransferFuncEH
 {

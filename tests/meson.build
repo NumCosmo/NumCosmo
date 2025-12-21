@@ -536,6 +536,18 @@ python_tests = [
         'source': 'test_py_test_data_objects.py',
     },
     {
+        'name': 'py_transfer_func_eh',
+        'source': 'test_py_transfer_func_eh.py',
+    },
+    {
+        'name': 'py_transfer_func_eh_no_baryon',
+        'source': 'test_py_transfer_func_eh_no_baryon.py',
+    },
+    {
+        'name': 'py_transfer_func_bbks',
+        'source': 'test_py_transfer_func_bbks.py',
+    },
+    {
         'name': 'py_model_builder',
         'source': 'test_py_model_builder.py',
     },
