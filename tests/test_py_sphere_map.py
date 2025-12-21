@@ -638,7 +638,10 @@ class TestIterativeRefinement:
                             hp_val.real,
                             rtol=1e-10,
                             atol=1e-14,
-                            err_msg=f"Mismatch at {description}, lmax={lmax}, iter={iter_val}, l={ell}, m={m}",
+                            err_msg=(
+                                f"Mismatch at {description}, "
+                                f"lmax={lmax}, iter={iter_val}, l={ell}, m={m}"
+                            ),
                         )
 
     def test_iter_default_value(self, smap: Ncm.SphereMap) -> None:
@@ -896,7 +899,7 @@ class TestCrossSpectrum:
         return min(2 * nside, 128)
 
     def test_cross_spectrum_identical_maps(
-        self, smap: Ncm.SphereMap, nside: int, lmax_cross: int, random_seed: int
+        self, nside: int, lmax_cross: int, random_seed: int
     ) -> None:
         """Cross-spectrum of a map with itself should equal auto-spectrum."""
         np.random.seed(random_seed)
@@ -1109,7 +1112,7 @@ class TestCrossSpectrum:
         npix = healpy.nside2npix(nside)
 
         # Create two masks with some overlap
-        theta, phi = healpy.pix2ang(nside, np.arange(npix))
+        theta, _ = healpy.pix2ang(nside, np.arange(npix))
         mask1 = (theta < np.pi / 2).astype(float)  # Northern hemisphere
         mask2 = (theta < np.pi / 3).astype(float)  # More restrictive
 
