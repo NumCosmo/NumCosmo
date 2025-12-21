@@ -169,8 +169,7 @@ nc_halo_cm_prada12_class_init (NcHaloCMPrada12Class *klass)
                                                         NULL,
                                                         "Halo mass function",
                                                         NC_TYPE_HALO_MASS_FUNCTION,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME
-                                                        | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcHaloCMPrada12:log10MDelta:

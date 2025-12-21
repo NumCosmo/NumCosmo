@@ -174,21 +174,23 @@ def fixture_halo_mass_summary_dutton14(
     return cls(mass_def=mass_def, Delta=200.0)
 
 
-# @pytest.fixture(
-#     name="halo_mass_summary_with_mfp",
-#     params=[Nc.HaloCMPrada12, Nc.HaloCMDiemer15],
-#     ids=["prada12", "diemer15"],
-# )
-# def fixture_halo_mass_summary_with_mfp(request, dist, psf) -> Nc.HaloMassSummary:
-#     """Fixture for HaloMassSummary that requires mass function (CRITICAL/200 only)."""
-#     mulf = Nc.MultiplicityFuncTinker.new()
-#     mulf.set_mdef(Nc.MultiplicityFuncMassDef.CRITICAL)
-#     mulf.set_Delta(200)
-#     mulf.set_linear_interp(True)
-#     mfp = Nc.HaloMassFunction.new(dist, psf, mulf)
-#     hms = request.param(mass_def=Nc.HaloMassSummaryMassDef.CRITICAL, Delta=200.0)
-#     hms.set_mfp(mfp)
-#     return hms
+@pytest.fixture(
+    name="halo_mass_summary_with_mfp",
+    params=[Nc.HaloCMPrada12, Nc.HaloCMDiemer15],
+    ids=["prada12", "diemer15"],
+)
+def fixture_halo_mass_summary_with_mfp(request, dist, psf) -> Nc.HaloMassSummary:
+    """Fixture for HaloMassSummary that requires mass function (CRITICAL/200 only)."""
+    mulf = Nc.MultiplicityFuncTinker.new()
+    mulf.set_mdef(Nc.MultiplicityFuncMassDef.CRITICAL)
+    mulf.set_Delta(200)
+    mulf.set_linear_interp(True)
+    mfp = Nc.HaloMassFunction.new(dist, psf, mulf)
+    hms: Nc.HaloCMPrada12 | Nc.HaloCMDiemer15 = request.param(
+        mass_def=Nc.HaloMassSummaryMassDef.CRITICAL, Delta=200.0, mass_function=mfp
+    )
+
+    return hms
 
 
 def test_halo_mass_summary_simple_basic(
@@ -227,16 +229,16 @@ def test_halo_mass_summary_dutton14_basic(
     assert halo_mass_summary_dutton14.rho_bg(cosmo, 1.0) > 0.0
 
 
-# def test_halo_mass_summary_with_mfp_basic(
-#     halo_mass_summary_with_mfp: Nc.HaloMassSummary, cosmo
-# ):
-#     """Test HaloMassSummary with mass function basic properties."""
-#     assert halo_mass_summary_with_mfp.concentration(cosmo, 0.0) > 0.0
-#     assert halo_mass_summary_with_mfp.mass() > 0.0
-#     assert halo_mass_summary_with_mfp.Delta(cosmo, 0.0) > 0.0
-#     assert halo_mass_summary_with_mfp.Delta(cosmo, 1.0) > 0.0
-#     assert halo_mass_summary_with_mfp.rho_bg(cosmo, 0.0) > 0.0
-#     assert halo_mass_summary_with_mfp.rho_bg(cosmo, 1.0) > 0.0
+def test_halo_mass_summary_with_mfp_basic(
+    halo_mass_summary_with_mfp: Nc.HaloMassSummary, cosmo
+):
+    """Test HaloMassSummary with mass function basic properties."""
+    assert halo_mass_summary_with_mfp.concentration(cosmo, 0.0) > 0.0
+    assert halo_mass_summary_with_mfp.mass() > 0.0
+    assert halo_mass_summary_with_mfp.Delta(cosmo, 0.0) > 0.0
+    assert halo_mass_summary_with_mfp.Delta(cosmo, 1.0) > 0.0
+    assert halo_mass_summary_with_mfp.rho_bg(cosmo, 0.0) > 0.0
+    assert halo_mass_summary_with_mfp.rho_bg(cosmo, 1.0) > 0.0
 
 
 def test_halo_mass_summary_simple_mass(
@@ -266,15 +268,6 @@ def test_halo_mass_summary_dutton14_mass(
     assert_allclose(halo_mass_summary_dutton14.mass(), mass, rtol=1e-5)
 
 
-# def test_halo_mass_summary_with_mfp_mass(
-#     halo_mass_summary_with_mfp: Nc.HaloMassSummary,
-# ):
-#     """Test HaloMassSummary with mass function mass."""
-#     log10MDelta = halo_mass_summary_with_mfp["log10MDelta"]
-#     mass = 10.0**log10MDelta
-#     assert_allclose(halo_mass_summary_with_mfp.mass(), mass, rtol=1e-5)
-
-
 def test_halo_mass_summary_param_concentration(cosmo: Nc.HICosmo) -> None:
     """Test HaloCMParam concentration."""
     hms = Nc.HaloCMParam(mass_def=Nc.HaloMassSummaryMassDef.CRITICAL, Delta=200.0)
@@ -282,15 +275,15 @@ def test_halo_mass_summary_param_concentration(cosmo: Nc.HICosmo) -> None:
     assert_allclose(hms.concentration(cosmo, 0.0), cDelta, rtol=1e-5)
 
 
-# def test_halo_mass_summary_concentration_relations(
-#     halo_mass_summary_with_mfp: Nc.HaloMassSummary, cosmo
-# ):
-#     """Test concentration-mass relation."""
-#     halo_mass_summary_with_mfp["log10MDelta"] = 12.5
-#     cDelta1 = halo_mass_summary_with_mfp.concentration(cosmo, 0.0)
-#     halo_mass_summary_with_mfp["log10MDelta"] = 13.5
-#     cDelta2 = halo_mass_summary_with_mfp.concentration(cosmo, 0.0)
-#     assert cDelta1 > cDelta2
+def test_halo_mass_summary_concentration_relations(
+    halo_mass_summary_with_mfp: Nc.HaloMassSummary, cosmo
+):
+    """Test concentration-mass relation."""
+    halo_mass_summary_with_mfp["log10MDelta"] = 12.5
+    cDelta1 = halo_mass_summary_with_mfp.concentration(cosmo, 0.0)
+    halo_mass_summary_with_mfp["log10MDelta"] = 13.5
+    cDelta2 = halo_mass_summary_with_mfp.concentration(cosmo, 0.0)
+    assert cDelta1 > cDelta2
 
 
 def test_halo_cm_klypin11_compare_colossus(cosmo: Nc.HICosmo) -> None:

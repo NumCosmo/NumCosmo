@@ -177,7 +177,7 @@ nc_halo_cm_diemer15_class_init (NcHaloCMDiemer15Class *klass)
                                                         NULL,
                                                         "Halo mass function",
                                                         NC_TYPE_HALO_MASS_FUNCTION,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcHaloCMDiemer15:log10MDelta:
@@ -258,6 +258,7 @@ _nc_halo_cm_diemer15_concentration_critical (NcHaloMassSummary *hms, NcHICosmo *
   NcHaloCMDiemer15Private * const self = nc_halo_cm_diemer15_get_instance_private (hcmdk);
 
   nc_halo_mass_function_prepare_if_needed (self->mfp, cosmo);
+  ncm_powspec_prepare_if_needed (self->powspec, NCM_MODEL (cosmo));
 
   const gdouble mass  = _nc_halo_cm_diemer15_mass (hms);
   const gdouble lnM   = log (mass);
@@ -298,6 +299,7 @@ _nc_halo_cm_diemer15_set_mdef (NcHaloMassSummary *hms, NcHaloMassSummaryMassDef 
  * nc_halo_cm_diemer15_new:
  * @mdef: a #NcHaloMassSummaryMassDef
  * @Delta: cluster threshold mass definition $\Delta$
+ * @mfp: a #NcHaloMassFunction
  *
  * This function returns the #NcHaloCMDiemer15 implementation of
  * #NcHaloMassSummary setting #NcHaloMassSummary:mass-def to @mdef
@@ -306,11 +308,12 @@ _nc_halo_cm_diemer15_set_mdef (NcHaloMassSummary *hms, NcHaloMassSummaryMassDef 
  * Returns: a new instance of #NcHaloCMDiemer15.
  */
 NcHaloCMDiemer15 *
-nc_halo_cm_diemer15_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta)
+nc_halo_cm_diemer15_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta, NcHaloMassFunction *mfp)
 {
   NcHaloCMDiemer15 *hcmdk = g_object_new (NC_TYPE_HALO_CM_DIEMER15,
                                           "mass-def", mdef,
                                           "Delta",    Delta,
+                                          "mass-function", mfp,
                                           NULL);
 
   return hcmdk;
@@ -370,7 +373,7 @@ nc_halo_cm_diemer15_prepare (NcHaloCMDiemer15 *hcmdk, NcHICosmo *cosmo)
 {
   NcHaloCMDiemer15Private * const self = nc_halo_cm_diemer15_get_instance_private (hcmdk);
 
-  if (self->powspec != NULL)
-    ncm_powspec_prepare_if_needed (self->powspec, NCM_MODEL (cosmo));
+  g_assert (self->powspec != NULL);
+  ncm_powspec_prepare_if_needed (self->powspec, NCM_MODEL (cosmo));
 }
 

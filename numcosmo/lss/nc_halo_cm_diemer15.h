@@ -62,7 +62,7 @@ typedef enum /*< enum,underscore_name=NC_HALO_CM_DIEMER15_SPARAMS >*/
 
 #define NC_HALO_CM_DIEMER15_LOCAL_SPARAM_LEN (NC_HALO_CM_DIEMER15_SPARAM_LEN - 0)
 
-NcHaloCMDiemer15 *nc_halo_cm_diemer15_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta);
+NcHaloCMDiemer15 *nc_halo_cm_diemer15_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta, NcHaloMassFunction *mfp);
 NcHaloCMDiemer15 *nc_halo_cm_diemer15_ref (NcHaloCMDiemer15 *hcmdk);
 
 void nc_halo_cm_diemer15_free (NcHaloCMDiemer15 *hcmdk);
