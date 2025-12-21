@@ -14516,7 +14516,7 @@ class HaloCMBhattacharya13(HaloMassSummary):
     ::
 
         HaloCMBhattacharya13(**properties)
-        new(mdef:NumCosmo.HaloMassSummaryMassDef, Delta:float) -> NumCosmo.HaloCMBhattacharya13
+        new(mdef:NumCosmo.HaloMassSummaryMassDef, Delta:float, mfp:NumCosmo.HaloMassFunction, gf:NumCosmo.GrowthFunc) -> NumCosmo.HaloCMBhattacharya13
 
     Object NcHaloCMBhattacharya13
 
@@ -14595,7 +14595,11 @@ class HaloCMBhattacharya13(HaloMassSummary):
     def free(self) -> None: ...
     @classmethod
     def new(
-        cls, mdef: HaloMassSummaryMassDef, Delta: float
+        cls,
+        mdef: HaloMassSummaryMassDef,
+        Delta: float,
+        mfp: HaloMassFunction,
+        gf: GrowthFunc,
     ) -> HaloCMBhattacharya13: ...
     def ref(self) -> HaloCMBhattacharya13: ...
 
@@ -14617,7 +14621,7 @@ class HaloCMDiemer15(HaloMassSummary):
     ::
 
         HaloCMDiemer15(**properties)
-        new(mdef:NumCosmo.HaloMassSummaryMassDef, Delta:float) -> NumCosmo.HaloCMDiemer15
+        new(mdef:NumCosmo.HaloMassSummaryMassDef, Delta:float, mfp:NumCosmo.HaloMassFunction) -> NumCosmo.HaloCMDiemer15
 
     Object NcHaloCMDiemer15
 
@@ -14691,7 +14695,9 @@ class HaloCMDiemer15(HaloMassSummary):
     def clear(hcmdk: HaloCMDiemer15) -> None: ...
     def free(self) -> None: ...
     @classmethod
-    def new(cls, mdef: HaloMassSummaryMassDef, Delta: float) -> HaloCMDiemer15: ...
+    def new(
+        cls, mdef: HaloMassSummaryMassDef, Delta: float, mfp: HaloMassFunction
+    ) -> HaloCMDiemer15: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> HaloCMDiemer15: ...
 
@@ -15085,7 +15091,7 @@ class HaloCMPrada12(HaloMassSummary):
     ::
 
         HaloCMPrada12(**properties)
-        new(mdef:NumCosmo.HaloMassSummaryMassDef, Delta:float) -> NumCosmo.HaloCMPrada12
+        new(mdef:NumCosmo.HaloMassSummaryMassDef, Delta:float, mfp:NumCosmo.HaloMassFunction) -> NumCosmo.HaloCMPrada12
 
     Object NcHaloCMPrada12
 
@@ -15159,7 +15165,9 @@ class HaloCMPrada12(HaloMassSummary):
     def clear(hcmp: HaloCMPrada12) -> None: ...
     def free(self) -> None: ...
     @classmethod
-    def new(cls, mdef: HaloMassSummaryMassDef, Delta: float) -> HaloCMPrada12: ...
+    def new(
+        cls, mdef: HaloMassSummaryMassDef, Delta: float, mfp: HaloMassFunction
+    ) -> HaloCMPrada12: ...
     def ref(self) -> HaloCMPrada12: ...
 
 class HaloCMPrada12Class(GObject.GPointer):
