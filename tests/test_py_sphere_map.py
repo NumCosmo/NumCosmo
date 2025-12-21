@@ -705,6 +705,80 @@ class TestIterativeRefinement:
 class TestPowerSpectrum:
     """Test power spectrum (Cl) calculations."""
 
+    def test_update_cl(self, nside: int) -> None:
+        """Test that update_Cl correctly updates Cl values from alm."""
+        lmax = 2 * nside
+        npix = healpy.nside2npix(nside)
+
+        # Create map with known content
+        np.random.seed(42)
+        test_map = np.random.randn(npix)
+
+        # NumCosmo computation
+        smap = Ncm.SphereMap.new(nside)
+        smap.set_lmax(lmax)
+        smap.set_map(test_map)
+        smap.prepare_alm()
+
+        # Get initial Cl values (prepare_alm should have calculated them)
+        cl_initial = np.array([smap.get_Cl(ell) for ell in range(lmax + 1)])
+
+        # Calculate expected Cl[1] manually from alm coefficients before modification
+        cl1_manual_before = 0.0
+        for m in range(2):  # l=1 has m=0,1
+            re_alm, im_alm = smap.get_alm(1, m)
+            alm_squared = re_alm**2 + im_alm**2
+            if m == 0:
+                cl1_manual_before += alm_squared
+            else:
+                cl1_manual_before += 2 * alm_squared
+        cl1_manual_before /= 2 * 1 + 1
+
+        # Verify that get_Cl matches our manual calculation
+        assert_allclose(smap.get_Cl(1), cl1_manual_before, rtol=1e-12)
+
+        # Now modify one alm coefficient
+        re_alm_10, im_alm_10 = smap.get_alm(1, 0)
+        smap.set_alm(1, 0, re_alm_10 * 2.0, im_alm_10 * 2.0)
+
+        # Calculate what the new Cl[1] should be after modification
+        cl1_expected = 0.0
+        for m in range(2):  # l=1 has m=0,1
+            if m == 0:
+                # We modified a_10, so use the new values
+                re_alm = re_alm_10 * 2.0
+                im_alm = im_alm_10 * 2.0
+            else:
+                # For other m, use original values
+                re_alm, im_alm = smap.get_alm(1, m)
+            alm_squared = re_alm**2 + im_alm**2
+            if m == 0:
+                cl1_expected += alm_squared
+            else:
+                cl1_expected += 2 * alm_squared
+        cl1_expected /= 2 * 1 + 1
+
+        # Before update_Cl, get_Cl should still return old values
+        cl_before_update = smap.get_Cl(1)
+        assert_allclose(cl_before_update, cl_initial[1], rtol=1e-12)
+
+        # Now call update_Cl to recalculate from modified alm
+        smap.update_Cl()
+
+        # After update_Cl, Cl[1] should match our expected value
+        cl_after_update = smap.get_Cl(1)
+        assert_allclose(cl_after_update, cl1_expected, rtol=1e-10)
+
+        # Verify that Cl[1] has indeed changed
+        assert not np.allclose(cl_after_update, cl_before_update, rtol=1e-5)
+
+        # Other Cl values should remain unchanged (within numerical precision)
+        for ell in [0, 2, 3, 4]:
+            if ell <= lmax:
+                assert_allclose(
+                    smap.get_Cl(ell), cl_initial[ell], rtol=1e-12, atol=1e-14
+                )
+
     def test_cl_api(self, nside: int) -> None:
         """Test that Cl API works correctly."""
         lmax = 2 * nside
@@ -863,6 +937,158 @@ class TestEdgeCases:
         expected_npix = healpy.nside2npix(nside_large)
 
         assert npix == expected_npix
+
+
+class TestFitsIO:
+    """Test FITS file I/O operations."""
+
+    def test_save_and_load_fits(
+        self, nside: int, random_seed: int, tmp_path: Any
+    ) -> None:
+        """Test saving and loading a map to/from FITS file."""
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+        test_map = np.random.randn(npix)
+
+        # Create and populate map
+        smap_save = Ncm.SphereMap.new(nside)
+        smap_save.set_map(test_map)
+
+        # Save to FITS file
+        fits_file = str(tmp_path / "test_sphere_map.fits")
+        smap_save.save_fits(fits_file, None, True)
+
+        # Verify file was created
+        assert (tmp_path / "test_sphere_map.fits").exists()
+
+        # Load into new map
+        smap_load = Ncm.SphereMap.new(nside)
+        smap_load.load_fits(fits_file, None)
+
+        # Compare maps
+        loaded_map = np.array([smap_load.get_pix(i) for i in range(npix)])
+        assert_allclose(loaded_map, test_map, rtol=1e-6, atol=1e-8)
+
+    def test_save_and_load_fits_with_custom_signal_name(
+        self, nside: int, random_seed: int, tmp_path: Any
+    ) -> None:
+        """Test saving and loading with custom signal name."""
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+        test_map = np.random.randn(npix)
+
+        # Create and populate map
+        smap_save = Ncm.SphereMap.new(nside)
+        smap_save.set_map(test_map)
+
+        # Save to FITS file with custom signal name
+        fits_file = str(tmp_path / "test_sphere_map_custom.fits")
+        signal_name = "CUSTOM_SIGNAL"
+        smap_save.save_fits(fits_file, signal_name, True)
+
+        # Load with same signal name
+        smap_load = Ncm.SphereMap.new(nside)
+        smap_load.load_fits(fits_file, signal_name)
+
+        # Compare maps
+        loaded_map = np.array([smap_load.get_pix(i) for i in range(npix)])
+        assert_allclose(loaded_map, test_map, rtol=1e-6, atol=1e-8)
+
+    def test_save_fits_overwrite(
+        self, nside: int, random_seed: int, tmp_path: Any
+    ) -> None:
+        """Test overwriting existing FITS file."""
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+
+        # Create first map
+        test_map1 = np.random.randn(npix)
+        smap1 = Ncm.SphereMap.new(nside)
+        smap1.set_map(test_map1)
+
+        # Save first map
+        fits_file = str(tmp_path / "test_overwrite.fits")
+        smap1.save_fits(fits_file, None, True)
+
+        # Create second map
+        test_map2 = np.random.randn(npix) * 2.0
+        smap2 = Ncm.SphereMap.new(nside)
+        smap2.set_map(test_map2)
+
+        # Overwrite with second map
+        smap2.save_fits(fits_file, None, True)
+
+        # Load and verify it's the second map
+        smap_load = Ncm.SphereMap.new(nside)
+        smap_load.load_fits(fits_file, None)
+
+        loaded_map = np.array([smap_load.get_pix(i) for i in range(npix)])
+        assert_allclose(loaded_map, test_map2, rtol=1e-6, atol=1e-8)
+        # Ensure it's not the first map
+        assert not np.allclose(loaded_map, test_map1, rtol=1e-3)
+
+    def test_save_and_load_fits_preserves_metadata(
+        self, nside: int, random_seed: int, tmp_path: Any
+    ) -> None:
+        """Test that FITS I/O preserves order and coordsys metadata."""
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+        test_map = np.random.randn(npix)
+
+        # Create map with specific order and coordsys
+        smap_save = Ncm.SphereMap.new(nside)
+        smap_save.set_order(Ncm.SphereMapOrder.RING)
+        smap_save.set_coordsys(Ncm.SphereMapCoordSys.GALACTIC)
+        smap_save.set_map(test_map)
+
+        # Save to FITS
+        fits_file = str(tmp_path / "test_metadata.fits")
+        smap_save.save_fits(fits_file, None, True)
+
+        # Load into new map
+        smap_load = Ncm.SphereMap.new(nside)
+        smap_load.load_fits(fits_file, None)
+
+        # Verify metadata was preserved
+        assert smap_load.get_order() == Ncm.SphereMapOrder.RING
+        assert smap_load.get_coordsys() == Ncm.SphereMapCoordSys.GALACTIC
+        assert smap_load.get_nside() == nside
+
+        # Verify data was preserved
+        loaded_map = np.array([smap_load.get_pix(i) for i in range(npix)])
+        assert_allclose(loaded_map, test_map, rtol=1e-6, atol=1e-8)
+
+    def test_fits_roundtrip_with_alm(
+        self, nside: int, random_seed: int, tmp_path: Any
+    ) -> None:
+        """Test FITS I/O roundtrip after computing alm."""
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+        test_map = np.random.randn(npix)
+        lmax = 2 * nside
+
+        # Create map and compute alm
+        smap_save = Ncm.SphereMap.new(nside)
+        smap_save.set_lmax(lmax)
+        smap_save.set_map(test_map)
+        smap_save.prepare_alm()
+
+        # Get Cl values before save
+        cl_before = np.array([smap_save.get_Cl(ell) for ell in range(lmax + 1)])
+
+        # Save to FITS (saves only the map, not alm)
+        fits_file = str(tmp_path / "test_with_alm.fits")
+        smap_save.save_fits(fits_file, None, True)
+
+        # Load and recompute alm
+        smap_load = Ncm.SphereMap.new(nside)
+        smap_load.set_lmax(lmax)
+        smap_load.load_fits(fits_file, None)
+        smap_load.prepare_alm()
+
+        # Compare Cl values (should match within numerical precision)
+        cl_after = np.array([smap_load.get_Cl(ell) for ell in range(lmax + 1)])
+        assert_allclose(cl_before, cl_after, rtol=1e-5, atol=1e-8)
 
 
 class TestPerformance:
