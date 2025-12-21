@@ -165,7 +165,6 @@ def fixture_cmr_bhattacharya13(
 
     # Get cosmology objects
     _, cosmology = cosmologies
-    cosmo = cosmology.cosmo
     ps_ml = cosmology.ps_ml
 
     # Create mass function
@@ -208,6 +207,140 @@ def parametrized_concentration_mass_tests():
             lf("cmr_bhattacharya13"),
         ],
     )
+
+
+def parametrized_all_cmr():
+    """Parametrized all concentration-mass relation fixtures."""
+    return pytest.mark.parametrize(
+        "cmr_fixture",
+        [
+            lf("cmr_duffy08"),
+            lf("cmr_duffy08_vir"),
+            lf("cmr_klypin11"),
+            lf("cmr_bhattacharya13"),
+        ],
+    )
+
+
+@parametrized_all_cmr()
+def test_cmr_basic_construction(
+    cmr_fixture: tuple[pyccl.halos.Concentration, Nc.HaloMassSummary],
+) -> None:
+    """Test basic construction and type checking."""
+    _, nc_hms = cmr_fixture
+
+    # Check that object is created and is instance of HaloMassSummary
+    assert nc_hms is not None
+    assert isinstance(nc_hms, Nc.HaloMassSummary)
+    assert isinstance(nc_hms, Ncm.Model)
+
+
+@parametrized_all_cmr()
+def test_cmr_properties(
+    cmr_fixture: tuple[pyccl.halos.Concentration, Nc.HaloMassSummary],
+) -> None:
+    """Test property access and modification."""
+    _, nc_hms = cmr_fixture
+
+    # Test log10MDelta parameter access and modification
+    original_log10m = nc_hms["log10MDelta"]
+    assert isinstance(original_log10m, float)
+
+    # Set a new value
+    test_log10m = 14.5
+    nc_hms["log10MDelta"] = test_log10m
+    assert np.isclose(nc_hms["log10MDelta"], test_log10m)
+
+    # Restore original value
+    nc_hms["log10MDelta"] = original_log10m
+
+
+@parametrized_all_cmr()
+def test_cmr_mass_calculation(
+    cmr_fixture: tuple[pyccl.halos.Concentration, Nc.HaloMassSummary],
+) -> None:
+    """Test mass calculation."""
+    _, nc_hms = cmr_fixture
+
+    # Set a test mass
+    log10m_test = 14.0
+    nc_hms["log10MDelta"] = log10m_test
+
+    # Calculate mass
+    mass = nc_hms.mass()
+
+    # Check that mass is consistent with set log10M
+    expected_mass = 10.0**log10m_test
+    assert np.isclose(mass, expected_mass, rtol=1e-10)
+
+
+@parametrized_all_cmr()
+def test_cmr_concentration_evaluation(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+    cmr_fixture: tuple[pyccl.halos.Concentration, Nc.HaloMassSummary],
+) -> None:
+    """Test concentration evaluation at different redshifts."""
+    _, cosmo_nc = cosmologies
+    _, nc_hms = cmr_fixture
+
+    # Set a test mass
+    nc_hms["log10MDelta"] = 14.0
+
+    # Test at multiple redshifts
+    z_test = [0.0, 0.5, 1.0, 2.0]
+
+    for z in z_test:
+        c = nc_hms.concentration(cosmo_nc.cosmo, z)
+
+        # Check that concentration is positive and reasonable
+        assert c > 0.0
+        assert c < 100.0  # Sanity check: concentration should be reasonable
+        assert isinstance(c, float)
+
+
+@parametrized_all_cmr()
+def test_cmr_concentration_mass_dependence(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+    cmr_fixture: tuple[pyccl.halos.Concentration, Nc.HaloMassSummary],
+) -> None:
+    """Test that concentration changes with mass."""
+    _, cosmo_nc = cosmologies
+    _, nc_hms = cmr_fixture
+
+    z = 0.0
+    masses = [13.0, 14.0, 15.0]
+    concentrations = []
+
+    for log10m in masses:
+        nc_hms["log10MDelta"] = log10m
+        c = nc_hms.concentration(cosmo_nc.cosmo, z)
+        concentrations.append(c)
+        assert c > 0.0
+
+    # Check that concentrations are different for different masses
+    assert not np.allclose(concentrations[0], concentrations[1])
+    assert not np.allclose(concentrations[1], concentrations[2])
+
+
+@parametrized_all_cmr()
+def test_cmr_concentration_redshift_dependence(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+    cmr_fixture: tuple[pyccl.halos.Concentration, Nc.HaloMassSummary],
+) -> None:
+    """Test concentration evaluation at multiple redshifts."""
+    _, cosmo_nc = cosmologies
+    _, nc_hms = cmr_fixture
+
+    nc_hms["log10MDelta"] = 14.0
+    redshifts = [0.0, 0.5, 1.0, 2.0]
+    concentrations = []
+
+    for z in redshifts:
+        c = nc_hms.concentration(cosmo_nc.cosmo, z)
+        concentrations.append(c)
+        assert c > 0.0
+        assert c < 100.0
+        assert np.isfinite(c)
 
 
 @parametrized_concentration_mass_tests()
