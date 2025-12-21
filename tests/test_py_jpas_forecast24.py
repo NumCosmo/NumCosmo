@@ -598,6 +598,23 @@ class TestGenerateJpasForecast:
 
         assert isinstance(experiment, Ncm.ObjDictStr)
 
+    def test_generate_jpas_forecast_2024_no_fitting_ssc_with_resample_ssc(self):
+        """Test generation with NO_SSC for fitting but SSC for resampling."""
+        experiment, _ = jpas.generate_jpas_forecast_2024(
+            znknots=3,
+            lnMobsnknots=2,
+            fitting_Sij_type=jpas.JpasSSCType.NO_SSC,
+            resample_Sij_type=jpas.JpasSSCType.FULLSKY,
+        )
+
+        assert isinstance(experiment, Ncm.ObjDictStr)
+
+        # Verify likelihood can be evaluated
+        likelihood = experiment.get("likelihood")
+        mset = experiment.get("model-set")
+        m2lnL = likelihood.m2lnL_val(mset)
+        assert np.isfinite(m2lnL)
+
     def test_generate_jpas_forecast_2024_likelihood_evaluation(self):
         """Test that generated experiment can evaluate likelihood."""
         experiment, _ = jpas.generate_jpas_forecast_2024(znknots=3, lnMobsnknots=2)
