@@ -887,6 +887,261 @@ class TestPerformance:
         assert len(ncm_result) == len(indices)
 
 
+class TestCrossSpectrum:
+    """Test cross-spectrum computation between two maps."""
+
+    @pytest.fixture(name="lmax_cross")
+    def fixture_lmax_cross(self, nside: int) -> int:
+        """lmax for cross-spectrum tests."""
+        return min(2 * nside, 128)
+
+    def test_cross_spectrum_identical_maps(
+        self, smap: Ncm.SphereMap, nside: int, lmax_cross: int, random_seed: int
+    ) -> None:
+        """Cross-spectrum of a map with itself should equal auto-spectrum."""
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+        test_map = np.random.randn(npix)
+
+        # Create two maps with same data
+        smap1 = Ncm.SphereMap.new(nside)
+        smap2 = Ncm.SphereMap.new(nside)
+
+        smap1.set_lmax(lmax_cross)
+        smap2.set_lmax(lmax_cross)
+
+        smap1.set_map(test_map)
+        smap2.set_map(test_map)
+
+        smap1.prepare_alm()
+        smap2.prepare_alm()
+
+        # Compute cross-spectrum
+        cross_cl = smap1.compute_cross_Cl(smap2)
+        cross_cl_array = np.array([cross_cl.get(i) for i in range(lmax_cross + 1)])
+
+        # Get auto-spectrum from smap1
+        auto_cl_array = np.array([smap1.get_Cl(i) for i in range(lmax_cross + 1)])
+
+        # Cross-spectrum should equal auto-spectrum
+        assert_allclose(cross_cl_array, auto_cl_array, rtol=1e-12, atol=1e-14)
+
+    def test_cross_spectrum_with_healpy(
+        self, nside: int, lmax_cross: int, random_seed: int
+    ) -> None:
+        """Cross-spectrum should match healpy anafast with two maps."""
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+
+        # Generate two different maps
+        map1 = np.random.randn(npix)
+        map2 = np.random.randn(npix) * 0.5 + np.random.randn(npix) * 0.3
+
+        # NumCosmo cross-spectrum (healpy uses iter=3 by default)
+        smap1 = Ncm.SphereMap.new(nside)
+        smap2 = Ncm.SphereMap.new(nside)
+
+        smap1.set_lmax(lmax_cross)
+        smap2.set_lmax(lmax_cross)
+        smap1.set_iter(3)  # Match healpy default
+        smap2.set_iter(3)
+
+        smap1.set_map(map1)
+        smap2.set_map(map2)
+
+        smap1.prepare_alm()
+        smap2.prepare_alm()
+
+        cross_cl = smap1.compute_cross_Cl(smap2)
+        nc_cross = np.array([cross_cl.get(i) for i in range(lmax_cross + 1)])
+
+        # Healpy cross-spectrum (iter=3 is default)
+        hp_cross = healpy.anafast(map1, map2=map2, lmax=lmax_cross)
+
+        # Should match to high precision
+        assert_allclose(nc_cross, hp_cross, rtol=1e-10, atol=1e-14)
+
+    def test_cross_spectrum_orthogonal_maps(
+        self, nside: int, lmax_cross: int, random_seed: int
+    ) -> None:
+        """Cross-spectrum of uncorrelated maps should be small."""
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+
+        # Two independent random maps
+        map1 = np.random.randn(npix)
+        map2 = np.random.randn(npix + 100)[:npix]  # Different seed effectively
+
+        smap1 = Ncm.SphereMap.new(nside)
+        smap2 = Ncm.SphereMap.new(nside)
+
+        smap1.set_lmax(lmax_cross)
+        smap2.set_lmax(lmax_cross)
+
+        smap1.set_map(map1)
+        smap2.set_map(map2)
+
+        smap1.prepare_alm()
+        smap2.prepare_alm()
+
+        cross_cl = smap1.compute_cross_Cl(smap2)
+        nc_cross = np.array([cross_cl.get(i) for i in range(lmax_cross + 1)])
+
+        # Auto-spectra for comparison
+        auto_cl1 = np.array([smap1.get_Cl(i) for i in range(lmax_cross + 1)])
+        auto_cl2 = np.array([smap2.get_Cl(i) for i in range(lmax_cross + 1)])
+        typical_power = np.sqrt(auto_cl1 * auto_cl2)
+
+        # Cross-spectrum should be much smaller than typical power (allow some noise)
+        # For random uncorrelated maps, cross-spectrum should be ~ sqrt(Cl1*Cl2/Nmodes)
+        assert np.abs(nc_cross[10:]).mean() < typical_power[10:].mean() * 0.3
+
+    def test_cross_spectrum_correlated_maps(
+        self, nside: int, lmax_cross: int, random_seed: int
+    ) -> None:
+        """Cross-spectrum of correlated maps should be positive."""
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+
+        # Create correlated maps: map2 = map1 + noise
+        map1 = np.random.randn(npix)
+        map2 = map1 * 0.8 + np.random.randn(npix) * 0.2
+
+        smap1 = Ncm.SphereMap.new(nside)
+        smap2 = Ncm.SphereMap.new(nside)
+
+        smap1.set_lmax(lmax_cross)
+        smap2.set_lmax(lmax_cross)
+
+        smap1.set_map(map1)
+        smap2.set_map(map2)
+
+        smap1.prepare_alm()
+        smap2.prepare_alm()
+
+        cross_cl = smap1.compute_cross_Cl(smap2)
+        nc_cross = np.array([cross_cl.get(i) for i in range(lmax_cross + 1)])
+
+        # Cross-spectrum should be positive for correlated maps
+        # (ell=0 might be zero for mean-zero maps)
+        assert np.all(nc_cross[1:] > 0)
+
+        # Should be comparable to auto-spectra
+        auto_cl1 = np.array([smap1.get_Cl(i) for i in range(lmax_cross + 1)])
+        auto_cl2 = np.array([smap2.get_Cl(i) for i in range(lmax_cross + 1)])
+
+        # Cross-spectrum should satisfy Cauchy-Schwarz: |Cl_12| <= sqrt(Cl_1 * Cl_2)
+        assert np.all(
+            np.abs(nc_cross[1:]) <= np.sqrt(auto_cl1[1:] * auto_cl2[1:]) + 1e-10
+        )
+
+    def test_cross_spectrum_commutative(
+        self, nside: int, lmax_cross: int, random_seed: int
+    ) -> None:
+        """Cross-spectrum should be commutative: Cl(A,B) = Cl(B,A)."""
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+
+        map1 = np.random.randn(npix)
+        map2 = np.random.randn(npix)
+
+        smap1 = Ncm.SphereMap.new(nside)
+        smap2 = Ncm.SphereMap.new(nside)
+
+        smap1.set_lmax(lmax_cross)
+        smap2.set_lmax(lmax_cross)
+
+        smap1.set_map(map1)
+        smap2.set_map(map2)
+
+        smap1.prepare_alm()
+        smap2.prepare_alm()
+
+        # Compute both orderings
+        cross_cl_12 = smap1.compute_cross_Cl(smap2)
+        cross_cl_21 = smap2.compute_cross_Cl(smap1)
+
+        cl_12 = np.array([cross_cl_12.get(i) for i in range(lmax_cross + 1)])
+        cl_21 = np.array([cross_cl_21.get(i) for i in range(lmax_cross + 1)])
+
+        # Should be identical
+        assert_allclose(cl_12, cl_21, rtol=1e-14, atol=1e-14)
+
+    @pytest.mark.parametrize("iter_val", [0, 1, 3])
+    def test_cross_spectrum_with_iterations(
+        self, nside: int, lmax_cross: int, random_seed: int, iter_val: int
+    ) -> None:
+        """Cross-spectrum should work with iterative refinement."""
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+
+        map1 = np.random.randn(npix)
+        map2 = np.random.randn(npix)
+
+        smap1 = Ncm.SphereMap.new(nside)
+        smap2 = Ncm.SphereMap.new(nside)
+
+        smap1.set_lmax(lmax_cross)
+        smap2.set_lmax(lmax_cross)
+        smap1.set_iter(iter_val)
+        smap2.set_iter(iter_val)
+
+        smap1.set_map(map1)
+        smap2.set_map(map2)
+
+        smap1.prepare_alm()
+        smap2.prepare_alm()
+
+        cross_cl = smap1.compute_cross_Cl(smap2)
+        nc_cross = np.array([cross_cl.get(i) for i in range(lmax_cross + 1)])
+
+        # Compare with healpy using same iter
+        hp_cross = healpy.anafast(map1, map2=map2, lmax=lmax_cross, iter=iter_val)
+
+        # Should match healpy
+        assert_allclose(nc_cross, hp_cross, rtol=1e-10, atol=1e-14)
+
+    def test_cross_spectrum_mask_example(
+        self, nside: int, lmax_cross: int, random_seed: int
+    ) -> None:
+        """Test cross-spectrum for mask correlation (pyssc use case)."""
+        np.random.seed(random_seed)
+        npix = healpy.nside2npix(nside)
+
+        # Create two masks with some overlap
+        theta, phi = healpy.pix2ang(nside, np.arange(npix))
+        mask1 = (theta < np.pi / 2).astype(float)  # Northern hemisphere
+        mask2 = (theta < np.pi / 3).astype(float)  # More restrictive
+
+        smap1 = Ncm.SphereMap.new(nside)
+        smap2 = Ncm.SphereMap.new(nside)
+
+        smap1.set_lmax(lmax_cross)
+        smap2.set_lmax(lmax_cross)
+        smap1.set_iter(3)  # Match healpy default
+        smap2.set_iter(3)
+
+        smap1.set_map(mask1)
+        smap2.set_map(mask2)
+
+        smap1.prepare_alm()
+        smap2.prepare_alm()
+
+        # Compute cross-spectrum
+        cross_cl = smap1.compute_cross_Cl(smap2)
+        nc_cross = np.array([cross_cl.get(i) for i in range(lmax_cross + 1)])
+
+        # Compare with healpy (iter=3 is default)
+        hp_cross = healpy.anafast(mask1, map2=mask2, lmax=lmax_cross)
+
+        assert_allclose(nc_cross, hp_cross, rtol=1e-10, atol=1e-14)
+
+        # Check fsky calculation from Cl[0] matches
+        fsky1 = np.sqrt(nc_cross[0] / (4 * np.pi))
+        fsky_expected = np.sqrt(hp_cross[0] / (4 * np.pi))
+        assert_allclose(fsky1, fsky_expected, rtol=1e-12)
+
+
 if __name__ == "__main__":
     # Run tests with: python test_py_sphere_map.py
     pytest.main([__file__, "-v"])

@@ -2331,6 +2331,76 @@ ncm_sphere_map_update_Cl (NcmSphereMap *smap)
 }
 
 /**
+ * ncm_sphere_map_compute_cross_Cl:
+ * @smap1: first #NcmSphereMap with computed $a_{lm}$
+ * @smap2: second #NcmSphereMap with computed $a_{lm}$
+ * @cross_Cl: (out) (transfer full): a #NcmVector to store the cross-spectrum
+ *
+ * Computes the cross-spectrum between two maps:
+ * $$C_\ell^\mathrm{cross} = \frac{1}{2\ell+1} \sum_{m=-\ell}^\ell \mathrm{Re}(a_{lm}^{(1)} \bar{a}_{lm}^{(2)})$$
+ *
+ * Both maps must have their spherical harmonic coefficients already computed via
+ * ncm_sphere_map_prepare_alm(), and must have the same lmax and nside.
+ *
+ * Returns: (transfer full): a #NcmVector containing the cross-spectrum $C_\ell$
+ * for $\ell = 0, \ldots, \ell_\mathrm{max}$.
+ */
+NcmVector *
+ncm_sphere_map_compute_cross_Cl (NcmSphereMap *smap1, NcmSphereMap *smap2)
+{
+  NcmSphereMapPrivate * const self1 = ncm_sphere_map_get_instance_private (smap1);
+  NcmSphereMapPrivate * const self2 = ncm_sphere_map_get_instance_private (smap2);
+  guint m, l, lm_index = 0;
+  NcmVector *cross_Cl;
+
+  g_assert (self1->lmax == self2->lmax);
+  g_assert (self1->nside == self2->nside);
+  g_assert (self1->alm != NULL);
+  g_assert (self2->alm != NULL);
+
+  cross_Cl = ncm_vector_new (self1->lmax + 1);
+  ncm_vector_set_zero (cross_Cl);
+
+  /* m = 0 term */
+  m = 0;
+
+  for (l = m; l <= self1->lmax; l++)
+  {
+    const gdouble Re_alm1 = creal (self1->alm[lm_index]);
+    const gdouble Re_alm2 = creal (self2->alm[lm_index]);
+
+    /* For m=0, a_lm is real, so cross term is just product */
+    lm_index++;
+    ncm_vector_fast_addto (cross_Cl, l, 1.0 * Re_alm1 * Re_alm2);
+  }
+
+  /* m > 0 terms */
+  for (m = 1; m <= self1->lmax; m++)
+  {
+    for (l = m; l <= self1->lmax; l++)
+    {
+      const gdouble Re_alm1 = creal (self1->alm[lm_index]);
+      const gdouble Im_alm1 = cimag (self1->alm[lm_index]);
+      const gdouble Re_alm2 = creal (self2->alm[lm_index]);
+      const gdouble Im_alm2 = cimag (self2->alm[lm_index]);
+
+      /* Real part of alm1 * conj(alm2) = Re1*Re2 + Im1*Im2 */
+      /* Factor of 2 accounts for both +m and -m terms */
+      lm_index++;
+      ncm_vector_fast_addto (cross_Cl, l, 2.0 * (Re_alm1 * Re_alm2 + Im_alm1 * Im_alm2));
+    }
+  }
+
+  /* Normalize by (2*ell + 1) */
+  for (l = 0; l <= self1->lmax; l++)
+  {
+    ncm_vector_fast_mulby (cross_Cl, l, 1.0 / (2.0 * l + 1.0));
+  }
+
+  return cross_Cl;
+}
+
+/**
  * ncm_sphere_map_get_alm:
  * @smap: a #NcmSphereMap
  * @l: value of $l < \ell_\mathrm{max}$
