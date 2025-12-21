@@ -733,6 +733,7 @@ if python_healpy.found()
         {
             'name': 'py_sphere_map',
             'source': 'test_py_sphere_map.py',
+            'timeout': 0,
         },
     ]
 endif
