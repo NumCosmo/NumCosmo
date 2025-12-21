@@ -61,7 +61,8 @@ def fixture_Delta(request) -> float:
 def fixture_prim() -> Nc.HIPrim:
     """Create primordial power spectrum model."""
     prim = Nc.HIPrimPowerLaw.new()
-    prim.props.n_SA = 0.967
+    prim["n_SA"] = 0.96
+    prim["ln10e10ASA"] = np.log(2.1e-9 * 1e10)
     return prim
 
 
@@ -77,9 +78,9 @@ def fixture_cosmo(prim: Nc.HIPrim, reion: Nc.HIReion) -> Nc.HICosmo:
     cosmo = Nc.HICosmoDEXcdm()
     cosmo.omega_x2omega_k()
     cosmo["Omegak"] = 0.0
-    cosmo["H0"] = 71
-    cosmo["Omegab"] = 0.0406
-    cosmo["Omegac"] = 0.22
+    cosmo["H0"] = 67.66
+    cosmo["Omegab"] = 0.049
+    cosmo["Omegac"] = 0.262
     cosmo["w"] = -1.0
     cosmo.add_submodel(prim)
     cosmo.add_submodel(reion)
@@ -109,7 +110,11 @@ def fixture_psf(cosmo: Nc.HICosmo, prim: Nc.HIPrim) -> Ncm.PowspecFilter:
 
 @pytest.fixture(name="mfp", params=[Nc.MultiplicityFuncTinker])
 def fixture_mass_function(
-    request, dist, psf, mass_def: Nc.HaloMassSummaryMassDef, Delta: float
+    request: pytest.FixtureRequest,
+    dist: Nc.Distance,
+    psf: Ncm.PowspecFilter,
+    mass_def: Nc.HaloMassSummaryMassDef,
+    Delta: float,
 ) -> Nc.HaloMassFunction:
     """Fixture for HaloMassFunction."""
     if mass_def == Nc.HaloMassSummaryMassDef.VIRIAL:
@@ -130,7 +135,7 @@ def fixture_mass_function(
     ids=["param", "klypin11"],
 )
 def fixture_halo_mass_summary_simple(
-    request, mass_def: Nc.HaloMassSummaryMassDef, Delta: float
+    request: pytest.FixtureRequest, mass_def: Nc.HaloMassSummaryMassDef, Delta: float
 ) -> Nc.HaloMassSummary:
     """Fixture for simple HaloMassSummary (no mass function needed)."""
     return request.param(mass_def=mass_def, Delta=Delta)
@@ -142,7 +147,7 @@ def fixture_halo_mass_summary_simple(
     ids=["duffy08"],
 )
 def fixture_halo_mass_summary_duffy08(
-    request, mass_def: Nc.HaloMassSummaryMassDef
+    request: pytest.FixtureRequest, mass_def: Nc.HaloMassSummaryMassDef
 ) -> Nc.HaloMassSummary:
     """Fixture for Duffy08 (only Delta=200)."""
     return request.param(mass_def=mass_def, Delta=200.0)
@@ -156,7 +161,9 @@ def fixture_halo_mass_summary_duffy08(
     ],
     ids=["dutton14-critical", "dutton14-virial"],
 )
-def fixture_halo_mass_summary_dutton14(request) -> Nc.HaloMassSummary:
+def fixture_halo_mass_summary_dutton14(
+    request: pytest.FixtureRequest,
+) -> Nc.HaloMassSummary:
     """Fixture for Dutton14 (CRITICAL/200 or VIRIAL only)."""
     cls, mass_def = request.param
     return cls(mass_def=mass_def, Delta=200.0)
@@ -180,8 +187,8 @@ def fixture_halo_mass_summary_dutton14(request) -> Nc.HaloMassSummary:
 
 
 def test_halo_mass_summary_simple_basic(
-    halo_mass_summary_simple: Nc.HaloMassSummary, cosmo
-):
+    halo_mass_summary_simple: Nc.HaloMassSummary, cosmo: Nc.HICosmo
+) -> None:
     """Test simple HaloMassSummary basic properties."""
     assert halo_mass_summary_simple.concentration(cosmo, 0.0) > 0.0
     assert halo_mass_summary_simple.mass() > 0.0
@@ -192,8 +199,8 @@ def test_halo_mass_summary_simple_basic(
 
 
 def test_halo_mass_summary_duffy08_basic(
-    halo_mass_summary_duffy08: Nc.HaloMassSummary, cosmo
-):
+    halo_mass_summary_duffy08: Nc.HaloMassSummary, cosmo: Nc.HICosmo
+) -> None:
     """Test Duffy08 HaloMassSummary basic properties."""
     assert halo_mass_summary_duffy08.concentration(cosmo, 0.0) > 0.0
     assert halo_mass_summary_duffy08.mass() > 0.0
@@ -204,8 +211,8 @@ def test_halo_mass_summary_duffy08_basic(
 
 
 def test_halo_mass_summary_dutton14_basic(
-    halo_mass_summary_dutton14: Nc.HaloMassSummary, cosmo
-):
+    halo_mass_summary_dutton14: Nc.HaloMassSummary, cosmo: Nc.HICosmo
+) -> None:
     """Test Dutton14 HaloMassSummary basic properties."""
     assert halo_mass_summary_dutton14.concentration(cosmo, 0.0) > 0.0
     assert halo_mass_summary_dutton14.mass() > 0.0
@@ -227,14 +234,18 @@ def test_halo_mass_summary_dutton14_basic(
 #     assert halo_mass_summary_with_mfp.rho_bg(cosmo, 1.0) > 0.0
 
 
-def test_halo_mass_summary_simple_mass(halo_mass_summary_simple: Nc.HaloMassSummary):
+def test_halo_mass_summary_simple_mass(
+    halo_mass_summary_simple: Nc.HaloMassSummary,
+) -> None:
     """Test simple HaloMassSummary mass."""
     log10MDelta = halo_mass_summary_simple["log10MDelta"]
     mass = 10.0**log10MDelta
     assert_allclose(halo_mass_summary_simple.mass(), mass, rtol=1e-5)
 
 
-def test_halo_mass_summary_duffy08_mass(halo_mass_summary_duffy08: Nc.HaloMassSummary):
+def test_halo_mass_summary_duffy08_mass(
+    halo_mass_summary_duffy08: Nc.HaloMassSummary,
+) -> None:
     """Test Duffy08 HaloMassSummary mass."""
     log10MDelta = halo_mass_summary_duffy08["log10MDelta"]
     mass = 10.0**log10MDelta
@@ -243,7 +254,7 @@ def test_halo_mass_summary_duffy08_mass(halo_mass_summary_duffy08: Nc.HaloMassSu
 
 def test_halo_mass_summary_dutton14_mass(
     halo_mass_summary_dutton14: Nc.HaloMassSummary,
-):
+) -> None:
     """Test Dutton14 HaloMassSummary mass."""
     log10MDelta = halo_mass_summary_dutton14["log10MDelta"]
     mass = 10.0**log10MDelta
@@ -259,7 +270,7 @@ def test_halo_mass_summary_dutton14_mass(
 #     assert_allclose(halo_mass_summary_with_mfp.mass(), mass, rtol=1e-5)
 
 
-def test_halo_mass_summary_param_concentration(cosmo):
+def test_halo_mass_summary_param_concentration(cosmo: Nc.HICosmo) -> None:
     """Test HaloCMParam concentration."""
     hms = Nc.HaloCMParam(mass_def=Nc.HaloMassSummaryMassDef.CRITICAL, Delta=200.0)
     cDelta = hms["cDelta"]
@@ -277,11 +288,7 @@ def test_halo_mass_summary_param_concentration(cosmo):
 #     assert cDelta1 > cDelta2
 
 
-Z_ARRAY = np.linspace(0.0, 2.0, 5)
-LOG10M_ARRAY = np.linspace(10.0, 15.0, 10)
-
-
-def test_halo_cm_klypin11_compare_colossus(cosmo):
+def test_halo_cm_klypin11_compare_colossus(cosmo: Nc.HICosmo) -> None:
     """Test Klypin11 against Colossus reference data."""
 
     # Pre-generated from Colossus (shape: len(Z_ARRAY) x len(LOG10M_ARRAY))
@@ -304,21 +311,23 @@ def test_halo_cm_klypin11_compare_colossus(cosmo):
     hms = Nc.HaloCMKlypin11(mass_def=Nc.HaloMassSummaryMassDef.VIRIAL, Delta=200.0)
 
     # NumCosmo computation
-    LOG10M_ARRAY = np.linspace(
+    log10m_array = np.linspace(
         np.log10(3.0) + 10.0, np.log10(5) + 14.0, 10
     )  # mass in Msun, colossus mass in Msun/h
-    c_nc = np.zeros(len(LOG10M_ARRAY))
-    for i, log10M in enumerate(LOG10M_ARRAY):
-        hms["log10MDelta"] = log10M + np.log10(cosmo["H0"] / 100.0)
+    c_nc = np.zeros(len(log10m_array))
+    for i, log10M in enumerate(log10m_array):
+        hms["log10MDelta"] = log10M + np.log10(cosmo.h())
         c_nc[i] = hms.concentration(cosmo, 0.0)
 
     assert_allclose(c_nc, c_colossus, rtol=1e-5)
 
 
-def test_halo_cm_prada12_compare_colossus(dist, psf, cosmo):
+def test_halo_cm_prada12_compare_colossus(
+    dist: Nc.Distance, psf: Ncm.PowspecFilter, cosmo: Nc.HICosmo
+) -> None:
     """Test Prada12 against Colossus reference data."""
 
-    # Pre-generated from Colossus (shape: len(Z_ARRAY) x len(LOG10M_ARRAY))
+    # Pre-generated from Colossus (shape: len(Z_ARRAY) x len(log10m_array))
     c_colossus = np.array(
         [
             [11.79827496, 9.72828123, 7.92720837, 6.44725001, 5.3786824],
@@ -337,13 +346,16 @@ def test_halo_cm_prada12_compare_colossus(dist, psf, cosmo):
     mfp = Nc.HaloMassFunction.new(dist, psf, mulf)
 
     # Setup
-    hms = Nc.HaloCMPrada12(mass_def=Nc.HaloMassSummaryMassDef.CRITICAL, Delta=200.0)
-    hms.set_mfp(mfp)
+    hms = Nc.HaloCMPrada12(
+        mass_def=Nc.HaloMassSummaryMassDef.CRITICAL, Delta=200.0, mass_function=mfp
+    )
 
     # NumCosmo computation
-    c_nc = np.zeros((len(Z_ARRAY), len(LOG10M_ARRAY)))
-    for i, z in enumerate(Z_ARRAY):
-        for j, log10M in enumerate(LOG10M_ARRAY):
+    log10M_array = np.log10(10.0 ** np.arange(10.0, 15.0, 1.0))
+    z_array = np.linspace(0.0, 2.0, 5)
+    c_nc = np.zeros((len(z_array), len(log10M_array)))
+    for i, z in enumerate(z_array):
+        for j, log10M in enumerate(log10M_array):
             hms["log10MDelta"] = log10M
             c_nc[i, j] = hms.concentration(cosmo, z)
 

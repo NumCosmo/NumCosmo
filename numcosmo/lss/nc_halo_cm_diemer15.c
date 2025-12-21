@@ -158,10 +158,10 @@ nc_halo_cm_diemer15_class_init (NcHaloCMDiemer15Class *klass)
   NcHaloMassSummaryClass *hms_class = NC_HALO_MASS_SUMMARY_CLASS (klass);
   NcmModelClass *model_class        = NCM_MODEL_CLASS (klass);
 
-  object_class->set_property = &_nc_halo_cm_diemer15_set_property;
-  object_class->get_property = &_nc_halo_cm_diemer15_get_property;
-  object_class->dispose      = &_nc_halo_cm_diemer15_dispose;
-  object_class->finalize     = &_nc_halo_cm_diemer15_finalize;
+  model_class->set_property = &_nc_halo_cm_diemer15_set_property;
+  model_class->get_property = &_nc_halo_cm_diemer15_get_property;
+  object_class->dispose     = &_nc_halo_cm_diemer15_dispose;
+  object_class->finalize    = &_nc_halo_cm_diemer15_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Diemer & Kravtsov (2015) concentration-mass relation", "CM_DIEMER15");
   ncm_model_class_add_params (model_class, NC_HALO_CM_DIEMER15_LOCAL_SPARAM_LEN, 0, PROP_LEN);

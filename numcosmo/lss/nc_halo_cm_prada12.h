@@ -4,7 +4,7 @@
  *            nc_halo_cm_prada12.h
  *
  *  Mon Dec 16 15:01:55 2024
- *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br> 
+ *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br>
  ****************************************************************************/
 /*
  * nc_halo_cm_prada12.h
@@ -46,7 +46,7 @@ G_DECLARE_FINAL_TYPE (NcHaloCMPrada12, nc_halo_cm_prada12, NC, HALO_CM_PRADA12, 
  * @NC_HALO_CM_PRADA12_LOG10M_DELTA: halo mass $\log_{10}(M_\Delta)$
  *
  * Fundamental parametrization of the profile $\rho(r)$.
- * The halo mass is a paremeter while the concentration is given by the 
+ * The halo mass is a paremeter while the concentration is given by the
  * Prada et al. (2012) concentration-mass relation.
  *
  */
@@ -59,7 +59,7 @@ typedef enum /*< enum,underscore_name=NC_HALO_CM_PRADA12_SPARAMS >*/
 
 #define NC_HALO_CM_PRADA12_LOCAL_SPARAM_LEN (NC_HALO_CM_PRADA12_SPARAM_LEN - 0)
 
-NcHaloCMPrada12 *nc_halo_cm_prada12_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta);
+NcHaloCMPrada12 *nc_halo_cm_prada12_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta, NcHaloMassFunction *mfp);
 NcHaloCMPrada12 *nc_halo_cm_prada12_ref (NcHaloCMPrada12 *hcmp);
 
 void nc_halo_cm_prada12_free (NcHaloCMPrada12 *hcmp);

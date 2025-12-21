@@ -102,13 +102,21 @@ GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_LOW: float = 0.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_ALPHA: float = 0.68
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_BETA: float = 2.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_Z0: float = 0.11
+HALO_CM_BHATTACHARYA13_DEFAULT_PARAMS_ABSTOL: float = 0.0
+HALO_CM_BHATTACHARYA13_LOCAL_SPARAM_LEN: int = 1
+HALO_CM_DIEMER15_DEFAULT_PARAMS_ABSTOL: float = 0.0
+HALO_CM_DIEMER15_LOCAL_SPARAM_LEN: int = 1
 HALO_CM_DUFFY08_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HALO_CM_DUFFY08_LOCAL_SPARAM_LEN: int = 1
+HALO_CM_DUTTON14_DEFAULT_PARAMS_ABSTOL: float = 0.0
+HALO_CM_DUTTON14_LOCAL_SPARAM_LEN: int = 1
 HALO_CM_KLYPIN11_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HALO_CM_KLYPIN11_LOCAL_SPARAM_LEN: int = 1
 HALO_CM_PARAM_DEFAULT_C_DELTA: float = 4.0
 HALO_CM_PARAM_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HALO_CM_PARAM_LOCAL_SPARAM_LEN: int = 2
+HALO_CM_PRADA12_DEFAULT_PARAMS_ABSTOL: float = 0.0
+HALO_CM_PRADA12_LOCAL_SPARAM_LEN: int = 1
 HALO_DENSITY_PROFILE_DK14_DEFAULT_BETA: float = 4.0
 HALO_DENSITY_PROFILE_DK14_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HALO_DENSITY_PROFILE_DK14_DEFAULT_RT: float = 1.0
@@ -14501,6 +14509,203 @@ class HaloBiasTinkerClass(GObject.GPointer):
 
     parent_class: HaloBiasClass = ...
 
+class HaloCMBhattacharya13(HaloMassSummary):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCMBhattacharya13(**properties)
+        new(mdef:NumCosmo.HaloMassSummaryMassDef, Delta:float) -> NumCosmo.HaloCMBhattacharya13
+
+    Object NcHaloCMBhattacharya13
+
+    Properties from NcHaloCMBhattacharya13:
+      growth-function -> NcGrowthFunc: growth-function
+        Growth function
+      mass-function -> NcHaloMassFunction: mass-function
+        Halo mass function
+      log10MDelta -> gdouble: log10MDelta
+        \log_{10}(M_{\Delta})
+      log10MDelta-fit -> gboolean: log10MDelta-fit
+        \log_{10}(M_{\Delta}):fit
+
+    Properties from NcHaloMassSummary:
+      mass-def -> NcHaloMassSummaryMassDef: mass-def
+        Mass definition
+      Delta -> gdouble: Delta
+        Overdensity constant
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        growth_function: GrowthFunc
+        log10MDelta: float
+        log10MDelta_fit: bool
+        mass_function: HaloMassFunction
+        Delta: float
+        mass_def: HaloMassSummaryMassDef
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        growth_function: GrowthFunc = ...,
+        log10MDelta: float = ...,
+        log10MDelta_fit: bool = ...,
+        mass_function: HaloMassFunction = ...,
+        Delta: float = ...,
+        mass_def: HaloMassSummaryMassDef = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(hcmb: HaloCMBhattacharya13) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(
+        cls, mdef: HaloMassSummaryMassDef, Delta: float
+    ) -> HaloCMBhattacharya13: ...
+    def ref(self) -> HaloCMBhattacharya13: ...
+
+class HaloCMBhattacharya13Class(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCMBhattacharya13Class()
+    """
+
+    parent_class: HaloMassSummaryClass = ...
+
+class HaloCMDiemer15(HaloMassSummary):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCMDiemer15(**properties)
+        new(mdef:NumCosmo.HaloMassSummaryMassDef, Delta:float) -> NumCosmo.HaloCMDiemer15
+
+    Object NcHaloCMDiemer15
+
+    Properties from NcHaloCMDiemer15:
+      mass-function -> NcHaloMassFunction: mass-function
+        Halo mass function
+      log10MDelta -> gdouble: log10MDelta
+        \log_{10}(M_{\Delta})
+      log10MDelta-fit -> gboolean: log10MDelta-fit
+        \log_{10}(M_{\Delta}):fit
+
+    Properties from NcHaloMassSummary:
+      mass-def -> NcHaloMassSummaryMassDef: mass-def
+        Mass definition
+      Delta -> gdouble: Delta
+        Overdensity constant
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        log10MDelta: float
+        log10MDelta_fit: bool
+        mass_function: HaloMassFunction
+        Delta: float
+        mass_def: HaloMassSummaryMassDef
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        log10MDelta: float = ...,
+        log10MDelta_fit: bool = ...,
+        mass_function: HaloMassFunction = ...,
+        Delta: float = ...,
+        mass_def: HaloMassSummaryMassDef = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(hcmdk: HaloCMDiemer15) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls, mdef: HaloMassSummaryMassDef, Delta: float) -> HaloCMDiemer15: ...
+    def prepare(self, cosmo: HICosmo) -> None: ...
+    def ref(self) -> HaloCMDiemer15: ...
+
+class HaloCMDiemer15Class(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCMDiemer15Class()
+    """
+
+    parent_class: HaloMassSummaryClass = ...
+
 class HaloCMDuffy08(HaloMassSummary):
     r"""
     :Constructors:
@@ -14588,6 +14793,97 @@ class HaloCMDuffy08Class(GObject.GPointer):
     ::
 
         HaloCMDuffy08Class()
+    """
+
+    parent_class: HaloMassSummaryClass = ...
+
+class HaloCMDutton14(HaloMassSummary):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCMDutton14(**properties)
+        new(mdef:NumCosmo.HaloMassSummaryMassDef, Delta:float) -> NumCosmo.HaloCMDutton14
+
+    Object NcHaloCMDutton14
+
+    Properties from NcHaloCMDutton14:
+      log10MDelta -> gdouble: log10MDelta
+        \log_{10}(M_{\Delta})
+      log10MDelta-fit -> gboolean: log10MDelta-fit
+        \log_{10}(M_{\Delta}):fit
+
+    Properties from NcHaloMassSummary:
+      mass-def -> NcHaloMassSummaryMassDef: mass-def
+        Mass definition
+      Delta -> gdouble: Delta
+        Overdensity constant
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        log10MDelta: float
+        log10MDelta_fit: bool
+        Delta: float
+        mass_def: HaloMassSummaryMassDef
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        log10MDelta: float = ...,
+        log10MDelta_fit: bool = ...,
+        Delta: float = ...,
+        mass_def: HaloMassSummaryMassDef = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(hcmdm: HaloCMDutton14) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls, mdef: HaloMassSummaryMassDef, Delta: float) -> HaloCMDutton14: ...
+    def ref(self) -> HaloCMDutton14: ...
+
+class HaloCMDutton14Class(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCMDutton14Class()
     """
 
     parent_class: HaloMassSummaryClass = ...
@@ -14778,6 +15074,101 @@ class HaloCMParamClass(GObject.GPointer):
     ::
 
         HaloCMParamClass()
+    """
+
+    parent_class: HaloMassSummaryClass = ...
+
+class HaloCMPrada12(HaloMassSummary):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCMPrada12(**properties)
+        new(mdef:NumCosmo.HaloMassSummaryMassDef, Delta:float) -> NumCosmo.HaloCMPrada12
+
+    Object NcHaloCMPrada12
+
+    Properties from NcHaloCMPrada12:
+      mass-function -> NcHaloMassFunction: mass-function
+        Halo mass function
+      log10MDelta -> gdouble: log10MDelta
+        \log_{10}(M_{\Delta})
+      log10MDelta-fit -> gboolean: log10MDelta-fit
+        \log_{10}(M_{\Delta}):fit
+
+    Properties from NcHaloMassSummary:
+      mass-def -> NcHaloMassSummaryMassDef: mass-def
+        Mass definition
+      Delta -> gdouble: Delta
+        Overdensity constant
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        log10MDelta: float
+        log10MDelta_fit: bool
+        mass_function: HaloMassFunction
+        Delta: float
+        mass_def: HaloMassSummaryMassDef
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        log10MDelta: float = ...,
+        log10MDelta_fit: bool = ...,
+        mass_function: HaloMassFunction = ...,
+        Delta: float = ...,
+        mass_def: HaloMassSummaryMassDef = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(hcmp: HaloCMPrada12) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls, mdef: HaloMassSummaryMassDef, Delta: float) -> HaloCMPrada12: ...
+    def ref(self) -> HaloCMPrada12: ...
+
+class HaloCMPrada12Class(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCMPrada12Class()
     """
 
     parent_class: HaloMassSummaryClass = ...
@@ -19000,8 +19391,6 @@ class TransferFunc(GObject.Object):
     """
 
     parent_instance: GObject.Object = ...
-    ctrl_cosmo: NumCosmoMath.ModelCtrl = ...
-    ctrl_reion: NumCosmoMath.ModelCtrl = ...
     @staticmethod
     def clear(tf: TransferFunc) -> None: ...
     def do_calc(self, k: float) -> float: ...
@@ -19035,8 +19424,6 @@ class TransferFuncBBKS(TransferFunc):
         type: TransferFuncBBKSType
 
     props: Props = ...
-    parent_instance: TransferFunc = ...
-    priv: TransferFuncBBKSPrivate = ...
     def __init__(self, type: TransferFuncBBKSType = ...) -> None: ...
     @classmethod
     def new(cls) -> TransferFuncBBKS: ...
@@ -19053,8 +19440,6 @@ class TransferFuncBBKSClass(GObject.GPointer):
 
     parent_class: TransferFuncClass = ...
 
-class TransferFuncBBKSPrivate(GObject.GPointer): ...
-
 class TransferFuncCAMB(TransferFunc):
     r"""
     :Constructors:
@@ -19070,9 +19455,6 @@ class TransferFuncCAMB(TransferFunc):
       notify (GParam)
     """
 
-    parent_instance: TransferFunc = ...
-    T_spline: NumCosmoMath.Spline = ...
-    init: bool = ...
     @classmethod
     def new(cls) -> TransferFuncCAMB: ...
 
@@ -19124,8 +19506,6 @@ class TransferFuncEH(TransferFunc):
         CCL_comp: bool
 
     props: Props = ...
-    parent_instance: TransferFunc = ...
-    priv: TransferFuncEHPrivate = ...
     def __init__(self, CCL_comp: bool = ...) -> None: ...
     @classmethod
     def new(cls) -> TransferFuncEH: ...
@@ -19142,7 +19522,34 @@ class TransferFuncEHClass(GObject.GPointer):
 
     parent_class: TransferFuncClass = ...
 
-class TransferFuncEHPrivate(GObject.GPointer): ...
+class TransferFuncEHNoBaryon(TransferFunc):
+    r"""
+    :Constructors:
+
+    ::
+
+        TransferFuncEHNoBaryon(**properties)
+        new() -> NumCosmo.TransferFunc
+
+    Object NcTransferFuncEHNoBaryon
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    @classmethod
+    def new(cls) -> TransferFuncEHNoBaryon: ...
+
+class TransferFuncEHNoBaryonClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        TransferFuncEHNoBaryonClass()
+    """
+
+    parent_class: TransferFuncClass = ...
 
 class WLSurfaceMassDensity(NumCosmoMath.Model):
     r"""
@@ -21675,8 +22082,50 @@ class HIReionCambSParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
+class HaloCMBhattacharya13SParams(GObject.GEnum):
+    DELTA: HaloCMBhattacharya13SParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class HaloCMDiemer15SParams(GObject.GEnum):
+    DELTA: HaloCMDiemer15SParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
 class HaloCMDuffy08SParams(GObject.GEnum):
     DELTA: HaloCMDuffy08SParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class HaloCMDutton14SParams(GObject.GEnum):
+    DELTA: HaloCMDutton14SParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -21706,6 +22155,20 @@ class HaloCMKlypin11SParams(GObject.GEnum):
 class HaloCMParamSParams(GObject.GEnum):
     C_DELTA: HaloCMParamSParams = ...
     LOG10M_DELTA: HaloCMParamSParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class HaloCMPrada12SParams(GObject.GEnum):
+    DELTA: HaloCMPrada12SParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

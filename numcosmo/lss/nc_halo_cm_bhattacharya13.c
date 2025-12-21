@@ -4,7 +4,7 @@
  *            nc_halo_cm_bhattacharya13.c
  *
  *  Mon Dec 09 14:58:42 2024
- *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br> 
+ *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br>
  ****************************************************************************/
 /*
  * nc_halo_cm_bhattacharya13.c
@@ -27,11 +27,11 @@
  * NcHaloCMBhattacharya13
  *
  *  Class defining the Bhattacharya et al. 2013 concentration-mass relation
- *  
+ *
  * This class implements the Bhattacharya et al. 2013 concentration-mass relation.
  * FIXME include reference, equation, ranges of mass and redshift.
- * TODO: include the following conditions for the mass (parameter): 
- * Range -  M_min = 2E12 up to M_max = 2E15 
+ * TODO: include the following conditions for the mass (parameter):
+ * Range -  M_min = 2E12 up to M_max = 2E15
  * But, if z > 0.5, then M_max = 2E14 and, if z > 1.5, then M_max = 1E14.
  * These values are in units of Msun/h.
  */
@@ -52,6 +52,7 @@ typedef struct _NcHaloCMBhattacharya13Private
   NcHaloMassSummaryMassDef mdef;
   NcHaloMassFunction *mfp;
   NcGrowthFunc *gf;
+
   gdouble (*concentration) (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z);
 } NcHaloCMBhattacharya13Private;
 
@@ -77,11 +78,11 @@ static void
 nc_halo_cm_bhattacharya13_init (NcHaloCMBhattacharya13 *hcmb)
 {
   NcHaloCMBhattacharya13Private * const self = nc_halo_cm_bhattacharya13_get_instance_private (hcmb);
- 
-  self->Delta = 0.0;
-  self->mdef = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
-  self->mfp = NULL;
-  self->gf = NULL;
+
+  self->Delta         = 0.0;
+  self->mdef          = NC_HALO_MASS_SUMMARY_MASS_DEF_LEN;
+  self->mfp           = NULL;
+  self->gf            = NULL;
   self->concentration = NULL;
 }
 
@@ -97,10 +98,10 @@ _nc_halo_cm_battacharya13_set_property (GObject *object, guint prop_id, const GV
   {
     case PROP_MFP:
       self->mfp = g_value_dup_object (value);
-      break;  
+      break;
     case PROP_GF:
       self->gf = g_value_dup_object (value);
-      break;  
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -160,8 +161,8 @@ nc_halo_cm_bhattacharya13_class_init (NcHaloCMBhattacharya13Class *klass)
   NcHaloMassSummaryClass *hms_class = NC_HALO_MASS_SUMMARY_CLASS (klass);
   NcmModelClass *model_class        = NCM_MODEL_CLASS (klass);
 
-  object_class->dispose  = &_nc_halo_cm_bhattacharya13_dispose;
-  object_class->finalize = &_nc_halo_cm_bhattacharya13_finalize;
+  object_class->dispose      = &_nc_halo_cm_bhattacharya13_dispose;
+  object_class->finalize     = &_nc_halo_cm_bhattacharya13_finalize;
   object_class->set_property = &_nc_halo_cm_battacharya13_set_property;
   object_class->get_property = &_nc_halo_cm_bhattacharya13_get_property;
 
@@ -237,7 +238,8 @@ _nc_halo_cm_bhattacharya13_mass (NcHaloMassSummary *hms)
   return exp10 (LOG10M_DELTA);
 }
 
-static gdouble _nc_halo_cm_bhattacharya13_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
+static gdouble
+_nc_halo_cm_bhattacharya13_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
   NcHaloCMBhattacharya13 *hcmb               = NC_HALO_CM_BHATTACHARYA13 (hms);
   NcHaloCMBhattacharya13Private * const self = nc_halo_cm_bhattacharya13_get_instance_private (hcmb);
@@ -268,7 +270,7 @@ _nc_halo_cm_bhattacharya13_concentration_mean (NcHaloMassSummary *hms, NcHICosmo
   nc_growth_func_prepare_if_needed (self->gf, cosmo);
 
   gdouble mass  = _nc_halo_cm_bhattacharya13_mass (hms);
-  gdouble lnM   = log(mass);
+  gdouble lnM   = log (mass);
   gdouble sigma = nc_halo_mass_function_sigma_lnM (self->mfp, cosmo, lnM, z);
   gdouble nu    = 1.686 / sigma;
   gdouble D     = nc_growth_func_eval (self->gf, cosmo, z);
@@ -286,7 +288,7 @@ _nc_halo_cm_bhattacharya13_concentration_critical (NcHaloMassSummary *hms, NcHIC
   nc_growth_func_prepare_if_needed (self->gf, cosmo);
 
   gdouble mass  = _nc_halo_cm_bhattacharya13_mass (hms);
-  gdouble lnM   = log(mass);
+  gdouble lnM   = log (mass);
   gdouble sigma = nc_halo_mass_function_sigma_lnM (self->mfp, cosmo, lnM, z);
   gdouble nu    = 1.686 / sigma;
   gdouble D     = nc_growth_func_eval (self->gf, cosmo, z);
@@ -304,11 +306,11 @@ _nc_halo_cm_bhattacharya13_concentration_virial (NcHaloMassSummary *hms, NcHICos
   nc_growth_func_prepare_if_needed (self->gf, cosmo);
 
   gdouble mass  = _nc_halo_cm_bhattacharya13_mass (hms);
-  gdouble lnM   = log(mass);
+  gdouble lnM   = log (mass);
   gdouble sigma = nc_halo_mass_function_sigma_lnM (self->mfp, cosmo, lnM, z);
   gdouble nu    = 1.686 / sigma;
   gdouble D     = nc_growth_func_eval (self->gf, cosmo, z);
-  
+
   return 7.7 * pow (D, 0.90) * pow (nu, -0.29);
 }
 
@@ -358,9 +360,9 @@ NcHaloCMBhattacharya13 *
 nc_halo_cm_bhattacharya13_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta)
 {
   NcHaloCMBhattacharya13 *hcmb = g_object_new (NC_TYPE_HALO_CM_BHATTACHARYA13,
-                                         "mass-def", mdef,
-                                         "Delta",    Delta,
-                                         NULL);
+                                               "mass-def", mdef,
+                                               "Delta",    Delta,
+                                               NULL);
 
   return hcmb;
 }
