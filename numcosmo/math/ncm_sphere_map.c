@@ -2334,7 +2334,6 @@ ncm_sphere_map_update_Cl (NcmSphereMap *smap)
  * ncm_sphere_map_compute_cross_Cl:
  * @smap1: first #NcmSphereMap with computed $a_{lm}$
  * @smap2: second #NcmSphereMap with computed $a_{lm}$
- * @cross_Cl: (out) (transfer full): a #NcmVector to store the cross-spectrum
  *
  * Computes the cross-spectrum between two maps:
  * $$C_\ell^\mathrm{cross} = \frac{1}{2\ell+1} \sum_{m=-\ell}^\ell \mathrm{Re}(a_{lm}^{(1)} \bar{a}_{lm}^{(2)})$$
