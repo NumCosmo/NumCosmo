@@ -97,9 +97,11 @@ _nc_halo_cm_battacharya13_set_property (GObject *object, guint prop_id, const GV
   switch (prop_id)
   {
     case PROP_MFP:
+      nc_halo_mass_function_clear (&self->mfp);
       self->mfp = g_value_dup_object (value);
       break;
     case PROP_GF:
+      nc_growth_func_clear (&self->gf);
       self->gf = g_value_dup_object (value);
       break;
     default:
@@ -161,10 +163,10 @@ nc_halo_cm_bhattacharya13_class_init (NcHaloCMBhattacharya13Class *klass)
   NcHaloMassSummaryClass *hms_class = NC_HALO_MASS_SUMMARY_CLASS (klass);
   NcmModelClass *model_class        = NCM_MODEL_CLASS (klass);
 
-  object_class->dispose      = &_nc_halo_cm_bhattacharya13_dispose;
-  object_class->finalize     = &_nc_halo_cm_bhattacharya13_finalize;
-  object_class->set_property = &_nc_halo_cm_battacharya13_set_property;
-  object_class->get_property = &_nc_halo_cm_bhattacharya13_get_property;
+  model_class->set_property = &_nc_halo_cm_battacharya13_set_property;
+  model_class->get_property = &_nc_halo_cm_bhattacharya13_get_property;
+  object_class->dispose     = &_nc_halo_cm_bhattacharya13_dispose;
+  object_class->finalize    = &_nc_halo_cm_bhattacharya13_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Bhattacharya et al. (2013) concentration-mass relation", "CM_BHATTACHARYA13");
   ncm_model_class_add_params (model_class, NC_HALO_CM_BHATTACHARYA13_LOCAL_SPARAM_LEN, 0, PROP_LEN);
@@ -349,6 +351,8 @@ _nc_halo_cm_bhattacharya13_set_mdef (NcHaloMassSummary *hms, NcHaloMassSummaryMa
  * nc_halo_cm_bhattacharya13_new:
  * @mdef: a #NcHaloMassSummaryMassDef
  * @Delta: cluster threshold mass definition $\Delta$
+ * @mfp: a #NcHaloMassFunction
+ * @gf: a #NcGrowthFunc
  *
  * This function returns the #NcHaloCMBhattacharya13 implementation of
  * #NcHaloMassSummary setting #NcHaloMassSummary:mass-def to @mdef
@@ -357,9 +361,11 @@ _nc_halo_cm_bhattacharya13_set_mdef (NcHaloMassSummary *hms, NcHaloMassSummaryMa
  * Returns: a new instance of #NcHaloCMBhattacharya13.
  */
 NcHaloCMBhattacharya13 *
-nc_halo_cm_bhattacharya13_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta)
+nc_halo_cm_bhattacharya13_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta, NcHaloMassFunction *mfp, NcGrowthFunc *gf)
 {
   NcHaloCMBhattacharya13 *hcmb = g_object_new (NC_TYPE_HALO_CM_BHATTACHARYA13,
+                                               "mass-function", mfp,
+                                               "growth-function", gf,
                                                "mass-def", mdef,
                                                "Delta",    Delta,
                                                NULL);

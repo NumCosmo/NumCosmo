@@ -4,7 +4,7 @@
  *            nc_halo_cm_bhattacharya13.h
  *
  *  Mon Dec 09 14:58:42 2024
- *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br> 
+ *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br>
  ****************************************************************************/
 /*
  * nc_halo_cm_bhattacharya13.h
@@ -46,7 +46,7 @@ G_DECLARE_FINAL_TYPE (NcHaloCMBhattacharya13, nc_halo_cm_bhattacharya13, NC, HAL
  * @NC_HALO_CM_BHATTACHARYA13_LOG10M_DELTA: halo mass $\log_{10}(M_\Delta)$
  *
  * Fundamental parametrization of the profile $\rho(r)$.
- * The halo mass is a paremeter while the concentration is given by the 
+ * The halo mass is a paremeter while the concentration is given by the
  * Bhattacharya et al. (2013) concentration-mass relation.
  *
  */
@@ -59,7 +59,7 @@ typedef enum /*< enum,underscore_name=NC_HALO_CM_BHATTACHARYA13_SPARAMS >*/
 
 #define NC_HALO_CM_BHATTACHARYA13_LOCAL_SPARAM_LEN (NC_HALO_CM_BHATTACHARYA13_SPARAM_LEN - 0)
 
-NcHaloCMBhattacharya13 *nc_halo_cm_bhattacharya13_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta);
+NcHaloCMBhattacharya13 *nc_halo_cm_bhattacharya13_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta, NcHaloMassFunction *mfp, NcGrowthFunc *gf);
 NcHaloCMBhattacharya13 *nc_halo_cm_bhattacharya13_ref (NcHaloCMBhattacharya13 *hcmb);
 
 void nc_halo_cm_bhattacharya13_free (NcHaloCMBhattacharya13 *hcmb);

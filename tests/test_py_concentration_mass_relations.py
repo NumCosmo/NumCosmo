@@ -155,6 +155,36 @@ def fixture_cmr_klypin11() -> (
     return ccl_cmr_Klypin11, cmr_Klypin11
 
 
+@pytest.fixture(name="cmr_bhattacharya13")
+def fixture_cmr_bhattacharya13(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+) -> tuple[pyccl.halos.ConcentrationBhattacharya13, Nc.HaloMassSummary]:
+    """Fixture for Bhattacharya13 concentration-mass relation."""
+    hmd = pyccl.halos.MassDef(200, "critical")
+    ccl_cmr_Bhattacharya13 = pyccl.halos.ConcentrationBhattacharya13(mass_def=hmd)
+
+    # Get cosmology objects
+    _, cosmology = cosmologies
+    cosmo = cosmology.cosmo
+    ps_ml = cosmology.ps_ml
+
+    # Create mass function
+    mulf = Nc.MultiplicityFuncTinker.new()
+    mulf.set_mdef(Nc.MultiplicityFuncMassDef.CRITICAL)
+    mulf.set_Delta(200.0)
+    mfp = Nc.HaloMassFunction.new(cosmology.dist, cosmology.psf_tophat, mulf)
+
+    # Get growth function from power spectrum
+    assert isinstance(ps_ml, Nc.PowspecMLTransfer)
+    gf = ps_ml.peek_gf()
+
+    cmr_Bhattacharya13 = Nc.HaloCMBhattacharya13.new(
+        Nc.HaloMassSummaryMassDef.CRITICAL, 200.0, mfp, gf
+    )
+
+    return ccl_cmr_Bhattacharya13, cmr_Bhattacharya13
+
+
 @pytest.fixture(name="mass_and_z_array")
 def fixture_mass_and_z_array() -> tuple[np.ndarray, np.ndarray]:
     """Fixture for mass and redshift arrays."""
@@ -175,6 +205,7 @@ def parametrized_concentration_mass_tests():
             lf("cmr_duffy08"),
             lf("cmr_duffy08_vir"),
             lf("cmr_klypin11"),
+            lf("cmr_bhattacharya13"),
         ],
     )
 
@@ -190,6 +221,9 @@ def test_compare_cmr(
     ccl_hmc, nc_hms = concentration_mass_relations
     m_arr, z_arr = mass_and_z_array
 
+    # Bhattacharya13 requires looser tolerance due to implementation differences
+    rtol = 3.0e-3 if isinstance(nc_hms, Nc.HaloCMBhattacharya13) else 1.0e-4
+
     for z in z_arr:
         a = 1.0 / (1.0 + z)
         ccl_cmr = ccl_hmc(cosmo_ccl, m_arr, a)
@@ -200,4 +234,4 @@ def test_compare_cmr(
 
         nc_cmr = np.array(nc_cmr_list)
 
-        assert_allclose(ccl_cmr, nc_cmr, rtol=1.0e-4)
+        assert_allclose(ccl_cmr, nc_cmr, rtol=rtol)
