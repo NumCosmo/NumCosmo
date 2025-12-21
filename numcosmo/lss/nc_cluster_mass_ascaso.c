@@ -397,17 +397,18 @@ static gdouble
 _nc_cluster_mass_ascaso_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params)
 {
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
+  const gdouble cut           = CUT;
   gdouble lnR_true, sigma;
 
   /* If entire bin is below CUT, return 0 */
-  if (lnM_obs_upper[0] < CUT)
+  if (lnM_obs_upper[0] < cut)
     return 0.0;
 
   _nc_cluster_mass_ascaso_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
 
   /* Enforce CUT as effective lower bound */
   {
-    const gdouble effective_lower = (lnM_obs_lower[0] < CUT) ? CUT : lnM_obs_lower[0];
+    const gdouble effective_lower = (lnM_obs_lower[0] < cut) ? cut : lnM_obs_lower[0];
 
     return ncm_util_gaussian_integral (effective_lower, lnM_obs_upper[0], lnR_true, sigma);
   }

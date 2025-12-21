@@ -483,7 +483,7 @@ def create_cluster_mass(
         cluster_m = Nc.ClusterMassNodist(lnM_min=lnM_obs_min, lnM_max=lnM_obs_max)
     elif cluster_mass_type == ClusterMassType.ASCASO:
         # Ascaso et al. (2015) relation for richness
-        lnM_obs_min = np.log(5.0)  # ln(richness_min) = ln(1) = 0
+        lnM_obs_min = np.log(5.0)  # ln(richness_min) = ln(5)
         lnM_obs_max = np.log(10) * 2.5  # ln(richness_max) = ln(10^2.5)
         cluster_m = Nc.ClusterMassAscaso(
             lnRichness_min=lnM_obs_min, lnRichness_max=lnM_obs_max, z0=0
