@@ -37,6 +37,7 @@ It includes:
 
 from typing import cast
 from enum import StrEnum, auto
+import time
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
@@ -611,6 +612,9 @@ def generate_jpas_forecast_2024(
                model set.
              - mfunc_oa (Ncm.ObjArray): Array of extra (derived) functions.
     """
+    t_start = time.time()
+    print("Starting J-PAS forecast generation...")
+
     # Adjust area if a masked SSC type is used, giving priority to resample model
     if resample_Sij_type in (JpasSSCType.FULL, JpasSSCType.GUARANTEED):
         area = survey_area(resample_Sij_type)
@@ -626,6 +630,7 @@ def generate_jpas_forecast_2024(
         )
 
     # --- Setup Core NumCosmo/PySSC Tools ---
+    t_setup_start = time.time()
     dist = Nc.Distance.new(2.0)
     tf = Nc.TransferFuncEH()
     psml = Nc.PowspecMLTransfer.new(tf)
@@ -657,6 +662,7 @@ def generate_jpas_forecast_2024(
 
     mset = Ncm.MSet.new_array([cosmo, cluster_m, cluster_z])
     mset.prepare_fparam_map()  # Map fitting parameters for efficient access
+    print(f"Model setup completed in {time.time() - t_setup_start:.2f}s")
 
     # --- Define Bins and Kernels ---
     kernel_z, kernels_T, z_bins_knots = create_zbins_kernels(
@@ -680,17 +686,25 @@ def generate_jpas_forecast_2024(
 
     # Set fitting (theoretical) SSC matrix
     if fitting_Sij_type != JpasSSCType.NO_SSC:
+        print(f"Computing fitting SSC matrix ({fitting_Sij_type})...", flush=True)
+        t_fit_ssc_start = time.time()
         _set_mset_params(mset, fitting_model)
         fitting_S_ij = create_covariance_S(kernel_z, kernels_T, fitting_Sij_type, cosmo)
         ncounts_gauss.set_s_matrix(fitting_S_ij)
+        print(f"Fitting SSC matrix computed in {time.time() - t_fit_ssc_start:.2f}s")
 
     # Set resampling (mock data) SSC matrix
     if resample_Sij_type != JpasSSCType.NO_SSC:
+        print(f"Computing resampling SSC matrix ({resample_Sij_type})...", flush=True)
+        t_resamp_ssc_start = time.time()
         _set_mset_params(mset, resample_model)
         resample_S_ij = create_covariance_S(
             kernel_z, kernels_T, resample_Sij_type, cosmo
         )
         ncounts_gauss.set_resample_s_matrix(resample_S_ij)
+        print(
+            f"Resampling SSC matrix computed in {time.time() - t_resamp_ssc_start:.2f}s"
+        )
 
     dset = Ncm.Dataset.new_array([ncounts_gauss])
     likelihood = Ncm.Likelihood.new(dset)
@@ -707,8 +721,11 @@ def generate_jpas_forecast_2024(
     if resample_Sij_type != JpasSSCType.NO_SSC:
         ncounts_gauss.set_has_ssc(True)
 
+    print("Generating mock data...", flush=True)
+    t_resample_start = time.time()
     # Generate the mock data vector (this computes $mu_{resample}$ and resamples $N$)
     ncounts_gauss.resample(mset, rng)
+    print(f"Mock data generated in {time.time() - t_resample_start:.2f}s")
 
     # Reset $text{has_ssc}$ based on the $text{fitting_Sij_type}$ for the actual
     # likelihood evaluation
@@ -720,16 +737,16 @@ def generate_jpas_forecast_2024(
     # Compute and fix the full covariance matrix (if requested, useful for Fisher
     # matrix)
     if use_fixed_cov:
-        print("Computing fixed covariance...")
+        print("Computing fixed covariance...", flush=True)
+        t_cov_start = time.time()
         _set_mset_params(mset, fitting_model)  # Use fitting model for fixed covariance
         cov, updated = ncounts_gauss.compute_cov(mset)
 
         assert updated
         ncounts_gauss.set_cov(cov)
         ncounts_gauss.set_fix_cov(True)
-        print("Covariance fixed.")
+        print(f"Fixed covariance computed in {time.time() - t_cov_start:.2f}s")
 
-    print("Experiment generation complete.", flush=True)
     # Set the model back to the resample model (or fiducial) for initial fitting state
     _set_mset_params(mset, resample_model)
 
@@ -738,4 +755,5 @@ def generate_jpas_forecast_2024(
     experiment.set("likelihood", likelihood)
     experiment.set("model-set", mset)
 
+    print(f"\nTotal experiment generation time: {time.time() - t_start:.2f}s")
     return experiment, mfunc_oa

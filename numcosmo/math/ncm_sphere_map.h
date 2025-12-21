@@ -151,7 +151,7 @@ NcmSpline *ncm_sphere_map_calc_Ctheta (NcmSphereMap *smap, const gdouble reltol)
 #define NCM_SPHERE_MAP_INT_TO_XY(i, x, y)         \
         G_STMT_START {                            \
           gint shift = 0, shifted = i;            \
-          x = y = 0;                              \
+          x          = y = 0;                     \
           do {                                    \
             x |= ((shifted & 1) << shift);        \
             y |= (((shifted & 2) >> 1) << shift); \
