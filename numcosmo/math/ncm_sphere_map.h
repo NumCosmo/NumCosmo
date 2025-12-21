@@ -104,7 +104,10 @@ NcmSphereMapCoordSys ncm_sphere_map_get_coordsys (NcmSphereMap *smap);
 void ncm_sphere_map_set_lmax (NcmSphereMap *smap, guint lmax);
 guint ncm_sphere_map_get_lmax (NcmSphereMap *smap);
 
-void ncm_sphere_map_clear_smapels (NcmSphereMap *smap);
+void ncm_sphere_map_set_iter (NcmSphereMap *smap, guint iter);
+guint ncm_sphere_map_get_iter (NcmSphereMap *smap);
+
+void ncm_sphere_map_clear_pixels (NcmSphereMap *smap);
 
 gint64 ncm_sphere_map_nest2ring (NcmSphereMap *smap, const gint64 nest_index);
 gint64 ncm_sphere_map_ring2nest (NcmSphereMap *smap, const gint64 ring_index);
@@ -128,6 +131,7 @@ void ncm_sphere_map_load_from_fits_catalog (NcmSphereMap *smap, const gchar *fit
 
 void ncm_sphere_map_prepare_alm (NcmSphereMap *smap);
 void ncm_sphere_map_update_Cl (NcmSphereMap *smap);
+NcmVector *ncm_sphere_map_compute_cross_Cl (NcmSphereMap *smap1, NcmSphereMap *smap2);
 
 void ncm_sphere_map_get_alm (NcmSphereMap *smap, guint l, guint m, gdouble *Re_alm, gdouble *Im_alm);
 void ncm_sphere_map_set_alm (NcmSphereMap *smap, guint l, guint m, gdouble Re_alm, gdouble Im_alm);

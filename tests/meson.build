@@ -674,6 +674,22 @@ if python_pyccl.found()
     ]
 endif
 
+python_pyssc = python_module.find_installation(
+    'python3',
+    modules: ['numcosmo_py.external.pyssc'],
+    required: false,
+)
+
+if python_pyssc.found()
+    python_tests += [
+        {
+            'name': 'py_jpas_forecast24',
+            'source': 'test_py_jpas_forecast24.py',
+            'timeout': 0,
+        },
+    ]
+endif
+
 python_matplotlib = python_module.find_installation(
     'python3',
     modules: ['matplotlib'],
@@ -701,6 +717,22 @@ if python_getdist.found()
         {
             'name': 'plotting',
             'source': 'test_plotting.py',
+            'timeout': 0,
+        },
+    ]
+endif
+
+python_healpy = python_module.find_installation(
+    'python3',
+    modules: ['healpy'],
+    required: false,
+)
+
+if python_healpy.found()
+    python_tests += [
+        {
+            'name': 'py_sphere_map',
+            'source': 'test_py_sphere_map.py',
             'timeout': 0,
         },
     ]

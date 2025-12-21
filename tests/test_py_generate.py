@@ -24,10 +24,11 @@
 
 """Test Generate classes."""
 
+from typing import cast
 from pathlib import Path
 import pytest
 
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Ncm
 import numcosmo_py.app.generate as gen
 import numcosmo_py.datasets.hicosmo as hicosmo
 
@@ -36,25 +37,28 @@ Ncm.cfg_init()
 
 # JPAS Forecast
 def test_generate_jpas(tmp_path: Path):
+    """Test JPAS forecast generation with YAML file."""
     exp_file = tmp_path / "jpas_forecast.yaml"
-    exp = gen.GenerateJpasForecast(experiment=exp_file.absolute())
+    _ = gen.GenerateJpasForecast(experiment=exp_file.absolute())
 
     assert exp_file.exists()
 
 
 def test_generate_jpas_invalid_suffix(tmp_path: Path):
+    """Test JPAS forecast rejects invalid file suffix."""
     exp_file = tmp_path / "jpas_forecast.txt"
     with pytest.raises(ValueError, match="Invalid experiment file suffix: .txt"):
-        exp = gen.GenerateJpasForecast(experiment=exp_file.absolute())
+        _ = gen.GenerateJpasForecast(experiment=exp_file.absolute())
 
 
 # QSpline
 def test_generate_qspline(tmp_path: Path):
+    """Test QSpline generation with all data types."""
     exp_file = tmp_path / "qspline.yaml"
     bao_id = hicosmo.BAOID.ALL_COMBINED_JUN_2025
     sne_id = hicosmo.SNIaID.COV_DES_Y5_STAT_SYS
     h_id = hicosmo.HID.ALL_COMBINED_APR_2025
-    exp = gen.GenerateQSpline(
+    _ = gen.GenerateQSpline(
         experiment=exp_file.absolute(),
         include_snia=sne_id,
         include_hubble=h_id,
@@ -65,71 +69,79 @@ def test_generate_qspline(tmp_path: Path):
 
 
 def test_generate_qspline_no_data(tmp_path: Path):
+    """Test QSpline rejects experiment with no data."""
     exp_file = tmp_path / "qspline.yaml"
     with pytest.raises(ValueError, match="No data included in the experiment."):
-        exp = gen.GenerateQSpline(experiment=exp_file.absolute())
+        _ = gen.GenerateQSpline(experiment=exp_file.absolute())
 
 
 def test_generate_qspline_invalid_suffix(tmp_path: Path):
+    """Test QSpline rejects invalid file suffix."""
     exp_file = tmp_path / "qspline.txt"
     bao_id = hicosmo.BAOID.ALL_COMBINED_JUN_2025
     with pytest.raises(ValueError, match="Invalid experiment file suffix: .txt"):
-        exp = gen.GenerateQSpline(experiment=exp_file.absolute(), include_bao=bao_id)
+        _ = gen.GenerateQSpline(experiment=exp_file.absolute(), include_bao=bao_id)
 
 
 # XCDM
 def test_generate_xcdm(tmp_path: Path):
+    """Test XCDM generation with multiple data sets."""
     exp_file = tmp_path / "xcdm.yaml"
-    bao_id = [hicosmo.BAOID.ALL_COMBINED_JUN_2025, hicosmo.BAOID.ALL_COMBINED_JAN_2023]
-    sne_id = [hicosmo.SNIaID.COV_DES_Y5_STAT_SYS, hicosmo.SNIaID.COV_DES_Y5_STATONLY]
-    h_id = [hicosmo.HID.ALL_COMBINED_APR_2025, hicosmo.HID.ALL_COMBINED_JAN_2023]
+    bao_ids = [hicosmo.BAOID.ALL_COMBINED_JUN_2025, hicosmo.BAOID.ALL_COMBINED_JAN_2023]
+    sne_ids = [hicosmo.SNIaID.COV_DES_Y5_STAT_SYS, hicosmo.SNIaID.COV_DES_Y5_STATONLY]
+    h_ids = [hicosmo.HID.ALL_COMBINED_APR_2025, hicosmo.HID.ALL_COMBINED_JAN_2023]
 
-    for i in range(len(bao_id)):
-        exp = gen.GenerateXCDM(
+    for bao_id, sne_id, h_id in zip(bao_ids, sne_ids, h_ids):
+        _ = gen.GenerateXCDM(
             experiment=exp_file.absolute(),
-            include_snia=sne_id[i],
-            include_hubble=h_id[i],
-            include_bao=bao_id[i],
+            include_snia=sne_id,
+            include_hubble=h_id,
+            include_bao=bao_id,
         )
 
     assert exp_file.exists()
 
 
 def test_generate_xcdm_no_data(tmp_path: Path):
+    """Test XCDM rejects experiment with no data."""
     exp_file = tmp_path / "xcdm.yaml"
     with pytest.raises(ValueError, match="No data included in the experiment."):
-        exp = gen.GenerateXCDM(experiment=exp_file.absolute())
+        _ = gen.GenerateXCDM(experiment=exp_file.absolute())
 
 
 def test_generate_xcdm_no_valid_bao_id(tmp_path: Path):
+    """Test XCDM rejects invalid BAO ID."""
     exp_file = tmp_path / "xcdm.yaml"
-    bao_id = str(-1)
+    bao_id = cast(hicosmo.BAOID, str(-1))
     with pytest.raises(ValueError, match="Unknown BAO data set id: -1"):
-        exp = gen.GenerateXCDM(experiment=exp_file.absolute(), include_bao=bao_id)
+        _ = gen.GenerateXCDM(experiment=exp_file.absolute(), include_bao=bao_id)
 
 
 def test_generate_xcdm_no_valid_hubble_id(tmp_path: Path):
+    """Test XCDM rejects invalid Hubble ID."""
     exp_file = tmp_path / "xcdm.yaml"
-    h_id = str(-1)
+    h_id = cast(hicosmo.HID, str(-1))
     with pytest.raises(ValueError, match="Unknown Hubble data set id: -1"):
-        exp = gen.GenerateXCDM(experiment=exp_file.absolute(), include_hubble=h_id)
+        _ = gen.GenerateXCDM(experiment=exp_file.absolute(), include_hubble=h_id)
 
 
 def test_generate_xcdm_invalid_suffix(tmp_path: Path):
+    """Test XCDM rejects invalid file suffix."""
     exp_file = tmp_path / "xcdm.txt"
     bao_id = hicosmo.BAOID.ALL_COMBINED_JUN_2025
     with pytest.raises(ValueError, match="Invalid experiment file suffix: .txt"):
-        exp = gen.GenerateXCDM(experiment=exp_file.absolute(), include_bao=bao_id)
+        _ = gen.GenerateXCDM(experiment=exp_file.absolute(), include_bao=bao_id)
 
 
 # DEWSpline
 # QSpline
 def test_generate_dewspline(tmp_path: Path):
+    """Test DEWSpline generation with all data types."""
     exp_file = tmp_path / "dewspline.yaml"
     bao_id = hicosmo.BAOID.ALL_COMBINED_JUN_2025
     sne_id = hicosmo.SNIaID.COV_DES_Y5_STAT_SYS
     h_id = hicosmo.HID.ALL_COMBINED_APR_2025
-    exp = gen.GenerateDEWSpline(
+    _ = gen.GenerateDEWSpline(
         experiment=exp_file.absolute(),
         include_snia=sne_id,
         include_hubble=h_id,
@@ -140,13 +152,15 @@ def test_generate_dewspline(tmp_path: Path):
 
 
 def test_generate_dewspline_no_data(tmp_path: Path):
+    """Test DEWSpline rejects experiment with no data."""
     exp_file = tmp_path / "qspline.yaml"
     with pytest.raises(ValueError, match="No data included in the experiment."):
-        exp = gen.GenerateDEWSpline(experiment=exp_file.absolute())
+        _ = gen.GenerateDEWSpline(experiment=exp_file.absolute())
 
 
 def test_generate_dewspline_invalid_suffix(tmp_path: Path):
+    """Test DEWSpline rejects invalid file suffix."""
     exp_file = tmp_path / "dewspline.txt"
     bao_id = hicosmo.BAOID.ALL_COMBINED_JUN_2025
     with pytest.raises(ValueError, match="Invalid experiment file suffix: .txt"):
-        exp = gen.GenerateDEWSpline(experiment=exp_file.absolute(), include_bao=bao_id)
+        _ = gen.GenerateDEWSpline(experiment=exp_file.absolute(), include_bao=bao_id)
