@@ -25,14 +25,12 @@
  */
 
 /**
- * SECTION:nc_halo_cm_duffy08
- * @title: NcHaloCMDuffy08
- * @short_description: Class defining the Duffy et al. 2008 concentration-mass relation
- * @stability: Unstable
+ * NcHaloCMDuffy08
  *
- *
- * Class defining the Duffy et al. 2008 concentration-mass relation.
- * FIXME include reference and equation
+ *  Class defining the Duffy et al. 2008 concentration-mass relation
+ *  
+ * This class implements the Duffy et al. 2008 concentration-mass relation.
+ * FIXME include reference, equation, ranges of mass and redshift.
  *
  */
 
@@ -48,9 +46,9 @@
 
 typedef struct _NcHaloCMDuffy08Private
 {
+  gint placeholder;
   gdouble Delta;
   NcHaloMassSummaryMassDef mdef;
-
   gdouble (*concentration) (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z);
 } NcHaloCMDuffy08Private;
 

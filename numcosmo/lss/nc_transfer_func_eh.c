@@ -37,7 +37,7 @@
  *  T(k) = \frac{\Omega_b}{\Omega_m} T_b(k) + \frac{\Omega_{c}}{\Omega_m} T_c(k) \, ,
  * \end{equation*}
  * where $\Omega_b$, $\Omega_m$ and $\Omega_{c}$ are the baryons (#nc_hicosmo_Omega_b0),
- * matter (#nc_hicosmo_Omega_m0) and cold dark matter (#nc_hicosmo_Omega_c0) density parameters today, respectevely.
+ * matter (#nc_hicosmo_Omega_m0) and cold dark matter (#nc_hicosmo_Omega_c0) density parameters today, respectively.
  * $T_b(k)$ and $T_c(k)$ are the weights from baryons and cold dark matter to the transfer function $T(k)$.
  *
  * The cold dark matter term is defined as,
@@ -95,7 +95,7 @@
 #include <gsl/gsl_sf_bessel.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcTransferFuncEHPrivate
+typedef struct _NcTransferFuncEHPrivate
 {
   gdouble h;
   gdouble s;
@@ -105,6 +105,12 @@ struct _NcTransferFuncEHPrivate
   gdouble ab, bc, bb, bb3, ac_142; /* ac_142 = 14.2/ac */
   gdouble wb_wm, wc_wm;
   gboolean CCL_comp;
+} NcTransferFuncEHPrivate;
+
+struct _NcTransferFuncEH
+{
+  /*< private >*/
+  NcTransferFunc parent_instance;
 };
 
 enum
@@ -118,7 +124,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcTransferFuncEH, nc_transfer_func_eh, NC_TYPE_TRANS
 static void
 nc_transfer_func_eh_init (NcTransferFuncEH *tf_eh)
 {
-  NcTransferFuncEHPrivate * const self = tf_eh->priv = nc_transfer_func_eh_get_instance_private (tf_eh);
+  NcTransferFuncEHPrivate * const self = nc_transfer_func_eh_get_instance_private (tf_eh);
 
   self->h        = 0.0;
   self->s        = 0.0;
@@ -157,7 +163,7 @@ static void
 _nc_transfer_func_eh_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcTransferFuncEH *tf_eh              = NC_TRANSFER_FUNC_EH (object);
-  NcTransferFuncEHPrivate * const self = tf_eh->priv;
+  NcTransferFuncEHPrivate * const self = nc_transfer_func_eh_get_instance_private (tf_eh);
 
   g_return_if_fail (NC_IS_TRANSFER_FUNC_EH (object));
 
@@ -214,7 +220,7 @@ static void
 _nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
   NcTransferFuncEH *tf_eh              = NC_TRANSFER_FUNC_EH (tf);
-  NcTransferFuncEHPrivate * const self = tf_eh->priv;
+  NcTransferFuncEHPrivate * const self = nc_transfer_func_eh_get_instance_private (tf_eh);
 
   const gdouble T_0   = nc_hicosmo_T_gamma0 (cosmo);
   const gdouble c1    = sqrt (6.0);
@@ -282,7 +288,7 @@ static gdouble
 _nc_transfer_func_eh_calc (NcTransferFunc *tf, gdouble kh)
 {
   NcTransferFuncEH *tf_eh              = NC_TRANSFER_FUNC_EH (tf);
-  NcTransferFuncEHPrivate * const self = tf_eh->priv;
+  NcTransferFuncEHPrivate * const self = nc_transfer_func_eh_get_instance_private (tf_eh);
 
   const gdouble k   = kh * self->h;
   const gdouble ks  = k * self->s;
@@ -336,7 +342,7 @@ nc_transfer_func_eh_new ()
 void
 nc_transfer_func_eh_set_CCL_comp (NcTransferFuncEH *tf_eh, gboolean CCL_comp)
 {
-  NcTransferFuncEHPrivate * const self = tf_eh->priv;
+  NcTransferFuncEHPrivate * const self = nc_transfer_func_eh_get_instance_private (tf_eh);
 
   self->CCL_comp = CCL_comp;
 }

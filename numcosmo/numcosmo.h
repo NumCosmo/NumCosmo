@@ -106,6 +106,7 @@
 #include <numcosmo/lss/nc_transfer_func.h>
 #include <numcosmo/lss/nc_transfer_func_bbks.h>
 #include <numcosmo/lss/nc_transfer_func_eh.h>
+#include <numcosmo/lss/nc_transfer_func_eh_no_baryon.h>
 #include <numcosmo/lss/nc_transfer_func_camb.h>
 #include <numcosmo/lss/nc_growth_func.h>
 #include <numcosmo/lss/nc_halo_position.h>
@@ -118,6 +119,10 @@
 #include <numcosmo/lss/nc_halo_cm_param.h>
 #include <numcosmo/lss/nc_halo_cm_duffy08.h>
 #include <numcosmo/lss/nc_halo_cm_klypin11.h>
+#include <numcosmo/lss/nc_halo_cm_prada12.h>
+#include <numcosmo/lss/nc_halo_cm_bhattacharya13.h>
+#include <numcosmo/lss/nc_halo_cm_dutton14.h>
+#include <numcosmo/lss/nc_halo_cm_diemer15.h>
 #include <numcosmo/lss/nc_galaxy_acf.h>
 #include <numcosmo/lss/nc_multiplicity_func.h>
 #include <numcosmo/lss/nc_multiplicity_func_ps.h>

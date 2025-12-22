@@ -59,7 +59,7 @@
 #include "lss/nc_transfer_func_bbks.h"
 #include "nc_enum_types.h"
 
-struct _NcTransferFuncBBKSPrivate
+typedef struct _NcTransferFuncBBKSPrivate
 {
   NcTransferFuncBBKSType type;
   gdouble c1;
@@ -68,12 +68,19 @@ struct _NcTransferFuncBBKSPrivate
   gdouble c4;
   gdouble c5_wm; /* c5_wm = c5/wm */
   gdouble h;
+}NcTransferFuncBBKSPrivate;
+
+struct _NcTransferFuncBBKS
+{
+  /*< private >*/
+  NcTransferFunc parent_instance;
 };
 
 enum
 {
   PROP_0,
   PROP_TYPE,
+  PROP_LEN,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcTransferFuncBBKS, nc_transfer_func_bbks, NC_TYPE_TRANSFER_FUNC)
@@ -81,8 +88,8 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcTransferFuncBBKS, nc_transfer_func_bbks, NC_TYPE_T
 static void
 nc_transfer_func_bbks_init (NcTransferFuncBBKS *tf_bbks)
 {
-  NcTransferFuncBBKSPrivate * const self = tf_bbks->priv = nc_transfer_func_bbks_get_instance_private (tf_bbks);
-
+  NcTransferFuncBBKSPrivate * const self = nc_transfer_func_bbks_get_instance_private (tf_bbks);
+  
   self->c1    = 0.0;
   self->c2    = 0.0;
   self->c3    = 0.0;
@@ -113,7 +120,7 @@ static void
 _nc_transfer_func_bbks_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcTransferFuncBBKS *tf_bbks            = NC_TRANSFER_FUNC_BBKS (object);
-  NcTransferFuncBBKSPrivate * const self = tf_bbks->priv;
+  NcTransferFuncBBKSPrivate * const self = nc_transfer_func_bbks_get_instance_private (tf_bbks);
 
   g_return_if_fail (NC_IS_TRANSFER_FUNC_BBKS (object));
 
@@ -191,7 +198,7 @@ static void
 _nc_transfer_func_bbks_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
   NcTransferFuncBBKS *tf_bbks            = NC_TRANSFER_FUNC_BBKS (tf);
-  NcTransferFuncBBKSPrivate * const self = tf_bbks->priv;
+  NcTransferFuncBBKSPrivate * const self = nc_transfer_func_bbks_get_instance_private (tf_bbks);
 
   const gdouble T_0 = nc_hicosmo_T_gamma0 (cosmo);
   const gdouble c1  = 3.89;
@@ -235,7 +242,7 @@ static gdouble
 _nc_transfer_func_bbks_calc (NcTransferFunc *tf, gdouble kh)
 {
   NcTransferFuncBBKS *tf_bbks            = NC_TRANSFER_FUNC_BBKS (tf);
-  NcTransferFuncBBKSPrivate * const self = tf_bbks->priv;
+  NcTransferFuncBBKSPrivate * const self = nc_transfer_func_bbks_get_instance_private (tf_bbks);
 
   const gdouble k  = kh * self->h;
   const gdouble q  = k * self->c5_wm;
@@ -258,7 +265,7 @@ _nc_transfer_func_bbks_calc (NcTransferFunc *tf, gdouble kh)
 void
 nc_transfer_func_bbks_set_type (NcTransferFuncBBKS *tf_bbks, NcTransferFuncBBKSType bbks_type)
 {
-  NcTransferFuncBBKSPrivate * const self = tf_bbks->priv;
+  NcTransferFuncBBKSPrivate * const self = nc_transfer_func_bbks_get_instance_private (tf_bbks);
 
   self->type = bbks_type;
 }

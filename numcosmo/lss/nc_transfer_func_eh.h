@@ -33,31 +33,9 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_TRANSFER_FUNC_EH             (nc_transfer_func_eh_get_type ())
-#define NC_TRANSFER_FUNC_EH(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_TRANSFER_FUNC_EH, NcTransferFuncEH))
-#define NC_TRANSFER_FUNC_EH_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_TRANSFER_FUNC_EH, NcTransferFuncEHClass))
-#define NC_IS_TRANSFER_FUNC_EH(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_TRANSFER_FUNC_EH))
-#define NC_IS_TRANSFER_FUNC_EH_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_TRANSFER_FUNC_EH))
-#define NC_TRANSFER_FUNC_EH_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_TRANSFER_FUNC_EH, NcTransferFuncEHClass))
+#define NC_TYPE_TRANSFER_FUNC_EH (nc_transfer_func_eh_get_type ())
 
-typedef struct _NcTransferFuncEHClass NcTransferFuncEHClass;
-typedef struct _NcTransferFuncEH NcTransferFuncEH;
-typedef struct _NcTransferFuncEHPrivate NcTransferFuncEHPrivate;
-
-struct _NcTransferFuncEHClass
-{
-  /*< private >*/
-  NcTransferFuncClass parent_class;
-};
-
-struct _NcTransferFuncEH
-{
-  /*< private >*/
-  NcTransferFunc parent_instance;
-  NcTransferFuncEHPrivate *priv;
-};
-
-GType nc_transfer_func_eh_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcTransferFuncEH, nc_transfer_func_eh, NC, TRANSFER_FUNC_EH, NcTransferFunc)
 
 NcTransferFunc *nc_transfer_func_eh_new (void);
 

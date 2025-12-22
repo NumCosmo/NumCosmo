@@ -120,6 +120,7 @@
 #include "lss/nc_transfer_func.h"
 #include "lss/nc_transfer_func_bbks.h"
 #include "lss/nc_transfer_func_eh.h"
+#include "lss/nc_transfer_func_eh_no_baryon.h"
 #include "lss/nc_transfer_func_camb.h"
 #include "lss/nc_halo_position.h"
 #include "lss/nc_halo_density_profile.h"
@@ -131,6 +132,10 @@
 #include "lss/nc_halo_cm_param.h"
 #include "lss/nc_halo_cm_duffy08.h"
 #include "lss/nc_halo_cm_klypin11.h"
+#include "lss/nc_halo_cm_prada12.h"
+#include "lss/nc_halo_cm_bhattacharya13.h"
+#include "lss/nc_halo_cm_dutton14.h"
+#include "lss/nc_halo_cm_diemer15.h"
 #include "lss/nc_multiplicity_func.h"
 #include "lss/nc_multiplicity_func_st.h"
 #include "lss/nc_multiplicity_func_ps.h"
@@ -729,6 +734,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_BBKS);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH);
+  ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH_NO_BARYON);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_CAMB);
 
   ncm_cfg_register_obj (NC_TYPE_HALO_POSITION);
@@ -743,6 +749,11 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_PARAM);
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_DUFFY08);
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_KLYPIN11);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_PRADA12);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_BHATTACHARYA13);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_DUTTON14);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_DIEMER15);
+
 
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_PS);

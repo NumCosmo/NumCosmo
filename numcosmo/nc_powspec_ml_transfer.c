@@ -151,6 +151,7 @@ static void _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *mode
 static gdouble _nc_powspec_ml_transfer_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
 static void _nc_powspec_ml_transfer_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
 static gdouble _nc_powspec_ml_transfer_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
+static gdouble _nc_powspec_ml_transfer_deriv_k (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
 static void _nc_powspec_ml_transfer_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
 
 static void
@@ -199,6 +200,7 @@ nc_powspec_ml_transfer_class_init (NcPowspecMLTransferClass *klass)
   powspec_class->eval       = &_nc_powspec_ml_transfer_eval;
   powspec_class->eval_vec   = &_nc_powspec_ml_transfer_eval_vec;
   powspec_class->deriv_z    = &_nc_powspec_ml_transfer_deriv_z;
+  powspec_class->deriv_k    = &_nc_powspec_ml_transfer_deriv_k;
   powspec_class->get_nknots = &_nc_powspec_ml_transfer_get_nknots;
 }
 
@@ -298,6 +300,18 @@ _nc_powspec_ml_transfer_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdo
   const gdouble pk            = ncm_spline_eval (ps_mlt->Pk, log (k));
 
   return pk * 2.0 * growth * deriv_growth;
+}
+
+static gdouble
+_nc_powspec_ml_transfer_deriv_k (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
+{
+  NcHICosmo *cosmo            = NC_HICOSMO (model);
+  NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (powspec);
+  const gdouble growth        = nc_growth_func_eval (ps_mlt->gf, cosmo, z);
+  const gdouble gf2           = gsl_pow_2 (growth);
+  const gdouble dpk_dlnk      = ncm_spline_eval_deriv (ps_mlt->Pk, log (k));
+
+  return gf2 * dpk_dlnk / k;
 }
 
 static void
