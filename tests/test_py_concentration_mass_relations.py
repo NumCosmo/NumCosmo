@@ -202,6 +202,37 @@ def fixture_cmr_bhattacharya13(
     return ccl_cmr_Bhattacharya13, cmr_Bhattacharya13
 
 
+@pytest.fixture(name="cmr_bhattacharya13_vir")
+def fixture_cmr_bhattacharya13_vir(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+) -> tuple[pyccl.halos.ConcentrationBhattacharya13, Nc.HaloMassSummary]:
+    """Fixture for Bhattacharya13 with Virial mass definition."""
+    hmd = pyccl.halos.MassDef("vir", "critical")
+    ccl_cmr_Bhattacharya13_vir = pyccl.halos.ConcentrationBhattacharya13(mass_def=hmd)
+
+    # Get cosmology objects
+    _, cosmology = cosmologies
+    ps_ml = cosmology.ps_ml
+
+    # Create mass function with virial mass definition Note: Tinker multiplicity
+    # function uses CRITICAL for virial mass definition. The actual MultiplicityFunc is
+    # irrelevant this object is only used to compute sigma(M) internally.
+    mulf = Nc.MultiplicityFuncTinker.new()
+    mulf.set_mdef(Nc.MultiplicityFuncMassDef.CRITICAL)
+    mulf.set_Delta(200.0)
+    mfp = Nc.HaloMassFunction.new(cosmology.dist, cosmology.psf_tophat, mulf)
+
+    # Get growth function from power spectrum
+    assert isinstance(ps_ml, Nc.PowspecMLTransfer)
+    gf = ps_ml.peek_gf()
+
+    cmr_Bhattacharya13_vir = Nc.HaloCMBhattacharya13.new(
+        Nc.HaloMassSummaryMassDef.VIRIAL, 200.0, mfp, gf
+    )
+
+    return ccl_cmr_Bhattacharya13_vir, cmr_Bhattacharya13_vir
+
+
 @pytest.fixture(name="mass_and_z_array")
 def fixture_mass_and_z_array() -> tuple[np.ndarray, np.ndarray]:
     """Fixture for mass and redshift arrays."""
@@ -223,6 +254,7 @@ def parametrized_concentration_mass_tests():
             lf("cmr_duffy08_vir"),
             lf("cmr_klypin11"),
             lf("cmr_bhattacharya13"),
+            lf("cmr_bhattacharya13_vir"),
         ],
     )
 
@@ -236,6 +268,7 @@ def parametrized_all_cmr():
             lf("cmr_duffy08_vir"),
             lf("cmr_klypin11"),
             lf("cmr_bhattacharya13"),
+            lf("cmr_bhattacharya13_vir"),
         ],
     )
 
