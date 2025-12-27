@@ -4,10 +4,14 @@
  *  Tue Sept 28 17:17:26 2021
  *  Copyright  2021  Mariana Penna-Lima
  *  <pennalima@gmail.com>
+ *  Sat December 27 20:21:01 2025
+ *  Copyright  2025  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) 2021 Mariana Penna-Lima  <pennalima@gmail.com>
+ * Copyright (C) 2025 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

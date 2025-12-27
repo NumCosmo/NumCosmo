@@ -4,10 +4,14 @@
  *  Tue January 10 12:00:00 2022
  *  Copyright  2022  Arthur de Souza Molina
  *  <arthur.souza.molina@uel.br>
+ *  Sat December 27 20:21:01 2025
+ *  Copyright  2025  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) 2022 Arthur de Souza Molina <arthur.souza.molina@uel.br>
+ * Copyright (C) 2025 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

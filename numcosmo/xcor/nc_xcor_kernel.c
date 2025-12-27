@@ -4,10 +4,14 @@
  *  Tue July 14 12:00:00 2015
  *  Copyright  2015  Cyrille Doux
  *  <cdoux@apc.in2p3.fr>
+ *  Sat December 27 20:21:01 2025
+ *  Copyright  2025  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) 2015 Cyrille Doux <cdoux@apc.in2p3.fr>
+ * Copyright (C) 2025 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
